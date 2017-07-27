@@ -460,7 +460,7 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
    SCIP_CONSEXPR_NLHDLR* nlhdlr, \
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata)
 
-/** callback to called in initialization
+/** callback to be called in initialization
  *
  * - scip SCIP data structure
  * - nlhdlr nonlinear handler
@@ -469,7 +469,7 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
    SCIP* scip, \
    SCIP_CONSEXPR_NLHDLR* nlhdlr)
 
-/** callback to called in deinitialization
+/** callback to be called in deinitialization
  *
  * - scip SCIP data structure
  * - nlhdlr nonlinear handler
@@ -477,6 +477,21 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
 #define SCIP_DECL_CONSEXPR_NLHDLREXIT(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSEXPR_NLHDLR* nlhdlr)
+
+/** callback to detect structure in expression tree
+ *
+ * - scip SCIP data structure
+ * - nlhdlr nonlinear handler
+ * - expr expression to analyze
+ * - success buffer to return whether a nlhdlr specific structure has been found
+ * - nlhdlrexprdata nlhdlr's expr data to be stored in expr, can only be set to non-NULL if success is set to TRUE
+ */
+#define SCIP_DECL_CONSEXPR_NLHDLRDETECT(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSEXPR_NLHDLR* nlhdlr, \
+   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_Bool* success, \
+   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata)
 
 typedef struct SCIP_ConsExpr_NlHdlr      SCIP_CONSEXPR_NLHDLR;        /**< nonlinear handler */
 typedef struct SCIP_ConsExpr_NlHdlrData  SCIP_CONSEXPR_NLHDLRDATA;    /**< nonlinear handler data */

@@ -132,6 +132,22 @@ SCIP_DECL_CONSEXPR_NLHDLREXIT(exitHldr)
 }
 
 static
+SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlr)
+{
+   assert(scip != NULL);
+   assert(nlhdlr != NULL);
+   assert(expr != NULL);
+   assert(success != NULL);
+   assert(nlhdlrexprdata != NULL);
+
+   /* TODO detect convex quad in 2 vars structure */
+
+   *success = FALSE;
+
+   return SCIP_OKAY;
+}
+
+static
 SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(copyHdlr)
 {
    SCIP_CONSEXPR_NLHDLR* targetnlhdlr;
@@ -146,14 +162,13 @@ SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(copyHdlr)
    SCIP_CALL( SCIPallocClearMemory(testscip, &nlhdlrdata) );
 
    SCIP_CALL( SCIPincludeConsExprNlHdlrBasic(targetscip, targetconsexprhdlr, &targetnlhdlr,
-      SCIPgetConsExprNlHdlrName(sourcenlhdlr), SCIPgetConsExprNlHdlrDesc(sourcenlhdlr), SCIPgetConsExprNlHdlrPriority(sourcenlhdlr), nlhdlrdata) );
+      SCIPgetConsExprNlHdlrName(sourcenlhdlr), SCIPgetConsExprNlHdlrDesc(sourcenlhdlr), SCIPgetConsExprNlHdlrPriority(sourcenlhdlr), detectHdlr, nlhdlrdata) );
    SCIPsetConsExprNlHdlrFreeHdlrData(targetscip, targetnlhdlr, freeHdlrData);
    SCIPsetConsExprNlHdlrCopyHdlr(testscip, targetnlhdlr, copyHdlr);
    SCIPsetConsExprNlHdlrInitExit(testscip, targetnlhdlr, initHdlr, exitHldr);
 
    return SCIP_OKAY;
 }
-
 
 Test(conshdlr, nlhdlr, .init = setup, .fini = teardown,
    .description = "test basic functionality of nonlinear handler of the cons_expr constraint handler."
@@ -169,7 +184,7 @@ Test(conshdlr, nlhdlr, .init = setup, .fini = teardown,
 
    SCIP_CALL( SCIPallocClearMemory(testscip, &nlhdlrdata) );
 
-   SCIP_CALL( SCIPincludeConsExprNlHdlrBasic(testscip, conshdlr, &nlhdlr, "testhdlr", "tests nonlinear handler functionality", 0, nlhdlrdata) );
+   SCIP_CALL( SCIPincludeConsExprNlHdlrBasic(testscip, conshdlr, &nlhdlr, "testhdlr", "tests nonlinear handler functionality", 0, detectHdlr, nlhdlrdata) );
 
    SCIPsetConsExprNlHdlrFreeHdlrData(testscip, nlhdlr, freeHdlrData);
    SCIPsetConsExprNlHdlrCopyHdlr(testscip, nlhdlr, copyHdlr);

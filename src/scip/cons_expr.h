@@ -857,6 +857,7 @@ SCIP_RETCODE SCIPincludeConsExprNlHdlrBasic(
    const char*                 name,         /**< name of nonlinear handler (must not be NULL) */
    const char*                 desc,         /**< description of nonlinear handler (can be NULL) */
    unsigned int                priority,     /**< priority of nonlinear handler */
+   SCIP_DECL_CONSEXPR_NLHDLRDETECT((*detect)), /**< structure detection callback of nonlinear handler */
    SCIP_CONSEXPR_NLHDLRDATA*   data          /**< data of nonlinear handler (can be NULL) */
    );
 

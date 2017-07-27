@@ -123,6 +123,7 @@ struct SCIP_ConsExpr_NlHdlr
    SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR((*copyhdlr)); /**< callback to copy nonlinear handler (can be NULL) */
    SCIP_DECL_CONSEXPR_NLHDLRINIT((*init));      /**< initialization callback (can be NULL) */
    SCIP_DECL_CONSEXPR_NLHDLREXIT((*exit));      /**< deinitialization callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_NLHDLRDETECT((*detect));  /**< structure detection callback */
 };
 
 

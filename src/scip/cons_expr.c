@@ -261,6 +261,8 @@ typedef struct
 #ifdef SCIP_DEBUG_SOLUTION
    SCIP_SOL*               debugsol;         /**< debug solution (or NULL if not debugging) */
 #endif
+   SCIP_CONSEXPR_NLHDLR**  nlhdlrssuccess;   /**< buffer for nlhdlrs that had success detecting structure at expression */
+   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrssuccessexprdata; /**< buffer for exprdata of nlhdlrs */
 } CREATE_AUXVARS_DATA;
 
 
@@ -3489,16 +3491,20 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(createAuxVarsEnterExpr)
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
    CREATE_AUXVARS_DATA* createdata;
+   int nsuccess;
+   int h;
 
    assert(expr != NULL);
    assert(result != NULL);
    assert(data != NULL);
    assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
 
-   createdata = (CREATE_AUXVARS_DATA *)data;
+   createdata = (CREATE_AUXVARS_DATA*)data;
    conshdlr = createdata->conshdlr;
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(createdata->nlhdlrssuccess != NULL);
+   assert(createdata->nlhdlrssuccessexprdata != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -3540,6 +3546,44 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(createAuxVarsEnterExpr)
          SCIP_CALL( SCIPdebugAddSolVal(scip, expr->auxvar, SCIPgetConsExprExprValue(expr)) );
       }
 #endif
+
+      /* analyze expression with nonlinear handlers */
+      assert(expr->nnlhdlrs == 0); /* we should not have any yet */
+      assert(expr->nlhdlrs == NULL);
+      assert(expr->nlhdlrsexprdata == NULL);
+      nsuccess = 0;
+      for( h = 0; h < conshdlrdata->nnlhdlrs; ++h )
+      {
+         SCIP_CONSEXPR_NLHDLR* nlhdlr;
+         SCIP_Bool success = FALSE;
+
+         nlhdlr = conshdlrdata->nlhdlrs[h];
+         assert(nlhdlr != NULL);
+         assert(nlhdlr->detect != NULL); /* detect callback is mandatory */
+
+         /* call detect routine of nlhdlr */
+         createdata->nlhdlrssuccessexprdata[nsuccess] = NULL;
+         SCIP_CALL( (*nlhdlr->detect)(scip, nlhdlr, expr, &success, &createdata->nlhdlrssuccessexprdata[nsuccess]) );
+
+         if( success )
+         {
+            /* remember nlhdlr and success */
+            createdata->nlhdlrssuccess[nsuccess] = nlhdlr;
+            ++nsuccess;
+         }
+         else
+         {
+            /* nlhdlrexprdata can be non-NULL only if success is TRUE */
+            assert(createdata->nlhdlrssuccessexprdata[nsuccess] == NULL);
+         }
+      }
+      if( nsuccess > 0 )
+      {
+         /* if any nlhdlr had success, then store them and there data in the expression */
+         SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &expr->nlhdlrs, createdata->nlhdlrssuccess, nsuccess) );
+         SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &expr->nlhdlrsexprdata, createdata->nlhdlrssuccessexprdata, nsuccess) );
+         expr->nnlhdlrs = nsuccess;
+      }
    }
    else
    {
@@ -3565,6 +3609,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeAuxVarsEnterExpr)
 
    if( expr->auxvar != NULL )
    {
+      int h;
+
       assert(expr->exprhdlr != SCIPgetConsExprExprHdlrVar((SCIP_CONSHDLR*)data));
       assert(expr->exprhdlr != SCIPgetConsExprExprHdlrValue((SCIP_CONSHDLR*)data));
 
@@ -3580,8 +3626,35 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeAuxVarsEnterExpr)
          SCIP_CALL( SCIPaddVarLocks(scip, expr->auxvar, -1, -1) );
       }
 
+      /* release auxiliary variable */
       SCIP_CALL( SCIPreleaseVar(scip, &expr->auxvar) );
       assert(expr->auxvar == NULL);
+
+      /* remove nonlinear handlers in expression and their data */
+      for( h = 0; h < expr->nnlhdlrs; ++h )
+      {
+         SCIP_CONSEXPR_NLHDLR* nlhdlr;
+
+         /* nothing to free */
+         if( expr->nlhdlrsexprdata[h] == NULL )
+            continue;
+
+         nlhdlr = expr->nlhdlrs[h];
+         assert(nlhdlr != NULL);
+
+         if( nlhdlr->freeexprdata != NULL )
+         {
+            SCIP_CALL( (*nlhdlr->freeexprdata)(scip, nlhdlr, expr->nlhdlrsexprdata + h) );
+            assert(expr->nlhdlrsexprdata[h] == NULL);
+         }
+      }
+      /* free arrays with nonlinear handlers and their data */
+      if( expr->nnlhdlrs > 0 )
+      {
+         SCIPfreeBlockMemoryArray(scip, &expr->nlhdlrs, expr->nnlhdlrs);
+         SCIPfreeBlockMemoryArray(scip, &expr->nlhdlrsexprdata, expr->nnlhdlrs);
+      }
+      expr->nnlhdlrs = 0;
    }
    else
    {
@@ -3605,6 +3678,7 @@ SCIP_RETCODE createAuxVars(
    )
 {
    CREATE_AUXVARS_DATA createdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    int i;
 
@@ -3622,6 +3696,13 @@ SCIP_RETCODE createAuxVars(
       assert(createdata.debugsol != NULL);
    }
 #endif
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* allocate some buffer for temporary storage of nlhdlr detect result */
+   SCIP_CALL( SCIPallocBufferArray(scip, &createdata.nlhdlrssuccess, conshdlrdata->nnlhdlrs) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &createdata.nlhdlrssuccessexprdata, conshdlrdata->nnlhdlrs) );
 
    for( i = 0; i < nconss; ++i )
    {
@@ -3645,19 +3726,24 @@ SCIP_RETCODE createAuxVars(
 
          if( *infeasible )
          {
+            /* TODO no printf */
             printf("infeasibility detected while creating vars: lhs of constraint (%g) > ub of node (%g)\n",
                   consdata->lhs, SCIPvarGetUbLocal(consdata->expr->auxvar));
-            return SCIP_OKAY;
+            break;
          }
          SCIP_CALL( SCIPtightenVarUb(scip, consdata->expr->auxvar, consdata->rhs, FALSE, infeasible, NULL) );
          if( *infeasible )
          {
+            /* TODO no printf */
             printf("infeasibility detected while creating vars: rhs of constraint (%g) < lb of node (%g)\n",
                   consdata->rhs, SCIPvarGetLbLocal(consdata->expr->auxvar));
-            return SCIP_OKAY;
+            break;
          }
       }
    }
+
+   SCIPfreeBufferArray(scip, &createdata.nlhdlrssuccess);
+   SCIPfreeBufferArray(scip, &createdata.nlhdlrssuccessexprdata);
 
    return SCIP_OKAY;
 }
@@ -6184,6 +6270,12 @@ SCIP_RETCODE SCIPreleaseConsExprExpr(
             assert((*expr)->nlhdlrsexprdata[i] == NULL);
          }
       }
+      /* free arrays with nonlinear handlers and their data */
+      if( (*expr)->nnlhdlrs > 0 )
+      {
+         SCIPfreeBlockMemoryArray(scip, &(*expr)->nlhdlrs, (*expr)->nnlhdlrs);
+         SCIPfreeBlockMemoryArray(scip, &(*expr)->nlhdlrsexprdata, (*expr)->nnlhdlrs);
+      }
 
       /* handle the root expr separately: free its data here */
       if( (*expr)->exprdata != NULL && (*expr)->exprhdlr->freedata != NULL )
@@ -7751,6 +7843,7 @@ SCIP_RETCODE SCIPincludeConsExprNlHdlrBasic(
    const char*                 name,         /**< name of nonlinear handler (must not be NULL) */
    const char*                 desc,         /**< description of nonlinear handler (can be NULL) */
    unsigned int                priority,     /**< priority of nonlinear handler */
+   SCIP_DECL_CONSEXPR_NLHDLRDETECT((*detect)), /**< structure detection callback of nonlinear handler */
    SCIP_CONSEXPR_NLHDLRDATA*   data          /**< data of nonlinear handler (can be NULL) */
    )
 {
@@ -7759,8 +7852,9 @@ SCIP_RETCODE SCIPincludeConsExprNlHdlrBasic(
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(name != NULL);
    assert(nlhdlr != NULL);
+   assert(name != NULL);
+   assert(detect != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -7775,6 +7869,7 @@ SCIP_RETCODE SCIPincludeConsExprNlHdlrBasic(
 
    (*nlhdlr)->priority = priority;
    (*nlhdlr)->data = data;
+   (*nlhdlr)->detect = detect;
 
    ENSUREBLOCKMEMORYARRAYSIZE(scip, conshdlrdata->nlhdlrs, conshdlrdata->nlhdlrssize, conshdlrdata->nnlhdlrs+1);
 
