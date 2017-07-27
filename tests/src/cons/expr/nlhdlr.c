@@ -31,10 +31,8 @@ static SCIP_VAR* y;
 
 struct SCIP_ConsExpr_NlHdlrData
 {
-   int dummy;
+   SCIP_Bool initialized;
 };
-
-static SCIP_CONSEXPR_NLHDLRDATA testnlhdlrdata = { .dummy = 42 };
 
 /* creates scip, problem, includes expression constraint handler, creates and adds variables */
 static
@@ -89,9 +87,10 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(freeHdlrData)
    assert(scip != NULL);
    assert(nlhdlr != NULL);
    assert(nlhdlrdata != NULL);
-   cr_assert(*nlhdlrdata == &testnlhdlrdata, "nlhdlrdata is not the one that was passed in by SCIPincludeConsExprNlHdlrBasic");
+   assert(*nlhdlrdata != NULL);
+   cr_assert(!(*nlhdlrdata)->initialized, "nlhdlr should not yet be initialized or be de-initialized when freeing");
 
-   *nlhdlrdata = NULL;
+   SCIPfreeMemory(scip, nlhdlrdata);
 
    return SCIP_OKAY;
 }
@@ -100,6 +99,7 @@ static
 SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(copyHdlr)
 {
    SCIP_CONSEXPR_NLHDLR* targetnlhdlr;
+   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
 
    assert(targetscip != NULL);
    assert(targetconsexprhdlr != NULL);
@@ -107,8 +107,10 @@ SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(copyHdlr)
    assert(sourcenlhdlr != NULL);
    cr_assert(strcmp(SCIPgetConsExprNlHdlrName(sourcenlhdlr), "testhdlr") == 0, "source nlhdlr is not testhdlr");
 
+   SCIP_CALL( SCIPallocClearMemory(testscip, &nlhdlrdata) );
+
    SCIP_CALL( SCIPincludeConsExprNlHdlrBasic(targetscip, targetconsexprhdlr, &targetnlhdlr,
-      SCIPgetConsExprNlHdlrName(sourcenlhdlr), SCIPgetConsExprNlHdlrDesc(sourcenlhdlr), SCIPgetConsExprNlHdlrPriority(sourcenlhdlr), SCIPgetConsExprNlHdlrData(sourcenlhdlr)) );
+      SCIPgetConsExprNlHdlrName(sourcenlhdlr), SCIPgetConsExprNlHdlrDesc(sourcenlhdlr), SCIPgetConsExprNlHdlrPriority(sourcenlhdlr), nlhdlrdata) );
    SCIPsetConsExprNlHdlrFreeHdlrData(targetscip, targetnlhdlr, freeHdlrData);
    SCIPsetConsExprNlHdlrCopyHdlr(testscip, targetnlhdlr, copyHdlr);
 
@@ -122,12 +124,15 @@ Test(conshdlr, nlhdlr, .init = setup, .fini = teardown,
 {
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSEXPR_NLHDLR* nlhdlr;
+   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
 
    /* get expr conshdlr */
    conshdlr = SCIPfindConshdlr(testscip, "expr");
    assert(conshdlr != NULL);
 
-   SCIP_CALL( SCIPincludeConsExprNlHdlrBasic(testscip, conshdlr, &nlhdlr, "testhdlr", "tests nonlinear handler functionality", 0, &testnlhdlrdata) );
+   SCIP_CALL( SCIPallocClearMemory(testscip, &nlhdlrdata) );
+
+   SCIP_CALL( SCIPincludeConsExprNlHdlrBasic(testscip, conshdlr, &nlhdlr, "testhdlr", "tests nonlinear handler functionality", 0, nlhdlrdata) );
 
    SCIPsetConsExprNlHdlrFreeHdlrData(testscip, nlhdlr, freeHdlrData);
    SCIPsetConsExprNlHdlrCopyHdlr(testscip, nlhdlr, copyHdlr);
