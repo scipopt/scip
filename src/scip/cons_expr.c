@@ -3860,6 +3860,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
       return SCIP_OKAY;
    }
 
+   /* TODO call sepa callbacks of nlhdlrs, if any */
+
    /* it only makes sense to call the separation callback if there is a variable attached to the expression */
    if( expr->exprhdlr->sepa != NULL && expr->auxvar != NULL )
    {
