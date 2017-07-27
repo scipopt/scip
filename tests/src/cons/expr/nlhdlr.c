@@ -96,6 +96,42 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(freeHdlrData)
 }
 
 static
+SCIP_DECL_CONSEXPR_NLHDLRINIT(initHdlr)
+{
+   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
+
+   assert(scip != NULL);
+   assert(nlhdlr != NULL);
+
+   nlhdlrdata = SCIPgetConsExprNlHdlrData(nlhdlr);
+   assert(nlhdlrdata != NULL);
+
+   cr_assert(!nlhdlrdata->initialized, "nlhdlr cannot be initialized already");
+
+   nlhdlrdata->initialized = TRUE;
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_DECL_CONSEXPR_NLHDLREXIT(exitHldr)
+{
+   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
+
+   assert(scip != NULL);
+   assert(nlhdlr != NULL);
+
+   nlhdlrdata = SCIPgetConsExprNlHdlrData(nlhdlr);
+   assert(nlhdlrdata != NULL);
+
+   cr_assert(nlhdlrdata->initialized, "nlhdlr must have been initialized");
+
+   nlhdlrdata->initialized = FALSE;
+
+   return SCIP_OKAY;
+}
+
+static
 SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(copyHdlr)
 {
    SCIP_CONSEXPR_NLHDLR* targetnlhdlr;
@@ -113,6 +149,7 @@ SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(copyHdlr)
       SCIPgetConsExprNlHdlrName(sourcenlhdlr), SCIPgetConsExprNlHdlrDesc(sourcenlhdlr), SCIPgetConsExprNlHdlrPriority(sourcenlhdlr), nlhdlrdata) );
    SCIPsetConsExprNlHdlrFreeHdlrData(targetscip, targetnlhdlr, freeHdlrData);
    SCIPsetConsExprNlHdlrCopyHdlr(testscip, targetnlhdlr, copyHdlr);
+   SCIPsetConsExprNlHdlrInitExit(testscip, targetnlhdlr, initHdlr, exitHldr);
 
    return SCIP_OKAY;
 }
@@ -136,6 +173,7 @@ Test(conshdlr, nlhdlr, .init = setup, .fini = teardown,
 
    SCIPsetConsExprNlHdlrFreeHdlrData(testscip, nlhdlr, freeHdlrData);
    SCIPsetConsExprNlHdlrCopyHdlr(testscip, nlhdlr, copyHdlr);
+   SCIPsetConsExprNlHdlrInitExit(testscip, nlhdlr, initHdlr, exitHldr);
 
    SCIP_CALL( SCIPsetIntParam(testscip, "display/verblevel", SCIP_VERBLEVEL_NONE) );
    SCIP_CALL( SCIPsolve(testscip) );
