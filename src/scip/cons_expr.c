@@ -4448,8 +4448,10 @@ SCIP_DECL_CONSEXITPRE(consExitpreExpr)
 static
 SCIP_DECL_CONSINITSOL(consInitsolExpr)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    int c;
+   int i;
 
    for( c = 0; c < nconss; ++c )
    {
@@ -4468,6 +4470,21 @@ SCIP_DECL_CONSINITSOL(consInitsolExpr)
       }
    }
 
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* initialize nonlinear handlers */
+   for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
+   {
+      SCIP_CONSEXPR_NLHDLR* nlhdlr;
+
+      nlhdlr = conshdlrdata->nlhdlrs[i];
+      if( nlhdlr->init != NULL )
+      {
+         SCIP_CALL( (*nlhdlr->init)(scip, nlhdlr) );
+      }
+   }
+
    return SCIP_OKAY;
 }
 
@@ -4478,9 +4495,22 @@ SCIP_DECL_CONSEXITSOL(consExitsolExpr)
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    int c;
+   int i;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    conshdlrdata->restart = restart;
+
+   /* deinitialize nonlinear handlers */
+   for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
+   {
+      SCIP_CONSEXPR_NLHDLR* nlhdlr;
+
+      nlhdlr = conshdlrdata->nlhdlrs[i];
+      if( nlhdlr->exit != NULL )
+      {
+         SCIP_CALL( (*nlhdlr->exit)(scip, nlhdlr) );
+      }
+   }
 
    /* call separation deinitialization callbacks; after a restart, the rows stored in the expressions are broken */
    SCIP_CALL( exitSepa(scip, conshdlr, conss, nconss) );
