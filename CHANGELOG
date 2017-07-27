@@ -32,6 +32,8 @@ fixed bugs:
 - treat reopt bugs: Avoid numerical problems with changing objective; fix check for changed objective
 - fixed reading issue in mps reader: integer variables fixed to 0 or 1 are treated as binaries now,
   allowing to use them as indicator variables
+- afternode heuristics are now called even if the node limit was reached and the solving process will be stopped
+  after the current node
 
 performance improvements:
 - widened a bottleneck in simplifying long signomial sums in a nonlinear constraint
