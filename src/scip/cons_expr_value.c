@@ -57,7 +57,6 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataValue)
    assert(sourceexpr != NULL);
 
    *targetexprdata = SCIPgetConsExprExprData(sourceexpr);
-   assert(*targetexprdata != NULL);
 
    return SCIP_OKAY;
 }
