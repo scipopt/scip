@@ -587,7 +587,7 @@ SCIP_RETCODE computeFacet(
    SCIP_CALL( SCIPlpiChgBounds(lp, ncols, inds, lb, ub) );
    SCIP_CALL( SCIPlpiChgSides(lp, nrows, inds, aux, aux) );
    SCIP_CALL( SCIPlpiChgObjsen(lp, overestimate ? SCIP_OBJSEN_MAXIMIZE : SCIP_OBJSEN_MINIMIZE) );
-   SCIP_CALL( SCIPlpiWriteLP(lp, "lp.lp") );
+   /* SCIP_CALL( SCIPlpiWriteLP(lp, "lp.lp") ); */
 
    /* free memory used to update the LP */
    SCIPfreeBufferArray(scip, &ub);
