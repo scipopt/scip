@@ -856,7 +856,7 @@ SCIP_RETCODE SCIPincludeConsExprNlHdlrBasic(
    SCIP_CONSEXPR_NLHDLR**      nlhdlr,       /**< buffer where to store nonlinear handler */
    const char*                 name,         /**< name of nonlinear handler (must not be NULL) */
    const char*                 desc,         /**< description of nonlinear handler (can be NULL) */
-   unsigned int                precedence,   /**< precedence of nonlinear handler */
+   unsigned int                priority,     /**< priority of nonlinear handler */
    SCIP_CONSEXPR_NLHDLRDATA*   data          /**< data of nonlinear handler (can be NULL) */
    );
 
@@ -892,6 +892,31 @@ void SCIPsetConsExprNlHdlrInitExit(
    SCIP_DECL_CONSEXPR_NLHDLRINIT((*init)),   /**< initialization callback (can be NULL) */
    SCIP_DECL_CONSEXPR_NLHDLREXIT((*exit))    /**< deinitialization callback (can be NULL) */
 );
+
+/** gives name of nonlinear handler */
+EXTERN
+const char* SCIPgetConsExprNlHdlrName(
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
+);
+
+/** gives description of nonlinear handler, can be NULL */
+EXTERN
+const char* SCIPgetConsExprNlHdlrDesc(
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
+);
+
+/** gives priority of nonlinear handler */
+EXTERN
+int SCIPgetConsExprNlHdlrPriority(
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
+);
+
+/** gives handler data of nonlinear handler */
+EXTERN
+SCIP_CONSEXPR_NLHDLRDATA* SCIPgetConsExprNlHdlrData(
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
+);
+
 
 #ifdef __cplusplus
 }

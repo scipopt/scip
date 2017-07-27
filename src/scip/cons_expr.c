@@ -272,7 +272,7 @@ typedef struct
 static
 SCIP_RETCODE includeConshdlrExprBasic(SCIP* scip);
 
-/** copy expression handlers from sourceconshdlr to (target's) scip consexprhdlr */
+/** copy expression and nonlinear handlers from sourceconshdlr to (target's) scip consexprhdlr */
 static
 SCIP_RETCODE copyConshdlrExprExprHdlr(
    SCIP*                 scip,               /**< (target) SCIP data structure */
@@ -316,6 +316,12 @@ SCIP_RETCODE copyConshdlrExprExprHdlr(
       }
    }
 
+   /* set pointer to important expression handlers in conshdlr of target SCIP */
+   conshdlrdata->exprvarhdlr = SCIPfindConsExprExprHdlr(conshdlr, "var");
+   conshdlrdata->exprvalhdlr = SCIPfindConsExprExprHdlr(conshdlr, "val");
+   conshdlrdata->exprsumhdlr = SCIPfindConsExprExprHdlr(conshdlr, "sum");
+   conshdlrdata->exprprodhdlr = SCIPfindConsExprExprHdlr(conshdlr, "prod");
+
    /* copy nonlinear handlers */
    for( i = 0; i < sourceconshdlrdata->nnlhdlrs; ++i )
    {
@@ -327,12 +333,6 @@ SCIP_RETCODE copyConshdlrExprExprHdlr(
          SCIP_CALL( sourcenlhdlr->copyhdlr(scip, conshdlr, sourceconshdlr, sourcenlhdlr) );
       }
    }
-
-   /* set pointer to important expression handlers in conshdlr of target SCIP */
-   conshdlrdata->exprvarhdlr = SCIPfindConsExprExprHdlr(conshdlr, "var");
-   conshdlrdata->exprvalhdlr = SCIPfindConsExprExprHdlr(conshdlr, "val");
-   conshdlrdata->exprsumhdlr = SCIPfindConsExprExprHdlr(conshdlr, "sum");
-   conshdlrdata->exprprodhdlr = SCIPfindConsExprExprHdlr(conshdlr, "prod");
 
    return SCIP_OKAY;
 }
@@ -4278,7 +4278,7 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyExpr)
    /* create basic data of constraint handler and include it to scip */
    SCIP_CALL( includeConshdlrExprBasic(scip) );
 
-   /* copy expression handlers */
+   /* copy expression and nonlinear handlers */
    SCIP_CALL( copyConshdlrExprExprHdlr(scip, conshdlr, valid) );
 
    return SCIP_OKAY;
@@ -7720,7 +7720,7 @@ SCIP_RETCODE SCIPincludeConsExprNlHdlrBasic(
    SCIP_CONSEXPR_NLHDLR**      nlhdlr,       /**< buffer where to store nonlinear handler */
    const char*                 name,         /**< name of nonlinear handler (must not be NULL) */
    const char*                 desc,         /**< description of nonlinear handler (can be NULL) */
-   unsigned int                precedence,   /**< precedence of nonlinear handler */
+   unsigned int                priority,     /**< priority of nonlinear handler */
    SCIP_CONSEXPR_NLHDLRDATA*   data          /**< data of nonlinear handler (can be NULL) */
    )
 {
@@ -7743,7 +7743,7 @@ SCIP_RETCODE SCIPincludeConsExprNlHdlrBasic(
       SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*nlhdlr)->desc, desc, strlen(desc)+1) );
    }
 
-   (*nlhdlr)->precedence = precedence;
+   (*nlhdlr)->priority = priority;
    (*nlhdlr)->data = data;
 
    ENSUREBLOCKMEMORYARRAYSIZE(scip, conshdlrdata->nlhdlrs, conshdlrdata->nlhdlrssize, conshdlrdata->nnlhdlrs+1);
@@ -7803,3 +7803,44 @@ void SCIPsetConsExprNlHdlrInitExit(
    nlhdlr->init = init;
    nlhdlr->exit = exit;
 }
+
+/** gives name of nonlinear handler */
+const char* SCIPgetConsExprNlHdlrName(
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
+)
+{
+   assert(nlhdlr != NULL);
+
+   return nlhdlr->name;
+}
+
+/** gives description of nonlinear handler, can be NULL */
+const char* SCIPgetConsExprNlHdlrDesc(
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
+)
+{
+   assert(nlhdlr != NULL);
+
+   return nlhdlr->desc;
+}
+
+/** gives priority of nonlinear handler */
+int SCIPgetConsExprNlHdlrPriority(
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
+)
+{
+   assert(nlhdlr != NULL);
+
+   return nlhdlr->priority;
+}
+
+/** gives handler data of nonlinear handler */
+SCIP_CONSEXPR_NLHDLRDATA* SCIPgetConsExprNlHdlrData(
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
+)
+{
+   assert(nlhdlr != NULL);
+
+   return nlhdlr->data;
+}
+

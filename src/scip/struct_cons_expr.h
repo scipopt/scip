@@ -116,7 +116,7 @@ struct SCIP_ConsExpr_NlHdlr
    char*                         name;       /**< nonlinearity handler name */
    char*                         desc;       /**< nonlinearity handler description (can be NULL) */
    SCIP_CONSEXPR_NLHDLRDATA*     data;       /**< data of handler */
-   unsigned int                  precedence; /**< precedence of nonlinearity handler */
+   unsigned int                  priority;   /**< priority of nonlinearity handler */
 
    SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA((*freehdlrdata));  /**< callback to free data of handler (can be NULL) */
    SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA((*freeexprdata));  /**< callback to free expression specific data (can be NULL) */

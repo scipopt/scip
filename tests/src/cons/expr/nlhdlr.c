@@ -20,6 +20,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/scip.h"
+#include "scip/scipdefplugins.h"
 #include "scip/cons_expr.h"
 
 #include "include/scip_test.h"
@@ -27,7 +28,6 @@
 static SCIP* testscip;
 static SCIP_VAR* x;
 static SCIP_VAR* y;
-static SCIP_CONS* consexpr;
 
 struct SCIP_ConsExpr_NlHdlrData
 {
@@ -40,34 +40,42 @@ static SCIP_CONSEXPR_NLHDLRDATA testnlhdlrdata = { .dummy = 42 };
 static
 void setup(void)
 {
+   SCIP_CONS* consexpr;
    SCIP_Bool success;
-   const char* input = "[expr] <test>: <x>^2 + 2*<x>*<y> + <y>^2 <= 2;";
+   const char* input1 = "[expr] <test>: (<x>-0)^2 + (<y>-0)^2 <= 1.5;";
+   const char* input2 = "[expr] <test>: (<x>-1)^2 + (<y>-1)^2 <= 1.0;";
 
+   /* create scip with all plugins */
    SCIP_CALL( SCIPcreate(&testscip) );
-
-   /* include cons_expr: this adds the operator handlers */
-   SCIP_CALL( SCIPincludeConshdlrExpr(testscip) );
+   SCIP_CALL( SCIPincludeDefaultPlugins(testscip) );
 
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(testscip, "test_problem") );
 
-   SCIP_CALL( SCIPcreateVarBasic(testscip, &x, "x", 0.0, 5.0, 1.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPcreateVarBasic(testscip, &y, "y", 0.0, 5.0, 2.0, SCIP_VARTYPE_INTEGER) );
+   SCIP_CALL( SCIPcreateVarBasic(testscip, &x, "x", 0.0, 5.0, -1.5, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(testscip, &y, "y", 0.0, 5.0, -2.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(testscip, x) );
    SCIP_CALL( SCIPaddVar(testscip, y) );
 
    success = FALSE;
-   SCIP_CALL( SCIPparseCons(testscip, &consexpr, input,
+   SCIP_CALL( SCIPparseCons(testscip, &consexpr, input1,
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
    SCIP_CALL( SCIPaddCons(testscip, consexpr) );
+   SCIP_CALL( SCIPreleaseCons(testscip, &consexpr) );
+
+   success = FALSE;
+   SCIP_CALL( SCIPparseCons(testscip, &consexpr, input2,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   cr_assert(success);
+   SCIP_CALL( SCIPaddCons(testscip, consexpr) );
+   SCIP_CALL( SCIPreleaseCons(testscip, &consexpr) );
 }
 
 /* releases variables, frees scip */
 static
 void teardown(void)
 {
-   SCIP_CALL( SCIPreleaseCons(testscip, &consexpr) );
    SCIP_CALL( SCIPreleaseVar(testscip, &x) );
    SCIP_CALL( SCIPreleaseVar(testscip, &y) );
    SCIP_CALL( SCIPfree(&testscip) );
@@ -88,6 +96,26 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(freeHdlrData)
    return SCIP_OKAY;
 }
 
+static
+SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(copyHdlr)
+{
+   SCIP_CONSEXPR_NLHDLR* targetnlhdlr;
+
+   assert(targetscip != NULL);
+   assert(targetconsexprhdlr != NULL);
+   assert(sourceconsexprhdlr != NULL);
+   assert(sourcenlhdlr != NULL);
+   cr_assert(strcmp(SCIPgetConsExprNlHdlrName(sourcenlhdlr), "testhdlr") == 0, "source nlhdlr is not testhdlr");
+
+   SCIP_CALL( SCIPincludeConsExprNlHdlrBasic(targetscip, targetconsexprhdlr, &targetnlhdlr,
+      SCIPgetConsExprNlHdlrName(sourcenlhdlr), SCIPgetConsExprNlHdlrDesc(sourcenlhdlr), SCIPgetConsExprNlHdlrPriority(sourcenlhdlr), SCIPgetConsExprNlHdlrData(sourcenlhdlr)) );
+   SCIPsetConsExprNlHdlrFreeHdlrData(targetscip, targetnlhdlr, freeHdlrData);
+   SCIPsetConsExprNlHdlrCopyHdlr(testscip, targetnlhdlr, copyHdlr);
+
+   return SCIP_OKAY;
+}
+
+
 Test(conshdlr, nlhdlr, .init = setup, .fini = teardown,
    .description = "test basic functionality of nonlinear handler of the cons_expr constraint handler."
    )
@@ -102,4 +130,9 @@ Test(conshdlr, nlhdlr, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPincludeConsExprNlHdlrBasic(testscip, conshdlr, &nlhdlr, "testhdlr", "tests nonlinear handler functionality", 0, &testnlhdlrdata) );
 
    SCIPsetConsExprNlHdlrFreeHdlrData(testscip, nlhdlr, freeHdlrData);
+   SCIPsetConsExprNlHdlrCopyHdlr(testscip, nlhdlr, copyHdlr);
+
+   SCIP_CALL( SCIPsetIntParam(testscip, "display/verblevel", SCIP_VERBLEVEL_NONE) );
+   SCIP_CALL( SCIPsolve(testscip) );
+   /* SCIP_CALL( SCIPprintBestSol(testscip, NULL, TRUE) ); */
 }
