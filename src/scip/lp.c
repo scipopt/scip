@@ -14155,7 +14155,7 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
       else
       {
          SCIP_Real primsolval = primsol[c] + rayscale * ray[c];
-         lpicols[c]->primsol = MAX(-SCIPsetInfinity(set), MIN(SCIPsetInfinity(set), primsolval));
+         lpicols[c]->primsol = MAX(-SCIPsetInfinity(set), MIN(SCIPsetInfinity(set), primsolval)); /*lint !e666*/
       }
       lpicols[c]->redcost = SCIP_INVALID;
       lpicols[c]->validredcostlp = -1;
