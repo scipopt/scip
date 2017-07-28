@@ -3028,6 +3028,18 @@ SCIP_RETCODE SCIPsetupBendersSubproblem(
    int                   probnumber          /**< the subproblem number */
    );
 
+/** the solves a single Benders' decomposition subproblem. The method either calls the users solve subproblem method or
+ * calls the generic method. In the case of the generic method, the user must set up the subproblem prior to calling
+ * this method. */
+EXTERN
+SCIP_RETCODE SCIPsolveBendersSubproblem(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_SOL*             sol,                /**< primal CIP solution, can be NULL for the current LP/Pseudo solution */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_Bool*            infeasible          /**< is the master problem infeasible with respect to the Benders' cuts? */
+   );
+
 /** checks the optimality of a Benders' decomposition subproblem by comparing the objective function value agains the
  * value of the corresponding auxiliary variable */
 EXTERN

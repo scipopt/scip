@@ -183,6 +183,17 @@ SCIP_RETCODE SCIPbendersSetupSubproblem(
    int                   probnum             /**< the subproblem number */
    );
 
+/** Solve a Benders' decomposition subproblems. This will either call the user defined method or the generic solving
+ * methods. If the generic method is called, then the subproblem must be set up before calling this method. */
+extern
+SCIP_RETCODE SCIPbendersSolveSubproblem(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_SOL*             sol,                /**< primal CIP solution, can be NULL */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_Bool*            infeasible          /**< is the master problem infeasible with respect to the Benders' cuts? */
+   );
+
 /** frees the subproblems. */
 extern
 SCIP_RETCODE SCIPbendersFreeSubproblem(

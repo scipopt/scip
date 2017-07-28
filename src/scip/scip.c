@@ -6335,7 +6335,9 @@ SCIP_RETCODE SCIPaddBendersSubproblem(
    return SCIP_OKAY;
 }
 
-/** setups the Benders' decomposition subproblem. This can be overridden in the Benders' decomposition plugins */
+/** calls the generic subproblem setup method for a Benders' decomposition subproblem. This is called if the user
+ * requires to solve the Benders' decomposition subproblem separately from the main Benders' solving loop. This could be
+ * in the case of enhancement techniques. */
 SCIP_RETCODE SCIPsetupBendersSubproblem(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
@@ -6349,6 +6351,27 @@ SCIP_RETCODE SCIPsetupBendersSubproblem(
    assert(probnumber >= 0 && probnumber < SCIPgetBendersNSubproblems(scip, benders));
 
    SCIP_CALL( SCIPbendersSetupSubproblem(benders, scip->set, sol, probnumber) );
+
+   return SCIP_OKAY;
+}
+
+/** the solves a single Benders' decomposition subproblem. The method either calls the users solve subproblem method or
+ * calls the generic method. In the case of the generic method, the user must set up the subproblem prior to calling
+ * this method. */
+SCIP_RETCODE SCIPsolveBendersSubproblem(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERS*         benders,            /**< variable benders */
+   SCIP_SOL*             sol,                /**< primal CIP solution, can be NULL for the current LP/Pseudo solution */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_Bool*            infeasible          /**< is the master problem infeasible with respect to the Benders' cuts? */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+   assert(benders != NULL);
+   assert(probnumber >= 0 && probnumber < SCIPgetBendersNSubproblems(scip, benders));
+
+   SCIP_CALL( SCIPbendersSolveSubproblem(benders, scip->set, sol, probnumber, infeasible) );
 
    return SCIP_OKAY;
 }

@@ -920,7 +920,7 @@ SCIP_RETCODE createSubproblems(
             assert(eventhdlr != NULL);
 
             /* Getting the problem into the right SCIP stage for solving */
-            SCIP_CALL( SCIPbendersSolveSubproblem(benders, i, &infeasible) );
+            SCIP_CALL( SCIPbendersSolveSubproblemMIP(benders, i, &infeasible) );
 
             /* Constructing the LP that can be solved in later iterations */
             SCIP_CALL( SCIPconstructLP(subproblem, &cutoff) );
@@ -1679,15 +1679,15 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
    assert(benders != NULL);
    assert(probnum >= 0 && probnum < benders->nsubproblems);
 
-   /* if the Benders subproblem is an LP, then probing mode must be started */
-   if( SCIPbendersSubprobIsLP(benders, probnum) )
-      SCIP_CALL( SCIPstartProbing(SCIPbendersSubproblem(benders, probnum)) );
-
    /* if the subproblem solve callback is implemented, then that is used instead of the default setup */
    if( benders->benderssolvesub != NULL)
       SCIP_CALL( benders->benderssolvesub(set->scip, benders, sol, probnum, infeasible) );
    else
    {
+      /* if the Benders subproblem is an LP, then probing mode must be started */
+      if( SCIPbendersSubprobIsLP(benders, probnum) )
+         SCIP_CALL( SCIPstartProbing(SCIPbendersSubproblem(benders, probnum)) );
+
       /* setting up the subproblem */
       SCIP_CALL( SCIPbendersSetupSubproblem(benders, set, sol, probnum) );
 
@@ -1695,7 +1695,7 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
       if( SCIPbendersSubprobIsLP(benders, probnum) )
          SCIP_CALL( SCIPbendersSolveSubproblemLP(benders, probnum, infeasible) );
       else
-         SCIP_CALL( SCIPbendersSolveSubproblem(benders, probnum, infeasible) );
+         SCIP_CALL( SCIPbendersSolveSubproblemMIP(benders, probnum, infeasible) );
    }
 
    subproblem = SCIPbendersSubproblem(benders, probnum);
@@ -1759,6 +1759,42 @@ SCIP_RETCODE SCIPbendersSetupSubproblem(
          assert(fixed);
          assert(!infeasible);
       }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** Solve a Benders' decomposition subproblems. This will either call the user defined method or the generic solving
+ * methods. If the generic method is called, then the subproblem must be set up before calling this method. */
+extern
+SCIP_RETCODE SCIPbendersSolveSubproblem(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_SOL*             sol,                /**< primal CIP solution, can be NULL */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_Bool*            infeasible          /**< is the master problem infeasible with respect to the Benders' cuts? */
+   )
+{
+   assert(benders != NULL);
+   assert(set != NULL);
+   assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
+
+   /* if the subproblem solve callback is implemented, then that is used instead of the default setup */
+   if( benders->benderssolvesub != NULL)
+      SCIP_CALL( benders->benderssolvesub(set->scip, benders, sol, probnumber, infeasible) );
+   else
+   {
+      /* solving the subproblem */
+      if( SCIPbendersSubprobIsLP(benders, probnumber) )
+      {
+         /* if the subproblem is not in probing mode, then it must be put into that mode for the LP solve. */
+         if( !SCIPinProbing(SCIPbendersSubproblem(benders, probnumber)) )
+            SCIP_CALL( SCIPstartProbing(SCIPbendersSubproblem(benders, probnumber)) );
+
+         SCIP_CALL( SCIPbendersSolveSubproblemLP(benders, probnumber, infeasible) );
+      }
+      else
+         SCIP_CALL( SCIPbendersSolveSubproblemMIP(benders, probnumber, infeasible) );
    }
 
    return SCIP_OKAY;
@@ -1829,7 +1865,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
 }
 
 /** solves the Benders' decomposition subproblem. */
-SCIP_RETCODE SCIPbendersSolveSubproblem(
+SCIP_RETCODE SCIPbendersSolveSubproblemMIP(
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool*            infeasible          /**< a flag to indicate whether all subproblems are feasible */

@@ -240,7 +240,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
 
 /** solves the Benders' decomposition subproblem. */
 EXTERN
-SCIP_RETCODE SCIPbendersSolveSubproblem(
+SCIP_RETCODE SCIPbendersSolveSubproblemMIP(
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool*            infeasible          /**< a flag to indicate whether all subproblems are feasible */
