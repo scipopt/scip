@@ -185,7 +185,7 @@ if( COVERAGE )
     APPEND_COVERAGE_COMPILER_FLAGS()
     set(COVERAGE_EXCLUDES '/usr*')
     SETUP_TARGET_FOR_COVERAGE(NAME coverage
-                          EXECUTABLE bash -c "${CMAKE_TEST_COMMAND} ${COVERAGE_CTEST_ARGS}"
+                          EXECUTABLE bash -c "${CMAKE_CTEST_COMMAND} ${COVERAGE_CTEST_ARGS}"
                           DEPENDENCIES scip)
 endif()
 
