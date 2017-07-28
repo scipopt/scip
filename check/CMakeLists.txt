@@ -291,7 +291,7 @@ if(NOT ${TPI} STREQUAL "none")
         #
         configure_file(interactiveshell/concurrentsolve.bat.in interactiveshell/concurrentsolve-${basename}.bat)
         add_test(NAME MIP-concurrentsolve-${basename}
-            COMMAND $<TARGET_FILE:scip-bin> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/concurrentsolve-${basename}.bat
+            COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/concurrentsolve-${basename}.bat
             )
         set_tests_properties(MIP-concurrentsolve-${basename} PROPERTIES PASS_REGULAR_EXPRESSION "Validation         : Success")
     endforeach(instance)
