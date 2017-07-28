@@ -228,7 +228,10 @@ SCIP_RETCODE conflictstoreEnsureMem(
       /* initialize the complete data structure */
       if( conflictstore->conflictsize == 0 )
       {
+         assert(conflictstore->storesize > 0);
+
          newsize = MIN(conflictstore->storesize, CONFLICTSTORE_SIZE);
+         newsize = MAX(newsize, num);
          SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &conflictstore->conflicts, newsize) );
          SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &conflictstore->confprimalbnds, newsize) );
       }
@@ -917,7 +920,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
    /* add the new constraint based on a dual solution at the last position */
    SCIPconsCapture(dualproof);
    conflictstore->dualsolconfs[conflictstore->ndualsolconfs] = dualproof;
-   conflictstore->dualprimalbnds[conflictstore->ndualsolconfs] = SCIPgetCutoffbound(set->scip);
+   conflictstore->dualprimalbnds[conflictstore->ndualsolconfs] = SCIPgetCutoffbound(set->scip) - SCIPsetSumepsilon(set);
    ++conflictstore->ndualsolconfs;
 
    /* increase the number of non-zeros */
@@ -1100,8 +1103,6 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
 
    SCIPsetDebugMsg(set, "-> removed %d/%d conflicts, %d depending on cutoff bound\n", ndelconfs,
          conflictstore->nconflicts+ndelconfs, ndelconfs);
-   printf("-> removed %d/%d conflicts, %d depending on cutoff bound\n", ndelconfs,
-         conflictstore->nconflicts+ndelconfs, ndelconfs);
 
    /* update all proof constraints based on a dual solution */
    for( i = 0; i < conflictstore->ndualsolconfs; i++ )
@@ -1133,18 +1134,14 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
          {
             assert(SCIPsetIsInfinity(set, -lhs));
 
-            newside = rhs - conflictstore->dualprimalbnds[i] + cutoffbound;
-            printf("update rhs: %g -> %g\n", rhs, newside);
-
+            newside = rhs - conflictstore->dualprimalbnds[i] + cutoffbound - SCIPsetSumepsilon(set);
             SCIP_CALL( SCIPchgRhsLinear(set->scip, dualproof, newside) );
          }
          else
          {
             assert(!SCIPsetIsInfinity(set, -lhs));
 
-            newside = lhs + conflictstore->dualprimalbnds[i] - cutoffbound;
-            printf("update lhs: %g -> %g\n", lhs, newside);
-
+            newside = lhs + conflictstore->dualprimalbnds[i] - (cutoffbound - SCIPsetSumepsilon(set));
             SCIP_CALL( SCIPchgLhsLinear(set->scip, dualproof, newside) );
          }
 
@@ -1155,14 +1152,11 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
          {
             SCIP_CALL( SCIPconsResetAge(dualproof, set) );
          }
-         conflictstore->dualprimalbnds[i] = cutoffbound;
+         conflictstore->dualprimalbnds[i] = cutoffbound - SCIPsetSumepsilon(set);
       }
-      else
-         printf("skip <%s>\n", SCIPconshdlrGetName(conshdlr));
    }
 
    SCIPsetDebugMsg(set, "-> changed %d sides of dual solution constraints\n", nchgsides);
-   printf("-> changed %d sides of dual solution constraints\n", nchgsides);
 
    return SCIP_OKAY;
 }

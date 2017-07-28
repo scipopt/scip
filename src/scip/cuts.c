@@ -585,9 +585,6 @@ SCIP_RETCODE SCIPaggrRowAddObjectiveFunction(
       int newsize = SCIPcalcMemGrowSize(scip, SCIPgetNVars(scip));
       int i;
 
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &aggrrow->vals, aggrrow->rowssize, newsize) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &aggrrow->inds, aggrrow->rowssize, newsize) );
-
       for( i = 0; i < nvars; i++ )
       {
          /* skip all variables with zero objective coefficient */
