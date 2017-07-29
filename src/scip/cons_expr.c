@@ -3563,7 +3563,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(createAuxVarsEnterExpr)
 
          /* call detect routine of nlhdlr */
          createdata->nlhdlrssuccessexprdata[nsuccess] = NULL;
-         SCIP_CALL( (*nlhdlr->detect)(scip, nlhdlr, expr, &success, &createdata->nlhdlrssuccessexprdata[nsuccess]) );
+         SCIP_CALL( (*nlhdlr->detect)(scip, conshdlr, nlhdlr, expr, &success, &createdata->nlhdlrssuccessexprdata[nsuccess]) );
 
          if( success )
          {
