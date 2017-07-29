@@ -3882,7 +3882,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
                continue;
 
             /* call the separation callback of the nonlinear handler */
-            SCIP_CALL( (nlhdlr->sepa)(scip, nlhdlr, expr, expr->nlhdlrsexprdata[h], sepadata->sol, sepadata->minviolation, &separesult, &ncuts) );
+            SCIP_CALL( (nlhdlr->sepa)(scip, sepadata->conshdlr, nlhdlr, expr, expr->nlhdlrsexprdata[h], sepadata->sol, sepadata->minviolation, &separesult, &ncuts) );
          }
          else if( expr->exprhdlr->sepa != NULL )
          {

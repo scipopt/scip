@@ -336,6 +336,126 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlr)
 }
 
 static
+SCIP_DECL_CONSEXPR_NLHDLRSEPA(sepaHdlr)
+{
+   SCIP_VAR* auxvar;
+   SCIP_ROW* cut = NULL;
+   SCIP_Bool overestimate;
+   SCIP_Bool infeasible;
+   SCIP_Real violation;
+   SCIP_Real xval;
+   SCIP_Real yval;
+   SCIP_Real xcoef;
+   SCIP_Real ycoef;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+
+   assert(scip != NULL);
+   assert(nlhdlr != NULL);
+   assert(nlhdlrexprdata != NULL);
+
+   *result = SCIP_DIDNOTFIND;
+   *ncuts = 0;
+
+   /* get auxiliary variable */
+   auxvar = SCIPgetConsExprExprLinearizationVar(expr);
+   assert(auxvar != NULL);
+
+   xval = SCIPgetSolVal(scip, sol, nlhdlrexprdata->varx);
+   yval = SCIPgetSolVal(scip, sol, nlhdlrexprdata->vary);
+
+   /* compute the violation; this determines whether we need to over- or underestimate */
+   violation = nlhdlrexprdata->constant;
+   violation += nlhdlrexprdata->xcoef * xval + nlhdlrexprdata->ycoef * yval;
+   violation += nlhdlrexprdata->xxcoef * xval*xval + nlhdlrexprdata->yycoef * yval*yval;
+   violation += nlhdlrexprdata->xycoef * xval*yval;
+   violation -= SCIPgetSolVal(scip, sol, auxvar);
+
+   /* check if there is a violation */
+   if( SCIPisEQ(scip, violation, 0.0) )
+      return SCIP_OKAY;
+
+   /* determine if we need to under- or overestimate */
+   overestimate = SCIPisLT(scip, violation, 0.0);
+
+   /* adjust the reference point */
+   xval = MIN(MAX(xval, SCIPvarGetLbLocal(nlhdlrexprdata->varx)), SCIPvarGetUbLocal(nlhdlrexprdata->varx));
+   yval = MIN(MAX(yval, SCIPvarGetLbLocal(nlhdlrexprdata->vary)), SCIPvarGetUbLocal(nlhdlrexprdata->vary));
+
+   if( nlhdlrexprdata->convex == !overestimate )
+   {
+      /* convex side -> linearize
+       * constant + xcoef * x + ycoef * y + xxcoef*xval*xval + yycoef*yval*yval + xycoef*xval*yval
+       *   + (2*xxcoef*xval + xycoef*yval) * (x - xval) + (2*yycoef*yval + xycoef*xval) * (y - yval)
+       * = (xcoef + 2*xxcoef*xval + xycoef*yval) * x + (ycoef * 2*yycoef*yval + xycoef*xval) * y
+       *   - xxcoef*xval*xval - yycoef*yval*yval - xycoef*xval*yval + constant
+       */
+      xcoef = nlhdlrexprdata->xcoef + 2.0 * nlhdlrexprdata->xxcoef * xval + nlhdlrexprdata->xycoef * yval;
+      ycoef = nlhdlrexprdata->ycoef + 2.0 * nlhdlrexprdata->yycoef * yval + nlhdlrexprdata->xycoef * xval;
+      if( !overestimate )
+      {
+         lhs = -SCIPinfinity(scip);
+         rhs = nlhdlrexprdata->xxcoef * xval * xval + nlhdlrexprdata->yycoef * yval * yval + nlhdlrexprdata->xycoef * xval * yval - nlhdlrexprdata->constant;
+      }
+      else
+      {
+         lhs = nlhdlrexprdata->xxcoef * xval * xval + nlhdlrexprdata->yycoef * yval * yval + nlhdlrexprdata->xycoef * xval * yval - nlhdlrexprdata->constant;
+         rhs = SCIPinfinity(scip);
+      }
+
+      SCIP_CALL( SCIPcreateRowCons(scip, &cut, conshdlr, "testhdlrcut_cvx", 0, NULL, NULL, lhs, rhs, FALSE, FALSE, TRUE) );
+      SCIP_CALL( SCIPaddVarToRow(scip, cut, nlhdlrexprdata->varx, xcoef) );
+      SCIP_CALL( SCIPaddVarToRow(scip, cut, nlhdlrexprdata->vary, ycoef) );
+      SCIP_CALL( SCIPaddVarToRow(scip, cut, auxvar, -1.0) );
+
+      /* SCIP_CALL( SCIPprintRow(scip, cut, NULL) ); */
+   }
+   else
+   {
+      /* todo? */
+   }
+
+   if( cut == NULL )
+      return SCIP_OKAY;
+
+   if( nlhdlrexprdata->convex == !overestimate )
+   {
+      /* if separated on convex side, then violation of cut in sol should be same as violation of cons in sol */
+      assert(SCIPisRelEQ(scip, -SCIPgetRowSolFeasibility(scip, cut, sol), violation));
+   }
+
+   /* check whether its violation and numerical properties are ok (and maybe improve) */
+   SCIP_CALL( SCIPmassageConsExprExprCut(scip, &cut, sol, minviolation) );
+
+   if( cut == NULL )
+      return SCIP_OKAY;
+
+   assert(-SCIPgetRowSolFeasibility(scip, cut, sol) >= minviolation);
+
+   /* add cut */
+   SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, &infeasible) );
+   *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
+   *ncuts += 1;
+
+#ifdef SCIP_DEBUG
+   if( *result == SCIP_CUTOFF )
+   {
+      SCIPdebugMsg(scip, "add cut makes node infeasible!\n");
+   }
+   else
+   {
+      SCIPdebugMsg(scip, "add cut with violation %e\n", -SCIPgetRowSolFeasibility(scip, cut, sol));
+   }
+   SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
+#endif
+
+   /* release cut */
+   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+
+   return SCIP_OKAY;
+}
+
+static
 SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(copyHdlr)
 {
    SCIP_CONSEXPR_NLHDLR* targetnlhdlr;
@@ -355,6 +475,7 @@ SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(copyHdlr)
    SCIPsetConsExprNlHdlrFreeExprData(targetscip, targetnlhdlr, freeExprData);
    SCIPsetConsExprNlHdlrCopyHdlr(targetscip, targetnlhdlr, copyHdlr);
    SCIPsetConsExprNlHdlrInitExit(targetscip, targetnlhdlr, initHdlr, exitHldr);
+   SCIPsetConsExprNlHdlrSepa(targetscip, targetnlhdlr, sepaHdlr);
 
    return SCIP_OKAY;
 }
@@ -379,9 +500,10 @@ Test(conshdlr, nlhdlr, .init = setup, .fini = teardown,
    SCIPsetConsExprNlHdlrFreeExprData(testscip, nlhdlr, freeExprData);
    SCIPsetConsExprNlHdlrCopyHdlr(testscip, nlhdlr, copyHdlr);
    SCIPsetConsExprNlHdlrInitExit(testscip, nlhdlr, initHdlr, exitHldr);
+   SCIPsetConsExprNlHdlrSepa(testscip, nlhdlr, sepaHdlr);
 
    SCIP_CALL( SCIPsetIntParam(testscip, "display/verblevel", SCIP_VERBLEVEL_NONE) );
-   SCIP_CALL( SCIPsetRealParam(testscip, "limits/gap", 1e-6) );
+   /* SCIP_CALL( SCIPsetRealParam(testscip, "limits/gap", 1e-6) ); */
 /*
    SCIP_CALL( SCIPpresolve(testscip) );
    SCIP_CALL( SCIPprintOrigProblem(testscip, NULL, NULL, FALSE) );
@@ -389,4 +511,8 @@ Test(conshdlr, nlhdlr, .init = setup, .fini = teardown,
 */
    SCIP_CALL( SCIPsolve(testscip) );
    /* SCIP_CALL( SCIPprintBestSol(testscip, NULL, TRUE) ); */
+
+   cr_assert(SCIPgetStatus(testscip) == SCIP_STATUS_OPTIMAL, "not solved to optimality");
+   cr_assert(SCIPisFeasEQ(testscip, SCIPgetPrimalbound(testscip), -1.93649230212515), "optimal value not correct, expected -1.93649230212515, but got %.20g", SCIPgetPrimalbound(testscip));
+   cr_assert(SCIPgetNNodes(testscip) <= 1, "convex NLP should be solved without branching, but took %" SCIP_LONGINT_FORMAT " nodes", SCIPgetNNodes(testscip));
 }
