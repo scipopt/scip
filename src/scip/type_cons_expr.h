@@ -481,6 +481,7 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
 /** callback to detect structure in expression tree
  *
  * - scip SCIP data structure
+ * - conshdlr expr-constraint handler
  * - nlhdlr nonlinear handler
  * - expr expression to analyze
  * - success buffer to return whether a nlhdlr specific structure has been found
@@ -493,6 +494,32 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_Bool* success, \
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata)
+
+/** nonlinear handler separation callback
+ *
+ * The method tries to separate a given point by means of the nonlinear handler.
+ *
+ * input:
+ *  - scip : SCIP main data structure
+ *  - conshdlr : cons expr handler
+ *  - nlhdlr : nonlinear handler
+ *  - expr : expression
+ *  - nlhdlrexprdata : expression specific data of the nonlinear handler
+ *  - sol  : solution to be separated (NULL for the LP solution)
+ *  - minviolation : minimal violation of a cut if it should be added to the LP
+ *  - result : pointer to store the result
+ *  - ncuts : pointer to store the number of added cuts
+ */
+#define SCIP_DECL_CONSEXPR_NLHDLRSEPA(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSHDLR* conshdlr, \
+   SCIP_CONSEXPR_NLHDLR* nlhdlr, \
+   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
+   SCIP_SOL* sol, \
+   SCIP_Real minviolation, \
+   SCIP_RESULT* result, \
+   int* ncuts)
 
 typedef struct SCIP_ConsExpr_NlHdlr      SCIP_CONSEXPR_NLHDLR;        /**< nonlinear handler */
 typedef struct SCIP_ConsExpr_NlHdlrData  SCIP_CONSEXPR_NLHDLRDATA;    /**< nonlinear handler data */

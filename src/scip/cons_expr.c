@@ -3860,35 +3860,54 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
       return SCIP_OKAY;
    }
 
-   /* TODO call sepa callbacks of nlhdlrs, if any */
-
    /* it only makes sense to call the separation callback if there is a variable attached to the expression */
-   if( expr->exprhdlr->sepa != NULL && expr->auxvar != NULL )
+   if( expr->auxvar != NULL )
    {
       SCIP_RESULT separesult;
       int ncuts;
+      int h;
 
       separesult = SCIP_DIDNOTFIND;
       ncuts = 0;
 
-      /* call the separation callback of the expression handler */
-      SCIP_CALL( (*expr->exprhdlr->sepa)(scip, sepadata->conshdlr, expr, sepadata->sol, sepadata->minviolation, &separesult, &ncuts) );
-
-      assert(ncuts >= 0);
-      sepadata->ncuts += ncuts;
-
-      if( separesult == SCIP_CUTOFF )
+      /* call the separation callbacks of the nonlinear handlers, if any, then the expression handler */
+      for( h = 0; h <= expr->nnlhdlrs; ++h )
       {
-         assert(ncuts > 0);
-         SCIPdebugMsg(scip, "found a cutoff -> stop separation\n");
-         sepadata->result = SCIP_CUTOFF;
-         *result = SCIP_CONSEXPREXPRWALK_ABORT;
-      }
-      else if( separesult == SCIP_SEPARATED )
-      {
-         assert(ncuts > 0);
-         SCIPdebugMsg(scip, "found %d cuts separating the current solution\n", ncuts);
-         sepadata->result = SCIP_SEPARATED;
+         if( h < expr->nnlhdlrs )
+         {
+            SCIP_CONSEXPR_NLHDLR* nlhdlr;
+
+            nlhdlr = expr->nlhdlrs[h];
+            if( nlhdlr->sepa == NULL )
+               continue;
+
+            /* call the separation callback of the nonlinear handler */
+            SCIP_CALL( (nlhdlr->sepa)(scip, nlhdlr, expr, expr->nlhdlrsexprdata[h], sepadata->sol, sepadata->minviolation, &separesult, &ncuts) );
+         }
+         else if( expr->exprhdlr->sepa != NULL )
+         {
+            /* call the separation callback of the expression handler */
+            SCIP_CALL( (*expr->exprhdlr->sepa)(scip, sepadata->conshdlr, expr, sepadata->sol, sepadata->minviolation, &separesult, &ncuts) );
+         }
+
+         assert(ncuts >= 0);
+         sepadata->ncuts += ncuts;
+
+         if( separesult == SCIP_CUTOFF )
+         {
+            assert(ncuts > 0);
+            SCIPdebugMsg(scip, "found a cutoff -> stop separation\n");
+            sepadata->result = SCIP_CUTOFF;
+            *result = SCIP_CONSEXPREXPRWALK_ABORT;
+            break;
+         }
+         else if( separesult == SCIP_SEPARATED )
+         {
+            assert(ncuts > 0);
+            SCIPdebugMsg(scip, "found %d cuts separating the current solution\n", ncuts);
+            sepadata->result = SCIP_SEPARATED;
+            break;
+         }
       }
    }
 
@@ -7905,7 +7924,7 @@ void SCIPsetConsExprNlHdlrFreeExprData(
    nlhdlr->freeexprdata = freeexprdata;
 }
 
-/** set the copy handler callback of an nonlinear handler */
+/** set the copy handler callback of a nonlinear handler */
 void SCIPsetConsExprNlHdlrCopyHdlr(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
@@ -7917,7 +7936,7 @@ void SCIPsetConsExprNlHdlrCopyHdlr(
    nlhdlr->copyhdlr = copy;
 }
 
-/** set the initialization and deinitialization callback of an nonlinear handler */
+/** set the initialization and deinitialization callback of a nonlinear handler */
 void SCIPsetConsExprNlHdlrInitExit(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
@@ -7929,6 +7948,18 @@ void SCIPsetConsExprNlHdlrInitExit(
 
    nlhdlr->init = init;
    nlhdlr->exit = exit;
+}
+
+/** set the separation callback of a nonlinear handler */
+void SCIPsetConsExprNlHdlrSepa(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
+   SCIP_DECL_CONSEXPR_NLHDLRSEPA((*sepa))    /**< separation callback (can be NULL) */
+)
+{
+   assert(nlhdlr != NULL);
+
+   nlhdlr->sepa = sepa;
 }
 
 /** gives name of nonlinear handler */
