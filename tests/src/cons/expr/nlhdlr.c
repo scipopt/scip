@@ -15,6 +15,14 @@
 
 /**@file   nlhdlr.c
  * @brief  tests basic nonlinear handler methods
+ *
+ * This test implements a nonlinear handler for bivariate quadratic expressions that are either convex or concave.
+ * We do some simplifying assumptions, e.g., assume that the arguments are actual variables and not non-variable expressions.
+ * Also separation is only implemented for the convex side at the moment.
+ *
+ * The test constructs a problem with two convex quadratic constraints.
+ * Convexity is not exploited when using the separation methods of the expressions alone, as the quadratic terms
+ * are considered separately. Thus, only with the nonlinear handler we can solve this problem by separation only (Kelley' cutting plane).
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
