@@ -26,6 +26,15 @@ set(scipsources
     scip/cons_countsols.c
     scip/cons_cumulative.c
     scip/cons_disjunction.c
+    scip/cons_expr.c
+    scip/cons_expr_abs.c
+    scip/cons_expr_exp.c
+    scip/cons_expr_log.c
+    scip/cons_expr_pow.c
+    scip/cons_expr_product.c
+    scip/cons_expr_sum.c
+    scip/cons_expr_value.c
+    scip/cons_expr_var.c
     scip/cons_indicator.c
     scip/cons_integral.c
     scip/cons_knapsack.c
@@ -357,6 +366,15 @@ set(scipheaders
     scip/cons_countsols.h
     scip/cons_cumulative.h
     scip/cons_disjunction.h
+    scip/cons_expr.h
+    scip/cons_expr_abs.h
+    scip/cons_expr_exp.h
+    scip/cons_expr_log.h
+    scip/cons_expr_pow.h
+    scip/cons_expr_product.h
+    scip/cons_expr_sum.h
+    scip/cons_expr_value.h
+    scip/cons_expr_var.h
     scip/cons.h
     scip/cons_indicator.h
     scip/cons_integral.h
