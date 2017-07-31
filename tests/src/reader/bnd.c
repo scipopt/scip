@@ -78,11 +78,12 @@ Test(readerbnd, read, .description = "check the function for reading a *.bnd fil
 
 Test(readerbnd, write, .description = "check the function for writting a *.bnd file")
 {
+   char formatstr[SCIP_MAXSTRLEN];
+
    /* check that the written bounds of x equal [-1,2] */
    cr_redirect_stdout();
    SCIP_CALL( SCIPwriteOrigProblem(scip, NULL, "bnd", FALSE) );
    fflush(stdout);
-   char formatstr[SCIP_MAXSTRLEN];
 
    sprintf(formatstr, "<%s> %16.15f %16.15f\n", varname, lb, ub);
 
