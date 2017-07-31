@@ -29,6 +29,9 @@
 
 static SCIP* scip;
 static SCIP_VAR* x;
+static SCIP_Real lb = -1.0;
+static SCIP_Real ub = 2.0;
+static const char* varname = "x";
 
 static
 void setup(void)
@@ -41,7 +44,7 @@ void setup(void)
    SCIP_CALL( SCIPincludeReaderBnd(scip) );
 
    /* create single variable */
-   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", -1, 2, 1.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &x, varname, lb, ub, 1.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(scip, x) );
 }
 
@@ -51,8 +54,6 @@ void teardown(void)
    /* free variable and SCIP */
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
    SCIP_CALL( SCIPfree(&scip) );
-
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
 }
 
 /* TEST SUITE */
@@ -81,5 +82,9 @@ Test(readerbnd, write, .description = "check the function for writting a *.bnd f
    cr_redirect_stdout();
    SCIP_CALL( SCIPwriteOrigProblem(scip, NULL, "bnd", FALSE) );
    fflush(stdout);
-   cr_assert_stdout_eq_str("<x> -1.000000000000000 2.000000000000000\n");
+   char formatstr[SCIP_MAXSTRLEN];
+
+   sprintf(formatstr, "<%s> %16.15f %16.15f\n", varname, lb, ub);
+
+   cr_assert_stdout_eq_str(formatstr);
 }
