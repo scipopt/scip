@@ -1623,6 +1623,30 @@ int SCIPcompareConsExprExprs(
 
 /**@} */  /* end of simplifying methods */
 
+/** compares nonlinear handler by priority
+ *
+ * if handlers have same priority, then compare by name
+ */
+static
+int nlhdlrCmp(
+   void*                 hdlr1,              /**< first handler */
+   void*                 hdlr2               /**< second handler */
+)
+{
+   SCIP_CONSEXPR_NLHDLR* h1;
+   SCIP_CONSEXPR_NLHDLR* h2;
+
+   assert(hdlr1 != NULL);
+   assert(hdlr2 != NULL);
+
+   h1 = (SCIP_CONSEXPR_NLHDLR*)hdlr1;
+   h2 = (SCIP_CONSEXPR_NLHDLR*)hdlr2;
+
+   if( h1->priority != h2->priority )
+      return h1->priority - h2->priority;
+
+   return strcmp(h1->name, h2->name);
+}
 
 /** @name Differentiation methods
  * Automatic differentiation Backward mode:
@@ -4461,6 +4485,10 @@ SCIP_DECL_CONSINIT(consInitExpr)
       SCIP_CALL( storeVarExprs(scip, SCIPconsGetData(conss[i])) );
       SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
    }
+
+   /* sort nonlinear handlers by priority, in decreasing order */
+   if( conshdlrdata->nnlhdlrs > 1 )
+      SCIPsortDownPtr((void**)conshdlrdata->nlhdlrs, nlhdlrCmp, conshdlrdata->nnlhdlrs);
 
    return SCIP_OKAY;
 }
@@ -7896,6 +7924,12 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
 
    conshdlrdata->nlhdlrs[conshdlrdata->nnlhdlrs] = *nlhdlr;
    ++conshdlrdata->nnlhdlrs;
+
+   /* sort nonlinear handlers by priority, in decreasing order
+    * will happen in INIT, so only do when called late
+    */
+   if( SCIPgetStage(scip) >= SCIP_STAGE_INIT && conshdlrdata->nnlhdlrs > 1 )
+      SCIPsortDownPtr((void**)conshdlrdata->nlhdlrs, nlhdlrCmp, conshdlrdata->nnlhdlrs);
 
    return SCIP_OKAY;
 }
