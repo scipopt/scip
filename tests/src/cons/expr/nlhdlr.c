@@ -41,13 +41,13 @@ static SCIP* testscip;
 static SCIP_VAR* x;
 static SCIP_VAR* y;
 
-struct SCIP_ConsExpr_NlHdlrData
+struct SCIP_ConsExpr_NlhdlrData
 {
    SCIP_Bool             initialized;        /**< whether handler has been initialized and not yet de-initialized */
 };
 
 /** compact storage for variables and coefficients in a bivariate quadratic term that is either convex or concave */
-struct SCIP_ConsExpr_NlHdlrExprData
+struct SCIP_ConsExpr_NlhdlrExprData
 {
    SCIP_VAR*             varx;               /**< first variable */
    SCIP_VAR*             vary;               /**< second variable */
@@ -140,7 +140,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINIT(initHdlr)
    assert(scip != NULL);
    assert(nlhdlr != NULL);
 
-   nlhdlrdata = SCIPgetConsExprNlHdlrData(nlhdlr);
+   nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
    assert(nlhdlrdata != NULL);
 
    cr_assert(!nlhdlrdata->initialized, "nlhdlr cannot be initialized already");
@@ -158,7 +158,7 @@ SCIP_DECL_CONSEXPR_NLHDLREXIT(exitHldr)
    assert(scip != NULL);
    assert(nlhdlr != NULL);
 
-   nlhdlrdata = SCIPgetConsExprNlHdlrData(nlhdlr);
+   nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
    assert(nlhdlrdata != NULL);
 
    cr_assert(nlhdlrdata->initialized, "nlhdlr must have been initialized");
@@ -473,17 +473,17 @@ SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(copyHdlr)
    assert(targetconsexprhdlr != NULL);
    assert(sourceconsexprhdlr != NULL);
    assert(sourcenlhdlr != NULL);
-   cr_assert(strcmp(SCIPgetConsExprNlHdlrName(sourcenlhdlr), "testhdlr") == 0, "source nlhdlr is not testhdlr");
+   cr_assert(strcmp(SCIPgetConsExprNlhdlrName(sourcenlhdlr), "testhdlr") == 0, "source nlhdlr is not testhdlr");
 
    SCIP_CALL( SCIPallocClearMemory(testscip, &nlhdlrdata) );
 
-   SCIP_CALL( SCIPincludeConsExprNlHdlrBasic(targetscip, targetconsexprhdlr, &targetnlhdlr,
-      SCIPgetConsExprNlHdlrName(sourcenlhdlr), SCIPgetConsExprNlHdlrDesc(sourcenlhdlr), SCIPgetConsExprNlHdlrPriority(sourcenlhdlr), detectHdlr, nlhdlrdata) );
-   SCIPsetConsExprNlHdlrFreeHdlrData(targetscip, targetnlhdlr, freeHdlrData);
-   SCIPsetConsExprNlHdlrFreeExprData(targetscip, targetnlhdlr, freeExprData);
-   SCIPsetConsExprNlHdlrCopyHdlr(targetscip, targetnlhdlr, copyHdlr);
-   SCIPsetConsExprNlHdlrInitExit(targetscip, targetnlhdlr, initHdlr, exitHldr);
-   SCIPsetConsExprNlHdlrSepa(targetscip, targetnlhdlr, sepaHdlr);
+   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(targetscip, targetconsexprhdlr, &targetnlhdlr,
+      SCIPgetConsExprNlhdlrName(sourcenlhdlr), SCIPgetConsExprNlhdlrDesc(sourcenlhdlr), SCIPgetConsExprNlhdlrPriority(sourcenlhdlr), detectHdlr, nlhdlrdata) );
+   SCIPsetConsExprNlhdlrFreeHdlrData(targetscip, targetnlhdlr, freeHdlrData);
+   SCIPsetConsExprNlhdlrFreeExprData(targetscip, targetnlhdlr, freeExprData);
+   SCIPsetConsExprNlhdlrCopyHdlr(targetscip, targetnlhdlr, copyHdlr);
+   SCIPsetConsExprNlhdlrInitExit(targetscip, targetnlhdlr, initHdlr, exitHldr);
+   SCIPsetConsExprNlhdlrSepa(targetscip, targetnlhdlr, sepaHdlr);
 
    return SCIP_OKAY;
 }
@@ -502,13 +502,13 @@ Test(conshdlr, nlhdlr, .init = setup, .fini = teardown,
 
    SCIP_CALL( SCIPallocClearMemory(testscip, &nlhdlrdata) );
 
-   SCIP_CALL( SCIPincludeConsExprNlHdlrBasic(testscip, conshdlr, &nlhdlr, "testhdlr", "tests nonlinear handler functionality", 0, detectHdlr, nlhdlrdata) );
+   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(testscip, conshdlr, &nlhdlr, "testhdlr", "tests nonlinear handler functionality", 0, detectHdlr, nlhdlrdata) );
 
-   SCIPsetConsExprNlHdlrFreeHdlrData(testscip, nlhdlr, freeHdlrData);
-   SCIPsetConsExprNlHdlrFreeExprData(testscip, nlhdlr, freeExprData);
-   SCIPsetConsExprNlHdlrCopyHdlr(testscip, nlhdlr, copyHdlr);
-   SCIPsetConsExprNlHdlrInitExit(testscip, nlhdlr, initHdlr, exitHldr);
-   SCIPsetConsExprNlHdlrSepa(testscip, nlhdlr, sepaHdlr);
+   SCIPsetConsExprNlhdlrFreeHdlrData(testscip, nlhdlr, freeHdlrData);
+   SCIPsetConsExprNlhdlrFreeExprData(testscip, nlhdlr, freeExprData);
+   SCIPsetConsExprNlhdlrCopyHdlr(testscip, nlhdlr, copyHdlr);
+   SCIPsetConsExprNlhdlrInitExit(testscip, nlhdlr, initHdlr, exitHldr);
+   SCIPsetConsExprNlhdlrSepa(testscip, nlhdlr, sepaHdlr);
 
    SCIP_CALL( SCIPsetIntParam(testscip, "display/verblevel", SCIP_VERBLEVEL_NONE) );
    /* SCIP_CALL( SCIPsetRealParam(testscip, "limits/gap", 1e-6) ); */

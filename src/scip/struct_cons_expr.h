@@ -111,7 +111,7 @@ struct SCIP_ConsExpr_Expr
    SCIP_CONSEXPREXPRWALK_IO walkio;       /**< space for walker callback to store some (temporary) data, e.g., to simulate input or output values of a recursive call */
 };
 
-struct SCIP_ConsExpr_NlHdlr
+struct SCIP_ConsExpr_Nlhdlr
 {
    char*                         name;       /**< nonlinearity handler name */
    char*                         desc;       /**< nonlinearity handler description (can be NULL) */

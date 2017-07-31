@@ -521,9 +521,9 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
    SCIP_RESULT* result, \
    int* ncuts)
 
-typedef struct SCIP_ConsExpr_NlHdlr      SCIP_CONSEXPR_NLHDLR;        /**< nonlinear handler */
-typedef struct SCIP_ConsExpr_NlHdlrData  SCIP_CONSEXPR_NLHDLRDATA;    /**< nonlinear handler data */
-typedef struct SCIP_ConsExpr_NlHdlrExprData SCIP_CONSEXPR_NLHDLREXPRDATA;  /**< nonlinear handler data for a specific expression */
+typedef struct SCIP_ConsExpr_Nlhdlr      SCIP_CONSEXPR_NLHDLR;        /**< nonlinear handler */
+typedef struct SCIP_ConsExpr_NlhdlrData  SCIP_CONSEXPR_NLHDLRDATA;    /**< nonlinear handler data */
+typedef struct SCIP_ConsExpr_NlhdlrExprData SCIP_CONSEXPR_NLHDLREXPRDATA;  /**< nonlinear handler data for a specific expression */
 
 #ifdef __cplusplus
 }
