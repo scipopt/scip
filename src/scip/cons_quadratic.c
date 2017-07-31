@@ -6745,11 +6745,11 @@ SCIP_RETCODE generateCut(
       success = coefrange <= conshdlrdata->cutmaxrange;
    }
 
-   /* check that side is finite */
-   success &= !SCIPisInfinity(scip, REALABS(rowprep->side));  /*lint --e{514} */
+   /* check that side is finite */ /*lint --e{514} */
+   success &= !SCIPisInfinity(scip, REALABS(rowprep->side));
 
-   /* check whether maximal coef is finite, if any */
-   success &= (rowprep->nvars == 0) || !SCIPisInfinity(scip, REALABS(rowprep->coefs[0]));  /*lint --e{514} */
+   /* check whether maximal coef is finite, if any */ /*lint --e{514} */
+   success &= (rowprep->nvars == 0) || !SCIPisInfinity(scip, REALABS(rowprep->coefs[0]));
 
    /* compute scaled violation, if necessary (minefficacy is given (>-inf) or efficacy is requested (!=NULL)) */
    if( success && conshdlrdata->scaling != 'o' && (!SCIPisInfinity(scip, -minefficacy) || efficacy != NULL) )
@@ -10579,7 +10579,8 @@ SCIP_RETCODE proposeFeasibleSolution(
                delta = SCIPceil(scip, delta);
 
             SCIP_CALL( SCIPincSolVal(scip, newsol, var, delta) );
-            SCIPdebugMsg(scip, "increase <%s> by %g to %g to remedy lhs-violation %g of cons <%s>\n", SCIPvarGetName(var), delta, SCIPgetSolVal(scip, newsol, var), viol, SCIPconsGetName(conss[c]));  /*lint --e{613} */
+            /*lint --e{613} */
+            SCIPdebugMsg(scip, "increase <%s> by %g to %g to remedy lhs-violation %g of cons <%s>\n", SCIPvarGetName(var), delta, SCIPgetSolVal(scip, newsol, var), viol, SCIPconsGetName(conss[c]));
 
             /* adjust constraint violation, if satisfied go on to next constraint */
             viol -= consdata->lincoefs[consdata->linvar_mayincrease] * delta;
@@ -10609,7 +10610,8 @@ SCIP_RETCODE proposeFeasibleSolution(
             if( SCIPvarIsIntegral(var) )
                delta = SCIPfloor(scip, delta);
             SCIP_CALL( SCIPincSolVal(scip, newsol, var, delta) );
-            SCIPdebugMsg(scip, "increase <%s> by %g to %g to remedy rhs-violation %g of cons <%s>\n", SCIPvarGetName(var), delta, SCIPgetSolVal(scip, newsol, var), viol, SCIPconsGetName(conss[c]));  /*lint --e{613} */
+            /*lint --e{613} */
+            SCIPdebugMsg(scip, "increase <%s> by %g to %g to remedy rhs-violation %g of cons <%s>\n", SCIPvarGetName(var), delta, SCIPgetSolVal(scip, newsol, var), viol, SCIPconsGetName(conss[c]));
 
             /* adjust constraint violation, if satisfied go on to next constraint */
             viol -= consdata->lincoefs[consdata->linvar_maydecrease] * delta;
@@ -10697,7 +10699,8 @@ SCIP_RETCODE enforceConstraint(
       assert(solinfeasible);
       /* however, if solinfeasible is actually not TRUE, then better cut off the node to avoid that SCIP
        * stops because infeasible cannot be resolved */
-      if( !solinfeasible )  /*lint --e{774} */
+      /*lint --e{774} */
+      if( !solinfeasible )
          *result = SCIP_CUTOFF;
       return SCIP_OKAY;
    }
@@ -14862,8 +14865,9 @@ SCIP_RETCODE SCIPaddRowprepTerms(
    SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, nvars) );
    assert(rowprep->varssize >= rowprep->nvars + nvars);
 
-   BMScopyMemoryArray(rowprep->vars + rowprep->nvars, vars, nvars);  /*lint --e{866} */
-   BMScopyMemoryArray(rowprep->coefs + rowprep->nvars, coefs, nvars);  /*lint --e{866} */
+   /*lint --e{866} */
+   BMScopyMemoryArray(rowprep->vars + rowprep->nvars, vars, nvars);
+   BMScopyMemoryArray(rowprep->coefs + rowprep->nvars, coefs, nvars);
    rowprep->nvars += nvars;
 
    return SCIP_OKAY;
@@ -14946,13 +14950,14 @@ SCIP_Real SCIPgetRowprepViolation(
        * CPLEX does not seem to scale row coefficients up too
        * also we use infinity norm, since that seem to be the usual scaling strategy in LP solvers (equilibrium scaling)
        */
-      if( rowprep->nvars > 0 )
-         viol /= MAX(1.0, REALABS(rowprep->coefs[0]));  /*lint --e{666} */
+      if( rowprep->nvars > 0 )  /*lint --e{666} */
+         viol /= MAX(1.0, REALABS(rowprep->coefs[0]));
       break;
 
    case 's' :
    {
-      viol /= MAX(1.0, REALABS(rowprep->side));  /*lint --e{666} */
+      /*lint --e{666} */
+      viol /= MAX(1.0, REALABS(rowprep->side));
       break;
    }
 
@@ -15182,11 +15187,12 @@ void rowprepCleanupImproveCoefrange(
             ((coef > 0.0 && rowprep->sidetype == SCIP_SIDETYPE_RIGHT) || (coef < 0.0 && rowprep->sidetype == SCIP_SIDETYPE_LEFT)) ? lb : ub, loss[pos]);
       }
 
-      if( loss[0] == SCIP_INVALID && loss[1] == SCIP_INVALID )  /*lint --e{777} */
+      /*lint --e{777} */
+      if( loss[0] == SCIP_INVALID && loss[1] == SCIP_INVALID )
          break;  /* cannot eliminate coefficient */
 
       /* select position with smaller loss */
-      pos = (loss[1] == SCIP_INVALID || loss[1] > loss[0]) ? 0 : 1;  /*lint --e{777} */
+      pos = (loss[1] == SCIP_INVALID || loss[1] > loss[0]) ? 0 : 1;
 
       /* now do the actual elimination */
       var = rowprep->vars[pos ? rowprep->nvars-1 : maxcoefidx];
@@ -15537,8 +15543,8 @@ SCIP_RETCODE SCIPcleanupRowprep(
    /* assert(myviol == SCIP_INVALID || SCIPisEQ(scip, myviol, SCIPgetRowprepViolation(scip, rowprep, sol, 'o'))); */
 
    /* compute final violation, if requested by caller */
-   if( viol != NULL )
-      *viol = myviol == SCIP_INVALID ? SCIPgetRowprepViolation(scip, rowprep, sol, 'o') : myviol;  /*lint --e{777} */
+   if( viol != NULL )  /*lint --e{777} */
+      *viol = myviol == SCIP_INVALID ? SCIPgetRowprepViolation(scip, rowprep, sol, 'o') : myviol;
 
    return SCIP_OKAY;
 }

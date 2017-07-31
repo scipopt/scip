@@ -5530,11 +5530,11 @@ SCIP_RETCODE generateCut(
       /* check that coefficient range is ok */
       success = coefrange <= maxrange;
 
-      /* check that side is finite */
-      success &= !SCIPisInfinity(scip, REALABS(rowprep->side));  /*lint --e{514} */
+      /* check that side is finite */ /*lint --e{514} */
+      success &= !SCIPisInfinity(scip, REALABS(rowprep->side));
 
       /* check whether maximal coef is finite, if any */
-      success &= (rowprep->nvars == 0) || !SCIPisInfinity(scip, REALABS(rowprep->coefs[0]));  /*lint --e{514} */
+      success &= (rowprep->nvars == 0) || !SCIPisInfinity(scip, REALABS(rowprep->coefs[0]));
    }
 
    if( success )
@@ -7091,8 +7091,8 @@ SCIP_RETCODE enforceConstraint(
        */
       assert(solinfeasible);
       /* however, if solinfeasible is actually not TRUE, then better cut off the node to avoid that SCIP
-       * stops because infeasible cannot be resolved */
-      if( !solinfeasible )  /*lint --e{774} */
+       * stops because infeasible cannot be resolved */ /*lint --e{774} */
+      if( !solinfeasible )
          *result = SCIP_CUTOFF;
       return SCIP_OKAY;
    }

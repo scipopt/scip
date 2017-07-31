@@ -5224,7 +5224,8 @@ SCIP_RETCODE enforceConstraint(
       assert(solinfeasible);
       /* however, if solinfeasible is actually not TRUE, then better cut off the node to avoid that SCIP
        * stops because infeasible cannot be resolved */
-      if( !solinfeasible )  /*lint --e{774} */
+       /*lint --e{774} */
+      if( !solinfeasible )
          *result = SCIP_CUTOFF;
       return SCIP_OKAY;
    }
