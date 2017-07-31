@@ -462,8 +462,8 @@ SCIP_Bool SCIPcliquetableNeedsComponentUpdate(
 #define SCIPcliquetableGetNCliques(cliquetable)      ((cliquetable)->ncliques)
 #define SCIPcliquetableGetCliques(cliquetable)       ((cliquetable)->cliques)
 #define SCIPcliquetableGetNEntries(cliquetable)      ((cliquetable)->nentries)
-#define SCIPcliquetableGetNCliqueComponents(cliquetable) ((cliquetable)->componentupdate ? -1 : (cliquetable)->ncliquecomponents)
-#define SCIPcliquetableNeedsComponentUpdate(cliquetable) ((cliquetable)->componentupdate)
+#define SCIPcliquetableGetNCliqueComponents(cliquetable) (cliquetable->compsfromscratch ? -1 : cliquetable->ncliquecomponents)
+#define SCIPcliquetableNeedsComponentUpdate(cliquetable) (cliquetable->compsfromscratch || cliquetable->unionfind == NULL)
 #endif
 
 #ifdef __cplusplus
