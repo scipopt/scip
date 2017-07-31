@@ -2295,7 +2295,6 @@ void cliquetableUpdateConnectednessClique(
    int lastnode;
    SCIP_VAR** clqvars;
    int nclqvars;
-   int ufsize;
 
    assert(cliquetable != NULL);
    assert(clique != NULL);
@@ -2311,7 +2310,6 @@ void cliquetableUpdateConnectednessClique(
    lastnode = -1;
    clqvars = clique->vars;
    nclqvars = clique->nvars;
-   ufsize = SCIPunionfindGetSize(cliquetable->unionfind);
 
    /* loop over variables in the clique and connect the corresponding components */
    for( i = 0; i < nclqvars && !cliquetable->compsfromscratch; ++i )
