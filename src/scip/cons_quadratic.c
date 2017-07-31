@@ -6746,10 +6746,10 @@ SCIP_RETCODE generateCut(
    }
 
    /* check that side is finite */
-   success &= !SCIPisInfinity(scip, REALABS(rowprep->side));
+   success &= !SCIPisInfinity(scip, REALABS(rowprep->side));  /*lint --e{514} */
 
    /* check whether maximal coef is finite, if any */
-   success &= (rowprep->nvars == 0) || !SCIPisInfinity(scip, REALABS(rowprep->coefs[0]));
+   success &= (rowprep->nvars == 0) || !SCIPisInfinity(scip, REALABS(rowprep->coefs[0]));  /*lint --e{514} */
 
    /* compute scaled violation, if necessary (minefficacy is given (>-inf) or efficacy is requested (!=NULL)) */
    if( success && conshdlrdata->scaling != 'o' && (!SCIPisInfinity(scip, -minefficacy) || efficacy != NULL) )
@@ -10579,7 +10579,7 @@ SCIP_RETCODE proposeFeasibleSolution(
                delta = SCIPceil(scip, delta);
 
             SCIP_CALL( SCIPincSolVal(scip, newsol, var, delta) );
-            SCIPdebugMsg(scip, "increase <%s> by %g to %g to remedy lhs-violation %g of cons <%s>\n", SCIPvarGetName(var), delta, SCIPgetSolVal(scip, newsol, var), viol, SCIPconsGetName(conss[c]));
+            SCIPdebugMsg(scip, "increase <%s> by %g to %g to remedy lhs-violation %g of cons <%s>\n", SCIPvarGetName(var), delta, SCIPgetSolVal(scip, newsol, var), viol, SCIPconsGetName(conss[c]));  /*lint --e{613} */
 
             /* adjust constraint violation, if satisfied go on to next constraint */
             viol -= consdata->lincoefs[consdata->linvar_mayincrease] * delta;
@@ -10609,7 +10609,7 @@ SCIP_RETCODE proposeFeasibleSolution(
             if( SCIPvarIsIntegral(var) )
                delta = SCIPfloor(scip, delta);
             SCIP_CALL( SCIPincSolVal(scip, newsol, var, delta) );
-            SCIPdebugMsg(scip, "increase <%s> by %g to %g to remedy rhs-violation %g of cons <%s>\n", SCIPvarGetName(var), delta, SCIPgetSolVal(scip, newsol, var), viol, SCIPconsGetName(conss[c]));
+            SCIPdebugMsg(scip, "increase <%s> by %g to %g to remedy rhs-violation %g of cons <%s>\n", SCIPvarGetName(var), delta, SCIPgetSolVal(scip, newsol, var), viol, SCIPconsGetName(conss[c]));  /*lint --e{613} */
 
             /* adjust constraint violation, if satisfied go on to next constraint */
             viol -= consdata->lincoefs[consdata->linvar_maydecrease] * delta;
@@ -10697,7 +10697,7 @@ SCIP_RETCODE enforceConstraint(
       assert(solinfeasible);
       /* however, if solinfeasible is actually not TRUE, then better cut off the node to avoid that SCIP
        * stops because infeasible cannot be resolved */
-      if( !solinfeasible )
+      if( !solinfeasible )  /*lint --e{774} */
          *result = SCIP_CUTOFF;
       return SCIP_OKAY;
    }
@@ -14862,8 +14862,8 @@ SCIP_RETCODE SCIPaddRowprepTerms(
    SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, nvars) );
    assert(rowprep->varssize >= rowprep->nvars + nvars);
 
-   BMScopyMemoryArray(rowprep->vars + rowprep->nvars, vars, nvars);
-   BMScopyMemoryArray(rowprep->coefs + rowprep->nvars, coefs, nvars);
+   BMScopyMemoryArray(rowprep->vars + rowprep->nvars, vars, nvars);  /*lint --e{866} */
+   BMScopyMemoryArray(rowprep->coefs + rowprep->nvars, coefs, nvars);  /*lint --e{866} */
    rowprep->nvars += nvars;
 
    return SCIP_OKAY;
@@ -14947,12 +14947,12 @@ SCIP_Real SCIPgetRowprepViolation(
        * also we use infinity norm, since that seem to be the usual scaling strategy in LP solvers (equilibrium scaling)
        */
       if( rowprep->nvars > 0 )
-         viol /= MAX(1.0, REALABS(rowprep->coefs[0]));
+         viol /= MAX(1.0, REALABS(rowprep->coefs[0]));  /*lint --e{666} */
       break;
 
    case 's' :
    {
-      viol /= MAX(1.0, REALABS(rowprep->side));
+      viol /= MAX(1.0, REALABS(rowprep->side));  /*lint --e{666} */
       break;
    }
 
@@ -15182,11 +15182,11 @@ void rowprepCleanupImproveCoefrange(
             ((coef > 0.0 && rowprep->sidetype == SCIP_SIDETYPE_RIGHT) || (coef < 0.0 && rowprep->sidetype == SCIP_SIDETYPE_LEFT)) ? lb : ub, loss[pos]);
       }
 
-      if( loss[0] == SCIP_INVALID && loss[1] == SCIP_INVALID )
+      if( loss[0] == SCIP_INVALID && loss[1] == SCIP_INVALID )  /*lint --e{777} */
          break;  /* cannot eliminate coefficient */
 
       /* select position with smaller loss */
-      pos = (loss[1] == SCIP_INVALID || loss[1] > loss[0]) ? 0 : 1;
+      pos = (loss[1] == SCIP_INVALID || loss[1] > loss[0]) ? 0 : 1;  /*lint --e{777} */
 
       /* now do the actual elimination */
       var = rowprep->vars[pos ? rowprep->nvars-1 : maxcoefidx];
@@ -15252,7 +15252,6 @@ static
 void rowprepCleanupScaleup(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be improve */
-   SCIP_SOL*             sol,                /**< solution that we try to cut off, or NULL for LP solution */
    SCIP_Real*            viol,               /**< violation of cut in sol (input and output) */
    SCIP_Real             minviol             /**< minimal violation we try to achieve */
    )
@@ -15302,7 +15301,6 @@ static
 void rowprepCleanupScaledown(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be improve */
-   SCIP_SOL*             sol,                /**< solution that we try to cut off, or NULL for LP solution */
    SCIP_Real*            viol,               /**< violation of cut in sol (input and output) */
    SCIP_Real             minviol             /**< minimal violation we try to keep */
    )
@@ -15503,10 +15501,10 @@ SCIP_RETCODE SCIPcleanupRowprep(
 #endif
 
    /* scale up to increase violation, updates myviol */
-   rowprepCleanupScaleup(scip, rowprep, sol, &myviol, minviol);
+   rowprepCleanupScaleup(scip, rowprep, &myviol, minviol);
 
    /* scale down to improve numerics, updates myviol */
-   rowprepCleanupScaledown(scip, rowprep, sol, &myviol, minviol);
+   rowprepCleanupScaledown(scip, rowprep, &myviol, minviol);
 
 #ifdef SCIP_DEBUG
    SCIPinfoMessage(scip, NULL, "applied scaling, viol %g: ", myviol);
@@ -15540,7 +15538,7 @@ SCIP_RETCODE SCIPcleanupRowprep(
 
    /* compute final violation, if requested by caller */
    if( viol != NULL )
-      *viol = myviol == SCIP_INVALID ? SCIPgetRowprepViolation(scip, rowprep, sol, 'o') : myviol;
+      *viol = myviol == SCIP_INVALID ? SCIPgetRowprepViolation(scip, rowprep, sol, 'o') : myviol;  /*lint --e{777} */
 
    return SCIP_OKAY;
 }
@@ -15555,26 +15553,26 @@ int SCIPscaleRowprep(
    )
 {
    double v;
-   int exp;
+   int expon;
    int i;
 
    assert(rowprep != NULL);
    assert(factor > 0.0);
 
-   /* write factor as v*2^exp with v in [0.5,1) */
-   v = frexp(factor, &exp);
-   /* adjust to v'*2^exp with v' in (0.5,1] by v'=v if v > 0.5, v'=1 if v=0.5 */
+   /* write factor as v*2^expon with v in [0.5,1) */
+   v = frexp(factor, &expon);
+   /* adjust to v'*2^expon with v' in (0.5,1] by v'=v if v > 0.5, v'=1 if v=0.5 */
    if( v == 0.5 )
-      --exp;
+      --expon;
 
-   /* multiply each coefficient by 2^exp */
+   /* multiply each coefficient by 2^expon */
    for( i = 0; i < rowprep->nvars; ++i )
-      rowprep->coefs[i] = ldexp(rowprep->coefs[i], exp);
+      rowprep->coefs[i] = ldexp(rowprep->coefs[i], expon);
 
-   /* multiply side by 2^exp */
-   rowprep->side = ldexp(rowprep->side, exp);
+   /* multiply side by 2^expon */
+   rowprep->side = ldexp(rowprep->side, expon);
 
-   return exp;
+   return expon;
 }
 
 /** generates a SCIP_ROW from a rowprep */
