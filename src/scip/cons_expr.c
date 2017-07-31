@@ -6734,7 +6734,7 @@ SCIP_RETCODE SCIPgetConsExprExprHashkey(
 
    SCIP_CALL( SCIPhashmapCreate(&expr2key, SCIPblkmem(scip), SCIPgetNVars(scip)) );
 
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, NULL, NULL, hashExprLeaveExpr, (void*)expr2key) );
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, hashExprVisitingExpr, NULL, hashExprLeaveExpr, (void*)expr2key) );
 
    assert(SCIPhashmapExists(expr2key, (void*)expr));  /* we just computed the hash, so should be in the map */
    *hashkey = (unsigned int)(size_t)SCIPhashmapGetImage(expr2key, (void*)expr);
