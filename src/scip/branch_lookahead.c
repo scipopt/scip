@@ -13,11 +13,11 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#define SCIP_STATISTIC
 /*
+#define SCIP_DEBUG
 #define PRINTNODECONS
 #define LAB_PRINT_BUFFER
-#define SCIP_STATISTIC
-#define SCIP_DEBUG
 */
 
 
@@ -267,8 +267,8 @@ void branchingResultDataInit(
    assert(scip != NULL);
    assert(resultdata != NULL);
 
-   resultdata->objval = -SCIPinfinity(scip);
-   resultdata->dualbound = -SCIPinfinity(scip);
+   resultdata->objval = SCIPinfinity(scip);
+   resultdata->dualbound = SCIPinfinity(scip);
    resultdata->cutoff = FALSE;
    resultdata->dualboundvalid = FALSE;
    resultdata->niterations = 0;
@@ -2391,6 +2391,8 @@ SCIP_RETCODE executeBranching(
             if( lpiMemoryIsReadable(candidate->uplpimemory) )
             {
                /* restore the stored LP data (e.g. the basis) from a previous run */
+               LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Restoring lp information for up branch of variable <%s>\n",
+                  SCIPvarGetName(branchvar));
                SCIP_CALL( restoreFromLPIMemory(scip, candidate->uplpimemory) );
             }
          }
@@ -3471,7 +3473,11 @@ SCIP_RETCODE executeDownBranchingRecursive(
    LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Solving the LP took %"SCIP_LONGINT_FORMAT" iterations.\n", downbranchingresult->niterations);
 
    SCIPdebug(
-      if( downbranchingresult->cutoff )
+      if( status->lperror )
+      {
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The LP could not be solved.\n");
+      }
+      else if( downbranchingresult->cutoff )
       {
          LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The solved LP was infeasible and as such is cutoff\n");
       }
@@ -3667,7 +3673,11 @@ SCIP_RETCODE executeUpBranchingRecursive(
    LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Solving the LP took %"SCIP_LONGINT_FORMAT" iterations.\n", upbranchingresult->niterations);
 
    SCIPdebug(
-      if( upbranchingresult->cutoff )
+      if( status->lperror )
+      {
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The could not be solved.\n");
+      }
+      else if( upbranchingresult->cutoff )
       {
          LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The solved LP was infeasible and as such cutoff\n", probingdepth);
       }
@@ -4067,6 +4077,7 @@ SCIP_RETCODE selectVarRecursive(
                }
             }
 
+            if( !status->lperror )
             {
                /* TODO: move this block to an own method when finished */
                SCIP_Real score = -SCIPinfinity(scip);
@@ -4817,7 +4828,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       }
       else if( status->lperror )
       {
-         *result = SCIP_DIDNOTFIND;
+         *result = SCIP_SOLVELP;
       }
 
       LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Result before branching is %s\n", getStatusString(*result));
