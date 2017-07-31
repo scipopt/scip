@@ -186,8 +186,8 @@ if( COVERAGE )
     APPEND_COVERAGE_COMPILER_FLAGS()
     set(COVERAGE_EXCLUDES '/usr*')
     SETUP_TARGET_FOR_COVERAGE(NAME coverage
-                          EXECUTABLE bash -c "ctest ${COVERAGE_CTEST_ARGS}"
-                          DEPENDENCIES scip-bin)
+                          EXECUTABLE bash -c "${CMAKE_CTEST_COMMAND} ${COVERAGE_CTEST_ARGS}"
+                          DEPENDENCIES scip)
 endif()
 
 # use C++11 standard
