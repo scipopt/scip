@@ -2442,11 +2442,7 @@ SCIP_DECL_HASHKEYVAL(hashCommonSubexprKeyval)
  *  @note the hash keys of the expressions are used for the hashing inside the hash table; to compute if two expressions
  *  (with the same hash) are structurally the same we use the function SCIPcompareConsExprExprs()
  */
-SCIP_RETCODE replaceCommonSubexpressions(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS**           conss,              /**< constraints */
-   int                   nconss              /**< total number of constraints */
-   );
+static
 SCIP_RETCODE replaceCommonSubexpressions(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           conss,              /**< constraints */
