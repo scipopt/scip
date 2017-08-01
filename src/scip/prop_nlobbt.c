@@ -190,7 +190,7 @@ SCIP_RETCODE filterCands(
    assert(propdata->currpos >= 0 && propdata->currpos < propdata->nlpinvars);
    assert(SCIPnlpiGetSolstat(propdata->nlpi, propdata->nlpiprob) <= SCIP_NLPSOLSTAT_FEASIBLE);
 
-   SCIP_CALL( SCIPnlpiGetSolution(propdata->nlpi, propdata->nlpiprob, &primal, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPnlpiGetSolution(propdata->nlpi, propdata->nlpiprob, &primal, NULL, NULL, NULL, NULL) );
    assert(primal != NULL);
 
    /* we skip all candidates which have been processed already, i.e., starting at propdata->currpos + 1 */
@@ -262,7 +262,7 @@ SCIP_RETCODE addGenVBound(
    assert(varidx >= 0 && varidx < propdata->nlpinvars);
    assert(SCIPnlpiGetSolstat(propdata->nlpi, propdata->nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT);
 
-   SCIP_CALL( SCIPnlpiGetSolution(propdata->nlpi, propdata->nlpiprob, &primal, &dual, &alpha, &beta) );
+   SCIP_CALL( SCIPnlpiGetSolution(propdata->nlpi, propdata->nlpiprob, &primal, &dual, &alpha, &beta, NULL) );
 
    /* not possible to generate genvbound if the duals for the propagated variable do not disappear */
    if( !SCIPisFeasZero(scip, alpha[varidx] - beta[varidx]) )
@@ -393,7 +393,7 @@ SCIP_RETCODE solveNlp(
          SCIP_CALL( addGenVBound(scip, propdata, var, varidx, boundtype, SCIPgetCutoffbound(scip)) );
       }
 
-      SCIP_CALL( SCIPnlpiGetSolution(propdata->nlpi, propdata->nlpiprob, &primal, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPnlpiGetSolution(propdata->nlpi, propdata->nlpiprob, &primal, NULL, NULL, NULL, NULL) );
 
       if( boundtype == SCIP_BOUNDTYPE_LOWER )
       {

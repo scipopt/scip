@@ -1106,6 +1106,9 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
 {
    SCIP_NODE* node;
    SCIP_Real mincutorthogonality;
+   SCIP_Real orthosaturation;
+   SCIP_Real initorthosaturation;
+   SCIP_Real oldorthofac;
    SCIP_Bool applied;
    int depth;
    int maxsepacuts;
@@ -1135,7 +1138,14 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    /* calculate minimal cut orthogonality */
    mincutorthogonality = (root ? set->sepa_minorthoroot : set->sepa_minortho);
    mincutorthogonality = MAX(mincutorthogonality, set->num_epsilon);
-   mincutorthogonality = stat->nseparounds > 20 ? 1.0 : mincutorthogonality;
+   oldorthofac = set->sepa_orthofac;
+   /* let the min orthogonality increase with each round with a logistic function */
+   {
+      SCIP_Real g = 1.0 - mincutorthogonality;
+      orthosaturation = g / (1 + (g / 0.01 - 1.0) * exp(-g*stat->nseparounds));
+   }
+   initorthosaturation = 0.01;
+
 
    /* Compute scores for all non-forced cuts and initialize orthogonalities - make sure all cuts are initialized again for the current LP solution */
    for( pos = sepastore->nforcedcuts; pos < sepastore->ncuts; pos++ )
@@ -1167,7 +1177,11 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
          /* add cut to the LP and update orthogonalities */
          SCIPsetDebugMsg(set, " -> applying forced cut <%s>\n", SCIProwGetName(cut));
          /*SCIPdebug( SCIProwPrint(cut, set->scip->messagehdlr, NULL));*/
-         SCIP_CALL( sepastoreApplyCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, cut, mincutorthogonality, depth, efficiacychoice, &ncutsapplied) );
+         SCIP_CALL( sepastoreApplyCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, cut, mincutorthogonality + orthosaturation - initorthosaturation, depth, efficiacychoice, &ncutsapplied) );
+
+         orthosaturation += orthosaturation * (1 - mincutorthogonality - orthosaturation);
+
+         set->sepa_orthofac *= 1.1;
       }
    }
 
@@ -1206,12 +1220,18 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
       if( SCIPsetIsFeasPositive(set, efficacy) )
       {
          /* add cut to the LP and update orthogonalities */
-         SCIP_CALL( sepastoreApplyCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, cut, mincutorthogonality, depth, efficiacychoice, &ncutsapplied) );
+         SCIP_CALL( sepastoreApplyCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, cut, mincutorthogonality + orthosaturation - initorthosaturation, depth, efficiacychoice, &ncutsapplied) );
+
+         orthosaturation += orthosaturation * (1 - mincutorthogonality - orthosaturation);
+
+         set->sepa_orthofac *= 1.1;
       }
 
       /* release cut */
       SCIP_CALL( SCIProwRelease(&cut, blkmem, set, lp) );
    }
+
+   set->sepa_orthofac = oldorthofac;
 
    /* clear the separation storage and reset statistics for separation round */
    SCIP_CALL( SCIPsepastoreClearCuts(sepastore, blkmem, set, eventqueue, eventfilter, lp) );

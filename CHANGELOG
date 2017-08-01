@@ -34,8 +34,10 @@ features
 - added command line option '-o' and command 'validatesolve' in interactive shell
   to validate the solution against an external primal and dual reference value.
 - allow to relax objective limit in reoptimization in presolved stage
+- suppress excessive printing about numerical troubles in LP on default verblevel (high)
 
 fixed bugs:
+- fixed bug in shift and propagate--variable information with a negation transformation is correctly reset after backtracking
 - fixed bug in genvbounds propagator when applying a restart after the root node
 - fixed unintended behavior of interrupt signal handler inside SCIP copies
 - fixed uninitialized values in SCIP's digraph data structure after calling SCIPdigraphResize()

@@ -144,6 +144,10 @@ echo                                >> $OUTFILE
 echo "start moving files"           >> $OUTFILE
 date                                >> $OUTFILE
 echo                                >> $OUTFILE
+echo                                >> $OUTFILE
+echo "--- FINISH ---"               >> $OUTFILE
+date                                >> $OUTFILE
+echo                                >> $OUTFILE
 
 mv $OUTFILE $SOLVERPATH/results/$BASENAME.out
 mv $ERRFILE $SOLVERPATH/results/$BASENAME.err
@@ -153,8 +157,3 @@ rm -f $SOLFILE
 #chmod g+r $ERRFILE
 #chmod g+r $SCIPPATH/results/$BASENAME.out
 #chmod g+r $SCIPPATH/results/$BASENAME.set
-
-echo                                >> $OUTFILE
-echo "--- FINISH ---"               >> $OUTFILE
-date                                >> $OUTFILE
-echo                                >> $OUTFILE
