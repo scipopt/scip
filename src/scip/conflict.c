@@ -2495,7 +2495,6 @@ SCIP_Real getMinActivity(
    return minact;
 }
 
-#if 0
 /** calculates the minimal activity of a given set of bounds and coefficients */
 static
 SCIP_Real getMaxActivity(
@@ -2528,7 +2527,6 @@ SCIP_Real getMaxActivity(
 
    return minact;
 }
-#endif
 
 static
 SCIP_RETCODE propagateLongProof(
@@ -2667,7 +2665,7 @@ SCIP_RETCODE createAndAddProofcons(
    assert(conflictstore != NULL);
    assert(proofset != NULL);
 
-   addtoconflictstore = FALSE;
+   addtoconflictstore = cover;
 
    vars = SCIPprobGetVars(transprob);
    nnz = SCIPaggrRowGetNNz(proofset->aggrrow);

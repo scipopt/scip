@@ -429,15 +429,15 @@ SCIP_RETCODE SCIPaggrRowAddSparseData(
 
    for( i = 0; i < nvars; i++ )
    {
-      aggrrow->vals[i] = vals[i];
-      aggrrow->inds[i] = inds[i];
+      aggrrow->vals[inds[i]] = NONZERO(vals[i]);
+      aggrrow->inds[aggrrow->nnz] = inds[i];
+      ++aggrrow->nnz;
    }
    aggrrow->rhs = rhs;
-   aggrrow->nnz = nvars;
 
 #ifndef NDEBUG
    for( i = 0; i < aggrrow->nnz; ++i )
-      assert(!SCIPisZero(scip, aggrrow->vals[i]));
+      assert(!SCIPisZero(scip, aggrrow->vals[inds[i]]));
 #endif
 
    return SCIP_OKAY;
@@ -572,17 +572,20 @@ SCIP_RETCODE SCIPaggrRowAddObjectiveFunction(
 {
    SCIP_VAR** vars;
    int nvars;
+   int r;
 
    assert(scip != NULL);
    assert(aggrrow != NULL);
+//   assert(SCIPisPositive(scip, scale));
 
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
 
+//   r = aggrrow->nrows++;
+
    /* add all variables straight forward if the aggregation row is empty */
    if( aggrrow->nnz == 0 )
    {
-      int newsize = SCIPcalcMemGrowSize(scip, SCIPgetNVars(scip));
       int i;
 
       for( i = 0; i < nvars; i++ )
@@ -2602,7 +2605,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    int*                  cutnnz,             /**< pointer to store the number of non-zeros in the cut */
    SCIP_Real*            cutefficacy,        /**< pointer to store efficacy of best cut; only cuts that are strictly better than the value of
                                               *   this efficacy on input to this function are returned */
-   int*                  cutrank,            /**< pointer to return rank of generated cut */
+   int*                  cutrank,            /**< pointer to return rank of generated cut (or NULL) */
    SCIP_Bool*            cutislocal,         /**< pointer to store whether the generated cut is only valid locally */
    SCIP_Bool*            success             /**< pointer to store whether a valid and efficacious cut was returned */
    )
@@ -3108,7 +3111,8 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
          *cutnnz = mksetnnz;
          *cutefficacy = mirefficacy;
          *success = TRUE;
-         *cutrank = aggrrow->rank + 1;
+         if( cutrank != NULL )
+            *cutrank = aggrrow->rank + 1;
          *cutislocal = *cutislocal || localbdsused;
       }
    }
