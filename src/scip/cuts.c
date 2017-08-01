@@ -357,52 +357,6 @@ SCIP_RETCODE SCIPaggrRowCopy(
    return SCIP_OKAY;
 }
 
-/** adds given data to the aggregation row */
-SCIP_RETCODE SCIPaggrRowAddData(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
-   SCIP_VAR**            vars,               /**< variable array */
-   SCIP_Real*            coefs,              /**< variable coefficients */
-   int                   nvars,              /**< size of variable and coefficient array */
-   SCIP_Real             rhs,                /**< right-hand side of the row */
-   SCIP_Real             scale               /**< scalar to apply */
-   )
-{
-   int i;
-
-   assert(scip != NULL);
-   assert(aggrrow != NULL);
-   assert(!SCIPisInfinity(scip, REALABS(scale)));
-
-   /* nothing needs to be done */
-   if( nvars == 0 )
-      return SCIP_OKAY;
-
-   assert(vars != NULL);
-   assert(coefs != NULL);
-
-   aggrrow->rhs = rhs * scale;
-
-   for( i = 0; i < nvars; i++ )
-   {
-      int probidx;
-      /* skip all variables with zero coefficient */
-      if( coefs[i] == 0.0 )
-         continue;
-
-      assert(vars[i] != NULL);
-      probidx = SCIPvarGetProbindex(vars[i]);
-
-      assert(!SCIPisInfinity(scip, REALABS(coefs[i] * scale)));
-      aggrrow->vals[probidx] = coefs[i] * scale;
-
-      aggrrow->inds[aggrrow->nnz] = probidx;
-      ++aggrrow->nnz;
-   }
-
-   return SCIP_OKAY;
-}
-
 /** adds given sparse data to the aggregation row */
 SCIP_RETCODE SCIPaggrRowAddSparseData(
    SCIP*                 scip,               /**< SCIP data structure */
