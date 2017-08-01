@@ -183,7 +183,7 @@ Test(relax, relaxCheckTime)
 /*@todo how to check this? */
 Test(relax, relaxCheckNCalls)
 {
-   cr_assert_eq( SCIPrelaxGetNCalls(relax), SCIPgetNcallsUnittest(scip) );
+   cr_assert_eq( SCIPrelaxGetNCalls(relax), SCIPgetNcallsUnittest() );
 }
 
 Test(relax, relaxCheckInitialized)
