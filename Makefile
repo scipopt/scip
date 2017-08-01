@@ -154,9 +154,9 @@ LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 SOFTLINKS	+=	$(LIBDIR)/include/mskinc
 SOFTLINKS	+=	$(LIBDIR)/shared/libmosek.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
 SOFTLINKS	+=	$(LIBDIR)/shared/libiomp5.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
-LPIINSTMSG	=	"  -> \"mskinc\" is the path to the Mosek \"include\" directory, e.g., \"<Mosek-path>/include\".\n"
-LPIINSTMSG	+=	" -> \"libmosek.*\" is the path to the Mosek library, e.g., \"<Mosek-path>/lib/libmosek.a\".\n"
-LPIINSTMSG	+=	" -> \"libiomp5.*\" is the path to the libiomp5, e.g., \"<Mosek-path>/lib/libiomp5.a\""
+LPIINSTMSG	=	"  -> \"mskinc\" is the path to the Mosek \"include\" directory, e.g., \"<Mosek-path>/tools/platform/linux64x86/h\".\n"
+LPIINSTMSG	+=	" -> \"libmosek.*\" is the path to the Mosek library, e.g., \"<Mosek-path>/tools/platform/linux64x86/bin/libmosek64.so\".\n"
+LPIINSTMSG	+=	" -> \"libiomp5.*\" is the path to the libiomp5, e.g., \"<Mosek-path>/tools/platform/linux64x86/bin/libiomp5.so\""
 endif
 
 LPSOPTIONS	+=	spx1
@@ -315,6 +315,7 @@ ALLSRC		+=	$(TPILIBSRC)
 #-----------------------------------------------------------------------------
 
 NLPILIBCOBJ	= 	nlpi/nlpi.o \
+			nlpi/nlpi_all.o \
 			nlpi/nlpioracle.o \
 			nlpi/expr.o
 
@@ -340,26 +341,33 @@ else
 NLPILIBCOBJ	+= 	nlpi/nlpi_ipopt_dummy.o
 endif
 
+ifeq ($(FILTERSQP),true)
+NLPILIBCOBJ	+= nlpi/nlpi_filtersqp.o
+else
+NLPILIBCOBJ	+= nlpi/nlpi_filtersqp_dummy.o
+endif
+
 ifeq ($(WORHP),true)
 NLPILIBCOBJ	+= 	nlpi/nlpi_worhp.o
 else
 NLPILIBCOBJ	+= 	nlpi/nlpi_worhp_dummy.o
 endif
 
-NLPILIBSHORTNAME= 	nlpi$(NLPILIBSHORTNAMECPPAD)$(NLPILIBSHORTNAMEIPOPT)
+NLPILIBSHORTNAME = nlpi$(NLPILIBSHORTNAMECPPAD)$(NLPILIBSHORTNAMEIPOPT)$(NLPILIBSHORTNAMEFILTERSQP)
+
 NLPILIBNAME	=	$(NLPILIBSHORTNAME)-$(VERSION)
 NLPILIB		=	$(NLPILIBNAME).$(BASE)
 NLPILIBFILE	=	$(LIBDIR)/$(LIBTYPE)/lib$(NLPILIB).$(LIBEXT)
 NLPILIBOBJFILES =	$(addprefix $(LIBOBJDIR)/,$(NLPILIBCOBJ)) $(addprefix $(LIBOBJDIR)/,$(NLPILIBCXXOBJ))
 NLPILIBSCIPOBJFILES =	$(addprefix $(LIBOBJDIR)/,$(NLPILIBSCIPOBJ))
 NLPILIBSRC	=	$(addprefix $(SRCDIR)/,$(NLPILIBCOBJ:.o=.c)) $(addprefix $(SRCDIR)/,$(NLPILIBCXXOBJ:.o=.cpp))
-NLPILIBDEP	=	$(SRCDIR)/depend.nlpilib$(NLPILIBSHORTNAMECPPAD)$(NLPILIBSHORTNAMEIPOPT).$(OPT)
+NLPILIBDEP	=	$(SRCDIR)/depend.nlpilib$(NLPILIBSHORTNAMECPPAD)$(NLPILIBSHORTNAMEIPOPT)$(NLPILIBSHORTNAMEFILTERSQP).$(OPT)
 NLPILIBLINK	=	$(LIBDIR)/$(LIBTYPE)/lib$(NLPILIBSHORTNAME).$(BASE).$(LIBEXT)
-NLPILIBSHORTLINK=	$(LIBDIR)/$(LIBTYPE)/lib$(NLPILIBSHORTNAME).$(LIBEXT)
+NLPILIBSHORTLINK	=	$(LIBDIR)/$(LIBTYPE)/lib$(NLPILIBSHORTNAME).$(LIBEXT)
 ALLSRC		+=	$(NLPILIBSRC)
 
 ifeq ($(SHARED),true)
-NLPILIBEXTLIBS	=	$(LIBBUILD_L)$(LIBDIR)/$(LIBTYPE) $(IPOPTLIBS) \
+NLPILIBEXTLIBS	=	$(LIBBUILD_L)$(LIBDIR)/$(LIBTYPE) $(IPOPTLIBS) $(FILTERSQPLIBS) \
 			$(LINKRPATH)$(realpath $(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib) \
 			$(LINKRPATH)$(realpath $(LIBDIR)/$(LIBTYPE)/worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)/lib)
 endif
@@ -413,6 +421,15 @@ endif
 ifeq ($(IPOPT),true)
 SOFTLINKS	+=	$(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)
 LPIINSTMSG	+=	"\n  -> \"ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)\" is a directory containing the ipopt installation, i.e., \"ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/include/coin/IpIpoptApplication.hpp\", \"ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib/libipopt*\", ... should exist.\n"
+endif
+
+ifeq ($(FILTERSQP),true)
+SOFTLINKS	+=	$(LIBDIR)/$(LIBTYPE)/libfiltersqp.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
+#SOFTLINKS	+=	$(LIBDIR)/$(LIBTYPE)/libfiltersqp.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
+SOFTLINKS	+=	$(LIBDIR)/$(LIBTYPE)/libbqpd.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
+#SOFTLINKS	+=	$(LIBDIR)/$(LIBTYPE)/libbqpd.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
+LPIINSTMSG	+=	" -> \"libfiltersqp.$(OSTYPE).$(ARCH).$(COMP).*\" is the path to the filterSQP library.\n"
+LPIINSTMSG	+=	" -> \"libbqpd.$(OSTYPE).$(ARCH).$(COMP).*\" is the path to the BQPD library.\n"
 endif
 
 # WORHP provides only shared libraries
@@ -589,6 +606,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/reader_ccg.o \
 			scip/reader_cip.o \
 			scip/reader_cnf.o \
+			scip/reader_cor.o \
 			scip/reader_diff.o \
 			scip/reader_fix.o \
 			scip/reader_fzn.o \
@@ -603,6 +621,8 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/reader_ppm.o \
 			scip/reader_rlp.o \
 			scip/reader_sol.o \
+			scip/reader_sto.o \
+			scip/reader_tim.o \
 			scip/reader_wbo.o \
 			scip/reader_zpl.o \
 			scip/sepa_cgmip.o \
@@ -776,8 +796,8 @@ else
 WINLIBFILENAME	=	lib$(MAINNAME).$(BASE).$(LPS).lib
 endif
 
-LINKSMARKERFILE	=	$(LIBDIR)/$(LIBTYPE)/linkscreated.$(LPS)-$(LPSOPT).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL)-$(ZIMPLOPT).$(IPOPT)-$(IPOPTOPT).$(GAMS)
-LASTSETTINGS	=	$(LIBDIR)/make.lastsettings
+LINKSMARKERFILE	=	$(LIBDIR)/$(LIBTYPE)/linkscreated.$(LPS)-$(LPSOPT).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL)-$(ZIMPLOPT).$(IPOPT)-$(IPOPTOPT).$(FILTERSQP).$(GAMS)
+LASTSETTINGS	=	$(OBJDIR)/make.lastsettings
 
 #-----------------------------------------------------------------------------
 # Rules
@@ -868,7 +888,8 @@ check:		test
 test:
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
-		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) $(SEEDS);
+		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) \
+                $(SEEDS);
 
 .PHONY: testcount
 testcount:
@@ -1367,7 +1388,7 @@ links:		| $(LIBDIR)/static $(LIBDIR)/shared $(LIBDIR)/include $(DIRECTORIES) ech
 .PHONY: echosoftlinks
 echosoftlinks:
 		@echo
-		@echo "- Current settings: LPS=$(LPS) OSTYPE=$(OSTYPE) ARCH=$(ARCH) COMP=$(COMP) SHARED=$(SHARED) SUFFIX=$(LINKLIBSUFFIX) ZIMPL=$(ZIMPL) ZIMPLOPT=$(ZIMPLOPT) IPOPT=$(IPOPT) IPOPTOPT=$(IPOPTOPT) WORHP=$(WORHP) WORHPOPT=$(WORHPOPT) EXPRINT=$(EXPRINT) GAMS=$(GAMS)"
+		@echo "- Current settings: LPS=$(LPS) OSTYPE=$(OSTYPE) ARCH=$(ARCH) COMP=$(COMP) SHARED=$(SHARED) SUFFIX=$(LINKLIBSUFFIX) ZIMPL=$(ZIMPL) ZIMPLOPT=$(ZIMPLOPT) IPOPT=$(IPOPT) IPOPTOPT=$(IPOPTOPT) WORHP=$(WORHP) WORHPOPT=$(WORHPOPT) FILTERSQP=$(FILTERSQP) EXPRINT=$(EXPRINT) GAMS=$(GAMS)"
 		@echo
 		@echo "* SCIP needs some softlinks to external programs, in particular, LP-solvers."
 		@echo "* Please insert the paths to the corresponding directories/libraries below."
@@ -1451,6 +1472,11 @@ endif
 ifneq ($(IPOPT),true)
 ifneq ($(IPOPT),false)
 		$(error invalid IPOPT flag selected: IPOPT=$(IPOPT). Possible options are: true false)
+endif
+endif
+ifneq ($(FILTERSQP),true)
+ifneq ($(FILTERSQP),false)
+		$(error invalid FILTERSQP flag selected: FILTERSQP=$(FILTERSQP). Possible options are: true false)
 endif
 endif
 ifneq ($(WORHP),true)

@@ -1,0 +1,8 @@
+read ${PROJECT_SOURCE_DIR}/check/${path}
+concurrentopt
+set parallel mode 0
+set parallel maxnthreads 2
+read ${PROJECT_SOURCE_DIR}/check/${path}
+concurrentopt
+validatesolve ${optval} ${optval}
+quit

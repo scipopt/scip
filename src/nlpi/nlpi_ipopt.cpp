@@ -61,7 +61,7 @@ using namespace Ipopt;
 
 #define NLPI_NAME          "ipopt"           /**< short concise name of solver */
 #define NLPI_DESC          "Ipopt interface" /**< description of solver */
-#define NLPI_PRIORITY      0                 /**< priority */
+#define NLPI_PRIORITY      1000              /**< priority */
 
 #ifdef SCIP_DEBUG
 #define DEFAULT_PRINTLEVEL J_WARNING         /**< default print level of Ipopt */
@@ -627,7 +627,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
    (*problem)->ipopt->Options()->SetStringValue("derivative_test", "second-order");
 #endif
    setFeastol(*problem, SCIP_DEFAULT_FEASTOL);
-   setOpttol(*problem, SCIP_DEFAULT_FEASTOL);
+   setOpttol(*problem, SCIP_DEFAULT_DUALFEASTOL);
 
    /* apply user's given modifications to Ipopt's default settings */
    if( data->defoptions.length() > 0 )
@@ -1176,6 +1176,12 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
          problem->lastniter = stats->IterationCount();
          problem->lasttime  = stats->TotalCPUTime();
       }
+      else
+      {
+         /* Ipopt does not provide access to the statistics when all variables have been fixed */
+         problem->lastniter = 0;
+         problem->lasttime  = 0.0;
+      }
    }
    catch( IpoptException& except )
    {
@@ -1231,6 +1237,7 @@ SCIP_DECL_NLPIGETTERMSTAT(nlpiGetTermstatIpopt)
  *  - consdualvalues buffer to store pointer to array to dual values of constraints, or NULL if not needed
  *  - varlbdualvalues buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed
  *  - varubdualvalues buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed
+ *  - objval buffer store the objective value, or NULL if not needed
  */
 static
 SCIP_DECL_NLPIGETSOLUTION(nlpiGetSolutionIpopt)
@@ -1249,6 +1256,17 @@ SCIP_DECL_NLPIGETSOLUTION(nlpiGetSolutionIpopt)
 
    if( varubdualvalues != NULL )
       *varubdualvalues = problem->lastsoldualvarub;
+
+   if( objval != NULL )
+   {
+      if( problem->lastsolprimals != NULL )
+      {
+         /* TODO store last solution value instead of reevaluating the objective function */
+         SCIP_CALL( SCIPnlpiOracleEvalObjectiveValue(problem->oracle, problem->lastsolprimals, objval) );
+      }
+      else
+         *objval = SCIP_INVALID;
+   }
 
    return SCIP_OKAY;
 }
@@ -2043,7 +2061,7 @@ const char* SCIPgetSolverNameIpopt(void)
    return "Ipopt " IPOPT_VERSION;
 }
 
-/** gets string that describes Ipopt (version number) */
+/** gets string that describes Ipopt */
 const char* SCIPgetSolverDescIpopt(void)
 {
    return "Interior Point Optimizer developed by A. Waechter et.al. (www.coin-or.org/Ipopt)";
@@ -2703,13 +2721,13 @@ void ScipNLP::finalize_solution(
 
    case MAXITER_EXCEEDED:
       check_feasibility = true;
-      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_ITLIM;
       break;
 
    case CPUTIME_EXCEEDED:
       check_feasibility = true;
-      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_TILIM;
       break;
 
@@ -2717,7 +2735,7 @@ void ScipNLP::finalize_solution(
    case RESTORATION_FAILURE:
    case ERROR_IN_STEP_COMPUTATION:
       check_feasibility = true;
-      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_NUMERR;
       break;
 
@@ -2730,7 +2748,7 @@ void ScipNLP::finalize_solution(
 
    case DIVERGING_ITERATES:
       nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNBOUNDED;
-      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_UOBJLIM;
+      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
       break;
 
    case INVALID_NUMBER_DETECTED:
@@ -2778,7 +2796,7 @@ void ScipNLP::finalize_solution(
       if( nlpiproblem->lastsolinfeas <= constrvioltol )
          nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
       else
-         nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+         nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
 
       SCIPdebugMessage("drop Ipopt's final point and report intermediate locally %sfeasible solution with infeas %g instead (acceptable: %g)\n",
          nlpiproblem->lastsolstat == SCIP_NLPSOLSTAT_LOCINFEASIBLE ? "in" : "", nlpiproblem->lastsolinfeas, constrvioltol);
@@ -2825,7 +2843,7 @@ void ScipNLP::finalize_solution(
          if( constrviol <= constrvioltol )
             nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
          else
-            nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+            nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       }
    }
 }

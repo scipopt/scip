@@ -160,6 +160,7 @@
 #include "scip/reader_ccg.h"
 #include "scip/reader_cip.h"
 #include "scip/reader_cnf.h"
+#include "scip/reader_cor.h"
 #include "scip/reader_diff.h"
 #include "scip/reader_fix.h"
 #include "scip/reader_fzn.h"
@@ -174,6 +175,8 @@
 #include "scip/reader_pbm.h"
 #include "scip/reader_rlp.h"
 #include "scip/reader_sol.h"
+#include "scip/reader_sto.h"
+#include "scip/reader_tim.h"
 #include "scip/reader_wbo.h"
 #include "scip/reader_zpl.h"
 #include "scip/sepa_eccuts.h"
@@ -197,7 +200,9 @@
 #include "scip/concsolver_scip.h"
 
 #include "nlpi/nlpi_ipopt.h"
+#include "nlpi/nlpi_filtersqp.h"
 #include "nlpi/nlpi_worhp.h"
+#include "nlpi/nlpi_all.h"
 
 #ifdef __cplusplus
 extern "C" {

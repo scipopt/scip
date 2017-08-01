@@ -32,6 +32,7 @@ LIBEXT		=	lib
 STATICLIBEXT    =	lib
 SHAREDLIBEXT	=	dll
 LINKLIBSUFFIX	=	.lib
+FORTRAN_NAMING_CONVENTION = UCASE_NODECOR
 
 # NOTE: use this flag throughout the whole compilation process
 CFLAGS  +=      -MDd

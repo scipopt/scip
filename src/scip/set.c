@@ -99,7 +99,7 @@
 #define SCIP_DEFAULT_CONF_USEBOUNDLP        'o' /**< should bound exceeding LP conflict analysis be used?
                                                  *   ('o'ff, 'c'onflict graph, 'd'ual ray, 'b'oth conflict graph and dual ray)
                                                  */
-#define SCIP_DEFAULT_CONF_USESB           FALSE /**< should infeasible/bound exceeding strong branching conflict analysis
+#define SCIP_DEFAULT_CONF_USESB            TRUE /**< should infeasible/bound exceeding strong branching conflict analysis
                                                  *   be used? */
 #define SCIP_DEFAULT_CONF_USEPSEUDO        TRUE /**< should pseudo solution conflict analysis be used? */
 #define SCIP_DEFAULT_CONF_SEPARATE         TRUE /**< should the conflict constraints be separated? */
@@ -661,16 +661,11 @@ SCIP_RETCODE SCIPsetSetReoptimizationParams(
       }
       SCIP_CALL( SCIPsetSetBoolParam(set, messagehdlr, "presolving/donotmultaggr", TRUE) );
 
-      /* fix paramters */
-      SCIP_CALL( SCIPsetChgParamFixed(set, "conflict/enable", TRUE) );
-      SCIP_CALL( SCIPsetChgParamFixed(set, "presolving/donotmultaggr", TRUE) );
-
       if( SCIPsetIsParamFixed(set, "branching/nodereopt/priority") )
       {
          SCIP_CALL( SCIPsetChgParamFixed(set, "branching/nodereopt/priority", FALSE) );
       }
       SCIP_CALL( SCIPsetSetIntParam(set, messagehdlr, "branching/nodereopt/priority", INT_MAX/4) );
-      SCIP_CALL( SCIPsetChgParamFixed(set, "branching/nodereopt/priority", TRUE) );
    }
    else
    {
