@@ -154,15 +154,6 @@ else()
       string(REPLACE "ipopt"             "" IPOPT_DEP ${IPOPT_DEP})       # remove any possible auto-dependency
       separate_arguments(IPOPT_DEP)
 
-      # check whether we need to link to MKL
-      foreach(LIB ${IPOPT_DEP})
-        if(${LIB} MATCHES "mkl*")
-           find_package(MKL)
-           find_package_handle_standard_args(IPOPT DEFAULT_MSG MKL_LIBRARIES)
-           break()
-        endif()
-      endforeach()
-
       # use the find_library command in order to prepare rpath correctly
       foreach(LIB ${IPOPT_DEP})
 
@@ -171,17 +162,14 @@ else()
           continue()
         endif()
 
-        find_library(IPOPT_SEARCH_FOR_${LIB} ${LIB} ${IPOPT_DIR}/lib
+        find_library(IPOPT_SEARCH_FOR_${LIB} ${LIB} $ENV{MKLROOT}/lib
+                                                    ${IPOPT_DIR}/lib
                                                     ${IPOPT_DIR}/lib/coin
                                                     ${IPOPT_DIR}/lib/coin/ThirdParty
                                                     NO_DEFAULT_PATH)
 
         if(IPOPT_SEARCH_FOR_${LIB})
-          # handle non-system libraries (e.g. coinblas)
           set(IPOPT_LIBRARIES ${IPOPT_LIBRARIES} ${IPOPT_SEARCH_FOR_${LIB}})
-        else()
-          # handle system libraries (e.g. gfortran)
-          set(IPOPT_LIBRARIES ${IPOPT_LIBRARIES} ${LIB})
         endif()
         mark_as_advanced(IPOPT_SEARCH_FOR_${LIB})
       endforeach()
