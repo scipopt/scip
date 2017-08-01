@@ -130,6 +130,7 @@ set(scipsources
     scip/presol_trivial.c
     scip/presol_tworowbnd.c
     scip/presol_stuffing.c
+    scip/presol_sparsify.c
     scip/prop_dualfix.c
     scip/prop_genvbounds.c
     scip/prop_nlobbt.c
