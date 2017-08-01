@@ -50,6 +50,7 @@ void checkHashkey(
    SCIP_CALL( SCIPprintConsExprExpr(scip, expr1, NULL) );
    SCIP_CALL( SCIPgetConsExprExprHashkey(scip, expr1, &hashkey1));
    SCIPinfoMessage(scip, NULL, " = %u\n", hashkey1);
+   cr_assert_neq(hashkey1, 0);
 
    if( expr2 != NULL )
    {
@@ -58,6 +59,7 @@ void checkHashkey(
       SCIP_CALL( SCIPgetConsExprExprHashkey(scip, expr2, &hashkey2));
       SCIPinfoMessage(scip, NULL, " = %u\n", hashkey2);
       cr_assert_eq(hashkey1, hashkey2);
+      cr_assert_neq(hashkey2, 0);
    }
 }
 
@@ -138,8 +140,6 @@ Test(hash, hashEqualExpressions)
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
 
-/* currently this test is testing nothing!
- * TODO: @bzfmuelb what are the expected hashes? */
 Test(hash, hashSingleExpr)
 {
    SCIP_CONSEXPR_EXPR* expr;
