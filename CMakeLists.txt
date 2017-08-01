@@ -361,6 +361,11 @@ add_subdirectory(check)
 add_custom_target(unittests ${CMAKE_CTEST_COMMAND} -R unittest EXCLUDE_FROM_ALL)
 add_subdirectory(tests EXCLUDE_FROM_ALL)
 
+#
+# add examples
+#
+add_subdirectory(examples)
+
 enable_testing()
 
 include(FeatureSummary)
