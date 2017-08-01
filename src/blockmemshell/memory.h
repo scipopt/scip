@@ -450,6 +450,7 @@ typedef struct BMS_BlkMem BMS_BLKMEM;           /**< block memory: collection of
 #define BMSdestroyBlockMemory(mem)                           SCIP_UNUSED(mem)
 #define BMSdestroyBlockMemoryNull(mem)                       SCIP_UNUSED(mem)
 #define BMSallocBlockMemory(mem,ptr)                         (SCIP_UNUSED(mem), BMSallocMemory(ptr))
+#define BMSallocClearBlockMemory(mem,ptr)                    (SCIP_UNUSED(mem), BMSallocClearMemory(ptr))
 #define BMSallocBlockMemoryArray(mem,ptr,num)                (SCIP_UNUSED(mem), BMSallocMemoryArray(ptr,num))
 #define BMSallocClearBlockMemoryArray(mem,ptr,num)           (SCIP_UNUSED(mem), BMSallocClearMemoryArray(ptr,num))
 #define BMSallocBlockMemorySize(mem,ptr,size)                (SCIP_UNUSED(mem), BMSallocMemorySize(ptr,size))
