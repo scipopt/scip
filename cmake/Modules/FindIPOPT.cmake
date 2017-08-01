@@ -162,7 +162,14 @@ else()
           continue()
         endif()
 
-        find_library(IPOPT_SEARCH_FOR_${LIB} ${LIB} $ENV{MKLROOT}/lib
+        # check whether we compile for x86 or x64
+        if(${CMAKE_SIZEOF_VOID_P} EQUAL 8)
+          set(MKL_ARCH_DIR "intel64")
+        else()
+          set(MKL_ARCH_DIR "ia32")
+        endif()
+
+        find_library(IPOPT_SEARCH_FOR_${LIB} ${LIB} $ENV{MKLROOT}/lib/${MKL_ARCH_DIR}
                                                     ${IPOPT_DIR}/lib
                                                     ${IPOPT_DIR}/lib/coin
                                                     ${IPOPT_DIR}/lib/coin/ThirdParty
