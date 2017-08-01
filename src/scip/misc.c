@@ -2010,11 +2010,6 @@ void SCIPmultihashPrintStatistics(
    SCIPmessagePrintInfo(messagehdlr, "\n");
 }
 
-/** computes a hashcode for double precision floating point values containing
- *  15 significant bits, the sign and the exponent
- */
-extern INLINE uint32_t SCIPrealHashCode(double x);
-
 /** creates a hash table */
 SCIP_RETCODE SCIPhashtableCreate(
    SCIP_HASHTABLE**      hashtable,          /**< pointer to store the created hash table */
@@ -6565,7 +6560,8 @@ SCIP_RETCODE SCIPdigraphCopy(
       (*targetdigraph)->nodedata[i] = sourcedigraph->nodedata[i];
    }
 
-   SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &(*targetdigraph)->successorssize, sourcedigraph->successorssize, nnodes) );
+   /* use nsuccessors as size to save memory */
+   SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &(*targetdigraph)->successorssize, sourcedigraph->nsuccessors, nnodes) );
    SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &(*targetdigraph)->nsuccessors, sourcedigraph->nsuccessors, nnodes) );
 
    /* copy component data */
@@ -6653,7 +6649,7 @@ void SCIPdigraphFree(
 
 #define STARTSUCCESSORSSIZE 5
 
-/* ensures that successors array of one node in a directed graph is big enough */
+/** ensures that successors array of one node in a directed graph is big enough */
 static
 SCIP_RETCODE ensureSuccessorsSize(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
@@ -8686,9 +8682,8 @@ SCIP_Real SCIPgetRandomReal(
 #define DEFAULT_CST  UINT32_C(7654321)
 
 
-/** initialize the random number generator with a given start seed */
-static
-void randomInitialize(
+/** initializes a random number generator with a given start seed */
+void SCIPrandomSetSeed(
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
    unsigned int          initseed            /**< initial random seed */
    )
@@ -8704,8 +8699,6 @@ void randomInitialize(
    assert(randnumgen->seed > 0);
    assert(randnumgen->xor_seed > 0);
    assert(randnumgen->mwc_seed > 0);
-
-   return;
 }
 
 /** returns a random number between 0 and UINT32_MAX
@@ -8753,25 +8746,27 @@ SCIP_RETCODE SCIPrandomCreate(
    assert(randnumgen != NULL);
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, randnumgen) );
-   (*randnumgen)->blkmem = blkmem;
 
-   randomInitialize((*randnumgen), initialseed);
+   SCIPrandomSetSeed((*randnumgen), initialseed);
 
    return SCIP_OKAY;
 }
 
 /** frees a random number generator */
 void SCIPrandomFree(
-   SCIP_RANDNUMGEN**     randnumgen          /**< random number generator */
+   SCIP_RANDNUMGEN**     randnumgen,         /**< random number generator */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    assert(randnumgen != NULL);
    assert((*randnumgen) != NULL);
 
-   BMSfreeBlockMemory((*randnumgen)->blkmem, randnumgen);
+   BMSfreeBlockMemory(blkmem, randnumgen);
 
    return;
 }
+
+
 
 /** returns a random integer between minrandval and maxrandval */
 int SCIPrandomGetInt(

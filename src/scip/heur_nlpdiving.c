@@ -1508,7 +1508,7 @@ SCIP_DECL_HEURINIT(heurInitNlpdiving) /*lint --e{715}*/
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen, DEFAULT_RANDSEED) );
 
    /* initialize data */
    heurdata->nnlpiterations = 0;
@@ -1539,7 +1539,7 @@ SCIP_DECL_HEUREXIT(heurExitNlpdiving) /*lint --e{715}*/
    assert(heurdata != NULL);
 
    /* free random number generator */
-   SCIPrandomFree(&heurdata->randnumgen);
+   SCIPfreeRandom(scip, &heurdata->randnumgen);
 
    /* free working solution */
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
@@ -2416,7 +2416,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
             /* set time limit for NLP solver */
             SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelim) );
             if( !SCIPisInfinity(scip, timelim) )
-               timelim -= SCIPgetSolvingTime(scip);
+               timelim = MAX(0.0, timelim-SCIPgetSolvingTime(scip));
             SCIP_CALL( SCIPsetNLPRealPar(scip, SCIP_NLPPAR_TILIM, timelim) );
 
             /* set start solution, if we are in backtracking (previous NLP solve was infeasible) */

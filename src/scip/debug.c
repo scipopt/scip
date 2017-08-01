@@ -538,12 +538,16 @@ SCIP_Bool debugSolIsAchieved(
 
    bestsol = SCIPgetBestSol(scip);
 
-   if( bestsol != NULL && !SCIPinProbing(scip) )
+   if( bestsol != NULL )
    {
       SCIP_Real solvalue;
 
       /* don't check solution while in problem creation stage */
       if( SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM )
+         return TRUE;
+
+      /* we can't get the original objective function value during probing mode when the objective has changed */
+      if( SCIPisObjChangedProbing(scip) )
          return TRUE;
 
       solvalue = SCIPgetSolOrigObj(scip, bestsol);

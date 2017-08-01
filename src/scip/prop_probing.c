@@ -746,8 +746,8 @@ SCIP_DECL_PROPINIT(propInitProbing)
    SCIP_CALL( initPropdata(scip, propdata) );
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&propdata->randnumgen, SCIPblkmem(scip),
-      SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &propdata->randnumgen,
+      DEFAULT_RANDSEED) );
 
 
    return SCIP_OKAY;
@@ -769,7 +769,7 @@ SCIP_DECL_PROPEXIT(propExitProbing)
    assert(propdata->nsortedbinvars == 0);
 
    /* free random number generator */
-   SCIPrandomFree(&propdata->randnumgen);
+   SCIPfreeRandom(scip, &propdata->randnumgen);
 
    return SCIP_OKAY;
 }

@@ -30,26 +30,24 @@
 #include "nlpi/nlpioracle.h"
 #include "nlpi/exprinterpret.h"
 #include "scip/interrupt.h"
-#include "scip/pub_misc.h"
+#include "scip/misc.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "worhp/worhp.h"
 
-#if WORHP_MAJOR < 2
-#error "Require at least Worhp 2.x"
+#if WORHP_MAJOR < 2 && WORHP_MINOR < 10
+#error "Require at least Worhp 1.10"
 #endif
 
-#define NLPI_NAME              "worhp"                      /**< short concise name of solver */
 #define NLPI_DESC              "Worhp interface"            /**< description of solver */
-#define NLPI_PRIORITY          1                            /**< priority of NLP solver */
+#define NLPI_PRIORITY_IP       0                            /**< priority of NLP solver (Interior Point) */
+#define NLPI_PRIORITY_SQP      -2000                        /**< priority of NLP solver (SQP) */
 
-#define DEFAULT_ALGORITHM      2                            /**< default algorithm to solve NLP (1: SQP 2: interior point) */
 #define DEFAULT_VERBLEVEL      0                            /**< default verbosity level (0: normal 1: full 2: debug >2: more debug) */
 #define DEFAULT_SCALEDKKT      TRUE                         /**< default whether KKT conditions are allowed to be scaled in the solver */
 #define DEFAULT_MAXITER        3000                         /**< default iteration limit for Worhp */
-#define DEFAULT_FEASTOL        1e-9                         /**< default feasibility tolerance for Worhp */
 #define DEFAULT_RANDSEED       107                          /**< initial random seed */
 
 #define MAXPERTURB             0.01                         /**< maximal perturbation of bounds in starting point heuristic */
@@ -63,6 +61,7 @@ struct SCIP_NlpiData
    BMS_BLKMEM*                 blkmem;       /**< block memory */
    SCIP_MESSAGEHDLR*           messagehdlr;  /**< message handler */
    SCIP_Real                   infinity;     /**< initial value for infinity */
+   SCIP_Bool                   useip;        /**< should the Interior Point solver of Worhp be used? */
 };
 
 struct SCIP_NlpiProblem
@@ -227,7 +226,7 @@ SCIP_RETCODE evaluateWorhpRun(
       /* iterates diverge */
       SCIPdebugMessage("Worhp failed because of diverging iterates!\n");
       invalidateSolution(problem);
-      problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+      problem->lastsolstat  = SCIP_NLPSOLSTAT_UNBOUNDED;
       problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERR;
       break;
    }
@@ -372,17 +371,23 @@ SCIP_RETCODE evaluateWorhpRun(
   /* store solution */
   if( problem->lastprimal == NULL )
   {
-     SCIP_ALLOC( BMSduplicateBlockMemoryArray(problem->blkmem, &problem->lastprimal, problem->opt->X, problem->opt->n) );
-     problem->lastprimalsize = problem->opt->n;
+     if( problem->opt->m > 0 )
+     {
+        SCIP_ALLOC( BMSduplicateBlockMemoryArray(problem->blkmem, &problem->lastdualcons, problem->opt->Mu, problem->opt->m) );
+        problem->lastdualconssize = problem->opt->m;
+     }
 
-     SCIP_ALLOC( BMSduplicateBlockMemoryArray(problem->blkmem, &problem->lastdualcons, problem->opt->Mu, problem->opt->m) );
-     problem->lastdualconssize = problem->opt->m;
+     if( problem->opt->n > 0 )
+     {
+        SCIP_ALLOC( BMSduplicateBlockMemoryArray(problem->blkmem, &problem->lastprimal, problem->opt->X, problem->opt->n) );
+        problem->lastprimalsize = problem->opt->n;
 
-     SCIP_ALLOC( BMSallocBlockMemoryArray(problem->blkmem, &problem->lastduallb, problem->opt->n) );
-     problem->lastduallbsize = problem->opt->n;
+        SCIP_ALLOC( BMSallocBlockMemoryArray(problem->blkmem, &problem->lastduallb, problem->opt->n) );
+        problem->lastduallbsize = problem->opt->n;
 
-     SCIP_ALLOC( BMSallocBlockMemoryArray(problem->blkmem, &problem->lastdualub, problem->opt->n) );
-     problem->lastdualubsize = problem->opt->n;
+        SCIP_ALLOC( BMSallocBlockMemoryArray(problem->blkmem, &problem->lastdualub, problem->opt->n) );
+        problem->lastdualubsize = problem->opt->n;
+     }
   }
   else
   {
@@ -404,10 +409,10 @@ SCIP_RETCODE evaluateWorhpRun(
      }
   }
 
-  assert(problem->lastprimal != NULL);
-  assert(problem->lastdualcons != NULL);
-  assert(problem->lastduallb != NULL);
-  assert(problem->lastdualub != NULL);
+  assert(problem->lastprimal != NULL || problem->opt->n == 0);
+  assert(problem->lastdualcons != NULL || problem->opt->m == 0);
+  assert(problem->lastduallb != NULL || problem->opt->n == 0);
+  assert(problem->lastdualub != NULL || problem->opt->n == 0);
 
   return SCIP_OKAY;
 }
@@ -919,7 +924,7 @@ SCIP_DECL_NLPICOPY( nlpiCopyWorhp )
    sourcedata = SCIPnlpiGetData(sourcenlpi);
    assert(sourcedata != NULL);
 
-   SCIP_CALL( SCIPcreateNlpSolverWorhp(blkmem, targetnlpi) );
+   SCIP_CALL( SCIPcreateNlpSolverWorhp(blkmem, targetnlpi, sourcedata->useip) );
    assert(*targetnlpi != NULL);
 
    SCIP_CALL( SCIPnlpiSetRealPar(*targetnlpi, NULL, SCIP_NLPPAR_INFINITY, sourcedata->infinity) );
@@ -1004,8 +1009,8 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemWorhp)
    WorhpPreInit((*problem)->opt, (*problem)->wsp, (*problem)->par, (*problem)->cnt);
 
    /* set default parameters */
-   (*problem)->feastol = DEFAULT_FEASTOL;
-   (*problem)->relobjtol = DEFAULT_FEASTOL;
+   (*problem)->feastol = SCIP_DEFAULT_FEASTOL;
+   (*problem)->relobjtol = SCIP_DEFAULT_FEASTOL;
    (*problem)->lobjlim = SCIP_INVALID;
    (*problem)->timelim = SCIP_DEFAULT_INFINITY;
    (*problem)->fromscratch = 0;
@@ -1059,7 +1064,7 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemWorhp)
       SCIP_CALL( SCIPnlpiOracleFree(&(*problem)->oracle) );
    }
 
-   SCIPrandomFree(&(*problem)->randnumgen);
+   SCIPrandomFree(&(*problem)->randnumgen, (*problem)->blkmem);
    BMSfreeMemoryArrayNull(&(*problem)->initguess);
    BMSfreeBlockMemory(data->blkmem, problem);
    *problem = NULL;
@@ -1204,13 +1209,20 @@ SCIP_DECL_NLPISETOBJECTIVE( nlpiSetObjectiveWorhp )
    assert(problem != NULL);
    assert(problem->oracle != NULL);
 
+   /* We pass the objective gradient in dense form to WORHP, so if the sparsity of that gradient changes, we do not need
+    * to reset WORHP (firstrun=TRUE).  However, if the sparsity of the Hessian matrix of the objective changes, then the
+    * sparsity pattern of the Hessian of the Lagrangian may change.  Thus, reset Worhp if the objective was and/or
+    * becomes nonlinear, but leave firstrun untouched if it was and stays linear.
+    */
+   if( nquadelems > 0 || exprtree != NULL || SCIPnlpiOracleGetConstraintDegree(problem->oracle, -1) > 1 )
+      problem->firstrun = TRUE;
+
    SCIP_CALL( SCIPnlpiOracleSetObjective(problem->oracle,
          constant, nlins, lininds, linvals,
          nquadelems, quadelems,
          exprvaridxs, exprtree) );
 
    invalidateSolution(problem);
-   problem->firstrun = TRUE;
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
@@ -1562,7 +1574,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
    if( status != OK )
       return SCIP_INVALIDCALL;
 
-   par->Algorithm = DEFAULT_ALGORITHM;
+   par->Algorithm = nlpidata->useip ? 2 : 1;
    par->ScaledKKT = DEFAULT_SCALEDKKT;
    par->sKKTOnlyAcceptable = DEFAULT_SCALEDKKT;
 
@@ -1787,6 +1799,7 @@ SCIP_DECL_NLPIGETTERMSTAT( nlpiGetTermstatWorhp )
  *  - consdualvalues buffer to store pointer to array to dual values of constraints, or NULL if not needed
  *  - varlbdualvalues buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed
  *  - varubdualvalues buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed
+ *  - objval buffer store the objective value, or NULL if not needed
  */
 static
 SCIP_DECL_NLPIGETSOLUTION( nlpiGetSolutionWorhp )
@@ -1804,6 +1817,17 @@ SCIP_DECL_NLPIGETSOLUTION( nlpiGetSolutionWorhp )
 
    if( varubdualvalues != NULL )
       *varubdualvalues = problem->lastdualub;
+
+   if( objval != NULL )
+   {
+      if( problem->lastprimal != NULL )
+      {
+         /* TODO store last solution value instead of reevaluating the objective function */
+         SCIP_CALL( SCIPnlpiOracleEvalObjectiveValue(problem->oracle, problem->lastprimal, objval) );
+      }
+      else
+         *objval = SCIP_INVALID;
+   }
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -2343,10 +2367,13 @@ SCIP_DECL_NLPISETMESSAGEHDLR( nlpiSetMessageHdlrWorhp )
 /** create solver interface for Worhp solver */
 SCIP_RETCODE SCIPcreateNlpSolverWorhp(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
-   SCIP_NLPI**           nlpi                /**< pointer to buffer for nlpi address */
+   SCIP_NLPI**           nlpi,               /**< pointer to buffer for nlpi address */
+   SCIP_Bool             useip               /**< TRUE for using Interior Point, FALSE for SQP */
    )
 {
    SCIP_NLPIDATA* nlpidata;
+   char name[SCIP_MAXSTRLEN];
+   int priority;
 
    assert(blkmem != NULL);
    assert(nlpi   != NULL);
@@ -2356,6 +2383,7 @@ SCIP_RETCODE SCIPcreateNlpSolverWorhp(
    BMSclearMemory(nlpidata);
 
    nlpidata->blkmem = blkmem;
+   nlpidata->useip = useip;
 
    /* initialize parameter */
    nlpidata->infinity = SCIP_DEFAULT_INFINITY;
@@ -2372,8 +2400,19 @@ SCIP_RETCODE SCIPcreateNlpSolverWorhp(
    CHECK_WORHP_VERSION
 
    /* create solver interface */
+   if( useip )
+   {
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "worhp-ip");
+      priority = NLPI_PRIORITY_IP;
+   }
+   else
+   {
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "worhp-sqp");
+      priority = NLPI_PRIORITY_SQP;
+   }
+
    SCIP_CALL( SCIPnlpiCreate(nlpi,
-         NLPI_NAME, NLPI_DESC, NLPI_PRIORITY,
+         name, NLPI_DESC, priority,
          nlpiCopyWorhp, nlpiFreeWorhp, nlpiGetSolverPointerWorhp,
          nlpiCreateProblemWorhp, nlpiFreeProblemWorhp, nlpiGetProblemPointerWorhp,
          nlpiAddVarsWorhp, nlpiAddConstraintsWorhp, nlpiSetObjectiveWorhp,
