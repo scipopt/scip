@@ -1717,7 +1717,6 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(bwdiffExprVisitChild)
 
 /**@} */  /* end of differentiation methods */
 
-/* export this function here, so it can be used by unittests but is not really part of the API */
 /** propagates bounds for each sub-expression in the constraint by using variable bounds; the resulting bounds for the
  *  root expression will be intersected with the [lhs,rhs] which might lead to an empty interval
  */
