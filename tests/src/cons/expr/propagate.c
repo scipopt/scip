@@ -608,3 +608,71 @@ Test(propagate, infeas_after_backwardprop)
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &yexpr) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
 }
+
+struct expr_results
+{
+   const char* cons1;
+   const char* cons2;
+   SCIP_Real xlb;
+   SCIP_Real xub;
+};
+
+ParameterizedTestParameters(propagate, propConss)
+{
+   static const struct expr_results data[] =
+   {
+      {"<t_x>^2 + <t_x>", "<t_x>^2 - 1.0", -1.0, -1.0},
+      {"<t_x>^(0.5) - <t_y>","<t_x> - 1.0 - <t_y>", 2.618033988749895, 2.618033988749895},
+      {"exp(<t_x>) - <t_y>", "4.0 * <t_x>^(1.5) - <t_y>", 0.58687228932071, 3.06767359040726},
+      {"log(abs(<t_x> + 1)) - <t_y>", "abs(<t_x>)^1.5 - <t_y>", 0.0,  0.6096527513}
+   };
+   return cr_make_param_array(const struct expr_results, data, sizeof(data)/sizeof(struct expr_results));
+}
+
+ParameterizedTest(const struct expr_results* data, propagate, propConss)
+{
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONS* cons1, *cons2;
+   int nchgbds = 0;
+   int ndelconss = 0;
+   SCIP_RESULT result;
+
+   /* set variable bounds */
+   SCIP_CALL( SCIPchgVarLb(scip, x, -10.0) ); SCIP_CALL( SCIPchgVarUb(scip, x, 10.0) );
+   SCIP_CALL( SCIPchgVarLb(scip, y, -100.0) ); SCIP_CALL( SCIPchgVarUb(scip, y, 100.0) );
+   SCIP_CALL( SCIPchgVarLb(scip, z, -3.0) ); SCIP_CALL( SCIPchgVarUb(scip, z, 1.0) );
+
+   SCIPinfoMessage(scip, NULL, "test constraints: %s == 0 and %s == 0 \n", data->cons1, data->cons2);
+
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, data->cons1, NULL, &expr) );
+   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons1, "cons1", expr, 0.0, 0.0) );
+   SCIP_CALL( SCIPaddCons(scip, cons1) );
+   cr_assert(SCIPconsIsActive(cons1));
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, data->cons2, NULL, &expr) );
+   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons2, "cons2", expr, 0.0, 0.0) );
+   SCIP_CALL( SCIPaddCons(scip, cons2) );
+   cr_assert(SCIPconsIsActive(cons1));
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+
+   /* call propConss() for all transformed constraints */
+   cr_assert_not_null(SCIPconshdlrGetConss(conshdlr));
+   cr_assert_eq(SCIPconshdlrGetNConss(conshdlr), 2);
+   SCIP_CALL( propConss(scip, conshdlr, SCIPconshdlrGetConss(conshdlr), SCIPconshdlrGetNConss(conshdlr), FALSE, &result, &nchgbds, &ndelconss) );
+   cr_assert_eq(result, SCIP_REDUCEDDOM, "expecting %d, but got %d\n", SCIP_REDUCEDDOM, result);
+   cr_assert_gt(nchgbds, 0);
+
+   /* check bounds */
+   cr_expect(SCIPvarGetLbLocal(x) <= data->xlb);
+   cr_expect(SCIPvarGetUbLocal(x) >= data->xub);
+   /* @benny: the tolerance is pretty bad for some tests, can you have a look please? */
+   cr_expect(REALABS(SCIPvarGetLbLocal(x) - data->xlb) <= 0.1, "Expecting %g, got %g\n", data->xlb, SCIPvarGetLbLocal(x));
+   cr_expect(REALABS(SCIPvarGetUbLocal(x) - data->xub) <= 0.2, "Expecting %g, got %g\n", data->xub, SCIPvarGetUbLocal(x));
+
+   /* free transformed problem and remove constraints */
+   SCIP_CALL( SCIPdelCons(scip, cons1) );
+   SCIP_CALL( SCIPdelCons(scip, cons2) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons1) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons2) );
+}

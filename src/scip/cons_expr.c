@@ -1927,7 +1927,6 @@ SCIP_RETCODE reversePropConss(
    return SCIP_OKAY;
 }
 
-/* export this function here, so it can be used by unittests but is not really part of the API */
 /** calls domain propagation for a given set of constraints; the algorithm alternates calls of forward and reverse
  *  propagation; the latter only for nodes which have been tightened during the propagation loop;
  *
