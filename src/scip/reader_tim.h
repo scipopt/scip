@@ -13,24 +13,24 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   reader_mps.h
+/**@file   reader_tim.h
  * @ingroup FILEREADERS
- * @brief  (extended) MPS file reader
+ * @brief  (extended) TIM file reader
  * @author Thorsten Koch
  * @author Tobias Achterberg
  *
- * This reader allows to parse and write MPS files with linear and quadratic constraints and objective,
+ * This reader allows to parse and write TIM files with linear and quadratic constraints and objective,
  * special ordered sets of type 1 and 2, indicators on linear constraints, and semicontinuous variables.
  * For writing, linear (general and specialized), indicator, quadratic, second order cone, and
  * special ordered set constraints are supported.
  *
- * See http://en.wikipedia.org/wiki/MPS_%28format%29 for a description.
+ * See http://en.wikipedia.org/wiki/TIM_%28format%29 for a description.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_READER_MPS_H__
-#define __SCIP_READER_MPS_H__
+#ifndef __SCIP_READER_TIM_H__
+#define __SCIP_READER_TIM_H__
 
 
 #include "scip/scip.h"
@@ -39,12 +39,12 @@
 extern "C" {
 #endif
 
-/** includes the mps file reader into SCIP
+/** includes the tim file reader into SCIP
  *
  *  @ingroup FileReaderIncludes
  */
 EXTERN
-SCIP_RETCODE SCIPincludeReaderMps(
+SCIP_RETCODE SCIPincludeReaderTim(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -55,24 +55,17 @@ SCIP_RETCODE SCIPincludeReaderMps(
 
 /** reads problem from file */
 EXTERN
-SCIP_RETCODE SCIPreadMps(
+SCIP_RETCODE SCIPreadTim(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_READER*          reader,             /**< the file reader itself */
    const char*           filename,           /**< full path and name of file to read, or NULL if stdin should be used */
-   SCIP_RESULT*          result,             /**< pointer to store the result of the file reading call */
-   const char***         varnames,           /**< storage for the variable names, or NULL */
-   const char***         consnames,          /**< storage for the constraint names, or NULL */
-   int*                  varnamessize,       /**< the size of the variable names storage, or NULL */
-   int*                  consnamessize,      /**< the size of the constraint names storage, or NULL */
-   int*                  nvarnames,          /**< the number of stored variable names, or NULL */
-   int*                  nconsnames          /**< the number of stored constraint names, or NULL */
+   SCIP_RESULT*          result              /**< pointer to store the result of the file reading call */
    );
 
 /** writes problem to file */
 EXTERN
-SCIP_RETCODE SCIPwriteMps(
+SCIP_RETCODE SCIPwriteTim(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_READER*          reader,             /**< the file reader itself */
    FILE*                 file,               /**< output file, or NULL if standard output should be used */
    const char*           name,               /**< problem name */
    SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
@@ -86,14 +79,79 @@ SCIP_RETCODE SCIPwriteMps(
    int                   nintvars,           /**< number of general integer variables */
    int                   nimplvars,          /**< number of implicit integer variables */
    int                   ncontvars,          /**< number of continuous variables */
-   SCIP_VAR**            fixedvars,          /**< array with fixed and aggregated variables */
-   int                   nfixedvars,         /**< number of fixed and aggregated variables in the problem */
    SCIP_CONS**           conss,              /**< array with constraints of the problem */
    int                   nconss,             /**< number of constraints in the problem */
    SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
    );
 
 /* @} */
+
+/*
+ * Interface methods for the cor and sto files
+ */
+
+/* returns the number of stages */
+EXTERN
+int SCIPtimGetNStage(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/* returns the name for a given stage */
+EXTERN
+const char* SCIPtimGetStageName(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   stagenum            /**< the number of the requested stage */
+   );
+
+/* returns the number for a given stage */
+EXTERN
+int SCIPtimFindStage(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           stage               /**< the name of the requested stage */
+   );
+
+/* returns the array of variables for a given stage */
+EXTERN
+SCIP_VAR** SCIPtimGetStageVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   stagenum            /**< the number of the requested stage */
+   );
+
+/* returns an array of constraints for a given stage */
+EXTERN
+SCIP_CONS** SCIPtimGetStageConss(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   stagenum            /**< the number of the requested stage */
+   );
+
+/* returns the number of variables for a given stage */
+EXTERN
+int SCIPtimGetStageNVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   stagenum            /**< the number of the requested stage */
+   );
+
+/* returns the number of constraints for a given stage */
+EXTERN
+int SCIPtimGetStageNConss(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   stagenum            /**< the number of the requested stage */
+   );
+
+/* returns the number of scenarios for a given stage */
+EXTERN
+int SCIPtimGetStageNScenarios(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   stagenum            /**< the number of the requested stage */
+   );
+
+/* returns the number of scenarios for a given stage */
+EXTERN
+void SCIPtimSetStageNScenarios(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   stagenum,           /**< the number of the requested stage */
+   int                   nscenarios          /**< the number of scenarios to set the stage parameter to */
+   );
 
 #ifdef __cplusplus
 }

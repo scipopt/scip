@@ -604,6 +604,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/reader_ccg.o \
 			scip/reader_cip.o \
 			scip/reader_cnf.o \
+			scip/reader_cor.o \
 			scip/reader_diff.o \
 			scip/reader_fix.o \
 			scip/reader_fzn.o \
@@ -618,6 +619,8 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/reader_ppm.o \
 			scip/reader_rlp.o \
 			scip/reader_sol.o \
+			scip/reader_sto.o \
+			scip/reader_tim.o \
 			scip/reader_wbo.o \
 			scip/reader_zpl.o \
 			scip/sepa_cgmip.o \
