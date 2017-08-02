@@ -203,12 +203,30 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
       SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
       SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameIpopt(), SCIPgetSolverDescIpopt()) );
    }
+   SCIP_CALL( SCIPcreateNlpSolverFilterSQP(SCIPblkmem(scip), &nlpi) );
+   if( nlpi != NULL )
+   {
+      SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
+      SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameFilterSQP(), SCIPgetSolverDescFilterSQP()) );
+   }
 
-   SCIP_CALL( SCIPcreateNlpSolverWorhp(SCIPblkmem(scip), &nlpi) );
+   SCIP_CALL( SCIPcreateNlpSolverWorhp(SCIPblkmem(scip), &nlpi, TRUE) );
    if( nlpi != NULL )
    {
       SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
       SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameWorhp(), SCIPgetSolverDescWorhp()) );
+   }
+
+   SCIP_CALL( SCIPcreateNlpSolverWorhp(SCIPblkmem(scip), &nlpi, FALSE) );
+   if( nlpi != NULL )
+   {
+      SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
+   }
+
+   SCIP_CALL( SCIPcreateNlpSolverAll(SCIPblkmem(scip), &nlpi, SCIPgetNlpis(scip), SCIPgetNNlpis(scip)) );
+   if( nlpi != NULL )
+   {
+      SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
    }
 
 #ifdef TPI_TNYC

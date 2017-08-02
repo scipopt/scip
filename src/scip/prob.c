@@ -1295,6 +1295,7 @@ SCIP_RETCODE SCIPprobAddCons(
    prob->conss[prob->nconss] = cons;
    prob->nconss++;
    prob->maxnconss = MAX(prob->maxnconss, prob->nconss);
+   stat->nactiveconssadded++;
 
    /* undelete constraint, if it was globally deleted in the past */
    cons->deleted = FALSE;

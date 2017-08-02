@@ -197,7 +197,9 @@
 #include "scip/concsolver_scip.h"
 
 #include "nlpi/nlpi_ipopt.h"
+#include "nlpi/nlpi_filtersqp.h"
 #include "nlpi/nlpi_worhp.h"
+#include "nlpi/nlpi_all.h"
 
 #ifdef __cplusplus
 extern "C" {

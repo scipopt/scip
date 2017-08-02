@@ -389,6 +389,7 @@
  *       <ul>
  *          <li>Compile with <code>IPOPT=true</code> for better performance.</li>
  *          <li>Compile with <code>WORHP=true</code> for better performance.</li>
+ *          <li>Compile with <code>FILTERSQP=true</code> for better performance.</li>
  *          <li>Compile with <code>GAMS=true</code> to read gms-files.</li>
  *          <li>See <a href="FAQ\FILEEXT#minlptypes"> Which kind of MINLPs are supported by \SCIP? </a> in the FAQ.</li>
  *          <li>There is an interface for the modelling language AMPL, see \ref INTERFACES.</li>
@@ -639,6 +640,8 @@
  *   version of ZIMPL, if ZIMPL support is enabled.
  *
  * - <code>READLINE=\<true|false\></code> Turns support via the readline library on (default) or off, respectively.
+ *
+ * - <code>FILTERSQP=\<true|false\></code> Enable or disable (default) FilterSQP interface.
  *
  * - <code>IPOPT=\<true|false\></code> Enable or disable (default) IPOPT interface (needs IPOPT >= 3.11).
  *

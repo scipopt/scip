@@ -73,10 +73,10 @@
 =opt=  khb05250                     1.0694022600e+08
 =opt=  l152lav                      4.7220000000e+03
 =opt=  lectsched-4-obj                   4.000000000
-=best= leo1                     421359487
+=best= leo1                     406070355.52
 =best= leo2                     425958116
 =best= liu                          1.1320000000e+03
-=opt= lrn                      44481892.1
+=opt= lrn                      4.4479255127e+07
 =opt=  lseu                         1.1200000000e+03
 =opt=  m100n500k4r1                     -25.00000000
 =opt=  macrophage                      374.000000000
@@ -112,7 +112,7 @@
 =opt=  n3div36                      130800.000000000
 =opt=  n3seq24                       52200.000000000
 =opt=  n4-3                           8993.000000000
-=best= nag                           1920
+=best= nag                           1740
 =opt= neos-1053234            0.593889097
 =opt= neos-1053591             -3662.9144
 =best= neos-1056905                    15
@@ -132,7 +132,7 @@
 =opt= neos-1151496                      6
 =opt= neos-1171448                   -309
 =opt= neos-1171692                   -273
-=best= neos-1171737                  -194
+=opt= neos-1171737                  -195
 =opt= neos-1173026             0.42184174
 =opt= neos-1200887                    -74
 =opt= neos-1208069                      2
@@ -172,7 +172,7 @@
 =unkn= neos-1429212
 =best= neos-1429461                -101.25
 =opt= neos-1430701                    -77
-=best= neos-1430811               475726667
+=best= neos-1430811               262624606.936544
 =best= neos-1436709                   -128
 =best= neos-1436713                 -152.5
 =opt= neos-1437164                      8
@@ -194,12 +194,12 @@
 =best= neos-1460246                   2606
 =opt= neos-1460265                  13400
 =best= neos-1460543                  14600
-=best= neos-1460641                  88030
+=best= neos-1460641                  88024
 =inf= neos-1461051
 =best= neos-1464762               88024.75
 =opt= neos-1467067                   -103
 =best= neos-1467371                 1786.5
-=best= neos-1467467                1793.5
+=best= neos-1467467                1790
 =opt= neos-1480121                     43
 =opt= neos-1489999                    354
 =opt= neos-1516309                  35954
@@ -332,7 +332,7 @@
 =opt= neos-831188              2.61377462
 =opt= neos-839838               106657171
 =opt= neos-839859              9809653.22
-=best= neos-839894              15964579.5
+=best= neos-839894              15739135.94795
 =best= neos-841664                   32735
 =best= neos-847051             -887666.893
 =best= neos-847302                       4
@@ -348,13 +348,13 @@
 =opt= neos-860300                    3201
 =opt= neos-862348                   96.73
 =opt= neos-863472                11.64809
-=best= neos-872648             48.9858978
+=best= neos-872648             48.7306627396781
 =best= neos-873061             116.249628
 =best= neos-876808             173836.215
 =opt= neos-880324                  108.67
 =opt= neos-881765                       0
 =opt= neos-885086                    -243
-=best= neos-885524               12335.272
+=opt= neos-885524                 12320.1
 =opt= neos-886822                   28755
 =opt= neos-892255                      14
 =opt= neos-905856                      -6
@@ -477,8 +477,8 @@
 =opt=  seymour                      4.2300000000e+02
 =best= seymour.disj-10                287
 =opt=  sp97ar                       6.6070564550e+08
-=best= sp97ic                    404237985
-=best= sp98ar                    543622634
+=best= sp97ic                    402826788.16
+=best= sp98ar                    535318375.68
 =opt=  sp98ic                    449144758.399999976
 =opt=  sp98ir                    219676790.400000006
 =opt=  stein27                      1.8000000000e+01
