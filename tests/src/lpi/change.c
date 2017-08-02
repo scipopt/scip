@@ -151,11 +151,9 @@ TestSuite(change, .init = setup, .fini = teardown);
 
 /** TESTS **/
 
-TheoryDataPoints(change,  testchgbound) = 
+TheoryDataPoints(change, testchgbound) = 
 {
    //TODO add the infinities...
-   //DataPoints(SCIP_Real, -3, SCIPlpiInfinity(lpi), 0, 5034.2, 2e15, 8e-7), 
-   //DataPoints(SCIP_Real, -10, 0, -342.3, -SCIPlpiInfinity(lpi), 2e13, -2e-9),
    DataPoints(SCIP_Real, -3, 0, 5034.2, 2e15, 8e-7), 
    DataPoints(SCIP_Real, -10, 0, -342.3, 2e13, -2e-9),
    DataPoints(int, 0, 1, 2)
@@ -163,19 +161,49 @@ TheoryDataPoints(change,  testchgbound) =
 
 Theory((SCIP_Real upper, SCIP_Real lower, int prob), change, testchgbound)
 {
-   cr_assume_lt(lower, upper);
+   cr_assume_lt(upper, lower);
    initProb(prob);
 
-   int ind[1] = {0};
    SCIP_Real setub[1] = { upper };
    SCIP_Real setlb[1] = { lower };
+   int ind[1] = {0};
    SCIP_CALL( SCIPlpiChgBounds(lpi, 1, ind, setlb, setub) );
 
    SCIP_Real ub[1];
    SCIP_Real lb[1];
    SCIP_CALL( SCIPlpiGetBounds(lpi, 0, 0, lb, ub) );
    
-   cr_assert_eq(ub[0], setub[0]);
-   cr_assert_eq(lb[0], setlb[0]);
+   cr_assert_arr_eq(ub, setub, 1);
+   cr_assert_arr_eq(lb, setlb, 1);
+}
+
+TheoryDataPoints(change, testchgbounds) = 
+{
+   //TODO add the infinities...
+   DataPoints(SCIP_Real, -3, 0, 5034.2, 2e15, 8e-7), 
+   DataPoints(SCIP_Real, -3, 0, 5034.2, 2e15, 8e-7), 
+   DataPoints(SCIP_Real, -10, 0, -342.3, 2e13, -2e-9),
+   DataPoints(SCIP_Real, -10, 0, -342.3, 2e13, -2e-9),
+   // Problem 0 has only one variable 
+   DataPoints(int, 1, 2)
+};
+
+Theory((SCIP_Real upper1, SCIP_Real upper2, SCIP_Real lower1, SCIP_Real lower2, int prob), change, testchgbounds)
+{
+   cr_assume_lt(lower1, upper1);
+   cr_assume_lt(lower2, upper2);
+   initProb(prob);
+
+   SCIP_Real setub[2] = { upper1, upper2 };
+   SCIP_Real setlb[2] = { lower1, lower2 };
+   int ind[2] = {0, 1};
+   SCIP_CALL( SCIPlpiChgBounds(lpi, 2, ind, setlb, setub) );
+
+   SCIP_Real ub[2];
+   SCIP_Real lb[2];
+   SCIP_CALL( SCIPlpiGetBounds(lpi, 0, 1, lb, ub) );
+   
+   cr_assert_arr_eq(ub, setub, 2);
+   cr_assert_arr_eq(lb, setlb, 2);
 }
 
