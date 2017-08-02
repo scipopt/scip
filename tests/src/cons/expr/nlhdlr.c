@@ -27,6 +27,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include <string.h>
+
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 #include "scip/cons_expr.h"
@@ -35,11 +37,9 @@
 #include "scip/cons_expr_pow.h"
 #include "scip/cons_expr_var.h"
 
-#include "include/scip_test.h"
-
-static SCIP* testscip;
-static SCIP_VAR* x;
-static SCIP_VAR* y;
+/*
+ * NONLINEAR HANDLER (i.e. SCIP code)
+ */
 
 struct SCIP_ConsExpr_NlhdlrData
 {
@@ -60,52 +60,6 @@ struct SCIP_ConsExpr_NlhdlrExprData
    SCIP_Bool             convex;             /**< whether convex or concave */
 };
 
-/* creates scip, problem, includes expression constraint handler, creates and adds variables */
-static
-void setup(void)
-{
-   SCIP_CONS* consexpr;
-   SCIP_Bool success;
-   const char* input1 = "[expr] <test>: (<x>+<y>-0)^2 + (<y>-0)^2 <= 1.5;";
-   const char* input2 = "[expr] <test>: (<x>+<y>-1)^2 + (<y>-1)^2 <= 1.0;";
-
-   /* create scip with all plugins */
-   SCIP_CALL( SCIPcreate(&testscip) );
-   SCIP_CALL( SCIPincludeDefaultPlugins(testscip) );
-
-   /* create problem */
-   SCIP_CALL( SCIPcreateProbBasic(testscip, "test_problem") );
-
-   SCIP_CALL( SCIPcreateVarBasic(testscip, &x, "x", 0.0, 5.0, -1.5, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPcreateVarBasic(testscip, &y, "y", 0.0, 5.0, -2.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPaddVar(testscip, x) );
-   SCIP_CALL( SCIPaddVar(testscip, y) );
-
-   success = FALSE;
-   SCIP_CALL( SCIPparseCons(testscip, &consexpr, input1,
-         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
-   SCIP_CALL( SCIPaddCons(testscip, consexpr) );
-   SCIP_CALL( SCIPreleaseCons(testscip, &consexpr) );
-
-   success = FALSE;
-   SCIP_CALL( SCIPparseCons(testscip, &consexpr, input2,
-         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
-   SCIP_CALL( SCIPaddCons(testscip, consexpr) );
-   SCIP_CALL( SCIPreleaseCons(testscip, &consexpr) );
-}
-
-/* releases variables, frees scip */
-static
-void teardown(void)
-{
-   SCIP_CALL( SCIPreleaseVar(testscip, &x) );
-   SCIP_CALL( SCIPreleaseVar(testscip, &y) );
-   SCIP_CALL( SCIPfree(&testscip) );
-
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
-}
 
 static
 SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(freeHdlrData)
@@ -114,7 +68,7 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(freeHdlrData)
    assert(nlhdlr != NULL);
    assert(nlhdlrdata != NULL);
    assert(*nlhdlrdata != NULL);
-   cr_assert(!(*nlhdlrdata)->initialized, "nlhdlr should not yet be initialized or be de-initialized when freeing");
+   assert(!(*nlhdlrdata)->initialized);
 
    SCIPfreeMemory(scip, nlhdlrdata);
 
@@ -143,7 +97,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINIT(initHdlr)
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
    assert(nlhdlrdata != NULL);
 
-   cr_assert(!nlhdlrdata->initialized, "nlhdlr cannot be initialized already");
+   assert(!nlhdlrdata->initialized);
 
    nlhdlrdata->initialized = TRUE;
 
@@ -161,7 +115,7 @@ SCIP_DECL_CONSEXPR_NLHDLREXIT(exitHldr)
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
    assert(nlhdlrdata != NULL);
 
-   cr_assert(nlhdlrdata->initialized, "nlhdlr must have been initialized");
+   assert(nlhdlrdata->initialized);
 
    nlhdlrdata->initialized = FALSE;
 
@@ -189,7 +143,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlr)
       return SCIP_OKAY;
 
    powhdlr = SCIPfindConsExprExprHdlr(conshdlr, "pow");
-   cr_assert(powhdlr != NULL, "pow hdlr should be present");
+   assert(powhdlr != NULL);
 
    BMSclearMemory(&exprdata);
    exprdata.constant = SCIPgetConsExprExprSumConstant(expr);
@@ -473,9 +427,9 @@ SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(copyHdlr)
    assert(targetconsexprhdlr != NULL);
    assert(sourceconsexprhdlr != NULL);
    assert(sourcenlhdlr != NULL);
-   cr_assert(strcmp(SCIPgetConsExprNlhdlrName(sourcenlhdlr), "testhdlr") == 0, "source nlhdlr is not testhdlr");
+   assert(strcmp(SCIPgetConsExprNlhdlrName(sourcenlhdlr), "testhdlr") == 0);
 
-   SCIP_CALL( SCIPallocClearMemory(testscip, &nlhdlrdata) );
+   SCIP_CALL( SCIPallocClearMemory(targetscip, &nlhdlrdata) );
 
    SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(targetscip, targetconsexprhdlr, &targetnlhdlr,
       SCIPgetConsExprNlhdlrName(sourcenlhdlr), SCIPgetConsExprNlhdlrDesc(sourcenlhdlr), SCIPgetConsExprNlhdlrPriority(sourcenlhdlr), detectHdlr, nlhdlrdata) );
@@ -488,6 +442,64 @@ SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(copyHdlr)
    return SCIP_OKAY;
 }
 
+/*
+ * TEST
+ */
+
+#include "include/scip_test.h"
+
+static SCIP* scip;
+static SCIP_VAR* x;
+static SCIP_VAR* y;
+
+
+/* creates scip, problem, includes expression constraint handler, creates and adds variables */
+static
+void setup(void)
+{
+   SCIP_CONS* consexpr;
+   SCIP_Bool success;
+   const char* input1 = "[expr] <test>: (<x>+<y>-0)^2 + (<y>-0)^2 <= 1.5;";
+   const char* input2 = "[expr] <test>: (<x>+<y>-1)^2 + (<y>-1)^2 <= 1.0;";
+
+   /* create scip with all plugins */
+   SCIP_CALL( SCIPcreate(&scip) );
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
+
+   /* create problem */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
+
+   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", 0.0, 5.0, -1.5, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", 0.0, 5.0, -2.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, x) );
+   SCIP_CALL( SCIPaddVar(scip, y) );
+
+   success = FALSE;
+   SCIP_CALL( SCIPparseCons(scip, &consexpr, input1,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   cr_assert(success);
+   SCIP_CALL( SCIPaddCons(scip, consexpr) );
+   SCIP_CALL( SCIPreleaseCons(scip, &consexpr) );
+
+   success = FALSE;
+   SCIP_CALL( SCIPparseCons(scip, &consexpr, input2,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   cr_assert(success);
+   SCIP_CALL( SCIPaddCons(scip, consexpr) );
+   SCIP_CALL( SCIPreleaseCons(scip, &consexpr) );
+}
+
+/* releases variables, frees scip */
+static
+void teardown(void)
+{
+   SCIP_CALL( SCIPreleaseVar(scip, &x) );
+   SCIP_CALL( SCIPreleaseVar(scip, &y) );
+   SCIP_CALL( SCIPfree(&scip) );
+
+   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
+}
+
 Test(conshdlr, nlhdlr, .init = setup, .fini = teardown,
    .description = "test basic functionality of nonlinear handler of the cons_expr constraint handler."
    )
@@ -497,30 +509,30 @@ Test(conshdlr, nlhdlr, .init = setup, .fini = teardown,
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
 
    /* get expr conshdlr */
-   conshdlr = SCIPfindConshdlr(testscip, "expr");
+   conshdlr = SCIPfindConshdlr(scip, "expr");
    assert(conshdlr != NULL);
 
-   SCIP_CALL( SCIPallocClearMemory(testscip, &nlhdlrdata) );
+   SCIP_CALL( SCIPallocClearMemory(scip, &nlhdlrdata) );
 
-   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(testscip, conshdlr, &nlhdlr, "testhdlr", "tests nonlinear handler functionality", 0, detectHdlr, nlhdlrdata) );
+   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, conshdlr, &nlhdlr, "testhdlr", "tests nonlinear handler functionality", 0, detectHdlr, nlhdlrdata) );
 
-   SCIPsetConsExprNlhdlrFreeHdlrData(testscip, nlhdlr, freeHdlrData);
-   SCIPsetConsExprNlhdlrFreeExprData(testscip, nlhdlr, freeExprData);
-   SCIPsetConsExprNlhdlrCopyHdlr(testscip, nlhdlr, copyHdlr);
-   SCIPsetConsExprNlhdlrInitExit(testscip, nlhdlr, initHdlr, exitHldr);
-   SCIPsetConsExprNlhdlrSepa(testscip, nlhdlr, sepaHdlr);
+   SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, freeHdlrData);
+   SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, freeExprData);
+   SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, copyHdlr);
+   SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, initHdlr, exitHldr);
+   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, sepaHdlr);
 
-   SCIP_CALL( SCIPsetIntParam(testscip, "display/verblevel", SCIP_VERBLEVEL_NONE) );
-   /* SCIP_CALL( SCIPsetRealParam(testscip, "limits/gap", 1e-6) ); */
+   SCIP_CALL( SCIPsetIntParam(scip, "display/verblevel", SCIP_VERBLEVEL_NONE) );
+   /* SCIP_CALL( SCIPsetRealParam(scip, "limits/gap", 1e-6) ); */
 /*
-   SCIP_CALL( SCIPpresolve(testscip) );
-   SCIP_CALL( SCIPprintOrigProblem(testscip, NULL, NULL, FALSE) );
-   SCIP_CALL( SCIPprintTransProblem(testscip, NULL, NULL, FALSE) );
+   SCIP_CALL( SCIPpresolve(scip) );
+   SCIP_CALL( SCIPprintOrigProblem(scip, NULL, NULL, FALSE) );
+   SCIP_CALL( SCIPprintTransProblem(scip, NULL, NULL, FALSE) );
 */
-   SCIP_CALL( SCIPsolve(testscip) );
-   /* SCIP_CALL( SCIPprintBestSol(testscip, NULL, TRUE) ); */
+   SCIP_CALL( SCIPsolve(scip) );
+   /* SCIP_CALL( SCIPprintBestSol(scip, NULL, TRUE) ); */
 
-   cr_assert(SCIPgetStatus(testscip) == SCIP_STATUS_OPTIMAL, "not solved to optimality");
-   cr_assert(SCIPisFeasEQ(testscip, SCIPgetPrimalbound(testscip), -1.93649230212515), "optimal value not correct, expected -1.93649230212515, but got %.20g", SCIPgetPrimalbound(testscip));
-   cr_assert(SCIPgetNNodes(testscip) <= 1, "convex NLP should be solved without branching, but took %" SCIP_LONGINT_FORMAT " nodes", SCIPgetNNodes(testscip));
+   cr_assert(SCIPgetStatus(scip) == SCIP_STATUS_OPTIMAL, "not solved to optimality");
+   cr_assert(SCIPisFeasEQ(scip, SCIPgetPrimalbound(scip), -1.93649230212515), "optimal value not correct, expected -1.93649230212515, but got %.20g", SCIPgetPrimalbound(scip));
+   cr_assert(SCIPgetNNodes(scip) <= 1, "convex NLP should be solved without branching, but took %" SCIP_LONGINT_FORMAT " nodes", SCIPgetNNodes(scip));
 }
