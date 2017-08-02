@@ -8,6 +8,7 @@ features
 - allow to relax objective limit in reoptimization in presolved stage
 - suppress excessive printing about numerical troubles in LP on default verblevel (high)
 - updated Mosek interface to compile with Mosek 8.1, too
+- updates GAMS interface to latest version
 
 fixed bugs:
 - fixed bug in shift and propagate--variable information with a negation transformation is correctly reset after backtracking
