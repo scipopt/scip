@@ -37,6 +37,7 @@ void initProb(int); //TODO without this we have a prototype missing warning...
 
 void initProb(int option) 
 {
+   // TODO add a minimization problem
    if(0 == option) {
       /* unbounded - infeasible
        * 
@@ -263,3 +264,19 @@ Theory((SCIP_Real left1, SCIP_Real left2, SCIP_Real right1, SCIP_Real right2, in
    cr_assert_arr_eq(ls, setls, 2);
 }
 
+TheoryDataPoints(change, testchgobjsen) = 
+{
+   DataPoints(SCIP_OBJSEN, SCIP_OBJSEN_MAXIMIZE, SCIP_OBJSEN_MINIMIZE),
+   DataPoints(int, 0, 1, 2)
+};
+
+Theory((SCIP_OBJSEN sense, int prob), change, testchgobjsen) 
+{
+   initProb(prob);
+   SCIP_CALL( SCIPlpiChgObjsen(lpi, sense) );
+   
+   SCIP_OBJSEN probsense;
+   SCIP_CALL( SCIPlpiGetObjsen(lpi, &probsense) );
+
+   cr_assert_eq( sense, probsense );
+}
