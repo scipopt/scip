@@ -2170,6 +2170,22 @@ SCIP_RETCODE SCIPgenVBoundAdd(
  * Callback methods of propagator
  */
 
+/** copy method for propagator plugins (called when SCIP copies plugins)
+ *
+ *  @note The UG framework assumes that all default plug-ins of SCIP implement a copy callback.
+ */
+static
+SCIP_DECL_PROPCOPY(propCopyGenvbounds)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(prop != NULL);
+   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludePropGenvbounds(scip) );
+
+   return SCIP_OKAY;
+}
 
 /** initialization method of propagator (called after problem was transformed) */
 static
@@ -2721,6 +2737,7 @@ SCIP_RETCODE SCIPincludePropGenvbounds(
    SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
          propExecGenvbounds, propdata) );
 
+   SCIP_CALL( SCIPsetPropCopy(scip, prop, propCopyGenvbounds) );
    SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeGenvbounds) );
    SCIP_CALL( SCIPsetPropInit(scip, prop, propInitGenvbounds) );
    SCIP_CALL( SCIPsetPropInitpre(scip, prop, propInitpreGenvbounds) );
