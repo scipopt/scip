@@ -6588,18 +6588,17 @@ SCIP_RETCODE tightenDualray(
       SCIP_CALL( SCIPfreeSol(set->scip, &refsol) );
    }
 
-   if( conflict->proofset->conflicttype == SCIP_CONFTYPE_INFEASLP )
+   if( proofset->conflicttype == SCIP_CONFTYPE_INFEASLP )
    {
       /* remove all continuous variables that have equal global and local bounds (ub or lb depend on the sign)
        * from the proof
        *
-       * @note: currently, we do this only for the initial proof
+       * @note: currently, we do this only for the original proof
        */
 
-      vals = SCIPaggrRowGetVals(conflict->proofset->aggrrow);
-      inds = SCIPaggrRowGetInds(conflict->proofset->aggrrow);
-      rhs = SCIPaggrRowGetRhs(conflict->proofset->aggrrow);
-      nnz = SCIPaggrRowGetNNz(conflict->proofset->aggrrow);
+      vals = SCIPaggrRowGetVals(proofset->aggrrow);
+      inds = SCIPaggrRowGetInds(proofset->aggrrow);
+      nnz = SCIPaggrRowGetNNz(proofset->aggrrow);
 
       SCIP_CALL( SCIPsetAllocBufferArray(set, &subvals, nnz) );
       SCIP_CALL( SCIPsetAllocBufferArray(set, &subinds, nnz) );
@@ -6643,8 +6642,8 @@ SCIP_RETCODE tightenDualray(
          }
       }
 
-      SCIP_CALL( SCIPaggrRowAddSparseData(set->scip, conflict->proofset->aggrrow, subvals, subinds, nsubvars, subrhs) );
-      SCIPaggrRowCleanup(set->scip, conflict->proofset->aggrrow);
+      SCIP_CALL( SCIPaggrRowAddSparseData(set->scip, proofset->aggrrow, subvals, subinds, nsubvars, subrhs) );
+      SCIPaggrRowCleanup(set->scip,    proofset->aggrrow);
 
       /* free buffer */
       SCIPsetFreeBufferArray(set, &subinds);
