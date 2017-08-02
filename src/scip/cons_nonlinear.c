@@ -8052,10 +8052,8 @@ SCIP_DECL_CONSENFOPS(consEnfopsNonlinear)
       return SCIP_OKAY;
    }
 
-   /* we are not feasible and we cannot proof that the whole node is infeasible
-    * -> collect all variables in violated constraints for branching
-    */
-
+   /* We are not feasible and we cannot prove that the whole node is infeasible -> collect all variables in violated
+    * constraints for branching. */
    nnotify = 0;
    for( c = 0; c < nconss; ++c )
    {
@@ -8077,6 +8075,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsNonlinear)
       }
 
       for( j = 0; j < consdata->nexprtrees; ++j )
+      {
          for( i = 0; i < SCIPexprtreeGetNVars(consdata->exprtrees[j]); ++i )
          {
             var = SCIPexprtreeGetVars(consdata->exprtrees[j])[i];
@@ -8086,6 +8085,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsNonlinear)
                ++nnotify;
             }
          }
+      }
    }
 
    if( nnotify == 0 )

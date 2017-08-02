@@ -22,15 +22,6 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${SCIP_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${SCIP_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${SCIP_BINARY_DIR}/lib)
 
-# update the cmake submodule
-if(EXISTS ${PROJECT_SOURCE_DIR}/.git AND NOT EXISTS ${PROJECT_SOURCE_DIR}/cmake/.git)
-   find_program(GIT git)
-   if(GIT)
-      execute_process(
-         COMMAND ${GIT} submodule update --init ${PROJECT_SOURCE_DIR}/cmake)
-   endif()
-endif()
-
 # path to e.g. findGMP module
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
 
@@ -51,6 +42,7 @@ option(GMP "should gmp be linked" ON)
 option(ZIMPL "should zimpl be linked" ON)
 option(IPOPT "should ipopt be linked" ON)
 option(PARASCIP "should scip be compiled thread safe" OFF)
+option(LPSCHECK "double check SoPlex results with CPLEX" OFF)
 option(LEGACY "build SCIP/SoPlex in legacy mode" OFF)
 option(NOBLKBUFMEM "should block and buffer memory be disabled" OFF)
 option(NOBLKMEM "should block and buffer memory be disabled" OFF)
@@ -153,11 +145,12 @@ endif()
 message(STATUS "LEGACY mode for old compilers: ${LEGACY}")
 
 # create a target for updating the current git hash
-file(WRITE ${CMAKE_BINARY_DIR}/update_githash.cmake "
+file(WRITE ${CMAKE_BINARY_DIR}/scip_update_githash.cmake "
 find_program(GIT git)
 if(GIT)
    execute_process(
       COMMAND \${GIT} describe --always --dirty
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
       OUTPUT_VARIABLE GITHASH OUTPUT_STRIP_TRAILING_WHITESPACE)
    if(GITHASH STREQUAL \"\")
       set(GITHASH \"000000\")
@@ -169,18 +162,18 @@ endif()
 file(WRITE \${DST} \"#define SCIP_GITHASH \\\"\${GITHASH}\\\"\")
 message(STATUS \"Git hash: \" \${GITHASH})
 ")
-add_custom_target(update_githash
+add_custom_target(scip_update_githash
                   COMMAND ${CMAKE_COMMAND} -DDST=${PROJECT_SOURCE_DIR}/src/scip/githash.c
-                                           -P ${CMAKE_BINARY_DIR}/update_githash.cmake)
+                                           -P ${CMAKE_BINARY_DIR}/scip_update_githash.cmake)
 
 # create a target for updating the current build configuration
 set(NEWLINE "\\\\n")
-file(WRITE ${CMAKE_BINARY_DIR}/update_buildflags.cmake "
+file(WRITE ${CMAKE_BINARY_DIR}/scip_update_buildflags.cmake "
 file(WRITE \${DST} \"#define SCIP_BUILDFLAGS \\\" ARCH=\${CMAKE_SYSTEM}${NEWLINE} COMP=\${CMAKE_SYSTEM_PROCESSOR}${NEWLINE} BUILD=\${CMAKE_BUILD_TYPE}\\\"\")
 ")
-add_custom_target(update_buildflags
+add_custom_target(scip_update_buildflags
                   COMMAND ${CMAKE_COMMAND} -DDST=${PROJECT_SOURCE_DIR}/src/scip/buildflags.c
-                                           -P ${CMAKE_BINARY_DIR}/update_buildflags.cmake)
+                                           -P ${CMAKE_BINARY_DIR}/scip_update_buildflags.cmake)
 
 add_definitions(-DWITH_SCIPDEF)
 
@@ -193,8 +186,8 @@ if( COVERAGE )
     APPEND_COVERAGE_COMPILER_FLAGS()
     set(COVERAGE_EXCLUDES '/usr*')
     SETUP_TARGET_FOR_COVERAGE(NAME coverage
-                          EXECUTABLE bash -c "ctest ${COVERAGE_CTEST_ARGS}"
-                          DEPENDENCIES scip-bin)
+                          EXECUTABLE bash -c "${CMAKE_CTEST_COMMAND} ${COVERAGE_CTEST_ARGS}"
+                          DEPENDENCIES scip)
 endif()
 
 # use C++11 standard
@@ -235,7 +228,11 @@ endif()
 
 #search the selected LP solver library
 if(LPS STREQUAL "spx")
-    find_package(SoPlex REQUIRED CONFIG)
+    find_package(SOPLEX REQUIRED CONFIG)
+    if(LPSCHECK)
+        find_package(CPLEX REQUIRED)
+        add_definitions(-DWITH_LPSCHECK)
+    endif()
 elseif(LPS STREQUAL "cpx")
     find_package(CPLEX REQUIRED)
 elseif(LPS STREQUAL "glop")
@@ -278,9 +275,12 @@ endif()
 
 if(CPLEX_FOUND)
     include_directories(${CPLEX_INCLUDE_DIRS})
-    set(lpi lpi/lpi_cpx.c)
-    set(LPS_LIBRARIES ${CPLEX_LIBRARIES})
-    set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
+    # only use lpi_cpx.c if LPSCHECK is not enabled
+    if(LPS STREQUAL "cpx")
+        set(lpi lpi/lpi_cpx.c)
+    endif()
+    set(LPS_LIBRARIES ${LPS_LIBRARIES} ${CPLEX_LIBRARIES})
+    set(LPS_PIC_LIBRARIES ${LPS_PIC_LIBRARIES} ${LPS_LIBRARIES})
 endif()
 
 if(GLOP_FOUND)
@@ -307,7 +307,7 @@ endif()
 
 # ZIMPL headers need to be copied to have the "zimpl/*.h" prefix
 if(ZIMPL)
-	find_package(ZIMPL CONFIG)
+    find_package(ZIMPL CONFIG)
 endif()
 if(ZIMPL_FOUND)
     add_definitions(-DWITH_ZIMPL)

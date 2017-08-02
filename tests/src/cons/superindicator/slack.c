@@ -13,21 +13,21 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   main.c
- * @brief  Main file for SCIPsolveSlack() unit test
- * @author Ambros Gleixner
- * @author Frederic Pythoud
+/**@file   initlp.c
+ * @brief  unit test for checking behaviour of the initlp callback
+ *
+ * TODO: how to specify the path of the file?
+ * What should the test actually test?
+ *
  */
 
-/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
 #include <string.h>
-
 #include "scip/scip.h"
-#include "scip/scipshell.h"
 #include "scip/scipdefplugins.h"
-#include "scip/dialog_default.h"
+
+
 
 #define CONSHDLR_NAME                        "superindicator"
 
@@ -40,12 +40,6 @@ enum SCIP_SlackType
 };
 typedef enum SCIP_SlackType SCIP_SLACKTYPE;
 
-
-/*
- * SCIPsolveSlack()
- */
-
-#ifndef NDEBUG
 /** find the position of a variable in an array of variables; returns -1 if not found */
 static
 int findvarpos(
@@ -67,7 +61,6 @@ int findvarpos(
 
    return -1;
 }
-#endif
 
 /** copies an array of variables and objective values */
 static
@@ -975,57 +968,6 @@ SCIP_RETCODE SCIPsolveSlack(
    return SCIP_OKAY;
 }
 
-/** dialog execution method for solveslack command */
-static
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecSolveSlack)
-{  /*lint --e{715}*/
-   SCIP_STATUS status;
-
-   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
-   SCIPdialogMessage(scip, NULL, "solveslack called\n");
-
-   switch( SCIPgetStage(scip) )
-   {
-   case SCIP_STAGE_INIT:
-      SCIPdialogMessage(scip, NULL, "no problem exists\n");
-      break;
-
-   case SCIP_STAGE_PROBLEM:
-      SCIP_CALL( SCIPsolveSlack(scip, NULL, 0, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, &status) );
-      break;
-
-   case SCIP_STAGE_TRANSFORMED:
-   case SCIP_STAGE_INITPRESOLVE:
-   case SCIP_STAGE_PRESOLVING:
-   case SCIP_STAGE_EXITPRESOLVE:
-   case SCIP_STAGE_PRESOLVED:
-   case SCIP_STAGE_SOLVING:
-   case SCIP_STAGE_SOLVED:
-   case SCIP_STAGE_TRANSFORMING:
-   case SCIP_STAGE_INITSOLVE:
-   case SCIP_STAGE_EXITSOLVE:
-   case SCIP_STAGE_FREETRANS:
-   case SCIP_STAGE_FREE:
-      SCIPdialogMessage(scip, NULL, "problem has to be in problem stage for solveslacking it\n");
-      break;
-
-   default:
-      SCIPerrorMessage("invalid SCIP stage\n");
-      return SCIP_INVALIDCALL;
-   } /*lint --e{616}*/
-
-   SCIPdialogMessage(scip, NULL, "\n");
-   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
-
-   return SCIP_OKAY;
-}
-
-
-
-/*
- * testslack()
- */
-
 /** runs unit test for SCIPsolveSlack() method */
 static
 SCIP_RETCODE testslack(
@@ -1194,140 +1136,40 @@ SCIP_RETCODE testslack(
    return SCIP_OKAY;
 }
 
-/** dialog execution method for the SCIPsolveSlack() unit test */
+#include "include/scip_test.h"
+
+static SCIP* scip;
+
 static
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecTestslack)
-{  /*lint --e{715}*/
-   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
-
-   switch( SCIPgetStage(scip) )
-   {
-   case SCIP_STAGE_INIT:
-      SCIPdialogMessage(scip, NULL, "no problem exists\n");
-      break;
-
-   case SCIP_STAGE_PROBLEM:
-      SCIPdialogMessage(scip, NULL, "unit test for SCIPsolveSlack() started\n");
-      /* NOTE: changing the two integer number below will change the solution (original values: 13, 17) */
-      SCIP_CALL( testslack(scip, 13, 17, TRUE, TRUE) );
-      break;
-
-   case SCIP_STAGE_TRANSFORMED:
-   case SCIP_STAGE_INITPRESOLVE:
-   case SCIP_STAGE_PRESOLVING:
-   case SCIP_STAGE_EXITPRESOLVE:
-   case SCIP_STAGE_PRESOLVED:
-   case SCIP_STAGE_SOLVING:
-   case SCIP_STAGE_SOLVED:
-   case SCIP_STAGE_TRANSFORMING:
-   case SCIP_STAGE_INITSOLVE:
-   case SCIP_STAGE_EXITSOLVE:
-   case SCIP_STAGE_FREETRANS:
-   case SCIP_STAGE_FREE:
-      SCIPdialogMessage(scip, NULL, "problem has to be in problem stage to run unit test for SCIPsolveSlack()\n");
-      break;
-
-   default:
-      SCIPerrorMessage("invalid SCIP stage\n");
-      return SCIP_INVALIDCALL;
-   } /*lint --e{616}*/
-
-   SCIPdialogMessage(scip, NULL, "\n");
-   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
-
-   return SCIP_OKAY;
-}
-
-
-
-/*
- * main function of example
- */
-
-/** includes dialog entry for running unit test for SCIPsolveSlack() method */
-static
-SCIP_RETCODE includeDialogSlack(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
+void setup(void)
 {
-   SCIP_DIALOG* root;
-   SCIP_DIALOG* dialog;
-
-   /* includes or updates the default dialog menus in SCIP */
-   SCIP_CALL( SCIPincludeDialogDefault(scip) );
-
-   root = SCIPgetRootDialog(scip);
-   assert(root != NULL);
-
-   if( !SCIPdialogHasEntry(root, "testslack") )
-   {
-      SCIP_CALL( SCIPincludeDialog(scip, &dialog, NULL, SCIPdialogExecTestslack, NULL, NULL,
-            "testslack", "run unit test for SCIPsolveSlack() method on current instance", FALSE, NULL) );
-      SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
-      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
-   }
-
-   if( !SCIPdialogHasEntry(root, "solveslack") )
-   {
-      SCIP_CALL( SCIPincludeDialog(scip, &dialog, NULL, SCIPdialogExecSolveSlack, NULL, NULL,
-            "solveslack", "solve the relaxed problem using the priority on the groups to process the solving steps", FALSE, NULL) );
-      SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
-      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
-   }
-
-   return SCIP_OKAY;
-}
-
-/** includes dialog entry for unit test and runs SCIP shell */
-static
-SCIP_RETCODE SCIPrunSlackShell(
-   int                        argc,               /**< number of shell parameters */
-   char**                     argv,               /**< array with shell parameters */
-   const char*                defaultsetname      /**< name of default settings file */
-   )
-{
-   SCIP* scip = NULL;
-
-   /* initialize SCIP */
    SCIP_CALL( SCIPcreate(&scip) );
-
-   /* include default plugins */
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
-
-   /* include dialog entry for unit test */
-   SCIP_CALL( includeDialogSlack(scip) );
-
-   /* increase verbosity */
-   SCIP_CALL( SCIPsetIntParam(scip, "display/verblevel", 5) );
-
-   /* start shell */
-   SCIP_CALL( SCIPprocessShellArguments(scip, argc, argv, defaultsetname) );
-
-   /* free SCIP */
-   SCIP_CALL( SCIPfree(&scip) );
-
-   /* check for memory leaks */
-   BMScheckEmptyMemory();
-
-   return SCIP_OKAY;
 }
 
-/** main function */
-int
-main(
-   int                   argc,
-   char**                argv
-   )
+static
+void teardown(void)
 {
-   SCIP_RETCODE retcode;
+   SCIP_CALL( SCIPfree(&scip) );
+   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!");
+}
 
-   retcode = SCIPrunSlackShell(argc, argv, "scip.set");
+TestSuite(slack, .init = setup, .fini = teardown);
 
-   if( retcode != SCIP_OKAY )
-   {
-      SCIPprintError(retcode);
-      return -1;
-   }
+Test(slack, feasible)
+{
+   // read a feasible model
+   SCIP_CALL( SCIPreadProb(scip, "src/cons/superindicator/misc07.mps.gz", NULL) );
 
-   return 0;
+   // call testslack
+   //SCIP_CALL( testslack(scip, 13, 17, TRUE, TRUE) );
+   //SCIP_CALL( testslack(scip, 1, 1, TRUE, TRUE) );
+}
+
+Test(slack, infeasible)
+{
+   // read a infeasible model
+   SCIP_CALL( SCIPreadProb(scip, "src/cons/superindicator/gen_inf.mps.gz", NULL) );
+   // call testslack
+   SCIP_CALL( testslack(scip, 13, 17, TRUE, TRUE) );
 }

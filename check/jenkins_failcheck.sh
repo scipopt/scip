@@ -28,7 +28,7 @@ BASEFILE="check/results/check.$TESTSET.*.$SETTING"
 
 # evaluate the run and upload it to rubberband
 cd check/
-./evalcheck_cluster.sh -R results/check.$TESTSET.*.$SETTING.eval
+./evalcheck_cluster.sh -R results/check.$TESTSET.*.$SETTING[.0-9]*eval
 cd ..
 
 # check if fail occurs
