@@ -2286,7 +2286,7 @@ SCIP_RETCODE initBounds(
 /** copy method for propagator plugins (called when SCIP copies plugins)
  *
  *  @note The UG framework assumes that all default plug-ins of SCIP implement a copy callback. We check
- *  SCIPgetSubscipDepth() in PROPEXEC the to prevent the propagator to run in a sub-SCIP.
+ *  SCIPgetSubscipDepth() in PROPEXEC to prevent the propagator to run in a sub-SCIP.
  */
 static
 SCIP_DECL_PROPCOPY(propCopyObbt)
