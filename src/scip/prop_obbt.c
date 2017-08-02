@@ -2283,6 +2283,24 @@ SCIP_RETCODE initBounds(
  * Callback methods of propagator
  */
 
+/** copy method for propagator plugins (called when SCIP copies plugins)
+ *
+ *  @note The UG framework assumes that all default plug-ins of SCIP implement a copy callback. We check
+ *  SCIPgetSubscipDepth() in PROPEXEC the to prevent the propagator to run in a sub-SCIP.
+ */
+static
+SCIP_DECL_PROPCOPY(propCopyObbt)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(prop != NULL);
+   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludePropObbt(scip) );
+
+   return SCIP_OKAY;
+}
+
 /** solving process initialization method of propagator (called when branch and bound process is about to begin) */
 static
 SCIP_DECL_PROPINITSOL(propInitsolObbt)
@@ -2326,6 +2344,10 @@ SCIP_DECL_PROPEXEC(propExecObbt)
 
    /* do not run in: presolving, repropagation, probing mode, if no objective propagation is allowed  */
    if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || SCIPinRepropagation(scip) || SCIPinProbing(scip) || !SCIPallowObjProp(scip) )
+      return SCIP_OKAY;
+
+   /* do not run propagator in a sub-SCIP */
+   if( SCIPgetSubscipDepth(scip) > 0 )
       return SCIP_OKAY;
 
    /* only run for nonlinear problems, i.e., if NLP is constructed */
@@ -2509,6 +2531,7 @@ SCIP_RETCODE SCIPincludePropObbt(
    SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
          propExecObbt, propdata) );
 
+   SCIP_CALL( SCIPsetPropCopy(scip, prop, propCopyObbt) );
    SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeObbt) );
    SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolObbt) );
    SCIP_CALL( SCIPsetPropInitsol(scip, prop, propInitsolObbt) );
