@@ -2595,7 +2595,6 @@ SCIP_RETCODE propagateLongProof(
             continue;
 
          SCIPvarAdjustUb(var, set, &newub);
-         printf("can tighten upper bound of <%s>: %g -> %g\n", SCIPvarGetName(var), ub, newub);
       }
       /* we got a potential new lower bound */
       else
@@ -2610,7 +2609,6 @@ SCIP_RETCODE propagateLongProof(
             continue;
 
          SCIPvarAdjustLb(var, set, &newlb);
-         printf("can tighten upper bound of <%s>: %g -> %g\n", SCIPvarGetName(var), lb, newlb);
       }
 
       SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp, branchcand,
@@ -2691,6 +2689,14 @@ SCIP_RETCODE createAndAddProofcons(
       SCIP_CALL( SCIPnodeCutoff(tree->path[0], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
 
       goto UPDATESTATISTICS;
+   }
+
+   if( cover )
+   {
+      SCIP_Real globalmaxactivity = getMaxActivity(transprob, coefs, inds, nnz, NULL, NULL);
+
+      if( SCIPsetIsLE(set, globalmaxactivity, rhs) )
+         return SCIP_OKAY;
    }
 
    fillin = SCIPconflictstoreGetNDualrays(conflictstore) * SCIPconflictstoreGetAvgNnzDualray(conflictstore);
@@ -6306,13 +6312,9 @@ SCIP_RETCODE getDualProof(
    SCIP_Real* primsols;
    SCIP_Real* dualsols;
    SCIP_Real* redcosts;
-   SCIP_Real* dualcoefs;
-   SCIP_Real* varredcosts;
    int nrows;
    int ncols;
    int r;
-   int v;
-   int i;
 
    assert(set != NULL);
    assert(prob != NULL);
@@ -6592,13 +6594,12 @@ void debugPrintViolationInfo(
 
 /** tighten a given infeasibility proof a^Tx <= b with minact > b w.r.t. local bounds
  *
- *  1) Remove continuous variables
- *    - variant A: greedy
- *    - variant B: non-zero-cancellation
- *  2) TODO: apply cut generating functions
+ *  1) Apply cut generating functions
  *    - c-MIR
  *    - Flow-cover
- *    - ...
+ *    - TODO: implenent other subadditive functions
+ *  2) Remove continuous variables contributing with its global bound
+ *    - TODO: implement a variant of non-zero-cancellation
  */
 static
 SCIP_RETCODE tightenDualray(
@@ -6619,10 +6620,14 @@ SCIP_RETCODE tightenDualray(
 {/*lint --e{715}*/
    SCIP_VAR** vars;
    SCIP_Real* vals;
+   SCIP_Real* subvals;
    int* inds;
+   int* subinds;
    SCIP_PROOFSET* proofset;
    SCIP_Real rhs;
+   SCIP_Real subrhs;
    int nvars;
+   int nsubvars;
    int nnz;
    int nbinvars;
    int ncontvars;
@@ -6661,7 +6666,7 @@ SCIP_RETCODE tightenDualray(
    debugPrintViolationInfo(set, getMinActivity(transprob, vals, inds, nnz, curvarlbs, curvarubs), rhs, NULL);
 
    /* return if all variables are continuous */
-   if( ncontvars == nnz && set->conf_removecont != 'd')
+   if( ncontvars == nnz )
       return SCIP_OKAY;
 
    if( initialproof )
@@ -6759,122 +6764,69 @@ SCIP_RETCODE tightenDualray(
 
       SCIP_CALL( SCIPfreeSol(set->scip, &refsol) );
    }
-#if 0
-   else if( ncontvars > 0 && (set->conf_removecont == 'g' || set->conf_removecont == 'n') )
+
+   if( conflict->proofset->conflicttype == SCIP_CONFTYPE_INFEASLP )
    {
-      SCIP_HASHTABLE* hashtable;
-      SCIP_ROW** rows;
-      int nrows;
+      /* remove all continuous variables that have equal global and local bounds (ub or lb depend on the sign)
+       * from the proof
+       *
+       * @note: currently, we do this only for the initial proof
+       */
 
-      rows = SCIPlpGetRows(lp);
-      nrows = SCIPlpGetNRows(lp);
+      vals = SCIPaggrRowGetVals(conflict->proofset->aggrrow);
+      inds = SCIPaggrRowGetInds(conflict->proofset->aggrrow);
+      rhs = SCIPaggrRowGetRhs(conflict->proofset->aggrrow);
+      nnz = SCIPaggrRowGetNNz(conflict->proofset->aggrrow);
 
-      SCIP_CALL( SCIPhashtableCreate(&hashtable, blkmem, ncontvars*(ncontvars-1.0)/2.0, SCIPhashGetKeyStandard, varPairsEqual,
-            varPairHashval, (void*)set->scip) );
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &subvals, nnz) );
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &subinds, nnz) );
 
-      /* iterate over all rows */
-      for( i = 0; i < nrows; i++ )
+      BMSclearMemoryArray(subvals, nnz);
+      subrhs = 0.0;
+      nsubvars = 0;
+
+      for( i = 0; i < nnz; i++ )
       {
-         SCIP_COL** rowcols;
-         SCIP_Real* rowvals;
-         int nrowcols;
-         int c1;
-         int c2;
+         int idx = inds[i];
 
-         rowcols = SCIProwGetCols(rows[i]);
-         rowvals = SCIProwGetVals(rows[i]);
-         nrowcols = SCIProwGetNNonz(rows[i]);
+         assert(vars[idx] != NULL);
+         assert(!SCIPsetIsZero(set, vals[idx]));
 
-         /* iterate over all columns
-          *
-          * TODO: do we want to check all rows? alternatively we could check rows with (non-)zero Farkas coefficient only.
-          */
-         for( c1 = 0; c1 < nrowcols; c1++ )
+         /* skip integral variables */
+         if( SCIPvarGetType(vars[idx]) != SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(vars[idx]) != SCIP_VARTYPE_IMPLINT )
+            continue;
+         else
          {
-            SCIP_VAR* var1;
+            SCIP_Real glbbd;
+            SCIP_Real locbd;
 
-            /* skip integral columns */
-            if( SCIPvarGetType(SCIPcolGetVar(rowcols[c1])) != SCIP_VARTYPE_CONTINUOUS )
+            /* get appropriate global and local bounds */
+            glbbd = (vals[idx] < 0.0 ? SCIPvarGetUbGlobal(vars[idx]) : SCIPvarGetLbGlobal(vars[idx]));
+            locbd = (vals[idx] < 0.0 ? curvarubs[idx] : curvarlbs[idx]);
+
+            if( !SCIPsetIsEQ(set, glbbd, locbd) )
                continue;
 
-            var1 = SCIPcolGetVar(rowcols[c1]);
+            SCIPsetDebugMsg(set, "-> remove continuous variable <%s>: glb=[%g,%g], loc=[%g,%g], val=%g\n",
+                  SCIPvarGetName(vars[idx]), SCIPvarGetLbGlobal(vars[idx]), SCIPvarGetUbGlobal(vars[idx]),
+                  SCIPvarGetLbLocal(vars[idx]), SCIPvarGetUbLocal(vars[idx]), vals[idx]);
 
-            for( c2 = c1+1; c2 < nrowcols; c2++ )
-            {
-               ROWVARPAIR* rowvarpair;
-               ROWVARPAIR* tmprowvarpair;
-               SCIP_VAR* var2;
+            /* update rhs of row that should be subtracted */
+            subrhs -= (glbbd * vals[idx]);
 
-               var2 = SCIPcolGetVar(rowcols[c2]);
-
-               /* skip integral columns */
-               if( SCIPvarGetType(SCIPcolGetVar(rowcols[c2])) != SCIP_VARTYPE_CONTINUOUS )
-                  continue;
-
-               if( SCIPvarGetProbindex(var1) < SCIPvarGetProbindex(var2) )
-               {
-                  rowvarpair->rowindex = SCIProwGetLPPos(rows[i]);
-                  rowvarpair->varcoef1 = rowvals[c1];
-                  rowvarpair->varcoef2 = rowvals[c2];
-                  rowvarpair->varindex1 = SCIPvarGetProbindex(var1);
-                  rowvarpair->varindex2 = SCIPvarGetProbindex(var2);
-               }
-               else
-               {
-                  rowvarpair->rowindex = SCIProwGetLPPos(rows[i]);
-                  rowvarpair->varcoef1 = rowvals[c2];
-                  rowvarpair->varcoef2 = rowvals[c1];
-                  rowvarpair->varindex1 = SCIPvarGetProbindex(var2);
-                  rowvarpair->varindex2 = SCIPvarGetProbindex(var1);
-               }
-
-               /* check if we have already seen a similar row */
-               tmprowvarpair = (ROWVARPAIR*)SCIPhashtableRetrieve(hashtable, (void*)rowvarpair);
-
-               if( tmprowvarpair != NULL )
-               {
-                  /* we prefer the row with less non-zeros
-                   *
-                   * TODO: is this really a good choice?
-                   */
-                  if( SCIProwGetNNonz(rows[rowvarpair->rowindex]) > SCIProwGetNNonz(rows[tmprowvarpair->rowindex]) )
-                     continue;
-               }
-
-               printf("add: %g<%s> and %g<%s>\n", rowvarpair->varcoef1, SCIPvarGetName(vars[rowvarpair->varindex1]), rowvarpair->varcoef2, SCIPvarGetName(vars[rowvarpair->varindex2]));
-               SCIP_CALL( SCIPhashtableInsert(hashtable, (void*)rowvarpair) );
-            }
+            /* add negative coefficient such that it will cancel out */
+            subvals[nsubvars] = -vals[idx];
+            subinds[nsubvars++] = idx;
          }
       }
 
-      printf("ncontvars: %d\n", ncontvars);
-      printf("hashtable has %d entries.\n", SCIPhashtableGetNEntries(hashtable));
+      SCIP_CALL( SCIPaggrRowAddSparseData(set->scip, conflict->proofset->aggrrow, subvals, subinds, nsubvars, subrhs) );
+      SCIPaggrRowCleanup(set->scip, conflict->proofset->aggrrow);
 
-      SCIPaggrRowPrint(set->scip, conflict->proofset->aggrrow, NULL);
-
-      /* iterate over all variables in the proof and hash all ordered pairs of continuous variables */
-
-      SCIPhashtableFree(&hashtable);
+      /* free buffer */
+      SCIPsetFreeBufferArray(set, &subinds);
+      SCIPsetFreeBufferArray(set, &subvals);
    }
-#endif
-
-#ifdef SCIP_DEBUG
-   /* get updated data */
-   vals = SCIPaggrRowGetVals(farkasrow);
-   inds = SCIPaggrRowGetInds(farkasrow);
-   rhs = SCIPaggrRowGetRhs(farkasrow);
-   nnz = SCIPaggrRowGetNNz(farkasrow);
-
-   SCIPsetDebugMsg(set, "-> final constraint after tightenDualray():\n");
-   for( i = 0; i < nnz; i++ )
-   {
-      SCIPsetDebugMsg(set, "   %+.15g<%s> glb=[%+.15g,%+.15g] loc=[%+.15g,%+.15g] type=%d\n", vals[inds[i]], SCIPvarGetName(vars[inds[i]]),
-            SCIPvarGetLbGlobal(vars[inds[i]]), SCIPvarGetUbGlobal(vars[inds[i]]),
-            SCIPvarGetLbLocal(vars[inds[i]]), SCIPvarGetUbLocal(vars[inds[i]]),
-            SCIPvarGetType(vars[inds[i]]));
-   }
-   debugPrintViolationInfo(set, getMinActivity(transprob, vals, inds, nnz, curvarlbs, curvarubs), rhs, NULL);
-#endif
 
    return SCIP_OKAY;
 }

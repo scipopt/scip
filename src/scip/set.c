@@ -1355,16 +1355,6 @@ SCIP_RETCODE SCIPsetCreate(
          "the weight the VSIDS score is weight by updating the VSIDS for a variable if it is part of a conflict graph",
          &(*set)->conf_conflictgraphweight, FALSE, SCIP_DEFAULT_CONF_CONFLITGRAPHWEIGHT, 0.0, 1.0,
          NULL, NULL) );
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "conflict/usemir",
-         "apply MIR function to dual rays",
-         &(*set)->conf_applymir, TRUE, SCIP_DEFAULT_CONF_APPLYMIR,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "conflict/prefermir",
-         "prefer a ray after applying the MIR function if the proof is still valid, use both rays otherwise",
-         &(*set)->conf_prefermir, TRUE, SCIP_DEFAULT_CONF_PREFERMIR,
-         NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "conflict/minimprove",
          "minimal improvement of primal bound to remove conflicts based on a previous incumbent",
@@ -1381,11 +1371,6 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/weightvaliddepth",
          "weight of the valid depth of a conflict used in score calculation",
          &(*set)->conf_weightvaliddepth, TRUE, SCIP_DEFAULT_CONF_WEIGHTVALIDDEPTH, 0.0, 1.0, NULL, NULL) );
-   SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
-         "conflict/removeconts",
-         "try to sparsify the dualray proof by removing continuous variables ([d]on't remove, remove [a]ll, variables with active [l]ocal or [g]lobal bound)",
-         &(*set)->conf_removecont, TRUE, SCIP_DEFAULT_CONF_REMOVECONTS, "dalg",
-         NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/sepacuts",
          "separate valid inequalities from dualray proofs",

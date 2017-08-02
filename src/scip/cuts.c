@@ -383,16 +383,22 @@ SCIP_RETCODE SCIPaggrRowAddSparseData(
 
    for( i = 0; i < nvars; i++ )
    {
-      aggrrow->vals[inds[i]] = NONZERO(vals[i]);
-      aggrrow->inds[aggrrow->nnz] = inds[i];
-      ++aggrrow->nnz;
-   }
-   aggrrow->rhs = rhs;
+      int probindex = inds[i];
+      SCIP_Real val = aggrrow->vals[probindex];
 
-#ifndef NDEBUG
-   for( i = 0; i < aggrrow->nnz; ++i )
-      assert(!SCIPisZero(scip, aggrrow->vals[inds[i]]));
-#endif
+      if( val == 0.0 )
+         aggrrow->inds[aggrrow->nnz++] = inds[i];
+
+      val += vals[i];
+      aggrrow->vals[probindex] = NONZERO(val);
+   }
+
+   if( SCIPisInfinity(scip, aggrrow->rhs + rhs) )
+      aggrrow->rhs = SCIPinfinity(scip);
+   else if( SCIPisInfinity(scip, -(aggrrow->rhs + rhs)) )
+      aggrrow->rhs = -SCIPinfinity(scip);
+   else
+      aggrrow->rhs += rhs;
 
    return SCIP_OKAY;
 }

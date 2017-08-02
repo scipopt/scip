@@ -228,16 +228,10 @@ struct SCIP_Set
    SCIP_Real             conf_weightsize;    /**< weight of the size of a conflict used in score calculation */
    SCIP_Real             conf_weightrepropdepth;/**< weight of the prepropagtion depth of a conflict used in score calculation */
    SCIP_Real             conf_weightvaliddepth;/**< weight of the valid depth of a conflict used in score calculation */
-   SCIP_Bool             conf_applymir;      /**< apply the MIR function on a dual ray */
-   SCIP_Bool             conf_prefermir;     /**< prefer a ray after applying the MIR function if the proof is still
-                                              *   valid, use both rays otherwise
-                                              */
    SCIP_Bool             conf_sepacuts;      /**< separate valid inequalities from dualray proofs */
    SCIP_Real             conf_minimprove;    /**< minimal improvement of primal bound to remove conflicts depending on
                                               *   a previous incumbent.
                                               */
-   char                  conf_removecont;    /**< how should continuous variables be treated? remove [n]one, [a]ll,
-                                              *   active at [g]lobal bound */
 
    /* constraint settings */
    int                   cons_agelimit;      /**< maximum age an unnecessary constraint can reach before it is deleted
