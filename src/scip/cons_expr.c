@@ -3603,7 +3603,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(createAuxVarsEnterExpr)
       }
       if( nsuccess > 0 )
       {
-         /* if any nlhdlr had success, then store them and there data in the expression */
+         /* if any nlhdlr had success, then store them and their data in the expression */
          SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &expr->nlhdlrs, createdata->nlhdlrssuccess, nsuccess) );
          SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &expr->nlhdlrsexprdata, createdata->nlhdlrssuccessexprdata, nsuccess) );
          expr->nnlhdlrs = nsuccess;
