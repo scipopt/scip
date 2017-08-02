@@ -1,5 +1,14 @@
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
+#
+# interface function for setting common library properties
+#
+function(setLibProperties targetname outputname)
+    set_target_properties(${targetname} PROPERTIES
+        OUTPUT_NAME ${outputname}
+        MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+endfunction(setLibProperties)
+
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED on)
 
@@ -703,6 +712,8 @@ set(xmlheaders
 )
 
 add_library(libobjscip EXCLUDE_FROM_ALL ${objscipsources})
+setLibProperties(libobjscip "objscip")
+
 add_library(libnlpi EXCLUDE_FROM_ALL
     ${nlpisources}
     blockmemshell/memory.c
@@ -710,13 +721,18 @@ add_library(libnlpi EXCLUDE_FROM_ALL
     scip/intervalarith.c
     scip/interrupt.c
     scip/message.c)
+setLibProperties(libnlpi "nlpi")
+
+
 add_library(liblpi EXCLUDE_FROM_ALL
     ${lpisources}
     scip/bitencode.c
     blockmemshell/memory.c
     scip/message.c)
+setLibProperties(liblpi "lpi")
 
 add_library(libscip ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${tpisources})
+setLibProperties(libscip "scip")
 
 target_link_libraries(libscip PRIVATE
     ${ZLIB_LIBRARIES}
@@ -746,9 +762,6 @@ set_target_properties(libscip PROPERTIES
 
 # set the install rpath to the installed destination
 set_target_properties(scip PROPERTIES INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
-set_target_properties(libscip PROPERTIES
-    OUTPUT_NAME "scip"
-    MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 
 # install the header files of scip
 install(FILES ${lpiheaders} DESTINATION include/lpi)

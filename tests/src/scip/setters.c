@@ -114,7 +114,7 @@ Test(setters, setObjsenseTest)
    setAndTestObjsense(SCIP_OBJSENSE_MINIMIZE);
 
    /* add some vars and test again */
-   initProb(scip);
+   initProb();
 
    setAndTestObjsense(SCIP_OBJSENSE_MAXIMIZE);
    setAndTestObjsense(SCIP_OBJSENSE_MINIMIZE);
@@ -144,7 +144,7 @@ Test(setters, setObjsenseTest)
       }                                                                                   \
                                                                                           \
       /* add some vars and test priorities again */                                       \
-      initProb(scip);                                                          \
+      initProb();                                                          \
                                                                                           \
       for( i=0; i < nobjs; ++i)                                                           \
       {                                                                                   \
