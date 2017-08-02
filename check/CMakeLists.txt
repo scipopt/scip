@@ -82,7 +82,8 @@ set(settings_MINLP
 #    "nlpdivingsolvesubmip"
     "nlpdiving4"
 )
-set(settings_ConsBivariate
+set(settings_Bivariate
+    "default"
     "bivariate"
 )
 
@@ -148,9 +149,9 @@ set(instances_MINLP
     "instances/MINLP/parincQuadratic.osil\;49920.5564"
     "instances/MINLP/tltr.mps\;48.0666666667"
     )
-set(instances_ConsBivariate,
-    "MINLP/instances/MINLPLib2/data/osil/st_qpk1.osil\;-3"
-    "MINLP/instances/MINLPLib2/data/osil/nvs01.osil\;12.4696688"
+set(instances_Bivariate
+    "instances/Bivariate/st_qpk1.osil\;-3"
+    "instances/Bivariate/nvs01.osil\;12.4696688"
    )
 #
 # PseudoBoolean instances
@@ -249,7 +250,7 @@ add_instancetests(instances_CP settings_default "CP")
 add_instancetests(instances_Indicator settings_default "Indicator")
 add_instancetests(instances_MIP settings_MIP "MIP")
 add_instancetests(instances_MINLP settings_MINLP "MINLP")
-add_instancetests(instances_ConsBivariate settings_ConsBivariate "Bivariate")
+add_instancetests(instances_Bivariate settings_Bivariate "Bivariate")
 add_instancetests(instances_PseudoBoolean settings_default "PseudoBoolean")
 add_instancetests(instances_Semicontinuous settings_default "Semicontinuous")
 add_instancetests(instances_SAT settings_default "SAT")
