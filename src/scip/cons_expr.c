@@ -1759,7 +1759,6 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(bwdiffExprVisitChild)
 
 /**@} */  /* end of differentiation methods */
 
-/* export this function here, so it can be used by unittests but is not really part of the API */
 /** propagates bounds for each sub-expression in the constraint by using variable bounds; the resulting bounds for the
  *  root expression will be intersected with the [lhs,rhs] which might lead to an empty interval
  */
@@ -1970,7 +1969,6 @@ SCIP_RETCODE reversePropConss(
    return SCIP_OKAY;
 }
 
-/* export this function here, so it can be used by unittests but is not really part of the API */
 /** calls domain propagation for a given set of constraints; the algorithm alternates calls of forward and reverse
  *  propagation; the latter only for nodes which have been tightened during the propagation loop;
  *
@@ -2103,19 +2101,13 @@ SCIP_RETCODE propConss(
    return SCIP_OKAY;
 }
 
-/* export this function here, so it can be used by unittests but is not really part of the API */
 /** returns all variable expressions contained in a given expression; the array to store all variable expressions needs
  * to be at least of size the number of variables in the expression which is bounded by SCIPgetNVars() since there are
  * no two different variable expression sharing the same variable
  *
  * @note function captures variable expressions
  */
-SCIP_RETCODE getVarExprs(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
-   SCIP_CONSEXPR_EXPR**    varexprs,         /**< array to store all variable expressions */
-   int*                    nvarexprs         /**< buffer to store the total number of variable expressions */
-   );
+static
 SCIP_RETCODE getVarExprs(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
@@ -2484,11 +2476,7 @@ SCIP_DECL_HASHKEYVAL(hashCommonSubexprKeyval)
  *  @note the hash keys of the expressions are used for the hashing inside the hash table; to compute if two expressions
  *  (with the same hash) are structurally the same we use the function SCIPcompareConsExprExprs()
  */
-SCIP_RETCODE replaceCommonSubexpressions(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS**           conss,              /**< constraints */
-   int                   nconss              /**< total number of constraints */
-   );
+static
 SCIP_RETCODE replaceCommonSubexpressions(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           conss,              /**< constraints */
@@ -6961,7 +6949,7 @@ SCIP_RETCODE SCIPgetConsExprExprHashkey(
 
    SCIP_CALL( SCIPhashmapCreate(&expr2key, SCIPblkmem(scip), SCIPgetNVars(scip)) );
 
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, NULL, NULL, hashExprLeaveExpr, (void*)expr2key) );
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, hashExprVisitingExpr, NULL, hashExprLeaveExpr, (void*)expr2key) );
 
    assert(SCIPhashmapExists(expr2key, (void*)expr));  /* we just computed the hash, so should be in the map */
    *hashkey = (unsigned int)(size_t)SCIPhashmapGetImage(expr2key, (void*)expr);

@@ -268,5 +268,8 @@ Criterion:
 	mkdir build; \
 	cd build; \
 	cmake ..; \
+	cd ../dependencies/klib; \
+	git checkout cdb7e9236dc47abf8da7ebd702cc6f7f21f0c502; \
+	cd ../../build; \
 	make
 #---- EOF --------------------------------------------------------------------

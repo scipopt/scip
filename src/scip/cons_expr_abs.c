@@ -98,11 +98,11 @@ SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrAbs)
 static
 SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataAbs)
 {  /*lint --e{715}*/
+   assert(targetscip != NULL);
    assert(targetexprdata != NULL);
-   assert(sourceexpr != NULL);
-   assert(SCIPgetConsExprExprData(sourceexpr) == NULL);
 
-   *targetexprdata = NULL;
+   SCIP_CALL( SCIPallocBlockMemory(targetscip, targetexprdata) );
+   BMSclearMemory(*targetexprdata);
 
    return SCIP_OKAY;
 }
