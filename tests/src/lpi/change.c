@@ -161,7 +161,7 @@ TheoryDataPoints(change, testchgbound) =
 
 Theory((SCIP_Real upper, SCIP_Real lower, int prob), change, testchgbound)
 {
-   cr_assume_lt(upper, lower);
+   cr_assume_lt(lower, upper);
    initProb(prob);
 
    SCIP_Real setub[1] = { upper };
@@ -205,5 +205,61 @@ Theory((SCIP_Real upper1, SCIP_Real upper2, SCIP_Real lower1, SCIP_Real lower2, 
    
    cr_assert_arr_eq(ub, setub, 2);
    cr_assert_arr_eq(lb, setlb, 2);
+}
+
+TheoryDataPoints(change, testchgside) = 
+{
+   //TODO add the infinities...
+   DataPoints(SCIP_Real, -3, 0, 5034.2, 2e15, 8e-7), 
+   DataPoints(SCIP_Real, -10, 0, -342.3, 2e13, -2e-9),
+   DataPoints(int, 0, 1, 2)
+};
+
+Theory((SCIP_Real left, SCIP_Real right, int prob), change, testchgside)
+{
+   cr_assume_lt(left, right);
+   initProb(prob);
+
+   SCIP_Real setls[1] = { left };
+   SCIP_Real setrs[1] = { right };
+   int ind[1] = {0};
+   SCIP_CALL( SCIPlpiChgBounds(lpi, 1, ind, setls, setrs) );
+
+   SCIP_Real ls[1];
+   SCIP_Real rs[1];
+   SCIP_CALL( SCIPlpiGetBounds(lpi, 0, 0, ls, rs) );
+   
+   cr_assert_arr_eq(ls, setls, 1);
+   cr_assert_arr_eq(rs, setrs, 1);
+}
+
+TheoryDataPoints(change, testchgsides) = 
+{
+   //TODO add the infinities...
+   DataPoints(SCIP_Real, -3, 0, 5034.2, 2e15, 8e-7), 
+   DataPoints(SCIP_Real, -3, 0, 5034.2, 2e15, 8e-7), 
+   DataPoints(SCIP_Real, -10, 0, -342.3, 2e13, -2e-9),
+   DataPoints(SCIP_Real, -10, 0, -342.3, 2e13, -2e-9),
+   // Problem 0 has only one variable 
+   DataPoints(int, 1, 2)
+};
+
+Theory((SCIP_Real left1, SCIP_Real left2, SCIP_Real right1, SCIP_Real right2, int prob), change, testchgsides)
+{
+   cr_assume_lt(right1, left1);
+   cr_assume_lt(right2, left2);
+   initProb(prob);
+
+   SCIP_Real setrs[2] = { left1, left2 };
+   SCIP_Real setls[2] = { right1, right2 };
+   int ind[2] = {0, 1};
+   SCIP_CALL( SCIPlpiChgBounds(lpi, 2, ind, setls, setrs) );
+
+   SCIP_Real rs[2];
+   SCIP_Real ls[2];
+   SCIP_CALL( SCIPlpiGetBounds(lpi, 0, 1, ls, rs) );
+   
+   cr_assert_arr_eq(rs, setrs, 2);
+   cr_assert_arr_eq(ls, setls, 2);
 }
 
