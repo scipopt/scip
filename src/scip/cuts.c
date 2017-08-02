@@ -532,16 +532,12 @@ SCIP_RETCODE SCIPaggrRowAddObjectiveFunction(
 {
    SCIP_VAR** vars;
    int nvars;
-   int r;
 
    assert(scip != NULL);
    assert(aggrrow != NULL);
-//   assert(SCIPisPositive(scip, scale));
 
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
-
-//   r = aggrrow->nrows++;
 
    /* add all variables straight forward if the aggregation row is empty */
    if( aggrrow->nnz == 0 )
