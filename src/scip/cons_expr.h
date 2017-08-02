@@ -848,6 +848,85 @@ SCIP_RETCODE SCIPmassageConsExprExprCut(
    );
 
 
+/** creates the nonlinearity handler and includes it into the expression constraint handler */
+EXTERN
+SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
+   SCIP*                       scip,         /**< SCIP data structure */
+   SCIP_CONSHDLR*              conshdlr,     /**< expression constraint handler */
+   SCIP_CONSEXPR_NLHDLR**      nlhdlr,       /**< buffer where to store nonlinear handler */
+   const char*                 name,         /**< name of nonlinear handler (must not be NULL) */
+   const char*                 desc,         /**< description of nonlinear handler (can be NULL) */
+   unsigned int                priority,     /**< priority of nonlinear handler */
+   SCIP_DECL_CONSEXPR_NLHDLRDETECT((*detect)), /**< structure detection callback of nonlinear handler */
+   SCIP_CONSEXPR_NLHDLRDATA*   data          /**< data of nonlinear handler (can be NULL) */
+   );
+
+/** set the nonlinear handler callback to free the nonlinear handler data */
+EXTERN
+void SCIPsetConsExprNlhdlrFreeHdlrData(
+   SCIP*                      scip,              /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr,            /**< nonlinear handler */
+   SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA((*freehdlrdata)) /**< handler free callback (can be NULL) */
+);
+
+/** set the expression handler callback to free expression specific data of nonlinear handler */
+EXTERN
+void SCIPsetConsExprNlhdlrFreeExprData(
+   SCIP*                      scip,              /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr,            /**< nonlinear handler */
+   SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA((*freeexprdata)) /**< nonlinear handler expression data free callback (can be NULL if data does not need to be freed) */
+);
+
+/** set the copy handler callback of a nonlinear handler */
+EXTERN
+void SCIPsetConsExprNlhdlrCopyHdlr(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
+   SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR((*copy)) /**< copy callback (can be NULL) */
+);
+
+/** set the initialization and deinitialization callback of a nonlinear handler */
+EXTERN
+void SCIPsetConsExprNlhdlrInitExit(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
+   SCIP_DECL_CONSEXPR_NLHDLRINIT((*init)),   /**< initialization callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_NLHDLREXIT((*exit))    /**< deinitialization callback (can be NULL) */
+);
+
+/** set the separation callback of a nonlinear handler */
+EXTERN
+void SCIPsetConsExprNlhdlrSepa(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
+   SCIP_DECL_CONSEXPR_NLHDLRSEPA((*sepa))    /**< separation callback (can be NULL) */
+);
+
+/** gives name of nonlinear handler */
+EXTERN
+const char* SCIPgetConsExprNlhdlrName(
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
+);
+
+/** gives description of nonlinear handler, can be NULL */
+EXTERN
+const char* SCIPgetConsExprNlhdlrDesc(
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
+);
+
+/** gives priority of nonlinear handler */
+EXTERN
+int SCIPgetConsExprNlhdlrPriority(
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
+);
+
+/** gives handler data of nonlinear handler */
+EXTERN
+SCIP_CONSEXPR_NLHDLRDATA* SCIPgetConsExprNlhdlrData(
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
+);
+
+
 #ifdef __cplusplus
 }
 #endif

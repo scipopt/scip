@@ -1815,7 +1815,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaProduct)
    *ncuts += 1;
 
 #ifdef SCIP_DEBUG
-   if( *result == infeasible )
+   if( *result == SCIP_CUTOFF )
    {
       SCIPdebugMsg(scip, "add cut makes node infeasible!\n");
    }
