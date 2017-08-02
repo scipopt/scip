@@ -6511,7 +6511,7 @@ SCIP_RETCODE tightenDualray(
    nnz = SCIPaggrRowGetNNz(farkasrow);
 
    /* try to find an alternative proof of local infeasibility that is stronger */
-   if( set->conf_sepacuts )
+   if( set->conf_sepaaltproofs )
    {
       SCIP_SOL* refsol;
       SCIP_Real* cutcoefs;

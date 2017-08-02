@@ -228,7 +228,7 @@ struct SCIP_Set
    SCIP_Real             conf_weightsize;    /**< weight of the size of a conflict used in score calculation */
    SCIP_Real             conf_weightrepropdepth;/**< weight of the prepropagtion depth of a conflict used in score calculation */
    SCIP_Real             conf_weightvaliddepth;/**< weight of the valid depth of a conflict used in score calculation */
-   SCIP_Bool             conf_sepacuts;      /**< separate valid inequalities from dualray proofs */
+   SCIP_Bool             conf_sepaaltproofs;      /**< separate valid inequalities from dualray proofs */
    SCIP_Real             conf_minimprove;    /**< minimal improvement of primal bound to remove conflicts depending on
                                               *   a previous incumbent.
                                               */

@@ -160,7 +160,7 @@
 #define SCIP_DEFAULT_CONF_REMOVECONTS       'd' /**< try to sparsify the dualray proof by removing continuous variables
                                                  *   ([d]on't remove, remove [g]reedy, use [n]on-zero-cancellation)
                                                  */
-#define SCIP_DEFAULT_CONF_SEPACUTS       FALSE /**< separate valid inequalities */
+#define SCIP_DEFAULT_CONF_SEPAALTPROOFS   FALSE /**< apply cut generating functions to construct alternative proofs */
 
 /* Constraints */
 
@@ -1372,9 +1372,9 @@ SCIP_RETCODE SCIPsetCreate(
          "weight of the valid depth of a conflict used in score calculation",
          &(*set)->conf_weightvaliddepth, TRUE, SCIP_DEFAULT_CONF_WEIGHTVALIDDEPTH, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "conflict/sepacuts",
-         "separate valid inequalities from dualray proofs",
-         &(*set)->conf_sepacuts, FALSE, SCIP_DEFAULT_CONF_SEPACUTS,
+         "conflict/sepaaltproofs",
+         "apply cut generating functions to construct alternative proofs",
+         &(*set)->conf_sepaaltproofs, FALSE, SCIP_DEFAULT_CONF_SEPAALTPROOFS,
          NULL, NULL) );
 
    /* constraint parameters */
