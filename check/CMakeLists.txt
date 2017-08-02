@@ -74,6 +74,8 @@ set(settings_MINLP
     "undercover1"
     "undercover2"
     "rensnlp"
+    "separating_aggressive"
+    "heuristics_aggressive"
     "bivariate"
     "nlpdiving2"
     "nlpdiving3"
