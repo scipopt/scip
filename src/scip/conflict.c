@@ -2589,8 +2589,7 @@ SCIP_RETCODE createAndAddProofcons(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_Bool             cover               /**< true if the proof set corresponds to an cover */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    SCIP_CONS* cons;
@@ -2602,7 +2601,6 @@ SCIP_RETCODE createAndAddProofcons(
    SCIP_Real fillin;
    SCIP_Real globalminactivity;
    SCIP_Bool toolong;
-   SCIP_Bool addtoconflictstore;
    char name[SCIP_MAXSTRLEN];
    int nnz;
    int i;
@@ -2610,8 +2608,6 @@ SCIP_RETCODE createAndAddProofcons(
    assert(conflict != NULL);
    assert(conflictstore != NULL);
    assert(proofset != NULL);
-
-   addtoconflictstore = cover;
 
    vars = SCIPprobGetVars(transprob);
    nnz = SCIPaggrRowGetNNz(proofset->aggrrow);
@@ -2639,24 +2635,23 @@ SCIP_RETCODE createAndAddProofcons(
       goto UPDATESTATISTICS;
    }
 
-   if( cover )
+   fillin = nnz;
+   if( proofset->conflicttype == SCIP_CONFTYPE_INFEASLP || proofset->conflicttype == SCIP_CONFTYPE_ALTINFPROOF )
    {
-      SCIP_Real globalmaxactivity = getMaxActivity(transprob, coefs, inds, nnz, NULL, NULL);
+      fillin += SCIPconflictstoreGetNDualInfProofs(conflictstore) * SCIPconflictstoreGetAvgNnzDualInfProofs(conflictstore);
+      fillin /= (SCIPconflictstoreGetNDualInfProofs(conflictstore) + 1.0);
+      toolong = (fillin > (1.0 + (100.0 - SCIPconflictstoreGetNDualInfProofs(conflictstore))/500.0) * stat->avgnnz);
+   }
+   else
+   {
+      assert(proofset->conflicttype == SCIP_CONFTYPE_BNDEXCEEDING || proofset->conflicttype == SCIP_CONFTYPE_ALTBNDPROOF);
 
-      if( SCIPsetIsLE(set, globalmaxactivity, rhs) )
-         return SCIP_OKAY;
+      fillin += SCIPconflictstoreGetNDualBndProofs(conflictstore) * SCIPconflictstoreGetAvgNnzDualBndProofs(conflictstore);
+      fillin /= (SCIPconflictstoreGetNDualBndProofs(conflictstore) + 1.0);
+      toolong = (fillin > (1.0 + (100.0 - SCIPconflictstoreGetNDualBndProofs(conflictstore))/500.0) * stat->avgnnz);
    }
 
-   fillin = SCIPconflictstoreGetNDualrays(conflictstore) * SCIPconflictstoreGetAvgNnzDualray(conflictstore);
-   fillin += nnz;
-   fillin /= 100;
-
-   toolong = (fillin > (1.0 + (100.0 - SCIPconflictstoreGetNDualrays(conflictstore))/100.0) * stat->avgnnz);
    toolong &= (set->conf_minmaxvars < nnz && nnz > set->conf_maxvarsfac * transprob->nvars);
-
-   SCIPsetDebugMsg(set, "check constraint: fill-in %g (nnz=%d), threshold %g, fdpt %d, cdpt %d\n", fillin,
-         nnz, (1.0 + (100.0 - SCIPconflictstoreGetNDualrays(conflictstore))/100.0) * stat->avgnnz,
-         SCIPtreeGetFocusDepth(tree), SCIPtreeGetCurrentDepth(tree));
 
    /* don't store global dualrays that are to long / have to much non-zeros */
    if( toolong )
@@ -2666,9 +2661,9 @@ SCIP_RETCODE createAndAddProofcons(
       return SCIP_OKAY;
    }
 
-   if( proofset->conflicttype == SCIP_CONFTYPE_INFEASLP )
+   if( proofset->conflicttype == SCIP_CONFTYPE_INFEASLP || proofset->conflicttype == SCIP_CONFTYPE_ALTINFPROOF )
       (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "dualproof_inf_%d", conflict->ndualrayinfsuccess);
-   else if( proofset->conflicttype == SCIP_CONFTYPE_BNDEXCEEDING )
+   else if( proofset->conflicttype == SCIP_CONFTYPE_BNDEXCEEDING || proofset->conflicttype == SCIP_CONFTYPE_ALTBNDPROOF )
       (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "dualproof_bnd_%d", conflict->ndualraybndsuccess);
    else
       return SCIP_INVALIDCALL;
@@ -2691,52 +2686,42 @@ SCIP_RETCODE createAndAddProofcons(
       {
          SCIP_CALL( SCIPreleaseCons(set->scip, &cons) );
          cons = upgdcons;
-         addtoconflictstore = TRUE;
+
+         if( proofset->conflicttype == SCIP_CONFTYPE_INFEASLP )
+            proofset->conflicttype = SCIP_CONFTYPE_ALTINFPROOF;
+         else
+            proofset->conflicttype = SCIP_CONFTYPE_ALTBNDPROOF;
+
       }
    }
 
    /* mark constraint to be a conflict */
    SCIPconsMarkConflict(cons);
 
-   /* add constraint based on dual ray to storage */
-   if( addtoconflictstore )
+   /* add constraint to storage */
+   if( proofset->conflicttype == SCIP_CONFTYPE_INFEASLP || proofset->conflicttype == SCIP_CONFTYPE_ALTINFPROOF )
    {
-      if( proofset->conflicttype == SCIP_CONFTYPE_INFEASLP )
-      {
-         SCIP_CALL( SCIPconflictstoreAddConflict(conflictstore, blkmem, set, stat, tree, transprob, reopt, cons,
-               proofset->conflicttype, FALSE, -SCIPsetInfinity(set)) );
-      }
-      else
-      {
-         SCIP_CALL( SCIPconflictstoreAddConflict(conflictstore, blkmem, set, stat, tree, transprob, reopt, cons,
-               proofset->conflicttype, TRUE, SCIPgetCutoffbound(set->scip)) );
-      }
+      /* add constraint based on dual ray to storage */
+      SCIP_CALL( SCIPconflictstoreAddDualraycons(conflictstore, cons, blkmem, set, stat, transprob, reopt) );
    }
    else
    {
-      if( proofset->conflicttype == SCIP_CONFTYPE_INFEASLP )
-      {
-         /* add constraint based on dual ray to storage */
-         SCIP_CALL( SCIPconflictstoreAddDualraycons(conflictstore, cons, blkmem, set, stat, transprob, reopt) );
-      }
-      else
-      {
-         /* add constraint based on dual solution to storage */
-         SCIP_CALL( SCIPconflictstoreAddDualsolcons(conflictstore, cons, blkmem, set, stat, transprob, reopt) );
-      }
+      /* add constraint based on dual solution to storage */
+      SCIP_CALL( SCIPconflictstoreAddDualsolcons(conflictstore, cons, blkmem, set, stat, transprob, reopt,
+            proofset->conflicttype == SCIP_CONFTYPE_BNDEXCEEDING) );
    }
 
    SCIP_CALL( SCIPnodeAddCons(tree->path[0], blkmem, set, stat, tree, cons) );
 
    SCIPsetDebugMsg(set, "added proof-constraint to node %p in depth 0 (nproofconss %d)\n", (void*)tree->path[0],
-         SCIPconflictstoreGetNDualrays(conflictstore));
+         SCIPconflictstoreGetNDualInfProofs(conflictstore));
 
    /* release the constraint */
    SCIP_CALL( SCIPreleaseCons(set->scip, &cons) );
 
   UPDATESTATISTICS:
    /* update statistics */
-   if( proofset->conflicttype == SCIP_CONFTYPE_INFEASLP )
+   if( proofset->conflicttype == SCIP_CONFTYPE_INFEASLP || proofset->conflicttype == SCIP_CONFTYPE_ALTINFPROOF )
    {
       conflict->dualrayinfnnonzeros += nnz;
       ++conflict->ndualrayinfglobal;
@@ -2744,7 +2729,7 @@ SCIP_RETCODE createAndAddProofcons(
    }
    else
    {
-      assert(proofset->conflicttype == SCIP_CONFTYPE_BNDEXCEEDING);
+      assert(proofset->conflicttype == SCIP_CONFTYPE_BNDEXCEEDING || proofset->conflicttype == SCIP_CONFTYPE_ALTBNDPROOF);
       conflict->dualraybndnnonzeros += nnz;
       ++conflict->ndualraybndglobal;
       ++conflict->ndualraybndsuccess;
@@ -2793,9 +2778,28 @@ SCIP_RETCODE conflictFlushProofset(
       }
       else
       {
-         /* create and add the original proof */
-         SCIP_CALL( createAndAddProofcons(conflict, conflictstore, conflict->proofset, set, stat, origprob, transprob,
-               tree, reopt, lp, branchcand, eventqueue, cliquetable, blkmem, FALSE) );
+         SCIP_Bool skipinitialproof = FALSE;
+         int i;
+
+         /* prefer an infeasibility proof */
+         if( set->conf_prefinfproof && conflict->proofset->conflicttype == SCIP_CONFTYPE_BNDEXCEEDING )
+         {
+            for( i = 0; i < conflict->nproofsets; i++ )
+            {
+               if( conflict->proofsets[i]->conflicttype == SCIP_CONFTYPE_INFEASLP )
+               {
+                  skipinitialproof = TRUE;
+                  break;
+               }
+            }
+         }
+
+         if( !skipinitialproof )
+         {
+            /* create and add the original proof */
+            SCIP_CALL( createAndAddProofcons(conflict, conflictstore, conflict->proofset, set, stat, origprob, transprob,
+                  tree, reopt, lp, branchcand, eventqueue, cliquetable, blkmem) );
+         }
       }
 
       /* clear the proof set anyway */
@@ -2831,7 +2835,7 @@ SCIP_RETCODE conflictFlushProofset(
          {
             /* create and add proof constraint */
             SCIP_CALL( createAndAddProofcons(conflict, conflictstore, conflict->proofsets[i], set, stat, origprob,
-                  transprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, blkmem, TRUE) );
+                  transprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, blkmem) );
          }
       }
 
@@ -6575,7 +6579,7 @@ SCIP_RETCODE tightenDualray(
          SCIP_PROOFSET* alternativeproofset;
 
          SCIP_CALL( proofsetCreate(&alternativeproofset, blkmem) );
-         alternativeproofset->conflicttype = conflict->conflictset->conflicttype;
+         alternativeproofset->conflicttype = SCIP_CONFTYPE_ALTINFPROOF;
 
          SCIP_CALL( proofsetAddSparseData(alternativeproofset, set, cutcoefs, cutinds, cutnnz, cutrhs) );
 
@@ -6588,6 +6592,7 @@ SCIP_RETCODE tightenDualray(
       SCIP_CALL( SCIPfreeSol(set->scip, &refsol) );
    }
 
+   /* TODO: check whether this should also applied to alternative proofs */
    if( proofset->conflicttype == SCIP_CONFTYPE_INFEASLP )
    {
       /* remove all continuous variables that have equal global and local bounds (ub or lb depend on the sign)

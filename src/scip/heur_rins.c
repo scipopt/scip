@@ -486,10 +486,14 @@ SCIP_DECL_HEUREXEC(heurExecRins)
       SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
    }
 
-   /* enable conflict analysis and restrict conflict pool */
+   /* enable conflict analysis, disable analysis of boundexceeding LPs, and restrict conflict pool */
    if( !SCIPisParamFixed(subscip, "conflict/enable") )
    {
       SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", TRUE) );
+   }
+   if( !SCIPisParamFixed(subscip, "conflict/useboundlp") )
+   {
+      SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useboundlp", 'o') );
    }
    if( !SCIPisParamFixed(subscip, "conflict/maxstoresize") )
    {

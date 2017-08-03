@@ -193,6 +193,7 @@ struct SCIP_Set
    SCIP_Bool             conf_usesb;         /**< should infeasible/bound exceeding strong branching conflict analysis be
                                               *   used? */
    SCIP_Bool             conf_usepseudo;     /**< should pseudo solution conflict analysis be used? */
+   SCIP_Bool             conf_prefinfproof;  /**< prefer infeasibility proof to boundexceeding proof */
    SCIP_Bool             conf_preferbinary;  /**< should binary conflicts be preferred? */
    SCIP_Bool             conf_allowlocal;    /**< should conflict constraints be generated that are only valid locally? */
    SCIP_Bool             conf_settlelocal;   /**< should conflict constraints be attached only to the local subtree where

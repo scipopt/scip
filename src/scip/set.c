@@ -101,6 +101,7 @@
 #define SCIP_DEFAULT_CONF_USESB            TRUE /**< should infeasible/bound exceeding strong branching conflict analysis
                                                  *   be used? */
 #define SCIP_DEFAULT_CONF_USEPSEUDO        TRUE /**< should pseudo solution conflict analysis be used? */
+#define SCIP_DEFAULT_CONF_PREFINFPROOF     TRUE /**< prefer infeasibility proof to boundexceeding proof */
 #define SCIP_DEFAULT_CONF_SEPARATE         TRUE /**< should the conflict constraints be separated? */
 #define SCIP_DEFAULT_CONF_DYNAMIC          TRUE /**< should the conflict constraints be subject to aging? */
 
@@ -1259,6 +1260,11 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/preferbinary",
          "should binary conflicts be preferred?",
          &(*set)->conf_preferbinary, FALSE, SCIP_DEFAULT_CONF_PREFERBINARY,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "conflict/prefinfproof",
+         "prefer infeasibility proof to boundexceeding proof",
+         &(*set)->conf_prefinfproof, TRUE, SCIP_DEFAULT_CONF_PREFINFPROOF,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/allowlocal",

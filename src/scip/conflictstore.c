@@ -444,10 +444,12 @@ SCIP_RETCODE delPosDualsol(
    {
       conflictstore->dualsolconfs[pos] = conflictstore->dualsolconfs[lastpos];
       conflictstore->dualprimalbnds[pos] = conflictstore->dualprimalbnds[lastpos];
+      conflictstore->updateside[pos] = conflictstore->updateside[lastpos];
 
 #ifndef NDEBUG
       conflictstore->dualsolconfs[lastpos] = NULL;
       conflictstore->dualprimalbnds[lastpos] = SCIP_UNKNOWN;
+      conflictstore->updateside[lastpos] = FALSE;
 #endif
    }
 
@@ -645,6 +647,7 @@ SCIP_RETCODE SCIPconflictstoreCreate(
    (*conflictstore)->conflicts = NULL;
    (*conflictstore)->confprimalbnds = NULL;
    (*conflictstore)->dualprimalbnds = NULL;
+   (*conflictstore)->updateside = NULL;
    (*conflictstore)->dualrayconfs = NULL;
    (*conflictstore)->dualsolconfs = NULL;
    (*conflictstore)->origconfs = NULL;
@@ -699,6 +702,7 @@ SCIP_RETCODE SCIPconflictstoreFree(
    BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictstore)->dualrayconfs, CONFLICTSTORE_DUALSIZE);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictstore)->dualsolconfs, CONFLICTSTORE_DUALSIZE);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictstore)->dualprimalbnds, CONFLICTSTORE_DUALSIZE);
+   BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictstore)->updateside, CONFLICTSTORE_DUALSIZE);
    BMSfreeMemoryNull(conflictstore);
 
    return SCIP_OKAY;
@@ -859,7 +863,8 @@ SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
    SCIP_PROB*            transprob,          /**< transformed problem */
-   SCIP_REOPT*           reopt               /**< reoptimization data */
+   SCIP_REOPT*           reopt,              /**< reoptimization data */
+   SCIP_Bool             updateside          /**< should the side be updated if a new incumbent is found */
    )
 {
    int nvars;
@@ -876,6 +881,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
    {
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &conflictstore->dualsolconfs, CONFLICTSTORE_DUALSIZE) );
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &conflictstore->dualprimalbnds, CONFLICTSTORE_DUALSIZE) );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &conflictstore->updateside, CONFLICTSTORE_DUALSIZE) );
    }
 
    /* the store is full, we proceed as follows
@@ -909,7 +915,8 @@ SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
       if( ndeleted == 0 )
       {
          /* sort dual rays */
-         SCIPsortPtrReal((void**)conflictstore->dualsolconfs, conflictstore->dualprimalbnds, compareConss, conflictstore->ndualsolconfs);
+         SCIPsortPtrRealInt((void**)conflictstore->dualsolconfs, conflictstore->dualprimalbnds, conflictstore->updateside,
+               compareConss, conflictstore->ndualsolconfs);
          assert(SCIPsetIsGE(set, SCIPconsGetAge(conflictstore->dualsolconfs[0]),
                SCIPconsGetAge(conflictstore->dualsolconfs[conflictstore->ndualsolconfs-1])));
 
@@ -921,6 +928,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
    SCIPconsCapture(dualproof);
    conflictstore->dualsolconfs[conflictstore->ndualsolconfs] = dualproof;
    conflictstore->dualprimalbnds[conflictstore->ndualsolconfs] = SCIPgetCutoffbound(set->scip) - SCIPsetSumepsilon(set);
+   conflictstore->updateside[conflictstore->ndualsolconfs] = updateside;
    ++conflictstore->ndualsolconfs;
 
    /* increase the number of non-zeros */
@@ -1116,6 +1124,9 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
       if( SCIPconsIsDeleted(dualproof) )
          continue;
 
+      if( !conflictstore->updateside[i] )
+         continue;
+
       conshdlr = SCIPconsGetHdlr(dualproof);
       assert(conshdlr != NULL);
 
@@ -1290,7 +1301,7 @@ SCIP_RETCODE SCIPconflictstoreTransform(
 }
 
 /** returns the average number of non-zeros over all stored dual ray constraints */
-SCIP_Real SCIPconflictstoreGetAvgNnzDualray(
+SCIP_Real SCIPconflictstoreGetAvgNnzDualInfProofs(
    SCIP_CONFLICTSTORE*   conflictstore       /**< conflict store */
    )
 {
@@ -1303,12 +1314,35 @@ SCIP_Real SCIPconflictstoreGetAvgNnzDualray(
 }
 
 /** returns the number of all stored dual ray constraints */
-int SCIPconflictstoreGetNDualrays(
+int SCIPconflictstoreGetNDualInfProofs(
    SCIP_CONFLICTSTORE*   conflictstore       /**< conflict store */
    )
 {
    assert(conflictstore != NULL);
 
    return conflictstore->ndualrayconfs;
+}
+
+/** returns the average number of non-zeros over all stored boundexceeding proofs */
+SCIP_Real SCIPconflictstoreGetAvgNnzDualBndProofs(
+   SCIP_CONFLICTSTORE*   conflictstore       /**< conflict store */
+   )
+{
+   assert(conflictstore != NULL);
+
+   if( conflictstore->ndualsolconfs == 0 )
+      return 0.0;
+   else
+      return (SCIP_Real) conflictstore->nnzdualsols / ((SCIP_Real) conflictstore->ndualsolconfs);
+}
+
+/** returns the number of all stored boundexceeding proofs */
+int SCIPconflictstoreGetNDualBndProofs(
+   SCIP_CONFLICTSTORE*   conflictstore       /**< conflict store */
+   )
+{
+   assert(conflictstore != NULL);
+
+   return conflictstore->ndualsolconfs;
 }
 
