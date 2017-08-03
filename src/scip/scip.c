@@ -19077,6 +19077,9 @@ SCIP_Real SCIPgetVarRedcost(
    assert( var != NULL );
    assert( var->scip == scip );
 
+   if( !SCIPlpIsDualReliable(scip->lp) )
+      return SCIP_OKAY;
+
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
@@ -19120,6 +19123,9 @@ SCIP_Real SCIPgetVarImplRedcost(
    assert( scip != NULL );
    assert( var != NULL );
    assert( var->scip == scip );
+
+   if( !SCIPlpIsDualReliable(scip->lp) )
+      return 0.0;
 
    switch( SCIPvarGetStatus(var) )
    {
@@ -20052,7 +20058,7 @@ SCIP_RETCODE analyzeStrongbranch(
     * @note Ignore the results if the LP solution of the down (up) branch LP is smaller which should not happened by
     *       theory but can arise due to numerical issues.
     */
-   if( SCIPtreeGetCurrentDepth(scip->tree) == 0 && SCIPvarIsBinary(var) )
+   if( SCIPtreeGetCurrentDepth(scip->tree) == 0 && SCIPvarIsBinary(var) && SCIPlpIsDualReliable(scip->lp) )
    {
       SCIP_Real lpobjval;
 
