@@ -357,7 +357,7 @@ add_subdirectory(check)
 #
 add_custom_target(unittests)
 add_subdirectory(tests EXCLUDE_FROM_ALL)
-add_custom_target(all_executables DEPENDS unittests examples)
+add_custom_target(all_executables DEPENDS scip unittests examples)
 #
 # add examples
 #
@@ -366,7 +366,7 @@ add_subdirectory(examples)
 enable_testing()
 #
 # enable coverage support
-#
+
 if( COVERAGE )
     include(CodeCoverage)
     APPEND_COVERAGE_COMPILER_FLAGS()
