@@ -1,5 +1,5 @@
 project(LOP)
-
+include(CTest)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../src)
 
 add_executable(lop
@@ -9,3 +9,6 @@ add_executable(lop
 
 target_link_libraries(lop libscip)
 add_dependencies(examples lop)
+
+add_subdirectory(check)
+enable_testing()

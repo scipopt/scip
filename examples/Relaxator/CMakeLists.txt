@@ -9,3 +9,6 @@ add_executable(relaxator
 
 target_link_libraries(relaxator libscip)
 add_dependencies(examples relaxator)
+
+add_subdirectory(check)
+enable_testing()

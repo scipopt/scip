@@ -8,3 +8,7 @@ add_executable(vrp
 
 target_link_libraries(vrp libscip)
 add_dependencies(examples vrp)
+
+
+add_subdirectory(check)
+enable_testing()

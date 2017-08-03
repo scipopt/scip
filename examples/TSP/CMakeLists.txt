@@ -15,3 +15,6 @@ add_executable(sciptsp
 
 target_link_libraries(sciptsp libscip)
 add_dependencies(examples sciptsp)
+
+add_subdirectory(check)
+enable_testing()
