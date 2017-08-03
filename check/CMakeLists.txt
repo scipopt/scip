@@ -74,8 +74,6 @@ set(settings_MINLP
     "undercover1"
     "undercover2"
     "rensnlp"
-    "separating_aggressive"
-    "heuristics_aggressive"
     "nlpdiving2"
     "nlpdiving3"
     "nlpdiving1-relprop"
