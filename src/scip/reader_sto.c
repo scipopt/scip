@@ -31,15 +31,18 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
+#define SCIP_DEBUG
 #include <assert.h>
 #include <string.h>
 #include <ctype.h>
 
+#include "scip/scipdefplugins.h"
 #include "scip/reader_sto.h"
 #include "scip/reader_tim.h"
 #include "scip/pub_misc.h"
 #include "scip/cons_linear.h"
+#include "scip/cons_benders.h"
+#include "scip/benders_default.h"
 
 #define READER_NAME             "storeader"
 #define READER_DESC             "file reader for MIQPs in IBM's Mathematical Programming System format"
@@ -47,6 +50,9 @@
 
 #define DEFAULT_LINEARIZE_ANDS         TRUE  /**< should possible \"and\" constraint be linearized when writing the sto file? */
 #define DEFAULT_AGGRLINEARIZATION_ANDS TRUE  /**< should an aggregated linearization for and constraints be used? */
+
+#define DEFAULT_USEBENDERS            FALSE  /**< should Benders' decomposition be used for the stochastic program? */
+//#define DEFAULT_USEBENDERS             TRUE  /**< should Benders' decomposition be used for the stochastic program? */
 
 /*
  * sto reader internal methods
@@ -78,10 +84,12 @@ struct SCIP_ReaderData
 struct StoScenario
 {
    SCIP*                 scip;               /**< the SCIP instance for the scenario. Used for benders. */
+   SCIP**                subproblems;        /**< the SCIP instances for the subproblems */
    STOSCENARIO*          parent;             /**< parent scenario. */
    STOSCENARIO**         children;           /**< children scenarios. */
    int                   nchildren;          /**< the number of children scenarios. */
    int                   childrensize;       /**< the size of the children array. */
+   int                   nsubproblems;       /**< the number of subproblems */
    int                   stagenum;           /**< the number of the stage */
    int                   scenarionum;        /**< the scenario number of this stage */
    const char*           stagename;          /**< the stage name */
@@ -143,9 +151,11 @@ SCIP_RETCODE createScenarioData(
    SCIP_CALL( SCIPallocBlockMemory(scip, scenariodata) );
 
    (*scenariodata)->scip = NULL;
+   (*scenariodata)->subproblems = NULL;
    (*scenariodata)->parent = NULL;
    (*scenariodata)->nchildren = 0;
    (*scenariodata)->childrensize = STO_DEFAULT_CHILDRENSIZE;
+   (*scenariodata)->nsubproblems = 0;
    (*scenariodata)->stagenum = -1;
    (*scenariodata)->scenarionum = -1;
    (*scenariodata)->stagename = NULL;
@@ -193,8 +203,16 @@ SCIP_RETCODE freeScenarioTree(
    SCIPfreeBlockMemoryArray(scip, &(*scenariotree)->colnames, (*scenariotree)->entriessize);
    SCIPfreeBlockMemoryArray(scip, &(*scenariotree)->rownames, (*scenariotree)->entriessize);
    SCIPfreeBlockMemoryArray(scip, &(*scenariotree)->children, (*scenariotree)->childrensize);
-   SCIPfreeBlockMemoryArray(scip, &(*scenariotree)->name, strlen((*scenariotree)->name) + 1);
-   SCIPfreeBlockMemoryArray(scip, &(*scenariotree)->stagename, strlen((*scenariotree)->stagename) + 1);
+   if( (*scenariotree)->name != NULL )
+      SCIPfreeBlockMemoryArray(scip, &(*scenariotree)->name, strlen((*scenariotree)->name) + 1);
+   if( (*scenariotree)->stagename != NULL )
+      SCIPfreeBlockMemoryArray(scip, &(*scenariotree)->stagename, strlen((*scenariotree)->stagename) + 1);
+
+   for( i = (*scenariotree)->nsubproblems - 1; i >= 0; i-- )
+      SCIPfree(&(*scenariotree)->subproblems[i]);
+
+   if( (*scenariotree)->nsubproblems > 0 )
+      SCIPfreeBlockMemoryArray(scip, &(*scenariotree)->subproblems, (*scenariotree)->nchildren);
 
 
    SCIPfreeBlockMemory(scip, scenariotree);
@@ -224,6 +242,48 @@ SCIP* getScenarioScip(
    assert(scenario != NULL);
 
    return scenario->scip;
+}
+
+/** creates the subproblem array. This array will be the same size as the number of children */
+static
+SCIP_RETCODE createScenarioSubprobArray(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   STOSCENARIO*          scenario            /**< the scenario */
+   )
+{
+   assert(scip != NULL);
+   assert(scenario != NULL);
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &scenario->subproblems, scenario->nchildren) );
+
+   return SCIP_OKAY;
+}
+
+/** adds a scenario to the subproblem array */
+static
+void addScenarioSubproblem(
+   STOSCENARIO*          scenario,           /**< the scenario */
+   SCIP*                 subproblem          /**< the subproblems data structure */
+   )
+{
+   assert(scenario != NULL);
+   assert(subproblem != NULL);
+
+   assert(scenario->nsubproblems + 1 <= scenario->nchildren);
+
+   scenario->subproblems[scenario->nsubproblems] = subproblem;
+   scenario->nsubproblems++;
+}
+
+/** returns the subproblem array for the scenario */
+static
+SCIP** getScenarioSubprobArray(
+   STOSCENARIO*          scenario            /**< the scenario */
+   )
+{
+   assert(scenario != NULL);
+
+   return scenario->subproblems;
 }
 
 /** returns the number of children for a given scenario */
@@ -648,8 +708,9 @@ SCIP_RETCODE addScenariosToReaderdata(
    assert(readerdata != NULL);
    assert(scenarios != NULL);
 
-   numstages = SCIPtimGetNStage(scip);
-   assert(numstages == numscenariostages + 1);
+   numstages = SCIPtimGetNStages(scip);
+   if( numstages != numscenariostages + 1 )
+      assert(FALSE);
 
    SCIP_CALL( buildScenarioTree(scip, &readerdata->scenariotree, scenarios, numscenarios, numscenariostages, 0) );
 
@@ -978,17 +1039,6 @@ const char* stoinputField4(
    return stoi->f4;
 }
 
-/** return the current value of field 5 */
-static
-const char* stoinputField5(
-   const STOINPUT*       stoi                /**< sto input structure */
-   )
-{
-   assert(stoi != NULL);
-
-   return stoi->f5;
-}
-
 /** returns if an error was detected */
 static
 SCIP_Bool stoinputHasError(
@@ -1052,28 +1102,6 @@ void stoinputSyntaxerror(
    stoi->haserror = TRUE;
 }
 
-/** method post a ignore message  */
-static
-void stoinputEntryIgnored(
-   SCIP*                 scip,               /**< SCIP data structure */
-   STOINPUT*             stoi,               /**< sto input structure */
-   const char*           what,               /**< what get ignored */
-   const char*           what_name,          /**< name of that object */
-   const char*           entity,             /**< entity */
-   const char*           entity_name,        /**< entity name */
-   SCIP_VERBLEVEL        verblevel           /**< SCIP verblevel for this message */
-   )
-{
-   assert(stoi        != NULL);
-   assert(what        != NULL);
-   assert(what_name   != NULL);
-   assert(entity      != NULL);
-   assert(entity_name != NULL);
-
-   SCIPverbMessage(scip, verblevel, NULL,
-      "Warning line %d: %s \"%s\" for %s \"%s\" ignored\n", stoi->lineno, what, what_name, entity, entity_name);
-}
-
 /** fill the line from \p pos up to column 80 with blanks. */
 static
 void clearFrom(
@@ -1086,27 +1114,6 @@ void clearFrom(
    for(i = pos; i < 80; i++)
       buf[i] = BLANK;
    buf[80] = '\0';
-}
-
-/** change all blanks inside a field to #PATCH_CHAR. */
-static
-void patchField(
-   char*                 buf,                /**< buffer to patch */
-   int                   beg,                /**< position to begin */
-   int                   end                 /**< position to end */
-   )
-{
-   int i;
-
-   while( (beg <= end) && (buf[end] == BLANK) )
-      end--;
-
-   while( (beg <= end) && (buf[beg] == BLANK) )
-      beg++;
-
-   for( i = beg; i <= end; i++ )
-      if( buf[i] == BLANK )
-         buf[i] = PATCH_CHAR;
 }
 
 /** read a sto format data line and parse the fields. */
@@ -1210,20 +1217,6 @@ SCIP_Bool stoinputReadLine(
    return TRUE;
 }
 
-/** Insert \p str as field 4 and shift all other fields up. */
-static
-void stoinputInsertField4(
-   STOINPUT*             stoi,               /**< sto input structure */
-   const char*           str                 /**< str to insert */
-   )
-{
-   assert(stoi != NULL);
-   assert(str != NULL);
-
-   stoi->f5 = stoi->f4;
-   stoi->f4 = str;
-}
-
 /** Process NAME section. */
 static
 SCIP_RETCODE readStoch(
@@ -1305,6 +1298,9 @@ SCIP_RETCODE readBlocks(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &blocks, STO_DEFAULT_ARRAYSIZE) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &numblocksperblock, STO_DEFAULT_ARRAYSIZE) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &blocksperblocksize, STO_DEFAULT_ARRAYSIZE) );
+
+   blockindex = 0;
+   blocknum = 0;
 
    /* initialising the stage names record */
    numstages = 0;
@@ -1421,32 +1417,23 @@ TERMINATE:
 }
 
 
+/** add variables to the scenario  */
 static
-SCIP_RETCODE addScenarioVarsAndConsToProb(
+SCIP_RETCODE addScenarioVarsToProb(
    SCIP*                 scip,               /**< the SCIP data structure */
-   STOSCENARIO*          scenario            /**< the current scenario */
+   STOSCENARIO*          scenario,           /**< the current scenario */
+   SCIP_VAR**            vars,               /**< the variables of the core problem associated with this scenario */
+   int                   nvars               /**< the number of variables for this scenario */
    )
 {
    STOSCENARIO* checkscen;
-   SCIP_CONS** conss;
-   SCIP_VAR** vars;
    SCIP_Real probability;
-   int nconss;
-   int nvars;
-   int nentries;
-   int stagenum;
    int i;
-   int j;
    char name[SCIP_MAXSTRLEN];
 
    assert(scip != NULL);
    assert(scenario != NULL);
-
-   stagenum = SCIPtimFindStage(scip, getScenarioStageName(scip, scenario));
-   conss = SCIPtimGetStageConss(scip, stagenum);
-   vars = SCIPtimGetStageVars(scip, stagenum);
-   nconss = SCIPtimGetStageNConss(scip, stagenum);
-   nvars = SCIPtimGetStageNVars(scip, stagenum);
+   assert(vars != NULL);
 
    /* computing the probability for the scenario */
    checkscen = scenario;
@@ -1457,7 +1444,6 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
       checkscen = getScenarioParent(checkscen);
    }
 
-   /* Add variables */
    for( i = 0; i < nvars; i++ )
    {
       SCIP_VAR* var;
@@ -1479,6 +1465,134 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
       SCIP_CALL( SCIPreleaseVar(scip, &var) );
    }
 
+   return SCIP_OKAY;
+}
+
+
+/** finds the scenario variable to add to a constraint */
+static
+SCIP_RETCODE findScenarioVar(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   STOSCENARIO*          scenario,           /**< the current scenario */
+   SCIP_VAR*             consvar,            /**< the variable in the constraint that is being searched for */
+   SCIP_VAR**            scenariovar         /**< pointer to return the variable to be added to the constraint */
+   )
+{
+   STOSCENARIO* checkscen;
+   char varname[SCIP_MAXSTRLEN];
+
+   assert(scip != NULL);
+   assert(scenario != NULL);
+   assert(consvar != NULL);
+   assert(scenariovar != NULL);
+
+   (*scenariovar) = NULL;
+
+   checkscen = scenario;
+
+   /* NOTE: if the variable does not exist, then we need to search the preceding scenarios. In the case of
+    * decomposition, then we only check the preceding scenario. As such, a check count is used to limit the number
+    * of scenario checks. */
+   while( (*scenariovar) == NULL )
+   {
+      assert(checkscen != NULL);
+      if( getScenarioStageNum(scip, checkscen) == 0 )
+         (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s", SCIPvarGetName(consvar));
+      else
+         (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s_%d_%d", SCIPvarGetName(consvar),
+            getScenarioStageNum(scip, checkscen), getScenarioNum(scip, checkscen));
+
+      (*scenariovar) = SCIPfindVar(scip, varname);
+
+      checkscen = getScenarioParent(checkscen);
+   }
+   assert((*scenariovar) != NULL);
+
+   return SCIP_OKAY;
+}
+
+
+/** create variable for the decomposed scenario */
+static
+SCIP_RETCODE getScenarioDecompVar(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   STOSCENARIO*          scenario,           /**< the current scenario */
+   SCIP_VAR*             consvar,            /**< the variable in the constraint that is being searched for */
+   SCIP_VAR**            scenariovar,        /**< pointer to return the variable to be added to the constraint */
+   SCIP_Bool*            varadded            /**< pointer to indicate whether a variable has been added */
+   )
+{
+   STOSCENARIO* checkscen;
+   SCIP_VAR* searchvar;
+   int checkcount;
+   char varname[SCIP_MAXSTRLEN];
+
+   assert(scip != NULL);
+   assert(scenario != NULL);
+   assert(consvar != NULL);
+
+   (*varadded) = FALSE;
+
+   /* finding the scenario that the consvar belongs to */
+   checkscen = scenario;
+   searchvar = NULL;
+   checkcount = 0;
+   while( searchvar == NULL && checkcount < 2 )
+   {
+      assert(checkscen != NULL);
+      if( getScenarioStageNum(scip, checkscen) == 0 )
+         (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s", SCIPvarGetName(consvar));
+      else
+         (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s_%d_%d", SCIPvarGetName(consvar),
+            getScenarioStageNum(scip, checkscen), getScenarioNum(scip, checkscen));
+
+      searchvar = SCIPfindVar(getScenarioScip(checkscen), varname);
+
+      checkscen = getScenarioParent(checkscen);
+      checkcount++;
+   }
+
+   /* if the checkcount == 1, then the consvar belongs to the current scenario. Otherwise, the consvar belongs to a
+    * scenario of a higher stage. In that case the variable must be created. */
+   if( checkcount == 1 )
+      (*scenariovar) = searchvar;
+   else if( searchvar != NULL )
+   {
+      SCIP_VAR* var;
+      /* creating a variable as a copy of the original variable. */
+      SCIP_CALL( SCIPcreateVar(scip, &var, varname, SCIPvarGetLbOriginal(searchvar), SCIPvarGetUbOriginal(searchvar),
+            0.0, SCIPvarGetType(searchvar), SCIPvarIsInitial(searchvar), SCIPvarIsRemovable(searchvar), NULL, NULL,
+            NULL, NULL, NULL) );
+
+      SCIP_CALL( SCIPaddVar(scip, var) );
+
+      (*scenariovar) = var;
+      (*varadded) = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** adds the constraint to the scenario problem */
+static
+SCIP_RETCODE addScenarioConsToProb(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   STOSCENARIO*          scenario,           /**< the current scenario */
+   SCIP_CONS**           conss,              /**< the constraints of the core problem associated with this scenario */
+   int                   nconss,             /**< the number of constraints for this scenario */
+   SCIP_Bool             decomp              /**< is the problem being decomposed */
+   )
+{
+   int i;
+   int j;
+   char name[SCIP_MAXSTRLEN];
+   SCIP_Bool varadded;
+
+   assert(scip != NULL);
+   assert(scenario != NULL);
+   assert(conss != NULL);
+
    /* Add constraints */
    /* NOTE: It is assumed that the problems only have linear constraints */
    for( i = 0; i < nconss; i++ )
@@ -1487,7 +1601,6 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
       SCIP_VAR** consvars;
       SCIP_Real* consvals;
       int nconsvars;
-      char varname[SCIP_MAXSTRLEN];
 
       if( SCIPconsIsDeleted(conss[i]) )
          continue;
@@ -1507,36 +1620,108 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
 
       for( j = 0; j < nconsvars; j++ )
       {
-         SCIP_VAR* scenariovar = NULL;
+         SCIP_VAR* scenariovar;
 
-         checkscen = scenario;
+         varadded = FALSE;
 
-         /* NOTE: if the variable does not exist, then we need to search the preceding scenarios */
-         while( scenariovar == NULL )
-         {
-            assert(checkscen != NULL);
-            if( getScenarioStageNum(scip, checkscen) == 0 )
-               (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s", SCIPvarGetName(consvars[j]));
-            else
-               (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s_%d_%d", SCIPvarGetName(consvars[j]),
-                  getScenarioStageNum(scip, checkscen), getScenarioNum(scip, checkscen));
-
-            scenariovar = SCIPfindVar(scip, varname);
-            checkscen = getScenarioParent(checkscen);
-         }
-         assert(scenariovar != NULL);
+         if( decomp )
+            SCIP_CALL( getScenarioDecompVar(scip, scenario, consvars[j], &scenariovar, &varadded) );
+         else
+            SCIP_CALL( findScenarioVar(scip, scenario, consvars[j], &scenariovar) );
 
          if( scenariovar != NULL )
             SCIP_CALL( SCIPaddCoefLinear(scip, cons, scenariovar, consvals[j]) );
+
+         if( varadded )
+         SCIP_CALL( SCIPreleaseVar(scip, &scenariovar) );
       }
 
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
 
+   return SCIP_OKAY;
+}
+
+
+static
+SCIP_RETCODE addScenarioVarsAndConsToProb(
+   SCIP*                 scip,               /**< the SCIP data structure of master problem */
+   STOSCENARIO*          scenario,           /**< the current scenario */
+   SCIP_Bool             decomp
+   )
+{
+   SCIP* scenarioscip;
+   SCIP_CONS** conss;
+   SCIP_VAR** vars;
+   int nconss;
+   int nvars;
+   int nentries;
+   int stagenum;
+   int i;
+   char name[SCIP_MAXSTRLEN];
+
+   assert(scip != NULL);
+   assert(scenario != NULL);
+
+   stagenum = SCIPtimFindStage(scip, getScenarioStageName(scip, scenario));
+   assert(stagenum >= 0 && stagenum < SCIPtimGetNStages(scip));
+
+   SCIPdebugMessage("Creating scenario at stage <%d>. Scenario: %d Stage: %d\n", stagenum, getScenarioNum(scip, scenario),
+      getScenarioStageNum(scip, scenario));
+
+   conss = SCIPtimGetStageConss(scip, stagenum);
+   nconss = SCIPtimGetStageNConss(scip, stagenum);
+   vars = SCIPtimGetStageVars(scip, stagenum);
+   nvars = SCIPtimGetStageNVars(scip, stagenum);
+
+   scenarioscip = scip;
+
+   if( decomp )
+   {
+      SCIP_CALL( SCIPcreate(&scenarioscip) );
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_%d", SCIPgetProbName(scip),
+         getScenarioStageNum(scip, scenario), getScenarioNum(scip, scenario));
+
+      /* creating the problem */
+      SCIP_CALL( SCIPcreateProbBasic(scenarioscip, name) );
+
+      /* we explicitly enable the use of a debug solution for this main SCIP instance */
+      SCIPenableDebugSol(scenarioscip);
+
+      /* include default SCIP plugins */
+      SCIP_CALL( SCIPincludeDefaultPlugins(scenarioscip) );
+
+      SCIP_CALL( SCIPincludeConshdlrBenders(scenarioscip, FALSE) );
+      SCIP_CALL( SCIPincludeBendersDefault(scenarioscip) );
+
+      /* allocating memory for the subproblems */
+      SCIP_CALL( createScenarioSubprobArray(scenarioscip, scenario) );
+   }
+
+   /* adding the scenarioscip to the scenario */
+   setScenarioScip(scenario, scenarioscip);
+
+   /* adding the variables to the scenario */
+   SCIP_CALL( addScenarioVarsToProb(scenarioscip, scenario, vars, nvars) );
+
+   /* adding the constraints to the scenario */
+   SCIP_CALL( addScenarioConsToProb(scenarioscip, scenario, conss, nconss, decomp) );
+
+
    /* add the variables and constraints of the child scenarios */
    for( i = 0; i < getScenarioNChildren(scenario); i++ )
-      SCIP_CALL( addScenarioVarsAndConsToProb(scip, getScenarioChild(scenario, i)) );
+   {
+      /* the master SCIP is always passed to the recursive function. The scenario SCIP instances are generated in the
+       * function call. */
+      SCIP_CALL( addScenarioVarsAndConsToProb(scip, getScenarioChild(scenario, i), decomp) );
+      addScenarioSubproblem(scenario, getScenarioScip(getScenarioChild(scenario, i)));
+   }
+
+   /* adding the Benders' decomposition */
+   if( decomp && getScenarioNChildren(scenario) > 0 )
+      SCIP_CALL( SCIPcreateBendersDefault(scenarioscip, getScenarioSubprobArray(scenario), getScenarioNChildren(scenario)) );
 
    /* change the constraints for the given scenario */
    nentries = getScenarioNEntries(scenario);
@@ -1548,31 +1733,31 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
 
       /* finding the constraint associated with the row */
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_%d", getScenarioEntryRow(scenario, i),
-         getScenarioStageNum(scip, scenario), getScenarioNum(scip, scenario));
-      cons = SCIPfindCons(scip, name);
+         getScenarioStageNum(scenarioscip, scenario), getScenarioNum(scenarioscip, scenario));
+      cons = SCIPfindCons(scenarioscip, name);
 
       if( strcmp(getScenarioEntryCol(scenario, i), RHS) == 0 )
       {
          /* if the constraint is an equality constraint, then the LHS must also be changed */
-         if( SCIPgetLhsLinear(scip, cons) == SCIPgetRhsLinear(scip, cons) )
+         if( SCIPgetLhsLinear(scenarioscip, cons) == SCIPgetRhsLinear(scenarioscip, cons) )
          {
-            SCIP_CALL( SCIPchgLhsLinear(scip, cons, getScenarioEntryValue(scenario, i)) );
-            SCIP_CALL( SCIPchgRhsLinear(scip, cons, getScenarioEntryValue(scenario, i)) );
+            SCIP_CALL( SCIPchgLhsLinear(scenarioscip, cons, getScenarioEntryValue(scenario, i)) );
+            SCIP_CALL( SCIPchgRhsLinear(scenarioscip, cons, getScenarioEntryValue(scenario, i)) );
          }
-         else if( SCIPisLT(scip, SCIPgetRhsLinear(scip, cons), SCIPinfinity(scip)) )
-            SCIP_CALL( SCIPchgRhsLinear(scip, cons, getScenarioEntryValue(scenario, i)) );
-         else if( SCIPisLT(scip, SCIPgetLhsLinear(scip, cons), SCIPinfinity(scip)) )
-            SCIP_CALL( SCIPchgLhsLinear(scip, cons, getScenarioEntryValue(scenario, i)) );
+         else if( SCIPisLT(scenarioscip, SCIPgetRhsLinear(scenarioscip, cons), SCIPinfinity(scenarioscip)) )
+            SCIP_CALL( SCIPchgRhsLinear(scenarioscip, cons, getScenarioEntryValue(scenario, i)) );
+         else if( SCIPisLT(scenarioscip, SCIPgetLhsLinear(scenarioscip, cons), SCIPinfinity(scenarioscip)) )
+            SCIP_CALL( SCIPchgLhsLinear(scenarioscip, cons, getScenarioEntryValue(scenario, i)) );
       }
       else
       {
          /* finding the variable associated with the column */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_%d", getScenarioEntryCol(scenario, i),
-            getScenarioStageNum(scip, scenario), getScenarioNum(scip, scenario));
-         var = SCIPfindVar(scip, name);
+            getScenarioStageNum(scenarioscip, scenario), getScenarioNum(scenarioscip, scenario));
+         var = SCIPfindVar(scenarioscip, name);
 
          /* changing the coefficient for the variable */
-         SCIP_CALL( SCIPchgCoefLinear(scip, cons, var, getScenarioEntryValue(scenario, i)) );
+         SCIP_CALL( SCIPchgCoefLinear(scenarioscip, cons, var, getScenarioEntryValue(scenario, i)) );
       }
    }
 
@@ -1597,7 +1782,7 @@ SCIP_RETCODE removeCoreVariablesAndConstraints(
 
    assert(scip != NULL);
 
-   numstages = SCIPtimGetNStage(scip);
+   numstages = SCIPtimGetNStages(scip);
 
    /* looping through all stages to remove the variables and constraints. The first stage is not removed as these are
     * part of the complete problem */
@@ -1646,7 +1831,7 @@ SCIP_RETCODE buildFullProblem(
    /* adding all variables and constraints for stages below the first stage.
     * The first stage is covered by the original problem. */
    for( i = 0; i < getScenarioNChildren(readerdata->scenariotree); i++ )
-      SCIP_CALL( addScenarioVarsAndConsToProb(scip, getScenarioChild(readerdata->scenariotree, i)) );
+      SCIP_CALL( addScenarioVarsAndConsToProb(scip, getScenarioChild(readerdata->scenariotree, i), FALSE) );
 
    /* removing the variable and constraints that were included as part of the core file */
    SCIP_CALL( removeCoreVariablesAndConstraints(scip) );
@@ -1658,37 +1843,41 @@ SCIP_RETCODE buildFullProblem(
 
 
 /* build the stochastic program completely as a MIP, i.e. no decomposition */
-//static
-//SCIP_RETCODE buildDecompProblem(
-   //SCIP*                 scip,               /**< the SCIP data structure */
-   //SCIP_READERDATA*      readerdata          /**< the reader data */
-   //)
-//{
-   //SCIP** subproblems;
-   //int i;
+static
+SCIP_RETCODE buildDecompProblem(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_READERDATA*      readerdata          /**< the reader data */
+   )
+{
+   int i;
 
-   //assert(scip != NULL);
-   //assert(readerdata != NULL);
+   assert(scip != NULL);
+   assert(readerdata != NULL);
 
-   //SCIP_CALL( SCIPallocBufferArray(scip, &subproblems, getScenarioNChildren(readerdata->scenariotree)) );
+   SCIP_CALL( createScenarioSubprobArray(scip, readerdata->scenariotree) );
+   SCIP_CALL( SCIPincludeConshdlrBenders(scip, TRUE) );
+   SCIP_CALL( SCIPincludeBendersDefault(scip) );
 
-   ///* adding all variables and constraints for stages below the first stage.
-    //* The first stage is covered by the original problem. */
-   //for( i = 0; i < getScenarioNChildren(readerdata->scenariotree); i++ )
-   //{
-      //SCIP_CALL( addScenarioVarsAndConsToProb(scip, getScenarioChild(readerdata->scenariotree, i)) );
-      //subproblems[i] = getScenarioScip(scenario);
-   //}
+   setScenarioScip(readerdata->scenariotree, scip);
 
-   //SCIP_CALL( SCIPcreate )
+   /* adding all variables and constraints for stages below the first stage.
+    * The first stage is covered by the original problem. */
+   for( i = 0; i < getScenarioNChildren(readerdata->scenariotree); i++ )
+   {
+      SCIP_CALL( addScenarioVarsAndConsToProb(scip, getScenarioChild(readerdata->scenariotree, i), TRUE) );
+      addScenarioSubproblem(readerdata->scenariotree, getScenarioScip(getScenarioChild(readerdata->scenariotree, i)));
+   }
 
-   ///* removing the variable and constraints that were included as part of the core file */
-   //SCIP_CALL( removeCoreVariablesAndConstraints(scip) );
+   /* creating the Benders' decomposition */
+   SCIP_CALL( SCIPcreateBendersDefault(scip, getScenarioSubprobArray(readerdata->scenariotree),
+         getScenarioNChildren(readerdata->scenariotree)) );
+
+   /* removing the variable and constraints that were included as part of the core file */
+   SCIP_CALL( removeCoreVariablesAndConstraints(scip) );
 
 
-
-   //return SCIP_OKAY;
-//}
+   return SCIP_OKAY;
+}
 
 
 /** Read LP in "STO File Format".
@@ -1755,7 +1944,10 @@ SCIP_RETCODE readSto(
 
    if( !error )
    {
-      SCIP_CALL_TERMINATE( retcode, buildFullProblem(scip, readerdata), TERMINATE );
+      if( readerdata->usebenders )
+         SCIP_CALL_TERMINATE( retcode, buildDecompProblem(scip, readerdata), TERMINATE );
+      else
+         SCIP_CALL_TERMINATE( retcode, buildFullProblem(scip, readerdata), TERMINATE );
    }
 
  /* cppcheck-suppress unusedLabel */
@@ -1845,6 +2037,9 @@ SCIP_RETCODE SCIPincludeReaderSto(
 
    /* create reader data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &readerdata) );
+   readerdata->usebenders = DEFAULT_USEBENDERS;
+   readerdata->scenariotree = NULL;
+
 
    /* include reader */
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
