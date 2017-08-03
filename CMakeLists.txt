@@ -355,9 +355,9 @@ add_subdirectory(check)
 #
 # add unit tests as a single target. Including tests will add the unit tests as single executables
 #
-add_custom_target(unittests DEPENDS scip)
+add_custom_target(unittests)
 add_subdirectory(tests EXCLUDE_FROM_ALL)
-
+add_custom_target(all_executables DEPENDS unittests examples)
 #
 # add examples
 #
@@ -373,7 +373,7 @@ if( COVERAGE )
     set(COVERAGE_EXCLUDES '/usr*')
     SETUP_TARGET_FOR_COVERAGE(NAME coverage
                           EXECUTABLE bash -c "${CMAKE_CTEST_COMMAND} ${COVERAGE_CTEST_ARGS}"
-                          DEPENDENCIES scip unittests examples)
+                          DEPENDENCIES all_executables)
 endif()
 
 include(FeatureSummary)
