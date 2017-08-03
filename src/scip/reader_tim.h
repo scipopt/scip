@@ -92,7 +92,7 @@ SCIP_RETCODE SCIPwriteTim(
 
 /* returns the number of stages */
 EXTERN
-int SCIPtimGetNStage(
+int SCIPtimGetNStages(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

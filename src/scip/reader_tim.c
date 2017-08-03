@@ -952,7 +952,7 @@ SCIP_RETCODE SCIPreadTim(
  */
 
 /* returns the number of stages */
-int SCIPtimGetNStage(
+int SCIPtimGetNStages(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
