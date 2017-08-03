@@ -13,3 +13,10 @@ add_executable(binpacking
 
 target_link_libraries(binpacking libscip)
 add_dependencies(examples binpacking)
+
+#
+# add check subdirectory for tests
+#
+add_subdirectory(check)
+
+enable_testing()
