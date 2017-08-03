@@ -318,4 +318,4 @@ configure_file(interactiveshell/interactiveshell.bat.in interactiveshell/interac
 add_test(NAME interactiveshell COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/interactiveshell.bat)
 set_tests_properties(interactiveshell PROPERTIES PASS_REGULAR_EXPRESSION "increased branching priority of new binary variables")
 
-add_custom_target(check COMMAND ctest -R default --schedule-random)
+add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} -R "-default" --schedule-random DEPENDS scip)
