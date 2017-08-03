@@ -7,7 +7,8 @@ include(CTest)
 #
 set(instances
     "eil13\;247"
-    "eil22\;375"
+#    "eil22\;375"
+#    this instance takes too long
     "eil7\;104"
 )
 
