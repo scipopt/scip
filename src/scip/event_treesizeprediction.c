@@ -26,13 +26,15 @@
 #include "scip/event_treesizeprediction.h"
 #include "scip/misc.h"
 #include "scip/struct_tree.h"
+#include "scip/struct_branch.h"
 
 #include "string.h"
 #define EVENTHDLR_NAME         "treesizeprediction"
 #define EVENTHDLR_DESC         "event handler for tree-size prediction related events"
 
 #define DEFAULT_HASHMAP_SIZE   100000
-#define DEFAULT_ESTIMATION_METHOD 'u'
+#define DEFAULT_MAXRATIOITERS  100
+#define DEFAULT_ESTIMATION_METHOD 'r'
 
 /*
  * Data structures
@@ -55,6 +57,7 @@ struct TreeSizeEstimateTree
    TSEtree *leftchild;
    TSEtree *rightchild;
 
+   SCIP_VAR* branchedvar; /* If any, the variable branched on at this node (supposing branching happened on a single variable) */
    SCIP_Bool prunedinPQ; /* Whether the node has been pruned while in the priority queue, and thus never focused */
    SCIP_Longint number; /* The number (id) of the node, as assigned by SCIP */
    SCIP_Real lowerbound; /* The lower bound at that node. TODO update this if a node gets an update */
@@ -149,9 +152,56 @@ SizeStatus estimateTreeSize(SCIP* scip, TSEtree *node, SCIP_Real upperbound, SCI
          switch(method)
          {
             case RATIO:
-               //TODO
-               SCIPABORT();
-               break;
+            {
+               SCIP_BRANCHRATIO branchratio;
+               SCIP_Real LPgains[2];
+               SCIP_Bool leftLPbetterthanrightLP;
+               int maxiters;
+
+               assert(node->branchedvar != NULL);
+
+               /* TODO for code below: investigate whether for the known node, using pscosts or known bound is better for estimation. */
+               if( leftstatus == UNKNOWN || SCIPisInfinity(scip, node->leftchild->lowerbound) == TRUE )
+                  LPgains[0] = SCIPgetVarPseudocostCurrentRun(scip, node->branchedvar, SCIP_BRANCHDIR_DOWNWARDS); /* Here and below we assume that left is downward, as in relpscost. */
+               else
+                  LPgains[0] = node->leftchild->lowerbound - node->lowerbound;
+               
+
+               if( rightstatus == UNKNOWN || SCIPisInfinity(scip, node->rightchild->lowerbound) == TRUE )
+                  LPgains[1] = SCIPgetVarPseudocostCurrentRun(scip, node->branchedvar, SCIP_BRANCHDIR_UPWARDS);
+               else
+                  LPgains[1] = node->rightchild->lowerbound - node->lowerbound;
+
+               if(LPgains[0] > LPgains[1])
+                  leftLPbetterthanrightLP = 1;
+               else
+                  leftLPbetterthanrightLP = 0;
+               
+               /* The first LP gain passed should be the minimum one, and the second the maximum one */
+               SCIPgetIntParam(scip, "estimates/maxratioiters", &maxiters);
+               SCIPcomputeBranchVarRatio(scip, NULL, LPgains[leftLPbetterthanrightLP], LPgains[1-leftLPbetterthanrightLP], maxiters, &branchratio);
+
+               if( branchratio.valid == TRUE )
+               {
+                  /* Once the ratio phi has been computed, we compute the fraction of trees as:
+                   * phi^{-l} for the left side (where l denotes the leftgain), and
+                   * phi^{-r} for the right side.
+                   * We use the fact that the sum of the two equals 1. */
+
+                  if( leftLPbetterthanrightLP == 0 )
+                  {
+                      fractionleft = 1.0/branchratio.upratio;
+                      fractionright = 1 - fractionleft;
+                  }
+                  else
+                  {
+                      fractionright = 1.0/branchratio.upratio;
+                      fractionleft = 1 - fractionright;
+                  }
+                  break;
+               }
+               /* If the ratio computed is not valid, we do not break the switch, and we use the UNIFORM case */
+            }
             case UNIFORM:
                fractionleft = .5;
                fractionright = .5;
@@ -162,6 +212,7 @@ SizeStatus estimateTreeSize(SCIP* scip, TSEtree *node, SCIP_Real upperbound, SCI
          }
 
          assert(SCIPisEQ(scip, 1.0, fractionleft + fractionright));
+         assert(fractionleft > 0 && fractionright > 0);
 
          assert((leftstatus == UNKNOWN) ^ (rightstatus == UNKNOWN));
 
@@ -224,6 +275,7 @@ struct SCIP_EventhdlrData
 {
    /* Parameters */
    int hashmapsize;
+   int maxratioiters;
    char estimatemethod;
 
    /* Internal variables */
@@ -427,6 +479,8 @@ SCIP_DECL_EVENTEXEC(eventExecTreeSizePrediction)
       eventnode->leftchild = NULL;
       eventnode->rightchild = NULL;
       eventnode->number = SCIPnodeGetNumber(scipnode);
+
+
       SCIP_CALL( SCIPhashmapInsert(eventhdlrdata->allnodes, (void *) (eventnode->number), eventnode) );
 
       /* We update the parent with this new child */
@@ -454,6 +508,11 @@ SCIP_DECL_EVENTEXEC(eventExecTreeSizePrediction)
          }
       }
    }
+   else
+   {
+      /* If this is not the first time we see this node, we update the lower bound */
+      eventnode->lowerbound = SCIPnodeGetLowerbound(scipnode);
+   }
 
    /* SCIPdebugMessage("Node event for focus node #%" SCIP_LONGINT_FORMAT "\n", eventnode->number); */
 
@@ -471,12 +530,33 @@ SCIP_DECL_EVENTEXEC(eventExecTreeSizePrediction)
          eventnode->status = KNOWN;
          break;
       case SCIP_EVENTTYPE_NODEBRANCHED:
+      {
+         int nbranchvars;
+         SCIP_Real branchbounds;
+         SCIP_BOUNDTYPE boundtypes;
+         SCIP_NODE** children;
+         int nchildren;
+
          /* When a node is branched on, we need to add the corresponding nodes
           * to our own data structure */
          eventnode->status = UNKNOWN;
+
+         /* We need to get the variable that this node has been branched on.
+          * First we get on of its children. */
+         assert(SCIPgetFocusNode(scip) == scipnode);
+         assert(SCIPgetNChildren(scip) > 0);
+         SCIPgetChildren(scip, &children, &nchildren);
+         assert(children != NULL);
+         assert(nchildren > 0);
+
+         /* We also collect the variable branched on, if this node has been branched on. */
+         SCIPnodeGetParentBranchings(children[0], &(eventnode->branchedvar), &branchbounds, &boundtypes, &nbranchvars, 1);
+         assert(nbranchvars <= 1); /* We check that this is a simple branching, i.e. on a single var. Also, sometimes there is no branching (yet).*/
+         assert(eventnode->branchedvar != NULL);
          //SCIPdebugMessage("Inserting node %" SCIP_LONGINT_FORMAT " with parent %" SCIP_LONGINT_FORMAT " into opennode hashmap\n", eventnode->number, (parentnode == NULL?((SCIP_Longint) 0): parentnode->number));
          //SCIP_CALL( SCIPhashmapInsert(eventhdlrdata->opennodes, (void *) (eventnode->number), eventnode) );
          break;
+      }
       default:
          SCIPerrorMessage("Missing case in this switch.\n");
          SCIPABORT();
@@ -530,6 +610,8 @@ SCIP_RETCODE SCIPincludeEventHdlrTreeSizePrediction(
 
    /* add tree-size prediction event handler parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "estimates/hashmapsize", "Default hashmap size to store the open nodes of the B&B tree", &(eventhdlrdata->hashmapsize), TRUE, DEFAULT_HASHMAP_SIZE, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "estimates/maxratioiters", "Maximum number of iterations to compute the ratio of a variable", &(eventhdlrdata->maxratioiters), TRUE, DEFAULT_MAXRATIOITERS, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "estimates/estimatemethod", "Method to estimate the sizes of unkown subtrees based on their siblings ('r'atio, 'u'niform)", &(eventhdlrdata->estimatemethod), TRUE, DEFAULT_ESTIMATION_METHOD, "ru", NULL, NULL) );
 
