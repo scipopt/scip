@@ -39,7 +39,8 @@ $NAME/applications/PolySCIP/CMakeLists.txt     \
 $NAME/check/CMakeLists.txt                     \
 $NAME/tests/CMakeLists.txt                     \
 $NAME/src/CMakeLists.txt                       \
-$NAME/CMakeLists.txt                           \
+$NAME/CMakeLists.txt \
+$NAME/scip-config.cmake.in \
 $NAME/examples/TSP/check/CMakeLists.txt        \
 $NAME/examples/TSP/CMakeLists.txt              \
 $NAME/examples/Binpacking/check/CMakeLists.txt \
@@ -57,6 +58,7 @@ $NAME/examples/Queens/CMakeLists.txt           \
 $NAME/examples/CMakeLists.txt                  \
 $NAME/examples/Eventhdlr/check/CMakeLists.txt  \
 $NAME/examples/Eventhdlr/CMakeLists.txt        \
+
 $NAME/check/check.sh $NAME/check/evalcheck.sh $NAME/check/check.awk \
 $NAME/check/check_gamscluster.sh $NAME/check/rungamscluster.sh $NAME/check/finishgamscluster.sh \
 $NAME/check/evalcheck_gamscluster.sh $NAME/check/check_gams.awk $NAME/check/schulz.sh \
