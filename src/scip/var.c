@@ -4039,7 +4039,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
             k = ntmpvars2 - 1;
             pos = ntmpvars + ntmpvars2 - 1;
             ntmpvars += ntmpvars2;
-            ntmpvars2 = 0;
+
             while( v >= 0 && k >= 0 )
             {
                assert(pos >= 0);
