@@ -47404,7 +47404,6 @@ SCIP_RETCODE SCIPvalidateSolve(
    assert(scip != NULL);
 
    localfeasible = TRUE;
-   localprimalboundcheck = TRUE;
    localdualboundcheck = TRUE;
 
    /* check the best solution for feasibility in the original problem */
