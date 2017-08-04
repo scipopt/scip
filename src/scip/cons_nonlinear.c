@@ -4172,7 +4172,7 @@ SCIP_RETCODE addLinearization(
    SCIP_Real treecoef;
    SCIP_Real val;
    SCIP_Real* grad;
-   SCIP_Real constant;
+   SCIP_Real constant = 0.0;
    SCIP_Bool perturbedx;
    int nvars;
    int i;
@@ -5530,7 +5530,7 @@ SCIP_RETCODE generateCut(
       /* check that coefficient range is ok */
       success = coefrange <= maxrange;
 
-      /* check that side is finite */
+      /* check that side is finite */ /*lint --e{514} */
       success &= !SCIPisInfinity(scip, REALABS(rowprep->side));
 
       /* check whether maximal coef is finite, if any */
@@ -7091,7 +7091,7 @@ SCIP_RETCODE enforceConstraint(
        */
       assert(solinfeasible);
       /* however, if solinfeasible is actually not TRUE, then better cut off the node to avoid that SCIP
-       * stops because infeasible cannot be resolved */
+       * stops because infeasible cannot be resolved */ /*lint --e{774} */
       if( !solinfeasible )
          *result = SCIP_CUTOFF;
       return SCIP_OKAY;
