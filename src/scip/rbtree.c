@@ -143,6 +143,8 @@ void rbDeleteFixup(
          w = p->child[dir];
       }
 
+      assert(w != NULL);
+
       if( IS_BLACK(w->child[LEFT]) && IS_BLACK(w->child[RIGHT]) )
       {
          MAKE_RED(w);
@@ -278,6 +280,8 @@ void SCIPrbtreeDelete_call(
    SCIP_RBTREENODE* y;
    SCIP_RBTREENODE* x;
    unsigned int yorigcolor;
+
+   nil.parent = 0;
 
    y = node;
    yorigcolor = COLOR(y);
