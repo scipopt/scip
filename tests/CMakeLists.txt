@@ -95,7 +95,9 @@ if( CRITERION_FOUND )
         # Finally, add the executable as a test to the test framework
         #
         add_test(NAME ${testName}
-                COMMAND $<TARGET_FILE:${testName}>)
+            COMMAND $<TARGET_FILE:${testName}>
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+	    )
     endforeach(testSrc)
 endif()
 
