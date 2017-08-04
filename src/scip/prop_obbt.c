@@ -2120,6 +2120,7 @@ SCIP_RETCODE getNLPVarsNonConvexity(
                   ++nlcounts[SCIPvarGetProbindex(var)];
                }
             }
+            SCIPfreeBufferArray(scip, &varbounds);
          }
       }
    }
