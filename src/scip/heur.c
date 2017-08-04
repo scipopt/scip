@@ -108,7 +108,7 @@ SCIP_RETCODE SCIPdivesetReset(
    if( diveset->randnumgen != NULL )
       SCIPrandomFree(&diveset->randnumgen);
 
-   SCIP_CALL( SCIPrandomCreate(&diveset->randnumgen, diveset->blkmem, (unsigned int) SCIPsetInitializeRandomSeed(set, diveset->initialseed)) );
+   SCIP_CALL( SCIPrandomCreate(&diveset->randnumgen, diveset->blkmem, (unsigned int) SCIPsetInitializeRandomSeed(set, (int) diveset->initialseed)) );
 
    return SCIP_OKAY;
 }

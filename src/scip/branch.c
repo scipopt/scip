@@ -1505,8 +1505,8 @@ SCIP_RETCODE SCIPbranchruleExecLPSol(
       {
          SCIP_Longint oldndomchgs;
          SCIP_Longint oldnprobdomchgs;
+         SCIP_Longint oldnactiveconss;
          int oldncuts;
-         int oldnactiveconss;
 
          SCIPsetDebugMsg(set, "executing LP branching rule <%s>\n", branchrule->name);
 

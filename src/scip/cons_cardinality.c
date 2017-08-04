@@ -3010,7 +3010,7 @@ SCIP_DECL_CONSPARSE(consParseCardinality)
          while ( isspace((unsigned char)*s) )
             ++s;
 
-         cardval = strtod(s, &t);
+         cardval = (int)strtod(s, &t);
          if ( t == NULL )
          {
             SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error during parsing of the cardinality restriction value: %s\n", s);

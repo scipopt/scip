@@ -192,7 +192,7 @@ SCIP_DECL_PROPEXIT(propExitSync)
 
 static
 SCIP_DECL_PROPPRESOL(propPresolSync)
-{
+{  /*lint --e{715}*/
    SCIP_PROPDATA*  data;
    int             ntightened;
    int             ntightenedint;
