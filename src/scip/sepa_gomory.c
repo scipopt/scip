@@ -165,7 +165,7 @@ SCIP_DECL_SEPACOPY(sepaCopyGomory)
    assert(sepa != NULL);
    assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
 
-   /* call inclusion method of constraint handler */
+   /* call inclusion method of separator */
    SCIP_CALL( SCIPincludeSepaGomory(scip) );
 
    return SCIP_OKAY;

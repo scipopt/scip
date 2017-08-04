@@ -289,7 +289,7 @@ SCIP_RETCODE computeInteriorPoint(
    {
       SCIP_Real* nlpisol;
 
-      SCIP_CALL( SCIPnlpiGetSolution(nlpi, nlpiprob, &nlpisol, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPnlpiGetSolution(nlpi, nlpiprob, &nlpisol, NULL, NULL, NULL, NULL) );
 
       assert(nlpisol != NULL);
       SCIPdebugMsg(scip, "NLP solved: sol found has objvalue = %g\n", nlpisol[objvaridx]);

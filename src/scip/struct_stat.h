@@ -185,6 +185,7 @@ struct SCIP_Stat
    SCIP_Longint          ndivinglps;         /**< number of LPs solved during diving and probing */
    SCIP_Longint          ndivesetlps;        /**< total number of diveset LPs */
    SCIP_Longint          nsbdivinglps;       /**< number of LPs solved during strong branching probing mode */
+   SCIP_Longint          nnumtroublelpmsgs;  /**< number of messages about numerical trouble in LP on verblevel HIGH or lower */
    SCIP_Longint          nstrongbranchs;     /**< number of strong branching calls */
    SCIP_Longint          nrootstrongbranchs; /**< number of strong branching calls at the root node */
    SCIP_Longint          nconflictlps;       /**< number of LPs solved during conflict analysis */

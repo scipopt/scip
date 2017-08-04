@@ -1,5 +1,14 @@
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
+#
+# interface function for setting common library properties
+#
+function(setLibProperties targetname outputname)
+    set_target_properties(${targetname} PROPERTIES
+        OUTPUT_NAME ${outputname}
+        MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+endfunction(setLibProperties)
+
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED on)
 
@@ -261,6 +270,7 @@ set(objscipsources
 
 set(nlpisources
     nlpi/nlpi.c
+    nlpi/nlpi_all.c
     nlpi/nlpioracle.c
     nlpi/expr.c
     nlpi/intervalarithext.cpp
@@ -701,35 +711,57 @@ set(xmlheaders
     xml/xml.h
 )
 
+add_library(libobjscip EXCLUDE_FROM_ALL ${objscipsources})
+setLibProperties(libobjscip "objscip")
 
-add_library(scip OBJECT ${scipsources})
-add_dependencies(scip update_githash update_buildflags)
-add_library(objscip OBJECT ${objscipsources})
-add_library(nlpi OBJECT ${nlpisources})
-add_library(lpi OBJECT ${lpisources})
-add_library(tpi OBJECT ${tpisources})
+add_library(libnlpi EXCLUDE_FROM_ALL
+    ${nlpisources}
+    blockmemshell/memory.c
+    scip/misc.c
+    scip/intervalarith.c
+    scip/interrupt.c
+    scip/message.c)
+setLibProperties(libnlpi "nlpi")
+
+
+add_library(liblpi EXCLUDE_FROM_ALL
+    ${lpisources}
+    scip/bitencode.c
+    blockmemshell/memory.c
+    scip/message.c)
+setLibProperties(liblpi "lpi")
+
+add_library(libscip ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${tpisources})
+setLibProperties(libscip "scip")
+
+target_link_libraries(libscip PRIVATE
+    ${ZLIB_LIBRARIES}
+    ${Readline_LIBRARY}
+    ${GMP_LIBRARIES}
+    ${THREAD_LIBRARIES}
+    ${NLPI_LIBRARIES})
 
 if(SHARED)
-    #in the shared case the scipopt needs to compile the sources relocatable again
-    add_library(scipopt ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${tpisources})
-    target_link_libraries(scipopt PRIVATE ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES}
-        ${ZIMPL_PIC_LIBRARIES} ${LPS_PIC_LIBRARIES} ${THREAD_LIBRARIES} ${NLPI_LIBRARIES})
+    target_link_libraries(libscip PRIVATE ${ZIMPL_PIC_LIBRARIES} ${LPS_PIC_LIBRARIES})
+    add_executable(scip main.c ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${tpisources})
 else()
-    #in the static case scipopt can reuse the non relocatable objects
-    add_library(scipopt $<TARGET_OBJECTS:scip> $<TARGET_OBJECTS:lpi> $<TARGET_OBJECTS:nlpi> $<TARGET_OBJECTS:tpi> $<TARGET_OBJECTS:objscip>)
-    target_link_libraries(scipopt PRIVATE ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES}
-        ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${THREAD_LIBRARIES} ${NLPI_LIBRARIES})
+    target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES})
+    add_executable(scip main.c)
+    target_link_libraries(scip libscip)
 endif()
 
-add_dependencies(scipopt update_githash update_buildflags)
-
-add_executable(scip-bin main.c $<TARGET_OBJECTS:scip> $<TARGET_OBJECTS:lpi> $<TARGET_OBJECTS:nlpi>
-   $<TARGET_OBJECTS:tpi> $<TARGET_OBJECTS:objscip>)
-target_link_libraries(scip-bin ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES}
+target_link_libraries(scip ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES}
    ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${THREAD_LIBRARIES} ${NLPI_LIBRARIES})
 
-# we cannot have the same name for library and binary, so we redefine it here
-set_target_properties(scip-bin PROPERTIES OUTPUT_NAME scip)
+add_dependencies(libscip scip_update_githash scip_update_buildflags)
+add_dependencies(scip scip_update_githash scip_update_buildflags)
+
+set_target_properties(libscip PROPERTIES
+    VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}.${SCIP_VERSION_SUB}
+    SOVERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR})
+
+# set the install rpath to the installed destination
+set_target_properties(scip PROPERTIES INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 
 # install the header files of scip
 install(FILES ${lpiheaders} DESTINATION include/lpi)
@@ -744,14 +776,14 @@ install(FILES ${xmlheaders} DESTINATION include/xml)
 install(FILES ${blockmemshellheader} DESTINATION include/blockmemshell)
 
 # install the binary and the library to appropriate lcoations and add them to an export group
-install(TARGETS scip-bin scipopt EXPORT scip-targets
+install(TARGETS scip libscip EXPORT scip-targets
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib
         RUNTIME DESTINATION bin
         INCLUDES DESTINATION include)
 
 # Add all targets to the build-tree export set
-export(TARGETS scip-bin scipopt
+export(TARGETS scip libscip
   FILE "${PROJECT_BINARY_DIR}/scip-targets.cmake")
 
 #configure the config file for the build tree

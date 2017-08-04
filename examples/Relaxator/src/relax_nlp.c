@@ -134,7 +134,7 @@ SCIP_DECL_RELAXEXEC(relaxExecNlp)
       vars = SCIPgetVars(scip);
       nvars = SCIPgetNVars(scip);
 
-      SCIP_CALL( SCIPnlpiGetSolution(nlpi, nlpiprob, &primal, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPnlpiGetSolution(nlpi, nlpiprob, &primal, NULL, NULL, NULL, NULL) );
 
       for( i = 0; i < nvars; ++i )
       {

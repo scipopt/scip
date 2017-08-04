@@ -300,6 +300,26 @@ SECTION: General Questions about SCIP
         "visual/realtime".
     </p>
 
+
+    QUESTION: SCIP has found decent primal and dual bounds but still reports the gap as "Infinity". Why?
+    LABEL:gapdefinition
+    ANSWER:
+    <p>
+        By default, the SCIP output contains the display column "gap", which is computed as follows:
+        If primal and dual bound have opposite signs, the gap is "Infinity".
+        If primal and dual bound have the same sign, the gap is
+        <code>|primalbound - dualbound|/min(|primalbound|,|dualbound|)| </code> (see SCIPgetGap()).
+        This definition has the advantage, that the gap decreases monotonously during the solving process.
+    </p>
+    <p>
+        An alternative definition of the gap is
+        <code>(dual bound - primal bound) / abs(primal bound)</code>.
+        Using this definiton, a finite gap is computed as soon as a dual and primal bound have been found.
+        However, the gap may increase during the solving process, if both bounds have opposite signs in the beginning.
+        In SCIP, this definition can be included in the output by enabling the display column "primalgap":
+        <code>display/primalgap/active = 2</code>
+    </p>
+
 SECTION: Using SCIP as a standalone solver
 
     QUESTION: The output is too wide for my terminal window. What can I do?
