@@ -1,0 +1,14 @@
+add_custom_target(examples)
+
+add_subdirectory(Binpacking EXCLUDE_FROM_ALL)
+add_subdirectory(CallableLibrary EXCLUDE_FROM_ALL)
+add_subdirectory(Eventhdlr EXCLUDE_FROM_ALL)
+add_subdirectory(GMI EXCLUDE_FROM_ALL)
+add_subdirectory(LOP EXCLUDE_FROM_ALL)
+add_subdirectory(MIPSolver EXCLUDE_FROM_ALL)
+add_subdirectory(Queens EXCLUDE_FROM_ALL)
+add_subdirectory(Relaxator EXCLUDE_FROM_ALL)
+add_subdirectory(TSP EXCLUDE_FROM_ALL)
+add_subdirectory(VRP EXCLUDE_FROM_ALL)
+
+enable_testing()

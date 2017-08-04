@@ -179,17 +179,6 @@ add_custom_target(scip_update_buildflags
 add_definitions(-DWITH_SCIPDEF)
 
 
-#
-# enable coverage support
-#
-if( COVERAGE )
-    include(CodeCoverage)
-    APPEND_COVERAGE_COMPILER_FLAGS()
-    set(COVERAGE_EXCLUDES '/usr*')
-    SETUP_TARGET_FOR_COVERAGE(NAME coverage
-                          EXECUTABLE bash -c "${CMAKE_CTEST_COMMAND} ${COVERAGE_CTEST_ARGS}"
-                          DEPENDENCIES scip)
-endif()
 
 # use C++11 standard
 set(CMAKE_CXX_STANDARD 11)
@@ -369,11 +358,39 @@ else()
     endif()
 endif()
 
+find_package(Criterion)
+
 # go to src/ and compile the code
 add_subdirectory(src)
+
+#
+# add SCIP tests
+#
 add_subdirectory(check)
 
+#
+# add unit tests as a single target. Including tests will add the unit tests as single executables
+#
+add_custom_target(unittests)
+add_subdirectory(tests EXCLUDE_FROM_ALL)
+add_custom_target(all_executables DEPENDS scip unittests examples)
+#
+# add examples
+#
+add_subdirectory(examples)
+
 enable_testing()
+#
+# enable coverage support
+
+if( COVERAGE )
+    include(CodeCoverage)
+    APPEND_COVERAGE_COMPILER_FLAGS()
+    set(COVERAGE_EXCLUDES '/usr*')
+    SETUP_TARGET_FOR_COVERAGE(NAME coverage
+                          EXECUTABLE bash -c "${CMAKE_CTEST_COMMAND} ${COVERAGE_CTEST_ARGS}"
+                          DEPENDENCIES all_executables)
+endif()
 
 include(FeatureSummary)
 feature_summary(WHAT ALL)
