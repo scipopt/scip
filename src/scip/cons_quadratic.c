@@ -5158,7 +5158,10 @@ SCIP_RETCODE computeViolation(
              (!SCIPisInfinity(scip,  SCIPvarGetUbLocal(var)) && !SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var))) )
             *solviolbounds = TRUE;
          else
+         {
             varval = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), varval));
+            activity = (consdata->quadvarterms[j].lincoef + consdata->quadvarterms[j].sqrcoef * varval) * varval;
+         }
       }
 
       consdata->activity += activity;
