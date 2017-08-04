@@ -1423,7 +1423,7 @@ SCIP_MULTIHASHLIST* multihashlistFind(
    void*                 key                 /**< key to retrieve */
    )
 {
-   unsigned int currentkeyval;
+   uint64_t currentkeyval;
    void* currentkey;
 
    assert(hashkeyeq != NULL);

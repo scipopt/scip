@@ -53,7 +53,11 @@
 #include "scip/pub_misc.h"
 
 #define READER_NAME             "gmsreader"
+#ifdef WITH_GAMS
 #define READER_DESC             "file writer for MI(NL)(SOC)Ps in GAMS file format"
+#else
+#define READER_DESC             "file reader and writer for MI(NL)(SOC)Ps in GAMS file format"
+#endif
 #define READER_EXTENSION        "gms"
 
 

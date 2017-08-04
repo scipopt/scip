@@ -43,6 +43,7 @@ option(ZIMPL "should zimpl be linked" ON)
 option(IPOPT "should ipopt be linked" ON)
 option(WORHP "should worhp be linked" OFF)
 option(PARASCIP "should scip be compiled thread safe" OFF)
+option(LPSCHECK "double check SoPlex results with CPLEX" OFF)
 option(LEGACY "build SCIP/SoPlex in legacy mode" OFF)
 option(NOBLKBUFMEM "should block and buffer memory be disabled" OFF)
 option(NOBLKMEM "should block and buffer memory be disabled" OFF)
@@ -178,17 +179,6 @@ add_custom_target(scip_update_buildflags
 add_definitions(-DWITH_SCIPDEF)
 
 
-#
-# enable coverage support
-#
-if( COVERAGE )
-    include(CodeCoverage)
-    APPEND_COVERAGE_COMPILER_FLAGS()
-    set(COVERAGE_EXCLUDES '/usr*')
-    SETUP_TARGET_FOR_COVERAGE(NAME coverage
-                          EXECUTABLE bash -c "ctest ${COVERAGE_CTEST_ARGS}"
-                          DEPENDENCIES scip-bin)
-endif()
 
 # use C++11 standard
 set(CMAKE_CXX_STANDARD 11)
@@ -229,6 +219,10 @@ endif()
 #search the selected LP solver library
 if(LPS STREQUAL "spx")
     find_package(SOPLEX REQUIRED CONFIG)
+    if(LPSCHECK)
+        find_package(CPLEX REQUIRED)
+        add_definitions(-DWITH_LPSCHECK)
+    endif()
 elseif(LPS STREQUAL "cpx")
     find_package(CPLEX REQUIRED)
 elseif(LPS STREQUAL "glop")
@@ -271,9 +265,12 @@ endif()
 
 if(CPLEX_FOUND)
     include_directories(${CPLEX_INCLUDE_DIRS})
-    set(lpi lpi/lpi_cpx.c)
-    set(LPS_LIBRARIES ${CPLEX_LIBRARIES})
-    set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
+    # only use lpi_cpx.c if LPSCHECK is not enabled
+    if(LPS STREQUAL "cpx")
+        set(lpi lpi/lpi_cpx.c)
+    endif()
+    set(LPS_LIBRARIES ${LPS_LIBRARIES} ${CPLEX_LIBRARIES})
+    set(LPS_PIC_LIBRARIES ${LPS_PIC_LIBRARIES} ${LPS_LIBRARIES})
 endif()
 
 if(GLOP_FOUND)
@@ -361,11 +358,39 @@ else()
     endif()
 endif()
 
+find_package(Criterion)
+
 # go to src/ and compile the code
 add_subdirectory(src)
+
+#
+# add SCIP tests
+#
 add_subdirectory(check)
 
+#
+# add unit tests as a single target. Including tests will add the unit tests as single executables
+#
+add_custom_target(unittests)
+add_subdirectory(tests EXCLUDE_FROM_ALL)
+add_custom_target(all_executables DEPENDS scip unittests examples)
+#
+# add examples
+#
+add_subdirectory(examples)
+
 enable_testing()
+#
+# enable coverage support
+
+if( COVERAGE )
+    include(CodeCoverage)
+    APPEND_COVERAGE_COMPILER_FLAGS()
+    set(COVERAGE_EXCLUDES '/usr*')
+    SETUP_TARGET_FOR_COVERAGE(NAME coverage
+                          EXECUTABLE bash -c "${CMAKE_CTEST_COMMAND} ${COVERAGE_CTEST_ARGS}"
+                          DEPENDENCIES all_executables)
+endif()
 
 include(FeatureSummary)
 feature_summary(WHAT ALL)

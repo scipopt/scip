@@ -35,6 +35,8 @@ features
   to validate the solution against an external primal and dual reference value.
 - allow to relax objective limit in reoptimization in presolved stage
 - suppress excessive printing about numerical troubles in LP on default verblevel (high)
+- updated Mosek interface to compile with Mosek 8.1, too
+- updates GAMS interface to latest version
 
 fixed bugs:
 - fixed bug in shift and propagate--variable information with a negation transformation is correctly reset after backtracking
@@ -57,6 +59,10 @@ fixed bugs:
 - relaxed a too strong assert concerning solutions close to the objective limit
 - fixed guard against using old Gurobi versions in lpi_grb.c: Gurobi 7.5 was not permitted
 - treat reopt bugs: Avoid numerical problems with changing objective; fix check for changed objective
+- fixed reading issue in mps reader: integer variables fixed to 0 or 1 are treated as binaries now,
+  allowing to use them as indicator variables
+- afternode heuristics are now called even if the node limit was reached and the solving process will be stopped
+  after the current node
 
 performance improvements:
 - widened a bottleneck in simplifying long signomial sums in a nonlinear constraint

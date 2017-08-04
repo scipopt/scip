@@ -41,7 +41,7 @@
 #include <string.h>
 #if defined(_WIN32) || defined(_WIN64)
 #else
-#include <strings.h>
+#include <strings.h> /*lint --e{766}*/
 #endif
 
 #ifdef WITH_ZLIB
@@ -38776,7 +38776,7 @@ SCIP_RETCODE SCIPgetDualSolVal(
    if( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE )
       (*dualsolval) *= -1.0;
 
-   return SCIP_OKAY;;
+   return SCIP_OKAY;
 }
 
 /** outputs dual solution from LP solver to file stream */
@@ -47383,7 +47383,6 @@ SCIP_RETCODE SCIPvalidateSolve(
    assert(scip != NULL);
 
    localfeasible = TRUE;
-   localprimalboundcheck = TRUE;
    localdualboundcheck = TRUE;
 
    /* check the best solution for feasibility in the original problem */
@@ -47417,17 +47416,17 @@ SCIP_RETCODE SCIPvalidateSolve(
       /* compute the relative violation between the primal bound and dual reference value, and vice versa */
       if( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE )
       {
-         if( dualreference != SCIP_UNKNOWN )
+         if( dualreference != SCIP_UNKNOWN ) /*lint !e777 */
             primviol = SCIPrelDiff(dualreference, pb);
-         if( primalreference != SCIP_UNKNOWN )
+         if( primalreference != SCIP_UNKNOWN ) /*lint !e777 */
             dualviol = SCIPrelDiff(db, primalreference);
       }
       else
       {
-         if( dualreference != SCIP_UNKNOWN )
+         if( dualreference != SCIP_UNKNOWN ) /*lint !e777 */
             primviol = SCIPrelDiff(pb, dualreference);
 
-         if( primalreference != SCIP_UNKNOWN )
+         if( primalreference != SCIP_UNKNOWN ) /*lint !e777 */
             dualviol = SCIPrelDiff(primalreference, db);
       }
       primviol = MAX(primviol, 0.0);

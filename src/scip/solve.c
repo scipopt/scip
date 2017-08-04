@@ -5070,7 +5070,7 @@ SCIP_RETCODE SCIPsolveCIP(
 
          /* call primal heuristics that should be applied after the node was solved */
          nnodes = SCIPtreeGetNNodes(tree);
-         stopped = SCIPsolveIsStopped(set, stat, TRUE);
+         stopped = SCIPsolveIsStopped(set, stat, FALSE);
          if( !afternodeheur && (!cutoff || nnodes > 0) && !stopped )
          {
             SCIP_CALL( SCIPprimalHeuristics(set, stat, transprob, primal, tree, lp, nextnode, SCIP_HEURTIMING_AFTERNODE,
