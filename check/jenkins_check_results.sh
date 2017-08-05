@@ -36,7 +36,7 @@ SCIPVERSIONOUTPUT=`bin/scip -v | sed -e 's/$/@/'`
 export TESTSET=$1
 export SETTING=$2
 export GITHASH=`git describe --always --dirty  | sed -re 's/^.+-g//'`
-export GITBRANCH=`git reflog show --all | grep $GITHASH | sed -e 's/.*origin.\([^@]*\)@.*/\1/'`
+export GITBRANCH=`git ls-remote --heads origin | grep $(git rev-parse HEAD)| cut -d / -f 3`
 export OPT=`echo $SCIPVERSIONOUTPUT | sed -e 's/.* OPT=\([^@]*\).*/\1/'`
 export LPS=`echo $SCIPVERSIONOUTPUT | sed -e 's/.* LPS=\([^@]*\).*/\1/'`
 
