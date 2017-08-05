@@ -1977,6 +1977,16 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/bound/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/zeroobj/freq", -1) );
 
+   /* TODO for SCIP stuff should be disabled for other variants */
+   if( graph->stp_type == STP_DHCSTP )
+   {
+      SCIP_CALL(SCIPsetIntParam(scip, "constraints/knapsack/propfreq", -1));
+      SCIP_CALL(SCIPsetIntParam(scip, "constraints/logicor/propfreq", -1));
+      SCIP_CALL(SCIPsetIntParam(scip, "separating/flowcover/freq", -1));
+      SCIP_CALL(SCIPsetIntParam(scip, "heuristics/locks/freq", -1));
+      SCIP_CALL(SCIPsetIntParam(scip, "heuristics/rounding/freq", -1));
+   }
+
    SCIPprobdataWriteLogLine(scip, "SECTION Comment\n");
    SCIPprobdataWriteLogLine(scip, "Name %s\n", filename);
 
@@ -2088,6 +2098,8 @@ SCIP_RETCODE SCIPprobdataCreate(
    graph = packedgraph;
    probdata->graph = graph;
    probdata->stp_type = graph->stp_type;
+
+
 
 #if 1
    if( (graph->edges > CUT_MAXNEDGES) && (graph->terms > CUT_MAXNTERMINALS)  )
