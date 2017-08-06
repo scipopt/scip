@@ -51,7 +51,7 @@ SCIP_RETCODE SCIPcreateProblemReaderGmo(
    SCIP*                 scip,               /**< SCIP data structure */
    gmoRec_t*             gmo,                /**< GAMS Model Object */
    const char*           indicatorfile,      /**< name of file with indicator specification, or NULL */
-   SCIP_Bool             loadinitialsol      /**< whether to pass initial solution from GMO to SCIP */
+   int                   mipstart            /**< how to pass initial variable levels from GMO to SCIP */
 );
 
 #ifdef __cplusplus

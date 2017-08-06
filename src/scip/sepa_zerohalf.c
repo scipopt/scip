@@ -93,44 +93,48 @@ typedef struct Mod2Col MOD2_COL;
 typedef struct Mod2Row MOD2_ROW;
 typedef struct Mod2Matrix MOD2_MATRIX;
 
+/** structure representing a row in the mod 2 system */
 struct Mod2Row {
-   int index;
-   int pos;
-   uint8_t rhs;
-   int nrowinds;
-   int rowindssize;
-   int nnonzcols;
-   int nonzcolssize;
-   int* rowinds;
-   MOD2_COL** nonzcols;
-   SCIP_Real slack;
+   int                   index;
+   int                   pos;
+   uint8_t               rhs;
+   int                   nrowinds;
+   int                   rowindssize;
+   int                   nnonzcols;
+   int                   nonzcolssize;
+   int*                  rowinds;
+   MOD2_COL**            nonzcols;
+   SCIP_Real             slack;
 };
 
+/** structure representing a column in the mod 2 system */
 struct Mod2Col {
-   int index;
-   int pos;
-   SCIP_HASHTABLE* nonzrows;
-   SCIP_Real solval;
+   int                   index;
+   int                   pos;
+   SCIP_HASHTABLE*       nonzrows;
+   SCIP_Real             solval;
 };
 
-
+/** matrix representing the modulo 2 system */
 struct Mod2Matrix {
-   MOD2_COL** cols;
-   MOD2_ROW** rows;
-   int nrows;
-   int ncols;
-   int rowssize;
-   int colssize;
+   MOD2_COL**            cols;
+   MOD2_ROW**            rows;
+   int                   nrows;
+   int                   ncols;
+   int                   rowssize;
+   int                   colssize;
 };
 
+/** data of separator */
 struct SCIP_SepaData
 {
-   SCIP_AGGRROW* aggrrow;
-   int ncuts;
-   int nreductions;
-   SCIP_Bool infeasible;
+   SCIP_AGGRROW*         aggrrow;
+   int                   ncuts;
+   int                   nreductions;
+   SCIP_Bool             infeasible;
 };
 
+/** comparison function for slack of mod 2 rows */
 static
 SCIP_DECL_SORTPTRCOMP(compareRowSlack)
 {
@@ -148,11 +152,14 @@ SCIP_DECL_SORTPTRCOMP(compareRowSlack)
    return 0;
 }
 
+/** gets the index of a mod 2 row/col */
 static
 SCIP_DECL_HASHKEYVAL(hashKeyValIndex)
 {
+   /* the index is the first member for both structures so interpreting it as an int is standards compliant */
    return *((int*)key);
 }
+
 
 static
 SCIP_DECL_SORTPTRCOMP(compareColIndex)
@@ -171,10 +178,11 @@ SCIP_DECL_SORTPTRCOMP(compareColIndex)
    return 0;
 }
 
+/** take integral real value modulo 2 */
 static
 uint8_t mod2(
-   SCIP*                 scip,
-   SCIP_Real             val
+   SCIP*                 scip,               /**< scip data structure */
+   SCIP_Real             val                 /**< value to take mod 2 */
    )
 {
    assert(SCIPisIntegral(scip, val));
@@ -182,9 +190,10 @@ uint8_t mod2(
    return (uint8_t) (!SCIPisEQ(scip, SCIPfloor(scip, val), val));
 }
 
+/** adds new column to the mod 2 matrix */
 static
 SCIP_RETCODE mod2MatrixAddCol(
-   SCIP*                 scip,
+   SCIP*                 scip,               /**< scip data structure */
    MOD2_MATRIX*          mod2matrix,
    SCIP_HASHMAP*         origcol2col,
    SCIP_COL*             origcol
@@ -206,10 +215,11 @@ SCIP_RETCODE mod2MatrixAddCol(
    return SCIP_OKAY;
 }
 
+/** links row to mod 2 column */
 static
 SCIP_RETCODE mod2colLinkRow(
-   MOD2_COL*             col,
-   MOD2_ROW*             row
+   MOD2_COL*             col,                /**< mod 2 column */
+   MOD2_ROW*             row                 /**< mod 2 row */
    )
 {
    SCIP_CALL( SCIPhashtableInsert(col->nonzrows, (void*)row) );
@@ -217,10 +227,11 @@ SCIP_RETCODE mod2colLinkRow(
    return SCIP_OKAY;
 }
 
+/** unlinks row from mod 2 column */
 static
 SCIP_RETCODE mod2colUnlinkRow(
-   MOD2_COL*             col,
-   MOD2_ROW*             row
+   MOD2_COL*             col,                /**< mod 2 column */
+   MOD2_ROW*             row                 /**< mod 2 row */
    )
 {
    SCIP_CALL( SCIPhashtableRemove(col->nonzrows, (void*)row) );
@@ -228,10 +239,11 @@ SCIP_RETCODE mod2colUnlinkRow(
    return SCIP_OKAY;
 }
 
+/** unlinks row from mod 2 column */
 static
 void mod2rowUnlinkCol(
-   MOD2_ROW*             row,
-   MOD2_COL*             col
+   MOD2_ROW*             row                 /**< mod 2 row */,
+   MOD2_COL*             col                 /**< mod 2 column */
    )
 {
    int i;
@@ -247,13 +259,13 @@ void mod2rowUnlinkCol(
 
 static
 SCIP_RETCODE mod2MatrixAddRow(
-   SCIP*                 scip,
-   MOD2_MATRIX*          mod2matrix,
-   SCIP_HASHMAP*         origcol2col,
-   SCIP_ROW*             origrow,
-   SCIP_Real             slack,
-   int                   side,
-   uint8_t               rhsmod2
+   SCIP*                 scip,               /**< scip data structure */
+   MOD2_MATRIX*          mod2matrix,         /**< modulo 2 matrix */
+   SCIP_HASHMAP*         origcol2col,        /**< hashmap to retrieve the mod 2 column from a SCIP_COL */
+   SCIP_ROW*             origrow,            /**< original SCIP row */
+   SCIP_Real             slack,              /**< slack of row */
+   int                   side,               /**< side of row that is used for mod 2 row (+1 for right hand side -1 for left hand side)*/
+   uint8_t               rhsmod2             /**< modulo 2 value of the row's right hand side */
    )
 {
    SCIP_Real* rowvals;
@@ -308,7 +320,7 @@ SCIP_RETCODE mod2MatrixAddRow(
 
 static
 void destroyMod2Matrix(
-   SCIP*                 scip,
+   SCIP*                 scip,               /**< scip data structure */
    MOD2_MATRIX*          mod2matrix
    )
 {
@@ -334,7 +346,7 @@ void destroyMod2Matrix(
 /** build the modulo 2 matrix from all integral rows in the LP */
 static
 SCIP_RETCODE buildMod2Matrix(
-   SCIP*                 scip,
+   SCIP*                 scip,               /**< scip data structure */
    MOD2_MATRIX*          mod2matrix
    )
 {
@@ -526,9 +538,9 @@ SCIP_DECL_HASHKEYVAL(rowGetSignature)
 
 static
 void mod2matrixRemoveRow(
-   SCIP*                 scip,
-   MOD2_MATRIX*          mod2matrix,
-   MOD2_ROW*             row
+   SCIP*                 scip,               /**< scip data structure */
+   MOD2_MATRIX*          mod2matrix,         /**< the mod 2 matrix */
+   MOD2_ROW*             row                 /**< mod 2 row */
    )
 {
    int i;
@@ -551,11 +563,12 @@ void mod2matrixRemoveRow(
    SCIPfreeBlockMemory(scip, &row);
 }
 
+/** removes a column from the mod 2 matrix */
 static
 void mod2matrixRemoveCol(
-   SCIP*                 scip,
-   MOD2_MATRIX*          mod2matrix,
-   MOD2_COL*             col
+   SCIP*                 scip,               /**< scip data structure */
+   MOD2_MATRIX*          mod2matrix,         /**< the mod 2 matrix */
+   MOD2_COL*             col                 /**< a column in the mod 2 matrix */
    )
 {
    int i;
@@ -585,9 +598,9 @@ void mod2matrixRemoveCol(
 /* remove columns that are (a) zero (b) indentical to other columns or (c) unit vector columns */
 static
 SCIP_RETCODE mod2matrixPreprocessColumns(
-   SCIP*                 scip,
-   MOD2_MATRIX*          mod2matrix,
-   SCIP_SEPADATA*        sepadata
+   SCIP*                 scip,               /**< scip data structure */
+   MOD2_MATRIX*          mod2matrix,         /**< mod 2 matrix */
+   SCIP_SEPADATA*        sepadata            /**< zerohalf separator data */
    )
 {
    int i;
@@ -644,12 +657,14 @@ SCIP_RETCODE mod2matrixPreprocessColumns(
    return SCIP_OKAY;
 }
 
+
+/** generate a zerohalf cut from a given mod 2 row */
 static
 SCIP_RETCODE generateZerohalfCut(
-   SCIP*                 scip,
-   SCIP_SEPA*            sepa,
-   SCIP_SEPADATA*        sepadata,
-   MOD2_ROW*             row
+   SCIP*                 scip,               /**< scip data structure */
+   SCIP_SEPA*            sepa,               /**< zerohalf separator */
+   SCIP_SEPADATA*        sepadata,           /**< zerohalf separator data */
+   MOD2_ROW*             row                 /**< mod 2 row */
    )
 {
    SCIP_ROW** rows;
@@ -743,10 +758,10 @@ SCIP_RETCODE generateZerohalfCut(
 /* remove rows that are (a) zero (b) identical to other rows or (c) have slack greater than 1 */
 static
 SCIP_RETCODE mod2matrixPreprocessRows(
-   SCIP*                 scip,
-   MOD2_MATRIX*          mod2matrix,
-   SCIP_SEPA*            sepa,
-   SCIP_SEPADATA*        sepadata
+   SCIP*                 scip,               /**< scip data structure */
+   MOD2_MATRIX*          mod2matrix,         /**< the mod 2 matrix */
+   SCIP_SEPA*            sepa,               /**< the zerohalf separator */
+   SCIP_SEPADATA*        sepadata            /**< data of the zerohalf separator */
    )
 {
    int i;
@@ -825,12 +840,12 @@ SCIP_RETCODE mod2matrixPreprocessRows(
    return SCIP_OKAY;
 }
 
-
+/** add a mod2 row to another one */
 static
 SCIP_RETCODE mod2rowAddRow(
-   SCIP*                 scip,
-   MOD2_ROW*             row,
-   MOD2_ROW*             rowtoadd
+   SCIP*                 scip,               /**< scip data structure */
+   MOD2_ROW*             row,                /**< mod 2 row */
+   MOD2_ROW*             rowtoadd            /**< mod 2 row that is added to the other mod 2 row */
    )
 {
    uint8_t* contained;
