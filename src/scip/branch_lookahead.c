@@ -992,8 +992,6 @@ void lpiMemoryShallowCopyWithSourceReset(
 {
    assert(source != NULL);
    assert(target != NULL);
-   assert(target->lpinorms == NULL);
-   assert(source->lpinorms == NULL);
 
    target->lpinorms = source->lpinorms;
    target->lpistate = source->lpistate;
@@ -2428,7 +2426,6 @@ SCIP_RETCODE executeBranching(
 
          if( !resultdata->cutoff )
          {
-
             /* solve the prepared probing LP */
             SCIP_CALL( SCIPsolveProbingLP(scip, -1, &status->lperror, &resultdata->cutoff) );
 
@@ -2763,7 +2760,8 @@ SCIP_Bool areBoundsChanged(
    SCIP_Real             upperbound
    )
 {
-   return SCIPvarGetLbLocal(var) != lowerbound || SCIPvarGetUbLocal(var) != upperbound;
+   return SCIPvarGetLbLocal(var) != lowerbound || SCIPvarGetUbLocal(var) != upperbound ||
+      SCIPvarGetLbLocal(var) == SCIPvarGetUbLocal(var);
 }
 
 static
@@ -3675,7 +3673,7 @@ SCIP_RETCODE executeUpBranchingRecursive(
    SCIPdebug(
       if( status->lperror )
       {
-         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The could not be solved.\n");
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The LP could not be solved.\n");
       }
       else if( upbranchingresult->cutoff )
       {
@@ -4828,7 +4826,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       }
       else if( status->lperror )
       {
-         *result = SCIP_SOLVELP;
+         *result = SCIP_DIDNOTFIND;
+         /* TODO: maybe return SCIP_LPERROR as the return value for this method */
       }
 
       LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Result before branching is %s\n", getStatusString(*result));
@@ -4854,37 +4853,34 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
 
       LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Result after branching is %s\n", getStatusString(*result));
 
-      SCIPstatistic(
-         if( *result == SCIP_BRANCHED )
-         {
-            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Result: Finished LookaheadBranching by branching.\n");
-         }
-         else if( *result == SCIP_REDUCEDDOM )
-         {
-            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Result: Finished LookaheadBranching by reducing domains.\n");
-         }
-         else if( *result == SCIP_CUTOFF )
-         {
-            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Result: Finished LookaheadBranching by cutting of, as the current problem is infeasible.\n");
-         }
-         else if( *result == SCIP_CONSADDED )
-         {
-            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Result: Finished LookaheadBranching by adding constraints.\n");
-         }
-         else if( *result == SCIP_DIDNOTFIND )
-         {
-            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Result: An error occurred during the solving of one of the lps.\n");
-         }
-         else if( status->depthtoosmall )
-         {
-            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Result: The branching depth wasn't high enough for a 2 level branching.\n");
-         }
-         else
-         {
-            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Result: Could not find any variable to branch on.\n");
-            SCIPABORT();
-         }
-      )
+      if( *result == SCIP_BRANCHED )
+      {
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Result: Finished LookaheadBranching by branching.\n");
+      }
+      else if( *result == SCIP_REDUCEDDOM )
+      {
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Result: Finished LookaheadBranching by reducing domains.\n");
+      }
+      else if( *result == SCIP_CUTOFF )
+      {
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Result: Finished LookaheadBranching by cutting of, as the current problem is infeasible.\n");
+      }
+      else if( *result == SCIP_CONSADDED )
+      {
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Result: Finished LookaheadBranching by adding constraints.\n");
+      }
+      else if( *result == SCIP_DIDNOTFIND )
+      {
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Result: An error occurred during the solving of one of the lps.\n");
+      }
+      else if( status->depthtoosmall )
+      {
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Result: The branching depth wasn't high enough for a 2 level branching.\n");
+      }
+      else
+      {
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Result: Could not find any variable to branch on.\n");
+      }
 
 #ifdef SCIP_STATISTIC
       localStatisticsFree(scip, &localstats);
