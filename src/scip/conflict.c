@@ -5838,7 +5838,7 @@ SCIP_RETCODE applyMIR(
    *success = FALSE;
    return SCIP_OKAY;
 
-   islocal = FALSE;
+   /* TODO set but not used warning islocal = FALSE; */
 
    /* create local copies */
    SCIP_CALL( SCIPsetDuplicateBufferArray(set, &copy_vals, vals, transprob->nvars) );
