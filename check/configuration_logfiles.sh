@@ -67,6 +67,27 @@ else
     fi
 fi
 
+
+if test -e $EVALFILE
+then
+    fname=$SCIPPATH/results/`basename $EVALFILE .eval`.meta
+    if ! test -e $fname
+    then
+        echo @Permutation $p > $fname
+        echo @Seed $s >> $fname
+        echo @Settings $SETNAME >> $fname
+        echo @TstName $TSTNAME >> $fname
+        echo @BinName $BINNAME >> $fname
+        echo @NodeLimit $NODELIMIT >> $fname
+        echo @MemLimit $MEMLIMIT >> $fname
+        echo @Threads $THREADS >> $fname
+        echo @FeasTol $FEASTOL >> $fname
+        echo @Queue $QUEUE >> $fname
+        echo @Exclusive $EXCLUSIVE >> $fname
+    fi
+fi
+
+
 if test "$INSTANCE" = "DONE"
 then
     return

@@ -18,7 +18,7 @@ LINKRPATH =
 ZIMPL_FLAGS	=  -I$(LIBDIR)/include/zimplinc/zimpl/WIN
 ZLIB_FLAGS	=  -I$(LIBDIR)/include/zlib
 ZLIB_LDFLAGS	=  libz.$(ARCH).$(OPT).lib -NODEFAULTLIB:LIBCMT -NODEFAULTLIB:LIBCMTD
-GMP_FLAGS	= -I$(LIBDIR)/include/$(LIBTYPE)/mpir.$(ARCH)
+GMP_FLAGS	= -I$(LIBDIR)/include/mpir.$(ARCH)
 GMP_LDFLAGS	= libmpir.$(ARCH).$(OPT).lib -debug -subsystem:console -incremental:no -fixed:no libpcre.$(ARCH).$(OPT).lib
 READLINE_FLAGS	=
 READLINE_LDFLAGS =
@@ -32,6 +32,7 @@ LIBEXT		=	lib
 STATICLIBEXT    =	lib
 SHAREDLIBEXT	=	dll
 LINKLIBSUFFIX	=	.lib
+FORTRAN_NAMING_CONVENTION = UCASE_NODECOR
 
 # NOTE: use this flag throughout the whole compilation process
 CFLAGS  +=      -MDd

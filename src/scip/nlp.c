@@ -257,7 +257,12 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
    SCIP_CALL( SCIPhashmapCreate(&varhash, tree->blkmem, tree->nvars) );
    for( i = 0; i < tree->nvars; ++i )
    {
+      /* it's not possible to add a variable twice to the varhash map */
+      if( SCIPhashmapExists(varhash, tree->vars[i]) )
+         continue;
+
       SCIP_CALL( SCIPhashmapInsert(varhash, tree->vars[i], (void*)(size_t)i) );
+
       if( !SCIPvarIsActive((SCIP_VAR*)tree->vars[i]) )
          havefixedvar = TRUE;
    }
@@ -4216,7 +4221,7 @@ SCIP_RETCODE nlpFlushNlRowDeletions(
    assert(c == nlp->nunflushednlrowdel);
 
    /* remove rows from NLPI problem */
-   SCIP_CALL( SCIPnlpiDelConsSet(nlp->solver, nlp->problem, rowset) );
+   SCIP_CALL( SCIPnlpiDelConsSet(nlp->solver, nlp->problem, rowset, nlp->nnlrows_solver) );
 
    /* update NLPI row indices */
    for( j = 0; j < nlp->nnlrows_solver; ++j )
@@ -4309,7 +4314,7 @@ SCIP_RETCODE nlpFlushVarDeletions(
    assert(c == nlp->nunflushedvardel);
 
    /* delete variables from NLPI problem */
-   SCIP_CALL( SCIPnlpiDelVarSet(nlp->solver, nlp->problem, colset) );
+   SCIP_CALL( SCIPnlpiDelVarSet(nlp->solver, nlp->problem, colset, nlp->nvars_solver) );
 
    /* update NLPI variable indices */
    for( i = 0; i < nlp->nvars_solver; ++i )
@@ -4712,6 +4717,10 @@ SCIP_RETCODE nlpSolve(
       SCIPsetFreeBufferArray(set, &initialguess_solver);
    }
 
+   /* set NLP tolerances to current SCIP primal and dual feasibility tolerance */
+   SCIP_CALL( SCIPnlpiSetRealPar(nlp->solver, nlp->problem, SCIP_NLPPAR_FEASTOL, SCIPsetFeastol(set)) );
+   SCIP_CALL( SCIPnlpiSetRealPar(nlp->solver, nlp->problem, SCIP_NLPPAR_RELOBJTOL, SCIPsetDualfeastol(set)) );
+
    /* let NLP solver do his work */
    SCIPclockStart(stat->nlpsoltime, set);
 
@@ -4740,7 +4749,7 @@ SCIP_RETCODE nlpSolve(
       varubdualvals = NULL;
 
       /* get NLP solution */
-      SCIP_CALL( SCIPnlpiGetSolution(nlp->solver, nlp->problem, &primalvals, &nlrowdualvals, &varlbdualvals, &varubdualvals) );
+      SCIP_CALL( SCIPnlpiGetSolution(nlp->solver, nlp->problem, &primalvals, &nlrowdualvals, &varlbdualvals, &varubdualvals, NULL) );
       assert(primalvals != NULL || nlp->nvars == 0);
       assert((varlbdualvals != NULL) == (varubdualvals != NULL)); /* if there are duals for one bound, then there should also be duals for the other bound */
 
@@ -4762,6 +4771,10 @@ SCIP_RETCODE nlpSolve(
          for( i = 0; i < nlp->nvars; ++i )
          {
             SCIP_Real solval = primalvals[nlp->varmap_nlp2nlpi[i]];  /*lint !e613 */
+
+            /* do a quick assert that variable bounds are satisfied, if feasibility is claimed */
+            assert(SCIPsetIsFeasGE(set, solval, SCIPvarGetLbLocal(nlp->vars[i])) || nlp->solstat > SCIP_NLPSOLSTAT_FEASIBLE);
+            assert(SCIPsetIsFeasLE(set, solval, SCIPvarGetUbLocal(nlp->vars[i])) || nlp->solstat > SCIP_NLPSOLSTAT_FEASIBLE);
 
             SCIP_CALL( SCIPvarSetNLPSol(nlp->vars[i], set, solval) );  /*lint !e613 */
             nlp->primalsolobjval += SCIPvarGetObj(nlp->vars[i]) * solval;  /*lint !e613 */

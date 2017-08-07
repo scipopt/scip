@@ -616,18 +616,18 @@ SCIP_RETCODE getLinearConsVarsData(
 
       if( coefs != NULL )
       {
-	 lincoefs = SCIPgetValsLinear(scip, cons);
+         lincoefs = SCIPgetValsLinear(scip, cons);
 
-	 for( v = 0; v < *nvars; ++v )
-	 {
-	    vars[v] = linvars[v];
-	    coefs[v] = lincoefs[v];
-	 }
+         for( v = 0; v < *nvars; ++v )
+         {
+            vars[v] = linvars[v];
+            coefs[v] = lincoefs[v];
+         }
       }
       else
       {
-	 for( v = 0; v < *nvars; ++v )
-	    vars[v] = linvars[v];
+         for( v = 0; v < *nvars; ++v )
+            vars[v] = linvars[v];
       }
 
       break;
@@ -639,16 +639,16 @@ SCIP_RETCODE getLinearConsVarsData(
 
       if( coefs != NULL )
       {
-	 for( v = 0; v < *nvars; ++v )
-	 {
-	    vars[v] = linvars[v];
-	    coefs[v] = 1.0;
-	 }
+         for( v = 0; v < *nvars; ++v )
+         {
+            vars[v] = linvars[v];
+            coefs[v] = 1.0;
+         }
       }
       else
       {
-	 for( v = 0; v < *nvars; ++v )
-	    vars[v] = linvars[v];
+         for( v = 0; v < *nvars; ++v )
+            vars[v] = linvars[v];
       }
 
       break;
@@ -662,18 +662,18 @@ SCIP_RETCODE getLinearConsVarsData(
 
       if( coefs != NULL )
       {
-	 weights = SCIPgetWeightsKnapsack(scip, cons);
+         weights = SCIPgetWeightsKnapsack(scip, cons);
 
-	 for( v = 0; v < *nvars; ++v )
-	 {
-	    vars[v] = linvars[v];
-	    coefs[v] = (SCIP_Real) weights[v];
-	 }
+         for( v = 0; v < *nvars; ++v )
+         {
+            vars[v] = linvars[v];
+            coefs[v] = (SCIP_Real) weights[v];
+         }
       }
       else
       {
-	 for( v = 0; v < *nvars; ++v )
-	    vars[v] = linvars[v];
+         for( v = 0; v < *nvars; ++v )
+            vars[v] = linvars[v];
       }
 
       break;
@@ -3821,10 +3821,12 @@ SCIP_RETCODE copyConsPseudoboolean(
       if( *valid )
       {
          SCIP_CONSHDLR* conshdlrand;
-         SCIP_CONS* oldcons;
-         SCIP_Bool validand;
          int c;
          int nsourceandconss;
+         SCIP_HASHTABLE* linconsvarsmap;
+         SCIP_VAR** targetlinvars;
+         SCIP_Real* targetlincoefs;
+         int ntargetlinvars;
 
          conshdlrand = SCIPfindConshdlr(sourcescip, "and");
          assert(conshdlrand != NULL);
@@ -3835,15 +3837,54 @@ SCIP_RETCODE copyConsPseudoboolean(
          SCIP_CALL( SCIPallocBufferArray(sourcescip, &targetandconss, nsourceandconss) );
          SCIP_CALL( SCIPallocBufferArray(sourcescip, &targetandcoefs, nsourceandconss) );
 
+         /* get the number of vars in the copied linear constraint and allocate buffers
+          * for the variables and the coefficients
+          */
+         SCIP_CALL( getLinearConsNVars(targetscip, targetlincons, targetlinconstype, &ntargetlinvars) );
+         SCIP_CALL( SCIPallocBufferArray(sourcescip, &targetlinvars, ntargetlinvars) );
+         SCIP_CALL( SCIPallocBufferArray(sourcescip, &targetlincoefs, ntargetlinvars) );
+
+         /* retrieve the variables of the copied linear constraint */
+         SCIP_CALL( getLinearConsVarsData(targetscip, targetlincons, targetlinconstype,
+                                          targetlinvars, targetlincoefs, &ntargetlinvars) );
+
+         /* now create a hashtable and insert the variables into it, so that it
+          * can be checked in constant time if a variable was removed due to
+          * compressed copying when looping over the and resultants
+          */
+         SCIP_CALL( SCIPhashtableCreate(&linconsvarsmap, SCIPblkmem(targetscip), ntargetlinvars, SCIPvarGetHashkey,
+                                        SCIPvarIsHashkeyEq, SCIPvarGetHashkeyVal, NULL) );
+
+         for( c = 0 ; c < ntargetlinvars; ++c )
+         {
+            SCIP_CALL( SCIPhashtableInsert(linconsvarsmap, targetlinvars[c]) );
+         }
+
+         /* free the buffer arrays that were only required for building the hastable */
+         SCIPfreeBufferArray(sourcescip, &targetlincoefs);
+         SCIPfreeBufferArray(sourcescip, &targetlinvars);
+
          for( c = 0 ; c < nsourceandconss; ++c )
          {
             CONSANDDATA* consanddata;
+            SCIP_CONS* oldcons;
+            SCIP_VAR* targetandresultant;
+            SCIP_Bool validand;
 
             consanddata = sourceconsdata->consanddatas[c];
             assert(consanddata != NULL);
 
             oldcons = consanddata->cons;
             assert(oldcons != NULL);
+
+            targetandresultant = (SCIP_VAR*) SCIPhashmapGetImage(varmap, SCIPgetResultantAnd(sourcescip, oldcons));
+            assert(targetandresultant != NULL);
+
+            /* if compressed copying is active, the resultant might not have been copied by the linear
+             * constraint and we don't need to add it to the pseudo boolean constraint in this case
+             */
+            if( !SCIPhashtableExists(linconsvarsmap, targetandresultant) )
+               continue;
 
             validand = TRUE;
 
@@ -3863,6 +3904,9 @@ SCIP_RETCODE copyConsPseudoboolean(
                ++ntargetandconss;
             }
          }
+
+         SCIPhashtableFree(&linconsvarsmap);
+         assert(ntargetandconss <= ntargetlinvars);
       }
 
       /* no correct pseudoboolean constraint */
@@ -3874,6 +3918,9 @@ SCIP_RETCODE copyConsPseudoboolean(
 
       if( *valid )
       {
+         SCIP_Real targetrhs;
+         SCIP_Real targetlhs;
+
          SCIP_VAR* intvar;
          SCIP_VAR* indvar;
          const char* consname;
@@ -3902,14 +3949,18 @@ SCIP_RETCODE copyConsPseudoboolean(
          else
             consname = SCIPconsGetName(sourcecons);
 
+         /* get new left and right hand sides of copied linear constraint since
+          * they might have changed if compressed copying is used
+          */
+         SCIP_CALL( getLinearConsSides(targetscip, targetlincons, targetlinconstype, &targetlhs, &targetrhs) );
+
          /* create new pseudoboolean constraint */
          SCIP_CALL( SCIPcreateConsPseudobooleanWithConss(targetscip, targetcons, consname,
                targetlincons, targetlinconstype, targetandconss, targetandcoefs, ntargetandconss,
-               indvar, sourceconsdata->weight, sourceconsdata->issoftcons, intvar,
-               sourceconsdata->lhs, sourceconsdata->rhs,
+               indvar, sourceconsdata->weight, sourceconsdata->issoftcons, intvar, targetlhs, targetrhs,
                initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
       }
-      else
+      else if( !SCIPisConsCompressionEnabled(sourcescip) )
       {
          SCIPverbMessage(sourcescip, SCIP_VERBLEVEL_MINIMAL, NULL, "could not copy constraint <%s>\n", SCIPconsGetName(sourcecons));
       }
@@ -3923,13 +3974,11 @@ SCIP_RETCODE copyConsPseudoboolean(
       /* release copied and constraint */
       if( targetandconss != NULL )
       {
-         int nsourceandconss;
          int c;
 
-         nsourceandconss = sourceconsdata->nconsanddatas;
-         assert(ntargetandconss <= nsourceandconss);
+         assert(ntargetandconss <= sourceconsdata->nconsanddatas);
 
-         for( c = 0 ; c < nsourceandconss; ++c )
+         for( c = 0 ; c < ntargetandconss; ++c )
          {
             if( targetandconss[c] != NULL )
             {

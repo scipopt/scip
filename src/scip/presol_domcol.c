@@ -53,6 +53,9 @@
 #define DEFAULT_NUMMAXPAIRS      1048576     /**< maximal number of pair comparisons */
 
 #define DEFAULT_PREDBNDSTR         FALSE     /**< should predictive bound strengthening be applied? */
+#define DEFAULT_CONTINUOUS_RED      TRUE     /**< should reductions for continuous variables be carried out? */
+
+
 
 /*
  * Data structures
@@ -65,6 +68,7 @@ struct SCIP_PresolData
    int                   nummaxpairs;        /**< maximal number of pair comparisons */
    int                   numcurrentpairs;    /**< current number of pair comparisons */
    SCIP_Bool             predbndstr;         /**< flag indicating if predictive bound strengthening should be applied */
+   SCIP_Bool             continuousred;      /**< flag indicating if reductions for continuous variables should be performed */
 };
 
 /** type of fixing direction */
@@ -1994,10 +1998,14 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
    if( !SCIPallowDualReds(scip) )
       return SCIP_OKAY;
 
-   *result = SCIP_DIDNOTFIND;
-
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
+
+   /* don't run for pure LPs */
+   if( !presoldata->continuousred && (SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) == 0) )
+      return SCIP_OKAY;
+
+   *result = SCIP_DIDNOTFIND;
 
    matrix = NULL;
    SCIP_CALL( SCIPmatrixCreate(scip, &matrix, &initialized, &complete) );
@@ -2120,7 +2128,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
             }
 
             /* continuous variables */
-            if( nconfill > 1 )
+            if( nconfill > 1 && presoldata->continuousred )
             {
                SCIP_CALL( findDominancePairs(scip, matrix, presoldata, consearchcols, nconfill, FALSE,
                      varstofix, &nfixings, &ndomrelations, nchgbds) );
@@ -2233,7 +2241,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
             }
 
             /* continuous variables */
-            if( nconfill > 1 )
+            if( nconfill > 1 && presoldata->continuousred )
             {
                SCIP_CALL( findDominancePairs(scip, matrix, presoldata, consearchcols, nconfill, FALSE,
                      varstofix, &nfixings, &ndomrelations, nchgbds) );
@@ -2416,6 +2424,11 @@ SCIP_RETCODE SCIPincludePresolDomcol(
          "presolving/domcol/predbndstr",
          "should predictive bound strengthening be applied?",
          &presoldata->predbndstr, FALSE, DEFAULT_PREDBNDSTR, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "presolving/domcol/continuousred",
+         "should reductions for continuous variables be performed?",
+         &presoldata->continuousred, FALSE, DEFAULT_CONTINUOUS_RED, NULL, NULL) );
 
    return SCIP_OKAY;
 }

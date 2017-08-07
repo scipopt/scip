@@ -29,6 +29,7 @@
 #include "scip/event.h"
 #include "scip/var.h"
 #include "scip/implics.h"
+#include "scip/misc.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/debug.h"
@@ -1348,7 +1349,7 @@ int cliquesSearchClique(
    return -1;
 }
 
-#ifndef NDEBUG
+#ifdef SCIP_MORE_DEBUG
 /** checks whether clique appears in all clique lists of the involved variables */
 static
 void cliqueCheck(
@@ -1702,7 +1703,7 @@ void SCIPcliquelistRemoveFromCliques(
             if( irrelevantvar )
                clique->equation = FALSE;
 
-#ifndef NDEBUG
+#ifdef SCIP_MORE_DEBUG
             /* during the cleanup step, we skip the consistency check because clique may be temporarily inconsistent */
             if( ! cliquetable->incleanup || clique->index > 0 )
             {
@@ -2596,6 +2597,9 @@ SCIP_RETCODE cliqueCleanup(
                (!clique->values[v] && SCIPvarGetLbGlobal(clique->vars[v]) > 0.5) ||
                SCIPvarIsMarkedDeleteGlobalStructures(clique->vars[v]) )
          {
+            if( clique->equation && SCIPvarIsMarkedDeleteGlobalStructures(clique->vars[v]) )
+               clique->equation = FALSE;
+
             /* the variable will be overwritten by subsequent active variables */
             continue;
          }

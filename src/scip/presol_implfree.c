@@ -1201,12 +1201,13 @@ SCIP_DECL_PRESOLEXEC(presolExecImplfree)
                assert(SCIPisInfinity(scip, -SCIPmatrixGetRowLhs(matrix, row)) ||
                   SCIPisInfinity(scip, rhs) ||
                   SCIPisEQ(scip, SCIPmatrixGetRowLhs(matrix, row), rhs));
+               assert(multiaggcoef != 0.0);
 
                /* we have to distinguished two cases */
                if( !SCIPisInfinity(scip, rhs) )
-                  aggrconst = rhs / multiaggcoef; /*lint !e414*/
+                  aggrconst = rhs / multiaggcoef;
                else
-                  aggrconst = rhs / multiaggcoef; /*lint !e414*/
+                  aggrconst = SCIPmatrixGetRowLhs(matrix, row) / multiaggcoef;
 
                /* calculate scalars */
                rowpnt = SCIPmatrixGetRowIdxPtr(matrix, row);

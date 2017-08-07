@@ -55,8 +55,7 @@
 #define READER_DESC             "file reader for MIQPs in IBM's Mathematical Programming System format"
 #define READER_EXTENSION        "mps"
 
-#define DEFAULT_LINEARIZE_ANDS         TRUE  /**< should possible \"and\" constraint be linearized when writing the mps
-                                              *   file? */
+#define DEFAULT_LINEARIZE_ANDS         TRUE  /**< should possible \"and\" constraint be linearized when writing the mps file? */
 #define DEFAULT_AGGRLINEARIZATION_ANDS TRUE  /**< should an aggregated linearization for and constraints be used? */
 
 /*
@@ -1420,7 +1419,9 @@ SCIP_RETCODE readBounds(
           * are by default assumed to be binary, but an explicit lower bound of 0 turns them into integer variables.
           * Only if the upper bound is explicitly set to 1, we leave the variable as a binary one.
           */
-         if( oldvartype == SCIP_VARTYPE_BINARY && !(mpsinputField1(mpsi)[0] == 'U' && SCIPisFeasEQ(scip, val, 1.0)) )
+         if( oldvartype == SCIP_VARTYPE_BINARY && !((mpsinputField1(mpsi)[0] == 'U' ||
+                  (mpsinputField1(mpsi)[0] == 'F' && mpsinputField1(mpsi)[1] == 'X')) && SCIPisFeasEQ(scip, val, 1.0))
+            && !(mpsinputField1(mpsi)[0] == 'F' && mpsinputField1(mpsi)[1] == 'X'&& SCIPisFeasEQ(scip, val, 0.0)) )
          {
             SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
             assert(!infeasible);
@@ -2704,12 +2705,11 @@ void printRowType(
    )
 {
    char rowtype[2];
-   assert( scip != NULL );
 
+   assert( scip != NULL );
    assert( !SCIPisInfinity(scip, -lhs) || !SCIPisInfinity(scip, rhs) );
    assert( SCIPisGT(scip, rhs, lhs) || SCIPisEQ(scip, lhs, rhs) );
    assert( name != NULL );
-
 
    if( SCIPisEQ(scip, lhs, rhs) )
       (void) SCIPsnprintf(rowtype, 2, "%s", "E");
@@ -3089,7 +3089,7 @@ SCIP_RETCODE checkConsnames(
 static
 void printColumnSection(
    SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file,               /**<  output file, or NULL if standard output should be used */
+   FILE*                 file,               /**< output file, or NULL if standard output should be used */
    SPARSEMATRIX*         matrix,             /**< sparse matrix containing the entries */
    SCIP_HASHMAP*         varnameHashmap,     /**< map from SCIP_VAR* to variable name */
    SCIP_HASHTABLE*       indicatorSlackHash, /**< hashtable containing slack variables from indicators (or NULL) */
@@ -3157,7 +3157,7 @@ void printColumnSection(
          value = matrix->values[v];
 
          /* print record to file */
-         printEntry( scip, file, varname, matrix->rows[v], value, &recordcnt, maxnamelen );
+         printEntry(scip, file, varname, matrix->rows[v], value, &recordcnt, maxnamelen);
          v++;
       }
       while( v < matrix->nentries && var == matrix->columns[v] );
@@ -3181,22 +3181,20 @@ void printColumnSection(
 static
 void printRhsSection(
    SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file,               /**<  output file, or NULL if standard output should be used */
+   FILE*                 file,               /**< output file, or NULL if standard output should be used */
    int                   nconss,             /**< number of constraints */
    const char**          consnames,          /**< constraint names */
    SCIP_Real*            rhss,               /**< right hand side array */
    unsigned int          maxnamelen          /**< maximum name length */
    )
 {
-   int recordcnt;
+   int recordcnt = 0;
    int c;
 
    assert( rhss != NULL );
 
    SCIPinfoMessage(scip, file, "RHS\n");
    SCIPdebugMsg(scip, "start printing RHS section\n");
-
-   recordcnt = 0;
 
    /* take care of the linear constraints */
    for( c = 0; c < nconss; ++c )
@@ -3207,7 +3205,7 @@ void printRhsSection(
 
       assert(consnames[c] != NULL);
 
-      printEntry( scip, file, "RHS", consnames[c], rhss[c], &recordcnt, maxnamelen );
+      printEntry(scip, file, "RHS", consnames[c], rhss[c], &recordcnt, maxnamelen);
    }
 
    if( recordcnt == 1 )
@@ -3219,16 +3217,16 @@ void printRhsSection(
 static
 void printRangeSection(
    SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file,               /**<  output file, or NULL if standard output should be used */
+   FILE*                 file,               /**< output file, or NULL if standard output should be used */
    SCIP_CONS**           conss,              /**< constraint array */
    int                   nconss,             /**< number of constraints */
    const char**          consnames,          /**< constraint names */
    SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
    unsigned int          maxnamelen          /**< maximum name length */
    )
-{   
+{
    int c;
-   int recordcnt;
+   int recordcnt = 0;
 
    SCIP_CONSHDLR* conshdlr;
    const char* conshdlrname;
@@ -3237,11 +3235,8 @@ void printRangeSection(
    SCIP_Real lhs;
    SCIP_Real rhs;
 
-
    SCIPinfoMessage(scip, file, "RANGES\n");
    SCIPdebugMsg(scip, "start printing RANGES section\n");
-
-   recordcnt = 0;
 
    for( c = 0; c < nconss; ++c  )
    {
@@ -3276,7 +3271,7 @@ void printRangeSection(
       if( !SCIPisInfinity(scip, -lhs) && !SCIPisInfinity(scip, rhs) && !SCIPisEQ(scip, rhs, lhs) )
       {
          assert( SCIPisGT(scip, rhs, lhs) );
-         printEntry( scip, file, "RANGE", consnames[c], rhs - lhs, &recordcnt, maxnamelen );
+         printEntry(scip, file, "RANGE", consnames[c], rhs - lhs, &recordcnt, maxnamelen);
       }
    }
    if(recordcnt == 1 )
@@ -3287,7 +3282,7 @@ void printRangeSection(
 static
 void printBoundSectionName(
    SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file                /**<  output file, or NULL if standard output should be used */
+   FILE*                 file                /**< output file, or NULL if standard output should be used */
    )
 {
    SCIPinfoMessage(scip, file, "BOUNDS\n");
@@ -3298,7 +3293,7 @@ void printBoundSectionName(
 static
 void printBoundSection(
    SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file,               /**<  output file, or NULL if standard output should be used */
+   FILE*                 file,               /**< output file, or NULL if standard output should be used */
    SCIP_VAR**            vars,               /**< active variables */
    int                   nvars,              /**< number of active variables */
    SCIP_VAR**            aggvars,            /**< needed aggregated variables */
@@ -3520,7 +3515,6 @@ void printBoundSection(
       /* we should print the transformed problem, otherwise no fixed variable should exists */
       assert(transformed);
 
-      /* cppcheck-suppress nullPointerRedundantCheck */
       var = fixvars[v];
 
       assert(var != NULL);
@@ -3597,7 +3591,7 @@ SCIP_DECL_READERREAD(readerReadMps)
    assert(scip != NULL);
    assert(result != NULL);
 
-   retcode =  readMps(scip, filename);
+   retcode = readMps(scip, filename);
 
    if( retcode == SCIP_PLUGINNOTFOUND )
       retcode = SCIP_READERROR;
@@ -4191,7 +4185,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
                      n = 2;
                   else
                      n = (int) log10((double)v) + 2;
-                  n += l;;
+                  n += l;
 
                   /* assure maximal allowed value */
                   if( n >= MPS_MAX_NAMELEN )
@@ -4430,6 +4424,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
    if( nfixedvars > 0 )
    {
+      /* cppcheck-suppress nullPointerRedundantCheck */
       assert(fixvars != NULL);
       SCIPfreeBufferArray(scip, &fixvars);
    }
@@ -4580,7 +4575,6 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
       SCIPfreeBufferArray(scip, &namestr);
    }
-
 
    /* print QCMATRIX sections for second order cone constraints */
    if( nConsSOC > 0 )

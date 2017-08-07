@@ -1,0 +1,53 @@
+{
+   filtersqp-bqpd-uninitvalue
+   Memcheck:Cond
+   fun:bqpd_
+   fun:qpsolve_
+}
+{
+   filtersqp-ratio-uninitvalue
+   Memcheck:Cond
+   fun:ratio_
+   fun:bqpd_
+   fun:qpsolve_
+}
+{
+   filtersqp-rshift-uninitvalue
+   Memcheck:Cond
+   fun:r_shift_
+   fun:update_l_
+   fun:pivot_
+   fun:bqpd_
+}
+{
+   filtersqp-infnlp-uninitvalue
+   Memcheck:Cond
+   fun:inf_nlp_
+   fun:filtersqp1_
+   fun:filtersqp_
+   fun:nlpiSolveFilterSQP
+}
+{
+   filtersqp-main-uninitvalue
+   Memcheck:Cond
+   fun:filtersqp1_
+   fun:filtersqp_
+   fun:nlpiSolveFilterSQP
+}
+{
+   filtersqp-writestr1-uninitvalue
+   Memcheck:Cond
+   fun:__memcmp_sse4_1
+   fun:_gfortran_compare_string
+   fun:filtersqp1_
+   fun:filtersqp_
+   fun:nlpiSolveFilterSQP
+}
+{
+   filtersqp-writestr2-uninitvalue
+   Memcheck:Cond
+   fun:_gfortran_compare_string
+   fun:filtersqp1_
+   fun:filtersqp_
+   fun:nlpiSolveFilterSQP
+}

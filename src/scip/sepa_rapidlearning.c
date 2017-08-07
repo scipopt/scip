@@ -180,10 +180,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    SCIP_VAR** vars;                          /* original problem's variables                   */
    SCIP_VAR** subvars;                       /* subproblem's variables                         */
    SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */    
-   SCIP_HASHMAP* varmapbw;                   /* mapping of sub-SCIP variables to SCIP variables */
+   SCIP_HASHMAP* varmapbw = NULL;            /* mapping of sub-SCIP variables to SCIP variables */
 
-   SCIP_CONSHDLR** conshdlrs;                /* array of constraint handler's that might that might obtain conflicts */
-   int* oldnconss;                           /* number of constraints without rapid learning conflicts               */
+   SCIP_CONSHDLR** conshdlrs = NULL;         /* array of constraint handler's that might that might obtain conflicts */
+   int* oldnconss = NULL;                    /* number of constraints without rapid learning conflicts               */
 
    SCIP_Longint nodelimit;                   /* node limit for the subproblem                  */
 
@@ -291,6 +291,27 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
 
          SCIP_CALL( SCIPchgVarType(subscip, subvars[i], SCIP_VARTYPE_INTEGER, &infeasible) );
          assert(!infeasible);
+      }
+
+      /* skip the heuristic when the sub-SCIP contains an integer variable with an infinite bound in direction of the
+       * objective function; this might lead to very bad branching decisions when enforcing a pseudo solution (#1439)
+       */
+      if( SCIPvarGetType(subvars[i]) <= SCIP_VARTYPE_INTEGER )
+      {
+         SCIP_Real lb = SCIPvarGetLbLocal(subvars[i]);
+         SCIP_Real ub = SCIPvarGetUbLocal(subvars[i]);
+         SCIP_Real obj = SCIPvarGetObj(subvars[i]);
+
+         if( (SCIPisNegative(subscip, obj) && SCIPisInfinity(subscip, ub))
+            || (SCIPisPositive(subscip, obj) && SCIPisInfinity(subscip, -lb)) )
+         {
+            /* free local hash map */
+            SCIPhashmapFree(&varmapfw);
+
+            SCIPdebugMsg(scip, "unbounded integer variable %s (in [%g,%g]) with objective %g -> skip heuristic\n",
+               SCIPvarGetName(subvars[i]), lb, ub, obj);
+            goto TERMINATE;
+         }
       }
    }
 
@@ -667,10 +688,14 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
       *result = SCIP_REDUCEDDOM;
 
    /* free local data */
+   assert(oldnconss != NULL);
+   assert(conshdlrs != NULL);
+   assert(varmapbw != NULL);
    SCIPfreeBufferArray(scip, &oldnconss);
    SCIPfreeBufferArray(scip, &conshdlrs);
-
    SCIPhashmapFree(&varmapbw);
+
+TERMINATE:
 
    /* free subproblem */
    SCIPfreeBufferArray(scip, &subvars);

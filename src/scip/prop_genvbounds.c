@@ -1489,7 +1489,7 @@ SCIP_RETCODE sortGenVBounds(
    SCIPdebugMsg(scip, "(re-)sort genvbounds topologically\n");
 
    /* create digraph */
-   SCIP_CALL( SCIPdigraphCreate(&graph, SCIPblkmem(scip), propdata->ngenvbounds) );
+   SCIP_CALL( SCIPcreateDigraph(scip, &graph, propdata->ngenvbounds) );
 
    /* add outgoing arcs for each genvbound */
    for( i = 0; i < propdata->ngenvbounds; i++ )
@@ -1797,32 +1797,38 @@ SCIP_RETCODE execGenVBounds(
    /* we only sort after the root node is finished; this avoids having to sort again after adding more genvbounds; if
     * the genvbounds are not sorted, we will simply propagate all of them in the order given
     */
-   if( propdata->sort && !propdata->issorted && !SCIPinProbing(scip) && SCIPgetDepth(scip) > 0 )
+   if( propdata->sort && !SCIPinProbing(scip) && SCIPgetDepth(scip) > 0 )
    {
-      *result = SCIP_DIDNOTFIND;
+      if( !propdata->issorted )
+      {
+         *result = SCIP_DIDNOTFIND;
 
-      SCIPdebugMsg(scip, "genvbounds are not sorted\n");
+         SCIPdebugMsg(scip, "genvbounds are not sorted\n");
 
-      /* drop and free old events */
-      SCIP_CALL( dropAndFreeEvents(scip, propdata) );
+         /* drop and free old events */
+         SCIP_CALL( dropAndFreeEvents(scip, propdata) );
 
-      /* free old starting data */
-      SCIP_CALL( freeStartingData(scip, propdata) );
+         /* free old starting data */
+         SCIP_CALL( freeStartingData(scip, propdata) );
 
-      /* free sorted components data */
-      SCIP_CALL( freeComponentsData(scip, propdata) );
+         /* free sorted components data */
+         SCIP_CALL( freeComponentsData(scip, propdata) );
 
-      /* sort genvbounds */
-      SCIP_CALL( sortGenVBounds(scip, propdata) );
+         /* sort genvbounds */
+         SCIP_CALL( sortGenVBounds(scip, propdata) );
 
-      /* create starting data */
-      SCIP_CALL( createStartingData(scip, propdata) );
+         /* create starting data */
+         SCIP_CALL( createStartingData(scip, propdata) );
 
-      /* fill global starting data */
-      SCIP_CALL( fillGlobalStartingData(scip, propdata) );
+         /* fill global starting data */
+         SCIP_CALL( fillGlobalStartingData(scip, propdata) );
+      }
 
-      /* set up new events to catch */
-      SCIP_CALL( setUpEvents(scip, propdata) );
+      /* set up new events to catch (if not done so far) */
+      if( propdata->lbevents == NULL )
+      {
+         SCIP_CALL( setUpEvents(scip, propdata) );
+      }
    }
 
    /* apply global propagation if primal bound has improved */
@@ -2164,6 +2170,22 @@ SCIP_RETCODE SCIPgenVBoundAdd(
  * Callback methods of propagator
  */
 
+/** copy method for propagator plugins (called when SCIP copies plugins)
+ *
+ *  @note The UG framework assumes that all default plug-ins of SCIP implement a copy callback.
+ */
+static
+SCIP_DECL_PROPCOPY(propCopyGenvbounds)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(prop != NULL);
+   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludePropGenvbounds(scip) );
+
+   return SCIP_OKAY;
+}
 
 /** initialization method of propagator (called after problem was transformed) */
 static
@@ -2346,7 +2368,14 @@ SCIP_DECL_PROPEXITPRE(propExitpreGenvbounds)
       }
 
       /* if the resulting genvbound is trivial, remove it */
-      if( genvbound->ncoefs == 0 && SCIPisZero(scip, genvbound->cutoffcoef) )
+      /* we remove all genvbounds with an aggregated or multi-aggregated genvbound->var; tightening aggregated variables
+       * might lead to some asserts in tree.c if the active variable has been already tightened (see !398);
+       *
+       * @todo replace aggregated variable by their active part
+       */
+      if( (genvbound->ncoefs == 0 && SCIPisZero(scip, genvbound->cutoffcoef))
+         || SCIPvarGetStatus(genvbound->var) == SCIP_VARSTATUS_MULTAGGR
+         || SCIPvarGetStatus(genvbound->var) == SCIP_VARSTATUS_AGGREGATED )
       {
          SCIP_HASHMAP* hashmap;
 
@@ -2564,9 +2593,6 @@ SCIP_DECL_PROPEXITSOL(propExitsolGenvbounds)
       /* set the number of genvbounds to zero */
       propdata->ngenvbounds = 0;
 
-      /* drop and free all events */
-      SCIP_CALL( dropAndFreeEvents(scip, propdata) );
-
       /* free componentsstart array */
       SCIP_CALL( freeComponentsData(scip, propdata) );
 
@@ -2582,6 +2608,9 @@ SCIP_DECL_PROPEXITSOL(propExitsolGenvbounds)
       propdata->cutoffboundvar = NULL;
       SCIPdebugMsg(scip, "release cutoffboundvar!\n");
    }
+
+   /* drop and free all events */
+   SCIP_CALL( dropAndFreeEvents(scip, propdata) );
 
    return SCIP_OKAY;
 }
@@ -2708,6 +2737,7 @@ SCIP_RETCODE SCIPincludePropGenvbounds(
    SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
          propExecGenvbounds, propdata) );
 
+   SCIP_CALL( SCIPsetPropCopy(scip, prop, propCopyGenvbounds) );
    SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeGenvbounds) );
    SCIP_CALL( SCIPsetPropInit(scip, prop, propInitGenvbounds) );
    SCIP_CALL( SCIPsetPropInitpre(scip, prop, propInitpreGenvbounds) );

@@ -96,6 +96,7 @@ SCIP_RETCODE SCIPstatCreate(
    (*stat)->collectvarhistory = TRUE;
    (*stat)->performpresol = FALSE;
    (*stat)->branchedunbdvar = FALSE;
+   (*stat)->disableenforelaxmsg = FALSE;
    (*stat)->subscipdepth = 0;
    (*stat)->detertimecnt = 0.0;
    (*stat)->nreoptruns = 0;
@@ -281,6 +282,7 @@ void SCIPstatReset(
    stat->ninitlps = 0;
    stat->ndivinglps = 0;
    stat->nsbdivinglps = 0;
+   stat->nnumtroublelpmsgs = 0;
    stat->nstrongbranchs = 0;
    stat->nrootstrongbranchs = 0;
    stat->nconflictlps = 0;
@@ -292,6 +294,7 @@ void SCIPstatReset(
    stat->memsavemode = FALSE;
    stat->nnodesbeforefirst = -1;
    stat->ninitconssadded = 0;
+   stat->nactiveconssadded = 0;
    stat->externmemestim = 0;
    stat->nrunsbeforefirst = -1;
    stat->firstprimalheur = NULL;
@@ -517,6 +520,7 @@ void SCIPstatResetCurrentRun(
    stat->ninfeasleaves = 0;
    stat->nfeasleaves = 0;
    stat->branchedunbdvar = FALSE;
+   stat->nnumtroublelpmsgs = 0;
 
    stat->nearlybacktracks = 0;
    stat->nnodesaboverefbound = 0;

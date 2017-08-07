@@ -7,11 +7,16 @@
 # Optionally, a custom .dxy file can be passed for the doxygen configuration
 #
 
-if [ $1 != "" ]
+if [ "$1" != "" ]
 then
     DOXYFILE=$1
 else
     DOXYFILE=scip.dxy
+fi
+
+if [ "$HTML_FILE_EXTENSION" = "" ]
+then
+    HTML_FILE_EXTENSION=shtml
 fi
 
 ### START SHELL TUTORIAL
@@ -39,7 +44,8 @@ python inc/shelltutorial/insertsnippetstutorial.py
 ### START FAQ GENERATION
 
 cd inc/faq
-python parser.py ./ localdoxysubstitutions && php localfaq.php > faq.inc
+
+python parser.py --linkext $HTML_FILE_EXTENSION  && php localfaq.php > faq.inc
 cd ../../
 
 ### FINISHED FAQ GENERATION

@@ -107,8 +107,9 @@
 #define DEFAULT_AGGREGATEVARIABLES   TRUE /**< should presolving search for redundant variables in equations */
 #define DEFAULT_SIMPLIFYINEQUALITIES TRUE /**< should presolving try to simplify inequalities */
 #define DEFAULT_DUALPRESOLVING       TRUE /**< should dual presolving steps be performed? */
-#define DEFAULT_SINGLETONSTUFFING    TRUE /**< should singleton variable stuffing be performed? */
-#define DEFAULT_SINGLEVARSTUFFING    TRUE /**< should single variable stuffing be performed? */
+#define DEFAULT_SINGLETONSTUFFING    TRUE /**< should stuffing of singleton continuous variables be performed? */
+#define DEFAULT_SINGLEVARSTUFFING   FALSE /**< should single variable stuffing be performed, which tries to fulfill
+                                           *   constraints using the cheapest variable? */
 #define DEFAULT_DETECTCUTOFFBOUND    TRUE /**< should presolving try to detect constraints parallel to the objective
                                            *   function defining an upper bound and prevent these constraints from
                                            *   entering the LP */
@@ -284,8 +285,9 @@ struct SCIP_ConshdlrData
    SCIP_Bool             aggregatevariables; /**< should presolving search for redundant variables in equations */
    SCIP_Bool             simplifyinequalities;/**< should presolving try to cancel down or delete coefficients in inequalities */
    SCIP_Bool             dualpresolving;     /**< should dual presolving steps be performed? */
-   SCIP_Bool             singletonstuffing;  /**< should singleton variable stuffing be performed? */
-   SCIP_Bool             singlevarstuffing;  /**< should single variable stuffing be performed? */
+   SCIP_Bool             singletonstuffing;  /**< should stuffing of singleton continuous variables be performed? */
+   SCIP_Bool             singlevarstuffing;  /**< should single variable stuffing be performed, which tries to fulfill
+                                              *   constraints using the cheapest variable? */
    SCIP_Bool             sortvars;           /**< should binary variables be sorted for faster propagation? */
    SCIP_Bool             checkrelmaxabs;     /**< should the violation for a constraint with side 0.0 be checked relative
                                               *   to 1.0 (FALSE) or to the maximum absolute value in the activity (TRUE)? */
@@ -9824,11 +9826,13 @@ SCIP_RETCODE convertLongEquality(
                return SCIP_OKAY;
             }
 
-            if( aggregated )
-               (*naggrvars)++;
-
             /* release implicit variable */
             SCIP_CALL( SCIPreleaseVar(scip, &newvar) );
+
+            if( aggregated )
+               (*naggrvars)++;
+            else
+               return SCIP_OKAY;
          }
 
          /* we do not have any event on vartype changes, so we need to manually force this constraint to be presolved
@@ -12633,8 +12637,7 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqLinearcons)
    SCIP* scip;
    SCIP_CONSDATA* consdata1;
    SCIP_CONSDATA* consdata2;
-   SCIP_Bool coefsequal;
-   SCIP_Bool coefsnegated;
+   SCIP_Real cons2scale;
    int i;
 
    assert(key1 != NULL);
@@ -12651,33 +12654,34 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqLinearcons)
    if( consdata1->nvars != consdata2->nvars )
       return FALSE;
 
-   coefsequal = TRUE;
-   coefsnegated = TRUE;
-
-   for( i = 0; i < consdata1->nvars && (coefsequal || coefsnegated); ++i )
+   /* tests if variables are equal */
+   for( i = 0; i < consdata1->nvars; ++i )
    {
-      SCIP_Real val1;
-      SCIP_Real val2;
-
-      /* tests if variables are equal */
       if( consdata1->vars[i] != consdata2->vars[i] )
       {
          assert(SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == 1 ||
             SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == -1);
-         coefsequal = FALSE;
-         coefsnegated = FALSE;
-         break;
+         return FALSE;
       }
       assert(SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == 0);
-
-      /* tests if coefficients are either equal or negated */
-      val1 = consdata1->vals[i];
-      val2 = consdata2->vals[i];
-      coefsequal = coefsequal && SCIPisEQ(scip, val1, val2);
-      coefsnegated = coefsnegated && SCIPisEQ(scip, val1, -val2);
    }
 
-   return (coefsequal || coefsnegated);
+   cons2scale = consdata1->vals[0] / consdata2->vals[0];
+
+   /* tests if coefficients are equal with the computed scale */
+   for( i = 1; i < consdata1->nvars; ++i )
+   {
+      SCIP_Real val1;
+      SCIP_Real val2;
+
+      val1 = consdata1->vals[i];
+      val2 = consdata2->vals[i] * cons2scale;
+
+      if( !SCIPisEQ(scip, val1, val2) )
+         return FALSE;
+   }
+
+   return TRUE;
 }
 
 /** returns the hash value of the key */
@@ -12688,6 +12692,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
    int minidx;
    int mididx;
    int maxidx;
+   SCIP_Real scale;
 #ifndef NDEBUG
    SCIP* scip;
 
@@ -12706,12 +12711,13 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
    mididx = SCIPvarGetIndex(consdata->vars[consdata->nvars / 2]);
    maxidx = SCIPvarGetIndex(consdata->vars[consdata->nvars - 1]);
    assert(minidx >= 0 && minidx <= maxidx);
+   scale = COPYSIGN(1.0/consdata->maxabsval, consdata->vals[0]);
 
    /* using only the variable indices as hash, since the values are compared by epsilon */
-   return SCIPhashFour(SCIPcombineFourInt(consdata->nvars, minidx, mididx, maxidx),
-                       SCIPrealHashCode(consdata->vals[0], 8),
-                       SCIPrealHashCode(consdata->vals[consdata->nvars / 2], 8),
-                       SCIPrealHashCode(consdata->vals[consdata->nvars - 1], 8));
+   return SCIPhashFour(consdata->nvars,
+                       SCIPcombineTwoInt(minidx, SCIPrealHashCode(consdata->vals[0] * scale)),
+                       SCIPcombineTwoInt(mididx, SCIPrealHashCode(consdata->vals[consdata->nvars / 2] * scale)),
+                       SCIPcombineTwoInt(maxidx, SCIPrealHashCode(consdata->vals[consdata->nvars - 1] * scale))); /*lint !e571*/
 }
 
 /** compares each constraint with all other constraints for possible redundancy and removes or changes constraint 
@@ -12781,6 +12787,7 @@ SCIP_RETCODE detectRedundantConstraints(
          SCIP_CONSDATA* consdatadel;
          SCIP_CONSDATA* consdata1;
 
+         SCIP_Real scale;
          SCIP_Real lhs;
          SCIP_Real rhs;
 
@@ -12798,58 +12805,10 @@ SCIP_RETCODE detectRedundantConstraints(
          assert(consdata1->sorted);
          assert(consdata0->vars[0] == consdata1->vars[0]);
 
-         if( SCIPisEQ(scip, consdata0->vals[0], consdata1->vals[0]) )
-         {
-            /* the coefficients of both constraints are equal */
-            assert(consdata0->nvars < 2 || SCIPisEQ(scip, consdata0->vals[1], consdata1->vals[1]));
-            SCIPdebugMsg(scip, "aggregate linear constraints <%s> and <%s> with equal coefficients into single ranged row\n",
-               SCIPconsGetName(cons0), SCIPconsGetName(cons1));
-            SCIPdebugPrintCons(scip, cons0, NULL);
-            SCIPdebugPrintCons(scip, cons1, NULL);
-
-            lhs = MAX(consdata1->lhs, consdata0->lhs);
-            rhs = MIN(consdata1->rhs, consdata0->rhs);
-         }
-         else
-         {
-            /* the coefficients of both rows are negations */
-            assert(SCIPisEQ(scip, consdata0->vals[0], -(consdata1->vals[0])));
-            assert(consdata0->nvars < 2 || SCIPisEQ(scip, consdata0->vals[1], -(consdata1->vals[1])));
-            SCIPdebugMsg(scip, "aggregate linear constraints <%s> and <%s> with negated coefficients into single ranged row\n",
-               SCIPconsGetName(cons0), SCIPconsGetName(cons1));
-            SCIPdebugPrintCons(scip, cons0, NULL);
-            SCIPdebugPrintCons(scip, cons1, NULL);
-
-            lhs = MAX(consdata1->lhs, -consdata0->rhs);
-            rhs = MIN(consdata1->rhs, -consdata0->lhs);
-         }
-
-         if( SCIPisFeasLT(scip, rhs, lhs) )
-         {
-            SCIPdebugMsg(scip, "aggregated linear constraint <%s> is infeasible\n", SCIPconsGetName(cons1));
-            *cutoff = TRUE;
-            break;
-         }
-
-         /* ensure that lhs <= rhs holds without tolerances as we only allow such rows to enter the LP */
-         if( lhs > rhs )
-         {
-            rhs = (lhs + rhs)/2;
-            lhs = rhs;
-         }
-
          /* check which constraint has to stay;
           * changes applied to an upgraded constraint will not be considered in the instance */
          if( consdata1->upgraded && !consdata0->upgraded )
          {
-            /* the coefficients of both rows are negations, we need to switch lhs and rhs and multiply them with -1 */
-            if( !SCIPisEQ(scip, consdata0->vals[0], consdata1->vals[0]) )
-            {
-               SCIP_Real tmp = lhs;
-               lhs = -rhs;
-               rhs = -tmp;
-            }
-
             consstay = cons0;
             consdatastay = consdata0;
             consdel = cons1;
@@ -12865,6 +12824,48 @@ SCIP_RETCODE detectRedundantConstraints(
             consdatastay = consdata1;
             consdel = cons0;
             consdatadel = consdata0;
+         }
+
+         scale = consdatastay->vals[0] / consdatadel->vals[0];
+         assert(scale != 0.0);
+
+         assert(consdatastay->nvars < 2 || SCIPisEQ(scip, consdatastay->vals[1], scale * consdatadel->vals[1]));
+
+         if( scale > 0.0 )
+         {
+            /* the coefficients of both constraints are parallel with a positive scale */
+            SCIPdebugMsg(scip, "aggregate linear constraints <%s> and <%s> with equal coefficients into single ranged row\n",
+               SCIPconsGetName(cons0), SCIPconsGetName(cons1));
+            SCIPdebugPrintCons(scip, cons0, NULL);
+            SCIPdebugPrintCons(scip, cons1, NULL);
+
+            lhs = MAX(scale * consdatadel->lhs, consdatastay->lhs);
+            rhs = MIN(scale * consdatadel->rhs, consdatastay->rhs);
+         }
+         else
+         {
+            /* the coefficients of both rows are negations */
+            SCIPdebugMsg(scip, "aggregate linear constraints <%s> and <%s> with negated coefficients into single ranged row\n",
+               SCIPconsGetName(cons0), SCIPconsGetName(cons1));
+            SCIPdebugPrintCons(scip, cons0, NULL);
+            SCIPdebugPrintCons(scip, cons1, NULL);
+
+            lhs = MAX(scale * consdatadel->rhs, consdatastay->lhs);
+            rhs = MIN(scale * consdatadel->lhs, consdatastay->rhs);
+         }
+
+         if( SCIPisFeasLT(scip, rhs, lhs) )
+         {
+            SCIPdebugMsg(scip, "aggregated linear constraint <%s> is infeasible\n", SCIPconsGetName(cons1));
+            *cutoff = TRUE;
+            break;
+         }
+
+         /* ensure that lhs <= rhs holds without tolerances as we only allow such rows to enter the LP */
+         if( lhs > rhs )
+         {
+            rhs = (lhs + rhs)/2;
+            lhs = rhs;
          }
 
          /* update lhs and rhs of consstay */
@@ -13508,8 +13509,9 @@ static
 SCIP_RETCODE presolStuffing(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linear constraint */
-   SCIP_Bool             singletonstuffing,  /**< should singleton variable stuffing be performed? */
-   SCIP_Bool             singlevarstuffing,  /**< should single variable stuffing be performed? */
+   SCIP_Bool             singletonstuffing,  /**< should stuffing of singleton continuous variables be performed? */
+   SCIP_Bool             singlevarstuffing,  /**< should single variable stuffing be performed, which tries to fulfill
+                                              *   constraints using the cheapest variable? */
    SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if a cutoff was found */
    int*                  nfixedvars,         /**< pointer to count the total number of fixed variables */
    int*                  nchgbds             /**< pointer to count the total number of tightened bounds */
@@ -13844,9 +13846,14 @@ SCIP_RETCODE presolStuffing(
     * about since we are setting them to the highest possible value. Also, they may be integer or binary, because the
     * computed ratio is still a lower bound on the change in the objective caused by reducing those variable to reach
     * constraint feasibility. On the other hand, uplocks on x_k from other constraint do no interfer with the method.
-    * With a slight adjustment, the procedure even works even for integral x_k. For this, we adjust the ratio by taking
-    * into account the integrality. If c_k * ceil((maxactivity - rhs)/val) / ((maxactivity - rhs)/val) is still a better
-    * ratio than that of all other constraints, the upper bound of x_k is decreased to ub_k - ceil(maxactivity - rhs).
+    * With a slight adjustment, the procedure even works for integral x_k. If (maxactivity - rhs)/val is integral,
+    * the variable gets an integral value in order to fulfill the constraint tightly, and we can just apply the procedure.
+    * If (maxactivity - rhs)/val is fractional, we need to check, if overfulfilling the constraint by setting x_k to
+    * ceil((maxactivity - rhs)/val) is still better than setting x_k to ceil((maxactivity - rhs)/val) - 1 and
+    * filling the remaining gap in the constraint with the next-best variable. For this, we check that
+    * c_k * ceil((maxactivity - rhs)/val) is still better than
+    * c_k * floor((maxactivity - rhs)/val) + c_j * ((maxactivity - rhs) - (floor((maxactivity - rhs)/val) * val))/a_j.
+    * In this case, the upper bound of x_k is decreased to ub_k - ceil(maxactivity - rhs).
     * If there are variables with a_i < 0 and c_i > 0, they are negated to obtain the above form, variables with same
     * sign of coefficients in constraint and objective prevent the use of this method.
     */
@@ -13961,13 +13968,19 @@ SCIP_RETCODE presolStuffing(
 
          if( val < 0 )
          {
-            if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+            assert(!SCIPisNegative(scip, obj));
+
+            /* the best variable is integer, and we need to overfulfill the constraint when using just the variable */
+            if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPisIntegral(scip, (maxactivity - rhs)/-val) )
             {
+               SCIP_Real bestvarfloor = SCIPfloor(scip, (maxactivity - rhs)/-val);
+               SCIP_Real activitydelta = (maxactivity - rhs) - (bestvarfloor * -val);
+               assert(SCIPisPositive(scip, activitydelta));
+
+               tryfixing = SCIPisLE(scip, obj, -activitydelta * secondbestratio);
+
                bounddelta = SCIPceil(scip, (maxactivity - rhs)/-val);
                assert(SCIPisPositive(scip, bounddelta));
-               assert(SCIPisNegative(scip, -bounddelta * obj / (maxactivity - rhs)));
-
-               tryfixing = SCIPisGE(scip, -bounddelta * obj / (maxactivity - rhs), secondbestratio);
             }
             else
                bounddelta = (maxactivity - rhs)/-val;
@@ -13992,13 +14005,19 @@ SCIP_RETCODE presolStuffing(
          }
          else
          {
-            if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+            assert(!SCIPisPositive(scip, obj));
+
+            /* the best variable is integer, and we need to overfulfill the constraint when using just the variable */
+            if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS  && !SCIPisIntegral(scip, (maxactivity - rhs)/val))
             {
+               SCIP_Real bestvarfloor = SCIPfloor(scip, (maxactivity - rhs)/val);
+               SCIP_Real activitydelta = (maxactivity - rhs) - (bestvarfloor * val);
+               assert(SCIPisPositive(scip, activitydelta));
+
+               tryfixing = SCIPisLE(scip, -obj, activitydelta * secondbestratio);
+
                bounddelta = SCIPceil(scip, (maxactivity - rhs)/val);
                assert(SCIPisPositive(scip, bounddelta));
-               assert(SCIPisNegative(scip, bounddelta * obj / (maxactivity - rhs)));
-
-               tryfixing = SCIPisGE(scip, bounddelta * obj / (maxactivity - rhs), secondbestratio);
             }
             else
                bounddelta = (maxactivity - rhs)/val;
@@ -16976,11 +16995,11 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
          &conshdlrdata->dualpresolving, TRUE, DEFAULT_DUALPRESOLVING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/singletonstuffing",
-         "should singleton variable stuffing be performed?",
+         "should stuffing of singleton continuous variables be performed?",
          &conshdlrdata->singletonstuffing, TRUE, DEFAULT_SINGLETONSTUFFING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/singlevarstuffing",
-         "should single variable stuffing be performed?",
+         "should single variable stuffing be performed, which tries to fulfill constraints using the cheapest variable?",
          &conshdlrdata->singlevarstuffing, TRUE, DEFAULT_SINGLEVARSTUFFING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/sortvars", "apply binaries sorting in decr. order of coeff abs value?",
@@ -17885,6 +17904,7 @@ SCIP_Real SCIPgetDualsolLinear(
    SCIP_CONSDATA* consdata;
 
    assert(cons != NULL);
+   assert(!SCIPconsIsOriginal(cons)); /* original constraints would always return 0 */
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -17911,6 +17931,7 @@ SCIP_Real SCIPgetDualfarkasLinear(
    SCIP_CONSDATA* consdata;
 
    assert(cons != NULL);
+   assert(!SCIPconsIsOriginal(cons)); /* original constraints would always return 0 */
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {

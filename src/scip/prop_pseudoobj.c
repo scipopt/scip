@@ -1590,10 +1590,10 @@ SCIP_RETCODE propdataInit(
          /* create temporary buffer */
          /* we store both lb and ub contributors in array contributors, and both could be nbinobjvars, we need twice that size */
          SCIP_CALL( SCIPallocBufferArray(scip, &contributors, 2 * nbinobjvars) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &collectedlbvars, nbinobjvars+1) );
-         BMSclearMemoryArray(collectedlbvars, nbinobjvars+1); /* @todo: use a SCIPallocCleanBufferArray instead? */
-         SCIP_CALL( SCIPallocBufferArray(scip, &collectedubvars, nbinobjvars+1) );
-         BMSclearMemoryArray(collectedubvars, nbinobjvars+1); /* @todo: use a SCIPallocCleanBufferArray instead? */
+         /* @todo: use SCIPallocCleanBufferArray instead? */
+         SCIP_CALL( SCIPallocClearBufferArray(scip, &collectedlbvars, nbinobjvars+1) );
+         /* @todo: use SCIPallocCleanBufferArray instead? */
+         SCIP_CALL( SCIPallocClearBufferArray(scip, &collectedubvars, nbinobjvars+1) );
 
          ncliques = SCIPgetNCliques(scip);
 
@@ -3233,7 +3233,7 @@ SCIP_RETCODE propagateLowerbound(
 #endif
 
    /* if the maximum pseudo objective activity is smaller than the lower bound the problem is infeasible */
-   if( SCIPisLT(scip, maxpseudoobjact, lowerbound) )
+   if( SCIPisDualfeasLT(scip, maxpseudoobjact, lowerbound) )
       cutoff = TRUE;
    else
    {

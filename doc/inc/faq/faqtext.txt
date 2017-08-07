@@ -3,28 +3,17 @@ SECTION: General Questions about SCIP
     LABEL:whatisscip
     ANSWER:
     <p>
-      SCIP is a constraint integer program solver. It can be used as a framework for <b>branch-cut-and-price</b>
-      and contains all necessary plugins to serve as a <b>standalone solver</b> for MIP, MINLP, and PBO.
+      SCIP is a solver for Mixed Integer Linear and Nonlinear Problems that allows for an easy integration of arbitrary constraints.
+      It can be used as a framework for <b>branch-cut-and-price</b>
+      and contains all necessary plugins to serve as a <b>standalone solver</b> for MIP and MINLP.
     </p>
     <ul>
       <li>You can use the <a href="http://scip.zib.de/#download">precompiled binaries</a>
-          to solve MIPs, MINLPs, or PBO problems. They can read
-
-        <ol>
-            <li>CIP - file format (own constraint based file format)</li>
-            <li><a href="http://people.sc.fsu.edu/~jburkardt/data/cnf/cnf.html">CNF - file format</a></li>
-            <li><a href="http://www.g12.cs.mu.oz.au/minizinc/downloads/doc-1.5/flatzinc-spec.pdf">FZN - file format</a></li>
-            <li><a href="http://publib.boulder.ibm.com/infocenter/cosinfoc/v12r3/topic/ilog.odms.cplex.help/Content/Optimization/Documentation/Optimization_Studio/_pubskel/ps_reffileformatscplex2159.html">(R)LP - file formats</a></li>
-            <li><a href="http://en.wikipedia.org/wiki/MPS_%28format%29">MPS - file format</a></li>
-            <li><a href="http://www.cril.univ-artois.fr/PB12/format.pdf">OPB/WBO - file formats</a></li>
-            <li><a href="http://www.coin-or.org/OS/OSiL.html">OSiL format for MINLP</a></li>
-            <li><a href="http://polip.zib.de/pipformat.php">PIP - file format</a></li>
-            <li>SOL - file format (solution reader, xml-solutions are also supported)</li>
-            <li><a href="http://zimpl.zib.de/download/zimpl.pdf">ZPL - file format</a></li>
-        </ol>
-        See also the page on <a href="PATHTODOC/group__FILEREADERS.LINKEXT">file readers</a>.
+          to solve MIPs and MINLPs. Learn more about the <a href="PATHTODOC/group__FILEREADERS.LINKEXT">file formats supported by SCIP</a>,
+          and get <a href="PATHTODOC/WHATPROBLEMS.LINKEXT">an overview</a>
+          of the supported problem classes and additional recommendations for solving them.
       </li>
-      <li>You can use SCIP as a subroutine for solving MIPs and more general constraint integer programs from your own source code.</li>
+      <li>You can use SCIP as a subroutine for solving MINLPs and more general constraint integer programs from your own source code.</li>
       <li>You can use SCIP as a framework in which you implement your own plugins.</li>
       <li>You can use SCIP in any combination of the three purposes above.</li>
     </ul>
@@ -36,9 +25,9 @@ SECTION: General Questions about SCIP
     LABEL:whenusescip
     ANSWER:
     <p>
-      If you are either looking for a fast non-commercial MIP-solver or for a
+      If you are either looking for a fast non-commercial MIP/MINLP-solver or for a
       branch-cut-and-price-framework in which you can directly implement your own methods
-      &mdash; which can even be for more general purposes than MIP.
+      and allows full control of the solving process.
     </p>
 
     QUESTION: I heard something about licenses. Do I have to pay for using SCIP?
@@ -81,13 +70,13 @@ SECTION: General Questions about SCIP
       LP-solvers currently supported by SCIP are:
     </p>
     <ul>
-      <li><a href="https://projects.coin-or.org/Clp/">CLP</a></li>
-      <li><a href="http://www.fico.com/en/Products/DMTools/Pages/FICO-Xpress-Optimization-Suite.aspx">FICO XPress</a></li>
-      <li><a href="http://www.gurobi.com/">Gurobi</a> (interface is in beta stage)</li>
-      <li><a href="http://www-01.ibm.com/software/integration/optimization/cplex-optimizer/">ILOG CPLEX</a></li>
-      <li><a href="http://www.mosek.com/">Mosek</a></li>
-      <li><a href="http://www2.isye.gatech.edu/~wcook/qsopt/">QSopt</a></li>
       <li><a href="http://soplex.zib.de/">SoPlex</a></li>
+      <li><a href="http://www-01.ibm.com/software/integration/optimization/cplex-optimizer/">IBM ILOG CPLEX</a></li>
+      <li><a href="http://www.fico.com/en/Products/DMTools/Pages/FICO-Xpress-Optimization-Suite.aspx">FICO XPress</a></li>
+      <li><a href="http://www.gurobi.com/">Gurobi</a> (interface is in beta stage, version at least 7.0.2 required)</li>
+      <li><a href="https://projects.coin-or.org/Clp/">CLP</a> (interface currently sometimes produces wrong results)</li>
+      <li><a href="http://www.mosek.com/">Mosek</a> (experimental)</li>
+      <li><a href="http://www2.isye.gatech.edu/~wcook/qsopt/">QSopt</a> (experimental)</li>
     </ul>
     <p>
       We also provide some <a href="http://scip.zib.de/#download">precompiled binaries</a>. Besides that,
@@ -97,7 +86,7 @@ SECTION: General Questions about SCIP
     </p>
     <p>
       If you want to use SCIP for mixed integer nonlinear programming, you might want to use an underlying NLP solver (e.g.,
-      <a href="https://projects.coin-or.org/Ipopt">Ipopt</a>) and an expression interpreter (e.g., <a href="http://www.coin-or.org/CppAD/">CppAD</a>).
+      <a href="https://projects.coin-or.org/Ipopt">Ipopt</a>). SCIP already comes with the CppAD expression interpreter (e.g., <a href="http://www.coin-or.org/CppAD/">CppAD</a>) as part of the source code.
     </p>
 
     QUESTION: I have installation problems. What can I do?
@@ -150,6 +139,7 @@ SECTION: General Questions about SCIP
         <li> <a href="PATHTODOC/CHG6.LINKEXT">Interface changes between SCIP 2.1 and SCIP 3.0</a></li>
         <li> <a href="PATHTODOC/CHG7.LINKEXT">Interface changes between SCIP 3.0 and SCIP 3.1</a></li>
         <li> <a href="PATHTODOC/CHG8.LINKEXT">Interface changes between SCIP 3.1 and SCIP 3.2</a></li>
+        <li> <a href="PATHTODOC/CHG9.LINKEXT">Interface changes between SCIP 3.2 and SCIP 4.0</a></li>
     </ul>
 
     QUESTION: How can I debug in SCIP?
@@ -167,9 +157,8 @@ SECTION: General Questions about SCIP
     ANSWER:
     <p>
        <a href="#howtodebug">See above.</a> Often, the asserts that show up in debug mode already help to clarify misunderstandings
-       and suggest fixes, if you were calling SCIP functions in an unexpected manner. If you, however, have the impression
-       that there is a bug in SCIP, <a href="https://www.edom.mi.uni-erlangen.de/cgi/scipweb/submit.pl">send us a bug report</a>
-       and include a log file and ideally a backtrace from a debugger.
+       and suggest fixes, if you were calling SCIP functions in an unexpected manner. For sending bug reports,
+       please see our <a href="scip.zib.de/#contact">Contact information</a> from which you can directly access an online form for reporting bugs.
     </p>
 
     QUESTION: I would like to check whether some functionality is implemented in SCIP.
@@ -179,10 +168,9 @@ SECTION: General Questions about SCIP
     <p>
       For an explanation of the naming see the
       <a href="PATHTODOC/CODE.LINKEXT">coding style guidelines</a>. <br>
-      The methods you might want to use should normally be found in scip.h or in pub_*.h,
-      see also <a href="PATHTODOC/DOC.LINKEXT">here</a>.
-      In the doxygen documentation of <a href="PATHTODOC/scip_8h.LINKEXT">scip.h</a>,
-      the methods are ordered by topics.
+      The <a href="PATHTODOC/modules.LINKEXT">Public C-API</a> of SCIP is separated
+      into a Core API provided by the header scip.h and a default plugin API provided
+      by scipdefplugins.h. The large API is structured into topics for a better overview.
     </p>
 
     QUESTION: Can I use SCIP as a pure CP/SAT Solver?
@@ -201,13 +189,13 @@ SECTION: General Questions about SCIP
     <p>
         Since LPs are only special types of MIPs and CIPs, the principal answer is yes. If you feed a pure LP to SCIP, it
         will first apply presolving and then hand this presolved problem to the underlying LP solver. If the LP is solved to
-        optimality, you can query the optimal solution values as always.
+        optimality, you can query the optimal solution values as always. You can also access the values of an optimal dual
+        solution by using <code>display dualsolution</code>.
     </p>
     <p>
-        However, there are certain limitations to this: Dual multipliers and reduced costs are not accessible. If the LP
-        turns out to be infeasible, you cannot obtain the Farkas proof. Strong LP duality theory does
-        not apply to MIP or CIP and there is no special functionality implemented in SCIP for the case
-        that the solved problem is an LP.
+        However, there are certain limitations to this: Reduced costs are not accessible. If the LP
+        turns out to be infeasible, you cannot currently obtain a Farkas proof. And recall that this approach is only
+        meaningful if the problem is an LP (no integer variables, only linear constraints).
     </p>
     <p>
         Hence, if you need more, "LP specific", information than the primal solution, you are better off using an LP-Solver
@@ -245,16 +233,18 @@ SECTION: General Questions about SCIP
     LABEL:staticvsshared
     ANSWER:
     <p>
-        When SCIP builds the binary it needs to link with the corresponding libraries of the LP-solver. There are usually
-        two ways to distribute a library. In the first (.a) the library is linked <em>statically</em> to SCIP; this means
-        that all of its information is packed into the binary. In the second way (.so) the library is a <em>shared</em>
-        library. In this case, the code of the library is not inserted into the binary itself, but is loaded at
-        runtime. This has the advantage that the binaries are smaller, but it comes at the cost that you have to make
-        sure that the library is found at runtime (for most systems it suffices to put the path of the library into the
-        <code>LD_LIBRARY_PATH</code> variable).<br/><br/> <em>Note:</em> Depending on the system shared or static libraries
-        are standard. If both links are present in the <code>lib</code> directory, the linker chooses which version to take
-        (on newer Linux systems this is usually the shared version). If you do not want this to happen you have to delete
-        the link that is not intended.
+        When SCIP builds the binary, it needs to link with the corresponding libraries, i.e., its own libraries and
+        those of an LP-solver. There are usually two ways to distribute a library (on UNIX systems). In the first
+        (with suffix ".a"), the library is linked <em>statically</em> to SCIP; this means that all information is packed
+        into the binary. In the second way (with suffix ".so"), the library is a <em>shared</em> library. In this case,
+        the code of the library is not inserted into the binary itself, but is loaded at runtime. This has the advantage
+        that the binaries are smaller, but it comes at the cost that you have to make sure that the library is found at
+        runtime. (SCIP adds <code>rpath</code> information containing the path to the shared libraries to the binary;
+        this usually allows to find these libraries at runtime. If this does not work, for most systems it suffices to
+        put the path of the library into the <code>LD_LIBRARY_PATH</code> environment variable).<br/><br/>
+        There are compiler-dependent preferences which version should be included if both a static and a shared version
+        of the same library are available. In order to avoid confusion, SCIP separates shared from static libraries into
+        the directories "lib/static" and "lib/shared". Note that some LP-solvers are only shipped with a shared version.
     </p>
 
     QUESTION: Can I compile SCIP as a shared library?
@@ -263,16 +253,16 @@ SECTION: General Questions about SCIP
     <p>
         You can use the <code>SHARED=true</code> option
         when making SCIP. This will generate the libraries of SCIP in shared format. The binary then
-        also uses this form. Note that the path to the <code>lib</code> directory of SCIP is used to
-        locate the libraries. If you want to move the libraries, you might to set the
+        also uses this form. Note that the path to the <code>lib/shared</code> directory of SCIP is used to
+        locate the libraries. If you want to move the libraries, you might need to set the
         <code>LD_LIBRARY_PATH</code> environment variable to include the new path.
 
         <!--
             If you have a different system or compiler (which supports shared libraries) you might try to
-            copy the file <code>make.linux.x86.gnu.opt-shared</code> and modify it according to your
+            copy the file <code>make/make.linux.x86.gnu.opt-shared</code> and modify it according to your
             needs (see also <code><a href="PATHTODOC/MAKE.LINKEXT">Makefiles</a></code>).
         -->
-       If you are using your own building system: The "magic" changes are the <code>-FPIC</code>
+       If you are using your own build system: The "magic" changes are the <code>-fPIC</code>
        compiler/linker option and the <code>-Wl,-rpath</code> option.
     </p>
 
@@ -308,6 +298,26 @@ SECTION: General Questions about SCIP
      </p>
         For users of the callable library, the corresponding parameters are called "visual/bakfilename", "visual/vbcfilename", and
         "visual/realtime".
+    </p>
+
+
+    QUESTION: SCIP has found decent primal and dual bounds but still reports the gap as "Infinity". Why?
+    LABEL:gapdefinition
+    ANSWER:
+    <p>
+        By default, the SCIP output contains the display column "gap", which is computed as follows:
+        If primal and dual bound have opposite signs, the gap is "Infinity".
+        If primal and dual bound have the same sign, the gap is
+        <code>|primalbound - dualbound|/min(|primalbound|,|dualbound|)| </code> (see SCIPgetGap()).
+        This definition has the advantage, that the gap decreases monotonously during the solving process.
+    </p>
+    <p>
+        An alternative definition of the gap is
+        <code>(dual bound - primal bound) / abs(primal bound)</code>.
+        Using this definiton, a finite gap is computed as soon as a dual and primal bound have been found.
+        However, the gap may increase during the solving process, if both bounds have opposite signs in the beginning.
+        In SCIP, this definition can be included in the output by enabling the display column "primalgap":
+        <code>display/primalgap/active = 2</code>
     </p>
 
 SECTION: Using SCIP as a standalone solver
@@ -473,10 +483,8 @@ SECTION: Using SCIP as a standalone solver
     LABEL:howtoinputminlp
     ANSWER:
     <p>
-        Mixed-integer nonlinear constrained programs can be input via the reader for OSiL and ZIMPL files and the AMPL interface.
-        An interface to the modeling language GAMS is available in the <a href="https://projects.coin-or.org/GAMSlinks">COIN-OR/GAMSlinks</a> project.
-        Further, mixed-integer <em>polynomially</em> constrained programs can be input via the readers for PIP files.
-        Finally, the readers for *.mps and *.lp files support the CPLEX extensions for <em>quadratic</em> constraints and objective.
+        Please consult <a href="PATHTODOC/WHATPROBLEMS.LINKEXT">this overview</a> on the problem classes
+        supported by SCIP and the recommendations and links for MINLPs therein.
     </p>
 
 
@@ -485,6 +493,11 @@ SECTION: Using SCIP included in another source code
     QUESTION: How do I construct a problem instance in SCIP?
     LABEL:howtocreateproblem
     ANSWER:
+    <p>
+        For starters, SCIP comes with complete examples in source code that illustrate the problem creation process.
+        Please refer to the examples of the Callable Library section in the <a href="PATHTODOC/EXAMPLES.LINKEXT">
+        Example Documentation</a> of SCIP.
+    </p>
     <p>
         First you have to create a SCIP object via <code>SCIPcreate()</code>, then you start to build the problem via
         <code>SCIPcreateProb()</code>.  Then you create variables via <code>SCIPcreateVar()</code> and add them to the
@@ -499,7 +512,7 @@ SECTION: Using SCIP included in another source code
     <p>
         Make sure to also call <code>SCIPreleaseVar()</code> if you do not need the variable pointer anymore.  For an
         explanation of creating and releasing objects, please see the <a
-        href="PATHTODOC/OBJ.LINKEXT">doxygen documentation.</a>.
+        href="PATHTODOC/OBJ.LINKEXT">notes on releasing objects</a>.
     </p>
 
     QUESTION: I already know a solution in advance, which I want to pass to SCIP.
@@ -508,8 +521,9 @@ SECTION: Using SCIP included in another source code
     ANSWER:
     <p>
         First you have to build your problem (at least all variables have to
-        exist), then there are two options:
+        exist), then there are several different ways:
     </p>
+    <p>
         <ul>
             <li>
                 You have the solution in file which fits the solution format of
@@ -528,7 +542,22 @@ SECTION: Using SCIP included in another source code
                 tries to add the solution to the candidate store and
                 free the solution afterwards.
             </li>
+            <li>
+                Since SCIP 4.0.0, there is the possibility to create partial solutions
+                via <code>SCIPcreatePartialSol()</code>. A solution is partial if
+                not all solution values are known before the solve.
+                After creation, all solution values are unknown unless explicitly
+                given via <code>SCIPsetSolVal()</code>.
+                In contrast, solutions created via <code>SCIPcreateSol()</code> implicitly
+                assume a solution value of zero.
+                A typical example for problem involving integer and continuous variables
+                is a tentative assignment for all integer variables so that values for the continuous
+                variables should be determined through the solver.
+                After starting the solving process, SCIP will try to heuristically complete
+                all partial solutions that were added during problem creation.
+            </li>
         </ul>
+    </p>
 
     QUESTION: What operational stages of SCIP are there and are they important for me?
     LABEL:scipstages

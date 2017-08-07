@@ -1,4 +1,4 @@
-'''
+helptext='''
 Created on 06.01.2014
 
 this parser generates php-readable data out of faqtext.txt.
@@ -40,14 +40,15 @@ The parser automatically interpretes this.
 import re
 import sys
 
+import argparse
+parser = argparse.ArgumentParser(epilog=helptext)
+parser.add_argument('--faqtextfile', type=str, default='faqtext.txt', help='faq text file')
+parser.add_argument('--linkext', type=str, default='shtml', help='file extension for internal links')
+
 sectiontag = "SECTION:"
 questiontag = "QUESTION:"
 answertag = "ANSWER:"
 labeltag = "LABEL:"
-
-faqtext = sys.argv[1]+"/faqtext.txt"
-submodule = __import__(sys.argv[2])
-substitutions = submodule.substitutions
 
 def formatitem((question, answer, label)):
    '''
@@ -90,7 +91,10 @@ if __name__ == '__main__':
    items = []
    mode = None
    currquestion = curranswer = currlabel = None
-
+   args = parser.parse_args()
+   substitutions = {"LINKEXT":args.linkext,
+                    "PATHTODOC": "."}
+   faqtext = args.faqtextfile
    # open the faqtext file and iterate over all lines. change mode depending on last seen tag
    with open(faqtext, 'r') as currentfile:
       for line in currentfile:

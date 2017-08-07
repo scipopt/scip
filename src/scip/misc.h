@@ -324,6 +324,31 @@ int SCIPptrarrayGetMaxIdx(
    SCIP_PTRARRAY*        ptrarray            /**< dynamic ptr array */
    );
 
+/** SCIP digraph functions
+ *
+ * internal digraph functions (see \ref DigraphMethods for public digraph methods)
+ */
+
+/** creates directed graph structure */
+extern
+SCIP_RETCODE SCIPdigraphCreate(
+   SCIP_DIGRAPH**        digraph,            /**< pointer to store the created directed graph */
+   BMS_BLKMEM*           blkmem,             /**< block memory to store the data */
+   int                   nnodes              /**< number of nodes */
+   );
+
+/** copies directed graph structure
+ *
+ *  @note The data in nodedata is copied verbatim. This possibly has to be adapted by the user.
+ */
+extern
+SCIP_RETCODE SCIPdigraphCopy(
+   SCIP_DIGRAPH**        targetdigraph,      /**< pointer to store the copied directed graph */
+   SCIP_DIGRAPH*         sourcedigraph,      /**< source directed graph */
+   BMS_BLKMEM*           targetblkmem        /**< block memory to store the target block memory, or NULL to use the same
+                                              *  the same block memory as used for the \p sourcedigraph */
+   );
+
 /*
  * Additional math functions
  */
@@ -335,6 +360,33 @@ int SCIPptrarrayGetMaxIdx(
 extern
 SCIP_Real SCIPnegateReal(
    SCIP_Real             x                   /**< value to negate */
+   );
+
+/** internal random number generator methods
+ *
+ * see \ref RandomNumbers for public random number generator methods
+ */
+
+/** creates and initializes a random number generator */
+extern
+SCIP_RETCODE SCIPrandomCreate(
+   SCIP_RANDNUMGEN**     randnumgen,         /**< random number generator */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   unsigned int          initialseed         /**< initial random seed */
+   );
+
+/** frees a random number generator */
+extern
+void SCIPrandomFree(
+   SCIP_RANDNUMGEN**     randnumgen,         /**< random number generator */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   );
+
+/** initializes a random number generator with a given start seed */
+extern
+void SCIPrandomSetSeed(
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
+   unsigned int          initseed            /**< initial random seed */
    );
 
 #ifdef __cplusplus

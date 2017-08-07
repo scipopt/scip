@@ -305,7 +305,7 @@ void updateNActiveConts(
       lb = bestcontlbs[probindex - nintvars];
       ub = bestcontubs[probindex - nintvars];
 
-      if( SCIPisLT(scip, lb, primsol) && SCIPisLT(scip, primsol, ub) )
+      if( !SCIPisInfinity(scip, -lb) && SCIPisLT(scip, lb, primsol) && !SCIPisInfinity(scip, ub) &&  SCIPisLT(scip, primsol, ub) )
          (*nactiveconts) += delta;
    }
 }

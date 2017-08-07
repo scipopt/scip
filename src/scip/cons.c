@@ -3090,7 +3090,6 @@ SCIP_RETCODE SCIPconshdlrEnforceRelaxSol(
    SCIP_Bool lastinfeasible;
 
    assert(conshdlr != NULL);
-   assert(conshdlr->consenforelax != NULL);
    assert(conshdlr->nusefulsepaconss <= conshdlr->nsepaconss);
    assert(conshdlr->nusefulenfoconss <= conshdlr->nenfoconss);
    assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
@@ -3165,6 +3164,8 @@ SCIP_RETCODE SCIPconshdlrEnforceRelaxSol(
       SCIP_Longint oldnprobdomchgs;
       int oldncuts;
       int oldnactiveconss;
+
+      assert(conshdlr->consenforelax != NULL);
 
       SCIPdebugMessage("enforcing constraints %d to %d of %d constraints of handler <%s> (%s relaxation solution)\n",
          firstcons, firstcons + nconss - 1, conshdlr->nenfoconss, conshdlr->name, relaxchanged ? "new" : "old");
@@ -7943,6 +7944,16 @@ SCIP_Bool SCIPconsIsActive(
    assert(cons != NULL);
 
    return cons->updateactivate || (cons->active && !cons->updatedeactivate);
+}
+
+/** returns TRUE iff constraint is active in the current node */
+SCIP_Bool SCIPconsIsUpdatedeactivate(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->updatedeactivate;
 }
 
 /** returns the depth in the tree at which the constraint is valid; returns INT_MAX, if the constraint is local

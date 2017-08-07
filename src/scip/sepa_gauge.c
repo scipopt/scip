@@ -196,8 +196,8 @@ SCIP_RETCODE computeInteriorPoint(
    nvars = SCIPgetNVars(scip);
    SCIP_CALL( SCIPnlpiCreateProblem(nlpi, &nlpiprob, "gauge-interiorpoint-nlp") );
    SCIP_CALL( SCIPhashmapCreate(&var2nlpiidx, SCIPblkmem(scip), nvars) );
-   SCIP_CALL( SCIPcreateConvexNlp(scip, nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip), nlpiprob, var2nlpiidx,
-            NULL, SCIPgetCutoffbound(scip), FALSE) );
+   SCIP_CALL( SCIPcreateNlpiProb(scip, nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip), nlpiprob, var2nlpiidx,
+            NULL, SCIPgetCutoffbound(scip), FALSE, TRUE) );
 
    /* add objective variable; the problem is \min t, s.t. g(x) <= t, l(x) <= 0, where g are nonlinear and l linear */
    objvaridx = nvars;
@@ -237,7 +237,7 @@ SCIP_RETCODE computeInteriorPoint(
    }
 
    /* add linear rows */
-   SCIP_CALL( SCIPaddConvexNlpRows(scip, nlpi, nlpiprob, var2nlpiidx, SCIPgetLPRows(scip), SCIPgetNLPRows(scip)) );
+   SCIP_CALL( SCIPaddNlpiProbRows(scip, nlpi, nlpiprob, var2nlpiidx, SCIPgetLPRows(scip), SCIPgetNLPRows(scip)) );
 
    /* set parameters in nlpi; time and iterations limit, tolerance, verbosity; for time limit, get time limit of scip;
     * if scip doesn't have much time left, don't run separator. otherwise, timelimit is the minimum between whats left
@@ -261,6 +261,7 @@ SCIP_RETCODE computeInteriorPoint(
    iterlimit = sepadata->nlpiterlimit > 0 ? sepadata->nlpiterlimit : INT_MAX;
    SCIP_CALL( SCIPnlpiSetIntPar(nlpi, nlpiprob, SCIP_NLPPAR_ITLIM, iterlimit) );
    SCIP_CALL( SCIPnlpiSetRealPar(nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, NLPFEASFAC * SCIPfeastol(scip)) );
+   SCIP_CALL( SCIPnlpiSetRealPar(nlpi, nlpiprob, SCIP_NLPPAR_RELOBJTOL, MAX(SCIPfeastol(scip), SCIPdualfeastol(scip))) );  /* TODO maybe this tolerance could be relaxed, as the point doesn't need to be the perfect center of the interior */
    SCIP_CALL( SCIPnlpiSetIntPar(nlpi, nlpiprob, SCIP_NLPPAR_VERBLEVEL, NLPVERBOSITY) );
 
    /* compute interior point */
@@ -288,7 +289,7 @@ SCIP_RETCODE computeInteriorPoint(
    {
       SCIP_Real* nlpisol;
 
-      SCIP_CALL( SCIPnlpiGetSolution(nlpi, nlpiprob, &nlpisol, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPnlpiGetSolution(nlpi, nlpiprob, &nlpisol, NULL, NULL, NULL, NULL) );
 
       assert(nlpisol != NULL);
       SCIPdebugMsg(scip, "NLP solved: sol found has objvalue = %g\n", nlpisol[objvaridx]);
@@ -934,7 +935,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGauge)
    /* do not run if SCIP has no way of solving nonlinear problems */
    if( SCIPgetNNlpis(scip) == 0 )
    {
-      SCIPdebugMsg(scip, "SCIP can't solve nonlinear problems without a nlpi\n");
+      SCIPdebugMsg(scip, "Skip gauge separator: no nlpi and SCIP can't solve nonlinear problems without a nlpi\n");
       return SCIP_OKAY;
    }
 

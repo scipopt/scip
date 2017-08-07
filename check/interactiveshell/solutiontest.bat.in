@@ -1,0 +1,8 @@
+read ${PROJECT_SOURCE_DIR}/check/${path}
+optimize
+write solution temp/${basename}.sol
+read ${PROJECT_SOURCE_DIR}/check/${path}
+read temp/${basename}.sol
+optimize
+validatesolve ${optval} ${optval}
+quit

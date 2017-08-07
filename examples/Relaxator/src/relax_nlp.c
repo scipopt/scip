@@ -98,9 +98,9 @@ SCIP_DECL_RELAXEXEC(relaxExecNlp)
    SCIP_CALL( SCIPnlpiCreateProblem(nlpi, &nlpiprob, "relax-NLP") );
    SCIP_CALL( SCIPhashmapCreate(&var2idx, SCIPblkmem(scip), SCIPgetNVars(scip)) );
 
-   SCIP_CALL( SCIPcreateConvexNlp(scip, nlpi, nlrows, nnlrows, nlpiprob, var2idx, NULL, SCIPgetCutoffbound(scip),
-         TRUE) );
-   SCIP_CALL( SCIPaddConvexNlpRows(scip, nlpi, nlpiprob, var2idx, SCIPgetLPRows(scip), SCIPgetNLPRows(scip)) );
+   SCIP_CALL( SCIPcreateNlpiProb(scip, nlpi, nlrows, nnlrows, nlpiprob, var2idx, NULL, SCIPgetCutoffbound(scip),
+         TRUE, TRUE) );
+   SCIP_CALL( SCIPaddNlpiProbRows(scip, nlpi, nlpiprob, var2idx, SCIPgetLPRows(scip), SCIPgetNLPRows(scip)) );
 
    /* set working limits */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
@@ -134,7 +134,7 @@ SCIP_DECL_RELAXEXEC(relaxExecNlp)
       vars = SCIPgetVars(scip);
       nvars = SCIPgetNVars(scip);
 
-      SCIP_CALL( SCIPnlpiGetSolution(nlpi, nlpiprob, &primal, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPnlpiGetSolution(nlpi, nlpiprob, &primal, NULL, NULL, NULL, NULL) );
 
       for( i = 0; i < nvars; ++i )
       {

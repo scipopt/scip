@@ -81,6 +81,10 @@
 #ifndef SOPLEX_SUBVERSION
 #define SOPLEX_SUBVERSION 0
 #endif
+/* define API version for versions <= 3.0.0 */
+#ifndef SOPLEX_APIVERSION
+#define SOPLEX_APIVERSION 0
+#endif
 
 /* check version */
 #if (SOPLEX_VERSION < 200 || (SOPLEX_VERSION == 200 && SOPLEX_SUBVERSION < 2) || (SOPLEX_VERSION > 200 && SOPLEX_VERSION < 201))
@@ -94,6 +98,13 @@
 #ifdef ___DEBUG
 #define SCIP_DEBUG
 #undef ___DEBUG
+#endif
+
+/* define snprintf when using a too old MSVC version */
+#if defined(_MSC_VER) && _MSC_VER < 1900
+#ifndef snprintf
+#define snprintf _snprintf
+#endif
 #endif
 
 #define SOPLEX_VERBLEVEL                5    /**< verbosity level for LPINFO */
@@ -2447,9 +2458,7 @@ SCIP_RETCODE lpiStrongbranch(
       *iter = 0;
 
    /* set the algorithm type to use dual simplex */
-
    (void) spx->setIntParam(SoPlex::ALGORITHM, SoPlex::ALGORITHM_DUAL);
-
 
    /* down branch */
    newub = EPSCEIL(psol-1.0, lpi->spx->feastol());
@@ -2623,7 +2632,7 @@ SCIP_RETCODE lpiStrongbranch(
 
    if( error )
    {
-      SCIPdebugMessage("SCIPlpiStrongbranch() returned SoPlex status %d\n", int(status));
+      SCIPdebugMessage("SCIPlpiStrongbranch() returned SoPlex status %d\n", int(status));  /*lint !e644*/
       return SCIP_LPERROR;
    }
 
@@ -4084,6 +4093,11 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       *ival = (int) lpi->spx->randomSeed();
       break;
 #endif
+#if SOPLEX_APIVERSION >= 1
+   case SCIP_LPPAR_REFACTOR:
+      *ival = (int) lpi->spx->intParam(SoPlex::FACTOR_UPDATE_MAX);
+      break;
+#endif
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
@@ -4177,6 +4191,13 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       (void) lpi->spx->setIntParam(SoPlex::SOLUTION_POLISHING, ival);
       break;
 #endif
+#if SOPLEX_APIVERSION >= 1
+   case SCIP_LPPAR_REFACTOR:
+      assert(ival >= 0);
+      (void) lpi->spx->setIntParam(SoPlex::FACTOR_UPDATE_MAX, ival);
+      break;
+#endif
+
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
