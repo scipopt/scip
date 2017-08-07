@@ -710,6 +710,11 @@ set(xmlheaders
     xml/xml.h
 )
 
+# all source files should be compiled with a c++ compiler
+if(CXXONLY)
+    set_source_files_properties(${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${tpisources} PROPERTIES LANGUAGE CXX)
+endif()
+
 add_library(libobjscip EXCLUDE_FROM_ALL ${objscipsources})
 setLibProperties(libobjscip "objscip")
 

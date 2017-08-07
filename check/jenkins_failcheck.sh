@@ -1,8 +1,9 @@
 #!/bin/bash
 #
 # This script uploads and checks for fails in a SCIP run.
-# Sends an email if errors are detected.
-# Note: TESTSET, GITHAS, etc are read from the environment, see
+# Sends an email if errors are detected. Is not meant to be use directly,
+# but to be called by jenkins_check_results.sh.
+# Note: TESTSET, GITHASH, etc are read from the environment, see
 # jenkins_check_results.sh
 
 sleep 5
