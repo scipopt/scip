@@ -12257,7 +12257,7 @@ SCIP_LPSOLSTAT SCIPgetLPSolstat(
 
 /** returns whether the current LP solution passed the primal feasibility check
  *
- *  @return the solution status of current LP.
+ *  @returns whether the current LP solution passed the primal feasibility check.
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
@@ -12271,7 +12271,7 @@ SCIP_LPSOLSTAT SCIPisLPPrimalReliable(
 
 /** returns whether the current LP solution passed the dual feasibility check
  *
- *  @return the solution status of current LP.
+ *  @returns whether the current LP solution passed the dual feasibility check.
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING

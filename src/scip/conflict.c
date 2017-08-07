@@ -6763,9 +6763,9 @@ SCIP_RETCODE runBoundHeuristic(
          {
             lp->solved = FALSE;
             lp->primalfeasible = FALSE;
-            lp->primalreliable = FALSE;
+            lp->primalchecked = FALSE;
             lp->dualfeasible = FALSE;
-            lp->dualreliable = FALSE;
+            lp->dualchecked = FALSE;
             lp->lpobjval = SCIP_INVALID;
             lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
          }
@@ -7274,9 +7274,9 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
    storedsolvals.lpsolstat = lp->lpsolstat;
    storedsolvals.lpobjval = lp->lpobjval;
    storedsolvals.primalfeasible = lp->primalfeasible;
-   storedsolvals.primalreliable = lp->primalreliable;
+   storedsolvals.primalchecked = lp->primalchecked;
    storedsolvals.dualfeasible = lp->dualfeasible;
-   storedsolvals.dualreliable = lp->dualreliable;
+   storedsolvals.dualchecked = lp->dualchecked;
    storedsolvals.solisbasic = lp->solisbasic;
    storedsolvals.lpissolved = lp->solved;
 
@@ -7332,9 +7332,9 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
       lp->lpsolstat = storedsolvals.lpsolstat;
       lp->lpobjval = storedsolvals.lpobjval;
       lp->primalfeasible = storedsolvals.primalfeasible;
-      lp->primalreliable = storedsolvals.primalreliable;
+      lp->primalchecked = storedsolvals.primalchecked;
       lp->dualfeasible = storedsolvals.dualfeasible;
-      lp->dualreliable = storedsolvals.dualreliable;
+      lp->dualchecked = storedsolvals.dualchecked;
       lp->solisbasic = storedsolvals.solisbasic;
       lp->solved = storedsolvals.lpissolved;
 

@@ -355,9 +355,9 @@ SCIP_RETCODE lpStoreSolVals(
    storedsolvals->lpsolstat = lp->lpsolstat;
    storedsolvals->lpobjval = lp->lpobjval;
    storedsolvals->primalfeasible = lp->primalfeasible;
-   storedsolvals->primalreliable = lp->primalreliable;
+   storedsolvals->primalchecked = lp->primalchecked;
    storedsolvals->dualfeasible = lp->dualfeasible;
-   storedsolvals->dualreliable = lp->dualreliable;
+   storedsolvals->dualchecked = lp->dualchecked;
    storedsolvals->solisbasic = lp->solisbasic;
    storedsolvals->lpissolved = lp->solved;
 
@@ -387,9 +387,9 @@ SCIP_RETCODE lpRestoreSolVals(
       lp->lpsolstat = storedsolvals->lpsolstat;
       lp->lpobjval = storedsolvals->lpobjval;
       lp->primalfeasible = storedsolvals->primalfeasible;
-      lp->primalreliable = storedsolvals->primalreliable;
+      lp->primalchecked = storedsolvals->primalchecked;
       lp->dualfeasible = storedsolvals->dualfeasible;
-      lp->dualreliable = storedsolvals->dualreliable;
+      lp->dualchecked = storedsolvals->dualchecked;
       lp->solisbasic = storedsolvals->solisbasic;
 
       /* solution values are stored only for LPs solved to optimality or unboundedness */
@@ -410,9 +410,9 @@ SCIP_RETCODE lpRestoreSolVals(
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
       lp->lpobjval = SCIP_INVALID;
       lp->primalfeasible = FALSE;
-      lp->primalreliable = FALSE;
+      lp->primalchecked = FALSE;
       lp->dualfeasible = FALSE;
-      lp->dualreliable = FALSE;
+      lp->dualchecked = FALSE;
       lp->solisbasic = FALSE;
       lp->validfarkaslp = -1;
    }
@@ -2631,7 +2631,7 @@ SCIP_RETCODE lpSetUobjlim(
          /* mark the current solution invalid */
          lp->solved = FALSE;
          lp->primalfeasible = FALSE;
-         lp->primalreliable = FALSE;
+         lp->primalchecked = FALSE;
          lp->lpobjval = SCIP_INVALID;
          lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
          lp->lpiuobjlim = uobjlim;
@@ -2665,7 +2665,7 @@ SCIP_RETCODE lpSetFeastol(
             /* mark the current solution invalid */
             lp->solved = FALSE;
             lp->primalfeasible = FALSE;
-            lp->primalreliable = FALSE;
+            lp->primalchecked = FALSE;
             lp->lpobjval = SCIP_INVALID;
             lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
          }
@@ -2702,7 +2702,7 @@ SCIP_RETCODE lpSetDualfeastol(
             /* mark the current solution invalid */
             lp->solved = FALSE;
             lp->dualfeasible = FALSE;
-            lp->dualreliable = FALSE;
+            lp->dualchecked = FALSE;
             lp->lpobjval = SCIP_INVALID;
             lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
          }
@@ -2740,7 +2740,7 @@ SCIP_RETCODE lpSetBarrierconvtol(
             /* mark the current solution invalid */
             lp->solved = FALSE;
             lp->dualfeasible = FALSE;
-            lp->dualreliable = FALSE;
+            lp->dualchecked = FALSE;
             lp->lpobjval = SCIP_INVALID;
             lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
          }
@@ -7698,7 +7698,7 @@ SCIP_RETCODE lpFlushDelCols(
       /* mark the LP unsolved */
       lp->solved = FALSE;
       lp->primalfeasible = FALSE;
-      lp->primalreliable = FALSE;
+      lp->primalchecked = FALSE;
       lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
@@ -7896,7 +7896,7 @@ SCIP_RETCODE lpFlushAddCols(
    /* mark the LP unsolved */
    lp->solved = FALSE;
    lp->dualfeasible = FALSE;
-   lp->dualreliable = FALSE;
+   lp->dualchecked = FALSE;
    lp->lpobjval = SCIP_INVALID;
    lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
 
@@ -7959,7 +7959,7 @@ SCIP_RETCODE lpFlushDelRows(
       /* mark the LP unsolved */
       lp->solved = FALSE;
       lp->dualfeasible = FALSE;
-      lp->dualreliable = FALSE;
+      lp->dualchecked = FALSE;
       lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
@@ -8109,7 +8109,7 @@ SCIP_RETCODE lpFlushAddRows(
    /* mark the LP unsolved */
    lp->solved = FALSE;
    lp->primalfeasible = FALSE;
-   lp->primalreliable = FALSE;
+   lp->primalchecked = FALSE;
    lp->lpobjval = SCIP_INVALID;
    lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
 
@@ -8233,7 +8233,7 @@ SCIP_RETCODE lpFlushChgCols(
       /* mark the LP unsolved */
       lp->solved = FALSE;
       lp->dualfeasible = FALSE;
-      lp->dualreliable = FALSE;
+      lp->dualchecked = FALSE;
       lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
@@ -8247,7 +8247,7 @@ SCIP_RETCODE lpFlushChgCols(
       /* mark the LP unsolved */
       lp->solved = FALSE;
       lp->primalfeasible = FALSE;
-      lp->primalreliable = FALSE;
+      lp->primalchecked = FALSE;
       lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
@@ -8348,7 +8348,7 @@ SCIP_RETCODE lpFlushChgRows(
       /* mark the LP unsolved */
       lp->solved = FALSE;
       lp->primalfeasible = FALSE;
-      lp->primalreliable = FALSE;
+      lp->primalchecked = FALSE;
       lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
@@ -8889,9 +8889,9 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->flushed = TRUE;
    (*lp)->solved = TRUE;
    (*lp)->primalfeasible = TRUE;
-   (*lp)->primalreliable = TRUE;
+   (*lp)->primalchecked = TRUE;
    (*lp)->dualfeasible = TRUE;
-   (*lp)->dualreliable = TRUE;
+   (*lp)->dualchecked = TRUE;
    (*lp)->solisbasic = FALSE;
    (*lp)->rootlpisrelax = TRUE;
    (*lp)->isrelax = TRUE;
@@ -8904,9 +8904,9 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->divinglazyapplied = FALSE;
    (*lp)->divelpistate = NULL;
    (*lp)->divelpwasprimfeas = TRUE;
-   (*lp)->divelpwasprimrel = TRUE;
+   (*lp)->divelpwasprimchecked = TRUE;
    (*lp)->divelpwasdualfeas = TRUE;
-   (*lp)->divelpwasdualrel = TRUE;
+   (*lp)->divelpwasdualchecked = TRUE;
    (*lp)->divechgsides = NULL;
    (*lp)->divechgsidetypes = NULL;
    (*lp)->divechgrows = NULL;
@@ -9135,9 +9135,9 @@ SCIP_RETCODE SCIPlpReset(
    lp->validfarkaslp = -1;
    lp->solved = TRUE;
    lp->primalfeasible = TRUE;
-   lp->primalreliable = TRUE;
+   lp->primalchecked = TRUE;
    lp->dualfeasible = TRUE;
-   lp->dualreliable = TRUE;
+   lp->dualchecked = TRUE;
    lp->solisbasic = FALSE;
    lp->lastlpalgo = SCIP_LPALGO_DUALSIMPLEX;
 
@@ -9759,9 +9759,9 @@ SCIP_RETCODE SCIPlpSetState(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LPISTATE*        lpistate,           /**< LP state information (like basis information) */
    SCIP_Bool             wasprimfeas,        /**< primal feasibility when LP state information was stored */
-   SCIP_Bool             wasprimrel,         /**< true if the LP solution has passed the primal feasibility check */
+   SCIP_Bool             wasprimchecked,     /**< true if the LP solution has passed the primal feasibility check */
    SCIP_Bool             wasdualfeas,        /**< dual feasibility when LP state information was stored */
-   SCIP_Bool             wasdualrel          /**< true if the LP solution has passed the dual feasibility check */
+   SCIP_Bool             wasdualchecked      /**< true if the LP solution has passed the dual feasibility check */
    )
 {
    assert(lp != NULL);
@@ -9786,9 +9786,9 @@ SCIP_RETCODE SCIPlpSetState(
     *        flushed and solved, also, e.g., when we hit the iteration limit
     */
    lp->primalfeasible = wasprimfeas;
-   lp->primalreliable = wasprimrel;
+   lp->primalchecked = wasprimchecked;
    lp->dualfeasible = wasdualfeas;
-   lp->dualreliable = wasdualrel;
+   lp->dualchecked = wasdualchecked;
 
    return SCIP_OKAY;
 }
@@ -12064,33 +12064,31 @@ SCIP_RETCODE SCIPlpSolveAndEval(
       case SCIP_LPSOLSTAT_OPTIMAL:
          /* get LP solution and possibly check the solution's feasibility again */
          if( set->lp_checkprimfeas )
+         {
             primalfeaspointer = &primalfeasible;
+            lp->primalchecked = TRUE;
+         }
          else
          {
             /* believe in the primal feasibility of the LP solution */
             primalfeasible = TRUE;
             primalfeaspointer = NULL;
+            lp->primalchecked = FALSE;
          }
          if( set->lp_checkdualfeas )
+         {
             dualfeaspointer = &dualfeasible;
+            lp->dualchecked = TRUE;
+         }
          else
          {
             /* believe in the dual feasibility of the LP solution */
             dualfeasible = TRUE;
             dualfeaspointer = NULL;
+            lp->dualchecked = FALSE;
          }
 
          SCIP_CALL( SCIPlpGetSol(lp, set, stat, primalfeaspointer, dualfeaspointer) );
-
-         if( set->lp_checkprimfeas && *primalfeaspointer )
-            lp->primalreliable = TRUE;
-         else
-            lp->primalreliable = FALSE;
-
-         if( set->lp_checkdualfeas && *dualfeaspointer )
-            lp->dualreliable = TRUE;
-         else
-            lp->dualreliable = FALSE;
 
          /* in debug mode, check that lazy bounds (if present) are not violated */
          checkLazyBounds(lp, set);
@@ -12187,10 +12185,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             /* get unbounded LP solution and check the solution's feasibility again */
             SCIP_CALL( SCIPlpGetUnboundedSol(lp, set, stat, &primalfeasible, &rayfeasible) );
 
-            if( primalfeasible )
-               lp->primalreliable = TRUE;
-            else
-               lp->primalreliable = FALSE;
+            lp->primalchecked = TRUE;
          }
          else
          {
@@ -12198,8 +12193,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             SCIP_CALL( SCIPlpGetUnboundedSol(lp, set, stat, NULL, NULL) );
 
             primalfeasible = TRUE;
-            rayfeasible = TRUE;
-            lp->primalreliable = FALSE;
+            lp->primalchecked = FALSE;
          }
 
          /* in debug mode, check that lazy bounds (if present) are not violated */
@@ -12362,33 +12356,31 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                {
                   /* get LP solution and possibly check the solution's feasibility again */
                   if( set->lp_checkprimfeas )
+                  {
                      primalfeaspointer = &primalfeasible;
+                     lp->primalchecked = TRUE;
+                  }
                   else
                   {
                      /* believe in the primal feasibility of the LP solution */
                      primalfeasible = TRUE;
                      primalfeaspointer = NULL;
+                     lp->primalchecked = FALSE;
                   }
                   if( set->lp_checkdualfeas )
+                  {
                      dualfeaspointer = &dualfeasible;
+                     lp->dualchecked = TRUE;
+                  }
                   else
                   {
                      /* believe in the dual feasibility of the LP solution */
                      dualfeasible = TRUE;
                      dualfeaspointer = NULL;
+                     lp->dualchecked = FALSE;
                   }
 
                   SCIP_CALL( SCIPlpGetSol(lp, set, stat, primalfeaspointer, dualfeaspointer) );
-
-                  if( set->lp_checkprimfeas && *primalfeaspointer )
-                     lp->primalreliable = TRUE;
-                  else
-                     lp->primalreliable = FALSE;
-
-                  if( set->lp_checkdualfeas && *dualfeaspointer )
-                     lp->dualreliable = TRUE;
-                  else
-                     lp->dualreliable = FALSE;
 
                   /* in debug mode, check that lazy bounds (if present) are not violated by an optimal LP solution */
                   if( solstat == SCIP_LPSOLSTAT_OPTIMAL )
@@ -12436,6 +12428,8 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                   {
                      /* get unbounded LP solution and check the solution's feasibility again */
                      SCIP_CALL( SCIPlpGetUnboundedSol(lp, set, stat, &primalfeasible, &rayfeasible) );
+
+                     lp->primalchecked = TRUE;
                   }
                   else
                   {
@@ -12444,6 +12438,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
                      primalfeasible = TRUE;
                      rayfeasible = TRUE;
+                     lp->primalchecked = FALSE;
                   }
 
                   SCIPsetDebugMsg(set, " -> LP has unbounded primal ray\n");
@@ -14520,7 +14515,7 @@ SCIP_RETCODE lpDelColset(
       /* mark the current solution invalid */
       lp->solved = FALSE;
       lp->primalfeasible = FALSE;
-      lp->primalreliable = FALSE;
+      lp->primalchecked = FALSE;
       lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
@@ -14619,7 +14614,7 @@ SCIP_RETCODE lpDelRowset(
       /* mark the current solution invalid */
       lp->solved = FALSE;
       lp->dualfeasible = FALSE;
-      lp->dualreliable = FALSE;
+      lp->dualchecked = FALSE;
       lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
@@ -15177,8 +15172,8 @@ SCIP_RETCODE SCIPlpStartDive(
    SCIP_CALL( SCIPlpiGetState(lp->lpi, blkmem, &lp->divelpistate) );
    lp->divelpwasprimfeas = lp->primalfeasible;
    lp->divelpwasdualfeas = lp->dualfeasible;
-   lp->divelpwasprimrel = lp->primalreliable;
-   lp->divelpwasdualrel = lp->dualreliable;
+   lp->divelpwasprimchecked = lp->primalchecked;
+   lp->divelpwasdualchecked = lp->dualchecked;
 
    /* save current LP values dependent on the solution */
    SCIP_CALL( lpStoreSolVals(lp, stat, blkmem) );
@@ -15306,12 +15301,12 @@ SCIP_RETCODE SCIPlpEndDive(
     * happens
     */
    SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, lp->divelpistate,
-         lp->divelpwasprimfeas, lp->divelpwasprimrel, lp->divelpwasdualfeas, lp->divelpwasdualrel) );
+         lp->divelpwasprimfeas, lp->divelpwasprimchecked, lp->divelpwasdualfeas, lp->divelpwasdualchecked) );
    SCIP_CALL( SCIPlpFreeState(lp, blkmem, &lp->divelpistate) );
    lp->divelpwasprimfeas = TRUE;
    lp->divelpwasdualfeas = TRUE;
-   lp->divelpwasprimrel = TRUE;
-   lp->divelpwasdualrel = TRUE;
+   lp->divelpwasprimchecked = TRUE;
+   lp->divelpwasdualchecked = TRUE;
    assert(lp->divelpistate == NULL);
 
    /* switch to standard (non-diving) mode */
@@ -16876,7 +16871,7 @@ SCIP_Bool SCIPlpIsPrimalReliable(
 {
    assert(lp != NULL);
 
-   return lp->primalreliable;
+   return (lp->primalchecked && lp->primalfeasible);
 }
 
 /** return whether the current LP solution passed the dual feasibility check */
@@ -16886,7 +16881,7 @@ SCIP_Bool SCIPlpIsDualReliable(
 {
    assert(lp != NULL);
 
-   return lp->dualreliable;
+   return (lp->dualchecked && lp->dualfeasible);
 }
 
 /** returns whether the current LP solution is a basic solution */
