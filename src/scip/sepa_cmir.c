@@ -59,10 +59,12 @@
 #define DEFAULT_DENSITYOFFSET       100 /**< additional number of variables allowed in row on top of density */
 #define DEFAULT_MAXROWFAC          1e+4 /**< maximal row aggregation factor */
 #define DEFAULT_MAXTESTDELTA         -1 /**< maximal number of different deltas to try (-1: unlimited) */
-#define DEFAULT_MAXCONTS             10 /**< maximal number of active continuous variables in aggregated row */
+#define DEFAULT_MAXCONTS             10 /**< maximal number of active continuous (continuous vars not in their bound) variables in aggregated row */
 #define DEFAULT_MAXCONTSROOT         10 /**< maximal number of active continuous variables in aggregated row in the root */
-#define DEFAULT_AGGRTOL             0.1 /**< aggregation heuristic: tolerance for bound distances used to select real
-                                         *   variable in current aggregated constraint to be eliminated */
+#define DEFAULT_AGGRTOL             0.1 /**< aggregation heuristic: we try to delete continuous variables from the current
+                                         *   aggregation, whose distance to its tightest bound is >= L - DEFAULT_AGGRTOL,
+                                         *   where L is the largest of the distances between a continuous variable's value
+                                         *   and its tightest bound in the current aggregation */
 #define DEFAULT_TRYNEGSCALING      TRUE /**< should negative values also be tested in scaling? */
 #define DEFAULT_FIXINTEGRALRHS     TRUE /**< should an additional variable be complemented if f0 = 0? */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
@@ -1011,7 +1013,6 @@ SCIP_RETCODE separateCuts(
    SCIP_Real* rowscores;
    int* roworder;
    SCIP_Real maxslack;
-   SCIP_Real objnorm;
    SCIP_Bool cutoff = FALSE;
    int nvars;
    int nintvars;
@@ -1068,7 +1069,7 @@ SCIP_RETCODE separateCuts(
 #ifdef IMPLINTSARECONT
    ncontvars += SCIPgetNImplVars(scip); /* also aggregate out implicit integers */
 #endif
-   nintvars = nvars-ncontvars;
+   nintvars = nvars - ncontvars;
    assert(nvars == 0 || vars != NULL);
 
    /* nothing to do, if problem has no variables */
@@ -1094,13 +1095,14 @@ SCIP_RETCODE separateCuts(
    /* get the solution values for all active variables */
    SCIP_CALL( SCIPgetSolVals(scip, sol, nvars, vars, varsolvals) );
 
-   /* calculate the tightest bounds w.r.t. current solution for the continuous variables */
+   /* calculate the fractionality of the integer variables in the current solution */
    for( v = 0; v < nintvars; ++v )
    {
       fractionalities[v] = SCIPfeasFrac(scip, varsolvals[v]);
       fractionalities[v] = MIN(fractionalities[v], 1.0 - fractionalities[v]);
    }
 
+   /* calculate the fractionality of the continuous variables in the current solution; TODO: define fractionality of continuous variables! */
    for( ; v < nvars; ++v )
    {
       SCIP_VAR** vlbvars;
@@ -1164,12 +1166,10 @@ SCIP_RETCODE separateCuts(
       maxconts = sepadata->maxconts;
    }
 
-   /* calculate aggregation scores for both sides of all rows, and sort rows by non-increasing maximal score */
-   objnorm = SCIPgetObjNorm(scip);
-   objnorm = MAX(objnorm, 1.0);
+   /* calculate aggregation scores for both sides of all rows, and sort rows by decreasing maximal score
+    * TODO: document score definition */
 
-   /* count the number of non-zero rows and zero rows.
-    * these values are used for the sorting of the rowscores.
+   /* count the number of non-zero rows and zero rows. these values are used for the sorting of the rowscores.
     * only the non-zero rows need to be sorted. */
    nnonzrows = 0;
    zerorows = 0;
@@ -1187,8 +1187,7 @@ SCIP_RETCODE separateCuts(
          rowlhsscores[r] = 0.0;
          rowrhsscores[r] = 0.0;
 
-         /* adding the row number to the back of the roworder
-          * for the zero rows  */
+         /* add the row number to the back of roworder for zero rows */
          zerorows++;
          rowscores[r] = 0.0;
          roworder[nrows - zerorows] = r;
@@ -1205,6 +1204,10 @@ SCIP_RETCODE separateCuts(
          SCIP_Real slack;
          SCIP_Real fracact;
          SCIP_Real fracscore;
+         SCIP_Real objnorm;
+
+         objnorm = SCIPgetObjNorm(scip);
+         objnorm = MAX(objnorm, 1.0);
 
          fracact = getRowFracActivity(rows[r], fractionalities);
          dualsol = (sol == NULL ? SCIProwGetDualsol(rows[r]) : 1.0);
@@ -1249,15 +1252,13 @@ SCIP_RETCODE separateCuts(
          rowscores[r] = fracscore;
          if( rowscores[r] == 0.0 )
          {
-            /* adding the row number to the back of the roworder
-             * for the zero rows  */
+            /* add the row number to the back of roworder for zero rows */
             zerorows++;
             roworder[nrows - zerorows] = r;
          }
          else
          {
-            /* adding and sorting the row number to the next index
-             * in roworder <= nnonzrows  */
+            /* insert the row number in the correct position of roworder */
             for( i = nnonzrows; i > 0 && rowscores[r] > rowscores[roworder[i - 1]]; --i )
                roworder[i] = roworder[i - 1];
             roworder[i] = r;
@@ -1271,16 +1272,17 @@ SCIP_RETCODE separateCuts(
    }
    assert(nrows == nnonzrows + zerorows);
 
+   /* start aggregation heuristic for each row in the LP: TODO it seems this also generates the cuts, so please document behaviour */
    SCIP_CALL( setupAggregationData(scip, sol, &aggrdata) );
 
-   /* start aggregation heuristic for each row in the LP */
    ncuts = 0;
    if( maxtries < 0 )
       maxtries = INT_MAX;
    if( maxfails < 0 )
       maxfails = INT_MAX;
-   else if( depth == 0 && 2*SCIPgetNSepaRounds(scip) < maxfails )
-      maxfails += maxfails - 2*SCIPgetNSepaRounds(scip); /* allow up to double as many fails in early separounds of root node */
+   else if( depth == 0 && 2 * SCIPgetNSepaRounds(scip) < maxfails )
+      maxfails += maxfails - 2 * SCIPgetNSepaRounds(scip); /* allow up to double as many fails in early separounds of root node */
+
    ntries = 0;
    nfails = 0;
    for( r = 0; r < nrows && ntries < maxtries && ncuts < maxsepacuts && rowscores[roworder[r]] > 0.0
@@ -1293,6 +1295,7 @@ SCIP_RETCODE separateCuts(
       SCIP_CALL( aggregation(scip, &aggrdata, sepa, sepadata, sol, varsolvals, rowlhsscores, rowrhsscores,
                              roworder[r], maxaggrs, maxconts, &wastried, &cutoff, cutinds, cutcoefs, FALSE, &ncuts) );
 
+      /* TODO: document what trynegscaling means or reference to the general description in the h file */
       if( sepadata->trynegscaling && !cutoff )
       {
          SCIP_CALL( aggregation(scip, &aggrdata, sepa, sepadata, sol, varsolvals, rowlhsscores, rowrhsscores,
