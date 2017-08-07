@@ -3234,11 +3234,11 @@ SCIP_RETCODE SCIPincludeConshdlrCardinality(
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxCardinality) );
 
    /* add cardinality constraint handler parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/branchbalanced",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/branchbalanced",
          "whether to use balanced instead of unbalanced branching",
          &conshdlrdata->branchbalanced, TRUE, DEFAULT_BRANCHBALANCED, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/balanceddepth",
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/balanceddepth",
          "maximum depth for using balanced branching (-1: no limit)",
          &conshdlrdata->balanceddepth, TRUE, DEFAULT_BALANCEDDEPTH, -1, INT_MAX, NULL, NULL) );
 
