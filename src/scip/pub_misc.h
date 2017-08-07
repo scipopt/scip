@@ -1481,47 +1481,47 @@ void SCIPbtSetRoot(
 
 /**@} */
 
-/**@addtogroup UnionFind
+/**@addtogroup DisjoinedSet
  *
  * @{
  */
 
 /*
- *Union-Find data structure
+ * Disjoined Set data structure
  */
 
-/** clears the union-find structure \p uf */
+/** clears the disjoint set (union find) structure \p uf */
 EXTERN
-void SCIPunionfindClear(
-   SCIP_UF*              uf                  /**< union find data structure */
+void SCIPdisjointsetClear(
+   SCIP_DISJOINTSET*     djset               /**< disjoint set (union find) data structure */
    );
 
 /** finds and returns the component identifier of this \p element */
 EXTERN
-int SCIPunionfindFind(
-   SCIP_UF*              uf,                 /**< union find data structure */
+int SCIPdisjointsetFind(
+   SCIP_DISJOINTSET*     djset,              /**< disjoint set (union find) data structure */
    int                   element             /**< element to be found */
    );
 
 /** merges the components containing the elements \p p and \p q */
 EXTERN
-void SCIPunionfindUnion(
-   SCIP_UF*              uf,                 /**< union find data structure */
+void SCIPdisjointsetUnion(
+   SCIP_DISJOINTSET*     djset,              /**< disjoint set (union find) data structure */
    int                   p,                  /**< first element */
    int                   q,                  /**< second element */
    SCIP_Bool             forcerepofp         /**< force representative of p to be new representative */
    );
 
-/** returns the number of independent components in this union find data structure */
+/** returns the number of independent components in this disjoint set (union find) data structure */
 EXTERN
-int SCIPunionfindGetComponentCount(
-   SCIP_UF*              uf                  /**< union find data structure */
+int SCIPdisjointsetGetComponentCount(
+   SCIP_DISJOINTSET*     djset               /**< disjoint set (union find) data structure */
    );
 
-/** returns the size (number of nodes) of this union find data structure */
+/** returns the size (number of nodes) of this disjoint set (union find) data structure */
 EXTERN
-int SCIPunionfindGetSize(
-   SCIP_UF*              uf                  /**< union find data structure */
+int SCIPdisjointsetGetSize(
+   SCIP_DISJOINTSET*     djset               /**< disjoint set (union find) data structure */
    );
 
 /* @} */

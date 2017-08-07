@@ -245,8 +245,8 @@ struct SCIP_RandNumGen
    uint32_t              cst_seed;           /**< constant seed */
 };
 
-/** union find data structure for querying and updating connectedness in a graph with integer vertices 0,...,n - 1 */
-struct SCIP_Uf
+/** disjoint set (disjoint set (union find)) data structure for querying and updating connectedness in a graph with integer vertices 0,...,n - 1 */
+struct SCIP_DisjointSet
 {
    int*                  parents;            /**< array to store the parent node index for every vertex */
    int*                  sizes;              /**< array to store the size of the subtree rooted at each vertex */

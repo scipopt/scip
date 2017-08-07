@@ -88,7 +88,7 @@ struct SCIP_CliqueTable
 {
    SCIP_HASHTABLE*       hashtable;          /**< hash table holding all cliques */
    SCIP_HASHMAP*         varidxtable;        /**< mapping from binary variable to their corresponding node indices */
-   SCIP_UF*              unionfind;          /**< union find data structure to maintain component information */
+   SCIP_DISJOINTSET*     djset;              /**< disjoint set (union find) data structure to maintain component information */
    SCIP_CLIQUE**         cliques;            /**< cliques stored in the table */
    SCIP_Longint          nentries;           /**< number of entries in the whole clique table */
    int                   ncliques;           /**< number of cliques stored in the table */

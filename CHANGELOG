@@ -2,7 +2,7 @@ SCIP version NEXT
 =================
 
 features:
-- new union find data structure SCIP_UF to incrementally update connectedness information for a graph on nodes {0,...,n-1}
+- new disjoint set data structure SCIP_DISJOINTSET to incrementally update connectedness information for a graph on nodes {0,...,n-1}
 - added macros to do computations with a higher precision by using double double arithmetic
 - new compiler flag DEBUGSOL={true,false} to enable an internal debugging mechanism to check against a user given debug solution
 - add new heuristic MPEC that solves a MPEC reformulation of a mixed-binary nonlinear problem by regularized NLP reformulations
@@ -25,7 +25,7 @@ interface:
   branching candidates; also added SCIPbranchcandGetNPrioLPCands() to access the number of LP candidates with this priority.
 
 performance improvements:
-- use union find to reduce peak memory usage and time to compute of clique table connectedness information
+- use disjoint set to reduce peak memory usage and time to compute of clique table connectedness information
 - add and use RESTRICT macro for some pointers
 - improved the implementation of SCIPvarGetActiveRepresentatives
 

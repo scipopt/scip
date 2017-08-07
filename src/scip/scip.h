@@ -22501,24 +22501,24 @@ int SCIPgetPtrarrayMaxIdx(
 
 /**@} */
 
-/**@addtogroup UnionFind
+/**@addtogroup DisjoinedSet
  *
  * @{
  */
 
-/** creates a union-find structure \p uf for \p ncomponents many components (of size one) */
+/** creates a disjoint set (union find) structure \p uf for \p ncomponents many components (of size one) */
 extern
-SCIP_RETCODE SCIPcreateUnionFind(
+SCIP_RETCODE SCIPcreateDisjointset(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_UF**             uf,                 /**< union find data structure */
+   SCIP_DISJOINTSET**    djset,              /**< disjoint set (union find) data structure */
    int                   ncomponents         /**< number of components */
    );
 
-/** frees the union-find data structure */
+/** frees the disjoint set (union find) data structure */
 extern
-void SCIPfreeUnionfind(
+void SCIPfreeDisjointset(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_UF**             uf                  /**< pointer to union find data structure */
+   SCIP_DISJOINTSET**    djset               /**< pointer to disjoint set (union find) data structure */
    );
 
 /* @} */

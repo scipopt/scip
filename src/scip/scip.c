@@ -47649,28 +47649,28 @@ void SCIPsetRandomSeed(
    SCIPrandomSetSeed(randnumgen, modifiedseed);
 }
 
-/** creates a union-find structure \p uf for \p ncomponents many components (of size one) */
-SCIP_RETCODE SCIPcreateUnionFind(
+/** creates a disjoint set (union find) structure \p uf for \p ncomponents many components (of size one) */
+SCIP_RETCODE SCIPcreateDisjointset(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_UF**             uf,                 /**< union find data structure */
+   SCIP_DISJOINTSET**    djset,              /**< disjoint set (union find) data structure */
    int                   ncomponents         /**< number of components */
    )
 {
    assert(scip != NULL);
-   assert(uf != NULL);
+   assert(djset != NULL);
 
-   SCIP_CALL( SCIPunionfindCreate(uf, scip->mem->probmem, ncomponents) );
+   SCIP_CALL( SCIPdisjointsetCreate(djset, scip->mem->probmem, ncomponents) );
 
    return SCIP_OKAY;
 }
 
-/** frees the union-find data structure */
-void SCIPfreeUnionfind(
+/** frees the disjoint set (union find) data structure */
+void SCIPfreeDisjointset(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_UF**             uf                  /**< pointer to union find data structure */
+   SCIP_DISJOINTSET**    djset               /**< disjoint set (union find) data structure */
    )
 {
    assert(scip != NULL);
 
-   SCIPunionfindFree(uf, scip->mem->probmem);
+   SCIPdisjointsetFree(djset, scip->mem->probmem);
 }

@@ -1786,7 +1786,7 @@ SCIP_RETCODE SCIPcliquetableCreate(
          hashgetkeyClique, hashkeyeqClique, hashkeyvalClique, NULL) );
 
    (*cliquetable)->varidxtable = NULL;
-   (*cliquetable)->unionfind = NULL;
+   (*cliquetable)->djset = NULL;
    (*cliquetable)->cliques = NULL;
    (*cliquetable)->ncliques = 0;
    (*cliquetable)->size = 0;
@@ -1819,9 +1819,9 @@ SCIP_RETCODE SCIPcliquetableFree(
       cliqueFree(&(*cliquetable)->cliques[i], blkmem);
    }
 
-   /* free union find data structure */
-   if( (*cliquetable)->unionfind != NULL )
-      SCIPunionfindFree(&(*cliquetable)->unionfind, blkmem);
+   /* free disjoint set (union find) data structure */
+   if( (*cliquetable)->djset != NULL )
+      SCIPdisjointsetFree(&(*cliquetable)->djset, blkmem);
 
    /* free hash table for variable indices */
    if( (*cliquetable)->varidxtable != NULL )
@@ -2299,8 +2299,8 @@ void cliquetableUpdateConnectednessClique(
    assert(cliquetable != NULL);
    assert(clique != NULL);
 
-   /* check if union find data structure has not been allocated yet */
-   if( cliquetable->unionfind == NULL )
+   /* check if disjoint set (union find) data structure has not been allocated yet */
+   if( cliquetable->djset == NULL )
       cliquetable->compsfromscratch = TRUE;
 
    /* return immediately if a component update is already pending */
@@ -2324,7 +2324,7 @@ void cliquetableUpdateConnectednessClique(
 
       /* connect this and the last active variable */
       if( lastnode != -1 )
-         SCIPunionfindUnion(cliquetable->unionfind, lastnode, currnode, FALSE);
+         SCIPdisjointsetUnion(cliquetable->djset, lastnode, currnode, FALSE);
 
       lastnode = currnode;
    }
@@ -2338,7 +2338,7 @@ int SCIPcliquetableGetVarComponentIdx(
 {
    int cmpidx = -1;
    assert(var != NULL);
-   assert(cliquetable->unionfind != NULL);
+   assert(cliquetable->djset != NULL);
 
    /* only binary variables can have a component index
     *(both integer and implicit integer variables can be binary)
@@ -2346,10 +2346,10 @@ int SCIPcliquetableGetVarComponentIdx(
    if( SCIPvarIsBinary(var) )
    {
       int nodeindex = cliquetableGetNodeIndexBinvar(cliquetable, var);
-      assert(nodeindex < SCIPunionfindGetSize(cliquetable->unionfind));
+      assert(nodeindex < SCIPdisjointsetGetSize(cliquetable->djset));
 
       if( nodeindex >= 0 )
-         cmpidx = SCIPunionfindFind(cliquetable->unionfind, nodeindex);
+         cmpidx = SCIPdisjointsetFind(cliquetable->djset, nodeindex);
    }
 
    return cmpidx;
@@ -3115,7 +3115,7 @@ SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
    int                   nimplvars           /**< number of implicit integer variables */
    )
 {
-   SCIP_UF* unionfind;
+   SCIP_DISJOINTSET* djset;
    int nimplbinvars;
    int v;
    int c;
@@ -3190,17 +3190,17 @@ SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
       }
    }
 
-   /* free previous union find data structure which has become outdated if new variables are present */
-   if( cliquetable->unionfind != NULL )
-      SCIPunionfindFree(&cliquetable->unionfind, blkmem);
+   /* free previous disjoint set (union find) data structure which has become outdated if new variables are present */
+   if( cliquetable->djset != NULL )
+      SCIPdisjointsetFree(&cliquetable->djset, blkmem);
 
    /* we need to consider integer and implicit integer variables for which SCIPvarIsBinary() returns TRUE.
     * These may be scattered across the ninteger + nimplvars implicit integer variables.
     * For simplicity, we add all integer and implicit integer variables as nodes to the graph, and subtract
     * the amount of nonbinary integer and implicit integer variables afterwards.
     */
-   SCIP_CALL( SCIPunionfindCreate(&cliquetable->unionfind, blkmem, ndiscvars) );
-   unionfind = cliquetable->unionfind;
+   SCIP_CALL( SCIPdisjointsetCreate(&cliquetable->djset, blkmem, ndiscvars) );
+   djset = cliquetable->djset;
 
    /* subtract all (implicit) integer for which SCIPvarIsBinary() returns FALSE */
    nnonbinvars = (nintvars + nimplvars) - nimplbinvars;
@@ -3210,7 +3210,7 @@ SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
    /* for every clique, we connect clique variable components, treating a clique as a path
     *
     * if the graph turns out to be completely connected (except for the nonbinary variables), we terminate */
-   for( c = 0; c < cliquetable->ncliques && SCIPunionfindGetComponentCount(unionfind) > 1 + nnonbinvars; ++c )
+   for( c = 0; c < cliquetable->ncliques && SCIPdisjointsetGetComponentCount(djset) > 1 + nnonbinvars; ++c )
    {
       SCIP_CLIQUE* clique;
 
@@ -3219,7 +3219,7 @@ SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
    }
 
    /* subtract superfluous integer and implicit integer variables added to the auxiliary graph */
-   cliquetable->ncliquecomponents = SCIPunionfindGetComponentCount(unionfind) - nnonbinvars;
+   cliquetable->ncliquecomponents = SCIPdisjointsetGetComponentCount(djset) - nnonbinvars;
    assert(cliquetable->ncliquecomponents >= 0);
    assert(cliquetable->ncliquecomponents <= nbinvarstotal);
 
@@ -3507,5 +3507,5 @@ SCIP_Bool SCIPcliquetableNeedsComponentUpdate(
    SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
    )
 {
-   return cliquetable->compsfromscratch || cliquetable->unionfind == NULL;
+   return cliquetable->compsfromscratch || cliquetable->djset == NULL;
 }

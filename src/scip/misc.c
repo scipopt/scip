@@ -9710,55 +9710,55 @@ SCIP_Real SCIPcomputeGap(
  *Union-Find data structure
  */
 
-/** creates a union-find structure \p uf for \p ncomponents many components (of size one) */
-SCIP_RETCODE SCIPunionfindCreate(
-   SCIP_UF**             uf,                 /**< union find data structure */
+/** creates a disjoint set (union find) structure \p uf for \p ncomponents many components (of size one) */
+SCIP_RETCODE SCIPdisjointsetCreate(
+   SCIP_DISJOINTSET**    djset,              /**< disjoint set (union find) data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    int                   ncomponents         /**< number of components */
    )
 {
-   assert(uf != NULL);
+   assert(djset != NULL);
    assert(blkmem != NULL);
 
    /* allocate the necessary memory */
    assert(ncomponents > 0);
-   SCIP_ALLOC( BMSallocBlockMemory(blkmem, uf) );
-   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &((*uf)->parents), ncomponents) );
-   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &((*uf)->sizes), ncomponents) );
-   (*uf)->size = ncomponents;
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, djset) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &((*djset)->parents), ncomponents) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &((*djset)->sizes), ncomponents) );
+   (*djset)->size = ncomponents;
 
    /* clear the data structure */
-   SCIPunionfindClear(*uf);
+   SCIPdisjointsetClear(*djset);
 
    return SCIP_OKAY;
 }
 
-/** clears the union-find structure \p uf */
-void SCIPunionfindClear(
-   SCIP_UF*              uf                  /**< union find data structure */
+/** clears the disjoint set (union find) structure \p uf */
+void SCIPdisjointsetClear(
+   SCIP_DISJOINTSET*     djset               /**< disjoint set (union find) data structure */
    )
 {
    int i;
-   uf->componentcount = uf->size;
+   djset->componentcount = djset->size;
 
    /* reset all components to be unconnected */
-   for( i = 0; i < uf->componentcount; i++ )
+   for( i = 0; i < djset->componentcount; i++ )
    {
-      uf->parents[i] = i;
-      uf->sizes[i] = 1;
+      djset->parents[i] = i;
+      djset->sizes[i] = 1;
    }
 }
 
 
 /** finds and returns the component identifier of this \p element */
-int SCIPunionfindFind(
-   SCIP_UF*              uf,                 /**< union find data structure */
+int SCIPdisjointsetFind(
+   SCIP_DISJOINTSET*     djset,              /**< disjoint set (union find) data structure */
    int                   element             /**< element to be found */
    )
 {
    int newelement;
    int root = element;
-   int* parents = uf->parents;
+   int* parents = djset->parents;
 
    /* find root of this element */
    while( root != parents[root] )
@@ -9778,8 +9778,8 @@ int SCIPunionfindFind(
 }
 
 /** merges the components containing the elements \p p and \p q */
-void SCIPunionfindUnion(
-   SCIP_UF*              uf,                 /**< union find data structure */
+void SCIPdisjointsetUnion(
+   SCIP_DISJOINTSET*     djset,              /**< disjoint set (union find) data structure */
    int                   p,                  /**< first element */
    int                   q,                  /**< second element */
    SCIP_Bool             forcerepofp         /**< force representative of p to be new representative */
@@ -9790,22 +9790,22 @@ void SCIPunionfindUnion(
    int* sizes;
    int* parents;
 
-   assert(uf != NULL);
+   assert(djset != NULL);
    assert(0 <= p);
    assert(0 <= q);
-   assert(uf->size > p);
-   assert(uf->size > q);
+   assert(djset->size > p);
+   assert(djset->size > q);
 
 
-   idp = SCIPunionfindFind(uf, p);
-   idq = SCIPunionfindFind(uf, q);
+   idp = SCIPdisjointsetFind(djset, p);
+   idq = SCIPdisjointsetFind(djset, q);
 
    /* if p and q lie in the same component, there is nothing to be done */
    if( idp == idq )
       return;
 
-   sizes = uf->sizes;
-   parents = uf->parents;
+   sizes = djset->sizes;
+   parents = djset->parents;
 
    if( forcerepofp )
    {
@@ -9826,44 +9826,44 @@ void SCIPunionfindUnion(
       }
    }
    /* one less component */
-   uf->componentcount--;
+   djset->componentcount--;
 }
 
-/** frees the union-find data structure */
-void SCIPunionfindFree(
-   SCIP_UF**             uf,                 /**< pointer to union find data structure */
+/** frees the disjoint set (union find) data structure */
+void SCIPdisjointsetFree(
+   SCIP_DISJOINTSET**    djset,              /**< pointer to disjoint set (union find) data structure */
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
-   SCIP_UF* ufptr;
+   SCIP_DISJOINTSET* dsptr;
 
-   assert(uf != NULL);
-   assert(*uf != NULL);
+   assert(djset != NULL);
+   assert(*djset != NULL);
 
-   ufptr = *uf;
+   dsptr = *djset;
 
-   BMSfreeBlockMemoryArray(blkmem, &ufptr->sizes, ufptr->size);
-   BMSfreeBlockMemoryArray(blkmem, &ufptr->parents, ufptr->size);
+   BMSfreeBlockMemoryArray(blkmem, &dsptr->sizes, dsptr->size);
+   BMSfreeBlockMemoryArray(blkmem, &dsptr->parents, dsptr->size);
 
-   BMSfreeBlockMemory(blkmem, uf);
+   BMSfreeBlockMemory(blkmem, djset);
 }
 
-/** returns the number of independent components in this union find data structure */
-int SCIPunionfindGetComponentCount(
-   SCIP_UF*              uf                  /**< union find data structure */
+/** returns the number of independent components in this disjoint set (union find) data structure */
+int SCIPdisjointsetGetComponentCount(
+   SCIP_DISJOINTSET*     djset               /**< disjoint set (union find) data structure */
    )
 {
-   assert(uf != NULL);
+   assert(djset != NULL);
 
-   return uf->componentcount;
+   return djset->componentcount;
 }
 
-/** returns the size (number of nodes) of this union find data structure */
-int SCIPunionfindGetSize(
-   SCIP_UF*              uf                  /**< union find data structure */
+/** returns the size (number of nodes) of this disjoint set (union find) data structure */
+int SCIPdisjointsetGetSize(
+   SCIP_DISJOINTSET*     djset               /**< disjoint set (union find) data structure */
    )
 {
-   assert(uf != NULL);
+   assert(djset != NULL);
 
-   return uf->size;
+   return djset->size;
 }
