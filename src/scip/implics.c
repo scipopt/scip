@@ -487,14 +487,10 @@ SCIP_RETCODE implicsEnsureSize(
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*implics)->vars[varfixing], (*implics)->size[varfixing],
-            newsize) ); /*lint !e866*/
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*implics)->types[varfixing], (*implics)->size[varfixing], 
-            newsize) ); /*lint !e866*/
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*implics)->bounds[varfixing], (*implics)->size[varfixing],
-            newsize) ); /*lint !e866*/
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*implics)->ids[varfixing], (*implics)->size[varfixing],
-            newsize) ); /*lint !e866*/
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*implics)->vars[varfixing], (*implics)->size[varfixing], newsize) ); /*lint !e866*/
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*implics)->types[varfixing], (*implics)->size[varfixing], newsize) ); /*lint !e866*/
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*implics)->bounds[varfixing], (*implics)->size[varfixing], newsize) ); /*lint !e866*/
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*implics)->ids[varfixing], (*implics)->size[varfixing], newsize) ); /*lint !e866*/
       (*implics)->size[varfixing] = newsize;
    }
    assert(num <= (*implics)->size[varfixing]);
@@ -1755,10 +1751,10 @@ SCIP_DECL_HASHKEYVAL(hashkeyvalClique)
 
    clique = (SCIP_CLIQUE*)key;
 
-   return clique->nvars == 0 ? 0 : SCIPhashTwo(SCIPcombineTwoInt(SCIPvarGetIndex(clique->vars[0]),
-                                                                 SCIPvarGetIndex(clique->vars[clique->nvars-1])),
-                                               SCIPcombineThreeInt(clique->nvars,
-                                                                   clique->values[0],
+   return clique->nvars == 0 ? 0 : SCIPhashTwo(SCIPcombineTwoInt(SCIPvarGetIndex(clique->vars[0]), \
+                                                                 SCIPvarGetIndex(clique->vars[clique->nvars-1])), \
+                                               SCIPcombineThreeInt(clique->nvars, \
+                                                                   clique->values[0], \
                                                                    clique->values[clique->nvars-1]));
 }
 

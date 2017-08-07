@@ -3540,6 +3540,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpOddcycle)
    SCIP_SEPADATA* sepadata;
    int depth;
    int ncalls;
+   /* cppcheck-suppress unassignedVariable */
    int oldnliftedcuts;
 
    *result = SCIP_DIDNOTRUN;
