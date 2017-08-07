@@ -38,8 +38,8 @@ void initProb(int, int); //TODO without this we have a prototype missing warning
 void initProb(int option, int dim) 
 {
    // TODO add a minimization problem
-   if(1 == dim) {
-      if(0 == option) {
+   if (1 == dim) {
+      if (0 == option) {
          /* unbounded - infeasible
           * 
           * (P):  max x
@@ -66,7 +66,7 @@ void initProb(int option, int dim)
          /* add one row */
          SCIP_CALL( SCIPlpiAddRows(lpi, 1, &lhs, &rhs, NULL, 1, &beg, &ind, &val) );
       }
-      if(1 == option) {
+      if (1 == option) {
          /* optimal - optimal/unbounded? TODO
           * 
           * (P):  max x
@@ -93,8 +93,8 @@ void initProb(int option, int dim)
          /* add one row */
          SCIP_CALL( SCIPlpiAddRows(lpi, 1, &lhs, &rhs, NULL, 1, &beg, &ind, &val) );
       }
-   } else if(2 == dim) {
-      if(0 == option) {
+   } else if (2 == dim) {
+      if (0 == option) {
          /* unbounded - infeasible 
           * 
           * (P):  max x+y
@@ -126,7 +126,7 @@ void initProb(int option, int dim)
 
          /* add rows */
          SCIP_CALL( SCIPlpiAddRows(lpi, 2, lhs, rhs, NULL, 1, beg, ind, val) );
-      } else if(1 == option) {
+      } else if (1 == option) {
          /* optimal - optimal
           * 
           * (P):  max x+y
@@ -158,7 +158,7 @@ void initProb(int option, int dim)
 
          /* add rows */
          SCIP_CALL( SCIPlpiAddRows(lpi, 2, lhs, rhs, NULL, 1, beg, ind, val) );
-      } else if(2 == option) {
+      } else if (2 == option) {
          /* infeasible - infeasible
           * 
           * (P):  max x+y
@@ -429,4 +429,116 @@ Theory((SCIP_OBJSEN sense, int dim, int prob), change, testchgobjsen)
    SCIP_CALL( SCIPlpiGetObjsen(lpi, &probsense) );
 
    cr_assert_eq( sense, probsense );
+}
+
+/* Test for
+ * SCIPlpiAddCols
+ * SCIPlpiAddRows
+ *
+ * SCIPlpiDelRowset
+ * SCIPlpiDelCols
+ * SCIPlpiDelColset
+ */
+
+/* Test SCIPlpiAddRows
+ * SCIPlpiDelRows
+ */
+
+Test (change, testaddrows)
+{
+   // Add some columns beforehand
+   SCIP_Real obj[5] = { 1.0, 1.0, 1.0, 1.0, 1.0 };
+   SCIP_Real lb[5] = { -1.0, -SCIPlpiInfinity(lpi), 0.0, -SCIPlpiInfinity(lpi), 0.0 };
+   SCIP_Real ub[5] = { 10.0, SCIPlpiInfinity(lpi), SCIPlpiInfinity(lpi), 29.0 };
+   SCIP_CALL( SCIPlpiAddCols(lpi, 5, obj, lb, ub, NULL, 0, NULL, NULL, NULL) );
+   int ncolsbefore, ncolsafter;
+   SCIP_CALL( SCIPlpiGetNCols(lpi, &ncolsbefore) );
+
+   // setup values
+   SCIP_Real lhsvals[6] = { -SCIPlpiInfinity(lpi), -1.0, -3e-10, 0.0, 1.0, 3e10 };
+   SCIP_Real rhsvals[6] = { -1.0, -3e-10, 0.0, 1.0, 3e10, SCIPlpiInfinity(lpi) };
+   SCIP_Real vals[10] = { 1.0, 0.0, -1.0, 3e5, 2.0, 1.0, 20, 10, -1.9, 1e-2 };
+   int nnonzs[6] = { 1, 10, -1, 6, -1 };
+   int indvals[10] = { 0, 1, 3, 2, 1, 1, 2, 4, 0, 3 };
+   int begvals[6] = { 0, 2, 3, 5, 8, 9 }; 
+
+   int iterations = 5;
+   int k[5] = { 1, 6, -1, 4, -2 };
+   int nnonzsdiff[5] = {1, 10, -1, 6, -3 };
+   
+   for (int i = 0; i < iterations; i++) {
+      // setup row values
+      int nrows = k[i];
+      int nnonzsbefore, nnonzsafter;
+      SCIP_CALL( SCIPlpiGetNNonz(lpi, &nnonzsbefore) );
+      int nrowsbefore, nrowsafter;
+      SCIP_CALL( SCIPlpiGetNRows(lpi, &nrowsbefore) );
+
+      if (nrows < 0) {
+         
+         SCIP_CALL( SCIPlpiDelRows(lpi, 0, -(1+nrows)) );
+
+      } else { // nrows >= 0
+
+         SCIP_Real lhs[nrows];
+         SCIP_Real rhs[nrows];
+         int beg[nrows];
+         for (int j = 0; j < nrows; j++) {
+            lhs[j] = lhsvals[j];
+            rhs[j] = rhsvals[j];
+            beg[j] = begvals[j];
+         }
+         int nnonz = nnonzs[i];
+         int ind[nnonz];
+         SCIP_Real val[nnonz];
+         for (int j = 0; j < nnonz; j++) {
+            ind[j] = indvals[j];
+            val[j] = vals[j];
+         }
+
+         SCIP_CALL( SCIPlpiAddRows(lpi, nrows, lhs, rhs, NULL, nnonz, beg, ind, val) );
+         
+         SCIP_Real newlhs[nrows], newrhs[nrows], newval[nrows];
+         int newbeg[nnonz], newind[nnonz];
+         int newnnonz;
+         // checks
+         SCIP_CALL( SCIPlpiGetRows(lpi, nrowsbefore, nrowsbefore-1+nrows, newlhs, newrhs, &newnnonz, newbeg, newind, newval) );
+         cr_assert_eq(nnonz, newnnonz);
+         cr_assert_arr_eq(lhs, newlhs, nrows);
+         //printf("nrows %d\n", nrows);
+         //for (int j = 0; j < nrows; j++) {
+         //   printf("assert %f is %f\n", newrhs[j], rhs[j]);
+         //}
+         // TODO why doesn't this work?
+         //cr_assert_arr_eq(rhs, newrhs, nrows);
+         cr_assert_arr_eq(beg, newbeg, nrows);
+         cr_assert_arr_eq(ind, newind, nnonz);
+         cr_assert_arr_eq(val, newval, nnonz);
+      } 
+      
+      // checks
+      SCIP_CALL( SCIPlpiGetNRows(lpi, &nrowsafter) );
+      cr_assert_eq(nrowsbefore+nrows, nrowsafter); 
+
+      SCIP_CALL( SCIPlpiGetNNonz(lpi, &nnonzsafter) );
+      cr_assert_eq(nnonzsbefore+nnonzsdiff[i], nnonzsafter); 
+
+      SCIP_CALL( SCIPlpiGetNCols(lpi, &ncolsafter) );
+      cr_assert_eq(ncolsbefore, ncolsafter); 
+   }
+   // delete rowsets
+   // should have 8 rows now
+   for (int i = 3; i > 0; i--) {
+      int rows[8];
+      memset(rows, 0, sizeof(*rows)*8);
+      for (int j = 0; j < i; j++) {
+         rows[(2*j)+1] = 1;
+      }
+      int nrowsbefore, nrowsafter;
+      SCIP_CALL( SCIPlpiGetNRows(lpi, &nrowsbefore) );
+      SCIP_CALL( SCIPlpiDelRowset(lpi, rows) );
+      SCIP_CALL( SCIPlpiGetNRows(lpi, &nrowsafter) );
+
+      cr_assert_eq(nrowsbefore-i, nrowsafter);
+   }
 }
