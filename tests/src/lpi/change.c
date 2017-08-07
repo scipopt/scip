@@ -213,6 +213,44 @@ TestSuite(change, .init = setup, .fini = teardown);
 
 /** TESTS **/
 
+/* Test SCIPlpiChgCoef */
+
+void checkChgCoef(int row, int col, SCIP_Real newval);
+
+void checkChgCoef(int row, int col, SCIP_Real newval) {
+   SCIP_CALL( SCIPlpiChgCoef(lpi, row, col, newval) );
+
+   SCIP_Real val;
+   SCIP_CALL( SCIPlpiGetCoef(lpi, row, col, &val) );
+   cr_assert_eq(newval, val);
+}
+
+TheoryDataPoints(change, testchgcoef_) = 
+{
+   DataPoints(SCIP_Real, -3, 0, 5034.2, 2e15, 8e-7),
+   DataPoints(int, 0, 1)
+};
+
+Theory((SCIP_Real newval, int prob), change, testchgcoef_)
+{
+   initProb(prob, 1);
+   checkChgCoef( 0, 0, newval );
+}
+
+TheoryDataPoints(change, testchgcoef) = 
+{
+   DataPoints(int, 0, 1),
+   DataPoints(int, 0, 1),
+   DataPoints(SCIP_Real, -3, 0, 5034.2, 2e15, 8e-7),
+   DataPoints(int, 0, 1)
+};
+
+Theory((int row, int col, SCIP_Real newval, int prob), change, testchgcoef)
+{
+   initProb(prob, 2);
+   checkChgCoef( row, col, newval );
+}
+
 /* Test SCIPlpiChgObj */
 
 void checkChgObj(int, int*, SCIP_Real*);
