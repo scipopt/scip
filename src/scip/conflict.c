@@ -5801,6 +5801,8 @@ SCIP_Bool isSeparatingRootLPSol(
    return cutoff;
 }
 
+
+#if 0
 /** apply the MIR function to a given constraint */
 static
 SCIP_RETCODE applyMIR(
@@ -5838,7 +5840,7 @@ SCIP_RETCODE applyMIR(
    *success = FALSE;
    return SCIP_OKAY;
 
-   /* TODO set but not used warning islocal = FALSE; */
+   islocal = FALSE;
 
    /* create local copies */
    SCIP_CALL( SCIPsetDuplicateBufferArray(set, &copy_vals, vals, transprob->nvars) );
@@ -5900,6 +5902,7 @@ SCIP_RETCODE applyMIR(
 
    return SCIP_OKAY;
 }
+#endif
 
 #ifdef SCIP_DEBUG
 static
@@ -5989,7 +5992,11 @@ SCIP_RETCODE tightenDualray(
    /* apply MIR function */
    if( set->conf_applymir )
    {
+      /*TODO adapt applyMIR function */
+#if 0
       SCIP_CALL( applyMIR(set, transprob, vals, varused, varinds, nvarinds, rhs, success) );
+#endif
+      *success = FALSE;
 
       debugPrintViolationInfo(set, getMinActivity(vals, varinds, (*nvarinds), curvarlbs, curvarubs), *rhs, " after applying MIR: ");
       if( !(*success) )
@@ -6052,7 +6059,11 @@ SCIP_RETCODE tightenDualray(
    /* apply MIR function again */
    if( set->conf_applymir )
    {
+      /*TODO adapt applyMIR function */
+#if 0
       SCIP_CALL( applyMIR(set, transprob, vals, varused, varinds, nvarinds, rhs, success) );
+#endif
+      *success = FALSE;
 
       debugPrintViolationInfo(set, getMinActivity(vals, varinds, (*nvarinds), curvarlbs, curvarubs), *rhs, " after applying MIR: ");
    }

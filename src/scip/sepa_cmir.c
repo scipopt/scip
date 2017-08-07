@@ -612,6 +612,7 @@ SCIP_RETCODE aggregateNextRow(
 
    aggrfac = 0.0;
    bestrowscore = 0.0;
+   bestrowside = 0;
    minbddist = 0.0;
    bestrow = NULL;
 
