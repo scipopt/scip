@@ -2,15 +2,13 @@
 
 #
 # Usage:
-# make testcluster | check/jenkins_check_results.sh TESTSET
+# make testcluster | check/jenkins_check_results.sh TESTSET SETTING
 
 # This script reads stdout from make testcluster, parses the slurm job ids, and starts a
 # job after the previously queued slurm jobs finish. This job waits for 5 seconds, then
 # runs ./evalcheck_cluster.sh and greps for fails.
-# To know which results to process with evalcheck_cluster, TESTSET must be provided explicitly.
-# If there is a fail, an email is sent to the admin. Otherwise, the results are uploaded
-# to rubberband with rbcli.
-#
+# To know which results to process with evalcheck_cluster, TESTSET and SETTING must be provided explicitly.
+# The results are uploaded to rubberband with rbcli and if there are fails, an email is sent to the admin.
 #
 
 # read from stdin
