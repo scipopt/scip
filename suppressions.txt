@@ -1,0 +1,17 @@
+// errors
+// it is possible to call va_copy() first
+va_list_usedBeforeStarted:src/scip/message.c
+nullPointer:src/lpi/lpi_qso.c
+unreadVariable:src/scip/sorttpl.c
+constStatement:src/scip/sorttpl.c
+
+// style
+// unusedFunction doesn't work for libraries
+unusedFunction
+variableScope
+
+// information
+unmatchedSuppression
+ConfigurationNotChecked
+missingInclude
+toomanyconfigs
