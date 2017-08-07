@@ -151,7 +151,7 @@ typedef struct data_crossover DATA_CROSSOVER;
 typedef struct data_mutation DATA_MUTATION;
 typedef struct data_dins DATA_DINS;
 typedef struct EpsGreedy EPSGREEDY;
-typedef struct expThree EXPTHREE;
+typedef struct SCIP_BanditExp3 SCIP_BANDITEXP3;
 typedef struct NH_FixingRate NH_FIXINGRATE;
 typedef struct NH_Stats NH_STATS;
 typedef struct Nh NH;
@@ -301,8 +301,8 @@ struct data_dins
    int                   npoolsols;          /**< number of pool solutions where binary solution values must agree */
 };
 
-/** structure that represents the adversarial bandit algorithm exp3 */
-struct expThree
+/** data structures for adversarial bandit algorithm Exp.3 */
+struct SCIP_BanditExp3
 {
    int                   nactions;           /**< the number of actions to select from */
    int                   ndraws;             /**< the total number of draws for all arms */
@@ -331,7 +331,7 @@ struct SCIP_HeurData
    char*                 gainfilename;       /**< file name to store all gains and the selection of the bandit */
    EPSGREEDY*            epsgreedynh;        /**< epsilon greedy selector for a neighborhood */
    FILE*                 gainfile;           /**< gain file pointer, or NULL */
-   EXPTHREE*             exp3;               /**< exp3 bandit algorithm */
+   SCIP_BANDITEXP3*      exp3;               /**< exp3 bandit algorithm */
    SCIP_Longint          nodesoffset;        /**< offset added to the nodes budget */
    SCIP_Longint          maxnodes;           /**< maximum number of nodes in a single sub-SCIP */
    SCIP_Longint          targetnodes;        /**< targeted number of nodes to start a sub-SCIP */
@@ -948,11 +948,11 @@ void epsGreedyUpdate(
    epsgreedy->weights[i] += 0.1 * gain;
 }
 
-/** reset exp3 bandit algorithm */
+/** reset Exp.3 bandit algorithm */
 static
-SCIP_RETCODE expThreeReset(
+SCIP_RETCODE SCIPbanditexp3Reset(
    SCIP*                 scip,               /**< SCIP data structure */
-   EXPTHREE*             exp3,               /**< the exp3 algorithm */
+   SCIP_BANDITEXP3*      exp3,               /**< the exp3 algorithm */
    SCIP_Real*            priorities,         /**< positive call priorities for every action */
    unsigned int          randseed            /**< initial random seed */
    )
@@ -992,13 +992,13 @@ SCIP_RETCODE expThreeReset(
    return SCIP_OKAY;
 }
 
-/** create exp3 bandit algorithm */
+/** create Exp.3 bandit algorithm */
 static
-SCIP_RETCODE expThreeCreate(
+SCIP_RETCODE SCIPcreateBanditexp3(
    SCIP*                 scip,               /**< SCIP data structure */
-   EXPTHREE**            exp3,               /**< pointer to store the exp3 algorithm */
+   SCIP_BANDITEXP3**     exp3,               /**< pointer to store the Exp.3 algorithm */
    SCIP_Real*            priorities,         /**< positive call priorities for every action */
-   unsigned int          initseed,           /**< initial seed for the exp3 algorithm */
+   unsigned int          initseed,           /**< initial seed for the Exp.3 algorithm */
    int                   nactions,           /**< the number of actions */
    SCIP_Real             gammaparam,         /**< weight between uniform (gamma ~ 1) and weight driven (gamma ~ 0) probability distribution */
    SCIP_Real             beta                /**< gain offset between 0 and 1 at every observation */
@@ -1018,16 +1018,16 @@ SCIP_RETCODE expThreeCreate(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*exp3)->weights, nactions) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*exp3)->cumulativegain, nactions) );
 
-   SCIP_CALL( expThreeReset(scip, *exp3, priorities, initseed) );
+   SCIP_CALL( SCIPbanditexp3Reset(scip, *exp3, priorities, initseed) );
 
    return SCIP_OKAY;
 }
 
-/** free an exp3 bandit algorithm */
+/** free an Exp.3 bandit algorithm */
 static
-void expThreeFree(
+void SCIPfreeBanditexp3(
    SCIP*                 scip,               /**< SCIP data structure */
-   EXPTHREE**            exp3                /**< pointer to the exp3 algorithm */
+   SCIP_BANDITEXP3**     exp3                /**< pointer to the Exp.3 algorithm */
    )
 {
    assert(scip != NULL);
@@ -1042,11 +1042,11 @@ void expThreeFree(
    SCIPfreeBlockMemory(scip, exp3);
 }
 
-/** draw the next action from the current probability distribution over the arms */
+/** select the next action from the current probability distribution over the arms */
 static
-SCIP_RETCODE expThreeSelectAction(
+SCIP_RETCODE SCIPbanditexp3Select(
    SCIP*                 scip,               /**< SCIP data structure */
-   EXPTHREE*             exp3,               /**< exp3 bandit algorithm */
+   SCIP_BANDITEXP3*      exp3,               /**< Exp.3 bandit algorithm */
    int*                  action              /**< the index of the selected action, between 0 and nactions - 1 */
    )
 {
@@ -1096,11 +1096,11 @@ SCIP_RETCODE expThreeSelectAction(
    return SCIP_OKAY;
 }
 
-/** update the exp3 probability distribution after observing a gain */
+/** update the Exp.3 probability distribution after observing a gain */
 static
-SCIP_RETCODE expThreeUpdate(
+SCIP_RETCODE SCIPbanditexp3Update(
    SCIP*                scip,               /**< SCIP data structure */
-   EXPTHREE*            exp3,               /**< exp3 bandit algorithm */
+   SCIP_BANDITEXP3*     exp3,               /**< Exp.3 bandit algorithm */
    SCIP_Real            gain,               /**< the gain that has been observed for action i */
    int                  i                   /**< the last selected action, for which the gain has been observed */
    )
@@ -1888,7 +1888,7 @@ SCIP_RETCODE selectNeighborhood(
          epsGreedySelect(heurdata->epsgreedynh, neighborhoodidx);
          break;
       case 'e':
-         SCIP_CALL( expThreeSelectAction(scip, heurdata->exp3, neighborhoodidx) );
+         SCIP_CALL( SCIPbanditexp3Select(scip, heurdata->exp3, neighborhoodidx) );
          break;
       case 'u':
          /*todo implement upper confidence bound selection */
@@ -1990,7 +1990,7 @@ SCIP_RETCODE updateBanditAlgorithms(
       case 'u':
          break;
       case 'e':
-         SCIP_CALL( expThreeUpdate(scip, heurdata->exp3, gain, neighborhoodidx) );
+         SCIP_CALL( SCIPbanditexp3Update(scip, heurdata->exp3, gain, neighborhoodidx) );
          break;
       default:
          break;
@@ -3371,7 +3371,7 @@ SCIP_DECL_HEURINIT(heurInitLns)
    if( heurdata->exp3 == NULL )
    {
       assert(heurdata->epsgreedynh == NULL);
-      SCIP_CALL( expThreeCreate(scip, &heurdata->exp3, priorities, (unsigned int)(heurdata->seed + SCIPgetNVars(scip)), heurdata->nactiveneighborhoods, heurdata->gamma, heurdata->beta) );
+      SCIP_CALL( SCIPcreateBanditexp3(scip, &heurdata->exp3, priorities, (unsigned int)(heurdata->seed + SCIPgetNVars(scip)), heurdata->nactiveneighborhoods, heurdata->gamma, heurdata->beta) );
 
       /* create epsilon greedy bandit algorithm */
       SCIP_CALL( epsGreedyCreate(scip, &heurdata->epsgreedynh, priorities, heurdata->eps, heurdata->nactiveneighborhoods, (unsigned int)(heurdata->seed + SCIPgetNVars(scip))) );
@@ -3381,7 +3381,7 @@ SCIP_DECL_HEURINIT(heurInitLns)
       assert(heurdata->epsgreedynh != NULL);
 
       /* todo active neighborhoods might change between init calls, reset functionality must take this into account */
-      SCIP_CALL( expThreeReset(scip, heurdata->exp3, priorities, (unsigned int)(heurdata->seed + SCIPgetNVars(scip))) );
+      SCIP_CALL( SCIPbanditexp3Reset(scip, heurdata->exp3, priorities, (unsigned int)(heurdata->seed + SCIPgetNVars(scip))) );
 
       epsGreedyReset(heurdata->epsgreedynh, priorities);
    }
@@ -3507,7 +3507,7 @@ SCIP_DECL_HEURFREE(heurFreeLns)
 
    /* an exp3 is only initialized when a problem is read */
    if( heurdata->exp3 != NULL )
-      expThreeFree(scip, &heurdata->exp3);
+      SCIPfreeBanditexp3(scip, &heurdata->exp3);
 
    if( heurdata->epsgreedynh != NULL )
       epsGreedyFree(scip, &heurdata->epsgreedynh);
