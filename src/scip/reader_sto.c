@@ -51,8 +51,8 @@
 #define DEFAULT_LINEARIZE_ANDS         TRUE  /**< should possible \"and\" constraint be linearized when writing the sto file? */
 #define DEFAULT_AGGRLINEARIZATION_ANDS TRUE  /**< should an aggregated linearization for and constraints be used? */
 
-#define DEFAULT_USEBENDERS            FALSE  /**< should Benders' decomposition be used for the stochastic program? */
-//#define DEFAULT_USEBENDERS             TRUE  /**< should Benders' decomposition be used for the stochastic program? */
+//#define DEFAULT_USEBENDERS            FALSE  /**< should Benders' decomposition be used for the stochastic program? */
+#define DEFAULT_USEBENDERS             TRUE  /**< should Benders' decomposition be used for the stochastic program? */
 
 /*
  * sto reader internal methods
@@ -101,9 +101,6 @@ struct StoScenario
    SCIP_Real*            values;             /**< the values for the given row/column pair. */
    int                   nentries;           /**< the number of row/column pairs */
    int                   entriessize;        /**< the size of the row/colum arrays */
-   SCIP_VAR**            vars;               /**< the variables that are copied for this scenario */
-   int                   nvars;              /**< the number of copied variables */
-   int                   varssize;           /**< the size of the variables array */
 };
 
 
@@ -148,6 +145,8 @@ SCIP_RETCODE createScenarioData(
 {
    assert(scip != NULL);
 
+   SCIPdebugMessage("Creating scenario data.\n");
+
    SCIP_CALL( SCIPallocBlockMemory(scip, scenariodata) );
 
    (*scenariodata)->scip = NULL;
@@ -163,9 +162,6 @@ SCIP_RETCODE createScenarioData(
    (*scenariodata)->probability = 1.0;
    (*scenariodata)->nentries = 0;
    (*scenariodata)->entriessize = STO_DEFAULT_ENTRIESSIZE;
-   (*scenariodata)->vars = NULL;
-   (*scenariodata)->nvars = 0;
-   (*scenariodata)->varssize = 0;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*scenariodata)->children, (*scenariodata)->childrensize) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*scenariodata)->rownames, (*scenariodata)->entriessize) );
@@ -185,6 +181,9 @@ SCIP_RETCODE freeScenarioTree(
 
    assert(scip != NULL);
 
+   SCIPdebugMessage("Freeing scenario <%s> in stage <%s>\n", (*scenariotree)->name,
+      (*scenariotree)->stagename);
+
    while( (*scenariotree)->nchildren > 0 )
    {
       SCIP_CALL( freeScenarioTree(scip, &(*scenariotree)->children[(*scenariotree)->nchildren - 1]) );
@@ -197,16 +196,13 @@ SCIP_RETCODE freeScenarioTree(
       SCIPfreeBlockMemoryArray(scip, &(*scenariotree)->rownames[i], strlen((*scenariotree)->rownames[i]) + 1);
    }
 
-   SCIPfreeBlockMemoryArray(scip, &(*scenariotree)->vars, (*scenariotree)->varssize);
-
    SCIPfreeBlockMemoryArray(scip, &(*scenariotree)->values, (*scenariotree)->entriessize);
    SCIPfreeBlockMemoryArray(scip, &(*scenariotree)->colnames, (*scenariotree)->entriessize);
    SCIPfreeBlockMemoryArray(scip, &(*scenariotree)->rownames, (*scenariotree)->entriessize);
    SCIPfreeBlockMemoryArray(scip, &(*scenariotree)->children, (*scenariotree)->childrensize);
-   if( (*scenariotree)->name != NULL )
-      SCIPfreeBlockMemoryArray(scip, &(*scenariotree)->name, strlen((*scenariotree)->name) + 1);
-   if( (*scenariotree)->stagename != NULL )
-      SCIPfreeBlockMemoryArray(scip, &(*scenariotree)->stagename, strlen((*scenariotree)->stagename) + 1);
+
+   SCIPfreeBlockMemoryArray(scip, &(*scenariotree)->name, strlen((*scenariotree)->name) + 1);
+   SCIPfreeBlockMemoryArray(scip, &(*scenariotree)->stagename, strlen((*scenariotree)->stagename) + 1);
 
    for( i = (*scenariotree)->nsubproblems - 1; i >= 0; i-- )
       SCIPfree(&(*scenariotree)->subproblems[i]);
@@ -784,7 +780,7 @@ SCIP_RETCODE buildScenariosFromBlocks(
       {
          int newsize;
          newsize = SCIPcalcMemGrowSize(scip, (*numscenarios) + 1);
-         SCIP_CALL( SCIPreallocBufferArray(scip, scenarios, newsize) );
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, scenarios, (*scenariossize), newsize) );
          (*scenariossize) = newsize;
       }
 
@@ -837,19 +833,20 @@ SCIP_RETCODE createScenariosFromBlocks(
    int stagenum;
    char periods[SCIP_MAXSTRLEN];
    int i;
+   int j;
 
    assert(scip != NULL);
    assert(blocks != NULL);
 
    /* allocting the memory for the scenarios array */
-   SCIP_CALL( SCIPallocBufferArray(scip, &scenarios, numstages) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &scenarios, numstages) );
    SCIP_CALL( SCIPallocBufferArray(scip, &numscenarios, numstages) );
    SCIP_CALL( SCIPallocBufferArray(scip, &scenariossize, numstages) );
    for( i = 0; i < numstages; i++ )
    {
       scenariossize[i] = STO_DEFAULT_BLOCKARRAYSIZE;
       numscenarios[i] = 0;
-      SCIP_CALL( SCIPallocBufferArray(scip, &scenarios[i], scenariossize[i]) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &scenarios[i], scenariossize[i]) );
    }
 
    /* allocting the memory for the block for scenario array */
@@ -882,10 +879,14 @@ SCIP_RETCODE createScenariosFromBlocks(
 
    SCIPfreeBufferArray(scip, &blocksforscen);
    for( i = numstages - 1; i >= 0; i-- )
-      SCIPfreeBufferArray(scip, &scenarios[i]);
+   {
+      for( j = numscenarios[i] - 1; j >= 0; j-- )
+         SCIP_CALL( freeScenarioTree(scip, &scenarios[i][j]) );
+      SCIPfreeBlockMemoryArray(scip, &scenarios[i], scenariossize[i]);
+   }
    SCIPfreeBufferArray(scip, &scenariossize);
    SCIPfreeBufferArray(scip, &numscenarios);
-   SCIPfreeBufferArray(scip, &scenarios);
+   SCIPfreeBlockMemoryArray(scip, &scenarios, numstages);
 
    return SCIP_OKAY;
 }
@@ -903,12 +904,9 @@ SCIP_RETCODE createReaderdata(
    /* creating the initial scenario */
    SCIP_CALL( createScenarioData(scip, &readerdata->scenariotree) );
 
-   /* the initial scenario is the deterministic part of the problem. So there will be no changes. */
-   /* the name of the first scenario is the name of stage 0 */
-   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &readerdata->scenariotree->stagename, SCIPtimGetStageName(scip, 0),
-         strlen(SCIPtimGetStageName(scip, 0)) + 1) );
-   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &readerdata->scenariotree->name, SCIPtimGetStageName(scip, 0),
-         strlen(SCIPtimGetStageName(scip, 0)) + 1) );
+   /* setting the scenario name and stage name */
+   SCIP_CALL( setScenarioName(scip, readerdata->scenariotree, "ROOT") );
+   SCIP_CALL( setScenarioStageName(scip, readerdata->scenariotree, SCIPtimGetStageName(scip, 0)) );
 
    return SCIP_OKAY;
 }
@@ -1697,7 +1695,8 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
       SCIP_CALL( SCIPincludeBendersDefault(scenarioscip) );
 
       /* allocating memory for the subproblems */
-      SCIP_CALL( createScenarioSubprobArray(scenarioscip, scenario) );
+      if( getScenarioNChildren(scenario) > 0 )
+         SCIP_CALL( createScenarioSubprobArray(scenarioscip, scenario) );
    }
 
    /* adding the scenarioscip to the scenario */
@@ -1716,7 +1715,8 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
       /* the master SCIP is always passed to the recursive function. The scenario SCIP instances are generated in the
        * function call. */
       SCIP_CALL( addScenarioVarsAndConsToProb(scip, getScenarioChild(scenario, i), decomp) );
-      addScenarioSubproblem(scenario, getScenarioScip(getScenarioChild(scenario, i)));
+      if( decomp )
+         addScenarioSubproblem(scenario, getScenarioScip(getScenarioChild(scenario, i)));
    }
 
    /* adding the Benders' decomposition */
