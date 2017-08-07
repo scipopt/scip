@@ -93,7 +93,7 @@ SCIP_DECL_EVENTINIT(eventInitGlobalbnd)
       int        i;
       int        nvars;
       SCIP_VAR** vars;
-      SCIPdebugMsg(scip, "catching events in "EVENTHDLR_NAME" eventhdlr\n");
+      SCIPdebugMsg(scip, "catching events in " EVENTHDLR_NAME " eventhdlr\n");
       /* notify SCIP that this event handler wants to react on global bound change events */
       nvars = SCIPgetNVars(scip);
       vars = SCIPgetVars(scip);
@@ -144,7 +144,7 @@ SCIP_DECL_EVENTEXEC(eventExecGlobalbnd)
    SCIP_BOUNDTYPE      boundtype;
    SCIP_Real           constant;
    SCIP_Real           scalar;
-   SCIPdebugMsg(scip, "exec method of eventhdlr "EVENTHDLR_NAME"\n");
+   SCIPdebugMsg(scip, "exec method of eventhdlr " EVENTHDLR_NAME "\n");
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
    assert(event != NULL);
