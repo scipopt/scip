@@ -1191,7 +1191,7 @@ SCIP_DECL_HEURINIT(heurInitGins)
 
    /* initialize data */
    heurdata->usednodes = 0;
-   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen, DEFAULT_RANDSEED) );
    heurdata->sumdiscneighborhoodvars = heurdata->sumneighborhoodvars = 0;
    heurdata->nneighborhoods = 0;
    heurdata->maxseendistance = 0;
@@ -1230,7 +1230,7 @@ SCIP_DECL_HEUREXIT(heurExitGins)
       printHistogram(scip, heurdata->consdiscvarshist, "Constraint discrete density histogram");
       )
 
-   SCIPrandomFree(&heurdata->randnumgen);
+   SCIPfreeRandom(scip, &heurdata->randnumgen);
    heurdata->randnumgen = NULL;
 
    return SCIP_OKAY;

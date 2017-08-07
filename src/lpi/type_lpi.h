@@ -58,7 +58,8 @@ enum SCIP_LPParam
    SCIP_LPPAR_CONDITIONLIMIT = 16,      /**< maximum condition number of LP basis counted as stable */
    SCIP_LPPAR_TIMING         = 17,      /**< type of timer (1 - cpu, 2 - wallclock, 0 - off) */
    SCIP_LPPAR_RANDOMSEED     = 18,      /**< inital random seed, e.g. for perturbations in the simplex (0: LP default) */
-   SCIP_LPPAR_POLISHING      = 19       /**< set solution polishing (0 - disable, 1 - enable) */
+   SCIP_LPPAR_POLISHING      = 19,      /**< set solution polishing (0 - disable, 1 - enable) */
+   SCIP_LPPAR_REFACTOR       = 20       /**< set refactorization interval (0 - automatic) */
 };
 typedef enum SCIP_LPParam SCIP_LPPARAM;
 

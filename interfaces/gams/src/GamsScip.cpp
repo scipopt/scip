@@ -246,7 +246,7 @@ int GamsScip::callSolver()
    SCIP_CALL_ABORT( SCIPgetStringParam(scip, "gams/interactive", &interactive) );
    assert(interactive != NULL);
 #ifdef GAMS_BUILD
-   if( interactive[0] != '\0' && !palLicenseIsAcademic(pal) )
+   if( interactive[0] != '\0' && !palLicenseIsAcademic(pal) && palLicenseCheckSubSys(pal, const_cast<char*>("SC")) )
    {
       gevLogStat(gev, "SCIP interactive shell not available in demo mode.\n");
       interactive[0] = '\0';
@@ -443,11 +443,13 @@ SCIP_RETCODE GamsScip::freeSCIP()
        * Without it, the run will be aborted here, thereby not returning
        * results back to GAMS.
        */
-      gevTerminateSet(gev, NULL, (void*)&interruptDuringFree);
+      if( gev != NULL )
+         gevTerminateSet(gev, NULL, (void*)&interruptDuringFree);
 
       SCIP_CALL( SCIPfree(&scip) );
 
-      gevTerminateUninstall(gev);
+      if( gev != NULL )
+         gevTerminateUninstall(gev);
    }
 
    return SCIP_OKAY;

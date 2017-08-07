@@ -467,7 +467,8 @@ void** SCIPpqueueElems(
  */
 
 /* fast 2-universal hash functions for two and four elements */
-#define SCIPhashSignature64(a)              ((uint64_t)(UINT64_C(1) << ((a) % 64)))
+
+#define SCIPhashSignature64(a)              (UINT64_C(0x8000000000000000)>>((UINT32_C(0x9e3779b9) * ((uint32_t)(a)))>>26))
 #define SCIPhashTwo(a, b)                   ((uint32_t)((((uint64_t)(a) + 0xd37e9a1ce2148403ULL) * ((uint64_t)(b) + 0xe5fcc163aef32782ULL) )>>32))
 
 #define SCIPhashFour(a, b, c, d)            ((uint32_t)((((uint64_t)(a) + 0xbd5c89185f082658ULL) * ((uint64_t)(b) + 0xe5fcc163aef32782ULL) + \
@@ -480,10 +481,15 @@ void** SCIPpqueueElems(
 
 #define SCIPcombineFourInt(a, b, c, d)      (((uint64_t) (a) << 48) + ((uint64_t) (b) << 32) + ((uint64_t) (c) << 16) + ((uint64_t) (d)) )
 
-/* computes a hashcode for a floating point value containing n bits after the comma */
-#define SCIPrealHashCode(x, n)              ( (x)*(1<<n) >= INT64_MAX ? INT64_MAX : ((x)*(1<<n) <= INT64_MIN ? INT64_MIN : (int64_t)((x)*(1<<n))) )
-
-#define SCIPpositiveRealHashCode(x, n)      ( (x)*(1<<n) >= UINT64_MAX ? UINT64_MAX : (uint64_t)((x)*(1<<n)) )
+/** computes a hashcode for double precision floating point values containing
+ *  15 significant bits, the sign and the exponent
+ */
+INLINE static
+uint32_t SCIPrealHashCode(double x)
+{
+   int exp;
+   return (((uint32_t)(uint16_t)(int16_t)ldexp(frexp(x, &exp), 15))<<16) | (uint32_t)exp;
+}
 
 
 /** creates a hash table */
@@ -1077,31 +1083,11 @@ int SCIPprofileGetLatestFeasibleStart(
  * @{
  */
 
-/** creates directed graph structure */
-EXTERN
-SCIP_RETCODE SCIPdigraphCreate(
-   SCIP_DIGRAPH**        digraph,            /**< pointer to store the created directed graph */
-   BMS_BLKMEM*           blkmem,             /**< block memory to store the data */
-   int                   nnodes              /**< number of nodes */
-   );
-
 /** resize directed graph structure */
 EXTERN
 SCIP_RETCODE SCIPdigraphResize(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   nnodes              /**< new number of nodes */
-   );
-
-/** copies directed graph structure
- *
- *  @note The data in nodedata is copied verbatim. This possibly has to be adapted by the user.
- */
-EXTERN
-SCIP_RETCODE SCIPdigraphCopy(
-   SCIP_DIGRAPH**        targetdigraph,      /**< pointer to store the copied directed graph */
-   SCIP_DIGRAPH*         sourcedigraph,      /**< source directed graph */
-   BMS_BLKMEM*           targetblkmem        /**< block memory to store the target block memory, or NULL to use the same
-                                              *  the same block memory as used for the \p sourcedigraph */
    );
 
 /** sets the sizes of the successor lists for the nodes in a directed graph and allocates memory for the lists */
@@ -1688,21 +1674,6 @@ SCIP_Real SCIPrandomGetReal(
    SCIP_RANDNUMGEN*      randgen,            /**< random number generator data */
    SCIP_Real             minrandval,         /**< minimal value to return */
    SCIP_Real             maxrandval          /**< maximal value to return */
-   );
-
-/** creates and initializes a random number generator */
-EXTERN
-SCIP_RETCODE SCIPrandomCreate(
-   SCIP_RANDNUMGEN**     randnumgen,         /**< random number generator */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   unsigned int          initialseed         /**< initial random seed */
-   );
-
-
-/** frees a random number generator */
-EXTERN
-void SCIPrandomFree(
-   SCIP_RANDNUMGEN**     randnumgen          /**< random number generator */
    );
 
 /** returns a random real between minrandval and maxrandval

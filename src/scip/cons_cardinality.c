@@ -39,6 +39,7 @@
 #include "scip/cons_linear.h"
 #include "scip/cons_knapsack.h"
 #include <string.h>
+#include <ctype.h>
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "cardinality"
@@ -2847,7 +2848,6 @@ SCIP_DECL_CONSPRINT(consPrintCardinality)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   SCIPinfoMessage(scip, file, "card( ");
    for( j = 0; j < consdata->nvars; ++j )
    {
       if( j > 0 )
@@ -2858,7 +2858,7 @@ SCIP_DECL_CONSPRINT(consPrintCardinality)
       else
          SCIPinfoMessage(scip, file, " (%3.2f)", consdata->weights[j]);
    }
-   SCIPinfoMessage(scip, file, ") <= %d", consdata->cardval);
+   SCIPinfoMessage(scip, file, " <= %d", consdata->cardval);
 
    return SCIP_OKAY;
 }
@@ -2939,6 +2939,91 @@ SCIP_DECL_CONSCOPY(consCopyCardinality)
    SCIPfreeBufferArray(sourcescip, &targetindvars);
    SCIPfreeBufferArray(sourcescip, &targetvars);
 
+   return SCIP_OKAY;
+}
+
+/** constraint parsing method of constraint handler */
+static
+SCIP_DECL_CONSPARSE(consParseCardinality)
+{  /*lint --e{715}*/
+   SCIP_VAR* var;
+   SCIP_Real weight;
+   int cardval;
+   const char* s;
+   char* t;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert(cons != NULL);
+   assert(success != NULL);
+
+   *success = TRUE;
+   s = str;
+
+   /* create empty cardinality constraint */
+   SCIP_CALL( SCIPcreateConsCardinality(scip, cons, name, 0, NULL, 0, NULL, NULL, initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
+
+   /* loop through string */
+   do
+   {
+      /* parse variable name */
+      SCIP_CALL( SCIPparseVarName(scip, s, &var, &t) );
+      s = t;
+
+      /* skip until beginning of weight */
+      while ( *s != '\0' && *s != '(' )
+         ++s;
+ 
+      if ( *s == '\0' )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: expected weight at input: %s\n", s);
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
+      /* skip '(' */
+      ++s;
+
+      /* find weight */
+      weight = strtod(s, &t);
+      if ( t == NULL )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error during parsing of the weight: %s\n", s);
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
+      s = t;
+
+      /* skip white space, ',', and ')' */
+      while ( *s != '\0' && ( isspace((unsigned char)*s) ||  *s == ',' || *s == ')' ) )
+         ++s;
+
+      /* add variable */
+      SCIP_CALL( SCIPaddVarCardinality(scip, *cons, var, NULL, weight) );
+
+      /* check if there is a '<=' */
+      if ( *s == '<' && *s+1 == '='  )
+      {
+         s = s + 2;
+
+         /* skip white space */
+         while ( isspace((unsigned char)*s) )
+            ++s;
+
+         cardval = (int)strtod(s, &t);
+         if ( t == NULL )
+         {
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error during parsing of the cardinality restriction value: %s\n", s);
+            *success = FALSE;
+            return SCIP_OKAY;
+         }
+         s = t;
+              
+         SCIP_CALL( SCIPchgCardvalCardinality(scip, *cons, cardval));
+      }
+   }
+   while ( *s != '\0' );
+  
    return SCIP_OKAY;
 }
 
@@ -3137,6 +3222,7 @@ SCIP_RETCODE SCIPincludeConshdlrCardinality(
    SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsCardinality) );
    SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsCardinality) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpCardinality) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseCardinality) );
    SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolCardinality, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintCardinality) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropCardinality, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
