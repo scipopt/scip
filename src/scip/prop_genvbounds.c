@@ -539,9 +539,9 @@ SCIP_RETCODE fillGlobalStartingData(
    /* resize arrays */
    if( propdata->gstartindicessize != propdata->ngindices )
    {
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(propdata->gstartindices), propdata->gstartindicessize,
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(propdata->gstartindices), propdata->gstartindicessize, \
             propdata->ngindices) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(propdata->gstartcomponents), propdata->gstartindicessize,
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(propdata->gstartcomponents), propdata->gstartindicessize, \
             propdata->ngindices) );
       propdata->gstartindicessize = propdata->ngindices;
    }
@@ -1413,15 +1413,15 @@ SCIP_RETCODE setUpEvents(
       /* resize arrays stored in eventdata */
       if( eventdata->startindicessize != eventdata->nstarts )
       {
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(eventdata->startcomponents), eventdata->startindicessize,
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(eventdata->startcomponents), eventdata->startindicessize, \
                eventdata->nstarts) );
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(eventdata->startindices), eventdata->startindicessize,
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(eventdata->startindices), eventdata->startindicessize, \
                eventdata->nstarts) );
          eventdata->startindicessize = eventdata->nstarts;
       }
 
       /* register event */
-      SCIP_CALL( SCIPcatchVarEvent(scip, eventdata->var, SCIP_EVENTTYPE_LBTIGHTENED, propdata->eventhdlr, eventdata,
+      SCIP_CALL( SCIPcatchVarEvent(scip, eventdata->var, SCIP_EVENTTYPE_LBTIGHTENED, propdata->eventhdlr, eventdata, \
             NULL) );
    }
 
@@ -1438,9 +1438,9 @@ SCIP_RETCODE setUpEvents(
       /* resize arrays stored in eventdata */
       if( eventdata->startindicessize != eventdata->nstarts )
       {
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(eventdata->startcomponents), eventdata->startindicessize,
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(eventdata->startcomponents), eventdata->startindicessize, \
                eventdata->nstarts) );
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(eventdata->startindices), eventdata->startindicessize,
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(eventdata->startindices), eventdata->startindicessize, \
                eventdata->nstarts) );
          eventdata->startindicessize = eventdata->nstarts;
       }

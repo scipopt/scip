@@ -609,6 +609,7 @@ SCIP_RETCODE primalAddSol(
    )
 {
    SCIP_SOL* sol;
+   /* cppcheck-suppress unassignedVariable */
    SCIP_EVENT event;
    SCIP_Real obj;
    int pos;

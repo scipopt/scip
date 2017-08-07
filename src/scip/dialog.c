@@ -703,7 +703,6 @@ SCIP_RETCODE SCIPdialoghdlrAddInputLine(
    *dialoghdlr->inputlistptr = linelist;
    dialoghdlr->inputlistptr = &linelist->nextline;
 
-   /* cppcheck-suppress unusedLabel */
  TERMINATE:
    if( retcode != SCIP_OKAY )
       BMSfreeMemory(&linelist);
@@ -857,7 +856,6 @@ SCIP_RETCODE SCIPdialogCreate(
    /* capture dialog */
    SCIPdialogCapture(*dialog);
 
-   /* cppcheck-suppress unusedLabel */
  TERMINATE:
    if( retcode != SCIP_OKAY )
    {
