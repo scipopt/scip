@@ -59,8 +59,6 @@
 #define DEFAULT_DENSITYOFFSET       100 /**< additional number of variables allowed in row on top of density */
 #define DEFAULT_MAXROWFAC          1e+4 /**< maximal row aggregation factor */
 #define DEFAULT_MAXTESTDELTA         -1 /**< maximal number of different deltas to try (-1: unlimited) */
-#define DEFAULT_MAXCONTS             10 /**< maximal number of active continuous (continuous vars not in their bound) variables in aggregated row */
-#define DEFAULT_MAXCONTSROOT         10 /**< maximal number of active continuous variables in aggregated row in the root */
 #define DEFAULT_AGGRTOL             0.1 /**< aggregation heuristic: we try to delete continuous variables from the current
                                          *   aggregation, whose distance to its tightest bound is >= L - DEFAULT_AGGRTOL,
                                          *   where L is the largest of the distances between a continuous variable's value
@@ -111,7 +109,6 @@ struct SCIP_SepaData
    int                   maxsepacutsroot;    /**< maximal number of cmir cuts separated per separation round in root node */
    int                   densityoffset;      /**< additional number of variables allowed in row on top of density */
    int                   maxtestdelta;       /**< maximal number of different deltas to try (-1: unlimited) */
-   int                   maxconts;           /**< maximal number of active continuous variables in aggregated row */
    int                   maxcontsroot;       /**< maximal number of active continuous variables in aggregated row in the root */
    SCIP_Bool             trynegscaling;      /**< should negative values also be tested in scaling? */
    SCIP_Bool             fixintegralrhs;     /**< should an additional variable be complemented if f0 = 0? */
@@ -547,7 +544,6 @@ static
 SCIP_RETCODE aggregateNextRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
-   int                   maxconts,
    SCIP_Real*            rowlhsscores,       /**< aggregation scores for left hand sides of row */
    SCIP_Real*            rowrhsscores,       /**< aggregation scores for right hand sides of row */
    AGGREGATIONDATA*      aggrdata,           /**< aggregation data */
@@ -802,14 +798,11 @@ SCIP_RETCODE aggregation(
    SCIP*                 scip,               /**< SCIP data structure */
    AGGREGATIONDATA*      aggrdata,
    SCIP_SEPA*            sepa,               /**< separator */
-   SCIP_SEPADATA*        sepadata,           /**< separator data */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
-   SCIP_Real*            varsolvals,         /**< LP solution value of all variables in LP */
    SCIP_Real*            rowlhsscores,       /**< aggregation scores for left hand sides of row */
    SCIP_Real*            rowrhsscores,       /**< aggregation scores for right hand sides of row */
    int                   startrow,           /**< index of row to start aggregation */
    int                   maxaggrs,           /**< maximal number of aggregations */
-   int                   maxconts,           /**< maximal number of active continuous variables in aggregated row */
    SCIP_Bool*            wastried,           /**< pointer to store whether the given startrow was actually tried */
    SCIP_Bool*            cutoff,             /**< whether a cutoff has been detected */
    int*                  cutinds,
@@ -818,6 +811,7 @@ SCIP_RETCODE aggregation(
    int*                  ncuts               /**< pointer to count the number of generated cuts */
    )
 {
+   SCIP_SEPADATA* sepadata;
    SCIP_COL** cols;
    SCIP_VAR** vars;
    SCIP_ROW** rows;
@@ -839,14 +833,15 @@ SCIP_RETCODE aggregation(
    SCIP_Real cutefficacy;
 
    assert(scip != NULL);
-   assert(sepadata != NULL);
-   assert(varsolvals != NULL);
+   assert(sepa != NULL);
    assert(rowlhsscores != NULL);
    assert(rowrhsscores != NULL);
    assert(wastried != NULL);
    assert(cutoff != NULL);
    assert(ncuts != NULL);
 
+   sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
    *cutoff = FALSE;
    *wastried = FALSE;
 
@@ -946,7 +941,7 @@ SCIP_RETCODE aggregation(
          break;
       }
 
-      SCIP_CALL( aggregateNextRow(scip, sepadata, maxconts, rowlhsscores, rowrhsscores, aggrdata, aggrdata->aggrrow,
+      SCIP_CALL( aggregateNextRow(scip, sepadata, rowlhsscores, rowrhsscores, aggrdata, aggrdata->aggrrow,
             &naggrs, &aggrsuccess) );
 
       /* no suitable aggregation was found or number of non-zeros is now too large so abort */
@@ -956,7 +951,7 @@ SCIP_RETCODE aggregation(
       }
 
       SCIPdebugMsg(scip, " -> %d continuous variables left (%d/%d active), %d/%d nonzeros, %d/%d aggregations\n",
-         naggrcontnonzs, nactiveconts, maxconts, naggrcontnonzs + naggrintnonzs, maxaggrnonzs, naggrs, maxaggrs);
+         naggrcontnonzs, nactiveconts, naggrcontnonzs + naggrintnonzs, maxaggrnonzs, naggrs, maxaggrs);
    }
 
    SCIPaggrRowClear(aggrdata->aggrrow);
@@ -1028,7 +1023,6 @@ SCIP_RETCODE separateCuts(
    int maxfails;
    int maxaggrs;
    int maxsepacuts;
-   int maxconts;
    int ncuts;
    int r;
    int v;
@@ -1154,7 +1148,6 @@ SCIP_RETCODE separateCuts(
       maxaggrs = sepadata->maxaggrsroot;
       maxsepacuts = sepadata->maxsepacutsroot;
       maxslack = sepadata->maxslackroot;
-      maxconts = sepadata->maxcontsroot;
    }
    else
    {
@@ -1163,7 +1156,6 @@ SCIP_RETCODE separateCuts(
       maxaggrs = sepadata->maxaggrs;
       maxsepacuts = sepadata->maxsepacuts;
       maxslack = sepadata->maxslack;
-      maxconts = sepadata->maxconts;
    }
 
    /* calculate aggregation scores for both sides of all rows, and sort rows by decreasing maximal score
@@ -1292,14 +1284,14 @@ SCIP_RETCODE separateCuts(
       int oldncuts;
 
       oldncuts = ncuts;
-      SCIP_CALL( aggregation(scip, &aggrdata, sepa, sepadata, sol, varsolvals, rowlhsscores, rowrhsscores,
-                             roworder[r], maxaggrs, maxconts, &wastried, &cutoff, cutinds, cutcoefs, FALSE, &ncuts) );
+      SCIP_CALL( aggregation(scip, &aggrdata, sepa, sol, rowlhsscores, rowrhsscores,
+                             roworder[r], maxaggrs, &wastried, &cutoff, cutinds, cutcoefs, FALSE, &ncuts) );
 
       /* TODO: document what trynegscaling means or reference to the general description in the h file */
       if( sepadata->trynegscaling && !cutoff )
       {
-         SCIP_CALL( aggregation(scip, &aggrdata, sepa, sepadata, sol, varsolvals, rowlhsscores, rowrhsscores,
-                             roworder[r], maxaggrs, maxconts, &wastried, &cutoff, cutinds, cutcoefs, TRUE, &ncuts) );
+         SCIP_CALL( aggregation(scip, &aggrdata, sepa, sol, rowlhsscores, rowrhsscores,
+                             roworder[r], maxaggrs, &wastried, &cutoff, cutinds, cutcoefs, TRUE, &ncuts) );
       }
 
       if ( cutoff )
@@ -1525,14 +1517,6 @@ SCIP_RETCODE SCIPincludeSepaCmir(
          "separating/cmir/maxtestdelta",
          "maximal number of different deltas to try (-1: unlimited)",
          &sepadata->maxtestdelta, TRUE, DEFAULT_MAXTESTDELTA, -1, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/cmir/maxconts",
-         "maximal number of active continuous variables in aggregated row",
-         &sepadata->maxconts, TRUE, DEFAULT_MAXCONTS, 0, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/cmir/maxcontsroot",
-         "maximal number of active continuous variables in aggregated row in the root node",
-         &sepadata->maxcontsroot, TRUE, DEFAULT_MAXCONTSROOT, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/cmir/aggrtol",
          "tolerance for bound distances used to select continuous variable in current aggregated constraint to be eliminated",
