@@ -3455,7 +3455,7 @@ SCIP_RETCODE generateLinearizationCut(
    }
 
    SCIP_CALL( SCIPcreateRowprep(scip, rowprep, SCIP_SIDETYPE_RIGHT, islocal) );
-   (void) SCIPsnprintf((*rowprep)->name, sizeof((*rowprep)->name), "signpowlinearizecut_%u", ++(conshdlrdata->ncuts));
+   (void) SCIPsnprintf((*rowprep)->name, (int)sizeof((*rowprep)->name), "signpowlinearizecut_%u", ++(conshdlrdata->ncuts));
    SCIPaddRowprepSide(*rowprep, rhs);
    SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, x, xmult*exponent*tmp) );
    SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, z, zcoef) );
@@ -3615,7 +3615,6 @@ static
 SCIP_RETCODE generateSecantCutNoCheck(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP**        rowprep,            /**< buffer to store rowprep */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_Real             xlb,                /**< lower bound of x */
    SCIP_Real             xub,                /**< upper bound of x */
    SCIP_Real             exponent,           /**< exponent n in sign(x)abs(x)^n */
@@ -4135,7 +4134,7 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
    conss = SCIPconshdlrGetConss(conshdlr);
    assert(conss != NULL);
 
-   SCIPdebugMsg(scip, "catched new sol event %"SCIP_EVENTTYPE_FORMAT" from heur <%s>; have %d conss\n", SCIPeventGetType(event), SCIPheurGetName(SCIPsolGetHeur(sol)), nconss);
+   SCIPdebugMsg(scip, "catched new sol event %" SCIP_EVENTTYPE_FORMAT " from heur <%s>; have %d conss\n", SCIPeventGetType(event), SCIPheurGetName(SCIPsolGetHeur(sol)), nconss);
 
    SCIP_CALL( addLinearizationCuts(scip, conshdlr, conss, nconss, sol, NULL, 0.0) );
 
@@ -5225,6 +5224,7 @@ SCIP_RETCODE enforceConstraint(
       assert(solinfeasible);
       /* however, if solinfeasible is actually not TRUE, then better cut off the node to avoid that SCIP
        * stops because infeasible cannot be resolved */
+       /*lint --e{774} */
       if( !solinfeasible )
          *result = SCIP_CUTOFF;
       return SCIP_OKAY;
@@ -5741,7 +5741,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
             if( SCIPisNegative(scip, xlb + consdata->xoffset) )
             {
                /* generate secant between xlb and right changepoint */
-               SCIP_CALL( generateSecantCutNoCheck(scip, &rowprep, conshdlr, xlb, MIN(-consdata->root * (xlb+consdata->xoffset) - consdata->xoffset, xub),
+               SCIP_CALL( generateSecantCutNoCheck(scip, &rowprep, xlb, MIN(-consdata->root * (xlb+consdata->xoffset) - consdata->xoffset, xub),
                      consdata->exponent, consdata->xoffset, consdata->power, 1.0, consdata->zcoef, consdata->rhs, consdata->x, consdata->z) );
                if( rowprep != NULL )
                {
@@ -5822,7 +5822,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
             if( SCIPisPositive(scip, xub + consdata->xoffset) )
             {
                /* generate secant between left change point and upper bound */
-               SCIP_CALL( generateSecantCutNoCheck(scip, &rowprep, conshdlr, -xub, MIN(consdata->root * (xub+consdata->xoffset) + consdata->xoffset, -xlb),
+               SCIP_CALL( generateSecantCutNoCheck(scip, &rowprep, -xub, MIN(consdata->root * (xub+consdata->xoffset) + consdata->xoffset, -xlb),
                      consdata->exponent, -consdata->xoffset, consdata->power, -1.0, -consdata->zcoef, -consdata->lhs, consdata->x, consdata->z) );
                if( rowprep != NULL )
                {

@@ -1006,7 +1006,6 @@ void branchcandRemovePseudoCand(
    SCIP_VAR*             var                 /**< variable to remove */
    )
 {
-   int branchpriority;
    int freepos;
 
    assert(branchcand != NULL);
@@ -1018,10 +1017,9 @@ void branchcandRemovePseudoCand(
    /* Note that the branching priority of the variable to be removed is not necessarily equal to pseudomaxpriority, since
     * the status of the variable might have changed, leading to a change in the branching priority. Moreover, if the
     * variable was part of an aggregation, even other variables might at this point have different priorities. */
-   branchpriority = SCIPvarGetBranchPriority(var);
-
    SCIPdebugMessage("removing pseudo candidate <%s> of type %d and priority %d at %d from candidate set (maxprio: %d)\n",
-      SCIPvarGetName(var), SCIPvarGetType(var), branchpriority, var->pseudocandindex, branchcand->pseudomaxpriority);
+      SCIPvarGetName(var), SCIPvarGetType(var), SCIPvarGetBranchPriority(var), var->pseudocandindex,
+      branchcand->pseudomaxpriority);
 
    /* delete the variable from pseudocands, making sure, that the highest priority candidates are at the front
     * and ordered binaries, integers, implicit integers
@@ -1505,8 +1503,8 @@ SCIP_RETCODE SCIPbranchruleExecLPSol(
       {
          SCIP_Longint oldndomchgs;
          SCIP_Longint oldnprobdomchgs;
+         SCIP_Longint oldnactiveconss;
          int oldncuts;
-         int oldnactiveconss;
 
          SCIPsetDebugMsg(set, "executing LP branching rule <%s>\n", branchrule->name);
 

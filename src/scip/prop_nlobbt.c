@@ -720,39 +720,39 @@ SCIP_RETCODE SCIPincludePropNlobbt(
    SCIP_CALL( SCIPsetPropInitsol(scip, prop, propInitsolNlobbt) );
    SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolNlobbt) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "propagating/"PROP_NAME"/feastolfac",
+   SCIP_CALL( SCIPaddRealParam(scip, "propagating/" PROP_NAME "/feastolfac",
          "factor for NLP feasibility tolerance",
          &propdata->feastolfac, TRUE, DEFAULT_FEASTOLFAC, 0.0, 1.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "propagating/"PROP_NAME"/relobjtolfac",
+   SCIP_CALL( SCIPaddRealParam(scip, "propagating/" PROP_NAME "/relobjtolfac",
          "factor for NLP relative objective tolerance",
          &propdata->relobjtolfac, TRUE, DEFAULT_RELOBJTOLFAC, 0.0, 1.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "propagating/"PROP_NAME"/minnonconvexfrac",
+   SCIP_CALL( SCIPaddRealParam(scip, "propagating/" PROP_NAME "/minnonconvexfrac",
          "(#convex nlrows)/(#nonconvex nlrows) threshold to apply propagator",
          &propdata->minnonconvexfrac, TRUE, DEFAULT_MINNONCONVEXFRAC, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "propagating/"PROP_NAME"/minlinearfrac",
+   SCIP_CALL( SCIPaddRealParam(scip, "propagating/" PROP_NAME "/minlinearfrac",
          "minimum (#convex nlrows)/(#linear nlrows) threshold to apply propagator",
          &propdata->minlinearfrac, TRUE, DEFAULT_MINLINEARFRAC, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/addlprows",
+   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/" PROP_NAME "/addlprows",
          "should non-initial LP rows be used?",
          &propdata->addlprows, FALSE, DEFAULT_ADDLPROWS, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "propagating/"PROP_NAME"/nlpiterlimit",
+   SCIP_CALL( SCIPaddIntParam(scip, "propagating/" PROP_NAME "/nlpiterlimit",
          "iteration limit of NLP solver; 0 for no limit",
          &propdata->nlpiterlimit, TRUE, DEFAULT_NLPITERLIMIT, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "propagating/"PROP_NAME"/nlptimelimit",
+   SCIP_CALL( SCIPaddRealParam(scip, "propagating/" PROP_NAME "/nlptimelimit",
          "time limit of NLP solver; 0.0 for no limit",
          &propdata->nlptimelimit, TRUE, DEFAULT_NLPTIMELIMIT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "propagating/"PROP_NAME"/nlpverblevel",
+   SCIP_CALL( SCIPaddIntParam(scip, "propagating/" PROP_NAME "/nlpverblevel",
          "verbosity level of NLP solver",
          &propdata->nlpverblevel, TRUE, DEFAULT_NLPVERLEVEL, 0, 5, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "propagating/"PROP_NAME"/itlimitfactor",
+   SCIP_CALL( SCIPaddRealParam(scip, "propagating/" PROP_NAME "/itlimitfactor",
          "LP iteration limit for nlobbt will be this factor times total LP iterations in root node",
          &propdata->itlimitfactor, TRUE, DEFAULT_ITLIMITFACTOR, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 

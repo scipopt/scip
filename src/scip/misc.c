@@ -1423,7 +1423,7 @@ SCIP_MULTIHASHLIST* multihashlistFind(
    void*                 key                 /**< key to retrieve */
    )
 {
-   unsigned int currentkeyval;
+   uint64_t currentkeyval;
    void* currentkey;
 
    assert(hashkeyeq != NULL);
@@ -9285,9 +9285,9 @@ void SCIPprintSysError(
    char buf[SCIP_MAXSTRLEN];
 
 #if defined(_WIN32) || defined(_WIN64)
-   (void) strerror_s(buf, SCIP_MAXSTRLEN, errno);
+   (void)(strerror_s(buf, SCIP_MAXSTRLEN, errno) + 1);
 #else
-   (void) strerror_r(errno, buf, SCIP_MAXSTRLEN);
+   (void)(strerror_r(errno, buf, SCIP_MAXSTRLEN) + 1);
 #endif
 
    buf[SCIP_MAXSTRLEN - 1] = '\0';

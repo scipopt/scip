@@ -2,15 +2,13 @@
 
 #
 # Usage:
-# make testcluster | check/jenkins_check_results.sh TESTSET
+# make testcluster | check/jenkins_check_results.sh TESTSET SETTING
 
 # This script reads stdout from make testcluster, parses the slurm job ids, and starts a
 # job after the previously queued slurm jobs finish. This job waits for 5 seconds, then
 # runs ./evalcheck_cluster.sh and greps for fails.
-# To know which results to process with evalcheck_cluster, TESTSET must be provided explicitly.
-# If there is a fail, an email is sent to the admin. Otherwise, the results are uploaded
-# to rubberband with rbcli.
-#
+# To know which results to process with evalcheck_cluster, TESTSET and SETTING must be provided explicitly.
+# The results are uploaded to rubberband with rbcli and if there are fails, an email is sent to the admin.
 #
 
 # read from stdin
@@ -36,7 +34,7 @@ SCIPVERSIONOUTPUT=`bin/scip -v | sed -e 's/$/@/'`
 export TESTSET=$1
 export SETTING=$2
 export GITHASH=`git describe --always --dirty  | sed -re 's/^.+-g//'`
-export GITBRANCH=`git reflog show --all | grep $GITHASH | sed -e 's/.*origin.\([^@]*\)@.*/\1/'`
+export GITBRANCH=`git ls-remote --heads origin | grep $(git rev-parse HEAD)| cut -d / -f 3`
 export OPT=`echo $SCIPVERSIONOUTPUT | sed -e 's/.* OPT=\([^@]*\).*/\1/'`
 export LPS=`echo $SCIPVERSIONOUTPUT | sed -e 's/.* LPS=\([^@]*\).*/\1/'`
 

@@ -183,7 +183,7 @@ SCIP_RETCODE SCIPconcsolverCreateInstance(
    /* in deterministic mode use number of nonzeros and variables to get a good initial synchronization frequency
     * in opportunistic mode use the frequency as set by the user
     */
-   if( set->parallel_mode == SCIP_PARA_DETERMINISTIC )
+   if( set->parallel_mode == (int) SCIP_PARA_DETERMINISTIC )
       (*concsolver)->syncfreq = 0.01 * set->scip->stat->nnz * SCIPgetNVars(set->scip) * set->concurrent_freqinit;
    else
       (*concsolver)->syncfreq = set->concurrent_freqinit;

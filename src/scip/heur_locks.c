@@ -682,7 +682,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
 #endif
       lpstatus = SCIPgetLPSolstat(scip);
 
-      SCIPdebugMsg(scip, " -> new LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
+      SCIPdebugMsg(scip, " -> new LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
       SCIPdebugMsg(scip, " -> error=%u, status=%d\n", lperror, SCIPgetLPSolstat(scip));
 
       /* check if this is a feasible solution */

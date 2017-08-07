@@ -1277,28 +1277,28 @@ SCIP_RETCODE SCIPincludeHeurRepair(
 
    heurdata->filename = NULL;
    /* add string parameter for filename containing a solution */
-   SCIP_CALL( SCIPaddStringParam(scip, "heuristics/"HEUR_NAME"/filename",
+   SCIP_CALL( SCIPaddStringParam(scip, "heuristics/" HEUR_NAME "/filename",
          "file name of a solution to be used as infeasible starting point, [-] if not available",
          &heurdata->filename, FALSE, DEFAULT_FILENAME, NULL, NULL) );
 
    /* add bool parameter for decision how to deal with unfractional cands */
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/roundit",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/roundit",
          "True : fractional variables which are not fractional in the given solution are rounded, "
          "FALSE : solving process of this heuristic is stopped. ",
          &heurdata->roundit, FALSE, DEFAULT_ROUNDIT, NULL, NULL));
 
    /* add bool parameter for decision how the objective function should be */
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/useobjfactor",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/useobjfactor",
          "should a scaled objective function for original variables be used in repair subproblem?",
          &heurdata->useobjfactor, FALSE, DEFAULT_USEOBJFACTOR, NULL, NULL));
 
    /* add bool parameter for decision if variable fixings should be used */
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/usevarfix",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/usevarfix",
          "should variable fixings be used in repair subproblem?",
          &heurdata->usevarfix, FALSE, DEFAULT_USEVARFIX, NULL, NULL));
 
    /* add bool parameter for decision how the objective function should be */
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/useslackvars",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/useslackvars",
          "should slack variables be used in repair subproblem?",
          &heurdata->useslackvars, FALSE, DEFAULT_USESLACKVARS, NULL, NULL));
 
