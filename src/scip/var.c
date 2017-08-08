@@ -1127,7 +1127,7 @@ SCIP_RETCODE SCIPdomchgMakeStatic(
             else
             {
                /* shrink dynamic size arrays to their minimal sizes */
-               SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.boundchgs,
+               SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.boundchgs, \
                      (*domchg)->domchgdyn.boundchgssize, (*domchg)->domchgdyn.nboundchgs) ); /*lint !e571*/
                BMSfreeBlockMemoryArrayNull(blkmem, &(*domchg)->domchgdyn.holechgs, (*domchg)->domchgdyn.holechgssize);
 
@@ -1139,9 +1139,9 @@ SCIP_RETCODE SCIPdomchgMakeStatic(
          else
          {
             /* shrink dynamic size arrays to their minimal sizes */
-            SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.boundchgs,
+            SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.boundchgs, \
                   (*domchg)->domchgdyn.boundchgssize, (*domchg)->domchgdyn.nboundchgs) ); /*lint !e571*/
-            SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.holechgs,
+            SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.holechgs, \
                   (*domchg)->domchgdyn.holechgssize, (*domchg)->domchgdyn.nholechgs) );
 
             /* convert into static domain change */
@@ -17753,7 +17753,7 @@ SCIP_RETCODE SCIPvarCatchEvent(
    assert((eventtype & SCIP_EVENTTYPE_VARCHANGED) != 0);
    assert(SCIPvarIsTransformed(var));
 
-   SCIPsetDebugMsg(set, "catch event of type 0x%"SCIP_EVENTTYPE_FORMAT" of variable <%s> with handler %p and data %p\n",
+   SCIPsetDebugMsg(set, "catch event of type 0x%" SCIP_EVENTTYPE_FORMAT " of variable <%s> with handler %p and data %p\n",
       eventtype, var->name, (void*)eventhdlr, (void*)eventdata);
 
    SCIP_CALL( SCIPeventfilterAdd(var->eventfilter, blkmem, set, eventtype, eventhdlr, eventdata, filterpos) );

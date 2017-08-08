@@ -3211,7 +3211,7 @@ SCIP_RETCODE SCIPrealarrayCopy(
    SCIP_CALL( SCIPrealarrayCreate(realarray, blkmem) );
    if( sourcerealarray->valssize > 0 )
    {
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*realarray)->vals, sourcerealarray->vals,
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*realarray)->vals, sourcerealarray->vals, \
                      sourcerealarray->valssize) );
    }
    (*realarray)->valssize = sourcerealarray->valssize;
@@ -3948,7 +3948,7 @@ SCIP_RETCODE SCIPboolarrayCopy(
    SCIP_CALL( SCIPboolarrayCreate(boolarray, blkmem) );
    if( sourceboolarray->valssize > 0 )
    {
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*boolarray)->vals, sourceboolarray->vals,
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*boolarray)->vals, sourceboolarray->vals, \
                      sourceboolarray->valssize) );
    }
    (*boolarray)->valssize = sourceboolarray->valssize;
@@ -6551,9 +6551,10 @@ SCIP_RETCODE SCIPdigraphCopy(
       {
          assert(sourcedigraph->successors[i] != NULL);
          assert(sourcedigraph->arcdata[i] != NULL);
-         SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &((*targetdigraph)->successors[i]),
+
+         SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &((*targetdigraph)->successors[i]), \
                sourcedigraph->successors[i], sourcedigraph->nsuccessors[i]) ); /*lint !e866*/
-         SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &((*targetdigraph)->arcdata[i]),
+         SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &((*targetdigraph)->arcdata[i]), \
                sourcedigraph->arcdata[i], sourcedigraph->nsuccessors[i]) ); /*lint !e866*/
       }
       /* copy node data - careful if these are pointers to some information -> need to be copied by hand */
@@ -6567,9 +6568,9 @@ SCIP_RETCODE SCIPdigraphCopy(
    /* copy component data */
    if( ncomponents > 0 )
    {
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &(*targetdigraph)->components, sourcedigraph->components,
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &(*targetdigraph)->components, sourcedigraph->components, \
             sourcedigraph->componentstarts[ncomponents]) );
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &(*targetdigraph)->componentstarts,
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &(*targetdigraph)->componentstarts, \
             sourcedigraph->componentstarts,ncomponents + 1) ); /*lint !e776*/
       (*targetdigraph)->componentstartsize = ncomponents + 1;
    }
@@ -7071,7 +7072,6 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
    if( ncomponents != NULL )
       (*ncomponents) = digraph->ncomponents;
 
-   /* cppcheck-suppress unusedLabel */
 TERMINATE:
    if( retcode != SCIP_OKAY )
    {
@@ -7377,8 +7377,7 @@ SCIP_RETCODE SCIPdigraphComputeDirectedComponents(
 
    assert(retcode == SCIP_OKAY);
 
- /* cppcheck-suppress unusedLabel */
- TERMINATE:
+TERMINATE:
    BMSfreeMemoryArrayNull(&lowlink);
    BMSfreeMemoryArrayNull(&dfsidx);
    BMSfreeMemoryArrayNull(&stack);
@@ -9333,9 +9332,9 @@ void SCIPprintSysError(
    char buf[SCIP_MAXSTRLEN];
 
 #if defined(_WIN32) || defined(_WIN64)
-   (void) strerror_s(buf, SCIP_MAXSTRLEN, errno);
+   (void)(strerror_s(buf, SCIP_MAXSTRLEN, errno) + 1);
 #else
-   (void) strerror_r(errno, buf, SCIP_MAXSTRLEN);
+   (void)(strerror_r(errno, buf, SCIP_MAXSTRLEN) + 1);
 #endif
 
    buf[SCIP_MAXSTRLEN - 1] = '\0';
