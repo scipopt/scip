@@ -192,11 +192,13 @@ SizeStatus estimateTreeSize(SCIP* scip, TSEtree *node, SCIP_Real upperbound, SCI
                   {
                       fractionleft = 1.0/branchratio.upratio;
                       fractionright = 1 - fractionleft;
+                      assert(fractionleft >= fractionright);
                   }
                   else
                   {
                       fractionright = 1.0/branchratio.upratio;
                       fractionleft = 1 - fractionright;
+                      assert(fractionleft <= fractionright);
                   }
                   break;
                }
@@ -218,7 +220,8 @@ SizeStatus estimateTreeSize(SCIP* scip, TSEtree *node, SCIP_Real upperbound, SCI
 
          if( leftstatus == UNKNOWN )
          {
-            leftremainingsize = fractionleft / fractionright * righttotalsize;
+            /* Below we use .5 to round to the closest integer in the truncation to int */
+            leftremainingsize = .5 + fractionleft / fractionright * righttotalsize;
             if( leftremainingsize < 0 )
               leftremainingsize = SCIP_LONGINT_MAX;
             lefttotalsize = leftremainingsize;
@@ -226,7 +229,8 @@ SizeStatus estimateTreeSize(SCIP* scip, TSEtree *node, SCIP_Real upperbound, SCI
          }
          else
          {
-            rightremainingsize = fractionright / fractionleft * lefttotalsize;
+            /* Below we use .5 to round to the closest integer in the truncation to int */
+            rightremainingsize = .5 + fractionright / fractionleft * lefttotalsize;
             if( rightremainingsize < 0 )
                rightremainingsize = SCIP_LONGINT_MAX;
            righttotalsize = rightremainingsize;
