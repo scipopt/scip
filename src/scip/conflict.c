@@ -2619,9 +2619,17 @@ SCIP_RETCODE createAndAddProofcons(
    assert(coefs != NULL);
    assert(inds != NULL);
 
-   globalminactivity = getMinActivity(transprob, coefs, inds, nnz, NULL, NULL);
+   if( proofset->conflicttype == SCIP_CONFTYPE_ALTINFPROOF || proofset->conflicttype == SCIP_CONFTYPE_ALTBNDPROOF )
+   {
+      SCIP_Real globalmaxactivity = getMaxActivity(transprob, coefs, inds, nnz, NULL, NULL);
+
+      /* check whether the alternative proof is redundant */
+      if( SCIPsetIsLE(set, globalmaxactivity, rhs) )
+         return SCIP_OKAY;
+   }
 
    /* check whether the constraint proves global infeasibility */
+   globalminactivity = getMinActivity(transprob, coefs, inds, nnz, NULL, NULL);
    if( SCIPsetIsGT(set, globalminactivity, rhs) )
    {
       SCIPsetDebugMsg(set, "detect global infeasibility: minactivity=%g, rhs=%g\n", globalminactivity, rhs);

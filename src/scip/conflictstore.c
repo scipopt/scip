@@ -247,9 +247,9 @@ SCIP_RETCODE conflictstoreEnsureMem(
       {
          newsize = SCIPsetCalcMemGrowSize(set, num);
          newsize = MIN(conflictstore->maxstoresize, newsize);
-         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &conflictstore->conflicts, conflictstore->conflictsize,
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &conflictstore->conflicts, conflictstore->conflictsize, \
                newsize) );
-         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &conflictstore->confprimalbnds, conflictstore->conflictsize,
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &conflictstore->confprimalbnds, conflictstore->conflictsize, \
                newsize) );
       }
 

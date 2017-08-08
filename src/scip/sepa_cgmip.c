@@ -3709,6 +3709,8 @@ SCIP_RETCODE createCGCuts(
       {
          SCIP_CALL( createCGCutDirect(scip, sepa, sepadata, mipdata, sol, cutcoefs, cutinds, cutvals, varsolvals, weights,
                &nprevrows, prevrows, cutoff, ngen) );
+
+         assert(! sepadata->usecmir && ! sepadata->usestrongcg);
       }
    }
    assert( nprevrows <= 2 * nsols );

@@ -905,7 +905,7 @@ SCIP_RETCODE mod2rowAddRow(
 
    SCIPfreeCleanBufferArray(scip, &contained);
 
-   SCIPallocBufferArray(scip, &newnonzcols, row->nnonzcols + rowtoadd->nnonzcols);
+   SCIP_CALL( SCIPallocBufferArray(scip, &newnonzcols, row->nnonzcols + rowtoadd->nnonzcols) );
 
    i = 0;
    j = 0;

@@ -134,16 +134,17 @@ void rbDeleteFixup(
       dir = x == p->child[LEFT] ? RIGHT : LEFT;
 
       w = p->child[dir];
-      if( IS_RED(w) )
+      assert(w != NULL);
+
+      if( COLOR(w) == RED )
       {
          MAKE_BLACK(w);
          MAKE_RED(p);
          rbRotate(root, p, OPPOSITE(dir));
          assert(p == PARENT(x == NULL ? nil : x));
          w = p->child[dir];
+         assert(w != NULL);
       }
-
-      assert(w != NULL);
 
       if( IS_BLACK(w->child[LEFT]) && IS_BLACK(w->child[RIGHT]) )
       {

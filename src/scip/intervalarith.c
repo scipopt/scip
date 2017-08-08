@@ -304,13 +304,10 @@ double nextafter(double x, double y)
    unsigned lx;
    unsigned ly;
 
-   /* cppcheck-suppress invalidPointerCast */
+
    hx = __HI(x);     /* high word of x */
-   /* cppcheck-suppress invalidPointerCast */
    lx = __LO(x);     /* low  word of x */
-   /* cppcheck-suppress invalidPointerCast */
    hy = __HI(y);     /* high word of y */
-   /* cppcheck-suppress invalidPointerCast */
    ly = __LO(y);     /* low  word of y */
    ix = hx&0x7fffffff;     /* |x| */
    iy = hy&0x7fffffff;     /* |y| */
@@ -327,9 +324,7 @@ double nextafter(double x, double y)
    if( (ix|lx) == 0 )
    {
       /* return +-minsubnormal */
-      /* cppcheck-suppress invalidPointerCast */
       __HI(x) = hy&0x80000000;
-      /* cppcheck-suppress invalidPointerCast */
       __LO(x) = 1;
       y = x * x;
       if ( y == x )
@@ -384,16 +379,13 @@ double nextafter(double x, double y)
       if( y != x )
       {
          /* raise underflow flag */
-         /* cppcheck-suppress invalidPointerCast */
          __HI(y) = hx;
-         /* cppcheck-suppress invalidPointerCast */
          __LO(y) = lx;
          return y;
       }
    }
-   /* cppcheck-suppress invalidPointerCast */
+
    __HI(x) = hx;
-   /* cppcheck-suppress invalidPointerCast */
    __LO(x) = lx;
    return x;
 }

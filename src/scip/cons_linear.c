@@ -7488,6 +7488,7 @@ SCIP_RETCODE propagateCons(
       {
          int nfixedvars;
          int naddconss;
+         /* cppcheck-suppress unassignedVariable */
          int oldnchgbds;
 
          nfixedvars = 0;
