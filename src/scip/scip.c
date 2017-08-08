@@ -24207,7 +24207,7 @@ SCIP_RETCODE calcCliquePartitionGreedy(
                   /* check if every variable in the current clique can be extended by tmpvars[j] */
                   for( k = ncliquevars - 1; k >= 0; --k )
                   {
-                     if( !SCIPvarsHaveCommonClique(vars[j], values[j], cliquevars[k], cliquevalues[k], TRUE) )
+                     if( !SCIPvarsHaveCommonClique(vars[j], values[j], cliquevars[k], cliquevalues[k], FALSE) )
                         break;
                   }
 
@@ -24305,8 +24305,8 @@ SCIP_RETCODE SCIPcalcCliquePartition(
       return SCIP_OKAY;
    }
 
-   /* early abort if neither cliques nor implications are present */
-   if( SCIPgetNCliques(scip) == 0 && SCIPgetNImplications(scip) == 0 )
+   /* early abort if no cliques are present */
+   if( SCIPgetNCliques(scip) == 0 )
    {
       for( i = nvars - 1; i >= 0; --i )
          cliquepartition[i] = i;
@@ -24353,7 +24353,7 @@ SCIP_RETCODE SCIPcalcCliquePartition(
    for( i = 0; i < nvars; ++i )
    {
       if( SCIPvarIsActive(tmpvars[i]) )
-         componentlabels[i] = SCIPvarGetCliqueComponentIdx(tmpvars[i]);
+         componentlabels[i] = SCIPcliquetableGetVarComponentIdx(scip->cliquetable, tmpvars[i]);
       else
          componentlabels[i] = -1;
    }
@@ -47647,4 +47647,30 @@ void SCIPsetRandomSeed(
    modifiedseed = SCIPinitializeRandomSeed(scip, seed);
 
    SCIPrandomSetSeed(randnumgen, modifiedseed);
+}
+
+/** creates a disjoint set (union find) structure \p uf for \p ncomponents many components (of size one) */
+SCIP_RETCODE SCIPcreateDisjointset(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DISJOINTSET**    djset,              /**< disjoint set (union find) data structure */
+   int                   ncomponents         /**< number of components */
+   )
+{
+   assert(scip != NULL);
+   assert(djset != NULL);
+
+   SCIP_CALL( SCIPdisjointsetCreate(djset, scip->mem->probmem, ncomponents) );
+
+   return SCIP_OKAY;
+}
+
+/** frees the disjoint set (union find) data structure */
+void SCIPfreeDisjointset(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DISJOINTSET**    djset               /**< disjoint set (union find) data structure */
+   )
+{
+   assert(scip != NULL);
+
+   SCIPdisjointsetFree(djset, scip->mem->probmem);
 }

@@ -324,6 +324,21 @@ int SCIPptrarrayGetMaxIdx(
    SCIP_PTRARRAY*        ptrarray            /**< dynamic ptr array */
    );
 
+/** creates a disjoint set (union find) structure \p uf for \p ncomponents many components (of size one) */
+extern
+SCIP_RETCODE SCIPdisjointsetCreate(
+   SCIP_DISJOINTSET**    djset,              /**< disjoint set (union find) data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   int                   ncomponents         /**< number of components */
+   );
+
+/** frees the disjoint set (union find) data structure */
+extern
+void SCIPdisjointsetFree(
+   SCIP_DISJOINTSET**    djset,              /**< pointer to disjoint set (union find) data structure */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   );
+
 /** SCIP digraph functions
  *
  * internal digraph functions (see \ref DigraphMethods for public digraph methods)

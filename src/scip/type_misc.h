@@ -134,6 +134,12 @@ typedef struct SCIP_BtNode SCIP_BTNODE;
  */
 typedef struct SCIP_Regression SCIP_REGRESSION;
 
+/** disjoint set (disjoint set (union find)) data structure for querying and updating connectedness of a graph with integer vertices 0,...,n - 1
+ *
+ *  - \ref DisjointSet "List of available methods"
+ */
+typedef struct SCIP_DisjointSet SCIP_DISJOINTSET;
+
 /** compares two element indices
  *  result:
  *    < 0: ind1 comes before (is better than) ind2
