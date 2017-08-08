@@ -11950,7 +11950,7 @@ int lpGetResolveItlim(
    if( itlim == -1 )
       itlim = INT_MAX;
    /* return resolveiterfac * average iteration number per call after root, but at least resolveitermin and at most the hard iteration limit */
-   return (int) MIN(itlim, MAX(set->lp_resolveitermin,
+   return (int) MIN(itlim, MAX(set->lp_resolveitermin, \
          (set->lp_resolveiterfac * (stat->nlpiterations - stat->nrootlpiterations) / (SCIP_Real)(stat->nlps - stat->nrootlps))));
 }
 

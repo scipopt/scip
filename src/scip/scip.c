@@ -16053,7 +16053,7 @@ SCIP_RETCODE SCIPsolve(
             else
             {
                SCIPdebugMsg(scip, "try to add solution to the solution tree:\n");
-               SCIPdebug( SCIP_CALL( SCIPsolPrint(sol, scip->set, scip->messagehdlr, scip->stat, scip->origprob,
+               SCIPdebug( SCIP_CALL( SCIPsolPrint(sol, scip->set, scip->messagehdlr, scip->stat, scip->origprob, \
                      scip->transprob, NULL, FALSE, FALSE) ); );
 
                SCIP_CALL( SCIPreoptAddSol(scip->reopt, scip->set, scip->stat, scip->origprimal, scip->mem->probmem,
@@ -24719,7 +24719,7 @@ SCIP_RETCODE SCIPwriteCliqueGraph(
    }
 
    /* create the hash map */
-   SCIP_CALL( SCIPhashmapCreate(&nodehashmap, SCIPblkmem(scip), nbinvars+nimplvars) );
+   SCIP_CALL_FINALLY( SCIPhashmapCreate(&nodehashmap, SCIPblkmem(scip), nbinvars+nimplvars), fclose(gmlfile) );
 
    /* write starting of gml file */
    SCIPgmlWriteOpening(gmlfile, TRUE);
@@ -38265,7 +38265,7 @@ SCIP_Real SCIPgetSolOrigObj(
       return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPsolGetObj(sol, scip->set, scip->transprob, scip->origprob));
    else
    {
-      SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSolOrigObj(sol==NULL)",
+      SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSolOrigObj(sol==NULL)", \
             FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
       if( SCIPtreeHasCurrentNodeLP(scip->tree) )
          return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPlpGetObjval(scip->lp, scip->set, scip->transprob));
@@ -38302,7 +38302,7 @@ SCIP_Real SCIPgetSolTransObj(
       return SCIPsolGetObj(sol, scip->set, scip->transprob, scip->origprob);
    else
    {
-      SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSolTransObj(sol==NULL)",
+      SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSolTransObj(sol==NULL)", \
             FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
       if( SCIPtreeHasCurrentNodeLP(scip->tree) )
          return SCIPlpGetObjval(scip->lp, scip->set, scip->transprob);
@@ -38593,7 +38593,7 @@ SCIP_RETCODE SCIPprintSol(
    currentsol = (sol == NULL);
    if( currentsol )
    {
-      SCIP_CALL( checkStage(scip, "SCIPprintSol(sol==NULL)",
+      SCIP_CALL( checkStage(scip, "SCIPprintSol(sol==NULL)", \
             FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
       /* create a temporary solution that is linked to the current solution */

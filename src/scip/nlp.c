@@ -2120,7 +2120,7 @@ SCIP_RETCODE SCIPnlrowCreate(
 
    /* left and right hand sides, asserted above that lhs is relatively less equal than rhs */
    (*nlrow)->lhs = MIN(lhs, rhs);
-   (*nlrow)->rhs = MAX(rhs, rhs);
+   (*nlrow)->rhs = MAX(lhs, rhs);
 
    /* miscellaneous */
    SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*nlrow)->name, name, strlen(name)+1) );
