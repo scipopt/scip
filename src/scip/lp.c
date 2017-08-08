@@ -12193,6 +12193,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             SCIP_CALL( SCIPlpGetUnboundedSol(lp, set, stat, NULL, NULL) );
 
             primalfeasible = TRUE;
+            rayfeasible = TRUE;
             lp->primalchecked = FALSE;
          }
 
