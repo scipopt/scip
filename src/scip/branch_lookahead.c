@@ -4075,7 +4075,7 @@ SCIP_RETCODE selectVarRecursive(
                }
             }
 
-            if( !status->lperror )
+            if( !status->lperror && !status->limitreached )
             {
                /* TODO: move this block to an own method when finished */
                SCIP_Real score = -SCIPinfinity(scip);
