@@ -43,7 +43,6 @@ include $(SCIPDIR)/make/make.project
 MAINNAME	=	scip
 MAINOBJ		=	probdata_spa.o \
 			reader_spa.o \
-			cons_triangle.o \
 			heur_spagreedy.o \
 			heur_fuzzyround.o \
 			heur_spakerlin.o \

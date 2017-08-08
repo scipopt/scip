@@ -97,11 +97,11 @@ SCIP_RETCODE getSolutionValues(
             binfixed[i][c] = FALSE;
             if( binvars[i][c] != NULL )
             {
-               if( (SCIPisEQ(scip, SCIPvarGetUbGlobal(binvars[i][c]), SCIPvarGetLbGlobal(binvars[i][c]))) )
+               if( (SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(binvars[i][c]), SCIPvarGetLbGlobal(binvars[i][c]))) )
                {
                   solclustering[i][c] = SCIPgetSolVal(scip, bestsol, binvars[i][c]);
                   binfixed[i][c] = TRUE;
-                  if( SCIPisEQ(scip, solclustering[i][c], 1) )
+                  if( SCIPisFeasEQ(scip, solclustering[i][c], 1) )
                   {
                      clusterofbin[i] = c;
                      nbinsincluster[c]++;
@@ -109,9 +109,9 @@ SCIP_RETCODE getSolutionValues(
                }else
                {
                   SCIP_Real solval = SCIPgetSolVal(scip, bestsol, binvars[i][c]);
-                  assert(SCIPisIntegral(scip, solval));
+                  assert(SCIPisFeasIntegral(scip, solval));
                   solclustering[i][c] = solval;
-                  if( SCIPisEQ(scip, solval, 1.0) )
+                  if( SCIPisFeasEQ(scip, solval, 1.0) )
                   {
                      clusterofbin[i] = c;
                      nbinsincluster[c]++;
@@ -334,7 +334,7 @@ SCIP_Bool switchNext(
       if( binprocessed[bin] || nbinsincluster[clusterofbin[bin]] == 1 )
          continue;
       k = clusterofbin[bin];
-      assert(SCIPisEQ(scip, clustering[bin][k], 1.0));
+      assert(SCIPisFeasEQ(scip, clustering[bin][k], 1.0));
       /* calculate the irreversibility and coherence after bin was moved from k to l */
       for( l = 0; l < ncluster; ++l )
       {
@@ -462,7 +462,7 @@ SCIP_RETCODE createSwitchSolution(
       for( c = 0; c < ncluster; ++c )
       {
          solclustering[i][c] = startclustering[i][c];
-         if( SCIPisEQ(scip, startclustering[i][c], 1.0) )
+         if( SCIPisFeasEQ(scip, startclustering[i][c], 1.0) )
          {
             clusterofbin[i] = c;
             nbinsincluster[c]++;
@@ -483,7 +483,7 @@ SCIP_RETCODE createSwitchSolution(
          for( c = 0; c < ncluster; ++c )
          {
             clustering[i][c] = solclustering[i][c];
-            if( SCIPisEQ(scip, solclustering[i][c], 1.0) )
+            if( SCIPisFeasEQ(scip, solclustering[i][c], 1.0) )
             {
                clusterofbin[i] = c;
                nbinsincluster[c]++;

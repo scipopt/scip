@@ -8,7 +8,6 @@
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
 #include "scip/var.h"
-#include "cons_triangle.h"
 #include <math.h>
 #include <assert.h>
 #include <string.h>
@@ -440,9 +439,7 @@ SCIP_RETCODE createProbSimplified(
       SCIP_CALL( SCIPaddCons(scip, temp) );
       SCIP_CALL( SCIPreleaseCons(scip, &temp) );
    }
-   /*   SCIP_CALL( SCIPcreateConsTriangle(scip, &temp, "triangle", TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );*/
-   /*SCIP_CALL( SCIPaddCons(scip, temp) );
-   SCIP_CALL( SCIPreleaseCons(scip, &temp) );*/
+
    return SCIP_OKAY;
 }
 
@@ -495,10 +492,7 @@ SCIP_RETCODE createProbOnlyEdge(
 
       }
    }
-
-   SCIP_CALL( SCIPcreateConsTriangle(scip, &temp, "triangle", TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );;
-   SCIP_CALL( SCIPaddCons(scip, temp) );
-   SCIP_CALL( SCIPreleaseCons(scip, &temp) );
+    
    return SCIP_OKAY;
 }
 

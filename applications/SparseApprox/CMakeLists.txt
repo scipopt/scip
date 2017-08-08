@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.0)
 
 project(ccscip)
 
-include_directories(/nfs/optimi/kombadon/bzfeifle/scip/src)
-link_directories(/nfs/optimi/kombadon/bzfeifle/scip/dbg/lib)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../src)
+link_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../lib)
 
 set (SOURCE_FILES
         src/main.c

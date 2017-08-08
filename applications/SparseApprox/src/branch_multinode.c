@@ -69,7 +69,7 @@ SCIP_RETCODE getBranchCands(
    {
       for( k = 0; k < ncluster; ++k )
       {
-         if( SCIPvarGetStatus(binvars[i][k]) ==  SCIP_VARSTATUS_COLUMN && !SCIPisZero(scip, SCIPvarGetLPSol(binvars[i][k])) && !SCIPisEQ(scip, SCIPvarGetLPSol(binvars[i][k]), 1.0) )
+         if( SCIPvarGetStatus(binvars[i][k]) ==  SCIP_VARSTATUS_COLUMN && !SCIPisFeasIntegral(scip, SCIPvarGetLPSol(binvars[i][k])) )
          {
             (*branchcands)[*ncands] = binvars[i][k];
             (*branchcandssol)[*ncands] = SCIPvarGetLPSol(binvars[i][k]);
@@ -78,6 +78,7 @@ SCIP_RETCODE getBranchCands(
          }
       }
    }
+
    return SCIP_OKAY;
 }
 
