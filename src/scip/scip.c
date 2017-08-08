@@ -28960,7 +28960,7 @@ SCIP_LPSOLSTAT SCIPgetLPSolstat(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-SCIP_LPSOLSTAT SCIPisLPPrimalReliable(
+SCIP_Bool SCIPisLPPrimalReliable(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -28978,7 +28978,7 @@ SCIP_LPSOLSTAT SCIPisLPPrimalReliable(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-SCIP_LPSOLSTAT SCIPisLPDualReliable(
+SCIP_Bool SCIPisLPDualReliable(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
