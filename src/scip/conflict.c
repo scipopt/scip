@@ -2541,8 +2541,6 @@ SCIP_RETCODE propagateLongProof(
          /* we cannot tighten the upper bound */
          if( SCIPsetIsGE(set, newub, ub) )
             continue;
-
-         SCIPvarAdjustUb(var, set, &newub);
       }
       /* we got a potential new lower bound */
       else
@@ -2555,8 +2553,6 @@ SCIP_RETCODE propagateLongProof(
          /* we cannot tighten the lower bound */
          if( SCIPsetIsLE(set, newlb, lb) )
             continue;
-
-         SCIPvarAdjustLb(var, set, &newlb);
       }
 
       SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp, branchcand,
@@ -2635,25 +2631,30 @@ SCIP_RETCODE createAndAddProofcons(
       goto UPDATESTATISTICS;
    }
 
-   fillin = nnz;
-   if( proofset->conflicttype == SCIP_CONFTYPE_INFEASLP || proofset->conflicttype == SCIP_CONFTYPE_ALTINFPROOF )
-   {
-      fillin += SCIPconflictstoreGetNDualInfProofs(conflictstore) * SCIPconflictstoreGetAvgNnzDualInfProofs(conflictstore);
-      fillin /= (SCIPconflictstoreGetNDualInfProofs(conflictstore) + 1.0);
-      toolong = (fillin > (1.0 + (100.0 - SCIPconflictstoreGetNDualInfProofs(conflictstore))/500.0) * stat->avgnnz);
-   }
+   if( set->conf_minmaxvars >= nnz  )
+      toolong = FALSE;
    else
    {
-      assert(proofset->conflicttype == SCIP_CONFTYPE_BNDEXCEEDING || proofset->conflicttype == SCIP_CONFTYPE_ALTBNDPROOF);
+      fillin = nnz;
+      if( proofset->conflicttype == SCIP_CONFTYPE_INFEASLP || proofset->conflicttype == SCIP_CONFTYPE_ALTINFPROOF )
+      {
+         fillin += SCIPconflictstoreGetNDualInfProofs(conflictstore) * SCIPconflictstoreGetAvgNnzDualInfProofs(conflictstore);
+         fillin /= (SCIPconflictstoreGetNDualInfProofs(conflictstore) + 1.0);
+         toolong = (fillin > 2.0 * stat->avgnnz);
+      }
+      else
+      {
+         assert(proofset->conflicttype == SCIP_CONFTYPE_BNDEXCEEDING || proofset->conflicttype == SCIP_CONFTYPE_ALTBNDPROOF);
 
-      fillin += SCIPconflictstoreGetNDualBndProofs(conflictstore) * SCIPconflictstoreGetAvgNnzDualBndProofs(conflictstore);
-      fillin /= (SCIPconflictstoreGetNDualBndProofs(conflictstore) + 1.0);
-      toolong = (fillin > (1.0 + (100.0 - SCIPconflictstoreGetNDualBndProofs(conflictstore))/500.0) * stat->avgnnz);
+         fillin += SCIPconflictstoreGetNDualBndProofs(conflictstore) * SCIPconflictstoreGetAvgNnzDualBndProofs(conflictstore);
+         fillin /= (SCIPconflictstoreGetNDualBndProofs(conflictstore) + 1.0);
+         toolong = (fillin > 1.5 * stat->avgnnz);
+      }
+
+      toolong &= (nnz > set->conf_maxvarsfac * transprob->nvars);
    }
 
-   toolong &= (set->conf_minmaxvars < nnz && nnz > set->conf_maxvarsfac * transprob->nvars);
-
-   /* don't store global dualrays that are to long / have to much non-zeros */
+   /* don't store global dual proofs that are to long / have to much non-zeros */
    if( toolong )
    {
       SCIP_CALL( propagateLongProof(conflict, proofset, set, stat, reopt, tree, blkmem, origprob, transprob, lp,
@@ -6579,7 +6580,7 @@ SCIP_RETCODE tightenDualray(
          SCIP_PROOFSET* alternativeproofset;
 
          SCIP_CALL( proofsetCreate(&alternativeproofset, blkmem) );
-         alternativeproofset->conflicttype = SCIP_CONFTYPE_ALTINFPROOF;
+         alternativeproofset->conflicttype = (proofset->conflicttype == SCIP_CONFTYPE_INFEASLP ? SCIP_CONFTYPE_ALTINFPROOF : SCIP_CONFTYPE_ALTBNDPROOF);
 
          SCIP_CALL( proofsetAddSparseData(alternativeproofset, set, cutcoefs, cutinds, cutnnz, cutrhs) );
 
