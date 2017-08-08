@@ -58,7 +58,6 @@ $NAME/examples/Queens/CMakeLists.txt           \
 $NAME/examples/CMakeLists.txt                  \
 $NAME/examples/Eventhdlr/check/CMakeLists.txt  \
 $NAME/examples/Eventhdlr/CMakeLists.txt        \
-
 $NAME/check/check.sh $NAME/check/evalcheck.sh $NAME/check/check.awk \
 $NAME/check/check_gamscluster.sh $NAME/check/rungamscluster.sh $NAME/check/finishgamscluster.sh \
 $NAME/check/evalcheck_gamscluster.sh $NAME/check/check_gams.awk $NAME/check/schulz.sh \
@@ -198,6 +197,14 @@ $NAME/check/instances/SAT/*.cnf \
 $NAME/check/instances/SOS/*.lp \
 $NAME/check/instances/Semicontinuous/*.lp \
 $NAME/check/instances/Semicontinuous/*.mps \
+$NAME/check/instances/Bivariate                     \
+$NAME/check/instances/Indicator/64-4-1.arc          \
+$NAME/check/instances/Indicator/64-4-1.mut          \
+$NAME/check/instances/Indicator/64-4-1.sup          \
+$NAME/check/instances/Indicator/indicatortest.zpl   \
+$NAME/check/instances/Indicator/mcf64-4-1.zpl       \
+$NAME/check/instances/MIP/vpm2.fix                  \
+$NAME/check/instances/MIP/vpm2.sol                  \
 $NAME/tests/Makefile \
 $NAME/tests/README \
 $NAME/tests/include/scip_test.* \
@@ -223,7 +230,18 @@ $NAME/tests/src/presol/qpkktref.c \
 $NAME/tests/src/prop/nlobbt.c \
 $NAME/tests/src/sepa/convexproj.c \
 $NAME/tests/src/sepa/gauge.c \
-$NAME/tests/src/test/stages.c
+$NAME/tests/src/test/stages.c                         \
+$NAME/tests/src/presol/presol.c                     \
+$NAME/tests/src/reader/*                               \
+$NAME/tests/src/relax/*                                \
+$NAME/tests/src/scip/*                                 \
+$NAME/applications/PolySCIP/cmake/Modules                   \
+$NAME/applications/STP/doc/pics/stp.png             \
+$NAME/applications/STP/doc/pics/stp.tex             \
+$NAME/check/interactiveshell/*                        \
+$NAME/cmake/Modules/*                                  \
+$NAME/coverage/settings/*                              \
+$NAME/tests/src/cons/superindicator/*                  \
 
 rm -f $NAME
 echo ""
