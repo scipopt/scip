@@ -2024,6 +2024,7 @@ SCIP_RETCODE computeViolation(
    val  = SIGN(xval) * consdata->power(REALABS(xval), consdata->exponent);
    val += consdata->zcoef * zval;
 
+   *viol = 0.0;
    relviol = 0.0;
    if( val < consdata->lhs && !SCIPisInfinity(scip, -consdata->lhs) )
    {

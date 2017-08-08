@@ -1339,7 +1339,7 @@ SCIP_RETCODE checkCons(
       else
          relviol = SCIPrelDiff(SCIPgetSolVal(scip, sol, vars[violpos]), bounds[violpos]);
 
-      SCIPsolUpdateLPConsViolation(sol, absviol, relviol);
+      SCIPsolUpdateConsViolation(sol, absviol, relviol);
    }
    return SCIP_OKAY;
 }

@@ -6158,7 +6158,7 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
          SCIP_Real absviol = REALABS(SCIPgetSolVal(scip, sol, consdata->slackvar));
          SCIP_Real relviol = SCIPrelDiff(absviol, 0.0);
          if( sol != NULL )
-            SCIPsolUpdateLPConsViolation(sol, absviol, relviol);
+            SCIPsolUpdateConsViolation(sol, absviol, relviol);
 
          SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
          *result = SCIP_INFEASIBLE;
