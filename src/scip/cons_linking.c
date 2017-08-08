@@ -1416,7 +1416,7 @@ SCIP_Bool checkCons(
    int* vals;
    SCIP_Real solval;
    SCIP_Real linksum;
-   SCIP_Real intvarval;
+   SCIP_VAR* intvarval;
    SCIP_Real setpartsum;
    SCIP_Real setpartsumbound;
    SCIP_Real absviol;

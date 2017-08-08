@@ -1544,7 +1544,7 @@ SCIP_RETCODE checkCons(
 
    /* calculate constraint violation and update it in solution */
    if( sol != NULL ){
-      SCIP_Real absviol = 1.0 - sum;;
+      SCIP_Real absviol = 1.0 - sum;
       SCIP_Real relviol = SCIPrelDiff(1.0, sum);
       SCIPsolUpdateLPConsViolation(sol, absviol, relviol);
    }

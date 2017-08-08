@@ -5206,6 +5206,8 @@ SCIP_RETCODE computeViolation(
       consdata->activity += activity;
    }
 
+   absviol = 0.0;
+   relviol = 0.0;
    /* compute absolute violation left hand side */
    if( consdata->activity < consdata->lhs && !SCIPisInfinity(scip, -consdata->lhs) )
    {
