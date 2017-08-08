@@ -34,172 +34,187 @@
 static SCIP_LPI* lpi = NULL;
 
 static
-void initProb( int option, int dim )
+SCIP_Bool initProb( int pos, int ncols, SCIP_OBJSEN objsen )
 {
    // TODO add a minimization problem
-   if( 1 == dim )
+   if( 1 == ncols )
    {
-      if( 0 == option )
+      SCIP_Real obj =  1.0;
+      SCIP_Real lb  =  0.0;
+      SCIP_Real ub  =  SCIPlpiInfinity(lpi);
+      SCIP_Real lhs = -SCIPlpiInfinity(lpi);
+      SCIP_Real rhs =  1.0;
+      SCIP_Real val =  1.0;
+      int beg = 0;
+      int ind = 0;
+      if( objsen == SCIP_OBJSEN_MAXIMIZE )
       {
-         /* unbounded - infeasible
-          *
-          * (P):  max x
-          * -x <= 1 (constr)
-          *  0 <= x (bound)
-          *
-          * (D):  min y
-          * 1 <= -y (constr)
-          * 0 <= y (bound)
-          *
-          * */
-         SCIP_Real obj =  1.0;
-         SCIP_Real lb  =  0.0;
-         SCIP_Real ub  =  SCIPlpiInfinity(lpi);
-         SCIP_Real lhs = -SCIPlpiInfinity(lpi);
-         SCIP_Real rhs =  1.0;
-         SCIP_Real val = -1.0;
-         int beg = 0;
-         int ind = 0;
-
-         /* add one column */
-         SCIP_CALL( SCIPlpiAddCols(lpi, 1, &obj, &lb, &ub, NULL, 0, NULL, NULL, NULL) );
-
-         /* add one row */
-         SCIP_CALL( SCIPlpiAddRows(lpi, 1, &lhs, &rhs, NULL, 1, &beg, &ind, &val) );
+         SCIP_CALL( SCIPlpiChgObjsen(lpi, SCIP_OBJSEN_MAXIMIZE) );
+         if( 0 == pos )
+         {
+            /* unbounded - infeasible
+             * (P):  max x
+             * -x <= 1 (constr)
+             *  0 <= x (bound)
+             *
+             * (D):  min y
+             * 1 <= -y (constr)
+             * 0 <= y (bound)
+             * */
+            val = -1.0;
+         }
+         else if( 1 == pos )
+         {
+            /* optimal - optimal
+             * (P):  max x
+             *  x <= 0 (constr)
+             *  0 <= x (bound)
+             *
+             * (D):  min 0
+             * 1 <= y (constr)
+             * 0 <= y (bound)
+             * */
+            rhs =  0.0;
+         }
+         else
+         {
+            return FALSE;
+         }
       }
-      if( 1 == option )
+      else if( objsen == SCIP_OBJSEN_MINIMIZE )
+      // duals of the above
       {
-         /* optimal - optimal/unbounded? TODO should be bounded
-          *
-          * (P):  max x
-          *  x <= 0 (constr)
-          *  0 <= x (bound)
-          *
-          * (D):  min 0
-          * 1 <= y (constr)
-          * 0 <= y (bound)
-          *
-          * */
-         SCIP_Real obj =  1.0;
-         SCIP_Real lb  =  0.0;
-         SCIP_Real ub  =  SCIPlpiInfinity(lpi);
-         SCIP_Real lhs = -SCIPlpiInfinity(lpi);
-         SCIP_Real rhs =  0.0;
-         SCIP_Real val =  1.0;
-         int beg = 0;
-         int ind = 0;
-
-         /* add one column */
-         SCIP_CALL( SCIPlpiAddCols(lpi, 1, &obj, &lb, &ub, NULL, 0, NULL, NULL, NULL) );
-
-         /* add one row */
-         SCIP_CALL( SCIPlpiAddRows(lpi, 1, &lhs, &rhs, NULL, 1, &beg, &ind, &val) );
+         SCIP_CALL( SCIPlpiChgObjsen(lpi, SCIP_OBJSEN_MINIMIZE) );
+         rhs = SCIPlpiInfinity(lpi);
+         lhs = 1;
+         if( 0 == pos )
+         {
+            val = -1.0;
+         }
+         else if( 1 == pos )
+         {
+            obj = 0.0;
+         }
+         else
+         {
+            return FALSE;
+         }
       }
+      else
+      {
+         return FALSE;
+      }
+      SCIP_CALL( SCIPlpiAddCols(lpi, 1, &obj, &lb, &ub, NULL, 0, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPlpiAddRows(lpi, 1, &lhs, &rhs, NULL, 1, &beg, &ind, &val) );
+      return TRUE;
    }
-   else if( 2 == dim )
+   else if( 2 == ncols )
    {
-      if( 0 == option )
+      SCIP_Real obj[2] = { 1.0, 1.0 };
+      SCIP_Real  lb[2] = { 0.0, 0.0 };
+      SCIP_Real  ub[2] = { SCIPlpiInfinity(lpi), SCIPlpiInfinity(lpi) };
+      SCIP_Real lhs[2] = { -SCIPlpiInfinity(lpi), -SCIPlpiInfinity(lpi) };
+      SCIP_Real rhs[2] = {  1.0,  1.0 };
+      SCIP_Real val[2] = {  1.0,  1.0 };
+      int beg[2] = { 0, 1 };
+      int ind[2] = { 0, 1 };
+      if( objsen == SCIP_OBJSEN_MAXIMIZE )
       {
-         /* unbounded - infeasible
-          *
-          * (P):  max x+y
-          * -x    <= 1 (constr)
-          *    -y <= 1 (constr)
-          *
-          *  0 <= x (bound)
-          *  0 <= y (bound)
-          *
-          * (D):  min x+y
-          * 1 <= -x   (constr)
-          * 1 <=   -y (constr)
-          *
-          * 0 <= x (bound)
-          * 0 <= y (bound)
-          *
-          * */
-         SCIP_Real obj[2] = { 1.0, 1.0 };
-         SCIP_Real  lb[2] = { 0.0, 0.0 };
-         SCIP_Real  ub[2] = { SCIPlpiInfinity(lpi), SCIPlpiInfinity(lpi) };
-         SCIP_Real lhs[2] = { -SCIPlpiInfinity(lpi), -SCIPlpiInfinity(lpi) };
-         SCIP_Real rhs[2] = {  1.0,  1.0 };
-         SCIP_Real val[2] = { -1.0, -1.0 };
-         int beg[2] = { 0, 1 };
-         int ind[2] = { 0, 1 };
-
-         /* add columns */
-         SCIP_CALL( SCIPlpiAddCols(lpi, 2, obj, lb, ub, NULL, 0, NULL, NULL, NULL) );
-
-         /* add rows */
-         SCIP_CALL( SCIPlpiAddRows(lpi, 2, lhs, rhs, NULL, 1, beg, ind, val) );
+         SCIP_CALL( SCIPlpiChgObjsen(lpi, SCIP_OBJSEN_MAXIMIZE) );
+         if( 0 == pos )
+         {
+            /* unbounded - infeasible
+             * (P):  max x+y
+             * -x    <= 1 (constr)
+             *    -y <= 1 (constr)
+             *
+             *  0 <= x (bound)
+             *  0 <= y (bound)
+             *
+             * (D):  min x+y
+             * 1 <= -x   (constr)
+             * 1 <=   -y (constr)
+             *
+             * 0 <= x (bound)
+             * 0 <= y (bound)
+             * */
+            val[0] = -1.0;
+            val[1] = -1.0;
+         }
+         else if( 1 == pos )
+         {
+            /* optimal - optimal
+             * (P):  max x+y
+             * x     <= 1 (constr)
+             *     y <= 1 (constr)
+             *
+             *  0 <= x (bound)
+             *  0 <= y (bound)
+             *
+             * (D):  min x+y
+             * 1 <= x    (constr)
+             * 1 <=    y (constr)
+             *
+             * 0 <= x (bound)
+             * 0 <= y (bound)
+             * */
+         }
+         else if( 2 == pos )
+         {
+            /* infeasible - infeasible
+             * (P):  max x+y
+             * -x    <= -1 (constr)
+             *     y <= -1 (constr)
+             *
+             *  0 <= x (bound)
+             *  0 <= y (bound)
+             *
+             * (D):  min -x-y
+             * 1 <= -x    (constr)
+             * 1 <=     y (constr)
+             *
+             * 0 <= x (bound)
+             * 0 <= y (bound)
+             */
+            rhs[0] = -1.0;
+            rhs[1] = -1.0;
+            val[0] = -1.0;
+         }
+         else
+         {
+            return FALSE;
+         }
       }
-      else if( 1 == option )
+      else if( objsen == SCIP_OBJSEN_MINIMIZE )
       {
-         /* optimal - optimal
-          *
-          * (P):  max x+y
-          * -x    <= 1 (constr)
-          *     y <= 1 (constr)
-          *
-          *  0 <= x (bound)
-          *  0 <= y (bound)
-          *
-          * (D):  min x+y
-          * 1 <= x    (constr)
-          * 1 <=    y (constr)
-          *
-          * 0 <= x (bound)
-          * 0 <= y (bound)
-          *
-          * */
-         SCIP_Real obj[2] = {  1.0, 1.0 };
-         SCIP_Real  lb[2] = {  0.0, 0.0 };
-         SCIP_Real  ub[2] = {  SCIPlpiInfinity(lpi), SCIPlpiInfinity(lpi) };
-         SCIP_Real lhs[2] = { -SCIPlpiInfinity(lpi), -SCIPlpiInfinity(lpi) };
-         SCIP_Real rhs[2] = {  1.0, 1.0 };
-         SCIP_Real val[2] = { -1.0, 1.0 };
-         int beg[2] = { 0, 1 };
-         int ind[2] = { 0, 1 };
-
-         /* add columns */
-         SCIP_CALL( SCIPlpiAddCols(lpi, 2, obj, lb, ub, NULL, 0, NULL, NULL, NULL) );
-
-         /* add rows */
-         SCIP_CALL( SCIPlpiAddRows(lpi, 2, lhs, rhs, NULL, 1, beg, ind, val) );
+         // duals of the above
+         SCIP_CALL( SCIPlpiChgObjsen(lpi, SCIP_OBJSEN_MINIMIZE) );
+         if( 0 == pos )
+         {
+            val[0] = -1.0;
+            val[1] = -1.0;
+         }
+         else if( 1 == pos )
+         {
+         }
+         else if( 2 == pos )
+         {
+            obj[0] = -1.0;
+            obj[1] = -1.0;
+            val[0] = -1.0;
+         }
+         else
+         {
+            return FALSE;
+         }
       }
-      else if( 2 == option )
-      {
-         /* infeasible - infeasible
-          *
-          * (P):  max x+y
-          * -x    <= -1 (constr)
-          *     y <= -1 (constr)
-          *
-          *  0 <= x (bound)
-          *  0 <= y (bound)
-          *
-          * (D):  min -x-y
-          * 1 <= -x    (constr)
-          * 1 <=     y (constr)
-          *
-          * 0 <= x (bound)
-          * 0 <= y (bound)
-          *
-          */
-         SCIP_Real obj[2] = {  1.0, 1.0 };
-         SCIP_Real  lb[2] = {  0.0, 0.0 };
-         SCIP_Real  ub[2] = {  SCIPlpiInfinity(lpi), SCIPlpiInfinity(lpi) };
-         SCIP_Real lhs[2] = { -SCIPlpiInfinity(lpi), -SCIPlpiInfinity(lpi) };
-         SCIP_Real rhs[2] = { -1.0, -1.0 };
-         SCIP_Real val[2] = { -1.0,  1.0 };
-         int beg[2] = {0, 1};
-         int ind[2] = {0, 1};
-
-         /* add columns */
-         SCIP_CALL( SCIPlpiAddCols(lpi, 2, obj, lb, ub, NULL, 0, NULL, NULL, NULL) );
-
-         /* add rows */
-         SCIP_CALL( SCIPlpiAddRows(lpi, 2, lhs, rhs, NULL, 1, beg, ind, val) );
-      }
+      SCIP_CALL( SCIPlpiAddCols(lpi, 2, obj, lb, ub, NULL, 0, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPlpiAddRows(lpi, 2, lhs, rhs, NULL, 1, beg, ind, val) );
+      return TRUE;
+   }
+   else
+   {
+      return FALSE;
    }
 }
 
@@ -234,29 +249,21 @@ void checkChgCoef(int row, int col, SCIP_Real newval)
    cr_assert_eq(newval, val);
 }
 
-TheoryDataPoints(change, testchgcoef_) =
-{
-   DataPoints(SCIP_Real, -3, 0, 5034.2, 2e15, 8e-7),
-   DataPoints(int, 0, 1)
-};
-
-Theory((SCIP_Real newval, int prob), change, testchgcoef_)
-{
-   initProb(prob, 1);
-   checkChgCoef( 0, 0, newval );
-}
-
 TheoryDataPoints(change, testchgcoef) =
 {
    DataPoints(int, 0, 1),
    DataPoints(int, 0, 1),
    DataPoints(SCIP_Real, -3, 0, 5034.2, 2e15, 8e-7),
-   DataPoints(int, 0, 1)
+   DataPoints(int, 0, 1, 2),
+   DataPoints(int, 1, 2),
+   DataPoints(SCIP_OBJSEN, SCIP_OBJSEN_MAXIMIZE, SCIP_OBJSEN_MINIMIZE)
 };
 
-Theory((int row, int col, SCIP_Real newval, int prob), change, testchgcoef)
+Theory((int row, int col, SCIP_Real newval, int prob, int dim, SCIP_OBJSEN sense), change, testchgcoef)
 {
-   initProb(prob, 2);
+   cr_assume_lt( row, dim );
+   cr_assume_lt( col, dim );
+   cr_assume( initProb(prob, dim, sense) );
    checkChgCoef( row, col, newval );
 }
 
@@ -275,12 +282,13 @@ void checkChgObj(int dim, int* ind, SCIP_Real* setobj)
 TheoryDataPoints(change, testchgobjective) =
 {
    DataPoints(SCIP_Real, -3, 0, 5034.2, 2e15, 8e-7),
-   DataPoints(int, 0, 1)
+   DataPoints(int, 0, 1),
+   DataPoints(SCIP_OBJSEN, SCIP_OBJSEN_MAXIMIZE, SCIP_OBJSEN_MINIMIZE)
 };
 
-Theory((SCIP_Real newobj, int prob), change, testchgobjective)
+Theory((SCIP_Real newobj, int prob, SCIP_OBJSEN sense), change, testchgobjective)
 {
-   initProb(prob, 1);
+   cr_assume( initProb(prob, 1, sense) );
    int ind[1] = { 0 };
    SCIP_Real setobj[1] = {newobj};
    checkChgObj(1, ind, setobj);
@@ -292,12 +300,13 @@ TheoryDataPoints(change, testchgobjectives) =
    DataPoints(SCIP_Real, -3, 0, 5034.2, 2e15, 8e-7),
    DataPoints(SCIP_Real, -3, 0, 5034.2, 2e15, 8e-7),
    // Problem 0 has only one variable
-   DataPoints(int, 0, 1, 2)
+   DataPoints(int, 0, 1, 2),
+   DataPoints(SCIP_OBJSEN, SCIP_OBJSEN_MAXIMIZE, SCIP_OBJSEN_MINIMIZE)
 };
 
-Theory((SCIP_Real first, SCIP_Real second, int prob), change, testchgobjectives)
+Theory((SCIP_Real first, SCIP_Real second, int prob, SCIP_OBJSEN sense), change, testchgobjectives)
 {
-   initProb(prob, 2);
+   cr_assume( initProb(prob, 2, sense) );
    int ind[2] = { 0, 1 };
    SCIP_Real setobj[2] = {first, second};
    checkChgObj(2, ind, setobj);
@@ -323,13 +332,14 @@ TheoryDataPoints(change, testchgbound) =
    //TODO add the infinities...
    DataPoints(SCIP_Real, -3, 0, 5034.2, 2e15, 8e-7),
    DataPoints(SCIP_Real, -10, 0, -342.3, 2e13, -2e-9),
-   DataPoints(int, 0, 1)
+   DataPoints(int, 0, 1),
+   DataPoints(SCIP_OBJSEN, SCIP_OBJSEN_MAXIMIZE, SCIP_OBJSEN_MINIMIZE)
 };
 
-Theory((SCIP_Real upper, SCIP_Real lower, int prob), change, testchgbound)
+Theory((SCIP_Real upper, SCIP_Real lower, int prob, SCIP_OBJSEN sense), change, testchgbound)
 {
    cr_assume_lt(lower, upper);
-   initProb(prob, 1);
+   cr_assume( initProb(prob, 1, sense) );
 
    SCIP_Real setub[1] = { upper };
    SCIP_Real setlb[1] = { lower };
@@ -345,14 +355,15 @@ TheoryDataPoints(change, testchgbounds) =
    DataPoints(SCIP_Real, -10, 0, -342.3, 2e13, -2e-9),
    DataPoints(SCIP_Real, -10, 0, -342.3, 2e13, -2e-9),
    // Problem 0 has only one variable
-   DataPoints(int, 0, 1, 2)
+   DataPoints(int, 0, 1, 2),
+   DataPoints(SCIP_OBJSEN, SCIP_OBJSEN_MAXIMIZE, SCIP_OBJSEN_MINIMIZE)
 };
 
-Theory((SCIP_Real upper1, SCIP_Real upper2, SCIP_Real lower1, SCIP_Real lower2, int prob), change, testchgbounds)
+Theory((SCIP_Real upper1, SCIP_Real upper2, SCIP_Real lower1, SCIP_Real lower2, int prob, SCIP_OBJSEN sense), change, testchgbounds)
 {
    cr_assume_lt(lower1, upper1);
    cr_assume_lt(lower2, upper2);
-   initProb(prob, 2);
+   cr_assume( initProb(prob, 2, sense) );
 
    SCIP_Real setub[2] = { upper1, upper2 };
    SCIP_Real setlb[2] = { lower1, lower2 };
@@ -380,13 +391,14 @@ TheoryDataPoints(change, testchgside) =
    //TODO add the infinities...
    DataPoints(SCIP_Real, -3, 0, 5034.2, 2e15, 8e-7),
    DataPoints(SCIP_Real, -10, 0, -342.3, 2e13, -2e-9),
-   DataPoints(int, 0, 1)
+   DataPoints(int, 0, 1),
+   DataPoints(SCIP_OBJSEN, SCIP_OBJSEN_MAXIMIZE, SCIP_OBJSEN_MINIMIZE)
 };
 
-Theory((SCIP_Real left, SCIP_Real right, int prob), change, testchgside)
+Theory((SCIP_Real left, SCIP_Real right, int prob, SCIP_OBJSEN sense), change, testchgside)
 {
    cr_assume_lt(left, right);
-   initProb(prob, 1);
+   cr_assume( initProb(prob, 1, sense) );
 
    SCIP_Real setls[1] = { left };
    SCIP_Real setrs[1] = { right };
@@ -402,14 +414,15 @@ TheoryDataPoints(change, testchgsides) =
    DataPoints(SCIP_Real, -10, 0, -342.3, 2e13, -2e-9),
    DataPoints(SCIP_Real, -10, 0, -342.3, 2e13, -2e-9),
    // Problem 0 has only one variable
-   DataPoints(int, 0, 1, 2)
+   DataPoints(int, 0, 1, 2),
+   DataPoints(SCIP_OBJSEN, SCIP_OBJSEN_MAXIMIZE, SCIP_OBJSEN_MINIMIZE)
 };
 
-Theory((SCIP_Real left1, SCIP_Real left2, SCIP_Real right1, SCIP_Real right2, int prob), change, testchgsides)
+Theory((SCIP_Real left1, SCIP_Real left2, SCIP_Real right1, SCIP_Real right2, int prob, SCIP_OBJSEN sense), change, testchgsides)
 {
    cr_assume_lt(right1, left1);
    cr_assume_lt(right2, left2);
-   initProb(prob, 2);
+   cr_assume( initProb(prob, 2, sense) );
 
    SCIP_Real setrs[2] = { left1, left2 };
    SCIP_Real setls[2] = { right1, right2 };
@@ -423,18 +436,19 @@ TheoryDataPoints(change, testchgobjsen) =
 {
    DataPoints(SCIP_OBJSEN, SCIP_OBJSEN_MAXIMIZE, SCIP_OBJSEN_MINIMIZE),
    DataPoints(int, 1, 2),
-   DataPoints(int, 0, 1, 2)
+   DataPoints(int, 0, 1, 2),
+   DataPoints(SCIP_OBJSEN, SCIP_OBJSEN_MAXIMIZE, SCIP_OBJSEN_MINIMIZE)
 };
 
-Theory((SCIP_OBJSEN sense, int dim, int prob), change, testchgobjsen)
+Theory((SCIP_OBJSEN sense, int dim, int prob, SCIP_OBJSEN newsense), change, testchgobjsen)
 {
-   initProb(prob, dim);
-   SCIP_CALL( SCIPlpiChgObjsen(lpi, sense) );
+   cr_assume( initProb(prob, dim, sense) );
+   SCIP_CALL( SCIPlpiChgObjsen(lpi, newsense) );
 
    SCIP_OBJSEN probsense;
    SCIP_CALL( SCIPlpiGetObjsen(lpi, &probsense) );
 
-   cr_assert_eq( sense, probsense );
+   cr_assert_eq( newsense, probsense );
 }
 
 /* Test SCIPlpiScaleCol */
@@ -443,13 +457,14 @@ TheoryDataPoints(change, testscalecol) =
 {
    DataPoints(SCIP_Real, -1, 1, 3e10, -2e11, 2e-11, -3e-12),
    DataPoints(int, 1, 2),
-   DataPoints(int, 0, 1, 2)
+   DataPoints(int, 0, 1, 2),
+   DataPoints(SCIP_OBJSEN, SCIP_OBJSEN_MAXIMIZE, SCIP_OBJSEN_MINIMIZE)
 };
 
-// TODO generate equivalent test for rowmethods
-Theory((SCIP_Real scale, int dim, int prob), change, testscalecol)
+// TODO How to generate an equivalent test for rowmethods from this?
+Theory((SCIP_Real scale, int dim, int prob, SCIP_OBJSEN sense), change, testscalecol)
 {
-   initProb(prob, dim);
+   cr_assume( initProb(prob, dim, sense) );
    int ncols, nrows;
    SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
    SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
@@ -470,19 +485,9 @@ Theory((SCIP_Real scale, int dim, int prob), change, testscalecol)
    }
 }
 
-/* Test for
- * SCIPlpiAddCols
- * SCIPlpiDelCols
- * SCIPlpiDelColset
- */
+/* Test for SCIPlpiAddRows SCIPlpiDelRowset SCIPlpiDelRows */
 
-/* Test for
- * SCIPlpiAddRows
- * SCIPlpiDelRowset
- * SCIPlpiDelRows
- */
-
-// TODO how to easily generate an equivalent test for the columnmethods?
+// TODO How to easily generate an equivalent test for the columnmethods from this?
 Test(change, testrowmethods)
 {
    // TODO any ideas how to do this better?
@@ -587,3 +592,4 @@ Test(change, testrowmethods)
       cr_assert_eq(nrowsbefore-i, nrowsafter);
    }
 }
+
