@@ -2416,7 +2416,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
             /* set time limit for NLP solver */
             SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelim) );
             if( !SCIPisInfinity(scip, timelim) )
-               timelim -= SCIPgetSolvingTime(scip);
+               timelim = MAX(0.0, timelim-SCIPgetSolvingTime(scip));
             SCIP_CALL( SCIPsetNLPRealPar(scip, SCIP_NLPPAR_TILIM, timelim) );
 
             /* set start solution, if we are in backtracking (previous NLP solve was infeasible) */

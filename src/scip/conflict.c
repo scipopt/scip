@@ -5967,7 +5967,7 @@ SCIP_RETCODE tightenDualray(
    }
 
    SCIPsetDebugMsg(set, "start dualray tightening:\n");
-   SCIPsetDebugMsg(set, "-> tighten dual ray: nvars=%d (bin=%d, int=%d, cont=%d)",
+   SCIPsetDebugMsg(set, "-> tighten dual ray: nvars=%d (bin=%d, int=%d, cont=%d)\n",
          (*nvarinds), nbinvars, nintvars, ncontvars);
    debugPrintViolationInfo(set, getMinActivity(vals, varinds, (*nvarinds), curvarlbs, curvarubs), *rhs, NULL);
 
@@ -6933,9 +6933,16 @@ SCIP_RETCODE conflictAnalyzeLP(
       }
       else
       {
+         /* don't analyze bound exceeding LPs (we may end here if strong branching LPs should be analyzed) */
+         if( set->conf_useboundlp )
+            return SCIP_OKAY;
+
          SCIPdebugMessage(" -> LP exceeds the cutoff bound: obj=%g, cutoff=%g\n", objval, lp->lpiuobjlim);
       }
    }
+   /* don't analyze infeasible LPs (we may end here if strong branching LPs should be analyzed) */
+   else if( !set->conf_useinflp )
+      return SCIP_OKAY;
 
 
    assert(valid);
@@ -7526,7 +7533,7 @@ SCIP_Longint SCIPconflictGetNBoundexceedingLPIterations(
  * infeasible strong branching conflict analysis
  */
 
-/** analyses infeasible strong branching sub problems for conflicts */
+/** analyzes infeasible strong branching sub problems for conflicts */
 SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
@@ -7606,6 +7613,7 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
    oldub = col->ub;
 
    resolve = FALSE;
+   dualraysuccess = FALSE;
 
    /* is down branch infeasible? */
    if( col->sbdownvalid && SCIPsetIsGE(set, col->sbdown, lp->cutoffbound) )
