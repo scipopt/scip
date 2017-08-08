@@ -46,6 +46,9 @@ interface:
   value
 - new function SCIPisObjChangedProbing() to check whether the objective function has changed during probing mode
 
+testing:
+- added make options for specifying EXECUTABLE and OUTPUTDIR variables for the make test target
+
 SCIP version 4.0.0
 ==================
 
