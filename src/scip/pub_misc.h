@@ -1494,6 +1494,51 @@ void SCIPbtSetRoot(
 
 /**@} */
 
+/**@addtogroup DisjoinedSet
+ *
+ * @{
+ */
+
+/*
+ * Disjoined Set data structure
+ */
+
+/** clears the disjoint set (union find) structure \p uf */
+EXTERN
+void SCIPdisjointsetClear(
+   SCIP_DISJOINTSET*     djset               /**< disjoint set (union find) data structure */
+   );
+
+/** finds and returns the component identifier of this \p element */
+EXTERN
+int SCIPdisjointsetFind(
+   SCIP_DISJOINTSET*     djset,              /**< disjoint set (union find) data structure */
+   int                   element             /**< element to be found */
+   );
+
+/** merges the components containing the elements \p p and \p q */
+EXTERN
+void SCIPdisjointsetUnion(
+   SCIP_DISJOINTSET*     djset,              /**< disjoint set (union find) data structure */
+   int                   p,                  /**< first element */
+   int                   q,                  /**< second element */
+   SCIP_Bool             forcerepofp         /**< force representative of p to be new representative */
+   );
+
+/** returns the number of independent components in this disjoint set (union find) data structure */
+EXTERN
+int SCIPdisjointsetGetComponentCount(
+   SCIP_DISJOINTSET*     djset               /**< disjoint set (union find) data structure */
+   );
+
+/** returns the size (number of nodes) of this disjoint set (union find) data structure */
+EXTERN
+int SCIPdisjointsetGetSize(
+   SCIP_DISJOINTSET*     djset               /**< disjoint set (union find) data structure */
+   );
+
+/* @} */
+
 /*
  * Numerical methods
  */

@@ -9721,3 +9721,165 @@ SCIP_Real SCIPcomputeGap(
       return REALABS((primalbound - dualbound)/MIN(absdual, absprimal));
    }
 }
+
+/*
+ *Union-Find data structure
+ */
+
+/** creates a disjoint set (union find) structure \p uf for \p ncomponents many components (of size one) */
+SCIP_RETCODE SCIPdisjointsetCreate(
+   SCIP_DISJOINTSET**    djset,              /**< disjoint set (union find) data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   int                   ncomponents         /**< number of components */
+   )
+{
+   assert(djset != NULL);
+   assert(blkmem != NULL);
+
+   /* allocate the necessary memory */
+   assert(ncomponents > 0);
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, djset) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &((*djset)->parents), ncomponents) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &((*djset)->sizes), ncomponents) );
+   (*djset)->size = ncomponents;
+
+   /* clear the data structure */
+   SCIPdisjointsetClear(*djset);
+
+   return SCIP_OKAY;
+}
+
+/** clears the disjoint set (union find) structure \p uf */
+void SCIPdisjointsetClear(
+   SCIP_DISJOINTSET*     djset               /**< disjoint set (union find) data structure */
+   )
+{
+   int i;
+   djset->componentcount = djset->size;
+
+   /* reset all components to be unconnected */
+   for( i = 0; i < djset->componentcount; i++ )
+   {
+      djset->parents[i] = i;
+      djset->sizes[i] = 1;
+   }
+}
+
+
+/** finds and returns the component identifier of this \p element */
+int SCIPdisjointsetFind(
+   SCIP_DISJOINTSET*     djset,              /**< disjoint set (union find) data structure */
+   int                   element             /**< element to be found */
+   )
+{
+   int newelement;
+   int root = element;
+   int* parents = djset->parents;
+
+   /* find root of this element */
+   while( root != parents[root] )
+   {
+      root = parents[root];
+   }
+
+   /* compress the path to make future queries faster */
+   while( element != root )
+   {
+      newelement = parents[element];
+      parents[element] = root;
+      element = newelement;
+   }
+
+   return root;
+}
+
+/** merges the components containing the elements \p p and \p q */
+void SCIPdisjointsetUnion(
+   SCIP_DISJOINTSET*     djset,              /**< disjoint set (union find) data structure */
+   int                   p,                  /**< first element */
+   int                   q,                  /**< second element */
+   SCIP_Bool             forcerepofp         /**< force representative of p to be new representative */
+   )
+{
+   int idp;
+   int idq;
+   int* sizes;
+   int* parents;
+
+   assert(djset != NULL);
+   assert(0 <= p);
+   assert(0 <= q);
+   assert(djset->size > p);
+   assert(djset->size > q);
+
+
+   idp = SCIPdisjointsetFind(djset, p);
+   idq = SCIPdisjointsetFind(djset, q);
+
+   /* if p and q lie in the same component, there is nothing to be done */
+   if( idp == idq )
+      return;
+
+   sizes = djset->sizes;
+   parents = djset->parents;
+
+   if( forcerepofp )
+   {
+      parents[idq] = idp;
+      sizes[idp] += sizes[idq];
+   }
+   else
+   {
+      if( sizes[idp] < sizes[idq] )
+      {
+         parents[idp] = idq;
+         sizes[idq] += sizes[idp];
+      }
+      else
+      {
+         parents[idq] = idp;
+         sizes[idp] += sizes[idq];
+      }
+   }
+   /* one less component */
+   djset->componentcount--;
+}
+
+/** frees the disjoint set (union find) data structure */
+void SCIPdisjointsetFree(
+   SCIP_DISJOINTSET**    djset,              /**< pointer to disjoint set (union find) data structure */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   )
+{
+   SCIP_DISJOINTSET* dsptr;
+
+   assert(djset != NULL);
+   assert(*djset != NULL);
+
+   dsptr = *djset;
+
+   BMSfreeBlockMemoryArray(blkmem, &dsptr->sizes, dsptr->size);
+   BMSfreeBlockMemoryArray(blkmem, &dsptr->parents, dsptr->size);
+
+   BMSfreeBlockMemory(blkmem, djset);
+}
+
+/** returns the number of independent components in this disjoint set (union find) data structure */
+int SCIPdisjointsetGetComponentCount(
+   SCIP_DISJOINTSET*     djset               /**< disjoint set (union find) data structure */
+   )
+{
+   assert(djset != NULL);
+
+   return djset->componentcount;
+}
+
+/** returns the size (number of nodes) of this disjoint set (union find) data structure */
+int SCIPdisjointsetGetSize(
+   SCIP_DISJOINTSET*     djset               /**< disjoint set (union find) data structure */
+   )
+{
+   assert(djset != NULL);
+
+   return djset->size;
+}
