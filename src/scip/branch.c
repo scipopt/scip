@@ -42,6 +42,7 @@
 #include "scip/sepastore.h"
 #include "scip/scip.h"
 #include "scip/branch.h"
+#include "scip/solve.h"
 
 #include "scip/struct_branch.h"
 
@@ -2464,7 +2465,7 @@ SCIP_RETCODE SCIPbranchExecLP(
    SCIPsetSortBranchrules(set);
 
    /* try all branching rules until one succeeded to branch */
-   for( i = 0; i < set->nbranchrules && (*result == SCIP_DIDNOTRUN || *result == SCIP_DIDNOTFIND); ++i )
+   for( i = 0; i < set->nbranchrules && (*result == SCIP_DIDNOTRUN || *result == SCIP_DIDNOTFIND) && !SCIPsolveIsStopped(set, stat, FALSE); ++i )
    {
       SCIP_CALL( SCIPbranchruleExecLPSol(set->branchrules[i], set, stat, tree, sepastore, cutoffbound, allowaddcons, result) );
    }
