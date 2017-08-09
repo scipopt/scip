@@ -29,7 +29,6 @@
  * \f[
  * \lfloor(u^T A) x \rfloor \leq \lfloor u^T b\rfloor
  * \f]
- * or (if exact methods are used) give a proof that no such inequality exists.
  *
  * References:
  * - Alberto Caprara, Matteo Fischetti. {0,1/2}-Chvatal-Gomory cuts. Math. Programming, Volume 74, p221--235, 1996.
@@ -50,9 +49,6 @@
 #include "scip/cons_linear.h"
 #include "scip/scipdefplugins.h"
 
-/* prints short statistics (callback, preprocessing, adding cuts) */
-/* #define ZEROHALF__PRINT_STATISTICS */ /**< print statistics */
-
 #define SEPA_NAME              "zerohalf"
 #define SEPA_DESC              "{0,1/2}-cuts separator"
 #define SEPA_PRIORITY             -6000
@@ -60,17 +56,6 @@
 #define SEPA_MAXBOUNDDIST           0.0
 #define SEPA_USESSUBSCIP          FALSE
 #define SEPA_DELAY                FALSE
-
-#define DEFAULT_MAXROUNDS             5 /**< maximal number of zerohalf separation rounds per node (-1: unlimited) */
-#define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of zerohalf separation rounds in the root node (-1: unlimited) */
-#define DEFAULT_MAXSEPACUTS          50 /**< maximal number of {0,1/2}-cuts separated per separation round */
-#define DEFAULT_MAXSEPACUTSROOT     500 /**< maximal number of {0,1/2}-cuts separated per separation round in root node */
-#define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
-#define DEFAULT_MAXDEPTH             -1 /**< separating cuts only if depth <= maxdepth (-1: unlimited) */
-#define DEFAULT_MAXCUTS             100 /**< maximal number of {0,1/2}-cuts determined per separation round
-                                         *  (this includes separated but inefficacious cuts) */
-#define DEFAULT_MAXCUTSROOT        1000 /**< maximal number of {0,1/2}-cuts determined per separation round
-                                         *   in the root node (this includes separated but inefficacious cuts) */
 
 #define MAXSLACK                    0.5
 
@@ -81,7 +66,6 @@
 #define FIXINTEGRALRHS            FALSE /**< try to generate an integral rhs - see SCIPcalcMIR() */
 #define BOUNDSFORTRANS             NULL
 #define BOUNDTYPESFORTRANS         NULL
-#define MAXWEIGHTRANGE         10000.00
 #define MINFRAC                    0.05
 #define MAXFRAC                    1.00
 
@@ -97,11 +81,11 @@ typedef struct Mod2Matrix MOD2_MATRIX;
 struct Mod2Row {
    int                   index;
    int                   pos;
-   uint8_t               rhs;
-   int                   nrowinds;
-   int                   rowindssize;
-   int                   nnonzcols;
-   int                   nonzcolssize;
+   uint8_t               rhs;                /**< rhs of row */
+   int                   nrowinds;           /**< number of elements in rowinds */
+   int                   rowindssize;        /**< size of rowinds array */
+   int                   nnonzcols;          /**< number of columns in nonzcols */
+   int                   nonzcolssize;       /**< size of nonzcols array */
    int*                  rowinds;
    MOD2_COL**            nonzcols;
    SCIP_Real             slack;
@@ -109,20 +93,21 @@ struct Mod2Row {
 
 /** structure representing a column in the mod 2 system */
 struct Mod2Col {
-   int                   index;
-   int                   pos;
-   SCIP_HASHTABLE*       nonzrows;
-   SCIP_Real             solval;
+   int                   index;              /**< index of SCIP column associated to this column */
+   int                   pos;                /**< position of column in matrix */
+   SCIP_HASHTABLE*       nonzrows;           /**< map between a MOD2ROW and its index; used as a set, the set of rows that
+                                               *  contain this column */
+   SCIP_Real             solval;             /**< solution value of the column */
 };
 
 /** matrix representing the modulo 2 system */
 struct Mod2Matrix {
-   MOD2_COL**            cols;
-   MOD2_ROW**            rows;
-   int                   nrows;
-   int                   ncols;
-   int                   rowssize;
-   int                   colssize;
+   MOD2_COL**            cols;               /**< columns of the matrix */
+   MOD2_ROW**            rows;               /**< rows of the matrix */
+   int                   nrows;              /**< number of rows of the matrix; number of elements in rows */
+   int                   ncols;              /**< number of cols of the matrix; number of elements in cols */
+   int                   rowssize;           /**< length of rows array */
+   int                   colssize;           /**< length of cols array */
 };
 
 /** data of separator */
@@ -205,7 +190,8 @@ SCIP_RETCODE mod2MatrixAddCol(
    col->pos = mod2matrix->ncols++;
    col->index = SCIPcolGetIndex(origcol);
    col->solval = SCIPcolGetPrimsol(origcol);
-   SCIP_CALL( SCIPhashtableCreate(&col->nonzrows, SCIPblkmem(scip), 1, SCIPhashGetKeyStandard, SCIPhashKeyEqPtr, hashKeyValIndex, NULL) );
+   SCIP_CALL( SCIPhashtableCreate(&col->nonzrows, SCIPblkmem(scip), 1, SCIPhashGetKeyStandard, SCIPhashKeyEqPtr,
+            hashKeyValIndex, NULL) );
 
    SCIP_CALL( SCIPensureBlockMemoryArray(scip, &mod2matrix->cols, &mod2matrix->colssize, mod2matrix->ncols) );
    mod2matrix->cols[col->pos] = col;
@@ -391,6 +377,7 @@ SCIP_RETCODE buildMod2Matrix(
 
          activity = SCIPgetRowLPActivity(scip, rows[i]);
 
+         /* compute lhsslack: activity - lhs */
          if( SCIPisInfinity(scip, -SCIProwGetLhs(rows[i])) )
             lhsslack = SCIPinfinity(scip);
          else
@@ -399,6 +386,7 @@ SCIP_RETCODE buildMod2Matrix(
             lhsmod2 = mod2(scip, SCIProwGetLhs(rows[i]));
          }
 
+         /* compute rhsslack: rhs - activity */
          if( SCIPisInfinity(scip, SCIProwGetRhs(rows[i])) )
             rhsslack = SCIPinfinity(scip);
          else
@@ -411,7 +399,9 @@ SCIP_RETCODE buildMod2Matrix(
          {
             if( lhsmod2 == rhsmod2 )
             {
-               /* MAXSLACK < 1 implies rhs - lhs = rhsslack + lhsslack < 2. Therefore lhs = rhs (mod2) can only hold if they are equal */
+               /* MAXSLACK < 1 implies rhs - lhs = rhsslack + lhsslack < 2. Therefore lhs = rhs (mod2) can only hold if they
+                * are equal
+                */
                assert(SCIPisEQ(scip, SCIProwGetLhs(rows[i]), SCIProwGetRhs(rows[i])));
 
                /* use rhs */
@@ -551,7 +541,7 @@ void mod2matrixRemoveRow(
    mod2matrix->rows[position] = mod2matrix->rows[mod2matrix->nrows];
    mod2matrix->rows[position]->pos = position;
 
-   /* adjust columns of row */
+   /* unlink columns from row */
    for( i = 0; i < row->nnonzcols; ++i )
    {
       mod2colUnlinkRow(row->nonzcols[i], row);
@@ -595,7 +585,7 @@ void mod2matrixRemoveCol(
    SCIPfreeBlockMemory(scip, &col);
 }
 
-/* remove columns that are (a) zero (b) indentical to other columns or (c) unit vector columns */
+/* remove columns that are (Prop3 iii) zero (Prop3 iv) identify indentical columns (Prop3 v) unit vector columns */
 static
 SCIP_RETCODE mod2matrixPreprocessColumns(
    SCIP*                 scip,               /**< scip data structure */
@@ -614,12 +604,11 @@ SCIP_RETCODE mod2matrixPreprocessColumns(
       MOD2_COL* col = mod2matrix->cols[i];
       int nnonzrows = SCIPhashtableGetNElements(col->nonzrows);
       if( nnonzrows == 0 )
-      {
-         /* column is zero so remove it */
+      { /* Prop3 iii */
          mod2matrixRemoveCol(scip, mod2matrix, col);
       }
       else if( nnonzrows == 1 )
-      {
+      { /* Prop3 v */
          MOD2_ROW* row;
          int j = 0;
          do
@@ -658,7 +647,9 @@ SCIP_RETCODE mod2matrixPreprocessColumns(
 }
 
 
-/** generate a zerohalf cut from a given mod 2 row */
+/** generate a zerohalf cut from a given mod 2 row, i.e., try if aggregations of rows of the
+ * mod2 matrix give violated cuts
+ */
 static
 SCIP_RETCODE generateZerohalfCut(
    SCIP*                 scip,               /**< scip data structure */
@@ -696,8 +687,9 @@ SCIP_RETCODE generateZerohalfCut(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, SCIPgetNVars(scip)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cutinds, SCIPgetNVars(scip)) );
-   SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS, BOUNDSFORTRANS, BOUNDTYPESFORTRANS, MINFRAC, MAXFRAC,
-                          1.0, sepadata->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
+   SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS, BOUNDSFORTRANS, BOUNDTYPESFORTRANS,
+            MINFRAC, MAXFRAC, 1.0, sepadata->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank,
+            &cutislocal, &success) );
 
    if( success && SCIPisEfficacious(scip, cutefficacy) )
    {
@@ -711,7 +703,7 @@ SCIP_RETCODE generateZerohalfCut(
       /* create the cut */
       (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "zerohalf%d_x%d", SCIPgetNLPs(scip), row->index);
 
-      SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE, TRUE /*todo sepadata->dynamiccuts*/) );
+      SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE, TRUE) );
 
       /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
       SCIProwChgRank(cut, cutrank);
@@ -755,7 +747,9 @@ SCIP_RETCODE generateZerohalfCut(
 }
 
 
-/* remove rows that are (a) zero (b) identical to other rows or (c) have slack greater than 1 */
+/** remove rows that are (a) zero (b) identical to other rows (keep the one with smallest slack) (c) have slack greater
+ * than 1 (d) for zero rows with 1 as rhs and slack less than 1, we can directly generate a cut and remove the row (Lemma 4)
+ */
 static
 SCIP_RETCODE mod2matrixPreprocessRows(
    SCIP*                 scip,               /**< scip data structure */
@@ -777,13 +771,14 @@ SCIP_RETCODE mod2matrixPreprocessRows(
 
       assert(row->nnonzcols == 0 || row->nonzcols != NULL);
 
+
       if( (row->nnonzcols == 0 && row->rhs == 0) || SCIPisGE(scip, row->slack, 1.0) )
-      {
+      { /* (a) and (c) */
          sepadata->nreductions += row->nnonzcols;
          mod2matrixRemoveRow(scip, mod2matrix, row);
       }
       else if( row->nnonzcols > 0 )
-      {
+      { /* (b) */
          MOD2_ROW* identicalrow;
          identicalrow = (MOD2_ROW*)SCIPhashtableRetrieve(rowtable, (void*)row);
          if( identicalrow != NULL )
@@ -823,6 +818,7 @@ SCIP_RETCODE mod2matrixPreprocessRows(
       }
       else
       {
+         /* (d) */
          assert(row->nnonzcols == 0 && row->rhs == 1 && SCIPisLT(scip, row->slack, 1.0));
 
          SCIP_CALL( generateZerohalfCut(scip, sepa, sepadata, row) );
@@ -999,8 +995,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
    MOD2_MATRIX mod2matrix;
    MOD2_ROW** nonzrows;
 
-   return SCIP_OKAY;
-
+   /* TODO: check something? that there are fractional integer variables?
+    * that scip is not stopped? something at all ?
+    * also add asserts
+    */
    sepadata = SCIPsepaGetData(sepa);
    SCIP_CALL( SCIPaggrRowCreate(scip, &sepadata->aggrrow) );
    sepadata->ncuts = 0;
@@ -1012,7 +1010,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
 
    SCIPallocBufferArray(scip, &nonzrows, mod2matrix.nrows);
 
-   for( k = 0; k < 10; ++k )
+   for( k = 0; k < 10; ++k ) /* TODO: what is this magic 10? define a macro */
    {
       sepadata->nreductions = 0;
       SCIP_CALL( mod2matrixPreprocessRows(scip, &mod2matrix, sepa, sepadata) );
@@ -1023,7 +1021,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
          goto TERMINATE;
       }
 
-      SCIPdebugMsg(scip, "preprocessed rows (%i rows, %i cols, %i cuts) \n", mod2matrix.nrows, mod2matrix.ncols, sepadata->ncuts);
+      SCIPdebugMsg(scip, "preprocessed rows (%i rows, %i cols, %i cuts) \n", mod2matrix.nrows, mod2matrix.ncols,
+            sepadata->ncuts);
 
       SCIP_CALL( mod2matrixPreprocessColumns(scip, &mod2matrix, sepadata) );
 
@@ -1031,6 +1030,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
 
       SCIPsortPtr((void**) mod2matrix.rows, compareRowSlack, mod2matrix.nrows);
 
+      /* apply Prop5 */ /* TODO: this should be in another function, just like the preprocess stuff */
       for( i = 0; i < mod2matrix.nrows; ++i )
       {
          int j;
@@ -1079,7 +1079,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
 
       if( sepadata->nreductions == 0 )
       {
-         SCIPdebugMsg(scip, "no change stopping (%i rows, %i cols)\n", mod2matrix.nrows, mod2matrix.ncols);
+         SCIPdebugMsg(scip, "no change, stopping (%i rows, %i cols)\n", mod2matrix.nrows, mod2matrix.ncols);
          break;
       }
    }
@@ -1130,9 +1130,7 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
 
    /* include separator */
    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
-         SEPA_USESSUBSCIP, SEPA_DELAY,
-         sepaExeclpZerohalf, NULL,
-         sepadata) );
+            SEPA_USESSUBSCIP, SEPA_DELAY, sepaExeclpZerohalf, NULL, sepadata) );
 
    assert(sepa != NULL);
 
@@ -1142,4 +1140,3 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
 
    return SCIP_OKAY;
 }
-
