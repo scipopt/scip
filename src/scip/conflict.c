@@ -2391,7 +2391,7 @@ SCIP_RETCODE tightenSingleVar(
 
    ++conflict->nglbchgbds;
 
-   if( prooftype == SCIP_CONFTYPE_INFEASLP )
+   if( prooftype == SCIP_CONFTYPE_INFEASLP || prooftype == SCIP_CONFTYPE_ALTINFPROOF )
    {
       ++conflict->dualrayinfnnonzeros; /* we count a global bound reduction as size 1 */
       ++conflict->ndualrayinfsuccess;
@@ -2498,7 +2498,6 @@ SCIP_RETCODE propagateLongProof(
    SCIP_Real minact;
    SCIP_Real rhs;
    int nnz;
-   int i;
 
    assert(proofset != NULL);
 
@@ -2510,7 +2509,7 @@ SCIP_RETCODE propagateLongProof(
 
    minact = getMinActivity(transprob, vals, inds, nnz, NULL, NULL);
 
-   for( i = 0; i < nnz; i++ )
+   for( int i = 0; i < nnz; i++ )
    {
       SCIP_VAR* var;
       SCIP_Real val;
@@ -2604,12 +2603,12 @@ SCIP_RETCODE createAndAddProofcons(
    assert(conflictstore != NULL);
    assert(proofset != NULL);
 
-   vars = SCIPprobGetVars(transprob);
    nnz = SCIPaggrRowGetNNz(proofset->aggrrow);
 
    if( nnz == 0 )
       return SCIP_OKAY;
 
+   vars = SCIPprobGetVars(transprob);
    rhs = SCIPaggrRowGetRhs(proofset->aggrrow);
    assert(!SCIPsetIsInfinity(set, rhs));
 
@@ -2658,7 +2657,7 @@ SCIP_RETCODE createAndAddProofcons(
          toolong = (fillin > 1.5 * stat->avgnnz);
       }
 
-      toolong &= (nnz > set->conf_maxvarsfac * transprob->nvars);
+      toolong = (toolong && (nnz > set->conf_maxvarsfac * transprob->nvars));
    }
 
    /* don't store global dual proofs that are to long / have to much non-zeros */
@@ -2787,12 +2786,11 @@ SCIP_RETCODE conflictFlushProofset(
       else
       {
          SCIP_Bool skipinitialproof = FALSE;
-         int i;
 
          /* prefer an infeasibility proof */
          if( set->conf_prefinfproof && conflict->proofset->conflicttype == SCIP_CONFTYPE_BNDEXCEEDING )
          {
-            for( i = 0; i < conflict->nproofsets; i++ )
+            for( int i = 0; i < conflict->nproofsets; i++ )
             {
                if( conflict->proofsets[i]->conflicttype == SCIP_CONFTYPE_INFEASLP )
                {
@@ -6575,11 +6573,11 @@ SCIP_RETCODE tightenDualray(
                MINFRAC, MAXFRAC, proofset->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, NULL, \
                &islocal, &cutsuccess) );
 
-         success |= cutsuccess;
+         success = (success || cutsuccess);
       }
 
       /* replace the current proof */
-      if( success && !islocal && SCIPsetIsPositive(set, cutefficacy) && cutefficacy / cutnnz > proofefficiacy / nnz )
+      if( success && !islocal && SCIPsetIsPositive(set, cutefficacy) && cutefficacy * nnz > proofefficiacy * cutnnz )
       {
          SCIP_PROOFSET* alternativeproofset;
 
@@ -6653,7 +6651,7 @@ SCIP_RETCODE tightenDualray(
       }
 
       SCIP_CALL( SCIPaggrRowAddSparseData(set->scip, proofset->aggrrow, subvals, subinds, nsubvars, subrhs) );
-      SCIPaggrRowCleanup(set->scip,    proofset->aggrrow);
+      SCIPaggrRowCleanup(set->scip, proofset->aggrrow);
 
       /* free buffer */
       SCIPsetFreeBufferArray(set, &subinds);
@@ -6881,7 +6879,7 @@ SCIP_RETCODE runBoundHeuristic(
        * finite sides are only changed to near infinity, such that the row's sense in the LP solver
        * is not affected (e.g. CPLEX cannot handle free rows)
        */
-      for( r = 0 ; r < nrows; ++r )
+      for( r = 0; r < nrows; ++r )
       {
          assert(SCIProwGetLPPos(rows[r]) == r);
 
