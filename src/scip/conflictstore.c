@@ -1310,7 +1310,7 @@ SCIP_RETCODE SCIPconflictstoreTransform(
 
       if( transcons != NULL )
       {
-         SCIP_CALL( SCIPconflictstoreAddConflict(conflictstore, blkmem, set, stat, tree, transprob, reopt, transcons,
+         SCIP_CALL( SCIPconflictstoreAddConflict(conflictstore, blkmem, set, stat, tree, transprob, reopt, transcons, \
                SCIP_CONFTYPE_UNKNOWN, FALSE, -SCIPsetInfinity(set)) );
 
          ++ntransconss;
