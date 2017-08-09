@@ -421,6 +421,7 @@ SCIP_RETCODE setupAggregationData(
    return SCIP_OKAY;
 }
 
+/** free resources held in aggregation data */
 static
 void destroyAggregationData(
    SCIP*                 scip,
@@ -437,9 +438,9 @@ void destroyAggregationData(
    SCIPfreeBufferArray(scip, &aggrdata->bounddist);
 }
 
-/* retrieves the candidate rows for canceling out the given variable, also returns the number of "good" rows which are the
- * rows stored at the first ngoodrows positions. A row is good if its continuous variables are all at their bounds, except
- * maybe the given continuous variable (in probvaridx)
+/** retrieves the candidate rows for canceling out the given variable, also returns the number of "good" rows which are the
+ *  rows stored at the first ngoodrows positions. A row is good if its continuous variables are all at their bounds, except
+ *  maybe the given continuous variable (in probvaridx)
  */
 static
 SCIP_Bool getRowAggregationCandidates(
@@ -464,7 +465,7 @@ SCIP_Bool getRowAggregationCandidates(
    return TRUE;
 }
 
-/* TODO: comment */
+/** find the bound distance value in the aggregation data struct for the given variable problem index */
 static
 SCIP_Real aggrdataGetBoundDist(
    AGGREGATIONDATA*      aggrdata,
@@ -479,7 +480,10 @@ SCIP_Real aggrdataGetBoundDist(
    return aggrdata->bounddist[aggrdataidx];
 }
 
-/* TODO: comment: what it does and maybe how */
+/** Aggregates the next row suitable for cancelling out an active continuous variable.
+ *  Equality rows that contain no other active continuous variables are preffered and apart from that
+ *  the scores for the rows are used to determine which row is aggregated next
+ */
 static
 SCIP_RETCODE aggregateNextRow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1023,7 +1027,11 @@ SCIP_RETCODE separateCuts(
       fractionalities[v] = MIN(fractionalities[v], 1.0 - fractionalities[v]);
    }
 
-   /* calculate the fractionality of the continuous variables in the current solution; TODO: define fractionality of continuous variables! */
+   /* calculate the fractionality of the continuous variables in the current solution;
+    * The fractionality of a continuous variable x is defined to be a * f_y,
+    * if there is a variable bound x <= a * y + c where f_y is the fractionality of y
+    * and in the current solution the variable bound has no slack.
+    */
    for( ; v < nvars; ++v )
    {
       SCIP_VAR** vlbvars;
@@ -1191,7 +1199,7 @@ SCIP_RETCODE separateCuts(
    }
    assert(nrows == nnonzrows + zerorows);
 
-   /* start aggregation heuristic for each row in the LP: TODO it seems this also generates the cuts, so please document behaviour */
+   /* calculate the data required for performing the row aggregation */
    SCIP_CALL( setupAggregationData(scip, sol, &aggrdata) );
 
    ncuts = 0;
@@ -1202,6 +1210,7 @@ SCIP_RETCODE separateCuts(
    else if( depth == 0 && 2 * SCIPgetNSepaRounds(scip) < maxfails )
       maxfails += maxfails - 2 * SCIPgetNSepaRounds(scip); /* allow up to double as many fails in early separounds of root node */
 
+   /* start aggregation heuristic for each row in the LP and generate resulting cuts */
    ntries = 0;
    nfails = 0;
    for( r = 0; r < nrows && ntries < maxtries && ncuts < maxsepacuts && rowscores[roworder[r]] > 0.0
@@ -1214,7 +1223,9 @@ SCIP_RETCODE separateCuts(
       SCIP_CALL( aggregation(scip, &aggrdata, sepa, sol, rowlhsscores, rowrhsscores,
                              roworder[r], maxaggrs, &wastried, &cutoff, cutinds, cutcoefs, FALSE, &ncuts) );
 
-      /* TODO: document what trynegscaling means or reference to the general description in the h file */
+      /* if trynegscaling is true we start the aggregation heuristic again for this row, but multiply it by -1 first.
+       * This is done by calling the aggregation function with the parameter negate equal to TRUE
+       */
       if( sepadata->trynegscaling && !cutoff )
       {
          SCIP_CALL( aggregation(scip, &aggrdata, sepa, sol, rowlhsscores, rowrhsscores,
