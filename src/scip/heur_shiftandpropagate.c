@@ -1164,6 +1164,8 @@ SCIP_RETCODE updateTransformation(
 
          if( !SCIPisInfinity(scip, -lb) )
             matrix->upperbounds[varindex] = ub - lb;
+         else
+            matrix->upperbounds[varindex] = SCIPinfinity(scip);
       }
       break;
    case TRANSFORMSTATUS_FREE:

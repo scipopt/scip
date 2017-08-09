@@ -111,7 +111,7 @@ if test "$VISUALIZE" = true
 then
     BAKFILENAME="`basename $TMPFILE .tmp`.dat"
     echo visualization output set to "$BAKFILENAME"
-    echo set visual bakfilename "results/${BAKFILENAME}" >> $TMPFILE
+    echo set visual bakfilename "$OUTPUTDIR/${BAKFILENAME}" >> $TMPFILE
 fi
 
 if test "$REOPT" = false

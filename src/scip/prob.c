@@ -1295,6 +1295,7 @@ SCIP_RETCODE SCIPprobAddCons(
    prob->conss[prob->nconss] = cons;
    prob->nconss++;
    prob->maxnconss = MAX(prob->maxnconss, prob->nconss);
+   stat->nactiveconssadded++;
 
    /* undelete constraint, if it was globally deleted in the past */
    cons->deleted = FALSE;
@@ -1755,6 +1756,9 @@ void SCIPprobUpdateBestRootSol(
 
    /* in case we have a zero objective fucntion, we skip the root reduced cost update */
    if( SCIPprobGetNObjVars(prob, set) == 0 )
+      return;
+
+   if( !SCIPlpIsDualReliable(lp) )
       return;
 
    SCIPsetDebugMsg(set, "update root reduced costs\n");

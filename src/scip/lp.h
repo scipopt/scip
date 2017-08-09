@@ -1024,7 +1024,9 @@ SCIP_RETCODE SCIPlpSetState(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LPISTATE*        lpistate,           /**< LP state information (like basis information) */
    SCIP_Bool             wasprimfeas,        /**< primal feasibility when LP state information was stored */
-   SCIP_Bool             wasdualfeas         /**< dual feasibility when LP state information was stored */
+   SCIP_Bool             wasprimchecked,     /**< true if the LP solution has passed the primal feasibility check */
+   SCIP_Bool             wasdualfeas,        /**< dual feasibility when LP state information was stored */
+   SCIP_Bool             wasdualchecked      /**< true if the LP solution has passed the dual feasibility check */
    );
 
 /** frees LP state information */
@@ -1639,6 +1641,18 @@ SCIP_Bool SCIPlpIsRelax(
 /** returns whether the current LP is flushed and solved */
 extern
 SCIP_Bool SCIPlpIsSolved(
+   SCIP_LP*              lp                  /**< current LP data */
+   );
+
+/** return whether the current LP solution passed the primal feasibility check */
+extern
+SCIP_Bool SCIPlpIsPrimalReliable(
+   SCIP_LP*              lp                  /**< current LP data */
+   );
+
+/** return whether the current LP solution passed the dual feasibility check */
+extern
+SCIP_Bool SCIPlpIsDualReliable(
    SCIP_LP*              lp                  /**< current LP data */
    );
 

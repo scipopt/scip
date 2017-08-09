@@ -28,7 +28,7 @@
 #include <string.h>
 #if defined(_WIN32) || defined(_WIN64)
 #else
-#include <strings.h>
+#include <strings.h> /*lint --e{766}*/
 #endif
 
 #include "scip/scip.h"
@@ -2877,21 +2877,24 @@ SCIP_RETCODE paramsetSetHeuristicsFast(
 {
    int i;
 
-#define NEXPENSIVEHEURFREQS 16
+#define NEXPENSIVEHEURFREQS 19
    static const char* const expensiveheurfreqs[NEXPENSIVEHEURFREQS] = {
       "heuristics/coefdiving/freq",
       "heuristics/crossover/freq",
       "heuristics/distributiondiving/freq",
       "heuristics/feaspump/freq",
       "heuristics/fracdiving/freq",
+      "heuristics/gins/freq",
       "heuristics/guideddiving/freq",
       "heuristics/linesearchdiving/freq",
+      "heuristics/lpface/freq",
       "heuristics/mpec/freq",
       "heuristics/nlpdiving/freq",
       "heuristics/subnlp/freq",
       "heuristics/objpscostdiving/freq",
       "heuristics/pscostdiving/freq",
       "heuristics/rens/freq",
+      "heuristics/rins/freq",
       "heuristics/rootsoldiving/freq",
       "heuristics/undercover/freq",
       "heuristics/veclendiving/freq"

@@ -1419,7 +1419,9 @@ SCIP_RETCODE readBounds(
           * are by default assumed to be binary, but an explicit lower bound of 0 turns them into integer variables.
           * Only if the upper bound is explicitly set to 1, we leave the variable as a binary one.
           */
-         if( oldvartype == SCIP_VARTYPE_BINARY && !(mpsinputField1(mpsi)[0] == 'U' && SCIPisFeasEQ(scip, val, 1.0)) )
+         if( oldvartype == SCIP_VARTYPE_BINARY && !((mpsinputField1(mpsi)[0] == 'U' ||
+                  (mpsinputField1(mpsi)[0] == 'F' && mpsinputField1(mpsi)[1] == 'X')) && SCIPisFeasEQ(scip, val, 1.0))
+            && !(mpsinputField1(mpsi)[0] == 'F' && mpsinputField1(mpsi)[1] == 'X'&& SCIPisFeasEQ(scip, val, 0.0)) )
          {
             SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
             assert(!infeasible);
@@ -2544,7 +2546,6 @@ SCIP_RETCODE readMps(
       SCIP_CALL_TERMINATE( retcode, SCIPsetObjsense(scip, mpsinputObjsense(mpsi)), TERMINATE );
    }
 
- /* cppcheck-suppress unusedLabel */
  TERMINATE:
    mpsinputFree(scip, &mpsi);
 
@@ -4422,7 +4423,6 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
    if( nfixedvars > 0 )
    {
-      /* cppcheck-suppress nullPointerRedundantCheck */
       assert(fixvars != NULL);
       SCIPfreeBufferArray(scip, &fixvars);
    }

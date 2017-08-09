@@ -3589,7 +3589,7 @@ SCIP_RETCODE conflictAddConflictset(
       SCIPsetDebugMsg(set, " -> final conflict set has %d literals\n", *nliterals);
 
       /* check conflict set on debugging solution */
-      SCIP_CALL( SCIPdebugCheckConflict(blkmem, set, tree->path[validdepth],
+      SCIP_CALL( SCIPdebugCheckConflict(blkmem, set, tree->path[validdepth], \
             conflictset->bdchginfos, conflictset->relaxedbds, conflictset->nbdchginfos) ); /*lint !e506 !e774*/
 
       /* move conflictset to the conflictset storage */
@@ -4030,8 +4030,8 @@ SCIP_RETCODE conflictCreateReconvergenceConss(
          assert(SCIPbdchginfoGetDepth(nextuip) == SCIPbdchginfoGetDepth(uip));
 
          /* check conflict graph frontier on debugging solution */
-         SCIP_CALL( SCIPdebugCheckConflictFrontier(blkmem, set, tree->path[validdepth],
-               bdchginfo, conflict->conflictset->bdchginfos, conflict->conflictset->relaxedbds,
+         SCIP_CALL( SCIPdebugCheckConflictFrontier(blkmem, set, tree->path[validdepth], \
+               bdchginfo, conflict->conflictset->bdchginfos, conflict->conflictset->relaxedbds, \
                conflict->conflictset->nbdchginfos, conflict->bdchgqueue, conflict->forcedbdchgqueue) ); /*lint !e506 !e774*/
 
          SCIPsetDebugMsg(set, "creating reconvergence constraint from UIP <%s> to UIP <%s> in depth %d with %d literals after %d resolutions\n",
@@ -4146,8 +4146,8 @@ SCIP_RETCODE conflictAnalyze(
    nfirstuips = 0;
 
    /* check if the initial reason on debugging solution */
-   SCIP_CALL( SCIPdebugCheckConflictFrontier(blkmem, set, tree->path[validdepth],
-         NULL, conflict->conflictset->bdchginfos, conflict->conflictset->relaxedbds, conflict->conflictset->nbdchginfos,
+   SCIP_CALL( SCIPdebugCheckConflictFrontier(blkmem, set, tree->path[validdepth], \
+         NULL, conflict->conflictset->bdchginfos, conflict->conflictset->relaxedbds, conflict->conflictset->nbdchginfos, \
          conflict->bdchgqueue, conflict->forcedbdchgqueue) ); /*lint !e506 !e774*/
 
    while( bdchginfo != NULL && validdepth <= maxvaliddepth )
@@ -4286,8 +4286,8 @@ SCIP_RETCODE conflictAnalyze(
       }
 
       /* check conflict graph frontier on debugging solution */
-      SCIP_CALL( SCIPdebugCheckConflictFrontier(blkmem, set, tree->path[validdepth],
-            bdchginfo, conflict->conflictset->bdchginfos, conflict->conflictset->relaxedbds, conflict->conflictset->nbdchginfos,
+      SCIP_CALL( SCIPdebugCheckConflictFrontier(blkmem, set, tree->path[validdepth], \
+            bdchginfo, conflict->conflictset->bdchginfos, conflict->conflictset->relaxedbds, conflict->conflictset->nbdchginfos, \
             conflict->bdchgqueue, conflict->forcedbdchgqueue) ); /*lint !e506 !e774*/
 
       /* get next conflicting bound from the conflict candidate queue (this needs not to be nextbdchginfo, because
@@ -5967,7 +5967,7 @@ SCIP_RETCODE tightenDualray(
    }
 
    SCIPsetDebugMsg(set, "start dualray tightening:\n");
-   SCIPsetDebugMsg(set, "-> tighten dual ray: nvars=%d (bin=%d, int=%d, cont=%d)",
+   SCIPsetDebugMsg(set, "-> tighten dual ray: nvars=%d (bin=%d, int=%d, cont=%d)\n",
          (*nvarinds), nbinvars, nintvars, ncontvars);
    debugPrintViolationInfo(set, getMinActivity(vals, varinds, (*nvarinds), curvarlbs, curvarubs), *rhs, NULL);
 
@@ -6763,7 +6763,9 @@ SCIP_RETCODE runBoundHeuristic(
          {
             lp->solved = FALSE;
             lp->primalfeasible = FALSE;
+            lp->primalchecked = FALSE;
             lp->dualfeasible = FALSE;
+            lp->dualchecked = FALSE;
             lp->lpobjval = SCIP_INVALID;
             lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
          }
@@ -6933,9 +6935,16 @@ SCIP_RETCODE conflictAnalyzeLP(
       }
       else
       {
+         /* don't analyze bound exceeding LPs (we may end here if strong branching LPs should be analyzed) */
+         if( set->conf_useboundlp )
+            return SCIP_OKAY;
+
          SCIPdebugMessage(" -> LP exceeds the cutoff bound: obj=%g, cutoff=%g\n", objval, lp->lpiuobjlim);
       }
    }
+   /* don't analyze infeasible LPs (we may end here if strong branching LPs should be analyzed) */
+   else if( !set->conf_useinflp )
+      return SCIP_OKAY;
 
 
    assert(valid);
@@ -7265,7 +7274,9 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
    storedsolvals.lpsolstat = lp->lpsolstat;
    storedsolvals.lpobjval = lp->lpobjval;
    storedsolvals.primalfeasible = lp->primalfeasible;
+   storedsolvals.primalchecked = lp->primalchecked;
    storedsolvals.dualfeasible = lp->dualfeasible;
+   storedsolvals.dualchecked = lp->dualchecked;
    storedsolvals.solisbasic = lp->solisbasic;
    storedsolvals.lpissolved = lp->solved;
 
@@ -7321,7 +7332,9 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
       lp->lpsolstat = storedsolvals.lpsolstat;
       lp->lpobjval = storedsolvals.lpobjval;
       lp->primalfeasible = storedsolvals.primalfeasible;
+      lp->primalchecked = storedsolvals.primalchecked;
       lp->dualfeasible = storedsolvals.dualfeasible;
+      lp->dualchecked = storedsolvals.dualchecked;
       lp->solisbasic = storedsolvals.solisbasic;
       lp->solved = storedsolvals.lpissolved;
 
@@ -7526,7 +7539,7 @@ SCIP_Longint SCIPconflictGetNBoundexceedingLPIterations(
  * infeasible strong branching conflict analysis
  */
 
-/** analyses infeasible strong branching sub problems for conflicts */
+/** analyzes infeasible strong branching sub problems for conflicts */
 SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
@@ -7606,6 +7619,7 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
    oldub = col->ub;
 
    resolve = FALSE;
+   dualraysuccess = FALSE;
 
    /* is down branch infeasible? */
    if( col->sbdownvalid && SCIPsetIsGE(set, col->sbdown, lp->cutoffbound) )

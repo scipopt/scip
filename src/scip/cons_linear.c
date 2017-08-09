@@ -7464,6 +7464,7 @@ SCIP_RETCODE propagateCons(
       {
          int nfixedvars;
          int naddconss;
+         /* cppcheck-suppress unassignedVariable */
          int oldnchgbds;
 
          nfixedvars = 0;
@@ -12693,7 +12694,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
    return SCIPhashFour(consdata->nvars,
                        SCIPcombineTwoInt(minidx, SCIPrealHashCode(consdata->vals[0] * scale)),
                        SCIPcombineTwoInt(mididx, SCIPrealHashCode(consdata->vals[consdata->nvars / 2] * scale)),
-                       SCIPcombineTwoInt(maxidx, SCIPrealHashCode(consdata->vals[consdata->nvars - 1] * scale)));
+                       SCIPcombineTwoInt(maxidx, SCIPrealHashCode(consdata->vals[consdata->nvars - 1] * scale))); /*lint !e571*/
 }
 
 /** compares each constraint with all other constraints for possible redundancy and removes or changes constraint 

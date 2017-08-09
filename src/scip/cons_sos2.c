@@ -1491,7 +1491,9 @@ SCIP_DECL_CONSTRANS(consTransSOS2)
 static
 SCIP_DECL_CONSPRESOL(consPresolSOS2)
 {  /*lint --e{715}*/
+   /* cppcheck-suppress unassignedVariable */
    int oldnfixedvars;
+   /* cppcheck-suppress unassignedVariable */
    int oldndelconss;
    int nremovedvars;
    SCIP_EVENTHDLR* eventhdlr;

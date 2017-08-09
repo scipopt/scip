@@ -58,12 +58,22 @@ You will need either the .a or the .so files and can skip the others by
 just pressing return.
 
 The most common compiling issue is that some libraries are missing on
-your system or that they are outdated. SCIP per default requires zlib,
-gmp and readline.  Try compiling with:
-make ZLIB=false READLINE=false GMP=false
-or, better, install them. Note that under Linux-based systems, you
-need to install the developer-versions of gmp/zlib/readline, in order
-to also have the header-files available.
+your system or that they are outdated. SCIP per default requires the
+following packages (with usual names for Linux systems in
+parentheses):
+
+- zlib     (libz-dev)
+- gmp      (libgmp-dev),
+- readline (libreadline-dev), and
+- ncurses  (libncurses-dev)
+
+Note that under Linux-based systems, you need to install the
+developer-versions of gmp/zlib/readline, in order to also have the
+header-files available.
+
+If you are not able or do not want to install these packages, try compiling with:
+make ZLIB=false READLINE=false GMP=false.
+
 
 II Detailed installation description
 ************************************
