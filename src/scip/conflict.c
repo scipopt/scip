@@ -4353,7 +4353,7 @@ SCIP_RETCODE conflictAddConflictset(
       SCIPsetDebugMsg(set, " -> final conflict set has %d literals\n", *nliterals);
 
       /* check conflict set on debugging solution */
-      SCIP_CALL( SCIPdebugCheckConflict(blkmem, set, tree->path[validdepth],
+      SCIP_CALL( SCIPdebugCheckConflict(blkmem, set, tree->path[validdepth], \
             conflictset->bdchginfos, conflictset->relaxedbds, conflictset->nbdchginfos) ); /*lint !e506 !e774*/
 
       /* move conflictset to the conflictset storage */
@@ -4794,8 +4794,8 @@ SCIP_RETCODE conflictCreateReconvergenceConss(
          assert(SCIPbdchginfoGetDepth(nextuip) == SCIPbdchginfoGetDepth(uip));
 
          /* check conflict graph frontier on debugging solution */
-         SCIP_CALL( SCIPdebugCheckConflictFrontier(blkmem, set, tree->path[validdepth],
-               bdchginfo, conflict->conflictset->bdchginfos, conflict->conflictset->relaxedbds,
+         SCIP_CALL( SCIPdebugCheckConflictFrontier(blkmem, set, tree->path[validdepth], \
+               bdchginfo, conflict->conflictset->bdchginfos, conflict->conflictset->relaxedbds, \
                conflict->conflictset->nbdchginfos, conflict->bdchgqueue, conflict->forcedbdchgqueue) ); /*lint !e506 !e774*/
 
          SCIPsetDebugMsg(set, "creating reconvergence constraint from UIP <%s> to UIP <%s> in depth %d with %d literals after %d resolutions\n",
