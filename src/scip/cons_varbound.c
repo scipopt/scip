@@ -456,7 +456,7 @@ SCIP_Bool checkCons(
       /* calculate constraint violation and update it in solution */
       absviol = MAX(consdata->lhs - sum, sum - consdata->rhs);
       lhsrelviol = SCIPrelDiff(consdata->lhs, sum);
-      rhsrelviol = SCIPrelDiff(consdata->rhs, sum);
+      rhsrelviol = SCIPrelDiff(sum, consdata->rhs);
       relviol = MAX(lhsrelviol, rhsrelviol);
       if( sol != NULL )
          SCIPsolUpdateLPConsViolation(sol, absviol, relviol);
