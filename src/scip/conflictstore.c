@@ -117,9 +117,9 @@ SCIP_DECL_SORTPTRCOMP(compareConss)
    assert(cons1 != NULL);
    assert(cons2 != NULL);
 
-   if( SCIPconsGetAge(cons1) > SCIPconsGetAge(cons2) )
+   if( SCIPconsGetAge(cons1) > SCIPconsGetAge(cons2) + 1e-09 )
       return -1;
-   else if ( SCIPconsGetAge(cons1) < SCIPconsGetAge(cons2) )
+   else if ( SCIPconsGetAge(cons1) < SCIPconsGetAge(cons2) - 1e-09 )
       return +1;
    else
 #ifdef SCIP_DISABLED_CODE
@@ -146,8 +146,11 @@ SCIP_DECL_SORTPTRCOMP(compareConss)
 #else
    {
       SCIP_CONSHDLR* conshdlr1 = SCIPconsGetHdlr(cons1);
+      SCIP_CONSHDLR* conshdlr2 = SCIPconsGetHdlr(cons2);
 
-      if( strcmp(SCIPconshdlrGetName(conshdlr1), "linear") == 0 )
+      if( strcmp(SCIPconshdlrGetName(conshdlr1), "linear") == strcmp(SCIPconshdlrGetName(conshdlr2), "linear") )
+         return 0;
+      else if( strcmp(SCIPconshdlrGetName(conshdlr1), "linear") == 0 )
          return -1;
       else
          return +1;

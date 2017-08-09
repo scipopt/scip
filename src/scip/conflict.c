@@ -6478,9 +6478,7 @@ SCIP_RETCODE tightenDualray(
    nintvars = 0;
    ncontvars = 0;
 
-   vals = SCIPaggrRowGetVals(farkasrow);
    inds = SCIPaggrRowGetInds(farkasrow);
-   rhs = SCIPaggrRowGetRhs(farkasrow);
    nnz = SCIPaggrRowGetNNz(farkasrow);
 
    /* count number of binary, integer, and continuous variables */
