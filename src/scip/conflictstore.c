@@ -428,6 +428,7 @@ SCIP_RETCODE delPosDualsol(
    int nvars;
 
    assert(conflictstore != NULL);
+   assert(pos >= 0 && pos < conflictstore->ndualsolconfs);
 
    lastpos = conflictstore->ndualsolconfs-1;
    dualproof = conflictstore->dualsolconfs[pos];
@@ -761,7 +762,7 @@ SCIP_RETCODE SCIPconflictstoreClean(
    if( conflictstore->dualrayconfs != NULL )
    {
       /* we traverse in reverse order to avoid swapping of pointers */
-      for( i = conflictstore->ndualrayconfs-1; i >= 0 ; i-- )
+      for( i = conflictstore->ndualrayconfs-1; i >= 0; i-- )
       {
          SCIP_CALL( delPosDualray(conflictstore, set, stat, NULL, blkmem, reopt, i, FALSE) );
       }
@@ -772,7 +773,7 @@ SCIP_RETCODE SCIPconflictstoreClean(
    if( conflictstore->dualsolconfs != NULL )
    {
       /* we traverse in reverse order to avoid swapping of pointers */
-      for( i = conflictstore->ndualsolconfs-1; i >= 0 ; i-- )
+      for( i = conflictstore->ndualsolconfs-1; i >= 0; i-- )
       {
          SCIP_CALL( delPosDualsol(conflictstore, set, stat, NULL, blkmem, reopt, i, FALSE) );
       }
@@ -818,10 +819,9 @@ SCIP_RETCODE SCIPconflictstoreAddDualraycons(
     */
    if( conflictstore->ndualrayconfs == CONFLICTSTORE_DUALRAYSIZE )
    {
-      int ndeleted;
+      int ndeleted = 0;
       int i;
 
-      ndeleted = 0;
       for( i = 0; i < conflictstore->ndualrayconfs; )
       {
          if( SCIPconsIsDeleted(conflictstore->dualrayconfs[i]) )
@@ -1067,9 +1067,6 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
    assert(blkmem != NULL);
    assert(transprob != NULL);
 
-   ndelconfs = 0;
-   nchgsides = 0;
-
    /* return if we do not want to use the storage */
    if( set->conf_maxstoresize == 0 )
       return SCIP_OKAY;
@@ -1099,6 +1096,7 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
     * note: we cannot remove conflicts that are marked as deleted because at this point in time we would destroy
     *       the internal data structure
     */
+   ndelconfs = 0;
    for( i = 0; i < conflictstore->nconflicts; )
    {
       assert(conflictstore->conflicts[i] != NULL);
@@ -1124,6 +1122,7 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
          conflictstore->nconflicts+ndelconfs, ndelconfs);
 
    ndelconfs = 0;
+   nchgsides = 0;
    /* update all proof constraints based on a dual solution */
    for( i = 0; i < conflictstore->ndualsolconfs; )
    {
@@ -1148,24 +1147,23 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
 
       if( strcmp(SCIPconshdlrGetName(conshdlr), "linear") == 0 )
       {
-         SCIP_Real lhs;
          SCIP_Real rhs;
          SCIP_Real newside;
 
          assert(SCIPsetIsGT(set, conflictstore->dualprimalbnds[i], cutoffbound));
 
          rhs = SCIPgetRhsLinear(NULL, dualproof);
-         lhs = SCIPgetLhsLinear(NULL, dualproof);
 
          if( !SCIPsetIsInfinity(set, rhs) )
          {
-            assert(SCIPsetIsInfinity(set, -lhs));
+            assert(SCIPsetIsInfinity(set, -SCIPgetLhsLinear(NULL, dualproof)));
 
             newside = rhs - conflictstore->dualprimalbnds[i] + cutoffbound - SCIPsetSumepsilon(set);
             SCIP_CALL( SCIPchgRhsLinear(set->scip, dualproof, newside) );
          }
          else
          {
+            SCIP_Real lhs = SCIPgetLhsLinear(NULL, dualproof);
             assert(!SCIPsetIsInfinity(set, -lhs));
 
             newside = lhs + conflictstore->dualprimalbnds[i] - (cutoffbound - SCIPsetSumepsilon(set));
@@ -1355,6 +1353,7 @@ SCIP_Real SCIPconflictstoreGetAvgNnzDualBndProofs(
    )
 {
    assert(conflictstore != NULL);
+   assert(conflictstore->ndualsolconfs >= 0);
 
    if( conflictstore->ndualsolconfs == 0 )
       return 0.0;

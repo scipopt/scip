@@ -69,11 +69,11 @@ struct SCIP_ConflictSet
    int                   insertdepth;        /**< depth level where constraint should be added */
    int                   conflictdepth;      /**< depth in the tree where the conflict set yields a conflict */
    int                   repropdepth;        /**< depth at which the conflict set triggers a deduction */
-   SCIP_CONFTYPE         conflicttype;       /**< conflict type: unknown, infeasible LP, bound exceeding LP, propagation */
    unsigned int          repropagate:1;      /**< should the conflict constraint trigger a repropagation? */
    unsigned int          depthcalced:1;      /**< are the conflict and repropagation depth calculated? */
    unsigned int          sorted:1;           /**< is the conflict set sorted */
    unsigned int          usescutoffbound:1;  /**< is the conflict based on the cutoff bound? */
+   SCIP_CONFTYPE         conflicttype;       /**< conflict type: unknown, infeasible LP, bound exceeding LP, propagation */
 };
 
 /** set of conflicting bound changes */
