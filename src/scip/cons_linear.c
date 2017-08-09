@@ -7100,6 +7100,8 @@ SCIP_RETCODE checkCons(
    lhsviol = consdata->lhs - activity;
    rhsviol = activity - consdata->rhs;
 
+   absviol = 0.0;
+   relviol = 0.0;
    if( (lhsviol > 0) && (lhsviol > rhsviol) )
    {
       absviol = lhsviol;
