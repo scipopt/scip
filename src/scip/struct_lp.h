@@ -109,9 +109,9 @@ struct SCIP_LpSolVals
    SCIP_LPSOLSTAT        lpsolstat;          /**< solution status of last LP solution */
    SCIP_Real             lpobjval;           /**< objective value of LP without loose variables, or SCIP_INVALID */
    SCIP_Bool             primalfeasible;     /**< is current LP solution primal feasible? */
-   SCIP_Bool             primalchecked;      /**< has current LP solution passed primal feasibility check? */
+   SCIP_Bool             primalchecked;      /**< was current LP solution checked for primal feasibility? */
    SCIP_Bool             dualfeasible;       /**< is current LP solution dual feasible? */
-   SCIP_Bool             dualchecked;        /**< has current LP solution passed dual feasibility check? */
+   SCIP_Bool             dualchecked;        /**< was current LP solution checked for primal feasibility? */
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
    SCIP_Bool             lpissolved;         /**< is current LP solved? */
 };
@@ -344,9 +344,9 @@ struct SCIP_Lp
    SCIP_Bool             flushed;            /**< are all cached changes applied to the LP solver? */
    SCIP_Bool             solved;             /**< is current LP solved? */
    SCIP_Bool             primalfeasible;     /**< is current LP solution (rather LPI state) primal feasible? */
-   SCIP_Bool             primalchecked;      /**< has the current LP solution passed the primal feasibility check? */
+   SCIP_Bool             primalchecked;      /**< was current LP solution checked for primal feasibility?? */
    SCIP_Bool             dualfeasible;       /**< is current LP solution (rather LPI state) dual feasible? */
-   SCIP_Bool             dualchecked;        /**< has the current LP solution passed the dual feasibility check? */
+   SCIP_Bool             dualchecked;        /**< was current LP solution checked for primal feasibility?? */
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
    SCIP_Bool             rootlpisrelax;      /**< is root LP a relaxation of the problem and its solution value a valid global lower bound? */
    SCIP_Bool             isrelax;            /**< is the current LP a relaxation of the problem for which it has been solved and its 
