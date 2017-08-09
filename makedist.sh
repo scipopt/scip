@@ -33,28 +33,11 @@ $NAME/doc/inc/makeexamples/* $NAME/doc/inc/shelltutorial/commands $NAME/doc/inc/
 $NAME/doc/inc/debugexamples/example*.txt \
 $NAME/doc/pictures/miniscippy.png $NAME/doc/pictures/scippy.png \
 $NAME/make/make.* \
-scip/applications/PolySCIP/doc/CMakeLists.txt  \
-$NAME/applications/PolySCIP/src/CMakeLists.txt \
-$NAME/applications/PolySCIP/CMakeLists.txt     \
 $NAME/check/CMakeLists.txt                     \
 $NAME/tests/CMakeLists.txt                     \
 $NAME/src/CMakeLists.txt                       \
 $NAME/CMakeLists.txt \
 $NAME/scip-config.cmake.in \
-$NAME/examples/TSP/check/CMakeLists.txt        \
-$NAME/examples/TSP/CMakeLists.txt              \
-$NAME/examples/Binpacking/check/CMakeLists.txt \
-$NAME/examples/Binpacking/CMakeLists.txt       \
-$NAME/examples/CallableLibrary/CMakeLists.txt  \
-$NAME/examples/Relaxator/check/CMakeLists.txt  \
-$NAME/examples/Relaxator/CMakeLists.txt        \
-$NAME/examples/LOP/check/CMakeLists.txt        \
-$NAME/examples/LOP/CMakeLists.txt              \
-$NAME/examples/MIPSolver/CMakeLists.txt        \
-$NAME/examples/GMI/CMakeLists.txt              \
-$NAME/examples/VRP/check/CMakeLists.txt        \
-$NAME/examples/VRP/CMakeLists.txt              \
-$NAME/examples/Queens/CMakeLists.txt           \
 $NAME/examples/CMakeLists.txt                  \
 $NAME/check/check.sh $NAME/check/evalcheck.sh $NAME/check/check.awk \
 $NAME/check/check_gamscluster.sh $NAME/check/rungamscluster.sh $NAME/check/finishgamscluster.sh \
@@ -109,6 +92,8 @@ $NAME/applications/PolySCIP/mult_zimpl/tenfelde_podehl.zpl \
 $NAME/applications/PolySCIP/mult_zimpl/*.py \
 $NAME/applications/PolySCIP/INSTALL $NAME/applications/PolySCIP/LICENCE \
 $NAME/applications/PolySCIP/README $NAME/applications/PolySCIP/scipmip.set \
+$NAME/applications/PolySCIP/src/CMakeLists.txt \
+$NAME/applications/PolySCIP/CMakeLists.txt     \
 $NAME/applications/STP/doc/* \
 $NAME/applications/STP/src/depend.* \
 $NAME/applications/STP/src/*.c $NAME/applications/STP/src/*.h \
@@ -117,12 +102,14 @@ $NAME/applications/STP/data/short/* \
 $NAME/applications/STP/Makefile $NAME/applications/STP/INSTALL \
 $NAME/examples/xternal_examples.c \
 $NAME/examples/Binpacking/Makefile $NAME/examples/Binpacking/INSTALL \
+$NAME/examples/Binpacking/CMakeLists.txt \
 $NAME/examples/Binpacking/doc/* $NAME/examples/Binpacking/doc/pics/binpacking.png \
 $NAME/examples/Binpacking/check/testset/short.test $NAME/examples/Binpacking/check/testset/short.solu \
 $NAME/examples/Binpacking/src/depend.* \
 $NAME/examples/Binpacking/src/*.c $NAME/examples/Binpacking/src/*.h \
 $NAME/examples/Binpacking/data/*.bpa \
 $NAME/examples/CallableLibrary/Makefile \
+$NAME/examples/CallableLibrary/CMakeLists.txt \
 $NAME/examples/CallableLibrary/INSTALL \
 $NAME/examples/CallableLibrary/doc/* \
 $NAME/examples/CallableLibrary/src/depend.* $NAME/examples/CallableLibrary/src/*.c \
@@ -131,6 +118,7 @@ $NAME/examples/Eventhdlr/src/depend.* \
 $NAME/examples/Eventhdlr/src/*.c $NAME/examples/Eventhdlr/src/*.h \
 $NAME/examples/GMI/Makefile \
 $NAME/examples/GMI/src/Makefile \
+$NAME/examples/GMI/CMakeLists.txt \
 $NAME/examples/GMI/INSTALL \
 $NAME/examples/GMI/settings/scipdefault.set \
 $NAME/examples/GMI/doc/* \
@@ -143,6 +131,7 @@ $NAME/examples/LOP/src/depend.* $NAME/examples/LOP/src/Makefile \
 $NAME/examples/LOP/settings/default.set \
 $NAME/examples/LOP/src/*.c $NAME/examples/LOP/src/*.h \
 $NAME/examples/MIPSolver/Makefile $NAME/examples/MIPSolver/INSTALL $NAME/examples/MIPSolver/scipmip.set \
+$NAME/examples/MIPSolver/CMakeLists.txt \
 $NAME/examples/MIPSolver/doc/* \
 $NAME/examples/MIPSolver/src/depend.* \
 $NAME/examples/MIPSolver/src/*.cpp \
@@ -151,12 +140,14 @@ $NAME/examples/Queens/src/depend.* \
 $NAME/examples/Queens/src/*.cpp $NAME/examples/Queens/src/*.hpp \
 $NAME/examples/Relaxator/INSTALL \
 $NAME/examples/Relaxator/Makefile \
+$NAME/examples/Relaxator/CMakeLists.txt        \
 $NAME/examples/Relaxator/check/testset/short.test \
 $NAME/examples/Relaxator/doc/xternal_relaxator.c \
 $NAME/examples/Relaxator/makedepend.sh \
 $NAME/examples/Relaxator/src/* \
 $NAME/examples/TSP/Makefile $NAME/examples/TSP/INSTALL \
 $NAME/examples/TSP/runme.sh $NAME/examples/TSP/runviewer.sh \
+$NAME/examples/TSP/CMakeLists.txt \
 $NAME/examples/TSP/sciptsp.set \
 $NAME/examples/TSP/doc/* \
 $NAME/examples/TSP/check/testset/short.* \
@@ -164,6 +155,7 @@ $NAME/examples/TSP/src/depend.* \
 $NAME/examples/TSP/src/*.cpp $NAME/examples/TSP/src/*.h \
 $NAME/examples/TSP/tspviewer/*.java $NAME/examples/TSP/tspdata/*.tsp \
 $NAME/examples/VRP/Makefile $NAME/examples/VRP/INSTALL \
+$NAME/examples/VRP/CMakeLists.txt \
 $NAME/examples/VRP/doc/* $NAME/examples/VRP/data/* \
 $NAME/examples/VRP/src/depend.* \
 $NAME/examples/VRP/src/*.cpp $NAME/examples/VRP/src/*.h \
