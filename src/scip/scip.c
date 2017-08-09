@@ -19117,6 +19117,9 @@ SCIP_Real SCIPgetVarRedcost(
    assert( var != NULL );
    assert( var->scip == scip );
 
+   if( !SCIPlpIsDualReliable(scip->lp) )
+      return SCIP_OKAY;
+
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
@@ -19160,6 +19163,9 @@ SCIP_Real SCIPgetVarImplRedcost(
    assert( scip != NULL );
    assert( var != NULL );
    assert( var->scip == scip );
+
+   if( !SCIPlpIsDualReliable(scip->lp) )
+      return 0.0;
 
    switch( SCIPvarGetStatus(var) )
    {
@@ -20092,7 +20098,7 @@ SCIP_RETCODE analyzeStrongbranch(
     * @note Ignore the results if the LP solution of the down (up) branch LP is smaller which should not happened by
     *       theory but can arise due to numerical issues.
     */
-   if( SCIPtreeGetCurrentDepth(scip->tree) == 0 && SCIPvarIsBinary(var) )
+   if( SCIPtreeGetCurrentDepth(scip->tree) == 0 && SCIPvarIsBinary(var) && SCIPlpIsDualReliable(scip->lp) )
    {
       SCIP_Real lpobjval;
 
@@ -28983,6 +28989,42 @@ SCIP_LPSOLSTAT SCIPgetLPSolstat(
       return SCIPlpGetSolstat(scip->lp);
    else
       return SCIP_LPSOLSTAT_NOTSOLVED;
+}
+
+/** returns whether the current LP solution passed the primal feasibility check
+ *
+ *  @return whether the current LP solution passed the primal feasibility check.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_Bool SCIPisLPPrimalReliable(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPisLPPrimalReliable", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIPlpIsPrimalReliable(scip->lp);
+}
+
+/** returns whether the current LP solution passed the dual feasibility check
+ *
+ *  @returns whether the current LP solution passed the dual feasibility check.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_Bool SCIPisLPDualReliable(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPisLPDualReliable", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIPlpIsDualReliable(scip->lp);
 }
 
 /** returns whether the current lp is a relaxation of the current problem and its optimal objective value is a local lower bound
