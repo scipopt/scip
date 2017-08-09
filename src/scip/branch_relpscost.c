@@ -1539,28 +1539,29 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
 
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
    {
+      *result = SCIP_DIDNOTRUN;
       SCIPdebugMsg(scip, "Could not apply relpscost branching, as the current LP was not solved to optimality.\n");
+
+      return SCIP_OKAY;
    }
-   else
-   {
-      /* get branching candidates */
-      SCIP_CALL( SCIPgetLPBranchCands(scip, &tmplpcands, &tmplpcandssol, &tmplpcandsfrac, NULL, &nlpcands, NULL) );
-      assert(nlpcands > 0);
 
-      /* copy LP banching candidates and solution values, because they will be updated w.r.t. the strong branching LP
-       * solution
-       */
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &lpcands, tmplpcands, nlpcands) );
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &lpcandssol, tmplpcandssol, nlpcands) );
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &lpcandsfrac, tmplpcandsfrac, nlpcands) );
+   /* get branching candidates */
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &tmplpcands, &tmplpcandssol, &tmplpcandsfrac, NULL, &nlpcands, NULL) );
+   assert(nlpcands > 0);
 
-      /* execute branching rule */
-      SCIP_CALL( execRelpscost(scip, branchrule, allowaddcons, lpcands, lpcandssol, lpcandsfrac, nlpcands, TRUE, result) );
+   /* copy LP banching candidates and solution values, because they will be updated w.r.t. the strong branching LP
+    * solution
+    */
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &lpcands, tmplpcands, nlpcands) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &lpcandssol, tmplpcandssol, nlpcands) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &lpcandsfrac, tmplpcandsfrac, nlpcands) );
 
-      SCIPfreeBufferArray(scip, &lpcandsfrac);
-      SCIPfreeBufferArray(scip, &lpcandssol);
-      SCIPfreeBufferArray(scip, &lpcands);
-   }
+   /* execute branching rule */
+   SCIP_CALL( execRelpscost(scip, branchrule, allowaddcons, lpcands, lpcandssol, lpcandsfrac, nlpcands, TRUE, result) );
+
+   SCIPfreeBufferArray(scip, &lpcandsfrac);
+   SCIPfreeBufferArray(scip, &lpcandssol);
+   SCIPfreeBufferArray(scip, &lpcands);
 
    return SCIP_OKAY;
 }
