@@ -80,7 +80,7 @@ then
     echo "EXCLUSIVE     = $EXCLUSIVE"
     echo "PERMUTE       = $PERMUTE"
     echo "SEEDS         = $SEEDS"
-    echo "DEBUGTOOL      = $DEBUGTOOL"
+    echo "DEBUGTOOL     = $DEBUGTOOL"
     echo "REOPT         = $REOPT"
     echo "OPTCOMMAND    = $OPTCOMMAND"
     echo "SETCUTOFF     = $SETCUTOFF"

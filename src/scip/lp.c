@@ -7604,7 +7604,7 @@ SCIP_RETCODE SCIProwCatchEvent(
    assert((eventtype & ~SCIP_EVENTTYPE_ROWCHANGED) == 0);
    assert((eventtype &  SCIP_EVENTTYPE_ROWCHANGED) != 0);
 
-   SCIPsetDebugMsg(set, "catch event of type 0x%"SCIP_EVENTTYPE_FORMAT" of row <%s> with handler %p and data %p\n",
+   SCIPsetDebugMsg(set, "catch event of type 0x%" SCIP_EVENTTYPE_FORMAT " of row <%s> with handler %p and data %p\n",
       eventtype, row->name, (void*)eventhdlr, (void*)eventdata);
 
    SCIP_CALL( SCIPeventfilterAdd(row->eventfilter, blkmem, set, eventtype, eventhdlr, eventdata, filterpos) );
@@ -11957,7 +11957,7 @@ int lpGetResolveItlim(
    if( itlim == -1 )
       itlim = INT_MAX;
    /* return resolveiterfac * average iteration number per call after root, but at least resolveitermin and at most the hard iteration limit */
-   return (int) MIN(itlim, MAX(set->lp_resolveitermin,
+   return (int) MIN(itlim, MAX(set->lp_resolveitermin, \
          (set->lp_resolveiterfac * (stat->nlpiterations - stat->nrootlpiterations) / (SCIP_Real)(stat->nlps - stat->nrootlps))));
 }
 
@@ -14189,7 +14189,7 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
       else
       {
          SCIP_Real primsolval = primsol[c] + rayscale * ray[c];
-         lpicols[c]->primsol = MAX(-SCIPsetInfinity(set), MIN(SCIPsetInfinity(set), primsolval));
+         lpicols[c]->primsol = MAX(-SCIPsetInfinity(set), MIN(SCIPsetInfinity(set), primsolval)); /*lint !e666*/
       }
       lpicols[c]->redcost = SCIP_INVALID;
       lpicols[c]->validredcostlp = -1;

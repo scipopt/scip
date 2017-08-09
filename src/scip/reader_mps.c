@@ -2546,7 +2546,6 @@ SCIP_RETCODE readMps(
       SCIP_CALL_TERMINATE( retcode, SCIPsetObjsense(scip, mpsinputObjsense(mpsi)), TERMINATE );
    }
 
- /* cppcheck-suppress unusedLabel */
  TERMINATE:
    mpsinputFree(scip, &mpsi);
 
@@ -4424,7 +4423,6 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
    if( nfixedvars > 0 )
    {
-      /* cppcheck-suppress nullPointerRedundantCheck */
       assert(fixvars != NULL);
       SCIPfreeBufferArray(scip, &fixvars);
    }

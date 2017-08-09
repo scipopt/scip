@@ -4167,6 +4167,7 @@ SCIP_RETCODE separateIISRounding(
    SCIP_Bool* S;
    SCIP_Bool error;
    int oldsize = -1;
+   /* cppcheck-suppress unassignedVariable */
    int nGenOld;
 
    assert( scip != NULL );

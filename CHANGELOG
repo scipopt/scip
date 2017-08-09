@@ -2,6 +2,7 @@ SCIP version NEXT
 =================
 
 features:
+- new disjoint set data structure SCIP_DISJOINTSET to incrementally update connectedness information for a graph on nodes {0,...,n-1}
 - added macros to do computations with a higher precision by using double double arithmetic
 - new compiler flag DEBUGSOL={true,false} to enable an internal debugging mechanism to check against a user given debug solution
 - add new heuristic MPEC that solves a MPEC reformulation of a mixed-binary nonlinear problem by regularized NLP reformulations
@@ -15,6 +16,7 @@ parameters:
 - new parameter: lp/refactorinterval to change the refactorization interval of the LP solver
 
 interface:
+- removed clique component index from SCIP_Var struct and the public interface method SCIPvarGetCliqueComponentIdx
 - new interface methods SCIPcreateRandom, SCIPfreeRandom that replace SCIPrandomCreate and SCIPrandomFree
   in the public SCIP API.
 - new interface method SCIPsetRandomSeed to (re)set a random number generator seed
@@ -23,6 +25,7 @@ interface:
   branching candidates; also added SCIPbranchcandGetNPrioLPCands() to access the number of LP candidates with this priority.
 
 performance improvements:
+- use disjoint set to reduce peak memory usage and time to compute of clique table connectedness information
 - add and use RESTRICT macro for some pointers
 - improved the implementation of SCIPvarGetActiveRepresentatives
 
@@ -36,6 +39,7 @@ features
 - allow to relax objective limit in reoptimization in presolved stage
 - suppress excessive printing about numerical troubles in LP on default verblevel (high)
 - updated Mosek interface to compile with Mosek 8.1, too
+- updates GAMS interface to latest version
 
 fixed bugs:
 - fixed bug in shift and propagate--variable information with a negation transformation is correctly reset after backtracking

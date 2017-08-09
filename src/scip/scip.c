@@ -41,7 +41,7 @@
 #include <string.h>
 #if defined(_WIN32) || defined(_WIN64)
 #else
-#include <strings.h>
+#include <strings.h> /*lint --e{766}*/
 #endif
 
 #ifdef WITH_ZLIB
@@ -16099,7 +16099,7 @@ SCIP_RETCODE SCIPsolve(
             else
             {
                SCIPdebugMsg(scip, "try to add solution to the solution tree:\n");
-               SCIPdebug( SCIP_CALL( SCIPsolPrint(sol, scip->set, scip->messagehdlr, scip->stat, scip->origprob,
+               SCIPdebug( SCIP_CALL( SCIPsolPrint(sol, scip->set, scip->messagehdlr, scip->stat, scip->origprob, \
                      scip->transprob, NULL, FALSE, FALSE) ); );
 
                SCIP_CALL( SCIPreoptAddSol(scip->reopt, scip->set, scip->stat, scip->origprimal, scip->mem->probmem,
@@ -24213,7 +24213,7 @@ SCIP_RETCODE calcCliquePartitionGreedy(
                   /* check if every variable in the current clique can be extended by tmpvars[j] */
                   for( k = ncliquevars - 1; k >= 0; --k )
                   {
-                     if( !SCIPvarsHaveCommonClique(vars[j], values[j], cliquevars[k], cliquevalues[k], TRUE) )
+                     if( !SCIPvarsHaveCommonClique(vars[j], values[j], cliquevars[k], cliquevalues[k], FALSE) )
                         break;
                   }
 
@@ -24311,8 +24311,8 @@ SCIP_RETCODE SCIPcalcCliquePartition(
       return SCIP_OKAY;
    }
 
-   /* early abort if neither cliques nor implications are present */
-   if( SCIPgetNCliques(scip) == 0 && SCIPgetNImplications(scip) == 0 )
+   /* early abort if no cliques are present */
+   if( SCIPgetNCliques(scip) == 0 )
    {
       for( i = nvars - 1; i >= 0; --i )
          cliquepartition[i] = i;
@@ -24359,7 +24359,7 @@ SCIP_RETCODE SCIPcalcCliquePartition(
    for( i = 0; i < nvars; ++i )
    {
       if( SCIPvarIsActive(tmpvars[i]) )
-         componentlabels[i] = SCIPvarGetCliqueComponentIdx(tmpvars[i]);
+         componentlabels[i] = SCIPcliquetableGetVarComponentIdx(scip->cliquetable, tmpvars[i]);
       else
          componentlabels[i] = -1;
    }
@@ -24759,7 +24759,7 @@ SCIP_RETCODE SCIPwriteCliqueGraph(
    }
 
    /* create the hash map */
-   SCIP_CALL( SCIPhashmapCreate(&nodehashmap, SCIPblkmem(scip), nbinvars+nimplvars) );
+   SCIP_CALL_FINALLY( SCIPhashmapCreate(&nodehashmap, SCIPblkmem(scip), nbinvars+nimplvars), fclose(gmlfile) );
 
    /* write starting of gml file */
    SCIPgmlWriteOpening(gmlfile, TRUE);
@@ -38305,7 +38305,7 @@ SCIP_Real SCIPgetSolOrigObj(
       return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPsolGetObj(sol, scip->set, scip->transprob, scip->origprob));
    else
    {
-      SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSolOrigObj(sol==NULL)",
+      SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSolOrigObj(sol==NULL)", \
             FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
       if( SCIPtreeHasCurrentNodeLP(scip->tree) )
          return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPlpGetObjval(scip->lp, scip->set, scip->transprob));
@@ -38342,7 +38342,7 @@ SCIP_Real SCIPgetSolTransObj(
       return SCIPsolGetObj(sol, scip->set, scip->transprob, scip->origprob);
    else
    {
-      SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSolTransObj(sol==NULL)",
+      SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSolTransObj(sol==NULL)", \
             FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
       if( SCIPtreeHasCurrentNodeLP(scip->tree) )
          return SCIPlpGetObjval(scip->lp, scip->set, scip->transprob);
@@ -38633,7 +38633,7 @@ SCIP_RETCODE SCIPprintSol(
    currentsol = (sol == NULL);
    if( currentsol )
    {
-      SCIP_CALL( checkStage(scip, "SCIPprintSol(sol==NULL)",
+      SCIP_CALL( checkStage(scip, "SCIPprintSol(sol==NULL)", \
             FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
       /* create a temporary solution that is linked to the current solution */
@@ -38879,7 +38879,7 @@ SCIP_RETCODE SCIPgetDualSolVal(
    if( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE )
       (*dualsolval) *= -1.0;
 
-   return SCIP_OKAY;;
+   return SCIP_OKAY;
 }
 
 /** outputs dual solution from LP solver to file stream */
@@ -47486,7 +47486,6 @@ SCIP_RETCODE SCIPvalidateSolve(
    assert(scip != NULL);
 
    localfeasible = TRUE;
-   localprimalboundcheck = TRUE;
    localdualboundcheck = TRUE;
 
    /* check the best solution for feasibility in the original problem */
@@ -47520,17 +47519,17 @@ SCIP_RETCODE SCIPvalidateSolve(
       /* compute the relative violation between the primal bound and dual reference value, and vice versa */
       if( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE )
       {
-         if( dualreference != SCIP_UNKNOWN )
+         if( dualreference != SCIP_UNKNOWN ) /*lint !e777 */
             primviol = SCIPrelDiff(dualreference, pb);
-         if( primalreference != SCIP_UNKNOWN )
+         if( primalreference != SCIP_UNKNOWN ) /*lint !e777 */
             dualviol = SCIPrelDiff(db, primalreference);
       }
       else
       {
-         if( dualreference != SCIP_UNKNOWN )
+         if( dualreference != SCIP_UNKNOWN ) /*lint !e777 */
             primviol = SCIPrelDiff(pb, dualreference);
 
-         if( primalreference != SCIP_UNKNOWN )
+         if( primalreference != SCIP_UNKNOWN ) /*lint !e777 */
             dualviol = SCIPrelDiff(primalreference, db);
       }
       primviol = MAX(primviol, 0.0);
@@ -47654,4 +47653,30 @@ void SCIPsetRandomSeed(
    modifiedseed = SCIPinitializeRandomSeed(scip, seed);
 
    SCIPrandomSetSeed(randnumgen, modifiedseed);
+}
+
+/** creates a disjoint set (union find) structure \p uf for \p ncomponents many components (of size one) */
+SCIP_RETCODE SCIPcreateDisjointset(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DISJOINTSET**    djset,              /**< disjoint set (union find) data structure */
+   int                   ncomponents         /**< number of components */
+   )
+{
+   assert(scip != NULL);
+   assert(djset != NULL);
+
+   SCIP_CALL( SCIPdisjointsetCreate(djset, scip->mem->probmem, ncomponents) );
+
+   return SCIP_OKAY;
+}
+
+/** frees the disjoint set (union find) data structure */
+void SCIPfreeDisjointset(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DISJOINTSET**    djset               /**< disjoint set (union find) data structure */
+   )
+{
+   assert(scip != NULL);
+
+   SCIPdisjointsetFree(djset, scip->mem->probmem);
 }
