@@ -129,7 +129,6 @@ $NAME/examples/CallableLibrary/src/depend.* $NAME/examples/CallableLibrary/src/*
 $NAME/examples/Eventhdlr/* $NAME/examples/Eventhdlr/doc/* \
 $NAME/examples/Eventhdlr/src/depend.* \
 $NAME/examples/Eventhdlr/src/*.c $NAME/examples/Eventhdlr/src/*.h \
-$NAME/examples/Eventhdlr/CMakeLists.txt \
 $NAME/examples/GMI/Makefile \
 $NAME/examples/GMI/src/Makefile \
 $NAME/examples/GMI/INSTALL \
