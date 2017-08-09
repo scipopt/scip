@@ -45,6 +45,8 @@ interface:
 - new function SCIPvalidateSolve() to compare solving result with an external primal and dual reference
   value
 - new function SCIPisObjChangedProbing() to check whether the objective function has changed during probing mode
+- new functions SCIPisLPPrimalReliable() and SCIPisLPDualReliable to check whether the current primal / dual LP solution
+  were successfully checked for feasibility
 
 SCIP version 4.0.0
 ==================
