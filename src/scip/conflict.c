@@ -6495,7 +6495,7 @@ SCIP_RETCODE tightenDualray(
    SCIPsetDebugMsg(set, "start dualray tightening:\n");
    SCIPsetDebugMsg(set, "-> tighten dual ray: nvars=%d (bin=%d, int=%d, cont=%d)\n",
          nnz, nbinvars, nintvars, ncontvars);
-   debugPrintViolationInfo(set, getMinActivity(transprob, vals, inds, nnz, curvarlbs, curvarubs), rhs, NULL);
+   debugPrintViolationInfo(set, getMinActivity(transprob, SCIPaggrRowGetVals(farkasrow), inds, nnz, curvarlbs, curvarubs), SCIPaggrRowGetRhs(farkasrow), NULL);
 
    /* return if all variables are continuous */
    if( ncontvars == nnz )
