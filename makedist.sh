@@ -56,8 +56,6 @@ $NAME/examples/VRP/check/CMakeLists.txt        \
 $NAME/examples/VRP/CMakeLists.txt              \
 $NAME/examples/Queens/CMakeLists.txt           \
 $NAME/examples/CMakeLists.txt                  \
-$NAME/examples/Eventhdlr/check/CMakeLists.txt  \
-$NAME/examples/Eventhdlr/CMakeLists.txt        \
 $NAME/check/check.sh $NAME/check/evalcheck.sh $NAME/check/check.awk \
 $NAME/check/check_gamscluster.sh $NAME/check/rungamscluster.sh $NAME/check/finishgamscluster.sh \
 $NAME/check/evalcheck_gamscluster.sh $NAME/check/check_gams.awk $NAME/check/schulz.sh \
@@ -131,6 +129,7 @@ $NAME/examples/CallableLibrary/src/depend.* $NAME/examples/CallableLibrary/src/*
 $NAME/examples/Eventhdlr/* $NAME/examples/Eventhdlr/doc/* \
 $NAME/examples/Eventhdlr/src/depend.* \
 $NAME/examples/Eventhdlr/src/*.c $NAME/examples/Eventhdlr/src/*.h \
+$NAME/examples/Eventhdlr/CMakeLists.txt \
 $NAME/examples/GMI/Makefile \
 $NAME/examples/GMI/src/Makefile \
 $NAME/examples/GMI/INSTALL \
