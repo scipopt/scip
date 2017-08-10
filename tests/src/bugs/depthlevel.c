@@ -93,12 +93,10 @@ Test(depthlevel, hit_depth_limit, .description = "show problem when hitting dept
 {
    SCIP_RETCODE retcode;
 
-   /* this test can only work in debug mode, so skip in opt mode; the following is a hack to know when we are in opt mode */
-   if(  BMSgetMemoryUsed() == 0 )
-   {
-      printf("We are in opt mode; skipping test\n");
-      abort(); /* return SIGABORT */
-   }
+   /* this test can only work in debug mode, so we make it pass in opt mode */
+#ifdef NDEBUG
+   abort(); /* return SIGABORT */
+#endif
 
    /* turn off presolving */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );

@@ -74,12 +74,10 @@ Test(matrix, create_matrix, .signal = SIGABRT)
    int beg = 0;
    int ind = 0;
 
-   /* this test can only work in debug mode, so skip in opt mode; the following is a hack to know when we are in opt mode */
-   if(  BMSgetMemoryUsed() == 0 )
-   {
-      printf("We are in opt mode; skipping test\n");
-      abort(); /* return SIGABORT */
-   }
+   /* this test can only work in debug mode, so we make it pass in opt mode */
+#ifdef NDEBUG
+   abort(); /* return SIGABORT */
+#endif
 
    /* add one column */
    SCIP_CALL( SCIPlpiAddCols(lpi, 1, &obj, &lb, &ub, NULL, 0, NULL, NULL, NULL) );
