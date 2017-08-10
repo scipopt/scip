@@ -63,18 +63,22 @@ $NAME/src/blockmemshell/*.c $NAME/src/blockmemshell/*.h \
 $NAME/src/tclique/*.c $NAME/src/tclique/*.h \
 $NAME/src/objscip/*.cpp $NAME/src/objscip/*.h \
 $NAME/src/cppad/* $NAME/src/cppad/local/* $NAME/src/cppad/utility/* \
+$NAME/applications/CMakeLists.txt \
 $NAME/applications/Coloring/* $NAME/applications/Coloring/doc/* $NAME/applications/Coloring/data/* \
+$NAME/applications/Coloring/check/CMakeLists.txt \
 $NAME/applications/Coloring/check/testset/short.test $NAME/applications/Coloring/check/testset/short.solu \
 $NAME/applications/Coloring/src/depend.* \
 $NAME/applications/Coloring/src/*.c $NAME/applications/Coloring/src/*.h \
 $NAME/applications/Scheduler/doc/* \
+$NAME/applications/Scheduler/check/CMakeLists.txt \
 $NAME/applications/Scheduler/check/testset/short.test $NAME/applications/Scheduler/check/testset/short.solu \
 $NAME/applications/Scheduler/src/depend.* \
 $NAME/applications/Scheduler/src/*.c $NAME/applications/Scheduler/src/*.cpp $NAME/applications/Scheduler/src/*.h \
 $NAME/applications/Scheduler/data/*.sm \
 $NAME/applications/Scheduler/data/*.cmin \
 $NAME/applications/Scheduler/Makefile \
-$NAME/applications/MinIISC/Makefile $NAME/applications/MinIISC/INSTALL \
+$NAME/applications/MinIISC/* \
+$NAME/applications/MinIISC/check/CMakeLists.txt \
 $NAME/applications/MinIISC/doc/* \
 $NAME/applications/MinIISC/src/* \
 $NAME/applications/MinIISC/data/* \

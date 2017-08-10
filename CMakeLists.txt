@@ -368,6 +368,11 @@ add_custom_target(all_executables DEPENDS scip unittests examples)
 #
 add_subdirectory(examples)
 
+#
+# add applications
+#
+add_subdirectory(applications)
+
 enable_testing()
 #
 # enable coverage support
