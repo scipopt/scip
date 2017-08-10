@@ -7034,14 +7034,6 @@ SCIP_RETCODE runBoundHeuristic(
 
                SCIP_CALL( undoBdchgsDualfarkas(set, transprob, lp, currentdepth, curvarlbs, curvarubs, lbchginfoposs, \
                      ubchginfoposs,  oldlpbdchgs, relaxedlpbdchgs, valid, &resolve, proofcoefs, (*prooflhs), proofactivity) );
-
-               /* flush proof set */
-               if( proofsetGetNVars(conflict->proofset) > 0 || conflict->nproofsets > 0 )
-               {
-                  assert(set->conf_useinflp == 'd' || set->conf_useinflp == 'b');
-                  SCIP_CALL( conflictFlushProofset(conflict, conflictstore, blkmem, set, stat, transprob, origprob, \
-                        tree, reopt, lp, branchcand, eventqueue, cliquetable, diving) );
-               }
             }
             else
             {
@@ -7085,13 +7077,6 @@ SCIP_RETCODE runBoundHeuristic(
 
                SCIP_CALL( undoBdchgsDualsol(set, transprob, lp, currentdepth, curvarlbs, curvarubs, lbchginfoposs, \
                      ubchginfoposs, oldlpbdchgs, relaxedlpbdchgs, valid, &resolve, proofcoefs, *prooflhs, proofactivity) );
-
-               /* flush proof set */
-               if( proofsetGetNVars(conflict->proofset) > 0 || conflict->nproofsets > 0 )
-               {
-                  SCIP_CALL( conflictFlushProofset(conflict, conflictstore, blkmem, set, stat, transprob, origprob, \
-                        tree, reopt, lp, branchcand, eventqueue, cliquetable, diving) );
-               }
             }
          }
          assert(!resolve || (*valid));
