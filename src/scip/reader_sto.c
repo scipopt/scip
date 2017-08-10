@@ -313,11 +313,9 @@ SCIP_RETCODE setScenarioName(
 /** returns the scenario name */
 static
 const char* getScenarioName(
-   SCIP*                 scip,               /**< the SCIP data structure */
    STOSCENARIO*          scenario            /**< the scenario */
    )
 {
-   assert(scip != NULL);
    assert(scenario != NULL);
 
    return scenario->name;
@@ -634,6 +632,58 @@ SCIP_RETCODE addScenariosToReaderdata(
       SCIPtimSetStageNScenarios(scip, i + 1, numscenarios[i]);
 
 
+
+   return SCIP_OKAY;
+}
+
+
+/** finds a scenario with a given name */
+static
+STOSCENARIO* findScenarioInTree(
+   STOSCENARIO*          scenariotree,       /**< the scenario tree to search */
+   const char*           scenname            /**< the name of the scenario to search */
+   )
+{
+   STOSCENARIO* retscen;
+   int i;
+
+   if( strcmp(getScenarioName(scenariotree), scenname) == 0 )
+      return scenariotree;
+   else
+   {
+      retscen = NULL;
+      for( i = 0; i < getScenarioNChildren(scenariotree); i++ )
+      {
+         retscen = findScenarioInTree(scenariotree->children[i], scenname);
+         if( retscen != NULL )
+            return retscen;
+      }
+   }
+
+   return NULL;
+}
+
+
+/** inserts a scenario into the reader data scenario tree */
+static
+SCIP_RETCODE insertScenarioInReaderdata(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_READERDATA*      readerdata,         /**< the reader data */
+   STOSCENARIO*          scenario,           /**< the scenario to insert in the scenario tree */
+   char*                 parentname          /**< the parent scenario for the inserting scenario */
+   )
+{
+   STOSCENARIO* parentscen;
+
+   assert(scip != NULL);
+   assert(readerdata != NULL);
+   assert(scenario != NULL);
+
+   /* searching for the parent scenario in the tree */
+   parentscen = findScenarioInTree(readerdata->scenariotree, parentname);
+
+   /* adding the scenario as a child of the parent scenario */
+   SCIP_CALL( scenarioAddChild(scip, &parentscen, scenario) );
 
    return SCIP_OKAY;
 }
@@ -956,6 +1006,17 @@ const char* stoinputField4(
    return stoi->f4;
 }
 
+/** return the current value of field 5 */
+static
+const char* stoinputField5(
+   const STOINPUT*       stoi                /**< sto input structure */
+   )
+{
+   assert(stoi != NULL);
+
+   return stoi->f5;
+}
+
 /** returns if an error was detected */
 static
 SCIP_Bool stoinputHasError(
@@ -1255,7 +1316,287 @@ SCIP_RETCODE readBlocks(
          /* determining whether a block name has previously been added */
          for( i = 0; i < numblocks; i++ )
          {
-            if( strcmp(getScenarioName(scip, blocks[i][0]), stoinputField2(stoi)) == 0 )
+            if( strcmp(getScenarioName(blocks[i][0]), stoinputField2(stoi)) == 0 )
+            {
+               foundblock = TRUE;
+               break;
+            }
+
+         }
+         blocknum = i;
+
+         /* if the block is found, then the memory for the blocks array must be ensured */
+         if( foundblock )
+         {
+            /* ensuring enough memory is available for the blocks */
+            if( numblocksperblock[blocknum] + 1 > blocksperblocksize[blocknum] )
+            {
+               int newsize;
+               newsize = SCIPcalcMemGrowSize(scip, numblocksperblock[blocknum] + 1);
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &blocks[blocknum], blocksperblocksize[blocknum], newsize) );
+               blocksperblocksize[blocknum] = newsize;
+            }
+         }
+         else
+         {
+            /* ensuring enough memory is available for the blocks */
+            if( numblocks + 1 > blockssize )
+            {
+               int newsize;
+               newsize = SCIPcalcMemGrowSize(scip, numblocks + 1);
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &blocks, blockssize, newsize) );
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &numblocksperblock, blockssize, newsize) );
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &blocksperblocksize, blockssize, newsize) );
+               blockssize = newsize;
+            }
+
+            blocksperblocksize[blocknum] = STO_DEFAULT_BLOCKARRAYSIZE;
+            numblocksperblock[blocknum] = 0;
+            SCIP_CALL( SCIPallocBlockMemoryArray(scip, &blocks[blocknum], blocksperblocksize[blocknum]) );
+         }
+
+         blockindex = numblocksperblock[blocknum];
+
+         /* creating the scenario data structure */
+         SCIP_CALL( createScenarioData(scip, &blocks[blocknum][blockindex]) );
+
+         SCIP_CALL( setScenarioName(scip, blocks[blocknum][blockindex], stoinputField2(stoi)) );
+         SCIP_CALL( setScenarioStageName(scip, blocks[blocknum][blockindex], stoinputField3(stoi)) );
+         SCIP_CALL( setScenarioProbability(scip, blocks[blocknum][blockindex], atof(stoinputField4(stoi))) );
+         numblocksperblock[blocknum]++;
+
+         if( !foundblock )
+            numblocks++;
+      }
+      else
+      {
+         SCIP_CALL( addScenarioEntry(scip, blocks[blocknum][blockindex], stoinputField2(stoi), stoinputField1(stoi),
+               atof(stoinputField3(stoi))) );
+      }
+   }
+   stoinputSyntaxerror(stoi);
+
+TERMINATE:
+
+   /* releasing the scenario data */
+   for( i = numblocks - 1; i >= 0; i-- )
+   {
+      for( j = numblocksperblock[i] - 1; j >= 0; j-- )
+         SCIP_CALL( freeScenarioTree(scip, &blocks[i][j]) );
+   }
+
+   for( i = numblocks - 1; i >= 0; i-- )
+      SCIPfreeBlockMemoryArray(scip, &blocks[i], blocksperblocksize[i]);
+   SCIPfreeBlockMemoryArray(scip, &blocksperblocksize, blockssize);
+   SCIPfreeBlockMemoryArray(scip, &numblocksperblock, blockssize);
+   SCIPfreeBlockMemoryArray(scip, &blocks, blockssize);
+
+   return SCIP_OKAY;
+}
+
+
+/** Process SCENARIOS section. */
+static
+SCIP_RETCODE readScenarios(
+   STOINPUT*             stoi,               /**< sto input structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READERDATA*      readerdata          /**< the reader data */
+   )
+{
+   STOSCENARIO* scenario;
+   char SC[] = "SC";
+   char wrongroot[] = "\'ROOT\'";
+   char parentname[SCIP_MAXSTRLEN];
+   char scennames[SCIP_MAXSTRLEN];
+   char tmpname[SCIP_MAXSTRLEN];
+   int numscenarios;
+   SCIP_Bool addscenario;
+
+   SCIPdebugMsg(scip, "read SCENARIOS\n");
+
+   /* This has to be the Line with the name. */
+   if( stoinputField1(stoi) == NULL )
+   {
+      stoinputSyntaxerror(stoi);
+      return SCIP_OKAY;
+   }
+
+   stoinputSetTypename(stoi, stoinputField1(stoi));
+
+   /* initialising the scen names record */
+   numscenarios = 0;
+   (void) SCIPsnprintf(scennames, SCIP_MAXSTRLEN, "ROOT");
+
+   addscenario = FALSE;
+
+   /* initialising the root scenario in the reader data */
+   SCIP_CALL( setScenarioNum(scip, readerdata->scenariotree, 0) );
+   SCIP_CALL( setScenarioStageNum(scip, readerdata->scenariotree, 0) );
+
+   while( stoinputReadLine(stoi) )
+   {
+      if( stoinputField0(stoi) != NULL )
+      {
+         /* if a scenario has been created that needs to be added to the scenario tree */
+         if( addscenario )
+         {
+            SCIP_CALL( insertScenarioInReaderdata(scip, readerdata, scenario, parentname) );
+
+            /* freeing the scenario */
+            SCIP_CALL( freeScenarioTree(scip, &scenario) );
+
+            addscenario = FALSE;
+         }
+
+         if( !strcmp(stoinputField0(stoi), "SCENARIOS") )
+            stoinputSetSection(stoi, STO_SCENARIOS);
+         else if( !strcmp(stoinputField0(stoi), "ENDATA") )
+            stoinputSetSection(stoi, STO_ENDATA);
+         else
+            stoinputSyntaxerror(stoi);
+
+         goto TERMINATE;
+      }
+
+      if( strcmp(stoinputField1(stoi), SC) == 0 )
+      {
+         /* if a scenario has been created that needs to be added to the scenario tree */
+         if( addscenario )
+         {
+            SCIP_CALL( insertScenarioInReaderdata(scip, readerdata, scenario, parentname) );
+
+            /* freeing the scenario */
+            SCIP_CALL( freeScenarioTree(scip, &scenario) );
+
+            addscenario = FALSE;
+         }
+
+         if( strcmp(wrongroot, stoinputField3(stoi)) == 0 )
+            (void) SCIPsnprintf(parentname, SCIP_MAXSTRLEN, "%s", "ROOT");
+         else
+            (void) SCIPsnprintf(parentname, SCIP_MAXSTRLEN, "%s", stoinputField3(stoi));
+
+         /* checking whether the stage has been added previously */
+         if( strstr(scennames, stoinputField2(stoi)) == NULL )
+         {
+            /* recording the stage name as processed */
+            (void) SCIPsnprintf(tmpname, SCIP_MAXSTRLEN, "%s_%s", scennames, stoinputField2(stoi));
+            (void) SCIPsnprintf(scennames, SCIP_MAXSTRLEN, "%s", tmpname);
+         }
+
+         /* checking whether the "common" scenario has been added yet */
+         if( strstr(scennames, parentname) == NULL )
+         {
+            SCIPerrorMessage("Scenario <%s> needs to be read before scenario <%s>\n", parentname, stoinputField2(stoi));
+            stoinputSyntaxerror(stoi);
+            goto TERMINATE;
+         }
+
+         /* the "common" scenario has been added before, so a child can be added to the scenario tree */
+         SCIP_CALL( createScenarioData(scip, &scenario) );
+
+         SCIP_CALL( setScenarioName(scip, scenario, stoinputField2(stoi)) );
+         SCIP_CALL( setScenarioStageName(scip, scenario, stoinputField5(stoi)) );
+         SCIP_CALL( setScenarioNum(scip, scenario, numscenarios) );
+         SCIP_CALL( setScenarioStageNum(scip, scenario, -1) );
+         SCIP_CALL( setScenarioProbability(scip, scenario, atof(stoinputField4(stoi))) );
+
+         numscenarios++;
+         addscenario = TRUE;
+      }
+      else
+      {
+         SCIP_CALL( addScenarioEntry(scip, scenario, stoinputField2(stoi), stoinputField1(stoi),
+               atof(stoinputField3(stoi))) );
+      }
+   }
+   stoinputSyntaxerror(stoi);
+
+TERMINATE:
+
+   return SCIP_OKAY;
+}
+
+
+/** Process INDEP section. */
+static
+SCIP_RETCODE readIndep(
+   STOINPUT*             stoi,               /**< sto input structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READERDATA*      readerdata          /**< the reader data */
+   )
+{
+   STOSCENARIO*** blocks;
+   int numblocks;
+   int* numblocksperblock;
+   int blockssize;
+   int* blocksperblocksize;
+   char BL[] = "BL";
+   int blocknum;
+   int blockindex;
+   int i;
+   int j;
+   char stagenames[SCIP_MAXSTRLEN];
+   int numstages;
+
+   SCIPdebugMsg(scip, "read Blocks\n");
+
+   /* This has to be the Line with the name. */
+   if( stoinputField1(stoi) == NULL )
+   {
+      stoinputSyntaxerror(stoi);
+      return SCIP_OKAY;
+   }
+
+   stoinputSetTypename(stoi, stoinputField1(stoi));
+
+   /* initialising the block data */
+   numblocks = 0;
+   blockssize = STO_DEFAULT_ARRAYSIZE;
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &blocks, STO_DEFAULT_ARRAYSIZE) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &numblocksperblock, STO_DEFAULT_ARRAYSIZE) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &blocksperblocksize, STO_DEFAULT_ARRAYSIZE) );
+
+   blockindex = 0;
+   blocknum = 0;
+
+   /* initialising the stage names record */
+   numstages = 0;
+   (void) SCIPsnprintf(stagenames, SCIP_MAXSTRLEN, "");
+
+   while( stoinputReadLine(stoi) )
+   {
+      if( stoinputField0(stoi) != NULL )
+      {
+         if( !strcmp(stoinputField0(stoi), "INDEP") )
+            stoinputSetSection(stoi, STO_BLOCKS);
+         else if( !strcmp(stoinputField0(stoi), "ENDATA") )
+         {
+            SCIP_CALL( createScenariosFromBlocks(scip, readerdata, blocks, numblocks, numblocksperblock, numstages) );
+            stoinputSetSection(stoi, STO_ENDATA);
+         }
+         else
+            stoinputSyntaxerror(stoi);
+
+         goto TERMINATE;
+      }
+
+      if( strcmp(stoinputField1(stoi), BL) == 0 )
+      {
+         SCIP_Bool foundblock = FALSE;
+
+         /* checking whether the stage has been added previously */
+         if( strstr(stagenames, stoinputField3(stoi)) == NULL )
+         {
+            /* recording the stage name as processed */
+            (void) SCIPsnprintf(stagenames, SCIP_MAXSTRLEN, "%s_%s", stagenames, stoinputField3(stoi));
+            numstages++;
+         }
+
+         /* determining whether a block name has previously been added */
+         for( i = 0; i < numblocks; i++ )
+         {
+            if( strcmp(getScenarioName(blocks[i][0]), stoinputField2(stoi)) == 0 )
             {
                foundblock = TRUE;
                break;
@@ -1458,6 +1799,7 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
       SCIP_CONS* cons;
       SCIP_VAR* var;
       char RHS[] = "RHS";
+      char MINI[] = "MINI";
 
       /* finding the constraint associated with the row */
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_%d", getScenarioEntryRow(scenario, i),
@@ -1476,6 +1818,16 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
             SCIP_CALL( SCIPchgRhsLinear(scip, cons, getScenarioEntryValue(scenario, i)) );
          else if( SCIPisLT(scip, SCIPgetLhsLinear(scip, cons), SCIPinfinity(scip)) )
             SCIP_CALL( SCIPchgLhsLinear(scip, cons, getScenarioEntryValue(scenario, i)) );
+      }
+      else if( strstr(getScenarioEntryCol(scenario, i), MINI) == 0 )
+      {
+         /* finding the variable associated with the column */
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_%d", getScenarioEntryCol(scenario, i),
+            getScenarioStageNum(scip, scenario), getScenarioNum(scip, scenario));
+         var = SCIPfindVar(scip, name);
+
+         /* changing the coefficient for the variable */
+         SCIP_CALL( SCIPchgVarObj(scip, var, getScenarioEntryValue(scenario, i)) );
       }
       else
       {
@@ -1651,10 +2003,10 @@ SCIP_RETCODE readSto(
    {
       SCIP_CALL_TERMINATE( retcode, readBlocks(stoi, scip, readerdata), TERMINATE );
    }
-   //if( stoinputSection(stoi) == STO_SCENARIOS )
-   //{
-      //SCIP_CALL_TERMINATE( retcode, readCols(stoi, scip), TERMINATE );
-   //}
+   if( stoinputSection(stoi) == STO_SCENARIOS )
+   {
+      SCIP_CALL_TERMINATE( retcode, readScenarios(stoi, scip, readerdata), TERMINATE );
+   }
    //if( stoinputSection(stoi) == STO_INDEP )
    //{
       //SCIP_CALL_TERMINATE( retcode, readRhs(stoi, scip), TERMINATE );
