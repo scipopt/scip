@@ -362,7 +362,7 @@ add_subdirectory(check)
 #
 add_custom_target(unittests)
 add_subdirectory(tests EXCLUDE_FROM_ALL)
-add_custom_target(all_executables DEPENDS scip unittests examples)
+add_custom_target(all_executables DEPENDS scip unittests examples applications)
 #
 # add examples
 #
