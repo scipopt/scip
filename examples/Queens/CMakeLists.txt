@@ -1,12 +1,13 @@
 project(Queens)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../src)
+find_package(SCIP REQUIRED)
+include_directories(${SCIP_INCLUDE_DIRS})
 
 add_executable(queens
    src/queens.cpp
    src/queens_main.cpp)
 
-target_link_libraries(queens libscip)
+target_link_libraries(queens ${SCIP_LIBRARIES})
 add_dependencies(examples queens)
 
 #
