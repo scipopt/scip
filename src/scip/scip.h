@@ -12255,6 +12255,34 @@ SCIP_LPSOLSTAT SCIPgetLPSolstat(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** returns whether the current LP solution passed the primal feasibility check
+ *
+ *  @returns whether the current LP solution passed the primal feasibility check.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_Bool SCIPisLPPrimalReliable(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns whether the current LP solution passed the dual feasibility check
+ *
+ *  @returns whether the current LP solution passed the dual feasibility check.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_Bool SCIPisLPDualReliable(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** returns whether the current lp is a relaxation of the current problem and its optimal objective value is a local lower bound
  *
  *  @return whether the current lp is a relaxation of the current problem and its optimal objective value is a local lower bound.
@@ -22500,6 +22528,28 @@ int SCIPgetPtrarrayMaxIdx(
    );
 
 /**@} */
+
+/**@addtogroup DisjoinedSet
+ *
+ * @{
+ */
+
+/** creates a disjoint set (union find) structure \p uf for \p ncomponents many components (of size one) */
+extern
+SCIP_RETCODE SCIPcreateDisjointset(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DISJOINTSET**    djset,              /**< disjoint set (union find) data structure */
+   int                   ncomponents         /**< number of components */
+   );
+
+/** frees the disjoint set (union find) data structure */
+extern
+void SCIPfreeDisjointset(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DISJOINTSET**    djset               /**< pointer to disjoint set (union find) data structure */
+   );
+
+/* @} */
 
 /**@addtogroup DigraphMethods
  *
