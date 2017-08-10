@@ -305,7 +305,6 @@ struct data_dins
 struct SCIP_BanditExp3
 {
    int                   nactions;           /**< the number of actions to select from */
-   int                   ndraws;             /**< the total number of draws for all arms */
    SCIP_Real*            weights;            /**< exponential weight for each arm */
    SCIP_Real*            cumulativegain;     /**< the cumulative gain for each arm */
    SCIP_Real             weightsum;          /**< the sum of all weights */
@@ -322,6 +321,92 @@ struct EpsGreedy
    int                   nactions;           /**< the number of actions to select from */
    int                   nselections;        /**< counter for the number of selection calls */
 };
+
+/** data structure for bandit algorithms */
+typedef struct SCIP_BanditAlgo SCIP_BANDITALGO;
+
+/** creation callback for bandit specific data structures */
+#define SCIP_DECL_BANDITCREATE(x) SCIP_RETCODE x (       \
+   SCIP*                 scip,           \
+   SCIP_BANDITALGO*      bandit          \
+)
+
+/** callback to free bandit specific data structures */
+#define SCIP_DECL_BANDITFREE(x) SCIP_RETCODE x ( \
+   SCIP*                 scip,                   \
+   SCIP_BANDITALGO*      bandit                  \
+)
+
+/** selection callback for bandit selector */
+#define SCIP_DECL_BANDITSELECT(x) SCIP_RETCODE x ( \
+	SCIP*                 scip,                     \
+	SCIP_BANDITALGO*      bandit,                   \
+	int*                  selection                 \
+)
+
+/** update callback for bandit algorithms */
+#define SCIP_DECL_BANDITUPDATE(x) SCIP_RETCODE x ( \
+   SCIP*                 scip,                     \
+   SCIP_BANDITALGO*      bandit,                   \
+   int                   selection,                \
+   SCIP_Real             score                     \
+)
+
+/** reset callback for bandit algorithms */
+#define SCIP_DECL_BANDITRESET(x) SCIP_RETCODE x (  \
+   SCIP*                 scip,                     \
+   SCIP_BANDITALGO*      bandit,                   \
+   SCIP_Real*            priorities                \
+)
+
+/**< specific data for the Exp.3 bandit algorithm */
+typedef struct BanditDataExp3 BANDITDATAEXP3;
+
+/**< specific data for the Exp.3 bandit algorithm */
+struct BanditDataExp3
+{
+   SCIP_Real*            weights;            /**< exponential weight for each arm */
+   SCIP_Real*            cumulativegain;     /**< the cumulative gain for each arm */
+   SCIP_Real             weightsum;          /**< the sum of all weights */
+   SCIP_Real             gamma;              /**< weight between uniform (gamma ~ 1) and weight driven (gamma ~ 0) probability distribution */
+   SCIP_Real             beta;               /**< gain offset between 0 and 1 at every observation */
+};
+
+/**< specific data for the epsilon greedy bandit algorithm */
+typedef struct BanditDataGreedy BANDITDATAGREEDY;
+
+/**< specific data for the epsilon greedy bandit algorithm */
+typedef struct BanditDataGreedy
+{
+   SCIP_Real             eps;                /**< epsilon parameter (between 0 and 1) to control epsilon greedy */
+   SCIP_Real*            weights;            /**< weights for every action */
+   int                   nactions;           /**< the number of actions to select from */
+   int                   nselections;        /**< counter for the number of selection calls */
+};
+
+
+/**< specific data for the UCB bandit algorithm */
+typedef struct BanditDataUcb BANDITDATAUCB;
+
+
+/** data structure for bandit algorithms */
+struct SCIP_BanditAlgo
+{
+   int                   nactions;           /**< the number of actions to select from */
+   SCIP_RANDNUMGEN*      rng;                /**< random number generator for randomized selection of routines  */
+   SCIP_DECL_BANDITCREATE((*banditcreate));  /**< creation callback for bandit specific data structures */
+   SCIP_DECL_BANDITFREE  ((*banditfree));    /**< callback to free bandit specific data structures */
+   SCIP_DECL_BANDITSELECT((*banditselect));  /**< selection callback for bandit selector */
+   SCIP_DECL_BANDITUPDATE((*banditupdate));  /**< update callback for bandit algorithms */
+   SCIP_DECL_BANDITRESET ((*banditreset));   /**< update callback for bandit algorithms */
+   union {
+      BANDITDATAEXP3*    dataexp3;           /**< specific data for the Exp.3 bandit algorithm */
+      BANDITDATAGREEDY*  datagreedy;         /**< specific data for the epsilon greedy bandit algorithm */
+      BANDITDATAUCB*     dataucb;            /**< specific data for the UCB bandit algorithm */
+   }                     data;               /**< specific data for the different bandit algorithms */
+};
+
+
 
 /** primal heuristic data */
 struct SCIP_HeurData
@@ -841,7 +926,7 @@ SCIP_RETCODE epsGreedyCreate(
    SCIP_CALL( SCIPallocBlockMemory(scip, epsgreedy) );
 
    /* create random number generator for the selector */
-   SCIP_CALL( SCIPrandomCreate(&(*epsgreedy)->rng, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, (int)initseed)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &(*epsgreedy)->rng, initseed) );
 
 
    (*epsgreedy)->nactions = nactions;
@@ -865,7 +950,7 @@ void epsGreedyFree(
    assert(epsgreedy != NULL);
    assert(*epsgreedy != NULL);
 
-   SCIPrandomFree(&(*epsgreedy)->rng);
+   SCIPfreeRandom(scip, &(*epsgreedy)->rng);
 
    SCIPfreeBlockMemoryArray(scip, &(*epsgreedy)->weights, (*epsgreedy)->nactions);
 
@@ -963,8 +1048,6 @@ SCIP_RETCODE SCIPbanditexp3Reset(
    assert(exp3->nactions > 0);
    assert(priorities != NULL);
 
-   exp3->ndraws = 0;
-
    priosum = 0.0;
    /* compute sum of priorities */
    for( i = 0; i < exp3->nactions; ++i )
@@ -984,11 +1067,12 @@ SCIP_RETCODE SCIPbanditexp3Reset(
    /* author bzfhende: TODO reset random number generator */
    if( exp3->rng != NULL )
    {
-      SCIPrandomFree(&exp3->rng);
+      SCIPsetRandomSeed(scip, exp3->rng, randseed);
    }
-
-   SCIP_CALL( SCIPrandomCreate(&exp3->rng, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, (int)randseed)) );
-
+   else
+   {
+      SCIP_CALL( SCIPcreateRandom(scip, &exp3->rng, randseed) );
+   }
    return SCIP_OKAY;
 }
 
@@ -1037,7 +1121,7 @@ void SCIPfreeBanditexp3(
    SCIPfreeBlockMemoryArray(scip, &(*exp3)->weights, (*exp3)->nactions);
    SCIPfreeBlockMemoryArray(scip, &(*exp3)->cumulativegain, (*exp3)->nactions);
 
-   SCIPrandomFree(&(*exp3)->rng);
+   SCIPfreeRandom(scip, &(*exp3)->rng);
 
    SCIPfreeBlockMemory(scip, exp3);
 }
@@ -1091,7 +1175,6 @@ SCIP_RETCODE SCIPbanditexp3Select(
    }
 
    *action = i;
-   exp3->ndraws++;
 
    return SCIP_OKAY;
 }
@@ -1118,7 +1201,6 @@ SCIP_RETCODE SCIPbanditexp3Update(
    assert(exp3 != NULL);
    assert(i >= 0);
    assert(i < exp3->nactions);
-   assert(exp3->ndraws > 0);
 
    SCIPdebugMsg(scip, "Rewarding Exp.3 algorithm action %d with gain %.2f\n", i, gain);
 
@@ -2701,9 +2783,9 @@ DECL_NHINIT(nhInitCrossover)
    assert(data != NULL);
 
    if( data->rng != NULL )
-      SCIPrandomFree(&data->rng);
+      SCIPfreeRandom(scip, &data->rng);
 
-   SCIP_CALL( SCIPrandomCreate(&data->rng, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, CROSSOVERSEED + SCIPgetNVars(scip))));
+   SCIP_CALL( SCIPcreateRandom(scip, &data->rng, CROSSOVERSEED + SCIPgetNVars(scip)) );
 
    return SCIP_OKAY;
 }
@@ -2717,7 +2799,7 @@ DECL_NHEXIT(nhExitCrossover)
    assert(neighborhood != NULL);
    assert(data->rng != NULL);
 
-   SCIPrandomFree(&data->rng);
+   SCIPfreeRandom(scip, &data->rng);
 
    return SCIP_OKAY;
 }
@@ -2816,7 +2898,7 @@ DECL_NHINIT(nhInitMutation)
    data = neighborhood->data.mutation;
    assert(data != NULL);
 
-   SCIP_CALL( SCIPrandomCreate(&data->rng, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, MUTATIONSEED)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &data->rng, MUTATIONSEED) );
 
    return SCIP_OKAY;
 }
@@ -2830,7 +2912,7 @@ DECL_NHEXIT(nhExitMutation)
    data = neighborhood->data.mutation;
    assert(data != NULL);
 
-   SCIPrandomFree(&data->rng);
+   SCIPfreeRandom(scip, &data->rng);
 
    SCIPfreeBlockMemory(scip, &neighborhood->data.mutation);
 

@@ -85,6 +85,7 @@ set(scipsources
     scip/heur_localbranching.c
     scip/heur_lpface.c
     scip/heur_locks.c
+    scip/heur_lns.c
     scip/heur_mutation.c
     scip/heur_multistart.c
     scip/heur_mpec.c
@@ -423,6 +424,7 @@ set(scipheaders
     scip/heur_linesearchdiving.h
     scip/heur_localbranching.h
     scip/heur_locks.h
+    scip/heur_lns.h
     scip/heur_lpface.h
     scip/heur_multistart.h
     scip/heur_mutation.h
