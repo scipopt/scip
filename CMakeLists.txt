@@ -349,6 +349,10 @@ find_package(Criterion)
 add_subdirectory(src)
 
 #
+# we set the SCIP_DIR variable explicitly for the following examples/applications and unittests that depend on SCIP.
+#
+set(SCIP_DIR ${CMAKE_BINARY_DIR})
+#
 # add SCIP tests
 #
 add_subdirectory(check)

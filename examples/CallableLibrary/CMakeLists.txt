@@ -1,7 +1,8 @@
 project(CallableLibrary)
 include(CTest)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../src)
+find_package(SCIP REQUIRED)
+include_directories(${SCIP_INCLUDE_DIRS})
 
 add_executable(circle
    src/circle.c)
@@ -12,9 +13,9 @@ add_executable(gastrans
 add_executable(string
    src/string.c)
 
-target_link_libraries(circle libscip)
-target_link_libraries(gastrans libscip m)
-target_link_libraries(string libscip)
+target_link_libraries(circle ${SCIP_LIBRARIES})
+target_link_libraries(gastrans ${SCIP_LIBRARIES} m)
+target_link_libraries(string ${SCIP_LIBRARIES})
 
 add_dependencies(examples circle gastrans string)
 
