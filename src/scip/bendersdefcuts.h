@@ -31,6 +31,7 @@
  */
 #include "scip/benderscut_opt.h"
 #include "scip/benderscut_feas.h"
+#include "scip/benderscut_int.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -13,24 +13,33 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   bendersdefcuts.c
- * @brief  default cuts for Benders' decomposition
+/**@file   benderscut_int.h
+ * @ingroup BENDERS
+ * @brief  Generates a Laporte and Louveaux Benders' decomposition integer cut
  * @author Stephen J. Maher
  */
 
-/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scip/bendersdefcuts.h"
+#ifndef __SCIP_BENDERSCUT_INT_H__
+#define __SCIP_BENDERSCUT_INT_H__
 
-/** includes default SCIP plugins into SCIP */
-SCIP_RETCODE SCIPincludeBendersDefaultCuts(
+
+#include "scip/scip.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/** creates the intimality Benders' decomposition cut and includes it in SCIP */
+EXTERN
+SCIP_RETCODE SCIPincludeBenderscutInt(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BENDERS*         benders             /**< Benders' decomposition struture */
-   )
-{
-   SCIP_CALL( SCIPincludeBenderscutOpt(scip, benders) );
-   SCIP_CALL( SCIPincludeBenderscutFeas(scip, benders) );
-   SCIP_CALL( SCIPincludeBenderscutInt(scip, benders) );
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   );
 
-   return SCIP_OKAY;
+#ifdef __cplusplus
 }
+#endif
+
+#endif

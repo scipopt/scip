@@ -625,6 +625,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/benders_default.o \
 			scip/benderscut_opt.o \
 			scip/benderscut_feas.o \
+			scip/benderscut_int.o \
 			scip/misc_benders.o
 
 SCIPLIBOBJ	=	scip/boundstore.o \
