@@ -2110,7 +2110,6 @@ SCIP_RETCODE SCIPincludeReaderSto(
 
    /* create reader data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &readerdata) );
-   readerdata->usebenders = DEFAULT_USEBENDERS;
    readerdata->scenariotree = NULL;
 
 
@@ -2122,6 +2121,12 @@ SCIP_RETCODE SCIPincludeReaderSto(
    SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeSto) );
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadSto) );
    //SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteSto) );
+
+   /* add decomposition parameters */
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "reading/" READER_NAME "/usebenders",
+         "should Benders' decomposition be used?",
+         &readerdata->usebenders, TRUE, DEFAULT_USEBENDERS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
