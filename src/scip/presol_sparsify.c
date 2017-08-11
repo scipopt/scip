@@ -45,7 +45,9 @@
 #define MIN_EQS_NONZEROS                3    /**< minimal number of non-zeros of the equalities */
 #define CHECK_INTERVAL               1000    /**< number of observed row pairs after which the success is verified */
 #define THRESHOLD        ((SCIP_Real)0.02)   /**< minimal ratio of non-zero cancellation per observed row pairs */
-#define DEFAULT_MAX_SUPERSET_MISSES     1    /**< default value for the maximal number of superset misses */
+#define DEFAULT_MAX_CONT_FILLIN         0    /**< default value for the maximal fillin for continuous variables */
+#define DEFAULT_MAX_BIN_FILLIN          0    /**< default value for the maximal fillin for binary variables */
+#define DEFAULT_MAX_INT_FILLIN          0    /**< default value for the maximal fillin for integer variables */
 #define DEFAULT_FULL_SEARCH             0    /**< default value for full search */
 
 
@@ -57,7 +59,9 @@
 /** control parameters */
 struct SCIP_PresolData
 {
-   int                   maxsupersetmisses;  /**< maximal number of superset misses */
+   int                   maxcontfillin;      /**< maximal fillin for continuous variables */
+   int                   maxintfillin;       /**< maximal fillin for integer variables*/
+   int                   maxbinfillin;       /**< maximal fillin for binary variables */
    SCIP_Bool             fullsearch;         /**< flag indicating that full sparsification is required */
 };
 
@@ -117,6 +121,9 @@ SCIP_RETCODE cancelRow(
    SCIP_MATRIX*          matrix,
    SCIP_HASHTABLE*       pairtable,
    int                   rowidx,
+   unsigned int          maxcontfillin,
+   unsigned int          maxintfillin,
+   unsigned int          maxbinfillin,
    int*                  nchgcoefs,
    int*                  ncanceled
    )
@@ -163,7 +170,7 @@ SCIP_RETCODE cancelRow(
          locks[i] = SCIPmatrixGetColNDownlocks(matrix, cancelrowinds[i]) + SCIPmatrixGetColNUplocks(matrix, cancelrowinds[i]);
       }
 
-      SCIPsortDownIntInt(locks, tmpinds, cancelrowlen);
+      SCIPsortIntInt(locks, tmpinds, cancelrowlen);
 
       maxlen = MIN(cancelrowlen, MAXCONSIDEREDNONZEROS);
 
@@ -173,6 +180,9 @@ SCIP_RETCODE cancelRow(
          {
             int a,b;
             int ncancel;
+            unsigned int ncontfillin;
+            unsigned int nintfillin;
+            unsigned int nbinfillin;
             int nfillin;
             int eqrowlen;
             ROWVARPAIR* eqrowvarpair;
@@ -222,7 +232,9 @@ SCIP_RETCODE cancelRow(
             a = 0;
             b = 0;
             ncancel = 0;
-            nfillin = 0;
+            ncontfillin = 0;
+            nintfillin = 0;
+            nbinfillin = 0;
             while( a < cancelrowlen && b < eqrowlen )
             {
                if( cancelrowinds[a] == eqrowinds[b] )
@@ -239,23 +251,63 @@ SCIP_RETCODE cancelRow(
                }
                else
                {
-                  ++nfillin;
+                  SCIP_VAR* var = SCIPmatrixGetVar(matrix, eqrowinds[b]);
                   ++b;
+                  if( SCIPvarIsBinary(var) )
+                  {
+                     if( ++nbinfillin > maxbinfillin )
+                        break;
+                  }
+                  else if( SCIPvarIsIntegral(var) )
+                  {
+                     if( ++nintfillin > maxintfillin )
+                        break;
+                  }
+                  else
+                  {
+                     if( ++ncontfillin > maxcontfillin )
+                        break;
+                  }
                }
             }
 
-            nfillin += (eqrowlen - b);
+            if( ncontfillin > maxcontfillin || nbinfillin > maxbinfillin || nintfillin > maxintfillin )
+               continue;
 
-            if( (ncancel - nfillin) > (bestncancel - bestnfillin) ||
-               ((ncancel - nfillin) == (bestncancel - bestnfillin) && nfillin < bestnfillin) )
+            while( b < eqrowlen )
+            {
+               SCIP_VAR* var = SCIPmatrixGetVar(matrix, eqrowinds[b]);
+               ++b;
+               if( SCIPvarIsBinary(var) )
+               {
+                  if( ++nbinfillin > maxbinfillin )
+                     break;
+               }
+               else if( SCIPvarIsIntegral(var) )
+               {
+                  if( ++nintfillin > maxintfillin )
+                     break;
+               }
+               else
+               {
+                  if( ++ncontfillin > maxcontfillin )
+                     break;
+               }
+            }
+
+            if( ncontfillin > maxcontfillin || nbinfillin > maxbinfillin || nintfillin > maxintfillin )
+               continue;
+
+            nfillin = nbinfillin + nintfillin + ncontfillin;
+
+            if( ((ncancel - nfillin) > (bestncancel - bestnfillin) ||
+               ((ncancel - nfillin) == (bestncancel - bestnfillin) && nfillin < bestnfillin) ) )
             {
                bestncancel = ncancel;
                bestnfillin = nfillin;
                bestcand = eqrowvarpair->rowindex;
                bestscale = scale;
             }
-
-            ++i;
          }
       }
 
@@ -401,6 +453,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
    ROWVARPAIR* varpairs;
    int nvarpairs;
    int varpairssize;
+   SCIP_PRESOLDATA* presoldata;
 
    assert(result != NULL);
    *result = SCIP_DIDNOTRUN;
@@ -412,6 +465,8 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
+
+   presoldata = SCIPpresolGetData(presol);
 
    matrix = NULL;
    SCIP_CALL( SCIPmatrixCreate(scip, &matrix, &initialized, &complete) );
@@ -458,7 +513,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
                locks[i] = SCIPmatrixGetColNDownlocks(matrix, rowinds[i]) + SCIPmatrixGetColNUplocks(matrix, rowinds[i]);
             }
 
-            SCIPsortDownIntInt(locks, perm, nnonz);
+            SCIPsortIntInt(locks, perm, nnonz);
 
             nnonz = MIN(nnonz, MAXCONSIDEREDNONZEROS);
 
@@ -536,7 +591,9 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       /* loop over the rows and cancel non-zeros */
       for( r = 0; r < nrows; r++ )
       {
-         SCIP_CALL( cancelRow(scip, matrix, pairtable, r, nchgcoefs, &numcancel) );
+         SCIP_CALL( cancelRow(scip, matrix, pairtable, r, \
+                              (unsigned int)presoldata->maxcontfillin, (unsigned int)presoldata->maxintfillin, (unsigned int)presoldata->maxbinfillin, \
+                              nchgcoefs, &numcancel) );
       }
 
       SCIPhashtableFree(&pairtable);
@@ -545,15 +602,12 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       SCIPfreeBufferArray(scip, &perm);
       SCIPfreeBufferArray(scip, &locks);
 
-      {
-         SCIP_Real percentagenzcancelled = 100 * numcancel / (SCIP_Real)SCIPmatrixGetNNonzs(matrix);
-         if( percentagenzcancelled >= 0.1 )
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "cancelled %.1f%% non-zeros\n", 100 * numcancel / (SCIP_Real)SCIPmatrixGetNNonzs(matrix));
-      }
-
       /* update result */
       if( numcancel > 0 )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "cancelled %.1f%%(%i) non-zeros\n", 100 * numcancel / (SCIP_Real)SCIPmatrixGetNNonzs(matrix), numcancel);
          *result = SCIP_SUCCESS;
+      }
    }
 
 
@@ -600,9 +654,19 @@ SCIP_RETCODE SCIPincludePresolSparsify(
    SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeSparsify) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
-         "presolving/sparsify/maxsupersetmisses",
-         "maximal number of superset misses",
-         &presoldata->maxsupersetmisses, TRUE, DEFAULT_MAX_SUPERSET_MISSES, 0, 1, NULL, NULL) );
+         "presolving/sparsify/maxcontfillin",
+         "maximal fillin for continuous variables",
+         &presoldata->maxcontfillin, FALSE, DEFAULT_MAX_CONT_FILLIN, -1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "presolving/sparsify/maxbinfillin",
+         "maximal fillin for binary variables",
+         &presoldata->maxbinfillin, FALSE, DEFAULT_MAX_BIN_FILLIN, -1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "presolving/sparsify/maxintfillin",
+         "maximal fillin for integer variables",
+         &presoldata->maxintfillin, FALSE, DEFAULT_MAX_INT_FILLIN, -1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "presolving/sparsify/fullsearch",
