@@ -102,8 +102,9 @@ $NAME/applications/STP/doc/* \
 $NAME/applications/STP/src/depend.* \
 $NAME/applications/STP/src/*.c $NAME/applications/STP/src/*.h \
 $NAME/applications/STP/check/testset/*.test $NAME/applications/STP/check/testset/*.solu \
+$NAME/applications/STP/check/CMakeLists.txt \
 $NAME/applications/STP/data/short/* \
-$NAME/applications/STP/Makefile $NAME/applications/STP/INSTALL \
+$NAME/applications/STP/* \
 $NAME/examples/xternal_examples.c \
 $NAME/examples/Binpacking/Makefile $NAME/examples/Binpacking/INSTALL \
 $NAME/examples/Binpacking/CMakeLists.txt \
