@@ -216,6 +216,30 @@ SCIP_RETCODE freeScenarioTree(
    return SCIP_OKAY;
 }
 
+/** sets the SCIP pointer to the scenario */
+static
+void setScenarioScip(
+   STOSCENARIO*          scenario,           /**< the scenario */
+   SCIP*                 scip                /**< the SCIP data structure */
+   )
+{
+   assert(scenario != NULL);
+   assert(scip != NULL);
+
+   scenario->scip = scip;
+}
+
+/** returns the SCIP pointer to the scenario */
+static
+SCIP* getScenarioScip(
+   STOSCENARIO*          scenario            /**< the scenario */
+   )
+{
+   assert(scenario != NULL);
+
+   return scenario->scip;
+}
+
 /** creates the subproblem array. This array will be the same size as the number of children */
 static
 SCIP_RETCODE createScenarioSubprobArray(
