@@ -51,8 +51,7 @@
 #define DEFAULT_LINEARIZE_ANDS         TRUE  /**< should possible \"and\" constraint be linearized when writing the sto file? */
 #define DEFAULT_AGGRLINEARIZATION_ANDS TRUE  /**< should an aggregated linearization for and constraints be used? */
 
-//#define DEFAULT_USEBENDERS            FALSE  /**< should Benders' decomposition be used for the stochastic program? */
-#define DEFAULT_USEBENDERS             TRUE  /**< should Benders' decomposition be used for the stochastic program? */
+#define DEFAULT_USEBENDERS            FALSE  /**< should Benders' decomposition be used for the stochastic program? */
 
 /*
  * sto reader internal methods
