@@ -171,7 +171,8 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    int                   probnum,            /**< the subproblem number */
    SCIP_Bool             enhancement,        /**< is the solve performed as part of and enhancement? */
-   SCIP_Bool*            infeasible          /**< returns whether the current subproblem is infeasible */
+   SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
+   SCIP_BENDERSENFOTYPE  type                /**< the enforcement type calling this function */
    );
 
 /** sets up the subproblem using the solution to the master problem  */
@@ -191,7 +192,8 @@ SCIP_RETCODE SCIPbendersSolveSubproblem(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_SOL*             sol,                /**< primal CIP solution, can be NULL */
    int                   probnumber,         /**< the subproblem number */
-   SCIP_Bool*            infeasible          /**< is the master problem infeasible with respect to the Benders' cuts? */
+   SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
+   SCIP_BENDERSENFOTYPE  type                /**< the enforcement type calling this function */
    );
 
 /** frees the subproblems. */

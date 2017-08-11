@@ -271,7 +271,7 @@ SCIP_RETCODE performMagnantiWongTechnique(
    SCIP_CALL( SCIPchgVarUb(subproblem, benders->mwauxiliaryvars[probnum], SCIPinfinity(subproblem)) );
 
    /* solving the subproblem with the updated solution and additional variable */
-   SCIP_CALL( SCIPbendersExecSubproblemSolve(benders, set, benders->relintsol, probnum, TRUE, &infeasible) );
+   SCIP_CALL( SCIPbendersExecSubproblemSolve(benders, set, benders->relintsol, probnum, TRUE, &infeasible, LP) );
    assert(!infeasible);
 
    /* freeing the values array memory */
@@ -920,7 +920,7 @@ SCIP_RETCODE createSubproblems(
             assert(eventhdlr != NULL);
 
             /* Getting the problem into the right SCIP stage for solving */
-            SCIP_CALL( SCIPbendersSolveSubproblemMIP(benders, i, &infeasible) );
+            SCIP_CALL( SCIPbendersSolveSubproblemMIP(benders, i, &infeasible, LP) );
 
             /* Constructing the LP that can be solved in later iterations */
             SCIP_CALL( SCIPconstructLP(subproblem, &cutoff) );
@@ -1560,7 +1560,7 @@ SCIP_RETCODE SCIPbendersExec(
       {
          SCIP_Bool subinfeas = FALSE;
 
-         SCIP_CALL( SCIPbendersExecSubproblemSolve(benders, set, sol, i, FALSE, &subinfeas) );
+         SCIP_CALL( SCIPbendersExecSubproblemSolve(benders, set, sol, i, FALSE, &subinfeas, type) );
 
          (*infeasible) = (*infeasible) || subinfeas;
 
@@ -1670,7 +1670,8 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    int                   probnum,            /**< the subproblem number */
    SCIP_Bool             enhancement,        /**< is the solve performed as part of and enhancement? */
-   SCIP_Bool*            infeasible          /**< returns whether the current subproblem is infeasible */
+   SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
+   SCIP_BENDERSENFOTYPE  type                /**< the enforcement type calling this function */
    )
 {
    SCIP* subproblem;
@@ -1695,7 +1696,7 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
       if( SCIPbendersSubprobIsLP(benders, probnum) )
          SCIP_CALL( SCIPbendersSolveSubproblemLP(benders, probnum, infeasible) );
       else
-         SCIP_CALL( SCIPbendersSolveSubproblemMIP(benders, probnum, infeasible) );
+         SCIP_CALL( SCIPbendersSolveSubproblemMIP(benders, probnum, infeasible, type) );
    }
 
    subproblem = SCIPbendersSubproblem(benders, probnum);
@@ -1772,7 +1773,8 @@ SCIP_RETCODE SCIPbendersSolveSubproblem(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_SOL*             sol,                /**< primal CIP solution, can be NULL */
    int                   probnumber,         /**< the subproblem number */
-   SCIP_Bool*            infeasible          /**< is the master problem infeasible with respect to the Benders' cuts? */
+   SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
+   SCIP_BENDERSENFOTYPE  type                /**< the enforcement type calling this function */
    )
 {
    assert(benders != NULL);
@@ -1794,7 +1796,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblem(
          SCIP_CALL( SCIPbendersSolveSubproblemLP(benders, probnumber, infeasible) );
       }
       else
-         SCIP_CALL( SCIPbendersSolveSubproblemMIP(benders, probnumber, infeasible) );
+         SCIP_CALL( SCIPbendersSolveSubproblemMIP(benders, probnumber, infeasible, type) );
    }
 
    return SCIP_OKAY;
@@ -1868,7 +1870,8 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
 SCIP_RETCODE SCIPbendersSolveSubproblemMIP(
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
    int                   probnumber,         /**< the subproblem number */
-   SCIP_Bool*            infeasible          /**< a flag to indicate whether all subproblems are feasible */
+   SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
+   SCIP_BENDERSENFOTYPE  type                /**< the enforcement type calling this function */
    )
 {
    SCIP* subproblem;
@@ -1925,6 +1928,10 @@ SCIP_RETCODE SCIPbendersSolveSubproblemMIP(
    SCIP_CALL( SCIPsetIntParam(subproblem, "propagating/maxroundsroot", 0) );
 
    SCIP_CALL( SCIPsetIntParam(subproblem, "constraints/linear/propfreq", -1) );
+
+   if( type != CHECK )
+      SCIP_CALL( SCIPsetIntParam(subproblem, "limits/nodes", 0) );
+
 
    SCIP_CALL( SCIPsolve(subproblem) );
 
