@@ -80,6 +80,7 @@ SCIP_RETCODE addSubtourCuts(
    int cycle[cyclelength + 1];
    SCIP_Bool* processed;
    SCIP_Bool doubleloop = FALSE;
+   SCIP_Bool nullvars = FALSE;
    int nbins;
    int successor;
    int currnode;
@@ -91,19 +92,24 @@ SCIP_RETCODE addSubtourCuts(
 
    assert( SCIPisGT(scip, adjmatrices[cyclelength - 1][start][start], cyclelength - 1) );
 
-   SCIPallocClearMemoryArray(scip, &processed, nbins);
+   SCIP_CALL( SCIPallocClearMemoryArray(scip, &processed, nbins) );
    cycle[0] = start;
    processed[start] = TRUE;
    /* iterate throguh all bins in the cycle */
    for( k = 0; k < cyclelength - 1; ++k )
    {
       currnode = cycle[k];
+      if( currnode > nbins || currnode < 0 )
+      {
+         doubleloop = TRUE;
+         break;
+      }
       /* reconstruct the successor of the current bin from the adjacency matrices*/
       for( l = 0; l < SCIPdigraphGetNSuccessors(capgraph, cycle[k]); ++l )
       {
          successor = SCIPdigraphGetSuccessors(capgraph, currnode)[l];
          /* check if this successor of the current node is the one in the cycle. If so add it. */
-         if( SCIPisEQ(scip, adjmatrices[0][currnode][successor] + adjmatrices[cyclelength - (k + 2)][successor][start], adjmatrices[cyclelength - (k + 1)][currnode][start]) )
+         if( SCIPisFeasEQ(scip, adjmatrices[0][currnode][successor] + adjmatrices[cyclelength - (k + 2)][successor][start], adjmatrices[cyclelength - (k + 1)][currnode][start]) )
          {
             if( processed[successor] )
             {
@@ -127,6 +133,11 @@ SCIP_RETCODE addSubtourCuts(
 
       for( k = 0; k < cyclelength; ++k )
       {
+         if( NULL == edgevars[cycle[k]][cycle[k+1]] )
+         {
+            nullvars = TRUE;
+            break;
+         }
          SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[cycle[k]][cycle[k+1]][1], 1.0) );
          if( k > 0)
             SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[MAX(cycle[k],cycle[k+1])][MIN(cycle[k],cycle[k+1])][0], 1.0) );
@@ -135,7 +146,7 @@ SCIP_RETCODE addSubtourCuts(
       SCIPdebug( printCycle(scip, cycle, cyclelength, nbins) );
       SCIPdebugMsg(scip, "Computed violation: %f \n", adjmatrices[cyclelength - 1][start][start] - cyclelength + 1);
 
-      if( SCIPisCutEfficacious(scip, NULL, cut) )
+      if( SCIPisCutEfficacious(scip, NULL, cut) && !nullvars )
       {
          SCIP_CALL( SCIPaddPoolCut(scip, cut) );
          *ncuts += 1;
@@ -164,7 +175,7 @@ SCIP_RETCODE addPathCuts(
    SCIP_ROW* cut;
    int path[pathlength + 1];
    SCIP_Bool* processed;
-   SCIP_Bool doubleloop = FALSE;
+   SCIP_Bool nullvars = FALSE;
    int nbins;
    int successor;
    SCIP_Real edgeweight;
@@ -208,6 +219,11 @@ SCIP_RETCODE addPathCuts(
 
          for( k = 0; k <= pathlength; ++k )
          {
+            if( NULL == edgevars[path[k]][path[k+1]] )
+            {
+               nullvars = TRUE;
+               break;
+            }
             SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[path[k]][path[k+1]][1], 1.0) );
             if( k > 0)
                SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[MAX(path[k],path[k+1])][MIN(path[k],path[k+1])][0], 1.0) );
@@ -216,7 +232,7 @@ SCIP_RETCODE addPathCuts(
          SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
          SCIPdebug( printCycle(scip, path, l, nbins) );
 
-         if( SCIPisCutEfficacious(scip, NULL, cut) )
+         if( SCIPisCutEfficacious(scip, NULL, cut) && !nullvars )
          {
             SCIP_CALL( SCIPaddPoolCut(scip, cut) );
             *ncuts += 1;

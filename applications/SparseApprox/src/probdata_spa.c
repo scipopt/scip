@@ -63,6 +63,9 @@ SCIP_RETCODE assignVars(
    binvars = SCIPspaGetBinvars(scip);
    edgevars = SCIPspaGetEdgevars(scip);
 
+   assert(binvars != NULL);
+   assert(edgevars != NULL);
+
    for ( c = 0; c < ncluster; ++c )
    {
       /* set values of binary variables */
@@ -74,6 +77,7 @@ SCIP_RETCODE assignVars(
                var = binvars[i][c];
             else
                var = SCIPvarGetTransVar(binvars[i][c] );
+
             /* check if the clusterassignment ist feasible for the variable bounds. If not do not assign the variable */
             if( var != NULL && SCIPisLE(scip, SCIPvarGetLbGlobal(var), clustering[i][c]) && SCIPisGE(scip, SCIPvarGetUbGlobal(var), clustering[i][c]) && SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
                SCIP_CALL( SCIPsetSolVal( scip, sol, var, clustering[i][c]) );
@@ -86,7 +90,7 @@ SCIP_RETCODE assignVars(
       {
          for( j = 0; j < i; ++j )
          {
-            if( NULL == edgevars[i][j] )
+            if( NULL == edgevars[i][j] || NULL == edgevars[j][i])
                continue;
             if( SCIPisEQ(scip, 1.0, clustering[i][c] * clustering[j][c]) )
             {
@@ -97,13 +101,13 @@ SCIP_RETCODE assignVars(
             else if( SCIPisEQ(scip, 1.0, clustering[i][c] * clustering[j][phi(c, ncluster)]) )
             {
                var = edgevars[i][j][1];
-               if( var != NULL && SCIPisGE(scip, SCIPvarGetUbGlobal(var), clustering[j][c] * clustering[i][c]) && SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
+               if( var != NULL && SCIPisGE(scip, SCIPvarGetUbGlobal(var), clustering[j][phi(c, ncluster)] * clustering[i][c]) && SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
                   SCIP_CALL( SCIPsetSolVal( scip, sol, var, 1.0 ) );
             }
             else if( SCIPisEQ(scip, 1.0, clustering[j][c] * clustering[i][phi(c, ncluster)]) )
             {
                var = edgevars[j][i][1];
-               if( var != NULL && SCIPisGE(scip, SCIPvarGetUbGlobal(var), clustering[j][c] * clustering[i][c]) && SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
+               if( var != NULL && SCIPisGE(scip, SCIPvarGetUbGlobal(var), clustering[j][c] * clustering[i][phi(c, ncluster)]) && SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
                   SCIP_CALL( SCIPsetSolVal( scip, sol, var, 1.0 ) );
             }
          }
@@ -197,7 +201,7 @@ SCIP_RETCODE createVariables(
       SCIP_CALL( SCIPallocClearMemoryArray(scip, &(probdata->edgevars[i]), nbins) );
       for( j = 0; j < nbins; ++j )
       {
-         if( i == j || (SCIPisZero(scip, (probdata->cmatrix[i][j] - probdata->cmatrix[j][i])) && SCIPisZero(scip, ((probdata->cmatrix[i][j] + probdata->cmatrix[j][i]) * probdata->scale))) )
+         if( i == j || (SCIPisZero(scip, (probdata->cmatrix[i][j] - probdata->cmatrix[j][i])) && SCIPisZero(scip, (probdata->cmatrix[i][j] + probdata->cmatrix[j][i]) )) )
             continue;
          SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->edgevars[i][j]), 3) );
          for( edgetype = 0; edgetype < 2; ++edgetype )
@@ -492,7 +496,7 @@ SCIP_RETCODE createProbOnlyEdge(
 
       }
    }
-    
+
    return SCIP_OKAY;
 }
 

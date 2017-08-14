@@ -520,7 +520,6 @@ SCIP_DECL_HEUREXEC(heurExecSpaGreedy)
       SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
       SCIP_CALL( assignVars( scip, sol, clustering, nbins, ncluster) );
       SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, TRUE, TRUE, TRUE, TRUE, &feasible) );
-      SCIPinfoMessage(scip, NULL, "\n" );
    }
    if( feasible )
       *result = SCIP_FOUNDSOL;

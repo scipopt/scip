@@ -136,8 +136,8 @@ SCIP_DECL_HEUREXEC(heurExecFuzzyround)
    int nbins;
    int ncluster;
    SCIP_Real** clustering;
-   SCIP_Real** qmatrix;
-   SCIP_Bool feasible;
+   int* binsincluster;
+   SCIP_Bool feasible = FALSE;
    char model;
 
    assert(heur != NULL);
@@ -162,38 +162,39 @@ SCIP_DECL_HEUREXEC(heurExecFuzzyround)
 
    binvars = SCIPspaGetBinvars(scip);
    assert(binvars != NULL);
-   SCIP_CALL( SCIPgetCharParam(scip, "model", &model) );
-   if( model != 's' )
-      return SCIP_OKAY;
+
    /* allocate memory */
 
-   SCIPallocClearMemoryArray(scip, &clustering , nbins);
-   SCIPallocClearMemoryArray(scip, &qmatrix, nbins);
+   SCIP_CALL( SCIPallocClearMemoryArray(scip, &clustering , nbins) );
+   SCIP_CALL( SCIPallocClearMemoryArray(scip, &binsincluster, ncluster) );
    for( i = 0; i < nbins; ++i )
    {
-      SCIPallocClearMemoryArray(scip, &clustering[i], ncluster);
-      SCIPallocClearMemoryArray(scip, &qmatrix[i], ncluster);
+      SCIP_CALL( SCIPallocClearMemoryArray(scip, &clustering[i], ncluster) );
    }
    /* for each bin, set the assignment with the highest lp-value to 1, the rest to 0 */
-   for( i = 0; i < nbins; ++i )
-   {
+   for( i = 0; i < nbins; ++i ) {
       maxlpval = 0;
       maxcluster = -1;
-      for( k = 0; k < ncluster; ++k )
+      for (k = 0; k < ncluster; ++k)
       {
+         assert( NULL != binvars[i][k]);
          if( SCIPisGT(scip, SCIPvarGetLPSol(binvars[i][k]), maxlpval) )
          {
             maxlpval = SCIPvarGetLPSol(binvars[i][k]);
-            maxcluster =  k;
+            maxcluster = k;
+            binsincluster[k]++;
+         }
+         else if( SCIPisEQ(scip, SCIPvarGetLPSol(binvars[i][k]), maxlpval) &&  maxcluster != -1 && binsincluster[maxcluster] > binsincluster[k] )
+         {
+            binsincluster[maxcluster]--;
+            binsincluster[k]++;
+            maxcluster = k;
          }
       }
       assert(maxcluster >= 0);
       clustering[i][maxcluster] = 1.0;
    }
-   SCIPdebug(writeLPSolSpa(scip));
    assert(isPartition(scip, clustering, nbins, ncluster));
-
-   computeIrrevMat(clustering, qmatrix, SCIPspaGetCmatrix(scip), nbins, ncluster);
 
    SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
    assignVars(scip, sol, clustering, nbins, ncluster);
@@ -208,10 +209,9 @@ SCIP_DECL_HEUREXEC(heurExecFuzzyround)
    for( i = 0; i < nbins; ++i )
    {
       SCIPfreeMemoryArray(scip, &clustering[i]);
-      SCIPfreeMemoryArray(scip, &qmatrix[i]);
    }
    SCIPfreeMemoryArray(scip, &clustering);
-   SCIPfreeMemoryArray(scip, &qmatrix);
+   SCIPfreeMemoryArray(scip, &binsincluster);
    return SCIP_OKAY;
 }
 
