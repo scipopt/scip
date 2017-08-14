@@ -174,6 +174,7 @@ $NAME/interfaces/ampl/check/instances/SOS/*.col $NAME/interfaces/ampl/check/inst
 $NAME/interfaces/ampl/check/instances/SOS/*.nl $NAME/interfaces/ampl/check/testset/short.solu \
 $NAME/interfaces/gams/Makefile $NAME/interfaces/gams/INSTALL $NAME/interfaces/gams/gamsinst.sh \
 $NAME/interfaces/gams/test.sh $NAME/interfaces/gams/src/* \
+$NAME/check/instances/Bivariate/*.osil \
 $NAME/check/instances/CP/*.cip \
 $NAME/check/instances/Indicator/*.lp \
 $NAME/check/instances/MIP/*.fzn \
