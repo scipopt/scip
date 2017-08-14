@@ -18,9 +18,9 @@ set(CPACK_PACKAGE_VERSION_PATCH "${SCIP_VERSION_PATCH}")
 set(CPACK_PACKAGE_VENDOR "Zuse Institute Berlin")
 include(CPack)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${SCIP_BINARY_DIR}/bin)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${SCIP_BINARY_DIR}/lib)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${SCIP_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 # path to e.g. findGMP module
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
@@ -364,6 +364,10 @@ find_package(Criterion)
 # go to src/ and compile the code
 add_subdirectory(src)
 
+#
+# we set the SCIP_DIR variable explicitly for the following examples/applications and unittests that depend on SCIP.
+#
+set(SCIP_DIR ${CMAKE_BINARY_DIR})
 #
 # add SCIP tests
 #

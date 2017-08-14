@@ -755,6 +755,8 @@ else()
     target_link_libraries(scip libscip)
 endif()
 
+target_compile_definitions(scip PRIVATE EXTERN=extern)
+
 target_link_libraries(scip ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES}
    ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${THREAD_LIBRARIES} ${NLPI_LIBRARIES})
 
@@ -789,7 +791,7 @@ install(TARGETS scip libscip EXPORT scip-targets
 
 # Add all targets to the build-tree export set
 export(TARGETS scip libscip
-  FILE "${PROJECT_BINARY_DIR}/scip-targets.cmake")
+  FILE "${CMAKE_BINARY_DIR}/scip-targets.cmake")
 
 #configure the config file for the build tree
 set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src")
