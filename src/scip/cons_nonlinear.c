@@ -4043,7 +4043,8 @@ SCIP_RETCODE computeViolation(
    /* update absolute and relative violation of the solution */
    if( sol != NULL )
    {
-      SCIP_Real absviol = 0.0;
+      SCIP_Real absviol;
+
       SCIP_Real relviol = 0.0;
       SCIP_Real lhsrelviol = 0.0;
       SCIP_Real rhsrelviol = 0.0;
