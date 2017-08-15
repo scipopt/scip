@@ -2314,31 +2314,46 @@ SCIP_Bool checkCons(
       sum += solval;
    }
 
+   if( sol != NULL )
+   {
+      absviol = sum - 1.0;
+      relviol = SCIPrelDiff(sum, 1.0);
+      switch( consdata->setppctype )
+      {
+      case SCIP_SETPPCTYPE_PARTITIONING:
+         /* in case of partitioning, the violation is equal to the absolute difference between sum and 1 */
+         absviol = REALABS(absviol);
+         relviol = REALABS(relviol);
+         break;
+      case SCIP_SETPPCTYPE_PACKING:
+         /* in case of packing, the violation is equal to how much sum exceeds 1 */
+         break;
+      case SCIP_SETPPCTYPE_COVERING:
+         /* in case of covering, the violation is equal to how much 1 exceeds sum */
+         absviol = -absviol;
+         relviol = -relviol;
+         break;
+      default:
+         SCIPerrorMessage("unknown setppc type\n");
+         SCIPABORT();
+         return FALSE; /*lint !e527*/
+      }
+      SCIPsolUpdateLPConsViolation(sol, absviol, relviol);
+   }
+
    switch( consdata->setppctype )
    {
    case SCIP_SETPPCTYPE_PARTITIONING:
-      /* in case of partitioning, the violation is equal to the absolute difference between sum and 1 */
-      absviol = REALABS(sum - 1.0);
-      relviol = REALABS(SCIPrelDiff(sum, 1.0));
-      break;
+      return SCIPisFeasEQ(scip, sum, 1.0);
    case SCIP_SETPPCTYPE_PACKING:
-      /* in case of packing, the violation is equal to how much sum exceeds 1 */
-      absviol = sum - 1.0;
-      relviol = SCIPrelDiff(sum, 1.0);
-      break;
+      return SCIPisFeasLE(scip, sum, 1.0);
    case SCIP_SETPPCTYPE_COVERING:
-      /* in case of covering, the violation is equal to how much 1 exceeds sum */
-      absviol = 1.0 - sum;
-      relviol = SCIPrelDiff(1.0, sum);
-      break;
+      return SCIPisFeasGE(scip, sum, 1.0);
    default:
       SCIPerrorMessage("unknown setppc type\n");
       SCIPABORT();
       return FALSE; /*lint !e527*/
    }
-   if( sol != NULL )
-      SCIPsolUpdateLPConsViolation(sol, absviol, relviol);
-   return SCIPisFeasGE(scip, sum, 1.0);
 }
 
 /** creates an LP row in a set partitioning / packing / covering constraint data object */
