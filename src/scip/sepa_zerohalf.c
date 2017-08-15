@@ -95,10 +95,9 @@ struct Mod2Row {
 struct Mod2Col {
    int                   index;              /**< index of SCIP column associated to this column */
    int                   pos;                /**< position of column in matrix */
-   int                   rhsoffset;          /**< offset of rhs due to complementation */
    SCIP_Real             solval;             /**< solution value of the column */
    SCIP_HASHTABLE*       nonzrows;           /**< map between a MOD2ROW and its index; used as a set, the set of rows that
-   *  contain this column */
+                                              *   contain this column */
 };
 
 /** matrix representing the modulo 2 system */
@@ -119,6 +118,11 @@ struct SCIP_SepaData
    int                   nreductions;
    SCIP_Bool             infeasible;
 };
+
+
+#define COLINFO_GET_MOD2COL(x) ((MOD2_COL*)  (((uintptr_t)(x)) & ~((uintptr_t)1)))
+#define COLINFO_GET_RHSOFFSET(x) ((int)  (((uintptr_t)(x)) & ((uintptr_t)1)))
+#define COLINFO_CREATE(mod2col, rhsoffset)  ((void*) (((uintptr_t)(mod2col)) | ((uintptr_t)(rhsoffset))))
 
 /** comparison function for slack of mod 2 rows */
 static
@@ -193,14 +197,13 @@ SCIP_RETCODE mod2MatrixAddCol(
    col->pos = mod2matrix->ncols++;
    col->index = SCIPcolGetIndex(origcol);
    col->solval = solval;
-   col->rhsoffset = rhsoffset;
    SCIP_CALL( SCIPhashtableCreate(&col->nonzrows, SCIPblkmem(scip), 1, SCIPhashGetKeyStandard, SCIPhashKeyEqPtr,
                                   hashKeyValIndex, NULL) );
 
    SCIP_CALL( SCIPensureBlockMemoryArray(scip, &mod2matrix->cols, &mod2matrix->colssize, mod2matrix->ncols) );
    mod2matrix->cols[col->pos] = col;
 
-   SCIP_CALL( SCIPhashmapInsert(origcol2col, (void*) origcol, (void*) col) );
+   SCIP_CALL( SCIPhashmapInsert(origcol2col, (void*) origcol, COLINFO_CREATE(col, rhsoffset)) );
 
    return SCIP_OKAY;
 }
@@ -290,19 +293,28 @@ SCIP_RETCODE mod2MatrixAddRow(
 
    for( i = 0; i < rowlen; ++i )
    {
-      MOD2_COL* col;
-
-      if( mod2(scip, rowvals[i]) == 1 && /* only do the hash map lookup if the mod2 coef is non-zero */
-         (col = (MOD2_COL*)SCIPhashmapGetImage(origcol2col, (void*)rowcols[i])) != NULL )
+      if( mod2(scip, rowvals[i]) == 1 )
       {
-         int k;
+         void* colinfo = SCIPhashmapGetImage(origcol2col, (void*)rowcols[i]);
 
-         k = row->nnonzcols++;
+         /* extract the righthand side offset from the colinfo and update the righthand side */
+         int rhsoffset = COLINFO_GET_RHSOFFSET(colinfo);
+         row->rhs = (row->rhs + rhsoffset) % 2;
 
-         SCIP_CALL( SCIPensureBlockMemoryArray(scip, &row->nonzcols, &row->nonzcolssize, row->nnonzcols) );
-         row->nonzcols[k] = col;
-         row->rhs = (row->rhs + col->rhsoffset) % 2;
-         SCIP_CALL( mod2colLinkRow(col, row) );
+         /* extract the column pointer from the colinfo */
+         MOD2_COL* col = COLINFO_GET_MOD2COL(colinfo);
+
+         if( col != NULL )
+         {
+            int k;
+
+            k = row->nnonzcols++;
+
+            SCIP_CALL( SCIPensureBlockMemoryArray(scip, &row->nonzcols, &row->nonzcolssize, row->nnonzcols) );
+            row->nonzcols[k] = col;
+
+            SCIP_CALL( mod2colLinkRow(col, row) );
+         }
       }
    }
 
@@ -378,12 +390,18 @@ SCIP_RETCODE buildMod2Matrix(
       lb = SCIPcolGetLb(cols[i]);
       lbsol = primsol - lb;
       if( SCIPisZero(scip, lbsol) )
+      {
+         SCIP_CALL( SCIPhashmapInsert(origcol2col, (void*) cols[i], COLINFO_CREATE(NULL, mod2(scip, lb))) );
          continue;
+      }
 
       ub = SCIPcolGetUb(cols[i]);
       ubsol = ub - primsol;
       if( SCIPisZero(scip, ubsol) )
+      {
+         SCIP_CALL( SCIPhashmapInsert(origcol2col, (void*) cols[i], COLINFO_CREATE(NULL, mod2(scip, ub))) );
          continue;
+      }
 
       if( SCIPisInfinity(scip, ub) ) /* if there is no ub, use lb */
          useub = FALSE;
