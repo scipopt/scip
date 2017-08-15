@@ -35,6 +35,7 @@
 #define BENDERSCUT_NAME             "optimality"
 #define BENDERSCUT_DESC             "Standard Benders' decomposition optimality cut"
 #define BENDERSCUT_PRIORITY         0
+#define BENDERSCUT_LPCUT            TRUE
 
 
 
@@ -351,6 +352,11 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    {
       SCIP_CALL( SCIPaddCons(masterprob, cons) );
 
+#ifdef SCIP_DEBUG
+      SCIP_CALL( SCIPprintCons(masterprob, cons, NULL) );
+      SCIPinfoMessage(masterprob, NULL, ";\n");
+#endif
+
       /* storing the generated cut */
       SCIP_CALL( SCIPstoreBenderscutCons(masterprob, benderscut, cons) );
 
@@ -468,18 +474,22 @@ SCIP_DECL_BENDERSCUTEXITSOL(benderscutExitsolOpt)
 static
 SCIP_DECL_BENDERSCUTEXEC(benderscutExecOpt)
 {  /*lint --e{715}*/
+   SCIP* subproblem;
+
    assert(scip != NULL);
    assert(benders != NULL);
    assert(benderscut != NULL);
    assert(result != NULL);
    assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
 
+   subproblem = SCIPbendersSubproblem(benders, probnumber);
+
    /* only generate optimality cuts if the subproblem is optimal */
-   if( SCIPgetStatus(SCIPbendersSubproblem(benders, probnumber)) == SCIP_STATUS_OPTIMAL ||
-    SCIPgetLPSolstat(SCIPbendersSubproblem(benders, probnumber)) == SCIP_LPSOLSTAT_OPTIMAL )
+   if( SCIPgetStatus(subproblem) == SCIP_STATUS_OPTIMAL ||
+    (SCIPgetStage(subproblem) == SCIP_STAGE_SOLVING && SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_OPTIMAL) )
    {
       /* generating a cut for a given subproblem */
-      SCIP_CALL( generateAndApplyBendersCuts(scip, SCIPbendersSubproblem(benders, probnumber), benders, benderscut,
+      SCIP_CALL( generateAndApplyBendersCuts(scip, subproblem, benders, benderscut,
             sol, probnumber, type, result) );
    }
 
@@ -514,14 +524,14 @@ SCIP_RETCODE SCIPincludeBenderscutOpt(
     * new callbacks are added in future SCIP versions
     */
    SCIP_CALL( SCIPincludeBenderscut(scip, benders, BENDERSCUT_NAME, BENDERSCUT_DESC, BENDERSCUT_PRIORITY,
-         benderscutCopyOpt, benderscutFreeXyz, benderscutInitXyz, benderscutExitXyz, benderscutInitsolXyz,
-         benderscutExitsolOpt, benderscutExecXyz, benderscutdata) );
+         BENDERSCUT_LPCUT, benderscutCopyOpt, benderscutFreeXyz, benderscutInitXyz, benderscutExitXyz,
+         benderscutInitsolXyz, benderscutExitsolOpt, benderscutExecXyz, benderscutdata) );
 #else
    /* use SCIPincludeBenderscutBasic() plus setter functions if you want to set callbacks one-by-one and your code should
     * compile independent of new callbacks being added in future SCIP versions
     */
-   SCIP_CALL( SCIPincludeBenderscutBasic(scip, benders, &benderscut, BENDERSCUT_NAME, BENDERSCUT_DESC, BENDERSCUT_PRIORITY,
-         benderscutExecOpt, benderscutdata) );
+   SCIP_CALL( SCIPincludeBenderscutBasic(scip, benders, &benderscut, BENDERSCUT_NAME, BENDERSCUT_DESC,
+         BENDERSCUT_PRIORITY, BENDERSCUT_LPCUT, benderscutExecOpt, benderscutdata) );
 
    assert(benderscut != NULL);
 

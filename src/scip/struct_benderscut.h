@@ -51,6 +51,7 @@ struct SCIP_Benderscut
    SCIP_CLOCK*           setuptime;          /**< time spend for setting up this benderscutession for the next stages */
    SCIP_CLOCK*           benderscutclock;    /**< compression execution time */
    int                   priority;           /**< priority of the Benders' decomposition cuts */
+   SCIP_Bool             islpcut;            /**< does this Benders' cut use LP information? */
    SCIP_Bool             initialized;        /**< is Benders' decomposition cuts initialized? */
 
    SCIP_CONS**           addedcons;          /**< an array to store the added constraints */

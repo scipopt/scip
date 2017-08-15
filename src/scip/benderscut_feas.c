@@ -33,6 +33,7 @@
 #define BENDERSCUT_NAME             "feas"
 #define BENDERSCUT_DESC             "Standard feasibility cuts for Benders' decomposition"
 #define BENDERSCUT_PRIORITY         0
+#define BENDERSCUT_LPCUT            TRUE
 
 
 /*
@@ -387,18 +388,22 @@ SCIP_DECL_BENDERSCUTEXITSOL(benderscutExitsolFeas)
 static
 SCIP_DECL_BENDERSCUTEXEC(benderscutExecFeas)
 {  /*lint --e{715}*/
+   SCIP* subproblem;
+
    assert(scip != NULL);
    assert(benders != NULL);
    assert(benderscut != NULL);
    assert(result != NULL);
    assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
 
+   subproblem = SCIPbendersSubproblem(benders, probnumber);
+
    /* only generate feasibility cuts if the subproblem is infeasible */
-   if( SCIPgetStatus(SCIPbendersSubproblem(benders, probnumber)) == SCIP_STATUS_INFEASIBLE ||
-      SCIPgetLPSolstat(SCIPbendersSubproblem(benders, probnumber)) == SCIP_LPSOLSTAT_INFEASIBLE )
+   if( SCIPgetStatus(subproblem) == SCIP_STATUS_INFEASIBLE ||
+      (SCIPgetStage(subproblem) == SCIP_STAGE_SOLVING && SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_INFEASIBLE) )
    {
       /* generating a cut for a given subproblem */
-      SCIP_CALL( generateAndApplyBendersCuts(scip, SCIPbendersSubproblem(benders, probnumber), benders, benderscut,
+      SCIP_CALL( generateAndApplyBendersCuts(scip, subproblem, benders, benderscut,
             sol, probnumber, result) );
    }
 
@@ -432,14 +437,14 @@ SCIP_RETCODE SCIPincludeBenderscutFeas(
     * new callbacks are added in future SCIP versions
     */
    SCIP_CALL( SCIPincludeBenderscut(scip, benders, BENDERSCUT_NAME, BENDERSCUT_DESC, BENDERSCUT_PRIORITY,
-         benderscutCopyFeas, benderscutFreeFeas, benderscutInitFeas, benderscutExitFeas, benderscutInitsolFeas,
-         benderscutExitsolFeas, benderscutExecFeas, benderscutdata) );
+         BENDERSCUT_LPCUT, benderscutCopyFeas, benderscutFreeFeas, benderscutInitFeas, benderscutExitFeas,
+         benderscutInitsolFeas, benderscutExitsolFeas, benderscutExecFeas, benderscutdata) );
 #else
    /* use SCIPincludeBenderscutBasic() plus setter functions if you want to set callbacks one-by-one and your code should
     * compile independent of new callbacks being added in future SCIP versions
     */
-   SCIP_CALL( SCIPincludeBenderscutBasic(scip, benders, &benderscut, BENDERSCUT_NAME, BENDERSCUT_DESC, BENDERSCUT_PRIORITY,
-         benderscutExecFeas, benderscutdata) );
+   SCIP_CALL( SCIPincludeBenderscutBasic(scip, benders, &benderscut, BENDERSCUT_NAME, BENDERSCUT_DESC,
+         BENDERSCUT_PRIORITY, BENDERSCUT_LPCUT, benderscutExecFeas, benderscutdata) );
 
    assert(benderscut != NULL);
 

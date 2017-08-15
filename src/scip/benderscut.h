@@ -54,6 +54,7 @@ SCIP_RETCODE SCIPbenderscutCreate(
    const char*           name,               /**< name of Benders' decomposition cuts */
    const char*           desc,               /**< description of Benders' decomposition cuts */
    int                   priority,           /**< priority of the Benders' decomposition cuts */
+   SCIP_Bool             islpcut,            /**< indicates whether the cut is generated from the LP solution */
    SCIP_DECL_BENDERSCUTCOPY((*benderscutcopy)),/**< copy method of Benders' decomposition cuts or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_BENDERSCUTFREE((*benderscutfree)),/**< destructor of Benders' decomposition cuts */
    SCIP_DECL_BENDERSCUTINIT((*benderscutinit)),/**< initialize Benders' decomposition cuts */
