@@ -322,43 +322,6 @@ struct EpsGreedy
    int                   nselections;        /**< counter for the number of selection calls */
 };
 
-/** data structure for bandit algorithms */
-typedef struct SCIP_BanditAlgo SCIP_BANDITALGO;
-
-/** creation callback for bandit specific data structures */
-#define SCIP_DECL_BANDITCREATE(x) SCIP_RETCODE x (       \
-   SCIP*                 scip,           \
-   SCIP_BANDITALGO*      bandit          \
-)
-
-/** callback to free bandit specific data structures */
-#define SCIP_DECL_BANDITFREE(x) SCIP_RETCODE x ( \
-   SCIP*                 scip,                   \
-   SCIP_BANDITALGO*      bandit                  \
-)
-
-/** selection callback for bandit selector */
-#define SCIP_DECL_BANDITSELECT(x) SCIP_RETCODE x ( \
-	SCIP*                 scip,                     \
-	SCIP_BANDITALGO*      bandit,                   \
-	int*                  selection                 \
-)
-
-/** update callback for bandit algorithms */
-#define SCIP_DECL_BANDITUPDATE(x) SCIP_RETCODE x ( \
-   SCIP*                 scip,                     \
-   SCIP_BANDITALGO*      bandit,                   \
-   int                   selection,                \
-   SCIP_Real             score                     \
-)
-
-/** reset callback for bandit algorithms */
-#define SCIP_DECL_BANDITRESET(x) SCIP_RETCODE x (  \
-   SCIP*                 scip,                     \
-   SCIP_BANDITALGO*      bandit,                   \
-   SCIP_Real*            priorities                \
-)
-
 /**< specific data for the Exp.3 bandit algorithm */
 typedef struct BanditDataExp3 BANDITDATAEXP3;
 
@@ -389,22 +352,7 @@ typedef struct BanditDataGreedy
 typedef struct BanditDataUcb BANDITDATAUCB;
 
 
-/** data structure for bandit algorithms */
-struct SCIP_BanditAlgo
-{
-   int                   nactions;           /**< the number of actions to select from */
-   SCIP_RANDNUMGEN*      rng;                /**< random number generator for randomized selection of routines  */
-   SCIP_DECL_BANDITCREATE((*banditcreate));  /**< creation callback for bandit specific data structures */
-   SCIP_DECL_BANDITFREE  ((*banditfree));    /**< callback to free bandit specific data structures */
-   SCIP_DECL_BANDITSELECT((*banditselect));  /**< selection callback for bandit selector */
-   SCIP_DECL_BANDITUPDATE((*banditupdate));  /**< update callback for bandit algorithms */
-   SCIP_DECL_BANDITRESET ((*banditreset));   /**< update callback for bandit algorithms */
-   union {
-      BANDITDATAEXP3*    dataexp3;           /**< specific data for the Exp.3 bandit algorithm */
-      BANDITDATAGREEDY*  datagreedy;         /**< specific data for the epsilon greedy bandit algorithm */
-      BANDITDATAUCB*     dataucb;            /**< specific data for the UCB bandit algorithm */
-   }                     data;               /**< specific data for the different bandit algorithms */
-};
+
 
 
 
