@@ -97,6 +97,7 @@ SCIP_RETCODE SCIPbenderscutCreate(
    const char*           name,               /**< name of Benders' decomposition cuts */
    const char*           desc,               /**< description of Benders' decomposition cuts */
    int                   priority,           /**< priority of the Benders' decomposition cuts */
+   SCIP_Bool             islpcut,            /**< indicates whether the cut is generated from the LP solution */
    SCIP_DECL_BENDERSCUTCOPY((*benderscutcopy)),/**< copy method of Benders' decomposition cuts or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_BENDERSCUTFREE((*benderscutfree)),/**< destructor of Benders' decomposition cuts */
    SCIP_DECL_BENDERSCUTINIT((*benderscutinit)),/**< initialize Benders' decomposition cuts */
@@ -119,6 +120,7 @@ SCIP_RETCODE SCIPbenderscutCreate(
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*benderscut)->name, name, strlen(name)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*benderscut)->desc, desc, strlen(desc)+1) );
    (*benderscut)->priority = priority;
+   (*benderscut)->islpcut = islpcut;
    (*benderscut)->benderscutcopy = benderscutcopy;
    (*benderscut)->benderscutfree = benderscutfree;
    (*benderscut)->benderscutinit = benderscutinit;
@@ -613,3 +615,12 @@ SCIP_RETCODE SCIPbenderscutGetCuts(
    return SCIP_OKAY;
 }
 
+/** returns whether the Benders' cut uses the LP information */
+SCIP_Bool SCIPbenderscutIsLPCut(
+   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
+   )
+{
+   assert(benderscut != NULL);
+
+   return benderscut->islpcut;
+}

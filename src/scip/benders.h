@@ -170,6 +170,7 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    int                   probnum,            /**< the subproblem number */
+   int                   solveloop,          /**< the solve loop iteration. The first iter is for LP, the second for IP */
    SCIP_Bool             enhancement,        /**< is the solve performed as part of and enhancement? */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
    SCIP_BENDERSENFOTYPE  type                /**< the enforcement type calling this function */
@@ -193,7 +194,8 @@ SCIP_RETCODE SCIPbendersSolveSubproblem(
    SCIP_SOL*             sol,                /**< primal CIP solution, can be NULL */
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
-   SCIP_BENDERSENFOTYPE  type                /**< the enforcement type calling this function */
+   SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
+   SCIP_Bool             solvemip            /**< directly solve the MIP subproblem */
    );
 
 /** frees the subproblems. */
@@ -335,6 +337,42 @@ SCIP_RETCODE SCIPbendersAddSubproblem(
 /** Removes the subproblems from the Benders' decomposition data */
 SCIP_RETCODE SCIPbendersRemoveSubproblems(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   );
+
+/* sets the flag indicating whether a subproblem is an LP. It is possible that this can change during the solving
+ * process. One example is when the three-phase method is employed, where the first phase solves the of both the master
+ * and subproblems and by the third phase the integer subproblem is solved. */
+extern
+void SCIPbendersSetSubprobIsLP(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_Bool             islp                /**< flag to indicate whether the subproblem is an LP */
+   );
+
+/** returns the number of subproblems that are LPs */
+extern
+int SCIPbendersGetNLPSubprobs(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   );
+
+/** changes all of the master problem variables in the given subproblem to continuous */
+SCIP_RETCODE SCIPbendersChgMastervarsToCont(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   probnumber          /**< the subproblem number */
+   );
+
+/** sets a flag to indicate whether the master variables are all set to continuous */
+SCIP_RETCODE SCIPbendersSetMastervarsCont(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_Bool             arecont             /**< flag to indicate whether the master problem variables are continuous */
+   );
+
+/** returns whether the master variables are all set to continuous */
+SCIP_Bool SCIPbendersGetMastervarsCont(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber          /**< the subproblem number */
    );
 
 #ifdef __cplusplus

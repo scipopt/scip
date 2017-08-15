@@ -28,6 +28,7 @@
 #define BENDERSCUT_NAME             "xyz"
 #define BENDERSCUT_DESC             "Benders' decomposition cuts template"
 #define BENDERSCUT_PRIORITY         0
+#define BENDERSCUT_LPCUT            TRUE
 
 
 /*
@@ -181,14 +182,14 @@ SCIP_RETCODE SCIPincludeBenderscutXyz(
     * new callbacks are added in future SCIP versions
     */
    SCIP_CALL( SCIPincludeBenderscut(scip, benders, BENDERSCUT_NAME, BENDERSCUT_DESC, BENDERSCUT_PRIORITY,
-         benderscutCopyXyz, benderscutFreeXyz, benderscutInitXyz, benderscutExitXyz, benderscutInitsolXyz,
-         benderscutExitsolXyz, benderscutExecXyz, benderscutdata) );
+         BENDERSCUT_LPCUT, benderscutCopyXyz, benderscutFreeXyz, benderscutInitXyz, benderscutExitXyz,
+         benderscutInitsolXyz, benderscutExitsolXyz, benderscutExecXyz, benderscutdata) );
 #else
    /* use SCIPincludeBenderscutBasic() plus setter functions if you want to set callbacks one-by-one and your code should
     * compile independent of new callbacks being added in future SCIP versions
     */
-   SCIP_CALL( SCIPincludeBenderscutBasic(scip, benders, &benderscut, BENDERSCUT_NAME, BENDERSCUT_DESC, BENDERSCUT_PRIORITY,
-         benderscutExecXyz, benderscutdata) );
+   SCIP_CALL( SCIPincludeBenderscutBasic(scip, benders, &benderscut, BENDERSCUT_NAME, BENDERSCUT_DESC,
+         BENDERSCUT_PRIORITY, BENDERSCUT_LPCUT, benderscutExecXyz, benderscutdata) );
 
    assert(benderscut != NULL);
 

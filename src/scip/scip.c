@@ -6364,7 +6364,8 @@ SCIP_RETCODE SCIPsolveBendersSubproblem(
    SCIP_SOL*             sol,                /**< primal CIP solution, can be NULL for the current LP/Pseudo solution */
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
-   SCIP_BENDERSENFOTYPE  type                /**< the enforcement type calling this function */
+   SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
+   SCIP_Bool             solvemip            /**< directly solve the MIP subproblem */
    )
 {
    assert(scip != NULL);
@@ -6372,7 +6373,7 @@ SCIP_RETCODE SCIPsolveBendersSubproblem(
    assert(benders != NULL);
    assert(probnumber >= 0 && probnumber < SCIPgetBendersNSubproblems(scip, benders));
 
-   SCIP_CALL( SCIPbendersSolveSubproblem(benders, scip->set, sol, probnumber, infeasible, type) );
+   SCIP_CALL( SCIPbendersSolveSubproblem(benders, scip->set, sol, probnumber, infeasible, type, solvemip) );
 
    return SCIP_OKAY;
 }
@@ -6418,6 +6419,7 @@ SCIP_RETCODE SCIPincludeBenderscut(
    const char*           name,               /**< name of Benders' decomposition cuts */
    const char*           desc,               /**< description of Benders' decomposition cuts */
    int                   priority,           /**< priority of the Benders' decomposition cuts */
+   SCIP_Bool             islpcut,            /**< indicates whether the cut is generated from the LP solution */
    SCIP_DECL_BENDERSCUTCOPY((*benderscutcopy)),/**< copy method of Benders' decomposition cuts or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_BENDERSCUTFREE((*benderscutfree)),/**< destructor of Benders' decomposition cuts */
    SCIP_DECL_BENDERSCUTINIT((*benderscutinit)),/**< initialize Benders' decomposition cuts */
@@ -6440,7 +6442,7 @@ SCIP_RETCODE SCIPincludeBenderscut(
    }
 
    SCIP_CALL( SCIPbenderscutCreate(&benderscut, scip->set, scip->messagehdlr, scip->mem->setmem, name, desc, priority,
-         benderscutcopy, benderscutfree, benderscutinit, benderscutexit,
+         islpcut, benderscutcopy, benderscutfree, benderscutinit, benderscutexit,
          benderscutinitsol, benderscutexitsol, benderscutexec, benderscutdata) );
    SCIP_CALL( SCIPbendersIncludeBenderscut(benders, scip->set, benderscut) );
 
@@ -6469,6 +6471,7 @@ SCIP_RETCODE SCIPincludeBenderscutBasic(
    const char*           name,               /**< name of Benders' decomposition */
    const char*           desc,               /**< description of Benders' decomposition */
    int                   priority,           /**< priority of the Benders' decomposition */
+   SCIP_Bool             islpcut,            /**< indicates whether the cut is generated from the LP solution */
    SCIP_DECL_BENDERSCUTEXEC((*benderscutexec)),/**< the execution method of the Benders' cut algorithm */
    SCIP_BENDERSCUTDATA*  benderscutdata      /**< Benders' cut data */
    )
@@ -6485,7 +6488,7 @@ SCIP_RETCODE SCIPincludeBenderscutBasic(
    }
 
    SCIP_CALL( SCIPbenderscutCreate(&benderscut, scip->set, scip->messagehdlr, scip->mem->setmem, name, desc, priority,
-         NULL, NULL, NULL, NULL, NULL, NULL, benderscutexec, benderscutdata) );
+         islpcut, NULL, NULL, NULL, NULL, NULL, NULL, benderscutexec, benderscutdata) );
    SCIP_CALL( SCIPbendersIncludeBenderscut(benders, scip->set, benderscut) );
 
    if( benderscutptr != NULL )
@@ -13435,8 +13438,10 @@ SCIP_RETCODE SCIPaddCons(
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_EXITPRESOLVE:
    case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_SOLVING:
-      assert( SCIPtreeGetCurrentDepth(scip->tree) >= 0 ||  scip->set->stage == SCIP_STAGE_PRESOLVED );
+      assert( SCIPtreeGetCurrentDepth(scip->tree) >= 0 ||  scip->set->stage == SCIP_STAGE_PRESOLVED
+         || scip->set->stage == SCIP_STAGE_INITSOLVE );
       if( SCIPtreeGetCurrentDepth(scip->tree) <= SCIPtreeGetEffectiveRootDepth(scip->tree) )
          SCIPconsSetLocal(cons, FALSE);
       if( SCIPconsIsGlobal(cons) )

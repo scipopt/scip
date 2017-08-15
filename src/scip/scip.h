@@ -3038,7 +3038,8 @@ SCIP_RETCODE SCIPsolveBendersSubproblem(
    SCIP_SOL*             sol,                /**< primal CIP solution, can be NULL for the current LP/Pseudo solution */
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
-   SCIP_BENDERSENFOTYPE  type                /**< the enforcement type calling this function */
+   SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
+   SCIP_Bool             solvemip            /**< directly solve the MIP subproblem */
    );
 
 /** checks the optimality of a Benders' decomposition subproblem by comparing the objective function value agains the
@@ -3075,6 +3076,7 @@ SCIP_RETCODE SCIPincludeBenderscut(
    const char*           name,               /**< name of Benders' decomposition cuts */
    const char*           desc,               /**< description of Benders' decomposition cuts */
    int                   priority,           /**< priority of the Benders' decomposition cuts */
+   SCIP_Bool             islpcut,            /**< indicates whether the cut is generated from the LP solution */
    SCIP_DECL_BENDERSCUTCOPY((*benderscutcopy)),/**< copy method of Benders' decomposition cuts or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_BENDERSCUTFREE((*benderscutfree)),/**< destructor of Benders' decomposition cuts */
    SCIP_DECL_BENDERSCUTINIT((*benderscutinit)),/**< initialize Benders' decomposition cuts */
@@ -3108,6 +3110,7 @@ SCIP_RETCODE SCIPincludeBenderscutBasic(
    const char*           name,               /**< name of Benders' decomposition */
    const char*           desc,               /**< description of Benders' decomposition */
    int                   priority,           /**< priority of the Benders' decomposition */
+   SCIP_Bool             islpcut,            /**< indicates whether the cut is generated from the LP solution */
    SCIP_DECL_BENDERSCUTEXEC((*benderscutexec)),/**< the execution method of the Benders' cut algorithm */
    SCIP_BENDERSCUTDATA*  benderscutdata      /**< Benders' cut data */
    );
