@@ -4001,6 +4001,7 @@ SCIP_RETCODE SCIPsetIncludeBanditvtable(
    }
 
    assert(set->nbanditvtables < set->banditvtablessize);
+   set->banditvtables[set->nbanditvtables++] = banditvtable;
 
    return SCIP_OKAY;
 }

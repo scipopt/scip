@@ -67,6 +67,7 @@ set(settings_MIP
     "vbcvisualization"
     "bakvisualization"
     "solvingphases"
+    "lns_epsgreedy"
 )
 
 set(settings_MINLP

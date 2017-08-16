@@ -16,7 +16,9 @@ set(scipsources
     blockmemshell/memory.c
     scip/message.c
     scip/bitencode.c
+    scip/bandit.c
     scip/bandit_epsgreedy.c
+    scip/bandit_exp3.c
     scip/branch_allfullstrong.c
     scip/branch_cloud.c
     scip/branch_distribution.c
@@ -341,6 +343,7 @@ set(objscipheaders
 set(scipheaders
     scip/bandit.h
     scip/bandit_epsgreedy.h
+    scip/bandit_exp3.h
     scip/bitencode.h
     scip/boundstore.h
     scip/branch_allfullstrong.h

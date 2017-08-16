@@ -69,6 +69,8 @@
 #include "scip/type_syncstore.h"
 
 /* include public interfaces, s.t. the user only needs to include scip.h */
+#include "scip/bandit_epsgreedy.h"
+#include "scip/bandit.h"
 #include "scip/pub_branch.h"
 #include "scip/pub_conflict.h"
 #include "scip/pub_cons.h"
@@ -4534,6 +4536,49 @@ EXTERN
 SCIP_BANDITVTABLE* SCIPfindBanditvtable(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of bandit algorithm virtual function table */
+   );
+
+/** creates a bandit algorithm */
+EXTERN
+SCIP_RETCODE SCIPcreateBandit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BANDIT**         bandit,             /**< pointer to bandit algorithm data structure */
+   SCIP_BANDITVTABLE*    banditvtable,       /**< virtual table for this bandit algorithm */
+   int                   nactions,           /**< the number of actions for this bandit algorithm */
+   SCIP_BANDITDATA*      banditdata          /**< algorithm specific bandit data */
+   );
+
+/** calls destructor and frees memory of bandit algorithm */
+EXTERN
+SCIP_RETCODE SCIPfreeBandit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BANDIT**         bandit              /**< pointer to bandit algorithm data structure */
+   );
+
+/** reset the bandit algorithm */
+EXTERN
+SCIP_RETCODE SCIPresetBandit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BANDIT*          bandit,             /**< pointer to bandit algorithm data structure */
+   SCIP_Real*            priorities,         /**< priorities for every action, or NULL if not needed */
+   unsigned int          seed                /**< initial random seed for bandit selection */
+   );
+
+/** select the next action */
+EXTERN
+SCIP_RETCODE SCIPselectBandit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BANDIT*          bandit,             /**< pointer to bandit algorithm data structure */
+   int*                  action              /**< pointer to store the selected action */
+   );
+
+/** update the score of the selected action */
+EXTERN
+SCIP_RETCODE SCIPupdateBandit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BANDIT*          bandit,             /**< pointer to bandit algorithm data structure */
+   int                   action,             /**< index of action for which the score should be updated */
+   SCIP_Real             score               /**< observed gain of the i'th action */
    );
 
 /* @} */
