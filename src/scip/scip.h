@@ -18123,7 +18123,7 @@ SCIP_RETCODE SCIPcheckSolOrig(
 
 /** update integrality violation of a solution */
 EXTERN
-SCIP_RETCODE SCIPupdateSolIntegralityViolation(
+void SCIPupdateSolIntegralityViolation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Real             absviol            /**< absolute violation */
@@ -18131,7 +18131,7 @@ SCIP_RETCODE SCIPupdateSolIntegralityViolation(
 
 /** update bound violation of a solution */
 EXTERN
-SCIP_RETCODE SCIPupdateSolBoundViolation(
+void SCIPupdateSolBoundViolation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Real             absviol,            /**< absolute violation */
@@ -18140,7 +18140,7 @@ SCIP_RETCODE SCIPupdateSolBoundViolation(
 
 /** update LP row violation of a solution */
 EXTERN
-SCIP_RETCODE SCIPupdateSolLPRowViolation(
+void SCIPupdateSolLPRowViolation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Real             absviol,            /**< absolute violation */
@@ -18149,7 +18149,7 @@ SCIP_RETCODE SCIPupdateSolLPRowViolation(
 
 /** update constraint violation of a solution */
 EXTERN
-SCIP_RETCODE SCIPupdateSolConsViolation(
+void SCIPupdateSolConsViolation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Real             absviol,            /**< absolute violation */
@@ -18158,7 +18158,7 @@ SCIP_RETCODE SCIPupdateSolConsViolation(
 
 /** update LP row and constraint violations of a solution */
 EXTERN
-SCIP_RETCODE SCIPupdateSolLPConsViolation(
+void SCIPupdateSolLPConsViolation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Real             absviol,            /**< absolute violation */
@@ -18167,13 +18167,13 @@ SCIP_RETCODE SCIPupdateSolLPConsViolation(
 
 /** allow violation updates */
 EXTERN
-SCIP_RETCODE SCIPactivateSolViolationUpdates(
+void SCIPactivateSolViolationUpdates(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** disallow violation updates */
 EXTERN
-SCIP_RETCODE SCIPdeactivateSolViolationUpdates(
+void SCIPdeactivateSolViolationUpdates(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

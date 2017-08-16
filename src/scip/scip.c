@@ -13613,85 +13613,83 @@ SCIP_RETCODE checkSolOrig(
 }
 
 /** update integrality violation of a solution */
-SCIP_RETCODE SCIPupdateSolIntegralityViolation(
+void SCIPupdateSolIntegralityViolation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Real             absviol            /**< absolute violation */
    )
 {
-   if( SCIPprobUpdateViolations(scip->origprob) )
+   SCIP_Bool updateviolations = SCIPprobUpdateViolations(scip->origprob);
+   if( updateviolations )
       SCIPsolUpdateIntegralityViolation(sol, absviol);
-   return SCIP_OKAY;
 }
 
 /** update bound violation of a solution */
-SCIP_RETCODE SCIPupdateSolBoundViolation(
+void SCIPupdateSolBoundViolation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Real             absviol,            /**< absolute violation */
    SCIP_Real             relviol             /**< relative violation */
    )
 {
-   if( SCIPprobUpdateViolations(scip->origprob) )
+   SCIP_Bool updateviolations = SCIPprobUpdateViolations(scip->origprob);
+   if( updateviolations )
       SCIPsolUpdateBoundViolation(sol, absviol, relviol);
-   return SCIP_OKAY;
 }
 
 /** update LP row violation of a solution */
-SCIP_RETCODE SCIPupdateSolLPRowViolation(
+void SCIPupdateSolLPRowViolation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Real             absviol,            /**< absolute violation */
    SCIP_Real             relviol             /**< relative violation */
    )
 {
-   if( SCIPprobUpdateViolations(scip->origprob) )
+   SCIP_Bool updateviolations = SCIPprobUpdateViolations(scip->origprob);
+   if( updateviolations )
       SCIPsolUpdateLPRowViolation(sol, absviol, relviol);
-   return SCIP_OKAY;
 }
 
 /** update constraint violation of a solution */
-SCIP_RETCODE SCIPupdateSolConsViolation(
+void SCIPupdateSolConsViolation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Real             absviol,            /**< absolute violation */
    SCIP_Real             relviol             /**< relative violation */
    )
 {
-   if( SCIPprobUpdateViolations(scip->origprob) )
+   SCIP_Bool updateviolations = SCIPprobUpdateViolations(scip->origprob);
+   if( updateviolations )
       SCIPsolUpdateConsViolation(sol, absviol, relviol);
-   return SCIP_OKAY;
 }
 
 /** update LP row and constraint violations of a solution */
-SCIP_RETCODE SCIPupdateSolLPConsViolation(
+void SCIPupdateSolLPConsViolation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Real             absviol,            /**< absolute violation */
    SCIP_Real             relviol             /**< relative violation */
    )
 {
-   if( SCIPprobUpdateViolations(scip->origprob) )
+   SCIP_Bool updateviolations = SCIPprobUpdateViolations(scip->origprob);
+   if( updateviolations )
       SCIPsolUpdateLPConsViolation(sol, absviol, relviol);
-   return SCIP_OKAY;
 }
 
 /** allow violation updates */
-SCIP_RETCODE SCIPactivateSolViolationUpdates(
+void SCIPactivateSolViolationUpdates(
    SCIP*                 scip               /**< SCIP data structure */
    )
 {
    SCIPprobSetUpdateViolations(scip->origprob, 1);
-   return SCIP_OKAY;
 }
 
 /** disallow violation updates */
-SCIP_RETCODE SCIPdeactivateSolViolationUpdates(
+void SCIPdeactivateSolViolationUpdates(
    SCIP*                 scip               /**< SCIP data structure */
    )
 {
    SCIPprobSetUpdateViolations(scip->origprob, 0);
-   return SCIP_OKAY;
 }
 
 /** calculates number of nonzeros in problem */

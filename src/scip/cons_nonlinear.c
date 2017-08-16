@@ -4044,10 +4044,9 @@ SCIP_RETCODE computeViolation(
    if( sol != NULL )
    {
       SCIP_Real absviol;
-
-      SCIP_Real relviol = 0.0;
-      SCIP_Real lhsrelviol = 0.0;
-      SCIP_Real rhsrelviol = 0.0;
+      SCIP_Real relviol;
+      SCIP_Real lhsrelviol;
+      SCIP_Real rhsrelviol;
 
       absviol = MAX(consdata->lhsviol, consdata->rhsviol);
 
