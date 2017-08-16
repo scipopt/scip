@@ -295,6 +295,21 @@ if(XPRESS_FOUND)
     set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
 endif()
 
+#
+# enable coverage support
+#
+# it is very important to execute this prior to adding subdirectories because of
+# the compiler flag changes
+#
+if( COVERAGE )
+    include(CodeCoverage)
+    APPEND_COVERAGE_COMPILER_FLAGS()
+    set(COVERAGE_EXCLUDES '/usr*')
+    SETUP_TARGET_FOR_COVERAGE(NAME coverage
+                          EXECUTABLE bash -c "${CMAKE_CTEST_COMMAND} ${COVERAGE_CTEST_ARGS}"
+                          DEPENDENCIES all_executables
+                          )
+endif()
 
 # ZIMPL headers need to be copied to have the "zimpl/*.h" prefix
 if(ZIMPL)
@@ -385,17 +400,7 @@ add_custom_target(all_executables DEPENDS scip unittests examples)
 add_subdirectory(examples)
 
 enable_testing()
-#
-# enable coverage support
 
-if( COVERAGE )
-    include(CodeCoverage)
-    APPEND_COVERAGE_COMPILER_FLAGS()
-    set(COVERAGE_EXCLUDES '/usr*')
-    SETUP_TARGET_FOR_COVERAGE(NAME coverage
-                          EXECUTABLE bash -c "${CMAKE_CTEST_COMMAND} ${COVERAGE_CTEST_ARGS}"
-                          DEPENDENCIES all_executables)
-endif()
 
 include(FeatureSummary)
 feature_summary(WHAT ALL)
