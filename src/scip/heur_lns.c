@@ -400,7 +400,7 @@ SCIP_RETCODE resetFixingRate(
    return SCIP_OKAY;
 }
 
-/** todo reset the currently active neighborhood */
+/** reset the currently active neighborhood */
 static
 void resetCurrentNeighborhood(
    SCIP_HEURDATA*        heurdata
@@ -1935,7 +1935,7 @@ SCIP_DECL_HEUREXEC(heurExecLns)
                break;
          }
 
-         assert(fixresult == SCIP_DIDNOTFIND);
+         assert(fixresult == SCIP_DIDNOTFIND || fixresult == SCIP_DELAYED);
          *result = fixresult;
          break;
       }
