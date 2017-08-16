@@ -48,6 +48,7 @@
 #include "scip/type_tree.h"
 #include "scip/type_scip.h"
 
+#include "scip/type_bandit.h"
 #include "scip/type_branch.h"
 #include "scip/type_conflict.h"
 #include "scip/type_cons.h"
@@ -4510,6 +4511,34 @@ EXTERN
 SCIP_NODESEL* SCIPgetNodesel(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup BanditAlgorithms
+ *
+ * @{
+ */
+
+/** includes a bandit algorithm virtual function table  */
+EXTERN
+SCIP_RETCODE SCIPincludeBanditvtable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BANDITVTABLE**   banditvtable,       /**< bandit algorithm virtual function table */
+   const char*           name,               /**< a name for the algorithm represented by this vtable */
+   SCIP_DECL_BANDITFREE  ((*banditfree)),    /**< callback to free bandit specific data structures */
+   SCIP_DECL_BANDITSELECT((*banditselect)),  /**< selection callback for bandit selector */
+   SCIP_DECL_BANDITUPDATE((*banditupdate)),  /**< update callback for bandit algorithms */
+   SCIP_DECL_BANDITRESET ((*banditreset))    /**< update callback for bandit algorithms */
+   );
+
+/** returns the bandit virtual function table of the given name, or NULL if not existing */
+EXTERN
+SCIP_BANDITVTABLE* SCIPfindBanditvtable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of bandit algorithm virtual function table */
+   );
+
+/* @} */
+
+
 
 /* @} */
 

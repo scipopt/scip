@@ -16,6 +16,7 @@ set(scipsources
     blockmemshell/memory.c
     scip/message.c
     scip/bitencode.c
+    scip/bandit_epsgreedy.c
     scip/branch_allfullstrong.c
     scip/branch_cloud.c
     scip/branch_distribution.c
@@ -228,6 +229,7 @@ set(scipsources
     scip/reopt.c
     scip/retcode.c
     scip/scip.c
+    scip/scip_bandit.c
     scip/scipbuildflags.c
     scip/scipdefplugins.c
     scip/scipgithash.c
@@ -337,6 +339,8 @@ set(objscipheaders
 )
 
 set(scipheaders
+    scip/bandit.h
+    scip/bandit_epsgreedy.h
     scip/bitencode.h
     scip/boundstore.h
     scip/branch_allfullstrong.h
@@ -592,6 +596,7 @@ set(scipheaders
     scip/sol.h
     scip/solve.h
     scip/stat.h
+    scip/struct_bandit.h
     scip/struct_branch.h
     scip/struct_clock.h
     scip/struct_compr.h
@@ -636,6 +641,7 @@ set(scipheaders
     scip/struct_visual.h
     scip/syncstore.h
     scip/tree.h
+    scip/type_bandit.h
     scip/type_branch.h
     scip/type_clock.h
     scip/type_compr.h

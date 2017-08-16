@@ -27,6 +27,7 @@
 
 #include "scip/def.h"
 #include "scip/message.h"
+#include "scip/type_bandit.h"
 #include "scip/type_set.h"
 #include "scip/type_clock.h"
 #include "scip/type_paramset.h"
@@ -86,6 +87,7 @@ struct SCIP_Set
    SCIP_CONCSOLVERTYPE** concsolvertypes;    /**< concurrent solver types */
    SCIP_CONCSOLVER**     concsolvers;        /**< the concurrent solvers used for solving */
    SCIP_DEBUGSOLDATA*    debugsoldata;       /**< data for debug solutions */
+   SCIP_BANDITVTABLE**   banditvtables;      /**< virtual function tables for bandit algorithms */
    char**                extcodenames;       /**< names of externals codes */
    char**                extcodedescs;       /**< descriptions of external codes */
    int                   nreaders;           /**< number of file readers */
@@ -127,6 +129,8 @@ struct SCIP_Set
    int                   concsolverssize;    /**< size of concurrent solvers array */
    int                   nextcodes;          /**< number of external codes */
    int                   extcodessize;       /**< size of external code arrays */
+   int                   nbanditvtables;     /**< number of bandit algorithm virtual function tables */
+   int                   banditvtablessize;  /**< size of banditvtables array */
    SCIP_Bool             pricerssorted;      /**< are the pricers sorted by activity and priority? */
    SCIP_Bool             pricersnamesorted;  /**< are the pricers sorted by name? */
    SCIP_Bool             conflicthdlrssorted;/**< are the conflict handlers sorted by priority? */
