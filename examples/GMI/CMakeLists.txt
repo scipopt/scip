@@ -7,7 +7,8 @@ add_executable(gmi
    src/cmain.c
    src/sepa_gmi.c)
 
-target_link_libraries(gmi ${SCIP_LIBRARIES})
+find_library(LIBM m)
+target_link_libraries(gmi ${SCIP_LIBRARIES} ${LIBM})
 add_dependencies(examples gmi)
 
 include(CTest)
