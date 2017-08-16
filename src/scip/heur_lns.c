@@ -2360,6 +2360,10 @@ DECL_VARFIXINGS(varFixingsCrossover)
    if( nsols > SCIPgetNSols(scip) )
       return SCIP_OKAY;
 
+   /* return if no binary or integer variables are present */
+   if( SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) == 0 )
+      return SCIP_OKAY;
+
    rng = data->rng;
    lastdraw = SCIPgetNSols(scip);
    SCIP_CALL( SCIPallocBufferArray(scip, &sols, nsols) );
@@ -2977,6 +2981,7 @@ SCIP_DECL_HEURINIT(heurInitLns)
             heurdata->nactiveneighborhoods, heurdata->gamma, heurdata->beta) );
 
       SCIP_CALL( SCIPcreateBanditEpsgreedy(scip, &heurdata->epsgreedynh, heurdata->eps, heurdata->nactiveneighborhoods) );
+      SCIP_CALL( SCIPresetBandit(scip, heurdata->exp3, priorities, (unsigned int)(heurdata->seed + SCIPgetNVars(scip))) );
       SCIP_CALL( SCIPresetBandit(scip, heurdata->epsgreedynh, priorities, (unsigned int)(heurdata->seed + SCIPgetNVars(scip))) );
    }
    else if( heurdata->resetweights )
