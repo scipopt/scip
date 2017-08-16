@@ -2009,7 +2009,6 @@ SCIP_RETCODE greedyExtensionPcMw(
             /* new solution value better than old one? */
             if( SCIPisLT(scip, newsolval, bestsolval) )
             {
-               assert(extensionstmp);
                *extensions = TRUE;
 
                bestsolval = newsolval;

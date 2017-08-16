@@ -51,7 +51,7 @@
 static
 void pertubateEdgeCosts(
    SCIP* scip,
-   GRAPH* graph,
+   const GRAPH* graph,
    GRAPH* transgraph,
    const int* result,
    STP_Bool* nodearrchar,
@@ -60,10 +60,10 @@ void pertubateEdgeCosts(
 {
    SCIP_Real pratio = PERTUBATION_RATIO;
    int e;
-   int k;
-   int root = graph->source[0];
-   int nnodes = graph->knots;
-   int nedges = graph->edges;
+   const int root = graph->source[0];
+   const int newroot = transgraph->source[0];
+   const int nnodes = graph->knots;
+   const int nedges = graph->edges;
 
    BMSclearMemoryArray(nodearrchar, nnodes);
 
@@ -73,7 +73,7 @@ void pertubateEdgeCosts(
          nodearrchar[graph->head[e]] = TRUE;
 
    srand(graph->terms);
-   for( k = 0; k < nnodes; k++ )
+   for( int k = 0; k < nnodes; k++ )
    {
       assert(Is_gterm(graph->term[k]) == Is_gterm(transgraph->term[k]));
 
@@ -103,7 +103,7 @@ void pertubateEdgeCosts(
                transgraph->cost[e] *= 1.0 + pratio;
          }
       }
-      else if( Is_term(transgraph->term[k]) && k != root )
+      else if( Is_term(transgraph->term[k]) && k != root && k != newroot )
       {
          assert(transgraph->grad[k] == 2);
 
@@ -274,8 +274,8 @@ SCIP_RETCODE computePertubedSol(
 {
    SCIP_Real* transcost;
    SCIP_Real lb;
+   const SCIP_Real incumbentub = *upperbound;
    int e;
-   int k;
    const int root = graph->source[0];
    const int nedges = graph->edges;
    const int transnedges = transgraph->edges;
@@ -311,6 +311,7 @@ SCIP_RETCODE computePertubedSol(
 
    if( e != EAT_LAST)
    {
+      int k;
       for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
          if( !Is_term(graph->term[graph->head[e]]) && result[e] == CONNECT )
             break;
@@ -332,7 +333,7 @@ SCIP_RETCODE computePertubedSol(
 
    lb += offset;
 
-   if( lb > *lpobjval )
+   if( SCIPisGE(scip, lb, *lpobjval) || SCIPisLE(scip, incumbentub, *upperbound) )
       *lpobjval = lb;
    else
       BMScopyMemoryArray(cost, costrev, extnedges);
@@ -539,9 +540,13 @@ SCIP_RETCODE da_reduce(
    int*                  edgestate           /**< array to store status of (directed) edge (for propagation, can otherwise be set to NULL) */
    )
 {
+   SCIP_Real ecost[4];
+   IDX* ancestors[4];
+   IDX* revancestors[4];
+   int adjvert[4];
+   int incedge[4];
+
    SCIP_HEURDATA* tmheurdata;
-   IDX** ancestors;
-   IDX** revancestors;
    SCIP_Real ubnew;
    SCIP_Real maxcost;
    SCIP_Real lpobjval;
@@ -551,16 +556,11 @@ SCIP_RETCODE da_reduce(
    SCIP_Bool success;
    SCIP_Bool directed;
    SCIP_Real hopfactor;
-   SCIP_Real* sd;
-   SCIP_Real* ecost;
    SCIP_Bool apsol;
    int* grad;
    int* terms;
    int* result;
    int* starts;
-   int* adjvert;
-   int* incedge;
-   int* reinsert;
    int* termdegs;
    int i;
    int k;
@@ -575,6 +575,7 @@ SCIP_RETCODE da_reduce(
    int nnodes;
    int nfixed;
    int best_start;
+
    STP_Bool* marked;
    SCIP_Bool externsol;
    SCIP_Bool deletable;
@@ -623,18 +624,8 @@ SCIP_RETCODE da_reduce(
       termdegs = NULL;
    }
 
-   /* allocate length-4 buffer memory */
-   SCIP_CALL( SCIPallocBufferArray(scip, &sd, 4) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &ancestors, 4) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &revancestors, 4) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &ecost, 4) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &adjvert, 4) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &reinsert, 4) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &incedge, 4) );
-
    for( i = 0; i < 4; i++ )
    {
-      sd[i] = 0.0;
       ancestors[i] = NULL;
       revancestors[i] = NULL;
    }
@@ -1210,13 +1201,6 @@ SCIP_RETCODE da_reduce(
       SCIPintListNodeFree(scip, &(revancestors[k]));
    }
 
-   SCIPfreeBufferArray(scip, &incedge);
-   SCIPfreeBufferArray(scip, &reinsert);
-   SCIPfreeBufferArray(scip, &adjvert);
-   SCIPfreeBufferArray(scip, &ecost);
-   SCIPfreeBufferArray(scip, &revancestors);
-   SCIPfreeBufferArray(scip, &ancestors);
-   SCIPfreeBufferArray(scip, &sd);
    SCIPfreeBufferArrayNull(scip, &termdegs);
    SCIPfreeBufferArrayNull(scip, &terms);
    SCIPfreeBufferArray(scip, &marked);
@@ -1914,12 +1898,6 @@ SCIP_RETCODE da_reducePcMw(
 
    lpobjval += offset;
 
-   FILE *fptr;
-         fptr=fopen("bounds.txt","a");
-         fprintf(fptr, "lb %f ub %f \n", lpobjval, upperbound);
-         fclose(fptr);
-
-
    /* the required reduced path cost to be surpassed */
    minpathcost = upperbound - lpobjval;
 
@@ -1952,6 +1930,7 @@ SCIP_RETCODE da_reducePcMw(
       solbasedda = FALSE;
       varyroot = FALSE;
    }
+
    /* try to reduce the graph */
    nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, TRUE);
 
@@ -1983,14 +1962,6 @@ SCIP_RETCODE da_reducePcMw(
       SCIP_CALL( computePertubedSol(scip, graph, transgraph, vnoi, gnodearr, cost, costrev, pathdist, state, vbase, pathedge, result, result2,
             transresult, marked, nodearrchar, &upperbound, &lpobjval, &minpathcost, &apsol, offset, extnedges, 0) );
 
-      printf("upperbound final %f \n", upperbound);
-      printf("minpathcost final %f \n", upperbound - lpobjval);
-
-      fptr=fopen("bounds.txt","a");
-               fprintf(fptr, "lb %f ub %f \n", lpobjval, upperbound);
-               fclose(fptr);
-
-
       computeTransVoronoi(scip, transgraph, vnoi, cost, costrev, pathdist, vbase, pathedge);
 
       /* restore original graph */
@@ -2004,8 +1975,6 @@ SCIP_RETCODE da_reducePcMw(
 
    if( varyroot && graph->stp_type == STP_MWCSP  )
    {
-      printf("FFFminpathcost INITIAL %f \n", upperbound - lpobjval);
-
       int todo; //&& graph->terms > 500
       for( run = 0; run < DEFAULT_NMAXROOTS; run++ )
       {
@@ -2018,9 +1987,6 @@ SCIP_RETCODE da_reducePcMw(
          printf("FFFupperbound final %f \n", upperbound);
          printf("FFFminpathcost final %f \n", upperbound - lpobjval);
 
-         fptr=fopen("bounds.txt","a");
-                  fprintf(fptr, "lb %f ub %f \n", lpobjval, upperbound);
-                  fclose(fptr);
 
          computeTransVoronoi(scip, transgraph, vnoi, cost, costrev, pathdist, vbase, pathedge);
 
@@ -2128,10 +2094,7 @@ SCIP_RETCODE da_reducePcMw(
 
       transgraph->stp_type = STP_SAP;
 
-      BMScopyMemoryArray(costrev, cost, extnedges);
-
-
-      if( run > 1 )
+      if( run >= 1 )
       {
          SCIP_CALL( SCIPallocBufferArray(scip, &transcost, transgraph->edges) );
 
@@ -2164,11 +2127,11 @@ SCIP_RETCODE da_reducePcMw(
 
          assert(graph_sol_valid(scip, transgraph, result) );
 
-         SCIP_CALL( SCIPdualAscentStpSol(scip, transgraph, cost, pathdist, &dummyreal, FALSE, FALSE, gnodearr, result, transresult, state, tmproot, 1, marked, nodearrchar) );
+         SCIP_CALL( SCIPdualAscentStpSol(scip, transgraph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, result, transresult, state, tmproot, 1, marked, nodearrchar) );
       }
       else
       {
-         SCIP_CALL( SCIPdualAscentStp(scip, transgraph, cost, pathdist, &dummyreal, FALSE, FALSE, gnodearr, transresult, state, tmproot, 1, marked, nodearrchar) );
+         SCIP_CALL( SCIPdualAscentStp(scip, transgraph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, transresult, state, tmproot, 1, marked, nodearrchar) );
       }
 
       assert(graph_valid(transgraph));
@@ -2223,12 +2186,6 @@ SCIP_RETCODE da_reducePcMw(
             apsol = FALSE;
          }
       }
-
-      if( dummyreal > lpobjval )
-         lpobjval = dummyreal;
-      else
-         BMScopyMemoryArray(cost, costrev, extnedges);
-
 
       for( k = 0; k < transnnodes; k++ )
          transgraph->mark[k] = (transgraph->grad[k] > 0);
