@@ -954,7 +954,7 @@ SCIP_RETCODE checkCons(
       absviol -= consdata->capacity;
       relviol = SCIPrelDiff(absviol + consdata->capacity, (SCIP_Real)consdata->capacity);
       if( sol != NULL )
-         SCIPsolUpdateLPConsViolation(sol, absviol, relviol);
+         SCIPupdateSolLPConsViolation(scip, sol, absviol, relviol);
 
       if( SCIPisFeasPositive(scip, absviol) )
       {

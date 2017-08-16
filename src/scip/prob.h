@@ -679,6 +679,19 @@ void SCIPprobEnableConsCompression(
    SCIP_PROB*            prob                /**< problem data */
    );
 
+/** is the updating of violations enabled for this problem? */
+extern
+SCIP_Bool SCIPprobUpdateViolations(
+   SCIP_PROB*            prob                /**< problem data */
+   );
+
+/** set whether the updating of violations is turned on */
+extern
+void SCIPprobSetUpdateViolations(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_Bool             updateviolations    /**< marks whether the updating of violations is turned on */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and

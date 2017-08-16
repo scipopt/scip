@@ -5243,7 +5243,7 @@ SCIP_RETCODE computeViolation(
 
    /* update absolute and relative violation of the solution */
    if( sol != NULL )
-      SCIPsolUpdateConsViolation(sol, absviol, relviol);
+      SCIPupdateSolConsViolation(scip, sol, absviol, relviol);
 
    switch( conshdlrdata->scaling )
    {

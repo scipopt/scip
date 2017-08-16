@@ -188,7 +188,7 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
          solval = SCIPgetSolVal(scip, sol, vars[v]);
 
          if( sol != NULL )
-            SCIPsolUpdateIntegralityViolation(sol, EPSFRAC(solval, SCIPfeastol(scip)));
+            SCIPupdateSolIntegralityViolation(scip, sol, EPSFRAC(solval, SCIPfeastol(scip)));
 
          if( !SCIPisFeasIntegral(scip, solval) )
          {

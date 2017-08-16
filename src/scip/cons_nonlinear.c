@@ -4055,7 +4055,7 @@ SCIP_RETCODE computeViolation(
       rhsrelviol = SCIPrelDiff(consdata->activity, consdata->rhs);
       relviol = MAX(lhsrelviol, rhsrelviol);
 
-      SCIPsolUpdateConsViolation(sol, absviol, relviol);
+      SCIPupdateSolConsViolation(scip, sol, absviol, relviol);
    }
 
    switch( conshdlrdata->scaling )

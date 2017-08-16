@@ -79,7 +79,8 @@ struct SCIP_Prob
    SCIP_Bool             transformed;        /**< TRUE iff problem is the transformed problem */
    SCIP_Bool             nlpenabled;         /**< marks whether an NLP relaxation should be constructed */
    SCIP_Bool             permuted;           /**< TRUE iff the problem is already permuted */
-   SCIP_Bool             conscompression;     /**< TRUE for problems for which constraint compression on a set of fixed variables is desired */
+   SCIP_Bool             conscompression;    /**< TRUE for problems for which constraint compression on a set of fixed variables is desired */
+   SCIP_Bool             updateviolations;   /**< marks whether the updating of violations is turned on */
 };
 
 #ifdef __cplusplus

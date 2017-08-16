@@ -459,7 +459,7 @@ SCIP_Bool checkCons(
       rhsrelviol = SCIPrelDiff(sum, consdata->rhs);
       relviol = MAX(lhsrelviol, rhsrelviol);
       if( sol != NULL )
-         SCIPsolUpdateLPConsViolation(sol, absviol, relviol);
+         SCIPupdateSolLPConsViolation(scip, sol, absviol, relviol);
 
       return (SCIPisInfinity(scip, -consdata->lhs) || SCIPisFeasGE(scip, sum, consdata->lhs))
          && (SCIPisInfinity(scip, consdata->rhs) || SCIPisFeasLE(scip, sum, consdata->rhs));

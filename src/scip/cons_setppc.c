@@ -2342,7 +2342,7 @@ SCIP_Bool checkCons(
    }
 
    if( sol != NULL )
-      SCIPsolUpdateLPConsViolation(sol, absviol, relviol);
+      SCIPupdateSolLPConsViolation(scip, sol, absviol, relviol);
 
    return check;
 }

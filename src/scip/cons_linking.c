@@ -1461,13 +1461,13 @@ SCIP_Bool checkCons(
    absviol = REALABS(linksum - SCIPgetSolVal(scip, sol, intvarval));
    relviol = REALABS(SCIPrelDiff(linksum, SCIPgetSolVal(scip, sol, intvarval)));
    if( sol != NULL )
-      SCIPsolUpdateLPConsViolation(sol, absviol, relviol);
+      SCIPupdateSolLPConsViolation(scip, sol, absviol, relviol);
 
    /* calculate and update absolute and relative violation of the set partitioning constraint */
    absviol = REALABS(setpartsum - 1.0);
    relviol = REALABS(SCIPrelDiff(setpartsum, 1.0));
    if( sol != NULL )
-      SCIPsolUpdateLPConsViolation(sol, absviol, relviol);
+      SCIPupdateSolLPConsViolation(scip, sol, absviol, relviol);
 
    /* check if the fixed binary variable match with the integer variable */
    return SCIPisFeasEQ(scip, linksum, SCIPgetSolVal(scip, sol, consdata->intvar)) && SCIPisFeasEQ(scip, setpartsum, 1.0);

@@ -867,7 +867,7 @@ SCIP_RETCODE computeViolation(
       consdata->rhsviol = 0.0;
 
    if( sol != NULL )
-      SCIPsolUpdateConsViolation(sol, absviol, relviol);
+      SCIPupdateSolConsViolation(scip, sol, absviol, relviol);
 
    switch( conshdlrdata->scaling )
    {

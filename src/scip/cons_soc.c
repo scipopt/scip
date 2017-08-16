@@ -858,7 +858,7 @@ SCIP_RETCODE computeViolation(
    }
 
    if( sol != NULL )
-      SCIPsolUpdateConsViolation(sol, absviol, relviol);
+      SCIPupdateSolConsViolation(scip, sol, absviol, relviol);
 
    return SCIP_OKAY;
 }

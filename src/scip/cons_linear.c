@@ -7289,7 +7289,7 @@ SCIP_RETCODE checkCons(
 
    /* update absolute and relative violation of the solution */
    if( sol != NULL )
-      SCIPsolUpdateLPConsViolation(sol, absviol, relviol);
+      SCIPupdateSolLPConsViolation(scip, sol, absviol, relviol);
 
    return SCIP_OKAY;
 }
