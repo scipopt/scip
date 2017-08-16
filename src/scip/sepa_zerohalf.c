@@ -48,6 +48,7 @@
 #include "scip/sepa_zerohalf.h"
 #include "scip/cons_linear.h"
 #include "scip/scipdefplugins.h"
+#include "scip/struct_lp.h"
 
 #define SEPA_NAME              "zerohalf"
 #define SEPA_DESC              "{0,1/2}-cuts separator"
@@ -76,6 +77,38 @@
 typedef struct Mod2Col MOD2_COL;
 typedef struct Mod2Row MOD2_ROW;
 typedef struct Mod2Matrix MOD2_MATRIX;
+typedef struct TransIntRow TRANSINTROW;
+typedef struct RowIndex ROWINDEX;
+
+#define UNIQUE_INDEX(rowind) (3*(rowind).index + (rowind).type)
+
+typedef enum {
+   ORIG_RHS = 0,
+   ORIG_LHS = 1,
+   TRANSROW = 2,
+} ROWIND_TYPE;
+
+struct RowIndex
+{
+   unsigned int          type:2;             /**< type of row index; 0 means lp row using the right hand side,
+                                              *   1 means lp row using the left hand side, and 2 means a
+                                              *   transformed integral row
+                                              */
+   unsigned int          index:30;           /**< lp position of original row, or index of transformed integral row */
+};
+
+/** structure containing a transformed integral row obtained by relaxing an lp row */
+struct TransIntRow
+{
+   SCIP_Real             slack;              /**< slack of row after transformation */
+   SCIP_Real             rhs;                /**< right hand side value of integral row after transformation */
+   SCIP_Real*            vals;               /**< values of row */
+   int*                  varinds;            /**< problem variable indices of row */
+   int                   size;               /**< alloc size of row */
+   int                   len;                /**< length of row */
+   int                   rank;               /**< rank of row */
+   SCIP_Bool             local;              /**< is row local? */
+};
 
 /** structure representing a row in the mod 2 system */
 struct Mod2Row {
@@ -86,9 +119,10 @@ struct Mod2Row {
    int                   rowindssize;        /**< size of rowinds array */
    int                   nnonzcols;          /**< number of columns in nonzcols */
    int                   nonzcolssize;       /**< size of nonzcols array */
-   int*                  rowinds;
+   ROWINDEX*             rowinds;
    MOD2_COL**            nonzcols;
    SCIP_Real             slack;
+   SCIP_Real             maxsolval;
 };
 
 /** structure representing a column in the mod 2 system */
@@ -104,6 +138,8 @@ struct Mod2Col {
 struct Mod2Matrix {
    MOD2_COL**            cols;               /**< columns of the matrix */
    MOD2_ROW**            rows;               /**< rows of the matrix */
+   TRANSINTROW*          transintrows;       /**< transformed integral rows obtained from non-integral lp rows */
+   int                   ntransintrows;      /**< number of transformed integral rows obtained from non-integral lp rows */
    int                   nrows;              /**< number of rows of the matrix; number of elements in rows */
    int                   ncols;              /**< number of cols of the matrix; number of elements in cols */
    int                   rowssize;           /**< length of rows array */
@@ -124,32 +160,6 @@ struct SCIP_SepaData
 #define COLINFO_GET_RHSOFFSET(x) ((int)  (((uintptr_t)(x)) & ((uintptr_t)1)))
 #define COLINFO_CREATE(mod2col, rhsoffset)  ((void*) (((uintptr_t)(mod2col)) | ((uintptr_t)(rhsoffset))))
 
-/** comparison function for slack of mod 2 rows */
-static
-SCIP_DECL_SORTPTRCOMP(compareRowSlack)
-{
-   MOD2_ROW* row1;
-   MOD2_ROW* row2;
-
-   row1 = (MOD2_ROW*) elem1;
-   row2 = (MOD2_ROW*) elem2;
-
-   if( row1->slack < row2->slack )
-      return -1;
-   if( row2->slack < row1->slack )
-      return 1;
-
-   return 0;
-}
-
-/** gets the index of a mod 2 row/col */
-static
-SCIP_DECL_HASHKEYVAL(hashKeyValIndex)
-{
-   /* the index is the first member for both structures so interpreting it as an int is standards compliant */
-   return *((int*)key);
-}
-
 
 static
 SCIP_DECL_SORTPTRCOMP(compareColIndex)
@@ -168,6 +178,45 @@ SCIP_DECL_SORTPTRCOMP(compareColIndex)
    return 0;
 }
 
+/** comparison function for slack of mod 2 rows */
+static
+SCIP_DECL_SORTPTRCOMP(compareRowSlack)
+{
+   MOD2_ROW* row1;
+   MOD2_ROW* row2;
+
+   row1 = (MOD2_ROW*) elem1;
+   row2 = (MOD2_ROW*) elem2;
+
+   /* small slack comes first */
+   if( row1->slack < row2->slack )
+      return -1;
+   if( row2->slack < row1->slack )
+      return 1;
+
+   /* if slack is equal prefer rows that contain columns with large solution value */
+   if( row1->maxsolval > row2->maxsolval )
+      return -1;
+   if( row2->maxsolval > row1->maxsolval )
+      return 1;
+
+   /* last tie breaker is to prefer sparser rows */
+   if( row1->nnonzcols > row2->nnonzcols )
+      return -1;
+   if( row2->nnonzcols > row1->nnonzcols )
+      return 1;
+
+   return 0;
+}
+
+/** gets the index of a mod 2 row/col */
+static
+SCIP_DECL_HASHKEYVAL(hashKeyValIndex)
+{
+   /* the index is the first member for both structures so interpreting it as an int is standards compliant */
+   return *((int*)key);
+}
+
 /** take integral real value modulo 2 */
 static
 int mod2(
@@ -180,13 +229,411 @@ int mod2(
    return (int) (!SCIPisEQ(scip, SCIPfloor(scip, val), val));
 }
 
+static
+SCIP_RETCODE mod2MatrixTransformContRows(
+   SCIP*                 scip,               /**< scip data structure */
+   MOD2_MATRIX*          mod2matrix          /**< mod2 matrix structure */
+   )
+{
+   SCIP_ROW** rows;
+   SCIP_VAR** vars;
+   int nrows;
+   int* intvarpos;
+   int i;
+   SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &mod2matrix->transintrows, 2*nrows) );
+   mod2matrix->ntransintrows = 0;
+   vars = SCIPgetVars(scip);
+
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &intvarpos, SCIPgetNVars(scip)) );
+
+   for( i = 0; i < nrows; ++i )
+   {
+      int k;
+      int rowlen;
+      SCIP_Bool success;
+      SCIP_Real activity;
+      SCIP_Real lhs;
+      SCIP_Real rhs;
+      SCIP_Real lhsslack;
+      SCIP_Real rhsslack;
+      SCIP_Real* rowvals;
+      SCIP_COL** rowcols;
+
+      /* skip modifiable rows and rows that are already integral */
+      if( SCIProwIsModifiable(rows[i]) || SCIProwIsIntegral(rows[i]) )
+         continue;
+
+      lhs = SCIProwGetLhs(rows[i]) - SCIProwGetConstant(rows[i]);
+      rhs = SCIProwGetRhs(rows[i]) - SCIProwGetConstant(rows[i]);
+      activity = SCIPgetRowLPActivity(scip, rows[i]);
+
+      /* compute lhsslack: activity - lhs */
+      if( SCIPisInfinity(scip, -SCIProwGetLhs(rows[i])) )
+         lhsslack = SCIPinfinity(scip);
+      else
+      {
+         lhsslack = activity - lhs;
+      }
+
+      /* compute rhsslack: rhs - activity */
+      if( SCIPisInfinity(scip, SCIProwGetRhs(rows[i])) )
+         rhsslack = SCIPinfinity(scip);
+      else
+         rhsslack = rhs - activity;
+
+      if( rhsslack > MAXSLACK && lhsslack > MAXSLACK )
+         continue;
+
+      rowlen = SCIProwGetNLPNonz(rows[i]);
+      rowvals = SCIProwGetVals(rows[i]);
+      rowcols = SCIProwGetCols(rows[i]);
+
+      if( rhsslack <= MAXSLACK )
+      {
+         SCIP_Bool local;
+         int transrowlen;
+         SCIP_Real transrowrhs;
+         int* transrowvars;
+         SCIP_Real* transrowvals;
+
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &transrowvars, rowlen) );
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &transrowvals, rowlen) );
+         transrowlen = 0;
+         transrowrhs = rhs;
+
+         for( k = 0; k < rowlen; ++k )
+         {
+            if( !SCIPcolIsIntegral(rowcols[k]) )
+               continue;
+
+            transrowvars[transrowlen] = rowcols[k]->var_probindex;
+            transrowvals[transrowlen] = rowvals[k];
+            intvarpos[rowcols[k]->var_probindex] = ++transrowlen;
+         }
+
+         success = TRUE;
+         local = SCIProwIsLocal(rows[i]);
+
+         for( k = 0; k < rowlen; ++k )
+         {
+            int closestvbdind;
+            SCIP_Real closestbound;
+            SCIP_VAR* vbdvar;
+            SCIP_Real vbdcoef;
+            SCIP_Real vbdconst;
+            SCIP_VAR* colvar;
+
+            if( SCIPcolIsIntegral(rowcols[k]) )
+               continue;
+
+            colvar = SCIPcolGetVar(rowcols[k]);
+
+            if( rowvals[k] > 0.0 )
+            {
+               SCIP_CALL( SCIPgetVarClosestVlb(scip, colvar, NULL, &closestbound, &closestvbdind) );
+               if( closestvbdind >= 0 )
+               {
+                  vbdcoef = SCIPvarGetVlbCoefs(colvar)[closestvbdind];
+                  vbdvar = SCIPvarGetVlbVars(colvar)[closestvbdind];
+                  vbdconst = SCIPvarGetVlbConstants(colvar)[closestvbdind];
+               }
+               else
+               {
+                  closestbound = SCIPvarGetLbGlobal(colvar);
+                  if( ALLOWLOCAL && SCIPvarGetLbLocal(colvar) > closestbound )
+                  {
+                     closestbound = SCIPvarGetLbLocal(colvar);
+                     local = TRUE;
+                  }
+               }
+            }
+            else
+            {
+               SCIP_CALL( SCIPgetVarClosestVub(scip, colvar, NULL, &closestbound, &closestvbdind) );
+               if( closestvbdind >= 0 )
+               {
+                  vbdcoef = SCIPvarGetVubCoefs(colvar)[closestvbdind];
+                  vbdvar = SCIPvarGetVubVars(colvar)[closestvbdind];
+                  vbdconst = SCIPvarGetVubConstants(colvar)[closestvbdind];
+               }
+               else
+               {
+                  closestbound = SCIPvarGetUbGlobal(colvar);
+                  if( ALLOWLOCAL && SCIPvarGetUbLocal(colvar) < closestbound )
+                  {
+                     closestbound = SCIPvarGetUbLocal(colvar);
+                     local = TRUE;
+                  }
+               }
+            }
+
+            if( closestvbdind >= 0 )
+            {
+               SCIP_Real coef = rowvals[k] * vbdcoef;
+               transrowrhs -= rowvals[k] * vbdconst;
+
+               int pos = intvarpos[SCIPvarGetProbindex(vbdvar)] - 1;
+               if( pos >= 0 )
+               {
+                  transrowvals[pos] += coef;
+               }
+               else
+               {
+                  transrowvars[transrowlen] = SCIPvarGetProbindex(vbdvar);
+                  transrowvals[transrowlen] = coef;
+                  intvarpos[SCIPvarGetProbindex(vbdvar)] = ++transrowlen;
+               }
+            }
+            else if( !SCIPisInfinity(scip, REALABS(closestbound)) )
+            {
+               transrowrhs -= rowvals[k] * closestbound;
+            }
+            else
+            {
+               success = FALSE;
+               break;
+            }
+         }
+
+         for( k = 0; k < transrowlen;)
+         {
+            intvarpos[transrowvars[k]] = 0;
+            if( SCIPisZero(scip, transrowvals[k]) )
+            {
+               --transrowlen;
+               transrowvals[k] = transrowvals[transrowlen];
+               transrowvars[k] = transrowvars[transrowlen];
+            }
+            else
+               ++k;
+         }
+
+         if( transrowlen <= 1 )
+            success = FALSE;
+
+         if( success )
+         {
+            SCIP_Real intscalar;
+
+            SCIP_CALL( SCIPcalcIntegralScalar(transrowvals, transrowlen, -SCIPepsilon(scip), SCIPepsilon(scip), MAXDNOM, MAXSCALE, &intscalar, &success) );
+
+            if( success )
+            {
+               transrowrhs = SCIPfeasFloor(scip, transrowrhs * intscalar);
+               SCIP_Real slack = transrowrhs;
+               for( k = 0; k < transrowlen; ++k )
+               {
+                  SCIP_Real solval = SCIPgetVarSol(scip, vars[transrowvars[k]]);
+                  transrowvals[k] = SCIPfeasRound(scip, transrowvals[k] * intscalar);
+                  slack -= solval * transrowvals[k];
+               }
+
+               if( slack <= MAXSLACK )
+               {
+                  int r = mod2matrix->ntransintrows++;
+                  mod2matrix->transintrows[r].rhs = transrowrhs;
+                  mod2matrix->transintrows[r].slack = slack;
+                  mod2matrix->transintrows[r].vals = transrowvals;
+                  mod2matrix->transintrows[r].varinds = transrowvars;
+                  mod2matrix->transintrows[r].len = transrowlen;
+                  mod2matrix->transintrows[r].size = rowlen;
+                  mod2matrix->transintrows[r].local = local;
+                  mod2matrix->transintrows[r].rank = SCIProwGetRank(rows[i]);
+               }
+               else
+               {
+                  success = FALSE;
+               }
+            }
+         }
+
+         if( !success )
+         {
+            SCIPfreeBlockMemoryArray(scip, &transrowvals, rowlen);
+            SCIPfreeBlockMemoryArray(scip, &transrowvars, rowlen);
+         }
+      }
+
+      if( lhsslack <= MAXSLACK )
+      {
+         SCIP_Bool local;
+         int transrowlen;
+         SCIP_Real transrowrhs;
+         int* transrowvars;
+         SCIP_Real* transrowvals;
+
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &transrowvars, rowlen) );
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &transrowvals, rowlen) );
+         transrowlen = 0;
+         transrowrhs = -lhs;
+
+         for( k = 0; k < rowlen; ++k )
+         {
+            if( !SCIPcolIsIntegral(rowcols[k]) )
+               continue;
+
+            transrowvars[transrowlen] = rowcols[k]->var_probindex;
+            transrowvals[transrowlen] = -rowvals[k];
+            intvarpos[rowcols[k]->var_probindex] = ++transrowlen;
+         }
+
+         success = TRUE;
+         local = SCIProwIsLocal(rows[i]);
+
+         for( k = 0; k < rowlen; ++k )
+         {
+            int closestvbdind;
+            SCIP_Real closestbound;
+            SCIP_VAR* vbdvar;
+            SCIP_Real vbdcoef;
+            SCIP_Real vbdconst;
+            SCIP_VAR* colvar;
+
+            if( SCIPcolIsIntegral(rowcols[k]) )
+               continue;
+
+            colvar = SCIPcolGetVar(rowcols[k]);
+
+            if( -rowvals[k] > 0.0 )
+            {
+               SCIP_CALL( SCIPgetVarClosestVlb(scip, colvar, NULL, &closestbound, &closestvbdind) );
+               if( closestvbdind >= 0 )
+               {
+                  vbdcoef = SCIPvarGetVlbCoefs(colvar)[closestvbdind];
+                  vbdvar = SCIPvarGetVlbVars(colvar)[closestvbdind];
+                  vbdconst = SCIPvarGetVlbConstants(colvar)[closestvbdind];
+               }
+               else
+               {
+                  closestbound = SCIPvarGetLbGlobal(colvar);
+                  if( ALLOWLOCAL && SCIPvarGetLbLocal(colvar) > closestbound )
+                  {
+                     closestbound = SCIPvarGetLbLocal(colvar);
+                     local = TRUE;
+                  }
+               }
+            }
+            else
+            {
+               SCIP_CALL( SCIPgetVarClosestVub(scip, colvar, NULL, &closestbound, &closestvbdind) );
+               if( closestvbdind >= 0 )
+               {
+                  vbdcoef = SCIPvarGetVubCoefs(colvar)[closestvbdind];
+                  vbdvar = SCIPvarGetVubVars(colvar)[closestvbdind];
+                  vbdconst = SCIPvarGetVubConstants(colvar)[closestvbdind];
+               }
+               else
+               {
+                  closestbound = SCIPvarGetUbGlobal(colvar);
+                  if( ALLOWLOCAL && SCIPvarGetUbLocal(colvar) < closestbound )
+                  {
+                     closestbound = SCIPvarGetUbLocal(colvar);
+                     local = TRUE;
+                  }
+               }
+            }
+
+            if( closestvbdind >= 0 )
+            {
+               SCIP_Real coef = -rowvals[k] * vbdcoef;
+               transrowrhs += rowvals[k] * vbdconst;
+
+               int pos = intvarpos[SCIPvarGetProbindex(vbdvar)] - 1;
+               if( pos >= 0 )
+               {
+                  transrowvals[pos] += coef;
+               }
+               else
+               {
+                  transrowvars[transrowlen] = SCIPvarGetProbindex(vbdvar);
+                  transrowvals[transrowlen] = coef;
+                  intvarpos[SCIPvarGetProbindex(vbdvar)] = ++transrowlen;
+               }
+            }
+            else if( !SCIPisInfinity(scip, REALABS(closestbound)) )
+            {
+               transrowrhs += rowvals[k] * closestbound;
+            }
+            else
+            {
+               success = FALSE;
+               break;
+            }
+         }
+
+         for( k = 0; k < transrowlen;)
+         {
+            intvarpos[transrowvars[k]] = 0;
+            if( SCIPisZero(scip, transrowvals[k]) )
+            {
+               --transrowlen;
+               transrowvals[k] = transrowvals[transrowlen];
+               transrowvars[k] = transrowvars[transrowlen];
+            }
+            else
+               ++k;
+         }
+
+         if( transrowlen <= 1 )
+            success = FALSE;
+
+         if( success )
+         {
+            SCIP_Real intscalar;
+            SCIP_CALL( SCIPcalcIntegralScalar(transrowvals, transrowlen, -SCIPepsilon(scip), SCIPepsilon(scip), MAXDNOM, MAXSCALE, &intscalar, &success) );
+
+            if( success )
+            {
+               transrowrhs = SCIPfeasFloor(scip, transrowrhs * intscalar);
+               SCIP_Real slack = transrowrhs;
+               for( k = 0; k < transrowlen; ++k )
+               {
+                  SCIP_Real solval = SCIPgetVarSol(scip, vars[transrowvars[k]]);
+                  transrowvals[k] = SCIPfeasRound(scip, transrowvals[k] * intscalar);
+                  slack -= solval * transrowvals[k];
+               }
+
+               if( slack <= MAXSLACK )
+               {
+                  int r = mod2matrix->ntransintrows++;
+                  mod2matrix->transintrows[r].rhs = transrowrhs;
+                  mod2matrix->transintrows[r].slack = slack;
+                  mod2matrix->transintrows[r].vals = transrowvals;
+                  mod2matrix->transintrows[r].varinds = transrowvars;
+                  mod2matrix->transintrows[r].len = transrowlen;
+                  mod2matrix->transintrows[r].size = rowlen;
+                  mod2matrix->transintrows[r].local = local;
+                  mod2matrix->transintrows[r].rank = SCIProwGetRank(rows[i]);
+               }
+               else
+               {
+                  success = FALSE;
+               }
+            }
+         }
+
+         if( !success )
+         {
+            SCIPfreeBlockMemoryArray(scip, &transrowvals, rowlen);
+            SCIPfreeBlockMemoryArray(scip, &transrowvars, rowlen);
+         }
+      }
+   }
+
+   SCIPfreeCleanBufferArray(scip, &intvarpos);
+
+   return SCIP_OKAY;
+}
+
+
 /** adds new column to the mod 2 matrix */
 static
 SCIP_RETCODE mod2MatrixAddCol(
    SCIP*                 scip,               /**< scip data structure */
    MOD2_MATRIX*          mod2matrix,
-   SCIP_HASHMAP*         origcol2col,
-   SCIP_COL*             origcol,
+   SCIP_HASHMAP*         origvar2col,
+   SCIP_VAR*             origvar,
    SCIP_Real             solval,
    int                   rhsoffset
    )
@@ -195,7 +642,7 @@ SCIP_RETCODE mod2MatrixAddCol(
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &col) );
    col->pos = mod2matrix->ncols++;
-   col->index = SCIPcolGetIndex(origcol);
+   col->index = SCIPvarGetProbindex(origvar);
    col->solval = solval;
    SCIP_CALL( SCIPhashtableCreate(&col->nonzrows, SCIPblkmem(scip), 1, SCIPhashGetKeyStandard, SCIPhashKeyEqPtr,
                                   hashKeyValIndex, NULL) );
@@ -203,7 +650,7 @@ SCIP_RETCODE mod2MatrixAddCol(
    SCIP_CALL( SCIPensureBlockMemoryArray(scip, &mod2matrix->cols, &mod2matrix->colssize, mod2matrix->ncols) );
    mod2matrix->cols[col->pos] = col;
 
-   SCIP_CALL( SCIPhashmapInsert(origcol2col, (void*) origcol, COLINFO_CREATE(col, rhsoffset)) );
+   SCIP_CALL( SCIPhashmapInsert(origvar2col, (void*) origvar, COLINFO_CREATE(col, rhsoffset)) );
 
    return SCIP_OKAY;
 }
@@ -216,6 +663,8 @@ SCIP_RETCODE mod2colLinkRow(
    )
 {
    SCIP_CALL( SCIPhashtableInsert(col->nonzrows, (void*)row) );
+
+   row->maxsolval = MAX(col->solval, row->maxsolval);
 
    return SCIP_OKAY;
 }
@@ -248,16 +697,25 @@ void mod2rowUnlinkCol(
 
    --row->nnonzcols;
    BMSmoveMemoryArray(row->nonzcols + i, row->nonzcols + i + 1, row->nnonzcols - i);
+
+   if( row->maxsolval == col->solval )
+   {
+      row->maxsolval = 0.0;
+      for( i = 0; i < row->nnonzcols; ++i )
+      {
+         row->maxsolval = MAX(row->nonzcols[i]->solval, row->maxsolval);
+      }
+   }
 }
 
 static
-SCIP_RETCODE mod2MatrixAddRow(
+SCIP_RETCODE mod2MatrixAddOrigRow(
    SCIP*                 scip,               /**< scip data structure */
    MOD2_MATRIX*          mod2matrix,         /**< modulo 2 matrix */
    SCIP_HASHMAP*         origcol2col,        /**< hashmap to retrieve the mod 2 column from a SCIP_COL */
    SCIP_ROW*             origrow,            /**< original SCIP row */
    SCIP_Real             slack,              /**< slack of row */
-   int                   side,               /**< side of row that is used for mod 2 row (+1 for right hand side -1 for left hand side)*/
+   ROWIND_TYPE           side,               /**< side of row that is used for mod 2 row, must be ORIG_RHS or ORIG_LHS */
    int                   rhsmod2             /**< modulo 2 value of the row's right hand side */
    )
 {
@@ -274,20 +732,21 @@ SCIP_RETCODE mod2MatrixAddRow(
    mod2matrix->rows[row->index] = row;
 
    row->slack = slack;
+   row->maxsolval = 0.0;
    row->rhs = rhsmod2;
    row->nrowinds = 1;
    row->rowinds = NULL;
    row->rowindssize = 0;
 
    SCIP_CALL( SCIPensureBlockMemoryArray(scip, &row->rowinds, &row->rowindssize, row->nrowinds) );
-   row->rowinds[0] = side * (SCIProwGetLPPos(origrow) + 1);
+   row->rowinds[0].type = side;
+   row->rowinds[0].index = SCIProwGetLPPos(origrow);
 
    row->nnonzcols = 0;
    row->nonzcolssize = 0;
    row->nonzcols = NULL;
 
-   SCIProwSort(origrow);
-   rowlen = SCIProwGetNLPNonz(origrow);
+   rowlen = SCIProwGetNNonz(origrow);
    rowvals = SCIProwGetVals(origrow);
    rowcols = SCIProwGetCols(origrow);
 
@@ -295,7 +754,7 @@ SCIP_RETCODE mod2MatrixAddRow(
    {
       if( mod2(scip, rowvals[i]) == 1 )
       {
-         void* colinfo = SCIPhashmapGetImage(origcol2col, (void*)rowcols[i]);
+         void* colinfo = SCIPhashmapGetImage(origcol2col, (void*)SCIPcolGetVar(rowcols[i]));
 
          /* extract the righthand side offset from the colinfo and update the righthand side */
          int rhsoffset = COLINFO_GET_RHSOFFSET(colinfo);
@@ -317,6 +776,76 @@ SCIP_RETCODE mod2MatrixAddRow(
          }
       }
    }
+
+   SCIPsortPtr((void**)row->nonzcols, compareColIndex, row->nnonzcols);
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE mod2MatrixAddTransRow(
+   SCIP*                 scip,               /**< scip data structure */
+   MOD2_MATRIX*          mod2matrix,         /**< modulo 2 matrix */
+   SCIP_HASHMAP*         origcol2col,        /**< hashmap to retrieve the mod 2 column from a SCIP_COL */
+   int                   transrowind         /**< index to transformed int row */
+   )
+{
+   int i;
+   SCIP_VAR** vars;
+   MOD2_ROW* row;
+   TRANSINTROW* introw;
+
+   SCIP_CALL( SCIPallocBlockMemory(scip, &row) );
+
+   vars = SCIPgetVars(scip);
+   introw = &mod2matrix->transintrows[transrowind];
+
+   row->index = mod2matrix->nrows++;
+   SCIP_CALL( SCIPensureBlockMemoryArray(scip, &mod2matrix->rows, &mod2matrix->rowssize, mod2matrix->nrows) );
+   mod2matrix->rows[row->index] = row;
+
+   row->slack = introw->slack;
+   row->rhs = mod2(scip, introw->rhs);
+   row->nrowinds = 1;
+   row->rowinds = NULL;
+   row->rowindssize = 0;
+
+   SCIP_CALL( SCIPensureBlockMemoryArray(scip, &row->rowinds, &row->rowindssize, row->nrowinds) );
+   row->rowinds[0].type = TRANSROW;
+   row->rowinds[0].index = transrowind;
+
+   row->nnonzcols = 0;
+   row->nonzcolssize = 0;
+   row->nonzcols = NULL;
+
+   for( i = 0; i < introw->len; ++i )
+   {
+      if( mod2(scip, introw->vals[i]) == 1 )
+      {
+         void* colinfo = SCIPhashmapGetImage(origcol2col, (void*)vars[introw->varinds[i]]);
+
+         /* extract the righthand side offset from the colinfo and update the righthand side */
+         int rhsoffset = COLINFO_GET_RHSOFFSET(colinfo);
+         row->rhs = (row->rhs + rhsoffset) % 2;
+
+         /* extract the column pointer from the colinfo */
+         MOD2_COL* col = COLINFO_GET_MOD2COL(colinfo);
+
+         if( col != NULL )
+         {
+            int k;
+
+            k = row->nnonzcols++;
+
+            SCIP_CALL( SCIPensureBlockMemoryArray(scip, &row->nonzcols, &row->nonzcolssize, row->nnonzcols) );
+            row->nonzcols[k] = col;
+
+            SCIP_CALL( mod2colLinkRow(col, row) );
+         }
+      }
+   }
+
+   SCIPsortPtr((void**)row->nonzcols, compareColIndex, row->nnonzcols);
 
    return SCIP_OKAY;
 }
@@ -342,6 +871,14 @@ void destroyMod2Matrix(
       SCIPfreeBlockMemory(scip, &mod2matrix->rows[i]);
    }
 
+   for( i = 0; i < mod2matrix->ntransintrows; ++i )
+   {
+      SCIPfreeBlockMemoryArray(scip, &mod2matrix->transintrows[i].vals, mod2matrix->transintrows[i].size);
+      SCIPfreeBlockMemoryArray(scip, &mod2matrix->transintrows[i].varinds, mod2matrix->transintrows[i].size);
+   }
+
+   SCIPfreeBlockMemoryArray(scip, &mod2matrix->transintrows, 2*SCIPgetNLPRows(scip));
+
    SCIPfreeBlockMemoryArrayNull(scip, &mod2matrix->rows, mod2matrix->rowssize);
    SCIPfreeBlockMemoryArrayNull(scip, &mod2matrix->cols, mod2matrix->colssize);
 }
@@ -353,14 +890,19 @@ SCIP_RETCODE buildMod2Matrix(
    MOD2_MATRIX*          mod2matrix
    )
 {
+   SCIP_VAR** vars;
    SCIP_ROW** rows;
    SCIP_COL** cols;
    SCIP_HASHMAP* origcol2col;
    int ncols;
    int nrows;
+   int nintvars;
    int i;
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
    SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
+
+   nintvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
+   vars = SCIPgetVars(scip);
 
    /* initialize fields */
    mod2matrix->cols = NULL;
@@ -372,8 +914,8 @@ SCIP_RETCODE buildMod2Matrix(
 
    SCIP_CALL( SCIPhashmapCreate(&origcol2col, SCIPblkmem(scip), 1) );
 
-   /* add all integral columns with non-zero solution value */
-   for( i = 0; i < ncols; ++i )
+   /* add all integral vars if they are not at their bound */
+   for( i = 0; i < nintvars; ++i )
    {
       SCIP_Real lb;
       SCIP_Real ub;
@@ -382,24 +924,21 @@ SCIP_RETCODE buildMod2Matrix(
       SCIP_Real primsol;
       SCIP_Bool useub;
 
-      if( !SCIPcolIsIntegral(cols[i]) )
-         continue;
+      primsol = SCIPgetVarSol(scip, vars[i]);
 
-      primsol = SCIPcolGetPrimsol(cols[i]);
-
-      lb = SCIPcolGetLb(cols[i]);
+      lb = ALLOWLOCAL ? SCIPvarGetLbLocal(vars[i]) : SCIPvarGetLbGlobal(vars[i]);
       lbsol = primsol - lb;
       if( SCIPisZero(scip, lbsol) )
       {
-         SCIP_CALL( SCIPhashmapInsert(origcol2col, (void*) cols[i], COLINFO_CREATE(NULL, mod2(scip, lb))) );
+         SCIP_CALL( SCIPhashmapInsert(origcol2col, (void*) vars[i], COLINFO_CREATE(NULL, mod2(scip, lb))) );
          continue;
       }
 
-      ub = SCIPcolGetUb(cols[i]);
+      ub = ALLOWLOCAL ? SCIPvarGetUbLocal(vars[i]) : SCIPvarGetUbGlobal(vars[i]);
       ubsol = ub - primsol;
       if( SCIPisZero(scip, ubsol) )
       {
-         SCIP_CALL( SCIPhashmapInsert(origcol2col, (void*) cols[i], COLINFO_CREATE(NULL, mod2(scip, ub))) );
+         SCIP_CALL( SCIPhashmapInsert(origcol2col, (void*) vars[i], COLINFO_CREATE(NULL, mod2(scip, ub))) );
          continue;
       }
 
@@ -414,11 +953,11 @@ SCIP_RETCODE buildMod2Matrix(
 
       if( useub )
       {
-         mod2MatrixAddCol(scip, mod2matrix, origcol2col, cols[i], ubsol, mod2(scip, ub));
+         mod2MatrixAddCol(scip, mod2matrix, origcol2col, vars[i], ubsol, mod2(scip, ub));
       }
       else
       {
-         mod2MatrixAddCol(scip, mod2matrix, origcol2col, cols[i], lbsol, mod2(scip, lb));
+         mod2MatrixAddCol(scip, mod2matrix, origcol2col, vars[i], lbsol, mod2(scip, lb));
       }
    }
 
@@ -463,26 +1002,35 @@ SCIP_RETCODE buildMod2Matrix(
                assert(SCIPisEQ(scip, SCIProwGetLhs(rows[i]), SCIProwGetRhs(rows[i])));
 
                /* use rhs */
-               SCIP_CALL( mod2MatrixAddRow(scip, mod2matrix, origcol2col, rows[i], rhsslack, 1, rhsmod2) );
+               SCIP_CALL( mod2MatrixAddOrigRow(scip, mod2matrix, origcol2col, rows[i], rhsslack, ORIG_RHS, rhsmod2) );
             }
             else
             {
                /* use both */
-               SCIP_CALL( mod2MatrixAddRow(scip, mod2matrix, origcol2col, rows[i], lhsslack, -1, lhsmod2) );
-               SCIP_CALL( mod2MatrixAddRow(scip, mod2matrix, origcol2col, rows[i], rhsslack, 1, rhsmod2) );
+               SCIP_CALL( mod2MatrixAddOrigRow(scip, mod2matrix, origcol2col, rows[i], lhsslack, ORIG_LHS, lhsmod2) );
+               SCIP_CALL( mod2MatrixAddOrigRow(scip, mod2matrix, origcol2col, rows[i], rhsslack, ORIG_RHS, rhsmod2) );
             }
          }
          else if( rhsslack <= MAXSLACK )
          {
             /* use rhs */
-            SCIP_CALL( mod2MatrixAddRow(scip, mod2matrix, origcol2col, rows[i], rhsslack, 1, rhsmod2) );
+            SCIP_CALL( mod2MatrixAddOrigRow(scip, mod2matrix, origcol2col, rows[i], rhsslack, ORIG_RHS, rhsmod2) );
          }
          else if( lhsslack <= MAXSLACK )
          {
             /* use lhs */
-            SCIP_CALL( mod2MatrixAddRow(scip, mod2matrix, origcol2col, rows[i], lhsslack, -1, lhsmod2) );
+            SCIP_CALL( mod2MatrixAddOrigRow(scip, mod2matrix, origcol2col, rows[i], lhsslack, ORIG_LHS, lhsmod2) );
          }
       }
+   }
+
+   /* transform non-integral rows */
+   SCIP_CALL( mod2MatrixTransformContRows(scip, mod2matrix) );
+
+   /* add all transformed integral rows using the created columns */
+   for( i = 0; i < mod2matrix->ntransintrows; ++i )
+   {
+      mod2MatrixAddTransRow(scip, mod2matrix, origcol2col, i);
    }
 
    SCIPhashmapFree(&origcol2col);
@@ -711,6 +1259,7 @@ SCIP_RETCODE mod2matrixPreprocessColumns(
 static
 SCIP_RETCODE generateZerohalfCut(
    SCIP*                 scip,               /**< scip data structure */
+   MOD2_MATRIX*          mod2matrix,         /**< mod 2 matrix */
    SCIP_SEPA*            sepa,               /**< zerohalf separator */
    SCIP_SEPADATA*        sepadata,           /**< zerohalf separator data */
    MOD2_ROW*             row                 /**< mod 2 row */
@@ -733,13 +1282,21 @@ SCIP_RETCODE generateZerohalfCut(
 
    for( i = 0; i < row->nrowinds; ++i )
    {
-      if( row->rowinds[i] < 0 )
+      switch( row->rowinds[i].type )
       {
-         SCIP_CALL( SCIPaggrRowAddRow(scip, sepadata->aggrrow, rows[-row->rowinds[i] - 1], -0.5, -1) );
-      }
-      else
-      {
-         SCIP_CALL( SCIPaggrRowAddRow(scip, sepadata->aggrrow, rows[row->rowinds[i] - 1], 0.5, 1) );
+         case ORIG_RHS:
+            SCIP_CALL( SCIPaggrRowAddRow(scip, sepadata->aggrrow, rows[row->rowinds[i].index], 0.5, 1) );
+            break;
+         case ORIG_LHS:
+            SCIP_CALL( SCIPaggrRowAddRow(scip, sepadata->aggrrow, rows[row->rowinds[i].index], -0.5, -1) );
+            break;
+         case TRANSROW: {
+            TRANSINTROW* introw = &mod2matrix->transintrows[row->rowinds[i].index];
+            SCIPdebugMsg(scip, "using transformed row %i of length %i with slack %f and rhs %f for cut\n", row->rowinds[i].index, introw->len, introw->slack, introw->rhs);
+            SCIP_CALL( SCIPaggrRowAddCustomCons(scip, sepadata->aggrrow, introw->varinds, introw->vals,
+                                                introw->len, introw->rhs, 0.5, introw->rank, introw->local) );
+         }
+
       }
    }
 
@@ -775,11 +1332,11 @@ SCIP_RETCODE generateZerohalfCut(
          SCIP_CALL( SCIPaddVarToRow(scip, cut, vars[cutinds[v]], cutcoefs[v]) );
       }
 
-      #if 0
+#if 0
       /* try to scale the cut to integral values */
       SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
-      maxdnom, maxscale, MAKECONTINTEGRAL, &success) );
-      #endif
+         maxdnom, maxscale, MAKECONTINTEGRAL, &success) );
+#endif
       /* flush all changes before adding the cut */
       SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
 
@@ -830,7 +1387,7 @@ SCIP_RETCODE mod2matrixPreprocessRows(
       assert(row->nnonzcols == 0 || row->nonzcols != NULL);
 
 
-      if( (row->nnonzcols == 0 && row->rhs == 0) || SCIPisGE(scip, row->slack, 1.0) )
+      if( (row->nnonzcols == 0 && row->rhs == 0) || row->slack > MAXSLACK )
       { /* (a) and (c) */
          sepadata->nreductions += row->nnonzcols;
          mod2matrixRemoveRow(scip, mod2matrix, row);
@@ -879,7 +1436,7 @@ SCIP_RETCODE mod2matrixPreprocessRows(
          /* (d) */
          assert(row->nnonzcols == 0 && row->rhs == 1 && SCIPisLT(scip, row->slack, 1.0));
 
-         SCIP_CALL( generateZerohalfCut(scip, sepa, sepadata, row) );
+         SCIP_CALL( generateZerohalfCut(scip, mod2matrix, sepa, sepadata, row) );
 
          if( sepadata->infeasible )
             return SCIP_OKAY;
@@ -898,6 +1455,7 @@ SCIP_RETCODE mod2matrixPreprocessRows(
 static
 SCIP_RETCODE mod2rowAddRow(
    SCIP*                 scip,               /**< scip data structure */
+   MOD2_MATRIX*          mod2matrix,         /**< mod 2 matrix */
    MOD2_ROW*             row,                /**< mod 2 row */
    MOD2_ROW*             rowtoadd            /**< mod 2 row that is added to the other mod 2 row */
    )
@@ -920,22 +1478,23 @@ SCIP_RETCODE mod2rowAddRow(
    /* shift indices by nlprows due to the left hand side indices being negative and allocate twice
     * twice the number of rows
     */
-   SCIP_CALL( SCIPallocCleanBufferArray(scip, &contained, 2*nlprows + 1) );
+   int allocsize = 3 * MAX(nlprows, mod2matrix->ntransintrows);
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &contained, allocsize) );
 
    /* remember entries that are in the row to add */
    for( i = 0; i < rowtoadd->nrowinds; ++i )
    {
-      contained[rowtoadd->rowinds[i] + nlprows] = 1;
+      contained[UNIQUE_INDEX(rowtoadd->rowinds[i])] = 1;
    }
 
    /* remove the entries that are in both rows from the row (1 + 1 = 0 (mod 2)) */
    nnewentries = rowtoadd->nrowinds;
    for( i = 0; i < row->nrowinds; )
    {
-      if( contained[row->rowinds[i] + nlprows] )
+      if( contained[UNIQUE_INDEX(row->rowinds[i])] )
       {
          --nnewentries;
-         contained[row->rowinds[i] + nlprows] = 0;
+         contained[UNIQUE_INDEX(row->rowinds[i])] = 0;
          --row->nrowinds;
          row->rowinds[i] = row->rowinds[row->nrowinds];
       }
@@ -950,9 +1509,9 @@ SCIP_RETCODE mod2rowAddRow(
    /* add remaining entries of row to add */
    for ( i = 0; i < rowtoadd->nrowinds; ++i )
    {
-      if( contained[rowtoadd->rowinds[i] + nlprows] )
+      if( contained[UNIQUE_INDEX(rowtoadd->rowinds[i])] )
       {
-         contained[rowtoadd->rowinds[i] + nlprows] = 0;
+         contained[UNIQUE_INDEX(rowtoadd->rowinds[i])] = 0;
          row->rowinds[row->nrowinds++] = rowtoadd->rowinds[i];
       }
    }
@@ -1015,14 +1574,14 @@ SCIP_RETCODE mod2rowAddRow(
 static
 SCIP_DECL_SEPACOPY(sepaCopyZerohalf)
 {  /*lint --e{715}*/
-assert(scip != NULL);
-assert(sepa != NULL);
-assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+   assert(scip != NULL);
+   assert(sepa != NULL);
+   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
 
-/* call inclusion method of constraint handler */
-SCIP_CALL( SCIPincludeSepaZerohalf(scip) );
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeSepaZerohalf(scip) );
 
-return SCIP_OKAY;
+   return SCIP_OKAY;
 }
 
 /** destructor of separator to free user data (called when SCIP is exiting) */
@@ -1068,7 +1627,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
 
    SCIPallocBufferArray(scip, &nonzrows, mod2matrix.nrows);
 
-   for( k = 0; k < 10; ++k ) /* TODO: what is this magic 10? define a macro */
+   for( k = 0; k < 100; ++k ) /* TODO: what is this magic 10? define a macro */
    {
       sepadata->nreductions = 0;
       SCIP_CALL( mod2matrixPreprocessRows(scip, &mod2matrix, sepa, sepadata) );
@@ -1082,12 +1641,17 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
       SCIPdebugMsg(scip, "preprocessed rows (%i rows, %i cols, %i cuts) \n", mod2matrix.nrows, mod2matrix.ncols,
                    sepadata->ncuts);
 
+      if( mod2matrix.nrows == 0 )
+         break;
+
       SCIP_CALL( mod2matrixPreprocessColumns(scip, &mod2matrix, sepadata) );
 
       SCIPdebugMsg(scip, "preprocessed columns (%i rows, %i cols)\n", mod2matrix.nrows, mod2matrix.ncols);
 
-      SCIPsortPtr((void**) mod2matrix.rows, compareRowSlack, mod2matrix.nrows);
+      if( mod2matrix.ncols == 0 )
+         break;
 
+      SCIPsortPtr((void**) mod2matrix.rows, compareRowSlack, mod2matrix.nrows);
       /* apply Prop5 */ /* TODO: this should be in another function, just like the preprocess stuff */
       for( i = 0; i < mod2matrix.nrows; ++i )
       {
@@ -1095,8 +1659,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
          MOD2_COL* col = NULL;
          MOD2_ROW* row = mod2matrix.rows[i];
 
-         if( !SCIPisZero(scip, row->slack) )
-            break;
+         if( SCIPisPositive(scip, row->slack) || row->nnonzcols == 0 )
+            continue;
 
          for( j = 0; j < row->nnonzcols; ++j )
          {
@@ -1125,7 +1689,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
 
             for( j = 0; j < nnonzrows; ++j )
             {
-               SCIP_CALL( mod2rowAddRow(scip, nonzrows[j], row) );
+               SCIP_CALL( mod2rowAddRow(scip, &mod2matrix, nonzrows[j], row) );
             }
 
             row->slack = col->solval;
@@ -1135,7 +1699,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
 
       SCIPdebugMsg(scip, "applied proposition five (%i rows, %i cols)\n", mod2matrix.nrows, mod2matrix.ncols);
 
-      if( sepadata->nreductions == 0 )
+      if( sepadata->nreductions == 0 || mod2matrix.ncols == 0 )
       {
          SCIPdebugMsg(scip, "no change, stopping (%i rows, %i cols)\n", mod2matrix.nrows, mod2matrix.ncols);
          break;
@@ -1151,10 +1715,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
       if( SCIPisGE(scip, row->slack, 1.0) )
          break;
 
-      if( row->rhs == 0 )
+      if( row->rhs == 0 || row->slack > MAXSLACK )
          continue;
 
-      SCIP_CALL( generateZerohalfCut(scip, sepa, sepadata, row) );
+      SCIP_CALL( generateZerohalfCut(scip, &mod2matrix, sepa, sepadata, row) );
 
       if( sepadata->infeasible )
       {

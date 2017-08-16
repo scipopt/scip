@@ -1181,7 +1181,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
 
          orthosaturation += orthosaturation * (1 - mincutorthogonality - orthosaturation);
 
-         set->sepa_orthofac *= 1.1;
+         set->sepa_orthofac = MIN(10000, set->sepa_orthofac * 1.1);
       }
    }
 
@@ -1224,7 +1224,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
 
          orthosaturation += orthosaturation * (1 - mincutorthogonality - orthosaturation);
 
-         set->sepa_orthofac *= 1.1;
+         set->sepa_orthofac = MIN(10000, set->sepa_orthofac * 1.1);
       }
 
       /* release cut */
