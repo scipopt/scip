@@ -13,7 +13,12 @@ add_executable(gastrans
 add_executable(string
    src/string.c)
 
+# link to math library if it is available
 find_library(LIBM m)
+if(NOT LIBM)
+  set(LIBM "")
+endif()
+
 target_link_libraries(circle ${SCIP_LIBRARIES})
 target_link_libraries(gastrans ${SCIP_LIBRARIES} ${LIBM})
 target_link_libraries(string ${SCIP_LIBRARIES})

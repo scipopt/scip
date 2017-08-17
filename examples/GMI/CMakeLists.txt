@@ -7,7 +7,12 @@ add_executable(gmi
    src/cmain.c
    src/sepa_gmi.c)
 
+# link to math library if it is available
 find_library(LIBM m)
+if(NOT LIBM)
+  set(LIBM "")
+endif()
+
 target_link_libraries(gmi ${SCIP_LIBRARIES} ${LIBM})
 add_dependencies(examples gmi)
 
