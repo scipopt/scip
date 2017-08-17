@@ -1819,7 +1819,7 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
          else if( SCIPisLT(scip, SCIPgetLhsLinear(scip, cons), SCIPinfinity(scip)) )
             SCIP_CALL( SCIPchgLhsLinear(scip, cons, getScenarioEntryValue(scenario, i)) );
       }
-      else if( strstr(getScenarioEntryCol(scenario, i), MINI) == 0 )
+      else if( strstr(getScenarioEntryCol(scenario, i), MINI) != NULL )
       {
          /* finding the variable associated with the column */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_%d", getScenarioEntryCol(scenario, i),
