@@ -1,7 +1,8 @@
 project(CallableLibrary)
 include(CTest)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../src)
+find_package(SCIP REQUIRED)
+include_directories(${SCIP_INCLUDE_DIRS})
 
 add_executable(circle
    src/circle.c)
@@ -12,9 +13,24 @@ add_executable(gastrans
 add_executable(string
    src/string.c)
 
-target_link_libraries(circle libscip)
-target_link_libraries(gastrans libscip m)
-target_link_libraries(string libscip)
+# check if we can use log10() with just including math.h
+unset(HAVE_LOG10 CACHE)
+check_symbol_exists(log10 "math.h" HAVE_LOG10)
+if(NOT HAVE_LOG10)
+    # if not we link libm and check again
+    unset(HAVE_LOG10 CACHE)
+    list(APPEND CMAKE_REQUIRED_LIBRARIES m)
+    check_symbol_exists(log10 "math.h" HAVE_LOG10)
+    if(HAVE_LOG10)
+        set(libm m)
+    else()
+        message(FATAL_ERROR "No log10() found")
+    endif()
+endif()
+
+target_link_libraries(circle ${SCIP_LIBRARIES})
+target_link_libraries(gastrans ${SCIP_LIBRARIES} ${libm})
+target_link_libraries(string ${SCIP_LIBRARIES})
 
 add_dependencies(examples circle gastrans string)
 
