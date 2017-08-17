@@ -862,63 +862,65 @@ SCIP_RETCODE buildMod2Matrix(
    /* add all integral rows using the created columns */
    for( i = 0; i < nrows; ++i )
    {
-      if( SCIProwIsIntegral(rows[i]) )
+      SCIP_Real activity;
+      SCIP_Real lhsslack;
+      SCIP_Real rhsslack;
+      int lhsmod2;
+      int rhsmod2;
+
+      if( !SCIProwIsIntegral(rows[i]) )
+         continue;
+
+      activity = SCIPgetRowLPActivity(scip, rows[i]);
+      lhsmod2 = 0;
+      rhsmod2 = 0;
+
+      /* compute lhsslack: activity - lhs */
+      if( SCIPisInfinity(scip, -SCIProwGetLhs(rows[i])) )
+         lhsslack = SCIPinfinity(scip);
+      else
       {
-         SCIP_Real activity;
-         SCIP_Real lhsslack;
-         SCIP_Real rhsslack;
-         int lhsmod2 = 0;
-         int rhsmod2 = 0;
+         lhsslack = activity - SCIProwGetLhs(rows[i]);
+         lhsmod2 = mod2(scip, SCIProwGetLhs(rows[i]));
+      }
 
-         activity = SCIPgetRowLPActivity(scip, rows[i]);
+      /* compute rhsslack: rhs - activity */
+      if( SCIPisInfinity(scip, SCIProwGetRhs(rows[i])) )
+         rhsslack = SCIPinfinity(scip);
+      else
+      {
+         rhsslack = SCIProwGetRhs(rows[i]) - activity;
+         rhsmod2 = mod2(scip, SCIProwGetRhs(rows[i]));
+      }
 
-         /* compute lhsslack: activity - lhs */
-         if( SCIPisInfinity(scip, -SCIProwGetLhs(rows[i])) )
-            lhsslack = SCIPinfinity(scip);
-         else
+      if( rhsslack <= maxslack && lhsslack <= maxslack )
+      {
+         if( lhsmod2 == rhsmod2 )
          {
-            lhsslack = activity - SCIProwGetLhs(rows[i]);
-            lhsmod2 = mod2(scip, SCIProwGetLhs(rows[i]));
-         }
+            /* maxslack < 1 implies rhs - lhs = rhsslack + lhsslack < 2. Therefore lhs = rhs (mod2) can only hold if they
+             * are equal
+             */
+            assert(SCIPisEQ(scip, SCIProwGetLhs(rows[i]), SCIProwGetRhs(rows[i])));
 
-         /* compute rhsslack: rhs - activity */
-         if( SCIPisInfinity(scip, SCIProwGetRhs(rows[i])) )
-            rhsslack = SCIPinfinity(scip);
-         else
-         {
-            rhsslack = SCIProwGetRhs(rows[i]) - activity;
-            rhsmod2 = mod2(scip, SCIProwGetRhs(rows[i]));
-         }
-
-         if( rhsslack <= maxslack && lhsslack <= maxslack )
-         {
-            if( lhsmod2 == rhsmod2 )
-            {
-               /* maxslack < 1 implies rhs - lhs = rhsslack + lhsslack < 2. Therefore lhs = rhs (mod2) can only hold if they
-                * are equal
-                */
-               assert(SCIPisEQ(scip, SCIProwGetLhs(rows[i]), SCIProwGetRhs(rows[i])));
-
-               /* use rhs */
-               SCIP_CALL( mod2MatrixAddOrigRow(scip, mod2matrix, origcol2col, rows[i], rhsslack, ORIG_RHS, rhsmod2) );
-            }
-            else
-            {
-               /* use both */
-               SCIP_CALL( mod2MatrixAddOrigRow(scip, mod2matrix, origcol2col, rows[i], lhsslack, ORIG_LHS, lhsmod2) );
-               SCIP_CALL( mod2MatrixAddOrigRow(scip, mod2matrix, origcol2col, rows[i], rhsslack, ORIG_RHS, rhsmod2) );
-            }
-         }
-         else if( rhsslack <= maxslack )
-         {
             /* use rhs */
             SCIP_CALL( mod2MatrixAddOrigRow(scip, mod2matrix, origcol2col, rows[i], rhsslack, ORIG_RHS, rhsmod2) );
          }
-         else if( lhsslack <= maxslack )
+         else
          {
-            /* use lhs */
+            /* use both */
             SCIP_CALL( mod2MatrixAddOrigRow(scip, mod2matrix, origcol2col, rows[i], lhsslack, ORIG_LHS, lhsmod2) );
+            SCIP_CALL( mod2MatrixAddOrigRow(scip, mod2matrix, origcol2col, rows[i], rhsslack, ORIG_RHS, rhsmod2) );
          }
+      }
+      else if( rhsslack <= maxslack )
+      {
+         /* use rhs */
+         SCIP_CALL( mod2MatrixAddOrigRow(scip, mod2matrix, origcol2col, rows[i], rhsslack, ORIG_RHS, rhsmod2) );
+      }
+      else if( lhsslack <= maxslack )
+      {
+         /* use lhs */
+         SCIP_CALL( mod2MatrixAddOrigRow(scip, mod2matrix, origcol2col, rows[i], lhsslack, ORIG_LHS, lhsmod2) );
       }
    }
 
