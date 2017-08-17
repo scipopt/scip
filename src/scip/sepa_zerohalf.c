@@ -84,7 +84,7 @@ typedef struct Mod2Matrix MOD2_MATRIX;
 typedef struct TransIntRow TRANSINTROW;
 typedef struct RowIndex ROWINDEX;
 
-
+/** enum for different types of row indices in ROWINDEX structure */
 typedef enum {
    ORIG_RHS = 0,
    ORIG_LHS = 1,
@@ -399,8 +399,13 @@ SCIP_RETCODE transformNonIntegralRow(
 
       if( *success )
       {
-         transrowrhs = SCIPfeasFloor(scip, transrowrhs * intscalar);
-         SCIP_Real slack = transrowrhs;
+         SCIP_Real floorrhs;
+         SCIP_Real slack;
+
+         transrowrhs *= intscalar;
+         floorrhs = SCIPfeasFloor(scip, transrowrhs);
+
+         slack = floorrhs;
          for( i = 0; i < transrowlen; ++i )
          {
             SCIP_Real solval = SCIPgetVarSol(scip, vars[transrowvars[i]]);
@@ -410,7 +415,7 @@ SCIP_RETCODE transformNonIntegralRow(
 
          if( slack <= maxslack )
          {
-            introw->rhs = transrowrhs;
+            introw->rhs = floorrhs;
             introw->slack = slack;
             introw->vals = transrowvals;
             introw->varinds = transrowvars;
@@ -418,6 +423,9 @@ SCIP_RETCODE transformNonIntegralRow(
             introw->size = rowlen;
             introw->local = local;
             introw->rank = rank;
+
+            if( !SCIPisEQ(scip, floorrhs, transrowrhs) )
+               introw->rank += 1;
          }
          else
          {
