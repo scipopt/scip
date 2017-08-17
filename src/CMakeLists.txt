@@ -19,6 +19,7 @@ set(scipsources
     scip/bandit.c
     scip/bandit_epsgreedy.c
     scip/bandit_exp3.c
+    scip/bandit_ucb.c
     scip/branch_allfullstrong.c
     scip/branch_cloud.c
     scip/branch_distribution.c
@@ -344,6 +345,7 @@ set(scipheaders
     scip/bandit.h
     scip/bandit_epsgreedy.h
     scip/bandit_exp3.h
+    scip/bandit_ucb.h
     scip/bitencode.h
     scip/boundstore.h
     scip/branch_allfullstrong.h

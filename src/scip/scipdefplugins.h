@@ -31,6 +31,7 @@
  */
 #include "scip/bandit_epsgreedy.h"
 #include "scip/bandit_exp3.h"
+#include "scip/bandit_ucb.h"
 #include "scip/branch_allfullstrong.h"
 #include "scip/branch_cloud.h"
 #include "scip/branch_distribution.h"
