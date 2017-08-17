@@ -58,21 +58,25 @@
 #define SEPA_USESSUBSCIP          FALSE
 #define SEPA_DELAY                FALSE
 
-#define MAXSLACK                    0.5
+#define DEFAULT_MAXROUNDS             5 /**< maximal number of cmir separation rounds per node (-1: unlimited) */
+#define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of cmir separation rounds in the root node (-1: unlimited) */
+#define DEFAULT_MAXSEPACUTS         200 /**< maximal number of cmir cuts separated per separation round */
+#define DEFAULT_MAXSEPACUTSROOT     500 /**< maximal number of cmir cuts separated per separation round in root node */
+#define DEFAULT_MAXSLACK           0.01 /**< maximal slack of rows to be used in aggregation */
+#define DEFAULT_MAXSLACKROOT        0.5 /**< maximal slack of rows to be used in aggregation in the root node */
+#define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
 
 /* SCIPcalcMIR parameters */
 #define BOUNDSWITCH                 0.5 /**< threshold for bound switching - see SCIPcalcMIR() */
 #define USEVBDS                    TRUE /**< use variable bounds - see SCIPcalcMIR() */
 #define ALLOWLOCAL                 TRUE /**< allow to generate local cuts - see SCIPcalcMIR() */
-#define FIXINTEGRALRHS            FALSE /**< try to generate an integral rhs - see SCIPcalcMIR() */
-#define BOUNDSFORTRANS             NULL
-#define BOUNDTYPESFORTRANS         NULL
+#define FIXINTEGRALRHS            FALSE /**< try to generate a fractional rhs - see SCIPcalcMIR() */
 #define MINFRAC                    0.05
 #define MAXFRAC                    1.00
 
 /* SCIPcalcRowIntegralScalar parameters */
-#define MAXDNOM                    1000
-#define MAXSCALE                 1000.0
+#define MAXDNOM                   10000
+#define MAXSCALE                10000.0
 
 typedef struct Mod2Col MOD2_COL;
 typedef struct Mod2Row MOD2_ROW;
@@ -80,13 +84,15 @@ typedef struct Mod2Matrix MOD2_MATRIX;
 typedef struct TransIntRow TRANSINTROW;
 typedef struct RowIndex ROWINDEX;
 
-#define UNIQUE_INDEX(rowind) (3*(rowind).index + (rowind).type)
 
 typedef enum {
    ORIG_RHS = 0,
    ORIG_LHS = 1,
    TRANSROW = 2,
 } ROWIND_TYPE;
+
+/* macro to get a unique index from the rowindex */
+#define UNIQUE_INDEX(rowind) (3*(rowind).index + (rowind).type)
 
 struct RowIndex
 {
@@ -119,10 +125,10 @@ struct Mod2Row {
    int                   rowindssize;        /**< size of rowinds array */
    int                   nnonzcols;          /**< number of columns in nonzcols */
    int                   nonzcolssize;       /**< size of nonzcols array */
-   ROWINDEX*             rowinds;
-   MOD2_COL**            nonzcols;
-   SCIP_Real             slack;
-   SCIP_Real             maxsolval;
+   ROWINDEX*             rowinds;            /**< index set of rows associated with the mod 2 row */
+   MOD2_COL**            nonzcols;           /**< sorted array of non-zero mod 2 columns in this mod 2 row */
+   SCIP_Real             slack;              /**< slack of mod 2 row */
+   SCIP_Real             maxsolval;          /**< maximum solution value of columns in mod 2 row */
 };
 
 /** structure representing a column in the mod 2 system */
@@ -149,10 +155,17 @@ struct Mod2Matrix {
 /** data of separator */
 struct SCIP_SepaData
 {
-   SCIP_AGGRROW*         aggrrow;
-   int                   ncuts;
-   int                   nreductions;
-   SCIP_Bool             infeasible;
+   SCIP_Real             maxslack;           /**< maximal slack of rows to be used in aggregation */
+   SCIP_Real             maxslackroot;       /**< maximal slack of rows to be used in aggregation in the root node */
+   int                   maxrounds;          /**< maximal number of cmir separation rounds per node (-1: unlimited) */
+   int                   maxroundsroot;      /**< maximal number of cmir separation rounds in the root node (-1: unlimited) */
+   int                   maxsepacuts;        /**< maximal number of cmir cuts separated per separation round */
+   int                   maxsepacutsroot;    /**< maximal number of cmir cuts separated per separation round in root node */
+   SCIP_Bool             dynamiccuts;        /**< should generated cuts be removed from the LP if they are no longer tight? */
+   SCIP_AGGRROW*         aggrrow;            /**< aggregation row used for generating cuts */
+   int                   ncuts;              /**< number of cuts generated in the current call */
+   int                   nreductions;        /**< number of reductions to the mod 2 system found so far */
+   SCIP_Bool             infeasible;         /**< infeasibility was detected after adding a zerohalf cut */
 };
 
 
@@ -161,6 +174,7 @@ struct SCIP_SepaData
 #define COLINFO_CREATE(mod2col, rhsoffset)  ((void*) (((uintptr_t)(mod2col)) | ((uintptr_t)(rhsoffset))))
 
 
+/** compare to mod 2 columns by there index */
 static
 SCIP_DECL_SORTPTRCOMP(compareColIndex)
 {
@@ -189,21 +203,21 @@ SCIP_DECL_SORTPTRCOMP(compareRowSlack)
    row2 = (MOD2_ROW*) elem2;
 
    /* small slack comes first */
-   if( row1->slack < row2->slack )
+   if( EPSLT(row1->slack, row2->slack, SCIP_DEFAULT_EPSILON) )
       return -1;
-   if( row2->slack < row1->slack )
-      return 1;
-
-   /* if slack is equal prefer rows that contain columns with large solution value */
-   if( row1->maxsolval > row2->maxsolval )
-      return -1;
-   if( row2->maxsolval > row1->maxsolval )
+   if( EPSLT(row2->slack, row1->slack, SCIP_DEFAULT_EPSILON) )
       return 1;
 
    /* last tie breaker is to prefer sparser rows */
    if( row1->nnonzcols > row2->nnonzcols )
       return -1;
    if( row2->nnonzcols > row1->nnonzcols )
+      return 1;
+
+   /* if slack is equal prefer rows that contain columns with large solution value */
+   if( row1->maxsolval > row2->maxsolval )
+      return -1;
+   if( row2->maxsolval > row1->maxsolval )
       return 1;
 
    return 0;
@@ -230,9 +244,203 @@ int mod2(
 }
 
 static
+SCIP_RETCODE transformNonIntegralRow(
+   SCIP*                 scip,               /**< scip data structure */
+   SCIP_Real             maxslack,           /**< maximum slack allowed for transformed row */
+   int                   sign,               /**< +1 or -1 scale to switch the sign of the row's coefficients */
+   SCIP_Bool             local,              /**< is the row only valid locally? */
+   int                   rank,               /**< rank of row */
+   int                   rowlen,             /**< length of row */
+   SCIP_Real*            rowvals,            /**< coefficients of columns in row */
+   SCIP_COL**            rowcols,            /**< columns of row */
+   SCIP_Real             rhs,                /**< right hand side of row */
+   int*                  intvarpos,          /**< clean buffer array of size SCIPgetNVars that will be clean when the function returns */
+   TRANSINTROW*          introw,             /**< pointer to return transformed row */
+   SCIP_Bool*            success             /**< pointer to return whether the transformation succeeded */
+   )
+{
+   int i;
+   int transrowlen;
+   SCIP_Real transrowrhs;
+   int* transrowvars;
+   SCIP_Real* transrowvals;
+
+   assert(scip != NULL);
+   assert(sign == +1 || sign == -1);
+   assert(rowvals != NULL || rowlen == 0);
+   assert(rowcols != NULL || rowlen == 0);
+   assert(intvarpos != NULL);
+   assert(introw != NULL);
+   assert(success != NULL);
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &transrowvars, rowlen) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &transrowvals, rowlen) );
+   transrowlen = 0;
+   transrowrhs = rhs;
+
+   for( i = 0; i < rowlen; ++i )
+   {
+      if( !SCIPcolIsIntegral(rowcols[i]) )
+         continue;
+
+      transrowvars[transrowlen] = rowcols[i]->var_probindex;
+      transrowvals[transrowlen] = sign * rowvals[i];
+      intvarpos[rowcols[i]->var_probindex] = ++transrowlen;
+   }
+
+   *success = TRUE;
+
+   for( i = 0; i < rowlen; ++i )
+   {
+      int closestvbdind;
+      SCIP_Real closestbound;
+      SCIP_VAR* vbdvar;
+      SCIP_Real vbdcoef;
+      SCIP_Real vbdconst;
+      SCIP_VAR* colvar;
+      SCIP_Real val;
+
+      if( SCIPcolIsIntegral(rowcols[i]) )
+         continue;
+
+      colvar = SCIPcolGetVar(rowcols[i]);
+
+      val = sign * rowvals[i];
+
+      if( val > 0.0 )
+      {
+         SCIP_CALL( SCIPgetVarClosestVlb(scip, colvar, NULL, &closestbound, &closestvbdind) );
+         if( closestvbdind >= 0 )
+         {
+            vbdcoef = SCIPvarGetVlbCoefs(colvar)[closestvbdind];
+            vbdvar = SCIPvarGetVlbVars(colvar)[closestvbdind];
+            vbdconst = SCIPvarGetVlbConstants(colvar)[closestvbdind];
+         }
+         else
+         {
+            closestbound = SCIPvarGetLbGlobal(colvar);
+            if( ALLOWLOCAL && SCIPvarGetLbLocal(colvar) > closestbound )
+            {
+               closestbound = SCIPvarGetLbLocal(colvar);
+               local = TRUE;
+            }
+         }
+      }
+      else
+      {
+         SCIP_CALL( SCIPgetVarClosestVub(scip, colvar, NULL, &closestbound, &closestvbdind) );
+         if( closestvbdind >= 0 )
+         {
+            vbdcoef = SCIPvarGetVubCoefs(colvar)[closestvbdind];
+            vbdvar = SCIPvarGetVubVars(colvar)[closestvbdind];
+            vbdconst = SCIPvarGetVubConstants(colvar)[closestvbdind];
+         }
+         else
+         {
+            closestbound = SCIPvarGetUbGlobal(colvar);
+            if( ALLOWLOCAL && SCIPvarGetUbLocal(colvar) < closestbound )
+            {
+               closestbound = SCIPvarGetUbLocal(colvar);
+               local = TRUE;
+            }
+         }
+      }
+
+      if( closestvbdind >= 0 )
+      {
+         SCIP_Real coef = val * vbdcoef;
+         transrowrhs -= val * vbdconst;
+
+         int pos = intvarpos[SCIPvarGetProbindex(vbdvar)] - 1;
+         if( pos >= 0 )
+         {
+            transrowvals[pos] += coef;
+         }
+         else
+         {
+            transrowvars[transrowlen] = SCIPvarGetProbindex(vbdvar);
+            transrowvals[transrowlen] = coef;
+            intvarpos[SCIPvarGetProbindex(vbdvar)] = ++transrowlen;
+         }
+      }
+      else if( !SCIPisInfinity(scip, REALABS(closestbound)) )
+      {
+         transrowrhs -= val * closestbound;
+      }
+      else
+      {
+         *success = FALSE;
+         break;
+      }
+   }
+
+   for( i = 0; i < transrowlen;)
+   {
+      intvarpos[transrowvars[i]] = 0;
+      if( SCIPisZero(scip, transrowvals[i]) )
+      {
+         --transrowlen;
+         transrowvals[i] = transrowvals[transrowlen];
+         transrowvars[i] = transrowvars[transrowlen];
+      }
+      else
+         ++i;
+   }
+
+   if( transrowlen <= 1 )
+      *success = FALSE;
+
+   if( *success )
+   {
+      SCIP_Real intscalar;
+      SCIP_VAR** vars = SCIPgetVars(scip);
+
+      SCIP_CALL( SCIPcalcIntegralScalar(transrowvals, transrowlen, -SCIPepsilon(scip), SCIPepsilon(scip), MAXDNOM, MAXSCALE, &intscalar, success) );
+
+      if( *success )
+      {
+         transrowrhs = SCIPfeasFloor(scip, transrowrhs * intscalar);
+         SCIP_Real slack = transrowrhs;
+         for( i = 0; i < transrowlen; ++i )
+         {
+            SCIP_Real solval = SCIPgetVarSol(scip, vars[transrowvars[i]]);
+            transrowvals[i] = SCIPfeasRound(scip, transrowvals[i] * intscalar);
+            slack -= solval * transrowvals[i];
+         }
+
+         if( slack <= maxslack )
+         {
+            introw->rhs = transrowrhs;
+            introw->slack = slack;
+            introw->vals = transrowvals;
+            introw->varinds = transrowvars;
+            introw->len = transrowlen;
+            introw->size = rowlen;
+            introw->local = local;
+            introw->rank = rank;
+         }
+         else
+         {
+            *success = FALSE;
+         }
+      }
+   }
+
+   if( !(*success) )
+   {
+      SCIPfreeBlockMemoryArray(scip, &transrowvals, rowlen);
+      SCIPfreeBlockMemoryArray(scip, &transrowvars, rowlen);
+   }
+
+   return SCIP_OKAY;
+}
+
+
+static
 SCIP_RETCODE mod2MatrixTransformContRows(
    SCIP*                 scip,               /**< scip data structure */
-   MOD2_MATRIX*          mod2matrix          /**< mod2 matrix structure */
+   MOD2_MATRIX*          mod2matrix,         /**< mod2 matrix structure */
+   SCIP_Real             maxslack            /**< maximum slack allowed for mod 2 rows */
    )
 {
    SCIP_ROW** rows;
@@ -249,9 +457,7 @@ SCIP_RETCODE mod2MatrixTransformContRows(
 
    for( i = 0; i < nrows; ++i )
    {
-      int k;
       int rowlen;
-      SCIP_Bool success;
       SCIP_Real activity;
       SCIP_Real lhs;
       SCIP_Real rhs;
@@ -282,342 +488,33 @@ SCIP_RETCODE mod2MatrixTransformContRows(
       else
          rhsslack = rhs - activity;
 
-      if( rhsslack > MAXSLACK && lhsslack > MAXSLACK )
+      if( rhsslack > maxslack && lhsslack > maxslack )
          continue;
 
       rowlen = SCIProwGetNLPNonz(rows[i]);
       rowvals = SCIProwGetVals(rows[i]);
       rowcols = SCIProwGetCols(rows[i]);
 
-      if( rhsslack <= MAXSLACK )
+      if( rhsslack <= maxslack )
       {
-         SCIP_Bool local;
-         int transrowlen;
-         SCIP_Real transrowrhs;
-         int* transrowvars;
-         SCIP_Real* transrowvals;
+         SCIP_Bool success;
+         TRANSINTROW* introw = &mod2matrix->transintrows[mod2matrix->ntransintrows];
+         SCIP_CALL( transformNonIntegralRow(scip, maxslack, 1, SCIProwIsLocal(rows[i]), SCIProwGetRank(rows[i]), \
+                                            rowlen, rowvals, rowcols, rhs, intvarpos, introw, &success) );
 
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &transrowvars, rowlen) );
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &transrowvals, rowlen) );
-         transrowlen = 0;
-         transrowrhs = rhs;
-
-         for( k = 0; k < rowlen; ++k )
-         {
-            if( !SCIPcolIsIntegral(rowcols[k]) )
-               continue;
-
-            transrowvars[transrowlen] = rowcols[k]->var_probindex;
-            transrowvals[transrowlen] = rowvals[k];
-            intvarpos[rowcols[k]->var_probindex] = ++transrowlen;
-         }
-
-         success = TRUE;
-         local = SCIProwIsLocal(rows[i]);
-
-         for( k = 0; k < rowlen; ++k )
-         {
-            int closestvbdind;
-            SCIP_Real closestbound;
-            SCIP_VAR* vbdvar;
-            SCIP_Real vbdcoef;
-            SCIP_Real vbdconst;
-            SCIP_VAR* colvar;
-
-            if( SCIPcolIsIntegral(rowcols[k]) )
-               continue;
-
-            colvar = SCIPcolGetVar(rowcols[k]);
-
-            if( rowvals[k] > 0.0 )
-            {
-               SCIP_CALL( SCIPgetVarClosestVlb(scip, colvar, NULL, &closestbound, &closestvbdind) );
-               if( closestvbdind >= 0 )
-               {
-                  vbdcoef = SCIPvarGetVlbCoefs(colvar)[closestvbdind];
-                  vbdvar = SCIPvarGetVlbVars(colvar)[closestvbdind];
-                  vbdconst = SCIPvarGetVlbConstants(colvar)[closestvbdind];
-               }
-               else
-               {
-                  closestbound = SCIPvarGetLbGlobal(colvar);
-                  if( ALLOWLOCAL && SCIPvarGetLbLocal(colvar) > closestbound )
-                  {
-                     closestbound = SCIPvarGetLbLocal(colvar);
-                     local = TRUE;
-                  }
-               }
-            }
-            else
-            {
-               SCIP_CALL( SCIPgetVarClosestVub(scip, colvar, NULL, &closestbound, &closestvbdind) );
-               if( closestvbdind >= 0 )
-               {
-                  vbdcoef = SCIPvarGetVubCoefs(colvar)[closestvbdind];
-                  vbdvar = SCIPvarGetVubVars(colvar)[closestvbdind];
-                  vbdconst = SCIPvarGetVubConstants(colvar)[closestvbdind];
-               }
-               else
-               {
-                  closestbound = SCIPvarGetUbGlobal(colvar);
-                  if( ALLOWLOCAL && SCIPvarGetUbLocal(colvar) < closestbound )
-                  {
-                     closestbound = SCIPvarGetUbLocal(colvar);
-                     local = TRUE;
-                  }
-               }
-            }
-
-            if( closestvbdind >= 0 )
-            {
-               SCIP_Real coef = rowvals[k] * vbdcoef;
-               transrowrhs -= rowvals[k] * vbdconst;
-
-               int pos = intvarpos[SCIPvarGetProbindex(vbdvar)] - 1;
-               if( pos >= 0 )
-               {
-                  transrowvals[pos] += coef;
-               }
-               else
-               {
-                  transrowvars[transrowlen] = SCIPvarGetProbindex(vbdvar);
-                  transrowvals[transrowlen] = coef;
-                  intvarpos[SCIPvarGetProbindex(vbdvar)] = ++transrowlen;
-               }
-            }
-            else if( !SCIPisInfinity(scip, REALABS(closestbound)) )
-            {
-               transrowrhs -= rowvals[k] * closestbound;
-            }
-            else
-            {
-               success = FALSE;
-               break;
-            }
-         }
-
-         for( k = 0; k < transrowlen;)
-         {
-            intvarpos[transrowvars[k]] = 0;
-            if( SCIPisZero(scip, transrowvals[k]) )
-            {
-               --transrowlen;
-               transrowvals[k] = transrowvals[transrowlen];
-               transrowvars[k] = transrowvars[transrowlen];
-            }
-            else
-               ++k;
-         }
-
-         if( transrowlen <= 1 )
-            success = FALSE;
-
-         if( success )
-         {
-            SCIP_Real intscalar;
-
-            SCIP_CALL( SCIPcalcIntegralScalar(transrowvals, transrowlen, -SCIPepsilon(scip), SCIPepsilon(scip), MAXDNOM, MAXSCALE, &intscalar, &success) );
-
-            if( success )
-            {
-               transrowrhs = SCIPfeasFloor(scip, transrowrhs * intscalar);
-               SCIP_Real slack = transrowrhs;
-               for( k = 0; k < transrowlen; ++k )
-               {
-                  SCIP_Real solval = SCIPgetVarSol(scip, vars[transrowvars[k]]);
-                  transrowvals[k] = SCIPfeasRound(scip, transrowvals[k] * intscalar);
-                  slack -= solval * transrowvals[k];
-               }
-
-               if( slack <= MAXSLACK )
-               {
-                  int r = mod2matrix->ntransintrows++;
-                  mod2matrix->transintrows[r].rhs = transrowrhs;
-                  mod2matrix->transintrows[r].slack = slack;
-                  mod2matrix->transintrows[r].vals = transrowvals;
-                  mod2matrix->transintrows[r].varinds = transrowvars;
-                  mod2matrix->transintrows[r].len = transrowlen;
-                  mod2matrix->transintrows[r].size = rowlen;
-                  mod2matrix->transintrows[r].local = local;
-                  mod2matrix->transintrows[r].rank = SCIProwGetRank(rows[i]);
-               }
-               else
-               {
-                  success = FALSE;
-               }
-            }
-         }
-
-         if( !success )
-         {
-            SCIPfreeBlockMemoryArray(scip, &transrowvals, rowlen);
-            SCIPfreeBlockMemoryArray(scip, &transrowvars, rowlen);
-         }
+         assert(success == 1 || success == 0);
+         mod2matrix->ntransintrows += success;
       }
 
-      if( lhsslack <= MAXSLACK )
+      if( lhsslack <= maxslack )
       {
-         SCIP_Bool local;
-         int transrowlen;
-         SCIP_Real transrowrhs;
-         int* transrowvars;
-         SCIP_Real* transrowvals;
+         SCIP_Bool success;
+         TRANSINTROW* introw = &mod2matrix->transintrows[mod2matrix->ntransintrows];
+         SCIP_CALL( transformNonIntegralRow(scip, maxslack, -1, SCIProwIsLocal(rows[i]), SCIProwGetRank(rows[i]), \
+                                            rowlen, rowvals, rowcols, -lhs, intvarpos, introw, &success) );
 
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &transrowvars, rowlen) );
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &transrowvals, rowlen) );
-         transrowlen = 0;
-         transrowrhs = -lhs;
-
-         for( k = 0; k < rowlen; ++k )
-         {
-            if( !SCIPcolIsIntegral(rowcols[k]) )
-               continue;
-
-            transrowvars[transrowlen] = rowcols[k]->var_probindex;
-            transrowvals[transrowlen] = -rowvals[k];
-            intvarpos[rowcols[k]->var_probindex] = ++transrowlen;
-         }
-
-         success = TRUE;
-         local = SCIProwIsLocal(rows[i]);
-
-         for( k = 0; k < rowlen; ++k )
-         {
-            int closestvbdind;
-            SCIP_Real closestbound;
-            SCIP_VAR* vbdvar;
-            SCIP_Real vbdcoef;
-            SCIP_Real vbdconst;
-            SCIP_VAR* colvar;
-
-            if( SCIPcolIsIntegral(rowcols[k]) )
-               continue;
-
-            colvar = SCIPcolGetVar(rowcols[k]);
-
-            if( -rowvals[k] > 0.0 )
-            {
-               SCIP_CALL( SCIPgetVarClosestVlb(scip, colvar, NULL, &closestbound, &closestvbdind) );
-               if( closestvbdind >= 0 )
-               {
-                  vbdcoef = SCIPvarGetVlbCoefs(colvar)[closestvbdind];
-                  vbdvar = SCIPvarGetVlbVars(colvar)[closestvbdind];
-                  vbdconst = SCIPvarGetVlbConstants(colvar)[closestvbdind];
-               }
-               else
-               {
-                  closestbound = SCIPvarGetLbGlobal(colvar);
-                  if( ALLOWLOCAL && SCIPvarGetLbLocal(colvar) > closestbound )
-                  {
-                     closestbound = SCIPvarGetLbLocal(colvar);
-                     local = TRUE;
-                  }
-               }
-            }
-            else
-            {
-               SCIP_CALL( SCIPgetVarClosestVub(scip, colvar, NULL, &closestbound, &closestvbdind) );
-               if( closestvbdind >= 0 )
-               {
-                  vbdcoef = SCIPvarGetVubCoefs(colvar)[closestvbdind];
-                  vbdvar = SCIPvarGetVubVars(colvar)[closestvbdind];
-                  vbdconst = SCIPvarGetVubConstants(colvar)[closestvbdind];
-               }
-               else
-               {
-                  closestbound = SCIPvarGetUbGlobal(colvar);
-                  if( ALLOWLOCAL && SCIPvarGetUbLocal(colvar) < closestbound )
-                  {
-                     closestbound = SCIPvarGetUbLocal(colvar);
-                     local = TRUE;
-                  }
-               }
-            }
-
-            if( closestvbdind >= 0 )
-            {
-               SCIP_Real coef = -rowvals[k] * vbdcoef;
-               transrowrhs += rowvals[k] * vbdconst;
-
-               int pos = intvarpos[SCIPvarGetProbindex(vbdvar)] - 1;
-               if( pos >= 0 )
-               {
-                  transrowvals[pos] += coef;
-               }
-               else
-               {
-                  transrowvars[transrowlen] = SCIPvarGetProbindex(vbdvar);
-                  transrowvals[transrowlen] = coef;
-                  intvarpos[SCIPvarGetProbindex(vbdvar)] = ++transrowlen;
-               }
-            }
-            else if( !SCIPisInfinity(scip, REALABS(closestbound)) )
-            {
-               transrowrhs += rowvals[k] * closestbound;
-            }
-            else
-            {
-               success = FALSE;
-               break;
-            }
-         }
-
-         for( k = 0; k < transrowlen;)
-         {
-            intvarpos[transrowvars[k]] = 0;
-            if( SCIPisZero(scip, transrowvals[k]) )
-            {
-               --transrowlen;
-               transrowvals[k] = transrowvals[transrowlen];
-               transrowvars[k] = transrowvars[transrowlen];
-            }
-            else
-               ++k;
-         }
-
-         if( transrowlen <= 1 )
-            success = FALSE;
-
-         if( success )
-         {
-            SCIP_Real intscalar;
-            SCIP_CALL( SCIPcalcIntegralScalar(transrowvals, transrowlen, -SCIPepsilon(scip), SCIPepsilon(scip), MAXDNOM, MAXSCALE, &intscalar, &success) );
-
-            if( success )
-            {
-               transrowrhs = SCIPfeasFloor(scip, transrowrhs * intscalar);
-               SCIP_Real slack = transrowrhs;
-               for( k = 0; k < transrowlen; ++k )
-               {
-                  SCIP_Real solval = SCIPgetVarSol(scip, vars[transrowvars[k]]);
-                  transrowvals[k] = SCIPfeasRound(scip, transrowvals[k] * intscalar);
-                  slack -= solval * transrowvals[k];
-               }
-
-               if( slack <= MAXSLACK )
-               {
-                  int r = mod2matrix->ntransintrows++;
-                  mod2matrix->transintrows[r].rhs = transrowrhs;
-                  mod2matrix->transintrows[r].slack = slack;
-                  mod2matrix->transintrows[r].vals = transrowvals;
-                  mod2matrix->transintrows[r].varinds = transrowvars;
-                  mod2matrix->transintrows[r].len = transrowlen;
-                  mod2matrix->transintrows[r].size = rowlen;
-                  mod2matrix->transintrows[r].local = local;
-                  mod2matrix->transintrows[r].rank = SCIProwGetRank(rows[i]);
-               }
-               else
-               {
-                  success = FALSE;
-               }
-            }
-         }
-
-         if( !success )
-         {
-            SCIPfreeBlockMemoryArray(scip, &transrowvals, rowlen);
-            SCIPfreeBlockMemoryArray(scip, &transrowvars, rowlen);
-         }
+         assert(success == 1 || success == 0);
+         mod2matrix->ntransintrows += success;
       }
    }
 
@@ -731,7 +628,7 @@ SCIP_RETCODE mod2MatrixAddOrigRow(
    SCIP_CALL( SCIPensureBlockMemoryArray(scip, &mod2matrix->rows, &mod2matrix->rowssize, mod2matrix->nrows) );
    mod2matrix->rows[row->index] = row;
 
-   row->slack = slack;
+   row->slack = MAX(0.0, slack);
    row->maxsolval = 0.0;
    row->rhs = rhsmod2;
    row->nrowinds = 1;
@@ -887,7 +784,8 @@ void destroyMod2Matrix(
 static
 SCIP_RETCODE buildMod2Matrix(
    SCIP*                 scip,               /**< scip data structure */
-   MOD2_MATRIX*          mod2matrix
+   MOD2_MATRIX*          mod2matrix,         /**< mod 2 matrix */
+   SCIP_Real             maxslack            /**< maximum slack allowed for mod 2 rows */
    )
 {
    SCIP_VAR** vars;
@@ -992,11 +890,11 @@ SCIP_RETCODE buildMod2Matrix(
             rhsmod2 = mod2(scip, SCIProwGetRhs(rows[i]));
          }
 
-         if( rhsslack <= MAXSLACK && lhsslack <= MAXSLACK )
+         if( rhsslack <= maxslack && lhsslack <= maxslack )
          {
             if( lhsmod2 == rhsmod2 )
             {
-               /* MAXSLACK < 1 implies rhs - lhs = rhsslack + lhsslack < 2. Therefore lhs = rhs (mod2) can only hold if they
+               /* maxslack < 1 implies rhs - lhs = rhsslack + lhsslack < 2. Therefore lhs = rhs (mod2) can only hold if they
                 * are equal
                 */
                assert(SCIPisEQ(scip, SCIProwGetLhs(rows[i]), SCIProwGetRhs(rows[i])));
@@ -1011,12 +909,12 @@ SCIP_RETCODE buildMod2Matrix(
                SCIP_CALL( mod2MatrixAddOrigRow(scip, mod2matrix, origcol2col, rows[i], rhsslack, ORIG_RHS, rhsmod2) );
             }
          }
-         else if( rhsslack <= MAXSLACK )
+         else if( rhsslack <= maxslack )
          {
             /* use rhs */
             SCIP_CALL( mod2MatrixAddOrigRow(scip, mod2matrix, origcol2col, rows[i], rhsslack, ORIG_RHS, rhsmod2) );
          }
-         else if( lhsslack <= MAXSLACK )
+         else if( lhsslack <= maxslack )
          {
             /* use lhs */
             SCIP_CALL( mod2MatrixAddOrigRow(scip, mod2matrix, origcol2col, rows[i], lhsslack, ORIG_LHS, lhsmod2) );
@@ -1025,7 +923,7 @@ SCIP_RETCODE buildMod2Matrix(
    }
 
    /* transform non-integral rows */
-   SCIP_CALL( mod2MatrixTransformContRows(scip, mod2matrix) );
+   SCIP_CALL( mod2MatrixTransformContRows(scip, mod2matrix, maxslack) );
 
    /* add all transformed integral rows using the created columns */
    for( i = 0; i < mod2matrix->ntransintrows; ++i )
@@ -1302,7 +1200,7 @@ SCIP_RETCODE generateZerohalfCut(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, SCIPgetNVars(scip)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cutinds, SCIPgetNVars(scip)) );
-   SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS, BOUNDSFORTRANS, BOUNDTYPESFORTRANS,
+   SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS, NULL, NULL,
                           MINFRAC, MAXFRAC, 1.0, sepadata->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank,
                           &cutislocal, &success) );
 
@@ -1318,7 +1216,7 @@ SCIP_RETCODE generateZerohalfCut(
       /* create the cut */
       (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "zerohalf%d_x%d", SCIPgetNLPs(scip), row->index);
 
-      SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE, TRUE) );
+      SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE, sepadata->dynamiccuts) );
 
       /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
       SCIProwChgRank(cut, cutrank);
@@ -1332,11 +1230,6 @@ SCIP_RETCODE generateZerohalfCut(
          SCIP_CALL( SCIPaddVarToRow(scip, cut, vars[cutinds[v]], cutcoefs[v]) );
       }
 
-#if 0
-      /* try to scale the cut to integral values */
-      SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
-         maxdnom, maxscale, MAKECONTINTEGRAL, &success) );
-#endif
       /* flush all changes before adding the cut */
       SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
 
@@ -1370,7 +1263,8 @@ SCIP_RETCODE mod2matrixPreprocessRows(
    SCIP*                 scip,               /**< scip data structure */
    MOD2_MATRIX*          mod2matrix,         /**< the mod 2 matrix */
    SCIP_SEPA*            sepa,               /**< the zerohalf separator */
-   SCIP_SEPADATA*        sepadata            /**< data of the zerohalf separator */
+   SCIP_SEPADATA*        sepadata,           /**< data of the zerohalf separator */
+   SCIP_Real             maxslack            /**< maximum slack allowed for mod 2 rows */
    )
 {
    int i;
@@ -1387,7 +1281,7 @@ SCIP_RETCODE mod2matrixPreprocessRows(
       assert(row->nnonzcols == 0 || row->nonzcols != NULL);
 
 
-      if( (row->nnonzcols == 0 && row->rhs == 0) || row->slack > MAXSLACK )
+      if( (row->nnonzcols == 0 && row->rhs == 0) || row->slack > maxslack )
       { /* (a) and (c) */
          sepadata->nreductions += row->nnonzcols;
          mod2matrixRemoveRow(scip, mod2matrix, row);
@@ -1475,8 +1369,11 @@ SCIP_RETCODE mod2rowAddRow(
    row->rhs ^= rowtoadd->rhs;
    row->slack += rowtoadd->slack;
 
-   /* shift indices by nlprows due to the left hand side indices being negative and allocate twice
-    * twice the number of rows
+   /* the maximum index return by the UNIQUE_INDEX macro is 3 times
+    * the maximum index value in the ROWINDEX struct. The index value could
+    * be the lp position of an original row or the index of a transformed row.
+    * Hence we need to allocate 3 times the maximum of these two possible
+    * index types.
     */
    int allocsize = 3 * MAX(nlprows, mod2matrix->ntransintrows);
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &contained, allocsize) );
@@ -1608,20 +1505,51 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
 {
    int i;
    int k;
+   int maxsepacuts;
+   SCIP_Real maxslack;
    SCIP_SEPADATA* sepadata;
    MOD2_MATRIX mod2matrix;
    MOD2_ROW** nonzrows;
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* only call separator, if we are not close to terminating */
+   if( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
+   /* only call separator, if an optimal LP solution is at hand */
+   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+      return SCIP_OKAY;
+
+   /* only call separator, if there are fractional variables */
+   if( SCIPgetNLPBranchCands(scip) == 0 )
+      return SCIP_OKAY;
 
    /* TODO: check something? that there are fractional integer variables?
     * that scip is not stopped? something at all ?
     * also add asserts
     */
    sepadata = SCIPsepaGetData(sepa);
+
+   {
+      int depth = SCIPgetDepth(scip);
+      int ncalls = SCIPsepaGetNCallsAtNode(sepa);
+
+      /* only call the cmir cut separator a given number of times at each node */
+      if( (depth == 0 && sepadata->maxroundsroot >= 0 && ncalls >= sepadata->maxroundsroot)
+         || (depth > 0 && sepadata->maxrounds >= 0 && ncalls >= sepadata->maxrounds) )
+         return SCIP_OKAY;
+
+      maxsepacuts = depth == 0 ? sepadata->maxsepacutsroot : sepadata->maxsepacuts;
+      maxslack = depth == 0 ? sepadata->maxslackroot : sepadata->maxslack;
+   }
+
+
    SCIP_CALL( SCIPaggrRowCreate(scip, &sepadata->aggrrow) );
    sepadata->ncuts = 0;
    sepadata->infeasible = FALSE;
 
-   SCIP_CALL( buildMod2Matrix(scip, &mod2matrix) );
+   SCIP_CALL( buildMod2Matrix(scip, &mod2matrix, maxslack) );
 
    SCIPdebugMsg(scip, "built mod2 matrix (%i rows, %i cols)\n", mod2matrix.nrows, mod2matrix.ncols);
 
@@ -1630,7 +1558,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
    for( k = 0; k < 100; ++k ) /* TODO: what is this magic 10? define a macro */
    {
       sepadata->nreductions = 0;
-      SCIP_CALL( mod2matrixPreprocessRows(scip, &mod2matrix, sepa, sepadata) );
+      SCIP_CALL( mod2matrixPreprocessRows(scip, &mod2matrix, sepa, sepadata, maxslack) );
 
       if( sepadata->infeasible )
       {
@@ -1699,7 +1627,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
 
       SCIPdebugMsg(scip, "applied proposition five (%i rows, %i cols)\n", mod2matrix.nrows, mod2matrix.ncols);
 
-      if( sepadata->nreductions == 0 || mod2matrix.ncols == 0 )
+      if( sepadata->nreductions == 0 || sepadata->ncuts >= maxsepacuts || mod2matrix.ncols == 0 )
       {
          SCIPdebugMsg(scip, "no change, stopping (%i rows, %i cols)\n", mod2matrix.nrows, mod2matrix.ncols);
          break;
@@ -1708,14 +1636,14 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
 
    SCIPfreeBufferArray(scip, &nonzrows);
 
-   for( i = 0; i < mod2matrix.nrows; ++i )
+   for( i = 0; sepadata->ncuts < maxsepacuts && i < mod2matrix.nrows; ++i )
    {
       MOD2_ROW* row = mod2matrix.rows[i];
 
       if( SCIPisGE(scip, row->slack, 1.0) )
          break;
 
-      if( row->rhs == 0 || row->slack > MAXSLACK )
+      if( row->rhs == 0 || row->slack > maxslack )
          continue;
 
       SCIP_CALL( generateZerohalfCut(scip, &mod2matrix, sepa, sepadata, row) );
@@ -1759,6 +1687,36 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyZerohalf) );
    SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeZerohalf) );
+
+   /* add zerohalf separator parameters */
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "separating/"SEPA_NAME"/maxrounds",
+         "maximal number of cmir separation rounds per node (-1: unlimited)",
+         &sepadata->maxrounds, FALSE, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "separating/"SEPA_NAME"/maxroundsroot",
+         "maximal number of cmir separation rounds in the root node (-1: unlimited)",
+         &sepadata->maxroundsroot, FALSE, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "separating/"SEPA_NAME"/maxsepacuts",
+         "maximal number of cmir cuts separated per separation round",
+         &sepadata->maxsepacuts, FALSE, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "separating/"SEPA_NAME"/maxsepacutsroot",
+         "maximal number of cmir cuts separated per separation round in the root node",
+         &sepadata->maxsepacutsroot, FALSE, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "separating/"SEPA_NAME"/maxslack",
+         "maximal slack of rows to be used in aggregation",
+         &sepadata->maxslack, TRUE, DEFAULT_MAXSLACK, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "separating/"SEPA_NAME"/maxslackroot",
+         "maximal slack of rows to be used in aggregation in the root node",
+         &sepadata->maxslackroot, TRUE, DEFAULT_MAXSLACKROOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "separating/"SEPA_NAME"/dynamiccuts",
+         "should generated cuts be removed from the LP if they are no longer tight?",
+         &sepadata->dynamiccuts, FALSE, DEFAULT_DYNAMICCUTS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
