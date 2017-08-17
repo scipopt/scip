@@ -2071,6 +2071,7 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
       SCIP_VAR* var;
       char RHS[] = "RHS";
       char MINI[] = "MINI";
+      char OBJ[] = "obj";
 
       /* finding the constraint associated with the row */
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_%d", getScenarioEntryRow(scenario, i),
@@ -2090,7 +2091,8 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
          else if( SCIPisLT(scenarioscip, SCIPgetLhsLinear(scenarioscip, cons), SCIPinfinity(scenarioscip)) )
             SCIP_CALL( SCIPchgLhsLinear(scenarioscip, cons, getScenarioEntryValue(scenario, i)) );
       }
-      else if( strstr(getScenarioEntryCol(scenario, i), MINI) != NULL )
+      else if( strstr(getScenarioEntryRow(scenario, i), MINI) != NULL ||
+         strstr(getScenarioEntryRow(scenario, i), OBJ) != NULL )
       {
          /* finding the variable associated with the column */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_%d", getScenarioEntryCol(scenario, i),
