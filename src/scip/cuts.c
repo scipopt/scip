@@ -2085,9 +2085,9 @@ SCIP_RETCODE cutsSubstituteMIR(
    int i;
 
    assert(scip != NULL);
-   assert(weights != NULL);
-   assert(slacksign != NULL);
-   assert(rowinds != NULL);
+   assert(weights != NULL || nrowinds == 0);
+   assert(slacksign != NULL || nrowinds == 0);
+   assert(rowinds != NULL || nrowinds == 0);
    assert(scale > 0.0);
    assert(cutcoefs != NULL);
    assert(cutrhs != NULL);
