@@ -474,8 +474,8 @@ SCIP_RETCODE mod2MatrixTransformContRows(
       SCIP_Real* rowvals;
       SCIP_COL** rowcols;
 
-      /* skip modifiable rows and rows that are already integral */
-      if( SCIProwIsModifiable(rows[i]) || SCIProwIsIntegral(rows[i]) )
+      /* skip integral rows and rows not suitable for generating cuts */
+      if( SCIProwIsModifiable(rows[i]) || SCIProwIsIntegral(rows[i]) || (SCIProwIsLocal(rows[i]) && !ALLOWLOCAL) )
          continue;
 
       lhs = SCIProwGetLhs(rows[i]) - SCIProwGetConstant(rows[i]);
@@ -854,7 +854,7 @@ SCIP_RETCODE buildMod2Matrix(
          useub = TRUE;
       else if( SCIPisLT(scip, primsol, (1.0 - BOUNDSWITCH) * lb + BOUNDSWITCH * ub) )
          useub = FALSE;
-      else //if( SCIPisGT(scip, primsol, (1.0 - BOUNDSWITCH) * lb + BOUNDSWITCH * ub) )
+      else
          useub = TRUE;
 
       if( useub )
@@ -876,12 +876,13 @@ SCIP_RETCODE buildMod2Matrix(
       int lhsmod2;
       int rhsmod2;
 
-      if( !SCIProwIsIntegral(rows[i]) )
+      /* skip non-integral rows and rows not suitable for generating cuts */
+      if( SCIProwIsModifiable(rows[i]) || !SCIProwIsIntegral(rows[i]) || (SCIProwIsLocal(rows[i]) && !ALLOWLOCAL) )
          continue;
 
-      activity = SCIPgetRowLPActivity(scip, rows[i]);
       lhsmod2 = 0;
       rhsmod2 = 0;
+      activity = SCIPgetRowLPActivity(scip, rows[i]);
 
       /* compute lhsslack: activity - lhs */
       if( SCIPisInfinity(scip, -SCIProwGetLhs(rows[i])) )
