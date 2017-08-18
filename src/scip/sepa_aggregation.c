@@ -33,23 +33,23 @@
 #define SEPA_NAME              "aggregation"
 #define SEPA_DESC              "aggregation heuristic for complemented mixed integer rounding cuts and flowcover cuts"
 #define SEPA_PRIORITY             -3000
-#define SEPA_FREQ                     0
-#define SEPA_MAXBOUNDDIST           0.0
+#define SEPA_FREQ                    10
+#define SEPA_MAXBOUNDDIST           1.0
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
-#define DEFAULT_MAXROUNDS             5 /**< maximal number of cmir separation rounds per node (-1: unlimited) */
+#define DEFAULT_MAXROUNDS            -1 /**< maximal number of cmir separation rounds per node (-1: unlimited) */
 #define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of cmir separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_MAXTRIES             -1 /**< maximal number of rows to start aggregation with per separation round
                                          *   (-1: unlimited) */
 #define DEFAULT_MAXTRIESROOT         -1 /**< maximal number of rows to start aggregation with per round in the root node
                                          *   (-1: unlimited) */
-#define DEFAULT_MAXFAILS             20 /**< maximal number of consecutive unsuccessful aggregation tries (-1: unlimited) */
+#define DEFAULT_MAXFAILS             50 /**< maximal number of consecutive unsuccessful aggregation tries (-1: unlimited) */
 #define DEFAULT_MAXFAILSROOT        100 /**< maximal number of consecutive unsuccessful aggregation tries in the root node
                                          *   (-1: unlimited) */
 #define DEFAULT_MAXAGGRS              3 /**< maximal number of aggregations for each row per separation round */
 #define DEFAULT_MAXAGGRSROOT          6 /**< maximal number of aggregations for each row per round in the root node */
-#define DEFAULT_MAXSEPACUTS         200 /**< maximal number of cmir cuts separated per separation round */
+#define DEFAULT_MAXSEPACUTS         400 /**< maximal number of cmir cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT    1000 /**< maximal number of cmir cuts separated per separation round in root node */
 #define DEFAULT_MAXSLACK            0.0 /**< maximal slack of rows to be used in aggregation */
 #define DEFAULT_MAXSLACKROOT        0.1 /**< maximal slack of rows to be used in aggregation in the root node */
@@ -70,7 +70,6 @@
 
 #define BOUNDSWITCH                 0.5
 #define USEVBDS                    TRUE
-#define ALLOWLOCAL                 TRUE
 #define MINFRAC                    0.05
 #define MAXFRAC                    0.999
 #define MAKECONTINTEGRAL          FALSE
@@ -257,6 +256,7 @@ static
 SCIP_RETCODE setupAggregationData(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< solution to separate, NULL for LP solution */
+   SCIP_Bool             allowlocal,         /**< should local cuts be allowed */
    AGGREGATIONDATA*      aggrdata            /**< pointer to aggregation data to setup */
    )
 {
@@ -306,13 +306,17 @@ SCIP_RETCODE setupAggregationData(
          int bestvlbidx;
          int bestvubidx;
 
-#if ALLOWLOCAL == 1
-         bestlb = SCIPvarGetLbLocal(vars[i]);
-         bestub = SCIPvarGetUbLocal(vars[i]);
-#else
-         bestlb = SCIPvarGetLbGlobal(vars[i]);
-         bestub = SCIPvarGetUbGlobal(vars[i]);
-#endif
+         if( allowlocal )
+         {
+            bestlb = SCIPvarGetLbLocal(vars[i]);
+            bestub = SCIPvarGetUbLocal(vars[i]);
+         }
+         else
+         {
+            bestlb = SCIPvarGetLbGlobal(vars[i]);
+            bestub = SCIPvarGetUbGlobal(vars[i]);
+         }
+
          SCIP_CALL( SCIPgetVarClosestVlb(scip, vars[i], sol, &bestvlb, &bestvlbidx) );
          SCIP_CALL( SCIPgetVarClosestVub(scip, vars[i], sol, &bestvub, &bestvubidx) );
          if( bestvlbidx >= 0 )
@@ -743,6 +747,7 @@ SCIP_RETCODE aggregation(
    AGGREGATIONDATA*      aggrdata,
    SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
+   SCIP_Bool             allowlocal,         /**< should local cuts be allowed */
    SCIP_Real*            rowlhsscores,       /**< aggregation scores for left hand sides of row */
    SCIP_Real*            rowrhsscores,       /**< aggregation scores for right hand sides of row */
    int                   startrow,           /**< index of row to start aggregation */
@@ -822,11 +827,11 @@ SCIP_RETCODE aggregation(
        */
 
       flowcoverefficacy =  -SCIPinfinity(scip);
-      SCIP_CALL( SCIPcalcFlowCover(scip, sol, BOUNDSWITCH, ALLOWLOCAL, aggrdata->aggrrow, cutcoefs, &cutrhs, cutinds,
+      SCIP_CALL( SCIPcalcFlowCover(scip, sol, BOUNDSWITCH, allowlocal, aggrdata->aggrrow, cutcoefs, &cutrhs, cutinds,
             &cutnnz, &flowcoverefficacy, &cutrank, &flowcovercutislocal, &flowcoversuccess) );
 
       cutefficacy = flowcoverefficacy;
-      SCIP_CALL( SCIPcutGenerationHeuristicCMIR(scip, sol, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, NULL, NULL, MINFRAC, MAXFRAC,
+      SCIP_CALL( SCIPcutGenerationHeuristicCMIR(scip, sol, BOUNDSWITCH, USEVBDS, allowlocal, NULL, NULL, MINFRAC, MAXFRAC,
             aggrdata->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cmircutislocal, &cmirsuccess) );
 
       oldncuts = *ncuts;
@@ -926,6 +931,7 @@ SCIP_RETCODE separateCuts(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPA*            sepa,               /**< the c-MIR separator */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
+   SCIP_Bool             allowlocal,         /**< should local cuts be allowed */
    SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
@@ -1153,7 +1159,7 @@ SCIP_RETCODE separateCuts(
          slack = (activity - lhs)/rownorm;
          dualscore = MAX(fracscore * dualsol/objnorm, 0.0001);
          if( !SCIPisInfinity(scip, -lhs) && SCIPisLE(scip, slack, maxslack)
-            && (ALLOWLOCAL || !SCIProwIsLocal(rows[r])) /*lint !e506 !e774*/
+            && (allowlocal || !SCIProwIsLocal(rows[r])) /*lint !e506 !e774*/
             && rowdensity <= sepadata->maxrowdensity
             && rowdensity <= sepadata->maxaggdensity )  /*lint !e774*/
          {
@@ -1167,7 +1173,7 @@ SCIP_RETCODE separateCuts(
          slack = (rhs - activity)/rownorm;
          dualscore = MAX(-fracscore * dualsol/objnorm, 0.0001);
          if( !SCIPisInfinity(scip, rhs) && SCIPisLE(scip, slack, maxslack)
-            && (ALLOWLOCAL || !SCIProwIsLocal(rows[r])) /*lint !e506 !e774*/
+            && (allowlocal || !SCIProwIsLocal(rows[r])) /*lint !e506 !e774*/
             && rowdensity <= sepadata->maxrowdensity
             && rowdensity <= sepadata->maxaggdensity )  /*lint !e774*/
          {
@@ -1203,7 +1209,7 @@ SCIP_RETCODE separateCuts(
    assert(nrows == nnonzrows + zerorows);
 
    /* calculate the data required for performing the row aggregation */
-   SCIP_CALL( setupAggregationData(scip, sol, &aggrdata) );
+   SCIP_CALL( setupAggregationData(scip, sol, allowlocal, &aggrdata) );
 
    ncuts = 0;
    if( maxtries < 0 )
@@ -1223,7 +1229,7 @@ SCIP_RETCODE separateCuts(
       int oldncuts;
 
       oldncuts = ncuts;
-      SCIP_CALL( aggregation(scip, &aggrdata, sepa, sol, rowlhsscores, rowrhsscores,
+      SCIP_CALL( aggregation(scip, &aggrdata, sepa, sol, allowlocal, rowlhsscores, rowrhsscores,
                              roworder[r], maxaggrs, &wastried, &cutoff, cutinds, cutcoefs, FALSE, &ncuts) );
 
       /* if trynegscaling is true we start the aggregation heuristic again for this row, but multiply it by -1 first.
@@ -1231,7 +1237,7 @@ SCIP_RETCODE separateCuts(
        */
       if( sepadata->trynegscaling && !cutoff )
       {
-         SCIP_CALL( aggregation(scip, &aggrdata, sepa, sol, rowlhsscores, rowrhsscores,
+         SCIP_CALL( aggregation(scip, &aggrdata, sepa, sol, allowlocal, rowlhsscores, rowrhsscores,
                              roworder[r], maxaggrs, &wastried, &cutoff, cutinds, cutcoefs, TRUE, &ncuts) );
       }
 
@@ -1338,7 +1344,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpAggregation)
    if( SCIPgetNLPBranchCands(scip) == 0 )
       return SCIP_OKAY;
 
-   SCIP_CALL( separateCuts(scip, sepa, NULL, result) );
+   SCIP_CALL( separateCuts(scip, sepa, NULL, allowlocal, result) );
 
    return SCIP_OKAY;
 }
@@ -1351,7 +1357,7 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolAggregation)
 
    *result = SCIP_DIDNOTRUN;
 
-   SCIP_CALL( separateCuts(scip, sepa, sol, result) );
+   SCIP_CALL( separateCuts(scip, sepa, sol, allowlocal, result) );
 
    return SCIP_OKAY;
 }

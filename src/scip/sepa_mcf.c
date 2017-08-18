@@ -81,7 +81,6 @@
 /* fixed parameters */
 #define BOUNDSWITCH                         0.5
 #define USEVBDS                            TRUE
-#define ALLOWLOCAL                         TRUE
 #define MINFRAC                            0.05
 #define MAXFRAC                           0.999
 
@@ -5843,6 +5842,7 @@ SCIP_RETCODE generateClusterCuts(
    SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
+   SCIP_Bool             allowlocal,         /**< should local cuts be allowed */
    SCIP_MCFNETWORK*      mcfnetwork,         /**< MCF network structure */
    NODEPARTITION*        nodepartition,      /**< node partition data structure, or NULL */
    int*                  ncuts,              /**< pointer to count the number of added cuts */
@@ -6344,7 +6344,7 @@ SCIP_RETCODE generateClusterCuts(
          {
             SCIP_Bool success;
             SCIP_CALL( SCIPaggrRowSumRows(scip, aggrrow, rowweights, NULL, -1, sepadata->maxweightrange, SCIPsumepsilon(scip),
-                                          FALSE, ALLOWLOCAL, 2, (int)MAXAGGRLEN(nvars), &success) );
+                                          FALSE, allowlocal, 2, (int)MAXAGGRLEN(nvars), &success) );
          }
 
          SCIPdebugMsg(scip, " -> found %d different deltas to try\n", ndeltas);
@@ -6364,9 +6364,9 @@ SCIP_RETCODE generateClusterCuts(
             assert( !SCIPisZero(scip, 1.0/deltas[d]) );
 
             SCIPdebugMsg(scip, "applying MIR with delta = %g\n", deltas[d]);
-            SCIP_CALL( SCIPcalcMIR(scip, sol, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->fixintegralrhs, NULL, NULL, MINFRAC, MAXFRAC,
+            SCIP_CALL( SCIPcalcMIR(scip, sol, BOUNDSWITCH, USEVBDS, allowlocal, sepadata->fixintegralrhs, NULL, NULL, MINFRAC, MAXFRAC,
                                    1.0/deltas[d], aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
-            assert(ALLOWLOCAL || !cutislocal);
+            assert(allowlocal || !cutislocal);
 
             /* // no success means row was too long or empty, there is a free
                // variable or for numerical reasons, it does not mean that the
@@ -6548,12 +6548,12 @@ SCIP_RETCODE generateClusterCuts(
                   SCIPdebugMsg(scip, "applying MIR with delta = %g to flowcut inequality (violation improvement: %g)\n", bestdelta, totalviolationdelta);
 
                   SCIP_CALL( SCIPaggrRowSumRows(scip, aggrrow, rowweights, NULL, -1, sepadata->maxweightrange, SCIPsumepsilon(scip),
-                                                FALSE, ALLOWLOCAL, 2, (int)MAXAGGRLEN(nvars), &success) );
+                                                FALSE, allowlocal, 2, (int)MAXAGGRLEN(nvars), &success) );
 
-                  SCIP_CALL( SCIPcalcMIR(scip, sol, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->fixintegralrhs, NULL, NULL, MINFRAC, MAXFRAC,
+                  SCIP_CALL( SCIPcalcMIR(scip, sol, BOUNDSWITCH, USEVBDS, allowlocal, sepadata->fixintegralrhs, NULL, NULL, MINFRAC, MAXFRAC,
                                    1.0/bestdelta, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
 
-                  assert(ALLOWLOCAL || !cutislocal);
+                  assert(allowlocal || !cutislocal);
 
                   if( success && SCIPisEfficacious(scip, cutefficacy) )
                   {
@@ -6584,6 +6584,7 @@ SCIP_RETCODE separateCuts(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPA*            sepa,               /**< the cut separator itself */
    SCIP_SOL*             sol,                /**< primal solution that should be separated, or NULL for LP solution */
+   SCIP_Bool             allowlocal,         /**< should local cuts be allowed */
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
    )
 {
@@ -6708,7 +6709,7 @@ SCIP_RETCODE separateCuts(
          /* enumerate single node cuts */
          if( sepadata->separatesinglenodecuts )
          {
-            SCIP_CALL( generateClusterCuts(scip, sepa, sepadata, sol, mcfnetwork, NULL, &ncuts, &cutoff) );
+            SCIP_CALL( generateClusterCuts(scip, sepa, sepadata, sol, allowlocal, mcfnetwork, NULL, &ncuts, &cutoff) );
          }
 
          if( !cutoff )
@@ -6721,7 +6722,7 @@ SCIP_RETCODE separateCuts(
 #endif
 
             /* enumerate cuts between subsets of the clusters */
-            SCIP_CALL( generateClusterCuts(scip, sepa, sepadata, sol, mcfnetwork, nodepartition, &ncuts, &cutoff) );
+            SCIP_CALL( generateClusterCuts(scip, sepa, sepadata, sol, allowlocal, mcfnetwork, nodepartition, &ncuts, &cutoff) );
 
             /* free node partition */
             nodepartitionFree(scip, &nodepartition);
@@ -6849,7 +6850,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpMcf)
       return SCIP_OKAY;
 
    /* separate cuts on the LP solution */
-   SCIP_CALL( separateCuts(scip, sepa, NULL, result) );
+   SCIP_CALL( separateCuts(scip, sepa, NULL, allowlocal, result) );
 
    return SCIP_OKAY;
 }
@@ -6864,7 +6865,7 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolMcf)
    *result = SCIP_DIDNOTRUN;
 
    /* separate cuts on the given primal solution */
-   SCIP_CALL( separateCuts(scip, sepa, sol, result) );
+   SCIP_CALL( separateCuts(scip, sepa, sol, allowlocal, result) );
 
    return SCIP_OKAY;
 }

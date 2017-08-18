@@ -34405,6 +34405,7 @@ SCIP_RETCODE SCIPseparateSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution that should be separated, or NULL for LP solution */
    SCIP_Bool             pretendroot,        /**< should the cut separators be called as if we are at the root node? */
+   SCIP_Bool             allowlocal,         /**< should the separator be asked to separate local cuts */
    SCIP_Bool             onlydelayed,        /**< should only separators be called that were delayed in the previous round? */
    SCIP_Bool*            delayed,            /**< pointer to store whether a separator was delayed */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
@@ -34419,7 +34420,7 @@ SCIP_RETCODE SCIPseparateSol(
 
    /* apply separation round */
    SCIP_CALL( SCIPseparationRound(scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->eventqueue, scip->eventfilter, scip->transprob, scip->primal, scip->tree, scip->lp, scip->sepastore,
-         sol, actdepth, onlydelayed, delayed, cutoff) );
+         sol, actdepth, allowlocal, onlydelayed, delayed, cutoff) );
 
    return SCIP_OKAY;
 }

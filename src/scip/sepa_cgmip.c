@@ -91,7 +91,6 @@
 #define DEFAULT_MAXROWAGE            -1 /**< maximal age of rows to consider if onlyactiverows is false */
 #define DEFAULT_ONLYRANKONE       FALSE /**< Separate rank 1 inequalities w.r.t. CG-MIP separator? */
 #define DEFAULT_ONLYINTVARS       FALSE /**< Generate cuts for problems with only integer variables? */
-#define DEFAULT_ALLOWLOCAL        FALSE /**< Allow to generate local cuts? */
 #define DEFAULT_CONTCONVERT       FALSE /**< Convert some integral variables to be continuous to reduce the size of the sub-MIP? */
 #define DEFAULT_CONTCONVFRAC        0.1 /**< fraction of integral variables converted to be continuous (if contconvert) */
 #define DEFAULT_CONTCONVMIN         100 /**< minimum number of integral variables before some are converted to be continuous */
@@ -3958,6 +3957,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
       SCIP_CALL( SCIPsetBoolParam(scip, "separating/cgmip/useobjub", FALSE) );
       SCIP_CALL( SCIPsetBoolParam(scip, "separating/cgmip/useobjlb", FALSE) );
    }
+   sepadata->allowlocal = allowlocal;
 
    /* get LP data */
    ncols = SCIPgetNLPCols(scip);
@@ -4160,11 +4160,6 @@ SCIP_RETCODE SCIPincludeSepaCGMIP(
          "separating/" SEPA_NAME "/onlyintvars",
          "Generate cuts for problems with only integer variables?",
          &sepadata->onlyintvars, FALSE, DEFAULT_ONLYINTVARS, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "separating/" SEPA_NAME "/allowlocal",
-         "Allow to generate local cuts?",
-         &sepadata->allowlocal, FALSE, DEFAULT_ALLOWLOCAL, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/" SEPA_NAME "/contconvert",
