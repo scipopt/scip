@@ -52,6 +52,7 @@
  *
  * - \ref WHATPROBLEMS "What types of optimization problems does SCIP solve?"
  * - \ref MAKE    "Installation information / Makefiles"
+ * - \ref CMAKE   "Installation information / CMake"
  * - \ref LICENSE "License"
  *
  * - \ref SHELL       "Tutorial: the interactive shell"
@@ -7078,6 +7079,11 @@
 /**@page INSTALL Installation information
  * \verbinclude INSTALL
  */
+
+/**@page INSTALL_CMAKE Installation information (CMake)
+ * \verbinclude INSTALL_CMAKE
+ */
+
 
 /**@page RELEASENOTES Release notes
  *
