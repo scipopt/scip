@@ -600,12 +600,18 @@
  * Parameters can be set all at once or in subsequent calls to "cmake" - extending or modifying the existing
  * configuration.
  *
- * @section Testing with CTest
+ * @section CTEST Testing with CTest
  *
  * There is an extensive test suite written for <a href="https://cmake.org/cmake/help/latest/manual/ctest.1.html">CTest</a>,
  * that may take a while to complete. To perform a quick test to see whether the compilation was really successful you may
  * run "ctest -R -default" or "make check". To see all available tests, run "ctest -N" and to perform a memory check, run
  * "ctest -T".
+ *
+ * @section CMAKE_INSTALL Installation
+ *
+ * CMake uses a default directory for installation, e.g., /usr/local on Linux. This can be modified by either changing
+ * the configuration using "-DCMAKE_INSTALL_PREFIX" as explained in \ref CMAKE_CONFIG or by setting the environment
+ * variable "DESTDIR" during or before the install command, e.g., "DESTDIR=<custom/install/dir> make install".
  *
  */
 
