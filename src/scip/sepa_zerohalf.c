@@ -348,10 +348,13 @@ SCIP_RETCODE transformNonIntegralRow(
 
       if( closestvbdind >= 0 )
       {
-         SCIP_Real coef = val * vbdcoef;
+         SCIP_Real coef;
+         int pos;
+
+         coef = val * vbdcoef;
          transrowrhs -= val * vbdconst;
 
-         int pos = intvarpos[SCIPvarGetProbindex(vbdvar)] - 1;
+         pos = intvarpos[SCIPvarGetProbindex(vbdvar)] - 1;
          if( pos >= 0 )
          {
             transrowvals[pos] += coef;
@@ -452,14 +455,12 @@ SCIP_RETCODE mod2MatrixTransformContRows(
    )
 {
    SCIP_ROW** rows;
-   SCIP_VAR** vars;
    int nrows;
    int* intvarpos;
    int i;
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &mod2matrix->transintrows, 2*nrows) );
    mod2matrix->ntransintrows = 0;
-   vars = SCIPgetVars(scip);
 
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &intvarpos, SCIPgetNVars(scip)) );
 
@@ -659,14 +660,18 @@ SCIP_RETCODE mod2MatrixAddOrigRow(
    {
       if( mod2(scip, rowvals[i]) == 1 )
       {
-         void* colinfo = SCIPhashmapGetImage(origcol2col, (void*)SCIPcolGetVar(rowcols[i]));
+         void* colinfo;
+         MOD2_COL* col;
+         int rhsoffset;
+
+         colinfo = SCIPhashmapGetImage(origcol2col, (void*)SCIPcolGetVar(rowcols[i]));
 
          /* extract the righthand side offset from the colinfo and update the righthand side */
-         int rhsoffset = COLINFO_GET_RHSOFFSET(colinfo);
+         rhsoffset = COLINFO_GET_RHSOFFSET(colinfo);
          row->rhs = (row->rhs + rhsoffset) % 2;
 
          /* extract the column pointer from the colinfo */
-         MOD2_COL* col = COLINFO_GET_MOD2COL(colinfo);
+         col = COLINFO_GET_MOD2COL(colinfo);
 
          if( col != NULL )
          {
@@ -727,14 +732,18 @@ SCIP_RETCODE mod2MatrixAddTransRow(
    {
       if( mod2(scip, introw->vals[i]) == 1 )
       {
-         void* colinfo = SCIPhashmapGetImage(origcol2col, (void*)vars[introw->varinds[i]]);
+         void* colinfo;
+         MOD2_COL* col;
+         int rhsoffset;
+
+         colinfo = SCIPhashmapGetImage(origcol2col, (void*)vars[introw->varinds[i]]);
 
          /* extract the righthand side offset from the colinfo and update the righthand side */
-         int rhsoffset = COLINFO_GET_RHSOFFSET(colinfo);
+         rhsoffset = COLINFO_GET_RHSOFFSET(colinfo);
          row->rhs = (row->rhs + rhsoffset) % 2;
 
          /* extract the column pointer from the colinfo */
-         MOD2_COL* col = COLINFO_GET_MOD2COL(colinfo);
+         col = COLINFO_GET_MOD2COL(colinfo);
 
          if( col != NULL )
          {
@@ -1380,14 +1389,16 @@ SCIP_RETCODE mod2rowAddRow(
    row->rhs ^= rowtoadd->rhs;
    row->slack += rowtoadd->slack;
 
-   /* the maximum index return by the UNIQUE_INDEX macro is 3 times
-    * the maximum index value in the ROWINDEX struct. The index value could
-    * be the lp position of an original row or the index of a transformed row.
-    * Hence we need to allocate 3 times the maximum of these two possible
-    * index types.
-    */
-   int allocsize = 3 * MAX(nlprows, mod2matrix->ntransintrows);
-   SCIP_CALL( SCIPallocCleanBufferArray(scip, &contained, allocsize) );
+   {
+      /* the maximum index return by the UNIQUE_INDEX macro is 3 times
+       * the maximum index value in the ROWINDEX struct. The index value could
+       * be the lp position of an original row or the index of a transformed row.
+       * Hence we need to allocate 3 times the maximum of these two possible
+       * index types.
+       */
+      int allocsize = 3 * MAX(nlprows, mod2matrix->ntransintrows);
+      SCIP_CALL( SCIPallocCleanBufferArray(scip, &contained, allocsize) );
+   }
 
    /* remember entries that are in the row to add */
    for( i = 0; i < rowtoadd->nrowinds; ++i )
