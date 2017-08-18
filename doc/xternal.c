@@ -593,9 +593,9 @@
  * ZIMPL                | on, off                        | ZIMPL=[true, false]
  * CMAKE_INSTALL_PREFIX | <path>                         | INSTALLDIR=<path>
  * SHARED               | on, off                        | SHARED=[true, false]
- * SOPLEX_DIR           | <path/to/SoPlex/installation>  |
- * GMP_DIR              | <path/to/GMP/installation>     |
- * ..._DIR              | <custom/path/to/.../package>   |
+ * SOPLEX_DIR           | <path/to/SoPlex/installation>  | --
+ * GMP_DIR              | <path/to/GMP/installation>     | --
+ * ..._DIR              | <custom/path/to/.../package>   | --
  *
  * Parameters can be set all at once or in subsequent calls to "cmake" - extending or modifying the existing
  * configuration.
