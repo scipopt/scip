@@ -1,6 +1,7 @@
 project(Binpacking)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../src)
+find_package(SCIP REQUIRED)
+include_directories(${SCIP_INCLUDE_DIRS})
 
 add_executable(binpacking
    src/branch_ryanfoster.c
@@ -11,7 +12,7 @@ add_executable(binpacking
    src/reader_bpa.c
    src/vardata_binpacking.c)
 
-target_link_libraries(binpacking libscip)
+target_link_libraries(binpacking ${SCIP_LIBRARIES})
 add_dependencies(examples binpacking)
 
 #
