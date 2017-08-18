@@ -584,8 +584,8 @@
  * For all of these options and parameters you have to use "-D<Parameter_name>=<value>". Following a list of available
  * options, for the full list run "cmake <path/to/SCIP> -LH".
  *
- * CMake option | available values | Makefile equivalent
- * -----------------------------------------------------
+ * CMake option         | available values               | Makefile equivalent
+ * ---------------------|--------------------------------|------------------------
  * CMAKE_BUILD_TYPE     | Release, Debug, ...            | OPT=[opt, dbg]
  * LPS                  | spx, cpx, grb, xprs, ...       | LPS=...
  * GMP                  | on, off                        | GMP=[true, false]
@@ -604,14 +604,19 @@
  *
  * There is an extensive test suite written for <a href="https://cmake.org/cmake/help/latest/manual/ctest.1.html">CTest</a>,
  * that may take a while to complete. To perform a quick test to see whether the compilation was really successful you may
- * run "ctest -R -default" or "make check". To see all available tests, run "ctest -N" and to perform a memory check, run
- * "ctest -T".
+ * run "make check". To see all available tests, run "ctest -N" and to perform a memory check, run
+ * "ctest -T MemCheck".
  *
  * @section CMAKE_INSTALL Installation
  *
  * CMake uses a default directory for installation, e.g., /usr/local on Linux. This can be modified by either changing
  * the configuration using "-DCMAKE_INSTALL_PREFIX" as explained in \ref CMAKE_CONFIG or by setting the environment
  * variable "DESTDIR" during or before the install command, e.g., "DESTDIR=<custom/install/dir> make install".
+ *
+ * @section CMAKE_TARGETS Additional targets
+ *
+ * There are several further targets available, which can be listed using "make help". For instance, there are some
+ * examples that can be built with "make examples" or by specifying a certain one: "make <example-name>".
  *
  */
 
