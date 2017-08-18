@@ -605,7 +605,8 @@
  * There is an extensive test suite written for <a href="https://cmake.org/cmake/help/latest/manual/ctest.1.html">CTest</a>,
  * that may take a while to complete. To perform a quick test to see whether the compilation was really successful you may
  * run "make check". To see all available tests, run "ctest -N" and to perform a memory check, run
- * "ctest -T MemCheck".
+ * "ctest -T MemCheck". If <a href="https://criterion.readthedocs.io/en/master/">Criterion</a> is installed (set
+ * custom path with "-DCRITERION=<path>") the target "unittests" can be used to compile and run the available unit tests.
  *
  * @section CMAKE_INSTALL Installation
  *
