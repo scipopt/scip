@@ -15,7 +15,7 @@
 
 /**@file   bandit_ucb.h
  * @ingroup BanditAlgorithms
- * @brief  public methods for Exp.3 bandit algorithm
+ * @brief  public methods for UCB bandit algorithm
  * @author Gregor Hendel
  */
 
@@ -31,13 +31,13 @@
 extern "C" {
 #endif
 
-/** include virtual function table for Exp.3 bandit algorithms */
+/** include virtual function table for UCB bandit algorithms */
 EXTERN
 SCIP_RETCODE SCIPincludeBanditvtableUcb(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** create Exp.3 bandit algorithm */
+/** create UCB bandit algorithm */
 EXTERN
 SCIP_RETCODE SCIPcreateBanditUcb(
    SCIP*                 scip,               /**< SCIP data structure */

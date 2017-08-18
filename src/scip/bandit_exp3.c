@@ -224,7 +224,6 @@ SCIP_DECL_BANDITRESET(banditResetExp3)
    weights = banditdata->weights;
 
    assert(nactions > 0);
-   assert(priorities != NULL);
 
    banditdata->weightsum = (SCIP_Real)nactions;
 

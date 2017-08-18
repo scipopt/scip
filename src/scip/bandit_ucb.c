@@ -45,6 +45,49 @@ struct SCIP_BanditData
  * Local methods
  */
 
+/** data reset method */
+static
+SCIP_RETCODE dataReset(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BANDIT*          ucb,                /**< ucb bandit algorithm */
+   SCIP_BANDITDATA*      banditdata,         /**< UCB bandit data structure */
+   SCIP_Real*            priorities,         /**< priorities for start permutation, or NULL */
+   int                   nactions            /**< number of actions */
+   )
+{
+   int i;
+   /* clear counters and scores */
+   BMSclearMemoryArray(banditdata->counter, nactions);
+   BMSclearMemoryArray(banditdata->meanscores, nactions);
+   banditdata->nselections = 0;
+
+   /* initialize start permutation as identity */
+   for( i = 0; i < nactions; ++i )
+      banditdata->startperm[i] = i;
+
+   /* prepare the start permutation in decreasing order of priority */
+   if( priorities != NULL )
+   {
+      SCIP_Real* prioritycopy;
+
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &prioritycopy, priorities, nactions) );
+
+      SCIPsortDownRealInt(prioritycopy, banditdata->startperm, nactions);
+
+      SCIPfreeBufferArray(scip, &prioritycopy);
+   }
+   else
+   {
+      /* use a random start permutation */
+      SCIP_RANDNUMGEN* rng = SCIPbanditGetRandnumgen(ucb);
+      assert(rng != NULL);
+
+      SCIPrandomPermuteIntArray(rng, banditdata->startperm, 0, nactions);
+   }
+
+   return SCIP_OKAY;
+}
+
 
 /*
  * Callback methods of bandit algorithm
@@ -137,8 +180,8 @@ SCIP_DECL_BANDITSELECT(banditSelectUcb)
       }
    }
 
-   assert(*selection > 0);
-   assert(*selection <= nactions);
+   assert(*selection >= 0);
+   assert(*selection < nactions);
    banditdata->nselections++;
 
    return SCIP_OKAY;
@@ -177,7 +220,6 @@ SCIP_DECL_BANDITRESET(banditResetUcb)
 {  /*lint --e{715}*/
    SCIP_BANDITDATA* banditdata;
    int nactions;
-   int i;
 
    assert(scip != NULL);
    assert(bandit != NULL);
@@ -186,34 +228,9 @@ SCIP_DECL_BANDITRESET(banditResetUcb)
    assert(banditdata != NULL);
    nactions = SCIPbanditGetNActions(bandit);
 
-   /* clear counters and scores */
-   BMSclearMemoryArray(banditdata->counter, nactions);
-   BMSclearMemoryArray(banditdata->meanscores, nactions);
-   banditdata->nselections = 0;
+   /* call the data reset for the given priorities */
+   SCIP_CALL( dataReset(scip, bandit, banditdata, priorities, nactions) );
 
-   /* initialize start permutation as identity */
-   for( i = 0; i < nactions; ++i )
-      banditdata->startperm[i] = i;
-
-   /* prepare the start permutation in decreasing order of priority */
-   if( priorities != NULL )
-   {
-      SCIP_Real* prioritycopy;
-
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &prioritycopy, priorities, nactions) );
-
-      SCIPsortDownRealInt(prioritycopy, banditdata->startperm, nactions);
-
-      SCIPfreeBufferArray(scip, &prioritycopy);
-   }
-   else
-   {
-      /* use a random start permutation */
-      SCIP_RANDNUMGEN* rng = SCIPbanditGetRandnumgen(bandit);
-      assert(rng != NULL);
-
-      SCIPrandomPermuteIntArray(rng, banditdata->startperm, 0, nactions);
-   }
 
    return SCIP_OKAY;
 }
@@ -288,6 +305,10 @@ SCIP_RETCODE SCIPcreateBanditUcb(
    banditdata->alpha = alpha;
 
    SCIP_CALL( SCIPcreateBandit(scip, ucb, vtable, nactions, banditdata) );
+   assert(*ucb != NULL);
+
+   /* reset data for correct initialization */
+   SCIP_CALL( dataReset(scip, *ucb, banditdata, NULL, nactions) );
 
    return SCIP_OKAY;
 }
