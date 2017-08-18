@@ -222,11 +222,12 @@ SECTION: General Questions about SCIP
         which can be avoided by careful modeling.
     </p>
 
-    QUESTION: How can I use the SCIP makefiles?
+    QUESTION: How can I build/compile SCIP?
     LABEL:howtousemakefiles
     ANSWER:
     <p>
-        See <a href="PATHTODOC/MAKE.LINKEXT">Makefiles</a>.
+        SCIP can be compiled using either <a href="PATHTODOC/MAKE.LINKEXT">Makefiles</a>
+        or <a href="PATHTODOC/CMAKE.LINKEXT">CMake</a>.
     </p>
 
     QUESTION: What is this business with .a and .so libraries in the directory <code>lib/</code>?
@@ -244,7 +245,8 @@ SECTION: General Questions about SCIP
         put the path of the library into the <code>LD_LIBRARY_PATH</code> environment variable).<br/><br/>
         There are compiler-dependent preferences which version should be included if both a static and a shared version
         of the same library are available. In order to avoid confusion, SCIP separates shared from static libraries into
-        the directories "lib/static" and "lib/shared". Note that some LP-solvers are only shipped with a shared version.
+        the directories "lib/static" and "lib/shared" when using the Makefile system. Note that some LP-solvers are only
+        shipped with a shared version.
     </p>
 
     QUESTION: Can I compile SCIP as a shared library?
@@ -280,16 +282,17 @@ SECTION: General Questions about SCIP
     LABEL:visualizebranchandbound
     ANSWER:
     <p>
-        Yes, currently there are two tree visualizations supported, the <a href="http://www.informatik.uni-koeln.de/ls_juenger/research/vbctool">vbctool</a>,
-        and the <a href="https://projects.coin-or.org/CoinBazaar/wiki/Projects/BAK">Branch-and-Bound Analysis Kit</a>.
+        Yes, currently there are three tree visualizations supported, the <a href="http://www.informatik.uni-koeln.de/ls_juenger/research/vbctool">vbctool</a>,
+        <a href="http://hydraw.zib.de/">HyDraw</a>, and <a href="https://github.com/coin-or/GrUMPy">GrUMPy</a>.
         The first comes with a viewer that has an option to uncover the nodes one-by-one (each time you
         hit the space key). Additional node information such as its lower bound, depth, and number are accessed through a
-        context menu. The BAK is a command line tool written in the Python programming language. It offers several
-        noninteractive visualizations of the tree at a user-defined frequency.
+        context menu. HyDraw can display a live visualization of the tree using JavaView.
+        GrUMPy is a Python tool that allows to create noninteractive visualizations of the tree in various formats.
     </p>
     <p>
-        For using one of these tools, SCIP lets you define file names <code>set visual vbcfilename somefilename.vbc</code> and
-        <code>set visual bakfilename somefilename.dat</code>.
+        For using one of these tools, SCIP lets you define file names <code>set visual vbcfilename somefilename.vbc</code>
+        and <code>set visual bakfilename somefilename.dat</code>. GrUMPy uses BAK files while the other two tools parse
+        vbc output.
     </p>
     <p>
         For those who want to use the step-by-step functionality of vbctool,
