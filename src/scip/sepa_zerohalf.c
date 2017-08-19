@@ -58,10 +58,10 @@
 #define SEPA_USESSUBSCIP          FALSE
 #define SEPA_DELAY                FALSE
 
-#define DEFAULT_MAXROUNDS             5 /**< maximal number of cmir separation rounds per node (-1: unlimited) */
-#define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of cmir separation rounds in the root node (-1: unlimited) */
-#define DEFAULT_MAXSEPACUTS         200 /**< maximal number of cmir cuts separated per separation round */
-#define DEFAULT_MAXSEPACUTSROOT     500 /**< maximal number of cmir cuts separated per separation round in root node */
+#define DEFAULT_MAXROUNDS             5 /**< maximal number of zerohalf separation rounds per node (-1: unlimited) */
+#define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of zerohalf separation rounds in the root node (-1: unlimited) */
+#define DEFAULT_MAXSEPACUTS         200 /**< maximal number of zerohalf cuts separated per separation round */
+#define DEFAULT_MAXSEPACUTSROOT     500 /**< maximal number of zerohalf cuts separated per separation round in root node */
 #define DEFAULT_MAXSLACK           0.01 /**< maximal slack of rows to be used in aggregation */
 #define DEFAULT_MAXSLACKROOT        0.5 /**< maximal slack of rows to be used in aggregation in the root node */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
@@ -198,27 +198,33 @@ SCIP_DECL_SORTPTRCOMP(compareRowSlack)
 {
    MOD2_ROW* row1;
    MOD2_ROW* row2;
+   SCIP_Bool slack1iszero;
+   SCIP_Bool slack2iszero;
 
    row1 = (MOD2_ROW*) elem1;
    row2 = (MOD2_ROW*) elem2;
 
-   /* small slack comes first */
-   if( EPSLT(row1->slack, row2->slack, SCIP_DEFAULT_EPSILON) )
+   slack1iszero = EPSZ(row1->slack, SCIP_DEFAULT_EPSILON);
+   slack2iszero = EPSZ(row2->slack, SCIP_DEFAULT_EPSILON);
+
+   /* zero slack comes first */
+   if( slack1iszero && !slack2iszero )
       return -1;
-   if( EPSLT(row2->slack, row1->slack, SCIP_DEFAULT_EPSILON) )
+   if( slack2iszero && !slack1iszero )
       return 1;
 
-   /* last tie breaker is to prefer sparser rows */
-   if( row1->nnonzcols > row2->nnonzcols )
-      return -1;
-   if( row2->nnonzcols > row1->nnonzcols )
-      return 1;
-
-   /* if slack is equal prefer rows that contain columns with large solution value */
+   /* prefer rows that contain columns with large solution value */
    if( row1->maxsolval > row2->maxsolval )
       return -1;
    if( row2->maxsolval > row1->maxsolval )
       return 1;
+
+   /* rows with less non-zeros come first rows */
+   if( row1->nnonzcols < row2->nnonzcols )
+      return -1;
+   if( row2->nnonzcols < row1->nnonzcols )
+      return 1;
+
 
    return 0;
 }
@@ -604,7 +610,7 @@ void mod2rowUnlinkCol(
    --row->nnonzcols;
    BMSmoveMemoryArray(row->nonzcols + i, row->nonzcols + i + 1, row->nnonzcols - i);
 
-   if( row->maxsolval == col->solval )
+   if( col->solval >= row->maxsolval )
    {
       row->maxsolval = 0.0;
       for( i = 0; i < row->nnonzcols; ++i )
@@ -1152,8 +1158,12 @@ SCIP_RETCODE mod2matrixPreprocessColumns(
          if( identicalcol != NULL )
          {
             assert(identicalcol != col);
+
             /* column is identical to other column so add its solution value to the other one and then remove and free it */
             identicalcol->solval += col->solval;
+
+            /* also adjust the solval of the removed column so that the maxsolval of each row is properly updated */
+            col->solval = identicalcol->solval;
 
             mod2matrixRemoveCol(scip, mod2matrix, col);
          }
