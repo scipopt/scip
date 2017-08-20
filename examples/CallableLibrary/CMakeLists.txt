@@ -13,23 +13,14 @@ add_executable(gastrans
 add_executable(string
    src/string.c)
 
-# check if we can use log10() with just including math.h
-unset(HAVE_LOG10 CACHE)
-check_symbol_exists(log10 "math.h" HAVE_LOG10)
-if(NOT HAVE_LOG10)
-    # if not we link libm and check again
-    unset(HAVE_LOG10 CACHE)
-    list(APPEND CMAKE_REQUIRED_LIBRARIES m)
-    check_symbol_exists(log10 "math.h" HAVE_LOG10)
-    if(HAVE_LOG10)
-        set(libm m)
-    else()
-        message(FATAL_ERROR "No log10() found")
-    endif()
+# link to math library if it is available
+find_library(LIBM m)
+if(NOT LIBM)
+  set(LIBM "")
 endif()
 
 target_link_libraries(circle ${SCIP_LIBRARIES})
-target_link_libraries(gastrans ${SCIP_LIBRARIES} ${libm})
+target_link_libraries(gastrans ${SCIP_LIBRARIES} ${LIBM})
 target_link_libraries(string ${SCIP_LIBRARIES})
 
 add_dependencies(examples circle gastrans string)
