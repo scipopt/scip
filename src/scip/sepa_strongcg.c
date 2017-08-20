@@ -50,7 +50,6 @@
 
 #define BOUNDSWITCH              0.9999
 #define USEVBDS                    TRUE
-#define ALLOWLOCAL                 TRUE
 #define MAKECONTINTEGRAL          FALSE
 #define MINFRAC                    0.05
 #define MAXFRAC                    0.95
@@ -318,16 +317,16 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
 
          /* create the aggregation row using the B^-1 row as weights */
          SCIP_CALL( SCIPaggrRowSumRows(scip, aggrrow, binvrow, inds, ninds, sepadata->maxweightrange, SCIPsumepsilon(scip),
-                                       FALSE, ALLOWLOCAL, 1, (int) MAXAGGRLEN(nvars), &success) );
+                                       FALSE, allowlocal, 1, (int) MAXAGGRLEN(nvars), &success) );
 
          if( !success )
             continue;
 
          /* create a strong CG cut out of the aggregation row */
-         SCIP_CALL( SCIPcalcStrongCG(scip, NULL, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, MINFRAC, MAXFRAC, 1.0, aggrrow,
+         SCIP_CALL( SCIPcalcStrongCG(scip, NULL, BOUNDSWITCH, USEVBDS, allowlocal, MINFRAC, MAXFRAC, 1.0, aggrrow,
                     cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
 
-         assert(ALLOWLOCAL || !cutislocal);
+         assert(allowlocal || !cutislocal);
          SCIPdebugMsg(scip, " -> success=%u: rhs: %g, efficacy: %g\n", success, cutrhs, cutefficacy);
 
          if( !success )

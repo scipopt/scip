@@ -111,6 +111,20 @@ SCIP_RETCODE SCIPaggrRowAddObjectiveFunction(
    SCIP_Real             scale               /**< scalar */
    );
 
+/** add weighted constraint to the aggregation row */
+extern
+SCIP_RETCODE SCIPaggrRowAddCustomCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   int*                  inds,               /**< variable problem indices in constraint to add to the aggregation row */
+   SCIP_Real*            vals,               /**< values of constraint to add to the aggregation row */
+   int                   len,                /**< length of constraint to add to the aggregation row */
+   SCIP_Real             rhs,                /**< right hand side of constraint to add to the aggregation row */
+   SCIP_Real             weight,             /**< (positive) scale for adding given constraint to the aggregation row */
+   int                   rank,               /**< rank to use for given constraint */
+   SCIP_Bool             local               /**< is constraint only valid locally */
+   );
+
 /** deletes variable at position @pos and updates mapping between variable indices and sparsity pattern */
 extern
 void SCIPaggrRowDelCoef(

@@ -172,7 +172,7 @@ set(scipsources
     scip/sepa_cgmip.c
     scip/sepa_clique.c
     scip/sepa_closecuts.c
-    scip/sepa_cmir.c
+    scip/sepa_aggregation.c
     scip/sepa_convexproj.c
     scip/sepa_disjunctive.c
     scip/sepa_eccuts.c
@@ -569,7 +569,7 @@ set(scipheaders
     scip/sepa_cgmip.h
     scip/sepa_clique.h
     scip/sepa_closecuts.h
-    scip/sepa_cmir.h
+    scip/sepa_aggregation.h
     scip/sepa_convexproj.h
     scip/sepa_disjunctive.h
     scip/sepa_eccuts.h
@@ -754,6 +754,8 @@ else()
     target_link_libraries(scip libscip)
 endif()
 
+target_compile_definitions(scip PRIVATE EXTERN=extern)
+
 target_link_libraries(scip ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES}
    ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${THREAD_LIBRARIES} ${NLPI_LIBRARIES})
 
@@ -788,12 +790,12 @@ install(TARGETS scip libscip EXPORT scip-targets
 
 # Add all targets to the build-tree export set
 export(TARGETS scip libscip
-  FILE "${PROJECT_BINARY_DIR}/scip-targets.cmake")
+  FILE "${CMAKE_BINARY_DIR}/scip-targets.cmake")
 
 #configure the config file for the build tree
 set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src")
 configure_file(${PROJECT_SOURCE_DIR}/scip-config.cmake.in
-  "${PROJECT_BINARY_DIR}/scip-config.cmake" @ONLY)
+  "${CMAKE_BINARY_DIR}/scip-config.cmake" @ONLY)
 
 #configure the config file for the install
 set(CONF_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/../../../include")

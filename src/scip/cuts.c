@@ -605,6 +605,50 @@ SCIP_RETCODE SCIPaggrRowAddObjectiveFunction(
    return SCIP_OKAY;
 }
 
+/** add weighted constraint to the aggregation row */
+SCIP_RETCODE SCIPaggrRowAddCustomCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   int*                  inds,               /**< variable problem indices in constraint to add to the aggregation row */
+   SCIP_Real*            vals,               /**< values of constraint to add to the aggregation row */
+   int                   len,                /**< length of constraint to add to the aggregation row */
+   SCIP_Real             rhs,                /**< right hand side of constraint to add to the aggregation row */
+   SCIP_Real             weight,             /**< (positive) scale for adding given constraint to the aggregation row */
+   int                   rank,               /**< rank to use for given constraint */
+   SCIP_Bool             local               /**< is constraint only valid locally */
+   )
+{
+   int i;
+
+   /* update local flag */
+   aggrrow->local = aggrrow->local || local;
+
+   /* update rank */
+   aggrrow->rank = MAX(rank, aggrrow->rank);
+
+   /* add right hand side value */
+   aggrrow->rhs += weight * rhs;
+
+   /* add the non-zeros to the aggregation row and keep non-zero index up to date */
+   for( i = 0 ; i < len; ++i )
+   {
+      int probindex = inds[i];
+      SCIP_Real val = aggrrow->vals[probindex];
+
+      if( val == 0.0 )
+         aggrrow->inds[aggrrow->nnz++] = probindex;
+
+      val += vals[i] * weight;
+
+      /* the value must not be exactly zero due to sparsity pattern */
+      aggrrow->vals[probindex] = NONZERO(val);
+
+      assert(aggrrow->vals[probindex] != 0.0);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** clear all entries int the aggregation row but don't free memory */
 void SCIPaggrRowClear(
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
@@ -2139,9 +2183,9 @@ SCIP_RETCODE cutsSubstituteMIR(
    int i;
 
    assert(scip != NULL);
-   assert(weights != NULL);
-   assert(slacksign != NULL);
-   assert(rowinds != NULL);
+   assert(weights != NULL || nrowinds == 0);
+   assert(slacksign != NULL || nrowinds == 0);
+   assert(rowinds != NULL || nrowinds == 0);
    assert(scale > 0.0);
    assert(cutcoefs != NULL);
    assert(cutrhs != NULL);
@@ -2316,7 +2360,7 @@ SCIP_RETCODE SCIPcalcMIR(
    SCIP_Bool localbdsused;
 
    assert(aggrrow != NULL);
-   assert(aggrrow->nrows >= 1);
+   assert(aggrrow->nnz >= 1);
    assert(SCIPisPositive(scip, scale));
    assert(success != NULL);
 

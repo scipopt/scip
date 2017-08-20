@@ -29,7 +29,7 @@ fi
 OUTFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.out
 ERRFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.err
 SOLFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.sol
-TMPFILE=$SOLVERPATH/results/$BASENAME.tmp
+TMPFILE=$SOLVERPATH/$OUTPUTDIR/$BASENAME.tmp
 
 uname -a                            > $OUTFILE
 uname -a                            > $ERRFILE
@@ -149,11 +149,11 @@ echo "--- FINISH ---"               >> $OUTFILE
 date                                >> $OUTFILE
 echo                                >> $OUTFILE
 
-mv $OUTFILE $SOLVERPATH/results/$BASENAME.out
-mv $ERRFILE $SOLVERPATH/results/$BASENAME.err
+mv $OUTFILE $SOLVERPATH/$OUTPUTDIR/$BASENAME.out
+mv $ERRFILE $SOLVERPATH/$OUTPUTDIR/$BASENAME.err
 
 rm -f $TMPFILE
 rm -f $SOLFILE
 #chmod g+r $ERRFILE
-#chmod g+r $SCIPPATH/results/$BASENAME.out
-#chmod g+r $SCIPPATH/results/$BASENAME.set
+#chmod g+r $SCIPPATH/$OUTPUTDIR/$BASENAME.out
+#chmod g+r $SCIPPATH/$OUTPUTDIR/$BASENAME.set

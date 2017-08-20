@@ -13,8 +13,9 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   sepa_cmir.c
+/**@file   sepa_aggregation.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
+ * @author Robert Lion Gottwald
  * @author Kati Wolter
  * @author Tobias Achterberg
  */
@@ -24,31 +25,31 @@
 #include <assert.h>
 #include <string.h>
 
-#include "scip/sepa_cmir.h"
+#include "scip/sepa_aggregation.h"
 #include "scip/pub_misc.h"
 #include "scip/cuts.h"
 
 
-#define SEPA_NAME              "cmir"
-#define SEPA_DESC              "complemented mixed integer rounding cuts separator (Marchand's version)"
+#define SEPA_NAME              "aggregation"
+#define SEPA_DESC              "aggregation heuristic for complemented mixed integer rounding cuts and flowcover cuts"
 #define SEPA_PRIORITY             -3000
-#define SEPA_FREQ                     0
-#define SEPA_MAXBOUNDDIST           0.0
+#define SEPA_FREQ                    10
+#define SEPA_MAXBOUNDDIST           1.0
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
-#define DEFAULT_MAXROUNDS             5 /**< maximal number of cmir separation rounds per node (-1: unlimited) */
+#define DEFAULT_MAXROUNDS            -1 /**< maximal number of cmir separation rounds per node (-1: unlimited) */
 #define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of cmir separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_MAXTRIES             -1 /**< maximal number of rows to start aggregation with per separation round
                                          *   (-1: unlimited) */
 #define DEFAULT_MAXTRIESROOT         -1 /**< maximal number of rows to start aggregation with per round in the root node
                                          *   (-1: unlimited) */
-#define DEFAULT_MAXFAILS             20 /**< maximal number of consecutive unsuccessful aggregation tries (-1: unlimited) */
+#define DEFAULT_MAXFAILS             50 /**< maximal number of consecutive unsuccessful aggregation tries (-1: unlimited) */
 #define DEFAULT_MAXFAILSROOT        100 /**< maximal number of consecutive unsuccessful aggregation tries in the root node
                                          *   (-1: unlimited) */
 #define DEFAULT_MAXAGGRS              3 /**< maximal number of aggregations for each row per separation round */
 #define DEFAULT_MAXAGGRSROOT          6 /**< maximal number of aggregations for each row per round in the root node */
-#define DEFAULT_MAXSEPACUTS         200 /**< maximal number of cmir cuts separated per separation round */
+#define DEFAULT_MAXSEPACUTS         400 /**< maximal number of cmir cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT    1000 /**< maximal number of cmir cuts separated per separation round in root node */
 #define DEFAULT_MAXSLACK            0.0 /**< maximal slack of rows to be used in aggregation */
 #define DEFAULT_MAXSLACKROOT        0.1 /**< maximal slack of rows to be used in aggregation in the root node */
@@ -69,7 +70,6 @@
 
 #define BOUNDSWITCH                 0.5
 #define USEVBDS                    TRUE
-#define ALLOWLOCAL                 TRUE
 #define MINFRAC                    0.05
 #define MAXFRAC                    0.999
 #define MAKECONTINTEGRAL          FALSE
@@ -113,6 +113,8 @@ struct SCIP_SepaData
    SCIP_Bool             trynegscaling;      /**< should negative values also be tested in scaling? */
    SCIP_Bool             fixintegralrhs;     /**< should an additional variable be complemented if f0 = 0? */
    SCIP_Bool             dynamiccuts;        /**< should generated cuts be removed from the LP if they are no longer tight? */
+   SCIP_SEPA*            cmir;               /**< separator for adding cmir cuts */
+   SCIP_SEPA*            flowcover;          /**< separator for adding flowcover cuts */
 };
 
 typedef
@@ -254,6 +256,7 @@ static
 SCIP_RETCODE setupAggregationData(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< solution to separate, NULL for LP solution */
+   SCIP_Bool             allowlocal,         /**< should local cuts be allowed */
    AGGREGATIONDATA*      aggrdata            /**< pointer to aggregation data to setup */
    )
 {
@@ -303,13 +306,17 @@ SCIP_RETCODE setupAggregationData(
          int bestvlbidx;
          int bestvubidx;
 
-#if ALLOWLOCAL == 1
-         bestlb = SCIPvarGetLbLocal(vars[i]);
-         bestub = SCIPvarGetUbLocal(vars[i]);
-#else
-         bestlb = SCIPvarGetLbGlobal(vars[i]);
-         bestub = SCIPvarGetUbGlobal(vars[i]);
-#endif
+         if( allowlocal )
+         {
+            bestlb = SCIPvarGetLbLocal(vars[i]);
+            bestub = SCIPvarGetUbLocal(vars[i]);
+         }
+         else
+         {
+            bestlb = SCIPvarGetLbGlobal(vars[i]);
+            bestub = SCIPvarGetUbGlobal(vars[i]);
+         }
+
          SCIP_CALL( SCIPgetVarClosestVlb(scip, vars[i], sol, &bestvlb, &bestvlbidx) );
          SCIP_CALL( SCIPgetVarClosestVub(scip, vars[i], sol, &bestvub, &bestvubidx) );
          if( bestvlbidx >= 0 )
@@ -421,6 +428,7 @@ SCIP_RETCODE setupAggregationData(
    return SCIP_OKAY;
 }
 
+/** free resources held in aggregation data */
 static
 void destroyAggregationData(
    SCIP*                 scip,
@@ -437,9 +445,9 @@ void destroyAggregationData(
    SCIPfreeBufferArray(scip, &aggrdata->bounddist);
 }
 
-/* retrieves the candidate rows for canceling out the given variable, also returns the number of "good" rows which are the
- * rows stored at the first ngoodrows positions. A row is good if its continuous variables are all at their bounds, except
- * maybe the given continuous variable (in probvaridx)
+/** retrieves the candidate rows for canceling out the given variable, also returns the number of "good" rows which are the
+ *  rows stored at the first ngoodrows positions. A row is good if its continuous variables are all at their bounds, except
+ *  maybe the given continuous variable (in probvaridx)
  */
 static
 SCIP_Bool getRowAggregationCandidates(
@@ -464,7 +472,7 @@ SCIP_Bool getRowAggregationCandidates(
    return TRUE;
 }
 
-/* TODO: comment */
+/** find the bound distance value in the aggregation data struct for the given variable problem index */
 static
 SCIP_Real aggrdataGetBoundDist(
    AGGREGATIONDATA*      aggrdata,
@@ -479,7 +487,10 @@ SCIP_Real aggrdataGetBoundDist(
    return aggrdata->bounddist[aggrdataidx];
 }
 
-/* TODO: comment: what it does and maybe how */
+/** Aggregates the next row suitable for cancelling out an active continuous variable.
+ *  Equality rows that contain no other active continuous variables are preffered and apart from that
+ *  the scores for the rows are used to determine which row is aggregated next
+ */
 static
 SCIP_RETCODE aggregateNextRow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -736,6 +747,7 @@ SCIP_RETCODE aggregation(
    AGGREGATIONDATA*      aggrdata,
    SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
+   SCIP_Bool             allowlocal,         /**< should local cuts be allowed */
    SCIP_Real*            rowlhsscores,       /**< aggregation scores for left hand sides of row */
    SCIP_Real*            rowrhsscores,       /**< aggregation scores for right hand sides of row */
    int                   startrow,           /**< index of row to start aggregation */
@@ -815,23 +827,23 @@ SCIP_RETCODE aggregation(
        */
 
       flowcoverefficacy =  -SCIPinfinity(scip);
-      SCIP_CALL( SCIPcalcFlowCover(scip, sol, BOUNDSWITCH, ALLOWLOCAL, aggrdata->aggrrow, cutcoefs, &cutrhs, cutinds,
+      SCIP_CALL( SCIPcalcFlowCover(scip, sol, BOUNDSWITCH, allowlocal, aggrdata->aggrrow, cutcoefs, &cutrhs, cutinds,
             &cutnnz, &flowcoverefficacy, &cutrank, &flowcovercutislocal, &flowcoversuccess) );
 
       cutefficacy = flowcoverefficacy;
-      SCIP_CALL( SCIPcutGenerationHeuristicCMIR(scip, sol, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, NULL, NULL, MINFRAC, MAXFRAC,
+      SCIP_CALL( SCIPcutGenerationHeuristicCMIR(scip, sol, BOUNDSWITCH, USEVBDS, allowlocal, NULL, NULL, MINFRAC, MAXFRAC,
             aggrdata->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cmircutislocal, &cmirsuccess) );
 
       oldncuts = *ncuts;
 
       if( cmirsuccess )
       {
-         SCIP_CALL( addCut(scip, sol, sepa, cutcoefs, cutinds, cutnnz, cutrhs, cutefficacy, cmircutislocal,
+         SCIP_CALL( addCut(scip, sol, sepadata->cmir, cutcoefs, cutinds, cutnnz, cutrhs, cutefficacy, cmircutislocal,
                sepadata->dynamiccuts, cutrank, "cmir", cutoff, ncuts) );
       }
       else if ( flowcoversuccess )
       {
-         SCIP_CALL( addCut(scip, sol, sepa, cutcoefs, cutinds, cutnnz, cutrhs, cutefficacy, flowcovercutislocal,
+         SCIP_CALL( addCut(scip, sol, sepadata->flowcover, cutcoefs, cutinds, cutnnz, cutrhs, cutefficacy, flowcovercutislocal,
                sepadata->dynamiccuts, cutrank, "flowcover", cutoff, ncuts) );
       }
 
@@ -919,6 +931,7 @@ SCIP_RETCODE separateCuts(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPA*            sepa,               /**< the c-MIR separator */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
+   SCIP_Bool             allowlocal,         /**< should local cuts be allowed */
    SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
@@ -1023,7 +1036,11 @@ SCIP_RETCODE separateCuts(
       fractionalities[v] = MIN(fractionalities[v], 1.0 - fractionalities[v]);
    }
 
-   /* calculate the fractionality of the continuous variables in the current solution; TODO: define fractionality of continuous variables! */
+   /* calculate the fractionality of the continuous variables in the current solution;
+    * The fractionality of a continuous variable x is defined to be a * f_y,
+    * if there is a variable bound x <= a * y + c where f_y is the fractionality of y
+    * and in the current solution the variable bound has no slack.
+    */
    for( ; v < nvars; ++v )
    {
       SCIP_VAR** vlbvars;
@@ -1142,7 +1159,7 @@ SCIP_RETCODE separateCuts(
          slack = (activity - lhs)/rownorm;
          dualscore = MAX(fracscore * dualsol/objnorm, 0.0001);
          if( !SCIPisInfinity(scip, -lhs) && SCIPisLE(scip, slack, maxslack)
-            && (ALLOWLOCAL || !SCIProwIsLocal(rows[r])) /*lint !e506 !e774*/
+            && (allowlocal || !SCIProwIsLocal(rows[r])) /*lint !e506 !e774*/
             && rowdensity <= sepadata->maxrowdensity
             && rowdensity <= sepadata->maxaggdensity )  /*lint !e774*/
          {
@@ -1156,7 +1173,7 @@ SCIP_RETCODE separateCuts(
          slack = (rhs - activity)/rownorm;
          dualscore = MAX(-fracscore * dualsol/objnorm, 0.0001);
          if( !SCIPisInfinity(scip, rhs) && SCIPisLE(scip, slack, maxslack)
-            && (ALLOWLOCAL || !SCIProwIsLocal(rows[r])) /*lint !e506 !e774*/
+            && (allowlocal || !SCIProwIsLocal(rows[r])) /*lint !e506 !e774*/
             && rowdensity <= sepadata->maxrowdensity
             && rowdensity <= sepadata->maxaggdensity )  /*lint !e774*/
          {
@@ -1191,8 +1208,8 @@ SCIP_RETCODE separateCuts(
    }
    assert(nrows == nnonzrows + zerorows);
 
-   /* start aggregation heuristic for each row in the LP: TODO it seems this also generates the cuts, so please document behaviour */
-   SCIP_CALL( setupAggregationData(scip, sol, &aggrdata) );
+   /* calculate the data required for performing the row aggregation */
+   SCIP_CALL( setupAggregationData(scip, sol, allowlocal, &aggrdata) );
 
    ncuts = 0;
    if( maxtries < 0 )
@@ -1202,6 +1219,7 @@ SCIP_RETCODE separateCuts(
    else if( depth == 0 && 2 * SCIPgetNSepaRounds(scip) < maxfails )
       maxfails += maxfails - 2 * SCIPgetNSepaRounds(scip); /* allow up to double as many fails in early separounds of root node */
 
+   /* start aggregation heuristic for each row in the LP and generate resulting cuts */
    ntries = 0;
    nfails = 0;
    for( r = 0; r < nrows && ntries < maxtries && ncuts < maxsepacuts && rowscores[roworder[r]] > 0.0
@@ -1211,13 +1229,15 @@ SCIP_RETCODE separateCuts(
       int oldncuts;
 
       oldncuts = ncuts;
-      SCIP_CALL( aggregation(scip, &aggrdata, sepa, sol, rowlhsscores, rowrhsscores,
+      SCIP_CALL( aggregation(scip, &aggrdata, sepa, sol, allowlocal, rowlhsscores, rowrhsscores,
                              roworder[r], maxaggrs, &wastried, &cutoff, cutinds, cutcoefs, FALSE, &ncuts) );
 
-      /* TODO: document what trynegscaling means or reference to the general description in the h file */
+      /* if trynegscaling is true we start the aggregation heuristic again for this row, but multiply it by -1 first.
+       * This is done by calling the aggregation function with the parameter negate equal to TRUE
+       */
       if( sepadata->trynegscaling && !cutoff )
       {
-         SCIP_CALL( aggregation(scip, &aggrdata, sepa, sol, rowlhsscores, rowrhsscores,
+         SCIP_CALL( aggregation(scip, &aggrdata, sepa, sol, allowlocal, rowlhsscores, rowrhsscores,
                              roworder[r], maxaggrs, &wastried, &cutoff, cutinds, cutcoefs, TRUE, &ncuts) );
       }
 
@@ -1265,6 +1285,9 @@ SCIP_RETCODE separateCuts(
    return SCIP_OKAY;
 }
 
+/*
+ * forward declarations for include function of dummy cmir and flowcover separators
+ */
 
 /*
  * Callback methods of separator
@@ -1272,21 +1295,21 @@ SCIP_RETCODE separateCuts(
 
 /** copy method for separator plugins (called when SCIP copies plugins) */
 static
-SCIP_DECL_SEPACOPY(sepaCopyCmir)
+SCIP_DECL_SEPACOPY(sepaCopyAggregation)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(sepa != NULL);
    assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
 
    /* call inclusion method of constraint handler */
-   SCIP_CALL( SCIPincludeSepaCmir(scip) );
+   SCIP_CALL( SCIPincludeSepaAggregation(scip) );
 
    return SCIP_OKAY;
 }
 
 /** destructor of separator to free user data (called when SCIP is exiting) */
 static
-SCIP_DECL_SEPAFREE(sepaFreeCmir)
+SCIP_DECL_SEPAFREE(sepaFreeAggregation)
 {  /*lint --e{715}*/
    SCIP_SEPADATA* sepadata;
 
@@ -1304,7 +1327,7 @@ SCIP_DECL_SEPAFREE(sepaFreeCmir)
 
 /** LP solution separation method of separator */
 static
-SCIP_DECL_SEPAEXECLP(sepaExeclpCmir)
+SCIP_DECL_SEPAEXECLP(sepaExeclpAggregation)
 {  /*lint --e{715}*/
 
    *result = SCIP_DIDNOTRUN;
@@ -1321,7 +1344,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCmir)
    if( SCIPgetNLPBranchCands(scip) == 0 )
       return SCIP_OKAY;
 
-   SCIP_CALL( separateCuts(scip, sepa, NULL, result) );
+   SCIP_CALL( separateCuts(scip, sepa, NULL, allowlocal, result) );
 
    return SCIP_OKAY;
 }
@@ -1329,23 +1352,43 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCmir)
 
 /** arbitrary primal solution separation method of separator */
 static
-SCIP_DECL_SEPAEXECSOL(sepaExecsolCmir)
+SCIP_DECL_SEPAEXECSOL(sepaExecsolAggregation)
 {  /*lint --e{715}*/
 
    *result = SCIP_DIDNOTRUN;
 
-   SCIP_CALL( separateCuts(scip, sepa, sol, result) );
+   SCIP_CALL( separateCuts(scip, sepa, sol, allowlocal, result) );
 
    return SCIP_OKAY;
 }
 
+/** LP solution separation method of dummy separator */
+static
+SCIP_DECL_SEPAEXECLP(sepaExeclpDummy)
+{  /*lint --e{715}*/
+
+   *result = SCIP_DIDNOTRUN;
+
+   return SCIP_OKAY;
+}
+
+
+/** arbitrary primal solution separation method of dummy separator */
+static
+SCIP_DECL_SEPAEXECSOL(sepaExecsolDummy)
+{  /*lint --e{715}*/
+
+   *result = SCIP_DIDNOTRUN;
+
+   return SCIP_OKAY;
+}
 
 /*
  * separator specific interface methods
  */
 
 /** creates the cmir separator and includes it in SCIP */
-SCIP_RETCODE SCIPincludeSepaCmir(
+SCIP_RETCODE SCIPincludeSepaAggregation(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -1355,109 +1398,120 @@ SCIP_RETCODE SCIPincludeSepaCmir(
    /* create cmir separator data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &sepadata) );
 
+   /* include dummy separators */
+   SCIP_CALL( SCIPincludeSepaBasic(scip, &sepadata->flowcover, "flowcover", "dummy separator for adding flowcover cuts", -100000, -1, SEPA_MAXBOUNDDIST,
+                                   SEPA_USESSUBSCIP, SEPA_DELAY, sepaExeclpDummy, sepaExecsolDummy, NULL) );
+
+   assert(sepadata->flowcover != NULL);
+
+   SCIP_CALL( SCIPincludeSepaBasic(scip, &sepadata->cmir, "cmir", "dummy separator for adding cmir cuts", -100000, -1, SEPA_MAXBOUNDDIST,
+                                   SEPA_USESSUBSCIP, SEPA_DELAY, sepaExeclpDummy, sepaExecsolDummy, NULL) );
+
+   assert(sepadata->cmir != NULL);
+
    /* include separator */
    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
          SEPA_USESSUBSCIP, SEPA_DELAY,
-         sepaExeclpCmir, sepaExecsolCmir,
+         sepaExeclpAggregation, sepaExecsolAggregation,
          sepadata) );
 
    assert(sepa != NULL);
 
    /* set non-NULL pointers to callback methods */
-   SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyCmir) );
-   SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeCmir) );
+   SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyAggregation) );
+   SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeAggregation) );
 
    /* add cmir separator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/cmir/maxrounds",
+         "separating/"SEPA_NAME"/maxrounds",
          "maximal number of cmir separation rounds per node (-1: unlimited)",
          &sepadata->maxrounds, FALSE, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/cmir/maxroundsroot",
+         "separating/"SEPA_NAME"/maxroundsroot",
          "maximal number of cmir separation rounds in the root node (-1: unlimited)",
          &sepadata->maxroundsroot, FALSE, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/cmir/maxtries",
+         "separating/"SEPA_NAME"/maxtries",
          "maximal number of rows to start aggregation with per separation round (-1: unlimited)",
          &sepadata->maxtries, TRUE, DEFAULT_MAXTRIES, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/cmir/maxtriesroot",
+         "separating/"SEPA_NAME"/maxtriesroot",
          "maximal number of rows to start aggregation with per separation round in the root node (-1: unlimited)",
          &sepadata->maxtriesroot, TRUE, DEFAULT_MAXTRIESROOT, -1, INT_MAX, NULL, NULL) );
      SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/cmir/maxfails",
+         "separating/"SEPA_NAME"/maxfails",
          "maximal number of consecutive unsuccessful aggregation tries (-1: unlimited)",
          &sepadata->maxfails, TRUE, DEFAULT_MAXFAILS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/cmir/maxfailsroot",
+         "separating/"SEPA_NAME"/maxfailsroot",
          "maximal number of consecutive unsuccessful aggregation tries in the root node (-1: unlimited)",
          &sepadata->maxfailsroot, TRUE, DEFAULT_MAXFAILSROOT, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/cmir/maxaggrs",
+         "separating/"SEPA_NAME"/maxaggrs",
          "maximal number of aggregations for each row per separation round",
          &sepadata->maxaggrs, TRUE, DEFAULT_MAXAGGRS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/cmir/maxaggrsroot",
+         "separating/"SEPA_NAME"/maxaggrsroot",
          "maximal number of aggregations for each row per separation round in the root node",
          &sepadata->maxaggrsroot, TRUE, DEFAULT_MAXAGGRSROOT, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/cmir/maxsepacuts",
+         "separating/"SEPA_NAME"/maxsepacuts",
          "maximal number of cmir cuts separated per separation round",
          &sepadata->maxsepacuts, FALSE, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/cmir/maxsepacutsroot",
+         "separating/"SEPA_NAME"/maxsepacutsroot",
          "maximal number of cmir cuts separated per separation round in the root node",
          &sepadata->maxsepacutsroot, FALSE, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "separating/cmir/maxslack",
+         "separating/"SEPA_NAME"/maxslack",
          "maximal slack of rows to be used in aggregation",
          &sepadata->maxslack, TRUE, DEFAULT_MAXSLACK, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "separating/cmir/maxslackroot",
+         "separating/"SEPA_NAME"/maxslackroot",
          "maximal slack of rows to be used in aggregation in the root node",
          &sepadata->maxslackroot, TRUE, DEFAULT_MAXSLACKROOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "separating/cmir/densityscore",
+         "separating/"SEPA_NAME"/densityscore",
          "weight of row density in the aggregation scoring of the rows",
          &sepadata->densityscore, TRUE, DEFAULT_DENSITYSCORE, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "separating/cmir/slackscore",
+         "separating/"SEPA_NAME"/slackscore",
          "weight of slack in the aggregation scoring of the rows",
          &sepadata->slackscore, TRUE, DEFAULT_SLACKSCORE, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "separating/cmir/maxaggdensity",
+         "separating/"SEPA_NAME"/maxaggdensity",
          "maximal density of aggregated row",
          &sepadata->maxaggdensity, TRUE, DEFAULT_MAXAGGDENSITY, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "separating/cmir/maxrowdensity",
+         "separating/"SEPA_NAME"/maxrowdensity",
          "maximal density of row to be used in aggregation",
          &sepadata->maxrowdensity, TRUE, DEFAULT_MAXROWDENSITY, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/cmir/densityoffset",
+         "separating/"SEPA_NAME"/densityoffset",
          "additional number of variables allowed in row on top of density",
          &sepadata->densityoffset, TRUE, DEFAULT_DENSITYOFFSET, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "separating/cmir/maxrowfac",
+         "separating/"SEPA_NAME"/maxrowfac",
          "maximal row aggregation factor",
          &sepadata->maxrowfac, TRUE, DEFAULT_MAXROWFAC, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/cmir/maxtestdelta",
+         "separating/"SEPA_NAME"/maxtestdelta",
          "maximal number of different deltas to try (-1: unlimited)",
          &sepadata->maxtestdelta, TRUE, DEFAULT_MAXTESTDELTA, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "separating/cmir/aggrtol",
+         "separating/"SEPA_NAME"/aggrtol",
          "tolerance for bound distances used to select continuous variable in current aggregated constraint to be eliminated",
          &sepadata->aggrtol, TRUE, DEFAULT_AGGRTOL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "separating/cmir/trynegscaling",
+         "separating/"SEPA_NAME"/trynegscaling",
          "should negative values also be tested in scaling?",
          &sepadata->trynegscaling, TRUE, DEFAULT_TRYNEGSCALING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "separating/cmir/fixintegralrhs",
+         "separating/"SEPA_NAME"/fixintegralrhs",
          "should an additional variable be complemented if f0 = 0?",
          &sepadata->fixintegralrhs, TRUE, DEFAULT_FIXINTEGRALRHS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "separating/cmir/dynamiccuts",
+         "separating/"SEPA_NAME"/dynamiccuts",
          "should generated cuts be removed from the LP if they are no longer tight?",
          &sepadata->dynamiccuts, FALSE, DEFAULT_DYNAMICCUTS, NULL, NULL) );
 

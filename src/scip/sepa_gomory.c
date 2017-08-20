@@ -56,7 +56,7 @@
 #define SEPA_NAME              "gomory"
 #define SEPA_DESC              "Gomory MIR cuts separator"
 #define SEPA_PRIORITY             -1000
-#define SEPA_FREQ                     0
+#define SEPA_FREQ                    20
 #define SEPA_MAXBOUNDDIST           0.0
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
@@ -79,7 +79,6 @@
 
 #define BOUNDSWITCH              0.9999 /**< threshold for bound switching - see SCIPcalcMIR() */
 #define USEVBDS                    TRUE /**< use variable bounds - see SCIPcalcMIR() */
-#define ALLOWLOCAL                 TRUE /**< allow to generate local cuts - see SCIPcalcMIR() */
 #define FIXINTEGRALRHS            FALSE /**< try to generate an integral rhs - see SCIPcalcMIR() */
 #define MAKECONTINTEGRAL          FALSE /**< convert continuous variable to integral variables in SCIPmakeRowIntegral() */
 
@@ -430,15 +429,15 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
 
          SCIP_CALL( SCIPaggrRowSumRows(scip, aggrrow, binvrow, inds, ninds, sepadata->maxweightrange, SCIPsumepsilon(scip),
-                                       sepadata->sidetypebasis, ALLOWLOCAL, 2, (int) MAXAGGRLEN(nvars), &success) );
+                                       sepadata->sidetypebasis, allowlocal, 2, (int) MAXAGGRLEN(nvars), &success) );
 
          if( !success )
             continue;
 
-         SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS, NULL, NULL, minfrac, maxfrac, 1.0,
+         SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, allowlocal, FIXINTEGRALRHS, NULL, NULL, minfrac, maxfrac, 1.0,
                                 aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
 
-         assert(ALLOWLOCAL || !cutislocal);
+         assert(allowlocal || !cutislocal);
 
          /* @todo Currently we are using the SCIPcalcMIR() function to compute the coefficients of the Gomory
           *       cut. Alternatively, we could use the direct version (see thesis of Achterberg formula (8.4)) which

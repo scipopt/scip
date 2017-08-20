@@ -338,6 +338,7 @@ SCIP_RETCODE SCIPsepaExecLP(
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    int                   depth,              /**< depth of current node */
    SCIP_Real             bounddist,          /**< current relative distance of local dual bound to global dual bound */
+   SCIP_Bool             allowlocal,         /**< should the separator be asked to separate local cuts */
    SCIP_Bool             execdelayed,        /**< execute separator even if it is marked to be delayed */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
@@ -353,7 +354,6 @@ SCIP_RETCODE SCIPsepaExecLP(
    assert(result != NULL);
 
    if( sepa->sepaexeclp != NULL
-      && SCIPsetIsLE(set, bounddist, sepa->maxbounddist)
       && ((depth == 0 && sepa->freq == 0) || (sepa->freq > 0 && depth % sepa->freq == 0) || sepa->lpwasdelayed) )
    {
       if( (!sepa->delay && !sepa->lpwasdelayed) || execdelayed )
@@ -381,8 +381,11 @@ SCIP_RETCODE SCIPsepaExecLP(
          /* start timing */
          SCIPclockStart(sepa->sepaclock, set);
 
+         /* decide whether to allow local cuts */
+         allowlocal = allowlocal && SCIPsetIsLE(set, bounddist, sepa->maxbounddist);
+
          /* call external separation method */
-         SCIP_CALL( sepa->sepaexeclp(set->scip, sepa, result) );
+         SCIP_CALL( sepa->sepaexeclp(set->scip, sepa, result, allowlocal) );
 
          /* stop timing */
          SCIPclockStop(sepa->sepaclock, set);
@@ -444,6 +447,7 @@ SCIP_RETCODE SCIPsepaExecSol(
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    SCIP_SOL*             sol,                /**< primal solution that should be separated */
    int                   depth,              /**< depth of current node */
+   SCIP_Bool             allowlocal,         /**< should the separator allow local cuts */
    SCIP_Bool             execdelayed,        /**< execute separator even if it is marked to be delayed */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
@@ -485,7 +489,7 @@ SCIP_RETCODE SCIPsepaExecSol(
          SCIPclockStart(sepa->sepaclock, set);
 
          /* call external separation method */
-         SCIP_CALL( sepa->sepaexecsol(set->scip, sepa, sol, result) );
+         SCIP_CALL( sepa->sepaexecsol(set->scip, sepa, sol, result, allowlocal) );
 
          /* stop timing */
          SCIPclockStop(sepa->sepaclock, set);

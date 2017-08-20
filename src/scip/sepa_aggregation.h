@@ -13,33 +13,51 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   struct_cuts.h
- * @ingroup PUBLICCOREAPI
- * @brief  struct definitions for cuts
+/**@file   sepa_aggreagation.h
+ * @ingroup SEPARATORS
+ * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
  * @author Robert Lion Gottwald
+ * @author Kati Wolter
+ * @author Tobias Achterberg
  *
+ * TODO: LONGER DESCRIPTION
+ * - Overview of the algorithm
+ *    - Eagle view: we aggregate and try different methods
+ * - Details
+ *    - The aggregation is done the following way blablabl
+ * - Definitions: good variable
+ * - In general, continuous variables are less prefered than integer variables, since their cut
+ *   coefficient is worse.
+ * - We seek for aggregations that project out continuous variables that are far away from there bound,
+ *   since if it is at its bound then it doesn't contribute to the violation
+ * - These aggregations are also useful for the flowcover separation, so after building an aggregation
+ *   we try to generate a MIR cut and a flowcover cut.
+ * - We only keep the best cut
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_STRUCT_CUTS_H__
-#define __SCIP_STRUCT_CUTS_H__
+#ifndef __SCIP_SEPA_CMIR_H__
+#define __SCIP_SEPA_CMIR_H__
 
-#include "scip/def.h"
 
-struct SCIP_AggrRow
-{
-   SCIP_Real*            vals;               /**< non-zero coefficients of the cut row */
-   int*                  inds;               /**< problem indices of variables with a non-zero coefficient in the cut row */
-   int*                  rowsinds;           /**< lpposition of rows that have been added to the cutrow */
-   int*                  slacksign;          /**< slacksign of rows that have been added to the cutrow */
-   SCIP_Real*            rowweights;         /**< weights of rows that have been added to the cutrow */
-   SCIP_Real             rhs;                /**< right hand side of the cut row */
-   int                   nnz;                /**< number of non-zeros in the cut row */
-   int                   nrows;              /**< number of rows that have been added to the cutrow */
-   int                   rowssize;           /**< size of the row and slacksign array */
-   int                   rank;               /**< rank of the cut row */
-   SCIP_Bool             local;              /**< is the cut row only valid locally? */
-};
+#include "scip/scip.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/** creates the aggregation separator and includes it in SCIP
+ *
+ * @ingroup SeparatorIncludes
+ */
+EXTERN
+SCIP_RETCODE SCIPincludeSepaAggregation(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
