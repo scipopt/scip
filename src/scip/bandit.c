@@ -103,11 +103,11 @@ SCIP_RETCODE SCIPbanditReset(
    assert(vtable != NULL);
    assert(vtable->banditreset != NULL);
 
-   /* call the reset callback of the bandit algorithm */
-   SCIP_CALL( vtable->banditreset(set->scip, bandit, priorities) );
-
    /* reset the random seed of the bandit algorithm */
    SCIPrandomSetSeed(bandit->rng, SCIPsetInitializeRandomSeed(set, seed));
+
+   /* call the reset callback of the bandit algorithm */
+   SCIP_CALL( vtable->banditreset(set->scip, bandit, priorities) );
 
    return SCIP_OKAY;
 }

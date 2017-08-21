@@ -56,11 +56,14 @@ SCIP_RETCODE dataReset(
    )
 {
    int i;
+   SCIP_RANDNUMGEN* rng;
    /* clear counters and scores */
    BMSclearMemoryArray(banditdata->counter, nactions);
    BMSclearMemoryArray(banditdata->meanscores, nactions);
    banditdata->nselections = 0;
 
+   rng = SCIPbanditGetRandnumgen(ucb);
+   assert(rng != NULL);
    /* initialize start permutation as identity */
    for( i = 0; i < nactions; ++i )
       banditdata->startperm[i] = i;
@@ -72,6 +75,10 @@ SCIP_RETCODE dataReset(
 
       SCIP_CALL( SCIPduplicateBufferArray(scip, &prioritycopy, priorities, nactions) );
 
+      /* randomly wiggle priorities a little bit to make them unique */
+      for( i = 0; i < nactions; ++i )
+         prioritycopy[i] += SCIPrandomGetReal(rng, -1e-6, 1e-6);
+
       SCIPsortDownRealInt(prioritycopy, banditdata->startperm, nactions);
 
       SCIPfreeBufferArray(scip, &prioritycopy);
@@ -79,9 +86,6 @@ SCIP_RETCODE dataReset(
    else
    {
       /* use a random start permutation */
-      SCIP_RANDNUMGEN* rng = SCIPbanditGetRandnumgen(ucb);
-      assert(rng != NULL);
-
       SCIPrandomPermuteIntArray(rng, banditdata->startperm, 0, nactions);
    }
 
@@ -125,7 +129,6 @@ SCIP_DECL_BANDITSELECT(banditSelectUcb)
    SCIP_BANDITDATA* banditdata;
    int nactions;
    int* counter;
-   SCIP_Real* meanscores;
 
    assert(scip != NULL);
    assert(bandit != NULL);
@@ -145,9 +148,15 @@ SCIP_DECL_BANDITSELECT(banditSelectUcb)
    else
    {
       /* select the action with the highest upper confidence bound */
+      SCIP_Real* meanscores;
       SCIP_Real widthfactor;
       SCIP_Real maxucb;
       int i;
+      SCIP_RANDNUMGEN* rng = SCIPbanditGetRandnumgen(bandit);
+      meanscores = banditdata->meanscores;
+
+      assert(rng != NULL);
+      assert(meanscores != NULL);
 
       /* compute the confidence width factor that is common for all actions */
       widthfactor = banditdata->alpha * log(1 + banditdata->nselections);
@@ -171,8 +180,8 @@ SCIP_DECL_BANDITSELECT(banditSelectUcb)
          uppercb += widthfactor / rootcount;
          assert(uppercb > 0);
 
-         /* update maximum */
-         if( uppercb > maxucb )
+         /* update maximum, breaking ties uniformly at random */
+         if( SCIPisFeasGT(scip, uppercb, maxucb) || (SCIPisFeasEQ(scip, uppercb, maxucb) && SCIPrandomGetReal(rng, 0, 1) >= 0.5) )
          {
             maxucb = uppercb;
             *selection = i;
