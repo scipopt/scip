@@ -1929,7 +1929,8 @@ SCIP_DECL_HEUREXEC(heurExecLns)
          {
             if( ntries < heurdata->nactiveneighborhoods )
             {
-               neighborhoodidx = (neighborhoodidx + 1) % heurdata->nactiveneighborhoods;
+               SCIP_CALL( updateBanditAlgorithms(scip, heurdata, 0.0, neighborhoodidx) );
+               SCIP_CALL( selectNeighborhood(scip, heurdata, &neighborhoodidx) );
                ntries++;
                tryagain = TRUE;
 
