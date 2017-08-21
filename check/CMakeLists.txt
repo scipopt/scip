@@ -102,7 +102,7 @@ set(instances_Indicator
 set(instances_MIP
     "instances/MIP/bell5.mps\;8966406.49"
     "instances/MIP/blend2.mps\;7.598985"
-    "instances/MIP/dcmulti.mps\;188182"
+#    "instances/MIP/dcmulti.mps\;188182"
     "instances/MIP/egout.mps\;568.1007"
     "instances/MIP/enigma.mps\;0"
     "instances/MIP/flugpl.mps\;1201500"

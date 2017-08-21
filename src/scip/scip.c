@@ -16093,7 +16093,7 @@ SCIP_RETCODE SCIPsolve(
             else
             {
                SCIPdebugMsg(scip, "try to add solution to the solution tree:\n");
-               SCIPdebug( SCIP_CALL( SCIPsolPrint(sol, scip->set, scip->messagehdlr, scip->stat, scip->origprob,
+               SCIPdebug( SCIP_CALL( SCIPsolPrint(sol, scip->set, scip->messagehdlr, scip->stat, scip->origprob, \
                      scip->transprob, NULL, FALSE, FALSE) ); );
 
                SCIP_CALL( SCIPreoptAddSol(scip->reopt, scip->set, scip->stat, scip->origprimal, scip->mem->probmem,
@@ -19117,6 +19117,9 @@ SCIP_Real SCIPgetVarRedcost(
    assert( var != NULL );
    assert( var->scip == scip );
 
+   if( !SCIPlpIsDualReliable(scip->lp) )
+      return SCIP_OKAY;
+
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
@@ -19160,6 +19163,9 @@ SCIP_Real SCIPgetVarImplRedcost(
    assert( scip != NULL );
    assert( var != NULL );
    assert( var->scip == scip );
+
+   if( !SCIPlpIsDualReliable(scip->lp) )
+      return 0.0;
 
    switch( SCIPvarGetStatus(var) )
    {
@@ -20092,7 +20098,7 @@ SCIP_RETCODE analyzeStrongbranch(
     * @note Ignore the results if the LP solution of the down (up) branch LP is smaller which should not happened by
     *       theory but can arise due to numerical issues.
     */
-   if( SCIPtreeGetCurrentDepth(scip->tree) == 0 && SCIPvarIsBinary(var) )
+   if( SCIPtreeGetCurrentDepth(scip->tree) == 0 && SCIPvarIsBinary(var) && SCIPlpIsDualReliable(scip->lp) )
    {
       SCIP_Real lpobjval;
 
@@ -24207,7 +24213,7 @@ SCIP_RETCODE calcCliquePartitionGreedy(
                   /* check if every variable in the current clique can be extended by tmpvars[j] */
                   for( k = ncliquevars - 1; k >= 0; --k )
                   {
-                     if( !SCIPvarsHaveCommonClique(vars[j], values[j], cliquevars[k], cliquevalues[k], TRUE) )
+                     if( !SCIPvarsHaveCommonClique(vars[j], values[j], cliquevars[k], cliquevalues[k], FALSE) )
                         break;
                   }
 
@@ -24305,8 +24311,8 @@ SCIP_RETCODE SCIPcalcCliquePartition(
       return SCIP_OKAY;
    }
 
-   /* early abort if neither cliques nor implications are present */
-   if( SCIPgetNCliques(scip) == 0 && SCIPgetNImplications(scip) == 0 )
+   /* early abort if no cliques are present */
+   if( SCIPgetNCliques(scip) == 0 )
    {
       for( i = nvars - 1; i >= 0; --i )
          cliquepartition[i] = i;
@@ -24353,7 +24359,7 @@ SCIP_RETCODE SCIPcalcCliquePartition(
    for( i = 0; i < nvars; ++i )
    {
       if( SCIPvarIsActive(tmpvars[i]) )
-         componentlabels[i] = SCIPvarGetCliqueComponentIdx(tmpvars[i]);
+         componentlabels[i] = SCIPcliquetableGetVarComponentIdx(scip->cliquetable, tmpvars[i]);
       else
          componentlabels[i] = -1;
    }
@@ -24753,7 +24759,7 @@ SCIP_RETCODE SCIPwriteCliqueGraph(
    }
 
    /* create the hash map */
-   SCIP_CALL( SCIPhashmapCreate(&nodehashmap, SCIPblkmem(scip), nbinvars+nimplvars) );
+   SCIP_CALL_FINALLY( SCIPhashmapCreate(&nodehashmap, SCIPblkmem(scip), nbinvars+nimplvars), fclose(gmlfile) );
 
    /* write starting of gml file */
    SCIPgmlWriteOpening(gmlfile, TRUE);
@@ -28983,6 +28989,42 @@ SCIP_LPSOLSTAT SCIPgetLPSolstat(
       return SCIPlpGetSolstat(scip->lp);
    else
       return SCIP_LPSOLSTAT_NOTSOLVED;
+}
+
+/** returns whether the current LP solution passed the primal feasibility check
+ *
+ *  @return whether the current LP solution passed the primal feasibility check.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_Bool SCIPisLPPrimalReliable(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPisLPPrimalReliable", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIPlpIsPrimalReliable(scip->lp);
+}
+
+/** returns whether the current LP solution passed the dual feasibility check
+ *
+ *  @returns whether the current LP solution passed the dual feasibility check.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_Bool SCIPisLPDualReliable(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPisLPDualReliable", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIPlpIsDualReliable(scip->lp);
 }
 
 /** returns whether the current lp is a relaxation of the current problem and its optimal objective value is a local lower bound
@@ -38299,7 +38341,7 @@ SCIP_Real SCIPgetSolOrigObj(
       return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPsolGetObj(sol, scip->set, scip->transprob, scip->origprob));
    else
    {
-      SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSolOrigObj(sol==NULL)",
+      SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSolOrigObj(sol==NULL)", \
             FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
       if( SCIPtreeHasCurrentNodeLP(scip->tree) )
          return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPlpGetObjval(scip->lp, scip->set, scip->transprob));
@@ -38336,7 +38378,7 @@ SCIP_Real SCIPgetSolTransObj(
       return SCIPsolGetObj(sol, scip->set, scip->transprob, scip->origprob);
    else
    {
-      SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSolTransObj(sol==NULL)",
+      SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSolTransObj(sol==NULL)", \
             FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
       if( SCIPtreeHasCurrentNodeLP(scip->tree) )
          return SCIPlpGetObjval(scip->lp, scip->set, scip->transprob);
@@ -38627,7 +38669,7 @@ SCIP_RETCODE SCIPprintSol(
    currentsol = (sol == NULL);
    if( currentsol )
    {
-      SCIP_CALL( checkStage(scip, "SCIPprintSol(sol==NULL)",
+      SCIP_CALL( checkStage(scip, "SCIPprintSol(sol==NULL)", \
             FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
       /* create a temporary solution that is linked to the current solution */
@@ -47647,4 +47689,30 @@ void SCIPsetRandomSeed(
    modifiedseed = SCIPinitializeRandomSeed(scip, seed);
 
    SCIPrandomSetSeed(randnumgen, modifiedseed);
+}
+
+/** creates a disjoint set (union find) structure \p uf for \p ncomponents many components (of size one) */
+SCIP_RETCODE SCIPcreateDisjointset(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DISJOINTSET**    djset,              /**< disjoint set (union find) data structure */
+   int                   ncomponents         /**< number of components */
+   )
+{
+   assert(scip != NULL);
+   assert(djset != NULL);
+
+   SCIP_CALL( SCIPdisjointsetCreate(djset, scip->mem->probmem, ncomponents) );
+
+   return SCIP_OKAY;
+}
+
+/** frees the disjoint set (union find) data structure */
+void SCIPfreeDisjointset(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DISJOINTSET**    djset               /**< disjoint set (union find) data structure */
+   )
+{
+   assert(scip != NULL);
+
+   SCIPdisjointsetFree(djset, scip->mem->probmem);
 }
