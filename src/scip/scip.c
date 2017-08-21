@@ -34035,7 +34035,7 @@ SCIP_RETCODE SCIPaddPoolCut(
 {
    SCIP_CALL( checkStage(scip, "SCIPaddPoolCut", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPcutpoolAddRow(scip->cutpool, scip->mem->probmem, scip->set, row) );
+   SCIP_CALL( SCIPcutpoolAddRow(scip->cutpool, scip->mem->probmem, scip->set, scip->stat, scip->lp, row) );
 
    return SCIP_OKAY;
 }
@@ -34189,7 +34189,7 @@ SCIP_RETCODE SCIPaddRowCutpool(
 {
    SCIP_CALL( checkStage(scip, "SCIPaddRowCutpool", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPcutpoolAddRow(cutpool, scip->mem->probmem, scip->set, row) );
+   SCIP_CALL( SCIPcutpoolAddRow(cutpool, scip->mem->probmem, scip->set, scip->stat, scip->lp, row) );
 
    return SCIP_OKAY;
 }
@@ -34314,7 +34314,7 @@ SCIP_RETCODE SCIPaddDelayedPoolCut(
 {
    SCIP_CALL( checkStage(scip, "SCIPaddDelayedPoolCut", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPcutpoolAddRow(scip->delayedcutpool, scip->mem->probmem, scip->set, row) );
+   SCIP_CALL( SCIPcutpoolAddRow(scip->delayedcutpool, scip->mem->probmem, scip->set, scip->stat, scip->lp, row) );
 
    return SCIP_OKAY;
 }

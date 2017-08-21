@@ -195,7 +195,7 @@ SCIP_RETCODE addCut(
       SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
 
       /* try to scale the cut to integral values, but only if the scaling is small; otherwise keep the fractional cut */
-      SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
+      SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPepsilon(scip),
                                      (SCIP_Longint) 30, 100.0, MAKECONTINTEGRAL, &success) );
 
       if( success && !SCIPisCutEfficacious(scip, sol, cut) )
@@ -211,6 +211,8 @@ SCIP_RETCODE addCut(
       /* if scaling was successful, add the cut */
       if( success )
       {
+         SCIP_Bool addcut = TRUE;
+
          SCIPdebugMsg(scip, " -> found %s cut <%s>: rhs=%f, eff=%f, rank=%d, min=%f, max=%f (range=%g)\n",
                       cutclassname, cutname, cutrhs, cutefficacy, SCIProwGetRank(cut),
                       SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
@@ -219,11 +221,19 @@ SCIP_RETCODE addCut(
 
          SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
 
-         SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, cutoff) );
-         if( !(*cutoff) && !cutislocal )
+         if( !cutislocal )
          {
             SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+            /* if the cut was rejected in the global cut pool, it means the cutpool
+             * contained a better cut so we do not add it */
+            addcut = SCIProwIsInGlobalCutpool(cut);
          }
+
+         if( addcut )
+         {
+            SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, cutoff) );
+         }
+
          (*ncuts)++;
       }
 

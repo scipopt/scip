@@ -2155,7 +2155,6 @@ SCIP_RETCODE cutsSubstituteMIR(
             continue; /* slack can be ignored, because its coefficient is reduced to 0.0 */
          else
             SCIPquadprecProdQD(cutar, onedivoneminusf0, ar);
-
       }
 
       /* if the coefficient was reduced to zero, ignore the slack variable */
@@ -2455,19 +2454,18 @@ SCIP_Real computeMIRViolation(
    assert(!SCIPisFeasZero(scip, f0));
    assert(!SCIPisFeasZero(scip, 1.0 - f0));
 
-
    for( i = 0; i < nvars; ++i )
    {
       SCIP_Real floorai = SCIPfeasFloor(scip, (scale * coefs[i]));
       SCIP_Real fi = (scale * coefs[i]) - floorai;
 
-      if( fi > f0 )
+      if( SCIPisFeasLE(scip, fi, f0) )
       {
-         rhs -= solvals[i] * (floorai + (fi - f0) * onedivoneminusf0);
+         rhs -= solvals[i] * floorai;
       }
       else
       {
-         rhs -= solvals[i] * floorai;
+         rhs -= solvals[i] * (floorai + (fi - f0) * onedivoneminusf0);
       }
    }
 
@@ -2556,7 +2554,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    SCIP_CALL( SCIPallocBufferArray(scip, &mksetinds, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpcoefs, nvars + aggrrow->nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpvalues, nvars + aggrrow->nrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &deltacands, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &deltacands, nvars + 2) );
    /* each variable is either integral or a variable bound with an integral variable is used
     * so the max number of integral variables that are strictly between it's bounds is
     * aggrrow->nnz
@@ -2608,7 +2606,8 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    /* found positions of integral variables that are strictly between their bounds */
    maxabsmksetcoef = -1.0;
    nbounddist = 0;
-   ndeltacands = 0;
+   ndeltacands = 1;
+   deltacands[0] = 1.0;
 
    for( i = mksetnnz - 1; i >= 0 && mksetinds[i] < firstcontvar; --i )
    {
@@ -2628,6 +2627,9 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
       bounddist[nbounddist] = MIN(ub - primsol, primsol - lb);
       bounddistpos[nbounddist] = i;
       ++nbounddist;
+
+      if( SCIPisFeasZero(scip, absmksetcoef) || SCIPisFeasZero(scip, 1.0 / absmksetcoef) )
+         continue;
 
       newdelta = TRUE;
       for( k = 0; k < ndeltacands; ++k )
@@ -2652,22 +2654,21 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 
       deltacand = maxabsmksetcoef + 1.0;
 
-      newdelta = TRUE;
-      for( k = 0; k < ndeltacands; ++k )
+      if( !SCIPisFeasZero(scip, deltacand) && !SCIPisFeasZero(scip, 1.0 / deltacand) )
       {
-         if( SCIPisSumEQ(scip, deltacands[k], deltacand) )
+         newdelta = TRUE;
+         for( k = 0; k < ndeltacands; ++k )
          {
-            newdelta = FALSE;
-            break;
+            if( SCIPisSumEQ(scip, deltacands[k], deltacand) )
+            {
+               newdelta = FALSE;
+               break;
+            }
          }
+         if( newdelta )
+            deltacands[ndeltacands++] = deltacand;
       }
-      if( newdelta )
-         deltacands[ndeltacands++] = deltacand;
    }
-
-   /* at least try without scaling if current delta set is empty */
-   if( ndeltacands == 0 )
-      deltacands[ndeltacands++] = 1.0;
 
    /* For each delta
     * Calculate fractionalities  f_0 := b - down(b), f_j := a'_j - down(a'_j) , and derive MIR cut
@@ -2990,8 +2991,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
          {
             viol += mksetcoefs[mksetinds[i]] * SCIPgetSolVal(scip, sol, vars[mksetinds[i]]);
          }
-         if( !SCIPisSumEQ(scip, viol, bestviol) )
-            printf("violation different: %g != %g\n", viol, bestviol);
+         assert(EPSEQ(viol, bestviol, 1e-4));
       }
 #endif
 
