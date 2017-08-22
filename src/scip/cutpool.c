@@ -624,6 +624,7 @@ SCIP_RETCODE SCIPcutpoolAddRow(
       SCIP_Real otherlhs;
       SCIP_Real otherrhs;
       SCIP_Real otherconstant;
+      SCIP_Real scale;
       SCIP_Real otherscale;
       SCIP_Real minidxval1;
       SCIP_Real minidxval2;
@@ -648,7 +649,13 @@ SCIP_RETCODE SCIPcutpoolAddRow(
          }
       }
 
-      otherscale = minidxval1 / minidxval2;
+      /* since we are comparing the improvement with an absolute value, we apply a
+       * scale to both rows such that the max absolute value is 1.0.
+       * For the scale of the second row use the sign such that the coefficients are equal
+       * to the first row.
+       */
+      scale = 1.0 / SCIProwGetMaxval(row, set);
+      otherscale = COPYSIGN(1.0 / SCIProwGetMaxval(otherrow, set), minidxval1 * minidxval2);
 
       if( otherscale < 0.0 )
       {
@@ -666,7 +673,7 @@ SCIP_RETCODE SCIPcutpoolAddRow(
 
       if( !SCIPsetIsInfinity(set, row->rhs) && !SCIPsetIsInfinity(set, otherrhs) )
       {
-         SCIP_Real rhs = row->rhs - row->constant;
+         SCIP_Real rhs = scale * (row->rhs - row->constant);
          otherrhs = otherscale * (otherrhs - otherconstant);
 
          if( SCIPsetIsFeasLT(set, rhs, otherrhs) )
@@ -675,7 +682,7 @@ SCIP_RETCODE SCIPcutpoolAddRow(
 
       if( !SCIPsetIsInfinity(set, -row->lhs) && !SCIPsetIsInfinity(set, -otherlhs) && !newrowbetter )
       {
-         SCIP_Real lhs = row->lhs - row->constant;
+         SCIP_Real lhs = scale * (row->lhs - row->constant);
          otherlhs = otherscale * (otherlhs - otherconstant);
 
          if( SCIPsetIsFeasGT(set, lhs, otherlhs) )
