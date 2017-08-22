@@ -69,7 +69,9 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
     */
    SCIP_ROW* row1;
    SCIP_ROW* row2;
+   SCIP_Real row1scale;
    SCIP_Real row2scale;
+   SCIP_SET* set;
 
    row1 = (SCIP_ROW*)key1;
    row2 = (SCIP_ROW*)key2;
@@ -86,6 +88,8 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
       || row1->maxidx != row2->maxidx
       )
       return FALSE;
+
+   set = (SCIP_SET*) userptr;
 
    {
       int i;
@@ -116,8 +120,11 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
          }
       }
 
-      /* set scale for row2 such that the coefficients of the column with minimum index is equal */
-      row2scale = minidxval1 / minidxval2;
+      /* set scale for the rows such that the coefficients sign of the column with minimum index is equal
+       * and the largest coefficient is 1.0
+       */
+      row1scale = COPYSIGN(1.0 / SCIProwGetMaxval(row1, set), minidxval1);
+      row2scale = COPYSIGN(1.0 / SCIProwGetMaxval(row2, set), minidxval2);
    }
 
    /* both rows have LP columns, or none of them has, or one has only LP colums and the other only non-LP columns,
@@ -140,11 +147,11 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
          while( i < row1->nlpcols && i2 < row2->len )
          {
             assert(row1->cols[i] != row2->cols[i2]);
-            if( row1->cols[i]->index < row2->cols[i2]->index )
+            if( row1->cols_index[i] < row2->cols_index[i2] )
                ++i;
             else
             {
-               assert(row1->cols[i]->index > row2->cols[i2]->index);
+               assert(row1->cols_index[i] > row2->cols_index[i2]);
                ++i2;
             }
          }
@@ -155,11 +162,11 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
          while( i < row1->len && i2 < row2->nlpcols )
          {
             assert(row1->cols[i] != row2->cols[i2]);
-            if( row1->cols[i]->index < row2->cols[i2]->index )
+            if( row1->cols_index[i] < row2->cols_index[i2] )
                ++i;
             else
             {
-               assert(row1->cols[i]->index > row2->cols[i2]->index);
+               assert(row1->cols_index[i] > row2->cols_index[i2]);
                ++i2;
             }
          }
@@ -174,14 +181,14 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
       /* compare the columns of the rows */
       for( i = 0; i < row1->len; ++i )
       {
-         if( row1->cols[i] != row2->cols[i] )
+         if( row1->cols_index[i] != row2->cols_index[i] )
             return FALSE;
       }
 
       /* compare the coefficients of the rows */
       for( i = 0; i < row1->len; ++i )
       {
-         if( REALABS(row1->vals[i] - row2scale * row2->vals[i]) > SCIP_DEFAULT_EPSILON )
+         if( !SCIPsetIsEQ(set, row1scale * row1->vals[i], row2scale * row2->vals[i]) )
             return FALSE;
       }
    }
@@ -200,9 +207,15 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
       if( row2->nlpcols == 0 )
       {
          SCIP_ROW* tmprow;
+         SCIP_Real tmpscale;
+
          tmprow = row2;
          row2 = row1;
          row1 = tmprow;
+
+         tmpscale = row2scale;
+         row2scale = row1scale;
+         row1scale = tmpscale;
       }
       assert(row1->nlpcols == 0 && row2->nlpcols > 0);
 
@@ -215,7 +228,7 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
          /* current column of row1 is the current LP column of row2, check the coefficient */
          if( ilp < row2->nlpcols && row1->cols[i1] == row2->cols[ilp] )
          {
-            if( REALABS(row1->vals[i1] - row2scale * row2->vals[ilp]) > SCIP_DEFAULT_EPSILON )
+            if( !SCIPsetIsEQ(set, row1scale * row1->vals[i1], row2scale * row2->vals[ilp]) )
                return FALSE;
             else
                ++ilp;
@@ -223,7 +236,7 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
          /* current column of row1 is the current non-LP column of row2, check the coefficient */
          else if( inlp < row2->len && row1->cols[i1] == row2->cols[inlp] )
          {
-            if( REALABS(row1->vals[i1] - row2scale * row2->vals[inlp]) > SCIP_DEFAULT_EPSILON )
+            if( !SCIPsetIsEQ(set, row1scale * row1->vals[i1], row2scale * row2->vals[inlp]) )
                return FALSE;
             else
                ++inlp;

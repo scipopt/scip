@@ -2991,7 +2991,11 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
          {
             viol += mksetcoefs[mksetinds[i]] * SCIPgetSolVal(scip, sol, vars[mksetinds[i]]);
          }
-         assert(EPSZ(SCIPrelDiff(viol, bestviol), 1e-3));
+
+         if(!EPSZ(SCIPrelDiff(viol, bestviol), 1e-4))
+         {
+            SCIPdebugMessage("violation of cmir cut is different than expected violation: %f != %f\n", viol, bestviol);
+         }
       }
 #endif
 
@@ -4661,7 +4665,7 @@ SCIP_RETCODE getFlowCover(
          nnonflowcovervars, flowcoverstatus, QUAD(&flowcoverweight), lambda);
       assert(*nflowcovervars + *nnonflowcovervars == snf->ntransvars);
    }
-   *found = TRUE;
+   *found = SCIPisFeasGT(scip, *lambda, 0.0);
 
   TERMINATE:
    assert((!*found) || SCIPisFeasGT(scip, *lambda, 0.0));
