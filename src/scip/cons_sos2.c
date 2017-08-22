@@ -1812,6 +1812,7 @@ SCIP_DECL_CONSCHECK(consCheckSOS2)
                   SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
                   *result = SCIP_INFEASIBLE;
 
+                  /* update constraint violation in solution */
                   if ( sol != NULL )
                      SCIPupdateSolConsViolation(scip, sol, 1.0, 1.0);
 

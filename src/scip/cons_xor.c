@@ -1842,6 +1842,7 @@ SCIP_RETCODE checkCons(
       {
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
       }
+      /* update constraint violation in solution */
       else if ( *violated && sol != NULL )
          SCIPupdateSolConsViolation(scip, sol, 1.0, 1.0);
    }

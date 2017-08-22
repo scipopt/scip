@@ -2367,7 +2367,7 @@ SCIP_RETCODE checkCumulativeCondition(
       }
    } /*lint --e{850}*/
 
-   /* Update constraint violation in solution */
+   /* update constraint violation in solution */
    if( sol != NULL )
       SCIPupdateSolConsViolation(scip, sol, absviol, relviol);
 
