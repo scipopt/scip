@@ -35200,9 +35200,12 @@ SCIP_RETCODE SCIPstartProbing(
    /* use a different separation storage for probing mode; otherwise SCIP will remove the cuts that are currently in the
     * separation storage after solving an LP in probing mode
     */
-   assert(scip->sepastore != NULL);
-   assert(scip->sepastoreprobing != NULL);
-   SCIPswapPointers((void**)&scip->sepastore, (void**)&scip->sepastoreprobing);
+   if( scip->sepastore != NULL )
+   {
+      assert(scip->sepastoreprobing != NULL);
+      SCIPswapPointers((void**)&scip->sepastore, (void**)&scip->sepastoreprobing);
+   }
+
    SCIP_CALL( SCIPtreeStartProbing(scip->tree, scip->mem->probmem, scip->set, scip->lp, FALSE) );
 
    /* disables the collection of any statistic for a variable */
@@ -35338,10 +35341,12 @@ SCIP_RETCODE SCIPendProbing(
    SCIPstatEnableVarHistory(scip->stat);
 
    /* switch to the original separation storage */
-   assert(scip->sepastore != NULL);
-   assert(scip->sepastoreprobing != NULL);
-   SCIPswapPointers((void**)&scip->sepastore, (void**)&scip->sepastoreprobing);
-   assert(SCIPsepastoreGetNCuts(scip->sepastoreprobing) == 0);
+   if( scip->sepastore != NULL )
+   {
+      assert(scip->sepastoreprobing != NULL);
+      SCIPswapPointers((void**)&scip->sepastore, (void**)&scip->sepastoreprobing);
+      assert(SCIPsepastoreGetNCuts(scip->sepastoreprobing) == 0);
+   }
 
    return SCIP_OKAY;
 }
