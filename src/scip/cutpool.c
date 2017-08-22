@@ -69,21 +69,57 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
     */
    SCIP_ROW* row1;
    SCIP_ROW* row2;
+   SCIP_Real row2scale;
 
    row1 = (SCIP_ROW*)key1;
    row2 = (SCIP_ROW*)key2;
    assert(row1 != NULL);
    assert(row2 != NULL);
 
+   /* return true if the row is the same */
+   if( row1 == row2 )
+      return TRUE;
+
    /* compare the trivial characteristics of the rows */
    if( row1->len != row2->len
       || row1->minidx != row2->minidx
       || row1->maxidx != row2->maxidx
-       )
+      )
       return FALSE;
 
-   return EPSEQ(SCIProwGetParallelism(row1, row2, 'e'), 1.0, SCIP_DEFAULT_EPSILON);
-#if 0
+   {
+      int i;
+      SCIP_Real minidxval1;
+      SCIP_Real minidxval2;
+
+      for( i = 0; TRUE; ++i )
+      {
+         assert(i < row1->len);
+         assert(row1->cols[i]->index == row1->cols_index[i]);
+
+         if( row1->cols_index[i] == row1->minidx )
+         {
+            minidxval1 = row1->vals[i];
+            break;
+         }
+      }
+
+      for( i = 0; TRUE; ++i )
+      {
+         assert(i < row2->len);
+         assert(row2->cols[i]->index == row2->cols_index[i]);
+
+         if( row2->cols_index[i] == row1->minidx )
+         {
+            minidxval2 = row2->vals[i];
+            break;
+         }
+      }
+
+      /* set scale for row2 such that the coefficients of the column with minimum index is equal */
+      row2scale = minidxval1 / minidxval2;
+   }
+
    /* both rows have LP columns, or none of them has, or one has only LP colums and the other only non-LP columns,
     * so we can rely on the sorting of the columns
     */
@@ -145,7 +181,7 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
       /* compare the coefficients of the rows */
       for( i = 0; i < row1->len; ++i )
       {
-         if( REALABS(row1->vals[i] - row2->vals[i]) > SCIP_DEFAULT_EPSILON )
+         if( REALABS(row1->vals[i] - row2scale * row2->vals[i]) > SCIP_DEFAULT_EPSILON )
             return FALSE;
       }
    }
@@ -179,7 +215,7 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
          /* current column of row1 is the current LP column of row2, check the coefficient */
          if( ilp < row2->nlpcols && row1->cols[i1] == row2->cols[ilp] )
          {
-            if( REALABS(row1->vals[i1] - row2->vals[ilp]) > SCIP_DEFAULT_EPSILON )
+            if( REALABS(row1->vals[i1] - row2scale * row2->vals[ilp]) > SCIP_DEFAULT_EPSILON )
                return FALSE;
             else
                ++ilp;
@@ -187,7 +223,7 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
          /* current column of row1 is the current non-LP column of row2, check the coefficient */
          else if( inlp < row2->len && row1->cols[i1] == row2->cols[inlp] )
          {
-            if( REALABS(row1->vals[i1] - row2->vals[inlp]) > SCIP_DEFAULT_EPSILON )
+            if( REALABS(row1->vals[i1] - row2scale * row2->vals[inlp]) > SCIP_DEFAULT_EPSILON )
                return FALSE;
             else
                ++inlp;
@@ -199,7 +235,6 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
    }
 
    return TRUE;
-#endif
 }
 
 static
