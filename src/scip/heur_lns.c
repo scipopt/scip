@@ -2240,7 +2240,7 @@ SCIP_RETCODE fixMatchingSolutionValues(
       for( s = 1; s < nsols; ++s )
       {
          SCIP_Real solval2 = SCIPgetSolVal(scip, sols[s], var);
-         if( ! SCIPisFeasEQ(scip, solval, solval2) )
+         if( ! SCIPisEQ(scip, solval, solval2) )
             break;
       }
 
