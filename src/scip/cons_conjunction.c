@@ -244,6 +244,8 @@ SCIP_RETCODE checkAllConss(
       {
          /* mark solution as violated */
          *result = SCIP_INFEASIBLE;
+         if ( sol != NULL )
+            SCIPupdateSolConsViolation(scip, sol, 1.0, 1.0);
          if( printreason )
          {
             assert( 0 < i && i <= consdata->nconss );
