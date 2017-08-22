@@ -377,7 +377,7 @@ add_subdirectory(check)
 #
 add_custom_target(unittests)
 add_subdirectory(tests EXCLUDE_FROM_ALL)
-add_custom_target(all_executables DEPENDS scip unittests examples)
+add_custom_target(all_executables DEPENDS scip unittests examples applications)
 #
 # add examples
 #
@@ -387,6 +387,11 @@ set(OLD_CMAKE_RUNTIME_OUTPUTDIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/examples)
 add_subdirectory(examples)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+
+#
+# add applications
+#
+add_subdirectory(applications)
 
 enable_testing()
 
