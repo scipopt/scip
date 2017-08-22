@@ -225,16 +225,15 @@ SCIP_RETCODE addCut(
          {
             SCIP_CALL( SCIPaddPoolCut(scip, cut) );
             /* if the cut was rejected in the global cut pool, it means the cutpool
-             * contained a better cut so we do not add it */
+             * contained an parallel cut that is at least as good so we do not add it */
             addcut = SCIProwIsInGlobalCutpool(cut);
          }
 
          if( addcut )
          {
             SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, cutoff) );
+            (*ncuts)++;
          }
-
-         (*ncuts)++;
       }
 
       /* release the row */

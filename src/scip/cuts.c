@@ -2991,7 +2991,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
          {
             viol += mksetcoefs[mksetinds[i]] * SCIPgetSolVal(scip, sol, vars[mksetinds[i]]);
          }
-         assert(EPSEQ(viol, bestviol, 1e-4));
+         assert(EPSZ(SCIPrelDiff(viol, bestviol), 1e-3));
       }
 #endif
 
@@ -4755,8 +4755,8 @@ SCIP_Real evaluateLiftingFunction(
       if( SCIPisLT(scip, QUAD_ROUND(tmp), xpluslambda) )
          return i * liftingdata->lambda;
 
-      assert(SCIPisLE(scip, liftingdata->M[i], xpluslambda) &&
-             SCIPisLE(scip, xpluslambda, liftingdata->M[i] + liftingdata->ml +
+      assert(SCIPisFeasLE(scip, liftingdata->M[i], xpluslambda) &&
+             SCIPisFeasLE(scip, xpluslambda, liftingdata->M[i] + liftingdata->ml +
              MAX(0.0, liftingdata->m[i] - (liftingdata->mp - liftingdata->lambda) - liftingdata->ml)));
 
       SCIPquadprecProdDD(tmp, i, liftingdata->lambda);

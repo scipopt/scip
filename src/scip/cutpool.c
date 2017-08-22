@@ -220,15 +220,23 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
    minidx = SCIProwGetMinidx(row, set);
    maxidx = SCIProwGetMaxidx(row, set);
 
-   for( i = 0; i < row->len; ++i )
+   for( i = 0; TRUE; ++i )
    {
+      assert(i < row->len);
       if( row->cols_index[i] == minidx )
       {
          minidxval = row->vals[i];
+         break;
       }
+   }
+
+   for( i = row->len - 1; TRUE; --i )
+   {
+      assert(i >= 0);
       if( row->cols_index[i] == maxidx )
       {
          maxidxval = row->vals[i];
+         break;
       }
    }
 
@@ -676,6 +684,8 @@ SCIP_RETCODE SCIPcutpoolAddNewRow(
    cutpool->maxncuts = MAX(cutpool->maxncuts, cutpool->ncuts);
    if( SCIProwIsRemovable(row) )
       cutpool->nremovablecuts++;
+
+   assert(!SCIPhashtableExists(cutpool->hashtable, (void*)cut));
 
    /* insert cut in the hash table */
    SCIP_CALL( SCIPhashtableInsert(cutpool->hashtable, (void*)cut) );

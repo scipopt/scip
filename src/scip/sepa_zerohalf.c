@@ -1334,9 +1334,8 @@ SCIP_RETCODE generateZerohalfCut(
       if( addcut )
       {
          SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &sepadata->infeasible) );
+         sepadata->ncuts++;
       }
-
-      sepadata->ncuts++;
 
       /* release the row */
       SCIP_CALL( SCIPreleaseRow(scip, &cut) );
