@@ -1689,10 +1689,7 @@ SCIP_RETCODE removeFixedNonlinearVariables(
    SCIP_Real constant;
    int i;
    int requsize;
-
-#ifdef SCIP_DEBUG
-   int j;
-#endif
+   SCIPdebug( int j );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);

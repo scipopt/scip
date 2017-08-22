@@ -386,7 +386,7 @@ SCIP_Bool SCIPprimalUpdateViolations(
 extern
 void SCIPprimalSetUpdateViolations(
    SCIP_PRIMAL*          primal,             /**< problem data */
-   SCIP_Bool             updateviolations    /**< marks whether the updating of violations is turned on */
+   SCIP_Bool             updateviolations    /**< TRUE to enable violation updates, FALSE otherwise */
    );
 
 #ifdef __cplusplus

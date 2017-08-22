@@ -457,20 +457,20 @@ SCIP_RETCODE SCIPsolPrintRay(
 
 
 /** reset violations of a solution */
-EXTERN
+extern
 void SCIPsolResetViolations(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /** update integrality violation of a solution */
-EXTERN
+extern
 void SCIPsolUpdateIntegralityViolation(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Real             absviolintegrality  /**< absolute violation of integrality */
    );
 
 /** update bound violation of a solution */
-EXTERN
+extern
 void SCIPsolUpdateBoundViolation(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Real             absviolbounds,      /**< absolute violation of bounds */
@@ -478,7 +478,7 @@ void SCIPsolUpdateBoundViolation(
    );
 
 /** update LP row violation of a solution */
-EXTERN
+extern
 void SCIPsolUpdateLPRowViolation(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Real             absviollprows,      /**< absolute violation of LP rows */
@@ -486,7 +486,7 @@ void SCIPsolUpdateLPRowViolation(
    );
 
 /** update constraint violation of a solution */
-EXTERN
+extern
 void SCIPsolUpdateConsViolation(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Real             absviolcons,        /**< absolute violation of constraint */
@@ -494,7 +494,7 @@ void SCIPsolUpdateConsViolation(
    );
 
 /** update violation of a constraint that is represented in the LP */
-EXTERN
+extern
 void SCIPsolUpdateLPConsViolation(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Real             absviol,            /**< absolute violation of constraint */

@@ -8,6 +8,7 @@ features:
 - add new heuristic MPEC that solves a MPEC reformulation of a mixed-binary nonlinear problem by regularized NLP reformulations
 - added interface to the NLP solver WORHP; set WORHP=true in order to link to WORHP
 - added interface to the NLP solver FilterSQP; set FILTERSQP=true in order to link to FilterSQP
+- new numerical solution violations get printed when checksol is called
 
 parameters:
 - new parameter misc/debugsol to specify a debug solution that should be checked during the solve
@@ -23,6 +24,9 @@ interface:
 - added method SCIPsetProbingLPState() to install given LP state and/or norms at the current probing node
 - added functions SCIPbranchcandGetLPMaxPrio() and SCIPbranchcandGetExternMaxPrio() get the maximal branching priority of given
   branching candidates; also added SCIPbranchcandGetNPrioLPCands() to access the number of LP candidates with this priority.
+- added methods SCIPupdateSolIntegralityViolation(), SCIPupdateSolBoundViolation(), SCIPupdateSolLPRowViolation(),
+  SCIPupdateSolConsViolation() and SCIPupdateSolLPConsViolation() for updating numerical solution violations, as well as
+  SCIPactivateSolViolationUpdates() and SCIPdeactivateSolViolationUpdates() for activating/deactivating violation updates globally
 
 performance improvements:
 - use disjoint set to reduce peak memory usage and time to compute of clique table connectedness information
