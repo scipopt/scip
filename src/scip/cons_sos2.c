@@ -1812,6 +1812,9 @@ SCIP_DECL_CONSCHECK(consCheckSOS2)
                   SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
                   *result = SCIP_INFEASIBLE;
 
+                  if ( sol != NULL )
+                     SCIPupdateSolConsViolation(scip, sol, 1.0, 1.0);
+
                   if ( printreason )
                   {
                      SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );
