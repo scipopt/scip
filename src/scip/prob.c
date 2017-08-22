@@ -2185,26 +2185,6 @@ void SCIPprobPrintStatistics(
          SCIPprobGetNObjVars(prob, set), SCIPprobGetAbsMinObjCoef(prob, set), SCIPprobGetAbsMaxObjCoef(prob, set));
 }
 
-/** is the updating of violations enabled for this problem? */
-SCIP_Bool SCIPprobUpdateViolations(
-   SCIP_PROB*            prob                /**< problem data */
-   )
-{
-   assert(prob != NULL);
-
-   return prob->updateviolations;
-}
-
-/** set whether the updating of violations is turned on */
-void SCIPprobSetUpdateViolations(
-   SCIP_PROB*            prob,               /**< problem data */
-   SCIP_Bool             updateviolations    /**< marks whether the updating of violations is turned on */
-   )
-{
-   assert(prob != NULL);
-
-   prob->updateviolations = updateviolations;
-}
 
 #ifndef NDEBUG
 

@@ -13619,8 +13619,7 @@ void SCIPupdateSolIntegralityViolation(
    SCIP_Real             absviol            /**< absolute violation */
    )
 {
-   SCIP_Bool updateviolations = SCIPprobUpdateViolations(scip->origprob);
-   if( updateviolations )
+   if( SCIPprimalUpdateViolations(scip->origprimal) )
       SCIPsolUpdateIntegralityViolation(sol, absviol);
 }
 
@@ -13632,8 +13631,7 @@ void SCIPupdateSolBoundViolation(
    SCIP_Real             relviol             /**< relative violation */
    )
 {
-   SCIP_Bool updateviolations = SCIPprobUpdateViolations(scip->origprob);
-   if( updateviolations )
+   if( SCIPprimalUpdateViolations(scip->origprimal) )
       SCIPsolUpdateBoundViolation(sol, absviol, relviol);
 }
 
@@ -13645,8 +13643,7 @@ void SCIPupdateSolLPRowViolation(
    SCIP_Real             relviol             /**< relative violation */
    )
 {
-   SCIP_Bool updateviolations = SCIPprobUpdateViolations(scip->origprob);
-   if( updateviolations )
+   if( SCIPprimalUpdateViolations(scip->origprimal) )
       SCIPsolUpdateLPRowViolation(sol, absviol, relviol);
 }
 
@@ -13658,8 +13655,7 @@ void SCIPupdateSolConsViolation(
    SCIP_Real             relviol             /**< relative violation */
    )
 {
-   SCIP_Bool updateviolations = SCIPprobUpdateViolations(scip->origprob);
-   if( updateviolations )
+   if( SCIPprimalUpdateViolations(scip->origprimal) )
       SCIPsolUpdateConsViolation(sol, absviol, relviol);
 }
 
@@ -13671,8 +13667,7 @@ void SCIPupdateSolLPConsViolation(
    SCIP_Real             relviol             /**< relative violation */
    )
 {
-   SCIP_Bool updateviolations = SCIPprobUpdateViolations(scip->origprob);
-   if( updateviolations )
+   if( SCIPprimalUpdateViolations(scip->origprimal) )
       SCIPsolUpdateLPConsViolation(sol, absviol, relviol);
 }
 
@@ -13681,7 +13676,7 @@ void SCIPactivateSolViolationUpdates(
    SCIP*                 scip               /**< SCIP data structure */
    )
 {
-   SCIPprobSetUpdateViolations(scip->origprob, 1);
+   SCIPprimalSetUpdateViolations(scip->origprimal, TRUE);
 }
 
 /** disallow violation updates */
@@ -13689,7 +13684,7 @@ void SCIPdeactivateSolViolationUpdates(
    SCIP*                 scip               /**< SCIP data structure */
    )
 {
-   SCIPprobSetUpdateViolations(scip->origprob, 0);
+   SCIPprimalSetUpdateViolations(scip->origprimal, FALSE);
 }
 
 /** calculates number of nonzeros in problem */
