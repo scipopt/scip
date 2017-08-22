@@ -188,7 +188,7 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
       /* compare the coefficients of the rows */
       for( i = 0; i < row1->len; ++i )
       {
-         if( !SCIPsetIsEQ(set, row1scale * row1->vals[i], row2scale * row2->vals[i]) )
+         if( !SCIPsetIsFeasEQ(set, row1scale * row1->vals[i], row2scale * row2->vals[i]) )
             return FALSE;
       }
    }
@@ -228,7 +228,7 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
          /* current column of row1 is the current LP column of row2, check the coefficient */
          if( ilp < row2->nlpcols && row1->cols[i1] == row2->cols[ilp] )
          {
-            if( !SCIPsetIsEQ(set, row1scale * row1->vals[i1], row2scale * row2->vals[ilp]) )
+            if( !SCIPsetIsFeasEQ(set, row1scale * row1->vals[i1], row2scale * row2->vals[ilp]) )
                return FALSE;
             else
                ++ilp;
@@ -236,7 +236,7 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
          /* current column of row1 is the current non-LP column of row2, check the coefficient */
          else if( inlp < row2->len && row1->cols[i1] == row2->cols[inlp] )
          {
-            if( !SCIPsetIsEQ(set, row1scale * row1->vals[i1], row2scale * row2->vals[inlp]) )
+            if( !SCIPsetIsFeasEQ(set, row1scale * row1->vals[i1], row2scale * row2->vals[inlp]) )
                return FALSE;
             else
                ++inlp;
