@@ -522,6 +522,10 @@ SCIP_DECL_PROPEXEC(propExecRedcost)
    if( !SCIPisLPSolBasic(scip) )
       return SCIP_OKAY;
 
+   /* we cannot apply reduced cost strengthening if the dual feasibility was not checked */
+   if( !SCIPisLPDualReliable(scip) )
+      return SCIP_OKAY;
+
    /* do not run if propagation w.r.t. objective is not allowed */
    if( !SCIPallowObjProp(scip) )
       return SCIP_OKAY;

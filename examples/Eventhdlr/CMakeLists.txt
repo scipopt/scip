@@ -1,13 +1,14 @@
 project(Eventhdlr)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../src)
+find_package(SCIP REQUIRED)
+include_directories(${SCIP_INCLUDE_DIRS})
 
 add_executable(eventhdlr
    src/cmain.c
    src/event_bestsol.c
    src/event_boundwriting.c)
 
-target_link_libraries(eventhdlr libscip)
+target_link_libraries(eventhdlr ${SCIP_LIBRARIES})
 add_dependencies(examples eventhdlr)
 
 #

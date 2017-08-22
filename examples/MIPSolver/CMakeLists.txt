@@ -1,9 +1,10 @@
 project(MIPSolver)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../src)
+find_package(SCIP REQUIRED)
+include_directories(${SCIP_INCLUDE_DIRS})
 
 add_executable(scipmip
    src/cppmain.cpp)
 
-target_link_libraries(scipmip libscip m)
+target_link_libraries(scipmip ${SCIP_LIBRARIES})
 add_dependencies(examples scipmip)

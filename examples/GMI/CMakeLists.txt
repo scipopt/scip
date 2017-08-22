@@ -1,12 +1,19 @@
 project(GMI)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../src)
+find_package(SCIP REQUIRED)
+include_directories(${SCIP_INCLUDE_DIRS})
 
 add_executable(gmi
    src/cmain.c
    src/sepa_gmi.c)
 
-target_link_libraries(gmi libscip m)
+# link to math library if it is available
+find_library(LIBM m)
+if(NOT LIBM)
+  set(LIBM "")
+endif()
+
+target_link_libraries(gmi ${SCIP_LIBRARIES} ${LIBM})
 add_dependencies(examples gmi)
 
 include(CTest)
