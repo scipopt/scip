@@ -136,6 +136,7 @@
 #define FIXINTEGRALRHS            FALSE
 #define MAKECONTINTEGRAL          FALSE
 #define MAXWEIGHTRANGE            1e+05 /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
+#define MAXCOEFRATIO              1e+05
 
 #define MAXAGGRLEN(nvars)         nvars      /**< currently very large to allow any generation; an alternative would be (0.1*(nvars)+1000) */
 
@@ -3233,7 +3234,7 @@ SCIP_RETCODE createCGCutCMIR(
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, sepadata->allowlocal, FIXINTEGRALRHS, boundsfortrans,
-         boundtypesfortrans, MINFRAC, MAXFRAC, MAXWEIGHTRANGE, 1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy,
+         boundtypesfortrans, MINFRAC, MAXFRAC, MAXCOEFRATIO, 1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy,
          &cutrank, &cutislocal, &success) );
 
    assert( sepadata->allowlocal || !cutislocal );
@@ -3464,7 +3465,7 @@ SCIP_RETCODE createCGCutStrongCG(
    if( !success )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPcalcStrongCG(scip, NULL, BOUNDSWITCH, USEVBDS, sepadata->allowlocal, MINFRAC, MAXFRAC, MAXWEIGHTRANGE,
+   SCIP_CALL( SCIPcalcStrongCG(scip, NULL, BOUNDSWITCH, USEVBDS, sepadata->allowlocal, MINFRAC, MAXFRAC, MAXCOEFRATIO,
          1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
 
    assert( sepadata->allowlocal || !cutislocal );

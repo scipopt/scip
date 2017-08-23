@@ -83,6 +83,7 @@
 #define USEVBDS                            TRUE
 #define MINFRAC                            0.05
 #define MAXFRAC                           0.999
+#define MAXCOEFRATIO                       1e+5
 
 #define MAXCOLS                         2000000 /**< maximum number of columns */
 #define MAXAGGRLEN(nvars)                  (0.1*(nvars)+1000) /**< maximal length of base inequality */
@@ -6364,8 +6365,8 @@ SCIP_RETCODE generateClusterCuts(
             assert( !SCIPisZero(scip, 1.0/deltas[d]) );
 
             SCIPdebugMsg(scip, "applying MIR with delta = %g\n", deltas[d]);
-            SCIP_CALL( SCIPcalcMIR(scip, sol, BOUNDSWITCH, USEVBDS, allowlocal, sepadata->fixintegralrhs, NULL, NULL, MINFRAC, MAXFRAC,
-               sepadata->maxweightrange, 1.0/deltas[d], aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
+            SCIP_CALL( SCIPcalcMIR(scip, sol, BOUNDSWITCH, USEVBDS, allowlocal, sepadata->fixintegralrhs, NULL, NULL, MINFRAC, MAXFRAC, MAXCOEFRATIO,
+               1.0/deltas[d], aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
             assert(allowlocal || !cutislocal);
 
             /* // no success means row was too long or empty, there is a free
@@ -6550,8 +6551,8 @@ SCIP_RETCODE generateClusterCuts(
                   SCIP_CALL( SCIPaggrRowSumRows(scip, aggrrow, rowweights, NULL, -1, sepadata->maxweightrange, SCIPsumepsilon(scip),
                                                 FALSE, allowlocal, 2, (int)MAXAGGRLEN(nvars), &success) );
 
-                  SCIP_CALL( SCIPcalcMIR(scip, sol, BOUNDSWITCH, USEVBDS, allowlocal, sepadata->fixintegralrhs, NULL, NULL, MINFRAC, MAXFRAC,
-                     sepadata->maxweightrange, 1.0/bestdelta, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
+                  SCIP_CALL( SCIPcalcMIR(scip, sol, BOUNDSWITCH, USEVBDS, allowlocal, sepadata->fixintegralrhs, NULL, NULL, MINFRAC, MAXFRAC, MAXCOEFRATIO,
+                     1.0/bestdelta, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
 
                   assert(allowlocal || !cutislocal);
 
