@@ -743,7 +743,10 @@ void SCIPvisualLowerbound(
       lowerbound = SCIPretransformObj(set->scip, lowerbound);
 
    printTime(visual, stat, TRUE);
-   SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "L %f\n", lowerbound);
+   if ( SCIPgetObjsense(set->scip) == SCIP_OBJSENSE_MINIMIZE )
+      SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "L %f\n", lowerbound);
+   else
+      SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "U %f\n", lowerbound);
 
    /* do nothing for BAK */
 }
@@ -767,7 +770,10 @@ void SCIPvisualUpperbound(
       upperbound = SCIPretransformObj(set->scip, upperbound);
 
    printTime(visual, stat, TRUE);
-   SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "U %f\n", upperbound);
+   if ( SCIPgetObjsense(set->scip) == SCIP_OBJSENSE_MINIMIZE )
+      SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "U %f\n", upperbound);
+   else
+      SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "L %f\n", upperbound);
 
    /* do nothing for BAK */
 }
