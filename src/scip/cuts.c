@@ -1826,7 +1826,9 @@ SCIP_RETCODE cutsRoundMIR(
          SCIP_Real QUAD(fj);
 
          aj = varsign[i] * cutcoefs[v]; /* a'_j */
-         downaj = SCIPfeasFloor(scip, aj);
+
+         /* floor the coefficients without an epsilon value */
+         downaj = floor(aj);
          SCIPquadprecSumDD(fj, aj, -downaj);
 
          if( SCIPisFeasLE(scip, QUAD_ROUND(fj), f0) )
@@ -2134,7 +2136,7 @@ SCIP_RETCODE cutsSubstituteMIR(
           *    a^_r = a~_r = down(a'_r)                      , if f_r <= f0
           *    a^_r = a~_r = down(a'_r) + (f_r - f0)/(1 - f0), if f_r >  f0
           */
-         downar = SCIPfloor(scip, ar);
+         downar = floor(ar);
          SCIPquadprecSumDD(fr, ar, -downar);
          if( SCIPisLE(scip, QUAD_ROUND(fr), f0) )
             QUAD_ASSIGN(cutar, downar);
@@ -2289,6 +2291,7 @@ SCIP_RETCODE SCIPcalcMIR(
    }
 
    *cutislocal = aggrrow->local;
+
    /* Transform equation  a*x == b, lb <= x <= ub  into standard form
     *   a'*x' == b, 0 <= x' <= ub'.
     *
@@ -2304,9 +2307,6 @@ SCIP_RETCODE SCIPcalcMIR(
     *   a_{zl_j} := a_{zl_j} + a_j * bl_j, or
     *   a_{zu_j} := a_{zu_j} + a_j * bu_j
     */
-
-   cleanupCut(scip, aggrrow->local, cutinds, tmpcoefs, cutnnz, cutrhs);
-
    SCIP_CALL( cutsTransformMIR(scip, sol, boundswitch, usevbds, allowlocal, fixintegralrhs, FALSE,
          boundsfortrans, boundtypesfortrans, minfrac, maxfrac, tmpcoefs, cutrhs, cutinds, cutnnz, varsign, boundtype, &freevariable, &localbdsused) );
    assert(allowlocal || !localbdsused);
@@ -2456,7 +2456,8 @@ SCIP_Real computeMIRViolation(
 
    for( i = 0; i < nvars; ++i )
    {
-      SCIP_Real floorai = SCIPfeasFloor(scip, (scale * coefs[i]));
+      /* floor coefficients without an epsilon value since not flooring will make the cut stronger */
+      SCIP_Real floorai = floor(scale * coefs[i]);
       SCIP_Real fi = (scale * coefs[i]) - floorai;
 
       if( SCIPisFeasLE(scip, fi, f0) )
@@ -2576,6 +2577,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    }
 
    *cutislocal = aggrrow->local;
+
    /* Transform equation  a*x == b, lb <= x <= ub  into standard form
     *   a'*x' == b, 0 <= x' <= ub'.
     *
@@ -2591,9 +2593,6 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
     *   a_{zl_j} := a_{zl_j} + a_j * bl_j, or
     *   a_{zu_j} := a_{zu_j} + a_j * bu_j
     */
-
-   cleanupCut(scip, *cutislocal, mksetinds, mksetcoefs, &mksetnnz, &mksetrhs);
-
    SCIP_CALL( cutsTransformMIR(scip, sol, boundswitch, usevbds, allowlocal, FALSE, FALSE,
          boundsfortrans, boundtypesfortrans, minfrac, maxfrac, mksetcoefs, &mksetrhs, mksetinds, &mksetnnz, varsign, boundtype, &freevariable, &localbdsused) );
 
@@ -2999,7 +2998,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
       }
 #endif
 
-      /* remove again all nearly-zero coefficients from MIR row and relax the right hand side correspondingly in order to
+      /* remove all nearly-zero coefficients from MIR row and relax the right hand side correspondingly in order to
        * prevent numerical rounding errors
        */
       *cutislocal = *cutislocal || localbdsused;
