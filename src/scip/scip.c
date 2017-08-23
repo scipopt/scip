@@ -19977,7 +19977,10 @@ SCIP_RETCODE SCIPendStrongbranch(
       /* inform the LP that the probing mode is not used for strong branching anymore */
       SCIPlpEndStrongbranchProbing(scip->lp);
 
-      SCIP_CALL( SCIPendProbing(scip) );
+      /* switch back from probing to normal operation mode and restore variables and constraints to focus node */
+      SCIP_CALL( SCIPtreeEndProbing(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat,
+         scip->transprob, scip->origprob, scip->lp, scip->relaxation, scip->primal,
+         scip->branchcand, scip->eventqueue, scip->eventfilter, scip->cliquetable) );
 
       /* apply the collected bound changes */
       for( i = 0; i < nbnds; ++i )
