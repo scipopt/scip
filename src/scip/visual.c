@@ -662,13 +662,34 @@ void SCIPvisualFoundSolution(
    SCIP_SOL*             sol                 /**< solution that has been found */
    )
 {
+   if ( node == NULL || ! set->visual_dispsols || SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE )
+      return;
+
    if ( visual->vbcfile != NULL )
    {
-      if ( node != NULL && set->visual_dispsols )
+      SCIP_Real obj;
+      size_t nodenum;
+
+      /* get node num from hash map */
+      assert( node != NULL );
+      nodenum = (size_t)SCIPhashmapGetImage(visual->nodenum, node);
+      assert(nodenum > 0);
+
+      /* get objective of solution */
+      if ( set->visual_objextern )
+         obj = SCIPgetSolOrigObj(set->scip, sol);
+      else
+         obj = SCIPgetSolTransObj(set->scip, sol);
+
+      if ( bettersol )
       {
-         if ( SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
-            vbcSetColor(visual, stat, node, SCIP_VBCCOLOR_SOLUTION);
+         /* note that this output is in addition to the one by SCIPvisualUpperbound() */
+         SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "A %d found better solution: %f\n", (int)nodenum, obj);
       }
+      else
+         SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "A %d found solution: %f\n", (int)nodenum, obj);
+
+      vbcSetColor(visual, stat, node, SCIP_VBCCOLOR_SOLUTION);
    }
 
    if ( visual->bakfile != NULL && bettersol )
@@ -680,7 +701,7 @@ void SCIPvisualFoundSolution(
       else
          obj = SCIPgetSolTransObj(set->scip, sol);
 
-      if ( SCIPsolGetHeur(sol) == NULL && node != NULL )
+      if ( SCIPsolGetHeur(sol) == NULL )
       {
          /* if LP solution was feasible ... */
          SCIP_VAR* branchvar;
@@ -692,6 +713,7 @@ void SCIPvisualFoundSolution(
          char t = 'M';
 
          /* find first parent that is not a probing node */
+         assert( node != NULL );
          pnode = node;
          while ( pnode != NULL && SCIPnodeGetType(pnode) == SCIP_NODETYPE_PROBINGNODE )
             pnode = pnode->parent;
