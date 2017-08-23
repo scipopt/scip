@@ -15626,15 +15626,18 @@ SCIP_RETCODE prepareReoptimization(
 
       SCIPbranchcandInvalidate(scip->branchcand);
 
-      /* install globally valid lower and upper bounds */
-      SCIP_CALL( SCIPreoptInstallBounds(scip->reopt, scip->set, scip->stat, scip->transprob, scip->lp, scip->branchcand,
-            scip->eventqueue, scip->cliquetable, scip->mem->probmem) );
-
       SCIP_CALL( SCIPreoptResetActiveConss(scip->reopt, scip->set, scip->stat) );
 
       /* check whether we want to restart the tree search */
       SCIP_CALL( SCIPreoptCheckRestart(scip->reopt, scip->set, scip->mem->probmem, NULL, scip->transprob->vars,
             scip->transprob->nvars, &reoptrestart) );
+
+      /* call initialization methods of plugins */
+      SCIP_CALL( SCIPsetInitPlugins(scip->set, scip->mem->probmem, scip->stat) );
+
+      /* install globally valid lower and upper bounds */
+      SCIP_CALL( SCIPreoptInstallBounds(scip->reopt, scip->set, scip->stat, scip->transprob, scip->lp, scip->branchcand,
+            scip->eventqueue, scip->cliquetable, scip->mem->probmem) );
 
       /* check, whether objective value is always integral by inspecting the problem, if it is the case adjust the
        * cutoff bound if primal solution is already known
@@ -15645,9 +15648,6 @@ SCIP_RETCODE prepareReoptimization(
       /* if possible, scale objective function such that it becomes integral with gcd 1 */
       SCIP_CALL( SCIPprobScaleObj(scip->transprob, scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->primal,
             scip->tree, scip->reopt, scip->lp, scip->eventqueue) );
-
-      /* call initialization methods of plugins */
-      SCIP_CALL( SCIPsetInitPlugins(scip->set, scip->mem->probmem, scip->stat) );
 
       SCIPlpRecomputeLocalAndGlobalPseudoObjval(scip->lp, scip->set, scip->transprob);
    }
