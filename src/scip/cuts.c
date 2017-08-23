@@ -3076,6 +3076,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 
 #define MAXABSVBCOEF               1e+5 /**< maximal absolute coefficient in variable bounds used for snf relaxation */
 #define MAXBOUND                  1e+10 /**< maximal value of normal bounds used for snf relaxation */
+#define NO_EXACT_KNAPSACK
 
 /** structure that contains all data required to perform the sequence independent lifting
  */
@@ -4337,6 +4338,7 @@ void buildFlowCover(
    *lambda = QUAD_ROUND(tmp);
 }
 
+#ifndef NO_EXACT_KNAPSACK
 /** get a flow cover (C1, C2) for a given 0-1 single node flow set
  *    {(x,y) in {0,1}^n x R^n : sum_{j in N1} y_j - sum_{j in N2} y_j <= b, 0 <= y_j <= u_j x_j},
  *  i.e., get sets C1 subset N1 and C2 subset N2 with sum_{j in C1} u_j - sum_{j in C2} u_j = b + lambda and lambda > 0
@@ -4717,6 +4719,277 @@ SCIP_RETCODE getFlowCover(
 
    return SCIP_OKAY;
 }
+
+#else
+/** get a flow cover (C1, C2) for a given 0-1 single node flow set
+ *    {(x,y) in {0,1}^n x R^n : sum_{j in N1} y_j - sum_{j in N2} y_j <= b, 0 <= y_j <= u_j x_j},
+ *  i.e., get sets C1 subset N1 and C2 subset N2 with sum_{j in C1} u_j - sum_{j in C2} u_j = b + lambda and lambda > 0
+ */
+static
+SCIP_RETCODE getFlowCover(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SNF_RELAXATION*       snf,                /**< @bzfgottwa write comment */
+   int*                  nflowcovervars,     /**< pointer to store number of variables in flow cover */
+   int*                  nnonflowcovervars,  /**< pointer to store number of variables not in flow cover */
+   int*                  flowcoverstatus,    /**< pointer to store whether variable is in flow cover (+1) or not (-1) */
+   SCIP_Real*            lambda,             /**< pointer to store lambda */
+   SCIP_Bool*            found               /**< pointer to store whether a cover was found */
+   )
+{
+   SCIP_Real* transprofitsreal;
+   SCIP_Real* transweightsreal;
+   SCIP_Longint* transweightsint;
+   int* items;
+   int* itemsint;
+   int* nonsolitems;
+   int* solitems;
+   SCIP_Real QUAD(flowcoverweight);
+   SCIP_Real QUAD(flowcoverweightafterfix);
+   SCIP_Real n1itemsweight;
+   SCIP_Real n2itemsminweight;
+   SCIP_Real transcapacityreal;
+   int nflowcovervarsafterfix;
+   int nitems;
+   int nn1items;
+   int nnonflowcovervarsafterfix;
+   int nnonsolitems;
+   int nsolitems;
+   int j;
+
+   assert(scip != NULL);
+   assert(snf->transvarcoefs != NULL);
+   assert(snf->transbinvarsolvals != NULL);
+   assert(snf->transvarvubcoefs != NULL);
+   assert(snf->ntransvars > 0);
+   assert(nflowcovervars != NULL);
+   assert(nnonflowcovervars != NULL);
+   assert(flowcoverstatus != NULL);
+   assert(lambda != NULL);
+   assert(found != NULL);
+
+   SCIPdebugMsg(scip, "--------------------- get flow cover ----------------------------------------------------\n");
+
+   /* get data structures */
+   SCIP_CALL( SCIPallocBufferArray(scip, &items, snf->ntransvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &itemsint, snf->ntransvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &transprofitsreal, snf->ntransvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &transweightsreal, snf->ntransvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &transweightsint, snf->ntransvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &solitems, snf->ntransvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nonsolitems, snf->ntransvars) );
+
+   BMSclearMemoryArray(flowcoverstatus, snf->ntransvars);
+   *found = FALSE;
+   *nflowcovervars = 0;
+   *nnonflowcovervars = 0;
+
+   QUAD_ASSIGN(flowcoverweight, 0.0);
+   nflowcovervarsafterfix = 0;
+   nnonflowcovervarsafterfix = 0;
+   QUAD_ASSIGN(flowcoverweightafterfix, 0.0);
+
+   /* fix some variables in advance according to the following fixing strategy
+    *   put j into N1\C1,          if j in N1 and x*_j = 0,
+    *   put j into C1,             if j in N1 and x*_j = 1,
+    *   put j into C2,             if j in N2 and x*_j = 1,
+    *   put j into N2\C2,          if j in N2 and x*_j = 0
+    * and get the set of the remaining variables
+    */
+   SCIPdebugMsg(scip, "0. Fix some variables in advance:\n");
+   nitems = 0;
+   nn1items = 0;
+   n1itemsweight = 0.0;
+   n2itemsminweight = SCIP_REAL_MAX;
+   for( j = 0; j < snf->ntransvars; j++ )
+   {
+      assert(snf->transvarcoefs[j] == 1 || snf->transvarcoefs[j] == -1);
+      assert(SCIPisFeasGE(scip, snf->transbinvarsolvals[j], 0.0) && SCIPisFeasLE(scip,  snf->transbinvarsolvals[j], 1.0));
+      assert(SCIPisFeasGE(scip, snf->transvarvubcoefs[j], 0.0));
+
+      /* if u_j = 0, put j into N1\C1 and N2\C2, respectively */
+      if( SCIPisFeasZero(scip, snf->transvarvubcoefs[j]) )
+      {
+         flowcoverstatus[j] = -1;
+         (*nnonflowcovervars)++;
+         continue;
+      }
+
+      /* x*_j is fractional */
+      if( !SCIPisFeasIntegral(scip,  snf->transbinvarsolvals[j]) )
+      {
+         items[nitems] = j;
+         nitems++;
+         if( snf->transvarcoefs[j] == 1 )
+         {
+            n1itemsweight += snf->transvarvubcoefs[j];
+            nn1items++;
+         }
+         else
+            n2itemsminweight = MIN(n2itemsminweight, snf->transvarvubcoefs[j]);
+      }
+      /* j is in N1 and x*_j = 0 */
+      else if( snf->transvarcoefs[j] == 1 &&  snf->transbinvarsolvals[j] < 0.5 )
+      {
+         flowcoverstatus[j] = -1;
+         (*nnonflowcovervars)++;
+         SCIPdebugMsg(scip, "     <%d>: in N1-C1\n", j);
+      }
+      /* j is in N1 and x*_j = 1 */
+      else if( snf->transvarcoefs[j] == 1 &&  snf->transbinvarsolvals[j] > 0.5 )
+      {
+         flowcoverstatus[j] = 1;
+         (*nflowcovervars)++;
+         SCIPquadprecSumQD(flowcoverweight, flowcoverweight, snf->transvarvubcoefs[j]);
+         SCIPdebugMsg(scip, "     <%d>: in C1\n", j);
+      }
+      /* j is in N2 and x*_j = 1 */
+      else if( snf->transvarcoefs[j] == -1 &&  snf->transbinvarsolvals[j] > 0.5 )
+      {
+         flowcoverstatus[j] = 1;
+         (*nflowcovervars)++;
+         SCIPquadprecSumQD(flowcoverweight, flowcoverweight, -snf->transvarvubcoefs[j]);
+         SCIPdebugMsg(scip, "     <%d>: in C2\n", j);
+      }
+      /* j is in N2 and x*_j = 0 */
+      else
+      {
+         assert(snf->transvarcoefs[j] == -1 &&  snf->transbinvarsolvals[j] < 0.5);
+         flowcoverstatus[j] = -1;
+         (*nnonflowcovervars)++;
+         SCIPdebugMsg(scip, "     <%d>: in N2-C2\n", j);
+      }
+   }
+   assert((*nflowcovervars) + (*nnonflowcovervars) + nitems == snf->ntransvars);
+   assert(nn1items >= 0);
+
+   /* to find a flow cover, transform the following knapsack problem
+    *
+    * (KP^SNF)      max sum_{j in N1} ( x*_j - 1 ) z_j + sum_{j in N2} x*_j z_j
+    *                   sum_{j in N1}          u_j z_j - sum_{j in N2} u_j  z_j > b
+    *                                         z_j in {0,1} for all j in N1 & N2
+    *
+    * 1. to a knapsack problem in maximization form, such that all variables in the knapsack constraint have
+    *    positive weights and the constraint is a "<" constraint, by complementing all variables in N1
+    *
+    *    (KP^SNF_rat)  max sum_{j in N1} ( 1 - x*_j ) z°_j + sum_{j in N2} x*_j z_j
+    *                      sum_{j in N1}          u_j z°_j + sum_{j in N2} u_j  z_j < - b + sum_{j in N1} u_j
+    *                                                 z°_j in {0,1} for all j in N1
+    *                                                  z_j in {0,1} for all j in N2,
+    *    and solve it approximately under consideration of the fixing,
+    * or
+    * 2. to a knapsack problem in maximization form, such that all variables in the knapsack constraint have
+    *    positive integer weights and the constraint is a "<=" constraint, by complementing all variables in N1
+    *    and multiplying the constraint by a suitable scalar C
+    *
+    *    (KP^SNF_int)  max sum_{j in N1} ( 1 - x*_j ) z°_j + sum_{j in N2} x*_j z_j
+    *                      sum_{j in N1}        C u_j z°_j + sum_{j in N2} C u_j  z_j <= c
+    *                                                   z°_j in {0,1} for all j in N1
+    *                                                    z_j in {0,1} for all j in N2,
+    *    where
+    *      c = floor[ C (- b + sum_{j in N1} u_j ) ]      if frac[ C (- b + sum_{j in N1} u_j ) ] > 0
+    *      c =        C (- b + sum_{j in N1} u_j )   - 1  if frac[ C (- b + sum_{j in N1} u_j ) ] = 0
+    *    and solve it exactly under consideration of the fixing.
+    */
+   SCIPdebugMsg(scip, "1. Transform KP^SNF to KP^SNF_rat:\n");
+
+   /* get weight and profit of variables in KP^SNF_rat and check, whether all weights are already integral */
+   for( j = 0; j < nitems; j++ )
+   {
+      transweightsreal[j] = snf->transvarvubcoefs[items[j]];
+
+      if( snf->transvarcoefs[items[j]] == 1 )
+      {
+         transprofitsreal[j] = 1.0 -  snf->transbinvarsolvals[items[j]];
+         SCIPdebugMsg(scip, "     <%d>: j in N1:   w_%d = %g, p_%d = %g %s\n", items[j], items[j], transweightsreal[j],
+            items[j], transprofitsreal[j], SCIPisIntegral(scip, transweightsreal[j]) ? "" : "  ----> NOT integral");
+      }
+      else
+      {
+         transprofitsreal[j] =  snf->transbinvarsolvals[items[j]];
+         SCIPdebugMsg(scip, "     <%d>: j in N2:   w_%d = %g, p_%d = %g %s\n", items[j], items[j], transweightsreal[j],
+            items[j], transprofitsreal[j], SCIPisIntegral(scip, transweightsreal[j]) ? "" : "  ----> NOT integral");
+      }
+   }
+   /* get capacity of knapsack constraint in KP^SNF_rat */
+   transcapacityreal = - snf->transrhs + QUAD_ROUND(flowcoverweight) + n1itemsweight;
+   SCIPdebugMsg(scip, "     transcapacity = -rhs(%g) + flowcoverweight(%g) + n1itemsweight(%g) = %g\n",
+      snf->transrhs, QUAD_ROUND(flowcoverweight), n1itemsweight, transcapacityreal);
+
+   /* there exists no flow cover if the capacity of knapsack constraint in KP^SNF_rat after fixing
+    * is less than or equal to zero
+    */
+   if( SCIPisFeasLE(scip, transcapacityreal/10, 0.0) )
+   {
+      assert(!(*found));
+      goto TERMINATE;
+   }
+
+   /* KP^SNF_rat has been solved by fixing some variables in advance */
+   assert(nitems >= 0);
+   if( nitems == 0)
+   {
+      /* get lambda = sum_{j in C1} u_j - sum_{j in C2} u_j - rhs */
+      SCIPquadprecSumQD(flowcoverweight, flowcoverweight, -snf->transrhs);
+      *lambda = QUAD_ROUND(flowcoverweight);
+      *found = TRUE;
+      goto TERMINATE;
+   }
+
+   /* Solve the KP^SNF_rat approximately */
+
+   /* initialize number of (non-)solution items, should be changed to a nonnegative number in all possible paths below */
+   nsolitems = -1;
+   nnonsolitems = -1;
+
+   /* suitable factor C was found*/
+   /* solve KP^SNF_rat approximately */
+   SCIP_CALL(SCIPsolveKnapsackApproximatelyLT(scip, nitems, transweightsreal, transprofitsreal, transcapacityreal,
+                                              items, solitems, nonsolitems, &nsolitems, &nnonsolitems, NULL));
+
+   assert(nsolitems != -1);
+   assert(nnonsolitems != -1);
+
+   /* build the flow cover from the solution of KP^SNF_rat and KP^SNF_int, respectively and the fixing */
+   assert(*nflowcovervars + *nnonflowcovervars + nsolitems + nnonsolitems == snf->ntransvars);
+   buildFlowCover(scip, snf->transvarcoefs, snf->transvarvubcoefs, snf->transrhs, solitems, nonsolitems, nsolitems, nnonsolitems, nflowcovervars,
+      nnonflowcovervars, flowcoverstatus, QUAD(&flowcoverweight), lambda);
+   assert(*nflowcovervars + *nnonflowcovervars == snf->ntransvars);
+
+   *found = SCIPisFeasGT(scip, *lambda, 0.0);
+
+  TERMINATE:
+   assert((!*found) || SCIPisFeasGT(scip, *lambda, 0.0));
+#ifdef SCIP_DEBUG
+   if( *found )
+   {
+      SCIPdebugMsg(scip, "2. approximate solution:\n");
+      for( j = 0; j < snf->ntransvars; j++ )
+      {
+         if( snf->transvarcoefs[j] == 1 && flowcoverstatus[j] == 1 )
+         {
+            SCIPdebugMsg(scip, "     C1: + y_%d [u_%d = %g]\n", j, j, snf->transvarvubcoefs[j]);
+         }
+         else if( snf->transvarcoefs[j] == -1 && flowcoverstatus[j] == 1 )
+         {
+            SCIPdebugMsg(scip, "     C2: - y_%d [u_%d = %g]\n", j, j, snf->transvarvubcoefs[j]);
+         }
+      }
+      SCIPdebugMsg(scip, "     flowcoverweight(%g) = rhs(%g) + lambda(%g)\n", QUAD_ROUND(flowcoverweight), snf->transrhs, *lambda);
+   }
+#endif
+
+   /* free data structures */
+   SCIPfreeBufferArray(scip, &nonsolitems);
+   SCIPfreeBufferArray(scip, &solitems);
+   SCIPfreeBufferArray(scip, &transweightsint);
+   SCIPfreeBufferArray(scip, &transweightsreal);
+   SCIPfreeBufferArray(scip, &transprofitsreal);
+   SCIPfreeBufferArray(scip, &itemsint);
+   SCIPfreeBufferArray(scip, &items);
+
+   return SCIP_OKAY;
+}
+#endif
 
 /** evaluate the super-additive lifting function for the lifted simple generalized flowcover inequalities
  *  for a given value x \in \{ u_j \mid j \in C- \}.
