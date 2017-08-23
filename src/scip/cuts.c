@@ -85,6 +85,8 @@ void printCut(
  */
 #define NONZERO(x)   (COPYSIGN(1e-100, (x)) + (x))
 
+#define AGGREGATION_EPS           1e-12 /**< epsilon value for removing zero coefficients from the aggregation */
+
 /** add a scaled row to a dense vector indexed over the problem variables and keep the
  *  index of non-zeros up-to-date
  */
@@ -755,15 +757,15 @@ SCIP_RETCODE SCIPaggrRowSumRows(
       }
    }
 
+   SCIPaggrRowRemoveZeros(aggrrow);
    *valid = aggrrow->nnz > 0;
 
    return SCIP_OKAY;
 }
 
-/** removes all (close enough to) zero entries in the aggregation row */
+/** removes all (close enough to) zero entries in the aggregation row. */
 void SCIPaggrRowRemoveZeros(
-   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
-   SCIP_Real             epsilon             /**< value to consider zero */
+   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    )
 {
    int i;
@@ -772,7 +774,7 @@ void SCIPaggrRowRemoveZeros(
 
    for( i = 0; i < aggrrow->nnz; )
    {
-      if( EPSZ(aggrrow->vals[aggrrow->inds[i]], epsilon) )
+      if( EPSZ(aggrrow->vals[aggrrow->inds[i]], AGGREGATION_EPS) )
       {
          aggrrow->vals[aggrrow->inds[i]] = 0.0;
          --aggrrow->nnz;
@@ -787,6 +789,7 @@ void SCIPaggrRowRemoveZeros(
 static
 void cleanupCut(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             maxcoefratio,       /**< maximal allowed ratio between two coefficients in the cut */
    SCIP_Bool             cutislocal,         /**< is the cut a local cut */
    int*                  cutinds,            /**< variable problem indices of non-zeros in cut */
    SCIP_Real*            cutcoefs,           /**< non-zeros coefficients of cut */
@@ -796,6 +799,9 @@ void cleanupCut(
 {
    int i;
    SCIP_VAR** vars;
+   SCIP_Real maxcoef;
+   SCIP_Real minallowedcoef;
+   SCIP_Real QUAD(rhs);
 
    assert(scip != NULL);
    assert(cutinds != NULL);
@@ -804,31 +810,45 @@ void cleanupCut(
 
    vars = SCIPgetVars(scip);
 
+   maxcoef = 0.0;
+   for( i = 0; i < *nnz; ++i )
+   {
+      maxcoef = MAX(REALABS(cutcoefs[cutinds[i]]), maxcoef);
+   }
+
+   minallowedcoef = MAX(SCIPsumepsilon(scip), maxcoef / maxcoefratio);
+   QUAD_ASSIGN(rhs, *cutrhs);
+
    i = 0;
    while( i < *nnz )
    {
       int v = cutinds[i];
 
-      if( SCIPisSumZero(scip, cutcoefs[v]) )
+      if( REALABS(cutcoefs[v]) <= minallowedcoef )
       {
-         /* relax left and right hand sides if necessary */
-         if( !SCIPisInfinity(scip, *cutrhs) && !SCIPisZero(scip, cutcoefs[v]) )
+         /* adjust left and right hand sides with max contribution */
+         if( cutcoefs[v] < 0.0 )
          {
-            if( cutcoefs[v] < 0.0 )
-            {
-               SCIP_Real ub = cutislocal ? SCIPvarGetUbLocal(vars[v]) : SCIPvarGetUbGlobal(vars[v]);
-               if( SCIPisInfinity(scip, ub) )
-                  *cutrhs = SCIPinfinity(scip);
-               else
-                  *cutrhs -= cutcoefs[v] * ub;
-            }
+            SCIP_Real ub = cutislocal ? SCIPvarGetUbLocal(vars[v]) : SCIPvarGetUbGlobal(vars[v]);
+            if( SCIPisInfinity(scip, ub) )
+               *cutrhs = SCIPinfinity(scip);
             else
             {
-               SCIP_Real lb = cutislocal ? SCIPvarGetLbLocal(vars[v]) : SCIPvarGetLbGlobal(vars[v]);
-               if( SCIPisInfinity(scip, -lb) )
-                  *cutrhs = SCIPinfinity(scip);
-               else
-                  *cutrhs -= cutcoefs[v] * lb;
+               SCIP_Real QUAD(tmp);
+               SCIPquadprecProdDD(tmp, cutcoefs[v], ub);
+               SCIPquadprecSumQQ(rhs, rhs, -tmp);
+            }
+         }
+         else
+         {
+            SCIP_Real lb = cutislocal ? SCIPvarGetLbLocal(vars[v]) : SCIPvarGetLbGlobal(vars[v]);
+            if( SCIPisInfinity(scip, -lb) )
+               *cutrhs = SCIPinfinity(scip);
+            else
+            {
+               SCIP_Real QUAD(tmp);
+               SCIPquadprecProdDD(tmp, cutcoefs[v], lb);
+               SCIPquadprecSumQQ(rhs, rhs, -tmp);
             }
          }
 
@@ -836,25 +856,28 @@ void cleanupCut(
          /* remove non-zero entry */
          --(*nnz);
          cutinds[i] = cutinds[*nnz];
+
+         if( SCIPisInfinity(scip, *cutrhs) )
+            return;
       }
       else
          ++i;
    }
+
+   *cutrhs = QUAD_ROUND(rhs);
 }
 
-/** removes all entries in the aggregation row that are smaller than epsilon.
- *  For values that are between epsilon and sum epsilon, replace the variable by its
- *  worst bound depending on the variable's coefficient.
- */
+/** safely removes variables with small coefficients from the aggregation row */
 void SCIPaggrRowCleanup(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   SCIP_Real             maxcoefratio        /**< maximal allowed ratio between two coefficients in the cut */
    )
 {
    assert(scip != NULL);
    assert(aggrrow != NULL);
 
-   cleanupCut(scip, aggrrow->local, aggrrow->inds, aggrrow->vals, &aggrrow->nnz, &aggrrow->rhs);
+   cleanupCut(scip, maxcoefratio, aggrrow->local, aggrrow->inds, aggrrow->vals, &aggrrow->nnz, &aggrrow->rhs);
 }
 
 /** get number of aggregated rows */
@@ -2239,6 +2262,7 @@ SCIP_RETCODE SCIPcalcMIR(
                                               *   NULL for using closest bound for all variables */
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce MIR cut for */
+   SCIP_Real             maxcoefratio,       /**< maximal allowed ratio between two coefficients in the cut */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to the aggrrow; must be positive */
    SCIP_AGGRROW*         aggrrow,            /**< aggrrow to compute MIR cut for */
    SCIP_Real*            cutcoefs,           /**< array to store the non-zero coefficients in the cut */
@@ -2343,7 +2367,7 @@ SCIP_RETCODE SCIPcalcMIR(
     *   a^_{zl_j} := a^_{zl_j} - a~_j * bl_j == a^_{zl_j} - a^_j * bl_j, or
     *   a^_{zu_j} := a^_{zu_j} + a~_j * bu_j == a^_{zu_j} - a^_j * bu_j
     */
-   downrhs = EPSFLOOR(*cutrhs, SCIPsumepsilon(scip));
+   downrhs = SCIPfeasFloor(scip, *cutrhs);
    f0 = *cutrhs - downrhs;
    if( f0 < minfrac || f0 > maxfrac )
       goto TERMINATE;
@@ -2379,7 +2403,7 @@ SCIP_RETCODE SCIPcalcMIR(
    /* remove again all nearly-zero coefficients from MIR row and relax the right hand side correspondingly in order to
     * prevent numerical rounding errors
     */
-   cleanupCut(scip, *cutislocal, cutinds, tmpcoefs, cutnnz, cutrhs);
+   cleanupCut(scip, maxcoefratio, *cutislocal, cutinds, tmpcoefs, cutnnz, cutrhs);
    SCIPdebug(printCut(scip, sol, tmpcoefs, *cutrhs, cutinds, *cutnnz, FALSE, FALSE));
 
    *success = TRUE;
@@ -2492,6 +2516,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
    SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
+   int                   maxtestdelta,       /**< maximum number of deltas to test */
    int*                  boundsfortrans,     /**< bounds that should be used for transformed variables: vlb_idx/vub_idx,
                                               *   -1 for global lb/ub, -2 for local lb/ub, or -3 for using closest bound;
                                               *   NULL for using closest bound for all variables */
@@ -2499,6 +2524,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
                                               *   NULL for using closest bound for all variables */
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce MIR cut for */
+   SCIP_Real             maxcoefratio,       /**< maximal allowed ratio between two coefficients in the cut */
    SCIP_AGGRROW*         aggrrow,            /**< aggrrow to compute MIR cut for */
    SCIP_Real*            cutcoefs,           /**< array to store the non-zero coefficients in the cut */
    SCIP_Real*            cutrhs,             /**< pointer to store the right hand side of the cut */
@@ -2555,7 +2581,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    SCIP_CALL( SCIPallocBufferArray(scip, &mksetinds, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpcoefs, nvars + aggrrow->nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpvalues, nvars + aggrrow->nrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &deltacands, nvars + 2) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &deltacands, aggrrow->nnz) );
    /* each variable is either integral or a variable bound with an integral variable is used
     * so the max number of integral variables that are strictly between it's bounds is
     * aggrrow->nnz
@@ -2610,8 +2636,6 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 
    for( i = mksetnnz - 1; i >= 0 && mksetinds[i] < firstcontvar; --i )
    {
-      int k;
-      SCIP_Bool newdelta;
       SCIP_VAR* var = vars[mksetinds[i]];
       SCIP_Real primsol = SCIPgetSolVal(scip, sol, var);
       SCIP_Real lb = SCIPvarGetLbLocal(var);
@@ -2625,49 +2649,25 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 
       bounddist[nbounddist] = MIN(ub - primsol, primsol - lb);
       bounddistpos[nbounddist] = i;
+      deltacands[nbounddist] = absmksetcoef;
       ++nbounddist;
-
-      if( SCIPisFeasZero(scip, absmksetcoef) || SCIPisFeasZero(scip, 1.0 / absmksetcoef) )
-         continue;
-
-      newdelta = TRUE;
-      for( k = 0; k < ndeltacands; ++k )
-      {
-         if( SCIPisSumEQ(scip, deltacands[k], absmksetcoef) )
-         {
-            newdelta = FALSE;
-            break;
-         }
-      }
-      if( newdelta )
-         deltacands[ndeltacands++] = absmksetcoef;
    }
+
+   /* no fractional variable; so abort here */
+   if( nbounddist == 0 )
+      goto TERMINATE;
 
    intstart = i + 1;
+   ndeltacands = nbounddist;
 
-   if( maxabsmksetcoef != -1.0 )
+   SCIPsortDownRealRealInt(bounddist, deltacands, bounddistpos, nbounddist);
+
+   if( ndeltacands < aggrrow->nnz && maxabsmksetcoef != -1.0 )
    {
-      int k;
-      SCIP_Bool newdelta;
-      SCIP_Real deltacand;
-
-      deltacand = maxabsmksetcoef + 1.0;
-
-      if( !SCIPisFeasZero(scip, deltacand) && !SCIPisFeasZero(scip, 1.0 / deltacand) )
-      {
-         newdelta = TRUE;
-         for( k = 0; k < ndeltacands; ++k )
-         {
-            if( SCIPisSumEQ(scip, deltacands[k], deltacand) )
-            {
-               newdelta = FALSE;
-               break;
-            }
-         }
-         if( newdelta )
-            deltacands[ndeltacands++] = deltacand;
-      }
+      deltacands[ndeltacands++] = maxabsmksetcoef + 1.0;
    }
+
+   maxtestdelta = MIN(ndeltacands, maxtestdelta);
 
    /* For each delta
     * Calculate fractionalities  f_0 := b - down(b), f_j := a'_j - down(a'_j) , and derive MIR cut
@@ -2848,9 +2848,28 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    bestdelta = SCIP_INVALID;
    bestviol = -SCIPinfinity(scip);
 
-   for( i = 0; i < ndeltacands; ++i )
+   for( i = 0; i < maxtestdelta; ++i )
    {
+      int j;
       SCIP_Real viol;
+
+      /* check if we have seen this value of delta before */
+      SCIP_Bool deltaseenbefore = FALSE;
+      for( j = 0; j < i; ++j )
+      {
+         if( SCIPisSumRelEQ(scip, deltacands[i], deltacands[j]) )
+         {
+            deltaseenbefore = FALSE;
+            break;
+         }
+      }
+
+      /* skip this delta value and allow one more delta value if available */
+      if( deltaseenbefore )
+      {
+         maxtestdelta = MIN(maxtestdelta + 1, ndeltacands);
+         continue;
+      }
 
       viol = computeMIRViolation(scip, tmpcoefs, tmpvalues, mksetrhs, contactivity, deltacands[i], ntmpcoefs, minfrac, maxfrac);
 
@@ -2885,7 +2904,6 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    /* try to improve efficacy by switching complementation of integral variables that are not at their bounds
     * in order of non-increasing bound distance
     */
-   SCIPsortDownRealInt(bounddist, bounddistpos, nbounddist);
    for( i = 0; i < nbounddist; ++i )
    {
       int k;
@@ -3002,7 +3020,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
        * prevent numerical rounding errors
        */
       *cutislocal = *cutislocal || localbdsused;
-      cleanupCut(scip, *cutislocal, mksetinds, mksetcoefs, &mksetnnz, &mksetrhs);
+      cleanupCut(scip, maxcoefratio, *cutislocal, mksetinds, mksetcoefs, &mksetnnz, &mksetrhs);
       SCIPdebug(printCut(scip, sol, mksetcoefs, mksetrhs, mksetinds, mksetnnz, FALSE, FALSE));
 
       mirefficacy = calcEfficacyDenseStorage(scip, sol, mksetcoefs, mksetrhs, mksetinds, mksetnnz);
@@ -3125,7 +3143,7 @@ SCIP_RETCODE getClosestVlb(
    assert(var != NULL);
    assert(bestsub == SCIPvarGetUbGlobal(var) || bestsub == SCIPvarGetUbLocal(var)); /*lint !e777*/
    assert(!SCIPisInfinity(scip, bestsub));
-   assert(!SCIPisZero(scip, rowcoef));
+   assert(!EPSZ(rowcoef, AGGREGATION_EPS));
    assert(rowcoefs != NULL);
    assert(binvarused != NULL);
    assert(closestvlb != NULL);
@@ -3246,7 +3264,7 @@ SCIP_RETCODE getClosestVub(
    assert(var != NULL);
    assert(bestslb == SCIPvarGetLbGlobal(var) || bestslb == SCIPvarGetLbLocal(var)); /*lint !e777*/
    assert(!SCIPisInfinity(scip, - bestslb));
-   assert(!SCIPisZero(scip, rowcoef));
+   assert(!EPSZ(rowcoef, AGGREGATION_EPS));
    assert(rowcoefs != NULL);
    assert(binvarused != NULL);
    assert(closestvub != NULL);
@@ -3383,7 +3401,7 @@ SCIP_RETCODE determineBoundForSNF(
    var = vars[probidx];
    rowcoef = rowcoefs[probidx];
 
-   assert(!SCIPisZero(scip, rowcoef));
+   assert(!EPSZ(rowcoef, AGGREGATION_EPS));
 
    /* get closest simple lower bound and closest simple upper bound */
    SCIP_CALL( findBestLb(scip, var, sol, FALSE, allowlocal, &bestslb[varposinrow], &bestslbtype[varposinrow]) );
@@ -3673,7 +3691,7 @@ SCIP_RETCODE constructSNFRelaxation(
             snf->origbinvars[snf->ntransvars] = -1;
             snf->aggrcoefsbin[snf->ntransvars] = 0.0;
 
-            if( SCIPisPositive(scip, rowcoef) )
+            if( rowcoef > AGGREGATION_EPS )
             {
                snf->transvarcoefs[snf->ntransvars] = - 1;
                snf->transvarvubcoefs[snf->ntransvars] = QUAD_ROUND(val);
@@ -3686,7 +3704,7 @@ SCIP_RETCODE constructSNFRelaxation(
             }
             else
             {
-               assert(SCIPisNegative(scip, rowcoef));
+               assert(rowcoef < AGGREGATION_EPS);
                snf->transvarcoefs[snf->ntransvars] = 1;
                snf->transvarvubcoefs[snf->ntransvars] = - QUAD_ROUND(val);
                snf->transbinvarsolvals[snf->ntransvars] = 1.0;
@@ -3827,7 +3845,7 @@ SCIP_RETCODE constructSNFRelaxation(
             snf->origbinvars[snf->ntransvars] = -1;
             snf->aggrcoefsbin[snf->ntransvars] = 0.0;
 
-            if( SCIPisPositive(scip, rowcoef) )
+            if( rowcoef > AGGREGATION_EPS )
             {
                snf->transvarcoefs[snf->ntransvars] = 1;
                snf->transvarvubcoefs[snf->ntransvars] = QUAD_ROUND(val);
@@ -3840,7 +3858,7 @@ SCIP_RETCODE constructSNFRelaxation(
             }
             else
             {
-               assert(SCIPisNegative(scip, rowcoef));
+               assert(rowcoef < AGGREGATION_EPS);
                snf->transvarcoefs[snf->ntransvars] = - 1;
                snf->transvarvubcoefs[snf->ntransvars] = - QUAD_ROUND(val);
                snf->transbinvarsolvals[snf->ntransvars] = 1.0;
@@ -5219,6 +5237,7 @@ SCIP_RETCODE SCIPcalcFlowCover(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
+   SCIP_Real             maxcoefratio,       /**< maximal allowed ratio between two coefficients in the cut */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row to compute flow cover cut for */
    SCIP_Real*            cutcoefs,           /**< array to store the non-zero coefficients in the cut */
@@ -5273,7 +5292,7 @@ SCIP_RETCODE SCIPcalcFlowCover(
    /* if success is FALSE generateLiftedFlowCoverCut wont have touched the tmpcoefs array so we dont need to clean it then */
    if( *success )
    {
-      cleanupCut(scip, *cutislocal, cutinds, tmpcoefs, cutnnz, cutrhs);
+      cleanupCut(scip, maxcoefratio, *cutislocal, cutinds, tmpcoefs, cutnnz, cutrhs);
 
       for( i = 0; i < *cutnnz; ++i )
       {
@@ -5941,6 +5960,7 @@ SCIP_RETCODE SCIPcalcStrongCG(
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce strong CG cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce strong CG cut for */
+   SCIP_Real             maxcoefratio,       /**< maximal allowed ratio between two coefficients in the cut */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row to compute a flow cover cut for */
    SCIP_Real*            cutcoefs,           /**< array to store the non-zero coefficients in the cut */
@@ -5999,7 +6019,7 @@ SCIP_RETCODE SCIPcalcStrongCG(
 
    *cutislocal = aggrrow->local;
 
-   cleanupCut(scip, aggrrow->local, cutinds, tmpcoefs, cutnnz, cutrhs);
+   cleanupCut(scip, maxcoefratio, aggrrow->local, cutinds, tmpcoefs, cutnnz, cutrhs);
 
    /* Transform equation  a*x == b, lb <= x <= ub  into standard form
     *   a'*x' == b, 0 <= x' <= ub'.
@@ -6092,7 +6112,7 @@ SCIP_RETCODE SCIPcalcStrongCG(
    /* remove again all nearly-zero coefficients from strong CG row and relax the right hand side correspondingly in order to
     * prevent numerical rounding errors
     */
-   cleanupCut(scip, *cutislocal, cutinds, tmpcoefs, cutnnz, cutrhs);
+   cleanupCut(scip, maxcoefratio, *cutislocal, cutinds, tmpcoefs, cutnnz, cutrhs);
    SCIPdebug(printCut(scip, sol, cutcoefs, *cutrhs, cutinds, *cutnnz, FALSE, FALSE));
 
    *success = TRUE;

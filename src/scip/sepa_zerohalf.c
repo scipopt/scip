@@ -72,6 +72,7 @@
 #define FIXINTEGRALRHS            FALSE /**< try to generate a fractional rhs - see SCIPcalcMIR() */
 #define MINFRAC                    0.05
 #define MAXFRAC                    1.00
+#define MAXCOEFRATIO               1e+5
 
 /* SCIPcalcRowIntegralScalar parameters */
 #define MAXDNOM                   10000
@@ -175,6 +176,7 @@ struct SCIP_SepaData
 
 
 #ifndef NDEBUG
+static
 void checkRow(MOD2_ROW* row)
 {
    int i;
@@ -1287,9 +1289,8 @@ SCIP_RETCODE generateZerohalfCut(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, SCIPgetNVars(scip)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cutinds, SCIPgetNVars(scip)) );
-   SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, allowlocal, FIXINTEGRALRHS, NULL, NULL,
-                          MINFRAC, MAXFRAC, 1.0, sepadata->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank,
-                          &cutislocal, &success) );
+   SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, allowlocal, FIXINTEGRALRHS, NULL, NULL, MINFRAC, MAXFRAC, MAXCOEFRATIO,
+                          1.0, sepadata->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
 
    if( success && SCIPisEfficacious(scip, cutefficacy) )
    {
@@ -1672,8 +1673,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
 
    for( k = 0; k < 100; ++k ) /* TODO: what is this magic 10? define a macro */
    {
-      sepadata->nreductions = 0;
       int nzeroslackrows;
+      sepadata->nreductions = 0;
 
       assert(mod2matrix.nzeroslackrows <= mod2matrix.nrows);
       SCIP_CALL( mod2matrixPreprocessRows(scip, &mod2matrix, sepa, sepadata, allowlocal, maxslack) );

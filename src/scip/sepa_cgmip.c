@@ -3233,7 +3233,7 @@ SCIP_RETCODE createCGCutCMIR(
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, sepadata->allowlocal, FIXINTEGRALRHS, boundsfortrans,
-         boundtypesfortrans, MINFRAC, MAXFRAC, 1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy,
+         boundtypesfortrans, MINFRAC, MAXFRAC, MAXWEIGHTRANGE, 1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy,
          &cutrank, &cutislocal, &success) );
 
    assert( sepadata->allowlocal || !cutislocal );
@@ -3464,7 +3464,7 @@ SCIP_RETCODE createCGCutStrongCG(
    if( !success )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPcalcStrongCG(scip, NULL, BOUNDSWITCH, USEVBDS, sepadata->allowlocal, MINFRAC, MAXFRAC,
+   SCIP_CALL( SCIPcalcStrongCG(scip, NULL, BOUNDSWITCH, USEVBDS, sepadata->allowlocal, MINFRAC, MAXFRAC, MAXWEIGHTRANGE,
          1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
 
    assert( sepadata->allowlocal || !cutislocal );

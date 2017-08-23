@@ -6365,7 +6365,7 @@ SCIP_RETCODE generateClusterCuts(
 
             SCIPdebugMsg(scip, "applying MIR with delta = %g\n", deltas[d]);
             SCIP_CALL( SCIPcalcMIR(scip, sol, BOUNDSWITCH, USEVBDS, allowlocal, sepadata->fixintegralrhs, NULL, NULL, MINFRAC, MAXFRAC,
-                                   1.0/deltas[d], aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
+               sepadata->maxweightrange, 1.0/deltas[d], aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
             assert(allowlocal || !cutislocal);
 
             /* // no success means row was too long or empty, there is a free
@@ -6551,7 +6551,7 @@ SCIP_RETCODE generateClusterCuts(
                                                 FALSE, allowlocal, 2, (int)MAXAGGRLEN(nvars), &success) );
 
                   SCIP_CALL( SCIPcalcMIR(scip, sol, BOUNDSWITCH, USEVBDS, allowlocal, sepadata->fixintegralrhs, NULL, NULL, MINFRAC, MAXFRAC,
-                                   1.0/bestdelta, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
+                     sepadata->maxweightrange, 1.0/bestdelta, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
 
                   assert(allowlocal || !cutislocal);
 

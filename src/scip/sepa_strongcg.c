@@ -323,8 +323,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
             continue;
 
          /* create a strong CG cut out of the aggregation row */
-         SCIP_CALL( SCIPcalcStrongCG(scip, NULL, BOUNDSWITCH, USEVBDS, allowlocal, MINFRAC, MAXFRAC, 1.0, aggrrow,
-                    cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
+         SCIP_CALL( SCIPcalcStrongCG(scip, NULL, BOUNDSWITCH, USEVBDS, allowlocal, MINFRAC, MAXFRAC, sepadata->maxweightrange,
+            1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
 
          assert(allowlocal || !cutislocal);
          SCIPdebugMsg(scip, " -> success=%u: rhs: %g, efficacy: %g\n", success, cutrhs, cutefficacy);

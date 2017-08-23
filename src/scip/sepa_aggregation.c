@@ -73,6 +73,7 @@
 #define MINFRAC                    0.05
 #define MAXFRAC                    0.999
 #define MAKECONTINTEGRAL          FALSE
+#define MAXCOEFRATIO               1e+5
 #define IMPLINTSARECONT
 
 #define MAXAGGRLEN(nvars)          (0.1*(nvars)+1000) /**< maximal length of base inequality */
@@ -195,7 +196,7 @@ SCIP_RETCODE addCut(
       SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
 
       /* try to scale the cut to integral values, but only if the scaling is small; otherwise keep the fractional cut */
-      SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPepsilon(scip),
+      SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
                                      (SCIP_Longint) 30, 100.0, MAKECONTINTEGRAL, &success) );
 
       if( success && !SCIPisCutEfficacious(scip, sol, cut) )
@@ -647,7 +648,7 @@ SCIP_RETCODE aggregateNextRow(
       *success = TRUE;
       ++(*naggrs);
       SCIP_CALL( SCIPaggrRowAddRow(scip, aggrrow, bestrow, aggrfac, bestrowside) );
-      SCIPaggrRowRemoveZeros(aggrrow, SCIPepsilon(scip));
+      SCIPaggrRowRemoveZeros(aggrrow);
       goto TERMINATE;
    }
 
@@ -739,7 +740,7 @@ SCIP_RETCODE aggregateNextRow(
       *success = TRUE;
       ++(*naggrs);
       SCIP_CALL( SCIPaggrRowAddRow(scip, aggrrow, bestrow, aggrfac, bestrowside) );
-      SCIPaggrRowRemoveZeros(aggrrow, SCIPepsilon(scip));
+      SCIPaggrRowRemoveZeros(aggrrow);
    }
 
 TERMINATE:
@@ -777,6 +778,7 @@ SCIP_RETCODE aggregation(
    int maxaggrnonzs;
    int naggrs;
    int nrows;
+   int maxtestdelta;
 
    SCIP_Real cutrhs;
    SCIP_Real cutefficacy;
@@ -810,6 +812,8 @@ SCIP_RETCODE aggregation(
    else
       startweight = 1.0;
 
+   maxtestdelta = sepadata->maxtestdelta == -1 ? INT_MAX : sepadata->maxtestdelta;
+
    /* add start row to the initially empty aggregation row (aggrrow) */
    SCIP_CALL( SCIPaggrRowAddRow(scip, aggrdata->aggrrow, rows[startrow], negate ? -startweight : startweight, 0) );
 
@@ -836,12 +840,12 @@ SCIP_RETCODE aggregation(
        */
 
       flowcoverefficacy =  -SCIPinfinity(scip);
-      SCIP_CALL( SCIPcalcFlowCover(scip, sol, BOUNDSWITCH, allowlocal, aggrdata->aggrrow, cutcoefs, &cutrhs, cutinds,
-            &cutnnz, &flowcoverefficacy, &cutrank, &flowcovercutislocal, &flowcoversuccess) );
+      SCIP_CALL( SCIPcalcFlowCover(scip, sol, BOUNDSWITCH, MAXCOEFRATIO, allowlocal, aggrdata->aggrrow,
+         cutcoefs, &cutrhs, cutinds, &cutnnz, &flowcoverefficacy, &cutrank, &flowcovercutislocal, &flowcoversuccess) );
 
       cutefficacy = flowcoverefficacy;
-      SCIP_CALL( SCIPcutGenerationHeuristicCMIR(scip, sol, BOUNDSWITCH, USEVBDS, allowlocal, NULL, NULL, MINFRAC, MAXFRAC,
-            aggrdata->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cmircutislocal, &cmirsuccess) );
+      SCIP_CALL( SCIPcutGenerationHeuristicCMIR(scip, sol, BOUNDSWITCH, USEVBDS, allowlocal, maxtestdelta, NULL, NULL, MINFRAC, MAXFRAC,
+         MAXCOEFRATIO, aggrdata->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cmircutislocal, &cmirsuccess) );
 
       oldncuts = *ncuts;
 

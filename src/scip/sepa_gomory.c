@@ -429,13 +429,13 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
 
          SCIP_CALL( SCIPaggrRowSumRows(scip, aggrrow, binvrow, inds, ninds, sepadata->maxweightrange, SCIPsumepsilon(scip),
-                                       sepadata->sidetypebasis, allowlocal, 2, (int) MAXAGGRLEN(nvars), &success) );
+            sepadata->sidetypebasis, allowlocal, 2, (int) MAXAGGRLEN(nvars), &success) );
 
          if( !success )
             continue;
 
-         SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, allowlocal, FIXINTEGRALRHS, NULL, NULL, minfrac, maxfrac, 1.0,
-                                aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
+         SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, allowlocal, FIXINTEGRALRHS, NULL, NULL, minfrac, maxfrac,
+            sepadata->maxweightrange, 1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
 
          assert(allowlocal || !cutislocal);
 
