@@ -4,3 +4,4 @@
 # [type: char, advanced: TRUE, range: {ueg}, default: e]
 heuristics/lns/banditalgo = g
 
+heuristics/lns/gaincontrol = 0.0

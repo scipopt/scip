@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_lns.c
- * @brief  "Large neighborhood search heuristic that orchestrates the popular neighborhoods Local Branching, RINS, RENS, DINS etc."
+ * @brief  "Large neighborhood search heuristic that orchestrates popular LNS heuristics"
  * @author Gregor Hendel
  */
 
@@ -65,7 +65,7 @@
 #define DEFAULT_BANDITALGO 'e'    /**< the default bandit algorithm: (u)pper confidence bounds, (e)xp.3, epsilon (g)reedy */
 #define DEFAULT_GAMMA 0.2         /**< default weight between uniform (gamma ~ 1) and weight driven (gamma ~ 0) probability distribution for exp3 */
 #define DEFAULT_BETA 0.0          /**< default gain offset between 0 and 1 at every observation for exp3 */
-#define DEFAULT_GAINMEASURE      'b'/**< measure for the gain of a neighborhood? 'b'oolean, 'w'eighted boolean, 'g'ap based? */
+#define DEFAULT_GAINCONTROL  0.7  /**< gain control to increase the weight of the simple solution indicator and decreases the weight of the closed gap gain */
 #define DEFAULT_NORMBYEFFORT     TRUE /**< should the gain be normalized by the effort? */
 #define GAINMEASURES "bwg"
 #define DEFAULT_EPS        0.5       /**< probability for exploration in epsilon-greedy bandit algorithm */
@@ -359,8 +359,8 @@ struct SCIP_HeurData
    SCIP_Bool             resetweights;       /**< should the bandit algorithms be reset when a new problem is read? */
    SCIP_Bool             subsciprandseeds;   /**< should random seeds of sub-SCIPs be altered to increase diversification? */
    SCIP_Bool             normbyeffort;       /**< should the gain be normalized by the effort? */
-   char                  gainmeasure;        /**< measure for the gain of a neighborhood? 'b'oolean, 'w'eighted boolean,
-                                               *  'e'ffort based? */
+   SCIP_Real             gaincontrol;        /**< gain control to increase the weight of the simple solution indicator
+                                               *  and decreases the weight of the closed gap gain */
 };
 
 /** event handler data */
@@ -1699,55 +1699,55 @@ SCIP_RETCODE getGain(
 {
    SCIP_Real gain = 0.0;
    assert(gainptr != NULL);
+   SCIP_Real gaincontrol = heurdata->gaincontrol;
 
-   /* compute the gain for this run based on the runstats */
-   switch( heurdata->gainmeasure )
+   /* a positive gain is only assigned if a new incumbent solution was found */
+   if( runstats->nbestsolsfound > 0 )
    {
-   case 'b':
-      if( runstats->nbestsolsfound > 0 )
-         gain = 1.0;
-      break;
-   case 'w':
-      if( runstats->nbestsolsfound > 0 )
-         gain = 1.0;
-      else if( runstats->nsolsfound > 0 )
-         gain = 1.0 / DEFAULT_BESTSOLWEIGHT;
-      break;
-   case 'g':
-      /* use the closed gap between the primal and dual bound as gain */
-      if( runstats->nbestsolsfound > 0 )
+      SCIP_Real bestsolgain;
+      SCIP_Real closedgapgain;
+
+      SCIP_Real lb;
+      SCIP_Real ub;
+
+      /* the indicator function is simply 1.0 */
+      bestsolgain = 1.0;
+
+      ub = SCIPgetUpperbound(scip);
+      lb = SCIPgetLowerbound(scip);
+
+      /* compute the closed gap gain */
+      if( SCIPisEQ(scip, ub, lb) )
+         closedgapgain = 1.0;
+      else if( SCIPisInfinity(scip, runstats->oldupperbound) )
+         closedgapgain = 1.0;
+      else
       {
-         if( SCIPisEQ(scip, SCIPgetUpperbound(scip), SCIPgetLowerbound(scip)) )
-            gain = 1.0;
-         else if( SCIPisInfinity(scip, runstats->oldupperbound) )
-            gain = 1.0;
-         else
-         {
-            gain = 1.0 - sqrt((SCIPgetUpperbound(scip) - SCIPgetLowerbound(scip)) / (runstats->oldupperbound - SCIPgetLowerbound(scip)));
-         }
+         closedgapgain = (runstats->oldupperbound - ub) / (runstats->oldupperbound - lb);
       }
-      break;
-   default:
-      SCIPerrorMessage("Error, passed unknown character '%c' (only know \"%s\") for measuring gains\n", heurdata->gainmeasure, GAINMEASURES);
-      SCIP_CALL( SCIP_INVALIDDATA );
-      break;
+
+      /* the gain is a convex combination of the best solution gain and the gain for the closed gap */
+      gain = heurdata->gaincontrol * bestsolgain + (1.0 - heurdata->gaincontrol) * closedgapgain;
+
+      /* optionally, scale the gain by the involved effort */
+      if( heurdata->normbyeffort )
+      {
+         SCIP_Real effort;
+
+         assert(runstats->usednodes >= 0);
+         assert(runstats->totalnfixings >= 0);
+         /* just add one node to avoid division by zero */
+         effort = runstats->usednodes / (SCIP_Real)(heurdata->minnodes + 1.0);
+
+         /* assume that every fixed variable linearly reduces the subproblem complexity */
+         effort = (1.0 - (runstats->totalnfixings / (SCIP_Real)SCIPgetNVars(scip))) * effort;
+
+         /* gain can be larger than 1.0 if a best solution was found within 0 nodes  */
+         gain /= (effort + 1.0);
+      }
    }
-
-   if( heurdata->normbyeffort )
-   {
-      SCIP_Real effort;
-
-      assert(runstats->usednodes >= 0);
-      assert(runstats->totalnfixings >= 0);
-      /* just add one node to avoid division by zero */
-      effort = runstats->usednodes / (SCIP_Real)(heurdata->minnodes + 1.0);
-
-      /* assume that every fixed variable linearly reduces the subproblem complexity */
-      effort = (1.0 - (runstats->totalnfixings / (SCIP_Real)SCIPgetNVars(scip))) * effort;
-
-      /* gain can be larger than 1.0 if a best solution was found within 0 nodes  */
-      gain /= (effort + 1.0);
-   }
+   else
+      gain = 0.0;
 
    *gainptr = gain;
    return SCIP_OKAY;
@@ -3485,9 +3485,9 @@ SCIP_RETCODE SCIPincludeHeurLns(
          "should the heuristic activate other sub-SCIP heuristics during its search?",
          &heurdata->usesubscipheurs, TRUE, DEFAULT_USESUBSCIPHEURS, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddCharParam(scip, "heuristics/" HEUR_NAME "/gainmeasure",
-         "measure for the gain of a neighborhood? 'b'oolean, 'w'eighted boolean, 'g'ap based?",
-         &heurdata->gainmeasure, TRUE, DEFAULT_GAINMEASURE, GAINMEASURES, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/gaincontrol",
+         "gain control to increase the weight of the simple solution indicator and decreases the weight of the closed gap gain",
+         &heurdata->gaincontrol, TRUE, DEFAULT_GAINCONTROL, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/seed",
          "initial random seed for bandit algorithms and random decisions by neighborhoods",

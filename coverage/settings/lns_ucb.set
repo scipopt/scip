@@ -8,3 +8,4 @@ heuristics/lns/banditalgo = u
 # [type: real, advanced: TRUE, range: [0,1], default: 0.2]
 heuristics/lns/alpha = 1
 
+heuristics/lns/gaincontrol = 1.0
