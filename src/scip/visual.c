@@ -681,13 +681,14 @@ void SCIPvisualFoundSolution(
       else
          obj = SCIPgetSolTransObj(set->scip, sol);
 
+      printTime(visual, stat, TRUE);
       if ( bettersol )
       {
          /* note that this output is in addition to the one by SCIPvisualUpperbound() */
-         SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "A %d found better solution: %f\n", (int)nodenum, obj);
+         SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "A %d \\nfound better solution: %f\n", (int)nodenum, obj);
       }
       else
-         SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "A %d found solution: %f\n", (int)nodenum, obj);
+         SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "A %d \\nfound solution: %f\n", (int)nodenum, obj);
 
       vbcSetColor(visual, stat, node, SCIP_VBCCOLOR_SOLUTION);
    }
