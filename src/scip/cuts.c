@@ -757,7 +757,6 @@ SCIP_RETCODE SCIPaggrRowSumRows(
       }
    }
 
-   SCIPaggrRowRemoveZeros(aggrrow);
    *valid = aggrrow->nnz > 0;
 
    return SCIP_OKAY;
