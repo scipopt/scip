@@ -15,7 +15,7 @@
 
 /**@file   heur_lns.h
  * @ingroup PRIMALHEURISTICS
- * @brief  lns primal heuristic
+ * @brief  Large neighborhood search heuristic that orchestrates popular LNS heuristics adaptively
  * @author Gregor Hendel
  *
  */
