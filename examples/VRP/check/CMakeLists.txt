@@ -13,6 +13,12 @@ set(instances
 )
 
 #
+# add test to build the VRP executable
+#
+add_test(NAME examples-vrp-build
+        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target vrp
+        )
+#
 # loop over the instances
 #
 foreach(instance ${instances})
@@ -21,5 +27,11 @@ foreach(instance ${instances})
     #
     list(GET instance 0 basename)
     list(GET instance 1 optval)
-    add_test(NAME examples-vrp-${basename} COMMAND $<TARGET_FILE:vrp> ${CMAKE_CURRENT_SOURCE_DIR}/../data/${basename}.vrp)
+    add_test(NAME examples-vrp-${basename}
+            COMMAND $<TARGET_FILE:vrp> ${CMAKE_CURRENT_SOURCE_DIR}/../data/${basename}.vrp
+            )
+    set_tests_properties(examples-vrp-${basename}
+                        PROPERTIES
+                            DEPENDS examples-vrp-build
+                            )
 endforeach(instance)
