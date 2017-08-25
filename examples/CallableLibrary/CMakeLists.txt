@@ -26,8 +26,21 @@ target_link_libraries(string ${SCIP_LIBRARIES})
 add_dependencies(examples circle gastrans string)
 
 #
-# add tests for the three executables
+# add one test that builds the executable and one that runs it
 #
-add_test(NAME examples-callablelibrary-circle COMMAND $<TARGET_FILE:circle>)
-add_test(NAME examples-callablelibrary-gastrans COMMAND $<TARGET_FILE:gastrans>)
-add_test(NAME examples-callablelibrary-string COMMAND $<TARGET_FILE:string>)
+macro(addbuildandtest target)
+    add_test(NAME examples-callablelibrary_${target}-build
+            COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${target}
+            )
+    add_test(NAME examples-callablelibrary_${target}
+            COMMAND $<TARGET_FILE:${target}>
+            )
+    set_tests_properties(examples-callablelibrary_${target}
+                        PROPERTIES
+                            DEPENDS examples-callablelibrary_${target}-build
+                        )
+endmacro(addbuildandtest)
+
+addbuildandtest(circle)
+addbuildandtest(gastrans)
+addbuildandtest(string)
