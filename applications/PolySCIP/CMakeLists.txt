@@ -50,5 +50,33 @@ add_executable(${EXECUTABLE_NAME} ${SOURCE_FILES})
 target_link_libraries(polyscip ${SCIP_LIBRARIES})      
 add_dependencies(applications ${EXECUTABLE_NAME})
 
+include(CTest)
 
+#
+# add tests to build the application and run on some easy instances
+#
+add_test(NAME applications-${EXECUTABLE_NAME}-build
+        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${EXECUTABLE_NAME}
+        )
+#
+# instances in the data subdirectory
+#
+set(instances
+    AP_p-3_n-5
+    mobp_2_30_1_knapsack
+    tenfelde_podehl
+)
+#
+# loop over instances and define a test
+#
+foreach(instance ${instances})
+    add_test(NAME applications-${EXECUTABLE_NAME}-${instance}
+            COMMAND $<TARGET_FILE:${EXECUTABLE_NAME}> ${CMAKE_CURRENT_SOURCE_DIR}/data/${instance}.mop
+            )
+    set_tests_properties(applications-${EXECUTABLE_NAME}-${instance}
+                        PROPERTIES
+                            PASS_REGULAR_EXPRESSION "PolySCIP Status: Successfully finished"
+                            DEPENDS applications-${EXECUTABLE_NAME}-build
+                        )
+endforeach()
 
