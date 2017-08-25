@@ -43,18 +43,19 @@ done
 
 for FILE in $FILES
 do
- 
+
   DIR=`dirname $FILE`
   EVALFILE=`basename $FILE .eval`
   EVALFILE=`basename $EVALFILE .out`
 
-  OUTFILE=$DIR/$EVALFILE.out 
+  OUTFILE=$DIR/$EVALFILE.out
   ERRFILE=$DIR/$EVALFILE.err
   SETFILE=$DIR/$EVALFILE.set
+  METAFILE=$DIR/$EVALFILE.meta
   RESFILE=$DIR/$EVALFILE.res
   TEXFILE=$DIR/$EVALFILE.tex
   PAVFILE=$DIR/$EVALFILE.pav
-  
+
   # check if the eval file exists; if this is the case construct the overall solution files
   if test -e $DIR/$EVALFILE.eval
   then
@@ -139,7 +140,7 @@ do
 
       # detect test used solver
       SOLVER=`echo $EVALFILE | sed 's/check.\([a-zA-Z0-9_-]*\).\([a-zA-Z0-9_]*\).*/\2/g'`
-      
+
       echo "Testset " $TSTNAME
       echo "Solver  " $SOLVER
 
@@ -184,7 +185,7 @@ do
       # upload results to rubberband.zib.de
       if test "$UPLOAD" = "1"
       then
-          rbcli up $OUTFILE $ERRFILE $SETFILE
+          rbcli up $OUTFILE $ERRFILE $SETFILE $METAFILE
       fi
   fi
 done
