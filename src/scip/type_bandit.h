@@ -35,6 +35,7 @@
 #include "scip/type_scip.h"
 #include "scip/type_result.h"
 #include "scip/type_timing.h"
+#include "blockmemshell/memory.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -55,20 +56,18 @@ typedef struct SCIP_BanditData SCIP_BANDITDATA;
 
 /** callback to free bandit specific data structures */
 #define SCIP_DECL_BANDITFREE(x) SCIP_RETCODE x (  \
-   SCIP*                 scip,                    \
-   SCIP_BANDIT*          bandit                   \
+   SCIP_BANDIT*          bandit,                  \
+   BMS_BLKMEM*           blkmem                   \
 )
 
 /** selection callback for bandit selector */
 #define SCIP_DECL_BANDITSELECT(x) SCIP_RETCODE x ( \
-   SCIP*                 scip,                     \
    SCIP_BANDIT*          bandit,                   \
    int*                  selection                 \
 )
 
 /** update callback for bandit algorithms */
 #define SCIP_DECL_BANDITUPDATE(x) SCIP_RETCODE x ( \
-   SCIP*                 scip,                     \
    SCIP_BANDIT*          bandit,                   \
    int                   selection,                \
    SCIP_Real             score                     \
@@ -76,7 +75,7 @@ typedef struct SCIP_BanditData SCIP_BANDITDATA;
 
 /** reset callback for bandit algorithms */
 #define SCIP_DECL_BANDITRESET(x) SCIP_RETCODE x (  \
-   SCIP*                 scip,                     \
+   BMS_BUFMEM*           bufmem,                   \
    SCIP_BANDIT*          bandit,                   \
    SCIP_Real*            priorities                \
 )

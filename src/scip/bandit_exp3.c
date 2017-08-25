@@ -25,6 +25,7 @@
 #include "scip/bandit_exp3.h"
 
 #define BANDIT_NAME "exp3"
+#define NUMTOL 1e-6
 
 /*
  * Data structures
@@ -56,16 +57,15 @@ SCIP_DECL_BANDITFREE(banditFreeExp3)
 
    SCIP_BANDITDATA* banditdata;
    int nactions;
-   assert(scip != NULL);
    assert(bandit != NULL);
 
    banditdata = SCIPbanditGetData(bandit);
    assert(banditdata != NULL);
    nactions = SCIPbanditGetNActions(bandit);
 
-   SCIPfreeBlockMemoryArray(scip, &banditdata->weights, nactions);
+   BMSfreeBlockMemoryArray(blkmem, &banditdata->weights, nactions);
 
-   SCIPfreeBlockMemory(scip, &banditdata);
+   BMSfreeBlockMemory(scip, &banditdata);
 
    SCIPbanditSetData(bandit, NULL);
 
@@ -88,7 +88,6 @@ SCIP_DECL_BANDITSELECT(banditSelectExp3)
    int i;
    int nactions;
 
-   assert(scip != NULL);
    assert(bandit != NULL);
    assert(selection != NULL);
 
@@ -98,8 +97,6 @@ SCIP_DECL_BANDITSELECT(banditSelectExp3)
    assert(rng != NULL);
    nactions = SCIPbanditGetNActions(bandit);
 
-
-   assert(scip != NULL);
 
    /* draw a random number between 0 and 1 */
    randnr = SCIPrandomGetReal(rng, 0.0, 1.0);
@@ -150,7 +147,6 @@ SCIP_DECL_BANDITUPDATE(banditUpdateExp3)
    SCIP_Real gammaoverk;
    int nactions;
 
-   assert(scip != NULL);
    assert(bandit != NULL);
 
    banditdata = SCIPbanditGetData(bandit);
@@ -171,7 +167,7 @@ SCIP_DECL_BANDITUPDATE(banditUpdateExp3)
    newweightsum = weightsum;
 
    /* if beta is zero, only the observation for the current arm needs an update */
-   if( SCIPisZero(scip, beta) )
+   if( EPSZ(beta, NUMTOL) )
    {
       SCIP_Real probai;
       probai = oneminusgamma * weights[selection] / weightsum + gammaoverk;
@@ -215,7 +211,6 @@ SCIP_DECL_BANDITRESET(banditResetExp3)
    int nactions;
    int i;
 
-   assert(scip != NULL);
    assert(bandit != NULL);
 
    banditdata = SCIPbanditGetData(bandit);

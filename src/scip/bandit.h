@@ -43,9 +43,9 @@ extern
 SCIP_RETCODE SCIPbanditCreate(
    SCIP_BANDIT**         bandit,             /**< pointer to bandit algorithm data structure */
    SCIP_BANDITVTABLE*    banditvtable,       /**< virtual table for this bandit algorithm */
-   SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
    int                   nactions,           /**< the number of actions for this bandit */
+   unsigned int          initseed,           /**< initial seed for random number generation */
    SCIP_BANDITDATA*      banditdata          /**< algorithm specific bandit data */
    );
 
@@ -53,7 +53,6 @@ SCIP_RETCODE SCIPbanditCreate(
 extern
 SCIP_RETCODE SCIPbanditFree(
    SCIP_BANDIT**         bandit,             /**< pointer to bandit algorithm data structure */
-   SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
@@ -61,7 +60,6 @@ SCIP_RETCODE SCIPbanditFree(
 extern
 SCIP_RETCODE SCIPbanditReset(
    SCIP_BANDIT*          bandit,             /**< pointer to bandit algorithm data structure */
-   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real*            priorities,         /**< priorities for every action, or NULL if not needed */
    unsigned int          seed                /**< initial random seed for bandit selection */
    );
@@ -70,7 +68,6 @@ SCIP_RETCODE SCIPbanditReset(
 extern
 SCIP_RETCODE SCIPbanditSelect(
    SCIP_BANDIT*          bandit,             /**< pointer to bandit algorithm data structure */
-   SCIP_SET*             set,                /**< global SCIP settings */
    int*                  action              /**< pointer to store the selected action */
    );
 
@@ -78,7 +75,6 @@ SCIP_RETCODE SCIPbanditSelect(
 extern
 SCIP_RETCODE SCIPbanditUpdate(
    SCIP_BANDIT*          bandit,             /**< pointer to bandit algorithm data structure */
-   SCIP_SET*             set,                /**< global SCIP settings */
    int                   action,             /**< index of action for which the score should be updated */
    SCIP_Real             score               /**< observed gain of the i'th action */
    );
@@ -101,8 +97,6 @@ extern
 SCIP_RETCODE SCIPbanditvtableCreate(
    SCIP_BANDITVTABLE**   banditvtable,       /**< pointer to virtual table for bandit algorithm */
    const char*           name,               /**< a name for the algorithm represented by this vtable */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
    SCIP_DECL_BANDITFREE  ((*banditfree)),    /**< callback to free bandit specific data structures */
    SCIP_DECL_BANDITSELECT((*banditselect)),  /**< selection callback for bandit selector */

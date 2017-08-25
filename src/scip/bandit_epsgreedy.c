@@ -21,6 +21,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include "blockmemshell/memory.h"
 #include "scip/bandit_epsgreedy.h"
 
 #define BANDIT_NAME           "eps-greedy"
@@ -121,16 +122,14 @@ SCIP_DECL_BANDITFREE(banditFreeEpsgreedy)
 
    SCIP_BANDITDATA* banditdata;
 
-   assert(scip != NULL);
    assert(bandit != NULL);
 
    banditdata = SCIPbanditGetData(bandit);
    assert(banditdata != NULL);
    assert(banditdata->weights != NULL);
 
-   SCIPfreeBlockMemoryArray(scip, &banditdata->weights, SCIPbanditGetNActions(bandit));
-
-   SCIPfreeBlockMemory(scip, &banditdata);
+   BMSfreeBlockMemoryArray(blkmem, &banditdata->weights, SCIPbanditGetNActions(bandit));
+   BMSfreeBlockMemory(blkmem, &banditdata);
 
    SCIPbanditSetData(bandit, NULL);
 
@@ -147,7 +146,6 @@ SCIP_DECL_BANDITSELECT(banditSelectEpsgreedy)
    SCIP_Real curreps;
    SCIP_RANDNUMGEN* rng;
    int nactions;
-   assert(scip != NULL);
    assert(bandit != NULL);
    assert(selection != NULL);
 
@@ -205,7 +203,6 @@ SCIP_DECL_BANDITUPDATE(banditUpdateEpsgreedy)
 {  /*lint --e{715}*/
    SCIP_BANDITDATA* banditdata;
 
-   assert(scip != NULL);
    assert(bandit != NULL);
 
    banditdata = SCIPbanditGetData(bandit);
@@ -227,7 +224,6 @@ SCIP_DECL_BANDITRESET(banditResetEpsgreedy)
    int w;
    int nactions;
 
-   assert(scip != NULL);
    assert(bandit != NULL);
 
    banditdata = SCIPbanditGetData(bandit);

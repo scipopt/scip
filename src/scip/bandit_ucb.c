@@ -23,6 +23,7 @@
 #include <assert.h>
 
 #include "scip/bandit_ucb.h"
+#include "blockmemshell/memory.h"
 
 #define BANDIT_NAME "ucb"
 
@@ -48,7 +49,7 @@ struct SCIP_BanditData
 /** data reset method */
 static
 SCIP_RETCODE dataReset(
-   SCIP*                 scip,               /**< SCIP data structure */
+   BMS_BUFMEM*           bufmem,             /**< buffer memory */
    SCIP_BANDIT*          ucb,                /**< ucb bandit algorithm */
    SCIP_BANDITDATA*      banditdata,         /**< UCB bandit data structure */
    SCIP_Real*            priorities,         /**< priorities for start permutation, or NULL */
@@ -57,6 +58,10 @@ SCIP_RETCODE dataReset(
 {
    int i;
    SCIP_RANDNUMGEN* rng;
+
+   assert(bufmem != NULL);
+   assert(ucb != NULL);
+
    /* clear counters and scores */
    BMSclearMemoryArray(banditdata->counter, nactions);
    BMSclearMemoryArray(banditdata->meanscores, nactions);
@@ -64,6 +69,7 @@ SCIP_RETCODE dataReset(
 
    rng = SCIPbanditGetRandnumgen(ucb);
    assert(rng != NULL);
+
    /* initialize start permutation as identity */
    for( i = 0; i < nactions; ++i )
       banditdata->startperm[i] = i;
@@ -73,7 +79,7 @@ SCIP_RETCODE dataReset(
    {
       SCIP_Real* prioritycopy;
 
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &prioritycopy, priorities, nactions) );
+      SCIP_CALL( BMSduplicateBufferArray(bufmem, &prioritycopy, priorities, nactions) );
 
       /* randomly wiggle priorities a little bit to make them unique */
       for( i = 0; i < nactions; ++i )
@@ -81,7 +87,7 @@ SCIP_RETCODE dataReset(
 
       SCIPsortDownRealInt(prioritycopy, banditdata->startperm, nactions);
 
-      SCIPfreeBufferArray(scip, &prioritycopy);
+      BMSfreeBufferArray(bufmem, &prioritycopy);
    }
    else
    {
@@ -111,10 +117,10 @@ SCIP_DECL_BANDITFREE(banditFreeUcb)
    assert(banditdata != NULL);
    nactions = SCIPbanditGetNActions(bandit);
 
-   SCIPfreeBlockMemoryArray(scip, &banditdata->counter, nactions);
-   SCIPfreeBlockMemoryArray(scip, &banditdata->startperm, nactions);
-   SCIPfreeBlockMemoryArray(scip, &banditdata->meanscores, nactions);
-   SCIPfreeBlockMemory(scip, &banditdata);
+   BMSfreeBlockMemoryArray(blkmem, &banditdata->counter, nactions);
+   BMSfreeBlockMemoryArray(blkmem, &banditdata->startperm, nactions);
+   BMSfreeBlockMemoryArray(blkmem, &banditdata->meanscores, nactions);
+   BMSfreeBlockMemory(blkmem, &banditdata);
 
    SCIPbanditSetData(bandit, NULL);
 
@@ -230,7 +236,7 @@ SCIP_DECL_BANDITRESET(banditResetUcb)
    SCIP_BANDITDATA* banditdata;
    int nactions;
 
-   assert(scip != NULL);
+   assert(bufmem != NULL);
    assert(bandit != NULL);
 
    banditdata = SCIPbanditGetData(bandit);
@@ -238,7 +244,8 @@ SCIP_DECL_BANDITRESET(banditResetUcb)
    nactions = SCIPbanditGetNActions(bandit);
 
    /* call the data reset for the given priorities */
-   SCIP_CALL( dataReset(scip, bandit, banditdata, priorities, nactions) );
+   SCIP_CALL( dataReset(bufmem, bandit, banditdata, priorities, nactions) );
+
 
 
    return SCIP_OKAY;
@@ -317,7 +324,7 @@ SCIP_RETCODE SCIPcreateBanditUcb(
    assert(*ucb != NULL);
 
    /* reset data for correct initialization */
-   SCIP_CALL( dataReset(scip, *ucb, banditdata, NULL, nactions) );
+   SCIP_CALL( dataReset(SCIPbuffer(scip), *ucb, banditdata, NULL, nactions) );
 
    return SCIP_OKAY;
 }

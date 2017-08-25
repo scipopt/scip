@@ -33,16 +33,15 @@
 SCIP_RETCODE SCIPbanditCreate(
    SCIP_BANDIT**         bandit,             /**< pointer to bandit algorithm data structure */
    SCIP_BANDITVTABLE*    banditvtable,       /**< virtual table for this bandit algorithm */
-   SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
    int                   nactions,           /**< the number of actions for this bandit */
+   unsigned int          initseed,           /**< initial seed for random number generation */
    SCIP_BANDITDATA*      banditdata          /**< algorithm specific bandit data */
    )
 {
    SCIP_BANDIT* banditptr;
    assert(bandit != NULL);
    assert(banditvtable != NULL);
-   assert(set != NULL);
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, bandit) );
    assert(*bandit != NULL);
@@ -51,7 +50,7 @@ SCIP_RETCODE SCIPbanditCreate(
    banditptr->data = banditdata;
    banditptr->nactions = nactions;
 
-   SCIP_CALL( SCIPrandomCreate(&banditptr->rng, blkmem, SCIPsetInitializeRandomSeed(set, DEFAULT_SEED)) );
+   SCIP_CALL( SCIPrandomCreate(&banditptr->rng, blkmem, initseed) );
 
    return SCIP_OKAY;
 }
@@ -59,7 +58,6 @@ SCIP_RETCODE SCIPbanditCreate(
 /** calls destructor and frees memory of bandit algorithm */
 SCIP_RETCODE SCIPbanditFree(
    SCIP_BANDIT**         bandit,             /**< pointer to bandit algorithm data structure */
-   SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
@@ -75,7 +73,7 @@ SCIP_RETCODE SCIPbanditFree(
    /* call bandit specific data destructor */
    if( vtable->banditfree != NULL )
    {
-      SCIP_CALL( vtable->banditfree(set->scip, banditptr) );
+      SCIP_CALL( vtable->banditfree(blkmem, banditptr) );
    }
 
    /* free random number generator */
@@ -88,8 +86,8 @@ SCIP_RETCODE SCIPbanditFree(
 
 /** reset the bandit algorithm */
 SCIP_RETCODE SCIPbanditReset(
+   BMS_BUFMEM*           bufmem,             /**< buffer memory */
    SCIP_BANDIT*          bandit,             /**< pointer to bandit algorithm data structure */
-   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real*            priorities,         /**< priorities for each action, or NULL if not needed */
    unsigned int          seed                /**< initial seed for random number generation */
    )
@@ -97,17 +95,17 @@ SCIP_RETCODE SCIPbanditReset(
    SCIP_BANDITVTABLE* vtable;
 
    assert(bandit != NULL);
-   assert(set != NULL);
+   assert(bufmem != NULL);
 
    vtable = bandit->vtable;
    assert(vtable != NULL);
    assert(vtable->banditreset != NULL);
 
    /* reset the random seed of the bandit algorithm */
-   SCIPrandomSetSeed(bandit->rng, SCIPsetInitializeRandomSeed(set, seed));
+   SCIPrandomSetSeed(bandit->rng, seed);
 
    /* call the reset callback of the bandit algorithm */
-   SCIP_CALL( vtable->banditreset(set->scip, bandit, priorities) );
+   SCIP_CALL( vtable->banditreset(bandit, priorities) );
 
    return SCIP_OKAY;
 }
@@ -115,19 +113,17 @@ SCIP_RETCODE SCIPbanditReset(
 /** select the next action */
 SCIP_RETCODE SCIPbanditSelect(
    SCIP_BANDIT*          bandit,             /**< pointer to bandit algorithm data structure */
-   SCIP_SET*             set,                /**< global SCIP settings */
    int*                  action              /**< pointer to store the selected action */
    )
 {
    assert(bandit != NULL);
-   assert(set != NULL);
    assert(action != NULL);
 
    *action = -1;
 
    assert(bandit->vtable->banditselect != NULL);
 
-   SCIP_CALL( bandit->vtable->banditselect(set->scip, bandit, action) );
+   SCIP_CALL( bandit->vtable->banditselect(bandit, action) );
 
    assert(SCIPbanditGetNActions(bandit) == 0 || *action >= 0);
    assert(*action < SCIPbanditGetNActions(bandit));
@@ -138,13 +134,11 @@ SCIP_RETCODE SCIPbanditSelect(
 /** update the score of the selected action */
 SCIP_RETCODE SCIPbanditUpdate(
    SCIP_BANDIT*          bandit,             /**< pointer to bandit algorithm data structure */
-   SCIP_SET*             set,                /**< global SCIP settings */
    int                   action,             /**< index of action for which the score should be updated */
    SCIP_Real             score               /**< observed gain of the i'th action */
    )
 {
    assert(bandit != NULL);
-   assert(set != NULL);
    assert(0 <= action && action < SCIPbanditGetNActions(bandit));
    assert(bandit->vtable->banditupdate != NULL);
 
@@ -178,8 +172,6 @@ void SCIPbanditSetData(
 SCIP_RETCODE SCIPbanditvtableCreate(
    SCIP_BANDITVTABLE**   banditvtable,       /**< pointer to virtual table for bandit algorithm */
    const char*           name,               /**< a name for the algorithm represented by this vtable */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
    SCIP_DECL_BANDITFREE  ((*banditfree)),    /**< callback to free bandit specific data structures */
    SCIP_DECL_BANDITSELECT((*banditselect)),  /**< selection callback for bandit selector */
@@ -191,8 +183,6 @@ SCIP_RETCODE SCIPbanditvtableCreate(
    assert(banditvtable != NULL);
    assert(name != NULL);
    assert(blkmem != NULL);
-   assert(set != NULL);
-   assert(messagehdlr != NULL);
    assert(banditfree != NULL);
    assert(banditselect != NULL);
    assert(banditupdate != NULL);

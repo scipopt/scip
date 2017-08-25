@@ -28,6 +28,8 @@
 #include "scip/struct_scip.h"
 #include "scip/mem.h"
 
+#define DEFAULT_SEED 987
+
 /** includes a bandit algorithm virtual function table  */
 SCIP_RETCODE SCIPincludeBanditvtable(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -47,7 +49,7 @@ SCIP_RETCODE SCIPincludeBanditvtable(
        return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( SCIPbanditvtableCreate(banditvtable, name, scip->set, scip->messagehdlr, scip->mem->setmem,
+   SCIP_CALL( SCIPbanditvtableCreate(banditvtable, name, scip->mem->setmem,
          banditfree, banditselect, banditupdate, banditreset) );
 
    SCIP_CALL( SCIPsetIncludeBanditvtable(scip->set, *banditvtable) );
@@ -80,7 +82,7 @@ SCIP_RETCODE SCIPcreateBandit(
    assert(banditvtable != NULL);
    assert(nactions > 0);
 
-   SCIP_CALL( SCIPbanditCreate(bandit, banditvtable, scip->set, scip->mem->setmem, nactions, banditdata) );
+   SCIP_CALL( SCIPbanditCreate(bandit, banditvtable, scip->mem->setmem, nactions, SCIPinitializeRandomSeed(scip, DEFAULT_SEED), banditdata) );
 
    return SCIP_OKAY;
 }
@@ -96,7 +98,7 @@ SCIP_RETCODE SCIPresetBandit(
    assert(scip != NULL);
    assert(bandit != NULL);
 
-   SCIP_CALL( SCIPbanditReset(bandit, scip->set, priorities, seed) );
+   SCIP_CALL( SCIPbanditReset(bandit, priorities, SCIPinitializeRandomSeed(scip, seed)) );
 
    return SCIP_OKAY;
 }
@@ -113,7 +115,7 @@ SCIP_RETCODE SCIPselectBandit(
    assert(bandit != NULL);
    assert(action != NULL);
 
-   SCIP_CALL( SCIPbanditSelect(bandit, scip->set, action) );
+   SCIP_CALL( SCIPbanditSelect(bandit, action) );
 
    return SCIP_OKAY;
 }
@@ -128,7 +130,7 @@ SCIP_RETCODE SCIPfreeBandit(
    assert(bandit != NULL);
    assert(*bandit != NULL);
 
-   SCIP_CALL( SCIPbanditFree(bandit, scip->set, scip->mem->setmem) );
+   SCIP_CALL( SCIPbanditFree(bandit, scip->mem->setmem) );
 
    return SCIP_OKAY;
 }
@@ -143,7 +145,7 @@ SCIP_RETCODE SCIPupdateBandit(
 {
    assert(scip != NULL);
 
-   SCIP_CALL( SCIPbanditUpdate(bandit, scip->set, action, score) );
+   SCIP_CALL( SCIPbanditUpdate(bandit, action, score) );
 
    return SCIP_OKAY;
 }
