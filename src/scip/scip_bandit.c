@@ -49,7 +49,7 @@ SCIP_RETCODE SCIPincludeBanditvtable(
        return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( SCIPbanditvtableCreate(banditvtable, name, scip->mem->setmem,
+   SCIP_CALL( SCIPbanditvtableCreate(banditvtable, name,
          banditfree, banditselect, banditupdate, banditreset) );
 
    SCIP_CALL( SCIPsetIncludeBanditvtable(scip->set, *banditvtable) );
@@ -82,7 +82,7 @@ SCIP_RETCODE SCIPcreateBandit(
    assert(banditvtable != NULL);
    assert(nactions > 0);
 
-   SCIP_CALL( SCIPbanditCreate(bandit, banditvtable, scip->mem->setmem, nactions, SCIPinitializeRandomSeed(scip, DEFAULT_SEED), banditdata) );
+   SCIP_CALL( SCIPbanditCreate(bandit, banditvtable, SCIPblkmem(scip), nactions, SCIPinitializeRandomSeed(scip, DEFAULT_SEED), banditdata) );
 
    return SCIP_OKAY;
 }
@@ -98,7 +98,7 @@ SCIP_RETCODE SCIPresetBandit(
    assert(scip != NULL);
    assert(bandit != NULL);
 
-   SCIP_CALL( SCIPbanditReset(bandit, priorities, SCIPinitializeRandomSeed(scip, seed)) );
+   SCIP_CALL( SCIPbanditReset(SCIPbuffer(scip), bandit, priorities, SCIPinitializeRandomSeed(scip, seed)) );
 
    return SCIP_OKAY;
 }
@@ -130,7 +130,7 @@ SCIP_RETCODE SCIPfreeBandit(
    assert(bandit != NULL);
    assert(*bandit != NULL);
 
-   SCIP_CALL( SCIPbanditFree(bandit, scip->mem->setmem) );
+   SCIP_CALL( SCIPbanditFree(SCIPblkmem(scip), bandit) );
 
    return SCIP_OKAY;
 }

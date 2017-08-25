@@ -711,6 +711,9 @@ SCIP_RETCODE SCIPcreate(
    SCIP_CALL( SCIPclockCreate(&(*scip)->totaltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPsyncstoreCreate( &(*scip)->syncstore ) );
 
+   /* include additional core functionality */
+   SCIP_CALL( SCIPincludeCorePlugins(*scip) );
+
    SCIPclockStart((*scip)->totaltime, (*scip)->set);
    (*scip)->stat = NULL;
    (*scip)->origprob = NULL;

@@ -56,8 +56,8 @@ typedef struct SCIP_BanditData SCIP_BANDITDATA;
 
 /** callback to free bandit specific data structures */
 #define SCIP_DECL_BANDITFREE(x) SCIP_RETCODE x (  \
-   SCIP_BANDIT*          bandit,                  \
-   BMS_BLKMEM*           blkmem                   \
+   BMS_BLKMEM*           blkmem,                  \
+   SCIP_BANDIT*          bandit                   \
 )
 
 /** selection callback for bandit selector */

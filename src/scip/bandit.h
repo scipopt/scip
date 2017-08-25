@@ -52,13 +52,14 @@ SCIP_RETCODE SCIPbanditCreate(
 /** calls destructor and frees memory of bandit algorithm */
 extern
 SCIP_RETCODE SCIPbanditFree(
-   SCIP_BANDIT**         bandit,             /**< pointer to bandit algorithm data structure */
-   BMS_BLKMEM*           blkmem              /**< block memory */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_BANDIT**         bandit              /**< pointer to bandit algorithm data structure */
    );
 
 /** reset the bandit algorithm */
 extern
 SCIP_RETCODE SCIPbanditReset(
+   BMS_BUFMEM*           bufmem,             /**< buffer memory */
    SCIP_BANDIT*          bandit,             /**< pointer to bandit algorithm data structure */
    SCIP_Real*            priorities,         /**< priorities for every action, or NULL if not needed */
    unsigned int          seed                /**< initial random seed for bandit selection */
@@ -97,7 +98,6 @@ extern
 SCIP_RETCODE SCIPbanditvtableCreate(
    SCIP_BANDITVTABLE**   banditvtable,       /**< pointer to virtual table for bandit algorithm */
    const char*           name,               /**< a name for the algorithm represented by this vtable */
-   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
    SCIP_DECL_BANDITFREE  ((*banditfree)),    /**< callback to free bandit specific data structures */
    SCIP_DECL_BANDITSELECT((*banditselect)),  /**< selection callback for bandit selector */
    SCIP_DECL_BANDITUPDATE((*banditupdate)),  /**< update callback for bandit algorithms */

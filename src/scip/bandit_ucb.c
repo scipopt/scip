@@ -26,6 +26,7 @@
 #include "blockmemshell/memory.h"
 
 #define BANDIT_NAME "ucb"
+#define NUMEPS 1e-6
 
 /*
  * Data structures
@@ -79,15 +80,15 @@ SCIP_RETCODE dataReset(
    {
       SCIP_Real* prioritycopy;
 
-      SCIP_CALL( BMSduplicateBufferArray(bufmem, &prioritycopy, priorities, nactions) );
+      SCIP_ALLOC( BMSduplicateBufferMemoryArray(bufmem, &prioritycopy, priorities, nactions) );
 
       /* randomly wiggle priorities a little bit to make them unique */
       for( i = 0; i < nactions; ++i )
-         prioritycopy[i] += SCIPrandomGetReal(rng, -1e-6, 1e-6);
+         prioritycopy[i] += SCIPrandomGetReal(rng, -NUMEPS, NUMEPS);
 
       SCIPsortDownRealInt(prioritycopy, banditdata->startperm, nactions);
 
-      BMSfreeBufferArray(bufmem, &prioritycopy);
+      BMSfreeBufferMemoryArray(bufmem, &prioritycopy);
    }
    else
    {
@@ -110,7 +111,6 @@ SCIP_DECL_BANDITFREE(banditFreeUcb)
 
    SCIP_BANDITDATA* banditdata;
    int nactions;
-   assert(scip != NULL);
    assert(bandit != NULL);
 
    banditdata = SCIPbanditGetData(bandit);
@@ -136,7 +136,6 @@ SCIP_DECL_BANDITSELECT(banditSelectUcb)
    int nactions;
    int* counter;
 
-   assert(scip != NULL);
    assert(bandit != NULL);
    assert(selection != NULL);
 
@@ -187,7 +186,7 @@ SCIP_DECL_BANDITSELECT(banditSelectUcb)
          assert(uppercb > 0);
 
          /* update maximum, breaking ties uniformly at random */
-         if( SCIPisFeasGT(scip, uppercb, maxucb) || (SCIPisFeasEQ(scip, uppercb, maxucb) && SCIPrandomGetReal(rng, 0, 1) >= 0.5) )
+         if( EPSGT(uppercb, maxucb, NUMEPS) || (EPSEQ(uppercb, maxucb, NUMEPS) && SCIPrandomGetReal(rng, 0, 1) >= 0.5) )
          {
             maxucb = uppercb;
             *selection = i;
@@ -210,8 +209,6 @@ SCIP_DECL_BANDITUPDATE(banditUpdateUcb)
    int nactions;
    SCIP_Real delta;
 
-
-   assert(scip != NULL);
    assert(bandit != NULL);
 
    banditdata = SCIPbanditGetData(bandit);

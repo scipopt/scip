@@ -235,6 +235,7 @@ set(scipsources
     scip/scip_bandit.c
     scip/scipbuildflags.c
     scip/scipdefplugins.c
+    scip/scipcoreplugins.c
     scip/scipgithash.c
     scip/scipshell.c
     scip/sepa.c
@@ -574,6 +575,7 @@ set(scipheaders
     scip/reopt.h
     scip/retcode.h
     scip/scipbuildflags.h
+    scip/scipcoreplugins.h
     scip/scipdefplugins.h
     scip/scipgithash.h
     scip/scip.h

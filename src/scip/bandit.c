@@ -57,8 +57,8 @@ SCIP_RETCODE SCIPbanditCreate(
 
 /** calls destructor and frees memory of bandit algorithm */
 SCIP_RETCODE SCIPbanditFree(
-   SCIP_BANDIT**         bandit,             /**< pointer to bandit algorithm data structure */
-   BMS_BLKMEM*           blkmem              /**< block memory */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_BANDIT**         bandit              /**< pointer to bandit algorithm data structure */
    )
 {
    SCIP_BANDIT* banditptr;
@@ -105,7 +105,7 @@ SCIP_RETCODE SCIPbanditReset(
    SCIPrandomSetSeed(bandit->rng, seed);
 
    /* call the reset callback of the bandit algorithm */
-   SCIP_CALL( vtable->banditreset(bandit, priorities) );
+   SCIP_CALL( vtable->banditreset(bufmem, bandit, priorities) );
 
    return SCIP_OKAY;
 }
@@ -142,7 +142,7 @@ SCIP_RETCODE SCIPbanditUpdate(
    assert(0 <= action && action < SCIPbanditGetNActions(bandit));
    assert(bandit->vtable->banditupdate != NULL);
 
-   SCIP_CALL( bandit->vtable->banditupdate(set->scip, bandit, action, score) );
+   SCIP_CALL( bandit->vtable->banditupdate(bandit, action, score) );
 
    return SCIP_OKAY;
 }
@@ -172,7 +172,6 @@ void SCIPbanditSetData(
 SCIP_RETCODE SCIPbanditvtableCreate(
    SCIP_BANDITVTABLE**   banditvtable,       /**< pointer to virtual table for bandit algorithm */
    const char*           name,               /**< a name for the algorithm represented by this vtable */
-   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
    SCIP_DECL_BANDITFREE  ((*banditfree)),    /**< callback to free bandit specific data structures */
    SCIP_DECL_BANDITSELECT((*banditselect)),  /**< selection callback for bandit selector */
    SCIP_DECL_BANDITUPDATE((*banditupdate)),  /**< update callback for bandit algorithms */
@@ -182,7 +181,6 @@ SCIP_RETCODE SCIPbanditvtableCreate(
    SCIP_BANDITVTABLE* banditvtableptr;
    assert(banditvtable != NULL);
    assert(name != NULL);
-   assert(blkmem != NULL);
    assert(banditfree != NULL);
    assert(banditselect != NULL);
    assert(banditupdate != NULL);

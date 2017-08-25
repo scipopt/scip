@@ -26,6 +26,7 @@
 
 #define BANDIT_NAME "exp3"
 #define NUMTOL 1e-6
+#define DEFAULT_SEED 547
 
 /*
  * Data structures
@@ -51,8 +52,7 @@ struct SCIP_BanditData
  */
 
 /** callback to free bandit specific data structures */
-static
-SCIP_DECL_BANDITFREE(banditFreeExp3)
+SCIP_DECL_BANDITFREE(SCIPbanditFreeExp3)
 {  /*lint --e{715}*/
 
    SCIP_BANDITDATA* banditdata;
@@ -65,7 +65,7 @@ SCIP_DECL_BANDITFREE(banditFreeExp3)
 
    BMSfreeBlockMemoryArray(blkmem, &banditdata->weights, nactions);
 
-   BMSfreeBlockMemory(scip, &banditdata);
+   BMSfreeBlockMemory(blkmem, &banditdata);
 
    SCIPbanditSetData(bandit, NULL);
 
@@ -73,8 +73,7 @@ SCIP_DECL_BANDITFREE(banditFreeExp3)
 }
 
 /** selection callback for bandit selector */
-static
-SCIP_DECL_BANDITSELECT(banditSelectExp3)
+SCIP_DECL_BANDITSELECT(SCIPbanditSelectExp3)
 {  /*lint --e{715}*/
 
    SCIP_BANDITDATA* banditdata;
@@ -133,8 +132,7 @@ SCIP_DECL_BANDITSELECT(banditSelectExp3)
 }
 
 /** update callback for bandit algorithm */
-static
-SCIP_DECL_BANDITUPDATE(banditUpdateExp3)
+SCIP_DECL_BANDITUPDATE(SCIPbanditUpdateExp3)
 {  /*lint --e{715}*/
    SCIP_BANDITDATA* banditdata;
    SCIP_Real eta;
@@ -203,8 +201,7 @@ SCIP_DECL_BANDITUPDATE(banditUpdateExp3)
 }
 
 /** reset callback for bandit algorithm */
-static
-SCIP_DECL_BANDITRESET(banditResetExp3)
+SCIP_DECL_BANDITRESET(SCIPbanditResetExp3)
 {  /*lint --e{715}*/
    SCIP_BANDITDATA* banditdata;
    SCIP_Real* weights;
@@ -251,7 +248,33 @@ SCIP_DECL_BANDITRESET(banditResetExp3)
  * bandit algorithm specific interface methods
  */
 
-/** create Exp.3 bandit algorithm */
+/** direct bandit creation method for the core where no SCIP pointer is available */
+SCIP_RETCODE SCIPbanditCreateExp3(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_BANDITVTABLE*    vtable,             /**< virtual function table for callback functions of Exp.3 */
+   SCIP_BANDIT**         exp3,               /**< pointer to store bandit algorithm */
+   int                   nactions,           /**< the number of actions for this bandit algorithm */
+   SCIP_Real             gammaparam,         /**< weight between uniform (gamma ~ 1) and weight driven (gamma ~ 0) probability distribution */
+   SCIP_Real             beta,               /**< gain offset between 0 and 1 at every observation */
+   unsigned int          initseed            /**< initial random seed */
+   )
+{
+   SCIP_BANDITDATA* banditdata;
+
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, &banditdata) );
+   assert(banditdata != NULL);
+
+   banditdata->gamma = gammaparam;
+   banditdata->beta = beta;
+
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &banditdata->weights, nactions) );
+
+   SCIP_CALL( SCIPbanditCreate(exp3, vtable, blkmem, nactions, initseed, banditdata) );
+
+   return SCIP_OKAY;
+}
+
+/** create Exp.3 bandit algorithm as a plugin using \p scip pointer */
 SCIP_RETCODE SCIPcreateBanditExp3(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BANDIT**         exp3,               /**< pointer to store bandit algorithm */
@@ -260,7 +283,6 @@ SCIP_RETCODE SCIPcreateBanditExp3(
    SCIP_Real             beta                /**< gain offset between 0 and 1 at every observation */
    )
 {
-   SCIP_BANDITDATA* banditdata;
    SCIP_BANDITVTABLE* vtable;
 
    vtable = SCIPfindBanditvtable(scip, BANDIT_NAME);
@@ -269,15 +291,7 @@ SCIP_RETCODE SCIPcreateBanditExp3(
       SCIPerrorMessage("Could not find virtual function table for %s bandit algorithm\n", BANDIT_NAME);
    }
 
-   SCIP_CALL( SCIPallocBlockMemory(scip, &banditdata) );
-   assert(banditdata != NULL);
-
-   banditdata->gamma = gammaparam;
-   banditdata->beta = beta;
-
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &banditdata->weights, nactions) );
-
-   SCIP_CALL( SCIPcreateBandit(scip, exp3, vtable, nactions, banditdata) );
+   SCIP_CALL( SCIPbanditCreateExp3(SCIPblkmem(scip), vtable, exp3, nactions, gammaparam, beta, SCIPinitializeRandomSeed(scip, DEFAULT_SEED)) );
 
    return SCIP_OKAY;
 }
@@ -324,7 +338,7 @@ SCIP_RETCODE SCIPincludeBanditvtableExp3(
    SCIP_BANDITVTABLE* vtable;
 
    SCIP_CALL( SCIPincludeBanditvtable(scip, &vtable, BANDIT_NAME,
-         banditFreeExp3, banditSelectExp3, banditUpdateExp3, banditResetExp3) );
+         SCIPbanditFreeExp3, SCIPbanditSelectExp3, SCIPbanditUpdateExp3, SCIPbanditResetExp3) );
    assert(vtable != NULL);
 
    return SCIP_OKAY;

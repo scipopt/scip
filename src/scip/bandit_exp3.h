@@ -68,8 +68,40 @@ SCIP_Real SCIPgetProbabilityExp3(
    int                   action              /**< index of the requested action */
    );
 
+/*
+ * callback methods for Exp.3 bandit algorithm to create a virtual function table
+ */
+
+/** callback to free bandit specific data structures */
+EXTERN
+SCIP_DECL_BANDITFREE(SCIPbanditFreeExp3);
+
+/** selection callback for bandit selector */
+EXTERN
+SCIP_DECL_BANDITSELECT(SCIPbanditSelectExp3);
 
 
+/** update callback for bandit algorithm */
+EXTERN
+SCIP_DECL_BANDITUPDATE(SCIPbanditUpdateExp3);
+
+
+/** reset callback for bandit algorithm */
+EXTERN
+SCIP_DECL_BANDITRESET(SCIPbanditResetExp3);
+
+
+/** direct bandit creation method for the core where no SCIP pointer is available */
+extern
+SCIP_RETCODE SCIPbanditCreateExp3(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_BANDITVTABLE*    vtable,             /**< virtual function table for callback functions of Exp.3 */
+   SCIP_BANDIT**         exp3,               /**< pointer to store bandit algorithm */
+   int                   nactions,           /**< the number of actions for this bandit algorithm */
+   SCIP_Real             gammaparam,         /**< weight between uniform (gamma ~ 1) and weight driven (gamma ~ 0) probability distribution */
+   SCIP_Real             beta,               /**< gain offset between 0 and 1 at every observation */
+   unsigned int          initseed            /**< initial random seed */
+   );
 
 #ifdef __cplusplus
 }

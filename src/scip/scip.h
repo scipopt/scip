@@ -69,7 +69,7 @@
 #include "scip/type_syncstore.h"
 
 /* include public interfaces, s.t. the user only needs to include scip.h */
-#include "scip/bandit_epsgreedy.h"
+#include "scip/scipcoreplugins.h"
 #include "scip/bandit.h"
 #include "scip/pub_branch.h"
 #include "scip/pub_conflict.h"
