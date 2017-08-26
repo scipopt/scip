@@ -136,8 +136,6 @@ SCIP_RETCODE SCIPaggrRowSumRows(
    SCIP_Real*            weights,            /**< row weights in row summation */
    int*                  rowinds,            /**< array to store indices of non-zero entries of the weights array, or NULL */
    int                   nrowinds,           /**< number of non-zero entries in weights array, -1 if rowinds is NULL */
-   SCIP_Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
-   SCIP_Real             minallowedweight,   /**< minimum magnitude of weight for rows that are used in the summation */
    SCIP_Bool             sidetypebasis,      /**< choose sidetypes of row (lhs/rhs) based on basis information? */
    SCIP_Bool             allowlocal,         /**< should local rows be used? */
    int                   negslack,           /**< should negative slack variables be used? (0: no, 1: only for integral rows, 2: yes) */
@@ -155,8 +153,7 @@ void SCIPaggrRowRemoveZeros(
 extern
 void SCIPaggrRowCleanup(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
-   SCIP_Real             maxcoefratio        /**< maximal allowed ratio between two coefficients in the cut */
+   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    );
 
 /** get number of aggregated rows */
@@ -250,7 +247,6 @@ SCIP_RETCODE SCIPcalcMIR(
                                               *   NULL for using closest bound for all variables */
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce MIR cut for */
-   SCIP_Real             maxcoefratio,       /**< maximal allowed ratio between two coefficients in the cut */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to the aggrrow; must be positive */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row to compute an MIR cut for */
    SCIP_Real*            cutcoefs,           /**< array to store the non-zero coefficients in the cut */
@@ -295,7 +291,6 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
                                               *   NULL for using closest bound for all variables */
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce MIR cut for */
-   SCIP_Real             maxcoefratio,       /**< maximal allowed ratio between two coefficients in the cut */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row to compute MIR cut for */
    SCIP_Real*            cutcoefs,           /**< array to store the non-zero coefficients in the cut */
    SCIP_Real*            cutrhs,             /**< pointer to store the right hand side of the cut */
@@ -329,7 +324,6 @@ SCIP_RETCODE SCIPcalcFlowCover(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
-   SCIP_Real             maxcoefratio,       /**< maximal allowed ratio between two coefficients in the cut */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row to compute flow cover cut for */
    SCIP_Real*            cutcoefs,           /**< array to store the non-zero coefficients in the cut */
@@ -363,7 +357,6 @@ SCIP_RETCODE SCIPcalcStrongCG(
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce strong CG cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce strong CG cut for */
-   SCIP_Real             maxcoefratio,       /**< maximal allowed ratio between two coefficients in the cut */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row to compute a flow cover cut for */
    SCIP_Real*            cutcoefs,           /**< array to store the non-zero coefficients in the cut */

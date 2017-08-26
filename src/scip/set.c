@@ -380,6 +380,7 @@
 #define SCIP_DEFAULT_SEPA_MAXBOUNDDIST      0.0 /**< maximal relative distance from current node's dual bound to primal
                                                  *   bound compared to best node's dual bound for applying local separation
                                                  *   (0.0: only on current best node, 1.0: on all nodes) */
+#define SCIP_DEFAULT_SEPA_MAXCOEFRATIO     1e+5 /**< maximal ratio between coefficients in strongcg, cmir, and flowcover cuts */
 #define SCIP_DEFAULT_SEPA_MINEFFICACY      0.05 /**< minimal efficacy for a cut to enter the LP */
 #define SCIP_DEFAULT_SEPA_MINEFFICACYROOT  0.001 /**< minimal efficacy for a cut to enter the LP in the root node */
 #define SCIP_DEFAULT_SEPA_MINORTHO         1.00 /**< minimal orthogonality for a cut to enter the LP */
@@ -2155,6 +2156,11 @@ SCIP_RETCODE SCIPsetCreate(
          "separating/maxbounddist",
          "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying local separation (0.0: only on current best node, 1.0: on all nodes)",
          &(*set)->sepa_maxbounddist, FALSE, SCIP_DEFAULT_SEPA_MAXBOUNDDIST, 0.0, 1.0,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "separating/maxcoefratio",
+         "maximal ratio between coefficients in strongcg, cmir, and flowcover cuts",
+         &(*set)->sepa_maxcoefratio, FALSE, SCIP_DEFAULT_SEPA_MAXCOEFRATIO, 1.0, SCIP_INVALID/10.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "separating/minefficacy",

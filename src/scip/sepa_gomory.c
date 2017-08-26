@@ -81,7 +81,6 @@
 #define USEVBDS                    TRUE /**< use variable bounds - see SCIPcalcMIR() */
 #define FIXINTEGRALRHS            FALSE /**< try to generate an integral rhs - see SCIPcalcMIR() */
 #define MAKECONTINTEGRAL          FALSE /**< convert continuous variable to integral variables in SCIPmakeRowIntegral() */
-#define MAXCOEFRATIO               1e+5
 
 #define MAXAGGRLEN(nvars)          (0.1*(nvars)+1000) /**< maximal length of base inequality */
 
@@ -428,15 +427,14 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
          ninds = -1;
          SCIP_CALL( SCIPgetLPBInvRow(scip, i, binvrow, inds, &ninds) );
 
-
-         SCIP_CALL( SCIPaggrRowSumRows(scip, aggrrow, binvrow, inds, ninds, sepadata->maxweightrange, SCIPsumepsilon(scip),
+         SCIP_CALL( SCIPaggrRowSumRows(scip, aggrrow, binvrow, inds, ninds,
             sepadata->sidetypebasis, allowlocal, 2, (int) MAXAGGRLEN(nvars), &success) );
 
          if( !success )
             continue;
 
          SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, allowlocal, FIXINTEGRALRHS, NULL, NULL, minfrac, maxfrac,
-            MAXCOEFRATIO, 1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
+            1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
 
          assert(allowlocal || !cutislocal);
 

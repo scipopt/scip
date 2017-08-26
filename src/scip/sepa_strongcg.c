@@ -53,7 +53,6 @@
 #define MAKECONTINTEGRAL          FALSE
 #define MINFRAC                    0.05
 #define MAXFRAC                    0.95
-#define MAXCOEFRATIO               1e+5
 
 #define MAXAGGRLEN(nvars)          (0.1*(nvars)+1000) /**< maximal length of base inequality */
 
@@ -317,14 +316,14 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
 #endif
 
          /* create the aggregation row using the B^-1 row as weights */
-         SCIP_CALL( SCIPaggrRowSumRows(scip, aggrrow, binvrow, inds, ninds, sepadata->maxweightrange, SCIPsumepsilon(scip),
-                                       FALSE, allowlocal, 1, (int) MAXAGGRLEN(nvars), &success) );
+         SCIP_CALL( SCIPaggrRowSumRows(scip, aggrrow, binvrow, inds, ninds,
+            FALSE, allowlocal, 1, (int) MAXAGGRLEN(nvars), &success) );
 
          if( !success )
             continue;
 
          /* create a strong CG cut out of the aggregation row */
-         SCIP_CALL( SCIPcalcStrongCG(scip, NULL, BOUNDSWITCH, USEVBDS, allowlocal, MINFRAC, MAXFRAC, MAXCOEFRATIO,
+         SCIP_CALL( SCIPcalcStrongCG(scip, NULL, BOUNDSWITCH, USEVBDS, allowlocal, MINFRAC, MAXFRAC,
             1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
 
          assert(allowlocal || !cutislocal);

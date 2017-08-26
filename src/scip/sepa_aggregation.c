@@ -28,6 +28,7 @@
 #include "scip/sepa_aggregation.h"
 #include "scip/pub_misc.h"
 #include "scip/cuts.h"
+#include "scip/dbldblarith.h"
 
 
 #define SEPA_NAME              "aggregation"
@@ -73,7 +74,6 @@
 #define MINFRAC                    0.05
 #define MAXFRAC                    0.999
 #define MAKECONTINTEGRAL          FALSE
-#define MAXCOEFRATIO               1e+5
 #define IMPLINTSARECONT
 
 #define MAXAGGRLEN(nvars)          (0.1*(nvars)+1000) /**< maximal length of base inequality */
@@ -607,8 +607,7 @@ SCIP_RETCODE aggregateNextRow(
 
       for( k = 0; k < ngoodrows; ++k )
       {
-         SCIP_Real minweight;
-         SCIP_Real maxweight;
+         SCIP_Real QUAD(val);
          SCIP_Real rowaggrfac;
          int lppos;
 
@@ -616,13 +615,12 @@ SCIP_RETCODE aggregateNextRow(
          if( SCIPaggrRowHasRowBeenAdded(aggrrow, candrows[k]) )
             continue;
 
-         /* if factor is too extreme skip this row */
-         SCIPaggrRowGetAbsWeightRange(aggrrow, &minweight, &maxweight);
-         rowaggrfac = -vals[probvaridx] / candrowcoefs[k];
+         QUAD_ARRAY_LOAD(val, vals, probvaridx);
+         SCIPquadprecDivQD(val, val, candrowcoefs[k]);
+         rowaggrfac = -QUAD_ROUND(val);
 
-         if( SCIPisZero(scip, rowaggrfac) ||
-             REALABS(rowaggrfac) > sepadata->maxrowfac * minweight ||
-             REALABS(rowaggrfac) * sepadata->maxrowfac < maxweight )
+         /* if factor is too extreme skip this row */
+         if( SCIPisZero(scip, rowaggrfac) )
             continue;
 
          lppos = SCIProwGetLPPos(candrows[k]);
@@ -685,24 +683,23 @@ SCIP_RETCODE aggregateNextRow(
 
       for( k = 0; k < nrows; ++k )
       {
-         SCIP_Real minweight;
-         SCIP_Real maxweight;
+         SCIP_Real QUAD(val);
          SCIP_Real rowaggrfac;
          int lppos;
 
-         /* dont't add rows twice */
+         /* do not add rows twice */
          if( SCIPaggrRowHasRowBeenAdded(aggrrow, candrows[k]) )
             continue;
 
-         /* if factor is too extreme skip this row */
-         SCIPaggrRowGetAbsWeightRange(aggrrow, &minweight, &maxweight);
-         rowaggrfac = -vals[probvaridx] / candrowcoefs[k];
-         lppos = SCIProwGetLPPos(candrows[k]);
+         QUAD_ARRAY_LOAD(val, vals, probvaridx);
+         SCIPquadprecDivQD(val, val, candrowcoefs[k]);
+         rowaggrfac = -QUAD_ROUND(val);
 
-         if( SCIPisZero(scip, rowaggrfac) ||
-             REALABS(rowaggrfac) > sepadata->maxrowfac * minweight ||
-             REALABS(rowaggrfac) * sepadata->maxrowfac < maxweight )
+         /* if factor is too extreme skip this row */
+         if( SCIPisZero(scip, rowaggrfac) )
             continue;
+
+         lppos = SCIProwGetLPPos(candrows[k]);
 
          /* row could be used, decide which side */
          {
@@ -840,12 +837,12 @@ SCIP_RETCODE aggregation(
        */
 
       flowcoverefficacy =  -SCIPinfinity(scip);
-      SCIP_CALL( SCIPcalcFlowCover(scip, sol, BOUNDSWITCH, MAXCOEFRATIO, allowlocal, aggrdata->aggrrow,
+      SCIP_CALL( SCIPcalcFlowCover(scip, sol, BOUNDSWITCH, allowlocal, aggrdata->aggrrow,
          cutcoefs, &cutrhs, cutinds, &cutnnz, &flowcoverefficacy, &cutrank, &flowcovercutislocal, &flowcoversuccess) );
 
       cutefficacy = flowcoverefficacy;
       SCIP_CALL( SCIPcutGenerationHeuristicCMIR(scip, sol, BOUNDSWITCH, USEVBDS, allowlocal, maxtestdelta, NULL, NULL, MINFRAC, MAXFRAC,
-         MAXCOEFRATIO, aggrdata->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cmircutislocal, &cmirsuccess) );
+         aggrdata->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cmircutislocal, &cmirsuccess) );
 
       oldncuts = *ncuts;
 

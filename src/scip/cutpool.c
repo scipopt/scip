@@ -264,6 +264,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
    set = (SCIP_SET*) userptr;
    row = (SCIP_ROW*)key;
    assert(row != NULL);
+   assert(row->len > 0);
 
    minidx = SCIProwGetMinidx(row, set);
    maxidx = SCIProwGetMaxidx(row, set);
@@ -606,9 +607,8 @@ SCIP_RETCODE SCIPcutpoolAddRow(
    assert(cutpool != NULL);
    assert(row != NULL);
 
-   /* only called to ensure that minidx and maxidx are up-to-date */
-   (void) SCIProwGetMaxidx(row, set);
-   assert(row->validminmaxidx);
+   if( row->len == 0 )
+      return SCIP_OKAY;
 
    othercut = (SCIP_CUT*)SCIPhashtableRetrieve(cutpool->hashtable, (void*)row);
    /* check in hash table, if cut already exists in the pool */

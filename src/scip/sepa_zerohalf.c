@@ -72,7 +72,6 @@
 #define FIXINTEGRALRHS            FALSE /**< try to generate a fractional rhs - see SCIPcalcMIR() */
 #define MINFRAC                    0.05
 #define MAXFRAC                    1.00
-#define MAXCOEFRATIO               1e+5
 
 /* SCIPcalcRowIntegralScalar parameters */
 #define MAXDNOM                   10000
@@ -1289,7 +1288,7 @@ SCIP_RETCODE generateZerohalfCut(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, SCIPgetNVars(scip)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cutinds, SCIPgetNVars(scip)) );
-   SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, allowlocal, FIXINTEGRALRHS, NULL, NULL, MINFRAC, MAXFRAC, MAXCOEFRATIO,
+   SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, allowlocal, FIXINTEGRALRHS, NULL, NULL, MINFRAC, MAXFRAC,
                           1.0, sepadata->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
 
    if( success && SCIPisEfficacious(scip, cutefficacy) )
