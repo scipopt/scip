@@ -18,6 +18,12 @@ set(instances
 )
 
 #
+# add a build test first
+#
+add_test(NAME examples-relaxator-build
+        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target relaxator
+        )
+#
 # loop over the instances
 #
 foreach(instance ${instances})
@@ -27,5 +33,11 @@ foreach(instance ${instances})
         #
         # treat the instance as a tuple (list) of two values
         #
-        add_test(NAME examples-relaxator-${basename} COMMAND $<TARGET_FILE:relaxator> -f ${CMAKE_CURRENT_SOURCE_DIR}/../../../check/${path} -o ${optval} ${optval})
+        add_test(NAME examples-relaxator-${basename}
+                COMMAND $<TARGET_FILE:relaxator> -f ${CMAKE_CURRENT_SOURCE_DIR}/../../../check/${path} -o ${optval} ${optval}
+                )
+        set_tests_properties(examples-relaxator-${basename}
+                            PROPERTIES
+                                DEPENDS examples-relaxator-build
+                            )
 endforeach(instance)

@@ -14,6 +14,13 @@ set(instances
 )
 
 #
+# add a test that builds the application
+#
+add_test(NAME applications-scipstp-build
+        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target scipstp
+        )
+
+#
 # add a test for every instance
 #
 foreach(instance ${instances})
@@ -22,6 +29,12 @@ foreach(instance ${instances})
     #
     # call the STP binary and validate the solve with the given objective value
     #
-    add_test(NAME "applications-scipstp-${basename}" COMMAND $<TARGET_FILE:scipstp> -f ${CMAKE_CURRENT_SOURCE_DIR}/../data/short/${basename}.stp -o ${optval} ${optval})
-    set_tests_properties("applications-scipstp-${basename}" PROPERTIES PASS_REGULAR_EXPRESSION "Validation         : Success")
+    add_test(NAME "applications-scipstp-${basename}"
+            COMMAND $<TARGET_FILE:scipstp> -f ${CMAKE_CURRENT_SOURCE_DIR}/../data/short/${basename}.stp -o ${optval} ${optval}
+            )
+    set_tests_properties("applications-scipstp-${basename}"
+                        PROPERTIES
+                            PASS_REGULAR_EXPRESSION "Validation         : Success"
+                            DEPENDS applications-scipstp-build
+                        )
 endforeach()
