@@ -332,6 +332,34 @@ if(NOT ${TPI} STREQUAL "none")
 endif()
 
 #
+# add tests that read partial solutions
+#
+foreach(instance ${instances_MIP})
+    split_instance(instance)
+    #
+    # if there is a partial solution file in mipstarts, we add a test
+    #
+    if( EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/mipstarts/${basename}.mst" )
+        #
+        # configure the template batch file and store it under the binary (build) directory
+        #
+        configure_file(interactiveshell/mipstarts.bat.in interactiveshell/MIP-mipstart-${basename}.bat)
+
+        #
+        # add test that executes the configured batch file and greps the validation expression
+        #
+        add_test(NAME MIP-mipstart-${basename}
+                COMMAND $<TARGET_FILE:scip> -b interactiveshell/MIP-mipstart-${basename}.bat
+                )
+        set_tests_properties(MIP-mipstart-${basename}
+                            PROPERTIES
+                                PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                DEPENDS scip-build
+                            )
+    endif()
+endforeach(instance)
+
+#
 # interactive shell test.
 # We substitute first path placeholders in the .in file, which creates a new file under the binary directory
 # Then run SCIP to execute the list of commands defined there.
