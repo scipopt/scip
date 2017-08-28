@@ -41,7 +41,7 @@ set(settings_MIP
     "fullstrongbfs"
     "indicatorlogicor"
     "mostinf"
-    "multaggr_distribution_mix"
+    "distribution"
     "oddcylcelift"
     "oddcylce"
     "oddcylceliftheur"
