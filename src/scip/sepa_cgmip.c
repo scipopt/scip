@@ -2983,6 +2983,7 @@ SCIP_RETCODE createCGCutDirect(
          if ( violated || (sepadata->usecutpool && ! cutislocal ) )
          {
             SCIP_ROW* cut;
+            SCIP_Bool addcut = TRUE;
 
             /* create the cut */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cgcut%d_%u", SCIPgetNLPs(scip), *ngen);
@@ -3006,10 +3007,15 @@ SCIP_RETCODE createCGCutDirect(
             {
                assert( violated || sepadata->usecutpool );
                SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+               addcut = SCIProwIsInGlobalCutpool(cut);
+            }
+            else
+            {
+               addcut = SCIPisCutNew(scip, cut);
             }
 
             /* add cut if it is violated */
-            if ( violated )
+            if ( violated && addcut )
             {
                /* check whether cut has been found before - may happend due to projection */
                for (k = 0; k < *nprevrows; ++k)

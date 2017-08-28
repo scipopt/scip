@@ -229,6 +229,10 @@ SCIP_RETCODE addCut(
              * contained an parallel cut that is at least as good so we do not add it */
             addcut = SCIProwIsInGlobalCutpool(cut);
          }
+         else
+         {
+            addcut = SCIPisCutNew(scip, cut);
+         }
 
          if( addcut )
          {

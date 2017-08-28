@@ -34020,6 +34020,23 @@ SCIP_RETCODE SCIPaddCut(
    return SCIP_OKAY;
 }
 
+/** checks if cut is already existing in global cutpool
+ *
+ *  @return TRUE is returned if the cut is not already existing in the global cutpool, FALSE otherwise
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_Bool SCIPisCutNew(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< cutting plane to add */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPcutpoolIsCutNew", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIPcutpoolIsCutNew(scip->cutpool, scip->set, row);
+}
+
 /** if not already existing, adds row to global cut pool
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref

@@ -1330,6 +1330,10 @@ SCIP_RETCODE generateZerohalfCut(
          SCIP_CALL( SCIPaddPoolCut(scip, cut) );
          addcut = SCIProwIsInGlobalCutpool(cut);
       }
+      else
+      {
+         addcut = SCIPisCutNew(scip, cut);
+      }
 
       if( addcut )
       {

@@ -2279,7 +2279,7 @@ SCIP_RETCODE priceAndCutLoop(
    glblowerbound = SCIPtreeGetLowerbound(tree, set);
    assert(primal->cutoffbound > glblowerbound);
    bounddist = (loclowerbound - glblowerbound)/(primal->cutoffbound - glblowerbound);
-   allowlocal = SCIPsetIsLE(set, bounddist, set->sepa_maxbounddist);
+   allowlocal = SCIPsetIsLE(set, bounddist, set->sepa_maxlocalbounddist);
    separate = (set->sepa_maxruns == -1 || stat->nruns <= set->sepa_maxruns);
 
    /* get maximal number of separation rounds */

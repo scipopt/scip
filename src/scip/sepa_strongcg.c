@@ -31,7 +31,7 @@
 #define SEPA_NAME              "strongcg"
 #define SEPA_DESC              "Strong CG cuts separator (Letchford and Lodi)"
 #define SEPA_PRIORITY             -2000
-#define SEPA_FREQ                     0
+#define SEPA_FREQ                    20
 #define SEPA_MAXBOUNDDIST           0.0
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
@@ -156,7 +156,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
    ncalls = SCIPsepaGetNCallsAtNode(sepa);
 
    /* only call separator, if we are not close to terminating */
-   if( SCIPisStopped(scip) )
+   if( SCIPisStopped(scip) || !allowlocal )
       return SCIP_OKAY;
 
    /* only call the strong CG cut separator a given number of times at each node */
@@ -420,6 +420,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
                   {
                      SCIP_CALL( SCIPaddPoolCut(scip, cut) );
                      addcut = SCIProwIsInGlobalCutpool(cut);
+                  }
+                  else
+                  {
+                     addcut = SCIPisCutNew(scip, cut);
                   }
 
                   if( addcut )

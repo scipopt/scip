@@ -123,6 +123,9 @@ SCIP_RETCODE evaluateCutNumerics(
    madeintegral = FALSE;
    (*useful) = FALSE;
 
+   if( !SCIPisCutNew(scip, cut) )
+      return SCIP_OKAY;
+
    if( sepadata->makeintegral )
    {
       /* try to scale the cut to integral values */
@@ -232,14 +235,15 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    SCIP_AGGRROW* aggrrow;
    SCIP_Real* binvrow;
    SCIP_Real* cutcoefs;
+   SCIP_Real* basisfrac;
+   int* basisind;
+   int* inds;
+   int* cutinds;
    SCIP_Real maxscale;
    SCIP_Real minfrac;
    SCIP_Real maxfrac;
    SCIP_Longint maxdnom;
    SCIP_Bool cutoff;
-   int* basisind;
-   int* inds;
-   int* cutinds;
    int ninds;
    int naddedcuts;
    int nvars;
@@ -269,7 +273,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    maxfrac = 1.0 - sepadata->away;
 
    /* only call separator, if we are not close to terminating */
-   if( SCIPisStopped(scip) )
+   if( SCIPisStopped(scip) || !allowlocal )
       return SCIP_OKAY;
 
    /* only call the gomory cut separator a given number of times at each node */
@@ -346,6 +350,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cutinds, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &basisind, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &basisfrac, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &binvrow, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &inds, nrows) );
    SCIP_CALL( SCIPaggrRowCreate(scip, &aggrrow) );
@@ -353,8 +358,49 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    /* get basis indices */
    SCIP_CALL( SCIPgetLPBasisInd(scip, basisind) );
 
-   /* permute basis indices to reduce performance variability */
-   SCIPrandomPermuteIntArray(sepadata->randnumgen, basisind, 0, nrows);
+   for( i = 0; i < nrows; ++i )
+   {
+      SCIP_Real frac = 0.0;
+      int c = basisind[i];
+
+      if( c >= 0 )
+      {
+         SCIP_VAR* var;
+
+         assert(c < ncols);
+         var = SCIPcolGetVar(cols[c]);
+         if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+         {
+            frac = SCIPfeasFrac(scip, SCIPcolGetPrimsol(cols[c]));
+            frac = MIN(frac, 1.0 - frac);
+         }
+      }
+      else if( sepadata->separaterows )
+      {
+         SCIP_ROW* row;
+
+         assert(0 <= -c-1 && -c-1 < nrows);
+         row = rows[-c-1];
+         if( SCIProwIsIntegral(row) && !SCIProwIsModifiable(row) )
+         {
+            frac = SCIPfeasFrac(scip, SCIPgetRowActivity(scip, row));
+            frac = MIN(frac, 1.0 - frac);
+         }
+      }
+
+      if( frac >= minfrac )
+      {
+         /* slightly change fractionality to have random order for equal fractions */
+         basisfrac[i] = frac + SCIPrandomGetReal(sepadata->randnumgen, -1e-6, 1e-6);
+      }
+      else
+      {
+         basisfrac[i] = 0.0;
+      }
+   }
+
+   /* sort basis indices by fractionality */
+   SCIPsortDownRealInt(basisfrac, basisind, nrows);
 
    /* get the maximal number of cuts allowed in a separation round */
    if( depth == 0 )
@@ -371,176 +417,140 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    /* for all basic columns belonging to integer variables, try to generate a gomory cut */
    for( i = 0; i < nrows && naddedcuts < maxsepacuts && !SCIPisStopped(scip) && !cutoff; ++i )
    {
-      SCIP_Bool tryrow;
+      SCIP_Real cutrhs;
+      SCIP_Real cutefficacy;
+      SCIP_Bool success;
+      SCIP_Bool cutislocal;
+      int cutnnz;
+      int cutrank;
 
-      tryrow = FALSE;
+      if( basisfrac[i] == 0.0 )
+         break;
+
       c = basisind[i];
-      if( c >= 0 )
+
+      /* get the row of B^-1 for this basic integer variable with fractional solution value */
+      ninds = -1;
+      SCIP_CALL( SCIPgetLPBInvRow(scip, i, binvrow, inds, &ninds) );
+
+      SCIP_CALL( SCIPaggrRowSumRows(scip, aggrrow, binvrow, inds, ninds,
+         sepadata->sidetypebasis, allowlocal, 2, (int) MAXAGGRLEN(nvars), &success) );
+
+      if( !success )
+         continue;
+
       {
-         SCIP_VAR* var;
-
-         assert(c < ncols);
-         var = SCIPcolGetVar(cols[c]);
-         if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
-         {
-            SCIP_Real primsol;
-
-            primsol = SCIPcolGetPrimsol(cols[c]);
-            assert(SCIPgetVarSol(scip, var) == primsol); /*lint !e777*/
-
-            if( SCIPfeasFrac(scip, primsol) >= minfrac )
-            {
-               SCIPdebugMsg(scip, "trying gomory cut for col <%s> [%g]\n", SCIPvarGetName(var), primsol);
-               tryrow = TRUE;
-            }
-         }
-      }
-      else if( sepadata->separaterows )
-      {
-         SCIP_ROW* row;
-
-         assert(0 <= -c-1 && -c-1 < nrows);
-         row = rows[-c-1];
-         if( SCIProwIsIntegral(row) && !SCIProwIsModifiable(row) )
-         {
-            SCIP_Real primsol;
-
-            primsol = SCIPgetRowActivity(scip, row);
-            if( SCIPfeasFrac(scip, primsol) >= minfrac )
-            {
-               SCIPdebugMsg(scip, "trying gomory cut for row <%s> [%g]\n", SCIProwGetName(row), primsol);
-               tryrow = TRUE;
-            }
-         }
+         int* inds = SCIPaggrRowGetInds(aggrrow);
+         SCIP_Real* vals = SCIPaggrRowGetVals(aggrrow);
       }
 
-      if( tryrow )
+      SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, allowlocal, FIXINTEGRALRHS, NULL, NULL, minfrac, maxfrac,
+         1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
+
+      assert(allowlocal || !cutislocal);
+
+      /* @todo Currently we are using the SCIPcalcMIR() function to compute the coefficients of the Gomory
+         *       cut. Alternatively, we could use the direct version (see thesis of Achterberg formula (8.4)) which
+         *       leads to cut a of the form \sum a_i x_i \geq 1. Rumor has it that these cuts are better.
+         */
+
+      SCIPdebugMsg(scip, " -> success=%u, rhs=%g, efficacy=%g\n", success, cutrhs, cutefficacy);
+
+      /* if successful, convert dense cut into sparse row, and add the row as a cut */
+      if( success )
       {
-         SCIP_Real cutrhs;
-         SCIP_Real cutefficacy;
-         SCIP_Bool success;
-         SCIP_Bool cutislocal;
-         int cutnnz;
-         int cutrank;
-
-         /* get the row of B^-1 for this basic integer variable with fractional solution value */
-         ninds = -1;
-         SCIP_CALL( SCIPgetLPBInvRow(scip, i, binvrow, inds, &ninds) );
-
-         SCIP_CALL( SCIPaggrRowSumRows(scip, aggrrow, binvrow, inds, ninds,
-            sepadata->sidetypebasis, allowlocal, 2, (int) MAXAGGRLEN(nvars), &success) );
-
-         if( !success )
-            continue;
-
-         SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, allowlocal, FIXINTEGRALRHS, NULL, NULL, minfrac, maxfrac,
-            1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
-
-         assert(allowlocal || !cutislocal);
-
-         /* @todo Currently we are using the SCIPcalcMIR() function to compute the coefficients of the Gomory
-          *       cut. Alternatively, we could use the direct version (see thesis of Achterberg formula (8.4)) which
-          *       leads to cut a of the form \sum a_i x_i \geq 1. Rumor has it that these cuts are better.
-          */
-
-         SCIPdebugMsg(scip, " -> success=%u, rhs=%g, efficacy=%g\n", success, cutrhs, cutefficacy);
-
-         /* if successful, convert dense cut into sparse row, and add the row as a cut */
-         if( success )
+         if( cutnnz == 0 && SCIPisFeasNegative(scip, cutrhs) )
          {
-            if( cutnnz == 0 && SCIPisFeasNegative(scip, cutrhs) )
+            SCIPdebugMsg(scip, " -> gomory cut detected infeasibility with cut 0 <= %f\n", cutrhs);
+            cutoff = TRUE;
+         }
+         else if( SCIPisEfficacious(scip, cutefficacy) )
+         {
+            /* Only take efficacious cuts, except for cuts with one non-zero coefficients (= bound
+               * changes); the latter cuts will be handeled internally in sepastore.
+               */
+            SCIP_ROW* cut;
+            char cutname[SCIP_MAXSTRLEN];
+            int v;
+
+            /* construct cut name */
+            if( c >= 0 )
+               (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "gom%d_x%d", SCIPgetNLPs(scip), c);
+            else
+               (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "gom%d_s%d", SCIPgetNLPs(scip), -c-1);
+
+            /* create empty cut */
+            SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs,
+                                                cutislocal, FALSE, sepadata->dynamiccuts) );
+
+            /* set cut rank */
+            SCIProwChgRank(cut, cutrank);
+
+            /* cache the row extension and only flush them if the cut gets added */
+            SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
+
+            /* collect all non-zero coefficients */
+            for( v = 0; v < cutnnz; ++v )
             {
-               SCIPdebugMsg(scip, " -> gomory cut detected infeasibility with cut 0 <= %f\n", cutrhs);
-               cutoff = TRUE;
+               SCIP_CALL( SCIPaddVarToRow(scip, cut, vars[cutinds[v]], cutcoefs[v]) );
             }
-            else if( SCIPisEfficacious(scip, cutefficacy) )
+
+            if( cutnnz == 1 )
             {
-               /* Only take efficacious cuts, except for cuts with one non-zero coefficients (= bound
-                * changes); the latter cuts will be handeled internally in sepastore.
-                */
-               SCIP_ROW* cut;
-               char cutname[SCIP_MAXSTRLEN];
-               int v;
+               /* add the bound change as cut to avoid that the LP gets modified. that would mean the LP is not flushed
+                  * and the method SCIPgetLPBInvRow() fails; SCIP internally will apply that bound change automatically
+                  */
+               SCIP_CALL( SCIPaddCut(scip, NULL, cut, TRUE, &cutoff) );
+               naddedcuts++;
+            }
+            else
+            {
+               SCIP_Bool useful;
 
-               /* construct cut name */
-               if( c >= 0 )
-                  (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "gom%d_x%d", SCIPgetNLPs(scip), c);
-               else
-                  (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "gom%d_s%d", SCIPgetNLPs(scip), -c-1);
+               assert(success == TRUE);
+               assert(SCIPisInfinity(scip, -SCIProwGetLhs(cut)));
+               assert(!SCIPisInfinity(scip, SCIProwGetRhs(cut)));
 
-               /* create empty cut */
-               SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs,
-                                                 cutislocal, FALSE, sepadata->dynamiccuts) );
+               SCIPdebugMsg(scip, " -> gomory cut for <%s>: rhs=%f, eff=%f\n",
+                  c >= 0 ? SCIPvarGetName(SCIPcolGetVar(cols[c])) : SCIProwGetName(rows[-c-1]),
+                  cutrhs, cutefficacy);
 
-               /* set cut rank */
-               SCIProwChgRank(cut, cutrank);
+               SCIP_CALL( evaluateCutNumerics(scip, sepadata, cut, maxdnom, maxscale, &useful) );
 
-               /* cache the row extension and only flush them if the cut gets added */
-               SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
-
-               /* collect all non-zero coefficients */
-               for( v = 0; v < cutnnz; ++v )
+               if( useful )
                {
-                  SCIP_CALL( SCIPaddVarToRow(scip, cut, vars[cutinds[v]], cutcoefs[v]) );
-               }
+                  SCIPdebugMsg(scip, " -> found gomory cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
+                     cutname, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
+                     SCIPgetCutEfficacy(scip, NULL, cut),
+                     SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
+                     SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
 
-               if( cutnnz == 1 )
-               {
-                  /* add the bound change as cut to avoid that the LP gets modified. that would mean the LP is not flushed
-                   * and the method SCIPgetLPBInvRow() fails; SCIP internally will apply that bound change automatically
-                   */
-                  SCIP_CALL( SCIPaddCut(scip, NULL, cut, TRUE, &cutoff) );
-                  naddedcuts++;
-               }
-               else
-               {
-                  SCIP_Bool useful;
+                  /* flush all changes before adding the cut */
+                  SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
 
-                  assert(success == TRUE);
-                  assert(SCIPisInfinity(scip, -SCIProwGetLhs(cut)));
-                  assert(!SCIPisInfinity(scip, SCIProwGetRhs(cut)));
-
-                  SCIPdebugMsg(scip, " -> gomory cut for <%s>: rhs=%f, eff=%f\n",
-                     c >= 0 ? SCIPvarGetName(SCIPcolGetVar(cols[c])) : SCIProwGetName(rows[-c-1]),
-                     cutrhs, cutefficacy);
-
-                  SCIP_CALL( evaluateCutNumerics(scip, sepadata, cut, maxdnom, maxscale, &useful) );
-
-                  if( useful )
+                  /* add global cuts which are not implicit bound changes to the cut pool */
+                  if( !cutislocal )
                   {
-                     SCIPdebugMsg(scip, " -> found gomory cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
-                        cutname, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
-                        SCIPgetCutEfficacy(scip, NULL, cut),
-                        SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
-                        SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
-
-                     /* flush all changes before adding the cut */
-                     SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
-
-                     /* add global cuts which are not implicit bound changes to the cut pool */
-                     if( !cutislocal )
+                     if( sepadata->delayedcuts )
                      {
-                        if( sepadata->delayedcuts )
-                        {
-                           SCIP_CALL( SCIPaddDelayedPoolCut(scip, cut) );
-                        }
-                        else
-                        {
-                           SCIP_CALL( SCIPaddPoolCut(scip, cut) );
-                        }
+                        SCIP_CALL( SCIPaddDelayedPoolCut(scip, cut) );
                      }
                      else
                      {
-                        /* local cuts we add to the sepastore */
-                        SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &cutoff) );
+                        SCIP_CALL( SCIPaddPoolCut(scip, cut) );
                      }
-
-                     naddedcuts++;
                   }
+                  else
+                  {
+                     /* local cuts we add to the sepastore */
+                     SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &cutoff) );
+                  }
+
+                  naddedcuts++;
                }
-               /* release the row */
-               SCIP_CALL( SCIPreleaseRow(scip, &cut) );
             }
+            /* release the row */
+            SCIP_CALL( SCIPreleaseRow(scip, &cut) );
          }
       }
    }
@@ -548,6 +558,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &inds);
    SCIPfreeBufferArray(scip, &binvrow);
+   SCIPfreeBufferArray(scip, &basisfrac);
    SCIPfreeBufferArray(scip, &basisind);
    SCIPfreeBufferArray(scip, &cutinds);
    SCIPfreeBufferArray(scip, &cutcoefs);

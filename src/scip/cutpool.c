@@ -593,6 +593,103 @@ SCIP_RETCODE cutpoolDelCut(
    return SCIP_OKAY;
 }
 
+/** checks if cut is already existing */
+SCIP_Bool SCIPcutpoolIsCutNew(
+   SCIP_CUTPOOL*         cutpool,            /**< cut pool */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_ROW*             row                 /**< cutting plane to add */
+   )
+{
+   SCIP_CUT* othercut;
+   assert(cutpool != NULL);
+   assert(row != NULL);
+
+   if( row->len == 0 )
+      return FALSE;
+
+   othercut = (SCIP_CUT*)SCIPhashtableRetrieve(cutpool->hashtable, (void*)row);
+   /* check in hash table, if cut already exists in the pool */
+   if( othercut == NULL )
+   {
+      return TRUE;
+   }
+   else
+   {
+      int i;
+      SCIP_ROW* otherrow = othercut->row;
+      SCIP_Bool newrowbetter = FALSE;
+      SCIP_Real otherlhs;
+      SCIP_Real otherrhs;
+      SCIP_Real otherconstant;
+      SCIP_Real scale;
+      SCIP_Real otherscale;
+      SCIP_Real minidxval1;
+      SCIP_Real minidxval2;
+
+      for( i = 0; TRUE; ++i )
+      {
+         if( row->cols_index[i] == row->minidx )
+         {
+            minidxval1 = row->vals[i];
+            break;
+         }
+      }
+
+      assert(row->minidx == otherrow->minidx);
+
+      for( i = 0; TRUE; ++i )
+      {
+         if( otherrow->cols_index[i] == otherrow->minidx )
+         {
+            minidxval2 = otherrow->vals[i];
+            break;
+         }
+      }
+
+      /* since we are comparing the improvement with an absolute value, we apply a
+       * scale to both rows such that the max absolute value is 1.0.
+       * For the scale of the second row use the sign such that the coefficients are equal
+       * to the first row.
+       */
+      scale = 1.0 / SCIProwGetMaxval(row, set);
+      otherscale = COPYSIGN(1.0 / SCIProwGetMaxval(otherrow, set), minidxval1 * minidxval2);
+
+      if( otherscale < 0.0 )
+      {
+         otherlhs = -otherrow->rhs;
+         otherrhs = -otherrow->lhs;
+         otherconstant = -otherrow->constant;
+         otherscale = -otherscale;
+      }
+      else
+      {
+         otherlhs = otherrow->lhs;
+         otherrhs = otherrow->rhs;
+         otherconstant = otherrow->constant;
+      }
+
+      if( !SCIPsetIsInfinity(set, row->rhs) && !SCIPsetIsInfinity(set, otherrhs) )
+      {
+         SCIP_Real rhs = scale * (row->rhs - row->constant);
+         otherrhs = otherscale * (otherrhs - otherconstant);
+
+         if( SCIPsetIsFeasLT(set, rhs, otherrhs) )
+            newrowbetter = TRUE;
+      }
+
+      if( !SCIPsetIsInfinity(set, -row->lhs) && !SCIPsetIsInfinity(set, -otherlhs) && !newrowbetter )
+      {
+         SCIP_Real lhs = scale * (row->lhs - row->constant);
+         otherlhs = otherscale * (otherlhs - otherconstant);
+
+         if( SCIPsetIsFeasGT(set, lhs, otherlhs) )
+            newrowbetter = TRUE;
+      }
+
+      return newrowbetter;
+   }
+}
+
 /** if not already existing, adds row to cut pool and captures it */
 SCIP_RETCODE SCIPcutpoolAddRow(
    SCIP_CUTPOOL*         cutpool,            /**< cut pool */
