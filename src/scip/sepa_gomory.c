@@ -361,7 +361,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    for( i = 0; i < nrows; ++i )
    {
       SCIP_Real frac = 0.0;
-      int c = basisind[i];
+
+      c = basisind[i];
 
       if( c >= 0 )
       {
