@@ -4037,6 +4037,23 @@ SCIP_RETCODE computeViolation(
    else
       consdata->rhsviol = 0.0;
 
+   /* update absolute and relative violation of the solution */
+   if( sol != NULL )
+   {
+      SCIP_Real absviol;
+      SCIP_Real relviol;
+      SCIP_Real lhsrelviol;
+      SCIP_Real rhsrelviol;
+
+      absviol = MAX(consdata->lhsviol, consdata->rhsviol);
+
+      lhsrelviol = SCIPrelDiff(consdata->lhs, consdata->activity);
+      rhsrelviol = SCIPrelDiff(consdata->activity, consdata->rhs);
+      relviol = MAX(lhsrelviol, rhsrelviol);
+
+      SCIPupdateSolConsViolation(scip, sol, absviol, relviol);
+   }
+
    switch( conshdlrdata->scaling )
    {
    case 'o' :

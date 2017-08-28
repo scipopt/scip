@@ -5071,6 +5071,8 @@ SCIP_RETCODE computeViolation(
    SCIP_CONSDATA* consdata;
    SCIP_Real varval;
    SCIP_Real varval2;
+   SCIP_Real absviol;
+   SCIP_Real relviol;
    SCIP_VAR* var;
    SCIP_VAR* var2;
    int i;
@@ -5217,17 +5219,31 @@ SCIP_RETCODE computeViolation(
       consdata->activity += activity;
    }
 
+   absviol = 0.0;
+   relviol = 0.0;
    /* compute absolute violation left hand side */
    if( consdata->activity < consdata->lhs && !SCIPisInfinity(scip, -consdata->lhs) )
+   {
       consdata->lhsviol = consdata->lhs - consdata->activity;
+      absviol = consdata->lhsviol;
+      relviol = SCIPrelDiff(consdata->lhs, consdata->activity);
+   }
    else
       consdata->lhsviol = 0.0;
 
    /* compute absolute violation right hand side */
    if( consdata->activity > consdata->rhs && !SCIPisInfinity(scip,  consdata->rhs) )
+   {
       consdata->rhsviol = consdata->activity - consdata->rhs;
+      absviol = consdata->rhsviol;
+      relviol = SCIPrelDiff(consdata->activity, consdata->rhs);
+   }
    else
       consdata->rhsviol = 0.0;
+
+   /* update absolute and relative violation of the solution */
+   if( sol != NULL )
+      SCIPupdateSolConsViolation(scip, sol, absviol, relviol);
 
    switch( conshdlrdata->scaling )
    {

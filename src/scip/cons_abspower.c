@@ -1978,6 +1978,7 @@ SCIP_RETCODE computeViolation(
    SCIP_Real val;
    SCIP_Real xval;
    SCIP_Real zval;
+   SCIP_Real relviol;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -2023,15 +2024,26 @@ SCIP_RETCODE computeViolation(
    val  = SIGN(xval) * consdata->power(REALABS(xval), consdata->exponent);
    val += consdata->zcoef * zval;
 
+   *viol = 0.0;
+   relviol = 0.0;
    if( val < consdata->lhs && !SCIPisInfinity(scip, -consdata->lhs) )
+   {
       consdata->lhsviol = *viol = consdata->lhs - val;
+      relviol = SCIPrelDiff(consdata->lhs, val);
+   }
    else
       consdata->lhsviol = 0.0;
 
    if( val > consdata->rhs && !SCIPisInfinity(scip,  consdata->rhs) )
+   {
       consdata->rhsviol = *viol = val - consdata->rhs;
+      relviol = SCIPrelDiff(val, consdata->rhs);
+   }
    else
       consdata->rhsviol = 0.0;
+
+   if( sol != NULL )
+      SCIPupdateSolConsViolation(scip, sol, *viol, relviol);
 
    switch( conshdlrdata->scaling )
    {
