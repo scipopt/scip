@@ -440,11 +440,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       if( !success )
          continue;
 
-      {
-         int* inds = SCIPaggrRowGetInds(aggrrow);
-         SCIP_Real* vals = SCIPaggrRowGetVals(aggrrow);
-      }
-
       SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, allowlocal, FIXINTEGRALRHS, NULL, NULL, minfrac, maxfrac,
          1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
 

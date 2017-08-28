@@ -652,13 +652,11 @@ SCIP_RETCODE addOneRow(
    SCIP_Bool*            rowtoolong          /**< is the aggregated row too long */
    )
 {
-   SCIP_Real absweight;
    SCIP_Real sideval;
    SCIP_Bool uselhs;
    int i;
 
    *rowtoolong = FALSE;
-   absweight = REALABS(weight);
 
    if( SCIPisZero(scip, weight) || SCIProwIsModifiable(row) || (SCIProwIsLocal(row) && !allowlocal) )
    {
@@ -4407,57 +4405,6 @@ SCIP_RETCODE SCIPsolveKnapsackApproximatelyLT(
    return SCIP_OKAY;
 }
 
-/** checks, whether the given scalar scales the given value to an integral number with error in the given bounds */
-static
-SCIP_Bool isIntegralScalar(
-   SCIP_Real             val,                /**< value that should be scaled to an integral value */
-   SCIP_Real             scalar,             /**< scalar that should be tried */
-   SCIP_Real             mindelta,           /**< minimal relative allowed difference of scaled coefficient s*c and integral i */
-   SCIP_Real             maxdelta            /**< maximal relative allowed difference of scaled coefficient s*c and integral i */
-   )
-{
-   SCIP_Real sval;
-   SCIP_Real downval;
-   SCIP_Real upval;
-
-   assert(mindelta <= 0.0);
-   assert(maxdelta >= 0.0);
-
-   sval = val * scalar;
-   downval = floor(sval);
-   upval = ceil(sval);
-
-   return (SCIPrelDiff(sval, downval) <= maxdelta || SCIPrelDiff(sval, upval) >= mindelta);
-}
-
-/** get integral number with error in the bounds which corresponds to given value scaled by a given scalar;
- *  should be used in connection with isIntegralScalar()
- */
-static
-SCIP_Longint getIntegralVal(
-   SCIP_Real             val,                /**< value that should be scaled to an integral value */
-   SCIP_Real             scalar,             /**< scalar that should be tried */
-   SCIP_Real             mindelta,           /**< minimal relative allowed difference of scaled coefficient s*c and integral i */
-   SCIP_Real             maxdelta            /**< maximal relative allowed difference of scaled coefficient s*c and integral i */
-   )
-{
-   SCIP_Real sval;
-   SCIP_Real upval;
-   SCIP_Longint intval;
-
-   assert(mindelta <= 0.0);
-   assert(maxdelta >= 0.0);
-
-   sval = val * scalar;
-   upval = ceil(sval);
-
-   if( SCIPrelDiff(sval, upval) >= mindelta )
-      intval = (SCIP_Longint) upval;
-   else
-      intval = (SCIP_Longint) (floor(sval));
-
-   return intval;
-}
 
 /** build the flow cover which corresponds to the given exact or approximate solution of KP^SNF; given unfinished
  *  flow cover contains variables which have been fixed in advance
@@ -4537,6 +4484,59 @@ void buildFlowCover(
 }
 
 #ifndef NO_EXACT_KNAPSACK
+
+/** checks, whether the given scalar scales the given value to an integral number with error in the given bounds */
+static
+SCIP_Bool isIntegralScalar(
+   SCIP_Real             val,                /**< value that should be scaled to an integral value */
+   SCIP_Real             scalar,             /**< scalar that should be tried */
+   SCIP_Real             mindelta,           /**< minimal relative allowed difference of scaled coefficient s*c and integral i */
+   SCIP_Real             maxdelta            /**< maximal relative allowed difference of scaled coefficient s*c and integral i */
+   )
+{
+   SCIP_Real sval;
+   SCIP_Real downval;
+   SCIP_Real upval;
+
+   assert(mindelta <= 0.0);
+   assert(maxdelta >= 0.0);
+
+   sval = val * scalar;
+   downval = floor(sval);
+   upval = ceil(sval);
+
+   return (SCIPrelDiff(sval, downval) <= maxdelta || SCIPrelDiff(sval, upval) >= mindelta);
+}
+
+/** get integral number with error in the bounds which corresponds to given value scaled by a given scalar;
+ *  should be used in connection with isIntegralScalar()
+ */
+static
+SCIP_Longint getIntegralVal(
+   SCIP_Real             val,                /**< value that should be scaled to an integral value */
+   SCIP_Real             scalar,             /**< scalar that should be tried */
+   SCIP_Real             mindelta,           /**< minimal relative allowed difference of scaled coefficient s*c and integral i */
+   SCIP_Real             maxdelta            /**< maximal relative allowed difference of scaled coefficient s*c and integral i */
+   )
+{
+   SCIP_Real sval;
+   SCIP_Real upval;
+   SCIP_Longint intval;
+
+   assert(mindelta <= 0.0);
+   assert(maxdelta >= 0.0);
+
+   sval = val * scalar;
+   upval = ceil(sval);
+
+   if( SCIPrelDiff(sval, upval) >= mindelta )
+      intval = (SCIP_Longint) upval;
+   else
+      intval = (SCIP_Longint) (floor(sval));
+
+   return intval;
+}
+
 /** get a flow cover (C1, C2) for a given 0-1 single node flow set
  *    {(x,y) in {0,1}^n x R^n : sum_{j in N1} y_j - sum_{j in N2} y_j <= b, 0 <= y_j <= u_j x_j},
  *  i.e., get sets C1 subset N1 and C2 subset N2 with sum_{j in C1} u_j - sum_{j in C2} u_j = b + lambda and lambda > 0
@@ -4919,6 +4919,7 @@ SCIP_RETCODE getFlowCover(
 }
 
 #else
+
 /** get a flow cover (C1, C2) for a given 0-1 single node flow set
  *    {(x,y) in {0,1}^n x R^n : sum_{j in N1} y_j - sum_{j in N2} y_j <= b, 0 <= y_j <= u_j x_j},
  *  i.e., get sets C1 subset N1 and C2 subset N2 with sum_{j in C1} u_j - sum_{j in C2} u_j = b + lambda and lambda > 0
@@ -4942,14 +4943,11 @@ SCIP_RETCODE getFlowCover(
    int* nonsolitems;
    int* solitems;
    SCIP_Real QUAD(flowcoverweight);
-   SCIP_Real QUAD(flowcoverweightafterfix);
    SCIP_Real n1itemsweight;
    SCIP_Real n2itemsminweight;
    SCIP_Real transcapacityreal;
-   int nflowcovervarsafterfix;
    int nitems;
    int nn1items;
-   int nnonflowcovervarsafterfix;
    int nnonsolitems;
    int nsolitems;
    int j;
@@ -4982,9 +4980,6 @@ SCIP_RETCODE getFlowCover(
    *nnonflowcovervars = 0;
 
    QUAD_ASSIGN(flowcoverweight, 0.0);
-   nflowcovervarsafterfix = 0;
-   nnonflowcovervarsafterfix = 0;
-   QUAD_ASSIGN(flowcoverweightafterfix, 0.0);
 
    /* fix some variables in advance according to the following fixing strategy
     *   put j into N1\C1,          if j in N1 and x*_j = 0,
@@ -5187,6 +5182,7 @@ SCIP_RETCODE getFlowCover(
 
    return SCIP_OKAY;
 }
+
 #endif
 
 /** evaluate the super-additive lifting function for the lifted simple generalized flowcover inequalities
@@ -6689,8 +6685,6 @@ TERMINATE:
    /* if we aborted early the tmpcoefs array needs to be cleaned */
    if( !(*success) )
    {
-      SCIP_Real QUAD(tmp);
-
       QUAD_ASSIGN(tmp, 0.0);
 
       for( i = 0; i < *cutnnz; ++i )
