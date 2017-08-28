@@ -227,7 +227,10 @@ SECTION: General Questions about SCIP
     ANSWER:
     <p>
         SCIP can be compiled using either <a href="PATHTODOC/MAKE.LINKEXT">Makefiles</a>
-        or <a href="PATHTODOC/CMAKE.LINKEXT">CMake</a>.
+        or <a href="PATHTODOC/CMAKE.LINKEXT">CMake</a>. It's recommended to use the new CMake build system both for new
+        and long-time users of SCIP. Consult the CMake documentation for further information about the changes introduced
+        in the new system (like Linux-conform naming conventions for libraries). We still support the traditional Makefile
+        system for backwards compatibility but it might be discontinued at some point.
     </p>
 
     QUESTION: What is this business with .a and .so libraries in the directory <code>lib/</code>?
