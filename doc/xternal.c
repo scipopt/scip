@@ -577,7 +577,7 @@
  * third-party libraries and packages and sets up the configuration accordingly, e.g., disabling support for GMP if not
  * installed.
  *
- * The generated executable and libraries are put in directories "bin" and "lib" respectively and will simply be named
+ * The generated executable and libraries are put in directories `bin` and `lib` respectively and will simply be named
  * `scip` or `libscip.so`. This is different from the naming convention of the previous Makefile setup that
  * appended the configuration details like OS and third party dependencies directly to the name of the binary or library.
  * The CMake setup tries to follow the established Linux/UNIX compilation conventions to facilitate the use of the
@@ -611,9 +611,9 @@
  *
  * There is an extensive test suite written for <a href="https://cmake.org/cmake/help/latest/manual/ctest.1.html">CTest</a>,
  * that may take a while to complete. To perform a quick test to see whether the compilation was really successful you may
- * run `make check`. To see all available tests, run "ctest -N" and to perform a memory check, run
+ * run `make check`. To see all available tests, run `ctest -N` and to perform a memory check, run
  * `ctest -T MemCheck`. If <a href="https://criterion.readthedocs.io/en/master/">Criterion</a> is installed (set
- * custom path with `-DCRITERION=<path>`) the target "unittests" can be used to compile and run the available unit tests.
+ * custom path with `-DCRITERION=<path>`) the target `unittests` can be used to compile and run the available unit tests.
  *
  * @section CMAKE_INSTALL Installation
  *
