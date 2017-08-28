@@ -13497,7 +13497,7 @@ SCIP_RETCODE SCIPchgChildPrio(
 /** checks solution for feasibility in original problem without adding it to the solution store; to improve the
  *  performance we use the following order when checking for violations:
  *
- *  1. constraint hanlders which don't need constraints (e.g. integral constraint handler)
+ *  1. constraint handlers which don't need constraints (e.g. integral constraint handler)
  *  2. variable bounds
  *  3. original constraints
  */
@@ -13527,6 +13527,8 @@ SCIP_RETCODE checkSolOrig(
 
    *feasible = TRUE;
 
+   SCIPsolResetViolations(sol);
+
    if( !printreason )
       completely = FALSE;
 
@@ -13545,6 +13547,10 @@ SCIP_RETCODE checkSolOrig(
 
          lb = SCIPvarGetLbOriginal(var);
          ub = SCIPvarGetUbOriginal(var);
+
+         SCIPupdateSolBoundViolation(scip, sol, lb - solval, SCIPrelDiff(lb, solval));
+         SCIPupdateSolBoundViolation(scip, sol, solval - ub, SCIPrelDiff(solval, ub));
+
          if( SCIPsetIsFeasLT(scip->set, solval, lb) || SCIPsetIsFeasGT(scip->set, solval, ub) )
          {
             *feasible = FALSE;
@@ -13604,6 +13610,81 @@ SCIP_RETCODE checkSolOrig(
    }
 
    return SCIP_OKAY;
+}
+
+/** update integrality violation of a solution */
+void SCIPupdateSolIntegralityViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             absviol            /**< absolute violation */
+   )
+{
+   if( SCIPprimalUpdateViolations(scip->origprimal) )
+      SCIPsolUpdateIntegralityViolation(sol, absviol);
+}
+
+/** update bound violation of a solution */
+void SCIPupdateSolBoundViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             absviol,            /**< absolute violation */
+   SCIP_Real             relviol             /**< relative violation */
+   )
+{
+   if( SCIPprimalUpdateViolations(scip->origprimal) )
+      SCIPsolUpdateBoundViolation(sol, absviol, relviol);
+}
+
+/** update LP row violation of a solution */
+void SCIPupdateSolLPRowViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             absviol,            /**< absolute violation */
+   SCIP_Real             relviol             /**< relative violation */
+   )
+{
+   if( SCIPprimalUpdateViolations(scip->origprimal) )
+      SCIPsolUpdateLPRowViolation(sol, absviol, relviol);
+}
+
+/** update constraint violation of a solution */
+void SCIPupdateSolConsViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             absviol,            /**< absolute violation */
+   SCIP_Real             relviol             /**< relative violation */
+   )
+{
+   if( SCIPprimalUpdateViolations(scip->origprimal) )
+      SCIPsolUpdateConsViolation(sol, absviol, relviol);
+}
+
+/** update LP row and constraint violations of a solution */
+void SCIPupdateSolLPConsViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             absviol,            /**< absolute violation */
+   SCIP_Real             relviol             /**< relative violation */
+   )
+{
+   if( SCIPprimalUpdateViolations(scip->origprimal) )
+      SCIPsolUpdateLPConsViolation(sol, absviol, relviol);
+}
+
+/** allow violation updates */
+void SCIPactivateSolViolationUpdates(
+   SCIP*                 scip               /**< SCIP data structure */
+   )
+{
+   SCIPprimalSetUpdateViolations(scip->origprimal, TRUE);
+}
+
+/** disallow violation updates */
+void SCIPdeactivateSolViolationUpdates(
+   SCIP*                 scip               /**< SCIP data structure */
+   )
+{
+   SCIPprimalSetUpdateViolations(scip->origprimal, FALSE);
 }
 
 /** calculates number of nonzeros in problem */
@@ -15666,15 +15747,18 @@ SCIP_RETCODE prepareReoptimization(
 
       SCIPbranchcandInvalidate(scip->branchcand);
 
-      /* install globally valid lower and upper bounds */
-      SCIP_CALL( SCIPreoptInstallBounds(scip->reopt, scip->set, scip->stat, scip->transprob, scip->lp, scip->branchcand,
-            scip->eventqueue, scip->cliquetable, scip->mem->probmem) );
-
       SCIP_CALL( SCIPreoptResetActiveConss(scip->reopt, scip->set, scip->stat) );
 
       /* check whether we want to restart the tree search */
       SCIP_CALL( SCIPreoptCheckRestart(scip->reopt, scip->set, scip->mem->probmem, NULL, scip->transprob->vars,
             scip->transprob->nvars, &reoptrestart) );
+
+      /* call initialization methods of plugins */
+      SCIP_CALL( SCIPsetInitPlugins(scip->set, scip->mem->probmem, scip->stat) );
+
+      /* install globally valid lower and upper bounds */
+      SCIP_CALL( SCIPreoptInstallBounds(scip->reopt, scip->set, scip->stat, scip->transprob, scip->lp, scip->branchcand,
+            scip->eventqueue, scip->cliquetable, scip->mem->probmem) );
 
       /* check, whether objective value is always integral by inspecting the problem, if it is the case adjust the
        * cutoff bound if primal solution is already known
@@ -15685,9 +15769,6 @@ SCIP_RETCODE prepareReoptimization(
       /* if possible, scale objective function such that it becomes integral with gcd 1 */
       SCIP_CALL( SCIPprobScaleObj(scip->transprob, scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->primal,
             scip->tree, scip->reopt, scip->lp, scip->eventqueue) );
-
-      /* call initialization methods of plugins */
-      SCIP_CALL( SCIPsetInitPlugins(scip->set, scip->mem->probmem, scip->stat) );
 
       SCIPlpRecomputeLocalAndGlobalPseudoObjval(scip->lp, scip->set, scip->transprob);
    }

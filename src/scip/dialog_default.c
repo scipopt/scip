@@ -560,6 +560,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChecksol)
 
       if( feasible )
          SCIPdialogMessage(scip, NULL, "solution is feasible in original problem\n");
+
+      SCIPdialogMessage(scip, NULL, "%-19s: %11s %11s\n", "Violation", "absolute", "relative");
+      SCIPdialogMessage(scip, NULL, "%-19s: %11.5e %11.5e\n", "  bounds", SCIPsolGetAbsBoundViolation(sol), SCIPsolGetRelBoundViolation(sol));
+      SCIPdialogMessage(scip, NULL, "%-19s: %11.5e %11s\n", "  integrality", SCIPsolGetAbsIntegralityViolation(sol), "-");
+      SCIPdialogMessage(scip, NULL, "%-19s: %11.5e %11.5e\n", "  LP rows", SCIPsolGetAbsLPRowViolation(sol), SCIPsolGetRelLPRowViolation(sol));
+      SCIPdialogMessage(scip, NULL, "%-19s: %11.5e %11.5e\n", "  constraints", SCIPsolGetAbsConsViolation(sol), SCIPsolGetRelConsViolation(sol));
    }
    SCIPdialogMessage(scip, NULL, "\n");
 

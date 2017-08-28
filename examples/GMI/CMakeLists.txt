@@ -42,6 +42,13 @@ set(settings
     "scipdefault")
 
 #
+# add the build of the binary as a test
+#
+add_test(NAME examples-gmi-build
+        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target gmi
+        )
+#
+#
 # loop over the instances
 #
 foreach(instance ${instances})
@@ -52,6 +59,12 @@ foreach(instance ${instances})
         #
         # treat the instance as a tuple (list) of two values
         #
-        add_test(NAME examples-gmi-${setting}-${basename} COMMAND $<TARGET_FILE:gmi> ${CMAKE_CURRENT_SOURCE_DIR}/../../check/${path} ${CMAKE_CURRENT_SOURCE_DIR}/settings/${setting}.set -o ${optval} ${optval})
+        add_test(NAME examples-gmi-${setting}-${basename}
+                COMMAND $<TARGET_FILE:gmi> ${CMAKE_CURRENT_SOURCE_DIR}/../../check/${path} ${CMAKE_CURRENT_SOURCE_DIR}/settings/${setting}.set -o ${optval} ${optval}
+                )
+        set_tests_properties(examples-gmi-${setting}-${basename}
+                            PROPERTIES
+                                DEPENDS examples-gmi-build
+                            )
     endforeach(setting)
 endforeach(instance)

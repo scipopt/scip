@@ -18082,6 +18082,62 @@ SCIP_RETCODE SCIPcheckSolOrig(
    SCIP_Bool             completely          /**< should all violations be checked? */
    );
 
+/** update integrality violation of a solution */
+EXTERN
+void SCIPupdateSolIntegralityViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             absviol            /**< absolute violation */
+   );
+
+/** update bound violation of a solution */
+EXTERN
+void SCIPupdateSolBoundViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             absviol,            /**< absolute violation */
+   SCIP_Real             relviol             /**< relative violation */
+   );
+
+/** update LP row violation of a solution */
+EXTERN
+void SCIPupdateSolLPRowViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             absviol,            /**< absolute violation */
+   SCIP_Real             relviol             /**< relative violation */
+   );
+
+/** update constraint violation of a solution */
+EXTERN
+void SCIPupdateSolConsViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             absviol,            /**< absolute violation */
+   SCIP_Real             relviol             /**< relative violation */
+   );
+
+/** update LP row and constraint violations of a solution */
+EXTERN
+void SCIPupdateSolLPConsViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             absviol,            /**< absolute violation */
+   SCIP_Real             relviol             /**< relative violation */
+   );
+
+/** allow violation updates */
+EXTERN
+void SCIPactivateSolViolationUpdates(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** disallow violation updates */
+EXTERN
+void SCIPdeactivateSolViolationUpdates(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** return whether a primal ray is stored that proves unboundedness of the LP relaxation
  *
  *  @return return whether a primal ray is stored that proves unboundedness of the LP relaxation

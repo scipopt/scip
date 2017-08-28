@@ -11,6 +11,13 @@ set(instances
 )
 
 #
+# add a test that builds the executable
+#
+add_test(NAME applications-miniisc-build
+        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target miniisc
+        )
+
+#
 # add a test for every instance
 #
 foreach(instance ${instances})
@@ -19,6 +26,12 @@ foreach(instance ${instances})
     #
     # call the Binpacking binary and validate the solve with the given objective value
     #
-    add_test(NAME "applications-miniisc-${basename}" COMMAND $<TARGET_FILE:miniisc> ${CMAKE_CURRENT_SOURCE_DIR}/../data/${basename}.lp)
-    set_tests_properties("applications-miniisc-${basename}" PROPERTIES PASS_REGULAR_EXPRESSION "Primal Bound       : \\+${optval}")
+    add_test(NAME "applications-miniisc-${basename}"
+            COMMAND $<TARGET_FILE:miniisc> ${CMAKE_CURRENT_SOURCE_DIR}/../data/${basename}.lp
+            )
+    set_tests_properties("applications-miniisc-${basename}"
+                        PROPERTIES
+                            PASS_REGULAR_EXPRESSION "Primal Bound       : \\+${optval}"
+                            DEPENDS applications-miniisc-build
+                        )
 endforeach()

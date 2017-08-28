@@ -2720,6 +2720,8 @@ SCIP_DECL_CONSCHECK(consCheckCardinality)
                   }
                   SCIPinfoMessage(scip, NULL, "\n");
                }
+               if( sol != NULL )
+                  SCIPupdateSolConsViolation(scip, sol, 1.0, 1.0);
                return SCIP_OKAY;
             }
          }

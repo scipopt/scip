@@ -15,6 +15,12 @@ set(instances
 )
 
 #
+# add test that builds the executable
+#
+add_test(NAME examples-tsp-build
+        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target tsp
+        )
+#
 # loop over the instances
 #
 foreach(instance ${instances})
@@ -23,6 +29,12 @@ foreach(instance ${instances})
     #
     list(GET instance 0 basename)
     list(GET instance 1 optval)
-    add_test(NAME examples-tsp-${basename} COMMAND $<TARGET_FILE:sciptsp> -f ${CMAKE_CURRENT_SOURCE_DIR}/../tspdata/${basename}.tsp -o ${optval} ${optval})
-    set_tests_properties(examples-tsp-${basename} PROPERTIES PASS_REGULAR_EXPRESSION "Validation         : Success")
+    add_test(NAME examples-tsp-${basename}
+            COMMAND $<TARGET_FILE:sciptsp> -f ${CMAKE_CURRENT_SOURCE_DIR}/../tspdata/${basename}.tsp -o ${optval} ${optval}
+            )
+    set_tests_properties(examples-tsp-${basename}
+                        PROPERTIES
+                            PASS_REGULAR_EXPRESSION "Validation         : Success"
+                            DEPENDS examples-tsp-build
+                        )
 endforeach(instance)

@@ -61,7 +61,7 @@ set(EXPRINT cppad CACHE STRING "options for expression interpreter")  #create th
 set_property(CACHE EXPRINT PROPERTY STRINGS none cppad )  #define list of values GUI will offer for the variable
 
 set(LPS spx CACHE STRING "options for LP solver")  #create the variable
-set_property(CACHE LPS PROPERTY STRINGS spx cpx grb glop )  #define list of values GUI will offer for the variable
+set_property(CACHE LPS PROPERTY STRINGS spx cpx grb glop msk )  #define list of values GUI will offer for the variable
 
 #set options for memory management
 if( NOBLKBUFMEM )
@@ -239,6 +239,8 @@ elseif(LPS STREQUAL "clp")
     find_package(CLP REQUIRED)
 elseif(LPS STREQUAL "xprs")
     find_package(XPRESS REQUIRED)
+elseif(LPS STREQUAL "msk")
+    find_package(MOSEK REQUIRED)
 elseif(LPS STREQUAL "none")
     set(lpi lpi/lpi_none.c)
 else()
@@ -297,6 +299,13 @@ if(XPRESS_FOUND)
     include_directories(${XPRESS_INCLUDE_DIRS})
     set(lpi lpi/lpi_xprs.c)
     set(LPS_LIBRARIES ${XPRESS_LIBRARIES})
+    set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
+endif()
+
+if(MOSEK_FOUND)
+    include_directories(${MOSEK_INCLUDE_DIRS})
+    set(lpi lpi/lpi_msk.c)
+    set(LPS_LIBRARIES ${MOSEK_LIBRARIES})
     set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
 endif()
 
@@ -404,15 +413,16 @@ add_custom_target(all_executables DEPENDS scip unittests examples applications)
 #
 # use sub directory bin/examples for executables of examples
 #
-set(OLD_CMAKE_RUNTIME_OUTPUTDIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+set(OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/examples)
 add_subdirectory(examples)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
 #
 # add applications
 #
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY}/applications)
 add_subdirectory(applications)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
 enable_testing()
 
