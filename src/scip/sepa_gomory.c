@@ -57,13 +57,13 @@
 #define SEPA_DESC              "Gomory MIR cuts separator"
 #define SEPA_PRIORITY             -1000
 #define SEPA_FREQ                    20
-#define SEPA_MAXBOUNDDIST           0.0
+#define SEPA_MAXBOUNDDIST           1.0
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define DEFAULT_MAXROUNDS             5 /**< maximal number of gomory separation rounds per node (-1: unlimited) */
 #define DEFAULT_MAXROUNDSROOT        10 /**< maximal number of gomory separation rounds in the root node (-1: unlimited) */
-#define DEFAULT_MAXSEPACUTS          50 /**< maximal number of gomory cuts separated per separation round */
+#define DEFAULT_MAXSEPACUTS           5 /**< maximal number of gomory cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT     200 /**< maximal number of gomory cuts separated per separation round in root node */
 #define DEFAULT_MAXRANK               3 /**< maximal rank of a gomory cut that could not be scaled to integral coefficients (-1: unlimited) */
 #define DEFAULT_MAXRANKINTEGRAL      -1 /**< maximal rank of a gomory cut that could be scaled to integral coefficients (-1: unlimited) */
@@ -273,7 +273,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    maxfrac = 1.0 - sepadata->away;
 
    /* only call separator, if we are not close to terminating */
-   if( SCIPisStopped(scip) || !allowlocal )
+   if( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
    /* only call the gomory cut separator a given number of times at each node */
