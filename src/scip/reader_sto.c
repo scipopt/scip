@@ -1755,23 +1755,18 @@ TERMINATE:
 }
 
 
-/** add variables to the scenario  */
+/** computes the probability of a scenario */
 static
-SCIP_RETCODE addScenarioVarsToProb(
+SCIP_Real computeScenarioProbability(
    SCIP*                 scip,               /**< the SCIP data structure */
-   STOSCENARIO*          scenario,           /**< the current scenario */
-   SCIP_VAR**            vars,               /**< the variables of the core problem associated with this scenario */
-   int                   nvars               /**< the number of variables for this scenario */
+   STOSCENARIO*          scenario            /**< the current scenario */
    )
 {
    STOSCENARIO* checkscen;
    SCIP_Real probability;
-   int i;
-   char name[SCIP_MAXSTRLEN];
 
    assert(scip != NULL);
    assert(scenario != NULL);
-   assert(vars != NULL);
 
    /* computing the probability for the scenario */
    checkscen = scenario;
@@ -1781,6 +1776,29 @@ SCIP_RETCODE addScenarioVarsToProb(
       probability *= getScenarioProbability(scip, checkscen);
       checkscen = getScenarioParent(checkscen);
    }
+
+   return probability;
+}
+
+/** add variables to the scenario  */
+static
+SCIP_RETCODE addScenarioVarsToProb(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   STOSCENARIO*          scenario,           /**< the current scenario */
+   SCIP_VAR**            vars,               /**< the variables of the core problem associated with this scenario */
+   int                   nvars               /**< the number of variables for this scenario */
+   )
+{
+   SCIP_Real probability;
+   int i;
+   char name[SCIP_MAXSTRLEN];
+
+   assert(scip != NULL);
+   assert(scenario != NULL);
+   assert(vars != NULL);
+
+   /* computing the probability for the scenario */
+   probability = computeScenarioProbability(scip, scenario);
 
    for( i = 0; i < nvars; i++ )
    {
@@ -1884,17 +1902,22 @@ SCIP_RETCODE getScenarioDecompVar(
          (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s_%d_%d", SCIPvarGetName(consvar),
             getScenarioStageNum(scip, checkscen), getScenarioNum(scip, checkscen));
 
+
+      /* first checking whether the variable is included in the scenario */
+      searchvar = SCIPfindVar(scip, varname);
+      if( searchvar != NULL )
+      {
+         (*scenariovar) = searchvar;
+         return SCIP_OKAY;
+      }
+
       searchvar = SCIPfindVar(getScenarioScip(checkscen), varname);
 
       checkscen = getScenarioParent(checkscen);
       checkcount++;
    }
 
-   /* if the checkcount == 1, then the consvar belongs to the current scenario. Otherwise, the consvar belongs to a
-    * scenario of a higher stage. In that case the variable must be created. */
-   if( checkcount == 1 )
-      (*scenariovar) = searchvar;
-   else if( searchvar != NULL )
+   if( searchvar != NULL )
    {
       SCIP_VAR* var;
       /* creating a variable as a copy of the original variable. */
@@ -1960,6 +1983,8 @@ SCIP_RETCODE addScenarioConsToProb(
       {
          SCIP_VAR* scenariovar;
 
+         scenariovar = NULL;
+
          varadded = FALSE;
 
          if( decomp )
@@ -1992,6 +2017,7 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
    SCIP* scenarioscip;
    SCIP_CONS** conss;
    SCIP_VAR** vars;
+   SCIP_Real probability;
    int nconss;
    int nvars;
    int nentries;
@@ -2012,8 +2038,6 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
    nconss = SCIPtimGetStageNConss(scip, stagenum);
    vars = SCIPtimGetStageVars(scip, stagenum);
    nvars = SCIPtimGetStageNVars(scip, stagenum);
-
-   scenarioscip = scip;
 
    if( decomp )
    {
@@ -2038,6 +2062,8 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
       if( getScenarioNChildren(scenario) > 0 )
          SCIP_CALL( createScenarioSubprobArray(scenarioscip, scenario) );
    }
+   else
+      scenarioscip = scip;
 
    /* adding the scenarioscip to the scenario */
    setScenarioScip(scenario, scenarioscip);
@@ -2062,6 +2088,9 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
    /* adding the Benders' decomposition */
    if( decomp && getScenarioNChildren(scenario) > 0 )
       SCIP_CALL( SCIPcreateBendersDefault(scenarioscip, getScenarioSubprobArray(scenario), getScenarioNChildren(scenario)) );
+
+   /* computing the probability for the scenario */
+   probability = computeScenarioProbability(scenarioscip, scenario);
 
    /* change the constraints for the given scenario */
    nentries = getScenarioNEntries(scenario);
@@ -2096,11 +2125,11 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
       {
          /* finding the variable associated with the column */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_%d", getScenarioEntryCol(scenario, i),
-            getScenarioStageNum(scip, scenario), getScenarioNum(scip, scenario));
-         var = SCIPfindVar(scip, name);
+            getScenarioStageNum(scenarioscip, scenario), getScenarioNum(scenarioscip, scenario));
+         var = SCIPfindVar(scenarioscip, name);
 
          /* changing the coefficient for the variable */
-         SCIP_CALL( SCIPchgVarObj(scip, var, getScenarioEntryValue(scenario, i)) );
+         SCIP_CALL( SCIPchgVarObj(scenarioscip, var, getScenarioEntryValue(scenario, i)*probability) );
       }
       else
       {
@@ -2227,6 +2256,11 @@ SCIP_RETCODE buildDecompProblem(
 
    /* removing the variable and constraints that were included as part of the core file */
    SCIP_CALL( removeCoreVariablesAndConstraints(scip) );
+
+   /* changing settings that are required for Benders' decomposition */
+   SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxrounds", 0) );
+   SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxroundsroot", 0) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/trysol/freq", 1) );
 
 
    return SCIP_OKAY;
