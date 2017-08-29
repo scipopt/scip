@@ -368,7 +368,8 @@ struct SCIP_Set
 #ifdef WITH_DEBUG_SOLUTION
    char*                 misc_debugsol;      /**< path to a debug solution */
 #endif
-SCIP_Bool             misc_alwaysgetduals;/**< should the dual solution always be collected for LP solutions. */
+   SCIP_Bool             misc_alwaysgetduals;/**< should the dual solution always be collected for LP solutions. */
+   SCIP_Bool             misc_scaleobj;      /**< should the objective function be scaled? */
 
    /* randomization parameters */
    int                   random_randomseedshift;/**< global shift of all random seeds in the plugins, this will have no impact on the permutation and LP seeds */

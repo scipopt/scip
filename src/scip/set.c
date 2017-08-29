@@ -281,6 +281,7 @@
 #define SCIP_DEFAULT_MISC_REFERENCEVALUE   1e99 /**< objective value for reference purposes */
 #define SCIP_DEFAULT_MISC_DEBUGSOLUTION     "-" /**< path to a debug solution */
 #define SCIP_DEFAULT_MISC_ALWAYSGETDUALS  FALSE /**< should the dual solution always be collected */
+#define SCIP_DEFAULT_MISC_SCALEOBJ         TRUE /**< should the objective function be scaled? */
 
 /* Randomization */
 #define SCIP_DEFAULT_RANDOM_RANDSEEDSHIFT     0 /**< global shift of all random seeds in the plugins, this will have no impact on the permutation and LP seeds */
@@ -1850,6 +1851,11 @@ SCIP_RETCODE SCIPsetCreate(
             "misc/alwaysgetduals",
             "should the Farkas duals always be collected when an LP is found to be infeasible?",
             &(*set)->misc_alwaysgetduals, FALSE, SCIP_DEFAULT_MISC_ALWAYSGETDUALS,
+            NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+            "misc/scaleobj",
+            "should the objective function be scaled so that it is always integer?",
+            &(*set)->misc_scaleobj, FALSE, SCIP_DEFAULT_MISC_SCALEOBJ,
             NULL, NULL) );
 
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,

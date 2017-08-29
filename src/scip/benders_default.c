@@ -488,6 +488,9 @@ SCIP_RETCODE SCIPcreateBendersDefault(
 
    SCIP_CALL( SCIPactivateBenders(scip, benders, nsubproblems) );
 
+   /* turning restarts off */
+   SCIP_CALL( SCIPsetIntParam(scip, "limits/restarts", 0) );
+
    return SCIP_OKAY;
 }
 

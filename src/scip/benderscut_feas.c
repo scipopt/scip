@@ -105,6 +105,7 @@ SCIP_RETCODE computeStandardFeasibilityCut(
    /* looping over all constraints and setting the coefficients of the cut */
    for( i = 0; i < nconss; i++ )
    {
+      addval = 0;
       dualsol = BDconsGetDualfarkas(subproblem, conss[i]);
 
       if( SCIPisZero(subproblem, dualsol) )
@@ -112,6 +113,8 @@ SCIP_RETCODE computeStandardFeasibilityCut(
 
       lhs = SCIPgetLhsLinear(masterprob, cut);
 
+      SCIPdebugMessage("Constraint: <%s>: LHS = %g RHS = %g dualsol = %g\n", SCIPconsGetName(conss[i]),
+         BDconsGetLhs(subproblem, conss[i]), BDconsGetRhs(subproblem, conss[i]), dualsol);
 
       if( SCIPisPositive(subproblem, dualsol) )
          addval = dualsol*BDconsGetLhs(subproblem, conss[i]);
@@ -206,11 +209,11 @@ SCIP_RETCODE computeStandardFeasibilityCut(
          else if( SCIPisNegative(subproblem, dualsol) )
             addval = dualsol*SCIPvarGetLbLocal(var);
 
-         lhs += addval;
+         lhs -= addval;
 
 
 #ifndef NDEBUG
-         farkasact += addval;
+         farkasact -= addval;
 #endif
 
          /* Update lhs */
@@ -221,6 +224,7 @@ SCIP_RETCODE computeStandardFeasibilityCut(
 #ifndef NDEBUG
    lhs = SCIPgetLhsLinear(masterprob, cut);
    activity = SCIPgetActivityLinear(masterprob, cut, sol);
+   SCIPdebugMessage("Generating a feasiility cut - activity = %g, lhs = %g\n", activity, lhs);
    assert(activity < lhs);
 #endif
 

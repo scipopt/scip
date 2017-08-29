@@ -216,6 +216,15 @@ SCIP_RETCODE SCIPbendersCheckAuxiliaryVar(
    SCIP_Bool*            optimal             /**< flag to indicate whether the current subproblem is optimal for the master */
    );
 
+/** returns the value of the auxiliary variable value in a master problem solution */
+extern
+SCIP_Real SCIPbendersGetAuxiliaryVarVal(
+   SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   int                   probnumber          /**< the number of the pricing problem */
+   );
+
 /** sets priority of variable benders */
 extern
 void SCIPbendersSetPriority(
