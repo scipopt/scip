@@ -41,7 +41,6 @@
 #define DEFAULT_MAXSEPACUTS           5 /**< maximal number of strong CG cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT     500 /**< maximal number of strong CG cuts separated per separation round in root node */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
-#define DEFAULT_MAXWEIGHTRANGE    1e+04 /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
 #define DEFAULT_RANDSEED             54 /**< initial random seed */
 
 #define MAKECUTINTEGRAL        /* try to scale all cuts to integral coefficients */
@@ -62,7 +61,6 @@
 struct SCIP_SepaData
 {
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
-   SCIP_Real             maxweightrange;     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    int                   maxrounds;          /**< maximal number of strong CG separation rounds per node (-1: unlimited) */
    int                   maxroundsroot;      /**< maximal number of strong CG separation rounds in the root node (-1: unlimited) */
    int                   maxsepacuts;        /**< maximal number of strong CG cuts separated per separation round */
@@ -548,10 +546,6 @@ SCIP_RETCODE SCIPincludeSepaStrongcg(
          "separating/strongcg/maxsepacutsroot",
          "maximal number of strong CG cuts separated per separation round in the root node",
          &sepadata->maxsepacutsroot, FALSE, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip,
-         "separating/strongcg/maxweightrange",
-         "maximal valid range max(|weights|)/min(|weights|) of row weights",
-         &sepadata->maxweightrange, TRUE, DEFAULT_MAXWEIGHTRANGE, 1.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/strongcg/dynamiccuts",
          "should generated cuts be removed from the LP if they are no longer tight?",

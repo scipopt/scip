@@ -68,7 +68,6 @@
 #define DEFAULT_MAXRANK               3 /**< maximal rank of a gomory cut that could not be scaled to integral coefficients (-1: unlimited) */
 #define DEFAULT_MAXRANKINTEGRAL      -1 /**< maximal rank of a gomory cut that could be scaled to integral coefficients (-1: unlimited) */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
-#define DEFAULT_MAXWEIGHTRANGE    1e+04 /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
 #define DEFAULT_AWAY               0.01 /**< minimal integrality violation of a basis variable in order to try Gomory cut */
 #define DEFAULT_MAKEINTEGRAL       TRUE /**< try to scale all cuts to integral coefficients */
 #define DEFAULT_FORCECUTS          TRUE /**< if conversion to integral coefficients failed still consider the cut */
@@ -89,7 +88,6 @@
 struct SCIP_SepaData
 {
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
-   SCIP_Real             maxweightrange;     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    SCIP_Real             away;               /**< minimal integrality violation of a basis variable in order to try Gomory cut */
    int                   maxrounds;          /**< maximal number of gomory separation rounds per node (-1: unlimited) */
    int                   maxroundsroot;      /**< maximal number of gomory separation rounds in the root node (-1: unlimited) */
@@ -635,10 +633,6 @@ SCIP_RETCODE SCIPincludeSepaGomory(
          "separating/gomory/away",
          "minimal integrality violation of a basis variable in order to try Gomory cut",
          &sepadata->away, FALSE, DEFAULT_AWAY, 1e-4, 0.5, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip,
-         "separating/gomory/maxweightrange",
-         "maximal valid range max(|weights|)/min(|weights|) of row weights",
-         &sepadata->maxweightrange, TRUE, DEFAULT_MAXWEIGHTRANGE, 1.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/gomory/dynamiccuts",
          "should generated cuts be removed from the LP if they are no longer tight?",
