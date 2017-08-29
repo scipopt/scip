@@ -35,6 +35,7 @@ fixed bugs:
   allowing to use them as indicator variables
 - afternode heuristics are now called even if the node limit was reached and the solving process will be stopped
   after the current node
+- fixed bug when activating probing mode with a non-empty separation storage
 
 performance improvements:
 - widened a bottleneck in simplifying long signomial sums in a nonlinear constraint
