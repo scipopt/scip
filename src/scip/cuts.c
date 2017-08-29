@@ -286,29 +286,6 @@ SCIP_Real calcEfficacyDenseStorageQuad(
 
 /* =========================================== aggregation row =========================================== */
 
-/* TODO: docu */
-static
-SCIP_Real maxOrigCoefRatio(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
-   )
-{
-   int i;
-
-   SCIP_Real maxcoefratio = 1.0;
-   SCIP_ROW** rows = SCIPgetLPRows(scip);
-   for( i = 0; i < aggrrow->nrows; ++i )
-   {
-      SCIP_ROW* row = rows[aggrrow->rowsinds[i]];
-      SCIP_Real factor = pow(1.0 / MAXCOEFRATIOFACTOR, row->rank);
-
-      SCIP_Real coefratio = factor * SCIProwGetMaxval(row, scip->set) / SCIProwGetMinval(row, scip->set);
-
-      maxcoefratio = MAX(maxcoefratio, coefratio);
-   }
-
-   return maxcoefratio;
-}
 
 /** create an empty aggregation row */
 SCIP_RETCODE SCIPaggrRowCreate(
@@ -873,7 +850,6 @@ void SCIPaggrRowRemoveZeros(
 static
 void cleanupCut(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             maxcoefratio,       /**< maximum ratio of coefficients */
    SCIP_Bool             cutislocal,         /**< is the cut a local cut */
    int*                  cutinds,            /**< variable problem indices of non-zeros in cut */
    SCIP_Real*            cutcoefs,           /**< non-zeros coefficients of cut */
@@ -900,7 +876,7 @@ void cleanupCut(
       maxcoef = MAX(REALABS(cutcoefs[cutinds[i]]), maxcoef);
    }
 
-   minallowedcoef = MAX(SCIPsumepsilon(scip), maxcoef / maxcoefratio);
+   minallowedcoef = MAX(SCIPsumepsilon(scip), maxcoef / scip->set->sepa_maxcoefratio);
    QUAD_ASSIGN(rhs, *cutrhs);
 
    i = 0;
@@ -956,7 +932,6 @@ void cleanupCut(
 static
 void cleanupCutQuad(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             maxcoefratio,       /**< maximum ratio of coefficients */
    SCIP_Bool             cutislocal,         /**< is the cut a local cut */
    int*                  cutinds,            /**< variable problem indices of non-zeros in cut */
    SCIP_Real*            cutcoefs,           /**< non-zeros coefficients of cut */
@@ -984,7 +959,7 @@ void cleanupCutQuad(
       maxcoef = MAX(REALABS(QUAD_ROUND(coef)), maxcoef);
    }
 
-   minallowedcoef = MAX(SCIPsumepsilon(scip), maxcoef / maxcoefratio);
+   minallowedcoef = MAX(SCIPsumepsilon(scip), maxcoef / scip->set->sepa_maxcoefratio);
 
    i = 0;
    while( i < *nnz )
@@ -1044,7 +1019,7 @@ void SCIPaggrRowCleanup(
    assert(scip != NULL);
    assert(aggrrow != NULL);
 
-   cleanupCutQuad(scip, scip->set->sepa_maxcoefratio, aggrrow->local, aggrrow->inds, aggrrow->vals, &aggrrow->nnz, QUAD(&aggrrow->rhs));
+   cleanupCutQuad(scip, aggrrow->local, aggrrow->inds, aggrrow->vals, &aggrrow->nnz, QUAD(&aggrrow->rhs));
 }
 
 /** get number of aggregated rows */
@@ -2562,14 +2537,11 @@ SCIP_RETCODE SCIPcalcMIR(
                                 aggrrow->nrows, scale, tmpcoefs, QUAD(&rhs), cutinds, cutnnz, QUAD(f0)) );
    SCIPdebug(printCut(scip, sol, tmpcoefs, QUAD_ROUND(rhs), cutinds, *cutnnz, FALSE, FALSE));
 
-   /* remove again all nearly-zero coefficients from MIR row and relax the right hand side correspondingly in order to
+   /* remove all nearly-zero coefficients from MIR row and relax the right hand side correspondingly in order to
     * prevent numerical rounding errors
     */
-   {
-      SCIP_Real maxcoefratio = maxOrigCoefRatio(scip, aggrrow);
+   cleanupCutQuad(scip, *cutislocal, cutinds, tmpcoefs, cutnnz, QUAD(&rhs));
 
-      cleanupCutQuad(scip, MIN(scip->set->sepa_maxcoefratio, MAXCOEFRATIOFACTOR * maxcoefratio), *cutislocal, cutinds, tmpcoefs, cutnnz, QUAD(&rhs));
-   }
    SCIPdebug(printCut(scip, sol, tmpcoefs, QUAD_ROUND(rhs), cutinds, *cutnnz, FALSE, FALSE));
 
    *success = TRUE;
@@ -3231,11 +3203,8 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
        * prevent numerical rounding errors
        */
       *cutislocal = *cutislocal || localbdsused;
-      {
-         SCIP_Real maxcoefratio = maxOrigCoefRatio(scip, aggrrow);
 
-         cleanupCutQuad(scip, MIN(scip->set->sepa_maxcoefratio, MAXCOEFRATIOFACTOR * maxcoefratio), *cutislocal, mksetinds, mksetcoefs, &mksetnnz, QUAD(&mksetrhs));
-      }
+      cleanupCutQuad(scip, *cutislocal, mksetinds, mksetcoefs, &mksetnnz, QUAD(&mksetrhs));
       SCIPdebug(printCut(scip, sol, mksetcoefs, mksetrhs, mksetinds, mksetnnz, FALSE, FALSE));
 
       mirefficacy = calcEfficacyDenseStorageQuad(scip, sol, mksetcoefs, QUAD_ROUND(mksetrhs), mksetinds, mksetnnz);
@@ -5799,9 +5768,7 @@ SCIP_RETCODE SCIPcalcFlowCover(
    /* if success is FALSE generateLiftedFlowCoverCut wont have touched the tmpcoefs array so we dont need to clean it then */
    if( *success )
    {
-      SCIP_Real maxcoefratio = maxOrigCoefRatio(scip, aggrrow);
-
-      cleanupCut(scip, MIN(scip->set->sepa_maxcoefratio, MAXCOEFRATIOFACTOR * maxcoefratio), *cutislocal, cutinds, tmpcoefs, cutnnz, cutrhs);
+      cleanupCut(scip, *cutislocal, cutinds, tmpcoefs, cutnnz, cutrhs);
 
       for( i = 0; i < *cutnnz; ++i )
       {
@@ -6682,14 +6649,10 @@ SCIP_RETCODE SCIPcalcStrongCG(
                           aggrrow->nrows, scale, tmpcoefs, QUAD(&rhs), cutinds, cutnnz, QUAD(f0), k) );
    SCIPdebug(printCut(scip, sol, cutcoefs, QUAD_ROUND(rhs), cutinds, *cutnnz, FALSE, FALSE));
 
-   /* remove again all nearly-zero coefficients from strong CG row and relax the right hand side correspondingly in order to
+   /* remove all nearly-zero coefficients from strong CG row and relax the right hand side correspondingly in order to
     * prevent numerical rounding errors
     */
-   {
-      SCIP_Real maxcoefratio = maxOrigCoefRatio(scip, aggrrow);
-
-      cleanupCutQuad(scip, MIN(scip->set->sepa_maxcoefratio, MAXCOEFRATIOFACTOR * maxcoefratio), *cutislocal, cutinds, tmpcoefs, cutnnz, QUAD(&rhs));
-   }
+   cleanupCutQuad(scip, *cutislocal, cutinds, tmpcoefs, cutnnz, QUAD(&rhs));
    SCIPdebug(printCut(scip, sol, cutcoefs, QUAD_ROUND(rhs), cutinds, *cutnnz, FALSE, FALSE));
 
    *success = TRUE;
