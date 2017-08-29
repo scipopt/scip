@@ -91,41 +91,15 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
 
    set = (SCIP_SET*) userptr;
 
-   {
-      int i;
-      SCIP_Real minidxval1;
-      SCIP_Real minidxval2;
+   /* set scale for the rows such that the largest absolute coefficient is 1.0 */
+   row1scale = 1.0 / SCIProwGetMaxval(row1, set);
+   row2scale = 1.0 / SCIProwGetMaxval(row2, set);
 
-      for( i = 0; TRUE; ++i )
-      {
-         assert(i < row1->len);
-         assert(row1->cols[i]->index == row1->cols_index[i]);
-
-         if( row1->cols_index[i] == row1->minidx )
-         {
-            minidxval1 = row1->vals[i];
-            break;
-         }
-      }
-
-      for( i = 0; TRUE; ++i )
-      {
-         assert(i < row2->len);
-         assert(row2->cols[i]->index == row2->cols_index[i]);
-
-         if( row2->cols_index[i] == row1->minidx )
-         {
-            minidxval2 = row2->vals[i];
-            break;
-         }
-      }
-
-      /* set scale for the rows such that the coefficients sign of the column with minimum index is equal
-       * and the largest coefficient is 1.0
-       */
-      row1scale = COPYSIGN(1.0 / SCIProwGetMaxval(row1, set), minidxval1);
-      row2scale = COPYSIGN(1.0 / SCIProwGetMaxval(row2, set), minidxval2);
-   }
+   /* set scale sign such that the rows are of the form ax <= b */
+   if( SCIPsetIsInfinity(set, row1->rhs) )
+      row1scale = -row1scale;
+   if( SCIPsetIsInfinity(set, row2->rhs) )
+      row2scale = -row2scale;
 
    /* both rows have LP columns, or none of them has, or one has only LP colums and the other only non-LP columns,
     * so we can rely on the sorting of the columns
@@ -615,79 +589,42 @@ SCIP_Bool SCIPcutpoolIsCutNew(
    }
    else
    {
-      int i;
       SCIP_ROW* otherrow = othercut->row;
-      SCIP_Bool newrowbetter = FALSE;
-      SCIP_Real otherlhs;
       SCIP_Real otherrhs;
-      SCIP_Real otherconstant;
+      SCIP_Real rhs;
       SCIP_Real scale;
       SCIP_Real otherscale;
-      SCIP_Real minidxval1;
-      SCIP_Real minidxval2;
-
-      for( i = 0; TRUE; ++i )
-      {
-         if( row->cols_index[i] == row->minidx )
-         {
-            minidxval1 = row->vals[i];
-            break;
-         }
-      }
-
-      assert(row->minidx == otherrow->minidx);
-
-      for( i = 0; TRUE; ++i )
-      {
-         if( otherrow->cols_index[i] == otherrow->minidx )
-         {
-            minidxval2 = otherrow->vals[i];
-            break;
-         }
-      }
 
       /* since we are comparing the improvement with an absolute value, we apply a
        * scale to both rows such that the max absolute value is 1.0.
-       * For the scale of the second row use the sign such that the coefficients are equal
-       * to the first row.
+       * Then bring the cut into the form ax <= b
        */
       scale = 1.0 / SCIProwGetMaxval(row, set);
-      otherscale = COPYSIGN(1.0 / SCIProwGetMaxval(otherrow, set), minidxval1 * minidxval2);
+      otherscale = 1.0 / SCIProwGetMaxval(otherrow, set);
 
-      if( otherscale < 0.0 )
+      if( SCIPsetIsInfinity(set, otherrow->rhs) )
       {
-         otherlhs = -otherrow->rhs;
-         otherrhs = -otherrow->lhs;
-         otherconstant = -otherrow->constant;
-         otherscale = -otherscale;
+         otherrhs = otherscale * (otherrow->constant - otherrow->lhs);
       }
       else
       {
-         otherlhs = otherrow->lhs;
-         otherrhs = otherrow->rhs;
-         otherconstant = otherrow->constant;
+         otherrhs = otherscale * (otherrow->rhs - otherrow->constant);
       }
 
-      if( !SCIPsetIsInfinity(set, row->rhs) && !SCIPsetIsInfinity(set, otherrhs) )
+      if( SCIPsetIsInfinity(set, row->rhs) )
       {
-         SCIP_Real rhs = scale * (row->rhs - row->constant);
-         otherrhs = otherscale * (otherrhs - otherconstant);
-
-         if( SCIPsetIsFeasLT(set, rhs, otherrhs) )
-            newrowbetter = TRUE;
+         rhs = scale * (row->constant - row->lhs);
       }
-
-      if( !SCIPsetIsInfinity(set, -row->lhs) && !SCIPsetIsInfinity(set, -otherlhs) && !newrowbetter )
+      else
       {
-         SCIP_Real lhs = scale * (row->lhs - row->constant);
-         otherlhs = otherscale * (otherlhs - otherconstant);
-
-         if( SCIPsetIsFeasGT(set, lhs, otherlhs) )
-            newrowbetter = TRUE;
+         rhs = scale * (row->rhs - row->constant);
       }
 
-      return newrowbetter;
+      if( SCIPsetIsFeasLT(set, rhs, otherrhs) )
+         return TRUE;
    }
+
+   return FALSE;
 }
 
 /** if not already existing, adds row to cut pool and captures it */
@@ -715,78 +652,38 @@ SCIP_RETCODE SCIPcutpoolAddRow(
    }
    else
    {
-      int i;
       SCIP_ROW* otherrow = othercut->row;
-      SCIP_Bool newrowbetter = FALSE;
-      SCIP_Real otherlhs;
       SCIP_Real otherrhs;
-      SCIP_Real otherconstant;
+      SCIP_Real rhs;
       SCIP_Real scale;
       SCIP_Real otherscale;
-      SCIP_Real minidxval1;
-      SCIP_Real minidxval2;
-
-      for( i = 0; TRUE; ++i )
-      {
-         if( row->cols_index[i] == row->minidx )
-         {
-            minidxval1 = row->vals[i];
-            break;
-         }
-      }
-
-      assert(row->minidx == otherrow->minidx);
-
-      for( i = 0; TRUE; ++i )
-      {
-         if( otherrow->cols_index[i] == otherrow->minidx )
-         {
-            minidxval2 = otherrow->vals[i];
-            break;
-         }
-      }
 
       /* since we are comparing the improvement with an absolute value, we apply a
        * scale to both rows such that the max absolute value is 1.0.
-       * For the scale of the second row use the sign such that the coefficients are equal
-       * to the first row.
+       * Then bring the cut into the form ax <= b
        */
       scale = 1.0 / SCIProwGetMaxval(row, set);
-      otherscale = COPYSIGN(1.0 / SCIProwGetMaxval(otherrow, set), minidxval1 * minidxval2);
+      otherscale = 1.0 / SCIProwGetMaxval(otherrow, set);
 
-      if( otherscale < 0.0 )
+      if( SCIPsetIsInfinity(set, otherrow->rhs) )
       {
-         otherlhs = -otherrow->rhs;
-         otherrhs = -otherrow->lhs;
-         otherconstant = -otherrow->constant;
-         otherscale = -otherscale;
+         otherrhs = otherscale * (otherrow->constant - otherrow->lhs);
       }
       else
       {
-         otherlhs = otherrow->lhs;
-         otherrhs = otherrow->rhs;
-         otherconstant = otherrow->constant;
+         otherrhs = otherscale * (otherrow->rhs - otherrow->constant);
       }
 
-      if( !SCIPsetIsInfinity(set, row->rhs) && !SCIPsetIsInfinity(set, otherrhs) )
+      if( SCIPsetIsInfinity(set, row->rhs) )
       {
-         SCIP_Real rhs = scale * (row->rhs - row->constant);
-         otherrhs = otherscale * (otherrhs - otherconstant);
-
-         if( SCIPsetIsFeasLT(set, rhs, otherrhs) )
-            newrowbetter = TRUE;
+         rhs = scale * (row->constant - row->lhs);
       }
-
-      if( !SCIPsetIsInfinity(set, -row->lhs) && !SCIPsetIsInfinity(set, -otherlhs) && !newrowbetter )
+      else
       {
-         SCIP_Real lhs = scale * (row->lhs - row->constant);
-         otherlhs = otherscale * (otherlhs - otherconstant);
-
-         if( SCIPsetIsFeasGT(set, lhs, otherlhs) )
-            newrowbetter = TRUE;
+         rhs = scale * (row->rhs - row->constant);
       }
 
-      if( newrowbetter )
+      if( SCIPsetIsFeasLT(set, rhs, otherrhs) )
       {
          SCIP_CALL( cutpoolDelCut(cutpool, blkmem, set, stat, lp, othercut) );
          SCIP_CALL( SCIPcutpoolAddNewRow(cutpool, blkmem, set, row) );
