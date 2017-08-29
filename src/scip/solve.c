@@ -556,8 +556,7 @@ SCIP_RETCODE propagateDomains(
    assert(cutoff != NULL);
 
    node = SCIPtreeGetCurrentNode(tree);
-   assert(node != NULL);
-   assert(SCIPnodeIsActive(node));
+   assert(node != NULL && SCIPnodeIsActive(node));
    assert(SCIPnodeGetType(node) == SCIP_NODETYPE_FOCUSNODE
       || SCIPnodeGetType(node) == SCIP_NODETYPE_REFOCUSNODE
       || SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
@@ -3033,8 +3032,7 @@ SCIP_RETCODE solveNodeLP(
       }
    }
 
-   /* cppcheck-suppress assertWithSideEffect */
-   assert(!(*pricingaborted) || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL
+   assert(!(*pricingaborted) || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL /* cppcheck-suppress assertWithSideEffect */
       || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_NOTSOLVED || SCIPsolveIsStopped(set, stat, FALSE) || (*cutoff));
 
    assert(*cutoff || *lperror || (lp->flushed && lp->solved));
