@@ -5153,7 +5153,7 @@ SCIP_RETCODE getFlowCover(
 
    /* KP^SNF_rat has been solved by fixing some variables in advance */
    assert(nitems >= 0);
-   if( nitems == 0)
+   if( nitems == 0 )
    {
       /* get lambda = sum_{j in C1} u_j - sum_{j in C2} u_j - rhs */
       SCIPquadprecSumQD(flowcoverweight, flowcoverweight, -snf->transrhs);
