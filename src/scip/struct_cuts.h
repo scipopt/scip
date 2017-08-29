@@ -26,6 +26,7 @@
 #define __SCIP_STRUCT_CUTS_H__
 
 #include "scip/def.h"
+#include "scip/dbldblarith.h"
 
 struct SCIP_AggrRow
 {
@@ -34,7 +35,7 @@ struct SCIP_AggrRow
    int*                  rowsinds;           /**< lpposition of rows that have been added to the cutrow */
    int*                  slacksign;          /**< slacksign of rows that have been added to the cutrow */
    SCIP_Real*            rowweights;         /**< weights of rows that have been added to the cutrow */
-   SCIP_Real             rhs;                /**< right hand side of the cut row */
+   QUAD_MEMBER(SCIP_Real rhs);               /**< right hand side of the cut row */
    int                   nnz;                /**< number of non-zeros in the cut row */
    int                   nrows;              /**< number of rows that have been added to the cutrow */
    int                   rowssize;           /**< size of the row and slacksign array */
