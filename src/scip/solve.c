@@ -1039,10 +1039,8 @@ SCIP_RETCODE updateEstimate(
    int nlpcands;
    int i;
 
-   assert(SCIPtreeHasFocusNodeLP(tree));
-
    /* estimate is only available if LP was solved to optimality */
-   if( SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL || !SCIPlpIsRelax(lp) )
+   if( !SCIPtreeHasFocusNodeLP(tree) || SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL || !SCIPlpIsRelax(lp) )
       return SCIP_OKAY;
 
    focusnode = SCIPtreeGetFocusNode(tree);
