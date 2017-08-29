@@ -204,12 +204,12 @@ SCIP_Real calcEfficacy(
    return (activity - cutrhs) / norm;
 }
 
-/* calculates the cuts efficacy for the given solution */
+/* calculates the cuts efficacy for the given solution; the cut coefs are stored densely and in quad precision */
 static
-SCIP_Real calcEfficacyDenseStorage(
+SCIP_Real calcEfficacyDenseStorageQuad(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< solution to calculate the efficacy for (NULL for LP solution) */
-   SCIP_Real*            cutcoefs,           /**< array of the non-zero coefficients in the cut */
+   SCIP_Real*            cutcoefs,           /**< array of the non-zero coefficients in the cut; this is a quad precision array! */
    SCIP_Real             cutrhs,             /**< the right hand side of the cut */
    int*                  cutinds,            /**< array of the problem indices of variables with a non-zero coefficient in the cut */
    int                   cutnnz              /**< the number of non-zeros in the cut */
@@ -286,6 +286,7 @@ SCIP_Real calcEfficacyDenseStorage(
 
 /* =========================================== aggregation row =========================================== */
 
+/* TODO: docu */
 static
 SCIP_Real maxOrigCoefRatio(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -387,8 +388,11 @@ void SCIPaggrRowPrint(
 
    for( i = 0; i < aggrrow->nnz; ++i )
    {
+      SCIP_Real QUAD(val);
+
+      QUAD_ARRAY_LOAD(val, aggrrow->vals, aggrrow->inds[i]);
       assert(SCIPvarGetProbindex(vars[aggrrow->inds[i]]) == aggrrow->inds[i]);
-      SCIPmessageFPrintInfo(messagehdlr, file, "%+.15g<%s> ", aggrrow->vals[aggrrow->inds[i]], SCIPvarGetName(vars[aggrrow->inds[i]]));
+      SCIPmessageFPrintInfo(messagehdlr, file, "%+.15g<%s> ", QUAD_ROUND(val), SCIPvarGetName(vars[aggrrow->inds[i]]));
    }
 
    /* print right hand side */
@@ -411,11 +415,11 @@ SCIP_RETCODE SCIPaggrRowCopy(
    nvars = SCIPgetNVars(scip);
    SCIP_CALL( SCIPallocBlockMemory(scip, aggrrow) );
 
-   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*aggrrow)->vals, source->vals, nvars) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*aggrrow)->vals, source->vals, QUAD_ARRAY_SIZE(nvars)) );
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*aggrrow)->inds, source->inds, nvars) );
    (*aggrrow)->nnz = source->nnz;
    QUAD_ASSIGN_Q((*aggrrow)->rhs, source->rhs);
-   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*aggrrow)->rowsinds, source->vals, source->nrows) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*aggrrow)->rowsinds, source->rowsinds, source->nrows) );
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*aggrrow)->slacksign, source->slacksign, source->nrows) );
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*aggrrow)->rowweights, source->rowweights, source->nrows) );
    (*aggrrow)->nrows = source->nrows;
@@ -426,6 +430,7 @@ SCIP_RETCODE SCIPaggrRowCopy(
    return SCIP_OKAY;
 }
 
+/* TODO: REMOVE THIS OR FIX (even docu) */
 /** adds given value to the right-hand side of the aggregation row */
 SCIP_RETCODE SCIPaggrRowAddData(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -454,7 +459,9 @@ SCIP_RETCODE SCIPaggrRowAddData(
 
    for( i = 0; i < nvars; i++ )
    {
+      SCIP_Real QUAD(val);
       int probidx;
+
       /* skip all variables with zero coefficient */
       if( coefs[i] == 0.0 )
          continue;
@@ -463,7 +470,8 @@ SCIP_RETCODE SCIPaggrRowAddData(
       probidx = SCIPvarGetProbindex(vars[i]);
 
       assert(!SCIPisInfinity(scip, REALABS(coefs[i] * scale)));
-      aggrrow->vals[probidx] = coefs[i] * scale;
+      QUAD_ASSIGN(val, coefs[i] * scale);
+      QUAD_ARRAY_STORE(aggrrow->vals, probidx, val);
 
       aggrrow->inds[aggrrow->nnz] = probidx;
       ++aggrrow->nnz;
@@ -472,6 +480,7 @@ SCIP_RETCODE SCIPaggrRowAddData(
    return SCIP_OKAY;
 }
 
+/* TODO: REMOVE OR FIX */
 /** deletes variable at position @pos and updates mapping between variable indices and sparsity pattern */
 void SCIPaggrRowDelCoef(
    SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
@@ -500,6 +509,7 @@ void SCIPaggrRowDelCoef(
    --aggrrow->nnz;
 }
 
+/* TODO: remove if not used! */
 /** adds given value to the right-hand side of the aggregation row */
 void SCIPaggrRowAddRhs(
    SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
@@ -622,7 +632,7 @@ SCIP_RETCODE SCIPaggrRowAddCustomCons(
       SCIP_Real QUAD(val);
       int probindex = inds[i];
 
-      QUAD_ARRAY_LOAD(val, aggrrow->vals, probindex);
+      QUAD_ARRAY_LOAD(val, aggrrow->vals, probindex); /* val = aggrrow->vals[probindex] */
 
       if( QUAD_HI(val) == 0.0 )
          aggrrow->inds[aggrrow->nnz++] = probindex;
@@ -661,7 +671,8 @@ void SCIPaggrRowClear(
    aggrrow->local = FALSE;
 }
 
-/* static function to add one row without clearing the varpos array so that multiple rows can be added using the same
+/* TODO: FIX COMMENT, also comment should start with two stars
+ * static function to add one row without clearing the varpos array so that multiple rows can be added using the same
  * varpos array which is only cleared in the end
  */
 static
@@ -816,9 +827,6 @@ SCIP_RETCODE SCIPaggrRowSumRows(
    {
       for( k = 0; k < nrows; ++k )
       {
-         if( weights[k] == 0.0 )
-            continue;
-
          SCIP_CALL( addOneRow(scip, aggrrow, rows[k], weights[k], sidetypebasis, allowlocal,
                               negslack, maxaggrlen, &rowtoolong) );
 
@@ -900,7 +908,7 @@ void cleanupCut(
    {
       int v = cutinds[i];
 
-      if( REALABS(cutcoefs[v]) <= minallowedcoef )
+      if( REALABS(cutcoefs[v]) < minallowedcoef )
       {
          /* adjust left and right hand sides with max contribution */
          if( cutcoefs[v] < 0.0 )
@@ -944,6 +952,7 @@ void cleanupCut(
 }
 
 /** removes almost zero entries and relaxes the sides of the row accordingly */
+/* TODO: documentation, cutcoefs is a quad array */
 static
 void cleanupCutQuad(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1048,7 +1057,7 @@ int SCIPaggrRowGetNRows(
    return aggrrow->nrows;
 }
 
-/** get array with lp positions of aggregated rows */
+/** get array with lp positions of rows used in aggregation */
 int* SCIPaggrRowGetRowInds(
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    )
@@ -1089,7 +1098,7 @@ int* SCIPaggrRowGetInds(
    return aggrrow->inds;
 }
 
-/** gets the dense array of values in the aggregation row */
+/** gets the dense *quad* array of values in the aggregation row */
 SCIP_Real* SCIPaggrRowGetVals(
     SCIP_AGGRROW*          aggrrow              /**< aggregation row */
    )
@@ -1099,7 +1108,7 @@ SCIP_Real* SCIPaggrRowGetVals(
    return aggrrow->vals;
 }
 
-/** gets the number of non-zeros in the aggregation row, or -1 if it exceeds 0.25*nvars */
+/** gets the number of non-zeros in the aggregation row */
 int SCIPaggrRowGetNNz(
     SCIP_AGGRROW*          aggrrow              /**< aggregation row */
    )
@@ -1259,7 +1268,7 @@ SCIP_RETCODE findBestUb(
    return SCIP_OKAY;
 }
 
-/** determine the best bounds wit respect to the given solution for complementing the given variable */
+/** determine the best bounds with respect to the given solution for complementing the given variable */
 static
 SCIP_RETCODE determineBestBounds(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1962,7 +1971,7 @@ SCIP_RETCODE cutsRoundMIR(
    firstcontvar = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
    vars = SCIPgetVars(scip);
 #ifndef NDEBUG
-   /*in debug mode check, that all continuous variables of the aggrrow come before the integral variables */
+   /*in debug mode check that all continuous variables of the aggrrow come before the integral variables */
    i = 0;
    while( i < *nnz && cutinds[i] >= firstcontvar )
       ++i;
@@ -2037,13 +2046,13 @@ SCIP_RETCODE cutsRoundMIR(
          {
             assert(!SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)));
             SCIPquadprecProdQD(tmp, cutaj, SCIPvarGetLbGlobal(var));
-            SCIPquadprecSumQQ(*cutrhs, *cutrhs, tmp);
+            SCIPquadprecSumQQ(*cutrhs, *cutrhs, tmp); /* rhs += cutaj * SCIPvarGetLbGlobal(var) */
          }
          else
          {
             assert(!SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)));
             SCIPquadprecProdQD(tmp, cutaj, SCIPvarGetLbLocal(var));
-            SCIPquadprecSumQQ(*cutrhs, *cutrhs, tmp);
+            SCIPquadprecSumQQ(*cutrhs, *cutrhs, tmp); /* rhs += cutaj * SCIPvarGetLbLocal(var) */
          }
       }
       else
@@ -2053,13 +2062,13 @@ SCIP_RETCODE cutsRoundMIR(
          {
             assert(!SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)));
             SCIPquadprecProdQD(tmp, cutaj, SCIPvarGetUbGlobal(var));
-            SCIPquadprecSumQQ(*cutrhs, *cutrhs, tmp);
+            SCIPquadprecSumQQ(*cutrhs, *cutrhs, tmp); /* rhs += cutaj * SCIPvarGetUbGlobal(var) */
          }
          else
          {
             assert(!SCIPisInfinity(scip, SCIPvarGetUbLocal(var)));
             SCIPquadprecProdQD(tmp, cutaj, SCIPvarGetUbLocal(var));
-            SCIPquadprecSumQQ(*cutrhs, *cutrhs, tmp);
+            SCIPquadprecSumQQ(*cutrhs, *cutrhs, tmp); /* rhs += cutaj * SCIPvarGetUbLocal(var) */
          }
       }
    }
@@ -2566,6 +2575,7 @@ SCIP_RETCODE SCIPcalcMIR(
    *success = TRUE;
    *cutrhs = QUAD_ROUND(rhs);
 
+   /* clean tmpcoefs and go back to double precision */
    for( i = 0; i < *cutnnz; ++i )
    {
       SCIP_Real QUAD(coef);
@@ -2603,6 +2613,7 @@ TERMINATE:
    return SCIP_OKAY;
 }
 
+/* TODO: comments!! */
 static
 SCIP_Real computeMIRViolation(
    SCIP*                 scip,
@@ -2667,8 +2678,13 @@ SCIP_Real computeMIRViolation(
    return - rhs;
 }
 
-/** calculates an MIR cut out of the weighted sum of LP rows; The weights of modifiable rows are set to 0.0, because
- *  these rows cannot participate in an MIR cut.
+/** calculates an MIR cut out of an aggregation of LP rows
+ *
+ *  Given the aggregation, it is transformed to a mixed knapsack set via complementation (using bounds or variable bounds)
+ *  Then, different scalings of the mkset are used to generate a MIR and the best is chosen.
+ *  One of the steps of the MIR is to round the coefficients of the integer variables down,
+ *  so one would prefer to have integer coefficients for integer variables which are far away from their bounds in the
+ *  mkset.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -2749,9 +2765,10 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpcoefs, nvars + aggrrow->nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpvalues, nvars + aggrrow->nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &deltacands, aggrrow->nnz) );
-   /* each variable is either integral or a variable bound with an integral variable is used
-    * so the max number of integral variables that are strictly between it's bounds is
-    * aggrrow->nnz
+   /* we only compute bound distance for integer variables; we allocate an array of length aggrrow->nnz to store this, since
+    * this is the largest number of integer variables. (in contrast to the number of total variables which can be 2 *
+    * aggrrow->nnz variables: if all are continuous and we use variable bounds to completement, we introduce aggrrow->nnz
+    * extra vars)
     */
    SCIP_CALL( SCIPallocBufferArray(scip, &bounddist, aggrrow->nnz) );
    SCIP_CALL( SCIPallocBufferArray(scip, &bounddistpos, aggrrow->nnz) );
@@ -3221,7 +3238,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
       }
       SCIPdebug(printCut(scip, sol, mksetcoefs, mksetrhs, mksetinds, mksetnnz, FALSE, FALSE));
 
-      mirefficacy = calcEfficacyDenseStorage(scip, sol, mksetcoefs, QUAD_ROUND(mksetrhs), mksetinds, mksetnnz);
+      mirefficacy = calcEfficacyDenseStorageQuad(scip, sol, mksetcoefs, QUAD_ROUND(mksetrhs), mksetinds, mksetnnz);
 
       if( SCIPisEfficacious(scip, mirefficacy) && mirefficacy > *cutefficacy )
       {
