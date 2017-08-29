@@ -123,6 +123,18 @@ SCIP_RETCODE SCIPbenderscutGetCuts(
    int*                  naddedcuts          /**< pointer to store the number of added cut */
    );
 
+/** returns the number of constraints that have been added by the Benders' cut plugin */
+EXTERN
+int SCIPbenderscutGetNAddedCons(
+   SCIP_BENDERSCUT*      benderscut         /**< Benders' decomposition cut */
+   );
+
+/** returns the number of cuts that have been added by the Benders' cut plugin */
+EXTERN
+int SCIPbenderscutGetNAddedCuts(
+   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
+   );
+
 /** returns whether the Benders' cut uses the LP information */
 EXTERN
 SCIP_Bool SCIPbenderscutIsLPCut(

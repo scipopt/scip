@@ -72,6 +72,7 @@ struct SCIP_Benders
    SCIP_Bool             computerelint;      /**< Should the relative interior point be computed? */
    SCIP_Bool             transfercuts;       /**< Should Benders' cuts generated in LNS heuristics be transferred to the main SCIP instance? */
    SCIP_Bool             cutsascons;         /**< Should the transferred cuts be added as constraints? */
+   int                   mipcheckfreq;       /**< the frequency that the MIP subproblem is checked for feasibility, -1 for always.*/
 
    /* information for heuristics */
    SCIP*                 sourcescip;         /**< the source scip from when the Benders' was copied */

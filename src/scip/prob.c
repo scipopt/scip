@@ -1600,7 +1600,7 @@ SCIP_RETCODE SCIPprobScaleObj(
    assert(set != NULL);
 
    /* do not change objective if there are pricers involved */
-   if( set->nactivepricers != 0 || set->nactivebenders != 0 )
+   if( set->nactivepricers != 0 || set->nactivebenders != 0 || !set->misc_scaleobj )
       return SCIP_OKAY;
 
    nints = transprob->nvars - transprob->ncontvars;

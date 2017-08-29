@@ -615,6 +615,26 @@ SCIP_RETCODE SCIPbenderscutGetCuts(
    return SCIP_OKAY;
 }
 
+/** returns the number of constraints that have been added by the Benders' cut plugin */
+int SCIPbenderscutGetNAddedCons(
+   SCIP_BENDERSCUT*      benderscut         /**< Benders' decomposition cut */
+   )
+{
+   assert(benderscut != NULL);
+
+   return benderscut->naddedcons;
+}
+
+/** returns the number of cuts that have been added by the Benders' cut plugin */
+int SCIPbenderscutGetNAddedCuts(
+   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
+   )
+{
+   assert(benderscut != NULL);
+
+   return benderscut->naddedcuts;
+}
+
 /** returns whether the Benders' cut uses the LP information */
 SCIP_Bool SCIPbenderscutIsLPCut(
    SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cut */
