@@ -1760,10 +1760,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
             ++sepadata->nreductions;
 
             nnonzrows = 0;
+            /* cppcheck-suppress nullPointer */
             colentries = SCIPhashtableGetNEntries(col->nonzrows);
 
             for( j = 0; j < colentries; ++j )
             {
+               /* cppcheck-suppress nullPointer */
                MOD2_ROW* colrow = (MOD2_ROW*) SCIPhashtableGetEntry(col->nonzrows, j);
                if( colrow != NULL && colrow != row )
                   nonzrows[nnonzrows++] = colrow;
