@@ -3369,8 +3369,11 @@ SCIP_RETCODE getClosestVlb(
          int probidxbinvar;
 
          /* use only variable lower bounds l~_i * x_i + d_i with x_i binary which are active */
-         if( SCIPvarGetProbindex(vlbvars[i]) >= nbinvars )
+         probidxbinvar = SCIPvarGetProbindex(vlbvars[i]);
+         if( (unsigned int)probidxbinvar >= (unsigned int)nbinvars )
             continue;
+
+         assert(SCIPvarIsBinary(vlbvars[i]));
 
          if( SCIPisFeasGT(scip, bestsub, vlbconsts[i]) )
             continue;
@@ -3395,7 +3398,6 @@ SCIP_RETCODE getClosestVlb(
           *   2. a_j ( u_j - d_i ) + c_i >= 0
           *   3. a_j l~_i + c_i >= 0
           */
-         probidxbinvar = SCIPvarGetProbindex(vlbvars[i]);
 
          /* has already been used in the SNF relaxation */
          if( binvarused[probidxbinvar] == 1 )
@@ -3494,8 +3496,11 @@ SCIP_RETCODE getClosestVub(
          int probidxbinvar;
 
          /* use only variable upper bound u~_i * x_i + d_i with x_i binary and which are active */
-         if( SCIPvarGetProbindex(vubvars[i]) >= nbinvars )
+         probidxbinvar = SCIPvarGetProbindex(vubvars[i]);
+         if( (unsigned int)probidxbinvar >= (unsigned int)nbinvars )
             continue;
+
+         assert(SCIPvarIsBinary(vubvars[i]));
 
          if( SCIPisFeasLT(scip, bestslb, vubconsts[i]) )
             continue;
@@ -3520,7 +3525,6 @@ SCIP_RETCODE getClosestVub(
           *   2. a_j ( l_j - d_i ) + c_i <= 0
           *   3. a_j u~_i + c_i <= 0
           */
-         probidxbinvar = SCIPvarGetProbindex(vubvars[i]);
 
          /* has already been used in the SNF relaxation */
          if( binvarused[probidxbinvar] == 1 )
