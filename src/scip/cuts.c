@@ -1075,16 +1075,6 @@ int* SCIPaggrRowGetInds(
    return aggrrow->inds;
 }
 
-/** gets the dense *quad* array of values in the aggregation row */
-SCIP_Real* SCIPaggrRowGetVals(
-    SCIP_AGGRROW*          aggrrow              /**< aggregation row */
-   )
-{
-   assert(aggrrow != NULL);
-
-   return aggrrow->vals;
-}
-
 /** gets the number of non-zeros in the aggregation row */
 int SCIPaggrRowGetNNz(
     SCIP_AGGRROW*          aggrrow              /**< aggregation row */
