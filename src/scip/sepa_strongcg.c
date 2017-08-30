@@ -487,6 +487,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
    SCIPfreeBufferArrayNull(scip, &varsolvals);
    SCIPfreeBufferArray(scip, &inds);
    SCIPfreeBufferArray(scip, &binvrow);
+   SCIPfreeBufferArray(scip, &basisfrac);
    SCIPfreeBufferArray(scip, &basisind);
    SCIPfreeBufferArray(scip, &cutinds);
    SCIPfreeBufferArray(scip, &cutcoefs);
