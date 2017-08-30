@@ -5756,6 +5756,8 @@ SCIP_RETCODE SCIPcalcFlowCover(
 
    *cutislocal = aggrrow->local || localbdsused;
 
+   /* initialize lambda because gcc issues a stupid warning */
+   lambda = 0.0;
    SCIP_CALL( getFlowCover(scip, &snf, &nflowcovervars, &nnonflowcovervars, transvarflowcoverstatus, &lambda, success) );
 
    if( ! *success )
