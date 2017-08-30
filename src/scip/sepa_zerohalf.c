@@ -117,7 +117,7 @@ struct TransIntRow
 
 /** structure representing a row in the mod 2 system */
 struct Mod2Row {
-   int                   index;
+   int                   index;              /**< TODO: comments! */
    int                   pos;
    int                   rhs;                /**< rhs of row */
    int                   nrowinds;           /**< number of elements in rowinds */
@@ -272,6 +272,7 @@ int mod2(
    return (int) (!SCIPisEQ(scip, SCIPfloor(scip, val), val));
 }
 
+/** TODO: comments! (and in the code of the description up here is not enough) */
 static
 SCIP_RETCODE transformNonIntegralRow(
    SCIP*                 scip,               /**< scip data structure */
@@ -477,6 +478,7 @@ SCIP_RETCODE transformNonIntegralRow(
 }
 
 
+/** TODO: comments! (and in the code of the description up here is not enough) */
 static
 SCIP_RETCODE mod2MatrixTransformContRows(
    SCIP*                 scip,               /**< scip data structure */
@@ -568,7 +570,7 @@ SCIP_RETCODE mod2MatrixTransformContRows(
 static
 SCIP_RETCODE mod2MatrixAddCol(
    SCIP*                 scip,               /**< scip data structure */
-   MOD2_MATRIX*          mod2matrix,
+   MOD2_MATRIX*          mod2matrix,         /**< TODO: comments! */
    SCIP_HASHMAP*         origvar2col,
    SCIP_VAR*             origvar,
    SCIP_Real             solval,
@@ -645,6 +647,7 @@ void mod2rowUnlinkCol(
    }
 }
 
+/** TODO: comments! */
 static
 SCIP_RETCODE mod2MatrixAddOrigRow(
    SCIP*                 scip,               /**< scip data structure */
@@ -728,6 +731,7 @@ SCIP_RETCODE mod2MatrixAddOrigRow(
    return SCIP_OKAY;
 }
 
+/** TODO: comments! */
 static
 SCIP_RETCODE mod2MatrixAddTransRow(
    SCIP*                 scip,               /**< scip data structure */
@@ -806,6 +810,7 @@ SCIP_RETCODE mod2MatrixAddTransRow(
    return SCIP_OKAY;
 }
 
+/** TODO: comments! */
 static
 void destroyMod2Matrix(
    SCIP*                 scip,               /**< scip data structure */
@@ -840,6 +845,7 @@ void destroyMod2Matrix(
 }
 
 /** build the modulo 2 matrix from all integral rows in the LP */
+/** TODO: update comment, since you now transform non integral rows!!! */
 static
 SCIP_RETCODE buildMod2Matrix(
    SCIP*                 scip,               /**< scip data structure */
@@ -1097,7 +1103,7 @@ SCIP_DECL_HASHKEYVAL(rowGetSignature)
    return signature;
 }
 
-
+/** removes a row from the mod 2 matrix */
 static
 void mod2matrixRemoveRow(
    SCIP*                 scip,               /**< scip data structure */
