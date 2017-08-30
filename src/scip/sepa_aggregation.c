@@ -50,8 +50,8 @@
                                          *   (-1: unlimited) */
 #define DEFAULT_MAXAGGRS              3 /**< maximal number of aggregations for each row per separation round */
 #define DEFAULT_MAXAGGRSROOT          6 /**< maximal number of aggregations for each row per round in the root node */
-#define DEFAULT_MAXSEPACUTS         400 /**< maximal number of cmir cuts separated per separation round */
-#define DEFAULT_MAXSEPACUTSROOT    1000 /**< maximal number of cmir cuts separated per separation round in root node */
+#define DEFAULT_MAXSEPACUTS         200 /**< maximal number of cmir cuts separated per separation round */
+#define DEFAULT_MAXSEPACUTSROOT     500 /**< maximal number of cmir cuts separated per separation round in root node */
 #define DEFAULT_MAXSLACK            0.0 /**< maximal slack of rows to be used in aggregation */
 #define DEFAULT_MAXSLACKROOT        0.1 /**< maximal slack of rows to be used in aggregation in the root node */
 #define DEFAULT_DENSITYSCORE       1e-4 /**< weight of row density in the aggregation scoring of the rows */

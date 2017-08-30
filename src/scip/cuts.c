@@ -648,9 +648,8 @@ void SCIPaggrRowClear(
    aggrrow->local = FALSE;
 }
 
-/* TODO: FIX COMMENT, also comment should start with two stars
- * static function to add one row without clearing the varpos array so that multiple rows can be added using the same
- * varpos array which is only cleared in the end
+/** Adds one row to the aggregation row. Differs from SCIPaggrRowAddRow() by providing some additional
+ *  parameters required for SCIPaggrRowSumRows()
  */
 static
 SCIP_RETCODE addOneRow(
@@ -927,8 +926,11 @@ void cleanupCut(
    *cutrhs = QUAD_ROUND(rhs);
 }
 
-/** removes almost zero entries and relaxes the sides of the row accordingly */
-/* TODO: documentation, cutcoefs is a quad array */
+/** removes almost zero entries and relaxes the sides of the row accordingly
+ *  The cutcoefs must be a quad precision array, i.e. allocated with size
+ *  QUAD_ARRAY_SIZE(nvars) and accessed with QUAD_ARRAY_LOAD and QUAD_ARRAY_STORE
+ *  macros.
+ */
 static
 void cleanupCutQuad(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2585,18 +2587,20 @@ TERMINATE:
    return SCIP_OKAY;
 }
 
-/* TODO: comments!! */
+/** compute the violation of the MIR cut for the given values without computing the cut.
+ *  This is used for the cMIR cut  generation heuristic.
+ */
 static
 SCIP_Real computeMIRViolation(
-   SCIP*                 scip,
-   SCIP_Real*            coefs,
-   SCIP_Real*            solvals,
-   SCIP_Real             rhs,
-   SCIP_Real             contactivity,
-   SCIP_Real             delta,
-   int                   nvars,
-   SCIP_Real             minfrac,
-   SCIP_Real             maxfrac
+   SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP_Real*            coefs,              /**< array with coefficients in row */
+   SCIP_Real*            solvals,            /**< solution values of variables in the row */
+   SCIP_Real             rhs,                /**< right hand side of MIR cut */
+   SCIP_Real             contactivity,       /**< aggregated activity of continuous variables in the row */
+   SCIP_Real             delta,              /**< delta value to compute the violation for */
+   int                   nvars,              /**< number of variables in the row, i.e. the size of coefs and solvals arrays */
+   SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
+   SCIP_Real             maxfrac             /**< maximal fractionality of rhs to produce MIR cut for */
    )
 {
    int i;
@@ -2607,9 +2611,6 @@ SCIP_Real computeMIRViolation(
    scale = 1.0 / delta;
 
    rhs *= scale;
-
-   if( SCIPisFeasIntegral(scip, rhs) )
-      return 0.0;
 
    f0 = rhs - SCIPfloor(scip, rhs);
 
