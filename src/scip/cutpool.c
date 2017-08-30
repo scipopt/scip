@@ -64,9 +64,6 @@ SCIP_DECL_HASHGETKEY(hashGetKeyCut)
 static
 SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
 {  /*lint --e{715}*/
-   /* Warning: The comparison of real values is made against default epsilon.
-    *          This is ugly, but we have no settings at hand.
-    */
    SCIP_ROW* row1;
    SCIP_ROW* row2;
    SCIP_Real row1scale;
@@ -82,12 +79,27 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
    if( row1 == row2 )
       return TRUE;
 
+   assert(row1->validminmaxidx);
+   assert(row2->validminmaxidx);
+
    /* compare the trivial characteristics of the rows */
    if( row1->len != row2->len
       || row1->minidx != row2->minidx
       || row1->maxidx != row2->maxidx
       )
       return FALSE;
+
+   SCIProwSort(row1);
+   assert(row1->lpcolssorted);
+   assert(row1->nonlpcolssorted);
+
+   SCIProwSort(row2);
+   assert(row2->lpcolssorted);
+   assert(row2->nonlpcolssorted);
+
+   /* currently we are only handling rows which are completely linked or not linked at all */
+   assert(row1->nunlinked == 0 || row1->nlpcols == 0);
+   assert(row2->nunlinked == 0 || row2->nlpcols == 0);
 
    set = (SCIP_SET*) userptr;
 
@@ -534,12 +546,13 @@ SCIP_RETCODE cutpoolDelCut(
    if( cutpool->globalcutpool )
       cut->row->inglobalcutpool = FALSE;
 
-   /* unlock the row */
-   SCIProwUnlock(cut->row);
-
    /* remove the cut from the hash table */
    assert(SCIPhashtableExists(cutpool->hashtable, (void*)cut));
    SCIP_CALL( SCIPhashtableRemove(cutpool->hashtable, (void*)cut) );
+   assert(! SCIPhashtableExists(cutpool->hashtable, (void*)cut));
+
+   /* unlock the row */
+   SCIProwUnlock(cut->row);
 
    /* free the cut */
    SCIP_CALL( cutFree(&cutpool->cuts[pos], blkmem, set, lp) );
@@ -738,6 +751,8 @@ SCIP_RETCODE SCIPcutpoolAddNewRow(
 
    /* insert cut in the hash table */
    SCIP_CALL( SCIPhashtableInsert(cutpool->hashtable, (void*)cut) );
+
+   assert(SCIPhashtableExists(cutpool->hashtable, (void*)cut));
 
    /* if this is the global cut pool of SCIP, mark the row to be member of the pool */
    if( cutpool->globalcutpool )

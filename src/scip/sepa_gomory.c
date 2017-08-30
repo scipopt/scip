@@ -121,9 +121,6 @@ SCIP_RETCODE evaluateCutNumerics(
    madeintegral = FALSE;
    (*useful) = FALSE;
 
-   if( !SCIPisCutNew(scip, cut) )
-      return SCIP_OKAY;
-
    if( sepadata->makeintegral )
    {
       /* try to scale the cut to integral values */
@@ -522,25 +519,28 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                   /* flush all changes before adding the cut */
                   SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
 
-                  /* add global cuts which are not implicit bound changes to the cut pool */
-                  if( !cutislocal )
+                  if( SCIPisCutNew(scip, cut) )
                   {
-                     if( sepadata->delayedcuts )
+                     /* add global cuts which are not implicit bound changes to the cut pool */
+                     if( !cutislocal )
                      {
-                        SCIP_CALL( SCIPaddDelayedPoolCut(scip, cut) );
+                        if( sepadata->delayedcuts )
+                        {
+                           SCIP_CALL( SCIPaddDelayedPoolCut(scip, cut) );
+                        }
+                        else
+                        {
+                           SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+                        }
                      }
                      else
                      {
-                        SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+                        /* local cuts we add to the sepastore */
+                        SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &cutoff) );
                      }
-                  }
-                  else
-                  {
-                     /* local cuts we add to the sepastore */
-                     SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &cutoff) );
-                  }
 
-                  naddedcuts++;
+                     naddedcuts++;
+                  }
                }
             }
             /* release the row */
