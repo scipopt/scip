@@ -689,7 +689,8 @@ SCIP_RETCODE addOneRow(
          assert( ! SCIPisInfinity(scip, SCIProwGetRhs(row)) );
          uselhs = FALSE;
       }
-      else if( weight < 0.0 && !SCIPisInfinity(scip, -row->lhs) )
+      else if( SCIPisInfinity(scip, SCIProwGetRhs(row)) ||
+         (weight < 0.0 && ! SCIPisInfinity(scip, -SCIProwGetLhs(row))) )
       {
          uselhs = TRUE;
       }
@@ -709,6 +710,8 @@ SCIP_RETCODE addOneRow(
 
    if( uselhs )
    {
+      assert( ! SCIPisInfinity(scip, -SCIProwGetLhs(row)) );
+
       if( weight > 0.0 && ((negslack == 0) || (negslack == 1 && !row->integral)) )
          return SCIP_OKAY;
 
@@ -719,6 +722,8 @@ SCIP_RETCODE addOneRow(
    }
    else
    {
+      assert( ! SCIPisInfinity(scip, SCIProwGetRhs(row)) );
+
       if( weight < 0.0 && ((negslack == 0) || (negslack == 1 && !row->integral)) )
          return SCIP_OKAY;
 
@@ -2727,7 +2732,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    SCIP_CALL( SCIPallocBufferArray(scip, &mksetinds, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpcoefs, nvars + aggrrow->nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpvalues, nvars + aggrrow->nrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &deltacands, aggrrow->nnz) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &deltacands, aggrrow->nnz + 2) );
    /* we only compute bound distance for integer variables; we allocate an array of length aggrrow->nnz to store this, since
     * this is the largest number of integer variables. (in contrast to the number of total variables which can be 2 *
     * aggrrow->nnz variables: if all are continuous and we use variable bounds to completement, we introduce aggrrow->nnz
@@ -2780,8 +2785,6 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    /* found positions of integral variables that are strictly between their bounds */
    maxabsmksetcoef = -1.0;
    nbounddist = 0;
-   ndeltacands = 1;
-   deltacands[0] = 1.0;
 
    for( i = mksetnnz - 1; i >= 0 && mksetinds[i] < firstcontvar; --i )
    {
@@ -2815,10 +2818,13 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 
    SCIPsortDownRealRealInt(bounddist, deltacands, bounddistpos, nbounddist);
 
-   if( ndeltacands < aggrrow->nnz && maxabsmksetcoef != -1.0 )
+   /* also test 1.0 and maxabsmksetcoef + 1.0 as last delta values */
+   if( maxabsmksetcoef != -1.0 )
    {
       deltacands[ndeltacands++] = maxabsmksetcoef + 1.0;
    }
+
+   deltacands[ndeltacands++] = 1.0;
 
    maxtestdelta = MIN(ndeltacands, maxtestdelta);
 
