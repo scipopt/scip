@@ -29,6 +29,7 @@
 #include "scip/def.h"
 #include "scip/set.h"
 #include "scip/type_cuts.h"
+#include "scip/struct_cuts.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -191,17 +192,39 @@ int* SCIPaggrRowGetInds(
     SCIP_AGGRROW*        aggrrow
    );
 
-/** gets the array of non-zero values in the aggregation row */
-extern
-SCIP_Real* SCIPaggrRowGetVals(
-   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
-   );
-
 /** gets the number of non-zeros in the aggregation row */
 extern
 int SCIPaggrRowGetNNz(
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    );
+
+/** gets the non-zero value for the given non-zero index */
+static INLINE
+SCIP_Real SCIPaggrRowGetValue(
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   int                   i                   /**< non-zero index; must be between 0 and SCIPaggrRowGetNNz(aggrrow) - 1 */
+   )
+{
+   SCIP_Real QUAD(val);
+
+   QUAD_ARRAY_LOAD(val, aggrrow->vals, aggrrow->inds[i]);
+
+   return QUAD_ROUND(val);
+}
+
+/** gets the non-zero value for the given problem index of a variable */
+static INLINE
+SCIP_Real SCIPaggrRowGetProbvarValue(
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   int                   probindex           /**< problem index of variable; must be between 0 and SCIPgetNVars(scip) - 1 */
+   )
+{
+   SCIP_Real QUAD(val);
+
+   QUAD_ARRAY_LOAD(val, aggrrow->vals, probindex);
+
+   return QUAD_ROUND(val);
+}
 
 /** gets the rank of the aggregation row */
 extern

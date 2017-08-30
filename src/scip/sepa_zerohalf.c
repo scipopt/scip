@@ -60,7 +60,7 @@
 
 #define DEFAULT_MAXROUNDS            -1 /**< maximal number of zerohalf separation rounds per node (-1: unlimited) */
 #define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of zerohalf separation rounds in the root node (-1: unlimited) */
-#define DEFAULT_MAXSEPACUTS         200 /**< maximal number of zerohalf cuts separated per separation round */
+#define DEFAULT_MAXSEPACUTS         100 /**< maximal number of zerohalf cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT     500 /**< maximal number of zerohalf cuts separated per separation round in root node */
 #define DEFAULT_MAXSLACK           0.01 /**< maximal slack of rows to be used in aggregation */
 #define DEFAULT_MAXSLACKROOT        0.5 /**< maximal slack of rows to be used in aggregation in the root node */
@@ -76,6 +76,10 @@
 /* SCIPcalcRowIntegralScalar parameters */
 #define MAXDNOM                   10000
 #define MAXSCALE                10000.0
+
+
+#define MAXREDUCTIONROUNDS          100 /**< maximum number of rounds to perform reductions on the mod 2 system */
+
 
 typedef struct Mod2Col MOD2_COL;
 typedef struct Mod2Row MOD2_ROW;
@@ -117,8 +121,8 @@ struct TransIntRow
 
 /** structure representing a row in the mod 2 system */
 struct Mod2Row {
-   int                   index;              /**< TODO: comments! */
-   int                   pos;
+   int                   index;              /**< unique index of mod 2 row */
+   int                   pos;                /**< position of mod 2 row in mod 2 matrix rows array */
    int                   rhs;                /**< rhs of row */
    int                   nrowinds;           /**< number of elements in rowinds */
    int                   rowindssize;        /**< size of rowinds array */
@@ -272,13 +276,13 @@ int mod2(
    return (int) (!SCIPisEQ(scip, SCIPfloor(scip, val), val));
 }
 
-/** TODO: comments! (and in the code of the description up here is not enough) */
+/** Tries to transform a non-integral row into an integral row that can be used in zerohalf separation */
 static
 SCIP_RETCODE transformNonIntegralRow(
    SCIP*                 scip,               /**< scip data structure */
    SCIP_Bool             allowlocal,         /**< should local cuts be allowed */
    SCIP_Real             maxslack,           /**< maximum slack allowed for transformed row */
-   int                   sign,               /**< +1 or -1 scale to switch the sign of the row's coefficients */
+   int                   sign,               /**< +1 or -1 scale to select the side of the row */
    SCIP_Bool             local,              /**< is the row only valid locally? */
    int                   rank,               /**< rank of row */
    int                   rowlen,             /**< length of row */
@@ -309,6 +313,7 @@ SCIP_RETCODE transformNonIntegralRow(
    transrowlen = 0;
    transrowrhs = rhs;
 
+   /* first add all integral variables to the transformed row and remember their positions in the row */
    for( i = 0; i < rowlen; ++i )
    {
       if( !SCIPcolIsIntegral(rowcols[i]) )
@@ -319,6 +324,8 @@ SCIP_RETCODE transformNonIntegralRow(
       intvarpos[rowcols[i]->var_probindex] = ++transrowlen;
    }
 
+
+   /* now loop over the non-integral columns of the row and project them out using simple or variable bounds */
    *success = TRUE;
 
    for( i = 0; i < rowlen; ++i )
@@ -338,8 +345,10 @@ SCIP_RETCODE transformNonIntegralRow(
 
       val = sign * rowvals[i];
 
+      /* if the value is positive we need to use a lower bound constraint */
       if( val > 0.0 )
       {
+         /* prefer variable bounds */
          SCIP_CALL( SCIPgetVarClosestVlb(scip, colvar, NULL, &closestbound, &closestvbdind) );
          if( closestvbdind >= 0 )
          {
@@ -349,9 +358,11 @@ SCIP_RETCODE transformNonIntegralRow(
          }
          else
          {
+            /* if no suitable variable bound was found use simple variable bounds */
             closestbound = SCIPvarGetLbGlobal(colvar);
             if( allowlocal && SCIPisGT(scip, SCIPvarGetLbLocal(colvar), closestbound) )
             {
+               /* only use local bound if it is better thatn the global bound */
                closestbound = SCIPvarGetLbLocal(colvar);
                local = TRUE;
             }
@@ -478,7 +489,7 @@ SCIP_RETCODE transformNonIntegralRow(
 }
 
 
-/** TODO: comments! (and in the code of the description up here is not enough) */
+/** Tries to transform non-integral rows into an integral form by using simple and variable bounds */
 static
 SCIP_RETCODE mod2MatrixTransformContRows(
    SCIP*                 scip,               /**< scip data structure */
@@ -569,26 +580,31 @@ SCIP_RETCODE mod2MatrixTransformContRows(
 /** adds new column to the mod 2 matrix */
 static
 SCIP_RETCODE mod2MatrixAddCol(
-   SCIP*                 scip,               /**< scip data structure */
-   MOD2_MATRIX*          mod2matrix,         /**< TODO: comments! */
-   SCIP_HASHMAP*         origvar2col,
-   SCIP_VAR*             origvar,
-   SCIP_Real             solval,
-   int                   rhsoffset
+   SCIP*                 scip,               /**< SCIP datastructure */
+   MOD2_MATRIX*          mod2matrix,         /**< mod 2 matrix */
+   SCIP_HASHMAP*         origvar2col,        /**< hash map for mapping of problem variables to mod 2 columns */
+   SCIP_VAR*             origvar,            /**< problem variable to create mod 2 column for */
+   SCIP_Real             solval,             /**< solution value of problem variable */
+   int                   rhsoffset           /**< offset in right hand side due complementation (mod 2) */
    )
 {
    MOD2_COL* col;
 
+   /* allocate memory */
    SCIP_CALL( SCIPallocBlockMemory(scip, &col) );
+
+   /* initialize fields */
    col->pos = mod2matrix->ncols++;
    col->index = SCIPvarGetProbindex(origvar);
    col->solval = solval;
    SCIP_CALL( SCIPhashtableCreate(&col->nonzrows, SCIPblkmem(scip), 1, SCIPhashGetKeyStandard, SCIPhashKeyEqPtr,
                                   hashKeyValIndex, NULL) );
 
+   /* add column to mod 2 matrix */
    SCIP_CALL( SCIPensureBlockMemoryArray(scip, &mod2matrix->cols, &mod2matrix->colssize, mod2matrix->ncols) );
    mod2matrix->cols[col->pos] = col;
 
+   /* create mapping of problem variable to mod 2 column with its right hand side offset */
    SCIP_CALL( SCIPhashmapInsert(origvar2col, (void*) origvar, COLINFO_CREATE(col, rhsoffset)) );
 
    return SCIP_OKAY;
@@ -647,7 +663,7 @@ void mod2rowUnlinkCol(
    }
 }
 
-/** TODO: comments! */
+/** adds a SCIP_ROW to the mod 2 matrix */
 static
 SCIP_RETCODE mod2MatrixAddOrigRow(
    SCIP*                 scip,               /**< scip data structure */
@@ -731,7 +747,7 @@ SCIP_RETCODE mod2MatrixAddOrigRow(
    return SCIP_OKAY;
 }
 
-/** TODO: comments! */
+/** adds a transformed integral row to the mod 2 matrix */
 static
 SCIP_RETCODE mod2MatrixAddTransRow(
    SCIP*                 scip,               /**< scip data structure */
@@ -810,7 +826,7 @@ SCIP_RETCODE mod2MatrixAddTransRow(
    return SCIP_OKAY;
 }
 
-/** TODO: comments! */
+/** free all resources held by the mod 2 matrix */
 static
 void destroyMod2Matrix(
    SCIP*                 scip,               /**< scip data structure */
@@ -844,8 +860,9 @@ void destroyMod2Matrix(
    SCIPfreeBlockMemoryArrayNull(scip, &mod2matrix->cols, mod2matrix->colssize);
 }
 
-/** build the modulo 2 matrix from all integral rows in the LP */
-/** TODO: update comment, since you now transform non integral rows!!! */
+/** build the modulo 2 matrix from all integral rows in the LP, and non-integral rows
+ *  if the transformation to an integral row succeeds
+ */
 static
 SCIP_RETCODE buildMod2Matrix(
    SCIP*                 scip,               /**< scip data structure */
@@ -890,8 +907,6 @@ SCIP_RETCODE buildMod2Matrix(
       SCIP_Bool useub;
 
       primsol = SCIPgetVarSol(scip, vars[i]);
-
-
 
       lb = allowlocal ? SCIPvarGetLbLocal(vars[i]) : SCIPvarGetLbGlobal(vars[i]);
       lbsol = MAX(0.0, primsol - lb);
@@ -1010,6 +1025,7 @@ SCIP_RETCODE buildMod2Matrix(
    return SCIP_OKAY;
 }
 
+/* compare two mod 2 columns for equality */
 static
 SCIP_DECL_HASHKEYEQ(columnsEqual)
 {
@@ -1036,6 +1052,7 @@ SCIP_DECL_HASHKEYEQ(columnsEqual)
    return TRUE;
 }
 
+/* compute a signature of the rows in a mod 2 matrix as hash value */
 static
 SCIP_DECL_HASHKEYVAL(columnGetSignature)
 {
@@ -1058,6 +1075,7 @@ SCIP_DECL_HASHKEYVAL(columnGetSignature)
    return signature;
 }
 
+/* compare two mod 2 rows for equality */
 static
 SCIP_DECL_HASHKEYEQ(rowsEqual)
 {
@@ -1085,6 +1103,7 @@ SCIP_DECL_HASHKEYEQ(rowsEqual)
    return TRUE;
 }
 
+/* compute a signature of a mod 2 row as hash value */
 static
 SCIP_DECL_HASHKEYVAL(rowGetSignature)
 {
@@ -1636,6 +1655,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
    MOD2_MATRIX mod2matrix;
    MOD2_ROW** nonzrows;
 
+   assert(result != NULL);
+   assert(sepa != NULL);
+   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
    *result = SCIP_DIDNOTRUN;
 
    /* only call separator, if we are not close to terminating */
@@ -1650,11 +1673,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
    if( SCIPgetNLPBranchCands(scip) == 0 )
       return SCIP_OKAY;
 
-   /* TODO: check something? that there are fractional integer variables?
-    * that scip is not stopped? something at all ?
-    * also add asserts
-    */
+
    sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
 
    {
       int depth = SCIPgetDepth(scip);
@@ -1680,7 +1701,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
 
    SCIPallocBufferArray(scip, &nonzrows, mod2matrix.nrows);
 
-   for( k = 0; k < 100; ++k ) /* TODO: what is this magic 10? define a macro */
+   for( k = 0; k < MAXREDUCTIONROUNDS; ++k )
    {
       int nzeroslackrows;
       sepadata->nreductions = 0;

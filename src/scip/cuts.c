@@ -957,7 +957,7 @@ void cleanupCutQuad(
    for( i = 0; i < *nnz; ++i )
    {
       SCIP_Real QUAD(coef);
-      QUAD_ARRAY_LOAD(coef, cutcoefs, cutinds[i]);
+      QUAD_ARRAY_LOAD(coef, cutcoefs, cutinds[i]); /* coef = cutcoefs[cutinds[i]] */
       maxcoef = MAX(REALABS(QUAD_ROUND(coef)), maxcoef);
    }
 

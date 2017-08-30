@@ -28,7 +28,6 @@
 #include "scip/sepa_aggregation.h"
 #include "scip/pub_misc.h"
 #include "scip/cuts.h"
-#include "scip/dbldblarith.h"
 
 
 #define SEPA_NAME              "aggregation"
@@ -45,12 +44,12 @@
                                          *   (-1: unlimited) */
 #define DEFAULT_MAXTRIESROOT         -1 /**< maximal number of rows to start aggregation with per round in the root node
                                          *   (-1: unlimited) */
-#define DEFAULT_MAXFAILS             50 /**< maximal number of consecutive unsuccessful aggregation tries (-1: unlimited) */
+#define DEFAULT_MAXFAILS             20 /**< maximal number of consecutive unsuccessful aggregation tries (-1: unlimited) */
 #define DEFAULT_MAXFAILSROOT        100 /**< maximal number of consecutive unsuccessful aggregation tries in the root node
                                          *   (-1: unlimited) */
 #define DEFAULT_MAXAGGRS              3 /**< maximal number of aggregations for each row per separation round */
 #define DEFAULT_MAXAGGRSROOT          6 /**< maximal number of aggregations for each row per round in the root node */
-#define DEFAULT_MAXSEPACUTS         200 /**< maximal number of cmir cuts separated per separation round */
+#define DEFAULT_MAXSEPACUTS         100 /**< maximal number of cmir cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT     500 /**< maximal number of cmir cuts separated per separation round in root node */
 #define DEFAULT_MAXSLACK            0.0 /**< maximal slack of rows to be used in aggregation */
 #define DEFAULT_MAXSLACKROOT        0.1 /**< maximal slack of rows to be used in aggregation in the root node */
@@ -529,7 +528,6 @@ SCIP_RETCODE aggregateNextRow(
    int bestrowside;
 
    int nnz = SCIPaggrRowGetNNz(aggrrow);
-   SCIP_Real* vals = SCIPaggrRowGetVals(aggrrow);
    int* inds = SCIPaggrRowGetInds(aggrrow);
 
    *success = FALSE;
@@ -611,7 +609,6 @@ SCIP_RETCODE aggregateNextRow(
 
       for( k = 0; k < ngoodrows; ++k )
       {
-         SCIP_Real QUAD(val);
          SCIP_Real rowaggrfac;
          int lppos;
 
@@ -619,9 +616,7 @@ SCIP_RETCODE aggregateNextRow(
          if( SCIPaggrRowHasRowBeenAdded(aggrrow, candrows[k]) )
             continue;
 
-         QUAD_ARRAY_LOAD(val, vals, probvaridx);
-         SCIPquadprecDivQD(val, val, candrowcoefs[k]);
-         rowaggrfac = -QUAD_ROUND(val);
+         rowaggrfac = - SCIPaggrRowGetProbvarValue(aggrrow, probvaridx) / candrowcoefs[k];
 
          /* if factor is too extreme skip this row */
          if( SCIPisZero(scip, rowaggrfac) )
@@ -687,7 +682,6 @@ SCIP_RETCODE aggregateNextRow(
 
       for( k = 0; k < nrows; ++k )
       {
-         SCIP_Real QUAD(val);
          SCIP_Real rowaggrfac;
          int lppos;
 
@@ -695,9 +689,7 @@ SCIP_RETCODE aggregateNextRow(
          if( SCIPaggrRowHasRowBeenAdded(aggrrow, candrows[k]) )
             continue;
 
-         QUAD_ARRAY_LOAD(val, vals, probvaridx);
-         SCIPquadprecDivQD(val, val, candrowcoefs[k]);
-         rowaggrfac = -QUAD_ROUND(val);
+         rowaggrfac = - SCIPaggrRowGetProbvarValue(aggrrow, probvaridx) / candrowcoefs[k];
 
          /* if factor is too extreme skip this row */
          if( SCIPisZero(scip, rowaggrfac) )
