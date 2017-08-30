@@ -3370,6 +3370,10 @@ SCIP_RETCODE getClosestVlb(
 
          /* use only variable lower bounds l~_i * x_i + d_i with x_i binary which are active */
          probidxbinvar = SCIPvarGetProbindex(vlbvars[i]);
+
+         /* if the variable is not active the problem index is -1, so we cast to unsigned int before the comparison which
+          * ensures that the problem index is between 0 and nbinvars - 1
+          */
          if( (unsigned int)probidxbinvar >= (unsigned int)nbinvars )
             continue;
 
@@ -3497,6 +3501,10 @@ SCIP_RETCODE getClosestVub(
 
          /* use only variable upper bound u~_i * x_i + d_i with x_i binary and which are active */
          probidxbinvar = SCIPvarGetProbindex(vubvars[i]);
+
+         /* if the variable is not active the problem index is -1, so we cast to unsigned int before the comparison which
+          * ensures that the problem index is between 0 and nbinvars - 1
+          */
          if( (unsigned int)probidxbinvar >= (unsigned int)nbinvars )
             continue;
 
