@@ -8,7 +8,10 @@ add_executable(queens
    src/queens_main.cpp)
 
 target_link_libraries(queens ${SCIP_LIBRARIES})
-add_dependencies(examples queens)
+
+if( TARGET examples )
+    add_dependencies( examples queens )
+endif()
 
 include(CTest)
 #

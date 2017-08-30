@@ -15,7 +15,10 @@ add_executable(sciptsp
    src/ReaderTSP.cpp)
 
 target_link_libraries(sciptsp ${SCIP_LIBRARIES})
-add_dependencies(examples sciptsp)
+
+if( TARGET examples )
+    add_dependencies( examples sciptsp )
+endif()
 
 add_subdirectory(check)
 enable_testing()

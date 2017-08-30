@@ -23,7 +23,9 @@ target_link_libraries(circle ${SCIP_LIBRARIES})
 target_link_libraries(gastrans ${SCIP_LIBRARIES} ${LIBM})
 target_link_libraries(string ${SCIP_LIBRARIES})
 
-add_dependencies(examples circle gastrans string)
+if( TARGET examples )
+    add_dependencies( examples circle gastrans string )
+endif()
 
 #
 # add one test that builds the executable and one that runs it

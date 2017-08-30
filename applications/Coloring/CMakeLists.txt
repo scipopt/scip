@@ -19,7 +19,9 @@ add_executable(coloring
 
 target_link_libraries(coloring ${SCIP_LIBRARIES} m)
                                                  
-add_dependencies(applications coloring)
+if( TARGET applications )
+    add_dependencies( applications coloring )
+endif()
 
 add_subdirectory(check)
 

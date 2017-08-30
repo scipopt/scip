@@ -8,7 +8,10 @@ add_executable(vrp
    src/pricer_vrp.cpp)
 
 target_link_libraries(vrp ${SCIP_LIBRARIES})
-add_dependencies(examples vrp)
+
+if( TARGET examples )
+    add_dependencies( examples vrp )
+endif()
 
 
 add_subdirectory(check)

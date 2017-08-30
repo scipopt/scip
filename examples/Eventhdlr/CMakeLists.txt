@@ -9,7 +9,10 @@ add_executable(eventhdlr
    src/event_boundwriting.c)
 
 target_link_libraries(eventhdlr ${SCIP_LIBRARIES})
-add_dependencies(examples eventhdlr)
+
+if( TARGET examples )
+    add_dependencies( examples eventhdlr )
+endif()
 
 #
 # add some trivial tests

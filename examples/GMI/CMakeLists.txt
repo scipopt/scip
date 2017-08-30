@@ -14,7 +14,10 @@ if(NOT LIBM)
 endif()
 
 target_link_libraries(gmi ${SCIP_LIBRARIES} ${LIBM})
-add_dependencies(examples gmi)
+
+if( TARGET examples )
+    add_dependencies( examples gmi )
+endif()
 
 include(CTest)
 

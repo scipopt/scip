@@ -48,7 +48,9 @@ include_directories(${PROJECT_SOURCE_DIR}/${SRC})
 
 add_executable(${EXECUTABLE_NAME} ${SOURCE_FILES})
 target_link_libraries(polyscip ${SCIP_LIBRARIES})      
-add_dependencies(applications ${EXECUTABLE_NAME})
+if( TARGET applications )
+    add_dependencies( applications ${EXECUTABLE_NAME} )
+endif()
 
 include(CTest)
 
