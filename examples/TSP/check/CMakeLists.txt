@@ -18,7 +18,7 @@ set(instances
 # add test that builds the executable
 #
 add_test(NAME examples-tsp-build
-        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target tsp
+        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target sciptsp
         )
 #
 # loop over the instances

@@ -15053,6 +15053,7 @@ SCIP_RETCODE initSolve(
    /* initialize solution process data structures */
    SCIP_CALL( SCIPpricestoreCreate(&scip->pricestore) );
    SCIP_CALL( SCIPsepastoreCreate(&scip->sepastore) );
+   SCIP_CALL( SCIPsepastoreCreate(&scip->sepastoreprobing) );
    SCIP_CALL( SCIPcutpoolCreate(&scip->cutpool, scip->mem->probmem, scip->set, scip->set->sepa_cutagelimit, TRUE) );
    SCIP_CALL( SCIPcutpoolCreate(&scip->delayedcutpool, scip->mem->probmem, scip->set, scip->set->sepa_cutagelimit, FALSE) );
    SCIP_CALL( SCIPtreeCreateRoot(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
@@ -15200,6 +15201,7 @@ SCIP_RETCODE freeSolve(
    /* free solution process data structures */
    SCIP_CALL( SCIPcutpoolFree(&scip->cutpool, scip->mem->probmem, scip->set, scip->lp) );
    SCIP_CALL( SCIPcutpoolFree(&scip->delayedcutpool, scip->mem->probmem, scip->set, scip->lp) );
+   SCIP_CALL( SCIPsepastoreFree(&scip->sepastoreprobing) );
    SCIP_CALL( SCIPsepastoreFree(&scip->sepastore) );
    SCIP_CALL( SCIPpricestoreFree(&scip->pricestore) );
 
@@ -15296,6 +15298,7 @@ SCIP_RETCODE freeReoptSolve(
 
    SCIP_CALL( SCIPcutpoolFree(&scip->cutpool, scip->mem->probmem, scip->set, scip->lp) );
    SCIP_CALL( SCIPcutpoolFree(&scip->delayedcutpool, scip->mem->probmem, scip->set, scip->lp) );
+   SCIP_CALL( SCIPsepastoreFree(&scip->sepastoreprobing) );
    SCIP_CALL( SCIPsepastoreFree(&scip->sepastore) );
    SCIP_CALL( SCIPpricestoreFree(&scip->pricestore) );
 
@@ -20095,7 +20098,10 @@ SCIP_RETCODE SCIPendStrongbranch(
       /* inform the LP that the probing mode is not used for strong branching anymore */
       SCIPlpEndStrongbranchProbing(scip->lp);
 
-      SCIP_CALL( SCIPendProbing(scip) );
+      /* switch back from probing to normal operation mode and restore variables and constraints to focus node */
+      SCIP_CALL( SCIPtreeEndProbing(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat,
+         scip->transprob, scip->origprob, scip->lp, scip->relaxation, scip->primal,
+         scip->branchcand, scip->eventqueue, scip->eventfilter, scip->cliquetable) );
 
       /* apply the collected bound changes */
       for( i = 0; i < nbnds; ++i )
@@ -35236,6 +35242,15 @@ SCIP_RETCODE SCIPstartProbing(
       return SCIP_INVALIDCALL;
    }
 
+   /* use a different separation storage for probing mode; otherwise SCIP will remove the cuts that are currently in the
+    * separation storage after solving an LP in probing mode
+    */
+   if( scip->sepastore != NULL )
+   {
+      assert(scip->sepastoreprobing != NULL);
+      SCIPswapPointers((void**)&scip->sepastore, (void**)&scip->sepastoreprobing);
+   }
+
    SCIP_CALL( SCIPtreeStartProbing(scip->tree, scip->mem->probmem, scip->set, scip->lp, FALSE) );
 
    /* disables the collection of any statistic for a variable */
@@ -35369,6 +35384,14 @@ SCIP_RETCODE SCIPendProbing(
 
    /* enables the collection of statistics for a variable */
    SCIPstatEnableVarHistory(scip->stat);
+
+   /* switch to the original separation storage */
+   if( scip->sepastore != NULL )
+   {
+      assert(scip->sepastoreprobing != NULL);
+      SCIPswapPointers((void**)&scip->sepastore, (void**)&scip->sepastoreprobing);
+      assert(SCIPsepastoreGetNCuts(scip->sepastoreprobing) == 0);
+   }
 
    return SCIP_OKAY;
 }
