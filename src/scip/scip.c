@@ -44473,8 +44473,6 @@ void printSolutionStatistics(
          SCIP_Real avggap;
          SCIP_Real primaldualintegral;
 
-         primaldualintegral = 0.0;
-
          if( !SCIPisFeasZero(scip, SCIPgetSolvingTime(scip)) )
          {
             primaldualintegral = SCIPstatGetPrimalDualIntegral(scip->stat, scip->set, scip->transprob, scip->origprob);
