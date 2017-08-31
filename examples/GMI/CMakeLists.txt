@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.0)
+
 project(GMI)
 
 find_package(SCIP REQUIRED)
@@ -50,6 +52,14 @@ set(settings
 add_test(NAME examples-gmi-build
         COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target gmi
         )
+#
+# avoid that several build jobs try to concurrently build the SCIP library
+# note that this ressource lock name is not the actual libscip target
+#
+set_tests_properties(examples-gmi-build
+                    PROPERTIES
+                        RESOURCE_LOCK libscip
+                    )
 #
 #
 # loop over the instances

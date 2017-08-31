@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.0)
+
 project(LOP)
 include(CTest)
 find_package(SCIP REQUIRED)
