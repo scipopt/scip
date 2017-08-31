@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.0)
+
 project(Scheduler)
 
 find_package(SCIP REQUIRED)

@@ -221,6 +221,17 @@ set(scip_reader_extensions
 add_test(NAME scip-build
         COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target scip
         )
+
+#
+# avoid that several build jobs try to concurrently build the SCIP library
+# note that this ressource lock name is not the actual libscip target
+#
+set_tests_properties(scip-build
+                    PROPERTIES
+                        RESOURCE_LOCK libscip
+                    )
+
+
 #
 # macro to split an instance into its relevant information
 # - path

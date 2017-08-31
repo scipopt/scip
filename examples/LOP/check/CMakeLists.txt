@@ -19,6 +19,14 @@ set(instances
 add_test(NAME examples-lop-build
         COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target lop
         )
+#
+# avoid that several build jobs try to concurrently build the SCIP library
+# note that this ressource lock name is not the actual libscip target
+#
+set_tests_properties(examples-lop-build
+                    PROPERTIES
+                        RESOURCE_LOCK libscip
+                    )
 
 #
 #
