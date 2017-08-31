@@ -386,7 +386,7 @@
 #define SCIP_DEFAULT_SEPA_MAXCOEFRATIO     1e+5 /**< maximal ratio between coefficients in strongcg, cmir, and flowcover cuts */
 #define SCIP_DEFAULT_SEPA_MINEFFICACY      0.05 /**< minimal efficacy for a cut to enter the LP */
 #define SCIP_DEFAULT_SEPA_MINEFFICACYROOT  0.001 /**< minimal efficacy for a cut to enter the LP in the root node */
-#define SCIP_DEFAULT_SEPA_MINORTHO         1.00 /**< minimal orthogonality for a cut to enter the LP */
+#define SCIP_DEFAULT_SEPA_MINORTHO         0.66 /**< minimal orthogonality for a cut to enter the LP */
 #define SCIP_DEFAULT_SEPA_MINORTHOROOT     0.50 /**< minimal orthogonality for a cut to enter the LP in the root node */
 #define SCIP_DEFAULT_SEPA_OBJPARALFAC    0.0001 /**< factor to scale objective parallelism of cut in score calculation */
 #define SCIP_DEFAULT_SEPA_ORTHOFAC         1.00 /**< factor to scale orthogonality of cut in score calculation */
