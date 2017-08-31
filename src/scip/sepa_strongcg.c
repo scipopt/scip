@@ -441,7 +441,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
             else
             {
                SCIP_Bool infeasible;
-               SCIP_Bool addcut = TRUE;
 
                /* flush all changes before adding the cut */
                SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
@@ -453,21 +452,24 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
                               SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
                /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
 
-               if( !cutislocal )
-               {
-                  SCIP_CALL( SCIPaddPoolCut(scip, cut) );
-                  addcut = SCIProwIsInGlobalCutpool(cut);
-               }
-               else
-               {
-                  addcut = SCIPisCutNew(scip, cut);
-               }
-
-               if( addcut )
+               if( SCIPisCutNew(scip, cut) )
                {
                   SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
                   ncuts++;
-                  *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
+
+                  if( infeasible )
+                  {
+                     *result = SCIP_CUTOFF;
+                  }
+                  else
+                  {
+                     *result = SCIP_SEPARATED;
+
+                     if( !cutislocal )
+                     {
+                        SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+                     }
+                  }
                }
             }
          }

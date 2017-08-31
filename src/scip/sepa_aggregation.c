@@ -211,8 +211,6 @@ SCIP_RETCODE addCut(
       /* if scaling was successful, add the cut */
       if( success )
       {
-         SCIP_Bool addcut = TRUE;
-
          SCIPdebugMsg(scip, " -> found %s cut <%s>: rhs=%f, eff=%f, rank=%d, min=%f, max=%f (range=%g)\n",
                       cutclassname, cutname, cutrhs, cutefficacy, SCIProwGetRank(cut),
                       SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
@@ -221,22 +219,15 @@ SCIP_RETCODE addCut(
 
          SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
 
-         if( !cutislocal )
-         {
-            SCIP_CALL( SCIPaddPoolCut(scip, cut) );
-            /* if the cut was rejected in the global cut pool, it means the cutpool
-             * contained an parallel cut that is at least as good so we do not add it */
-            addcut = SCIProwIsInGlobalCutpool(cut);
-         }
-         else
-         {
-            addcut = SCIPisCutNew(scip, cut);
-         }
-
-         if( addcut )
+         if( SCIPisCutNew(scip, cut) )
          {
             SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, cutoff) );
             (*ncuts)++;
+
+            if( !cutislocal )
+            {
+               SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+            }
          }
       }
 

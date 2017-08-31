@@ -89,6 +89,17 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
       )
       return FALSE;
 
+   set = (SCIP_SET*) userptr;
+
+   /* set scale for the rows such that the largest absolute coefficient is 1.0 */
+   row1scale = 1.0 / SCIProwGetMaxval(row1, set);
+   row2scale = 1.0 / SCIProwGetMaxval(row2, set);
+
+   /* check if scaled min value is feas equal first */
+   if( !SCIPsetIsFeasEQ(set, row1scale * SCIProwGetMinval(row1, set),
+                             row2scale * SCIProwGetMinval(row2, set)) )
+      return FALSE;
+
    SCIProwSort(row1);
    assert(row1->lpcolssorted);
    assert(row1->nonlpcolssorted);
@@ -100,12 +111,6 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
    /* currently we are only handling rows which are completely linked or not linked at all */
    assert(row1->nunlinked == 0 || row1->nlpcols == 0);
    assert(row2->nunlinked == 0 || row2->nlpcols == 0);
-
-   set = (SCIP_SET*) userptr;
-
-   /* set scale for the rows such that the largest absolute coefficient is 1.0 */
-   row1scale = 1.0 / SCIProwGetMaxval(row1, set);
-   row2scale = 1.0 / SCIProwGetMaxval(row2, set);
 
    /* set scale sign such that the rows are of the form ax <= b */
    if( SCIPsetIsInfinity(set, row1->rhs) )
@@ -592,7 +597,10 @@ SCIP_Bool SCIPcutpoolIsCutNew(
    assert(row != NULL);
 
    if( row->len == 0 )
-      return FALSE;
+   {
+      /* trivial cut is only new if it proves infeasibility */
+      return SCIPsetIsFeasLT(set, row->constant, row->lhs) || SCIPsetIsFeasGT(set, row->constant, row->rhs);
+   }
 
    othercut = (SCIP_CUT*)SCIPhashtableRetrieve(cutpool->hashtable, (void*)row);
    /* check in hash table, if cut already exists in the pool */

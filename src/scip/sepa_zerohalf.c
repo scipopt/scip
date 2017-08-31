@@ -1321,7 +1321,6 @@ SCIP_RETCODE generateZerohalfCut(
       SCIP_ROW* cut;
       char cutname[SCIP_MAXSTRLEN];
       int v;
-      SCIP_Bool addcut = TRUE;
 
       assert(allowlocal || !cutislocal);
 
@@ -1349,20 +1348,15 @@ SCIP_RETCODE generateZerohalfCut(
 
       /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
 
-      if( !cutislocal )
-      {
-         SCIP_CALL( SCIPaddPoolCut(scip, cut) );
-         addcut = SCIProwIsInGlobalCutpool(cut);
-      }
-      else
-      {
-         addcut = SCIPisCutNew(scip, cut);
-      }
-
-      if( addcut )
+      if( SCIPisCutNew(scip, cut) )
       {
          SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &sepadata->infeasible) );
          sepadata->ncuts++;
+
+         if( !sepadata->infeasible && !cutislocal )
+         {
+            SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+         }
       }
 
       /* release the row */
