@@ -52,6 +52,7 @@
  *
  * - \ref WHATPROBLEMS "What types of optimization problems does SCIP solve?"
  * - \ref MAKE    "Installation information / Makefiles"
+ * - \ref CMAKE   "Installation information / CMake"
  * - \ref LICENSE "License"
  *
  * - \ref SHELL       "Tutorial: the interactive shell"
@@ -553,6 +554,78 @@
  * Eclipse user can use the profile below. This profile does not match the \SCIP coding guideline completely.
  *
  * \include codestyle/eclipse_scip_codestyle.xml
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/**@page CMAKE CMake build system
+ *
+ * <a href=https://cmake.org/>CMake</a> is a build system generator that can create e.g. Makefiles for UNIX
+ * or Visual Studio project files for Windows.
+ *
+ * CMake provides an <a href="https://cmake.org/cmake/help/latest/manual/cmake.1.html">extensive documentation</a>
+ * explaining available features and use cases as well as an <a href="https://cmake.org/Wiki/CMake_FAQ">FAQ section</a>.
+ * It's recommended to use the latest stable CMake version available. `cmake --help` is also a good first step to see
+ * available options and usage information.
+ *
+ * CMake uses an out-of-source build, i.e., compiled binaries and object files are separated from the source tree and
+ * located in another directory. Usually this directory is called `build` or `debug` or whatever you prefer. From within
+ * this directory, run `cmake <path/to/SCIP>` to configure your build, followed by `make` to compile the code according
+ * to the current configuration (this assumes that you chose Linux Makefiles as CMake Generator). Afterwards,
+ * successive calls to `make` are going to recompile modified source code,
+ * without requiring another call to `cmake`. The initial configuration step checks your environment for available
+ * third-party libraries and packages and sets up the configuration accordingly, e.g., disabling support for GMP if not
+ * installed.
+ *
+ * The generated executable and libraries are put in directories `bin` and `lib` respectively and will simply be named
+ * `scip` or `libscip.so`. This is different from the naming convention of the previous Makefile setup that
+ * appended the configuration details like OS and third party dependencies directly to the name of the binary or library.
+ * The CMake setup tries to follow the established Linux/UNIX compilation conventions to facilitate the use of the
+ * libraries in other applications. The previously generated sub-libraries like `liblpi.so` or `libobjscip.so` are not
+ * created by default anymore. They can be built using the respective targets `liblpi`, `libobjscip`, etc. The main
+ * library `libscip.so` will contain all SCIP sources and won't have dependencies to the other sub-libs.
+ *
+ * @section CMAKE_CONFIG Modifying a CMake configuration
+ *
+ * There are several options that can be passed to the `cmake <path/to/SCIP>` call to modify how the code is built.
+ * For all of these options and parameters you have to use `-D<Parameter_name>=<value>`. Following a list of available
+ * options, for the full list run `cmake <path/to/SCIP> -LH`.
+ *
+ * CMake option         | available values               | Makefile equivalent
+ * ---------------------|--------------------------------|------------------------
+ * CMAKE_BUILD_TYPE     | Release, Debug, ...            | OPT=[opt, dbg]
+ * LPS                  | spx, cpx, grb, xprs, ...       | LPS=...
+ * GMP                  | on, off                        | GMP=[true, false]
+ * READLINE             | on, off                        | READLINE=[true, false]
+ * ZIMPL                | on, off                        | ZIMPL=[true, false]
+ * CMAKE_INSTALL_PREFIX | <path>                         | INSTALLDIR=<path>
+ * SHARED               | on, off                        | SHARED=[true, false]
+ * SOPLEX_DIR           | <path/to/SoPlex/installation>  | --
+ * GMP_DIR              | <path/to/GMP/installation>     | --
+ * ..._DIR              | <custom/path/to/.../package>   | --
+ *
+ * Parameters can be set all at once or in subsequent calls to `cmake` - extending or modifying the existing
+ * configuration.
+ *
+ * @section CTEST Testing with CTest
+ *
+ * There is an extensive test suite written for <a href="https://cmake.org/cmake/help/latest/manual/ctest.1.html">CTest</a>,
+ * that may take a while to complete. To perform a quick test to see whether the compilation was really successful you may
+ * run `make check`. To see all available tests, run `ctest -N` and to perform a memory check, run
+ * `ctest -T MemCheck`. If <a href="https://criterion.readthedocs.io/en/master/">Criterion</a> is installed (set
+ * custom path with `-DCRITERION=<path>`) the target `unittests` can be used to compile and run the available unit tests.
+ *
+ * @section CMAKE_INSTALL Installation
+ *
+ * CMake uses a default directory for installation, e.g., /usr/local on Linux. This can be modified by either changing
+ * the configuration using `-DCMAKE_INSTALL_PREFIX` as explained in \ref CMAKE_CONFIG or by setting the environment
+ * variable `DESTDIR` during or before the install command, e.g., `DESTDIR=<custom/install/dir> make install`.
+ *
+ * @section CMAKE_TARGETS Additional targets
+ *
+ * There are several further targets available, which can be listed using `make help`. For instance, there are some
+ * examples that can be built with `make examples` or by specifying a certain one: `make <example-name>`.
+ *
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -7012,6 +7085,11 @@
 /**@page INSTALL Installation information
  * \verbinclude INSTALL
  */
+
+/**@page INSTALL_CMAKE Installation information (CMake)
+ * \verbinclude INSTALL_CMAKE
+ */
+
 
 /**@page RELEASENOTES Release notes
  *
