@@ -249,9 +249,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
    int maxidx;
    SCIP_Real maxidxval;
    SCIP_Real minidxval;
-   SCIP_Real rowscale;
    SCIP_SET* set;
-   int i;
 
    set = (SCIP_SET*) userptr;
    row = (SCIP_ROW*)key;
@@ -261,43 +259,19 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
    minidx = SCIProwGetMinidx(row, set);
    maxidx = SCIProwGetMaxidx(row, set);
 
-   for( i = 0; TRUE; ++i )
-   {
-      assert(i < row->len);
-      if( row->cols_index[i] == minidx )
-      {
-         minidxval = row->vals[i];
-         break;
-      }
-   }
+   SCIProwSort(row);
 
-   for( i = row->len - 1; TRUE; --i )
-   {
-      assert(i >= 0);
-      if( row->cols_index[i] == maxidx )
-      {
-         maxidxval = row->vals[i];
-         break;
-      }
-   }
+   /* When hash value is computed first, the row should not be linked to the lp.
+    * Thus the sorting should make the following asserts valid
+    */
+   assert( row->cols_index[0] == minidx );
+   assert( row->cols_index[row->len - 1] == maxidx );
 
-   /* set scale for the rows such that the largest absolute coefficient is 1.0 */
-   rowscale = 1.0 / SCIProwGetMaxval(row, set);
+   minidxval = row->vals[0];
+   maxidxval = row->vals[row->len - 1];
 
-   if( SCIPsetIsInfinity(set, row->rhs) )
-   {
-      maxidxval *= -rowscale;
-      minidxval *= -rowscale;
-   }
-   else
-   {
-      maxidxval *= rowscale;
-      minidxval *= rowscale;
-   }
-
-   return SCIPhashFour(SCIPcombineTwoInt(SCIPrealHashCode(maxidxval), maxidx), \
-                       SCIPcombineTwoInt(SCIPrealHashCode(minidxval), minidx), \
-                       row->len, SCIPrealHashCode(rowscale * SCIProwGetMinval(row, set)));
+   return SCIPhashTwo(SCIPcombineTwoInt(SCIPrealHashCode(minidxval / maxidxval), row->len), \
+                      SCIPcombineTwoInt(minidx, maxidx));
 }
 
 
