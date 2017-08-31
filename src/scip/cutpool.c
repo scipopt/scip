@@ -89,6 +89,17 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
       )
       return FALSE;
 
+   set = (SCIP_SET*) userptr;
+
+   /* set scale for the rows such that the largest absolute coefficient is 1.0 */
+   row1scale = 1.0 / SCIProwGetMaxval(row1, set);
+   row2scale = 1.0 / SCIProwGetMaxval(row2, set);
+
+   /* check if scaled min value is feas equal first */
+   if( !SCIPsetIsFeasEQ(set, row1scale * SCIProwGetMinval(row1, set),
+                             row2scale * SCIProwGetMinval(row2, set)) )
+      return FALSE;
+
    SCIProwSort(row1);
    assert(row1->lpcolssorted);
    assert(row1->nonlpcolssorted);
@@ -100,12 +111,6 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
    /* currently we are only handling rows which are completely linked or not linked at all */
    assert(row1->nunlinked == 0 || row1->nlpcols == 0);
    assert(row2->nunlinked == 0 || row2->nlpcols == 0);
-
-   set = (SCIP_SET*) userptr;
-
-   /* set scale for the rows such that the largest absolute coefficient is 1.0 */
-   row1scale = 1.0 / SCIProwGetMaxval(row1, set);
-   row2scale = 1.0 / SCIProwGetMaxval(row2, set);
 
    /* set scale sign such that the rows are of the form ax <= b */
    if( SCIPsetIsInfinity(set, row1->rhs) )
@@ -245,37 +250,39 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
    SCIP_Real maxidxval;
    SCIP_Real minidxval;
    SCIP_SET* set;
-   int i;
 
    set = (SCIP_SET*) userptr;
    row = (SCIP_ROW*)key;
    assert(row != NULL);
    assert(row->len > 0);
 
+   SCIProwSort(row);
    minidx = SCIProwGetMinidx(row, set);
    maxidx = SCIProwGetMaxidx(row, set);
 
-   for( i = 0; TRUE; ++i )
+   if( row->cols_index[0] == minidx )
    {
-      assert(i < row->len);
-      if( row->cols_index[i] == minidx )
-      {
-         minidxval = row->vals[i];
-         break;
-      }
+      minidxval = row->vals[0];
+   }
+   else
+   {
+      assert(row->len > row->nlpcols);
+      assert(row->cols_index[row->nlpcols] == minidx);
+      minidxval = row->vals[row->nlpcols];
    }
 
-   for( i = row->len - 1; TRUE; --i )
+   if( row->cols_index[row->len - 1] == maxidx )
    {
-      assert(i >= 0);
-      if( row->cols_index[i] == maxidx )
-      {
-         maxidxval = row->vals[i];
-         break;
-      }
+      maxidxval = row->vals[row->len - 1];
+   }
+   else
+   {
+      assert(row->len > row->nlpcols);
+      assert(row->cols_index[row->nlpcols - 1] == maxidx);
+      maxidxval = row->vals[row->nlpcols - 1];
    }
 
-   return SCIPhashTwo(SCIPcombineTwoInt(SCIPrealHashCode(maxidxval / minidxval), row->len),
+   return SCIPhashTwo(SCIPcombineTwoInt(SCIPrealHashCode(minidxval / maxidxval), row->len), \
                       SCIPcombineTwoInt(minidx, maxidx));
 }
 
@@ -372,7 +379,8 @@ SCIP_Bool cutIsAged(
 {
    assert(cut != NULL);
 
-   return (agelimit >= 0 && cut->age > agelimit);
+   /* since agelimit can be -1 cast to unsigned before comparison, then it is the maximum unsigned value in that case */
+   return (unsigned int)cut->age > (unsigned int)agelimit;
 }
 
 /** gets the row of the cut */
@@ -592,7 +600,10 @@ SCIP_Bool SCIPcutpoolIsCutNew(
    assert(row != NULL);
 
    if( row->len == 0 )
-      return FALSE;
+   {
+      /* trivial cut is only new if it proves infeasibility */
+      return SCIPsetIsFeasLT(set, row->constant, row->lhs) || SCIPsetIsFeasGT(set, row->constant, row->rhs);
+   }
 
    othercut = (SCIP_CUT*)SCIPhashtableRetrieve(cutpool->hashtable, (void*)row);
    /* check in hash table, if cut already exists in the pool */
