@@ -266,8 +266,25 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
    assert( row->cols_index[0] == minidx );
    assert( row->cols_index[row->len - 1] == maxidx );
 
-   minidxval = row->vals[0];
-   maxidxval = row->vals[row->len - 1];
+   if( row->cols_index[0] == minidx )
+   {
+      minidxval = row->vals[0];
+   }
+   else
+   {
+      assert( row->cols_index[row->nlpcols] == minidx );
+      minidxval = row->vals[row->nlpcols];
+   }
+
+   if( row->cols_index[row->len - 1] == maxidx )
+   {
+      maxidxval = row->vals[row->len - 1];
+   }
+   else
+   {
+      assert( row->cols_index[row->nlpcols - 1] == maxidx );
+      maxidxval = row->vals[row->nlpcols - 1];
+   }
 
    return SCIPhashTwo(SCIPcombineTwoInt(SCIPrealHashCode(minidxval / maxidxval), row->len), \
                       SCIPcombineTwoInt(minidx, maxidx));
