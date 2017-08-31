@@ -537,8 +537,6 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
 
       /* in the case that the problem is feasible, this means that all subproblems are feasible. The auxiliary variables
        * still need to be updated. This is done by constructing a valid solution. */
-      if( SCIPsolGetHeur(sol) == SCIPfindHeur(scip, "rins") )
-         printf("result: %d, infeasible %d\n", *result, infeasible);
       if( (*result) == SCIP_FEASIBLE && infeasible )
       {
          if( !SCIPsolIsOriginal(sol) )

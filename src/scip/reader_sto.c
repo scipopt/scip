@@ -2447,7 +2447,7 @@ SCIP_RETCODE SCIPincludeReaderSto(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/" READER_NAME "/usebenders",
          "should Benders' decomposition be used?",
-         &readerdata->usebenders, TRUE, DEFAULT_USEBENDERS, NULL, NULL) );
+         &readerdata->usebenders, FALSE, DEFAULT_USEBENDERS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
