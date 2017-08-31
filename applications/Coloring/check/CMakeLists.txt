@@ -16,6 +16,14 @@ set(instances
 add_test(NAME applications-coloring-build
         COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target coloring
         )
+#
+# avoid that several build jobs try to concurrently build the SCIP library
+# note that this ressource lock name is not the actual libscip target
+#
+set_tests_properties(applications-coloring-build
+                    PROPERTIES
+                        RESOURCE_LOCK libscip
+                    )
 
 #
 # add a test for every instance

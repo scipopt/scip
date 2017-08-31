@@ -21,6 +21,14 @@ add_test(NAME examples-tsp-build
         COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target sciptsp
         )
 #
+# avoid that several build jobs try to concurrently build the SCIP library
+# note that this ressource lock name is not the actual libscip target
+#
+set_tests_properties(examples-tsp-build
+                    PROPERTIES
+                        RESOURCE_LOCK libscip
+                    )
+#
 # loop over the instances
 #
 foreach(instance ${instances})
