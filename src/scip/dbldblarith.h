@@ -29,6 +29,9 @@
 
 #ifndef DISABLE_QUADPREC
 
+/* smaller epsilon value for use with quadprecision */
+#define QUAD_EPSILON 1e-12
+
 /* convenience macros for nicer usage of double double arithmetic */
 #define QUAD_HI(x)  x ## hi
 #define QUAD_LO(x)  x ## lo
@@ -61,6 +64,9 @@
 #define SCIPquadprecAbsQ(r, a) SCIPdbldblAbs2(QUAD_HI(r), QUAD_LO(r), QUAD_HI(a), QUAD_LO(a))
 
 #else
+
+/* normal epsilon value if quadprecision is disabled */
+#define QUAD_EPSILON 1e-9
 
 /* dummy macros that use normal arithmetic */
 #define QUAD_HI(x)  x

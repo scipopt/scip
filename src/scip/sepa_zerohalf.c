@@ -324,7 +324,6 @@ SCIP_RETCODE transformNonIntegralRow(
       intvarpos[rowcols[i]->var_probindex] = ++transrowlen;
    }
 
-
    /* now loop over the non-integral columns of the row and project them out using simple or variable bounds */
    *success = TRUE;
 

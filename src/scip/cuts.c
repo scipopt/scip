@@ -85,9 +85,6 @@ void printCut(
  */
 #define NONZERO(x)   (COPYSIGN(1e-100, (x)) + (x))
 
-#define AGGREGATION_EPS           1e-12 /**< epsilon value for removing zero coefficients from the aggregation */
-#define MAXCOEFRATIOFACTOR          100 /**< maximum increase of coefficient ratio over original rows used for aggregation */
-
 /** add a scaled row to a dense vector indexed over the problem variables and keep the
  *  index of non-zeros up-to-date
  */
@@ -838,7 +835,7 @@ void SCIPaggrRowRemoveZeros(
 
       QUAD_ARRAY_LOAD(val, aggrrow->vals, aggrrow->inds[i]);
 
-      if( EPSZ(QUAD_ROUND(val), AGGREGATION_EPS) )
+      if( EPSZ(QUAD_ROUND(val), QUAD_EPSILON) )
       {
          QUAD_ASSIGN(val, 0.0);
          QUAD_ARRAY_STORE(aggrrow->vals, aggrrow->inds[i], val);
@@ -1657,7 +1654,7 @@ SCIP_RETCODE cutsTransformMIR(
       QUAD_ARRAY_LOAD(coef, cutcoefs, v);
 
       /* due to variable bound usage for the continous variables cancellation may have occurred */
-      if( EPSZ(QUAD_ROUND(coef), AGGREGATION_EPS) )
+      if( EPSZ(QUAD_ROUND(coef), QUAD_EPSILON) )
       {
          QUAD_ASSIGN(coef, 0.0);
          QUAD_ARRAY_STORE(cutcoefs, v, coef);
@@ -1743,7 +1740,7 @@ SCIP_RETCODE cutsTransformMIR(
             assert(0 <= v && v < nvars);
 
             QUAD_ARRAY_LOAD(coef, cutcoefs, v);
-            assert(!EPSZ(QUAD_ROUND(coef), AGGREGATION_EPS));
+            assert(!EPSZ(QUAD_ROUND(coef), QUAD_EPSILON));
 
             if( boundtype[i] < 0
                && ((varsign[i] == +1 && !SCIPisInfinity(scip, bestubs[i]) && bestubtypes[i] < 0)
@@ -1979,7 +1976,7 @@ SCIP_RETCODE cutsRoundMIR(
          QUAD_SCALE(aj, varsign[i]);
 
          /* floor the coefficients without an epsilon value */
-         downaj = floor(QUAD_ROUND(aj));
+         downaj = EPSFLOOR(QUAD_ROUND(aj), QUAD_EPSILON);
          SCIPquadprecSumQD(fj, aj, -downaj);
 
          if( SCIPisLE(scip, QUAD_ROUND(fj), QUAD_ROUND(f0)) )
@@ -1996,7 +1993,7 @@ SCIP_RETCODE cutsRoundMIR(
       }
 
       /* remove zero cut coefficients from cut */
-      if( EPSZ(QUAD_ROUND(cutaj), AGGREGATION_EPS) )
+      if( EPSZ(QUAD_ROUND(cutaj), QUAD_EPSILON) )
       {
          QUAD_ASSIGN(cutaj, 0.0);
          QUAD_ARRAY_STORE(cutcoefs, v, cutaj);
@@ -2078,7 +2075,7 @@ SCIP_RETCODE cutsRoundMIR(
        * to the current position, so that all integral variables stay behind the continuous
        * variables
        */
-      if( EPSZ(QUAD_ROUND(cutaj), AGGREGATION_EPS) )
+      if( EPSZ(QUAD_ROUND(cutaj), QUAD_EPSILON) )
       {
          QUAD_ASSIGN(cutaj, 0.0);
          QUAD_ARRAY_STORE(cutcoefs, v, cutaj);
@@ -2286,7 +2283,7 @@ SCIP_RETCODE cutsSubstituteMIR(
           *    a^_r = a~_r = down(a'_r)                      , if f_r <= f0
           *    a^_r = a~_r = down(a'_r) + (f_r - f0)/(1 - f0), if f_r >  f0
           */
-         downar = floor(ar);
+         downar = EPSFLOOR(ar, QUAD_EPSILON);
          SCIPquadprecSumDD(fr, ar, -downar);
          if( SCIPisLE(scip, QUAD_ROUND(fr), QUAD_ROUND(f0)) )
             QUAD_ASSIGN(cutar, downar);
@@ -2310,7 +2307,7 @@ SCIP_RETCODE cutsSubstituteMIR(
       }
 
       /* if the coefficient was reduced to zero, ignore the slack variable */
-      if( EPSZ(QUAD_ROUND(cutar), AGGREGATION_EPS) )
+      if( EPSZ(QUAD_ROUND(cutar), QUAD_EPSILON) )
          continue;
 
       /* depending on the slack's sign, we have
@@ -2356,7 +2353,7 @@ SCIP_RETCODE cutsSubstituteMIR(
    }
 
    /* set rhs to zero, if it's very close to */
-   if( EPSZ(QUAD_ROUND(*cutrhs), AGGREGATION_EPS) )
+   if( EPSZ(QUAD_ROUND(*cutrhs), QUAD_EPSILON) )
       QUAD_ASSIGN(*cutrhs, 0.0);
 
    return SCIP_OKAY;
@@ -2627,8 +2624,7 @@ SCIP_Real computeMIRViolation(
 
    for( i = 0; i < nvars; ++i )
    {
-      /* floor coefficients without an epsilon value since not flooring will make the cut stronger */
-      SCIP_Real floorai = floor(scale * coefs[i]);
+      SCIP_Real floorai = EPSFLOOR(scale * coefs[i], QUAD_EPSILON);
       SCIP_Real fi = (scale * coefs[i]) - floorai;
 
       if( SCIPisLE(scip, fi, f0) )
@@ -3334,7 +3330,7 @@ SCIP_RETCODE getClosestVlb(
    assert(var != NULL);
    assert(bestsub == SCIPvarGetUbGlobal(var) || bestsub == SCIPvarGetUbLocal(var)); /*lint !e777*/
    assert(!SCIPisInfinity(scip, bestsub));
-   assert(!EPSZ(rowcoef, AGGREGATION_EPS));
+   assert(!EPSZ(rowcoef, QUAD_EPSILON));
    assert(rowcoefs != NULL);
    assert(binvarused != NULL);
    assert(closestvlb != NULL);
@@ -3465,7 +3461,7 @@ SCIP_RETCODE getClosestVub(
    assert(var != NULL);
    assert(bestslb == SCIPvarGetLbGlobal(var) || bestslb == SCIPvarGetLbLocal(var)); /*lint !e777*/
    assert(!SCIPisInfinity(scip, - bestslb));
-   assert(!EPSZ(rowcoef, AGGREGATION_EPS));
+   assert(!EPSZ(rowcoef, QUAD_EPSILON));
    assert(rowcoefs != NULL);
    assert(binvarused != NULL);
    assert(closestvub != NULL);
@@ -3616,7 +3612,7 @@ SCIP_RETCODE determineBoundForSNF(
       rowcoef = QUAD_ROUND(tmp);
    }
 
-   assert(!EPSZ(rowcoef, AGGREGATION_EPS));
+   assert(!EPSZ(rowcoef, QUAD_EPSILON));
 
    /* get closest simple lower bound and closest simple upper bound */
    SCIP_CALL( findBestLb(scip, var, sol, FALSE, allowlocal, &bestslb[varposinrow], &bestslbtype[varposinrow]) );
@@ -3906,7 +3902,7 @@ SCIP_RETCODE constructSNFRelaxation(
             snf->origbinvars[snf->ntransvars] = -1;
             snf->aggrcoefsbin[snf->ntransvars] = 0.0;
 
-            if( QUAD_ROUND(rowcoef) > AGGREGATION_EPS )
+            if( QUAD_ROUND(rowcoef) > QUAD_EPSILON )
             {
                snf->transvarcoefs[snf->ntransvars] = - 1;
                snf->transvarvubcoefs[snf->ntransvars] = QUAD_ROUND(val);
@@ -3919,7 +3915,7 @@ SCIP_RETCODE constructSNFRelaxation(
             }
             else
             {
-               assert(QUAD_ROUND(rowcoef) < AGGREGATION_EPS);
+               assert(QUAD_ROUND(rowcoef) < QUAD_EPSILON);
                snf->transvarcoefs[snf->ntransvars] = 1;
                snf->transvarvubcoefs[snf->ntransvars] = - QUAD_ROUND(val);
                snf->transbinvarsolvals[snf->ntransvars] = 1.0;
@@ -3984,7 +3980,7 @@ SCIP_RETCODE constructSNFRelaxation(
             /* store aggregation information for y'_j for transforming cuts for the SNF relaxation back to the problem variables later */
             snf->origbinvars[snf->ntransvars] = vlbvarprobidx;
 
-            if( QUAD_ROUND(rowcoef) > AGGREGATION_EPS )
+            if( QUAD_ROUND(rowcoef) > QUAD_EPSILON )
             {
                snf->transvarcoefs[snf->ntransvars] = - 1;
                snf->transvarvubcoefs[snf->ntransvars] = - QUAD_ROUND(val);
@@ -3998,7 +3994,7 @@ SCIP_RETCODE constructSNFRelaxation(
             }
             else
             {
-               assert(QUAD_ROUND(rowcoef) < AGGREGATION_EPS);
+               assert(QUAD_ROUND(rowcoef) < QUAD_EPSILON);
                snf->transvarcoefs[snf->ntransvars] = 1;
                snf->transvarvubcoefs[snf->ntransvars] = QUAD_ROUND(val);
                snf->transbinvarsolvals[snf->ntransvars] = varsolvalbinary;
@@ -4060,7 +4056,7 @@ SCIP_RETCODE constructSNFRelaxation(
             snf->origbinvars[snf->ntransvars] = -1;
             snf->aggrcoefsbin[snf->ntransvars] = 0.0;
 
-            if( QUAD_ROUND(rowcoef) > AGGREGATION_EPS )
+            if( QUAD_ROUND(rowcoef) > QUAD_EPSILON )
             {
                snf->transvarcoefs[snf->ntransvars] = 1;
                snf->transvarvubcoefs[snf->ntransvars] = QUAD_ROUND(val);
@@ -4073,7 +4069,7 @@ SCIP_RETCODE constructSNFRelaxation(
             }
             else
             {
-               assert(QUAD_ROUND(rowcoef) < AGGREGATION_EPS);
+               assert(QUAD_ROUND(rowcoef) < QUAD_EPSILON);
                snf->transvarcoefs[snf->ntransvars] = - 1;
                snf->transvarvubcoefs[snf->ntransvars] = - QUAD_ROUND(val);
                snf->transbinvarsolvals[snf->ntransvars] = 1.0;
@@ -4136,7 +4132,7 @@ SCIP_RETCODE constructSNFRelaxation(
             /* store aggregation information for y'_j for transforming cuts for the SNF relaxation back to the problem variables later */
             snf->origbinvars[snf->ntransvars] = vubvarprobidx;
 
-            if( QUAD_ROUND(rowcoef) > AGGREGATION_EPS )
+            if( QUAD_ROUND(rowcoef) > QUAD_EPSILON )
             {
                snf->transvarcoefs[snf->ntransvars] = 1;
                snf->transvarvubcoefs[snf->ntransvars] = QUAD_ROUND(val);
@@ -4150,7 +4146,7 @@ SCIP_RETCODE constructSNFRelaxation(
             }
             else
             {
-               assert(QUAD_ROUND(rowcoef) < AGGREGATION_EPS);
+               assert(QUAD_ROUND(rowcoef) < QUAD_EPSILON);
                snf->transvarcoefs[snf->ntransvars] = - 1;
                snf->transvarvubcoefs[snf->ntransvars] = - QUAD_ROUND(val);
                snf->transbinvarsolvals[snf->ntransvars] = varsolvalbinary;
@@ -4204,7 +4200,7 @@ SCIP_RETCODE constructSNFRelaxation(
       var = vars[probidx];
       QUAD_ARRAY_LOAD(rowcoef, rowcoefs, probidx);
 
-      assert(!EPSZ(QUAD_ROUND(rowcoef), AGGREGATION_EPS));
+      assert(!EPSZ(QUAD_ROUND(rowcoef), QUAD_EPSILON));
 
       varsolval = SCIPgetSolVal(scip, sol, var);
       SCIPdebugMsg(scip, "  %d: %g <%s, idx=%d, lp=%g, [%g, %g]>:\n", i, QUAD_ROUND(rowcoef), SCIPvarGetName(var), probidx, varsolval,
@@ -4226,7 +4222,7 @@ SCIP_RETCODE constructSNFRelaxation(
       snf->aggrcoefscont[snf->ntransvars] = 0.0;
       snf->aggrconstants[snf->ntransvars] = 0.0;
 
-      if( QUAD_ROUND(rowcoef) > AGGREGATION_EPS )
+      if( QUAD_ROUND(rowcoef) > QUAD_EPSILON )
       {
          snf->transvarcoefs[snf->ntransvars] = 1;
          snf->transvarvubcoefs[snf->ntransvars] = val;
@@ -4238,7 +4234,7 @@ SCIP_RETCODE constructSNFRelaxation(
       }
       else
       {
-         assert(QUAD_ROUND(rowcoef) < AGGREGATION_EPS);
+         assert(QUAD_ROUND(rowcoef) < QUAD_EPSILON);
          snf->transvarcoefs[snf->ntransvars] = - 1;
          snf->transvarvubcoefs[snf->ntransvars] = - val;
          snf->transbinvarsolvals[snf->ntransvars] = varsolval;
@@ -5697,7 +5693,7 @@ SCIP_RETCODE generateLiftedFlowCoverCut(
    *cutrhs = QUAD_ROUND(rhs);
 
    /* set rhs to zero, if it's very close to */
-   if( EPSZ(*cutrhs, AGGREGATION_EPS) )
+   if( EPSZ(*cutrhs, QUAD_EPSILON) )
       *cutrhs = 0.0;
 
    return SCIP_OKAY;
@@ -6009,7 +6005,7 @@ SCIP_RETCODE cutsTransformStrongCG(
       QUAD_ARRAY_LOAD(coef, cutcoefs, v);
 
       /* due to variable bound usage for the continous variables cancellation may have occurred */
-      if( EPSZ(QUAD_ROUND(coef), AGGREGATION_EPS) )
+      if( EPSZ(QUAD_ROUND(coef), QUAD_EPSILON) )
       {
          QUAD_ASSIGN(coef, 0.0);
          QUAD_ARRAY_STORE(cutcoefs, v, coef);
@@ -6191,7 +6187,7 @@ SCIP_RETCODE cutsRoundStrongCG(
       QUAD_ARRAY_LOAD(aj, cutcoefs, v);
       QUAD_SCALE(aj, varsign[i]);
 
-      downaj = floor(QUAD_ROUND(aj));
+      downaj = EPSFLOOR(QUAD_ROUND(aj), QUAD_EPSILON);
       SCIPquadprecSumQD(fj, aj, -downaj);
 
       if( SCIPisLE(scip, QUAD_ROUND(fj), QUAD_ROUND(f0)) )
@@ -6212,7 +6208,7 @@ SCIP_RETCODE cutsRoundStrongCG(
       }
 
       /* remove zero cut coefficients from cut */
-      if( EPSZ(QUAD_ROUND(cutaj), AGGREGATION_EPS) )
+      if( EPSZ(QUAD_ROUND(cutaj), QUAD_EPSILON) )
       {
          QUAD_ASSIGN(cutaj, 0.0);
          QUAD_ARRAY_STORE(cutcoefs, v, cutaj);
@@ -6404,7 +6400,7 @@ SCIP_RETCODE cutsSubstituteStrongCG(
       if( row->integral )
       {
          /* slack variable is always integral: */
-         downar = floor(QUAD_ROUND(ar));
+         downar = EPSFLOOR(QUAD_ROUND(ar), QUAD_EPSILON);
          SCIPquadprecSumQD(fr, ar, -downar);
 
          if( SCIPisLE(scip, QUAD_ROUND(fr), QUAD_ROUND(f0)) )
@@ -6429,7 +6425,7 @@ SCIP_RETCODE cutsSubstituteStrongCG(
       }
 
       /* if the coefficient was reduced to zero, ignore the slack variable */
-      if( EPSZ(QUAD_ROUND(cutar), AGGREGATION_EPS) )
+      if( EPSZ(QUAD_ROUND(cutar), QUAD_EPSILON) )
          continue;
 
       /* depending on the slack's sign, we have
@@ -6477,7 +6473,7 @@ SCIP_RETCODE cutsSubstituteStrongCG(
    }
 
    /* set rhs to zero, if it's very close to */
-   if( EPSZ(QUAD_ROUND(*cutrhs), AGGREGATION_EPS) )
+   if( EPSZ(QUAD_ROUND(*cutrhs), QUAD_EPSILON) )
       QUAD_ASSIGN(*cutrhs, 0.0);
 
    return SCIP_OKAY;
@@ -6636,7 +6632,7 @@ SCIP_RETCODE SCIPcalcStrongCG(
       goto TERMINATE;
 
    SCIPquadprecDivDQ(tmp, 1.0, f0);
-   k = ceil(QUAD_ROUND(tmp)) - 1.0;
+   k = EPSCEIL(QUAD_ROUND(tmp), QUAD_EPSILON) - 1.0;
 
    QUAD_ASSIGN(rhs, downrhs);
    SCIP_CALL( cutsRoundStrongCG(scip, tmpcoefs, QUAD(&rhs), cutinds, cutnnz, varsign, boundtype, QUAD(f0), k) );
