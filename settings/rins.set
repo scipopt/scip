@@ -1,0 +1,33 @@
+# SCIP version 4.0.0.2
+
+# priority of heuristic <rins>
+# [type: int, advanced: TRUE, range: [-536870912,536870911], default: -1101000]
+heuristics/rins/priority = 0
+
+# frequency for calling primal heuristic <rins> (-1: never, 0: only at depth freqofs)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 25]
+heuristics/rins/freq = 0
+
+# number of nodes added to the contingent of the total nodes
+# [type: int, advanced: FALSE, range: [0,2147483647], default: 500]
+heuristics/rins/nodesofs = 10000
+
+# maximum number of nodes to regard in the subproblem
+# [type: int, advanced: TRUE, range: [0,2147483647], default: 5000]
+heuristics/rins/maxnodes = 5
+
+# minimum number of nodes required to start the subproblem
+# [type: int, advanced: TRUE, range: [0,2147483647], default: 50]
+heuristics/rins/minnodes = 0
+
+# contingent of sub problem nodes in relation to the number of nodes of the original problem
+# [type: real, advanced: FALSE, range: [0,1], default: 0.1]
+heuristics/rins/nodesquot = 1
+
+# number of nodes without incumbent change that heuristic should wait
+# [type: int, advanced: TRUE, range: [0,2147483647], default: 200]
+heuristics/rins/nwaitingnodes = 0
+
+# minimum percentage of integer variables that have to be fixed
+# [type: real, advanced: FALSE, range: [0,1], default: 0.3]
+heuristics/rins/minfixingrate = 0

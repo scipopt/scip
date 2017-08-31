@@ -1,0 +1,101 @@
+# SCIP version 4.0.0.2
+
+# frequency for calling primal heuristic <coefdiving> (-1: never, 0: only at depth freqofs)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 10]
+heuristics/coefdiving/freq = -1
+
+# frequency for calling primal heuristic <crossover> (-1: never, 0: only at depth freqofs)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 30]
+heuristics/crossover/freq = -1
+
+# frequency for calling primal heuristic <distributiondiving> (-1: never, 0: only at depth freqofs)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 10]
+heuristics/distributiondiving/freq = -1
+
+# frequency for calling primal heuristic <feaspump> (-1: never, 0: only at depth freqofs)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 20]
+heuristics/feaspump/freq = -1
+
+# frequency for calling primal heuristic <fracdiving> (-1: never, 0: only at depth freqofs)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 10]
+heuristics/fracdiving/freq = -1
+
+# frequency for calling primal heuristic <gins> (-1: never, 0: only at depth freqofs)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 20]
+heuristics/gins/freq = -1
+
+# frequency for calling primal heuristic <guideddiving> (-1: never, 0: only at depth freqofs)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 10]
+heuristics/guideddiving/freq = -1
+
+# frequency for calling primal heuristic <linesearchdiving> (-1: never, 0: only at depth freqofs)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 10]
+heuristics/linesearchdiving/freq = -1
+
+# frequency for calling primal heuristic <lpface> (-1: never, 0: only at depth freqofs)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 15]
+heuristics/lpface/freq = -1
+
+# frequency for calling primal heuristic <nlpdiving> (-1: never, 0: only at depth freqofs)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 10]
+heuristics/nlpdiving/freq = -1
+
+# frequency for calling primal heuristic <objpscostdiving> (-1: never, 0: only at depth freqofs)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 20]
+heuristics/objpscostdiving/freq = -1
+
+# frequency for calling primal heuristic <pscostdiving> (-1: never, 0: only at depth freqofs)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 10]
+heuristics/pscostdiving/freq = -1
+
+# frequency for calling primal heuristic <rens> (-1: never, 0: only at depth freqofs)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 0]
+heuristics/rens/freq = -1
+
+# priority of heuristic <rins>
+# [type: int, advanced: TRUE, range: [-536870912,536870911], default: -1101000]
+heuristics/rins/priority = 0
+
+# frequency for calling primal heuristic <rins> (-1: never, 0: only at depth freqofs)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 25]
+heuristics/rins/freq = 0
+
+# number of nodes added to the contingent of the total nodes
+# [type: int, advanced: FALSE, range: [0,2147483647], default: 500]
+heuristics/rins/nodesofs = 10000
+
+# maximum number of nodes to regard in the subproblem
+# [type: int, advanced: TRUE, range: [0,2147483647], default: 5000]
+heuristics/rins/maxnodes = 10
+
+# minimum number of nodes required to start the subproblem
+# [type: int, advanced: TRUE, range: [0,2147483647], default: 50]
+heuristics/rins/minnodes = 0
+
+# contingent of sub problem nodes in relation to the number of nodes of the original problem
+# [type: real, advanced: FALSE, range: [0,1], default: 0.1]
+heuristics/rins/nodesquot = 1
+
+# number of nodes without incumbent change that heuristic should wait
+# [type: int, advanced: TRUE, range: [0,2147483647], default: 200]
+heuristics/rins/nwaitingnodes = 0
+
+# minimum percentage of integer variables that have to be fixed
+# [type: real, advanced: FALSE, range: [0,1], default: 0.3]
+heuristics/rins/minfixingrate = 0
+
+# frequency for calling primal heuristic <rootsoldiving> (-1: never, 0: only at depth freqofs)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 20]
+heuristics/rootsoldiving/freq = -1
+
+# frequency for calling primal heuristic <subnlp> (-1: never, 0: only at depth freqofs)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 1]
+heuristics/subnlp/freq = -1
+
+# frequency for calling primal heuristic <undercover> (-1: never, 0: only at depth freqofs)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 0]
+heuristics/undercover/freq = -1
+
+# frequency for calling primal heuristic <veclendiving> (-1: never, 0: only at depth freqofs)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 10]
+heuristics/veclendiving/freq = -1
