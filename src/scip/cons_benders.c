@@ -21,6 +21,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <string.h>
 #include "scip/scip.h"
 
 #include "scip/cons_benders.h"
@@ -263,9 +264,6 @@ SCIP_DECL_CONSFREE(consFreeBenders)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   /* freeing the checked sols array */
-   SCIPfreeBlockMemoryArray(scip, &conshdlrdata->checkedsols, conshdlrdata->checkedsolssize);
-
    /* freeing the constrains handler data */
    SCIPfreeMemory(scip, &conshdlrdata);
 
@@ -294,18 +292,22 @@ SCIP_DECL_CONSINIT(consInitBenders)
 
 
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
-#if 0
 static
 SCIP_DECL_CONSEXIT(consExitBenders)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of benders constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* freeing the checked sols array */
+   SCIPfreeBlockMemoryArray(scip, &conshdlrdata->checkedsols, conshdlrdata->checkedsolssize);
 
    return SCIP_OKAY;
 }
-#else
-#define consExitBenders NULL
-#endif
 
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
@@ -499,6 +501,7 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
    performcheck = TRUE;
    infeasible = FALSE;
 
+
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
    benders = SCIPgetBenders(scip);
@@ -524,6 +527,7 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
    {
       for( i = 0; i < nactivebenders; i++ )
       {
+
          SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], sol, result, &infeasible, CHECK) );
 
          /* if the result is infeasible, it is not necessary to check any more subproblems. */
@@ -533,6 +537,8 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
 
       /* in the case that the problem is feasible, this means that all subproblems are feasible. The auxiliary variables
        * still need to be updated. This is done by constructing a valid solution. */
+      if( SCIPsolGetHeur(sol) == SCIPfindHeur(scip, "rins") )
+         printf("result: %d, infeasible %d\n", *result, infeasible);
       if( (*result) == SCIP_FEASIBLE && infeasible )
       {
          if( !SCIPsolIsOriginal(sol) )
