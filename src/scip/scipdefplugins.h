@@ -198,6 +198,7 @@
 #include "scip/sepa_zerohalf.h"
 #include "scip/scipshell.h"
 #include "scip/concsolver_scip.h"
+#include "scip/benders_default.h"
 
 #include "nlpi/nlpi_ipopt.h"
 #include "nlpi/nlpi_filtersqp.h"

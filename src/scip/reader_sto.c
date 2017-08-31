@@ -31,7 +31,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-#define SCIP_DEBUG
+
 #include <assert.h>
 #include <string.h>
 #include <ctype.h>
@@ -1804,17 +1804,26 @@ SCIP_RETCODE addScenarioVarsToProb(
    {
       SCIP_VAR* var;
       SCIP_Real obj;
+      SCIP_VARTYPE vartype;
 
       if( SCIPvarIsDeleted(vars[i]) )
          continue;
 
       obj = SCIPvarGetObj(vars[i])*probability;
 
+      vartype = SCIPvarGetType(vars[i]);
+#if 0
+      if( getScenarioStageNum(scip, scenario) == 0 )
+         vartype = SCIPvarGetType(vars[i]);
+      else
+         vartype = SCIP_VARTYPE_CONTINUOUS;
+#endif
+
       /* creating a variable as a copy of the original variable. */
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_%d", SCIPvarGetName(vars[i]),
          getScenarioStageNum(scip, scenario), getScenarioNum(scip, scenario));
       SCIP_CALL( SCIPcreateVar(scip, &var, name, SCIPvarGetLbOriginal(vars[i]), SCIPvarGetUbOriginal(vars[i]),
-            obj, SCIPvarGetType(vars[i]), SCIPvarIsInitial(vars[i]), SCIPvarIsRemovable(vars[i]), NULL, NULL, NULL,
+            obj, vartype, SCIPvarIsInitial(vars[i]), SCIPvarIsRemovable(vars[i]), NULL, NULL, NULL,
             NULL, NULL) );
 
       SCIP_CALL( SCIPaddVar(scip, var) );
@@ -2056,7 +2065,6 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
       SCIP_CALL( SCIPincludeDefaultPlugins(scenarioscip) );
 
       SCIP_CALL( SCIPincludeConshdlrBenders(scenarioscip, FALSE) );
-      SCIP_CALL( SCIPincludeBendersDefault(scenarioscip) );
 
       /* allocating memory for the subproblems */
       if( getScenarioNChildren(scenario) > 0 )
@@ -2238,7 +2246,6 @@ SCIP_RETCODE buildDecompProblem(
 
    SCIP_CALL( createScenarioSubprobArray(scip, readerdata->scenariotree) );
    SCIP_CALL( SCIPincludeConshdlrBenders(scip, TRUE) );
-   SCIP_CALL( SCIPincludeBendersDefault(scip) );
 
    setScenarioScip(readerdata->scenariotree, scip);
 
