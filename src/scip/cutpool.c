@@ -256,10 +256,9 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
    assert(row != NULL);
    assert(row->len > 0);
 
+   SCIProwSort(row);
    minidx = SCIProwGetMinidx(row, set);
    maxidx = SCIProwGetMaxidx(row, set);
-
-   SCIProwSort(row);
 
    /* When hash value is computed first, the row should not be linked to the lp.
     * Thus the sorting should make the following asserts valid
@@ -367,7 +366,8 @@ SCIP_Bool cutIsAged(
 {
    assert(cut != NULL);
 
-   return (agelimit >= 0 && cut->age > agelimit);
+   /* since agelimit can be -1 cast to unsigned before comparison, then it is the maximum unsigned value in that case */
+   return (unsigned int)cut->age > (unsigned int)agelimit;
 }
 
 /** gets the row of the cut */
