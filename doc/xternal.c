@@ -6960,6 +6960,11 @@
   * - <b>Solutions</b>:
   *   - added argument "completely" to SCIPtrySol(), SCIPtrySolFree(), SCIPcheckSol()
   *
+  * - <b>Hashmap and Hashtable</b>:
+  *   - removed function SCIPcalcHashtableSize() since not required anymore for SCIP_HASHTABLE and SCIP_HASHMAP
+  *   - based on the initial size SCIP_HASHTABLE and SCIP_HASHMAP choose an appropriate size internally to allow insertion of that many elements without resizing
+  *   - SCIP_MULTIHASH behaves like the old SCIP_HASHTABLE and SCIPcalcMultihashSize() should be used as replacement for SCIPcalcHashtableSize()
+  *
   * <br>
   * For further information we refer to the \ref RELEASENOTES "Release notes" and the \ref CHANGELOG "Changelog".
   */
