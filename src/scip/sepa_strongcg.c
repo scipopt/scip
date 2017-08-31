@@ -38,7 +38,7 @@
 
 #define DEFAULT_MAXROUNDS             5 /**< maximal number of strong CG separation rounds per node (-1: unlimited) */
 #define DEFAULT_MAXROUNDSROOT        20 /**< maximal number of strong CG separation rounds in the root node (-1: unlimited) */
-#define DEFAULT_MAXSEPACUTS           5 /**< maximal number of strong CG cuts separated per separation round */
+#define DEFAULT_MAXSEPACUTS          20 /**< maximal number of strong CG cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT     500 /**< maximal number of strong CG cuts separated per separation round in root node */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
 #define DEFAULT_RANDSEED             54 /**< initial random seed */
