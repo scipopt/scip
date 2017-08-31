@@ -260,12 +260,6 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
    minidx = SCIProwGetMinidx(row, set);
    maxidx = SCIProwGetMaxidx(row, set);
 
-   /* When hash value is computed first, the row should not be linked to the lp.
-    * Thus the sorting should make the following asserts valid
-    */
-   assert( row->cols_index[0] == minidx );
-   assert( row->cols_index[row->len - 1] == maxidx );
-
    if( row->cols_index[0] == minidx )
    {
       minidxval = row->vals[0];
