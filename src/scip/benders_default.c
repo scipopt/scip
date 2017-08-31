@@ -131,6 +131,8 @@ SCIP_RETCODE createVariableMappings(
       SCIP_Real scalar;
       SCIP_Real constant;
       char* endptr;
+      const char* origvarname;
+      int charcount = SCIPgetSubscipDepth(scip)*2;
 
       /* getting the original variable for the master variable */
       /* NOTE: This retreived the original variable. It may be a bug in regards to other parts of the code.
@@ -140,7 +142,8 @@ SCIP_RETCODE createVariableMappings(
       SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
 
       /* retreiving the var name */
-      (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "<%s>", SCIPvarGetName(origvar));
+      origvarname = SCIPvarGetName(origvar);
+      (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "<%s>", &origvarname[charcount]);
 
       /* retreiving the subproblem variable for the given master variable */
       for( j = 0; j < nsubproblems; j++ )
