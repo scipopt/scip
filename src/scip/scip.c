@@ -41,7 +41,7 @@
 #include <string.h>
 #if defined(_WIN32) || defined(_WIN64)
 #else
-#include <strings.h>
+#include <strings.h> /*lint --e{766}*/
 #endif
 
 #ifdef WITH_ZLIB
@@ -14926,6 +14926,7 @@ SCIP_RETCODE initSolve(
    /* initialize solution process data structures */
    SCIP_CALL( SCIPpricestoreCreate(&scip->pricestore) );
    SCIP_CALL( SCIPsepastoreCreate(&scip->sepastore) );
+   SCIP_CALL( SCIPsepastoreCreate(&scip->sepastoreprobing) );
    SCIP_CALL( SCIPcutpoolCreate(&scip->cutpool, scip->mem->probmem, scip->set, scip->set->sepa_cutagelimit, TRUE) );
    SCIP_CALL( SCIPcutpoolCreate(&scip->delayedcutpool, scip->mem->probmem, scip->set, scip->set->sepa_cutagelimit, FALSE) );
    SCIP_CALL( SCIPtreeCreateRoot(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
@@ -15073,6 +15074,7 @@ SCIP_RETCODE freeSolve(
    /* free solution process data structures */
    SCIP_CALL( SCIPcutpoolFree(&scip->cutpool, scip->mem->probmem, scip->set, scip->lp) );
    SCIP_CALL( SCIPcutpoolFree(&scip->delayedcutpool, scip->mem->probmem, scip->set, scip->lp) );
+   SCIP_CALL( SCIPsepastoreFree(&scip->sepastoreprobing) );
    SCIP_CALL( SCIPsepastoreFree(&scip->sepastore) );
    SCIP_CALL( SCIPpricestoreFree(&scip->pricestore) );
 
@@ -15169,6 +15171,7 @@ SCIP_RETCODE freeReoptSolve(
 
    SCIP_CALL( SCIPcutpoolFree(&scip->cutpool, scip->mem->probmem, scip->set, scip->lp) );
    SCIP_CALL( SCIPcutpoolFree(&scip->delayedcutpool, scip->mem->probmem, scip->set, scip->lp) );
+   SCIP_CALL( SCIPsepastoreFree(&scip->sepastoreprobing) );
    SCIP_CALL( SCIPsepastoreFree(&scip->sepastore) );
    SCIP_CALL( SCIPpricestoreFree(&scip->pricestore) );
 
@@ -15620,15 +15623,18 @@ SCIP_RETCODE prepareReoptimization(
 
       SCIPbranchcandInvalidate(scip->branchcand);
 
-      /* install globally valid lower and upper bounds */
-      SCIP_CALL( SCIPreoptInstallBounds(scip->reopt, scip->set, scip->stat, scip->transprob, scip->lp, scip->branchcand,
-            scip->eventqueue, scip->cliquetable, scip->mem->probmem) );
-
       SCIP_CALL( SCIPreoptResetActiveConss(scip->reopt, scip->set, scip->stat) );
 
       /* check whether we want to restart the tree search */
       SCIP_CALL( SCIPreoptCheckRestart(scip->reopt, scip->set, scip->mem->probmem, NULL, scip->transprob->vars,
             scip->transprob->nvars, &reoptrestart) );
+
+      /* call initialization methods of plugins */
+      SCIP_CALL( SCIPsetInitPlugins(scip->set, scip->mem->probmem, scip->stat) );
+
+      /* install globally valid lower and upper bounds */
+      SCIP_CALL( SCIPreoptInstallBounds(scip->reopt, scip->set, scip->stat, scip->transprob, scip->lp, scip->branchcand,
+            scip->eventqueue, scip->cliquetable, scip->mem->probmem) );
 
       /* check, whether objective value is always integral by inspecting the problem, if it is the case adjust the
        * cutoff bound if primal solution is already known
@@ -15639,9 +15645,6 @@ SCIP_RETCODE prepareReoptimization(
       /* if possible, scale objective function such that it becomes integral with gcd 1 */
       SCIP_CALL( SCIPprobScaleObj(scip->transprob, scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->primal,
             scip->tree, scip->reopt, scip->lp, scip->eventqueue) );
-
-      /* call initialization methods of plugins */
-      SCIP_CALL( SCIPsetInitPlugins(scip->set, scip->mem->probmem, scip->stat) );
 
       SCIPlpRecomputeLocalAndGlobalPseudoObjval(scip->lp, scip->set, scip->transprob);
    }
@@ -16047,7 +16050,7 @@ SCIP_RETCODE SCIPsolve(
             else
             {
                SCIPdebugMsg(scip, "try to add solution to the solution tree:\n");
-               SCIPdebug( SCIP_CALL( SCIPsolPrint(sol, scip->set, scip->messagehdlr, scip->stat, scip->origprob,
+               SCIPdebug( SCIP_CALL( SCIPsolPrint(sol, scip->set, scip->messagehdlr, scip->stat, scip->origprob, \
                      scip->transprob, NULL, FALSE, FALSE) ); );
 
                SCIP_CALL( SCIPreoptAddSol(scip->reopt, scip->set, scip->stat, scip->origprimal, scip->mem->probmem,
@@ -19071,6 +19074,9 @@ SCIP_Real SCIPgetVarRedcost(
    assert( var != NULL );
    assert( var->scip == scip );
 
+   if( !SCIPlpIsDualReliable(scip->lp) )
+      return SCIP_OKAY;
+
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
@@ -19114,6 +19120,9 @@ SCIP_Real SCIPgetVarImplRedcost(
    assert( scip != NULL );
    assert( var != NULL );
    assert( var->scip == scip );
+
+   if( !SCIPlpIsDualReliable(scip->lp) )
+      return 0.0;
 
    switch( SCIPvarGetStatus(var) )
    {
@@ -19962,7 +19971,10 @@ SCIP_RETCODE SCIPendStrongbranch(
       /* inform the LP that the probing mode is not used for strong branching anymore */
       SCIPlpEndStrongbranchProbing(scip->lp);
 
-      SCIP_CALL( SCIPendProbing(scip) );
+      /* switch back from probing to normal operation mode and restore variables and constraints to focus node */
+      SCIP_CALL( SCIPtreeEndProbing(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat,
+         scip->transprob, scip->origprob, scip->lp, scip->relaxation, scip->primal,
+         scip->branchcand, scip->eventqueue, scip->eventfilter, scip->cliquetable) );
 
       /* apply the collected bound changes */
       for( i = 0; i < nbnds; ++i )
@@ -20046,7 +20058,7 @@ SCIP_RETCODE analyzeStrongbranch(
     * @note Ignore the results if the LP solution of the down (up) branch LP is smaller which should not happened by
     *       theory but can arise due to numerical issues.
     */
-   if( SCIPtreeGetCurrentDepth(scip->tree) == 0 && SCIPvarIsBinary(var) )
+   if( SCIPtreeGetCurrentDepth(scip->tree) == 0 && SCIPvarIsBinary(var) && SCIPlpIsDualReliable(scip->lp) )
    {
       SCIP_Real lpobjval;
 
@@ -24707,7 +24719,7 @@ SCIP_RETCODE SCIPwriteCliqueGraph(
    }
 
    /* create the hash map */
-   SCIP_CALL( SCIPhashmapCreate(&nodehashmap, SCIPblkmem(scip), nbinvars+nimplvars) );
+   SCIP_CALL_FINALLY( SCIPhashmapCreate(&nodehashmap, SCIPblkmem(scip), nbinvars+nimplvars), fclose(gmlfile) );
 
    /* write starting of gml file */
    SCIPgmlWriteOpening(gmlfile, TRUE);
@@ -28937,6 +28949,42 @@ SCIP_LPSOLSTAT SCIPgetLPSolstat(
       return SCIPlpGetSolstat(scip->lp);
    else
       return SCIP_LPSOLSTAT_NOTSOLVED;
+}
+
+/** returns whether the current LP solution passed the primal feasibility check
+ *
+ *  @return whether the current LP solution passed the primal feasibility check.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_Bool SCIPisLPPrimalReliable(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPisLPPrimalReliable", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIPlpIsPrimalReliable(scip->lp);
+}
+
+/** returns whether the current LP solution passed the dual feasibility check
+ *
+ *  @returns whether the current LP solution passed the dual feasibility check.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_Bool SCIPisLPDualReliable(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPisLPDualReliable", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIPlpIsDualReliable(scip->lp);
 }
 
 /** returns whether the current lp is a relaxation of the current problem and its optimal objective value is a local lower bound
@@ -35146,6 +35194,15 @@ SCIP_RETCODE SCIPstartProbing(
       return SCIP_INVALIDCALL;
    }
 
+   /* use a different separation storage for probing mode; otherwise SCIP will remove the cuts that are currently in the
+    * separation storage after solving an LP in probing mode
+    */
+   if( scip->sepastore != NULL )
+   {
+      assert(scip->sepastoreprobing != NULL);
+      SCIPswapPointers((void**)&scip->sepastore, (void**)&scip->sepastoreprobing);
+   }
+
    SCIP_CALL( SCIPtreeStartProbing(scip->tree, scip->mem->probmem, scip->set, scip->lp, FALSE) );
 
    /* disables the collection of any statistic for a variable */
@@ -35279,6 +35336,14 @@ SCIP_RETCODE SCIPendProbing(
 
    /* enables the collection of statistics for a variable */
    SCIPstatEnableVarHistory(scip->stat);
+
+   /* switch to the original separation storage */
+   if( scip->sepastore != NULL )
+   {
+      assert(scip->sepastoreprobing != NULL);
+      SCIPswapPointers((void**)&scip->sepastore, (void**)&scip->sepastoreprobing);
+      assert(SCIPsepastoreGetNCuts(scip->sepastoreprobing) == 0);
+   }
 
    return SCIP_OKAY;
 }
@@ -38217,7 +38282,7 @@ SCIP_Real SCIPgetSolOrigObj(
       return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPsolGetObj(sol, scip->set, scip->transprob, scip->origprob));
    else
    {
-      SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSolOrigObj(sol==NULL)",
+      SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSolOrigObj(sol==NULL)", \
             FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
       if( SCIPtreeHasCurrentNodeLP(scip->tree) )
          return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPlpGetObjval(scip->lp, scip->set, scip->transprob));
@@ -38254,7 +38319,7 @@ SCIP_Real SCIPgetSolTransObj(
       return SCIPsolGetObj(sol, scip->set, scip->transprob, scip->origprob);
    else
    {
-      SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSolTransObj(sol==NULL)",
+      SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSolTransObj(sol==NULL)", \
             FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
       if( SCIPtreeHasCurrentNodeLP(scip->tree) )
          return SCIPlpGetObjval(scip->lp, scip->set, scip->transprob);
@@ -38545,7 +38610,7 @@ SCIP_RETCODE SCIPprintSol(
    currentsol = (sol == NULL);
    if( currentsol )
    {
-      SCIP_CALL( checkStage(scip, "SCIPprintSol(sol==NULL)",
+      SCIP_CALL( checkStage(scip, "SCIPprintSol(sol==NULL)", \
             FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
       /* create a temporary solution that is linked to the current solution */
@@ -38791,7 +38856,7 @@ SCIP_RETCODE SCIPgetDualSolVal(
    if( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE )
       (*dualsolval) *= -1.0;
 
-   return SCIP_OKAY;;
+   return SCIP_OKAY;
 }
 
 /** outputs dual solution from LP solver to file stream */
@@ -47398,7 +47463,6 @@ SCIP_RETCODE SCIPvalidateSolve(
    assert(scip != NULL);
 
    localfeasible = TRUE;
-   localprimalboundcheck = TRUE;
    localdualboundcheck = TRUE;
 
    /* check the best solution for feasibility in the original problem */
@@ -47432,17 +47496,17 @@ SCIP_RETCODE SCIPvalidateSolve(
       /* compute the relative violation between the primal bound and dual reference value, and vice versa */
       if( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE )
       {
-         if( dualreference != SCIP_UNKNOWN )
+         if( dualreference != SCIP_UNKNOWN ) /*lint !e777 */
             primviol = SCIPrelDiff(dualreference, pb);
-         if( primalreference != SCIP_UNKNOWN )
+         if( primalreference != SCIP_UNKNOWN ) /*lint !e777 */
             dualviol = SCIPrelDiff(db, primalreference);
       }
       else
       {
-         if( dualreference != SCIP_UNKNOWN )
+         if( dualreference != SCIP_UNKNOWN ) /*lint !e777 */
             primviol = SCIPrelDiff(pb, dualreference);
 
-         if( primalreference != SCIP_UNKNOWN )
+         if( primalreference != SCIP_UNKNOWN ) /*lint !e777 */
             dualviol = SCIPrelDiff(primalreference, db);
       }
       primviol = MAX(primviol, 0.0);

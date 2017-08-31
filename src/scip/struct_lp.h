@@ -109,7 +109,9 @@ struct SCIP_LpSolVals
    SCIP_LPSOLSTAT        lpsolstat;          /**< solution status of last LP solution */
    SCIP_Real             lpobjval;           /**< objective value of LP without loose variables, or SCIP_INVALID */
    SCIP_Bool             primalfeasible;     /**< is current LP solution primal feasible? */
+   SCIP_Bool             primalchecked;      /**< was current LP solution checked for primal feasibility? */
    SCIP_Bool             dualfeasible;       /**< is current LP solution dual feasible? */
+   SCIP_Bool             dualchecked;        /**< was current LP solution checked for primal feasibility? */
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
    SCIP_Bool             lpissolved;         /**< is current LP solved? */
 };
@@ -342,7 +344,9 @@ struct SCIP_Lp
    SCIP_Bool             flushed;            /**< are all cached changes applied to the LP solver? */
    SCIP_Bool             solved;             /**< is current LP solved? */
    SCIP_Bool             primalfeasible;     /**< is current LP solution (rather LPI state) primal feasible? */
+   SCIP_Bool             primalchecked;      /**< was current LP solution checked for primal feasibility?? */
    SCIP_Bool             dualfeasible;       /**< is current LP solution (rather LPI state) dual feasible? */
+   SCIP_Bool             dualchecked;        /**< was current LP solution checked for primal feasibility?? */
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
    SCIP_Bool             rootlpisrelax;      /**< is root LP a relaxation of the problem and its solution value a valid global lower bound? */
    SCIP_Bool             isrelax;            /**< is the current LP a relaxation of the problem for which it has been solved and its 
@@ -370,7 +374,9 @@ struct SCIP_Lp
    SCIP_Real             lpirowrepswitch;    /**< simplex algorithm shall use row representation of the basis
                                               *   if number of rows divided by number of columns exceeds this value */
    SCIP_Bool             divelpwasprimfeas;  /**< primal feasibility when diving started */
+   SCIP_Bool             divelpwasprimchecked;/**< primal feasibility was checked when diving started */
    SCIP_Bool             divelpwasdualfeas;  /**< dual feasibility when diving started */
+   SCIP_Bool             divelpwasdualchecked;/**< dual feasibility was checked when diving started */
 };
 
 #ifdef __cplusplus

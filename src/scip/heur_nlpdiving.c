@@ -1752,14 +1752,12 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
       {
          SCIPdebugMsg(scip, "initial NLP infeasible or not solvable --> stop\n");
 
-         if( SCIPgetNLPTermstat(scip) < SCIP_NLPTERMSTAT_NUMERR )
-         {
-            SCIPstatistic( heurdata->nfailcutoff++ );
-         }
-         else
-         {
-            SCIPstatistic( heurdata->nfailnlperror++ );
-         }
+         SCIPstatistic(
+            if( SCIPgetNLPTermstat(scip) < SCIP_NLPTERMSTAT_NUMERR )
+               heurdata->nfailcutoff++;
+            else
+               heurdata->nfailnlperror++;
+         )
 
          /* reset changed NLP parameters */
          SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, origiterlim) );

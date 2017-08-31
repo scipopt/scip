@@ -1127,7 +1127,7 @@ SCIP_RETCODE SCIPdomchgMakeStatic(
             else
             {
                /* shrink dynamic size arrays to their minimal sizes */
-               SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.boundchgs,
+               SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.boundchgs, \
                      (*domchg)->domchgdyn.boundchgssize, (*domchg)->domchgdyn.nboundchgs) ); /*lint !e571*/
                BMSfreeBlockMemoryArrayNull(blkmem, &(*domchg)->domchgdyn.holechgs, (*domchg)->domchgdyn.holechgssize);
 
@@ -1139,9 +1139,9 @@ SCIP_RETCODE SCIPdomchgMakeStatic(
          else
          {
             /* shrink dynamic size arrays to their minimal sizes */
-            SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.boundchgs,
+            SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.boundchgs, \
                   (*domchg)->domchgdyn.boundchgssize, (*domchg)->domchgdyn.nboundchgs) ); /*lint !e571*/
-            SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.holechgs,
+            SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.holechgs, \
                   (*domchg)->domchgdyn.holechgssize, (*domchg)->domchgdyn.nholechgs) );
 
             /* convert into static domain change */
@@ -12722,7 +12722,7 @@ SCIP_Real getImplVarRedcost(
    SCIP_LP*              lp                  /**< current LP data */
    )
 {
-   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN && SCIPlpIsDualReliable(lp) )
    {
       SCIP_COL* col;
       SCIP_Real primsol;
@@ -12782,6 +12782,9 @@ SCIP_Real SCIPvarGetImplRedcost(
 
    assert(SCIPvarIsBinary(var));
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+
+   if( !SCIPlpIsDualReliable(lp) )
+      return 0.0;
 
    /* get reduced cost of given variable */
    implredcost = getImplVarRedcost(var, set, varfixing, stat, lp);
@@ -17680,7 +17683,7 @@ SCIP_RETCODE SCIPvarCatchEvent(
    assert((eventtype & SCIP_EVENTTYPE_VARCHANGED) != 0);
    assert(SCIPvarIsTransformed(var));
 
-   SCIPsetDebugMsg(set, "catch event of type 0x%"SCIP_EVENTTYPE_FORMAT" of variable <%s> with handler %p and data %p\n",
+   SCIPsetDebugMsg(set, "catch event of type 0x%" SCIP_EVENTTYPE_FORMAT " of variable <%s> with handler %p and data %p\n",
       eventtype, var->name, (void*)eventhdlr, (void*)eventdata);
 
    SCIP_CALL( SCIPeventfilterAdd(var->eventfilter, blkmem, set, eventtype, eventhdlr, eventdata, filterpos) );

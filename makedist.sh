@@ -67,17 +67,20 @@ $NAME/src/blockmemshell/*.c $NAME/src/blockmemshell/*.h \
 $NAME/src/tclique/*.c $NAME/src/tclique/*.h \
 $NAME/src/objscip/*.cpp $NAME/src/objscip/*.h \
 $NAME/applications/Coloring/* $NAME/applications/Coloring/doc/* $NAME/applications/Coloring/data/* \
+$NAME/applications/Coloring/check/CMakeLists.txt \
 $NAME/applications/Coloring/check/testset/short.test $NAME/applications/Coloring/check/testset/short.solu \
 $NAME/applications/Coloring/src/depend.* \
 $NAME/applications/Coloring/src/*.c $NAME/applications/Coloring/src/*.h \
 $NAME/applications/Scheduler/doc/* \
+$NAME/applications/Scheduler/check/CMakeLists.txt \
 $NAME/applications/Scheduler/check/testset/short.test $NAME/applications/Scheduler/check/testset/short.solu \
 $NAME/applications/Scheduler/src/depend.* \
 $NAME/applications/Scheduler/src/*.c $NAME/applications/Scheduler/src/*.cpp $NAME/applications/Scheduler/src/*.h \
 $NAME/applications/Scheduler/data/*.sm \
 $NAME/applications/Scheduler/data/*.cmin \
 $NAME/applications/Scheduler/Makefile \
-$NAME/applications/MinIISC/Makefile $NAME/applications/MinIISC/INSTALL \
+$NAME/applications/MinIISC/* \
+$NAME/applications/MinIISC/check/CMakeLists.txt \
 $NAME/applications/MinIISC/doc/* \
 $NAME/applications/MinIISC/src/* \
 $NAME/applications/MinIISC/data/* \
@@ -95,20 +98,26 @@ $NAME/applications/PolySCIP/mult_zimpl/tenfelde_podehl.zpl \
 $NAME/applications/PolySCIP/mult_zimpl/*.py \
 $NAME/applications/PolySCIP/INSTALL $NAME/applications/PolySCIP/LICENCE \
 $NAME/applications/PolySCIP/README $NAME/applications/PolySCIP/scipmip.set \
+$NAME/applications/PolySCIP/src/CMakeLists.txt \
+$NAME/applications/PolySCIP/CMakeLists.txt     \
 $NAME/applications/STP/doc/* \
 $NAME/applications/STP/src/depend.* \
 $NAME/applications/STP/src/*.c $NAME/applications/STP/src/*.h \
 $NAME/applications/STP/check/testset/*.test $NAME/applications/STP/check/testset/*.solu \
+$NAME/applications/STP/check/CMakeLists.txt \
 $NAME/applications/STP/data/short/* \
-$NAME/applications/STP/Makefile $NAME/applications/STP/INSTALL \
+$NAME/applications/STP/* \
 $NAME/examples/xternal_examples.c \
 $NAME/examples/Binpacking/Makefile $NAME/examples/Binpacking/INSTALL \
+$NAME/examples/Binpacking/CMakeLists.txt \
+$NAME/examples/Binpacking/check/CMakeLists.txt \
 $NAME/examples/Binpacking/doc/* $NAME/examples/Binpacking/doc/pics/binpacking.png \
 $NAME/examples/Binpacking/check/testset/short.test $NAME/examples/Binpacking/check/testset/short.solu \
 $NAME/examples/Binpacking/src/depend.* \
 $NAME/examples/Binpacking/src/*.c $NAME/examples/Binpacking/src/*.h \
 $NAME/examples/Binpacking/data/*.bpa \
 $NAME/examples/CallableLibrary/Makefile \
+$NAME/examples/CallableLibrary/CMakeLists.txt \
 $NAME/examples/CallableLibrary/INSTALL \
 $NAME/examples/CallableLibrary/doc/* \
 $NAME/examples/CallableLibrary/src/depend.* $NAME/examples/CallableLibrary/src/*.c \
@@ -117,6 +126,7 @@ $NAME/examples/Eventhdlr/src/depend.* \
 $NAME/examples/Eventhdlr/src/*.c $NAME/examples/Eventhdlr/src/*.h \
 $NAME/examples/GMI/Makefile \
 $NAME/examples/GMI/src/Makefile \
+$NAME/examples/GMI/CMakeLists.txt \
 $NAME/examples/GMI/INSTALL \
 $NAME/examples/GMI/settings/scipdefault.set \
 $NAME/examples/GMI/doc/* \
@@ -124,11 +134,13 @@ $NAME/examples/GMI/check/testset/short.* \
 $NAME/examples/GMI/settings/gmi* $NAME/examples/GMI/src/depend.* \
 $NAME/examples/GMI/src/*.c $NAME/examples/GMI/src/*.h \
 $NAME/examples/LOP/* $NAME/examples/LOP/doc/* $NAME/examples/LOP/data/* \
+$NAME/examples/LOP/check/CMakeLists.txt \
 $NAME/examples/LOP/check/testset/short.* \
 $NAME/examples/LOP/src/depend.* $NAME/examples/LOP/src/Makefile \
 $NAME/examples/LOP/settings/default.set \
 $NAME/examples/LOP/src/*.c $NAME/examples/LOP/src/*.h \
 $NAME/examples/MIPSolver/Makefile $NAME/examples/MIPSolver/INSTALL $NAME/examples/MIPSolver/scipmip.set \
+$NAME/examples/MIPSolver/CMakeLists.txt \
 $NAME/examples/MIPSolver/doc/* \
 $NAME/examples/MIPSolver/src/depend.* \
 $NAME/examples/MIPSolver/src/*.cpp \
@@ -137,12 +149,16 @@ $NAME/examples/Queens/src/depend.* \
 $NAME/examples/Queens/src/*.cpp $NAME/examples/Queens/src/*.hpp \
 $NAME/examples/Relaxator/INSTALL \
 $NAME/examples/Relaxator/Makefile \
+$NAME/examples/Relaxator/CMakeLists.txt \
+$NAME/examples/Relaxator/check/CMakeLists.txt \
 $NAME/examples/Relaxator/check/testset/short.test \
 $NAME/examples/Relaxator/doc/xternal_relaxator.c \
 $NAME/examples/Relaxator/makedepend.sh \
 $NAME/examples/Relaxator/src/* \
 $NAME/examples/TSP/Makefile $NAME/examples/TSP/INSTALL \
 $NAME/examples/TSP/runme.sh $NAME/examples/TSP/runviewer.sh \
+$NAME/examples/TSP/CMakeLists.txt \
+$NAME/examples/TSP/check/CMakeLists.txt \
 $NAME/examples/TSP/sciptsp.set \
 $NAME/examples/TSP/doc/* \
 $NAME/examples/TSP/check/testset/short.* \
@@ -150,6 +166,8 @@ $NAME/examples/TSP/src/depend.* \
 $NAME/examples/TSP/src/*.cpp $NAME/examples/TSP/src/*.h \
 $NAME/examples/TSP/tspviewer/*.java $NAME/examples/TSP/tspdata/*.tsp \
 $NAME/examples/VRP/Makefile $NAME/examples/VRP/INSTALL \
+$NAME/examples/VRP/CMakeLists.txt \
+$NAME/examples/VRP/check/CMakeLists.txt \
 $NAME/examples/VRP/doc/* $NAME/examples/VRP/data/* \
 $NAME/examples/VRP/src/depend.* \
 $NAME/examples/VRP/src/*.cpp $NAME/examples/VRP/src/*.h \
@@ -163,6 +181,7 @@ $NAME/interfaces/ampl/check/instances/SOS/*.col $NAME/interfaces/ampl/check/inst
 $NAME/interfaces/ampl/check/instances/SOS/*.nl $NAME/interfaces/ampl/check/testset/short.solu \
 $NAME/interfaces/gams/Makefile $NAME/interfaces/gams/INSTALL $NAME/interfaces/gams/gamsinst.sh \
 $NAME/interfaces/gams/test.sh $NAME/interfaces/gams/src/* \
+$NAME/check/instances/Bivariate/*.osil \
 $NAME/check/instances/CP/*.cip \
 $NAME/check/instances/Indicator/*.lp \
 $NAME/check/instances/MIP/*.fzn \
@@ -181,6 +200,14 @@ $NAME/check/instances/SAT/*.cnf \
 $NAME/check/instances/SOS/*.lp \
 $NAME/check/instances/Semicontinuous/*.lp \
 $NAME/check/instances/Semicontinuous/*.mps \
+$NAME/check/instances/Bivariate                     \
+$NAME/check/instances/Indicator/64-4-1.arc          \
+$NAME/check/instances/Indicator/64-4-1.mut          \
+$NAME/check/instances/Indicator/64-4-1.sup          \
+$NAME/check/instances/Indicator/indicatortest.zpl   \
+$NAME/check/instances/Indicator/mcf64-4-1.zpl       \
+$NAME/check/instances/MIP/vpm2.fix                  \
+$NAME/check/instances/MIP/vpm2.sol                  \
 $NAME/tests/Makefile \
 $NAME/tests/README \
 $NAME/tests/include/scip_test.* \
@@ -206,7 +233,18 @@ $NAME/tests/src/presol/qpkktref.c \
 $NAME/tests/src/prop/nlobbt.c \
 $NAME/tests/src/sepa/convexproj.c \
 $NAME/tests/src/sepa/gauge.c \
-$NAME/tests/src/test/stages.c
+$NAME/tests/src/test/stages.c                         \
+$NAME/tests/src/presol/presol.c                     \
+$NAME/tests/src/reader/*                               \
+$NAME/tests/src/relax/*                                \
+$NAME/tests/src/scip/*                                 \
+$NAME/applications/PolySCIP/cmake/Modules                   \
+$NAME/applications/STP/doc/pics/stp.png             \
+$NAME/applications/STP/doc/pics/stp.tex             \
+$NAME/check/interactiveshell/*                        \
+$NAME/cmake/Modules/*                                  \
+$NAME/coverage/settings/*                              \
+$NAME/tests/src/cons/superindicator/*                  \
 
 rm -f $NAME
 echo ""

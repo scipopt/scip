@@ -556,8 +556,7 @@ SCIP_RETCODE propagateDomains(
    assert(cutoff != NULL);
 
    node = SCIPtreeGetCurrentNode(tree);
-   assert(node != NULL);
-   assert(SCIPnodeIsActive(node));
+   assert(node != NULL && SCIPnodeIsActive(node));
    assert(SCIPnodeGetType(node) == SCIP_NODETYPE_FOCUSNODE
       || SCIPnodeGetType(node) == SCIP_NODETYPE_REFOCUSNODE
       || SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
@@ -1039,10 +1038,8 @@ SCIP_RETCODE updateEstimate(
    int nlpcands;
    int i;
 
-   assert(SCIPtreeHasFocusNodeLP(tree));
-
    /* estimate is only available if LP was solved to optimality */
-   if( SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL || !SCIPlpIsRelax(lp) )
+   if( !SCIPtreeHasFocusNodeLP(tree) || SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL || !SCIPlpIsRelax(lp) )
       return SCIP_OKAY;
 
    focusnode = SCIPtreeGetFocusNode(tree);
@@ -1415,6 +1412,7 @@ SCIP_RETCODE solveNodeInitialLP(
 
    if( !(*lperror) )
    {
+      /* cppcheck-suppress unassignedVariable */
       SCIP_EVENT event;
 
       if( SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_ITERLIMIT && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_TIMELIMIT )
@@ -2194,6 +2192,7 @@ SCIP_RETCODE priceAndCutLoop(
    )
 {
    SCIP_NODE* focusnode;
+   /* cppcheck-suppress unassignedVariable */
    SCIP_EVENT event;
    SCIP_LPSOLSTAT stalllpsolstat;
    SCIP_Real loclowerbound;
@@ -3030,7 +3029,8 @@ SCIP_RETCODE solveNodeLP(
          *cutoff = TRUE;
       }
    }
-   assert(!(*pricingaborted) || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL
+
+   assert(!(*pricingaborted) || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL /* cppcheck-suppress assertWithSideEffect */
       || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_NOTSOLVED || SCIPsolveIsStopped(set, stat, FALSE) || (*cutoff));
 
    assert(*cutoff || *lperror || (lp->flushed && lp->solved));
@@ -3733,6 +3733,7 @@ SCIP_RETCODE propAndSolve(
       /* check if primal heuristics found a solution and we therefore reached a solution limit */
       if( SCIPsolveIsStopped(set, stat, FALSE) )
       {
+         /* cppcheck-suppress unassignedVariable */
          SCIP_NODE* node;
 
          /* we reached a solution limit and do not want to continue the processing of the current node, but in order to

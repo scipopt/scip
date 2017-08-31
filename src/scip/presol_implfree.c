@@ -1201,6 +1201,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplfree)
                assert(SCIPisInfinity(scip, -SCIPmatrixGetRowLhs(matrix, row)) ||
                   SCIPisInfinity(scip, rhs) ||
                   SCIPisEQ(scip, SCIPmatrixGetRowLhs(matrix, row), rhs));
+               assert(multiaggcoef != 0.0);
 
                /* we have to distinguished two cases */
                if( !SCIPisInfinity(scip, rhs) )
