@@ -1,0 +1,9 @@
+# SCIP version 4.0.0.2
+
+# should Benders' decomposition be used?
+# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
+reading/storeader/usebenders = TRUE
+
+# Should Benders' cuts from LNS heuristics be transferred to the main SCIP instance?
+# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: TRUE]
+benders/default/transfercuts = FALSE
