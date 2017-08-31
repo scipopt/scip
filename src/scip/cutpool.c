@@ -249,6 +249,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
    int maxidx;
    SCIP_Real maxidxval;
    SCIP_Real minidxval;
+   SCIP_Real rowscale;
    SCIP_SET* set;
    int i;
 
@@ -280,8 +281,23 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
       }
    }
 
-   return SCIPhashTwo(SCIPcombineTwoInt(SCIPrealHashCode(maxidxval / minidxval), row->len),
-                      SCIPcombineTwoInt(minidx, maxidx));
+   /* set scale for the rows such that the largest absolute coefficient is 1.0 */
+   rowscale = 1.0 / SCIProwGetMaxval(row, set);
+
+   if( SCIPsetIsInfinity(set, row->rhs) )
+   {
+      maxidxval *= -rowscale;
+      minidxval *= -rowscale;
+   }
+   else
+   {
+      maxidxval *= rowscale;
+      minidxval *= rowscale;
+   }
+
+   return SCIPhashFour(SCIPcombineTwoInt(SCIPrealHashCode(maxidxval), maxidx), \
+                       SCIPcombineTwoInt(SCIPrealHashCode(minidxval), minidx), \
+                       row->len, SCIPrealHashCode(rowscale * SCIProwGetMinval(row, set)));
 }
 
 
