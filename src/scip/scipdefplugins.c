@@ -178,11 +178,10 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeSepaCGMIP(scip) );
    SCIP_CALL( SCIPincludeSepaClique(scip) );
    SCIP_CALL( SCIPincludeSepaClosecuts(scip) );
-   SCIP_CALL( SCIPincludeSepaCmir(scip) );
+   SCIP_CALL( SCIPincludeSepaAggregation(scip) );
    SCIP_CALL( SCIPincludeSepaConvexproj(scip) );
-   SCIP_CALL( SCIPincludeSepaEccuts(scip) );
    SCIP_CALL( SCIPincludeSepaDisjunctive(scip) );
-   SCIP_CALL( SCIPincludeSepaFlowcover(scip) );
+   SCIP_CALL( SCIPincludeSepaEccuts(scip) );
    SCIP_CALL( SCIPincludeSepaGauge(scip) );
    SCIP_CALL( SCIPincludeSepaGomory(scip) );
    SCIP_CALL( SCIPincludeSepaImpliedbounds(scip) );

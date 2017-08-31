@@ -1385,7 +1385,7 @@ SCIP_RETCODE applySeparation(
       oldval = SCIPvarGetLPSol(currbound->var);
 
       /* find and store cuts to separate the current LP solution */
-      SCIP_CALL( SCIPseparateSol(scip, NULL, inroot, FALSE, &delayed, &cutoff) );
+      SCIP_CALL( SCIPseparateSol(scip, NULL, inroot, TRUE, FALSE, &delayed, &cutoff) );
       SCIPdebugMsg(scip, "applySeparation() - ncuts = %d\n", SCIPgetNCuts(scip));
 
       /* leave if we did not found any cut */

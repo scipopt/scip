@@ -25,4 +25,6 @@ $(BINOBJDIR)/main.o: src/main.c src/scip/scip.h src/scip/def.h src/scip/type_ret
  src/scip/type_reopt.h src/scip/pub_var.h src/lpi/lpi.h \
  src/nlpi/pub_expr.h src/scip/intervalarith.h \
  src/nlpi/type_exprinterpret.h src/scip/presolve.h src/scip/scip.h \
- src/scip/cuts.h src/scip/heuristics.h src/scip/scipshell.h
+ src/scip/cuts.h src/scip/set.h src/scip/struct_set.h src/scip/message.h \
+ src/scip/debug.h src/scip/type_cuts.h src/scip/heuristics.h \
+ src/scip/scipshell.h

@@ -13,10 +13,11 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cuts.h
+/**@file   aggrrow.h
  * @ingroup PUBLICCOREAPI
- * @brief  common methods used to generate and strengthen cuts
+ * @brief  methods for the aggregation rows
  * @author Jakob Witzig
+ * @author Robert Lion Gottwald
  *
  */
 
@@ -25,16 +26,10 @@
 #ifndef __SCIP_CUTS_H__
 #define __SCIP_CUTS_H__
 
-
 #include "scip/def.h"
-#include "blockmemshell/memory.h"
-#include "scip/type_cons.h"
-#include "scip/type_set.h"
-#include "scip/type_stat.h"
-#include "scip/type_misc.h"
-#include "scip/type_prob.h"
-#include "scip/type_sol.h"
-#include "scip/type_lp.h"
+#include "scip/set.h"
+#include "scip/type_cuts.h"
+#include "scip/struct_cuts.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -45,42 +40,213 @@ extern "C" {
  * @{
  */
 
-/** calculates a strong CG cut out of the weighted sum of LP rows; The weights of modifiable rows are set to 0.0 because
- *  these rows cannot participate in an MIR cut.
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_SOLVING
- *
- *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
- */
+/** create an empty the aggregation row */
 extern
-SCIP_RETCODE SCIPcutsCalcStrongCG(
+SCIP_RETCODE SCIPaggrRowCreate(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
-   SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
-   SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
-   int                   maxmksetcoefs,      /**< maximal number of nonzeros allowed in aggregated base inequality */
-   SCIP_Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
-   SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce strong CG cut for */
-   SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce strong CG cut for */
-   SCIP_Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
-   int*                  inds,               /**< indices of non-zero entries in weights array, or NULL */
-   int                   ninds,              /**< number of indices of non-zero entries in weights array, -1 if inds is
-                                              *   NULL */
-   SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
-   SCIP_Real*            mircoef,            /**< array to store strong CG coefficients: must be of size SCIPgetNVars() */
-   SCIP_Real*            mirrhs,             /**< pointer to store the right hand side of the strong CG row */
-   SCIP_Real*            cutactivity,        /**< pointer to store the activity of the resulting cut */
-   SCIP_Bool*            success,            /**< pointer to store whether the returned coefficients are a valid strong CG cut */
-   SCIP_Bool*            cutislocal,         /**< pointer to store whether the returned cut is only valid locally */
-   int*                  cutrank             /**< pointer to store the rank of the returned cut; or NULL */
+   SCIP_AGGRROW**        aggrrow             /**< pointer to return the aggregation row */
    );
 
-/** calculates an MIR cut out of the weighted sum of LP rows; The weights of modifiable rows are set to 0.0, because
- *  these rows cannot participate in an MIR cut.
+/** free a the aggregation row */
+extern
+void SCIPaggrRowFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW**        aggrrow             /**< pointer to the aggregation row that should be freed */
+   );
+
+/** output aggregation row to file stream */
+extern
+void SCIPaggrRowPrint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW*         aggrrow,            /**< pointer to return aggregation row */
+   FILE*                 file                /**< output file (or NULL for standard output) */
+   );
+
+/** copy the aggregation row */
+extern
+SCIP_RETCODE SCIPaggrRowCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW**        aggrrow,            /**< pointer to return the aggregation row */
+   SCIP_AGGRROW*         source              /**< source the aggregation row */
+   );
+
+/** adds given value to the right-hand side of the aggregation row */
+extern
+SCIP_RETCODE SCIPaggrRowAddData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
+   SCIP_VAR**            vars,               /**< variable array */
+   SCIP_Real*            coefs,              /**< variable coefficients */
+   int                   nvars,              /**< size of variable and coefficient array */
+   SCIP_Real             rhs,                /**< right-hand side of the row */
+   SCIP_Real             scale               /**< scalar to apply */
+   );
+
+/** add weighted row to the aggregation row */
+extern
+SCIP_RETCODE SCIPaggrRowAddRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   SCIP_ROW*             row,                /**< row to add to the aggregation row */
+   SCIP_Real             weight,             /**< scale for adding given row to the aggregation row */
+   int                   sidetype            /**< specify row side type (-1 = lhs, 0 = automatic, 1 = rhs) */
+   );
+
+/** add weighted constraint to the aggregation row */
+extern
+SCIP_RETCODE SCIPaggrRowAddCustomCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   int*                  inds,               /**< variable problem indices in constraint to add to the aggregation row */
+   SCIP_Real*            vals,               /**< values of constraint to add to the aggregation row */
+   int                   len,                /**< length of constraint to add to the aggregation row */
+   SCIP_Real             rhs,                /**< right hand side of constraint to add to the aggregation row */
+   SCIP_Real             weight,             /**< (positive) scale for adding given constraint to the aggregation row */
+   int                   rank,               /**< rank to use for given constraint */
+   SCIP_Bool             local               /**< is constraint only valid locally */
+   );
+
+/** deletes variable at position @pos and updates mapping between variable indices and sparsity pattern */
+extern
+void SCIPaggrRowDelCoef(
+   SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
+   int                   pos,                /**< position that should be removed */
+   int*                  positions           /**< mapping between variable indices and sparsity pattern (or NULL) */
+   );
+
+/** change the right-hand side of the aggregation row */
+extern
+void SCIPaggrRowAddRhs(
+   SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
+   SCIP_Real             value               /**< value to add to the right-hand side */
+   );
+
+/** clear all entries in the aggregation row but do not free the internal memory */
+extern
+void SCIPaggrRowClear(
+   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
+   );
+
+/** aggregate rows using the given weights; the current content of the aggregation
+ *  row, @aggrow, gets overwritten
+ */
+extern
+SCIP_RETCODE SCIPaggrRowSumRows(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   SCIP_Real*            weights,            /**< row weights in row summation */
+   int*                  rowinds,            /**< array to store indices of non-zero entries of the weights array, or NULL */
+   int                   nrowinds,           /**< number of non-zero entries in weights array, -1 if rowinds is NULL */
+   SCIP_Bool             sidetypebasis,      /**< choose sidetypes of row (lhs/rhs) based on basis information? */
+   SCIP_Bool             allowlocal,         /**< should local rows be used? */
+   int                   negslack,           /**< should negative slack variables be used? (0: no, 1: only for integral rows, 2: yes) */
+   int                   maxaggrlen,         /**< maximal number of non-zeros in the aggregation row */
+   SCIP_Bool*            valid               /**< is the aggregation valid */
+   );
+
+/** removes all (close enough to) zero entries in the aggregation row */
+extern
+void SCIPaggrRowRemoveZeros(
+   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
+   );
+
+/** safely removes variables with small coefficients from the aggregation row */
+extern
+void SCIPaggrRowCleanup(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
+   );
+
+/** get number of aggregated rows */
+extern
+int SCIPaggrRowGetNRows(
+   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
+   );
+
+/** get array with lp positions of aggregated rows */
+extern
+int* SCIPaggrRowGetRowInds(
+   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
+   );
+
+/** checks whether a given row has been added to the aggregation row */
+extern
+SCIP_Bool SCIPaggrRowHasRowBeenAdded(
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   SCIP_ROW*             row                 /**< row for which it is checked whether it has been added to the aggregation */
+   );
+
+/** gets the min and max absolute value of the weights used to aggregate the rows;
+ *  must not be called for empty aggregation rows
+ */
+extern
+void SCIPaggrRowGetAbsWeightRange(
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   SCIP_Real*            minabsrowweight,    /**< pointer to store smallest absolute value of weights used for aggregating rows */
+   SCIP_Real*            maxabsrowweight     /**< pointer to store largest absolute value of weights used for aggregating rows */
+   );
+
+/** gets the array of corresponding variable problem indices for each non-zero in the aggregation row */
+extern
+int* SCIPaggrRowGetInds(
+    SCIP_AGGRROW*        aggrrow
+   );
+
+/** gets the number of non-zeros in the aggregation row */
+extern
+int SCIPaggrRowGetNNz(
+   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
+   );
+
+/** gets the non-zero value for the given non-zero index */
+static INLINE
+SCIP_Real SCIPaggrRowGetValue(
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   int                   i                   /**< non-zero index; must be between 0 and SCIPaggrRowGetNNz(aggrrow) - 1 */
+   )
+{
+   SCIP_Real QUAD(val);
+
+   QUAD_ARRAY_LOAD(val, aggrrow->vals, aggrrow->inds[i]);
+
+   return QUAD_ROUND(val);
+}
+
+/** gets the non-zero value for the given problem index of a variable */
+static INLINE
+SCIP_Real SCIPaggrRowGetProbvarValue(
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   int                   probindex           /**< problem index of variable; must be between 0 and SCIPgetNVars(scip) - 1 */
+   )
+{
+   SCIP_Real QUAD(val);
+
+   QUAD_ARRAY_LOAD(val, aggrrow->vals, probindex);
+
+   return QUAD_ROUND(val);
+}
+
+/** gets the rank of the aggregation row */
+extern
+int SCIPaggrRowGetRank(
+   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
+   );
+
+/** checks if the aggregation row is only valid locally */
+extern
+SCIP_Bool SCIPaggrRowIsLocal(
+   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
+   );
+
+/** gets the right hand side of the aggregation row */
+extern
+SCIP_Real SCIPaggrRowGetRhs(
+   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
+   );
+
+/** calculates an MIR cut out of the weighted sum of LP rows given by an aggregation row; the
+ *  aggregation row must not contain non-zero weights for modifiable rows, because these rows cannot
+ *  participate in an MIR cut.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -90,8 +256,7 @@ SCIP_RETCODE SCIPcutsCalcStrongCG(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-extern
-SCIP_RETCODE SCIPcutsCalcLpMIR(
+SCIP_RETCODE SCIPcalcMIR(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
@@ -103,30 +268,28 @@ SCIP_RETCODE SCIPcutsCalcLpMIR(
                                               *   NULL for using closest bound for all variables */
    SCIP_BOUNDTYPE*       boundtypesfortrans, /**< type of bounds that should be used for transformed variables;
                                               *   NULL for using closest bound for all variables */
-   int                   maxmksetcoefs,      /**< maximal number of nonzeros allowed in aggregated base inequality */
-   SCIP_Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce MIR cut for */
-   SCIP_Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
-   SCIP_Real             maxweight,          /**< largest magnitude of weights; set to -1.0 if sparsity information is
-                                              *   unknown */
-   int*                  weightinds,         /**< sparsity pattern of weights; size nrowinds; NULL if sparsity info is
-                                              *   unknown */
-   int                   nweightinds,        /**< number of nonzeros in weights; -1 if rowinds is NULL */
-   int                   rowlensum,          /**< total number of nonzeros in used rows (row associated with nonzero weight coefficient); -1 if unknown */
-   int*                  sidetypes,          /**< specify row side type (-1 = lhs, 0 = unkown, 1 = rhs) or NULL for automatic choices */
-   SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
-   SCIP_Real*            mksetcoefs,         /**< array to store mixed knapsack set coefficients: size nvars; or NULL */
-   SCIP_Bool*            mksetcoefsvalid,    /**< pointer to store whether mixed knapsack set coefficients are valid; or NULL */
-   SCIP_Real*            mircoef,            /**< array to store MIR coefficients: must be of size SCIPgetNVars() */
-   SCIP_Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
-   SCIP_Real*            cutactivity,        /**< pointer to store the activity of the resulting cut */
-   SCIP_Bool*            success,            /**< pointer to store whether the returned coefficients are a valid MIR cut */
-   SCIP_Bool*            cutislocal,         /**< pointer to store whether the returned cut is only valid locally */
-   int*                  cutrank             /**< pointer to store the rank of the returned cut; or NULL */
+   SCIP_Real             scale,              /**< additional scaling factor multiplied to the aggrrow; must be positive */
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row to compute an MIR cut for */
+   SCIP_Real*            cutcoefs,           /**< array to store the non-zero coefficients in the cut */
+   SCIP_Real*            cutrhs,             /**< pointer to store the right hand side of the cut */
+   int*                  cutinds,            /**< array to store the problem indices of variables with a non-zero coefficient in the cut */
+   int*                  cutnnz,             /**< pointer to store the number of non-zeros in the cut */
+   SCIP_Real*            cutefficacy,        /**< pointer to store the efficacy of the cut, or NULL */
+   int*                  cutrank,            /**< pointer to return rank of generated cut */
+   SCIP_Bool*            cutislocal,         /**< pointer to store whether the generated cut is only valid locally */
+   SCIP_Bool*            success             /**< pointer to store whether the returned coefficients are a valid MIR cut */
    );
 
-/** applies the MIR function on a constraint; the constraint is given by pairs of variables and coefficients and a rhs.
+/** calculates an MIR cut out of the weighted sum of LP rows given by an aggregation row; the
+ *  aggregation row must not contain non-zero weights for modifiable rows, because these rows cannot
+ *  participate in an MIR cut. The function uses a cut generation heuristic which tries different scaling
+ *  factors and complementations of the variables to improve the cut's efficacy.
+ *  For further details we refer to:
+ *
+ *  Marchand, H., & Wolsey, L. A. (2001). Aggregation and mixed integer rounding to solve MIPs.
+ *  Operations research, 49(3), 363-371.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -137,43 +300,96 @@ SCIP_RETCODE SCIPcutsCalcLpMIR(
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
 extern
-SCIP_RETCODE SCIPcutsApplyMIR(
+SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
    SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
-   SCIP_Bool             fixintegralrhs,     /**< should complementation tried to be adjusted such that rhs gets fractional? */
-   int*                  boundsfortrans,     /**< bounds that should be used for transformed variables: 0 vlb_idx/vub_idx,
-                                              *   -1 for global lb/ub or -2 for local lb/ub
-                                              */
+   int                   maxtestdelta,       /**< maximum number of deltas to test */
+   int*                  boundsfortrans,     /**< bounds that should be used for transformed variables: vlb_idx/vub_idx,
+                                              *   -1 for global lb/ub, -2 for local lb/ub, or -3 for using closest bound;
+                                              *   NULL for using closest bound for all variables */
    SCIP_BOUNDTYPE*       boundtypesfortrans, /**< type of bounds that should be used for transformed variables;
                                               *   NULL for using closest bound for all variables */
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce MIR cut for */
-   SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
-   SCIP_Real*            mksetcoefs,         /**< array to store mixed knapsack set coefficients: size nvars; or NULL */
-   SCIP_Bool*            mksetcoefsvalid,    /**< pointer to store whether mixed knapsack set coefficients are valid; or NULL */
-   SCIP_Real*            mircoef,            /**< array to store MIR coefficients: must be of size SCIPgetNVars() */
-   SCIP_Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
-   int*                  varinds,            /**< array of variable indices with a mircoef != 0 */
-   int*                  nvarinds,           /**< number of variables indices in varinds array */
-   SCIP_Real*            minact,             /**< pointer to store the minimal activity */
-   SCIP_Bool*            varused,            /**< array to store whether a variable has a mircoef != 0 */
-   SCIP_Bool*            success,            /**< pointer to store whether the returned coefficients are a valid MIR cut */
-   SCIP_Bool*            islocal             /**< pointer to store whether the returned constraint is only valid locally */
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row to compute MIR cut for */
+   SCIP_Real*            cutcoefs,           /**< array to store the non-zero coefficients in the cut */
+   SCIP_Real*            cutrhs,             /**< pointer to store the right hand side of the cut */
+   int*                  cutinds,            /**< array to store the problem indices of variables with a non-zero coefficient in the cut */
+   int*                  cutnnz,             /**< pointer to store the number of non-zeros in the cut */
+   SCIP_Real*            cutefficacy,        /**< pointer to store efficacy of best cut; only cuts that are strictly better than the value of
+                                              *   this efficacy on input to this function are returned */
+   int*                  cutrank,            /**< pointer to return rank of generated cut */
+   SCIP_Bool*            cutislocal,         /**< pointer to store whether the generated cut is only valid locally */
+   SCIP_Bool*            success             /**< pointer to store whether a valid and efficacious cut was returned */
    );
 
-/** removes all nearly-zero coefficients from MIR row and relaxes the right hand side accordingly in order to prevent
- *  numerical rounding errors
+/** calculates a lifted simple generalized flow cover cut out of the weighted sum of LP rows given by an aggregation row; the
+ *  aggregation row must not contain non-zero weights for modifiable rows, because these rows cannot
+ *  participate in an MIR cut.
+ *  For further details we refer to:
+ *
+ *  Gu, Z., Nemhauser, G. L., & Savelsbergh, M. W. (1999). Lifted flow cover inequalities for mixed 0-1 integer programs.
+ *  Mathematical Programming, 85(3), 439-467.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-void SCIPcutsCleanupRow(
+extern
+SCIP_RETCODE SCIPcalcFlowCover(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real*            coefs,              /**< array to store MIR coefficients: must be of size nvars */
-   SCIP_Real*            rhs,                /**< pointer to store the right hand side of the MIR row */
-   SCIP_Bool*            varused,            /**< array to flag variables that appear in the MIR constraint */
-   int*                  varinds,            /**< sparsity pattern of non-zero MIR coefficients */
-   int*                  nvarinds,           /**< pointer to number of non-zero MIR coefficients */
-   SCIP_Bool             islocal             /**< is the row only valid locally? */
+   SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
+   SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
+   SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row to compute flow cover cut for */
+   SCIP_Real*            cutcoefs,           /**< array to store the non-zero coefficients in the cut */
+   SCIP_Real*            cutrhs,             /**< pointer to store the right hand side of the cut */
+   int*                  cutinds,            /**< array to store the problem indices of variables with a non-zero coefficient in the cut */
+   int*                  cutnnz,             /**< pointer to store the number of non-zeros in the cut */
+   SCIP_Real*            cutefficacy,        /**< pointer to store the efficacy of the cut, or NULL */
+   int*                  cutrank,            /**< pointer to return rank of generated cut */
+   SCIP_Bool*            cutislocal,         /**< pointer to store whether the generated cut is only valid locally */
+   SCIP_Bool*            success             /**< pointer to store whether a valid cut was returned */
+   );
+
+/** calculates a strong CG cut out of the weighted sum of LP rows given by an aggregation row; the
+ *  aggregation row must not contain non-zero weights for modifiable rows, because these rows cannot
+ *  participate in a strongcg cut
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+extern
+SCIP_RETCODE SCIPcalcStrongCG(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
+   SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
+   SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
+   SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
+   SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce strong CG cut for */
+   SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce strong CG cut for */
+   SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row to compute a flow cover cut for */
+   SCIP_Real*            cutcoefs,           /**< array to store the non-zero coefficients in the cut */
+   SCIP_Real*            cutrhs,             /**< pointer to store the right hand side of the cut */
+   int*                  cutinds,            /**< array to store the problem indices of variables with a non-zero coefficient in the cut */
+   int*                  cutnnz,             /**< pointer to store the number of non-zeros in the cut */
+   SCIP_Real*            cutefficacy,        /**< pointer to store the efficacy of the cut, or NULL */
+   int*                  cutrank,            /**< pointer to return rank of generated cut */
+   SCIP_Bool*            cutislocal,         /**< pointer to store whether the generated cut is only valid locally */
+   SCIP_Bool*            success             /**< pointer to store whether a valid cut was returned */
    );
 
 /* @} */

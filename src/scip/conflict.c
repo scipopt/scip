@@ -5801,6 +5801,8 @@ SCIP_Bool isSeparatingRootLPSol(
    return cutoff;
 }
 
+
+#if 0
 /** apply the MIR function to a given constraint */
 static
 SCIP_RETCODE applyMIR(
@@ -5832,6 +5834,12 @@ SCIP_RETCODE applyMIR(
    assert(rhs != NULL);
    assert(success != NULL);
 
+   /* TODO adapt this to new cuts.c */
+
+   SCIPABORT();
+   *success = FALSE;
+   return SCIP_OKAY;
+
    islocal = FALSE;
 
    /* create local copies */
@@ -5841,8 +5849,10 @@ SCIP_RETCODE applyMIR(
    copy_rhs = (*rhs);
    copy_nvarinds = (*nvarinds);
 
+#if 0
    SCIP_CALL( SCIPcutsApplyMIR(set->scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS, NULL, NULL, MINFRAC, 1.0,
          SCALE, NULL, NULL, copy_vals, &copy_rhs, copy_varinds, &copy_nvarinds, &minact, copy_varused, success, &islocal) );
+#endif
    assert(!islocal);
 
    if( *success )
@@ -5892,6 +5902,7 @@ SCIP_RETCODE applyMIR(
 
    return SCIP_OKAY;
 }
+#endif
 
 #ifdef SCIP_DEBUG
 static
@@ -5981,7 +5992,11 @@ SCIP_RETCODE tightenDualray(
    /* apply MIR function */
    if( set->conf_applymir )
    {
+      /*TODO adapt applyMIR function */
+#if 0
       SCIP_CALL( applyMIR(set, transprob, vals, varused, varinds, nvarinds, rhs, success) );
+#endif
+      *success = FALSE;
 
       debugPrintViolationInfo(set, getMinActivity(vals, varinds, (*nvarinds), curvarlbs, curvarubs), *rhs, " after applying MIR: ");
       if( !(*success) )
@@ -6044,7 +6059,11 @@ SCIP_RETCODE tightenDualray(
    /* apply MIR function again */
    if( set->conf_applymir )
    {
+      /*TODO adapt applyMIR function */
+#if 0
       SCIP_CALL( applyMIR(set, transprob, vals, varused, varinds, nvarinds, rhs, success) );
+#endif
+      *success = FALSE;
 
       debugPrintViolationInfo(set, getMinActivity(vals, varinds, (*nvarinds), curvarlbs, curvarubs), *rhs, " after applying MIR: ");
    }
@@ -6320,6 +6339,79 @@ SCIP_RETCODE tightenSingleVar(
    return SCIP_OKAY;
 }
 
+/** TODO: copied from old cuts.c; remove this if conflcit.c has been adapted to new interface
+ *  removes all nearly-zero coefficients from MIR row and relaxes the right hand side accordingly in order to prevent
+ *  numerical rounding errors
+ */
+static
+void cleanupRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real*            coefs,              /**< array to store MIR coefficients: must be of size nvars */
+   SCIP_Real*            rhs,                /**< pointer to store the right hand side of the MIR row */
+   SCIP_Bool*            varused,            /**< array to flag variables that appear in the MIR constraint */
+   int*                  varinds,            /**< sparsity pattern of non-zero MIR coefficients */
+   int*                  nvarinds,           /**< pointer to number of non-zero MIR coefficients */
+   SCIP_Bool             islocal             /**< is the row only valid locally? */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_Bool rhsinf;
+   int i;
+
+   assert(coefs != NULL);
+   assert(coefs != NULL);
+   assert(rhs != NULL);
+   assert(varused != NULL);
+   assert(varinds != NULL);
+   assert(nvarinds != NULL);
+
+   rhsinf = SCIPisInfinity(scip, *rhs);
+   i = 0;
+   vars = SCIPgetVars(scip);
+
+   while( i < *nvarinds )
+   {
+      int v;
+
+      v = varinds[i];
+      assert(0 <= v && v < SCIPgetNVars(scip));
+      assert(varused[v]);
+
+      if( SCIPisSumZero(scip, coefs[v]) )
+      {
+         SCIP_Real bd;
+
+         SCIPdebugMessage("coefficient of <%s> in transformed MIR row is too small: %.12f\n",
+            SCIPvarGetName(vars[v]), coefs[v]);
+
+         /* relax the constraint such that the coefficient becomes exactly 0.0 */
+         if( SCIPisPositive(scip, coefs[v]) )
+         {
+            bd = islocal ? SCIPvarGetLbLocal(vars[v]) : SCIPvarGetLbGlobal(vars[v]);
+            rhsinf = SCIPisInfinity(scip, -bd);
+         }
+         else if( SCIPisNegative(scip, coefs[v]) )
+         {
+            bd = islocal ? SCIPvarGetUbLocal(vars[v]) : SCIPvarGetUbGlobal(vars[v]);
+            rhsinf = SCIPisInfinity(scip, bd);
+         }
+         else
+            bd = 0.0;
+         *rhs -= bd * coefs[v];
+         coefs[v] = 0.0;
+
+         /* remove variable from sparsity pattern, do not increase i (i-th position is filled with last entry) */
+         varused[v] = FALSE;
+         varinds[i] = varinds[(*nvarinds)-1];
+         (*nvarinds)--;
+      }
+      else
+         ++i;
+   }
+   if( rhsinf )
+      *rhs = SCIPinfinity(scip);
+}
+
 /** perform conflict analysis based on a dual unbounded ray
  *
  *  given an aggregation of rows lhs <= a^Tx such that lhs > maxactivity. if the constraint has size one we add a
@@ -6396,7 +6488,7 @@ SCIP_RETCODE performDualRayAnalysis(
    }
 
    /* try to remove all nearly zero coefficients */
-   SCIPcutsCleanupRow(set->scip, mirvals, &mirrhs, varused, varinds, &nmirvars, FALSE);
+   cleanupRow(set->scip, mirvals, &mirrhs, varused, varinds, &nmirvars, FALSE);
 
    /* if the farkas-proof is empty, the node and its sub tree can be cut off completely */
    if( nmirvars == 0 )
