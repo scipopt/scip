@@ -266,7 +266,8 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
    }
    else
    {
-      assert( row->cols_index[row->nlpcols] == minidx );
+      assert(row->len > row->nlpcols);
+      assert(row->cols_index[row->nlpcols] == minidx);
       minidxval = row->vals[row->nlpcols];
    }
 
@@ -276,7 +277,8 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
    }
    else
    {
-      assert( row->cols_index[row->nlpcols - 1] == maxidx );
+      assert(row->len > row->nlpcols);
+      assert(row->cols_index[row->nlpcols - 1] == maxidx);
       maxidxval = row->vals[row->nlpcols - 1];
    }
 
