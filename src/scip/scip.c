@@ -44471,17 +44471,24 @@ void printSolutionStatistics(
       else
       {
          SCIP_Real avggap;
-
-         avggap = 0.0;
+         SCIP_Real primaldualintegral;
 
          if( !SCIPisFeasZero(scip, SCIPgetSolvingTime(scip)) )
-            avggap = scip->stat->primaldualintegral/SCIPgetSolvingTime(scip);
+         {
+            primaldualintegral = SCIPstatGetPrimalDualIntegral(scip->stat, scip->set, scip->transprob, scip->origprob);
+            avggap = primaldualintegral/SCIPgetSolvingTime(scip);
+         }
+         else
+         {
+            avggap = 0.0;
+            primaldualintegral = 0.0;
+         }
 
          /* caution: this assert is non-deterministic since it depends on the solving time */
          assert(0.0 <= avggap && SCIPisLE(scip, avggap, 100.0));
 
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Avg. Gap         : %10.2f %% (%.2f primal-dual integral)\n",
-            avggap, scip->stat->primaldualintegral);
+            avggap, primaldualintegral);
       }
    }
    else
