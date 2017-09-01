@@ -139,18 +139,8 @@ SCIP_DECL_READERFREE(readerFreeCor)
 static
 SCIP_DECL_READERREAD(readerReadCor)
 {  /*lint --e{715}*/
-   SCIP_READERDATA* readerdata;
 
-   assert(reader != NULL);
-
-   readerdata = SCIPreaderGetData(reader);
-   assert(readerdata != NULL);
-
-   SCIP_CALL( SCIPreadMps(scip, reader, filename, result, &readerdata->varnames, &readerdata->consnames,
-         &readerdata->varnamessize, &readerdata->consnamessize, &readerdata->nvarnames, &readerdata->nconsnames) );
-
-   if( (*result) == SCIP_SUCCESS )
-      readerdata->read = TRUE;
+   SCIP_CALL( SCIPreadCor(scip, reader, filename, result) );
 
    return SCIP_OKAY;
 }
@@ -160,27 +150,10 @@ SCIP_DECL_READERREAD(readerReadCor)
 static
 SCIP_DECL_READERWRITE(readerWriteCor)
 {  /*lint --e{715}*/
-   if( genericnames )
-   {
-      SCIP_CALL( SCIPwriteMps(scip, reader, file, name, transformed, objsense, objscale, objoffset, vars,
-            nvars, nbinvars, nintvars, nimplvars, ncontvars, fixedvars, nfixedvars, conss, nconss, result) );
-   }
-   else
-   {
-      SCIPwarningMessage(scip, "COR format is an MPS format with generic variable and constraint names\n");
 
-      if( transformed )
-      {
-         SCIPwarningMessage(scip, "write transformed problem with generic variable and constraint names\n");
-         SCIP_CALL( SCIPprintTransProblem(scip, file, "cor", TRUE) );
-      }
-      else
-      {
-         SCIPwarningMessage(scip, "write original problem with generic variable and constraint names\n");
-         SCIP_CALL( SCIPprintOrigProblem(scip, file, "cor", TRUE) );
-      }
-      *result = SCIP_SUCCESS;
-   }
+   SCIP_CALL( SCIPwriteCor(scip, reader, file, name, transformed, objsense, objscale, objoffset, vars, nvars, nbinvars,
+         nintvars, nimplvars, ncontvars, fixedvars, nfixedvars, conss, nconss, genericnames, result) );
+
    return SCIP_OKAY;
 }
 
@@ -221,6 +194,82 @@ SCIP_RETCODE SCIPincludeReaderCor(
          "reading/" READER_NAME "/aggrlinearization-ands",
          "should an aggregated linearization for and constraints be used?",
          &readerdata->aggrlinearizationands, TRUE, DEFAULT_AGGRLINEARIZATION_ANDS, NULL, NULL) );
+
+   return SCIP_OKAY;
+}
+
+
+
+/** reads problem from file */
+SCIP_RETCODE SCIPreadCor(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READER*          reader,             /**< the file reader itself */
+   const char*           filename,           /**< full path and name of file to read, or NULL if stdin should be used */
+   SCIP_RESULT*          result              /**< pointer to store the result of the file reading call */
+   )
+{
+   SCIP_READERDATA* readerdata;
+
+   assert(reader != NULL);
+
+   readerdata = SCIPreaderGetData(reader);
+   assert(readerdata != NULL);
+
+   SCIP_CALL( SCIPreadMps(scip, reader, filename, result, &readerdata->varnames, &readerdata->consnames,
+         &readerdata->varnamessize, &readerdata->consnamessize, &readerdata->nvarnames, &readerdata->nconsnames) );
+
+   if( (*result) == SCIP_SUCCESS )
+      readerdata->read = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** writes problem to file */
+SCIP_RETCODE SCIPwriteCor(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READER*          reader,             /**< the file reader itself */
+   FILE*                 file,               /**< output file, or NULL if standard output should be used */
+   const char*           name,               /**< problem name */
+   SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
+   SCIP_OBJSENSE         objsense,           /**< objective sense */
+   SCIP_Real             objscale,           /**< scalar applied to objective function; external objective value is
+                                              * extobj = objsense * objscale * (intobj + objoffset) */
+   SCIP_Real             objoffset,          /**< objective offset from bound shifting and fixing */
+   SCIP_VAR**            vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
+   int                   nvars,              /**< number of active variables in the problem */
+   int                   nbinvars,           /**< number of binary variables */
+   int                   nintvars,           /**< number of general integer variables */
+   int                   nimplvars,          /**< number of implicit integer variables */
+   int                   ncontvars,          /**< number of continuous variables */
+   SCIP_VAR**            fixedvars,          /**< array with fixed and aggregated variables */
+   int                   nfixedvars,         /**< number of fixed and aggregated variables in the problem */
+   SCIP_CONS**           conss,              /**< array with constraints of the problem */
+   int                   nconss,             /**< number of constraints in the problem */
+   SCIP_Bool             genericnames,       /**< should generic names be used for the variables and constraints? */
+   SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
+   )
+{
+   if( genericnames )
+   {
+      SCIP_CALL( SCIPwriteMps(scip, reader, file, name, transformed, objsense, objscale, objoffset, vars,
+            nvars, nbinvars, nintvars, nimplvars, ncontvars, fixedvars, nfixedvars, conss, nconss, result) );
+   }
+   else
+   {
+      SCIPwarningMessage(scip, "COR format is an MPS format with generic variable and constraint names\n");
+
+      if( transformed )
+      {
+         SCIPwarningMessage(scip, "write transformed problem with generic variable and constraint names\n");
+         SCIP_CALL( SCIPprintTransProblem(scip, file, "cor", TRUE) );
+      }
+      else
+      {
+         SCIPwarningMessage(scip, "write original problem with generic variable and constraint names\n");
+         SCIP_CALL( SCIPprintOrigProblem(scip, file, "cor", TRUE) );
+      }
+      *result = SCIP_SUCCESS;
+   }
 
    return SCIP_OKAY;
 }

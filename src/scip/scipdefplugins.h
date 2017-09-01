@@ -174,6 +174,7 @@
 #include "scip/reader_ppm.h"
 #include "scip/reader_pbm.h"
 #include "scip/reader_rlp.h"
+#include "scip/reader_smps.h"
 #include "scip/reader_sol.h"
 #include "scip/reader_sto.h"
 #include "scip/reader_tim.h"
