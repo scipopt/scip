@@ -77,6 +77,7 @@ $NAME/applications/Scheduler/src/*.c $NAME/applications/Scheduler/src/*.cpp $NAM
 $NAME/applications/Scheduler/data/*.sm \
 $NAME/applications/Scheduler/data/*.cmin \
 $NAME/applications/Scheduler/Makefile \
+$NAME/applications/Scheduler/CMakeLists.txt \
 $NAME/applications/MinIISC/* \
 $NAME/applications/MinIISC/check/CMakeLists.txt \
 $NAME/applications/MinIISC/doc/* \
