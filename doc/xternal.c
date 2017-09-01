@@ -7191,10 +7191,13 @@
 
 /**@page RELEASENOTES Release notes
  *
- * A release report with an in-depth description of many of the new features is available on <a href="http://www.optimization-online.org">Optimization Online</a>.
+ * A release report with an in-depth description of many of the new features in version 4.0 is available on <a href="http://www.optimization-online.org/DB_HTML/2017/03/5895.html">Optimization Online</a>.
+ *
+ * \verbinclude SCIP-release-notes-4.0.1
+ *
  * \verbinclude SCIP-release-notes-4.0
  *
- * Please consult the <a href="http://nbn-resolving.de/urn:nbn:de:0297-zib-57675">release report</a> that explains many of the new features in detail.
+ * Please consult the <a href="http://nbn-resolving.de/urn:nbn:de:0297-zib-57675">release report</a> for version 3.2 that explains many of the new features in detail.
  *
  * \verbinclude SCIP-release-notes-3.2.1
  *

@@ -48,7 +48,7 @@ interface:
   value
 - new function SCIPisObjChangedProbing() to check whether the objective function has changed during probing mode
 - new function SCIPgetDualSolVal() to get the dual solution value of a constraint
-- new functions SCIPisLPPrimalReliable() and SCIPisLPDualReliable to check whether the current primal / dual LP solution
+- new functions SCIPisLPPrimalReliable() and SCIPisLPDualReliable() to check whether the current primal / dual LP solution
   were successfully checked for feasibility
 
 testing:
