@@ -42,7 +42,7 @@
 #define SCIP_DEFAULT_SOLTOL               1e-2  /** The tolerance used to determine optimality of the solution */
 #define SCIP_DEFAULT_ADDCUTS             FALSE  /** Should cuts be generated, instead of constraints */
 
-#define CUTS_CONSTANT      0
+#define SCIP_DEFAULT_CUTCONSTANT        -10000
 
 /*
  * Data structures
@@ -53,6 +53,7 @@
 /** Benders' decomposition cuts data */
 struct SCIP_BenderscutData
 {
+   SCIP_Real             cutconstant;        /**< the constant for computing the integer cuts */
    SCIP_Real             soltol;             /**< the tolerance for the check between the auxiliary var and subprob */
    SCIP_Bool             addcuts;            /**< should cuts be generated instead of constraints */
 };
@@ -71,6 +72,7 @@ SCIP_RETCODE computeStandardIntegerOptCut(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_CONS*            cons,               /**< the constraint for the generated cut, can be NULL */
    SCIP_ROW*             row,                /**< the row for the generated cut, can be NULL */
+   SCIP_Real             cutconstant,        /**< the constant value in the integer optimality cut */
    int                   probnumber,         /**< the number of the pricing problem */
    SCIP_Bool             addcut              /**< indicates whether a cut is created instead of a constraint */
    )
@@ -95,7 +97,7 @@ SCIP_RETCODE computeStandardIntegerOptCut(
 
    /* getting the best solution from the subproblem */
    subprobsol = SCIPgetBestSol(subproblem);
-   subprobobj = SCIPgetSolOrigObj(subproblem, subprobsol) - CUTS_CONSTANT;
+   subprobobj = SCIPgetSolOrigObj(subproblem, subprobsol) - cutconstant;
 
    nvars = SCIPgetNVars(masterprob);
    vars = SCIPgetVars(masterprob);
@@ -135,7 +137,7 @@ SCIP_RETCODE computeStandardIntegerOptCut(
    else
       lhs = SCIPgetLhsLinear(masterprob, cons);
 
-   lhs += (1 - nposvars)*subprobobj + CUTS_CONSTANT;
+   lhs += (1 - nposvars)*subprobobj + cutconstant;
 
    /* Update the lhs of the cut */
    if( addcut )
@@ -262,7 +264,8 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
       SCIP_CALL( SCIPcreateConsBasicLinear(masterprob, &cons, cutname, 0, NULL, NULL, 0.0, SCIPinfinity(masterprob)) );
 
    /* computing the coefficients of the optimality cut */
-   SCIP_CALL( computeStandardIntegerOptCut(masterprob, subproblem, benders, sol, cons, row, probnumber, addcut) );
+   SCIP_CALL( computeStandardIntegerOptCut(masterprob, subproblem, benders, sol, cons, row, benderscutdata->cutconstant,
+         probnumber, addcut) );
 
    /* adding the auxiliary variable to the optimality cut */
    SCIP_CALL( addAuxiliaryVariableToCut(masterprob, benders, cons, row, probnumber, addcut) );
@@ -492,6 +495,12 @@ SCIP_RETCODE SCIPincludeBenderscutInt(
 #endif
 
    /* add int Benders' decomposition cuts parameters */
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "benderscut/" BENDERSCUT_NAME "/cutsconstant",
+         "the constant term of the integer Benders' cuts.",
+         &benderscutdata->cutconstant, FALSE, SCIP_DEFAULT_CUTCONSTANT, -SCIPinfinity(scip), SCIPinfinity(scip),
+         NULL, NULL) );
+
    SCIP_CALL( SCIPaddRealParam(scip,
          "benderscut/" BENDERSCUT_NAME "/solutiontol",
          "the tolerance used for the comparison between the auxiliary variable and the subproblem objective.",
