@@ -14932,6 +14932,7 @@ SCIP_RETCODE initSolve(
    /* initialize solution process data structures */
    SCIP_CALL( SCIPpricestoreCreate(&scip->pricestore) );
    SCIP_CALL( SCIPsepastoreCreate(&scip->sepastore) );
+   SCIP_CALL( SCIPsepastoreCreate(&scip->sepastoreprobing) );
    SCIP_CALL( SCIPcutpoolCreate(&scip->cutpool, scip->mem->probmem, scip->set, scip->set->sepa_cutagelimit, TRUE) );
    SCIP_CALL( SCIPcutpoolCreate(&scip->delayedcutpool, scip->mem->probmem, scip->set, scip->set->sepa_cutagelimit, FALSE) );
    SCIP_CALL( SCIPtreeCreateRoot(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
@@ -15079,6 +15080,7 @@ SCIP_RETCODE freeSolve(
    /* free solution process data structures */
    SCIP_CALL( SCIPcutpoolFree(&scip->cutpool, scip->mem->probmem, scip->set, scip->lp) );
    SCIP_CALL( SCIPcutpoolFree(&scip->delayedcutpool, scip->mem->probmem, scip->set, scip->lp) );
+   SCIP_CALL( SCIPsepastoreFree(&scip->sepastoreprobing) );
    SCIP_CALL( SCIPsepastoreFree(&scip->sepastore) );
    SCIP_CALL( SCIPpricestoreFree(&scip->pricestore) );
 
@@ -15175,6 +15177,7 @@ SCIP_RETCODE freeReoptSolve(
 
    SCIP_CALL( SCIPcutpoolFree(&scip->cutpool, scip->mem->probmem, scip->set, scip->lp) );
    SCIP_CALL( SCIPcutpoolFree(&scip->delayedcutpool, scip->mem->probmem, scip->set, scip->lp) );
+   SCIP_CALL( SCIPsepastoreFree(&scip->sepastoreprobing) );
    SCIP_CALL( SCIPsepastoreFree(&scip->sepastore) );
    SCIP_CALL( SCIPpricestoreFree(&scip->pricestore) );
 
@@ -15626,15 +15629,18 @@ SCIP_RETCODE prepareReoptimization(
 
       SCIPbranchcandInvalidate(scip->branchcand);
 
-      /* install globally valid lower and upper bounds */
-      SCIP_CALL( SCIPreoptInstallBounds(scip->reopt, scip->set, scip->stat, scip->transprob, scip->lp, scip->branchcand,
-            scip->eventqueue, scip->cliquetable, scip->mem->probmem) );
-
       SCIP_CALL( SCIPreoptResetActiveConss(scip->reopt, scip->set, scip->stat) );
 
       /* check whether we want to restart the tree search */
       SCIP_CALL( SCIPreoptCheckRestart(scip->reopt, scip->set, scip->mem->probmem, NULL, scip->transprob->vars,
             scip->transprob->nvars, &reoptrestart) );
+
+      /* call initialization methods of plugins */
+      SCIP_CALL( SCIPsetInitPlugins(scip->set, scip->mem->probmem, scip->stat) );
+
+      /* install globally valid lower and upper bounds */
+      SCIP_CALL( SCIPreoptInstallBounds(scip->reopt, scip->set, scip->stat, scip->transprob, scip->lp, scip->branchcand,
+            scip->eventqueue, scip->cliquetable, scip->mem->probmem) );
 
       /* check, whether objective value is always integral by inspecting the problem, if it is the case adjust the
        * cutoff bound if primal solution is already known
@@ -15645,9 +15651,6 @@ SCIP_RETCODE prepareReoptimization(
       /* if possible, scale objective function such that it becomes integral with gcd 1 */
       SCIP_CALL( SCIPprobScaleObj(scip->transprob, scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->primal,
             scip->tree, scip->reopt, scip->lp, scip->eventqueue) );
-
-      /* call initialization methods of plugins */
-      SCIP_CALL( SCIPsetInitPlugins(scip->set, scip->mem->probmem, scip->stat) );
 
       SCIPlpRecomputeLocalAndGlobalPseudoObjval(scip->lp, scip->set, scip->transprob);
    }
@@ -19974,7 +19977,10 @@ SCIP_RETCODE SCIPendStrongbranch(
       /* inform the LP that the probing mode is not used for strong branching anymore */
       SCIPlpEndStrongbranchProbing(scip->lp);
 
-      SCIP_CALL( SCIPendProbing(scip) );
+      /* switch back from probing to normal operation mode and restore variables and constraints to focus node */
+      SCIP_CALL( SCIPtreeEndProbing(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat,
+         scip->transprob, scip->origprob, scip->lp, scip->relaxation, scip->primal,
+         scip->branchcand, scip->eventqueue, scip->eventfilter, scip->cliquetable) );
 
       /* apply the collected bound changes */
       for( i = 0; i < nbnds; ++i )
@@ -35194,6 +35200,15 @@ SCIP_RETCODE SCIPstartProbing(
       return SCIP_INVALIDCALL;
    }
 
+   /* use a different separation storage for probing mode; otherwise SCIP will remove the cuts that are currently in the
+    * separation storage after solving an LP in probing mode
+    */
+   if( scip->sepastore != NULL )
+   {
+      assert(scip->sepastoreprobing != NULL);
+      SCIPswapPointers((void**)&scip->sepastore, (void**)&scip->sepastoreprobing);
+   }
+
    SCIP_CALL( SCIPtreeStartProbing(scip->tree, scip->mem->probmem, scip->set, scip->lp, FALSE) );
 
    /* disables the collection of any statistic for a variable */
@@ -35327,6 +35342,14 @@ SCIP_RETCODE SCIPendProbing(
 
    /* enables the collection of statistics for a variable */
    SCIPstatEnableVarHistory(scip->stat);
+
+   /* switch to the original separation storage */
+   if( scip->sepastore != NULL )
+   {
+      assert(scip->sepastoreprobing != NULL);
+      SCIPswapPointers((void**)&scip->sepastore, (void**)&scip->sepastoreprobing);
+      assert(SCIPsepastoreGetNCuts(scip->sepastoreprobing) == 0);
+   }
 
    return SCIP_OKAY;
 }
@@ -44448,17 +44471,24 @@ void printSolutionStatistics(
       else
       {
          SCIP_Real avggap;
-
-         avggap = 0.0;
+         SCIP_Real primaldualintegral;
 
          if( !SCIPisFeasZero(scip, SCIPgetSolvingTime(scip)) )
-            avggap = scip->stat->primaldualintegral/SCIPgetSolvingTime(scip);
+         {
+            primaldualintegral = SCIPstatGetPrimalDualIntegral(scip->stat, scip->set, scip->transprob, scip->origprob);
+            avggap = primaldualintegral/SCIPgetSolvingTime(scip);
+         }
+         else
+         {
+            avggap = 0.0;
+            primaldualintegral = 0.0;
+         }
 
          /* caution: this assert is non-deterministic since it depends on the solving time */
          assert(0.0 <= avggap && SCIPisLE(scip, avggap, 100.0));
 
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Avg. Gap         : %10.2f %% (%.2f primal-dual integral)\n",
-            avggap, scip->stat->primaldualintegral);
+            avggap, primaldualintegral);
       }
    }
    else

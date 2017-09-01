@@ -32,6 +32,21 @@ set(instances
 )
 
 #
+# add a test to build the application
+#
+add_test(NAME applications-scheduler-build
+        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target scheduler
+        )
+#
+# avoid that several build jobs try to concurrently build the SCIP library
+# note that this ressource lock name is not the actual libscip target
+#
+set_tests_properties(applications-scheduler-build
+                    PROPERTIES
+                        RESOURCE_LOCK libscip
+                    )
+
+#
 # add a test for every instance
 #
 foreach(instance ${instances})
@@ -40,6 +55,12 @@ foreach(instance ${instances})
     #
     # call the Scheduler binary and validate the solve with the given objective value
     #
-    add_test(NAME "applications-scheduler-${basename}" COMMAND $<TARGET_FILE:scheduler> -f ${CMAKE_CURRENT_SOURCE_DIR}/../data/${basename} -o ${optval} ${optval})
-    set_tests_properties("applications-scheduler-${basename}" PROPERTIES PASS_REGULAR_EXPRESSION "Validation         : Success")
+    add_test(NAME "applications-scheduler-${basename}"
+            COMMAND $<TARGET_FILE:scheduler> -f ${CMAKE_CURRENT_SOURCE_DIR}/../data/${basename} -o ${optval} ${optval}
+            )
+    set_tests_properties("applications-scheduler-${basename}"
+                        PROPERTIES
+                            PASS_REGULAR_EXPRESSION "Validation         : Success"
+                            DEPENDS applications-scheduler-build
+                        )
 endforeach()

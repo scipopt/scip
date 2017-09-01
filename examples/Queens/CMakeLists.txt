@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.0)
+
 project(Queens)
 
 find_package(SCIP REQUIRED)
@@ -8,12 +10,31 @@ add_executable(queens
    src/queens_main.cpp)
 
 target_link_libraries(queens ${SCIP_LIBRARIES})
-add_dependencies(examples queens)
+
+if( TARGET examples )
+    add_dependencies( examples queens )
+endif()
+
+include(CTest)
+#
+# add a test to build the executable
+#
+add_test(NAME examples-queens-build
+        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target queens
+        )
+#
+# avoid that several build jobs try to concurrently build the SCIP library
+# note that this ressource lock name is not the actual libscip target
+#
+set_tests_properties(examples-queens-build
+                    PROPERTIES
+                        RESOURCE_LOCK libscip
+                    )
 
 #
 # test the queens example on checker boards of different size
 #
-include(CTest)
+
 set(nSet
     1
     2
@@ -22,6 +43,12 @@ set(nSet
     16
     )
 foreach(n ${nSet})
-    add_test(NAME examples-queens-${n} COMMAND $<TARGET_FILE:queens> ${n})
+    add_test(NAME examples-queens-${n}
+            COMMAND $<TARGET_FILE:queens> ${n}
+            )
+    set_tests_properties(examples-queens-${n}
+                        PROPERTIES
+                            DEPENDS examples-queens-build
+                        )
 endforeach(n)
     
