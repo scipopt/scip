@@ -604,10 +604,13 @@
  * cd build
  * cmake .. [-DSOPLEX_DIR=/path/to/soplex]
  * make
+ *
  * # optional: run a quick check on some instances
+ *
  * make check
  *
  * # optional: install scip executable, library, and headers
+ *
  * make install
  *
  * ```
@@ -638,7 +641,11 @@
  *
  * There are several options that can be passed to the `cmake <path/to/SCIP>` call to modify how the code is built.
  * For all of these options and parameters you have to use `-D<Parameter_name>=<value>`. Following a list of available
- * options, for the full list run `cmake <path/to/SCIP> -LH`.
+ * options, for the full list run
+ *
+ * ```
+ * cmake <path/to/SCIP> -LH
+ * ```
  *
  * CMake option         | Available values               | Makefile equivalent    | Remarks                                    |
  * ---------------------|--------------------------------|------------------------|--------------------------------------------|
@@ -662,8 +669,15 @@
  *
  * There is an extensive test suite written for <a href="https://cmake.org/cmake/help/latest/manual/ctest.1.html">CTest</a>,
  * that may take a while to complete. To perform a quick test to see whether the compilation was really successful you may
- * run `make check`. To see all available tests, run `ctest -N` and to perform a memory check, run
- * `ctest -T MemCheck`. If <a href="https://criterion.readthedocs.io/en/master/">Criterion</a> is installed (set
+ * run `make check`. To see all available tests, run
+ *
+ * ```ctest -N```
+ *
+ * and to perform a memory check, run
+ *
+ * ```ctest -T MemCheck```
+ *
+ * If <a href="https://criterion.readthedocs.io/en/master/">Criterion</a> is installed (set
  * custom path with `-DCRITERION_DIR=<path>`) the target `unittests` can be used to compile and run the available unit tests.
  *
  * A coverage report for the entire test suite can be generated. This requires a modification of the
@@ -697,11 +711,11 @@
  * | scip            | build SCIP executable                                 |                                       |
  * | applications    | build executables for all applications                |                                       |
  * | examples        | build executables for all examples                    |                                       |
- * | unittests       | build unit tests -                                    | the Criterion package, see \ref CTEST |
+ * | unittests       | build unit tests                                      | the Criterion package, see \ref CTEST |
  * | all_executables | build all of the above                                |                                       |
  * | libscip         | build the SCIP library                                |                                       |
  * | install         | install SCIP, see \ref CMAKE_INSTALL                  |                                       |
- * | coverage        | run the test suite and create a coverage report       | build flags `-DCOVERAGE=on`           |
+ * | coverage        | run the test suite and create a coverage report       | build flag `-DCOVERAGE=on`            |
  * | liblpi          | build the LPI library                                 |                                       |
  * | libnlpi         | build the NLPI library                                |                                       |
  * | libobjscip      | build the ObjSCIP library for the C++ wrapper classes |                                       |
