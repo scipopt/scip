@@ -51,8 +51,8 @@
  * @section GETTINGSTARTED Getting started
  *
  * - \ref WHATPROBLEMS "What types of optimization problems does SCIP solve?"
- * - \ref MAKE    "Installation information / Makefiles"
- * - \ref CMAKE   "Installation information / CMake"
+ * - \ref CMAKE   "Installation information using CMake"
+ * - \ref MAKE    "Installation information using Makefiles"
  * - \ref LICENSE "License"
  *
  * - \ref SHELL       "Tutorial: the interactive shell"
