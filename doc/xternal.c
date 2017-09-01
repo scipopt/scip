@@ -590,7 +590,7 @@
 
 /**@page CMAKE CMake build system
  *
- * <a href=https://cmake.org/>CMake</a> is a build system generator that can create e.g. Makefiles for UNIX
+ * <a href=https://cmake.org/>CMake</a> is a build system generator that can create, e.g., Makefiles for UNIX and Mac
  * or Visual Studio project files for Windows.
  *
  * CMake provides an <a href="https://cmake.org/cmake/help/latest/manual/cmake.1.html">extensive documentation</a>
@@ -598,10 +598,29 @@
  * It's recommended to use the latest stable CMake version available. `cmake --help` is also a good first step to see
  * available options and usage information.
  *
+ * ```
+ * cd scip
+ * mkdir build
+ * cd build
+ * cmake .. [-DSOPLEX_DIR=/path/to/soplex]
+ * make
+ * # optional: run a quick check on some instances
+ * make check
+ *
+ * # optional: install scip executable, library, and headers
+ * make install
+ *
+ * ```
+ *
  * CMake uses an out-of-source build, i.e., compiled binaries and object files are separated from the source tree and
  * located in another directory. Usually this directory is called `build` or `debug` or whatever you prefer. From within
  * this directory, run `cmake <path/to/SCIP>` to configure your build, followed by `make` to compile the code according
- * to the current configuration (this assumes that you chose Linux Makefiles as CMake Generator). Afterwards,
+ * to the current configuration (this assumes that you chose Linux Makefiles as CMake Generator). By default, SCIP
+ * searches for Soplex as LP solver. If SoPlex is not installed systemwide, the path to a CMake build directory
+ * of SoPlex must be specified (ie one that contains "soplex-config.cmake"). Alternatively, a different LP solver
+ * can be specified with the `LPS` variable, see \ref CMAKE_CONFIG and \ref LPI.
+ *
+ * Afterwards,
  * successive calls to `make` are going to recompile modified source code,
  * without requiring another call to `cmake`. The initial configuration step checks your environment for available
  * third-party libraries and packages and sets up the configuration accordingly, e.g., disabling support for GMP if not
@@ -621,18 +640,20 @@
  * For all of these options and parameters you have to use `-D<Parameter_name>=<value>`. Following a list of available
  * options, for the full list run `cmake <path/to/SCIP> -LH`.
  *
- * CMake option         | available values               | Makefile equivalent
- * ---------------------|--------------------------------|------------------------
- * CMAKE_BUILD_TYPE     | Release, Debug, ...            | OPT=[opt, dbg]
- * LPS                  | spx, cpx, grb, xprs, ...       | LPS=...
- * GMP                  | on, off                        | GMP=[true, false]
- * READLINE             | on, off                        | READLINE=[true, false]
- * ZIMPL                | on, off                        | ZIMPL=[true, false]
- * CMAKE_INSTALL_PREFIX | <path>                         | INSTALLDIR=<path>
- * SHARED               | on, off                        | SHARED=[true, false]
- * SOPLEX_DIR           | <path/to/SoPlex/installation>  | --
- * GMP_DIR              | <path/to/GMP/installation>     | --
- * ..._DIR              | <custom/path/to/.../package>   | --
+ * CMake option         | Available values               | Makefile equivalent    | Remarks                                    |
+ * ---------------------|--------------------------------|------------------------|--------------------------------------------|
+ * CMAKE_BUILD_TYPE     | Release, Debug, ...            | OPT=[opt, dbg]         |                                            |
+ * LPS                  | spx, cpx, grb, xprs, ...       | LPS=...                | See \ref LPI for a complete list           |
+ * GMP                  | on, off                        | GMP=[true, false]      |                                            |
+ * READLINE             | on, off                        | READLINE=[true, false] |                                            |
+ * ZIMPL                | on, off                        | ZIMPL=[true, false]    |                                            |
+ * CMAKE_INSTALL_PREFIX | \<path\>                       | INSTALLDIR=\<path\>    |                                            |
+ * SHARED               | on, off                        | SHARED=[true, false]   |                                            |
+ * SOPLEX_DIR           | <path/to/SoPlex/installation>  | --                     |                                            |
+ * GMP_DIR              | <path/to/GMP/installation>     | --                     |                                            |
+ * ..._DIR              | <custom/path/to/.../package>   | --                     |                                            |
+ * COVERAGE             | on, off                        | --                     | use with gcc, lcov, gcov in **debug** mode |
+ * COVERAGE_CTEST_ARGS  | ctest argument string          | --                     | see `ctest --help` for arguments           |
  *
  * Parameters can be set all at once or in subsequent calls to `cmake` - extending or modifying the existing
  * configuration.
@@ -643,7 +664,22 @@
  * that may take a while to complete. To perform a quick test to see whether the compilation was really successful you may
  * run `make check`. To see all available tests, run `ctest -N` and to perform a memory check, run
  * `ctest -T MemCheck`. If <a href="https://criterion.readthedocs.io/en/master/">Criterion</a> is installed (set
- * custom path with `-DCRITERION=<path>`) the target `unittests` can be used to compile and run the available unit tests.
+ * custom path with `-DCRITERION_DIR=<path>`) the target `unittests` can be used to compile and run the available unit tests.
+ *
+ * A coverage report for the entire test suite can be generated. This requires a modification of the
+ * compilation process. Two variables govern the report generation, `COVERAGE` and `COVERAGE_CTEST_ARGS`.
+ * It is recommended to use the Debug build type.
+ *
+ * ```
+ * cmake .. -DCOVERAGE=on -DCOVERAGE_CTEST_ARGS="-R MIP -E stein -j4" -DCMAKE_BUILD_TYPE=Debug
+ * ```
+ *
+ * In this example, coverage is enabled in combination with the build type Debug. In addition, only the coverage
+ * for tests with "MIP" in the name are run, excluding those that have "stein" in the name.
+ * The tests are performed in parallel using 4 cores.
+ *
+ * Use the `coverage` target, e.g., `make coverage`, to build the coverage report. The generated report can be found
+ * under "coverage/index.html".
  *
  * @section CMAKE_INSTALL Installation
  *
@@ -656,6 +692,19 @@
  * There are several further targets available, which can be listed using `make help`. For instance, there are some
  * examples that can be built with `make examples` or by specifying a certain one: `make <example-name>`.
  *
+ * | CMake target    | Description                                           | Requirements                          |
+ * |-----------------|-------------------------------------------------------|---------------------------------------|
+ * | scip            | build SCIP executable                                 |                                       |
+ * | applications    | build executables for all applications                |                                       |
+ * | examples        | build executables for all examples                    |                                       |
+ * | unittests       | build unit tests -                                    | the Criterion package, see \ref CTEST |
+ * | all_executables | build all of the above                                |                                       |
+ * | libscip         | build the SCIP library                                |                                       |
+ * | install         | install SCIP, see \ref CMAKE_INSTALL                  |                                       |
+ * | coverage        | run the test suite and create a coverage report       | build flags `-DCOVERAGE=on`           |
+ * | liblpi          | build the LPI library                                 |                                       |
+ * | libnlpi         | build the NLPI library                                |                                       |
+ * | libobjscip      | build the ObjSCIP library for the C++ wrapper classes |                                       |
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -4089,7 +4138,7 @@
  * If you are using relaxation handler data, you have to implement this method in order to free the relaxation handler
  * data. This can be done by the following procedure:
  *
- * @refsnippet{unittests/src/unittest-relax/relax_unittest.c,SnippetRelaxFreeUnittest}
+ * @refsnippet{tests/src/relax/relax.c,SnippetRelaxFreeUnittest}
  *
  * If you have allocated memory for fields in your relaxation handler data, remember to free this memory
  * before freeing the relaxation handler data itself.
