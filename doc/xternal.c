@@ -588,7 +588,7 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@page CMAKE CMake build system
+/**@page CMAKE Building SCIP with CMake
  *
  * <a href=https://cmake.org/>CMake</a> is a build system generator that can create, e.g., Makefiles for UNIX and Mac
  * or Visual Studio project files for Windows.
