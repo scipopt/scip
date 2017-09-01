@@ -60,6 +60,7 @@
  * - \ref START       "How to start a new project"
  * - \ref EXAMPLES    "Examples"
  * - \ref APPLICATIONS "Extensions of SCIP for specific applications"
+ * - \ref LPI         "Available LP solver interfaces"
  *
  * @section FURTHERINFORMATION References
  *
@@ -68,7 +69,6 @@
  *
  * - \ref DOC     "How to search the documentation for interface methods"
  * - \ref FAQ     "Frequently asked questions (FAQ)"
- * - \ref APPLICATIONS "Extensions of SCIP for specific applications"
  *
  *
  * @section PROGRAMMING Programming with SCIP
@@ -293,6 +293,36 @@
  *  </td>
  *  </tr>
  *  </table>
+ *
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/** @page LPI Available LP solver interfaces
+ *
+ * SCIP provides a range of different interfaces to LP solvers:
+ *
+ * LPI name | LP solver
+ * ---------|----------
+ * `spx`    | SoPlex
+ * `cpx`    | IBM ILOG CPLEX
+ * `xprs`   | FICO XPress
+ * `grb`    | Gurobi (interface is in beta stage, version at least 7.0.2 required)
+ * `clp`    | CoinOR CLP (interface currently sometimes produces wrong results)
+ * `glop`   | Google Glop (experimental, LPI is contained in Glop package/Google OR tools)
+ * `msk`    | Mosek (experimental)
+ * `qsopt`  | QSopt (experimental)
+ * `none`   | disables LP solving entirely (not recommended; only for technical reasons)
+ *
+ * There are two different interfaces for SoPlex. The default one (`spx`) uses an updated interface that is provided
+ * by SoPlex itself (since version 2.0), resulting in a slimmer LPI that is similiar to those for CPLEX or XPRESS.
+ * The other one - `spx1` - is the older LPI that directly interfaces the internal simplex solver of SoPlex and
+ * therefore needs to duplicate some features in the LPI that are already available in SoPlex itself. It lacks some
+ * features like persistent scaling which are only available in the modern interface. Upcoming features may not be
+ * supported. Old compilers might have difficulties with the new interface because some C++11 features are required
+ * that may not be supported.
+ *
+ * To use the old interface, set the Makefile option `LPS=spx1` or configure your CMake build with `LEGACY=ON`.
  *
  */
 

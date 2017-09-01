@@ -75,6 +75,7 @@ SECTION: General Questions about SCIP
       <li><a href="http://www.fico.com/en/Products/DMTools/Pages/FICO-Xpress-Optimization-Suite.aspx">FICO XPress</a></li>
       <li><a href="http://www.gurobi.com/">Gurobi</a> (interface is in beta stage, version at least 7.0.2 required)</li>
       <li><a href="https://projects.coin-or.org/Clp/">CLP</a> (interface currently sometimes produces wrong results)</li>
+      <li><a href="https://github.com/google/or-tools">Glop, Google OR tools</a> (experimental, LPI contained in OR tools)</li>
       <li><a href="http://www.mosek.com/">Mosek</a> (experimental)</li>
       <li><a href="http://www2.isye.gatech.edu/~wcook/qsopt/">QSopt</a> (experimental)</li>
     </ul>
