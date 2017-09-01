@@ -245,45 +245,28 @@ static
 SCIP_DECL_HASHKEYVAL(hashKeyValCut)
 {  /*lint --e{715}*/
    SCIP_ROW* row;
-   int minidx;
-   int maxidx;
-   SCIP_Real maxidxval;
-   SCIP_Real minidxval;
+   int i;
+   SCIP_Real scale;
    SCIP_SET* set;
+   uint64_t hash;
 
    set = (SCIP_SET*) userptr;
    row = (SCIP_ROW*)key;
    assert(row != NULL);
    assert(row->len > 0);
 
-   SCIProwSort(row);
-   minidx = SCIProwGetMinidx(row, set);
-   maxidx = SCIProwGetMaxidx(row, set);
+   scale = 1.0 / SCIProwGetMaxval(row, set);
+   if( SCIPsetIsInfinity(set, row->rhs) )
+      scale = -scale;
 
-   if( row->cols_index[0] == minidx )
+   hash = row->len;
+
+   for( i = 0; i < row->len; ++i )
    {
-      minidxval = row->vals[0];
-   }
-   else
-   {
-      assert(row->len > row->nlpcols);
-      assert(row->cols_index[row->nlpcols] == minidx);
-      minidxval = row->vals[row->nlpcols];
+      hash += SCIPhashTwo(SCIPrealHashCode(scale * row->vals[i]), row->cols_index[i]);
    }
 
-   if( row->cols_index[row->len - 1] == maxidx )
-   {
-      maxidxval = row->vals[row->len - 1];
-   }
-   else
-   {
-      assert(row->len > row->nlpcols);
-      assert(row->cols_index[row->nlpcols - 1] == maxidx);
-      maxidxval = row->vals[row->nlpcols - 1];
-   }
-
-   return SCIPhashTwo(SCIPcombineTwoInt(SCIPrealHashCode(minidxval / maxidxval), row->len), \
-                      SCIPcombineTwoInt(minidx, maxidx));
+   return hash;
 }
 
 
@@ -611,7 +594,7 @@ SCIP_Bool SCIPcutpoolIsCutNew(
    {
       return TRUE;
    }
-   else
+   else if( othercut->row != row )
    {
       SCIP_ROW* otherrow = othercut->row;
       SCIP_Real otherrhs;
