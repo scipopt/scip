@@ -488,9 +488,8 @@ INLINE static
 uint32_t SCIPrealHashCode(double x)
 {
    int exp;
-   return (((uint32_t)(uint16_t)(int16_t)ldexp(frexp(x, &exp), 15))<<16) | (uint32_t)exp;
+   return (((uint32_t)(uint16_t)(int16_t)ldexp(frexp(x, &exp), 15))<<16) | (uint32_t)(uint16_t)exp;
 }
-
 
 /** creates a hash table */
 EXTERN

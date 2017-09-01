@@ -271,9 +271,9 @@ int mod2(
    SCIP_Real             val                 /**< value to take mod 2 */
 )
 {
-   assert(SCIPisIntegral(scip, val));
+   assert(SCIPisFeasIntegral(scip, val));
    val *= 0.5;
-   return (int) (!SCIPisEQ(scip, SCIPfloor(scip, val), val));
+   return (REALABS(SCIPround(scip, val) - val) > 0.1) ? 1 : 0;
 }
 
 /** Tries to transform a non-integral row into an integral row that can be used in zerohalf separation */
@@ -967,7 +967,7 @@ SCIP_RETCODE buildMod2Matrix(
       else
       {
          lhsslack = activity - SCIProwGetLhs(rows[i]);
-         lhsmod2 = mod2(scip, SCIProwGetLhs(rows[i]));
+         lhsmod2 = mod2(scip, SCIProwGetLhs(rows[i]) - SCIProwGetConstant(rows[i]));
       }
 
       /* compute rhsslack: rhs - activity */
@@ -976,7 +976,7 @@ SCIP_RETCODE buildMod2Matrix(
       else
       {
          rhsslack = SCIProwGetRhs(rows[i]) - activity;
-         rhsmod2 = mod2(scip, SCIProwGetRhs(rows[i]));
+         rhsmod2 = mod2(scip, SCIProwGetRhs(rows[i]) - SCIProwGetConstant(rows[i]));
       }
 
       if( rhsslack <= maxslack && lhsslack <= maxslack )

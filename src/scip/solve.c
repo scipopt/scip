@@ -1244,19 +1244,20 @@ SCIP_RETCODE SCIPconstructCurrentLP(
 
    if( !SCIPtreeIsFocusNodeLPConstructed(tree) )
    {
-      int i;
-
       /* inform separation storage, that LP is now filled with initial data */
       SCIPsepastoreStartInitialLP(sepastore);
 
-      i = tree->correctlpdepth >= 0 ? tree->pathnlprows[tree->correctlpdepth] : 0;
-
-      for( ; i < lp->nrows; ++i )
+      if( tree->correctlpdepth >= 0 )
       {
-         /* keep all active global cuts that where applied in the previous node in the lp */
-         if( !lp->rows[i]->local && lp->rows[i]->age == 0 )
+         int i;
+
+         for( i = tree->pathnlprows[tree->correctlpdepth]; i < lp->nrows; ++i )
          {
-            SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, NULL, lp->rows[i], TRUE, (SCIPtreeGetCurrentDepth(tree) == 0), cutoff) );
+            /* keep all active global cuts that where applied in the previous node in the lp */
+            if( !lp->rows[i]->local && lp->rows[i]->age == 0 )
+            {
+               SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, NULL, lp->rows[i], TRUE, (SCIPtreeGetCurrentDepth(tree) == 0), cutoff) );
+            }
          }
       }
 
