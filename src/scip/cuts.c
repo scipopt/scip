@@ -2352,8 +2352,8 @@ SCIP_RETCODE cutsSubstituteMIR(
       }
    }
 
-   /* set rhs to zero, if it's very close to */
-   if( EPSZ(QUAD_ROUND(*cutrhs), QUAD_EPSILON) )
+   /* relax rhs to zero, if it's very close to */
+   if( QUAD_ROUND(*cutrhs) < 0.0 && QUAD_ROUND(*cutrhs) >= SCIPepsilon(scip) )
       QUAD_ASSIGN(*cutrhs, 0.0);
 
    return SCIP_OKAY;
@@ -2624,7 +2624,7 @@ SCIP_Real computeMIRViolation(
 
    for( i = 0; i < nvars; ++i )
    {
-      SCIP_Real floorai = EPSFLOOR(scale * coefs[i], QUAD_EPSILON);
+      SCIP_Real floorai = floor(scale * coefs[i]);
       SCIP_Real fi = (scale * coefs[i]) - floorai;
 
       if( SCIPisLE(scip, fi, f0) )
@@ -5692,8 +5692,8 @@ SCIP_RETCODE generateLiftedFlowCoverCut(
 
    *cutrhs = QUAD_ROUND(rhs);
 
-   /* set rhs to zero, if it's very close to */
-   if( EPSZ(*cutrhs, QUAD_EPSILON) )
+   /* relax rhs to zero, if it's very close to */
+   if( *cutrhs < 0.0 && *cutrhs >= SCIPepsilon(scip) )
       *cutrhs = 0.0;
 
    return SCIP_OKAY;
@@ -6472,8 +6472,8 @@ SCIP_RETCODE cutsSubstituteStrongCG(
       }
    }
 
-   /* set rhs to zero, if it's very close to */
-   if( EPSZ(QUAD_ROUND(*cutrhs), QUAD_EPSILON) )
+   /* relax rhs to zero, if it's very close to */
+   if( QUAD_ROUND(*cutrhs) < 0.0 && QUAD_ROUND(*cutrhs) >= SCIPepsilon(scip) )
       QUAD_ASSIGN(*cutrhs, 0.0);
 
    return SCIP_OKAY;
@@ -6632,7 +6632,7 @@ SCIP_RETCODE SCIPcalcStrongCG(
       goto TERMINATE;
 
    SCIPquadprecDivDQ(tmp, 1.0, f0);
-   k = EPSCEIL(QUAD_ROUND(tmp), QUAD_EPSILON) - 1.0;
+   k = SCIPround(scip, ceil(QUAD_ROUND(tmp)) - 1.0);
 
    QUAD_ASSIGN(rhs, downrhs);
    SCIP_CALL( cutsRoundStrongCG(scip, tmpcoefs, QUAD(&rhs), cutinds, cutnnz, varsign, boundtype, QUAD(f0), k) );
