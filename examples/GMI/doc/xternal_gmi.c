@@ -32,8 +32,9 @@
  * to the aggregated row. This function can, among other things, take variable bounds into account. Thus, the resulting
  * cuts cannot be used for comparison with standard GMI cuts. This example remedies this situation.
  *
- * The implementation has been used in the paper@p
+ * The implementation has been used in the paper
+ *
  * G. Cornuejols, F. Margot and G. Nannicini:@n
  * On the safety of Gomory cut generators.@n
- * Preprint 2012.
+ * Math. Program. Comput. 5(4), 2013.
  */
