@@ -1453,13 +1453,13 @@ SCIP_RETCODE mod2matrixPreprocessRows(
          SCIP_CALL( generateZerohalfCut(scip, mod2matrix, sepa, sepadata, allowlocal, row) );
 
          if( sepadata->infeasible )
-            return SCIP_OKAY;
+            goto TERMINATE;
 
          mod2matrixRemoveRow(scip, mod2matrix, row);
          ++i;
       }
    }
-
+TERMINATE:
    SCIPhashtableFree(&rowtable);
 
    return SCIP_OKAY;
@@ -1785,8 +1785,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
       }
    }
 
-   SCIPfreeBufferArray(scip, &nonzrows);
-
    for( i = 0; sepadata->ncuts < maxsepacuts && i < mod2matrix.nrows; ++i )
    {
       MOD2_ROW* row = mod2matrix.rows[i];
@@ -1811,6 +1809,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
       *result = SCIP_SEPARATED;
 
 TERMINATE:
+   SCIPfreeBufferArray(scip, &nonzrows);
    SCIPaggrRowFree(scip, &sepadata->aggrrow);
 
    destroyMod2Matrix(scip, &mod2matrix);
