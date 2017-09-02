@@ -1959,8 +1959,8 @@ void rowDelNorms(
 
    absval = REALABS(val);
    assert(!SCIPsetIsZero(set, absval));
-   assert(row->nummaxval == 0 || SCIPsetIsGE(set, row->maxval, absval));
-   assert(row->numminval == 0 || SCIPsetIsLE(set, row->minval, absval));
+   assert(row->nummaxval == 0 || row->maxval >= absval);
+   assert(row->numminval == 0 || row->minval <= absval);
 
    /* update min/maxidx validity */
    if( updateindex && (col->index == row->minidx || col->index == row->maxidx) )
@@ -4758,7 +4758,11 @@ void rowCalcIdxsAndVals(
             row->nummaxval = 1;
          }
          else if( SCIPsetIsGE(set, absval, row->maxval) )
+         {
+            /* make sure the maxval is always exactly the same */
+            row->maxval = MAX(absval, row->maxval);
             row->nummaxval++;
+         }
       }
       if( row->numminval > 0 )
       {
@@ -4768,7 +4772,11 @@ void rowCalcIdxsAndVals(
             row->numminval = 1;
          }
          else if( SCIPsetIsLE(set, absval, row->minval) )
+         {
+            /* make sure the minval is always exactly the same */
+            row->minval = MIN(absval, row->minval);
             row->numminval++;
+         }
       }
    }
 }
