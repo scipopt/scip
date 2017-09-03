@@ -40,7 +40,7 @@
 
 #define DEFAULT_MAXROUNDS            -1 /**< maximal number of cmir separation rounds per node (-1: unlimited) */
 #define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of cmir separation rounds in the root node (-1: unlimited) */
-#define DEFAULT_MAXTRIES             -1 /**< maximal number of rows to start aggregation with per separation round
+#define DEFAULT_MAXTRIES             20 /**< maximal number of rows to start aggregation with per separation round
                                          *   (-1: unlimited) */
 #define DEFAULT_MAXTRIESROOT         -1 /**< maximal number of rows to start aggregation with per round in the root node
                                          *   (-1: unlimited) */
