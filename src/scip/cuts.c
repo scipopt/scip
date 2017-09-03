@@ -1069,7 +1069,7 @@ SCIP_Bool SCIPaggrRowHasRowBeenAdded(
 
 /** gets the array of corresponding variable problem indices for each non-zero in the aggregation row */
 int* SCIPaggrRowGetInds(
-    SCIP_AGGRROW*          aggrrow              /**< aggregation row */
+   SCIP_AGGRROW*         aggrrow             /**< aggregation row */
    )
 {
    assert(aggrrow != NULL);
@@ -1079,7 +1079,7 @@ int* SCIPaggrRowGetInds(
 
 /** gets the number of non-zeros in the aggregation row */
 int SCIPaggrRowGetNNz(
-    SCIP_AGGRROW*          aggrrow              /**< aggregation row */
+   SCIP_AGGRROW*         aggrrow             /**< aggregation row */
    )
 {
    assert(aggrrow != NULL);
@@ -1089,7 +1089,7 @@ int SCIPaggrRowGetNNz(
 
 /** gets the rank of the aggregation row */
 int SCIPaggrRowGetRank(
-    SCIP_AGGRROW*          aggrrow              /**< aggregation row */
+   SCIP_AGGRROW*         aggrrow             /**< aggregation row */
    )
 {
    assert(aggrrow != NULL);
@@ -1099,7 +1099,7 @@ int SCIPaggrRowGetRank(
 
 /** checks if the aggregation row is only valid locally */
 SCIP_Bool SCIPaggrRowIsLocal(
-    SCIP_AGGRROW*          aggrrow              /**< aggregation row */
+   SCIP_AGGRROW*         aggrrow             /**< aggregation row */
    )
 {
    assert(aggrrow != NULL);
@@ -1109,7 +1109,7 @@ SCIP_Bool SCIPaggrRowIsLocal(
 
 /** gets the right hand side of the aggregation row */
 SCIP_Real SCIPaggrRowGetRhs(
-    SCIP_AGGRROW*          aggrrow              /**< aggregation row */
+   SCIP_AGGRROW*         aggrrow             /**< aggregation row */
    )
 {
    assert(aggrrow != NULL);
@@ -1664,7 +1664,7 @@ SCIP_RETCODE cutsTransformMIR(
          continue;
       }
 
-      /** determine the best bounds for the integral variable, usevbd can be set to FALSE here as vbds are only used for continous variables */
+      /* determine the best bounds for the integral variable, usevbd can be set to FALSE here as vbds are only used for continous variables */
       SCIP_CALL( determineBestBounds(scip, vars[v], sol, boundswitch, FALSE, allowlocal, fixintegralrhs,
                                      ignoresol, boundsfortrans, boundtypesfortrans,
                                      bestlbs + i, bestubs + i, bestlbtypes + i, bestubtypes + i, selectedbounds + i, freevariable) );
@@ -6016,7 +6016,7 @@ SCIP_RETCODE cutsTransformStrongCG(
          continue;
       }
 
-      /** determine the best bounds for the integral variable, usevbd can be set to FALSE here as vbds are only used for continous variables */
+      /* determine the best bounds for the integral variable, usevbd can be set to FALSE here as vbds are only used for continous variables */
       SCIP_CALL( determineBestBounds(scip, vars[v], sol, boundswitch, FALSE, allowlocal, FALSE, FALSE, NULL, NULL,
                                      &bestlb, &bestub, &bestlbtype, &bestubtype, &selectedbound, freevariable) );
 

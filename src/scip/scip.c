@@ -34119,7 +34119,7 @@ SCIP_Bool SCIPisCutNew(
    SCIP_ROW*             row                 /**< cutting plane to add */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPcutpoolIsCutNew", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPisCutNew", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIPcutpoolIsCutNew(scip->cutpool, scip->set, row);
 }
@@ -47564,7 +47564,7 @@ SCIP_RETCODE SCIPvalidateSolve(
 
    primviol = 0.0;
    dualviol = 0.0;
-   /** check the primal and dual bounds computed by SCIP against the external reference values within reference tolerance */
+   /* check the primal and dual bounds computed by SCIP against the external reference values within reference tolerance */
    /* solution for an infeasible problem */
    if( SCIPgetNSols(scip) > 0 && ((SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE && SCIPisInfinity(scip, dualreference))
             || (SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE && SCIPisInfinity(scip, -dualreference))) )

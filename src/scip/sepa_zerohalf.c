@@ -88,7 +88,8 @@ typedef struct TransIntRow TRANSINTROW;
 typedef struct RowIndex ROWINDEX;
 
 /** enum for different types of row indices in ROWINDEX structure */
-typedef enum {
+typedef enum
+{
    ORIG_RHS = 0,
    ORIG_LHS = 1,
    TRANSROW = 2,
@@ -101,8 +102,7 @@ struct RowIndex
 {
    unsigned int          type:2;             /**< type of row index; 0 means lp row using the right hand side,
                                               *   1 means lp row using the left hand side, and 2 means a
-                                              *   transformed integral row
-                                              */
+                                              *   transformed integral row */
    unsigned int          index:30;           /**< lp position of original row, or index of transformed integral row */
 };
 
@@ -120,7 +120,8 @@ struct TransIntRow
 };
 
 /** structure representing a row in the mod 2 system */
-struct Mod2Row {
+struct Mod2Row
+{
    int                   index;              /**< unique index of mod 2 row */
    int                   pos;                /**< position of mod 2 row in mod 2 matrix rows array */
    int                   rhs;                /**< rhs of row */
@@ -135,7 +136,8 @@ struct Mod2Row {
 };
 
 /** structure representing a column in the mod 2 system */
-struct Mod2Col {
+struct Mod2Col
+{
    int                   index;              /**< index of SCIP column associated to this column */
    int                   pos;                /**< position of column in matrix */
    SCIP_Real             solval;             /**< solution value of the column */
@@ -144,7 +146,8 @@ struct Mod2Col {
 };
 
 /** matrix representing the modulo 2 system */
-struct Mod2Matrix {
+struct Mod2Matrix
+{
    MOD2_COL**            cols;               /**< columns of the matrix */
    MOD2_ROW**            rows;               /**< rows of the matrix */
    TRANSINTROW*          transintrows;       /**< transformed integral rows obtained from non-integral lp rows */
@@ -1822,11 +1825,11 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_SEPADATA*        sepadata;
+   SCIP_SEPADATA* sepadata;
    SCIP_SEPA* sepa;
 
    /* create zerohalf separator data */
-   SCIP_CALL(SCIPallocBlockMemory(scip, &sepadata));
+   SCIP_CALL( SCIPallocBlockMemory(scip, &sepadata) );
 
    /* include separator */
    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
