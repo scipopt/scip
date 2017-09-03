@@ -62,23 +62,17 @@
 #define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of zerohalf separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_MAXSEPACUTS         100 /**< maximal number of zerohalf cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT     500 /**< maximal number of zerohalf cuts separated per separation round in root node */
-#define DEFAULT_MAXSLACK           0.01 /**< maximal slack of rows to be used in aggregation */
+#define DEFAULT_MAXSLACK           0.33 /**< maximal slack of rows to be used in aggregation */
 #define DEFAULT_MAXSLACKROOT        0.5 /**< maximal slack of rows to be used in aggregation in the root node */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
-
-/* SCIPcalcMIR parameters */
-#define BOUNDSWITCH                 0.5 /**< threshold for bound switching - see SCIPcalcMIR() */
-#define USEVBDS                    TRUE /**< use variable bounds - see SCIPcalcMIR() */
-#define FIXINTEGRALRHS            FALSE /**< try to generate a fractional rhs - see SCIPcalcMIR() */
-#define MINFRAC                    0.05
-#define MAXFRAC                    1.00
 
 /* SCIPcalcRowIntegralScalar parameters */
 #define MAXDNOM                   10000
 #define MAXSCALE                10000.0
 
-
+/* other defines */
 #define MAXREDUCTIONROUNDS          100 /**< maximum number of rounds to perform reductions on the mod 2 system */
+#define BOUNDSWITCH                 0.5 /**< threshold for bound switching - see SCIPcalcMIR() */
 
 
 typedef struct Mod2Col MOD2_COL;
@@ -1264,9 +1258,118 @@ SCIP_RETCODE mod2matrixPreprocessColumns(
    return SCIP_OKAY;
 }
 
+#define NONZERO(x)   (COPYSIGN(1e-100, (x)) + (x))
+
+/** add original row to aggregation with weight 0.5 */
+static
+void addOrigRow(
+   SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP_Real*            tmpcoefs,           /**< array to add coefficients to */
+   SCIP_Real*            cutrhs,             /**< pointer to add right hand side */
+   int*                  nonzeroinds,        /**< array of non-zeros in the aggregation */
+   int*                  nnz,                /**< pointer to update number of non-zeros */
+   int*                  cutrank,            /**< pointer to update cut rank */
+   SCIP_Bool*            cutislocal,         /**< pointer to update local flag */
+   SCIP_ROW*             row,                /**< row to add */
+   int                   sign                /**< sign for weight, i.e. +1 to use right hand side or -1 to use left hand side */
+   )
+{
+   int i;
+   SCIP_Real weight = 0.5 * sign;
+
+   for( i = 0; i < row->len; ++i )
+   {
+      int probindex = row->cols[i]->var_probindex;
+      SCIP_Real val = tmpcoefs[probindex];
+
+      if( val == 0.0 )
+      {
+         nonzeroinds[(*nnz)++] = probindex;
+      }
+
+      val += weight * row->vals[i];
+      tmpcoefs[probindex] = NONZERO(val);
+   }
+
+   if( sign == +1 )
+   {
+      *cutrhs += weight * SCIPfeasFloor(scip, row->rhs - row->constant);
+   }
+   else
+   {
+      assert(sign == -1);
+      *cutrhs += weight * SCIPfeasCeil(scip, row->lhs - row->constant);
+   }
+
+   *cutrank = MAX(*cutrank, row->rank);
+   *cutislocal = *cutislocal || row->local;
+}
+
+/** add transformed integral row to aggregation with weight 0.5 */
+static
+void addTransRow(
+   SCIP_Real*            tmpcoefs,           /**< array to add coefficients to */
+   SCIP_Real*            cutrhs,             /**< pointer to add right hand side */
+   int*                  nonzeroinds,        /**< array of non-zeros in the aggregation */
+   int*                  nnz,                /**< pointer to update number of non-zeros */
+   int*                  cutrank,            /**< pointer to update cut rank */
+   SCIP_Bool*            cutislocal,         /**< pointer to update local flag */
+   TRANSINTROW*          introw              /**< transformed integral row to add to the aggregation */
+   )
+{
+   int i;
+
+   for( i = 0; i < introw->len; ++i )
+   {
+      int probindex = introw->varinds[i];
+      SCIP_Real val = tmpcoefs[probindex];
+
+      if( val == 0.0 )
+      {
+         nonzeroinds[(*nnz)++] = probindex;
+      }
+
+      val += 0.5 * introw->vals[i];
+      tmpcoefs[probindex] = NONZERO(val);
+   }
+
+   *cutrhs += 0.5 * introw->rhs;
+
+   *cutrank = MAX(*cutrank, introw->rank);
+   *cutislocal = *cutislocal || introw->local;
+}
+
+/* calculates the cuts efficacy of cut */
+static
+SCIP_Real calcEfficacy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real*            cutcoefs,           /**< array of the non-zero coefficients in the cut */
+   SCIP_Real             cutrhs,             /**< the right hand side of the cut */
+   int*                  cutinds,            /**< array of the problem indices of variables with a non-zero coefficient in the cut */
+   int                   cutnnz              /**< the number of non-zeros in the cut */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_Real norm;
+   SCIP_Real activity;
+   int i;
+
+   assert(scip != NULL);
+   assert(cutcoefs != NULL);
+   assert(cutinds != NULL);
+
+   norm = MAX(1e-6, SCIPgetVectorEfficacyNorm(scip, cutcoefs, cutnnz));
+   vars = SCIPgetVars(scip);
+
+   activity = 0.0;
+   for( i = 0; i < cutnnz; ++i )
+      activity += cutcoefs[i] * SCIPgetVarSol(scip, vars[cutinds[i]]);
+
+   return (activity - cutrhs) / norm;
+}
 
 /** generate a zerohalf cut from a given mod 2 row, i.e., try if aggregations of rows of the
- * mod2 matrix give violated cuts
+ *  mod2 matrix give violated cuts
  */
 static
 SCIP_RETCODE generateZerohalfCut(
@@ -1286,55 +1389,167 @@ SCIP_RETCODE generateZerohalfCut(
    int* cutinds;
    SCIP_Real cutrhs;
    SCIP_Real cutefficacy;
-   SCIP_Bool success;
+   SCIP_Real* tmpcoefs;
    int cutrank;
+   int nvars;
+   SCIP_VAR** vars;
 
    rows = SCIPgetLPRows(scip);
+   nvars = SCIPgetNVars(scip);
+   vars = SCIPgetVars(scip);
 
-   SCIPaggrRowClear(sepadata->aggrrow);
+   /* right hand side must be odd, otherwise no cut can be generated */
+   assert(row->rhs == 1);
 
+   /* perform the summation of the rows defined by the mod 2 row*/
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &tmpcoefs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cutinds,  nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
+
+   /* the right hand side of the zerohalf cut will be rounded down by 0.5
+    * thus we can instead subtract 0.5 directly
+    */
+   cutrhs = -0.5;
+   cutnnz = 0;
+   cutrank = 0;
+   cutislocal = FALSE;
+
+   /* compute the aggregation of the rows with weight 0.5 */
    for( i = 0; i < row->nrowinds; ++i )
    {
       switch( row->rowinds[i].type )
       {
          case ORIG_RHS:
-            SCIP_CALL( SCIPaggrRowAddRow(scip, sepadata->aggrrow, rows[row->rowinds[i].index], 0.5, 1) );
+            addOrigRow(scip, tmpcoefs, &cutrhs, cutinds, &cutnnz, &cutrank, &cutislocal, rows[row->rowinds[i].index], 1);
             break;
          case ORIG_LHS:
-            SCIP_CALL( SCIPaggrRowAddRow(scip, sepadata->aggrrow, rows[row->rowinds[i].index], -0.5, -1) );
+            addOrigRow(scip, tmpcoefs, &cutrhs, cutinds, &cutnnz, &cutrank, &cutislocal, rows[row->rowinds[i].index], -1);
             break;
          case TRANSROW: {
             TRANSINTROW* introw = &mod2matrix->transintrows[row->rowinds[i].index];
             SCIPdebugMsg(scip, "using transformed row %i of length %i with slack %f and rhs %f for cut\n", row->rowinds[i].index, introw->len, introw->slack, introw->rhs);
-            SCIP_CALL( SCIPaggrRowAddCustomCons(scip, sepadata->aggrrow, introw->varinds, introw->vals,
-                                                introw->len, introw->rhs, 0.5, introw->rank, introw->local) );
+            addTransRow(tmpcoefs, &cutrhs, cutinds, &cutnnz, &cutrank, &cutislocal, introw);
          }
-
       }
    }
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, SCIPgetNVars(scip)) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &cutinds, SCIPgetNVars(scip)) );
-   SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, allowlocal, FIXINTEGRALRHS, NULL, NULL, MINFRAC, MAXFRAC,
-                          1.0, sepadata->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
-
-   if( success && SCIPisEfficacious(scip, cutefficacy) )
+   /* compute the cut coefficients and update right handside due to complementation if necessary */
+   for( i = 0; i < cutnnz; )
    {
-      SCIP_VAR** vars;
+      int k = cutinds[i];
+      SCIP_Real coef = tmpcoefs[k];
+      SCIP_Real floorcoef = SCIPfeasFloor(scip, coef);
+      tmpcoefs[k] = 0.0;
+
+      /* only check complementation if the coefficient was rounded down */
+      if( REALABS(coef - floorcoef) > 0.1 )
+      {
+         SCIP_Real lb;
+         SCIP_Real ub;
+         SCIP_Bool loclb;
+         SCIP_Bool locub;
+         SCIP_Real primsol;
+         SCIP_Bool useub;
+
+         /* complement with closest bound */
+         primsol = SCIPgetVarSol(scip, vars[k]);
+         lb = SCIPvarGetLbGlobal(vars[k]);
+         ub = SCIPvarGetUbGlobal(vars[k]);
+         loclb = FALSE;
+         locub = FALSE;
+
+         /* use local bounds if better */
+         if( allowlocal )
+         {
+            if( SCIPisGT(scip, SCIPvarGetLbLocal(vars[k]), lb) )
+            {
+               loclb = TRUE;
+               lb = SCIPvarGetLbLocal(vars[k]);
+            }
+
+            if( SCIPisLT(scip, SCIPvarGetUbLocal(vars[k]), ub) )
+            {
+               locub = TRUE;
+               ub = SCIPvarGetUbLocal(vars[k]);
+            }
+         }
+
+         if( SCIPisInfinity(scip, ub) ) /* if there is no ub, use lb */
+            useub = FALSE;
+         else if( SCIPisInfinity(scip, -lb) ) /* if there is no lb, use ub */
+            useub = TRUE;
+         else if( SCIPisLT(scip, primsol, (1.0 - BOUNDSWITCH) * lb + BOUNDSWITCH * ub) )
+            useub = FALSE;
+         else
+            useub = TRUE;
+
+         if( useub )
+         {
+            /* set local flag if local bound was used */
+            if( locub )
+               cutislocal = TRUE;
+
+            /* upper bound was used so floor was the wrong direction to round, coefficient must be ceiled instead */
+            floorcoef += 1.0;
+
+            assert(SCIPisFeasEQ(scip, floorcoef - coef, 0.5));
+
+            /* add delta of complementing then rounding by 0.5 and complementing back to the right hand side */
+            cutrhs += 0.5 * ub;
+         }
+         else
+         {
+            /* set local flag if local bound was used */
+            if( loclb )
+               cutislocal = TRUE;
+
+            assert(SCIPisFeasEQ(scip, coef - floorcoef, 0.5));
+
+            /* add delta of complementing then rounding by 0.5 and complementing back to the right hand side */
+            cutrhs -= 0.5 * lb;
+         }
+      }
+
+      /* make coefficient exactly integral */
+      assert(SCIPisFeasIntegral(scip, floorcoef));
+      floorcoef = SCIPfeasRound(scip, floorcoef);
+
+      /* if coefficient is zero remove entry, otherwise set to floorcoef */
+      if( floorcoef == 0.0 )
+      {
+         --cutnnz;
+         cutinds[i] = cutinds[cutnnz];
+      }
+      else
+      {
+         cutcoefs[i] = floorcoef;
+         ++i;
+      }
+   }
+
+   /* make right hand side exactly integral */
+   assert(SCIPisFeasIntegral(scip, cutrhs));
+   cutrhs = SCIPfeasRound(scip, cutrhs);
+
+   /* calculate efficacy */
+   cutefficacy = calcEfficacy(scip, cutcoefs, cutrhs, cutinds, cutnnz);
+
+   if( SCIPisEfficacious(scip, cutefficacy) )
+   {
       SCIP_ROW* cut;
       char cutname[SCIP_MAXSTRLEN];
       int v;
 
-      assert(allowlocal || !cutislocal);
+      /* increase rank by 1 */
+      cutrank += 1;
 
-      vars = SCIPgetVars(scip);
+      assert(allowlocal || !cutislocal);
 
       /* create the cut */
       (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "zerohalf%d_x%d", SCIPgetNLPs(scip), row->index);
 
       SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE, sepadata->dynamiccuts) );
 
-      /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
       SCIProwChgRank(cut, cutrank);
 
       /* cache the row extension and only flush them if the cut gets added */
@@ -1349,14 +1564,12 @@ SCIP_RETCODE generateZerohalfCut(
       /* flush all changes before adding the cut */
       SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
 
-      /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
-
       if( SCIPisCutNew(scip, cut) )
       {
          SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &sepadata->infeasible) );
          sepadata->ncuts++;
 
-         if( !sepadata->infeasible && !cutislocal )
+         if( !cutislocal )
          {
             SCIP_CALL( SCIPaddPoolCut(scip, cut) );
          }
@@ -1364,11 +1577,11 @@ SCIP_RETCODE generateZerohalfCut(
 
       /* release the row */
       SCIP_CALL( SCIPreleaseRow(scip, &cut) );
-      assert(success);
    }
 
    SCIPfreeBufferArray(scip, &cutinds);
    SCIPfreeBufferArray(scip, &cutcoefs);
+   SCIPfreeCleanBufferArray(scip, &tmpcoefs);
 
    return SCIP_OKAY;
 }
