@@ -47,6 +47,7 @@ option(LEGACY "build SCIP/SoPlex in legacy mode" OFF)
 option(NOBLKBUFMEM "should block and buffer memory be disabled" OFF)
 option(NOBLKMEM "should block and buffer memory be disabled" OFF)
 option(NOBUFMEM "should block and buffer memory be disabled" OFF)
+option(DEBUGSOL "should the debug solution mechanism be enabled" OFF)
 option(COVERAGE "enable coverage support" OFF)
 SET(COVERAGE_CTEST_ARGS "" CACHE STRING "additional ctest arguments for coverage")
 option(MT "use static runtime libraries for Visual Studio compiler" OFF)
@@ -59,7 +60,7 @@ set(EXPRINT cppad CACHE STRING "options for expression interpreter")  #create th
 set_property(CACHE EXPRINT PROPERTY STRINGS none cppad )  #define list of values GUI will offer for the variable
 
 set(LPS spx CACHE STRING "options for LP solver")  #create the variable
-set_property(CACHE LPS PROPERTY STRINGS spx cpx grb glop msk )  #define list of values GUI will offer for the variable
+set_property(CACHE LPS PROPERTY STRINGS spx cpx grb xprs clp glop msk none )  #define list of values GUI will offer for the variable
 
 #set options for memory management
 if( NOBLKBUFMEM )
@@ -73,6 +74,10 @@ endif()
 
 if(NOBUFMEM)
    add_definitions(-DSCIP_NOBUFFERMEM)
+endif()
+
+if(DEBUGSOL)
+   add_definitions(-DWITH_DEBUG_SOLUTION)
 endif()
 
 #set the correct rpath for OS X
