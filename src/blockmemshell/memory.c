@@ -2698,6 +2698,7 @@ void* BMSallocBufferMemory_work(
    int                   line                /**< line number in source file of the function call */
    )
 {
+   /* cppcheck-suppress unassignedVariable */
    void* ptr;
 #ifndef SCIP_NOBUFFERMEM
    size_t bufnum;

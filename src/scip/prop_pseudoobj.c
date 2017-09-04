@@ -314,8 +314,7 @@ SCIP_DECL_HASHKEYEQ(cliqueIsHashkeyEq)
 static
 SCIP_DECL_HASHKEYVAL(cliqueGetHashkeyVal)
 {  /*lint --e{715}*/
-   assert( SCIPcliqueGetId((SCIP_CLIQUE*) key) >= 0 );
-   return (unsigned int) SCIPcliqueGetId((SCIP_CLIQUE*) key);
+   return SCIPcliqueGetId((SCIP_CLIQUE*) key);
 }
 
 /*

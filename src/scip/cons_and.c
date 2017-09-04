@@ -4028,7 +4028,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreAnd)
    }
 
    /* create the variable mapping hash map */
-   SCIP_CALL( SCIPhashmapCreate(&hashmap, SCIPblkmem(scip), nvars) );
+   SCIP_CALL_FINALLY( SCIPhashmapCreate(&hashmap, SCIPblkmem(scip), nvars), fclose(gmlfile) );
 
    /* write starting of gml file */
    SCIPgmlWriteOpening(gmlfile, TRUE);
@@ -4040,14 +4040,14 @@ SCIP_DECL_CONSEXITPRE(consExitpreAnd)
 
       /* only handle active constraints */
       if( !SCIPconsIsActive(cons) )
-	 continue;
+         continue;
 
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
       /* only handle constraints which have operands */
       if( consdata->nvars == 0 )
-	 continue;
+         continue;
 
       assert(consdata->vars != NULL);
       assert(consdata->resvar != NULL);
@@ -4059,12 +4059,12 @@ SCIP_DECL_CONSEXITPRE(consExitpreAnd)
       resid = (unsigned int)(size_t) SCIPhashmapGetImage(hashmap, activevar);
       if( resid == 0 )
       {
-	 resid = id;
-	 ++id;
-	 SCIP_CALL( SCIPhashmapInsert(hashmap, (void*)activevar, (void*)(size_t)resid) );
+         resid = id;
+         ++id;
+         SCIP_CALL( SCIPhashmapInsert(hashmap, (void*)activevar, (void*)(size_t)resid) );
 
-	 /* write new gml node for new resultant */
-	 SCIPgmlWriteNode(gmlfile, resid, SCIPvarGetName(activevar), NULL, NULL, NULL);
+         /* write new gml node for new resultant */
+         SCIPgmlWriteNode(gmlfile, resid, SCIPvarGetName(activevar), NULL, NULL, NULL);
       }
 
       /* copy operands to get problem variables for */
@@ -4075,19 +4075,19 @@ SCIP_DECL_CONSEXITPRE(consExitpreAnd)
 
       for( v = consdata->nvars - 1; v >= 0; --v )
       {
-	 /* check if we already found this variables */
-	 varid = (unsigned int)(size_t) SCIPhashmapGetImage(hashmap, activeconsvars[v]);
-	 if( varid == 0 )
-	 {
-	    varid = id;
-	    ++id;
-	    SCIP_CALL( SCIPhashmapInsert(hashmap, (void*)activeconsvars[v], (void*)(size_t)varid) );
+         /* check if we already found this variables */
+         varid = (unsigned int)(size_t) SCIPhashmapGetImage(hashmap, activeconsvars[v]);
+         if( varid == 0 )
+         {
+            varid = id;
+            ++id;
+            SCIP_CALL( SCIPhashmapInsert(hashmap, (void*)activeconsvars[v], (void*)(size_t)varid) );
 
-	    /* write new gml node for new operand */
-	    SCIPgmlWriteNode(gmlfile, varid, SCIPvarGetName(activeconsvars[v]), NULL, NULL, NULL);
-	 }
-	 /* write gml arc between resultant and operand */
-	 SCIPgmlWriteArc(gmlfile, resid, varid, NULL, NULL);
+            /* write new gml node for new operand */
+            SCIPgmlWriteNode(gmlfile, varid, SCIPvarGetName(activeconsvars[v]), NULL, NULL, NULL);
+         }
+         /* write gml arc between resultant and operand */
+         SCIPgmlWriteArc(gmlfile, resid, varid, NULL, NULL);
       }
 
       /* free temporary memory for active constraint variables */
