@@ -3955,8 +3955,8 @@ SCIP_RETCODE nlpDelVarPos(
       --nlp->nunflushedvaradd;
 
    /* drop events on variable */
-   SCIP_CALL( SCIPvarDropEvent(var, blkmem, set,
-         SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_OBJCHANGED,
+   SCIP_CALL( SCIPvarDropEvent(var, blkmem, set, \
+         SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_OBJCHANGED, \
          nlp->eventhdlr, (SCIP_EVENTDATA*)nlp, -1) );
 
    /* move variable from end to pos */
