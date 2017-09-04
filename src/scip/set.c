@@ -1092,9 +1092,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->nlp_solver = NULL;
    (*set)->nlp_disable = FALSE;
    (*set)->sepa_primfeastol = SCIP_INVALID;
-#ifdef WITH_DEBUG_SOLUTION
    (*set)->misc_debugsol = NULL;
-#endif
 
    /* the default time limit is infinite */
    (*set)->istimelimitfinite = FALSE;
