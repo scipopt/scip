@@ -333,9 +333,13 @@ SCIP_RETCODE transformNonIntegralRow(
       SCIP_Real vbdconst;
       SCIP_VAR* colvar;
       SCIP_Real val;
+      SCIP_Real closestvbd;
+      SCIP_Bool localbound;
 
       if( SCIPcolIsIntegral(rowcols[i]) )
          continue;
+
+      localbound = FALSE;
 
       colvar = SCIPcolGetVar(rowcols[i]);
 
@@ -344,43 +348,55 @@ SCIP_RETCODE transformNonIntegralRow(
       /* if the value is positive we need to use a lower bound constraint */
       if( val > 0.0 )
       {
-         /* prefer variable bounds */
-         SCIP_CALL( SCIPgetVarClosestVlb(scip, colvar, NULL, &closestbound, &closestvbdind) );
-         if( closestvbdind >= 0 )
+         /* retrieve simple variable bound */
+         closestbound = SCIPvarGetLbGlobal(colvar);
+         if( allowlocal && SCIPisGT(scip, SCIPvarGetLbLocal(colvar), closestbound) )
+         {
+            /* only use local bound if it is better thatn the global bound */
+            closestbound = SCIPvarGetLbLocal(colvar);
+            localbound = TRUE;
+         }
+
+         /* retrieve closest variable bound */
+         SCIP_CALL( SCIPgetVarClosestVlb(scip, colvar, NULL, &closestvbd, &closestvbdind) );
+
+         /* if a suitable variable bound exists which is at least as good as the simple bound we use it */
+         if( closestvbdind >= 0 && SCIPisGE(scip, closestvbd, closestbound) )
          {
             vbdcoef = SCIPvarGetVlbCoefs(colvar)[closestvbdind];
             vbdvar = SCIPvarGetVlbVars(colvar)[closestvbdind];
             vbdconst = SCIPvarGetVlbConstants(colvar)[closestvbdind];
+            closestbound = closestvbd;
          }
          else
          {
-            /* if no suitable variable bound was found use simple variable bounds */
-            closestbound = SCIPvarGetLbGlobal(colvar);
-            if( allowlocal && SCIPisGT(scip, SCIPvarGetLbLocal(colvar), closestbound) )
-            {
-               /* only use local bound if it is better thatn the global bound */
-               closestbound = SCIPvarGetLbLocal(colvar);
-               local = TRUE;
-            }
+            closestvbdind = -1;
          }
       }
       else
       {
-         SCIP_CALL( SCIPgetVarClosestVub(scip, colvar, NULL, &closestbound, &closestvbdind) );
-         if( closestvbdind >= 0 )
+         /* retrieve simple variable bound */
+         closestbound = SCIPvarGetUbGlobal(colvar);
+         if( allowlocal && SCIPisLT(scip, SCIPvarGetUbLocal(colvar), closestbound) )
+         {
+            closestbound = SCIPvarGetUbLocal(colvar);
+            localbound = TRUE;
+         }
+
+         /* retrieve closest variable bound */
+         SCIP_CALL( SCIPgetVarClosestVub(scip, colvar, NULL, &closestvbd, &closestvbdind) );
+
+         /* if a suitable variable bound exists which is at least as good as the simple bound we use it */
+         if( closestvbdind >= 0 && SCIPisLE(scip, closestvbd, closestbound) )
          {
             vbdcoef = SCIPvarGetVubCoefs(colvar)[closestvbdind];
             vbdvar = SCIPvarGetVubVars(colvar)[closestvbdind];
             vbdconst = SCIPvarGetVubConstants(colvar)[closestvbdind];
+            closestbound = closestvbd;
          }
          else
          {
-            closestbound = SCIPvarGetUbGlobal(colvar);
-            if( allowlocal && SCIPisLT(scip, SCIPvarGetUbLocal(colvar), closestbound) )
-            {
-               closestbound = SCIPvarGetUbLocal(colvar);
-               local = TRUE;
-            }
+            closestvbdind = -1;
          }
       }
 
@@ -406,6 +422,7 @@ SCIP_RETCODE transformNonIntegralRow(
       }
       else if( !SCIPisInfinity(scip, REALABS(closestbound)) )
       {
+         local = local || localbound;
          transrowrhs -= val * closestbound;
       }
       else
