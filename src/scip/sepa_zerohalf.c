@@ -72,7 +72,7 @@
 
 /* other defines */
 #define MAXREDUCTIONROUNDS          100 /**< maximum number of rounds to perform reductions on the mod 2 system */
-#define BOUNDSWITCH                 0.5 /**< threshold for bound switching - see SCIPcalcMIR() */
+#define BOUNDSWITCH                 0.5 /**< threshold for bound switching */
 
 
 typedef struct Mod2Col MOD2_COL;
