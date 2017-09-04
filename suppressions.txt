@@ -4,6 +4,8 @@ va_list_usedBeforeStarted:src/scip/message.c
 nullPointer:src/lpi/lpi_qso.c
 unreadVariable:src/scip/sorttpl.c
 constStatement:src/scip/sorttpl.c
+strncatUsage:src/scip/cons_orbitope.c
+nullPointer:src/objscip/objmessagehdlr.cpp
 
 // style
 // unusedFunction doesn't work for libraries
