@@ -3840,8 +3840,8 @@ SCIP_RETCODE nlpAddVars(
       }
 
       /* catch events on variable */
-      SCIP_CALL( SCIPvarCatchEvent(var, blkmem, set,
-            SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_OBJCHANGED,
+      SCIP_CALL( SCIPvarCatchEvent(var, blkmem, set, \
+            SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_OBJCHANGED, \
             nlp->eventhdlr, (SCIP_EVENTDATA*)nlp, NULL) ); /* @todo should store event filter position in nlp? */
    }
 
