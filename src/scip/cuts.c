@@ -821,38 +821,80 @@ SCIP_RETCODE SCIPaggrRowSumRows(
       }
    }
 
-   SCIPaggrRowRemoveZeros(aggrrow);
-
-   *valid = aggrrow->nnz > 0;
+   SCIPaggrRowRemoveZeros(scip, aggrrow, valid);
 
    return SCIP_OKAY;
 }
 
-/** removes all (close enough to) zero entries in the aggregation row. */
+/** removes almost zero entries from the aggregation row. */
 void SCIPaggrRowRemoveZeros(
-   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
+   SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   SCIP_Bool*            valid               /**< pointer to return whether the aggregation row is still valid */
    )
 {
    int i;
+   SCIP_VAR** vars;
+
+   vars = SCIPgetVars(scip);
 
    assert(aggrrow != NULL);
+   *valid = TRUE;
 
    for( i = 0; i < aggrrow->nnz; )
    {
       SCIP_Real QUAD(val);
 
-      QUAD_ARRAY_LOAD(val, aggrrow->vals, aggrrow->inds[i]);
+      int v = aggrrow->inds[i];
+      QUAD_ARRAY_LOAD(val, aggrrow->vals, v);
 
-      if( EPSZ(QUAD_ROUND(val), QUAD_EPSILON) )
+      if( SCIPisSumZero(scip, QUAD_ROUND(val)) )
       {
+         if( REALABS(QUAD_ROUND(val)) > QUAD_EPSILON )
+         {
+            /* adjust left and right hand sides with max contribution */
+            if( QUAD_ROUND(val) < 0.0 )
+            {
+               SCIP_Real ub = aggrrow->local ? SCIPvarGetUbLocal(vars[v]) : SCIPvarGetUbGlobal(vars[v]);
+               if( SCIPisInfinity(scip, ub) )
+                  QUAD_ASSIGN(aggrrow->rhs, SCIPinfinity(scip));
+               else
+               {
+                  SCIPquadprecProdQD(val, val, ub);
+                  SCIPquadprecSumQQ(aggrrow->rhs, aggrrow->rhs, -val);
+               }
+            }
+            else
+            {
+               SCIP_Real lb = aggrrow->local ? SCIPvarGetLbLocal(vars[v]) : SCIPvarGetLbGlobal(vars[v]);
+               if( SCIPisInfinity(scip, -lb) )
+                  QUAD_ASSIGN(aggrrow->rhs, SCIPinfinity(scip));
+               else
+               {
+                  SCIPquadprecProdQD(val, val, lb);
+                  SCIPquadprecSumQQ(aggrrow->rhs, aggrrow->rhs, -val);
+               }
+            }
+         }
+
          QUAD_ASSIGN(val, 0.0);
-         QUAD_ARRAY_STORE(aggrrow->vals, aggrrow->inds[i], val);
-         --aggrrow->nnz;
+         QUAD_ARRAY_STORE(aggrrow->vals, v, val);
+
+         /* remove non-zero entry */
+         --(aggrrow->nnz);
          aggrrow->inds[i] = aggrrow->inds[aggrrow->nnz];
+
+         if( SCIPisInfinity(scip, QUAD_HI(aggrrow->rhs)) )
+         {
+            *valid = FALSE;
+            return;
+         }
       }
       else
          ++i;
    }
+
+   *valid = aggrrow->nnz > 0;
 }
 
 /** removes almost zero entries and relaxes the sides of the row accordingly */

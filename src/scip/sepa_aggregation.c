@@ -633,10 +633,9 @@ SCIP_RETCODE aggregateNextRow(
    /* found a row among the good rows, so aggregate it and stop */
    if( aggrfac != 0.0 )
    {
-      *success = TRUE;
       ++(*naggrs);
       SCIP_CALL( SCIPaggrRowAddRow(scip, aggrrow, bestrow, aggrfac, bestrowside) );
-      SCIPaggrRowRemoveZeros(aggrrow);
+      SCIPaggrRowRemoveZeros(scip, aggrrow, success);
       goto TERMINATE;
    }
 
@@ -721,10 +720,9 @@ SCIP_RETCODE aggregateNextRow(
     /* found a row so aggregate it */
    if( aggrfac != 0.0 )
    {
-      *success = TRUE;
       ++(*naggrs);
       SCIP_CALL( SCIPaggrRowAddRow(scip, aggrrow, bestrow, aggrfac, bestrowside) );
-      SCIPaggrRowRemoveZeros(aggrrow);
+      SCIPaggrRowRemoveZeros(scip, aggrrow, success);
    }
 
 TERMINATE:
