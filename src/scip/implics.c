@@ -1605,7 +1605,7 @@ SCIP_Bool SCIPcliquelistsHaveCommonClique(
 
    if( i1 < ncliques1 && i2 < ncliques2 )
    {
-      int cliqueid;
+      unsigned int cliqueid;
 
       /* make the bigger clique the first one */
       if( ncliques2 > ncliques1 )
@@ -3323,13 +3323,13 @@ SCIP_Bool* SCIPcliqueGetValues(
 }
 
 /** gets unique identifier of the clique */
-int SCIPcliqueGetId(
+unsigned int SCIPcliqueGetId(
    SCIP_CLIQUE*          clique              /**< clique data structure */
    )
 {
    assert(clique != NULL);
 
-   return (int) clique->id;
+   return clique->id;
 }
 
 /** gets unique identifier of the clique */
