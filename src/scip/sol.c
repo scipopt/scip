@@ -1608,6 +1608,8 @@ SCIP_RETCODE SCIPsolCheck(
 
    *feasible = TRUE;
 
+   SCIPsolResetViolations(sol);
+
    if( !printreason )
       completely = FALSE;
 
