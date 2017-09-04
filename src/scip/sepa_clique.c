@@ -32,7 +32,7 @@
 #define SEPA_NAME              "clique"
 #define SEPA_DESC              "clique separator of stable set relaxation"
 #define SEPA_PRIORITY             -5000
-#define SEPA_FREQ                    20
+#define SEPA_FREQ                     0
 #define SEPA_MAXBOUNDDIST           0.0
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
