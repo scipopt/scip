@@ -41,8 +41,7 @@
 #include "scip/pub_misc.h"
 #include "scip/struct_scip.h"
 
-//#ifdef WITH_DEBUG_SOLUTION
-#if 1
+#ifdef WITH_DEBUG_SOLUTION
 
 #define SCIP_HASHSIZE_DEBUG        500    /**< minimum size of hash map for storing whether a solution is valid for the node */
 
