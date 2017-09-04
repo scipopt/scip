@@ -123,6 +123,15 @@ void SCIPstatUpdatePrimalDualIntegral(
    SCIP_Real             dualbound           /**< current lower bound in transformed space, or -infinity */
    );
 
+/** update and return the primal-dual integral statistic */
+extern
+SCIP_Real SCIPstatGetPrimalDualIntegral(
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob            /**< original problem */
+   );
+
 /** reset current branch and bound run specific statistics */
 extern
 void SCIPstatResetCurrentRun(

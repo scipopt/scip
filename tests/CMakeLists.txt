@@ -99,6 +99,15 @@ if( CRITERION_FOUND )
                 )
 
         #
+        # avoid that several build jobs try to concurrently build the SCIP library
+        # note that this ressource lock name is not the actual libscip target
+        #
+        set_tests_properties(${testName}-build
+                            PROPERTIES
+                                RESOURCE_LOCK libscip
+                            )
+
+        #
         # Finally, add the executable as a test to the test framework
         #
         add_test(NAME ${testName}

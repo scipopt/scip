@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.0)
+
 set(PROJECT_NAME PolySCIP)
 project(${PROJECT_NAME})
 
@@ -48,7 +50,9 @@ include_directories(${PROJECT_SOURCE_DIR}/${SRC})
 
 add_executable(${EXECUTABLE_NAME} ${SOURCE_FILES})
 target_link_libraries(polyscip ${SCIP_LIBRARIES})      
-add_dependencies(applications ${EXECUTABLE_NAME})
+if( TARGET applications )
+    add_dependencies( applications ${EXECUTABLE_NAME} )
+endif()
 
 include(CTest)
 
@@ -58,6 +62,14 @@ include(CTest)
 add_test(NAME applications-${EXECUTABLE_NAME}-build
         COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${EXECUTABLE_NAME}
         )
+#
+# avoid that several build jobs try to concurrently build the SCIP library
+# note that this ressource lock name is not the actual libscip target
+#
+set_tests_properties(applications-${EXECUTABLE_NAME}-build
+                    PROPERTIES
+                        RESOURCE_LOCK libscip
+                    )
 #
 # instances in the data subdirectory
 #

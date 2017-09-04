@@ -481,6 +481,25 @@ void SCIPstatUpdatePrimalDualIntegral(
    stat->lastupperbound = upperbound;
 }
 
+/** update and return the primal-dual integral statistic */
+SCIP_Real SCIPstatGetPrimalDualIntegral(
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob            /**< original problem */
+   )
+{
+   assert(stat != NULL);
+   assert(set != NULL);
+   assert(transprob != NULL);
+   assert(origprob != NULL);
+
+   /* update the primal dual integral first */
+   SCIPstatUpdatePrimalDualIntegral(stat, set, transprob, origprob, SCIPsetInfinity(set), -SCIPsetInfinity(set));
+
+   return stat->primaldualintegral;
+}
+
 /** reset current branch and bound run specific statistics */
 void SCIPstatResetCurrentRun(
    SCIP_STAT*            stat,               /**< problem statistics data */
