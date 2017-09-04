@@ -2039,8 +2039,13 @@ SCIP_RETCODE getNLPVarsNonConvexity(
 
       for( i = 0; i < nconss; ++i )
       {
+         SCIP_Bool isconvex;
+
+         isconvex = (SCIPisConvexQuadratic(scip, conss[i]) && !SCIPisInfinity(scip, SCIPgetRhsQuadratic(scip, conss[i])))
+            || (SCIPisConcaveQuadratic(scip, conss[i]) && !SCIPisInfinity(scip, -SCIPgetLhsQuadratic(scip, conss[i])));
+
          /* only check the nlrow if the constraint is not convex */
-         if( SCIPisConvexQuadratic(scip, conss[i]) == FALSE )
+         if( !isconvex )
          {
             SCIP_NLROW* nlrow;
             SCIP_CALL( SCIPgetNlRowQuadratic(scip, conss[i], &nlrow) );
@@ -2063,10 +2068,15 @@ SCIP_RETCODE getNLPVarsNonConvexity(
       for( i = 0; i < nconss; ++i )
       {
          SCIP_EXPRCURV curvature;
+         SCIP_Bool isconvex;
+
          SCIP_CALL( SCIPgetCurvatureNonlinear(scip, conss[i], TRUE, &curvature) );
 
+         isconvex = (curvature != SCIP_EXPRCURV_CONVEX && !SCIPisInfinity(scip, SCIPgetRhsNonlinear(scip, conss[i])))
+            || (curvature != SCIP_EXPRCURV_CONCAVE && !SCIPisInfinity(scip, -SCIPgetLhsNonlinear(scip, conss[i])));
+
          /* only check the nlrow if the constraint is not convex */
-         if(  curvature != SCIP_EXPRCURV_CONVEX )
+         if( !isconvex )
          {
             SCIP_NLROW* nlrow;
             SCIP_CALL( SCIPgetNlRowNonlinear(scip, conss[i], &nlrow) );
@@ -2091,6 +2101,7 @@ SCIP_RETCODE getNLPVarsNonConvexity(
          SCIP_EXPRCURV curvature;
          SCIP_INTERVAL* varbounds;
          SCIP_EXPRTREE* exprtree;
+         SCIP_Bool isconvex;
          int j;
 
          exprtree = SCIPgetExprtreeBivariate(scip, conss[i]);
@@ -2109,8 +2120,11 @@ SCIP_RETCODE getNLPVarsNonConvexity(
 
             SCIP_CALL( SCIPexprtreeCheckCurvature(exprtree, SCIPinfinity(scip), varbounds, &curvature, NULL) );
 
+            isconvex = (curvature != SCIP_EXPRCURV_CONVEX && !SCIPisInfinity(scip, SCIPgetRhsBivariate(scip, conss[i])))
+               || (curvature != SCIP_EXPRCURV_CONCAVE && !SCIPisInfinity(scip, -SCIPgetLhsBivariate(scip, conss[i])));
+
             /* increase counter for all variables in the expression tree if the constraint is non-convex */
-            if( curvature != SCIP_EXPRCURV_CONVEX )
+            if( !isconvex )
             {
                for( j = 0; j < SCIPexprtreeGetNVars(exprtree); ++j )
                {
