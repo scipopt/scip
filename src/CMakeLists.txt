@@ -298,7 +298,9 @@ set(dijkstraheaders
 set(nlpiheaders
     nlpi/exprinterpret.h
     nlpi/intervalarithext.h
+    nlpi/nlpi_all.h
     nlpi/nlpi.h
+    nlpi/nlpi_filtersqp.h
     nlpi/nlpi_ipopt.h
     nlpi/nlpi_worhp.h
     nlpi/nlpioracle.h
