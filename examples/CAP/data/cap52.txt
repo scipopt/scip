@@ -1,0 +1,18 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+<html><head>
+<title>300 Multiple Choices</title>
+</head><body>
+<h1>Multiple Choices</h1>
+The document name you requested (<code>/~mastjjb/jeb/orlib/files/cap52.txt</code>) could not be found on this server.
+However, we found documents with names similar to the one you requested.<p>Available documents:
+<ul>
+<li><a href="/~mastjjb/jeb/orlib/files/cap92.txt">/~mastjjb/jeb/orlib/files/cap92.txt</a> (mistyped character)
+<li><a href="/~mastjjb/jeb/orlib/files/cap82.txt">/~mastjjb/jeb/orlib/files/cap82.txt</a> (mistyped character)
+<li><a href="/~mastjjb/jeb/orlib/files/cap42.txt">/~mastjjb/jeb/orlib/files/cap42.txt</a> (mistyped character)
+<li><a href="/~mastjjb/jeb/orlib/files/cap72.txt">/~mastjjb/jeb/orlib/files/cap72.txt</a> (mistyped character)
+<li><a href="/~mastjjb/jeb/orlib/files/cap51.txt">/~mastjjb/jeb/orlib/files/cap51.txt</a> (mistyped character)
+<li><a href="/~mastjjb/jeb/orlib/files/cap62.txt">/~mastjjb/jeb/orlib/files/cap62.txt</a> (mistyped character)
+</ul>
+<hr>
+<address>Apache Server at people.brunel.ac.uk Port 80</address>
+</body></html>
