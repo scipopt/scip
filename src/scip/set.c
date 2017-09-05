@@ -377,7 +377,7 @@
 
 /* Separation */
 
-#define SCIP_DEFAULT_SEPA_MAXBOUNDDIST      0.2 /**< maximal relative distance from current node's dual bound to primal
+#define SCIP_DEFAULT_SEPA_MAXBOUNDDIST      1.0 /**< maximal relative distance from current node's dual bound to primal
                                                  *   bound compared to best node's dual bound for applying separation
                                                  *   (0.0: only on current best node, 1.0: on all nodes) */
 #define SCIP_DEFAULT_SEPA_MAXLOCALBOUNDDIST 0.0 /**< maximal relative distance from current node's dual bound to primal
