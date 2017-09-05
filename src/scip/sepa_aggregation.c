@@ -33,7 +33,7 @@
 #define SEPA_NAME              "aggregation"
 #define SEPA_DESC              "aggregation heuristic for complemented mixed integer rounding cuts and flowcover cuts"
 #define SEPA_PRIORITY             -3000
-#define SEPA_FREQ                    20
+#define SEPA_FREQ                    30
 #define SEPA_MAXBOUNDDIST           1.0
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */

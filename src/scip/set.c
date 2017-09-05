@@ -383,10 +383,10 @@
 #define SCIP_DEFAULT_SEPA_MAXLOCALBOUNDDIST 0.0 /**< maximal relative distance from current node's dual bound to primal
                                                  *   bound compared to best node's dual bound for applying local separation
                                                  *   (0.0: only on current best node, 1.0: on all nodes) */
-#define SCIP_DEFAULT_SEPA_MAXCOEFRATIO     1e+5 /**< maximal ratio between coefficients in strongcg, cmir, and flowcover cuts */
-#define SCIP_DEFAULT_SEPA_MINEFFICACY      0.05 /**< minimal efficacy for a cut to enter the LP */
-#define SCIP_DEFAULT_SEPA_MINEFFICACYROOT  0.001 /**< minimal efficacy for a cut to enter the LP in the root node */
-#define SCIP_DEFAULT_SEPA_MINORTHO         0.50 /**< minimal orthogonality for a cut to enter the LP */
+#define SCIP_DEFAULT_SEPA_MAXCOEFRATIO     1e+4 /**< maximal ratio between coefficients in strongcg, cmir, and flowcover cuts */
+#define SCIP_DEFAULT_SEPA_MINEFFICACY       0.1 /**< minimal efficacy for a cut to enter the LP */
+#define SCIP_DEFAULT_SEPA_MINEFFICACYROOT  0.01 /**< minimal efficacy for a cut to enter the LP in the root node */
+#define SCIP_DEFAULT_SEPA_MINORTHO         0.60 /**< minimal orthogonality for a cut to enter the LP */
 #define SCIP_DEFAULT_SEPA_MINORTHOROOT     0.50 /**< minimal orthogonality for a cut to enter the LP in the root node */
 #define SCIP_DEFAULT_SEPA_OBJPARALFAC    0.0001 /**< factor to scale objective parallelism of cut in score calculation */
 #define SCIP_DEFAULT_SEPA_ORTHOFAC         1.00 /**< factor to scale orthogonality of cut in score calculation */
@@ -403,7 +403,7 @@
                                                  *   price-and-cut loops (-1: no additional restriction) */
 #define SCIP_DEFAULT_SEPA_MAXSTALLROUNDSROOT 10 /**< maximal number of consecutive separation rounds without objective
                                                  *   or integrality improvement (-1: no additional restriction) */
-#define SCIP_DEFAULT_SEPA_MAXSTALLROUNDS      3 /**< maximal number of consecutive separation rounds without objective
+#define SCIP_DEFAULT_SEPA_MAXSTALLROUNDS      1 /**< maximal number of consecutive separation rounds without objective
                                                  *   or integrality improvement (-1: no additional restriction) */
 #define SCIP_DEFAULT_SEPA_MAXCUTS           200 /**< maximal number of cuts separated per separation round */
 #define SCIP_DEFAULT_SEPA_MAXCUTSROOT      2000 /**< maximal separated cuts at the root node */

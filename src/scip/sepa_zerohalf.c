@@ -67,8 +67,8 @@
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
 
 /* SCIPcalcRowIntegralScalar parameters */
-#define MAXDNOM                   10000
-#define MAXSCALE                10000.0
+#define MAXDNOM                    1000
+#define MAXSCALE                 1000.0
 
 /* other defines */
 #define MAXREDUCTIONROUNDS          100 /**< maximum number of rounds to perform reductions on the mod 2 system */
@@ -453,7 +453,7 @@ SCIP_RETCODE transformNonIntegralRow(
       SCIP_Real intscalar;
       SCIP_VAR** vars = SCIPgetVars(scip);
 
-      SCIP_CALL( SCIPcalcIntegralScalar(transrowvals, transrowlen, -SCIPepsilon(scip), SCIPepsilon(scip), MAXDNOM, MAXSCALE, &intscalar, success) );
+      SCIP_CALL( SCIPcalcIntegralScalar(transrowvals, transrowlen, -SCIPepsilon(scip), SCIPsumepsilon(scip), MAXDNOM, MAXSCALE, &intscalar, success) );
 
       if( *success )
       {
