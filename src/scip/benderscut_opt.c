@@ -316,7 +316,10 @@ SCIP_RETCODE generateAndApplyBendersCuts(
             FALSE, TRUE) );
    }
    else
+   {
       SCIP_CALL( SCIPcreateConsBasicLinear(masterprob, &cons, cutname, 0, NULL, NULL, 0.0, SCIPinfinity(masterprob)) );
+      SCIPconsSetRemovable(cons, TRUE);
+   }
 
    /* computing the coefficients of the optimality cut */
    SCIP_CALL( computeStandardOptimalityCut(masterprob, subproblem, benders, sol, cons, row, addcut) );

@@ -1373,7 +1373,10 @@ SCIP_RETCODE createAndAddTransferredCut(
 
    /* creating an empty row/constraint for the transferred cut */
    if( sourcebenders->cutsascons )
+   {
       SCIP_CALL( SCIPcreateConsBasicLinear(sourcescip, &transfercons, cutname, 0, NULL, NULL, lhs, rhs) );
+      SCIPconsSetRemovable(transfercons, TRUE);
+   }
    else
       SCIP_CALL( SCIPcreateEmptyRowCons(sourcescip, &transfercut, consbenders, cutname, lhs, rhs, FALSE,
             FALSE, TRUE) );
