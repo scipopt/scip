@@ -296,6 +296,7 @@ SCIP_RETCODE SCIPsolCreate(
    (*sol)->primalindex = -1;
    (*sol)->index = stat->solindex;
    (*sol)->hasinfval = FALSE;
+   SCIPsolResetViolations(*sol);
    stat->solindex++;
    solStamp(*sol, stat, tree, TRUE);
 
@@ -1606,6 +1607,8 @@ SCIP_RETCODE SCIPsolCheck(
       sol->obj, sol->nodenum, sol->solorigin);
 
    *feasible = TRUE;
+
+   SCIPsolResetViolations(sol);
 
    if( !printreason )
       completely = FALSE;
