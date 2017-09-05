@@ -58,7 +58,7 @@ heuristics/rins/priority = 0
 
 # frequency for calling primal heuristic <rins> (-1: never, 0: only at depth freqofs)
 # [type: int, advanced: FALSE, range: [-1,65534], default: 25]
-heuristics/rins/freq = 0
+heuristics/rins/freq = 10
 
 # number of nodes added to the contingent of the total nodes
 # [type: int, advanced: FALSE, range: [0,2147483647], default: 500]
