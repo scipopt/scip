@@ -9287,6 +9287,9 @@ void SCIPprintSysError(
    (void)(strerror_s(buf, SCIP_MAXSTRLEN, errno) + 1);
 #else
    #if (_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && !_GNU_SOURCE
+      /* the return value (int) of strerror_r cannot be casted to void without compiler warnings when using a c++ compiler.
+       * thus, we use a dirty hack and add +1 such that compiler will not complain anymore.
+       */
       (void)(strerror_r(errno, buf, SCIP_MAXSTRLEN) + 1);
    #else
       buf = strerror_r(errno, buf, SCIP_MAXSTRLEN);
