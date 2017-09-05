@@ -9286,7 +9286,11 @@ void SCIPprintSysError(
 #if defined(_WIN32) || defined(_WIN64)
    (void)(strerror_s(buf, SCIP_MAXSTRLEN, errno) + 1);
 #else
-   (void)(strerror_r(errno, buf, SCIP_MAXSTRLEN) + 1);
+   #if (_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && !_GNU_SOURCE
+      (void)(strerror_r(errno, buf, SCIP_MAXSTRLEN) + 1);
+   #else
+      buf = strerror_r(errno, buf, SCIP_MAXSTRLEN);
+   #endif
 #endif
 
    buf[SCIP_MAXSTRLEN - 1] = '\0';
