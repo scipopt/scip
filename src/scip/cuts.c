@@ -2576,6 +2576,11 @@ SCIP_RETCODE SCIPcalcMIR(
     *   a^_{zu_j} := a^_{zu_j} + a~_j * bu_j == a^_{zu_j} - a^_j * bu_j
     */
    downrhs = SCIPfloor(scip, QUAD_ROUND(rhs));
+
+   /* numerics are not reliable */
+   if( SCIPisFeasEQ(scip, QUAD_ROUND(rhs), downrhs) )
+      goto TERMINATE;
+
    SCIPquadprecSumQD(f0, rhs, -downrhs);
 
    if( QUAD_ROUND(f0) < minfrac || QUAD_ROUND(f0) > maxfrac )
@@ -2586,6 +2591,9 @@ SCIP_RETCODE SCIPcalcMIR(
     */
    if( REALABS(scale)/(1.0 - QUAD_ROUND(f0)) > MAXCMIRSCALE )
       goto TERMINATE;
+
+   /* renormaliize f0 value */
+   SCIPquadprecSumDD(f0, QUAD_HI(f0), QUAD_LO(f0));
 
    QUAD_ASSIGN(rhs, downrhs);
    SCIP_CALL( cutsRoundMIR(scip, tmpcoefs, QUAD(&rhs), cutinds, cutnnz, varsign, boundtype, QUAD(f0)) );
@@ -2677,12 +2685,19 @@ SCIP_Real computeMIRViolation(
    SCIP_Real f0;
    SCIP_Real onedivoneminusf0;
    SCIP_Real scale;
+   SCIP_Real downrhs;
 
    scale = 1.0 / delta;
 
    rhs *= scale;
 
-   f0 = rhs - SCIPfloor(scip, rhs);
+   downrhs = SCIPfloor(scip, rhs);
+
+   /* numerics are not reliable */
+   if( SCIPisFeasEQ(scip, rhs, downrhs) )
+      return 0.0;
+
+   f0 = rhs - downrhs;
 
    if( f0 < minfrac || f0 > maxfrac )
       return 0.0;
@@ -3220,6 +3235,9 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 
       downrhs = SCIPfloor(scip, QUAD_ROUND(mksetrhs));
       SCIPquadprecSumQD(f0, mksetrhs, -downrhs);
+
+      /* renormaliize f0 value */
+      SCIPquadprecSumDD(f0, QUAD_HI(f0), QUAD_LO(f0));
 
       for( i = 0; i < mksetnnz; ++i )
       {
@@ -6708,9 +6726,17 @@ SCIP_RETCODE SCIPcalcStrongCG(
     *   a^_{zu_j} := a^_{zu_j} + a~_j * bu_j == a^_{zu_j} - a^_j * bu_j
     */
    downrhs = SCIPfloor(scip, QUAD_ROUND(rhs));
+
+   /* numerics are not reliable */
+   if( SCIPisFeasEQ(scip, QUAD_ROUND(rhs), downrhs) )
+      goto TERMINATE;
+
    SCIPquadprecSumQD(f0, rhs, -downrhs);
    if( QUAD_ROUND(f0) < minfrac || QUAD_ROUND(f0) > maxfrac )
       goto TERMINATE;
+
+   /* renormalize the f0 value */
+   SCIPquadprecSumDD(f0, QUAD_HI(f0), QUAD_LO(f0));
 
    SCIPquadprecDivDQ(tmp, 1.0, f0);
    k = SCIPround(scip, ceil(QUAD_ROUND(tmp)) - 1.0);
