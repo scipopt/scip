@@ -19081,7 +19081,7 @@ SCIP_Real SCIPgetVarRedcost(
    assert( var->scip == scip );
 
    if( !SCIPlpIsDualReliable(scip->lp) )
-      return SCIP_OKAY;
+      return 0.0;
 
    switch( SCIPvarGetStatus(var) )
    {
