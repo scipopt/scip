@@ -971,7 +971,7 @@ void** SCIPhashsetGetSlots(
 
 /** removes all entries in a hash set. */
 EXTERN
-SCIP_RETCODE SCIPhashsetRemoveAll(
+void SCIPhashsetRemoveAll(
    SCIP_HASHSET*         hashset             /**< hash set */
    );
 

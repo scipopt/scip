@@ -3195,6 +3195,11 @@ SCIP_RETCODE SCIPhashmapRemoveAll(
  * Hash Set
  */
 
+/* redefine ELEM_DISTANCE macro for hashset */
+#undef ELEM_DISTANCE
+/* computes the distance from it's desired position for the element stored at pos */
+#define ELEM_DISTANCE(pos) (((pos) + nslots - hashSetDesiredPos(hashset, hashset->slots[(pos)])) & mask)
+
 /* calculate desired position of element in hash set */
 static
 uint32_t hashSetDesiredPos(
@@ -3237,10 +3242,11 @@ void hashsetInsert(
          return;
       }
 
-      assert(hashset->slots[pos] != element);
+      if( hashset->slots[pos] == element )
+         return;
 
       /* otherwise check if the current element at this position is closer to its hashvalue */
-      distance = (hashSetDesiredPos(hashset, hashset->slots[pos]) + nslots - pos) & mask;
+      distance = ELEM_DISTANCE(pos);
       if( distance < elemdistance )
       {
          /* if this is the case we insert the new element here and find a new position for the old one */
@@ -3318,7 +3324,7 @@ SCIP_RETCODE SCIPhashsetCreate(
     * to the next power of two.
     */
    (*hashset)->shift = 64;
-   (*hashset)->shift -= (int)ceil(log2(MAX(16.0, size / 0.9)));
+   (*hashset)->shift -= (int)ceil(log2(MAX(8.0, size / 0.9)));
    nslots = SCIPhashsetGetNSlots(*hashset);
    (*hashset)->nelements = 0;
 
@@ -3385,7 +3391,7 @@ SCIP_Bool SCIPhashsetExists(
       if( hashset->slots[pos] == NULL )
          return FALSE;
 
-      distance = (hashSetDesiredPos(hashset, hashset->slots[pos]) + nslots - pos) & mask;
+      distance = ELEM_DISTANCE(pos);
       /* element can not be contained since otherwise we would have swapped it with this one during insert */
       if( elemdistance > distance )
          return FALSE;
@@ -3427,7 +3433,7 @@ SCIP_RETCODE SCIPhashsetRemove(
       if( hashset->slots[pos] == NULL )
          return SCIP_OKAY;
 
-      distance = (hashSetDesiredPos(hashset, hashset->slots[pos]) + nslots - pos) & mask;
+      distance = ELEM_DISTANCE(pos);
       /* element can not be contained since otherwise we would have swapped it with this one during insert */
       if( elemdistance > distance )
          return SCIP_OKAY;
@@ -3435,6 +3441,9 @@ SCIP_RETCODE SCIPhashsetRemove(
       pos = (pos + 1) & mask;
       ++elemdistance;
    }
+
+   assert(hashset->slots[pos] == element);
+   assert(SCIPhashsetExists(hashset, element));
 
    /* remove element */
    --hashset->nelements;
@@ -3448,12 +3457,17 @@ SCIP_RETCODE SCIPhashsetRemove(
       if( hashset->slots[nextpos] == NULL )
       {
          hashset->slots[pos] = NULL;
+         assert(!SCIPhashsetExists(hashset, element));
          return SCIP_OKAY;
       }
 
       /* check if the element is the start of a new chain and return if that is the case */
       if( hashSetDesiredPos(hashset, hashset->slots[nextpos]) == nextpos )
+      {
+         hashset->slots[pos] = NULL;
+         assert(!SCIPhashsetExists(hashset, element));
          return SCIP_OKAY;
+      }
 
       /* element should be moved to the left and next element needs to be checked */
       hashset->slots[pos] = hashset->slots[nextpos];
@@ -3537,7 +3551,7 @@ void** SCIPhashsetGetSlots(
 }
 
 /** removes all entries in a hash set. */
-SCIP_RETCODE SCIPhashsetRemoveAll(
+void SCIPhashsetRemoveAll(
    SCIP_HASHSET*         hashset             /**< hash set */
    )
 {
