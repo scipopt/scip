@@ -95,12 +95,13 @@
 #define SCIP_DEFAULT_CONF_USEINFLP          'b' /**< should infeasible LP conflict analysis be used?
                                                  *   ('o'ff, 'c'onflict graph, 'd'ual ray, 'b'oth conflict graph and dual ray)
                                                  */
-#define SCIP_DEFAULT_CONF_USEBOUNDLP        'o' /**< should bound exceeding LP conflict analysis be used?
-                                                 *   ('o'ff, 'c'onflict graph, 'd'ual ray, 'b'oth conflict graph and dual ray)
+#define SCIP_DEFAULT_CONF_USEBOUNDLP        'b' /**< should bound exceeding LP conflict analysis be used?
+                                                 *   ('o'ff, 'c'onflict graph, 'd'ual ray, 'b'oth conflict graph and dual solution)
                                                  */
 #define SCIP_DEFAULT_CONF_USESB            TRUE /**< should infeasible/bound exceeding strong branching conflict analysis
                                                  *   be used? */
 #define SCIP_DEFAULT_CONF_USEPSEUDO        TRUE /**< should pseudo solution conflict analysis be used? */
+#define SCIP_DEFAULT_CONF_PREFINFPROOF     TRUE /**< prefer infeasibility proof to boundexceeding proof */
 #define SCIP_DEFAULT_CONF_SEPARATE         TRUE /**< should the conflict constraints be separated? */
 #define SCIP_DEFAULT_CONF_DYNAMIC          TRUE /**< should the conflict constraints be subject to aging? */
 
@@ -143,12 +144,24 @@
 #define SCIP_DEFAULT_CONF_WEIGHTVALIDDEPTH  1.0 /**< weight of the valid depth of a conflict used in score calculation */
 #define SCIP_DEFAULT_CONF_MINIMPROVE       0.05 /**< minimal improvement of primal bound to remove conflicts based on a previous incumbent */
 
-
 /* Conflict Analysis (dual ray) */
 
 #define SCIP_DEFAULT_CONF_APPLYMIR        FALSE /**< apply MIR function to dual rays */
 #define SCIP_DEFAULT_CONF_PREFERMIR        TRUE /**< prefer a ray after applying the MIR function if the proof is still
-                                                  *   valid, use both rays otherwise */
+                                                 *   valid, use both rays otherwise
+                                                 */
+#define SCIP_DEFAULT_CONF_DUALRAYPRESOL       0 /**< which presolving strategy should be used for dualray constraints?
+                                                 *   (0: no presolving,
+                                                 *    1: keep variables contributing with its local bound
+                                                 *    2: keep variables contributing with its global bound
+                                                 *    3: keep variables contributing with its global bound and add a few
+                                                 *       variables contributing with its local bound such that the
+                                                 *       constraint is not globally redundant
+                                                 */
+#define SCIP_DEFAULT_CONF_REMOVECONTS       'd' /**< try to sparsify the dualray proof by removing continuous variables
+                                                 *   ([d]on't remove, remove [g]reedy, use [n]on-zero-cancellation)
+                                                 */
+#define SCIP_DEFAULT_CONF_SEPAALTPROOFS   FALSE /**< apply cut generating functions to construct alternative proofs */
 
 /* Constraints */
 
@@ -1255,6 +1268,11 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->conf_preferbinary, FALSE, SCIP_DEFAULT_CONF_PREFERBINARY,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "conflict/prefinfproof",
+         "prefer infeasibility proof to boundexceeding proof",
+         &(*set)->conf_prefinfproof, TRUE, SCIP_DEFAULT_CONF_PREFINFPROOF,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/allowlocal",
          "should conflict constraints be generated that are only valid locally?",
          &(*set)->conf_allowlocal, TRUE, SCIP_DEFAULT_CONF_ALLOWLOCAL,
@@ -1349,16 +1367,6 @@ SCIP_RETCODE SCIPsetCreate(
          "the weight the VSIDS score is weight by updating the VSIDS for a variable if it is part of a conflict graph",
          &(*set)->conf_conflictgraphweight, FALSE, SCIP_DEFAULT_CONF_CONFLITGRAPHWEIGHT, 0.0, 1.0,
          NULL, NULL) );
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "conflict/usemir",
-         "apply MIR function to dual rays",
-         &(*set)->conf_applymir, TRUE, SCIP_DEFAULT_CONF_APPLYMIR,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "conflict/prefermir",
-         "prefer a ray after applying the MIR function if the proof is still valid, use both rays otherwise",
-         &(*set)->conf_prefermir, TRUE, SCIP_DEFAULT_CONF_PREFERMIR,
-         NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "conflict/minimprove",
          "minimal improvement of primal bound to remove conflicts based on a previous incumbent",
@@ -1375,6 +1383,11 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/weightvaliddepth",
          "weight of the valid depth of a conflict used in score calculation",
          &(*set)->conf_weightvaliddepth, TRUE, SCIP_DEFAULT_CONF_WEIGHTVALIDDEPTH, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "conflict/sepaaltproofs",
+         "apply cut generating functions to construct alternative proofs",
+         &(*set)->conf_sepaaltproofs, FALSE, SCIP_DEFAULT_CONF_SEPAALTPROOFS,
+         NULL, NULL) );
 
    /* constraint parameters */
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,

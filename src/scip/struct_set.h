@@ -193,6 +193,7 @@ struct SCIP_Set
    SCIP_Bool             conf_usesb;         /**< should infeasible/bound exceeding strong branching conflict analysis be
                                               *   used? */
    SCIP_Bool             conf_usepseudo;     /**< should pseudo solution conflict analysis be used? */
+   SCIP_Bool             conf_prefinfproof;  /**< prefer infeasibility proof to boundexceeding proof */
    SCIP_Bool             conf_preferbinary;  /**< should binary conflicts be preferred? */
    SCIP_Bool             conf_allowlocal;    /**< should conflict constraints be generated that are only valid locally? */
    SCIP_Bool             conf_settlelocal;   /**< should conflict constraints be attached only to the local subtree where
@@ -228,10 +229,7 @@ struct SCIP_Set
    SCIP_Real             conf_weightsize;    /**< weight of the size of a conflict used in score calculation */
    SCIP_Real             conf_weightrepropdepth;/**< weight of the prepropagtion depth of a conflict used in score calculation */
    SCIP_Real             conf_weightvaliddepth;/**< weight of the valid depth of a conflict used in score calculation */
-   SCIP_Bool             conf_applymir;      /**< apply the MIR function on a dual ray */
-   SCIP_Bool             conf_prefermir;     /**< prefer a ray after applying the MIR function if the proof is still
-                                              *   valid, use both rays otherwise
-                                              */
+   SCIP_Bool             conf_sepaaltproofs;      /**< separate valid inequalities from dualray proofs */
    SCIP_Real             conf_minimprove;    /**< minimal improvement of primal bound to remove conflicts depending on
                                               *   a previous incumbent.
                                               */

@@ -70,18 +70,6 @@ SCIP_RETCODE SCIPaggrRowCopy(
    SCIP_AGGRROW*         source              /**< source the aggregation row */
    );
 
-/** adds given value to the right-hand side of the aggregation row */
-extern
-SCIP_RETCODE SCIPaggrRowAddData(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
-   SCIP_VAR**            vars,               /**< variable array */
-   SCIP_Real*            coefs,              /**< variable coefficients */
-   int                   nvars,              /**< size of variable and coefficient array */
-   SCIP_Real             rhs,                /**< right-hand side of the row */
-   SCIP_Real             scale               /**< scalar to apply */
-   );
-
 /** add weighted row to the aggregation row */
 extern
 SCIP_RETCODE SCIPaggrRowAddRow(
@@ -90,6 +78,15 @@ SCIP_RETCODE SCIPaggrRowAddRow(
    SCIP_ROW*             row,                /**< row to add to the aggregation row */
    SCIP_Real             weight,             /**< scale for adding given row to the aggregation row */
    int                   sidetype            /**< specify row side type (-1 = lhs, 0 = automatic, 1 = rhs) */
+   );
+
+/** add the objective function with right-hand side @p rhs and scaled by @p scale to the aggregation row */
+extern
+SCIP_RETCODE SCIPaggrRowAddObjectiveFunction(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   SCIP_Real             rhs,                /**< right-hand side of the artificial row */
+   SCIP_Real             scale               /**< scalar */
    );
 
 /** add weighted constraint to the aggregation row */
@@ -106,19 +103,14 @@ SCIP_RETCODE SCIPaggrRowAddCustomCons(
    SCIP_Bool             local               /**< is constraint only valid locally */
    );
 
-/** deletes variable at position @pos and updates mapping between variable indices and sparsity pattern */
+/** calculates the efficacy norm of the given aggregation row, which depends on the "separating/efficacynorm" parameter
+ *
+ *  @return the efficacy norm of the given aggregation row, which depends on the "separating/efficacynorm" parameter
+ */
 extern
-void SCIPaggrRowDelCoef(
-   SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
-   int                   pos,                /**< position that should be removed */
-   int*                  positions           /**< mapping between variable indices and sparsity pattern (or NULL) */
-   );
-
-/** change the right-hand side of the aggregation row */
-extern
-void SCIPaggrRowAddRhs(
-   SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
-   SCIP_Real             value               /**< value to add to the right-hand side */
+SCIP_Real SCIPaggrRowCalcEfficacyNorm(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    );
 
 /** clear all entries in the aggregation row but do not free the internal memory */
@@ -154,12 +146,6 @@ void SCIPaggrRowRemoveZeros(
 extern
 void SCIPaggrRowCleanup(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
-   );
-
-/** get number of aggregated rows */
-extern
-int SCIPaggrRowGetNRows(
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    );
 
@@ -242,6 +228,12 @@ SCIP_Bool SCIPaggrRowIsLocal(
 extern
 SCIP_Real SCIPaggrRowGetRhs(
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
+   );
+
+/** gets the number of row aggregations */
+extern
+int SCIPaggrRowGetNRows(
+    SCIP_AGGRROW*          aggrrow              /**< aggregation row */
    );
 
 /** calculates an MIR cut out of the weighted sum of LP rows given by an aggregation row; the
