@@ -777,6 +777,12 @@ int SCIPlinConsStatsGetTypeCount(
    SCIP_LINCONSTYPE     linconstype          /**< linear constraint type */
    );
 
+/** returns the total number of classified constraints */
+EXTERN
+int SCIPlinConsStatsGetSum(
+   SCIP_LINCONSSTATS*   linconsstats         /**< linear constraint classification statistics */
+   );
+
 /** increases the number of occurrences of a specific type of linear constraint */
 EXTERN
 void SCIPlinConsStatsIncTypeCount(

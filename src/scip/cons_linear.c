@@ -14839,13 +14839,26 @@ SCIP_RETCODE SCIPclassifyConstraintTypesLinear(
          continue;
       }
 
-      /* is constraint of type SCIP_CONSTYPE_{VARBOUND}? */
+      /* is constraint of type SCIP_CONSTYPE_{VARBOUND,PRECEDENCE}? */
       if( consdata->nvars == 2 )
       {
-         SCIPdebugMsg(scip, "classified as VARBOUND: ");
+         SCIP_LINCONSTYPE constype;
+
+         /* precedence constraints have the same coefficient, but with opposite sign for the same variable type */
+         if( SCIPisEQ(scip, consdata->vals[0], -consdata->vals[1])
+               && SCIPvarGetType(consdata->vars[0]) == SCIPvarGetType(consdata->vars[1]))
+         {
+            constype = SCIP_LINCONSTYPE_PRECEDENCE;
+            SCIPdebugMsg(scip, "classified as PRECEDENCE: ");
+         }
+         else
+         {
+            constype = SCIP_LINCONSTYPE_VARBOUND;
+            SCIPdebugMsg(scip, "classified as VARBOUND: ");
+         }
          SCIPdebugPrintCons(scip, cons, NULL);
 
-         SCIPlinConsStatsIncTypeCount(linconsstats, SCIP_LINCONSTYPE_VARBOUND, isRangedRow(scip, lhs, rhs) ? 2 : 1);
+         SCIPlinConsStatsIncTypeCount(linconsstats, constype, isRangedRow(scip, lhs, rhs) ? 2 : 1);
 
          continue;
       }

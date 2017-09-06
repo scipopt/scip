@@ -280,6 +280,7 @@ struct SCIP_Conshdlr
 struct SCIP_LinConsStats
 {
    int                   counter[SCIP_NLINCONSTYPES]; /**< count statistics per type of linear constraint */
+   int                   sum;                         /**< sum of all counters */
 };
 
 #ifdef __cplusplus
