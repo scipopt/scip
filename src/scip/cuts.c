@@ -24,6 +24,7 @@
 
 #include "scip/scip.h"
 #include "scip/cuts.h"
+#include "scip/misc.h"
 #include "scip/struct_lp.h"
 #include "scip/lp.h"
 #include "scip/struct_cuts.h"
@@ -209,6 +210,68 @@ SCIP_Real calcEfficacy(
    return (activity - cutrhs) / norm;
 }
 
+static
+SCIP_Real calcEfficacyNormQuad(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real*            vals,               /**< array of the non-zero coefficients in the vector; this is a quad precision array! */
+   int*                  inds,               /**< array of the problem indices of variables with a non-zero coefficient in the vector */
+   int                   nnz                 /**< the number of non-zeros in the vector */
+   )
+{
+   SCIP_Real norm;
+   SCIP_Real QUAD(coef);
+   int i;
+
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   norm = 0.0;
+   switch( scip->set->sepa_efficacynorm )
+   {
+   case 'e':
+      for( i = 0; i < nnz; ++i )
+      {
+         QUAD_ARRAY_LOAD(coef, vals, inds[i]);
+         norm += SQR(QUAD_ROUND(coef));
+      }
+      norm = SQRT(norm);
+      break;
+   case 'm':
+      for( i = 0; i < nnz; ++i )
+      {
+         SCIP_Real absval;
+         QUAD_ARRAY_LOAD(coef, vals, inds[i]);
+
+         absval = REALABS(QUAD_ROUND(coef));
+         norm = MAX(norm, absval);
+      }
+      break;
+   case 's':
+      for( i = 0; i < nnz; ++i )
+      {
+         QUAD_ARRAY_LOAD(coef, vals, inds[i]);
+         norm += REALABS(QUAD_ROUND(coef));
+      }
+      break;
+   case 'd':
+      for( i = 0; i < nnz; ++i )
+      {
+         QUAD_ARRAY_LOAD(coef, vals, inds[i]);
+         if( !SCIPisZero(scip, QUAD_ROUND(coef)) )
+         {
+            norm = 1.0;
+            break;
+         }
+      }
+      break;
+   default:
+      SCIPerrorMessage("invalid efficacy norm parameter '%c'\n", scip->set->sepa_efficacynorm);
+      assert(FALSE);
+   }
+
+   return norm;
+}
+
 /* calculates the cuts efficacy for the given solution; the cut coefs are stored densely and in quad precision */
 static
 SCIP_Real calcEfficacyDenseStorageQuad(
@@ -231,50 +294,7 @@ SCIP_Real calcEfficacyDenseStorageQuad(
    assert(cutinds != NULL);
    assert(scip->set != NULL);
 
-   norm = 0.0;
-   switch( scip->set->sepa_efficacynorm )
-   {
-   case 'e':
-      for( i = 0; i < cutnnz; ++i )
-      {
-         QUAD_ARRAY_LOAD(coef, cutcoefs, cutinds[i]);
-         norm += SQR(QUAD_ROUND(coef));
-      }
-      norm = SQRT(norm);
-      break;
-   case 'm':
-      for( i = 0; i < cutnnz; ++i )
-      {
-         SCIP_Real absval;
-         QUAD_ARRAY_LOAD(coef, cutcoefs, cutinds[i]);
-
-         absval = REALABS(QUAD_ROUND(coef));
-         norm = MAX(norm, absval);
-      }
-      break;
-   case 's':
-      for( i = 0; i < cutnnz; ++i )
-      {
-         QUAD_ARRAY_LOAD(coef, cutcoefs, cutinds[i]);
-         norm += REALABS(QUAD_ROUND(coef));
-      }
-      break;
-   case 'd':
-      for( i = 0; i < cutnnz; ++i )
-      {
-         QUAD_ARRAY_LOAD(coef, cutcoefs, cutinds[i]);
-         if( !SCIPisZero(scip, QUAD_ROUND(coef)) )
-         {
-            norm = 1.0;
-            break;
-         }
-      }
-      break;
-   default:
-      SCIPerrorMessage("invalid efficacy norm parameter '%c'\n", scip->set->sepa_efficacynorm);
-      assert(FALSE);
-   }
-   norm = MAX(1e-6, norm);
+   norm = MAX(1e-6, calcEfficacyNormQuad(scip, cutcoefs, cutinds, cutnnz));
 
    vars = SCIPgetVars(scip);
 
@@ -401,106 +421,30 @@ SCIP_RETCODE SCIPaggrRowCopy(
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*aggrrow)->inds, source->inds, nvars) );
    (*aggrrow)->nnz = source->nnz;
    QUAD_ASSIGN_Q((*aggrrow)->rhs, source->rhs);
-   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*aggrrow)->rowsinds, source->rowsinds, source->nrows) );
-   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*aggrrow)->slacksign, source->slacksign, source->nrows) );
-   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*aggrrow)->rowweights, source->rowweights, source->nrows) );
+
+   if( source->nrows > 0 )
+   {
+      assert(source->rowsinds != NULL);
+      assert(source->slacksign != NULL);
+      assert(source->rowweights != NULL);
+
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*aggrrow)->rowsinds, source->rowsinds, source->nrows) );
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*aggrrow)->slacksign, source->slacksign, source->nrows) );
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*aggrrow)->rowweights, source->rowweights, source->nrows) );
+   }
+   else
+   {
+      (*aggrrow)->rowsinds = NULL;
+      (*aggrrow)->slacksign = NULL;
+      (*aggrrow)->rowweights = NULL;
+   }
+
    (*aggrrow)->nrows = source->nrows;
    (*aggrrow)->rowssize = source->nrows;
    (*aggrrow)->rank = source->rank;
    (*aggrrow)->local = source->local;
 
    return SCIP_OKAY;
-}
-
-/* TODO: REMOVE THIS OR FIX (even docu) */
-/** adds given value to the right-hand side of the aggregation row */
-SCIP_RETCODE SCIPaggrRowAddData(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
-   SCIP_VAR**            vars,               /**< variable array */
-   SCIP_Real*            coefs,              /**< variable coefficients */
-   int                   nvars,              /**< size of variable and coefficient array */
-   SCIP_Real             rhs,                /**< right-hand side of the row */
-   SCIP_Real             scale               /**< scalar to apply */
-   )
-{
-   int i;
-
-   assert(scip != NULL);
-   assert(aggrrow != NULL);
-   assert(!SCIPisInfinity(scip, REALABS(scale)));
-
-   /* nothing needs to be done */
-   if( nvars == 0 )
-      return SCIP_OKAY;
-
-   assert(vars != NULL);
-   assert(coefs != NULL);
-
-   SCIPquadprecProdDD(aggrrow->rhs, rhs, scale);
-
-   for( i = 0; i < nvars; i++ )
-   {
-      SCIP_Real QUAD(val);
-      int probidx;
-
-      /* skip all variables with zero coefficient */
-      if( coefs[i] == 0.0 )
-         continue;
-
-      assert(vars[i] != NULL);
-      probidx = SCIPvarGetProbindex(vars[i]);
-
-      assert(!SCIPisInfinity(scip, REALABS(coefs[i] * scale)));
-      QUAD_ASSIGN(val, coefs[i] * scale);
-      QUAD_ARRAY_STORE(aggrrow->vals, probidx, val);
-
-      aggrrow->inds[aggrrow->nnz] = probidx;
-      ++aggrrow->nnz;
-   }
-
-   return SCIP_OKAY;
-}
-
-/* TODO: REMOVE OR FIX */
-/** deletes variable at position @pos and updates mapping between variable indices and sparsity pattern */
-void SCIPaggrRowDelCoef(
-   SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
-   int                   pos,                /**< position that should be removed */
-   int*                  positions           /**< mapping between variable indices and sparsity pattern (or NULL) */
-   )
-{
-   assert(aggrrow != NULL);
-   assert(pos >= 0);
-   assert(pos < aggrrow->nnz);
-   assert(aggrrow->inds[pos] >= 0);
-
-   aggrrow->vals[aggrrow->inds[pos]] = 0.0;
-
-   if( positions != NULL )
-   {
-      positions[aggrrow->inds[pos]] = 0;
-
-      /* mapping should be shifted by +1 */
-      assert(positions[aggrrow->inds[aggrrow->nnz - 1]] == aggrrow->nnz);
-      positions[aggrrow->inds[aggrrow->nnz - 1]] = pos+1;
-   }
-
-   aggrrow->inds[pos] = aggrrow->inds[aggrrow->nnz - 1];
-
-   --aggrrow->nnz;
-}
-
-/* TODO: remove if not used! */
-/** adds given value to the right-hand side of the aggregation row */
-void SCIPaggrRowAddRhs(
-   SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
-   SCIP_Real             value               /**< value to add to the right-hand side */
-   )
-{
-   assert(aggrrow != NULL);
-
-   SCIPquadprecSumQD(aggrrow->rhs, aggrrow->rhs, value);
 }
 
 /** add weighted row to aggregation row */
@@ -584,6 +528,75 @@ SCIP_RETCODE SCIPaggrRowAddRow(
    return SCIP_OKAY;
 }
 
+/** add the objective function with right-hand side @p rhs and scaled by @p scale to the aggregation row */
+SCIP_RETCODE SCIPaggrRowAddObjectiveFunction(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   SCIP_Real             rhs,                /**< right-hand side of the artificial row */
+   SCIP_Real             scale               /**< scalar */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_Real QUAD(val);
+   int nvars;
+
+   assert(scip != NULL);
+   assert(aggrrow != NULL);
+
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
+
+   /* add all variables straight forward if the aggregation row is empty */
+   if( aggrrow->nnz == 0 )
+   {
+      for( int i = 0; i < nvars; ++i )
+      {
+         assert(SCIPvarGetProbindex(vars[i]) == i);
+
+         /* skip all variables with zero objective coefficient */
+         if( SCIPisZero(scip, scale * SCIPvarGetObj(vars[i])) )
+            continue;
+
+         QUAD_ASSIGN(val, scale * SCIPvarGetObj(vars[i]));
+         QUAD_ARRAY_STORE(aggrrow->vals, i, val);
+         aggrrow->inds[aggrrow->nnz++] = i;
+      }
+
+      /* add right-hand side value */
+      QUAD_ASSIGN(aggrrow->rhs, scale * rhs);
+   }
+   else
+   {
+      /* add the non-zeros to the aggregation row and keep non-zero index up to date */
+      for( int i = 0 ; i < nvars; ++i )
+      {
+         assert(SCIPvarGetProbindex(vars[i]) == i);
+
+         /* skip all variables with zero objective coefficient */
+         if( SCIPisZero(scip, scale * SCIPvarGetObj(vars[i])) )
+            continue;
+
+         QUAD_ARRAY_LOAD(val, aggrrow->vals, i); /* val = aggrrow->vals[i] */
+
+         if( QUAD_HI(val) == 0.0 )
+            aggrrow->inds[aggrrow->nnz++] = i;
+
+         SCIPquadprecSumQD(val, val, scale * SCIPvarGetObj(vars[i]));
+
+         /* the value must not be exactly zero due to sparsity pattern */
+         QUAD_HI(val) = NONZERO(QUAD_HI(val));
+         assert(QUAD_HI(val) != 0.0);
+
+         QUAD_ARRAY_STORE(aggrrow->vals, i, val);
+      }
+
+      /* add right-hand side value */
+      SCIPquadprecSumQD(aggrrow->rhs, aggrrow->rhs, scale * rhs);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** add weighted constraint to the aggregation row */
 SCIP_RETCODE SCIPaggrRowAddCustomCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -598,6 +611,9 @@ SCIP_RETCODE SCIPaggrRowAddCustomCons(
    )
 {
    int i;
+
+   assert(weight >= 0.0);
+   assert(!SCIPisInfinity(scip, REALABS(weight * rhs)));
 
    /* update local flag */
    aggrrow->local = aggrrow->local || local;
@@ -651,6 +667,18 @@ void SCIPaggrRowClear(
    aggrrow->rank = 0;
    QUAD_ASSIGN(aggrrow->rhs, 0.0);
    aggrrow->local = FALSE;
+}
+
+/** calculates the efficacy norm of the given aggregation row, which depends on the "separating/efficacynorm" parameter
+ *
+ *  @return the efficacy norm of the given aggregation row, which depends on the "separating/efficacynorm" parameter
+ */
+SCIP_Real SCIPaggrRowCalcEfficacyNorm(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
+   )
+{
+   return calcEfficacyNormQuad(scip, aggrrow->vals, aggrrow->inds, aggrrow->nnz);
 }
 
 /** Adds one row to the aggregation row. Differs from SCIPaggrRowAddRow() by providing some additional
@@ -1890,7 +1918,7 @@ SCIP_RETCODE cutsTransformMIR(
       }
    }
 
-TERMINATE:
+  TERMINATE:
 
    /*free temporary memory */
    SCIPfreeBufferArray(scip, &selectedbounds);
@@ -2610,7 +2638,7 @@ SCIP_RETCODE SCIPcalcMIR(
    if( cutrank != NULL )
       *cutrank = aggrrow->rank + 1;
 
-TERMINATE:
+  TERMINATE:
    if( !(*success) )
    {
       SCIP_Real QUAD(tmp);
@@ -2729,7 +2757,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    int*                  cutnnz,             /**< pointer to store the number of non-zeros in the cut */
    SCIP_Real*            cutefficacy,        /**< pointer to store efficacy of best cut; only cuts that are strictly better than the value of
                                               *   this efficacy on input to this function are returned */
-   int*                  cutrank,            /**< pointer to return rank of generated cut */
+   int*                  cutrank,            /**< pointer to return rank of generated cut (or NULL) */
    SCIP_Bool*            cutislocal,         /**< pointer to store whether the generated cut is only valid locally */
    SCIP_Bool*            success             /**< pointer to store whether a valid and efficacious cut was returned */
    )
@@ -2758,7 +2786,6 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    SCIP_VAR** vars;
    SCIP_Bool freevariable;
    SCIP_Bool localbdsused;
-
    SCIP_Real contactivity;
 
    assert(aggrrow != NULL);
@@ -3270,12 +3297,13 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
          *cutrhs = QUAD_ROUND(mksetrhs);
          *cutefficacy = mirefficacy;
          *success = TRUE;
-         *cutrank = aggrrow->rank + 1;
+         if( cutrank != NULL )
+            *cutrank = aggrrow->rank + 1;
          *cutislocal = *cutislocal || localbdsused;
       }
    }
 
-TERMINATE:
+  TERMINATE:
    /* if we aborted early we need to clean the mksetcoefs */
    if( !(*success) )
    {
@@ -5853,6 +5881,7 @@ SCIP_RETCODE SCIPcalcFlowCover(
    return SCIP_OKAY;
 }
 
+
 /* =========================================== strongcg =========================================== */
 
 /** Transform equation \f$ a \cdot x = b; lb \leq x \leq ub \f$ into standard form
@@ -6106,7 +6135,7 @@ SCIP_RETCODE cutsTransformStrongCG(
    if( QUAD_ROUND(*cutrhs) < 0.0 && QUAD_ROUND(*cutrhs) >= -SCIPepsilon(scip) )
       QUAD_ASSIGN(*cutrhs, 0.0);
 
-TERMINATE:
+  TERMINATE:
    /*free temporary memory */
    SCIPfreeBufferArray(scip, &bestbds);
 
@@ -6737,7 +6766,7 @@ SCIP_RETCODE SCIPcalcStrongCG(
    if( cutrank != NULL )
       *cutrank = aggrrow->rank + 1;
 
-TERMINATE:
+  TERMINATE:
 
    /* if we aborted early the tmpcoefs array needs to be cleaned */
    if( !(*success) )
