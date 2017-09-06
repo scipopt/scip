@@ -3226,7 +3226,7 @@ SCIP_RETCODE createCGCutCMIR(
    /* create a MIR cut using the above calculated weights */
    cutefficacy = -1.0;
    cutrhs = -1.0;
-   SCIP_CALL( SCIPaggrRowSumRows(scip, aggrrow, weights, NULL, -1, MAXWEIGHTRANGE, SCIPsumepsilon(scip), FALSE,
+   SCIP_CALL( SCIPaggrRowSumRows(scip, aggrrow, weights, NULL, -1, FALSE,
          sepadata->allowlocal, 2, (int) MAXAGGRLEN(nvars), &success) );
 
    if( !success )
@@ -3458,7 +3458,7 @@ SCIP_RETCODE createCGCutStrongCG(
    /* create a strong CG cut out of the weighted LP rows using the B^-1 row as weights */
    cutefficacy = -1.0;
    cutrhs = -1.0;
-   SCIP_CALL( SCIPaggrRowSumRows(scip, aggrrow, weights, NULL, -1, MAXWEIGHTRANGE, SCIPsumepsilon(scip), FALSE,
+   SCIP_CALL( SCIPaggrRowSumRows(scip, aggrrow, weights, NULL, -1, FALSE,
          sepadata->allowlocal, 1, (int) MAXAGGRLEN(nvars), &success) );
 
    if( !success )

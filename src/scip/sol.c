@@ -2258,8 +2258,158 @@ SCIP_RETCODE SCIPsolPrintRay(
    return SCIP_OKAY;
 }
 
+/*
+ * methods for accumulated numerical violations of a solution
+ */
 
+/** reset violations of a solution */
+void SCIPsolResetViolations(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   assert(sol != NULL);
 
+   sol->viol.absviolbounds = 0.0;
+   sol->viol.relviolbounds = 0.0;
+   sol->viol.absviolintegrality = 0.0;
+   sol->viol.absviollprows = 0.0;
+   sol->viol.relviollprows = 0.0;
+   sol->viol.absviolcons = 0.0;
+   sol->viol.relviolcons = 0.0;
+}
+
+/** update integrality violation of a solution */
+void SCIPsolUpdateIntegralityViolation(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             absviolintegrality  /**< absolute violation of integrality */
+   )
+{
+   assert(sol != NULL);
+
+   sol->viol.absviolintegrality = MAX(sol->viol.absviolintegrality, absviolintegrality);
+}
+
+/** update bound violation of a solution */
+void SCIPsolUpdateBoundViolation(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             absviolbounds,      /**< absolute violation of bounds */
+   SCIP_Real             relviolbounds       /**< relative violation of bounds */
+   )
+{
+   assert(sol != NULL);
+
+   sol->viol.absviolbounds = MAX(sol->viol.absviolbounds, absviolbounds);
+   sol->viol.relviolbounds = MAX(sol->viol.relviolbounds, relviolbounds);
+}
+
+/** update LP row violation of a solution */
+void SCIPsolUpdateLPRowViolation(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             absviollprows,      /**< absolute violation of LP rows */
+   SCIP_Real             relviollprows       /**< relative violation of LP rows */
+   )
+{
+   assert(sol != NULL);
+
+   sol->viol.absviollprows = MAX(sol->viol.absviollprows, absviollprows);
+   sol->viol.relviollprows = MAX(sol->viol.relviollprows, relviollprows);
+}
+
+/** update constraint violation of a solution */
+void SCIPsolUpdateConsViolation(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             absviolcons,        /**< absolute violation of constraint */
+   SCIP_Real             relviolcons         /**< relative violation of constraint */
+   )
+{
+   assert(sol != NULL);
+
+   sol->viol.absviolcons = MAX(sol->viol.absviollprows, absviolcons);
+   sol->viol.relviolcons = MAX(sol->viol.relviollprows, relviolcons);
+}
+
+/** update violation of a constraint that is represented in the LP */
+void SCIPsolUpdateLPConsViolation(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             absviol,            /**< absolute violation of constraint */
+   SCIP_Real             relviol             /**< relative violation of constraint */
+   )
+{
+   assert(sol != NULL);
+
+   SCIPsolUpdateConsViolation(sol, absviol, relviol);
+   SCIPsolUpdateLPRowViolation(sol, absviol, relviol);
+}
+
+/** get maximum absolute bound violation of solution */
+SCIP_Real SCIPsolGetAbsBoundViolation(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   assert(sol != NULL);
+
+   return sol->viol.absviolbounds;
+}
+
+/** get maximum relative bound violation of solution */
+SCIP_Real SCIPsolGetRelBoundViolation(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   assert(sol != NULL);
+
+   return sol->viol.relviolbounds;
+}
+
+/** get maximum absolute integrality violation of solution */
+SCIP_Real SCIPsolGetAbsIntegralityViolation(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   assert(sol != NULL);
+
+   return sol->viol.absviolintegrality;
+}
+
+/** get maximum absolute LP row violation of solution */
+SCIP_Real SCIPsolGetAbsLPRowViolation(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   assert(sol != NULL);
+
+   return sol->viol.absviollprows;
+}
+
+/** get maximum relative LP row violation of solution */
+SCIP_Real SCIPsolGetRelLPRowViolation(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   assert(sol != NULL);
+
+   return sol->viol.relviollprows;
+}
+
+/** get maximum absolute constraint violation of solution */
+SCIP_Real SCIPsolGetAbsConsViolation(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   assert(sol != NULL);
+
+   return sol->viol.absviolcons;
+}
+
+/** get maximum relative constraint violation of solution */
+SCIP_Real SCIPsolGetRelConsViolation(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   assert(sol != NULL);
+
+   return sol->viol.relviolcons;
+}
 
 /*
  * simple functions implemented as defines

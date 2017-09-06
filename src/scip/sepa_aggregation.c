@@ -33,7 +33,7 @@
 #define SEPA_NAME              "aggregation"
 #define SEPA_DESC              "aggregation heuristic for complemented mixed integer rounding cuts and flowcover cuts"
 #define SEPA_PRIORITY             -3000
-#define SEPA_FREQ                    10
+#define SEPA_FREQ                    20
 #define SEPA_MAXBOUNDDIST           1.0
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
@@ -44,13 +44,13 @@
                                          *   (-1: unlimited) */
 #define DEFAULT_MAXTRIESROOT         -1 /**< maximal number of rows to start aggregation with per round in the root node
                                          *   (-1: unlimited) */
-#define DEFAULT_MAXFAILS             50 /**< maximal number of consecutive unsuccessful aggregation tries (-1: unlimited) */
+#define DEFAULT_MAXFAILS             20 /**< maximal number of consecutive unsuccessful aggregation tries (-1: unlimited) */
 #define DEFAULT_MAXFAILSROOT        100 /**< maximal number of consecutive unsuccessful aggregation tries in the root node
                                          *   (-1: unlimited) */
 #define DEFAULT_MAXAGGRS              3 /**< maximal number of aggregations for each row per separation round */
 #define DEFAULT_MAXAGGRSROOT          6 /**< maximal number of aggregations for each row per round in the root node */
-#define DEFAULT_MAXSEPACUTS         400 /**< maximal number of cmir cuts separated per separation round */
-#define DEFAULT_MAXSEPACUTSROOT    1000 /**< maximal number of cmir cuts separated per separation round in root node */
+#define DEFAULT_MAXSEPACUTS         100 /**< maximal number of cmir cuts separated per separation round */
+#define DEFAULT_MAXSEPACUTSROOT     500 /**< maximal number of cmir cuts separated per separation round in root node */
 #define DEFAULT_MAXSLACK            0.0 /**< maximal slack of rows to be used in aggregation */
 #define DEFAULT_MAXSLACKROOT        0.1 /**< maximal slack of rows to be used in aggregation in the root node */
 #define DEFAULT_DENSITYSCORE       1e-4 /**< weight of row density in the aggregation scoring of the rows */
@@ -219,12 +219,16 @@ SCIP_RETCODE addCut(
 
          SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
 
-         SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, cutoff) );
-         if( !(*cutoff) && !cutislocal )
+         if( SCIPisCutNew(scip, cut) )
          {
-            SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+            SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, cutoff) );
+            (*ncuts)++;
+
+            if( !cutislocal )
+            {
+               SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+            }
          }
-         (*ncuts)++;
       }
 
       /* release the row */
@@ -515,7 +519,6 @@ SCIP_RETCODE aggregateNextRow(
    int bestrowside;
 
    int nnz = SCIPaggrRowGetNNz(aggrrow);
-   SCIP_Real* vals = SCIPaggrRowGetVals(aggrrow);
    int* inds = SCIPaggrRowGetInds(aggrrow);
 
    *success = FALSE;
@@ -597,8 +600,6 @@ SCIP_RETCODE aggregateNextRow(
 
       for( k = 0; k < ngoodrows; ++k )
       {
-         SCIP_Real minweight;
-         SCIP_Real maxweight;
          SCIP_Real rowaggrfac;
          int lppos;
 
@@ -606,13 +607,10 @@ SCIP_RETCODE aggregateNextRow(
          if( SCIPaggrRowHasRowBeenAdded(aggrrow, candrows[k]) )
             continue;
 
-         /* if factor is too extreme skip this row */
-         SCIPaggrRowGetAbsWeightRange(aggrrow, &minweight, &maxweight);
-         rowaggrfac = -vals[probvaridx] / candrowcoefs[k];
+         rowaggrfac = - SCIPaggrRowGetProbvarValue(aggrrow, probvaridx) / candrowcoefs[k];
 
-         if( SCIPisZero(scip, rowaggrfac) ||
-             REALABS(rowaggrfac) > sepadata->maxrowfac * minweight ||
-             REALABS(rowaggrfac) * sepadata->maxrowfac < maxweight )
+         /* if factor is too extreme skip this row */
+         if( SCIPisZero(scip, rowaggrfac) )
             continue;
 
          lppos = SCIProwGetLPPos(candrows[k]);
@@ -638,7 +636,7 @@ SCIP_RETCODE aggregateNextRow(
       *success = TRUE;
       ++(*naggrs);
       SCIP_CALL( SCIPaggrRowAddRow(scip, aggrrow, bestrow, aggrfac, bestrowside) );
-      SCIPaggrRowRemoveZeros(aggrrow, SCIPepsilon(scip));
+      SCIPaggrRowRemoveZeros(aggrrow);
       goto TERMINATE;
    }
 
@@ -675,24 +673,20 @@ SCIP_RETCODE aggregateNextRow(
 
       for( k = 0; k < nrows; ++k )
       {
-         SCIP_Real minweight;
-         SCIP_Real maxweight;
          SCIP_Real rowaggrfac;
          int lppos;
 
-         /* dont't add rows twice */
+         /* do not add rows twice */
          if( SCIPaggrRowHasRowBeenAdded(aggrrow, candrows[k]) )
             continue;
 
-         /* if factor is too extreme skip this row */
-         SCIPaggrRowGetAbsWeightRange(aggrrow, &minweight, &maxweight);
-         rowaggrfac = -vals[probvaridx] / candrowcoefs[k];
-         lppos = SCIProwGetLPPos(candrows[k]);
+         rowaggrfac = - SCIPaggrRowGetProbvarValue(aggrrow, probvaridx) / candrowcoefs[k];
 
-         if( SCIPisZero(scip, rowaggrfac) ||
-             REALABS(rowaggrfac) > sepadata->maxrowfac * minweight ||
-             REALABS(rowaggrfac) * sepadata->maxrowfac < maxweight )
+         /* if factor is too extreme skip this row */
+         if( SCIPisZero(scip, rowaggrfac) )
             continue;
+
+         lppos = SCIProwGetLPPos(candrows[k]);
 
          /* row could be used, decide which side */
          {
@@ -730,7 +724,7 @@ SCIP_RETCODE aggregateNextRow(
       *success = TRUE;
       ++(*naggrs);
       SCIP_CALL( SCIPaggrRowAddRow(scip, aggrrow, bestrow, aggrfac, bestrowside) );
-      SCIPaggrRowRemoveZeros(aggrrow, SCIPepsilon(scip));
+      SCIPaggrRowRemoveZeros(aggrrow);
    }
 
 TERMINATE:
@@ -768,6 +762,7 @@ SCIP_RETCODE aggregation(
    int maxaggrnonzs;
    int naggrs;
    int nrows;
+   int maxtestdelta;
 
    SCIP_Real cutrhs;
    SCIP_Real cutefficacy;
@@ -801,6 +796,8 @@ SCIP_RETCODE aggregation(
    else
       startweight = 1.0;
 
+   maxtestdelta = sepadata->maxtestdelta == -1 ? INT_MAX : sepadata->maxtestdelta;
+
    /* add start row to the initially empty aggregation row (aggrrow) */
    SCIP_CALL( SCIPaggrRowAddRow(scip, aggrdata->aggrrow, rows[startrow], negate ? -startweight : startweight, 0) );
 
@@ -827,12 +824,12 @@ SCIP_RETCODE aggregation(
        */
 
       flowcoverefficacy =  -SCIPinfinity(scip);
-      SCIP_CALL( SCIPcalcFlowCover(scip, sol, BOUNDSWITCH, allowlocal, aggrdata->aggrrow, cutcoefs, &cutrhs, cutinds,
-            &cutnnz, &flowcoverefficacy, &cutrank, &flowcovercutislocal, &flowcoversuccess) );
+      SCIP_CALL( SCIPcalcFlowCover(scip, sol, BOUNDSWITCH, allowlocal, aggrdata->aggrrow,
+         cutcoefs, &cutrhs, cutinds, &cutnnz, &flowcoverefficacy, &cutrank, &flowcovercutislocal, &flowcoversuccess) );
 
       cutefficacy = flowcoverefficacy;
-      SCIP_CALL( SCIPcutGenerationHeuristicCMIR(scip, sol, BOUNDSWITCH, USEVBDS, allowlocal, NULL, NULL, MINFRAC, MAXFRAC,
-            aggrdata->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cmircutislocal, &cmirsuccess) );
+      SCIP_CALL( SCIPcutGenerationHeuristicCMIR(scip, sol, BOUNDSWITCH, USEVBDS, allowlocal, maxtestdelta, NULL, NULL, MINFRAC, MAXFRAC,
+         aggrdata->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cmircutislocal, &cmirsuccess) );
 
       oldncuts = *ncuts;
 

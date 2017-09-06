@@ -354,6 +354,7 @@ SCIP_RETCODE SCIPsepaExecLP(
    assert(result != NULL);
 
    if( sepa->sepaexeclp != NULL
+      && SCIPsetIsLE(set, bounddist, sepa->maxbounddist)
       && ((depth == 0 && sepa->freq == 0) || (sepa->freq > 0 && depth % sepa->freq == 0) || sepa->lpwasdelayed) )
    {
       if( (!sepa->delay && !sepa->lpwasdelayed) || execdelayed )
@@ -380,9 +381,6 @@ SCIP_RETCODE SCIPsepaExecLP(
 
          /* start timing */
          SCIPclockStart(sepa->sepaclock, set);
-
-         /* decide whether to allow local cuts */
-         allowlocal = allowlocal && SCIPsetIsLE(set, bounddist, sepa->maxbounddist);
 
          /* call external separation method */
          SCIP_CALL( sepa->sepaexeclp(set->scip, sepa, result, allowlocal) );

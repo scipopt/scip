@@ -556,8 +556,7 @@ SCIP_RETCODE propagateDomains(
    assert(cutoff != NULL);
 
    node = SCIPtreeGetCurrentNode(tree);
-   assert(node != NULL);
-   assert(SCIPnodeIsActive(node));
+   assert(node != NULL && SCIPnodeIsActive(node));
    assert(SCIPnodeGetType(node) == SCIP_NODETYPE_FOCUSNODE
       || SCIPnodeGetType(node) == SCIP_NODETYPE_REFOCUSNODE
       || SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
@@ -1039,10 +1038,8 @@ SCIP_RETCODE updateEstimate(
    int nlpcands;
    int i;
 
-   assert(SCIPtreeHasFocusNodeLP(tree));
-
    /* estimate is only available if LP was solved to optimality */
-   if( SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL || !SCIPlpIsRelax(lp) )
+   if( !SCIPtreeHasFocusNodeLP(tree) || SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL || !SCIPlpIsRelax(lp) )
       return SCIP_OKAY;
 
    focusnode = SCIPtreeGetFocusNode(tree);
@@ -1247,19 +1244,20 @@ SCIP_RETCODE SCIPconstructCurrentLP(
 
    if( !SCIPtreeIsFocusNodeLPConstructed(tree) )
    {
-      int i;
-
       /* inform separation storage, that LP is now filled with initial data */
       SCIPsepastoreStartInitialLP(sepastore);
 
-      i = tree->correctlpdepth >= 0 ? tree->pathnlprows[tree->correctlpdepth] : 0;
-
-      for( ; i < lp->nrows; ++i )
+      if( tree->correctlpdepth >= 0 )
       {
-         /* keep all active global cuts that where applied in the previous node in the lp */
-         if( !lp->rows[i]->local && lp->rows[i]->age == 0 )
+         int i;
+
+         for( i = tree->pathnlprows[tree->correctlpdepth]; i < lp->nrows; ++i )
          {
-            SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, NULL, lp->rows[i], TRUE, (SCIPtreeGetCurrentDepth(tree) == 0), cutoff) );
+            /* keep all active global cuts that where applied in the previous node in the lp */
+            if( !lp->rows[i]->local && lp->rows[i]->age == 0 )
+            {
+               SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, NULL, lp->rows[i], TRUE, (SCIPtreeGetCurrentDepth(tree) == 0), cutoff) );
+            }
          }
       }
 
@@ -2279,7 +2277,7 @@ SCIP_RETCODE priceAndCutLoop(
    glblowerbound = SCIPtreeGetLowerbound(tree, set);
    assert(primal->cutoffbound > glblowerbound);
    bounddist = (loclowerbound - glblowerbound)/(primal->cutoffbound - glblowerbound);
-   allowlocal = SCIPsetIsLE(set, bounddist, set->sepa_maxbounddist);
+   allowlocal = SCIPsetIsLE(set, bounddist, set->sepa_maxlocalbounddist);
    separate = (set->sepa_maxruns == -1 || stat->nruns <= set->sepa_maxruns);
 
    /* get maximal number of separation rounds */
@@ -3072,8 +3070,7 @@ SCIP_RETCODE solveNodeLP(
       }
    }
 
-   /* cppcheck-suppress assertWithSideEffect */
-   assert(!(*pricingaborted) || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL
+   assert(!(*pricingaborted) || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL /* cppcheck-suppress assertWithSideEffect */
       || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_NOTSOLVED || SCIPsolveIsStopped(set, stat, FALSE) || (*cutoff));
 
    assert(*cutoff || *lperror || (lp->flushed && lp->solved));

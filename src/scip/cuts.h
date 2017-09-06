@@ -29,6 +29,7 @@
 #include "scip/def.h"
 #include "scip/set.h"
 #include "scip/type_cuts.h"
+#include "scip/struct_cuts.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -69,29 +70,6 @@ SCIP_RETCODE SCIPaggrRowCopy(
    SCIP_AGGRROW*         source              /**< source the aggregation row */
    );
 
-/** adds given data to the aggregation row */
-extern
-SCIP_RETCODE SCIPaggrRowAddData(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
-   SCIP_VAR**            vars,               /**< variable array */
-   SCIP_Real*            coefs,              /**< variable coefficients */
-   int                   nvars,              /**< size of variable and coefficient array */
-   SCIP_Real             rhs,                /**< right-hand side of the row */
-   SCIP_Real             scale               /**< scalar to apply */
-   );
-
-/** adds given sparse data to the aggregation row */
-extern
-SCIP_RETCODE SCIPaggrRowAddSparseData(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
-   SCIP_Real*            vals,              /**< variable coefficients */
-   int*                  inds,               /**< variable array */
-   int                   nvars,              /**< size of variable and coefficient array */
-   SCIP_Real             rhs                 /**< right-hand side of the row */
-   );
-
 /** add weighted row to the aggregation row */
 extern
 SCIP_RETCODE SCIPaggrRowAddRow(
@@ -125,21 +103,6 @@ SCIP_RETCODE SCIPaggrRowAddCustomCons(
    SCIP_Bool             local               /**< is constraint only valid locally */
    );
 
-/** deletes variable at position @pos and updates mapping between variable indices and sparsity pattern */
-extern
-void SCIPaggrRowDelCoef(
-   SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
-   int                   pos,                /**< position that should be removed */
-   int*                  positions           /**< mapping between variable indices and sparsity pattern (or NULL) */
-   );
-
-/** change the right-hand side of the aggregation row */
-extern
-void SCIPaggrRowAddRhs(
-   SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
-   SCIP_Real             value               /**< value to add to the right-hand side */
-   );
-
 /** clear all entries in the aggregation row but do not free the internal memory */
 extern
 void SCIPaggrRowClear(
@@ -156,8 +119,6 @@ SCIP_RETCODE SCIPaggrRowSumRows(
    SCIP_Real*            weights,            /**< row weights in row summation */
    int*                  rowinds,            /**< array to store indices of non-zero entries of the weights array, or NULL */
    int                   nrowinds,           /**< number of non-zero entries in weights array, -1 if rowinds is NULL */
-   SCIP_Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
-   SCIP_Real             minallowedweight,   /**< minimum magnitude of weight for rows that are used in the summation */
    SCIP_Bool             sidetypebasis,      /**< choose sidetypes of row (lhs/rhs) based on basis information? */
    SCIP_Bool             allowlocal,         /**< should local rows be used? */
    int                   negslack,           /**< should negative slack variables be used? (0: no, 1: only for integral rows, 2: yes) */
@@ -168,14 +129,10 @@ SCIP_RETCODE SCIPaggrRowSumRows(
 /** removes all (close enough to) zero entries in the aggregation row */
 extern
 void SCIPaggrRowRemoveZeros(
-   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
-   SCIP_Real             epsilon             /**< value to consider zero */
+   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    );
 
-/** removes all entries in the aggregation row that are smaller than epsilon.
- *  For values that are between epsilon and sum epsilon, replace the variable by its
- *  worst bound depending on the variable's coefficient.
- */
+/** safely removes variables with small coefficients from the aggregation row */
 extern
 void SCIPaggrRowCleanup(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -211,17 +168,39 @@ int* SCIPaggrRowGetInds(
     SCIP_AGGRROW*        aggrrow
    );
 
-/** gets the array of non-zero values in the aggregation row */
-extern
-SCIP_Real* SCIPaggrRowGetVals(
-   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
-   );
-
 /** gets the number of non-zeros in the aggregation row */
 extern
 int SCIPaggrRowGetNNz(
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    );
+
+/** gets the non-zero value for the given non-zero index */
+static INLINE
+SCIP_Real SCIPaggrRowGetValue(
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   int                   i                   /**< non-zero index; must be between 0 and SCIPaggrRowGetNNz(aggrrow) - 1 */
+   )
+{
+   SCIP_Real QUAD(val);
+
+   QUAD_ARRAY_LOAD(val, aggrrow->vals, aggrrow->inds[i]);
+
+   return QUAD_ROUND(val);
+}
+
+/** gets the non-zero value for the given problem index of a variable */
+static INLINE
+SCIP_Real SCIPaggrRowGetProbvarValue(
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   int                   probindex           /**< problem index of variable; must be between 0 and SCIPgetNVars(scip) - 1 */
+   )
+{
+   SCIP_Real QUAD(val);
+
+   QUAD_ARRAY_LOAD(val, aggrrow->vals, probindex);
+
+   return QUAD_ROUND(val);
+}
 
 /** gets the rank of the aggregation row */
 extern
@@ -309,6 +288,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
    SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
+   int                   maxtestdelta,       /**< maximum number of deltas to test */
    int*                  boundsfortrans,     /**< bounds that should be used for transformed variables: vlb_idx/vub_idx,
                                               *   -1 for global lb/ub, -2 for local lb/ub, or -3 for using closest bound;
                                               *   NULL for using closest bound for all variables */

@@ -29,14 +29,22 @@
 
 #ifndef DISABLE_QUADPREC
 
+/* smaller epsilon value for use with quadprecision */
+#define QUAD_EPSILON 1e-12
+
 /* convenience macros for nicer usage of double double arithmetic */
 #define QUAD_HI(x)  x ## hi
 #define QUAD_LO(x)  x ## lo
 #define QUAD(x) QUAD_HI(x), QUAD_LO(x)
+#define QUAD_MEMBER(x) QUAD_HI(x); QUAD_LO(x)
 #define QUAD_ROUND(x) ( QUAD_HI(x) + QUAD_LO(x) )
 #define QUAD_SCALE(x, a) do { QUAD_HI(x) *= (a); QUAD_LO(x) *= (a); } while(0)
 #define QUAD_ASSIGN(a, constant)  do { QUAD_HI(a) = constant; QUAD_LO(a) = 0.0; } while(0)
 #define QUAD_ASSIGN_Q(a, b)  do { QUAD_HI(a) = QUAD_HI(b); QUAD_LO(a) = QUAD_LO(b); } while(0)
+#define QUAD_ARRAY_SIZE(size) ((size)*2)
+#define QUAD_ARRAY_LOAD(r, a, idx) do { QUAD_HI(r) = (a)[2*(idx)]; QUAD_LO(r) = (a)[2*(idx) + 1]; } while(0)
+#define QUAD_ARRAY_STORE(a, idx, x) do { (a)[2*(idx)] = QUAD_HI(x); (a)[2*(idx) + 1] = QUAD_LO(x); } while(0)
+
 
 /* define all the SCIPquadprec... macros such that they use the SCIPdbldbl... macros that expands the quad precision arguments using the above macros */
 #define SCIPquadprecProdDD(r, a, b)  SCIPdbldblProd(QUAD_HI(r), QUAD_LO(r), a, b)
@@ -57,14 +65,21 @@
 
 #else
 
+/* normal epsilon value if quadprecision is disabled */
+#define QUAD_EPSILON 1e-9
+
 /* dummy macros that use normal arithmetic */
 #define QUAD_HI(x)  x
 #define QUAD_LO(x)  0.0
 #define QUAD(x)     x
+#define QUAD_MEMBER(x) x
 #define QUAD_ROUND(x) (x)
 #define QUAD_SCALE(x, a) do { (x) *= (a); } while(0)
 #define QUAD_ASSIGN(a, constant)  do { (a) = constant; } while(0)
 #define QUAD_ASSIGN_Q(a, b)  do { (a) = (b); } while(0)
+#define QUAD_ARRAY_SIZE(size) (size)
+#define QUAD_ARRAY_LOAD(r, a, idx) do { r = (a)[(idx)]; } while(0)
+#define QUAD_ARRAY_STORE(a, idx, x) do { (a)[(idx)] = (x); } while(0)
 
 #define SCIPquadprecProdDD(r, a, b)  do { (r) = (a) * (b); } while(0)
 #define SCIPquadprecSquareD(r, a)    do { (r) = (a) * (a); } while(0)

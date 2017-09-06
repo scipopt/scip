@@ -15006,6 +15006,19 @@ SCIP_RETCODE SCIPaddCut(
    SCIP_Bool*            infeasible          /**< pointer to store whether cut has been detected to be infeasible for local bounds */
    );
 
+/** checks if cut is already existing in global cutpool
+ *
+ *  @return TRUE is returned if the cut is not already existing in the global cutpool, FALSE otherwise
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+SCIP_Bool SCIPisCutNew(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< cutting plane to add */
+   );
+
 /** if not already existing, adds row to global cut pool
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -18067,6 +18080,62 @@ SCIP_RETCODE SCIPcheckSolOrig(
    SCIP_Bool*            feasible,           /**< stores whether given solution is feasible */
    SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
    SCIP_Bool             completely          /**< should all violations be checked? */
+   );
+
+/** update integrality violation of a solution */
+EXTERN
+void SCIPupdateSolIntegralityViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             absviol            /**< absolute violation */
+   );
+
+/** update bound violation of a solution */
+EXTERN
+void SCIPupdateSolBoundViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             absviol,            /**< absolute violation */
+   SCIP_Real             relviol             /**< relative violation */
+   );
+
+/** update LP row violation of a solution */
+EXTERN
+void SCIPupdateSolLPRowViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             absviol,            /**< absolute violation */
+   SCIP_Real             relviol             /**< relative violation */
+   );
+
+/** update constraint violation of a solution */
+EXTERN
+void SCIPupdateSolConsViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             absviol,            /**< absolute violation */
+   SCIP_Real             relviol             /**< relative violation */
+   );
+
+/** update LP row and constraint violations of a solution */
+EXTERN
+void SCIPupdateSolLPConsViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             absviol,            /**< absolute violation */
+   SCIP_Real             relviol             /**< relative violation */
+   );
+
+/** allow violation updates */
+EXTERN
+void SCIPactivateSolViolationUpdates(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** disallow violation updates */
+EXTERN
+void SCIPdeactivateSolViolationUpdates(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** return whether a primal ray is stored that proves unboundedness of the LP relaxation

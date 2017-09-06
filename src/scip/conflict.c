@@ -920,7 +920,7 @@ void proofsetFree(
    (*proofset) = NULL;
 }
 
-/** return the indices of variables in the a proofset */
+/** return the indices of variables in the proofset */
 static
 int* proofsetGetInds(
    SCIP_PROOFSET*        proofset            /**< proof set */
@@ -931,15 +931,17 @@ int* proofsetGetInds(
    return SCIPaggrRowGetInds(proofset->aggrrow);
 }
 
-/** return the coefficients of a proofset */
+/** return coefficient of variable in the proofset with given probindex */
 static
-SCIP_Real* proofsetGetCoefs(
-   SCIP_PROOFSET*        proofset            /**< proof set */
+SCIP_Real proofsetGetCoef(
+   SCIP_PROOFSET*        proofset,           /**< proof set */
+   int                   probindex           /**< problem index of variable */
    )
 {
    assert(proofset != NULL);
+   assert(probindex >= 0);
 
-   return SCIPaggrRowGetVals(proofset->aggrrow);
+   return SCIPaggrRowGetProbvarValue(proofset->aggrrow, probindex);
 }
 
 /** return the right-hand side if a proofset */
@@ -1011,7 +1013,7 @@ SCIP_RETCODE proofsetAddSparseData(
    assert(proofset->aggrrow == NULL);
 
    SCIP_CALL( SCIPaggrRowCreate(set->scip, &proofset->aggrrow) );
-   SCIP_CALL( SCIPaggrRowAddSparseData(set->scip, proofset->aggrrow, vals, inds, nnz, rhs) );
+   SCIP_CALL( SCIPaggrRowAddCustomCons(set->scip, proofset->aggrrow, inds, vals, nnz, rhs, 1.0, 1, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -2413,30 +2415,36 @@ SCIP_RETCODE tightenSingleVar(
 static
 SCIP_Real getMinActivity(
    SCIP_PROB*            transprob,          /** transformed problem data */
-   SCIP_Real*            vals,               /**< array of values */
-   int*                  varinds,            /**< sparse data of variable indices */
-   int                   nvarinds,           /**< number of variable indices*/
+   SCIP_AGGRROW*         aggrrow,
    SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables (or NULL for global bounds) */
    SCIP_Real*            curvarubs           /**< current upper bounds of active problem variables (or NULL for global bounds) */
    )
 {
    SCIP_VAR** vars;
    SCIP_Real minact = 0.0;
+   int* inds;
+   int nnz;
    int i;
 
    vars = SCIPprobGetVars(transprob);
    assert(vars != NULL);
 
-   for( i = 0; i < nvarinds; i++ )
+   nnz = SCIPaggrRowGetNNz(aggrrow);
+   inds = SCIPaggrRowGetInds(aggrrow);
+
+   for( i = 0; i < nnz; i++ )
    {
-      int v = varinds[i];
+      SCIP_Real val;
+      int v = inds[i];
       assert(SCIPvarGetProbindex(vars[v]) == v);
 
+      val = SCIPaggrRowGetProbvarValue(aggrrow, v);
+
       /* calculate the minimal activity */
-      if( vals[v] > 0.0 )
-         minact += vals[v] * (curvarlbs == NULL ? SCIPvarGetLbGlobal(vars[v]) : curvarlbs[v]);
+      if( val > 0.0 )
+         minact += val * (curvarlbs == NULL ? SCIPvarGetLbGlobal(vars[v]) : curvarlbs[v]);
       else
-         minact += vals[v] * (curvarubs == NULL ? SCIPvarGetUbGlobal(vars[v]) : curvarubs[v]);
+         minact += val * (curvarubs == NULL ? SCIPvarGetUbGlobal(vars[v]) : curvarubs[v]);
    }
 
    return minact;
@@ -2446,33 +2454,39 @@ SCIP_Real getMinActivity(
 static
 SCIP_Real getMaxActivity(
    SCIP_PROB*            transprob,          /** transformed problem data */
-   SCIP_Real*            vals,               /**< array of values */
-   int*                  varinds,            /**< sparse data of variable indices */
-   int                   nvarinds,           /**< number of variable indices*/
+   SCIP_AGGRROW*         aggrrow,
    SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables (or NULL for global bounds) */
    SCIP_Real*            curvarubs           /**< current upper bounds of active problem variables (or NULL for global bounds) */
    )
 {
    SCIP_VAR** vars;
-   SCIP_Real minact = 0.0;
+   SCIP_Real maxact = 0.0;
+   int* inds;
+   int nnz;
    int i;
 
    vars = SCIPprobGetVars(transprob);
    assert(vars != NULL);
 
-   for( i = 0; i < nvarinds; i++ )
+   nnz = SCIPaggrRowGetNNz(aggrrow);
+   inds = SCIPaggrRowGetInds(aggrrow);
+
+   for( i = 0; i < nnz; i++ )
    {
-      int v = varinds[i];
+      SCIP_Real val;
+      int v = inds[i];
       assert(SCIPvarGetProbindex(vars[v]) == v);
 
+      val = SCIPaggrRowGetProbvarValue(aggrrow, v);
+
       /* calculate the minimal activity */
-      if( vals[i] < 0.0 )
-         minact += vals[i] * (curvarlbs == NULL ? SCIPvarGetLbGlobal(vars[v]) : curvarlbs[v]);
+      if( val < 0.0 )
+         maxact += val * (curvarlbs == NULL ? SCIPvarGetLbGlobal(vars[v]) : curvarlbs[v]);
       else
-         minact += vals[i] * (curvarubs == NULL ? SCIPvarGetUbGlobal(vars[v]) : curvarubs[v]);
+         maxact += val * (curvarubs == NULL ? SCIPvarGetUbGlobal(vars[v]) : curvarubs[v]);
    }
 
-   return minact;
+   return maxact;
 }
 
 static
@@ -2493,7 +2507,6 @@ SCIP_RETCODE propagateLongProof(
    )
 {
    SCIP_VAR** vars;
-   SCIP_Real* vals;
    int* inds;
    SCIP_Real minact;
    SCIP_Real rhs;
@@ -2502,12 +2515,11 @@ SCIP_RETCODE propagateLongProof(
    assert(proofset != NULL);
 
    vars = SCIPprobGetVars(transprob);
-   vals = SCIPaggrRowGetVals(proofset->aggrrow);
    inds = SCIPaggrRowGetInds(proofset->aggrrow);
    nnz = SCIPaggrRowGetNNz(proofset->aggrrow);
    rhs = SCIPaggrRowGetRhs(proofset->aggrrow);
 
-   minact = getMinActivity(transprob, vals, inds, nnz, NULL, NULL);
+   minact = getMinActivity(transprob, proofset->aggrrow, NULL, NULL);
 
    for( int i = 0; i < nnz; i++ )
    {
@@ -2520,7 +2532,7 @@ SCIP_RETCODE propagateLongProof(
 
       pos = inds[i];
       var = vars[pos];
-      val = vals[pos];
+      val = SCIPaggrRowGetProbvarValue(proofset->aggrrow, pos);
       lb = SCIPvarGetLbGlobal(var);
       ub = SCIPvarGetUbGlobal(var);
 
@@ -2560,7 +2572,7 @@ SCIP_RETCODE propagateLongProof(
        *
        * todo this could by more efficient if we update the current activity w.r.t the old and new bound
        */
-      minact = getMinActivity(transprob, vals, inds, nnz, NULL, NULL);
+      minact = getMinActivity(transprob, proofset->aggrrow, NULL, NULL);
    }
 
    return SCIP_OKAY;
@@ -2589,7 +2601,6 @@ SCIP_RETCODE createAndAddProofcons(
    SCIP_CONS* cons;
    SCIP_CONS* upgdcons;
    SCIP_VAR** vars;
-   SCIP_Real* coefs;
    int* inds;
    SCIP_Real rhs;
    SCIP_Real fillin;
@@ -2612,14 +2623,12 @@ SCIP_RETCODE createAndAddProofcons(
    rhs = SCIPaggrRowGetRhs(proofset->aggrrow);
    assert(!SCIPsetIsInfinity(set, rhs));
 
-   coefs = SCIPaggrRowGetVals(proofset->aggrrow);
    inds = SCIPaggrRowGetInds(proofset->aggrrow);
-   assert(coefs != NULL);
    assert(inds != NULL);
 
    if( proofset->conflicttype == SCIP_CONFTYPE_ALTINFPROOF || proofset->conflicttype == SCIP_CONFTYPE_ALTBNDPROOF )
    {
-      SCIP_Real globalmaxactivity = getMaxActivity(transprob, coefs, inds, nnz, NULL, NULL);
+      SCIP_Real globalmaxactivity = getMaxActivity(transprob, proofset->aggrrow, NULL, NULL);
 
       /* check whether the alternative proof is redundant */
       if( SCIPsetIsLE(set, globalmaxactivity, rhs) )
@@ -2627,7 +2636,7 @@ SCIP_RETCODE createAndAddProofcons(
    }
 
    /* check whether the constraint proves global infeasibility */
-   globalminactivity = getMinActivity(transprob, coefs, inds, nnz, NULL, NULL);
+   globalminactivity = getMinActivity(transprob, proofset->aggrrow, NULL, NULL);
    if( SCIPsetIsGT(set, globalminactivity, rhs) )
    {
       SCIPsetDebugMsg(set, "detect global infeasibility: minactivity=%g, rhs=%g\n", globalminactivity, rhs);
@@ -2680,7 +2689,7 @@ SCIP_RETCODE createAndAddProofcons(
 
    for( i = 0; i < nnz; i++ )
    {
-      SCIP_CALL( SCIPaddCoefLinear(set->scip, cons, vars[inds[i]], coefs[inds[i]]) );
+      SCIP_CALL( SCIPaddCoefLinear(set->scip, cons, vars[inds[i]], SCIPaggrRowGetProbvarValue(proofset->aggrrow, inds[i])) );
    }
 
    /* do not upgrade linear constraints of size 1 */
@@ -2772,16 +2781,15 @@ SCIP_RETCODE conflictFlushProofset(
       {
          SCIP_VAR** vars;
          int* inds;
-         SCIP_Real* coefs;
          SCIP_Real rhs;
 
          vars = SCIPprobGetVars(transprob);
          inds = proofsetGetInds(conflict->proofset);
-         coefs = proofsetGetCoefs(conflict->proofset);
          rhs = proofsetGetRhs(conflict->proofset);
 
          SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp, \
-               branchcand, eventqueue, cliquetable, vars[inds[0]], coefs[inds[0]], rhs, conflict->proofset->conflicttype) );
+               branchcand, eventqueue, cliquetable, vars[inds[0]], proofsetGetCoef(conflict->proofset, inds[0]), rhs, \
+               conflict->proofset->conflicttype) );
       }
       else
       {
@@ -2826,16 +2834,15 @@ SCIP_RETCODE conflictFlushProofset(
          {
             SCIP_VAR** vars;
             int* inds;
-            SCIP_Real* coefs;
             SCIP_Real rhs;
 
             vars = SCIPprobGetVars(transprob);
             inds = proofsetGetInds(conflict->proofsets[i]);
-            coefs = proofsetGetCoefs(conflict->proofsets[i]);
             rhs = proofsetGetRhs(conflict->proofsets[i]);
 
             SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp, \
-                  branchcand, eventqueue, cliquetable, vars[inds[0]], coefs[inds[0]], rhs, conflict->proofsets[i]->conflicttype) );
+                  branchcand, eventqueue, cliquetable, vars[inds[0]], proofsetGetCoef(conflict->proofsets[i], inds[0]), \
+                  rhs, conflict->proofsets[i]->conflicttype) );
          }
          else
          {
@@ -6229,8 +6236,7 @@ SCIP_RETCODE getFarkasProof(
    SCIPaggrRowCleanup(set->scip, farkasrow);
 
    /* calculate the current Farkas activity, always using the best bound w.r.t. the Farkas coefficient */
-   *farkasact = getMinActivity(prob, SCIPaggrRowGetVals(farkasrow), SCIPaggrRowGetInds(farkasrow),
-         SCIPaggrRowGetNNz(farkasrow), curvarlbs, curvarubs);
+   *farkasact = getMinActivity(prob, farkasrow, curvarlbs, curvarubs);
 
    SCIPsetDebugMsg(set, " -> farkasact=%g farkasrhs=%g, \n", (*farkasact), SCIPaggrRowGetRhs(farkasrow));
 
@@ -6396,7 +6402,7 @@ SCIP_RETCODE getDualProof(
    SCIPaggrRowCleanup(set->scip, farkasrow);
 
    /* check validity of the proof */
-   *farkasact = getMinActivity(prob, SCIPaggrRowGetVals(farkasrow), SCIPaggrRowGetInds(farkasrow), SCIPaggrRowGetNNz(farkasrow), curvarlbs, curvarubs);
+   *farkasact = getMinActivity(prob, farkasrow, curvarlbs, curvarubs);
 
    if( SCIPsetIsLT(set, SCIPaggrRowGetRhs(farkasrow), *farkasact) )
       *valid = TRUE;
@@ -6451,7 +6457,6 @@ SCIP_RETCODE tightenDualray(
    )
 {/*lint --e{715}*/
    SCIP_VAR** vars;
-   SCIP_Real* vals;
    SCIP_Real* subvals;
    int* inds;
    int* subinds;
@@ -6493,7 +6498,7 @@ SCIP_RETCODE tightenDualray(
    SCIPsetDebugMsg(set, "start dualray tightening:\n");
    SCIPsetDebugMsg(set, "-> tighten dual ray: nvars=%d (bin=%d, int=%d, cont=%d)\n",
          nnz, nbinvars, nintvars, ncontvars);
-   debugPrintViolationInfo(set, getMinActivity(transprob, SCIPaggrRowGetVals(farkasrow), inds, nnz, curvarlbs, curvarubs), SCIPaggrRowGetRhs(farkasrow), NULL);
+   debugPrintViolationInfo(set, getMinActivity(transprob, farkasrow, curvarlbs, curvarubs), SCIPaggrRowGetRhs(farkasrow), NULL);
 
    /* return if all variables are continuous */
    if( ncontvars == nnz )
@@ -6506,13 +6511,13 @@ SCIP_RETCODE tightenDualray(
       SCIP_CALL( proofsetCreate(&proofset, blkmem) );
       SCIP_CALL( conflictInsertProofset(conflict, set, blkmem, proofset) );
    }
+   assert(proofset->aggrrow == NULL);
 
    /* start with a proofset containing all variables with a non-zero coefficient in the Farkas proof */
    SCIP_CALL( proofsetAddAggrrow(proofset, set, farkasrow) );
    proofset->conflicttype = conflict->conflictset->conflicttype;
 
    /* get sorted data */
-   vals = SCIPaggrRowGetVals(farkasrow);
    inds = SCIPaggrRowGetInds(farkasrow);
    rhs = SCIPaggrRowGetRhs(farkasrow);
    nnz = SCIPaggrRowGetNNz(farkasrow);
@@ -6531,8 +6536,10 @@ SCIP_RETCODE tightenDualray(
       SCIP_Bool cutsuccess;
       SCIP_Bool success;
 
-      proofefficiacy = getMinActivity(transprob, vals, inds, nnz, curvarlbs, curvarubs) - rhs;
-      proofefficiacy /= MAX(1e-6, SCIPgetVectorEfficacyNorm(set->scip, vals, nnz));
+      proofefficiacy = getMinActivity(transprob, farkasrow, curvarlbs, curvarubs) - rhs;
+
+      /* TODO This code is deactivated by default. BUT FIX THIS TOGETHER WITH @gottwald ASAP ! ! ! */
+      /* proofefficiacy /= MAX(1e-6, SCIPgetVectorEfficacyNorm(set->scip, vals, nnz)); */
 
       /* create reference solution */
       SCIP_CALL( SCIPcreateSol(set->scip, &refsol, NULL) );
@@ -6546,7 +6553,9 @@ SCIP_RETCODE tightenDualray(
       /* set all variables that are part of the proof to its active local bound */
       for( i = 0; i < nnz; i++ )
       {
-         if( vals[inds[i]] > 0.0 )
+         SCIP_Real val = SCIPaggrRowGetProbvarValue(farkasrow, inds[i]);
+
+         if( val > 0.0 )
          {
             SCIP_CALL( SCIPsolSetVal(refsol, set, stat, tree, vars[inds[i]], curvarubs[inds[i]]) );
          }
@@ -6569,8 +6578,8 @@ SCIP_RETCODE tightenDualray(
 
       if( SCIPaggrRowGetNRows(proofset->aggrrow) >= 1 )
       {
-         SCIP_CALL( SCIPcutGenerationHeuristicCMIR(set->scip, refsol, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, NULL, NULL, \
-               MINFRAC, MAXFRAC, proofset->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, NULL, \
+         SCIP_CALL( SCIPcutGenerationHeuristicCMIR(set->scip, refsol, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, INT_MAX, \
+               NULL, NULL, MINFRAC, MAXFRAC, proofset->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, NULL, \
                &islocal, &cutsuccess) );
 
          success = (success || cutsuccess);
@@ -6604,7 +6613,6 @@ SCIP_RETCODE tightenDualray(
        * @note: currently, we do this only for the original proof
        */
 
-      vals = SCIPaggrRowGetVals(proofset->aggrrow);
       inds = SCIPaggrRowGetInds(proofset->aggrrow);
       nnz = SCIPaggrRowGetNNz(proofset->aggrrow);
 
@@ -6617,10 +6625,13 @@ SCIP_RETCODE tightenDualray(
 
       for( i = 0; i < nnz; i++ )
       {
+         SCIP_Real val;
          int idx = inds[i];
 
          assert(vars[idx] != NULL);
-         assert(!SCIPsetIsZero(set, vals[idx]));
+
+         val = SCIPaggrRowGetProbvarValue(proofset->aggrrow, idx);
+         assert(!SCIPsetIsZero(set, val));
 
          /* skip integral variables */
          if( SCIPvarGetType(vars[idx]) != SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(vars[idx]) != SCIP_VARTYPE_IMPLINT )
@@ -6631,26 +6642,26 @@ SCIP_RETCODE tightenDualray(
             SCIP_Real locbd;
 
             /* get appropriate global and local bounds */
-            glbbd = (vals[idx] < 0.0 ? SCIPvarGetUbGlobal(vars[idx]) : SCIPvarGetLbGlobal(vars[idx]));
-            locbd = (vals[idx] < 0.0 ? curvarubs[idx] : curvarlbs[idx]);
+            glbbd = (val < 0.0 ? SCIPvarGetUbGlobal(vars[idx]) : SCIPvarGetLbGlobal(vars[idx]));
+            locbd = (val < 0.0 ? curvarubs[idx] : curvarlbs[idx]);
 
             if( !SCIPsetIsEQ(set, glbbd, locbd) )
                continue;
 
             SCIPsetDebugMsg(set, "-> remove continuous variable <%s>: glb=[%g,%g], loc=[%g,%g], val=%g\n",
                   SCIPvarGetName(vars[idx]), SCIPvarGetLbGlobal(vars[idx]), SCIPvarGetUbGlobal(vars[idx]),
-                  SCIPvarGetLbLocal(vars[idx]), SCIPvarGetUbLocal(vars[idx]), vals[idx]);
+                  SCIPvarGetLbLocal(vars[idx]), SCIPvarGetUbLocal(vars[idx]), val);
 
             /* update rhs of row that should be subtracted */
-            subrhs -= (glbbd * vals[idx]);
+            subrhs -= (glbbd * val);
 
             /* add negative coefficient such that it will cancel out */
-            subvals[nsubvars] = -vals[idx];
+            subvals[nsubvars] = -val;
             subinds[nsubvars++] = idx;
          }
       }
 
-      SCIP_CALL( SCIPaggrRowAddSparseData(set->scip, proofset->aggrrow, subvals, subinds, nsubvars, subrhs) );
+      SCIP_CALL( SCIPaggrRowAddCustomCons(set->scip, proofset->aggrrow, subinds, subvals, nsubvars, subrhs, 1.0, 1, FALSE) );
       SCIPaggrRowCleanup(set->scip, proofset->aggrrow);
 
       /* free buffer */
@@ -6692,7 +6703,6 @@ SCIP_RETCODE conflictAnalyzeDualProof(
    SCIP_Bool*            success             /**< pointer to store success result */
    )
 {
-   SCIP_Real* vals;
    int* inds;
    SCIP_Real rhs;
    SCIP_Real minact;
@@ -6704,16 +6714,14 @@ SCIP_RETCODE conflictAnalyzeDualProof(
    /* get sparse data */
    nnz = SCIPaggrRowGetNNz(farkasrow);
    rhs = SCIPaggrRowGetRhs(farkasrow);
-   vals = SCIPaggrRowGetVals(farkasrow);
    inds = SCIPaggrRowGetInds(farkasrow);
-   assert(vals != NULL);
    assert(inds != NULL);
 
    *globalinfeasible = FALSE;
    *success = FALSE;
 
    /* get minimal activity w.r.t. local bounds */
-   minact = getMinActivity(transprob, vals, inds, nnz, curvarlbs, curvarubs);
+   minact = getMinActivity(transprob, farkasrow, curvarlbs, curvarubs);
 
    /* only run is the proof proves local infeasibility */
    if( SCIPsetIsFeasLE(set, minact, rhs) )
@@ -6971,7 +6979,6 @@ SCIP_RETCODE runBoundHeuristic(
             if( SCIPlpiIsPrimalInfeasible(lpi) )
             {
                SCIP_AGGRROW* farkasrow;
-               SCIP_Real* vals;
                int* inds;
                int nnz;
                int v;
@@ -7016,7 +7023,6 @@ SCIP_RETCODE runBoundHeuristic(
                (*prooflhs) = -SCIPaggrRowGetRhs(farkasrow);
                (*proofactivity) = -(*proofactivity);
 
-               vals = SCIPaggrRowGetVals(farkasrow);
                inds = SCIPaggrRowGetInds(farkasrow);
                nnz = SCIPaggrRowGetNNz(farkasrow);
 
@@ -7026,7 +7032,7 @@ SCIP_RETCODE runBoundHeuristic(
 
                   assert(SCIPvarGetProbindex(vars[i]) == inds[v]);
 
-                  proofcoefs[i] = -vals[i];
+                  proofcoefs[i] = -SCIPaggrRowGetProbvarValue(farkasrow, i);
                }
 
                /* free aggregation rows */
@@ -7038,7 +7044,6 @@ SCIP_RETCODE runBoundHeuristic(
             else
             {
                SCIP_AGGRROW* proofrow;
-               SCIP_Real* vals;
                int* inds;
                int nnz;
                int v;
@@ -7059,7 +7064,6 @@ SCIP_RETCODE runBoundHeuristic(
                (*prooflhs) = -SCIPaggrRowGetRhs(proofrow);
                (*proofactivity) = -(*proofactivity);
 
-               vals = SCIPaggrRowGetVals(proofrow);
                inds = SCIPaggrRowGetInds(proofrow);
                nnz = SCIPaggrRowGetNNz(proofrow);
 
@@ -7069,7 +7073,7 @@ SCIP_RETCODE runBoundHeuristic(
 
                   assert(SCIPvarGetProbindex(vars[i]) == inds[v]);
 
-                  proofcoefs[i] = -vals[i];
+                  proofcoefs[i] = -SCIPaggrRowGetProbvarValue(proofrow, i);
                }
 
                /* free aggregation rows */
@@ -7379,7 +7383,6 @@ SCIP_RETCODE conflictAnalyzeLP(
    {
       SCIP_Real* farkascoefs;
       SCIP_Real farkaslhs;
-      SCIP_Real* vals;
       int* inds;
       int nnz;
 
@@ -7400,7 +7403,6 @@ SCIP_RETCODE conflictAnalyzeLP(
       farkaslhs = -SCIPaggrRowGetRhs(farkasrow);
       farkasactivity = -farkasactivity;
 
-      vals = SCIPaggrRowGetVals(farkasrow);
       inds = SCIPaggrRowGetInds(farkasrow);
       nnz = SCIPaggrRowGetNNz(farkasrow);
 
@@ -7410,7 +7412,7 @@ SCIP_RETCODE conflictAnalyzeLP(
 
          assert(SCIPvarGetProbindex(vars[i]) == inds[v]);
 
-         farkascoefs[i] = -vals[i];
+         farkascoefs[i] = -SCIPaggrRowGetProbvarValue(farkasrow, i);
       }
 
       SCIP_CALL( runBoundHeuristic(conflict, set, stat, origprob, transprob, tree, reopt, lp, lpi, branchcand, \
