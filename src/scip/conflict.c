@@ -6701,7 +6701,6 @@ SCIP_RETCODE conflictAnalyzeDualProof(
    SCIP_Bool*            success             /**< pointer to store success result */
    )
 {
-   int* inds;
    SCIP_Real rhs;
    SCIP_Real minact;
    int nnz;
@@ -6712,8 +6711,6 @@ SCIP_RETCODE conflictAnalyzeDualProof(
    /* get sparse data */
    nnz = SCIPaggrRowGetNNz(farkasrow);
    rhs = SCIPaggrRowGetRhs(farkasrow);
-   inds = SCIPaggrRowGetInds(farkasrow);
-   assert(inds != NULL);
 
    *globalinfeasible = FALSE;
    *success = FALSE;
