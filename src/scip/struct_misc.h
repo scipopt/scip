@@ -128,6 +128,14 @@ struct SCIP_HashMap
    uint32_t              nelements;          /**< number of elements in the hashtable */
 };
 
+/** lightweight hash set data structure to map pointers on pointers */
+struct SCIP_HashSet
+{
+   void**                slots;              /**< buffer for hashmap entries */
+   uint32_t              shift;              /**< power such that 2^(64-shift) == nslots */
+   uint32_t              nelements;          /**< number of elements in the hashtable */
+};
+
 /** dynamic array for storing real values */
 struct SCIP_RealArray
 {

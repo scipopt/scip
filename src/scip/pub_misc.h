@@ -889,6 +889,94 @@ SCIP_RETCODE SCIPhashmapRemoveAll(
 /**@} */
 
 
+/*
+ * Hash Set
+ */
+
+/**@defgroup HashSet Hash Set
+ * @ingroup DataStructures
+ * @brief very lightweight hash set to pointers
+ *
+ * @{
+ */
+
+/** creates a hash set of pointers */
+EXTERN
+SCIP_RETCODE SCIPhashsetCreate(
+   SCIP_HASHSET**        hashset,            /**< pointer to store the created hash set */
+   BMS_BLKMEM*           blkmem,             /**< block memory used to store hash set entries */
+   int                   size                /**< initial size of the hash set; it is guaranteed that the set is not
+                                              *   resized if at most that many elements are inserted */
+   );
+
+/** frees the hash set */
+EXTERN
+void SCIPhashsetFree(
+   SCIP_HASHSET**        hashset,            /**< pointer to the hash set */
+   BMS_BLKMEM*           blkmem              /**< block memory used to store hash set entries */
+   );
+
+/** inserts new element into the hash set */
+EXTERN
+SCIP_RETCODE SCIPhashsetInsert(
+   SCIP_HASHSET*         hashset,            /**< hash set */
+   BMS_BLKMEM*           blkmem,             /**< block memory used to store hash set entries */
+   void*                 element             /**< element to insert */
+   );
+
+/** checks whether an element exists in the hash set */
+EXTERN
+SCIP_Bool SCIPhashsetExists(
+   SCIP_HASHSET*         hashset,            /**< hash set */
+   void*                 element             /**< element to search for */
+   );
+
+/** removes an element from the hash set, if it exists */
+EXTERN
+SCIP_RETCODE SCIPhashsetRemove(
+   SCIP_HASHSET*         hashset,            /**< hash set */
+   void*                 element             /**< origin to remove from the list */
+   );
+
+/** prints statistics about hash set usage */
+EXTERN
+void SCIPhashsetPrintStatistics(
+   SCIP_HASHSET*         hashset,            /**< hash set */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
+   );
+
+/** indicates whether a hash set has no entries */
+EXTERN
+SCIP_Bool SCIPhashsetIsEmpty(
+   SCIP_HASHSET*         hashset             /**< hash set */
+   );
+
+/** gives the number of elements in a hash set */
+EXTERN
+int SCIPhashsetGetNElements(
+   SCIP_HASHSET*         hashset             /**< hash set */
+   );
+
+/** gives the number of slots of a hash set */
+EXTERN
+int SCIPhashsetGetNSlots(
+   SCIP_HASHSET*         hashset             /**< hash set */
+   );
+
+/** gives the array of hash set slots; contains all elements in indetermined order and may contain NULL values */
+EXTERN
+void** SCIPhashsetGetSlots(
+   SCIP_HASHSET*         hashset             /**< hash set */
+   );
+
+/** removes all entries in a hash set. */
+EXTERN
+SCIP_RETCODE SCIPhashsetRemoveAll(
+   SCIP_HASHSET*         hashset             /**< hash set */
+   );
+
+/**@} */
+
 
 /*
  * Activity
