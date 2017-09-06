@@ -103,6 +103,16 @@ SCIP_RETCODE SCIPaggrRowAddCustomCons(
    SCIP_Bool             local               /**< is constraint only valid locally */
    );
 
+/** calculates the efficacy norm of the given aggregation row, which depends on the "separating/efficacynorm" parameter
+ *
+ *  @return the efficacy norm of the given aggregation row, which depends on the "separating/efficacynorm" parameter
+ */
+extern
+SCIP_Real SCIPaggrRowCalcEfficacyNorm(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
+   );
+
 /** clear all entries in the aggregation row but do not free the internal memory */
 extern
 void SCIPaggrRowClear(

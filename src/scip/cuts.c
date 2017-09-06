@@ -202,6 +202,68 @@ SCIP_Real calcEfficacy(
    return (activity - cutrhs) / norm;
 }
 
+static
+SCIP_Real calcEfficacyNormQuad(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real*            vals,               /**< array of the non-zero coefficients in the vector; this is a quad precision array! */
+   int*                  inds,               /**< array of the problem indices of variables with a non-zero coefficient in the vector */
+   int                   nnz                 /**< the number of non-zeros in the vector */
+   )
+{
+   SCIP_Real norm;
+   SCIP_Real QUAD(coef);
+   int i;
+
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   norm = 0.0;
+   switch( scip->set->sepa_efficacynorm )
+   {
+   case 'e':
+      for( i = 0; i < nnz; ++i )
+      {
+         QUAD_ARRAY_LOAD(coef, vals, inds[i]);
+         norm += SQR(QUAD_ROUND(coef));
+      }
+      norm = SQRT(norm);
+      break;
+   case 'm':
+      for( i = 0; i < nnz; ++i )
+      {
+         SCIP_Real absval;
+         QUAD_ARRAY_LOAD(coef, vals, inds[i]);
+
+         absval = REALABS(QUAD_ROUND(coef));
+         norm = MAX(norm, absval);
+      }
+      break;
+   case 's':
+      for( i = 0; i < nnz; ++i )
+      {
+         QUAD_ARRAY_LOAD(coef, vals, inds[i]);
+         norm += REALABS(QUAD_ROUND(coef));
+      }
+      break;
+   case 'd':
+      for( i = 0; i < nnz; ++i )
+      {
+         QUAD_ARRAY_LOAD(coef, vals, inds[i]);
+         if( !SCIPisZero(scip, QUAD_ROUND(coef)) )
+         {
+            norm = 1.0;
+            break;
+         }
+      }
+      break;
+   default:
+      SCIPerrorMessage("invalid efficacy norm parameter '%c'\n", scip->set->sepa_efficacynorm);
+      assert(FALSE);
+   }
+
+   return norm;
+}
+
 /* calculates the cuts efficacy for the given solution; the cut coefs are stored densely and in quad precision */
 static
 SCIP_Real calcEfficacyDenseStorageQuad(
@@ -224,50 +286,7 @@ SCIP_Real calcEfficacyDenseStorageQuad(
    assert(cutinds != NULL);
    assert(scip->set != NULL);
 
-   norm = 0.0;
-   switch( scip->set->sepa_efficacynorm )
-   {
-   case 'e':
-      for( i = 0; i < cutnnz; ++i )
-      {
-         QUAD_ARRAY_LOAD(coef, cutcoefs, cutinds[i]);
-         norm += SQR(QUAD_ROUND(coef));
-      }
-      norm = SQRT(norm);
-      break;
-   case 'm':
-      for( i = 0; i < cutnnz; ++i )
-      {
-         SCIP_Real absval;
-         QUAD_ARRAY_LOAD(coef, cutcoefs, cutinds[i]);
-
-         absval = REALABS(QUAD_ROUND(coef));
-         norm = MAX(norm, absval);
-      }
-      break;
-   case 's':
-      for( i = 0; i < cutnnz; ++i )
-      {
-         QUAD_ARRAY_LOAD(coef, cutcoefs, cutinds[i]);
-         norm += REALABS(QUAD_ROUND(coef));
-      }
-      break;
-   case 'd':
-      for( i = 0; i < cutnnz; ++i )
-      {
-         QUAD_ARRAY_LOAD(coef, cutcoefs, cutinds[i]);
-         if( !SCIPisZero(scip, QUAD_ROUND(coef)) )
-         {
-            norm = 1.0;
-            break;
-         }
-      }
-      break;
-   default:
-      SCIPerrorMessage("invalid efficacy norm parameter '%c'\n", scip->set->sepa_efficacynorm);
-      assert(FALSE);
-   }
-   norm = MAX(1e-6, norm);
+   norm = MAX(1e-6, calcEfficacyNormQuad(scip, cutcoefs, cutinds, cutnnz));
 
    vars = SCIPgetVars(scip);
 
@@ -640,6 +659,18 @@ void SCIPaggrRowClear(
    aggrrow->rank = 0;
    QUAD_ASSIGN(aggrrow->rhs, 0.0);
    aggrrow->local = FALSE;
+}
+
+/** calculates the efficacy norm of the given aggregation row, which depends on the "separating/efficacynorm" parameter
+ *
+ *  @return the efficacy norm of the given aggregation row, which depends on the "separating/efficacynorm" parameter
+ */
+SCIP_Real SCIPaggrRowCalcEfficacyNorm(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
+   )
+{
+   return calcEfficacyNormQuad(scip, aggrrow->vals, aggrrow->inds, aggrrow->nnz);
 }
 
 /** Adds one row to the aggregation row. Differs from SCIPaggrRowAddRow() by providing some additional
