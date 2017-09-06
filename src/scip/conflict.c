@@ -6537,9 +6537,7 @@ SCIP_RETCODE tightenDualray(
       SCIP_Bool success;
 
       proofefficiacy = getMinActivity(transprob, farkasrow, curvarlbs, curvarubs) - rhs;
-
-      /* TODO This code is deactivated by default. BUT FIX THIS TOGETHER WITH @gottwald ASAP ! ! ! */
-      /* proofefficiacy /= MAX(1e-6, SCIPgetVectorEfficacyNorm(set->scip, vals, nnz)); */
+      proofefficiacy /= MAX(1e-6, SCIPaggrRowCalcEfficacyNorm(set->scip, farkasrow));
 
       /* create reference solution */
       SCIP_CALL( SCIPcreateSol(set->scip, &refsol, NULL) );
