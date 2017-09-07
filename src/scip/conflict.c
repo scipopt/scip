@@ -6429,8 +6429,6 @@ SCIP_RETCODE getDualProof(
          }
          SCIPsetDebugMsg(set, " -> global row <%s>[%g,%g]: dual=%g -> dualrhs=%g\n",
             SCIProwGetName(row), row->lhs - row->constant, row->rhs - row->constant, -dualsols[r], SCIPaggrRowGetRhs(farkasrow));
-         printf(" -> global row <%s>[%g,%g]: dual=%g -> dualrhs=%g\n",
-            SCIProwGetName(row), row->lhs - row->constant, row->rhs - row->constant, -dualsols[r], SCIPaggrRowGetRhs(farkasrow));
       }
    }
 

@@ -1168,7 +1168,8 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
 
             /* get unscaled rhs */
             newside = rhs * conflictstore->scalefactors[i];
-            newside -= conflictstore->dualprimalbnds[i] + cutoffbound - SCIPsetSumepsilon(set);
+            newside -= conflictstore->dualprimalbnds[i];
+            newside += cutoffbound - SCIPsetSumepsilon(set);
 
             /* scale rhs */
             newside /= conflictstore->scalefactors[i];
@@ -1183,7 +1184,8 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
 
             /* get unscaled lhs */
             newside = lhs * conflictstore->scalefactors[i];
-            newside += conflictstore->dualprimalbnds[i] - (cutoffbound - SCIPsetSumepsilon(set));
+            newside += conflictstore->dualprimalbnds[i];
+            newside -= (cutoffbound - SCIPsetSumepsilon(set));
 
             /* scale lhs */
             newside /= conflictstore->scalefactors[i];
