@@ -2030,6 +2030,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
                SCIP_CALL( mod2rowAddRow(scip, SCIPblkmem(scip), &mod2matrix, nonzrows[j], row) );
             }
 
+            /* cppcheck-suppress nullPointer */
             row->slack = col->solval;
             --mod2matrix.nzeroslackrows;
 
