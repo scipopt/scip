@@ -97,6 +97,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_REOPT*           reopt,              /**< reoptimization data */
+   SCIP_Real             scale,              /**< scaling factor that needs to be considered when updating the side */
    SCIP_Bool             updateside          /**< should the side be updated if a new incumbent is found */
    );
 

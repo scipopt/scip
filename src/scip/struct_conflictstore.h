@@ -44,6 +44,7 @@ struct SCIP_ConflictStore
                                               *   conflict was found (-infinity if the conflict based on an infeasible LP) */
    SCIP_Real*            dualprimalbnds;     /**< array of primal bounds valid at the time the corresponding dual proof
                                               *   based on a dual solution was found */
+   SCIP_Real*            scalefactors;       /**< scaling factor that needs to be considered when updating the side */
    SCIP_Bool*            updateside;         /**< array to store whether the side should be updated whenever a new incumbent is found */
    SCIP_Real             avgswitchlength;    /**< average length of switched paths */
    SCIP_Real             lastcutoffbound;    /**< last cutoff bound for which the conflict store was cleaned */
