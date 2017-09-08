@@ -456,11 +456,13 @@ SCIP_RETCODE delPosDualsol(
    {
       conflictstore->dualsolconfs[pos] = conflictstore->dualsolconfs[lastpos];
       conflictstore->dualprimalbnds[pos] = conflictstore->dualprimalbnds[lastpos];
+      conflictstore->scalefactors[pos] = conflictstore->scalefactors[lastpos];
       conflictstore->updateside[pos] = conflictstore->updateside[lastpos];
 
 #ifndef NDEBUG
       conflictstore->dualsolconfs[lastpos] = NULL;
       conflictstore->dualprimalbnds[lastpos] = SCIP_UNKNOWN;
+      conflictstore->scalefactors[lastpos] = 1.0;
       conflictstore->updateside[lastpos] = FALSE;
 #endif
    }
@@ -659,6 +661,7 @@ SCIP_RETCODE SCIPconflictstoreCreate(
    (*conflictstore)->conflicts = NULL;
    (*conflictstore)->confprimalbnds = NULL;
    (*conflictstore)->dualprimalbnds = NULL;
+   (*conflictstore)->scalefactors = NULL;
    (*conflictstore)->updateside = NULL;
    (*conflictstore)->dualrayconfs = NULL;
    (*conflictstore)->dualsolconfs = NULL;
@@ -714,6 +717,7 @@ SCIP_RETCODE SCIPconflictstoreFree(
    BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictstore)->dualrayconfs, CONFLICTSTORE_DUALRAYSIZE);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictstore)->dualsolconfs, CONFLICTSTORE_DUALSOLSIZE);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictstore)->dualprimalbnds, CONFLICTSTORE_DUALSOLSIZE);
+   BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictstore)->scalefactors, CONFLICTSTORE_DUALSOLSIZE);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictstore)->updateside, CONFLICTSTORE_DUALSOLSIZE);
    BMSfreeMemoryNull(conflictstore);
 
@@ -875,6 +879,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_REOPT*           reopt,              /**< reoptimization data */
+   SCIP_Real             scale,              /**< scaling factor that needs to be considered when updating the side */
    SCIP_Bool             updateside          /**< should the side be updated if a new incumbent is found */
    )
 {
@@ -892,6 +897,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
    {
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &conflictstore->dualsolconfs, CONFLICTSTORE_DUALSOLSIZE) );
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &conflictstore->dualprimalbnds, CONFLICTSTORE_DUALSOLSIZE) );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &conflictstore->scalefactors, CONFLICTSTORE_DUALSOLSIZE) );
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &conflictstore->updateside, CONFLICTSTORE_DUALSOLSIZE) );
    }
 
@@ -939,6 +945,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
    SCIPconsCapture(dualproof);
    conflictstore->dualsolconfs[conflictstore->ndualsolconfs] = dualproof;
    conflictstore->dualprimalbnds[conflictstore->ndualsolconfs] = SCIPgetCutoffbound(set->scip) - SCIPsetSumepsilon(set);
+   conflictstore->scalefactors[conflictstore->ndualsolconfs] = scale;
    conflictstore->updateside[conflictstore->ndualsolconfs] = updateside;
    ++conflictstore->ndualsolconfs;
 
@@ -1157,16 +1164,32 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
          if( !SCIPsetIsInfinity(set, rhs) )
          {
             assert(SCIPsetIsInfinity(set, -SCIPgetLhsLinear(NULL, dualproof)));
+            assert(SCIPsetIsPositive(set, conflictstore->scalefactors[i]));
 
-            newside = rhs - conflictstore->dualprimalbnds[i] + cutoffbound - SCIPsetSumepsilon(set);
+            /* get unscaled rhs */
+            newside = rhs * conflictstore->scalefactors[i];
+            newside -= conflictstore->dualprimalbnds[i];
+            newside += cutoffbound - SCIPsetSumepsilon(set);
+
+            /* scale rhs */
+            newside /= conflictstore->scalefactors[i];
+
             SCIP_CALL( SCIPchgRhsLinear(set->scip, dualproof, newside) );
          }
          else
          {
             SCIP_Real lhs = SCIPgetLhsLinear(NULL, dualproof);
             assert(!SCIPsetIsInfinity(set, -lhs));
+            assert(SCIPsetIsNegative(set, conflictstore->scalefactors[i]));
 
-            newside = lhs + conflictstore->dualprimalbnds[i] - (cutoffbound - SCIPsetSumepsilon(set));
+            /* get unscaled lhs */
+            newside = lhs * conflictstore->scalefactors[i];
+            newside += conflictstore->dualprimalbnds[i];
+            newside -= (cutoffbound - SCIPsetSumepsilon(set));
+
+            /* scale lhs */
+            newside /= conflictstore->scalefactors[i];
+
             SCIP_CALL( SCIPchgLhsLinear(set->scip, dualproof, newside) );
          }
 

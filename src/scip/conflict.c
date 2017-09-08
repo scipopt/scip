@@ -2722,9 +2722,43 @@ SCIP_RETCODE createAndAddProofcons(
    }
    else
    {
+      SCIP_Real scale = 1.0;
+      SCIP_Bool updateside = FALSE;
+
+      /* In some cases the constraint could not be updated to a more special type. However, it is possible that
+       * constraint got scaled. Therefore, we need to be very careful when updating the lhs/rhs after the incumbent
+       * solution has improved.
+       */
+      if( proofset->conflicttype == SCIP_CONFTYPE_BNDEXCEEDING )
+      {
+         SCIP_Real side;
+
+#ifndef NDEBUG
+         SCIP_CONSHDLR* conshdlr = SCIPconsGetHdlr(cons);
+
+         assert(conshdlr != NULL);
+         assert(strcmp(SCIPconshdlrGetName(conshdlr), "linear") == 0);
+#endif
+         side = SCIPgetLhsLinear(set->scip, cons);
+
+         if( !SCIPsetIsInfinity(set, -side) )
+         {
+            scale = SCIPaggrRowGetRhs(proofset->aggrrow) / side;
+            assert(SCIPsetIsNegative(set, scale));
+         }
+         else
+         {
+            side = SCIPgetRhsLinear(set->scip, cons);
+            assert(!SCIPsetIsInfinity(set, side));
+
+            scale = SCIPaggrRowGetRhs(proofset->aggrrow) / side;
+            assert(SCIPsetIsPositive(set, scale));
+         }
+         updateside = TRUE;
+      }
+
       /* add constraint based on dual solution to storage */
-      SCIP_CALL( SCIPconflictstoreAddDualsolcons(conflictstore, cons, blkmem, set, stat, transprob, reopt, \
-            proofset->conflicttype == SCIP_CONFTYPE_BNDEXCEEDING) );
+      SCIP_CALL( SCIPconflictstoreAddDualsolcons(conflictstore, cons, blkmem, set, stat, transprob, reopt, scale, updateside) );
    }
 
    SCIP_CALL( SCIPnodeAddCons(tree->path[0], blkmem, set, stat, tree, cons) );
