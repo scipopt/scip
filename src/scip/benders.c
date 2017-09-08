@@ -52,6 +52,11 @@
 //#define SCIP_DEFAULT_CUTSASCONS          FALSE  /** Should the transferred cuts be added as constraints? */
 #define SCIP_DEFAULT_MIPCHECKFREQ            5  /** the number of iterations that the MIP is checked, -1 for always. */
 #define SCIP_DEFAULT_LNSCHECK              TRUE /** should the Benders' decomposition be used in LNS heuristics */
+/* A standard implementation of is defined only generating cuts when the current problem solution is optimal for the
+ * given cuts. That is, the bound of the solution is equal to the current lower bound. The cuts are generated in the
+ * enfo or check phases of the constraint handler. Different from standard Benders, the tree is not deleted. The cuts
+ * are added to the problem and the solving continues. */
+#define SCIP_DEFAULT_STDBENDERS           FALSE /** should a standard implementation of Benders' decomposition be used? */
 
 #define AUXILIARYVAR_NAME     "##bendersauxiliaryvar"
 #define MW_AUXILIARYVAR_NAME  "##MWauxiliaryvar##"
@@ -1045,6 +1050,11 @@ SCIP_RETCODE SCIPbendersCreate(
    SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname, paramdesc,
                   &(*benders)->lnscheck, FALSE, SCIP_DEFAULT_LNSCHECK, NULL, NULL) ); /*lint !e740*/
 
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/stdbenders", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "Should a standard Benders' decomposition implementation be used (i.e. only generate cuts for optimal solutions)?");
+   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname, paramdesc,
+                  &(*benders)->stdbenders, FALSE, SCIP_DEFAULT_STDBENDERS, NULL, NULL) ); /*lint !e740*/
+
    return SCIP_OKAY;
 }
 
@@ -1375,7 +1385,7 @@ SCIP_RETCODE createAndAddTransferredCut(
    if( sourcebenders->cutsascons )
    {
       SCIP_CALL( SCIPcreateConsBasicLinear(sourcescip, &transfercons, cutname, 0, NULL, NULL, lhs, rhs) );
-      SCIPconsSetRemovable(transfercons, TRUE);
+      SCIPsetConsRemovable(sourcescip, transfercons, TRUE);
    }
    else
       SCIP_CALL( SCIPcreateEmptyRowCons(sourcescip, &transfercut, consbenders, cutname, lhs, rhs, FALSE,
@@ -1845,12 +1855,30 @@ SCIP_RETCODE SCIPbendersExec(
       return SCIP_OKAY;
    }
 
-   //if( sol != NULL && SCIPsolGetHeur(sol) != NULL && strcmp(SCIPheurGetName(SCIPsolGetHeur(sol)), HEUR_RINS) == 0 && benders->lnscheck )
-   //{
-      //(*result) = SCIP_FEASIBLE;
-      //return SCIP_OKAY;
-   //}
+   /* To replicate a standard implementation of Benders' decomposition, cuts are only generated when the given solution
+    * is optimal w.r.t the current set of cuts. This requires a check of the current solution objective with the current
+    * dual bound. */
+   if( benders->stdbenders && !SCIPsetIsFeasLE(set, SCIPgetSolOrigObj(set->scip, sol), SCIPgetDualbound(set->scip)) )
+   {
+      (*result) = SCIP_INFEASIBLE;
+      return SCIP_OKAY;
+   }
 
+#if 0
+   /* This is part of testing!!!
+    * A flag `onlylpcheck` has been added to force only the LP's to be checked during a LNS heuristic solve. As such,
+    * the integer subproblems need to be checked after the completion of the LNS heuristic.
+    * If the integer subproblems are checked during the LNS solve, then the Benders' subproblem solves would not be
+    * required for the solutions generated from the LNS heuristic. */
+   if( sol != NULL && SCIPsolGetHeur(sol) != NULL && strcmp(SCIPheurGetName(SCIPsolGetHeur(sol)), HEUR_RINS) == 0 && benders->lnscheck )
+   {
+      (*result) = SCIP_FEASIBLE;
+      return SCIP_OKAY;
+   }
+#endif
+
+   /* when Benders' is used in the LNS heuristics, only the LP of the master/subproblems is checked, i.e. no integer
+    * cuts are generated. This assumes that in the LNS heuristics the subproblems are all LPs. */
    onlylpcheck = benders->iscopy && benders->lnscheck;
 
    /* stating that the core point has not been updated for this iteration */
