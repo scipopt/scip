@@ -1245,25 +1245,31 @@ SCIP_RETCODE mod2matrixPreprocessColumns(
       }
       else if( nnonzrows == 1 )
       { /* Prop3 v */
-         MOD2_ROW** rows;
-         int j = 0;
-         rows = (MOD2_ROW**) SCIPhashsetGetSlots(col->nonzrows);
-         while( rows[j] == NULL )
-            ++j;
+         MOD2_ROW* row;
 
-         checkRow(rows[j]);
+         {
+            int j = 0;
+            MOD2_ROW** rows;
+            rows = (MOD2_ROW**) SCIPhashsetGetSlots(col->nonzrows);
+            while( rows[j] == NULL )
+               ++j;
+
+            row = rows[j];
+         }
+
+         checkRow(row);
 
          /* column is unit vector, so add its solution value to the rows slack and remove it */
-         if( SCIPisZero(scip, rows[j]->slack) )
+         if( SCIPisZero(scip, row->slack) )
             --mod2matrix->nzeroslackrows;
 
-         rows[j]->slack += col->solval;
-         assert(!SCIPisZero(scip, rows[j]->slack));
+         row->slack += col->solval;
+         assert(!SCIPisZero(scip, row->slack));
 
          mod2matrixRemoveCol(scip, mod2matrix, col);
          ++sepadata->nreductions;
 
-         checkRow(rows[j]);
+         checkRow(row);
       }
       else
       {
