@@ -33,14 +33,14 @@
 #define SEPA_NAME              "aggregation"
 #define SEPA_DESC              "aggregation heuristic for complemented mixed integer rounding cuts and flowcover cuts"
 #define SEPA_PRIORITY             -3000
-#define SEPA_FREQ                    20
+#define SEPA_FREQ                    30
 #define SEPA_MAXBOUNDDIST           1.0
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define DEFAULT_MAXROUNDS            -1 /**< maximal number of cmir separation rounds per node (-1: unlimited) */
 #define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of cmir separation rounds in the root node (-1: unlimited) */
-#define DEFAULT_MAXTRIES             -1 /**< maximal number of rows to start aggregation with per separation round
+#define DEFAULT_MAXTRIES            200 /**< maximal number of rows to start aggregation with per separation round
                                          *   (-1: unlimited) */
 #define DEFAULT_MAXTRIESROOT         -1 /**< maximal number of rows to start aggregation with per round in the root node
                                          *   (-1: unlimited) */
@@ -633,10 +633,9 @@ SCIP_RETCODE aggregateNextRow(
    /* found a row among the good rows, so aggregate it and stop */
    if( aggrfac != 0.0 )
    {
-      *success = TRUE;
       ++(*naggrs);
       SCIP_CALL( SCIPaggrRowAddRow(scip, aggrrow, bestrow, aggrfac, bestrowside) );
-      SCIPaggrRowRemoveZeros(aggrrow);
+      SCIPaggrRowRemoveZeros(scip, aggrrow, success);
       goto TERMINATE;
    }
 
@@ -721,10 +720,9 @@ SCIP_RETCODE aggregateNextRow(
     /* found a row so aggregate it */
    if( aggrfac != 0.0 )
    {
-      *success = TRUE;
       ++(*naggrs);
       SCIP_CALL( SCIPaggrRowAddRow(scip, aggrrow, bestrow, aggrfac, bestrowside) );
-      SCIPaggrRowRemoveZeros(aggrrow);
+      SCIPaggrRowRemoveZeros(scip, aggrrow, success);
    }
 
 TERMINATE:

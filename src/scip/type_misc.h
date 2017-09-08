@@ -86,6 +86,12 @@ typedef struct SCIP_HashMapEntry SCIP_HASHMAPENTRY;
  */
 typedef struct SCIP_HashMap SCIP_HASHMAP;
 
+/** Hash set data structure
+ *
+ *  - \ref HashMap "List of all available methods"
+ */
+typedef struct SCIP_HashSet SCIP_HASHSET;
+
 /** dynamic array for storing SCIP_Real values */
 typedef struct SCIP_RealArray SCIP_REALARRAY;
 

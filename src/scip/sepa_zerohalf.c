@@ -62,23 +62,17 @@
 #define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of zerohalf separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_MAXSEPACUTS         100 /**< maximal number of zerohalf cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT     500 /**< maximal number of zerohalf cuts separated per separation round in root node */
-#define DEFAULT_MAXSLACK           0.01 /**< maximal slack of rows to be used in aggregation */
+#define DEFAULT_MAXSLACK           0.25 /**< maximal slack of rows to be used in aggregation */
 #define DEFAULT_MAXSLACKROOT        0.5 /**< maximal slack of rows to be used in aggregation in the root node */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
 
-/* SCIPcalcMIR parameters */
-#define BOUNDSWITCH                 0.5 /**< threshold for bound switching - see SCIPcalcMIR() */
-#define USEVBDS                    TRUE /**< use variable bounds - see SCIPcalcMIR() */
-#define FIXINTEGRALRHS            FALSE /**< try to generate a fractional rhs - see SCIPcalcMIR() */
-#define MINFRAC                    0.05
-#define MAXFRAC                    1.00
-
 /* SCIPcalcRowIntegralScalar parameters */
-#define MAXDNOM                   10000
-#define MAXSCALE                10000.0
+#define MAXDNOM                    1000
+#define MAXSCALE                 1000.0
 
-
+/* other defines */
 #define MAXREDUCTIONROUNDS          100 /**< maximum number of rounds to perform reductions on the mod 2 system */
+#define BOUNDSWITCH                 0.5 /**< threshold for bound switching */
 
 
 typedef struct Mod2Col MOD2_COL;
@@ -141,8 +135,7 @@ struct Mod2Col
    int                   index;              /**< index of SCIP column associated to this column */
    int                   pos;                /**< position of column in matrix */
    SCIP_Real             solval;             /**< solution value of the column */
-   SCIP_HASHTABLE*       nonzrows;           /**< map between a MOD2ROW and its index; used as a set, the set of rows that
-                                              *   contain this column */
+   SCIP_HASHSET*         nonzrows;           /**< the set of rows that contain this column */
 };
 
 /** matrix representing the modulo 2 system */
@@ -259,14 +252,6 @@ SCIP_DECL_SORTPTRCOMP(compareRowSlack)
    return 0;
 }
 
-/** gets the index of a mod 2 row/col */
-static
-SCIP_DECL_HASHKEYVAL(hashKeyValIndex)
-{
-   /* the index is the first member for both structures so interpreting it as an int is standards compliant */
-   return *((int*)key);
-}
-
 /** take integral real value modulo 2 */
 static
 int mod2(
@@ -339,9 +324,13 @@ SCIP_RETCODE transformNonIntegralRow(
       SCIP_Real vbdconst;
       SCIP_VAR* colvar;
       SCIP_Real val;
+      SCIP_Real closestvbd;
+      SCIP_Bool localbound;
 
       if( SCIPcolIsIntegral(rowcols[i]) )
          continue;
+
+      localbound = FALSE;
 
       colvar = SCIPcolGetVar(rowcols[i]);
 
@@ -350,43 +339,55 @@ SCIP_RETCODE transformNonIntegralRow(
       /* if the value is positive we need to use a lower bound constraint */
       if( val > 0.0 )
       {
-         /* prefer variable bounds */
-         SCIP_CALL( SCIPgetVarClosestVlb(scip, colvar, NULL, &closestbound, &closestvbdind) );
-         if( closestvbdind >= 0 )
+         /* retrieve simple variable bound */
+         closestbound = SCIPvarGetLbGlobal(colvar);
+         if( allowlocal && SCIPisGT(scip, SCIPvarGetLbLocal(colvar), closestbound) )
+         {
+            /* only use local bound if it is better thatn the global bound */
+            closestbound = SCIPvarGetLbLocal(colvar);
+            localbound = TRUE;
+         }
+
+         /* retrieve closest variable bound */
+         SCIP_CALL( SCIPgetVarClosestVlb(scip, colvar, NULL, &closestvbd, &closestvbdind) );
+
+         /* if a suitable variable bound exists which is at least as good as the simple bound we use it */
+         if( closestvbdind >= 0 && SCIPisGE(scip, closestvbd, closestbound) )
          {
             vbdcoef = SCIPvarGetVlbCoefs(colvar)[closestvbdind];
             vbdvar = SCIPvarGetVlbVars(colvar)[closestvbdind];
             vbdconst = SCIPvarGetVlbConstants(colvar)[closestvbdind];
+            closestbound = closestvbd;
          }
          else
          {
-            /* if no suitable variable bound was found use simple variable bounds */
-            closestbound = SCIPvarGetLbGlobal(colvar);
-            if( allowlocal && SCIPisGT(scip, SCIPvarGetLbLocal(colvar), closestbound) )
-            {
-               /* only use local bound if it is better thatn the global bound */
-               closestbound = SCIPvarGetLbLocal(colvar);
-               local = TRUE;
-            }
+            closestvbdind = -1;
          }
       }
       else
       {
-         SCIP_CALL( SCIPgetVarClosestVub(scip, colvar, NULL, &closestbound, &closestvbdind) );
-         if( closestvbdind >= 0 )
+         /* retrieve simple variable bound */
+         closestbound = SCIPvarGetUbGlobal(colvar);
+         if( allowlocal && SCIPisLT(scip, SCIPvarGetUbLocal(colvar), closestbound) )
+         {
+            closestbound = SCIPvarGetUbLocal(colvar);
+            localbound = TRUE;
+         }
+
+         /* retrieve closest variable bound */
+         SCIP_CALL( SCIPgetVarClosestVub(scip, colvar, NULL, &closestvbd, &closestvbdind) );
+
+         /* if a suitable variable bound exists which is at least as good as the simple bound we use it */
+         if( closestvbdind >= 0 && SCIPisLE(scip, closestvbd, closestbound) )
          {
             vbdcoef = SCIPvarGetVubCoefs(colvar)[closestvbdind];
             vbdvar = SCIPvarGetVubVars(colvar)[closestvbdind];
             vbdconst = SCIPvarGetVubConstants(colvar)[closestvbdind];
+            closestbound = closestvbd;
          }
          else
          {
-            closestbound = SCIPvarGetUbGlobal(colvar);
-            if( allowlocal && SCIPisLT(scip, SCIPvarGetUbLocal(colvar), closestbound) )
-            {
-               closestbound = SCIPvarGetUbLocal(colvar);
-               local = TRUE;
-            }
+            closestvbdind = -1;
          }
       }
 
@@ -412,6 +413,7 @@ SCIP_RETCODE transformNonIntegralRow(
       }
       else if( !SCIPisInfinity(scip, REALABS(closestbound)) )
       {
+         local = local || localbound;
          transrowrhs -= val * closestbound;
       }
       else
@@ -442,7 +444,7 @@ SCIP_RETCODE transformNonIntegralRow(
       SCIP_Real intscalar;
       SCIP_VAR** vars = SCIPgetVars(scip);
 
-      SCIP_CALL( SCIPcalcIntegralScalar(transrowvals, transrowlen, -SCIPepsilon(scip), SCIPepsilon(scip), MAXDNOM, MAXSCALE, &intscalar, success) );
+      SCIP_CALL( SCIPcalcIntegralScalar(transrowvals, transrowlen, -SCIPepsilon(scip), SCIPsumepsilon(scip), MAXDNOM, MAXSCALE, &intscalar, success) );
 
       if( *success )
       {
@@ -599,8 +601,7 @@ SCIP_RETCODE mod2MatrixAddCol(
    col->pos = mod2matrix->ncols++;
    col->index = SCIPvarGetProbindex(origvar);
    col->solval = solval;
-   SCIP_CALL( SCIPhashtableCreate(&col->nonzrows, SCIPblkmem(scip), 1, SCIPhashGetKeyStandard, SCIPhashKeyEqPtr,
-                                  hashKeyValIndex, NULL) );
+   SCIP_CALL( SCIPhashsetCreate(&col->nonzrows, SCIPblkmem(scip), 1) );
 
    /* add column to mod 2 matrix */
    SCIP_CALL( SCIPensureBlockMemoryArray(scip, &mod2matrix->cols, &mod2matrix->colssize, mod2matrix->ncols) );
@@ -615,11 +616,14 @@ SCIP_RETCODE mod2MatrixAddCol(
 /** links row to mod 2 column */
 static
 SCIP_RETCODE mod2colLinkRow(
+   BMS_BLKMEM*           blkmem,             /**< block memory shell */
    MOD2_COL*             col,                /**< mod 2 column */
    MOD2_ROW*             row                 /**< mod 2 row */
    )
 {
-   SCIP_CALL( SCIPhashtableInsert(col->nonzrows, (void*)row) );
+   SCIP_CALL( SCIPhashsetInsert(col->nonzrows, blkmem, (void*)row) );
+
+   assert(SCIPhashsetExists(col->nonzrows, (void*)row));
 
    row->maxsolval = MAX(col->solval, row->maxsolval);
 
@@ -633,7 +637,20 @@ SCIP_RETCODE mod2colUnlinkRow(
    MOD2_ROW*             row                 /**< mod 2 row */
    )
 {
-   SCIP_CALL( SCIPhashtableRemove(col->nonzrows, (void*)row) );
+   SCIP_CALL( SCIPhashsetRemove(col->nonzrows, (void*)row) );
+
+   assert(!SCIPhashsetExists(col->nonzrows, (void*)row));
+#ifndef NDEBUG
+   {
+      int nslots = SCIPhashsetGetNSlots(col->nonzrows);
+      MOD2_ROW** rows = (MOD2_ROW**) SCIPhashsetGetSlots(col->nonzrows);
+
+      for( int i = 0; i < nslots; ++i )
+      {
+         assert(rows[i] != row);
+      }
+   }
+#endif
 
    return SCIP_OKAY;
 }
@@ -669,6 +686,7 @@ void mod2rowUnlinkCol(
 static
 SCIP_RETCODE mod2MatrixAddOrigRow(
    SCIP*                 scip,               /**< scip data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory shell */
    MOD2_MATRIX*          mod2matrix,         /**< modulo 2 matrix */
    SCIP_HASHMAP*         origcol2col,        /**< hashmap to retrieve the mod 2 column from a SCIP_COL */
    SCIP_ROW*             origrow,            /**< original SCIP row */
@@ -683,7 +701,7 @@ SCIP_RETCODE mod2MatrixAddOrigRow(
    int i;
    MOD2_ROW* row;
 
-   SCIP_CALL( SCIPallocBlockMemory(scip, &row) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, &row) );
 
    row->index = mod2matrix->nrows++;
    SCIP_CALL( SCIPensureBlockMemoryArray(scip, &mod2matrix->rows, &mod2matrix->rowssize, mod2matrix->nrows) );
@@ -737,7 +755,7 @@ SCIP_RETCODE mod2MatrixAddOrigRow(
             SCIP_CALL( SCIPensureBlockMemoryArray(scip, &row->nonzcols, &row->nonzcolssize, row->nnonzcols) );
             row->nonzcols[k] = col;
 
-            SCIP_CALL( mod2colLinkRow(col, row) );
+            SCIP_CALL( mod2colLinkRow(blkmem, col, row) );
          }
       }
    }
@@ -760,6 +778,7 @@ SCIP_RETCODE mod2MatrixAddTransRow(
 {
    int i;
    SCIP_VAR** vars;
+   BMS_BLKMEM* blkmem;
    MOD2_ROW* row;
    TRANSINTROW* introw;
 
@@ -768,6 +787,7 @@ SCIP_RETCODE mod2MatrixAddTransRow(
    vars = SCIPgetVars(scip);
    introw = &mod2matrix->transintrows[transrowind];
 
+   blkmem = SCIPblkmem(scip);
    row->index = mod2matrix->nrows++;
    SCIP_CALL( SCIPensureBlockMemoryArray(scip, &mod2matrix->rows, &mod2matrix->rowssize, mod2matrix->nrows) );
    mod2matrix->rows[row->index] = row;
@@ -816,7 +836,7 @@ SCIP_RETCODE mod2MatrixAddTransRow(
             SCIP_CALL( SCIPensureBlockMemoryArray(scip, &row->nonzcols, &row->nonzcolssize, row->nnonzcols) );
             row->nonzcols[k] = col;
 
-            SCIP_CALL( mod2colLinkRow(col, row) );
+            SCIP_CALL( mod2colLinkRow(blkmem, col, row) );
          }
       }
    }
@@ -839,7 +859,7 @@ void destroyMod2Matrix(
 
    for( i = 0; i < mod2matrix->ncols; ++i )
    {
-      SCIPhashtableFree(&mod2matrix->cols[i]->nonzrows);
+      SCIPhashsetFree(&mod2matrix->cols[i]->nonzrows, SCIPblkmem(scip));
       SCIPfreeBlockMemory(scip, &mod2matrix->cols[i]);
    }
 
@@ -868,6 +888,7 @@ void destroyMod2Matrix(
 static
 SCIP_RETCODE buildMod2Matrix(
    SCIP*                 scip,               /**< scip data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory shell */
    MOD2_MATRIX*          mod2matrix,         /**< mod 2 matrix */
    SCIP_Bool             allowlocal,         /**< should local cuts be allowed */
    SCIP_Real             maxslack            /**< maximum slack allowed for mod 2 rows */
@@ -992,24 +1013,24 @@ SCIP_RETCODE buildMod2Matrix(
             assert(SCIPisEQ(scip, SCIProwGetLhs(rows[i]), SCIProwGetRhs(rows[i])));
 
             /* use rhs */
-            SCIP_CALL( mod2MatrixAddOrigRow(scip, mod2matrix, origcol2col, rows[i], rhsslack, ORIG_RHS, rhsmod2) );
+            SCIP_CALL( mod2MatrixAddOrigRow(scip, blkmem, mod2matrix, origcol2col, rows[i], rhsslack, ORIG_RHS, rhsmod2) );
          }
          else
          {
             /* use both */
-            SCIP_CALL( mod2MatrixAddOrigRow(scip, mod2matrix, origcol2col, rows[i], lhsslack, ORIG_LHS, lhsmod2) );
-            SCIP_CALL( mod2MatrixAddOrigRow(scip, mod2matrix, origcol2col, rows[i], rhsslack, ORIG_RHS, rhsmod2) );
+            SCIP_CALL( mod2MatrixAddOrigRow(scip, blkmem, mod2matrix, origcol2col, rows[i], lhsslack, ORIG_LHS, lhsmod2) );
+            SCIP_CALL( mod2MatrixAddOrigRow(scip, blkmem, mod2matrix, origcol2col, rows[i], rhsslack, ORIG_RHS, rhsmod2) );
          }
       }
       else if( rhsslack <= maxslack )
       {
          /* use rhs */
-         SCIP_CALL( mod2MatrixAddOrigRow(scip, mod2matrix, origcol2col, rows[i], rhsslack, ORIG_RHS, rhsmod2) );
+         SCIP_CALL( mod2MatrixAddOrigRow(scip, blkmem, mod2matrix, origcol2col, rows[i], rhsslack, ORIG_RHS, rhsmod2) );
       }
       else if( lhsslack <= maxslack )
       {
          /* use lhs */
-         SCIP_CALL( mod2MatrixAddOrigRow(scip, mod2matrix, origcol2col, rows[i], lhsslack, ORIG_LHS, lhsmod2) );
+         SCIP_CALL( mod2MatrixAddOrigRow(scip, blkmem, mod2matrix, origcol2col, rows[i], lhsslack, ORIG_LHS, lhsmod2) );
       }
    }
 
@@ -1033,21 +1054,21 @@ SCIP_DECL_HASHKEYEQ(columnsEqual)
 {
    MOD2_COL* col1;
    MOD2_COL* col2;
-   int col1entries;
+   int nslotscol1;
+   MOD2_ROW** col1rows;
    int i;
 
    col1 = (MOD2_COL*) key1;
    col2 = (MOD2_COL*) key2;
 
-   if( SCIPhashtableGetNElements(col1->nonzrows) != SCIPhashtableGetNElements(col2->nonzrows) )
+   if( SCIPhashsetGetNElements(col1->nonzrows) != SCIPhashsetGetNElements(col2->nonzrows) )
       return FALSE;
 
-   col1entries = SCIPhashtableGetNEntries(col1->nonzrows);
-   for( i = 0; i < col1entries; ++i )
+   nslotscol1 = SCIPhashsetGetNSlots(col1->nonzrows);
+   col1rows = (MOD2_ROW**) SCIPhashsetGetSlots(col1->nonzrows);
+   for( i = 0; i < nslotscol1; ++i )
    {
-      MOD2_ROW* row = (MOD2_ROW*)SCIPhashtableGetEntry(col1->nonzrows, i);
-
-      if( row != NULL && !SCIPhashtableExists(col2->nonzrows, (void*)row) )
+      if( col1rows[i] != NULL && !SCIPhashsetExists(col2->nonzrows, (void*)col1rows[i]) )
          return FALSE;
    }
 
@@ -1059,19 +1080,21 @@ static
 SCIP_DECL_HASHKEYVAL(columnGetSignature)
 {
    MOD2_COL* col;
-   int i;
-   int colentries;
+   MOD2_ROW** rows;
    uint64_t signature;
+   int i;
+   int nslots;
 
    col = (MOD2_COL*) key;
 
-   colentries = SCIPhashtableGetNEntries(col->nonzrows);
+   nslots = SCIPhashsetGetNSlots(col->nonzrows);
+   rows = (MOD2_ROW**) SCIPhashsetGetSlots(col->nonzrows);
+
    signature = 0;
-   for( i = 0; i < colentries; ++i )
+   for( i = 0; i < nslots; ++i )
    {
-      MOD2_ROW* row = (MOD2_ROW*) SCIPhashtableGetEntry(col->nonzrows, i);
-      if( row != NULL )
-         signature |= SCIPhashSignature64(row->index);
+      if( rows[i] != NULL )
+         signature |= SCIPhashSignature64(rows[i]->index);
    }
 
    return signature;
@@ -1167,26 +1190,34 @@ void mod2matrixRemoveCol(
    )
 {
    int i;
-   int colentries;
-   int position = col->pos;
+   int nslots;
+   MOD2_ROW** rows;
+   int position;
+
+   assert(col != NULL);
+
+   /* cppcheck-suppress nullPointer */
+   position = col->pos;
 
    /* remove column from arrays */
    --mod2matrix->ncols;
    mod2matrix->cols[position] = mod2matrix->cols[mod2matrix->ncols];
    mod2matrix->cols[position]->pos = position;
 
-   colentries = SCIPhashtableGetNEntries(col->nonzrows);
+   /* cppcheck-suppress nullPointer */
+   nslots = SCIPhashsetGetNSlots(col->nonzrows);
+   /* cppcheck-suppress nullPointer */
+   rows = (MOD2_ROW**) SCIPhashsetGetSlots(col->nonzrows);
 
    /* adjust rows of column */
-   for( i = 0; i < colentries; ++i )
+   for( i = 0; i < nslots; ++i )
    {
-      MOD2_ROW* row = (MOD2_ROW*) SCIPhashtableGetEntry(col->nonzrows, i);
-      if( row != NULL )
-         mod2rowUnlinkCol(row, col);
+      if( rows[i] != NULL )
+         mod2rowUnlinkCol(rows[i], col);
    }
 
    /* free column */
-   SCIPhashtableFree(&col->nonzrows);
+   SCIPhashsetFree(&col->nonzrows, SCIPblkmem(scip));
    SCIPfreeBlockMemory(scip, &col);
 }
 
@@ -1207,7 +1238,7 @@ SCIP_RETCODE mod2matrixPreprocessColumns(
    for( i = 0; i < mod2matrix->ncols; )
    {
       MOD2_COL* col = mod2matrix->cols[i];
-      int nnonzrows = SCIPhashtableGetNElements(col->nonzrows);
+      int nnonzrows = SCIPhashsetGetNElements(col->nonzrows);
       if( nnonzrows == 0 )
       { /* Prop3 iii */
          mod2matrixRemoveCol(scip, mod2matrix, col);
@@ -1215,11 +1246,16 @@ SCIP_RETCODE mod2matrixPreprocessColumns(
       else if( nnonzrows == 1 )
       { /* Prop3 v */
          MOD2_ROW* row;
-         int j = 0;
-         do
+
          {
-            row = (MOD2_ROW*) SCIPhashtableGetEntry(col->nonzrows, j++);
-         } while( row == NULL );
+            int j = 0;
+            MOD2_ROW** rows;
+            rows = (MOD2_ROW**) SCIPhashsetGetSlots(col->nonzrows);
+            while( rows[j] == NULL )
+               ++j;
+
+            row = rows[j];
+         }
 
          checkRow(row);
 
@@ -1264,9 +1300,118 @@ SCIP_RETCODE mod2matrixPreprocessColumns(
    return SCIP_OKAY;
 }
 
+#define NONZERO(x)   (COPYSIGN(1e-100, (x)) + (x))
+
+/** add original row to aggregation with weight 0.5 */
+static
+void addOrigRow(
+   SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP_Real*            tmpcoefs,           /**< array to add coefficients to */
+   SCIP_Real*            cutrhs,             /**< pointer to add right hand side */
+   int*                  nonzeroinds,        /**< array of non-zeros in the aggregation */
+   int*                  nnz,                /**< pointer to update number of non-zeros */
+   int*                  cutrank,            /**< pointer to update cut rank */
+   SCIP_Bool*            cutislocal,         /**< pointer to update local flag */
+   SCIP_ROW*             row,                /**< row to add */
+   int                   sign                /**< sign for weight, i.e. +1 to use right hand side or -1 to use left hand side */
+   )
+{
+   int i;
+   SCIP_Real weight = 0.5 * sign;
+
+   for( i = 0; i < row->len; ++i )
+   {
+      int probindex = row->cols[i]->var_probindex;
+      SCIP_Real val = tmpcoefs[probindex];
+
+      if( val == 0.0 )
+      {
+         nonzeroinds[(*nnz)++] = probindex;
+      }
+
+      val += weight * row->vals[i];
+      tmpcoefs[probindex] = NONZERO(val);
+   }
+
+   if( sign == +1 )
+   {
+      *cutrhs += weight * SCIPfeasFloor(scip, row->rhs - row->constant);
+   }
+   else
+   {
+      assert(sign == -1);
+      *cutrhs += weight * SCIPfeasCeil(scip, row->lhs - row->constant);
+   }
+
+   *cutrank = MAX(*cutrank, row->rank);
+   *cutislocal = *cutislocal || row->local;
+}
+
+/** add transformed integral row to aggregation with weight 0.5 */
+static
+void addTransRow(
+   SCIP_Real*            tmpcoefs,           /**< array to add coefficients to */
+   SCIP_Real*            cutrhs,             /**< pointer to add right hand side */
+   int*                  nonzeroinds,        /**< array of non-zeros in the aggregation */
+   int*                  nnz,                /**< pointer to update number of non-zeros */
+   int*                  cutrank,            /**< pointer to update cut rank */
+   SCIP_Bool*            cutislocal,         /**< pointer to update local flag */
+   TRANSINTROW*          introw              /**< transformed integral row to add to the aggregation */
+   )
+{
+   int i;
+
+   for( i = 0; i < introw->len; ++i )
+   {
+      int probindex = introw->varinds[i];
+      SCIP_Real val = tmpcoefs[probindex];
+
+      if( val == 0.0 )
+      {
+         nonzeroinds[(*nnz)++] = probindex;
+      }
+
+      val += 0.5 * introw->vals[i];
+      tmpcoefs[probindex] = NONZERO(val);
+   }
+
+   *cutrhs += 0.5 * introw->rhs;
+
+   *cutrank = MAX(*cutrank, introw->rank);
+   *cutislocal = *cutislocal || introw->local;
+}
+
+/* calculates the cuts efficacy of cut */
+static
+SCIP_Real calcEfficacy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real*            cutcoefs,           /**< array of the non-zero coefficients in the cut */
+   SCIP_Real             cutrhs,             /**< the right hand side of the cut */
+   int*                  cutinds,            /**< array of the problem indices of variables with a non-zero coefficient in the cut */
+   int                   cutnnz              /**< the number of non-zeros in the cut */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_Real norm;
+   SCIP_Real activity;
+   int i;
+
+   assert(scip != NULL);
+   assert(cutcoefs != NULL);
+   assert(cutinds != NULL);
+
+   norm = MAX(1e-6, SCIPgetVectorEfficacyNorm(scip, cutcoefs, cutnnz));
+   vars = SCIPgetVars(scip);
+
+   activity = 0.0;
+   for( i = 0; i < cutnnz; ++i )
+      activity += cutcoefs[i] * SCIPgetVarSol(scip, vars[cutinds[i]]);
+
+   return (activity - cutrhs) / norm;
+}
 
 /** generate a zerohalf cut from a given mod 2 row, i.e., try if aggregations of rows of the
- * mod2 matrix give violated cuts
+ *  mod2 matrix give violated cuts
  */
 static
 SCIP_RETCODE generateZerohalfCut(
@@ -1286,55 +1431,167 @@ SCIP_RETCODE generateZerohalfCut(
    int* cutinds;
    SCIP_Real cutrhs;
    SCIP_Real cutefficacy;
-   SCIP_Bool success;
+   SCIP_Real* tmpcoefs;
    int cutrank;
+   int nvars;
+   SCIP_VAR** vars;
 
    rows = SCIPgetLPRows(scip);
+   nvars = SCIPgetNVars(scip);
+   vars = SCIPgetVars(scip);
 
-   SCIPaggrRowClear(sepadata->aggrrow);
+   /* right hand side must be odd, otherwise no cut can be generated */
+   assert(row->rhs == 1);
 
+   /* perform the summation of the rows defined by the mod 2 row*/
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &tmpcoefs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cutinds,  nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
+
+   /* the right hand side of the zerohalf cut will be rounded down by 0.5
+    * thus we can instead subtract 0.5 directly
+    */
+   cutrhs = -0.5;
+   cutnnz = 0;
+   cutrank = 0;
+   cutislocal = FALSE;
+
+   /* compute the aggregation of the rows with weight 0.5 */
    for( i = 0; i < row->nrowinds; ++i )
    {
       switch( row->rowinds[i].type )
       {
          case ORIG_RHS:
-            SCIP_CALL( SCIPaggrRowAddRow(scip, sepadata->aggrrow, rows[row->rowinds[i].index], 0.5, 1) );
+            addOrigRow(scip, tmpcoefs, &cutrhs, cutinds, &cutnnz, &cutrank, &cutislocal, rows[row->rowinds[i].index], 1);
             break;
          case ORIG_LHS:
-            SCIP_CALL( SCIPaggrRowAddRow(scip, sepadata->aggrrow, rows[row->rowinds[i].index], -0.5, -1) );
+            addOrigRow(scip, tmpcoefs, &cutrhs, cutinds, &cutnnz, &cutrank, &cutislocal, rows[row->rowinds[i].index], -1);
             break;
          case TRANSROW: {
             TRANSINTROW* introw = &mod2matrix->transintrows[row->rowinds[i].index];
             SCIPdebugMsg(scip, "using transformed row %i of length %i with slack %f and rhs %f for cut\n", row->rowinds[i].index, introw->len, introw->slack, introw->rhs);
-            SCIP_CALL( SCIPaggrRowAddCustomCons(scip, sepadata->aggrrow, introw->varinds, introw->vals,
-                                                introw->len, introw->rhs, 0.5, introw->rank, introw->local) );
+            addTransRow(tmpcoefs, &cutrhs, cutinds, &cutnnz, &cutrank, &cutislocal, introw);
          }
-
       }
    }
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, SCIPgetNVars(scip)) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &cutinds, SCIPgetNVars(scip)) );
-   SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, allowlocal, FIXINTEGRALRHS, NULL, NULL, MINFRAC, MAXFRAC,
-                          1.0, sepadata->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
-
-   if( success && SCIPisEfficacious(scip, cutefficacy) )
+   /* compute the cut coefficients and update right handside due to complementation if necessary */
+   for( i = 0; i < cutnnz; )
    {
-      SCIP_VAR** vars;
+      int k = cutinds[i];
+      SCIP_Real coef = tmpcoefs[k];
+      SCIP_Real floorcoef = SCIPfeasFloor(scip, coef);
+      tmpcoefs[k] = 0.0;
+
+      /* only check complementation if the coefficient was rounded down */
+      if( REALABS(coef - floorcoef) > 0.1 )
+      {
+         SCIP_Real lb;
+         SCIP_Real ub;
+         SCIP_Bool loclb;
+         SCIP_Bool locub;
+         SCIP_Real primsol;
+         SCIP_Bool useub;
+
+         /* complement with closest bound */
+         primsol = SCIPgetVarSol(scip, vars[k]);
+         lb = SCIPvarGetLbGlobal(vars[k]);
+         ub = SCIPvarGetUbGlobal(vars[k]);
+         loclb = FALSE;
+         locub = FALSE;
+
+         /* use local bounds if better */
+         if( allowlocal )
+         {
+            if( SCIPisGT(scip, SCIPvarGetLbLocal(vars[k]), lb) )
+            {
+               loclb = TRUE;
+               lb = SCIPvarGetLbLocal(vars[k]);
+            }
+
+            if( SCIPisLT(scip, SCIPvarGetUbLocal(vars[k]), ub) )
+            {
+               locub = TRUE;
+               ub = SCIPvarGetUbLocal(vars[k]);
+            }
+         }
+
+         if( SCIPisInfinity(scip, ub) ) /* if there is no ub, use lb */
+            useub = FALSE;
+         else if( SCIPisInfinity(scip, -lb) ) /* if there is no lb, use ub */
+            useub = TRUE;
+         else if( SCIPisLT(scip, primsol, (1.0 - BOUNDSWITCH) * lb + BOUNDSWITCH * ub) )
+            useub = FALSE;
+         else
+            useub = TRUE;
+
+         if( useub )
+         {
+            /* set local flag if local bound was used */
+            if( locub )
+               cutislocal = TRUE;
+
+            /* upper bound was used so floor was the wrong direction to round, coefficient must be ceiled instead */
+            floorcoef += 1.0;
+
+            assert(SCIPisFeasEQ(scip, floorcoef - coef, 0.5));
+
+            /* add delta of complementing then rounding by 0.5 and complementing back to the right hand side */
+            cutrhs += 0.5 * ub;
+         }
+         else
+         {
+            /* set local flag if local bound was used */
+            if( loclb )
+               cutislocal = TRUE;
+
+            assert(SCIPisFeasEQ(scip, coef - floorcoef, 0.5));
+
+            /* add delta of complementing then rounding by 0.5 and complementing back to the right hand side */
+            cutrhs -= 0.5 * lb;
+         }
+      }
+
+      /* make coefficient exactly integral */
+      assert(SCIPisFeasIntegral(scip, floorcoef));
+      floorcoef = SCIPfeasRound(scip, floorcoef);
+
+      /* if coefficient is zero remove entry, otherwise set to floorcoef */
+      if( floorcoef == 0.0 )
+      {
+         --cutnnz;
+         cutinds[i] = cutinds[cutnnz];
+      }
+      else
+      {
+         cutcoefs[i] = floorcoef;
+         ++i;
+      }
+   }
+
+   /* make right hand side exactly integral */
+   assert(SCIPisFeasIntegral(scip, cutrhs));
+   cutrhs = SCIPfeasRound(scip, cutrhs);
+
+   /* calculate efficacy */
+   cutefficacy = calcEfficacy(scip, cutcoefs, cutrhs, cutinds, cutnnz);
+
+   if( SCIPisEfficacious(scip, cutefficacy) )
+   {
       SCIP_ROW* cut;
       char cutname[SCIP_MAXSTRLEN];
       int v;
 
-      assert(allowlocal || !cutislocal);
+      /* increase rank by 1 */
+      cutrank += 1;
 
-      vars = SCIPgetVars(scip);
+      assert(allowlocal || !cutislocal);
 
       /* create the cut */
       (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "zerohalf%d_x%d", SCIPgetNLPs(scip), row->index);
 
       SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE, sepadata->dynamiccuts) );
 
-      /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
       SCIProwChgRank(cut, cutrank);
 
       /* cache the row extension and only flush them if the cut gets added */
@@ -1349,14 +1606,12 @@ SCIP_RETCODE generateZerohalfCut(
       /* flush all changes before adding the cut */
       SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
 
-      /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
-
       if( SCIPisCutNew(scip, cut) )
       {
          SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &sepadata->infeasible) );
          sepadata->ncuts++;
 
-         if( !sepadata->infeasible && !cutislocal )
+         if( !cutislocal )
          {
             SCIP_CALL( SCIPaddPoolCut(scip, cut) );
          }
@@ -1364,11 +1619,11 @@ SCIP_RETCODE generateZerohalfCut(
 
       /* release the row */
       SCIP_CALL( SCIPreleaseRow(scip, &cut) );
-      assert(success);
    }
 
    SCIPfreeBufferArray(scip, &cutinds);
    SCIPfreeBufferArray(scip, &cutcoefs);
+   SCIPfreeCleanBufferArray(scip, &tmpcoefs);
 
    return SCIP_OKAY;
 }
@@ -1472,6 +1727,7 @@ TERMINATE:
 static
 SCIP_RETCODE mod2rowAddRow(
    SCIP*                 scip,               /**< scip data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory shell */
    MOD2_MATRIX*          mod2matrix,         /**< mod 2 matrix */
    MOD2_ROW*             row,                /**< mod 2 row */
    MOD2_ROW*             rowtoadd            /**< mod 2 row that is added to the other mod 2 row */
@@ -1496,6 +1752,7 @@ SCIP_RETCODE mod2rowAddRow(
    row->rhs ^= rowtoadd->rhs;
 
    newslack = row->slack + rowtoadd->slack;
+   blkmem = SCIPblkmem(scip);
 
    if( SCIPisZero(scip, row->slack) && !SCIPisZero(scip, newslack) )
       --mod2matrix->nzeroslackrows;
@@ -1573,7 +1830,7 @@ SCIP_RETCODE mod2rowAddRow(
       }
       else
       {
-         SCIP_CALL( mod2colLinkRow(rowtoadd->nonzcols[j], row) );
+         SCIP_CALL( mod2colLinkRow(blkmem, rowtoadd->nonzcols[j], row) );
          newnonzcols[k++] = rowtoadd->nonzcols[j++];
       }
    }
@@ -1586,7 +1843,7 @@ SCIP_RETCODE mod2rowAddRow(
 
    while( j <  rowtoadd->nnonzcols )
    {
-      SCIP_CALL( mod2colLinkRow(rowtoadd->nonzcols[j], row) );
+      SCIP_CALL( mod2colLinkRow(blkmem, rowtoadd->nonzcols[j], row) );
       newnonzcols[k++] = rowtoadd->nonzcols[j++];
    }
 
@@ -1691,7 +1948,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
    sepadata->ncuts = 0;
    sepadata->infeasible = FALSE;
 
-   SCIP_CALL( buildMod2Matrix(scip, &mod2matrix, allowlocal, maxslack) );
+   SCIP_CALL( buildMod2Matrix(scip, SCIPblkmem(scip), &mod2matrix, allowlocal, maxslack) );
 
    SCIPdebugMsg(scip, "built mod2 matrix (%i rows, %i cols)\n", mod2matrix.nrows, mod2matrix.ncols);
 
@@ -1750,28 +2007,30 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
          assert( col != NULL );
 
          {
-            int colentries;
+            int nslots;
             int nnonzrows;
+            MOD2_ROW** rows;
 
             ++sepadata->nreductions;
 
             nnonzrows = 0;
             /* cppcheck-suppress nullPointer */
-            colentries = SCIPhashtableGetNEntries(col->nonzrows);
+            nslots = SCIPhashsetGetNSlots(col->nonzrows);
+            /* cppcheck-suppress nullPointer */
+            rows = (MOD2_ROW**) SCIPhashsetGetSlots(col->nonzrows);
 
-            for( j = 0; j < colentries; ++j )
+            for( j = 0; j < nslots; ++j )
             {
-               /* cppcheck-suppress nullPointer */
-               MOD2_ROW* colrow = (MOD2_ROW*) SCIPhashtableGetEntry(col->nonzrows, j);
-               if( colrow != NULL && colrow != row )
-                  nonzrows[nnonzrows++] = colrow;
+               if( rows[j] != NULL && rows[j] != row )
+                  nonzrows[nnonzrows++] = rows[j];
             }
 
             for( j = 0; j < nnonzrows; ++j )
             {
-               SCIP_CALL( mod2rowAddRow(scip, &mod2matrix, nonzrows[j], row) );
+               SCIP_CALL( mod2rowAddRow(scip, SCIPblkmem(scip), &mod2matrix, nonzrows[j], row) );
             }
 
+            /* cppcheck-suppress nullPointer */
             row->slack = col->solval;
             --mod2matrix.nzeroslackrows;
 

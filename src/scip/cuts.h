@@ -139,7 +139,9 @@ SCIP_RETCODE SCIPaggrRowSumRows(
 /** removes all (close enough to) zero entries in the aggregation row */
 extern
 void SCIPaggrRowRemoveZeros(
-   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
+   SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   SCIP_Bool*            valid               /**< pointer to return whether the aggregation row is still valid */
    );
 
 /** safely removes variables with small coefficients from the aggregation row */
