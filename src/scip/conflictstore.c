@@ -1144,7 +1144,7 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
          ++i;
          continue;
       }
-      if( !conflictstore->updateside[i] )
+      if( !conflictstore->updateside[i] || SCIPsetIsLE(set, improvement * conflictstore->dualprimalbnds[i], cutoffbound) )
       {
          ++i;
          continue;
