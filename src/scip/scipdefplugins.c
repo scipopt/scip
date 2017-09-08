@@ -150,11 +150,13 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurOfins(scip) );
    SCIP_CALL( SCIPincludeHeurOneopt(scip) );
    SCIP_CALL( SCIPincludeHeurProximity(scip) );
+   SCIP_CALL( SCIPincludeHeurProximitybenders(scip) );
    SCIP_CALL( SCIPincludeHeurPscostdiving(scip) );
    SCIP_CALL( SCIPincludeHeurRandrounding(scip) );
    SCIP_CALL( SCIPincludeHeurRens(scip) );
    SCIP_CALL( SCIPincludeHeurReoptsols(scip) );
    SCIP_CALL( SCIPincludeHeurRepair(scip) );
+   SCIP_CALL( SCIPincludeHeurRinsbenders(scip) );
    SCIP_CALL( SCIPincludeHeurRins(scip) );
    SCIP_CALL( SCIPincludeHeurRootsoldiving(scip) );
    SCIP_CALL( SCIPincludeHeurRounding(scip) );

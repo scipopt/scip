@@ -25,17 +25,18 @@
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 #include "scip/cons_linear.h"
-#include "scip/heur_rins.h"
+#include "scip/heur_rins-benders.h"
 #include "scip/pub_misc.h"
 
-#define HEUR_NAME             "rins"
+#define HEUR_NAME             "rins-benders"
 #define HEUR_DESC             "relaxation induced neighborhood search by Danna, Rothberg, and Le Pape"
 #define HEUR_DISPCHAR         'N'
 #define HEUR_PRIORITY         -1101000
-#define HEUR_FREQ             25
+#define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
-#define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPNODE
+//#define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPNODE
+#define HEUR_TIMING           SCIP_HEURTIMING_DURINGLPLOOP
 #define HEUR_USESSUBSCIP      TRUE      /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_NODESOFS      500       /* number of nodes added to the contingent of the total nodes          */
@@ -54,7 +55,7 @@
 #define DEFAULT_USEUCT        FALSE     /* should uct node selection be used at the beginning of the search?     */
 
 /* event handler properties */
-#define EVENTHDLR_NAME         "Rins"
+#define EVENTHDLR_NAME         "Rinsbenders"
 #define EVENTHDLR_DESC         "LP event handler for " HEUR_NAME " heuristic"
 
 /*
@@ -219,7 +220,7 @@ SCIP_RETCODE createNewSol(
  * we interrupt the solution process
  */
 static
-SCIP_DECL_EVENTEXEC(eventExecRins)
+SCIP_DECL_EVENTEXEC(eventExecRinsbenders)
 {
    SCIP_HEURDATA* heurdata;
 
@@ -249,21 +250,21 @@ SCIP_DECL_EVENTEXEC(eventExecRins)
 
 /** copy method for primal heuristic plugins (called when SCIP copies plugins) */
 static
-SCIP_DECL_HEURCOPY(heurCopyRins)
+SCIP_DECL_HEURCOPY(heurCopyRinsbenders)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
    /* call inclusion method of primal heuristic */
-   SCIP_CALL( SCIPincludeHeurRins(scip) );
+   SCIP_CALL( SCIPincludeHeurRinsbenders(scip) );
 
    return SCIP_OKAY;
 }
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
-SCIP_DECL_HEURFREE(heurFreeRins)
+SCIP_DECL_HEURFREE(heurFreeRinsbenders)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
@@ -284,7 +285,7 @@ SCIP_DECL_HEURFREE(heurFreeRins)
 
 /** initialization method of primal heuristic (called after problem was transformed) */
 static
-SCIP_DECL_HEURINIT(heurInitRins)
+SCIP_DECL_HEURINIT(heurInitRinsbenders)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
@@ -304,7 +305,7 @@ SCIP_DECL_HEURINIT(heurInitRins)
 
 /** execution method of primal heuristic */
 static
-SCIP_DECL_HEUREXEC(heurExecRins)
+SCIP_DECL_HEUREXEC(heurExecRinsbenders)
 {  /*lint --e{715}*/
    SCIP_Longint nnodes;
 
@@ -332,6 +333,8 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    assert( scip != NULL );
    assert( result != NULL );
    assert( SCIPhasCurrentNodeLP(scip) );
+
+   printf("RINSBENDERS\n");
 
    *result = SCIP_DELAYED;
 
@@ -419,12 +422,12 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
 
    /* create a problem copy as sub SCIP */
-   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "rins", fixedvars, fixedvals, nfixedvars,
+   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "rinsbenders", fixedvars, fixedvals, nfixedvars,
          heurdata->uselprows, heurdata->copycuts, &success, NULL) );
 
    eventhdlr = NULL;
    /* create event handler for LP events */
-   SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecRins, NULL) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecRinsbenders, NULL) );
    if( eventhdlr == NULL )
    {
       SCIPerrorMessage("event handler for " HEUR_NAME " heuristic not found.\n");
@@ -458,6 +461,7 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nnodes) );
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", MAX(10, nnodes/10)) );
    SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", 3) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/gap", 0.1) );
 
    /* forbid recursive call of heuristics and separators solving subMIPs */
    SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
@@ -466,7 +470,7 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    SCIP_CALL( SCIPsetSeparating(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
 
    /* disable expensive presolving */
-   SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
+   //SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
 
    /* use best estimate node selection */
    if( SCIPfindNodesel(subscip, "estimate") != NULL && !SCIPisParamFixed(subscip, "nodeselection/estimate/stdpriority") )
@@ -584,7 +588,7 @@ SCIP_DECL_HEUREXEC(heurExecRins)
  */
 
 /** creates the RINS primal heuristic and includes it in SCIP */
-SCIP_RETCODE SCIPincludeHeurRins(
+SCIP_RETCODE SCIPincludeHeurRinsbenders(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -597,14 +601,14 @@ SCIP_RETCODE SCIPincludeHeurRins(
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
          HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecRins, heurdata) );
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecRinsbenders, heurdata) );
 
    assert(heur != NULL);
 
    /* set non-NULL pointers to callback methods */
-   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyRins) );
-   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeRins) );
-   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitRins) );
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyRinsbenders) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeRinsbenders) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitRinsbenders) );
 
    /* add RINS primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/nodesofs",
