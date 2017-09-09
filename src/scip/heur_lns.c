@@ -61,10 +61,10 @@
  * bandit algorithm parameters
  */
 #define DEFAULT_BESTSOLWEIGHT 1
-#define DEFAULT_BANDITALGO 'e'    /**< the default bandit algorithm: (u)pper confidence bounds, (e)xp.3, epsilon (g)reedy */
+#define DEFAULT_BANDITALGO 'u'    /**< the default bandit algorithm: (u)pper confidence bounds, (e)xp.3, epsilon (g)reedy */
 #define DEFAULT_GAMMA 0.2         /**< default weight between uniform (gamma ~ 1) and weight driven (gamma ~ 0) probability distribution for exp3 */
 #define DEFAULT_BETA 0.0          /**< default gain offset between 0 and 1 at every observation for exp3 */
-#define DEFAULT_GAINCONTROL  0.7  /**< gain control to increase the weight of the simple solution indicator and decrease the weight of the closed gap gain */
+#define DEFAULT_GAINCONTROL  0.8  /**< gain control to increase the weight of the simple solution indicator and decrease the weight of the closed gap gain */
 #define DEFAULT_SCALEBYEFFORT     TRUE /**< should the gain be scaled by the effort? */
 #define GAINMEASURES "bwg"
 #define DEFAULT_EPS        0.5       /**< increase exploration in epsilon-greedy bandit algorithm */
@@ -93,7 +93,7 @@
 /* individual neighborhood parameters */
 #define DEFAULT_MINFIXINGRATE_RENS 0.3
 #define DEFAULT_MAXFIXINGRATE_RENS 0.7
-#define DEFAULT_ACTIVE_RENS TRUE
+#define DEFAULT_ACTIVE_RENS FALSE
 #define DEFAULT_PRIORITY_RENS 1.0
 
 #define DEFAULT_MINFIXINGRATE_RINS 0.2
