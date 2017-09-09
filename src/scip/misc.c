@@ -3518,6 +3518,8 @@ void SCIPhashsetPrintStatistics(
    SCIPmessagePrintInfo(messagehdlr, "\n");
 }
 
+#ifndef NDEBUG
+
 /** indicates whether a hash set has no entries */
 SCIP_Bool SCIPhashsetIsEmpty(
    SCIP_HASHSET*         hashset             /**< hash set */
@@ -3549,6 +3551,8 @@ void** SCIPhashsetGetSlots(
 {
    return hashset->slots;
 }
+
+#endif
 
 /** removes all entries in a hash set. */
 void SCIPhashsetRemoveAll(

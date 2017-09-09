@@ -895,7 +895,7 @@ SCIP_RETCODE SCIPhashmapRemoveAll(
 
 /**@defgroup HashSet Hash Set
  * @ingroup DataStructures
- * @brief very lightweight hash set to pointers
+ * @brief very lightweight hash set of pointers
  *
  * @{
  */
@@ -974,6 +974,19 @@ EXTERN
 void SCIPhashsetRemoveAll(
    SCIP_HASHSET*         hashset             /**< hash set */
    );
+
+#ifdef NDEBUG
+
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+
+#define SCIPhashsetIsEmpty(hashset)        ((hashset)->nelements == 0)
+#define SCIPhashsetGetNElements(hashset)   ((hashset)->nelements)
+#define SCIPhashsetGetNSlots(hashset)      (1u << (64 - (hashset)->shift))
+#define SCIPhashsetGetSlots(hashset)       ((hashset)->slots)
+
+#endif
 
 /**@} */
 
