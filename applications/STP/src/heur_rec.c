@@ -976,7 +976,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
 
    heurdata->ncalls++;
 
-   restrictheur = (graph->terms > BOUND_MAXNTERMINALS && nedges >  BOUND_MAXNEDGES);
+   restrictheur = (graph->terms > BOUND_MAXNTERMINALS && nedges > BOUND_MAXNEDGES);
 
    if( restrictheur)
       runs = RUNS_RESTRICTED;
@@ -1407,10 +1407,157 @@ inline void markSolVerts(
    }
 }
 
+static
+SCIP_Bool isInPool(
+   const int*            soledges,           /**< edge array of solution to be checked */
+   const STPSOLPOOL*     pool                /**< the pool */
+)
+{
+   STPSOL** poolsols = pool->sols;
+   const int poolsize = pool->size;
+   const int nedges = pool->nedges;
+
+   for( int i = 0; i < poolsize; i++ )
+   {
+      int j;
+      const int* pooledges = poolsols[i]->soledges;
+      assert(pooledges != NULL);
+
+      for( j = 0; j < nedges; j++ )
+         if( pooledges[j] != soledges[j] )
+            break;
+
+      /* pooledges == soledges? */
+      if( j == nedges )
+         return TRUE;
+   }
+   return FALSE;
+}
 
 /*
  * primal heuristic specific interface methods
  */
+
+/** initializes STPSOL pool */
+SCIP_RETCODE SCIPHeurRecInitPool(
+   SCIP*                 scip,               /**< SCIP data structure */
+   STPSOLPOOL**          pool,               /**< the pool */
+   const int             maxsize             /**< capacity of pool */
+   )
+{
+   STPSOLPOOL* dpool;
+
+   assert(pool != NULL);
+   assert(maxsize > 0);
+
+   SCIP_CALL( SCIPallocBuffer(scip, pool) );
+
+   dpool = *pool;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &(dpool->sols), maxsize) );
+
+   for( int i = 0; i < maxsize; i++ )
+      dpool->sols[i] = NULL;
+
+   dpool->maxsize = maxsize;
+   dpool->size = 0;
+
+   return SCIP_OKAY;
+}
+
+
+/** frees STPSOL pool */
+void SCIPHeurRecFreePool(
+   SCIP*                 scip,               /**< SCIP data structure */
+   STPSOLPOOL**          pool                /**< the pool */
+   )
+{
+   STPSOLPOOL* dpool = *pool;
+   const int poolsize = dpool->size;
+
+   assert(pool != NULL);
+   assert(dpool != NULL);
+   assert(poolsize == dpool->maxsize || dpool->sols[poolsize] == NULL);
+
+   for( int i = poolsize - 1; i >= 0; i-- )
+   {
+      STPSOL* sol = dpool->sols[i];
+
+      assert(sol != NULL);
+
+      SCIPfreeBufferArray(scip, &(sol->soledges));
+      SCIPfreeBuffer(scip, &sol);
+   }
+
+   SCIPfreeBuffer(scip, pool);
+}
+
+
+/** tries to add STPSOL to pool */
+SCIP_RETCODE SCIPHeurRecAddToPool(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const SCIP_Real       obj,                /**< objective of solution to be added */
+   const int*            soledges,           /**< edge array of solution to be added */
+   STPSOLPOOL*           pool,               /**< the pool */
+   SCIP_Bool*            success             /**< has solution been added? */
+   )
+{
+   STPSOL** poolsols = pool->sols;
+   STPSOL* sol;
+   int i;
+   int poolsize = pool->size;
+   const int nedges = pool->nedges;
+   const int poolmaxsize = pool->maxsize;
+
+   assert(scip != NULL);
+   assert(pool != NULL);
+   assert(poolsols != NULL);
+   assert(poolsize >= 0);
+   assert(poolmaxsize >= 0);
+   assert(poolsize <= poolmaxsize);
+
+   *success = FALSE;
+
+   /* is solution in pool? */
+   if( !isInPool(soledges, pool) )
+      return SCIP_OKAY;
+
+   /* enlarge pool if possible */
+   if( poolsize < poolmaxsize )
+   {
+      sol = pool->sols[poolsize];
+      SCIP_CALL( SCIPallocBuffer(scip, &sol) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &(sol->soledges), nedges) );
+
+      poolsize++;
+      pool->size++;
+   }
+   /* pool is full; new solution worse than worst solution in pool? */
+   else if( SCIPisGT(scip, obj, poolsols[poolsize - 1]->obj) )
+   {
+      return SCIP_OKAY;
+   }
+
+   /* overwrite last element of pool (either empty or inferior to current solution) */
+   sol = poolsols[poolsize - 1];
+   assert(sol != NULL);
+   sol->obj = obj;
+   BMScopyMemoryArray(sol->soledges, soledges, nedges);
+
+   /* shift solution up */
+   for( i = poolsize - 1; i >= 1; i-- )
+   {
+      if( SCIPisGT(scip, obj, poolsols[i - 1]->obj) )
+         break;
+
+      poolsols[i] = poolsols[i - 1];
+   }
+
+   poolsols[i] = sol;
+   *success = TRUE;
+
+   return SCIP_OKAY;
+}
 
 
 

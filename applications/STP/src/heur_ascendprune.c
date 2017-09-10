@@ -52,7 +52,7 @@
 #define HEUR_TIMING           (SCIP_HEURTIMING_DURINGLPLOOP | SCIP_HEURTIMING_AFTERLPLOOP | SCIP_HEURTIMING_AFTERNODE)
 #define HEUR_USESSUBSCIP      FALSE           /**< does the heuristic use a secondary SCIP instance?                                 */
 
-#define XXX 0
+#define XXX 0 /**< write red stats */
 
 #define DEFAULT_MAXFREQPRUNE     FALSE         /**< executions of the heuristic at maximum frequency?                               */
 #define ASCENPRUNE_MINLPIMPROVE     0.05          /**< minimum percentual improvement of dual bound (wrt to gap) mandatory to execute heuristic */
@@ -1047,16 +1047,29 @@ SCIP_RETCODE SCIPheurAscendAndPrunePcMw(
                   nnewnodes++;
                   SCIP_CALL( SCIPqueueInsert(queue, &(g->head[a])) );
                }
-               if( !scanned[head] || !SCIPisZero(scip, redcosts[flipedge(a)]) )
+               if( (!scanned[head] || !SCIPisZero(scip, redcosts[flipedge(a)])) && k != root )
+               {
+                  assert(g->tail[a] != root);
+                  assert(g->head[a] != root);
+
                   newedges[nnewedges++] = a;
+               }
             }
          }
       }
 
+//#ifdef SCIP_DEBUG
+      for( e = 0; e < nnewedges; e++ )
+      {
+         assert(!(g->tail[a] == root && Is_pterm(g->term[g->head[a]])));
+         assert(!(g->head[a] == root && Is_pterm(g->term[g->tail[a]])));
+      }
+//#endif
+
       for( a = g->outbeg[root]; a != EAT_LAST; a = g->oeat[a] )
       {
          head = g->head[a];
-         if( Is_term(g->term[head]) && mark[head] )
+         if( mark[head] )
             newedges[nnewedges++] = a;
       }
 
@@ -1064,6 +1077,8 @@ SCIP_RETCODE SCIPheurAscendAndPrunePcMw(
       for( k = 0; k < nnodes; k++ )
          nodechild[k] = -1;
    }
+
+
    SCIPqueueFree(&queue);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &edgeancestor, 2 * nnewedges) );

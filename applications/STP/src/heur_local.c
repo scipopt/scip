@@ -2065,7 +2065,7 @@ SCIP_RETCODE greedyExtensionPcMw(
    SCIPpqueueFree(&pqueue);
    SCIPfreeBufferArray(scip, &stvertextmp);
 
-#if DEBUG
+#ifdef printDebug
    t = 0.0;
    for (int e = 0; e < nedges; e++)
       if( stedge[e] == CONNECT )

@@ -34,6 +34,48 @@
 extern "C" {
 #endif
 
+/** element of Steiner tree solution pool */
+typedef struct stp_solution
+{
+   SCIP_Real obj;
+   int* soledges;
+} STPSOL;
+
+/** edge based solution pool for Steiner tree problems (in presolving) */
+typedef struct stp_solution_pool
+{
+   STPSOL** sols;
+   int size;
+   int nedges;
+   int maxsize;
+} STPSOLPOOL;
+
+
+/** initializes STPSOL pool */
+extern
+SCIP_RETCODE SCIPHeurRecInitPool(
+   SCIP*                 scip,               /**< SCIP data structure */
+   STPSOLPOOL**          pool,               /**< the pool */
+   const int             maxsize             /**< capacity of pool */
+   );
+
+/** tries to add STPSOL to pool */
+extern
+SCIP_RETCODE SCIPHeurRecAddToPool(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const SCIP_Real       obj,                /**< objective of solution to be added */
+   const int*            soledges,           /**< edge array of solution to be added */
+   STPSOLPOOL*           pool,               /**< the pool */
+   SCIP_Bool*            success             /**< has solution been added? */
+   );
+
+/** frees STPSOL pool */
+extern
+void SCIPHeurRecFreePool(
+   SCIP*                 scip,               /**< SCIP data structure */
+   STPSOLPOOL**          pool                /**< the pool */
+   );
+
 /** creates the rec primal heuristic and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludeHeurRec(
