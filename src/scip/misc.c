@@ -3518,7 +3518,16 @@ void SCIPhashsetPrintStatistics(
    SCIPmessagePrintInfo(messagehdlr, "\n");
 }
 
-#ifndef NDEBUG
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ * In optimized mode, the methods are implemented as defines to improve performance.
+ * However, we want to have them in the library anyways, so we have to undef the defines.
+ */
+
+#undef SCIPhashsetIsEmpty
+#undef SCIPhashsetGetNElements
+#undef SCIPhashsetGetNSlots
+#undef SCIPhashsetGetSlots
 
 /** indicates whether a hash set has no entries */
 SCIP_Bool SCIPhashsetIsEmpty(
@@ -3551,8 +3560,6 @@ void** SCIPhashsetGetSlots(
 {
    return hashset->slots;
 }
-
-#endif
 
 /** removes all entries in a hash set. */
 void SCIPhashsetRemoveAll(
