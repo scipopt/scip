@@ -20,14 +20,16 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include <string.h>
 #include "scip/cons_expr_sin.h"
 #include "scip/cons_expr.h"
+#include "cons_expr_value.h"
 
 /* fundamental expression handler properties */
 #define EXPRHDLR_NAME         "sin"
-#define EXPRHDLR_DESC         "expression handler template"
-#define EXPRHDLR_PRECEDENCE   0
-#define EXPRHDLR_HASHKEY      SCIPcalcFibHash(1.0)
+#define EXPRHDLR_DESC         "sine expression"
+#define SIN_PRECEDENCE   0
+#define SIN_HASHKEY      SCIPcalcFibHash(1.0)
 
 /*
  * Data structures
@@ -59,47 +61,58 @@ struct SCIP_ConsExpr_ExprHdlrData
 static
 SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrSin)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of sin constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CALL( SCIPincludeConsExprExprHdlrSin(scip, consexprhdlr) );
+   *valid = TRUE;
+
+   return SCIP_OKAY;
 }
 
-/** expression handler free callback */
-static
-SCIP_DECL_CONSEXPR_EXPRFREEHDLR(freehdlrSin)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of sin constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-}
-
-/** simplifies a sin expression */
+/** simplifies a sin expression
+ * Evaluates the sine value function when its child is a value expression
+ * TODO: add further simplifications
+ */
 static
 SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySin)
 {  /*lint --e{715}*/
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_CONSHDLR* conshdlr;
+
+   assert(scip != NULL);
    assert(expr != NULL);
+   assert(simplifiedexpr != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
 
-   SCIPerrorMessage("method of sin constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-}
+   conshdlr = SCIPfindConshdlr(scip, "expr");
+   assert(conshdlr != NULL);
 
-/** expression compare callback */
-static
-SCIP_DECL_CONSEXPR_EXPRCMP(compareSin)
-{  /*lint --e{715}*/
-   assert(expr1 != NULL);
-   assert(expr2 != NULL);
+   child = SCIPgetConsExprExprChildren(expr)[0];
+   assert(child != NULL);
 
-   SCIPerrorMessage("method of sin constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   /* check for value expression */
+   if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrValue(conshdlr) )
+   {
+      SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, simplifiedexpr, SIN(SCIPgetConsExprExprValueValue(child))) );
+   }
+   else
+   {
+      *simplifiedexpr = expr;
 
-   return 0;
+      /* we have to capture it, since it must simulate a "normal" simplified call in which a new expression is created */
+      SCIPcaptureConsExprExpr(*simplifiedexpr);
+   }
+
+   return SCIP_OKAY;
 }
 
 /** expression data copy callback */
 static
 SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataSin)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of sin constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   assert(targetscip != NULL);
+   assert(targetexprdata != NULL);
+
+   SCIP_CALL( SCIPallocBlockMemory(targetscip, targetexprdata) );
+   BMSclearMemory(*targetexprdata);
 
    return SCIP_OKAY;
 }
@@ -108,10 +121,15 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataSin)
 static
 SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataSin)
 {  /*lint --e{715}*/
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+
    assert(expr != NULL);
 
-   SCIPerrorMessage("method of sin constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
+
+   SCIPfreeBlockMemory(scip, &exprdata);
+   SCIPsetConsExprExprData(expr, NULL);
 
    return SCIP_OKAY;
 }
@@ -122,8 +140,54 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printSin)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
-   SCIPerrorMessage("method of sin constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   switch( stage )
+   {
+      case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
+      {
+         /* print function with opening parenthesis */
+         SCIPinfoMessage(scip, file, "sin(");
+         break;
+      }
+
+      case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
+      {
+         assert(SCIPgetConsExprExprWalkCurrentChild(expr) == 0);
+         break;
+      }
+
+      case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
+      {
+         /* print closing parenthesis */
+         SCIPinfoMessage(scip, file, ")");
+         break;
+      }
+
+      case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
+      default: ;
+   }
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_DECL_CONSEXPR_EXPRPARSE(parseSin)
+{
+   SCIP_CONSEXPR_EXPR* childexpr;
+
+   assert(expr != NULL);
+
+   /* parse child expression from remaining string */
+   SCIP_CALL( SCIPparseConsExprExpr(scip, consexprhdlr, string, endstring, &childexpr) );
+   assert(childexpr != NULL);
+
+   /* create absolute expression */
+   SCIP_CALL( SCIPcreateConsExprExprSin(scip, consexprhdlr, expr, childexpr) );
+   assert(*expr != NULL);
+
+   /* release child expression since it has been captured by the absolute expression */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &childexpr) );
+
+   *success = TRUE;
 
    return SCIP_OKAY;
 }
@@ -133,9 +197,10 @@ static
 SCIP_DECL_CONSEXPR_EXPREVAL(evalSin)
 {  /*lint --e{715}*/
    assert(expr != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+   assert(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]) != SCIP_INVALID); /*lint !e777*/
 
-   SCIPerrorMessage("method of sin constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   *val = SIN(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]));
 
    return SCIP_OKAY;
 }
@@ -144,10 +209,18 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalSin)
 static
 SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffSin)
 {  /*lint --e{715}*/
-   assert(expr != NULL);
+   SCIP_CONSEXPR_EXPR* child;
 
-   SCIPerrorMessage("method of sin constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprData(expr) != NULL);
+   assert(idx >= 0 && idx < SCIPgetConsExprExprNChildren(expr));
+   assert(SCIPgetConsExprExprValue(expr) != SCIP_INVALID);
+
+   child = SCIPgetConsExprExprChildren(expr)[idx];
+   assert(child != NULL);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child)), "val") != 0);
+
+   *val = SIN(0.5*M_PI - SCIPgetConsExprExprValue(child));
 
    return SCIP_OKAY;
 }
@@ -156,10 +229,15 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffSin)
 static
 SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalSin)
 {  /*lint --e{715}*/
-   assert(expr != NULL);
+   SCIP_INTERVAL childinterval;
 
-   SCIPerrorMessage("method of sin constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+
+   childinterval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]);
+   assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), childinterval));
+
+   SCIPintervalSin(SCIPinfinity(scip), interval, childinterval);
 
    return SCIP_OKAY;
 }
@@ -230,23 +308,15 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSin(
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    )
 {
-   SCIP_CONSEXPR_EXPRHDLRDATA* exprhdlrdata;
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
 
-   /* create expression handler data */
-   exprhdlrdata = NULL;
-
-   /* TODO: create and store expression handler specific data here */
-
-   /* include expression handler */
    SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC,
-         EXPRHDLR_PRECEDENCE, evalSin, exprhdlrdata) );
+         SIN_PRECEDENCE, evalSin, NULL) );
    assert(exprhdlr != NULL);
 
-   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrSin, freehdlrSin) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrSin, NULL) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataSin, freedataSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrSimplify(scip, consexprhdlr, exprhdlr, simplifySin) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, compareSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrInitSepa(scip, consexprhdlr, exprhdlr, initSepaSin) );
@@ -267,21 +337,18 @@ SCIP_RETCODE SCIPcreateConsExprExprSin(
    SCIP_CONSEXPR_EXPR*   child               /**< single child */
    )
 {
-   SCIP_CONSEXPR_EXPRHDLR* exprhdlr = NULL;
    SCIP_CONSEXPR_EXPRDATA* exprdata;
 
-   assert(consexprhdlr != NULL);
    assert(expr != NULL);
+   assert(child != NULL);
+   assert(SCIPfindConsExprExprHdlr(consexprhdlr, "sin") != NULL);
 
-    exprhdlr = SCIPfindConsExprExprHdlr(consexprhdlr, EXPRHDLR_NAME);
+   SCIP_CALL( SCIPallocBlockMemory(scip, &exprdata) );
+   assert(exprdata != NULL);
 
-   /* create expression data */
-   exprdata = NULL;
+   BMSclearMemory(exprdata);
 
-   /* TODO: create and store expression specific data here */
-
-   /* create expression */
-   SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, exprhdlr, exprdata, 1, &child) );
+   SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, SCIPfindConsExprExprHdlr(consexprhdlr, "sin"), exprdata, 1, &child) );
 
    return SCIP_OKAY;
 }
