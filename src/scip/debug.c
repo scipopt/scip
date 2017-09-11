@@ -894,7 +894,7 @@ SCIP_RETCODE SCIPdebugCheckRow(
    /* check row for violation */
    if( SCIPsetIsFeasLT(set, maxactivity, lhs) || SCIPsetIsFeasGT(set, minactivity, rhs) )
    {
-      printf("***** debug: row <%s> violates debugging solution (lhs=%.15g, rhs=%.15g, activity=[%.15g,%.15g], local=%d)\n",
+      printf("***** debug: row <%s> violates debugging solution (lhs=%.15g, rhs=%.15g, activity=[%.15g,%.15g], local=%u)\n",
          SCIProwGetName(row), lhs, rhs, minactivity, maxactivity, SCIProwIsLocal(row));
       SCIProwPrint(row, SCIPgetMessagehdlr(set->scip), NULL);
 
