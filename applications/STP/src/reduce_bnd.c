@@ -73,12 +73,8 @@ void pertubateEdgeCosts(
          nodearrchar[graph->head[e]] = TRUE;
    srand(graph->terms);
 
-   // todo test for MWCSP
    if( graph->stp_type != STP_MWCSP )
    {
-      // might not always hold
-      printf("newroot %d root %d \n", newroot, root);
-      assert(newroot == root);
 
       for( int k = 0; k < nnodes; k++ )
       {
@@ -102,11 +98,11 @@ void pertubateEdgeCosts(
          {
             for( e = transgraph->inpbeg[k]; e != EAT_LAST; e = transgraph->ieat[e] )
             {
-               assert(transgraph->tail[e] != newroot);
+               assert(transgraph->tail[e] != root);
 
                int todo;
-               // || result[flipedge(e)] == CONNECT
-               if( result[e] == CONNECT )
+
+               if( result[e] == CONNECT  || result[flipedge(e)] == CONNECT )
                   transgraph->cost[e] *= 1.0 - pratio;
                else
                   transgraph->cost[e] *= 1.0 + pratio;
@@ -120,10 +116,9 @@ void pertubateEdgeCosts(
                if( SCIPisPositive(scip, transgraph->cost[e]) )
                {
                   assert(!Is_pterm(transgraph->term[transgraph->tail[e]]));
-                  assert(transgraph->tail[e] != newroot);
+                  assert(transgraph->tail[e] != root);
+                  assert(result[flipedge(e)] != CONNECT);
 
-                  int todo;
-                  // || result[flipedge(e)] == CONNECT
                   if( result[e] == CONNECT )
                      transgraph->cost[e] *= 1.0 - pratio;
                   else
@@ -2036,8 +2031,8 @@ printf("raph->terms  %d \n", graph->terms );
 
       printf("RERUN NFIXED %d \n", nfixed);
    }
-
-   if( varyroot && graph->stp_type == STP_MWCSP  )
+//&& graph->stp_type == STP_MWCSP
+   if( varyroot )
    {
       int todo; //&& graph->terms > 500
       for( run = 0; run < DEFAULT_NMAXROOTS; run++ )

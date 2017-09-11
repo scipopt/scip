@@ -49,26 +49,20 @@
 #include "probdata_stp.h"
 #include "prop_stp.h"
 
-#ifndef RESTRICT
-#define RESTRICT restrict
-#endif
-
-/** set entries of (STP_Bool) array to FALSE */
+/** set entries of (STP_Bool) array to TRUE */
 static
 void setTrue(
-   STP_Bool**                arr,
+   STP_Bool*             arr,
    int                   arrsize
    )
 {
-   int i;
-
    assert(arr != NULL);
    assert(arrsize >= 0);
 
-   for( i = 0; i < arrsize; i++ )
+   for( int i = 0; i < arrsize; i++ )
    {
       assert(arr[i] != NULL);
-      *(arr[i]) = TRUE;
+      (arr[i]) = TRUE;
    }
 }
 
@@ -87,7 +81,7 @@ SCIP_RETCODE nvsl_reduction(
    int*                  neighb,
    int*                  distnode,
    int*                  solnode,
-   STP_Bool*              visited,
+   STP_Bool*             visited,
    int*                  nelims,
    int                   minelims
    )
@@ -878,7 +872,6 @@ SCIP_RETCODE reduceNw(
    return SCIP_OKAY;
 }
 
-#if 1
 /** MWCS loop */
 SCIP_RETCODE redLoopMw(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -923,7 +916,7 @@ SCIP_RETCODE redLoopMw(
    STP_Bool ansad = TRUE;
    STP_Bool ansad2 = TRUE;
    STP_Bool chain2 = TRUE;
-   STP_Bool* boolarr[16];
+   STP_Bool boolarr[16];
    STP_Bool extensive = EXTENSIVE;
 
    assert(scip != NULL);
@@ -931,14 +924,14 @@ SCIP_RETCODE redLoopMw(
    assert(fixed != NULL);
    assert(advanced || !tryrmw);
 
-   boolarr[0] = &ans;
-   boolarr[1] = &nnp;
-   boolarr[2] = &npv;
-   boolarr[3] = &bred;
-   boolarr[4] = &ansad;
-   boolarr[5] = &ansad2;
-   boolarr[6] = &chain2;
-   boolarr[7] = &da;
+   boolarr[0] = ans;
+   boolarr[1] = nnp;
+   boolarr[2] = npv;
+   boolarr[3] = bred;
+   boolarr[4] = ansad;
+   boolarr[5] = ansad2;
+   boolarr[6] = chain2;
+   boolarr[7] = da;
 
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
 
@@ -1137,324 +1130,7 @@ SCIP_RETCODE redLoopMw(
 
    return SCIP_OKAY;
 }
-#else
-/** MWCS loop */
-SCIP_RETCODE redLoopMw(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                g,                  /**< graph data structure */
-   PATH*                 vnoi,
-   PATH*                 path,
-   GNODE**               gnodearr,
-   SCIP_Real*            nodearrreal,
-   SCIP_Real*            edgearrreal,
-   SCIP_Real*            edgearrreal2,
-   int*                  state,
-   int*                  vbase,
-   int*                  nodearrint,
-   int*                  edgearrint,
-   int*                  nodearrint2,
-   int*                  nodearrint3,
-   int*                  solnode,            /**< array to indicate whether a node is part of the current solution (==CONNECT) */
-   STP_Bool*              nodearrchar,
-   SCIP_Real*            fixed,              /**< pointer to store the offset value */
-   STP_Bool              advanced,
-   STP_Bool              bred,
-   int                   redbound            /**< minimal number of edges to be eliminated in order to reiterate reductions */
-   )
-{
-   SCIP_Real timelimit;
-   SCIP_Real upperbound;
-   int daelims;
-   int anselims;
-   int nnpelims;
-   int degelims;
-   int npvelims;
-   int bredelims;
-   int ansadelims;
-   int ansad2elims;
-   int chain2elims;
 
-   STP_Bool da = advanced;
-   STP_Bool ans = TRUE;
-   STP_Bool nnp = TRUE;
-   STP_Bool npv = TRUE;
-   STP_Bool rerun = TRUE;
-   STP_Bool ansad = TRUE;
-   STP_Bool ansad2 = TRUE;
-   STP_Bool chain2 = TRUE;
-   STP_Bool* boolarr[16];
-   STP_Bool extensive = EXTENSIVE;
-
-   assert(scip != NULL);
-   assert(g != NULL);
-   assert(fixed != NULL);
-
-   boolarr[0] = &ans;
-   boolarr[1] = &nnp;
-   boolarr[2] = &npv;
-   boolarr[3] = &bred;
-   boolarr[4] = &ansad;
-   boolarr[5] = &ansad2;
-   boolarr[6] = &chain2;
-   boolarr[7] = &da;
-
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-
-   SCIP_CALL( pcgraphorg(scip, g) );
-
-#if 0
-   if( da )
-   {
-      do
-      {
-         ansadelims = 0;
-         anselims= 0;
-         nnpelims = 0;
-         chain2elims = 0;
-         npvelims = 0;
-         daelims = 0;
-         upperbound = -1.0;
-         SCIP_CALL( da_reducePcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint, nodearrint2, nodearrchar, &daelims, FALSE, FALSE) );
-
-
-      }while( (daelims) > 0 );
-   }
-   /* go back to the extended graph */
-   SCIP_CALL( pcgraphtrans(scip, g) );
-   return SCIP_OKAY;
-#endif
-   degelims = 0;
-#if 0
-   while( da && !SCIPisStopped(scip) )
-   {
-      daelims = 0;
-      upperbound = -1.0;
-      SCIP_CALL( da_reducePcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint, nodearrint2, nodearrchar, &daelims, TRUE, TRUE, FALSE) );
-
-      if( daelims <= 1 )
-      {
-         da = FALSE;
-      }
-   }
-
-   SCIP_CALL( pcgraphtrans(scip, g) );
-   return SCIP_OKAY;
-#endif
-
-   SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
-
-   while( rerun && !SCIPisStopped(scip) )
-   {
-      daelims = 0;
-      anselims = 0;
-      nnpelims = 0;
-      degelims = 0;
-      npvelims = 0;
-      bredelims = 0;
-      ansadelims = 0;
-      ansad2elims = 0;
-      chain2elims = 0;
-
-      if( SCIPgetTotalTime(scip) > timelimit )
-         break;
-#if 0
-      if( chain2 )
-      {
-         SCIP_CALL( chain2Reduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &chain2elims, 300) );
-
-         if( chain2elims <= redbound )
-            chain2 = FALSE;
-
-         printf("chain2 delete: %d \n", chain2elims);
-      }
-
-      if( npv )
-      {
-         SCIP_CALL( npvReduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &npvelims, 400) );
-
-         if( npvelims <= redbound )
-            npv = FALSE;
-
-         printf("npv delete: %d \n", npvelims);
-      }
-#endif
-
-      if( ans || extensive )
-      {
-         SCIP_CALL( ansReduction(scip, g, fixed, nodearrint2, &anselims) );
-
-         if( anselims <= redbound )
-            ans = FALSE;
-
-         SCIPdebugMessage("ans deleted: %d \n", anselims);
-      }
-
-      if( ansad || extensive )
-      {
-         SCIP_CALL( ansadvReduction(scip, g, fixed, nodearrint2, &ansadelims) );
-
-         if( ansadelims <= redbound )
-            ansad = FALSE;
-
-         SCIPdebugMessage("ans advanced deleted: %d \n", ansadelims);
-      }
-
-      if( da || (advanced && extensive) )
-      {
-         upperbound = -1.0;
-         SCIP_CALL( da_reducePcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint, nodearrint2, nodearrchar, &daelims, TRUE, TRUE, FALSE) );
-
-         if( daelims <= 2 * redbound )
-         {
-            da = FALSE;
-         }
-         else
-         {
-            SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
-         }
-      }
-#if 0
-      if( ansad2 )
-      {
-         SCIP_CALL( ansadv2Reduction(scip, g, fixed, nodearrint2, &ansad2elims) );
-
-         if( ansad2elims <= redbound )
-            ansad2 = FALSE;
-         else
-            SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
-
-         printf("ans advanced 2 deleted: %d \n", degelims);
-      }
-#endif
-      if( ans || ansad || extensive )
-      {
-         SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
-      }
-
-#if 1
-      if( chain2 || extensive )
-      {
-         SCIP_CALL( chain2Reduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &chain2elims, 300) );
-
-         if( chain2elims <= redbound )
-            chain2 = FALSE;
-
-         SCIPdebugMessage("chain2 delete: %d \n", chain2elims);
-      }
-
-      if( npv || extensive )
-      {
-         SCIP_CALL( npvReduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &npvelims, 400) );
-
-         if( npvelims <= redbound )
-            npv = FALSE;
-
-         SCIPdebugMessage("npv delete: %d \n", npvelims);
-      }
-#endif
-#if 1 /* org */
-      if( nnp )
-      {
-         SCIP_CALL( nnpReduction(scip, g, fixed, nodearrint, nodearrint2, nodearrint3, &nnpelims, 300, nodearrchar) );
-
-         if( nnpelims <= redbound )
-            nnp = FALSE;
-
-         SCIPdebugMessage("nnp deleted: %d \n", nnpelims);
-      }
-#endif
-      if( nnp || extensive )
-      {
-         SCIP_CALL( chain2Reduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &chain2elims, 500) );
-
-         if( chain2elims <= redbound )
-            chain2 = FALSE;
-
-         SCIPdebugMessage("chain2 delete: %d \n", chain2elims);
-
-         if( SCIPgetTotalTime(scip) > timelimit )
-            break;
-      }
-
-      SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
-
-#if 1 /* org */
-      if( ansad2 || extensive )
-      {
-         SCIP_CALL( ansadv2Reduction(scip, g, fixed, nodearrint2, &ansad2elims) );
-
-         if( ansad2elims <= redbound )
-         {
-            ansad2 = FALSE;
-         }
-         else
-         {
-            SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
-         }
-
-         SCIPdebugMessage("ans advanced 2 deleted: %d \n", degelims);
-      }
-#endif
-
-      if( bred )
-      {
-         upperbound = -1.0;
-         SCIP_CALL( bound_reduce(scip, g, vnoi, edgearrreal, g->prize, nodearrreal, edgearrreal2, fixed, &upperbound, nodearrint, state, vbase, &bredelims) );
-
-         if( bredelims <= redbound )
-         {
-            bred = FALSE;
-         }
-         else
-         {
-            SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
-         }
-
-         SCIPdebugMessage("bound_reduce: %d \n", bredelims);
-      }
-
-      if( anselims + nnpelims + chain2elims + bredelims + npvelims + ansadelims + ansad2elims + daelims <= redbound )
-         rerun = FALSE;
-
-      if( !rerun && advanced && g->terms > 2 )
-      {
-         int cnsadvelims = 0;
-         SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
-         SCIP_CALL( cnsAdvReduction(scip, g, nodearrint2, &cnsadvelims) );
-         SCIP_CALL( da_reducePcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint, nodearrint2, nodearrchar, &daelims, TRUE, TRUE, FALSE) );
-
-         if( cnsadvelims + daelims >= redbound || (extensive && cnsadvelims + daelims > 0)  )
-         {
-            setTrue(boolarr, 8);
-            rerun = TRUE;
-            advanced = FALSE;
-            SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
-            da = FALSE;
-            SCIPdebugMessage("RELAOD! %d\n\n ", cnsadvelims);
-       if( extensive )
-         advanced = TRUE;
-         }
-      }
-   }
-#if 0
-   int k;
-   printf("FINAL %d \n", 0);
-   for( k = 0; k < g->knots; k++ )
-   {
-      if( !Is_gterm(g->term[k]) && g->grad[k] >= 2 &&  g->grad[k] <= 5 )
-         printf("k %d grad %d\n", k, g->grad[k]);
-   }
-#endif
-   SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
-
-   /* go back to the extended graph */
-   SCIP_CALL( pcgraphtrans(scip, g) );
-
-   SCIP_CALL( level0(scip, g) );
-
-   return SCIP_OKAY;
-}
-#endif
 /** (R)PC loop */
 SCIP_RETCODE redLoopPc(
    SCIP*                 scip,               /**< SCIP data structure */
