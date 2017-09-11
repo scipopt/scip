@@ -12724,7 +12724,7 @@ SCIP_Real getImplVarRedcost(
 {
    assert(SCIPlpIsDualReliable(lp));
 
-   if( !SCIPlpIsDualReliable(scip->lp) )
+   if( !SCIPlpIsDualReliable(lp) )
       return SCIP_INVALID;
 
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
@@ -12789,7 +12789,7 @@ SCIP_Real SCIPvarGetImplRedcost(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPlpIsDualReliable(lp));
 
-   if( !SCIPlpIsDualReliable(scip->lp) )
+   if( !SCIPlpIsDualReliable(lp) )
       return SCIP_INVALID;
 
    /* get reduced cost of given variable */
