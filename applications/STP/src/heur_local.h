@@ -47,7 +47,6 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
    SCIP_Real*            cost,               /**< arc cost array */
-   SCIP_Real*            costrev,            /**< reversed arc cost array */
    int*                  best_result         /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
    );
 

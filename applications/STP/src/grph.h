@@ -91,8 +91,8 @@ typedef struct
    int                   esize;              /**< Count of allocated edge slots                                             */
    int                   edges;              /**< Count of edges in the graph                                               */
    int                   orgedges;
-   SCIP_Real* RESTRICT   cost;               /**< Array [0..edges-1] of positive edge costs                                  */
-   SCIP_Real* RESTRICT   prize;              /**< Array [0..nodes-1] of positive node costs                                  */
+   SCIP_Real*            cost;               /**< Array [0..edges-1] of positive edge costs                                  */
+   SCIP_Real*            prize;              /**< Array [0..nodes-1] of positive node costs                                  */
    int* RESTRICT         tail;               /**< Array [0..edges-1] of node-number of tail of edge [i]                     */
    int* RESTRICT         head;               /**< Array [0..edges-1] of node-number of head of edge [i]                     */
    int* RESTRICT         orgtail;            /**< Array [0..edges-1] of node-number of tail of edge [i] prior to reduction  */

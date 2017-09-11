@@ -1247,7 +1247,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
 
       if( pcmw )
       {
-         SCIP_CALL( SCIPStpHeurLocalRun(scip, prunegraph, cost, costrev, soledge) );
+         SCIP_CALL( SCIPStpHeurLocalRun(scip, prunegraph, cost, soledge) );
       }
 
 #if BREAKONERROR

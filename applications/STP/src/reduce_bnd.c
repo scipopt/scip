@@ -215,7 +215,7 @@ SCIP_RETCODE computeDaSolPcMw(
    SCIP_CALL( SCIPStpHeurAscendPruneRunPcMw(scip, NULL, graph, cost, result2, vbase, root, nodearrchar, &success, TRUE, FALSE) );
 
    SCIP_CALL( SCIPStpHeurLocalExtendPcMw(scip, graph, graph->cost, vnoi, result2, pathedge, nodearrchar, &tmp) );
-   //SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, graph->cost, graph->cost, result2) );
+   //SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, graph->cost, result2) );
 
    assert(graph_sol_valid(scip, graph, result2));
 

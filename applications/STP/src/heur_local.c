@@ -208,7 +208,6 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
    SCIP_Real*            cost,               /**< arc cost array */
-   SCIP_Real*            costrev,            /**< reversed arc cost array */
    int*                  best_result         /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
    )
 {
@@ -231,7 +230,6 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
 
    assert(graph != NULL);
    assert(cost != NULL);
-   assert(costrev != NULL);
    assert(best_result != NULL);
    assert(graph_valid(graph));
 
@@ -1998,7 +1996,6 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    SCIP_VAR** vars;                          /* SCIP variables */
    SCIP_Real pobj;
    SCIP_Real* cost;
-   SCIP_Real* costrev;
    SCIP_Real* nval;
    SCIP_Real* xval;
    int i;
@@ -2149,7 +2146,6 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
 
    /* allocate memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &cost, nedges) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &results, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nval, nvars) );
 
@@ -2162,30 +2158,12 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
          results[e] = UNKNOWN;
    }
 
-   /* swap costs; set high cost if variable is fixed to 0 */
-   for( e = 0; e < nedges; e += 2)
+   for( e = 0; e < nedges; e++ )
    {
-      if( SCIPvarGetUbLocal(vars[e + 1]) < 0.5 )
-      {
-         costrev[e] = BLOCKED;
-         cost[e + 1] = BLOCKED;
-      }
-      else
-      {
-         costrev[e] = graph->cost[e + 1];
-         cost[e + 1] = costrev[e];
-      }
-
       if( SCIPvarGetUbLocal(vars[e]) < 0.5 )
-      {
-         costrev[e + 1] = BLOCKED;
          cost[e] = BLOCKED;
-      }
       else
-      {
-         costrev[e + 1] = graph->cost[e];
-         cost[e] = costrev[e + 1];
-      }
+         cost[e] = graph->cost[e];
    }
 
    /* pruning necessary? */
@@ -2220,7 +2198,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    }
 
    /* execute local heuristics */
-   SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, cost, costrev, results) );
+   SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, cost, results) );
 
    /* can we connect the network */
    for( v = 0; v < nvars; v++ )
@@ -2273,7 +2251,6 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
 
    SCIPfreeBufferArray(scip, &nval);
    SCIPfreeBufferArray(scip, &results);
-   SCIPfreeBufferArray(scip, &costrev);
    SCIPfreeBufferArray(scip, &cost);
 
    return SCIP_OKAY;
