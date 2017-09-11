@@ -293,6 +293,7 @@ struct SCIP_Lp
    SCIP_LPSOLVALS*       storedsolvals;      /**< collected values of the LP data which depend on the LP solution */
    SCIP_Longint          validsollp;         /**< LP number for which the currently stored solution values are valid */
    SCIP_Longint          validfarkaslp;      /**< LP number for which the currently stored Farkas row multipliers are valid */
+   SCIP_Longint          nolddomchgs;        /**< number of domain changes before diving has started */
    int                   lpicolssize;        /**< available slots in lpicols vector */
    int                   nlpicols;           /**< number of columns in the LP solver */
    int                   lpifirstchgcol;     /**< first column of the LP which differs from the column in the LP solver */

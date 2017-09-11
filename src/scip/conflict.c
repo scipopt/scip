@@ -2811,7 +2811,7 @@ SCIP_RETCODE conflictFlushProofset(
    if( proofsetGetConftype(conflict->proofset) != SCIP_CONFTYPE_UNKNOWN )
    {
       /* only one variable has a coefficient different to zero, we add this bound change instead of a constraint */
-      if( proofsetGetNVars(conflict->proofset) == 1 && !diving )
+      if( proofsetGetNVars(conflict->proofset) == 1 )
       {
          SCIP_VAR** vars;
          int* inds;
@@ -2864,7 +2864,7 @@ SCIP_RETCODE conflictFlushProofset(
          assert(proofsetGetConftype(conflict->proofsets[i]) != SCIP_CONFTYPE_UNKNOWN);
 
          /* only one variable has a coefficient different to zero, we add this bound change instead of a constraint */
-         if( proofsetGetNVars(conflict->proofsets[i]) == 1 && !diving )
+         if( proofsetGetNVars(conflict->proofsets[i]) == 1 )
          {
             SCIP_VAR** vars;
             int* inds;
