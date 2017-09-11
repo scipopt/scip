@@ -154,24 +154,17 @@ message(STATUS "LEGACY mode for old compilers: ${LEGACY}")
 # create a target for updating the current git hash
 file(WRITE ${CMAKE_BINARY_DIR}/scip_update_githash.cmake "
 find_program(GIT git)
-if(GIT)
+if((GIT) AND (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git))
    execute_process(
       COMMAND \${GIT} describe --always --dirty
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
       OUTPUT_VARIABLE GITHASH OUTPUT_STRIP_TRAILING_WHITESPACE)
-   if(GITHASH STREQUAL \"\")
-      set(GITHASH \"------\")
-   endif()
    string(REGEX REPLACE \"^.*-g\" \"\" GITHASH \${GITHASH})
+   file(WRITE \${DST} \"#define SCIP_GITHASH \\\"\${GITHASH}\\\"\")
 else()
-   set(GITHASH \"------\")
-endif()
-if(GITHASH STREQUAL \"------\")
    # read stored hash from file
    file(STRINGS \${DST} GITHASH)
    string(REGEX REPLACE \"#define SCIP_GITHASH \" \"\" GITHASH \${GITHASH})
-else()
-   file(WRITE \${DST} \"#define SCIP_GITHASH \\\"\${GITHASH}\\\"\")
 endif()
 message(STATUS \"Git hash: \" \${GITHASH})
 ")
