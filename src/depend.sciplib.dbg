@@ -6794,21 +6794,21 @@ $(LIBOBJDIR)/scip/conflict.o: src/scip/conflict.c src/scip/def.h src/scip/type_r
  src/scip/type_primal.h src/scip/type_reopt.h src/scip/pub_var.h \
  src/scip/type_implics.h src/scip/struct_var.h src/scip/prob.h \
  src/scip/type_conflictstore.h src/scip/struct_prob.h src/scip/tree.h \
- src/scip/pub_tree.h src/scip/struct_tree.h src/scip/scip.h \
- src/scip/type_nlp.h src/scip/pub_branch.h src/scip/pub_conflict.h \
- src/scip/pub_cons.h src/scip/pub_cutpool.h src/scip/type_cutpool.h \
- src/scip/pub_dialog.h src/scip/pub_disp.h src/scip/pub_event.h \
- src/scip/pub_fileio.h src/scip/pub_heur.h src/scip/pub_compr.h \
- src/scip/pub_history.h src/scip/pub_implics.h src/scip/pub_nlp.h \
- src/scip/pub_nodesel.h src/scip/pub_presol.h src/scip/pub_pricer.h \
- src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
- src/scip/pub_prop.h src/scip/pub_sol.h src/lpi/lpi.h src/nlpi/pub_expr.h \
- src/scip/intervalarith.h src/nlpi/type_exprinterpret.h \
- src/scip/presolve.h src/scip/cuts.h src/scip/type_cuts.h \
- src/scip/struct_cuts.h src/scip/dbldblarith.h src/scip/heuristics.h \
- src/scip/conflict.h src/scip/conflictstore.h src/scip/cons.h \
- src/scip/type_sepastore.h src/scip/struct_cons.h src/scip/prop.h \
- src/scip/struct_conflict.h src/scip/cons_linear.h
+ src/scip/pub_tree.h src/scip/struct_tree.h src/scip/sol.h \
+ src/scip/type_nlp.h src/scip/pub_sol.h src/scip/scip.h \
+ src/scip/pub_branch.h src/scip/pub_conflict.h src/scip/pub_cons.h \
+ src/scip/pub_cutpool.h src/scip/type_cutpool.h src/scip/pub_dialog.h \
+ src/scip/pub_disp.h src/scip/pub_event.h src/scip/pub_fileio.h \
+ src/scip/pub_heur.h src/scip/pub_compr.h src/scip/pub_history.h \
+ src/scip/pub_implics.h src/scip/pub_nlp.h src/scip/pub_nodesel.h \
+ src/scip/pub_presol.h src/scip/pub_pricer.h src/scip/pub_reader.h \
+ src/scip/pub_relax.h src/scip/pub_sepa.h src/scip/pub_prop.h \
+ src/lpi/lpi.h src/nlpi/pub_expr.h src/scip/intervalarith.h \
+ src/nlpi/type_exprinterpret.h src/scip/presolve.h src/scip/cuts.h \
+ src/scip/type_cuts.h src/scip/struct_cuts.h src/scip/dbldblarith.h \
+ src/scip/heuristics.h src/scip/conflict.h src/scip/conflictstore.h \
+ src/scip/cons.h src/scip/type_sepastore.h src/scip/struct_cons.h \
+ src/scip/prop.h src/scip/struct_conflict.h src/scip/cons_linear.h
 $(LIBOBJDIR)/scip/conflictstore.o: src/scip/conflictstore.c src/scip/conflictstore.h \
  src/scip/def.h src/scip/type_retcode.h src/scip/pub_message.h \
  src/scip/type_message.h src/blockmemshell/memory.h \
@@ -6938,7 +6938,7 @@ $(LIBOBJDIR)/scip/cuts.o: src/scip/cuts.c src/scip/scip.h src/scip/def.h \
  src/nlpi/type_exprinterpret.h src/scip/presolve.h src/scip/cuts.h \
  src/scip/set.h src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/type_cuts.h src/scip/struct_cuts.h src/scip/dbldblarith.h \
- src/scip/heuristics.h src/scip/struct_lp.h src/scip/lp.h \
+ src/scip/heuristics.h src/scip/misc.h src/scip/struct_lp.h src/scip/lp.h \
  src/scip/cons_knapsack.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
