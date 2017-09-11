@@ -73,21 +73,21 @@ SCIP_Real SCIPgetProbabilityExp3(
  */
 
 /** callback to free bandit specific data structures */
-EXTERN
+extern
 SCIP_DECL_BANDITFREE(SCIPbanditFreeExp3);
 
 /** selection callback for bandit selector */
-EXTERN
+extern
 SCIP_DECL_BANDITSELECT(SCIPbanditSelectExp3);
 
 
 /** update callback for bandit algorithm */
-EXTERN
+extern
 SCIP_DECL_BANDITUPDATE(SCIPbanditUpdateExp3);
 
 
 /** reset callback for bandit algorithm */
-EXTERN
+extern
 SCIP_DECL_BANDITRESET(SCIPbanditResetExp3);
 
 

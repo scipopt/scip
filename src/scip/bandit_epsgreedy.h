@@ -59,6 +59,34 @@ void SCIPsetEpsilonEpsgreedy(
    SCIP_Real             eps                 /**< epsilon parameter (increase for more exploration) */
    );
 
+/** callback to free bandit specific data structures */
+extern
+SCIP_DECL_BANDITFREE(SCIPbanditFreeEpsgreedy);
+
+/** selection callback for bandit algorithm */
+extern
+SCIP_DECL_BANDITSELECT(SCIPbanditSelectEpsgreedy);
+
+/** update callback for bandit algorithm */
+extern
+SCIP_DECL_BANDITUPDATE(SCIPbanditUpdateEpsgreedy);
+
+/** reset callback for bandit algorithm */
+extern
+SCIP_DECL_BANDITRESET(SCIPbanditResetEpsgreedy);
+
+
+/** internal method to create an epsilon greedy bandit algorithm */
+extern
+SCIP_RETCODE SCIPbanditCreateEpsgreedy(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_BANDITVTABLE*    vtable,             /**< virtual function table with epsilon greedy callbacks */
+   SCIP_BANDIT**         epsgreedy,          /**< pointer to store the epsilon greedy bandit algorithm */
+   SCIP_Real             eps,                /**< probability for exploration between all actions */
+   int                   nactions,           /**< the number of possible actions */
+   unsigned int          initseed            /**< initial random seed */
+   );
+
 #ifdef __cplusplus
 }
 #endif

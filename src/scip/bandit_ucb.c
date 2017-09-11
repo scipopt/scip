@@ -27,6 +27,7 @@
 
 #define BANDIT_NAME "ucb"
 #define NUMEPS 1e-6
+#define DEFAULT_SEED 999
 
 /*
  * Data structures
@@ -105,7 +106,6 @@ SCIP_RETCODE dataReset(
  */
 
 /** callback to free bandit specific data structures */
-static
 SCIP_DECL_BANDITFREE(banditFreeUcb)
 {  /*lint --e{715}*/
 
@@ -128,7 +128,6 @@ SCIP_DECL_BANDITFREE(banditFreeUcb)
 }
 
 /** selection callback for bandit selector */
-static
 SCIP_DECL_BANDITSELECT(banditSelectUcb)
 {  /*lint --e{715}*/
 
@@ -202,7 +201,6 @@ SCIP_DECL_BANDITSELECT(banditSelectUcb)
 }
 
 /** update callback for bandit algorithm */
-static
 SCIP_DECL_BANDITUPDATE(banditUpdateUcb)
 {  /*lint --e{715}*/
    SCIP_BANDITDATA* banditdata;
@@ -227,7 +225,6 @@ SCIP_DECL_BANDITUPDATE(banditUpdateUcb)
 }
 
 /** reset callback for bandit algorithm */
-static
 SCIP_DECL_BANDITRESET(banditResetUcb)
 {  /*lint --e{715}*/
    SCIP_BANDITDATA* banditdata;
@@ -291,6 +288,37 @@ int* SCIPgetStartPermutationUcb(
    return banditdata->startperm;
 }
 
+/** internal method to create UCB bandit algorithm */
+SCIP_RETCODE SCIPbanditCreateUcb(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   BMS_BUFMEM*           bufmem,             /**< buffer memory */
+   SCIP_BANDITVTABLE*    vtable,             /**< virtual function table for UCB bandit algorithm */
+   SCIP_BANDIT**         ucb,                /**< pointer to store bandit algorithm */
+   int                   nactions,           /**< the number of actions for this bandit algorithm */
+   SCIP_Real             alpha,              /**< parameter to increase confidence width */
+   unsigned int          initseed            /**< initial random seed */
+   )
+{
+   SCIP_BANDITDATA* banditdata;
+
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, &banditdata) );
+   assert(banditdata != NULL);
+
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &banditdata->counter, nactions) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &banditdata->startperm, nactions) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &banditdata->meanscores, nactions) );
+
+   banditdata->alpha = alpha;
+
+   SCIP_CALL( SCIPbanditCreate(ucb, vtable, blkmem, nactions, initseed, banditdata) );
+   assert(*ucb != NULL);
+
+   /* reset data for correct initialization */
+   SCIP_CALL( dataReset(bufmem, *ucb, banditdata, NULL, nactions) );
+
+   return SCIP_OKAY;
+}
+
 /** create UCB bandit algorithm */
 SCIP_RETCODE SCIPcreateBanditUcb(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -299,7 +327,6 @@ SCIP_RETCODE SCIPcreateBanditUcb(
    SCIP_Real             alpha               /**< parameter to increase confidence width */
    )
 {
-   SCIP_BANDITDATA* banditdata;
    SCIP_BANDITVTABLE* vtable;
 
    vtable = SCIPfindBanditvtable(scip, BANDIT_NAME);
@@ -308,20 +335,7 @@ SCIP_RETCODE SCIPcreateBanditUcb(
       SCIPerrorMessage("Could not find virtual function table for %s bandit algorithm\n", BANDIT_NAME);
    }
 
-   SCIP_CALL( SCIPallocBlockMemory(scip, &banditdata) );
-   assert(banditdata != NULL);
-
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &banditdata->counter, nactions) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &banditdata->startperm, nactions) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &banditdata->meanscores, nactions) );
-
-   banditdata->alpha = alpha;
-
-   SCIP_CALL( SCIPcreateBandit(scip, ucb, vtable, nactions, banditdata) );
-   assert(*ucb != NULL);
-
-   /* reset data for correct initialization */
-   SCIP_CALL( dataReset(SCIPbuffer(scip), *ucb, banditdata, NULL, nactions) );
+   SCIP_CALL( SCIPbanditCreateUcb(SCIPblkmem(scip), SCIPbuffer(scip), vtable, ucb, nactions, alpha, SCIPinitializeRandomSeed(scip, DEFAULT_SEED)) );
 
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   bandit_epsgreedy.c
- * @brief  implementation of Epsilon Greedy bandit algorithm
+ * @brief  implementation of epsilon greedy bandit algorithm
  * @author Gregor Hendel
  */
 
@@ -26,11 +26,10 @@
 
 #define BANDIT_NAME           "eps-greedy"
 #define DEFAULT_WEIGHT 0.2
+#define DEFAULT_INITSEED 999
 /*
  * Data structures
  */
-
-/* TODO: fill in the necessary primal heuristic data */
 
 /** private data structure of epsilon greedy bandit algorithm */
 struct SCIP_BanditData
@@ -41,83 +40,11 @@ struct SCIP_BanditData
 };
 
 /*
- * Local methods
- */
-
-/* put your local methods here, and declare them static */
-
-/*
- * interface methods
- */
-/** create an epsilon greedy bandit selector with the necessary callbacks */
-SCIP_RETCODE SCIPcreateBanditEpsgreedy(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BANDIT**         epsgreedy,          /**< pointer to store the epsilon greedy bandit algorithm */
-   SCIP_Real             eps,                /**< probability for exploration between all actions */
-   int                   nactions            /**< the number of possible actions */
-   )
-{
-   SCIP_BANDITDATA* banditdata;
-   SCIP_BANDITVTABLE* vtable;
-   assert(scip != NULL);
-   assert(epsgreedy != NULL);
-   assert(eps <= 1.0);
-   assert(eps >= 0.0);
-   assert(nactions > 0);
-
-   vtable = SCIPfindBanditvtable(scip, BANDIT_NAME);
-   if( vtable == NULL )
-   {
-      SCIPerrorMessage("Could not find virtual function table for %s bandit algorithm\n", BANDIT_NAME);
-      return SCIP_INVALIDDATA;
-   }
-
-   SCIP_CALL( SCIPallocBlockMemory(scip, &banditdata) );
-   assert(banditdata != NULL);
-
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &banditdata->weights, nactions) );
-   banditdata->eps = eps;
-   banditdata->nselections = 0;
-
-   SCIP_CALL( SCIPcreateBandit(scip, epsgreedy, vtable, nactions, banditdata) );
-
-   return SCIP_OKAY;
-}
-
-/** get weights array of epsilon greedy bandit algorithm */
-SCIP_Real* SCIPgetWeightsEpsgreedy(
-   SCIP_BANDIT*          epsgreedy           /**< epsilon greedy bandit algorithm */
-   )
-{
-   SCIP_BANDITDATA* banditdata;
-   assert(epsgreedy != NULL);
-   banditdata = SCIPbanditGetData(epsgreedy);
-   assert(banditdata != NULL);
-
-   return banditdata->weights;
-}
-
-/** set epsilon parameter of epsilon greedy bandit algorithm */
-void SCIPsetEpsilonEpsgreedy(
-   SCIP_BANDIT*          epsgreedy,          /**< epsilon greedy bandit algorithm */
-   SCIP_Real             eps                 /**< epsilon parameter (increase for more exploration) */
-   )
-{
-   SCIP_BANDITDATA* banditdata;
-   assert(epsgreedy != NULL);
-
-   banditdata = SCIPbanditGetData(epsgreedy);
-
-   banditdata->eps = eps;
-}
-
-/*
  * Callback methods of bandit algorithm virtual function table
  */
 
 /** callback to free bandit specific data structures */
-static
-SCIP_DECL_BANDITFREE(banditFreeEpsgreedy)
+SCIP_DECL_BANDITFREE(SCIPbanditFreeEpsgreedy)
 {  /*lint --e{715}*/
 
    SCIP_BANDITDATA* banditdata;
@@ -136,9 +63,8 @@ SCIP_DECL_BANDITFREE(banditFreeEpsgreedy)
    return SCIP_OKAY;
 }
 
-/** selection callback for bandit selector */
-static
-SCIP_DECL_BANDITSELECT(banditSelectEpsgreedy)
+/** selection callback for bandit algorithm */
+SCIP_DECL_BANDITSELECT(SCIPbanditSelectEpsgreedy)
 {  /*lint --e{715}*/
 
    SCIP_BANDITDATA* banditdata;
@@ -198,8 +124,7 @@ SCIP_DECL_BANDITSELECT(banditSelectEpsgreedy)
 }
 
 /** update callback for bandit algorithm */
-static
-SCIP_DECL_BANDITUPDATE(banditUpdateEpsgreedy)
+SCIP_DECL_BANDITUPDATE(SCIPbanditUpdateEpsgreedy)
 {  /*lint --e{715}*/
    SCIP_BANDITDATA* banditdata;
 
@@ -216,8 +141,7 @@ SCIP_DECL_BANDITUPDATE(banditUpdateEpsgreedy)
 }
 
 /** reset callback for bandit algorithm */
-static
-SCIP_DECL_BANDITRESET(banditResetEpsgreedy)
+SCIP_DECL_BANDITRESET(SCIPbanditResetEpsgreedy)
 {  /*lint --e{715}*/
    SCIP_BANDITDATA* banditdata;
    SCIP_Real* weights;
@@ -264,6 +188,88 @@ SCIP_DECL_BANDITRESET(banditResetEpsgreedy)
    return SCIP_OKAY;
 }
 
+/*
+ * interface methods of the Epsilon Greedy bandit algorithm
+ */
+
+/** internal method to create an epsilon greedy bandit algorithm */
+SCIP_RETCODE SCIPbanditCreateEpsgreedy(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_BANDITVTABLE*    vtable,             /**< virtual function table with epsilon greedy callbacks */
+   SCIP_BANDIT**         epsgreedy,          /**< pointer to store the epsilon greedy bandit algorithm */
+   SCIP_Real             eps,                /**< probability for exploration between all actions */
+   int                   nactions,           /**< the number of possible actions */
+   unsigned int          initseed            /**< initial random seed */
+   )
+{
+   SCIP_BANDITDATA* banditdata;
+
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, &banditdata) );
+   assert(banditdata != NULL);
+
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &banditdata->weights, nactions) );
+   banditdata->eps = eps;
+   banditdata->nselections = 0;
+
+   SCIP_CALL( SCIPbanditCreate(epsgreedy, vtable, blkmem, nactions, initseed, banditdata) );
+
+   return SCIP_OKAY;
+}
+
+/** create an epsilon greedy bandit algorithm */
+SCIP_RETCODE SCIPcreateBanditEpsgreedy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BANDIT**         epsgreedy,          /**< pointer to store the epsilon greedy bandit algorithm */
+   SCIP_Real             eps,                /**< probability for exploration between all actions */
+   int                   nactions            /**< the number of possible actions */
+   )
+{
+   SCIP_BANDITVTABLE* vtable;
+   assert(scip != NULL);
+   assert(epsgreedy != NULL);
+   assert(eps <= 1.0);
+   assert(eps >= 0.0);
+   assert(nactions > 0);
+
+   vtable = SCIPfindBanditvtable(scip, BANDIT_NAME);
+   if( vtable == NULL )
+   {
+      SCIPerrorMessage("Could not find virtual function table for %s bandit algorithm\n", BANDIT_NAME);
+      return SCIP_INVALIDDATA;
+   }
+
+   SCIP_CALL( SCIPbanditCreateEpsgreedy(SCIPblkmem(scip), vtable, epsgreedy, eps, nactions, SCIPinitializeRandomSeed(scip, DEFAULT_INITSEED)) );
+
+   return SCIP_OKAY;
+}
+
+/** get weights array of epsilon greedy bandit algorithm */
+SCIP_Real* SCIPgetWeightsEpsgreedy(
+   SCIP_BANDIT*          epsgreedy           /**< epsilon greedy bandit algorithm */
+   )
+{
+   SCIP_BANDITDATA* banditdata;
+   assert(epsgreedy != NULL);
+   banditdata = SCIPbanditGetData(epsgreedy);
+   assert(banditdata != NULL);
+
+   return banditdata->weights;
+}
+
+/** set epsilon parameter of epsilon greedy bandit algorithm */
+void SCIPsetEpsilonEpsgreedy(
+   SCIP_BANDIT*          epsgreedy,          /**< epsilon greedy bandit algorithm */
+   SCIP_Real             eps                 /**< epsilon parameter (increase for more exploration) */
+   )
+{
+   SCIP_BANDITDATA* banditdata;
+   assert(epsgreedy != NULL);
+
+   banditdata = SCIPbanditGetData(epsgreedy);
+
+   banditdata->eps = eps;
+}
+
 
 /** creates the epsilon greedy bandit algorithm includes it in SCIP */
 SCIP_RETCODE SCIPincludeBanditvtableEpsgreedy(
@@ -273,7 +279,7 @@ SCIP_RETCODE SCIPincludeBanditvtableEpsgreedy(
    SCIP_BANDITVTABLE* banditvtable;
 
    SCIP_CALL( SCIPincludeBanditvtable(scip, &banditvtable, BANDIT_NAME,
-         banditFreeEpsgreedy, banditSelectEpsgreedy, banditUpdateEpsgreedy, banditResetEpsgreedy) );
+         SCIPbanditFreeEpsgreedy, SCIPbanditSelectEpsgreedy, SCIPbanditUpdateEpsgreedy, SCIPbanditResetEpsgreedy) );
 
    return SCIP_OKAY;
 }

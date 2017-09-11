@@ -59,8 +59,41 @@ int* SCIPgetStartPermutationUcb(
    SCIP_BANDIT*          ucb                 /**< UCB bandit algorithm */
    );
 
+/*
+ * Callback methods of bandit algorithm
+ */
+
+/** callback to free bandit specific data structures */
+extern
+SCIP_DECL_BANDITFREE(banditFreeUcb);
+
+/** selection callback for bandit selector */
+extern
+SCIP_DECL_BANDITSELECT(banditSelectUcb);
+
+/** update callback for bandit algorithm */
+extern
+SCIP_DECL_BANDITUPDATE(banditUpdateUcb);
+
+/** reset callback for bandit algorithm */
+extern
+SCIP_DECL_BANDITRESET(banditResetUcb);
+
+/** internal method to create UCB bandit algorithm */
+extern
+SCIP_RETCODE SCIPbanditCreateUcb(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   BMS_BUFMEM*           bufmem,             /**< buffer memory */
+   SCIP_BANDITVTABLE*    vtable,             /**< virtual function table for UCB bandit algorithm */
+   SCIP_BANDIT**         ucb,                /**< pointer to store bandit algorithm */
+   int                   nactions,           /**< the number of actions for this bandit algorithm */
+   SCIP_Real             alpha,              /**< parameter to increase confidence width */
+   unsigned int          initseed            /**< initial random seed */
+   );
+
 #ifdef __cplusplus
 }
+
 #endif
 
 #endif

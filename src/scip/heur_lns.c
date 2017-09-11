@@ -1702,7 +1702,7 @@ SCIP_RETCODE selectNeighborhood(
 
    bandit = getBandit(heurdata);
 
-   SCIP_CALL( SCIPselectBandit(scip, bandit, neighborhoodidx) );
+   SCIP_CALL( SCIPbanditSelect(bandit, neighborhoodidx) );
    assert(*neighborhoodidx >= 0);
 
    return SCIP_OKAY;
@@ -1790,7 +1790,7 @@ SCIP_RETCODE updateBanditAlgorithms(
 
    bandit = getBandit(heurdata);
    SCIPdebugMsg(scip, "Rewarding bandit algorithm action %d with gain %.2f\n", neighborhoodidx, gain);
-   SCIP_CALL( SCIPupdateBandit(scip, bandit, neighborhoodidx, gain) );
+   SCIP_CALL( SCIPbanditUpdate(bandit, neighborhoodidx, gain) );
 
    return SCIP_OKAY;
 }

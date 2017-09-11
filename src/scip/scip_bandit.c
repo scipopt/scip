@@ -103,23 +103,6 @@ SCIP_RETCODE SCIPresetBandit(
    return SCIP_OKAY;
 }
 
-/** select the next action */
-EXTERN
-SCIP_RETCODE SCIPselectBandit(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BANDIT*          bandit,             /**< bandit algorithm data structure */
-   int*                  action              /**< pointer to store the selected action */
-   )
-{
-   assert(scip != NULL);
-   assert(bandit != NULL);
-   assert(action != NULL);
-
-   SCIP_CALL( SCIPbanditSelect(bandit, action) );
-
-   return SCIP_OKAY;
-}
-
 /** calls destructor and frees memory of bandit algorithm */
 SCIP_RETCODE SCIPfreeBandit(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -134,19 +117,3 @@ SCIP_RETCODE SCIPfreeBandit(
 
    return SCIP_OKAY;
 }
-
-/** update the score of the selected action */
-SCIP_RETCODE SCIPupdateBandit(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BANDIT*          bandit,             /**< bandit algorithm data structure */
-   int                   action,             /**< index of action for which the score should be updated */
-   SCIP_Real             score               /**< observed gain of the i'th action */
-   )
-{
-   assert(scip != NULL);
-
-   SCIP_CALL( SCIPbanditUpdate(bandit, action, score) );
-
-   return SCIP_OKAY;
-}
-
