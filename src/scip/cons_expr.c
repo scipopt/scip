@@ -36,6 +36,7 @@
 #include "scip/cons_expr_log.h"
 #include "scip/cons_expr_abs.h"
 #include "scip/cons_expr_pow.h"
+#include "scip/cons_expr_sin.h"
 #include "scip/debug.h"
 
 /* fundamental constraint handler properties */
@@ -7428,6 +7429,10 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    /* include handler for power expression */
    SCIP_CALL( SCIPincludeConsExprExprHdlrPow(scip, conshdlr) );
    assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "pow") == 0);
+
+   /* include handler for sinus expression */
+   SCIP_CALL( SCIPincludeConsExprExprHdlrSin(scip, conshdlr) );
+   assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "sin") == 0);
 
    return SCIP_OKAY;
 }
