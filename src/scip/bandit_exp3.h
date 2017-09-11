@@ -31,6 +31,29 @@
 extern "C" {
 #endif
 
+/**@addtogroup PublicBanditMethods
+ *
+ * Exp.3 is a randomized selection method for the multi-armed bandit problem
+ *
+ * Exp3 maintains a probability distribution
+ * according to which an action is drawn
+ * in every iteration.
+ * The probability distribution is a mixture between
+ * a uniform distribution and a softmax distribution
+ * based on the cumulative rewards of the actions.
+ *
+ * The weight of the uniform distribution in the mixture
+ * is controlled by the parameter \f$ \gamma \f$, ie.,
+ * setting \f$ \gamma = 1\f$ uses a uniform distribution
+ * in every selection step.
+ *
+ * The cumulative reward for the actions can be
+ * fine-tuned by adding a general bias for all actions.
+ * The bias is given by the parameter \f$ \beta \f$.
+ *
+ * @{
+ */
+
 /** include virtual function table for Exp.3 bandit algorithms */
 EXTERN
 SCIP_RETCODE SCIPincludeBanditvtableExp3(
@@ -67,6 +90,8 @@ SCIP_Real SCIPgetProbabilityExp3(
    SCIP_BANDIT*          exp3,               /**< bandit algorithm */
    int                   action              /**< index of the requested action */
    );
+
+/** @}*/
 
 /*
  * callback methods for Exp.3 bandit algorithm to create a virtual function table

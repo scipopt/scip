@@ -31,6 +31,21 @@
 extern "C" {
 #endif
 
+/**@addtogroup PublicBanditMethods
+ *
+ * UCB (Upper confidence bounds) is a deterministic algorithm
+ * for the multi-armed bandit problem.
+ *
+ * In every iteration, UCB selects the action that maximizes
+ * a tradeoff between its performance in the past
+ * and a variance term.
+ *
+ * The influence of the variance (confidence width) can be
+ * controlled by the parameter \f$ \alpha f$.
+ *
+ * @{
+ */
+
 /** include virtual function table for UCB bandit algorithms */
 EXTERN
 SCIP_RETCODE SCIPincludeBanditvtableUcb(
@@ -58,6 +73,8 @@ EXTERN
 int* SCIPgetStartPermutationUcb(
    SCIP_BANDIT*          ucb                 /**< UCB bandit algorithm */
    );
+
+/** @}*/
 
 /*
  * Callback methods of bandit algorithm

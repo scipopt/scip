@@ -31,6 +31,22 @@
 extern "C" {
 #endif
 
+/**@addtogroup PublicBanditMethods
+ *
+ * Epsilon greedy is a randomized algorithm for the multi-armed bandit problem.
+ *
+ * In every iteration, it either
+ * selects an action uniformly at random with
+ * probability \f$ \varepsilon_t\f$
+ * or it greedily exploits the best action seen so far with
+ * probability \f$ 1 - \varepsilon_t \f$.
+ *
+ * In this implementation, \f$ \varepsilon_t \f$ decreases over time
+ * (number of selections performed), controlled by the epsilon parameter.
+ *
+ * @{
+ */
+
 /** creates the epsilon greedy bandit algorithm includes it in SCIP */
 EXTERN
 SCIP_RETCODE SCIPincludeBanditvtableEpsgreedy(
@@ -58,6 +74,8 @@ void SCIPsetEpsilonEpsgreedy(
    SCIP_BANDIT*          epsgreedy,          /**< epsilon greedy bandit algorithm */
    SCIP_Real             eps                 /**< epsilon parameter (increase for more exploration) */
    );
+
+/* @} */
 
 /** callback to free bandit specific data structures */
 extern
