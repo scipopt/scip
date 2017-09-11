@@ -765,9 +765,9 @@ SCIP_RETCODE SCIPheurAscendAndPrune(
       newedges[e] = UNKNOWN;
 
    if( pcmw )
-      SCIP_CALL( SCIPheurPrunePCSteinerTree(scip, g, g->cost, newedges, nodearrchar) );
+      SCIP_CALL( SCIPStpHeurTMPrunePc(scip, g, g->cost, newedges, nodearrchar) );
    else
-      SCIP_CALL( SCIPheurPruneSteinerTree(scip, g, g->cost, 0, newedges, nodearrchar) );
+      SCIP_CALL( SCIPStpHeurTMPrune(scip, g, g->cost, 0, newedges, nodearrchar) );
 
 
    assert(graph_sol_valid(scip, g, newedges));
@@ -1156,7 +1156,7 @@ SCIP_RETCODE SCIPheurAscendAndPrunePcMw(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &path, newgraph->knots) );
 
-   SCIP_CALL( greedyExtensionPcMw(scip, newgraph, newgraph->cost, path, newedges, nodechild, nodearrchar, &dummy) );
+   SCIP_CALL( SCIPStpHeurLocalExtendPcMw(scip, newgraph, newgraph->cost, path, newedges, nodechild, nodearrchar, &dummy) );
 
    SCIPfreeBufferArray(scip, &path);
 
@@ -1203,7 +1203,7 @@ SCIP_RETCODE SCIPheurAscendAndPrunePcMw(
    for( e = 0; e < nedges; e++ )
       newedges[e] = UNKNOWN;
 
-   SCIP_CALL( SCIPheurPrunePCSteinerTree(scip, g, g->cost, newedges, nodearrchar) );
+   SCIP_CALL( SCIPStpHeurTMPrunePc(scip, g, g->cost, newedges, nodearrchar) );
 
    assert(graph_sol_valid(scip, g, newedges));
 

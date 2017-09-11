@@ -53,7 +53,7 @@ typedef struct stp_solution_pool
 
 /** initializes STPSOL pool */
 extern
-SCIP_RETCODE SCIPHeurRecInitPool(
+SCIP_RETCODE SCIPStpHeurRecInitPool(
    SCIP*                 scip,               /**< SCIP data structure */
    STPSOLPOOL**          pool,               /**< the pool */
    const int             maxsize             /**< capacity of pool */
@@ -61,7 +61,7 @@ SCIP_RETCODE SCIPHeurRecInitPool(
 
 /** tries to add STPSOL to pool */
 extern
-SCIP_RETCODE SCIPHeurRecAddToPool(
+SCIP_RETCODE SCIPStpHeurRecAddToPool(
    SCIP*                 scip,               /**< SCIP data structure */
    const SCIP_Real       obj,                /**< objective of solution to be added */
    const int*            soledges,           /**< edge array of solution to be added */
@@ -71,20 +71,20 @@ SCIP_RETCODE SCIPHeurRecAddToPool(
 
 /** frees STPSOL pool */
 extern
-void SCIPHeurRecFreePool(
+void SCIPStpHeurRecFreePool(
    SCIP*                 scip,               /**< SCIP data structure */
    STPSOLPOOL**          pool                /**< the pool */
    );
 
 /** creates the rec primal heuristic and includes it in SCIP */
 extern
-SCIP_RETCODE SCIPincludeHeurRec(
+SCIP_RETCODE SCIPStpIncludeHeurRec(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** heuristic to exclude vertices or edges from a given solution (and inserting other edges) to improve objective */
 extern
-SCIP_RETCODE SCIPheurExclusion(
+SCIP_RETCODE SCIPStpHeurRecExclude(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph structure */
    int*                  result,             /**< edge solution array (UNKNOWN/CONNECT) */

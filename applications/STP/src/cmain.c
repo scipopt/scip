@@ -68,7 +68,7 @@ SCIP_RETCODE runShell(
    /* include stp pricer */
    SCIP_CALL( SCIPincludePricerStp(scip) );
 
-   /* include steiner tree reader */
+   /* include Steiner tree reader */
    SCIP_CALL( SCIPincludeReaderStp(scip) );
 
    /* include default SCIP plugins */
@@ -77,17 +77,17 @@ SCIP_RETCODE runShell(
    /* include STP dialog */
    SCIP_CALL( SCIPincludeDialogStp(scip) );
 
-   /* include steiner tree constraint handler */
+   /* include Steiner tree constraint handler */
    SCIP_CALL( SCIPincludeConshdlrStp(scip) );
 
-   /* include Takahashi Matsuyama heuristic */
-   SCIP_CALL( SCIPincludeHeurTM(scip) );
+   /* include shortest path heuristic */
+   SCIP_CALL( SCIPStpIncludeHeurTM(scip) );
 
    /* include local heuristics */
-   SCIP_CALL( SCIPincludeHeurLocal(scip) );
+   SCIP_CALL( SCIPStpIncludeHeurLocal(scip) );
 
    /* include recombination heuristic */
-   SCIP_CALL( SCIPincludeHeurRec(scip) );
+   SCIP_CALL( SCIPStpIncludeHeurRec(scip) );
 
    /* include pruning heuristic */
    SCIP_CALL( SCIPincludeHeurPrune(scip) );

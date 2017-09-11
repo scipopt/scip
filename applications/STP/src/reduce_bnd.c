@@ -214,8 +214,8 @@ SCIP_RETCODE computeDaSolPcMw(
 
    SCIP_CALL( SCIPheurAscendAndPrunePcMw(scip, NULL, graph, cost, result2, vbase, root, nodearrchar, &success, TRUE, FALSE) );
 
-   SCIP_CALL( greedyExtensionPcMw(scip, graph, graph->cost, vnoi, result2, pathedge, nodearrchar, &tmp) );
-   //SCIP_CALL( SCIPheurImproveSteinerTree(scip, graph, graph->cost, graph->cost, result2) );
+   SCIP_CALL( SCIPStpHeurLocalExtendPcMw(scip, graph, graph->cost, vnoi, result2, pathedge, nodearrchar, &tmp) );
+   //SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, graph->cost, graph->cost, result2) );
 
    assert(graph_sol_valid(scip, graph, result2));
 
@@ -240,7 +240,7 @@ SCIP_RETCODE computeDaSolPcMw(
       *apsol = TRUE;
       *upperbound = ub;
 
-      SCIP_CALL( SCIPheurExclusion(scip, graph, result2, result1, result1, pathedge, nodearrchar, &success) );
+      SCIP_CALL( SCIPStpHeurRecExclude(scip, graph, result2, result1, result1, pathedge, nodearrchar, &success) );
 
       ub = graph_computeSolVal(graph->cost, result1, 0.0, nedges);
 
@@ -259,7 +259,7 @@ SCIP_RETCODE computeDaSolPcMw(
    {
       *apsol = FALSE;
 
-      SCIP_CALL( SCIPheurExclusion(scip, graph, result1, result2, result2, pathedge, nodearrchar, &success));
+      SCIP_CALL( SCIPStpHeurRecExclude(scip, graph, result1, result2, result2, pathedge, nodearrchar, &success));
 
       ub = graph_computeSolVal(graph->cost, result2, 0.0, nedges);
 
@@ -272,7 +272,7 @@ SCIP_RETCODE computeDaSolPcMw(
       }
    }
 
-    SCIP_CALL( SCIPheurExclusion(scip, graph, result1, NULL, result2, pathedge, nodearrchar, &success) );
+    SCIP_CALL( SCIPStpHeurRecExclude(scip, graph, result1, NULL, result2, pathedge, nodearrchar, &success) );
 
     if( success )
     {
@@ -719,7 +719,7 @@ SCIP_RETCODE da_reduce(
    {
       /* choose starting points for TM heuristic */
       starts = heursources;
-      compTMstarts(graph, starts, &runs);
+      SCIPStpHeurTMCompStarts(graph, starts, &runs);
    }
    else
    {
@@ -788,7 +788,7 @@ SCIP_RETCODE da_reduce(
 
    if( directed && !externsol )
    {
-      SCIP_CALL( SCIPheurComputeSteinerTree(scip, tmheurdata, graph, starts, &best_start, result, runs, root, cost, costrev, &hopfactor, NULL, maxcost, &success, FALSE) );
+      SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, graph, starts, &best_start, result, runs, root, cost, costrev, &hopfactor, NULL, maxcost, &success, FALSE) );
 
       /* calculate objective value of solution */
       ubnew = graph_computeSolVal(graph->cost, result, 0.0, nedges);
@@ -892,11 +892,6 @@ SCIP_RETCODE da_reduce(
       else if( !directed )
       {
          SCIP_CALL( SCIPheurAscendAndPrune(scip, NULL, graph, cost, result, nodearrint, root, nodearrchar, &success, TRUE, FALSE) );
-
-         if( rpc )
-         {
-            SCIP_CALL( extendSteinerTreePcMw(scip, graph, vnoi, costrev, vbase, result, nodearrchar, &e) );
-         }
 
          /* calculate objective value of solution */
          ubnew = graph_computeSolVal(graph->cost, result, 0.0, nedges);
@@ -1916,9 +1911,9 @@ printf("raph->terms  %d \n", graph->terms );
    SCIP_CALL( pcgraphtrans(scip, graph) );
 
    /* compute Steiner tree to obtain upper bound */
-   SCIP_CALL( SCIPheurComputeSteinerTree(scip, tmheurdata, graph, NULL, &best_start, result, runs, root, cost, costrev, &dummyreal, NULL, 0.0, &success, FALSE) );
+   SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, graph, NULL, &best_start, result, runs, root, cost, costrev, &dummyreal, NULL, 0.0, &success, FALSE) );
 
-   SCIP_CALL( greedyExtensionPcMw(scip, graph, graph->cost, vnoi, result, pathedge, nodearrchar, &tmp) );
+   SCIP_CALL( SCIPStpHeurLocalExtendPcMw(scip, graph, graph->cost, vnoi, result, pathedge, nodearrchar, &tmp) );
 
    /* restore original graph */
    SCIP_CALL( pcgraphorg(scip, graph) );
@@ -2011,9 +2006,9 @@ printf("raph->terms  %d \n", graph->terms );
          for( e = 0; e < nedges; e++ )
             costrev[e] = graph->cost[flipedge(e)];
 
-         SCIP_CALL( SCIPheurComputeSteinerTree(scip, tmheurdata, graph, NULL, &best_start, result, runs, root, graph->cost, costrev, &dummyreal, NULL, 0.0, &success, FALSE) );
+         SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, graph, NULL, &best_start, result, runs, root, graph->cost, costrev, &dummyreal, NULL, 0.0, &success, FALSE) );
 
-         SCIP_CALL( greedyExtensionPcMw(scip, graph, graph->cost, vnoi, result, pathedge, nodearrchar, &tmp) );
+         SCIP_CALL( SCIPStpHeurLocalExtendPcMw(scip, graph, graph->cost, vnoi, result, pathedge, nodearrchar, &tmp) );
 
          assert(graph_valid(transgraph));
       }
@@ -2445,7 +2440,7 @@ SCIP_RETCODE da_reduceSlackPruneMw(
       }
 
       /* build trivial solution */
-      SCIP_CALL( SCIPheurPrunePCSteinerTree(scip, graph, graph->cost, result, nodearrchar) );
+      SCIP_CALL( SCIPStpHeurTMPrunePc(scip, graph, graph->cost, result, nodearrchar) );
    }
    else
    {
@@ -2489,9 +2484,7 @@ SCIP_RETCODE da_reduceSlackPruneMw(
 #endif
 
    /* compute Steiner tree to obtain upper bound */
-   SCIP_CALL( SCIPheurComputeSteinerTree(scip, tmheurdata, graph, NULL, &best_start, transresult, runs, root, cost, costrev, &hopfactor, NULL, 0.0, &success, FALSE) );
-
-   SCIP_CALL( extendSteinerTreePcMw(scip, graph, vnoi, costrev, vbase, transresult, nodearrchar, &e) );
+   SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, graph, NULL, &best_start, transresult, runs, root, cost, costrev, &hopfactor, NULL, 0.0, &success, FALSE) );
 
    /* feasible solution found? */
    if( success )
@@ -2513,10 +2506,6 @@ SCIP_RETCODE da_reduceSlackPruneMw(
    SCIP_CALL( SCIPdualAscentStp(scip, transgraph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, transresult, state, root, 1, marked, nodearrchar) );
 
    SCIP_CALL( SCIPheurAscendAndPrunePcMw(scip, NULL, graph, cost, transresult, vbase, root, nodearrchar, &success, TRUE, FALSE) );
-
-#if 1
-   SCIP_CALL( extendSteinerTreePcMw(scip, graph, vnoi, costrev, vbase, transresult, nodearrchar, &e) );
-#endif
 
    assert(success);
    assert(graph_sol_valid(scip, graph, transresult));
@@ -2926,7 +2915,7 @@ SCIP_RETCODE bound_reduce(
 
       SCIP_CALL( SCIPallocBufferArray(scip, &starts, nnodes) );
 
-      compTMstarts(graph, starts, &runs);
+      SCIPStpHeurTMCompStarts(graph, starts, &runs);
    }
    else
    {
@@ -3100,7 +3089,7 @@ SCIP_RETCODE bound_reduce(
       if( pcmw )
          SCIP_CALL( pcgraphtrans(scip, graph) );
 
-      SCIP_CALL( SCIPheurComputeSteinerTree(scip, tmheurdata, graph, starts, &best_start, result, runs, root, cost, costrev, &obj, NULL, maxcost, &success, FALSE) );
+      SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, graph, starts, &best_start, result, runs, root, cost, costrev, &obj, NULL, maxcost, &success, FALSE) );
 
       /* PC or RPC? Then restore oringinal graph */
       if( pcmw )
@@ -4689,7 +4678,7 @@ SCIP_RETCODE hcrcbound_reduce(
       tmheurdata = SCIPheurGetData(SCIPfindHeur(scip, "TM"));
 
       /* compute UB */
-      SCIP_CALL( SCIPheurComputeSteinerTree(scip, tmheurdata, graph, NULL, &best_start, result, 50, root, cost, costrev, &hopfactor, NULL, maxcost, &success, FALSE) );
+      SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, graph, NULL, &best_start, result, 50, root, cost, costrev, &hopfactor, NULL, maxcost, &success, FALSE) );
 
       objval = 0.0;
       for( e = 0; e < nedges; e++ )

@@ -715,7 +715,7 @@ SCIP_RETCODE SCIPheurPrune(
 
          if( !pcmw )
          {
-            compTMstarts(prunegraph, nodearrint, &nruns);
+            SCIPStpHeurTMCompStarts(prunegraph, nodearrint, &nruns);
 
             for( k = 0; k < nruns; k++ )
                assert(prunegraph->grad[nodearrint[k]] > 0 );
@@ -731,17 +731,13 @@ SCIP_RETCODE SCIPheurPrune(
          assert(graph_valid(prunegraph));
 
          /* run shortest path heuristic */
-         SCIP_CALL( SCIPheurComputeSteinerTree(scip, tmheurdata, prunegraph, tmstarts, &best_start, edgearrint, nruns,
+         SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, prunegraph, tmstarts, &best_start, edgearrint, nruns,
                prunegraph->source[0], cost, costrev, &hopfactor, NULL, 0.0, success, FALSE) );
 
          if( pcmw )
          {
-#if 1
             SCIP_Bool dummy;
-            SCIP_CALL( greedyExtensionPcMw(scip, prunegraph, prunegraph->cost, path, edgearrint, nodearrint, nodearrchar, &dummy) );
-#else
-            SCIP_CALL( extendSteinerTreePcMw(scip, prunegraph, vnoi, costrev, vbase, edgearrint, nodearrchar, &k) );
-#endif
+            SCIP_CALL( SCIPStpHeurLocalExtendPcMw(scip, prunegraph, prunegraph->cost, path, edgearrint, nodearrint, nodearrchar, &dummy) );
 
             for( k = 0; k < nnodes; k++ )
                nodearrchar[k] = FALSE;
@@ -791,11 +787,11 @@ SCIP_RETCODE SCIPheurPrune(
          /* prune solution (in the original graph) */
          if( pcmw )
          {
-            SCIP_CALL( SCIPheurPrunePCSteinerTree(scip, g, g->cost, soledge, nodearrchar) );
+            SCIP_CALL( SCIPStpHeurTMPrunePc(scip, g, g->cost, soledge, nodearrchar) );
          }
          else
          {
-            SCIP_CALL( SCIPheurPruneSteinerTree(scip, g, g->cost, 0, soledge, nodearrchar) );
+            SCIP_CALL( SCIPStpHeurTMPrune(scip, g, g->cost, 0, soledge, nodearrchar) );
          }
 
 #if PRINTDEBUG
@@ -814,17 +810,13 @@ SCIP_RETCODE SCIPheurPrune(
          assert(graph_valid(prunegraph));
 
          /* run shortest path heuristic */
-         SCIP_CALL( SCIPheurComputeSteinerTree(scip, tmheurdata, prunegraph, NULL, &best_start, soledge, nruns,
+         SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, prunegraph, NULL, &best_start, soledge, nruns,
                prunegraph->source[0], cost, costrev, &hopfactor, NULL, 0.0, success, FALSE) );
 
          if( pcmw )
          {
-#if 1
             SCIP_Bool dummy;
-            SCIP_CALL( greedyExtensionPcMw(scip, prunegraph, prunegraph->cost, path, soledge, nodearrint, nodearrchar, &dummy) );
-#else
-            SCIP_CALL( extendSteinerTreePcMw(scip, prunegraph, vnoi, costrev, vbase, soledge, nodearrchar, &k) );
-#endif
+            SCIP_CALL( SCIPStpHeurLocalExtendPcMw(scip, prunegraph, prunegraph->cost, path, soledge, nodearrint, nodearrchar, &dummy) );
          }
 
          setSolArray(prunegraph, &uborg, solnode, soledge);
@@ -888,7 +880,7 @@ SCIP_RETCODE SCIPheurPrune(
          for( e = 0; e < nedges; e++ )
             soledge[e] = UNKNOWN;
 
-         SCIP_CALL( SCIPheurPrunePCSteinerTree(scip, g, g->cost, soledge, nodearrchar) );
+         SCIP_CALL( SCIPStpHeurTMPrunePc(scip, g, g->cost, soledge, nodearrchar) );
 
          *success = graph_sol_valid(scip, g, soledge);
          assert(*success);
@@ -956,22 +948,18 @@ SCIP_RETCODE SCIPheurPrune(
             }
 
             nruns = MIN(nruns, DEFAULT_PRUNE_TMRUNS);
-            compTMstarts(prunegraph, nodearrint, &nruns);
+            SCIPStpHeurTMCompStarts(prunegraph, nodearrint, &nruns);
 
             assert(graph_valid(prunegraph));
 
             /* run shortest path heuristic */
-            SCIP_CALL( SCIPheurComputeSteinerTree(scip, tmheurdata, prunegraph, nodearrint, &best_start, edgearrint, nruns,
+            SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, prunegraph, nodearrint, &best_start, edgearrint, nruns,
                   prunegraph->source[0], cost, costrev, &hopfactor, NULL, 0.0, success, FALSE) );
 
             if( pcmw )
             {
-#if 1
                SCIP_Bool dummy;
-               SCIP_CALL( greedyExtensionPcMw(scip, prunegraph, prunegraph->cost, path, edgearrint, nodearrint, nodearrchar, &dummy) );
-#else
-               SCIP_CALL( extendSteinerTreePcMw(scip, prunegraph, vnoi, costrev, vbase, edgearrint, nodearrchar, &k) );
-#endif
+               SCIP_CALL( SCIPStpHeurLocalExtendPcMw(scip, prunegraph, prunegraph->cost, path, edgearrint, nodearrint, nodearrchar, &dummy) );
             }
 
             objnew = graph_computeSolVal(prunegraph->cost, edgearrint, 0.0, nedges);
@@ -987,11 +975,11 @@ SCIP_RETCODE SCIPheurPrune(
 #endif
             if( pcmw )
             {
-               SCIP_CALL( SCIPheurBuildTreePcMw(scip, prunegraph, path, cost, &objold, solnode) );
+               SCIP_CALL( SCIPStpHeurTMBuildTreePcMw(scip, prunegraph, path, cost, &objold, solnode) );
             }
             else
             {
-               SCIP_CALL( SCIPheurBuildTree(scip, prunegraph, path, cost, &objold, solnode) );
+               SCIP_CALL( SCIPStpHeurTMBuildTree(scip, prunegraph, path, cost, &objold, solnode) );
             }
 
 #if PRINTDEBUG
@@ -1207,11 +1195,11 @@ SCIP_RETCODE SCIPheurPrune(
 
       if( pcmw )
       {
-         SCIP_CALL( SCIPheurBuildTreePcMw(scip, prunegraph, path, prunegraph->cost, &objprune, solnode) );
+         SCIP_CALL( SCIPStpHeurTMBuildTreePcMw(scip, prunegraph, path, prunegraph->cost, &objprune, solnode) );
       }
       else
       {
-         SCIP_CALL( SCIPheurBuildTree(scip, prunegraph, path, prunegraph->cost, &objprune, solnode) );
+         SCIP_CALL( SCIPStpHeurTMBuildTree(scip, prunegraph, path, prunegraph->cost, &objprune, solnode) );
       }
 
       /* solution valid? */
@@ -1254,12 +1242,12 @@ SCIP_RETCODE SCIPheurPrune(
       /* compute new solution on heuristically reduced graph */
 
       /* run TM heuristic */
-      SCIP_CALL( SCIPheurComputeSteinerTree(scip, tmheurdata, prunegraph, NULL, &best_start, soledge, DEFAULT_PRUNE_TMRUNS,
+      SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, prunegraph, NULL, &best_start, soledge, DEFAULT_PRUNE_TMRUNS,
             prunegraph->source[0], cost, costrev, &hopfactor, NULL, 0.0, success, FALSE) );
 
       if( pcmw )
       {
-         SCIP_CALL( SCIPheurImproveSteinerTree(scip, prunegraph, cost, costrev, soledge) );
+         SCIP_CALL( SCIPStpHeurLocalRun(scip, prunegraph, cost, costrev, soledge) );
       }
 
 #if BREAKONERROR
@@ -1335,9 +1323,9 @@ SCIP_RETCODE SCIPheurPrune(
       soledge[e] = UNKNOWN;
 
    if( pcmw )
-      SCIP_CALL( SCIPheurPrunePCSteinerTree(scip, g, g->cost, soledge, nodearrchar) );
+      SCIP_CALL( SCIPStpHeurTMPrunePc(scip, g, g->cost, soledge, nodearrchar) );
    else
-      SCIP_CALL( SCIPheurPruneSteinerTree(scip, g, g->cost, 0, soledge, nodearrchar) );
+      SCIP_CALL( SCIPStpHeurTMPrune(scip, g, g->cost, 0, soledge, nodearrchar) );
 
    *success = graph_sol_valid(scip, g, soledge);
    assert(*success);

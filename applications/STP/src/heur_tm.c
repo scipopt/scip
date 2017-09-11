@@ -196,7 +196,7 @@ SCIP_RETCODE printGraph(
 
 
 /** compute starting points among marked (w.r.t. g->mark) vertices for constructive heuristics */
-void compTMstarts(
+void SCIPStpHeurTMCompStarts(
    GRAPH*                graph,              /**< graph data structure */
    int*                  starts,             /**< starting points array */
    int*                  runs               /**< pointer to number of runs */
@@ -249,7 +249,7 @@ void compTMstarts(
 }
 
 /* prune the (rooted) prize collecting Steiner tree in such a way that all leaves are terminals */
-SCIP_RETCODE SCIPheurPrunePCSteinerTree(
+SCIP_RETCODE SCIPStpHeurTMPrunePc(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
    const SCIP_Real*      cost,               /**< edge costs */
@@ -448,7 +448,7 @@ SCIP_RETCODE SCIPheurPrunePCSteinerTree(
 
 
 /** build (rooted) prize collecting Steiner tree in such a way that all leaves are terminals */
-SCIP_RETCODE SCIPheurBuildTreePcMw(
+SCIP_RETCODE SCIPStpHeurTMBuildTreePcMw(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
    PATH*                 mst,                /**< path data structure array */
@@ -621,7 +621,7 @@ SCIP_RETCODE SCIPheurBuildTreePcMw(
 
 
 /** prune a Steiner tree in such a way that all leaves are terminals */
-SCIP_RETCODE SCIPheurPruneSteinerTree(
+SCIP_RETCODE SCIPStpHeurTMPrune(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
    const SCIP_Real*      cost,               /**< edge costs */
@@ -719,7 +719,7 @@ SCIP_RETCODE SCIPheurPruneSteinerTree(
 }
 
 /** build Steiner tree in such a way that all leaves are terminals */
-SCIP_RETCODE SCIPheurBuildTree(
+SCIP_RETCODE SCIPStpHeurTMBuildTree(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
    PATH*                 mst,                /**< path data structure array */
@@ -797,31 +797,8 @@ SCIP_RETCODE SCIPheurBuildTree(
    return SCIP_OKAY;
 }
 
-static
-SCIP_RETCODE prune(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          g,                  /**< graph structure */
-   const SCIP_Real*      cost,               /**< edge costs for DHCSTP */
-   int*                  result,             /**< ST edges */
-   STP_Bool*             connected           /**< ST nodes */
-   )
-{
-   const int nedges = g->edges;
-
-   if( g->stp_type != STP_DHCSTP )
-      for( int e = 0; e < nedges; e++ )
-         result[e] = UNKNOWN;
-
-   if( g->stp_type == STP_MWCSP || g->stp_type == STP_PCSPG || g->stp_type == STP_RPCSPG || g->stp_type == STP_RMWCSP )
-      SCIP_CALL( SCIPheurPrunePCSteinerTree(scip, g, g->cost, result, connected) );
-   else
-      SCIP_CALL( SCIPheurPruneSteinerTree(scip, g, (g->stp_type != STP_DHCSTP) ? g->cost : cost, 0, result, connected) );
-
-   return SCIP_OKAY;
-}
-
 /** prune a degree constrained Steiner tree in such a way that all leaves are terminals */
-SCIP_RETCODE SCIPheurPruneDegConsSteinerTree(
+SCIP_RETCODE SCIPStpHeurTMBuildTreeDc(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
    int*                  result,             /**< ST edges */
@@ -908,6 +885,33 @@ SCIP_RETCODE SCIPheurPruneDegConsSteinerTree(
       }
    }
    while( count > 0 );
+
+   return SCIP_OKAY;
+}
+
+/*
+ *  local functions
+ */
+
+static
+SCIP_RETCODE prune(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph structure */
+   const SCIP_Real*      cost,               /**< edge costs for DHCSTP */
+   int*                  result,             /**< ST edges */
+   STP_Bool*             connected           /**< ST nodes */
+   )
+{
+   const int nedges = g->edges;
+
+   if( g->stp_type != STP_DHCSTP )
+      for( int e = 0; e < nedges; e++ )
+         result[e] = UNKNOWN;
+
+   if( g->stp_type == STP_MWCSP || g->stp_type == STP_PCSPG || g->stp_type == STP_RPCSPG || g->stp_type == STP_RMWCSP )
+      SCIP_CALL( SCIPStpHeurTMPrunePc(scip, g, g->cost, result, connected) );
+   else
+      SCIP_CALL( SCIPStpHeurTMPrune(scip, g, (g->stp_type != STP_DHCSTP) ? g->cost : cost, 0, result, connected) );
 
    return SCIP_OKAY;
 }
@@ -1390,7 +1394,7 @@ SCIP_RETCODE computeDegConsTree(
    if( *solfound )
    {
       /* prune the solution */
-      SCIP_CALL( SCIPheurPruneDegConsSteinerTree(scip, g, result, connected) );
+      SCIP_CALL( SCIPStpHeurTMBuildTreeDc(scip, g, result, connected) );
 
       for( t = 0; t < nnodes; t++ )
          if( degs[t] > maxdegs[t] )
@@ -1776,7 +1780,7 @@ void do_prizecoll_trivial(
 
 
 /** execute shortest paths heuristic to obtain a Steiner tree */
-SCIP_RETCODE SCIPheurComputeSteinerTree(
+SCIP_RETCODE SCIPStpHeurTMRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
@@ -2475,7 +2479,7 @@ SCIP_DECL_HEURCOPY(heurCopyTM)
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
    /* call inclusion method of primal heuristic */
-   SCIP_CALL( SCIPincludeHeurTM(scip) );
+   SCIP_CALL( SCIPStpIncludeHeurTM(scip) );
 
    return SCIP_OKAY;
 }
@@ -2926,7 +2930,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
             }
          }
          /* can we connect the network */
-         SCIP_CALL( SCIPheurComputeSteinerTree(scip, heurdata, graph, NULL, &best_start, results, runs, heurdata->beststartnode,
+         SCIP_CALL( SCIPStpHeurTMRun(scip, heurdata, graph, NULL, &best_start, results, runs, heurdata->beststartnode,
                cost, costrev, &(heurdata->hopfactor), nodepriority, maxcost, &success, FALSE) );
    }
    if( success )
@@ -2977,7 +2981,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
  */
 
 /** creates the TM primal heuristic and includes it in SCIP */
-SCIP_RETCODE SCIPincludeHeurTM(
+SCIP_RETCODE SCIPStpIncludeHeurTM(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {

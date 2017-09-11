@@ -841,7 +841,7 @@ SCIP_RETCODE SCIPheurSlackPrune(
          for( e = 0; e < nedges; e++ )
             soledge[e] = UNKNOWN;
 
-         SCIP_CALL( SCIPheurPruneSteinerTree(scip, prunegraph, prunegraph->cost, 0, soledge, nodearrchar) );
+         SCIP_CALL( SCIPStpHeurTMPrune(scip, prunegraph, prunegraph->cost, 0, soledge, nodearrchar) );
 
          for( k = 0; k < nnodes; k++ )
             nodearrchar[k] = FALSE;
@@ -906,7 +906,7 @@ SCIP_RETCODE SCIPheurSlackPrune(
    for( e = 0; e < nedges; e++ )
       soledge[e] = UNKNOWN;
 
-   SCIP_CALL( SCIPheurPruneSteinerTree(scip, g, g->cost, 0, soledge, nodearrchar) );
+   SCIP_CALL( SCIPStpHeurTMPrune(scip, g, g->cost, 0, soledge, nodearrchar) );
 
    *success = graph_sol_valid(scip, g, soledge);
 
@@ -1202,7 +1202,7 @@ SCIP_RETCODE SCIPheurSlackPrunePcMw(
       for( k = 0; k < nnodes; k++ )
          nodearrchar[k] = (solnode[k] == CONNECT);
 
-      SCIP_CALL( SCIPheurPrunePCSteinerTree(scip, prunegraph, prunegraph->cost, soledge, nodearrchar) );
+      SCIP_CALL( SCIPStpHeurTMPrunePc(scip, prunegraph, prunegraph->cost, soledge, nodearrchar) );
 
       for( k = 0; k < nnodes; k++ )
          nodearrchar[k] = FALSE;
@@ -1224,8 +1224,6 @@ SCIP_RETCODE SCIPheurSlackPrunePcMw(
 #endif
 
       SCIP_CALL( SCIPheurPrune(scip, NULL, prunegraph, soledge, success, FALSE, TRUE) );
-
-     // SCIP_CALL( extendSteinerTreePcMw(scip, prunegraph, vnoi, costrev, vbase, soledge, nodearrchar, &e) );
 
       if( !(*success) )
       {
@@ -1295,7 +1293,7 @@ SCIP_RETCODE SCIPheurSlackPrunePcMw(
    for( e = 0; e < nedges; e++ )
       soledge[e] = UNKNOWN;
 
-   SCIP_CALL( SCIPheurPrunePCSteinerTree(scip, g, g->cost, soledge, nodearrchar) );
+   SCIP_CALL( SCIPStpHeurTMPrunePc(scip, g, g->cost, soledge, nodearrchar) );
    *success = graph_sol_valid(scip, g, soledge);
 
 #if 0

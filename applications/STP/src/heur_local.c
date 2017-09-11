@@ -204,7 +204,7 @@ STP_Bool nodeIsCrucial(
 }
 
 /** perform local heuristics on a given Steiner tree */
-SCIP_RETCODE SCIPheurImproveSteinerTree(
+SCIP_RETCODE SCIPStpHeurLocalRun(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
    SCIP_Real*            cost,               /**< arc cost array */
@@ -267,7 +267,7 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
    if( mwpc )
    {
       SCIP_Bool dummy;
-      SCIP_CALL( greedyExtensionPcMw(scip, graph, cost, vnoi, best_result, vbase, steinertree, &dummy) );
+      SCIP_CALL( SCIPStpHeurLocalExtendPcMw(scip, graph, cost, vnoi, best_result, vbase, steinertree, &dummy) );
    }
 
    for( i = 0; i < nnodes; i++ )
@@ -516,9 +516,9 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
       if( newnverts > 0  )
       {
          if( mwpc )
-            SCIP_CALL( SCIPheurPrunePCSteinerTree(scip, graph, graph->cost, best_result, steinertree) );
+            SCIP_CALL( SCIPStpHeurTMPrunePc(scip, graph, graph->cost, best_result, steinertree) );
          else
-            SCIP_CALL( SCIPheurPruneSteinerTree(scip, graph, graph->cost, 0, best_result, steinertree) );
+            SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, graph->cost, 0, best_result, steinertree) );
 
          for( i = 0; i < nnodes; i++ )
             SCIPlinkcuttreeInit(&nodes[i]);
@@ -1684,143 +1684,8 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
    return SCIP_OKAY;
 }
 
-/** local heuristic for (R)PC and MW */
-SCIP_RETCODE extendSteinerTreePcMw(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          graph,              /**< graph data structure */
-   PATH*                 vnoi,               /**< Voronoi data structure array */
-   SCIP_Real*            costrev,            /**< reversed edge cost array*/
-   int*                  vbase,              /**< array to store Voronoi bases to each vertex */
-   int*                  stedge,             /**< array to indicate whether an edge is part of the Steiner tree */
-   STP_Bool*             stvertex,           /**< uninitialized array to indicate whether an edge is part of the Steiner tree */
-   int*                  adds                /**< pointer to store number of added vertices */
-   )
-{
-   int e;
-   int i;
-   int k;
-   int nedges;
-   int nnodes;
-   int newnverts;
-
-   assert(adds != NULL);
-   assert(scip != NULL);
-   assert(vnoi != NULL);
-   assert(graph != NULL);
-   assert(stedge != NULL);
-   assert(costrev != NULL);
-   assert(stvertex != NULL);
-
-   *adds = -1;
-   nnodes = graph->knots;
-   nedges = graph->edges;
-   newnverts = 1;
-
-   /* init solution vertex array */
-
-   for( i = 0; i < nnodes; i++ )
-      stvertex[i] = FALSE;
-
-   stvertex[graph->source[0]] = TRUE;
-
-   for( e = 0; e < nedges; e++ )
-      if( stedge[e] == CONNECT )
-         stvertex[graph->head[e]] = TRUE;
-
-   /* main loop */
-   while( newnverts > 0)
-   {
-      if( graph->stp_type != STP_MWCSP )
-      {
-          for( i = 0; i < nnodes; i++ )
-          {
-             if( Is_pterm(graph->term[i]) && !stvertex[i] )
-             {
-                for( e = graph->outbeg[i]; e != EAT_LAST; e = graph->oeat[e] )
-                {
-                  if( stvertex[graph->head[e]]
-                        && !Is_term(graph->term[graph->head[e]])
-                        && SCIPisLT(scip, graph->cost[e], graph->prize[i]) )
-                  {
-                     stvertex[i] = TRUE;
-                     newnverts++;
-                     SCIPdebugMessage("add terminal  %d  %f < %f \n\n", i,
-                           graph->cost[e], graph->prize[i]);
-                     break;
-                  }
-               }
-            }
-         }
-      }
-      else
-      {
-          for( i = 0; i < nnodes; i++ )
-          {
-             if( Is_pterm(graph->term[i]) && !stvertex[i] )
-             {
-                for( e = graph->outbeg[i]; e != EAT_LAST; e = graph->oeat[e] )
-                {
-                  if( stvertex[graph->head[e]]
-                        && !Is_term(graph->term[graph->head[e]]) )
-                  {
-                     stvertex[i] = TRUE;
-                     newnverts++;
-                     SCIPdebugMessage("add terminal %d  %f head %d:  \n\n", i,
-                           graph->prize[i], graph->head[e]);
-                     break;
-                  }
-               }
-            }
-         }
-      }
-
-      voronoiSteinerTreeExt(scip, graph, costrev, vbase, stvertex, vnoi);
-
-      for( i = 0; i < nnodes; i++ )
-      {
-         if( stvertex[i] && vbase[i] != UNKNOWN && vbase[i] != i && !Is_term(graph->term[i]) )
-         {
-            assert(Is_pterm(graph->term[vbase[i]]));
-
-            if( !stvertex[vbase[i]] && SCIPisLT(scip, vnoi[i].dist, 0.0) )
-            {
-               k = i;
-
-               while( k != vbase[i] )
-               {
-                  e = vnoi[k].edge;
-                  k = graph->tail[e];
-                  if( !stvertex[k] )
-                  {
-                     stvertex[k] = TRUE;
-                     newnverts++;
-
-                     SCIPdebugMessage("add vertex %d (vbase: %d, cost: %f \n", k, i, graph->prize[k]);
-                  }
-               }
-            }
-         }
-      }
-
-      *adds += newnverts;
-      newnverts = 0;
-   }
-
-   /* have vertices been added? */
-   if( *adds > 0 )
-   {
-      SCIPdebugMessage("\n vertices added! \n");
-      for( e = 0; e < nedges; e++ )
-         stedge[e] = UNKNOWN;
-      SCIP_CALL( SCIPheurPrunePCSteinerTree(scip, graph, graph->cost, stedge, stvertex) );
-   }
-
-   return SCIP_OKAY;
-}
-
-
 /** Greedy Extension local heuristic for (R)PC and MW */
-SCIP_RETCODE greedyExtensionPcMw(
+SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
    const SCIP_Real*      cost,               /**< edge cost array*/
@@ -2056,10 +1921,10 @@ SCIP_RETCODE greedyExtensionPcMw(
    /* have vertices been added? */
    if( *extensions )
    {
-      SCIPdebugMessage("greedyExtensionPcMw found extensions \n");
+      SCIPdebugMessage("SCIPStpHeurLocalExtendPcMw found extensions \n");
       for( int e = 0; e < nedges; e++ )
          stedge[e] = UNKNOWN;
-      SCIP_CALL( SCIPheurPrunePCSteinerTree(scip, graph, cost, stedge, stvertex) );
+      SCIP_CALL( SCIPStpHeurTMPrunePc(scip, graph, cost, stedge, stvertex) );
    }
 
    SCIPpqueueFree(&pqueue);
@@ -2095,7 +1960,7 @@ SCIP_DECL_HEURCOPY(heurCopyLocal)
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
    /* call inclusion method of primal heuristic */
-   SCIP_CALL( SCIPincludeHeurLocal(scip) );
+   SCIP_CALL( SCIPStpIncludeHeurLocal(scip) );
 
    return SCIP_OKAY;
 }
@@ -2347,15 +2212,15 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
       }
 
       if( graph->stp_type == STP_PCSPG || graph->stp_type == STP_RPCSPG || graph->stp_type == STP_MWCSP )
-         SCIP_CALL( SCIPheurPrunePCSteinerTree(scip, graph, graph->cost, results, steinertree) );
+         SCIP_CALL( SCIPStpHeurTMPrunePc(scip, graph, graph->cost, results, steinertree) );
       else
-         SCIP_CALL( SCIPheurPruneSteinerTree(scip, graph, graph->cost, 0, results, steinertree) );
+         SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, graph->cost, 0, results, steinertree) );
 
       SCIPfreeBufferArray(scip, &steinertree);
    }
 
    /* execute local heuristics */
-   SCIP_CALL( SCIPheurImproveSteinerTree(scip, graph, cost, costrev, results) );
+   SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, cost, costrev, results) );
 
    /* can we connect the network */
    for( v = 0; v < nvars; v++ )
@@ -2420,7 +2285,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
 
 
 /** creates the local primal heuristic and includes it in SCIP */
-SCIP_RETCODE SCIPincludeHeurLocal(
+SCIP_RETCODE SCIPStpIncludeHeurLocal(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
