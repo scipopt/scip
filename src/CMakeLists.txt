@@ -32,6 +32,7 @@ set(scipsources
     scip/cons_expr_log.c
     scip/cons_expr_pow.c
     scip/cons_expr_product.c
+    scip/cons_expr_sin.c
     scip/cons_expr_sum.c
     scip/cons_expr_value.c
     scip/cons_expr_var.c
