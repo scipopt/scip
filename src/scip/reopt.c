@@ -5085,7 +5085,7 @@ SCIP_RETCODE SCIPreoptFree(
    assert(blkmem != NULL);
 
    /* free random number generator */
-   SCIPrandomFree(&(*reopt)->randnumgen);
+   SCIPrandomFree(&(*reopt)->randnumgen, blkmem);
 
    /* free reopttree */
    SCIP_CALL( freeReoptTree((*reopt)->reopttree, set, blkmem) );
@@ -7763,7 +7763,7 @@ SCIP_RETCODE SCIPreoptApplyCuts(
          {
             SCIP_CALL( SCIProwCreate(&cut, blkmem, set, stat, lp, cutname, ncols, cols, vals, cons->lhs, cons->rhs,
                   SCIP_ROWORIGINTYPE_REOPT, NULL, FALSE, FALSE, TRUE) );
-            SCIP_CALL( SCIPcutpoolAddRow(cutpool, blkmem, set, cut) );
+            SCIP_CALL( SCIPcutpoolAddRow(cutpool, blkmem, set, stat, lp, cut) );
 
             SCIPsetDebugMsg(set, "add cut <%s> of size %d to cutpool, [lhs, rhs] = [%g,%g] to node %lld\n", cutname,
                ncols, cons->lhs, cons->rhs, SCIPnodeGetNumber(node));

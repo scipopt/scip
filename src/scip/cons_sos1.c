@@ -1812,7 +1812,7 @@ SCIP_RETCODE presolRoundConssSOS1(
 
    /* create digraph whose nodes represent variables and cliques in the conflict graph */
    csize = MAX(1, conshdlrdata->maxextensions) * nconss;
-   SCIP_CALL( SCIPdigraphCreate(&vertexcliquegraph, nsos1vars + csize) );
+   SCIP_CALL( SCIPcreateDigraph(scip, &vertexcliquegraph, nsos1vars + csize) );
 
    /* allocate buffer arrays */
    SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nsos1vars) );
@@ -2860,7 +2860,7 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
       }
 
       /* create conflict graph of linear constraint */
-      SCIP_CALL( SCIPdigraphCreate(&conflictgraphlin, ntrafolinvars) );
+      SCIP_CALL( SCIPcreateDigraph(scip, &conflictgraphlin, ntrafolinvars) );
       SCIP_CALL( genConflictgraphLinearCons(conshdlrdata, conflictgraphlin, conflictgraph, trafolinvars, ntrafolinvars, varindincons) );
 
       /* mark all the variables as 'not covered by some clique cover' */
@@ -3401,7 +3401,7 @@ SCIP_RETCODE presolRoundVarsSOS1(
    }
 
    /* create implication graph */
-   SCIP_CALL( SCIPdigraphCreate(&implgraph, ntotalvars) );
+   SCIP_CALL( SCIPcreateDigraph(scip, &implgraph, ntotalvars) );
 
    /* try to tighten the lower and upper bounds of the variables */
    updateconfl = FALSE;
@@ -3809,7 +3809,7 @@ SCIP_RETCODE initImplGraphSOS1(
    nimplnodes = 0;
 
    /* create implication graph */
-   SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->implgraph, nsos1vars + nprobvars) );
+   SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->implgraph, SCIPblkmem(scip), nsos1vars + nprobvars) );
 
    /* create hashmap */
    SCIP_CALL( SCIPhashmapCreate(&implhash, SCIPblkmem(scip), nsos1vars + nprobvars) );
@@ -5098,7 +5098,7 @@ SCIP_RETCODE addBranchingComplementaritiesSOS1(
                      {
                         if ( localconflicts == NULL )
                         {
-                           SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->localconflicts, nsos1vars) );
+                           SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->localconflicts, SCIPblkmem(scip), nsos1vars) );
                            localconflicts = conshdlrdata->localconflicts;
                         }
                         SCIP_CALL( SCIPdigraphAddArc(localconflicts, vertex1, vertex2, NULL) );
@@ -5411,7 +5411,7 @@ SCIP_RETCODE enforceConflictgraph(
 
          if ( conshdlrdata->localconflicts == NULL )
          {
-            SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->localconflicts, nsos1vars ) );
+            SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->localconflicts, SCIPblkmem(scip), nsos1vars ) );
          }
 
          vars = consdata->vars;
@@ -8725,7 +8725,7 @@ SCIP_RETCODE initConflictgraph(
       nodecreated[i] = FALSE;
 
    /* create conflict graph */
-   SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->conflictgraph, cntsos) );
+   SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->conflictgraph, SCIPblkmem(scip), cntsos) );
 
    /* set up hash map */
    SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->varhash, SCIPblkmem(scip), cntsos) );
@@ -8958,7 +8958,7 @@ SCIP_DECL_CONSINITSOL(consInitsolSOS1)
        /* create local conflict graph if needed */
        if ( conshdlrdata->addcomps )
        {
-          SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->localconflicts, conshdlrdata->nsos1vars) );
+          SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->localconflicts, SCIPblkmem(scip), conshdlrdata->nsos1vars) );
        }
 
        /* initialize stack of variables fixed to nonzero (memory may be already allocated in consTransSOS1()) */
@@ -9466,6 +9466,10 @@ SCIP_DECL_CONSCHECK(consCheckSOS1)
             {
                SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
                *result = SCIP_INFEASIBLE;
+
+               /* update constraint violation in solution */
+               if ( sol != NULL )
+                  SCIPupdateSolConsViolation(scip, sol, 1.0, 1.0);
 
                if ( printreason )
                {

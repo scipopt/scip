@@ -340,7 +340,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpClosecuts)
          isroot = (SCIP_Bool) (SCIPgetNNodes(scip) == 0);
 
          /* separate solution via other separators */
-         SCIP_CALL( SCIPseparateSol(scip, point, isroot, FALSE, &delayed, &cutoff) );
+         SCIP_CALL( SCIPseparateSol(scip, point, isroot, TRUE, FALSE, &delayed, &cutoff) );
 
          SCIP_CALL( SCIPfreeSol(scip, &point) );
          assert( point == NULL );

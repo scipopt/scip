@@ -305,7 +305,7 @@ SCIP_RETCODE readFile(
       BMSclearMemoryArray(demands[j], nresources); /*lint !e866*/
    }
 
-   SCIP_CALL( SCIPdigraphCreate(&precedencegraph, njobs) );
+   SCIP_CALL( SCIPcreateDigraph(scip, &precedencegraph, njobs) );
 
    SCIPdebugMessage("problem has <%d> jobs and <%d> resources\n", njobs, nresources);
 

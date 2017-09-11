@@ -973,8 +973,8 @@ SCIP_DECL_HEURINIT(heurInitMultistart)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
-         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
+         DEFAULT_RANDSEED) );
 
    /* try to find sub-NLP heuristic */
    heurdata->heursubnlp = SCIPfindHeur(scip, "subnlp");
@@ -994,7 +994,7 @@ SCIP_DECL_HEUREXIT(heurExitMultistart)
    assert(heurdata != NULL);
    assert(heurdata->randnumgen != NULL);
 
-   SCIPrandomFree(&heurdata->randnumgen);
+   SCIPfreeRandom(scip, &heurdata->randnumgen);
 
    return SCIP_OKAY;
 }

@@ -1,3 +1,38 @@
+SCIP version NEXT
+=================
+
+features:
+- new disjoint set data structure SCIP_DISJOINTSET to incrementally update connectedness information for a graph on nodes {0,...,n-1}
+- added macros to do computations with a higher precision by using double double arithmetic
+- new compiler flag DEBUGSOL={true,false} to enable an internal debugging mechanism to check against a user given debug solution
+- add new heuristic MPEC that solves a MPEC reformulation of a mixed-binary nonlinear problem by regularized NLP reformulations
+- added interface to the NLP solver WORHP; set WORHP=true in order to link to WORHP
+- added interface to the NLP solver FilterSQP; set FILTERSQP=true in order to link to FilterSQP
+- new numerical solution violations get printed when checksol is called
+
+parameters:
+- new parameter misc/debugsol to specify a debug solution that should be checked during the solve
+- fixed typo: heuristics/completesol/maxunkownrate has changed to heuristics/completesol/maxunknownrate
+- new parameters: beforepresol, maxlpiter, and maxcontvars in heur_completesol.c
+- new parameter: lp/refactorinterval to change the refactorization interval of the LP solver
+
+interface:
+- removed clique component index from SCIP_Var struct and the public interface method SCIPvarGetCliqueComponentIdx
+- new interface methods SCIPcreateRandom, SCIPfreeRandom that replace SCIPrandomCreate and SCIPrandomFree
+  in the public SCIP API.
+- new interface method SCIPsetRandomSeed to (re)set a random number generator seed
+- added method SCIPsetProbingLPState() to install given LP state and/or norms at the current probing node
+- added functions SCIPbranchcandGetLPMaxPrio() and SCIPbranchcandGetExternMaxPrio() get the maximal branching priority of given
+  branching candidates; also added SCIPbranchcandGetNPrioLPCands() to access the number of LP candidates with this priority.
+- added methods SCIPupdateSolIntegralityViolation(), SCIPupdateSolBoundViolation(), SCIPupdateSolLPRowViolation(),
+  SCIPupdateSolConsViolation() and SCIPupdateSolLPConsViolation() for updating numerical solution violations, as well as
+  SCIPactivateSolViolationUpdates() and SCIPdeactivateSolViolationUpdates() for activating/deactivating violation updates globally
+
+performance improvements:
+- use disjoint set to reduce peak memory usage and time to compute of clique table connectedness information
+- add and use RESTRICT macro for some pointers
+- improved the implementation of SCIPvarGetActiveRepresentatives
+
 SCIP version 4.0.1
 ==================
 
@@ -139,7 +174,7 @@ parameters:
   constraints
 - new parameter "constraints/cardinality/balanceddepth" to set the maximal depth until balanced branching is turned off
 - new parameter "constraints/cardinality/balancedcutoff" to determine that balanced branching is only used if the branching cut off value
-  w.r.t. the current LP solution is greater than a given value
+  w.r.t. the current LP solution is greater than a given value
 - new parameter "constraints/quadratic/projectedcuts" to enable convex quadratics to generate gradients cuts at the
   projection of the point onto the region described by the constraint, which is supporting
 - parameters "conflict/useinflp" and "conflict/useboundlp" are now of type char (before bool)

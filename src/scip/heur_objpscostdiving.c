@@ -196,7 +196,7 @@ SCIP_DECL_HEURINIT(heurInitObjpscostdiving) /*lint --e{715}*/
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen, DEFAULT_RANDSEED) );
 
    /* initialize data */
    heurdata->nlpiterations = 0;
@@ -220,7 +220,7 @@ SCIP_DECL_HEUREXIT(heurExitObjpscostdiving) /*lint --e{715}*/
    assert(heurdata != NULL);
 
    /* free random number generator */
-   SCIPrandomFree(&heurdata->randnumgen);
+   SCIPfreeRandom(scip, &heurdata->randnumgen);
 
    /* free working solution */
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );

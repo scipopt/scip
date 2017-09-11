@@ -845,8 +845,8 @@ SCIP_DECL_HEURINIT(heurInitTwoopt)
    heurdata->nintblocks = 0;
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
-         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
+         DEFAULT_RANDSEED) );
 
 #ifdef SCIP_STATISTIC
    /* initialize statistics */
@@ -1338,7 +1338,7 @@ SCIP_DECL_HEUREXIT(heurExitTwoopt)
    assert(heurdata->intvars == NULL);
 
    /* free random number generator */
-   SCIPrandomFree(&heurdata->randnumgen);
+   SCIPfreeRandom(scip, &heurdata->randnumgen);
 
    SCIPheurSetData(heur, heurdata);
 

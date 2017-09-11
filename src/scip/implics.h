@@ -385,10 +385,18 @@ extern
 SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_VAR**            vars,               /**< array of problem variables, sorted by variable type */
    int                   nbinvars,           /**< number of binary variables */
    int                   nintvars,           /**< number of integer variables */
    int                   nimplvars           /**< number of implicit integer variables */
+   );
+
+/** returns the index of the connected component of the clique graph that the variable belongs to, or -1  */
+extern
+int SCIPcliquetableGetVarComponentIdx(
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** returns the number of cliques stored in the clique list */
@@ -454,8 +462,8 @@ SCIP_Bool SCIPcliquetableNeedsComponentUpdate(
 #define SCIPcliquetableGetNCliques(cliquetable)      ((cliquetable)->ncliques)
 #define SCIPcliquetableGetCliques(cliquetable)       ((cliquetable)->cliques)
 #define SCIPcliquetableGetNEntries(cliquetable)      ((cliquetable)->nentries)
-#define SCIPcliquetableGetNCliqueComponents(cliquetable) ((cliquetable)->componentupdate ? -1 : (cliquetable)->ncliquecomponents)
-#define SCIPcliquetableNeedsComponentUpdate(cliquetable) ((cliquetable)->componentupdate)
+#define SCIPcliquetableGetNCliqueComponents(cliquetable) (cliquetable->compsfromscratch ? -1 : cliquetable->ncliquecomponents)
+#define SCIPcliquetableNeedsComponentUpdate(cliquetable) (cliquetable->compsfromscratch || cliquetable->djset == NULL)
 #endif
 
 #ifdef __cplusplus

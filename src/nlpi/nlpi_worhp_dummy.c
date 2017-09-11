@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -13,35 +13,42 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   sepa_flowcover.h
- * @ingroup SEPARATORS
- * @brief  flowcover separator
- * @author Tobias Achterberg
+/**@file    nlpi_worhp_dummy.c
+ * @ingroup NLPIS
+ * @brief   dummy WORHP NLP interface
+ * @author  Benjamin Mueller
  */
 
-/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+#include "nlpi/nlpi_worhp.h"
 
-#ifndef __SCIP_SEPA_FLOWCOVER_H__
-#define __SCIP_SEPA_FLOWCOVER_H__
+/** create solver interface for Worhp solver */
+SCIP_RETCODE SCIPcreateNlpSolverWorhp(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_NLPI**           nlpi,               /**< pointer to buffer for nlpi address */
+   SCIP_Bool             useip               /**< TRUE for using Interior Point, FALSE for SQP */
+   )
+{
+   *nlpi = NULL;
 
-
-#include "scip/scip.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/** creates the flowcover separator and includes it in SCIP
- *
- * @ingroup SeparatorIncludes
- */
-EXTERN
-SCIP_RETCODE SCIPincludeSepaFlowcover(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-#ifdef __cplusplus
+   return SCIP_OKAY;
 }
-#endif
 
-#endif
+/** gets string that identifies Worhp (version number) */
+const char* SCIPgetSolverNameWorhp(void)
+{
+   return "WORHP";
+}
+
+/** gets string that describes Worhp (version number) */
+extern
+const char* SCIPgetSolverDescWorhp(void)
+{
+   return "this is WORHP";
+}
+
+/** returns whether Worhp is available, i.e., whether it has been linked in */
+extern
+SCIP_Bool SCIPisWorhpAvailableWorhp(void)
+{
+   return FALSE;
+}

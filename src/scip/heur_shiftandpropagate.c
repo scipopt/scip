@@ -1306,7 +1306,7 @@ SCIP_DECL_HEUREXIT(heurExitShiftandpropagate)
    assert(heurdata != NULL);
 
    /* free random number generator */
-   SCIPrandomFree(&heurdata->randnumgen);
+   SCIPfreeRandom(scip, &heurdata->randnumgen);
 
    /* if statistic mode is enabled, statistics are printed to console */
    SCIPstatistic(
@@ -1340,8 +1340,8 @@ SCIP_DECL_HEURINIT(heurInitShiftandpropagate)
    assert(heurdata != NULL);
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
-         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
+         DEFAULT_RANDSEED) );
 
    SCIPstatistic(
       heurdata->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;

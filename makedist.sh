@@ -2,7 +2,7 @@
 
 # For release versions, only use VERSION="x.x.x".
 # For development versions, use VERSION="x.x.x.x" with subversion number.
-VERSION="4.0.1"
+VERSION="4.0.0.2"
 NAME="scip-$VERSION"
 rm -f $NAME
 ln -s . $NAME
@@ -248,10 +248,9 @@ $NAME/tests/src/cons/superindicator/*                  \
 
 rm -f $NAME
 echo ""
-echo "check version numbers in src/scip/def.h, doc/xternal.c, make.project, Makefile.nmake, and makedist.sh ($VERSION):"
+echo "check version numbers in src/scip/def.h, doc/xternal.c, make.project, and makedist.sh ($VERSION):"
 grep -H "SCIP_VERSION" src/scip/def.h
 grep -H "@version" doc/xternal.c
 grep -H "^SCIP_VERSION" make/make.project
-grep -H "^VERSION" Makefile.nmake
 echo ""
 tail src/scip/githash.c

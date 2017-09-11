@@ -87,6 +87,7 @@ set(scipsources
     scip/heur_locks.c
     scip/heur_mutation.c
     scip/heur_multistart.c
+    scip/heur_mpec.c
     scip/heur_nlpdiving.c
     scip/heur_objpscostdiving.c
     scip/heur_octane.c
@@ -171,11 +172,10 @@ set(scipsources
     scip/sepa_cgmip.c
     scip/sepa_clique.c
     scip/sepa_closecuts.c
-    scip/sepa_cmir.c
+    scip/sepa_aggregation.c
     scip/sepa_convexproj.c
     scip/sepa_disjunctive.c
     scip/sepa_eccuts.c
-    scip/sepa_flowcover.c
     scip/sepa_gauge.c
     scip/sepa_gomory.c
     scip/sepa_impliedbounds.c
@@ -240,6 +240,7 @@ set(scipsources
     scip/tree.c
     scip/var.c
     scip/visual.c
+    scip/rbtree.c
     tclique/tclique_branch.c
     tclique/tclique_coloring.c
     tclique/tclique_graph.c
@@ -268,6 +269,7 @@ set(objscipsources
 
 set(nlpisources
     nlpi/nlpi.c
+    nlpi/nlpi_all.c
     nlpi/nlpioracle.c
     nlpi/expr.c
     nlpi/intervalarithext.cpp
@@ -277,7 +279,7 @@ set(nlpisources
 
 set(lpisources
    ${lpi}
-)
+   )
 
 set(blockmemshellheader
     blockmemshell/memory.h
@@ -297,6 +299,7 @@ set(nlpiheaders
     nlpi/intervalarithext.h
     nlpi/nlpi.h
     nlpi/nlpi_ipopt.h
+    nlpi/nlpi_worhp.h
     nlpi/nlpioracle.h
     nlpi/pub_expr.h
     nlpi/struct_expr.h
@@ -422,6 +425,7 @@ set(scipheaders
     scip/heur_lpface.h
     scip/heur_multistart.h
     scip/heur_mutation.h
+    scip/heur_mpec.h
     scip/heur_nlpdiving.h
     scip/heur_objpscostdiving.h
     scip/heur_octane.h
@@ -532,6 +536,7 @@ set(scipheaders
     scip/pub_sol.h
     scip/pub_tree.h
     scip/pub_var.h
+    scip/rbtree.h
     scip/reader_bnd.h
     scip/reader_ccg.h
     scip/reader_cip.h
@@ -564,7 +569,7 @@ set(scipheaders
     scip/sepa_cgmip.h
     scip/sepa_clique.h
     scip/sepa_closecuts.h
-    scip/sepa_cmir.h
+    scip/sepa_aggregation.h
     scip/sepa_convexproj.h
     scip/sepa_disjunctive.h
     scip/sepa_eccuts.h

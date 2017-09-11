@@ -29,18 +29,38 @@
 #include <stdlib.h>
 #include <stddef.h>
 
-/* special thanks to Daniel Junglas for following template and macros */
 #ifdef __cplusplus
 
+/* special thanks to Daniel Junglas for following template and macros */
 template<typename T> T* docast(T*, void *v) { return reinterpret_cast<T*>(v); }
+
+/* For C++11, we can easily check whether the types for memory functions like BMSduplicateXYZArray() are equal. */
+#if __cplusplus > 199711L
+#include <type_traits>
+
+/* the following adds a type check for the parameters, used in ASSIGNCHECK below */
+template<typename T1, typename T2> T1* docastcheck(T1* v1, void* v, T2* v2)
+{
+   typedef typename std::remove_const<T1>::type t1;
+   typedef typename std::remove_const<T2>::type t2;
+   static_assert(std::is_same<t1, t2>(), "need equal types");
+   return reinterpret_cast<T1*>(v);
+}
+#else
+/* for older compilers do nothing */
+template<typename T1, typename T2> T1* docastcheck(T1* v1, void* v, T2* v2) { return reinterpret_cast<T1*>(v); }
+#endif
+
 
 extern "C" {
 
 #define ASSIGN(pointerstarstar, voidstarfunction) (*(pointerstarstar) = docast(*(pointerstarstar), (voidstarfunction)))
+#define ASSIGNCHECK(pointerstarstar, voidstarfunction, origpointer) (*(pointerstarstar) = docastcheck(*(pointerstarstar), (voidstarfunction), (origpointer)))
 
 #else
 
 #define ASSIGN(pointerstarstar, voidstarfunction) (*(pointerstarstar) = (voidstarfunction))
+#define ASSIGNCHECK(pointerstarstar, voidstarfunction, origpointer) (*(pointerstarstar) = (voidstarfunction))
 
 #endif
 
@@ -99,8 +119,8 @@ extern "C" {
 
 #define BMSduplicateMemory(ptr, source)       ASSIGN((ptr), BMSduplicateMemory_call( (const void*)(source), sizeof(**(ptr)), __FILE__, __LINE__ ))
 #define BMSduplicateMemorySize(ptr, source, size) ASSIGN((ptr), BMSduplicateMemory_call( (const void*)(source), (size_t)(ptrdiff_t)(size), __FILE__, __LINE__ ))
-#define BMSduplicateMemoryArray(ptr, source, num) ASSIGN((ptr), BMSduplicateMemoryArray_call( (const void*)(source), (size_t)(ptrdiff_t)(num), \
-                                                  sizeof(**(ptr)), __FILE__, __LINE__ ))
+#define BMSduplicateMemoryArray(ptr, source, num) ASSIGNCHECK((ptr), BMSduplicateMemoryArray_call( (const void*)(source), (size_t)(ptrdiff_t)(num), \
+                                                  sizeof(**(ptr)), __FILE__, __LINE__ ), source)
 #define BMSfreeMemory(ptr)                    BMSfreeMemory_call( (void**)(ptr), __FILE__, __LINE__ )
 #define BMSfreeMemoryNull(ptr)                BMSfreeMemoryNull_call( (void**)(ptr), __FILE__, __LINE__ )
 #define BMSfreeMemoryArray(ptr)               BMSfreeMemory_call( (void**)(ptr), __FILE__, __LINE__ )
@@ -417,8 +437,8 @@ typedef struct BMS_BlkMem BMS_BLKMEM;           /**< block memory: collection of
                                                 (size_t)(ptrdiff_t)(oldnum), (size_t)(ptrdiff_t)(newnum), sizeof(**(ptr)), __FILE__, __LINE__))
 #define BMSduplicateBlockMemory(mem, ptr, source) ASSIGN((ptr), BMSduplicateBlockMemory_call((mem), (const void*)(source), \
                                                 sizeof(**(ptr)), __FILE__, __LINE__ ))
-#define BMSduplicateBlockMemoryArray(mem, ptr, source, num) ASSIGN((ptr), BMSduplicateBlockMemoryArray_call( (mem), (const void*)(source), \
-                                                (size_t)(ptrdiff_t)(num), sizeof(**(ptr)), __FILE__, __LINE__ ))
+#define BMSduplicateBlockMemoryArray(mem, ptr, source, num) ASSIGNCHECK((ptr), BMSduplicateBlockMemoryArray_call( (mem), (const void*)(source), \
+                                                (size_t)(ptrdiff_t)(num), sizeof(**(ptr)), __FILE__, __LINE__ ), source)
 
 #define BMSfreeBlockMemory(mem,ptr)           BMSfreeBlockMemory_call( (mem), (void**)(ptr), sizeof(**(ptr)), __FILE__, __LINE__ )
 #define BMSfreeBlockMemoryNull(mem,ptr)       BMSfreeBlockMemoryNull_call( (mem), (void**)(ptr), sizeof(**(ptr)), __FILE__, __LINE__ )
@@ -682,8 +702,8 @@ typedef struct BMS_BufMem BMS_BUFMEM;        /**< buffer memory for temporary ob
                                                  sizeof(**(ptr)), __FILE__, __LINE__))
 #define BMSduplicateBufferMemory(mem,ptr,source,size) \
                                              ASSIGN((ptr), BMSduplicateBufferMemory_call((mem), (const void*)(source), (size_t)(ptrdiff_t)(size), __FILE__, __LINE__))
-#define BMSduplicateBufferMemoryArray(mem,ptr,source,num) ASSIGN((ptr), BMSduplicateBufferMemoryArray_call((mem), \
-                                                (const void*)(source), (size_t)(ptrdiff_t)(num), sizeof(**(ptr)), __FILE__, __LINE__))
+#define BMSduplicateBufferMemoryArray(mem,ptr,source,num) ASSIGNCHECK((ptr), BMSduplicateBufferMemoryArray_call((mem), \
+                                                 (const void*)(source), (size_t)(ptrdiff_t)(num), sizeof(**(ptr)), __FILE__, __LINE__), source)
 
 #define BMSfreeBufferMemory(mem,ptr)         BMSfreeBufferMemory_call((mem), (void**)(ptr), __FILE__, __LINE__)
 #define BMSfreeBufferMemoryNull(mem,ptr)     BMSfreeBufferMemoryNull_call((mem), (void**)(ptr), __FILE__, __LINE__)

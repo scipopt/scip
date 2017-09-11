@@ -81,6 +81,10 @@
 #ifndef SOPLEX_SUBVERSION
 #define SOPLEX_SUBVERSION 0
 #endif
+/* define API version for versions <= 3.0.0 */
+#ifndef SOPLEX_APIVERSION
+#define SOPLEX_APIVERSION 0
+#endif
 
 /* check version */
 #if (SOPLEX_VERSION < 200 || (SOPLEX_VERSION == 200 && SOPLEX_SUBVERSION < 2) || (SOPLEX_VERSION > 200 && SOPLEX_VERSION < 201))
@@ -4089,6 +4093,11 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       *ival = (int) lpi->spx->randomSeed();
       break;
 #endif
+#if SOPLEX_APIVERSION >= 1
+   case SCIP_LPPAR_REFACTOR:
+      *ival = (int) lpi->spx->intParam(SoPlex::FACTOR_UPDATE_MAX);
+      break;
+#endif
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
@@ -4182,6 +4191,13 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       (void) lpi->spx->setIntParam(SoPlex::SOLUTION_POLISHING, ival);
       break;
 #endif
+#if SOPLEX_APIVERSION >= 1
+   case SCIP_LPPAR_REFACTOR:
+      assert(ival >= 0);
+      (void) lpi->spx->setIntParam(SoPlex::FACTOR_UPDATE_MAX, ival);
+      break;
+#endif
+
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/

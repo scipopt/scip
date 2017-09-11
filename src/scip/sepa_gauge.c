@@ -261,6 +261,7 @@ SCIP_RETCODE computeInteriorPoint(
    iterlimit = sepadata->nlpiterlimit > 0 ? sepadata->nlpiterlimit : INT_MAX;
    SCIP_CALL( SCIPnlpiSetIntPar(nlpi, nlpiprob, SCIP_NLPPAR_ITLIM, iterlimit) );
    SCIP_CALL( SCIPnlpiSetRealPar(nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, NLPFEASFAC * SCIPfeastol(scip)) );
+   SCIP_CALL( SCIPnlpiSetRealPar(nlpi, nlpiprob, SCIP_NLPPAR_RELOBJTOL, MAX(SCIPfeastol(scip), SCIPdualfeastol(scip))) );  /* TODO maybe this tolerance could be relaxed, as the point doesn't need to be the perfect center of the interior */
    SCIP_CALL( SCIPnlpiSetIntPar(nlpi, nlpiprob, SCIP_NLPPAR_VERBLEVEL, NLPVERBOSITY) );
 
    /* compute interior point */
@@ -288,7 +289,7 @@ SCIP_RETCODE computeInteriorPoint(
    {
       SCIP_Real* nlpisol;
 
-      SCIP_CALL( SCIPnlpiGetSolution(nlpi, nlpiprob, &nlpisol, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPnlpiGetSolution(nlpi, nlpiprob, &nlpisol, NULL, NULL, NULL, NULL) );
 
       assert(nlpisol != NULL);
       SCIPdebugMsg(scip, "NLP solved: sol found has objvalue = %g\n", nlpisol[objvaridx]);

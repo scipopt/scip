@@ -1918,7 +1918,7 @@ SCIP_RETCODE findComponents(
          SCIP_DIGRAPH* digraph;
 
          /* create and fill directed graph */
-         SCIP_CALL( SCIPdigraphCreate(&digraph, nunfixedvars) );
+         SCIP_CALL( SCIPcreateDigraph(scip, &digraph, nunfixedvars) );
          SCIP_CALL( SCIPdigraphSetSizes(digraph, varlocks) );
          SCIP_CALL( fillDigraph(scip, digraph, sortedconss, *nsortedconss, unfixedvarpos, nunfixedvars, firstvaridxpercons, &success) );
 

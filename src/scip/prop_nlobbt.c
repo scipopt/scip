@@ -190,7 +190,7 @@ SCIP_RETCODE filterCands(
    assert(propdata->currpos >= 0 && propdata->currpos < propdata->nlpinvars);
    assert(SCIPnlpiGetSolstat(propdata->nlpi, propdata->nlpiprob) <= SCIP_NLPSOLSTAT_FEASIBLE);
 
-   SCIP_CALL( SCIPnlpiGetSolution(propdata->nlpi, propdata->nlpiprob, &primal, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPnlpiGetSolution(propdata->nlpi, propdata->nlpiprob, &primal, NULL, NULL, NULL, NULL) );
    assert(primal != NULL);
 
    /* we skip all candidates which have been processed already, i.e., starting at propdata->currpos + 1 */
@@ -262,7 +262,7 @@ SCIP_RETCODE addGenVBound(
    assert(varidx >= 0 && varidx < propdata->nlpinvars);
    assert(SCIPnlpiGetSolstat(propdata->nlpi, propdata->nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT);
 
-   SCIP_CALL( SCIPnlpiGetSolution(propdata->nlpi, propdata->nlpiprob, &primal, &dual, &alpha, &beta) );
+   SCIP_CALL( SCIPnlpiGetSolution(propdata->nlpi, propdata->nlpiprob, &primal, &dual, &alpha, &beta, NULL) );
 
    /* not possible to generate genvbound if the duals for the propagated variable do not disappear */
    if( !SCIPisFeasZero(scip, alpha[varidx] - beta[varidx]) )
@@ -393,7 +393,7 @@ SCIP_RETCODE solveNlp(
          SCIP_CALL( addGenVBound(scip, propdata, var, varidx, boundtype, SCIPgetCutoffbound(scip)) );
       }
 
-      SCIP_CALL( SCIPnlpiGetSolution(propdata->nlpi, propdata->nlpiprob, &primal, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPnlpiGetSolution(propdata->nlpi, propdata->nlpiprob, &primal, NULL, NULL, NULL, NULL) );
 
       if( boundtype == SCIP_BOUNDTYPE_LOWER )
       {
@@ -532,8 +532,6 @@ SCIP_RETCODE applyNlobbt(
    /* set parameters of NLP solver */
    SCIP_CALL( SCIPnlpiSetRealPar(propdata->nlpi, propdata->nlpiprob, SCIP_NLPPAR_FEASTOL,
          SCIPfeastol(scip) * propdata->feastolfac) );
-   SCIP_CALL( SCIPnlpiSetRealPar(propdata->nlpi, propdata->nlpiprob, SCIP_NLPPAR_FEASTOL,
-         SCIPfeastol(scip) * propdata->feastolfac) );
    SCIP_CALL( SCIPnlpiSetRealPar(propdata->nlpi, propdata->nlpiprob, SCIP_NLPPAR_RELOBJTOL,
          SCIPfeastol(scip) * propdata->relobjtolfac) );
    SCIP_CALL( SCIPnlpiSetIntPar(propdata->nlpi, propdata->nlpiprob, SCIP_NLPPAR_VERBLEVEL, propdata->nlpverblevel) );
@@ -623,8 +621,8 @@ SCIP_DECL_PROPINITSOL(propInitsolNlobbt)
    /* if genvbounds propagator is not available, we cannot create genvbounds */
    propdata->genvboundprop = SCIPfindProp(scip, "genvbounds");
 
-   SCIP_CALL( SCIPrandomCreate(&propdata->randnumgen, SCIPblkmem(scip),
-         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &propdata->randnumgen,
+         DEFAULT_RANDSEED) );
    SCIP_CALL( SCIPnlpStatisticsCreate(&propdata->nlpstatistics) );
    propdata->lastnode = -1;
 
@@ -641,7 +639,7 @@ SCIP_DECL_PROPEXITSOL(propExitsolNlobbt)
    assert(propdata != NULL);
 
    SCIPnlpStatisticsFree(&propdata->nlpstatistics);
-   SCIPrandomFree(&propdata->randnumgen);
+   SCIPfreeRandom(scip, &propdata->randnumgen);
 
    SCIP_CALL( propdataClear(scip, propdata) );
 

@@ -120,10 +120,3 @@ if( CRITERION_FOUND )
                             )
     endforeach(testSrc)
 endif()
-
-
-
-
-
-
-

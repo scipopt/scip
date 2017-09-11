@@ -1349,7 +1349,7 @@ uint32_t hashvalue(
    uint64_t              input               /**< key value */
    )
 {
-   return ( (uint32_t) ((0x9e3779b97f4a7c15ULL * input)>>32) ) | 1u;
+   return ( (uint32_t) ((UINT64_C(0x9e3779b97f4a7c15) * input)>>32) ) | 1u;
 }
 
 /** returns a reasonable hash table size (a prime number) that is at least as large as the specified value */
@@ -2479,6 +2479,23 @@ SCIP_Longint SCIPhashtableGetNElements(
    return hashtable->nelements;
 }
 
+/** gives the number of entries in the internal arrays of a hash table */
+int SCIPhashtableGetNEntries(
+   SCIP_HASHTABLE*       hashtable           /**< hash table */
+   )
+{
+   return (int) hashtable->mask + 1;
+}
+
+/** gives the element at the given index or NULL if entry at that index has no element */
+void* SCIPhashtableGetEntry(
+   SCIP_HASHTABLE*       hashtable,          /**< hash table */
+   int                   entryidx            /**< index of hash table entry */
+   )
+{
+   return hashtable->hashes[entryidx] == 0 ? NULL : hashtable->slots[entryidx];
+}
+
 /** returns the load of the given hash table in percentage */
 SCIP_Real SCIPhashtableGetLoad(
    SCIP_HASHTABLE*       hashtable           /**< hash table */
@@ -3173,6 +3190,386 @@ SCIP_RETCODE SCIPhashmapRemoveAll(
    return SCIP_OKAY;
 }
 
+
+/*
+ * Hash Set
+ */
+
+/* redefine ELEM_DISTANCE macro for hashset */
+#undef ELEM_DISTANCE
+/* computes the distance from it's desired position for the element stored at pos */
+#define ELEM_DISTANCE(pos) (((pos) + nslots - hashSetDesiredPos(hashset, hashset->slots[(pos)])) & mask)
+
+/* calculate desired position of element in hash set */
+static
+uint32_t hashSetDesiredPos(
+   SCIP_HASHSET*         hashset,            /**< the hash set */
+   void*                 element             /**< element to calculate position for */
+   )
+{
+   return (uint32_t)((UINT64_C(0x9e3779b97f4a7c15) * (uintptr_t)element)>>(hashset->shift));
+}
+
+static
+void hashsetInsert(
+   SCIP_HASHSET*         hashset,            /**< hash set */
+   void*                 element             /**< element to insert */
+   )
+{
+   uint32_t elemdistance;
+   uint32_t pos;
+   uint32_t nslots;
+   uint32_t mask;
+
+   assert(hashset != NULL);
+   assert(hashset->slots != NULL);
+   assert(element != NULL);
+
+   pos = hashSetDesiredPos(hashset, element);
+   nslots = SCIPhashsetGetNSlots(hashset);
+   mask = nslots - 1;
+
+   elemdistance = 0;
+   while( TRUE ) /*lint !e716*/
+   {
+      uint32_t distance;
+
+      /* if position is empty or key equal insert element */
+      if( hashset->slots[pos] == NULL )
+      {
+         hashset->slots[pos] = element;
+         ++hashset->nelements;
+         return;
+      }
+
+      if( hashset->slots[pos] == element )
+         return;
+
+      /* otherwise check if the current element at this position is closer to its hashvalue */
+      distance = ELEM_DISTANCE(pos);
+      if( distance < elemdistance )
+      {
+         /* if this is the case we insert the new element here and find a new position for the old one */
+         elemdistance = distance;
+         SCIPswapPointers(&hashset->slots[pos], &element);
+      }
+
+      /* continue until we have found an empty position */
+      pos = (pos + 1) & mask;
+      ++elemdistance;
+   }
+}
+
+/** check if the load factor of the hash set is too high and rebuild if necessary */
+static
+SCIP_RETCODE hashsetCheckLoad(
+   SCIP_HASHSET*         hashset,            /**< hash set */
+   BMS_BLKMEM*           blkmem              /**< block memory used to store hash set entries */
+   )
+{
+   assert(hashset != NULL);
+   assert(hashset->shift < 64);
+
+   /* use integer arithmetic to approximately check if load factor is above 90% */
+   if( ((((uint64_t)hashset->nelements)<<10)>>(64-hashset->shift) > 921) )
+   {
+      void** slots;
+      uint32_t nslots;
+      uint32_t newnslots;
+      uint32_t i;
+
+      /* calculate new size (always power of two) */
+      nslots = SCIPhashsetGetNSlots(hashset);
+      newnslots = 2*nslots;
+      --hashset->shift;
+
+      /* reallocate array */
+      SCIP_ALLOC( BMSallocClearBlockMemoryArray(blkmem, &slots, newnslots) );
+
+      SCIPswapPointers((void**) &slots, (void**) &hashset->slots);
+      hashset->nelements = 0;
+
+      /* reinsert all elements */
+      for( i = 0; i < nslots; ++i )
+      {
+         if( slots[i] != NULL )
+            hashsetInsert(hashset, slots[i]);
+      }
+
+      BMSfreeBlockMemoryArray(blkmem, &slots, nslots);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** creates a hash set of pointers */
+SCIP_RETCODE SCIPhashsetCreate(
+   SCIP_HASHSET**        hashset,            /**< pointer to store the created hash set */
+   BMS_BLKMEM*           blkmem,             /**< block memory used to store hash set entries */
+   int                   size                /**< initial size of the hash set; it is guaranteed that the set is not
+                                              *   resized if at most that many elements are inserted */
+   )
+{
+   uint32_t nslots;
+
+   assert(hashset != NULL);
+   assert(size >= 0);
+   assert(blkmem != NULL);
+
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, hashset) );
+
+   /* dont create too small hashtables, i.e. at least size 32, and increase
+    * the given size by divinding it by 0.9, since then no rebuilding will
+    * be necessary if the given number of elements are inserted. Finally round
+    * to the next power of two.
+    */
+   (*hashset)->shift = 64;
+   (*hashset)->shift -= (int)ceil(log2(MAX(8.0, size / 0.9)));
+   nslots = SCIPhashsetGetNSlots(*hashset);
+   (*hashset)->nelements = 0;
+
+   SCIP_ALLOC( BMSallocClearBlockMemoryArray(blkmem, &(*hashset)->slots, nslots) );
+
+   return SCIP_OKAY;
+}
+
+/** frees the hash set */
+void SCIPhashsetFree(
+   SCIP_HASHSET**        hashset,            /**< pointer to the hash set */
+   BMS_BLKMEM*           blkmem              /**< block memory used to store hash set entries */
+   )
+{
+   BMSfreeBlockMemoryArray(blkmem, &(*hashset)->slots, SCIPhashsetGetNSlots(*hashset));
+   BMSfreeBlockMemory(blkmem, hashset);
+}
+
+/** inserts new element into the hash set */
+SCIP_RETCODE SCIPhashsetInsert(
+   SCIP_HASHSET*         hashset,            /**< hash set */
+   BMS_BLKMEM*           blkmem,             /**< block memory used to store hash set entries */
+   void*                 element             /**< element to insert */
+   )
+{
+   assert(hashset != NULL);
+   assert(hashset->slots != NULL);
+
+   SCIP_CALL( hashsetCheckLoad(hashset, blkmem) );
+
+   hashsetInsert(hashset, element);
+
+   return SCIP_OKAY;
+}
+
+/** checks whether an element exists in the hash set */
+SCIP_Bool SCIPhashsetExists(
+   SCIP_HASHSET*         hashset,            /**< hash set */
+   void*                 element             /**< element to search for */
+   )
+{
+   uint32_t pos;
+   uint32_t nslots;
+   uint32_t mask;
+   uint32_t elemdistance;
+
+   assert(hashset != NULL);
+   assert(hashset->slots != NULL);
+
+   pos = hashSetDesiredPos(hashset, element);
+   nslots = SCIPhashsetGetNSlots(hashset);
+   mask = nslots - 1;
+   elemdistance = 0;
+
+   while( TRUE ) /*lint !e716*/
+   {
+      uint32_t distance;
+
+      /* found element */
+      if( hashset->slots[pos] == element )
+         return TRUE;
+
+      /* slots is empty so element cannot be contained */
+      if( hashset->slots[pos] == NULL )
+         return FALSE;
+
+      distance = ELEM_DISTANCE(pos);
+      /* element can not be contained since otherwise we would have swapped it with this one during insert */
+      if( elemdistance > distance )
+         return FALSE;
+
+      pos = (pos + 1) & mask;
+      ++elemdistance;
+   }
+}
+
+/** removes an element from the hash set, if it exists */
+SCIP_RETCODE SCIPhashsetRemove(
+   SCIP_HASHSET*         hashset,            /**< hash set */
+   void*                 element             /**< origin to remove from the list */
+   )
+{
+   uint32_t pos;
+   uint32_t nslots;
+   uint32_t mask;
+   uint32_t elemdistance;
+
+   assert(hashset != NULL);
+   assert(hashset->slots != NULL);
+   assert(element != NULL);
+
+   pos = hashSetDesiredPos(hashset, element);
+   nslots = SCIPhashsetGetNSlots(hashset);
+   mask = nslots - 1;
+   elemdistance = 0;
+
+   while( TRUE ) /*lint !e716*/
+   {
+      uint32_t distance;
+
+      /* found element */
+      if( hashset->slots[pos] == element )
+         break;
+
+      /* slots is empty so element cannot be contained */
+      if( hashset->slots[pos] == NULL )
+         return SCIP_OKAY;
+
+      distance = ELEM_DISTANCE(pos);
+      /* element can not be contained since otherwise we would have swapped it with this one during insert */
+      if( elemdistance > distance )
+         return SCIP_OKAY;
+
+      pos = (pos + 1) & mask;
+      ++elemdistance;
+   }
+
+   assert(hashset->slots[pos] == element);
+   assert(SCIPhashsetExists(hashset, element));
+
+   /* remove element */
+   --hashset->nelements;
+
+   /* move other elements if necessary */
+   while( TRUE ) /*lint !e716*/
+   {
+      uint32_t nextpos = (pos + 1) & mask;
+
+      /* nothing to do since there is no chain that needs to be moved */
+      if( hashset->slots[nextpos] == NULL )
+      {
+         hashset->slots[pos] = NULL;
+         assert(!SCIPhashsetExists(hashset, element));
+         return SCIP_OKAY;
+      }
+
+      /* check if the element is the start of a new chain and return if that is the case */
+      if( hashSetDesiredPos(hashset, hashset->slots[nextpos]) == nextpos )
+      {
+         hashset->slots[pos] = NULL;
+         assert(!SCIPhashsetExists(hashset, element));
+         return SCIP_OKAY;
+      }
+
+      /* element should be moved to the left and next element needs to be checked */
+      hashset->slots[pos] = hashset->slots[nextpos];
+
+      pos = nextpos;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** prints statistics about hash set usage */
+void SCIPhashsetPrintStatistics(
+   SCIP_HASHSET*         hashset,            /**< hash set */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
+   )
+{
+   uint32_t maxprobelen = 0;
+   uint64_t probelensum = 0;
+   uint32_t nslots;
+   uint32_t mask;
+   uint32_t i;
+
+   assert(hashset != NULL);
+
+   nslots = SCIPhashsetGetNSlots(hashset);
+   mask = nslots - 1;
+
+   /* compute the maximum and average probe length */
+   for( i = 0; i < nslots; ++i )
+   {
+      if( hashset->slots[i] != NULL )
+      {
+         uint32_t probelen = ((hashSetDesiredPos(hashset, hashset->slots[i]) + nslots - i) & mask) + 1;
+         probelensum += probelen;
+         maxprobelen = MAX(probelen, maxprobelen);
+      }
+   }
+
+   /* print general hash set statistics */
+   SCIPmessagePrintInfo(messagehdlr, "%u hash entries, used %u/%u slots (%.1f%%)",
+                        (unsigned int)hashset->nelements, (unsigned int)hashset->nelements,
+                        (unsigned int)nslots, 100.0*(SCIP_Real)hashset->nelements/(SCIP_Real)(nslots));
+
+   /* if not empty print average and maximum probe length */
+   if( hashset->nelements > 0 )
+      SCIPmessagePrintInfo(messagehdlr, ", avg. probe length is %.1f, max. probe length is %u",
+         (SCIP_Real)(probelensum)/(SCIP_Real)hashset->nelements, (unsigned int)maxprobelen);
+   SCIPmessagePrintInfo(messagehdlr, "\n");
+}
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ * In optimized mode, the methods are implemented as defines to improve performance.
+ * However, we want to have them in the library anyways, so we have to undef the defines.
+ */
+
+#undef SCIPhashsetIsEmpty
+#undef SCIPhashsetGetNElements
+#undef SCIPhashsetGetNSlots
+#undef SCIPhashsetGetSlots
+
+/** indicates whether a hash set has no entries */
+SCIP_Bool SCIPhashsetIsEmpty(
+   SCIP_HASHSET*         hashset             /**< hash set */
+   )
+{
+   return hashset->nelements == 0;
+}
+
+/** gives the number of elements in a hash set */
+int SCIPhashsetGetNElements(
+   SCIP_HASHSET*         hashset             /**< hash set */
+   )
+{
+   return hashset->nelements;
+}
+
+/** gives the number of slots of a hash set */
+int SCIPhashsetGetNSlots(
+   SCIP_HASHSET*         hashset             /**< hash set */
+   )
+{
+   return  1u << (64 - hashset->shift);
+}
+
+/** gives the array of hash set slots; contains all elements in indetermined order and may contain NULL values */
+void** SCIPhashsetGetSlots(
+   SCIP_HASHSET*         hashset             /**< hash set */
+   )
+{
+   return hashset->slots;
+}
+
+/** removes all entries in a hash set. */
+void SCIPhashsetRemoveAll(
+   SCIP_HASHSET*         hashset             /**< hash set */
+   )
+{
+   BMSclearMemoryArray(hashset->slots, SCIPhashsetGetNSlots(hashset));
+
+   hashset->nelements = 0;
+}
 
 /*
  * Dynamic Arrays
@@ -6441,24 +6838,27 @@ int SCIPprofileGetLatestFeasibleStart(
 /** creates directed graph structure */
 SCIP_RETCODE SCIPdigraphCreate(
    SCIP_DIGRAPH**        digraph,            /**< pointer to store the created directed graph */
+   BMS_BLKMEM*           blkmem,             /**< block memory to store the data */
    int                   nnodes              /**< number of nodes */
    )
 {
    assert(digraph != NULL);
+   assert(blkmem != NULL);
    assert(nnodes > 0);
 
    /* allocate memory for the graph and the arrays storing arcs and data */
-   SCIP_ALLOC( BMSallocMemory(digraph) );
-   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->successors, nnodes) );
-   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->arcdata, nnodes) );
-   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->successorssize, nnodes) );
-   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->nsuccessors, nnodes) );
-   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->nodedata, nnodes) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, digraph) );
+   SCIP_ALLOC( BMSallocClearBlockMemoryArray(blkmem, &(*digraph)->successors, nnodes) );
+   SCIP_ALLOC( BMSallocClearBlockMemoryArray(blkmem, &(*digraph)->arcdata, nnodes) );
+   SCIP_ALLOC( BMSallocClearBlockMemoryArray(blkmem, &(*digraph)->successorssize, nnodes) );
+   SCIP_ALLOC( BMSallocClearBlockMemoryArray(blkmem, &(*digraph)->nsuccessors, nnodes) );
+   SCIP_ALLOC( BMSallocClearBlockMemoryArray(blkmem, &(*digraph)->nodedata, nnodes) );
 
    /* store number of nodes */
    (*digraph)->nnodes = nnodes;
 
    /* at the beginning, no components are stored */
+   (*digraph)->blkmem = blkmem;
    (*digraph)->ncomponents = 0;
    (*digraph)->componentstartsize = 0;
    (*digraph)->components = NULL;
@@ -6474,17 +6874,19 @@ SCIP_RETCODE SCIPdigraphResize(
    )
 {
    int n;
+   assert(digraph != NULL);
+   assert(digraph->blkmem != NULL);
 
    /* check if the digraph has already a proper size */
    if( nnodes <= digraph->nnodes )
       return SCIP_OKAY;
 
    /* reallocate memory for increasing the arrays storing arcs and data */
-   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->successors, nnodes) );
-   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->arcdata, nnodes) );
-   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->successorssize, nnodes) );
-   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->nsuccessors, nnodes) );
-   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->nodedata, nnodes) );
+   SCIP_ALLOC( BMSreallocBlockMemoryArray(digraph->blkmem, &digraph->successors, digraph->nnodes, nnodes) );
+   SCIP_ALLOC( BMSreallocBlockMemoryArray(digraph->blkmem, &digraph->arcdata, digraph->nnodes, nnodes) );
+   SCIP_ALLOC( BMSreallocBlockMemoryArray(digraph->blkmem, &digraph->successorssize, digraph->nnodes, nnodes) );
+   SCIP_ALLOC( BMSreallocBlockMemoryArray(digraph->blkmem, &digraph->nsuccessors, digraph->nnodes, nnodes) );
+   SCIP_ALLOC( BMSreallocBlockMemoryArray(digraph->blkmem, &digraph->nodedata, digraph->nnodes, nnodes) );
 
    /* initialize the new node data structures */
    for( n = digraph->nnodes; n < nnodes; ++n )
@@ -6508,24 +6910,36 @@ SCIP_RETCODE SCIPdigraphResize(
  */
 SCIP_RETCODE SCIPdigraphCopy(
    SCIP_DIGRAPH**        targetdigraph,      /**< pointer to store the copied directed graph */
-   SCIP_DIGRAPH*         sourcedigraph       /**< source directed graph */
+   SCIP_DIGRAPH*         sourcedigraph,      /**< source directed graph */
+   BMS_BLKMEM*           targetblkmem        /**< block memory to store the target block memory, or NULL to use the same
+                                              *   the same block memory as used for the \p sourcedigraph */
    )
 {
    int ncomponents;
    int nnodes;
    int i;
 
-   SCIP_ALLOC( BMSallocMemory(targetdigraph) );
+   assert(sourcedigraph != NULL);
+   assert(targetdigraph != NULL);
+
+   /* use the source digraph block memory if not specified otherwise */
+   if( targetblkmem == NULL )
+      targetblkmem = sourcedigraph->blkmem;
+
+   assert(targetblkmem != NULL);
+
+   SCIP_ALLOC( BMSallocBlockMemory(targetblkmem, targetdigraph) );
 
    nnodes = sourcedigraph->nnodes;
    ncomponents = sourcedigraph->ncomponents;
    (*targetdigraph)->nnodes = nnodes;
    (*targetdigraph)->ncomponents = ncomponents;
+   (*targetdigraph)->blkmem = targetblkmem;
 
    /* copy arcs and data */
-   SCIP_ALLOC( BMSallocClearMemoryArray(&(*targetdigraph)->successors, nnodes) );
-   SCIP_ALLOC( BMSallocClearMemoryArray(&(*targetdigraph)->arcdata, nnodes) );
-   SCIP_ALLOC( BMSallocClearMemoryArray(&(*targetdigraph)->nodedata, nnodes) );
+   SCIP_ALLOC( BMSallocClearBlockMemoryArray(targetblkmem, &(*targetdigraph)->successors, nnodes) );
+   SCIP_ALLOC( BMSallocClearBlockMemoryArray(targetblkmem, &(*targetdigraph)->arcdata, nnodes) );
+   SCIP_ALLOC( BMSallocClearBlockMemoryArray(targetblkmem, &(*targetdigraph)->nodedata, nnodes) );
 
    /* copy lists of successors and arc data */
    for( i = 0; i < nnodes; ++i )
@@ -6535,23 +6949,25 @@ SCIP_RETCODE SCIPdigraphCopy(
          assert(sourcedigraph->successors[i] != NULL);
          assert(sourcedigraph->arcdata[i] != NULL);
 
-         SCIP_ALLOC( BMSduplicateMemoryArray(&((*targetdigraph)->successors[i]), \
+         SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &((*targetdigraph)->successors[i]), \
                sourcedigraph->successors[i], sourcedigraph->nsuccessors[i]) ); /*lint !e866*/
-         SCIP_ALLOC( BMSduplicateMemoryArray(&((*targetdigraph)->arcdata[i]), \
+         SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &((*targetdigraph)->arcdata[i]), \
                sourcedigraph->arcdata[i], sourcedigraph->nsuccessors[i]) ); /*lint !e866*/
       }
       /* copy node data - careful if these are pointers to some information -> need to be copied by hand */
       (*targetdigraph)->nodedata[i] = sourcedigraph->nodedata[i];
    }
-   SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->successorssize, sourcedigraph->nsuccessors, nnodes) );
-   SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->nsuccessors, sourcedigraph->nsuccessors, nnodes) );
+
+   /* use nsuccessors as size to save memory */
+   SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &(*targetdigraph)->successorssize, sourcedigraph->nsuccessors, nnodes) );
+   SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &(*targetdigraph)->nsuccessors, sourcedigraph->nsuccessors, nnodes) );
 
    /* copy component data */
    if( ncomponents > 0 )
    {
-      SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->components, sourcedigraph->components, \
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &(*targetdigraph)->components, sourcedigraph->components, \
             sourcedigraph->componentstarts[ncomponents]) );
-      SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->componentstarts, \
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &(*targetdigraph)->componentstarts, \
             sourcedigraph->componentstarts,ncomponents + 1) ); /*lint !e776*/
       (*targetdigraph)->componentstartsize = ncomponents + 1;
    }
@@ -6572,14 +6988,16 @@ SCIP_RETCODE SCIPdigraphSetSizes(
    )
 {
    int i;
+   BMS_BLKMEM* blkmem;
 
    assert(digraph != NULL);
    assert(digraph->nnodes > 0);
+   blkmem = digraph->blkmem;
 
    for( i = 0; i < digraph->nnodes; ++i )
    {
-      SCIP_ALLOC( BMSallocMemoryArray(&digraph->successors[i], sizes[i]) ); /*lint !e866*/
-      SCIP_ALLOC( BMSallocMemoryArray(&digraph->arcdata[i], sizes[i]) ); /*lint !e866*/
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &digraph->successors[i], sizes[i]) ); /*lint !e866*/
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &digraph->arcdata[i], sizes[i]) ); /*lint !e866*/
       digraph->successorssize[i] = sizes[i];
       digraph->nsuccessors[i] = 0;
    }
@@ -6593,33 +7011,38 @@ void SCIPdigraphFree(
    )
 {
    int i;
+   BMS_BLKMEM* blkmem;
+   SCIP_DIGRAPH* digraphptr;
 
    assert(digraph != NULL);
    assert(*digraph != NULL);
+   assert((*digraph)->blkmem != NULL);
+
+   blkmem = (*digraph)->blkmem;
+   digraphptr = *digraph;
 
    /* free arrays storing the successor nodes and arc data */
-   for( i = (*digraph)->nnodes - 1; i >= 0; --i )
+   for( i = digraphptr->nnodes - 1; i >= 0; --i )
    {
-      BMSfreeMemoryArrayNull(&(*digraph)->successors[i]);
-      BMSfreeMemoryArrayNull(&(*digraph)->arcdata[i]);
+      BMSfreeBlockMemoryArrayNull(blkmem, &digraphptr->successors[i], digraphptr->successorssize[i]);
+      BMSfreeBlockMemoryArrayNull(blkmem, &digraphptr->arcdata[i], digraphptr->successorssize[i]);
    }
-   (*digraph)->nnodes = 0;
 
    /* free components structure */
-   SCIPdigraphFreeComponents(*digraph);
-   assert((*digraph)->ncomponents == 0);
-   assert((*digraph)->componentstartsize == 0);
-   assert((*digraph)->components == NULL);
-   assert((*digraph)->componentstarts == NULL);
+   SCIPdigraphFreeComponents(digraphptr);
+   assert(digraphptr->ncomponents == 0);
+   assert(digraphptr->componentstartsize == 0);
+   assert(digraphptr->components == NULL);
+   assert(digraphptr->componentstarts == NULL);
 
    /* free directed graph data structure */
-   BMSfreeMemoryArray(&(*digraph)->nodedata);
-   BMSfreeMemoryArray(&(*digraph)->successorssize);
-   BMSfreeMemoryArray(&(*digraph)->nsuccessors);
-   BMSfreeMemoryArray(&(*digraph)->successors);
-   BMSfreeMemoryArray(&(*digraph)->arcdata);
+   BMSfreeBlockMemoryArray(blkmem, &digraphptr->nodedata, digraphptr->nnodes);
+   BMSfreeBlockMemoryArray(blkmem, &digraphptr->successorssize, digraphptr->nnodes);
+   BMSfreeBlockMemoryArray(blkmem, &digraphptr->nsuccessors, digraphptr->nnodes);
+   BMSfreeBlockMemoryArray(blkmem, &digraphptr->successors, digraphptr->nnodes);
+   BMSfreeBlockMemoryArray(blkmem, &digraphptr->arcdata, digraphptr->nnodes);
 
-   BMSfreeMemory(digraph);
+   BMSfreeBlockMemory(blkmem, digraph);
 }
 
 #define STARTSUCCESSORSSIZE 5
@@ -6632,12 +7055,17 @@ SCIP_RETCODE ensureSuccessorsSize(
    int                   newsize             /**< needed size */
    )
 {
+   BMS_BLKMEM* blkmem;
+
    assert(digraph != NULL);
+   assert(digraph->blkmem != NULL);
    assert(idx >= 0);
    assert(idx < digraph->nnodes);
    assert(newsize > 0);
    assert(digraph->successorssize[idx] == 0 || digraph->successors[idx] != NULL);
    assert(digraph->successorssize[idx] == 0 || digraph->arcdata[idx] != NULL);
+
+   blkmem = digraph->blkmem;
 
    /* check whether array is big enough, and realloc, if needed */
    if( newsize > digraph->successorssize[idx] )
@@ -6646,17 +7074,20 @@ SCIP_RETCODE ensureSuccessorsSize(
       {
          assert(digraph->arcdata[idx] == NULL);
          digraph->successorssize[idx] = STARTSUCCESSORSSIZE;
-         SCIP_ALLOC( BMSallocMemoryArray(&digraph->successors[idx], digraph->successorssize[idx]) ); /*lint !e866*/
-         SCIP_ALLOC( BMSallocMemoryArray(&digraph->arcdata[idx], digraph->successorssize[idx]) ); /*lint !e866*/
+         SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &digraph->successors[idx], digraph->successorssize[idx]) ); /*lint !e866*/
+         SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &digraph->arcdata[idx], digraph->successorssize[idx]) ); /*lint !e866*/
       }
       else
       {
+         newsize = MAX(newsize, 2 * digraph->successorssize[idx]);
          assert(digraph->arcdata[idx] != NULL);
-         digraph->successorssize[idx] = MAX(newsize, 2 * digraph->successorssize[idx]);
-         SCIP_ALLOC( BMSreallocMemoryArray(&digraph->successors[idx], digraph->successorssize[idx]) ); /*lint !e866*/
-         SCIP_ALLOC( BMSreallocMemoryArray(&digraph->arcdata[idx], digraph->successorssize[idx]) ); /*lint !e866*/
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &digraph->successors[idx], digraph->successorssize[idx], newsize) ); /*lint !e866*/
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &digraph->arcdata[idx], digraph->successorssize[idx], newsize) ); /*lint !e866*/
+         digraph->successorssize[idx] = newsize;
       }
    }
+
+   assert(newsize <= digraph->successorssize[idx]);
 
    return SCIP_OKAY;
 }
@@ -6939,6 +7370,7 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
                                               *   number of components is accessed by SCIPdigraphGetNComponents() */
    )
 {
+   BMS_BLKMEM* blkmem;
    SCIP_Bool* visited;
    int* ndirectedsuccessors;
    int* stackadjvisited;
@@ -6953,6 +7385,9 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
 
    assert(digraph != NULL);
    assert(digraph->nnodes > 0);
+   assert(digraph->blkmem != NULL);
+
+   blkmem = digraph->blkmem;
 
    /* first free the old components */
    if( digraph->ncomponents > 0 )
@@ -6963,12 +7398,15 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
    digraph->ncomponents = 0;
    digraph->componentstartsize = 10;
 
-   SCIP_ALLOC_TERMINATE(retcode, BMSallocClearMemoryArray(&visited, digraph->nnodes), TERMINATE );
-   SCIP_ALLOC_TERMINATE(retcode, BMSallocMemoryArray(&digraph->components, digraph->nnodes), TERMINATE );
-   SCIP_ALLOC_TERMINATE(retcode, BMSallocMemoryArray(&digraph->componentstarts, digraph->componentstartsize), TERMINATE );
-   SCIP_ALLOC_TERMINATE(retcode, BMSallocMemoryArray(&dfsstack, digraph->nnodes), TERMINATE );
-   SCIP_ALLOC_TERMINATE(retcode, BMSallocMemoryArray(&stackadjvisited, digraph->nnodes), TERMINATE );
-   SCIP_ALLOC_TERMINATE(retcode, BMSallocMemoryArray(&ndirectedsuccessors, digraph->nnodes), TERMINATE );
+   /* storage to hold components is stored in block memory */
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &digraph->components, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &digraph->componentstarts, digraph->componentstartsize) );
+
+   /* allocate temporary arrays */
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocClearMemoryArray(&visited, digraph->nnodes), TERMINATE );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&dfsstack, digraph->nnodes), TERMINATE );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&stackadjvisited, digraph->nnodes), TERMINATE );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&ndirectedsuccessors, digraph->nnodes), TERMINATE );
 
    digraph->componentstarts[0] = 0;
 
@@ -6980,7 +7418,7 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
    {
       for( j = 0; j < ndirectedsuccessors[i]; ++j )
       {
-         SCIP_CALL_TERMINATE(retcode, SCIPdigraphAddArc(digraph, digraph->successors[i][j], i, NULL), TERMINATE );
+         SCIP_CALL_TERMINATE( retcode, SCIPdigraphAddArc(digraph, digraph->successors[i][j], i, NULL), TERMINATE );
       }
    }
 
@@ -7002,10 +7440,13 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
          /* enlarge componentstartsize array, if needed */
          if( digraph->ncomponents >= digraph->componentstartsize )
          {
-            digraph->componentstartsize = 2 * digraph->componentstartsize;
-            assert(digraph->ncomponents < digraph->componentstartsize);
+            int newsize;
 
-            SCIP_ALLOC_TERMINATE(retcode, BMSreallocMemoryArray(&digraph->componentstarts, digraph->componentstartsize), TERMINATE );
+            newsize = 2 * digraph->componentstartsize;
+            assert(digraph->ncomponents < newsize);
+
+            SCIP_ALLOC_TERMINATE( retcode, BMSreallocBlockMemoryArray(blkmem, &digraph->componentstarts, digraph->componentstartsize, newsize), TERMINATE );
+            digraph->componentstartsize = newsize;
          }
          digraph->componentstarts[digraph->ncomponents] = compstart + ndfsnodes;
 
@@ -7348,13 +7789,18 @@ void SCIPdigraphFreeComponents(
    SCIP_DIGRAPH*         digraph             /**< directed graph */
    )
 {
+   BMS_BLKMEM* blkmem;
+
    assert(digraph != NULL);
+   assert(digraph->blkmem != NULL);
+
+   blkmem = digraph->blkmem;
 
    /* free components structure */
    if( digraph->componentstartsize > 0 )
    {
-      BMSfreeMemoryArray(&digraph->componentstarts);
-      BMSfreeMemoryArray(&digraph->components);
+      BMSfreeBlockMemoryArray(blkmem, &digraph->componentstarts, digraph->componentstartsize);
+      BMSfreeBlockMemoryArray(blkmem, &digraph->components, digraph->nnodes);
       digraph->components = NULL;
       digraph->componentstarts = NULL;
       digraph->ncomponents = 0;
@@ -8632,9 +9078,8 @@ SCIP_Real SCIPgetRandomReal(
 #define DEFAULT_CST  UINT32_C(7654321)
 
 
-/** initialize the random number generator with a given start seed */
-static
-void randomInitialize(
+/** initializes a random number generator with a given start seed */
+void SCIPrandomSetSeed(
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
    unsigned int          initseed            /**< initial random seed */
    )
@@ -8650,8 +9095,6 @@ void randomInitialize(
    assert(randnumgen->seed > 0);
    assert(randnumgen->xor_seed > 0);
    assert(randnumgen->mwc_seed > 0);
-
-   return;
 }
 
 /** returns a random number between 0 and UINT32_MAX
@@ -8699,25 +9142,27 @@ SCIP_RETCODE SCIPrandomCreate(
    assert(randnumgen != NULL);
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, randnumgen) );
-   (*randnumgen)->blkmem = blkmem;
 
-   randomInitialize((*randnumgen), initialseed);
+   SCIPrandomSetSeed((*randnumgen), initialseed);
 
    return SCIP_OKAY;
 }
 
 /** frees a random number generator */
 void SCIPrandomFree(
-   SCIP_RANDNUMGEN**     randnumgen          /**< random number generator */
+   SCIP_RANDNUMGEN**     randnumgen,         /**< random number generator */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    assert(randnumgen != NULL);
    assert((*randnumgen) != NULL);
 
-   BMSfreeBlockMemory((*randnumgen)->blkmem, randnumgen);
+   BMSfreeBlockMemory(blkmem, randnumgen);
 
    return;
 }
+
+
 
 /** returns a random integer between minrandval and maxrandval */
 int SCIPrandomGetInt(
@@ -9655,4 +10100,166 @@ SCIP_Real SCIPcomputeGap(
 
       return REALABS((primalbound - dualbound)/MIN(absdual, absprimal));
    }
+}
+
+/*
+ *Union-Find data structure
+ */
+
+/** creates a disjoint set (union find) structure \p uf for \p ncomponents many components (of size one) */
+SCIP_RETCODE SCIPdisjointsetCreate(
+   SCIP_DISJOINTSET**    djset,              /**< disjoint set (union find) data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   int                   ncomponents         /**< number of components */
+   )
+{
+   assert(djset != NULL);
+   assert(blkmem != NULL);
+
+   /* allocate the necessary memory */
+   assert(ncomponents > 0);
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, djset) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &((*djset)->parents), ncomponents) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &((*djset)->sizes), ncomponents) );
+   (*djset)->size = ncomponents;
+
+   /* clear the data structure */
+   SCIPdisjointsetClear(*djset);
+
+   return SCIP_OKAY;
+}
+
+/** clears the disjoint set (union find) structure \p uf */
+void SCIPdisjointsetClear(
+   SCIP_DISJOINTSET*     djset               /**< disjoint set (union find) data structure */
+   )
+{
+   int i;
+   djset->componentcount = djset->size;
+
+   /* reset all components to be unconnected */
+   for( i = 0; i < djset->componentcount; i++ )
+   {
+      djset->parents[i] = i;
+      djset->sizes[i] = 1;
+   }
+}
+
+
+/** finds and returns the component identifier of this \p element */
+int SCIPdisjointsetFind(
+   SCIP_DISJOINTSET*     djset,              /**< disjoint set (union find) data structure */
+   int                   element             /**< element to be found */
+   )
+{
+   int newelement;
+   int root = element;
+   int* parents = djset->parents;
+
+   /* find root of this element */
+   while( root != parents[root] )
+   {
+      root = parents[root];
+   }
+
+   /* compress the path to make future queries faster */
+   while( element != root )
+   {
+      newelement = parents[element];
+      parents[element] = root;
+      element = newelement;
+   }
+
+   return root;
+}
+
+/** merges the components containing the elements \p p and \p q */
+void SCIPdisjointsetUnion(
+   SCIP_DISJOINTSET*     djset,              /**< disjoint set (union find) data structure */
+   int                   p,                  /**< first element */
+   int                   q,                  /**< second element */
+   SCIP_Bool             forcerepofp         /**< force representative of p to be new representative */
+   )
+{
+   int idp;
+   int idq;
+   int* sizes;
+   int* parents;
+
+   assert(djset != NULL);
+   assert(0 <= p);
+   assert(0 <= q);
+   assert(djset->size > p);
+   assert(djset->size > q);
+
+
+   idp = SCIPdisjointsetFind(djset, p);
+   idq = SCIPdisjointsetFind(djset, q);
+
+   /* if p and q lie in the same component, there is nothing to be done */
+   if( idp == idq )
+      return;
+
+   sizes = djset->sizes;
+   parents = djset->parents;
+
+   if( forcerepofp )
+   {
+      parents[idq] = idp;
+      sizes[idp] += sizes[idq];
+   }
+   else
+   {
+      if( sizes[idp] < sizes[idq] )
+      {
+         parents[idp] = idq;
+         sizes[idq] += sizes[idp];
+      }
+      else
+      {
+         parents[idq] = idp;
+         sizes[idp] += sizes[idq];
+      }
+   }
+   /* one less component */
+   djset->componentcount--;
+}
+
+/** frees the disjoint set (union find) data structure */
+void SCIPdisjointsetFree(
+   SCIP_DISJOINTSET**    djset,              /**< pointer to disjoint set (union find) data structure */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   )
+{
+   SCIP_DISJOINTSET* dsptr;
+
+   assert(djset != NULL);
+   assert(*djset != NULL);
+
+   dsptr = *djset;
+
+   BMSfreeBlockMemoryArray(blkmem, &dsptr->sizes, dsptr->size);
+   BMSfreeBlockMemoryArray(blkmem, &dsptr->parents, dsptr->size);
+
+   BMSfreeBlockMemory(blkmem, djset);
+}
+
+/** returns the number of independent components in this disjoint set (union find) data structure */
+int SCIPdisjointsetGetComponentCount(
+   SCIP_DISJOINTSET*     djset               /**< disjoint set (union find) data structure */
+   )
+{
+   assert(djset != NULL);
+
+   return djset->componentcount;
+}
+
+/** returns the size (number of nodes) of this disjoint set (union find) data structure */
+int SCIPdisjointsetGetSize(
+   SCIP_DISJOINTSET*     djset               /**< disjoint set (union find) data structure */
+   )
+{
+   assert(djset != NULL);
+
+   return djset->size;
 }
