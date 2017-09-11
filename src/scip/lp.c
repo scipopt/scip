@@ -1907,7 +1907,11 @@ void rowAddNorms(
             row->nummaxval = 1;
          }
          else if( SCIPsetIsGE(set, absval, row->maxval) )
+         {
+            /* make sure the maxval is always exactly the same */
+            row->maxval = MAX(absval, row->maxval);
             row->nummaxval++;
+         }
       }
       if( row->numminval > 0 )
       {
@@ -1917,15 +1921,19 @@ void rowAddNorms(
             row->numminval = 1;
          }
          else if( SCIPsetIsLE(set, absval, row->minval) )
+         {
+            /* make sure the minval is always exactly the same */
+            row->minval = MIN(absval, row->minval);
             row->numminval++;
+         }
       }
    }
    else
    {
       assert(row->minidx <= col->index);
       assert(row->maxidx >= col->index);
-      assert(row->numminval <= 0 || SCIPsetIsGE(set, absval, row->minval));
-      assert(row->nummaxval <= 0 || SCIPsetIsLE(set, absval, row->maxval));
+      assert(row->numminval <= 0 || absval >= row->minval);
+      assert(row->nummaxval <= 0 || absval <= row->maxval);
    }
 }
 
@@ -1951,8 +1959,8 @@ void rowDelNorms(
 
    absval = REALABS(val);
    assert(!SCIPsetIsZero(set, absval));
-   assert(row->nummaxval == 0 || SCIPsetIsGE(set, row->maxval, absval));
-   assert(row->numminval == 0 || SCIPsetIsLE(set, row->minval, absval));
+   assert(row->nummaxval == 0 || row->maxval >= absval);
+   assert(row->numminval == 0 || row->minval <= absval);
 
    /* update min/maxidx validity */
    if( updateindex && (col->index == row->minidx || col->index == row->maxidx) )
@@ -4750,7 +4758,11 @@ void rowCalcIdxsAndVals(
             row->nummaxval = 1;
          }
          else if( SCIPsetIsGE(set, absval, row->maxval) )
+         {
+            /* make sure the maxval is always exactly the same */
+            row->maxval = MAX(absval, row->maxval);
             row->nummaxval++;
+         }
       }
       if( row->numminval > 0 )
       {
@@ -4760,7 +4772,11 @@ void rowCalcIdxsAndVals(
             row->numminval = 1;
          }
          else if( SCIPsetIsLE(set, absval, row->minval) )
+         {
+            /* make sure the minval is always exactly the same */
+            row->minval = MIN(absval, row->minval);
             row->numminval++;
+         }
       }
    }
 }
@@ -8939,6 +8955,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->ndivingrows = 0;
    (*lp)->divinglpiitlim = INT_MAX;
    (*lp)->resolvelperror = FALSE;
+   (*lp)->divenolddomchgs = 0;
    (*lp)->adjustlpval = FALSE;
    (*lp)->lpiuobjlim = SCIPlpiInfinity((*lp)->lpi);
    (*lp)->lpifeastol = SCIPsetLpfeastol(set);
@@ -15258,6 +15275,9 @@ SCIP_RETCODE SCIPlpStartDive(
    /* store LPI iteration limit */
    SCIP_CALL( SCIPlpiGetIntpar(lp->lpi, SCIP_LPPAR_LPITLIM, &lp->divinglpiitlim) );
 
+   /* remember the number of domain changes */
+   lp->divenolddomchgs = stat->domchgcount;
+
    /* store current number of rows */
    lp->ndivingrows = lp->nrows;
 
@@ -15356,7 +15376,7 @@ SCIP_RETCODE SCIPlpEndDive(
     */
    assert(lp->storedsolvals != NULL);
    if( lp->storedsolvals->lpissolved
-      && (set->lp_resolverestore || lp->storedsolvals->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL) )
+      && (set->lp_resolverestore || lp->storedsolvals->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL || lp->divenolddomchgs < stat->domchgcount) )
    {
       SCIP_Bool lperror;
 

@@ -48,6 +48,7 @@ option(LEGACY "build SCIP/SoPlex in legacy mode" OFF)
 option(NOBLKBUFMEM "should block and buffer memory be disabled" OFF)
 option(NOBLKMEM "should block and buffer memory be disabled" OFF)
 option(NOBUFMEM "should block and buffer memory be disabled" OFF)
+option(DEBUGSOL "should the debug solution mechanism be enabled" OFF)
 option(COVERAGE "enable coverage support" OFF)
 SET(COVERAGE_CTEST_ARGS "" CACHE STRING "additional ctest arguments for coverage")
 option(MT "use static runtime libraries for Visual Studio compiler" OFF)
@@ -60,7 +61,7 @@ set(EXPRINT cppad CACHE STRING "options for expression interpreter")  #create th
 set_property(CACHE EXPRINT PROPERTY STRINGS none cppad )  #define list of values GUI will offer for the variable
 
 set(LPS spx CACHE STRING "options for LP solver")  #create the variable
-set_property(CACHE LPS PROPERTY STRINGS spx cpx grb glop )  #define list of values GUI will offer for the variable
+set_property(CACHE LPS PROPERTY STRINGS spx cpx grb xprs clp glop msk none )  #define list of values GUI will offer for the variable
 
 #set options for memory management
 if( NOBLKBUFMEM )
@@ -74,6 +75,10 @@ endif()
 
 if(NOBUFMEM)
    add_definitions(-DSCIP_NOBUFFERMEM)
+endif()
+
+if(DEBUGSOL)
+   add_definitions(-DWITH_DEBUG_SOLUTION)
 endif()
 
 #set the correct rpath for OS X
@@ -149,19 +154,18 @@ message(STATUS "LEGACY mode for old compilers: ${LEGACY}")
 # create a target for updating the current git hash
 file(WRITE ${CMAKE_BINARY_DIR}/scip_update_githash.cmake "
 find_program(GIT git)
-if(GIT)
+if((GIT) AND (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git))
    execute_process(
       COMMAND \${GIT} describe --always --dirty
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
       OUTPUT_VARIABLE GITHASH OUTPUT_STRIP_TRAILING_WHITESPACE)
-   if(GITHASH STREQUAL \"\")
-      set(GITHASH \"000000\")
-   endif()
    string(REGEX REPLACE \"^.*-g\" \"\" GITHASH \${GITHASH})
+   file(WRITE \${DST} \"#define SCIP_GITHASH \\\"\${GITHASH}\\\"\")
 else()
-   set(GITHASH \"000000\")
+   # read stored hash from file
+   file(STRINGS \${DST} GITHASH)
+   string(REGEX REPLACE \"#define SCIP_GITHASH \" \"\" GITHASH \${GITHASH})
 endif()
-file(WRITE \${DST} \"#define SCIP_GITHASH \\\"\${GITHASH}\\\"\")
 message(STATUS \"Git hash: \" \${GITHASH})
 ")
 add_custom_target(scip_update_githash
@@ -234,6 +238,8 @@ elseif(LPS STREQUAL "clp")
     find_package(CLP REQUIRED)
 elseif(LPS STREQUAL "xprs")
     find_package(XPRESS REQUIRED)
+elseif(LPS STREQUAL "msk")
+    find_package(MOSEK REQUIRED)
 elseif(LPS STREQUAL "none")
     set(lpi lpi/lpi_none.c)
 else()
@@ -292,6 +298,13 @@ if(XPRESS_FOUND)
     include_directories(${XPRESS_INCLUDE_DIRS})
     set(lpi lpi/lpi_xprs.c)
     set(LPS_LIBRARIES ${XPRESS_LIBRARIES})
+    set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
+endif()
+
+if(MOSEK_FOUND)
+    include_directories(${MOSEK_INCLUDE_DIRS})
+    set(lpi lpi/lpi_msk.c)
+    set(LPS_LIBRARIES ${MOSEK_LIBRARIES})
     set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
 endif()
 
@@ -399,15 +412,16 @@ add_custom_target(all_executables DEPENDS scip unittests examples applications)
 #
 # use sub directory bin/examples for executables of examples
 #
-set(OLD_CMAKE_RUNTIME_OUTPUTDIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+set(OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/examples)
 add_subdirectory(examples)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
 #
 # add applications
 #
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY}/applications)
 add_subdirectory(applications)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
 enable_testing()
 

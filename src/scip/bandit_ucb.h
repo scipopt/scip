@@ -41,7 +41,7 @@ extern "C" {
  * and a variance term.
  *
  * The influence of the variance (confidence width) can be
- * controlled by the parameter \f$ \alpha f$.
+ * controlled by the parameter \f$ \alpha \f$.
  *
  * @{
  */

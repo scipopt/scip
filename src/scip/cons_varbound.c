@@ -430,6 +430,8 @@ SCIP_Bool checkCons(
 {
    SCIP_CONSDATA* consdata;
    SCIP_Real solval;
+   SCIP_Real absviol;
+   SCIP_Real relviol;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -446,8 +448,18 @@ SCIP_Bool checkCons(
    if( checklprows || consdata->row == NULL || !SCIProwIsInLP(consdata->row) )
    {
       SCIP_Real sum;
+      SCIP_Real lhsrelviol;
+      SCIP_Real rhsrelviol;
 
       sum = solval + consdata->vbdcoef * SCIPgetSolVal(scip, sol, consdata->vbdvar);
+
+      /* calculate constraint violation and update it in solution */
+      absviol = MAX(consdata->lhs - sum, sum - consdata->rhs);
+      lhsrelviol = SCIPrelDiff(consdata->lhs, sum);
+      rhsrelviol = SCIPrelDiff(sum, consdata->rhs);
+      relviol = MAX(lhsrelviol, rhsrelviol);
+      if( sol != NULL )
+         SCIPupdateSolLPConsViolation(scip, sol, absviol, relviol);
 
       return (SCIPisInfinity(scip, -consdata->lhs) || SCIPisFeasGE(scip, sum, consdata->lhs))
          && (SCIPisInfinity(scip, consdata->rhs) || SCIPisFeasLE(scip, sum, consdata->rhs));

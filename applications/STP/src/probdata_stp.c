@@ -1967,6 +1967,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_CALL( SCIPsetProbData(scip, probdata) );
 
    /* disable sub-SCIP heuristics */
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/gins/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/rens/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/rins/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/dins/freq", -1) );

@@ -2294,6 +2294,9 @@ SCIP_Bool checkCons(
    SCIP_Real solval;
    SCIP_Real sum;
    SCIP_Real sumbound;
+   SCIP_Real absviol;
+   SCIP_Real relviol;
+   SCIP_Bool check;
    int nvars;
    int v;
 
@@ -2312,19 +2315,36 @@ SCIP_Bool checkCons(
       sum += solval;
    }
 
+   absviol = sum - 1.0;
+   relviol = SCIPrelDiff(sum, 1.0);
    switch( consdata->setppctype )
    {
    case SCIP_SETPPCTYPE_PARTITIONING:
-      return SCIPisFeasEQ(scip, sum, 1.0);
+      /* in case of partitioning, the violation is equal to the absolute difference between sum and 1 */
+      absviol = REALABS(absviol);
+      relviol = REALABS(relviol);
+      check = SCIPisFeasEQ(scip, sum, 1.0);
+      break;
    case SCIP_SETPPCTYPE_PACKING:
-      return SCIPisFeasLE(scip, sum, 1.0);
+      /* in case of packing, the violation is equal to how much sum exceeds 1 */
+      check = SCIPisFeasLE(scip, sum, 1.0);
+      break;
    case SCIP_SETPPCTYPE_COVERING:
-      return SCIPisFeasGE(scip, sum, 1.0);
+      /* in case of covering, the violation is equal to how much 1 exceeds sum */
+      absviol = -absviol;
+      relviol = -relviol;
+      check = SCIPisFeasGE(scip, sum, 1.0);
+      break;
    default:
       SCIPerrorMessage("unknown setppc type\n");
       SCIPABORT();
       return FALSE; /*lint !e527*/
    }
+
+   if( sol != NULL )
+      SCIPupdateSolLPConsViolation(scip, sol, absviol, relviol);
+
+   return check;
 }
 
 /** creates an LP row in a set partitioning / packing / covering constraint data object */

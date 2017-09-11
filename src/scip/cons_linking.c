@@ -1416,8 +1416,11 @@ SCIP_Bool checkCons(
    int* vals;
    SCIP_Real solval;
    SCIP_Real linksum;
+   SCIP_VAR* intvarval;
    SCIP_Real setpartsum;
    SCIP_Real setpartsumbound;
+   SCIP_Real absviol;
+   SCIP_Real relviol;
    int nbinvars;
    int b;
 
@@ -1452,6 +1455,19 @@ SCIP_Bool checkCons(
       linksum += vals[b] * solval;
       setpartsum += solval;
    }
+
+   /* calculate and update absolute and relative violation of the equality constraint */
+   intvarval = consdata->intvar;
+   absviol = REALABS(linksum - SCIPgetSolVal(scip, sol, intvarval));
+   relviol = REALABS(SCIPrelDiff(linksum, SCIPgetSolVal(scip, sol, intvarval)));
+   if( sol != NULL )
+      SCIPupdateSolLPConsViolation(scip, sol, absviol, relviol);
+
+   /* calculate and update absolute and relative violation of the set partitioning constraint */
+   absviol = REALABS(setpartsum - 1.0);
+   relviol = REALABS(SCIPrelDiff(setpartsum, 1.0));
+   if( sol != NULL )
+      SCIPupdateSolLPConsViolation(scip, sol, absviol, relviol);
 
    /* check if the fixed binary variable match with the integer variable */
    return SCIPisFeasEQ(scip, linksum, SCIPgetSolVal(scip, sol, consdata->intvar)) && SCIPisFeasEQ(scip, setpartsum, 1.0);

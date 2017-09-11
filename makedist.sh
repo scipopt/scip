@@ -25,7 +25,7 @@ chmod 750 bin/* scripts/* interfaces/ampl/get.ASL check/cmpres.awk
 tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
 --exclude="*~" \
 --exclude=".*" \
-$NAME/COPYING $NAME/INSTALL $NAME/CHANGELOG $NAME/Makefile \
+$NAME/COPYING $NAME/INSTALL $NAME/INSTALL_CMAKE $NAME/CHANGELOG $NAME/Makefile \
 $NAME/doc/scip* $NAME/doc/xternal.c $NAME/doc/builddoc.sh \
 $NAME/doc/inc/codestyle/* $NAME/doc/inc/shelltutorial $NAME/doc/inc/debugexamples \
 $NAME/doc/inc/faq/faqtext.txt $NAME/doc/inc/faq/*.py $NAME/doc/inc/faq/localfaq.php \
@@ -77,6 +77,7 @@ $NAME/applications/Scheduler/src/*.c $NAME/applications/Scheduler/src/*.cpp $NAM
 $NAME/applications/Scheduler/data/*.sm \
 $NAME/applications/Scheduler/data/*.cmin \
 $NAME/applications/Scheduler/Makefile \
+$NAME/applications/Scheduler/CMakeLists.txt \
 $NAME/applications/MinIISC/* \
 $NAME/applications/MinIISC/check/CMakeLists.txt \
 $NAME/applications/MinIISC/doc/* \
@@ -98,6 +99,7 @@ $NAME/applications/PolySCIP/INSTALL $NAME/applications/PolySCIP/LICENCE \
 $NAME/applications/PolySCIP/README $NAME/applications/PolySCIP/scipmip.set \
 $NAME/applications/PolySCIP/src/CMakeLists.txt \
 $NAME/applications/PolySCIP/CMakeLists.txt     \
+$NAME/applications/PolySCIP/cmake/PolySCIPConfig.h.in \
 $NAME/applications/STP/doc/* \
 $NAME/applications/STP/src/depend.* \
 $NAME/applications/STP/src/*.c $NAME/applications/STP/src/*.h \

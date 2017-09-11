@@ -91,23 +91,24 @@ SCIP_DECL_BRANCHFREE(branchFreeCloud)
 
    if( branchruledata->cloudclock != NULL)
    {
-      int ntried;
-      int nuseful;
-      int ncloudpoints;
-      int nsavedlps;
-
       SCIPstatistic(
+         int ntried;
+         int nuseful;
+         int ncloudpoints;
+         int nsavedlps;
+
          ntried = branchruledata->ntried;
          nuseful = branchruledata->nuseful;
          ncloudpoints = branchruledata->ncloudpoints;
          nsavedlps = branchruledata->nsavedlps;
+
+         SCIPstatisticMessage("time spent diving in cloud branching: %g\n", SCIPgetClockTime(scip, branchruledata->cloudclock));
+         SCIPstatisticMessage("cloud branching tried: %6d      found cloud: %6d \n", ntried, nuseful);
+         SCIPstatisticMessage("cloud used points: %6d      saved LPs: %6d \n", ncloudpoints, nsavedlps);
+         SCIPstatisticMessage("cloud success rates useful/tried: %8.6g points/useful: %8.6g  saved/useful: %8.6g \n",
+            ntried == 0 ? -1 : (SCIP_Real)nuseful / ntried,  nuseful == 0 ? -1 : (SCIP_Real)ncloudpoints / nuseful, nuseful == 0 ? -1 :  (SCIP_Real)nsavedlps / nuseful);
       )
 
-      SCIPstatisticMessage("time spent diving in cloud branching: %g\n", SCIPgetClockTime(scip, branchruledata->cloudclock));
-      SCIPstatisticMessage("cloud branching tried: %6d      found cloud: %6d \n", ntried, nuseful);
-      SCIPstatisticMessage("cloud used points: %6d      saved LPs: %6d \n", ncloudpoints, nsavedlps);
-      SCIPstatisticMessage("cloud success rates useful/tried: %8.6g points/useful: %8.6g  saved/useful: %8.6g \n",
-         ntried == 0 ? -1 : (SCIP_Real)nuseful / ntried,  nuseful == 0 ? -1 : (SCIP_Real)ncloudpoints / nuseful, nuseful == 0 ? -1 :  (SCIP_Real)nsavedlps / nuseful);
       SCIP_CALL( SCIPfreeClock(scip, &(branchruledata->cloudclock)) );
    }
 

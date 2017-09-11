@@ -13,35 +13,18 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   sepa_flowcover.h
- * @ingroup SEPARATORS
- * @brief  flowcover separator
- * @author Tobias Achterberg
+/**@file   type_cuts.h
+ * @ingroup PUBLICCOREAPI
+ * @brief  type definitions for cuts
+ * @author Robert Lion Gottwald
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_SEPA_FLOWCOVER_H__
-#define __SCIP_SEPA_FLOWCOVER_H__
+#ifndef __SCIP_TYPE_CUTS_H__
+#define __SCIP_TYPE_CUTS_H__
 
-
-#include "scip/scip.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/** creates the flowcover separator and includes it in SCIP
- *
- * @ingroup SeparatorIncludes
- */
-EXTERN
-SCIP_RETCODE SCIPincludeSepaFlowcover(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-#ifdef __cplusplus
-}
-#endif
+typedef struct SCIP_AggrRow SCIP_AGGRROW;
 
 #endif
