@@ -263,7 +263,8 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSin(
 SCIP_RETCODE SCIPcreateConsExprExprSin(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR**  expr                /**< pointer where to store expression */
+   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
+   SCIP_CONSEXPR_EXPR*   child               /**< single child */
    )
 {
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr = NULL;
@@ -280,7 +281,7 @@ SCIP_RETCODE SCIPcreateConsExprExprSin(
    /* TODO: create and store expression specific data here */
 
    /* create expression */
-   SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, exprhdlr, exprdata, 0, NULL) );
+   SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, exprhdlr, exprdata, 1, &child) );
 
    return SCIP_OKAY;
 }

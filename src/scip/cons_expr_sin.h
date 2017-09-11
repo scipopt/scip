@@ -43,7 +43,8 @@ EXTERN
 SCIP_RETCODE SCIPcreateConsExprExprSin(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR**  expr                /**< pointer where to store expression */
+   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
+   SCIP_CONSEXPR_EXPR*   child               /**< single child */
    );
 
 #ifdef __cplusplus
