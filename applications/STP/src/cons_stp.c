@@ -2027,7 +2027,7 @@ SCIP_RETCODE SCIPdualAscentStp(
    if( ascendandprune )
    {
        SCIP_Bool success;
-       SCIP_CALL( SCIPheurAscendAndPrune(scip, NULL, g, rescap, unsatarcs, cutverts, root, active, &success, TRUE, TRUE) );
+       SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, g, rescap, unsatarcs, cutverts, root, active, &success, TRUE, TRUE) );
    }
 
    if( edgearrint == NULL )
@@ -2551,7 +2551,7 @@ SCIP_RETCODE SCIPdualAscentStpSol(
    if( ascendandprune )
    {
        SCIP_Bool success;
-       SCIP_CALL( SCIPheurAscendAndPrune(scip, NULL, g, rescap, unsatarcs, cutverts, root, active, &success, TRUE, TRUE) );
+       SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, g, rescap, unsatarcs, cutverts, root, active, &success, TRUE, TRUE) );
    }
 
    /*** free memory (2) ***/
@@ -3029,7 +3029,7 @@ SCIP_RETCODE SCIPdualAscentPcStp(
    if( ascendandprune )
    {
       SCIP_Bool success;
-      SCIP_CALL( SCIPheurAscendAndPrunePcMw(scip, NULL, g, rescap, unsatarcs, cutverts, root, active, &success, TRUE, TRUE));
+      SCIP_CALL( SCIPStpHeurAscendPruneRunPcMw(scip, NULL, g, rescap, unsatarcs, cutverts, root, active, &success, TRUE, TRUE));
    }
 
    /* free memory */

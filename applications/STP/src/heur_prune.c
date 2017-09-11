@@ -282,7 +282,7 @@ SCIP_DECL_HEURCOPY(heurCopyPrune)
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
    /* call inclusion method of primal heuristic */
-   SCIP_CALL( SCIPincludeHeurPrune(scip) );
+   SCIP_CALL( SCIPStpIncludeHeurPrune(scip) );
 
    return SCIP_OKAY;
 }
@@ -410,7 +410,7 @@ SCIP_DECL_HEUREXEC(heurExecPrune)
    }
 
    /* execute prune heuristic */
-   SCIP_CALL( SCIPheurPrune(scip, vars, graph, soledge, &success, TRUE, FALSE) );
+   SCIP_CALL( SCIPStpHeurPruneRun(scip, vars, graph, soledge, &success, TRUE, FALSE) );
 
    /* solution found by prune heuristic? */
    if( success )
@@ -490,7 +490,7 @@ SCIP_DECL_HEUREXEC(heurExecPrune)
  */
 
 /** execute prune heuristic on given graph */
-SCIP_RETCODE SCIPheurPrune(
+SCIP_RETCODE SCIPStpHeurPruneRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< problem variables or NULL (need to be provided whenever available) */
    GRAPH*                g,                  /**< the graph */
@@ -1374,7 +1374,7 @@ SCIP_RETCODE SCIPheurPrune(
 
 
 /** creates the prune primal heuristic and includes it in SCIP */
-SCIP_RETCODE SCIPincludeHeurPrune(
+SCIP_RETCODE SCIPStpIncludeHeurPrune(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {

@@ -38,13 +38,13 @@ extern "C" {
 
 /** creates the prune primal heuristic and includes it in SCIP */
 extern
-SCIP_RETCODE SCIPincludeHeurPrune(
+SCIP_RETCODE SCIPStpIncludeHeurPrune(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 extern
 /** execute prune heuristic on given graph */
-SCIP_RETCODE SCIPheurPrune(
+SCIP_RETCODE SCIPStpHeurPruneRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< problem variables or NULL */
    GRAPH*                g,                  /**< the graph */

@@ -38,14 +38,14 @@ extern "C" {
 
 /** creates the prune primal heuristic and includes it in SCIP */
 extern
-SCIP_RETCODE SCIPincludeHeurAscendPrune(
+SCIP_RETCODE SCIPStpIncludeHeurAscendPrune(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 
 /** ascent and prune */
 extern
-SCIP_RETCODE SCIPheurAscendAndPrune(
+SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic data structure or NULL */
    const GRAPH*          g,                  /**< the graph */
@@ -60,7 +60,7 @@ SCIP_RETCODE SCIPheurAscendAndPrune(
    );
 
 /** ascent and prune for prize-collecting Steiner tree and maximum weight connected subgraph */
-SCIP_RETCODE SCIPheurAscendAndPrunePcMw(
+SCIP_RETCODE SCIPStpHeurAscendPruneRunPcMw(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic data structure or NULL */
    const GRAPH*          g,                  /**< the graph */

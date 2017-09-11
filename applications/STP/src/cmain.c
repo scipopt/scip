@@ -90,13 +90,13 @@ SCIP_RETCODE runShell(
    SCIP_CALL( SCIPStpIncludeHeurRec(scip) );
 
    /* include pruning heuristic */
-   SCIP_CALL( SCIPincludeHeurPrune(scip) );
+   SCIP_CALL( SCIPStpIncludeHeurPrune(scip) );
 
    /* include ascend-and-prune heuristic */
-   SCIP_CALL( SCIPincludeHeurAscendPrune(scip) );
+   SCIP_CALL( SCIPStpIncludeHeurAscendPrune(scip) );
 
    /* include slack-and-prune heuristic */
-   SCIP_CALL( SCIPincludeHeurSlackPrune(scip) );
+   SCIP_CALL( SCIPStpIncludeHeurSlackPrune(scip) );
 
    /* include event handler for printing primal solution development */
    SCIP_CALL( SCIPincludeEventHdlrBestsol(scip) );

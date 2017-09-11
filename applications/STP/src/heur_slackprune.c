@@ -275,7 +275,7 @@ SCIP_DECL_HEURCOPY(heurCopySlackPrune)
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
    /* call inclusion method of primal heuristic */
-   SCIP_CALL( SCIPincludeHeurSlackPrune(scip) );
+   SCIP_CALL( SCIPStpIncludeHeurSlackPrune(scip) );
 
    return SCIP_OKAY;
 }
@@ -425,11 +425,11 @@ SCIP_DECL_HEUREXEC(heurExecSlackPrune)
    /* execute slackprune heuristic */
    if( graph->stp_type == STP_MWCSP )
    {
-      SCIP_CALL( SCIPheurSlackPrunePcMw(scip, vars, graph, soledge, &success) );
+      SCIP_CALL( SCIPStpHeurSlackPruneRunPcMw(scip, vars, graph, soledge, &success) );
    }
    else
    {
-      SCIP_CALL( SCIPheurSlackPrune(scip, vars, graph, soledge, &success, FALSE) );
+      SCIP_CALL( SCIPStpHeurSlackPruneRun(scip, vars, graph, soledge, &success, FALSE) );
    }
 
    /* solution found by slackprune heuristic? */
@@ -516,7 +516,7 @@ SCIP_DECL_HEUREXEC(heurExecSlackPrune)
  */
 
 /** execute slack-and-prune heuristic on given graph */
-SCIP_RETCODE SCIPheurSlackPrune(
+SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< problem variables or NULL */
    GRAPH*                g,                  /**< graph data structure */
@@ -729,7 +729,7 @@ SCIP_RETCODE SCIPheurSlackPrune(
          i = SLACKPRUNE_MAXREDROUNDS;
       }
       /* compute new guiding solution */
-      SCIP_CALL( SCIPheurAscendAndPrune(scip, NULL, prunegraph, cost, edgearrint, nodearrint, prunegraph->source[0], nodearrchar, &apsuccess, (i != 0), FALSE) );
+      SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, prunegraph, cost, edgearrint, nodearrint, prunegraph->source[0], nodearrchar, &apsuccess, (i != 0), FALSE) );
 
       /* solution found by ascend and prune? */
       if( apsuccess )
@@ -860,7 +860,7 @@ SCIP_RETCODE SCIPheurSlackPrune(
 #endif
       /* compute new solution on heuristically reduced graph */
 
-      SCIP_CALL( SCIPheurPrune(scip, NULL, prunegraph, soledge, success, FALSE, TRUE) );
+      SCIP_CALL( SCIPStpHeurPruneRun(scip, NULL, prunegraph, soledge, success, FALSE, TRUE) );
 
       graph_path_exit(scip, prunegraph);
 
@@ -948,7 +948,7 @@ SCIP_RETCODE SCIPheurSlackPrune(
 
 
 /** execute slack-and-prune heuristic on given graph */
-SCIP_RETCODE SCIPheurSlackPrunePcMw(
+SCIP_RETCODE SCIPStpHeurSlackPruneRunPcMw(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< problem variables or NULL */
    GRAPH*                g,                  /**< graph data structure */
@@ -1146,7 +1146,7 @@ SCIP_RETCODE SCIPheurSlackPrunePcMw(
       }
 
       /* compute new guiding solution */
-      SCIP_CALL( SCIPheurAscendAndPrunePcMw(scip, NULL, prunegraph, cost, edgearrint, vbase, root, nodearrchar, &apsuccess, TRUE, FALSE) );
+      SCIP_CALL( SCIPStpHeurAscendPruneRunPcMw(scip, NULL, prunegraph, cost, edgearrint, vbase, root, nodearrchar, &apsuccess, TRUE, FALSE) );
 
       /* solution found by ascend and prune? */
       if( apsuccess )
@@ -1223,7 +1223,7 @@ SCIP_RETCODE SCIPheurSlackPrunePcMw(
       printf("final SP anedges: %d anterms: %d \n", anedges, anterms);
 #endif
 
-      SCIP_CALL( SCIPheurPrune(scip, NULL, prunegraph, soledge, success, FALSE, TRUE) );
+      SCIP_CALL( SCIPStpHeurPruneRun(scip, NULL, prunegraph, soledge, success, FALSE, TRUE) );
 
       if( !(*success) )
       {
@@ -1238,7 +1238,7 @@ SCIP_RETCODE SCIPheurSlackPrunePcMw(
       objprune = graph_computeSolVal(prunegraph->cost, soledge, offsetnew, nedges);
 
       if( PRINTDEBUG )
-         printf("SCIPheurPrune:  weight %f \n", objprune + SCIPprobdataGetOffset(scip));
+         printf("SCIPStpHeurPruneRun:  weight %f \n", objprune + SCIPprobdataGetOffset(scip));
 
       printf("root %d \n", prunegraph->source[0]);
 #if 0
@@ -1370,7 +1370,7 @@ SCIP_RETCODE SCIPheurSlackPrunePcMw(
 
 
 /** creates the slackprune primal heuristic and includes it in SCIP */
-SCIP_RETCODE SCIPincludeHeurSlackPrune(
+SCIP_RETCODE SCIPStpIncludeHeurSlackPrune(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {

@@ -1390,7 +1390,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
             if( nrounds == 1 )
             {
                assert(results != NULL);
-               SCIP_CALL( SCIPheurSlackPrune(scip, NULL, solgraph, results, &success, FALSE) );
+               SCIP_CALL( SCIPStpHeurSlackPruneRun(scip, NULL, solgraph, results, &success, FALSE) );
 
                assert(graph_sol_valid(scip, solgraph, results));
 

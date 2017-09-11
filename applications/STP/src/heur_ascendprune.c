@@ -97,7 +97,7 @@ SCIP_DECL_HEURCOPY(heurCopyAscendPrune)
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
    /* call inclusion method of primal heuristic */
-   SCIP_CALL( SCIPincludeHeurAscendPrune(scip) );
+   SCIP_CALL( SCIPStpIncludeHeurAscendPrune(scip) );
 
    return SCIP_OKAY;
 }
@@ -264,7 +264,7 @@ SCIP_DECL_HEUREXEC(heurExecAscendPrune)
    }
 
    /* perform ascent and prune */
-   SCIP_CALL( SCIPheurAscendAndPrune(scip, heur, graph, redcosts, edgearrint, nodearrint, graph->source[0], nodearrchar, &success, FALSE, TRUE) );
+   SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, heur, graph, redcosts, edgearrint, nodearrint, graph->source[0], nodearrchar, &success, FALSE, TRUE) );
 
    if( success )
    {
@@ -294,7 +294,7 @@ SCIP_DECL_HEUREXEC(heurExecAscendPrune)
 
 
 /** ascent and prune */
-SCIP_RETCODE SCIPheurAscendAndPrune(
+SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic data structure or NULL */
    const GRAPH*          g,                  /**< the graph */
@@ -706,7 +706,7 @@ SCIP_RETCODE SCIPheurAscendAndPrune(
    assert(graph_valid(newgraph));
 
    /* get solution on new graph by PRUNE heuristic */
-   SCIP_CALL( SCIPheurPrune(scip, NULL, newgraph, newedges, &success, FALSE, TRUE) );
+   SCIP_CALL( SCIPStpHeurPruneRun(scip, NULL, newgraph, newedges, &success, FALSE, TRUE) );
 
 #if 0 // debug
    for( k = 0; k < newgraph->knots; ++k )
@@ -832,7 +832,7 @@ SCIP_RETCODE SCIPheurAscendAndPrune(
 
 
 /** ascent and prune for prize-collecting Steiner tree and maximum weight connected subgraph */
-SCIP_RETCODE SCIPheurAscendAndPrunePcMw(
+SCIP_RETCODE SCIPStpHeurAscendPruneRunPcMw(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic data structure or NULL */
    const GRAPH*          g,                  /**< the graph */
@@ -1149,7 +1149,7 @@ SCIP_RETCODE SCIPheurAscendAndPrunePcMw(
    assert(graph_valid(newgraph));
 
    /* get solution on new graph by PRUNE heuristic */
-   SCIP_CALL( SCIPheurPrune(scip, NULL, newgraph, newedges, &success, FALSE, TRUE) );
+   SCIP_CALL( SCIPStpHeurPruneRun(scip, NULL, newgraph, newedges, &success, FALSE, TRUE) );
 
    PATH* path;
    SCIP_Bool dummy;
@@ -1264,7 +1264,7 @@ SCIP_RETCODE SCIPheurAscendAndPrunePcMw(
 
 
 /** creates the prune primal heuristic and includes it in SCIP */
-SCIP_RETCODE SCIPincludeHeurAscendPrune(
+SCIP_RETCODE SCIPStpIncludeHeurAscendPrune(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {

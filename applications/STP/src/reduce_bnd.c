@@ -212,7 +212,7 @@ SCIP_RETCODE computeDaSolPcMw(
    SCIP_Bool success;
    SCIP_Bool tmp;
 
-   SCIP_CALL( SCIPheurAscendAndPrunePcMw(scip, NULL, graph, cost, result2, vbase, root, nodearrchar, &success, TRUE, FALSE) );
+   SCIP_CALL( SCIPStpHeurAscendPruneRunPcMw(scip, NULL, graph, cost, result2, vbase, root, nodearrchar, &success, TRUE, FALSE) );
 
    SCIP_CALL( SCIPStpHeurLocalExtendPcMw(scip, graph, graph->cost, vnoi, result2, pathedge, nodearrchar, &tmp) );
    //SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, graph->cost, graph->cost, result2) );
@@ -891,7 +891,7 @@ SCIP_RETCODE da_reduce(
       }
       else if( !directed )
       {
-         SCIP_CALL( SCIPheurAscendAndPrune(scip, NULL, graph, cost, result, nodearrint, root, nodearrchar, &success, TRUE, FALSE) );
+         SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, graph, cost, result, nodearrint, root, nodearrchar, &success, TRUE, FALSE) );
 
          /* calculate objective value of solution */
          ubnew = graph_computeSolVal(graph->cost, result, 0.0, nedges);
@@ -1514,7 +1514,7 @@ SCIP_RETCODE da_reduceSlackPrune(
             printf("in bnd  FAIL %d not marked, but terminal, \n", k);
 #endif
 
-   SCIP_CALL( SCIPheurAscendAndPrune(scip, NULL, graph, cost, edgearrint2, vbase, root, nodearrchar, &success, TRUE, FALSE) );
+   SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, graph, cost, edgearrint2, vbase, root, nodearrchar, &success, TRUE, FALSE) );
 
    objprune = graph_computeSolVal(graph->cost, edgearrint2, 0.0, nedges);
 
@@ -2193,7 +2193,7 @@ printf("raph->terms  %d \n", graph->terms );
       {
          transgraph->stp_type = STP_RPCSPG;
 
-         SCIP_CALL( SCIPheurAscendAndPrune(scip, NULL, transgraph, cost, result, vbase, tmproot, nodearrchar, &success, TRUE, FALSE) );
+         SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, transgraph, cost, result, vbase, tmproot, nodearrchar, &success, TRUE, FALSE) );
 
          /* compute objective value */
          ub = graph_computeSolVal(graph->cost, result, 0.0, graph->edges);
@@ -2505,7 +2505,7 @@ SCIP_RETCODE da_reduceSlackPruneMw(
    /* compute lower bound and reduced costs todo use SCIPdualAscentStpSol */
    SCIP_CALL( SCIPdualAscentStp(scip, transgraph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, transresult, state, root, 1, marked, nodearrchar) );
 
-   SCIP_CALL( SCIPheurAscendAndPrunePcMw(scip, NULL, graph, cost, transresult, vbase, root, nodearrchar, &success, TRUE, FALSE) );
+   SCIP_CALL( SCIPStpHeurAscendPruneRunPcMw(scip, NULL, graph, cost, transresult, vbase, root, nodearrchar, &success, TRUE, FALSE) );
 
    assert(success);
    assert(graph_sol_valid(scip, graph, transresult));
