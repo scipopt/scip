@@ -19079,9 +19079,10 @@ SCIP_Real SCIPgetVarRedcost(
    assert( scip != NULL );
    assert( var != NULL );
    assert( var->scip == scip );
+   assert(SCIPlpIsDualReliable(scip->lp));
 
    if( !SCIPlpIsDualReliable(scip->lp) )
-      return 0.0;
+      return SCIP_INVALID;
 
    switch( SCIPvarGetStatus(var) )
    {
@@ -19126,9 +19127,10 @@ SCIP_Real SCIPgetVarImplRedcost(
    assert( scip != NULL );
    assert( var != NULL );
    assert( var->scip == scip );
+   assert(SCIPlpIsDualReliable(scip->lp));
 
    if( !SCIPlpIsDualReliable(scip->lp) )
-      return 0.0;
+      return SCIP_INVALID;
 
    switch( SCIPvarGetStatus(var) )
    {
