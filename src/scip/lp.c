@@ -15375,9 +15375,8 @@ SCIP_RETCODE SCIPlpEndDive(
     * restoring an unbounded ray after solve does not seem to work currently (bug 631), so we resolve also in this case
     */
    assert(lp->storedsolvals != NULL);
-   if( lp->nolddomchgs < stat->domchgcount
-      || (lp->storedsolvals->lpissolved
-            && (set->lp_resolverestore || lp->storedsolvals->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL)) )
+   if( lp->storedsolvals->lpissolved
+      && (set->lp_resolverestore || lp->storedsolvals->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL || lp->nolddomchgs < stat->domchgcount) )
    {
       SCIP_Bool lperror;
 
