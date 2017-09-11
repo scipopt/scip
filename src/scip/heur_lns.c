@@ -1471,12 +1471,12 @@ SCIP_RETCODE lnsUnfixVariables(
 /** call variable fixing callback for this neighborhood and orchestrate additional variable fixings, if necessary */
 static
 SCIP_RETCODE neighborhoodFixVariables(
-  SCIP*                  scip,
+  SCIP*                  scip,               /**< SCIP data structure */
   SCIP_HEURDATA*         heurdata,           /**< heuristic data of the LNS neighborhood */
-  NH*                    neighborhood,
-  SCIP_VAR**             varbuf,
-  SCIP_Real*             valbuf,
-  int*                   nfixings,
+  NH*                    neighborhood,       /**< neighborhood data structure */
+  SCIP_VAR**             varbuf,             /**< buffer array to keep variables that should be fixed */
+  SCIP_Real*             valbuf,             /**< buffer array to keep fixing values */
+  int*                   nfixings,           /**< pointer to store the number of variable fixings */
   SCIP_RESULT*           result              /**< pointer to store the result of the fixing operation */
   )
 {
@@ -1556,10 +1556,10 @@ SCIP_RETCODE neighborhoodChangeSubscip(
    SCIP*                 targetscip,         /**< target SCIP data structure */
    NH*                   neighborhood,       /**< neighborhood */
    SCIP_VAR**            targetvars,         /**< array of target SCIP variables aligned with source SCIP variables */
-   int*                  ndomchgs,
-   int*                  nchgobjs,
-   int*                  naddedconss,
-   SCIP_Bool*            success
+   int*                  ndomchgs,           /**< pointer to store the number of variable domain changes */
+   int*                  nchgobjs,           /**< pointer to store the number of changed objective coefficients */
+   int*                  naddedconss,        /**< pointer to store the number of added constraints */
+   SCIP_Bool*            success             /**< pointer to store whether the sub-SCIP has been successfully modified */
    )
 {
    assert(sourcescip != NULL);
