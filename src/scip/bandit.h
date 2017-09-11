@@ -38,6 +38,46 @@
 extern "C" {
 #endif
 
+/**@addtogroup PublicBanditMethods
+ *
+ * @{
+ */
+
+/** select the next action */
+EXTERN
+SCIP_RETCODE SCIPbanditSelect(
+   SCIP_BANDIT*          bandit,             /**< bandit algorithm data structure */
+   int*                  action              /**< pointer to store the selected action */
+   );
+
+/** update the score of the selected action */
+EXTERN
+SCIP_RETCODE SCIPbanditUpdate(
+   SCIP_BANDIT*          bandit,             /**< bandit algorithm data structure */
+   int                   action,             /**< index of action for which the score should be updated */
+   SCIP_Real             score               /**< observed gain of the i'th action */
+   );
+
+/** return the name of this bandit virtual function table */
+EXTERN
+const char* SCIPbanditvtableGetName(
+   SCIP_BANDITVTABLE*    banditvtable        /**< virtual table for bandit algorithm */
+   );
+
+/** return the random number generator of a bandit algorithm */
+EXTERN
+SCIP_RANDNUMGEN* SCIPbanditGetRandnumgen(
+   SCIP_BANDIT*          bandit              /**< bandit algorithm data structure */
+   );
+
+/** return number of actions of this bandit algorithm */
+EXTERN
+int SCIPbanditGetNActions(
+   SCIP_BANDIT*          bandit              /**< bandit algorithm data structure */
+   );
+
+/* @} */
+
 /** creates a bandit algorithm */
 extern
 SCIP_RETCODE SCIPbanditCreate(
@@ -65,20 +105,6 @@ SCIP_RETCODE SCIPbanditReset(
    unsigned int          seed                /**< initial random seed for bandit selection */
    );
 
-/** select the next action */
-extern
-SCIP_RETCODE SCIPbanditSelect(
-   SCIP_BANDIT*          bandit,             /**< pointer to bandit algorithm data structure */
-   int*                  action              /**< pointer to store the selected action */
-   );
-
-/** update the score of the selected action */
-extern
-SCIP_RETCODE SCIPbanditUpdate(
-   SCIP_BANDIT*          bandit,             /**< pointer to bandit algorithm data structure */
-   int                   action,             /**< index of action for which the score should be updated */
-   SCIP_Real             score               /**< observed gain of the i'th action */
-   );
 
 /** get data of this bandit algorithm */
 extern
@@ -110,26 +136,6 @@ extern
 void SCIPbanditvtableFree(
    SCIP_BANDITVTABLE**   banditvtable        /**< pointer to virtual table for bandit algorithm */
    );
-
-/** return the name of this bandit virtual function table */
-extern
-const char* SCIPbanditvtableGetName(
-   SCIP_BANDITVTABLE*    banditvtable        /**< virtual table for bandit algorithm */
-   );
-
-
-/** return the random number generator of a bandit algorithm */
-extern
-SCIP_RANDNUMGEN* SCIPbanditGetRandnumgen(
-   SCIP_BANDIT*          bandit              /**< bandit algorithm data structure */
-   );
-
-/** return number of actions of this bandit algorithm */
-extern
-int SCIPbanditGetNActions(
-   SCIP_BANDIT*          bandit              /**< bandit algorithm data structure */
-   );
-
 
 #ifdef __cplusplus
 }

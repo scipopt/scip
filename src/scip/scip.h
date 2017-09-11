@@ -4514,7 +4514,7 @@ SCIP_NODESEL* SCIPgetNodesel(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/**@addtogroup BanditAlgorithms
+/**@addtogroup PublicBanditAlgorithms
  *
  * @{
  */

@@ -33,6 +33,8 @@ extern "C" {
 
 /**@addtogroup PublicBanditMethods
  *
+ * ## Exp.3
+ *
  * Exp.3 is a randomized selection method for the multi-armed bandit problem
  *
  * Exp3 maintains a probability distribution
@@ -41,12 +43,10 @@ extern "C" {
  * The probability distribution is a mixture between
  * a uniform distribution and a softmax distribution
  * based on the cumulative rewards of the actions.
- *
  * The weight of the uniform distribution in the mixture
  * is controlled by the parameter \f$ \gamma \f$, ie.,
  * setting \f$ \gamma = 1\f$ uses a uniform distribution
  * in every selection step.
- *
  * The cumulative reward for the actions can be
  * fine-tuned by adding a general bias for all actions.
  * The bias is given by the parameter \f$ \beta \f$.
@@ -105,16 +105,13 @@ SCIP_DECL_BANDITFREE(SCIPbanditFreeExp3);
 extern
 SCIP_DECL_BANDITSELECT(SCIPbanditSelectExp3);
 
-
 /** update callback for bandit algorithm */
 extern
 SCIP_DECL_BANDITUPDATE(SCIPbanditUpdateExp3);
 
-
 /** reset callback for bandit algorithm */
 extern
 SCIP_DECL_BANDITRESET(SCIPbanditResetExp3);
-
 
 /** direct bandit creation method for the core where no SCIP pointer is available */
 extern

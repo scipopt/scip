@@ -112,7 +112,7 @@ SCIP_RETCODE SCIPbanditReset(
 
 /** select the next action */
 SCIP_RETCODE SCIPbanditSelect(
-   SCIP_BANDIT*          bandit,             /**< pointer to bandit algorithm data structure */
+   SCIP_BANDIT*          bandit,             /**< bandit algorithm data structure */
    int*                  action              /**< pointer to store the selected action */
    )
 {
@@ -133,7 +133,7 @@ SCIP_RETCODE SCIPbanditSelect(
 
 /** update the score of the selected action */
 SCIP_RETCODE SCIPbanditUpdate(
-   SCIP_BANDIT*          bandit,             /**< pointer to bandit algorithm data structure */
+   SCIP_BANDIT*          bandit,             /**< bandit algorithm data structure */
    int                   action,             /**< index of action for which the score should be updated */
    SCIP_Real             score               /**< observed gain of the i'th action */
    )
@@ -149,7 +149,7 @@ SCIP_RETCODE SCIPbanditUpdate(
 
 /** get data of this bandit algorithm */
 SCIP_BANDITDATA* SCIPbanditGetData(
-   SCIP_BANDIT*          bandit              /**< pointer to bandit algorithm data structure */
+   SCIP_BANDIT*          bandit              /**< bandit algorithm data structure */
    )
 {
    assert(bandit != NULL);

@@ -33,13 +33,13 @@ extern "C" {
 
 /**@addtogroup PublicBanditMethods
  *
- * UCB (Upper confidence bounds) is a deterministic algorithm
- * for the multi-armed bandit problem.
+ * ## Upper Confidence Bounds (UCB)
  *
+ * UCB (Upper confidence bounds) is a deterministic
+ * selection algorithm for the multi-armed bandit problem.
  * In every iteration, UCB selects the action that maximizes
  * a tradeoff between its performance in the past
  * and a variance term.
- *
  * The influence of the variance (confidence width) can be
  * controlled by the parameter \f$ \alpha \f$.
  *

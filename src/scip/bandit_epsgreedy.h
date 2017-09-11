@@ -33,6 +33,8 @@ extern "C" {
 
 /**@addtogroup PublicBanditMethods
  *
+ * ## Epsilon greedy
+ *
  * Epsilon greedy is a randomized algorithm for the multi-armed bandit problem.
  *
  * In every iteration, it either
@@ -40,7 +42,6 @@ extern "C" {
  * probability \f$ \varepsilon_t\f$
  * or it greedily exploits the best action seen so far with
  * probability \f$ 1 - \varepsilon_t \f$.
- *
  * In this implementation, \f$ \varepsilon_t \f$ decreases over time
  * (number of selections performed), controlled by the epsilon parameter.
  *
