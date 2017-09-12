@@ -1214,7 +1214,7 @@ SCIP_RETCODE setObjective(
 #ifdef SCIP_DEBUG_SOLUTION
             if( SCIPdebugIsMainscip(scip) )
             {
-               SCIP_Real val;
+               SCIP_Real val = 0.0;
 
                for( v = nvars - 1; v >= 0; --v )
                {
