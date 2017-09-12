@@ -46,6 +46,7 @@
 #define DEFAULT_NSOLSLIM 3
 #define DEFAULT_MINNODES 50LL
 #define DEFAULT_MAXNODES 5000LL
+#define DEFAULT_TARGETNODEFACTOR 2.0
 #define LPLIMFAC 4.0
 
 /*
@@ -93,7 +94,7 @@
 /* individual neighborhood parameters */
 #define DEFAULT_MINFIXINGRATE_RENS 0.3
 #define DEFAULT_MAXFIXINGRATE_RENS 0.7
-#define DEFAULT_ACTIVE_RENS FALSE
+#define DEFAULT_ACTIVE_RENS TRUE
 #define DEFAULT_PRIORITY_RENS 1.0
 
 #define DEFAULT_MINFIXINGRATE_RINS 0.2
@@ -347,6 +348,7 @@ struct SCIP_HeurData
    SCIP_Real             ucb_alpha;          /**< parameter to increase the confidence width in UCB */
    SCIP_Real             gaincontrol;        /**< gain control to increase the weight of the simple solution indicator
                                                *  and decrease the weight of the closed gap gain */
+   SCIP_Real             targetnodefactor;   /**< factor by which target node number is increased/decreased at every adjustment */
    int                   nneighborhoods;     /**< number of neighborhoods */
    int                   nactiveneighborhoods; /**< number of active neighborhoods */
    int                   ninitneighborhoods; /**< neighborhoods that were used at least one time */
@@ -510,7 +512,7 @@ void increaseTargetNodeLimit(
    SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
-   heurdata->targetnodes *= 2;
+   heurdata->targetnodes *= (heurdata->targetnodefactor);
    heurdata->targetnodes = MIN(heurdata->targetnodes, heurdata->maxnodes);
 }
 
@@ -520,7 +522,7 @@ void decreaseTargetNodeLimit(
    SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
-   heurdata->targetnodes /= 2;
+   heurdata->targetnodes /= (heurdata->targetnodefactor);
    heurdata->targetnodes = MAX(heurdata->targetnodes, heurdata->minnodes);
 }
 
@@ -537,6 +539,7 @@ void resetTargetNodeLimit(
 static
 void updateTargetNodeLimit(
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   NH_STATS*             runstats,           /**< statistics of the run */
    SCIP_STATUS           subscipstatus       /**< status of the sub-SCIP run */
    )
 {
@@ -551,7 +554,8 @@ void updateTargetNodeLimit(
       case SCIP_STATUS_STALLNODELIMIT:
       case SCIP_STATUS_NODELIMIT:
          /* the subproblem could be explored more */
-         increaseTargetNodeLimit(heurdata);
+         if( runstats->nbestsolsfound == 0 )
+            increaseTargetNodeLimit(heurdata);
          break;
       case SCIP_STATUS_USERINTERRUPT:
          break;
@@ -2264,7 +2268,7 @@ SCIP_DECL_HEUREXEC(heurExecLns)
       }
 
       /* update the target node limit based on the status of the selected algorithm */
-      updateTargetNodeLimit(heurdata, subscipstatus[banditidx]);
+      updateTargetNodeLimit(heurdata, &runstats[banditidx], subscipstatus[banditidx]);
 
       /* update the bandit algorithms by the measured gain */
       SCIP_CALL( updateBanditAlgorithms(scip, heurdata, gains[banditidx], banditidx) );
@@ -3508,6 +3512,10 @@ SCIP_RETCODE SCIPincludeHeurLns(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/gaincontrol",
          "gain control to increase the weight of the simple solution indicator and decrease the weight of the closed gap gain",
          &heurdata->gaincontrol, TRUE, DEFAULT_GAINCONTROL, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/targetnodefactor",
+         "factor by which target node number is increased/decreased at every adjustment",
+         &heurdata->targetnodefactor, TRUE, DEFAULT_TARGETNODEFACTOR, 1.0, 1e+5, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/seed",
          "initial random seed for bandit algorithms and random decisions by neighborhoods",
