@@ -60,10 +60,7 @@ void setTrue(
    assert(arrsize >= 0);
 
    for( int i = 0; i < arrsize; i++ )
-   {
-      assert(arr[i] != NULL);
-      (arr[i]) = TRUE;
-   }
+      arr[i] = TRUE;
 }
 
 /** iterate NV and SL test while at least minelims many contractions are being performed */
@@ -1617,24 +1614,6 @@ SCIP_RETCODE reduce(
       graph_path_exit(scip, (*graph));
       return SCIP_OKAY;
    }
-#if 0
-   if( level == 0 )
-   {
-      int n = 0;
-      if( stp_type == STP_MWCSP )
-      {
-         SCIP_CALL( pcgraphorg(scip, *graph) );
-         SCIP_CALL( degree_test_mw(scip, *graph, NULL, offset, &n) );
-         SCIP_CALL( pcgraphtrans(scip, *graph) );
-      }
-      else if( stp_type == STP_PCSPG || stp_type == STP_RPCSPG )
-      {
-         SCIP_CALL( pcgraphorg(scip, *graph) );
-         SCIP_CALL( degree_test_pc(scip, *graph, offset, &n, NULL, FALSE) );
-         SCIP_CALL( pcgraphtrans(scip, *graph) );
-      }
-   }
-#endif
 
    if( level == 1 )
    {

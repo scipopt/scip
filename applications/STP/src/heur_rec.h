@@ -55,10 +55,10 @@ extern
 SCIP_RETCODE SCIPStpHeurRecRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic or NULL */
+   SCIP_HEUR*            heur,               /**< heuristic or NULL */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data or NULL */
    GRAPH*                graph,              /**< graph data */
    SCIP_VAR**            vars,               /**< variables or NULL */
-   SCIP_SOL*             bestsol,            /**< best solution or NULL */
    SCIP_SOL*             newsol,             /**< to store new solution if != NULL */
    int*                  newsoledges,        /**< to store new solution if != NULL */
    int                   runs,               /**< number of runs */

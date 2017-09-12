@@ -18,7 +18,7 @@
  * @author Daniel Rehfeldt
  *
  * This file implements a recombination heuristic for Steiner problems, see
- * "SCIP-Jack - A solver for STP and variants with parallelization extensions" (2016) by
+ * "SCIP-Jack - A solver for STP and variants with parallelization extensions" (2017) by
  * Gamrath, Koch, Maher, Rehfeldt and Shinano
  *
  * A list of all interface methods can be found in heur_rec.h
@@ -759,241 +759,7 @@ SCIP_RETCODE buildsolgraph(
    return SCIP_OKAY;
 }
 
-/*
- * Callback methods of primal heuristic
- */
 
-
-/** deinitialization method of primal heuristic (called before transformed problem is freed) */
-static
-SCIP_DECL_HEUREXIT(heurExitRec)
-{
-   SCIP_HEURDATA* heurdata;
-
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
-
-   /* free random number generator */
-   SCIPrandomFree(&heurdata->randnumgen);
-
-   SCIPheurSetData(heur, heurdata);
-
-   return SCIP_OKAY;
-}
-
-/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
-static
-SCIP_DECL_HEURCOPY(heurCopyRec)
-{  /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
-
-   /* call inclusion method of primal heuristic */
-   SCIP_CALL( SCIPStpIncludeHeurRec(scip) );
-
-   return SCIP_OKAY;
-}
-
-/** destructor of primal heuristic to free user data (called when SCIP is exiting) */
-static
-SCIP_DECL_HEURFREE(heurFreeRec)
-{  /*lint --e{715}*/
-   SCIP_HEURDATA* heurdata;
-
-   assert(heur != NULL);
-   assert(scip != NULL);
-
-   /* get heuristic data */
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
-
-   /* free heuristic data */
-   SCIPfreeMemory(scip, &heurdata);
-   SCIPheurSetData(heur, NULL);
-
-   return SCIP_OKAY;
-}
-
-/** initialization method of primal heuristic (called after problem was transformed) */
-static
-SCIP_DECL_HEURINIT(heurInitRec)
-{  /*lint --e{715}*/
-   SCIP_HEURDATA* heurdata;
-
-   assert(heur != NULL);
-   assert(scip != NULL);
-
-   /* get heuristic's data */
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
-
-   /* initialize data */
-   heurdata->nselectedsols = 0;
-   heurdata->ncalls = 0;
-   heurdata->ntmruns = 100;
-   heurdata->nlastsols = 0;
-   heurdata->lastsolindex = -1;
-   heurdata->bestsolindex = -1;
-   heurdata->nfailures = 0;
-   heurdata->nusedsols = DEFAULT_NUSEDSOLS;
-   heurdata->randseed = DEFAULT_RANDSEED;
-
-#ifdef WITH_UG
-   heurdata->randseed += getUgRank();
-#endif
-
-   /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
-         SCIPinitializeRandomSeed(scip, heurdata->randseed)) );
-
-   return SCIP_OKAY;
-}
-
-/** execution method of primal heuristic */
-static
-SCIP_DECL_HEUREXEC(heurExecRec)
-{  /*lint --e{715}*/
-   SCIP_HEURDATA* heurdata;
-   SCIP_PROBDATA* probdata;
-   SCIP_VAR** vars;
-   SCIP_SOL** sols;
-   GRAPH* graph;
-   SCIP_SOL*  newsol;
-   SCIP_SOL*  bestsol;
-   SCIP_Longint nallsols;
-   SCIP_Bool pcmw;
-   SCIP_Bool restrictheur;
-
-   int runs;
-   int nsols;
-   int nedges;
-   int solindex;
-   int probtype;
-   int nreadysols;
-   int bestsolindex;
-
-   assert(heur != NULL);
-   assert(scip != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
-   assert(result != NULL);
-
-   /* get heuristic data */
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
-
-   /* get problem data */
-   probdata = SCIPgetProbData(scip);
-   assert(probdata != NULL);
-
-   /* get graph */
-   graph = SCIPprobdataGetGraph(probdata);
-   assert(graph != NULL);
-
-   probtype = graph->stp_type;
-   *result = SCIP_DIDNOTRUN;
-
-   if( probtype == STP_RMWCSP )
-      return SCIP_OKAY;
-
-   pcmw = (probtype == STP_PCSPG || probtype == STP_MWCSP || probtype == STP_RPCSPG);
-   nallsols = SCIPgetNSolsFound(scip);
-   nreadysols = SCIPgetNSols(scip);
-
-   /* only call heuristic if sufficiently many solutions are available */
-   if( nreadysols < DEFAULT_NUSEDSOLS )
-      return SCIP_OKAY;
-
-   /* suspend heuristic? */
-   if( pcmw || probtype == STP_DHCSTP || probtype == STP_DCSTP )
-   {
-      int i;
-      if( heurdata->ncalls == 0 )
-         i = 0;
-      else if( heurdata->maxfreq )
-         i = 1;
-      else if( probtype == STP_RPCSPG || probtype == STP_DCSTP )
-         i = MIN(2 * heurdata->nwaitingsols, 2 * heurdata->nfailures);
-      else
-         i = MIN(heurdata->nwaitingsols, heurdata->nfailures);
-
-      if( nallsols <= heurdata->nlastsols + i )
-         return SCIP_OKAY;
-   }
-   else
-   {
-      int i;
-      if( heurdata->maxfreq )
-         i = 1;
-      else
-         i = MIN(heurdata->nwaitingsols, heurdata->nfailures);
-
-      if( nallsols <= heurdata->nlastsols + i && heurdata->bestsolindex == SCIPsolGetIndex(SCIPgetBestSol(scip)) )
-         return SCIP_OKAY;
-   }
-
-   /* get edge variables */
-   vars = SCIPprobdataGetVars(scip);
-   assert(vars != NULL);
-   assert(vars[0] != NULL);
-
-   nedges = graph->edges;
-   bestsol = SCIPgetBestSol(scip);
-
-   heurdata->ncalls++;
-
-   restrictheur = (graph->terms > BOUND_MAXNTERMINALS && nedges > BOUND_MAXNEDGES);
-
-   if( restrictheur)
-      runs = RUNS_RESTRICTED;
-   else
-      runs = RUNS_NORMAL;
-
-   if( runs > nreadysols )
-      runs = nreadysols;
-
-   assert(runs > 0);
-
-   if( probtype == STP_MWCSP || probtype == STP_DHCSTP || probtype == STP_DCSTP )
-   {
-      newsol = (SCIPgetSols(scip))[0];
-   }
-   /* first run? */
-   else if( heurdata->lastsolindex == -1 )
-   {
-      newsol = (SCIPgetSols(scip))[SCIPrandomGetInt(heurdata->randnumgen, 0, heurdata->nusedsols - 1)];
-   }
-   else
-   {
-      newsol = NULL;
-   }
-
-   bestsolindex = SCIPsolGetIndex(SCIPgetBestSol(scip));
-
-   /* save latest solution index */
-   solindex = 0;
-   nsols = SCIPgetNSols(scip);
-   assert(nsols > 0);
-   sols = SCIPgetSols(scip);
-
-   for( int i = 1; i < nsols; i++ )
-      if( SCIPsolGetIndex(sols[i]) > SCIPsolGetIndex(sols[solindex]) )
-         solindex = i;
-
-   if( SCIPsolGetIndex(SCIPgetBestSol(scip)) == bestsolindex )
-      heurdata->nfailures++;
-   else
-   {
-      heurdata->nfailures = 0;
-      *result = SCIP_FOUNDSOL;
-   }
-
-   heurdata->lastsolindex = SCIPsolGetIndex(sols[solindex]);
-   heurdata->bestsolindex = SCIPsolGetIndex(SCIPgetBestSol(scip));
-   heurdata->nlastsols = SCIPgetNSolsFound(scip);
-
-   return SCIP_OKAY;
-}
 
 
 static
@@ -1170,11 +936,11 @@ SCIP_RETCODE SCIPStpHeurRecAddToPool(
 /** runs STP recombination heuristic */
 SCIP_RETCODE SCIPStpHeurRecRun(
    SCIP*                 scip,               /**< SCIP data structure */
+   STPSOLPOOL**          pool,               /**< solution pool or NULL */
    SCIP_HEUR*            heur,               /**< heuristic or NULL */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data or NULL */
    GRAPH*                graph,              /**< graph data */
    SCIP_VAR**            vars,               /**< variables or NULL */
-   SCIP_SOL*             bestsol,            /**< best solution or NULL */
    SCIP_SOL*             newsol,             /**< to store new solution if != NULL */
    int*                  newsoledges,        /**< to store new solution if != NULL */
    int                   runs,               /**< number of runs */
@@ -1183,12 +949,13 @@ SCIP_RETCODE SCIPStpHeurRecRun(
    SCIP_Bool*            solfound            /**< new solution found? */
 )
 {
+   SCIP_SOL* bestsol = SCIPgetBestSol(scip);
    SCIP_Real* nval = NULL;
    int* orgresults;
 
    SCIP_Real bestobj = FARAWAY;
 
-   const STP_Bool usestppool = (heur == NULL);
+   const STP_Bool usestppool = (pool != NULL);
    SCIP_Real hopfactor = 0.1;
    const int nnodes = graph->knots;
    const int nedges = graph->edges;
@@ -1202,7 +969,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
 
    *solfound = FALSE;
 
-   if( usestppool )
+   if( !usestppool )
       SCIP_CALL( SCIPallocBufferArray(scip, &nval, nedges) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &orgresults, nedges) );
@@ -1224,7 +991,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
       else
          randomize = FALSE;
 
-      /* one cycle finished? */
+      /* first cycle finished? */
       if( count++ == runs )
       {
          if( *solfound )
@@ -1264,7 +1031,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
          assert(graph_valid(solgraph));
 
          /* reduce new graph */
-         if( probtype == STP_RPCSPG || probtype == STP_DHCSTP || probtype == STP_DCSTP || probtype == STP_MWCSP
+         if( probtype == STP_RPCSPG || probtype == STP_DHCSTP || probtype == STP_DCSTP
              || probtype == STP_NWSPG || probtype == STP_SAP )
             SCIP_CALL( reduce(scip, &solgraph, &pobj, 0, 5) );
          else
@@ -1330,6 +1097,9 @@ SCIP_RETCODE SCIPStpHeurRecRun(
                if( fixed )
                {
                   cost[e] = BLOCKED;
+
+                  nodepriority[solgraph->head[e]] /= 2.0;
+                  nodepriority[solgraph->tail[e]] /= 2.0;
                }
                else
                {
@@ -1491,16 +1261,27 @@ SCIP_RETCODE SCIPStpHeurRecRun(
 
          pobj = 0.0;
 
-         for( int e = 0; e < nedges; e++ )
+         if( usestppool )
          {
-            if( orgresults[e] == CONNECT )
+            for( int e = 0; e < nedges; e++ )
+               if( orgresults[e] == CONNECT )
+                  pobj += graph->cost[e];
+         }
+         else
+         {
+            assert(nval != NULL);
+
+            for( int e = 0; e < nedges; e++ )
             {
-               nval[e] = 1.0;
-               pobj += graph->cost[e];
-            }
-            else
-            {
-               nval[e] = 0.0;
+               if( orgresults[e] == CONNECT )
+               {
+                  nval[e] = 1.0;
+                  pobj += graph->cost[e];
+               }
+               else
+               {
+                  nval[e] = 0.0;
+               }
             }
          }
 
@@ -1551,9 +1332,9 @@ SCIP_RETCODE SCIPStpHeurRecRun(
    }
 
    /* store best solution in pool */
-   if( usestppool && bestobj < FARAWAY )
+   if( usestppool && *solfound )
    {
-      // todo
+      SCIP_CALL( SCIPStpHeurRecAddToPool(scip, bestobj, newsoledges, pool, solfound) );
    }
 
    SCIPfreeBufferArray(scip, &orgresults);
@@ -2103,6 +1884,237 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
 
 
 
+
+/*
+ * Callback methods of primal heuristic
+ */
+
+/** deinitialization method of primal heuristic (called before transformed problem is freed) */
+static
+SCIP_DECL_HEUREXIT(heurExitRec)
+{
+   SCIP_HEURDATA* heurdata;
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* free random number generator */
+   SCIPrandomFree(&heurdata->randnumgen);
+
+   SCIPheurSetData(heur, heurdata);
+
+   return SCIP_OKAY;
+}
+
+/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_HEURCOPY(heurCopyRec)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   /* call inclusion method of primal heuristic */
+   SCIP_CALL( SCIPStpIncludeHeurRec(scip) );
+
+   return SCIP_OKAY;
+}
+
+/** destructor of primal heuristic to free user data (called when SCIP is exiting) */
+static
+SCIP_DECL_HEURFREE(heurFreeRec)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(scip != NULL);
+
+   /* get heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* free heuristic data */
+   SCIPfreeMemory(scip, &heurdata);
+   SCIPheurSetData(heur, NULL);
+
+   return SCIP_OKAY;
+}
+
+/** initialization method of primal heuristic (called after problem was transformed) */
+static
+SCIP_DECL_HEURINIT(heurInitRec)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(scip != NULL);
+
+   /* get heuristic's data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* initialize data */
+   heurdata->nselectedsols = 0;
+   heurdata->ncalls = 0;
+   heurdata->ntmruns = 100;
+   heurdata->nlastsols = 0;
+   heurdata->lastsolindex = -1;
+   heurdata->bestsolindex = -1;
+   heurdata->nfailures = 0;
+   heurdata->nusedsols = DEFAULT_NUSEDSOLS;
+   heurdata->randseed = DEFAULT_RANDSEED;
+
+#ifdef WITH_UG
+   heurdata->randseed += getUgRank();
+#endif
+
+   /* create random number generator */
+   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
+         SCIPinitializeRandomSeed(scip, heurdata->randseed)) );
+
+   return SCIP_OKAY;
+}
+
+/** execution method of primal heuristic */
+static
+SCIP_DECL_HEUREXEC(heurExecRec)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+   SCIP_PROBDATA* probdata;
+   SCIP_VAR** vars;
+   SCIP_SOL** sols;
+   GRAPH* graph;
+   SCIP_SOL*  newsol;
+   SCIP_Longint nallsols;
+   SCIP_Bool pcmw;
+   SCIP_Bool solfound;
+   SCIP_Bool restrictheur;
+
+   int runs;
+   int nsols;
+   int nedges;
+   int solindex;
+   int probtype;
+   int nreadysols;
+   int bestsolindex;
+
+   assert(heur != NULL);
+   assert(scip != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+   assert(result != NULL);
+
+   /* get heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* get problem data */
+   probdata = SCIPgetProbData(scip);
+   assert(probdata != NULL);
+
+   /* get graph */
+   graph = SCIPprobdataGetGraph(probdata);
+   assert(graph != NULL);
+
+   probtype = graph->stp_type;
+   *result = SCIP_DIDNOTRUN;
+
+   if( probtype == STP_RMWCSP )
+      return SCIP_OKAY;
+
+   pcmw = (probtype == STP_PCSPG || probtype == STP_MWCSP || probtype == STP_RPCSPG);
+   nallsols = SCIPgetNSolsFound(scip);
+   nreadysols = SCIPgetNSols(scip);
+
+   /* only call heuristic if sufficiently many solutions are available */
+   if( nreadysols < DEFAULT_NUSEDSOLS )
+      return SCIP_OKAY;
+
+   /* suspend heuristic? */
+   if( pcmw || probtype == STP_DHCSTP || probtype == STP_DCSTP )
+   {
+      int i;
+      if( heurdata->ncalls == 0 )
+         i = 0;
+      else if( heurdata->maxfreq )
+         i = 1;
+      else if( probtype == STP_RPCSPG || probtype == STP_DCSTP )
+         i = MIN(2 * heurdata->nwaitingsols, 2 * heurdata->nfailures);
+      else
+         i = MIN(heurdata->nwaitingsols, heurdata->nfailures);
+
+      if( nallsols <= heurdata->nlastsols + i )
+         return SCIP_OKAY;
+   }
+   else
+   {
+      int i;
+      if( heurdata->maxfreq )
+         i = 1;
+      else
+         i = MIN(heurdata->nwaitingsols, heurdata->nfailures);
+
+      if( nallsols <= heurdata->nlastsols + i && heurdata->bestsolindex == SCIPsolGetIndex(SCIPgetBestSol(scip)) )
+         return SCIP_OKAY;
+   }
+
+   /* get edge variables */
+   vars = SCIPprobdataGetVars(scip);
+   assert(vars != NULL);
+   assert(vars[0] != NULL);
+
+   nedges = graph->edges;
+   heurdata->ncalls++;
+
+   restrictheur = (graph->terms > BOUND_MAXNTERMINALS && nedges > BOUND_MAXNEDGES);
+
+   if( restrictheur)
+      runs = RUNS_RESTRICTED;
+   else
+      runs = RUNS_NORMAL;
+
+   if( runs > nreadysols )
+      runs = nreadysols;
+
+   assert(runs > 0);
+
+   if( probtype == STP_MWCSP || probtype == STP_DHCSTP || probtype == STP_DCSTP )
+      newsol = (SCIPgetSols(scip))[0];
+   /* first run? */
+   else if( heurdata->lastsolindex == -1 )
+      newsol = (SCIPgetSols(scip))[SCIPrandomGetInt(heurdata->randnumgen, 0, heurdata->nusedsols - 1)];
+   else
+      newsol = NULL;
+
+   bestsolindex = SCIPsolGetIndex(SCIPgetBestSol(scip));
+   nsols = nreadysols;
+
+   /* run the actual heuristic */
+   SCIP_CALL( SCIPStpHeurRecRun(scip, NULL, heur, heurdata, graph, vars, newsol, NULL, runs, nsols, restrictheur, &solfound) );
+
+   /* save latest solution index */
+   solindex = 0;
+   nsols = SCIPgetNSols(scip);
+   assert(nsols > 0);
+   sols = SCIPgetSols(scip);
+
+   for( int i = 1; i < nsols; i++ )
+      if( SCIPsolGetIndex(sols[i]) > SCIPsolGetIndex(sols[solindex]) )
+         solindex = i;
+
+   if( SCIPsolGetIndex(SCIPgetBestSol(scip)) == bestsolindex )
+      heurdata->nfailures++;
+   else
+   {
+      heurdata->nfailures = 0;
+      *result = SCIP_FOUNDSOL;
+   }
+
+   heurdata->lastsolindex = SCIPsolGetIndex(sols[solindex]);
+   heurdata->bestsolindex = SCIPsolGetIndex(SCIPgetBestSol(scip));
+   heurdata->nlastsols = SCIPgetNSolsFound(scip);
+
+   return SCIP_OKAY;
+}
 
 
 /** creates the rec primal heuristic and includes it in SCIP */
