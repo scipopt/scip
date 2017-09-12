@@ -129,6 +129,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printXyz)
 }
 
 /** expression parse callback */
+static
 SCIP_DECL_CONSEXPR_EXPRPARSE(parseXyz)
 {  /*lint --e{715}*/
    assert(expr != NULL);
@@ -259,6 +260,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrXyz(
    SCIP_CALL( SCIPsetConsExprExprHdlrSimplify(scip, consexprhdlr, exprhdlr, simplifyXyz) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, compareXyz) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printXyz) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseXyz) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalXyz) );
    SCIP_CALL( SCIPsetConsExprExprHdlrInitSepa(scip, consexprhdlr, exprhdlr, initSepaXyz) );
    SCIP_CALL( SCIPsetConsExprExprHdlrExitSepa(scip, consexprhdlr, exprhdlr, exitSepaXyz) );
