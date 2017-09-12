@@ -4264,7 +4264,7 @@ SCIP_RETCODE SCIPwriteOpb(
    if( nvars != nbinvars && (nintvars > 0 || SCIPfindConshdlr(scip, "indicator") != NULL
          || ncontvars + nimplvars != SCIPconshdlrGetNConss(SCIPfindConshdlr(scip, "indicator"))) )
    {
-      SCIPwarningMessage(scip, "OPB format is only capable for binary problems.\n");
+      SCIPwarningMessage(scip, "only binary problems can be written in OPB format.\n");
       *result = SCIP_DIDNOTRUN;
    }
    else
