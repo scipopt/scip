@@ -43,7 +43,9 @@ EXTERN
 SCIP_RETCODE SCIPcreateConsExprExprXyz(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR**  expr                /**< pointer where to store expression */
+   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
+   int                   nchildren,          /**< number of children */
+   SCIP_CONSEXPR_EXPR**  children            /**< children (can be NULL if nchildren is 0) */
    );
 
 #ifdef __cplusplus

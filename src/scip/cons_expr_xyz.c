@@ -128,6 +128,17 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printXyz)
    return SCIP_OKAY;
 }
 
+/** expression parse callback */
+SCIP_DECL_CONSEXPR_EXPRPARSE(parseXyz)
+{  /*lint --e{715}*/
+   assert(expr != NULL);
+
+   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+
 /** expression (point-) evaluation callback */
 static
 SCIP_DECL_CONSEXPR_EXPREVAL(evalXyz)
@@ -263,7 +274,9 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrXyz(
 SCIP_RETCODE SCIPcreateConsExprExprXyz(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR**  expr                /**< pointer where to store expression */
+   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
+   int                   nchildren,          /**< number of children */
+   SCIP_CONSEXPR_EXPR**  children            /**< children (can be NULL if nchildren is 0) */
    )
 {
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr = NULL;
@@ -280,7 +293,7 @@ SCIP_RETCODE SCIPcreateConsExprExprXyz(
    /* TODO: create and store expression specific data here */
 
    /* create expression */
-   SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, exprhdlr, exprdata, 0, NULL) );
+   SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, exprhdlr, exprdata, nchildren, children) );
 
    return SCIP_OKAY;
 }
