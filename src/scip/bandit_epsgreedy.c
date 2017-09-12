@@ -23,6 +23,7 @@
 #include <assert.h>
 #include "blockmemshell/memory.h"
 #include "scip/bandit_epsgreedy.h"
+#include "scip/scip.h"
 
 #define BANDIT_NAME           "eps-greedy"
 #define DEFAULT_WEIGHT 0.2

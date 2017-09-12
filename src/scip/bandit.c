@@ -23,6 +23,7 @@
 #include <assert.h>
 #include <string.h>
 #include "scip/bandit.h"
+#include "scip/pub_bandit.h"
 #include "scip/struct_bandit.h"
 #include "struct_set.h"
 #include "scip/set.h"

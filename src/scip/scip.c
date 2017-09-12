@@ -81,6 +81,7 @@
 #include "scip/scip.h"
 #include "lpi/lpi.h"
 
+#include "scip/scipcoreplugins.h"
 #include "scip/branch.h"
 #include "scip/conflict.h"
 #include "scip/cons.h"

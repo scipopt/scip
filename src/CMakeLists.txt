@@ -518,6 +518,10 @@ set(scipheaders
     scip/prop_sync.h
     scip/prop_vbounds.h
     scip/pub_branch.h
+    scip/pub_bandit.h
+    scip/pub_bandit_epsgreedy.h
+    scip/pub_bandit_exp3.h
+    scip/pub_bandit_ucb.h
     scip/pub_compr.h
     scip/pub_conflict.h
     scip/pub_cons.h
