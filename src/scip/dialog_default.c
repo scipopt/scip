@@ -228,7 +228,7 @@ SCIP_RETCODE writeProblem(
             {
                SCIPdialogMessage(scip, NULL, "no reader for requested output format\n");
 
-               SCIPdialogMessage(scip, NULL, "following readers are avaliable for writing:\n");
+               SCIPdialogMessage(scip, NULL, "The following readers are available for writing:\n");
                displayReaders(scip, FALSE, TRUE);
 
                SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, 
@@ -1819,7 +1819,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecRead)
                {
                   SCIPdialogMessage(scip, NULL, "no reader for input file <%s> available\n", tmpfilename);
 
-                  SCIPdialogMessage(scip, NULL, "following readers are avaliable for reading:\n");
+                  SCIPdialogMessage(scip, NULL, "The following readers are available for reading:\n");
                   displayReaders(scip, TRUE, FALSE);
 
                   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog,
