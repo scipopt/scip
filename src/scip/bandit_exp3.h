@@ -62,11 +62,13 @@ SCIP_DECL_BANDITRESET(SCIPbanditResetExp3);
 extern
 SCIP_RETCODE SCIPbanditCreateExp3(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   BMS_BUFMEM*           bufmem,             /**< buffer memory */
    SCIP_BANDITVTABLE*    vtable,             /**< virtual function table for callback functions of Exp.3 */
    SCIP_BANDIT**         exp3,               /**< pointer to store bandit algorithm */
-   int                   nactions,           /**< the number of actions for this bandit algorithm */
+   SCIP_Real*            priorities,         /**< priorities for each action, or NULL if not needed */
    SCIP_Real             gammaparam,         /**< weight between uniform (gamma ~ 1) and weight driven (gamma ~ 0) probability distribution */
    SCIP_Real             beta,               /**< gain offset between 0 and 1 at every observation */
+   int                   nactions,           /**< the number of actions for this bandit algorithm */
    unsigned int          initseed            /**< initial random seed */
    );
 

@@ -27,7 +27,6 @@
 
 #define BANDIT_NAME "ucb"
 #define NUMEPS 1e-6
-#define DEFAULT_SEED 999
 
 /*
  * Data structures
@@ -288,14 +287,15 @@ int* SCIPgetStartPermutationUcb(
    return banditdata->startperm;
 }
 
-/** internal method to create UCB bandit algorithm */
+/** internal method to create and reset UCB bandit algorithm */
 SCIP_RETCODE SCIPbanditCreateUcb(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    BMS_BUFMEM*           bufmem,             /**< buffer memory */
    SCIP_BANDITVTABLE*    vtable,             /**< virtual function table for UCB bandit algorithm */
    SCIP_BANDIT**         ucb,                /**< pointer to store bandit algorithm */
-   int                   nactions,           /**< the number of actions for this bandit algorithm */
+   SCIP_Real*            priorities,         /**< priorities for each action, or NULL if not needed */
    SCIP_Real             alpha,              /**< parameter to increase confidence width */
+   int                   nactions,           /**< the number of actions for this bandit algorithm */
    unsigned int          initseed            /**< initial random seed */
    )
 {
@@ -310,21 +310,19 @@ SCIP_RETCODE SCIPbanditCreateUcb(
 
    banditdata->alpha = alpha;
 
-   SCIP_CALL( SCIPbanditCreate(ucb, vtable, blkmem, nactions, initseed, banditdata) );
-   assert(*ucb != NULL);
-
-   /* reset data for correct initialization */
-   SCIP_CALL( dataReset(bufmem, *ucb, banditdata, NULL, nactions) );
+   SCIP_CALL( SCIPbanditCreate(ucb, vtable, blkmem, bufmem, priorities, nactions, initseed, banditdata) );
 
    return SCIP_OKAY;
 }
 
-/** create UCB bandit algorithm */
+/** create and reset UCB bandit algorithm */
 SCIP_RETCODE SCIPcreateBanditUcb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BANDIT**         ucb,                /**< pointer to store bandit algorithm */
+   SCIP_Real*            priorities,         /**< priorities for each action, or NULL if not needed */
+   SCIP_Real             alpha,              /**< parameter to increase confidence width */
    int                   nactions,           /**< the number of actions for this bandit algorithm */
-   SCIP_Real             alpha               /**< parameter to increase confidence width */
+   unsigned int          initseed            /**< initial random number seed */
    )
 {
    SCIP_BANDITVTABLE* vtable;
@@ -335,7 +333,8 @@ SCIP_RETCODE SCIPcreateBanditUcb(
       SCIPerrorMessage("Could not find virtual function table for %s bandit algorithm\n", BANDIT_NAME);
    }
 
-   SCIP_CALL( SCIPbanditCreateUcb(SCIPblkmem(scip), SCIPbuffer(scip), vtable, ucb, nactions, alpha, SCIPinitializeRandomSeed(scip, DEFAULT_SEED)) );
+   SCIP_CALL( SCIPbanditCreateUcb(SCIPblkmem(scip), SCIPbuffer(scip), vtable, ucb,
+         priorities, alpha, nactions, SCIPinitializeRandomSeed(scip, initseed)) );
 
    return SCIP_OKAY;
 }

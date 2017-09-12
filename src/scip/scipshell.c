@@ -22,6 +22,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"

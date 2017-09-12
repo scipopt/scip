@@ -4537,16 +4537,6 @@ SCIP_BANDITVTABLE* SCIPfindBanditvtable(
    const char*           name                /**< name of bandit algorithm virtual function table */
    );
 
-/** creates a bandit algorithm */
-EXTERN
-SCIP_RETCODE SCIPcreateBandit(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BANDIT**         bandit,             /**< pointer to bandit algorithm data structure */
-   SCIP_BANDITVTABLE*    banditvtable,       /**< virtual table for this bandit algorithm */
-   int                   nactions,           /**< the number of actions for this bandit algorithm */
-   SCIP_BANDITDATA*      banditdata          /**< algorithm specific bandit data */
-   );
-
 /** calls destructor and frees memory of bandit algorithm */
 EXTERN
 SCIP_RETCODE SCIPfreeBandit(

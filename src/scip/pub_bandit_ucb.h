@@ -48,13 +48,15 @@ extern "C" {
  */
 
 
-/** create UCB bandit algorithm */
+/** create and reset UCB bandit algorithm */
 EXTERN
 SCIP_RETCODE SCIPcreateBanditUcb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BANDIT**         ucb,                /**< pointer to store bandit algorithm */
+   SCIP_Real*            priorities,         /**< priorities for each action, or NULL if not needed */
+   SCIP_Real             alpha,              /**< parameter to increase confidence width */
    int                   nactions,           /**< the number of actions for this bandit algorithm */
-   SCIP_Real             alpha               /**< parameter to increase confidence width */
+   unsigned int          initseed            /**< initial random number seed */
    );
 
 /** returns the upper confidence bound of a selected action */

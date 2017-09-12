@@ -27,7 +27,6 @@
 
 #define BANDIT_NAME           "eps-greedy"
 #define DEFAULT_WEIGHT 0.2
-#define DEFAULT_INITSEED 999
 /*
  * Data structures
  */
@@ -193,11 +192,13 @@ SCIP_DECL_BANDITRESET(SCIPbanditResetEpsgreedy)
  * interface methods of the Epsilon Greedy bandit algorithm
  */
 
-/** internal method to create an epsilon greedy bandit algorithm */
+/** internal method to create and reset epsilon greedy bandit algorithm */
 SCIP_RETCODE SCIPbanditCreateEpsgreedy(
    BMS_BLKMEM*           blkmem,             /**< block memory */
+   BMS_BUFMEM*           bufmem,             /**< buffer memory */
    SCIP_BANDITVTABLE*    vtable,             /**< virtual function table with epsilon greedy callbacks */
    SCIP_BANDIT**         epsgreedy,          /**< pointer to store the epsilon greedy bandit algorithm */
+   SCIP_Real*            priorities,         /**< priorities for each action, or NULL if not needed */
    SCIP_Real             eps,                /**< probability for exploration between all actions */
    int                   nactions,           /**< the number of possible actions */
    unsigned int          initseed            /**< initial random seed */
@@ -212,17 +213,19 @@ SCIP_RETCODE SCIPbanditCreateEpsgreedy(
    banditdata->eps = eps;
    banditdata->nselections = 0;
 
-   SCIP_CALL( SCIPbanditCreate(epsgreedy, vtable, blkmem, nactions, initseed, banditdata) );
+   SCIP_CALL( SCIPbanditCreate(epsgreedy, vtable, blkmem, bufmem, priorities, nactions, initseed, banditdata) );
 
    return SCIP_OKAY;
 }
 
-/** create an epsilon greedy bandit algorithm */
+/** create and resets an epsilon greedy bandit algorithm */
 SCIP_RETCODE SCIPcreateBanditEpsgreedy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BANDIT**         epsgreedy,          /**< pointer to store the epsilon greedy bandit algorithm */
+   SCIP_Real*            priorities,         /**< priorities for each action, or NULL if not needed */
    SCIP_Real             eps,                /**< probability for exploration between all actions */
-   int                   nactions            /**< the number of possible actions */
+   int                   nactions,           /**< the number of possible actions */
+   unsigned int          initseed            /**< initial seed for random number generation */
    )
 {
    SCIP_BANDITVTABLE* vtable;
@@ -239,7 +242,8 @@ SCIP_RETCODE SCIPcreateBanditEpsgreedy(
       return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( SCIPbanditCreateEpsgreedy(SCIPblkmem(scip), vtable, epsgreedy, eps, nactions, SCIPinitializeRandomSeed(scip, DEFAULT_INITSEED)) );
+   SCIP_CALL( SCIPbanditCreateEpsgreedy(SCIPblkmem(scip), SCIPbuffer(scip), vtable, epsgreedy,
+         priorities, eps, nactions, SCIPinitializeRandomSeed(scip, initseed)) );
 
    return SCIP_OKAY;
 }

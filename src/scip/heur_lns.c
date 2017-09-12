@@ -3176,6 +3176,7 @@ SCIP_DECL_HEURINIT(heurInitLns)
    int i;
    SCIP_Real* priorities;
    SCIP_Bool reset;
+   unsigned int initseed;
 
    assert(scip != NULL);
    assert(heur != NULL);
@@ -3197,6 +3198,7 @@ SCIP_DECL_HEURINIT(heurInitLns)
 
       SCIP_CALL( neighborhoodStatsReset(scip, &neighborhood->stats) );
 
+      /* disable inactive neighborhoods */
       if( ! neighborhood->active )
       {
          if( heurdata->nactiveneighborhoods - 1 > i )
@@ -3213,22 +3215,23 @@ SCIP_DECL_HEURINIT(heurInitLns)
       priorities[i] = heurdata->neighborhoods[i]->priority;
 
 
-   reset = heurdata->resetweights;
-   /* create bandit algorithms */
+   initseed = (unsigned int)heurdata->seed + SCIPgetNVars(scip);
+
+   /* create or reset bandit algorithms */
    if( heurdata->exp3 == NULL )
    {
       assert(heurdata->epsgreedynh == NULL);
       assert(heurdata->ucb == NULL);
-      SCIP_CALL( SCIPcreateBanditExp3(scip, &heurdata->exp3,
-            heurdata->nactiveneighborhoods, heurdata->exp3_gamma, heurdata->exp3_beta) );
+      SCIP_CALL( SCIPcreateBanditExp3(scip, &heurdata->exp3, priorities,
+            heurdata->exp3_gamma, heurdata->exp3_beta, heurdata->nactiveneighborhoods, initseed) );
 
-      SCIP_CALL( SCIPcreateBanditEpsgreedy(scip, &heurdata->epsgreedynh, heurdata->epsgreedy_eps, heurdata->nactiveneighborhoods) );
+      SCIP_CALL( SCIPcreateBanditEpsgreedy(scip, &heurdata->epsgreedynh, priorities,
+            heurdata->epsgreedy_eps, heurdata->nactiveneighborhoods, initseed) );
 
-      SCIP_CALL( SCIPcreateBanditUcb(scip, &heurdata->ucb, heurdata->nactiveneighborhoods, heurdata->ucb_alpha) );
-      reset = TRUE;
-   }
+      SCIP_CALL( SCIPcreateBanditUcb(scip, &heurdata->ucb, priorities,
+            heurdata->ucb_alpha, heurdata->nactiveneighborhoods, initseed) );
 
-   if( reset )
+   } else if( heurdata->resetweights )
    {
       /* TODO active neighborhoods might change between init calls, reset functionality must take this into account */
       SCIP_BANDIT* bandits[] = {heurdata->exp3, heurdata->epsgreedynh, heurdata->ucb, NULL};
@@ -3236,7 +3239,7 @@ SCIP_DECL_HEURINIT(heurInitLns)
       do
       {
          assert(bandit != NULL);
-         SCIP_CALL( SCIPresetBandit(scip, *bandit, priorities, (unsigned int)(heurdata->seed + SCIPgetNVars(scip))) );
+         SCIP_CALL( SCIPresetBandit(scip, *bandit, priorities, initseed) );
       }
       while( *(++bandit) != NULL );
    }

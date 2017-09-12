@@ -28,8 +28,6 @@
 #include "scip/struct_scip.h"
 #include "scip/mem.h"
 
-#define DEFAULT_SEED 987
-
 /** includes a bandit algorithm virtual function table  */
 SCIP_RETCODE SCIPincludeBanditvtable(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -66,25 +64,6 @@ SCIP_BANDITVTABLE* SCIPfindBanditvtable(
    assert(scip != NULL);
 
    return SCIPsetFindBanditvtable(scip->set, name);
-}
-
-/** creates a bandit algorithm */
-SCIP_RETCODE SCIPcreateBandit(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BANDIT**         bandit,             /**< pointer to bandit algorithm data structure */
-   SCIP_BANDITVTABLE*    banditvtable,       /**< virtual table for this bandit algorithm */
-   int                   nactions,           /**< the number of actions for this bandit algorithm */
-   SCIP_BANDITDATA*      banditdata          /**< algorithm specific bandit data */
-   )
-{
-   assert(scip != NULL);
-   assert(bandit != NULL);
-   assert(banditvtable != NULL);
-   assert(nactions > 0);
-
-   SCIP_CALL( SCIPbanditCreate(bandit, banditvtable, SCIPblkmem(scip), nactions, SCIPinitializeRandomSeed(scip, DEFAULT_SEED), banditdata) );
-
-   return SCIP_OKAY;
 }
 
 /** reset the bandit algorithm */

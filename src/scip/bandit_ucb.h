@@ -58,15 +58,16 @@ SCIP_DECL_BANDITUPDATE(banditUpdateUcb);
 extern
 SCIP_DECL_BANDITRESET(banditResetUcb);
 
-/** internal method to create UCB bandit algorithm */
+/** internal method to create and reset UCB bandit algorithm */
 extern
 SCIP_RETCODE SCIPbanditCreateUcb(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    BMS_BUFMEM*           bufmem,             /**< buffer memory */
    SCIP_BANDITVTABLE*    vtable,             /**< virtual function table for UCB bandit algorithm */
    SCIP_BANDIT**         ucb,                /**< pointer to store bandit algorithm */
-   int                   nactions,           /**< the number of actions for this bandit algorithm */
+   SCIP_Real*            priorities,         /**< priorities for each action, or NULL if not needed */
    SCIP_Real             alpha,              /**< parameter to increase confidence width */
+   int                   nactions,           /**< the number of actions for this bandit algorithm */
    unsigned int          initseed            /**< initial random seed */
    );
 

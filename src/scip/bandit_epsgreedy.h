@@ -55,12 +55,14 @@ extern
 SCIP_DECL_BANDITRESET(SCIPbanditResetEpsgreedy);
 
 
-/** internal method to create an epsilon greedy bandit algorithm */
+/** internal method to create and reset epsilon greedy bandit algorithm */
 extern
 SCIP_RETCODE SCIPbanditCreateEpsgreedy(
    BMS_BLKMEM*           blkmem,             /**< block memory */
+   BMS_BUFMEM*           bufmem,             /**< buffer memory */
    SCIP_BANDITVTABLE*    vtable,             /**< virtual function table with epsilon greedy callbacks */
    SCIP_BANDIT**         epsgreedy,          /**< pointer to store the epsilon greedy bandit algorithm */
+   SCIP_Real*            priorities,         /**< priorities for each action, or NULL if not needed */
    SCIP_Real             eps,                /**< probability for exploration between all actions */
    int                   nactions,           /**< the number of possible actions */
    unsigned int          initseed            /**< initial random seed */

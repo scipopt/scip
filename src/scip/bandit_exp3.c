@@ -26,7 +26,6 @@
 
 #define BANDIT_NAME "exp3"
 #define NUMTOL 1e-6
-#define DEFAULT_SEED 547
 
 /*
  * Data structures
@@ -251,11 +250,13 @@ SCIP_DECL_BANDITRESET(SCIPbanditResetExp3)
 /** direct bandit creation method for the core where no SCIP pointer is available */
 SCIP_RETCODE SCIPbanditCreateExp3(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   BMS_BUFMEM*           bufmem,             /**< buffer memory */
    SCIP_BANDITVTABLE*    vtable,             /**< virtual function table for callback functions of Exp.3 */
    SCIP_BANDIT**         exp3,               /**< pointer to store bandit algorithm */
-   int                   nactions,           /**< the number of actions for this bandit algorithm */
+   SCIP_Real*            priorities,         /**< priorities for each action, or NULL if not needed */
    SCIP_Real             gammaparam,         /**< weight between uniform (gamma ~ 1) and weight driven (gamma ~ 0) probability distribution */
    SCIP_Real             beta,               /**< gain offset between 0 and 1 at every observation */
+   int                   nactions,           /**< the number of actions for this bandit algorithm */
    unsigned int          initseed            /**< initial random seed */
    )
 {
@@ -269,18 +270,20 @@ SCIP_RETCODE SCIPbanditCreateExp3(
 
    SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &banditdata->weights, nactions) );
 
-   SCIP_CALL( SCIPbanditCreate(exp3, vtable, blkmem, nactions, initseed, banditdata) );
+   SCIP_CALL( SCIPbanditCreate(exp3, vtable, blkmem, bufmem, priorities, nactions, initseed, banditdata) );
 
    return SCIP_OKAY;
 }
 
-/** create Exp.3 bandit algorithm as a plugin using \p scip pointer */
+/** creates and resets an Exp.3 bandit algorithm using \p scip pointer */
 SCIP_RETCODE SCIPcreateBanditExp3(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BANDIT**         exp3,               /**< pointer to store bandit algorithm */
-   int                   nactions,           /**< the number of actions for this bandit algorithm */
+   SCIP_Real*            priorities,         /**< priorities for each action, or NULL if not needed */
    SCIP_Real             gammaparam,         /**< weight between uniform (gamma ~ 1) and weight driven (gamma ~ 0) probability distribution */
-   SCIP_Real             beta                /**< gain offset between 0 and 1 at every observation */
+   SCIP_Real             beta,               /**< gain offset between 0 and 1 at every observation */
+   int                   nactions,           /**< the number of actions for this bandit algorithm */
+   unsigned int          initseed            /**< initial seed for random number generation */
    )
 {
    SCIP_BANDITVTABLE* vtable;
@@ -291,7 +294,8 @@ SCIP_RETCODE SCIPcreateBanditExp3(
       SCIPerrorMessage("Could not find virtual function table for %s bandit algorithm\n", BANDIT_NAME);
    }
 
-   SCIP_CALL( SCIPbanditCreateExp3(SCIPblkmem(scip), vtable, exp3, nactions, gammaparam, beta, SCIPinitializeRandomSeed(scip, DEFAULT_SEED)) );
+   SCIP_CALL( SCIPbanditCreateExp3(SCIPblkmem(scip), SCIPbuffer(scip), vtable, exp3,
+         priorities, gammaparam, beta, nactions, SCIPinitializeRandomSeed(scip, initseed)) );
 
    return SCIP_OKAY;
 }

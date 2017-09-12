@@ -38,12 +38,14 @@
 extern "C" {
 #endif
 
-/** creates a bandit algorithm */
+/** creates and resets bandit algorithm */
 extern
 SCIP_RETCODE SCIPbanditCreate(
    SCIP_BANDIT**         bandit,             /**< pointer to bandit algorithm data structure */
    SCIP_BANDITVTABLE*    banditvtable,       /**< virtual table for this bandit algorithm */
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
+   BMS_BUFMEM*           bufmem,             /**< buffer memory */
+   SCIP_Real*            priorities,         /**< priorities for each action, or NULL if not needed */
    int                   nactions,           /**< the number of actions for this bandit */
    unsigned int          initseed,           /**< initial seed for random number generation */
    SCIP_BANDITDATA*      banditdata          /**< algorithm specific bandit data */
@@ -64,7 +66,6 @@ SCIP_RETCODE SCIPbanditReset(
    SCIP_Real*            priorities,         /**< priorities for every action, or NULL if not needed */
    unsigned int          seed                /**< initial random seed for bandit selection */
    );
-
 
 /** get data of this bandit algorithm */
 extern
@@ -89,7 +90,6 @@ SCIP_RETCODE SCIPbanditvtableCreate(
    SCIP_DECL_BANDITUPDATE((*banditupdate)),  /**< update callback for bandit algorithms */
    SCIP_DECL_BANDITRESET ((*banditreset))    /**< update callback for bandit algorithms */
    );
-
 
 /** free a bandit vTable for bandit algorithm callback functions */
 extern

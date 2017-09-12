@@ -48,27 +48,29 @@ extern "C" {
  * @{
  */
 
-/** create an epsilon greedy bandit selector with the necessary callbacks */
+/** create and resets an epsilon greedy bandit algorithm */
 EXTERN
 SCIP_RETCODE SCIPcreateBanditEpsgreedy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BANDIT**         epsgreedy,          /**< pointer to store the epsilon greedy bandit algorithm */
+   SCIP_Real*            priorities,         /**< priorities for each action, or NULL if not needed */
    SCIP_Real             eps,                /**< probability for exploration between all actions */
-   int                   nactions            /**< the number of possible actions */
-);
+   int                   nactions,           /**< the number of possible actions */
+   unsigned int          initseed            /**< initial seed for random number generation */
+   );
 
 /** get weights array of epsilon greedy bandit algorithm */
 EXTERN
 SCIP_Real* SCIPgetWeightsEpsgreedy(
    SCIP_BANDIT*          epsgreedy           /**< epsilon greedy bandit algorithm */
-);
+   );
 
 /** set epsilon parameter of epsilon greedy bandit algorithm */
 EXTERN
 void SCIPsetEpsilonEpsgreedy(
    SCIP_BANDIT*          epsgreedy,          /**< epsilon greedy bandit algorithm */
    SCIP_Real             eps                 /**< epsilon parameter (increase for more exploration) */
-);
+   );
 
 /* @} */
 
