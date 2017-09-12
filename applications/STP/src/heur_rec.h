@@ -39,6 +39,7 @@ typedef struct stp_solution
 {
    SCIP_Real obj;
    int* soledges;
+   int index;
 } STPSOL;
 
 /** edge based solution pool for Steiner tree problems (in presolving) */
@@ -48,19 +49,20 @@ typedef struct stp_solution_pool
    int size;
    int nedges;
    int maxsize;
+   int maxindex;
 } STPSOLPOOL;
 
 /** run REC heuristic */
 extern
 SCIP_RETCODE SCIPStpHeurRecRun(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEUR*            heur,               /**< heuristic or NULL */
+   STPSOLPOOL*           pool,               /**< solution pool or NULL */
    SCIP_HEUR*            heur,               /**< heuristic or NULL */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data or NULL */
    GRAPH*                graph,              /**< graph data */
    SCIP_VAR**            vars,               /**< variables or NULL */
-   SCIP_SOL*             newsol,             /**< to store new solution if != NULL */
    int*                  newsoledges,        /**< to store new solution if != NULL */
+   int*                  newsolindex,          /**< index of new solution */
    int                   runs,               /**< number of runs */
    int                   nsols,              /**< number of solutions */
    SCIP_Bool             restrictheur,       /**< use restricted version of heur? */
