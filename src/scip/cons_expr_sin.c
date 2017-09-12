@@ -128,6 +128,18 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printSin)
    return SCIP_OKAY;
 }
 
+/** expression parse callback */
+static
+SCIP_DECL_CONSEXPR_EXPRPARSE(parseSin)
+{  /*lint --e{715}*/
+   assert(expr != NULL);
+
+   SCIPerrorMessage("method of sin constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+
 /** expression (point-) evaluation callback */
 static
 SCIP_DECL_CONSEXPR_EXPREVAL(evalSin)
@@ -248,6 +260,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSin(
    SCIP_CALL( SCIPsetConsExprExprHdlrSimplify(scip, consexprhdlr, exprhdlr, simplifySin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, compareSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printSin) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrInitSepa(scip, consexprhdlr, exprhdlr, initSepaSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrExitSepa(scip, consexprhdlr, exprhdlr, exitSepaSin) );
