@@ -1214,7 +1214,7 @@ SCIP_RETCODE setObjective(
 #ifdef SCIP_DEBUG_SOLUTION
             if( SCIPdebugIsMainscip(scip) )
             {
-               SCIP_Real val;
+               SCIP_Real val = 0.0;
 
                for( v = nvars - 1; v >= 0; --v )
                {
@@ -4261,7 +4261,8 @@ SCIP_RETCODE SCIPwriteOpb(
 {  /*lint --e{715}*/
    SCIP_RETCODE retcode = SCIP_OKAY;
 
-   if( nvars != nbinvars && ncontvars + nimplvars + nbinvars != nvars && ncontvars + nimplvars != ( (SCIPfindConshdlr(scip, "indicator") != NULL) ? SCIPconshdlrGetNConss(SCIPfindConshdlr(scip, "indicator")) : 0 ) )
+   if( nvars != nbinvars && (nintvars > 0 || SCIPfindConshdlr(scip, "indicator") != NULL
+         || ncontvars + nimplvars != SCIPconshdlrGetNConss(SCIPfindConshdlr(scip, "indicator"))) )
    {
       SCIPwarningMessage(scip, "OPB format is only capable for binary problems.\n");
       *result = SCIP_DIDNOTRUN;
