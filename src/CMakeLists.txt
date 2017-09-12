@@ -787,6 +787,15 @@ install(TARGETS scip libscip EXPORT scip-targets
 export(TARGETS scip libscip
   FILE "${CMAKE_BINARY_DIR}/scip-targets.cmake")
 
+#make soplex and zimpl dir absolute for the config file
+if(SOPLEX_FOUND)
+    get_filename_component(CONF_SOPLEX_DIR ${SOPLEX_DIR} REALPATH BASE_DIR ${CMAKE_SOURCE_DIR})
+endif()
+
+if(ZIMPL_FOUND)
+    get_filename_component(CONF_ZIMPL_DIR ${ZIMPL_DIR} REALPATH BASE_DIR ${CMAKE_SOURCE_DIR})
+endif()
+
 #configure the config file for the build tree
 set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src")
 configure_file(${PROJECT_SOURCE_DIR}/scip-config.cmake.in
