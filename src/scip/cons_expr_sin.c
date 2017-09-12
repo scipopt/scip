@@ -122,8 +122,31 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printSin)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
-   SCIPerrorMessage("method of sin constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   switch( stage )
+   {
+      case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
+      {
+         /* print function with opening parenthesis */
+         SCIPinfoMessage(scip, file, "%s(", EXPRHDLR_NAME);
+         break;
+      }
+
+      case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
+      {
+         assert(SCIPgetConsExprExprWalkCurrentChild(expr) == 0);
+         break;
+      }
+
+      case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
+      {
+         /* print closing parenthesis */
+         SCIPinfoMessage(scip, file, ")");
+         break;
+      }
+
+      case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
+      default: ;
+   }
 
    return SCIP_OKAY;
 }
@@ -132,10 +155,22 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printSin)
 static
 SCIP_DECL_CONSEXPR_EXPRPARSE(parseSin)
 {  /*lint --e{715}*/
+   SCIP_CONSEXPR_EXPR* childexpr;
+
    assert(expr != NULL);
 
-   SCIPerrorMessage("method of sin constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   /* parse child expression from remaining string */
+   SCIP_CALL( SCIPparseConsExprExpr(scip, consexprhdlr, string, endstring, &childexpr) );
+   assert(childexpr != NULL);
+
+   /* create sinus expression */
+   SCIP_CALL( SCIPcreateConsExprExprSin(scip, consexprhdlr, expr, childexpr) );
+   assert(*expr != NULL);
+
+   /* release child expression since it has been captured by the sinus expression */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &childexpr) );
+
+   *success = TRUE;
 
    return SCIP_OKAY;
 }
