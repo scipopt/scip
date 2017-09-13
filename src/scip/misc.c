@@ -9278,20 +9278,29 @@ void SCIPprintSysError(
    )
 {
 #ifdef NO_STRERROR_R
-   char* buf;
-   buf = strerror(errno);
+   SCIPmessagePrintError("%s: %s\n", message, strerror(errno));
 #else
    char buf[SCIP_MAXSTRLEN];
 
 #if defined(_WIN32) || defined(_WIN64)
-   (void)(strerror_s(buf, SCIP_MAXSTRLEN, errno) + 1);
-#else
-   (void)(strerror_r(errno, buf, SCIP_MAXSTRLEN) + 1);
-#endif
-
-   buf[SCIP_MAXSTRLEN - 1] = '\0';
-#endif
+   /* strerror_s returns 0 on success; the string is \0 terminated. */
+   if ( strerror_s(buf, SCIP_MAXSTRLEN, errno) != 0 )
+      SCIPmessagePrintError("Unkown error number %d or error message too long.\n", errno);
    SCIPmessagePrintError("%s: %s\n", message, buf);
+#else
+   #if (_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && ! _GNU_SOURCE
+      /* We are in the POSIX/XSI case, where strerror_r returns 0 on success; \0 termination is unclear. */
+      if ( strerror_r(errno, buf, SCIP_MAXSTRLEN) != 0 )
+         SCIPmessagePrintError("Unkown error number %d.\n", errno);
+      buf[SCIP_MAXSTRLEN - 1] = '\0';
+      SCIPmessagePrintError("%s: %s\n", message, buf);
+#else
+      /* We are in the GNU case, where strerror_r returns a string to the error string. This string is possibly stored
+       * in buf and is always \0 terminated. */
+      SCIPmessagePrintError("%s: %s\n", message, strerror_r(errno, buf, SCIP_MAXSTRLEN));
+   #endif
+#endif
+#endif
 }
 
 /** extracts tokens from strings - wrapper method for strtok_r() */
