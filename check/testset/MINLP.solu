@@ -334,11 +334,11 @@
 =best=     elec50                                        1055.1823150000
 =bestdual= elec50                                         359.0296983000
 =opt=      elf                                              0.1916666667
-=best=     emfl050_3_3                                     10.4017089100
+=best=     emfl050_3_3                                     10.4017379300
 =bestdual= emfl050_3_3                                      0.1407430609
-=best=     emfl050_5_5                                     18.9131408100
+=best=     emfl050_5_5                                     18.9134077600
 =bestdual= emfl050_5_5                                      0.0000000000
-=best=     emfl100_3_3                                     18.1325464900
+=best=     emfl100_3_3                                     18.1326244600
 =bestdual= emfl100_3_3                                      0.1731353408
 =best=     emfl100_5_5                                     32.6381834800
 =bestdual= emfl100_5_5                                      0.1088554903
@@ -722,6 +722,7 @@
 =opt=      hda                                          -5964.5340840000
 =best=     heatexch_gen1                               197729.4324000000
 =bestdual= heatexch_gen1                               100500.0000000000
+=best=     heatexch_gen2                               635838.8464000000
 =bestdual= heatexch_gen2                               579990.0125000000
 =bestdual= heatexch_gen3                                55948.5117200000
 =best=     heatexch_spec1                              154997.3349000000
@@ -1417,7 +1418,7 @@
 =bestdual= squfl040-080persp                              263.8921950000
 =opt=      srcpm                                         2109.7818330000
 =opt=      sssd08-04                                   182022.5703000000
-=opt=      sssd08-04persp                              182022.5702000000
+=opt=      sssd08-04persp                              182022.5703000000
 =opt=      sssd12-05                                   281408.6352000000
 =opt=      sssd12-05persp                              281408.6353000000
 =opt=      sssd15-04                                   205054.4585000000
@@ -1433,7 +1434,7 @@
 =opt=      sssd16-07                                   417188.8105000000
 =best=     sssd16-07persp                              417188.8105000000
 =bestdual= sssd16-07persp                              256654.7407000000
-=opt=      sssd18-06                                   397992.2942000000
+=opt=      sssd18-06                                   397992.2951000000
 =best=     sssd18-06persp                              397992.2951000000
 =bestdual= sssd18-06persp                              255576.3382000000
 =best=     sssd18-08                                   832795.5852000000
@@ -1441,7 +1442,7 @@
 =best=     sssd18-08persp                              832795.5852000000
 =bestdual= sssd18-08persp                              412938.6878000000
 =opt=      sssd20-04                                   347691.4105000000
-=best=     sssd20-04persp                              347691.4098000000
+=best=     sssd20-04persp                              347691.4105000000
 =bestdual= sssd20-04persp                              336396.6204000000
 =best=     sssd20-08                                   469619.8376000000
 =bestdual= sssd20-08                                   469439.8537000000
@@ -1779,7 +1780,7 @@
 =bestdual= waternd2                                   1051119.5819999999
 =best=     waternd_blacksburg                          118251.0932000000
 =best=     waternd_fossiron                            178494.1410000000
-=best=     waternd_fosspoly0                         71823199.0999999940
+=best=     waternd_fosspoly0                         70680507.9000000060
 =best=     waternd_hanoi                              6109620.9000000004
 =best=     waternd_modena                             2580379.5320000001
 =best=     waternd_pescara                            1837440.4099999999
