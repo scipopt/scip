@@ -1436,7 +1436,7 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    SCIP_CALL( ensureSidechgMem(lpi, nrows) );
 
    /* convert objective sense */
-   objsen = SCIP_OBJSEN_MINIMIZE ? GRB_MINIMIZE : GRB_MAXIMIZE;
+   objsen = (objsen == SCIP_OBJSEN_MINIMIZE ? GRB_MINIMIZE : GRB_MAXIMIZE);
 
    /* convert lhs/rhs into sen/rhs/range tuples */
    SCIP_CALL( convertSides(lpi, nrows, lhs, rhs, &rngcount) );
@@ -1451,13 +1451,10 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    cnt[ncols-1] = nnonz - beg[ncols-1];
    assert(cnt[ncols-1] >= 0);
 
-   /* delete model */
-   assert( lpi->grbmodel != NULL );
-   CHECK_ZERO( lpi->messagehdlr, GRBfreemodel(lpi->grbmodel) );
-
    /* load model - all variables are continuous */
    CHECK_ZERO( lpi->messagehdlr, GRBloadmodel(lpi->grbenv, &(lpi->grbmodel), NULL, ncols, nrows, (int) objsen, 0.0, (SCIP_Real*)obj,
          lpi->senarray, lpi->rhsarray, (int*)beg, cnt, (int*)ind, (SCIP_Real*)val, (SCIP_Real*)lb, (SCIP_Real*)ub, NULL, colnames, rownames) );
+
    CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
 
    /* free temporary memory */
@@ -2416,15 +2413,6 @@ SCIP_RETCODE SCIPlpiGetCols(
 
       CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_LB, firstcol, lastcol-firstcol+1, lb) );
       CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_UB, firstcol, lastcol-firstcol+1, ub) );
-
-      /* adjust infinity values */
-      for (j = 0; j < lastcol-firstcol+1; j++)
-      {
-         if ( lb[j] <= -GRB_INFBOUND )
-            lb[j] = -SCIP_DEFAULT_INFINITY;
-         if ( ub[j] >= GRB_INFBOUND )
-            ub[j] = SCIP_DEFAULT_INFINITY;
-      }
    }
    else
       assert(ub == NULL);
