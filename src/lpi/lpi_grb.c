@@ -970,13 +970,13 @@ SCIP_RETCODE reconvertSides(
          break;
 
       case GRB_LESS_EQUAL:
-         lhs[i] = -SCIP_DEFAULT_INFINITY;
+         lhs[i] = -GRB_INFINITY;
          rhs[i] = lpi->rhsarray[i];
          break;
 
       case GRB_GREATER_EQUAL:
          lhs[i] = lpi->rhsarray[i];
-         rhs[i] = SCIP_DEFAULT_INFINITY;
+         rhs[i] = GRB_INFINITY;
          break;
 
       default:
