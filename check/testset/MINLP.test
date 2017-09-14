@@ -593,7 +593,7 @@ MINLP/instances/MINLPLib2/data/osil/hmittelman.osil
 MINLP/instances/MINLPLib2/data/osil/house.osil
 MINLP/instances/MINLPLib2/data/osil/hs62.osil
 MINLP/instances/MINLPLib2/data/osil/hvb11.osil
-MINLP/instances/MINLPLib2/data/osil/hvycrash.osil
+#MINLP/instances/MINLPLib2/data/osil/hvycrash.osil
 MINLP/instances/MINLPLib2/data/osil/hybriddynamic_fixedcc.osil
 MINLP/instances/MINLPLib2/data/osil/hybriddynamic_fixed.osil
 MINLP/instances/MINLPLib2/data/osil/hybriddynamic_varcc.osil
@@ -1381,7 +1381,7 @@ MINLP/instances/MINLPLib2/data/osil/synheat.osil
 MINLP/instances/MINLPLib2/data/osil/synthes1.osil
 MINLP/instances/MINLPLib2/data/osil/synthes2.osil
 MINLP/instances/MINLPLib2/data/osil/synthes3.osil
-MINLP/instances/MINLPLib2/data/osil/t1000.osil
+#MINLP/instances/MINLPLib2/data/osil/t1000.osil
 MINLP/instances/MINLPLib2/data/osil/tanksize.osil
 MINLP/instances/MINLPLib2/data/osil/telecomsp_metro.osil
 MINLP/instances/MINLPLib2/data/osil/telecomsp_njlata.osil
@@ -1426,7 +1426,7 @@ MINLP/instances/MINLPLib2/data/osil/transswitch2736spr.osil
 MINLP/instances/MINLPLib2/data/osil/tricp.osil
 #MINLP/instances/MINLPLib2/data/osil/trig.osil
 #MINLP/instances/MINLPLib2/data/osil/trigx.osil
-MINLP/instances/MINLPLib2/data/osil/truck.osil
+#MINLP/instances/MINLPLib2/data/osil/truck.osil
 MINLP/instances/MINLPLib2/data/osil/tspn05.osil
 MINLP/instances/MINLPLib2/data/osil/tspn08.osil
 MINLP/instances/MINLPLib2/data/osil/tspn10.osil
