@@ -61,8 +61,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
    SCIP_HEURDATA*        heurdata,           /**< heuristic data or NULL */
    GRAPH*                graph,              /**< graph data */
    SCIP_VAR**            vars,               /**< variables or NULL */
-   int*                  newsoledges,        /**< to store new solution if != NULL */
-   int*                  newsolindex,          /**< index of new solution */
+   int*                  newsolindex,        /**< index of new solution */
    int                   runs,               /**< number of runs */
    int                   nsols,              /**< number of solutions */
    SCIP_Bool             restrictheur,       /**< use restricted version of heur? */
@@ -74,6 +73,7 @@ extern
 SCIP_RETCODE SCIPStpHeurRecInitPool(
    SCIP*                 scip,               /**< SCIP data structure */
    STPSOLPOOL**          pool,               /**< the pool */
+   const int             nedges,             /**< number of edges of solutions to be stored in the pool */
    const int             maxsize             /**< capacity of pool */
    );
 
@@ -98,6 +98,11 @@ void SCIPStpHeurRecFreePool(
 extern
 SCIP_RETCODE SCIPStpIncludeHeurRec(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** initialize heurdata */
+SCIP_RETCODE SCIPStpHeurRecInit(
+   SCIP_HEUR*            heur                /**< rec heuristic */
    );
 
 /** heuristic to exclude vertices or edges from a given solution (and inserting other edges) to improve objective */
