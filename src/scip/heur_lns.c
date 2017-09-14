@@ -46,7 +46,8 @@
 #define DEFAULT_NSOLSLIM 3
 #define DEFAULT_MINNODES 50LL
 #define DEFAULT_MAXNODES 5000LL
-#define DEFAULT_TARGETNODEFACTOR 2.0
+#define DEFAULT_TARGETNODEFACTOR 1.5
+#define DEFAULT_STALLNODEFACTOR 0.5
 #define LPLIMFAC 4.0
 
 /*
@@ -349,6 +350,7 @@ struct SCIP_HeurData
    SCIP_Real             gaincontrol;        /**< gain control to increase the weight of the simple solution indicator
                                                *  and decrease the weight of the closed gap gain */
    SCIP_Real             targetnodefactor;   /**< factor by which target node number is increased/decreased at every adjustment */
+   SCIP_Real             stallnodefactor;    /**< stall node limit as a fraction of total node limit */
    int                   nneighborhoods;     /**< number of neighborhoods */
    int                   nactiveneighborhoods; /**< number of active neighborhoods */
    int                   ninitneighborhoods; /**< neighborhoods that were used at least one time */
@@ -387,6 +389,7 @@ struct SolveLimits
    SCIP_Longint          nodelimit;          /**< maximum number of solving nodes for the sub-SCIP */
    SCIP_Real             memorylimit;        /**< memory limit for the sub-SCIP */
    SCIP_Real             timelimit;          /**< time limit for the sub-SCIP */
+   SCIP_Longint          stallnodes;         /**< maximum number of nodes without (primal) stalling */
 };
 
 typedef struct SolveLimits SOLVELIMITS;
@@ -1603,8 +1606,10 @@ SCIP_RETCODE setLimits(
    assert(subscip != NULL);
    assert(solvelimits != NULL);
 
+   assert(solvelimits->nodelimit >= solvelimits->stallnodes);
+
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", solvelimits->nodelimit) );
-   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", solvelimits->nodelimit / 2));
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", solvelimits->stallnodes));
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", solvelimits->timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", solvelimits->memorylimit) );
 
@@ -1656,6 +1661,7 @@ SCIP_RETCODE determineLimits(
    assert(heurdata->ninitneighborhoods >= 0);
    initfactor = (heurdata->nactiveneighborhoods - heurdata->ninitneighborhoods + 1.0) / (heurdata->nactiveneighborhoods + 1.0);
    solvelimits->nodelimit = (SCIP_Longint)(solvelimits->nodelimit * initfactor);
+   solvelimits->stallnodes = solvelimits->nodelimit * heurdata->stallnodefactor;
 
    /* check whether we have enough nodes left to call subproblem solving */
    if( solvelimits->nodelimit < heurdata->targetnodes )
@@ -3516,6 +3522,10 @@ SCIP_RETCODE SCIPincludeHeurLns(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/targetnodefactor",
          "factor by which target node number is increased/decreased at every adjustment",
          &heurdata->targetnodefactor, TRUE, DEFAULT_TARGETNODEFACTOR, 1.0, 1e+5, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/stallnodefactor",
+         "stall node limit as a fraction of total node limit",
+         &heurdata->stallnodefactor, TRUE, DEFAULT_STALLNODEFACTOR, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/seed",
          "initial random seed for bandit algorithms and random decisions by neighborhoods",
