@@ -534,6 +534,37 @@ SCIP_RETCODE switchWatchedvars(
    return SCIP_OKAY;
 }
 
+/** check whether two intervals overlap */
+static
+SCIP_Bool isOverlapping(
+   SCIP*                 scip,
+   SCIP_VAR*             var,
+   SCIP_BOUNDTYPE        boundtype1,
+   SCIP_Bool             bound1,
+   SCIP_BOUNDTYPE        boundtype2,
+   SCIP_Bool             bound2
+   )
+{
+   SCIP_Bool overlapping = FALSE;
+
+   if( boundtype1 == SCIP_BOUNDTYPE_LOWER )
+   {
+      assert(boundtype2 == SCIP_BOUNDTYPE_UPPER);
+
+      if( SCIPisLE(scip, bound1 - bound2, (SCIP_Real)SCIPvarIsIntegral(var)) )
+         overlapping = TRUE;
+   }
+   else
+   {
+      assert(boundtype2 == SCIP_BOUNDTYPE_LOWER);
+
+      if( SCIPisLE(scip, bound2 - bound1, (SCIP_Real)SCIPvarIsIntegral(var)) )
+         overlapping = TRUE;
+   }
+
+   return overlapping;
+}
+
 /** deletes coefficient at given position from bound disjunction constraint data */
 static
 SCIP_RETCODE delCoefPos(
@@ -595,7 +626,8 @@ SCIP_RETCODE addCoef(
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    SCIP_VAR*             var,                /**< variable in literal */
    SCIP_BOUNDTYPE        boundtype,          /**< boundtype of literal */
-   SCIP_Real             bound               /**< bound of literal */
+   SCIP_Real             bound,              /**< bound of literal */
+   SCIP_Bool*            redundant           /**< flag to indicate whether constraint has been bound redundant */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -625,8 +657,16 @@ SCIP_RETCODE addCoef(
    for( v = 0; v < consdata->nvars; v++ )
    {
       /* check if the variable is already part of the constraint */
-      if( consdata->vars[v] == var && consdata->boundtypes[v] == boundtype )
-         break;
+      if( consdata->vars[v] == var )
+      {
+         if( consdata->boundtypes[v] == boundtype )
+            break;
+         else if( isOverlapping(scip, var, consdata->boundtypes[v], consdata->bounds[v], boundtype, bound) )
+         {
+            *redundant = TRUE;
+            return SCIP_OKAY;
+         }
+      }
    }
 
    /* the combination of variable and boundtype is already part of the constraint; check whether the clause
@@ -869,7 +909,7 @@ SCIP_RETCODE removeFixedVariables(
       if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_FIXED )
       {
          /* add new literal */
-         SCIP_CALL( addCoef(scip, cons, eventhdlr, var, boundtype, bound) );
+         SCIP_CALL( addCoef(scip, cons, eventhdlr, var, boundtype, bound, redundant) );
       }
 
       /* remove old literal */
@@ -3233,6 +3273,18 @@ SCIP_RETCODE SCIPcreateConsBounddisjunction(
       SCIPerrorMessage("bound disjunction constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
+
+#ifndef NDEBUG
+   /* ensure that the given data neither contains overlapping nor redundant literals */
+   for( int v1 = 0; v1 < nvars; v1++ )
+   {
+      for( int v2 = v1+1; v2 < nvars; v2++ )
+      {
+         assert(vars[v1] != vars[v2] || (SCIPboundtypeOpposite(boundtypes[v1]) == boundtypes[v2]
+               && !isOverlapping(scip, vars[v1], boundtypes[v1], bounds[v1], boundtypes[v2], bounds[v2])));
+      }
+   }
+#endif
 
    /* create the constraint specific data */
    SCIP_CALL( consdataCreate(scip, &consdata, nvars, vars, boundtypes, bounds) );
