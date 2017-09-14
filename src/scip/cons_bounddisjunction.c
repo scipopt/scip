@@ -599,6 +599,7 @@ SCIP_RETCODE addCoef(
    )
 {
    SCIP_CONSDATA* consdata;
+   int v;
 
    assert(eventhdlr != NULL);
 
@@ -621,26 +622,43 @@ SCIP_RETCODE addCoef(
    }
    assert(consdata->varssize > consdata->nvars);
 
-   /* add the variable to the end of the array */
-   consdata->vars[consdata->nvars] = var;
-   consdata->boundtypes[consdata->nvars] = boundtype;
-   consdata->bounds[consdata->nvars] = bound;
-   consdata->nvars++;
-
-   if( SCIPconsIsTransformed(cons) )
+   /* the combination of variable and boundtype is already part of the constraint; check whether the clause
+    * can be relaxed
+    */
+   if( v < consdata->nvars )
    {
-      /* add rounding lock of variable */
-      SCIP_CALL( lockRounding(scip, cons, consdata, consdata->nvars-1) );
-
-      /* if less than 2 variables are watched, add the new one to the watched variables */
-      if( consdata->watchedvar1 == -1 )
+      if( (boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisLT(scip, bound, consdata->bounds[v]))
+         || (boundtype == SCIP_BOUNDTYPE_UPPER && SCIPisGT(scip, bound, consdata->bounds[v])) )
       {
-         assert(consdata->watchedvar2 == -1);
-         SCIP_CALL( switchWatchedvars(scip, cons, eventhdlr, consdata->nvars-1, -1) );
+         SCIPdebugMsg(scip, "relax clause of <%s>: (<%s> %s %.15g) -> (<%s> %s %.15g)\n", SCIPconsGetName(cons), \
+               SCIPvarGetName(var), boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", consdata->bounds[v], \
+               SCIPvarGetName(var), boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", bound);
+         consdata->bounds[v] = bound;
       }
-      else if( consdata->watchedvar2 == -1 )
+   }
+   else
+   {
+      /* add the variable to the end of the array */
+      consdata->vars[consdata->nvars] = var;
+      consdata->boundtypes[consdata->nvars] = boundtype;
+      consdata->bounds[consdata->nvars] = bound;
+      consdata->nvars++;
+
+      if( SCIPconsIsTransformed(cons) )
       {
-         SCIP_CALL( switchWatchedvars(scip, cons, eventhdlr, consdata->watchedvar1, consdata->nvars-1) );
+         /* add rounding lock of variable */
+         SCIP_CALL( lockRounding(scip, cons, consdata, consdata->nvars-1) );
+
+         /* if less than 2 variables are watched, add the new one to the watched variables */
+         if( consdata->watchedvar1 == -1 )
+         {
+            assert(consdata->watchedvar2 == -1);
+            SCIP_CALL( switchWatchedvars(scip, cons, eventhdlr, consdata->nvars-1, -1) );
+         }
+         else if( consdata->watchedvar2 == -1 )
+         {
+            SCIP_CALL( switchWatchedvars(scip, cons, eventhdlr, consdata->watchedvar1, consdata->nvars-1) );
+         }
       }
    }
 
