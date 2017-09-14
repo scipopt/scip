@@ -5285,7 +5285,17 @@ SCIP_RETCODE SCIPlpiWriteLP(
 
    SCIPdebugMessage("writing LP to file <%s>\n", fname);
 
-   CHECK_ZERO( lpi->messagehdlr, GRBwrite(lpi->grbmodel, fname) );
+   /* if range rows were not added, add, print and remove them; otherwise, just print */
+   if ( lpi->nrngrows > 0 && !lpi->rngvarsadded )
+   {
+      SCIP_CALL( addRangeVars(lpi) );
+      CHECK_ZERO( lpi->messagehdlr, GRBwrite(lpi->grbmodel, fname) );
+      SCIP_CALL( delRangeVars(lpi) );
+   }
+   else
+   {
+      CHECK_ZERO( lpi->messagehdlr, GRBwrite(lpi->grbmodel, fname) );
+   }
 
    return SCIP_OKAY;
 }
