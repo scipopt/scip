@@ -2009,7 +2009,6 @@ SCIP_RETCODE SCIPlpiChgSides(
    /* convert lhs/rhs into sen/rhs/range tuples */
    SCIP_CALL( ensureSidechgMem(lpi, nrows) );
    SCIP_CALL( convertSides(lpi, nrows, lhs, rhs, &rngcount) );
-   assert( rngcount == 0 );
 
    /* change row sides */
    CHECK_ZERO( lpi->messagehdlr, GRBsetdblattrlist(lpi->grbmodel, GRB_DBL_ATTR_RHS, nrows, (int*)ind, lpi->rhsarray) );
