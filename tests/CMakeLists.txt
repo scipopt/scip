@@ -110,10 +110,16 @@ if( CRITERION_FOUND )
         #
         # Finally, add the executable as a test to the test framework
         #
+        if( COVERAGE )
+            set( ADDITIONAL_FLAGS "--no-early-exit" )
+        else()
+            set( ADDITIONAL_FLAGS "" )
+        endif()
+
         add_test(NAME ${testName}
-            COMMAND $<TARGET_FILE:${testName}>
+            COMMAND $<TARGET_FILE:${testName}> ${ADDITIONAL_FLAGS}
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-	    )
+            )
         set_tests_properties(${testName}
                             PROPERTIES
                                 DEPENDS ${testName}-build
