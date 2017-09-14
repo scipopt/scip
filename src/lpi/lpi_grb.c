@@ -1436,7 +1436,7 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    SCIP_CALL( ensureSidechgMem(lpi, nrows) );
 
    /* convert objective sense */
-   objsen = (objsen == SCIP_OBJSEN_MINIMIZE ? GRB_MINIMIZE : GRB_MAXIMIZE);
+   objsen = (objsen == SCIP_OBJSEN_MINIMIZE) ? GRB_MINIMIZE : GRB_MAXIMIZE;
 
    /* convert lhs/rhs into sen/rhs/range tuples */
    SCIP_CALL( convertSides(lpi, nrows, lhs, rhs, &rngcount) );
@@ -2154,7 +2154,7 @@ SCIP_RETCODE SCIPlpiChgObjsen(
    assert(objsen == SCIP_OBJSEN_MAXIMIZE || objsen == SCIP_OBJSEN_MINIMIZE);
 
    /* convert objective sense */
-   objsen = SCIP_OBJSEN_MINIMIZE ? GRB_MINIMIZE : GRB_MAXIMIZE;
+   objsen = (objsen == SCIP_OBJSEN_MINIMIZE) ? GRB_MINIMIZE : GRB_MAXIMIZE;
 
    SCIPdebugMessage("changing objective sense in Gurobi to %d\n", objsen);
 
