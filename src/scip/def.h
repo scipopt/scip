@@ -202,11 +202,19 @@ extern "C" {
 #endif
 
 #ifndef SIN
-#define SIN(x)      (sin((x)))
+#define SIN(x)       (sin((x)))
 #endif
 
 #ifndef COS
-#define COS(x)      (cos((x)))
+#define COS(x)       (cos((x)))
+#endif
+
+#ifndef ASIN
+#define ASIN(x)      (asin((x)))
+#endif
+
+#ifndef ACOS
+#define ACOS(x)      (acos((x)))
 #endif
 
 #ifndef COPYSIGN
