@@ -1319,8 +1319,6 @@ SCIP_RETCODE lnsFixMoreVariables(
  * Callback methods of primal heuristic
  */
 
-/* TODO: Implement all necessary primal heuristic methods. The methods with an #if 0 ... #else #define ... are optional */
-
 /** copy method for primal heuristic plugins (called when SCIP copies plugins) */
 #if 0
 static
