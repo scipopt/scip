@@ -22,13 +22,9 @@
 
 #include <string.h>
 #include "scip/cons_expr_sin.h"
-#include "scip/cons_expr.h"
 #include "cons_expr_value.h"
 
-/* fundamental expression handler properties */
-#define EXPRHDLR_NAME         "sin"
-#define EXPRHDLR_DESC         "sine expression"
-#define SIN_PRECEDENCE   0
+#define SIN_PRECEDENCE   91000
 #define SIN_HASHKEY      SCIPcalcFibHash(1.0)
 
 /*
@@ -39,11 +35,6 @@
 
 /** expression data */
 struct SCIP_ConsExpr_ExprData
-{
-};
-
-/** expression handler data */
-struct SCIP_ConsExpr_ExprHdlrData
 {
 };
 
@@ -278,14 +269,18 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSin)
    return SCIP_OKAY;
 }
 
-/** expression reverse propagation callback */
+/** expression reverse propagation callback
+ *  Reverse Propagation is not possible for sine function since sine^-1(x) is unbounded for all x
+ * */
 static
 SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSin)
 {  /*lint --e{715}*/
+   assert(scip != NULL);
    assert(expr != NULL);
-
-   SCIPerrorMessage("method of sin constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+   assert(nreductions != NULL);
+   assert(SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)) >= -1.0);
+   assert(SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)) <= 1.0);
 
    return SCIP_OKAY;
 }
@@ -310,7 +305,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSin(
 {
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
 
-   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC,
+   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "sin", "sine expression",
          SIN_PRECEDENCE, evalSin, NULL) );
    assert(exprhdlr != NULL);
 
@@ -318,6 +313,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSin(
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataSin, freedataSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrSimplify(scip, consexprhdlr, exprhdlr, simplifySin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printSin) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrInitSepa(scip, consexprhdlr, exprhdlr, initSepaSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrExitSepa(scip, consexprhdlr, exprhdlr, exitSepaSin) );
