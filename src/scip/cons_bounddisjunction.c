@@ -622,6 +622,13 @@ SCIP_RETCODE addCoef(
    }
    assert(consdata->varssize > consdata->nvars);
 
+   for( v = 0; v < consdata->nvars; v++ )
+   {
+      /* check if the variable is already part of the constraint */
+      if( consdata->vars[v] == var && consdata->boundtypes[v] == boundtype )
+         break;
+   }
+
    /* the combination of variable and boundtype is already part of the constraint; check whether the clause
     * can be relaxed
     */
