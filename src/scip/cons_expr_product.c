@@ -36,8 +36,10 @@
 
 #include "scip/pub_misc.h"
 
-#define PRODUCT_PRECEDENCE  50000
-#define PRODUCT_HASHKEY     SCIPcalcFibHash(54949.0)
+#define EXPRHDLR_NAME         "prod"
+#define EXPRHDLR_DESC         "product of children"
+#define EXPRHDLR_PRECEDENCE  50000
+#define EXPRHDLR_HASHKEY     SCIPcalcFibHash(54949.0)
 
 #define ADJUSTFACETFACTOR          1e1 /**< adjust resulting facets in checkRikun() up to a violation of this value *
                                          lpfeastol */
@@ -782,7 +784,7 @@ SCIP_RETCODE simplifyFactor(
    }
 
    /* enforces SP2 */
-   if( strcmp(factortype, "prod") == 0 )
+   if( strcmp(factortype, EXPRHDLR_NAME) == 0 )
    {
       /* assert SP8 */
       assert(SCIPgetConsExprExprProductCoef(factor) == 1.0);
@@ -795,7 +797,7 @@ SCIP_RETCODE simplifyFactor(
    }
 
    /* the given (simplified) expression `factor`, can be a child of a simplified product */
-   assert(strcmp(factortype, "prod") != 0);
+   assert(strcmp(factortype, EXPRHDLR_NAME) != 0);
    assert(strcmp(factortype, "val") != 0);
    SCIP_CALL( createExprNode(scip, factor, simplifiedfactor) );
 
@@ -1015,7 +1017,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
 
    assert(expr != NULL);
    assert(simplifiedexpr != NULL);
-   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "prod") == 0);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
 
    /* set up list of current children (when looking at each of them individually, they are simplified, but as
     * children of a product expression they might be unsimplified) */
@@ -1250,7 +1252,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
       case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
       {
          /* print opening parenthesis, if necessary */
-         if( PRODUCT_PRECEDENCE <= SCIPgetConsExprExprWalkParentPrecedence(expr) )
+         if( EXPRHDLR_PRECEDENCE <= SCIPgetConsExprExprWalkParentPrecedence(expr) )
          {
             SCIPinfoMessage(scip, file, "(");
          }
@@ -1258,7 +1260,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
          /* print coefficient, if not one */
          if( exprdata->coefficient != 1.0 )
          {
-            if( exprdata->coefficient < 0.0 && PRODUCT_PRECEDENCE > SCIPgetConsExprExprWalkParentPrecedence(expr) )
+            if( exprdata->coefficient < 0.0 && EXPRHDLR_PRECEDENCE > SCIPgetConsExprExprWalkParentPrecedence(expr) )
             {
                SCIPinfoMessage(scip, file, "(%g)", exprdata->coefficient);
             }
@@ -1290,7 +1292,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
       case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
       {
          /* print closing parenthesis, if necessary */
-         if( PRODUCT_PRECEDENCE <= SCIPgetConsExprExprWalkParentPrecedence(expr) )
+         if( EXPRHDLR_PRECEDENCE <= SCIPgetConsExprExprWalkParentPrecedence(expr) )
          {
             SCIPinfoMessage(scip, file, ")");
          }
@@ -1316,7 +1318,7 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashProduct)
    exprdata = SCIPgetConsExprExprData(expr);
    assert(exprdata != NULL);
 
-   *hashkey = PRODUCT_HASHKEY;
+   *hashkey = EXPRHDLR_HASHKEY;
    *hashkey ^= SCIPcalcFibHash(exprdata->coefficient);
 
    for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
@@ -1549,7 +1551,7 @@ SCIP_RETCODE separatePointProduct(
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), "expr") == 0);
    assert(expr != NULL);
-   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "prod") == 0);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
    assert(cut != NULL);
 
    exprdata = SCIPgetConsExprExprData(expr);
@@ -1916,8 +1918,8 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
     */
    SCIP_CALL( SCIPcreateRandom(scip, &exprhdlrdata->randnumgen, DEFAULT_RANDSEED) );
 
-   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "prod", "product of children",
-            PRODUCT_PRECEDENCE, evalProduct, exprhdlrdata) );
+   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC,
+            EXPRHDLR_PRECEDENCE, evalProduct, exprhdlrdata) );
    assert(exprhdlr != NULL);
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrProduct, freehdlrProduct) );

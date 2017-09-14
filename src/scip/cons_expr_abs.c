@@ -27,8 +27,10 @@
 #include "scip/cons_expr_value.h"
 #include "scip/cons_expr_abs.h"
 
-#define ABS_PRECEDENCE  70000
-#define ABS_HASHKEY     SCIPcalcFibHash(7187.0)
+#define EXPRHDLR_NAME         "abs"
+#define EXPRHDLR_DESC         "absolute expression"
+#define EXPRHDLR_PRECEDENCE  70000
+#define EXPRHDLR_HASHKEY     SCIPcalcFibHash(7187.0)
 
 /*
  * Data structures
@@ -507,7 +509,7 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashAbs)
    assert(expr2key != NULL);
    assert(hashkey != NULL);
 
-   *hashkey = ABS_HASHKEY;
+   *hashkey = EXPRHDLR_HASHKEY;
 
    assert(SCIPhashmapExists(expr2key, (void*) SCIPgetConsExprExprChildren(expr)[0]));
    childhash = (unsigned int)(size_t) SCIPhashmapGetImage(expr2key, SCIPgetConsExprExprChildren(expr)[0]);
@@ -525,8 +527,8 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrAbs(
 {
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
 
-   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "abs", "absolute expression",
-         ABS_PRECEDENCE, evalAbs, NULL) );
+   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC,
+         EXPRHDLR_PRECEDENCE, evalAbs, NULL) );
    assert(exprhdlr != NULL);
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrAbs, NULL) );
@@ -557,14 +559,14 @@ SCIP_RETCODE SCIPcreateConsExprExprAbs(
 
    assert(expr != NULL);
    assert(child != NULL);
-   assert(SCIPfindConsExprExprHdlr(consexprhdlr, "abs") != NULL);
+   assert(SCIPfindConsExprExprHdlr(consexprhdlr, EXPRHDLR_NAME) != NULL);
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &exprdata) );
    assert(exprdata != NULL);
 
    BMSclearMemory(exprdata);
 
-   SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, SCIPfindConsExprExprHdlr(consexprhdlr, "abs"), exprdata, 1, &child) );
+   SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, SCIPfindConsExprExprHdlr(consexprhdlr, EXPRHDLR_NAME), exprdata, 1, &child) );
 
    return SCIP_OKAY;
 }

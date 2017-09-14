@@ -26,7 +26,9 @@
 #include "scip/cons_expr_var.h"
 #include "scip/cons_expr_sum.h"
 
-#define VAR_HASHKEY     SCIPcalcFibHash(22153.0)
+#define EXPRHDLR_NAME         "var"
+#define EXPRHDLR_DESC         "variable expression"
+#define EXPRHDLR_HASHKEY     SCIPcalcFibHash(22153.0)
 
 
 /** simplifies a variable expression.
@@ -54,7 +56,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyVar)
 
    assert(expr != NULL);
    assert(simplifiedexpr != NULL);
-   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "var") == 0);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
 
    var = SCIPgetConsExprExprVarVar(expr);
    assert(var != NULL);
@@ -303,7 +305,7 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashVar)
    var = (SCIP_VAR*) SCIPgetConsExprExprData(expr);
    assert(var != NULL);
 
-   *hashkey = VAR_HASHKEY;
+   *hashkey = EXPRHDLR_HASHKEY;
    *hashkey ^= SCIPcalcFibHash((SCIP_Real)SCIPvarGetIndex(var));
 
    return SCIP_OKAY;
@@ -322,7 +324,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrVar(
    /* initialize hash map to reuse variable expressions for the same variables */
    SCIP_CALL( SCIPhashmapCreate(&var2expr, SCIPblkmem(scip), 100) );
 
-   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "var", "variable", 0, evalVar, (SCIP_CONSEXPR_EXPRHDLRDATA*) var2expr) );
+   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, 0, evalVar, (SCIP_CONSEXPR_EXPRHDLRDATA*) var2expr) );
    assert(exprhdlr != NULL);
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrVar, freehdlrVar) );

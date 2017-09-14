@@ -25,8 +25,10 @@
 
 #include "scip/cons_expr_value.h"
 
-#define VALUE_PRECEDENCE     10000
-#define VALUE_HASHKEY        SCIPcalcFibHash(36787.0)
+#define EXPRHDLR_NAME            "val"
+#define EXPRHDLR_DESC            "constant value"
+#define EXPRHDLR_PRECEDENCE      10000
+#define EXPRHDLR_HASHKEY         SCIPcalcFibHash(36787.0)
 
 /** the order of two values is the real order */
 static
@@ -69,7 +71,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printValue)
    if( stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR )
    {
       SCIP_Real v = SCIPgetConsExprExprValueValue(expr);
-      if( v < 0.0 && VALUE_PRECEDENCE <= SCIPgetConsExprExprWalkParentPrecedence(expr)  )
+      if( v < 0.0 && EXPRHDLR_PRECEDENCE <= SCIPgetConsExprExprWalkParentPrecedence(expr)  )
       {
          SCIPinfoMessage(scip, file, "(%g)", v);
       }
@@ -144,7 +146,7 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashValue)
    assert(expr2key != NULL);
    assert(hashkey != NULL);
 
-   *hashkey = VALUE_HASHKEY;
+   *hashkey = EXPRHDLR_HASHKEY;
    *hashkey ^= SCIPcalcFibHash(SCIPgetConsExprExprValueValue(expr));
 
    return SCIP_OKAY;
@@ -158,7 +160,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrValue(
 {
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
 
-   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "val", "constant value", VALUE_PRECEDENCE, evalValue, NULL) );
+   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, EXPRHDLR_NAME, "constant value", EXPRHDLR_PRECEDENCE, evalValue, NULL) );
    assert(exprhdlr != NULL);
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrValue, NULL) );
