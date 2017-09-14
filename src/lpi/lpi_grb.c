@@ -2373,7 +2373,8 @@ SCIP_RETCODE SCIPlpiGetNNonz(
    CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMNZS, nnonz) );
 
    /* subtract number of ranged rows, as these are non-zeros for the LPI internal columns */
-   (*nnonz) -= lpi->nrngrows;
+   if ( lpi->rngvarsadded )
+      (*nnonz) -= lpi->nrngrows;
 
    return SCIP_OKAY;
 }
