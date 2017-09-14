@@ -26,9 +26,9 @@
 
 /* fundamental expression handler properties */
 #define EXPRHDLR_NAME         "sin"
-#define EXPRHDLR_DESC         "expression handler template"
+#define EXPRHDLR_DESC         "sine expression"
 #define EXPRHDLR_PRECEDENCE   91000
-#define EXPRHDLR_HASHKEY      SCIPcalcFibHash(1.0)
+#define EXPRHDLR_HASHKEY      SCIPcalcFibHash(82457.0)
 
 /*
  * Data structures
@@ -243,6 +243,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalSin)
 }
 
 /** separation initialization callback */
+/*TODO implement*/
 static
 SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSin)
 {  /*lint --e{715}*/
@@ -255,6 +256,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSin)
 }
 
 /** separation deinitialization callback */
+/*TODO implement */
 static
 SCIP_DECL_CONSEXPR_EXPREXITSEPA(exitSepaSin)
 {  /*lint --e{715}*/
@@ -267,6 +269,7 @@ SCIP_DECL_CONSEXPR_EXPREXITSEPA(exitSepaSin)
 }
 
 /** expression separation callback */
+/*TODO implement*/
 static
 SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSin)
 {  /*lint --e{715}*/
@@ -278,18 +281,32 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSin)
    return SCIP_OKAY;
 }
 
-/** expression reverse propagation callback
- *  Reverse Propagation is not possible for sine function since sine^-1(x) is unbounded for all x
- * */
+/** expression reverse propagation callback */
 static
 SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSin)
 {  /*lint --e{715}*/
+   SCIP_INTERVAL interval;
+   SCIP_INTERVAL childinterval;
+
    assert(scip != NULL);
    assert(expr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
    assert(nreductions != NULL);
    assert(SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)) >= -1.0);
    assert(SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)) <= 1.0);
+
+   *nreductions = 0;
+
+   childinterval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]);
+   SCIPintervalSin(SCIPinfinity(scip), &interval, childinterval);
+
+   /* compare bounds of this node with images of child bounds */
+   SCIPintervalSetBounds(&interval, MAX(SCIPintervalGetInf(interval), SCIPintervalGetInf(childinterval)),
+                         MIN(SCIPintervalGetSup(interval), SCIPintervalGetSup(childinterval)));
+
+   /* try to tighten the bounds of the child node */
+   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[0], interval, force, infeasible,
+                                              nreductions) );
 
    return SCIP_OKAY;
 }
@@ -298,10 +315,20 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSin)
 static
 SCIP_DECL_CONSEXPR_EXPRHASH(hashSin)
 {  /*lint --e{715}*/
-   assert(expr != NULL);
+   unsigned int childhash;
 
-   SCIPerrorMessage("method of sin constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+   assert(expr2key != NULL);
+   assert(hashkey != NULL);
+
+   *hashkey = EXPRHDLR_HASHKEY;
+
+   assert(SCIPhashmapExists(expr2key, (void*) SCIPgetConsExprExprChildren(expr)[0]));
+   childhash = (unsigned int)(size_t) SCIPhashmapGetImage(expr2key, SCIPgetConsExprExprChildren(expr)[0]);
+
+   *hashkey ^= childhash;
 
    return SCIP_OKAY;
 }
@@ -349,14 +376,14 @@ SCIP_RETCODE SCIPcreateConsExprExprSin(
    assert(consexprhdlr != NULL);
    assert(expr != NULL);
    assert(child != NULL);
-   assert(SCIPfindConsExprExprHdlr(consexprhdlr, "sin") != NULL);
+   assert(SCIPfindConsExprExprHdlr(consexprhdlr, EXPRHDLR_NAME) != NULL);
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &exprdata) );
    assert(exprdata != NULL);
 
    BMSclearMemory(exprdata);
 
-   SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, SCIPfindConsExprExprHdlr(consexprhdlr, "sin"), exprdata, 1, &child) );
+   SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, SCIPfindConsExprExprHdlr(consexprhdlr, EXPRHDLR_NAME), exprdata, 1, &child) );
 
    return SCIP_OKAY;
 }
