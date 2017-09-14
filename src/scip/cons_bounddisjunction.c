@@ -677,8 +677,8 @@ SCIP_RETCODE addCoef(
       if( (boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisLT(scip, bound, consdata->bounds[v]))
          || (boundtype == SCIP_BOUNDTYPE_UPPER && SCIPisGT(scip, bound, consdata->bounds[v])) )
       {
-         SCIPdebugMsg(scip, "relax clause of <%s>: (<%s> %s %.15g) -> (<%s> %s %.15g)\n", SCIPconsGetName(cons), \
-               SCIPvarGetName(var), boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", consdata->bounds[v], \
+         SCIPdebugMsg(scip, "relax clause of <%s>: (<%s> %s %.15g) -> (<%s> %s %.15g)\n", SCIPconsGetName(cons),
+               SCIPvarGetName(var), boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", consdata->bounds[v],
                SCIPvarGetName(var), boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", bound);
          consdata->bounds[v] = bound;
       }
