@@ -1376,6 +1376,8 @@ SCIP_RETCODE SCIPlpiFree(
    BMSfreeMemoryArrayNull(&(*lpi)->rngrowmap);
    BMSfreeMemoryArrayNull(&(*lpi)->rngrows);
    BMSfreeMemoryArrayNull(&(*lpi)->rngvals);
+   BMSfreeMemoryArrayNull(&(*lpi)->indarray);
+   BMSfreeMemoryArrayNull(&(*lpi)->valarray);
    BMSfreeMemory(lpi);
 
    /* free environment */
