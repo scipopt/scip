@@ -128,6 +128,18 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printXyz)
    return SCIP_OKAY;
 }
 
+/** expression parse callback */
+static
+SCIP_DECL_CONSEXPR_EXPRPARSE(parseXyz)
+{  /*lint --e{715}*/
+   assert(expr != NULL);
+
+   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+
 /** expression (point-) evaluation callback */
 static
 SCIP_DECL_CONSEXPR_EXPREVAL(evalXyz)
@@ -248,6 +260,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrXyz(
    SCIP_CALL( SCIPsetConsExprExprHdlrSimplify(scip, consexprhdlr, exprhdlr, simplifyXyz) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, compareXyz) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printXyz) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseXyz) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalXyz) );
    SCIP_CALL( SCIPsetConsExprExprHdlrInitSepa(scip, consexprhdlr, exprhdlr, initSepaXyz) );
    SCIP_CALL( SCIPsetConsExprExprHdlrExitSepa(scip, consexprhdlr, exprhdlr, exitSepaXyz) );
@@ -263,7 +276,9 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrXyz(
 SCIP_RETCODE SCIPcreateConsExprExprXyz(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR**  expr                /**< pointer where to store expression */
+   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
+   int                   nchildren,          /**< number of children */
+   SCIP_CONSEXPR_EXPR**  children            /**< children (can be NULL if nchildren is 0) */
    )
 {
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr = NULL;
@@ -280,7 +295,7 @@ SCIP_RETCODE SCIPcreateConsExprExprXyz(
    /* TODO: create and store expression specific data here */
 
    /* create expression */
-   SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, exprhdlr, exprdata, 0, NULL) );
+   SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, exprhdlr, exprdata, nchildren, children) );
 
    return SCIP_OKAY;
 }

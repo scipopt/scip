@@ -24,8 +24,11 @@
 #include "scip/cons_expr_sin.h"
 #include "cons_expr_value.h"
 
-#define SIN_PRECEDENCE   91000
-#define SIN_HASHKEY      SCIPcalcFibHash(1.0)
+/* fundamental expression handler properties */
+#define EXPRHDLR_NAME         "sin"
+#define EXPRHDLR_DESC         "expression handler template"
+#define EXPRHDLR_PRECEDENCE   91000
+#define EXPRHDLR_HASHKEY      SCIPcalcFibHash(1.0)
 
 /*
  * Data structures
@@ -35,6 +38,11 @@
 
 /** expression data */
 struct SCIP_ConsExpr_ExprData
+{
+};
+
+/** expression handler data */
+struct SCIP_ConsExpr_ExprHdlrData
 {
 };
 
@@ -136,7 +144,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printSin)
       case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
       {
          /* print function with opening parenthesis */
-         SCIPinfoMessage(scip, file, "sin(");
+         SCIPinfoMessage(scip, file, "%s(", EXPRHDLR_NAME);
          break;
       }
 
@@ -160,6 +168,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printSin)
    return SCIP_OKAY;
 }
 
+/** expression parse callback */
 static
 SCIP_DECL_CONSEXPR_EXPRPARSE(parseSin)
 {
@@ -303,10 +312,11 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSin(
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    )
 {
+   SCIP_CONSEXPR_EXPRHDLRDATA* exprhdlrdata;
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
 
-   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "sin", "sine expression",
-         SIN_PRECEDENCE, evalSin, NULL) );
+   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC,
+         EXPRHDLR_PRECEDENCE, evalSin, NULL) );
    assert(exprhdlr != NULL);
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrSin, NULL) );
@@ -333,8 +343,10 @@ SCIP_RETCODE SCIPcreateConsExprExprSin(
    SCIP_CONSEXPR_EXPR*   child               /**< single child */
    )
 {
+   SCIP_CONSEXPR_EXPRHDLR* exprhdlr = NULL;
    SCIP_CONSEXPR_EXPRDATA* exprdata;
 
+   assert(consexprhdlr != NULL);
    assert(expr != NULL);
    assert(child != NULL);
    assert(SCIPfindConsExprExprHdlr(consexprhdlr, "sin") != NULL);
