@@ -325,6 +325,8 @@ void* BMSallocClearMemory_call(
 {
    void* ptr;
 
+   assert(typesize > 0);
+
    debugMessage("calloc %llu elements of %llu bytes [%s:%d]\n", (unsigned long long)num, (unsigned long long)typesize,
       filename, line);
 
@@ -2698,6 +2700,7 @@ void* BMSallocBufferMemory_work(
    int                   line                /**< line number in source file of the function call */
    )
 {
+   /* cppcheck-suppress unassignedVariable */
    void* ptr;
 #ifndef SCIP_NOBUFFERMEM
    size_t bufnum;
@@ -2809,6 +2812,9 @@ void* BMSallocBufferMemory_work(
 #else
    if( buffer->clean )
    {
+      /* we should allocate at least one byte, otherwise BMSallocMemorySize will fail */
+      size = MAX(size,1);
+
       BMSallocClearMemorySize(&ptr, size);
    }
    else

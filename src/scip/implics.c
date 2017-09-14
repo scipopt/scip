@@ -487,14 +487,10 @@ SCIP_RETCODE implicsEnsureSize(
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*implics)->vars[varfixing], (*implics)->size[varfixing],
-            newsize) ); /*lint !e866*/
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*implics)->types[varfixing], (*implics)->size[varfixing], 
-            newsize) ); /*lint !e866*/
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*implics)->bounds[varfixing], (*implics)->size[varfixing],
-            newsize) ); /*lint !e866*/
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*implics)->ids[varfixing], (*implics)->size[varfixing],
-            newsize) ); /*lint !e866*/
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*implics)->vars[varfixing], (*implics)->size[varfixing], newsize) ); /*lint !e866*/
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*implics)->types[varfixing], (*implics)->size[varfixing], newsize) ); /*lint !e866*/
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*implics)->bounds[varfixing], (*implics)->size[varfixing], newsize) ); /*lint !e866*/
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*implics)->ids[varfixing], (*implics)->size[varfixing], newsize) ); /*lint !e866*/
       (*implics)->size[varfixing] = newsize;
    }
    assert(num <= (*implics)->size[varfixing]);
@@ -1609,7 +1605,7 @@ SCIP_Bool SCIPcliquelistsHaveCommonClique(
 
    if( i1 < ncliques1 && i2 < ncliques2 )
    {
-      int cliqueid;
+      unsigned int cliqueid;
 
       /* make the bigger clique the first one */
       if( ncliques2 > ncliques1 )
@@ -1755,10 +1751,10 @@ SCIP_DECL_HASHKEYVAL(hashkeyvalClique)
 
    clique = (SCIP_CLIQUE*)key;
 
-   return clique->nvars == 0 ? 0 : SCIPhashTwo(SCIPcombineTwoInt(SCIPvarGetIndex(clique->vars[0]),
-                                                                 SCIPvarGetIndex(clique->vars[clique->nvars-1])),
-                                               SCIPcombineThreeInt(clique->nvars,
-                                                                   clique->values[0],
+   return clique->nvars == 0 ? 0 : SCIPhashTwo(SCIPcombineTwoInt(SCIPvarGetIndex(clique->vars[0]), \
+                                                                 SCIPvarGetIndex(clique->vars[clique->nvars-1])), \
+                                               SCIPcombineThreeInt(clique->nvars, \
+                                                                   clique->values[0], \
                                                                    clique->values[clique->nvars-1]));
 }
 
@@ -3327,13 +3323,13 @@ SCIP_Bool* SCIPcliqueGetValues(
 }
 
 /** gets unique identifier of the clique */
-int SCIPcliqueGetId(
+unsigned int SCIPcliqueGetId(
    SCIP_CLIQUE*          clique              /**< clique data structure */
    )
 {
    assert(clique != NULL);
 
-   return (int) clique->id;
+   return clique->id;
 }
 
 /** gets unique identifier of the clique */

@@ -3589,7 +3589,7 @@ SCIP_RETCODE conflictAddConflictset(
       SCIPsetDebugMsg(set, " -> final conflict set has %d literals\n", *nliterals);
 
       /* check conflict set on debugging solution */
-      SCIP_CALL( SCIPdebugCheckConflict(blkmem, set, tree->path[validdepth],
+      SCIP_CALL( SCIPdebugCheckConflict(blkmem, set, tree->path[validdepth], \
             conflictset->bdchginfos, conflictset->relaxedbds, conflictset->nbdchginfos) ); /*lint !e506 !e774*/
 
       /* move conflictset to the conflictset storage */
@@ -4030,8 +4030,8 @@ SCIP_RETCODE conflictCreateReconvergenceConss(
          assert(SCIPbdchginfoGetDepth(nextuip) == SCIPbdchginfoGetDepth(uip));
 
          /* check conflict graph frontier on debugging solution */
-         SCIP_CALL( SCIPdebugCheckConflictFrontier(blkmem, set, tree->path[validdepth],
-               bdchginfo, conflict->conflictset->bdchginfos, conflict->conflictset->relaxedbds,
+         SCIP_CALL( SCIPdebugCheckConflictFrontier(blkmem, set, tree->path[validdepth], \
+               bdchginfo, conflict->conflictset->bdchginfos, conflict->conflictset->relaxedbds, \
                conflict->conflictset->nbdchginfos, conflict->bdchgqueue, conflict->forcedbdchgqueue) ); /*lint !e506 !e774*/
 
          SCIPsetDebugMsg(set, "creating reconvergence constraint from UIP <%s> to UIP <%s> in depth %d with %d literals after %d resolutions\n",
@@ -4146,8 +4146,8 @@ SCIP_RETCODE conflictAnalyze(
    nfirstuips = 0;
 
    /* check if the initial reason on debugging solution */
-   SCIP_CALL( SCIPdebugCheckConflictFrontier(blkmem, set, tree->path[validdepth],
-         NULL, conflict->conflictset->bdchginfos, conflict->conflictset->relaxedbds, conflict->conflictset->nbdchginfos,
+   SCIP_CALL( SCIPdebugCheckConflictFrontier(blkmem, set, tree->path[validdepth], \
+         NULL, conflict->conflictset->bdchginfos, conflict->conflictset->relaxedbds, conflict->conflictset->nbdchginfos, \
          conflict->bdchgqueue, conflict->forcedbdchgqueue) ); /*lint !e506 !e774*/
 
    while( bdchginfo != NULL && validdepth <= maxvaliddepth )
@@ -4286,8 +4286,8 @@ SCIP_RETCODE conflictAnalyze(
       }
 
       /* check conflict graph frontier on debugging solution */
-      SCIP_CALL( SCIPdebugCheckConflictFrontier(blkmem, set, tree->path[validdepth],
-            bdchginfo, conflict->conflictset->bdchginfos, conflict->conflictset->relaxedbds, conflict->conflictset->nbdchginfos,
+      SCIP_CALL( SCIPdebugCheckConflictFrontier(blkmem, set, tree->path[validdepth], \
+            bdchginfo, conflict->conflictset->bdchginfos, conflict->conflictset->relaxedbds, conflict->conflictset->nbdchginfos, \
             conflict->bdchgqueue, conflict->forcedbdchgqueue) ); /*lint !e506 !e774*/
 
       /* get next conflicting bound from the conflict candidate queue (this needs not to be nextbdchginfo, because
@@ -6763,7 +6763,9 @@ SCIP_RETCODE runBoundHeuristic(
          {
             lp->solved = FALSE;
             lp->primalfeasible = FALSE;
+            lp->primalchecked = FALSE;
             lp->dualfeasible = FALSE;
+            lp->dualchecked = FALSE;
             lp->lpobjval = SCIP_INVALID;
             lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
          }
@@ -7272,7 +7274,9 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
    storedsolvals.lpsolstat = lp->lpsolstat;
    storedsolvals.lpobjval = lp->lpobjval;
    storedsolvals.primalfeasible = lp->primalfeasible;
+   storedsolvals.primalchecked = lp->primalchecked;
    storedsolvals.dualfeasible = lp->dualfeasible;
+   storedsolvals.dualchecked = lp->dualchecked;
    storedsolvals.solisbasic = lp->solisbasic;
    storedsolvals.lpissolved = lp->solved;
 
@@ -7328,7 +7332,9 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
       lp->lpsolstat = storedsolvals.lpsolstat;
       lp->lpobjval = storedsolvals.lpobjval;
       lp->primalfeasible = storedsolvals.primalfeasible;
+      lp->primalchecked = storedsolvals.primalchecked;
       lp->dualfeasible = storedsolvals.dualfeasible;
+      lp->dualchecked = storedsolvals.dualchecked;
       lp->solisbasic = storedsolvals.solisbasic;
       lp->solved = storedsolvals.lpissolved;
 

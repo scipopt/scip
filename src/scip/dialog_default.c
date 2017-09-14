@@ -228,7 +228,7 @@ SCIP_RETCODE writeProblem(
             {
                SCIPdialogMessage(scip, NULL, "no reader for requested output format\n");
 
-               SCIPdialogMessage(scip, NULL, "following readers are avaliable for writing:\n");
+               SCIPdialogMessage(scip, NULL, "The following readers are available for writing:\n");
                displayReaders(scip, FALSE, TRUE);
 
                SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, 
@@ -1819,7 +1819,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecRead)
                {
                   SCIPdialogMessage(scip, NULL, "no reader for input file <%s> available\n", tmpfilename);
 
-                  SCIPdialogMessage(scip, NULL, "following readers are avaliable for reading:\n");
+                  SCIPdialogMessage(scip, NULL, "The following readers are available for reading:\n");
                   displayReaders(scip, TRUE, FALSE);
 
                   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog,
@@ -3339,7 +3339,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecValidateSolve)
    else
    {
       char *refstrs[2];
-      SCIP_Real refvals[2];
+      SCIP_Real refvals[2] = {SCIP_INVALID, SCIP_INVALID};
       const char* primaldual[] = {"primal", "dual"};
       char promptbuffer[100];
       int i;
@@ -3353,7 +3353,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecValidateSolve)
          SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, promptbuffer, &(refstrs[i]), &endoffile) );
 
          /* treat no input as SCIP_UNKNOWN */
-         if( endoffile || strncmp(refstrs[i], "\0", 1) == 0 )
+         if( endoffile || strncmp(refstrs[i], "\0", 1) == 0 ) /*lint !e840*/
          {
             refvals[i] = SCIP_UNKNOWN;
          }
@@ -3367,8 +3367,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecValidateSolve)
       }
 
       /* check if the loop finished by checking the value of 'i'. Do not validate if user input is missing */
-      if( i == 2 )
+      if( i == 2 ) /*lint !e850*/
       {
+         assert(refvals[0] != SCIP_INVALID); /*lint !e777*/
+         assert(refvals[1] != SCIP_INVALID); /*lint !e777*/
          SCIP_CALL( SCIPvalidateSolve(scip, refvals[0], refvals[1], SCIPfeastol(scip), FALSE, NULL, NULL, NULL) );
       }
    }

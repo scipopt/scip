@@ -8,6 +8,8 @@ features
 - allow to relax objective limit in reoptimization in presolved stage
 - suppress excessive printing about numerical troubles in LP on default verblevel (high)
 - updated Mosek interface to compile with Mosek 8.1, too
+- updates GAMS interface to latest version
+- new LP interface to Glop (Google OR tools); CMake only
 
 fixed bugs:
 - fixed bug in shift and propagate--variable information with a negation transformation is correctly reset after backtracking
@@ -34,6 +36,7 @@ fixed bugs:
   allowing to use them as indicator variables
 - afternode heuristics are now called even if the node limit was reached and the solving process will be stopped
   after the current node
+- fixed bug when activating probing mode with a non-empty separation storage
 
 performance improvements:
 - widened a bottleneck in simplifying long signomial sums in a nonlinear constraint
@@ -44,6 +47,12 @@ interface:
 - new function SCIPvalidateSolve() to compare solving result with an external primal and dual reference
   value
 - new function SCIPisObjChangedProbing() to check whether the objective function has changed during probing mode
+- new function SCIPgetDualSolVal() to get the dual solution value of a constraint
+- new functions SCIPisLPPrimalReliable() and SCIPisLPDualReliable() to check whether the current primal / dual LP solution
+  were successfully checked for feasibility
+
+testing:
+- added make options for specifying EXECUTABLE and OUTPUTDIR variables for the make test target
 
 SCIP version 4.0.0
 ==================

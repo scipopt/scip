@@ -1758,6 +1758,9 @@ void SCIPprobUpdateBestRootSol(
    if( SCIPprobGetNObjVars(prob, set) == 0 )
       return;
 
+   if( !SCIPlpIsDualReliable(lp) )
+      return;
+
    SCIPsetDebugMsg(set, "update root reduced costs\n");
 
    /* compute current root LP objective value */

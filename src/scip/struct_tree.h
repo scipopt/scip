@@ -52,7 +52,9 @@ struct SCIP_Probingnode
    SCIP_Real*            origobjvals;        /**< original objective function coefficients */
    int                   nchgdobjs;          /**< number of changed objective coefficients */
    SCIP_Bool             lpwasprimfeas;      /**< primal feasibility of saved LP state information */
+   SCIP_Bool             lpwasprimchecked;   /**< primal feasibility check state of saved LP state information  */
    SCIP_Bool             lpwasdualfeas;      /**< dual feasibility of saved LP state information */
+   SCIP_Bool             lpwasdualchecked;   /**< dual feasibility check state of saved LP state information  */
 };
 
 /** sibling information (should not exceed the size of a pointer) */
@@ -99,9 +101,11 @@ struct SCIP_Fork
    int                   naddedcols;         /**< number of columns added at this node */
    int                   naddedrows;         /**< number of rows added at this node */
    int                   nlpistateref;       /**< number of times, the LP state is needed */
-   unsigned int          nchildren:30;       /**< number of children of this parent node */
+   unsigned int          nchildren:28;       /**< number of children of this parent node */
    unsigned int          lpwasprimfeas:1;    /**< primal feasibility of saved LP state information */
+   unsigned int          lpwasprimchecked:1; /**< primal feasibility check state of saved LP state information */
    unsigned int          lpwasdualfeas:1;    /**< dual feasibility of saved LP state information */
+   unsigned int          lpwasdualchecked:1; /**< dual feasibility check state of saved LP state information */
 };
 
 /** fork with solved LP, where bounds and constraints have been changed, and rows and columns were removed and added */
@@ -116,7 +120,9 @@ struct SCIP_Subroot
    int                   nlpistateref;       /**< number of times, the LP state is needed */
    unsigned int          nchildren:30;       /**< number of children of this parent node */
    unsigned int          lpwasprimfeas:1;    /**< primal feasibility of saved LP state information */
+   unsigned int          lpwasprimchecked:1; /**< primal feasibility check state of saved LP state information */
    unsigned int          lpwasdualfeas:1;    /**< dual feasibility of saved LP state information */
+   unsigned int          lpwasdualchecked:1; /**< dual feasibility check state of saved LP state information */
 };
 
 /** node data structure */
@@ -224,7 +230,9 @@ struct SCIP_Tree
    SCIP_Bool             probingobjchanged;  /**< was the objective function changed during probing? */
    SCIP_Bool             sbprobing;          /**< is the probing mode used for strong branching? */
    SCIP_Bool             probinglpwasprimfeas;/**< primal feasibility when probing started */
+   SCIP_Bool             probinglpwasprimchecked;/**< primal feasibility has been checked when probing started */
    SCIP_Bool             probinglpwasdualfeas;/**< dual feasibility when probing started */
+   SCIP_Bool             probinglpwasdualchecked;/**< dual feasibility has been check when probing started */
 };
 
 #ifdef __cplusplus

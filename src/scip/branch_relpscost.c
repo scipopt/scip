@@ -1537,6 +1537,14 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
 
    SCIPdebugMsg(scip, "Execlp method of relpscost branching in node %llu\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
 
+   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+   {
+      *result = SCIP_DIDNOTRUN;
+      SCIPdebugMsg(scip, "Could not apply relpscost branching, as the current LP was not solved to optimality.\n");
+
+      return SCIP_OKAY;
+   }
+
    /* get branching candidates */
    SCIP_CALL( SCIPgetLPBranchCands(scip, &tmplpcands, &tmplpcandssol, &tmplpcandsfrac, NULL, &nlpcands, NULL) );
    assert(nlpcands > 0);

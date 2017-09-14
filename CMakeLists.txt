@@ -18,9 +18,9 @@ set(CPACK_PACKAGE_VERSION_PATCH "${SCIP_VERSION_PATCH}")
 set(CPACK_PACKAGE_VENDOR "Zuse Institute Berlin")
 include(CPack)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${SCIP_BINARY_DIR}/bin)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${SCIP_BINARY_DIR}/lib)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${SCIP_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 # path to e.g. findGMP module
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
@@ -42,13 +42,16 @@ option(GMP "should gmp be linked" ON)
 option(ZIMPL "should zimpl be linked" ON)
 option(IPOPT "should ipopt be linked" ON)
 option(PARASCIP "should scip be compiled thread safe" OFF)
+option(LPSCHECK "double check SoPlex results with CPLEX" OFF)
 option(LEGACY "build SCIP/SoPlex in legacy mode" OFF)
 option(NOBLKBUFMEM "should block and buffer memory be disabled" OFF)
 option(NOBLKMEM "should block and buffer memory be disabled" OFF)
 option(NOBUFMEM "should block and buffer memory be disabled" OFF)
+option(DEBUGSOL "should the debug solution mechanism be enabled" OFF)
 option(COVERAGE "enable coverage support" OFF)
 SET(COVERAGE_CTEST_ARGS "" CACHE STRING "additional ctest arguments for coverage")
 option(MT "use static runtime libraries for Visual Studio compiler" OFF)
+option(CXXONLY "use a c++ compiler for all source files" OFF)
 
 set(TPI none CACHE STRING "options for thread support library")  #create the variable
 set_property(CACHE TPI PROPERTY STRINGS none tny omp)  #define list of values GUI will offer for the variable
@@ -57,7 +60,7 @@ set(EXPRINT cppad CACHE STRING "options for expression interpreter")  #create th
 set_property(CACHE EXPRINT PROPERTY STRINGS none cppad )  #define list of values GUI will offer for the variable
 
 set(LPS spx CACHE STRING "options for LP solver")  #create the variable
-set_property(CACHE LPS PROPERTY STRINGS spx cpx grb glop )  #define list of values GUI will offer for the variable
+set_property(CACHE LPS PROPERTY STRINGS spx cpx grb xprs clp glop msk none )  #define list of values GUI will offer for the variable
 
 #set options for memory management
 if( NOBLKBUFMEM )
@@ -71,6 +74,10 @@ endif()
 
 if(NOBUFMEM)
    add_definitions(-DSCIP_NOBUFFERMEM)
+endif()
+
+if(DEBUGSOL)
+   add_definitions(-DWITH_DEBUG_SOLUTION)
 endif()
 
 #set the correct rpath for OS X
@@ -146,19 +153,18 @@ message(STATUS "LEGACY mode for old compilers: ${LEGACY}")
 # create a target for updating the current git hash
 file(WRITE ${CMAKE_BINARY_DIR}/scip_update_githash.cmake "
 find_program(GIT git)
-if(GIT)
+if((GIT) AND (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git))
    execute_process(
       COMMAND \${GIT} describe --always --dirty
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
       OUTPUT_VARIABLE GITHASH OUTPUT_STRIP_TRAILING_WHITESPACE)
-   if(GITHASH STREQUAL \"\")
-      set(GITHASH \"000000\")
-   endif()
    string(REGEX REPLACE \"^.*-g\" \"\" GITHASH \${GITHASH})
+   file(WRITE \${DST} \"#define SCIP_GITHASH \\\"\${GITHASH}\\\"\")
 else()
-   set(GITHASH \"000000\")
+   # read stored hash from file
+   file(STRINGS \${DST} GITHASH)
+   string(REGEX REPLACE \"#define SCIP_GITHASH \" \"\" GITHASH \${GITHASH})
 endif()
-file(WRITE \${DST} \"#define SCIP_GITHASH \\\"\${GITHASH}\\\"\")
 message(STATUS \"Git hash: \" \${GITHASH})
 ")
 add_custom_target(scip_update_githash
@@ -177,17 +183,6 @@ add_custom_target(scip_update_buildflags
 add_definitions(-DWITH_SCIPDEF)
 
 
-#
-# enable coverage support
-#
-if( COVERAGE )
-    include(CodeCoverage)
-    APPEND_COVERAGE_COMPILER_FLAGS()
-    set(COVERAGE_EXCLUDES '/usr*')
-    SETUP_TARGET_FOR_COVERAGE(NAME coverage
-                          EXECUTABLE bash -c "${CMAKE_CTEST_COMMAND} ${COVERAGE_CTEST_ARGS}"
-                          DEPENDENCIES scip)
-endif()
 
 # use C++11 standard
 set(CMAKE_CXX_STANDARD 11)
@@ -228,6 +223,10 @@ endif()
 #search the selected LP solver library
 if(LPS STREQUAL "spx")
     find_package(SOPLEX REQUIRED CONFIG)
+    if(LPSCHECK)
+        find_package(CPLEX REQUIRED)
+        add_definitions(-DWITH_LPSCHECK)
+    endif()
 elseif(LPS STREQUAL "cpx")
     find_package(CPLEX REQUIRED)
 elseif(LPS STREQUAL "glop")
@@ -238,6 +237,8 @@ elseif(LPS STREQUAL "clp")
     find_package(CLP REQUIRED)
 elseif(LPS STREQUAL "xprs")
     find_package(XPRESS REQUIRED)
+elseif(LPS STREQUAL "msk")
+    find_package(MOSEK REQUIRED)
 elseif(LPS STREQUAL "none")
     set(lpi lpi/lpi_none.c)
 else()
@@ -270,9 +271,12 @@ endif()
 
 if(CPLEX_FOUND)
     include_directories(${CPLEX_INCLUDE_DIRS})
-    set(lpi lpi/lpi_cpx.c)
-    set(LPS_LIBRARIES ${CPLEX_LIBRARIES})
-    set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
+    # only use lpi_cpx.c if LPSCHECK is not enabled
+    if(LPS STREQUAL "cpx")
+        set(lpi lpi/lpi_cpx.c)
+    endif()
+    set(LPS_LIBRARIES ${LPS_LIBRARIES} ${CPLEX_LIBRARIES})
+    set(LPS_PIC_LIBRARIES ${LPS_PIC_LIBRARIES} ${LPS_LIBRARIES})
 endif()
 
 if(GLOP_FOUND)
@@ -296,6 +300,28 @@ if(XPRESS_FOUND)
     set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
 endif()
 
+if(MOSEK_FOUND)
+    include_directories(${MOSEK_INCLUDE_DIRS})
+    set(lpi lpi/lpi_msk.c)
+    set(LPS_LIBRARIES ${MOSEK_LIBRARIES})
+    set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
+endif()
+
+#
+# enable coverage support
+#
+# it is very important to execute this prior to adding subdirectories because of
+# the compiler flag changes
+#
+if( COVERAGE )
+    include(CodeCoverage)
+    APPEND_COVERAGE_COMPILER_FLAGS()
+    set(COVERAGE_EXCLUDES '/usr*')
+    SETUP_TARGET_FOR_COVERAGE(NAME coverage
+                          EXECUTABLE bash -c "${CMAKE_CTEST_COMMAND} ${COVERAGE_CTEST_ARGS}"
+                          DEPENDENCIES all_executables
+                          )
+endif()
 
 # ZIMPL headers need to be copied to have the "zimpl/*.h" prefix
 if(ZIMPL)
@@ -345,11 +371,44 @@ else()
     endif()
 endif()
 
+find_package(Criterion)
+
 # go to src/ and compile the code
 add_subdirectory(src)
+
+#
+# we set the SCIP_DIR variable explicitly for the following examples/applications and unittests that depend on SCIP.
+#
+set(SCIP_DIR ${CMAKE_BINARY_DIR})
+#
+# add SCIP tests
+#
 add_subdirectory(check)
 
+#
+# add unit tests as a single target. Including tests will add the unit tests as single executables
+#
+add_custom_target(unittests)
+add_subdirectory(tests EXCLUDE_FROM_ALL)
+add_custom_target(all_executables DEPENDS scip unittests examples applications)
+#
+# add examples
+#
+# use sub directory bin/examples for executables of examples
+#
+set(OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/examples)
+add_subdirectory(examples)
+
+#
+# add applications
+#
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY}/applications)
+add_subdirectory(applications)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+
 enable_testing()
+
 
 include(FeatureSummary)
 feature_summary(WHAT ALL)
