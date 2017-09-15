@@ -6503,7 +6503,6 @@ SCIP_RETCODE tightenDualray(
    SCIP_Real rhs;
    SCIP_Bool valid;
    int nvars;
-   int nsubvars;
    int nnz;
    int nbinvars;
    int ncontvars;
