@@ -214,7 +214,7 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffSin)
    assert(expr != NULL);
    assert(SCIPgetConsExprExprData(expr) != NULL);
    assert(idx >= 0 && idx < SCIPgetConsExprExprNChildren(expr));
-   assert(SCIPgetConsExprExprValue(expr) != SCIP_INVALID);
+   assert(SCIPgetConsExprExprValue(expr) != SCIP_INVALID); /*lint !e777*/
 
    child = SCIPgetConsExprExprChildren(expr)[idx];
    assert(child != NULL);
@@ -285,6 +285,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSin)
 static
 SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSin)
 {  /*lint --e{715}*/
+   SCIP_CONSEXPR_EXPR* child;
    SCIP_INTERVAL interval;
    SCIP_INTERVAL childbound;
    SCIP_Real newinf;
@@ -299,58 +300,71 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSin)
 
    *nreductions = 0;
 
-   interval = SCIPgetConsExprExprInterval(expr);
-   childbound = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]);
+   child = SCIPgetConsExprExprChildren(expr)[0];
+   assert(child != NULL);
 
+   childbound = SCIPgetConsExprExprInterval(child);
    newinf = childbound.inf;
    newsup = childbound.sup;
 
+   interval = SCIPgetConsExprExprInterval(expr);
 
-   /* computing new lower and upper bounds for child
-    *
-    * l(x) and u(x) are lower/upper bound of child, l(s) and u(s) are lower/upper bound of sin expr
-    *
-    * If sin(l(x)) < l(s), we are looking for k minimal s.t. a + 2k*pi > l(x) where a = asin(l(s))
-    * Then the new lower bound is a + 2k*pi */
-   if( SIN(newinf) < interval.inf )
+   if( !SCIPisInfinity(scip, -newinf) )
    {
-      SCIP_Real a = ASIN(interval.inf);
-      int k = (int) ceil((newinf - a) / 2*M_PI);
-      newinf = a + 2*M_PI * k;
+      /* l(x) and u(x) are lower/upper bound of child, l(s) and u(s) are lower/upper bound of sin expr
+       *
+       * if sin(l(x)) < l(s), we are looking for k minimal s.t. a + 2k*pi > l(x) where a = asin(l(s))
+       * then the new lower bound is a + 2k*pi
+       */
+      if( SCIPisLT(scip, SIN(newinf), interval.inf) )
+      {
+         SCIP_Real a = ASIN(interval.inf);
+         int k = (int) ceil((newinf - a) / 2*M_PI);
+         newinf = a + 2*M_PI * k;
+         assert(newinf >= childbound.inf);
+      }
+
+      /* if sin(l(x)) > u(s), we are looking for k minimal s.t. pi - a + 2k*pi > l(x) where a = asin(u(s))
+       * then the new lower bound is pi - a + 2k*pi
+       */
+      else if( SCIPisGT(scip, SIN(newinf), interval.sup) )
+      {
+         SCIP_Real a = ASIN(interval.sup);
+         int k = (int) ceil((newinf + a) / (2.0*M_PI) - 0.5);
+         newinf = M_PI * (2.0*k + 1.0) - a;
+         assert(newinf >= childbound.inf);
+      }
    }
 
-   /* If sin(l(x) > u(s), we are looking for k minimal s.t. pi - a + 2k*pi > l(x) where a = asin(u(s))
-    * Then the new lower bound is pi - a + 2k*pi */
-   else if( SIN(newinf) > interval.sup )
+   if( !SCIPisInfinity(scip, interval.sup) )
    {
-      SCIP_Real a = ASIN(interval.sup);
-      int k = (int) ceil((newinf + a) / 2*M_PI - 0.5);
-      newinf = M_PI * (2*k + 1) - a;
-   }
+      /* if sin(u(x)) > u(s), we are looking for k minimal s.t. a + 2k*pi > u(x) - 2*pi where a = asin(u(s))
+       * then the new lower bound is a + 2k*pi
+       */
+      if ( SCIPisGT(scip, SIN(newsup), interval.sup) )
+      {
+         SCIP_Real a = ASIN(interval.sup);
+         int k = (int) ceil((newsup - a ) / 2*M_PI) - 1;
+         newsup = a + 2*M_PI * k;
+         assert(newsup <= childbound.sup);
+      }
 
-   /* If sin(u(x)) > u(s), we are looking for k minimal s.t. a + 2k*pi > u(x) - 2*pi where a = asin(u(s))
-    * Then the new lower bound is a + 2k*pi */
-   if ( SIN(newsup) > interval.sup )
-   {
-      SCIP_Real a = ASIN(interval.sup);
-      int k = (int) ceil((newsup - a ) / 2*M_PI) - 1;
-      newsup = a + 2*M_PI * k;
-   }
-
-   /* If sin(u(x) < l(s), we are looking for k minimal s.t. pi - a + 2k*pi > l(x) - 2*pi where a = asin(u(s))
-    * Then the new lower bound is pi - a + 2k*pi */
-   if( SIN(newsup) < interval.inf )
-   {
-      SCIP_Real a = ASIN(interval.inf);
-      int k = (int) ceil((newsup + a) / 2*M_PI - 0.5) - 1;
-      newsup = M_PI * (2*k + 1) - a;
+      /* if sin(u(x)) < l(s), we are looking for k minimal s.t. pi - a + 2k*pi > l(x) - 2*pi where a = asin(l(s))
+       * then the new lower bound is pi - a + 2k*pi
+       */
+      if( SCIPisLT(scip, SIN(newsup), interval.inf) )
+      {
+         SCIP_Real a = ASIN(interval.inf);
+         int k = (int) ceil((newsup + a) / 2*M_PI - 0.5) - 1;
+         newsup = M_PI * (2.0*k + 1.0) - a;
+         assert(newsup <= childbound.sup);
+      }
    }
 
    SCIPintervalSetBounds(&childbound, newinf, newsup);
 
    /* try to tighten the bounds of the child node */
-   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[0], childbound, force, infeasible,
-                                              nreductions) );
+   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, child, childbound, force, infeasible, nreductions) );
 
    return SCIP_OKAY;
 }
@@ -414,7 +428,6 @@ SCIP_RETCODE SCIPcreateConsExprExprSin(
    SCIP_CONSEXPR_EXPR*   child               /**< single child */
    )
 {
-   SCIP_CONSEXPR_EXPRHDLR* exprhdlr = NULL;
    SCIP_CONSEXPR_EXPRDATA* exprdata;
 
    assert(consexprhdlr != NULL);

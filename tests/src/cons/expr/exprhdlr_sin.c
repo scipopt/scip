@@ -22,6 +22,7 @@
 #include "scip/scip.h"
 #include "scip/cons_expr.h"
 #include "scip/cons_expr_sin.h"
+#include "scip/cons_expr_var.h"
 
 #include "include/scip_test.h"
 
@@ -30,6 +31,9 @@ static SCIP_CONSHDLR* conshdlr;
 static SCIP_SOL* sol;
 static SCIP_VAR* x;
 static SCIP_VAR* y;
+static SCIP_CONSEXPR_EXPR* sinexpr;
+static SCIP_CONSEXPR_EXPR* xexpr;
+static SCIP_CONSEXPR_EXPR* yexpr;
 
 /* creates scip, problem, includes expression constraint handler, creates  and adds variables */
 static
@@ -52,6 +56,11 @@ void setup(void)
    SCIP_CALL( SCIPaddVar(scip, x) );
    SCIP_CALL( SCIPaddVar(scip, y) );
 
+   /* create variable and sine expressions */
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &xexpr, x) );
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &yexpr, y) );
+   SCIP_CALL( SCIPcreateConsExprExprSin(scip, conshdlr, &sinexpr, xexpr) );
+
    /* create solution */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
 }
@@ -62,6 +71,10 @@ void teardown(void)
 {
    /* free allocated memory */
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
+
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sinexpr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &yexpr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
    SCIP_CALL( SCIPfree(&scip) );
@@ -78,7 +91,16 @@ TestSuite(sin, .init = setup, .fini = teardown);
 
 Test(sin, creation, .description = "Tests the expression creation.")
 {
-   /* TODO */
+   SCIP_CONSEXPR_EXPR* expr;
+
+   /* create sine expression */
+   SCIP_CALL( SCIPcreateConsExprExprSin(scip, conshdlr, &expr, xexpr) );
+   cr_assert(expr != NULL);
+   cr_expect(SCIPgetConsExprExprNChildren(expr) == 1);
+   cr_expect(SCIPgetConsExprExprChildren(expr)[0] == xexpr);
+
+   /* release expression */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
 
 Test(sin, print, .description = "Tests the expression printing function.")
@@ -108,7 +130,30 @@ Test(sin, derivative, .description = "Tests the expression derivation.")
 
 Test(sin, hash, .description = "Tests the expression hash.")
 {
-   /* TODO */
+   SCIP_CONSEXPR_EXPR* expr1;
+   SCIP_CONSEXPR_EXPR* expr2;
+   SCIP_CONSEXPR_EXPR* expr3;
+   unsigned int hashkey1;
+   unsigned int hashkey2;
+   unsigned int hashkey3;
+
+   SCIP_CALL( SCIPcreateConsExprExprSin(scip, conshdlr, &expr1, xexpr) );
+   SCIP_CALL( SCIPcreateConsExprExprSin(scip, conshdlr, &expr2, xexpr) );
+   SCIP_CALL( SCIPcreateConsExprExprSin(scip, conshdlr, &expr3, yexpr) );
+
+   SCIP_CALL( SCIPgetConsExprExprHashkey(scip, expr1, &hashkey1) );
+   SCIP_CALL( SCIPgetConsExprExprHashkey(scip, expr2, &hashkey2) );
+   SCIP_CALL( SCIPgetConsExprExprHashkey(scip, expr3, &hashkey3) );
+
+   cr_expect(hashkey1 != 0);
+   cr_expect(hashkey2 != 0);
+   cr_expect(hashkey3 != 0);
+   cr_expect(hashkey1 == hashkey2);
+   cr_expect(hashkey1 != hashkey3);
+
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr3) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr2) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr1) );
 }
 
 Test(sin, simplify, .description = "Tests the expression simplification.")
