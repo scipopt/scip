@@ -431,7 +431,7 @@ Theory((SCIP_OBJSEN newsense, int prob), change, testchgobjsen)
    SCIP_OBJSEN probsense;
    SCIP_CALL( SCIPlpiGetObjsen(lpi, &probsense) );
 
-   cr_assert_eq( newsense, probsense );
+   cr_assert_eq( newsense, probsense, "Expected: %d, got %d\n", newsense, probsense );
 }
 
 /* Test SCIPlpiScaleCol */
@@ -455,16 +455,21 @@ Theory((SCIP_Real scale, int prob), change, testscalecol)
 
    for( int col = 0; col < ncols; col++ )
    {
-      SCIP_Real colbefore[100], colafter[100];
+      SCIP_Real colbefore[100], colafter;
+
       for( int i = 0; i < nrows; i++ )
       {
-         SCIP_CALL( SCIPlpiGetCoef(lpi, i, col, &colbefore[i]) );
+         SCIP_Real coef;
+
+         SCIP_CALL( SCIPlpiGetCoef(lpi, i, col, &coef) );
+         colbefore[i] = coef;
       }
+
       SCIP_CALL( SCIPlpiScaleCol(lpi, col, scale) );
       for( int i = 0; i < nrows; i++ )
       {
-         SCIP_CALL( SCIPlpiGetCoef(lpi, i, col, &colafter[i]) );
-         cr_assert_eq( colbefore[i] * scale, colafter[i] );
+         SCIP_CALL( SCIPlpiGetCoef(lpi, i, col, &colafter) );
+         cr_assert_float_eq( colbefore[i] * scale, colafter, EPS, "Found values: scale %.20f, colbefore[i] %.20f, colafter %.20f, i %d\n", scale, colbefore[i], colafter, i );
       }
    }
 }
@@ -499,7 +504,7 @@ Theory((SCIP_Real scale, int prob), change, testscalerow)
       for( int i = 0; i < ncols; i++ )
       {
          SCIP_CALL( SCIPlpiGetCoef(lpi, row, i, &rowafter[i]) );
-         cr_assert_eq( rowbefore[i] * scale, rowafter[i] );
+         cr_assert_float_eq( rowbefore[i] * scale, rowafter[i], EPS, "Found values: scale %.20f, rowbefore[i] %.20f, rowafter %.20f, i %d\n", scale, rowbefore[i], rowafter[i], i );
       }
    }
 }
@@ -514,12 +519,12 @@ Test(change, testrowmethods)
    SCIP_Real  ub[5] = { 10.0, SCIPlpiInfinity(lpi), SCIPlpiInfinity(lpi), 29.0 };
    int ncolsbefore, ncolsafter;
    int nrowsbefore, nrowsafter;
-   SCIP_Real lhsvals[6] = { -SCIPlpiInfinity(lpi), -1.0, -3e-10, 0.0, 1.0, 3e10 };
-   SCIP_Real rhsvals[6] = { -1.0, -3e-10, 0.0, 1.0, 3e10, SCIPlpiInfinity(lpi) };
-   SCIP_Real   vals[10] = { 1.0, 0.0, -1.0, 3e5, 2.0, 1.0, 20, 10, -1.9, 1e-2 };
-   int  nnonzs[6]  = { 1, 10, -1, 6, -1 };
-   int begvals[6]  = { 0, 2, 3, 5, 8, 9 };
-   int indvals[10] = { 0, 1, 3, 2, 1, 1, 2, 4, 0, 3 };
+   SCIP_Real lhsvals[6] = { -SCIPlpiInfinity(lpi), -1.0,   -3e-10, 0.0, 1.0,  3e10 };
+   SCIP_Real rhsvals[6] = { -1.0,                  -3e-10, 0.0,    1.0, 3e10, SCIPlpiInfinity(lpi) };
+   int     nnonzs[6]  = { 1, 10, -1, 6, -1 };
+   int    begvals[6]  = { 0, 2, 3, 5, 8, 9 };
+   int    indvals[10] = { 0, 1, 3, 2, 1, 1, 2, 4, 0, 3 };
+   SCIP_Real vals[10] = { 1.0, 0.0, -1.0, 3e5, 2.0, 1.0, 20, 10, -1.9, 1e-2 };
 
    int iterations = 5;
    int k[5] = { 1, 6, -1, 4, -2 };
@@ -589,7 +594,7 @@ Test(change, testrowmethods)
       cr_assert_eq(nrowsbefore+nrows, nrowsafter);
 
       SCIP_CALL( SCIPlpiGetNNonz(lpi, &nnonzsafter) );
-      cr_assert_eq(nnonzsbefore+nnonzsdiff[i], nnonzsafter);
+      cr_assert_eq(nnonzsbefore+nnonzsdiff[i], nnonzsafter, "nnonzsbefore %d, nnonzsafter %d, nnonzsdiff[i] %d, in iteration %d\n", nnonzsbefore, nnonzsafter, nnonzsdiff[i], i);
 
       SCIP_CALL( SCIPlpiGetNCols(lpi, &ncolsafter) );
       cr_assert_eq(ncolsbefore, ncolsafter);
@@ -702,7 +707,7 @@ Test(change, testcolmethods)
       cr_assert_eq(nrowsbefore, nrowsafter);
 
       SCIP_CALL( SCIPlpiGetNNonz(lpi, &nnonzsafter) );
-      cr_assert_eq(nnonzsbefore+nnonzsdiff[i], nnonzsafter);
+      cr_assert_eq(nnonzsbefore+nnonzsdiff[i], nnonzsafter, "nnonzsbefore %d, nnonzsafter %d, nnonzsdiff[i] %d, in iteration %d\n", nnonzsbefore, nnonzsafter, nnonzsdiff[i], i);
 
       SCIP_CALL( SCIPlpiGetNCols(lpi, &ncolsafter) );
       cr_assert_eq(ncolsbefore+ncols, ncolsafter);
