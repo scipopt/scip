@@ -439,17 +439,15 @@ void convertSides(
       }
       else if( lhss[i] <= XPRS_MINUSINFINITY )
       {
-         assert(XPRS_MINUSINFINITY < rhss[i] && rhss[i] < XPRS_PLUSINFINITY);
          lpi->senarray[i] = 'L';
          lpi->rhsarray[i] = rhss[i];
-         lpi->rngarray[i] = 0.0;
+         lpi->rngarray[i] = XPRS_PLUSINFINITY;
       }
       else if( rhss[i] >= XPRS_PLUSINFINITY )
       {
-         assert(XPRS_MINUSINFINITY < lhss[i] && lhss[i] < XPRS_PLUSINFINITY);
          lpi->senarray[i] = 'G';
          lpi->rhsarray[i] = lhss[i];
-         lpi->rngarray[i] = 0.0;
+         lpi->rngarray[i] = XPRS_PLUSINFINITY;
       }
       else
       {
