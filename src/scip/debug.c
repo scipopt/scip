@@ -383,7 +383,7 @@ SCIP_RETCODE getSolutionValue(
    assert(debugsoldata != NULL);
 
    /* allow retrieving solution values only if referring to the SCIP instance that is debugged */
-   if( SCIPdebugSolIsEnabled(set->scip) )
+   if( !SCIPdebugSolIsEnabled(set->scip) )
    {
       *val = SCIP_UNKNOWN;
       return SCIP_OKAY;
@@ -760,7 +760,7 @@ SCIP_RETCODE SCIPdebugCheckConss(
    assert(scip->set != NULL);
 
    /* check if we are in the original problem and not in a sub MIP */
-   if( ! SCIPdebugSolIsEnabled(scip) )
+   if( !SCIPdebugSolIsEnabled(scip) )
       return SCIP_OKAY;
 
    /* check whether a debug solution is available */
@@ -834,7 +834,7 @@ SCIP_RETCODE SCIPdebugCheckRow(
    assert(row != NULL);
 
    /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
-   if( SCIPdebugSolIsEnabled(set->scip) )
+   if( !SCIPdebugSolIsEnabled(set->scip) )
       return SCIP_OKAY;
 
    /* check whether a debug solution is available */
@@ -1015,7 +1015,7 @@ SCIP_RETCODE SCIPdebugCheckInference(
       return SCIP_OKAY;
 
    /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
-   if( SCIPdebugSolIsEnabled(set->scip) )
+   if( !SCIPdebugSolIsEnabled(set->scip) )
       return SCIP_OKAY;
 
    /* check whether a debug solution is available */
@@ -1069,7 +1069,7 @@ SCIP_RETCODE SCIPdebugRemoveNode(
    assert(debugsoldata != NULL);
 
    /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
-   if( SCIPdebugSolIsEnabled(set->scip) )
+   if( !SCIPdebugSolIsEnabled(set->scip) )
       return SCIP_OKAY;
 
    /* check whether a debug solution is available */
@@ -1124,7 +1124,7 @@ SCIP_RETCODE SCIPdebugCheckVbound(
    assert(var != NULL);
 
    /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
-   if( SCIPdebugSolIsEnabled(set->scip) )
+   if( !SCIPdebugSolIsEnabled(set->scip) )
       return SCIP_OKAY;
 
    /* check whether a debug solution is available */
@@ -1173,7 +1173,7 @@ SCIP_RETCODE SCIPdebugCheckImplic(
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
 
    /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
-   if( SCIPdebugSolIsEnabled(set->scip) )
+   if( !SCIPdebugSolIsEnabled(set->scip) )
       return SCIP_OKAY;
 
    /* check whether a debug solution is available */
@@ -1238,7 +1238,7 @@ SCIP_RETCODE SCIPdebugCheckClique(
    assert(vars != NULL);
 
    /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
-   if( SCIPdebugSolIsEnabled(set->scip) )
+   if( !SCIPdebugSolIsEnabled(set->scip) )
       return SCIP_OKAY;
 
    /* check whether a debug solution is available */
@@ -1442,7 +1442,7 @@ SCIP_RETCODE SCIPdebugCheckConflict(
    assert(nbdchginfos == 0 || bdchginfos != NULL);
 
    /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
-   if( SCIPdebugSolIsEnabled(set->scip) )
+   if( !SCIPdebugSolIsEnabled(set->scip) )
       return SCIP_OKAY;
 
    /* check whether a debug solution is available */
@@ -1498,7 +1498,7 @@ SCIP_RETCODE SCIPdebugCheckConflictFrontier(
    assert(nbdchginfos == 0 || bdchginfos != NULL);
 
    /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
-   if( SCIPdebugSolIsEnabled(set->scip) )
+   if( !SCIPdebugSolIsEnabled(set->scip) )
       return SCIP_OKAY;
 
    /* check whether a debug solution is available */
@@ -1573,7 +1573,7 @@ SCIP_RETCODE SCIPdebugSolIsValidInSubtree(
    assert(scip->set != NULL);
 
    /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
-   if( SCIPdebugSolIsEnabled(scip) )
+   if( !SCIPdebugSolIsEnabled(scip) )
       return SCIP_OKAY;
 
    /* check whether a debug solution is available */
