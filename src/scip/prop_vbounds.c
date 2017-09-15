@@ -90,7 +90,7 @@
 
 #define PROP_PRESOL_PRIORITY     -90000 /**< priority of the presolving method (>= 0: before, < 0: after constraint handlers); combined with presolvers */
 #define PROP_PRESOLTIMING       SCIP_PRESOLTIMING_MEDIUM | SCIP_PRESOLTIMING_EXHAUSTIVE
-#define PROP_PRESOL_MAXROUNDS         0 /**< maximal number of presolving rounds the presolver participates in (-1: no
+#define PROP_PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds the presolver participates in (-1: no
                                          *   limit) */
 /**@} */
 
@@ -2174,7 +2174,7 @@ SCIP_RETCODE tarjan(
    int*                  cliquecurrentexit,  /**< for cliques which define an arc on the current path: target node of this arc */
    int*                  sccvars,            /**< array with all nontrivial strongly connected components in the graph */
    int*                  sccstarts,          /**< start indices of SCCs in sccvars array; one additional entry at the end
-                                              *    to give length of used part of sccvars array */
+                                              *   to give length of used part of sccvars array */
    int*                  nsccs,              /**< pointer to store number of strongly connected components */
    int*                  infeasnodes,        /**< sparse array with node indices of infeasible nodes */
    int*                  ninfeasnodes,       /**< pointer to store the number of infeasible nodes */
@@ -2581,7 +2581,7 @@ SCIP_RETCODE applyFixingsAndAggregations(
    uint8_t*              nodeinfeasible,     /**< array to store whether the fixing of a node was detected to be infeasible */
    int*                  sccvars,            /**< array with all nontrivial strongly connected components in the graph */
    int*                  sccstarts,          /**< start indices of SCCs in sccvars array; one additional entry at the end
-                                              *    to give length of used part of sccvars array */
+                                              *   to give length of used part of sccvars array */
    int                   nsccs,              /**< pointer to store number of strongly connected components */
    SCIP_Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
    int*                  nfixedvars,         /**< pointer to number of fixed variables, increment when fixing another one */
