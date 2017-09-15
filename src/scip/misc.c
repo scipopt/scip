@@ -2041,7 +2041,11 @@ SCIP_RETCODE SCIPhashtableCreate(
     * to the next power of two.
     */
    (*hashtable)->shift = 32;
+#if defined(_MSC_VER) && (_MSC_VER < 1800)
    (*hashtable)->shift -= (int)ceil(log(MAX(32.0, tablesize / 0.9)) / log(2.0));
+#else
+   (*hashtable)->shift -= (int)ceil(log2(MAX(32.0, tablesize / 0.9)));
+#endif
 
    /* compute size from shift */
    nslots = 1u << (32 - (*hashtable)->shift);
@@ -3324,7 +3328,7 @@ SCIP_RETCODE SCIPhashsetCreate(
     * to the next power of two.
     */
    (*hashset)->shift = 64;
-   (*hashset)->shift -= (int)ceil(log2(MAX(8.0, size / 0.9)));
+   (*hashset)->shift -= (int)ceil(log(MAX(8.0, size / 0.9)) / log(2.0));
    nslots = SCIPhashsetGetNSlots(*hashset);
    (*hashset)->nelements = 0;
 
