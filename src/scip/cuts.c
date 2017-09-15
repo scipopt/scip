@@ -528,6 +528,69 @@ SCIP_RETCODE SCIPaggrRowAddRow(
    return SCIP_OKAY;
 }
 
+/** Removes a given variable @p var from position @p pos the aggregation row and updates the right-hand side according
+ *  to sign of the coefficient, i.e., rhs -= coef * bound, where bound = lb if coef >= 0 and bound = ub, otherwise.
+ *
+ *  @note: The choice of global or local bounds depend on the validity (global or local) of the aggregation row.
+ *
+ *  @note: The list of non-zero indices will be updated by swapping the last non-zero index to @p pos.
+ */
+void SCIPaggrRowCancelVarWithBound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   SCIP_VAR*             var,                /**< variable that should be removed */
+   int                   pos,                /**< position of the variable in the aggregation row */
+   SCIP_Bool*            valid               /**< pointer to return whether the aggregation row is still valid */
+   )
+{
+   SCIP_Real QUAD(val);
+   int v;
+
+   assert(valid != NULL);
+   assert(pos >= 0);
+
+   v = aggrrow->inds[pos];
+   assert(v == SCIPvarGetProbindex(var));
+
+   QUAD_ARRAY_LOAD(val, aggrrow->vals, v);
+
+   *valid = TRUE;
+
+   /* adjust left and right hand sides with max contribution */
+   if( QUAD_ROUND(val) < 0.0 )
+   {
+      SCIP_Real ub = aggrrow->local ? SCIPvarGetUbLocal(var) : SCIPvarGetUbGlobal(var);
+      if( SCIPisInfinity(scip, ub) )
+         QUAD_ASSIGN(aggrrow->rhs, SCIPinfinity(scip));
+      else
+      {
+         SCIPquadprecProdQD(val, val, ub);
+         SCIPquadprecSumQQ(aggrrow->rhs, aggrrow->rhs, -val);
+      }
+   }
+   else
+   {
+      SCIP_Real lb = aggrrow->local ? SCIPvarGetLbLocal(var) : SCIPvarGetLbGlobal(var);
+      if( SCIPisInfinity(scip, -lb) )
+         QUAD_ASSIGN(aggrrow->rhs, SCIPinfinity(scip));
+      else
+      {
+         SCIPquadprecProdQD(val, val, lb);
+         SCIPquadprecSumQQ(aggrrow->rhs, aggrrow->rhs, -val);
+      }
+   }
+
+   QUAD_ASSIGN(val, 0.0);
+   QUAD_ARRAY_STORE(aggrrow->vals, v, val);
+
+   /* remove non-zero entry */
+   --(aggrrow->nnz);
+   aggrrow->inds[pos] = aggrrow->inds[aggrrow->nnz];
+
+   if( SCIPisInfinity(scip, QUAD_HI(aggrrow->rhs)) )
+      *valid = FALSE;
+}
+
 /** add the objective function with right-hand side @p rhs and scaled by @p scale to the aggregation row */
 SCIP_RETCODE SCIPaggrRowAddObjectiveFunction(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -539,7 +602,6 @@ SCIP_RETCODE SCIPaggrRowAddObjectiveFunction(
    SCIP_VAR** vars;
    SCIP_Real QUAD(val);
    int nvars;
-   int i;
 
    assert(scip != NULL);
    assert(aggrrow != NULL);
@@ -550,7 +612,7 @@ SCIP_RETCODE SCIPaggrRowAddObjectiveFunction(
    /* add all variables straight forward if the aggregation row is empty */
    if( aggrrow->nnz == 0 )
    {
-      for( i = 0; i < nvars; ++i )
+      for( int i = 0; i < nvars; ++i )
       {
          assert(SCIPvarGetProbindex(vars[i]) == i);
 
@@ -569,7 +631,7 @@ SCIP_RETCODE SCIPaggrRowAddObjectiveFunction(
    else
    {
       /* add the non-zeros to the aggregation row and keep non-zero index up to date */
-      for( i = 0 ; i < nvars; ++i )
+      for( int i = 0 ; i < nvars; ++i )
       {
          assert(SCIPvarGetProbindex(vars[i]) == i);
 
@@ -922,8 +984,6 @@ void SCIPaggrRowRemoveZeros(
       else
          ++i;
    }
-
-   *valid = aggrrow->nnz > 0;
 }
 
 /** removes almost zero entries and relaxes the sides of the row accordingly */
