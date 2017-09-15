@@ -549,7 +549,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       }
    }
 
-  TERMINATE:
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &inds);
    SCIPfreeBufferArray(scip, &binvrow);
