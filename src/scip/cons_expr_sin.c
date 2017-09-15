@@ -180,7 +180,7 @@ SCIP_DECL_CONSEXPR_EXPRPARSE(parseSin)
    SCIP_CALL( SCIPparseConsExprExpr(scip, consexprhdlr, string, endstring, &childexpr) );
    assert(childexpr != NULL);
 
-   /* create absolute expression */
+   /* create sine expression */
    SCIP_CALL( SCIPcreateConsExprExprSin(scip, consexprhdlr, expr, childexpr) );
    assert(*expr != NULL);
 
@@ -220,7 +220,7 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffSin)
    assert(child != NULL);
    assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child)), "val") != 0);
 
-   *val = SIN(0.5*M_PI - SCIPgetConsExprExprValue(child));
+   *val = COS(SCIPgetConsExprExprValue(child));
 
    return SCIP_OKAY;
 }

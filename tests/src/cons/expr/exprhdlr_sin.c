@@ -115,7 +115,22 @@ Test(sin, parse, .description = "Tests the expression parsing.")
 
 Test(sin, eval, .description = "Tests the expression evaluation.")
 {
-   /* TODO */
+   SCIP_RANDNUMGEN* rndgen;
+   SCIP_CALL( SCIPcreateRandom(scip, &rndgen, 1) );
+   SCIP_Real randnum = SCIPrandomGetReal(rndgen, -10.0, 10.0);
+
+   SCIP_Real testvalues[5] = {0.0, M_PI, 2.5*M_PI, -0.5*M_PI, randnum};
+   SCIP_Real results[5] = {0.0, 0.0, 1.0, -1.0, SIN(randnum)};
+
+   for(int i = 0; i < 5; i++)
+   {
+	SCIP_CALL( SCIPsetSolVal(scip, sol, x, testvalues[i]) );
+	SCIP_CALL( SCIPevalConsExprExpr(scip, sinexpr, sol, 0) );
+
+	cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprValue(sinexpr), results[i]));
+   }
+
+   SCIPfreeRandom(scip, &rndgen);
 }
 
 Test(sin, inteval, .description = "Tests the expression interval evaluation.")
