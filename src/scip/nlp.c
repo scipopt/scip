@@ -2120,7 +2120,7 @@ SCIP_RETCODE SCIPnlrowCreate(
 
    /* left and right hand sides, asserted above that lhs is relatively less equal than rhs */
    (*nlrow)->lhs = MIN(lhs, rhs);
-   (*nlrow)->rhs = MAX(rhs, rhs);
+   (*nlrow)->rhs = MAX(lhs, rhs);
 
    /* miscellaneous */
    SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*nlrow)->name, name, strlen(name)+1) );
@@ -3840,8 +3840,8 @@ SCIP_RETCODE nlpAddVars(
       }
 
       /* catch events on variable */
-      SCIP_CALL( SCIPvarCatchEvent(var, blkmem, set,
-            SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_OBJCHANGED,
+      SCIP_CALL( SCIPvarCatchEvent(var, blkmem, set, \
+            SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_OBJCHANGED, \
             nlp->eventhdlr, (SCIP_EVENTDATA*)nlp, NULL) ); /* @todo should store event filter position in nlp? */
    }
 
@@ -3955,8 +3955,8 @@ SCIP_RETCODE nlpDelVarPos(
       --nlp->nunflushedvaradd;
 
    /* drop events on variable */
-   SCIP_CALL( SCIPvarDropEvent(var, blkmem, set,
-         SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_OBJCHANGED,
+   SCIP_CALL( SCIPvarDropEvent(var, blkmem, set, \
+         SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_OBJCHANGED, \
          nlp->eventhdlr, (SCIP_EVENTDATA*)nlp, -1) );
 
    /* move variable from end to pos */
@@ -4221,7 +4221,7 @@ SCIP_RETCODE nlpFlushNlRowDeletions(
    assert(c == nlp->nunflushednlrowdel);
 
    /* remove rows from NLPI problem */
-   SCIP_CALL( SCIPnlpiDelConsSet(nlp->solver, nlp->problem, rowset) );
+   SCIP_CALL( SCIPnlpiDelConsSet(nlp->solver, nlp->problem, rowset, nlp->nnlrows_solver) );
 
    /* update NLPI row indices */
    for( j = 0; j < nlp->nnlrows_solver; ++j )
@@ -4314,7 +4314,7 @@ SCIP_RETCODE nlpFlushVarDeletions(
    assert(c == nlp->nunflushedvardel);
 
    /* delete variables from NLPI problem */
-   SCIP_CALL( SCIPnlpiDelVarSet(nlp->solver, nlp->problem, colset) );
+   SCIP_CALL( SCIPnlpiDelVarSet(nlp->solver, nlp->problem, colset, nlp->nvars_solver) );
 
    /* update NLPI variable indices */
    for( i = 0; i < nlp->nvars_solver; ++i )
@@ -4749,7 +4749,7 @@ SCIP_RETCODE nlpSolve(
       varubdualvals = NULL;
 
       /* get NLP solution */
-      SCIP_CALL( SCIPnlpiGetSolution(nlp->solver, nlp->problem, &primalvals, &nlrowdualvals, &varlbdualvals, &varubdualvals) );
+      SCIP_CALL( SCIPnlpiGetSolution(nlp->solver, nlp->problem, &primalvals, &nlrowdualvals, &varlbdualvals, &varubdualvals, NULL) );
       assert(primalvals != NULL || nlp->nvars == 0);
       assert((varlbdualvals != NULL) == (varubdualvals != NULL)); /* if there are duals for one bound, then there should also be duals for the other bound */
 

@@ -92,6 +92,12 @@ void setup(void)
 Test(depthlevel, hit_depth_limit, .description = "show problem when hitting depth level", .init = setup, .signal = SIGABRT)
 {
    SCIP_RETCODE retcode;
+
+   /* this test can only work in debug mode, so we make it pass in opt mode */
+#ifdef NDEBUG
+   abort(); /* return SIGABORT */
+#endif
+
    /* turn off presolving */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
 

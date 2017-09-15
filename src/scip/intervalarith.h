@@ -597,8 +597,8 @@ extern
 SCIP_Real SCIPintervalQuadUpperBound(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_Real             a,                  /**< coefficient of x^2 */
-   SCIP_INTERVAL         b,                  /**< coefficient of x */
-   SCIP_INTERVAL         xrng                /**< range of x */
+   SCIP_INTERVAL         b_,                 /**< coefficient of x */
+   SCIP_INTERVAL         x                   /**< range of x */
    );
 
 /** stores range of quadratic term in resultant

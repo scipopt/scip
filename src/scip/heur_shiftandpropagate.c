@@ -1311,7 +1311,7 @@ SCIP_DECL_HEUREXIT(heurExitShiftandpropagate)
    /* if statistic mode is enabled, statistics are printed to console */
    SCIPstatistic(
       SCIPstatisticMessage(
-         "  DETAILS                    :  %d violations left, %d probing status, %d redundant rows\n",
+         "  DETAILS                    :  %d violations left, %d probing status\n",
          heurdata->nremainingviols,
          heurdata->lpsolstat
          );

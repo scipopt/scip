@@ -4037,6 +4037,23 @@ SCIP_RETCODE computeViolation(
    else
       consdata->rhsviol = 0.0;
 
+   /* update absolute and relative violation of the solution */
+   if( sol != NULL )
+   {
+      SCIP_Real absviol;
+      SCIP_Real relviol;
+      SCIP_Real lhsrelviol;
+      SCIP_Real rhsrelviol;
+
+      absviol = MAX(consdata->lhsviol, consdata->rhsviol);
+
+      lhsrelviol = SCIPrelDiff(consdata->lhs, consdata->activity);
+      rhsrelviol = SCIPrelDiff(consdata->activity, consdata->rhs);
+      relviol = MAX(lhsrelviol, rhsrelviol);
+
+      SCIPupdateSolConsViolation(scip, sol, absviol, relviol);
+   }
+
    switch( conshdlrdata->scaling )
    {
    case 'o' :
@@ -4172,7 +4189,7 @@ SCIP_RETCODE addLinearization(
    SCIP_Real treecoef;
    SCIP_Real val;
    SCIP_Real* grad;
-   SCIP_Real constant;
+   SCIP_Real constant = 0.0;
    SCIP_Bool perturbedx;
    int nvars;
    int i;
@@ -5530,7 +5547,7 @@ SCIP_RETCODE generateCut(
       /* check that coefficient range is ok */
       success = coefrange <= maxrange;
 
-      /* check that side is finite */
+      /* check that side is finite */ /*lint --e{514} */
       success &= !SCIPisInfinity(scip, REALABS(rowprep->side));
 
       /* check whether maximal coef is finite, if any */
@@ -5861,7 +5878,7 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
    conss = SCIPconshdlrGetConss(conshdlr);
    assert(conss != NULL);
 
-   SCIPdebugMsg(scip, "catched new sol event %"SCIP_EVENTTYPE_FORMAT" from heur <%s>; have %d conss\n", SCIPeventGetType(event), SCIPheurGetName(SCIPsolGetHeur(sol)), nconss);
+   SCIPdebugMsg(scip, "catched new sol event %" SCIP_EVENTTYPE_FORMAT " from heur <%s>; have %d conss\n", SCIPeventGetType(event), SCIPheurGetName(SCIPsolGetHeur(sol)), nconss);
 
    SCIP_CALL( addLinearizationCuts(scip, conshdlr, conss, nconss, sol, NULL, 0.0) );
 
@@ -7091,7 +7108,7 @@ SCIP_RETCODE enforceConstraint(
        */
       assert(solinfeasible);
       /* however, if solinfeasible is actually not TRUE, then better cut off the node to avoid that SCIP
-       * stops because infeasible cannot be resolved */
+       * stops because infeasible cannot be resolved */ /*lint --e{774} */
       if( !solinfeasible )
          *result = SCIP_CUTOFF;
       return SCIP_OKAY;
@@ -8052,10 +8069,8 @@ SCIP_DECL_CONSENFOPS(consEnfopsNonlinear)
       return SCIP_OKAY;
    }
 
-   /* we are not feasible and we cannot proof that the whole node is infeasible
-    * -> collect all variables in violated constraints for branching
-    */
-
+   /* We are not feasible and we cannot prove that the whole node is infeasible -> collect all variables in violated
+    * constraints for branching. */
    nnotify = 0;
    for( c = 0; c < nconss; ++c )
    {
@@ -8077,6 +8092,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsNonlinear)
       }
 
       for( j = 0; j < consdata->nexprtrees; ++j )
+      {
          for( i = 0; i < SCIPexprtreeGetNVars(consdata->exprtrees[j]); ++i )
          {
             var = SCIPexprtreeGetVars(consdata->exprtrees[j])[i];
@@ -8086,6 +8102,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsNonlinear)
                ++nnotify;
             }
          }
+      }
    }
 
    if( nnotify == 0 )

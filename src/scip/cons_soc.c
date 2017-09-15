@@ -765,6 +765,9 @@ SCIP_RETCODE computeViolation(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_Real rhsval;
+   SCIP_Real rhs;
+   SCIP_Real absviol;
+   SCIP_Real relviol;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -803,7 +806,10 @@ SCIP_RETCODE computeViolation(
       return SCIP_OKAY;
    }
 
-   consdata->violation = consdata->lhsval - consdata->rhscoeff * (rhsval + consdata->rhsoffset);
+   rhs = consdata->rhscoeff * (rhsval + consdata->rhsoffset);
+   consdata->violation = consdata->lhsval - rhs;
+   absviol = consdata->violation;
+   relviol = SCIPrelDiff(consdata->lhsval, rhs);
    if( consdata->violation <= 0.0 )
    {
       /* constraint is not violated for sure */
@@ -850,6 +856,9 @@ SCIP_RETCODE computeViolation(
          return SCIP_INVALIDDATA;  /*lint !e527*/
       }
    }
+
+   if( sol != NULL )
+      SCIPupdateSolConsViolation(scip, sol, absviol, relviol);
 
    return SCIP_OKAY;
 }
@@ -1449,7 +1458,7 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
    conss = SCIPconshdlrGetConss(conshdlr);
    assert(conss != NULL);
 
-   SCIPdebugMsg(scip, "caught new sol event %"SCIP_EVENTTYPE_FORMAT" from heur <%s>; have %d conss\n", SCIPeventGetType(event), SCIPheurGetName(SCIPsolGetHeur(sol)), nconss);
+   SCIPdebugMsg(scip, "caught new sol event %" SCIP_EVENTTYPE_FORMAT " from heur <%s>; have %d conss\n", SCIPeventGetType(event), SCIPheurGetName(SCIPsolGetHeur(sol)), nconss);
 
    SCIP_CALL( addLinearizationCuts(scip, conshdlr, conss, nconss, sol, NULL, 0.0, &cutoff) );
    /* ignore cutoff, cannot return status */

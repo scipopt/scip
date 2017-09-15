@@ -43,7 +43,7 @@ public:
    const SCIP_Bool scip_bufferedoutput_;
 
    /** default constructor */
-   ObjMessagehdlr(
+   explicit ObjMessagehdlr(
       SCIP_Bool          bufferedoutput      /**< should the output be buffered up to the next newline? */
       )
       : scip_bufferedoutput_(bufferedoutput)

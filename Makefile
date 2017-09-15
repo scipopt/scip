@@ -142,7 +142,7 @@ LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 SOFTLINKS	+=	$(LIBDIR)/include/xprsinc
 SOFTLINKS	+=	$(LIBDIR)/shared/libxpress.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
 LPIINSTMSG	=	"  -> \"xprsinc\" is the path to the XPRESS \"include\" directory, e.g., \"<XPRESS-path>/include\".\n"
-LPIINSTMSG	+=	" -> \"libpress.*\" is the path to the XPRESS library, e.g., \"<XPRESS-path>/lib/libxpress.so\""
+LPIINSTMSG	+=	" -> \"libxpress.*\" is the path to the XPRESS library, e.g., \"<XPRESS-path>/lib/libxprs.so\""
 endif
 
 # mosek only supports shared libraries
@@ -315,6 +315,7 @@ ALLSRC		+=	$(TPILIBSRC)
 #-----------------------------------------------------------------------------
 
 NLPILIBCOBJ	= 	nlpi/nlpi.o \
+			nlpi/nlpi_all.o \
 			nlpi/nlpioracle.o \
 			nlpi/expr.o
 
@@ -622,11 +623,10 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/sepa_cgmip.o \
 			scip/sepa_clique.o \
 			scip/sepa_closecuts.o \
-			scip/sepa_cmir.o \
+			scip/sepa_aggregation.o \
 			scip/sepa_convexproj.o \
 			scip/sepa_disjunctive.o \
 			scip/sepa_eccuts.o \
-			scip/sepa_flowcover.o \
 			scip/sepa_gauge.o \
 			scip/sepa_gomory.o \
 			scip/sepa_impliedbounds.o \
@@ -874,7 +874,7 @@ check:		test
 .PHONY: test
 test:
 		cd check; \
-		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
+		$(SHELL) ./check.sh $(TEST) $(EXECUTABLE) $(SETTINGS) $(BINID) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
 		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) \
                 $(SEEDS);
 

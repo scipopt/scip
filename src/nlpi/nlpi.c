@@ -361,14 +361,15 @@ SCIP_RETCODE SCIPnlpiChgConsSides(
 SCIP_RETCODE SCIPnlpiDelVarSet(
    SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
    SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   int*                  dstats              /**< deletion status of vars; 1 if var should be deleted, 0 if not; afterwards -1
+   int*                  dstats,             /**< deletion status of vars; 1 if var should be deleted, 0 if not; afterwards -1
                                               * if var was deleted */
+   int                   dstatssize          /**< size of the dstats array */
    )
 {
    assert(nlpi    != NULL);
    assert(problem != NULL);
 
-   SCIP_CALL( (*nlpi->nlpidelvarset)(nlpi, problem, dstats) );
+   SCIP_CALL( (*nlpi->nlpidelvarset)(nlpi, problem, dstats, dstatssize) );
 
    return SCIP_OKAY;
 }
@@ -377,14 +378,15 @@ SCIP_RETCODE SCIPnlpiDelVarSet(
 SCIP_RETCODE SCIPnlpiDelConsSet(
    SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
    SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   int*                  dstats              /**< deletion status of rows; 1 if row should be deleted, 0 if not; afterwards -1
+   int*                  dstats,             /**< deletion status of rows; 1 if row should be deleted, 0 if not; afterwards -1
                                               * if row was deleted */
+   int                   dstatssize          /**< size of the dstats array */
    )
 {
    assert(nlpi    != NULL);
    assert(problem != NULL);
 
-   SCIP_CALL( (*nlpi->nlpidelconsset)(nlpi, problem, dstats) );
+   SCIP_CALL( (*nlpi->nlpidelconsset)(nlpi, problem, dstats, dstatssize) );
 
    return SCIP_OKAY;
 }
@@ -430,7 +432,7 @@ SCIP_RETCODE SCIPnlpiChgExprtree(
    SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
    int                   idxcons,            /**< index of constraint or -1 for objective */
    const int*            exprvaridxs,        /**< indices of variables in expression tree, maps variable indices in expression tree to indices in nlp, or NULL */
-   SCIP_EXPRTREE*        exprtree            /**< new expression tree, or NULL for no tree */
+   const SCIP_EXPRTREE*  exprtree            /**< new expression tree, or NULL for no tree */
    )
 {
    assert(nlpi    != NULL);
@@ -538,13 +540,14 @@ SCIP_RETCODE SCIPnlpiGetSolution(
    SCIP_Real**           primalvalues,       /**< buffer to store pointer to array to primal values, or NULL if not needed */
    SCIP_Real**           consdualvalues,     /**< buffer to store pointer to array to dual values of constraints, or NULL if not needed */
    SCIP_Real**           varlbdualvalues,    /**< buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed */
-   SCIP_Real**           varubdualvalues     /**< buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed */
+   SCIP_Real**           varubdualvalues,    /**< buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed */
+   SCIP_Real*            objval              /**< buffer to store the objective value, or NULL if not needed */
    )
 {
    assert(nlpi    != NULL);
    assert(problem != NULL);
 
-   SCIP_CALL( (*nlpi->nlpigetsolution)(nlpi, problem, primalvalues, consdualvalues, varlbdualvalues, varubdualvalues) );
+   SCIP_CALL( (*nlpi->nlpigetsolution)(nlpi, problem, primalvalues, consdualvalues, varlbdualvalues, varubdualvalues, objval) );
 
    return SCIP_OKAY;
 }
@@ -655,7 +658,7 @@ SCIP_RETCODE SCIPnlpiGetRealPar(
    )
 {
    assert(nlpi    != NULL);
-   assert(problem != NULL);
+   assert(problem != NULL || type == SCIP_NLPPAR_INFINITY);
    assert(dval    != NULL);
 
    SCIP_CALL( (*nlpi->nlpigetrealpar)(nlpi, problem, type, dval) );

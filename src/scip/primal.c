@@ -138,6 +138,7 @@ SCIP_RETCODE SCIPprimalCreate(
    (*primal)->nlimbestsolsfound = 0;
    (*primal)->upperbound = SCIP_INVALID;
    (*primal)->cutoffbound = SCIP_INVALID;
+   (*primal)->updateviolations = TRUE;
 
    return SCIP_OKAY;
 }
@@ -223,6 +224,7 @@ SCIP_RETCODE SCIPprimalClear(
    (*primal)->nlimbestsolsfound = 0;
    (*primal)->upperbound = SCIP_INVALID;
    (*primal)->cutoffbound = SCIP_INVALID;
+   (*primal)->updateviolations = TRUE;
 
    return SCIP_OKAY;
 }
@@ -609,6 +611,7 @@ SCIP_RETCODE primalAddSol(
    )
 {
    SCIP_SOL* sol;
+   /* cppcheck-suppress unassignedVariable */
    SCIP_EVENT event;
    SCIP_Real obj;
    int pos;
@@ -1877,4 +1880,26 @@ SCIP_RETCODE SCIPprimalTransformSol(
    }
 
    return SCIP_OKAY;
+}
+
+
+/** is the updating of violations enabled for this problem? */
+SCIP_Bool SCIPprimalUpdateViolations(
+   SCIP_PRIMAL*          primal              /**< problem data */
+   )
+{
+   assert(primal != NULL);
+
+   return primal->updateviolations;
+}
+
+/** set whether the updating of violations is turned on */
+void SCIPprimalSetUpdateViolations(
+   SCIP_PRIMAL*          primal,             /**< problem data */
+   SCIP_Bool             updateviolations    /**< marks whether the updating of violations is turned on */
+   )
+{
+   assert(primal != NULL);
+
+   primal->updateviolations = updateviolations;
 }

@@ -456,6 +456,52 @@ SCIP_RETCODE SCIPsolPrintRay(
    );
 
 
+/** reset violations of a solution */
+extern
+void SCIPsolResetViolations(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** update integrality violation of a solution */
+extern
+void SCIPsolUpdateIntegralityViolation(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             absviolintegrality  /**< absolute violation of integrality */
+   );
+
+/** update bound violation of a solution */
+extern
+void SCIPsolUpdateBoundViolation(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             absviolbounds,      /**< absolute violation of bounds */
+   SCIP_Real             relviolbounds       /**< relative violation of bounds */
+   );
+
+/** update LP row violation of a solution */
+extern
+void SCIPsolUpdateLPRowViolation(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             absviollprows,      /**< absolute violation of LP rows */
+   SCIP_Real             relviollprows       /**< relative violation of LP rows */
+   );
+
+/** update constraint violation of a solution */
+extern
+void SCIPsolUpdateConsViolation(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             absviolcons,        /**< absolute violation of constraint */
+   SCIP_Real             relviolcons         /**< relative violation of constraint */
+   );
+
+/** update violation of a constraint that is represented in the LP */
+extern
+void SCIPsolUpdateLPConsViolation(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             absviol,            /**< absolute violation of constraint */
+   SCIP_Real             relviol             /**< relative violation of constraint */
+   );
+
+
 
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.

@@ -23,6 +23,7 @@
 #include "double_description_method.h"
 
 #include <algorithm>
+#include <numeric>
 #include <bitset>
 #include <cmath> //std::fabs
 #include <functional>

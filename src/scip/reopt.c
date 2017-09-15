@@ -172,7 +172,7 @@ SCIP_RETCODE ensureSolsSize(
    if( num > reopt->soltree->solssize[runidx] )
    {
       int newsize = SCIPsetCalcMemGrowSize(set, num+1);
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reopt->soltree->sols[runidx], reopt->soltree->solssize[runidx],
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reopt->soltree->sols[runidx], reopt->soltree->solssize[runidx], \
              newsize) ); /*lint !e866 */
       reopt->soltree->solssize[runidx] = newsize;
    }
@@ -1418,11 +1418,11 @@ SCIP_RETCODE saveAfterDualBranchings(
 
       /* allocate block memory for node information */
       reopt->reopttree->reoptnodes[id]->afterdualvarssize = DEFAULT_MEM_VARAFTERDUAL;
-      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(reopt->reopttree->reoptnodes[id]->afterdualvars),
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(reopt->reopttree->reoptnodes[id]->afterdualvars), \
             reopt->reopttree->reoptnodes[id]->afterdualvarssize) );
-      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(reopt->reopttree->reoptnodes[id]->afterdualvarbounds),
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(reopt->reopttree->reoptnodes[id]->afterdualvarbounds), \
             reopt->reopttree->reoptnodes[id]->afterdualvarssize) );
-      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(reopt->reopttree->reoptnodes[id]->afterdualvarboundtypes),
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(reopt->reopttree->reoptnodes[id]->afterdualvarboundtypes), \
             reopt->reopttree->reoptnodes[id]->afterdualvarssize) );
    }
 
@@ -1440,11 +1440,11 @@ SCIP_RETCODE saveAfterDualBranchings(
    if( nbranchvars > reopt->reopttree->reoptnodes[id]->afterdualvarssize )
    {
       int newsize = SCIPsetCalcMemGrowSize(set, nbranchvars+1);
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(reopt->reopttree->reoptnodes[id]->afterdualvars),
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(reopt->reopttree->reoptnodes[id]->afterdualvars), \
             reopt->reopttree->reoptnodes[id]->afterdualvarssize, newsize) );
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(reopt->reopttree->reoptnodes[id]->afterdualvarbounds),
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(reopt->reopttree->reoptnodes[id]->afterdualvarbounds), \
             reopt->reopttree->reoptnodes[id]->afterdualvarssize, newsize) );
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(reopt->reopttree->reoptnodes[id]->afterdualvarboundtypes),
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(reopt->reopttree->reoptnodes[id]->afterdualvarboundtypes), \
             reopt->reopttree->reoptnodes[id]->afterdualvarssize, newsize) );
       reopt->reopttree->reoptnodes[id]->afterdualvarssize = newsize;
 
@@ -2286,11 +2286,11 @@ SCIP_RETCODE saveConsBounddisjuction(
    assert(*success);
 
    /* allocate memory for variables and values; boundtypes are not needed */
-   SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &reoptconsdata->vars,
+   SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &reoptconsdata->vars, \
          SCIPgetVarsBounddisjunction(NULL, cons), reoptconsdata->nvars) );
-   SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &reoptconsdata->vals,
+   SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &reoptconsdata->vals, \
          SCIPgetBoundsBounddisjunction(NULL, cons), reoptconsdata->nvars) );
-   SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &reoptconsdata->boundtypes,
+   SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &reoptconsdata->boundtypes, \
          SCIPgetBoundtypesBounddisjunction(NULL, cons), reoptconsdata->nvars) );
    reoptconsdata->varssize = reoptconsdata->nvars;
    reoptconsdata->lhs = SCIP_UNKNOWN;
@@ -2494,11 +2494,11 @@ SCIP_RETCODE collectDualInformation(
    {
       assert(reopt->reopttree->reoptnodes[id]->dualredscur == NULL);
       SCIP_ALLOC( BMSallocBlockMemory(blkmem, &reopt->reopttree->reoptnodes[id]->dualredscur) );
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &reopt->reopttree->reoptnodes[id]->dualredscur->vars,
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &reopt->reopttree->reoptnodes[id]->dualredscur->vars, \
             reopt->dualreds->vars, nbndchgs) );
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &reopt->reopttree->reoptnodes[id]->dualredscur->vals,
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &reopt->reopttree->reoptnodes[id]->dualredscur->vals, \
             reopt->dualreds->vals, nbndchgs) );
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &reopt->reopttree->reoptnodes[id]->dualredscur->boundtypes,
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &reopt->reopttree->reoptnodes[id]->dualredscur->boundtypes, \
             reopt->dualreds->boundtypes, nbndchgs) );
 
       reopt->reopttree->reoptnodes[id]->dualredscur->nvars = nbndchgs;
@@ -2520,11 +2520,11 @@ SCIP_RETCODE collectDualInformation(
       SCIP_ALLOC( BMSallocBlockMemory(blkmem, &reopt->reopttree->reoptnodes[id]->dualredsnex) );
       reopt->reopttree->reoptnodes[id]->dualredsnex->nvars = -1;
 
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &reopt->reopttree->reoptnodes[id]->dualredsnex->vars,
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &reopt->reopttree->reoptnodes[id]->dualredsnex->vars, \
             reopt->dualreds->vars, nbndchgs) );
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &reopt->reopttree->reoptnodes[id]->dualredsnex->vals,
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &reopt->reopttree->reoptnodes[id]->dualredsnex->vals, \
             reopt->dualreds->vals, nbndchgs) );
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &reopt->reopttree->reoptnodes[id]->dualredsnex->boundtypes,
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &reopt->reopttree->reoptnodes[id]->dualredsnex->boundtypes, \
             reopt->dualreds->boundtypes, nbndchgs) );
       reopt->reopttree->reoptnodes[id]->dualredsnex->nvars = nbndchgs;
       reopt->reopttree->reoptnodes[id]->dualredsnex->varssize = nbndchgs;
@@ -3233,11 +3233,11 @@ SCIP_RETCODE addGlobalCut(
 
       if( reoptconsdata->varssize < nbinvars+2*nintvars )
       {
-         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reoptconsdata->vars, reoptconsdata->varssize,
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reoptconsdata->vars, reoptconsdata->varssize, \
                (int)(nbinvars+2*nintvars)) );
-         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reoptconsdata->vals, reoptconsdata->varssize,
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reoptconsdata->vals, reoptconsdata->varssize, \
                (int)(nbinvars+2*nintvars)) );
-         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reoptconsdata->boundtypes, reoptconsdata->varssize,
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reoptconsdata->boundtypes, reoptconsdata->varssize, \
                (int)(nbinvars+2*nintvars)) );
          reoptconsdata->varssize = (int)(nbinvars+2*nintvars);
       }
@@ -5290,6 +5290,7 @@ SCIP_RETCODE SCIPreoptAddOptSol(
    int                   nvars               /**< number of original problem variables */
    )
 {
+   /* cppcheck-suppress unassignedVariable */
    SCIP_SOL* solcopy;
 
    assert(reopt != NULL);
@@ -5949,7 +5950,7 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
 
    reopt->lastseennode = SCIPnodeGetNumber(node);
 
-   SCIPsetDebugMsg(set, "catch event %"SCIP_EVENTTYPE_FORMAT" for node %lld (type:%d)\n", eventtype, SCIPnodeGetNumber(node), SCIPnodeGetType(node));
+   SCIPsetDebugMsg(set, "catch event %" SCIP_EVENTTYPE_FORMAT " for node %lld (type:%d)\n", eventtype, SCIPnodeGetNumber(node), SCIPnodeGetType(node));
 
    /* case 1: the current node is the root node
     * we can skip if the root is (in)feasible or branched w/o bound
@@ -7762,7 +7763,7 @@ SCIP_RETCODE SCIPreoptApplyCuts(
          {
             SCIP_CALL( SCIProwCreate(&cut, blkmem, set, stat, lp, cutname, ncols, cols, vals, cons->lhs, cons->rhs,
                   SCIP_ROWORIGINTYPE_REOPT, NULL, FALSE, FALSE, TRUE) );
-            SCIP_CALL( SCIPcutpoolAddRow(cutpool, blkmem, set, cut) );
+            SCIP_CALL( SCIPcutpoolAddRow(cutpool, blkmem, set, stat, lp, cut) );
 
             SCIPsetDebugMsg(set, "add cut <%s> of size %d to cutpool, [lhs, rhs] = [%g,%g] to node %lld\n", cutname,
                ncols, cons->lhs, cons->rhs, SCIPnodeGetNumber(node));

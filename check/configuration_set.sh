@@ -65,10 +65,10 @@ then
    exit 2
 fi
 
-# create results directory if it doesn't already exist
-if test ! -e $SCIPPATH/results
+# create $OUTPUTDIR directory if it doesn't already exist
+if test ! -e $SCIPPATH/$OUTPUTDIR
 then
-    mkdir $SCIPPATH/results
+    mkdir $SCIPPATH/$OUTPUTDIR
 fi
 
 # create settings directory if non-existent

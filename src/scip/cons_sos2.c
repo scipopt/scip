@@ -1491,7 +1491,9 @@ SCIP_DECL_CONSTRANS(consTransSOS2)
 static
 SCIP_DECL_CONSPRESOL(consPresolSOS2)
 {  /*lint --e{715}*/
+   /* cppcheck-suppress unassignedVariable */
    int oldnfixedvars;
+   /* cppcheck-suppress unassignedVariable */
    int oldndelconss;
    int nremovedvars;
    SCIP_EVENTHDLR* eventhdlr;
@@ -1809,6 +1811,10 @@ SCIP_DECL_CONSCHECK(consCheckSOS2)
                {
                   SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
                   *result = SCIP_INFEASIBLE;
+
+                  /* update constraint violation in solution */
+                  if ( sol != NULL )
+                     SCIPupdateSolConsViolation(scip, sol, 1.0, 1.0);
 
                   if ( printreason )
                   {

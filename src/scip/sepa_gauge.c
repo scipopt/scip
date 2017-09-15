@@ -289,7 +289,7 @@ SCIP_RETCODE computeInteriorPoint(
    {
       SCIP_Real* nlpisol;
 
-      SCIP_CALL( SCIPnlpiGetSolution(nlpi, nlpiprob, &nlpisol, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPnlpiGetSolution(nlpi, nlpiprob, &nlpisol, NULL, NULL, NULL, NULL) );
 
       assert(nlpisol != NULL);
       SCIPdebugMsg(scip, "NLP solved: sol found has objvalue = %g\n", nlpisol[objvaridx]);
@@ -1073,11 +1073,11 @@ SCIP_RETCODE SCIPincludeSepaGauge(
    SCIP_CALL( SCIPsetSepaExitsol(scip, sepa, sepaExitsolGauge) );
 
    /* add gauge separator parameters */
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/"SEPA_NAME"/nlpiterlimit",
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/nlpiterlimit",
          "iteration limit of NLP solver; 0 for no limit",
          &sepadata->nlpiterlimit, TRUE, DEFAULT_NLPITERLIM, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "separating/"SEPA_NAME"/nlptimelimit",
+   SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/nlptimelimit",
          "time limit of NLP solver; 0.0 for no limit",
          &sepadata->nlptimelimit, TRUE, DEFAULT_NLPTIMELIMIT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 

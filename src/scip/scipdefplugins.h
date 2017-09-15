@@ -180,10 +180,9 @@
 #include "scip/sepa_cgmip.h"
 #include "scip/sepa_clique.h"
 #include "scip/sepa_closecuts.h"
-#include "scip/sepa_cmir.h"
+#include "scip/sepa_aggregation.h"
 #include "scip/sepa_convexproj.h"
 #include "scip/sepa_disjunctive.h"
-#include "scip/sepa_flowcover.h"
 #include "scip/sepa_gauge.h"
 #include "scip/sepa_gomory.h"
 #include "scip/sepa_impliedbounds.h"
@@ -199,6 +198,7 @@
 #include "nlpi/nlpi_ipopt.h"
 #include "nlpi/nlpi_filtersqp.h"
 #include "nlpi/nlpi_worhp.h"
+#include "nlpi/nlpi_all.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -41,7 +41,7 @@
 
 #define NLPI_NAME              "filtersqp"                 /* short concise name of solver */
 #define NLPI_DESC              "Sequential Quadratic Programming trust region solver by R. Fletcher and S. Leyffer" /* description of solver */
-#define NLPI_PRIORITY          -10000                     /* priority of NLP solver */
+#define NLPI_PRIORITY          -1000                       /* priority of NLP solver */
 
 #define RANDSEED               26051979      /**< initial random seed */
 #define MAXPERTURB             0.01          /**< maximal perturbation of bounds in starting point heuristic */
@@ -917,7 +917,7 @@ SCIP_DECL_NLPICOPY( nlpiCopyFilterSQP )
 }  /*lint !e715*/
 
 /** destructor of NLP interface to free nlpi data
- * 
+ *
  * input:
  *  - nlpi datastructure for solver interface
  */
@@ -943,12 +943,12 @@ SCIP_DECL_NLPIFREE( nlpiFreeFilterSQP )
 }
 
 /** gets pointer for NLP solver
- * 
+ *
  *  to do dirty stuff
- * 
+ *
  * input:
  *  - nlpi datastructure for solver interface
- *  
+ *
  * return: void pointer to solver
  */
 static
@@ -958,7 +958,7 @@ SCIP_DECL_NLPIGETSOLVERPOINTER(nlpiGetSolverPointerFilterSQP)
 }  /*lint !e715*/
 
 /** creates a problem instance
- * 
+ *
  * input:
  *  - nlpi datastructure for solver interface
  *  - problem pointer to store the problem data
@@ -995,10 +995,10 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemFilterSQP)
 }  /*lint !e715*/
 
 /** free a problem instance
- * 
+ *
  * input:
  *  - nlpi datastructure for solver interface
- *  - problem pointer where problem data is stored 
+ *  - problem pointer where problem data is stored
  */
 static
 SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemFilterSQP)
@@ -1043,13 +1043,13 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemFilterSQP)
 }  /*lint !e715*/
 
 /** gets pointer to solver-internal problem instance
- * 
+ *
  *  to do dirty stuff
- * 
+ *
  * input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
- *  
+ *
  * return: void pointer to problem instance
  */
 static
@@ -1059,16 +1059,16 @@ SCIP_DECL_NLPIGETPROBLEMPOINTER(nlpiGetProblemPointerFilterSQP)
 }  /*lint !e715*/
 
 /** add variables
- * 
+ *
  * input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
- *  - nvars number of variables 
+ *  - nvars number of variables
  *  - lbs lower bounds of variables, can be NULL if -infinity
  *  - ubs upper bounds of variables, can be NULL if +infinity
  *  - varnames names of variables, can be NULL
  */
-static 
+static
 SCIP_DECL_NLPIADDVARS( nlpiAddVarsFilterSQP )
 {
    int oldnvars;
@@ -1166,7 +1166,7 @@ SCIP_DECL_NLPIADDVARS( nlpiAddVarsFilterSQP )
 
 /** add constraints
  * quadratic coefficients: row oriented matrix for each constraint
- * 
+ *
  * input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
@@ -1285,7 +1285,7 @@ SCIP_DECL_NLPIADDCONSTRAINTS( nlpiAddConstraintsFilterSQP )
 
 /** sets or overwrites objective, a minimization problem is expected
  *  May change sparsity pattern.
- * 
+ *
  * input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
@@ -1333,7 +1333,7 @@ SCIP_DECL_NLPISETOBJECTIVE( nlpiSetObjectiveFilterSQP )
 }  /*lint !e715*/
 
 /** change variable bounds
- * 
+ *
  * input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
@@ -1408,12 +1408,12 @@ SCIP_DECL_NLPICHGCONSSIDES( nlpiChgConsSidesFilterSQP )
 }  /*lint !e715*/
 
 /** delete a set of variables
- * 
+ *
  * input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
  *  - dstats deletion status of vars; 1 if var should be deleted, 0 if not
- * 
+ *
  * output:
  *  - dstats new position of var, -1 if var was deleted
  */
@@ -1447,12 +1447,12 @@ SCIP_DECL_NLPIDELVARSET( nlpiDelVarSetFilterSQP )
 }  /*lint !e715*/
 
 /** delete a set of constraints
- * 
+ *
  * input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
  *  - dstats deletion status of rows; 1 if row should be deleted, 0 if not
- * 
+ *
  * output:
  *  - dstats new position of row, -1 if row was deleted
  */
@@ -1481,7 +1481,7 @@ SCIP_DECL_NLPIDELCONSSET( nlpiDelConstraintSetFilterSQP )
 }  /*lint !e715*/
 
 /** changes (or adds) linear coefficients in a constraint or objective
- * 
+ *
  * input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
@@ -1514,7 +1514,7 @@ SCIP_DECL_NLPICHGLINEARCOEFS( nlpiChgLinearCoefsFilterSQP )
 }  /*lint !e715*/
 
 /** changes (or adds) coefficients in the quadratic part of a constraint or objective
- * 
+ *
  * input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
@@ -1588,14 +1588,14 @@ SCIP_DECL_NLPICHGEXPRTREE( nlpiChgExprtreeFilterSQP )
 }  /*lint !e715*/
 
 /** change one coefficient in the nonlinear part
- * 
+ *
  * input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
  *  - idxcons index of constraint or -1 for objective
  *  - idxparam index of parameter
  *  - value new value for nonlinear parameter
- * 
+ *
  * return: Error if parameter does not exist
  */
 static
@@ -1676,7 +1676,7 @@ SCIP_DECL_NLPISETINITIALGUESS( nlpiSetInitialGuessFilterSQP )
 }  /*lint !e715*/
 
 /** tries to solve NLP
- * 
+ *
  * input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
@@ -1981,11 +1981,11 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
 }  /*lint !e715*/
 
 /** gives solution status
- * 
+ *
  * input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
- * 
+ *
  * return: Solution Status
  */
 static
@@ -1997,11 +1997,11 @@ SCIP_DECL_NLPIGETSOLSTAT( nlpiGetSolstatFilterSQP )
 }  /*lint !e715*/
 
 /** gives termination reason
- * 
+ *
  * input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
- * 
+ *
  * return: Termination Status
  */
 static
@@ -2013,7 +2013,7 @@ SCIP_DECL_NLPIGETTERMSTAT( nlpiGetTermstatFilterSQP )
 }  /*lint !e715*/
 
 /** gives primal and dual solution values
- * 
+ *
  * solver can return NULL in dual values if not available
  * but if solver provides dual values for one side of variable bounds, then it must also provide those for the other side
  *
@@ -2026,6 +2026,7 @@ SCIP_DECL_NLPIGETTERMSTAT( nlpiGetTermstatFilterSQP )
  *  - consdualvalues buffer to store pointer to array to dual values of constraints, or NULL if not needed
  *  - varlbdualvalues buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed
  *  - varubdualvalues buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed
+ *  - objval buffer store the objective value, or NULL if not needed
  */
 static
 SCIP_DECL_NLPIGETSOLUTION( nlpiGetSolutionFilterSQP )
@@ -2060,16 +2061,27 @@ SCIP_DECL_NLPIGETSOLUTION( nlpiGetSolutionFilterSQP )
       *varubdualvalues = problem->varubdualvalues;
    }
 
+   if( objval != NULL )
+   {
+      if( problem->primalvalues != NULL )
+      {
+         /* TODO store last solution value instead of reevaluating the objective function */
+         SCIP_CALL( SCIPnlpiOracleEvalObjectiveValue(problem->oracle, problem->primalvalues, objval) );
+      }
+      else
+         *objval = SCIP_INVALID;
+   }
+
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
 /** gives solve statistics
- * 
+ *
  * input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
  *  - statistics pointer to store statistics
- * 
+ *
  * output:
  *  - statistics solve statistics
  */
@@ -2085,12 +2097,12 @@ SCIP_DECL_NLPIGETSTATISTICS( nlpiGetStatisticsFilterSQP )
 }  /*lint !e715*/
 
 /** gives required size of a buffer to store a warmstart object
- * 
+ *
  *  input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
  *  - size pointer to store required size for warmstart buffer
- * 
+ *
  * output:
  *  - size required size for warmstart buffer
  */
@@ -2104,14 +2116,14 @@ SCIP_DECL_NLPIGETWARMSTARTSIZE( nlpiGetWarmstartSizeFilterSQP )
 }  /*lint !e715*/
 
 /** stores warmstart information in buffer
- * 
+ *
  * required size of buffer should have been obtained by SCIPnlpiGetWarmstartSize before
- * 
+ *
  * input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
  *  - buffer memory to store warmstart information
- * 
+ *
  * output:
  *  - buffer warmstart information in solver specific data structure
  */
@@ -2125,9 +2137,9 @@ SCIP_DECL_NLPIGETWARMSTARTMEMO( nlpiGetWarmstartMemoFilterSQP )
 }  /*lint !e715*/
 
 /** sets warmstart information in solver
- * 
+ *
  * write warmstart to buffer
- * 
+ *
  * input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
@@ -2143,13 +2155,13 @@ SCIP_DECL_NLPISETWARMSTARTMEMO( nlpiSetWarmstartMemoFilterSQP )
 }  /*lint !e715*/
 
 /** gets integer parameter of NLP
- * 
+ *
  * input:
  *  - nlpi NLP interface structure
  *  - problem datastructure for problem instance
  *  - type parameter number
  *  - ival pointer to store the parameter value
- * 
+ *
  * output:
  *  - ival parameter value
  */
@@ -2233,7 +2245,7 @@ SCIP_DECL_NLPIGETINTPAR( nlpiGetIntParFilterSQP )
 }  /*lint !e715*/
 
 /** sets integer parameter of NLP
- * 
+ *
  * input:
  *  - nlpi NLP interface structure
  *  - problem datastructure for problem instance
@@ -2351,13 +2363,13 @@ SCIP_DECL_NLPISETINTPAR( nlpiSetIntParFilterSQP )
 }  /*lint !e715*/
 
 /** gets floating point parameter of NLP
- * 
+ *
  * input:
  *  - nlpi NLP interface structure
  *  - problem datastructure for problem instance, can be NULL only if type == SCIP_NLPPAR_INFINITY
  *  - type parameter number
  *  - dval pointer to store the parameter value
- * 
+ *
  * output:
  *  - dval parameter value
  */
@@ -2450,7 +2462,7 @@ SCIP_DECL_NLPIGETREALPAR( nlpiGetRealParFilterSQP )
 }  /*lint !e715*/
 
 /** sets floating point parameter of NLP
- * 
+ *
  * input:
  *  - nlpi NLP interface structure
  *  - problem datastructure for problem instance, can be NULL only if type == SCIP_NLPPAR_INFINITY
@@ -2571,13 +2583,13 @@ SCIP_DECL_NLPISETREALPAR( nlpiSetRealParFilterSQP )
 }  /*lint !e715*/
 
 /** gets string parameter of NLP
- * 
+ *
  * input:
  *  - nlpi NLP interface structure
  *  - problem datastructure for problem instance
  *  - type parameter number
  *  - sval pointer to store the string value, the user must not modify the string
- * 
+ *
  * output:
  *  - sval parameter value
  */
@@ -2660,7 +2672,7 @@ SCIP_DECL_NLPIGETSTRINGPAR( nlpiGetStringParFilterSQP )
 }  /*lint !e715*/
 
 /** sets string parameter of NLP
- * 
+ *
  * input:
  *  - nlpi NLP interface structure
  *  - problem datastructure for problem instance
