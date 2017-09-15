@@ -1044,6 +1044,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
    const int nedges = graph->edges;
    const int probtype = graph->stp_type;
    const SCIP_Bool pcmw = (probtype == STP_PCSPG || probtype == STP_MWCSP || probtype == STP_RPCSPG || probtype == STP_RMWCSP );
+   STP_Bool* stnodes;
 
    assert(runs >= 0);
    assert(graph != NULL);
@@ -1056,6 +1057,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &newsoledges, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &incumbentedges, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &stnodes, nnodes) );
 
    /*
     * initialize incumbent solution
@@ -1141,7 +1143,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
       {
          IDX** ancestors;
          GRAPH* psolgraph;
-         STP_Bool* stnodes;
+         STP_Bool* solnodes = NULL;
          int* soledges = NULL;
          SCIP_HEURDATA* tmheurdata;
          int nsoledges;
@@ -1271,16 +1273,19 @@ SCIP_RETCODE SCIPStpHeurRecRun(
             SCIPfreeBufferArray(scip, &cost);
          } /* graph->terms > 1 */
 
-         SCIPfreeMemoryArray(scip, &edgeweight);
-
-         /* allocate memory */
-         SCIP_CALL( SCIPallocBufferArray(scip, &stnodes, nnodes) );
-
          for( int i = 0; i < nedges; i++ )
             newsoledges[i] = UNKNOWN;
 
          for( int i = 0; i < nnodes; i++ )
             stnodes[i] = FALSE;
+
+         if( pcmw )
+         {
+            SCIP_CALL( SCIPallocBufferArray(scip, &solnodes, solgraph->norgmodelknots) );
+
+            for( int i = 0; i < solgraph->norgmodelknots; i++ )
+               solnodes[i] = FALSE;
+         }
 
          /*
           *  retransform solution found by heuristic
@@ -1304,6 +1309,15 @@ SCIP_RETCODE SCIPStpHeurRecRun(
 
                         stnodes[graph->head[i]] = TRUE;
                         stnodes[graph->tail[i]] = TRUE;
+
+                        if( pcmw )
+                        {
+                           assert(solgraph->orghead[curr->index] < solgraph->norgmodelknots);
+                           assert(solgraph->orgtail[curr->index] < solgraph->norgmodelknots);
+
+                           solnodes[solgraph->orghead[curr->index]] = TRUE;
+                           solnodes[solgraph->orgtail[curr->index]] = TRUE;
+                        }
 
                         curr = curr->parent;
                      }
@@ -1334,6 +1348,14 @@ SCIP_RETCODE SCIPStpHeurRecRun(
 
                stnodes[graph->head[i]] = TRUE;
                stnodes[graph->tail[i]] = TRUE;
+               if( pcmw )
+               {
+                  assert(solgraph->orghead[curr->index] < solgraph->norgmodelknots);
+                  assert(solgraph->orgtail[curr->index] < solgraph->norgmodelknots);
+
+                  solnodes[solgraph->orghead[curr->index]] = TRUE;
+                  solnodes[solgraph->orgtail[curr->index]] = TRUE;
+               }
 
                curr = curr->parent;
             }
@@ -1348,28 +1370,28 @@ SCIP_RETCODE SCIPStpHeurRecRun(
             }
          }
 
-         SCIPfreeMemoryArray(scip, &edgeancestor);
-
          if( pcmw )
          {
-            for( int i = 0; i < solgraph->knots; i++ )
+            for( int k = 0; k < solgraph->norgmodelknots; k++ )
             {
-               if( stnodes[i] == TRUE )
+               if( solnodes[k] )
                {
-                  curr = solgraph->pcancestors[i];
+                  curr = solgraph->pcancestors[k];
                   while( curr != NULL )
                   {
-                     if( stnodes[graph->tail[curr->index]] == FALSE )
-                        stnodes[graph->tail[curr->index]] = TRUE;
+                     const int i = edgeancestor[curr->index];
 
-                     if( stnodes[graph->head[curr->index]] == FALSE )
-                        stnodes[graph->head[curr->index]] = TRUE;
+                     stnodes[graph->tail[i]] = TRUE;
+                     stnodes[graph->head[i]] = TRUE;
 
                      curr = curr->parent;
                   }
                }
             }
+            SCIPfreeBufferArray(scip, &solnodes);
          }
+
+         SCIPfreeMemoryArray(scip, &edgeancestor);
 
          graph_free(scip, solgraph, TRUE);
 
@@ -1399,13 +1421,14 @@ SCIP_RETCODE SCIPStpHeurRecRun(
             failcount++;
          }
 
-         SCIPfreeBufferArray(scip, &stnodes);
          SCIPfreeBufferArrayNull(scip, &soledges);
       }
       else
       {
          failcount++;
       }
+
+      SCIPfreeMemoryArray(scip, &edgeweight);
 
       /* too many fails? */
       if( failcount >= REC_MAX_FAILS )
@@ -1414,6 +1437,8 @@ SCIP_RETCODE SCIPStpHeurRecRun(
          break;
       }
    }
+
+   SCIPfreeBufferArray(scip, &stnodes);
 
    /* improving solution found? */
    if( *solfound )
