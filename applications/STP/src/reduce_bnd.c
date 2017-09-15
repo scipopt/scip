@@ -46,6 +46,8 @@
 #define DEFAULT_DARUNS     5                  /**< number of runs for dual ascent heuristic */
 #define DEFAULT_NMAXROOTS  11                 /**< max number of roots to use for new graph in dual ascent heuristic */
 #define PERTUBATION_RATIO   0.05              /**< pertubation ratio for dual-ascent primal bound computation */
+#define PERTUBATION_RATIO_PC   0.005          /**< pertubation ratio for dual-ascent primal bound computation */
+#define SOLPOOL_SIZE 20                       /**< size of presolving solution pool */
 
 /** pertubate edge costs for PCMW dual-ascent */
 static
@@ -58,7 +60,6 @@ void pertubateEdgeCosts(
    int randomize
 )
 {
-   SCIP_Real pratio = PERTUBATION_RATIO;
    int e;
    const int root = graph->source[0];
    const int newroot = transgraph->source[0];
@@ -75,21 +76,22 @@ void pertubateEdgeCosts(
 
    if( graph->stp_type != STP_MWCSP )
    {
+      SCIP_Real pratio = PERTUBATION_RATIO_PC;
 
       for( int k = 0; k < nnodes; k++ )
       {
-         assert(Is_gterm(graph->term[k]) == Is_gterm(transgraph->term[k]));
+         assert(Is_gterm(graph->term[k]) == Is_gterm(transgraph->term[k]) || transgraph->grad[k] == 0);
 
          if( randomize > 8 )
-            pratio = ((SCIP_Real)(rand() % 10)) / (50.0) - 5.0 / 50.0;
+            pratio = ((SCIP_Real)(rand() % 10)) / (100.0) - 5.0 / 500.0;
          if( randomize > 6 )
-            pratio = ((SCIP_Real)(rand() % 10)) / (20.0);
+            pratio = ((SCIP_Real)(rand() % 10)) / (200.0);
          if( randomize > 4 )
-            pratio = ((SCIP_Real)(rand() % 10)) / (30.0);
+            pratio = ((SCIP_Real)(rand() % 10)) / (300.0);
          else if( randomize > 0 )
-            pratio = ((SCIP_Real)(rand() % 10)) / 100.0;
+            pratio = ((SCIP_Real)(rand() % 10)) / 1000.0;
          else
-            pratio = PERTUBATION_RATIO + ((SCIP_Real)(rand() % 10)) / 200.0;
+            pratio = PERTUBATION_RATIO_PC + ((SCIP_Real)(rand() % 10)) / 1000.0;
 
          assert(SCIPisPositive(scip, 1.0 - pratio));
          assert(SCIPisPositive(scip, 1.0 + pratio));
@@ -134,6 +136,8 @@ void pertubateEdgeCosts(
 
    for( int k = 0; k < nnodes; k++ )
    {
+      SCIP_Real pratio = PERTUBATION_RATIO;
+
       assert(Is_gterm(graph->term[k]) == Is_gterm(transgraph->term[k]));
 
       if( randomize > 8 )
@@ -1807,6 +1811,7 @@ SCIP_RETCODE da_reducePcMw(
    )
 {
    SCIP_HEURDATA* tmheurdata;
+   STPSOLPOOL* pool;
    GRAPH* transgraph;
    SCIP_Real* transcost;
    SCIP_Real ub;
@@ -1826,7 +1831,6 @@ SCIP_RETCODE da_reducePcMw(
    int run;
    int runs;
    int root;
-   int nsols;
    int nroots;
    int nterms;
    int nedges;
@@ -1875,9 +1879,9 @@ SCIP_RETCODE da_reducePcMw(
    SCIP_CALL( SCIPallocBufferArray(scip, &marked, extnedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &result2, nedges) );
 
+   SCIP_CALL( SCIPStpHeurRecInitPool(scip, &pool, nedges, SOLPOOL_SIZE) );
 
    /* 1. step: compute upper bound */
-
 
    k = 0;
    nterms = 0;
@@ -2285,6 +2289,7 @@ printf("raph->terms  %d \n", graph->terms );
    *nelims = nfixed;
 
    /* free memory */
+   SCIPStpHeurRecFreePool(scip, &pool);
    SCIPfreeBufferArrayNull(scip, &roots);
    SCIPfreeBufferArrayNull(scip, &result2);
    SCIPfreeBufferArray(scip, &marked);

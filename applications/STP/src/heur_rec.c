@@ -67,7 +67,7 @@
 #define RUNS_RESTRICTED     3
 #define RUNS_NORMAL         10
 #define CYCLES_PER_RUN      3
-#define REC_MAX_FAILS       5
+#define REC_MAX_FAILS       4
 #define REC_MIN_NSOLS       4
 
 #ifndef DEBUG
@@ -124,19 +124,81 @@ SCIP_DECL_PARAMCHGD(paramChgdRandomseed)
    return SCIP_OKAY;
 }
 
+#define COST_MAX_POLY_x0 500
+#define COST_MAX_POLY_x1 (-1000)
+#define COST_MAX_POLY_x2 500
+
+#define COST_MIN_POLY_x0 100
+#define COST_MIN_POLY_x1 (-200)
+#define COST_MIN_POLY_x2 100
+
+
 /** edge cost multiplier */
 static
-SCIP_Real costMultiplier(
+inline int edgecostMultiplier(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
+   SCIP_Real             avg                 /**< number of solutions containing this edge */
+   )
+{
+   SCIP_Real normed;
+   SCIP_Real upper;
+   SCIP_Real lower;
+   int factor;
+
+   /* if STP, then avg >= 2.0 */
+   assert(SCIPisGE(scip, avg, 1.0));
+   assert(heurdata->nusedsols  >= 2);
+
+   /* norm to [0,1] (STP) or [-1,1]  and compute polynomials */
+   normed = (avg - 2.0) / ((double) heurdata->nusedsols - 1.0);
+   upper = COST_MAX_POLY_x0 + COST_MAX_POLY_x1 * normed + COST_MAX_POLY_x2 * (normed * normed);
+   lower = COST_MIN_POLY_x0 + COST_MIN_POLY_x1 * normed + COST_MIN_POLY_x2 * (normed * normed);
+
+   // printf("NSOLS %d \n \n", nusedsols);
+
+   // printf("avg %f \n", avg);
+
+   if( !(SCIPisGE(scip, normed, -1.0) && SCIPisLE(scip, normed, 1.0)) )
+   {
+      printf("normed %f \n", normed);
+      exit(1);
+   }
+
+   assert(SCIPisGE(scip, normed, -1.0) && SCIPisLE(scip, normed, 1.0));
+   // printf("upp: %f low: %f \n", upper, lower);
+
+   lower = MAX(0.0, lower);
+   upper = MAX(0.0, upper);
+
+   factor = SCIPrandomGetInt(heurdata->randnumgen, lower, upper);
+
+   factor++;
+   // printf("factor %d \n", factor);
+
+   assert(factor >= 1);
+
+   return factor;
+}
+
+#if 0
+
+/** edge cost multiplier */
+static
+inline SCIP_Real costMultiplier(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
    SCIP_Real             avg                 /**< number of solutions containing this edge */
    )
 {
    int factor = 1;
-   int nusedsols = heurdata->nusedsols;
+   const int nusedsols = heurdata->nusedsols;
    SCIP_Real mult = 1;
 
+   /* if STP, then avg >= 2.0 */
    assert(SCIPisGE(scip, avg, 1.0));
+   assert(nusedsols >= 2);
+
 
    if( nusedsols <= 3 )
    {
@@ -152,6 +214,7 @@ SCIP_Real costMultiplier(
       {
          factor = SCIPrandomGetInt(heurdata->randnumgen, 40, 100);
       }
+      mult = (double) factor * (1.0 / avg);
    }
    else
    {
@@ -171,12 +234,15 @@ SCIP_Real costMultiplier(
       {
          factor = SCIPrandomGetInt(heurdata->randnumgen, 60, 90);
       }
+      mult = (double) factor * (1.0 / avg);
    }
 
-   mult =  (double) factor * (1.0 / avg);
+
 
    return mult;
 }
+
+#endif
 
 /** select solutions to be merged */
 static
@@ -278,18 +344,23 @@ SCIP_RETCODE selectdiffsols(
          int eqnedges = 0;
          int diffnedges = 0;
          const int k = perm[i];
-         SCIP_SOL* const solk = sols[k];
-         const int* const solKedges = poolsols[k]->soledges;
+         SCIP_SOL* solk = NULL;
+         const int* solKedges = NULL;
+
+         if( usestppool )
+            solKedges = poolsols[k]->soledges;
+         else
+            solk = sols[k];
 
          for( int e = 0; e < nedges; e += 2 )
          {
             SCIP_Bool hit;
 
             if( usestppool )
+               hit = (solKedges[e] == CONNECT || solKedges[e + 1] == CONNECT);
+            else
                hit = SCIPisEQ(scip, SCIPgetSolVal(scip, solk, vars[e]), 1.0)
                   || SCIPisEQ(scip, SCIPgetSolVal(scip, solk, vars[e + 1]), 1.0);
-            else
-               hit = (solKedges[e] == CONNECT || solKedges[e + 1] == CONNECT);
 
             if( hit )
             {
@@ -300,7 +371,7 @@ SCIP_RETCODE selectdiffsols(
                   const int tail = graph->tail[e];
                   const int head = graph->head[e];
 
-                  /* possible dummy edge? */
+                  /* no dummy edge? */
                   if( !(Is_term(graph->term[tail]) && Is_term(graph->term[head])) )
                      eqnedges++;
                }
@@ -480,7 +551,7 @@ SCIP_RETCODE buildsolgraph(
    const int*            incumbentedges,     /**< edges of solution to be used as recombination root */
    int*                  incumbentindex,     /**< index of ancestor of incumbent solution */
    int**                 edgeancestor,       /**< ancestor to edge edge */
-   int**                 edgeweight,         /**< fore each edge: number of solution that contain this edge */
+   int**                 edgeweight,         /**< for each edge: number of solution that contain this edge */
    SCIP_Bool*            success,            /**< new graph constructed? */
    SCIP_Bool             randomize           /**< select solution randomly? */
    )
@@ -835,10 +906,9 @@ SCIP_RETCODE SCIPStpHeurRecInitPool(
    assert(nedges > 0);
    assert(maxsize > 0);
 
-   SCIP_CALL( SCIPallocBuffer(scip, pool) );
+   SCIP_CALL( SCIPallocMemory(scip, pool) );
 
    dpool = *pool;
-
    SCIP_CALL( SCIPallocMemoryArray(scip, &(dpool->sols), maxsize) );
 
    for( int i = 0; i < maxsize; i++ )
@@ -876,7 +946,7 @@ void SCIPStpHeurRecFreePool(
       SCIPfreeMemory(scip, &sol);
    }
 
-   SCIPfreeBuffer(scip, pool);
+   SCIPfreeMemory(scip, pool);
 }
 
 
@@ -973,7 +1043,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
    const int nnodes = graph->knots;
    const int nedges = graph->edges;
    const int probtype = graph->stp_type;
-   const SCIP_Bool pcmw = (probtype == STP_PCSPG || probtype == STP_MWCSP || probtype == STP_RPCSPG);;
+   const SCIP_Bool pcmw = (probtype == STP_PCSPG || probtype == STP_MWCSP || probtype == STP_RPCSPG || probtype == STP_RMWCSP );
 
    assert(runs >= 0);
    assert(graph != NULL);
@@ -1030,7 +1100,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
    /* get objective value of incumbent */
    incumentobj = graph_computeSolVal(graph->cost, incumbentedges, 0.0, nedges);
 
-   SCIPdebugMessage("REC: incumbent obj: %f \n", incumentobj);
+   SCIPdebugMessage("REC: incumbent obj: %f , with offset: %f\n", incumentobj, SCIPprobdataGetOffset(scip) + incumentobj);
 
    /* main loop (for recombination) */
    for( int v = 0, failcount = 0; v < CYCLES_PER_RUN * runs && !SCIPisStopped(scip); v++ )
@@ -1052,7 +1122,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
       if( restrictheur )
          randn = SCIPrandomGetInt(heurdata->randnumgen, 0, 3);
       else
-         randn = SCIPrandomGetInt(heurdata->randnumgen, 0, 5);
+         randn = SCIPrandomGetInt(heurdata->randnumgen, 0, 6);
 
       if( (randn <= 2) || (nsols < 3) )
          heurdata->nusedsols = 2;
@@ -1103,7 +1173,6 @@ SCIP_RETCODE SCIPStpHeurRecRun(
             SCIP_Real* costrev;
             SCIP_Real* nodepriority;
             SCIP_Real maxcost;
-            SCIP_Real mult;
 
             int best_start;
 
@@ -1145,7 +1214,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
 
                      curr = curr->parent;
                   }
-                  avg = (double) avg / (double) i;
+                  avg = avg / (double) i;
                   assert(avg >= 1);
                }
                /* is an ancestor edge fixed? */
@@ -1156,13 +1225,11 @@ SCIP_RETCODE SCIPStpHeurRecRun(
                   nodepriority[solgraph->head[e]] /= 2.0;
                   nodepriority[solgraph->tail[e]] /= 2.0;
                }
-               else
-               {
-                  nodepriority[solgraph->head[e]] += avg - 1.0;
-                  nodepriority[solgraph->tail[e]] += avg - 1.0;
-                  mult = costMultiplier(scip, heurdata, avg);
-                  cost[e] = cost[e] * mult;
-               }
+
+               nodepriority[solgraph->head[e]] += avg - 1.0;
+               nodepriority[solgraph->tail[e]] += avg - 1.0;
+
+               cost[e] = cost[e] * edgecostMultiplier(scip, heurdata, avg);
 
                if( probtype == STP_DHCSTP && SCIPisLT(scip, cost[e], BLOCKED) && SCIPisGT(scip, cost[e], maxcost) )
                   maxcost = cost[e];
@@ -1307,7 +1374,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
          graph_free(scip, solgraph, TRUE);
 
          /* prune solution (in the original graph) */
-         if( pcmw || probtype == STP_RMWCSP )
+         if( pcmw )
             SCIP_CALL( SCIPStpHeurTMPrunePc(scip, graph, graph->cost, newsoledges, stnodes) );
          else if( probtype == STP_DCSTP )
             SCIP_CALL( SCIPStpHeurTMBuildTreeDc(scip, graph, newsoledges, stnodes) );
@@ -2104,9 +2171,10 @@ SCIP_DECL_HEUREXEC(heurExecRec)
 
    probtype = graph->stp_type;
    *result = SCIP_DIDNOTRUN;
-printf("IN REC %d \n", 0);
 
-   pcmw = (probtype == STP_PCSPG || probtype == STP_MWCSP || probtype == STP_RPCSPG);
+   SCIPdebugMessage("REC: checking ... \n");
+
+   pcmw = (probtype == STP_PCSPG || probtype == STP_MWCSP || probtype == STP_RPCSPG || probtype == STP_RMWCSP);
    nallsols = SCIPgetNSolsFound(scip);
    nreadysols = SCIPgetNSols(scip);
 
@@ -2115,7 +2183,7 @@ printf("IN REC %d \n", 0);
       return SCIP_OKAY;
 
    /* suspend heuristic? */
-   if( pcmw || probtype == STP_DHCSTP || probtype == STP_DCSTP || probtype == STP_RMWCSP )
+   if( pcmw || probtype == STP_DHCSTP || probtype == STP_DCSTP )
    {
       int i;
       if( heurdata->ncalls == 0 )
@@ -2192,7 +2260,6 @@ printf("IN REC %d \n", 0);
          newsolindex = SCIPsolGetIndex(sols[SCIPrandomGetInt(heurdata->randnumgen, 0, nreadysols)]);
    }
 
-printf("run REC heur %d \n", 0);
    /* run the actual heuristic */
    SCIP_CALL( SCIPStpHeurRecRun(scip, NULL, heur, heurdata, graph, vars, &newsolindex, runs, nreadysols, restrictheur, &solfound) );
 
