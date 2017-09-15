@@ -2741,7 +2741,7 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
       return SCIP_OKAY;
 
    /* only run if enough new cliques were created since the last successful call */
-   if( SCIPgetNCliquesCreated(scip) >= (1.0 + propdata->minnewcliques) * propdata->lastpresolncliques )
+   if( SCIPgetNCliquesCreated(scip) < (1.0 + propdata->minnewcliques) * propdata->lastpresolncliques )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
