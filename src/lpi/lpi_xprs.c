@@ -1320,7 +1320,6 @@ SCIP_RETCODE SCIPlpiScaleRow(
    SCIP_Real rhs;
    int nnonz;
    int ncols;
-   int beg;
    int i;
 
    assert(lpi != NULL);
@@ -1335,7 +1334,9 @@ SCIP_RETCODE SCIPlpiScaleRow(
    SCIP_CALL( ensureValMem(lpi, ncols) );
 
    /* get the row */
-   SCIP_CALL( SCIPlpiGetRows(lpi, row, row, &lhs, &rhs, &nnonz, &beg, lpi->indarray, lpi->valarray) );
+   SCIP_CALL( SCIPlpiGetSides(lpi, row, row, &lhs, &rhs) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetrows(lpi->xprslp, NULL, lpi->indarray, lpi->valarray, ncols, &nnonz, row, row) );
+   assert(nnonz <= ncols);
 
    /* scale row coefficients */
    for( i = 0; i < nnonz; ++i )
