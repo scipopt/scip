@@ -435,29 +435,15 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       if( !success )
          continue;
 
-      /* check whether the row is empty and either always fulfilled or trivially violated */
-      if( SCIPaggrRowGetNNz(aggrrow) == 0 )
-      {
-         if( SCIPisNegative(scip, SCIPaggrRowGetRhs(aggrrow)) )
-         {
-            SCIP_CALL( SCIPcutoffNode(scip, SCIPgetCurrentNode(scip)) );
-            cutoff = TRUE;
-
-            goto TERMINATE;
-         }
-         else
-            continue;
-      }
-
       SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, allowlocal, FIXINTEGRALRHS, NULL, NULL, minfrac, maxfrac,
          1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
 
       assert(allowlocal || !cutislocal);
 
       /* @todo Currently we are using the SCIPcalcMIR() function to compute the coefficients of the Gomory
-         *       cut. Alternatively, we could use the direct version (see thesis of Achterberg formula (8.4)) which
-         *       leads to cut a of the form \sum a_i x_i \geq 1. Rumor has it that these cuts are better.
-         */
+       *       cut. Alternatively, we could use the direct version (see thesis of Achterberg formula (8.4)) which
+       *       leads to cut a of the form \sum a_i x_i \geq 1. Rumor has it that these cuts are better.
+       */
 
       SCIPdebugMsg(scip, " -> success=%u, rhs=%g, efficacy=%g\n", success, cutrhs, cutefficacy);
 
@@ -471,9 +457,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
          }
          else if( SCIPisEfficacious(scip, cutefficacy) )
          {
-            /* Only take efficacious cuts, except for cuts with one non-zero coefficients (= bound
-               * changes); the latter cuts will be handeled internally in sepastore.
-               */
+            /* Only take efficient cuts, except for cuts with one non-zero coefficients (= bound
+             * changes); the latter cuts will be handled internally in sepastore.
+             */
             SCIP_ROW* cut;
             char cutname[SCIP_MAXSTRLEN];
             int v;
@@ -503,8 +489,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
             if( cutnnz == 1 )
             {
                /* add the bound change as cut to avoid that the LP gets modified. that would mean the LP is not flushed
-                  * and the method SCIPgetLPBInvRow() fails; SCIP internally will apply that bound change automatically
-                  */
+                * and the method SCIPgetLPBInvRow() fails; SCIP internally will apply that bound change automatically
+                */
                SCIP_CALL( SCIPaddCut(scip, NULL, cut, TRUE, &cutoff) );
                naddedcuts++;
             }
@@ -577,7 +563,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
    sepadata->lastncutsfound = SCIPgetNCutsFound(scip);
 
-   /* evalute the result of the separation */
+   /* evaluate the result of the separation */
    if( cutoff )
       *result = SCIP_CUTOFF;
    else if ( naddedcuts > 0 )

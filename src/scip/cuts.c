@@ -2548,7 +2548,6 @@ SCIP_RETCODE SCIPcalcMIR(
    SCIP_Bool localbdsused;
 
    assert(aggrrow != NULL);
-   assert(aggrrow->nnz >= 1);
    assert(SCIPisPositive(scip, scale));
    assert(success != NULL);
 
@@ -2564,50 +2563,52 @@ SCIP_RETCODE SCIPcalcMIR(
 
    /* initialize cut with aggregation */
    *cutnnz = aggrrow->nnz;
-
-   BMScopyMemoryArray(cutinds, aggrrow->inds, *cutnnz);
+   *cutislocal = aggrrow->local;
 
    SCIPquadprecProdQD(rhs, aggrrow->rhs, scale);
 
-   for( i = 0; i < *cutnnz; ++i )
+   if( *cutnnz > 0 )
    {
-      SCIP_Real QUAD(coef);
+      BMScopyMemoryArray(cutinds, aggrrow->inds, *cutnnz);
 
-      int k = aggrrow->inds[i];
-      QUAD_ARRAY_LOAD(coef, aggrrow->vals, k);
+      for( i = 0; i < *cutnnz; ++i )
+      {
+         SCIP_Real QUAD(coef);
 
-      SCIPquadprecProdQD(coef, coef, scale);
+         int k = aggrrow->inds[i];
+         QUAD_ARRAY_LOAD(coef, aggrrow->vals, k);
 
-      QUAD_ARRAY_STORE(tmpcoefs, k, coef);
+         SCIPquadprecProdQD(coef, coef, scale);
 
-      assert(QUAD_HI(coef) != 0.0);
+         QUAD_ARRAY_STORE(tmpcoefs, k, coef);
+
+         assert(QUAD_HI(coef) != 0.0);
+      }
+
+      /* Transform equation  a*x == b, lb <= x <= ub  into standard form
+       *   a'*x' == b, 0 <= x' <= ub'.
+       *
+       * Transform variables (lb or ub):
+       *   x'_j := x_j - lb_j,   x_j == x'_j + lb_j,   a'_j ==  a_j,   if lb is used in transformation
+       *   x'_j := ub_j - x_j,   x_j == ub_j - x'_j,   a'_j == -a_j,   if ub is used in transformation
+       * and move the constant terms "a_j * lb_j" or "a_j * ub_j" to the rhs.
+       *
+       * Transform variables (vlb or vub):
+       *   x'_j := x_j - (bl_j * zl_j + dl_j),   x_j == x'_j + (bl_j * zl_j + dl_j),   a'_j ==  a_j,   if vlb is used in transf.
+       *   x'_j := (bu_j * zu_j + du_j) - x_j,   x_j == (bu_j * zu_j + du_j) - x'_j,   a'_j == -a_j,   if vub is used in transf.
+       * move the constant terms "a_j * dl_j" or "a_j * du_j" to the rhs, and update the coefficient of the VLB variable:
+       *   a_{zl_j} := a_{zl_j} + a_j * bl_j, or
+       *   a_{zu_j} := a_{zu_j} + a_j * bu_j
+       */
+      SCIP_CALL( cutsTransformMIR(scip, sol, boundswitch, usevbds, allowlocal, fixintegralrhs, FALSE,
+            boundsfortrans, boundtypesfortrans, minfrac, maxfrac, tmpcoefs, QUAD(&rhs), cutinds, cutnnz, varsign, boundtype, &freevariable, &localbdsused) );
+      assert(allowlocal || !localbdsused);
+      *cutislocal = *cutislocal || localbdsused;
+
+      if( freevariable )
+         goto TERMINATE;
+      SCIPdebug(printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), cutinds, *cutnnz, FALSE, FALSE));
    }
-
-   *cutislocal = aggrrow->local;
-
-   /* Transform equation  a*x == b, lb <= x <= ub  into standard form
-    *   a'*x' == b, 0 <= x' <= ub'.
-    *
-    * Transform variables (lb or ub):
-    *   x'_j := x_j - lb_j,   x_j == x'_j + lb_j,   a'_j ==  a_j,   if lb is used in transformation
-    *   x'_j := ub_j - x_j,   x_j == ub_j - x'_j,   a'_j == -a_j,   if ub is used in transformation
-    * and move the constant terms "a_j * lb_j" or "a_j * ub_j" to the rhs.
-    *
-    * Transform variables (vlb or vub):
-    *   x'_j := x_j - (bl_j * zl_j + dl_j),   x_j == x'_j + (bl_j * zl_j + dl_j),   a'_j ==  a_j,   if vlb is used in transf.
-    *   x'_j := (bu_j * zu_j + du_j) - x_j,   x_j == (bu_j * zu_j + du_j) - x'_j,   a'_j == -a_j,   if vub is used in transf.
-    * move the constant terms "a_j * dl_j" or "a_j * du_j" to the rhs, and update the coefficient of the VLB variable:
-    *   a_{zl_j} := a_{zl_j} + a_j * bl_j, or
-    *   a_{zu_j} := a_{zu_j} + a_j * bu_j
-    */
-   SCIP_CALL( cutsTransformMIR(scip, sol, boundswitch, usevbds, allowlocal, fixintegralrhs, FALSE,
-         boundsfortrans, boundtypesfortrans, minfrac, maxfrac, tmpcoefs, QUAD(&rhs), cutinds, cutnnz, varsign, boundtype, &freevariable, &localbdsused) );
-   assert(allowlocal || !localbdsused);
-   *cutislocal = *cutislocal || localbdsused;
-
-   if( freevariable )
-      goto TERMINATE;
-   SCIPdebug(printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), cutinds, *cutnnz, FALSE, FALSE));
 
    /* Calculate fractionalities  f_0 := b - down(b), f_j := a'_j - down(a'_j) , and derive MIR cut
     *   a~*x' <= down(b)
@@ -2653,12 +2654,16 @@ SCIP_RETCODE SCIPcalcMIR(
    if( REALABS(scale)/(1.0 - QUAD_ROUND(f0)) > MAXCMIRSCALE )
       goto TERMINATE;
 
-   /* renormaliize f0 value */
+   /* renormalize f0 value */
    SCIPquadprecSumDD(f0, QUAD_HI(f0), QUAD_LO(f0));
 
    QUAD_ASSIGN(rhs, downrhs);
-   SCIP_CALL( cutsRoundMIR(scip, tmpcoefs, QUAD(&rhs), cutinds, cutnnz, varsign, boundtype, QUAD(f0)) );
-   SCIPdebug(printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), cutinds, *cutnnz, FALSE, FALSE));
+
+   if( *cutnnz > 0 )
+   {
+      SCIP_CALL( cutsRoundMIR(scip, tmpcoefs, QUAD(&rhs), cutinds, cutnnz, varsign, boundtype, QUAD(f0)) );
+      SCIPdebug(printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), cutinds, *cutnnz, FALSE, FALSE));
+   }
 
    /* substitute aggregated slack variables:
     *
@@ -2676,7 +2681,7 @@ SCIP_RETCODE SCIPcalcMIR(
     */
    SCIP_CALL( cutsSubstituteMIR(scip, aggrrow->rowweights, aggrrow->slacksign, aggrrow->rowsinds,
                                 aggrrow->nrows, scale, tmpcoefs, QUAD(&rhs), cutinds, cutnnz, QUAD(f0)) );
-   SCIPdebug(printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), cutinds, *cutnnz, FALSE, FALSE));
+   SCIPdebug( printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), cutinds, *cutnnz, FALSE, FALSE) );
 
    /* remove all nearly-zero coefficients from MIR row and relax the right hand side correspondingly in order to
     * prevent numerical rounding errors
