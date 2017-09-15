@@ -3614,6 +3614,7 @@ SCIP_RETCODE SCIPconflictInit(
 static
 SCIP_Bool conflictMarkBoundCheckPresence(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_BDCHGINFO*       bdchginfo,          /**< bound change to add to the conflict set */
    SCIP_Real             relaxedbd           /**< relaxed bound */
    )
@@ -3636,14 +3637,14 @@ SCIP_Bool conflictMarkBoundCheckPresence(
          /* the variable is already member of the conflict; hence check if the new bound is redundant */
          if( var->conflictlb > newbound )
          {
-            SCIPdebugMessage("ignoring redundant bound change <%s> >= %g since a stronger lower bound exist <%s> >= %g\n",
+            SCIPsetDebugMsg(set, "ignoring redundant bound change <%s> >= %g since a stronger lower bound exist <%s> >= %g\n",
                SCIPvarGetName(var), newbound, SCIPvarGetName(var), var->conflictlb);
             return TRUE;
          }
          else if( var->conflictlb == newbound ) /*lint !e777*/
          {
-            SCIPdebugMessage("ignoring redundant bound change <%s> >= %g since this lower bound is already present\n", SCIPvarGetName(var), newbound);
-            SCIPdebugMessage("adjust relaxed lower bound <%g> -> <%g>\n", var->conflictlb, relaxedbd);
+            SCIPsetDebugMsg(set, "ignoring redundant bound change <%s> >= %g since this lower bound is already present\n", SCIPvarGetName(var), newbound);
+            SCIPsetDebugMsg(set, "adjust relaxed lower bound <%g> -> <%g>\n", var->conflictlb, relaxedbd);
             var->conflictrelaxedlb = MAX(var->conflictrelaxedlb, relaxedbd);
             return TRUE;
          }
@@ -3667,14 +3668,14 @@ SCIP_Bool conflictMarkBoundCheckPresence(
          /* the variable is already member of the conflict; hence check if the new bound is redundant */
          if( var->conflictub < newbound )
          {
-            SCIPdebugMessage("ignoring redundant bound change <%s> <= %g since a stronger upper bound exist <%s> <= %g\n",
+            SCIPsetDebugMsg(set, "ignoring redundant bound change <%s> <= %g since a stronger upper bound exist <%s> <= %g\n",
                SCIPvarGetName(var), newbound, SCIPvarGetName(var), var->conflictub);
             return TRUE;
          }
          else if( var->conflictub == newbound ) /*lint !e777*/
          {
-            SCIPdebugMessage("ignoring redundant bound change <%s> <= %g since this upper bound is already present\n", SCIPvarGetName(var), newbound);
-            SCIPdebugMessage("adjust relaxed upper bound <%g> -> <%g>\n", var->conflictub, relaxedbd);
+            SCIPsetDebugMsg(set, "ignoring redundant bound change <%s> <= %g since this upper bound is already present\n", SCIPvarGetName(var), newbound);
+            SCIPsetDebugMsg(set, "adjust relaxed upper bound <%g> -> <%g>\n", var->conflictub, relaxedbd);
             var->conflictrelaxedub = MIN(var->conflictrelaxedub, relaxedbd);
             return TRUE;
          }
@@ -3723,7 +3724,7 @@ SCIP_RETCODE conflictAddConflictBound(
    /* mark the bound to be member of the conflict and check if a bound which is at least as tight is already member of
     * the conflict
     */
-   if( !conflictMarkBoundCheckPresence(conflict, bdchginfo, relaxedbd) )
+   if( !conflictMarkBoundCheckPresence(conflict, set, bdchginfo, relaxedbd) )
    {
       /* add the bound change to the current conflict set */
       SCIP_CALL( conflictsetAddBound(conflict->conflictset, blkmem, set, bdchginfo, relaxedbd) );
@@ -3782,7 +3783,7 @@ SCIP_RETCODE conflictQueueBound(
    /* mark the bound to be member of the conflict and check if a bound which is at least as tight is already member of
     * the conflict
     */
-   if( !conflictMarkBoundCheckPresence(conflict, bdchginfo, relaxedbd) )
+   if( !conflictMarkBoundCheckPresence(conflict, set, bdchginfo, relaxedbd) )
    {
       /* insert the bound change into the conflict queue */
       if( (!set->conf_preferbinary || SCIPvarIsBinary(SCIPbdchginfoGetVar(bdchginfo)))
