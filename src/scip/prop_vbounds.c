@@ -143,7 +143,7 @@
 #define getBoundString(lower) ((lower) ? "lb" : "ub")
 #define getBoundtypeString(type) ((type) == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper")
 #define indexGetBoundString(idx) (getBoundString(isIndexLowerbound(idx)))
-#define getOtherBoundIndex(idx) (((idx) % 2 == 0) ? (idx) + 1 : (idx) - 1)
+#define getOtherBoundIndex(idx) ((idx) + 1 - 2 * ((idx) % 2))
 
 /**@} */
 
