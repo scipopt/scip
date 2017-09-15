@@ -243,7 +243,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalSin)
 }
 
 /** separation initialization callback */
-/*TODO implement*/
+/* TODO: implement*/
 static
 SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSin)
 {  /*lint --e{715}*/
@@ -256,7 +256,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSin)
 }
 
 /** separation deinitialization callback */
-/*TODO implement */
+/* TODO: implement */
 static
 SCIP_DECL_CONSEXPR_EXPREXITSEPA(exitSepaSin)
 {  /*lint --e{715}*/
@@ -269,7 +269,7 @@ SCIP_DECL_CONSEXPR_EXPREXITSEPA(exitSepaSin)
 }
 
 /** expression separation callback */
-/*TODO implement*/
+/* TODO: implement*/
 static
 SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSin)
 {  /*lint --e{715}*/
