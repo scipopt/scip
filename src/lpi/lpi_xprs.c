@@ -1379,7 +1379,6 @@ SCIP_RETCODE SCIPlpiScaleCol(
    SCIP_Real obj;
    int nnonz;
    int nrows;
-   int beg;
    int i;
 
    assert(lpi != NULL);
@@ -1394,7 +1393,10 @@ SCIP_RETCODE SCIPlpiScaleCol(
    SCIP_CALL( ensureValMem(lpi, nrows) );
 
    /* get the column */
-   SCIP_CALL( SCIPlpiGetCols(lpi, col, col, &lb, &ub, &nnonz, &beg, lpi->indarray, lpi->valarray) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetlb(lpi->xprslp, &lb, col, col) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetub(lpi->xprslp, &ub, col, col) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetcols(lpi->xprslp, NULL, lpi->indarray, lpi->valarray, nrows, &nnonz, col, col) );
+   assert(nnonz <= nrows);
 
    /* get objective coefficient */
    SCIP_CALL( SCIPlpiGetObj(lpi, col, col, &obj) );
