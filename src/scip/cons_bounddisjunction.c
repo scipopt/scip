@@ -540,9 +540,9 @@ SCIP_Bool isOverlapping(
    SCIP*                 scip,
    SCIP_VAR*             var,
    SCIP_BOUNDTYPE        boundtype1,
-   SCIP_Bool             bound1,
+   SCIP_Real             bound1,
    SCIP_BOUNDTYPE        boundtype2,
-   SCIP_Bool             bound2
+   SCIP_Real             bound2
    )
 {
    SCIP_Bool overlapping = FALSE;
