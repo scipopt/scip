@@ -1418,95 +1418,95 @@ SCIP_RETCODE SCIPincludeSepaAggregation(
 
    /* add cmir separator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/"SEPA_NAME"/maxrounds",
+         "separating/" SEPA_NAME "/maxrounds",
          "maximal number of cmir separation rounds per node (-1: unlimited)",
          &sepadata->maxrounds, FALSE, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/"SEPA_NAME"/maxroundsroot",
+         "separating/" SEPA_NAME "/maxroundsroot",
          "maximal number of cmir separation rounds in the root node (-1: unlimited)",
          &sepadata->maxroundsroot, FALSE, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/"SEPA_NAME"/maxtries",
+         "separating/" SEPA_NAME "/maxtries",
          "maximal number of rows to start aggregation with per separation round (-1: unlimited)",
          &sepadata->maxtries, TRUE, DEFAULT_MAXTRIES, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/"SEPA_NAME"/maxtriesroot",
+         "separating/" SEPA_NAME "/maxtriesroot",
          "maximal number of rows to start aggregation with per separation round in the root node (-1: unlimited)",
          &sepadata->maxtriesroot, TRUE, DEFAULT_MAXTRIESROOT, -1, INT_MAX, NULL, NULL) );
      SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/"SEPA_NAME"/maxfails",
+         "separating/" SEPA_NAME "/maxfails",
          "maximal number of consecutive unsuccessful aggregation tries (-1: unlimited)",
          &sepadata->maxfails, TRUE, DEFAULT_MAXFAILS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/"SEPA_NAME"/maxfailsroot",
+         "separating/" SEPA_NAME "/maxfailsroot",
          "maximal number of consecutive unsuccessful aggregation tries in the root node (-1: unlimited)",
          &sepadata->maxfailsroot, TRUE, DEFAULT_MAXFAILSROOT, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/"SEPA_NAME"/maxaggrs",
+         "separating/" SEPA_NAME "/maxaggrs",
          "maximal number of aggregations for each row per separation round",
          &sepadata->maxaggrs, TRUE, DEFAULT_MAXAGGRS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/"SEPA_NAME"/maxaggrsroot",
+         "separating/" SEPA_NAME "/maxaggrsroot",
          "maximal number of aggregations for each row per separation round in the root node",
          &sepadata->maxaggrsroot, TRUE, DEFAULT_MAXAGGRSROOT, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/"SEPA_NAME"/maxsepacuts",
+         "separating/" SEPA_NAME "/maxsepacuts",
          "maximal number of cmir cuts separated per separation round",
          &sepadata->maxsepacuts, FALSE, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/"SEPA_NAME"/maxsepacutsroot",
+         "separating/" SEPA_NAME "/maxsepacutsroot",
          "maximal number of cmir cuts separated per separation round in the root node",
          &sepadata->maxsepacutsroot, FALSE, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "separating/"SEPA_NAME"/maxslack",
+         "separating/" SEPA_NAME "/maxslack",
          "maximal slack of rows to be used in aggregation",
          &sepadata->maxslack, TRUE, DEFAULT_MAXSLACK, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "separating/"SEPA_NAME"/maxslackroot",
+         "separating/" SEPA_NAME "/maxslackroot",
          "maximal slack of rows to be used in aggregation in the root node",
          &sepadata->maxslackroot, TRUE, DEFAULT_MAXSLACKROOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "separating/"SEPA_NAME"/densityscore",
+         "separating/" SEPA_NAME "/densityscore",
          "weight of row density in the aggregation scoring of the rows",
          &sepadata->densityscore, TRUE, DEFAULT_DENSITYSCORE, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "separating/"SEPA_NAME"/slackscore",
+         "separating/" SEPA_NAME "/slackscore",
          "weight of slack in the aggregation scoring of the rows",
          &sepadata->slackscore, TRUE, DEFAULT_SLACKSCORE, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "separating/"SEPA_NAME"/maxaggdensity",
+         "separating/" SEPA_NAME "/maxaggdensity",
          "maximal density of aggregated row",
          &sepadata->maxaggdensity, TRUE, DEFAULT_MAXAGGDENSITY, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "separating/"SEPA_NAME"/maxrowdensity",
+         "separating/" SEPA_NAME "/maxrowdensity",
          "maximal density of row to be used in aggregation",
          &sepadata->maxrowdensity, TRUE, DEFAULT_MAXROWDENSITY, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/"SEPA_NAME"/densityoffset",
+         "separating/" SEPA_NAME "/densityoffset",
          "additional number of variables allowed in row on top of density",
          &sepadata->densityoffset, TRUE, DEFAULT_DENSITYOFFSET, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "separating/"SEPA_NAME"/maxrowfac",
+         "separating/" SEPA_NAME "/maxrowfac",
          "maximal row aggregation factor",
          &sepadata->maxrowfac, TRUE, DEFAULT_MAXROWFAC, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/"SEPA_NAME"/maxtestdelta",
+         "separating/" SEPA_NAME "/maxtestdelta",
          "maximal number of different deltas to try (-1: unlimited)",
          &sepadata->maxtestdelta, TRUE, DEFAULT_MAXTESTDELTA, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "separating/"SEPA_NAME"/aggrtol",
+         "separating/" SEPA_NAME "/aggrtol",
          "tolerance for bound distances used to select continuous variable in current aggregated constraint to be eliminated",
          &sepadata->aggrtol, TRUE, DEFAULT_AGGRTOL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "separating/"SEPA_NAME"/trynegscaling",
+         "separating/" SEPA_NAME "/trynegscaling",
          "should negative values also be tested in scaling?",
          &sepadata->trynegscaling, TRUE, DEFAULT_TRYNEGSCALING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "separating/"SEPA_NAME"/fixintegralrhs",
+         "separating/" SEPA_NAME "/fixintegralrhs",
          "should an additional variable be complemented if f0 = 0?",
          &sepadata->fixintegralrhs, TRUE, DEFAULT_FIXINTEGRALRHS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "separating/"SEPA_NAME"/dynamiccuts",
+         "separating/" SEPA_NAME "/dynamiccuts",
          "should generated cuts be removed from the LP if they are no longer tight?",
          &sepadata->dynamiccuts, FALSE, DEFAULT_DYNAMICCUTS, NULL, NULL) );
 

@@ -2511,7 +2511,6 @@ SCIP_RETCODE propagateLongProof(
    SCIP_Real minact;
    SCIP_Real rhs;
    int nnz;
-   int i;
 
    assert(proofset != NULL);
 
@@ -2522,7 +2521,7 @@ SCIP_RETCODE propagateLongProof(
 
    minact = getMinActivity(transprob, proofset->aggrrow, NULL, NULL);
 
-   for( i = 0; i < nnz; i++ )
+   for( int i = 0; i < nnz; i++ )
    {
       SCIP_VAR* var;
       SCIP_Real val;
@@ -2833,8 +2832,7 @@ SCIP_RETCODE conflictFlushProofset(
          /* prefer an infeasibility proof */
          if( set->conf_prefinfproof && conflict->proofset->conflicttype == SCIP_CONFTYPE_BNDEXCEEDING )
          {
-            int i;
-            for( i = 0; i < conflict->nproofsets; i++ )
+            for( int i = 0; i < conflict->nproofsets; i++ )
             {
                if( conflict->proofsets[i]->conflicttype == SCIP_CONFTYPE_INFEASLP )
                {
@@ -6270,7 +6268,10 @@ SCIP_RETCODE getFarkasProof(
    }
 
    /* remove all coefficients that are too close to zero */
-   SCIPaggrRowCleanup(set->scip, farkasrow);
+   SCIPaggrRowRemoveZeros(set->scip, farkasrow, valid);
+
+   if( !(*valid) )
+      goto TERMINATE;
 
    /* calculate the current Farkas activity, always using the best bound w.r.t. the Farkas coefficient */
    *farkasact = getMinActivity(prob, farkasrow, curvarlbs, curvarubs);
@@ -6436,7 +6437,10 @@ SCIP_RETCODE getDualProof(
    }
 
    /* remove all nearly zero coefficients */
-   SCIPaggrRowCleanup(set->scip, farkasrow);
+   SCIPaggrRowRemoveZeros(set->scip, farkasrow, valid);
+
+   if( !(*valid) )
+      goto TERMINATE;
 
    /* check validity of the proof */
    *farkasact = getMinActivity(prob, farkasrow, curvarlbs, curvarubs);
@@ -6472,7 +6476,7 @@ void debugPrintViolationInfo(
  *  1) Apply cut generating functions
  *    - c-MIR
  *    - Flow-cover
- *    - TODO: implenent other subadditive functions
+ *    - TODO: implement other subadditive functions
  *  2) Remove continuous variables contributing with its global bound
  *    - TODO: implement a variant of non-zero-cancellation
  */
@@ -6494,14 +6498,11 @@ SCIP_RETCODE tightenDualray(
    )
 {/*lint --e{715}*/
    SCIP_VAR** vars;
-   SCIP_Real* subvals;
    int* inds;
-   int* subinds;
    SCIP_PROOFSET* proofset;
    SCIP_Real rhs;
-   SCIP_Real subrhs;
+   SCIP_Bool valid;
    int nvars;
-   int nsubvars;
    int nnz;
    int nbinvars;
    int ncontvars;
@@ -6651,14 +6652,7 @@ SCIP_RETCODE tightenDualray(
       inds = SCIPaggrRowGetInds(proofset->aggrrow);
       nnz = SCIPaggrRowGetNNz(proofset->aggrrow);
 
-      SCIP_CALL( SCIPsetAllocBufferArray(set, &subvals, nnz) );
-      SCIP_CALL( SCIPsetAllocBufferArray(set, &subinds, nnz) );
-
-      BMSclearMemoryArray(subvals, nnz);
-      subrhs = 0.0;
-      nsubvars = 0;
-
-      for( i = 0; i < nnz; i++ )
+      for( i = 0; i < nnz; )
       {
          SCIP_Real val;
          int idx = inds[i];
@@ -6670,7 +6664,10 @@ SCIP_RETCODE tightenDualray(
 
          /* skip integral variables */
          if( SCIPvarGetType(vars[idx]) != SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(vars[idx]) != SCIP_VARTYPE_IMPLINT )
+         {
+            i++;
             continue;
+         }
          else
          {
             SCIP_Real glbbd;
@@ -6681,27 +6678,23 @@ SCIP_RETCODE tightenDualray(
             locbd = (val < 0.0 ? curvarubs[idx] : curvarlbs[idx]);
 
             if( !SCIPsetIsEQ(set, glbbd, locbd) )
+            {
+               i++;
                continue;
+            }
 
             SCIPsetDebugMsg(set, "-> remove continuous variable <%s>: glb=[%g,%g], loc=[%g,%g], val=%g\n",
                   SCIPvarGetName(vars[idx]), SCIPvarGetLbGlobal(vars[idx]), SCIPvarGetUbGlobal(vars[idx]),
                   SCIPvarGetLbLocal(vars[idx]), SCIPvarGetUbLocal(vars[idx]), val);
 
-            /* update rhs of row that should be subtracted */
-            subrhs -= (glbbd * val);
+            SCIPaggrRowCancelVarWithBound(set->scip, proofset->aggrrow, vars[idx], i, &valid);
+            assert(valid); /* this should be always fulfilled at this place */
 
-            /* add negative coefficient such that it will cancel out */
-            subvals[nsubvars] = -val;
-            subinds[nsubvars++] = idx;
+            --nnz;
          }
       }
 
-      SCIP_CALL( SCIPaggrRowAddCustomCons(set->scip, proofset->aggrrow, subinds, subvals, nsubvars, subrhs, 1.0, 1, FALSE) );
-      SCIPaggrRowCleanup(set->scip, proofset->aggrrow);
-
-      /* free buffer */
-      SCIPsetFreeBufferArray(set, &subinds);
-      SCIPsetFreeBufferArray(set, &subvals);
+      SCIPaggrRowRemoveZeros(set->scip, proofset->aggrrow, &valid);
    }
 
    return SCIP_OKAY;
