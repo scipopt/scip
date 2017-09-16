@@ -39,7 +39,10 @@ static
 SCIP_Bool initProb(int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* objsen)
 {
    /* this is necessary because the theories don't setup and teardown after each call, but once before and after */
-   SCIP_CALL( SCIPlpiFree(&lpi) );
+   if ( lpi != NULL )
+   {
+      SCIP_CALL( SCIPlpiFree(&lpi) );
+   }
    SCIP_CALL( SCIPlpiCreate(&lpi, NULL, "prob", SCIP_OBJSEN_MAXIMIZE) );
 
    SCIP_Real obj[100] = { 1.0, 1.0 };
