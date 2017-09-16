@@ -520,7 +520,7 @@ Test(change, testrowmethods)
    /* problem data */
    SCIP_Real obj[5] = { 1.0, 1.0, 1.0, 1.0, 1.0 };
    SCIP_Real  lb[5] = { -1.0, -SCIPlpiInfinity(lpi), 0.0, -SCIPlpiInfinity(lpi), 0.0 };
-   SCIP_Real  ub[5] = { 10.0, SCIPlpiInfinity(lpi), SCIPlpiInfinity(lpi), 29.0 };
+   SCIP_Real  ub[5] = { 10.0, SCIPlpiInfinity(lpi), SCIPlpiInfinity(lpi), 29.0, 0.0 };
    int ncolsbefore, ncolsafter;
    int nrowsbefore, nrowsafter;
    SCIP_Real lhsvals[6] = { -SCIPlpiInfinity(lpi), -1.0,   -3e-10, 0.0, 1.0,  3e10 };
@@ -633,7 +633,7 @@ Test(change, testcolmethods)
    /* problem data */
    SCIP_Real obj[5] = { 1.0, 1.0, 1.0, 1.0, 1.0 };
    SCIP_Real lhs[5] = { -1.0, -SCIPlpiInfinity(lpi), 0.0, -SCIPlpiInfinity(lpi), 0.0 };
-   SCIP_Real rhs[5] = { 10.0, SCIPlpiInfinity(lpi), SCIPlpiInfinity(lpi), 29.0 };
+   SCIP_Real rhs[5] = { 10.0, SCIPlpiInfinity(lpi), SCIPlpiInfinity(lpi), 29.0, 0.0 };
    int ncolsbefore, ncolsafter;
    int nrowsbefore, nrowsafter;
    SCIP_Real lbvals[6] = { -SCIPlpiInfinity(lpi), -1.0, -3e-10, 0.0, 1.0, 3e10 };
