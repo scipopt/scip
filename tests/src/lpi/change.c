@@ -34,9 +34,9 @@
 static SCIP_LPI* lpi = NULL;
 static int nprobs = 10;
 
-/* write ncols, nrows and objsen into variables to check later */
+/** write ncols, nrows and objsen into variables to check later */
 static
-SCIP_Bool initProb( int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* objsen )
+SCIP_Bool initProb(int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* objsen)
 {
    /* this is necessary because the theories don't setup and teardown after each call, but once before and after */
    SCIP_CALL( SCIPlpiFree(&lpi) );
@@ -229,8 +229,6 @@ SCIP_Bool initProb( int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* ob
 }
 
 /* TEST SUITE */
-/* We treat -2 and 2 as -infinity and infinity resp., as SCIPlpiInfinity is not accepted by the TheoryDataPoints */
-
 static
 void setup(void)
 {
@@ -247,10 +245,11 @@ void teardown(void)
 
 TestSuite(change, .init = setup, .fini = teardown);
 
-/** TESTS **/
+/* TESTS **/
 
+/* We treat -2 and 2 as -infinity and infinity resp., as SCIPlpiInfinity is not accepted by the TheoryDataPoints */
 static
-SCIP_Real substituteInfinity( SCIP_Real inf )
+SCIP_Real substituteInfinity(SCIP_Real inf)
 {
    if( inf == 2 )
       return SCIPlpiInfinity(lpi);
@@ -260,8 +259,7 @@ SCIP_Real substituteInfinity( SCIP_Real inf )
       return inf;
 }
 
-/* Test SCIPlpiChgCoef */
-
+/** Test SCIPlpiChgCoef */
 static
 void checkChgCoef(int row, int col, SCIP_Real newval)
 {
@@ -469,7 +467,8 @@ Theory((SCIP_Real scale, int prob), change, testscalecol)
       for( int i = 0; i < nrows; i++ )
       {
          SCIP_CALL( SCIPlpiGetCoef(lpi, i, col, &colafter) );
-         cr_assert_float_eq( colbefore[i] * scale, colafter, EPS, "Found values: scale %.20f, colbefore[i] %.20f, colafter %.20f, i %d\n", scale, colbefore[i], colafter, i );
+         cr_assert_float_eq( colbefore[i] * scale, colafter, EPS, "Found values: scale %.20f, colbefore[i] %.20f, colafter %.20f, i %d\n",
+            scale, colbefore[i], colafter, i );
       }
    }
 }
@@ -509,11 +508,10 @@ Theory((SCIP_Real scale, int prob), change, testscalerow)
    }
 }
 
-/* Test for SCIPlpiAddRows SCIPlpiDelRowset SCIPlpiDelRows */
-
+/** Test for SCIPlpiAddRows, SCIPlpiDelRowset, SCIPlpiDelRows */
 Test(change, testrowmethods)
 {
-   // problem data
+   /* problem data */
    SCIP_Real obj[5] = { 1.0, 1.0, 1.0, 1.0, 1.0 };
    SCIP_Real  lb[5] = { -1.0, -SCIPlpiInfinity(lpi), 0.0, -SCIPlpiInfinity(lpi), 0.0 };
    SCIP_Real  ub[5] = { 10.0, SCIPlpiInfinity(lpi), SCIPlpiInfinity(lpi), 29.0 };
@@ -529,19 +527,20 @@ Test(change, testrowmethods)
    int iterations = 5;
    int k[5] = { 1, 6, -1, 4, -2 };
    int nnonzsdiff[5] = {1, 10, -1, 6, -3 };
+   int i;
+   int j;
 
-   // create original lp
+   /* create original lp */
    SCIP_CALL( SCIPlpiAddCols(lpi, 5, obj, lb, ub, NULL, 0, NULL, NULL, NULL) );
    SCIP_CALL( SCIPlpiGetNCols(lpi, &ncolsbefore) );
 
-
-   for( int i = 0; i < iterations; i++ )
+   for( i = 0; i < iterations; i++ )
    {
-      // setup row values
+      /* setup row values */
       int nrows = k[i];
       int nnonzsbefore, nnonzsafter;
 
-      // get data before modification
+      /* get data before modification */
       SCIP_CALL( SCIPlpiGetNNonz(lpi, &nnonzsbefore) );
       SCIP_CALL( SCIPlpiGetNRows(lpi, &nrowsbefore) );
 
@@ -550,7 +549,7 @@ Test(change, testrowmethods)
          SCIP_CALL( SCIPlpiDelRows(lpi, 0, -(1 + nrows)) );
       }
       else
-      { // nrows >= 0
+      {  /* nrows >= 0 */
          SCIP_Real lhs[100];
          SCIP_Real rhs[100];
          int beg[100];
@@ -559,19 +558,20 @@ Test(change, testrowmethods)
          int ind[100];
          SCIP_Real val[100];
 
-         SCIP_Real newlhs[100], newval[100];
+         SCIP_Real newlhs[100];
+         SCIP_Real newval[100];
          SCIP_Real newrhs[100];
          int newbeg[100], newind[100];
          int newnnonz;
 
-         for( int j = 0; j < nrows; j++ )
+         for( j = 0; j < nrows; j++ )
          {
             lhs[j] = lhsvals[j];
             rhs[j] = rhsvals[j];
             beg[j] = begvals[j];
          }
 
-         for( int j = 0; j < nnonz; j++ )
+         for( j = 0; j < nnonz; j++ )
          {
             ind[j] = indvals[j];
             val[j] = vals[j];
@@ -589,44 +589,42 @@ Test(change, testrowmethods)
          cr_assert_arr_eq(val, newval, nnonz);
       }
 
-      // checks
+      /* checks */
       SCIP_CALL( SCIPlpiGetNRows(lpi, &nrowsafter) );
-      cr_assert_eq(nrowsbefore+nrows, nrowsafter);
+      cr_assert_eq(nrowsbefore + nrows, nrowsafter);
 
       SCIP_CALL( SCIPlpiGetNNonz(lpi, &nnonzsafter) );
-      cr_assert_eq(nnonzsbefore+nnonzsdiff[i], nnonzsafter, "nnonzsbefore %d, nnonzsafter %d, nnonzsdiff[i] %d, in iteration %d\n", nnonzsbefore, nnonzsafter, nnonzsdiff[i], i);
+      cr_assert_eq(nnonzsbefore + nnonzsdiff[i], nnonzsafter, "nnonzsbefore %d, nnonzsafter %d, nnonzsdiff[i] %d, in iteration %d\n",
+         nnonzsbefore, nnonzsafter, nnonzsdiff[i], i);
 
       SCIP_CALL( SCIPlpiGetNCols(lpi, &ncolsafter) );
       cr_assert_eq(ncolsbefore, ncolsafter);
    }
 
-   // delete rowsets
-   // should have 8 rows now
+   /* delete rowsets */
+   /* should have 8 rows now */
    SCIP_CALL( SCIPlpiGetNRows(lpi, &nrowsbefore) );
    cr_assert_eq(8, nrowsbefore);
-   for( int i = 3; i > 0; i-- )
+   for( i = 3; i > 0; i-- )
    {
-      int rows[8];
+      int rows[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
-      memset(rows, 0, sizeof(*rows) * 8);
-      for( int j = 0; j < i; j++ )
-      {
+      for( j = 0; j < i; j++ )
          rows[(2 * j) + 1] = 1;
-      }
+
       SCIP_CALL( SCIPlpiGetNRows(lpi, &nrowsbefore) );
       SCIP_CALL( SCIPlpiDelRowset(lpi, rows) );
       SCIP_CALL( SCIPlpiGetNRows(lpi, &nrowsafter) );
 
       cr_assert_eq(nrowsbefore - i, nrowsafter);
-      // assert that the rows that are left are the ones I intended
+      /* assert that the rows that are left are the ones I intended */
    }
 }
 
-/* Test for SCIPlpiAddCols SCIPlpiDelColset SCIPlpiDelCols */
-
+/** Test for SCIPlpiAddCols, SCIPlpiDelColset, SCIPlpiDelCols */
 Test(change, testcolmethods)
 {
-   // problem data
+   /* problem data */
    SCIP_Real obj[5] = { 1.0, 1.0, 1.0, 1.0, 1.0 };
    SCIP_Real lhs[5] = { -1.0, -SCIPlpiInfinity(lpi), 0.0, -SCIPlpiInfinity(lpi), 0.0 };
    SCIP_Real rhs[5] = { 10.0, SCIPlpiInfinity(lpi), SCIPlpiInfinity(lpi), 29.0 };
@@ -642,19 +640,20 @@ Test(change, testcolmethods)
    int iterations = 5;
    int k[5] = { 1, 6, -1, 4, -2 };
    int nnonzsdiff[5] = {1, 10, -1, 6, -3 };
+   int i;
+   int j;
 
-   // create original lp
+   /* create original lp */
    SCIP_CALL( SCIPlpiAddRows(lpi, 5, lhs, rhs, NULL, 0, NULL, NULL, NULL) );
    SCIP_CALL( SCIPlpiGetNRows(lpi, &nrowsbefore) );
 
-
-   for( int i = 0; i < iterations; i++ )
+   for( i = 0; i < iterations; i++ )
    {
-      // setup col values
+      /* setup col values */
       int ncols = k[i];
       int nnonzsbefore, nnonzsafter;
 
-      // get data before modification
+      /* get data before modification */
       SCIP_CALL( SCIPlpiGetNNonz(lpi, &nnonzsbefore) );
       SCIP_CALL( SCIPlpiGetNCols(lpi, &ncolsbefore) );
 
@@ -663,7 +662,7 @@ Test(change, testcolmethods)
          SCIP_CALL( SCIPlpiDelCols(lpi, 0, -(1 + ncols)) );
       }
       else
-      { // ncols >= 0
+      {  /* ncols >= 0 */
          SCIP_Real lb[100];
          SCIP_Real ub[100];
          int beg[100];
@@ -677,21 +676,21 @@ Test(change, testcolmethods)
          int newbeg[100], newind[100];
          int newnnonz;
 
-         for( int j = 0; j < ncols; j++ )
+         for( j = 0; j < ncols; j++ )
          {
             lb[j] = lbvals[j];
             ub[j] = ubvals[j];
             beg[j] = begvals[j];
          }
 
-         for( int j = 0; j < nnonz; j++ )
+         for( j = 0; j < nnonz; j++ )
          {
             ind[j] = indvals[j];
             val[j] = vals[j];
          }
          SCIP_CALL( SCIPlpiAddCols(lpi, ncols, obj, lb, ub, NULL, nnonz, beg, ind, val) );
 
-         // checks
+         /* checks */
          SCIP_CALL( SCIPlpiGetCols(lpi, ncolsbefore, ncolsbefore-1+ncols, newlb, newub, &newnnonz, newbeg, newind, newval) );
          cr_assert_eq(nnonz, newnnonz, "expecting %d, got %d\n", nnonz, newnnonz);
 
@@ -702,36 +701,34 @@ Test(change, testcolmethods)
          cr_assert_arr_eq(val, newval, nnonz);
       }
 
-      // checks
+      /* checks */
       SCIP_CALL( SCIPlpiGetNRows(lpi, &nrowsafter) );
       cr_assert_eq(nrowsbefore, nrowsafter);
 
       SCIP_CALL( SCIPlpiGetNNonz(lpi, &nnonzsafter) );
-      cr_assert_eq(nnonzsbefore+nnonzsdiff[i], nnonzsafter, "nnonzsbefore %d, nnonzsafter %d, nnonzsdiff[i] %d, in iteration %d\n", nnonzsbefore, nnonzsafter, nnonzsdiff[i], i);
+      cr_assert_eq(nnonzsbefore+nnonzsdiff[i], nnonzsafter, "nnonzsbefore %d, nnonzsafter %d, nnonzsdiff[i] %d, in iteration %d\n",
+         nnonzsbefore, nnonzsafter, nnonzsdiff[i], i);
 
       SCIP_CALL( SCIPlpiGetNCols(lpi, &ncolsafter) );
       cr_assert_eq(ncolsbefore+ncols, ncolsafter);
    }
 
-   // delete rowsets
-   // should have 8 rows now
+   /* delete rowsets */
+   /* should have 8 rows now */
    SCIP_CALL( SCIPlpiGetNCols(lpi, &ncolsbefore) );
    cr_assert_eq(8, ncolsbefore);
-   for( int i = 3; i > 0; i-- )
+   for( i = 3; i > 0; i-- )
    {
-      int cols[8];
+      int cols[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
-      memset(cols, 0, sizeof(*cols) * 8);
-      for( int j = 0; j < i; j++ )
-      {
+      for( j = 0; j < i; j++ )
          cols[(2 * j) + 1] = 1;
-      }
+
       SCIP_CALL( SCIPlpiGetNCols(lpi, &ncolsbefore) );
       SCIP_CALL( SCIPlpiDelColset(lpi, cols) );
       SCIP_CALL( SCIPlpiGetNCols(lpi, &ncolsafter) );
 
       cr_assert_eq(ncolsbefore - i, ncolsafter);
-      // assert that the rows that are left are the ones I intended
+      /* assert that the rows that are left are the ones I intended */
    }
 }
-
