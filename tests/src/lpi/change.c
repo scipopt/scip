@@ -55,8 +55,9 @@ SCIP_Bool initProb(int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* obj
    int ind[100] = { 0, 1 };
 
    /* maximization problems, ncols is 1, nrows is 1*/
-   if( 0 == pos )
+   switch ( pos )
    {
+   case 0:
       /* unbounded - infeasible
        * (P):  max x
        * -x <= 1 (constr)
@@ -71,9 +72,9 @@ SCIP_Bool initProb(int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* obj
       *nnonz = 1;
       *objsen = SCIP_OBJSEN_MAXIMIZE;
       val[0] = -1.0;
-   }
-   else if( 1 == pos )
-   {
+      break;
+
+   case 1:
       /* optimal - optimal
        * (P):  max x
        *  x <= 0 (constr)
@@ -88,10 +89,10 @@ SCIP_Bool initProb(int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* obj
       *nnonz = 1;
       *objsen = SCIP_OBJSEN_MAXIMIZE;
       rhs[0] =  0.0;
-   }
-   /* minimization problems (duals of the above) */
-   else if( 2 == pos )
-   {
+      break;
+
+   case 2:
+      /* minimization problems (duals of the above) */
       *ncols = 1;
       *nrows = 1;
       *nnonz = 1;
@@ -99,9 +100,9 @@ SCIP_Bool initProb(int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* obj
       rhs[0] = SCIPlpiInfinity(lpi);
       lhs[0] = 1;
       val[0] = -1.0;
-   }
-   else if( 3 == pos )
-   {
+      break;
+
+   case 3:
       *ncols = 1;
       *nrows = 1;
       *nnonz = 1;
@@ -109,10 +110,10 @@ SCIP_Bool initProb(int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* obj
       rhs[0] = SCIPlpiInfinity(lpi);
       lhs[0] = 1;
       obj[0] = 0.0;
-   }
-   /* maximization problems, ncols is 2, *nrows is 2 */
-   else if( 4 == pos )
-   {
+      break;
+
+   case 4:
+      /* maximization problems, ncols is 2, *nrows is 2 */
       /* unbounded - infeasible
        * (P):  max x+y
        * -x    <= 1 (constr)
@@ -134,9 +135,9 @@ SCIP_Bool initProb(int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* obj
       *objsen = SCIP_OBJSEN_MAXIMIZE;
       val[0] = -1.0;
       val[1] = -1.0;
-   }
-   else if( 5 == pos )
-   {
+      break;
+
+   case 5:
       /* optimal - optimal
        * (P):  max x+y
        * x     <= 1 (constr)
@@ -156,9 +157,9 @@ SCIP_Bool initProb(int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* obj
       *nrows = 2;
       *nnonz = 2;
       *objsen = SCIP_OBJSEN_MAXIMIZE;
-   }
-   else if( 6 == pos )
-   {
+      break;
+
+   case 6:
       /* infeasible - infeasible
        * (P):  max x+y
        * -x    <= -1 (constr)
@@ -181,10 +182,10 @@ SCIP_Bool initProb(int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* obj
       rhs[0] = -1.0;
       rhs[1] = -1.0;
       val[0] = -1.0;
-   }
-   /* minimization problems (duals of the above) */
-   else if( 7 == pos )
-   {
+      break;
+
+   case 7:
+      /* minimization problems (duals of the above) */
       *ncols = 2;
       *nrows = 2;
       *nnonz = 2;
@@ -195,9 +196,9 @@ SCIP_Bool initProb(int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* obj
       lhs[1] = 1.0;
       val[0] = -1.0;
       val[1] = -1.0;
-   }
-   else if( 8 == pos )
-   {
+      break;
+
+   case 8:
       *ncols = 2;
       *nrows = 2;
       *nnonz = 2;
@@ -206,9 +207,9 @@ SCIP_Bool initProb(int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* obj
       rhs[1] = SCIPlpiInfinity(lpi);
       lhs[0] = 1.0;
       lhs[1] = 1.0;
-   }
-   else if( 9 == pos )
-   {
+      break;
+
+   case 9:
       *ncols = 2;
       *nrows = 2;
       *nnonz = 2;
@@ -220,15 +221,17 @@ SCIP_Bool initProb(int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* obj
       obj[0] = -1.0;
       obj[1] = -1.0;
       val[0] = -1.0;
-   }
-   else {
-      return false;
+      break;
+
+   default:
+      return FALSE;
    }
 
    SCIP_CALL( SCIPlpiChgObjsen(lpi, *objsen) );
    SCIP_CALL( SCIPlpiAddCols(lpi, *ncols, obj, lb, ub, NULL, 0, NULL, NULL, NULL) );
    SCIP_CALL( SCIPlpiAddRows(lpi, *nrows, lhs, rhs, NULL, *nnonz, beg, ind, val) );
-   return true;
+
+   return TRUE;
 }
 
 /* TEST SUITE */
