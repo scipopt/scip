@@ -1059,8 +1059,9 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRunPcMw(
       }
 
 //#ifdef SCIP_DEBUG
-      for( e = 0; e < nnewedges; e++ )
+      for( k = 0; k < nnewedges; k++ )
       {
+         e = newedges[k];
          assert(!(g->tail[e] == root && Is_pterm(g->term[g->head[e]])));
          assert(!(g->head[e] == root && Is_pterm(g->term[g->tail[e]])));
       }

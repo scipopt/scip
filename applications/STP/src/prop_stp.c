@@ -153,7 +153,7 @@ SCIP_RETCODE redbasedvarfixing(
    /* reduce graph */
 
    SCIP_CALL( level0(scip, copyg) );
-   SCIP_CALL( reduceStp(scip, &copyg, &offset, 5, FALSE, FALSE, edgestate) );
+   SCIP_CALL( reduceStp(scip, &copyg, &offset, 5, FALSE, FALSE, edgestate, FALSE) );
 
    assert(graph_valid(copyg));
 

@@ -70,6 +70,9 @@
 #define REC_MAX_FAILS       4
 #define REC_MIN_NSOLS       4
 
+#define COST_MAX_POLY_x0 500
+#define COST_MIN_POLY_x0 100
+
 #ifndef DEBUG
 #define DEBUG
 #endif
@@ -124,14 +127,6 @@ SCIP_DECL_PARAMCHGD(paramChgdRandomseed)
    return SCIP_OKAY;
 }
 
-#define COST_MAX_POLY_x0 500
-#define COST_MAX_POLY_x1 (-1000)
-#define COST_MAX_POLY_x2 500
-
-#define COST_MIN_POLY_x0 100
-#define COST_MIN_POLY_x1 (-200)
-#define COST_MIN_POLY_x2 100
-
 
 /** edge cost multiplier */
 static
@@ -144,37 +139,36 @@ inline int edgecostMultiplier(
    SCIP_Real normed;
    SCIP_Real upper;
    SCIP_Real lower;
+   SCIP_Real maxpolyx0;
+   SCIP_Real minpolyx0;
    int factor;
 
    /* if STP, then avg >= 2.0 */
    assert(SCIPisGE(scip, avg, 1.0));
    assert(heurdata->nusedsols  >= 2);
 
-   /* norm to [0,1] (STP) or [-1,1]  and compute polynomials */
+   maxpolyx0 = COST_MAX_POLY_x0 * (heurdata->nusedsols - 1);
+   minpolyx0 = COST_MIN_POLY_x0 * (heurdata->nusedsols - 1);
+
+   /* norm to [0,1] (STP) or [-1,1] and evaluate polynomials */
    normed = (avg - 2.0) / ((double) heurdata->nusedsols - 1.0);
-   upper = COST_MAX_POLY_x0 + COST_MAX_POLY_x1 * normed + COST_MAX_POLY_x2 * (normed * normed);
-   lower = COST_MIN_POLY_x0 + COST_MIN_POLY_x1 * normed + COST_MIN_POLY_x2 * (normed * normed);
-
-   // printf("NSOLS %d \n \n", nusedsols);
-
-   // printf("avg %f \n", avg);
+   upper = maxpolyx0 - 2 * maxpolyx0 * normed + maxpolyx0 * (normed * normed);
+   lower = minpolyx0 - 2 * minpolyx0 * normed + minpolyx0 * (normed * normed);
 
    if( !(SCIPisGE(scip, normed, -1.0) && SCIPisLE(scip, normed, 1.0)) )
    {
+      int todo;
       printf("normed %f \n", normed);
       exit(1);
    }
 
    assert(SCIPisGE(scip, normed, -1.0) && SCIPisLE(scip, normed, 1.0));
-   // printf("upp: %f low: %f \n", upper, lower);
 
    lower = MAX(0.0, lower);
    upper = MAX(0.0, upper);
 
    factor = SCIPrandomGetInt(heurdata->randnumgen, lower, upper);
-
    factor++;
-   // printf("factor %d \n", factor);
 
    assert(factor >= 1);
 
@@ -883,7 +877,10 @@ SCIP_Bool isInPool(
 
       /* pooledges == soledges? */
       if( j == nedges )
+      {
+         SCIPdebugMessage("Pool: solution is already contained \n");
          return TRUE;
+      }
    }
    return FALSE;
 }
@@ -946,6 +943,7 @@ void SCIPStpHeurRecFreePool(
       SCIPfreeMemory(scip, &sol);
    }
 
+   SCIPfreeMemoryArray(scip, &(dpool->sols));
    SCIPfreeMemory(scip, pool);
 }
 
@@ -979,12 +977,15 @@ SCIP_RETCODE SCIPStpHeurRecAddToPool(
    if( isInPool(soledges, pool) )
       return SCIP_OKAY;
 
+   SCIPdebugMessage("Pool: add to pool (current size: %d, max: %d) \n", poolsize, poolmaxsize);
+
    /* enlarge pool if possible */
    if( poolsize < poolmaxsize )
    {
-      sol = pool->sols[poolsize];
-      SCIP_CALL( SCIPallocMemory(scip, &sol) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(sol->soledges), nedges) );
+      SCIPdebugMessage("Pool: alloc memory at position %d \n", poolsize);
+
+      SCIP_CALL( SCIPallocMemory(scip, &(poolsols[poolsize])) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(poolsols[poolsize]->soledges), nedges) );
 
       poolsize++;
       pool->size++;
@@ -1102,7 +1103,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
    /* get objective value of incumbent */
    incumentobj = graph_computeSolVal(graph->cost, incumbentedges, 0.0, nedges);
 
-   SCIPdebugMessage("REC: incumbent obj: %f , with offset: %f\n", incumentobj, SCIPprobdataGetOffset(scip) + incumentobj);
+//   SCIPdebugMessage("REC: incumbent obj: %f , with offset: %f\n", incumentobj, SCIPprobdataGetOffset(scip) + incumentobj);
 
    /* main loop (for recombination) */
    for( int v = 0, failcount = 0; v < CYCLES_PER_RUN * runs && !SCIPisStopped(scip); v++ )
@@ -1158,9 +1159,9 @@ SCIP_RETCODE SCIPStpHeurRecRun(
          /* reduce new graph */
          if( probtype == STP_RPCSPG || probtype == STP_DHCSTP || probtype == STP_DCSTP
              || probtype == STP_NWSPG || probtype == STP_SAP || probtype == STP_RMWCSP )
-            SCIP_CALL( reduce(scip, &solgraph, &pobj, 0, 5) );
+            SCIP_CALL( reduce(scip, &solgraph, &pobj, 0, 5, FALSE) );
          else
-            SCIP_CALL( reduce(scip, &solgraph, &pobj, 2, 5) );
+            SCIP_CALL( reduce(scip, &solgraph, &pobj, 2, 5, FALSE) );
 
          SCIP_CALL( graph_pack(scip, solgraph, &psolgraph, FALSE) );
 
@@ -1211,7 +1212,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
                   {
                      i++;
                      avg += edgeweight[curr->index];
-                     if( SCIPvarGetUbGlobal(vars[edgeancestor[curr->index]] ) < 0.5 )
+                     if( !usestppool && SCIPvarGetUbGlobal(vars[edgeancestor[curr->index]] ) < 0.5 )
                         fixed = TRUE;
 
                      curr = curr->parent;
@@ -1312,6 +1313,10 @@ SCIP_RETCODE SCIPStpHeurRecRun(
 
                         if( pcmw )
                         {
+                           printf("solgraph->orghead[curr->index] %d \n", solgraph->orghead[curr->index]);
+                           printf("solgraph->norgmodelknots %d \n", solgraph->norgmodelknots);
+                              printf(" %d \n", solgraph->orgtail[curr->index]);
+
                            assert(solgraph->orghead[curr->index] < solgraph->norgmodelknots);
                            assert(solgraph->orgtail[curr->index] < solgraph->norgmodelknots);
 
@@ -2006,7 +2011,7 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
    newgraph->norgmodelknots = nsolnodes;
 
    dummy = 0.0;
-   SCIP_CALL( reduce(scip, &newgraph, &dummy, 1, 5) );
+   SCIP_CALL( reduce(scip, &newgraph, &dummy, 1, 5, FALSE) );
 
 
    /*** step 3: compute solution on new graph ***/
@@ -2279,10 +2284,14 @@ SCIP_DECL_HEUREXEC(heurExecRec)
          {
             newsolindex = currindex;
             minobj = SCIPgetSolOrigObj(scip, sols[i]);
+            SCIPdebugMessage("REC: better start solution, obj: %f \n", minobj);
          }
       }
       if( newsolindex == -1 )
+      {
+         SCIPdebugMessage("REC: random start solution\n");
          newsolindex = SCIPsolGetIndex(sols[SCIPrandomGetInt(heurdata->randnumgen, 0, nreadysols)]);
+      }
    }
 
    /* run the actual heuristic */

@@ -661,17 +661,17 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
       if( pc )
       {
          SCIP_CALL( redLoopPc(scip, prunegraph, vnoi, path, NULL, nodearrreal, cost, costrev, heap, state,
-               vbase, nodearrint, edgearrint, nodearrint2, (solgiven) ? solnode : NULL, nodearrchar, &offsetold, FALSE, FALSE, reductbound) );
+               vbase, nodearrint, edgearrint, nodearrint2, (solgiven) ? solnode : NULL, nodearrchar, &offsetold, FALSE, FALSE, reductbound, FALSE) );
       }
       else if( mw )
       {
          SCIP_CALL( redLoopMw(scip, prunegraph, vnoi, path, NULL, nodearrreal, cost, costrev, state,
-               vbase, nodearrint, edgearrint, nodearrint2, heap, (solgiven) ? solnode : NULL, nodearrchar, &offsetold, FALSE, FALSE, FALSE, reductbound) );
+               vbase, nodearrint, edgearrint, nodearrint2, heap, (solgiven) ? solnode : NULL, nodearrchar, &offsetold, FALSE, FALSE, FALSE, reductbound, FALSE) );
       }
       else
       {
          SCIP_CALL( redLoopStp(scip, prunegraph, vnoi, path, NULL, nodearrreal, cost, costrev, heap, state,
-               vbase, nodearrint, edgearrint, nodearrint2, (solgiven) ? solnode : NULL, nodearrchar, &offsetold, -1.0, FALSE, FALSE, TRUE, reductbound, NULL) );
+               vbase, nodearrint, edgearrint, nodearrint2, (solgiven) ? solnode : NULL, nodearrchar, &offsetold, -1.0, FALSE, FALSE, TRUE, reductbound, NULL, FALSE) );
       }
    }
 
@@ -1130,17 +1130,17 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
          if( pc )
          {
             SCIP_CALL( redLoopPc(scip, prunegraph, vnoi, path, NULL, nodearrreal, cost, costrev, heap, state,
-                  vbase, nodearrint, edgearrint, nodearrint2, solnode, nodearrchar, &offsetnew, FALSE, FALSE, reductbound) );
+                  vbase, nodearrint, edgearrint, nodearrint2, solnode, nodearrchar, &offsetnew, FALSE, FALSE, reductbound, FALSE) );
          }
          else if( mw )
          {
             SCIP_CALL( redLoopMw(scip, prunegraph, vnoi, path, NULL, nodearrreal, cost, costrev, state,
-                  vbase, nodearrint, edgearrint, nodearrint2, heap, solnode, nodearrchar, &offsetnew, FALSE, FALSE, FALSE, reductbound) );
+                  vbase, nodearrint, edgearrint, nodearrint2, heap, solnode, nodearrchar, &offsetnew, FALSE, FALSE, FALSE, reductbound, FALSE) );
          }
          else
          {
             SCIP_CALL( redLoopStp(scip, prunegraph, vnoi, path, NULL, nodearrreal, cost, costrev, heap, state, vbase, nodearrint, edgearrint,
-                  nodearrint2, solnode, nodearrchar, &offsetnew, -1.0, FALSE, FALSE, TRUE, reductbound, NULL));
+                  nodearrint2, solnode, nodearrchar, &offsetnew, -1.0, FALSE, FALSE, TRUE, reductbound, NULL, FALSE));
          }
 
          /* delete all vertices not reachable from the root */

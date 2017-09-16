@@ -182,7 +182,8 @@ SCIP_RETCODE reduceStp(
    int                   minelims,           /**< minimal number of edges to be eliminated in order to reiterate reductions */
    SCIP_Bool             dualascent,         /**< perform dualascent reductions? */
    SCIP_Bool             nodereplacing,      /**< should node replacement (by edges) be performed? */
-   int*                  edgestate           /**< array to store status of (directed) edge (for propagation, can otherwise be set to NULL) */
+   int*                  edgestate,          /**< array to store status of (directed) edge (for propagation, can otherwise be set to NULL) */
+   SCIP_Bool             userec              /**< use recombination heuristic? */
    )
 {
    PATH* vnoi;
@@ -260,7 +261,7 @@ SCIP_RETCODE reduceStp(
 
    /* reduction loop */
    SCIP_CALL( redLoopStp(scip, g, vnoi, path, gnodearr, nodearrreal, edgearrreal, edgearrreal2, heap, state,
-         vbase, nodearrint, edgearrint, nodearrint2, NULL, nodearrchar, fixed, -1.0, dualascent, bred, nodereplacing, reductbound, edgestate) );
+         vbase, nodearrint, edgearrint, nodearrint2, NULL, nodearrchar, fixed, -1.0, dualascent, bred, nodereplacing, reductbound, edgestate, userec) );
 
    SCIPdebugMessage("Reduction Level 1: Fixed Cost = %.12e\n", *fixed);
 
@@ -295,7 +296,8 @@ SCIP_RETCODE reducePc(
    GRAPH**               graph,              /**< graph data structure */
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
    int                   minelims,           /**< minimal number of edges to be eliminated in order to reiterate reductions */
-   STP_Bool              dualascent          /**< perform dual ascent reductions? */
+   STP_Bool              dualascent,         /**< perform dual ascent reductions? */
+   SCIP_Bool             userec              /**< use recombination heuristic? */
    )
 {
    PATH* vnoi;
@@ -382,7 +384,7 @@ SCIP_RETCODE reducePc(
 
    /* reduction loop */
    SCIP_CALL( redLoopPc(scip, g, vnoi, path, gnodearr, nodearrreal, exedgearrreal, exedgearrreal2, heap, state,
-         vbase, nodearrint, edgearrint, nodearrint2, NULL, nodearrchar, fixed, dualascent, bred, reductbound) );
+         vbase, nodearrint, edgearrint, nodearrint2, NULL, nodearrchar, fixed, dualascent, bred, reductbound, userec) );
 
    /* free memory */
 
@@ -415,7 +417,8 @@ SCIP_RETCODE reduceMw(
    GRAPH**               graph,              /**< graph data structure */
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
    int                   minelims,           /**< minimal number of edges to be eliminated in order to reiterate reductions */
-   STP_Bool              advanced            /**< perform advanced reductions? */
+   STP_Bool              advanced,           /**< perform advanced reductions? */
+   SCIP_Bool             userec              /**< use recombination heuristic? */
    )
 {
    GRAPH* g = *graph;
@@ -493,7 +496,7 @@ SCIP_RETCODE reduceMw(
 
    /* reduction loop */
    SCIP_CALL( redLoopMw(scip, g, vnoi, path, gnodearr, nodearrreal, edgearrreal, edgearrreal2, state,
-         vbase, nodearrint, edgearrint, nodearrint2, nodearrint3, NULL, nodearrchar, fixed, advanced, bred, advanced, redbound) );
+         vbase, nodearrint, edgearrint, nodearrint2, nodearrint3, NULL, nodearrchar, fixed, advanced, bred, advanced, redbound, userec) );
 
    /* free memory */
    SCIPfreeBufferArrayNull(scip, &edgearrreal2);
@@ -891,7 +894,8 @@ SCIP_RETCODE redLoopMw(
    STP_Bool              advanced,
    STP_Bool              bred,
    STP_Bool              tryrmw,             /**< try to convert problem to RMWCSP? Only possible if advanced = TRUE */
-   int                   redbound            /**< minimal number of edges to be eliminated in order to reiterate reductions */
+   int                   redbound,           /**< minimal number of edges to be eliminated in order to reiterate reductions */
+   SCIP_Bool             userec              /**< use recombination heuristic? */
    )
 {
    SCIP_Real timelimit;
@@ -985,7 +989,7 @@ SCIP_RETCODE redLoopMw(
 
       if( (da || (advanced && extensive)) )
       {
-         SCIP_CALL( da_reducePcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint, state, nodearrchar, &daelims, TRUE, FALSE, FALSE, FALSE) );
+         SCIP_CALL( da_reducePcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint, state, nodearrchar, &daelims, TRUE, FALSE, FALSE, FALSE, userec) );
 
          if( daelims <= 2 * redbound )
          {
@@ -1084,7 +1088,7 @@ SCIP_RETCODE redLoopMw(
          SCIP_CALL( cnsAdvReduction(scip, g, nodearrint2, &cnsadvelims) );
 #endif
 
-         SCIP_CALL( da_reducePcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint, state, nodearrchar, &daelims, TRUE, (g->terms > MW_TERM_BOUND), FALSE, FALSE) );
+         SCIP_CALL( da_reducePcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint, state, nodearrchar, &daelims, TRUE, (g->terms > MW_TERM_BOUND), FALSE, FALSE, userec) );
 
          if( cnsadvelims + daelims >= redbound || (extensive && (cnsadvelims + daelims > 0))  )
          {
@@ -1104,7 +1108,7 @@ SCIP_RETCODE redLoopMw(
 
    if( tryrmw )
    {
-      SCIP_CALL( da_reducePcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint, state, nodearrchar, &daelims, TRUE, FALSE, FALSE, TRUE) );
+      SCIP_CALL( da_reducePcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint, state, nodearrchar, &daelims, TRUE, FALSE, FALSE, TRUE, userec) );
 
       npvelims = 0;
       anselims = 0;
@@ -1149,7 +1153,8 @@ SCIP_RETCODE redLoopPc(
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
    SCIP_Bool             dualascent,
    SCIP_Bool             bred,
-   int                   reductbound         /**< minimal number of edges to be eliminated in order to reiterate reductions */
+   int                   reductbound,        /**< minimal number of edges to be eliminated in order to reiterate reductions */
+   SCIP_Bool             userec              /**< use recombination heuristic? */
    )
 {
    SCIP_Real ub;
@@ -1318,7 +1323,7 @@ SCIP_RETCODE redLoopPc(
          }
          else
          {
-            SCIP_CALL( da_reducePcMw(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, vbase, heap, edgearrint, state, nodearrchar, &danelims, TRUE, FALSE, FALSE, FALSE) );
+            SCIP_CALL( da_reducePcMw(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, vbase, heap, edgearrint, state, nodearrchar, &danelims, TRUE, FALSE, FALSE, FALSE, userec) );
          }
 
          if( danelims <= reductbound )
@@ -1357,7 +1362,7 @@ SCIP_RETCODE redLoopPc(
          }
          else
          {
-            SCIP_CALL( da_reducePcMw(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, vbase, heap, edgearrint, state, nodearrchar, &danelims, TRUE, TRUE, FALSE, FALSE) );
+            SCIP_CALL( da_reducePcMw(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, vbase, heap, edgearrint, state, nodearrchar, &danelims, TRUE, TRUE, FALSE, FALSE, userec) );
          }
          SCIP_CALL( degree_test_pc(scip, g, &fix, &degnelims, solnode, TRUE) );
          if( danelims + degnelims > reductbound || (extensive && danelims + degnelims > 0) )
@@ -1417,7 +1422,8 @@ SCIP_RETCODE redLoopStp(
    SCIP_Bool             bred,
    SCIP_Bool             nodereplacing,      /**< should node replacement (by edges) be performed? */
    int                   reductbound,        /**< minimal number of edges to be eliminated in order to reiterate reductions */
-   int*                  edgestate           /**< array to store status of (directed) edge (for propagation, can otherwise be set to NULL) */
+   int*                  edgestate,           /**< array to store status of (directed) edge (for propagation, can otherwise be set to NULL) */
+   SCIP_Bool             userec              /**< use recombination heuristic? */
    )
 {
    SCIP_Real    ub;
@@ -1585,7 +1591,8 @@ SCIP_RETCODE reduce(
    GRAPH**               graph,              /**< graph structure */
    SCIP_Real*            offset,             /**< pointer to store offset generated by reductions */
    int                   level,              /**< reduction level 0: none, 1: basic, 2: advanced */
-   int                   minelims            /**< minimal amount of reductions to reiterate reduction methods */
+   int                   minelims,           /**< minimal amount of reductions to reiterate reduction methods */
+   SCIP_Bool             userec              /**< use recombination heuristic? */
    )
 {
    int stp_type;
@@ -1619,11 +1626,11 @@ SCIP_RETCODE reduce(
    {
       if( stp_type == STP_PCSPG || stp_type == STP_RPCSPG )
       {
-         SCIP_CALL( reducePc(scip, (graph), offset, minelims, FALSE) );
+         SCIP_CALL( reducePc(scip, (graph), offset, minelims, FALSE, FALSE) );
       }
       else if( stp_type == STP_MWCSP )
       {
-         SCIP_CALL( reduceMw(scip, (graph), offset, minelims, FALSE) );
+         SCIP_CALL( reduceMw(scip, (graph), offset, minelims, FALSE, FALSE) );
       }
       else if( stp_type == STP_DHCSTP )
       {
@@ -1639,18 +1646,18 @@ SCIP_RETCODE reduce(
       }
       else
       {
-         SCIP_CALL( reduceStp(scip, (graph), offset, minelims, FALSE, TRUE, NULL) );
+         SCIP_CALL( reduceStp(scip, (graph), offset, minelims, FALSE, TRUE, NULL, FALSE) );
       }
    }
    else if( level == 2 )
    {
       if( stp_type == STP_PCSPG || stp_type == STP_RPCSPG )
       {
-         SCIP_CALL( reducePc(scip, (graph), offset, minelims, TRUE) );
+         SCIP_CALL( reducePc(scip, (graph), offset, minelims, TRUE, userec) );
       }
       else if( stp_type == STP_MWCSP )
       {
-         SCIP_CALL( reduceMw(scip, (graph), offset, minelims, TRUE) );
+         SCIP_CALL( reduceMw(scip, (graph), offset, minelims, TRUE, userec) );
       }
       else if( stp_type == STP_DHCSTP )
       {
@@ -1666,7 +1673,7 @@ SCIP_RETCODE reduce(
       }
       else
       {
-         SCIP_CALL( reduceStp(scip, (graph), offset, minelims, TRUE, TRUE, NULL) );
+         SCIP_CALL( reduceStp(scip, (graph), offset, minelims, TRUE, TRUE, NULL, userec) );
       }
    }
    SCIPdebugMessage("offset : %f \n", *offset);

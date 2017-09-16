@@ -665,7 +665,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    if( reducegraph )
    {
       SCIP_CALL( redLoopStp(scip, prunegraph, vnoi, path, NULL, nodearrreal, cost, costrev, heap, state,
-            vbase, nodearrint, soledge, nodearrint2, solnode, nodearrchar, &offsetnew, -1.0, TRUE, FALSE, TRUE, reductbound, NULL) );
+            vbase, nodearrint, soledge, nodearrint2, solnode, nodearrchar, &offsetnew, -1.0, TRUE, FALSE, TRUE, reductbound, NULL, TRUE) );
    }
 
    npruneedges = prunegraph->edges;
@@ -775,7 +775,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
 
       /* reduce graph, using the new upper bound and not letting BND eliminate solution edges */
       SCIP_CALL( redLoopStp(scip, prunegraph, vnoi, path, NULL, nodearrreal, cost, costrev, heap, state,
-            vbase, nodearrint, soledge, nodearrint2, solnode, nodearrchar, &offsetnew, -1.0, TRUE, FALSE, TRUE, reductbound, NULL) );
+            vbase, nodearrint, soledge, nodearrint2, solnode, nodearrchar, &offsetnew, -1.0, TRUE, FALSE, TRUE, reductbound, NULL, TRUE) );
 
       /* graph vanished? */
       if( prunegraph->grad[prunegraph->source[0]] == 0 )
@@ -1171,7 +1171,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRunPcMw(
 
       /* reduction loop */
       SCIP_CALL( redLoopMw(scip, prunegraph, vnoi, path, NULL, NULL, NULL, NULL, state,
-            vbase, nodearrint, NULL, nodearrint2, nodearrint3, solnode, nodearrchar, &offsetnew, FALSE, FALSE, FALSE, reductbound) );
+            vbase, nodearrint, NULL, nodearrint2, nodearrint3, solnode, nodearrchar, &offsetnew, FALSE, FALSE, FALSE, reductbound, TRUE) );
 
       assert(graph_valid(prunegraph));
 
