@@ -1237,15 +1237,6 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRunPcMw(
       /* calculate objective value of solution */
       objprune = graph_computeSolVal(prunegraph->cost, soledge, offsetnew, nedges);
 
-      if( PRINTDEBUG )
-         printf("SCIPStpHeurPruneRun:  weight %f \n", objprune + SCIPprobdataGetOffset(scip));
-
-      printf("root %d \n", prunegraph->source[0]);
-#if 0
-      for( e = 0; e < nedges; e++ )
-         if( soledge[e] == CONNECT )
-            printf("sol org edge %d %d \n", prunegraph->tail[e], prunegraph->head[e]);
-#endif
       if( SCIPisLT(scip, objprune, objorg) )
       {
          /* mark vertices of solution found by prune heuristic */
@@ -1295,51 +1286,6 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRunPcMw(
 
    SCIP_CALL( SCIPStpHeurTMPrunePc(scip, g, g->cost, soledge, nodearrchar) );
    *success = graph_sol_valid(scip, g, soledge);
-
-#if 0
-
-   for( e = g->outbeg[g->source[0]]; e != EAT_LAST; e = g->oeat[e] )
-   {
-        if( !Is_term(g->term[g->head[e]]) && soledge[e] == CONNECT )
-           printf("head to %d-> %d \n", g->source[0], g->head[e]);
-   }
-
-   for( k = 0; k < nnodes; k++ )
-   {
-      if( Is_term(g->term[k]) && k != g->source[0] )
-      {
-         int l = TRUE;
-         for( e = g->inpbeg[k]; e != EAT_LAST; e = g->ieat[e] )
-         {
-            if( soledge[e] == CONNECT )
-            {
-               if( l == FALSE )
-                  return SCIP_ERROR;
-               l = FALSE;
-            }
-         }
-      }
-   }
-
-
-   if( (*success) )
-   {
-      SCIP_Real objf = 0.0;
-
-      for( e = 0; e < nedges; e++ )
-         if( soledge[e] == CONNECT )
-            objf += g->cost[e];
-      printf("slack prune solution IS valid cost %f \n", objf + SCIPprobdataGetOffset(scip));
-   }
-#endif
-
-#if BREAKONERROR
-   if( !(*success) )
-   {
-      printf("slack prune solution not valid %d \n", 0);
-      return SCIP_ERROR;
-   }
-#endif
 
  TERMINATE:
 

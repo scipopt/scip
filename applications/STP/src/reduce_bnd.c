@@ -25,7 +25,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-#define SCIP_DEBUG
+//#define SCIP_DEBUG
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -49,6 +49,7 @@
 #define PERTUBATION_RATIO   0.05              /**< pertubation ratio for dual-ascent primal bound computation */
 #define PERTUBATION_RATIO_PC   0.005          /**< pertubation ratio for dual-ascent primal bound computation */
 #define SOLPOOL_SIZE 20                       /**< size of presolving solution pool */
+#define DA_REC_RUNS 3                         /**< runs of rec heuristic */
 
 /** pertubate edge costs for PCMW dual-ascent */
 static
@@ -228,31 +229,60 @@ SCIP_RETCODE computeDaSolPcMw(
 
    SCIPdebugMessage("DA: first new sol value in computeDaSolPcMw: %f ... old value: %f \n", ub, *upperbound);
 
+   /* try recombination? */
    if( pool != NULL )
    {
-      printf("ub %f vs  %f\n", ub, pool->sols[0]->obj);
+      SCIPdebugMessage("ub %f vs  %f\n", ub, pool->sols[0]->obj);
       SCIP_CALL( SCIPStpHeurRecAddToPool(scip, ub, result2, pool, &success) );
 
       SCIPdebugMessage("DA: added this sol to pool? %d \n", success);
 
-      int solindex = pool->sols[0]->index;
-      SCIP_Bool solfound;
-
-      if( pool->size >= 2)
+      if( success && pool->size >= 2 )
       {
-      printf("OBJ 0 %f   OBJ 1 %f \n", pool->sols[0]->obj, pool->sols[1]->obj);
+         /* get index of just added solution */
+         int solindex = pool->maxindex;
 
-      SCIP_HEUR* rec = SCIPfindHeur(scip, "rec");
-      assert(rec != NULL );
+         /* get recombination heuristic data */
+         SCIP_HEUR* recheur = SCIPfindHeur(scip, "rec");
+         SCIP_Bool solfound;
+         SCIP_HEURDATA* recheurdata;
 
-      SCIP_HEURDATA* recheurdata = SCIPheurGetData(rec);
+         assert(recheur != NULL );
 
-      printf("HEU REC %d \n\n", 0);
+         recheurdata = SCIPheurGetData(recheur);
 
+         assert(recheurdata != NULL);
 
-      SCIP_CALL( SCIPStpHeurRecRun(scip, pool, rec, recheurdata, graph, NULL, &solindex, 3, pool->size, FALSE, &solfound) );
+         SCIP_CALL( SCIPStpHeurRecRun(scip, pool, recheur, recheurdata, graph, NULL, &solindex, 3, pool->size, FALSE, &solfound) );
 
-      printf("THROUGH %d \n\n", 0);
+         if( solfound )
+         {
+            STPSOL* sol;
+            int i;
+            assert(pool->size >= 2);
+
+            for( i = 0; i < pool->size; i++ )
+               if( pool->sols[i]->index == solindex )
+                  break;
+
+            assert(i != pool->size);
+
+            sol = pool->sols[i];
+
+            SCIPdebugMessage("DA: rec found better solution with obj %f vs %f \n", sol->obj, ub);
+
+            if( SCIPisLT(scip, sol->obj, ub) )
+            {
+               ub = sol->obj;
+               BMScopyMemoryArray(result2, sol->soledges, nedges);
+
+               SCIP_CALL( SCIPStpHeurLocalExtendPcMw(scip, graph, graph->cost, vnoi, result2, pathedge, nodearrchar, &tmp) );
+
+               ub = graph_computeSolVal(graph->cost, result2, 0.0, nedges);
+
+               SCIPdebugMessage("DA: new ub after extension: %f \n", ub);
+            }
+         }
       }
    }
 
@@ -260,6 +290,8 @@ SCIP_RETCODE computeDaSolPcMw(
    {
       if( SCIPisLE(scip, ub, *upperbound) )
       {
+         SCIPdebugMessage("DA: improved incumbent %f vs %f, return \n", ub, *upperbound);
+
          *apsol = TRUE;
          *upperbound = ub;
          BMScopyMemoryArray(result1, result2, nedges);
@@ -354,72 +386,61 @@ SCIP_RETCODE computePertubedSol(
    const int nedges = graph->edges;
    const int transnedges = transgraph->edges;
 
-   BMScopyMemoryArray(costrev, cost, extnedges);
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &transcost, transnedges) );
-   BMScopyMemoryArray(transcost, transgraph->cost, transnedges);
-
-   pertubateEdgeCosts(scip, graph, transgraph, result, nodearrchar, pertubation);
-
-   SCIP_CALL( SCIPdualAscentStp(scip, transgraph, cost, pathdist, &lb, FALSE, FALSE, gnodearr, transresult, state, root, 1, marked, nodearrchar) );
-
-   BMScopyMemoryArray(transgraph->cost, transcost, transnedges);
-
-#if 0
-   for( int a = graph->outbeg[root]; a != EAT_LAST; a = graph->oeat[a] )
-         {
-            int head = graph->head[a];
-
-            if( Is_pterm(graph->term[head]) )
-                  {
-               printf("r to pterm %d: %f (%f)\n", head, cost[a], transgraph->cost[a]);
-                  }
-
-            if( Is_term(graph->term[head]) )
-                            {
-                         printf("r to term %d: %f (%f)\n", head, cost[a], transgraph->cost[a]);
-                            }
-
-         }
-#endif
-
-   SCIPfreeBufferArray(scip, &transcost);
-
-   SCIP_CALL( computeDaSolPcMw(scip, graph, pool, vnoi, cost, pathdist, upperbound, result, transresult, vbase, pathedge, root, nodearrchar, apsol) );
-
-   SCIPdebugMessage("DA: pertubated sol value %f \n", *upperbound);
-
-   BMScopyMemoryArray(transresult, result, nedges);
-
-   for( e = nedges; e < transnedges; e++ )
-       transresult[e] = UNKNOWN;
-
-   /* non-trivial solution */
-   for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
-      if( Is_term(graph->term[graph->head[e]]) && result[e] != CONNECT )
-         break;
-
-   if( e != EAT_LAST)
+   if( graph->stp_type == STP_MWCSP )
    {
-      int k;
+      BMScopyMemoryArray(costrev, cost, extnedges);
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &transcost, transnedges) );
+      BMScopyMemoryArray(transcost, transgraph->cost, transnedges);
+
+      pertubateEdgeCosts(scip, graph, transgraph, result, nodearrchar, pertubation);
+
+      SCIP_CALL( SCIPdualAscentStp(scip, transgraph, cost, pathdist, &lb, FALSE, FALSE, gnodearr, transresult, state, root, 1, marked, nodearrchar) );
+
+      BMScopyMemoryArray(transgraph->cost, transcost, transnedges);
+
+      SCIPfreeBufferArray(scip, &transcost);
+
+      SCIP_CALL( computeDaSolPcMw(scip, graph, pool, vnoi, cost, pathdist, upperbound, result, transresult, vbase, pathedge, root, nodearrchar, apsol) );
+
+      SCIPdebugMessage("DA: pertubated sol value %f \n", *upperbound);
+
+      BMScopyMemoryArray(transresult, result, nedges);
+
+      for( e = nedges; e < transnedges; e++ )
+          transresult[e] = UNKNOWN;
+
+      /* non-trivial solution */
       for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
-         if( !Is_term(graph->term[graph->head[e]]) && result[e] == CONNECT )
+         if( Is_term(graph->term[graph->head[e]]) && result[e] != CONNECT )
             break;
 
-      assert(e != EAT_LAST);
-      k = graph->head[e];
-
-      for( e = transgraph->outbeg[k]; e != EAT_LAST; e = transgraph->oeat[e] )
+      if( e != EAT_LAST)
       {
-         if( transgraph->head[e] == graph->knots )
+         int k;
+         for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
+            if( !Is_term(graph->term[graph->head[e]]) && result[e] == CONNECT )
+               break;
+
+         assert(e != EAT_LAST);
+         k = graph->head[e];
+
+         for( e = transgraph->outbeg[k]; e != EAT_LAST; e = transgraph->oeat[e] )
          {
-            transresult[e] = CONNECT;
-            break;
+            if( transgraph->head[e] == graph->knots )
+            {
+               transresult[e] = CONNECT;
+               break;
+            }
          }
       }
-   }
 
-   SCIP_CALL( SCIPdualAscentStpSol(scip, transgraph, cost, pathdist, &lb, FALSE, FALSE, gnodearr, transresult, NULL, state, root, 1, marked, nodearrchar) );
+      SCIP_CALL( SCIPdualAscentStpSol(scip, transgraph, cost, pathdist, &lb, FALSE, FALSE, gnodearr, transresult, NULL, state, root, 1, marked, nodearrchar) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPdualAscentStpSol(scip, transgraph, cost, pathdist, &lb, FALSE, FALSE, gnodearr, result, NULL, state, root, 1, marked, nodearrchar) );
+   }
 
    lb += offset;
 
@@ -432,6 +453,8 @@ SCIP_RETCODE computePertubedSol(
 
    /* the required reduced path cost to be surpassed */
    *minpathcost = *upperbound - *lpobjval;
+
+   printf("new minpathcost %f \n", *minpathcost);
 
    for( e = 0; e < transnedges; e++ )
       costrev[e] = cost[flipedge(e)];
@@ -655,7 +678,6 @@ SCIP_RETCODE da_reduce(
    int i;
    int k;
    int e;
-   int run;
    int etmp;
    int runs;
    int root;
@@ -878,11 +900,11 @@ SCIP_RETCODE da_reduce(
       nruns = 1;
       if( rpc )
       {
-         SCIP_CALL( pcgraphtrans(scip, graph) );
+         SCIP_CALL( graph_2trans(scip, graph) );
       }
    }
 
-   for( run = 0; run < nruns; run++ )
+   for( int run = 0; run < nruns; run++ )
    {
       /* graph vanished? */
       if( grad[graph->source[0]] == 0 )
@@ -945,7 +967,7 @@ SCIP_RETCODE da_reduce(
          {
             if( rpc )
             {
-               SCIP_CALL( pcgraphorg(scip, graph) );
+               SCIP_CALL( graph_2org(scip, graph) );
             }
 
             goto TERMINATE;
@@ -990,7 +1012,7 @@ SCIP_RETCODE da_reduce(
       /* RPC? If yes, restore original graph */
       if( rpc )
       {
-         SCIP_CALL( pcgraphorg(scip, graph) );
+         SCIP_CALL( graph_2org(scip, graph) );
       }
 
       for( k = 0; k < nnodes; k++ )
@@ -1263,8 +1285,8 @@ SCIP_RETCODE da_reduce(
 
       if( rpc )
       {
-         SCIP_CALL( pcgraphtrans(scip, graph) );
-         SCIP_CALL( pcgraphorg(scip, graph) );
+         SCIP_CALL( graph_2trans(scip, graph) );
+         SCIP_CALL( graph_2org(scip, graph) );
       }
       else
       {
@@ -1422,7 +1444,7 @@ SCIP_RETCODE da_reduceSlackPrune(
 
    if( rpc )
    {
-      SCIP_CALL( pcgraphtrans(scip, graph) );
+      SCIP_CALL( graph_2trans(scip, graph) );
    }
 
 
@@ -1603,7 +1625,7 @@ SCIP_RETCODE da_reduceSlackPrune(
    /* RPC? If yes, restore original graph */
    if( rpc )
    {
-      SCIP_CALL( pcgraphorg(scip, graph) );
+      SCIP_CALL( graph_2org(scip, graph) );
       graph->mark[root] = FALSE;
    }
 
@@ -1790,7 +1812,7 @@ SCIP_RETCODE da_reduceSlackPrune(
    SCIPdebugMessage("deleted by da: %d \n", nfixed );
 
    if( rpc )
-      SCIP_CALL( pcgraphtrans(scip, graph) );
+      SCIP_CALL( graph_2trans(scip, graph) );
    assert(graph->mark[root]);
 
  TERMINATE:
@@ -1869,8 +1891,6 @@ SCIP_RETCODE da_reducePcMw(
    int tmproot;
    int best_start;
    int nusedroots;
-   int transnnodes;
-   int transnedges;
    int extnedges;
    SCIP_Bool tmp;
    SCIP_Bool apsol;
@@ -1895,13 +1915,9 @@ SCIP_RETCODE da_reducePcMw(
 
    /* allocate memory */
    if( edgearrint == NULL )
-   {
       SCIP_CALL( SCIPallocBufferArray(scip, &result, nedges) );
-   }
    else
-   {
       result = edgearrint;
-   }
 
    extnedges = nedges + 2 * (graph->terms - 1);
 
@@ -1938,24 +1954,20 @@ SCIP_RETCODE da_reducePcMw(
    tmheurdata = SCIPheurGetData(SCIPfindHeur(scip, "TM"));
 
    for( e = 0; e < nedges; e++ )
-   {
       result[e] = UNKNOWN;
-      cost[e] = graph->cost[e];
-      costrev[e] = graph->cost[flipedge(e)];
-   }
 
    /* restore transformed graph */
-   SCIP_CALL( pcgraphtrans(scip, graph) );
+   SCIP_CALL( graph_2trans(scip, graph) );
 
    /* compute Steiner tree to obtain upper bound */
-   SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, graph, NULL, &best_start, result, runs, root, cost, costrev, &dummyreal, NULL, 0.0, &success, FALSE) );
+   SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, graph, NULL, &best_start, result, runs, root, graph->cost, graph->cost, &dummyreal, NULL, 0.0, &success, FALSE) );
 
    assert(success);
 
    SCIP_CALL( SCIPStpHeurLocalExtendPcMw(scip, graph, graph->cost, vnoi, result, pathedge, nodearrchar, &tmp) );
 
    /* restore original graph */
-   SCIP_CALL( pcgraphorg(scip, graph) );
+   SCIP_CALL( graph_2org(scip, graph) );
 
    /* feasible solution found? If so, calculate objective value of solution and add to pool */
    if( success )
@@ -1975,8 +1987,7 @@ SCIP_RETCODE da_reducePcMw(
     * 2. step: compute lower bound and reduced costs
     */
 
-
-   SCIP_CALL( pcgraphtrans(scip, graph) );
+   SCIP_CALL( graph_2trans(scip, graph) );
 
    offset = 0.0;
 
@@ -1990,9 +2001,6 @@ SCIP_RETCODE da_reducePcMw(
       SCIP_CALL( graph_PcSapCopy(scip, graph, &transgraph, &offset) );
    }
 
-   transnnodes = transgraph->knots;
-   transnedges = transgraph->edges;
-
    /* initialize data structures for shortest paths */
    SCIP_CALL( graph_path_init(scip, transgraph) );
 
@@ -2005,7 +2013,7 @@ SCIP_RETCODE da_reducePcMw(
    /* the required reduced path cost to be surpassed */
    minpathcost = upperbound - lpobjval;
 
-   for( e = 0; e < transnedges; e++ )
+   for( e = 0; e < transgraph->edges; e++ )
    {
       costrev[e] = cost[flipedge(e)];
       marked[e] = FALSE;
@@ -2023,7 +2031,7 @@ SCIP_RETCODE da_reducePcMw(
 
 
    /* restore original graph */
-   SCIP_CALL( pcgraphorg(scip, graph) );
+   SCIP_CALL( graph_2org(scip, graph) );
 
    if( shiftcosts )
    {
@@ -2046,20 +2054,19 @@ SCIP_RETCODE da_reducePcMw(
    /* rerun dual ascent? */
    if( solbasedda && graph->terms > 2 )
    {
-      SCIP_CALL( pcgraphtrans(scip, graph) );
+      SCIP_CALL( graph_2trans(scip, graph) );
 
       /* solution not from ascend-and-prune? */
       if( !apsol )
       {
-         for( e = 0; e < nedges; e++ )
-            costrev[e] = graph->cost[flipedge(e)];
-
-         SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, graph, NULL, &best_start, result, runs, root, graph->cost, costrev, &dummyreal, NULL, 0.0, &success, FALSE) );
-
+         SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, graph, NULL, &best_start, result, runs, root, graph->cost, graph->cost, &dummyreal, NULL, 0.0, &success, FALSE) );
          SCIP_CALL( SCIPStpHeurLocalExtendPcMw(scip, graph, graph->cost, vnoi, result, pathedge, nodearrchar, &tmp) );
 
          assert(graph_valid(transgraph));
       }
+
+      printf("WITH %d  nodes\n", graph->knots);
+
       /* try to improve both dual and primal bound */
       SCIP_CALL( computePertubedSol(scip, graph, transgraph, pool, vnoi, gnodearr, cost, costrev, pathdist, state, vbase, pathedge, result, result2,
             transresult, marked, nodearrchar, &upperbound, &lpobjval, &minpathcost, &apsol, offset, extnedges, 0) );
@@ -2067,20 +2074,19 @@ SCIP_RETCODE da_reducePcMw(
       computeTransVoronoi(scip, transgraph, vnoi, cost, costrev, pathdist, vbase, pathedge);
 
       /* restore original graph */
-      SCIP_CALL( pcgraphorg(scip, graph) );
+      SCIP_CALL( graph_2org(scip, graph) );
 
       /* try to reduce the graph */
       nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, apsol);
 
       SCIPdebugMessage("DA: RERUN NFIXED %d \n", nfixed);
    }
-//&& graph->stp_type == STP_MWCSP
-   if( varyroot )
+
+   if( varyroot && graph->stp_type == STP_MWCSP )
    {
-      int todo; //&& graph->terms > 500
-      for( run = 0; run < DEFAULT_NMAXROOTS; run++ )
+      for( run = 0; run < DEFAULT_NMAXROOTS && graph->terms > 500; run++ )
       {
-         SCIP_CALL( pcgraphtrans(scip, graph) );
+         SCIP_CALL( graph_2trans(scip, graph) );
 
          /* try to improve both dual and primal bound */
          SCIP_CALL( computePertubedSol(scip, graph, transgraph, pool, vnoi, gnodearr, cost, costrev, pathdist, state, vbase, pathedge, result, result2,
@@ -2092,7 +2098,7 @@ SCIP_RETCODE da_reducePcMw(
          computeTransVoronoi(scip, transgraph, vnoi, cost, costrev, pathdist, vbase, pathedge);
 
          /* restore original graph */
-         SCIP_CALL( pcgraphorg(scip, graph) );
+         SCIP_CALL( graph_2org(scip, graph) );
 
          /* try to reduce the graph */
          nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, apsol);
@@ -2101,18 +2107,15 @@ SCIP_RETCODE da_reducePcMw(
       }
    }
 
-   /* change roots? */
+   /* change or mark roots? */
    if( varyroot || markroots )
    {
       if( varyroot )
-      {
          SCIP_CALL( SCIPallocBufferArray(scip, &roots, graph->terms) );
-      }
       else
-      {
          roots = NULL;
-      }
 
+      int CLEANUP;
       /* get possible roots */
       for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
       {
@@ -2168,6 +2171,9 @@ SCIP_RETCODE da_reducePcMw(
 
    for( run = 0; run < nusedroots; run++  )
    {
+      int transnnodes;
+      int transnedges;
+
       assert(nroots > 0);
       assert(roots != NULL);
 
@@ -2178,7 +2184,7 @@ SCIP_RETCODE da_reducePcMw(
       if( graph->terms <= 2 )
          break;
 
-      SCIP_CALL( pcgraphtrans(scip, graph) );
+      SCIP_CALL( graph_2trans(scip, graph) );
       SCIP_CALL( graph_PcRSapCopy(scip, graph, &transgraph, roots, nroots, tmproot) );
 
       assert(graph_valid(transgraph));
@@ -2290,8 +2296,15 @@ SCIP_RETCODE da_reducePcMw(
       for( k = 0; k < transnnodes; k++ )
          transgraph->mark[k] = (transgraph->grad[k] > 0);
 
+      printf("WITH %d  nodes in root loop\n", graph->knots);
+
+
       /* the required reduced path cost to be surpassed */
       minpathcost = upperbound - lpobjval;
+
+
+      printf("minpathcost %f \n", minpathcost);
+      printf(" %f %f \n", upperbound, lpobjval);
 
       for( e = 0; e < transnedges; e++ )
       {
@@ -2311,7 +2324,7 @@ SCIP_RETCODE da_reducePcMw(
       get2next(scip, transgraph, costrev, costrev, vnoi, vbase, transgraph->path_heap, state);
 
       /* restore original graph */
-      SCIP_CALL( pcgraphorg(scip, graph) );
+      SCIP_CALL( graph_2org(scip, graph) );
 
       e = graph->mark[tmproot];
       graph->mark[tmproot] = FALSE;
@@ -2360,7 +2373,7 @@ SCIP_RETCODE da_reduceSlackPruneMw(
    int*                  soledge,            /**< edge solution array (CONNECT/UNKNOWN) or NULL; needs to contain solution if solgiven == TRUE */
    int*                  state,              /**< int 4 * vertices array */
    int*                  solnode,            /**< array of nodes of current solution that is not to be destroyed */
-   STP_Bool*                 nodearrchar,        /**< STP_Bool node array for internal computations */
+   STP_Bool*             nodearrchar,        /**< STP_Bool node array for internal computations */
    int*                  nelims,             /**< pointer to store number of reduced edges */
    int                   minelims,           /**< minimum number of edges to eliminate */
    SCIP_Bool             solgiven            /**< solution provided? */
@@ -2597,7 +2610,7 @@ SCIP_RETCODE da_reduceSlackPruneMw(
    voronoi_terms(scip, transgraph, costrev, vnoi, vbase, transgraph->path_heap, transgraph->path_state);
 
    /* restore original graph */
-   SCIP_CALL( pcgraphorg(scip, graph) );
+   SCIP_CALL( graph_2org(scip, graph) );
 
    for( k = 0; k < nnodes; k++ )
       solnode[k] = UNKNOWN;
@@ -2785,7 +2798,7 @@ SCIP_RETCODE da_reduceSlackPruneMw(
    graph_free(scip, transgraph, TRUE);
 
    /* restore transformed graph */
-   SCIP_CALL( pcgraphtrans(scip, graph) );
+   SCIP_CALL( graph_2trans(scip, graph) );
 
    *nelims = nfixed;
 
@@ -3135,13 +3148,13 @@ SCIP_RETCODE bound_reduce(
 
       /* PC or RPC? Then restore transformed graph */
       if( pcmw )
-         SCIP_CALL( pcgraphtrans(scip, graph) );
+         SCIP_CALL( graph_2trans(scip, graph) );
 
       SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, graph, starts, &best_start, result, runs, root, cost, costrev, &obj, NULL, maxcost, &success, FALSE) );
 
       /* PC or RPC? Then restore oringinal graph */
       if( pcmw )
-         SCIP_CALL( pcgraphorg(scip, graph) );
+         SCIP_CALL( graph_2org(scip, graph) );
 
       /* no feasible solution found? */
       if( !success )

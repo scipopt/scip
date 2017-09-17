@@ -26,7 +26,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-#define SCIP_DEBUG
+//#define SCIP_DEBUG
 
 #include <assert.h>
 #include <string.h>
@@ -175,69 +175,6 @@ inline int edgecostMultiplier(
    return factor;
 }
 
-#if 0
-
-/** edge cost multiplier */
-static
-inline SCIP_Real costMultiplier(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
-   SCIP_Real             avg                 /**< number of solutions containing this edge */
-   )
-{
-   int factor = 1;
-   const int nusedsols = heurdata->nusedsols;
-   SCIP_Real mult = 1;
-
-   /* if STP, then avg >= 2.0 */
-   assert(SCIPisGE(scip, avg, 1.0));
-   assert(nusedsols >= 2);
-
-
-   if( nusedsols <= 3 )
-   {
-      if( SCIPisLT(scip, avg, 1.6) )
-      {
-         factor = SCIPrandomGetInt(heurdata->randnumgen, 1000, 1400);
-      }
-      else if( SCIPisLT(scip, avg, 2.6) )
-      {
-         factor = SCIPrandomGetInt(heurdata->randnumgen, 200, 1000);
-      }
-      else if( nusedsols == 3 && SCIPisLT(scip, avg, 3.6) )
-      {
-         factor = SCIPrandomGetInt(heurdata->randnumgen, 40, 100);
-      }
-      mult = (double) factor * (1.0 / avg);
-   }
-   else
-   {
-      if( SCIPisLT(scip, avg, 1.6) )
-      {
-         factor = SCIPrandomGetInt(heurdata->randnumgen, 1400, 1800);
-      }
-      else if( SCIPisLT(scip, avg, 2.6) )
-      {
-         factor = SCIPrandomGetInt(heurdata->randnumgen, 400, 1400);
-      }
-      else if( SCIPisLT(scip, avg, 3.6) )
-      {
-         factor = SCIPrandomGetInt(heurdata->randnumgen, 150, 250);
-      }
-      else if( SCIPisLT(scip, avg, 4.6) )
-      {
-         factor = SCIPrandomGetInt(heurdata->randnumgen, 60, 90);
-      }
-      mult = (double) factor * (1.0 / avg);
-   }
-
-
-
-   return mult;
-}
-
-#endif
-
 /** select solutions to be merged */
 static
 SCIP_RETCODE selectdiffsols(
@@ -331,7 +268,7 @@ SCIP_RETCODE selectdiffsols(
 
    SCIPrandomPermuteIntArray(heurdata->randnumgen, perm, 0, maxnsols);
 
-   for( int i = 0; i < maxnsols; i++ )
+   for( int i = 0; i < nsols; i++ )
    {
       if( solselected[perm[i]] == FALSE )
       {
@@ -762,6 +699,8 @@ SCIP_RETCODE buildsolgraph(
       if( pcmw )
          newgraph->norgmodelknots = newgraph->knots - newgraph->terms;
 
+      SCIPdebugMessage("REC: sol graph with nodes: %d, edges: %d, terminals: %d  \n", nsolnodes, 2 * nsoledges, newgraph->terms);
+
       /* set root */
       newgraph->source[0] = dnodemap[graph->source[0]];
       if( newgraph->stp_type == STP_RPCSPG )
@@ -1013,6 +952,7 @@ SCIP_RETCODE SCIPStpHeurRecAddToPool(
    }
 
    poolsols[i] = sol;
+   SCIPdebugMessage("Pool: put new solution to position %d \n", i);
    *success = TRUE;
 
    return SCIP_OKAY;
@@ -1103,7 +1043,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
    /* get objective value of incumbent */
    incumentobj = graph_computeSolVal(graph->cost, incumbentedges, 0.0, nedges);
 
-//   SCIPdebugMessage("REC: incumbent obj: %f , with offset: %f\n", incumentobj, SCIPprobdataGetOffset(scip) + incumentobj);
+   SCIPdebugMessage("REC: incumbent obj: %f \n", incumentobj);
 
    /* main loop (for recombination) */
    for( int v = 0, failcount = 0; v < CYCLES_PER_RUN * runs && !SCIPisStopped(scip); v++ )
@@ -1179,7 +1119,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
 
             int best_start;
 
-            SCIPdebugMessage("REC: graph not completely reduced, terminals: %d \n", solgraph->terms);
+            SCIPdebugMessage("REC: graph not completely reduced, nodes: %d, edges: %d, terminals: %d \n", solgraph->knots, nsoledges, solgraph->terms);
 
             /* allocate memory */
             SCIP_CALL( SCIPallocBufferArray(scip, &soledges, nsoledges) );
@@ -1282,9 +1222,9 @@ SCIP_RETCODE SCIPStpHeurRecRun(
 
          if( pcmw )
          {
-            SCIP_CALL( SCIPallocBufferArray(scip, &solnodes, solgraph->norgmodelknots) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &solnodes, solgraph->orgknots) );
 
-            for( int i = 0; i < solgraph->norgmodelknots; i++ )
+            for( int i = 0; i < solgraph->orgknots; i++ )
                solnodes[i] = FALSE;
          }
 
@@ -1313,12 +1253,8 @@ SCIP_RETCODE SCIPStpHeurRecRun(
 
                         if( pcmw )
                         {
-                           printf("solgraph->orghead[curr->index] %d \n", solgraph->orghead[curr->index]);
-                           printf("solgraph->norgmodelknots %d \n", solgraph->norgmodelknots);
-                              printf(" %d \n", solgraph->orgtail[curr->index]);
-
-                           assert(solgraph->orghead[curr->index] < solgraph->norgmodelknots);
-                           assert(solgraph->orgtail[curr->index] < solgraph->norgmodelknots);
+                           assert(solgraph->orghead[curr->index] < solgraph->orgknots);
+                           assert(solgraph->orgtail[curr->index] < solgraph->orgknots);
 
                            solnodes[solgraph->orghead[curr->index]] = TRUE;
                            solnodes[solgraph->orgtail[curr->index]] = TRUE;
@@ -1355,8 +1291,8 @@ SCIP_RETCODE SCIPStpHeurRecRun(
                stnodes[graph->tail[i]] = TRUE;
                if( pcmw )
                {
-                  assert(solgraph->orghead[curr->index] < solgraph->norgmodelknots);
-                  assert(solgraph->orgtail[curr->index] < solgraph->norgmodelknots);
+                  assert(solgraph->orghead[curr->index] < solgraph->orgknots);
+                  assert(solgraph->orgtail[curr->index] < solgraph->orgknots);
 
                   solnodes[solgraph->orghead[curr->index]] = TRUE;
                   solnodes[solgraph->orgtail[curr->index]] = TRUE;
@@ -1377,7 +1313,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
 
          if( pcmw )
          {
-            for( int k = 0; k < solgraph->norgmodelknots; k++ )
+            for( int k = 0; k < solgraph->orgknots; k++ )
             {
                if( solnodes[k] )
                {

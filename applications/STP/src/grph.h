@@ -79,8 +79,12 @@ typedef struct
                                              /**< for the ieat array, -1 if not used                  */
    int* RESTRICT         outbeg;             /**< Array [0..nodes-1] with starting slot index         */
                                              /**< for the oeat array, -1 if not used                  */
-   int* RESTRICT         maxdeg;             /**< Array [0..nodes-1] containing the maximal degrees
-                                                   of all nodes (only used for HCDSTPs)               */
+   int* RESTRICT         maxdeg;             /**< For HCDSTP: Array [0..nodes-1] containing the maximal degrees
+                                                   of all nodes               */
+   int*                  term2edge;          /**< (R)PCSTP and (R)MWCSP: Array [0..nodes-1] of edge to twin terminal or -1 */
+
+   SCIP_Real*            prize;              /**< For (R)PCSTP and (R)MWCSP: Array [0..nodes-1] of node costs       */
+
    /* Edges */
    IDX*                  fixedges;           /**< list of fixed edges*/
    IDX**                 ancestors;          /**< list of ancestor edges to each edge (to keep track of reductions)         */
@@ -92,7 +96,6 @@ typedef struct
    int                   edges;              /**< Count of edges in the graph                                               */
    int                   orgedges;
    SCIP_Real*            cost;               /**< Array [0..edges-1] of positive edge costs                                  */
-   SCIP_Real*            prize;              /**< Array [0..nodes-1] of positive node costs                                  */
    int* RESTRICT         tail;               /**< Array [0..edges-1] of node-number of tail of edge [i]                     */
    int* RESTRICT         head;               /**< Array [0..edges-1] of node-number of head of edge [i]                     */
    int* RESTRICT         orgtail;            /**< Array [0..edges-1] of node-number of tail of edge [i] prior to reduction  */
@@ -114,7 +117,7 @@ typedef struct
    int* RESTRICT         mincut_x;           /**< x[k] : Actual flow on arc k                 */
    int* RESTRICT         mincut_r;           /**< r[k] : residual capacity of arc k                    */
 
-   /* data for math and mst computation */
+   /* Data for sp and mst computation */
    int* RESTRICT         path_heap;
    int* RESTRICT         path_state;
 
@@ -123,8 +126,10 @@ typedef struct
    int*                  grid_ncoords;
    int**                 grid_coordinates;
 
-   /* Steiner problem variant */
-   int                   stp_type;
+   /* Global information */
+   int                   stp_type;          /**< Steiner problem variant                                                */
+   SCIP_Bool             extended;          /**< For (R)PCSTP and (R)MWCSP: signifies whether problem is in extended
+                                                 form (TRUE) or not (FALSE)                                             */
 
 } GRAPH;
 
@@ -185,15 +190,17 @@ extern void   graph_edge_add(SCIP*, GRAPH*, int, int, double, double);
 extern void   graph_edge_del(SCIP*, GRAPH*, int, SCIP_Bool);
 extern void   graph_edge_hide(GRAPH*, int);
 extern void   graph_uncover(GRAPH*);
-extern void   prize_subtract(SCIP*, GRAPH*, SCIP_Real, int);
+extern void   graph_subtractprize(SCIP*, GRAPH*, SCIP_Real, int);
 extern void   graph_trail(const GRAPH*, int);
 extern void   graph_free(SCIP*, GRAPH*, SCIP_Bool);
 extern void   graph_getNVET(const GRAPH*, int*, int*, int*);
 extern void   graph_listSetSolNode(const GRAPH*, STP_Bool*, IDX*);
 extern SCIP_RETCODE   graph_trail_arr(SCIP*, const GRAPH*, int);
 extern SCIP_RETCODE   graph_init(SCIP*, GRAPH**, int, int, int, int);
-extern SCIP_RETCODE   pcgraphorg(SCIP*, GRAPH*);
-extern SCIP_RETCODE   pcgraphtrans(SCIP*, GRAPH*);
+extern SCIP_RETCODE   graph_2org(SCIP*, GRAPH*);
+extern SCIP_RETCODE   graph_2trans(SCIP*, GRAPH*);
+extern SCIP_RETCODE   graph_2orgcheck(SCIP*, GRAPH*);
+extern SCIP_RETCODE   graph_2transcheck(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_init_history(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_resize(SCIP*, GRAPH*, int, int, int);
 extern SCIP_RETCODE   graph_knot_contract(SCIP*, GRAPH*, int*, int, int);
@@ -295,9 +302,6 @@ extern SCIP_RETCODE reduce(SCIP*, GRAPH**, SCIP_Real*, int, int, SCIP_Bool);
 
 /* reduce_alt.c
  */
-#if 0
-extern SCIP_RETCODE    sd_reduction(SCIP*, GRAPH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int, unsigned int*);
-#endif
 extern SCIP_RETCODE    sdsp_reduction(SCIP*, GRAPH*, PATH*, PATH*, int*, int*, int*, int*, int*, int*, int, int*);
 extern SCIP_RETCODE    sdsp_sap_reduction(SCIP*, GRAPH*, PATH*, PATH*, int*, int*, int*, int*, int*, int*, int);
 extern SCIP_RETCODE    sd_red(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int*, int*, int*, SCIP_Bool, int*);

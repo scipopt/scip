@@ -392,17 +392,10 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
                   assert(stdeg != NULL);
 
                   minweight = SCIPlinkcuttreeFindMinChain(scip, graph->prize, graph->head, stdeg, firstnode, &chainfirst, &chainlast);
-#if 0
-                  if( SCIPisLT(scip, minweight, 0.0) )
-                     printf("candidate with %f (insertcound: %d, to beat %f) \n", minweight, insertcount, graph->prize[i]);
-#endif
+
 
                   if( SCIPisLT(scip, minweight, graph->prize[i]) )
                   {
-                     // todo
-                     if( chainfirst == NULL || chainlast == NULL )
-                        return SCIP_ERROR;
-
                      assert(chainfirst != NULL && chainlast != NULL);
                      for( NODE* mynode = chainfirst; mynode != chainlast; mynode = mynode->parent )
                      {
@@ -454,8 +447,6 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
                {
                   steinertree[i] = TRUE;
                   newnverts++;
-                  //return SCIP_ERROR;
-                  //break;
                }
             }
             else
@@ -543,7 +534,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
          }
       }
 
-#ifdef printDebug
+#ifdef SCIP_DEBUG
       obj = 0.0;
       for( e = 0; e < nedges; e++)
          obj += (best_result[e] > -1) ? graph->cost[e] : 0.0;
@@ -602,7 +593,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
       STP_Bool* scanned;
       STP_Bool* nodesmark;
 
-#ifdef printDebug
+#ifdef SCIP_DEBUG
       obj = 0.0;
       for( e = 0; e < nedges; e++)
          obj += (best_result[e] > -1) ? graph->cost[e] : 0.0;
@@ -741,9 +732,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
             crucnode = dfstree[i];
             scanned[crucnode] = TRUE;
 
-#ifdef printDebug
-               printf("iteration %d (%d) \n", i, crucnode);
-#endif
+            SCIPdebugMessage("iteration %d (%d) \n", i, crucnode);
 
             /*  has the node been temporarily removed from the ST? */
             if( !graphmark[crucnode] )
@@ -1053,9 +1042,8 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
                if( SCIPisLT(scip, mstcost, kpcost) )
                {
                   localmoves++;
-#ifdef printDebug
-                  printf("found improving solution in KEY VERTEX ELIMINATION (round: %d) \n ", nruns);
-#endif
+                  SCIPdebugMessage("found improving solution in KEY VERTEX ELIMINATION (round: %d) \n ", nruns);
+
                   /* unmark the original edges spanning the supergraph */
                   for( e = 0; e < nkpedges; e++ )
                   {
@@ -1451,9 +1439,9 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
                if( SCIPisLT(scip, edgecost, kpathcost) )
                {
                   node = SCIPunionfindFind(&uf, vbase[graph->head[newedge]]);
-#ifdef printDebug
-                  printf( "ADDING NEW KEY PATH (%f )\n", edgecost - kpathcost );
-#endif
+
+                  SCIPdebugMessage( "ADDING NEW KEY PATH (%f )\n", edgecost - kpathcost );
+
                   localmoves++;
 
                   /* remove old keypath */
@@ -1666,7 +1654,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
    }
 
 
-#ifdef printDebug
+#ifdef SCIP_DEBUG
    obj = 0.0;
    for( e = 0; e < nedges; e++)
       obj += (best_result[e] > -1) ? graph->cost[e] : 0.0;
@@ -1928,13 +1916,13 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    SCIPpqueueFree(&pqueue);
    SCIPfreeBufferArray(scip, &stvertextmp);
 
-#ifdef printDebug
+#ifdef SCIP_DEBUG
    t = 0.0;
    for (int e = 0; e < nedges; e++)
       if( stedge[e] == CONNECT )
          t += graph->cost[e];
 
-   printf("exit real cost %f \n\n", t);
+   SCIPdebugMessage("SCIPStpHeurLocalExtendPcMw: exit real cost %f \n", t);
 #endif
 
    return SCIP_OKAY;

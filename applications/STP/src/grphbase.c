@@ -41,244 +41,48 @@
 #include "scip/misc.h"
 #include "grph.h"
 
-#define BLK 0
 
-/** initialize graph */
-SCIP_RETCODE graph_init(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH**               g,                  /**< new graph */
-   int                   ksize,              /**< slots for nodes */
-   int                   esize,              /**< slots for edges */
-   int                   layers,             /**< number of layers (only needed for packing, otherwise 1) */
-   int                   flags               /**< flags */
+/*
+ * local functions
+ */
+
+
+inline static
+void edge_remove(
+   GRAPH*                g,                  /**< the graph */
+   int                   e                   /**< the edge to be removed */
    )
 {
-   GRAPH* p;
    int    i;
+   int    head;
+   int    tail;
 
-   assert(ksize > 0);
-   assert(ksize < INT_MAX);
-   assert(esize >= 0);
-   assert(esize < INT_MAX);
-   assert(layers > 0);
-   assert(layers < SHRT_MAX);
+   assert(g          != NULL);
+   assert(e          >= 0);
+   assert(e          <  g->edges);
 
-#if BLK
-   SCIP_CALL( SCIPallocBlockMemory(scip, g) );
-#else
-   SCIP_CALL( SCIPallocMemory(scip, g) );
-#endif
-   p = *g;
-   assert(p != NULL);
+   head = g->head[e];
+   tail = g->tail[e];
 
-   /* ancestor data for retransformation after reductions */
-   p->fixedges = NULL;
-   p->ancestors = NULL;
-   p->pcancestors = NULL;
-   p->orgtail = NULL;
-   p->orghead = NULL;
-   p->norgmodelknots = 0;
-   p->norgmodeledges = 0;
-   p->ksize  = ksize;
-   p->orgknots = 0;
-   p->orgedges = 0;
-   p->knots  = 0;
-   p->terms  = 0;
-   p->orgsource = UNKNOWN;
-   p->stp_type = UNKNOWN;
-   p->flags  = flags;
-   p->layers = layers;
-   p->hoplimit = UNKNOWN;
-
-#if BLK
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(p->locals), layers) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(p->source), layers) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(p->term), ksize) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(p->mark), ksize) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(p->grad), ksize) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(p->inpbeg), ksize) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(p->outbeg), ksize) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(p->cost), esize) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(p->tail), esize) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(p->head), esize) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(p->ieat), esize) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(p->oeat), esize) );
-#else
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->locals), layers) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->source), layers) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->term), ksize) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mark), ksize) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->grad), ksize) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->inpbeg), ksize) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->outbeg), ksize) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->cost), esize) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->tail), esize) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->head), esize) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->ieat), esize) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->oeat), esize) );
-#endif
-
-   p->esize = esize;
-   p->edges = 0;
-   p->prize  = NULL;
-   p->maxdeg = NULL;
-   p->grid_coordinates = NULL;
-   p->grid_ncoords = NULL;
-   p->mincut_dist = NULL;
-   p->mincut_head = NULL;
-   p->mincut_numb = NULL;
-   p->mincut_prev = NULL;
-   p->mincut_next = NULL;
-   p->mincut_temp = NULL;
-   p->mincut_e = NULL;
-   p->mincut_x = NULL;
-   p->mincut_r = NULL;
-   p->path_heap = NULL;
-   p->path_state = NULL;
-
-   for( i = 0; i < p->layers; i++ )
+   if( g->inpbeg[head] == e )
+      g->inpbeg[head] = g->ieat[e];
+   else
    {
-      p->source[i] = -1;
-      p->locals[i] =  0;
+      for( i = g->inpbeg[head]; g->ieat[i] != e; i = g->ieat[i] )
+         assert(i >= 0);
+
+      g->ieat[i] = g->ieat[e];
    }
-   return SCIP_OKAY;
+   if( g->outbeg[tail] == e )
+      g->outbeg[tail] = g->oeat[e];
+   else
+   {
+      for( i = g->outbeg[tail]; g->oeat[i] != e; i = g->oeat[i] )
+         assert(i >= 0);
+
+      g->oeat[i] = g->oeat[e];
+   }
 }
-
-/** initialize data structures required to keep track of reductions */
-SCIP_RETCODE graph_init_history(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                graph               /**< graph */
-   )
-{
-   IDX** ancestors;          /* ancestor lists array (over all edges) */
-   IDX** pcancestors;        /* ancestor lists array (over all nodes) */
-   int* tail;                /* tail of all edges  */
-   int* head;                /* head of all edges  */
-   int* orgtail;             /* (original) tail of all original edges  */
-   int* orghead;             /* (original) head of all original edges  */
-   int e;
-   int nedges;
-   SCIP_Bool pcmw;
-
-   assert(scip != NULL);
-   assert(graph != NULL);
-
-   pcmw = (graph->stp_type == STP_PCSPG || graph->stp_type == STP_RPCSPG || graph->stp_type == STP_MWCSP || graph->stp_type == STP_RMWCSP);
-
-   nedges = graph->edges;
-
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(graph->orgtail), nedges) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(graph->orghead), nedges) );
-
-   tail = graph->tail;
-   head = graph->head;
-   orgtail = graph->orgtail;
-   orghead = graph->orghead;
-
-   for( e = 0; e < nedges; e++ )
-   {
-      orgtail[e] = tail[e];
-      orghead[e] = head[e];
-   }
-
-   if( pcmw )
-   {
-      int k;
-      int nnodes = graph->knots;
-
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(graph->pcancestors), nnodes) );
-
-      pcancestors = graph->pcancestors;
-
-      for( k = 0; k < nnodes; k++ )
-         pcancestors[k] = NULL;
-   }
-
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(graph->ancestors), nedges) );
-
-   ancestors = graph->ancestors;
-
-   for( e = 0; e < nedges; e++ )
-   {
-      SCIP_CALL( SCIPallocMemory(scip, &(ancestors[e])) ); /*lint !e866*/
-      (ancestors)[e]->index = e;
-      (ancestors)[e]->parent = NULL;
-   }
-
-   return SCIP_OKAY;
-}
-
-/** enlarge given graph */
-SCIP_RETCODE graph_resize(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                g,                  /**< graph to be resized */
-   int                   ksize,              /**< new node slots */
-   int                   esize,              /**< new edge slots */
-   int                   layers              /**< layers (set to -1 by default) */
-   )
-{
-   int i;
-   assert(scip      != NULL);
-   assert(g      != NULL);
-   assert((ksize  < 0) || (ksize  >= g->knots));
-   assert((esize  < 0) || (esize  >= g->edges));
-   assert((layers < 0) || (layers >= g->layers));
-
-   if( (layers > 0) && (layers != g->layers) )
-   {
-#if BLK
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(g->locals), g->layers, layers) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(g->source), g->layers, layers) );
-#else
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->locals), layers) );
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->source), layers) );
-#endif
-      for( i = g->layers; i < layers; i++ )
-      {
-         g->source[i] = -1;
-         g->locals[i] =  0;
-      }
-      g->layers = layers;
-   }
-   if( (ksize > 0) && (ksize != g->ksize) )
-   {
-#if BLK
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(g->term), g->ksize, ksize) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(g->mark), g->ksize, ksize) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(g->grad), g->ksize, ksize) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(g->inpbeg), g->ksize, ksize) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(g->outbeg), g->ksize, ksize) );
-#else
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->term), ksize) );
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->mark), ksize) );
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->grad), ksize) );
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->inpbeg), ksize) );
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->outbeg), ksize) );
-#endif
-      g->ksize  = ksize;
-   }
-   if( (esize > 0) && (esize != g->esize) )
-   {
-
-#if BLK
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(g->cost), g->esize, esize) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(g->tail), g->esize, esize) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(g->head), g->esize, esize) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(g->ieat), g->esize, esize) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(g->oeat), g->esize, esize) );
-#else
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->cost), esize) );
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->tail), esize) );
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->head), esize) );
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->ieat), esize) );
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->oeat), esize) );
-#endif
-      g->esize = esize;
-   }
-
-   return SCIP_OKAY;
-}
-
 
 /** used by graph_grid_create */
 static
@@ -409,6 +213,210 @@ void compEdges(
       }
       i++;
    }
+}
+
+/*
+ * global functions
+ */
+
+
+/** initialize graph */
+SCIP_RETCODE graph_init(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH**               g,                  /**< new graph */
+   int                   ksize,              /**< slots for nodes */
+   int                   esize,              /**< slots for edges */
+   int                   layers,             /**< number of layers (only needed for packing, otherwise 1) */
+   int                   flags               /**< flags */
+   )
+{
+   GRAPH* p;
+   int    i;
+
+   assert(ksize > 0);
+   assert(ksize < INT_MAX);
+   assert(esize >= 0);
+   assert(esize < INT_MAX);
+   assert(layers > 0);
+   assert(layers < SHRT_MAX);
+
+   SCIP_CALL( SCIPallocMemory(scip, g) );
+   p = *g;
+   assert(p != NULL);
+
+   /* ancestor data for retransformation after reductions */
+   p->fixedges = NULL;
+   p->ancestors = NULL;
+   p->pcancestors = NULL;
+   p->orgtail = NULL;
+   p->orghead = NULL;
+   p->norgmodelknots = 0;
+   p->norgmodeledges = 0;
+   p->ksize  = ksize;
+   p->orgknots = 0;
+   p->orgedges = 0;
+   p->knots  = 0;
+   p->terms  = 0;
+   p->orgsource = UNKNOWN;
+   p->stp_type = UNKNOWN;
+   p->flags  = flags;
+   p->layers = layers;
+   p->hoplimit = UNKNOWN;
+   p->extended = FALSE;
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->locals), layers) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->source), layers) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->term), ksize) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mark), ksize) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->grad), ksize) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->inpbeg), ksize) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->outbeg), ksize) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->cost), esize) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->tail), esize) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->head), esize) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->ieat), esize) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->oeat), esize) );
+
+   p->esize = esize;
+   p->edges = 0;
+   p->prize  = NULL;
+   p->maxdeg = NULL;
+   p->grid_coordinates = NULL;
+   p->grid_ncoords = NULL;
+   p->mincut_dist = NULL;
+   p->mincut_head = NULL;
+   p->mincut_numb = NULL;
+   p->mincut_prev = NULL;
+   p->mincut_next = NULL;
+   p->mincut_temp = NULL;
+   p->mincut_e = NULL;
+   p->mincut_x = NULL;
+   p->mincut_r = NULL;
+   p->path_heap = NULL;
+   p->path_state = NULL;
+
+   for( i = 0; i < p->layers; i++ )
+   {
+      p->source[i] = -1;
+      p->locals[i] =  0;
+   }
+   return SCIP_OKAY;
+}
+
+/** initialize data structures required to keep track of reductions */
+SCIP_RETCODE graph_init_history(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph               /**< graph */
+   )
+{
+   IDX** ancestors;          /* ancestor lists array (over all edges) */
+   IDX** pcancestors;        /* ancestor lists array (over all nodes) */
+   int* tail;                /* tail of all edges  */
+   int* head;                /* head of all edges  */
+   int* orgtail;             /* (original) tail of all original edges  */
+   int* orghead;             /* (original) head of all original edges  */
+   int e;
+   int nedges;
+   SCIP_Bool pcmw;
+
+   assert(scip != NULL);
+   assert(graph != NULL);
+
+   pcmw = (graph->stp_type == STP_PCSPG || graph->stp_type == STP_RPCSPG || graph->stp_type == STP_MWCSP || graph->stp_type == STP_RMWCSP);
+
+   nedges = graph->edges;
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(graph->orgtail), nedges) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(graph->orghead), nedges) );
+
+   tail = graph->tail;
+   head = graph->head;
+   orgtail = graph->orgtail;
+   orghead = graph->orghead;
+
+   for( e = 0; e < nedges; e++ )
+   {
+      orgtail[e] = tail[e];
+      orghead[e] = head[e];
+   }
+
+   if( pcmw )
+   {
+      int k;
+      int nnodes = graph->knots;
+
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(graph->pcancestors), nnodes) );
+
+      pcancestors = graph->pcancestors;
+
+      for( k = 0; k < nnodes; k++ )
+         pcancestors[k] = NULL;
+   }
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(graph->ancestors), nedges) );
+
+   ancestors = graph->ancestors;
+
+   for( e = 0; e < nedges; e++ )
+   {
+      SCIP_CALL( SCIPallocMemory(scip, &(ancestors[e])) ); /*lint !e866*/
+      (ancestors)[e]->index = e;
+      (ancestors)[e]->parent = NULL;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** enlarge given graph */
+SCIP_RETCODE graph_resize(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph to be resized */
+   int                   ksize,              /**< new node slots */
+   int                   esize,              /**< new edge slots */
+   int                   layers              /**< layers (set to -1 by default) */
+   )
+{
+   int i;
+   assert(scip      != NULL);
+   assert(g      != NULL);
+   assert((ksize  < 0) || (ksize  >= g->knots));
+   assert((esize  < 0) || (esize  >= g->edges));
+   assert((layers < 0) || (layers >= g->layers));
+
+   if( (layers > 0) && (layers != g->layers) )
+   {
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->locals), layers) );
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->source), layers) );
+
+      for( i = g->layers; i < layers; i++ )
+      {
+         g->source[i] = -1;
+         g->locals[i] =  0;
+      }
+      g->layers = layers;
+   }
+   if( (ksize > 0) && (ksize != g->ksize) )
+   {
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->term), ksize) );
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->mark), ksize) );
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->grad), ksize) );
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->inpbeg), ksize) );
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->outbeg), ksize) );
+
+      g->ksize  = ksize;
+   }
+   if( (esize > 0) && (esize != g->esize) )
+   {
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->cost), esize) );
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->tail), esize) );
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->head), esize) );
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->ieat), esize) );
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->oeat), esize) );
+
+      g->esize = esize;
+   }
+
+   return SCIP_OKAY;
 }
 
 /** creates a graph out of a given grid */
@@ -815,6 +823,7 @@ SCIP_RETCODE graph_prize_transform(
       }
    }
    graph->source[0] = root;
+   graph->extended = TRUE;
    assert((nterms + 1) == graph->terms);
    if( graph->stp_type != STP_MWCSP )
       graph->stp_type = STP_PCSPG;
@@ -1393,6 +1402,7 @@ SCIP_RETCODE graph_PcToSap(
       }
    }
    graph->source[0] = root;
+   graph->extended = TRUE;
    assert((nterms + 1) == graph->terms);
    if( graph->stp_type != STP_MWCSP )
       graph->stp_type = STP_PCSPG;
@@ -1461,7 +1471,9 @@ SCIP_RETCODE graph_rootprize_transform(
    }
    /* one for the root */
    nterms++;
-   assert((nterms) == graph->terms);
+
+   graph->extended = TRUE;
+   assert(nterms == graph->terms);
    graph->stp_type = STP_RPCSPG;
    return SCIP_OKAY;
 }
@@ -1867,22 +1879,6 @@ void graph_free(
          SCIPfreeMemoryArray(scip, &(p->grid_ncoords));
    }
 
-#if BLK
-   SCIPfreeBlockMemoryArray(scip, &(p->oeat), p->esize);
-   SCIPfreeBlockMemoryArray(scip, &(p->ieat), p->esize);
-   SCIPfreeBlockMemoryArray(scip, &(p->head), p->esize);
-   SCIPfreeBlockMemoryArray(scip, &(p->tail), p->esize);
-   SCIPfreeBlockMemoryArray(scip, &(p->cost), p->esize);
-   SCIPfreeBlockMemoryArray(scip, &(p->outbeg), p->ksize);
-   SCIPfreeBlockMemoryArray(scip, &(p->inpbeg), p->ksize);
-   SCIPfreeBlockMemoryArray(scip, &(p->grad), p->ksize);
-   SCIPfreeBlockMemoryArray(scip, &(p->mark), p->ksize);
-   SCIPfreeBlockMemoryArray(scip, &(p->term), p->ksize);
-   SCIPfreeBlockMemoryArray(scip, &(p->source), p->layers);
-   SCIPfreeBlockMemoryArray(scip, &(p->locals), p->layers);
-
-   SCIPfreeBlockMemory(scip, &(p));
-#else
    SCIPfreeMemoryArray(scip, &(p->oeat));
    SCIPfreeMemoryArray(scip, &(p->ieat));
    SCIPfreeMemoryArray(scip, &(p->head));
@@ -1897,7 +1893,6 @@ void graph_free(
    SCIPfreeMemoryArray(scip, &(p->locals));
 
    SCIPfreeMemory(scip, &(p));
-#endif
 }
 
 /** copy the graph */
@@ -2343,7 +2338,7 @@ SCIP_RETCODE graph_knot_contract(
 }
 
 /** subtract a given sum from the prize of a terminal */
-void prize_subtract(
+void graph_subtractprize(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< the graph */
    SCIP_Real             cost,               /**< cost to be subtracted */
@@ -2447,7 +2442,7 @@ SCIP_RETCODE graph_knot_contractpc(
       assert(g->source[0] == g->tail[e] || g->source[0] == j);
       assert(SCIPisEQ(scip, g->prize[s], g->cost[e]));
 
-      prize_subtract(scip, g, g->cost[ets] - g->prize[s], i);
+      graph_subtractprize(scip, g, g->cost[ets] - g->prize[s], i);
       graph_edge_del(scip, g, e, TRUE);
 
       assert(g->inpbeg[j] == EAT_LAST);
@@ -2463,9 +2458,9 @@ SCIP_RETCODE graph_knot_contractpc(
    else
    {
       if( g->stp_type != STP_MWCSP && g->stp_type != STP_RMWCSP )
-         prize_subtract(scip, g, g->cost[ets], i);
+         graph_subtractprize(scip, g, g->cost[ets], i);
       else
-         prize_subtract(scip, g, -(g->prize[s]), i);
+         graph_subtractprize(scip, g, -(g->prize[s]), i);
       SCIP_CALL( graph_knot_contract(scip, g, solnode, t, s) );
    }
    return SCIP_OKAY;
@@ -2616,41 +2611,6 @@ void graph_edge_add(
    g->edges += 2;
 }
 
-inline static void edge_remove(
-   GRAPH*                g,                  /**< the graph */
-   int                   e                   /**< the edge to be removed */
-   )
-{
-   int    i;
-   int    head;
-   int    tail;
-
-   assert(g          != NULL);
-   assert(e          >= 0);
-   assert(e          <  g->edges);
-
-   head = g->head[e];
-   tail = g->tail[e];
-
-   if( g->inpbeg[head] == e )
-      g->inpbeg[head] = g->ieat[e];
-   else
-   {
-      for( i = g->inpbeg[head]; g->ieat[i] != e; i = g->ieat[i] )
-         assert(i >= 0);
-
-      g->ieat[i] = g->ieat[e];
-   }
-   if( g->outbeg[tail] == e )
-      g->outbeg[tail] = g->oeat[e];
-   else
-   {
-      for( i = g->outbeg[tail]; g->oeat[i] != e; i = g->oeat[i] )
-         assert(i >= 0);
-
-      g->oeat[i] = g->oeat[e];
-   }
-}
 
 /** delete an edge */
 void graph_edge_del(
@@ -2791,23 +2751,24 @@ void graph_uncover(
    }
 }
 
+
 /** mark terminals and switch terminal property to original terminals */
-SCIP_RETCODE pcgraphorg(
+SCIP_RETCODE graph_2org(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph               /**< the graph */
    )
 {
-   int k;
-   int  root;
+   int root;
    int nnodes;
 
    assert(scip != NULL);
    assert(graph != NULL);
+   assert(graph->extended);
 
    root = graph->source[0];
    nnodes = graph->knots;
 
-   for( k = 0; k < nnodes; k++ )
+   for( int k = 0; k < nnodes; k++ )
    {
       graph->mark[k] = (graph->grad[k] > 0);
 
@@ -2826,26 +2787,25 @@ SCIP_RETCODE pcgraphorg(
    if( graph->stp_type == STP_RPCSPG )
       graph->mark[root] = TRUE;
 
+   graph->extended = FALSE;
+
    return SCIP_OKAY;
 }
 
 /** unmark terminals and switch terminal property to transformed terminals */
-SCIP_RETCODE pcgraphtrans(
+SCIP_RETCODE graph_2trans(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph               /**< the graph */
    )
 {
-   int k;
-   int  root;
-   int nnodes;
+   const int root = graph->source[0];
+   const int nnodes = graph->knots;;
 
    assert(scip != NULL);
    assert(graph != NULL);
+   assert(!(graph->extended));
 
-   root = graph->source[0];
-   nnodes = graph->knots;
-
-   for( k = 0; k < nnodes; k++ )
+   for( int k = 0; k < nnodes; k++ )
    {
       graph->mark[k] = (graph->grad[k] > 0);
 
@@ -2855,7 +2815,37 @@ SCIP_RETCODE pcgraphtrans(
          graph_knot_chg(graph, k, -2);
    }
 
+   graph->extended = TRUE;
+
    return SCIP_OKAY;
+}
+
+/** graph_2org if extended */
+SCIP_RETCODE graph_2orgcheck(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph               /**< the graph */
+   )
+{
+   assert(graph != NULL);
+
+   if( !graph->extended )
+      return SCIP_OKAY;
+
+   return graph_2org(scip, graph);
+}
+
+/** graph_2trans if not extended */
+SCIP_RETCODE graph_2transcheck(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph               /**< the graph */
+   )
+{
+   assert(graph != NULL);
+
+   if( graph->extended )
+      return SCIP_OKAY;
+
+   return graph_2trans(scip, graph);
 }
 
 /** pack the graph, i.e. build a new graph that discards deleted edges and nodes */
@@ -2866,11 +2856,9 @@ SCIP_RETCODE graph_pack(
    SCIP_Bool             verbose             /**< verbose? */
    )
 {
-   const char* msg1 = "Nodes: %d  Edges: %d  Terminals: %d\n";
    GRAPH* g;
    GRAPH* q;
    int*   new;
-   int    i;
    int    e;
    int    oldnnodes;
    int    oldnedges;
@@ -2894,7 +2882,7 @@ SCIP_RETCODE graph_pack(
       printf("Reduced graph: ");
 
    /* count nodes */
-   for( i = 0; i < oldnnodes; i++ )
+   for( int i = 0; i < oldnnodes; i++ )
    {
       /* are there incident edges to current node? */
       if( g->grad[i] > 0 )
@@ -2915,7 +2903,7 @@ SCIP_RETCODE graph_pack(
    }
 
    /* count edges */
-   for( i = 0; i < oldnedges; i++ )
+   for( int i = 0; i < oldnedges; i++ )
    {
       if( g->oeat[i] != EAT_FREE )
       {
@@ -2941,6 +2929,7 @@ SCIP_RETCODE graph_pack(
    q->grid_coordinates = g->grid_coordinates;
    q->fixedges = g->fixedges;
    q->hoplimit = g->hoplimit;
+   q->extended = g->extended;
    q->pcancestors = g->pcancestors;
 
    if( new == NULL )
@@ -2972,6 +2961,7 @@ SCIP_RETCODE graph_pack(
 
    if( rmw )
    {
+      int i;
       for( i = 0; i < oldnnodes; i++ )
          g->mark[i] = (g->grad[i] > 0);
 
@@ -2986,7 +2976,7 @@ SCIP_RETCODE graph_pack(
       }
    }
 
-   for( i = 0; i < oldnnodes; i++ )
+   for( int i = 0; i < oldnnodes; i++ )
    {
       assert(g->term[i] < g->layers);
       if( g->grad[i] > 0 )
@@ -3003,7 +2993,7 @@ SCIP_RETCODE graph_pack(
    }
 
    /* add edges */
-   for( i = 0; i < oldnedges; i += 2 )
+   for( int i = 0; i < oldnedges; i += 2 )
    {
       if( g->ieat[i] == EAT_FREE )
       {
@@ -3047,7 +3037,7 @@ SCIP_RETCODE graph_pack(
    assert(graph_valid(q));
 
    if( verbose )
-      printf(msg1, q->knots, q->edges, q->terms);
+      printf("Nodes: %d  Edges: %d  Terminals: %d\n", q->knots, q->edges, q->terms);
 
    return SCIP_OKAY;
 }
@@ -3061,7 +3051,6 @@ void graph_getNVET(
    int*            nterms              /**< number of terminals */
    )
 {
-   int k;
    int v = 0;
    int e = 0;
    int t = 0;
@@ -3071,7 +3060,7 @@ void graph_getNVET(
 
    vorg = graph->knots;
 
-   for( k = 0; k < vorg; k++ )
+   for( int k = 0; k < vorg; k++ )
    {
       if( graph->grad[k] > 0 )
       {

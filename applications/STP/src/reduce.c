@@ -936,7 +936,7 @@ SCIP_RETCODE redLoopMw(
 
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
 
-   SCIP_CALL( pcgraphorg(scip, g) );
+   SCIP_CALL( graph_2org(scip, g) );
 
    degelims = 0;
 
@@ -1120,7 +1120,7 @@ SCIP_RETCODE redLoopMw(
 
 
    /* go back to the extended graph */
-   SCIP_CALL( pcgraphtrans(scip, g) );
+   SCIP_CALL( graph_2trans(scip, g) );
 
    SCIP_CALL( level0(scip, g) );
 
@@ -1194,7 +1194,7 @@ SCIP_RETCODE redLoopPc(
    ub = -1.0;
    fix = 0.0;
 
-   SCIP_CALL( pcgraphorg(scip, g) );
+   SCIP_CALL( graph_2org(scip, g) );
 
    SCIP_CALL( degree_test_pc(scip, g, &fix, &degnelims, solnode, FALSE) );
 
@@ -1387,7 +1387,7 @@ SCIP_RETCODE redLoopPc(
    if( rpc )
       g->prize[g->source[0]] = rootprize;
 
-   SCIP_CALL( pcgraphtrans(scip, g) );
+   SCIP_CALL( graph_2trans(scip, g) );
 
    /* free random number generator */
    SCIPrandomFree(&randnumgen);
@@ -1607,10 +1607,10 @@ SCIP_RETCODE reduce(
 
    stp_type = (*graph)->stp_type;
 
-   /* initialise ancestor list for each edge */
+   /* initialize ancestor list for each edge */
    SCIP_CALL( graph_init_history(scip, (*graph)) );
 
-   /* initialise shortest path algorithms */
+   /* initialize shortest path algorithms */
    SCIP_CALL( graph_path_init(scip, (*graph)) );
 
    SCIP_CALL( level0(scip, (*graph)) );

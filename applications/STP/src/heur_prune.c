@@ -550,7 +550,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
    probtype = g->stp_type;
    hopfactor = DEFAULT_HOPFACTOR;
 
-   mw = (probtype == STP_MWCSP);
+   mw = (probtype == STP_MWCSP || probtype == STP_RMWCSP);
    pc = (probtype == STP_RPCSPG || probtype == STP_PCSPG);
    pcmw = (pc || mw);
 
@@ -678,9 +678,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
    /* get number of remaining nodes, edges and terminals */
    graph_getNVET(prunegraph, &annodes, &anedges, &anterms);
 
-#if PRINTDEBUG
-         printf("entering prune \n\n");
-#endif
+   SCIPdebugMessage("entering prune \n\n");
 
    /* no solution provided and graph not completely reduced? */
    if( !solgiven && annodes > 0 )
@@ -1081,7 +1079,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
 
          if( pcmw )
          {
-            SCIP_CALL( pcgraphorg(scip, prunegraph) );
+            SCIP_CALL( graph_2org(scip, prunegraph) );
          }
 
          SCIP_CALL( bound_reducePrune(scip, prunegraph, vnoi, cost, (pcmw) ? prunegraph->prize : NULL, nodearrreal, costrev,
@@ -1089,7 +1087,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
 
          if( pcmw )
          {
-            SCIP_CALL( pcgraphtrans(scip, prunegraph) );
+            SCIP_CALL( graph_2trans(scip, prunegraph) );
          }
 
 #if PRINTDEBUG
@@ -1305,11 +1303,11 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
             curr = prunegraph->pcancestors[k];
             while( curr != NULL )
             {
-               if( nodearrchar[prunegraph->orgtail[curr->index]] == FALSE )
-                  nodearrchar[prunegraph->orgtail[curr->index]] = TRUE;
+               assert(prunegraph->orgtail[curr->index] < nnodes);
+               assert(prunegraph->orghead[curr->index] < nnodes);
 
-               if( nodearrchar[prunegraph->orghead[curr->index]] == FALSE )
-                  nodearrchar[prunegraph->orghead[curr->index]] = TRUE;
+               nodearrchar[prunegraph->orgtail[curr->index]] = TRUE;
+               nodearrchar[prunegraph->orghead[curr->index]] = TRUE;
 
                curr = curr->parent;
             }

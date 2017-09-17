@@ -112,89 +112,6 @@ SCIP_DECL_PARAMCHGD(paramChgdRandomseed)
 }
 
 
-#if 0
-/** for debug purposes only */
-static
-SCIP_RETCODE printGraph(
-   SCIP* scip,
-   const GRAPH*          graph,              /**< Graph to be printed */
-   const char*           filename,           /**< Name of the output file */
-   int*                  result
-   )
-{
-   char                label[SCIP_MAXSTRLEN];
-   FILE* file;
-   int e;
-   int n;
-   int m;
-   STP_Bool* stnodes;
-   SCIP_CALL( SCIPallocBufferArray(scip, &stnodes, graph->knots ) );
-
-   assert(graph != NULL);
-   file = fopen((filename != NULL) ? filename : "graphX.gml", "w");
-
-   for( e = 0; e < graph->knots; e++ )
-   {
-      stnodes[e] = FALSE;
-   }
-   for( e = 0; e < graph->edges; e++ )
-   {
-      if( result[e] == CONNECT )
-      {
-         stnodes[graph->tail[e]] = TRUE;
-         stnodes[graph->head[e]] = TRUE;
-      }
-   }
-
-   /* write GML format opening, undirected */
-   SCIPgmlWriteOpening(file, FALSE);
-
-   /* write all nodes, discriminate between root, terminals and the other nodes */
-   e = 0;
-   m = 0;
-   for( n = 0; n < graph->knots; ++n )
-   {
-      if( stnodes[n] )
-      {
-         if( n == graph->source[0] )
-         {
-            (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Root", n);
-            SCIPgmlWriteNode(file, (unsigned int)n, label, "rectangle", "#666666", NULL);
-            m = 1;
-         }
-         else if( graph->term[n] == 0 )
-         {
-            (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Terminal %d", n, e + 1);
-            SCIPgmlWriteNode(file, (unsigned int)n, label, "circle", "#ff0000", NULL);
-            e += 1;
-         }
-         else
-         {
-            (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Node %d", n, n + 1 - e - m);
-            SCIPgmlWriteNode(file, (unsigned int)n, label, "circle", "#336699", NULL);
-         }
-      }
-   }
-
-   /* write all edges (undirected) */
-   for( e = 0; e < graph->edges; e ++ )
-   {
-      if( result[e] == CONNECT )
-      {
-         (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "%8.2f", graph->cost[e]);
-
-         SCIPgmlWriteEdge(file, (unsigned int)graph->tail[e], (unsigned int)graph->head[e], label, "#ff0000");
-      }
-   }
-   SCIPfreeBufferArray(scip, &stnodes);
-   /* write GML format closing */
-   SCIPgmlWriteClosing(file);
-
-   return SCIP_OKAY;
-}
-#endif
-
-
 /** compute starting points among marked (w.r.t. g->mark) vertices for constructive heuristics */
 void SCIPStpHeurTMCompStarts(
    GRAPH*                graph,              /**< graph data structure */
@@ -922,7 +839,6 @@ SCIP_RETCODE computeSteinerTreeDijk(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
    SCIP_Real*            cost,               /**< edge costs */
-   SCIP_Real*            costrev,            /**< reversed edge costs */
    SCIP_Real*            dijkdist,           /**< distance array */
    int*                  result,             /**< solution array (on edges) */
    int*                  dijkedge,           /**< predecessor edge array */
@@ -954,7 +870,6 @@ SCIP_RETCODE computeSteinerTreeDijkPcMw(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
    SCIP_Real*            cost,               /**< edge costs */
-   SCIP_Real*            costrev,            /**< reversed edge costs */
    SCIP_Real*            dijkdist,           /**< distance array */
    int*                  result,             /**< solution array (on edges) */
    int*                  dijkedge,           /**< predecessor edge array */
@@ -989,20 +904,6 @@ SCIP_RETCODE computeSteinerTreeDijkPcMwFull(
    )
 {
    graph_path_st_pcmw_full(scip, g, cost, dijkdist, dijkedge, start, connected);
-
-#if 0
-   SCIP_Real* tmpnodeweight;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &tmpnodeweight, g->knots) );
-
-   SCIP_CALL(prune(scip, g, cost, result, connected));
-
-   BMScopyMemoryArray(tmpnodeweight, g->prize, g->knots);
-
-   graph_path_st_pcmw_reduce(scip, g, cost, tmpnodeweight, result, start, connected);
-
-   SCIPfreeBufferArray(scip, &tmpnodeweight);
-#endif
 
    SCIP_CALL(prune(scip, g, cost, result, connected));
 
@@ -1727,58 +1628,6 @@ SCIP_RETCODE computeSteinerTreeVnoi(
    return SCIP_OKAY;
 }
 
-/** trivial PC heuristic, selecting most expensive terminal as solution */
-static
-void do_prizecoll_trivial(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          graph,              /**< graph data structure */
-   int*                  best_result         /**< array to indicate whether an edge is in the solution */
-   )
-{
-   double maxcost = -1;
-   int e;
-   int i = -1;
-   int maxedge = UNKNOWN;
-   int maxterm;
-   int root;
-   assert(graph != NULL);
-   assert(best_result != NULL);
-   root = graph->source[0];
-
-   for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
-   {
-      if( Is_term(graph->term[graph->head[e]]) )
-      {
-         best_result[e] = CONNECT;
-         if( SCIPisLT(scip, maxcost, graph->cost[e]) )
-         {
-            maxcost = graph->cost[e];
-            maxedge = e;
-         }
-      }
-   }
-
-   assert(maxedge >= 0);
-   maxterm = graph->head[maxedge];
-   for( e = graph->inpbeg[maxterm]; e != EAT_LAST; e = graph->ieat[e] )
-   {
-      if( graph->tail[e] != root )
-      {
-         best_result[e] = CONNECT;
-         i = graph->tail[e];
-         break;
-      }
-   }
-   assert(i >= 0);
-   for( e = graph->inpbeg[i]; e != EAT_LAST; e = graph->ieat[e] )
-      if( graph->tail[e] == root )
-         break;
-   assert(e != EAT_LAST);
-   best_result[maxedge] = UNKNOWN;
-   best_result[e] = CONNECT;
-}
-
-
 /** execute shortest paths heuristic to obtain a Steiner tree */
 SCIP_RETCODE SCIPStpHeurTMRun(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2181,7 +2030,7 @@ SCIP_RETCODE SCIPStpHeurTMRun(
          }
          else
          {
-            SCIP_CALL( computeSteinerTreeDijkPcMw(scip, graph, cost, costrev, dijkdist, result, dijkedge, k, connected) );
+            SCIP_CALL( computeSteinerTreeDijkPcMw(scip, graph, cost, dijkdist, result, dijkedge, k, connected) );
          }
 
          if( SCIPisStopped(scip) )
@@ -2240,7 +2089,7 @@ SCIP_RETCODE SCIPStpHeurTMRun(
                result[e] = UNKNOWN;
             }
 
-            SCIP_CALL( computeSteinerTreeDijk(scip, graph, cost, costrev, dijkdist, result, dijkedge, root, heurdata->randnumgen, connected) );
+            SCIP_CALL( computeSteinerTreeDijk(scip, graph, cost, dijkdist, result, dijkedge, root, heurdata->randnumgen, connected) );
 
             obj = 0.0;
             edgecount = 0;
@@ -2307,7 +2156,7 @@ SCIP_RETCODE SCIPStpHeurTMRun(
 
          if( mode == TM_DIJKSTRA && graph->stp_type != STP_DCSTP )
          {
-            SCIP_CALL( computeSteinerTreeDijk(scip, graph, cost, costrev, dijkdist, result, dijkedge, start[r],  heurdata->randnumgen, connected) );
+            SCIP_CALL( computeSteinerTreeDijk(scip, graph, cost, dijkdist, result, dijkedge, start[r],  heurdata->randnumgen, connected) );
          }
          else if( graph->stp_type == STP_DCSTP )
          {
@@ -2558,9 +2407,6 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    SCIP_Real* xval;
    SCIP_Real pobj;
    SCIP_Real maxcost;
-#if 0
-   SCIP_Real oldtimelimit = 0.0;
-#endif
    int* results;
    SCIP_Real* nodepriority;
    int e;
@@ -2643,14 +2489,6 @@ SCIP_DECL_HEUREXEC(heurExecTM)
 
    assert(vars[0] != NULL);
 
-#if 0
-   if( heurtiming & SCIP_HEURTIMING_BEFORENODE )
-   {
-      SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &oldtimelimit) );
-      SCIP_CALL( SCIPsetRealParam(scip, "limits/time", 0.95 * oldtimelimit) );
-   }
-#endif
-
    /* allocate memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &cost, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nedges) );
@@ -2681,12 +2519,6 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    for( e = 0; e < nedges; e++ )
       results[e] = UNKNOWN;
 
-   /* prize collecting problem and too many edges for the heuristic to handle? */
-   if( graph->stp_type == STP_PCSPG && graph->edges > pctrivialbound )
-   {
-      do_prizecoll_trivial(scip, graph, results);
-   }
-   else
    {
       SCIP_Real randval;
       SCIP_Real randupper;
@@ -2967,12 +2799,6 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    SCIPfreeBufferArray(scip, &costrev);
    SCIPfreeBufferArray(scip, &cost);
 
-#if 0
-   if( heurtiming & SCIP_HEURTIMING_BEFORENODE )
-   {
-      SCIP_CALL( SCIPsetRealParam(scip, "limits/time", oldtimelimit) );
-   }
-#endif
    return SCIP_OKAY;
 }
 

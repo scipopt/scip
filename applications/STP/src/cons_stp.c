@@ -2050,10 +2050,6 @@ SCIP_RETCODE SCIPdualAscentStp(
    return SCIP_OKAY;
 }
 
-
-
-
-
 /** dual ascent heuristic for the STP */
 SCIP_RETCODE SCIPdualAscentStpSol(
    SCIP*                 scip,               /**< SCIP data structure */
