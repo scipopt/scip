@@ -3072,7 +3072,7 @@ SCIP_RETCODE propagateLowerboundBinvar(
    SCIP_Real ubobjchg;
 
    assert(SCIPvarIsBinary(var));
-   assert(SCIPisLE(scip, lowerbound, maxpseudoobjact));
+   assert(SCIPisDualfeasLE(scip, lowerbound, maxpseudoobjact));
    assert(!SCIPisInfinity(scip, maxpseudoobjact));
 
    /*@todo Instead of running always over all implications use SCIP_OBJIMPLICS in the same way as for the propagation of
