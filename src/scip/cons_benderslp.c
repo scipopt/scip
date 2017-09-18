@@ -314,7 +314,7 @@ static
 SCIP_DECL_CONSENFOLP(consEnfolpBenderslp)
 {  /*lint --e{715}*/
 
-   if( SCIPgetDepth(scip) > 1 )
+   if( SCIPgetDepth(scip) >= 1 )
       (*result) = SCIP_FEASIBLE;
    else
       SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, NULL, conshdlr, result, LP) );
@@ -328,7 +328,7 @@ static
 SCIP_DECL_CONSENFORELAX(consEnforelaxBenderslp)
 {  /*lint --e{715}*/
 
-   if( SCIPgetDepth(scip) > 1 )
+   if( SCIPgetDepth(scip) >= 1 )
       (*result) = SCIP_FEASIBLE;
    else
       SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, sol, conshdlr, result, RELAX) );
@@ -342,7 +342,7 @@ static
 SCIP_DECL_CONSENFOPS(consEnfopsBenderslp)
 {  /*lint --e{715}*/
 
-   if( SCIPgetDepth(scip) > 1 )
+   if( SCIPgetDepth(scip) >= 1 )
       (*result) = SCIP_FEASIBLE;
    else
       SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, NULL, conshdlr, result, PSEUDO) );

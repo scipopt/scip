@@ -52,11 +52,7 @@
 //#define SCIP_DEFAULT_CUTSASCONS          FALSE  /** Should the transferred cuts be added as constraints? */
 #define SCIP_DEFAULT_MIPCHECKFREQ            5  /** the number of iterations that the MIP is checked, -1 for always. */
 #define SCIP_DEFAULT_LNSCHECK              TRUE /** should the Benders' decomposition be used in LNS heuristics */
-/* A standard implementation of is defined only generating cuts when the current problem solution is optimal for the
- * given cuts. That is, the bound of the solution is equal to the current lower bound. The cuts are generated in the
- * enfo or check phases of the constraint handler. Different from standard Benders, the tree is not deleted. The cuts
- * are added to the problem and the solving continues. */
-#define SCIP_DEFAULT_STDBENDERS           FALSE /** should a standard implementation of Benders' decomposition be used? */
+#define SCIP_DEFAULT_COPYBENDERS           TRUE /** Should Benders' decomposition be copied in sub-SCIPs? */
 
 #define AUXILIARYVAR_NAME     "##bendersauxiliaryvar"
 #define MW_AUXILIARYVAR_NAME  "##MWauxiliaryvar##"
@@ -877,7 +873,7 @@ SCIP_RETCODE SCIPbendersCopyInclude(
    assert(valid != NULL);
    assert(set->scip != NULL);
 
-   if( benders->benderscopy != NULL )
+   if( benders->benderscopy != NULL && benders->copybenders )
    {
       SCIPsetDebugMsg(set, "including benders %s in subscip %p\n", SCIPbendersGetName(benders), (void*)set->scip);
       SCIP_CALL( benders->benderscopy(set->scip, benders, valid) );
@@ -1050,10 +1046,10 @@ SCIP_RETCODE SCIPbendersCreate(
    SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname, paramdesc,
                   &(*benders)->lnscheck, FALSE, SCIP_DEFAULT_LNSCHECK, NULL, NULL) ); /*lint !e740*/
 
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/stdbenders", name);
-   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "Should a standard Benders' decomposition implementation be used (i.e. only generate cuts for optimal solutions)?");
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/copybenders", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "Should Benders' decomposition be copied in sub-SCIPs?");
    SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname, paramdesc,
-                  &(*benders)->stdbenders, FALSE, SCIP_DEFAULT_STDBENDERS, NULL, NULL) ); /*lint !e740*/
+                  &(*benders)->copybenders, FALSE, SCIP_DEFAULT_COPYBENDERS, NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -1852,15 +1848,6 @@ SCIP_RETCODE SCIPbendersExec(
    if( benders->iscopy && !benders->lnscheck )
    {
       (*result) = SCIP_FEASIBLE;
-      return SCIP_OKAY;
-   }
-
-   /* To replicate a standard implementation of Benders' decomposition, cuts are only generated when the given solution
-    * is optimal w.r.t the current set of cuts. This requires a check of the current solution objective with the current
-    * dual bound. */
-   if( benders->stdbenders && !SCIPsetIsFeasLE(set, SCIPgetSolOrigObj(set->scip, sol), SCIPgetDualbound(set->scip)) )
-   {
-      (*result) = SCIP_INFEASIBLE;
       return SCIP_OKAY;
    }
 
