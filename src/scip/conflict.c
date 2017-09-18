@@ -6652,7 +6652,7 @@ SCIP_RETCODE tightenDualray(
       inds = SCIPaggrRowGetInds(proofset->aggrrow);
       nnz = SCIPaggrRowGetNNz(proofset->aggrrow);
 
-      for( i = 0; i < nnz && nnz > 1; i++ )
+      for( i = 0; i < nnz && nnz > 1; )
       {
          SCIP_Real val;
          int idx = inds[i];
