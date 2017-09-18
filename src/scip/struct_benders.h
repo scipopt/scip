@@ -73,7 +73,7 @@ struct SCIP_Benders
    SCIP_Bool             transfercuts;       /**< Should Benders' cuts generated in LNS heuristics be transferred to the main SCIP instance? */
    SCIP_Bool             lnscheck;           /**< Should Benders' decomposition be used in LNS heuristics? */
    SCIP_Bool             cutsascons;         /**< Should the transferred cuts be added as constraints? */
-   SCIP_Bool             stdbenders;         /**< Should a standard Benders' decomposition implementation be used? */
+   SCIP_Bool             copybenders;        /**< Should the Benders' decomposition be copied? */
    int                   mipcheckfreq;       /**< the frequency that the MIP subproblem is checked for feasibility, -1 for always.*/
 
    /* information for heuristics */
