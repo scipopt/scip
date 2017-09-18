@@ -2833,7 +2833,8 @@ SCIP_RETCODE conflictFlushProofset(
          /* prefer an infeasibility proof */
          if( set->conf_prefinfproof && conflict->proofset->conflicttype == SCIP_CONFTYPE_BNDEXCEEDING )
          {
-            for( int i = 0; i < conflict->nproofsets; i++ )
+            int i;
+            for( i = 0; i < conflict->nproofsets; i++ )
             {
                if( conflict->proofsets[i]->conflicttype == SCIP_CONFTYPE_INFEASLP )
                {
