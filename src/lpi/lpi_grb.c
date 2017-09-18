@@ -902,13 +902,13 @@ SCIP_RETCODE convertSides(
          lpi->rhsarray[i] = rhs[i];
          lpi->rngarray[i] = 0.0;
       }
-      else if( lhs[i] <= -SCIP_DEFAULT_INFINITY )
+      else if( lhs[i] <= -GRB_INFINITY )
       {
          assert(-GRB_INFINITY < rhs[i] && rhs[i] < GRB_INFINITY);
          lpi->senarray[i] = GRB_LESS_EQUAL;
          lpi->rhsarray[i] = rhs[i];
       }
-      else if( rhs[i] >= SCIP_DEFAULT_INFINITY )
+      else if( rhs[i] >= GRB_INFINITY )
       {
          assert(-GRB_INFINITY < lhs[i] && lhs[i] < GRB_INFINITY);
          lpi->senarray[i] = GRB_GREATER_EQUAL;
@@ -1536,9 +1536,6 @@ SCIP_RETCODE SCIPlpiAddCols(
       /**@todo Save and restore basis - currently, the basis is destroyed if we discard (and later re-add) range variables */
       SCIP_CALL( delRangeVars(lpi) );
    }
-
-   /* we do not need to convert infinity values, because SCIP_DEFAULT_INFINITY is large enough */
-   assert(SCIP_DEFAULT_INFINITY >= GRB_INFBOUND);
 
    /* add columns - all new variables are continuous */
    CHECK_ZERO( lpi->messagehdlr, GRBaddvars(lpi->grbmodel, ncols, nnonz, (int*)beg, (int*)ind, (SCIP_Real*)val,
@@ -2222,14 +2219,14 @@ SCIP_RETCODE SCIPlpiScaleRow(
    }
 
    /* scale row sides */
-   if( lhs > -SCIP_DEFAULT_INFINITY )
+   if( lhs > -GRB_INFBOUND )
       lhs *= scaleval;
    else if( scaleval < 0.0 )
-      lhs = SCIP_DEFAULT_INFINITY;
-   if( rhs < SCIP_DEFAULT_INFINITY )
+      lhs = GRB_INFBOUND;
+   if( rhs < GRB_INFBOUND )
       rhs *= scaleval;
    else if( scaleval < 0.0 )
-      rhs = -SCIP_DEFAULT_INFINITY;
+      rhs = -GRB_INFBOUND;
    if( scaleval > 0.0 )
    {
       SCIP_CALL( SCIPlpiChgSides(lpi, 1, &row, &lhs, &rhs) );
