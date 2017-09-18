@@ -697,7 +697,10 @@ SCIP_RETCODE buildsolgraph(
       }
 
       if( pcmw )
+      {
+         newgraph->extended = TRUE;
          newgraph->norgmodelknots = newgraph->knots - newgraph->terms;
+      }
 
       SCIPdebugMessage("REC: sol graph with nodes: %d, edges: %d, terminals: %d  \n", nsolnodes, 2 * nsoledges, newgraph->terms);
 
@@ -827,6 +830,31 @@ SCIP_Bool isInPool(
 /*
  * primal heuristic specific interface methods
  */
+
+
+/** get solution from index */
+STPSOL* SCIPStpHeurRecSolfromIdx(
+   STPSOLPOOL*           pool,               /**< the pool */
+   const int             index               /**< the index */
+      )
+{
+   int i;
+   int size;
+
+   assert(pool != NULL);
+   assert(index >= 0 && index <= pool->maxindex);
+
+   size = pool->size;
+
+   for( i = 0; i < size; i++ )
+      if( pool->sols[i]->index == index )
+         break;
+
+   if( i == size )
+      return NULL;
+   else
+      return pool->sols[i];
+}
 
 /** initializes STPSOL pool */
 SCIP_RETCODE SCIPStpHeurRecInitPool(
@@ -1044,6 +1072,14 @@ SCIP_RETCODE SCIPStpHeurRecRun(
    incumentobj = graph_computeSolVal(graph->cost, incumbentedges, 0.0, nedges);
 
    SCIPdebugMessage("REC: incumbent obj: %f \n", incumentobj);
+
+   if( heur == NULL )
+   {
+      heur = SCIPfindHeur(scip, "rec");
+      assert(heur != NULL);
+      heurdata = SCIPheurGetData(heur);
+      assert(heurdata != NULL);
+   }
 
    /* main loop (for recombination) */
    for( int v = 0, failcount = 0; v < CYCLES_PER_RUN * runs && !SCIPisStopped(scip); v++ )
@@ -1521,7 +1557,6 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
    assert(success != NULL);
    assert(dnodemap != NULL);
    assert(newresult != NULL);
-   assert(graph->stp_type != STP_DHCSTP);
 
    pcmw = (graph->stp_type == STP_PCSPG || graph->stp_type == STP_MWCSP || graph->stp_type == STP_RMWCSP || graph->stp_type == STP_RPCSPG);
    nedges = graph->edges;

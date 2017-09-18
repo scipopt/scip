@@ -841,12 +841,7 @@ SCIP_RETCODE graph_RerootSol(
    )
 {
    SCIP_QUEUE* queue;
-   int a;
-   int k;
-   int head;
-   int node;
    int nnodes;
-   int* pnode;
    int* gmark;
 
    assert(scip != NULL);
@@ -860,7 +855,7 @@ SCIP_RETCODE graph_RerootSol(
    gmark = g->mark;
    nnodes = g->knots;
 
-   for( k = 0; k < nnodes; k++ )
+   for( int k = 0; k < nnodes; k++ )
       gmark[k] = FALSE;
 
    gmark[newroot] = TRUE;
@@ -871,13 +866,12 @@ SCIP_RETCODE graph_RerootSol(
    /* BFS loop */
    while( !SCIPqueueIsEmpty(queue) )
    {
-      pnode = (SCIPqueueRemove(queue));
-      node = *pnode;
+      const int node = * ((int*) SCIPqueueRemove(queue));
 
       /* traverse outgoing arcs */
-      for( a = g->outbeg[node]; a != EAT_LAST; a = g->oeat[a] )
+      for( int a = g->outbeg[node]; a != EAT_LAST; a = g->oeat[a] )
       {
-         head = g->head[a];
+         const int head = g->head[a];
 
          if( !gmark[head] && (result[a] == CONNECT || result[flipedge(a)] == CONNECT ) )
          {
@@ -894,11 +888,11 @@ SCIP_RETCODE graph_RerootSol(
    SCIPqueueFree(&queue);
 
    /* adjust solution if infeasible */
-   for( k = 0; k < nnodes; k++ )
+   for( int k = 0; k < nnodes; k++ )
    {
       if( !gmark[k] )
       {
-         for( a = g->outbeg[k]; a != EAT_LAST; a = g->oeat[a] )
+         for( int a = g->outbeg[k]; a != EAT_LAST; a = g->oeat[a] )
          {
             result[a] = UNKNOWN;
             result[flipedge(a)] = UNKNOWN;
@@ -907,9 +901,10 @@ SCIP_RETCODE graph_RerootSol(
          /* not yet connected terminal? */
          if( Is_term(g->term[k]) )
          {
+            int a;
             for( a = g->inpbeg[k]; a != EAT_LAST; a = g->ieat[a] )
             {
-               node = g->tail[a];
+               const int node = g->tail[a];
                if( gmark[node] && node != newroot )
                {
                   result[a] = CONNECT;
@@ -920,7 +915,7 @@ SCIP_RETCODE graph_RerootSol(
             {
                for( a = g->inpbeg[k]; a != EAT_LAST; a = g->ieat[a] )
                {
-                  node = g->tail[a];
+                  const int node = g->tail[a];
                   if( node == newroot )
                   {
                      result[a] = CONNECT;
@@ -928,7 +923,7 @@ SCIP_RETCODE graph_RerootSol(
                   }
                }
             }
-            if( a != EAT_LAST )
+            else
                gmark[k] = TRUE;
          }
       }
@@ -1926,6 +1921,7 @@ SCIP_RETCODE graph_copy(
    g->grid_dim = p->grid_dim;
    g->stp_type = p->stp_type;
    g->hoplimit = p->hoplimit;
+   g->extended = p->extended;
 
    BMScopyMemoryArray(g->locals, p->locals, p->layers);
    BMScopyMemoryArray(g->source, p->source, p->layers);
@@ -2763,6 +2759,10 @@ SCIP_RETCODE graph_2org(
 
    assert(scip != NULL);
    assert(graph != NULL);
+   int FXI;
+   if( !graph->extended )
+      return SCIP_ERROR;
+
    assert(graph->extended);
 
    root = graph->source[0];

@@ -1632,7 +1632,7 @@ SCIP_RETCODE computeSteinerTreeVnoi(
 SCIP_RETCODE SCIPStpHeurTMRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
-   const GRAPH*          graph,              /**< graph data structure */
+   GRAPH*                graph,              /**< graph data structure */
    int*                  starts,             /**< array containing start vertices (NULL to not provide any) */
    int*                  bestnewstart,       /**< pointer to the start vertex resulting in the best solution */
    int*                  best_result,        /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
@@ -1681,8 +1681,13 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    assert(cost != NULL);
    assert(graph != NULL);
    assert(costrev != NULL);
-   assert(heurdata != NULL);
    assert(best_result != NULL);
+
+   if( heurdata == NULL )
+   {
+      assert(SCIPfindHeur(scip, "TM") != NULL);
+      heurdata = SCIPheurGetData(SCIPfindHeur(scip, "TM"));
+   }
 
    best = bestincstart;
    root = graph->source[0];
@@ -1722,6 +1727,7 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    if( graph->stp_type == STP_RPCSPG || graph->stp_type == STP_PCSPG || graph->stp_type == STP_MWCSP || graph->stp_type == STP_RMWCSP )
    {
       mode = TM_DIJKSTRA;
+      SCIP_CALL( graph_2transcheck(scip, graph) );
    }
    else if( graph->stp_type == STP_DHCSTP )
    {

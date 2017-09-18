@@ -623,6 +623,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
       }
 
       newgraph->norgmodelknots = nnewnodes;
+      newgraph->extended = TRUE;
    }
    else
    {
@@ -1136,6 +1137,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRunPcMw(
       }
    }
    newgraph->norgmodeledges = newgraph->edges;
+   newgraph->extended = TRUE;
 
    SCIP_CALL( level0(scip, newgraph) );
 

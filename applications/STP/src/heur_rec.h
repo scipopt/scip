@@ -68,6 +68,14 @@ SCIP_RETCODE SCIPStpHeurRecRun(
    SCIP_Bool*            solfound            /**< new solution found? */
 );
 
+
+/** get solution from index */
+extern
+STPSOL* SCIPStpHeurRecSolfromIdx(
+   STPSOLPOOL*           pool,               /**< the pool */
+   const int             index               /**< the index */
+    );
+
 /** initializes STPSOL pool */
 extern
 SCIP_RETCODE SCIPStpHeurRecInitPool(

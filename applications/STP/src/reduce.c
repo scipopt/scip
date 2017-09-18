@@ -1203,34 +1203,6 @@ SCIP_RETCODE redLoopPc(
 
    while( rerun && !SCIPisStopped(scip) )
    {
-#if 0 /* debug*/
-      int i;
-
-      for (i = 0; i < g->knots; i++)
-      {
-         if( Is_pterm(g->term[i]) && i != g->source[0] )
-         {
-            if( g->grad[i] != 2 )
-            {
-               printf("root %d \n", g->source[0]);
-               printf("probtype %d \n", g->stp_type);
-               printf("fail %d \n", i);
-               return SCIP_ERROR;
-            }
-         }
-         if( Is_term(g->term[i]) && i != g->source[0] )
-         {
-            if( g->grad[i] < 2 )
-            {
-               printf("root %d \n", g->source[0]);
-               printf("probtype %d \n", g->stp_type);
-               printf("2fail %d grad %d \n", i, g->grad[i]);
-               return SCIP_ERROR;
-            }
-         }
-      }
-#endif
-
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
 
@@ -1316,6 +1288,8 @@ SCIP_RETCODE redLoopPc(
 
       if( da || (dualascent && extensive) )
       {
+         if( userec )
+         printf("FIXED %f \n\n\n", fix);
          if( rpc )
          {
             SCIP_CALL( da_reduce(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap,

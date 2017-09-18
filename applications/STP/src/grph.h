@@ -149,7 +149,8 @@ typedef struct shortest_path
    signed int            edge;               /* Incoming edge to go along                   */
 } PATH;
 
-#define flipedge(edge) ((((edge) % 2) == 0) ? ((edge) + 1) : ((edge) - 1))
+/* ((((edge) % 2) == 0) ? ((edge) + 1) : ((edge) - 1)) without branch */
+#define flipedge(edge) ( ((edge) + 1) - 2 * ((edge) % 2) )
 
 #define PATH_NIL    ((PATH*)0)
 

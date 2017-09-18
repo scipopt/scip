@@ -56,7 +56,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
 extern
 SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          graph,              /**< graph data structure */
+   GRAPH*                graph,              /**< graph data structure */
    const SCIP_Real*      cost,               /**< edge cost array*/
    PATH*                 path,               /**< shortest data structure array */
    int*                  stedge,             /**< initialized array to indicate whether an edge is part of the Steiner tree */
