@@ -72,7 +72,7 @@
 #define DEFAULT_EPS        0.5       /**< increase exploration in epsilon-greedy bandit algorithm */
 #define DEFAULT_RESETWEIGHTS TRUE    /**< should the bandit algorithms be reset when a new problem is read? */
 #define DEFAULT_SUBSCIPRANDSEEDS FALSE /**< should random seeds of sub-SCIPs be altered to increase diversification? */
-#define DEFAULT_ALPHA 1.0           /**< parameter to increase the confidence width in UCB */
+#define DEFAULT_ALPHA 0.2           /**< parameter to increase the confidence width in UCB */
 
 /*
  * parameters to control variable fixing
@@ -3492,7 +3492,7 @@ SCIP_RETCODE SCIPincludeHeurLns(
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/alpha",
             "parameter to increase the confidence width in UCB",
-            &heurdata->ucb_alpha, TRUE, DEFAULT_GAMMA, 0.0, 1.0, NULL, NULL) );
+            &heurdata->ucb_alpha, TRUE, DEFAULT_ALPHA, 0.0, 100.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/usedistances",
          "distances from fixed variables be used for variable prioritization",
