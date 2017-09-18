@@ -2511,6 +2511,7 @@ SCIP_RETCODE propagateLongProof(
    SCIP_Real minact;
    SCIP_Real rhs;
    int nnz;
+   int i;
 
    assert(proofset != NULL);
 
@@ -2521,7 +2522,7 @@ SCIP_RETCODE propagateLongProof(
 
    minact = getMinActivity(transprob, proofset->aggrrow, NULL, NULL);
 
-   for( int i = 0; i < nnz; i++ )
+   for( i = 0; i < nnz; i++ )
    {
       SCIP_VAR* var;
       SCIP_Real val;
