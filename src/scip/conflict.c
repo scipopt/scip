@@ -2511,6 +2511,7 @@ SCIP_RETCODE propagateLongProof(
    SCIP_Real minact;
    SCIP_Real rhs;
    int nnz;
+   int i;
 
    assert(proofset != NULL);
 
@@ -2521,7 +2522,7 @@ SCIP_RETCODE propagateLongProof(
 
    minact = getMinActivity(transprob, proofset->aggrrow, NULL, NULL);
 
-   for( int i = 0; i < nnz; i++ )
+   for( i = 0; i < nnz; i++ )
    {
       SCIP_VAR* var;
       SCIP_Real val;
@@ -2832,7 +2833,9 @@ SCIP_RETCODE conflictFlushProofset(
          /* prefer an infeasibility proof */
          if( set->conf_prefinfproof && conflict->proofset->conflicttype == SCIP_CONFTYPE_BNDEXCEEDING )
          {
-            for( int i = 0; i < conflict->nproofsets; i++ )
+            int i;
+
+            for( i = 0; i < conflict->nproofsets; i++ )
             {
                if( conflict->proofsets[i]->conflicttype == SCIP_CONFTYPE_INFEASLP )
                {
