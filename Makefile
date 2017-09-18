@@ -526,6 +526,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_completesol.o \
 			scip/heur_crossover.o \
 			scip/heur_dins.o \
+			scip/heur_dins-benders.o \
 			scip/heur_distributiondiving.o \
 			scip/heur_dualval.o \
 			scip/heur_feaspump.o \

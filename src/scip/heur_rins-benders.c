@@ -80,6 +80,7 @@ struct SCIP_HeurData
                                               *   to constraints in subproblem?
                                               */
    SCIP_Bool             useuct;             /**< should uct node selection be used at the beginning of the search?  */
+   SCIP_Real             prevobj;            /**< the objective function value of the previous incumbent solution */
 };
 
 /*
@@ -234,7 +235,7 @@ SCIP_DECL_EVENTEXEC(eventExecRinsbenders)
    assert(heurdata != NULL);
 
    /* interrupt solution process of sub-SCIP */
-   if( SCIPgetNLPs(scip) > heurdata->lplimfac * heurdata->nodelimit )
+   if( SCIPgetDepth(scip) == 0 && SCIPgetNLPs(scip) > heurdata->lplimfac * heurdata->nodelimit )
    {
       SCIPdebugMsg(scip, "interrupt after  %" SCIP_LONGINT_FORMAT " LPs\n",SCIPgetNLPs(scip));
       SCIP_CALL( SCIPinterruptSolve(scip) );
@@ -298,6 +299,7 @@ SCIP_DECL_HEURINIT(heurInitRinsbenders)
 
    /* initialize data */
    heurdata->usednodes = 0;
+   heurdata->prevobj = SCIPinfinity(scip);
 
    return SCIP_OKAY;
 }
@@ -334,8 +336,6 @@ SCIP_DECL_HEUREXEC(heurExecRinsbenders)
    assert( result != NULL );
    assert( SCIPhasCurrentNodeLP(scip) );
 
-   printf("RINSBENDERS\n");
-
    *result = SCIP_DELAYED;
 
    /* do not call heuristic of node was already detected to be infeasible */
@@ -362,6 +362,12 @@ SCIP_DECL_HEUREXEC(heurExecRinsbenders)
    /* only call heuristic, if enough nodes were processed since last incumbent */
    if( SCIPgetNNodes(scip) - SCIPgetSolNodenum(scip,SCIPgetBestSol(scip))  < heurdata->nwaitingnodes)
       return SCIP_OKAY;
+
+   /* only call the heuristic if the incumbent has improved since the last call */
+   //if( SCIPisGE(scip, SCIPgetSolTransObj(scip, SCIPgetBestSol(scip)), heurdata->prevobj) )
+      //return SCIP_OKAY;
+
+   heurdata->prevobj = SCIPgetSolTransObj(scip, SCIPgetBestSol(scip));
 
    *result = SCIP_DIDNOTRUN;
 
