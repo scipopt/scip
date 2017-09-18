@@ -95,6 +95,7 @@ Test(sin, creation, .description = "Tests the expression creation.")
 
    /* create sine expression */
    SCIP_CALL( SCIPcreateConsExprExprSin(scip, conshdlr, &expr, xexpr) );
+
    cr_assert(expr != NULL);
    cr_expect(SCIPgetConsExprExprNChildren(expr) == 1);
    cr_expect(SCIPgetConsExprExprChildren(expr)[0] == xexpr);
@@ -110,24 +111,37 @@ Test(sin, print, .description = "Tests the expression printing function.")
 
 Test(sin, parse, .description = "Tests the expression parsing.")
 {
-   /* TODO */
+   SCIP_CONSEXPR_EXPR* expr;
+   const char* input = "sin(<x>[C])";
+
+   /* create expression for product of -5, sin(x), and sin(y) */
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr) );
+
+   cr_expect(expr != NULL);
+   cr_expect(SCIPgetConsExprExprNChildren(expr) == 1);
+   cr_expect(SCIPgetConsExprExprChildren(expr)[0] == xexpr);
+
+   /* release expression */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
 
 Test(sin, eval, .description = "Tests the expression evaluation.")
 {
+   /* get random real number between -10 and 10 */
    SCIP_RANDNUMGEN* rndgen;
    SCIP_CALL( SCIPcreateRandom(scip, &rndgen, 1) );
    SCIP_Real randnum = SCIPrandomGetReal(rndgen, -10.0, 10.0);
 
+   /* create 5 different testvalues and corresponding expected results */
    SCIP_Real testvalues[5] = {0.0, M_PI, 2.5*M_PI, -0.5*M_PI, randnum};
    SCIP_Real results[5] = {0.0, 0.0, 1.0, -1.0, SIN(randnum)};
 
    for(int i = 0; i < 5; i++)
    {
-	SCIP_CALL( SCIPsetSolVal(scip, sol, x, testvalues[i]) );
-	SCIP_CALL( SCIPevalConsExprExpr(scip, sinexpr, sol, 0) );
+      SCIP_CALL( SCIPsetSolVal(scip, sol, x, testvalues[i]) );
+      SCIP_CALL( SCIPevalConsExprExpr(scip, sinexpr, sol, 0) );
 
-	cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprValue(sinexpr), results[i]));
+      cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprValue(sinexpr), results[i]));
    }
 
    SCIPfreeRandom(scip, &rndgen);
@@ -135,7 +149,24 @@ Test(sin, eval, .description = "Tests the expression evaluation.")
 
 Test(sin, inteval, .description = "Tests the expression interval evaluation.")
 {
-   /* TODO */
+   /* create 5 sets of bounds to cover different cases */
+   SCIP_Real testlowerbounds[5] = {0.0, -2.7, M_PI, 0.5*M_PI, 1.5};
+   SCIP_Real testupperbounds[5] = {2*M_PI, 1.9, 6.0, 1.5*M_PI, 4.0};
+   SCIP_Real reslowerbounds[5] = {-1.0, -1.0, -1.0, -1.0, SIN(4.0)};
+   SCIP_Real resupperbounds[5] = {1.0, 1.0, 0.0, 1.0, 1.0};
+
+   for(int i = 0; i < 5; i++)
+   {
+      SCIP_CALL( SCIPchgVarLb(scip, x, testlowerbounds[i]) );
+      SCIP_CALL( SCIPchgVarUb(scip, x, testupperbounds[i]) );
+      SCIP_CALL( SCIPevalConsExprExpr(scip, sinexpr, sol, 0) );
+      SCIP_CALL( SCIPevalConsExprExprInterval(scip, sinexpr, FALSE, 0, SCIPepsilon(scip)) );
+
+      SCIP_INTERVAL interval = SCIPgetConsExprExprInterval(sinexpr);
+      cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetInf(interval), reslowerbounds[i]));
+      cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetSup(interval), resupperbounds[i]));
+   }
+
 }
 
 Test(sin, derivative, .description = "Tests the expression derivation.")
