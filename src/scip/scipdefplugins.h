@@ -81,6 +81,7 @@
 #include "scip/heur_completesol.h"
 #include "scip/heur_crossover.h"
 #include "scip/heur_dins.h"
+#include "scip/heur_dins-benders.h"
 #include "scip/heur_distributiondiving.h"
 #include "scip/heur_dualval.h"
 #include "scip/heur_feaspump.h"
