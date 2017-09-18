@@ -6658,7 +6658,7 @@ SCIP_RETCODE tightenDualray(
       subrhs = 0.0;
       nsubvars = 0;
 
-      for( i = 0; i < nnz; i++ )
+      for( i = 0; i < nnz && nnz > 1; i++ )
       {
          SCIP_Real val;
          int idx = inds[i];
