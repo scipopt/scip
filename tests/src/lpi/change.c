@@ -456,12 +456,14 @@ Theory((SCIP_Real scale, int prob), change, testscalecol)
    SCIP_CALL( SCIPlpiGetNRows(lpi, &rows) );
    cr_assert_eq(ncols, cols);
    cr_assert_eq(nrows, rows);
+   int col;
+   int i;
 
-   for( int col = 0; col < ncols; col++ )
+   for( col = 0; col < ncols; col++ )
    {
       SCIP_Real colbefore[100], colafter;
 
-      for( int i = 0; i < nrows; i++ )
+      for( i = 0; i < nrows; i++ )
       {
          SCIP_Real coef;
 
@@ -470,7 +472,7 @@ Theory((SCIP_Real scale, int prob), change, testscalecol)
       }
 
       SCIP_CALL( SCIPlpiScaleCol(lpi, col, scale) );
-      for( int i = 0; i < nrows; i++ )
+      for( i = 0; i < nrows; i++ )
       {
          SCIP_CALL( SCIPlpiGetCoef(lpi, i, col, &colafter) );
          cr_assert_float_eq( colbefore[i] * scale, colafter, EPS, "Found values: scale %.20f, colbefore[i] %.20f, colafter %.20f, i %d\n",
@@ -497,16 +499,18 @@ Theory((SCIP_Real scale, int prob), change, testscalerow)
    SCIP_CALL( SCIPlpiGetNCols(lpi, &cols) );
    cr_assert_eq(nrows, rows);
    cr_assert_eq(ncols, cols);
+   int row;
+   int i;
 
-   for( int row = 0; row < nrows; row++ )
+   for( row = 0; row < nrows; row++ )
    {
       SCIP_Real rowbefore[100], rowafter[100];
-      for( int i = 0; i < ncols; i++ )
+      for( i = 0; i < ncols; i++ )
       {
          SCIP_CALL( SCIPlpiGetCoef(lpi, row, i, &rowbefore[i]) );
       }
       SCIP_CALL( SCIPlpiScaleRow(lpi, row, scale) );
-      for( int i = 0; i < ncols; i++ )
+      for( i = 0; i < ncols; i++ )
       {
          SCIP_CALL( SCIPlpiGetCoef(lpi, row, i, &rowafter[i]) );
          cr_assert_float_eq( rowbefore[i] * scale, rowafter[i], EPS, "Found values: scale %.20f, rowbefore[i] %.20f, rowafter %.20f, i %d\n", scale, rowbefore[i], rowafter[i], i );
