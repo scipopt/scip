@@ -117,7 +117,7 @@ Test(sin, parse, .description = "Tests the expression parsing.")
    /* create expression for product of -5, sin(x), and sin(y) */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr) );
 
-   cr_expect(expr != NULL);
+   cr_assert(expr != NULL);
    cr_expect(SCIPgetConsExprExprNChildren(expr) == 1);
    cr_expect(SCIPgetConsExprExprChildren(expr)[0] == xexpr);
 
@@ -171,7 +171,23 @@ Test(sin, inteval, .description = "Tests the expression interval evaluation.")
 
 Test(sin, derivative, .description = "Tests the expression derivation.")
 {
-   /* TODO */
+   /* get random real number between -10 and 10 */
+   SCIP_RANDNUMGEN* rndgen;
+   SCIP_CALL( SCIPcreateRandom(scip, &rndgen, 1) );
+   SCIP_Real randnum = SCIPrandomGetReal(rndgen, -10.0, 10.0);
+
+   /* create 5 different testvalues and corresponding expected results */
+   SCIP_Real testvalues[5] = {0.0, M_PI, 2.5*M_PI, -0.5*M_PI, randnum};
+   SCIP_Real results[5] = {1.0, -1.0, 0.0, 0.0, COS(randnum)};
+
+   for(int i = 0; i < 5; i++)
+   {
+      SCIP_CALL( SCIPsetSolVal(scip, sol, x, testvalues[i]) );
+      SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, sinexpr, sol, 0) );
+      cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprPartialDiff(scip, conshdlr, sinexpr, x), results[i]));
+   }
+
+   SCIPfreeRandom(scip, &rndgen);
 }
 
 Test(sin, hash, .description = "Tests the expression hash.")
