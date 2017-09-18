@@ -612,7 +612,8 @@ SCIP_RETCODE SCIPaggrRowAddObjectiveFunction(
    /* add all variables straight forward if the aggregation row is empty */
    if( aggrrow->nnz == 0 )
    {
-      for( int i = 0; i < nvars; ++i )
+      int i;
+      for( i = 0; i < nvars; ++i )
       {
          assert(SCIPvarGetProbindex(vars[i]) == i);
 
@@ -630,8 +631,9 @@ SCIP_RETCODE SCIPaggrRowAddObjectiveFunction(
    }
    else
    {
+      int i;
       /* add the non-zeros to the aggregation row and keep non-zero index up to date */
-      for( int i = 0 ; i < nvars; ++i )
+      for( i = 0 ; i < nvars; ++i )
       {
          assert(SCIPvarGetProbindex(vars[i]) == i);
 
