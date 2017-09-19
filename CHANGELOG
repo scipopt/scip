@@ -11,7 +11,7 @@ features:
 - new numerical solution violations get printed when checksol is called
 - three bandit selection algorithms to face sequential decision problems under uncertainty
 - new primal heuristic LNS that orchestrates eight different LNS heuristics adaptively
-  using algorithms for the multi armed bandit problem.
+  using algorithms for the multi-armed bandit problem
 
 parameters:
 - new parameter misc/debugsol to specify a debug solution that should be checked during the solve
