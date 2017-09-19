@@ -331,10 +331,8 @@ struct SCIP_HeurData
 {
    NH**                  neighborhoods;      /**< array of neighborhoods */
    char*                 gainfilename;       /**< file name to store all gains and the selection of the bandit */
-   SCIP_BANDIT*          epsgreedynh;        /**< epsilon greedy selector for a neighborhood */
    FILE*                 gainfile;           /**< gain file pointer, or NULL */
-   SCIP_BANDIT*          exp3;               /**< exp3 bandit algorithm */
-   SCIP_BANDIT*          ucb;                /**< UCB bandit algorithm */
+   SCIP_BANDIT*          bandit;             /**< bandit algorithm */
    SCIP_Longint          nodesoffset;        /**< offset added to the nodes budget */
    SCIP_Longint          maxnodes;           /**< maximum number of nodes in a single sub-SCIP */
    SCIP_Longint          targetnodes;        /**< targeted number of nodes to start a sub-SCIP */
@@ -1244,7 +1242,7 @@ SCIP_RETCODE lnsFixMoreVariables(
    varprio.usedistances = heurdata->usedistances;
    varprio.useredcost = heurdata->useredcost;
    varprio.scip = scip;
-   rng = SCIPbanditGetRandnumgen(heurdata->epsgreedynh);
+   rng = SCIPbanditGetRandnumgen(heurdata->bandit);
    assert(rng != NULL);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &randscores, nbinintvars) );
@@ -1315,6 +1313,42 @@ SCIP_RETCODE lnsFixMoreVariables(
    SCIPfreeBufferArray(scip, &distances);
    SCIPfreeBufferArray(scip, &perm);
    SCIPfreeBufferArray(scip, &randscores);
+
+   return SCIP_OKAY;
+}
+
+/** create the bandit algorithm for the heuristic depending on the user parameter */
+static
+SCIP_RETCODE createBandit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data structure */
+   SCIP_Real*            priorities,         /**< call priorities for active neighborhoods */
+   unsigned int          initseed            /**< initial random seed */
+   )
+{
+
+   switch (heurdata->banditalgo) {
+      case 'u':
+         SCIP_CALL( SCIPcreateBanditUcb(scip, &heurdata->bandit, priorities,
+               heurdata->ucb_alpha, heurdata->nactiveneighborhoods, initseed) );
+         break;
+
+      case 'e':
+         SCIP_CALL( SCIPcreateBanditExp3(scip, &heurdata->bandit, priorities,
+               heurdata->exp3_gamma, heurdata->exp3_beta, heurdata->nactiveneighborhoods, initseed) );
+         break;
+
+      case 'g':
+         SCIP_CALL( SCIPcreateBanditEpsgreedy(scip, &heurdata->bandit, priorities,
+               heurdata->epsgreedy_eps, heurdata->nactiveneighborhoods, initseed) );
+         break;
+      default:
+
+         SCIPerrorMessage("Unknown bandit parameter %c\n", heurdata->banditalgo);
+         return SCIP_INVALIDDATA;
+
+         break;
+   }
 
    return SCIP_OKAY;
 }
@@ -1430,7 +1464,7 @@ SCIP_RETCODE lnsUnfixVariables(
 
 
    /* collect reduced cost scores of the fixings and assign random scores */
-   rng = SCIPbanditGetRandnumgen(heurdata->epsgreedynh);
+   rng = SCIPbanditGetRandnumgen(heurdata->bandit);
    for( i = 0; i < *nfixings; ++i )
    {
       SCIP_VAR* fixedvar = varbuf[i];
@@ -1676,22 +1710,7 @@ SCIP_BANDIT* getBandit(
    )
 {
    assert(heurdata != NULL);
-   /* use the selected bandit algorithm */
-   switch (heurdata->banditalgo) {
-      case 'g':
-         return heurdata->epsgreedynh;
-         break;
-      case 'e':
-         return heurdata->exp3;
-         break;
-      case 'u':
-         return heurdata->ucb;
-         break;
-      default:
-         SCIPerrorMessage("Unknown bandit algorithm '%c' selected\n", heurdata->banditalgo);
-         SCIPABORT();
-         return NULL;
-   }
+   return heurdata->bandit;
 }
 
 /** select a neighborhood depending on the selected bandit algorithm */
@@ -2751,7 +2770,7 @@ DECL_VARFIXINGS(varFixingsMutation)
    return SCIP_OKAY;
 }
 
-/** todo add local branching constraint */
+/** add local branching constraint */
 static
 SCIP_RETCODE addLocalBranchingConstraint(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
@@ -3221,31 +3240,21 @@ SCIP_DECL_HEURINIT(heurInitLns)
 
    initseed = (unsigned int)heurdata->seed + SCIPgetNVars(scip);
 
-   /* create or reset bandit algorithms */
-   if( heurdata->exp3 == NULL )
+   /* active neighborhoods might change between init calls, reset functionality must take this into account */
+   if( heurdata->bandit != NULL && SCIPbanditGetNActions(heurdata->bandit) != heurdata->nactiveneighborhoods )
    {
-      assert(heurdata->epsgreedynh == NULL);
-      assert(heurdata->ucb == NULL);
-      SCIP_CALL( SCIPcreateBanditExp3(scip, &heurdata->exp3, priorities,
-            heurdata->exp3_gamma, heurdata->exp3_beta, heurdata->nactiveneighborhoods, initseed) );
+      SCIPfreeBandit(scip, &heurdata->bandit);
+      heurdata->bandit = NULL;
+   }
 
-      SCIP_CALL( SCIPcreateBanditEpsgreedy(scip, &heurdata->epsgreedynh, priorities,
-            heurdata->epsgreedy_eps, heurdata->nactiveneighborhoods, initseed) );
-
-      SCIP_CALL( SCIPcreateBanditUcb(scip, &heurdata->ucb, priorities,
-            heurdata->ucb_alpha, heurdata->nactiveneighborhoods, initseed) );
-
-   } else if( heurdata->resetweights )
+   /* create or reset bandit algorithm */
+   if( heurdata->bandit == NULL )
    {
-      /* TODO active neighborhoods might change between init calls, reset functionality must take this into account */
-      SCIP_BANDIT* bandits[] = {heurdata->exp3, heurdata->epsgreedynh, heurdata->ucb, NULL};
-      SCIP_BANDIT** bandit = bandits;
-      do
-      {
-         assert(bandit != NULL);
-         SCIP_CALL( SCIPresetBandit(scip, *bandit, priorities, initseed) );
-      }
-      while( *(++bandit) != NULL );
+      SCIP_CALL( createBandit(scip, heurdata, priorities, initseed) );
+   }
+   else if( heurdata->resetweights )
+   {
+      SCIP_CALL( SCIPresetBandit(scip, heurdata->bandit, priorities, initseed) );
    }
 
    heurdata->usednodes = 0;
@@ -3282,7 +3291,6 @@ void printNeighborhoodStatistics(
    SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
-   SCIP_Real* epsgreedyweights;
    int i;
    int j;
    HISTINDEX statusses[] = {HIDX_OPT, HIDX_INFEAS, HIDX_NODELIM, HIDX_STALLNODE, HIDX_SOLLIM, HIDX_USR, HIDX_OTHER};
@@ -3291,7 +3299,7 @@ void printNeighborhoodStatistics(
             "Calls", "SetupTime", "SubmipTime", "SubmipNodes", "Sols", "Best", "Exp3", "EpsGreedy", "UCB", "TgtFixRate",
             "Opt", "Inf", "Node", "Stal", "Sol", "Usr", "Othr");
 
-   epsgreedyweights = SCIPgetWeightsEpsgreedy(heurdata->epsgreedynh);
+
    /* loop over neighborhoods and fill in statistics */
    for( i = 0; i < heurdata->nneighborhoods; ++i )
    {
@@ -3308,17 +3316,25 @@ void printNeighborhoodStatistics(
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, " %11d", neighborhood->stats.nsolsfound);
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, " %11d", neighborhood->stats.nbestsolsfound);
 
+      proba = 0.0;
+      ucb = 1.0;
+      epsgreedyweight = -1.0;
+
       if( neighborhood->active )
       {
-         proba = SCIPgetProbabilityExp3(heurdata->exp3, i);
-         ucb = SCIPgetConfidenceBoundUcb(heurdata->ucb, i);
-         epsgreedyweight = epsgreedyweights[i];
-      }
-      else
-      {
-         proba = 0.0;
-         ucb = 1.0;
-         epsgreedyweight = -1.0;
+         switch (heurdata->banditalgo) {
+            case 'u':
+               ucb = SCIPgetConfidenceBoundUcb(heurdata->bandit, i);
+               break;
+            case 'g':
+               epsgreedyweight = SCIPgetWeightsEpsgreedy(heurdata->bandit)[i];
+               break;
+            case 'e':
+               proba = SCIPgetProbabilityExp3(heurdata->bandit, i);
+               break;
+            default:
+               break;
+         }
       }
 
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, " %11.5f", proba);
@@ -3382,11 +3398,9 @@ SCIP_DECL_HEURFREE(heurFreeLns)
    assert(heurdata != NULL);
 
    /* bandits are only initialized if a problem has been read */
-   if( heurdata->exp3 != NULL )
+   if( heurdata->bandit != NULL )
    {
-      SCIP_CALL( SCIPfreeBandit(scip, &heurdata->exp3) );
-      SCIP_CALL( SCIPfreeBandit(scip, &heurdata->epsgreedynh) );
-      SCIP_CALL( SCIPfreeBandit(scip, &heurdata->ucb) );
+      SCIP_CALL( SCIPfreeBandit(scip, &heurdata->bandit) );
    }
 
    /* free neighborhoods */
@@ -3417,11 +3431,9 @@ SCIP_RETCODE SCIPincludeHeurLns(
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
 
-   /* author bzfhende: TODO make this a user parameter? */
+   /* TODO make this a user parameter? */
    heurdata->lplimfac = LPLIMFAC;
-   heurdata->epsgreedynh = NULL;
-   heurdata->exp3 = NULL;
-   heurdata->ucb = NULL;
+   heurdata->bandit = NULL;
    heurdata->gainfilename = NULL;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->neighborhoods, NNEIGHBORHOODS) );
