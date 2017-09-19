@@ -14,14 +14,13 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scipcoreplugins.c
- * @brief  register additional core functionality that is designed as plugins
- * @author Tobias Achterberg
+ * @brief  register additional core functionality designed as plugins
+ * @author Gregor Hendel
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/scipcoreplugins.h"
-#include "scip/debug.h"
 
 /** includes core SCIP plugins into SCIP */
 SCIP_RETCODE SCIPincludeCorePlugins(

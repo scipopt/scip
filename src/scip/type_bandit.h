@@ -15,15 +15,11 @@
 
 /**@file   type_bandit.h
  * @ingroup TYPEDEFINITIONS
- * @brief  type definitions for primal heuristics
- * @author Tobias Achterberg
- * @author Timo Berthold
+ * @brief  type definitions for bandit selection algorithms
+ * @author Gregor Hendel
  *
- *  This file defines the interface for primal heuristics implemented in C.
- *
- *  - \ref BANDIT "Instructions for implementing a primal heuristic"
- *  - \ref PRIMALHEURISTICS "List of available primal heuristics"
- *  - \ref scip::ObjHeur "C++ wrapper class"
+ *  This file defines the interface for bandit selection algorithms implemented in C.
+ *  see \ref PublicBanditAlgorithms for all publicly available bandit methods.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -44,14 +40,14 @@ extern "C" {
 /** data structure for bandit algorithms */
 typedef struct SCIP_Bandit SCIP_BANDIT;
 
-/** virtual table for bandit callbacks */
+/** virtual function table for bandit callbacks */
 typedef struct SCIP_BanditVTable SCIP_BANDITVTABLE;
 
 /** data structure for specific bandit algorithm implementation */
 typedef struct SCIP_BanditData SCIP_BANDITDATA;
 
 /*
- * callbacks for bandit VTable
+ * callbacks for bandit virtual function table
  */
 
 /** callback to free bandit specific data structures */

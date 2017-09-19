@@ -15,8 +15,8 @@
 
 /**@file   struct_bandit.h
  * @ingroup INTERNALAPI
- * @brief  data structures for bandit algorithms
- * @author Tobias Achterberg
+ * @brief  data structures for bandit selection algorithms
+ * @author Gregor Hendel
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -34,7 +34,7 @@
 extern "C" {
 #endif
 
-/** virtual table for bandit callbacks */
+/** virtual function table for bandit selection algorithms */
 struct SCIP_BanditVTable
 {
    const char*           name;               /**< name of the represented bandit algorithm */
@@ -47,8 +47,8 @@ struct SCIP_BanditVTable
 /** data structure for bandit algorithms */
 struct SCIP_Bandit
 {
-   SCIP_BANDITVTABLE*    vtable;             /**< virtual table for callback functions */
-   SCIP_RANDNUMGEN*      rng;                /**< random number generator for randomized selection of routines  */
+   SCIP_BANDITVTABLE*    vtable;             /**< virtual function table for callbacks */
+   SCIP_RANDNUMGEN*      rng;                /**< random number generator for randomized selection */
    int                   nactions;           /**< the number of actions to select from */
    SCIP_BANDITDATA*      data;               /**< specific data for bandit algorithm implementations */
 };

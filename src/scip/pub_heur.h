@@ -398,7 +398,7 @@ SCIP_RANDNUMGEN* SCIPdivesetGetRandnumgen(
  *  This is useful for a single use of the variable constraint graph. For several consecutive uses,
  *  it is advised to create a variable constraint graph via SCIPvariableGraphCreate().
  */
- EXTERN
+EXTERN
 SCIP_RETCODE SCIPvariablegraphBreadthFirst(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VGRAPH*          vargraph,           /**< pointer to the variable graph, or NULL to let the function create a local graph */

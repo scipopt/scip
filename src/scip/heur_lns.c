@@ -1726,8 +1726,8 @@ SCIP_RETCODE getGain(
    )
 {
    SCIP_Real gain = 0.0;
-   assert(gainptr != NULL);
    SCIP_Real gaincontrol = heurdata->gaincontrol;
+   assert(gainptr != NULL);
 
    /* a positive gain is only assigned if a new incumbent solution was found */
    if( runstats->nbestsolsfound > 0 )
@@ -1755,7 +1755,7 @@ SCIP_RETCODE getGain(
       }
 
       /* the gain is a convex combination of the best solution gain and the gain for the closed gap */
-      gain = heurdata->gaincontrol * bestsolgain + (1.0 - heurdata->gaincontrol) * closedgapgain;
+      gain = gaincontrol * bestsolgain + (1.0 - gaincontrol) * closedgapgain;
 
       /* optionally, scale the gain by the involved effort */
       if( heurdata->scalebyeffort )
@@ -3183,7 +3183,6 @@ SCIP_DECL_HEURINIT(heurInitLns)
    SCIP_HEURDATA* heurdata;
    int i;
    SCIP_Real* priorities;
-   SCIP_Bool reset;
    unsigned int initseed;
 
    assert(scip != NULL);

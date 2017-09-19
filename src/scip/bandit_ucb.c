@@ -203,17 +203,14 @@ SCIP_DECL_BANDITSELECT(banditSelectUcb)
 SCIP_DECL_BANDITUPDATE(banditUpdateUcb)
 {  /*lint --e{715}*/
    SCIP_BANDITDATA* banditdata;
-   int nactions;
    SCIP_Real delta;
 
    assert(bandit != NULL);
 
    banditdata = SCIPbanditGetData(bandit);
    assert(banditdata != NULL);
-   nactions = SCIPbanditGetNActions(bandit);
-
    assert(selection >= 0);
-   assert(selection < nactions);
+   assert(selection < SCIPbanditGetNActions(bandit));
 
    /* increase the mean by the incremental formula: A_n = A_n-1 + 1/n (a_n - A_n-1) */
    delta = score - banditdata->meanscores[selection];

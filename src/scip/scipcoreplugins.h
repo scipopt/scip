@@ -14,9 +14,9 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scipcoreplugins.h
- * @ingroup PUBLICCOREAPI
+ * @ingroup INTERNALAPI
  * @brief  register additional core functionality that is designed as plugins
- * @author Tobias Achterberg
+ * @author Gregor Hendel
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -37,7 +37,7 @@ extern "C" {
 #endif
 
 /** includes core SCIP plugins into SCIP */
-EXTERN
+extern
 SCIP_RETCODE SCIPincludeCorePlugins(
    SCIP*                 scip                /**< SCIP data structure */
    );
