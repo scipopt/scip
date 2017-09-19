@@ -3313,6 +3313,9 @@ SCIP_DECL_HEURINIT(heurInitLns)
    if( heurdata->bandit == NULL )
    {
       SCIP_CALL( createBandit(scip, heurdata, priorities, initseed) );
+
+      resetMinimumImprovement(heurdata);
+      resetTargetNodeLimit(heurdata);
    }
    else if( heurdata->resetweights )
    {
@@ -3320,11 +3323,11 @@ SCIP_DECL_HEURINIT(heurInitLns)
 
       resetMinimumImprovement(heurdata);
       resetTargetNodeLimit(heurdata);
-      resetCurrentNeighborhood(heurdata);
    }
 
    heurdata->usednodes = 0;
    heurdata->ninitneighborhoods = heurdata->nactiveneighborhoods;
+   resetCurrentNeighborhood(heurdata);
 
    SCIPfreeBufferArray(scip, &priorities);
 
