@@ -2144,6 +2144,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
       SCIPsetDebugMsg(set, "adding event %p of type 0x%" SCIP_EVENTTYPE_FORMAT " to event queue %p\n", (void*)*event, (*event)->eventtype, (void*)eventqueue);
 
 
+
       switch( (*event)->eventtype )
       {
       case SCIP_EVENTTYPE_DISABLED:
