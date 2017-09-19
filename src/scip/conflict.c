@@ -2834,6 +2834,7 @@ SCIP_RETCODE conflictFlushProofset(
          if( set->conf_prefinfproof && conflict->proofset->conflicttype == SCIP_CONFTYPE_BNDEXCEEDING )
          {
             int i;
+
             for( i = 0; i < conflict->nproofsets; i++ )
             {
                if( conflict->proofsets[i]->conflicttype == SCIP_CONFTYPE_INFEASLP )
@@ -6654,7 +6655,7 @@ SCIP_RETCODE tightenDualray(
       inds = SCIPaggrRowGetInds(proofset->aggrrow);
       nnz = SCIPaggrRowGetNNz(proofset->aggrrow);
 
-      for( i = 0; i < nnz; )
+      for( i = 0; i < nnz && nnz > 1; )
       {
          SCIP_Real val;
          int idx = inds[i];
