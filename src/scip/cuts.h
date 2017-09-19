@@ -40,6 +40,18 @@ extern "C" {
  * @{
  */
 
+/** perform activity based coefficient tigthening on the given cut */
+extern
+void SCIPcutsTightenCoefficients(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             cutislocal,         /**< is the cut local? */
+   SCIP_Real*            cutcoefs,           /**< array of the non-zero coefficients in the cut */
+   SCIP_Real*            cutrhs,             /**< the right hand side of the cut */
+   int*                  cutinds,            /**< array of the problem indices of variables with a non-zero coefficient in the cut */
+   int*                  cutnnz,             /**< the number of non-zeros in the cut */
+   SCIP_Bool*            redundant           /**< pointer to return whether cut is redundat */
+   );
+
 /** create an empty the aggregation row */
 extern
 SCIP_RETCODE SCIPaggrRowCreate(
@@ -158,13 +170,6 @@ void SCIPaggrRowRemoveZeros(
    SCIP*                 scip,               /**< SCIP datastructure */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
    SCIP_Bool*            valid               /**< pointer to return whether the aggregation row is still valid */
-   );
-
-/** safely removes variables with small coefficients from the aggregation row */
-extern
-void SCIPaggrRowCleanup(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    );
 
 /** get array with lp positions of aggregated rows */

@@ -1424,18 +1424,19 @@ SCIP_RETCODE generateZerohalfCut(
    MOD2_ROW*             row                 /**< mod 2 row */
    )
 {
-   SCIP_ROW** rows;
-   int i;
+   SCIP_Bool redundant;
    SCIP_Bool cutislocal;
+   int i;
    int cutnnz;
-   SCIP_Real* cutcoefs;
-   int* cutinds;
-   SCIP_Real cutrhs;
-   SCIP_Real cutefficacy;
-   SCIP_Real* tmpcoefs;
    int cutrank;
    int nvars;
+   int* cutinds;
+   SCIP_ROW** rows;
    SCIP_VAR** vars;
+   SCIP_Real* tmpcoefs;
+   SCIP_Real* cutcoefs;
+   SCIP_Real cutrhs;
+   SCIP_Real cutefficacy;
 
    rows = SCIPgetLPRows(scip);
    nvars = SCIPgetNVars(scip);
@@ -1574,52 +1575,57 @@ SCIP_RETCODE generateZerohalfCut(
    assert(SCIPisFeasIntegral(scip, cutrhs));
    cutrhs = SCIPfeasRound(scip, cutrhs);
 
-   /* calculate efficacy */
-   cutefficacy = calcEfficacy(scip, cutcoefs, cutrhs, cutinds, cutnnz);
+   SCIPcutsTightenCoefficients(scip, cutislocal, cutcoefs, &cutrhs, cutinds, &cutnnz, &redundant);
 
-   if( SCIPisEfficacious(scip, cutefficacy) )
+   if( !redundant )
    {
-      SCIP_ROW* cut;
-      char cutname[SCIP_MAXSTRLEN];
-      int v;
+      /* calculate efficacy */
+      cutefficacy = calcEfficacy(scip, cutcoefs, cutrhs, cutinds, cutnnz);
 
-      /* increase rank by 1 */
-      cutrank += 1;
-
-      assert(allowlocal || !cutislocal);
-
-      /* create the cut */
-      (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "zerohalf%d_x%d", SCIPgetNLPs(scip), row->index);
-
-      SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE, sepadata->dynamiccuts) );
-
-      SCIProwChgRank(cut, cutrank);
-
-      /* cache the row extension and only flush them if the cut gets added */
-      SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
-
-      /* collect all non-zero coefficients */
-      for( v = 0; v < cutnnz; ++v )
+      if( SCIPisEfficacious(scip, cutefficacy) )
       {
-         SCIP_CALL( SCIPaddVarToRow(scip, cut, vars[cutinds[v]], cutcoefs[v]) );
-      }
+         SCIP_ROW* cut;
+         char cutname[SCIP_MAXSTRLEN];
+         int v;
 
-      /* flush all changes before adding the cut */
-      SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
+         /* increase rank by 1 */
+         cutrank += 1;
 
-      if( SCIPisCutNew(scip, cut) )
-      {
-         SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &sepadata->infeasible) );
-         sepadata->ncuts++;
+         assert(allowlocal || !cutislocal);
 
-         if( !cutislocal )
+         /* create the cut */
+         (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "zerohalf%d_x%d", SCIPgetNLPs(scip), row->index);
+
+         SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE, sepadata->dynamiccuts) );
+
+         SCIProwChgRank(cut, cutrank);
+
+         /* cache the row extension and only flush them if the cut gets added */
+         SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
+
+         /* collect all non-zero coefficients */
+         for( v = 0; v < cutnnz; ++v )
          {
-            SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+            SCIP_CALL( SCIPaddVarToRow(scip, cut, vars[cutinds[v]], cutcoefs[v]) );
          }
-      }
 
-      /* release the row */
-      SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+         /* flush all changes before adding the cut */
+         SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
+
+         if( SCIPisCutNew(scip, cut) )
+         {
+            SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &sepadata->infeasible) );
+            sepadata->ncuts++;
+
+            if( !cutislocal )
+            {
+               SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+            }
+         }
+
+         /* release the row */
+         SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+      }
    }
 
    SCIPfreeBufferArray(scip, &cutinds);
