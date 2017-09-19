@@ -644,8 +644,9 @@ SCIP_RETCODE mod2colUnlinkRow(
    {
       int nslots = SCIPhashsetGetNSlots(col->nonzrows);
       MOD2_ROW** rows = (MOD2_ROW**) SCIPhashsetGetSlots(col->nonzrows);
+      int i;
 
-      for( int i = 0; i < nslots; ++i )
+      for( i = 0; i < nslots; ++i )
       {
          assert(rows[i] != row);
       }

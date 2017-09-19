@@ -80,6 +80,22 @@ SCIP_RETCODE SCIPaggrRowAddRow(
    int                   sidetype            /**< specify row side type (-1 = lhs, 0 = automatic, 1 = rhs) */
    );
 
+/** Removes a given variable @p var from position @p pos the aggregation row and updates the right-hand side according
+ *  to sign of the coefficient, i.e., rhs -= coef * bound, where bound = lb if coef >= 0 and bound = ub, otherwise.
+ *
+ *  @note: The choice of global or local bounds depend on the validity (global or local) of the aggregation row.
+ *
+ *  @note: The list of non-zero indices will be updated by swapping the last non-zero index to @p pos.
+ */
+extern
+void SCIPaggrRowCancelVarWithBound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   SCIP_VAR*             var,                /**< variable that should be removed */
+   int                   pos,                /**< position of the variable in the aggregation row */
+   SCIP_Bool*            valid               /**< pointer to return whether the aggregation row is still valid */
+   );
+
 /** add the objective function with right-hand side @p rhs and scaled by @p scale to the aggregation row */
 extern
 SCIP_RETCODE SCIPaggrRowAddObjectiveFunction(

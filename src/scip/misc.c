@@ -2041,7 +2041,11 @@ SCIP_RETCODE SCIPhashtableCreate(
     * to the next power of two.
     */
    (*hashtable)->shift = 32;
+#if defined(_MSC_VER) && (_MSC_VER < 1800)
    (*hashtable)->shift -= (int)ceil(log(MAX(32.0, tablesize / 0.9)) / log(2.0));
+#else
+   (*hashtable)->shift -= (int)ceil(log2(MAX(32.0, tablesize / 0.9)));
+#endif
 
    /* compute size from shift */
    nslots = 1u << (32 - (*hashtable)->shift);
@@ -3324,7 +3328,7 @@ SCIP_RETCODE SCIPhashsetCreate(
     * to the next power of two.
     */
    (*hashset)->shift = 64;
-   (*hashset)->shift -= (int)ceil(log2(MAX(8.0, size / 0.9)));
+   (*hashset)->shift -= (int)ceil(log(MAX(8.0, size / 0.9)) / log(2.0));
    nslots = SCIPhashsetGetNSlots(*hashset);
    (*hashset)->nelements = 0;
 
@@ -9723,20 +9727,29 @@ void SCIPprintSysError(
    )
 {
 #ifdef NO_STRERROR_R
-   char* buf;
-   buf = strerror(errno);
+   SCIPmessagePrintError("%s: %s\n", message, strerror(errno));
 #else
    char buf[SCIP_MAXSTRLEN];
 
 #if defined(_WIN32) || defined(_WIN64)
-   (void)(strerror_s(buf, SCIP_MAXSTRLEN, errno) + 1);
-#else
-   (void)(strerror_r(errno, buf, SCIP_MAXSTRLEN) + 1);
-#endif
-
-   buf[SCIP_MAXSTRLEN - 1] = '\0';
-#endif
+   /* strerror_s returns 0 on success; the string is \0 terminated. */
+   if ( strerror_s(buf, SCIP_MAXSTRLEN, errno) != 0 )
+      SCIPmessagePrintError("Unkown error number %d or error message too long.\n", errno);
    SCIPmessagePrintError("%s: %s\n", message, buf);
+#else
+   #if (_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && ! _GNU_SOURCE
+      /* We are in the POSIX/XSI case, where strerror_r returns 0 on success; \0 termination is unclear. */
+      if ( strerror_r(errno, buf, SCIP_MAXSTRLEN) != 0 )
+         SCIPmessagePrintError("Unkown error number %d.\n", errno);
+      buf[SCIP_MAXSTRLEN - 1] = '\0';
+      SCIPmessagePrintError("%s: %s\n", message, buf);
+#else
+      /* We are in the GNU case, where strerror_r returns a string to the error string. This string is possibly stored
+       * in buf and is always \0 terminated. */
+      SCIPmessagePrintError("%s: %s\n", message, strerror_r(errno, buf, SCIP_MAXSTRLEN));
+   #endif
+#endif
+#endif
 }
 
 /** extracts tokens from strings - wrapper method for strtok_r() */

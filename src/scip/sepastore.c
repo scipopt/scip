@@ -515,7 +515,7 @@ SCIP_RETCODE SCIPsepastoreAddCut(
 
    SCIPsetDebugMsg(set, "adding cut <%s> to separation storage of size %d (forcecut=%u, len=%d)\n",
       SCIProwGetName(cut), sepastore->ncuts, forcecut, SCIProwGetNNonz(cut));
-   /*SCIPdebug(SCIProwPrint(cut, set->scip->messagehdlr, NULL));*/
+   /*SCIP_CALL( SCIPprintRow(set->scip, cut, NULL) );*/
 
    /* capture the cut */
    SCIProwCapture(cut);

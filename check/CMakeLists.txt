@@ -210,7 +210,7 @@ set(scip_reader_extensions
     "ppm"
     "pbm"
     "ccg"
-#    "opb"
+    "opb"
     "pip"
     "rlp"
 #    "mps"
@@ -301,6 +301,23 @@ foreach(instance ${instances_MINLP})
                             )
 endforeach(instance)
 
+#
+# the following instances are not pure binary and hence cannot be written out in opb format
+#
+set(basenames_opb_wrongformat
+    bell5.mps
+    blend2.mps
+    egout.mps
+    flugpl.mps
+    gt2.mps
+    MANN_a9.clq.lp
+    misc03.mps
+    rgn.mps
+    vpm2.fzn
+    )
+set(message_format_opb "WARNING: only binary problems can be written in OPB format.")
+
+
 
 #
 # test writing and reading from and to different file extensions for MIP
@@ -311,13 +328,28 @@ foreach(instance ${instances_MIP})
         #
         # configure the batch file for this test by substituting placeholders in the in.file
         #
-        configure_file(interactiveshell/readertest.bat.in interactiveshell/readertest-${extension}-${basename}.bat)
+
+        # does this instance match the requirements of this format?
+        list(FIND basenames_${extension}_wrongformat ${basename} wrongformat)
+
+        #
+        # use different template batch files depending on the format requirements
+        #
+        if( wrongformat EQUAL -1 )
+            configure_file(interactiveshell/readertest.bat.in interactiveshell/readertest-${extension}-${basename}.bat)
+            set(regex "Validation         : Success")
+        else()
+            configure_file(interactiveshell/readertest-wrongformat.bat.in interactiveshell/readertest-${extension}-${basename}.bat)
+            set(regex "${message_format_${extension}}")
+        endif()
+
         add_test(NAME MIP-readertest-${extension}-${basename}
                 COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/readertest-${extension}-${basename}.bat
                 )
         set_tests_properties(MIP-readertest-${extension}-${basename}
                             PROPERTIES
-                                PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                PASS_REGULAR_EXPRESSION ${regex}
+#                                     FAIL_REGULAR_EXPRESSION ERROR
                                 DEPENDS scip-build
                             )
     endforeach(extension)
