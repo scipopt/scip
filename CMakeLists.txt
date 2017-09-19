@@ -153,24 +153,17 @@ message(STATUS "LEGACY mode for old compilers: ${LEGACY}")
 # create a target for updating the current git hash
 file(WRITE ${CMAKE_BINARY_DIR}/scip_update_githash.cmake "
 find_program(GIT git)
-if(GIT)
+if((GIT) AND (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git))
    execute_process(
       COMMAND \${GIT} describe --always --dirty
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
       OUTPUT_VARIABLE GITHASH OUTPUT_STRIP_TRAILING_WHITESPACE)
-   if(GITHASH STREQUAL \"\")
-      set(GITHASH \"------\")
-   endif()
    string(REGEX REPLACE \"^.*-g\" \"\" GITHASH \${GITHASH})
+   file(WRITE \${DST} \"#define SCIP_GITHASH \\\"\${GITHASH}\\\"\")
 else()
-   set(GITHASH \"------\")
-endif()
-if(GITHASH STREQUAL \"------\")
    # read stored hash from file
    file(STRINGS \${DST} GITHASH)
    string(REGEX REPLACE \"#define SCIP_GITHASH \" \"\" GITHASH \${GITHASH})
-else()
-   file(WRITE \${DST} \"#define SCIP_GITHASH \\\"\${GITHASH}\\\"\")
 endif()
 message(STATUS \"Git hash: \" \${GITHASH})
 ")
@@ -324,8 +317,19 @@ if( COVERAGE )
     include(CodeCoverage)
     APPEND_COVERAGE_COMPILER_FLAGS()
     set(COVERAGE_EXCLUDES '/usr*')
+
+    #
+    # create a CMake script file that is executed to run the coverage test.
+    # With a script file, the return code of the tests is simply ignored,
+    # and a coverage report is generated even if some tests fail currently.
+    #
+    file(WRITE ${CMAKE_BINARY_DIR}/RunCoverage.cmake "execute_process(COMMAND ctest ${CMAKE_CTEST_COMMAND} ${COVERAGE_CTEST_ARGS})")
+
+    #
+    # setup the coverage target to execute the RunCoverage script
+    #
     SETUP_TARGET_FOR_COVERAGE(NAME coverage
-                          EXECUTABLE bash -c "${CMAKE_CTEST_COMMAND} ${COVERAGE_CTEST_ARGS}"
+                          EXECUTABLE ${CMAKE_COMMAND} -P ${CMAKE_BINARY_DIR}/RunCoverage.cmake
                           DEPENDENCIES all_executables
                           )
 endif()

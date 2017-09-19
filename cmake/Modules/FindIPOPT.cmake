@@ -39,7 +39,7 @@
 if(NOT WIN32)
   # On non Windows systems we use PkgConfig to find IPOPT
   find_package(PkgConfig QUIET)
-  if(PKG_CONFIG_FOUND)
+  if(PKG_CONFIG_FOUND AND NOT IPOPT_DIR)
 
     if(IPOPT_FIND_VERSION)
       if(IPOPT_FIND_VERSION_EXACT)
