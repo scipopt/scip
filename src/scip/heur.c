@@ -1422,7 +1422,7 @@ int SCIPheurGetNDivesets(
  */
 SCIP_RETCODE SCIPvariablegraphBreadthFirst(
    SCIP*                 scip,               /**< SCIP data structure */
-   VARIABLEGRAPH*        vargraph,           /**< pointer to the variable graph, or NULL to let the function create a local graph */
+   SCIP_VGRAPH*          vargraph,           /**< pointer to the variable graph, or NULL to let the function create a local graph */
    SCIP_VAR**            startvars,          /**< array of start variables to calculate distance from */
    int                   nstartvars,         /**< number of starting variables, at least 1 */
    int*                  distances,          /**< array to keep distance in vargraph from start variables for every variable */
@@ -1621,7 +1621,7 @@ SCIP_RETCODE SCIPvariablegraphBreadthFirst(
 static
 SCIP_RETCODE fillVariableGraph(
    SCIP*                 scip,               /**< SCIP data structure */
-   VARIABLEGRAPH*        vargraph,           /**< variable graph data structure for breadth-first-search neighborhoods */
+   SCIP_VGRAPH*          vargraph,           /**< variable graph data structure for breadth-first-search neighborhoods */
    SCIP_Bool             relaxdenseconss,    /**< should dense constraints (at least as dense as \p density) be
                                               *   ignored by connectivity graph? */
    SCIP_Real             relaxdensity,       /**< density (with respect to number of variables) to relax constraint from graph */
@@ -1723,7 +1723,7 @@ SCIP_RETCODE fillVariableGraph(
 /** initialization method of variable graph data structure */
 SCIP_RETCODE SCIPvariableGraphCreate(
    SCIP*                 scip,               /**< SCIP data structure */
-   VARIABLEGRAPH**       vargraph,           /**< pointer to the variable graph */
+   SCIP_VGRAPH**         vargraph,           /**< pointer to the variable graph */
    SCIP_Bool             relaxdenseconss,    /**< should dense constraints (at least as dense as \p density) be
                                               *   ignored by connectivity graph? */
    SCIP_Real             relaxdensity,       /**< density (with respect to number of variables) to relax constraint from graph */
@@ -1761,7 +1761,7 @@ SCIP_RETCODE SCIPvariableGraphCreate(
 /** deinitialization method of variable graph data structure */
 void SCIPvariableGraphFree(
    SCIP*                 scip,               /**< SCIP data structure */
-   VARIABLEGRAPH**       vargraph            /**< pointer to the variable graph */
+   SCIP_VGRAPH**         vargraph            /**< pointer to the variable graph */
    )
 {
    int nvars;

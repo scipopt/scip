@@ -90,7 +90,7 @@
  */
 struct RollingHorizon
 {
-   VARIABLEGRAPH*        variablegraph;      /**< variable graph data structure for breadth-first-search neighborhoods */
+   SCIP_VGRAPH*          variablegraph;      /**< variable graph data structure for breadth-first-search neighborhoods */
    int*                  distances;          /**< distances of the heuristic rolling horizon from the original source
                                               *   variable indexed by probindex */
    SCIP_Bool*            used;               /**< array that represents for every variable whether it has been used
@@ -503,7 +503,7 @@ static
 SCIP_RETCODE selectInitialVariable(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
-   VARIABLEGRAPH*        vargraph,           /**< variable graph data structure to work on */
+   SCIP_VGRAPH*          vargraph,           /**< variable graph data structure to work on */
    int*                  distances,          /**< breadth-first distances indexed by Probindex of variables */
    SCIP_VAR**            selvar,             /**< pointer to store the selected variable */
    int*                  selvarmaxdistance   /**< maximal distance k to consider for selected variable neighborhood */
@@ -780,7 +780,7 @@ SCIP_RETCODE determineVariableFixings(
    SCIP_VAR** vars;
    SCIP_SOL* sol;                            /* pool of solutions */
    int* distances;
-   VARIABLEGRAPH* vargraph;
+   SCIP_VGRAPH* vargraph;
    SCIP_VAR* selvar;
    int nvars;
    int nbinvars;

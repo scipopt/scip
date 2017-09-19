@@ -111,7 +111,7 @@ struct SCIP_Heur
  *
  *  @see PublicVariableGraphMethods for available methods
  */
-struct VariableGraph
+struct SCIP_VGraph
 {
    SCIP_CONS***          varconss;           /**< constraints of each variable */
    SCIP_HASHTABLE*       visitedconss;       /**< hash table that keeps a record of visited constraints during breadth-first search */
