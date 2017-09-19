@@ -19070,6 +19070,8 @@ SCIP_RETCODE SCIPgetActiveVars(
  *  returns 0 if the variable has been aggregated out or fixed in presolving.
  *
  *  @pre This method can only be called if @p scip is in stage \ref SCIP_STAGE_SOLVING
+ *
+ *  @note The return value of this method should be used carefully if the dual feasibility check was explictely disabled.
  */
 SCIP_Real SCIPgetVarRedcost(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -19079,10 +19081,6 @@ SCIP_Real SCIPgetVarRedcost(
    assert( scip != NULL );
    assert( var != NULL );
    assert( var->scip == scip );
-   assert(SCIPlpIsDualReliable(scip->lp));
-
-   if( !SCIPlpIsDualReliable(scip->lp) )
-      return SCIP_INVALID;
 
    switch( SCIPvarGetStatus(var) )
    {
@@ -19117,6 +19115,8 @@ SCIP_Real SCIPgetVarRedcost(
  *  returns 0 if the variable has been aggregated out or fixed in presolving.
  *
  *  @pre This method can only be called if @p scip is in stage \ref SCIP_STAGE_SOLVING
+ *
+ *  @note The return value of this method should be used carefully if the dual feasibility check was explictely disabled.
  */
 SCIP_Real SCIPgetVarImplRedcost(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -19127,10 +19127,6 @@ SCIP_Real SCIPgetVarImplRedcost(
    assert( scip != NULL );
    assert( var != NULL );
    assert( var->scip == scip );
-   assert(SCIPlpIsDualReliable(scip->lp));
-
-   if( !SCIPlpIsDualReliable(scip->lp) )
-      return SCIP_INVALID;
 
    switch( SCIPvarGetStatus(var) )
    {
@@ -29948,6 +29944,8 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
  *
  *  @note calling this method in SCIP_STAGE_SOLVED is only recommended to experienced users and should only be called
  *        for pure LP instances (without presolving)
+ *
+ *  @note The return value of this method should be used carefully if the dual feasibility check was explictely disabled.
  */
 SCIP_Real SCIPgetColRedcost(
    SCIP*                 scip,               /**< SCIP data structure */

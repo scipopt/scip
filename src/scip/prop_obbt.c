@@ -505,10 +505,6 @@ SCIP_RETCODE createGenVBound(
 
    assert(SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL);
 
-   /* skip creating of LVB if LP solution does not pass the dual feasibility check */
-   if( !SCIPisLPDualReliable(scip) )
-      return SCIP_OKAY;
-
    /* only genvbounds created in the root node are globally valid
     *
     * note: depth changes to one if we use the probing mode to solve the obbt LPs
