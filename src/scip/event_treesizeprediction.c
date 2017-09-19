@@ -36,6 +36,7 @@
 #define DEFAULT_MAXRATIOITERS  100
 #define DEFAULT_ESTIMATION_METHOD 'r'
 #define DEFAULT_MEASURE_ERROR  TRUE
+/* #define DEFAULT_SMOOTHING_METHOD  'n' */
 
 /*
  * Data structures
@@ -287,10 +288,11 @@ void freeTreeMemory(SCIP *scip, TSEtree **tree)
 /**
  * Recursively frees memory of the estimates (Elist)
  */
+static
 void freeElistMemory(SCIP* scip, Elist *elist)
 {
-   assert(scip != NULL);
    Elist* next;
+   assert(scip != NULL);
    assert(elist != NULL);
 
    while( elist != NULL )
@@ -309,6 +311,7 @@ struct SCIP_EventhdlrData
    int maxratioiters;
    char estimatemethod;
    SCIP_Bool measureerror;
+   /* char smoothingmethod; */
 
    /* Internal variables */
    unsigned int nodesfound;
@@ -498,14 +501,31 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolTreeSizePrediction)
       Elist *current;
       Elist *next;
       int nmeasures;
+      SCIP_Real relerror;
+
       SCIP_Real mape;
+
+      SCIP_Real var;
+
+      const int nthresholds = 7;
+      const SCIP_Real thresholds[] = {.01,.05,.1,.2,.5,1,10};
+      SCIP_Real nestimatesinthreshold[nthresholds];
+      SCIP_Real nestimatesinthresholdattheend[nthresholds];
+
       SCIP_Real totaltreesize;
       assert(eventhdlrdata->estimatelist != NULL);
 
       totaltreesize = SCIPgetNNodes(scip);
-      /* We use the following measures: MAPE, */
+
+      /* We use the following measures: MAPE, VARiance, Estimates within thresholds (overall, or only at the end) */
       nmeasures = 0;
       mape = 0;
+      var = 0;
+      for( int i = 0; i < nthresholds; ++i )
+      {
+         nestimatesinthreshold[i] = 0;
+         nestimatesinthresholdattheend[i] = 0;
+      }
 
       current = eventhdlrdata->estimatelist;
       while( current != NULL )
@@ -513,18 +533,62 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolTreeSizePrediction)
          next = current->next;
          /* statistics */
          ++nmeasures;
+         /* we compute the relative error */
+         relerror = abs(current->estimate - totaltreesize) / totaltreesize;
          /* MAPE */
-         mape += abs(current->estimate - totaltreesize) / totaltreesize;
-
+         mape += relerror;
+         /* VARiance */
+         var += pow(current->estimate - totaltreesize,2);
+         /* Number of estimates within given relative thresholds */
+         for( int i = 0; i < nthresholds; ++i )
+         {
+            if( relerror <= thresholds[i] )
+            {
+               ++nestimatesinthreshold[i];
+               ++nestimatesinthresholdattheend[i];
+            }
+            else
+            {
+               /* We reset this value since the relative error of one estimate was larger than the threshold */
+               nestimatesinthresholdattheend[i] = 0;
+            }
+         }
          //SCIPfreeMemory(scip, &current);
          current = next;
       }
 
-      /* MAPE */
-      mape = 100 * mape / nmeasures;
+      /* Output of the measures */
       msghdlr = SCIPgetMessagehdlr(scip);
       assert(msghdlr != NULL);
-      SCIPmessagePrintInfo(msghdlr, "MAPE value = %lf\n", mape);
+
+      SCIPmessagePrintInfo(msghdlr, "Estimation errors  :\n");
+
+      /* MAPE */
+      mape = 100 * mape / nmeasures;
+      SCIPmessagePrintInfo(msghdlr, "  MAPE             : %lf\n", mape);
+
+      /* VARiance (and Standard Deviation) */
+      var = var / nmeasures;
+      SCIPmessagePrintInfo(msghdlr, "  VAR              : %lf\n", var);
+      SCIPmessagePrintInfo(msghdlr, "  SD               : %lf\n", sqrt(var));
+
+      /* Percent of estimates within the thresholds */
+      SCIPmessagePrintInfo(msghdlr, "  Levels (total,%) : ");
+      for( int i = 0; i < nthresholds; ++i )
+      {
+         nestimatesinthreshold[i] = 100 * nestimatesinthreshold[i]/nmeasures;
+         SCIPmessagePrintInfo(msghdlr, "T(%.2lf)=%.2lf,", thresholds[i], nestimatesinthreshold[i]);
+      }
+      SCIPmessagePrintInfo(msghdlr, "\n");
+
+      /* Percent of estimates within the thresholds at the end */
+      SCIPmessagePrintInfo(msghdlr, "  Levels (end,%)   : ");
+      for( int i = 0; i < nthresholds; ++i )
+      {
+         nestimatesinthresholdattheend[i] = 100 * nestimatesinthresholdattheend[i]/nmeasures;
+         SCIPmessagePrintInfo(msghdlr, "T(%.2lf)=%.2lf,", thresholds[i], nestimatesinthresholdattheend[i]);
+      }
+      SCIPmessagePrintInfo(msghdlr, "\n");
 
       /* We free the estimates (Elist) memory */
       freeElistMemory(scip, eventhdlrdata->estimatelist);
@@ -745,7 +809,11 @@ SCIP_RETCODE SCIPincludeEventHdlrTreeSizePrediction(
 
    SCIP_CALL( SCIPaddCharParam(scip, "estimates/estimatemethod", "Method to estimate the sizes of unkown subtrees based on their siblings ('r'atio, 'u'niform)", &(eventhdlrdata->estimatemethod), TRUE, DEFAULT_ESTIMATION_METHOD, "ru", NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "estimates/measureerror", "Whether or not to measure the prediction error at the end of the run", &(eventhdlrdata->measureerror), FALSE, DEFAULT_MEASURE_ERROR, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "estimates/measureerror", "Whether to measure the prediction error at the end of the run", &(eventhdlrdata->measureerror), FALSE, DEFAULT_MEASURE_ERROR, NULL, NULL) );
+
+/*   SCIP_CALL( SCIPaddCharParam(scip, "estimates/smoothingmethod", "Smoothing method ('n'one, 's'imple exponential, 'd'ouble exponential)", &(eventhdlrdata->smoothingmethod), TRUE, DEFAULT_SMOOTHING_METHOD, "nsd", NULL, NULL) ); */
+
+
 
    return SCIP_OKAY;
 }
