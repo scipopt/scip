@@ -271,6 +271,7 @@ SizeStatus estimateTreeSize(SCIP* scip, TSEtree *node, SCIP_Real upperbound, SCI
 static
 void freeTreeMemory(SCIP *scip, TSEtree **tree)
 {
+   assert(scip != NULL);
    assert(tree != NULL);
    assert(*tree != NULL);
    /* postfix traversal */
@@ -281,6 +282,23 @@ void freeTreeMemory(SCIP *scip, TSEtree **tree)
    SCIPdebugMessage("Freeing memory for node %"SCIP_LONGINT_FORMAT"\n", (*tree)->number);
    SCIPfreeMemory(scip, tree);
    *tree = NULL;
+}
+
+/**
+ * Recursively frees memory of the estimates (Elist)
+ */
+void freeElistMemory(SCIP* scip, Elist *elist)
+{
+   assert(scip != NULL);
+   Elist* next;
+   assert(elist != NULL);
+
+   while( elist != NULL )
+   {
+      next = elist->next;
+      SCIPfreeMemory(scip, &elist);
+      elist = next;
+   }
 }
 
 /** event handler data */
@@ -498,18 +516,23 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolTreeSizePrediction)
          /* MAPE */
          mape += abs(current->estimate - totaltreesize) / totaltreesize;
 
-         SCIPfreeMemory(scip, &current);
+         //SCIPfreeMemory(scip, &current);
          current = next;
       }
       /* We set those to NULL for safety */
-      eventhdlrdata->estimatelist = NULL;
-      eventhdlrdata->lastestimate = NULL;
+//      eventhdlrdata->estimatelist = NULL;
+//      eventhdlrdata->lastestimate = NULL;
 
       /* MAPE */
       mape = 100 * mape / nmeasures;
       msghdlr = SCIPgetMessagehdlr(scip);
       assert(msghdlr != NULL);
       SCIPmessagePrintInfo(msghdlr, "MAPE value = %lf\n", mape);
+
+      /* We free the estimates (Elist) memory */
+      freeElistMemory(scip, eventhdlrdata->estimatelist);
+      eventhdlrdata->estimatelist = NULL;
+      eventhdlrdata->lastestimate = NULL;
    }
 
    /* We drop node solved events */
