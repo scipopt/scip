@@ -37,6 +37,12 @@ SCIP_Longint SCIPtreeSizeGetEstimateRemaining(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** Returns an estimate of the total tree size to explore, -1 if no estimate is available */
+EXTERN
+SCIP_Longint SCIPtreeSizeGetEstimateTotal(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** creates event handler for tree-size prediction event */
 EXTERN
 SCIP_RETCODE SCIPincludeEventHdlrTreeSizePrediction(

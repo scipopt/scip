@@ -160,22 +160,14 @@ SCIP_DECL_DISPEXITSOL(dispExitsolEstimates)
 static
 SCIP_DECL_DISPOUTPUT(dispOutputEstimates)
 {  /*lint --e{715}*/
-   SCIP_Longint remainingestimate;
    SCIP_Longint estimate;
 
    assert(scip != NULL);
-   /* We call the estimation method */
-   remainingestimate = SCIPtreeSizeGetEstimateRemaining(scip);
-   
-   /* If there is no estimate of remaining nodes (-1) or if we have not branched yet, then make a prediction */
-   if( remainingestimate != -1 && SCIPgetNNodes(scip) > 1)
-   { 
-      estimate = remainingestimate + SCIPgetNNodes(scip);
-      /* We check if SCIP_Longint is large enough to encode the number it should encode */
-      if( estimate < remainingestimate || estimate < SCIPgetNNodes(scip) )
-         estimate = SCIP_LONGINT_MAX;
+
+   estimate = SCIPtreeSizeGetEstimateTotal(scip);
+
+   if( estimate != -1 )
       SCIPdispLongint(SCIPgetMessagehdlr(scip), file, estimate, DISP_WIDTH);
-   }
    else
       SCIPinfoMessage(scip, file, "   -   ");
    

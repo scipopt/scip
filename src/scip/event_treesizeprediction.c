@@ -35,6 +35,7 @@
 #define DEFAULT_HASHMAP_SIZE   100000
 #define DEFAULT_MAXRATIOITERS  100
 #define DEFAULT_ESTIMATION_METHOD 'r'
+#define DEFAULT_MEASURE_ERROR  TRUE
 
 /*
  * Data structures
@@ -49,6 +50,14 @@
 
 typedef enum {UNKNOWN, ESTIMATED, KNOWN} SizeStatus;
 typedef enum {RATIO, UNIFORM} EstimationMethod;
+
+typedef struct EstimatesList Elist;
+struct EstimatesList;
+struct EstimatesList
+{
+   SCIP_Real estimate;
+   struct EstimatesList *next;
+};
 
 typedef struct TreeSizeEstimateTree TSEtree;
 struct TreeSizeEstimateTree
@@ -281,6 +290,7 @@ struct SCIP_EventhdlrData
    int hashmapsize;
    int maxratioiters;
    char estimatemethod;
+   SCIP_Bool measureerror;
 
    /* Internal variables */
    unsigned int nodesfound;
@@ -292,6 +302,8 @@ struct SCIP_EventhdlrData
    TSEtree *tree; /* The representation of the B&B tree */
    //SCIP_HASHMAP *opennodes; /* The open nodes (that have yet to be solved). The key is the (scip) id/number of the SCIP_Node */
    SCIP_HASHMAP *allnodes;
+   Elist *estimatelist;
+   Elist *lastestimate;
 };
 
 SCIP_Longint SCIPtreeSizeGetEstimateRemaining(SCIP* scip)
@@ -323,6 +335,56 @@ SCIP_Longint SCIPtreeSizeGetEstimateRemaining(SCIP* scip)
    }
 }
 
+SCIP_Longint SCIPtreeSizeGetEstimateTotal(SCIP* scip)
+{
+   SCIP_Longint remainingestimate;
+   SCIP_Longint estimate;
+
+   SCIP_EVENTHDLR* eventhdlr;
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+   assert(scip != NULL);
+   eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
+   assert(eventhdlr != NULL);
+
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   assert(eventhdlrdata != NULL);
+
+   remainingestimate = -1;
+   estimate = -1;
+
+   /* We only call the estimation method if we are not at the root node */
+   if( SCIPgetNNodes(scip) > 1 )
+      remainingestimate = SCIPtreeSizeGetEstimateRemaining(scip);
+      
+   /* If there is no estimate of remaining nodes or if we have not branched yet, then we return -1 */
+   if( remainingestimate != -1 )
+   { 
+      estimate = remainingestimate + SCIPgetNNodes(scip);
+      /* We check if SCIP_Longint is large enough to encode the number it should encode */
+      if( estimate < remainingestimate || estimate < SCIPgetNNodes(scip) )
+         estimate = SCIP_LONGINT_MAX;
+   }
+
+   if( eventhdlrdata->measureerror == TRUE )
+   {
+      Elist *newlistitem;
+      SCIP_CALL( SCIPallocMemory(scip, &newlistitem) );
+      newlistitem->next = NULL;
+      if( eventhdlrdata->estimatelist == NULL )
+      {
+         eventhdlrdata->estimatelist = newlistitem;
+      }
+      else
+      {
+         eventhdlrdata->lastestimate->next = newlistitem;
+      }
+      eventhdlrdata->lastestimate = newlistitem;
+
+      newlistitem->estimate = estimate;
+   }
+
+   return estimate;
+}
 
 /** solving process initialization method of event handler (called when branch and bound process is about to begin) */
 static
@@ -358,6 +420,8 @@ SCIP_DECL_EVENTINITSOL(eventInitsolTreeSizePrediction)
    //SCIP_CALL( SCIPhashmapCreate(&(eventhdlrdata->opennodes), SCIPblkmem(scip), eventhdlrdata->hashmapsize) );
    SCIP_CALL( SCIPhashmapCreate(&(eventhdlrdata->allnodes), SCIPblkmem(scip), eventhdlrdata->hashmapsize) );
 
+   eventhdlrdata->estimatelist = NULL;
+
    /* We catch node solved events */
    SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_NODESOLVED, eventhdlr, NULL, NULL) );
 
@@ -375,6 +439,7 @@ static
 SCIP_DECL_EVENTEXITSOL(eventExitsolTreeSizePrediction)
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
+   SCIP_MESSAGEHDLR* msghdlr;
    /* SCIPdebugMsg(scip, "exitsol method of eventhdlr "EVENTHDLR_NAME"\n"); */
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
@@ -384,6 +449,8 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolTreeSizePrediction)
    assert(eventhdlrdata != NULL);
 
    SCIPdebugMessage("Found %u nodes in the B&B tree\n", eventhdlrdata->nodesfound);
+   if( eventhdlrdata->nodesfound != SCIPgetNNodes(scip) )
+      SCIPdebugMessage("Warning: this number does not match the actual number of nodes: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNNodes(scip));
 
    #ifdef SCIP_DEBUG
    {
@@ -405,6 +472,44 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolTreeSizePrediction)
    if( eventhdlrdata->tree != NULL )
    {
       freeTreeMemory(scip, &(eventhdlrdata->tree));
+   }
+
+   /* We measure errors if needed */
+   if( eventhdlrdata->measureerror == TRUE )
+   {
+      Elist *current;
+      Elist *next;
+      int nmeasures;
+      SCIP_Real mape;
+      SCIP_Real totaltreesize;
+      assert(eventhdlrdata->estimatelist != NULL);
+
+      totaltreesize = SCIPgetNNodes(scip);
+      /* We use the following measures: MAPE, */
+      nmeasures = 0;
+      mape = 0;
+
+      current = eventhdlrdata->estimatelist;
+      while( current != NULL )
+      {
+         next = current->next;
+         /* statistics */
+         ++nmeasures;
+         /* MAPE */
+         mape += abs(current->estimate - totaltreesize) / totaltreesize;
+
+         SCIPfreeMemory(scip, &current);
+         current = next;
+      }
+      /* We set those to NULL for safety */
+      eventhdlrdata->estimatelist = NULL;
+      eventhdlrdata->lastestimate = NULL;
+
+      /* MAPE */
+      mape = 100 * mape / nmeasures;
+      msghdlr = SCIPgetMessagehdlr(scip);
+      assert(msghdlr != NULL);
+      SCIPmessagePrintInfo(msghdlr, "MAPE value = %lf\n", mape);
    }
 
    /* We drop node solved events */
@@ -618,6 +723,8 @@ SCIP_RETCODE SCIPincludeEventHdlrTreeSizePrediction(
    SCIP_CALL( SCIPaddIntParam(scip, "estimates/maxratioiters", "Maximum number of iterations to compute the ratio of a variable", &(eventhdlrdata->maxratioiters), TRUE, DEFAULT_MAXRATIOITERS, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "estimates/estimatemethod", "Method to estimate the sizes of unkown subtrees based on their siblings ('r'atio, 'u'niform)", &(eventhdlrdata->estimatemethod), TRUE, DEFAULT_ESTIMATION_METHOD, "ru", NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "estimates/measureerror", "Whether or not to measure the prediction error at the end of the run", &(eventhdlrdata->measureerror), FALSE, DEFAULT_MEASURE_ERROR, NULL, NULL) );
 
    return SCIP_OKAY;
 }
