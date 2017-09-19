@@ -819,7 +819,7 @@ SCIP_RETCODE determineVariableFixings(
    }
    else
    {
-      SCIP_CALL( SCIPvariableGraphCreate(scip, &rollinghorizon->variablegraph, heurdata->relaxdenseconss, 1.0 - heurdata->minfixingrate, &heurdata->nrelaxedconstraints) );
+      SCIP_CALL( SCIPvariableGraphCreate(scip, &vargraph, heurdata->relaxdenseconss, 1.0 - heurdata->minfixingrate, &heurdata->nrelaxedconstraints) );
    }
 
    /* allocate buffer memory to hold distances */

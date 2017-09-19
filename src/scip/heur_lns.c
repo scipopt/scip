@@ -22,7 +22,10 @@
 
 #include <assert.h>
 #include <string.h>
-#include <strings.h>
+#if defined(_WIN32) || defined(_WIN64)
+#else
+#include <strings.h> /*lint --e{766}*/
+#endif
 #include "scip/heur_lns.h"
 #include "scipdefplugins.h"
 
@@ -1080,8 +1083,6 @@ SCIP_DECL_SORTINDCOMP(sortIndCompLns)
    return ind1 - ind2;
 }
 
-
-
 /** Compute the reduced cost score for this variable in the reference solution */
 static
 SCIP_Real getVariableRedcostScore(
@@ -2134,7 +2135,6 @@ SCIP_DECL_HEUREXEC(heurExecLns)
                continue;
             }
             else
-               tryagain = FALSE;
                break;
          }
 
@@ -3171,8 +3171,6 @@ SCIP_RETCODE includeNeighborhoods(
          "number of pool solutions where binary solution values must agree",
          &dins->data.dins->npoolsols, TRUE, DEFAULT_NPOOLSOLS_DINS, 1, 100, NULL, NULL) );
 
-   /* author bzfhende: TODO include the GINS neighborhood */
-
    return SCIP_OKAY;
 }
 
@@ -3221,7 +3219,6 @@ SCIP_DECL_HEURINIT(heurInitLns)
    for( i = 0; i < heurdata->nactiveneighborhoods; ++i )
       priorities[i] = heurdata->neighborhoods[i]->priority;
 
-
    initseed = (unsigned int)heurdata->seed + SCIPgetNVars(scip);
 
    /* create or reset bandit algorithms */
@@ -3260,7 +3257,7 @@ SCIP_DECL_HEURINIT(heurInitLns)
    SCIPfreeBufferArray(scip, &priorities);
 
    /* open gain file for reading */
-   if( strncasecmp(heurdata->gainfilename, DEFAULT_GAINFILENAME, strlen(DEFAULT_GAINFILENAME) != 0 ) )
+   if( strncasecmp(heurdata->gainfilename, DEFAULT_GAINFILENAME, strlen(DEFAULT_GAINFILENAME)) != 0 )
    {
       heurdata->gainfile = fopen(heurdata->gainfilename, "w");
 
