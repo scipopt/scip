@@ -519,9 +519,6 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolTreeSizePrediction)
          //SCIPfreeMemory(scip, &current);
          current = next;
       }
-      /* We set those to NULL for safety */
-//      eventhdlrdata->estimatelist = NULL;
-//      eventhdlrdata->lastestimate = NULL;
 
       /* MAPE */
       mape = 100 * mape / nmeasures;
@@ -531,6 +528,7 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolTreeSizePrediction)
 
       /* We free the estimates (Elist) memory */
       freeElistMemory(scip, eventhdlrdata->estimatelist);
+      /* We set those to NULL for safety */
       eventhdlrdata->estimatelist = NULL;
       eventhdlrdata->lastestimate = NULL;
    }
