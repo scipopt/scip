@@ -411,9 +411,9 @@ SCIP_RETCODE SCIPprocessShellArguments(
          "  -q            : suppress screen messages\n"
          "  -s <settings> : load parameter settings (.set) file\n"
          "  -f <problem>  : load and solve problem file\n"
-         "  -o <primref> <dualref> : pass primal and dual objective reference values for validation at the end of the solve"
+         "  -o <primref> <dualref> : pass primal and dual objective reference values for validation at the end of the solve\n"
          "  -b <batchfile>: load and execute dialog command batch file (can be used multiple times)\n"
-         "  -r <randomseed>: nonnegative integer to be used as random seed. "
+         "  -r <randseed> : nonnegative integer to be used as random seed. "
          "Has priority over random seed specified through parameter settings (.set) file\n"
          "  -c \"command\"  : execute single line of dialog commands (can be used multiple times)\n\n",
          argv[0]);
