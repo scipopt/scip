@@ -105,34 +105,35 @@ void SCIPbranchComputeVarRatio(
    SCIP_Bool usefp;
    /* It is possible that we don't have to iterate at all */
    SCIP_Bool doloop = TRUE;
+   SCIP_Real l;
+   SCIP_Real r;
 
-   /* We scale left and right gains by dividing both by left*/
-   const SCIP_Real l = 1;
-   const SCIP_Real r = rightgain / leftgain;
+   assert(leftgain >= 0);
+   assert(rightgain >= leftgain);
 
    #ifdef ONEVAR_TIMINGS
       ++branchrule->ncomputeratiocalls;
       SCIPclockStart(branchrule->computeratiotime, set);
    #endif
 
-   assert(leftgain >= 0);
-   assert(rightgain >= leftgain);
-
-   ratio = 1;
-
    if(leftgain == 0 || rightgain == 0)
    {
       branchratio->valid = FALSE;
       doloop = FALSE;
    }
-
-   /* In the case where l and r are very close r may become < 1 */
-   if(r <= 1)
+   else
    {
-      branchratio->valid = TRUE;
-      branchratio->upratio = 2;
-      branchratio->invleft = 1.0 / leftgain;
-      doloop = FALSE;
+      /* We scale left and right gains by dividing both by left*/
+      l = 1;
+      r = rightgain / leftgain;
+      /* In the case where l and r are very close r may become < 1 */
+      if(r <= 1)
+      {
+         branchratio->valid = TRUE;
+         branchratio->upratio = 2;
+         branchratio->invleft = 1.0 / leftgain;
+         doloop = FALSE;
+      }
    }
 
    /* Depending on the value of rightgain/leftgain, we have two different methods to compute the ratio.
@@ -153,7 +154,9 @@ void SCIPbranchComputeVarRatio(
          SCIPclockStart(branchrule->laguerreratiotime, set);
       }
    #endif
+
    iters=0;
+   ratio = 1;
    /* We initialize the iterations at a lower bound */
    newratio = pow(2, 1.0/r);
    while(doloop == TRUE && SCIPsetIsEQ(set, ratio, newratio) == FALSE && iters < maxiters)
