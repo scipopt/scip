@@ -631,6 +631,7 @@ SCIP_RETCODE addCoef(
    )
 {
    SCIP_CONSDATA* consdata;
+   int samebndidx;
    int v;
 
    assert(eventhdlr != NULL);
@@ -654,13 +655,21 @@ SCIP_RETCODE addCoef(
    }
    assert(consdata->varssize > consdata->nvars);
 
+   /* remember the position of the literal in the constraint that has the same bound type on the same variable
+    *
+    * example: (x >= 5) or (x <= 2) and literal (x >= 2) should be added.
+    *          if we see (x >= 5) first, we cannot stop immediately because only in combination with the second literal
+    *          we see that the constraint is redundant.
+    */
+   samebndidx = -1;
+
    for( v = 0; v < consdata->nvars; v++ )
    {
       /* check if the variable is already part of the constraint */
       if( consdata->vars[v] == var )
       {
          if( consdata->boundtypes[v] == boundtype )
-            break;
+            samebndidx = v;
          else if( isOverlapping(scip, var, consdata->boundtypes[v], consdata->bounds[v], boundtype, bound) )
          {
             *redundant = TRUE;
@@ -672,15 +681,15 @@ SCIP_RETCODE addCoef(
    /* the combination of variable and boundtype is already part of the constraint; check whether the clause
     * can be relaxed
     */
-   if( v < consdata->nvars )
+   if( samebndidx < consdata->nvars )
    {
-      if( (boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisLT(scip, bound, consdata->bounds[v]))
-         || (boundtype == SCIP_BOUNDTYPE_UPPER && SCIPisGT(scip, bound, consdata->bounds[v])) )
+      if( (boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisLT(scip, bound, consdata->bounds[samebndidx]))
+         || (boundtype == SCIP_BOUNDTYPE_UPPER && SCIPisGT(scip, bound, consdata->bounds[samebndidx])) )
       {
          SCIPdebugMsg(scip, "relax clause of <%s>: (<%s> %s %.15g) -> (<%s> %s %.15g)\n", SCIPconsGetName(cons),
-               SCIPvarGetName(var), boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", consdata->bounds[v],
+               SCIPvarGetName(var), boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", consdata->bounds[samebndidx],
                SCIPvarGetName(var), boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", bound);
-         consdata->bounds[v] = bound;
+         consdata->bounds[samebndidx] = bound;
       }
    }
    else
