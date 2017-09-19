@@ -681,7 +681,7 @@ SCIP_RETCODE addCoef(
    /* the combination of variable and boundtype is already part of the constraint; check whether the clause
     * can be relaxed
     */
-   if( samebndidx < consdata->nvars )
+   if( samebndidx > -1 )
    {
       if( (boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisLT(scip, bound, consdata->bounds[samebndidx]))
          || (boundtype == SCIP_BOUNDTYPE_UPPER && SCIPisGT(scip, bound, consdata->bounds[samebndidx])) )
