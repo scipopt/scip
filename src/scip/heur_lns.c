@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+#define SCIP_DEBUG
 /**@file   heur_lns.c
  * @brief  Large neighborhood search heuristic that orchestrates popular LNS heuristics adaptively
  * @author Gregor Hendel
@@ -46,6 +46,7 @@
 #define DEFAULT_NSOLSLIM 3
 #define DEFAULT_MINNODES 50LL
 #define DEFAULT_MAXNODES 5000LL
+#define DEFAULT_WAITINGNODES 0LL  /**< number of nodes since last incumbent solution that the heuristic should wait */
 #define DEFAULT_TARGETNODEFACTOR 1.5
 #define DEFAULT_STALLNODEFACTOR 0.25
 #define LPLIMFAC 4.0
@@ -65,14 +66,15 @@
 #define DEFAULT_BESTSOLWEIGHT 1
 #define DEFAULT_BANDITALGO 'u'    /**< the default bandit algorithm: (u)pper confidence bounds, (e)xp.3, epsilon (g)reedy */
 #define DEFAULT_GAMMA 0.2         /**< default weight between uniform (gamma ~ 1) and weight driven (gamma ~ 0) probability distribution for exp3 */
-#define DEFAULT_BETA 0.0          /**< default gain offset between 0 and 1 at every observation for exp3 */
-#define DEFAULT_GAINCONTROL  0.8  /**< gain control to increase the weight of the simple solution indicator and decrease the weight of the closed gap gain */
-#define DEFAULT_SCALEBYEFFORT     TRUE /**< should the gain be scaled by the effort? */
-#define GAINMEASURES "bwg"
+#define DEFAULT_BETA 0.0          /**< default reward offset between 0 and 1 at every observation for exp3 */
+#define DEFAULT_REWARDCONTROL  0.8  /**< reward control to increase the weight of the simple solution indicator and decrease the weight of the closed gap reward */
+#define DEFAULT_SCALEBYEFFORT     TRUE /**< should the reward be scaled by the effort? */
+#define REWARDMEASURES "bwg"
 #define DEFAULT_EPS        0.5       /**< increase exploration in epsilon-greedy bandit algorithm */
 #define DEFAULT_RESETWEIGHTS TRUE    /**< should the bandit algorithms be reset when a new problem is read? */
 #define DEFAULT_SUBSCIPRANDSEEDS FALSE /**< should random seeds of sub-SCIPs be altered to increase diversification? */
 #define DEFAULT_ALPHA 0.2           /**< parameter to increase the confidence width in UCB */
+#define DEFAULT_REWARDBASELINE 0.0  /**< the reward baseline to separate successful and failed calls */
 
 /*
  * parameters to control variable fixing
@@ -85,7 +87,7 @@
 #define FIXINGRATE_DECAY 0.75  /**< geometric decay for fixing rate adjustments */
 #define FIXINGRATE_STARTINC 0.2 /**< initial increment value for fixing rate */
 #define DEFAULT_USESUBSCIPHEURS  FALSE   /**< should the heuristic activate other sub-SCIP heuristics during its search?  */
-#define DEFAULT_GAINFILENAME "-" /**< file name to store all gains and the selection of the bandit */
+#define DEFAULT_REWARDFILENAME "-" /**< file name to store all rewards and the selection of the bandit */
 
 /* individual random seeds */
 #define DEFAULT_SEED 113
@@ -327,9 +329,9 @@ struct data_dins
 struct SCIP_HeurData
 {
    NH**                  neighborhoods;      /**< array of neighborhoods */
-   char*                 gainfilename;       /**< file name to store all gains and the selection of the bandit */
+   char*                 rewardfilename;     /**< file name to store all rewards and the selection of the bandit */
    SCIP_BANDIT*          epsgreedynh;        /**< epsilon greedy selector for a neighborhood */
-   FILE*                 gainfile;           /**< gain file pointer, or NULL */
+   FILE*                 rewardfile;         /**< reward file pointer, or NULL */
    SCIP_BANDIT*          exp3;               /**< exp3 bandit algorithm */
    SCIP_BANDIT*          ucb;                /**< UCB bandit algorithm */
    SCIP_Longint          nodesoffset;        /**< offset added to the nodes budget */
@@ -337,22 +339,24 @@ struct SCIP_HeurData
    SCIP_Longint          targetnodes;        /**< targeted number of nodes to start a sub-SCIP */
    SCIP_Longint          minnodes;           /**< minimum number of nodes required to start a sub-SCIP */
    SCIP_Longint          usednodes;          /**< total number of nodes already spent in sub-SCIPs */
+   SCIP_Longint          waitingnodes;       /**< number of nodes since last incumbent solution that the heuristic should wait */
    SCIP_Real             nodesquot;          /**< fraction of nodes compared to the main SCIP for budget computation */
    SCIP_Real             startminimprove;    /**< initial factor by which LNS should at least improve the incumbent */
    SCIP_Real             minimprovelow;      /**< lower threshold for the minimal improvement over the incumbent */
    SCIP_Real             minimprovehigh;     /**< upper bound for the minimal improvement over the incumbent */
    SCIP_Real             minimprove;         /**< factor by which LNS should at least improve the incumbent */
    SCIP_Real             lplimfac;           /**< limit fraction of LPs per node to interrupt sub-SCIP */
-   SCIP_Real             exp3_gamma;              /**< weight between uniform (gamma ~ 1) and weight driven (gamma ~ 0) probability distribution for exp3 */
-   SCIP_Real             exp3_beta;          /**< gain offset between 0 and 1 at every observation for exp3 */
+   SCIP_Real             exp3_gamma;         /**< weight between uniform (gamma ~ 1) and weight driven (gamma ~ 0) probability distribution for exp3 */
+   SCIP_Real             exp3_beta;          /**< reward offset between 0 and 1 at every observation for exp3 */
    SCIP_Real             epsgreedy_eps;      /**< increase exploration in epsilon-greedy bandit algorithm */
    SCIP_Real             ucb_alpha;          /**< parameter to increase the confidence width in UCB */
-   SCIP_Real             gaincontrol;        /**< gain control to increase the weight of the simple solution indicator
-                                               *  and decrease the weight of the closed gap gain */
+   SCIP_Real             rewardcontrol;      /**< reward control to increase the weight of the simple solution indicator
+                                               *  and decrease the weight of the closed gap reward */
    SCIP_Real             targetnodefactor;   /**< factor by which target node number is increased/decreased at every adjustment */
    SCIP_Real             stallnodefactor;    /**< stall node limit as a fraction of total node limit */
+   SCIP_Real             rewardbaseline;     /**< the reward baseline to separate successful and failed calls */
    int                   nneighborhoods;     /**< number of neighborhoods */
-   int                   nactiveneighborhoods; /**< number of active neighborhoods */
+   int                   nactiveneighborhoods;/**< number of active neighborhoods */
    int                   ninitneighborhoods; /**< neighborhoods that were used at least one time */
    int                   nsolslim;           /**< limit on the number of improving solutions in a sub-SCIP call */
    int                   seed;               /**< initial random seed for bandit algorithms and random decisions by neighborhoods */
@@ -368,7 +372,7 @@ struct SCIP_HeurData
    SCIP_Bool             adjustminimprove;   /**< should the factor by which the minimum improvement is bound be dynamically updated? */
    SCIP_Bool             resetweights;       /**< should the bandit algorithms be reset when a new problem is read? */
    SCIP_Bool             subsciprandseeds;   /**< should random seeds of sub-SCIPs be altered to increase diversification? */
-   SCIP_Bool             scalebyeffort;      /**< should the gain be scaled by the effort? */
+   SCIP_Bool             scalebyeffort;      /**< should the reward be scaled by the effort? */
 };
 
 /** event handler data */
@@ -380,7 +384,7 @@ struct SCIP_EventData
    SCIP_Longint          nodelimit;          /**< node limit of the run */
    SCIP_Real             lplimfac;           /**< limit fraction of LPs per node to interrupt sub-SCIP */
    NH_STATS*             runstats;           /**< run statistics for the current neighborhood */
-   SCIP_Bool             allgainsmode;       /**< true if solutions should only be checked for gain comparisons */
+   SCIP_Bool             allrewardsmode;     /**< true if solutions should only be checked for reward comparisons */
 };
 
 /** represents limits for the sub-SCIP solving process */
@@ -849,10 +853,10 @@ SCIP_RETCODE transferSolution(
 
    oldbestsol = SCIPgetBestSol(sourcescip);
 
-   /* in the special, experimental all gains mode, the solution is only checked for feasibility
+   /* in the special, experimental all rewards mode, the solution is only checked for feasibility
     * but not stored
     */
-   if( eventdata->allgainsmode )
+   if( eventdata->allrewardsmode )
    {
       SCIP_CALL( SCIPcheckSol(sourcescip, newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
 
@@ -1718,68 +1722,81 @@ SCIP_RETCODE selectNeighborhood(
    return SCIP_OKAY;
 }
 
-/** Calculate gain based on the selected gain measure */
+/** Calculate reward based on the selected reward measure */
 static
-SCIP_RETCODE getGain(
+SCIP_RETCODE getReward(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data of the LNS neighborhood */
    NH_STATS*             runstats,           /**< run statistics */
-   SCIP_Real*            gainptr             /**< pointer to store the computed gain */
+   SCIP_Real*            rewardptr           /**< pointer to store the computed reward */
    )
 {
-   SCIP_Real gain = 0.0;
-   assert(gainptr != NULL);
-   SCIP_Real gaincontrol = heurdata->gaincontrol;
+   SCIP_Real reward = 0.0;
+   SCIP_Real effort;
+   SCIP_Real rewardcontrol = heurdata->rewardcontrol;
 
-   /* a positive gain is only assigned if a new incumbent solution was found */
+   assert(runstats->usednodes >= 0);
+   assert(runstats->nfixings >= 0)
+   ;
+   /* just add one node to avoid division by zero */
+   effort = runstats->usednodes / (SCIP_Real)(heurdata->targetnodes + 1.0);
+
+   /* assume that every fixed variable linearly reduces the subproblem complexity */
+   effort = (1.0 - (runstats->nfixings / ((SCIP_Real)SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip)))) * effort;
+   assert(rewardptr != NULL);
+
+   /* a positive reward is only assigned if a new incumbent solution was found */
    if( runstats->nbestsolsfound > 0 )
    {
-      SCIP_Real bestsolgain;
-      SCIP_Real closedgapgain;
+      SCIP_Real bestsolreward;
+      SCIP_Real closedgapreward;
 
       SCIP_Real lb;
       SCIP_Real ub;
 
       /* the indicator function is simply 1.0 */
-      bestsolgain = 1.0;
+      bestsolreward = 1.0;
 
       ub = SCIPgetUpperbound(scip);
       lb = SCIPgetLowerbound(scip);
 
-      /* compute the closed gap gain */
+      /* compute the closed gap reward */
       if( SCIPisEQ(scip, ub, lb) )
-         closedgapgain = 1.0;
+         closedgapreward = 1.0;
       else if( SCIPisInfinity(scip, runstats->oldupperbound) )
-         closedgapgain = 1.0;
+         closedgapreward = 1.0;
       else
       {
-         closedgapgain = (runstats->oldupperbound - ub) / (runstats->oldupperbound - lb);
+         closedgapreward = (runstats->oldupperbound - ub) / (runstats->oldupperbound - lb);
       }
 
-      /* the gain is a convex combination of the best solution gain and the gain for the closed gap */
-      gain = heurdata->gaincontrol * bestsolgain + (1.0 - heurdata->gaincontrol) * closedgapgain;
+      /* the reward is a convex combination of the best solution reward and the reward for the closed gap */
+      reward = heurdata->rewardcontrol * bestsolreward + (1.0 - heurdata->rewardcontrol) * closedgapreward;
 
-      /* optionally, scale the gain by the involved effort */
+      /* optionally, scale the reward by the involved effort */
       if( heurdata->scalebyeffort )
       {
-         SCIP_Real effort;
-
-         assert(runstats->usednodes >= 0);
-         assert(runstats->nfixings >= 0);
-         /* just add one node to avoid division by zero */
-         effort = runstats->usednodes / (SCIP_Real)(heurdata->minnodes + 1.0);
-
-         /* assume that every fixed variable linearly reduces the subproblem complexity */
-         effort = (1.0 - (runstats->nfixings / (SCIP_Real)SCIPgetNVars(scip))) * effort;
-
-         /* gain can be larger than 1.0 if a best solution was found within 0 nodes  */
-         gain /= (effort + 1.0);
+         /* reward can be larger than 1.0 if a best solution was found within 0 nodes  */
+         reward /= (effort + 1.0);
       }
+
+      /* add the baseline and rescale the reward into the interval [baseline, 1.0] */
+      reward = heurdata->rewardbaseline + (1.0 - heurdata->rewardbaseline) * reward;
    }
    else
-      gain = 0.0;
+   {
+      /* linearly decrease the reward based on the number of nodes spent */
+      SCIP_Real maxeffort = heurdata->targetnodes * heurdata->stallnodefactor;
+      SCIP_Real usednodes = runstats->usednodes;
 
-   *gainptr = gain;
+      usednodes *= (1.0 - (runstats->nfixings / ((SCIP_Real)SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip))));
+
+      reward = heurdata->rewardbaseline - (usednodes) * heurdata->rewardbaseline / maxeffort;
+
+      reward = MAX(0.0, reward);
+   }
+
+   *rewardptr = reward;
    return SCIP_OKAY;
 }
 
@@ -1788,7 +1805,7 @@ static
 SCIP_RETCODE updateBanditAlgorithms(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data of the LNS neighborhood */
-   SCIP_Real             gain,               /**< measured gain */
+   SCIP_Real             reward,             /**< measured reward */
    int                   neighborhoodidx     /**< the neighborhood that was chosen */
    )
 {
@@ -1799,8 +1816,8 @@ SCIP_RETCODE updateBanditAlgorithms(
    assert(neighborhoodidx < heurdata->nactiveneighborhoods);
 
    bandit = getBandit(heurdata);
-   SCIPdebugMsg(scip, "Rewarding bandit algorithm action %d with gain %.2f\n", neighborhoodidx, gain);
-   SCIP_CALL( SCIPupdateBandit(scip, bandit, neighborhoodidx, gain) );
+   SCIPdebugMsg(scip, "Rewarding bandit algorithm action %d with reward %.2f\n", neighborhoodidx, reward);
+   SCIP_CALL( SCIPupdateBandit(scip, bandit, neighborhoodidx, reward) );
 
    return SCIP_OKAY;
 }
@@ -1979,8 +1996,8 @@ SCIP_DECL_HEUREXEC(heurExecLns)
    SOLVELIMITS solvelimits;
    SCIP_Bool success;
    SCIP_Bool run;
-   SCIP_Bool allgainsmode;
-   SCIP_Real gains[NNEIGHBORHOODS];
+   SCIP_Bool allrewardsmode;
+   SCIP_Real rewards[NNEIGHBORHOODS];
    int banditidx;
    int i;
 
@@ -1988,6 +2005,14 @@ SCIP_DECL_HEUREXEC(heurExecLns)
    assert(heurdata != NULL);
 
    *result = SCIP_DIDNOTRUN;
+
+   /* wait for a sufficient number of nodes since last incumbent solution */
+   if( SCIPgetDepth(scip) > 0 && SCIPgetBestSol(scip) != NULL
+      && (SCIPgetNNodes(scip) - SCIPsolGetNodenum(SCIPgetBestSol(scip))) < heurdata->waitingnodes )
+   {
+      SCIPdebugMsg(scip, "Waiting nodes not satisfied\n");
+      return SCIP_OKAY;
+   }
 
    run = TRUE;
    /** check if budget allows a run of the next selected neighborhood */
@@ -1997,20 +2022,20 @@ SCIP_DECL_HEUREXEC(heurExecLns)
    if( !run )
       return SCIP_OKAY;
 
-   allgainsmode = heurdata->gainfile != NULL;
+   allrewardsmode = heurdata->rewardfile != NULL;
 
-   /* apply some other rules for a fair all gains mode; in normal execution mode, neighborhoods are iterated through */
-   if( allgainsmode )
+   /* apply some other rules for a fair all rewards mode; in normal execution mode, neighborhoods are iterated through */
+   if( allrewardsmode )
    {
       /* most neighborhoods require an incumbent solution */
       if( SCIPgetNSols(scip) < 2 )
       {
-         SCIPdebugMsg(scip, "Not enough solutions for all gains mode\n");
+         SCIPdebugMsg(scip, "Not enough solutions for all rewards mode\n");
          return SCIP_OKAY;
       }
 
       /* if the node is infeasible, or has no LP solution, which is required by some neighborhoods
-       * if we are not in all gains mode, the neighborhoods delay themselves individually
+       * if we are not in all rewards mode, the neighborhoods delay themselves individually
        */
       if( nodeinfeasible || ! SCIPhasCurrentNodeLP(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       {
@@ -2023,7 +2048,7 @@ SCIP_DECL_HEUREXEC(heurExecLns)
    /** use the neighborhood that requested a delay or select the next neighborhood to run based on the selected bandit algorithm */
    if( heurdata->currneighborhood >= 0 )
    {
-      assert(!allgainsmode);
+      assert(!allrewardsmode);
       banditidx = heurdata->currneighborhood;
       SCIPdebugMsg(scip, "Select delayed neighborhood %d (was delayed %d times)\n", banditidx, heurdata->ndelayedcalls);
    }
@@ -2033,8 +2058,8 @@ SCIP_DECL_HEUREXEC(heurExecLns)
       SCIPdebugMsg(scip, "Selected neighborhood %d with bandit algorithm\n", banditidx);
    }
 
-   /* in all gains mode, we simply loop over all heuristics */
-   if( ! allgainsmode )
+   /* in all rewards mode, we simply loop over all heuristics */
+   if( ! allrewardsmode )
       neighborhoodidx = banditidx;
    else
       neighborhoodidx = 0;
@@ -2065,7 +2090,7 @@ SCIP_DECL_HEUREXEC(heurExecLns)
       SCIPdebugMsg(scip, "Running '%s' neighborhood %d\n", neighborhood->name, neighborhoodidx);
 
       initRunStats(scip, &runstats[neighborhoodidx]);
-      gains[neighborhoodidx] = 0.0;
+      rewards[neighborhoodidx] = 0.0;
 
       subscipstatus[neighborhoodidx] = SCIP_STATUS_UNKNOWN;
       SCIP_CALL( SCIPstartClock(scip, neighborhood->stats.setupclock) );
@@ -2085,8 +2110,8 @@ SCIP_DECL_HEUREXEC(heurExecLns)
       {
          SCIP_CALL( SCIPstopClock(scip, neighborhood->stats.setupclock) );
 
-         /* to determine all gains, we cannot delay neighborhoods */
-         if( allgainsmode )
+         /* to determine all rewards, we cannot delay neighborhoods */
+         if( allrewardsmode )
          {
             if( ntries == heurdata->nactiveneighborhoods )
                break;
@@ -2172,7 +2197,7 @@ SCIP_DECL_HEUREXEC(heurExecLns)
       {
          SCIP_CALL( SCIPstopClock(scip, neighborhood->stats.setupclock) );
 
-         if( !allgainsmode || ntries == heurdata->nactiveneighborhoods )
+         if( !allrewardsmode || ntries == heurdata->nactiveneighborhoods )
             break;
 
          neighborhoodidx = (neighborhoodidx + 1) % heurdata->nactiveneighborhoods;
@@ -2194,7 +2219,7 @@ SCIP_DECL_HEUREXEC(heurExecLns)
       eventdata.sourcescip = scip;
       eventdata.subvars = subvars;
       eventdata.runstats = &runstats[neighborhoodidx];
-      eventdata.allgainsmode = allgainsmode;
+      eventdata.allrewardsmode = allrewardsmode;
 
       /* include an event handler to transfer solutions into the main SCIP */
       SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecLns, NULL) );
@@ -2218,9 +2243,9 @@ SCIP_DECL_HEUREXEC(heurExecLns)
       updateRunStats(scip, &runstats[neighborhoodidx], subscip);
       subscipstatus[neighborhoodidx] = SCIPgetStatus(subscip);
 
-      SCIP_CALL( getGain(scip, heurdata, &runstats[neighborhoodidx], &gains[neighborhoodidx]) );
+      SCIP_CALL( getReward(scip, heurdata, &runstats[neighborhoodidx], &rewards[neighborhoodidx]) );
 
-      if( allgainsmode && ntries < heurdata->nactiveneighborhoods )
+      if( allrewardsmode && ntries < heurdata->nactiveneighborhoods )
       {
          neighborhoodidx = (neighborhoodidx + 1) % heurdata->nactiveneighborhoods;
          ntries++;
@@ -2242,8 +2267,8 @@ SCIP_DECL_HEUREXEC(heurExecLns)
    SCIPfreeBufferArray(scip, &valbuf);
    SCIPfreeBufferArray(scip, &varbuf);
 
-   /* update bandit index that may have changed unless we are in all gains mode */
-   if( !allgainsmode )
+   /* update bandit index that may have changed unless we are in all rewards mode */
+   if( !allrewardsmode )
       banditidx = neighborhoodidx;
 
    if( *result != SCIP_DELAYED )
@@ -2258,15 +2283,15 @@ SCIP_DECL_HEUREXEC(heurExecLns)
       updateNeighborhoodStats(scip, &runstats[banditidx], heurdata->neighborhoods[banditidx], subscipstatus[banditidx]);
 
       /* adjust the fixing rate for this neighborhood
-       * make no adjustments in all gains mode, because this only affects 1 of 8 heuristics
+       * make no adjustments in all rewards mode, because this only affects 1 of 8 heuristics
        */
-      if( heurdata->adjustfixingrate && !allgainsmode )
+      if( heurdata->adjustfixingrate && !allrewardsmode )
          updateFixingRate(scip, heurdata->neighborhoods[banditidx], subscipstatus[banditidx], &runstats[banditidx]);
 
       /* similarly, update the minimum improvement for the LNS heuristic
-       * make no adjustments in all gains mode
+       * make no adjustments in all rewards mode
        */
-      if( heurdata->adjustminimprove && !allgainsmode )
+      if( heurdata->adjustminimprove && !allrewardsmode )
       {
          SCIPdebugMsg(scip, "Update Minimum Improvement: %.4f\n", heurdata->minimprove);
          updateMinimumImprovement(heurdata, subscipstatus[banditidx], &runstats[banditidx]);
@@ -2276,20 +2301,20 @@ SCIP_DECL_HEUREXEC(heurExecLns)
       /* update the target node limit based on the status of the selected algorithm */
       updateTargetNodeLimit(heurdata, &runstats[banditidx], subscipstatus[banditidx]);
 
-      /* update the bandit algorithms by the measured gain */
-      SCIP_CALL( updateBanditAlgorithms(scip, heurdata, gains[banditidx], banditidx) );
+      /* update the bandit algorithms by the measured reward */
+      SCIP_CALL( updateBanditAlgorithms(scip, heurdata, rewards[banditidx], banditidx) );
 
       resetCurrentNeighborhood(heurdata);
    }
 
-   /* write single, measured gains and the bandit index to the gain file */
-   if( allgainsmode )
+   /* write single, measured rewards and the bandit index to the reward file */
+   if( allrewardsmode )
    {
       for( i = 0; i < heurdata->nactiveneighborhoods; ++i )
       {
-         fprintf(heurdata->gainfile, "%.4f,", gains[i]);
+         fprintf(heurdata->rewardfile, "%.4f,", rewards[i]);
       }
-      fprintf(heurdata->gainfile, "%d\n", banditidx);
+      fprintf(heurdata->rewardfile, "%d\n", banditidx);
    }
 
    return SCIP_OKAY;
@@ -3259,21 +3284,21 @@ SCIP_DECL_HEURINIT(heurInitLns)
 
    SCIPfreeBufferArray(scip, &priorities);
 
-   /* open gain file for reading */
-   if( strncasecmp(heurdata->gainfilename, DEFAULT_GAINFILENAME, strlen(DEFAULT_GAINFILENAME) != 0 ) )
+   /* open reward file for reading */
+   if( strncasecmp(heurdata->rewardfilename, DEFAULT_REWARDFILENAME, strlen(DEFAULT_REWARDFILENAME) != 0 ) )
    {
-      heurdata->gainfile = fopen(heurdata->gainfilename, "w");
+      heurdata->rewardfile = fopen(heurdata->rewardfilename, "w");
 
-      if( heurdata->gainfile == NULL )
+      if( heurdata->rewardfile == NULL )
       {
-         SCIPerrorMessage("Error: Could not open gain file <%s>\n", heurdata->gainfilename);
+         SCIPerrorMessage("Error: Could not open reward file <%s>\n", heurdata->rewardfilename);
          return SCIP_FILECREATEERROR;
       }
 
-      SCIPdebugMsg(scip, "Writing gain information to <%s>\n", heurdata->gainfilename);
+      SCIPdebugMsg(scip, "Writing reward information to <%s>\n", heurdata->rewardfilename);
    }
    else
-      heurdata->gainfile = NULL;
+      heurdata->rewardfile = NULL;
 
    return SCIP_OKAY;
 }
@@ -3362,10 +3387,10 @@ SCIP_DECL_HEUREXIT(heurExitLns)
       SCIP_CALL( neighborhoodExit(scip, neighborhood) );
    }
 
-   if( heurdata->gainfile != NULL )
+   if( heurdata->rewardfile != NULL )
    {
-      fclose(heurdata->gainfile);
-      heurdata->gainfile = NULL;
+      fclose(heurdata->rewardfile);
+      heurdata->rewardfile = NULL;
    }
 
    return SCIP_OKAY;
@@ -3425,7 +3450,7 @@ SCIP_RETCODE SCIPincludeHeurLns(
    heurdata->epsgreedynh = NULL;
    heurdata->exp3 = NULL;
    heurdata->ucb = NULL;
-   heurdata->gainfilename = NULL;
+   heurdata->rewardfilename = NULL;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->neighborhoods, NNEIGHBORHOODS) );
 
@@ -3458,6 +3483,10 @@ SCIP_RETCODE SCIPincludeHeurLns(
          "minimum number of nodes required to start a sub-SCIP",
          &heurdata->minnodes, TRUE, DEFAULT_MINNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/" HEUR_NAME "/waitingnodes",
+         "number of nodes since last incumbent solution that the heuristic should wait",
+         &heurdata->waitingnodes, TRUE, DEFAULT_WAITINGNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
+
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/nodesquot",
          "fraction of nodes compared to the main SCIP for budget computation",
          &heurdata->nodesquot, FALSE, DEFAULT_NODESQUOT, 0.0, 1.0, NULL, NULL) );
@@ -3487,7 +3516,7 @@ SCIP_RETCODE SCIPincludeHeurLns(
          &heurdata->exp3_gamma, TRUE, DEFAULT_GAMMA, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/beta",
-         "gain offset between 0 and 1 at every observation for Exp.3",
+         "reward offset between 0 and 1 at every observation for Exp.3",
          &heurdata->exp3_beta, TRUE, DEFAULT_BETA, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/alpha",
@@ -3515,9 +3544,9 @@ SCIP_RETCODE SCIPincludeHeurLns(
          "should the heuristic activate other sub-SCIP heuristics during its search?",
          &heurdata->usesubscipheurs, TRUE, DEFAULT_USESUBSCIPHEURS, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/gaincontrol",
-         "gain control to increase the weight of the simple solution indicator and decrease the weight of the closed gap gain",
-         &heurdata->gaincontrol, TRUE, DEFAULT_GAINCONTROL, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/rewardcontrol",
+         "reward control to increase the weight of the simple solution indicator and decrease the weight of the closed gap reward",
+         &heurdata->rewardcontrol, TRUE, DEFAULT_REWARDCONTROL, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/targetnodefactor",
          "factor by which target node number is increased/decreased at every adjustment",
@@ -3536,23 +3565,27 @@ SCIP_RETCODE SCIPincludeHeurLns(
          &heurdata->adjustminimprove, TRUE, DEFAULT_ADJUSTMINIMPROVE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/eps",
-            "increase exploration in epsilon-greedy bandit algorithm",
-            &heurdata->epsgreedy_eps, TRUE, DEFAULT_EPS, 0.0, 1.0, NULL, NULL) );
+         "increase exploration in epsilon-greedy bandit algorithm",
+         &heurdata->epsgreedy_eps, TRUE, DEFAULT_EPS, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/rewardbaseline",
+         "the reward baseline to separate successful and failed calls",
+         &heurdata->rewardbaseline, TRUE, DEFAULT_REWARDBASELINE, 0.0, 0.99, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/resetweights",
-            "should the bandit algorithms be reset when a new problem is read?",
-            &heurdata->resetweights, TRUE, DEFAULT_RESETWEIGHTS, NULL, NULL) );
+         "should the bandit algorithms be reset when a new problem is read?",
+         &heurdata->resetweights, TRUE, DEFAULT_RESETWEIGHTS, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddStringParam(scip, "heuristics/" HEUR_NAME "/gainfilename", "file name to store all gains and the selection of the bandit",
-         &heurdata->gainfilename, TRUE, DEFAULT_GAINFILENAME, NULL, NULL) );
+   SCIP_CALL( SCIPaddStringParam(scip, "heuristics/" HEUR_NAME "/rewardfilename", "file name to store all rewards and the selection of the bandit",
+         &heurdata->rewardfilename, TRUE, DEFAULT_REWARDFILENAME, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/subsciprandseeds",
-            "should random seeds of sub-SCIPs be altered to increase diversification?",
-            &heurdata->subsciprandseeds, TRUE, DEFAULT_SUBSCIPRANDSEEDS, NULL, NULL) );
+         "should random seeds of sub-SCIPs be altered to increase diversification?",
+         &heurdata->subsciprandseeds, TRUE, DEFAULT_SUBSCIPRANDSEEDS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/scalebyeffort",
-            "should the gain be scaled by the effort?",
-            &heurdata->scalebyeffort, TRUE, DEFAULT_SCALEBYEFFORT, NULL, NULL) );
+         "should the reward be scaled by the effort?",
+         &heurdata->scalebyeffort, TRUE, DEFAULT_SCALEBYEFFORT, NULL, NULL) );
 
    return SCIP_OKAY;
 }
