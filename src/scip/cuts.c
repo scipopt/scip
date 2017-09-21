@@ -1570,7 +1570,6 @@ void postprocessCut(
    )
 {
    int i;
-   SCIP_VAR** vars;
    SCIP_Real maxcoef;
    SCIP_Real minallowedcoef;
    SCIP_Real QUAD(rhs);
@@ -1579,8 +1578,6 @@ void postprocessCut(
    assert(cutinds != NULL);
    assert(cutcoefs != NULL);
    assert(cutrhs != NULL);
-
-   vars = SCIPgetVars(scip);
 
    *success = FALSE;
 
