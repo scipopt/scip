@@ -1874,6 +1874,7 @@ SCIP_RETCODE getReward(
 
       reward = heurdata->rewardbaseline - (usednodes) * heurdata->rewardbaseline / maxeffort;
 
+
       reward = MAX(0.0, reward);
    }
 
