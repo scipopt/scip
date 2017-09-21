@@ -458,10 +458,13 @@ SCIP_Bool cutTightenCoefsQuad(
    SCIP_VAR** vars;
    SCIP_Real QUAD(maxacttmp);
    SCIP_Real maxact;
+   SCIP_Real maxabsval;
 
    QUAD_ASSIGN(maxacttmp, 0.0);
 
    vars = SCIPgetVars(scip);
+   maxabsval = 0.0;
+   nintegralvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
 
    for( i = 0; i < *cutnnz; ++i )
    {
@@ -479,6 +482,9 @@ SCIP_Bool cutTightenCoefsQuad(
          if( SCIPisInfinity(scip, -lb) )
             return FALSE;
 
+         if( cutinds[i] < nintegralvars )
+            maxabsval = MAX(maxabsval, -QUAD_ROUND(val));
+
          SCIPquadprecProdQD(val, val, lb);
 
          SCIPquadprecSumQQ(maxacttmp, maxacttmp, val);
@@ -490,6 +496,9 @@ SCIP_Bool cutTightenCoefsQuad(
          if( SCIPisInfinity(scip, ub) )
             return FALSE;
 
+         if( cutinds[i] < nintegralvars )
+            maxabsval = MAX(maxabsval, QUAD_ROUND(val));
+
          SCIPquadprecProdQD(val, val, ub);
 
          SCIPquadprecSumQQ(maxacttmp, maxacttmp, val);
@@ -498,14 +507,16 @@ SCIP_Bool cutTightenCoefsQuad(
 
    maxact = QUAD_ROUND(maxacttmp);
 
+   /* cut is redundant in activity bounds */
    if( SCIPisFeasLE(scip, maxact, QUAD_ROUND(*cutrhs)) )
-   {
       return TRUE;
-   }
 
-   nintegralvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
+   /* no coefficient tightening can be performed since the precondition doesn't hold for any of the variables */
+   if( SCIPisGT(scip, maxact - maxabsval, QUAD_ROUND(*cutrhs)) )
+      return FALSE;
 
-   for( i = 0; i < *cutnnz;)
+   /* loop over the integral variables and try to tighten the coefficients; see cons_linear for more details */
+   for( i = 0; i < *cutnnz; )
    {
       SCIP_Real QUAD(val);
 
@@ -622,10 +633,13 @@ SCIP_Bool cutTightenCoefs(
    SCIP_VAR** vars;
    SCIP_Real QUAD(maxacttmp);
    SCIP_Real maxact;
+   SCIP_Real maxabsval;
 
    QUAD_ASSIGN(maxacttmp, 0.0);
 
    vars = SCIPgetVars(scip);
+   maxabsval = 0.0;
+   nintegralvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
 
    for( i = 0; i < *cutnnz; ++i )
    {
@@ -643,6 +657,9 @@ SCIP_Bool cutTightenCoefs(
          if( SCIPisInfinity(scip, -lb) )
             return FALSE;
 
+         if( cutinds[i] < nintegralvars )
+            maxabsval = MAX(maxabsval, -val);
+
          SCIPquadprecSumQD(maxacttmp, maxacttmp, val * lb);
       }
       else
@@ -652,20 +669,25 @@ SCIP_Bool cutTightenCoefs(
          if( SCIPisInfinity(scip, ub) )
             return FALSE;
 
+         if( cutinds[i] < nintegralvars )
+            maxabsval = MAX(maxabsval, val);
+
          SCIPquadprecSumQD(maxacttmp, maxacttmp, val * ub);
       }
    }
 
    maxact = QUAD_ROUND(maxacttmp);
 
+   /* cut is redundant in activity bounds */
    if( SCIPisFeasLE(scip, maxact, QUAD_ROUND(*cutrhs)) )
-   {
       return TRUE;
-   }
 
-   nintegralvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
+   /* no coefficient tightening can be performed since the precondition doesn't hold for any of the variables */
+   if( SCIPisGT(scip, maxact - maxabsval, QUAD_ROUND(*cutrhs)) )
+      return FALSE;
 
-   for( i = 0; i < *cutnnz;)
+   /* loop over the integral variables and try to tighten the coefficients; see cons_linear for more details */
+   for( i = 0; i < *cutnnz; )
    {
       SCIP_Real val;
 
@@ -781,10 +803,13 @@ SCIP_Bool SCIPcutsTightenCoefficients(
    SCIP_VAR** vars;
    SCIP_Real QUAD(maxacttmp);
    SCIP_Real maxact;
+   SCIP_Real maxabsval;
 
    QUAD_ASSIGN(maxacttmp, 0.0);
 
    vars = SCIPgetVars(scip);
+   nintegralvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
+   maxabsval = 0.0;
 
    for( i = 0; i < *cutnnz; ++i )
    {
@@ -798,6 +823,9 @@ SCIP_Bool SCIPcutsTightenCoefficients(
          if( SCIPisInfinity(scip, -lb) )
             return FALSE;
 
+         if( cutinds[i] < nintegralvars )
+            maxabsval = MAX(maxabsval, -cutcoefs[i]);
+
          SCIPquadprecSumQD(maxacttmp, maxacttmp, lb * cutcoefs[i]);
       }
       else
@@ -807,17 +835,24 @@ SCIP_Bool SCIPcutsTightenCoefficients(
          if( SCIPisInfinity(scip, ub) )
             return FALSE;
 
+         if( cutinds[i] < nintegralvars )
+            maxabsval = MAX(maxabsval, -cutcoefs[i]);
+
          SCIPquadprecSumQD(maxacttmp, maxacttmp, ub * cutcoefs[i]);
       }
    }
 
    maxact = QUAD_ROUND(maxacttmp);
 
+   /* cut is redundant in activity bounds */
    if( SCIPisFeasLE(scip, maxact, *cutrhs) )
       return TRUE;
 
-   nintegralvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
+   /* no coefficient tightening can be performed since the precondition doesn't hold for any of the variables */
+   if( SCIPisGT(scip, maxact - maxabsval, *cutrhs) )
+      return FALSE;
 
+   /* loop over the integral variables and try to tighten the coefficients; see cons_linear for more details */
    for( i = 0; i < *cutnnz;)
    {
       if( cutinds[i] >= nintegralvars )
@@ -1559,9 +1594,7 @@ void postprocessCut(
 
    maxcoef = 0.0;
    for( i = 0; i < *nnz; ++i )
-   {
       maxcoef = MAX(REALABS(cutcoefs[cutinds[i]]), maxcoef);
-   }
 
    minallowedcoef = MAX(SCIPsumepsilon(scip), maxcoef / scip->set->sepa_maxcoefratio);
 
@@ -1589,7 +1622,6 @@ void postprocessCutQuad(
    )
 {
    int i;
-   SCIP_VAR** vars;
    SCIP_Real maxcoef;
    SCIP_Real minallowedcoef;
 
@@ -1597,8 +1629,6 @@ void postprocessCutQuad(
    assert(cutinds != NULL);
    assert(cutcoefs != NULL);
    assert(QUAD_HI(cutrhs) != NULL);
-
-   vars = SCIPgetVars(scip);
 
    *success = FALSE;
 
@@ -1628,10 +1658,6 @@ void SCIPaggrRowRemoveZeros(
    SCIP_Bool*            valid               /**< pointer to return whether the aggregation row is still valid */
    )
 {
-   SCIP_VAR** vars;
-
-   vars = SCIPgetVars(scip);
-
    assert(aggrrow != NULL);
 
    *valid = ! removeZerosQuad(scip, SCIPsumepsilon(scip), aggrrow->local, aggrrow->vals, QUAD(&aggrrow->rhs), aggrrow->inds, &aggrrow->nnz);
