@@ -13,6 +13,7 @@ sleep 5
 # name (i.e, the directory name) is not enough)
 DATABASE="/nfs/OPTI/adm_timo/databases/${PWD##*/}_${TESTSET}_$SETTING.txt"
 TMPDATABASE="$DATABASE.tmp"
+STILLFAILING="${DATABASE}_SF.tmp"
 
 # the first time, the file might not exists so we create it
 # Even more, we have to write something to it, since otherwise
@@ -64,15 +65,6 @@ NR != FNR {
 }' $RESFILE $DATABASE`
 mv $TMPDATABASE $DATABASE
 
-# send email if there are fixed instances
-if [ -n "$RESOLVEDINSTANCES" ]; then
-   echo "Found resolved instances, sending emails."
-   SUBJECT="FIX [BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING=$SETTING] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH]"
-   echo -e "The following errors have been fixed: $RESOLVEDINSTANCES \n\nCongratulations" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
-else
-   echo "No resolved instances found, sending no emails."
-fi
-
 # check if fail occurs
 NFAILS=`grep -c fail $RESFILE`
 
@@ -92,16 +84,28 @@ if [ $NFAILS -gt 0 ]; then
         print errorstring >> "'$DATABASE'";
         print $0;
      }
+     else
+     {
+        print errorstring >> "'$STILLFAILING'";
+     }
   }' $DATABASE $RESFILE`
+  STILLFAILINGDB=`cat ${STILLFAILING}`
 
   # check if there are errors (string non empty)
   if [ -n "$ERRORINSTANCES" ]; then
      echo "Found new errors, sending emails."
      SUBJECT="FAIL [BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING=$SETTING] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH]"
-     echo -e "$ERRORINSTANCES \n\nThe files can be found here:\n$DESTINATION\n\nPlease note that the files might be deleted soon" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+     echo -e "There are newly failed instances:\n${ERRORINSTANCES}\n\nThe follwing instances are still failing:\n${STILLFAILINGDB}\n\nThe files can be found here:\n$DESTINATION\n\nPlease note that they might be deleted soon" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
   else
      echo "No new errors, sending no emails."
   fi
 else
   echo "No fails detected."
 fi
+
+# send email if there are fixed instances
+if [ -n "$RESOLVEDINSTANCES" ]; then
+   SUBJECT="FIX [BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING=$SETTING] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH]"
+   echo -e "Congratulations!\nThe following errors have been fixed: ${RESOLVEDINSTANCES}\nThe following instances are still failing:\n${STILLFAILINGDB}\n\n" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+fi
+rm ${STILLFAILING}
