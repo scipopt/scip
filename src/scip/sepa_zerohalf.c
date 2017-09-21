@@ -1424,7 +1424,6 @@ SCIP_RETCODE generateZerohalfCut(
    MOD2_ROW*             row                 /**< mod 2 row */
    )
 {
-   SCIP_Bool redundant;
    SCIP_Bool cutislocal;
    int i;
    int cutnnz;
@@ -1575,9 +1574,7 @@ SCIP_RETCODE generateZerohalfCut(
    assert(SCIPisFeasIntegral(scip, cutrhs));
    cutrhs = SCIPfeasRound(scip, cutrhs);
 
-   SCIPcutsTightenCoefficients(scip, cutislocal, cutcoefs, &cutrhs, cutinds, &cutnnz, &redundant);
-
-   if( !redundant )
+   if( ! SCIPcutsTightenCoefficients(scip, cutislocal, cutcoefs, &cutrhs, cutinds, &cutnnz) )
    {
       /* calculate efficacy */
       cutefficacy = calcEfficacy(scip, cutcoefs, cutrhs, cutinds, cutnnz);
