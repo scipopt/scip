@@ -318,8 +318,19 @@ if( COVERAGE )
     include(CodeCoverage)
     APPEND_COVERAGE_COMPILER_FLAGS()
     set(COVERAGE_EXCLUDES '/usr*')
+
+    #
+    # create a CMake script file that is executed to run the coverage test.
+    # With a script file, the return code of the tests is simply ignored,
+    # and a coverage report is generated even if some tests fail currently.
+    #
+    file(WRITE ${CMAKE_BINARY_DIR}/RunCoverage.cmake "execute_process(COMMAND ctest ${CMAKE_CTEST_COMMAND} ${COVERAGE_CTEST_ARGS})")
+
+    #
+    # setup the coverage target to execute the RunCoverage script
+    #
     SETUP_TARGET_FOR_COVERAGE(NAME coverage
-                          EXECUTABLE bash -c "${CMAKE_CTEST_COMMAND} ${COVERAGE_CTEST_ARGS}"
+                          EXECUTABLE ${CMAKE_COMMAND} -P ${CMAKE_BINARY_DIR}/RunCoverage.cmake
                           DEPENDENCIES all_executables
                           )
 endif()
