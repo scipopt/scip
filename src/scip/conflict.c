@@ -6316,6 +6316,7 @@ SCIP_RETCODE getDualProof(
    SCIP_Real* primsols;
    SCIP_Real* dualsols;
    SCIP_Real* redcosts;
+   SCIP_Real maxabsdualsol;
    int nrows;
    int ncols;
    int r;
@@ -6355,6 +6356,20 @@ SCIP_RETCODE getDualProof(
       SCIPsetDebugMsg(set, " -> LP objval: %g\n", objval);
    }
 #endif
+
+   /* check whether the dual solution is numerically stable */
+   maxabsdualsol = 0;
+   for( r = 0; r < nrows; r++ )
+   {
+      SCIP_Real absdualsol = REALABS(dualsols[r]);
+
+      if( absdualsol > maxabsdualsol )
+         maxabsdualsol = absdualsol;
+   }
+
+   /* don't consider dual solution with maxabsdualsol > 1e+07, this would almost cancel out the objective constraint */
+   if( maxabsdualsol > 1e+07 )
+      goto TERMINATE;
 
    /* clear the proof */
    SCIPaggrRowClear(farkasrow);
