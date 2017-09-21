@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define SCIP_DEBUG
+
 /**@file   heur_lns.c
  * @brief  Large neighborhood search heuristic that orchestrates popular LNS heuristics adaptively
  * @author Gregor Hendel
