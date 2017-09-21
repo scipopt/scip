@@ -526,8 +526,11 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolTreeSizePrediction)
       Elist *next;
       int nmeasures;
       SCIP_Real relerror;
+      SCIP_Real absrelerror;
 
       SCIP_Real mape;
+      SCIP_Real mapeabove;
+      SCIP_Real mapebelow;
 
       SCIP_Real var;
 
@@ -544,6 +547,8 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolTreeSizePrediction)
       /* We use the following measures: MAPE, VARiance, Estimates within thresholds (overall, or only at the end) */
       nmeasures = 0;
       mape = 0;
+      mapebelow = 0;
+      mapeabove = 0;
       var = 0;
       for( int i = 0; i < nthresholds; ++i )
       {
@@ -557,16 +562,27 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolTreeSizePrediction)
          next = current->next;
          /* statistics */
          ++nmeasures;
-         /* we compute the relative error */
-         relerror = abs(current->estimate - totaltreesize) / totaltreesize;
+         /* we compute the (absolute) relative error */
+         relerror = (current->estimate - totaltreesize) / totaltreesize;
+         absrelerror = abs(relerror);
          /* MAPE */
-         mape += relerror;
+         mape += absrelerror;
+         if( relerror > 0 )
+         {
+            /* overestimation */
+            mapeabove += absrelerror;
+         }
+         else
+         {
+            /* underestimation */
+            mapebelow += absrelerror;
+         }
          /* VARiance */
          var += pow(current->estimate - totaltreesize,2);
          /* Number of estimates within given relative thresholds */
          for( int i = 0; i < nthresholds; ++i )
          {
-            if( relerror <= thresholds[i] )
+            if( absrelerror <= thresholds[i] )
             {
                ++nestimatesinthreshold[i];
                ++nestimatesinthresholdattheend[i];
@@ -588,13 +604,18 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolTreeSizePrediction)
       SCIPmessagePrintInfo(msghdlr, "Estimation errors  :\n");
 
       /* MAPE */
-      mape = 100 * mape / nmeasures;
+      mape = 100.0 * mape / nmeasures;
+      mapeabove = 100.0 * mapeabove / nmeasures;
+      mapebelow = 100.0 * mapebelow / nmeasures;
       SCIPmessagePrintInfo(msghdlr, "  MAPE             : %lf\n", mape);
+      SCIPmessagePrintInfo(msghdlr, "  MAPE above       : %lf\n", mapeabove);
+      SCIPmessagePrintInfo(msghdlr, "  MAPE below       : %lf\n", mapebelow);
 
-      /* VARiance (and Standard Deviation) */
+      /* VARiance (and (relative) Standard Deviation) */
       var = var / nmeasures;
       SCIPmessagePrintInfo(msghdlr, "  VAR              : %lf\n", var);
       SCIPmessagePrintInfo(msghdlr, "  SD               : %lf\n", sqrt(var));
+      SCIPmessagePrintInfo(msghdlr, "  RSD (%)          : %lf\n", 100.0*sqrt(var)/totaltreesize);
 
       /* Percent of estimates within the thresholds */
       SCIPmessagePrintInfo(msghdlr, "  Levels (total,%) : ");
