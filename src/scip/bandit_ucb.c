@@ -105,7 +105,7 @@ SCIP_RETCODE dataReset(
  */
 
 /** callback to free bandit specific data structures */
-SCIP_DECL_BANDITFREE(banditFreeUcb)
+SCIP_DECL_BANDITFREE(SCIPbanditFreeUcb)
 {  /*lint --e{715}*/
 
    SCIP_BANDITDATA* banditdata;
@@ -127,7 +127,7 @@ SCIP_DECL_BANDITFREE(banditFreeUcb)
 }
 
 /** selection callback for bandit selector */
-SCIP_DECL_BANDITSELECT(banditSelectUcb)
+SCIP_DECL_BANDITSELECT(SCIPbanditSelectUcb)
 {  /*lint --e{715}*/
 
    SCIP_BANDITDATA* banditdata;
@@ -200,7 +200,7 @@ SCIP_DECL_BANDITSELECT(banditSelectUcb)
 }
 
 /** update callback for bandit algorithm */
-SCIP_DECL_BANDITUPDATE(banditUpdateUcb)
+SCIP_DECL_BANDITUPDATE(SCIPbanditUpdateUcb)
 {  /*lint --e{715}*/
    SCIP_BANDITDATA* banditdata;
    SCIP_Real delta;
@@ -221,7 +221,7 @@ SCIP_DECL_BANDITUPDATE(banditUpdateUcb)
 }
 
 /** reset callback for bandit algorithm */
-SCIP_DECL_BANDITRESET(banditResetUcb)
+SCIP_DECL_BANDITRESET(SCIPbanditResetUcb)
 {  /*lint --e{715}*/
    SCIP_BANDITDATA* banditdata;
    int nactions;
@@ -344,7 +344,7 @@ SCIP_RETCODE SCIPincludeBanditvtableUcb(
    SCIP_BANDITVTABLE* vtable;
 
    SCIP_CALL( SCIPincludeBanditvtable(scip, &vtable, BANDIT_NAME,
-         banditFreeUcb, banditSelectUcb, banditUpdateUcb, banditResetUcb) );
+         SCIPbanditFreeUcb, SCIPbanditSelectUcb, SCIPbanditUpdateUcb, SCIPbanditResetUcb) );
    assert(vtable != NULL);
 
    return SCIP_OKAY;
