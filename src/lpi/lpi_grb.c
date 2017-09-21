@@ -2406,8 +2406,6 @@ SCIP_RETCODE SCIPlpiGetCols(
 
    if( lb != NULL )
    {
-      int j;
-
       assert(ub != NULL);
 
       CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_LB, firstcol, lastcol-firstcol+1, lb) );
