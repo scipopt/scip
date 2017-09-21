@@ -1113,11 +1113,6 @@ void graph_path_st_pcmw(
       int node;
       int nterms = 0;
 
-      for( int k2 = 0; k2 < g->edges; k2++ )
-         if( cost[k2] < 0 )
-            printf("FUCKGUCK FUCK %d %f \n", k2, cost[k2]);
-
-
       count       = 1;
       heap[count] = k;
       state[k]    = count;

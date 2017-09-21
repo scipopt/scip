@@ -107,7 +107,7 @@ SCIP_RETCODE trydg1edgepc(
          (*rerun) = TRUE;
       SCIPdebugMessage("Delete (degree 1) terminal %d \n", i);
       (*offset) += g->prize[i];
-      (*count) += deleteterm(scip, g, i);
+      (*count) += graph_pterm_delete(scip, g, i);
    }
    else
    {
@@ -138,7 +138,7 @@ SCIP_RETCODE trydg1edgepc(
             SCIPintListNodeFree(scip, &(g->pcancestors[i]));
          }
          SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->pcancestors[i1]), g->ancestors[iout], NULL) );
-         (*count) += deleteterm(scip, g, i);
+         (*count) += graph_pterm_delete(scip, g, i);
          return SCIP_OKAY;
       }
 
@@ -396,50 +396,6 @@ void adjust0term(
    assert(g->grad[t] == 0);
 }
 
-/** delete a terminal for a (rooted) prize-collecting problem */
-int deleteterm(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                g,                  /**< graph data structure */
-   int                   i                   /**< index of the terminal */
-   )
-{
-   int e;
-   int t;
-   int i1;
-   int count;
-
-   assert(g != NULL);
-   assert(scip != NULL);
-   assert(Is_term(g->term[i]));
-
-   t = UNKNOWN;
-   count = g->grad[i] + 2;
-
-   /* delete terminal */
-
-   graph_knot_chg(g, i, -1);
-   g->mark[i] = FALSE;
-
-   while( (e = g->outbeg[i]) != EAT_LAST )
-   {
-      i1 = g->head[e];
-
-      if( Is_pterm(g->term[i1]) && g->source[0] != i1 )
-         t = g->head[e];
-      graph_edge_del(scip, g, e, TRUE);
-   }
-
-   assert(t != UNKNOWN);
-
-   /* delete artificial terminal */
-
-   graph_knot_chg(g, t, -1);
-
-   while( g->outbeg[t] != EAT_LAST )
-      graph_edge_del(scip, g, g->outbeg[t], TRUE);
-
-   return count;
-}
 
 /** contract edges of weight zero */
 SCIP_RETCODE contractZeroEdges(
@@ -1171,7 +1127,7 @@ SCIP_RETCODE degree_test_mw(
             {
                SCIPdebugMessage("delete degree 0 term %d prize: %f count:%d\n ", i, g->prize[i], localcount);
                (*fixed) += g->prize[i];
-               localcount += deleteterm(scip, g, i);
+               localcount += graph_pterm_delete(scip, g, i);
             }
          }
          /* terminal of (real) degree 1? */
@@ -1446,7 +1402,7 @@ SCIP_RETCODE degree_test_pc(
             {
                SCIPdebugMessage("delete 0 term %d prize: %f count:%d\n ", i, g->prize[i], *count);
                (*fixed) += g->prize[i];
-               (*count) += deleteterm(scip, g, i);
+               (*count) += graph_pterm_delete(scip, g, i);
             }
          }
          /* terminal of (real) degree 1? */
@@ -1506,7 +1462,7 @@ SCIP_RETCODE degree_test_pc(
                      SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->ancestors[n1]), ancestors, NULL) );
                      SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(n1)]), revancestors, NULL) );
                   }
-                  (*count) += deleteterm(scip, g, i);
+                  (*count) += graph_pterm_delete(scip, g, i);
                   (*fixed) += g->prize[i];
                   SCIPintListNodeFree(scip, &(ancestors));
                   SCIPintListNodeFree(scip, &(revancestors));

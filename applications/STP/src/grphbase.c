@@ -1022,7 +1022,6 @@ SCIP_RETCODE graph_PcSapCopy(
    return SCIP_OKAY;
 }
 
-#if 1
 /** alters the graph for prize collecting problems and shifts weights to reduce number of terminal */
 SCIP_RETCODE graph_PcSapCopyShift(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1032,22 +1031,14 @@ SCIP_RETCODE graph_PcSapCopyShift(
    )
 {
    GRAPH* newg;
-   SCIP_Real p;
    SCIP_Real maxp;
-   SCIP_Real* prize;
+   SCIP_Real* const prize = graph->prize;
    SCIP_Real prizesum;
-   int k;
    int e;
-   int e2;
-   int i;
-   int l;
-   int enext;
    int root;
-   int head;
-   int nnodes;
-   int nterms;
+   const int nnodes = graph->knots;
+   const int stp_type = graph->stp_type;
    int maxvert;
-   int stp_type;
    int pseudoroot;
 
    assert(scip != NULL);
@@ -1055,13 +1046,8 @@ SCIP_RETCODE graph_PcSapCopyShift(
    assert(graph->prize != NULL);
    assert(graph->knots == graph->ksize);
    assert(graph->edges == graph->esize);
-
-   prize = graph->prize;
-   nnodes = graph->knots;
-   nterms = graph->terms;
-   prizesum = 0.0;
-
-   stp_type = graph->stp_type;
+   assert(stp_type == STP_MWCSP || stp_type == STP_PCSPG);
+   assert(graph->extended);
    graph->stp_type = STP_SAP;
 
    /* for each terminal, except for the root, three edges (i.e. six arcs) are to be added */
@@ -1070,54 +1056,58 @@ SCIP_RETCODE graph_PcSapCopyShift(
    graph->stp_type = stp_type;
    newg = *newgraph;
 
+   /* get max prize and max vertex */
    maxvert = -1;
    maxp = -1.0;
-   for( k = 0; k < nnodes; k++ )
-   {
-      if( Is_pterm(graph->term[k]) && graph->grad[k] > 0 )
+   for( int k = 0; k < nnodes; k++ )
+      if( Is_pterm(graph->term[k]) && SCIPisGT(scip, graph->prize[k], maxp) )
       {
-         if( SCIPisGT(scip, graph->prize[k], maxp) )
-         {
-            maxp = graph->prize[k];
-            maxvert = k;
-         }
+         assert(graph->grad[k] > 0);
+         maxp = graph->prize[k];
+         maxvert = k;
       }
-   }
 
-   i = 0;
-   for( k = 0; k < nnodes; k++ )
+   assert(maxvert >= 0);
+
+   printf("BEF TEMRS: %d \n", newg->terms);
+
+
+   /* shift the costs */
+   for( int k = 0; k < nnodes; k++ )
    {
       newg->mark[k] = (newg->grad[k] > 0);
-      if( Is_pterm(graph->term[k]) && newg->mark[k] && k != maxvert )
+      if( Is_pterm(graph->term[k]) && k != maxvert )
       {
-         assert(newg->grad[k] > 0);
+         SCIP_Real p;
+
+         assert(newg->mark[k]);
 
          p = prize[k];
          for( e = graph->inpbeg[k]; e != EAT_LAST; e = graph->ieat[e] )
-         {
-            if( SCIPisLE(scip, graph->cost[e], p) && !Is_term(graph->term[graph->tail[e]]) )
+            if( SCIPisLT(scip, graph->cost[e], p) && !Is_term(graph->term[graph->tail[e]]) )
                break;
-         }
 
          /* if there is no incoming arc of lower cost than prize[k], make k a common node */
-         if( e == EAT_LAST && i < graph->terms - 1)
+         if( e == EAT_LAST )
          {
+            int e2 = -1;
+            int term = -1;
 
-            newg->mark[k] = FALSE;
             newg->term[k] = -1;
-            i++;
-            e2 = UNKNOWN;
-            head = UNKNOWN;
+
             for( e = graph->inpbeg[k]; e != EAT_LAST; e = graph->ieat[e] )
             {
-               l = graph->tail[e];
+               const int tail = graph->tail[e];
 
-               if( Is_term(graph->term[l]) )
+               if( Is_term(graph->term[tail]) )
                {
-                  if( l == graph->source[0] )
+                  if( tail == graph->source[0] )
                      e2 = e;
                   else
-                     head = l;
+                  {
+                     assert(term == -1);
+                     term = tail;
+                  }
                }
                else
                {
@@ -1125,21 +1115,27 @@ SCIP_RETCODE graph_PcSapCopyShift(
                   assert(SCIPisGE(scip, newg->cost[e], 0.0));
                }
             }
+            prize[k] = 0.0;
+
             (*offset) += p;
-            assert(e2 != UNKNOWN);
-            assert(head != UNKNOWN);
+            assert(e2 != -1);
+            assert(term != -1);
 
-            while( newg->inpbeg[head] != EAT_LAST )
-               graph_edge_del(scip, newg, newg->inpbeg[head], FALSE);
+            while( newg->inpbeg[term] != EAT_LAST )
+               graph_edge_del(scip, newg, newg->inpbeg[term], FALSE);
 
-            newg->mark[head] = FALSE;
-            graph_knot_chg(newg, head, -1);
+            newg->mark[term] = FALSE;
+            graph_knot_chg(newg, k, -1);
+            graph_knot_chg(newg, term, -1);
             graph_edge_del(scip, newg, e2, FALSE);
          }
       }
    }
 
-   SCIP_CALL( graph_resize(scip, newg, (newg->ksize + 1), (newg->esize + 2 * (nterms - 1)) , -1) );
+   printf("AFT TEMRS: %d \n", newg->terms);
+
+
+   SCIP_CALL( graph_resize(scip, newg, (newg->ksize + 1), (newg->esize + 2 * (newg->terms - 1)) , -1) );
 
    assert(newg->source[0] == graph->source[0]);
    root = newg->source[0];
@@ -1148,20 +1144,22 @@ SCIP_RETCODE graph_PcSapCopyShift(
    pseudoroot = newg->knots;
    graph_knot_add(newg, -1);
 
-   for( k = 0; k < nnodes; k++ )
-      if( Is_pterm(graph->term[k]) && newg->mark[k] )
+   prizesum = 0.0;
+   for( int k = 0; k < nnodes; k++ )
+      if( Is_pterm(graph->term[k]) )
          prizesum += prize[k];
 
    prizesum += 1;
 
    *offset -= prizesum;
 
+   /* move edges to terminal from root to pseudo-root */
    e = newg->outbeg[root];
-
    while( e != EAT_LAST )
    {
-      enext = newg->oeat[e];
-      head = newg->head[e];
+      const int head = newg->head[e];
+      const int enext = newg->oeat[e];
+
       if( Is_term(newg->term[head]) )
       {
          (void) graph_edge_redirect(scip, newg, e, pseudoroot, head, graph->cost[e]);
@@ -1177,7 +1175,8 @@ SCIP_RETCODE graph_PcSapCopyShift(
       e = enext;
    }
 
-   for( k = 0; k < nnodes; k++ )
+   /* add edges from pterminals to pseudo-root */
+   for( int k = 0; k < nnodes; k++ )
    {
       /* is the kth node a terminal other than the root? */
       if( Is_pterm(newg->term[k]) )
@@ -1189,7 +1188,6 @@ SCIP_RETCODE graph_PcSapCopyShift(
 
    return SCIP_OKAY;
 }
-#endif
 
 /** alters the graph for prize-collecting problems with given root */
 SCIP_RETCODE graph_PcRSapCopy(
@@ -2699,6 +2697,48 @@ void graph_edge_hide(
 
    g->ieat[e] = EAT_HIDE;
    g->oeat[e] = EAT_HIDE;
+}
+
+/** delete a terminal for a (rooted) prize-collecting problem */
+int graph_pterm_delete(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   int                   i                   /**< index of the terminal */
+   )
+{
+   int e;
+   int t;
+
+   assert(g != NULL);
+   assert(scip != NULL);
+   assert(Is_term(g->term[i]));
+
+   t = UNKNOWN;
+
+   /* delete terminal */
+
+   graph_knot_chg(g, i, -1);
+   g->mark[i] = FALSE;
+
+   while( (e = g->outbeg[i]) != EAT_LAST )
+   {
+      const int i1 = g->head[e];
+
+      if( Is_pterm(g->term[i1]) && g->source[0] != i1 )
+         t = g->head[e];
+      graph_edge_del(scip, g, e, TRUE);
+   }
+
+   assert(t != UNKNOWN);
+
+   /* delete artificial terminal */
+
+   graph_knot_chg(g, t, -1);
+
+   while( g->outbeg[t] != EAT_LAST )
+      graph_edge_del(scip, g, g->outbeg[t], TRUE);
+
+   return g->grad[i] + 2;
 }
 
 /** reinsert all hidden edges */

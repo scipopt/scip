@@ -137,10 +137,11 @@ inline int edgecostMultiplier(
    )
 {
    SCIP_Real normed;
-   SCIP_Real upper;
-   SCIP_Real lower;
    SCIP_Real maxpolyx0;
    SCIP_Real minpolyx0;
+
+   int upper;
+   int lower;
    int factor;
 
    /* if STP, then avg >= 2.0 */
@@ -152,8 +153,8 @@ inline int edgecostMultiplier(
 
    /* norm to [0,1] (STP) or [-1,1] and evaluate polynomials */
    normed = (avg - 2.0) / ((double) heurdata->nusedsols - 1.0);
-   upper = maxpolyx0 - 2 * maxpolyx0 * normed + maxpolyx0 * (normed * normed);
-   lower = minpolyx0 - 2 * minpolyx0 * normed + minpolyx0 * (normed * normed);
+   upper = (int) (maxpolyx0 - 2 * maxpolyx0 * normed + maxpolyx0 * (normed * normed));
+   lower = (int) (minpolyx0 - 2 * minpolyx0 * normed + minpolyx0 * (normed * normed));
 
    if( !(SCIPisGE(scip, normed, -1.0) && SCIPisLE(scip, normed, 1.0)) )
    {
@@ -164,11 +165,19 @@ inline int edgecostMultiplier(
 
    assert(SCIPisGE(scip, normed, -1.0) && SCIPisLE(scip, normed, 1.0));
 
-   lower = MAX(0.0, lower);
-   upper = MAX(0.0, upper);
+   lower = MAX(0, lower);
+   upper = MAX(0, upper);
 
    factor = SCIPrandomGetInt(heurdata->randnumgen, lower, upper);
    factor++;
+
+   if( factor > 1501 && avg > 2.0 )
+   {
+      printf(" %f \n", avg);
+      printf("upper  %d  lower %d \n", upper, lower);
+      printf("WTF %d %d\n", factor, heurdata->nusedsols);
+      exit(1);
+   }
 
    assert(factor >= 1);
 
@@ -1150,10 +1159,11 @@ SCIP_RETCODE SCIPStpHeurRecRun(
          {
             SCIP_Real* cost;
             SCIP_Real* costrev;
+            SCIP_Real* orgprize = NULL;
             SCIP_Real* nodepriority;
             SCIP_Real maxcost;
-
             int best_start;
+            const int nsolnodes = solgraph->knots;
 
             SCIPdebugMessage("REC: graph not completely reduced, nodes: %d, edges: %d, terminals: %d \n", solgraph->knots, nsoledges, solgraph->terms);
 
@@ -1161,9 +1171,12 @@ SCIP_RETCODE SCIPStpHeurRecRun(
             SCIP_CALL( SCIPallocBufferArray(scip, &soledges, nsoledges) );
             SCIP_CALL( SCIPallocBufferArray(scip, &cost, nsoledges) );
             SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nsoledges) );
-            SCIP_CALL( SCIPallocBufferArray(scip, &nodepriority, solgraph->knots) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &nodepriority, nsolnodes) );
 
-            for( int i = 0; i < solgraph->knots; i++ )
+            if( pcmw )
+               SCIP_CALL( SCIPallocBufferArray(scip, &orgprize, nsolnodes) );
+
+            for( int i = 0; i < nsolnodes; i++ )
                nodepriority[i] = 0.0;
 
             /*
@@ -1208,10 +1221,68 @@ SCIP_RETCODE SCIPStpHeurRecRun(
                nodepriority[solgraph->head[e]] += avg - 1.0;
                nodepriority[solgraph->tail[e]] += avg - 1.0;
 
-               cost[e] = cost[e] * edgecostMultiplier(scip, heurdata, avg);
+               cost[e] *= edgecostMultiplier(scip, heurdata, avg);
 
                if( probtype == STP_DHCSTP && SCIPisLT(scip, cost[e], BLOCKED) && SCIPisGT(scip, cost[e], maxcost) )
                   maxcost = cost[e];
+            }
+
+            /* adapted prizes */
+            if( pcmw )
+            {
+               const int solgraphroot = solgraph->source[0];
+               SCIP_Real* const prize = solgraph->prize;
+
+               assert(prize != NULL);
+               assert(orgprize != NULL);
+               assert(solgraph->extended);
+
+               if( !solgraph->extended )
+               {
+                  printf("nex %d \n", 0);
+                  return SCIP_ERROR;
+               }
+
+               for( int k = 0; k < nsolnodes; k++ )
+               {
+                  if( Is_pterm(solgraph->term[k]) && k != solgraphroot )
+                  {
+                     int e;
+                     int tail = -1;
+                     int implementme; // CHANGE PRIZES OF GRAPH FOR PCMW and use for debug
+
+                     orgprize[k] = prize[k];
+
+                     // todo only for testing
+                     for( e = solgraph->inpbeg[k]; e != EAT_LAST; e = solgraph->ieat[e] )
+                     {
+                        tail = solgraph->tail[e];
+                        if( SCIPisZero(scip, solgraph->cost[flipedge(e)]) && Is_term(solgraph->term[tail]) && tail != solgraphroot  )
+                           break;
+                     }
+                     assert(e != EAT_LAST);
+                     assert(tail >= 0);
+
+                     if( e == EAT_LAST )
+                     {
+                        printf("F! %d \n", 0);
+                        return SCIP_ERROR;
+                     }
+
+                     for( e = solgraph->inpbeg[tail]; e != EAT_LAST; e = solgraph->ieat[e] )
+                        if( solgraph->tail[e] == solgraphroot )
+                           break;
+                     assert(e != EAT_LAST);
+                     if( e == EAT_LAST )
+                     {
+                        printf("LAST %d \n", 0);
+                        return SCIP_ERROR;
+                     }
+
+                     prize[k] = cost[e];
+                     assert(solgraph->cost[e] > 0);
+                  }
+               }
             }
 
             for( int e = 0; e < nsoledges; e++ )
@@ -1234,6 +1305,20 @@ SCIP_RETCODE SCIPStpHeurRecRun(
             assert(success);
             assert(graph_valid(solgraph));
             assert(graph_sol_valid(scip, solgraph, soledges));
+
+            /* reset vertex weights */
+            if( pcmw )
+            {
+               SCIP_Real* const prize = solgraph->prize;
+
+               assert(orgprize != NULL);
+
+               for( int k = 0; k < nsolnodes; k++ )
+                  if( Is_pterm(solgraph->term[k]) && k != solgraph->source[0] )
+                     prize[k] = orgprize[k];
+
+               SCIPfreeBufferArray(scip, &orgprize);
+            }
 
             /* run local heuristic (with original costs) */
             if( probtype != STP_DHCSTP && probtype != STP_DCSTP

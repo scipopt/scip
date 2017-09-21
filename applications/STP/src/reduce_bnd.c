@@ -984,7 +984,7 @@ SCIP_RETCODE da_reduce(
 
          if( rpc && Is_term(graph->term[k]) && SCIPisGT(scip, pathdist[k] + vnoi[k].dist, minpathcost) && k != root )
          {
-            (*nelims) += deleteterm(scip, graph, k);
+            (*nelims) += graph_pterm_delete(scip, graph, k);
             (*offset) += graph->prize[k];
             continue;
          }
@@ -1919,6 +1919,8 @@ SCIP_RETCODE da_reducePcMw(
    SCIP_CALL( graph_path_init(scip, transgraph) );
 
    SCIP_CALL( SCIPdualAscentStp(scip, transgraph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, transresult, state, root, 1, marked, nodearrchar) );
+
+   exit(1);
 
    /* compute first primal solution */
    upperbound = FARAWAY;
@@ -3366,7 +3368,7 @@ SCIP_RETCODE bound_reduce(
             if( SCIPisGT(scip, tmpcost, obj) )
             {
                SCIPdebugMessage("alternative bnd elimination!!! \n\n");
-               (*nelims) += deleteterm(scip, graph, k);
+               (*nelims) += graph_pterm_delete(scip, graph, k);
                (*offset) += graph->prize[k];
             }
             else
@@ -3386,7 +3388,7 @@ SCIP_RETCODE bound_reduce(
                   {
                      SCIPdebugMessage("second elimination!!! prize: %f \n\n", graph->prize[k]);
                      (*offset) += graph->prize[k];
-                     (*nelims) += deleteterm(scip, graph, k);
+                     (*nelims) += graph_pterm_delete(scip, graph, k);
                   }
                }
             }

@@ -225,6 +225,7 @@ extern SCIP_RETCODE   graph_copy(SCIP*, const GRAPH*, GRAPH**);
 extern SCIP_RETCODE   graph_pack(SCIP*, GRAPH*, GRAPH**, SCIP_Bool);
 extern int    graph_edge_redirect(SCIP*, GRAPH*, int, int, int, SCIP_Real);
 extern int    graph_valid(const GRAPH*);
+extern int    graph_pterm_delete(SCIP*, GRAPH*, int);
 extern SCIP_Bool graph_sol_valid(SCIP*, const GRAPH*, int*);
 extern SCIP_Real graph_computeSolVal(const SCIP_Real*, const int*, SCIP_Real, int);
 
@@ -348,7 +349,6 @@ extern SCIP_RETCODE    degree_test_mw(SCIP*, GRAPH*, int*, SCIP_Real*, int*);
 extern SCIP_RETCODE    degree_test_pc(SCIP*, GRAPH*, SCIP_Real*, int*, int*, SCIP_Bool);
 extern SCIP_RETCODE    degree_test_sap(SCIP*, GRAPH*, SCIP_Real*, int*);
 extern SCIP_RETCODE    rptReduction(SCIP*, GRAPH*, SCIP_Real*, int*);
-extern int             deleteterm(SCIP*, GRAPH*, int);
 
 /* validate.c
  */
