@@ -89,7 +89,7 @@ if [ $NFAILS -gt 0 ]; then
         print errorstring >> "'$STILLFAILING'";
      }
   }' $DATABASE $RESFILE`
-  STILLFAILINGDB=`echo 'STILLFAILING'`
+  STILLFAILINGDB=`cat ${STILLFAILING}`
 
   # check if there are errors (string non empty)
   if [ -n "$ERRORINSTANCES" ]; then
