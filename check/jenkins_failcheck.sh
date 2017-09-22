@@ -11,10 +11,10 @@ sleep 5
 # we use a name that is unique per test sent to the cluster (a jenkins job
 # can have several tests sent to the cluster, that is why the jenkins job
 # name (i.e, the directory name) is not enough)
-DATABASE="/nfs/OPTI/adm_timo/databases/${PWD##*/}_${TESTSET}_$SETTING.txt"
+DATABASE="/nfs/OPTI/adm_timo/databases/${PWD##*/}_${TESTSET}_${SETTING}_${LPS}.txt"
 TMPDATABASE="$DATABASE.tmp"
 STILLFAILING="${DATABASE}_SF.tmp"
-RBDB="${DATABASE}_rbdb.txt"
+RBDB="rbdb/${DATABASE}_rb.txt"
 OUTPUT="${DATABASE}_output.tmp"
 touch ${STILLFAILING}
 touch ${RBDB}
