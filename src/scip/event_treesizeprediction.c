@@ -36,6 +36,7 @@
 #define DEFAULT_MAXRATIOITERS  100
 #define DEFAULT_ESTIMATION_METHOD 'r'
 #define DEFAULT_MEASURE_ERROR  TRUE
+#define DEFAULT_RELERROR_BOUND 10000
 /* #define DEFAULT_SMOOTHING_METHOD  'n' */
 
 /*
@@ -334,6 +335,7 @@ struct SCIP_EventhdlrData
    int maxratioiters;
    char estimatemethod;
    SCIP_Bool measureerror;
+   SCIP_Real relerrorbound;
    /* char smoothingmethod; */
 
    /* Internal variables */
@@ -564,7 +566,18 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolTreeSizePrediction)
          ++nmeasures;
          /* we compute the (absolute) relative error */
          relerror = (current->estimate - totaltreesize) / totaltreesize;
-         absrelerror = abs(relerror);
+
+         if( relerror > 0 )
+         {
+            relerror = MIN(relerror, eventhdlrdata->relerrorbound);
+            absrelerror = relerror;
+         }
+         else
+         {
+            relerror = MAX(relerror, - eventhdlrdata->relerrorbound);
+            absrelerror = - relerror;
+         }
+
          /* MAPE */
          mape += absrelerror;
          if( relerror > 0 )
@@ -577,6 +590,7 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolTreeSizePrediction)
             /* underestimation */
             mapebelow += absrelerror;
          }
+
          /* VARiance */
          var += pow(current->estimate - totaltreesize,2);
          /* Number of estimates within given relative thresholds */
@@ -856,6 +870,7 @@ SCIP_RETCODE SCIPincludeEventHdlrTreeSizePrediction(
 
    SCIP_CALL( SCIPaddBoolParam(scip, "estimates/measureerror", "Whether to measure the prediction error at the end of the run", &(eventhdlrdata->measureerror), FALSE, DEFAULT_MEASURE_ERROR, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddRealParam(scip, "estimates/relerrorbound", "When computing the relative error of a sample, bound it by this parameter", &(eventhdlrdata->relerrorbound), TRUE, DEFAULT_RELERROR_BOUND, 0, SCIP_REAL_MAX, NULL, NULL) );
 /*   SCIP_CALL( SCIPaddCharParam(scip, "estimates/smoothingmethod", "Smoothing method ('n'one, 's'imple exponential, 'd'ouble exponential)", &(eventhdlrdata->smoothingmethod), TRUE, DEFAULT_SMOOTHING_METHOD, "nsd", NULL, NULL) ); */
 
 
