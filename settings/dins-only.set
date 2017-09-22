@@ -1,9 +1,5 @@
 # SCIP version 4.0.0.2
 
-# should Benders' decomposition be used?
-# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
-reading/storeader/usebenders = TRUE
-
 # frequency for calling primal heuristic <coefdiving> (-1: never, 0: only at depth freqofs)
 # [type: int, advanced: FALSE, range: [-1,65534], default: 10]
 heuristics/coefdiving/freq = -1
@@ -11,6 +7,46 @@ heuristics/coefdiving/freq = -1
 # frequency for calling primal heuristic <crossover> (-1: never, 0: only at depth freqofs)
 # [type: int, advanced: FALSE, range: [-1,65534], default: 30]
 heuristics/crossover/freq = -1
+
+# priority of heuristic <dins-benders>
+# [type: int, advanced: TRUE, range: [-536870912,536870911], default: -1105000]
+heuristics/dins-benders/priority = 0
+
+# frequency for calling primal heuristic <dins-benders> (-1: never, 0: only at depth freqofs)
+# [type: int, advanced: FALSE, range: [-1,65534], default: -1]
+heuristics/dins-benders/freq = 10
+
+# number of nodes added to the contingent of the total nodes
+# [type: longint, advanced: FALSE, range: [0,9223372036854775807], default: 5000]
+heuristics/dins-benders/nodesofs = 10000
+
+# contingent of sub problem nodes in relation to the number of nodes of the original problem
+# [type: real, advanced: FALSE, range: [0,1], default: 0.05]
+heuristics/dins-benders/nodesquot = 1
+
+# minimum number of nodes required to start the subproblem
+# [type: longint, advanced: FALSE, range: [0,9223372036854775807], default: 50]
+heuristics/dins-benders/minnodes = 0
+
+# maximum number of nodes to regard in the subproblem
+# [type: longint, advanced: TRUE, range: [0,9223372036854775807], default: 5000]
+heuristics/dins-benders/maxnodes = 20
+
+# factor by which dins-benders should at least improve the incumbent
+# [type: real, advanced: TRUE, range: [0,1], default: 0.01]
+heuristics/dins-benders/minimprove = 0.0001
+
+# number of nodes without incumbent change that heuristic should wait
+# [type: longint, advanced: TRUE, range: [0,9223372036854775807], default: 200]
+heuristics/dins-benders/nwaitingnodes = 0
+
+# factor by which the limit on the number of LP depends on the node limit
+# [type: real, advanced: TRUE, range: [1,1.79769313486232e+308], default: 1.5]
+heuristics/dins-benders/lplimfac = 1
+
+# minimum percentage of integer variables that have to be fixable
+# [type: real, advanced: FALSE, range: [0,1], default: 0.3]
+heuristics/dins-benders/minfixingrate = 0
 
 # frequency for calling primal heuristic <distributiondiving> (-1: never, 0: only at depth freqofs)
 # [type: int, advanced: FALSE, range: [-1,65534], default: 10]
@@ -56,42 +92,6 @@ heuristics/pscostdiving/freq = -1
 # [type: int, advanced: FALSE, range: [-1,65534], default: 0]
 heuristics/rens/freq = -1
 
-# priority of heuristic <rins-benders>
-# [type: int, advanced: TRUE, range: [-536870912,536870911], default: -1101000]
-heuristics/rins-benders/priority = 0
-
-# frequency for calling primal heuristic <rins-benders> (-1: never, 0: only at depth freqofs)
-# [type: int, advanced: FALSE, range: [-1,65534], default: -1]
-heuristics/rins-benders/freq = 10
-
-# number of nodes added to the contingent of the total nodes
-# [type: int, advanced: FALSE, range: [0,2147483647], default: 500]
-heuristics/rins-benders/nodesofs = 10000
-
-# maximum number of nodes to regard in the subproblem
-# [type: int, advanced: TRUE, range: [0,2147483647], default: 5000]
-heuristics/rins-benders/maxnodes = 20
-
-# minimum number of nodes required to start the subproblem
-# [type: int, advanced: TRUE, range: [0,2147483647], default: 50]
-heuristics/rins-benders/minnodes = 0
-
-# contingent of sub problem nodes in relation to the number of nodes of the original problem
-# [type: real, advanced: FALSE, range: [0,1], default: 0.1]
-heuristics/rins-benders/nodesquot = 1
-
-# number of nodes without incumbent change that heuristic should wait
-# [type: int, advanced: TRUE, range: [0,2147483647], default: 200]
-heuristics/rins-benders/nwaitingnodes = 0
-
-# minimum percentage of integer variables that have to be fixed
-# [type: real, advanced: FALSE, range: [0,1], default: 0.3]
-heuristics/rins-benders/minfixingrate = 0
-
-# factor by which the limit on the number of LP depends on the node limit
-# [type: real, advanced: TRUE, range: [1,1.79769313486232e+308], default: 2]
-heuristics/rins-benders/lplimfac = 1
-
 # frequency for calling primal heuristic <rins> (-1: never, 0: only at depth freqofs)
 # [type: int, advanced: FALSE, range: [-1,65534], default: 25]
 heuristics/rins/freq = -1
@@ -111,7 +111,3 @@ heuristics/undercover/freq = -1
 # frequency for calling primal heuristic <veclendiving> (-1: never, 0: only at depth freqofs)
 # [type: int, advanced: FALSE, range: [-1,65534], default: 10]
 heuristics/veclendiving/freq = -1
-
-# Should Benders' cuts from LNS heuristics be transferred to the main SCIP instance?
-# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: TRUE]
-benders/default/transfercuts = FALSE
