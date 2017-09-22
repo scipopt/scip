@@ -562,6 +562,13 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolTreeSizePrediction)
       while( current != NULL )
       {
          next = current->next;
+
+         if( current->estimate <= 0 )
+         {
+            current = next;
+            continue;
+         }
+
          /* statistics */
          ++nmeasures;
          /* we compute the (absolute) relative error */
