@@ -2511,6 +2511,7 @@ SCIP_RETCODE propagateLongProof(
    SCIP_Real minact;
    SCIP_Real rhs;
    int nnz;
+   int i;
 
    assert(proofset != NULL);
 
@@ -2521,7 +2522,7 @@ SCIP_RETCODE propagateLongProof(
 
    minact = getMinActivity(transprob, proofset->aggrrow, NULL, NULL);
 
-   for( int i = 0; i < nnz; i++ )
+   for( i = 0; i < nnz; i++ )
    {
       SCIP_VAR* var;
       SCIP_Real val;
@@ -2811,7 +2812,7 @@ SCIP_RETCODE conflictFlushProofset(
    if( proofsetGetConftype(conflict->proofset) != SCIP_CONFTYPE_UNKNOWN )
    {
       /* only one variable has a coefficient different to zero, we add this bound change instead of a constraint */
-      if( proofsetGetNVars(conflict->proofset) == 1 && !diving )
+      if( proofsetGetNVars(conflict->proofset) == 1 )
       {
          SCIP_VAR** vars;
          int* inds;
@@ -2832,7 +2833,9 @@ SCIP_RETCODE conflictFlushProofset(
          /* prefer an infeasibility proof */
          if( set->conf_prefinfproof && conflict->proofset->conflicttype == SCIP_CONFTYPE_BNDEXCEEDING )
          {
-            for( int i = 0; i < conflict->nproofsets; i++ )
+            int i;
+
+            for( i = 0; i < conflict->nproofsets; i++ )
             {
                if( conflict->proofsets[i]->conflicttype == SCIP_CONFTYPE_INFEASLP )
                {
@@ -2864,7 +2867,7 @@ SCIP_RETCODE conflictFlushProofset(
          assert(proofsetGetConftype(conflict->proofsets[i]) != SCIP_CONFTYPE_UNKNOWN);
 
          /* only one variable has a coefficient different to zero, we add this bound change instead of a constraint */
-         if( proofsetGetNVars(conflict->proofsets[i]) == 1 && !diving )
+         if( proofsetGetNVars(conflict->proofsets[i]) == 1 )
          {
             SCIP_VAR** vars;
             int* inds;
@@ -3614,6 +3617,7 @@ SCIP_RETCODE SCIPconflictInit(
 static
 SCIP_Bool conflictMarkBoundCheckPresence(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_BDCHGINFO*       bdchginfo,          /**< bound change to add to the conflict set */
    SCIP_Real             relaxedbd           /**< relaxed bound */
    )
@@ -3636,14 +3640,14 @@ SCIP_Bool conflictMarkBoundCheckPresence(
          /* the variable is already member of the conflict; hence check if the new bound is redundant */
          if( var->conflictlb > newbound )
          {
-            SCIPdebugMessage("ignoring redundant bound change <%s> >= %g since a stronger lower bound exist <%s> >= %g\n",
+            SCIPsetDebugMsg(set, "ignoring redundant bound change <%s> >= %g since a stronger lower bound exist <%s> >= %g\n",
                SCIPvarGetName(var), newbound, SCIPvarGetName(var), var->conflictlb);
             return TRUE;
          }
          else if( var->conflictlb == newbound ) /*lint !e777*/
          {
-            SCIPdebugMessage("ignoring redundant bound change <%s> >= %g since this lower bound is already present\n", SCIPvarGetName(var), newbound);
-            SCIPdebugMessage("adjust relaxed lower bound <%g> -> <%g>\n", var->conflictlb, relaxedbd);
+            SCIPsetDebugMsg(set, "ignoring redundant bound change <%s> >= %g since this lower bound is already present\n", SCIPvarGetName(var), newbound);
+            SCIPsetDebugMsg(set, "adjust relaxed lower bound <%g> -> <%g>\n", var->conflictlb, relaxedbd);
             var->conflictrelaxedlb = MAX(var->conflictrelaxedlb, relaxedbd);
             return TRUE;
          }
@@ -3667,14 +3671,14 @@ SCIP_Bool conflictMarkBoundCheckPresence(
          /* the variable is already member of the conflict; hence check if the new bound is redundant */
          if( var->conflictub < newbound )
          {
-            SCIPdebugMessage("ignoring redundant bound change <%s> <= %g since a stronger upper bound exist <%s> <= %g\n",
+            SCIPsetDebugMsg(set, "ignoring redundant bound change <%s> <= %g since a stronger upper bound exist <%s> <= %g\n",
                SCIPvarGetName(var), newbound, SCIPvarGetName(var), var->conflictub);
             return TRUE;
          }
          else if( var->conflictub == newbound ) /*lint !e777*/
          {
-            SCIPdebugMessage("ignoring redundant bound change <%s> <= %g since this upper bound is already present\n", SCIPvarGetName(var), newbound);
-            SCIPdebugMessage("adjust relaxed upper bound <%g> -> <%g>\n", var->conflictub, relaxedbd);
+            SCIPsetDebugMsg(set, "ignoring redundant bound change <%s> <= %g since this upper bound is already present\n", SCIPvarGetName(var), newbound);
+            SCIPsetDebugMsg(set, "adjust relaxed upper bound <%g> -> <%g>\n", var->conflictub, relaxedbd);
             var->conflictrelaxedub = MIN(var->conflictrelaxedub, relaxedbd);
             return TRUE;
          }
@@ -3723,7 +3727,7 @@ SCIP_RETCODE conflictAddConflictBound(
    /* mark the bound to be member of the conflict and check if a bound which is at least as tight is already member of
     * the conflict
     */
-   if( !conflictMarkBoundCheckPresence(conflict, bdchginfo, relaxedbd) )
+   if( !conflictMarkBoundCheckPresence(conflict, set, bdchginfo, relaxedbd) )
    {
       /* add the bound change to the current conflict set */
       SCIP_CALL( conflictsetAddBound(conflict->conflictset, blkmem, set, bdchginfo, relaxedbd) );
@@ -3782,7 +3786,7 @@ SCIP_RETCODE conflictQueueBound(
    /* mark the bound to be member of the conflict and check if a bound which is at least as tight is already member of
     * the conflict
     */
-   if( !conflictMarkBoundCheckPresence(conflict, bdchginfo, relaxedbd) )
+   if( !conflictMarkBoundCheckPresence(conflict, set, bdchginfo, relaxedbd) )
    {
       /* insert the bound change into the conflict queue */
       if( (!set->conf_preferbinary || SCIPvarIsBinary(SCIPbdchginfoGetVar(bdchginfo)))
@@ -6267,7 +6271,10 @@ SCIP_RETCODE getFarkasProof(
    }
 
    /* remove all coefficients that are too close to zero */
-   SCIPaggrRowCleanup(set->scip, farkasrow);
+   SCIPaggrRowRemoveZeros(set->scip, farkasrow, valid);
+
+   if( !(*valid) )
+      goto TERMINATE;
 
    /* calculate the current Farkas activity, always using the best bound w.r.t. the Farkas coefficient */
    *farkasact = getMinActivity(prob, farkasrow, curvarlbs, curvarubs);
@@ -6309,6 +6316,7 @@ SCIP_RETCODE getDualProof(
    SCIP_Real* primsols;
    SCIP_Real* dualsols;
    SCIP_Real* redcosts;
+   SCIP_Real maxabsdualsol;
    int nrows;
    int ncols;
    int r;
@@ -6348,6 +6356,20 @@ SCIP_RETCODE getDualProof(
       SCIPsetDebugMsg(set, " -> LP objval: %g\n", objval);
    }
 #endif
+
+   /* check whether the dual solution is numerically stable */
+   maxabsdualsol = 0;
+   for( r = 0; r < nrows; r++ )
+   {
+      SCIP_Real absdualsol = REALABS(dualsols[r]);
+
+      if( absdualsol > maxabsdualsol )
+         maxabsdualsol = absdualsol;
+   }
+
+   /* don't consider dual solution with maxabsdualsol > 1e+07, this would almost cancel out the objective constraint */
+   if( maxabsdualsol > 1e+07 )
+      goto TERMINATE;
 
    /* clear the proof */
    SCIPaggrRowClear(farkasrow);
@@ -6433,7 +6455,10 @@ SCIP_RETCODE getDualProof(
    }
 
    /* remove all nearly zero coefficients */
-   SCIPaggrRowCleanup(set->scip, farkasrow);
+   SCIPaggrRowRemoveZeros(set->scip, farkasrow, valid);
+
+   if( !(*valid) )
+      goto TERMINATE;
 
    /* check validity of the proof */
    *farkasact = getMinActivity(prob, farkasrow, curvarlbs, curvarubs);
@@ -6469,7 +6494,7 @@ void debugPrintViolationInfo(
  *  1) Apply cut generating functions
  *    - c-MIR
  *    - Flow-cover
- *    - TODO: implenent other subadditive functions
+ *    - TODO: implement other subadditive functions
  *  2) Remove continuous variables contributing with its global bound
  *    - TODO: implement a variant of non-zero-cancellation
  */
@@ -6491,14 +6516,11 @@ SCIP_RETCODE tightenDualray(
    )
 {/*lint --e{715}*/
    SCIP_VAR** vars;
-   SCIP_Real* subvals;
    int* inds;
-   int* subinds;
    SCIP_PROOFSET* proofset;
    SCIP_Real rhs;
-   SCIP_Real subrhs;
+   SCIP_Bool valid;
    int nvars;
-   int nsubvars;
    int nnz;
    int nbinvars;
    int ncontvars;
@@ -6648,14 +6670,7 @@ SCIP_RETCODE tightenDualray(
       inds = SCIPaggrRowGetInds(proofset->aggrrow);
       nnz = SCIPaggrRowGetNNz(proofset->aggrrow);
 
-      SCIP_CALL( SCIPsetAllocBufferArray(set, &subvals, nnz) );
-      SCIP_CALL( SCIPsetAllocBufferArray(set, &subinds, nnz) );
-
-      BMSclearMemoryArray(subvals, nnz);
-      subrhs = 0.0;
-      nsubvars = 0;
-
-      for( i = 0; i < nnz; i++ )
+      for( i = 0; i < nnz && nnz > 1; )
       {
          SCIP_Real val;
          int idx = inds[i];
@@ -6667,7 +6682,10 @@ SCIP_RETCODE tightenDualray(
 
          /* skip integral variables */
          if( SCIPvarGetType(vars[idx]) != SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(vars[idx]) != SCIP_VARTYPE_IMPLINT )
+         {
+            i++;
             continue;
+         }
          else
          {
             SCIP_Real glbbd;
@@ -6678,27 +6696,23 @@ SCIP_RETCODE tightenDualray(
             locbd = (val < 0.0 ? curvarubs[idx] : curvarlbs[idx]);
 
             if( !SCIPsetIsEQ(set, glbbd, locbd) )
+            {
+               i++;
                continue;
+            }
 
             SCIPsetDebugMsg(set, "-> remove continuous variable <%s>: glb=[%g,%g], loc=[%g,%g], val=%g\n",
                   SCIPvarGetName(vars[idx]), SCIPvarGetLbGlobal(vars[idx]), SCIPvarGetUbGlobal(vars[idx]),
                   SCIPvarGetLbLocal(vars[idx]), SCIPvarGetUbLocal(vars[idx]), val);
 
-            /* update rhs of row that should be subtracted */
-            subrhs -= (glbbd * val);
+            SCIPaggrRowCancelVarWithBound(set->scip, proofset->aggrrow, vars[idx], i, &valid);
+            assert(valid); /* this should be always fulfilled at this place */
 
-            /* add negative coefficient such that it will cancel out */
-            subvals[nsubvars] = -val;
-            subinds[nsubvars++] = idx;
+            --nnz;
          }
       }
 
-      SCIP_CALL( SCIPaggrRowAddCustomCons(set->scip, proofset->aggrrow, subinds, subvals, nsubvars, subrhs, 1.0, 1, FALSE) );
-      SCIPaggrRowCleanup(set->scip, proofset->aggrrow);
-
-      /* free buffer */
-      SCIPsetFreeBufferArray(set, &subinds);
-      SCIPsetFreeBufferArray(set, &subvals);
+      SCIPaggrRowRemoveZeros(set->scip, proofset->aggrrow, &valid);
    }
 
    return SCIP_OKAY;

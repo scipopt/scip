@@ -2991,7 +2991,7 @@ SCIP_RETCODE createCGCutDirect(
 
             for( k = 0; k < cutlen; ++k )
             {
-               SCIP_CALL( SCIPaddVarToRow(scip, cut, vars[cutinds[k]], cutcoefs[k]) );
+               SCIP_CALL( SCIPaddVarToRow(scip, cut, vars[cutinds[k]], cutvals[k]) );
             }
 
             /* set cut rank */
