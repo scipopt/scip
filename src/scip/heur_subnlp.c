@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -86,6 +86,7 @@ struct SCIP_HeurData
    SCIP_Real             iterquot;           /**< contingent of NLP iterations in relation to the number of nodes in SCIP */
    int                   itermin;            /**< minimal number of iterations required to start local search */
    SCIP_Bool             runalways;          /**< whether to run NLP heuristic always (independent of iteroffset,iterquot,itermin) */
+   int                   nsolfound;          /**< number of solutions found in this run (because we give authorship of solutions we found to the heuristic that proposed the starting point) */
 };
 
 
@@ -298,19 +299,17 @@ SCIP_RETCODE createSubSCIP(
    SCIP_CALL( SCIPresetParam(heurdata->subscip, "limits/time") );
    SCIP_CALL( SCIPresetParam(heurdata->subscip, "limits/totalnodes") );
 
-   /* disable conflict analysis and separation 
-    * keep normal presolving, but disable probing and restarts
-    * disable LP solve
-    * set nodelimit to 0
+   /* disable restarts (not sure they could be triggered on continuous problems anyway)
+    * keep normal presolving, but disable components presolver
     * heuristics and separators were not copied into subscip, so should not need to switch off
     */
    if( !SCIPisParamFixed(heurdata->subscip, "presolving/maxrounds") )
    {
       SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "presolving/maxrounds", heurdata->maxpresolverounds) );
    }
-   if( !SCIPisParamFixed(heurdata->subscip, "propagating/probing/maxprerounds") )
+   if( !SCIPisParamFixed(heurdata->subscip, "constraints/components/maxprerounds") )
    {
-      SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "propagating/probing/maxprerounds", 0) );
+      SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "constraints/components/maxprerounds", 0) );
    }
    if( !SCIPisParamFixed(heurdata->subscip, "presolving/maxrestarts") )
    {
@@ -974,6 +973,13 @@ SCIP_RETCODE solveSubNLP(
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
+   /* if NLP timelimit is set to 0.0, then return immediately
+    * Previously, we were still running scip presolve, assuming the caller wanted to see if the instance is still feasible after presolve.
+    * But now we want to set a timelimit also for the scip presolve, and it is easiest to use timelimit for this.
+    */
+   if( timelimit == 0.0 )
+      goto CLEANUP;
+
    if( tighttolerances )
    {
       SCIP_Real sumepsilon;
@@ -995,9 +1001,11 @@ SCIP_RETCODE solveSubNLP(
    SCIP_CALL( SCIPtransformProb(heurdata->subscip) );
 
    /* presolve sub-SCIP
+    *  set scip timelimit in case presolve is unexpectedly expensive
     *  set node limit to 1 so that presolve can go
     *  reset maxpresolverounds, in case user changed
     */
+   SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", 1LL) );
    if( !SCIPisParamFixed(heurdata->subscip, "presolving/maxrounds") )
    {
@@ -1094,6 +1102,7 @@ SCIP_RETCODE solveSubNLP(
                SCIPdebugMsg(scip, "SCIP stored solution from sub-SCIP root node\n");
             }
             *result = SCIP_FOUNDSOL;
+            ++heurdata->nsolfound;
             break;
          }
          else
@@ -1121,6 +1130,7 @@ SCIP_RETCODE solveSubNLP(
                SCIPdebugMsg(scip, "SCIP solution from sub-SCIP root node is feasible\n");
             }
             *result = SCIP_FOUNDSOL;
+            ++heurdata->nsolfound;
             break;
          }
          else
@@ -1187,10 +1197,6 @@ SCIP_RETCODE solveSubNLP(
       return SCIP_ERROR;
    } /*lint !e788*/
 
-   /* if NLP timelimit is set to 0.0, then caller just wanted to see if the instance is still feasible after presolve */
-   if( timelimit == 0.0 )
-      goto CLEANUP;
-
    /* add non-combinatorial linear constraints from subscip into subNLP (shall be replaced by catching row events in NLP) */
    SCIP_CALL( addLinearConstraintsToNlp(heurdata->subscip, FALSE, TRUE) );
 
@@ -1246,6 +1252,12 @@ SCIP_RETCODE solveSubNLP(
       /* set feasibility tolerance, if tighttolerances is set */
       SCIP_CALL( SCIPsetNLPRealPar(heurdata->subscip, SCIP_NLPPAR_FEASTOL, heurdata->resolvetolfactor*SCIPfeastol(scip)) );
    }
+   /* TODO Would it make sense to already start with a tighter feastol than SCIP's?
+   else
+   {
+      SCIP_CALL( SCIPsetNLPRealPar(heurdata->subscip, SCIP_NLPPAR_FEASTOL, 0.1*SCIPfeastol(scip)) );
+   }
+   */
 
    /* set option file to use by NLP solver */
    if( heurdata->nlpoptfile != NULL && *heurdata->nlpoptfile != '\0' )
@@ -1347,6 +1359,7 @@ SCIP_RETCODE solveSubNLP(
             }
 
             *result = SCIP_FOUNDSOL;
+            ++heurdata->nsolfound;
          }
          else if( !tighttolerances && heurdata->resolvetolfactor < 1.0 )
          {
@@ -1403,6 +1416,7 @@ SCIP_RETCODE solveSubNLP(
                SCIPdebugMsg(scip, "solution reported by NLP solver feasible for SCIP\n");
             }
             *result = SCIP_FOUNDSOL;
+            ++heurdata->nsolfound;
          }
          else if( !tighttolerances && heurdata->resolvetolfactor < 1.0 )
          {
@@ -1739,8 +1753,11 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
          /* if we do not really have a startpoint, then we should take care that we do not fix variables to very large values
           *  thus, we set to 0.0 here and project on bounds below
           */
-         if( ABS(fixval) > 1E+10 && !refpoint && SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+         if( REALABS(fixval) > 1E+10 && !refpoint && SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
             fixval = 0.0;
+
+         /* fixing variables to infinity causes problems, we should not have been passed such a solution as refpoint */
+         assert(!SCIPisInfinity(scip, REALABS(fixval)));
 
          /* round fractional variables to the nearest integer,
           *  use exact integral value, if the variable is only integral within numerical tolerances
@@ -2062,6 +2079,9 @@ SCIP_DECL_HEURINITSOL(heurInitsolSubNlp)
    assert(heurdata != NULL);
    assert(heurdata->subscip == NULL);
 
+   /* reset solution found counter */
+   heurdata->nsolfound = 0;
+
    if( heurdata->keepcopy )
    {
       /* create sub-SCIP for later use */
@@ -2202,7 +2222,7 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
       itercontingent = (SCIP_Longint)(heurdata->iterquot * SCIPgetNNodes(scip));
 
       /* weight by previous success of heuristic */
-      itercontingent = (SCIP_Longint)(itercontingent * 3.0 * (SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
+      itercontingent = (SCIP_Longint)(itercontingent * 3.0 * (heurdata->nsolfound+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
       /* add the fixed offset */
       itercontingent += heurdata->iteroffset;
       /* subtract the number of iterations used so far */
@@ -2212,7 +2232,7 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
       {
          /* not enough iterations left to start NLP solver */
          SCIPdebugMsg(scip, "skip NLP heuristic; contingent=%" SCIP_LONGINT_FORMAT "; minimal number of iterations=%d; success ratio=%g\n",
-            itercontingent, heurdata->itermin, (SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
+            itercontingent, heurdata->itermin, (heurdata->nsolfound+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
          return SCIP_OKAY;
       }
 

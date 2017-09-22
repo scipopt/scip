@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_implics.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for implications, variable bounds, and cliques
  * @author Tobias Achterberg
  */
@@ -86,6 +87,8 @@ struct SCIP_CliqueList
 struct SCIP_CliqueTable
 {
    SCIP_HASHTABLE*       hashtable;          /**< hash table holding all cliques */
+   SCIP_HASHMAP*         varidxtable;        /**< mapping from binary variable to their corresponding node indices */
+   SCIP_DISJOINTSET*     djset;              /**< disjoint set (union find) data structure to maintain component information */
    SCIP_CLIQUE**         cliques;            /**< cliques stored in the table */
    SCIP_Longint          nentries;           /**< number of entries in the whole clique table */
    int                   ncliques;           /**< number of cliques stored in the table */
@@ -96,7 +99,7 @@ struct SCIP_CliqueTable
    int                   ndirtycliques;      /**< number of cliques stored when the last cleanup was performed */
    int                   ncliquecomponents;  /**< number of connected components in clique graph */
    SCIP_Bool             incleanup;          /**< is this clique table currently performing cleanup? */
-   SCIP_Bool             componentupdate;    /**< must the connected components of the clique graph be updated? */
+   SCIP_Bool             compsfromscratch;   /**< must the connected components of the clique graph be recomputed from scratch? */
 };
 
 #ifdef __cplusplus

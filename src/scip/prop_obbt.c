@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -718,9 +718,12 @@ SCIP_RETCODE filterExistingLP(
          SCIPvarGetUbLocal(bound->var) : SCIPvarGetLbLocal(bound->var);
       solval = SCIPvarGetLPSol(bound->var);
 
-      /* bound is tight; since this holds for all fixed variables, those are filtered here automatically */
-      if( (bound->boundtype == SCIP_BOUNDTYPE_UPPER && SCIPisFeasGE(scip, solval, boundval))
-         || (bound->boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisFeasLE(scip, solval, boundval)) )
+      /* bound is tight; since this holds for all fixed variables, those are filtered here automatically; if the lp solution
+       * is infinity, then also the bound is tight */
+      if( (bound->boundtype == SCIP_BOUNDTYPE_UPPER &&
+               (SCIPisInfinity(scip, solval) || SCIPisFeasGE(scip, solval, boundval)))
+            || (bound->boundtype == SCIP_BOUNDTYPE_LOWER &&
+               (SCIPisInfinity(scip, -solval) || SCIPisFeasLE(scip, solval, boundval))) )
       {
          SCIP_BASESTAT basestat;
 
@@ -1382,7 +1385,7 @@ SCIP_RETCODE applySeparation(
       oldval = SCIPvarGetLPSol(currbound->var);
 
       /* find and store cuts to separate the current LP solution */
-      SCIP_CALL( SCIPseparateSol(scip, NULL, inroot, FALSE, &delayed, &cutoff) );
+      SCIP_CALL( SCIPseparateSol(scip, NULL, inroot, TRUE, FALSE, &delayed, &cutoff) );
       SCIPdebugMsg(scip, "applySeparation() - ncuts = %d\n", SCIPgetNCuts(scip));
 
       /* leave if we did not found any cut */
@@ -1392,9 +1395,9 @@ SCIP_RETCODE applySeparation(
       /* apply cuts and resolve LP */
       SCIP_CALL( SCIPapplyCutsProbing(scip, &cutoff) );
       assert(SCIPgetNCuts(scip) == 0);
-      nlpiter = SCIPgetNLPIterations(scip);
+      SCIPdebug( nlpiter = SCIPgetNLPIterations(scip); )
       SCIP_CALL( solveLP(scip, (int) *nleftiterations, &error, &optimal) );
-      nlpiter = SCIPgetNLPIterations(scip) - nlpiter;
+      SCIPdebug( nlpiter = SCIPgetNLPIterations(scip) - nlpiter; )
       SCIPdebugMsg(scip, "applySeparation() - optimal=%u error=%u lpiter=%" SCIP_LONGINT_FORMAT "\n", optimal, error, nlpiter);
       SCIPdebugMsg(scip, "oldval = %e newval = %e\n", oldval, SCIPvarGetLPSol(currbound->var));
 
@@ -2036,8 +2039,13 @@ SCIP_RETCODE getNLPVarsNonConvexity(
 
       for( i = 0; i < nconss; ++i )
       {
+         SCIP_Bool isnonconvex;
+
+         isnonconvex = (!SCIPisConvexQuadratic(scip, conss[i]) && !SCIPisInfinity(scip, SCIPgetRhsQuadratic(scip, conss[i])))
+            || (!SCIPisConcaveQuadratic(scip, conss[i]) && !SCIPisInfinity(scip, -SCIPgetLhsQuadratic(scip, conss[i])));
+
          /* only check the nlrow if the constraint is not convex */
-         if( SCIPisConvexQuadratic(scip, conss[i]) == FALSE )
+         if( isnonconvex )
          {
             SCIP_NLROW* nlrow;
             SCIP_CALL( SCIPgetNlRowQuadratic(scip, conss[i], &nlrow) );
@@ -2060,10 +2068,15 @@ SCIP_RETCODE getNLPVarsNonConvexity(
       for( i = 0; i < nconss; ++i )
       {
          SCIP_EXPRCURV curvature;
+         SCIP_Bool isnonconvex;
+
          SCIP_CALL( SCIPgetCurvatureNonlinear(scip, conss[i], TRUE, &curvature) );
 
+         isnonconvex = (curvature != SCIP_EXPRCURV_CONVEX && !SCIPisInfinity(scip, SCIPgetRhsNonlinear(scip, conss[i])))
+            || (curvature != SCIP_EXPRCURV_CONCAVE && !SCIPisInfinity(scip, -SCIPgetLhsNonlinear(scip, conss[i])));
+
          /* only check the nlrow if the constraint is not convex */
-         if(  curvature != SCIP_EXPRCURV_CONVEX )
+         if( isnonconvex )
          {
             SCIP_NLROW* nlrow;
             SCIP_CALL( SCIPgetNlRowNonlinear(scip, conss[i], &nlrow) );
@@ -2093,6 +2106,8 @@ SCIP_RETCODE getNLPVarsNonConvexity(
          exprtree = SCIPgetExprtreeBivariate(scip, conss[i]);
          if( exprtree != NULL )
          {
+            SCIP_Bool isnonconvex;
+
             SCIP_CALL( SCIPallocBufferArray(scip, &varbounds, SCIPexprtreeGetNVars(exprtree)) );
             for( j = 0; j < SCIPexprtreeGetNVars(exprtree); ++j )
             {
@@ -2106,8 +2121,11 @@ SCIP_RETCODE getNLPVarsNonConvexity(
 
             SCIP_CALL( SCIPexprtreeCheckCurvature(exprtree, SCIPinfinity(scip), varbounds, &curvature, NULL) );
 
+            isnonconvex = (curvature != SCIP_EXPRCURV_CONVEX && !SCIPisInfinity(scip, SCIPgetRhsBivariate(scip, conss[i])))
+               || (curvature != SCIP_EXPRCURV_CONCAVE && !SCIPisInfinity(scip, -SCIPgetLhsBivariate(scip, conss[i])));
+
             /* increase counter for all variables in the expression tree if the constraint is non-convex */
-            if( curvature != SCIP_EXPRCURV_CONVEX )
+            if( isnonconvex )
             {
                for( j = 0; j < SCIPexprtreeGetNVars(exprtree); ++j )
                {
@@ -2117,6 +2135,7 @@ SCIP_RETCODE getNLPVarsNonConvexity(
                   ++nlcounts[SCIPvarGetProbindex(var)];
                }
             }
+            SCIPfreeBufferArray(scip, &varbounds);
          }
       }
    }
@@ -2280,6 +2299,24 @@ SCIP_RETCODE initBounds(
  * Callback methods of propagator
  */
 
+/** copy method for propagator plugins (called when SCIP copies plugins)
+ *
+ *  @note The UG framework assumes that all default plug-ins of SCIP implement a copy callback. We check
+ *  SCIPgetSubscipDepth() in PROPEXEC to prevent the propagator to run in a sub-SCIP.
+ */
+static
+SCIP_DECL_PROPCOPY(propCopyObbt)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(prop != NULL);
+   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludePropObbt(scip) );
+
+   return SCIP_OKAY;
+}
+
 /** solving process initialization method of propagator (called when branch and bound process is about to begin) */
 static
 SCIP_DECL_PROPINITSOL(propInitsolObbt)
@@ -2323,6 +2360,10 @@ SCIP_DECL_PROPEXEC(propExecObbt)
 
    /* do not run in: presolving, repropagation, probing mode, if no objective propagation is allowed  */
    if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || SCIPinRepropagation(scip) || SCIPinProbing(scip) || !SCIPallowObjProp(scip) )
+      return SCIP_OKAY;
+
+   /* do not run propagator in a sub-SCIP */
+   if( SCIPgetSubscipDepth(scip) > 0 )
       return SCIP_OKAY;
 
    /* only run for nonlinear problems, i.e., if NLP is constructed */
@@ -2506,6 +2547,7 @@ SCIP_RETCODE SCIPincludePropObbt(
    SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
          propExecObbt, propdata) );
 
+   SCIP_CALL( SCIPsetPropCopy(scip, prop, propCopyObbt) );
    SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeObbt) );
    SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolObbt) );
    SCIP_CALL( SCIPsetPropInitsol(scip, prop, propInitsolObbt) );

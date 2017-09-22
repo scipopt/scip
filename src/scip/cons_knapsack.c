@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -909,6 +909,8 @@ SCIP_RETCODE checkCons(
       SCIP_Real sum;
       SCIP_Longint integralsum;
       SCIP_Bool ishuge;
+      SCIP_Real absviol;
+      SCIP_Real relviol;
       int v;
 
       /* increase age of constraint; age is reset to zero, if a violation was found only in case we are in
@@ -921,7 +923,7 @@ SCIP_RETCODE checkCons(
 
       sum = 0.0;
       integralsum = 0;
-      /* we perform an more exact comparison if the capacity does not exceed the huge value */
+      /* we perform a more exact comparison if the capacity does not exceed the huge value */
       if( SCIPisHugeValue(scip, (SCIP_Real) consdata->capacity) )
       {
          ishuge = TRUE;
@@ -947,7 +949,14 @@ SCIP_RETCODE checkCons(
          }
       }
 
-      if( (!ishuge && integralsum > consdata->capacity) || (ishuge && SCIPisFeasGT(scip, sum, (SCIP_Real)consdata->capacity)) )
+      /* calculate constraint violation and update it in solution */
+      absviol = ishuge ? sum : (SCIP_Real)integralsum;
+      absviol -= consdata->capacity;
+      relviol = SCIPrelDiff(absviol + consdata->capacity, (SCIP_Real)consdata->capacity);
+      if( sol != NULL )
+         SCIPupdateSolLPConsViolation(scip, sol, absviol, relviol);
+
+      if( SCIPisFeasPositive(scip, absviol) )
       {
          *violated = TRUE;
 
@@ -959,17 +968,13 @@ SCIP_RETCODE checkCons(
 
          if( printreason )
          {
-            SCIP_Real viol = ishuge ? sum : (SCIP_Real)integralsum;
-
-            viol -= consdata->capacity;
-            assert(viol > 0);
-
             SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
 
             SCIPinfoMessage(scip, NULL, ";\n");
-            SCIPinfoMessage(scip, NULL, "violation: the capacity is violated by %.15g\n", viol);
+            SCIPinfoMessage(scip, NULL, "violation: the capacity is violated by %.15g\n", absviol);
          }
       }
+
    }
 
    return SCIP_OKAY;
@@ -1672,7 +1677,7 @@ SCIP_RETCODE GUBconsCreate(
    assert(gubcons != NULL);
 
    /* allocate memory for GUB constraint data structures */
-   SCIP_CALL( SCIPallocMemory(scip, gubcons) );
+   SCIP_CALL( SCIPallocBuffer(scip, gubcons) );
    (*gubcons)->gubvarssize = GUBCONSGROWVALUE;
    SCIP_CALL( SCIPallocBufferArray(scip, &(*gubcons)->gubvars, (*gubcons)->gubvarssize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*gubcons)->gubvarsstatus, (*gubcons)->gubvarssize) );
@@ -1697,7 +1702,7 @@ SCIP_RETCODE GUBconsFree(
    /* free allocated memory */
    SCIPfreeBufferArray(scip, &(*gubcons)->gubvarsstatus);
    SCIPfreeBufferArray(scip, &(*gubcons)->gubvars);
-   SCIPfreeMemory(scip, gubcons);
+   SCIPfreeBuffer(scip, gubcons);
 
    return SCIP_OKAY;
 }
@@ -1924,7 +1929,7 @@ SCIP_RETCODE GUBsetCreate(
    assert(capacity >= 0);
 
    /* allocate memory for GUB set data structures */
-   SCIP_CALL( SCIPallocMemory(scip, gubset) );
+   SCIP_CALL( SCIPallocBuffer(scip, gubset) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*gubset)->gubconss, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*gubset)->gubconsstatus, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*gubset)->gubconssidx, nvars) );
@@ -1983,7 +1988,7 @@ SCIP_RETCODE GUBsetFree(
    SCIPfreeBufferArray( scip, &(*gubset)->gubconssidx );
    SCIPfreeBufferArray( scip, &(*gubset)->gubconsstatus );
    SCIPfreeBufferArray( scip, &(*gubset)->gubconss );
-   SCIPfreeMemory(scip, gubset);
+   SCIPfreeBuffer(scip, gubset);
 
    return SCIP_OKAY;
 }
@@ -2115,7 +2120,6 @@ SCIP_RETCODE GUBsetCalcCliquePartition(
    SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpvars, vars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &varseq, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &sortkeys, nvars) );
-   ncliquevars = 0;
 
    /* initialize the cliquepartition array with -1 */
    /* initialize the tmpvalues array */
@@ -7362,7 +7366,6 @@ SCIP_RETCODE propagateCons(
 #endif
 
    usenegatedclique = usenegatedclique && consdata->merged;
-   nnegcliques = -1;
 
    /* init for debugging */
    myvars = NULL;
@@ -7545,28 +7548,26 @@ SCIP_RETCODE propagateCons(
          /* check, if weights of fixed variables don't exceeds knapsack capacity */
          if( !(*cutoff) && consdata->capacity >= minweightsum + consdata->onesweightsum )
          {
-            SCIP_Longint maxcliqueweight;
-
-            c = 0;
-            maxcliqueweight = -1;
+            SCIP_Longint maxcliqueweight = -1LL;
 
             /* loop over cliques */
             for( c = 0; c < nnegcliques; ++c )
             {
                SCIP_VAR* maxvar;
                SCIP_Bool maxvarfixed;
-               int endvarposclique = cliqueendposs[c];
-               int startvarposclique = cliquestartposs[c];
+               int endvarposclique;
+               int startvarposclique;
 
-
-               maxvar = myvars[startvarposclique];
-
-
-               assert(nnegcliques == consdata->nnegcliques);
                assert(myvars != NULL);
+               assert(nnegcliques == consdata->nnegcliques);
                assert(myweights != NULL);
                assert(secondmaxweights != NULL);
                assert(cliquestartposs != NULL);
+
+               endvarposclique = cliqueendposs[c];
+               startvarposclique = cliquestartposs[c];
+
+               maxvar = myvars[startvarposclique];
 
                /* no need to process this negated clique because all variables are already fixed (which we detect from a fixed maxvar) */
                if( SCIPvarGetUbLocal(maxvar) - SCIPvarGetLbLocal(maxvar) < 0.5 )
@@ -8924,7 +8925,6 @@ SCIP_RETCODE dualWeightsTightening(
                if( (dualcapacity & 1) == 0 )
                {
                   newweight = dualcapacity / 2;
-                  startv = v;
 
                   /* set all middle coefficients */
                   for( ; v <= end; ++v )
@@ -9113,7 +9113,6 @@ SCIP_RETCODE dualWeightsTightening(
                   if( (dualcapacity & 1) == 0 )
                   {
                      newweight = dualcapacity / 2;
-                     startv = v;
 
                      /* set all middle coefficients */
                      for( ; v <= end; ++v )
@@ -9400,7 +9399,6 @@ SCIP_RETCODE simplifyInequalities(
          return SCIP_OKAY;
    }
 
-   vars = consdata->vars;
    weights = consdata->weights;
    nvars = consdata->nvars;
 
@@ -9442,8 +9440,8 @@ SCIP_RETCODE simplifyInequalities(
    /* 3. start gcd procedure for all variables */
    do
    {
-      oldnchgcoefs = *nchgcoefs;
-      oldnchgsides = *nchgsides;
+      SCIPdebug( oldnchgcoefs = *nchgcoefs; )
+      SCIPdebug( oldnchgsides = *nchgsides; )
 
       vars = consdata->vars;
       weights = consdata->weights;
@@ -10421,7 +10419,8 @@ SCIP_RETCODE tightenWeights(
                backpos = nvars - 2;
             }
             break;
-         case 3:
+         default:
+            assert(k == 3);
             if( sumcoefcase )
             {
                if( weights[nvars - 4] < weights[nvars - 1] + weights[nvars - 2] )
@@ -10441,8 +10440,6 @@ SCIP_RETCODE tightenWeights(
                backpos = nvars - 3;
             }
             break;
-         default:
-            return SCIP_ERROR;
          }
 
          if( backpos <= pos )
@@ -11937,6 +11934,7 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdKnapsack)
  */
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
+/**! [SnippetConsCopyKnapsack] */
 static
 SCIP_DECL_CONSHDLRCOPY(conshdlrCopyKnapsack)
 {  /*lint --e{715}*/
@@ -11951,8 +11949,10 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyKnapsack)
 
    return SCIP_OKAY;
 }
+/**! [SnippetConsCopyKnapsack] */
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
+/**! [SnippetConsFreeKnapsack] */
 static
 SCIP_DECL_CONSFREE(consFreeKnapsack)
 {  /*lint --e{715}*/
@@ -11968,6 +11968,7 @@ SCIP_DECL_CONSFREE(consFreeKnapsack)
 
    return SCIP_OKAY;
 }
+/**! [SnippetConsFreeKnapsack] */
 
 
 /** initialization method of constraint handler (called after problem was transformed) */
@@ -12138,7 +12139,8 @@ SCIP_DECL_CONSDELETE(consDeleteKnapsack)
    return SCIP_OKAY;
 }
 
-/** transforms constraint data into data belonging to the transformed problem */ 
+/** transforms constraint data into data belonging to the transformed problem */
+/**! [SnippetConsTransKnapsack]*/
 static
 SCIP_DECL_CONSTRANS(consTransKnapsack)
 {  /*lint --e{715}*/
@@ -12177,6 +12179,7 @@ SCIP_DECL_CONSTRANS(consTransKnapsack)
 
    return SCIP_OKAY;
 }
+/**! [SnippetConsTransKnapsack]*/
 
 /** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 static
@@ -12740,6 +12743,7 @@ SCIP_DECL_CONSRESPROP(consRespropKnapsack)
 }
 
 /** variable rounding lock method of constraint handler */
+/**! [SnippetConsLockKnapsack] */
 static
 SCIP_DECL_CONSLOCK(consLockKnapsack)
 {  /*lint --e{715}*/
@@ -12756,6 +12760,7 @@ SCIP_DECL_CONSLOCK(consLockKnapsack)
 
    return SCIP_OKAY;
 }
+/**! [SnippetConsLockKnapsack] */
 
 
 /** variable deletion method of constraint handler */
@@ -13185,6 +13190,7 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
+/**! [SnippetConsCreationKnapsack] */
 SCIP_RETCODE SCIPcreateConsKnapsack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -13250,6 +13256,7 @@ SCIP_RETCODE SCIPcreateConsKnapsack(
 
    return SCIP_OKAY;
 }
+/**! [SnippetConsCreationKnapsack] */
 
 /** creates and captures a knapsack constraint
  *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the

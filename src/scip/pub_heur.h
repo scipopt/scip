@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_heur.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for primal heuristics
  * @author Tobias Achterberg
  */
@@ -32,6 +32,13 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**@addtogroup PublicHeuristicMethods
+ *
+ * @{
+ */
+
+
 
 /** compares two heuristics w. r. to their priority */
 EXTERN
@@ -170,6 +177,8 @@ int SCIPheurGetNDivesets(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
+/* @} */
+
 /** get the heuristic to which this diving setting belongs */
 EXTERN
 SCIP_HEUR* SCIPdivesetGetHeur(
@@ -188,6 +197,11 @@ void SCIPdivesetSetWorkSolution(
    SCIP_DIVESET*         diveset,            /**< diving settings */
    SCIP_SOL*             sol                 /**< new working solution for this dive set, or NULL */
    );
+
+/**@addtogroup PublicDivesetMethods
+ *
+ * @{
+ */
 
 /** get the name of the dive set */
 EXTERN
@@ -347,6 +361,14 @@ SCIP_Bool SCIPdivesetSupportsType(
    SCIP_DIVESET*         diveset,            /**< diving settings */
    SCIP_DIVETYPE         divetype            /**< bit mask that represents the supported dive types by this dive set */
    );
+
+/** returns the random number generator of this \p diveset for tie-breaking */
+EXTERN
+SCIP_RANDNUMGEN* SCIPdivesetGetRandnumgen(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/* @} */
 
 #ifdef __cplusplus
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sol.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for storing primal CIP solutions
  * @author Tobias Achterberg
  */
@@ -437,6 +438,7 @@ SCIP_RETCODE SCIPsolPrint(
    SCIP_PROB*            prob,               /**< problem data (original or transformed) */
    SCIP_PROB*            transprob,          /**< transformed problem data or NULL (to display priced variables) */
    FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             mipstart,           /**< should only discrete variables be printed? */
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    );
 
@@ -451,6 +453,52 @@ SCIP_RETCODE SCIPsolPrintRay(
    SCIP_PROB*            transprob,          /**< transformed problem data or NULL (to display priced variables) */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
+   );
+
+
+/** reset violations of a solution */
+extern
+void SCIPsolResetViolations(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** update integrality violation of a solution */
+extern
+void SCIPsolUpdateIntegralityViolation(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             absviolintegrality  /**< absolute violation of integrality */
+   );
+
+/** update bound violation of a solution */
+extern
+void SCIPsolUpdateBoundViolation(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             absviolbounds,      /**< absolute violation of bounds */
+   SCIP_Real             relviolbounds       /**< relative violation of bounds */
+   );
+
+/** update LP row violation of a solution */
+extern
+void SCIPsolUpdateLPRowViolation(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             absviollprows,      /**< absolute violation of LP rows */
+   SCIP_Real             relviollprows       /**< relative violation of LP rows */
+   );
+
+/** update constraint violation of a solution */
+extern
+void SCIPsolUpdateConsViolation(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             absviolcons,        /**< absolute violation of constraint */
+   SCIP_Real             relviolcons         /**< relative violation of constraint */
+   );
+
+/** update violation of a constraint that is represented in the LP */
+extern
+void SCIPsolUpdateLPConsViolation(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             absviol,            /**< absolute violation of constraint */
+   SCIP_Real             relviol             /**< relative violation of constraint */
    );
 
 

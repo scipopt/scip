@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_primal.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for collecting primal CIP solutions and primal informations
  * @author Tobias Achterberg
  */
@@ -56,6 +57,8 @@ struct SCIP_Primal
    int                   npartialsols;       /**< number of partial solutions stored in partialsol array */
    int                   existingsolssize;   /**< size of existingsols array */
    int                   nexistingsols;      /**< number of primal CIP solutions stored in existingsols array */
+
+   SCIP_Bool             updateviolations;   /**< marks whether the updating of violations is turned on */
 };
 
 #ifdef __cplusplus

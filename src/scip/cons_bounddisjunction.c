@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -483,6 +483,10 @@ SCIP_RETCODE switchWatchedvars(
    assert(watchedvar1 != -1 || watchedvar2 == -1);
    assert(watchedvar1 == -1 || (0 <= watchedvar1 && watchedvar1 < consdata->nvars));
    assert(watchedvar2 == -1 || (0 <= watchedvar2 && watchedvar2 < consdata->nvars));
+
+   /* don't watch variables for non active constraints */
+   if( !SCIPconsIsActive(cons) )
+      return SCIP_OKAY;
 
    /* if one watched variable is equal to the old other watched variable, just switch positions */
    if( watchedvar1 == consdata->watchedvar2 || watchedvar2 == consdata->watchedvar1 )
@@ -1280,6 +1284,9 @@ SCIP_RETCODE checkCons(
    SCIP_BOUNDTYPE* boundtypes;
    SCIP_Real* bounds;
    SCIP_Real solval;
+   SCIP_Real viol;
+   SCIP_Real absviol;
+   int violpos;
    int nvars;
    int v;
 
@@ -1298,16 +1305,41 @@ SCIP_RETCODE checkCons(
    assert(nvars == 0 || bounds != NULL);
 
    /* check the given solution */
+   absviol = SCIP_REAL_MAX;
+   violpos = -1;
    *violated = TRUE;
    for( v = 0; v < nvars; ++v )
    {
       solval = SCIPgetSolVal(scip, sol, vars[v]);
+
+      /* update absolute violation if needed */
+      viol = (boundtypes[v] == SCIP_BOUNDTYPE_LOWER) ? bounds[v] - solval : solval - bounds[v];
+      if( viol < absviol )
+      {
+         absviol = viol;
+         violpos = v;
+      }
+
       if( (boundtypes[v] == SCIP_BOUNDTYPE_LOWER && isFeasGE(scip, vars[v], solval, bounds[v]))
          || (boundtypes[v] == SCIP_BOUNDTYPE_UPPER && isFeasLE(scip, vars[v], solval, bounds[v])) )
       {
          *violated = FALSE;
          break;
       }
+   }
+   /* update constraint violation in solution */
+   if( sol != NULL )
+   {
+      SCIP_Real relviol;
+
+      assert(0 == nvars || -1 != violpos);
+
+      if( 0 == nvars )
+         relviol = SCIP_REAL_MAX;
+      else
+         relviol = SCIPrelDiff(SCIPgetSolVal(scip, sol, vars[violpos]), bounds[violpos]);
+
+      SCIPupdateSolConsViolation(scip, sol, absviol, relviol);
    }
    return SCIP_OKAY;
 }
@@ -2128,6 +2160,9 @@ SCIP_DECL_CONSEXITPRE(consExitpreBounddisjunction)
 
       SCIPdebugMsg(scip, "exit-presolving bound disjunction constraint <%s>\n", SCIPconsGetName(cons));
 
+      if( SCIPconsIsDeleted(cons) )
+         continue;
+
       /* remove all literals that are violated in global bounds, check redundancy due to global bounds */
       SCIP_CALL( applyGlobalBounds(scip, cons, conshdlrdata->eventhdlr, &redundant) );
 
@@ -2512,11 +2547,11 @@ SCIP_DECL_CONSPRESOL(consPresolBounddisjunction)
             *result = SCIP_SUCCESS;
             continue;
          }
-	 else
-	 {
-	    /* try to upgrade the bounddisjunction constraint */
-	    SCIP_CALL( upgradeCons(scip, cons, ndelconss, naddconss) );
-	 }
+         else
+         {
+            /* try to upgrade the bounddisjunction constraint */
+            SCIP_CALL( upgradeCons(scip, cons, ndelconss, naddconss) );
+         }
       }
    }
 
@@ -2759,7 +2794,7 @@ SCIP_DECL_CONSCOPY(consCopyBounddisjunction)
    if( *valid )
    {
       SCIP_CALL( SCIPcreateConsBounddisjunction(scip, cons, name ? name : SCIPconsGetName(sourcecons), nvars, targetvars, boundtypes,
-         bounds, initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );      
+         bounds, initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
 
    SCIPfreeBufferArray(scip, &targetvars);
@@ -2817,7 +2852,7 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
 
       if( var == NULL )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "variable with name <%s> does not exist\n", SCIPvarGetName(var));
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Error while parsing variable.\n");
          *success = FALSE;
          goto TERMINATE;
       }
@@ -2956,6 +2991,9 @@ SCIP_DECL_EVENTEXEC(eventExecBounddisjunction)
    assert(event != NULL);
 
    /*SCIPdebugMsg(scip, "exec method of event handler for bound disjunction constraints\n");*/
+
+   assert(SCIPconsGetData((SCIP_CONS*)eventdata) != NULL);
+   assert(SCIPconsIsActive((SCIP_CONS*)eventdata) || SCIPconsIsUpdatedeactivate((SCIP_CONS*)eventdata));
 
    if( (SCIPeventGetType(event) & SCIP_EVENTTYPE_BOUNDRELAXED) != 0 )
    {

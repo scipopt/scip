@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scipdefplugins.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  default SCIP plugins
  * @author Tobias Achterberg
  */
@@ -98,6 +98,7 @@
 #include "scip/heur_lpface.h"
 #include "scip/heur_multistart.h"
 #include "scip/heur_mutation.h"
+#include "scip/heur_mpec.h"
 #include "scip/heur_nlpdiving.h"
 #include "scip/heur_objpscostdiving.h"
 #include "scip/heur_octane.h"
@@ -180,10 +181,9 @@
 #include "scip/sepa_cgmip.h"
 #include "scip/sepa_clique.h"
 #include "scip/sepa_closecuts.h"
-#include "scip/sepa_cmir.h"
+#include "scip/sepa_aggregation.h"
 #include "scip/sepa_convexproj.h"
 #include "scip/sepa_disjunctive.h"
-#include "scip/sepa_flowcover.h"
 #include "scip/sepa_gauge.h"
 #include "scip/sepa_gomory.h"
 #include "scip/sepa_impliedbounds.h"
@@ -197,6 +197,9 @@
 #include "scip/concsolver_scip.h"
 
 #include "nlpi/nlpi_ipopt.h"
+#include "nlpi/nlpi_filtersqp.h"
+#include "nlpi/nlpi_worhp.h"
+#include "nlpi/nlpi_all.h"
 
 #ifdef __cplusplus
 extern "C" {

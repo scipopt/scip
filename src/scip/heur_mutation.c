@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -264,8 +264,8 @@ SCIP_DECL_HEURINIT(heurInitMutation)
    heurdata->usednodes = 0;
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
-         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
+         DEFAULT_RANDSEED) );
 
    return SCIP_OKAY;
 }
@@ -284,7 +284,7 @@ SCIP_DECL_HEUREXIT(heurExitMutation)
    assert(heurdata != NULL);
 
    /* free random number generator */
-   SCIPrandomFree(&heurdata->randnumgen);
+   SCIPfreeRandom(scip, &heurdata->randnumgen);
 
    return SCIP_OKAY;
 }
@@ -398,7 +398,8 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
 
    /* create a problem copy as sub SCIP */
-   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "mutation", fixedvars, fixedvals, nfixedvars, heurdata->uselprows, heurdata->copycuts, &success) );
+   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "mutation", fixedvars, fixedvals, nfixedvars,
+         heurdata->uselprows, heurdata->copycuts, &success, NULL) );
 
    for( i = 0; i < nvars; i++ )
      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
@@ -451,27 +452,22 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
       SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
    }
 
-   /* disable conflict analysis */
-   if( !SCIPisParamFixed(subscip, "conflict/useprop") )
+   /* enable conflict analysis, disable analysis of boundexceeding LPs, and restrict conflict pool */
+   if( !SCIPisParamFixed(subscip, "conflict/enable") )
    {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useprop", FALSE) );
-   }
-   if( !SCIPisParamFixed(subscip, "conflict/useinflp") )
-   {
-      SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useinflp", 'o') );
+      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", TRUE) );
    }
    if( !SCIPisParamFixed(subscip, "conflict/useboundlp") )
    {
       SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useboundlp", 'o') );
    }
-   if( !SCIPisParamFixed(subscip, "conflict/usesb") )
+   if( !SCIPisParamFixed(subscip, "conflict/maxstoresize") )
    {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usesb", FALSE) );
+      SCIP_CALL( SCIPsetIntParam(subscip, "conflict/maxstoresize", 100) );
    }
-   if( !SCIPisParamFixed(subscip, "conflict/usepseudo") )
-   {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) );
-   }
+
+   /* speed up sub-SCIP by not checking dual LP feasibility */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "lp/checkdualfeas", FALSE) );
 
    /* employ a limit on the number of enforcement rounds in the quadratic constraint handlers; this fixes the issue that
     * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
@@ -485,7 +481,6 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    }
 
    /* add an objective cutoff */
-   cutoff = SCIPinfinity(scip);
    assert( !SCIPisInfinity(scip, SCIPgetUpperbound(scip)) );
 
    upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
@@ -513,10 +508,8 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
     */
    if( retcode != SCIP_OKAY )
    {
-#ifndef NDEBUG
-      SCIP_CALL( retcode );
-#endif
       SCIPwarningMessage(scip, "Error while solving subproblem in Mutation heuristic; sub-SCIP terminated with code <%d>\n",retcode);
+      SCIPABORT();
    }
    else
    {

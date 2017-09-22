@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -244,7 +244,7 @@ SCIP_RETCODE SCIPvalidateStpSol(
 #endif
       for(i = 0; i < g->knots; i++)
       {
-         if( g->stp_type == STP_DEG_CONS )
+         if( g->stp_type == STP_DCSTP )
          {
             deg = 0;
             for( e = g->outbeg[i]; e != EAT_LAST ; e = g->oeat[e] )

@@ -3,7 +3,7 @@
 *                  This file is part of the program and library             *
 *         SCIP --- Solving Constraint Integer Programs                      *
 *                                                                           *
-*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
+*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            *
 *                            fuer Informationstechnik Berlin                *
 *                                                                           *
 *  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -81,8 +81,5 @@ running:
 4. To run the program enter "bin/scipmip.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LPS)"
    (e.g. "bin/scipmip.linux.x86.gnu.opt.spx") or "bin/scipmip" which is a link
    to last compiled version
-
-5. To generate the documentation, you need to have doxygen installed, and
-   enter "make doc"
 
 On some machines, you should use gmake instead of make.

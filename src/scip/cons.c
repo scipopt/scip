@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -305,6 +305,7 @@ void checkConssArrays(
       assert(conshdlr->propconss[c]->markpropagate == (c < conshdlr->nmarkedpropconss));
       assert(conshdlr->propconss[c]->markpropagate || (conshdlr->propconss[c]->obsolete == (c >= conshdlr->nusefulpropconss)));
    }
+   assert(conshdlr->nmarkedpropconss <= conshdlr->npropconss);
 }
 #endif
 #endif
@@ -671,6 +672,7 @@ void conshdlrMarkConsPropagate(
    cons->propconsspos = conshdlr->nmarkedpropconss;
 
    conshdlr->nmarkedpropconss++;
+   assert(conshdlr->nmarkedpropconss <= conshdlr->npropconss);
 
    checkConssArrays(conshdlr);
 }
@@ -1264,6 +1266,7 @@ void conshdlrDelPropcons(
    }
    conshdlr->npropconss--;
    cons->propconsspos = -1;
+   assert(conshdlr->nmarkedpropconss <= conshdlr->npropconss);
 
    checkConssArrays(conshdlr);
 }
@@ -3087,7 +3090,6 @@ SCIP_RETCODE SCIPconshdlrEnforceRelaxSol(
    SCIP_Bool lastinfeasible;
 
    assert(conshdlr != NULL);
-   assert(conshdlr->consenforelax != NULL);
    assert(conshdlr->nusefulsepaconss <= conshdlr->nsepaconss);
    assert(conshdlr->nusefulenfoconss <= conshdlr->nenfoconss);
    assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
@@ -3162,6 +3164,8 @@ SCIP_RETCODE SCIPconshdlrEnforceRelaxSol(
       SCIP_Longint oldnprobdomchgs;
       int oldncuts;
       int oldnactiveconss;
+
+      assert(conshdlr->consenforelax != NULL);
 
       SCIPdebugMessage("enforcing constraints %d to %d of %d constraints of handler <%s> (%s relaxation solution)\n",
          firstcons, firstcons + nconss - 1, conshdlr->nenfoconss, conshdlr->name, relaxchanged ? "new" : "old");
@@ -3770,8 +3774,6 @@ SCIP_RETCODE SCIPconshdlrPropagate(
          int nmarkedpropconss;
          int firstcons;
 
-         nmarkedpropconss = conshdlr->nmarkedpropconss;
-
          /* check, if the current domains were already propagated */
          if( !fullpropagation && conshdlr->lastpropdomchgcount == stat->domchgcount )
          {
@@ -3792,6 +3794,8 @@ SCIP_RETCODE SCIPconshdlrPropagate(
          assert(firstcons >= 0);
          assert(firstcons + nconss <= conshdlr->npropconss);
          assert(nusefulconss <= nconss);
+
+         nmarkedpropconss = conshdlr->nmarkedpropconss - firstcons;
 
          /* constraint handlers without constraints should only be called once */
          if( nconss > 0 || fullpropagation
@@ -3834,6 +3838,9 @@ SCIP_RETCODE SCIPconshdlrPropagate(
                SCIPclockStart(conshdlr->sbproptime, set);
             else
                SCIPclockStart(conshdlr->proptime, set);
+
+            assert(nusefulconss <= nconss);
+            assert(nmarkedpropconss <= nconss);
 
             /* call external method */
             SCIP_CALL( conshdlr->consprop(set->scip, conshdlr, conss, nconss, nusefulconss, nmarkedpropconss, proptiming, result) );
@@ -5847,7 +5854,7 @@ SCIP_RETCODE SCIPconsCreate(
  *  mapping the variables of the source SCIP to the variables of the target SCIP; if the copying process was successful
  *  a constraint is created and captured;
  *
- *  @warning If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution
+ *  @warning If a constraint is marked to be checked for feasibility but not to be enforced, an LP or pseudo solution
  *  may be declared feasible even if it violates this particular constraint.
  *  This constellation should only be used, if no LP or pseudo solution can violate the constraint -- e.g. if a
  *  local constraint is redundant due to the variable's local bounds.
@@ -5875,7 +5882,7 @@ SCIP_RETCODE SCIPconsCopy(
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node? */
    SCIP_Bool             global,             /**< create a global or a local copy? */
-   SCIP_Bool*            success             /**< pointer to store whether the copying was successful or not */
+   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
    )
 {
    assert(cons != NULL);
@@ -5885,15 +5892,15 @@ SCIP_RETCODE SCIPconsCopy(
    assert(sourcecons != NULL);
    assert(varmap != NULL);
    assert(consmap != NULL);
-   assert(success != NULL);
+   assert(valid != NULL);
 
    /* if constraint handler does not support copying, success will return false. Constraints handlers have to actively set this to true. */
-   (*success) = FALSE;
+   (*valid) = FALSE;
 
    if( sourceconshdlr->conscopy != NULL )
    {
       SCIP_CALL( sourceconshdlr->conscopy(set->scip, cons, name, sourcescip, sourceconshdlr, sourcecons, varmap, consmap,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, success) );
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, valid) );
    }
 
    return SCIP_OKAY;
@@ -7102,13 +7109,13 @@ SCIP_RETCODE SCIPconsResolvePropagation(
 {
    SCIP_CONSHDLR* conshdlr;
 
+   assert(set != NULL);
    assert(cons != NULL);
    assert((inferboundtype == SCIP_BOUNDTYPE_LOWER
          && SCIPgetVarLbAtIndex(set->scip, infervar, bdchgidx, TRUE) > SCIPvarGetLbGlobal(infervar))
       || (inferboundtype == SCIP_BOUNDTYPE_UPPER
          && SCIPgetVarUbAtIndex(set->scip, infervar, bdchgidx, TRUE) < SCIPvarGetUbGlobal(infervar)));
    assert(result != NULL);
-   assert(set != NULL);
    assert(cons->scip == set->scip);
 
    *result = SCIP_DIDNOTRUN;
@@ -7986,6 +7993,16 @@ SCIP_Bool SCIPconsIsActive(
    assert(cons != NULL);
 
    return cons->updateactivate || (cons->active && !cons->updatedeactivate);
+}
+
+/** returns TRUE iff constraint is active in the current node */
+SCIP_Bool SCIPconsIsUpdatedeactivate(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->updatedeactivate;
 }
 
 /** returns the depth in the tree at which the constraint is valid; returns INT_MAX, if the constraint is local

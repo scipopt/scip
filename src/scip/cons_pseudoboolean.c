@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -616,18 +616,18 @@ SCIP_RETCODE getLinearConsVarsData(
 
       if( coefs != NULL )
       {
-	 lincoefs = SCIPgetValsLinear(scip, cons);
+         lincoefs = SCIPgetValsLinear(scip, cons);
 
-	 for( v = 0; v < *nvars; ++v )
-	 {
-	    vars[v] = linvars[v];
-	    coefs[v] = lincoefs[v];
-	 }
+         for( v = 0; v < *nvars; ++v )
+         {
+            vars[v] = linvars[v];
+            coefs[v] = lincoefs[v];
+         }
       }
       else
       {
-	 for( v = 0; v < *nvars; ++v )
-	    vars[v] = linvars[v];
+         for( v = 0; v < *nvars; ++v )
+            vars[v] = linvars[v];
       }
 
       break;
@@ -639,16 +639,16 @@ SCIP_RETCODE getLinearConsVarsData(
 
       if( coefs != NULL )
       {
-	 for( v = 0; v < *nvars; ++v )
-	 {
-	    vars[v] = linvars[v];
-	    coefs[v] = 1.0;
-	 }
+         for( v = 0; v < *nvars; ++v )
+         {
+            vars[v] = linvars[v];
+            coefs[v] = 1.0;
+         }
       }
       else
       {
-	 for( v = 0; v < *nvars; ++v )
-	    vars[v] = linvars[v];
+         for( v = 0; v < *nvars; ++v )
+            vars[v] = linvars[v];
       }
 
       break;
@@ -662,18 +662,18 @@ SCIP_RETCODE getLinearConsVarsData(
 
       if( coefs != NULL )
       {
-	 weights = SCIPgetWeightsKnapsack(scip, cons);
+         weights = SCIPgetWeightsKnapsack(scip, cons);
 
-	 for( v = 0; v < *nvars; ++v )
-	 {
-	    vars[v] = linvars[v];
-	    coefs[v] = (SCIP_Real) weights[v];
-	 }
+         for( v = 0; v < *nvars; ++v )
+         {
+            vars[v] = linvars[v];
+            coefs[v] = (SCIP_Real) weights[v];
+         }
       }
       else
       {
-	 for( v = 0; v < *nvars; ++v )
-	    vars[v] = linvars[v];
+         for( v = 0; v < *nvars; ++v )
+            vars[v] = linvars[v];
       }
 
       break;
@@ -958,7 +958,7 @@ void checkConsConsistency(
 
    /* get variables and coefficients */
    SCIP_CALL_ABORT( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, vars, coefs, &nvars) );
-   assert(nvars == 0 || (vars != NULL && coefs != NULL));
+   assert(nvars == 0 || (coefs != NULL));
 
    /* calculate all not artificial linear variables and all artificial and-resultants */
    SCIP_CALL_ABORT( getLinVarsAndAndRess(scip, cons, vars, coefs, nvars, linvars, lincoefs, &nlinvars,
@@ -1833,7 +1833,7 @@ SCIP_RETCODE consdataPrint(
 
    /* get variables and coefficient of linear constraint */
    SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, vars, coefs, &nvars) );
-   assert(nvars == 0 || (vars != NULL && coefs != NULL));
+   assert(nvars == 0 || (coefs != NULL));
 
    /* calculate all not artificial linear variables and all artificial and-resultants which will be ordered like the
     * 'consanddatas' such that the and-resultant of the and-constraint is the and-resultant in the 'andress' array
@@ -2417,7 +2417,7 @@ SCIP_RETCODE chgLhs(
 
    /* get variables and coefficient of linear constraint */
    SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, vars, coefs, &nvars) );
-   assert(nvars == 0 || (vars != NULL && coefs != NULL));
+   assert(nvars == 0 || (coefs != NULL));
 
    /* calculate all not artificial linear variables and all artificial and-resultants which will be ordered like the
     * 'consanddatas' such that the and-resultant of the and-constraint is the and-resultant in the 'andress' array
@@ -2590,7 +2590,7 @@ SCIP_RETCODE chgRhs(
 
    /* get variables and coefficient of linear constraint */
    SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, vars, coefs, &nvars) );
-   assert(nvars == 0 || (vars != NULL && coefs != NULL));
+   assert(nvars == 0 || (coefs != NULL));
 
    /* calculate all not artificial linear variables and all artificial and-resultants which will be ordered like the
     * 'consanddatas' such that the and-resultant of the and-constraint is the and-resultant in the 'andress' array
@@ -3434,6 +3434,11 @@ SCIP_RETCODE checkOrigPbCons(
    SCIP_Real activity;
    int c;
 
+   SCIP_Real lhsviol;
+   SCIP_Real rhsviol;
+   SCIP_Real absviol;
+   SCIP_Real relviol;
+
    assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsIsOriginal(cons));
@@ -3469,7 +3474,7 @@ SCIP_RETCODE checkOrigPbCons(
 
    /* get variables and coefficient of linear constraint */
    SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, vars, coefs, &nvars) );
-   assert(nvars == 0 || (vars != NULL && coefs != NULL));
+   assert(nvars == 0 || (coefs != NULL));
 
    /* number of variables should be consistent, number of 'real' linear variables plus number of and-constraints should
     * have to be equal to the number of variables in the linear constraint
@@ -3584,6 +3589,25 @@ SCIP_RETCODE checkOrigPbCons(
       activity += andvalue * andcoefs[c];
    }
    SCIPdebugMsg(scip, "lhs = %g, overall activity = %g, rhs = %g\n", lhs, activity, rhs);
+
+   /* calculate absolute and relative violation */
+   lhsviol = lhs - activity;
+   rhsviol = activity - rhs;
+
+   if(lhsviol > rhsviol)
+   {
+      absviol = lhsviol;
+      relviol = SCIPrelDiff(lhs, activity);
+   }
+   else
+   {
+      absviol = rhsviol;
+      relviol = SCIPrelDiff(activity, rhs);
+   }
+
+   /* update absolute and relative violation of the solution */
+   if( sol != NULL )
+      SCIPupdateSolConsViolation(scip, sol, absviol, relviol);
 
    /* check left hand side for violation */
    if( SCIPisFeasLT(scip, activity, lhs) )
@@ -3821,10 +3845,12 @@ SCIP_RETCODE copyConsPseudoboolean(
       if( *valid )
       {
          SCIP_CONSHDLR* conshdlrand;
-         SCIP_CONS* oldcons;
-         SCIP_Bool validand;
          int c;
          int nsourceandconss;
+         SCIP_HASHTABLE* linconsvarsmap;
+         SCIP_VAR** targetlinvars;
+         SCIP_Real* targetlincoefs;
+         int ntargetlinvars;
 
          conshdlrand = SCIPfindConshdlr(sourcescip, "and");
          assert(conshdlrand != NULL);
@@ -3835,15 +3861,54 @@ SCIP_RETCODE copyConsPseudoboolean(
          SCIP_CALL( SCIPallocBufferArray(sourcescip, &targetandconss, nsourceandconss) );
          SCIP_CALL( SCIPallocBufferArray(sourcescip, &targetandcoefs, nsourceandconss) );
 
+         /* get the number of vars in the copied linear constraint and allocate buffers
+          * for the variables and the coefficients
+          */
+         SCIP_CALL( getLinearConsNVars(targetscip, targetlincons, targetlinconstype, &ntargetlinvars) );
+         SCIP_CALL( SCIPallocBufferArray(sourcescip, &targetlinvars, ntargetlinvars) );
+         SCIP_CALL( SCIPallocBufferArray(sourcescip, &targetlincoefs, ntargetlinvars) );
+
+         /* retrieve the variables of the copied linear constraint */
+         SCIP_CALL( getLinearConsVarsData(targetscip, targetlincons, targetlinconstype,
+                                          targetlinvars, targetlincoefs, &ntargetlinvars) );
+
+         /* now create a hashtable and insert the variables into it, so that it
+          * can be checked in constant time if a variable was removed due to
+          * compressed copying when looping over the and resultants
+          */
+         SCIP_CALL( SCIPhashtableCreate(&linconsvarsmap, SCIPblkmem(targetscip), ntargetlinvars, SCIPvarGetHashkey,
+                                        SCIPvarIsHashkeyEq, SCIPvarGetHashkeyVal, NULL) );
+
+         for( c = 0 ; c < ntargetlinvars; ++c )
+         {
+            SCIP_CALL( SCIPhashtableInsert(linconsvarsmap, targetlinvars[c]) );
+         }
+
+         /* free the buffer arrays that were only required for building the hastable */
+         SCIPfreeBufferArray(sourcescip, &targetlincoefs);
+         SCIPfreeBufferArray(sourcescip, &targetlinvars);
+
          for( c = 0 ; c < nsourceandconss; ++c )
          {
             CONSANDDATA* consanddata;
+            SCIP_CONS* oldcons;
+            SCIP_VAR* targetandresultant;
+            SCIP_Bool validand;
 
             consanddata = sourceconsdata->consanddatas[c];
             assert(consanddata != NULL);
 
             oldcons = consanddata->cons;
             assert(oldcons != NULL);
+
+            targetandresultant = (SCIP_VAR*) SCIPhashmapGetImage(varmap, SCIPgetResultantAnd(sourcescip, oldcons));
+            assert(targetandresultant != NULL);
+
+            /* if compressed copying is active, the resultant might not have been copied by the linear
+             * constraint and we don't need to add it to the pseudo boolean constraint in this case
+             */
+            if( !SCIPhashtableExists(linconsvarsmap, targetandresultant) )
+               continue;
 
             validand = TRUE;
 
@@ -3863,6 +3928,9 @@ SCIP_RETCODE copyConsPseudoboolean(
                ++ntargetandconss;
             }
          }
+
+         SCIPhashtableFree(&linconsvarsmap);
+         assert(ntargetandconss <= ntargetlinvars);
       }
 
       /* no correct pseudoboolean constraint */
@@ -3874,6 +3942,9 @@ SCIP_RETCODE copyConsPseudoboolean(
 
       if( *valid )
       {
+         SCIP_Real targetrhs;
+         SCIP_Real targetlhs;
+
          SCIP_VAR* intvar;
          SCIP_VAR* indvar;
          const char* consname;
@@ -3902,14 +3973,18 @@ SCIP_RETCODE copyConsPseudoboolean(
          else
             consname = SCIPconsGetName(sourcecons);
 
+         /* get new left and right hand sides of copied linear constraint since
+          * they might have changed if compressed copying is used
+          */
+         SCIP_CALL( getLinearConsSides(targetscip, targetlincons, targetlinconstype, &targetlhs, &targetrhs) );
+
          /* create new pseudoboolean constraint */
          SCIP_CALL( SCIPcreateConsPseudobooleanWithConss(targetscip, targetcons, consname,
                targetlincons, targetlinconstype, targetandconss, targetandcoefs, ntargetandconss,
-               indvar, sourceconsdata->weight, sourceconsdata->issoftcons, intvar,
-               sourceconsdata->lhs, sourceconsdata->rhs,
+               indvar, sourceconsdata->weight, sourceconsdata->issoftcons, intvar, targetlhs, targetrhs,
                initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
       }
-      else
+      else if( !SCIPisConsCompressionEnabled(sourcescip) )
       {
          SCIPverbMessage(sourcescip, SCIP_VERBLEVEL_MINIMAL, NULL, "could not copy constraint <%s>\n", SCIPconsGetName(sourcecons));
       }
@@ -3923,13 +3998,11 @@ SCIP_RETCODE copyConsPseudoboolean(
       /* release copied and constraint */
       if( targetandconss != NULL )
       {
-         int nsourceandconss;
          int c;
 
-         nsourceandconss = sourceconsdata->nconsanddatas;
-         assert(ntargetandconss <= nsourceandconss);
+         assert(ntargetandconss <= sourceconsdata->nconsanddatas);
 
-         for( c = 0 ; c < nsourceandconss; ++c )
+         for( c = 0 ; c < ntargetandconss; ++c )
          {
             if( targetandconss[c] != NULL )
             {
@@ -6049,7 +6122,7 @@ SCIP_RETCODE tryUpgradingLogicor(
 
       /* get variables and coefficients */
       SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, allvars, allcoefs, &nallvars) );
-      assert(allvars != NULL && allcoefs != NULL);
+      assert(allcoefs != NULL);
 
       /* calculate all not artificial linear variables */
       SCIP_CALL( getLinVarsAndAndRess(scip, cons, allvars, allcoefs, nallvars, linvars, lincoefs, &nlinvars,
@@ -6385,7 +6458,7 @@ SCIP_RETCODE tryUpgradingLogicor(
 
          /* get variables and coefficients */
          SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, vars, coefs, &nvars) );
-         assert(nvars == 0 || (vars != NULL && coefs != NULL));
+         assert(nvars == 0 || (coefs != NULL));
 
 #ifndef NDEBUG
          /* all coefficients have to be 1 */
@@ -7264,7 +7337,6 @@ SCIP_RETCODE findAggregation(
 	 /* get variables and coefficients */
 	 SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, consvars, conscoefs, &nconsvars) );
 	 assert(nconsvars == consdata->nlinvars + nconsanddatas);
-	 assert(consvars != NULL);
 	 assert(conscoefs != NULL);
 
 #ifndef NDEBUG
@@ -7377,7 +7449,6 @@ SCIP_RETCODE findAggregation(
 	 /* get variables and coefficients */
 	 SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, consvars, conscoefs, &nconsvars) );
 	 assert(nconsvars == consdata->nlinvars + nconsanddatas);
-	 assert(consvars != NULL);
 	 assert(conscoefs != NULL);
 
 #ifndef NDEBUG
@@ -7605,7 +7676,7 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
 
          /* get variables and coefficient of linear constraint */
          SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, vars, coefs, &nvars) );
-         assert(nvars == 0 || (vars != NULL && coefs != NULL));
+         assert(nvars == 0 || (coefs != NULL));
 
          if( consdata->issoftcons && conshdlrdata->decomposeindicatorpbcons )
          {
@@ -8167,7 +8238,7 @@ SCIP_DECL_CONSPRESOL(consPresolPseudoboolean)
 
       /* get variables and coefficient of linear constraint */
       SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, vars, coefs, &nvars) );
-      assert(nvars == 0 || (vars != NULL && coefs != NULL));
+      assert(nvars == 0 || (coefs != NULL));
 
       /* calculate all not artificial linear variables and all artificial and-resultants which will be ordered like the
        * 'consanddatas' such that the and-resultant of the and-constraint is the and-resultant in the 'andress' array

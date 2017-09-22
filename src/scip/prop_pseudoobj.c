@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -314,8 +314,7 @@ SCIP_DECL_HASHKEYEQ(cliqueIsHashkeyEq)
 static
 SCIP_DECL_HASHKEYVAL(cliqueGetHashkeyVal)
 {  /*lint --e{715}*/
-   assert( SCIPcliqueGetId((SCIP_CLIQUE*) key) >= 0 );
-   return (unsigned int) SCIPcliqueGetId((SCIP_CLIQUE*) key);
+   return SCIPcliqueGetId((SCIP_CLIQUE*) key);
 }
 
 /*
@@ -1588,11 +1587,12 @@ SCIP_RETCODE propdataInit(
          int ncliques;
 
          /* create temporary buffer */
-         SCIP_CALL( SCIPallocBufferArray(scip, &contributors, nbinobjvars) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &collectedlbvars, nbinobjvars+1) );
-         BMSclearMemoryArray(collectedlbvars, nbinobjvars+1);
-         SCIP_CALL( SCIPallocBufferArray(scip, &collectedubvars, nbinobjvars+1) );
-         BMSclearMemoryArray(collectedubvars, nbinobjvars+1);
+         /* we store both lb and ub contributors in array contributors, and both could be nbinobjvars, we need twice that size */
+         SCIP_CALL( SCIPallocBufferArray(scip, &contributors, 2 * nbinobjvars) );
+         /* @todo: use SCIPallocCleanBufferArray instead? */
+         SCIP_CALL( SCIPallocClearBufferArray(scip, &collectedlbvars, nbinobjvars+1) );
+         /* @todo: use SCIPallocCleanBufferArray instead? */
+         SCIP_CALL( SCIPallocClearBufferArray(scip, &collectedubvars, nbinobjvars+1) );
 
          ncliques = SCIPgetNCliques(scip);
 
@@ -3026,7 +3026,6 @@ SCIP_Real getMaxObjPseudoactivityResidual(
 
    assert(propdata != NULL);
 
-   contrib = 0.0;
    objval = SCIPvarGetObj(var);
    if( SCIPvarGetWorstBoundType(var) == SCIP_BOUNDTYPE_UPPER )
    {
@@ -3233,7 +3232,7 @@ SCIP_RETCODE propagateLowerbound(
 #endif
 
    /* if the maximum pseudo objective activity is smaller than the lower bound the problem is infeasible */
-   if( SCIPisLT(scip, maxpseudoobjact, lowerbound) )
+   if( SCIPisDualfeasLT(scip, maxpseudoobjact, lowerbound) )
       cutoff = TRUE;
    else
    {

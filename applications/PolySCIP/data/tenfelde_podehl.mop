@@ -1,0 +1,141 @@
+NAME        ./tenfel
+OBJSENSE 
+ MIN
+ROWS
+ N  Obj1_1            
+ N  Obj2_1            
+ N  Obj3_1            
+ E  rows_1            
+ E  rows_2            
+ E  rows_3            
+ E  rows_4            
+ E  col_1             
+ E  col_2             
+ E  col_3             
+ E  col_4             
+COLUMNS
+    MARK0000  'MARKER'                 'INTORG'
+    x#1#1     col_1                1
+    x#1#1     rows_1               1
+    x#1#1     Obj3_1               4
+    x#1#1     Obj2_1               2
+    x#1#1     Obj1_1               3
+    x#1#2     col_2                1
+    x#1#2     rows_1               1
+    x#1#2     Obj3_1               2
+    x#1#2     Obj2_1               3
+    x#1#2     Obj1_1               6
+    x#1#3     col_3                1
+    x#1#3     rows_1               1
+    x#1#3     Obj3_1               4
+    x#1#3     Obj2_1               5
+    x#1#3     Obj1_1               4
+    x#1#4     col_4                1
+    x#1#4     rows_1               1
+    x#1#4     Obj3_1               2
+    x#1#4     Obj2_1               4
+    x#1#4     Obj1_1               5
+    x#2#1     col_1                1
+    x#2#1     rows_2               1
+    x#2#1     Obj3_1               4
+    x#2#1     Obj2_1               5
+    x#2#1     Obj1_1               2
+    x#2#2     col_2                1
+    x#2#2     rows_2               1
+    x#2#2     Obj3_1               2
+    x#2#2     Obj2_1               3
+    x#2#2     Obj1_1               3
+    x#2#3     col_3                1
+    x#2#3     rows_2               1
+    x#2#3     Obj3_1               4
+    x#2#3     Obj2_1               4
+    x#2#3     Obj1_1               5
+    x#2#4     col_4                1
+    x#2#4     rows_2               1
+    x#2#4     Obj3_1               6
+    x#2#4     Obj2_1               3
+    x#2#4     Obj1_1               4
+    x#3#1     col_1                1
+    x#3#1     rows_3               1
+    x#3#1     Obj3_1               4
+    x#3#1     Obj2_1               5
+    x#3#1     Obj1_1               3
+    x#3#2     col_2                1
+    x#3#2     rows_3               1
+    x#3#2     Obj3_1               2
+    x#3#2     Obj2_1               2
+    x#3#2     Obj1_1               5
+    x#3#3     col_3                1
+    x#3#3     rows_3               1
+    x#3#3     Obj3_1               6
+    x#3#3     Obj2_1               6
+    x#3#3     Obj1_1               4
+    x#3#4     col_4                1
+    x#3#4     rows_3               1
+    x#3#4     Obj3_1               3
+    x#3#4     Obj2_1               4
+    x#3#4     Obj1_1               2
+    x#4#1     col_1                1
+    x#4#1     rows_4               1
+    x#4#1     Obj3_1               2
+    x#4#1     Obj2_1               4
+    x#4#1     Obj1_1               4
+    x#4#2     col_2                1
+    x#4#2     rows_4               1
+    x#4#2     Obj3_1               4
+    x#4#2     Obj2_1               5
+    x#4#2     Obj1_1               5
+    x#4#3     col_3                1
+    x#4#3     rows_4               1
+    x#4#3     Obj3_1               5
+    x#4#3     Obj2_1               2
+    x#4#3     Obj1_1               3
+    x#4#4     col_4                1
+    x#4#4     rows_4               1
+    x#4#4     Obj3_1               3
+    x#4#4     Obj2_1               5
+    x#4#4     Obj1_1               6
+    MARK0001  'MARKER'                 'INTEND'
+RHS
+    RHS       rows_1               1
+    RHS       rows_2               1
+    RHS       rows_3               1
+    RHS       rows_4               1
+    RHS       col_1                1
+    RHS       col_2                1
+    RHS       col_3                1
+    RHS       col_4                1
+BOUNDS
+ LO BOUND     x#1#1                0
+ UP BOUND     x#1#1                1
+ LO BOUND     x#1#2                0
+ UP BOUND     x#1#2                1
+ LO BOUND     x#1#3                0
+ UP BOUND     x#1#3                1
+ LO BOUND     x#1#4                0
+ UP BOUND     x#1#4                1
+ LO BOUND     x#2#1                0
+ UP BOUND     x#2#1                1
+ LO BOUND     x#2#2                0
+ UP BOUND     x#2#2                1
+ LO BOUND     x#2#3                0
+ UP BOUND     x#2#3                1
+ LO BOUND     x#2#4                0
+ UP BOUND     x#2#4                1
+ LO BOUND     x#3#1                0
+ UP BOUND     x#3#1                1
+ LO BOUND     x#3#2                0
+ UP BOUND     x#3#2                1
+ LO BOUND     x#3#3                0
+ UP BOUND     x#3#3                1
+ LO BOUND     x#3#4                0
+ UP BOUND     x#3#4                1
+ LO BOUND     x#4#1                0
+ UP BOUND     x#4#1                1
+ LO BOUND     x#4#2                0
+ UP BOUND     x#4#2                1
+ LO BOUND     x#4#3                0
+ UP BOUND     x#4#3                1
+ LO BOUND     x#4#4                0
+ UP BOUND     x#4#4                1
+ENDATA

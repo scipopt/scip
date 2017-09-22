@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_set.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for global SCIP settings
  * @author Tobias Achterberg
  */
@@ -192,6 +193,7 @@ struct SCIP_Set
    SCIP_Bool             conf_usesb;         /**< should infeasible/bound exceeding strong branching conflict analysis be
                                               *   used? */
    SCIP_Bool             conf_usepseudo;     /**< should pseudo solution conflict analysis be used? */
+   SCIP_Bool             conf_prefinfproof;  /**< prefer infeasibility proof to boundexceeding proof */
    SCIP_Bool             conf_preferbinary;  /**< should binary conflicts be preferred? */
    SCIP_Bool             conf_allowlocal;    /**< should conflict constraints be generated that are only valid locally? */
    SCIP_Bool             conf_settlelocal;   /**< should conflict constraints be attached only to the local subtree where
@@ -199,7 +201,7 @@ struct SCIP_Set
    SCIP_Bool             conf_repropagate;   /**< should earlier nodes be repropagated in order to replace branching
                                               *   decisions by deductions? */
    SCIP_Bool             conf_keepreprop;    /**< should constraints be kept for repropagation even if they are too long? */
-   SCIP_Bool             conf_seperate;      /**< should the conflict constraints be separated? */
+   SCIP_Bool             conf_separate;      /**< should the conflict constraints be separated? */
    SCIP_Bool             conf_dynamic;       /**< should the conflict constraints be subject to aging? */
    SCIP_Bool             conf_removable;     /**< should the conflict's relaxations be subject to LP aging and cleanup? */
    SCIP_Real             conf_depthscorefac; /**< score factor for depth level in bound relaxation heuristic */
@@ -227,10 +229,7 @@ struct SCIP_Set
    SCIP_Real             conf_weightsize;    /**< weight of the size of a conflict used in score calculation */
    SCIP_Real             conf_weightrepropdepth;/**< weight of the prepropagtion depth of a conflict used in score calculation */
    SCIP_Real             conf_weightvaliddepth;/**< weight of the valid depth of a conflict used in score calculation */
-   SCIP_Bool             conf_applymir;      /**< apply the MIR function on a dual ray */
-   SCIP_Bool             conf_prefermir;     /**< prefer a ray after applying the MIR function if the proof is still
-                                              *   valid, use both rays otherwise
-                                              */
+   SCIP_Bool             conf_sepaaltproofs;      /**< separate valid inequalities from dualray proofs */
    SCIP_Real             conf_minimprove;    /**< minimal improvement of primal bound to remove conflicts depending on
                                               *   a previous incumbent.
                                               */
@@ -320,7 +319,7 @@ struct SCIP_Set
                                               *   for LP resolve (-1: unlimited) */
    int                   lp_resolveitermin;  /**< minimum number of iterations that are allowed for LP resolve */
    int                   lp_solutionpolishing;/**< LP solution polishing method (0: disabled, 1: only root, 2: always) */
-   SCIP_Bool             lp_persistentscaling;/**< use persistent LP scaling during branch and bound */
+   int                   lp_refactorinterval;/**< LP refactorization interval (0: automatic) */
 
    /* NLP settings */
    SCIP_Bool             nlp_disable;        /**< should the NLP be disabled even if a constraint handler enabled it? */
@@ -357,10 +356,13 @@ struct SCIP_Set
    SCIP_Bool             misc_allowdualreds; /**< should dual reductions in propagation methods and presolver be allowed? */
    SCIP_Bool             misc_allowobjprop;  /**< should propagation to the current objective be allowed in propagation methods? */
    SCIP_Real             misc_referencevalue;/**< objective value for reference purposes */
+#ifdef WITH_DEBUG_SOLUTION
+   char*                 misc_debugsol;      /**< path to a debug solution */
+#endif
 
    /* randomization parameters */
    int                   random_randomseedshift;/**< global shift of all random seeds in the plugins, this will have no impact on the permutation and LP seeds */
-   int                   random_permutationseed;/**< seed value for permuting the problem after the problem was tranformed
+   int                   random_permutationseed;/**< seed value for permuting the problem after reading/transformation
                                                  *   (0: no permutation) */
    int                   random_randomseed;     /**< random seed for LP solver, e.g. for perturbations in the simplex (0: LP default) */
    SCIP_Bool             random_permuteconss;   /**< should order of constraints be permuted (depends on permutationseed)? */
@@ -463,6 +465,10 @@ struct SCIP_Set
    SCIP_Real             sepa_maxbounddist;  /**< maximal relative distance from current node's dual bound to primal bound
                                               *   compared to best node's dual bound for applying separation
                                               *   (0.0: only on current best node, 1.0: on all nodes) */
+   SCIP_Real             sepa_maxlocalbounddist;/**< maximal relative distance from current node's dual bound to primal bound
+                                              *   compared to best node's dual bound for applying local separation
+                                              *   (0.0: only on current best node, 1.0: on all nodes) */
+   SCIP_Real             sepa_maxcoefratio;  /**< maximal ratio between coefficients in strongcg, cmir, and flowcover cuts */
    SCIP_Real             sepa_minefficacy;   /**< minimal efficacy for a cut to enter the LP */
    SCIP_Real             sepa_minefficacyroot; /**< minimal efficacy for a cut to enter the LP in the root node */
    SCIP_Real             sepa_minortho;      /**< minimal orthogonality for a cut to enter the LP */
@@ -486,16 +492,18 @@ struct SCIP_Set
                                               *   loops (-1: no additional restriction) */
    int                   sepa_maxstallrounds;/**< maximal number of consecutive separation rounds without objective
                                               *   or integrality improvement (-1: no additional restriction) */
+   int                   sepa_maxstallroundsroot;/**< maximal number of consecutive separation rounds without objective
+                                              *   or integrality improvement (-1: no additional restriction) */
    int                   sepa_maxcuts;       /**< maximal number of cuts separated per separation round */
    int                   sepa_maxcutsroot;   /**< maximal number of separated cuts at the root node */
    int                   sepa_cutagelimit;   /**< maximum age a cut can reach before it is deleted from the global cut pool */
    int                   sepa_poolfreq;      /**< separation frequency for the global cut pool */
 
    /* parallel settings */
-   int                   parallel_spimode;           /**< the mode for the parallel implementation. 0: opportunistic or
-                                                      *   1: deterministic */
-   int                   parallel_minnthreads;       /**< the minimum number of threads used for parallel code */
-   int                   parallel_maxnthreads;       /**< the maximum number of threads used for parallel code */
+   int                   parallel_mode;      /**< the mode for the parallel implementation. 0: opportunistic or
+                                              *   1: deterministic */
+   int                   parallel_minnthreads;/**< the minimum number of threads used for parallel code */
+   int                   parallel_maxnthreads;/**< the maximum number of threads used for parallel code */
 
    /* concurrent solver settings */
    SCIP_Bool             concurrent_changeseeds;    /**< change the seeds in the different solvers? */

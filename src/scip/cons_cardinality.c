@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -39,6 +39,7 @@
 #include "scip/cons_linear.h"
 #include "scip/cons_knapsack.h"
 #include <string.h>
+#include <ctype.h>
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "cardinality"
@@ -129,11 +130,11 @@ SCIP_RETCODE catchVarEventCardinality(
    assert(consdata != NULL);
    assert(var != NULL);
    assert(indvar != NULL);
-   assert(eventdata != NULL);
    assert(pos >= 0);
 
    /* create event data of indicator variable */
    SCIP_CALL( SCIPallocBlockMemory(scip, eventdata) );
+
    (*eventdata)->consdata = consdata;
    (*eventdata)->var = var;
    (*eventdata)->indvar = indvar;
@@ -2493,8 +2494,11 @@ SCIP_DECL_CONSTRANS(consTransCardinality)
 static
 SCIP_DECL_CONSPRESOL(consPresolCardinality)
 {  /*lint --e{715}*/
+   /* cppcheck-suppress unassignedVariable */
    int oldnfixedvars;
+   /* cppcheck-suppress unassignedVariable */
    int oldndelconss;
+   /* cppcheck-suppress unassignedVariable */
    int oldnupgdconss;
    int nremovedvars;
    SCIP_EVENTHDLR* eventhdlr;
@@ -2508,9 +2512,9 @@ SCIP_DECL_CONSPRESOL(consPresolCardinality)
    SCIPdebugMsg(scip, "Presolving cardinality constraints.\n");
 
    *result = SCIP_DIDNOTRUN;
-   oldnfixedvars = *nfixedvars;
-   oldndelconss = *ndelconss;
-   oldnupgdconss = *nupgdconss;
+   SCIPdebug( oldnfixedvars = *nfixedvars; )
+   SCIPdebug( oldndelconss = *ndelconss; )
+   SCIPdebug( oldnupgdconss = *nupgdconss; )
    nremovedvars = 0;
 
    /* only run if success if possible */
@@ -2716,6 +2720,8 @@ SCIP_DECL_CONSCHECK(consCheckCardinality)
                   }
                   SCIPinfoMessage(scip, NULL, "\n");
                }
+               if( sol != NULL )
+                  SCIPupdateSolConsViolation(scip, sol, 1.0, 1.0);
                return SCIP_OKAY;
             }
          }
@@ -2847,7 +2853,6 @@ SCIP_DECL_CONSPRINT(consPrintCardinality)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   SCIPinfoMessage(scip, file, "card( ");
    for( j = 0; j < consdata->nvars; ++j )
    {
       if( j > 0 )
@@ -2858,7 +2863,7 @@ SCIP_DECL_CONSPRINT(consPrintCardinality)
       else
          SCIPinfoMessage(scip, file, " (%3.2f)", consdata->weights[j]);
    }
-   SCIPinfoMessage(scip, file, ") <= %d", consdata->cardval);
+   SCIPinfoMessage(scip, file, " <= %d", consdata->cardval);
 
    return SCIP_OKAY;
 }
@@ -2939,6 +2944,91 @@ SCIP_DECL_CONSCOPY(consCopyCardinality)
    SCIPfreeBufferArray(sourcescip, &targetindvars);
    SCIPfreeBufferArray(sourcescip, &targetvars);
 
+   return SCIP_OKAY;
+}
+
+/** constraint parsing method of constraint handler */
+static
+SCIP_DECL_CONSPARSE(consParseCardinality)
+{  /*lint --e{715}*/
+   SCIP_VAR* var;
+   SCIP_Real weight;
+   int cardval;
+   const char* s;
+   char* t;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert(cons != NULL);
+   assert(success != NULL);
+
+   *success = TRUE;
+   s = str;
+
+   /* create empty cardinality constraint */
+   SCIP_CALL( SCIPcreateConsCardinality(scip, cons, name, 0, NULL, 0, NULL, NULL, initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
+
+   /* loop through string */
+   do
+   {
+      /* parse variable name */
+      SCIP_CALL( SCIPparseVarName(scip, s, &var, &t) );
+      s = t;
+
+      /* skip until beginning of weight */
+      while ( *s != '\0' && *s != '(' )
+         ++s;
+ 
+      if ( *s == '\0' )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: expected weight at input: %s\n", s);
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
+      /* skip '(' */
+      ++s;
+
+      /* find weight */
+      weight = strtod(s, &t);
+      if ( t == NULL )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error during parsing of the weight: %s\n", s);
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
+      s = t;
+
+      /* skip white space, ',', and ')' */
+      while ( *s != '\0' && ( isspace((unsigned char)*s) ||  *s == ',' || *s == ')' ) )
+         ++s;
+
+      /* add variable */
+      SCIP_CALL( SCIPaddVarCardinality(scip, *cons, var, NULL, weight) );
+
+      /* check if there is a '<=' */
+      if ( *s == '<' && *s+1 == '='  )
+      {
+         s = s + 2;
+
+         /* skip white space */
+         while ( isspace((unsigned char)*s) )
+            ++s;
+
+         cardval = (int)strtod(s, &t);
+         if ( t == NULL )
+         {
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error during parsing of the cardinality restriction value: %s\n", s);
+            *success = FALSE;
+            return SCIP_OKAY;
+         }
+         s = t;
+              
+         SCIP_CALL( SCIPchgCardvalCardinality(scip, *cons, cardval));
+      }
+   }
+   while ( *s != '\0' );
+  
    return SCIP_OKAY;
 }
 
@@ -3137,6 +3227,7 @@ SCIP_RETCODE SCIPincludeConshdlrCardinality(
    SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsCardinality) );
    SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsCardinality) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpCardinality) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseCardinality) );
    SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolCardinality, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintCardinality) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropCardinality, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
@@ -3148,11 +3239,11 @@ SCIP_RETCODE SCIPincludeConshdlrCardinality(
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxCardinality) );
 
    /* add cardinality constraint handler parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/branchbalanced",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/branchbalanced",
          "whether to use balanced instead of unbalanced branching",
          &conshdlrdata->branchbalanced, TRUE, DEFAULT_BRANCHBALANCED, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/balanceddepth",
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/balanceddepth",
          "maximum depth for using balanced branching (-1: no limit)",
          &conshdlrdata->balanceddepth, TRUE, DEFAULT_BALANCEDDEPTH, -1, INT_MAX, NULL, NULL) );
 

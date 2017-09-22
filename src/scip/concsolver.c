@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -33,6 +33,7 @@
 #include "scip/struct_scip.h"
 #include "blockmemshell/memory.h"
 #include "scip/syncstore.h"
+#include "scip/boundstore.h"
 #include "scip/clock.h"
 
 
@@ -178,8 +179,18 @@ SCIP_RETCODE SCIPconcsolverCreateInstance(
    /* initialize synchronization fields */
    (*concsolver)->nsyncs = 0;
    (*concsolver)->syncdelay = 0.0;
+
+   /* in deterministic mode use number of nonzeros and variables to get a good initial synchronization frequency
+    * in opportunistic mode use the frequency as set by the user
+    */
+   if( set->parallel_mode == (int) SCIP_PARA_DETERMINISTIC )
+      (*concsolver)->syncfreq = 0.01 * set->scip->stat->nnz * SCIPgetNVars(set->scip) * set->concurrent_freqinit;
+   else
+      (*concsolver)->syncfreq = set->concurrent_freqinit;
+
    (*concsolver)->syncdata = NULL;
 
+   SCIPdebugMessage("concsolver %s initialized sync freq to %f\n", (*concsolver)->name, (*concsolver)->syncfreq);
    /* register concurrent solver */
    (*concsolver)->idx = SCIPgetNConcurrentSolvers(set->scip);
    SCIP_CALL( concsolvertype->concsolvercreateinst(set->scip, concsolvertype, *concsolver) );
@@ -265,6 +276,10 @@ SCIP_RETCODE SCIPconcsolverExec(
    assert(concsolver->type != NULL);
    assert(concsolver->type->concsolverexec != NULL);
 
+   /* set the stopped flag to false */
+   concsolver->stopped = FALSE;
+
+   /* then call the execute callback */
    SCIP_CALL( concsolver->type->concsolverexec(concsolver, &concsolver->solvingtime, &concsolver->nlpiterations, &concsolver->nnodes) );
 
    return SCIP_OKAY;
@@ -294,6 +309,9 @@ SCIP_RETCODE SCIPconcsolverStop(
 
    SCIP_CALL( concsolver->type->concsolverstop(concsolver) );
 
+   /* set the stopped flag to true */
+   concsolver->stopped = TRUE;
+
    return SCIP_OKAY;
 }
 
@@ -307,7 +325,6 @@ SCIP_RETCODE SCIPconcsolverSync(
 {
    SCIP_SYNCDATA*   syncdata;
    SCIP_SYNCSTORE*  syncstore;
-   int              nsynced;
    int              nsols;
    int              ntighterintbnds;
    int              ntighterbnds;
@@ -317,6 +334,9 @@ SCIP_RETCODE SCIPconcsolverSync(
    assert(concsolver->type != NULL);
    assert(concsolver->type->concsolversyncwrite != NULL);
    assert(concsolver->type->concsolversyncread != NULL);
+
+   if( concsolver->stopped )
+      return SCIP_OKAY;
 
    SCIP_CALL( SCIPstartClock(set->scip, concsolver->totalsynctime) );
 
@@ -340,20 +360,9 @@ SCIP_RETCODE SCIPconcsolverSync(
 
    if( SCIPsyncdataGetStatus(syncdata) != SCIP_STATUS_UNKNOWN )
    {
-      SCIP_CALL( SCIPsyncstoreFinishSync(syncstore, &syncdata) );
-      ++concsolver->nsyncs;
       SCIP_CALL( SCIPconcsolverStop(concsolver) );
-      SCIP_CALL( SCIPstopClock(set->scip, concsolver->totalsynctime) );
-      return SCIP_OKAY;
    }
-
-   nsynced = SCIPsyncdataGetNSynced(syncdata);
-
-   if( concsolver->nsyncs == 0 )
-   {
-      SCIPsyncstoreInitSyncTiming(syncstore, concsolver->timesincelastsync);
-   }
-   else if( nsynced == SCIPsyncstoreGetNSolvers(syncstore) - 1 )
+   else if( SCIPsyncdataGetNSynced(syncdata) == SCIPsyncstoreGetNSolvers(syncstore) - 1 )
    {
       /* if this is the last concurrent solver that is synchronizing for this synchronization data
        * it will adjust the synchronization frequency using the progress on the gap
@@ -369,72 +378,72 @@ SCIP_RETCODE SCIPconcsolverSync(
       SCIP_Real newsyncfreq;
       SCIP_SYNCDATA* prevsync;
 
-      prevsync = SCIPsyncstoreGetSyncdata(syncstore, concsolver->nsyncs - 1);
-      assert(SCIPsyncdataGetNSynced(prevsync) == SCIPsyncstoreGetNSolvers(syncstore));
-
-      prevub = SCIPsyncdataGetUpperbound(prevsync);
-      prevlb = SCIPsyncdataGetLowerbound(prevsync);
-      newub = SCIPsyncdataGetUpperbound(syncdata);
-      newlb = SCIPsyncdataGetLowerbound(syncdata);
-      lbok = prevlb > SCIPsetInfinity(set);
-      ubok = prevub < SCIPsetInfinity(set);
-
-      if( lbok && ubok )
-         progress = SCIPrelDiff(prevub - prevlb, newub - newlb);
-      else if( lbok )
-         progress = SCIPrelDiff(newlb, prevlb);
-      else if( ubok )
-         progress = SCIPrelDiff(prevub, newub);
-      else if( SCIPsetIsInfinity(set, -newlb) && SCIPsetIsInfinity(set, newub) )
-         progress = 0.0;
+      if( concsolver->nsyncs == 0 )
+      {
+         SCIPsyncdataSetSyncFreq(syncstore, syncdata, concsolver->syncfreq);
+      }
       else
-         progress = 1.0;
+      {
+         prevsync = SCIPsyncstoreGetSyncdata(syncstore, concsolver->nsyncs - 1);
+         assert(SCIPsyncdataGetNSynced(prevsync) == SCIPsyncstoreGetNSolvers(syncstore));
 
-      /* should not be negative */
-      assert(SCIPsetIsGE(set, progress, 0.0));
+         prevub = SCIPsyncdataGetUpperbound(prevsync);
+         prevlb = SCIPsyncdataGetLowerbound(prevsync);
+         newub = SCIPsyncdataGetUpperbound(syncdata);
+         newlb = SCIPsyncdataGetLowerbound(syncdata);
+         lbok = prevlb > -SCIPsetInfinity(set);
+         ubok = prevub < SCIPsetInfinity(set);
 
-      if( progress < 0.5 * set->concurrent_targetprogress )
-         freqfactor = set->concurrent_freqfactor;
-      else if( progress > 2 * set->concurrent_targetprogress )
-         freqfactor = 0.5 + 0.5 / set->concurrent_freqfactor;
-      else
-         freqfactor = 1.0;
+         if( lbok && ubok )
+            progress = SCIPrelDiff(prevub - prevlb, newub - newlb);
+         else if( lbok )
+            progress = SCIPrelDiff(newlb, prevlb);
+         else if( ubok )
+            progress = SCIPrelDiff(prevub, newub);
+         else if( !SCIPsetIsInfinity(set, -newlb) || !SCIPsetIsInfinity(set, newub) ||
+                  SCIPboundstoreGetNChgs(SCIPsyncdataGetBoundChgs(syncdata)) > 0 )
+            progress = set->concurrent_targetprogress;
+         else
+            progress = 0.0;
 
-      newsyncfreq = SCIPsyncdataGetSyncFreq(prevsync) * freqfactor;
-      SCIPsyncdataSetSyncFreq(syncstore, syncdata, newsyncfreq);
-      SCIPdebugMessage("new syncfreq is %g\n", SCIPsyncdataGetSyncFreq(syncdata));
+         /* should not be negative */
+         assert(SCIPsetIsGE(set, progress, 0.0));
+
+         if( progress < 0.5 * set->concurrent_targetprogress )
+            freqfactor = set->concurrent_freqfactor;
+         else if( progress > 2 * set->concurrent_targetprogress )
+            freqfactor = 0.5 + 0.5 / set->concurrent_freqfactor;
+         else
+            freqfactor = 1.0;
+
+         SCIPdebugMessage("syncfreq is %g and freqfactor is %f due to progress %f\n", concsolver->syncfreq, freqfactor, progress);
+         newsyncfreq = concsolver->syncfreq * freqfactor;
+         SCIPsyncdataSetSyncFreq(syncstore, syncdata, newsyncfreq);
+         SCIPdebugMessage("new syncfreq is %g\n", SCIPsyncdataGetSyncFreq(syncdata));
+      }
    }
+
+   SCIPdebugMessage("concsolver %s finishing sync %lli\n", concsolver->name, concsolver->nsyncs);
 
    SCIP_CALL( SCIPsyncstoreFinishSync(syncstore, &syncdata) );
    ++concsolver->nsyncs;
 
-   if( concsolver->nsyncs == 1 )
+   concsolver->syncdelay += concsolver->timesincelastsync;
+
+   syncdata = SCIPsyncstoreGetNextSyncdata(syncstore, concsolver->syncdata, concsolver->syncfreq, concsolver->nsyncs, &concsolver->syncdelay);
+
+   while( syncdata != NULL )
    {
-      syncdata = SCIPsyncstoreGetSyncdata(syncstore, 0);
       SCIP_CALL( SCIPsyncstoreEnsureAllSynced(syncstore, syncdata) );
       concsolver->syncdata = syncdata;
       SCIP_CALL( concsolvertype->concsolversyncread(concsolver, syncstore, syncdata, &nsols, &ntighterbnds, &ntighterintbnds) );
       concsolver->ntighterbnds += ntighterbnds;
       concsolver->ntighterintbnds += ntighterintbnds;
       concsolver->nsolsrecvd += nsols;
-   }
-   else
-   {
-      assert(concsolver->syncdata != NULL);
-      concsolver->syncdelay += concsolver->timesincelastsync;
-
-      syncdata = SCIPsyncstoreGetNextSyncdata(syncstore, concsolver->syncdata, concsolver->nsyncs, &concsolver->syncdelay);
-
-      while( syncdata != NULL )
-      {
-         SCIP_CALL( SCIPsyncstoreEnsureAllSynced(syncstore, syncdata) );
-         concsolver->syncdata = syncdata;
-         SCIP_CALL( concsolvertype->concsolversyncread(concsolver, syncstore, syncdata, &nsols, &ntighterbnds, &ntighterintbnds) );
-         concsolver->ntighterbnds += ntighterbnds;
-         concsolver->ntighterintbnds += ntighterintbnds;
-         concsolver->nsolsrecvd += nsols;
-         syncdata = SCIPsyncstoreGetNextSyncdata(syncstore, concsolver->syncdata, concsolver->nsyncs, &concsolver->syncdelay);
-      }
+      SCIPdebugMessage("syncfreq before reading the next syncdata is %g\n", concsolver->syncfreq);
+      concsolver->syncfreq = SCIPsyncdataGetSyncFreq(concsolver->syncdata);
+      SCIPdebugMessage("syncfreq after reading the next syncdata is %g\n", concsolver->syncfreq);
+      syncdata = SCIPsyncstoreGetNextSyncdata(syncstore, concsolver->syncdata, concsolver->syncfreq, concsolver->nsyncs, &concsolver->syncdelay);
    }
 
    SCIP_CALL( SCIPstopClock(set->scip, concsolver->totalsynctime) );
@@ -449,7 +458,7 @@ SCIP_Real SCIPconcsolverGetSyncFreq(
 {
    assert(concsolver != NULL);
 
-   return concsolver->syncdata != NULL ? SCIPsyncdataGetSyncFreq(concsolver->syncdata) : 0.0;
+   return concsolver->syncfreq;
 }
 
 /** gets the total memory used by the concurent solver */

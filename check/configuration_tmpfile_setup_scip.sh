@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -111,7 +111,7 @@ if test "$VISUALIZE" = true
 then
     BAKFILENAME="`basename $TMPFILE .tmp`.dat"
     echo visualization output set to "$BAKFILENAME"
-    echo set visual bakfilename "results/${BAKFILENAME}" >> $TMPFILE
+    echo set visual bakfilename "$OUTPUTDIR/${BAKFILENAME}" >> $TMPFILE
 fi
 
 if test "$REOPT" = false

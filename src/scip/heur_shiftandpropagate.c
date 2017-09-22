@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -384,7 +384,6 @@ void transformVariable(
    lb = SCIPvarGetLbLocal(var);
    ub = SCIPvarGetUbLocal(var);
 
-   deltashift = 0.0;
    negatecoeffs = FALSE;
    /* if both lower and upper bound are -infinity and infinity, resp., this is reflected by a free transform status.
     * If the lower bound is already zero, this is reflected by identity transform status. In both cases, none of the
@@ -1165,6 +1164,8 @@ SCIP_RETCODE updateTransformation(
 
          if( !SCIPisInfinity(scip, -lb) )
             matrix->upperbounds[varindex] = ub - lb;
+         else
+            matrix->upperbounds[varindex] = SCIPinfinity(scip);
       }
       break;
    case TRANSFORMSTATUS_FREE:
@@ -1305,12 +1306,12 @@ SCIP_DECL_HEUREXIT(heurExitShiftandpropagate)
    assert(heurdata != NULL);
 
    /* free random number generator */
-   SCIPrandomFree(&heurdata->randnumgen);
+   SCIPfreeRandom(scip, &heurdata->randnumgen);
 
    /* if statistic mode is enabled, statistics are printed to console */
    SCIPstatistic(
       SCIPstatisticMessage(
-         "  DETAILS                    :  %d violations left, %d probing status, %d redundant rows\n",
+         "  DETAILS                    :  %d violations left, %d probing status\n",
          heurdata->nremainingviols,
          heurdata->lpsolstat
          );
@@ -1339,8 +1340,8 @@ SCIP_DECL_HEURINIT(heurInitShiftandpropagate)
    assert(heurdata != NULL);
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
-         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
+         DEFAULT_RANDSEED) );
 
    SCIPstatistic(
       heurdata->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
@@ -1856,7 +1857,6 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       SCIP_Real origsolval;
       SCIP_Real lb;
       SCIP_Real ub;
-      TRANSFORMSTATUS status;
       int nviolations;
       int permutedvarindex;
       int j;
@@ -1901,10 +1901,8 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          SCIP_CALL( updateTransformation(scip, matrix, heurdata, permutedvarindex,lb, ub, violatedrows, violatedrowpos,
                &nviolatedrows) );
 
-      status = matrix->transformstatus[permutedvarindex];
-
       SCIPdebugMsg(scip, "Variable %s with local bounds [%g,%g], status <%d>, matrix bound <%g>\n",
-         SCIPvarGetName(var), lb, ub, status, matrix->upperbounds[permutedvarindex]);
+         SCIPvarGetName(var), lb, ub, matrix->transformstatus[permutedvarindex], matrix->upperbounds[permutedvarindex]);
 
       /* ignore variable if propagation fixed it (lb and ub will be zero) */
       if( SCIPisFeasZero(scip, matrix->upperbounds[permutedvarindex]) )
@@ -2221,13 +2219,17 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
        */
       if( trysol )
       {
-         SCIP_Bool printreason = FALSE;
-         SCIP_Bool completely = FALSE;
+         SCIP_Bool printreason;
+         SCIP_Bool completely;
 #ifdef SCIP_DEBUG
          printreason = TRUE;
+#else
+         printreason = FALSE;
 #endif
 #ifndef NDEBUG
          completely = TRUE; /*lint !e838*/
+#else
+         completely = FALSE;
 #endif
 
          /* we once also checked the variable bounds which should not be necessary */

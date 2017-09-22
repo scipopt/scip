@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -23,7 +23,7 @@ fi
 
 OUTFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.out
 ERRFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.err
-TMPFILE=$SOLVERPATH/results/$BASENAME.tmp
+TMPFILE=$SOLVERPATH/$OUTPUTDIR/$BASENAME.tmp
 uname -a                            > $OUTFILE
 uname -a                            > $ERRFILE
 echo "hard time limit: $HARDTIMELIMIT">>$OUTFILE
@@ -44,10 +44,10 @@ date                                >> $ERRFILE
 echo                                >> $OUTFILE
 echo =ready=                        >> $OUTFILE
 
-mv $OUTFILE $SOLVERPATH/results/$BASENAME.out
-mv $ERRFILE $SOLVERPATH/results/$BASENAME.err
+mv $OUTFILE $SOLVERPATH/$OUTPUTDIR/$BASENAME.out
+mv $ERRFILE $SOLVERPATH/$OUTPUTDIR/$BASENAME.err
 
 rm -f $TMPFILE
 #chmod g+r $ERRFILE
-#chmod g+r $SCIPPATH/results/$BASENAME.out
-#chmod g+r $SCIPPATH/results/$BASENAME.set
+#chmod g+r $SCIPPATH/$OUTPUTDIR/$BASENAME.out
+#chmod g+r $SCIPPATH/$OUTPUTDIR/$BASENAME.set

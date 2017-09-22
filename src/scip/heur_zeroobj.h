@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -31,21 +31,31 @@
 extern "C" {
 #endif
 
+/** creates the zeroobj primal heuristic and includes it in SCIP
+ *
+ *  @ingroup PrimalHeuristicIncludes
+ */
+EXTERN
+SCIP_RETCODE SCIPincludeHeurZeroobj(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/**@addtogroup PRIMALHEURISTICS
+ *
+ * @{
+ */
+
 /** main procedure of the zeroobj heuristic, creates and solves a sub-SCIP */
 EXTERN
 SCIP_RETCODE SCIPapplyZeroobj(
    SCIP*                 scip,               /**< original SCIP data structure                                        */
    SCIP_HEUR*            heur,               /**< heuristic data structure                                            */
    SCIP_RESULT*          result,             /**< result data structure                                               */
-   SCIP_Real             minimprove,         /**< factor by which zeroobj should at least improve the incumbent          */
+   SCIP_Real             minimprove,         /**< factor by which zeroobj should at least improve the incumbent       */
    SCIP_Longint          nnodes              /**< node limit for the subproblem                                       */
    );
 
-/** creates the zeroobj primal heuristic and includes it in SCIP */
-EXTERN
-SCIP_RETCODE SCIPincludeHeurZeroobj(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
+/* @} */
 
 #ifdef __cplusplus
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -35,38 +35,40 @@
 #define BRANCHRULE_MAXDEPTH      -1
 #define BRANCHRULE_MAXBOUNDDIST  1.0
 
-#define DEFAULT_CONFLICTWEIGHT   0.01   /**< weight in score calculations for conflict score */
-#define DEFAULT_CONFLENGTHWEIGHT 0.0    /**< weight in score calculations for conflict length score*/
-#define DEFAULT_INFERENCEWEIGHT  0.0001 /**< weight in score calculations for inference score */
-#define DEFAULT_CUTOFFWEIGHT     0.0001 /**< weight in score calculations for cutoff score */
-#define DEFAULT_PSCOSTWEIGHT     1.0    /**< weight in score calculations for pseudo cost score */
-#define DEFAULT_NLSCOREWEIGHT    0.1    /**< weight in score calculations for nlcount score */
-#define DEFAULT_MINRELIABLE      1.0    /**< minimal value for minimum pseudo cost size to regard pseudo cost value as reliable */
-#define DEFAULT_MAXRELIABLE      5.0    /**< maximal value for minimum pseudo cost size to regard pseudo cost value as reliable */
-#define DEFAULT_SBITERQUOT       0.5    /**< maximal fraction of strong branching LP iterations compared to normal iterations */
-#define DEFAULT_SBITEROFS   100000      /**< additional number of allowed strong branching LP iterations */
-#define DEFAULT_MAXLOOKAHEAD     9      /**< maximal number of further variables evaluated without better score */
-#define DEFAULT_INITCAND       100      /**< maximal number of candidates initialized with strong branching per node */
-#define DEFAULT_INITITER         0      /**< iteration limit for strong branching initialization of pseudo cost entries (0: auto) */
-#define DEFAULT_MAXBDCHGS        5      /**< maximal number of bound tightenings before the node is reevaluated (-1: unlimited) */
-#define DEFAULT_MAXPROPROUNDS   -2      /**< maximum number of propagation rounds to be performed during strong branching
-                                         *   before solving the LP (-1: no limit, -2: parameter settings) */
-#define DEFAULT_PROBINGBOUNDS    TRUE   /**< should valid bounds be identified in a probing-like fashion during strong
-                                         *   branching (only with propagation)? */
+#define DEFAULT_CONFLICTWEIGHT   0.01        /**< weight in score calculations for conflict score */
+#define DEFAULT_CONFLENGTHWEIGHT 0.0         /**< weight in score calculations for conflict length score*/
+#define DEFAULT_INFERENCEWEIGHT  0.0001      /**< weight in score calculations for inference score */
+#define DEFAULT_CUTOFFWEIGHT     0.0001      /**< weight in score calculations for cutoff score */
+#define DEFAULT_PSCOSTWEIGHT     1.0         /**< weight in score calculations for pseudo cost score */
+#define DEFAULT_NLSCOREWEIGHT    0.1         /**< weight in score calculations for nlcount score */
+#define DEFAULT_MINRELIABLE      1.0         /**< minimal value for minimum pseudo cost size to regard pseudo cost value as reliable */
+#define DEFAULT_MAXRELIABLE      5.0         /**< maximal value for minimum pseudo cost size to regard pseudo cost value as reliable */
+#define DEFAULT_SBITERQUOT       0.5         /**< maximal fraction of strong branching LP iterations compared to normal iterations */
+#define DEFAULT_SBITEROFS        100000      /**< additional number of allowed strong branching LP iterations */
+#define DEFAULT_MAXLOOKAHEAD     9           /**< maximal number of further variables evaluated without better score */
+#define DEFAULT_INITCAND         100         /**< maximal number of candidates initialized with strong branching per node */
+#define DEFAULT_INITITER         0           /**< iteration limit for strong branching initialization of pseudo cost entries (0: auto) */
+#define DEFAULT_MAXBDCHGS        5           /**< maximal number of bound tightenings before the node is reevaluated (-1: unlimited) */
+#define DEFAULT_MAXPROPROUNDS   -2           /**< maximum number of propagation rounds to be performed during strong branching
+                                              *   before solving the LP (-1: no limit, -2: parameter settings) */
+#define DEFAULT_PROBINGBOUNDS    TRUE        /**< should valid bounds be identified in a probing-like fashion during strong
+                                              *   branching (only with propagation)? */
 #define DEFAULT_USERELERRORFORRELIABILITY FALSE /**< should reliability be based on relative errors? */
-#define DEFAULT_LOWERRORTOL 0.05   /**< lowest tolerance beneath which relative errors are reliable */
-#define DEFAULT_HIGHERRORTOL 1.0   /**< highest tolerance beneath which relative errors are reliable */
+#define DEFAULT_LOWERRORTOL      0.05        /**< lowest tolerance beneath which relative errors are reliable */
+#define DEFAULT_HIGHERRORTOL     1.0         /**< highest tolerance beneath which relative errors are reliable */
 #define DEFAULT_USEHYPTESTFORRELIABILITY FALSE /**< should the strong branching decision be based on a hypothesis test? */
-#define DEFAULT_USEDYNAMICCONFIDENCE FALSE /**< should the confidence level be adjusted dynamically? */
-#define DEFAULT_STORESEMIINITCOSTS FALSE /**< should strong branching result be considered for pseudo costs if the other direction was infeasible? */
-#define DEFAULT_USESBLOCALINFO FALSE    /**< should the scoring function use only local cutoff and inference information obtained for strong branching candidates? */
-#define DEFAULT_CONFIDENCELEVEL 2       /**< The confidence level for statistical methods, between 0 (Min) and 4 (Max). */
-#define DEFAULT_SKIPBADINITCANDS TRUE  /**< should branching rule skip candidates that have a low probability to be
-                                          *  better than the best strong-branching or pseudo-candidate? */
-#define DEFAULT_STARTRANDSEED      5    /**< start random seed for random number generation */
-#define DEFAULT_RANDINITORDER  FALSE    /**< should slight perturbation of scores be used to break ties in the prior scores? */
-#define DEFAULT_USESMALLWEIGHTSITLIM FALSE /**< should smaller weights be used for pseudo cost updates after hitting the LP iteration limit? */
-#define DEFAULT_DYNAMICWEIGHTS TRUE     /**< should the weights of the branching rule be adjusted dynamically during solving based infeasible and objective leaf counters? */
+#define DEFAULT_USEDYNAMICCONFIDENCE FALSE   /**< should the confidence level be adjusted dynamically? */
+#define DEFAULT_STORESEMIINITCOSTS FALSE     /**< should strong branching result be considered for pseudo costs if the other direction was infeasible? */
+#define DEFAULT_USESBLOCALINFO   FALSE       /**< should the scoring function use only local cutoff and inference information obtained for strong branching candidates? */
+#define DEFAULT_CONFIDENCELEVEL  2           /**< The confidence level for statistical methods, between 0 (Min) and 4 (Max). */
+#define DEFAULT_SKIPBADINITCANDS TRUE        /**< should branching rule skip candidates that have a low probability to be
+                                              *  better than the best strong-branching or pseudo-candidate? */
+#define DEFAULT_STARTRANDSEED    5           /**< start random seed for random number generation */
+#define DEFAULT_RANDINITORDER    FALSE       /**< should slight perturbation of scores be used to break ties in the prior scores? */
+#define DEFAULT_USESMALLWEIGHTSITLIM FALSE   /**< should smaller weights be used for pseudo cost updates after hitting the LP iteration limit? */
+#define DEFAULT_DYNAMICWEIGHTS   TRUE        /**< should the weights of the branching rule be adjusted dynamically during solving based
+                                              *   infeasible and objective leaf counters? */
+
 /** branching rule data */
 struct SCIP_BranchruleData
 {
@@ -112,9 +114,7 @@ struct SCIP_BranchruleData
  * local methods
  */
 
-/** return probindex of variable or corresponding active variable (if negated or aggregated) or -1 (if
- *  multiaggregated)
- */
+/** return probindex of variable or corresponding active variable (if negated or aggregated) or -1 (if multiaggregated) */
 static
 SCIP_RETCODE binvarGetActiveProbindex(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -545,7 +545,7 @@ SCIP_RETCODE execRelpscost(
    {
       /* only one candidate: nothing has to be done */
       bestcand = 0;
-      ninitcands = 0;
+      SCIPdebug(ninitcands = 0);
    }
    else
    {
@@ -1494,8 +1494,8 @@ SCIP_DECL_BRANCHINITSOL(branchInitsolRelpscost)
    assert(branchruledata->startrandseed >= 0);
 
    /* create a random number generator */
-   SCIP_CALL( SCIPrandomCreate(&branchruledata->randnumgen, SCIPblkmem(scip),
-         SCIPinitializeRandomSeed(scip, branchruledata->startrandseed)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &branchruledata->randnumgen,
+         branchruledata->startrandseed) );
 
    return SCIP_OKAY;
 }
@@ -1512,7 +1512,7 @@ SCIP_DECL_BRANCHEXITSOL(branchExitsolRelpscost)
    SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->nlcount, branchruledata->nlcountsize);
 
    /* free random number generator */
-   SCIPrandomFree(&branchruledata->randnumgen);
+   SCIPfreeRandom(scip, &branchruledata->randnumgen);
 
    return SCIP_OKAY;
 }
@@ -1536,6 +1536,14 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
    assert(result != NULL);
 
    SCIPdebugMsg(scip, "Execlp method of relpscost branching in node %llu\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
+
+   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+   {
+      *result = SCIP_DIDNOTRUN;
+      SCIPdebugMsg(scip, "Could not apply relpscost branching, as the current LP was not solved to optimality.\n");
+
+      return SCIP_OKAY;
+   }
 
    /* get branching candidates */
    SCIP_CALL( SCIPgetLPBranchCands(scip, &tmplpcands, &tmplpcandssol, &tmplpcandsfrac, NULL, &nlpcands, NULL) );

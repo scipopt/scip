@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -94,6 +94,7 @@ SCIP_DECL_PRESOLCOPY(presolCopyBoundshift)
 
 
 /** destructor of presolver to free user data (called when SCIP is exiting) */
+/**! [SnippetPresolFreeBoundshift] */
 static
 SCIP_DECL_PRESOLFREE(presolFreeBoundshift)
 {  /*lint --e{715}*/   
@@ -108,6 +109,7 @@ SCIP_DECL_PRESOLFREE(presolFreeBoundshift)
 
    return SCIP_OKAY;
 }
+/**! [SnippetPresolFreeBoundshift] */
 
 
 /** presolving execution method */

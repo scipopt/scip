@@ -3,7 +3,7 @@
 # This scripts generates the dependences for SCIP
 #
 
-EXAMPLES=(Binpacking CallableLibrary Eventhdlr GMI LOP MIPSolver Queens TSP VRP)
+EXAMPLES=(Binpacking CallableLibrary Eventhdlr GMI LOP MIPSolver Queens Relaxator TSP VRP)
 OPTS=(opt dbg opt-gccold)
 
 for EXAMPLE in ${EXAMPLES[@]}

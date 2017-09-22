@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -234,25 +234,9 @@ SCIP_RETCODE setupSCIPparamsStage3(
    }
 
    /* disable conflict analysis */
-   if( !SCIPisParamFixed(probingscip, "conflict/useprop") )
+   if( !SCIPisParamFixed(probingscip, "conflict/enable") )
    {
-      SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/useprop", FALSE) );
-   }
-   if( !SCIPisParamFixed(probingscip, "conflict/useinflp") )
-   {
-      SCIP_CALL( SCIPsetCharParam(probingscip, "conflict/useinflp", 'o') );
-   }
-   if( !SCIPisParamFixed(probingscip, "conflict/useboundlp") )
-   {
-      SCIP_CALL( SCIPsetCharParam(probingscip, "conflict/useboundlp", 'o') );
-   }
-   if( !SCIPisParamFixed(probingscip, "conflict/usesb") )
-   {
-      SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/usesb", FALSE) );
-   }
-   if( !SCIPisParamFixed(probingscip, "conflict/usepseudo") )
-   {
-      SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/usepseudo", FALSE) );
+      SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/enable", FALSE) );
    }
 
    return SCIP_OKAY;
@@ -324,21 +308,30 @@ SCIP_RETCODE handle1Cycle(
    /* just flipping the objective coefficients from +1 to -1 and the rounding from floor to ceil */
    for( i = 0; i < nflipcands; i++ )
    {
+      SCIP_Real sign = 1.0;
+
       var = mostfracvars[i];
       solval = SCIPvarGetLPSol(var);
       orgobjcoeff = SCIPvarGetObj(var);
       frac = SCIPfeasFrac(scip, solval);
 
-      if( frac > 0.5 )
+      if( SCIPisEQ(scip, frac, 0.5) )
       {
-         newobjcoeff = (1.0 - alpha) + alpha * orgobjcoeff;
-         solval = SCIPfeasFloor(scip, solval);
+         if( SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0 )
+         {
+            sign = -1.0;
+            solval = SCIPfeasCeil(scip, solval);
+         }
       }
+      else if( frac > 0.5 )
+         solval = SCIPfeasFloor(scip, solval);
       else
       {
-         newobjcoeff = - (1.0 - alpha) + alpha * orgobjcoeff;
+         sign = -1.0;
          solval = SCIPfeasCeil(scip, solval);
       }
+      newobjcoeff = sign * (1.0 - alpha) + alpha * orgobjcoeff;
+
       /* updating the rounded solution and the objective */
       SCIP_CALL( SCIPsetSolVal(scip, heurdata->roundedsol, var, solval) );
       SCIP_CALL( SCIPchgVarObjDive(scip, var, newobjcoeff) );
@@ -369,6 +362,8 @@ SCIP_RETCODE handleCycle(
    /* just flipping the objective coefficients from +1 to -1 and the rounding from floor to ceil */
    for( i = 0; i < nbinandintvars; i++ )
    {
+      SCIP_Real sign = 1.0;
+
       /* decide arbitrarily whether the variable will be flipped or not */
       var = vars[i];
       solval = SCIPvarGetLPSol(var);
@@ -379,16 +374,24 @@ SCIP_RETCODE handleCycle(
       /* flip, iff the sum of the randomized number and the fractionality is big enough */
       if( MIN(frac, 1.0-frac) + MAX(flipprob, 0.0) > 0.5 )
       {
-         if( frac > 0.5 )
+         if( SCIPisEQ(scip, frac, 0.5) )
          {
-            newobjcoeff = (1.0 - alpha) + alpha * orgobjcoeff;
-            solval = SCIPfeasFloor(scip, solval);
+            if( SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0 )
+            {
+               sign = -1.0;
+               solval = SCIPfeasCeil(scip, solval);
+            }
          }
+         if( frac > 0.5 )
+            solval = SCIPfeasFloor(scip, solval);
          else
          {
-            newobjcoeff = - (1.0 - alpha) + alpha * orgobjcoeff;
+            sign = -1.0;
             solval = SCIPfeasCeil(scip, solval);
          }
+
+         newobjcoeff = sign * (1.0 - alpha) + alpha * orgobjcoeff;
+
          SCIP_CALL( SCIPsetSolVal(scip, heurdata->roundedsol, var, solval) );
          SCIP_CALL( SCIPchgVarObjDive(scip, var, newobjcoeff) );
       }
@@ -581,8 +584,8 @@ SCIP_DECL_HEURINIT(heurInitFeaspump)
    heurdata->nsuccess = 0;
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
-         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
+         DEFAULT_RANDSEED) );
 
    return SCIP_OKAY;
 }
@@ -605,7 +608,7 @@ SCIP_DECL_HEUREXIT(heurExitFeaspump)
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->roundedsol) );
 
    /* free random number generator */
-   SCIPrandomFree(&heurdata->randnumgen);
+   SCIPfreeRandom(scip, &heurdata->randnumgen);
 
    return SCIP_OKAY;
 }
@@ -1041,13 +1044,21 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          }
          else
          {
+            SCIP_Real scale = 1.0;
+
             /* check whether the variable is one of the most fractionals and label if so */
             insertFlipCand(mostfracvars, mostfracvals, &nflipcands, maxnflipcands, var, frac);
 
-            if( frac > 0.5 )
-               newobjcoeff = - (1.0 - alpha)/scalingfactor + alpha * orgobjcoeff;
-            else
-               newobjcoeff = (1.0 - alpha)/scalingfactor + alpha * orgobjcoeff;
+            /* try to avoid variability; decide randomly if the LP solution can contain some noise. */
+            if( SCIPisEQ(scip, frac, 0.5) )
+            {
+               if( SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0 )
+                  scale = -1.0;
+            }
+            else if( frac > 0.5 )
+               scale = -1.0;
+
+            newobjcoeff = scale * (1.0 - alpha)/scalingfactor + alpha * orgobjcoeff;
          }
 
          /* change one coefficient of the objective */
@@ -1276,16 +1287,8 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
           * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
           */
-#ifdef NDEBUG
-         retcode = SCIPsolve(probingscip);
-         if( retcode != SCIP_OKAY )
-         {
-            SCIPwarningMessage(scip, "Error while solving sub-SCIP in stage 3 of feasibility pump heuristic; sub-SCIP terminated with code <%d>\n",
-               retcode);
-         }
-#else
-         SCIP_CALL( SCIPsolve(probingscip) );
-#endif
+         SCIP_CALL_ABORT( SCIPsolve(probingscip) );
+
          /* check, whether a solution was found */
          if( SCIPgetNSols(probingscip) > 0 )
          {

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -81,7 +81,7 @@ struct TCLIQUE_Graph
    int*                  adjnodesidxs;       /**< indices in adjnodes array of first adjacent nodes for each node */
    int*                  cliqueidsidxs;      /**< indices in cliqueids array of first clique the node is contained in */
    int*                  adjnodes;           /**< adjacent nodes of edges */
-   int*                  cliqueids;          /**< unique ids of cliques */
+   unsigned int*         cliqueids;          /**< unique ids of cliques */
    unsigned int*         cliquetable;        /**< dense bitvector clique table (array stored as a vector) */
    int                   adjnodessize;       /**< size of adjnodes array */
    int                   cliqueidssize;      /**< size of cliqueids array */
@@ -197,7 +197,7 @@ SCIP_RETCODE tcliquegraphAddNode(
    )
 {
    SCIP_VAR* nodevar;
-   int* cliqueids;
+   unsigned int* cliqueids;
    SCIP_CLIQUE** cliques;
    int ncliques;
    int nadjnodes;
@@ -299,7 +299,10 @@ SCIP_RETCODE tcliquegraphAddCliqueVars(
    return SCIP_OKAY;
 }
 
-/** constructs dense clique incidence matrix */
+/** constructs dense clique incidence matrix
+ *
+ * @todo add implicit and integer variables appearing in cliques also to the clique table
+ */
 static
 SCIP_RETCODE tcliquegraphConstructCliqueTable(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -365,18 +368,13 @@ SCIP_RETCODE tcliquegraphConstructCliqueTable(
       vars = SCIPcliqueGetVars(cliques[i]);
       vals = SCIPcliqueGetValues(cliques[i]);
       nvars = SCIPcliqueGetNVars(cliques[i]);
-#if 0  /**@todo this assert is currently not valid since implicit binary variables in cliques are ignored,
-        * i.e., corresponding nodes and edges are not added to the tclique graph. Enable assert again if
-        * this feature it incorporated.
-        */
-      assert(nvars <= tcliquegraph->nnodes);
-#endif
 
       /* get the node numbers of the variables */
       for( u = 0; u < nvars && !SCIPisStopped(scip); ++u )
       {
          SCIP_VAR* var;
 
+         /* implicit integer and integer variables are currently not present in the constructed tclique graph */
          if( SCIPvarGetType(vars[u]) != SCIP_VARTYPE_BINARY )
             continue;
 
@@ -396,6 +394,7 @@ SCIP_RETCODE tcliquegraphConstructCliqueTable(
          int colofs;
          unsigned int colmask;
 
+         /* implicit integer and integer variables are currently not present in the constructed tclique graph */
          if( SCIPvarGetType(vars[u]) != SCIP_VARTYPE_BINARY )
             continue;
 
@@ -408,6 +407,7 @@ SCIP_RETCODE tcliquegraphConstructCliqueTable(
             int nv;
             unsigned int mask;
 
+            /* implicit integer and integer variables are currently not present in the constructed tclique graph */
             if( SCIPvarGetType(vars[v]) != SCIP_VARTYPE_BINARY )
                continue;
 
@@ -555,7 +555,7 @@ SCIP_Bool nodesHaveCommonClique(
    }
    else
    {
-      int* cliqueids;
+      unsigned int* cliqueids;
       int i1;
       int i2;
       int endi1;
@@ -714,8 +714,13 @@ SCIP_RETCODE newsolCliqueAddRow(
 
    /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
 
-   SCIP_CALL( SCIPaddCut(scip, sepadata->sol, cut, FALSE, cutoff) );
    SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+
+   if( SCIProwIsInGlobalCutpool(cut) )
+   {
+      /* only add row if it was accepted in the global cut pool */
+      SCIP_CALL( SCIPaddCut(scip, sepadata->sol, cut, FALSE, cutoff) );
+   }
 
    /* release the row */
    SCIP_CALL( SCIPreleaseRow(scip, &cut) );

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -28,7 +28,7 @@
 #include <string.h>
 #if defined(_WIN32) || defined(_WIN64)
 #else
-#include <strings.h>
+#include <strings.h> /*lint --e{766}*/
 #endif
 
 #include "scip/scip.h"
@@ -61,7 +61,7 @@ SCIP_RETCODE paramTestFixed(
    SCIP_PARAM*           param,              /**< parameter */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    )
-{
+{  /*lint --e{715}*/
    assert(param != NULL);
 
    if( param->isfixed )
@@ -80,7 +80,7 @@ SCIP_RETCODE paramTestBool(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Bool             value               /**< value to test */
    )
-{
+{  /*lint --e{715}*/
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_BOOL);
 
@@ -100,7 +100,7 @@ SCIP_RETCODE paramTestInt(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    int                   value               /**< value to test */
    )
-{
+{  /*lint --e{715}*/
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_INT);
 
@@ -121,7 +121,7 @@ SCIP_RETCODE paramTestLongint(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Longint          value               /**< value to test */
    )
-{
+{  /*lint --e{715}*/
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_LONGINT);
 
@@ -142,7 +142,7 @@ SCIP_RETCODE paramTestReal(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Real             value               /**< value to test */
    )
-{
+{  /*lint --e{715}*/
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_REAL);
 
@@ -163,7 +163,7 @@ SCIP_RETCODE paramTestChar(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    char                  value               /**< value to test */
    )
-{
+{  /*lint --e{715}*/
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_CHAR);
 
@@ -199,7 +199,7 @@ SCIP_RETCODE paramTestString(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           value               /**< value to test */
    )
-{
+{  /*lint --e{715}*/
    unsigned int i;
 
    assert(param != NULL);
@@ -2816,29 +2816,29 @@ SCIP_RETCODE paramsetSetHeuristicsAggressive(
          }
 
          SCIP_CALL( paramSetInt(paramset, set, messagehdlr, paramname, newfreq, quiet) );
-      }
 
-      /* LP iteration limits only get increased for heuristics which are activated by default */
-      if( SCIPparamGetIntDefault(param) > -1 )
-      {
-         /* construct (possible) parameter name for LP iteration offset */
-         (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterofs", heurname);
-         param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
-
-         if( param != NULL && SCIPparamGetType(param) == SCIP_PARAMTYPE_INT )
+         /* LP iteration limits only get increased for heuristics which are activated by default */
+         if( SCIPparamGetIntDefault(param) > -1 )
          {
-            /* set LP iteration offset to 1.5 time the current value */
-            SCIP_CALL( paramSetInt(paramset, set, messagehdlr, paramname, (int) (1.5 * SCIPparamGetIntDefault(param)), quiet) );
-         }
+            /* construct (possible) parameter name for LP iteration offset */
+            (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterofs", heurname);
+            param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
 
-         /* construct (possible) parameter name for LP iteration quotient parameter */
-         (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterquot", heurname);
-         param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+            if( param != NULL && SCIPparamGetType(param) == SCIP_PARAMTYPE_INT )
+            {
+               /* set LP iteration offset to 1.5 time the current value */
+               SCIP_CALL( paramSetInt(paramset, set, messagehdlr, paramname, (int) (1.5 * SCIPparamGetIntDefault(param)), quiet) );
+            }
 
-         if( param != NULL && SCIPparamGetType(param) == SCIP_PARAMTYPE_REAL )
-         {
-            /* set LP iteration quotient to 1.5 time the current value */
-            SCIP_CALL( paramSetReal(paramset, set, messagehdlr, paramname, 1.5 * SCIPparamGetRealDefault(param), quiet) );
+            /* construct (possible) parameter name for LP iteration quotient parameter */
+            (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterquot", heurname);
+            param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+
+            if( param != NULL && SCIPparamGetType(param) == SCIP_PARAMTYPE_REAL )
+            {
+               /* set LP iteration quotient to 1.5 time the current value */
+               SCIP_CALL( paramSetReal(paramset, set, messagehdlr, paramname, 1.5 * SCIPparamGetRealDefault(param), quiet) );
+            }
          }
       }
    }
@@ -2877,20 +2877,24 @@ SCIP_RETCODE paramsetSetHeuristicsFast(
 {
    int i;
 
-#define NEXPENSIVEHEURFREQS 15
+#define NEXPENSIVEHEURFREQS 19
    static const char* const expensiveheurfreqs[NEXPENSIVEHEURFREQS] = {
       "heuristics/coefdiving/freq",
       "heuristics/crossover/freq",
       "heuristics/distributiondiving/freq",
       "heuristics/feaspump/freq",
       "heuristics/fracdiving/freq",
+      "heuristics/gins/freq",
       "heuristics/guideddiving/freq",
       "heuristics/linesearchdiving/freq",
+      "heuristics/lpface/freq",
+      "heuristics/mpec/freq",
       "heuristics/nlpdiving/freq",
       "heuristics/subnlp/freq",
       "heuristics/objpscostdiving/freq",
       "heuristics/pscostdiving/freq",
       "heuristics/rens/freq",
+      "heuristics/rins/freq",
       "heuristics/rootsoldiving/freq",
       "heuristics/undercover/freq",
       "heuristics/veclendiving/freq"
@@ -3360,12 +3364,16 @@ SCIP_RETCODE paramsetSetSeparatingDefault(
    SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/maxaddrounds") );
    SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/maxcutsroot") );
    SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/poolfreq") );
-   SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/cmir/maxfailsroot") );
+   SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/aggregation/maxfailsroot") );
    SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/mcf/maxtestdelta") );
    SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/mcf/trynegscaling") );
-   SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/cmir/maxtriesroot") );
-   SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/cmir/maxaggrsroot") );
+   SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/aggregation/maxtriesroot") );
+   SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/aggregation/maxaggrsroot") );
    SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/maxbounddist") );
+   SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/zerohalf/maxslackroot") );
+   SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/zerohalf/maxslack") );
+   SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/zerohalf/maxsepacutsroot") );
+   SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/zerohalf/maxroundsroot") );
 
    return SCIP_OKAY;
 }
@@ -3526,10 +3534,10 @@ SCIP_RETCODE paramsetSetSeparatingAggressive(
 
    /* explicitly change a separating parameter of cmir separator, if included */
 #ifndef NDEBUG
-   if( SCIPsetFindSepa(set, "cmir") != NULL )
+   if( SCIPsetFindSepa(set, "aggregation") != NULL )
 #endif
    {
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/cmir/maxfailsroot", 200, quiet) );
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/aggregation/maxfailsroot", 200, quiet) );
    }
 
    /* explicitly change separating parameters of mcf separator, if included */
@@ -3567,19 +3575,22 @@ SCIP_RETCODE paramsetSetSeparatingFast(
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/and/sepafreq", 0, quiet) );
    }
 #ifndef NDEBUG
-   if( SCIPsetFindSepa(set, "cmir") != NULL )
+   if( SCIPsetFindSepa(set, "aggregation") != NULL )
 #endif
    {
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/cmir/maxroundsroot", 5, quiet) );
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/cmir/maxtriesroot", 100, quiet) );
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/cmir/maxaggrsroot", 3, quiet) );
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/cmir/maxsepacutsroot", 200, quiet) );
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/aggregation/maxroundsroot", 5, quiet) );
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/aggregation/maxtriesroot", 100, quiet) );
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/aggregation/maxaggrsroot", 3, quiet) );
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/aggregation/maxsepacutsroot", 200, quiet) );
    }
 #ifndef NDEBUG
-   if( SCIPsetFindSepa(set, "flowcover") != NULL )
+   if( SCIPsetFindSepa(set, "zerohalf") != NULL )
 #endif
    {
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/flowcover/freq", -1, quiet) );
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "separating/zerohalf/maxslackroot", 0.0, quiet) );
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "separating/zerohalf/maxslack", 0.0, quiet) );
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/zerohalf/maxsepacutsroot", 200, quiet) );
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/zerohalf/maxroundsroot", 5, quiet) );
    }
 #ifndef NDEBUG
    if( SCIPsetFindSepa(set, "gomory") != NULL )
@@ -3729,8 +3740,8 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       {
          SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/components/maxprerounds", 0, quiet) );
          SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/components/propfreq", -1, quiet) );
-         break;
       }
+      break;
 
    case SCIP_PARAMEMPHASIS_CPSOLVER:
       /* shrink the minimal maximum value for the conflict length */
@@ -3793,8 +3804,7 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       /* reduce the amount of separation rounds and disable most expensive separators */
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/maxrounds", 1, quiet) );
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/maxroundsroot", 5, quiet) );
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/cmir/freq", -1, quiet) );
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/flowcover/freq", -1, quiet) );
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/aggregation/freq", -1, quiet) );
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/mcf/freq", -1, quiet) );
 
       /* set priority for node selection "restartdfs" to be higher as the current used one */
@@ -4226,7 +4236,7 @@ SCIP_Bool SCIPparamIsValidBool(
    SCIP_PARAM*           param,              /**< parameter */
    SCIP_Bool             value               /**< value to check */
    )
-{
+{  /*lint --e{715}*/
    return ( value == TRUE || value == FALSE );
 }
 
@@ -4294,7 +4304,7 @@ SCIP_Bool SCIPparamIsValidString(
    SCIP_PARAM*           param,              /**< parameter */
    const char*           value               /**< value to check */
    )
-{
+{  /*lint --e{715}*/
    unsigned int i;
 
    for( i = 0; i < (unsigned int) strlen(value); ++i )
@@ -4449,8 +4459,8 @@ SCIP_RETCODE SCIPparamSetReal(
    SCIP_CALL_QUIET( paramTestReal(param, messagehdlr, value) );
 
    /* is the value of the parameter changed? */
-   if( initialize ||  (param->data.realparam.valueptr != NULL && *param->data.realparam.valueptr != value)
-      || (param->data.realparam.valueptr == NULL && param->data.realparam.curvalue != value) )
+   if( initialize || (param->data.realparam.valueptr != NULL && *param->data.realparam.valueptr != value) /*lint !e777*/
+      || (param->data.realparam.valueptr == NULL && param->data.realparam.curvalue != value) ) /*lint !e777*/
    {
       SCIP_CALL_QUIET( paramTestFixed(param, messagehdlr) );
 

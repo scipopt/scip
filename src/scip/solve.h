@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   solve.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for main solving loop and node processing
  * @author Tobias Achterberg
  */
@@ -156,6 +157,7 @@ SCIP_RETCODE SCIPseparationRound(
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    SCIP_SOL*             sol,                /**< primal solution that should be separated, or NULL for LP solution */
    int                   actdepth,           /**< current depth in the tree */
+   SCIP_Bool             allowlocal,         /**< should the separator be asked to separate local cuts */
    SCIP_Bool             onlydelayed,        /**< should only delayed separators be called? */
    SCIP_Bool*            delayed,            /**< pointer to store whether a separator was delayed */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */

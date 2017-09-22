@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -197,7 +197,7 @@ SCIP_RETCODE readFile(
       BMSclearMemoryArray(demands[j], nresources); /*lint !e866*/
    }
 
-   SCIP_CALL( SCIPdigraphCreate(&precedencegraph, njobs) );
+   SCIP_CALL( SCIPcreateDigraph(scip, &precedencegraph, njobs) );
 
    SCIPdebugMessage("problem has <%d> jobs and <%d> resources\n", njobs, nresources);
 

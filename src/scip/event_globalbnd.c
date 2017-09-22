@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -93,7 +93,7 @@ SCIP_DECL_EVENTINIT(eventInitGlobalbnd)
       int        i;
       int        nvars;
       SCIP_VAR** vars;
-      SCIPdebugMsg(scip, "catching events in "EVENTHDLR_NAME" eventhdlr\n");
+      SCIPdebugMsg(scip, "catching events in " EVENTHDLR_NAME " eventhdlr\n");
       /* notify SCIP that this event handler wants to react on global bound change events */
       nvars = SCIPgetNVars(scip);
       vars = SCIPgetVars(scip);
@@ -144,7 +144,7 @@ SCIP_DECL_EVENTEXEC(eventExecGlobalbnd)
    SCIP_BOUNDTYPE      boundtype;
    SCIP_Real           constant;
    SCIP_Real           scalar;
-   SCIPdebugMsg(scip, "exec method of eventhdlr "EVENTHDLR_NAME"\n");
+   SCIPdebugMsg(scip, "exec method of eventhdlr " EVENTHDLR_NAME "\n");
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
    assert(event != NULL);
@@ -225,7 +225,7 @@ SCIP_RETCODE SCIPincludeEventHdlrGlobalbnd(
 
 /** gets the global bound changes stored in the eventhandler */
 SCIP_BOUNDSTORE* SCIPeventGlobalbndGetBoundChanges(
-   SCIP_EVENTHDLR*  eventhdlr           /**< the globalbound eventhandler */
+   SCIP_EVENTHDLR*       eventhdlr           /**< the globalbound eventhandler */
    )
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
@@ -240,7 +240,7 @@ SCIP_BOUNDSTORE* SCIPeventGlobalbndGetBoundChanges(
 
 /** enables storing of bound changes */
 void SCIPeventGlobalbndEnableBoundStorage(
-   SCIP_EVENTHDLR*  eventhdlr           /**< the globalbound eventhandler */
+   SCIP_EVENTHDLR*       eventhdlr           /**< the globalbound eventhandler */
    )
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
@@ -256,7 +256,7 @@ void SCIPeventGlobalbndEnableBoundStorage(
 
 /** disables storing of bound changes */
 void SCIPeventGlobalbndDisableBoundStorage(
-   SCIP_EVENTHDLR*  eventhdlr           /**< the globalbound eventhandler */
+   SCIP_EVENTHDLR*       eventhdlr           /**< the globalbound eventhandler */
    )
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
@@ -272,7 +272,7 @@ void SCIPeventGlobalbndDisableBoundStorage(
 
 /** clears all bound changes stored in the eventhandler */
 void SCIPeventGlobalbndClearBoundChanges(
-   SCIP_EVENTHDLR*  eventhdlr           /**< the globalbound eventhandler */
+   SCIP_EVENTHDLR*       eventhdlr           /**< the globalbound eventhandler */
    )
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;

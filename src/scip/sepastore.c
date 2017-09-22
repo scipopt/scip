@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -428,7 +428,6 @@ SCIP_RETCODE SCIPsepastoreAddCut(
    assert(sepastore->nforcedcuts <= sepastore->ncuts);
    assert(set != NULL);
    assert(cut != NULL);
-   assert(sol != NULL || !SCIProwIsInLP(cut));
    assert(!SCIPsetIsInfinity(set, -SCIProwGetLhs(cut)) || !SCIPsetIsInfinity(set, SCIProwGetRhs(cut)));
    assert(eventqueue != NULL);
    assert(eventfilter != NULL);
@@ -626,7 +625,7 @@ SCIP_RETCODE sepastoreApplyLb(
          else
          {
             /* we are done with solving since a global bound change is infeasible */
-            SCIP_CALL( SCIPnodeCutoff(SCIPtreeGetRootNode(tree), set, stat, tree, reopt, lp, blkmem) );
+            SCIP_CALL( SCIPnodeCutoff(SCIPtreeGetRootNode(tree), set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
             *cutoff = TRUE;
          }
 
@@ -711,7 +710,7 @@ SCIP_RETCODE sepastoreApplyUb(
          else
          {
             /* we are done with solving since a global bound change is infeasible */
-            SCIP_CALL( SCIPnodeCutoff(SCIPtreeGetRootNode(tree), set, stat, tree, reopt, lp, blkmem) );
+            SCIP_CALL( SCIPnodeCutoff(SCIPtreeGetRootNode(tree), set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
             *cutoff = TRUE;
          }
 
@@ -1133,7 +1132,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    depth = SCIPnodeGetDepth(node);
 
    /* calculate minimal cut orthogonality */
-   mincutorthogonality = (root ? set->sepa_minorthoroot : set->sepa_minortho);
+   mincutorthogonality = root ? set->sepa_minorthoroot : set->sepa_minortho;
    mincutorthogonality = MAX(mincutorthogonality, set->num_epsilon);
 
    /* Compute scores for all non-forced cuts and initialize orthogonalities - make sure all cuts are initialized again for the current LP solution */
@@ -1175,6 +1174,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    {
       SCIP_ROW* cut;
       int bestpos;
+      SCIP_Real efficacy;
 
       /* get best non-forced cut */
       bestpos = sepastoreGetBestCut(sepastore);
@@ -1192,6 +1192,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
 
       /* capture cut such that it is not destroyed in sepastoreDelCut() */
       SCIProwCapture(cut);
+      efficacy = sepastore->efficacies[bestpos];
 
       /* release the row and delete the cut (also issuing ROWDELETEDSEPA event) */
       SCIP_CALL( sepastoreDelCut(sepastore, blkmem, set, eventqueue, eventfilter, lp, bestpos) );
@@ -1200,7 +1201,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
        * Note: do not take SCIPsetIsEfficacious(), because constraint handlers often add cuts w.r.t. SCIPsetIsFeasPositive().
        * Note2: if separating/feastolfac != -1, constraint handlers may even add cuts w.r.t. SCIPsetIsPositive(); those are currently rejected here
        */
-      if( SCIPsetIsFeasPositive(set, sepastore->efficacies[bestpos]) )
+      if( SCIPsetIsFeasPositive(set, efficacy) )
       {
          /* add cut to the LP and update orthogonalities */
          SCIP_CALL( sepastoreApplyCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, cut, mincutorthogonality, depth, efficiacychoice, &ncutsapplied) );

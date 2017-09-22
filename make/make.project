@@ -3,10 +3,10 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
-#*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
+#*  SCIP is distributed under the terms of the ZIB Academic License.         *
 #*                                                                           *
 #*  You should have received a copy of the ZIB Academic License              *
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
@@ -64,17 +64,20 @@ TEST		=	short
 SETTINGS        =       default
 CONTINUE	=	false
 LOCK		=	false
-DEBUGTOOL	=	auto
+DEBUGTOOL	=	none
 CLIENTTMPDIR    =       /tmp
 REOPT		=	false
 OPTCOMMAND	=	optimize
 SETCUTOFF	=	0
 VISUALIZE       =       false
 MAXJOBS         =       1
+EXECUTABLE      =       $(MAINFILE)
+BINID           =       $(notdir $(EXECUTABLE))
+OUTPUTDIR       =       results
 
 # set SCIP version here for external projects
 # use underscore to make it compatible with def.h
-SCIP_VERSION	=   	4.0.0
+SCIP_VERSION	=	4.0.0.2
 
 # compiling and linking parameters
 VERBOSE		=	false
@@ -94,6 +97,11 @@ NOBLKBUFMEM	=	false
 # if SHARED = true, nevertheless link to static version of external libraries (usefull for mingw)
 LIBEXTFORCESTATIC =	false
 
+#-----------------------------------------------------------------------------
+# load different default for debugtool
+#-----------------------------------------------------------------------------
+-include $(SCIPDIR)/make/local/make.debugtool
+
 ifeq ($(DEBUGTOOL),auto)
    ifeq ($(OPT),dbg)
       override DEBUGTOOL   =   gdb
@@ -105,17 +113,23 @@ endif
 #will this be compiled for parascip, necessary for dbg-builds and cppad to make it threadsafe
 PARASCIP	=	false
 
+# enable debug-solution mechanism
+DEBUGSOL =  false
+
 # third party compiling parameters
 OPENSOURCE   	=	true
 READLINE	=	true
 ZLIB		=	true
 GMP		=	true
-ZIMPL		=	auto
+ZIMPL		=	false
 IPOPT		=	false
+FILTERSQP	=	false
+WORHP		=	false
 EXPRINT 	=	cppad
 LPSOPT		=	opt
 ZIMPLOPT	=	opt
 IPOPTOPT	=	opt
+WORHPOPT	=	opt
 LPSCHECK        =	false
 GAMS		=	false
 SPX_LEGACY  	=	false
@@ -156,6 +170,7 @@ SPLINTFLAGS	=	-UNDEBUG -UWITH_READLINE -UROUNDING_FE -UWITH_GMP -UWITH_ZLIB -whi
 			-redef +export-header +export-local +decl-undef +relaxtypes
 
 # third party testing parameters
+FSCIP		=	fscip
 CPLEX		=	cplex
 CBC		=	cbc
 CBCPARALLEL	=	cbc-parallel
@@ -300,7 +315,6 @@ FLAGS		+=	-DNPARASCIP
 else
 LDFLAGS 	+=	-lpthread
 endif
-
 
 #-----------------------------------------------------------------------------
 # LP Solver Interface
@@ -521,6 +535,28 @@ endif
 NLPILIBSHORTNAMEIPOPT = .ipopt
 endif
 
+# define flags for FilterSQP
+ifeq ($(FILTERSQP),true)
+FILTERSQPLIBS       =       $(LINKCC_l)filtersqp.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)bqpd.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+LDFLAGS		+=	$(FILTERSQPLIBS) $(FORTRANLIBS)
+CFLAGS			+=	-DFNAME_$(FORTRAN_NAMING_CONVENTION)
+NLPILIBSHORTNAMEFILTERSQP = .filtersqp
+endif
+
+# define flags for WORHP
+ifeq ($(WORHP),true)
+FLAGS		+=	-I$(LIBDIR)/$(LIBTYPE)/worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)/include
+LDFLAGS  += $(LINKCC_l)worhp
+LDFLAGS  += $(LINKCC_L)$(SCIPDIR)/$(LIBDIR)/$(LIBTYPE)/worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)/lib
+ifneq ($(LINKRPATH),)
+ifneq ($(SCIPINTERNAL),)
+LDFLAGS		+=	$(LINKRPATH)\$$ORIGIN/../$(LIBDIR)/$(LIBEXTTYPE)/worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)/lib
+else
+LDFLAGS		+=	$(LINKRPATH)\$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)/lib
+endif
+endif
+endif
+
 ifeq ($(EXPRINT),cppad)
 LINKER		=	CPP
 NLPILIBSHORTNAMECPPAD = .cppad
@@ -585,7 +621,7 @@ OBJSCIPLIBSHORTLINK=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(OBJSCIPLIBNAME).$(LIBEX
 # NLP interfaces and expression interpreter library
 #-----------------------------------------------------------------------------
 
-NLPILIBNAME	=	nlpi$(NLPILIBSHORTNAMECPPAD)$(NLPILIBSHORTNAMEIPOPT)
+NLPILIBNAME	=	nlpi$(NLPILIBSHORTNAMECPPAD)$(NLPILIBSHORTNAMEIPOPT)$(NLPILIBSHORTNAMEFILTERSQP)
 NLPILIB		=	$(NLPILIBNAME).$(BASE)
 NLPILIBFILE	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(NLPILIB).$(LIBEXT)
 NLPILIBSHORTLINK=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(NLPILIBNAME).$(LIBEXT)

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prob.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for storing and manipulating the main problem
  * @author Tobias Achterberg
  */
@@ -457,6 +458,30 @@ int SCIPprobGetNObjVars(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** returns the minimal absolute non-zero objective coefficient
+ *
+ *  @note currently, this is only used for statistics and printed after the solving process. if this information is
+ *        needed during the (pre)solving process this should be implemented more efficiently, e.g., updating the minimal
+ *        absolute non-zero coefficient every time an objective coefficient has changed.
+ */
+extern
+SCIP_Real SCIPprobGetAbsMinObjCoef(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** returns the maximal absolute non-zero objective coefficient
+ *
+ *  @note currently, this is only used for statistics and printed after the solving process. if this information is
+ *        needed during the (pre)solving process this should be implemented more efficiently, e.g., updating the maximal
+ *        absolute non-zero coefficient every time an objective coefficient has changed.
+ */
+extern
+SCIP_Real SCIPprobGetAbsMaxObjCoef(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** update the number of variables with non-zero objective coefficient */
 extern
 void SCIPprobUpdateNObjVars(
@@ -523,6 +548,7 @@ void SCIPprobPrintPseudoSol(
 extern
 void SCIPprobPrintStatistics(
    SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< output file (or NULL for standard output) */
    );

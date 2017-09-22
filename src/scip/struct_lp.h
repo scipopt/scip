@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_lp.h
- * @brief  datastructures for LP management
+ * @ingroup INTERNALAPI
+ * @brief  data structures for LP management
  * @author Tobias Achterberg
  *
  *  In SCIP, the LP is defined as follows:
@@ -108,7 +109,9 @@ struct SCIP_LpSolVals
    SCIP_LPSOLSTAT        lpsolstat;          /**< solution status of last LP solution */
    SCIP_Real             lpobjval;           /**< objective value of LP without loose variables, or SCIP_INVALID */
    SCIP_Bool             primalfeasible;     /**< is current LP solution primal feasible? */
+   SCIP_Bool             primalchecked;      /**< was current LP solution checked for primal feasibility? */
    SCIP_Bool             dualfeasible;       /**< is current LP solution dual feasible? */
+   SCIP_Bool             dualchecked;        /**< was current LP solution checked for primal feasibility? */
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
    SCIP_Bool             lpissolved;         /**< is current LP solved? */
 };
@@ -324,6 +327,7 @@ struct SCIP_Lp
    int                   lpitiming;          /**< current timing type in LPI */
    int                   lpirandomseed;      /**< current initial random seed in LPI */
    int                   lpiscaling;         /**< current SCALING setting in LPI */
+   int                   lpirefactorinterval;/**< current refactorization interval */
    SCIP_PRICING          lpipricing;         /**< current pricing setting in LPI */
    SCIP_LPSOLSTAT        lpsolstat;          /**< solution status of last LP solution */
    SCIP_LPALGO           lastlpalgo;         /**< algorithm used for last LP solve */
@@ -341,7 +345,9 @@ struct SCIP_Lp
    SCIP_Bool             flushed;            /**< are all cached changes applied to the LP solver? */
    SCIP_Bool             solved;             /**< is current LP solved? */
    SCIP_Bool             primalfeasible;     /**< is current LP solution (rather LPI state) primal feasible? */
+   SCIP_Bool             primalchecked;      /**< was current LP solution checked for primal feasibility?? */
    SCIP_Bool             dualfeasible;       /**< is current LP solution (rather LPI state) dual feasible? */
+   SCIP_Bool             dualchecked;        /**< was current LP solution checked for primal feasibility?? */
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
    SCIP_Bool             rootlpisrelax;      /**< is root LP a relaxation of the problem and its solution value a valid global lower bound? */
    SCIP_Bool             isrelax;            /**< is the current LP a relaxation of the problem for which it has been solved and its 
@@ -366,11 +372,13 @@ struct SCIP_Lp
    SCIP_Bool             lpihaspresolving;   /**< does the LPI support the PRESOLVING parameter? */
    SCIP_Bool             lpihasrowrep;       /**< does the LPI support row representation of a simplex basis? */
    SCIP_Bool             lpihaspolishing;    /**< does the LPI support solution polishing? */
+   SCIP_Bool             lpihasrefactor;     /**< does the LPI support changing the refactorization interval? */
    SCIP_Real             lpirowrepswitch;    /**< simplex algorithm shall use row representation of the basis
                                               *   if number of rows divided by number of columns exceeds this value */
-   SCIP_Bool             lpipersistentscaling;/**< use persistent LP scaling during branch and bound */
    SCIP_Bool             divelpwasprimfeas;  /**< primal feasibility when diving started */
+   SCIP_Bool             divelpwasprimchecked;/**< primal feasibility was checked when diving started */
    SCIP_Bool             divelpwasdualfeas;  /**< dual feasibility when diving started */
+   SCIP_Bool             divelpwasdualchecked;/**< dual feasibility was checked when diving started */
 };
 
 #ifdef __cplusplus

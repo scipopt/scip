@@ -2,7 +2,7 @@
 /*                                                                           */
 /*        This file is part of the program PolySCIP                          */
 /*                                                                           */
-/*    Copyright (C) 2012-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2012-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  PolySCIP is distributed under the terms of the ZIB Academic License.     */
@@ -21,25 +21,24 @@
 
 About
 =====
-[PolySCIP] (http://polyscip.zib.de) is a solver for multi-criteria integer programming as well as multi-criteria linear 
-programming.
+[PolySCIP] (http://polyscip.zib.de) is a solver for multi-criteria integer programming and multi-criteria linear 
+programming problems.
 In other words, it solves optimization problems of the form: 
 \f{align*}{
-\min / \max~ &(c_1^T x, \ldots, c_k^T x) \\
+\min / \max~ (c_1^\top x&, \ldots, c_k^\top x) \\
 \mbox{s.t. } Ax &\leq b,\\
-x &\in \mathbb{Z}^n \lor \mathbb{Q}^n.
+x &\in \mathbb{Z}^n \lor \mathbb{Q}^n,
 \f}
 where \f$ k \geq 2,~ A \in \mathbb{Q}^{m \times n},~ b \in
 \mathbb{Q}^m \f$.
 
 The name PolySCIP is composed of Poly (from the Greek
 &pi;o&lambda;&upsilon;&sigmaf; meaning "many") and SCIP. 
-The long-term development goal of PolySCIP is to solve general
-multi-criteria mixed-integer programming problems, i.e., problems of
-the above mentioned form where \f$x \in \mathbb{Z}^{n_1} \times
-\mathbb{Q}^{n_2}$ with $n_1 + n_2 = n \f$.
 
-Please note that there is a more detailed user guide available on the PolySCIP [website] (http://polyscip.zib.de).
+Please note that there is a [user guide]
+(http://polyscip.zib.de/#userguide) available describing command line parameters,
+the file format and an easy generation of problem files
+via the algebraic modeling language ZIMPL.
   
 Installation
 ============
@@ -52,6 +51,7 @@ Usage
 * After a succesful built, execute **polyscip -h** for detailed information about its command line arguments
 
 * **polyscip probFile.mop** runs PolySCIP on the given problem file **probFile.mop** without any further parameters
+
 
 
 

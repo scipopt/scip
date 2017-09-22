@@ -1,0 +1,9 @@
+STATISTICS
+    Problem name     : mini_trigo_example
+OBJECTIVE
+    Sense            : minimize
+VARIABLES
+    [integer] <x>: obj=1, original bounds=[0,0]
+CONSTRAINTS
+    [nonlinear] <problem>: cos(0) + <x>   == 1;
+END

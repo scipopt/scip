@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -17,8 +17,9 @@
  * @author Daniel Rehfeldt
  *
  * The Steiner branching rule implemented in this file is described in
- * "A Generic Approach to Solving the Steiner Tree Problem and Variants" by Daniel Rehfeldt.
- * It includes and exludes Steiner vertices during branching.
+ * "SCIP-Jack - A solver for STP and variants with parallelization extensions" by
+ * Gamrath, Koch, Maher, Rehfeldt and Shinano
+ * It includes and excludes Steiner vertices during branching.
  *
 */
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -38,7 +39,7 @@
 
 #define BRANCHRULE_NAME            "stp"
 #define BRANCHRULE_DESC            "stp branching on vertices"
-#define BRANCHRULE_PRIORITY        -1000000
+#define BRANCHRULE_PRIORITY        1000000
 #define BRANCHRULE_MAXDEPTH        -1
 #define BRANCHRULE_MAXBOUNDDIST    1.0
 
@@ -102,12 +103,12 @@ SCIP_RETCODE selectBranchingVertex(
    {
       inflow[k] = 0.0;
       for( a = g->inpbeg[k]; a != EAT_LAST; a = g->ieat[a] )
-	 inflow[k] += SCIPvarGetLPSol(edgevars[a]);
+         inflow[k] += SCIPvarGetLPSol(edgevars[a]);
 
       if( !Is_term(g->term[k]) && SCIPisLT(scip, inflow[k], 1.0) && SCIPisLT(scip, fabs(inflow[k] - 0.5), maxflow) )
       {
          branchvert = k;
-	 maxflow = fabs(inflow[k] - 0.5);
+         maxflow = fabs(inflow[k] - 0.5);
          SCIPdebugMessage("new maxflow %f on vertex %d \n", inflow[k], branchvert );
       }
    }
@@ -198,6 +199,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStp)
    SCIP_Real estimateout;
    GRAPH* g;
    int e;
+   int probtype;
    int branchvertex;
 
    assert(branchrule != NULL);
@@ -218,6 +220,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStp)
    g = SCIPprobdataGetGraph(probdata);
    assert(g != NULL);
 
+   probtype = g->stp_type;
+
+   if( probtype != STP_SPG && probtype != STP_RSMT && probtype != STP_OARSMT )
+      return SCIP_OKAY;
 
    /* get vertex to branch on */
    SCIP_CALL( selectBranchingVertex(scip, &branchvertex) );
@@ -257,7 +263,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStp)
    SCIP_CALL( SCIPaddConsNode(scip, vertexin, consin, NULL) );
    SCIP_CALL( SCIPaddConsNode(scip, vertexout, consout, NULL) );
 
-   /* relase constraints */
+   /* release constraints */
    SCIP_CALL( SCIPreleaseCons(scip, &consin) );
    SCIP_CALL( SCIPreleaseCons(scip, &consout) );
 

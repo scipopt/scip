@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   def.h
+ * @ingroup INTERNALAPI
  * @brief  common defines and data types used in all packages of SCIP
  * @author Tobias Achterberg
  */
@@ -83,6 +84,15 @@
 #endif
 #endif
 
+/* define INLINE */
+#ifndef INLINE
+#if defined(_WIN32) || defined(_WIN64) || defined(__STDC__)
+#define INLINE                 __inline
+#else
+#define INLINE                 inline
+#endif
+#endif
+
 
 
 #include "scip/type_retcode.h"
@@ -94,8 +104,9 @@ extern "C" {
 
 
 #define SCIP_VERSION                400 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION               0 /**< SCIP sub version number */
-#define SCIP_COPYRIGHT   "Copyright (C) 2002-2016 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
+#define SCIP_SUBVERSION               2 /**< SCIP sub version number */
+#define SCIP_APIVERSION              14 /**< SCIP API version number */
+#define SCIP_COPYRIGHT   "Copyright (C) 2002-2017 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
 /*
@@ -151,8 +162,8 @@ extern "C" {
 #define SCIP_DEFAULT_HUGEVAL          1e+15  /**< values larger than this are considered huge and should be handled separately (e.g., in activity computation) */
 #define SCIP_MAXEPSILON               1e-03  /**< maximum value for any numerical epsilon */
 #define SCIP_MINEPSILON               1e-20  /**< minimum value for any numerical epsilon */
-#define SCIP_INVALID                  1e+99  /**< floating point value is not valid */
-#define SCIP_UNKNOWN                  1e+98  /**< floating point value is not known (in primal solution) */
+#define SCIP_INVALID          (double)1e+99  /**< floating point value is not valid */
+#define SCIP_UNKNOWN          (double)1e+98  /**< floating point value is not known (in primal solution) */
 
 
 #define REALABS(x)        (fabs(x))
@@ -190,7 +201,13 @@ extern "C" {
 #define MIN3(x,y,z) ((x) <= (y) ? MIN(x,z) : MIN(y,z))  /**< returns minimum of x, y, and z */
 #endif
 
-
+#ifndef COPYSIGN
+#if defined(_MSC_VER) && (_MSC_VER < 1800)
+#define COPYSIGN _copysign
+#else
+#define COPYSIGN copysign
+#endif
+#endif
 
 /*
  * Pointers
@@ -200,6 +217,17 @@ extern "C" {
 #define NULL ((void*)0)                 /**< zero pointer */
 #endif
 
+#ifndef RESTRICT
+#if defined(_MSC_VER)
+#define RESTRICT __restrict
+#else
+#ifdef __cplusplus
+#define RESTRICT __restrict__
+#else
+#define RESTRICT restrict
+#endif
+#endif
+#endif
 
 /*
  * Strings
@@ -232,7 +260,19 @@ extern "C" {
  * Tree settings
  */
 
-#define SCIP_MAXTREEDEPTH             65535  /**< maximal allowed depth of the branch-and-bound tree */
+#define SCIP_MAXTREEDEPTH             65534  /**< maximal allowed depth of the branch-and-bound tree */
+
+/*
+ * Probing scoring settings
+ */
+
+#define SCIP_PROBINGSCORE_PENALTYRATIO    2  /**< ratio for penalizing too small fractionalities in diving heuristics.
+                                              *   if the fractional part of a variable is smaller than a given threshold
+                                              *   the corresponding score gets penalized. due to numerical troubles
+                                              *   we will flip a coin whenever SCIPisEQ(scip, fractionality, threshold)
+                                              *   evaluates to true. this parameter defines the chance that this results
+                                              *   in penalizing the score, i.e., there is 1:2 chance for penalizing.
+                                              */
 
 /*
  * Global debugging settings
@@ -250,7 +290,7 @@ extern "C" {
  *  @note In optimized mode this macro has no effect. That means, in case of an error it has to be ensured that code
  *        terminates with an error code or continues safely.
  */
-#define SCIPABORT() assert(FALSE)
+#define SCIPABORT() assert(FALSE) /*lint --e{527} */
 
 #define SCIP_CALL_ABORT_QUIET(x)  do { if( (x) != SCIP_OKAY ) SCIPABORT(); } while( FALSE )
 #define SCIP_CALL_QUIET(x)        do { SCIP_RETCODE _restat_; if( (_restat_ = (x)) != SCIP_OKAY ) return _restat_; } while( FALSE )
@@ -259,7 +299,7 @@ extern "C" {
 
 #define SCIP_CALL_ABORT(x) do                                                                                 \
                        {                                                                                      \
-                          SCIP_RETCODE _restat_;                                                              \
+                          SCIP_RETCODE _restat_; /*lint -e{506,774}*/                                         \
                           if( (_restat_ = (x)) != SCIP_OKAY )                                                 \
                           {                                                                                   \
                              SCIPerrorMessage("Error <%d> in function call\n", _restat_);                     \
@@ -280,7 +320,7 @@ extern "C" {
 
 #define SCIP_CALL(x)   do                                                                                     \
                        {                                                                                      \
-                          SCIP_RETCODE _restat_;                                                              \
+                          SCIP_RETCODE _restat_; /*lint -e{506,774}*/                                         \
                           if( (_restat_ = (x)) != SCIP_OKAY )                                                 \
                           {                                                                                   \
                              SCIPerrorMessage("Error <%d> in function call\n", _restat_);                     \
@@ -317,6 +357,18 @@ extern "C" {
                              retcode = SCIP_NOMEMORY;                                                         \
                              goto TERM;                                                                       \
                           }                                                                                   \
+                       }                                                                                      \
+                       while( FALSE )
+
+#define SCIP_CALL_FINALLY(x, y)   do                                                                                     \
+                       {                                                                                      \
+                          SCIP_RETCODE _restat_;                                                              \
+                          if( (_restat_ = (x)) != SCIP_OKAY )                                                 \
+                          {                                                                                   \
+                             SCIPerrorMessage("Error <%d> in function call\n", _restat_);                     \
+                             (y);                                                                             \
+                             return _restat_;                                                                 \
+                           }                                                                                  \
                        }                                                                                      \
                        while( FALSE )
 

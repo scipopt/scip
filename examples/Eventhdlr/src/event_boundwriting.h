@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -13,8 +13,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   event_boundwriting.h
- * @brief  event handler for writing primal- and dualbound for all open nodes
+/**@file   examples/Eventhdlr/src/event_boundwriting.h
+ * @brief  event handler for writing primal- and dual bound for all open nodes
  * @author Michael Winkler
  */
 
@@ -22,7 +22,7 @@
 
 #include "scip/scip.h"
 
-/** includes event handler for writing primal- and dualbound for all open nodes */
+/** includes event handler for writing primal- and dual bound for all open nodes */
 extern
 SCIP_RETCODE SCIPincludeEventHdlrBoundwriting(
    SCIP*                 scip                /**< SCIP data structure */

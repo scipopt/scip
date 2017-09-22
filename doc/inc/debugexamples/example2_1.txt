@@ -1,0 +1,21 @@
+SCIP> display solution
+
+objective value:                                 3089
+C157                                                1   (obj:171)
+C163                                                1   (obj:163)
+C164                                                1   (obj:69)
+C166                                                1   (obj:183)
+C170                                                1   (obj:49)
+C174                                                1   (obj:250)
+C177                                                1   (obj:500)
+C179                                                1   (obj:318)
+C181                                                1   (obj:318)
+C182                                                1   (obj:159)
+C183                                                1   (obj:318)
+C184                                                1   (obj:159)
+C185                                                1   (obj:318)
+C186                                                1   (obj:114)
+
+SCIP> write solution check/p0033.sol
+
+written solution information to file <check/p0033.sol>

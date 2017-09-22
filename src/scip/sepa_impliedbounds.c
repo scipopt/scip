@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -31,8 +31,8 @@
 #define SEPA_NAME              "impliedbounds"
 #define SEPA_DESC              "implied bounds separator"
 #define SEPA_PRIORITY               -50
-#define SEPA_FREQ                     0
-#define SEPA_MAXBOUNDDIST           0.0
+#define SEPA_FREQ                    20
+#define SEPA_MAXBOUNDDIST           1.0
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
@@ -98,12 +98,16 @@ SCIP_RETCODE addCut(
       SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
 #endif
 
-      /* add cut */
-      SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, cutoff) );
-      if ( ! (*cutoff) )
+      SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+
+      /* add cut only if it was accepted in the global cut pool */
+      if( SCIProwIsInGlobalCutpool(cut) )
       {
-         SCIP_CALL( SCIPaddPoolCut(scip, cut) );
-         (*ncuts)++;
+         SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, cutoff) );
+         if ( ! (*cutoff) )
+         {
+            (*ncuts)++;
+         }
       }
 
       /* release cut */

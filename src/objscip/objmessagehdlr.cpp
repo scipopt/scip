@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -65,8 +65,7 @@ SCIP_DECL_MESSAGEWARNING(messagehdlrWarningObj)
    SCIP_MESSAGEHDLRDATA* messagehdlrdata;
 
    messagehdlrdata = SCIPmessagehdlrGetData(messagehdlr);
-   assert(messagehdlrdata != NULL);
-   assert(messagehdlrdata->objmessagehdlr != NULL);
+   assert(messagehdlrdata != NULL && messagehdlrdata->objmessagehdlr != NULL);
 
    /* call virtual method of messagehdlr object */
    messagehdlrdata->objmessagehdlr->scip_warning(messagehdlr, file, msg);
@@ -80,8 +79,7 @@ SCIP_DECL_MESSAGEDIALOG(messagehdlrDialogObj)
    SCIP_MESSAGEHDLRDATA* messagehdlrdata;
 
    messagehdlrdata = SCIPmessagehdlrGetData(messagehdlr);
-   assert(messagehdlrdata != NULL);
-   assert(messagehdlrdata->objmessagehdlr != NULL);
+   assert(messagehdlrdata != NULL && messagehdlrdata->objmessagehdlr != NULL);
 
    /* call virtual method of messagehdlr object */
    messagehdlrdata->objmessagehdlr->scip_dialog(messagehdlr, file, msg);
@@ -95,8 +93,7 @@ SCIP_DECL_MESSAGEINFO(messagehdlrInfoObj)
    SCIP_MESSAGEHDLRDATA* messagehdlrdata;
 
    messagehdlrdata = SCIPmessagehdlrGetData(messagehdlr);
-   assert(messagehdlrdata != NULL);
-   assert(messagehdlrdata->objmessagehdlr != NULL);
+   assert(messagehdlrdata != NULL && messagehdlrdata->objmessagehdlr != NULL);
 
    /* call virtual method of messagehdlr object */
    messagehdlrdata->objmessagehdlr->scip_info(messagehdlr, file, msg);
@@ -109,8 +106,7 @@ SCIP_DECL_MESSAGEHDLRFREE(messagehdlrFree)
    SCIP_MESSAGEHDLRDATA* messagehdlrdata;
 
    messagehdlrdata = SCIPmessagehdlrGetData(messagehdlr);
-   assert(messagehdlrdata != NULL);
-   assert(messagehdlrdata->objmessagehdlr != NULL);
+   assert(messagehdlrdata != NULL && messagehdlrdata->objmessagehdlr != NULL);
 
    /* call virtual method of messagehdlr object */
    SCIP_CALL( messagehdlrdata->objmessagehdlr->scip_free(messagehdlr) );
@@ -174,13 +170,12 @@ scip::ObjMessagehdlr* SCIPgetObjMessagehdlr(
    SCIP_MESSAGEHDLRDATA* messagehdlrdata;
 
    messagehdlrdata = SCIPmessagehdlrGetData(messagehdlr);
-   assert(messagehdlrdata != NULL);
+   assert(messagehdlrdata != NULL && messagehdlrdata->objmessagehdlr != NULL);
 
    return messagehdlrdata->objmessagehdlr;
 }
 
 /** set static error output function to the corresponding function of message handler */
-EXTERN
 void SCIPsetStaticErrorPrintingMessagehdlr(
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    )

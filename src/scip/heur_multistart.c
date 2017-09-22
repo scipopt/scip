@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -38,7 +38,7 @@
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
 #define HEUR_USESSUBSCIP      TRUE           /**< does the heuristic use a secondary SCIP instance? */
 
-#define DEFAULT_RANDSEED      59             /**< initial random seed */
+#define DEFAULT_RANDSEED      131            /**< initial random seed */
 #define DEFAULT_NRNDPOINTS    100            /**< default number of generated random points per call */
 #define DEFAULT_MAXBOUNDSIZE  2e+4           /**< default maximum variable domain size for unbounded variables */
 #define DEFAULT_MAXITER       300            /**< default number of iterations to reduce the violation of a point */
@@ -149,7 +149,7 @@ SCIP_RETCODE sampleRandomPoints(
          lb = MIN(SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i])); /*lint !e666*/
          ub = MAX(SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i])); /*lint !e666*/
 
-         if( SCIPisEQ(scip, lb, ub) )
+         if( SCIPisFeasEQ(scip, lb, ub) )
             val = (lb + ub) / 2.0;
          /* use a smaller domain for unbounded variables */
          else if( !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) )
@@ -163,7 +163,7 @@ SCIP_RETCODE sampleRandomPoints(
             assert(SCIPisInfinity(scip, -lb) && SCIPisInfinity(scip, ub));
             val = SCIPrandomGetReal(randnumgen, -0.5*maxboundsize, 0.5*maxboundsize);
          }
-         assert(SCIPisGE(scip, val, lb) && SCIPisLE(scip, val, ub));
+         assert(SCIPisFeasGE(scip, val, lb) && SCIPisFeasLE(scip, val, ub));
 
          /* set solution value; round the sampled point for integer variables */
          if( SCIPvarGetType(vars[i]) < SCIP_VARTYPE_CONTINUOUS )
@@ -973,8 +973,8 @@ SCIP_DECL_HEURINIT(heurInitMultistart)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
-         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
+         DEFAULT_RANDSEED) );
 
    /* try to find sub-NLP heuristic */
    heurdata->heursubnlp = SCIPfindHeur(scip, "subnlp");
@@ -994,7 +994,7 @@ SCIP_DECL_HEUREXIT(heurExitMultistart)
    assert(heurdata != NULL);
    assert(heurdata->randnumgen != NULL);
 
-   SCIPrandomFree(&heurdata->randnumgen);
+   SCIPfreeRandom(scip, &heurdata->randnumgen);
 
    return SCIP_OKAY;
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -37,11 +37,19 @@
 extern "C" {
 #endif
 
-/** creates the pseudo objective function propagator and includes it in SCIP */
+/** creates the pseudo objective function propagator and includes it in SCIP
+ *
+ * @ingroup PropagatorIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludePropPseudoobj(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup PROPAGATORS
+  *
+  * @{
+  */
 
 /** propagates the cutoff bound for the given variables */
 EXTERN
@@ -53,6 +61,8 @@ SCIP_RETCODE SCIPpropagateCutoffboundVar(
    SCIP_Real             pseudoobjval,       /**< pseudo objective value to use */
    SCIP_Bool*            tightened           /**< pointer to if the domain was tightened */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

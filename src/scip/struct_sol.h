@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_sol.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for storing primal CIP solutions
  * @author Tobias Achterberg
  */
@@ -34,6 +35,18 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/** maximum violations of problem constraints */
+struct SCIP_Viol
+{
+   SCIP_Real             absviolbounds;       /**< maximum absolute violation of variable bounds */
+   SCIP_Real             relviolbounds;       /**< maximum relative violation of variable bounds */
+   SCIP_Real             absviollprows;       /**< maximum absolute violation of LP rows */
+   SCIP_Real             relviollprows;       /**< maximum relative violation of LP rows */
+   SCIP_Real             absviolintegrality;  /**< maximum absolute violation integrality */
+   SCIP_Real             absviolcons;         /**< maximum absolute violation of constraints */
+   SCIP_Real             relviolcons;         /**< maximum relative violation of constraints */
+};
 
 /** primal CIP solution
  *
@@ -61,6 +74,7 @@ struct SCIP_Sol
    SCIP_BOOLARRAY*       valid;              /**< is value in vals array valid? otherwise it has to be retrieved from
                                               *   origin */
    SCIP_HEUR*            heur;               /**< heuristic that found the solution (or NULL if it's an LP solution) */
+   SCIP_VIOL             viol;               /**< maximum violations of problem constraints */
    int                   runnum;             /**< branch and bound run number in which the solution was found */
    int                   depth;              /**< depth at which the solution was found */
    int                   primalindex;        /**< index of solution in array of existing solutions of primal data */

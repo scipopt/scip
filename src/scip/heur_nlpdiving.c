@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -72,6 +72,7 @@
                                          *   'p'seudocost, 'g'uided, 'd'ouble)
                                          */
 #define DEFAULT_NLPFASTFAIL        TRUE /**< should the NLP solver stop early if it converges slow? */
+#define DEFAULT_RANDSEED             97 /**< initial random seed */
 
 #define MINNLPITER                   10 /**< minimal number of NLP iterations allowed in each NLP solving call */
 
@@ -113,6 +114,7 @@ struct SCIP_HeurData
    int                   nfailnlperror;      /**< number of fails due to NLP error */
 #endif
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
 };
 
 
@@ -273,7 +275,12 @@ SCIP_RETCODE chooseFracVar(
              *   the current fractional solution
              */
             if( mayrounddown && mayroundup )
-               roundup = (frac > 0.5);
+            {
+               if( SCIPisEQ(scip, frac, 0.5) )
+                  roundup = (SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0);
+               else
+                  roundup = (frac > 0.5);
+            }
             else
                roundup = mayrounddown;
 
@@ -286,7 +293,15 @@ SCIP_RETCODE chooseFracVar(
                objgain = -frac*obj;
 
             /* penalize too small fractions */
-            if( frac < 0.01 )
+            if( SCIPisEQ(scip, frac, 0.01) )
+            {
+               /* try to avoid variability; decide randomly if the LP solution can contain some noise.
+                * use a 1:SCIP_PROBINGSCORE_PENALTYRATIO chance for increasing the fractionality, i.e., the score.
+                */
+               if( SCIPrandomGetInt(heurdata->randnumgen, 0, SCIP_PROBINGSCORE_PENALTYRATIO) == 0 )
+                  objgain *= 1000.0;
+            }
+            else if( frac < 0.01 )
                objgain *= 1000.0;
 
             /* prefer decisions on binary variables */
@@ -312,16 +327,27 @@ SCIP_RETCODE chooseFracVar(
       else
       {
          /* the candidate may not be rounded */
-         if( frac < 0.5 )
+         if( SCIPisEQ(scip, frac, 0.5) )
+            roundup = (SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0);
+         else if( frac < 0.5 )
             roundup = FALSE;
          else
-         {
             roundup = TRUE;
+
+         /* adjust fractional part */
+         if( roundup )
             frac = 1.0 - frac;
-         }
 
          /* penalize too small fractions */
-         if( frac < 0.01 )
+         if( SCIPisEQ(scip, frac, 0.01) )
+         {
+            /* try to avoid variability; decide randomly if the LP solution can contain some noise.
+             * use a 1:SCIP_PROBINGSCORE_PENALTYRATIO chance for increasing the fractionality, i.e., the score.
+             */
+            if( SCIPrandomGetInt(heurdata->randnumgen, 0, SCIP_PROBINGSCORE_PENALTYRATIO) == 0 )
+               frac += 10.0;
+         }
+         else if( frac < 0.01 )
             frac += 10.0;
 
          /* prefer decisions on binary variables */
@@ -520,7 +546,12 @@ SCIP_RETCODE chooseCoefVar(
              *   the current fractional solution
              */
             if( mayrounddown && mayroundup )
-               roundup = (frac > 0.5);
+            {
+               if( SCIPisEQ(scip, frac, 0.5) )
+                  roundup = (SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0);
+               else
+                  roundup = (frac > 0.5);
+            }
             else
                roundup = mayrounddown;
 
@@ -533,7 +564,15 @@ SCIP_RETCODE chooseCoefVar(
                nviolrows = SCIPvarGetNLocksDown(var);
 
             /* penalize too small fractions */
-            if( frac < 0.01 )
+            if( SCIPisEQ(scip, frac, 0.01) )
+            {
+               /* try to avoid variability; decide randomly if the LP solution can contain some noise.
+                * use a 1:SCIP_PROBINGSCORE_PENALTYRATIO chance for increasing the fractionality, i.e., the score.
+                */
+               if( SCIPrandomGetInt(heurdata->randnumgen, 0, SCIP_PROBINGSCORE_PENALTYRATIO) == 0 )
+                  nviolrows *= 100;
+            }
+            else if( frac < 0.01 )
                nviolrows *= 100;
 
             /* prefer decisions on binary variables */
@@ -562,7 +601,17 @@ SCIP_RETCODE chooseCoefVar(
          /* the candidate may not be rounded */
          nlocksdown = SCIPvarGetNLocksDown(var);
          nlocksup = SCIPvarGetNLocksUp(var);
-         roundup = (nlocksdown > nlocksup || (nlocksdown == nlocksup && frac > 0.5));
+
+         roundup = (nlocksdown > nlocksup);
+         if( !roundup )
+         {
+            roundup = (nlocksdown == nlocksup);
+            if( SCIPisEQ(scip, frac, 0.5) )
+               roundup = (roundup && (SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0));
+            else
+               roundup = (roundup && frac > 0.5);
+         }
+
          if( roundup )
          {
             nviolrows = nlocksup;
@@ -572,7 +621,15 @@ SCIP_RETCODE chooseCoefVar(
             nviolrows = nlocksdown;
 
          /* penalize too small fractions */
-         if( frac < 0.01 )
+         if( SCIPisEQ(scip, frac, 0.01) )
+         {
+            /* try to avoid variability; decide randomly if the LP solution can contain some noise.
+             * use a 1:SCIP_PROBINGSCORE_PENALTYRATIO chance for increasing the fractionality, i.e., the score.
+             */
+            if( SCIPrandomGetInt(heurdata->randnumgen, 0, SCIP_PROBINGSCORE_PENALTYRATIO) == 0 )
+               nviolrows *= 100;
+         }
+         else if( frac < 0.01 )
             nviolrows *= 100;
 
          /* prefer decisions on binary variables */
@@ -607,18 +664,20 @@ SCIP_RETCODE chooseCoefVar(
 static
 void calcPscostQuot(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data structure */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             primsol,            /**< primal solution of variable */
    SCIP_Real             frac,               /**< fractionality of variable */
    int                   rounddir,           /**< -1: round down, +1: round up, 0: select due to pseudo cost values */
    SCIP_Real*            pscostquot,         /**< pointer to store pseudo cost quotient */
    SCIP_Bool*            roundup,            /**< pointer to store whether the variable should be rounded up */
-   SCIP_Bool             prefvar             /**< should this variable be prefered because it is in a minimal cover? */
+   SCIP_Bool             prefvar             /**< should this variable be preferred because it is in a minimal cover? */
    )
 {
    SCIP_Real pscostdown;
    SCIP_Real pscostup;
 
+   assert(heurdata != NULL);
    assert(pscostquot != NULL);
    assert(roundup != NULL);
    assert(SCIPisEQ(scip, frac, primsol - SCIPfeasFloor(scip, primsol)));
@@ -632,20 +691,27 @@ void calcPscostQuot(
    pscostup = SCIPgetVarPseudocostVal(scip, var, 1.0-frac);
    assert(pscostdown >= 0.0 && pscostup >= 0.0);
 
-   /* choose rounding direction */
+   /* choose rounding direction
+    *
+    * to avoid performance variability caused by numerics we use random numbers to decide whether we want to roundup or
+    * round down if the values to compare are equal within tolerances.
+    */
    if( rounddir == -1 )
       *roundup = FALSE;
    else if( rounddir == +1 )
       *roundup = TRUE;
-   else if( primsol < SCIPvarGetRootSol(var) - 0.4 )
+   else if( SCIPisLT(scip, primsol, SCIPvarGetRootSol(var) - 0.4)
+         || (SCIPisEQ(scip, primsol, SCIPvarGetRootSol(var) - 0.4) && SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0) )
       *roundup = FALSE;
-   else if( primsol > SCIPvarGetRootSol(var) + 0.4 )
+   else if( SCIPisGT(scip, primsol, SCIPvarGetRootSol(var) + 0.4)
+         || (SCIPisEQ(scip, primsol, SCIPvarGetRootSol(var) + 0.4) && SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0) )
       *roundup = TRUE;
-   else if( frac < 0.3 )
+   else if( SCIPisLT(scip, frac, 0.3) || (SCIPisEQ(scip, frac, 0.3) && SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0) )
       *roundup = FALSE;
-   else if( frac > 0.7 )
+   else if( SCIPisGT(scip, frac, 0.7) || (SCIPisEQ(scip, frac, 0.7) && SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0) )
       *roundup = TRUE;
-   else if( pscostdown < pscostup )
+   else if( SCIPisLT(scip, pscostdown, pscostup)
+         || (SCIPisEQ(scip, pscostdown, pscostup) && SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0))
       *roundup = FALSE;
    else
       *roundup = TRUE;
@@ -744,11 +810,11 @@ SCIP_RETCODE choosePscostVar(
              */
             roundup = FALSE;
             if( mayrounddown && mayroundup )
-               calcPscostQuot(scip, var, primsol, frac, 0, &pscostquot, &roundup, prefvar);
+               calcPscostQuot(scip, heurdata, var, primsol, frac, 0, &pscostquot, &roundup, prefvar);
             else if( mayrounddown )
-               calcPscostQuot(scip, var, primsol, frac, +1, &pscostquot, &roundup, prefvar);
+               calcPscostQuot(scip, heurdata, var, primsol, frac, +1, &pscostquot, &roundup, prefvar);
             else
-               calcPscostQuot(scip, var, primsol, frac, -1, &pscostquot, &roundup, prefvar);
+               calcPscostQuot(scip, heurdata, var, primsol, frac, -1, &pscostquot, &roundup, prefvar);
 
             assert(!SCIPisInfinity(scip,ABS(pscostquot)));
 
@@ -766,7 +832,7 @@ SCIP_RETCODE choosePscostVar(
       else
       {
          /* the candidate may not be rounded: calculate pseudo cost quotient and preferred direction */
-         calcPscostQuot(scip, var, primsol, frac, 0, &pscostquot, &roundup, prefvar);
+         calcPscostQuot(scip, heurdata, var, primsol, frac, 0, &pscostquot, &roundup, prefvar);
          assert(!SCIPisInfinity(scip,ABS(pscostquot)));
 
          /* check, if candidate is new best candidate: prefer unroundable candidates in any case */
@@ -859,8 +925,13 @@ SCIP_RETCODE chooseGuidedVar(
       if( SCIPisLT(scip, solval, SCIPvarGetLbLocal(var)) || SCIPisGT(scip, solval, SCIPvarGetUbLocal(var)) )
          continue;
 
-      /* select default rounding direction */
-      roundup = (solval < bestsolval);
+      /* select default rounding direction
+       * try to avoid variability; decide randomly if the LP solution can contain some noise
+       */
+      if( SCIPisEQ(scip, solval, bestsolval) )
+         roundup = (SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0);
+      else
+         roundup = (solval < bestsolval);
 
       if( mayrounddown || mayroundup )
       {
@@ -884,7 +955,15 @@ SCIP_RETCODE chooseGuidedVar(
                objgain = -frac*obj;
 
             /* penalize too small fractions */
-            if( frac < 0.01 )
+            if( SCIPisEQ(scip, frac, 0.01) )
+            {
+               /* try to avoid variability; decide randomly if the LP solution can contain some noise.
+                * use a 1:SCIP_PROBINGSCORE_PENALTYRATIO chance for increasing the fractionality, i.e., the score.
+                */
+               if( SCIPrandomGetInt(heurdata->randnumgen, 0, SCIP_PROBINGSCORE_PENALTYRATIO) == 0 )
+                  objgain *= 1000.0;
+            }
+            else if( frac < 0.01 )
                objgain *= 1000.0;
 
             /* prefer decisions on binary variables */
@@ -914,7 +993,15 @@ SCIP_RETCODE chooseGuidedVar(
             frac = 1.0 - frac;
 
          /* penalize too small fractions */
-         if( frac < 0.01 )
+         if( SCIPisEQ(scip, frac, 0.01) )
+         {
+            /* try to avoid variability; decide randomly if the LP solution can contain some noise.
+             * use a 1:SCIP_PROBINGSCORE_PENALTYRATIO chance for increasing the fractionality, i.e., the score.
+             */
+            if( SCIPrandomGetInt(heurdata->randnumgen, 0, SCIP_PROBINGSCORE_PENALTYRATIO) == 0 )
+               frac += 10.0;
+         }
+         else if( frac < 0.01 )
             frac += 10.0;
 
          /* prefer decisions on binary variables */
@@ -1059,7 +1146,15 @@ SCIP_RETCODE chooseDoubleVar(
       }
 
       /* penalize too small fractions */
-      if( frac < 0.01 )
+      if( SCIPisEQ(scip, frac, 0.01) )
+      {
+         /* try to avoid variability; decide randomly if the LP solution can contain some noise.
+          * use a 1:SCIP_PROBINGSCORE_PENALTYRATIO chance for increasing the fractionality, i.e., the score.
+          */
+         if( SCIPrandomGetInt(heurdata->randnumgen, 0, SCIP_PROBINGSCORE_PENALTYRATIO) == 0 )
+            frac += 10.0;
+      }
+      else if( frac < 0.01 )
          frac += 10.0;
 
       /* prefer decisions on binary variables */
@@ -1159,13 +1254,12 @@ SCIP_RETCODE solveSubMIP(
    SCIP_RETCODE retcode;
    int c;
    int nsubsols;
-   SCIP_Bool valid;
 
    /* check whether there is enough time and memory left */
    SCIP_CALL( SCIPcheckCopyLimits(scip, success) );
 
    if( !(*success) )
-      goto TERMINATE;
+      return SCIP_OKAY;
 
    /* create subproblem */
    SCIP_CALL( SCIPcreate(&subscip) );
@@ -1176,7 +1270,7 @@ SCIP_RETCODE solveSubMIP(
    *success = FALSE;
 
    /* copy original problem to subproblem; do not copy pricers */
-   SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "undercoversub", NULL, NULL, 0, FALSE, FALSE, TRUE, &valid) );
+   SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "undercoversub", NULL, NULL, 0, FALSE, FALSE, TRUE, NULL) );
 
    /* assert that cover variables are fixed in source and target SCIP */
    for( c = 0; c < ncovervars; c++)
@@ -1227,26 +1321,18 @@ SCIP_RETCODE solveSubMIP(
       SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
    }
 
-   /* disable conflict analysis */
-   if( !SCIPisParamFixed(subscip, "conflict/useprop") )
+   /* enable conflict analysis, disable analysis of boundexceeding LPs, and restrict conflict pool */
+   if( !SCIPisParamFixed(subscip, "conflict/enable") )
    {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useprop", FALSE) );
-   }
-   if( !SCIPisParamFixed(subscip, "conflict/useinflp") )
-   {
-      SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useinflp", 'o') );
+      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", TRUE) );
    }
    if( !SCIPisParamFixed(subscip, "conflict/useboundlp") )
    {
       SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useboundlp", 'o') );
    }
-   if( !SCIPisParamFixed(subscip, "conflict/usesb") )
+   if( !SCIPisParamFixed(subscip, "conflict/maxstoresize") )
    {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usesb", FALSE) );
-   }
-   if( !SCIPisParamFixed(subscip, "conflict/usepseudo") )
-   {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) );
+      SCIP_CALL( SCIPsetIntParam(subscip, "conflict/maxstoresize", 100) );
    }
 
    if( SCIPgetNSols(scip) > 0 )
@@ -1255,7 +1341,6 @@ SCIP_RETCODE solveSubMIP(
       SCIP_Real cutoffbound;
       SCIP_Real minimprove;
 
-      cutoffbound = SCIPinfinity(scip);
       assert( !SCIPisInfinity(scip,SCIPgetUpperbound(scip)) );
 
       upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
@@ -1299,7 +1384,6 @@ SCIP_RETCODE solveSubMIP(
       SCIP_CALL( createNewSol(scip, subscip, heur, varmap, subsols[c], success) );
    }
 
- TERMINATE:
    /* free sub-SCIP and hash map */
    SCIP_CALL( SCIPfree(&subscip) );
    SCIPhashmapFree(&varmap);
@@ -1427,6 +1511,9 @@ SCIP_DECL_HEURINIT(heurInitNlpdiving) /*lint --e{715}*/
    /* create working solution */
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
 
+   /* create random number generator */
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen, DEFAULT_RANDSEED) );
+
    /* initialize data */
    heurdata->nnlpiterations = 0;
    heurdata->nsuccess = 0;
@@ -1454,6 +1541,9 @@ SCIP_DECL_HEUREXIT(heurExitNlpdiving) /*lint --e{715}*/
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
+
+   /* free random number generator */
+   SCIPfreeRandom(scip, &heurdata->randnumgen);
 
    /* free working solution */
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
@@ -1518,6 +1608,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    SCIP_Real oldobjval;
    SCIP_Real fixquot;
    SCIP_Real bestboundval;
+   SCIP_Real timelim;
    SCIP_Bool bestcandmayround;
    SCIP_Bool bestcandroundup;
    SCIP_Bool nlperror;
@@ -1634,6 +1725,12 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    SCIP_CALL( SCIPgetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, &origiterlim) );
    SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, maxnnlpiterations - heurdata->nnlpiterations) );
 
+   /* set time limit for NLP solver */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelim) );
+   if( !SCIPisInfinity(scip, timelim) )
+      timelim -= SCIPgetSolvingTime(scip);
+   SCIP_CALL( SCIPsetNLPRealPar(scip, SCIP_NLPPAR_TILIM, timelim) );
+
    /* set whether NLP solver should fail fast */
    SCIP_CALL( SCIPgetNLPIntPar(scip, SCIP_NLPPAR_FASTFAIL, &origfastfail) );
    SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_FASTFAIL, (int)heurdata->nlpfastfail) );
@@ -1666,14 +1763,12 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
       {
          SCIPdebugMsg(scip, "initial NLP infeasible or not solvable --> stop\n");
 
-         if( SCIPgetNLPTermstat(scip) < SCIP_NLPTERMSTAT_NUMERR )
-         {
-            SCIPstatistic( heurdata->nfailcutoff++ );
-         }
-         else
-         {
-            SCIPstatistic( heurdata->nfailnlperror++ );
-         }
+         SCIPstatistic(
+            if( SCIPgetNLPTermstat(scip) < SCIP_NLPTERMSTAT_NUMERR )
+               heurdata->nfailcutoff++;
+            else
+               heurdata->nfailnlperror++;
+         )
 
          /* reset changed NLP parameters */
          SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, origiterlim) );
@@ -2320,6 +2415,12 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
             /* set iteration limit, allow at least MINNLPITER many iterations */
             SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, MAX(maxnnlpiterations - heurdata->nnlpiterations, MINNLPITER)) );
 
+            /* set time limit for NLP solver */
+            SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelim) );
+            if( !SCIPisInfinity(scip, timelim) )
+               timelim = MAX(0.0, timelim-SCIPgetSolvingTime(scip));
+            SCIP_CALL( SCIPsetNLPRealPar(scip, SCIP_NLPPAR_TILIM, timelim) );
+
             /* set start solution, if we are in backtracking (previous NLP solve was infeasible) */
             if( heurdata->nlpstart != 'n' && backtracked )
             {
@@ -2338,7 +2439,8 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
             {
                if( termstat >= SCIP_NLPTERMSTAT_LICERR )
                {
-                  SCIPwarningMessage(scip, "Error while solving NLP in nlpdiving heuristic; NLP solve terminated with code <%d>\n", termstat);
+                  SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL,
+                     "Error while solving NLP in nlpdiving heuristic; NLP solve terminated with code <%d>\n", termstat);
                }
                nlperror = TRUE;
                break;

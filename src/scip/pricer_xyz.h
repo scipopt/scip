@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -31,11 +31,23 @@
 extern "C" {
 #endif
 
-/** creates the xyz variable pricer and includes it in SCIP */
+/** creates the xyz variable pricer and includes it in SCIP
+ *
+ *  @ingroup PricerIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludePricerXyz(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup PRICERS
+ *
+ * @{
+ */
+
+/** TODO: add public methods to this group for documentation purposes
+
+/* @} */
 
 #ifdef __cplusplus
 }

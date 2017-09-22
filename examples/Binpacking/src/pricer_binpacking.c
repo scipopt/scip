@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -19,9 +19,9 @@
  * @author Stefan Heinz
  *
  * This file implements the variable pricer which check if variables exist with negative reduced cost. See
- * @ref PRICER for more details.
+ * @ref BINPACKING_PRICER for more details.
  *
- * @page PRICER Pricing new variables
+ * @page BINPACKING_PRICER Pricing new variables
  *
  * The task of the pricer is to search for new variables with negative reduced costs. For this, the following integer
  * program is solved:
@@ -37,7 +37,7 @@
  * \f]
  *
  * where \f$ (\lambda_S)_i \f$ for \f$i\in\{1,\dots,n\}\f$ are binary variables and \f$y^\star_i\f$ given by the dual
- * solution of the restricted master problem. See the \ref PROBLEM "problem description" for more details.
+ * solution of the restricted master problem. See the \ref BINPACKING_PROBLEM "problem description" for more details.
  *
  * To solve the above integer program, we create a new SCIP instance within SCIP and use the usual functions to create
  * variables and constraints. Besides, we need the current dual solutions to all set covering constraints (each stands
@@ -48,7 +48,7 @@
  * and over again. For example, if we branched or fixed a certain packing to zero, we have to make sure that we do not
  * generate the corresponding variables at that node again. For this, we have to add constraints forbidding to generate
  * variables which are locally fixed to zero. See the function addFixedVarsConss() for more details. While using the
- * \ref BRANCHING "Ryan/Foster branching", we also have to ensure that these branching decisions are respected. This is
+ * \ref BINPACKING_BRANCHING "Ryan/Foster branching", we also have to ensure that these branching decisions are respected. This is
  * realized within the function addBranchingDecisionConss().
  *
  * @note In case of this binpacking example, the master LP should not get infeasible after branching, because of the way

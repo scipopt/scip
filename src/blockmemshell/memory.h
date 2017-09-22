@@ -3,7 +3,7 @@
 /*                  This file is part of the library                         */
 /*          BMS --- Block Memory Shell                                       */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  BMS is distributed under the terms of the ZIB Academic License.          */
@@ -29,18 +29,38 @@
 #include <stdlib.h>
 #include <stddef.h>
 
-/* special thanks to Daniel Junglas for following template and macros */
 #ifdef __cplusplus
 
+/* special thanks to Daniel Junglas for following template and macros */
 template<typename T> T* docast(T*, void *v) { return reinterpret_cast<T*>(v); }
+
+/* For C++11, we can easily check whether the types for memory functions like BMSduplicateXYZArray() are equal. */
+#if __cplusplus > 199711L
+#include <type_traits>
+
+/* the following adds a type check for the parameters, used in ASSIGNCHECK below */
+template<typename T1, typename T2> T1* docastcheck(T1* v1, void* v, T2* v2)
+{
+   typedef typename std::remove_const<T1>::type t1;
+   typedef typename std::remove_const<T2>::type t2;
+   static_assert(std::is_same<t1, t2>(), "need equal types");
+   return reinterpret_cast<T1*>(v);
+}
+#else
+/* for older compilers do nothing */
+template<typename T1, typename T2> T1* docastcheck(T1* v1, void* v, T2* v2) { return reinterpret_cast<T1*>(v); }
+#endif
+
 
 extern "C" {
 
 #define ASSIGN(pointerstarstar, voidstarfunction) (*(pointerstarstar) = docast(*(pointerstarstar), (voidstarfunction)))
+#define ASSIGNCHECK(pointerstarstar, voidstarfunction, origpointer) (*(pointerstarstar) = docastcheck(*(pointerstarstar), (voidstarfunction), (origpointer)))
 
 #else
 
 #define ASSIGN(pointerstarstar, voidstarfunction) (*(pointerstarstar) = (voidstarfunction))
+#define ASSIGNCHECK(pointerstarstar, voidstarfunction, origpointer) (*(pointerstarstar) = (voidstarfunction))
 
 #endif
 
@@ -57,6 +77,10 @@ extern "C" {
 
 #endif
 
+/* define if not already existing to make file independent from def.h */
+#ifndef SCIP_UNUSED
+#define SCIP_UNUSED(x) ((void) (x))
+#endif
 
 
 /*************************************************************************************
@@ -95,8 +119,8 @@ extern "C" {
 
 #define BMSduplicateMemory(ptr, source)       ASSIGN((ptr), BMSduplicateMemory_call( (const void*)(source), sizeof(**(ptr)), __FILE__, __LINE__ ))
 #define BMSduplicateMemorySize(ptr, source, size) ASSIGN((ptr), BMSduplicateMemory_call( (const void*)(source), (size_t)(ptrdiff_t)(size), __FILE__, __LINE__ ))
-#define BMSduplicateMemoryArray(ptr, source, num) ASSIGN((ptr), BMSduplicateMemoryArray_call( (const void*)(source), (size_t)(ptrdiff_t)(num), \
-                                                  sizeof(**(ptr)), __FILE__, __LINE__ ))
+#define BMSduplicateMemoryArray(ptr, source, num) ASSIGNCHECK((ptr), BMSduplicateMemoryArray_call( (const void*)(source), (size_t)(ptrdiff_t)(num), \
+                                                  sizeof(**(ptr)), __FILE__, __LINE__ ), source)
 #define BMSfreeMemory(ptr)                    BMSfreeMemory_call( (void**)(ptr), __FILE__, __LINE__ )
 #define BMSfreeMemoryNull(ptr)                BMSfreeMemoryNull_call( (void**)(ptr), __FILE__, __LINE__ )
 #define BMSfreeMemoryArray(ptr)               BMSfreeMemory_call( (void**)(ptr), __FILE__, __LINE__ )
@@ -413,8 +437,8 @@ typedef struct BMS_BlkMem BMS_BLKMEM;           /**< block memory: collection of
                                                 (size_t)(ptrdiff_t)(oldnum), (size_t)(ptrdiff_t)(newnum), sizeof(**(ptr)), __FILE__, __LINE__))
 #define BMSduplicateBlockMemory(mem, ptr, source) ASSIGN((ptr), BMSduplicateBlockMemory_call((mem), (const void*)(source), \
                                                 sizeof(**(ptr)), __FILE__, __LINE__ ))
-#define BMSduplicateBlockMemoryArray(mem, ptr, source, num) ASSIGN((ptr), BMSduplicateBlockMemoryArray_call( (mem), (const void*)(source), \
-                                                (size_t)(ptrdiff_t)(num), sizeof(**(ptr)), __FILE__, __LINE__ ))
+#define BMSduplicateBlockMemoryArray(mem, ptr, source, num) ASSIGNCHECK((ptr), BMSduplicateBlockMemoryArray_call( (mem), (const void*)(source), \
+                                                (size_t)(ptrdiff_t)(num), sizeof(**(ptr)), __FILE__, __LINE__ ), source)
 
 #define BMSfreeBlockMemory(mem,ptr)           BMSfreeBlockMemory_call( (mem), (void**)(ptr), sizeof(**(ptr)), __FILE__, __LINE__ )
 #define BMSfreeBlockMemoryNull(mem,ptr)       BMSfreeBlockMemoryNull_call( (mem), (void**)(ptr), sizeof(**(ptr)), __FILE__, __LINE__ )
@@ -424,12 +448,12 @@ typedef struct BMS_BlkMem BMS_BLKMEM;           /**< block memory: collection of
 #define BMSfreeBlockMemorySizeNull(mem,ptr,size) BMSfreeBlockMemory_call( (mem), (void**)(ptr), (size_t)(ptrdiff_t)(size), __FILE__, __LINE__ )
 
 #define BMSgarbagecollectBlockMemory(mem)     BMSgarbagecollectBlockMemory_call(mem)
-#define BMSgetBlockMemoryTotal(mem)           BMSgetBlockMemoryTotal_call(mem)
+#define BMSgetBlockMemoryAllocated(mem)       BMSgetBlockMemoryAllocated_call(mem)
 #define BMSgetBlockMemoryUsed(mem)            BMSgetBlockMemoryUsed_call(mem)
-#define BMSgetBlockMemoryLazy(mem)            BMSgetBlockMemoryLazy_call(mem)
+#define BMSgetBlockMemoryUnused(mem)          BMSgetBlockMemoryUnused_call(mem)
 #define BMSgetBlockMemoryUsedMax(mem)         BMSgetBlockMemoryUsedMax_call(mem)
-#define BMSgetBlockMemoryLazyMax(mem)         BMSgetBlockMemoryLazyMax_call(mem)
-#define BMSgetBlockMemoryTotalMax(mem)        BMSgetBlockMemoryTotalMax_call(mem)
+#define BMSgetBlockMemoryUnusedMax(mem)       BMSgetBlockMemoryUnusedMax_call(mem)
+#define BMSgetBlockMemoryAllocatedMax(mem)    BMSgetBlockMemoryAllocatedMax_call(mem)
 #define BMSgetBlockPointerSize(mem,ptr)       BMSgetBlockPointerSize_call((mem), (ptr))
 #define BMSdisplayBlockMemory(mem)            BMSdisplayBlockMemory_call(mem)
 #define BMSblockMemoryCheckEmpty(mem)         BMScheckEmptyBlockMemory_call(mem)
@@ -458,12 +482,12 @@ typedef struct BMS_BlkMem BMS_BLKMEM;           /**< block memory: collection of
 #define BMSfreeBlockMemorySize(mem,ptr,size)                 (SCIP_UNUSED(mem), SCIP_UNUSED(size), BMSfreeMemory(ptr))
 #define BMSfreeBlockMemorySizeNull(mem,ptr,size)             (SCIP_UNUSED(mem), SCIP_UNUSED(size), BMSfreeMemoryNull(ptr))
 #define BMSgarbagecollectBlockMemory(mem)                    SCIP_UNUSED(mem)
-#define BMSgetBlockMemoryTotal(mem)                          (SCIP_UNUSED(mem), 0LL)
+#define BMSgetBlockMemoryAllocated(mem)                      (SCIP_UNUSED(mem), 0LL)
 #define BMSgetBlockMemoryUsed(mem)                           (SCIP_UNUSED(mem), 0LL)
-#define BMSgetBlockMemoryLazy(mem)                           (SCIP_UNUSED(mem), 0LL)
+#define BMSgetBlockMemoryUnused(mem)                         (SCIP_UNUSED(mem), 0LL)
 #define BMSgetBlockMemoryUsedMax(mem)                        (SCIP_UNUSED(mem), 0LL)
-#define BMSgetBlockMemoryLazyMax(mem)                        (SCIP_UNUSED(mem), 0LL)
-#define BMSgetBlockMemoryTotalMax(mem)                       (SCIP_UNUSED(mem), 0LL)
+#define BMSgetBlockMemoryUnusedMax(mem)                      (SCIP_UNUSED(mem), 0LL)
+#define BMSgetBlockMemoryAllocatedMax(mem)                   (SCIP_UNUSED(mem), 0LL)
 #define BMSgetBlockPointerSize(mem,ptr)                      (SCIP_UNUSED(mem), SCIP_UNUSED(ptr), 0)
 #define BMSdisplayBlockMemory(mem)                           SCIP_UNUSED(mem)
 #define BMSblockMemoryCheckEmpty(mem)                        (SCIP_UNUSED(mem), 0LL)
@@ -598,13 +622,13 @@ void BMSgarbagecollectBlockMemory_call(
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
-/** returns the total number of bytes in the block memory */
+/** returns the number of allocated bytes in the block memory */
 EXTERN
-long long BMSgetBlockMemoryTotal_call(
+long long BMSgetBlockMemoryAllocated_call(
    const BMS_BLKMEM*     blkmem              /**< block memory */
    );
 
-/** returns the number of allocated bytes in the block memory */
+/** returns the number of used bytes in the block memory */
 EXTERN
 long long BMSgetBlockMemoryUsed_call(
    const BMS_BLKMEM*     blkmem              /**< block memory */
@@ -612,24 +636,24 @@ long long BMSgetBlockMemoryUsed_call(
 
 /** returns the number of allocated but not used bytes in the block memory */
 EXTERN
-long long BMSgetBlockMemoryLazy_call(
+long long BMSgetBlockMemoryUnused_call(
    const BMS_BLKMEM*     blkmem              /**< block memory */
    );
 
-/** returns the number of allocated but not used bytes in the block memory */
+/** returns the maximal number of used bytes in the block memory */
 EXTERN
 long long BMSgetBlockMemoryUsedMax_call(
    const BMS_BLKMEM*     blkmem              /**< block memory */
    );
 
-/** returns the number of allocated but not used bytes in the block memory */
+/** returns the maximal number of allocated but not used bytes in the block memory */
 EXTERN
-long long BMSgetBlockMemoryLazyMax_call(
+long long BMSgetBlockMemoryUnusedMax_call(
    const BMS_BLKMEM*     blkmem              /**< block memory */
    );
 
-/** returns the maximal number of allocated and used bytes in the block memory */
-long long BMSgetBlockMemoryTotalMax_call(
+/** returns the maximal number of allocated bytes in the block memory */
+long long BMSgetBlockMemoryAllocatedMax_call(
    const BMS_BLKMEM*     blkmem              /**< block memory */
    );
 
@@ -678,8 +702,8 @@ typedef struct BMS_BufMem BMS_BUFMEM;        /**< buffer memory for temporary ob
                                                  sizeof(**(ptr)), __FILE__, __LINE__))
 #define BMSduplicateBufferMemory(mem,ptr,source,size) \
                                              ASSIGN((ptr), BMSduplicateBufferMemory_call((mem), (const void*)(source), (size_t)(ptrdiff_t)(size), __FILE__, __LINE__))
-#define BMSduplicateBufferMemoryArray(mem,ptr,source,num) ASSIGN((ptr), BMSduplicateBufferMemoryArray_call((mem), \
-                                                (const void*)(source), (size_t)(ptrdiff_t)(num), sizeof(**(ptr)), __FILE__, __LINE__))
+#define BMSduplicateBufferMemoryArray(mem,ptr,source,num) ASSIGNCHECK((ptr), BMSduplicateBufferMemoryArray_call((mem), \
+                                                 (const void*)(source), (size_t)(ptrdiff_t)(num), sizeof(**(ptr)), __FILE__, __LINE__), source)
 
 #define BMSfreeBufferMemory(mem,ptr)         BMSfreeBufferMemory_call((mem), (void**)(ptr), __FILE__, __LINE__)
 #define BMSfreeBufferMemoryNull(mem,ptr)     BMSfreeBufferMemoryNull_call((mem), (void**)(ptr), __FILE__, __LINE__)

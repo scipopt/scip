@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -40,7 +40,7 @@
 #define SCIPtpiDestroyCondition(condition)    SCIP_UNUSED(condition)
 #define SCIPtpiSignalCondition(condition)     (SCIP_UNUSED(condition), SCIP_OKAY)
 #define SCIPtpiBroadcastCondition(condition)  (SCIP_UNUSED(condition), SCIP_OKAY)
-#define SCIPtpiWaitCondition(condition, lock) (SCIP_UNUSED(condition), SCIP_UNUSED(lock), SCIP_OKAY)
+#define SCIPtpiWaitCondition(condition, lock) /*lint -e505*/ (SCIP_UNUSED(condition), SCIP_UNUSED(lock), SCIP_OKAY)
 
 
 #define SCIPtpiGetNumThreads()                1

@@ -4,11 +4,66 @@ OPTHOST	   	 := $(shell uname -n | sed 's/\(.zib.de\)//g' | tr -cd '[:alpha:]')
 
 -include $(SCIPDIR)/make/local/make.$(OPTHOST)
 
+.PHONY: testfscip
+testfscip: check/configuration_set_fscip.sh check/configuration_logfiles_fscip.sh check/evalcheck_cluster.sh check/check.awk
+		cd check; \
+		$(SHELL) ./check_fscip.sh $(TEST) $(FSCIP) $(SETTINGS) $(notdir $(FSCIP)).$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
+		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) \
+		$(SEEDS);
+
+.PHONY: testcplex
+testcplex:
+		cd check; \
+		$(SHELL) ./check_cplex.sh $(TEST) $(CPLEX) $(SETTINGS) $(notdir $(CPLEX)).$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
+		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE);
+
+.PHONY: testxpress
+testxpress:
+		cd check; \
+		$(SHELL) ./check_xpress.sh $(TEST) $(XPRESS_BIN) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) \
+		$(DISPFREQ) $(CONTINUE);
+
+.PHONY: testmosek
+testmosek:
+		cd check; \
+		$(SHELL) ./check_mosek.sh $(TEST) $(MOSEK) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
+
+.PHONY: testcbc
+testcbc:
+		cd check; \
+		$(SHELL) ./check_cbc.sh $(TEST) $(CBC) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(CONTINUE);
+
+.PHONY: testcbcparallel
+testcbcparallel:
+		cd check; \
+		$(SHELL) ./check_cbc.sh $(TEST) $(CBCPARALLEL) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(CONTINUE);
+
+.PHONY: testgurobi
+testgurobi:
+		cd check; \
+		$(SHELL) ./check_gurobi.sh $(TEST) $(GUROBI) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
+
+.PHONY: testglpk
+testglpk:
+		cd check; \
+		$(SHELL) ./check_glpk.sh $(TEST) $(GLPK) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
+
+.PHONY: testsymphony
+testsymphony:
+		cd check; \
+		$(SHELL) ./check_symphony.sh $(TEST) $(SYMPHONY) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) \
+		$(DISPFREQ) $(CONTINUE);
+
+.PHONY: testblis
+testblis:
+		cd check; \
+		$(SHELL) ./check_blis.sh $(TEST) $(BLIS) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
+
 .PHONY: testcluster
 testcluster: check/check_cluster.sh check/configuration_cluster.sh check/configuration_set.sh check/configuration_logfiles.sh check/evalcheck_cluster.sh check/check.awk
 		cd check; \
-		$(SHELL) ./check_cluster.sh $(TEST) $(MAINFILE) $(SETTINGS) \
-		$(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) \
+		$(SHELL) ./check_cluster.sh $(TEST) $(EXECUTABLE) $(SETTINGS) \
+		$(BINID) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) \
 		$(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
 		$(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) \
 		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(SEEDS) $(DEBUGTOOL) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE);
@@ -21,6 +76,15 @@ testnodes:
                 $(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
                 $(QUEUETYPE) $(QUEUE) $(NODES) $(PPN) $(CLIENTTMPDIR) \
                 $(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(DEBUGTOOL) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE);
+
+.PHONY: testclusterfscip
+testclusterfscip: check/check_cluster_fscip.sh check/configuration_cluster.sh check/configuration_set_fscip.sh check/configuration_logfiles_fscip.sh check/evalcheck_cluster.sh check/check.awk
+		cd check; \
+		$(SHELL) ./check_cluster_fscip.sh $(TEST) $(FSCIP) $(SETTINGS) \
+		$(notdir $(FSCIP)) $(TIME) $(NODES) $(MEM) \
+		$(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
+		$(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) \
+		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(SEEDS) $(DEBUGTOOL) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE);
 
 .PHONY: testclustercpx
 testclustercpx:

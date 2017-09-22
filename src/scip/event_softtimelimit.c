@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -43,6 +43,7 @@ struct SCIP_EventhdlrData
  */
 
 /** copy method for event handler plugins (called when SCIP copies plugins) */
+/**! [SnippetEventCopySofttimelimit] */
 static
 SCIP_DECL_EVENTCOPY(eventCopySofttimelimit)
 {  /*lint --e{715}*/
@@ -55,8 +56,10 @@ SCIP_DECL_EVENTCOPY(eventCopySofttimelimit)
 
    return SCIP_OKAY;
 }
+/**! [SnippetEventCopySofttimelimit] */
 
 /** destructor of event handler to free user data (called when SCIP is exiting) */
+/**! [SnippetEventFreeSofttimelimit] */
 static
 SCIP_DECL_EVENTFREE(eventFreeSofttimelimit)
 {  /*lint --e{715}*/
@@ -74,6 +77,7 @@ SCIP_DECL_EVENTFREE(eventFreeSofttimelimit)
 
    return SCIP_OKAY;
 }
+/**! [SnippetEventFreeSofttimelimit] */
 
 
 
@@ -152,7 +156,7 @@ SCIP_DECL_EVENTEXEC(eventExecSofttimelimit)
    eventhdlrdata->filterpos = -1;
 
    /* print best solution value */
-   SCIPinfoMessage(scip, NULL, "changed time limit to %.1f after first solution was found\n",
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "changed time limit to %.1f after first solution was found\n",
       eventhdlrdata->softtimelimit);
 
    return SCIP_OKAY;
@@ -179,7 +183,7 @@ SCIP_RETCODE SCIPincludeEventHdlrSofttimelimit(
    SCIP_CALL( SCIPsetEventhdlrExit(scip, eventhdlr, eventExitSofttimelimit) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "limits/softtime",
-         "soft time limit which should be applied after first solution was found",
+         "soft time limit which should be applied after first solution was found (-1.0: disabled)",
          &eventhdlrdata->softtimelimit, FALSE, -1.0, -1.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;

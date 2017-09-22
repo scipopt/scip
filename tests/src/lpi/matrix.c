@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -55,7 +55,7 @@ TestSuite(matrix, .init = setup, .fini = teardown);
 /** TESTS **/
 
 /* This test should fail with an assert from the LPI, which causes SIGABRT to be issued. Thus, this test should pass. */
-Test(matrix, create_matrix, .disabled = false, .signal = SIGABRT)
+Test(matrix, create_matrix, .signal = SIGABRT)
 {
    SCIP_Real obj = 0.0;
    SCIP_Real lb = 0.0;
@@ -73,6 +73,11 @@ Test(matrix, create_matrix, .disabled = false, .signal = SIGABRT)
    int matind[2];
    int beg = 0;
    int ind = 0;
+
+   /* this test can only work in debug mode, so we make it pass in opt mode */
+#ifdef NDEBUG
+   abort(); /* return SIGABORT */
+#endif
 
    /* add one column */
    SCIP_CALL( SCIPlpiAddCols(lpi, 1, &obj, &lb, &ub, NULL, 0, NULL, NULL, NULL) );

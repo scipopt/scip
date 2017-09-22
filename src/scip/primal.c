@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -138,6 +138,7 @@ SCIP_RETCODE SCIPprimalCreate(
    (*primal)->nlimbestsolsfound = 0;
    (*primal)->upperbound = SCIP_INVALID;
    (*primal)->cutoffbound = SCIP_INVALID;
+   (*primal)->updateviolations = TRUE;
 
    return SCIP_OKAY;
 }
@@ -223,6 +224,7 @@ SCIP_RETCODE SCIPprimalClear(
    (*primal)->nlimbestsolsfound = 0;
    (*primal)->upperbound = SCIP_INVALID;
    (*primal)->cutoffbound = SCIP_INVALID;
+   (*primal)->updateviolations = TRUE;
 
    return SCIP_OKAY;
 }
@@ -609,6 +611,7 @@ SCIP_RETCODE primalAddSol(
    )
 {
    SCIP_SOL* sol;
+   /* cppcheck-suppress unassignedVariable */
    SCIP_EVENT event;
    SCIP_Real obj;
    int pos;
@@ -629,7 +632,7 @@ SCIP_RETCODE primalAddSol(
    SCIPsetDebugMsg(set, "insert primal solution %p with obj %g at position %d (replace=%u):\n",
       (void*)sol, obj, insertpos, replace);
 
-   SCIPdebug( SCIP_CALL( SCIPsolPrint(sol, set, messagehdlr, stat, transprob, NULL, NULL, FALSE) ) );
+   SCIPdebug( SCIP_CALL( SCIPsolPrint(sol, set, messagehdlr, stat, transprob, NULL, NULL, FALSE, FALSE) ) );
 
 #if 0 /* this is not a valid debug check, but can be used to track down numerical troubles */
 #ifndef NDEBUG
@@ -648,7 +651,7 @@ SCIP_RETCODE primalAddSol(
       if( !feasible )
       {
          SCIPerrorMessage("infeasible solution accepted:\n");
-         SCIP_CALL( SCIPsolPrint(sol, set, messagehdlr, stat, origprob, transprob, NULL, FALSE) );
+         SCIP_CALL( SCIPsolPrint(sol, set, messagehdlr, stat, origprob, transprob, NULL, FALSE, FALSE) );
       }
       assert(feasible);
    }
@@ -735,7 +738,7 @@ SCIP_RETCODE primalAddSol(
    SCIPvisualFoundSolution(stat->visual, set, stat, SCIPtreeGetCurrentNode(tree), insertpos == 0 ? TRUE : FALSE, sol);
 
    /* check, if the global upper bound has to be updated */
-   if( obj < primal->upperbound )
+   if( obj < primal->cutoffbound && insertpos == 0 )
    {
       /* update the upper bound */
       SCIP_CALL( SCIPprimalSetUpperbound(primal, blkmem, set, stat, eventqueue, transprob, tree, reopt, lp, obj) );
@@ -836,7 +839,7 @@ SCIP_RETCODE primalAddOrigPartialSol(
    SCIP_PROB*            prob,               /**< original problem data */
    SCIP_SOL*             sol                 /**< primal CIP solution */
    )
-{
+{  /*lint --e{715}*/
    assert(primal != NULL);
    assert(set != NULL);
    assert(prob != NULL);
@@ -1877,4 +1880,26 @@ SCIP_RETCODE SCIPprimalTransformSol(
    }
 
    return SCIP_OKAY;
+}
+
+
+/** is the updating of violations enabled for this problem? */
+SCIP_Bool SCIPprimalUpdateViolations(
+   SCIP_PRIMAL*          primal              /**< problem data */
+   )
+{
+   assert(primal != NULL);
+
+   return primal->updateviolations;
+}
+
+/** set whether the updating of violations is turned on */
+void SCIPprimalSetUpdateViolations(
+   SCIP_PRIMAL*          primal,             /**< problem data */
+   SCIP_Bool             updateviolations    /**< marks whether the updating of violations is turned on */
+   )
+{
+   assert(primal != NULL);
+
+   primal->updateviolations = updateviolations;
 }

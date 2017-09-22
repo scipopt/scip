@@ -3,10 +3,10 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
-#*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
+#*  SCIP is distributed under the terms of the ZIB Academic License.         *
 #*                                                                           *
 #*  You should have received a copy of the ZIB Academic License              *
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
@@ -95,7 +95,6 @@ scip:
 
 .PHONY: doc
 doc:
-		@-(cd doc && $(LN_sf) ../$(SCIPDIR)/doc/scip.css);
 		@-(cd doc && $(LN_sf) ../$(SCIPDIR)/doc/pictures/scippy.png);
 		@-(cd doc && $(LN_sf) ../$(SCIPDIR)/doc/pictures/miniscippy.png);
 		@-(cd doc && $(LN_sf) ../$(SCIPDIR)/doc/scipfooter.html footer.html);
@@ -127,7 +126,7 @@ test:		$(MAINFILE) $(CHECKDIR)
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_tmpfile_setup_scip.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/run.sh);
 		cd check; \
-		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
+		$(SHELL) ./check.sh $(TEST) $(EXECUTABLE) $(SETTINGS) $(BINID) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
 		$(CONTINUE) $(LOCK) "example" $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) $(SEEDS);
 
 # include local targets

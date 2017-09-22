@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   primal.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for collecting primal CIP solutions and primal informations
  * @author Tobias Achterberg
  */
@@ -373,6 +374,19 @@ SCIP_RETCODE SCIPprimalTransformSol(
    int                   solvalssize,        /**< size of solvals and solvalset arrays, should be >= number of active
                                               *   variables */
    SCIP_Bool*            added               /**< pointer to store whether the solution was added */
+   );
+
+/** is the updating of violations enabled for this problem? */
+extern
+SCIP_Bool SCIPprimalUpdateViolations(
+   SCIP_PRIMAL*          primal              /**< problem data */
+   );
+
+/** set whether the updating of violations is turned on */
+extern
+void SCIPprimalSetUpdateViolations(
+   SCIP_PRIMAL*          primal,             /**< problem data */
+   SCIP_Bool             updateviolations    /**< TRUE to enable violation updates, FALSE otherwise */
    );
 
 #ifdef __cplusplus

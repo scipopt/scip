@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -472,7 +472,6 @@ SCIP_Real determineBound(
       }
 
       slaveincrement = FALSE;
-      masterincrement = FALSE;
       /* If one counter has already reached its limit, assign a huge number to the corresponding
        * row index to simulate an always greater row position. */
       if( i < nslaverows )
@@ -846,8 +845,8 @@ SCIP_DECL_HEURINIT(heurInitTwoopt)
    heurdata->nintblocks = 0;
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
-         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
+         DEFAULT_RANDSEED) );
 
 #ifdef SCIP_STATISTIC
    /* initialize statistics */
@@ -1339,7 +1338,7 @@ SCIP_DECL_HEUREXIT(heurExitTwoopt)
    assert(heurdata->intvars == NULL);
 
    /* free random number generator */
-   SCIPrandomFree(&heurdata->randnumgen);
+   SCIPfreeRandom(scip, &heurdata->randnumgen);
 
    SCIPheurSetData(heur, heurdata);
 

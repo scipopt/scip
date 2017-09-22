@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presolve.h
- * @brief  internal methods for presolving
+ * @ingroup PUBLICCOREAPI
+ * @brief  methods commonly used for presolving
  * @author Michael Winkler
  */
 
@@ -30,7 +31,12 @@
 extern "C" {
 #endif
 
-
+/**@defgroup PublicSpecialPresolveMethods Special Methods
+ * @ingroup PublicPresolverMethods
+ * @brief methods commonly used for presolving
+ *
+ * @{
+ */
 /** try to reduce the necessary variable in a set of variables with corresponding bounds and boundtypes for which one
  *  must be fulfilled
  *
@@ -70,6 +76,8 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
    SCIP_Bool*            glbinfeas,          /**< pointer to store if global infeasibility was detected */
    SCIP_Bool             fullshortening      /**< do we want to try the shortening procedure over the whole set (which might be expensive) */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

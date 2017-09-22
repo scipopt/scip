@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -18,9 +18,9 @@
  * @author Timo Berthold
  * @author Stefan Heinz
  *
- * This file implements the reader/parser used to read the binpacking input data. For more details see \ref READER.
+ * This file implements the reader/parser used to read the binpacking input data. For more details see \ref BINPACKING_READER.
  *
- * @page READER Parsing the input format and creating the problem
+ * @page BINPACKING_READER Parsing the input format and creating the problem
  *
  * In the <code>data</code> directory you find a few data files which contain each one binpacking problem. These data
  * files have the following structure. In the first line the name of the instance is stated. In the second line you find
@@ -32,7 +32,7 @@
  * one interface methods (the one including the reader into \SCIP). For our purpose we only implemented the \ref
  * READERREAD "READERREAD" callback and the interface method which adds the reader plugin to \SCIP.
  *
- * @section READERINCLUDE The SCIPincludeReaderBpa() interface method
+ * @section BINPACKING_READERINCLUDE The SCIPincludeReaderBpa() interface method
  *
  * The interface method <code>SCIPincludeReaderBpa()</code> is called to add the reader plugin to \SCIP (see
  * cmain.c). This means \SCIP gets informed that this reader is available for reading input files. Therefore, the
@@ -43,11 +43,11 @@
  * <code>SCIPincludeReader()</code> also passes for each callback of the reader a function pointers
  * (some of them might be NULL pointers). These function
  * pointers are used by \SCIP to run the reader. For more information about all available reader callbacks we refer to
- * the <a href="http://scip.zib.de/doc/html/READER.html">How to add file readers</a> tutorial. In the remaining section
+ * the \ref READER "How to add file readers" tutorial. In the remaining section
  * we restrict ourself to the callback <code>READERREAD</code> which is the only one we implemented for the binpacking
  * example. All other callbacks are not required for this example.
  *
- * @section READERREAD The READERREAD callback method
+ * @section BINPACKING_READERREAD The READERREAD callback method
  *
  * The READERREAD callback is in charge of parsing a file and creating the problem. To see the list of arguments this
  * functions gets see the file type_reader.h in the source of \SCIP. The following arguments are of interest in our
@@ -57,7 +57,7 @@
  * not. Note that in type_reader.h you also find a list of allowable result values for the SCIP_RESULT pointer and the
  * <code>SCIP_RETCODE</code> which is the return value of this function.
  *
- * @subsection PARSING Parsing the problem
+ * @subsection BINPACKING_PARSING Parsing the problem
  *
  * The file can be opened and parsed with your favorite methods. In this case we are using the functionality provided by
  * \SCIP since this has some nice side effects. We are using the function SCIPfopen() which can besides standard
@@ -65,7 +65,7 @@
  * in the source of SCIP. Parsing the data out of the file is not that hard. Please look at the code and comments
  * therein for more details.
  *
- * @subsection CREATING Creating the problem
+ * @subsection BINPACKING_CREATING Creating the problem
  *
  * After parsing the file the final task for the reader is to create the problem. In our case, we pass the collected data
  * to the \ref probdata_binpacking.h "main problem data plugin". For this, we use the interface methods

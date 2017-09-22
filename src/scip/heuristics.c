@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -127,7 +127,8 @@ SCIP_RETCODE selectNextDiving(
          /* scores are kept in arrays for faster reuse */
          if( storelpcandscores )
          {
-            SCIP_CALL( SCIPgetDivesetScore(scip, diveset, SCIP_DIVETYPE_INTEGRALITY, lpcands[c], lpcandssol[c], lpcandsfrac[c], &lpcandsscores[c], &lpcandroundup[c]) );
+            SCIP_CALL( SCIPgetDivesetScore(scip, diveset, SCIP_DIVETYPE_INTEGRALITY, lpcands[c], lpcandssol[c],
+                  lpcandsfrac[c], &lpcandsscores[c], &lpcandroundup[c]) );
          }
 
          score = lpcandsscores[c];
@@ -242,6 +243,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    int lpsolvefreq;
 
    assert(scip != NULL);
+   assert(heur != NULL);
    assert(result != NULL);
    assert(worksol != NULL);
 
@@ -284,8 +286,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    /*todo another factor of 10, REALLY? */
    maxnlpiterations = (SCIP_Longint)((1.0 + 10*(oldsolsuccess+1.0)/(ncalls+1.0)) * SCIPdivesetGetMaxLPIterQuot(diveset) * nlpiterations);
    maxnlpiterations += SCIPdivesetGetMaxLPIterOffset(diveset);
-
-
 
    /* don't try to dive, if we took too many LP iterations during diving */
    if( SCIPdivesetGetNLPIterations(diveset) >= maxnlpiterations )
@@ -591,7 +591,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                   case SCIP_BRANCHDIR_UPWARDS:
                      /* test if bound change is possible, otherwise propagation might have deduced the same
                       * bound already or numerical troubles might have occurred */
-                     if( SCIPisFeasLE(scip, bdchgvalue, lblocal) )
+                     if( SCIPisFeasLE(scip, bdchgvalue, lblocal) || SCIPisFeasGT(scip, bdchgvalue, ublocal) )
                         infeasbdchange = TRUE;
                      else
                      {
@@ -602,7 +602,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                   case SCIP_BRANCHDIR_DOWNWARDS:
                      /* test if bound change is possible, otherwise propagation might have deduced the same
                       * bound already or numerical troubles might have occurred */
-                     if( SCIPisFeasGE(scip, bdchgvalue, ublocal) )
+                     if( SCIPisFeasGE(scip, bdchgvalue, ublocal) || SCIPisFeasLT(scip, bdchgvalue, lblocal) )
                         infeasbdchange = TRUE;
                      else
                      {
@@ -641,13 +641,12 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                if( infeasbdchange )
                {
                   SCIPdebugMsg(scip, "\nSelected variable <%s> domain already [%g,%g] as least as tight as desired bound change, diving aborted \n",
-                     SCIPvarGetName(bdchgvar), lblocal, ublocal);
+                     SCIPvarGetName(bdchgvar), SCIPvarGetLbLocal(bdchgvar), SCIPvarGetUbLocal(bdchgvar));
                   cutoff = TRUE;
                   break;
                }
 
-               SCIPdebugMsg(scip, "newbounds=[%g,%g]\n",
-                     lblocal, ublocal);
+               SCIPdebugMsg(scip, "newbounds=[%g,%g]\n", SCIPvarGetLbLocal(bdchgvar), SCIPvarGetUbLocal(bdchgvar));
             }
             /* break loop immediately if we detected a cutoff */
             if( cutoff )
@@ -908,13 +907,15 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
    int                   nfixedvars,         /**< number of source variables whose copies should be fixed in the target SCIP environment, or NULL */
    SCIP_Bool             uselprows,          /**< should the linear relaxation of the problem defined by LP rows be copied? */
    SCIP_Bool             copycuts,           /**< should cuts be copied (only if uselprows == FALSE) */
-   SCIP_Bool*            success             /**< was the copying successful? */
+   SCIP_Bool*            success,            /**< was the copying successful? */
+   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    )
 {
    assert(sourcescip != NULL);
    assert(suffix != NULL);
    assert(subscip != NULL);
    assert(varmap != NULL);
+   assert(success != NULL);
 
    if( uselprows )
    {
@@ -930,14 +931,15 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
       SCIP_CALL( SCIPcreateProb(subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
       /* copy all variables */
-      SCIP_CALL( SCIPcopyVars(sourcescip, subscip, varmap, NULL,  fixedvars, fixedvals, nfixedvars, TRUE) );
+      SCIP_CALL( SCIPcopyVars(sourcescip, subscip, varmap, NULL, fixedvars, fixedvals, nfixedvars, TRUE) );
 
       /* create linear constraints from LP rows of the source problem */
       SCIP_CALL( createRows(sourcescip, subscip, varmap) );
    }
    else
    {
-      SCIP_CALL( SCIPcopyConsCompression(sourcescip, subscip, varmap, NULL, suffix, fixedvars, fixedvals, nfixedvars, TRUE, FALSE, TRUE, success) );
+      SCIP_CALL( SCIPcopyConsCompression(sourcescip, subscip, varmap, NULL, suffix, fixedvars, fixedvals, nfixedvars,
+            TRUE, FALSE, TRUE, valid) );
 
       if( copycuts )
       {
@@ -945,6 +947,8 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
          SCIP_CALL( SCIPcopyCuts(sourcescip, subscip, varmap, NULL, TRUE, NULL) );
       }
    }
+
+   *success = TRUE;
 
    return SCIP_OKAY;
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -837,7 +837,7 @@ SCIP_RETCODE applyFixings(
       }
    }
 
-#if 0 /* does not work with pseudoboolean constraint handler, need to be fixed */
+#ifdef SCIP_DISABLED_CODE /* does not work with pseudoboolean constraint handler, need to be fixed */
    /* check, if the resultant should be replaced with the active representative */
    if( !SCIPvarIsActive(consdata->resvar) )
    {
@@ -976,6 +976,8 @@ SCIP_RETCODE addRelaxation(
          SCIP_CALL( createRelaxation(scip, cons) );
       }
 
+      assert(consdata->rows != NULL);
+
       /* add additional row */
       if( !SCIProwIsInLP(consdata->rows[0]) )
       {
@@ -1027,6 +1029,9 @@ SCIP_RETCODE checkCons(
    if( mustcheck )
    {
       SCIP_Real solval;
+      SCIP_Real viol;
+      SCIP_Real absviol;
+      SCIP_Real relviol;
       int i;
 
       /* increase age of constraint; age is reset to zero, if a violation was found only in case we are in
@@ -1037,10 +1042,20 @@ SCIP_RETCODE checkCons(
          SCIP_CALL( SCIPincConsAge(scip, cons) );
       }
 
+      absviol = 0.0;
+      relviol = 0.0;
+
       /* check, if all operator variables are TRUE */
       for( i = 0; i < consdata->nvars; ++i )
       {
          solval = SCIPgetSolVal(scip, sol, consdata->vars[i]);
+
+         viol = REALABS(1 - solval);
+         if( absviol < viol )
+         {
+            absviol = viol;
+            relviol = SCIPrelDiff(solval, 1.0);
+         }
 
         /* @todo If "upgraded resultants to varstatus implicit" is fully allowed, than the following assert does not hold
          *       anymore, therefor we need to stop the check and return with the status not violated, because the
@@ -1065,6 +1080,8 @@ SCIP_RETCODE checkCons(
       if( !SCIPisFeasIntegral(scip, solval) || (i == consdata->nvars) != (solval > 0.5) )
       {
          *violated = TRUE;
+         absviol = 1.0;
+         relviol = 1.0;
 
          /* only reset constraint age if we are in enforcement */
          if( sol == NULL )
@@ -1094,6 +1111,8 @@ SCIP_RETCODE checkCons(
             }
          }
       }
+      if( sol != NULL )
+         SCIPupdateSolConsViolation(scip, sol, absviol, relviol);
    }
 
    return SCIP_OKAY;
@@ -3333,6 +3352,7 @@ SCIP_RETCODE detectRedundantConstraints(
          continue;
 
       consdata0 = SCIPconsGetData(cons0);
+
       /* sort the constraint */
       consdataSort(consdata0);
       assert(consdata0->sorted);
@@ -3350,7 +3370,7 @@ SCIP_RETCODE detectRedundantConstraints(
 
          consdata1 = SCIPconsGetData(cons1);
 
-         assert(consdata0 != NULL && consdata1 != NULL);
+         assert(consdata1 != NULL);
          assert(consdata0->nvars >= 1 && consdata0->nvars == consdata1->nvars);
 
          assert(consdata0->sorted && consdata1->sorted);
@@ -3458,7 +3478,7 @@ SCIP_RETCODE enforceConstraint(
             * initialization sets the relaxation solution value) to 0.0, and this already could lead to no violation of
             * the rows, which then are not seperated into the lp
             */
-#if 0
+#ifdef SCIP_DISABLED_CODE
             assert(consseparated); /* because the solution is integral, the separation always finds a cut */
 #endif
          }
@@ -3512,11 +3532,11 @@ SCIP_RETCODE preprocessConstraintPairs(
    assert(!SCIPconsIsModifiable(cons0));
 
    consdata0 = SCIPconsGetData(cons0);
-   assert(consdata0 != NULL);
-   assert(consdata0->nvars >= 1);
 
    /* sort the constraint */
    consdataSort(consdata0);
+
+   assert(consdata0->nvars >= 1);
    assert(consdata0->sorted);
 
    /* check constraint against all prior constraints */
@@ -3545,7 +3565,7 @@ SCIP_RETCODE preprocessConstraintPairs(
          consdata1 = SCIPconsGetData(cons1);
          assert(consdata1 != NULL);
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
          SCIPdebugMsg(scip, "preprocess AND-constraint pair <%s>[chg:%d] and <%s>[chg:%d]\n",
             SCIPconsGetName(cons0), cons0changed, SCIPconsGetName(cons1), consdata1->changed);
 #endif
@@ -3558,7 +3578,7 @@ SCIP_RETCODE preprocessConstraintPairs(
 
          /* sort the constraint */
          consdataSort(consdata1);
-	 assert(consdata1->sorted);
+         assert(consdata1->sorted);
 
          /* check consdata0 against consdata1:
           * - if they consist of the same operands, the resultants can be aggregated
@@ -4025,7 +4045,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreAnd)
    }
 
    /* create the variable mapping hash map */
-   SCIP_CALL( SCIPhashmapCreate(&hashmap, SCIPblkmem(scip), nvars) );
+   SCIP_CALL_FINALLY( SCIPhashmapCreate(&hashmap, SCIPblkmem(scip), nvars), fclose(gmlfile) );
 
    /* write starting of gml file */
    SCIPgmlWriteOpening(gmlfile, TRUE);
@@ -4037,14 +4057,14 @@ SCIP_DECL_CONSEXITPRE(consExitpreAnd)
 
       /* only handle active constraints */
       if( !SCIPconsIsActive(cons) )
-	 continue;
+         continue;
 
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
       /* only handle constraints which have operands */
       if( consdata->nvars == 0 )
-	 continue;
+         continue;
 
       assert(consdata->vars != NULL);
       assert(consdata->resvar != NULL);
@@ -4056,12 +4076,12 @@ SCIP_DECL_CONSEXITPRE(consExitpreAnd)
       resid = (unsigned int)(size_t) SCIPhashmapGetImage(hashmap, activevar);
       if( resid == 0 )
       {
-	 resid = id;
-	 ++id;
-	 SCIP_CALL( SCIPhashmapInsert(hashmap, (void*)activevar, (void*)(size_t)resid) );
+         resid = id;
+         ++id;
+         SCIP_CALL( SCIPhashmapInsert(hashmap, (void*)activevar, (void*)(size_t)resid) );
 
-	 /* write new gml node for new resultant */
-	 SCIPgmlWriteNode(gmlfile, resid, SCIPvarGetName(activevar), NULL, NULL, NULL);
+         /* write new gml node for new resultant */
+         SCIPgmlWriteNode(gmlfile, resid, SCIPvarGetName(activevar), NULL, NULL, NULL);
       }
 
       /* copy operands to get problem variables for */
@@ -4072,19 +4092,19 @@ SCIP_DECL_CONSEXITPRE(consExitpreAnd)
 
       for( v = consdata->nvars - 1; v >= 0; --v )
       {
-	 /* check if we already found this variables */
-	 varid = (unsigned int)(size_t) SCIPhashmapGetImage(hashmap, activeconsvars[v]);
-	 if( varid == 0 )
-	 {
-	    varid = id;
-	    ++id;
-	    SCIP_CALL( SCIPhashmapInsert(hashmap, (void*)activeconsvars[v], (void*)(size_t)varid) );
+         /* check if we already found this variables */
+         varid = (unsigned int)(size_t) SCIPhashmapGetImage(hashmap, activeconsvars[v]);
+         if( varid == 0 )
+         {
+            varid = id;
+            ++id;
+            SCIP_CALL( SCIPhashmapInsert(hashmap, (void*)activeconsvars[v], (void*)(size_t)varid) );
 
-	    /* write new gml node for new operand */
-	    SCIPgmlWriteNode(gmlfile, varid, SCIPvarGetName(activeconsvars[v]), NULL, NULL, NULL);
-	 }
-	 /* write gml arc between resultant and operand */
-	 SCIPgmlWriteArc(gmlfile, resid, varid, NULL, NULL);
+            /* write new gml node for new operand */
+            SCIPgmlWriteNode(gmlfile, varid, SCIPvarGetName(activeconsvars[v]), NULL, NULL, NULL);
+         }
+         /* write gml arc between resultant and operand */
+         SCIPgmlWriteArc(gmlfile, resid, varid, NULL, NULL);
       }
 
       /* free temporary memory for active constraint variables */
@@ -4092,7 +4112,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreAnd)
    }
 
    /* write all remaining variables as nodes */
-#if 0
+#ifdef SCIP_DISABLED_CODE
    for( v = nvars - 1; v >= 0; --v )
    {
       activevar = SCIPvarGetProbvar(vars[v]);

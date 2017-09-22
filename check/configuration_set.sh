@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -65,10 +65,10 @@ then
    exit 2
 fi
 
-# create results directory if it doesn't already exist
-if test ! -e $SCIPPATH/results
+# create $OUTPUTDIR directory if it doesn't already exist
+if test ! -e $SCIPPATH/$OUTPUTDIR
 then
-    mkdir $SCIPPATH/results
+    mkdir $SCIPPATH/$OUTPUTDIR
 fi
 
 # create settings directory if non-existent
@@ -133,7 +133,7 @@ fi
 # check if the test run should be processed in a debug tool environment
 if test "$DEBUGTOOL" = "valgrind"
 then
-    DEBUGTOOLCMD="valgrind --log-fd=1 --leak-check=full "
+    DEBUGTOOLCMD="valgrind --log-fd=1 --leak-check=full --suppressions=${SCIPPATH}/../suppressions.valgrind "
 elif test "$DEBUGTOOL" = "gdb"
 then
     #  set a gdb command, but leave a place holder for the error file we want to log to, which gets replaced in 'run.sh'

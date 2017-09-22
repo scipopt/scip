@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -70,6 +70,7 @@ SCIP_RETCODE branch(
 {
    SCIP_BRANCHRULEDATA* branchruledata;
    SCIP_VAR** pseudocands;
+   SCIP_VAR** pseudocandscopy;
    SCIP_Real bestdown;
    SCIP_Real bestup;
    SCIP_Real bestscore;
@@ -119,7 +120,9 @@ SCIP_RETCODE branch(
    assert(npseudocands > 0);
    assert(npriopseudocands > 0);
 
-   SCIP_CALL( SCIPselectVarPseudoStrongBranching(scip, pseudocands, branchruledata->skipdown, branchruledata->skipup, npseudocands, npriopseudocands,
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &pseudocandscopy, pseudocands, npseudocands) );
+
+   SCIP_CALL( SCIPselectVarPseudoStrongBranching(scip, pseudocandscopy, branchruledata->skipdown, branchruledata->skipup, npseudocands, npriopseudocands,
       allowaddcons, &bestpseudocand, &bestdown, &bestup, &bestscore, &bestdownvalid, &bestupvalid, &provedbound, result) );
 
    if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED )
@@ -133,7 +136,7 @@ SCIP_RETCODE branch(
       assert(0 <= bestpseudocand && bestpseudocand < npseudocands);
       assert(SCIPisLT(scip, provedbound, cutoffbound));
 
-      var = pseudocands[bestpseudocand];
+      var = pseudocandscopy[bestpseudocand];
 
       /* perform the branching */
       SCIPdebugMsg(scip, " -> %d candidates, selected candidate %d: variable <%s>[%g,%g] (solval=%g, down=%g, up=%g, score=%g)\n",
@@ -163,6 +166,8 @@ SCIP_RETCODE branch(
 
       *result = SCIP_BRANCHED;
    }
+
+   SCIPfreeBufferArray(scip, &pseudocandscopy);
 
    return SCIP_OKAY;
 }
@@ -431,6 +436,8 @@ SCIP_RETCODE SCIPselectVarPseudoStrongBranching(
             if( allowaddcons && downinf == downconflict && upinf == upconflict )
             {
                *result = SCIP_CONSADDED;
+               SCIPdebugMsg(scip, " -> fractional variable <%s> is infeasible in %d directions - added conflict\n",
+                  SCIPvarGetName(pseudocands[c]), downinf && upinf ? 2 : 1);
                break; /* terminate initialization loop, because constraint was added */
             }
             else if( downinf && upinf )
@@ -537,7 +544,9 @@ SCIP_RETCODE SCIPselectVarPseudoStrongBranching(
             }
          }
          else
-            score = 0.0;
+         {
+            SCIPdebug( score = 0.0; )
+         }
 
          /* update pseudo cost values */
          if( !downinf )

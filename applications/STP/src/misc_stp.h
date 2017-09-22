@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -38,14 +38,6 @@ typedef struct Graph_Node
    SCIP_Real             dist;               /**< node distance */
 }GNODE;
 
-/** a  weighted-quick-union-path-compression union find structure */
-typedef struct UnionFind_Structure
-{
-   int*                  parent;             /**< parent[i] stores the parent of i                       */
-   int*                  size;               /**< size[i] stores number of nodes in the tree rooted at i */
-   int                   count;              /**< number of components                                   */
-}UF;
-
 /** voronoi list node structure storing distance, incoming edge,base and pointer to next list node */
 typedef struct Vnoi_List_Node
 {
@@ -61,6 +53,15 @@ typedef struct ST_Node
    int                   edge;               /**< edge to the node       */
    struct ST_Node        *parent;            /**< pointer to parent node */
 }NODE;
+
+
+/** a  weighted-quick-union-path-compression union find structure */
+typedef struct UnionFind_Structure
+{
+   int*                  parent;             /**< parent[i] stores the parent of i                       */
+   int*                  size;               /**< size[i] stores number of nodes in the tree rooted at i */
+   int                   count;              /**< number of components                                   */
+}UF;
 
 /** integer list node */
 typedef struct Int_List_Node
@@ -89,7 +90,8 @@ extern
 SCIP_RETCODE SCIPintListNodeAppendCopy(
    SCIP*                 scip,               /**< SCIP data structure */
    IDX**                 node1,              /**< pointer to the last node of list to be enlarged */
-   IDX*                  node2               /**< pointer to the last node of source list */
+   IDX*                  node2,              /**< pointer to the last node of source list */
+   SCIP_Bool*            conflict            /**< pointer to store whether a conflict has been detected by the method */
    );
 
 /** insert a new node */
@@ -233,7 +235,15 @@ SCIP_RETCODE SCIPpairheapBuffarr(
 
 /** initializes the union-find structure 'uf' with 'length' many components (of size one) */
 extern
-SCIP_RETCODE SCIPunionfindInit(
+SCIP_RETCODE SCIPSTPunionfindInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   UF*                   uf,                 /**< union find data structure */
+   int                   length              /**< number of components */
+   );
+
+/** clears the union-find structure 'uf'*/
+extern
+void SCIPSTPunionfindClear(
    SCIP*                 scip,               /**< SCIP data structure */
    UF*                   uf,                 /**< union find data structure */
    int                   length              /**< number of components */
@@ -241,14 +251,14 @@ SCIP_RETCODE SCIPunionfindInit(
 
 /** finds and returns the component identifier */
 extern
-int SCIPunionfindFind(
+int SCIPSTPunionfindFind(
    UF*                   uf,                 /**< union find data structure */
    int                   element             /**< element to be found */
    );
 
 /** merges the components containing p and q respectively */
 extern
-void SCIPunionfindUnion(
+void SCIPSTPunionfindUnion(
    UF*                   uf,                 /**< union find data structure */
    int                   p,                  /**< first component */
    int                   q,                  /**< second component*/
@@ -257,7 +267,7 @@ void SCIPunionfindUnion(
 
 /** frees the data fields of the union-find structure */
 extern
-void SCIPunionfindFree(
+void SCIPSTPunionfindFree(
    SCIP*                 scip,               /**< SCIP data structure */
    UF*                   uf                  /**< union find data structure */
    );

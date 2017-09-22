@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_cutpool.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for storing cuts in a cut pool
  * @author Tobias Achterberg
  */
@@ -31,6 +31,11 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**@addtogroup PublicCutMethods
+ *
+ * @{
+ */
 
 /** gets the row of the cut */
 EXTERN
@@ -89,6 +94,8 @@ EXTERN
 SCIP_Longint SCIPcutpoolGetNCutsFound(
    SCIP_CUTPOOL*         cutpool             /**< cut pool */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   var.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for problem variables
  * @author Tobias Achterberg
  */
@@ -551,14 +552,6 @@ SCIP_RETCODE SCIPvarMultiaggregate(
 /** returns whether variable is not allowed to be multi-aggregated */
 extern
 SCIP_Bool SCIPvarDoNotMultaggr(
-   SCIP_VAR*             var                 /**< problem variable */
-   );
-
-/** marks variable to be deleted from global structures (cliques etc.) when cleaning up
- *
- *  @note: this is not equivalent to marking the variable itself for deletion, this is done by using SCIPvarMarkDeletable()
- */
-void SCIPvarMarkDeleteGlobalStructures(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
@@ -1664,13 +1657,6 @@ SCIP_RETCODE SCIPvarRemoveCliquesImplicsVbs(
    SCIP_Bool             irrelevantvar,      /**< has the variable become irrelevant? */
    SCIP_Bool             onlyredundant,      /**< should only the redundant implications and variable bounds be removed? */
    SCIP_Bool             removefromvar       /**< should the implications and variable bounds be removed from the var itself? */
-   );
-
-/** sets the index of the connected component of the clique graph that the variable belongs to, or -1 if not computed */
-extern
-void SCIPvarSetCliqueComponentIdx(
-   SCIP_VAR*             var,                /**< problem variable */
-   int                   idx                 /**< clique component index of this variable */
    );
 
 #ifdef NDEBUG

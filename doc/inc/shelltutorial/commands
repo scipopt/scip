@@ -1,0 +1,29 @@
+help
+read check/instances/MIP/stein27.fzn
+optimize
+display solution
+write solution stein27.sol
+write problem stein27.lp
+set save settingsfile.set
+set diffsave settingsfile.set
+set load settingsfile.set
+display heuristics
+display statistics
+set
+heuristics
+shifting
+freq
+-1
+se he rou freq -1
+read check/instances/MIP/stein27.fzn
+optimize
+set default
+set heuristics emphasis
+aggr
+set limits nodes 200
+read check/instances/MIP/stein27.fzn
+optimize
+set save settingsfile.set
+set diffsave settingsfile.set
+set load settingsfile.set
+quit

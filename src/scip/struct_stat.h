@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_stat.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for problem statistics
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -109,7 +110,9 @@ struct SCIP_Stat
    SCIP_Longint          nsbtimesiterlimhit; /**< total number of times that the strong branching iteration limit was hit */
    SCIP_Longint          nnodesbeforefirst;  /**< number of nodes before first primal solution */
    SCIP_Longint          ninitconssadded;    /**< total number of initial constraints added during the solve */
+   SCIP_Longint          nactiveconssadded;  /**< total number of active constraints added */
    SCIP_Longint          externmemestim;     /**< estimation of external memory usage, e.g., by LP solver */
+   SCIP_Real             avgnnz;             /**< average number of nonzeros per constraint in presolved problem */
    SCIP_Real             firstlpdualbound;   /**< dual bound of root node computed by first LP solve (without cuts) */
    SCIP_Real             rootlowerbound;     /**< lower bound of root node */
    SCIP_Real             vsidsweight;        /**< current weight to use for updating VSIDS in history */
@@ -182,6 +185,7 @@ struct SCIP_Stat
    SCIP_Longint          ndivinglps;         /**< number of LPs solved during diving and probing */
    SCIP_Longint          ndivesetlps;        /**< total number of diveset LPs */
    SCIP_Longint          nsbdivinglps;       /**< number of LPs solved during strong branching probing mode */
+   SCIP_Longint          nnumtroublelpmsgs;  /**< number of messages about numerical trouble in LP on verblevel HIGH or lower */
    SCIP_Longint          nstrongbranchs;     /**< number of strong branching calls */
    SCIP_Longint          nrootstrongbranchs; /**< number of strong branching calls at the root node */
    SCIP_Longint          nconflictlps;       /**< number of LPs solved during conflict analysis */
@@ -252,6 +256,8 @@ struct SCIP_Stat
    SCIP_Bool             inrestart;          /**< are we currently restarting the system? */
    SCIP_Bool             collectvarhistory;  /**< should variable history statistics be collected */
    SCIP_Bool             performpresol;      /**< indicates whether presolving is enabled */
+   SCIP_Bool             branchedunbdvar;    /**< indicates whether branching on an unbounded variable has been performed */
+   SCIP_Bool             disableenforelaxmsg;/**< was disable enforelax message printed? */
 };
 
 #ifdef __cplusplus

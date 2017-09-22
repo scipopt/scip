@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -19,10 +19,6 @@
  * @author Tobias Fischer
  * @author Marc Pfetsch
  *
- * A specially ordered set of type 1 (SOS1) is a sequence of variables such that at most one
- * variable is nonzero. The special case of two variables arises, for instance, from equilibrium or
- * complementary conditions like \f$x \cdot y = 0\f$. Note that it is in principle allowed that a
- * variable appears twice, but it then can be fixed to 0.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -37,11 +33,28 @@
 extern "C" {
 #endif
 
-/** creates the handler for SOS1 constraints and includes it in SCIP */
+/** creates the handler for SOS1 constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrSOS1(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ *
+ * @name Specially Ordered Set (SOS) Type 1 Constraints
+ *
+ * @{
+ *
+ * A specially ordered set of type 1 (SOS1) is a sequence of variables such that at most one
+ * variable is nonzero. The special case of two variables arises, for instance, from equilibrium or
+ * complementary conditions like \f$x \cdot y = 0\f$. Note that it is in principle allowed that a
+ * variable appears twice, but it then can be fixed to 0.
+ */
 
 /** creates and captures an SOS1 constraint
  *
@@ -186,6 +199,10 @@ SCIP_RETCODE SCIPmakeSOS1sFeasible(
    SCIP_Bool*            success             /**< pointer to store whether SOS1 constraints have been turned feasible and
                                               *   solution was good enough */
    );
+
+/* @} */
+
+/* @} */
 
 #ifdef __cplusplus
 }

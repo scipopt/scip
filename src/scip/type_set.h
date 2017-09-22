@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -22,6 +22,8 @@
 
 #ifndef __SCIP_TYPE_SET_H__
 #define __SCIP_TYPE_SET_H__
+
+/**! [SnippetCodeStyleExample] */
 
 #ifdef __cplusplus
 extern "C" {
@@ -62,5 +64,7 @@ typedef struct SCIP_Set SCIP_SET;                 /**< global SCIP settings */
 #ifdef __cplusplus
 }
 #endif
+
+/**! [SnippetCodeStyleExample] */
 
 #endif

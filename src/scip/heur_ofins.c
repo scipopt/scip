@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -175,7 +175,7 @@ SCIP_RETCODE applyOfins(
    int i;
 
    SCIP_SOL** subsols;
-   int nsubsols;
+   int nsubsols = 0;
 
    SCIP_Bool success;
    SCIP_RETCODE retcode;
@@ -238,7 +238,7 @@ SCIP_RETCODE applyOfins(
 
    /* create a problem copy as sub SCIP */
    SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "ofins", fixedvars, fixedvals, nfixedvars, FALSE,
-         FALSE, &success) );
+         FALSE, &success, NULL) );
    assert(success);
 
    SCIPfreeBufferArrayNull(scip, &fixedvals);
@@ -262,10 +262,6 @@ SCIP_RETCODE applyOfins(
 
    /* free hash map */
    SCIPhashmapFree(&varmapfw);
-
-   if( !success )
-      goto TERMINATE;
-
 
    /* set an objective limit */
    SCIPdebugMsg(scip, "set objective limit of %g to sub-SCIP\n", SCIPgetUpperbound(scip));
@@ -319,6 +315,9 @@ SCIP_RETCODE applyOfins(
       SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", FALSE) );
    }
 
+   /* speed up sub-SCIP by not checking dual LP feasibility */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "lp/checkdualfeas", FALSE) );
+
    /* presolve the subproblem */
    retcode = SCIPpresolve(subscip);
 
@@ -327,10 +326,9 @@ SCIP_RETCODE applyOfins(
     */
    if( retcode != SCIP_OKAY )
    {
-#ifndef NDEBUG
-      SCIP_CALL( retcode );
-#endif
       SCIPwarningMessage(scip, "Error while presolving subproblem in %s heuristic; sub-SCIP terminated with code <%d>\n", HEUR_NAME, retcode);
+
+      SCIPABORT(); /*lint --e{527}*/
 
       /* free */
       SCIPfreeBufferArray(scip, &subvars);
@@ -347,20 +345,13 @@ SCIP_RETCODE applyOfins(
 
    /* solve the subproblem */
    SCIPdebugMsg(scip, "solving subproblem: nstallnodes=%" SCIP_LONGINT_FORMAT ", maxnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->maxnodes);
-   retcode = SCIPsolve(subscip);
-
-   SCIP_CALL( SCIPdropEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, -1) );
 
    /* errors in solving the subproblem should not kill the overall solving process;
     * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
     */
-   if( retcode != SCIP_OKAY )
-   {
-#ifndef NDEBUG
-      SCIP_CALL( retcode );
-#endif
-      SCIPwarningMessage(scip, "Error while solving subproblem in RENS heuristic; sub-SCIP terminated with code <%d>\n", retcode);
-   }
+   SCIP_CALL_ABORT( SCIPsolve(subscip) );
+
+   SCIP_CALL( SCIPdropEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, -1) );
 
    /* print solving statistics of subproblem if we are in SCIP's debug mode */
    SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );
@@ -416,13 +407,12 @@ SCIP_RETCODE applyOfins(
             *result = SCIP_FOUNDSOL;
       }
       break;
-   }
+   } /*lint !e788*/
 
    SCIPstatisticPrintf("%s statistic: fixed %6.3f integer variables, needed %6.1f seconds, %" SCIP_LONGINT_FORMAT " nodes, solution %10.4f found at node %" SCIP_LONGINT_FORMAT "\n",
       HEUR_NAME, 0.0, SCIPgetSolvingTime(subscip), SCIPgetNNodes(subscip), success ? SCIPgetPrimalbound(scip) : SCIPinfinity(scip),
       nsubsols > 0 ? SCIPsolGetNodenum(SCIPgetBestSol(subscip)) : -1 );
 
-  TERMINATE:
    /* free subproblem */
    SCIPfreeBufferArray(scip, &subvars);
    SCIP_CALL( SCIPfree(&subscip) );
@@ -551,8 +541,6 @@ SCIP_DECL_HEUREXEC(heurExecOfins)
       SCIP_CALL( SCIPgetReoptOldObjCoef(scip, vars[v], SCIPgetNReoptRuns(scip)-1, &oldcoef) );
       newcoefabs = REALABS(newcoef);
       oldcoefabs = REALABS(oldcoef);
-
-      frac = SCIP_INVALID;
 
       /* if both coefficients are zero nothing has changed */
       if( SCIPisZero(scip, newcoef) && SCIPisZero(scip, oldcoef) )

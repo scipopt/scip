@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -156,8 +156,6 @@ SCIP_RETCODE readCnf(
    assert(scip != NULL);
    assert(file != NULL);
 
-   retcode = SCIP_OKAY;
-
    linecount = 0;
 
    /* read header */
@@ -167,6 +165,7 @@ SCIP_RETCODE readCnf(
       readError(scip, linecount, "problem declaration line expected");
       return SCIP_READERROR;
    }
+   /* cppcheck-suppress invalidScanfFormatWidth_smaller */
    if( sscanf(line, "p %8s %d %d", format, &nvars, &nclauses) != 3 )
    {
       readError(scip, linecount, "invalid problem declaration (must be 'p cnf <nvars> <nclauses>')");

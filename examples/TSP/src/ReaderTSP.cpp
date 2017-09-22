@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -290,7 +290,7 @@ SCIP_DECL_READERREAD(ReaderTSP::scip_read)
             if( edgeweighttype == "EUC_2D")
                edgeforw->length = sqrt( x*x + y*y );
             else if( edgeweighttype == "MAX_2D")
-               edgeforw->length = max( ABS(x), ABS(y) );
+               edgeforw->length = MAX( ABS(x), ABS(y) );
             else if( edgeweighttype == "MAN_2D")
                edgeforw->length = ABS(x) + ABS(y);
             else if( edgeweighttype == "ATT")

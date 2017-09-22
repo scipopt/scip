@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -128,7 +128,7 @@ struct SCIP_ConshdlrData
 /** constraint data for set partitioning / packing / covering constraints */
 struct SCIP_ConsData
 {
-   SCIP_Longint          signature;          /**< bit signature of vars array */
+   uint64_t              signature;          /**< bit signature of vars array */
    SCIP_ROW*             row;                /**< LP row, if constraint is already stored in LP row format */
    SCIP_VAR**            vars;               /**< variables of the constraint */
    int                   varssize;           /**< size of vars array */
@@ -366,8 +366,8 @@ SCIP_RETCODE conshdlrdataCreate(
    (*conshdlrdata)->nsetpart = 0;
 
    /* create a random number generator */
-   SCIP_CALL( SCIPrandomCreate(&(*conshdlrdata)->randnumgen, SCIPblkmem(scip),
-         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &(*conshdlrdata)->randnumgen,
+         DEFAULT_RANDSEED) );
 
    return SCIP_OKAY;
 }
@@ -387,7 +387,7 @@ SCIP_RETCODE conshdlrdataFree(
 #endif
 
    /* free random number generator */
-   SCIPrandomFree(&(*conshdlrdata)->randnumgen);
+   SCIPfreeRandom(scip, &(*conshdlrdata)->randnumgen);
 
    SCIPfreeBlockMemory(scip, conshdlrdata);
 
@@ -743,21 +743,9 @@ SCIP_RETCODE consdataPrint(
    return SCIP_OKAY;
 }
 
-/** returns the signature bitmask for the given variable */
-static
-SCIP_Longint getVarSignature(
-   SCIP_VAR*             var                 /**< variable */
-   )
-{
-   int sigidx;
-
-   sigidx = SCIPvarGetIndex(var) % (int)(8*sizeof(SCIP_Longint));
-   return ((unsigned SCIP_Longint)1) << sigidx; /*lint !e703*/
-}
-
 /** returns the bit signature of the given constraint data */
 static
-SCIP_Longint consdataGetSignature(
+uint64_t consdataGetSignature(
    SCIP_CONSDATA*        consdata            /**< set partitioning / packing / covering constraint data */
    )
 {
@@ -769,7 +757,7 @@ SCIP_Longint consdataGetSignature(
 
       consdata->signature = 0;
       for( i = 0; i < consdata->nvars; ++i )
-         consdata->signature |= getVarSignature(consdata->vars[i]);
+         consdata->signature |= SCIPhashSignature64(SCIPvarGetIndex(consdata->vars[i]));
       consdata->validsignature = TRUE;
    }
 
@@ -1062,7 +1050,7 @@ SCIP_RETCODE addCoef(
    consdata->vars[consdata->nvars] = var;
    consdata->nvars++;
    if( consdata->validsignature )
-      consdata->signature |= getVarSignature(var);
+      consdata->signature |= SCIPhashSignature64(SCIPvarGetIndex(var));
    consdata->sorted = (consdata->nvars == 1);
    consdata->changed = TRUE;
 
@@ -2306,6 +2294,9 @@ SCIP_Bool checkCons(
    SCIP_Real solval;
    SCIP_Real sum;
    SCIP_Real sumbound;
+   SCIP_Real absviol;
+   SCIP_Real relviol;
+   SCIP_Bool check;
    int nvars;
    int v;
 
@@ -2324,19 +2315,36 @@ SCIP_Bool checkCons(
       sum += solval;
    }
 
+   absviol = sum - 1.0;
+   relviol = SCIPrelDiff(sum, 1.0);
    switch( consdata->setppctype )
    {
    case SCIP_SETPPCTYPE_PARTITIONING:
-      return SCIPisFeasEQ(scip, sum, 1.0);
+      /* in case of partitioning, the violation is equal to the absolute difference between sum and 1 */
+      absviol = REALABS(absviol);
+      relviol = REALABS(relviol);
+      check = SCIPisFeasEQ(scip, sum, 1.0);
+      break;
    case SCIP_SETPPCTYPE_PACKING:
-      return SCIPisFeasLE(scip, sum, 1.0);
+      /* in case of packing, the violation is equal to how much sum exceeds 1 */
+      check = SCIPisFeasLE(scip, sum, 1.0);
+      break;
    case SCIP_SETPPCTYPE_COVERING:
-      return SCIPisFeasGE(scip, sum, 1.0);
+      /* in case of covering, the violation is equal to how much 1 exceeds sum */
+      absviol = -absviol;
+      relviol = -relviol;
+      check = SCIPisFeasGE(scip, sum, 1.0);
+      break;
    default:
       SCIPerrorMessage("unknown setppc type\n");
       SCIPABORT();
       return FALSE; /*lint !e527*/
    }
+
+   if( sol != NULL )
+      SCIPupdateSolLPConsViolation(scip, sol, absviol, relviol);
+
+   return check;
 }
 
 /** creates an LP row in a set partitioning / packing / covering constraint data object */
@@ -5303,9 +5311,9 @@ SCIP_RETCODE addCliques(
    int c;
 
    assert(scip != NULL);
-   assert(conss != NULL || nconss == 0);
    assert(firstclique >= 0);
    assert(lastclique <= nconss);
+   assert(conss != NULL || ((nconss == 0) && (lastclique == 0)));
 
    /* add clique and implication information */
    for( c = firstclique; c < lastclique; ++c )
@@ -6554,7 +6562,7 @@ SCIP_RETCODE removeRedundantConstraints(
 {
    SCIP_CONS* cons0;
    SCIP_CONSDATA* consdata0;
-   SCIP_Longint signature0;
+   uint64_t signature0;
    SCIP_Bool cons0changed;
    int c;
 
@@ -6589,8 +6597,8 @@ SCIP_RETCODE removeRedundantConstraints(
    {
       SCIP_CONS* cons1;
       SCIP_CONSDATA* consdata1;
-      SCIP_Longint signature1;
-      SCIP_Longint jointsignature;
+      uint64_t signature1;
+      uint64_t jointsignature;
       SCIP_Bool cons0iscontained;
       SCIP_Bool cons1iscontained;
       int v0;

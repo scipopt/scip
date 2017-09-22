@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1162,18 +1162,20 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputPrimalgap)
       else
          gap = 0.0;
    }
-
-   primalbound = SCIPgetPrimalbound(scip);
-   dualbound = SCIPgetDualbound(scip);
-
-   if( SCIPisEQ(scip, primalbound, dualbound) )
-      gap = 0.0;
-   else if( SCIPisZero(scip, primalbound)
-      || SCIPisInfinity(scip, REALABS(primalbound))
-      || primalbound * dualbound < 0.0 )
-      gap = SCIPinfinity(scip);
    else
-      gap = REALABS((primalbound - dualbound))/REALABS(primalbound + SCIPepsilon(scip));
+   {
+      primalbound = SCIPgetPrimalbound(scip);
+      dualbound = SCIPgetDualbound(scip);
+
+      if( SCIPisEQ(scip, primalbound, dualbound) )
+         gap = 0.0;
+      else if( SCIPisZero(scip, primalbound)
+         || SCIPisInfinity(scip, REALABS(primalbound))
+         || primalbound * dualbound < 0.0 )
+         gap = SCIPinfinity(scip);
+      else
+         gap = REALABS((primalbound - dualbound))/REALABS(primalbound + SCIPepsilon(scip));
+   }
 
    if( SCIPisInfinity(scip, gap) )
       SCIPinfoMessage(scip, file, "    Inf ");

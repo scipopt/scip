@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -81,6 +81,10 @@
 #ifndef SOPLEX_SUBVERSION
 #define SOPLEX_SUBVERSION 0
 #endif
+/* define API version for versions <= 3.0.0 */
+#ifndef SOPLEX_APIVERSION
+#define SOPLEX_APIVERSION 0
+#endif
 
 /* check version */
 #if (SOPLEX_VERSION < 200 || (SOPLEX_VERSION == 200 && SOPLEX_SUBVERSION < 2) || (SOPLEX_VERSION > 200 && SOPLEX_VERSION < 201))
@@ -94,6 +98,13 @@
 #ifdef ___DEBUG
 #define SCIP_DEBUG
 #undef ___DEBUG
+#endif
+
+/* define snprintf when using a too old MSVC version */
+#if defined(_MSC_VER) && _MSC_VER < 1900
+#ifndef snprintf
+#define snprintf _snprintf
+#endif
 #endif
 
 #define SOPLEX_VERBLEVEL                5    /**< verbosity level for LPINFO */
@@ -680,13 +691,13 @@ public:
    /** provides access for temporary storage of basis status of rows */
    DataArray<SPxSolver::VarStatus>& rowStat()
    {
-      return _rowStat;
+      return _rowStat; /*lint !e1536*/
    }
 
    /** provides access for temporary storage of basis status or columns */
    DataArray<SPxSolver::VarStatus>& colStat()
    {
-      return _colStat;
+      return _colStat; /*lint !e1536*/
    }
 
 }; /*lint !e1748*/
@@ -931,9 +942,9 @@ const char* SCIPlpiGetSolverName(
    SCIPdebugMessage("calling SCIPlpiGetSolverName()\n");
 
 #if (SOPLEX_SUBVERSION > 0)
-   sprintf(spxname, "SoPlex %d.%d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10, SOPLEX_SUBVERSION); /*lint !e778*/
+   snprintf(spxname, 100, "SoPlex %d.%d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10, SOPLEX_SUBVERSION); /*lint !e778 !e845*/
 #else
-   sprintf(spxname, "SoPlex %d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10); /*lint !e778*/
+   snprintf(spxname, 100, "SoPlex %d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10); /*lint !e778 !e845*/
 #endif
    return spxname;
 }
@@ -943,7 +954,7 @@ const char* SCIPlpiGetSolverDesc(
    void
    )
 {
-   sprintf(spxdesc, "%s [GitHash: %s]", "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)"
+   snprintf(spxdesc, 200, "%s [GitHash: %s]", "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)"
 #ifdef WITH_LPSCHECK
      " - including CPLEX double check"
 #endif
@@ -1157,6 +1168,8 @@ SCIP_RETCODE SCIPlpiAddCols(
    assert(nnonz == 0 || beg != NULL);
    assert(nnonz == 0 || ind != NULL);
    assert(nnonz == 0 || val != NULL);
+   assert(nnonz >= 0);
+   assert(ncols >= 0);
 
    invalidateSolution(lpi);
 
@@ -1603,7 +1616,6 @@ SCIP_RETCODE SCIPlpiChgObj(
    return SCIP_OKAY;
 }
 
-/* todo unclear how to adapt to persistent scaling */
 /** multiplies a row with a non-zero scalar; for negative scalars, the row's sense is switched accordingly */
 SCIP_RETCODE SCIPlpiScaleRow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -1676,7 +1688,6 @@ SCIP_RETCODE SCIPlpiScaleRow(
    return SCIP_OKAY;
 }
 
-/* todo unclear how to adapt to persistent scaling */
 /** multiplies a column with a non-zero scalar; the objective value is multiplied with the scalar, and the bounds
  *  are divided by the scalar; for negative scalars, the column's bounds are switched
  */
@@ -1872,8 +1883,8 @@ SCIP_RETCODE SCIPlpiGetCols(
 #if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
       if( lpi->spx->boolParam(SoPlex::PERSISTENTSCALING) )
       {
-         DVector lbvec(lpi->spx->numRowsReal());
-         DVector ubvec(lpi->spx->numRowsReal());
+         DVector lbvec(lpi->spx->numColsReal());
+         DVector ubvec(lpi->spx->numColsReal());
          lpi->spx->getLowerReal(lbvec);
          lpi->spx->getUpperReal(ubvec);
          for( i = firstcol; i <= lastcol; ++i )
@@ -1988,8 +1999,8 @@ SCIP_RETCODE SCIPlpiGetRows(
 #if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
       if( lpi->spx->boolParam(SoPlex::PERSISTENTSCALING) )
       {
-         DVector lhsvec(lpi->spx->numColsReal());
-         DVector rhsvec(lpi->spx->numColsReal());
+         DVector lhsvec(lpi->spx->numRowsReal());
+         DVector rhsvec(lpi->spx->numRowsReal());
          lpi->spx->getLhsReal(lhsvec);
          lpi->spx->getRhsReal(rhsvec);
          for( i = firstrow; i <= lastrow; ++i )
@@ -2430,8 +2441,9 @@ SCIP_RETCODE lpiStrongbranch(
    assert(upvalid != NULL);
 
    spx = lpi->spx;
-   status = SPxSolver::UNKNOWN;
+#ifndef STRONGBRANCH_RESTOREBASIS
    fromparentbasis = false;
+#endif
    error = false;
    oldItlim = spx->intParam(SoPlex::ITERLIMIT);
 
@@ -2446,9 +2458,7 @@ SCIP_RETCODE lpiStrongbranch(
       *iter = 0;
 
    /* set the algorithm type to use dual simplex */
-
    (void) spx->setIntParam(SoPlex::ALGORITHM, SoPlex::ALGORITHM_DUAL);
-
 
    /* down branch */
    newub = EPSCEIL(psol-1.0, lpi->spx->feastol());
@@ -2622,7 +2632,7 @@ SCIP_RETCODE lpiStrongbranch(
 
    if( error )
    {
-      SCIPdebugMessage("SCIPlpiStrongbranch() returned SoPlex status %d\n", int(status));
+      SCIPdebugMessage("SCIPlpiStrongbranch() returned SoPlex status %d\n", int(status));  /*lint !e644*/
       return SCIP_LPERROR;
    }
 
@@ -4083,6 +4093,11 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       *ival = (int) lpi->spx->randomSeed();
       break;
 #endif
+#if SOPLEX_APIVERSION >= 1
+   case SCIP_LPPAR_REFACTOR:
+      *ival = (int) lpi->spx->intParam(SoPlex::FACTOR_UPDATE_MAX);
+      break;
+#endif
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
@@ -4167,7 +4182,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
 #endif
 #if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 3)
    case SCIP_LPPAR_RANDOMSEED:
-      lpi->spx->setRandomSeed((unsigned int) ival);
+      lpi->spx->setRandomSeed((unsigned long)(long)ival);
       break;
 #endif
 #if SOPLEX_VERSION > 221 || (SOPLEX_VERSION >= 221 && SOPLEX_SUBVERSION >= 3)
@@ -4176,11 +4191,13 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       (void) lpi->spx->setIntParam(SoPlex::SOLUTION_POLISHING, ival);
       break;
 #endif
-#if SOPLEX_VERSION >= 230 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
-   case SCIP_LPPAR_PERSISTENTSCALING:
-      lpi->spx->setBoolParam(SoPlex::PERSISTENTSCALING, (bool) ival);
+#if SOPLEX_APIVERSION >= 1
+   case SCIP_LPPAR_REFACTOR:
+      assert(ival >= 0);
+      (void) lpi->spx->setIntParam(SoPlex::FACTOR_UPDATE_MAX, ival);
       break;
 #endif
+
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlpi.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for NLPI solver interfaces
  * @author Stefan Vigerske
  * @author Thorsten Gellermann
@@ -30,6 +31,11 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**@addtogroup NLPIS
+ *
+ * @{
+ */
 
 /** compares two NLPIs w.r.t. their priority */
 SCIP_DECL_SORTPTRCOMP(SCIPnlpiComp);
@@ -204,8 +210,9 @@ EXTERN
 SCIP_RETCODE SCIPnlpiDelVarSet(
    SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
    SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   int*                  dstats              /**< deletion status of vars; 1 if var should be deleted, 0 if not; afterwards -1
+   int*                  dstats,             /**< deletion status of vars; 1 if var should be deleted, 0 if not; afterwards -1
                                               * if var was deleted */
+   int                   dstatssize          /**< size of the dstats array */
    );
 
 /** delete a set of constraints */
@@ -213,8 +220,9 @@ EXTERN
 SCIP_RETCODE SCIPnlpiDelConsSet(
    SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
    SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   int*                  dstats              /**< deletion status of rows; 1 if row should be deleted, 0 if not; afterwards -1
+   int*                  dstats,             /**< deletion status of rows; 1 if row should be deleted, 0 if not; afterwards -1
                                               * if row was deleted */
+   int                   dstatssize          /**< size of the dstats array */
    );
 
 /** changes or adds linear coefficients in a constraint or objective */
@@ -245,7 +253,7 @@ SCIP_RETCODE SCIPnlpiChgExprtree(
    SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
    int                   idxcons,            /**< index of constraint or -1 for objective */
    const int*            exprvaridxs,        /**< indices of variables in expression tree, maps variable indices in expression tree to indices in nlp, or NULL */
-   SCIP_EXPRTREE*        exprtree            /**< new expression tree, or NULL for no tree */
+   const SCIP_EXPRTREE*  exprtree            /**< new expression tree, or NULL for no tree */
    );
 
 /** change the value of one parameter in the nonlinear part */
@@ -310,7 +318,8 @@ SCIP_RETCODE SCIPnlpiGetSolution(
    SCIP_Real**           primalvalues,       /**< buffer to store pointer to array to primal values, or NULL if not needed */
    SCIP_Real**           consdualvalues,     /**< buffer to store pointer to array to dual values of constraints, or NULL if not needed */
    SCIP_Real**           varlbdualvalues,    /**< buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed */
-   SCIP_Real**           varubdualvalues     /**< buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed */
+   SCIP_Real**           varubdualvalues,    /**< buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed */
+   SCIP_Real*            objval              /**< buffer to store the objective value, or NULL if not needed */
    );
 
 /** gives solve statistics */
@@ -468,6 +477,10 @@ void SCIPnlpStatisticsSetTotalTime(
    SCIP_NLPSTATISTICS*   statistics,         /**< NLP statistics structure */
    SCIP_Real             totaltime           /**< solution time to store */
    );
+
+/** @} */
+
+/** @} */
 
 #ifdef __cplusplus
 }

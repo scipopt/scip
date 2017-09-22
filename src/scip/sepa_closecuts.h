@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -38,11 +38,19 @@
 extern "C" {
 #endif
 
-/** creates the closecuts separator and includes it in SCIP */
+/** creates the closecuts separator and includes it in SCIP
+ *
+ * @ingroup SeparatorIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeSepaClosecuts(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup SEPARATORS
+ *
+ * @{
+ */
 
 /** sets point to be used as base point for computing the point to be separated
  *
@@ -53,6 +61,8 @@ SCIP_RETCODE SCIPsetBasePointClosecuts(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< base point solution */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

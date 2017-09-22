@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -26,7 +26,7 @@
 ### FILENAME - the basename of the local files (.out, .tmp, and .err)
 ### EVALFILE - evaluation file to glue single output and error files together
 ### SKIPINSTANCE - should the instance be skipped because it was already evaluated in a previous setting?
-### BASENAME - $SCIPPATH/results/$FILENAME cf. FILENAME argument
+### BASENAME - $SCIPPATH/$OUTPUTDIR/$FILENAME cf. FILENAME argument
 ### TMPFILE  - the batch file name to pass for solver instructions
 ### SETFILE  - the name of the settings file to save solver settings to
 
@@ -44,8 +44,8 @@ QUEUE=${10}    # the queue name
 p=${11}      # the index of the current permutation
 s=${12}      # shift of the global random seed
 
-OUTFILE=results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME.out
-ERRFILE=results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME.err
+OUTFILE=$OUTPUTDIR/check.$TSTNAME.$BINID.$QUEUE.$SETNAME.out
+ERRFILE=$OUTPUTDIR/check.$TSTNAME.$BINID.$QUEUE.$SETNAME.err
 
 # if number of permutations is positive, add postfix
 if test $p -gt 0
@@ -53,19 +53,40 @@ then
     # if number of seeds is positive, add postfix
     if test $s -gt 0
     then
-        EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME"-s"$s"-p"$p.eval
+        EVALFILE=$SCIPPATH/$OUTPUTDIR/check.$TSTNAME.$BINID.$QUEUE.$SETNAME"-s"$s"-p"$p.eval
     else
-        EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME"-p"$p.eval
+        EVALFILE=$SCIPPATH/$OUTPUTDIR/check.$TSTNAME.$BINID.$QUEUE.$SETNAME"-p"$p.eval
     fi
 else
     # if number of seeds is positive, add postfix
     if test $s -gt 0
     then
-        EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME"-s"$s.eval
+        EVALFILE=$SCIPPATH/$OUTPUTDIR/check.$TSTNAME.$BINID.$QUEUE.$SETNAME"-s"$s.eval
     else
-        EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME.eval
+        EVALFILE=$SCIPPATH/$OUTPUTDIR/check.$TSTNAME.$BINID.$QUEUE.$SETNAME.eval
     fi
 fi
+
+
+if test -e $EVALFILE
+then
+    fname=$SCIPPATH/$OUTPUTDIR/`basename $EVALFILE .eval`.meta
+    if ! test -e $fname
+    then
+        echo @Permutation $p > $fname
+        echo @Seed $s >> $fname
+        echo @Settings $SETNAME >> $fname
+        echo @TstName $TSTNAME >> $fname
+        echo @BinName $BINNAME >> $fname
+        echo @NodeLimit $NODELIMIT >> $fname
+        echo @MemLimit $MEMLIMIT >> $fname
+        echo @Threads $THREADS >> $fname
+        echo @FeasTol $FEASTOL >> $fname
+        echo @Queue $QUEUE >> $fname
+        echo @Exclusive $EXCLUSIVE >> $fname
+    fi
+fi
+
 
 if test "$INSTANCE" = "DONE"
 then
@@ -127,14 +148,14 @@ fi
 
 SKIPINSTANCE="false"
 # in case we want to continue we check if the job was already performed
-if test "$CONTINUE" = "true" && test -e results/$FILENAME.out
+if test "$CONTINUE" = "true" && test -e $OUTPUTDIR/$FILENAME.out
 then
-    echo skipping file $INSTANCE due to existing output file results/$FILENAME.out
+    echo skipping file $INSTANCE due to existing output file $OUTPUTDIR/$FILENAME.out
     SKIPINSTANCE="true"
 fi
 
 # configure global names TMPFILE (batch file) and SETFILE to save settings to
-BASENAME=$SCIPPATH/results/$FILENAME
+BASENAME=$SCIPPATH/$OUTPUTDIR/$FILENAME
 TMPFILE=$BASENAME.tmp
 SETFILE=$BASENAME.set
 # even if we decide skip this instance, we write the basename to the eval file

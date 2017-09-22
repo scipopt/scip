@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -86,6 +86,12 @@ typedef struct SCIP_HashMapEntry SCIP_HASHMAPENTRY;
  */
 typedef struct SCIP_HashMap SCIP_HASHMAP;
 
+/** Hash set data structure
+ *
+ *  - \ref HashMap "List of all available methods"
+ */
+typedef struct SCIP_HashSet SCIP_HASHSET;
+
 /** dynamic array for storing SCIP_Real values */
 typedef struct SCIP_RealArray SCIP_REALARRAY;
 
@@ -134,6 +140,12 @@ typedef struct SCIP_BtNode SCIP_BTNODE;
  */
 typedef struct SCIP_Regression SCIP_REGRESSION;
 
+/** disjoint set (disjoint set (union find)) data structure for querying and updating connectedness of a graph with integer vertices 0,...,n - 1
+ *
+ *  - \ref DisjointSet "List of available methods"
+ */
+typedef struct SCIP_DisjointSet SCIP_DISJOINTSET;
+
 /** compares two element indices
  *  result:
  *    < 0: ind1 comes before (is better than) ind2
@@ -157,7 +169,7 @@ typedef struct SCIP_Regression SCIP_REGRESSION;
 #define SCIP_DECL_HASHKEYEQ(x) SCIP_Bool x (void* userptr, void* key1, void* key2)
 
 /** returns the hash value of the key */
-#define SCIP_DECL_HASHKEYVAL(x) unsigned int x (void* userptr, void* key)
+#define SCIP_DECL_HASHKEYVAL(x) uint64_t x (void* userptr, void* key)
 
 
 #ifdef __cplusplus

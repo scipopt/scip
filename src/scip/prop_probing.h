@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -31,11 +31,19 @@
 extern "C" {
 #endif
 
-/** creates the probing propagator and includes it in SCIP */
+/** creates the probing propagator and includes it in SCIP
+ *
+ * @ingroup PropagatorIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludePropProbing(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup PROPAGATORS
+  *
+  * @{
+  */
 
 /** applies and evaluates probing of a single variable in the given direction and bound */
 EXTERN
@@ -87,6 +95,8 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
    int*                  nchgbds,            /**< pointer to counter which is increased by the number of deduced bound tightenings */
    SCIP_Bool*            cutoff              /**< buffer to store whether a cutoff is detected */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

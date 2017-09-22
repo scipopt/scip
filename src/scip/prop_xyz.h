@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -31,7 +31,19 @@
 extern "C" {
 #endif
 
-/** creates the xyz propagator and includes it in SCIP */
+/**@addtogroup PROPAGATORS
+ *
+ * @{
+ */
+
+/* TODO place other public methods in this group to facilitate navigation through the documentation */
+
+/* @} */
+
+/** creates the xyz propagator and includes it in SCIP
+ *
+ * @ingroup PropagatorIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludePropXyz(
    SCIP*                 scip                /**< SCIP data structure */

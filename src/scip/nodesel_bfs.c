@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -73,6 +73,7 @@ SCIP_DECL_NODESELCOPY(nodeselCopyBfs)
 }
 
 /** destructor of node selector to free user data (called when SCIP is exiting) */
+/**! [SnippetNodeselFreeBfs] */
 static
 SCIP_DECL_NODESELFREE(nodeselFreeBfs)
 {  /*lint --e{715}*/
@@ -90,6 +91,7 @@ SCIP_DECL_NODESELFREE(nodeselFreeBfs)
 
    return SCIP_OKAY;
 }
+/**! [SnippetNodeselFreeBfs] */
 
 
 /** node selection method of node selector */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   set.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for global SCIP settings
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -757,9 +758,16 @@ SCIP_CONCSOLVERTYPE* SCIPsetFindConcsolverType(
    );
 
 /** inserts concurrent solver into the concurrent solver list */
+extern
 SCIP_RETCODE SCIPsetIncludeConcsolver(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_CONCSOLVER*      concsolver          /**< concurrent solver */
+   );
+
+/** frees all concurrent solvers in the concurrent solver list */
+extern
+SCIP_RETCODE SCIPsetFreeConcsolvers(
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** inserts primal heuristic in primal heuristic list */

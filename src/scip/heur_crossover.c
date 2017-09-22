@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -641,8 +641,8 @@ SCIP_DECL_HEURINIT(heurInitCrossover)
    heurdata->nextnodenumber = 0;
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
-         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
+         DEFAULT_RANDSEED) );
 
    /* initialize hash table */
    SCIP_CALL( SCIPhashtableCreate(&heurdata->hashtable, SCIPblkmem(scip), HASHSIZE_SOLS,
@@ -678,7 +678,7 @@ SCIP_DECL_HEUREXIT(heurExitCrossover)
    }
 
    /* free random number generator */
-   SCIPrandomFree(&heurdata->randnumgen);
+   SCIPfreeRandom(scip, &heurdata->randnumgen);
 
    /* free hash table */
    assert(heurdata->hashtable != NULL);
@@ -716,8 +716,6 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    SCIP_VAR** fixedvars;
    SCIP_Real* fixedvals;
    int nfixedvars;
-
-   SCIP_RETCODE retcode;
 
    assert(heur != NULL);
    assert(scip != NULL);
@@ -828,7 +826,8 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    success = FALSE;
 
    /* create a copy of the transformed problem to be used by the heuristic */
-   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "crossover", fixedvars, fixedvals, nfixedvars, heurdata->uselprows, heurdata->copycuts, &success) );
+   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "crossover", fixedvars, fixedvals, nfixedvars,
+         heurdata->uselprows, heurdata->copycuts, &success, NULL) );
 
    eventhdlr = NULL;
    /* create event handler for LP events */
@@ -895,27 +894,22 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
       SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
    }
 
-   /* disable conflict analysis */
-   if( !SCIPisParamFixed(subscip, "conflict/useprop") )
+   /* enable conflict analysis, disable analysis of boundexceeding LPs, and restrict conflict pool */
+   if( !SCIPisParamFixed(subscip, "conflict/enable") )
    {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useprop", FALSE) );
-   }
-   if( !SCIPisParamFixed(subscip, "conflict/useinflp") )
-   {
-      SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useinflp", 'o') );
+      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", TRUE) );
    }
    if( !SCIPisParamFixed(subscip, "conflict/useboundlp") )
    {
       SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useboundlp", 'o') );
    }
-   if( !SCIPisParamFixed(subscip, "conflict/usesb") )
+   if( !SCIPisParamFixed(subscip, "conflict/maxstoresize") )
    {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usesb", FALSE) );
+      SCIP_CALL( SCIPsetIntParam(subscip, "conflict/maxstoresize", 100) );
    }
-   if( !SCIPisParamFixed(subscip, "conflict/usepseudo") )
-   {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) );
-   }
+
+   /* speed up sub-SCIP by not checking dual LP feasibility */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "lp/checkdualfeas", FALSE) );
 
    /* employ a limit on the number of enforcement rounds in the quadratic constraint handler; this fixes the issue that
     * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
@@ -929,7 +923,6 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    }
 
    /* add an objective cutoff */
-   cutoff = SCIPinfinity(scip);
    assert(!SCIPisInfinity(scip, SCIPgetUpperbound(scip)));
 
    upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
@@ -950,7 +943,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    /* permute the subproblem to increase diversification */
    if( heurdata->permute )
    {
-      SCIP_CALL( SCIPpermuteProb(subscip, SCIPinitializeRandomSeed(scip, SCIPheurGetNCalls(heur)), TRUE, TRUE, TRUE, TRUE, TRUE) );
+      SCIP_CALL( SCIPpermuteProb(subscip, SCIPinitializeRandomSeed(scip, (int) SCIPheurGetNCalls(heur)), TRUE, TRUE, TRUE, TRUE, TRUE) );
    }
 
    /* catch LP events of sub-SCIP */
@@ -963,20 +956,13 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
 #endif
    /* solve the subproblem */
    SCIPdebugMsg(scip, "Solve Crossover subMIP\n");
-   retcode = SCIPsolve(subscip);
-
-   /* drop LP events of sub-SCIP */
-   SCIP_CALL( SCIPdropEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, -1) );
 
    /* Errors in solving the subproblem should not kill the overall solving process.
     * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop. */
-   if( retcode != SCIP_OKAY )
-   {
-#ifndef NDEBUG
-      SCIP_CALL( retcode );
-#endif
-      SCIPwarningMessage(scip, "Error while solving subproblem in Crossover heuristic; sub-SCIP terminated with code <%d>\n", retcode);
-   }
+   SCIP_CALL_ABORT( SCIPsolve(subscip) );
+
+   /* drop LP events of sub-SCIP */
+   SCIP_CALL( SCIPdropEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, -1) );
 
    /* print solving statistics of subproblem if we are in SCIP's debug mode */
    SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );

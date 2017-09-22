@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   stat.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for problem statistics
  * @author Tobias Achterberg
  */
@@ -122,6 +123,15 @@ void SCIPstatUpdatePrimalDualIntegral(
    SCIP_Real             dualbound           /**< current lower bound in transformed space, or -infinity */
    );
 
+/** update and return the primal-dual integral statistic */
+extern
+SCIP_Real SCIPstatGetPrimalDualIntegral(
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob            /**< original problem */
+   );
+
 /** reset current branch and bound run specific statistics */
 extern
 void SCIPstatResetCurrentRun(
@@ -212,8 +222,8 @@ SCIP_RETCODE SCIPstatUpdateVarRootLPBestEstimate(
 #define SCIPupdateDeterministicTimeCount(stat, set, val) do { \
         (stat)->detertimecnt += (val); \
         if( (stat)->detertimecnt > 10000.0 ) { \
-            SCIPincrementConcurrentTime( (set)->scip, (stat)->detertimecnt * 1e-6 ); \
-            (stat)->detertimecnt = 0.0; \
+           SCIP_CALL_ABORT( SCIPincrementConcurrentTime( (set)->scip, (stat)->detertimecnt ) ); \
+           (stat)->detertimecnt = 0.0;                                  \
         }\
     } while(0) \
 

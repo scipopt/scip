@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -131,8 +131,7 @@ SCIP_RETCODE checkConsLinear(
    SCIP_CALL( SCIPcreateConsBasicLinear(scip, &objcons, "objcons", 0, NULL, NULL, 0.0, 0.0) );
 
    /* set up hash map */
-   SCIP_CALL( SCIPhashmapCreate(&varhash, SCIPblkmem(scip),
-         SCIPcalcHashtableSize(10 * (SCIPgetNVars(scip) + SCIPgetNFixedVars(scip)))) );
+   SCIP_CALL( SCIPhashmapCreate(&varhash, SCIPblkmem(scip), SCIPgetNVars(scip) + SCIPgetNFixedVars(scip)) );
 
    /* allocate buffer array */
    SCIP_CALL( SCIPallocBufferArray(scip, &dualconss, 2 * SCIPgetNVars(scip) + 2 * SCIPgetNFixedVars(scip)) ); /*lint !e647*/
@@ -191,8 +190,7 @@ SCIP_RETCODE checkConsKnapsack(
    SCIP_CALL( SCIPcreateConsBasicLinear(scip, &objcons, "objcons", 0, NULL, NULL, 0.0, 0.0) );
 
    /* set up hash map */
-   SCIP_CALL( SCIPhashmapCreate(&varhash, SCIPblkmem(scip),
-         SCIPcalcHashtableSize(10 * (SCIPgetNVars(scip) + SCIPgetNFixedVars(scip)))) );
+   SCIP_CALL( SCIPhashmapCreate(&varhash, SCIPblkmem(scip), SCIPgetNVars(scip) + SCIPgetNFixedVars(scip)) );
 
    /* allocate buffer array */
    SCIP_CALL( SCIPallocBufferArray(scip, &dualconss, 2 * SCIPgetNVars(scip) + 2 * SCIPgetNFixedVars(scip)) ); /*lint !e647*/

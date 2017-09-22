@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -34,13 +34,22 @@
 extern "C" {
 #endif
 
-/** creates RENS primal heuristic and includes it in SCIP */
+/** creates RENS primal heuristic and includes it in SCIP
+ *
+ *  @ingroup PrimalHeuristicIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeHeurRens(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** main procedure of the RENS heuristic, creates and solves a sub-SCIP */
+/**@addtogroup PRIMALHEURISTICS
+ *
+ * @{
+ */
+
+/** main procedure of the RNS heuristic, creates and solves a sub-SCIP */
+EXTERN
 SCIP_RETCODE SCIPapplyRens(
    SCIP*                 scip,               /**< original SCIP data structure                                        */
    SCIP_HEUR*            heur,               /**< heuristic data structure                                            */
@@ -53,6 +62,8 @@ SCIP_RETCODE SCIPapplyRens(
    SCIP_Bool             binarybounds,       /**< should general integers get binary bounds [floor(.),ceil(.)]?       */
    SCIP_Bool             uselprows           /**< should subproblem be created out of the rows in the LP rows?        */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

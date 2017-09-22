@@ -2,7 +2,7 @@
 /*                                                                           */
 /*        This file is part of the program PolySCIP                          */
 /*                                                                           */
-/*    Copyright (C) 2012-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2012-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  PolySCIP is distributed under the terms of the ZIB Academic License.     */
@@ -13,16 +13,17 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**
- * @brief  PolySCIP command line arguments
+ * @file cmd_line_args.cpp
+ * @brief Implements PolySCIP command line arguments via TCLAP
  * @author Sebastian Schenker
  *
- * Implements PolySCIP command line arguments.
  */
 
 
 #include "cmd_line_args.h"
 
 #include <string>
+#include <vector>
 
 #include "PolySCIPConfig.h" // defines EXECUTABLE_NAME, POLYSCIP_VERSION_{MAJOR,MINOR}
 #include "tclap/CmdLine.h"
@@ -35,6 +36,11 @@ using TCLAP::UnlabeledValueArg;
 
 namespace polyscip {
 
+    /**
+     * Constructor
+     * @param argc Argument count
+     * @param argv Argument vector
+     */
     CmdLineArgs::CmdLineArgs(int argc, const char *const *argv)
             : executable_name_(EXECUTABLE_NAME)
     {
@@ -51,14 +57,20 @@ namespace polyscip {
         cmd.add(output_sols_arg);
         SwitchArg output_outcomes_arg("o", "noOutcomes", "switching output of outcomes off", true);
         cmd.add(output_outcomes_arg);
+        std::vector<int> round_vals = {5,10,15};
+        TCLAP::ValuesConstraint<int> allowed_vals(round_vals);
+        ValueArg<int> round_weighted_obj_coeff_arg("r", "round",
+                                          "round weighted objective coefficient in fct 'setWeightedObjective' at r-th decimal position",
+                                          false, 0, &allowed_vals);
+        cmd.add(round_weighted_obj_coeff_arg);
         ValueArg<TimeLimitType> time_limit_arg("t", "timeLimit",
-                                               "time limit in seconds for total computation time",
+                                               "time limit in seconds for total SCIP computation time",
                                                false, kTimeLimitInf, "seconds");
         cmd.add(time_limit_arg);
-        ValueArg<double> delta_arg("d", "Delta", "Delta used in computation of feasible boxes; default value: 0.01",
+        ValueArg<double> delta_arg("d", "delta", "Delta used in computation of feasible boxes; default value: 0.01",
                                      false, 0.01, "double");
         cmd.add(delta_arg);
-        ValueArg<double> epsilon_arg("e", "Epsilon", "epsilon_ used in computation of unsupported points; default value: 1e-3",
+        ValueArg<double> epsilon_arg("e", "epsilon", "epsilon used in computation of unsupported points; default value: 1e-3",
                                      false, 1e-3, "double");
         cmd.add(epsilon_arg);
         ValueArg<string> write_sols_path_arg("W", "writeSolsPath",
@@ -78,6 +90,7 @@ namespace polyscip {
         write_results_ = write_results_arg.getValue();
         output_solutions_ = output_sols_arg.getValue();
         output_outcomes_ = output_outcomes_arg.getValue();
+        round_weighted_obj_coeff_ = round_weighted_obj_coeff_arg.getValue();
         time_limit_ = time_limit_arg.getValue();
         delta_ = delta_arg.getValue();
         epsilon_ = epsilon_arg.getValue();

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -53,7 +53,7 @@ void getMatrix(SCIP_Real* matrix)
    n = consdata->nquadvars;
 
    BMSclearMemoryArray(matrix, n*n);
-   SCIP_CALL( SCIPhashmapCreate(&var2index, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * n)) );
+   SCIP_CALL( SCIPhashmapCreate(&var2index, SCIPblkmem(scip), n) );
 
    for( i = 0; i < n; ++i )
    {

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for separators
  * @author Tobias Achterberg
  */
@@ -115,6 +116,7 @@ SCIP_RETCODE SCIPsepaExecLP(
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    int                   depth,              /**< depth of current node */
    SCIP_Real             bounddist,          /**< current relative distance of local dual bound to global dual bound */
+   SCIP_Bool             allowlocal,         /**< should the separator be asked to separate local cuts */
    SCIP_Bool             execdelayed,        /**< execute separator even if it is marked to be delayed */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
@@ -128,6 +130,7 @@ SCIP_RETCODE SCIPsepaExecSol(
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    SCIP_SOL*             sol,                /**< primal solution that should be separated */
    int                   depth,              /**< depth of current node */
+   SCIP_Bool             allowlocal,         /**< should the separator be asked to separate local cuts */
    SCIP_Bool             execdelayed,        /**< execute separator even if it is marked to be delayed */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );

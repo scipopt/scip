@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1652,7 +1652,6 @@ SCIP_RETCODE readConstraints(
       /* check whether we have '<' from a "<->" string */
       if ( *lpinput->token == '<' )
       {
-         SCIP_Bool haveequiv = FALSE;
          int linepos = lpinput->linepos-1;
 
          /* check next token - cannot be a new section */
@@ -1671,18 +1670,14 @@ SCIP_RETCODE readConstraints(
                      strcpy(lpinput->token, "<");
                      syntaxError(scip, lpinput,
                         "SCIP does not support equivalence (<->) indicator constraints; consider using the \"->\" form.");
-                     haveequiv = TRUE;
+                     goto TERMINATE;
                   }
                }
             }
          }
-         if ( ! haveequiv )
-         {
-            lpinput->linepos = linepos;
-            strcpy(lpinput->token, "<");
-            syntaxError(scip, lpinput, "unexpected \"<\".");
-         }
-         goto TERMINATE;
+         /* reset the lpinput for further usage as we have no indicator constraint */
+         lpinput->linepos = linepos;
+         strcpy(lpinput->token, "<");
       }
 
       /* check for "->" */
@@ -2311,7 +2306,7 @@ SCIP_RETCODE readSos(
                /* get sign */
                if( isSign(lpinput, &sign) )
                {
-                 getNextToken(scip, lpinput);
+                  (void) getNextToken(scip, lpinput);
                }
 
                /* get weight */

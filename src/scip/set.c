@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -95,12 +95,13 @@
 #define SCIP_DEFAULT_CONF_USEINFLP          'b' /**< should infeasible LP conflict analysis be used?
                                                  *   ('o'ff, 'c'onflict graph, 'd'ual ray, 'b'oth conflict graph and dual ray)
                                                  */
-#define SCIP_DEFAULT_CONF_USEBOUNDLP        'o' /**< should bound exceeding LP conflict analysis be used?
-                                                 *   ('o'ff, 'c'onflict graph, 'd'ual ray, 'b'oth conflict graph and dual ray)
+#define SCIP_DEFAULT_CONF_USEBOUNDLP        'b' /**< should bound exceeding LP conflict analysis be used?
+                                                 *   ('o'ff, 'c'onflict graph, 'd'ual ray, 'b'oth conflict graph and dual solution)
                                                  */
-#define SCIP_DEFAULT_CONF_USESB           FALSE /**< should infeasible/bound exceeding strong branching conflict analysis
+#define SCIP_DEFAULT_CONF_USESB            TRUE /**< should infeasible/bound exceeding strong branching conflict analysis
                                                  *   be used? */
 #define SCIP_DEFAULT_CONF_USEPSEUDO        TRUE /**< should pseudo solution conflict analysis be used? */
+#define SCIP_DEFAULT_CONF_PREFINFPROOF     TRUE /**< prefer infeasibility proof to boundexceeding proof */
 #define SCIP_DEFAULT_CONF_SEPARATE         TRUE /**< should the conflict constraints be separated? */
 #define SCIP_DEFAULT_CONF_DYNAMIC          TRUE /**< should the conflict constraints be subject to aging? */
 
@@ -143,12 +144,24 @@
 #define SCIP_DEFAULT_CONF_WEIGHTVALIDDEPTH  1.0 /**< weight of the valid depth of a conflict used in score calculation */
 #define SCIP_DEFAULT_CONF_MINIMPROVE       0.05 /**< minimal improvement of primal bound to remove conflicts based on a previous incumbent */
 
-
 /* Conflict Analysis (dual ray) */
 
 #define SCIP_DEFAULT_CONF_APPLYMIR        FALSE /**< apply MIR function to dual rays */
 #define SCIP_DEFAULT_CONF_PREFERMIR        TRUE /**< prefer a ray after applying the MIR function if the proof is still
-                                                  *   valid, use both rays otherwise */
+                                                 *   valid, use both rays otherwise
+                                                 */
+#define SCIP_DEFAULT_CONF_DUALRAYPRESOL       0 /**< which presolving strategy should be used for dualray constraints?
+                                                 *   (0: no presolving,
+                                                 *    1: keep variables contributing with its local bound
+                                                 *    2: keep variables contributing with its global bound
+                                                 *    3: keep variables contributing with its global bound and add a few
+                                                 *       variables contributing with its local bound such that the
+                                                 *       constraint is not globally redundant
+                                                 */
+#define SCIP_DEFAULT_CONF_REMOVECONTS       'd' /**< try to sparsify the dualray proof by removing continuous variables
+                                                 *   ([d]on't remove, remove [g]reedy, use [n]on-zero-cancellation)
+                                                 */
+#define SCIP_DEFAULT_CONF_SEPAALTPROOFS   FALSE /**< apply cut generating functions to construct alternative proofs */
 
 /* Constraints */
 
@@ -238,7 +251,7 @@
                                                  *   for LP resolve (-1.0: unlimited) */
 #define SCIP_DEFAULT_LP_RESOLVEITERMIN     1000 /**< minimum number of iterations that are allowed for LP resolve */
 #define SCIP_DEFAULT_LP_SOLUTIONPOLISHING     0 /**< LP solution polishing method (0: disabled, 1: only root, 2: always) */
-#define SCIP_DEFAULT_LP_PERSISTENTSCALING FALSE /**< use persistent LP scaling during branch and bound */
+#define SCIP_DEFAULT_LP_REFACTORINTERVAL      0 /**< LP refactorization interval (0: automatic) */
 
 /* NLP */
 
@@ -278,10 +291,11 @@
 #define SCIP_DEFAULT_MISC_ALLOWDUALREDS    TRUE /**< should dual reductions in propagation methods and presolver be allowed? */
 #define SCIP_DEFAULT_MISC_ALLOWOBJPROP     TRUE /**< should propagation to the current objective be allowed in propagation methods? */
 #define SCIP_DEFAULT_MISC_REFERENCEVALUE   1e99 /**< objective value for reference purposes */
+#define SCIP_DEFAULT_MISC_DEBUGSOLUTION     "-" /**< path to a debug solution */
 
 /* Randomization */
 #define SCIP_DEFAULT_RANDOM_RANDSEEDSHIFT     0 /**< global shift of all random seeds in the plugins, this will have no impact on the permutation and LP seeds */
-#define SCIP_DEFAULT_RANDOM_PERMUTATIONSEED   0 /**< seed value for permuting the problem after the problem was transformed (0: no permutation) */
+#define SCIP_DEFAULT_RANDOM_PERMUTATIONSEED   0 /**< seed value for permuting the problem after reading/transformation (0: no permutation) */
 #define SCIP_DEFAULT_RANDOM_LPSEED            0 /**< random seed for LP solver, e.g. for perturbations in the simplex (0: LP default) */
 #define SCIP_DEFAULT_RANDOM_PERMUTECONSS   TRUE /**< should order of constraints be permuted (depends on permutationseed)? */
 #define SCIP_DEFAULT_RANDOM_PERMUTEVARS   FALSE /**< should order of variables be permuted (depends on permutationseed)? */
@@ -295,7 +309,7 @@
 
 /* Presolving */
 
-#define SCIP_DEFAULT_PRESOL_ABORTFAC      1e-03 /**< abort presolve, if at most this fraction of the problem was changed
+#define SCIP_DEFAULT_PRESOL_ABORTFAC      8e-04 /**< abort presolve, if at most this fraction of the problem was changed
                                                  *   in last presolve round */
 #define SCIP_DEFAULT_PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds (-1: unlimited, 0: off) */
 #define SCIP_DEFAULT_PRESOL_MAXRESTARTS      -1 /**< maximal number of restarts (-1: unlimited) */
@@ -379,9 +393,13 @@
 #define SCIP_DEFAULT_SEPA_MAXBOUNDDIST      1.0 /**< maximal relative distance from current node's dual bound to primal
                                                  *   bound compared to best node's dual bound for applying separation
                                                  *   (0.0: only on current best node, 1.0: on all nodes) */
-#define SCIP_DEFAULT_SEPA_MINEFFICACY      0.05 /**< minimal efficacy for a cut to enter the LP */
-#define SCIP_DEFAULT_SEPA_MINEFFICACYROOT  0.001 /**< minimal efficacy for a cut to enter the LP in the root node */
-#define SCIP_DEFAULT_SEPA_MINORTHO         0.50 /**< minimal orthogonality for a cut to enter the LP */
+#define SCIP_DEFAULT_SEPA_MAXLOCALBOUNDDIST 0.0 /**< maximal relative distance from current node's dual bound to primal
+                                                 *   bound compared to best node's dual bound for applying local separation
+                                                 *   (0.0: only on current best node, 1.0: on all nodes) */
+#define SCIP_DEFAULT_SEPA_MAXCOEFRATIO     1e+4 /**< maximal ratio between coefficients in strongcg, cmir, and flowcover cuts */
+#define SCIP_DEFAULT_SEPA_MINEFFICACY       0.1 /**< minimal efficacy for a cut to enter the LP */
+#define SCIP_DEFAULT_SEPA_MINEFFICACYROOT 0.001 /**< minimal efficacy for a cut to enter the LP in the root node */
+#define SCIP_DEFAULT_SEPA_MINORTHO         0.60 /**< minimal orthogonality for a cut to enter the LP */
 #define SCIP_DEFAULT_SEPA_MINORTHOROOT     0.50 /**< minimal orthogonality for a cut to enter the LP in the root node */
 #define SCIP_DEFAULT_SEPA_OBJPARALFAC    0.0001 /**< factor to scale objective parallelism of cut in score calculation */
 #define SCIP_DEFAULT_SEPA_ORTHOFAC         1.00 /**< factor to scale orthogonality of cut in score calculation */
@@ -393,16 +411,18 @@
 #define SCIP_DEFAULT_SEPA_MAXRUNS            -1 /**< maximal number of runs for which separation is enabled (-1: unlimited) */
 #define SCIP_DEFAULT_SEPA_MAXROUNDS           5 /**< maximal number of separation rounds per node (-1: unlimited) */
 #define SCIP_DEFAULT_SEPA_MAXROUNDSROOT      -1 /**< maximal number of separation rounds in the root node (-1: unlimited) */
-#define SCIP_DEFAULT_SEPA_MAXROUNDSROOTSUBRUN 1 /**< maximal number of separation rounds in the root node of a subsequent run (-1: unlimited) */
+#define SCIP_DEFAULT_SEPA_MAXROUNDSROOTSUBRUN 5 /**< maximal number of separation rounds in the root node of a subsequent run (-1: unlimited) */
 #define SCIP_DEFAULT_SEPA_MAXADDROUNDS        1 /**< maximal additional number of separation rounds in subsequent
                                                  *   price-and-cut loops (-1: no additional restriction) */
-#define SCIP_DEFAULT_SEPA_MAXSTALLROUNDS      5 /**< maximal number of consecutive separation rounds without objective
+#define SCIP_DEFAULT_SEPA_MAXSTALLROUNDSROOT 10 /**< maximal number of consecutive separation rounds without objective
                                                  *   or integrality improvement (-1: no additional restriction) */
-#define SCIP_DEFAULT_SEPA_MAXCUTS           100 /**< maximal number of cuts separated per separation round */
+#define SCIP_DEFAULT_SEPA_MAXSTALLROUNDS      1 /**< maximal number of consecutive separation rounds without objective
+                                                 *   or integrality improvement (-1: no additional restriction) */
+#define SCIP_DEFAULT_SEPA_MAXCUTS           200 /**< maximal number of cuts separated per separation round */
 #define SCIP_DEFAULT_SEPA_MAXCUTSROOT      2000 /**< maximal separated cuts at the root node */
 #define SCIP_DEFAULT_SEPA_CUTAGELIMIT       100 /**< maximum age a cut can reach before it is deleted from global cut pool
                                                  *   (-1: cuts are never deleted from the global cut pool) */
-#define SCIP_DEFAULT_SEPA_POOLFREQ            0 /**< separation frequency for the global cut pool */
+#define SCIP_DEFAULT_SEPA_POOLFREQ           20 /**< separation frequency for the global cut pool */
 #define SCIP_DEFAULT_SEPA_FEASTOLFAC      -1.00 /**< factor on cut infeasibility to limit feasibility tolerance for relaxation solver (-1: off) */
 #define SCIP_DEFAULT_SEPA_MINACTIVITYQUOT   0.8 /**< minimum cut activity quotient to convert cuts into constraints
                                                  *   during a restart (0.0: all cuts are converted) */
@@ -419,17 +439,17 @@
 #define SCIP_DEFAULT_CONCURRENT_COMMVARBNDS     TRUE /**< should the concurrent solvers communicate variable bounds? */
 #define SCIP_DEFAULT_CONCURRENT_PRESOLVEBEFORE  TRUE /**< should the problem be presolved before it is copied to the concurrent solvers? */
 #define SCIP_DEFAULT_CONCURRENT_INITSEED     5131912 /**< the seed used to initialize the random seeds for the concurrent solvers */
-#define SCIP_DEFAULT_CONCURRENT_FREQINIT         0.5 /**< initial frequency of synchronization with other threads
+#define SCIP_DEFAULT_CONCURRENT_FREQINIT        10.0 /**< initial frequency of synchronization with other threads
                                                       *   (fraction of time required for solving the root LP) */
-#define SCIP_DEFAULT_CONCURRENT_FREQMAX         20.0 /**< maximal frequency of synchronization with other threads
+#define SCIP_DEFAULT_CONCURRENT_FREQMAX         10.0 /**< maximal frequency of synchronization with other threads
                                                       *   (fraction of time required for solving the root LP) */
 #define SCIP_DEFAULT_CONCURRENT_FREQFACTOR       1.5 /**< factor by which the frequency of synchronization is changed */
-#define SCIP_DEFAULT_CONCURRENT_TARGETPROGRESS 0.005 /**< when adapting the synchronization frequency this value is the targeted
+#define SCIP_DEFAULT_CONCURRENT_TARGETPROGRESS 0.001 /**< when adapting the synchronization frequency this value is the targeted
                                                        *   relative difference by which the absolute gap decreases per synchronization */
-#define SCIP_DEFAULT_CONCURRENT_MAXNSOLS           1 /**< maximum number of solutions that will be shared in a single synchronization */
-#define SCIP_DEFAULT_CONCURRENT_MAXNSYNCDELAY      3 /**< maximum number of synchronizations before reading is enforced regardless of delay */
-#define SCIP_DEFAULT_CONCURRENT_MINSYNCDELAY     2.0 /**< minimum delay before synchronization data is read */
-#define SCIP_DEFAULT_CONCURRENT_NBESTSOLS          1 /**< how many of the N best solutions should be considered for synchronization */
+#define SCIP_DEFAULT_CONCURRENT_MAXNSOLS           3 /**< maximum number of solutions that will be shared in a single synchronization */
+#define SCIP_DEFAULT_CONCURRENT_MAXNSYNCDELAY      7 /**< maximum number of synchronizations before reading is enforced regardless of delay */
+#define SCIP_DEFAULT_CONCURRENT_MINSYNCDELAY    10.0 /**< minimum delay before synchronization data is read */
+#define SCIP_DEFAULT_CONCURRENT_NBESTSOLS         10 /**< how many of the N best solutions should be considered for synchronization */
 #define SCIP_DEFAULT_CONCURRENT_PARAMSETPREFIX    "" /**< path prefix for parameter setting files of concurrent solvers */
 
 
@@ -654,16 +674,11 @@ SCIP_RETCODE SCIPsetSetReoptimizationParams(
       }
       SCIP_CALL( SCIPsetSetBoolParam(set, messagehdlr, "presolving/donotmultaggr", TRUE) );
 
-      /* fix paramters */
-      SCIP_CALL( SCIPsetChgParamFixed(set, "conflict/enable", TRUE) );
-      SCIP_CALL( SCIPsetChgParamFixed(set, "presolving/donotmultaggr", TRUE) );
-
       if( SCIPsetIsParamFixed(set, "branching/nodereopt/priority") )
       {
          SCIP_CALL( SCIPsetChgParamFixed(set, "branching/nodereopt/priority", FALSE) );
       }
       SCIP_CALL( SCIPsetSetIntParam(set, messagehdlr, "branching/nodereopt/priority", INT_MAX/4) );
-      SCIP_CALL( SCIPsetChgParamFixed(set, "branching/nodereopt/priority", TRUE) );
    }
    else
    {
@@ -1090,6 +1105,9 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->nlp_solver = NULL;
    (*set)->nlp_disable = FALSE;
    (*set)->sepa_primfeastol = SCIP_INVALID;
+#ifdef WITH_DEBUG_SOLUTION
+   (*set)->misc_debugsol = NULL;
+#endif
 
    /* the default time limit is infinite */
    (*set)->istimelimitfinite = FALSE;
@@ -1250,6 +1268,11 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->conf_preferbinary, FALSE, SCIP_DEFAULT_CONF_PREFERBINARY,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "conflict/prefinfproof",
+         "prefer infeasibility proof to boundexceeding proof",
+         &(*set)->conf_prefinfproof, TRUE, SCIP_DEFAULT_CONF_PREFINFPROOF,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/allowlocal",
          "should conflict constraints be generated that are only valid locally?",
          &(*set)->conf_allowlocal, TRUE, SCIP_DEFAULT_CONF_ALLOWLOCAL,
@@ -1272,7 +1295,7 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/separate",
          "should the conflict constraints be separated?",
-         &(*set)->conf_seperate, TRUE, SCIP_DEFAULT_CONF_SEPARATE,
+         &(*set)->conf_separate, TRUE, SCIP_DEFAULT_CONF_SEPARATE,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/dynamic",
@@ -1344,16 +1367,6 @@ SCIP_RETCODE SCIPsetCreate(
          "the weight the VSIDS score is weight by updating the VSIDS for a variable if it is part of a conflict graph",
          &(*set)->conf_conflictgraphweight, FALSE, SCIP_DEFAULT_CONF_CONFLITGRAPHWEIGHT, 0.0, 1.0,
          NULL, NULL) );
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "conflict/usemir",
-         "apply MIR function to dual rays",
-         &(*set)->conf_applymir, TRUE, SCIP_DEFAULT_CONF_APPLYMIR,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "conflict/prefermir",
-         "prefer a ray after applying the MIR function if the proof is still valid, use both rays otherwise",
-         &(*set)->conf_prefermir, TRUE, SCIP_DEFAULT_CONF_PREFERMIR,
-         NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "conflict/minimprove",
          "minimal improvement of primal bound to remove conflicts based on a previous incumbent",
@@ -1370,6 +1383,11 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/weightvaliddepth",
          "weight of the valid depth of a conflict used in score calculation",
          &(*set)->conf_weightvaliddepth, TRUE, SCIP_DEFAULT_CONF_WEIGHTVALIDDEPTH, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "conflict/sepaaltproofs",
+         "apply cut generating functions to construct alternative proofs",
+         &(*set)->conf_sepaaltproofs, FALSE, SCIP_DEFAULT_CONF_SEPAALTPROOFS,
+         NULL, NULL) );
 
    /* constraint parameters */
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
@@ -1673,17 +1691,17 @@ SCIP_RETCODE SCIPsetCreate(
          "minimum number of iterations that are allowed for LP resolve",
          &(*set)->lp_resolveitermin, TRUE, SCIP_DEFAULT_LP_RESOLVEITERMIN, 1, INT_MAX,
          NULL, NULL) );
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "lp/persistentscaling",
-         "use persistent LP scaling during branch and bound",
-         &(*set)->lp_persistentscaling, TRUE, SCIP_DEFAULT_LP_PERSISTENTSCALING,
-         NULL, NULL) );
-
 
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "lp/solutionpolishing",
          "LP solution polishing method (0: disabled, 1: only root, 2: always)",
          &(*set)->lp_solutionpolishing, TRUE, SCIP_DEFAULT_LP_SOLUTIONPOLISHING, 0, 2,
+         NULL, NULL) );
+
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "lp/refactorinterval",
+         "LP refactorization interval (0: auto)",
+         &(*set)->lp_refactorinterval, TRUE, SCIP_DEFAULT_LP_REFACTORINTERVAL, 0, INT_MAX,
          NULL, NULL) );
 
    /* NLP parameters */
@@ -1828,6 +1846,13 @@ SCIP_RETCODE SCIPsetCreate(
          "objective value for reference purposes",
          &(*set)->misc_referencevalue, FALSE, SCIP_DEFAULT_MISC_REFERENCEVALUE, SCIP_REAL_MIN, SCIP_REAL_MAX,
          NULL, NULL) );
+#ifdef WITH_DEBUG_SOLUTION
+   SCIP_CALL( SCIPsetAddStringParam(*set, messagehdlr, blkmem,
+         "misc/debugsol",
+         "path to a debug solution",
+         &(*set)->misc_debugsol, FALSE, SCIP_DEFAULT_MISC_DEBUGSOLUTION,
+         NULL, NULL) );
+#endif
 
    /* randomization parameters */
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
@@ -1838,7 +1863,7 @@ SCIP_RETCODE SCIPsetCreate(
 
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "randomization/permutationseed",
-         "seed value for permuting the problem after the problem was transformed (0: no permutation)",
+         "seed value for permuting the problem after reading/transformation (0: no permutation)",
          &(*set)->random_permutationseed, FALSE, SCIP_DEFAULT_RANDOM_PERMUTATIONSEED, 0, INT_MAX,
          NULL, NULL) );
 
@@ -2149,6 +2174,16 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->sepa_maxbounddist, FALSE, SCIP_DEFAULT_SEPA_MAXBOUNDDIST, 0.0, 1.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "separating/maxlocalbounddist",
+         "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying local separation (0.0: only on current best node, 1.0: on all nodes)",
+         &(*set)->sepa_maxlocalbounddist, FALSE, SCIP_DEFAULT_SEPA_MAXLOCALBOUNDDIST, 0.0, 1.0,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "separating/maxcoefratio",
+         "maximal ratio between coefficients in strongcg, cmir, and flowcover cuts",
+         &(*set)->sepa_maxcoefratio, FALSE, SCIP_DEFAULT_SEPA_MAXCOEFRATIO, 1.0, SCIP_INVALID/10.0,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "separating/minefficacy",
          "minimal efficacy for a cut to enter the LP",
          &(*set)->sepa_minefficacy, FALSE, SCIP_DEFAULT_SEPA_MINEFFICACY, 0.0, SCIP_INVALID/10.0,
@@ -2234,6 +2269,11 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->sepa_maxstallrounds, FALSE, SCIP_DEFAULT_SEPA_MAXSTALLROUNDS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "separating/maxstallroundsroot",
+         "maximal number of consecutive separation rounds without objective or integrality improvement (-1: no additional restriction)",
+         &(*set)->sepa_maxstallroundsroot, FALSE, SCIP_DEFAULT_SEPA_MAXSTALLROUNDSROOT, -1, INT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "separating/maxcuts",
          "maximal number of cuts separated per separation round (0: disable local separation)",
          &(*set)->sepa_maxcuts, FALSE, SCIP_DEFAULT_SEPA_MAXCUTS, 0, INT_MAX,
@@ -2263,7 +2303,7 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "parallel/mode",
          "parallel optimisation mode, 0: opportunistic or 1: deterministic.",
-         &(*set)->parallel_spimode, FALSE, SCIP_DEFAULT_PARALLEL_MODE, 0, 1,
+         &(*set)->parallel_mode, FALSE, SCIP_DEFAULT_PARALLEL_MODE, 0, 1,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "parallel/minnthreads",
@@ -2521,7 +2561,7 @@ SCIP_RETCODE SCIPsetFree(
    /* free primal heuristics */
    for( i = 0; i < (*set)->nheurs; ++i )
    {
-      SCIP_CALL( SCIPheurFree(&(*set)->heurs[i], *set) );
+      SCIP_CALL( SCIPheurFree(&(*set)->heurs[i], *set, blkmem) );
    }
    BMSfreeMemoryArrayNull(&(*set)->heurs);
 
@@ -2571,11 +2611,7 @@ SCIP_RETCODE SCIPsetFree(
    BMSfreeMemoryArrayNull(&(*set)->nlpis);
 
    /* free concsolvers */
-   for( i = 0; i < (*set)->nconcsolvers; ++i )
-   {
-      SCIP_CALL( SCIPconcsolverDestroyInstance(*set, &(*set)->concsolvers[i]) );
-   }
-   BMSfreeMemoryArrayNull(&(*set)->concsolvers);
+   SCIP_CALL( SCIPsetFreeConcsolvers(*set) );
 
    /* free concsolvers types */
    for( i = 0; i < (*set)->nconcsolvertypes; ++i )
@@ -4033,6 +4069,28 @@ SCIP_RETCODE SCIPsetIncludeConcsolver(
    assert(set->nconcsolvers == SCIPconcsolverGetIdx(concsolver));
 
    set->nconcsolvers++;
+
+   return SCIP_OKAY;
+}
+
+/** frees all concurrent solvers in the concurrent solver list */
+SCIP_RETCODE SCIPsetFreeConcsolvers(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   int i;
+   assert(set != NULL);
+
+   /* call user callback for each concurrent solver */
+   for( i = 0; i < set->nconcsolvers; ++i )
+   {
+      SCIP_CALL( SCIPconcsolverDestroyInstance(set, &set->concsolvers[i]) );
+   }
+
+   /* set size and number to zero and free the concurent solver array */
+   set->nconcsolvers = 0;
+   set->concsolverssize = 0;
+   BMSfreeMemoryArrayNull(&set->concsolvers);
 
    return SCIP_OKAY;
 }

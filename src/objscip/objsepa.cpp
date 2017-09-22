@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -178,7 +178,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpObj)
    assert(sepadata->objsepa != NULL);
 
    /* call virtual method of sepa object */
-   SCIP_CALL( sepadata->objsepa->scip_execlp(scip, sepa, result) );
+   SCIP_CALL( sepadata->objsepa->scip_execlp(scip, sepa, result, allowlocal) );
 
    return SCIP_OKAY;
 }
@@ -195,7 +195,7 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolObj)
    assert(sepadata->objsepa != NULL);
 
    /* call virtual method of sepa object */
-   SCIP_CALL( sepadata->objsepa->scip_execsol(scip, sepa, sol, result) );
+   SCIP_CALL( sepadata->objsepa->scip_execsol(scip, sepa, sol, result, allowlocal) );
 
    return SCIP_OKAY;
 }

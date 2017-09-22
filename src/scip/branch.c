@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -42,6 +42,7 @@
 #include "scip/sepastore.h"
 #include "scip/scip.h"
 #include "scip/branch.h"
+#include "scip/solve.h"
 
 #include "scip/struct_branch.h"
 
@@ -448,7 +449,6 @@ SCIP_RETCODE SCIPbranchcandGetExternCands(
                                               *   or NULL */
    )
 {
-
    assert(branchcand != NULL);
 
    /* assign return values */
@@ -470,6 +470,39 @@ SCIP_RETCODE SCIPbranchcandGetExternCands(
       *nprioexternimpls = branchcand->nprioexternimpls;
 
    return SCIP_OKAY;
+}
+
+/** gets maximal branching priority of LP branching candidates */
+extern
+int SCIPbranchcandGetLPMaxPrio(
+   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
+   )
+{
+   assert(branchcand != NULL);
+
+   return branchcand->lpmaxpriority;
+}
+
+/** gets number of LP branching candidates with maximal branch priority */
+extern
+int SCIPbranchcandGetNPrioLPCands(
+   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
+   )
+{
+   assert(branchcand != NULL);
+
+   return branchcand->npriolpcands;
+}
+
+/** gets maximal branching priority of external branching candidates */
+extern
+int SCIPbranchcandGetExternMaxPrio(
+   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
+   )
+{
+   assert(branchcand != NULL);
+
+   return branchcand->externmaxpriority;
 }
 
 /** gets number of external branching candidates */
@@ -802,6 +835,8 @@ SCIP_RETCODE SCIPbranchcandGetPseudoCands(
          }
       }
       assert(branchcand->npseudocands == npcs);
+      for (v = 0; v < branchcand->npriopseudocands; ++v)
+         assert( branchcand->pseudocands[v]->branchpriority == branchcand->pseudomaxpriority );
    }
 #endif
 
@@ -989,6 +1024,12 @@ void branchcandSortPseudoCands(
    assert(0 <= branchcand->npriopseudocands && branchcand->npriopseudocands <= branchcand->npseudocands);
    assert(0 <= branchcand->npriopseudobins && branchcand->npriopseudobins <= branchcand->npriopseudocands);
    assert(0 <= branchcand->npriopseudoints && branchcand->npriopseudoints <= branchcand->npriopseudocands);
+#ifndef NDEBUG
+   {
+      for (i = 0; i < branchcand->npriopseudocands; ++i)
+         assert( branchcand->pseudocands[i]->branchpriority == branchcand->pseudomaxpriority );
+   }
+#endif
 }
 
 /** removes pseudo candidate from pseudocands array
@@ -999,7 +1040,6 @@ void branchcandRemovePseudoCand(
    SCIP_VAR*             var                 /**< variable to remove */
    )
 {
-   int branchpriority;
    int freepos;
 
    assert(branchcand != NULL);
@@ -1008,10 +1048,12 @@ void branchcandRemovePseudoCand(
    assert(branchcand->pseudocands[var->pseudocandindex] == var);
    assert(branchcand->pseudocands[branchcand->npseudocands-1] != NULL);
 
-   branchpriority = SCIPvarGetBranchPriority(var);
-
+   /* Note that the branching priority of the variable to be removed is not necessarily equal to pseudomaxpriority, since
+    * the status of the variable might have changed, leading to a change in the branching priority. Moreover, if the
+    * variable was part of an aggregation, even other variables might at this point have different priorities. */
    SCIPdebugMessage("removing pseudo candidate <%s> of type %d and priority %d at %d from candidate set (maxprio: %d)\n",
-      SCIPvarGetName(var), SCIPvarGetType(var), branchpriority, var->pseudocandindex, branchcand->pseudomaxpriority);
+      SCIPvarGetName(var), SCIPvarGetType(var), SCIPvarGetBranchPriority(var), var->pseudocandindex,
+      branchcand->pseudomaxpriority);
 
    /* delete the variable from pseudocands, making sure, that the highest priority candidates are at the front
     * and ordered binaries, integers, implicit integers
@@ -1024,7 +1066,6 @@ void branchcandRemovePseudoCand(
    {
       /* a binary candidate of maximal priority was removed */
       assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
-      assert(branchpriority == branchcand->pseudomaxpriority);
       if( freepos != branchcand->npriopseudobins - 1 )
       {
          branchcand->pseudocands[freepos] = branchcand->pseudocands[branchcand->npriopseudobins - 1];
@@ -1034,11 +1075,11 @@ void branchcandRemovePseudoCand(
       branchcand->npriopseudobins--;
       branchcand->npriopseudoints++;
    }
+
    if( freepos < branchcand->npriopseudobins + branchcand->npriopseudoints )
    {
       /* a binary or integer candidate of maximal priority was removed */
       assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
-      assert(branchpriority == branchcand->pseudomaxpriority);
       if( freepos != branchcand->npriopseudobins + branchcand->npriopseudoints - 1 )
       {
          branchcand->pseudocands[freepos] =
@@ -1048,10 +1089,10 @@ void branchcandRemovePseudoCand(
       }
       branchcand->npriopseudoints--;
    }
+
    if( freepos < branchcand->npriopseudocands )
    {
       /* a candidate of maximal priority was removed */
-      assert(branchpriority == branchcand->pseudomaxpriority);
       if( freepos != branchcand->npriopseudocands - 1 )
       {
          branchcand->pseudocands[freepos] = branchcand->pseudocands[branchcand->npriopseudocands - 1];
@@ -1135,7 +1176,7 @@ SCIP_RETCODE SCIPbranchcandUpdateVar(
    return SCIP_OKAY;
 }
 
-/** updates branching priority of the given variable and update the pseude candidate array if needed */
+/** updates branching priority of the given variable and update the pseudo candidate array if needed */
 SCIP_RETCODE SCIPbranchcandUpdateVarBranchPriority(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1155,9 +1196,8 @@ SCIP_RETCODE SCIPbranchcandUpdateVarBranchPriority(
 
    pseudomaxpriority = branchcand->pseudomaxpriority;
 
-   /* if the variable currently belongs to priority set or the new branching priority is larger than the current one,
-    * renmove it from the pseudo branch candidate array temporary
-    */
+   /* if the variable currently belongs to the priority set or the new branching priority is larger than the current one,
+    * remove it from the pseudo branch candidate array */
    if( oldbranchpriority == pseudomaxpriority || branchpriority > pseudomaxpriority )
    {
       SCIP_CALL( SCIPbranchcandRemoveVar(branchcand, var) );
@@ -1167,9 +1207,8 @@ SCIP_RETCODE SCIPbranchcandUpdateVarBranchPriority(
    /* change the branching priority of the variable */
    SCIP_CALL( SCIPvarChgBranchPriority(var, branchpriority) );
 
-   /* of the variable is not part of the pseudo branching candidate array; check if it is a pseudo branching candidate
-    * and add it if so
-    */
+   /* if the variable is not part of the pseudo branching candidate array, check if it is a pseudo branching candidate
+    * and add it if so */
    SCIP_CALL( SCIPbranchcandUpdateVar(branchcand, set, var) );
 
    return SCIP_OKAY;
@@ -1498,15 +1537,15 @@ SCIP_RETCODE SCIPbranchruleExecLPSol(
       {
          SCIP_Longint oldndomchgs;
          SCIP_Longint oldnprobdomchgs;
+         SCIP_Longint oldnactiveconss;
          int oldncuts;
-         int oldnactiveconss;
 
          SCIPsetDebugMsg(set, "executing LP branching rule <%s>\n", branchrule->name);
 
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
          oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
          oldncuts = SCIPsepastoreGetNCuts(sepastore);
-         oldnactiveconss = stat->nactiveconss;
+         oldnactiveconss = stat->nactiveconssadded;
 
          /* start timing */
          SCIPclockStart(branchrule->branchclock, set);
@@ -1552,7 +1591,7 @@ SCIP_RETCODE SCIPbranchruleExecLPSol(
             branchrule->ndomredsfound -= (stat->nprobboundchgs + stat->nprobholechgs - oldnprobdomchgs);
 
             branchrule->ncutsfound += SCIPsepastoreGetNCuts(sepastore) - oldncuts; /*lint !e776*/
-            branchrule->nconssfound += stat->nactiveconss - oldnactiveconss; /*lint !e776*/
+            branchrule->nconssfound += stat->nactiveconssadded - oldnactiveconss; /*lint !e776*/
          }
          else
             branchrule->nchildren += tree->nchildren;
@@ -2160,8 +2199,8 @@ SCIP_Real SCIPbranchGetScore(
       break;
    default:
       SCIPerrorMessage("invalid branching score function <%c>\n", set->branch_scorefunc);
-      score = 0.0;
       SCIPABORT();
+      score = 0.0;
    }
 
    /* apply the branch factor of the variable */
@@ -2400,10 +2439,6 @@ SCIP_Real SCIPbranchGetBranchingPoint(
          return branchpoint;
       }
    }
-
-   SCIPerrorMessage("you should not be here, this should not happen\n");  /*lint !e527*/
-   SCIPABORT();  /*lint --e{527}*/
-   return SCIP_INVALID;  /*lint --e{527}*/
 }
 
 /** calls branching rules to branch on an LP solution; if no fractional variables exist, the result is SCIP_DIDNOTRUN;
@@ -2463,7 +2498,7 @@ SCIP_RETCODE SCIPbranchExecLP(
    SCIPsetSortBranchrules(set);
 
    /* try all branching rules until one succeeded to branch */
-   for( i = 0; i < set->nbranchrules && (*result == SCIP_DIDNOTRUN || *result == SCIP_DIDNOTFIND); ++i )
+   for( i = 0; i < set->nbranchrules && (*result == SCIP_DIDNOTRUN || *result == SCIP_DIDNOTFIND) && !SCIPsolveIsStopped(set, stat, FALSE); ++i )
    {
       SCIP_CALL( SCIPbranchruleExecLPSol(set->branchrules[i], set, stat, tree, sepastore, cutoffbound, allowaddcons, result) );
    }

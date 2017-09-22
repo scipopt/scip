@@ -3,10 +3,10 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic Licence.         */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
@@ -474,7 +474,7 @@ SCIP_RETCODE createSettingsFile(
    }
 
    /* generate random number generator */
-   SCIP_CALL( SCIPrandomCreate(&randgen, SCIPblkmem(scip), seed) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randgen, seed) );
 
    /* generate random setting and write it to file */
    SCIP_CALL( generateRandomSettings(scip, randgen, MAX_CHANGE, CHANGE_ADVANCED) );
@@ -482,7 +482,7 @@ SCIP_RETCODE createSettingsFile(
    SCIPinfoMessage(scip, NULL, "-> saved random settings to file <%s>\n", filename);
 
    /* close SCIP */
-   SCIPrandomFree(&randgen);
+   SCIPfreeRandom(scip, &randgen);
    SCIP_CALL( SCIPfree(&scip) );
    BMScheckEmptyMemory();
 

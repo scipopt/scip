@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -141,6 +141,18 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxIntegral)
       }
    }
 
+   /* if we have found a branching candidate, immediately branch to be able to return SCIP_BRANCHED and stop the
+    * enforcement loop
+    */
+   if( *result == SCIP_INFEASIBLE )
+   {
+      /* call branching methods for external candidates */
+      SCIP_CALL( SCIPbranchExtern(scip, result) );
+
+      /* since we only call it if we added external candidates, the branching rule should always be able to branch */
+      assert(*result != SCIP_DIDNOTRUN);
+   }
+
    return SCIP_OKAY;
 }
 
@@ -174,6 +186,10 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
       for( v = 0; v < ninteger; ++v )
       {
          solval = SCIPgetSolVal(scip, sol, vars[v]);
+
+         if( sol != NULL )
+            SCIPupdateSolIntegralityViolation(scip, sol, EPSFRAC(solval, SCIPfeastol(scip)));
+
          if( !SCIPisFeasIntegral(scip, solval) )
          {
             *result = SCIP_INFEASIBLE;
@@ -269,7 +285,8 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIntegral)
       /* skip variable if solution value disagrees with the local bounds */
       if( ! SCIPisFeasIntegral(scip, solval) && SCIPisGE(scip, solval, SCIPvarGetLbLocal(vars[v])) && SCIPisLE(scip, solval, SCIPvarGetUbLocal(vars[v])) )
       {
-         SCIP_CALL( SCIPgetDivesetScore(scip, diveset, SCIP_DIVETYPE_INTEGRALITY, vars[v], solval, solval - SCIPfloor(scip, solval), &score, &roundup) );
+         SCIP_CALL( SCIPgetDivesetScore(scip, diveset, SCIP_DIVETYPE_INTEGRALITY, vars[v], solval,
+               solval - SCIPfloor(scip, solval), &score, &roundup) );
 
          /* we search for candidates with maximum score */
          if( score > bestscore )

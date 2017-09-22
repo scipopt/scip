@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -278,13 +278,12 @@ void setup_sepadata(void)
    cr_assert_not_null(sepadata->nlpi);
 
    SCIP_CALL( SCIPnlpiCreateProblem(sepadata->nlpi, &sepadata->nlpiprob, "convexproj-nlp-unittest") );
-   SCIP_CALL( SCIPhashmapCreate(&sepadata->var2nlpiidx, SCIPblkmem(scip),
-            SCIPcalcHashtableSize(sepadata->nlpinvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&sepadata->var2nlpiidx, SCIPblkmem(scip), sepadata->nlpinvars) );
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &sepadata->nlpivars, SCIPgetVars(scip), sepadata->nlpinvars) );
 
    /* I shouldn't care about the cutoff, just assert that the lp solution satisfies the cutoff bound */
-   SCIP_CALL( SCIPcreateConvexNlp(scip, sepadata->nlpi, nlrows, 3,
-            sepadata->nlpiprob, sepadata->var2nlpiidx, NULL, SCIPgetCutoffbound(scip), FALSE) );
+   SCIP_CALL( SCIPcreateNlpiProb(scip, sepadata->nlpi, nlrows, 3,
+            sepadata->nlpiprob, sepadata->var2nlpiidx, NULL, SCIPgetCutoffbound(scip), FALSE, TRUE) );
 
    /* set quadratic part of objective function */
    SCIP_CALL( setQuadraticObj(scip, sepadata) );

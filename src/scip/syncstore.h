@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -60,20 +60,13 @@ SCIP_RETCODE SCIPsyncstoreExit(
    SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
    );
 
-/** initialize the synchronization timing parameters for the first synchronization */
-EXTERN
-void SCIPsyncstoreInitSyncTiming(
-   SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
-   SCIP_Real             time                /**< the time the solver spent before the first synchronization */
-   );
-
 /** checks whether the solve-is-stopped flag in the syncstore has been set by any thread */
 EXTERN
 SCIP_Bool SCIPsyncstoreSolveIsStopped(
    SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
    );
 
-/** sets the solve-is-stopped flag in the SPI so that subsequent calls to
+/** sets the solve-is-stopped flag in the syncstore so that subsequent calls to
  *  SCIPsyncstoreSolveIsStopped will return the given value in any thread
  */
 EXTERN
@@ -133,6 +126,7 @@ EXTERN
 SCIP_SYNCDATA* SCIPsyncstoreGetNextSyncdata(
    SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
    SCIP_SYNCDATA*        syncdata,           /**< the synchronization data */
+   SCIP_Real             syncfreq,           /**< the current synchronization frequency */
    SCIP_Longint          writenum,           /**< number of synchronizations the solver has written to */
    SCIP_Real*            delay               /**< pointer holding the current synchronization delay */
    );

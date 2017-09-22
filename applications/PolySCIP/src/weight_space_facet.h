@@ -2,7 +2,7 @@
 /*                                                                           */
 /*        This file is part of the program PolySCIP                          */
 /*                                                                           */
-/*    Copyright (C) 2012-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2012-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  PolySCIP is distributed under the terms of the ZIB Academic License.     */
@@ -13,15 +13,10 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**
+ * @file weight_space_facet.h
  * @brief Class representing a facet of the weight space polyhedron
  * @author Sebastian Schenker
  *
- * Data structure representing a facet of the (partial) weight space
- * polyhedron P={(w,a) : w \cdot y >= a \forall y \in Y_N} where Y_N is
- * the (current) set of non-dominated points. A facet (w_coeffs_, wov_coeff_) is
- * represented by coefficients 'w_coeffs_' and a right hand side 'wov_coeff_'
- * yielding an inequality of the form w_coeffs_ \cdot w >= wov_coeff_ * wov
- * where wov stands for weighted objective value
  */
 
 #ifndef POLYSCIP_SRC_WEIGHT_SPACE_FACET_H_INCLUDED
@@ -35,10 +30,24 @@
 
 namespace polyscip {
 
-    /** Facet of the (partial) weight space polyhedron. */
+    /**
+     * @class WeightSpaceFacet
+     * @brief Class representing a facet of the (partial) weight space polyhedron
+     * @details A facet is described by the inequality w_coeffs \\cdot w >= wov_coeff * a
+     */
     class WeightSpaceFacet {
     public:
+
+        /**
+         * Simple class for less than comparison
+         */
         struct Compare {
+            /**
+             * Callable less than comparator
+             * @param f1 lhs facet
+             * @param f2 rhs facet
+             * @return true if lhs facet is lexicographically smaller than rhs facet
+             */
             bool operator()(const std::shared_ptr<const WeightSpaceFacet> &f1,
                             const std::shared_ptr<const WeightSpaceFacet> &f2) {
                 return std::tie(f1->wov_coeff_, f1->w_coeffs_) <
@@ -47,37 +56,24 @@ namespace polyscip {
         };
 
 
-        /** Creates the facet: outcome \cdot w >= wov_coeff*weighted_obj_val
-         *  @param outcome outcome in objective space
-         *  @param wov_coeff coefficient for weighted objective value
+        /**
+         *  Default constructor
+         *  @param outcome Values for w_coeffs_
+         *  @param wov_coeff Values for wov_coeff
          */
         explicit WeightSpaceFacet(OutcomeType outcome,
-                         ValueType wov_coeff);
+                                  ValueType wov_coeff);
 
-        /** Creates the weight space facet w_i >= 0
-         *  @param num_objs number of objectives of given problem
-         *  @param index index i of w_i >= 0
-         */
-        explicit WeightSpaceFacet(unsigned num_objs, unsigned index) = delete;
 
-        /** Prints facet information to output stream.
+        /**
+         * Print function
+         * @param os Output stream to print to
          */
         void print(std::ostream& os) const;
 
-        bool hasNonZeroWOVCoeff() const {return wov_coeff_ != 0;};
-
-        OutcomeType::const_iterator coeffsBegin() const {return w_coeffs_.cbegin();};
-        OutcomeType::const_iterator coeffsEnd() const {return w_coeffs_.cend();};
-
-        ValueType getWeightedWeight(const WeightType& weight) const;
-
-        ValueType getWOVCoeff() const {return wov_coeff_;};
-
     private:
-        /**< coefficients for the weight of the facet inequality */
-        OutcomeType w_coeffs_;
-        /**< coefficient for the weighted objective value of the facet inequality */
-        ValueType wov_coeff_;
+        OutcomeType w_coeffs_; ///< Corresponding lhs coefficients for facet inequality
+        ValueType wov_coeff_; ///< Corresponding rhs coefficients for facet inequality
     };
 }
 

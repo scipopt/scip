@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_nlp.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for NLP management
  * @author Thorsten Gellermann
  * @author Stefan Vigerske
@@ -42,8 +42,16 @@
 extern "C" {
 #endif
 
-/**@name Expressions and Expression tree methods */
-/**@{ */
+/**@addtogroup PublicNLPMethods
+ *
+ * @{
+ */
+
+
+/**@addtogroup PublicExpressionTreeMethods
+ *
+ * @{
+ */
 
 /** returns variables of expression tree */
 EXTERN
@@ -86,8 +94,10 @@ int SCIPexprtreeFindVar(
 
 /**@} */
 
-/**@name Nonlinear row methods */
-/**@{ */
+/**@addtogroup PublicNLRowMethods
+ *
+ * @{
+ */
 
 /** gets constant */
 EXTERN
@@ -210,6 +220,8 @@ SCIP_Real SCIPnlrowGetDualsol(
    );
 
 /**@} */
+
+/**@} */ /* PublicNLPMethods */
 
 #ifdef __cplusplus
 }

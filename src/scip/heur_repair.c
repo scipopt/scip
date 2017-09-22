@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -257,7 +257,7 @@ SCIP_RETCODE tryFixVar(
    SCIP_ROW** rows;
    SCIP_COL* col;
    SCIP_Real* vals;
-   SCIP_Real alpha = heurdata->alpha;
+   SCIP_Real alpha;
    int nrows;
    int i;
    int sgn;
@@ -270,6 +270,7 @@ SCIP_RETCODE tryFixVar(
    assert(NULL != inftycounter);
    assert(NULL != heurdata);
 
+   alpha = heurdata->alpha;
    *infeasible = TRUE;
    *fixed = FALSE;
 
@@ -488,10 +489,10 @@ SCIP_RETCODE createNewSol(
 /** tries to fix variables as an approach to repair a solution. */
 static
 SCIP_RETCODE applyRepair(
-   SCIP*                 scip,             /**< SCIP data structure of the problem */
-   SCIP_HEUR*            heur,             /**< pointer to this heuristic instance */
-   SCIP_RESULT*          result,           /**< pointer to return the result status */
-   SCIP_Longint          nnodes            /**< nodelimit for sub-SCIP */
+   SCIP*                 scip,               /**< SCIP data structure of the problem */
+   SCIP_HEUR*            heur,               /**< pointer to this heuristic instance */
+   SCIP_RESULT*          result,             /**< pointer to return the result status */
+   SCIP_Longint          nnodes              /**< nodelimit for sub-SCIP */
    )
 {
    SCIP* subscip = NULL;
@@ -914,33 +915,16 @@ SCIP_RETCODE applyRepair(
    SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", -1) );
 #endif
 
-   /* presolve the subproblem */
-   retcode = SCIPpresolve(subscip);
-
-   /* errors in solving the subproblem should not kill the overall solving process;
-    * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
-    */
-   if( retcode != SCIP_OKAY )
-   {
-#ifndef NDEBUG
-      SCIP_CALL( retcode );
-#endif
-      SCIPwarningMessage(scip, "Error while presolving subproblem in REPAIR heuristic; sub-SCIP terminated with code <%d>\n", retcode);
-
-      goto TERMINATE;
-   }
    /* solve the subproblem */
    retcode = SCIPsolve(subscip);
 
+   /* errors in sub-SCIPs should not kill the overall solving process. Hence, we print a warning message. Only
+    * in debug mode, SCIP will stop
+    */
    if( retcode != SCIP_OKAY )
    {
-#ifndef NDEBUG
-      SCIP_CALL( retcode );
-#endif
-      SCIPwarningMessage(scip,
-            "Error while solving subproblem in REPAIR heuristic; sub-SCIP terminated with code <%d>\n",
-            retcode);
-
+      SCIPwarningMessage(scip, "Error while solving subproblem in REPAIR heuristic; sub-SCIP terminated with code <%d>\n", retcode);
+      SCIPABORT();  /*lint --e{527}*/
       goto TERMINATE;
    }
 
@@ -1000,10 +984,9 @@ TERMINATE:
    {
       SCIP_CALL( SCIPfreeSol(subscip, &subsol) );
    }
-   if( NULL != subscip )
-   {
-      SCIP_CALL( SCIPfree(&subscip) );
-   }
+
+   SCIP_CALL( SCIPfree(&subscip) );
+
    SCIPdebugMsg(scip, "repair finished\n");
    return SCIP_OKAY;
 }
@@ -1153,20 +1136,20 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
    SCIP_Bool error;
    SCIP_Longint nnodes;
 
-   retcode = SCIP_OKAY;
    heurdata = SCIPheurGetData(heur);
    SCIPdebugMsg(scip, "%s\n", heurdata->filename);
 
-   /* if repair already ran or neither variable fixing nor slack variables are enabled, stop */
-   if( 0 < SCIPheurGetNCalls(heur) || !(heurdata->usevarfix || heurdata->useslackvars) )
-   {
-      *result = SCIP_DIDNOTFIND;
-      return SCIP_OKAY;
-   }
-
-   /* checks the result pointer*/
+   /* checks the result pointer */
    assert(result != NULL);
    *result = SCIP_DIDNOTRUN;
+
+   /* if repair already ran or neither variable fixing nor slack variables are enabled, stop */
+   if( 0 < SCIPheurGetNCalls(heur) || !(heurdata->usevarfix || heurdata->useslackvars) )
+      return SCIP_OKAY;
+
+   /* do not run if the neither the LP is constructed nor a user given solution exists */
+   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL && strcmp(heurdata->filename, DEFAULT_FILENAME) == 0 )
+      return SCIP_OKAY;
 
    /* calculate the maximal number of branching nodes until heuristic is aborted */
    nnodes = (SCIP_Longint)(heurdata->nodesquot * SCIPgetNNodes(scip));
@@ -1182,9 +1165,7 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
 
    /* check whether we have enough nodes left to call subproblem solving */
    if( nnodes < heurdata->minnodes )
-   {
       return SCIP_OKAY;
-   }
 
    if( !SCIPhasCurrentNodeLP(scip) )
       return SCIP_OKAY;
@@ -1209,7 +1190,7 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
    /* use read method to enter solution from a file */
    if( strcmp(heurdata->filename, DEFAULT_FILENAME) == 0 )
    {
-      SCIP_CALL( SCIPlinkLPSol(scip, heurdata->infsol) );
+      retcode = SCIPlinkLPSol(scip, heurdata->infsol);
    }
    else
    {
@@ -1228,6 +1209,7 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
    }
    else if( retcode != SCIP_OKAY )
    {
+      SCIPwarningMessage(scip, "cannot run repair, unknown return status <%d>\n", retcode);
       SCIP_CALL( SCIPfreeSol(scip, &(heurdata->infsol)) );
       return SCIP_OKAY;
    }
@@ -1241,6 +1223,7 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
       SCIP_CALL( SCIPfreeSol(scip, &(heurdata->infsol)) );
       return SCIP_OKAY;
    }
+
    *result = SCIP_DIDNOTFIND;
 
    SCIP_CALL( SCIPtrySol(scip, heurdata->infsol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
@@ -1294,28 +1277,28 @@ SCIP_RETCODE SCIPincludeHeurRepair(
 
    heurdata->filename = NULL;
    /* add string parameter for filename containing a solution */
-   SCIP_CALL( SCIPaddStringParam(scip, "heuristics/"HEUR_NAME"/filename",
+   SCIP_CALL( SCIPaddStringParam(scip, "heuristics/" HEUR_NAME "/filename",
          "file name of a solution to be used as infeasible starting point, [-] if not available",
          &heurdata->filename, FALSE, DEFAULT_FILENAME, NULL, NULL) );
 
    /* add bool parameter for decision how to deal with unfractional cands */
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/roundit",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/roundit",
          "True : fractional variables which are not fractional in the given solution are rounded, "
          "FALSE : solving process of this heuristic is stopped. ",
          &heurdata->roundit, FALSE, DEFAULT_ROUNDIT, NULL, NULL));
 
    /* add bool parameter for decision how the objective function should be */
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/useobjfactor",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/useobjfactor",
          "should a scaled objective function for original variables be used in repair subproblem?",
          &heurdata->useobjfactor, FALSE, DEFAULT_USEOBJFACTOR, NULL, NULL));
 
    /* add bool parameter for decision if variable fixings should be used */
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/usevarfix",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/usevarfix",
          "should variable fixings be used in repair subproblem?",
          &heurdata->usevarfix, FALSE, DEFAULT_USEVARFIX, NULL, NULL));
 
    /* add bool parameter for decision how the objective function should be */
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/useslackvars",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/useslackvars",
          "should slack variables be used in repair subproblem?",
          &heurdata->useslackvars, FALSE, DEFAULT_USESLACKVARS, NULL, NULL));
 

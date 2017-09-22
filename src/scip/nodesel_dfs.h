@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -31,7 +31,10 @@
 extern "C" {
 #endif
 
-/** creates the node selector for depth first search and includes it in SCIP */
+/** creates the node selector for depth first search and includes it in SCIP
+ *
+ *  @ingroup NodeSelectorIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeNodeselDfs(
    SCIP*                 scip                /**< SCIP data structure */

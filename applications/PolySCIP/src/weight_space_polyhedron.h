@@ -2,7 +2,7 @@
 /*                                                                           */
 /*        This file is part of the program PolySCIP                          */
 /*                                                                           */
-/*    Copyright (C) 2012-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2012-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  PolySCIP is distributed under the terms of the ZIB Academic License.     */
@@ -12,12 +12,11 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/** @brief  The (partial) weight space polyhedron
+/**
+ * @file weight_space_polyhedron.h
+ * @brief Class representing the 1-skeleton of the weight space polyhedron
+ * @author Sebastian Schenker
  *
- * This class represents the (partial) weight space polyhedron P =
- * {(w,a) \in \Lambda \times R : w \cdot y >= a \forall y \in Y'}
- * where Y' is the set of non-dominated points computed so far and
- * \Lambda is the set of normalized weights
  */
 
 #ifndef POLYSCIP_SRC_WEIGHT_SPACE_POLYHEDRON_H_INCLUDED
@@ -45,104 +44,160 @@
 
 namespace polyscip {
 
-    using V_RepT = doubledescription::V_RepT;
-    using V_RepC = doubledescription::V_RepC;
-    using H_RepC = doubledescription::H_RepC;
+    using V_RepT = doubledescription::V_RepT; ///< abbreviation
+    using V_RepC = doubledescription::V_RepC; ///< abbreviation
+    using H_RepC = doubledescription::H_RepC; ///< abbreviation
     class WeightSpaceVertex;
 
-    /** 1-skeleton of the (partial) weight space polyhedron. */
+    /**
+     * @class WeightSpacePolyhedron
+     * @brief Class representing the 1-skeleton of the weight space polyhedron
+     * @details The (partial) weight space polyhedron
+     * P = {(w,a) \\in W \\times R : w \\cdot y >= a \\forall y \\in Y'}
+     * where Y' is the set of non-dominated extreme points computed so far and
+     * W = {w \\in R^k: w_i >= 0, w_1 + ... + w_k = 1} is the set of non-negative normalized weights
+     */
     class WeightSpacePolyhedron {
     public:
-        using FacetContainer = std::vector<std::shared_ptr<const WeightSpaceFacet>>;
+        using FacetContainer = std::vector<std::shared_ptr<const WeightSpaceFacet>>; ///< Container for facets
 
-        /** Creates the skeleton of the initial (partial) weight
-        * space polyhedron P = {(w,a) \in \Lambda \times R : w \cdot y^1
-        * >= a}
-        * @param num_objs number of objectives of given problem
-        * @param point first computed (weakly non-dominated) point
-        * @param point_weighted_obj_val weighted objective value of first point
-        * @param initial_rays rays which were computed while computing the first non-dominated point
-        * @param unit_weight_info pair indicating whether first point was computed by using
-        * a unit weight; if unit_weight_info.first is true, then unit_weight_info.second contains the
-        * index with value 1; note: first index is 0
-        */
-        explicit WeightSpacePolyhedron(SCIP* scip,
-                                       std::size_t wsp_dimension,
+        /**
+         * Default constructor
+         * @param wsp_dimension Dimension of the weight space polyhedron
+         * @param v_rep v-representation of the initial polyhedron
+         * @param h_rep h-representation of the initial polyhedron
+         */
+        explicit WeightSpacePolyhedron(std::size_t wsp_dimension,
                                        V_RepC v_rep,
                                        H_RepC h_rep);
 
-        /** Destructor */
+        /**
+         * Destructor
+         */
         ~WeightSpacePolyhedron();
 
-        /** Checks whether there is an unmarked weight space vertex with an untested weight
-         *  @return true if there is an unmarked weight space vertex with untested weight; false otherwise
+        /**
+         * Indicates whether there is an unmarked vertex in the current polyhedron
+         * @return true if there is an unmarked vertex; false otherwise
          */
         bool hasUntestedWeight() const;
 
-        /** Returns an untested weight; Should only be called after hasUnmarkedVertex()
-         * returned true
-         *  @return an untested weight
+        /**
+         * Get corresponding weight of unmarked vertex of the polyhedron
+         * @attention Should only be called after hasUnmarkedVertex() returned true
+         * @return Weight vector
          */
         WeightType getUntestedWeight();
 
+        /**
+         * Get weighted objective value of unmarked vertex
+         * @param untested_weight Corresponding weight of currently investigated vertex
+         * @return Weighted objective value of currently investigated vertex
+         */
         ValueType getUntestedVertexWOV(const WeightType& untested_weight) const;
 
-        /** Incorporates an newly found unbounded non-dominated ray
-         * into the (partial) weight space polyhedron
-         //todo
+        /**
+         * Incorporate new outcome (yielding new vertex) into weight space polyhedron
+         * @param scip SCIP pointer
+         * @param used_weight Weight used to compute outcome
+         * @param outcome Newly computed outcome
+         * @param outcome_is_ray Indicates whether newly computed outcome is a ray
          */
         void incorporateNewOutcome(SCIP* scip,
                                    const WeightType& used_weight,
                                    const OutcomeType& outcome,
                                    bool outcome_is_ray = false);
 
-        void incorporateKnownOutcome(const WeightType& weight);
-
-        /** Prints unmarked vertices to output stream
-         *  @param printFacets if true, facet information of unmarked vertices is also printed
+        /**
+         * Incorporate weight not yielding new vertex into weight space polyhedron
+         * @param used_weight Used weight vector
          */
-        void printUnmarkedVertices(std::ostream& os = std::cout, bool printFacets = false) const;
+        void incorporateKnownOutcome(const WeightType& used_weight);
 
-        /** Prints marked vertices to standard output
-         *  @param printFacets if true, facet information of marked vertices is also printed
+        /**
+         * Print function for unmarked vertices
+         * @param os Output stream to write to
+         * @param printFacets Indicates whether corresponding facets should be printed
          */
-        void printMarkedVertices(std::ostream& os = std::cout, bool printFacets = false) const;
+        void printUnmarkedVertices(std::ostream& os = std::cout,
+                                   bool printFacets = false) const;
 
-        /** Prints obsolete vertices to output stream
-         * @param printFacets if true, facet information of obsolete vertices is also printed
+        /**
+         * Print function for marked vertices
+         * @param os Output stream to write to
+         * @param printFacets Indicates whether corresponding facets should be printed
          */
-        void printObsoleteVertices(std::ostream& os = std::cout, bool printFacets = false) const;
+        void printMarkedVertices(std::ostream& os = std::cout,
+                                 bool printFacets = false) const;
 
-        bool areAdjacent(const WeightSpaceVertex* v, const WeightSpaceVertex* w);
+        /**
+         * Print function for obsolete vertices
+         * @param os Output stream to write to
+         * @param printFacets Indicates whether corresponding facets should be printed
+         */
+        void printObsoleteVertices(std::ostream& os = std::cout,
+                                   bool printFacets = false) const;
+
+        /**
+         * Indicates whether two weight space vertices are adjacent in weight space polyhedron
+         * @param v First vertex
+         * @param w Second vertex
+         * @return true if first vertex is adjacent to second vertex; false otherwise
+         * @todo Const qualification
+         */
+        bool areAdjacent(const WeightSpaceVertex* v,
+                         const WeightSpaceVertex* w);
 
     private:
 
-        using MarkedVertexContainer = std::vector<WeightSpaceVertex*>;
-        /** Container used to store the unmarked weight space vertices
-         *  Needs to support: empty(), size(), valid iterators of objects after erasing another object
+        using MarkedVertexContainer = std::vector<WeightSpaceVertex*>; ///< Container for marked vertices @attention needs to support empty(), size(), valid iterators after erasing objects
+        using UnmarkedVertexContainer = std::list<WeightSpaceVertex*>; ///< Container for unmarked vertices
+        using ObsoleteVertexContainer = std::vector<WeightSpaceVertex*>; ///< Container for obsolete vertices
+
+        /**
+         * Create initial weight space vertices and corresponding 1-skeleton of weight space polyhedron
+         * @param h_rep h-representation of initial weight space polyhedron
+         * @param v_rep v-representation of initial weight space polyhedron
          */
-        using UnmarkedVertexContainer = std::list<WeightSpaceVertex*>;
-
-
-        using ObsoleteVertexContainer = std::vector<WeightSpaceVertex*>;
-
-
-        void createInitialVerticesAndSkeleton(SCIP* scip,
-                                              H_RepC h_rep,
+        void createInitialVerticesAndSkeleton(H_RepC h_rep,
                                               V_RepC v_rep);
 
+        /**
+         * Get incident facets
+         * @param v Corresponding vertex
+         * @param initial_facets Facets
+         * @return Incident facets of given vertex with respect to given facets
+         */
         FacetContainer getIncidentFacets(const V_RepT& v,
                                          const FacetContainer& initial_facets) const;
 
+        /**
+         * Update 1-skeleton of weight space polyhedron
+         * @param scip SCIP pointer
+         * @param outcome New outcome yielding a new vertex in weight space polyhedron
+         * @param outcome_is_ray Indicates whether outcome corresponds to ray
+         */
         void updateWeightSpacePolyhedron(SCIP* scip,
                                          const OutcomeType& outcome,
                                          bool outcome_is_ray);
 
-
+        /**
+         * Nullify currently investigated vertex
+         */
         void resetCurrentInvestigatedVertex() {
             curr_investigated_vertex_ = nullptr;
         }
 
+        /**
+         * Add vertex to corresponding partition (minus, zero, plus) with respect to the given outcome
+         * @param scip SCIP pointer
+         * @param vertex Weight space vertex
+         * @param outcome Outcome
+         * @param outcome_is_ray Indicates whether given outcome is a ray
+         * @param minus_vertices Container storing vertices in minus partition
+         * @param plus_vertices Container storing vertices in plus partition
+         * @param zero_vertices Container storing vertices in zero partition
+         */
         void addVertexToCorrespondingPartition(SCIP* scip,
                                                WeightSpaceVertex* vertex,
                                                const OutcomeType& outcome,
@@ -151,14 +206,20 @@ namespace polyscip {
                                                std::vector<WeightSpaceVertex*>& plus_vertices,
                                                std::vector<WeightSpaceVertex*>& zero_vertices) const;
 
+        /**
+         * Set status of given vertex to obsolete status
+         * @param v Weight space vertex
+         */
         void makeObsolete(WeightSpaceVertex *v);
 
-        /** Template function to print vertices; is used by public print{Marked,Obsolete,Unmarked}Vertices
-         * functions
-         * @param container Container of vertices which are to be printed
-         * @param description Initial string describing what is going to be printed
-         * @param os output stream
-         * @param printFacets if true, also facet information of vertices is printed
+
+        /**
+         * Print function for vertex container
+         * @tparam Container Container type
+         * @param container Container with elements to be printed
+         * @param description Description to be printed before elements
+         * @param os Output stream to write to
+         * @param printFacets Indicates whether corresponding facets should be printed
          */
         template <typename Container>
         void printVertices(const Container& container,
@@ -166,19 +227,13 @@ namespace polyscip {
                            std::ostream& os,
                            bool printFacets) const;
 
-        std::size_t wsp_dimension_;
+        std::size_t wsp_dimension_; ///< Corresponding dimension of weight space polyhedron
 
-        /**< all marked weight space vertices */
-        MarkedVertexContainer marked_and_special_vertices_;
-        /**< all unmarked weight space vertices */
-        UnmarkedVertexContainer unmarked_vertices_;
-        /**< all obsolete weight space vertices */
-        ObsoleteVertexContainer obsolete_vertices_;
-        /**< unmarked weight space vertex currently investigated */
-        WeightSpaceVertex* curr_investigated_vertex_;
-        /**< 1-skeleton of the weight space polyhedron */
+        MarkedVertexContainer marked_and_special_vertices_; ///< Marked weight space vertices
+        UnmarkedVertexContainer unmarked_vertices_; ///< Unmarked weight spaces vertices
+        ObsoleteVertexContainer obsolete_vertices_; ///< Obsolete weight space vertices
+        WeightSpaceVertex* curr_investigated_vertex_; ///< Weight space vertex currently investigated
     };
-
 
 
     template <typename Container>

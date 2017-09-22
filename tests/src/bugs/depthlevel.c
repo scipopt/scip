@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -92,6 +92,12 @@ void setup(void)
 Test(depthlevel, hit_depth_limit, .description = "show problem when hitting depth level", .init = setup, .signal = SIGABRT)
 {
    SCIP_RETCODE retcode;
+
+   /* this test can only work in debug mode, so we make it pass in opt mode */
+#ifdef NDEBUG
+   abort(); /* return SIGABORT */
+#endif
+
    /* turn off presolving */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
 

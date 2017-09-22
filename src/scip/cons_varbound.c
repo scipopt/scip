@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -430,6 +430,8 @@ SCIP_Bool checkCons(
 {
    SCIP_CONSDATA* consdata;
    SCIP_Real solval;
+   SCIP_Real absviol;
+   SCIP_Real relviol;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -446,8 +448,18 @@ SCIP_Bool checkCons(
    if( checklprows || consdata->row == NULL || !SCIProwIsInLP(consdata->row) )
    {
       SCIP_Real sum;
+      SCIP_Real lhsrelviol;
+      SCIP_Real rhsrelviol;
 
       sum = solval + consdata->vbdcoef * SCIPgetSolVal(scip, sol, consdata->vbdvar);
+
+      /* calculate constraint violation and update it in solution */
+      absviol = MAX(consdata->lhs - sum, sum - consdata->rhs);
+      lhsrelviol = SCIPrelDiff(consdata->lhs, sum);
+      rhsrelviol = SCIPrelDiff(sum, consdata->rhs);
+      relviol = MAX(lhsrelviol, rhsrelviol);
+      if( sol != NULL )
+         SCIPupdateSolLPConsViolation(scip, sol, absviol, relviol);
 
       return (SCIPisInfinity(scip, -consdata->lhs) || SCIPisFeasGE(scip, sum, consdata->lhs))
          && (SCIPisInfinity(scip, consdata->rhs) || SCIPisFeasLE(scip, sum, consdata->rhs));
@@ -3126,13 +3138,13 @@ SCIP_RETCODE tightenCoefs(
       && SCIPvarGetType(consdata->vbdvar) <= SCIP_VARTYPE_IMPLINT
       && SCIPisIntegral(scip, consdata->vbdcoef) )
    {
-      if( !SCIPisFeasIntegral(scip, consdata->lhs) )
+      if( !SCIPisIntegral(scip, consdata->lhs) )
       {
          consdata->lhs = SCIPfeasCeil(scip, consdata->lhs);
          ++(*nchgsides);
          consdata->changed = TRUE;
       }
-      if( !SCIPisFeasIntegral(scip, consdata->rhs) )
+      if( !SCIPisIntegral(scip, consdata->rhs) )
       {
          consdata->rhs = SCIPfeasFloor(scip, consdata->rhs);
          ++(*nchgsides);
@@ -3209,7 +3221,7 @@ SCIP_RETCODE tightenCoefs(
          consdata->vbdcoef = SCIPfeasFloor(scip, consdata->vbdcoef);
          ++(*nchgcoefs);
 
-         if( !SCIPisFeasIntegral(scip, consdata->rhs) )
+         if( !SCIPisInfinity(scip, consdata->rhs) )
          {
             consdata->rhs = SCIPfeasFloor(scip, consdata->rhs);
             ++(*nchgsides);
@@ -3223,10 +3235,12 @@ SCIP_RETCODE tightenCoefs(
          consdata->vbdcoef = SCIPfeasCeil(scip, consdata->vbdcoef);
          ++(*nchgcoefs);
 
-         if( !SCIPisFeasIntegral(scip, consdata->lhs) )
+         if( !SCIPisInfinity(scip, -consdata->lhs) )
          {
+            if( !SCIPisIntegral(scip, consdata->lhs) )
+               ++(*nchgsides);
+
             consdata->lhs = SCIPfeasCeil(scip, consdata->lhs);
-            ++(*nchgsides);
          }
       }
       /* case 3 */
@@ -3235,15 +3249,19 @@ SCIP_RETCODE tightenCoefs(
          consdata->vbdcoef = SCIPfeasCeil(scip, consdata->vbdcoef);
          ++(*nchgcoefs);
 
-         if( !SCIPisFeasIntegral(scip, consdata->lhs) )
+         if( !SCIPisInfinity(scip, -consdata->lhs) )
          {
+            if( !SCIPisIntegral(scip, consdata->lhs) )
+               ++(*nchgsides);
+
             consdata->lhs = SCIPfeasCeil(scip, consdata->lhs);
-            ++(*nchgsides);
          }
-         if( !SCIPisFeasIntegral(scip, consdata->rhs) )
+         if( !SCIPisInfinity(scip, consdata->rhs) )
          {
+            if( !SCIPisIntegral(scip, consdata->rhs) )
+               ++(*nchgsides);
+
             consdata->rhs = SCIPfeasFloor(scip, consdata->rhs);
-            ++(*nchgsides);
          }
       }
       /* case 4 */
@@ -3252,15 +3270,19 @@ SCIP_RETCODE tightenCoefs(
          consdata->vbdcoef = SCIPfeasFloor(scip, consdata->vbdcoef);
          ++(*nchgcoefs);
 
-         if( !SCIPisFeasIntegral(scip, consdata->lhs) )
+         if( !SCIPisInfinity(scip, -consdata->lhs) )
          {
+            if( !SCIPisIntegral(scip, consdata->lhs) )
+               ++(*nchgsides);
+
             consdata->lhs = SCIPfeasCeil(scip, consdata->lhs);
-            ++(*nchgsides);
          }
-         if( !SCIPisFeasIntegral(scip, consdata->rhs) )
+         if( !SCIPisInfinity(scip, consdata->rhs) )
          {
+            if( !SCIPisIntegral(scip, consdata->rhs) )
+               ++(*nchgsides);
+
             consdata->rhs = SCIPfeasFloor(scip, consdata->rhs);
-            ++(*nchgsides);
          }
       }
       /* case 5 */
@@ -3719,8 +3741,6 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdVarbound)
       SCIP_Real vbdrhs;
       int vbdind;
 
-      SCIPdebugMsg(scip, "upgrading constraint <%s> to variable bound constraint\n", SCIPconsGetName(cons));
-
       /* decide which variable we want to use as bounding variable y */
       if( SCIPvarGetType(vars[0]) < SCIPvarGetType(vars[1]) )
          vbdind = 0;
@@ -3734,6 +3754,12 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdVarbound)
          vbdind = 1;
       else
          vbdind = 0;
+
+      /* do not upgrade when it is numerical unstable */
+      if( SCIPisZero(scip, vals[vbdind]/vals[1-vbdind]) )
+         return SCIP_OKAY;
+
+      SCIPdebugMsg(scip, "upgrading constraint <%s> to variable bound constraint\n", SCIPconsGetName(cons));
 
       var = vars[1-vbdind];
       vbdvar = vars[vbdind];

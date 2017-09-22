@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_conflict.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for conflict analysis handlers
  * @author Tobias Achterberg
  */
@@ -33,6 +33,11 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**@addtogroup PublicConflictMethods
+ *
+ * @{
+ */
 
 /** compares two conflict handlers w. r. to their priority */
 EXTERN
@@ -90,6 +95,8 @@ EXTERN
 SCIP_Real SCIPconflicthdlrGetTime(
    SCIP_CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

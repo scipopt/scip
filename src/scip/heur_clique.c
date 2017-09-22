@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -21,6 +21,12 @@
  *
  * @todo allow smaller fixing rate for probing LP?
  * @todo allow smaller fixing rate after presolve if total number of variables is small (<= 1000)?
+ *
+ * More details about the heuristic can be found in@n
+ * Structure-Based Primal Heuristics for Mixed Integer Programming@n
+ * Gerald Gamrath, Timo Berthold, Stefan Heinz, and Michael Winkler@n
+ * Optimization in the Real World, Volume 13 of the series Mathematics for Industry, pp 37-53@n
+ * Preliminary version available as <a href="https://opus4.kobv.de/opus4-zib/frontdoor/index/index/docId/5551">ZIB-Report 15-26</a>.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -478,8 +484,8 @@ SCIP_DECL_HEURINIT(heurInitClique)
    assert(heurdata != NULL);
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
-         SCIPinitializeRandomSeed(scip, heurdata->initseed)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
+         heurdata->initseed) );
 
    heurdata->usednodes = 0;
 
@@ -502,7 +508,7 @@ SCIP_DECL_HEUREXIT(heurExitClique)
    assert(heurdata != NULL);
 
    /* free random number generator */
-   SCIPrandomFree(&heurdata->randnumgen);
+   SCIPfreeRandom(scip, &heurdata->randnumgen);
 
    return SCIP_OKAY;
 }
@@ -818,6 +824,8 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       SCIP_CALL( SCIPaddConsNode(scip, SCIPgetCurrentNode(scip), conflictcons, NULL) );
       SCIPdebugPrintCons(scip, conflictcons, NULL);
       SCIP_CALL( SCIPreleaseCons(scip, &conflictcons) );
+
+      goto TERMINATE;
    }
 
    /*************************** End Conflict ***************************/
@@ -827,7 +835,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    /* if no solution has been found yet and the subproblem is still feasible --> fix all other variables by subscip if
     * necessary
     */
-   if( !allfixsolfound && lpstatus != SCIP_LPSOLSTAT_INFEASIBLE && lpstatus != SCIP_LPSOLSTAT_OBJLIMIT && !backtrackcutoff )
+   if( !allfixsolfound && !lperror )
    {
       SCIP* subscip;
       SCIP_VAR** subvars;
@@ -884,6 +892,9 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", nstallnodes) );
       SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", heurdata->maxnodes) );
 
+      /* speed up sub-SCIP by not checking dual LP feasibility */
+      SCIP_CALL( SCIPsetBoolParam(subscip, "lp/checkdualfeas", FALSE) );
+
       /* forbid call of heuristics and separators solving sub-CIPs */
       SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
 
@@ -918,7 +929,6 @@ SCIP_DECL_HEUREXEC(heurExecClique)
          SCIP_Real cutoffbound;
 
          minimprove = heurdata->minimprove;
-         cutoffbound = SCIPinfinity(scip);
          assert( !SCIPisInfinity(scip,SCIPgetUpperbound(scip)) );
 
          upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
@@ -945,18 +955,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
        * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
        */
-#ifdef NDEBUG
-      {
-         SCIP_RETCODE retstat;
-         retstat = SCIPpresolve(subscip);
-         if( retstat != SCIP_OKAY )
-         {
-            SCIPwarningMessage(scip, "Error while presolving subMIP in clique heuristic; sub-SCIP terminated with code <%d>\n", retstat);
-         }
-      }
-#else
-      SCIP_CALL( SCIPpresolve(subscip) );
-#endif
+      SCIP_CALL_ABORT( SCIPpresolve(subscip) );
 
       SCIPdebugMsg(scip, "clique heuristic presolved subproblem: %d vars, %d cons; fixing value = %g\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip), ((nvars - SCIPgetNVars(subscip)) / (SCIP_Real)nvars));
 
@@ -971,18 +970,8 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
          SCIPdebugMsg(scip, "solving subproblem: nstallnodes=%" SCIP_LONGINT_FORMAT ", maxnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->maxnodes);
 
-#ifdef NDEBUG
-         {
-            SCIP_RETCODE retstat;
-            retstat = SCIPsolve(subscip);
-            if( retstat != SCIP_OKAY )
-            {
-               SCIPwarningMessage(scip, "Error while solving subMIP in clique heuristic; sub-SCIP terminated with code <%d>\n",retstat);
-            }
-         }
-#else
-         SCIP_CALL( SCIPsolve(subscip) );
-#endif
+         SCIP_CALL_ABORT( SCIPsolve(subscip) );
+
          SCIPdebugMsg(scip, "ending solving clique-submip at time %g, status = %d\n", SCIPgetSolvingTime(scip), SCIPgetStatus(subscip));
 
          /* check, whether a solution was found; due to numerics, it might happen that not all solutions are feasible ->

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   spi_none.c
+/**@file   tpi_none.c
  * @ingroup TASKINTERFACE
  * @brief  the interface functions for dummy tpi
  * @author Stephen J. Maher
@@ -28,7 +28,7 @@
 SCIP_RETCODE SCIPtpiCreateJob(
    SCIP_JOB**            job,                /**< pointer to the job that will be created */
    int                   jobid,              /**< the id for the current job */
-   int                   (*jobfunc)(void* args),/**< pointer to the job function */
+   SCIP_RETCODE          (*jobfunc)(void* args),/**< pointer to the job function */
    void*                 jobarg              /**< the job's argument */
    )
 {

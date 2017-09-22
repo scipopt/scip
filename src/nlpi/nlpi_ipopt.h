@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -31,6 +31,11 @@
 extern "C" {
 #endif
 
+/**@addtogroup NLPIS
+ *
+ * @{
+ */
+
 /** create solver interface for Ipopt solver
  * sets *nlpi to NULL if Ipopt is not available
  */
@@ -44,7 +49,7 @@ SCIP_RETCODE SCIPcreateNlpSolverIpopt(
 extern
 const char* SCIPgetSolverNameIpopt(void);
 
-/** gets string that describes Ipopt (version number) */
+/** gets string that describes Ipopt */
 extern
 const char* SCIPgetSolverDescIpopt(void);
 
@@ -97,6 +102,8 @@ SCIP_RETCODE SCIPsolveLinearProb(
    SCIP_Real*            x,                  /**< buffer to store solution (size N) */
    SCIP_Bool*            success             /**< pointer to store if the solving routine was successful */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

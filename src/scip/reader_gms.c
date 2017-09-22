@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -53,7 +53,11 @@
 #include "scip/pub_misc.h"
 
 #define READER_NAME             "gmsreader"
+#ifdef WITH_GAMS
 #define READER_DESC             "file writer for MI(NL)(SOC)Ps in GAMS file format"
+#else
+#define READER_DESC             "file reader and writer for MI(NL)(SOC)Ps in GAMS file format"
+#endif
 #define READER_EXTENSION        "gms"
 
 
@@ -69,7 +73,7 @@
  * Local methods (for writing)
  */
 
-static const char badchars[] = "#*+/-@$";
+static const char badchars[] = "#*+/-@$[](){}";
 
 /** transforms given variables, scalars, and constant to the corresponding active variables, scalars, and constant */
 static
@@ -201,7 +205,7 @@ void appendLineWithIndent(
    appendLine(scip, file, linebuffer, linecnt, extension);
 }
 
-/** checks string for occurences of '#', '*', '+', '/', and '-' and replaces those by '_' */
+/** checks string for occurences of bad symbols and replace those by '_' */
 static
 void conformName(
    char*                 name                /**< string to adjust */
@@ -1890,7 +1894,7 @@ SCIP_RETCODE checkVarnames(
 
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/gmsreader/replaceforbiddenchars", &replaceforbiddenchars) );
 
-   /* check if the variable names contain the symbols '#', '*', '+', '/', '-', or '@' */
+   /* check if the variable names contain any of the bad symbols */
    for( badchar = badchars; *badchar; ++badchar )
    {
       for( v = 0; v < nvars; ++v )
@@ -1952,7 +1956,7 @@ SCIP_RETCODE checkConsnames(
 
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/gmsreader/replaceforbiddenchars", &replaceforbiddenchars) );
 
-   /* check if the constraint names contain the symbol '#', '*', '+', '/', '-', or '@' */
+   /* check if the constraint names contain any of the bad symbols */
    for( badchar = badchars; *badchar; ++badchar )
    {
       for( c = 0; c < nconss; ++c )

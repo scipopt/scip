@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -265,7 +265,6 @@ SCIP_RETCODE constructCompression(
          SCIP_CALL( SCIPallocClearMemoryArray(scip, &common_vars, SCIPgetNOrigVars(scip)) );
 
          /* allocate buffer */
-         ncommon_vars = 0;
          nnon_zero_vars = 0;
          SCIP_CALL( SCIPallocBufferArray(scip, &idx_common_vars, nvars[current_id]) );
          SCIP_CALL( SCIPallocBufferArray(scip, &idx_non_zero, nvars[current_id]) );
@@ -404,7 +403,7 @@ SCIP_RETCODE constructCompression(
          }
 
          /* calculate the score */
-         score += ncovered * nnon_zero_vars;
+         score += (SCIP_Real) ncovered * nnon_zero_vars;
 
          SCIPdebugMessage("-> current representation is of size %d with score = %.1f\n", nreps, score);
 

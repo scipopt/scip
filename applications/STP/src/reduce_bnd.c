@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -33,168 +33,145 @@
 #include "scip/scip.h"
 #include "grph.h"
 #include "heur_tm.h"
+#include "heur_ascendprune.h"
 #include "cons_stp.h"
 #include "heur_local.h"
 #include "misc_stp.h"
 #include "prop_stp.h"
 #include "probdata_stp.h"
+#include "heur_slackprune.h"
 
 #define DEFAULT_HEURRUNS 100                 /**< number of runs of constructive heuristic */
-#define DEFAULT_DARUNS     5                 /**< number of runs for dual ascent heuristic */
+#define DEFAULT_DARUNS     6                 /**< number of runs for dual ascent heuristic */
+#define DEFAULT_NMAXROOTS  15                /**< max number of roots to use for new graph in dual ascent heuristic */
 
-#if 0
-/** print graph (in undirected form) in GML format */
+
+/** reduce PCSTP or MWCS graph based on information from dual ascent and given upper bound  */
 static
-SCIP_RETCODE probdataPrintGraph(
-   GRAPH*                graph,              /**< Graph to be printed */
-   const char*           filename,           /**< Name of the output file */
-   SCIP_Bool*            edgemark            /**< Array of (undirected) edges to highlight */
-   )
-{
-   char label[SCIP_MAXSTRLEN];
-   FILE* file;
-   int e;
-   int n;
-   int m;
-
-   assert(graph != NULL);
-   file = fopen((filename != NULL) ? filename : "stpgraph.gml", "w");
-
-#ifndef NDEBUG
-   for( e = 0; e < graph->edges; e += 2 )
-   {
-      assert(graph->tail[e] == graph->head[e + 1]);
-      assert(graph->tail[e + 1] == graph->head[e]);
-   }
-#endif
-
-   /* write GML format opening, undirected */
-   SCIPgmlWriteOpening(file, FALSE);
-
-   /* write all nodes, discriminate between root, terminals and the other nodes */
-   e = 0;
-   m = 0;
-   for( n = 0; n < graph->knots; ++n )
-   {
-#if 1
-      if( n == graph->source[0] )
-      {
-         (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Root", n);
-	 SCIPgmlWriteNode(file, (unsigned int)n, label, "rectangle", "#666666", NULL);
-	 m = 1;
-      }
-      else if( graph->term[n] == 0 )
-      {
-	 (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Terminal %d", n, e + 1);
-	 SCIPgmlWriteNode(file, (unsigned int)n, label, "circle", "#ff0000", NULL);
-	 e += 1;
-      }
-      else
-      {
-         (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Node %d", n, n + 1 - e - m);
-         SCIPgmlWriteNode(file, (unsigned int)n, label, "circle", "#336699", NULL);
-      }
-#else
-      (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "");
-      if( n == graph->source[0] )
-      {
-
-	 SCIPgmlWriteNode(file, (unsigned int)n, label, "rectangle", "#666666", NULL);
-	 m = 1;
-      }
-      else if( graph->term[n] == 0 )
-      {
-
-	 SCIPgmlWriteNode(file, (unsigned int)n, label, "rectangle", "#666666", NULL);
-	 e += 1;
-      }
-      else
-      {
-         SCIPgmlWriteNode(file, (unsigned int)n, label, "circle", "#666666", NULL);
-      }
-#endif
-
-   }
-
-   /* write all edges (undirected) */
-   for( e = 0; e < graph->edges; e += 2 )
-   {
-#if 1
-      (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "%8.2f", graph->cost[e]);
-#endif
-      if( edgemark != NULL && edgemark[e / 2] )
-	 SCIPgmlWriteEdge(file, (unsigned int)graph->tail[e], (unsigned int)graph->head[e], label, "#ff0000");
-      else
-         SCIPgmlWriteEdge(file, (unsigned int)graph->tail[e], (unsigned int)graph->head[e], label, NULL);
-   }
-
-   /* write GML format closing */
-   SCIPgmlWriteClosing(file);
-
-   return SCIP_OKAY;
-}
-#endif
-
-/** compute starting points for constructive heuristics */
-static
-void compTMstarts(
+int reducePcMw(
+   SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
-   int*                  starts,             /**< starting points array */
-   int                   runs                /**< number of runs */
-   )
+   GRAPH*                transgraph,         /**< graph data structure */
+   PATH*                 vnoi,               /**< Voronoi data structure */
+   SCIP_Real*            cost,               /**< dual ascent costs */
+   SCIP_Real*            pathdist,           /**< distance array from shortest path calculations */
+   SCIP_Real             minpathcost,        /**< the required reduced path cost to be surpassed */
+   int*                  result,             /**< int array */
+   char*                 marked,             /**< edge array to mark which (directed) edge can be removed */
+   char*                 nodearrchar,        /**< node array storing solution vertices */
+   SCIP_Bool             solgiven            /**< is sol given? */
+)
 {
-   int r;
    int k;
-   int l;
    int e;
-   int root;
+   int etmp;
    int nnodes;
-   int nterms;
-   int randval;
+   int nfixed;
+   SCIP_Real tmpcost;
 
+   assert(scip != NULL);
    assert(graph != NULL);
-   assert(starts != NULL);
+   assert(pathdist != NULL);
+   assert(result != NULL);
+   assert(cost != NULL);
+   assert(vnoi != NULL);
 
-   root = graph->source[0];
+   nfixed = 0;
    nnodes = graph->knots;
-   nterms = graph->terms;
 
-   r = 0;
-   if( graph->mark[root] )
-      starts[r++] = root;
-   randval = nnodes - nterms;
+   if( solgiven )
+   {
+      int nedges = graph->edges;
 
-   /* use non-isolated terminals as starting points for TM heuristic */
+      for( k = 0; k < nnodes; k++ )
+         nodearrchar[k] = FALSE;
+
+      for( e = 0; e < nedges; e++ )
+      {
+         if( result[e] == CONNECT )
+         {
+            nodearrchar[graph->head[e]] = TRUE;
+            nodearrchar[graph->tail[e]] = TRUE;
+         }
+      }
+   }
+
+   /* try to eliminate vertices and edges */
    for( k = 0; k < nnodes; k++ )
    {
-      if( r >= runs || r >= nterms )
-         break;
+      if( !graph->mark[k] )
+         continue;
 
-      l = (k + randval) % nnodes;
-      if( Is_term(graph->term[l]) && graph->mark[l] && l != root )
-         starts[r++] = l;
-   }
-
-   /* still empty slots in start array? */
-
-   /* fill empty slots with terminal neighbours */
-   for( k = 0; k < r && r < runs; k++ )
-   {
-      for( e = graph->outbeg[starts[k]]; e != EAT_LAST && r < runs; e = graph->oeat[e] )
+      if( Is_term(graph->term[k]) )
       {
-         l = graph->head[e];
-         if( !Is_term(graph->term[l]) && graph->mark[l] )
-            starts[r++] = l;
+         e = graph->outbeg[k];
+         while( e != EAT_LAST )
+         {
+            etmp = graph->oeat[e];
+            tmpcost = pathdist[k] + cost[e] + vnoi[graph->head[e]].dist;
+
+            if( graph->mark[graph->head[e]] &&
+               ((SCIPisGT(scip, tmpcost, minpathcost)) ||
+                  (solgiven && SCIPisGE(scip, tmpcost, minpathcost) && result[e] != CONNECT && result[flipedge(e)] != CONNECT)) )
+            {
+               if( marked[flipedge(e)] )
+               {
+                  graph_edge_del(scip, graph, e, TRUE);
+                  graph_edge_del(scip, transgraph, e, FALSE);
+                  nfixed++;
+               }
+               else
+               {
+                  marked[e] = TRUE;
+               }
+            }
+            e = etmp;
+         }
+         continue;
+      }
+
+      tmpcost = pathdist[k] + vnoi[k].dist;
+
+      if( SCIPisGT(scip, tmpcost, minpathcost) ||
+         (solgiven && SCIPisGE(scip, tmpcost, minpathcost) && !nodearrchar[k]))
+      {
+         while( transgraph->outbeg[k] != EAT_LAST )
+         {
+            e = transgraph->outbeg[k];
+            graph_edge_del(scip, transgraph, e, FALSE);
+            graph_edge_del(scip, graph, e, TRUE);
+            nfixed++;
+         }
+         assert(graph->outbeg[k] == EAT_LAST);
+      }
+      else
+      {
+         e = transgraph->outbeg[k];
+         while( e != EAT_LAST )
+         {
+            etmp = transgraph->oeat[e];
+            tmpcost = pathdist[k] + cost[e] + vnoi[transgraph->head[e]].dist;
+
+            if( SCIPisGT(scip, tmpcost, minpathcost) ||
+               (solgiven && SCIPisGE(scip, tmpcost, minpathcost) && result[e] != CONNECT && result[flipedge(e)] != CONNECT) )
+            {
+               if( marked[flipedge(e)] )
+               {
+                  graph_edge_del(scip, graph, e, TRUE);
+                  graph_edge_del(scip, transgraph, e, FALSE);
+                  nfixed++;
+               }
+               else
+               {
+                  marked[e] = TRUE;
+               }
+            }
+            e = etmp;
+         }
       }
    }
 
-   /* fill empty slots randomly */
-   for( k = 0; k < nnodes && r < runs; k++ )
-   {
-      l = (k + randval) % nnodes;
-      if( !Is_term(graph->term[l]) && graph->mark[l] )
-         starts[r++] = l;
-   }
+   return nfixed;
 }
 
 /** dual ascent based reductions */
@@ -206,27 +183,38 @@ SCIP_RETCODE da_reduce(
    SCIP_Real*            cost,               /**< edge costs */
    SCIP_Real*            costrev,            /**< reverse edge costs */
    SCIP_Real*            pathdist,           /**< distance array for shortest path calculations */
+   SCIP_Real*            ub,                 /**< pointer to provide upper bound and return upper bound found during ascent and prune (if better) */
+   SCIP_Real*            offset,             /**< pointer to store offset */
    int*                  edgearrint,         /**< int edges array for internal computations or NULL */
    int*                  vbase,              /**< array for Voronoi bases */
-   int*                  pathedge,           /**< array for predecessor edge on a path */
    int*                  state,              /**< int 4 * nnodes array for internal computations */
+   int*                  pathedge,           /**< array for predecessor edge on a path */
+   int*                  nodearrint,         /**< int nnodes array for internal computations */
    int*                  heursources,        /**< array to store starting points of TM heuristic */
-   char*                 nodearrchar,        /**< char node array for internal computations or NULL */
-   int*                  nelims              /**< pointer to store number of reduced edges */
+   char*                 nodearrchar,        /**< char node array for internal computations */
+   int*                  nelims,             /**< pointer to store number of reduced edges */
+   int                   prevrounds,         /**< number of reduction rounds that have been performed already */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
+   SCIP_Bool             nodereplacing,      /**< should node replacement (by edges) be performed? */
+   int*                  edgestate           /**< array to store status of (directed) edge (for propagation, can otherwise be set to NULL) */
    )
 {
    SCIP_HEURDATA* tmheurdata;
    IDX** ancestors;
    IDX** revancestors;
+   SCIP_Real ubnew;
    SCIP_Real maxcost;
    SCIP_Real lpobjval;
    SCIP_Real upperbound;
    SCIP_Real minpathcost;
    SCIP_Bool rpc;
    SCIP_Bool success;
+   SCIP_Bool directed;
    SCIP_Real hopfactor;
    SCIP_Real* sd;
    SCIP_Real* ecost;
+   SCIP_Bool apsol;
+   int* grad;
    int* terms;
    int* result;
    int* starts;
@@ -248,24 +236,43 @@ SCIP_RETCODE da_reduce(
    int nfixed;
    int best_start;
    char* marked;
+   SCIP_Bool externsol;
+   SCIP_Bool deletable;
+   SCIP_Bool checkstate;
 
+   assert(ub != NULL);
    assert(scip != NULL);
    assert(graph != NULL);
    assert(nelims != NULL);
+   assert(nodearrint != NULL);
+
+   rpc = (graph->stp_type == STP_RPCSPG);
+   directed = (graph->stp_type == STP_SAP || graph->stp_type == STP_NWSPG);
+   grad = graph->grad;
+   checkstate = (edgestate != NULL);
+   deletable = TRUE;
 
    root = graph->source[0];
-   rpc = (graph->stp_type == STP_ROOTED_PRIZE_COLLECTING);
+   apsol = FALSE;
    nfixed = 0;
    nedges = graph->edges;
    nnodes = graph->knots;
    maxcost = 0.0;
    hopfactor = DEFAULT_HOPFACTOR;
 
+   if( graph->terms <= 1 )
+      return SCIP_OKAY;
+
+   if( SCIPisGE(scip, *ub, 0.0) )
+      upperbound = *ub;
+   else
+      upperbound = FARAWAY;
+
    /* allocate memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &result, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &marked, nedges) );
 
-   if( !rpc )
+   if( !rpc && !directed )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &terms, graph->terms) );
       SCIP_CALL( SCIPallocBufferArray(scip, &termdegs, graph->terms) );
@@ -300,7 +307,8 @@ SCIP_RETCODE da_reduce(
    for( i = 0; i < nnodes; i++ )
    {
       if( !rpc )
-         graph->mark[i] = (graph->grad[i] > 0);
+         graph->mark[i] = (grad[i] > 0);
+
       if( graph->mark[i] )
       {
          k++;
@@ -311,7 +319,9 @@ SCIP_RETCODE da_reduce(
 
    /* not more than two terminals? */
    if( nterms <= 2 )
+   {
       goto TERMINATE;
+   }
 
    /* number of runs should not exceed number of connected vertices */
    runs = MIN(k, DEFAULT_HEURRUNS);
@@ -321,7 +331,7 @@ SCIP_RETCODE da_reduce(
    {
       /* choose starting points for TM heuristic */
       starts = heursources;
-      compTMstarts(graph, starts, runs);
+      compTMstarts(graph, starts, &runs);
    }
    else
    {
@@ -332,96 +342,214 @@ SCIP_RETCODE da_reduce(
    assert(SCIPfindHeur(scip, "TM") != NULL);
    tmheurdata = SCIPheurGetData(SCIPfindHeur(scip, "TM"));
 
+   /* fill result array with current best incumbent solution if possible */
+   if( nodereplacing == FALSE )
+   {
+      SCIP_SOL* bestsol;
+      SCIP_Real* xval = NULL;
+
+      externsol = TRUE;
+      bestsol = SCIPgetBestSol(scip);
+
+      /* no solution available? */
+      if( bestsol == NULL )
+         externsol = FALSE;
+      else
+         xval = SCIPprobdataGetXval(scip, bestsol);
+
+      if( xval == NULL )
+      {
+         externsol = FALSE;
+      }
+      else
+      {
+         for( e = 0; e < nedges; e++ )
+         {
+            if( SCIPisEQ(scip, xval[e], 1.0) )
+               result[e] = CONNECT;
+            else
+               result[e] = UNKNOWN;
+
+            if( result[e] == CONNECT && graph->oeat[e] == EAT_FREE )
+               externsol = FALSE;
+
+         }
+
+         if( externsol )
+         {
+            assert(graph_sol_valid(scip, graph, result));
+            upperbound = graph_computeSolVal(graph->cost, result, 0.0, nedges);
+         }
+      }
+   }
+   else
+   {
+      externsol = FALSE;
+   }
+
    for( e = 0; e < nedges; e++ )
    {
       cost[e] = graph->cost[e];
-      result[e] = UNKNOWN;
+      if( !externsol )
+         result[e] = UNKNOWN;
       costrev[e] = graph->cost[flipedge(e)];
 
-      if( graph->stp_type == STP_HOP_CONS && SCIPisLT(scip, graph->cost[e], BLOCKED) && SCIPisGT(scip, graph->cost[e], maxcost) )
+      if( graph->stp_type == STP_DHCSTP && SCIPisLT(scip, graph->cost[e], BLOCKED) && SCIPisGT(scip, graph->cost[e], maxcost) )
          maxcost = graph->cost[e];
    }
 
-   /* RPC? Then restore transformed graph */
-   if( rpc )
-      SCIP_CALL( pcgraphtrans(scip, graph) );
-
-   SCIP_CALL( SCIPheurComputeSteinerTree(scip, tmheurdata, graph, starts, &best_start, result, runs, root, cost, costrev, &hopfactor, NULL, maxcost, &success) );
-
-   /* RPC? Then restore original graph */
-   if( rpc )
+   if( directed && !externsol )
    {
-      SCIP_CALL( extendSteinerTreePcMw(scip, graph, vnoi, costrev, vbase, result, nodearrchar, &e) );
-      SCIP_CALL( pcgraphorg(scip, graph) );
+      SCIP_CALL( SCIPheurComputeSteinerTree(scip, tmheurdata, graph, starts, &best_start, result, runs, root, cost, costrev, &hopfactor, NULL, maxcost, &success) );
+
+      /* calculate objective value of solution */
+      ubnew = graph_computeSolVal(graph->cost, result, 0.0, nedges);
+
+      if( SCIPisLT(scip, ubnew, upperbound) )
+         upperbound = ubnew;
+
+      /* no feasible solution found? */
+      if( !success )
+      {
+         goto TERMINATE;
+      }
    }
 
-   /* no feasible solution found? */
-   if( !success )
-      goto TERMINATE;
-
-   /* calculate objective value of solution */
-   upperbound = 0.0;
-   for( e = 0; e < nedges; e++ )
-      if( result[e] == CONNECT )
-         upperbound += graph->cost[e];
-
-   /* 2. step: repeatedly compute lower bound and reduced costs and try to eliminate */
-   for( i = 0; i < nnodes; i++ )
-      if( Is_term(graph->term[i]) )
-         assert(graph->grad[i] > 0);
+   /*
+    * 2. step: repeatedly compute lower bound and reduced costs and try to eliminate
+    * */
 
    /* if not RPC, select roots for dual ascent */
-   if( !rpc )
+   if( !rpc && !directed )
    {
+      int maxdeg;
+
       assert(terms != NULL);
       assert(termdegs != NULL);
+
       k = 0;
+      maxdeg = 0;
+
       for( i = 0; i < nnodes; i++ )
       {
-         if( Is_term(graph->term[i]) && (graph->grad[i] > 0) )
+         if( Is_term(graph->term[i]) && (grad[i] > 0) )
          {
-            termdegs[k] = graph->grad[i];
+            termdegs[k] = grad[i];
             terms[k++] = i;
+
+            if( grad[i] > maxdeg )
+               maxdeg = grad[i];
          }
       }
+
       nruns = MIN(nterms, DEFAULT_DARUNS);
+
+      if( prevrounds > 0 )
+      {
+         for( i = 0; i < k; i++ )
+            termdegs[i] += SCIPrandomGetInt(randnumgen, 0, maxdeg);
+      }
+
       SCIPsortIntInt(termdegs, terms, nterms);
    }
    else
    {
       nruns = 1;
-      SCIP_CALL( pcgraphtrans(scip, graph) );
+      if( rpc )
+      {
+         SCIP_CALL( pcgraphtrans(scip, graph) );
+      }
    }
-
-   if( graph->stp_type == STP_HOP_CONS )
-      nruns = 1;
 
    for( run = 0; run < nruns; run++ )
    {
       /* graph vanished? */
-      if( graph->grad[graph->source[0]] == 0 )
-	 break;
+      if( grad[graph->source[0]] == 0 )
+         break;
 
-      if( !rpc && graph->stp_type != STP_HOP_CONS )
+      if( !rpc && !directed )
       {
          assert(terms != NULL);
          root = terms[nterms - run - 1];
       }
 
-      SCIP_CALL( SCIPdualAscentStp(scip, graph, cost, &lpobjval, FALSE, gnodearr, edgearrint, state, root, 1, NULL, nodearrchar) );
+      if( externsol && (run == 0) && graph->stp_type != STP_RSMT )
+      {
+         SCIP_CALL( SCIPdualAscentStpSol(scip, graph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, result, edgearrint, state, root, 1, NULL, nodearrchar) );
+      }
+      else if( run > 1 && graph->stp_type != STP_RSMT )
+      {
+         int realroot;
+
+         SCIP_CALL( graph_RerootSol(scip, graph, result, root) );
+
+         realroot = graph->source[0];
+         graph->source[0] = root;
+         assert(graph_sol_valid(scip, graph, result));
+         graph->source[0] = realroot;
+
+         SCIP_CALL( SCIPdualAscentStpSol(scip, graph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, result, edgearrint, state, root, 1, NULL, nodearrchar) );
+
+      }
+      else
+      {
+         SCIP_CALL( SCIPdualAscentStp(scip, graph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, edgearrint, state, root, 1, NULL, nodearrchar) );
+      }
+
+      /* perform ascent and prune */
+      if( externsol && run == 0 )
+      {
+         apsol = TRUE;
+      }
+      else if( !directed )
+      {
+         SCIP_CALL( SCIPheurAscendAndPrune(scip, NULL, graph, cost, result, nodearrint, root, nodearrchar, &success, TRUE, FALSE) );
+
+         if( rpc )
+         {
+            SCIP_CALL( extendSteinerTreePcMw(scip, graph, vnoi, costrev, vbase, result, nodearrchar, &e) );
+         }
+
+         /* calculate objective value of solution */
+         ubnew = graph_computeSolVal(graph->cost, result, 0.0, nedges);
+
+         if( success )
+         {
+            if( SCIPisLE(scip, ubnew, upperbound) )
+            {
+               apsol = TRUE;
+               upperbound = ubnew;
+            }
+            else
+            {
+               apsol = FALSE;
+            }
+         }
+         else
+         {
+            if( rpc )
+            {
+               SCIP_CALL( pcgraphorg(scip, graph) );
+            }
+
+            goto TERMINATE;
+         }
+      }
 
       /* the required reduced path cost to be surpassed */
       minpathcost = upperbound - lpobjval;
-      SCIPdebugMessage("da: upperbound %f, lpobjval %f\n", upperbound, lpobjval);
+
+      if( SCIPisLE(scip, minpathcost, 0.0) )
+         minpathcost = 0.0;
 
       for( e = 0; e < nedges; e++ )
       {
-	 marked[e] = FALSE;
+         marked[e] = FALSE;
          costrev[e] = cost[flipedge(e)];
       }
 
       for( k = 0; k < nnodes; k++ )
-         graph->mark[k] = (graph->grad[k] > 0);
+         graph->mark[k] = (grad[k] > 0);
 
       /* distance from root to all nodes */
       graph_path_execX(scip, graph, root, cost, pathdist, pathedge);
@@ -431,17 +559,22 @@ SCIP_RETCODE da_reduce(
          costrev[e] = FARAWAY;
 
       /* build voronoi diagram */
-      getnext4terms(scip, graph, costrev, costrev, vnoi, vbase, graph->path_heap, state);
+      if( directed )
+      {
+         for( k = 0; k < nnodes; k++ )
+            graph->mark[k] = (graph->grad[k] > 0);
 
-      for( k = 0; k < nnodes; k++ )
-         if( !Is_term(graph->term[k]) )
-            assert(vbase[k + nnodes] != root );
+         voronoi_terms(scip, graph, costrev, vnoi, vbase, graph->path_heap, state);
+      }
+      else
+      {
+         getnext4terms(scip, graph, costrev, costrev, vnoi, vbase, graph->path_heap, state);
+      }
 
       /* RPC? If yes, restore original graph */
       if( rpc )
       {
          SCIP_CALL( pcgraphorg(scip, graph) );
-	 graph->mark[root] = FALSE;
       }
 
       for( k = 0; k < nnodes; k++ )
@@ -449,12 +582,62 @@ SCIP_RETCODE da_reduce(
          if( !graph->mark[k] )
             continue;
 
+         if( rpc && Is_term(graph->term[k]) && SCIPisGT(scip, pathdist[k] + vnoi[k].dist, minpathcost) && k != root )
+         {
+            (*nelims) += deleteterm(scip, graph, k);
+            (*offset) += graph->prize[k];
+            continue;
+         }
+
          if( !Is_term(graph->term[k]) && SCIPisGT(scip, pathdist[k] + vnoi[k].dist, minpathcost) )
          {
-            while( graph->outbeg[k] != EAT_LAST )
+            if( checkstate )
             {
-               graph_edge_del(scip, graph, graph->outbeg[k], TRUE);
-               nfixed++;
+               deletable = TRUE;
+               for( e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
+                  if( edgestate[e] == EDGE_BLOCKED )
+                  {
+                     deletable = FALSE;
+                     break;
+                  }
+            }
+
+            if( deletable )
+            {
+               while( graph->outbeg[k] != EAT_LAST )
+               {
+                  graph_edge_del(scip, graph, graph->outbeg[k], TRUE);
+                  nfixed++;
+               }
+            }
+            else
+            {
+               e = graph->outbeg[k];
+               while( e != EAT_LAST )
+               {
+                  etmp = graph->oeat[e];
+
+                  /* for rpc no artificial terminal arcs should be deleted */
+                  if( (rpc && !graph->mark[graph->head[e]]) || (edgestate[e] == EDGE_BLOCKED) )
+                  {
+                     e = etmp;
+                     continue;
+                  }
+
+                  if( SCIPisGT(scip, pathdist[k] + cost[e] + vnoi[graph->head[e]].dist, minpathcost) )
+                  {
+                     if( marked[flipedge(e)] )
+                     {
+                        graph_edge_del(scip, graph, e, TRUE);
+                        nfixed++;
+                     }
+                     else
+                     {
+                        marked[e] = TRUE;
+                     }
+                  }
+                  e = etmp;
+               }
             }
          }
          else
@@ -464,12 +647,12 @@ SCIP_RETCODE da_reduce(
             {
                etmp = graph->oeat[e];
 
-	       /* for rpc not artificial terminal arcs should be deleted */
-	       if( rpc && !graph->mark[graph->head[e]] )
-	       {
-		  e = etmp;
-		  continue;
-	       }
+               /* for rpc no artificial terminal arcs should be deleted */
+               if( (rpc && !graph->mark[graph->head[e]]) || (checkstate && edgestate[e] == EDGE_BLOCKED) )
+               {
+                  e = etmp;
+                  continue;
+               }
 
                if( SCIPisGT(scip, pathdist[k] + cost[e] + vnoi[graph->head[e]].dist, minpathcost) )
                {
@@ -488,64 +671,205 @@ SCIP_RETCODE da_reduce(
          }
       }
 
-      for( k = 0; k < nnodes; k++ )
+      if( apsol )
       {
-         if( !graph->mark[k] || Is_term(graph->term[k]) )
-            continue;
-         if( graph->grad[k] == 3 )
-	 {
+         for( k = 0; k < nnodes; k++ )
+            nodearrchar[k] = FALSE;
+         for( e = 0; e < nedges; e++ )
+         {
+            if( result[e] == CONNECT )
+            {
+               nodearrchar[graph->tail[e]] = TRUE;
+               nodearrchar[graph->head[e]] = TRUE;
+            }
+         }
 
-	    if( SCIPisGT(scip,pathdist[k] + vnoi[k].dist + vnoi[k + nnodes].dist, minpathcost) )
-	    {
+         for( k = 0; k < nnodes; k++ )
+         {
+            if( !graph->mark[k] )
+               continue;
+
+            if( !Is_gterm(graph->term[k]) && SCIPisGE(scip, pathdist[k] + vnoi[k].dist, minpathcost) && !nodearrchar[k] )
+            {
+               if( checkstate )
+               {
+                  deletable = TRUE;
+                  for( e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
+                     if( edgestate[e] == EDGE_BLOCKED )
+                     {
+                        deletable = FALSE;
+                        break;
+                     }
+               }
+
+               if( deletable )
+               {
+                  while( graph->outbeg[k] != EAT_LAST )
+                  {
+                     graph_edge_del(scip, graph, graph->outbeg[k], TRUE);
+                     nfixed++;
+                  }
+               }
+               else
+               {
+                  e = graph->outbeg[k];
+                  while( e != EAT_LAST )
+                  {
+                     etmp = graph->oeat[e];
+
+                     /* for rpc no artificial terminal arcs should be deleted */
+                     if( (rpc && !graph->mark[graph->head[e]]) || result[e] == CONNECT || result[flipedge(e)] == CONNECT
+                           || (edgestate[e] == EDGE_BLOCKED) )
+                     {
+                        e = etmp;
+                        continue;
+                     }
+
+                     if( SCIPisGE(scip, pathdist[k] + cost[e] + vnoi[graph->head[e]].dist, minpathcost) )
+                     {
+                        if( marked[flipedge(e)] )
+                        {
+                           graph_edge_del(scip, graph, e, TRUE);
+                           nfixed++;
+                        }
+                        else
+                        {
+                           marked[e] = TRUE;
+                        }
+                     }
+                     e = etmp;
+                  }
+               }
+            }
+            else
+            {
+               e = graph->outbeg[k];
+               while( e != EAT_LAST )
+               {
+                  etmp = graph->oeat[e];
+
+                  /* for rpc no artificial terminal arcs should be deleted */
+                  if( (rpc && !graph->mark[graph->head[e]]) || result[e] == CONNECT || result[flipedge(e)] == CONNECT
+                        || (checkstate && edgestate[e] == EDGE_BLOCKED) )
+                  {
+                     e = etmp;
+                     continue;
+                  }
+
+                  if( SCIPisGE(scip, pathdist[k] + cost[e] + vnoi[graph->head[e]].dist, minpathcost) )
+                  {
+                     if( marked[flipedge(e)] )
+                     {
+                        graph_edge_del(scip, graph, e, TRUE);
+                        nfixed++;
+                     }
+                     else
+                     {
+                        marked[e] = TRUE;
+                     }
+                  }
+                  e = etmp;
+               }
+            }
+         }
+      }
+
+      if( !directed && nodereplacing )
+      {
+         for( k = 0; k < nnodes; k++ )
+         {
+            if( !graph->mark[k] || Is_gterm(graph->term[k]) )
+               continue;
+            if( rpc && k == root )
+               continue;
+
+            if( graph->grad[k] == 3 )
+            {
+               SCIP_Real d = FARAWAY;
+               int i1 = graph->tail[vnoi[k].edge];
                int i2;
-
-               SCIPdebugMessage("DA eliminates 3-Vertex: %d %f min: %f \n", k, pathdist[k] + vnoi[k].dist + vnoi[k + nnodes].dist,  minpathcost);
-               nfixed++;
-               i = 0;
+               int base = vbase[k];
 
                for( e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
                {
-                  incedge[i] = e;
-                  ecost[i] = graph->cost[e];
-                  adjvert[i++] = graph->head[e];
-                  assert(i <= 4);
+                  i2 = graph->head[e];
+                  if( i1 != i2 && (!rpc || i2 != root) )
+                  {
+                     if( base != vbase[i2] && SCIPisLT(scip, cost[e] + vnoi[i2].dist, d) )
+                     {
+                        d = cost[e] + vnoi[i2].dist;
+                     }
+                     else if( base == vbase[i2] && SCIPisLT(scip, cost[e] + vnoi[i2 + nnodes].dist, d) )
+                     {
+                        d = cost[e] + vnoi[i2 + nnodes].dist;
+                     }
+                  }
                }
 
-               /* save ancestors */
-               for( i = 0; i < 3; i++ )
+               if( SCIPisGT(scip, vnoi[k + nnodes].dist, d) )
+                  d = vnoi[k + nnodes].dist;
+
+               if( SCIPisGT(scip, pathdist[k] + vnoi[k].dist + d, minpathcost) )
                {
-                  SCIPintListNodeFree(scip, &(ancestors[i]));
-                  SCIPintListNodeFree(scip, &(revancestors[i]));
-                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors[i]), graph->ancestors[incedge[i]]) );
-                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors[i]), graph->ancestors[Edge_anti(incedge[i])]) );
-               }
+                  nfixed++;
+                  i = 0;
 
-               for( i = 0; i < 3; i++ )
+                  for( e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
+                  {
+                     graph->mark[graph->head[e]] = FALSE;
+                     incedge[i] = e;
+                     ecost[i] = graph->cost[e];
+                     adjvert[i++] = graph->head[e];
+                     assert(i <= 4);
+                  }
+
+                  /* save ancestors */
+                  for( i = 0; i < 3; i++ )
+                  {
+                     SCIPintListNodeFree(scip, &(ancestors[i]));
+                     SCIPintListNodeFree(scip, &(revancestors[i]));
+                     SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors[i]), graph->ancestors[incedge[i]], NULL) );
+                     SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors[i]), graph->ancestors[Edge_anti(incedge[i])], NULL) );
+                  }
+
+                  for( i = 0; i < 3; i++ )
+                  {
+                     i2 = (i + 1) % 3;
+                     SCIP_CALL( graph_edge_reinsert(scip, graph, incedge[i], adjvert[i], adjvert[i2], ecost[i] + ecost[i2], ancestors[i],
+                           ancestors[i2], revancestors[i], revancestors[i2]) );
+                  }
+               }
+            }
+            /* todo */
+            if( grad[k] == 4 )
+            {
+               if( SCIPisGT(scip,pathdist[k] + vnoi[k].dist + vnoi[k + nnodes].dist + vnoi[k + 2 * nnodes].dist, minpathcost) )
                {
-                  i2 = (i + 1) % 3;
-                  SCIP_CALL( graph_edge_reinsert(scip, graph, incedge[i], adjvert[i], adjvert[i2], ecost[i] + ecost[i2], ancestors[i], ancestors[i2], revancestors[i], revancestors[i2]) );
+                  SCIPdebugMessage("DA could eliminate 4-Vertex: %d %f min: %f \n", k, pathdist[k] + vnoi[k].dist + vnoi[k + nnodes].dist,  minpathcost);
                }
-	    }
-	 }
-	 /* @todo */
-         if( graph->grad[k] == 4 )
-	 {
-
-	    if( SCIPisGT(scip,pathdist[k] + vnoi[k].dist + vnoi[k + nnodes].dist + vnoi[k + 2 * nnodes].dist, minpathcost) )
-	    {
-               SCIPdebugMessage("DA could eliminate 4-Vertex: %d %f min: %f \n", k, pathdist[k] + vnoi[k].dist + vnoi[k + nnodes].dist,  minpathcost);
-	    }
-	 }
+            }
+         }
       }
-      SCIPdebugMessage("deleted by da: %d \n", nfixed );
+
+      assert(graph_valid(graph));
 
       if( rpc )
-         graph->mark[root] = TRUE;
-
+      {
+         SCIP_CALL( pcgraphtrans(scip, graph) );
+         SCIP_CALL( pcgraphorg(scip, graph) );
+      }
+      else
+      {
+         for( k = 0; k < nnodes; k++ )
+            graph->mark[k] = graph->grad[k] > 0;
+      }
    } /* root loop */
 
  TERMINATE:
    *nelims = nfixed;
+
+   if( SCIPisLT(scip, upperbound, *ub) || SCIPisLT(scip, *ub, 0.0) )
+      *ub = upperbound;
 
    /* free memory */
    for( k = 0; k < 4; k++ )
@@ -570,8 +894,531 @@ SCIP_RETCODE da_reduce(
 }
 
 
+/** dual ascent reduction for slack-and-prune heuristic */
+SCIP_RETCODE da_reduceSlackPrune(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< problem variables or NULL */
+   GRAPH*                graph,              /**< graph data structure */
+   PATH*                 vnoi,               /**< Voronoi data structure */
+   GNODE**               gnodearr,           /**< GNODE* terminals array for internal computations or NULL */
+   SCIP_Real*            cost,               /**< array to store reduced costs */
+   SCIP_Real*            costrev,            /**< reverse edge costs */
+   SCIP_Real*            pathdist,           /**< distance array for shortest path calculations */
+   SCIP_Real*            upperbound,         /**< pointer to store new upper bound */
+   int*                  edgearrint,         /**< int edges array to store solution value  */
+   int*                  edgearrint2,        /**< int edges array for internal computations */
+   int*                  vbase,              /**< array for Voronoi bases */
+   int*                  pathedge,           /**< array for predecessor edge on a path */
+   int*                  state,              /**< int 4 * nnodes array for internal computations */
+   int*                  solnode,            /**< array of nodes of current solution that is not to be destroyed */
+   char*                 nodearrchar,        /**< char node array for internal computations  */
+   char*                 edgearrchar,        /**< char edge array for internal computations  */
+   int*                  nelims,             /**< pointer to store number of reduced edges */
+   int                   minelims,           /**< minimum number of edges to eliminate */
+   SCIP_Bool             solgiven            /**< solution provided? */
+   )
+{
+   IDX** ancestors;
+   IDX** revancestors;
+   SCIP_Real obj;
+   SCIP_Real tmpcost;
+   SCIP_Real lpobjval;
+   SCIP_Real objprune;
+   SCIP_Real minpathcost;
+   SCIP_Real* sd;
+   SCIP_Real* ecost;
+   SCIP_Bool rpc;
+   SCIP_Bool success;
+   SCIP_Bool eliminate;
+
+   int* grad;
+   int* adjvert;
+   int* incedge;
+   int* reinsert;
+   int i;
+   int k;
+   int e;
+   int e2;
+   int e3;
+   int etmp;
+   int root;
+   int head;
+   int nterms;
+   int nedges;
+   int nnodes;
+   int nfixed;
+   int redrounds;
+   char* marked;
+
+   assert(scip != NULL);
+   assert(cost != NULL);
+   assert(graph != NULL);
+   assert(nelims != NULL);
+   assert(solnode != NULL);
+   assert(costrev != NULL);
+   assert(pathedge != NULL);
+   assert(upperbound != NULL);
+   assert(edgearrint != NULL);
+   assert(edgearrint2 != NULL);
+   assert(nodearrchar != NULL);
+   assert(edgearrchar != NULL);
+
+   /* 1. step: initialize */
+
+   rpc = (graph->stp_type == STP_RPCSPG);
+   grad = graph->grad;
+   root = graph->source[0];
+   nfixed = 0;
+   nedges = graph->edges;
+   nnodes = graph->knots;
+
+   /* graph vanished? */
+   if( grad[graph->source[0]] == 0 )
+      return SCIP_OKAY;
+
+   marked = edgearrchar;
+
+   /* allocate length-4 buffer memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &sd, 4) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ancestors, 4) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &revancestors, 4) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ecost, 4) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &adjvert, 4) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &reinsert, 4) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &incedge, 4) );
+
+   for( i = 0; i < 4; i++ )
+   {
+      sd[i] = 0.0;
+      ancestors[i] = NULL;
+      revancestors[i] = NULL;
+   }
+
+   k = 0;
+   nterms = 0;
+   for( i = 0; i < nnodes; i++ )
+   {
+      if( !rpc )
+         graph->mark[i] = (grad[i] > 0);
+      if( graph->mark[i] )
+      {
+         k++;
+         if( Is_term(graph->term[i]) )
+            nterms++;
+      }
+   }
+
+   /* not more than two terminals? */
+   if( nterms <= 2 )
+      goto TERMINATE;
+
+   /* 2. step: - if not provided, compute lower bound and reduced costs
+    *          - try to eliminate edges and nodes                        */
+
+   for( i = 0; i < nnodes; i++ )
+      if( Is_term(graph->term[i]) )
+         assert(grad[i] > 0);
+
+   if( rpc )
+   {
+      SCIP_CALL( pcgraphtrans(scip, graph) );
+   }
+
+
+   if( !solgiven )
+   {
+      /* try to build MST on solnode nodes */
+      for( i = 0; i < nnodes; i++ )
+         graph->mark[i] = (solnode[i] == CONNECT);
+
+      for( e = 0; e < nedges; e++ )
+         edgearrint[e] = UNKNOWN;
+
+      graph_path_exec(scip, graph, MST_MODE, root, graph->cost, vnoi);
+
+      for( i = 0; i < nnodes; i++ )
+      {
+         e = vnoi[i].edge;
+         if( e >= 0 )
+         {
+            edgearrint[e] = CONNECT;
+         }
+         else if( Is_term(graph->term[i]) && i != root )
+         {
+            break;
+         }
+      }
+
+      if( i == nnodes )
+      {
+         int l;
+         int count;
+
+         do
+         {
+            count = 0;
+
+            for( l = nnodes - 1; l >= 0; --l )
+            {
+               if( (solnode[l] != CONNECT) || Is_term(graph->term[l]) )
+                  continue;
+
+               for( e = graph->outbeg[l]; e != EAT_LAST; e = graph->oeat[e] )
+                  if( edgearrint[e] == CONNECT )
+                     break;
+
+               if( e == EAT_LAST )
+               {
+                  /* there has to be exactly one incoming edge */
+                  for( e = graph->inpbeg[l]; e != EAT_LAST; e = graph->ieat[e] )
+                  {
+                     if( edgearrint[e] == CONNECT )
+                     {
+                        edgearrint[e] = UNKNOWN;
+                        solnode[l] = UNKNOWN;
+                        count++;
+                        break;
+                     }
+                  }
+               }
+            }
+         }
+         while( count > 0 );
+      }
+   }
+
+
+   if( solgiven || i == nnodes )
+   {
+      obj = graph_computeSolVal(graph->cost, edgearrint, 0.0, nedges);
+
+      SCIP_CALL( SCIPdualAscentStpSol(scip, graph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, edgearrint, edgearrint2, state, root, 1, edgearrchar, nodearrchar) );
+
+   }
+   else
+   {
+      obj = FARAWAY;
+      SCIP_CALL( SCIPdualAscentStp(scip, graph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, edgearrint2, state, root, 1, edgearrchar, nodearrchar) );
+   }
+
+#if 0
+      SCIP_QUEUE* queue;
+      SCIP_CALL( SCIPqueueCreate(&queue, nnodes, 2.0) );
+
+      GRAPH* prunegraph = graph;
+      int* mark = graph->mark;
+      int* pnode;
+      int a;
+      for( k = 0; k < nnodes; k++ )
+         mark[k] = FALSE;
+
+
+      /* BFS from root along incoming arcs of zero cost */
+
+      mark[prunegraph->source[0]] = TRUE;
+
+      SCIP_CALL( SCIPqueueInsert(queue, &(prunegraph->source[0])) );
+
+      while( !SCIPqueueIsEmpty(queue) )
+      {
+         pnode = (SCIPqueueRemove(queue));
+         k = *pnode;
+
+         /* traverse outgoing arcs */
+         for( a = prunegraph->outbeg[k]; a != EAT_LAST; a = prunegraph->oeat[a] )
+         {
+            head = prunegraph->head[a];
+
+            if( SCIPisEQ(scip, cost[a], 0.0) )
+            {
+               /* vertex not labeled yet? */
+               if( !mark[head] )
+               {
+                  mark[head] = TRUE;
+                  SCIP_CALL( SCIPqueueInsert(queue, &(prunegraph->head[a])) );
+               }
+            }
+         }
+      }
+      SCIPqueueFree(&queue);
+      for( k = 0; k < nnodes; k++ ) // TODO
+         if( Is_term(prunegraph->term[k]) && !mark[k]  )
+            printf("in bnd  FAIL %d not marked, but terminal, \n", k);
+#endif
+
+   SCIP_CALL( SCIPheurAscendAndPrune(scip, NULL, graph, cost, edgearrint2, vbase, root, nodearrchar, &success, TRUE, FALSE) );
+
+   objprune = graph_computeSolVal(graph->cost, edgearrint2, 0.0, nedges);
+
+   assert(success);
+
+   if( success && SCIPisLT(scip, objprune, obj ) )
+   {
+
+      for( i = 0; i < nnodes; i++ )
+         solnode[i] = UNKNOWN;
+
+      for( e = 0; e < nedges; e++ )
+      {
+         edgearrint[e] = edgearrint2[e];
+         if( edgearrint[e] == CONNECT )
+         {
+            solnode[graph->tail[e]] = CONNECT;
+            solnode[graph->head[e]] = CONNECT;
+         }
+      }
+   }
+
+   obj = 0.0;
+
+   for( e = 0; e < nedges; e++ )
+   {
+      if( edgearrint[e] == CONNECT )
+         obj += graph->cost[e];
+
+      marked[e] = FALSE;
+      costrev[e] = cost[flipedge(e)];
+   }
+
+   *upperbound = obj;
+
+   for( k = 0; k < nnodes; k++ )
+      graph->mark[k] = (grad[k] > 0);
+
+   /* distance from root to all nodes */
+   graph_path_execX(scip, graph, root, cost, pathdist, pathedge);
+
+   /* no paths should go back to the root */
+   for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
+      costrev[e] = FARAWAY;
+
+   /* build Voronoi diagram */
+   getnext4terms(scip, graph, costrev, costrev, vnoi, vbase, graph->path_heap, state);
+
+   for( k = 0; k < nnodes; k++ )
+      if( !Is_term(graph->term[k]) )
+         assert(vbase[k + nnodes] != root );
+
+   /* RPC? If yes, restore original graph */
+   if( rpc )
+   {
+      SCIP_CALL( pcgraphorg(scip, graph) );
+      graph->mark[root] = FALSE;
+   }
+
+   for( e = 0; e < nedges; e++ )
+      costrev[e] = -1.0;
+
+   for( redrounds = 0; redrounds < 3; redrounds++ )
+   {
+      if( redrounds == 0 )
+      {
+         eliminate = FALSE;
+         minpathcost = FARAWAY;
+      }
+      else if( redrounds == 1 )
+      {
+         assert(minelims > 0);
+         assert(2 * minelims < nedges);
+
+         eliminate = TRUE;
+         SCIPsortReal(costrev, nedges);
+
+         /* the required reduced path cost to be surpassed */
+         minpathcost = costrev[nedges - 2 * minelims];
+
+         if( SCIPisLE(scip, minpathcost, 0.0) )
+            minpathcost = 2 * SCIPepsilon(scip);
+
+         k = nedges - 2 * minelims;
+
+         /* try to first eliminate edges with higher gap */
+         for( e = nedges - 1; e > k && e >= 2; e = e - 2 )
+         {
+            if( SCIPisLE(scip, costrev[e - 2], minpathcost) )
+               break;
+         }
+
+         if( SCIPisGT(scip, costrev[e], minpathcost) )
+            minpathcost = costrev[e];
+
+         if( SCIPisLE(scip, minpathcost, 0.0) )
+            minpathcost = 2 * SCIPepsilon(scip);
+
+         for( e = 0; e < nedges; e++ )
+            marked[e] = FALSE;
+      }
+      else
+      {
+         eliminate = TRUE;
+
+         /* the required reduced path cost to be surpassed */
+         minpathcost = costrev[nedges - 2 * minelims];
+
+         if( SCIPisLE(scip, minpathcost, 0.0) )
+            minpathcost = 2 * SCIPepsilon(scip);
+
+         for( e = 0; e < nedges; e++ )
+            marked[e] = FALSE;
+      }
+
+      for( k = 0; k < nnodes; k++ )
+      {
+         if( grad[k] <= 0 )
+            continue;
+
+         if( nfixed > minelims )
+            break;
+
+         if( !Is_term(graph->term[k]) && (!eliminate || SCIPisGE(scip, pathdist[k] + vnoi[k].dist, minpathcost)) && solnode[k] != CONNECT  )
+         {
+            if( !eliminate )
+            {
+               tmpcost = pathdist[k] + vnoi[k].dist;
+
+               for( e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
+               {
+                  if( SCIPisGT(scip, tmpcost, costrev[e]) )
+                     costrev[e] = tmpcost;
+
+                  e2 = flipedge(e);
+
+                  if( SCIPisGT(scip, tmpcost, costrev[e2]) )
+                     costrev[e2] = tmpcost;
+               }
+
+               continue;
+            }
+            nfixed += grad[k];
+
+            while( graph->outbeg[k] != EAT_LAST )
+               graph_edge_del(scip, graph, graph->outbeg[k], TRUE);
+         }
+         else
+         {
+            e = graph->outbeg[k];
+            while( e != EAT_LAST )
+            {
+               etmp = graph->oeat[e];
+               head = graph->head[e];
+
+               /* for rpc no artificial terminal arcs should be deleted; in general: delete no solution edges */
+               if( (rpc && !graph->mark[head])
+                  || (edgearrint[e] == CONNECT) || (edgearrint[flipedge(e)] == CONNECT) )
+               {
+                  e = etmp;
+                  continue;
+               }
+
+               tmpcost = pathdist[k] + cost[e] + vnoi[head].dist;
+
+               if( (!eliminate) || SCIPisGE(scip, tmpcost, minpathcost) )
+               {
+                  if( marked[flipedge(e)] )
+                  {
+                     if( eliminate )
+                     {
+                        graph_edge_del(scip, graph, e, TRUE);
+                        nfixed++;
+                     }
+                     else
+                     {
+                        if( SCIPisGT(scip, tmpcost, costrev[e]) )
+                           costrev[e] = tmpcost;
+
+                        if( SCIPisGT(scip, tmpcost, costrev[flipedge(e)]) )
+                           costrev[flipedge(e)] = tmpcost;
+                     }
+                  }
+                  else
+                  {
+                     marked[e] = TRUE;
+                  }
+               }
+               e = etmp;
+            }
+         }
+      }
+
+      for( k = 0; k < nnodes; k++ )
+      {
+         if( nfixed > minelims )
+            break;
+
+         if( !graph->mark[k] || Is_term(graph->term[k]) || solnode[k] == CONNECT )
+            continue;
+
+         if( grad[k] == 3 )
+         {
+            tmpcost = pathdist[k] + vnoi[k].dist + vnoi[k + nnodes].dist;
+
+            if( !eliminate || SCIPisGE(scip, tmpcost, minpathcost) )
+            {
+               e = graph->outbeg[k];
+               assert(graph->oeat[e] != EAT_LAST);
+               e2 = graph->oeat[e];
+               assert(graph->oeat[e2] != EAT_LAST);
+               e3 = graph->oeat[e2];
+               assert(graph->oeat[e3] == EAT_LAST);
+
+               if( SCIPisLE(scip, cost[e], 0.0) || SCIPisLE(scip, cost[e2], 0.0) || SCIPisLE(scip, cost[e3], 0.0) )
+                  continue;
+
+               if( !eliminate )
+               {
+                  for( e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
+                  {
+                     if( SCIPisGT(scip, tmpcost, costrev[e]) )
+                        costrev[e] = tmpcost;
+
+                     e2 = flipedge(e);
+
+                     if( SCIPisGT(scip, tmpcost, costrev[e2]) )
+                        costrev[e2] = tmpcost;
+                  }
+
+                  continue;
+               }
+               nfixed += 3;
+               while( graph->outbeg[k] != EAT_LAST )
+                  graph_edge_del(scip, graph, graph->outbeg[k], TRUE);
+            }
+         }
+      }
+   }
+   SCIPdebugMessage("deleted by da: %d \n", nfixed );
+
+   if( rpc )
+      SCIP_CALL( pcgraphtrans(scip, graph) );
+   assert(graph->mark[root]);
+
+ TERMINATE:
+   *nelims = nfixed;
+
+   /* free memory */
+   for( k = 0; k < 4; k++ )
+   {
+      SCIPintListNodeFree(scip, &(ancestors[k]));
+      SCIPintListNodeFree(scip, &(revancestors[k]));
+   }
+
+   SCIPfreeBufferArray(scip, &incedge);
+   SCIPfreeBufferArray(scip, &reinsert);
+   SCIPfreeBufferArray(scip, &adjvert);
+   SCIPfreeBufferArray(scip, &ecost);
+   SCIPfreeBufferArray(scip, &revancestors);
+   SCIPfreeBufferArray(scip, &ancestors);
+   SCIPfreeBufferArray(scip, &sd);
+
+   if( edgearrchar == NULL )
+      SCIPfreeBufferArray(scip, &marked);
+
+   return SCIP_OKAY;
+}
+
+
 /** dual ascent based reductions for PCSPG and MWCSP */
-SCIP_RETCODE daPc_reduce(
+SCIP_RETCODE da_reducePcMw(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
    PATH*                 vnoi,               /**< Voronoi data structure array */
@@ -580,11 +1427,15 @@ SCIP_RETCODE daPc_reduce(
    SCIP_Real*            costrev,            /**< reverse edge costs */
    SCIP_Real*            pathdist,           /**< distance array for shortest path calculations */
    int*                  vbase,              /**< Voronoi base array */
-   int*                  pathedge,           /**< shorest path incoming edge array for shortest path calculations */
+   int*                  pathedge,           /**< shortest path incoming edge array for shortest path calculations */
    int*                  edgearrint,         /**< int edges array for internal computations or NULL */
    int*                  state,              /**< int 4 * vertices array  */
    char*                 nodearrchar,        /**< char node array for internal computations */
-   int*                  nelims              /**< pointer to store number of reduced edges */
+   int*                  nelims,             /**< pointer to store number of reduced edges */
+   SCIP_Bool             solbasedda,         /**< rerun Da based on best primal solution */
+   SCIP_Bool             varyroot,           /**< vary root for DA if possible */
+   SCIP_Bool             shiftcosts,         /**< should costs be shifted to try to reduce number of terminals? */
+   SCIP_Bool             markroots           /**< should terminals proven to be part of an opt. sol. be marked as such? */
    )
 {
    SCIP_HEURDATA* tmheurdata;
@@ -593,29 +1444,34 @@ SCIP_RETCODE daPc_reduce(
    GRAPH* transgraph;
    SCIP_Real* sd;
    SCIP_Real* ecost;
+   SCIP_Real ub;
+   SCIP_Real offset;
+   SCIP_Bool success;
    SCIP_Real lpobjval;
+   SCIP_Real hopfactor;
    SCIP_Real upperbound;
    SCIP_Real minpathcost;
-   SCIP_Bool success;
-   SCIP_Real offset;
-   SCIP_Real hopfactor;
+   SCIP_Bool apsol;
+   int* roots;
    int* result;
    int* adjvert;
    int* incedge;
    int* reinsert;
+   int* transresult;
    int i;
    int k;
    int e;
    int run;
-   int etmp;
    int runs;
    int root;
-   int nruns;
+   int nroots;
    int nterms;
    int nedges;
    int nnodes;
    int nfixed;
+   int tmproot;
    int best_start;
+   int nusedroots;
    int transnnodes;
    int transnedges;
    char* marked;
@@ -626,11 +1482,16 @@ SCIP_RETCODE daPc_reduce(
    assert(nodearrchar != NULL);
 
    root = graph->source[0];
+   apsol = FALSE;
+   nroots = 0;
    nfixed = 0;
    nnodes = graph->knots;
    nedges = graph->edges;
    hopfactor = DEFAULT_HOPFACTOR;
-   upperbound = 0.0;
+
+   /* not more than two terminals? */
+   if( graph->terms <= 3 )
+      return SCIP_OKAY;
 
    /* allocate memory */
    if( edgearrint == NULL )
@@ -641,6 +1502,8 @@ SCIP_RETCODE daPc_reduce(
    {
       result = edgearrint;
    }
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &transresult, nedges + 2 * (graph->terms - 1)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &marked, nedges + 2 * (graph->terms - 1)) );
 
    /* allocate length-4 buffer memory */
@@ -659,9 +1522,10 @@ SCIP_RETCODE daPc_reduce(
       revancestors[i] = NULL;
    }
 
+
    /* 1. step: compute upper bound */
 
-   /* initialize */
+
    k = 0;
    nterms = 0;
    for( i = 0; i < nnodes; i++ )
@@ -674,9 +1538,7 @@ SCIP_RETCODE daPc_reduce(
       }
    }
 
-   /* not more than two terminals? */
-   if( nterms <= 2 )
-      goto TERMINATE;
+   assert(nterms == (graph->terms - ((graph->stp_type != STP_RPCSPG)? 1 : 0)));
 
    /* number of runs should not exceed number of connected vertices */
    runs = MIN(k, DEFAULT_HEURRUNS);
@@ -700,39 +1562,196 @@ SCIP_RETCODE daPc_reduce(
 
    SCIP_CALL( extendSteinerTreePcMw(scip, graph, vnoi, costrev, vbase, result, nodearrchar, &e) );
 
-   /* restore oringinal graph */
+   /* restore original graph */
    SCIP_CALL( pcgraphorg(scip, graph) );
 
-   /* no feasible solution found? */
-   if( !success )
-      goto TERMINATE;
+   /* feasible solution found? If so, calculate objective value of solution */
+   if( success )
+      upperbound = graph_computeSolVal(graph->cost, result, 0.0, nedges);
+   else
+      upperbound = FARAWAY;
 
-   /* calculate objective value of solution */
-   for( e = 0; e < nedges; e++ )
-      if( result[e] == CONNECT )
-         upperbound += graph->cost[e];
 
-   /* 2. step: compute lower bound and reduced costs and try to eliminate */
+   /* 2. step: compute lower bound and reduced costs */
+
 
    SCIP_CALL( pcgraphtrans(scip, graph) );
 
-   /* @todo: vary */
-   nruns = 1;
+   offset = 0.0;
 
-   for( run = 0; run < nruns; run++ )
+   /* transform the problem to a real SAP */
+   if( shiftcosts )
    {
-      offset = 0.0;
+      SCIP_CALL( graph_PcSapCopyShift(scip, graph, &transgraph, &offset) );
+   }
+   else
+   {
       SCIP_CALL( graph_PcSapCopy(scip, graph, &transgraph, &offset) );
-      transnnodes = transgraph->knots;
-      transnedges = transgraph->edges;
+   }
 
-      SCIP_CALL( SCIPdualAscentStp(scip, transgraph, cost, &lpobjval, FALSE, gnodearr, edgearrint, state, root, 1, marked, nodearrchar) );
+   transnnodes = transgraph->knots;
+   transnedges = transgraph->edges;
+
+   /* initialize data structures for shortest paths */
+   SCIP_CALL( graph_path_init(scip, transgraph) );
+
+   SCIP_CALL( SCIPdualAscentStp(scip, transgraph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, transresult, state, root, 1, marked, nodearrchar) );
+
+   SCIP_CALL( SCIPheurAscendAndPrunePcMw(scip, NULL, graph, cost, transresult, vbase, root, nodearrchar, &success, TRUE, FALSE) );
+
+#if 1
+   SCIP_CALL( extendSteinerTreePcMw(scip, graph, vnoi, costrev, vbase, transresult, nodearrchar, &e) );
+#endif
+
+   assert(graph_sol_valid(scip, graph, transresult));
+
+   /* compute objective value */
+   ub = graph_computeSolVal(graph->cost, transresult, 0.0, nedges);
+
+   /* new solution better? */
+   if( SCIPisLE(scip, ub, upperbound) )
+   {
+      apsol = TRUE;
+      upperbound = ub;
+      for( e = 0; e < nedges; e++ )
+         result[e] = transresult[e];
+   }
+
+   lpobjval += offset;
+
+   /* the required reduced path cost to be surpassed */
+   minpathcost = upperbound - lpobjval;
+
+   for( e = 0; e < transnedges; e++ )
+   {
+      costrev[e] = cost[flipedge(e)];
+      marked[e] = FALSE;
+   }
+
+   for( k = 0; k < transnnodes; k++ )
+      transgraph->mark[k] = (transgraph->grad[k] > 0);
+
+   /* initialize data structures for history */
+   SCIP_CALL( graph_init_history(scip, transgraph) );
+
+   assert(root == transgraph->source[0]);
+
+   /* distance from root to all nodes */
+   graph_path_execX(scip, transgraph, root, cost, pathdist, pathedge);
+
+   for( i = 0; i < transnnodes; i++ )
+      if( Is_term(transgraph->term[i]) )
+         assert(SCIPisEQ(scip, pathdist[i], 0.0));
+
+   /* no paths should go back to the root */
+   for( e = transgraph->outbeg[root]; e != EAT_LAST; e = transgraph->oeat[e] )
+      costrev[e] = FARAWAY;
+
+   /* build Voronoi diagram wrt incoming arcs */
+   voronoi_terms(scip, transgraph, costrev, vnoi, vbase, transgraph->path_heap, transgraph->path_state);
+
+
+   /* 3. step: try to eliminate */
+
+
+   /* restore original graph */
+   SCIP_CALL( pcgraphorg(scip, graph) );
+
+   if( shiftcosts )
+   {
+      for( i = 0; i < nnodes; i++ )
+      {
+         if( Is_term(graph->term[i]) && transgraph->term[i] == -1 )
+            graph->mark[k] = FALSE;
+      }
+      solbasedda = FALSE;
+      varyroot = FALSE;
+   }
+   /* try to reduce the graph */
+   nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, TRUE);
+
+   assert(root == transgraph->source[0]);
+
+   SCIPdebugMessage("fixed by da: %d \n", nfixed );
+
+   /* rerun dual ascent? */
+   if( solbasedda && graph->terms > 2 )
+   {
+      SCIP_CALL( pcgraphtrans(scip, graph) );
+
+      /* solution not from ascend-and-prune? */
+      if( !apsol )
+      {
+         for( e = 0; e < nedges; e++ )
+         {
+            cost[e] = graph->cost[e];
+            costrev[e] = graph->cost[flipedge(e)];
+         }
+
+         SCIP_CALL( SCIPheurComputeSteinerTree(scip, tmheurdata, graph, NULL, &best_start, result, runs, root, cost, costrev, &hopfactor, NULL, 0.0, &success) );
+
+         SCIP_CALL( extendSteinerTreePcMw(scip, graph, vnoi, costrev, vbase, result, nodearrchar, &e) );
+
+         assert(graph_valid(transgraph));
+      }
+
+      for( e = nedges; e < transgraph->edges; e++ )
+         transresult[e] = UNKNOWN;
+
+      for( e = 0; e < nedges; e++ )
+         transresult[e] = result[e];
+
+      for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
+         if( Is_term(graph->term[graph->head[e]]) && result[e] != CONNECT )
+            break;
+
+      if( e != EAT_LAST)
+      {
+         for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
+            if( !Is_term(graph->term[graph->head[e]]) && result[e] == CONNECT )
+               break;
+
+         assert(e != EAT_LAST);
+         k = graph->head[e];
+
+         for( e = transgraph->outbeg[k]; e != EAT_LAST; e = transgraph->oeat[e] )
+         {
+            if( transgraph->head[e] == graph->knots )
+            {
+               transresult[e] = CONNECT;
+               break;
+            }
+         }
+      }
+
+      SCIP_CALL( SCIPdualAscentStpSol(scip, transgraph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, transresult, result, state, root, 1, marked, nodearrchar) );
 
       lpobjval += offset;
 
+      SCIP_CALL( SCIPheurAscendAndPrunePcMw(scip, NULL, graph, cost, transresult, vbase, root, nodearrchar, &success, TRUE, FALSE) );
+
+#if 1
+      SCIP_CALL( extendSteinerTreePcMw(scip, graph, vnoi, costrev, vbase, transresult, nodearrchar, &e) );
+#endif
+      assert(graph_sol_valid(scip, graph, transresult));
+
+      /* compute objective value */
+      ub = graph_computeSolVal(graph->cost, transresult, 0.0, nedges);
+
+      if( SCIPisLE(scip, ub, upperbound) )
+      {
+         apsol = TRUE;
+         upperbound = ub;
+         for( e = 0; e < nedges; e++ )
+            result[e] = transresult[e];
+      }
+      else
+      {
+         apsol = FALSE;
+      }
+
       /* the required reduced path cost to be surpassed */
       minpathcost = upperbound - lpobjval;
-      SCIPdebugMessage("xupperbound %f, lpobjval %f\n", upperbound, lpobjval);
 
       for( e = 0; e < transnedges; e++ )
       {
@@ -743,56 +1762,604 @@ SCIP_RETCODE daPc_reduce(
       for( k = 0; k < transnnodes; k++ )
          transgraph->mark[k] = (transgraph->grad[k] > 0);
 
-      /* init data structures for shortest paths and history */
-      SCIP_CALL( graph_path_init(scip, transgraph) );
-      SCIP_CALL( graph_init_history(scip, transgraph ) );
-
       /* distance from root to all nodes */
-      graph_path_execX(scip, transgraph, root, cost, pathdist, pathedge);
+      graph_path_execX(scip, transgraph, transgraph->source[0], cost, pathdist, pathedge);
 
       for( i = 0; i < transnnodes; i++ )
          if( Is_term(transgraph->term[i]) )
             assert(SCIPisEQ(scip, pathdist[i], 0.0));
 
       /* no paths should go back to the root */
-      for( e = transgraph->outbeg[root]; e != EAT_LAST; e = transgraph->oeat[e] )
+      for( e = transgraph->outbeg[transgraph->source[0]]; e != EAT_LAST; e = transgraph->oeat[e] )
          costrev[e] = FARAWAY;
 
-      /* build voronoi diagram */
+      /* build Voronoi diagram */
       voronoi_terms(scip, transgraph, costrev, vnoi, vbase, transgraph->path_heap, transgraph->path_state);
 
-      /* restore original transgraph */
+      /* restore original graph */
       SCIP_CALL( pcgraphorg(scip, graph) );
+
+      /* try to reduce the graph */
+      nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, apsol);
+   }
+
+   /* change roots? */
+   if( varyroot || markroots )
+   {
+      /* get possible roots */
+      int l;
+      int e2;
+      int e3;
+
+      if( varyroot )
+      {
+         SCIP_CALL( SCIPallocBufferArray(scip, &roots, graph->terms) );
+      }
+      else
+      {
+         roots = NULL;
+      }
+
+      for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
+      {
+         k = graph->head[e];
+
+         if( Is_pterm(graph->term[k]) )
+         {
+            l = -1;
+            e3 = -1;
+
+            for( e2 = transgraph->inpbeg[k]; e2 != EAT_LAST; e2 = transgraph->ieat[e2] )
+            {
+               if( SCIPisZero(scip, transgraph->cost[e2]) )
+                  l = transgraph->tail[e2];
+               else
+                  e3 = e2;
+            }
+
+            assert(l >= 0);
+            assert(e3 >= 0);
+            assert(SCIPisEQ(scip, graph->cost[e], graph->cost[e3]));
+            assert(graph->mark[l]);
+
+            if( SCIPisGT(scip, cost[e3], minpathcost) )
+            {
+               assert(SCIPisPositive(scip, graph->prize[l]));
+               assert(nroots < graph->terms);
+
+               if( roots != NULL )
+                  roots[nroots++] = l;
+
+               if( markroots )
+               {
+                  graph->prize[l] = FARAWAY;
+                  graph->cost[e] = FARAWAY;
+               }
+            }
+         }
+      }
+   }
+   else
+   {
+      roots = NULL;
+   }
+
+   graph_path_exit(scip, transgraph);
+   graph_free(scip, transgraph, TRUE);
+
+   if( varyroot )
+      nusedroots = MIN(DEFAULT_NMAXROOTS, nroots);
+   else
+      nusedroots = 0;
+
+   for( run = 0; run < nusedroots; run++  )
+   {
+      assert(nroots > 0);
+      assert(roots != NULL);
+
+      /* todo use randnum generator */
+      tmproot = roots[(nterms + 2 * run) % nroots];
+
+      assert(Is_term(graph->term[tmproot]));
+
+      if( graph->terms <= 2 )
+         break;
+
+      SCIP_CALL( pcgraphtrans(scip, graph) );
+      SCIP_CALL( graph_PcRSapCopy(scip, graph, &transgraph, roots, nroots, tmproot) );
+
+      assert(graph_valid(transgraph));
+
+      transnnodes = transgraph->knots;
+      transnedges = transgraph->edges;
+
+      for( k = 0; k < transnnodes; k++ )
+         transgraph->mark[k] = (transgraph->grad[k] > 0);
+
+      /* init data structures for shortest paths and history */
+      SCIP_CALL( graph_path_init(scip, transgraph) );
+      SCIP_CALL( graph_init_history(scip, transgraph ) );
+
+      transgraph->stp_type = STP_SAP;
+
+      for( k = 0; k < transnnodes; k++ )
+         transgraph->mark[k] = (transgraph->grad[k] > 0);
+
+      if( run > 1 )
+      {
+         SCIP_CALL( graph_RerootSol(scip, transgraph, transresult, tmproot) );
+
+         assert(graph_sol_valid(scip, transgraph, transresult) );
+
+         SCIP_CALL( SCIPdualAscentStpSol(scip, transgraph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, transresult, result, state, tmproot, 1, marked, nodearrchar) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPdualAscentStp(scip, transgraph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, result, state, tmproot, 1, marked, nodearrchar) );
+      }
+
+      assert(graph_valid(transgraph));
+
+      if( graph->stp_type == STP_PCSPG )
+      {
+         transgraph->stp_type = STP_RPCSPG;
+
+         SCIP_CALL( SCIPheurAscendAndPrune(scip, NULL, transgraph, cost, transresult, vbase, tmproot, nodearrchar, &success, TRUE, FALSE) );
+      }
+      else
+      {
+         for( e = graph->outbeg[tmproot]; e != EAT_LAST; e = graph->oeat[e] )
+         {
+            k = graph->head[e];
+            if( Is_term(graph->term[k]) )
+            {
+               if( k == root )
+                  cost[flipedge(e)] = 0.0;
+               else
+                  cost[e] = 0.0;
+            }
+         }
+
+         SCIP_CALL( SCIPheurAscendAndPrunePcMw(scip, NULL, graph, cost, transresult, vbase, root, nodearrchar, &success, TRUE, FALSE) );
+      }
+      for( k = 0; k < transnnodes; k++ )
+         transgraph->mark[k] = (transgraph->grad[k] > 0);
+
+#if 0
+      SCIP_CALL( extendSteinerTreePcMw(scip, graph, vnoi, costrev, vbase, transresult, nodearrchar, &e) );
+#endif
+
+      /* compute objective value */
+      ub = graph_computeSolVal(graph->cost, transresult, 0.0, graph->edges);
+
+      if( SCIPisLE(scip, ub, upperbound) )
+      {
+         upperbound = ub;
+         apsol = TRUE;
+      }
+      else
+      {
+         apsol = FALSE;
+      }
+
+      /* the required reduced path cost to be surpassed */
+      minpathcost = upperbound - lpobjval;
+
+      for( e = 0; e < transnedges; e++ )
+      {
+         costrev[e] = cost[flipedge(e)];
+         marked[e] = FALSE;
+      }
+
+      /* distance from root to all nodes */
+      graph_path_execX(scip, transgraph, tmproot, cost, pathdist, pathedge);
+
+      /* no paths should go back to the root */
+      for( e = transgraph->outbeg[tmproot]; e != EAT_LAST; e = transgraph->oeat[e] )
+         costrev[e] = FARAWAY;
+
+      /* build Voronoi diagram */
+      voronoi_terms(scip, transgraph, costrev, vnoi, vbase, transgraph->path_heap, transgraph->path_state);
+
+      get2next(scip, transgraph, costrev, costrev, vnoi, vbase, transgraph->path_heap, state);
+
+      /* restore original graph */
+      SCIP_CALL( pcgraphorg(scip, graph) );
+
+      e = graph->mark[tmproot];
+      graph->mark[tmproot] = FALSE;
+
+      /* try to eliminate vertices and edges */
+      nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, transresult, marked, nodearrchar, apsol);
+
+      graph->mark[tmproot] = e;
+
+      transgraph->stp_type = STP_RPCSPG;
+      graph_path_exit(scip, transgraph);
+      graph_free(scip, transgraph, TRUE);
+   }
+
+   *nelims = nfixed;
+
+   /* free memory */
+   SCIPfreeBufferArrayNull(scip, &roots);
+
+   for( k = 0; k < 4; k++ )
+   {
+      SCIPintListNodeFree(scip, &(ancestors[k]));
+      SCIPintListNodeFree(scip, &(revancestors[k]));
+   }
+
+   SCIPfreeBufferArray(scip, &incedge);
+   SCIPfreeBufferArray(scip, &reinsert);
+   SCIPfreeBufferArray(scip, &adjvert);
+   SCIPfreeBufferArray(scip, &ecost);
+   SCIPfreeBufferArray(scip, &revancestors);
+   SCIPfreeBufferArray(scip, &ancestors);
+   SCIPfreeBufferArray(scip, &sd);
+   SCIPfreeBufferArray(scip, &marked);
+   SCIPfreeBufferArray(scip, &transresult);
+
+   if( edgearrint == NULL )
+      SCIPfreeBufferArray(scip, &result);
+
+   return SCIP_OKAY;
+}
+
+
+
+/** dual ascent based heuristic reductions for MWCSP */
+SCIP_RETCODE da_reduceSlackPruneMw(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< graph data structure */
+   PATH*                 vnoi,               /**< Voronoi data structure array */
+   GNODE**               gnodearr,           /**< GNODE* terminals array for internal computations or NULL */
+   SCIP_Real*            cost,               /**< edge costs */
+   SCIP_Real*            costrev,            /**< reverse edge costs */
+   SCIP_Real*            pathdist,           /**< distance array for shortest path calculations */
+   int*                  vbase,              /**< Voronoi base array */
+   int*                  pathedge,           /**< shortest path incoming edge array for shortest path calculations */
+   int*                  soledge,            /**< edge solution array (CONNECT/UNKNOWN) or NULL; needs to contain solution if solgiven == TRUE */
+   int*                  state,              /**< int 4 * vertices array */
+   int*                  solnode,            /**< array of nodes of current solution that is not to be destroyed */
+   char*                 nodearrchar,        /**< char node array for internal computations */
+   int*                  nelims,             /**< pointer to store number of reduced edges */
+   int                   minelims,           /**< minimum number of edges to eliminate */
+   SCIP_Bool             solgiven            /**< solution provided? */
+   )
+{
+   SCIP_HEURDATA* tmheurdata;
+   IDX** ancestors;
+   IDX** revancestors;
+   GRAPH* transgraph;
+   SCIP_Real* sd;
+   SCIP_Real* ecost;
+   SCIP_Real ub;
+   SCIP_Real offset;
+   SCIP_Bool success;
+   SCIP_Real tmpcost;
+   SCIP_Real lpobjval;
+   SCIP_Real hopfactor;
+   SCIP_Real upperbound;
+   SCIP_Real minpathcost;
+   SCIP_Bool eliminate;
+   int* result;
+   int* adjvert;
+   int* incedge;
+   int* reinsert;
+   int* transresult;
+   int i;
+   int k;
+   int e;
+   int e2;
+   int etmp;
+   int runs;
+   int root;
+   int nterms;
+   int nedges;
+   int nnodes;
+   int nfixed;
+   int redrounds;
+   int best_start;
+   int transnnodes;
+   int transnedges;
+   char* marked;
+
+   assert(scip != NULL);
+   assert(graph != NULL);
+   assert(nelims != NULL);
+   assert(nodearrchar != NULL);
+
+   root = graph->source[0];
+   nfixed = 0;
+   nnodes = graph->knots;
+   nedges = graph->edges;
+   success = FALSE;
+   hopfactor = DEFAULT_HOPFACTOR;
+
+   /* not more than two terminals? */
+   if( graph->terms <= 3 )
+      return SCIP_OKAY;
+
+   /* allocate memory */
+   if( soledge == NULL )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &result, nedges) );
+   }
+   else
+   {
+      result = soledge;
+   }
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &transresult, nedges + 2 * (graph->terms - 1)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &marked, nedges + 2 * (graph->terms - 1)) );
+
+   /* allocate length-4 buffer memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &sd, 4) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ancestors, 4) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &revancestors, 4) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ecost, 4) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &adjvert, 4) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &reinsert, 4) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &incedge, 4) );
+
+   for( i = 0; i < 4; i++ )
+   {
+      sd[i] = 0.0;
+      ancestors[i] = NULL;
+      revancestors[i] = NULL;
+   }
+
+   /* 1. step: compute upper bound */
+
+   runs = 0;
+   nterms = 0;
+   for( i = 0; i < nnodes; i++ )
+   {
+      if( graph->grad[i] > 0 )
+      {
+         runs++;
+         if( Is_term(graph->term[i]) )
+            nterms++;
+      }
+   }
+
+   assert(nterms == (graph->terms - ((graph->stp_type != STP_RPCSPG)? 1 : 0)));
+
+   offset = 0.0;
+
+   /* transform the problem to a real SAP */
+   SCIP_CALL( graph_PcSapCopy(scip, graph, &transgraph, &offset) );
+
+   /* initialize data structures for shortest paths and history */
+   SCIP_CALL( graph_path_init(scip, transgraph) );
+   SCIP_CALL( graph_init_history(scip, transgraph ) );
+   transnnodes = transgraph->knots;
+   transnedges = transgraph->edges;
+
+   if( !solgiven )
+   {
+      for( k = 0; k < nnodes; k++ )
+         nodearrchar[k] = (solnode[k] == CONNECT);
+
+      for( e = 0; e < nedges; e++ )
+      {
+         cost[e] = graph->cost[e];
+         costrev[e] = graph->cost[flipedge(e)];
+         result[e] = UNKNOWN;
+      }
+
+      /* build trivial solution */
+      SCIP_CALL( SCIPheurPrunePCSteinerTree(scip, graph, graph->cost, result, nodearrchar) );
+   }
+   else
+   {
+      for( e = 0; e < nedges; e++ )
+      {
+         cost[e] = graph->cost[e];
+         costrev[e] = graph->cost[flipedge(e)];
+      }
+   }
+
+   upperbound = graph_computeSolVal(graph->cost, result, 0.0, nedges);
+
+   /* number of runs should not exceed number of connected vertices */
+   runs = MIN(runs, DEFAULT_HEURRUNS);
+
+   /* get TM heuristic data */
+   assert(SCIPfindHeur(scip, "TM") != NULL);
+   tmheurdata = SCIPheurGetData(SCIPfindHeur(scip, "TM"));
+
+#if 0
+   for( k = 0; k < nnodes; k++ )
+   {
+      if( Is_term(graph->term[k]) && k != root )
+      {
+         assert(graph->grad[k] > 0);
+
+         for( e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
+         {
+            if( graph->head[e] == graph->source[0] )
+            {
+               break;
+            }
+         }
+         if( e == EAT_LAST )
+         {
+            printf("err %d \n", 0);
+            return SCIP_ERROR;
+         }
+      }
+   }
+#endif
+
+   /* compute Steiner tree to obtain upper bound */
+   SCIP_CALL( SCIPheurComputeSteinerTree(scip, tmheurdata, graph, NULL, &best_start, transresult, runs, root, cost, costrev, &hopfactor, NULL, 0.0, &success) );
+
+   SCIP_CALL( extendSteinerTreePcMw(scip, graph, vnoi, costrev, vbase, transresult, nodearrchar, &e) );
+
+   /* feasible solution found? */
+   if( success )
+   {
+      /* calculate objective value of solution */
+      ub = graph_computeSolVal(graph->cost, transresult, 0.0, nedges);
+#if 0
+      printf("TM upperbound in da_reduceSlackPruneMw  %f \n", ub + SCIPprobdataGetOffset(scip));
+#endif
+      if( SCIPisLE(scip, ub, upperbound) )
+      {
+         upperbound = ub;
+         for( e = 0; e < nedges; e++ )
+            result[e] = transresult[e];
+      }
+   }
+
+   /* compute lower bound and reduced costs todo use SCIPdualAscentStpSol */
+   SCIP_CALL( SCIPdualAscentStp(scip, transgraph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, transresult, state, root, 1, marked, nodearrchar) );
+
+   SCIP_CALL( SCIPheurAscendAndPrunePcMw(scip, NULL, graph, cost, transresult, vbase, root, nodearrchar, &success, TRUE, FALSE) );
+
+#if 1
+   SCIP_CALL( extendSteinerTreePcMw(scip, graph, vnoi, costrev, vbase, transresult, nodearrchar, &e) );
+#endif
+
+   assert(success);
+   assert(graph_sol_valid(scip, graph, transresult));
+
+   if( success )
+   {
+      ub = graph_computeSolVal(graph->cost, transresult, 0.0, nedges);
+#if 0
+      printf("AP upperbound in da_reduceSlackPruneMw  %f \n", ub + SCIPprobdataGetOffset(scip));
+#endif
+      if( SCIPisLE(scip, ub, upperbound) )
+         for( e = 0; e < nedges; e++ )
+            result[e] = transresult[e];
+   }
+
+   /*
+    * 2. step: try to eliminate
+    * */
+
+   for( e = 0; e < transnedges; e++ )
+   {
+      costrev[e] = cost[flipedge(e)];
+      marked[e] = FALSE;
+   }
+
+   for( k = 0; k < transnnodes; k++ )
+      transgraph->mark[k] = (transgraph->grad[k] > 0);
+
+   /* distance from root to all nodes */
+   graph_path_execX(scip, transgraph, root, cost, pathdist, pathedge);
+
+   for( i = 0; i < transnnodes; i++ )
+      if( Is_term(transgraph->term[i]) )
+         assert(SCIPisEQ(scip, pathdist[i], 0.0));
+
+   /* no paths should go back to the root */
+   for( e = transgraph->outbeg[root]; e != EAT_LAST; e = transgraph->oeat[e] )
+      costrev[e] = FARAWAY;
+
+   /* build Voronoi diagram */
+   voronoi_terms(scip, transgraph, costrev, vnoi, vbase, transgraph->path_heap, transgraph->path_state);
+
+   /* restore original graph */
+   SCIP_CALL( pcgraphorg(scip, graph) );
+
+   for( k = 0; k < nnodes; k++ )
+      solnode[k] = UNKNOWN;
+
+   for( e = 0; e < nedges; e++ )
+   {
+      costrev[e] = -1.0;
+      if( result[e] == CONNECT )
+      {
+         solnode[graph->head[e]] = CONNECT;
+         solnode[graph->tail[e]] = CONNECT;
+      }
+   }
+
+   for( redrounds = 0; redrounds < 3; redrounds++ )
+   {
+      if( redrounds == 0 )
+      {
+         eliminate = FALSE;
+         minpathcost = FARAWAY;
+      }
+      else if( redrounds == 1 )
+      {
+         assert(minelims > 0);
+         assert(2 * minelims < nedges);
+
+         eliminate = TRUE;
+         SCIPsortReal(costrev, nedges);
+
+         /* the required reduced path cost to be surpassed */
+         minpathcost = costrev[nedges - 2 * minelims];
+
+         if( SCIPisLE(scip, minpathcost, 0.0) )
+            minpathcost = 2 * SCIPepsilon(scip);
+
+         k = nedges - 2 * minelims;
+
+         /* try to first eliminate edges with higher gap */
+         for( e = nedges - 1; e > k && e >= 2; e = e - 2 )
+         {
+            if( SCIPisLE(scip, costrev[e - 2], minpathcost) )
+               break;
+         }
+
+         if( SCIPisGT(scip, costrev[e], minpathcost) )
+            minpathcost = costrev[e];
+
+         if( SCIPisLE(scip, minpathcost, 0.0) )
+            minpathcost = 2 * SCIPepsilon(scip);
+
+
+         for( e = 0; e < nedges; e++ )
+            marked[e] = FALSE;
+      }
+      else
+      {
+         eliminate = TRUE;
+
+         /* the required reduced path cost to be surpassed */
+         minpathcost = costrev[nedges - 2 * minelims];
+
+         if( SCIPisLE(scip, minpathcost, 0.0) )
+            minpathcost = 2 * SCIPepsilon(scip);
+
+         for( e = 0; e < nedges; e++ )
+            marked[e] = FALSE;
+      }
 
       /* try to eliminate vertices and edges */
       for( k = 0; k < nnodes; k++ )
       {
-         if( !graph->mark[k] || Is_gterm(graph->term[k]) )
+         if( !graph->mark[k]  )
             continue;
 
-         if( SCIPisGT(scip, pathdist[k] + vnoi[k].dist, minpathcost) )
+         if( nfixed > minelims )
+            break;
+
+
+#if 0 //todo
+         if( Is_term(graph->term[k]) )
          {
-            while( transgraph->outbeg[k] != EAT_LAST )
-            {
-	       e = transgraph->outbeg[k];
-	       graph_edge_del(scip, transgraph, e, FALSE);
-	       graph_edge_del(scip, graph, e, TRUE);
-               nfixed++;
-            }
-            assert(graph->outbeg[k] == EAT_LAST);
-         }
-         else
-         {
-            e = transgraph->outbeg[k];
+            e = graph->outbeg[k];
             while( e != EAT_LAST )
             {
-               etmp = transgraph->oeat[e];
+               etmp = graph->oeat[e];
+               tmpcost = pathdist[k] + cost[e] + vnoi[graph->head[e]].dist;
 
-               if( SCIPisGT(scip, pathdist[k] + cost[e] + vnoi[transgraph->head[e]].dist, minpathcost) )
+               if( graph->mark[graph->head[e]] &&
+                  ((SCIPisGT(scip, tmpcost, minpathcost)) ||
+                     (SCIPisGE(scip, tmpcost, minpathcost) && result[e] != CONNECT && result[flipedge(e)] != CONNECT)) )
                {
                   if( marked[flipedge(e)] )
                   {
-		     graph_edge_del(scip, graph, e, TRUE);
+                     graph_edge_del(scip, graph, e, TRUE);
                      graph_edge_del(scip, transgraph, e, FALSE);
                      nfixed++;
                   }
@@ -803,16 +2370,91 @@ SCIP_RETCODE daPc_reduce(
                }
                e = etmp;
             }
+            continue;
+         }
+#else
+         if( Is_term(graph->term[k]) )
+            continue;
+#endif
+
+         tmpcost = pathdist[k] + vnoi[k].dist;
+
+         if( SCIPisGT(scip, tmpcost, minpathcost) ||
+            (SCIPisGE(scip, tmpcost, minpathcost) && solnode[k] != CONNECT) || (!eliminate && solnode[k] != CONNECT) )
+         {
+            if( !eliminate )
+            {
+               for( e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
+               {
+                  if( SCIPisGT(scip, tmpcost, costrev[e]) )
+                     costrev[e] = tmpcost;
+
+                  e2 = flipedge(e);
+
+                  if( SCIPisGT(scip, tmpcost, costrev[e2]) )
+                     costrev[e2] = tmpcost;
+               }
+
+               continue;
+            }
+
+            while( transgraph->outbeg[k] != EAT_LAST )
+            {
+               e = transgraph->outbeg[k];
+               graph_edge_del(scip, transgraph, e, FALSE);
+               graph_edge_del(scip, graph, e, TRUE);
+               nfixed++;
+            }
+            assert(graph->outbeg[k] == EAT_LAST);
+         }
+         else
+         {
+            e = transgraph->outbeg[k];
+            while( e != EAT_LAST )
+            {
+               etmp = transgraph->oeat[e];
+               tmpcost = pathdist[k] + cost[e] + vnoi[transgraph->head[e]].dist;
+
+               if( SCIPisGT(scip, tmpcost, minpathcost) ||
+                  ( (SCIPisGE(scip, tmpcost, minpathcost) || !eliminate) && result[e] != CONNECT && result[flipedge(e)] != CONNECT) )
+               {
+                  if( marked[flipedge(e)] )
+                  {
+                     if( eliminate )
+                     {
+                        graph_edge_del(scip, graph, e, TRUE);
+                        graph_edge_del(scip, transgraph, e, FALSE);
+                        nfixed++;
+                     }
+                     else
+                     {
+                        if( SCIPisGT(scip, tmpcost, costrev[e]) )
+                           costrev[e] = tmpcost;
+
+                        if( SCIPisGT(scip, tmpcost, costrev[flipedge(e)]) )
+                           costrev[flipedge(e)] = tmpcost;
+                     }
+                  }
+                  else
+                  {
+                     marked[e] = TRUE;
+                  }
+               }
+               e = etmp;
+            }
          }
       }
+   }
+   assert(root == transgraph->source[0]);
 
-      SCIPdebugMessage("fixed by da: %d \n", nfixed );
+   SCIPdebugMessage("fixed by da: %d \n", nfixed );
 
-      graph_path_exit(scip, transgraph);
-      graph_free(scip, transgraph, TRUE);
-   } /* root loop */
+   graph_path_exit(scip, transgraph);
+   graph_free(scip, transgraph, TRUE);
 
- TERMINATE:
+   /* restore transformed graph */
+   SCIP_CALL( pcgraphtrans(scip, graph) );
+
    *nelims = nfixed;
 
    /* free memory */
@@ -830,29 +2472,31 @@ SCIP_RETCODE daPc_reduce(
    SCIPfreeBufferArray(scip, &ancestors);
    SCIPfreeBufferArray(scip, &sd);
    SCIPfreeBufferArray(scip, &marked);
+   SCIPfreeBufferArray(scip, &transresult);
 
-   if( edgearrint == NULL )
+   if( soledge == NULL )
       SCIPfreeBufferArray(scip, &result);
 
    return SCIP_OKAY;
 }
 
 
+
 /** bound-based reductions for the (R)PCSTP, the MWCSP and the STP */
 SCIP_RETCODE bound_reduce(
-   SCIP*  scip,
-   GRAPH* graph,
-   PATH* vnoi,
-   SCIP_Real* cost,
-   SCIP_Real* prize,
-   SCIP_Real* radius,
-   SCIP_Real* costrev,
-   SCIP_Real* offset,
-   SCIP_Real* upperbound,
-   int* heap,
-   int* state,
-   int* vbase,
-   int* nelims
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< graph data structure */
+   PATH*                 vnoi,               /**< Voronoi data structure */
+   SCIP_Real*            cost,               /**< edge cost array                    */
+   SCIP_Real*            prize,              /**< prize (nodes) array                */
+   SCIP_Real*            radius,             /**< radius array                       */
+   SCIP_Real*            costrev,            /**< reversed edge cost array           */
+   SCIP_Real*            offset,             /**< pointer to the offset              */
+   SCIP_Real*            upperbound,         /**< pointer to an upper bound          */
+   int*                  heap,               /**< heap array */
+   int*                  state,              /**< array to store state of a node during Voronoi computation*/
+   int*                  vbase,              /**< Voronoi base to each node */
+   int*                  nelims              /**< pointer to store number of eliminated edges */
    )
 {
    SCIP_HEURDATA* tmheurdata;
@@ -922,8 +2566,8 @@ SCIP_RETCODE bound_reduce(
    mstobj2 = 0.0;
    best_start = 0;
    ub = SCIPisGT(scip, *upperbound, 0.0);
-   mw = (graph->stp_type == STP_MAX_NODE_WEIGHT);
-   pc = (graph->stp_type == STP_ROOTED_PRIZE_COLLECTING) || (graph->stp_type == STP_PRIZE_COLLECTING);
+   mw = (graph->stp_type == STP_MWCSP);
+   pc = (graph->stp_type == STP_RPCSPG) || (graph->stp_type == STP_PCSPG);
    pcmw = pc || mw;
    success = TRUE;
 #if 1
@@ -954,7 +2598,7 @@ SCIP_RETCODE bound_reduce(
    {
       if( !ub )
       {
-	 assert(stnode != NULL);
+         assert(stnode != NULL);
          stnode[k] = FALSE;
       }
       if( !pcmw )
@@ -968,7 +2612,7 @@ SCIP_RETCODE bound_reduce(
    }
 
    /* not more than two terminals? */
-   if( nterms <= 2 )
+   if( nterms <= 2 || (pcmw && nterms <= 3) )
    {
       /* free memory and return */
       SCIPfreeBufferArrayNull(scip, &stnode);
@@ -976,18 +2620,18 @@ SCIP_RETCODE bound_reduce(
       return SCIP_OKAY;
    }
 
-   assert(nterms == (graph->terms - ((graph->stp_type == STP_PRIZE_COLLECTING || mw)? 1 : 0)));
+   assert(nterms == (graph->terms - ((graph->stp_type == STP_PCSPG || mw)? 1 : 0)));
 
-   runs = MIN(e, 100);
+   runs = MIN(e, DEFAULT_HEURRUNS);
 
    /* neither PC, MW, RPC nor HC? */
-   if( !pcmw && graph->stp_type != STP_HOP_CONS )
+   if( !pcmw && graph->stp_type != STP_DHCSTP )
    {
       /* choose starting points for TM heuristic */
 
       SCIP_CALL( SCIPallocBufferArray(scip, &starts, nnodes) );
 
-      compTMstarts(graph, starts, runs);
+      compTMstarts(graph, starts, &runs);
    }
    else
    {
@@ -1000,7 +2644,7 @@ SCIP_RETCODE bound_reduce(
    {
       if( !ub )
       {
-	 assert(result != NULL);
+         assert(result != NULL);
          result[e] = UNKNOWN;
       }
       cost[e] = graph->cost[e];
@@ -1008,7 +2652,7 @@ SCIP_RETCODE bound_reduce(
 
       assert(SCIPisGE(scip, cost[e], 0.0));
 
-      if( graph->stp_type == STP_HOP_CONS && SCIPisLT(scip, graph->cost[e], BLOCKED) && SCIPisGT(scip, graph->cost[e], maxcost) )
+      if( graph->stp_type == STP_DHCSTP && SCIPisLT(scip, graph->cost[e], BLOCKED) && SCIPisGT(scip, graph->cost[e], maxcost) )
          maxcost = graph->cost[e];
    }
 
@@ -1058,15 +2702,15 @@ SCIP_RETCODE bound_reduce(
          mstobj += tmpcost;
          if( SCIPisGT(scip, tmpcost, max) )
             max = tmpcost;
-	 else if( SCIPisGT(scip, tmpcost, r) )
-	    r = tmpcost;
+         else if( SCIPisGT(scip, tmpcost, r) )
+            r = tmpcost;
       }
       mstobj -= max;
       mstobj2 = mstobj - r;
    }
 
    /* for (rooted) prize collecting an maximum weight problems: correct radius values */
-   if( graph->stp_type == STP_ROOTED_PRIZE_COLLECTING )
+   if( graph->stp_type == STP_RPCSPG )
    {
       assert(graph->mark[graph->source[0]]);
       for( k = 0; k < nnodes; k++ )
@@ -1078,7 +2722,7 @@ SCIP_RETCODE bound_reduce(
             radius[k] = prize[k];
       }
    }
-   else if( graph->stp_type == STP_PRIZE_COLLECTING )
+   else if( graph->stp_type == STP_PCSPG )
    {
       for( k = 0; k < nnodes; k++ )
       {
@@ -1089,7 +2733,7 @@ SCIP_RETCODE bound_reduce(
             radius[k] = prize[k];
       }
    }
-   else if( graph->stp_type == STP_MAX_NODE_WEIGHT )
+   else if( graph->stp_type == STP_MWCSP )
    {
       max = 0.0;
       for( k = 0; k < nnodes; k++ )
@@ -1206,18 +2850,14 @@ SCIP_RETCODE bound_reduce(
             }
          }
       }
-      *upperbound = obj + *offset;
+      *upperbound = obj;
    }
    else
    {
-      obj = *upperbound - *offset;
+      obj = *upperbound;
       assert(SCIPisGE(scip, obj, 0.0));
    }
-#if 0
-   printf("radiim2: %f \n", radiim2);
-   printf("mstobj:  %f \n", mstobj);
-   printf("totalobj: %f \n", obj);
-#endif
+
    if( SCIPisGT(scip, radiim2, mstobj) )
       bound = radiim2;
    else
@@ -1233,13 +2873,13 @@ SCIP_RETCODE bound_reduce(
       {
          tmpcost = -vnoi[k].dist - vnoi[k + nnodes].dist + bound - graph->prize[k];
 
-	 if( !Is_term(graph->term[k]) && (SCIPisLT(scip, tmpcost, obj)) )
+         if( !Is_term(graph->term[k]) && (SCIPisLT(scip, tmpcost, obj)) )
          {
-	    while( graph->outbeg[k] != EAT_LAST )
-	    {
+            while( graph->outbeg[k] != EAT_LAST )
+            {
                (*nelims)++;
                graph_edge_del(scip, graph, graph->outbeg[k], TRUE);
-	    }
+            }
          }
          else
          {
@@ -1274,7 +2914,7 @@ SCIP_RETCODE bound_reduce(
                e = etemp;
             }
          }
-	 continue;
+         continue;
       }
 
       tmpcost = vnoi[k].dist + vnoi[k + nnodes].dist + bound;
@@ -1324,7 +2964,7 @@ SCIP_RETCODE bound_reduce(
                && SCIPisLT(scip, graph->cost[e], FARAWAY) && (!(pc || mw) || graph->mark[head]) )
             {
                SCIPdebugMessage("delete edge: %d->%d \n", graph->tail[e], graph->head[e]);
-               if( graph->stp_type == STP_HOP_CONS && SCIPisGT(scip, graph->cost[e], graph->cost[flipedge(e)]) )
+               if( graph->stp_type == STP_DHCSTP && SCIPisGT(scip, graph->cost[e], graph->cost[flipedge(e)]) )
                {
                   graph->cost[e] = FARAWAY;
                   (*nelims)++;
@@ -1394,14 +3034,14 @@ SCIP_RETCODE bound_reduce(
                }
 
                /* store ancestors of incident edges */
-               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors[0]), graph->ancestors[edges3[0]]) );
-               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors[0]), graph->ancestors[Edge_anti(edges3[0])]) );
+               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors[0]), graph->ancestors[edges3[0]], NULL) );
+               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors[0]), graph->ancestors[Edge_anti(edges3[0])], NULL) );
 
-               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors[1]), graph->ancestors[edges3[1]]) );
-               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors[1]), graph->ancestors[Edge_anti(edges3[1])]) );
+               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors[1]), graph->ancestors[edges3[1]], NULL) );
+               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors[1]), graph->ancestors[Edge_anti(edges3[1])], NULL) );
 
-               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors[2]), graph->ancestors[edges3[2]]) );
-               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors[2]), graph->ancestors[Edge_anti(edges3[2])]) );
+               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors[2]), graph->ancestors[edges3[2]], NULL) );
+               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors[2]), graph->ancestors[Edge_anti(edges3[2])], NULL) );
 
                SCIP_CALL( graph_edge_reinsert(scip, graph, edges3[0], nodes3[0], nodes3[1], cost3[0] + cost3[1], ancestors[0], ancestors[1], revancestors[0], revancestors[1]) );
                SCIP_CALL( graph_edge_reinsert(scip, graph, edges3[1], nodes3[1], nodes3[2], cost3[1] + cost3[2], ancestors[1], ancestors[2], revancestors[1], revancestors[2]) );
@@ -1454,12 +3094,12 @@ SCIP_RETCODE bound_reduce(
 
             if( SCIPisGT(scip, tmpcost, obj) )
             {
-	       SCIPdebugMessage("alternative bnd elimination!!! \n\n");
+               SCIPdebugMessage("alternative bnd elimination!!! \n\n");
                (*nelims) += deleteterm(scip, graph, k);
-	       (*offset) += graph->prize[k];
+               (*offset) += graph->prize[k];
             }
             else
-	    {
+            {
                tmpcost += vnoi[k + nnodes].dist;
                if( l >= nterms - 2 )
                   tmpcost -= radius[nterms - 3];
@@ -1478,7 +3118,7 @@ SCIP_RETCODE bound_reduce(
                      (*nelims) += deleteterm(scip, graph, k);
                   }
                }
-	    }
+            }
          }
       }
    }
@@ -1501,6 +3141,791 @@ SCIP_RETCODE bound_reduce(
 
    return SCIP_OKAY;
 }
+
+
+
+
+/** Bound-based reduction method for the MWCSP .
+ * The reduction method tries to eliminate nodes and vertices
+ * by checking whether an upper bound for each solution that contains them
+ * is smaller than the best known solution value.
+ * The essence of the approach is a decomposition of the graph such that this upper bound
+ * is minimized.
+ * */
+SCIP_RETCODE bound_reduceMw(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< graph data structure */
+   PATH*                 vnoi,               /**< Voronoi data structure (size 3 * nnodes) */
+   PATH*                 path,               /**< shortest path data structure (size nnodes) */
+   SCIP_Real*            cost,               /**< edge cost array                    */
+   SCIP_Real*            radius,             /**< radius array                       */
+   SCIP_Real*            costrev,            /**< reversed edge cost array           */
+   SCIP_Real*            offset,             /**< pointer to the offset              */
+   int*                  heap,               /**< heap array */
+   int*                  state,              /**< array to store state of a node during Voronoi computation*/
+   int*                  vbase,              /**< Voronoi base to each node */
+   int*                  result,             /**< solution array or NULL */
+   int*                  nelims              /**< pointer to store number of eliminated edges */
+   )
+{
+   PATH* mst;
+   SCIP_Real* prize;
+   SCIP_Real  obj;
+   SCIP_Real  bound;
+   SCIP_Real  tmpcost;
+   SCIP_Real  radiim2;
+   int e;
+   int k;
+   int head;
+   int nterms;
+   int nnodes;
+   int nedges;
+
+   assert(scip != NULL);
+   assert(graph != NULL);
+   assert(vnoi != NULL);
+   assert(path != NULL);
+   assert(cost != NULL);
+   assert(radius != NULL);
+   assert(costrev != NULL);
+   assert(heap != NULL);
+   assert(state != NULL);
+   assert(vbase != NULL);
+   assert(nelims != NULL);
+   assert(graph->source[0] >= 0);
+
+   mst = NULL;
+   prize = graph->prize;
+   nedges = graph->edges;
+   nnodes = graph->knots;
+   nterms = graph->terms - 1;
+   *nelims = 0;
+
+   assert(prize != NULL);
+
+   /* not more than two nodes of positive weight? */
+   if( nterms <= 2 )
+      /* return */
+      return SCIP_OKAY;
+
+   /* initialize cost and costrev array */
+   for( e = 0; e < nedges; e++ )
+   {
+      cost[e] = graph->cost[e];
+      costrev[e] = graph->cost[flipedge(e)];
+
+      assert(SCIPisGE(scip, cost[e], 0.0));
+   }
+
+   /* compute decomposition of graph and radius values */
+   voronoi_mw_radius(scip, graph, path, cost, radius, vbase, heap, state);
+
+   /* sum all radius values, exclude two radius values of lowest value */
+   for( k = 0; k < nnodes; k++ )
+   {
+      if( !Is_term(graph->term[k]) || !graph->mark[k] )
+         continue;
+
+      assert(vbase[k] == k);
+      assert(SCIPisGE(scip, prize[k], 0.0));
+
+      if( SCIPisGE(scip, radius[k], FARAWAY) )
+         radius[k] = 0.0;
+      else
+      {
+         if( SCIPisGE(scip, radius[k], prize[k] ) )
+            radius[k] = 0.0;
+         else
+            radius[k] = prize[k] - radius[k];
+      }
+   }
+
+   for( k = 0; k < nnodes; k++ )
+   {
+      if( !graph->mark[k] || graph->grad[k] == 0 || Is_term(graph->term[k]) )
+         continue;
+   }
+
+   /* build Voronoi regions */
+   voronoi_mw(scip, graph, costrev, vnoi, vbase, heap, state);
+
+   /* get 2nd next positive node to all non-positive nodes */
+   get2next(scip, graph, cost, costrev, vnoi, vbase, heap, state);
+
+   for( k = 0; k < nnodes; k++ )
+   {
+      if( !Is_term(graph->term[k]) || !graph->mark[k] )
+         continue;
+
+      assert(vbase[k] == k);
+   }
+
+   SCIPsortReal(radius, nnodes);
+
+   radiim2 = 0.0;
+
+   for( k = 2; k < nterms; k++ )
+   {
+      assert( SCIPisGT(scip, FARAWAY, radius[k]) );
+      radiim2 += radius[k];
+   }
+
+   /* solution available? */
+   if( result != NULL)
+   {
+      /* calculate objective value of solution */
+      obj = 0.0;
+      for( e = 0; e < nedges; e++ )
+      {
+         if( result[e] == CONNECT )
+         {
+            head = graph->head[e];
+
+            if( graph->mark[head] )
+               obj += prize[head];
+         }
+      }
+   }
+   else
+   {
+      obj = 0.0;
+   }
+
+   bound = radiim2;
+
+   /* traverse all nodes, try to eliminate each non-positive node */
+   for( k = 0; k < nnodes; k++ )
+   {
+      if( !graph->mark[k] || graph->grad[k] == 0 || Is_term(graph->term[k]) )
+         continue;
+
+      assert(SCIPisLE(scip, graph->prize[k], 0.0));
+
+      tmpcost = -vnoi[k].dist - vnoi[k + nnodes].dist + bound + graph->prize[k];
+
+      if( (SCIPisLT(scip, tmpcost, obj)) )
+      {
+         while( graph->outbeg[k] != EAT_LAST )
+         {
+            (*nelims)++;
+            graph_edge_del(scip, graph, graph->outbeg[k], TRUE);
+         }
+      }
+   }
+
+   SCIPdebugMessage("nelims (edges) in MWCSP bound reduce: %d,\n", *nelims);
+
+   /* free memory*/
+   SCIPfreeBufferArrayNull(scip, &mst);
+
+   return SCIP_OKAY;
+}
+
+
+
+/** bound-based reductions for the (R)PCSTP, the MWCSP and the STP; used by prune heuristic */
+SCIP_RETCODE bound_reducePrune(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< graph data structure */
+   PATH*                 vnoi,               /**< Voronoi data structure */
+   SCIP_Real*            cost,               /**< edge cost array                    */
+   SCIP_Real*            prize,              /**< prize (nodes) array                */
+   SCIP_Real*            radius,             /**< radius array                       */
+   SCIP_Real*            costrev,            /**< reversed edge cost array           */
+   SCIP_Real*            offset,             /**< pointer to the offset              */
+   int*                  heap,               /**< heap array */
+   int*                  state,              /**< array to store state of a node during Voronoi computation */
+   int*                  vbase,              /**< Voronoi base to each node */
+   int*                  solnode,            /**< array of nodes of current solution that is not to be destroyed */
+   int*                  soledge,            /**< array of edges of current solution that is not to be destroyed */
+   int*                  nelims,             /**< pointer to store number of eliminated edges */
+   int                   minelims            /**< minimum number of edges to be eliminated */
+   )
+{
+   GRAPH* adjgraph;
+   PATH* mst;
+   SCIP_Real* cost3;
+   SCIP_Real  r;
+   SCIP_Real  obj;
+   SCIP_Real  max;
+   SCIP_Real  bound;
+   SCIP_Real  tmpcost;
+   SCIP_Real  mstobj;
+   SCIP_Real  maxcost;
+   SCIP_Real  radiim2;
+   SCIP_Real  radiim3;
+   IDX** ancestors;
+   IDX** revancestors;
+   int* edges3;
+   int* nodes3;
+   int e;
+   int k;
+   int l;
+   int head;
+   int tail;
+   int root;
+   int etemp;
+   int nterms;
+   int nnodes;
+   int nedges;
+   int redrounds;
+   SCIP_Bool pc;
+   SCIP_Bool mw;
+   SCIP_Bool pcmw;
+   SCIP_Bool eliminate;
+
+   assert(scip != NULL);
+   assert(vnoi != NULL);
+   assert(cost != NULL);
+   assert(heap != NULL);
+   assert(graph != NULL);
+   assert(state != NULL);
+   assert(vbase != NULL);
+   assert(nelims != NULL);
+   assert(radius != NULL);
+   assert(costrev != NULL);
+   assert(solnode != NULL);
+   assert(soledge != NULL);
+   assert(graph->source[0] >= 0);
+
+   mst = NULL;
+   nedges = graph->edges;
+   nnodes = graph->knots;
+   mstobj = 0.0;
+   *nelims = 0;
+   mw = (graph->stp_type == STP_MWCSP);
+   pc = (graph->stp_type == STP_RPCSPG) || (graph->stp_type == STP_PCSPG);
+   pcmw = (pc || mw);
+   root = graph->source[0];
+
+   cost3 = NULL;
+   edges3 = NULL;
+   nodes3 = NULL;
+   ancestors = NULL;
+   revancestors = NULL;
+
+   if( graph->stp_type == STP_RPCSPG )
+      graph_knot_chg(graph, root, 0);
+
+   /* initialize */
+   e = 0;
+   nterms = 0;
+   for( k = 0; k < nnodes; k++ )
+   {
+      if( !pcmw )
+         graph->mark[k] = (graph->grad[k] > 0);
+      if( graph->mark[k] )
+      {
+         e++;
+         if( Is_term(graph->term[k]) && graph->grad[k] > 0 )
+            nterms++;
+      }
+   }
+
+   /* not more than two terminals? */
+   if( nterms <= 2 )
+      return SCIP_OKAY;
+
+   /* initialize cost and costrev array */
+   maxcost = 0.0;
+   for( e = 0; e < nedges; e++ )
+   {
+      cost[e] = graph->cost[e];
+      costrev[e] = graph->cost[flipedge(e)];
+
+      assert(SCIPisGE(scip, cost[e], 0.0));
+
+      if( graph->stp_type == STP_DHCSTP && SCIPisLT(scip, graph->cost[e], BLOCKED) && SCIPisGT(scip, graph->cost[e], maxcost) )
+         maxcost = graph->cost[e];
+   }
+
+   /* no MWCSP? */
+   if( !mw )
+   {
+      SCIP_CALL( graph_init(scip, &adjgraph, nterms, MIN(nedges, (nterms - 1) * nterms), 1, 0) );
+
+      /* build Voronoi regions, concomitantly building adjgraph and computing radii values*/
+      SCIP_CALL( voronoi_radius(scip, graph, adjgraph, vnoi, radius, cost, costrev, vbase, heap, state) );
+
+      /* get 2nd next terminals to all non-terminal nodes */
+      get2next(scip, graph, cost, costrev, vnoi, vbase, heap, state);
+
+      /* get 3th next terminals to all non-terminal nodes */
+      get3next(scip, graph, cost, costrev, vnoi, vbase, heap, state);
+
+      assert(adjgraph != NULL);
+      graph_knot_chg(adjgraph, 0, 0);
+      adjgraph->source[0] = 0;
+
+      /* compute MST on adjgraph */
+      SCIP_CALL( SCIPallocBufferArray(scip, &mst, nterms) );
+      SCIP_CALL( graph_path_init(scip, adjgraph) );
+      graph_path_exec(scip, adjgraph, MST_MODE, 0, adjgraph->cost, mst);
+
+      max = -1.0;
+      r = -1.0;
+
+      for( k = 1; k < nterms; k++ )
+      {
+         assert(adjgraph->path_state[k] == CONNECT);
+         e = mst[k].edge;
+         assert(e >= 0);
+         tmpcost = adjgraph->cost[e];
+         mstobj += tmpcost;
+         if( SCIPisGT(scip, tmpcost, max) )
+            max = tmpcost;
+         else if( SCIPisGT(scip, tmpcost, r) )
+            r = tmpcost;
+      }
+      mstobj -= max;
+   }
+   else
+   {
+      adjgraph = NULL;
+
+      /* build Voronoi regions */
+      voronoi_mw(scip, graph, costrev, vnoi, vbase, heap, state);
+
+      /* get 2nd next positive node to all non-positive nodes */
+      get2next(scip, graph, cost, costrev, vnoi, vbase, heap, state);
+   }
+
+
+   /* for (rooted) prize collecting an maximum weight problems: correct radius values */
+   if( graph->stp_type == STP_RPCSPG )
+   {
+      assert(graph->mark[graph->source[0]]);
+      for( k = 0; k < nnodes; k++ )
+      {
+         if( !Is_term(graph->term[k]) || !graph->mark[k] )
+            continue;
+
+         if( SCIPisGT(scip, radius[k], prize[k]) && k != graph->source[0] )
+            radius[k] = prize[k];
+      }
+   }
+   else if( graph->stp_type == STP_PCSPG )
+   {
+      for( k = 0; k < nnodes; k++ )
+      {
+         if( !graph->mark[k] )
+            continue;
+
+         if( Is_term(graph->term[k]) && SCIPisGT(scip, radius[k], prize[k])  )
+            radius[k] = prize[k];
+      }
+   }
+
+   /* sort radius values */
+   if( !mw )
+      SCIPsortReal(radius, nnodes);
+
+   radiim2 = 0.0;
+
+   if( mw )
+   {
+      for( e = 0; e < nedges; e++ )
+         costrev[e] = FARAWAY;
+      bound = 0.0;
+      radiim3 = 0.0;
+   }
+   else
+   {
+      for( e = 0; e < nedges; e++ )
+         costrev[e] = -1.0;
+
+      /* sum all but two radius values of highest/lowest value */
+      for( k = 0; k < nterms - 2; k++ )
+      {
+         assert( SCIPisGT(scip, FARAWAY, radius[k]) );
+         radiim2 += radius[k];
+      }
+      if( nterms >= 3 )
+         radiim3 = radiim2 - radius[nterms - 3];
+      else
+         radiim3 = 0.0;
+
+      if( SCIPisGT(scip, radiim2, mstobj) )
+         bound = radiim2;
+      else
+         bound = mstobj;
+   }
+
+   for( redrounds = 0; redrounds < 3; redrounds++ )
+   {
+      int nrealelims = MIN(2 * minelims, nedges - 1);
+
+      if( redrounds == 0 )
+      {
+         eliminate = FALSE;
+         obj = FARAWAY;
+      }
+      else if( redrounds == 1 )
+      {
+
+         assert(minelims > 0);
+         assert(2 * minelims < nedges);
+         eliminate = TRUE;
+         SCIPsortReal(costrev, nedges);
+
+         if( mw )
+         {
+            obj = costrev[nrealelims];
+         }
+         else
+         {
+            obj = costrev[nedges - nrealelims];
+
+            if( SCIPisLT(scip, obj, 0.0) )
+               obj = 0.0;
+         }
+      }
+      else
+      {
+         if( mw )
+         {
+            obj = costrev[nrealelims] + 2 * SCIPepsilon(scip);
+         }
+         else
+         {
+            obj = costrev[nedges - nrealelims] - 2 * SCIPepsilon(scip);
+
+            if( SCIPisLT(scip, obj, 0.0) )
+               obj = 0.0;
+         }
+         eliminate = TRUE;
+      }
+
+      if( mw )
+      {
+         for( k = 0; k < nnodes; k++ )
+         {
+            if( (*nelims) >= minelims )
+               break;
+
+            if( root == k )
+               continue;
+
+            if( !graph->mark[k] || graph->grad[k] == 0 || Is_gterm(graph->term[k] ) )
+               continue;
+
+            tmpcost = -vnoi[k].dist - vnoi[k + nnodes].dist + graph->prize[k];
+
+            if( (!eliminate || SCIPisLT(scip, tmpcost, obj)) && solnode[k] != CONNECT )
+            {
+               if( eliminate )
+               {
+                  while (graph->outbeg[k] != EAT_LAST)
+                  {
+                     (*nelims)++;
+                     graph_edge_del(scip, graph, graph->outbeg[k], TRUE);
+                  }
+               }
+               else
+               {
+                  for (e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e])
+                  {
+                     if( SCIPisLT(scip, tmpcost, costrev[e]) )
+                     {
+                        costrev[e] = tmpcost;
+                        costrev[flipedge(e)] = tmpcost;
+                     }
+                  }
+               }
+            }
+            else if( solnode[k] == CONNECT )
+            {
+               e = graph->outbeg[k];
+
+               while( e != EAT_LAST )
+               {
+                  etemp = graph->oeat[e];
+                  tail = graph->tail[e];
+                  head = graph->head[e];
+
+                  if( tail > head || soledge[e] == CONNECT || soledge[flipedge(e)] == CONNECT )
+                  {
+                     e = etemp;
+                     continue;
+                  }
+
+                  tmpcost = graph->prize[head] + graph->prize[tail];
+
+                  if( vbase[tail] != vbase[head] )
+                  {
+                     tmpcost -= vnoi[head].dist + vnoi[tail].dist;
+                  }
+                  else
+                  {
+                     if( SCIPisGT(scip, -vnoi[tail].dist -vnoi[head + nnodes].dist, -vnoi[tail + nnodes].dist -vnoi[head].dist) )
+                        tmpcost -= vnoi[tail].dist + vnoi[head + nnodes].dist;
+                     else
+                        tmpcost -= vnoi[tail + nnodes].dist + vnoi[head].dist;
+                  }
+                  /* can edge e or arc e be deleted? */
+                  if( (!eliminate || SCIPisLT(scip, tmpcost, obj))
+                     && SCIPisLT(scip, graph->cost[e], FARAWAY) && (graph->mark[head]) )
+                  {
+                     SCIPdebugMessage("delete edge: %d->%d \n", graph->tail[e], graph->head[e]);
+
+                     assert(!Is_pterm(graph->term[head]));
+                     assert(!Is_pterm(graph->term[tail]));
+
+                     if( eliminate )
+                     {
+                        graph_edge_del(scip, graph, e, TRUE);
+                        (*nelims)++;
+                     }
+                     else if( SCIPisLT(scip, tmpcost, costrev[e]) )
+                     {
+                        costrev[e] = tmpcost;
+                        costrev[flipedge(e)] = tmpcost;
+                     }
+
+                  }
+                  e = etemp;
+               }
+            }
+         }
+      }
+      /* no MWCSP */
+      else
+      {
+         /* traverse all nodes, try to eliminate each node or incident edges */
+         for( k = 0; k < nnodes; k++ )
+         {
+            if( (*nelims) >= minelims )
+               break;
+            if( root == k )
+               continue;
+
+            if( (!graph->mark[k] && (pcmw)) || graph->grad[k] == 0 )
+               continue;
+
+            tmpcost = vnoi[k].dist + vnoi[k + nnodes].dist + bound;
+
+            /* can node k be deleted? */
+            if( !Is_term(graph->term[k]) && (!eliminate || SCIPisGT(scip, tmpcost, obj)) && solnode[k] != CONNECT )
+            {
+               SCIPdebugMessage("delete vertex: %d of degree: %d\n", k, graph->grad[k]);
+
+               /* delete all incident edges */
+               if( eliminate )
+               {
+                  while( graph->outbeg[k] != EAT_LAST )
+                  {
+                     e = graph->outbeg[k];
+                     (*nelims)++;
+
+                     assert(!pc || graph->tail[e] != graph->source[0]);
+                     assert(!pc || graph->mark[graph->head[e]]);
+                     assert(!Is_pterm(graph->term[graph->head[e]]));
+                     assert(!Is_pterm(graph->term[graph->tail[e]]));
+
+                     graph_edge_del(scip, graph, e, TRUE);
+                  }
+               }
+               else
+               {
+                  for( e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
+                  {
+                     if( SCIPisGT(scip, tmpcost, costrev[e]) )
+                     {
+                        costrev[e] = tmpcost;
+                        costrev[flipedge(e)] = tmpcost;
+                     }
+                  }
+               }
+            }
+            else
+            {
+               e = graph->outbeg[k];
+               while( e != EAT_LAST )
+               {
+                  etemp = graph->oeat[e];
+                  tail = graph->tail[e];
+                  head = graph->head[e];
+
+                  if( tail > head )
+                  {
+                     e = etemp;
+                     continue;
+                  }
+
+                  if( soledge[e] == CONNECT || soledge[flipedge(e)] == CONNECT )
+                  {
+                     e = etemp;
+                     continue;
+                  }
+
+                  tmpcost = graph->cost[e] + bound;
+
+                  if( vbase[tail] != vbase[head] )
+                  {
+                     tmpcost += vnoi[head].dist + vnoi[tail].dist;
+                  }
+                  else
+                  {
+                     if( SCIPisGT(scip, vnoi[tail].dist + vnoi[head + nnodes].dist, vnoi[tail + nnodes].dist + vnoi[head].dist) )
+                        tmpcost += vnoi[tail + nnodes].dist + vnoi[head].dist;
+                     else
+                        tmpcost += vnoi[tail].dist + vnoi[head + nnodes].dist;
+
+                     assert(SCIPisGE(scip, tmpcost, vnoi[head].dist + vnoi[tail].dist + graph->cost[e] + bound));
+                  }
+                  /* can edge e or arc e be deleted? */
+                  if( (!eliminate || SCIPisGT(scip, tmpcost, obj))
+                     && SCIPisLT(scip, graph->cost[e], FARAWAY) && (!(pc) || graph->mark[head]) )
+                  {
+                     SCIPdebugMessage("delete edge: %d->%d \n", graph->tail[e], graph->head[e]);
+
+                     assert(!Is_pterm(graph->term[head]));
+                     assert(!Is_pterm(graph->term[tail]));
+
+                     if( eliminate )
+                     {
+                        graph_edge_del(scip, graph, e, TRUE);
+                        (*nelims)++;
+                     }
+                     else if( SCIPisGT(scip, tmpcost, costrev[e]) )
+                     {
+                        costrev[e] = tmpcost;
+                        costrev[flipedge(e)] = tmpcost;
+                     }
+                  }
+                  e = etemp;
+               }
+            }
+         }
+#if 1
+         /* traverse all nodes, try to eliminate 3 degree nodes */
+         for( k = 0; k < nnodes; k++ )
+         {
+            if( (*nelims) >= minelims )
+               break;
+
+            if( (!graph->mark[k] && pc) || graph->grad[k] <= 0 )
+               continue;
+
+            if( solnode[k] == CONNECT )
+               continue;
+
+            if( !eliminate )
+            {
+               if( graph->grad[k] == 3 && !Is_term(graph->term[k]) )
+               {
+                  tmpcost = vnoi[k].dist + vnoi[k + nnodes].dist + vnoi[k + 2 * nnodes].dist + radiim3;
+                  for( e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
+                  {
+                     if( SCIPisGT(scip, tmpcost, costrev[e]) )
+                     {
+                        costrev[e] = tmpcost;
+                        costrev[flipedge(e)] = tmpcost;
+                     }
+                  }
+               }
+               continue;
+            }
+
+            if( graph->grad[k] == 3 && !Is_term(graph->term[k]) )
+            {
+               tmpcost = vnoi[k].dist + vnoi[k + nnodes].dist + vnoi[k + 2 * nnodes].dist + radiim3;
+               if( SCIPisGT(scip, tmpcost, obj) )
+               {
+                  (*nelims)++;
+
+                  /* first 3-node elimination? */
+                  if( ancestors == NULL )
+                  {
+                     SCIP_CALL( SCIPallocBufferArray(scip, &cost3, 3) );
+                     SCIP_CALL( SCIPallocBufferArray(scip, &edges3, 3) );
+                     SCIP_CALL( SCIPallocBufferArray(scip, &nodes3, 3) );
+                     SCIP_CALL( SCIPallocBufferArray(scip, &ancestors, 3) );
+                     SCIP_CALL( SCIPallocBufferArray(scip, &revancestors, 3) );
+                     for( l = 0; l < 3; l++ )
+                     {
+                        ancestors[l] = NULL;
+                        revancestors[l] = NULL;
+                     }
+                  }
+
+                  assert(cost3 != NULL);
+                  assert(edges3 != NULL);
+                  assert(nodes3 != NULL);
+                  assert(ancestors != NULL);
+                  assert(revancestors != NULL);
+
+                  SCIPdebugMessage("eliminated 3 knot %d\n", k);
+                  /* get incident edges, cost and adjacent nodes */
+                  l = 0;
+                  for( e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
+                  {
+                     assert(l < 3);
+                     edges3[l] = e;
+                     nodes3[l] = graph->head[e];
+                     cost3[l++] = graph->cost[e];
+                  }
+
+                  /* clear */
+                  for( l = 0; l < 3; l++ )
+                  {
+                     SCIPintListNodeFree(scip, &(ancestors[l]));
+                     SCIPintListNodeFree(scip, &(revancestors[l]));
+                  }
+
+                  /* store ancestors of incident edges */
+                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors[0]), graph->ancestors[edges3[0]], NULL) );
+                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors[0]), graph->ancestors[Edge_anti(edges3[0])], NULL) );
+
+                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors[1]), graph->ancestors[edges3[1]], NULL) );
+                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors[1]), graph->ancestors[Edge_anti(edges3[1])], NULL) );
+
+                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors[2]), graph->ancestors[edges3[2]], NULL) );
+                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors[2]), graph->ancestors[Edge_anti(edges3[2])], NULL) );
+
+                  SCIP_CALL( graph_edge_reinsert(scip, graph, edges3[0], nodes3[0], nodes3[1], cost3[0] + cost3[1], ancestors[0], ancestors[1], revancestors[0], revancestors[1]) );
+                  SCIP_CALL( graph_edge_reinsert(scip, graph, edges3[1], nodes3[1], nodes3[2], cost3[1] + cost3[2], ancestors[1], ancestors[2], revancestors[1], revancestors[2]) );
+                  SCIP_CALL( graph_edge_reinsert(scip, graph, edges3[2], nodes3[2], nodes3[0], cost3[2] + cost3[0], ancestors[2], ancestors[0], revancestors[2], revancestors[0]) );
+
+                  assert(graph->grad[k] == 0);
+               }
+            }
+         }
+
+         if( ancestors != NULL )
+         {
+            assert(revancestors != NULL);
+            for( k = 0; k < 3; k++ )
+            {
+               SCIPintListNodeFree(scip, &(ancestors[k]));
+               SCIPintListNodeFree(scip, &(revancestors[k]));
+            }
+            SCIPfreeBufferArray(scip, &revancestors);
+            SCIPfreeBufferArray(scip, &ancestors);
+            SCIPfreeBufferArray(scip, &nodes3);
+            SCIPfreeBufferArray(scip, &edges3);
+            SCIPfreeBufferArray(scip, &cost3);
+         }
+      } /* no MWCS */
+#endif
+   } /* redrounds */
+
+   SCIPdebugMessage("nelims (edges) in bound reduce: %d,\n", *nelims);
+
+   /* free adjgraph */
+   if( !mw )
+   {
+      graph_path_exit(scip, adjgraph);
+      graph_free(scip, adjgraph, TRUE);
+   }
+
+   /* free memory*/
+   SCIPfreeBufferArrayNull(scip, &mst);
+
+   return SCIP_OKAY;
+}
+
+
 
 
 /** bound-based reduction test for the HCDSTP */
@@ -1614,11 +4039,7 @@ SCIP_RETCODE hopbound_reduce(
    }
 
    hoplimit = (SCIP_Real) graph->hoplimit;
-#if 0
-   printf("radiim2: %f \n", radiim2);
-   printf("mstobj: %f \n", mstobj);
-   printf("hoplimit: %f \n", hoplimit);
-#endif
+
    if( SCIPisGT(scip, radiim2, mstobj) )
       bound = radiim2;
    else

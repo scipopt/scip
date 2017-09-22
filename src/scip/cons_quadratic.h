@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -17,6 +17,39 @@
  * @ingroup CONSHDLRS
  * @brief  constraint handler for quadratic constraints \f$\textrm{lhs} \leq \sum_{i,j=1}^n a_{i,j} x_ix_j + \sum_{i=1}^n b_i x_i \leq \textrm{rhs}\f$
  * @author Stefan Vigerske
+ *
+ */
+
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+#ifndef __SCIP_CONS_QUADRATIC_H__
+#define __SCIP_CONS_QUADRATIC_H__
+
+#include "scip/scip.h"
+#include "scip/intervalarith.h"
+#include "nlpi/type_nlpi.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+/** creates the handler for quadratic constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
+EXTERN
+SCIP_RETCODE SCIPincludeConshdlrQuadratic(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ *
+ * @name Quadratic Constraints
+ *
+ * @{
  *
  * This constraint handler handles constraints of the form
  * \f[
@@ -54,19 +87,6 @@
  * SIAG/OPT Views-and-News 22:1, 1-8, 2011.
  */
 
-/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
-#ifndef __SCIP_CONS_QUADRATIC_H__
-#define __SCIP_CONS_QUADRATIC_H__
-
-#include "scip/scip.h"
-#include "scip/intervalarith.h"
-#include "nlpi/type_nlpi.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /** event data for variable bound changes in quadratic constraints */
 typedef struct SCIP_QuadVarEventData SCIP_QUADVAREVENTDATA;
 
@@ -97,6 +117,23 @@ struct SCIP_BilinTerm
 };
 typedef struct SCIP_BilinTerm SCIP_BILINTERM;
 
+/** storage for a linear row in preparation
+ *
+ * Uses to assemble data that could eventually make a SCIP_ROW.
+ * @note Only one-sided rows are allowed here.
+ */
+struct SCIP_RowPrep
+{
+   SCIP_VAR**            vars;               /**< variables */
+   SCIP_Real*            coefs;              /**< coefficients of variables */
+   int                   nvars;              /**< number of variables (= number of coefficients) */
+   int                   varssize;           /**< length of variables array (= lengths of coefficients array) */
+   SCIP_Real             side;               /**< side */
+   SCIP_SIDETYPE         sidetype;           /**< type of side */
+   SCIP_Bool             local;              /**< whether the row is only locally valid (i.e., for the current node) */
+   char                  name[SCIP_MAXSTRLEN]; /**< row name */
+};
+typedef struct SCIP_RowPrep SCIP_ROWPREP;
 
 /** upgrading method for quadratic constraints into more specific constraints
  *
@@ -129,12 +166,6 @@ typedef struct SCIP_BilinTerm SCIP_BILINTERM;
 #define SCIP_DECL_QUADCONSUPGD(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONS* cons, \
       int nbinlin, int nbinquad, int nintlin, int nintquad, int nimpllin, int nimplquad, int ncontlin, int ncontquad, \
       SCIP_Bool integral, int* nupgdconss, SCIP_CONS** upgdconss, int upgdconsssize, SCIP_PRESOLTIMING presoltiming)
-
-/** creates the handler for quadratic constraints and includes it in SCIP */
-EXTERN
-SCIP_RETCODE SCIPincludeConshdlrQuadratic(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
 
 /** includes a quadratic constraint upgrade method into the quadratic constraint handler */
 EXTERN
@@ -604,6 +635,177 @@ SCIP_RETCODE SCIPchgBilinCoefQuadratic(
    SCIP_VAR*             var2,               /**< second quadratic variable */
    SCIP_Real             coef                /**< coefficient of bilinear term */
    );
+
+/* @} */
+
+
+#ifdef SCIP_PRIVATE_ROWPREP
+
+/** creates a SCIP_ROWPREP datastructure
+ *
+ * Initial row represents 0 <= 0.
+ */
+EXTERN
+SCIP_RETCODE SCIPcreateRowprep(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP**        rowprep,            /**< buffer to store pointer to rowprep */
+   SCIP_SIDETYPE         sidetype,           /**< whether cut will be or lower-equal or larger-equal type */
+   SCIP_Bool             local               /**< whether cut will be valid only locally */
+);
+
+/** frees a SCIP_ROWPREP datastructure */
+EXTERN
+void SCIPfreeRowprep(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP**        rowprep             /**< pointer that stores pointer to rowprep */
+);
+
+/** creates a copy of a SCIP_ROWPREP datastructure */
+EXTERN
+SCIP_RETCODE SCIPcopyRowprep(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP**        target,             /**< buffer to store pointer of rowprep copy */
+   SCIP_ROWPREP*         source              /**< rowprep to copy */
+);
+
+/** ensures that rowprep has space for at least given number of additional terms
+ *
+ * Useful when knowing in advance how many terms will be added.
+ */
+EXTERN
+SCIP_RETCODE SCIPensureRowprepSize(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep */
+   int                   size                /**< number of additional terms for which to alloc space in rowprep */
+);
+
+/** prints a rowprep */
+EXTERN
+void SCIPprintRowprep(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep to be printed */
+   FILE*                 file                /**< file to print to, or NULL for stdout */
+);
+
+/** adds a term coef*var to a rowprep */
+EXTERN
+SCIP_RETCODE SCIPaddRowprepTerm(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep */
+   SCIP_VAR*             var,                /**< variable to add */
+   SCIP_Real             coef                /**< coefficient to add */
+);
+
+/** adds several terms coef*var to a rowprep */
+EXTERN
+SCIP_RETCODE SCIPaddRowprepTerms(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep */
+   int                   nvars,              /**< number of terms to add */
+   SCIP_VAR**            vars,               /**< variables to add */
+   SCIP_Real*            coefs               /**< coefficients to add */
+);
+
+/** adds constant value to side of rowprep */
+EXTERN
+void SCIPaddRowprepSide(
+   SCIP_ROWPREP*         rowprep,            /**< rowprep */
+   SCIP_Real             side                /**< constant value to be added to side */
+);
+
+/** adds constant term to rowprep
+ *
+ * Substracts constant from side.
+ */
+EXTERN
+void SCIPaddRowprepConstant(
+   SCIP_ROWPREP*         rowprep,            /**< rowprep */
+   SCIP_Real             constant            /**< constant value to be added */
+);
+
+#ifdef NDEBUG
+#define SCIPaddRowprepSide(rowprep, sideadd)  ((rowprep)->side += (sideadd))
+#define SCIPaddRowprepConstant(rowprep, constant)  SCIPaddRowprepSide(rowprep, -(constant))
+#endif
+
+/* computes violation of cut in a given solution
+ *
+ * If scaling == 'g', assumes that terms in rowprep are sorted by abs value of coef, in decreasing order.
+ *
+ * @param scaling 'o' for no scaling, 'g' for scaling by the absolute value of the maximal coefficient, or 's' for scaling by side
+ */
+EXTERN
+SCIP_Real SCIPgetRowprepViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep to be turned into a row */
+   SCIP_SOL*             sol,                /**< solution or NULL for LP solution */
+   char                  scaling             /**< how to scale cut violation: o, g, or s */
+);
+
+/** Merge terms that use same variable and eliminate zero coefficients.
+ *
+ * Terms are sorted by variable (@see SCIPvarComp) after return.
+ */
+EXTERN
+void SCIPmergeRowprepTerms(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep             /**< rowprep to be cleaned up */
+);
+
+/* Cleans up and attempts to improve rowprep
+ *
+ * Drops small or large coefficients if coefrange is too large, if this can be done by relaxing the cut.
+ * Scales coefficients up to reach minimal violation, if possible.
+ * Scaling is omitted if violation is very small (ROWPREP_SCALEUP_VIOLNONZERO) or
+ * maximal coefficient would become huge (ROWPREP_SCALEUP_MAXMAXCOEF).
+ * Scales coefficients and side down if they are large and if the minimal violation is still reached.
+ * Rounds coefficients close to integral values to integrals, if this can be done by relaxing the cut.
+ * Rounds side within epsilon of 0 to 0.0 or +/-1.1*epsilon, whichever relaxes the cut least.
+ *
+ * After return, the terms in the rowprep will be sorted by absolute value of coefficient, in decreasing order.
+ */
+EXTERN
+SCIP_RETCODE SCIPcleanupRowprep(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep to be cleaned */
+   SCIP_SOL*             sol,                /**< solution that we try to cut off, or NULL for LP solution */
+   SCIP_Real             maxcoefrange,       /**< maximal allowed coefficients range */
+   SCIP_Real             minviol,            /**< minimal absolute violation the row should achieve (w.r.t. sol) */
+   SCIP_Real*            coefrange,          /**< buffer to store coefrange of cleaned up cut, or NULL if not of interest */
+   SCIP_Real*            viol                /**< buffer to store absolute violation of cleaned up cut in sol, or NULL if not of interest */
+);
+
+/** scales a rowprep
+ *
+ * @return Exponent of actually applied scaling factor, if written as 2^x.
+ */
+EXTERN
+int SCIPscaleRowprep(
+   SCIP_ROWPREP*         rowprep,            /**< rowprep to be scaled */
+   SCIP_Real             factor              /**< suggested scale factor */
+);
+
+/** generates a SCIP_ROW from a rowprep */
+EXTERN
+SCIP_RETCODE SCIPgetRowprepRowCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW**            row,                /**< buffer to store pointer to new row */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep to be turned into a row */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+);
+
+/** generates a SCIP_ROW from a rowprep */
+EXTERN
+SCIP_RETCODE SCIPgetRowprepRowSepa(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW**            row,                /**< buffer to store pointer to new row */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep to be turned into a row */
+   SCIP_SEPA*            sepa                /**< separator */
+);
+
+#endif
+
+/* @} */
 
 #ifdef __cplusplus
 }

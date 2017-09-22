@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1491,7 +1491,9 @@ SCIP_DECL_CONSTRANS(consTransSOS2)
 static
 SCIP_DECL_CONSPRESOL(consPresolSOS2)
 {  /*lint --e{715}*/
+   /* cppcheck-suppress unassignedVariable */
    int oldnfixedvars;
+   /* cppcheck-suppress unassignedVariable */
    int oldndelconss;
    int nremovedvars;
    SCIP_EVENTHDLR* eventhdlr;
@@ -1503,8 +1505,8 @@ SCIP_DECL_CONSPRESOL(consPresolSOS2)
    assert( result != NULL );
 
    *result = SCIP_DIDNOTRUN;
-   oldnfixedvars = *nfixedvars;
-   oldndelconss = *ndelconss;
+   SCIPdebug( oldnfixedvars = *nfixedvars; )
+   SCIPdebug( oldndelconss = *ndelconss; )
    nremovedvars = 0;
 
    /* only run if success is possible */
@@ -1809,6 +1811,10 @@ SCIP_DECL_CONSCHECK(consCheckSOS2)
                {
                   SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
                   *result = SCIP_INFEASIBLE;
+
+                  /* update constraint violation in solution */
+                  if ( sol != NULL )
+                     SCIPupdateSolConsViolation(scip, sol, 1.0, 1.0);
 
                   if ( printreason )
                   {
