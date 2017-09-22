@@ -17,7 +17,6 @@ STILLFAILING="${DATABASE}_SF.tmp"
 RBDB="rbdb/${DATABASE}_rb.txt"
 OUTPUT="${DATABASE}_output.tmp"
 touch ${STILLFAILING}
-touch ${RBDB}
 
 # the first time, the file might not exists so we create it
 # Even more, we have to write something to it, since otherwise
