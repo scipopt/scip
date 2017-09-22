@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   examples/Eventhdlr/src/event_boundwriting.h
- * @brief  event handler for writing primal- and dualbound for all open nodes
+ * @brief  event handler for writing primal- and dual bound for all open nodes
  * @author Michael Winkler
  */
 
@@ -22,7 +22,7 @@
 
 #include "scip/scip.h"
 
-/** includes event handler for writing primal- and dualbound for all open nodes */
+/** includes event handler for writing primal- and dual bound for all open nodes */
 extern
 SCIP_RETCODE SCIPincludeEventHdlrBoundwriting(
    SCIP*                 scip                /**< SCIP data structure */

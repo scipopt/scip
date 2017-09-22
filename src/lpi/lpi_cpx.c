@@ -756,13 +756,11 @@ void convertSides(
       }
       else if( lhs[i] <= -CPX_INFBOUND )
       {
-         assert(-CPX_INFBOUND < rhs[i] && rhs[i] < CPX_INFBOUND);
          lpi->senarray[i] = 'L';
          lpi->rhsarray[i] = rhs[i];
       }
       else if( rhs[i] >= CPX_INFBOUND )
       {
-         assert(-CPX_INFBOUND < lhs[i] && lhs[i] < CPX_INFBOUND);
          lpi->senarray[i] = 'G';
          lpi->rhsarray[i] = lhs[i];
       }

@@ -1745,8 +1745,18 @@ SCIP_RETCODE SCIPlpiGetObjsen(
    SCIP_OBJSEN*          objsen              /**< pointer to store objective sense */
    )
 {
-   SCIPerrorMessage("SCIPlpiGetObjsen() has not been implemented yet.\n");
-   return SCIP_LPERROR;
+   MSKobjsensee mskobjsen;
+
+   assert(MosekEnv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->task != NULL);
+
+   SCIPdebugMessage("Calling SCIPlpiGetObjsen (%d)\n", lpi->lpid);
+
+   MOSEK_CALL( MSK_getobjsense(lpi->task, &mskobjsen) );
+   *objsen = (mskobjsen == MSK_OBJECTIVE_SENSE_MINIMIZE ? SCIP_OBJSEN_MINIMIZE : SCIP_OBJSEN_MAXIMIZE);
+
+   return SCIP_OKAY;
 }
 
 /** gets objective coefficients from LP problem object */
@@ -2277,7 +2287,10 @@ SCIP_RETCODE SCIPlpiSolveDual(
 
    SCIPdebugMessage("Calling SCIPlpiSolveDual[%d] (%d)\n",optimizecount,lpi->lpid);
 
+/* MSK_IPAR_SIM_INTEGER is removed in Mosek 8.1 */
+#if (MSK_VERSION_MAJOR < 8) || (MSK_VERSION_MAJOR == 8 && MSK_VERSION_MINOR == 0)
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_INTEGER, MSK_ON) );
+#endif
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_HOTSTART_LU, MSK_ON) );
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_OPTIMIZER, MSK_OPTIMIZER_DUAL_SIMPLEX) );
 

@@ -193,6 +193,7 @@ struct SCIP_Set
    SCIP_Bool             conf_usesb;         /**< should infeasible/bound exceeding strong branching conflict analysis be
                                               *   used? */
    SCIP_Bool             conf_usepseudo;     /**< should pseudo solution conflict analysis be used? */
+   SCIP_Bool             conf_prefinfproof;  /**< prefer infeasibility proof to boundexceeding proof */
    SCIP_Bool             conf_preferbinary;  /**< should binary conflicts be preferred? */
    SCIP_Bool             conf_allowlocal;    /**< should conflict constraints be generated that are only valid locally? */
    SCIP_Bool             conf_settlelocal;   /**< should conflict constraints be attached only to the local subtree where
@@ -228,10 +229,7 @@ struct SCIP_Set
    SCIP_Real             conf_weightsize;    /**< weight of the size of a conflict used in score calculation */
    SCIP_Real             conf_weightrepropdepth;/**< weight of the prepropagtion depth of a conflict used in score calculation */
    SCIP_Real             conf_weightvaliddepth;/**< weight of the valid depth of a conflict used in score calculation */
-   SCIP_Bool             conf_applymir;      /**< apply the MIR function on a dual ray */
-   SCIP_Bool             conf_prefermir;     /**< prefer a ray after applying the MIR function if the proof is still
-                                              *   valid, use both rays otherwise
-                                              */
+   SCIP_Bool             conf_sepaaltproofs;      /**< separate valid inequalities from dualray proofs */
    SCIP_Real             conf_minimprove;    /**< minimal improvement of primal bound to remove conflicts depending on
                                               *   a previous incumbent.
                                               */
@@ -358,9 +356,7 @@ struct SCIP_Set
    SCIP_Bool             misc_allowdualreds; /**< should dual reductions in propagation methods and presolver be allowed? */
    SCIP_Bool             misc_allowobjprop;  /**< should propagation to the current objective be allowed in propagation methods? */
    SCIP_Real             misc_referencevalue;/**< objective value for reference purposes */
-#ifdef WITH_DEBUG_SOLUTION
    char*                 misc_debugsol;      /**< path to a debug solution */
-#endif
 
    /* randomization parameters */
    int                   random_randomseedshift;/**< global shift of all random seeds in the plugins, this will have no impact on the permutation and LP seeds */
@@ -467,6 +463,10 @@ struct SCIP_Set
    SCIP_Real             sepa_maxbounddist;  /**< maximal relative distance from current node's dual bound to primal bound
                                               *   compared to best node's dual bound for applying separation
                                               *   (0.0: only on current best node, 1.0: on all nodes) */
+   SCIP_Real             sepa_maxlocalbounddist;/**< maximal relative distance from current node's dual bound to primal bound
+                                              *   compared to best node's dual bound for applying local separation
+                                              *   (0.0: only on current best node, 1.0: on all nodes) */
+   SCIP_Real             sepa_maxcoefratio;  /**< maximal ratio between coefficients in strongcg, cmir, and flowcover cuts */
    SCIP_Real             sepa_minefficacy;   /**< minimal efficacy for a cut to enter the LP */
    SCIP_Real             sepa_minefficacyroot; /**< minimal efficacy for a cut to enter the LP in the root node */
    SCIP_Real             sepa_minortho;      /**< minimal orthogonality for a cut to enter the LP */
@@ -489,6 +489,8 @@ struct SCIP_Set
    int                   sepa_maxaddrounds;  /**< maximal additional number of separation rounds in subsequent price-and-cut
                                               *   loops (-1: no additional restriction) */
    int                   sepa_maxstallrounds;/**< maximal number of consecutive separation rounds without objective
+                                              *   or integrality improvement (-1: no additional restriction) */
+   int                   sepa_maxstallroundsroot;/**< maximal number of consecutive separation rounds without objective
                                               *   or integrality improvement (-1: no additional restriction) */
    int                   sepa_maxcuts;       /**< maximal number of cuts separated per separation round */
    int                   sepa_maxcutsroot;   /**< maximal number of separated cuts at the root node */

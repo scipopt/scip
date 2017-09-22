@@ -2727,6 +2727,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEccuts)
 
    *result = SCIP_DIDNOTRUN;
 
+   if( !allowlocal )
+      return SCIP_OKAY;
+
    /* check min- and maximal aggregation size */
    if( sepadata->maxaggrsize < sepadata->minaggrsize )
       return SCIP_PARAMETERWRONGVAL;

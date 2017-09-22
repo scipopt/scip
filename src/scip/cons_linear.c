@@ -7062,6 +7062,10 @@ SCIP_RETCODE checkCons(
 {
    SCIP_CONSDATA* consdata;
    SCIP_Real activity;
+   SCIP_Real absviol;
+   SCIP_Real relviol;
+   SCIP_Real lhsviol;
+   SCIP_Real rhsviol;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -7092,6 +7096,23 @@ SCIP_RETCODE checkCons(
       consdata->row == NULL ? 0 : SCIProwIsInLP(consdata->row), (void*)sol,
       consdata->row == NULL ? FALSE : SCIPhasCurrentNodeLP(scip));
 
+   /* calculate absolute and relative bound violations */
+   lhsviol = consdata->lhs - activity;
+   rhsviol = activity - consdata->rhs;
+
+   absviol = 0.0;
+   relviol = 0.0;
+   if( (lhsviol > 0) && (lhsviol > rhsviol) )
+   {
+      absviol = lhsviol;
+      relviol = SCIPrelDiff(consdata->lhs, activity);
+   }
+   else if( rhsviol > 0 )
+   {
+      absviol = rhsviol;
+      relviol = SCIPrelDiff(activity, consdata->rhs);
+   }
+
    /* the activity of pseudo solutions may be invalid if it comprises positive and negative infinity contributions; we
     * return infeasible for safety
     */
@@ -7099,6 +7120,10 @@ SCIP_RETCODE checkCons(
    {
       assert(sol == NULL);
       *violated = TRUE;
+
+      /* set violation of invalid pseudo solutions */
+      absviol = SCIP_INVALID;
+      relviol = SCIP_INVALID;
 
       /* reset constraint age since we are in enforcement */
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
@@ -7261,6 +7286,10 @@ SCIP_RETCODE checkCons(
          SCIP_CALL( SCIPincConsAge(scip, cons) );
       }
    }
+
+   /* update absolute and relative violation of the solution */
+   if( sol != NULL )
+      SCIPupdateSolLPConsViolation(scip, sol, absviol, relviol);
 
    return SCIP_OKAY;
 }
@@ -7488,6 +7517,7 @@ SCIP_RETCODE propagateCons(
       {
          int nfixedvars;
          int naddconss;
+         /* cppcheck-suppress unassignedVariable */
          int oldnchgbds;
 
          nfixedvars = 0;
@@ -12717,7 +12747,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
    return SCIPhashFour(consdata->nvars,
                        SCIPcombineTwoInt(minidx, SCIPrealHashCode(consdata->vals[0] * scale)),
                        SCIPcombineTwoInt(mididx, SCIPrealHashCode(consdata->vals[consdata->nvars / 2] * scale)),
-                       SCIPcombineTwoInt(maxidx, SCIPrealHashCode(consdata->vals[consdata->nvars - 1] * scale)));
+                       SCIPcombineTwoInt(maxidx, SCIPrealHashCode(consdata->vals[consdata->nvars - 1] * scale))); /*lint !e571*/
 }
 
 /** compares each constraint with all other constraints for possible redundancy and removes or changes constraint 

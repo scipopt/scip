@@ -620,7 +620,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
 
             assert(inspect);
 
-            if( inspect )
+            if( inspect ) /*lint !e774*/
             {
                assert(row >= 0);
                assert(!SCIPisZero(scip, val));
@@ -678,7 +678,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
 
             assert(inspect);
 
-            if( inspect )
+            if( inspect ) /*lint !e774*/
             {
                assert(row >= 0);
                assert(!SCIPisZero(scip, val));

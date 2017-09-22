@@ -2494,8 +2494,11 @@ SCIP_DECL_CONSTRANS(consTransCardinality)
 static
 SCIP_DECL_CONSPRESOL(consPresolCardinality)
 {  /*lint --e{715}*/
+   /* cppcheck-suppress unassignedVariable */
    int oldnfixedvars;
+   /* cppcheck-suppress unassignedVariable */
    int oldndelconss;
+   /* cppcheck-suppress unassignedVariable */
    int oldnupgdconss;
    int nremovedvars;
    SCIP_EVENTHDLR* eventhdlr;
@@ -2717,6 +2720,8 @@ SCIP_DECL_CONSCHECK(consCheckCardinality)
                   }
                   SCIPinfoMessage(scip, NULL, "\n");
                }
+               if( sol != NULL )
+                  SCIPupdateSolConsViolation(scip, sol, 1.0, 1.0);
                return SCIP_OKAY;
             }
          }
@@ -3010,7 +3015,7 @@ SCIP_DECL_CONSPARSE(consParseCardinality)
          while ( isspace((unsigned char)*s) )
             ++s;
 
-         cardval = strtod(s, &t);
+         cardval = (int)strtod(s, &t);
          if ( t == NULL )
          {
             SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error during parsing of the cardinality restriction value: %s\n", s);
@@ -3234,11 +3239,11 @@ SCIP_RETCODE SCIPincludeConshdlrCardinality(
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxCardinality) );
 
    /* add cardinality constraint handler parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/branchbalanced",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/branchbalanced",
          "whether to use balanced instead of unbalanced branching",
          &conshdlrdata->branchbalanced, TRUE, DEFAULT_BRANCHBALANCED, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/balanceddepth",
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/balanceddepth",
          "maximum depth for using balanced branching (-1: no limit)",
          &conshdlrdata->balanceddepth, TRUE, DEFAULT_BALANCEDDEPTH, -1, INT_MAX, NULL, NULL) );
 

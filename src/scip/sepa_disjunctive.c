@@ -505,6 +505,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
 
    *result = SCIP_DIDNOTRUN;
 
+   if( !allowlocal )
+      return SCIP_OKAY;
+
    /* only generate disjunctive cuts if we are not close to terminating */
    if ( SCIPisStopped(scip) )
       return SCIP_OKAY;

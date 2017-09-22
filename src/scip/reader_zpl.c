@@ -1612,7 +1612,7 @@ SCIP_RETCODE SCIPincludeReaderZpl(
          "reading/zplreader/parameters", "additional parameter string passed to the ZIMPL parser (or - for no additional parameters)",
          NULL, FALSE, "-", NULL, NULL) );
 
-   (void) SCIPsnprintf(extcodename, SCIP_MAXSTRLEN, "ZIMPL %d.%d.%d", ZIMPL_VERSION/100, (ZIMPL_VERSION%100)/10, ZIMPL_VERSION%10);
+   (void) SCIPsnprintf(extcodename, SCIP_MAXSTRLEN, "ZIMPL %d.%d.%d", ZIMPL_VERSION/100, (ZIMPL_VERSION%100)/10, ZIMPL_VERSION%10); /*lint !e778*/
    SCIP_CALL( SCIPincludeExternalCodeInformation(scip, extcodename, "Zuse Institute Mathematical Programming Language developed by T. Koch (zimpl.zib.de)"));
 #else
    SCIPwarningMessage(scip, "SCIP does only support ZIMPL 3.2.0 and higher. Please update your ZIMPL version %d.%d.%d\n",

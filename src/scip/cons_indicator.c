@@ -4167,6 +4167,7 @@ SCIP_RETCODE separateIISRounding(
    SCIP_Bool* S;
    SCIP_Bool error;
    int oldsize = -1;
+   /* cppcheck-suppress unassignedVariable */
    int nGenOld;
 
    assert( scip != NULL );
@@ -6155,6 +6156,11 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
       if ( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, consdata->binvar)) &&
            ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, consdata->slackvar)) )
       {
+         SCIP_Real absviol = REALABS(SCIPgetSolVal(scip, sol, consdata->slackvar));
+         SCIP_Real relviol = SCIPrelDiff(absviol, 0.0);
+         if( sol != NULL )
+            SCIPupdateSolConsViolation(scip, sol, absviol, relviol);
+
          SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
          *result = SCIP_INFEASIBLE;
 

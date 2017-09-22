@@ -391,6 +391,7 @@ double nextafter(double x, double y)
          return y;
       }
    }
+
    /* cppcheck-suppress invalidPointerCast */
    __HI(x) = hx;
    /* cppcheck-suppress invalidPointerCast */

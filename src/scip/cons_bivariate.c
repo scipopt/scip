@@ -761,6 +761,8 @@ SCIP_RETCODE computeViolation(
    SCIP_Real xub;
    SCIP_Real ylb;
    SCIP_Real yub;
+   SCIP_Real absviol;
+   SCIP_Real relviol;
    SCIP_VAR* x;
    SCIP_VAR* y;
 
@@ -844,15 +846,28 @@ SCIP_RETCODE computeViolation(
    consdata->activity += consdata->zcoef * zval;
 
    /* compute violation of constraint sides */
+   absviol = 0.0;
+   relviol = 0.0;
    if( consdata->activity < consdata->lhs && !SCIPisInfinity(scip, -consdata->lhs) )
+   {
       consdata->lhsviol = consdata->lhs - consdata->activity;
+      absviol = consdata->lhsviol;
+      relviol = SCIPrelDiff(consdata->lhs, consdata->activity);
+   }
    else
       consdata->lhsviol = 0.0;
 
    if( consdata->activity > consdata->rhs && !SCIPisInfinity(scip,  consdata->rhs) )
+   {
       consdata->rhsviol = consdata->activity - consdata->rhs;
+      absviol = consdata->rhsviol;
+      relviol = SCIPrelDiff(consdata->activity, consdata->rhs);
+   }
    else
       consdata->rhsviol = 0.0;
+
+   if( sol != NULL )
+      SCIPupdateSolConsViolation(scip, sol, absviol, relviol);
 
    switch( conshdlrdata->scaling )
    {
@@ -4804,7 +4819,7 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
    conss = SCIPconshdlrGetConss(conshdlr);
    assert(conss != NULL);
 
-   SCIPdebugMsg(scip, "catched new sol event %"SCIP_EVENTTYPE_FORMAT" from heur <%s>; have %d conss\n", SCIPeventGetType(event), SCIPheurGetName(SCIPsolGetHeur(sol)), nconss);
+   SCIPdebugMsg(scip, "catched new sol event %" SCIP_EVENTTYPE_FORMAT " from heur <%s>; have %d conss\n", SCIPeventGetType(event), SCIPheurGetName(SCIPsolGetHeur(sol)), nconss);
 
    row = NULL;
 
@@ -7008,7 +7023,7 @@ SCIP_DECL_CONSCHECK(consCheckBivariate)
          return SCIP_OKAY;
    }
 
-   if( *result == SCIP_INFEASIBLE && conshdlrdata->subnlpheur != NULL && sol != NULL )
+   if( *result == SCIP_INFEASIBLE && conshdlrdata->subnlpheur != NULL && sol != NULL && !SCIPisInfinity(scip, maxviol) )
    {
       SCIP_CALL( SCIPupdateStartpointHeurSubNlp(scip, conshdlrdata->subnlpheur, sol, maxviol) );
    }
