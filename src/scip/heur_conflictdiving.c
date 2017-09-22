@@ -25,17 +25,17 @@
 
 #include "scip/heur_conflictdiving.h"
 
-#define HEUR_NAME             "conflictdiving"
-#define HEUR_DESC             "LP diving heuristic that chooses fixings w.r.t. soft locks"
-#define HEUR_DISPCHAR         '~'
-#define HEUR_PRIORITY         -1000250
-#define HEUR_FREQ             5
-#define HEUR_FREQOFS          1
-#define HEUR_MAXDEPTH         -1
-#define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPPLUNGE
-#define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
-#define DIVESET_DIVETYPES     SCIP_DIVETYPE_INTEGRALITY | SCIP_DIVETYPE_SOS1VARIABLE /**< bit mask that represents all supported dive types */
-
+#define HEUR_NAME                    "conflictdiving"
+#define HEUR_DESC                    "LP diving heuristic that chooses fixings w.r.t. soft locks"
+#define HEUR_DISPCHAR                '~'
+#define HEUR_PRIORITY                -1000250
+#define HEUR_FREQ                    1
+#define HEUR_FREQOFS                 0
+#define HEUR_MAXDEPTH                -1
+#define HEUR_TIMING                  SCIP_HEURTIMING_DURINGLPLOOP
+#define HEUR_USESSUBSCIP             FALSE  /**< does the heuristic use a secondary SCIP instance? */
+#define DIVESET_DIVETYPES            SCIP_DIVETYPE_INTEGRALITY | SCIP_DIVETYPE_SOS1VARIABLE /**< bit mask that represents all supported dive types */
+#define DEFAULT_RANDSEED             151 /**< default random seed */
 
 /*
  * Default parameter settings
@@ -257,7 +257,7 @@ SCIP_RETCODE SCIPincludeHeurConflictdiving(
    /* create a diveset (this will automatically install some additional parameters for the heuristic)*/
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_LPRESOLVEDOMCHGQUOT,
-         DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_DIVETYPES, divesetGetScoreConflictdiving) );
+         DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_DIVETYPES, divesetGetScoreConflictdiving) );
 
    return SCIP_OKAY;
 }
