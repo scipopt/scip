@@ -3284,13 +3284,17 @@ SCIP_RETCODE SCIPcreateConsBounddisjunction(
    }
 
 #ifndef NDEBUG
-   /* ensure that the given data neither contains overlapping nor redundant literals */
-   for( int v1 = 0; v1 < nvars; v1++ )
    {
-      for( int v2 = v1+1; v2 < nvars; v2++ )
+      int v1;
+      /* ensure that the given data neither contains overlapping nor redundant literals */
+      for( v1 = 0; v1 < nvars; v1++ )
       {
-         assert(vars[v1] != vars[v2] || (SCIPboundtypeOpposite(boundtypes[v1]) == boundtypes[v2]
-               && !isOverlapping(scip, vars[v1], boundtypes[v1], bounds[v1], boundtypes[v2], bounds[v2])));
+         int v2;
+         for( v2 = v1+1; v2 < nvars; v2++ )
+         {
+            assert(vars[v1] != vars[v2] || (SCIPboundtypeOpposite(boundtypes[v1]) == boundtypes[v2]
+                  && !isOverlapping(scip, vars[v1], boundtypes[v1], bounds[v1], boundtypes[v2], bounds[v2])));
+         }
       }
    }
 #endif
