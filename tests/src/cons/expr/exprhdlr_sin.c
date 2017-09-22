@@ -23,6 +23,7 @@
 #include "scip/cons_expr.h"
 #include "scip/cons_expr_sin.h"
 #include "scip/cons_expr_var.h"
+#include <scip/cons_expr_value.h>
 
 #include "include/scip_test.h"
 
@@ -87,7 +88,7 @@ void teardown(void)
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
+   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
 }
 
 /* test suite */
@@ -146,7 +147,7 @@ Test(sin, eval, .description = "Tests the expression evaluation.")
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, testvalues[i]) );
       SCIP_CALL( SCIPevalConsExprExpr(scip, sinexpr, sol, 0) );
 
-      cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprValue(sinexpr), results[i]));
+      cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprValue(sinexpr), results[i]));
    }
 
    /* random part */
@@ -156,7 +157,7 @@ Test(sin, eval, .description = "Tests the expression evaluation.")
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, randnum) );
       SCIP_CALL( SCIPevalConsExprExpr(scip, sinexpr, sol, 0) );
 
-      cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprValue(sinexpr), SIN(randnum)));
+      cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprValue(sinexpr), SIN(randnum)));
    }
 }
 
@@ -240,6 +241,7 @@ Test(sin, derivative, .description = "Tests the expression derivation.")
    {
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, testvalues[i]) );
       SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, sinexpr, sol, 0) );
+
       cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprPartialDiff(scip, conshdlr, sinexpr, x), results[i]));
    }
 
@@ -249,7 +251,8 @@ Test(sin, derivative, .description = "Tests the expression derivation.")
       randnum = SCIPrandomGetReal(rndgen, -10.0, 10.0);
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, randnum) );
       SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, sinexpr, sol, 0) );
-      cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprPartialDiff(scip, conshdlr, sinexpr, x), COS(randnum)));
+
+      cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprPartialDiff(scip, conshdlr, sinexpr, x), COS(randnum)));
    }
 }
 
@@ -283,5 +286,20 @@ Test(sin, hash, .description = "Tests the expression hash.")
 
 Test(sin, simplify, .description = "Tests the expression simplification.")
 {
-   /* TODO */
+   SCIP_CONSEXPR_EXPR* expr1;
+   SCIP_CONSEXPR_EXPR* expr2;
+   SCIP_CONSEXPR_EXPR* expr3;
+
+   /* expr1 = <5.0>, expr2 = sin(<5.0>), expr3 is buffer for simplification */
+   SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, &expr1, 5.0));
+   SCIP_CALL( SCIPcreateConsExprExprSin(scip, conshdlr, &expr2, expr1));
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, expr2, &expr3));
+   SCIP_CALL( SCIPevalConsExprExpr(scip, expr2, sol, 0) );
+
+   cr_expect(SCIPgetConsExprExprHdlr(expr3) == SCIPgetConsExprExprHdlrValue(conshdlr));
+   cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprValue(expr2), SIN(5.0)));
+
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr3) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr2) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr1) );
 }
