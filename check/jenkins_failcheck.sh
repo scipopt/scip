@@ -84,9 +84,9 @@ if [ $NFAILS -gt 0 ]; then
         print errorstring >> "'$DATABASE'";
         print $0;
      }
-     else
+     else # these are instances that failed before
      {
-        print errorstring >> "'$STILLFAILING'";
+        print $1 " " failmsg >> "'$STILLFAILING'"; # only report the name of the instance and the fail message
      }
   }' $DATABASE $RESFILE`
   STILLFAILINGDB=`cat ${STILLFAILING}`
@@ -106,6 +106,6 @@ fi
 # send email if there are fixed instances
 if [ -n "$RESOLVEDINSTANCES" ]; then
    SUBJECT="FIX [BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING=$SETTING] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH]"
-   echo -e "Congratulations!\nThe following errors have been fixed: ${RESOLVEDINSTANCES}\nThe following instances are still failing:\n${STILLFAILINGDB}\n\n" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+   echo -e "Congratulations!\n\nThe following errors have been fixed:\n${RESOLVEDINSTANCES}\n\nThe following instances are still failing:\n${STILLFAILINGDB}\n\n" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
 fi
 rm ${STILLFAILING}
