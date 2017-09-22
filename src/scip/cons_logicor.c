@@ -1542,6 +1542,13 @@ SCIP_RETCODE checkCons(
 
    *violated = SCIPisFeasLT(scip, sum, 1.0);
 
+   /* calculate constraint violation and update it in solution */
+   if( sol != NULL ){
+      SCIP_Real absviol = 1.0 - sum;
+      SCIP_Real relviol = SCIPrelDiff(1.0, sum);
+      SCIPupdateSolLPConsViolation(scip, sol, absviol, relviol);
+   }
+
    return SCIP_OKAY;
 }
 

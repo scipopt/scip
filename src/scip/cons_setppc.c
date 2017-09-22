@@ -1174,8 +1174,8 @@ SCIP_RETCODE delCoefPos(
  *
  *  (1) set covering
  *
- *      - fix all independant variables with negative object coefficient to one
- *      - fix all remaining independant variables to zero
+ *      - fix all independent variables with negative object coefficient to one
+ *      - fix all remaining independent variables to zero
  *
  *      (i) all variables are independent and the constraint is not modifiable
  *
@@ -1191,7 +1191,7 @@ SCIP_RETCODE delCoefPos(
  *      (i) all variables are independent and the constraint is not modifiable
  *
  *          - fix the variable with the smallest object coefficient to one
- *          - fix all remaining independant variables to zero
+ *          - fix all remaining independent variables to zero
  *
  *     (ii) a variable x has exactly 1 uplock and arbitrary downlocks and a variable y has exactly 1 downlock and
  *          arbitrary uplocks and obj(x) <= obj(y)
@@ -1203,7 +1203,7 @@ SCIP_RETCODE delCoefPos(
  *      (i) all variables are independent and the constraint is not modifiable
  *
  *          - fix the variable with the smallest object coefficient to one if the object coefficient is negative or zero
- *          - fix all remaining independant variables to zero
+ *          - fix all remaining independent variables to zero
  *
  *     (ii) a variable x has exactly 1 uplock and arbitrary downlocks and a variable y has exactly 0 downlocks and
  *          arbitrary uplocks and obj(x) <= obj(y)
@@ -1329,31 +1329,31 @@ SCIP_RETCODE dualPresolving(
 
       if( SCIPvarGetNLocksDown(var) >= nlockdowns && SCIPvarGetNLocksUp(var) == nlockups )
       {
-	 activevar = var;
-	 negated = FALSE;
+         activevar = var;
+         negated = FALSE;
 
-	 /* get the active variable */
-	 SCIP_CALL( SCIPvarGetProbvarBinary(&activevar, &negated) );
-	 assert(SCIPvarIsActive(activevar));
+         /* get the active variable */
+         SCIP_CALL( SCIPvarGetProbvarBinary(&activevar, &negated) );
+         assert(SCIPvarIsActive(activevar));
 
-	 if( negated )
-	    objval = -SCIPvarGetObj(activevar);
-	 else
-	    objval = SCIPvarGetObj(activevar);
+         if( negated )
+            objval = -SCIPvarGetObj(activevar);
+         else
+            objval = SCIPvarGetObj(activevar);
 
-	 /* check if the current variable has a smaller objective coefficient */
-	 if( idx == -1 || objval < bestobjval )
-	 {
-	    idx = v;
-	    bestobjval = objval;
-	 }
+         /* check if the current variable has a smaller objective coefficient */
+         if( idx == -1 || objval < bestobjval )
+         {
+            idx = v;
+            bestobjval = objval;
+         }
       }
 
       /* in case another constraint has also downlocks on that variable we cannot perform a dual reduction on these
        * variables
        */
       if( SCIPvarGetNLocksDown(var) == nlockdowns && SCIPvarGetNLocksUp(var) >= nlockups )
-	 ++nposfixings;
+         ++nposfixings;
    }
 
    if( idx == -1 || nposfixings == 0 )
@@ -1374,8 +1374,8 @@ SCIP_RETCODE dualPresolving(
       /* first part of all variables */
       for( v = nvars - 1; v >= 0; --v )
       {
-	 if( v == idx )
-	    continue;
+         if( v == idx )
+            continue;
 
          var = vars[v];
          assert(var != NULL);
@@ -1385,28 +1385,28 @@ SCIP_RETCODE dualPresolving(
           */
          if( SCIPvarGetNLocksDown(var) == nlockdowns && SCIPvarGetNLocksUp(var) >= nlockups )
          {
-	    activevar = var;
-	    negated = FALSE;
+            activevar = var;
+            negated = FALSE;
 
-	    /* get the active variable */
-	    SCIP_CALL( SCIPvarGetProbvarBinary(&activevar, &negated) );
-	    assert(SCIPvarIsActive(activevar));
+            /* get the active variable */
+            SCIP_CALL( SCIPvarGetProbvarBinary(&activevar, &negated) );
+            assert(SCIPvarIsActive(activevar));
 
-	    if( negated )
-	       objval = -SCIPvarGetObj(activevar);
-	    else
-	       objval = SCIPvarGetObj(activevar);
+            if( negated )
+               objval = -SCIPvarGetObj(activevar);
+            else
+               objval = SCIPvarGetObj(activevar);
 
-	    if( objval >= bestobjval )
-	    {
-	       SCIP_CALL( SCIPfixVar(scip, var, 0.0, &infeasible, &fixed) );
-	       assert(!infeasible);
-	       assert(fixed);
+            if( objval >= bestobjval )
+            {
+               SCIP_CALL( SCIPfixVar(scip, var, 0.0, &infeasible, &fixed) );
+               assert(!infeasible);
+               assert(fixed);
 
-	       SCIPdebugMsg(scip, " -> dual-fixed dominated variable <%s> == 0.0\n", SCIPvarGetName(var));
-	       ++(*nfixedvars);
-	    }
-	 }
+               SCIPdebugMsg(scip, " -> dual-fixed dominated variable <%s> == 0.0\n", SCIPvarGetName(var));
+               ++(*nfixedvars);
+            }
+         }
       }
    }
    /* if we got a set covering constraint and not all variables are locked from this constraint it might not get
@@ -1418,8 +1418,8 @@ SCIP_RETCODE dualPresolving(
       /* first part of all variables */
       for( v = nvars - 1; v >= 0; --v )
       {
-	 if( v == idx )
-	    continue;
+         if( v == idx )
+            continue;
 
          var = vars[v];
          assert(var != NULL);
@@ -1428,38 +1428,39 @@ SCIP_RETCODE dualPresolving(
           * variables
           */
          if( SCIPvarGetNLocksDown(var) == nlockdowns && SCIPvarGetNLocksUp(var) >= nlockups )
-	 {
-	    activevar = var;
-	    negated = FALSE;
+         {
+            activevar = var;
+            negated = FALSE;
 
-	    /* get the active variable */
-	    SCIP_CALL( SCIPvarGetProbvarBinary(&activevar, &negated) );
-	    assert(SCIPvarIsActive(activevar));
-	    assert(SCIPvarGetNLocksDown(var) == SCIPvarGetNLocksDown(activevar) && SCIPvarGetNLocksUp(var) == SCIPvarGetNLocksUp(activevar));
+            /* get the active variable */
+            SCIP_CALL( SCIPvarGetProbvarBinary(&activevar, &negated) );
+            assert(SCIPvarIsActive(activevar));
+            assert(negated || (SCIPvarGetNLocksDown(var) == SCIPvarGetNLocksDown(activevar) && SCIPvarGetNLocksUp(var) == SCIPvarGetNLocksUp(activevar)));
+            assert(!negated || (SCIPvarGetNLocksDown(var) == SCIPvarGetNLocksUp(activevar) && SCIPvarGetNLocksUp(var) == SCIPvarGetNLocksDown(activevar)));
 
-	    if( negated )
-	       objval = -SCIPvarGetObj(activevar);
-	    else
-	       objval = SCIPvarGetObj(activevar);
+            if( negated )
+               objval = -SCIPvarGetObj(activevar);
+            else
+               objval = SCIPvarGetObj(activevar);
 
-	    if( objval > 0.0 )
-	       fixval = 0.0;
-	    else
-	       fixval = 1.0;
+            if( objval > 0.0 )
+               fixval = 0.0;
+            else
+               fixval = 1.0;
 
-	    /* if variables has a negative objective contribution, and is uplocked by another constraint we cannot fix
-	     * the variables to 1
-	     */
-	    if( (fixval == 1.0 && SCIPvarGetNLocksUp(var) > nlockups) || objval < bestobjval )
-	       continue;
+            /* if variables has a negative objective contribution, and is uplocked by another constraint we cannot fix
+             * the variables to 1
+             */
+            if( (fixval == 1.0 && SCIPvarGetNLocksUp(var) > nlockups) || objval < bestobjval )
+               continue;
 
-	    SCIP_CALL( SCIPfixVar(scip, var, fixval, &infeasible, &fixed) );
-	    assert(!infeasible);
-	    assert(fixed);
+            SCIP_CALL( SCIPfixVar(scip, var, fixval, &infeasible, &fixed) );
+            assert(!infeasible);
+            assert(fixed);
 
-	    SCIPdebugMsg(scip, " -> dual-fixed dominated variable <%s> == %g\n", SCIPvarGetName(var), fixval);
-	    ++(*nfixedvars);
-	 }
+            SCIPdebugMsg(scip, " -> dual-fixed dominated variable <%s> == %g\n", SCIPvarGetName(var), fixval);
+            ++(*nfixedvars);
+         }
       }
    }
 
@@ -2294,6 +2295,9 @@ SCIP_Bool checkCons(
    SCIP_Real solval;
    SCIP_Real sum;
    SCIP_Real sumbound;
+   SCIP_Real absviol;
+   SCIP_Real relviol;
+   SCIP_Bool check;
    int nvars;
    int v;
 
@@ -2312,19 +2316,36 @@ SCIP_Bool checkCons(
       sum += solval;
    }
 
+   absviol = sum - 1.0;
+   relviol = SCIPrelDiff(sum, 1.0);
    switch( consdata->setppctype )
    {
    case SCIP_SETPPCTYPE_PARTITIONING:
-      return SCIPisFeasEQ(scip, sum, 1.0);
+      /* in case of partitioning, the violation is equal to the absolute difference between sum and 1 */
+      absviol = REALABS(absviol);
+      relviol = REALABS(relviol);
+      check = SCIPisFeasEQ(scip, sum, 1.0);
+      break;
    case SCIP_SETPPCTYPE_PACKING:
-      return SCIPisFeasLE(scip, sum, 1.0);
+      /* in case of packing, the violation is equal to how much sum exceeds 1 */
+      check = SCIPisFeasLE(scip, sum, 1.0);
+      break;
    case SCIP_SETPPCTYPE_COVERING:
-      return SCIPisFeasGE(scip, sum, 1.0);
+      /* in case of covering, the violation is equal to how much 1 exceeds sum */
+      absviol = -absviol;
+      relviol = -relviol;
+      check = SCIPisFeasGE(scip, sum, 1.0);
+      break;
    default:
       SCIPerrorMessage("unknown setppc type\n");
       SCIPABORT();
       return FALSE; /*lint !e527*/
    }
+
+   if( sol != NULL )
+      SCIPupdateSolLPConsViolation(scip, sol, absviol, relviol);
+
+   return check;
 }
 
 /** creates an LP row in a set partitioning / packing / covering constraint data object */

@@ -57,6 +57,8 @@ struct SCIP_Primal
    int                   npartialsols;       /**< number of partial solutions stored in partialsol array */
    int                   existingsolssize;   /**< size of existingsols array */
    int                   nexistingsols;      /**< number of primal CIP solutions stored in existingsols array */
+
+   SCIP_Bool             updateviolations;   /**< marks whether the updating of violations is turned on */
 };
 
 #ifdef __cplusplus

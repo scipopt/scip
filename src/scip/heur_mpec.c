@@ -33,7 +33,7 @@
 #define HEUR_DESC             "regularization heuristic for convex and nonconvex MINLPs"
 #define HEUR_DISPCHAR         'W'
 #define HEUR_PRIORITY         -2050000
-#define HEUR_FREQ             -1
+#define HEUR_FREQ             50
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPNODE
@@ -409,7 +409,7 @@ SCIP_RETCODE heurExec(
       nlpcostleft -= SCIPnlpStatisticsGetNIterations(nlpstatistics) * nlpcostperiter * nbinvars;
       SCIPdebugMsg(scip, "nlpcostleft = %e\n", nlpcostleft);
 
-      SCIP_CALL( SCIPnlpiGetSolution(heurdata->nlpi, heurdata->nlpiprob, &primal, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPnlpiGetSolution(heurdata->nlpi, heurdata->nlpiprob, &primal, NULL, NULL, NULL, NULL) );
       assert(primal != NULL);
 
       /* check for binary feasibility */

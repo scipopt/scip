@@ -314,8 +314,7 @@ SCIP_DECL_HASHKEYEQ(cliqueIsHashkeyEq)
 static
 SCIP_DECL_HASHKEYVAL(cliqueGetHashkeyVal)
 {  /*lint --e{715}*/
-   assert( SCIPcliqueGetId((SCIP_CLIQUE*) key) >= 0 );
-   return (unsigned int) SCIPcliqueGetId((SCIP_CLIQUE*) key);
+   return SCIPcliqueGetId((SCIP_CLIQUE*) key);
 }
 
 /*
@@ -3073,7 +3072,7 @@ SCIP_RETCODE propagateLowerboundBinvar(
    SCIP_Real ubobjchg;
 
    assert(SCIPvarIsBinary(var));
-   assert(SCIPisLE(scip, lowerbound, maxpseudoobjact));
+   assert(SCIPisDualfeasLE(scip, lowerbound, maxpseudoobjact));
    assert(!SCIPisInfinity(scip, maxpseudoobjact));
 
    /*@todo Instead of running always over all implications use SCIP_OBJIMPLICS in the same way as for the propagation of

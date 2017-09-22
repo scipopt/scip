@@ -768,7 +768,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultAggr)
 
       if( SCIPgetNRuns(scip) != branchruledata->nrun )
       {
-         SCIP_VAR** fixvars = NULL;
+         SCIP_VAR** fixvars;
          int nfixvars;
          int i;
 

@@ -1164,6 +1164,8 @@ SCIP_RETCODE updateTransformation(
 
          if( !SCIPisInfinity(scip, -lb) )
             matrix->upperbounds[varindex] = ub - lb;
+         else
+            matrix->upperbounds[varindex] = SCIPinfinity(scip);
       }
       break;
    case TRANSFORMSTATUS_FREE:
@@ -1309,7 +1311,7 @@ SCIP_DECL_HEUREXIT(heurExitShiftandpropagate)
    /* if statistic mode is enabled, statistics are printed to console */
    SCIPstatistic(
       SCIPstatisticMessage(
-         "  DETAILS                    :  %d violations left, %d probing status, %d redundant rows\n",
+         "  DETAILS                    :  %d violations left, %d probing status\n",
          heurdata->nremainingviols,
          heurdata->lpsolstat
          );

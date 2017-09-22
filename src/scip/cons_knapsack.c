@@ -909,6 +909,8 @@ SCIP_RETCODE checkCons(
       SCIP_Real sum;
       SCIP_Longint integralsum;
       SCIP_Bool ishuge;
+      SCIP_Real absviol;
+      SCIP_Real relviol;
       int v;
 
       /* increase age of constraint; age is reset to zero, if a violation was found only in case we are in
@@ -921,7 +923,7 @@ SCIP_RETCODE checkCons(
 
       sum = 0.0;
       integralsum = 0;
-      /* we perform an more exact comparison if the capacity does not exceed the huge value */
+      /* we perform a more exact comparison if the capacity does not exceed the huge value */
       if( SCIPisHugeValue(scip, (SCIP_Real) consdata->capacity) )
       {
          ishuge = TRUE;
@@ -947,7 +949,14 @@ SCIP_RETCODE checkCons(
          }
       }
 
-      if( (!ishuge && integralsum > consdata->capacity) || (ishuge && SCIPisFeasGT(scip, sum, (SCIP_Real)consdata->capacity)) )
+      /* calculate constraint violation and update it in solution */
+      absviol = ishuge ? sum : (SCIP_Real)integralsum;
+      absviol -= consdata->capacity;
+      relviol = SCIPrelDiff(absviol + consdata->capacity, (SCIP_Real)consdata->capacity);
+      if( sol != NULL )
+         SCIPupdateSolLPConsViolation(scip, sol, absviol, relviol);
+
+      if( SCIPisFeasPositive(scip, absviol) )
       {
          *violated = TRUE;
 
@@ -959,17 +968,13 @@ SCIP_RETCODE checkCons(
 
          if( printreason )
          {
-            SCIP_Real viol = ishuge ? sum : (SCIP_Real)integralsum;
-
-            viol -= consdata->capacity;
-            assert(viol > 0);
-
             SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
 
             SCIPinfoMessage(scip, NULL, ";\n");
-            SCIPinfoMessage(scip, NULL, "violation: the capacity is violated by %.15g\n", viol);
+            SCIPinfoMessage(scip, NULL, "violation: the capacity is violated by %.15g\n", absviol);
          }
       }
+
    }
 
    return SCIP_OKAY;

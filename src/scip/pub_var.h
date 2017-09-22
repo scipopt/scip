@@ -859,12 +859,6 @@ SCIP_VALUEHISTORY* SCIPvarGetValuehistory(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** returns the index of the connected component of the clique graph that the variable belongs to, or -1 if not computed */
-EXTERN
-int SCIPvarGetCliqueComponentIdx(
-   SCIP_VAR*             var                 /**< problem variable */
-   );
-
 
 /** returns whether a cut containing this variable is invalid after a restart */
 EXTERN

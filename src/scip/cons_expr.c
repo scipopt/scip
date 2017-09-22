@@ -4169,6 +4169,86 @@ SCIP_RETCODE removeFixedAndBoundConstraints(
    return SCIP_OKAY;
 }
 
+/** helper function to enforce constraints */
+static
+SCIP_RETCODE enforceConstraint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to process */
+   int                   nconss,             /**< number of constraints */
+   int                   nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
+   SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
+   SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   SCIP_Real minviolation;
+   SCIP_Real maxviol;
+   SCIP_RESULT propresult;
+   SCIP_Bool force;
+   int nnotify;
+   int nchgbds;
+   int ndelconss;
+   int c;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlr != NULL);
+
+   maxviol = 0.0;
+
+   /* force tightenings when calling enforcement for the first time for a node */
+   force = conshdlrdata->lastenfolpnodenum != SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
+   conshdlrdata->lastenfolpnodenum = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
+
+   for( c = 0; c < nconss; ++c )
+   {
+      SCIP_CALL( computeViolation(scip, conss[c], NULL, 0) );
+      consdata = SCIPconsGetData(conss[c]);
+
+      /* compute max violation */
+      maxviol = MAX3(maxviol, consdata->lhsviol, consdata->rhsviol);
+   }
+   SCIPdebugMsg(scip, "maxviol=%e\n", maxviol);
+
+   *result = SCIPisGT(scip, maxviol, SCIPfeastol(scip)) ? SCIP_INFEASIBLE : SCIP_FEASIBLE;
+
+   if( *result == SCIP_FEASIBLE )
+      return SCIP_OKAY;
+
+   /* try to propagate */
+   nchgbds = 0;
+   ndelconss = 0;
+   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, force, &propresult, &nchgbds, &ndelconss) );
+
+   if( propresult == SCIP_CUTOFF || propresult == SCIP_REDUCEDDOM )
+   {
+      *result = propresult;
+      return SCIP_OKAY;
+   }
+
+   /* try to separate the LP solution */
+   minviolation = MIN(0.75*maxviol, conshdlrdata->mincutviolationenfofac * SCIPfeastol(scip));  /*lint !e666*/
+   minviolation = MAX(minviolation, SCIPfeastol(scip));  /*lint !e666*/
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, minviolation, result) );
+
+   if( *result == SCIP_CUTOFF || *result == SCIP_SEPARATED )
+      return SCIP_OKAY;
+
+   /* find branching candidates */
+   SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, NULL, &nnotify) );
+   SCIPdebugMsg(scip, "registered %d external branching candidates\n", nnotify);
+
+   /* all variables have been fixed -> cutoff node */
+   /* @todo If we do not branch on linear variables any more this should be changed. We need to introduce linear
+    * constraints which are obtained by replacing all fixed non-linear variables as it is done in cons_nonlinear.
+    */
+   if( nnotify == 0 )
+      *result = SCIP_CUTOFF;
+
+   return SCIP_OKAY;
+}
+
 /** @} */
 
 /*
@@ -4809,74 +4889,19 @@ SCIP_DECL_CONSSEPASOL(consSepasolExpr)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpExpr)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSDATA* consdata;
-   SCIP_Real minviolation;
-   SCIP_Real maxviol;
-   SCIP_RESULT propresult;
-   SCIP_Bool force;
-   int nnotify;
-   int nchgbds;
-   int ndelconss;
-   int c;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlr != NULL);
-
-   maxviol = 0.0;
-
-   /* force tightenings when calling enforcement for the first time for a node */
-   force = conshdlrdata->lastenfolpnodenum != SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
-   conshdlrdata->lastenfolpnodenum = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
-
-   for( c = 0; c < nconss; ++c )
-   {
-      SCIP_CALL( computeViolation(scip, conss[c], NULL, 0) );
-      consdata = SCIPconsGetData(conss[c]);
-
-      /* compute max violation */
-      maxviol = MAX3(maxviol, consdata->lhsviol, consdata->rhsviol);
-   }
-   SCIPdebugMsg(scip, "maxviol=%e\n", maxviol);
-
-   *result = SCIPisGT(scip, maxviol, SCIPfeastol(scip)) ? SCIP_INFEASIBLE : SCIP_FEASIBLE;
-
-   if( *result == SCIP_FEASIBLE )
-      return SCIP_OKAY;
-
-   /* try to propagate */
-   nchgbds = 0;
-   ndelconss = 0;
-   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, force, &propresult, &nchgbds, &ndelconss) );
-
-   if( propresult == SCIP_CUTOFF || propresult == SCIP_REDUCEDDOM )
-   {
-      *result = propresult;
-      return SCIP_OKAY;
-   }
-
-   /* try to separate the LP solution */
-   minviolation = MIN(0.75*maxviol, conshdlrdata->mincutviolationenfofac * SCIPfeastol(scip));  /*lint !e666*/
-   minviolation = MAX(minviolation, SCIPfeastol(scip));  /*lint !e666*/
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, minviolation, result) );
-
-   if( *result == SCIP_CUTOFF || *result == SCIP_SEPARATED )
-      return SCIP_OKAY;
-
-   /* find branching candidates */
-   SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, NULL, &nnotify) );
-   SCIPdebugMsg(scip, "registered %d external branching candidates\n", nnotify);
-
-   /* all variables have been fixed -> cutoff node */
-   /* @todo If we do not branch on linear variables any more this should be changed. We need to introduce linear
-    * constraints which are obtained by replacing all fixed non-linear variables as it is done in cons_nonlinear.
-    */
-   if( nnotify == 0 )
-      *result = SCIP_CUTOFF;
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, NULL, result) );
 
    return SCIP_OKAY;
 }
 
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxExpr)
+{  /*lint --e{715}*/
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, sol, result) );
+
+   return SCIP_OKAY;
+}
 
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
@@ -7298,7 +7323,7 @@ SCIP_RETCODE includeConshdlrExprBasic(
          consFreeExpr, consInitExpr, consExitExpr,
          consInitpreExpr, consExitpreExpr, consInitsolExpr, consExitsolExpr,
          consDeleteExpr, consTransExpr, consInitlpExpr,
-         consSepalpExpr, consSepasolExpr, consEnfolpExpr, consEnfopsExpr, consCheckExpr,
+         consSepalpExpr, consSepasolExpr, consEnfolpExpr, consEnforelaxExpr, consEnfopsExpr, consCheckExpr,
          consPropExpr, consPresolExpr, consRespropExpr, consLockExpr,
          consActiveExpr, consDeactiveExpr,
          consEnableExpr, consDisableExpr, consDelvarsExpr,
@@ -7341,6 +7366,7 @@ SCIP_RETCODE includeConshdlrExprBasic(
    SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropExpr) );
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpExpr, consSepasolExpr, CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransExpr) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxExpr) );
 #endif
 
    if( SCIPfindConshdlr(scip, "quadratic") != NULL )
