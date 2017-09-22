@@ -14,6 +14,10 @@ sleep 5
 DATABASE="/nfs/OPTI/adm_timo/databases/${PWD##*/}_${TESTSET}_$SETTING.txt"
 TMPDATABASE="$DATABASE.tmp"
 STILLFAILING="${DATABASE}_SF.tmp"
+RBDB="${DATABASE}_rbdb.txt"
+OUTPUT="${DATABASE}_output.tmp"
+touch ${STILLFAILING}
+touch ${RBDB}
 
 # the first time, the file might not exists so we create it
 # Even more, we have to write something to it, since otherwise
@@ -32,7 +36,17 @@ BASEFILE="check/results/check.$TESTSET.*.$SETTING"
 # evaluate the run and upload it to rubberband
 echo "Evaluating the run and uploading it to rubberband."
 cd check/
-./evalcheck_cluster.sh -R results/check.$TESTSET.*.$SETTING[.0-9]*eval
+PERF_MAIL=""
+if [ ${PERFORMANCE} == 'performance' ]; then
+  ./evalcheck_cluster.sh -R results/check.$TESTSET.*.$SETTING[.0-9]*eval >> ${OUTPUT}
+  NEWRBID=`echo $OUTPUT | grep "rubberband.zib" |sed -e 's|https://rubberband.zib.de/result/||'`
+  OLDRBID=`tail $RBDB -n 1`
+  PERF_MAIL=`echo "The results of the weekly performance runs are ready. Take a look at https://rubberband.zib.de/result/${NEWRBID}?compare=${OLDRBID}"`
+  echo $NEWRBID >> $RBDB
+  rm ${OUTPUT}
+else
+  ./evalcheck_cluster.sh -R results/check.$TESTSET.*.$SETTING[.0-9]*eval
+fi
 cd ..
 
 # construct string which shows the destination of the out, err, and res files
@@ -109,3 +123,8 @@ if [ -n "$RESOLVEDINSTANCES" ]; then
    echo -e "Congratulations!\n\nThe following errors have been fixed:\n${RESOLVEDINSTANCES}\n\nThe following instances are still failing:\n${STILLFAILINGDB}\n\n" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
 fi
 rm ${STILLFAILING}
+
+if [ ${PERFORMANCE} == 'performance' ]; then
+   SUBJECT="WEEKLYPERF [BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING=$SETTING] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH]"
+   echo -e "${PERF_MAIL}" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+fi
