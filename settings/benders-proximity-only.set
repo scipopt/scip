@@ -58,7 +58,7 @@ heuristics/proximity-benders/freq = 0
 
 # maximum number of nodes to regard in the subproblem
 # [type: longint, advanced: TRUE, range: [0,9223372036854775807], default: 10000]
-heuristics/proximity-benders/maxnodes = 100000
+heuristics/proximity-benders/maxnodes = 20
 
 # number of nodes added to the contingent of the total nodes
 # [type: longint, advanced: TRUE, range: [0,9223372036854775807], default: 50]
@@ -115,4 +115,3 @@ heuristics/undercover/freq = -1
 # frequency for calling primal heuristic <veclendiving> (-1: never, 0: only at depth freqofs)
 # [type: int, advanced: FALSE, range: [-1,65534], default: 10]
 heuristics/veclendiving/freq = -1
-s
