@@ -58,7 +58,7 @@ heuristics/proximity-benders/freq = 5
 
 # maximum number of nodes to regard in the subproblem
 # [type: longint, advanced: TRUE, range: [0,9223372036854775807], default: 10000]
-heuristics/proximity-benders/maxnodes = 1000
+heuristics/proximity-benders/maxnodes = 500
 
 # number of nodes added to the contingent of the total nodes
 # [type: longint, advanced: TRUE, range: [0,9223372036854775807], default: 50]
