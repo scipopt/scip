@@ -74,67 +74,6 @@ struct SCIP_ConshdlrData
    int                   checkedsolssize;    /**< the size of the checked solutions array */
 };
 
-/** the methods for the enforcement of solutions */
-SCIP_RETCODE SCIPconsBendersEnforceSolutions(
-   SCIP*                 scip,               /**< the SCIP instance */
-   SCIP_SOL*             sol,                /**< the primal solution to enforce, or NULL for the current LP/pseudo sol */
-   SCIP_CONSHDLR*        conshdlr,           /**< the constraint handler */
-   SCIP_RESULT*          result,             /**< the result of the enforcement */
-   SCIP_BENDERSENFOTYPE  type                /**< the type of solution being enforced */
-   )
-{
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_BENDERS** benders;
-   SCIP_Bool infeasible;
-   int nactivebenders;
-   int i;
-
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(result != NULL);
-
-   (*result) = SCIP_FEASIBLE;
-   infeasible = FALSE;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-
-   benders = SCIPgetBenders(scip);
-   nactivebenders = SCIPgetNActiveBenders(scip);
-
-   for( i = 0; i < nactivebenders; i++ )
-   {
-      switch( type )
-      {
-         case LP:
-            if( SCIPbendersCutLP(benders[i]) )
-            {
-               SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], NULL, result, &infeasible, type) );
-            }
-            break;
-         case RELAX:
-            if( SCIPbendersCutRelaxation(benders[i]) )
-            {
-               SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], sol, result, &infeasible, type) );
-            }
-            break;
-         case PSEUDO:
-            if( SCIPbendersCutPseudo(benders[i]) )
-            {
-               SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], NULL, result, &infeasible, type) );
-            }
-            break;
-         case CHECK:
-            SCIPwarningMessage(scip, "The conscheck callback is not supported\n");
-         default:
-            break;
-      }
-   }
-
-   conshdlrdata->ncalls++;
-
-   return SCIP_OKAY;
-}
-
 /*
  * Local methods
  */
@@ -227,6 +166,81 @@ SCIP_RETCODE constructValidSolution(
 #endif
 
    SCIP_CALL( SCIPfreeSol(scip, &newsol) );
+
+   return SCIP_OKAY;
+}
+
+/** the methods for the enforcement of solutions */
+SCIP_RETCODE SCIPconsBendersEnforceSolutions(
+   SCIP*                 scip,               /**< the SCIP instance */
+   SCIP_SOL*             sol,                /**< the primal solution to enforce, or NULL for the current LP/pseudo sol */
+   SCIP_CONSHDLR*        conshdlr,           /**< the constraint handler */
+   SCIP_RESULT*          result,             /**< the result of the enforcement */
+   SCIP_BENDERSENFOTYPE  type,               /**< the type of solution being enforced */
+   SCIP_Bool             checkint            /**< should the integer solution be checked by the subproblems */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_BENDERS** benders;
+   SCIP_Bool infeasible;
+   int nactivebenders;
+   int i;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(result != NULL);
+
+   (*result) = SCIP_FEASIBLE;
+   infeasible = FALSE;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+
+   benders = SCIPgetBenders(scip);
+   nactivebenders = SCIPgetNActiveBenders(scip);
+
+   for( i = 0; i < nactivebenders; i++ )
+   {
+      switch( type )
+      {
+         case LP:
+            if( SCIPbendersCutLP(benders[i]) )
+            {
+               SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], NULL, result, &infeasible, type, checkint) );
+            }
+            break;
+         case RELAX:
+            if( SCIPbendersCutRelaxation(benders[i]) )
+            {
+               SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], sol, result, &infeasible, type, checkint) );
+            }
+            break;
+         case PSEUDO:
+            if( SCIPbendersCutPseudo(benders[i]) )
+            {
+               SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], NULL, result, &infeasible, type, checkint) );
+            }
+            break;
+         case CHECK:
+            SCIPwarningMessage(scip, "The conscheck callback is not supported\n");
+         default:
+            break;
+      }
+   }
+
+   /* if the constraint handler was called with an integer feasible solution, then a feasible solution can be proposed */
+   if( checkint )
+   {
+      /* in the case that the problem is feasible, this means that all subproblems are feasible. The auxiliary variables
+       * still need to be updated. This is done by constructing a valid solution. */
+      if( (*result) == SCIP_FEASIBLE && infeasible )
+      {
+         //if( !SCIPsolIsOriginal(sol) )
+            //SCIP_CALL( constructValidSolution(scip, conshdlr, sol) );
+         (*result) = SCIP_INFEASIBLE;
+      }
+   }
+
+   conshdlrdata->ncalls++;
 
    return SCIP_OKAY;
 }
@@ -450,7 +464,7 @@ static
 SCIP_DECL_CONSENFOLP(consEnfolpBenders)
 {  /*lint --e{715}*/
 
-   SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, NULL, conshdlr, result, LP) );
+   SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, NULL, conshdlr, result, LP, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -461,7 +475,7 @@ static
 SCIP_DECL_CONSENFORELAX(consEnforelaxBenders)
 {  /*lint --e{715}*/
 
-   SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, sol, conshdlr, result, RELAX) );
+   SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, sol, conshdlr, result, RELAX, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -472,7 +486,7 @@ static
 SCIP_DECL_CONSENFOPS(consEnfopsBenders)
 {  /*lint --e{715}*/
 
-   SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, NULL, conshdlr, result, PSEUDO) );
+   SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, NULL, conshdlr, result, PSEUDO, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -528,7 +542,7 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
       for( i = 0; i < nactivebenders; i++ )
       {
 
-         SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], sol, result, &infeasible, CHECK) );
+         SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], sol, result, &infeasible, CHECK, TRUE) );
 
          /* if the result is infeasible, it is not necessary to check any more subproblems. */
          if( (*result) == SCIP_INFEASIBLE )

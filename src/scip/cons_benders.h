@@ -111,12 +111,13 @@ SCIP_RETCODE SCIPcreateConsBasicBenders(
 /** the methods for the enforcement of solutions */
 EXTERN
 SCIP_RETCODE SCIPconsBendersEnforceSolutions(
-    SCIP*                scip,               /**< the SCIP instance */
-   SCIP_SOL*             sol,                /**< the primal solution to enforce, or NULL for the current LP/pseudo sol */
-    SCIP_CONSHDLR*       conshdlr,           /**< the constraint handler */
-    SCIP_RESULT*         result,             /**< the result of the enforcement */
-    SCIP_BENDERSENFOTYPE  type                /**< the type of solution being enforced */
-    );
+   SCIP*                 scip,               /**< the SCIP instance */
+  SCIP_SOL*              sol,                /**< the primal solution to enforce, or NULL for the current LP/pseudo sol */
+   SCIP_CONSHDLR*        conshdlr,           /**< the constraint handler */
+   SCIP_RESULT*          result,             /**< the result of the enforcement */
+   SCIP_BENDERSENFOTYPE  type,               /**< the type of solution being enforced */
+   SCIP_Bool             checkint            /**< should the integer solution be checked by the subproblems */
+   );
 
 /* @} */
 

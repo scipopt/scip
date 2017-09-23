@@ -317,7 +317,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpBenderslp)
    if( SCIPgetDepth(scip) >= 1 )
       (*result) = SCIP_FEASIBLE;
    else
-      SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, NULL, conshdlr, result, LP) );
+      SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, NULL, conshdlr, result, LP, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -331,7 +331,7 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxBenderslp)
    if( SCIPgetDepth(scip) >= 1 )
       (*result) = SCIP_FEASIBLE;
    else
-      SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, sol, conshdlr, result, RELAX) );
+      SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, sol, conshdlr, result, RELAX, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -345,7 +345,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsBenderslp)
    if( SCIPgetDepth(scip) >= 1 )
       (*result) = SCIP_FEASIBLE;
    else
-      SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, NULL, conshdlr, result, PSEUDO) );
+      SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, NULL, conshdlr, result, PSEUDO, FALSE) );
 
    return SCIP_OKAY;
 }
