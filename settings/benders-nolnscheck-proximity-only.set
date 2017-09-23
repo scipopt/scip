@@ -80,6 +80,10 @@ heuristics/proximity-benders/minimprove = 0.0001
 # [type: real, advanced: TRUE, range: [0,1e+20], default: 0.1]
 heuristics/proximity-benders/nodesquot = 10000
 
+# threshold for percentage of binary variables required to start
+# [type: real, advanced: TRUE, range: [0,1], default: 0.1]
+heuristics/proximity-benders/binvarquot = 0
+
 # quotient of sub-MIP LP iterations with respect to LP iterations so far
 # [type: real, advanced: TRUE, range: [0,1], default: 0.2]
 heuristics/proximity-benders/lpitersquot = 1
