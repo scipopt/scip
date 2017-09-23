@@ -646,8 +646,8 @@ SCIP_DECL_HEUREXEC(heurExecDinsbenders)
       return SCIP_OKAY;
 
    /* only call the heuristic if the incumbent has improved since the last call */
-   if( SCIPisGE(scip, SCIPgetSolTransObj(scip, SCIPgetBestSol(scip)), heurdata->prevobj) )
-      return SCIP_OKAY;
+   //if( SCIPisGE(scip, SCIPgetSolTransObj(scip, SCIPgetBestSol(scip)), heurdata->prevobj) )
+      //return SCIP_OKAY;
 
    heurdata->prevobj = SCIPgetSolTransObj(scip, SCIPgetBestSol(scip));
 

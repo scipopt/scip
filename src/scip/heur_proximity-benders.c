@@ -898,7 +898,7 @@ SCIP_RETCODE SCIPapplyProximitybenders(
    /* set limits for the subproblem */
    SCIP_CALL( SCIPcopyLimits(scip, subscip) );
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nnodes) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "limits/solutions", 10000) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", 3) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/gap", 0.1) );
 
    /* restrict LP iterations */
