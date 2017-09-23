@@ -1933,7 +1933,7 @@ SCIP_RETCODE SCIPbendersExec(
 
             /* if the subproblems are being solved as part of the conscheck, then we break once an infeasibility is found.
              * The result pointer is set to (*infeasible) and the execution is halted. */
-            if( type == CHECK )
+            if( checkint )
             {
                /* if the subproblem is feasible, then it is necessary to update the value of the auxiliary variable to the
                 * objective function value of the subproblem. */
@@ -2030,7 +2030,7 @@ SCIP_RETCODE SCIPbendersExec(
 
    allchecked = (nchecked == nsubproblems);
 
-   if( checkint )
+   if( checkint && (type == CHECK || (*result) != SCIP_CONSADDED) )
    {
       /* if the subproblems are being solved as part of conscheck, then the results flag must be returned after the solving
        * has completed. No cut is generated during conscheck. */
