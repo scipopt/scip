@@ -14,7 +14,7 @@ sleep 5
 DATABASE="/nfs/OPTI/adm_timo/databases/${PWD##*/}_${TESTSET}_${SETTING}_${LPS}.txt"
 TMPDATABASE="$DATABASE.tmp"
 STILLFAILING="${DATABASE}_SF.tmp"
-RBDB="rbdb/${DATABASE}_rb.txt"
+RBDB="/nfs/OPTI/adm_timo/databases/rbdb/${PWD##*/}_${TESTSET}_${SETTING}_${LPS}_rb.txt"
 OUTPUT="${DATABASE}_output.tmp"
 touch ${STILLFAILING}
 
@@ -37,8 +37,8 @@ echo "Evaluating the run and uploading it to rubberband."
 cd check/
 PERF_MAIL=""
 if [ ${PERFORMANCE} == 'performance' ]; then
-  ./evalcheck_cluster.sh -R results/check.$TESTSET.*.$SETTING[.0-9]*eval >> ${OUTPUT}
-  NEWRBID=`echo $OUTPUT | grep "rubberband.zib" |sed -e 's|https://rubberband.zib.de/result/||'`
+  ./evalcheck_cluster.sh -R results/check.$TESTSET.*.$SETTING[.0-9]*eval > ${OUTPUT}
+  NEWRBID=`cat $OUTPUT | grep "rubberband.zib" |sed -e 's|https://rubberband.zib.de/result/||'`
   OLDRBID=`tail $RBDB -n 1`
   PERF_MAIL=`echo "The results of the weekly performance runs are ready. Take a look at https://rubberband.zib.de/result/${NEWRBID}?compare=${OLDRBID}"`
   echo $NEWRBID >> $RBDB
