@@ -1,4 +1,3 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
@@ -1810,7 +1809,8 @@ SCIP_RETCODE SCIPbendersExec(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_RESULT*          result,             /**< result of the pricing process */
    SCIP_Bool*            infeasible,         /**< is the master problem infeasible with respect to the Benders' cuts? */
-   SCIP_BENDERSENFOTYPE  type                /**< the enforcement type calling this function */
+   SCIP_BENDERSENFOTYPE  type,               /**< the type of solution being enforced */
+   SCIP_Bool             checkint            /**< should the integer solution be checked by the subproblems */
    )
 {
    SCIP_BENDERSCUT** benderscuts;
@@ -2023,14 +2023,14 @@ SCIP_RETCODE SCIPbendersExec(
 
          /* if no cuts were added, then the number of solve loops is increased */
          if( addedcuts == 0 && SCIPbendersGetNLPSubprobs(benders) < SCIPbendersGetNSubproblems(benders)
-            && benders->benderssolvesub == NULL && type == CHECK && !onlylpcheck )
+            && benders->benderssolvesub == NULL && checkint && !onlylpcheck )
             nsolveloops = 2;
       }
    }
 
    allchecked = (nchecked == nsubproblems);
 
-   if( type == CHECK )
+   if( checkint )
    {
       /* if the subproblems are being solved as part of conscheck, then the results flag must be returned after the solving
        * has completed. No cut is generated during conscheck. */
@@ -2045,6 +2045,9 @@ SCIP_RETCODE SCIPbendersExec(
          (*infeasible) = !optimal;
       }
    }
+#if 0
+   /* The else branch existed when the if statement checked for type == CHECK. I think that the else is not needed.
+    * Keeping it here to check whether it was needed  */
    else if( type == PSEUDO )
    {
       if( (*infeasible) || !(optimal && allchecked) )
@@ -2052,6 +2055,7 @@ SCIP_RETCODE SCIPbendersExec(
       else
          (*result) = SCIP_FEASIBLE;
    }
+#endif
 
    /* calling the post-solve call back for the Benders' decomposition algorithm. This allows the user to work directly
     * with the solved subproblems and the master problem */
