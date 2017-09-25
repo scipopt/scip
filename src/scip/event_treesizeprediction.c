@@ -32,6 +32,7 @@
 #define EVENTHDLR_NAME         "treesizeprediction"
 #define EVENTHDLR_DESC         "event handler for tree-size prediction related events"
 
+#define DEFAULT_ACTIVE         FALSE
 #define DEFAULT_HASHMAP_SIZE   100000
 #define DEFAULT_MAXRATIOITERS  100
 #define DEFAULT_ESTIMATION_METHOD 'r'
@@ -331,6 +332,7 @@ void freeElistMemory(SCIP* scip, Elist *elist)
 struct SCIP_EventhdlrData
 {
    /* Parameters */
+   SCIP_Bool active;
    int hashmapsize;
    int maxratioiters;
    char estimatemethod;
@@ -446,6 +448,13 @@ SCIP_DECL_EVENTINITSOL(eventInitsolTreeSizePrediction)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
+   /* If the plugin is not active then we skip everything */
+   if( eventhdlrdata->active == FALSE )
+   {
+      /* We deactivate the display column */
+      SCIPsetIntParam(scip, "display/estimates/active", 0);
+      return SCIP_OKAY;
+   }
 
    switch(eventhdlrdata->estimatemethod)
    {
@@ -494,6 +503,12 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolTreeSizePrediction)
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
+
+   /* If the plugin is not active then we skip everything */
+   if( eventhdlrdata->active == FALSE )
+   {
+      return SCIP_OKAY;
+   }
 
    SCIPdebugMessage("Found %u nodes in the B&B tree\n", eventhdlrdata->nodesfound);
    if( eventhdlrdata->nodesfound != SCIPgetNNodes(scip) )
@@ -869,6 +884,8 @@ SCIP_RETCODE SCIPincludeEventHdlrTreeSizePrediction(
    SCIP_CALL( SCIPsetEventhdlrDelete(scip, eventhdlr, NULL) );
 
    /* add tree-size prediction event handler parameters */
+   SCIP_CALL( SCIPaddBoolParam(scip, "estimates/active", "Whether to activate the plugin", &(eventhdlrdata->active), FALSE, DEFAULT_ACTIVE, NULL, NULL) );
+
    SCIP_CALL( SCIPaddIntParam(scip, "estimates/hashmapsize", "Default hashmap size to store the open nodes of the B&B tree", &(eventhdlrdata->hashmapsize), TRUE, DEFAULT_HASHMAP_SIZE, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "estimates/maxratioiters", "Maximum number of iterations to compute the ratio of a variable", &(eventhdlrdata->maxratioiters), TRUE, DEFAULT_MAXRATIOITERS, 0, INT_MAX, NULL, NULL) );
