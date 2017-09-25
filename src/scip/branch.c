@@ -120,6 +120,7 @@ void SCIPbranchComputeVarRatio(
    {
       branchratio->valid = FALSE;
       doloop = FALSE;
+      r = 1; /* We give a dummy value to r so that it is initialised and valgrind does not pick up that problem between here and the loop*/
    }
    else
    {
