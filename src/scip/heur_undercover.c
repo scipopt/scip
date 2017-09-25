@@ -1925,8 +1925,8 @@ SCIP_RETCODE getFixingValue(
    /* due to propagation (during probing) it might happen that the LP and NLP solution value of var might be outside of
     * its bounds
     */
-   *val = MAX(*val, SCIPvarGetLbLocal(var));
-   *val = MIN(*val, SCIPvarGetUbLocal(var));
+   *val = MAX(*val, SCIPvarGetLbLocal(var)); /*lint !e666*/
+   *val = MIN(*val, SCIPvarGetUbLocal(var)); /*lint !e666*/
 
    return SCIP_OKAY;
 }
