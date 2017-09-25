@@ -659,6 +659,12 @@ int SCIProwGetMinidx(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** gets number of integral columns in row */
+int SCIProwGetNumIntCol(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** returns row's efficacy with respect to the current LP solution: e = -feasibility/norm */
 extern
 SCIP_Real SCIProwGetLPEfficacy(

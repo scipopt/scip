@@ -99,16 +99,7 @@ SCIP_RETCODE addCut(
 #endif
 
       SCIP_CALL( SCIPaddPoolCut(scip, cut) );
-
-      /* add cut only if it was accepted in the global cut pool */
-      if( SCIProwIsInGlobalCutpool(cut) )
-      {
-         SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, cutoff) );
-         if ( ! (*cutoff) )
-         {
-            (*ncuts)++;
-         }
-      }
+      (*ncuts)++;
 
       /* release cut */
       SCIP_CALL( SCIPreleaseRow(scip, &cut) );

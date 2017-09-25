@@ -56,7 +56,7 @@
 #define SEPA_NAME              "gomory"
 #define SEPA_DESC              "Gomory MIR cuts separator"
 #define SEPA_PRIORITY             -1000
-#define SEPA_FREQ                    30
+#define SEPA_FREQ                    20
 #define SEPA_MAXBOUNDDIST           1.0
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
@@ -72,7 +72,7 @@
 #define DEFAULT_MAKEINTEGRAL       TRUE /**< try to scale all cuts to integral coefficients */
 #define DEFAULT_FORCECUTS          TRUE /**< if conversion to integral coefficients failed still consider the cut */
 #define DEFAULT_SEPARATEROWS       TRUE /**< separate rows with integral slack */
-#define DEFAULT_DELAYEDCUTS        TRUE /**< should cuts be added to the delayed cut pool? */
+#define DEFAULT_DELAYEDCUTS       FALSE /**< should cuts be added to the delayed cut pool? */
 #define DEFAULT_SIDETYPEBASIS      TRUE /**< choose side types of row (lhs/rhs) based on basis information? */
 #define DEFAULT_RANDSEED             53 /**< initial random seed */
 

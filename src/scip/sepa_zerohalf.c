@@ -1615,12 +1615,15 @@ SCIP_RETCODE generateZerohalfCut(
 
          if( SCIPisCutNew(scip, cut) )
          {
-            SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &sepadata->infeasible) );
             sepadata->ncuts++;
 
             if( !cutislocal )
             {
                SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &sepadata->infeasible) );
             }
          }
 
@@ -1933,7 +1936,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
    /* only call separator, if there are fractional variables */
    if( SCIPgetNLPBranchCands(scip) == 0 )
       return SCIP_OKAY;
-
 
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);

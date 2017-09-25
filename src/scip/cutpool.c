@@ -263,7 +263,9 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
 
    for( i = 0; i < row->len; ++i )
    {
-      hash += SCIPhashTwo(SCIPrealHashCode(scale * row->vals[i]), row->cols_index[i]);
+      SCIP_Real val = scale * row->vals[i];
+
+      hash += SCIPhashTwo(SCIPrealHashCode(val), row->cols_index[i]);
    }
 
    return hash;
@@ -438,6 +440,8 @@ SCIP_RETCODE SCIPcutpoolCreate(
    (*cutpool)->agelimit = agelimit;
    (*cutpool)->processedlp = -1;
    (*cutpool)->processedlpsol = -1;
+   (*cutpool)->processedlpefficacy = SCIP_INVALID;
+   (*cutpool)->processedlpsolefficacy = SCIP_INVALID;
    (*cutpool)->firstunprocessed = 0;
    (*cutpool)->firstunprocessedsol = 0;
    (*cutpool)->maxncuts = 0;
@@ -494,6 +498,7 @@ SCIP_RETCODE SCIPcutpoolClear(
       SCIProwUnlock(cutpool->cuts[i]->row);
       SCIP_CALL( cutFree(&cutpool->cuts[i], blkmem, set, lp) );
    }
+
    cutpool->ncuts = 0;
    cutpool->nremovablecuts = 0;
 
@@ -655,7 +660,7 @@ SCIP_RETCODE SCIPcutpoolAddRow(
    /* check in hash table, if cut already exists in the pool */
    if( othercut == NULL )
    {
-      SCIP_CALL( SCIPcutpoolAddNewRow(cutpool, blkmem, set, row) );
+      SCIP_CALL( SCIPcutpoolAddNewRow(cutpool, blkmem, set, stat, lp, row) );
    }
    else
    {
@@ -693,7 +698,7 @@ SCIP_RETCODE SCIPcutpoolAddRow(
       if( SCIPsetIsFeasLT(set, rhs, otherrhs) )
       {
          SCIP_CALL( cutpoolDelCut(cutpool, blkmem, set, stat, lp, othercut) );
-         SCIP_CALL( SCIPcutpoolAddNewRow(cutpool, blkmem, set, row) );
+         SCIP_CALL( SCIPcutpoolAddNewRow(cutpool, blkmem, set, stat, lp, row) );
       }
    }
 
@@ -705,6 +710,8 @@ SCIP_RETCODE SCIPcutpoolAddNewRow(
    SCIP_CUTPOOL*         cutpool,            /**< cut pool */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_ROW*             row                 /**< cutting plane to add */
    )
 {
@@ -747,6 +754,8 @@ SCIP_RETCODE SCIPcutpoolAddNewRow(
    SCIP_CALL( SCIPhashtableInsert(cutpool->hashtable, (void*)cut) );
 
    assert(SCIPhashtableExists(cutpool->hashtable, (void*)cut));
+
+   stat->bestefficacy = MAX(SCIProwGetLPEfficacy(row, set, stat, lp), stat->bestefficacy);
 
    /* if this is the global cut pool of SCIP, mark the row to be member of the pool */
    if( cutpool->globalcutpool )
@@ -806,6 +815,9 @@ SCIP_RETCODE SCIPcutpoolSeparate(
    SCIP_CUT* cut;
    SCIP_Bool found;
    SCIP_Bool cutoff;
+   SCIP_Real minefficacy;
+   SCIP_Bool tried;
+   SCIP_Bool retest;
    int firstunproc;
    int oldncuts;
    int c;
@@ -844,6 +856,19 @@ SCIP_RETCODE SCIPcutpoolSeparate(
    *result = SCIP_DIDNOTFIND;
    cutpool->ncalls++;
    found = FALSE;
+   tried = FALSE;
+   minefficacy = stat->bestefficacy * stat->minefficacyfac;
+
+   if( sol == NULL )
+   {
+      retest = cutpool->processedlpsolefficacy > minefficacy;
+      cutpool->processedlpsolefficacy = minefficacy;
+   }
+   else
+   {
+      retest = cutpool->processedlpefficacy > minefficacy;
+      cutpool->processedlpefficacy = minefficacy;
+   }
 
    SCIPsetDebugMsg(set, "separating%s cut pool %p with %d cuts, beginning with cut %d\n", ( sol == NULL ) ? "" : " solution from", (void*)cutpool, cutpool->ncuts, firstunproc);
 
@@ -867,7 +892,7 @@ SCIP_RETCODE SCIPcutpoolSeparate(
 
       proclp = ( sol == NULL ) ? cut->processedlp : cut->processedlpsol;
 
-      if( proclp < stat->lpcount )
+      if( retest || proclp < stat->lpcount )
       {
          SCIP_ROW* row;
 
@@ -879,6 +904,8 @@ SCIP_RETCODE SCIPcutpoolSeparate(
          row = cut->row;
          if( !SCIProwIsInLP(row) )
          {
+            SCIP_Real efficacy;
+
             /* if the cut is a bound change (i.e. a row with only one variable), add it as bound change instead of LP
              * row; hence, we want to remove the bound change cut from the SCIP cut pool
              */
@@ -890,8 +917,14 @@ SCIP_RETCODE SCIPcutpoolSeparate(
 
                if ( cutoff )
                   break;
+
+               continue;
             }
-            else if( (sol == NULL && SCIProwIsLPEfficacious(row, set, stat, lp, root)) || (sol != NULL && SCIProwIsSolEfficacious(row, set, stat, sol, root)) )
+
+            tried = TRUE;
+            efficacy = sol == NULL ? SCIProwGetLPEfficacy(row, set, stat, lp) : SCIProwGetSolEfficacy(row, set, stat, sol);
+
+            if( efficacy >= minefficacy )
             {
                /* insert cut in separation storage */
                SCIPsetDebugMsg(set, " -> separated cut <%s> from the cut pool (feasibility: %g)\n",
@@ -947,8 +980,28 @@ SCIP_RETCODE SCIPcutpoolSeparate(
       cutpool->firstunprocessedsol = cutpool->ncuts;
    }
 
-   /* update the number of found cuts */
-   cutpool->ncutsfound += SCIPsepastoreGetNCuts(sepastore) - oldncuts; /*lint !e776*/
+   if( tried && !found )
+      ++stat->ncutpoolfails;
+   else
+   {
+      int ncuts = SCIPsepastoreGetNCuts(sepastore) - oldncuts;
+
+      /* update the number of found cuts */
+      cutpool->ncutsfound += ncuts;
+
+      if( ncuts > SCIPsetGetSepaMaxcuts(set, root) )
+         stat->minefficacyfac *= 1.5;
+
+      stat->ncutpoolfails = 0;
+   }
+
+   if( stat->ncutpoolfails == 2 )
+   {
+      cutpool->firstunprocessed = 0;
+      cutpool->firstunprocessedsol = 0;
+      stat->minefficacyfac *= 0.5;
+      stat->ncutpoolfails = 0;
+   }
 
    /* stop timing */
    SCIPclockStop(cutpool->poolclock, set);

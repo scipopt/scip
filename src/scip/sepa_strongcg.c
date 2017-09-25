@@ -31,7 +31,7 @@
 #define SEPA_NAME              "strongcg"
 #define SEPA_DESC              "Strong CG cuts separator (Letchford and Lodi)"
 #define SEPA_PRIORITY             -2000
-#define SEPA_FREQ                    30
+#define SEPA_FREQ                    20
 #define SEPA_MAXBOUNDDIST           1.0
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
@@ -441,7 +441,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
             }
             else
             {
-               SCIP_Bool infeasible;
+               SCIP_Bool infeasible = FALSE;
 
                /* flush all changes before adding the cut */
                SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
@@ -455,7 +455,15 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
 
                if( SCIPisCutNew(scip, cut) )
                {
-                  SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
+                  if( !cutislocal )
+                  {
+                     SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+                  }
+                  else
+                  {
+                     SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
+                  }
+
                   ncuts++;
 
                   if( infeasible )
@@ -465,11 +473,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
                   else
                   {
                      *result = SCIP_SEPARATED;
-
-                     if( !cutislocal )
-                     {
-                        SCIP_CALL( SCIPaddPoolCut(scip, cut) );
-                     }
                   }
                }
             }

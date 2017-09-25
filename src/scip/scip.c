@@ -34343,7 +34343,7 @@ SCIP_RETCODE SCIPaddNewRowCutpool(
 {
    SCIP_CALL( checkStage(scip, "SCIPaddNewRowCutpool", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPcutpoolAddNewRow(cutpool, scip->mem->probmem, scip->set, row) );
+   SCIP_CALL( SCIPcutpoolAddNewRow(cutpool, scip->mem->probmem, scip->set, scip->stat, scip->lp, row) );
 
    return SCIP_OKAY;
 }

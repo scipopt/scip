@@ -4731,6 +4731,7 @@ void rowCalcIdxsAndVals(
 
    row->maxval = 0.0;
    row->nummaxval = 1;
+   row->numintcols = 0;
    row->minval = SCIPsetInfinity(set);
    row->numminval = 1;
    row->minidx = INT_MAX;
@@ -4750,6 +4751,7 @@ void rowCalcIdxsAndVals(
       /* update min/maxidx */
       row->minidx = MIN(row->minidx, col->index);
       row->maxidx = MAX(row->maxidx, col->index);
+      row->numintcols += SCIPcolIsIntegral(col);
 
       /* update maximal and minimal non-zero value */
       if( row->nummaxval > 0 )
@@ -5099,6 +5101,7 @@ SCIP_RETCODE SCIProwCreate(
    (*row)->maxidx = INT_MIN;
    (*row)->nummaxval = 0;
    (*row)->numminval = 0;
+   (*row)->numintcols = 0;
    (*row)->validactivitylp = -1;
    (*row)->validpsactivitydomchg = -1;
    (*row)->validactivitybdsdomchg = -1;
@@ -6589,6 +6592,23 @@ int SCIProwGetMinidx(
    assert(row->validminmaxidx);
 
    return row->minidx;
+}
+
+/** gets number of integral columns in row */
+int SCIProwGetNumIntCol(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(row != NULL);
+
+   if( !row->validminmaxidx )
+      rowCalcIdxsAndVals(row, set);
+   assert(row->validminmaxidx);
+
+   assert(row->numintcols <= row->len && row->numintcols >= 0);
+
+   return row->numintcols;
 }
 
 /** returns row's efficacy with respect to the current LP solution: e = -feasibility/norm */

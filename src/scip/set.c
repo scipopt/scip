@@ -385,10 +385,10 @@
                                                  *   bound compared to best node's dual bound for applying local separation
                                                  *   (0.0: only on current best node, 1.0: on all nodes) */
 #define SCIP_DEFAULT_SEPA_MAXCOEFRATIO     1e+4 /**< maximal ratio between coefficients in strongcg, cmir, and flowcover cuts */
-#define SCIP_DEFAULT_SEPA_MINEFFICACY       0.1 /**< minimal efficacy for a cut to enter the LP */
-#define SCIP_DEFAULT_SEPA_MINEFFICACYROOT 0.001 /**< minimal efficacy for a cut to enter the LP in the root node */
-#define SCIP_DEFAULT_SEPA_MINORTHO         0.60 /**< minimal orthogonality for a cut to enter the LP */
-#define SCIP_DEFAULT_SEPA_MINORTHOROOT     0.50 /**< minimal orthogonality for a cut to enter the LP in the root node */
+#define SCIP_DEFAULT_SEPA_MINEFFICACY      0.01 /**< minimal efficacy for a cut to enter the LP */
+#define SCIP_DEFAULT_SEPA_MINEFFICACYROOT  0.01 /**< minimal efficacy for a cut to enter the LP in the root node */
+#define SCIP_DEFAULT_SEPA_MINORTHO         0.90 /**< minimal orthogonality for a cut to enter the LP */
+#define SCIP_DEFAULT_SEPA_MINORTHOROOT     0.90 /**< minimal orthogonality for a cut to enter the LP in the root node */
 #define SCIP_DEFAULT_SEPA_OBJPARALFAC    0.0001 /**< factor to scale objective parallelism of cut in score calculation */
 #define SCIP_DEFAULT_SEPA_ORTHOFAC         1.00 /**< factor to scale orthogonality of cut in score calculation */
 #define SCIP_DEFAULT_SEPA_ORTHOFUNC         'e' /**< function used for calc. scalar prod. in orthogonality test ('e'uclidean, 'd'iscrete) */
@@ -397,9 +397,9 @@
 #define SCIP_DEFAULT_SEPA_CUTSELRESTART     'a' /**< cut selection during restart ('a'ge, activity 'q'uotient) */
 #define SCIP_DEFAULT_SEPA_CUTSELSUBSCIP     'a' /**< cut selection for sub SCIPs  ('a'ge, activity 'q'uotient) */
 #define SCIP_DEFAULT_SEPA_MAXRUNS            -1 /**< maximal number of runs for which separation is enabled (-1: unlimited) */
-#define SCIP_DEFAULT_SEPA_MAXROUNDS           5 /**< maximal number of separation rounds per node (-1: unlimited) */
+#define SCIP_DEFAULT_SEPA_MAXROUNDS          -1 /**< maximal number of separation rounds per node (-1: unlimited) */
 #define SCIP_DEFAULT_SEPA_MAXROUNDSROOT      -1 /**< maximal number of separation rounds in the root node (-1: unlimited) */
-#define SCIP_DEFAULT_SEPA_MAXROUNDSROOTSUBRUN 5 /**< maximal number of separation rounds in the root node of a subsequent run (-1: unlimited) */
+#define SCIP_DEFAULT_SEPA_MAXROUNDSROOTSUBRUN -1 /**< maximal number of separation rounds in the root node of a subsequent run (-1: unlimited) */
 #define SCIP_DEFAULT_SEPA_MAXADDROUNDS        1 /**< maximal additional number of separation rounds in subsequent
                                                  *   price-and-cut loops (-1: no additional restriction) */
 #define SCIP_DEFAULT_SEPA_MAXSTALLROUNDSROOT 10 /**< maximal number of consecutive separation rounds without objective
@@ -408,9 +408,9 @@
                                                  *   or integrality improvement (-1: no additional restriction) */
 #define SCIP_DEFAULT_SEPA_MAXCUTS           200 /**< maximal number of cuts separated per separation round */
 #define SCIP_DEFAULT_SEPA_MAXCUTSROOT      2000 /**< maximal separated cuts at the root node */
-#define SCIP_DEFAULT_SEPA_CUTAGELIMIT       100 /**< maximum age a cut can reach before it is deleted from global cut pool
+#define SCIP_DEFAULT_SEPA_CUTAGELIMIT        80 /**< maximum age a cut can reach before it is deleted from global cut pool
                                                  *   (-1: cuts are never deleted from the global cut pool) */
-#define SCIP_DEFAULT_SEPA_POOLFREQ           20 /**< separation frequency for the global cut pool */
+#define SCIP_DEFAULT_SEPA_POOLFREQ           10 /**< separation frequency for the global cut pool */
 #define SCIP_DEFAULT_SEPA_FEASTOLFAC      -1.00 /**< factor on cut infeasibility to limit feasibility tolerance for relaxation solver (-1: off) */
 #define SCIP_DEFAULT_SEPA_MINACTIVITYQUOT   0.8 /**< minimum cut activity quotient to convert cuts into constraints
                                                  *   during a restart (0.0: all cuts are converted) */

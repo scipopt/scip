@@ -5813,11 +5813,14 @@ SCIP_RETCODE addCut(
    SCIPdebugMsg(scip, " -> found MCF cut <%s>: rhs=%f, act=%f eff=%f rank=%d\n",
                 cutname, cutrhs, SCIPgetRowSolActivity(scip, cut, sol), SCIPgetCutEfficacy(scip, sol, cut), SCIProwGetRank(cut));
    /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
-   SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, cutoff) );
 
-   if( !(*cutoff) && !cutislocal )
+   if( !cutislocal )
    {
       SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, cutoff) );
    }
    (*ncuts)++;
 

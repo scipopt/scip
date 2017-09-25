@@ -2537,6 +2537,18 @@ SCIP_RETCODE priceAndCutLoop(
             }
          }
 
+         /* call global cut pool separation again since separators may add cuts to the pool instead of the sepastore */
+         if( !(*cutoff) && !(*lperror) && !enoughcuts && lp->solved )
+         {
+            SCIP_CALL( cutpoolSeparate(cutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, FALSE, root,
+                  actdepth, &enoughcuts, cutoff) );
+
+            if( *cutoff )
+            {
+               SCIPsetDebugMsg(set, " -> global cut pool detected cutoff\n");
+            }
+         }
+
          /* delayed global cut pool separation */
          if( !(*cutoff) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && SCIPsepastoreGetNCuts(sepastore) == 0 )
          {
