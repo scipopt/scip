@@ -1,2 +1,4 @@
+display/estimates/active = 2
+estimates/active = TRUE
 estimates/estimatemethod = r
 estimates/measureerror = TRUE
