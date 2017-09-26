@@ -17178,7 +17178,6 @@ SCIP_RETCODE SCIPcreateConsLinear(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    )
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
 
@@ -17192,11 +17191,6 @@ SCIP_RETCODE SCIPcreateConsLinear(
       SCIPerrorMessage("linear constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
-
-   /* check for event handler */
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-   assert(conshdlrdata->eventhdlr != NULL);
 
    /* for the solving process we need linear rows, containing only active variables; therefore when creating a linear
     * constraint after presolving we have to ensure that it holds active variables
