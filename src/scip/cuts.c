@@ -392,6 +392,9 @@ SCIP_Bool removeZeros(
 
    vars = SCIPgetVars(scip);
 
+   /* loop over non-zeros and remove values below minval; values above QUAD_EPSILON are cancelled with their bound
+    * to avoid numerical rounding errors
+    */
    for( i = 0; i < *cutnnz; )
    {
       SCIP_Real val;
@@ -466,6 +469,9 @@ SCIP_Bool cutTightenCoefsQuad(
    maxabsval = 0.0;
    nintegralvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
 
+   /* loop over non-zeros and remove values below minval; values above QUAD_EPSILON are cancelled with their bound
+    * to avoid numerical rounding errors
+    */
    for( i = 0; i < *cutnnz; ++i )
    {
       SCIP_Real QUAD(val);
