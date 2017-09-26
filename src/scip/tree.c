@@ -6412,6 +6412,7 @@ SCIP_RETCODE SCIPtreeLoadProbingLPState(
 
       /* get the current probing node */
       node = SCIPtreeGetCurrentNode(tree);
+      assert(node != NULL);
       assert(SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
 
       /* search the last node where an LP state information was attached */
