@@ -163,7 +163,7 @@ SCIP_DECL_BANDITSELECT(SCIPbanditSelectUcb)
       assert(meanscores != NULL);
 
       /* compute the confidence width factor that is common for all actions */
-      widthfactor = banditdata->alpha * log1p(banditdata->nselections);
+      widthfactor = banditdata->alpha * log1p((SCIP_Real)banditdata->nselections);
       widthfactor = sqrt(widthfactor);
       maxucb = -1.0;
 
@@ -185,7 +185,7 @@ SCIP_DECL_BANDITSELECT(SCIPbanditSelectUcb)
          assert(uppercb > 0);
 
          /* update maximum, breaking ties uniformly at random */
-         if( EPSGT(uppercb, maxucb, NUMEPS) || (EPSEQ(uppercb, maxucb, NUMEPS) && SCIPrandomGetReal(rng, 0, 1) >= 0.5) )
+         if( EPSGT(uppercb, maxucb, NUMEPS) || (EPSEQ(uppercb, maxucb, NUMEPS) && SCIPrandomGetReal(rng, 0.0, 1.0) >= 0.5) )
          {
             maxucb = uppercb;
             *selection = i;
@@ -266,7 +266,7 @@ SCIP_Real SCIPgetConfidenceBoundUcb(
    /* the bandit algorithm must have picked every action once */
    assert(banditdata->counter[action] > 0);
    uppercb = banditdata->meanscores[action];
-   uppercb += sqrt(banditdata->alpha * log1p(banditdata->nselections) / (SCIP_Real)banditdata->counter[action]);
+   uppercb += sqrt(banditdata->alpha * log1p((SCIP_Real)banditdata->nselections) / (SCIP_Real)banditdata->counter[action]);
 
    return uppercb;
 }

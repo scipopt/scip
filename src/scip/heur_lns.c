@@ -1814,7 +1814,6 @@ SCIP_RETCODE getReward(
 {
    SCIP_Real reward = 0.0;
    SCIP_Real effort;
-   SCIP_Real rewardcontrol = heurdata->rewardcontrol;
 
    assert(runstats->usednodes >= 0);
    assert(runstats->nfixings >= 0)
@@ -1831,6 +1830,7 @@ SCIP_RETCODE getReward(
    {
       SCIP_Real bestsolreward;
       SCIP_Real closedgapreward;
+      SCIP_Real rewardcontrol = heurdata->rewardcontrol;
 
       SCIP_Real lb;
       SCIP_Real ub;
@@ -1852,7 +1852,7 @@ SCIP_RETCODE getReward(
       }
 
       /* the reward is a convex combination of the best solution reward and the reward for the closed gap */
-      reward = heurdata->rewardcontrol * bestsolreward + (1.0 - heurdata->rewardcontrol) * closedgapreward;
+      reward = rewardcontrol * bestsolreward + (1.0 - rewardcontrol) * closedgapreward;
 
       /* optionally, scale the reward by the involved effort */
       if( heurdata->scalebyeffort )
