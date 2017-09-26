@@ -5565,7 +5565,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
       /* create child nodes with x <= floor(x'), and x >= ceil(x') */
       downub = SCIPsetFeasFloor(set, val);
       uplb = downub + 1.0;
-      assert( SCIPsetIsRelEQ(set, SCIPsetFeasCeil(set, val), uplb) );
+      assert( SCIPsetIsRelEQ(set, SCIPsetCeil(set, val), uplb) );
       SCIPsetDebugMsg(set, "fractional branch on variable <%s> with value %g, root value %g, priority %d (current lower bound: %g)\n",
          SCIPvarGetName(var), val, SCIPvarGetRootSol(var), SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode));
    }
