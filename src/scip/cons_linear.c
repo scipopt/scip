@@ -15198,28 +15198,49 @@ SCIP_DECL_CONSEXITSOL(consExitsolLinear)
 }
 
 
+/** constraint deactivation notification method of constraint handler */
+static
+SCIP_DECL_CONSDEACTIVE(consDeactiveLinear)
+{  /*lint --e{715}*/
+
+   if( SCIPconsIsDeleted(cons) )
+   {
+      SCIP_CONSHDLRDATA* conshdlrdata;
+      SCIP_CONSDATA* consdata;
+
+      assert(scip != NULL);
+      assert(conshdlr != NULL);
+      assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+      /* get constraint data */
+      consdata = SCIPconsGetData(cons);
+      assert(consdata != NULL);
+
+      /* check for event handler */
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+      assert(conshdlrdata->eventhdlr != NULL);
+
+      /* free event data */
+      if( consdata->eventdata != NULL )
+      {
+         /* drop bound change events of variables */
+         SCIP_CALL( consDropAllEvents(scip, cons, conshdlrdata->eventhdlr) );
+      }
+      assert(consdata->eventdata == NULL);
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** frees specific constraint data */
 static
 SCIP_DECL_CONSDELETE(consDeleteLinear)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-
-   /* check for event handler */
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-   assert(conshdlrdata->eventhdlr != NULL);
-
-   /* free event datas */
-   if( (*consdata)->eventdata != NULL )
-   {
-      /* drop bound change events of variables */
-      SCIP_CALL( consDropAllEvents(scip, cons, conshdlrdata->eventhdlr) );
-   }
-   assert((*consdata)->eventdata == NULL);
 
    /* free linear constraint */
    SCIP_CALL( consdataFree(scip, consdata) );
@@ -16893,6 +16914,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
 
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyLinear, consCopyLinear) );
+   SCIP_CALL( SCIPsetConshdlrDeactive(scip, conshdlr, consDeactiveLinear) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteLinear) );
    SCIP_CALL( SCIPsetConshdlrDelvars(scip, conshdlr, consDelvarsLinear) );
    SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitLinear) );
