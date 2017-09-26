@@ -34,8 +34,8 @@ SCIP_RETCODE SCIPbanditCreate(
    SCIP_BANDITVTABLE*    banditvtable,       /**< virtual table for this bandit algorithm */
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
    BMS_BUFMEM*           bufmem,             /**< buffer memory */
-   SCIP_Real*            priorities,         /**< priorities for each action, or NULL if not needed */
-   int                   nactions,           /**< the number of actions for this bandit */
+   SCIP_Real*            priorities,         /**< nonnegative priorities for each action, or NULL if not needed */
+   int                   nactions,           /**< the positive number of actions for this bandit */
    unsigned int          initseed,           /**< initial seed for random number generation */
    SCIP_BANDITDATA*      banditdata          /**< algorithm specific bandit data */
    )
@@ -43,6 +43,14 @@ SCIP_RETCODE SCIPbanditCreate(
    SCIP_BANDIT* banditptr;
    assert(bandit != NULL);
    assert(banditvtable != NULL);
+
+   /* the number of actions must be positive */
+   if( nactions <= 0 )
+   {
+      SCIPerrorMessage("Cannot create bandit selector with %d <= 0 actions\n", nactions);
+
+      return SCIP_INVALIDDATA;
+   }
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, bandit) );
    assert(*bandit != NULL);
@@ -91,7 +99,7 @@ SCIP_RETCODE SCIPbanditFree(
 SCIP_RETCODE SCIPbanditReset(
    BMS_BUFMEM*           bufmem,             /**< buffer memory */
    SCIP_BANDIT*          bandit,             /**< pointer to bandit algorithm data structure */
-   SCIP_Real*            priorities,         /**< priorities for each action, or NULL if not needed */
+   SCIP_Real*            priorities,         /**< nonnegative priorities for each action, or NULL if not needed */
    unsigned int          seed                /**< initial seed for random number generation */
    )
 {
@@ -103,6 +111,24 @@ SCIP_RETCODE SCIPbanditReset(
    vtable = bandit->vtable;
    assert(vtable != NULL);
    assert(vtable->banditreset != NULL);
+
+   /* test if the priorities are nonnegative */
+   if( priorities != NULL )
+   {
+      int i;
+
+      assert(SCIPbanditGetNActions(bandit) > 0);
+
+      for( i = 0; i < SCIPbanditGetNActions(bandit); ++i )
+      {
+         if( priorities[i] < 0 )
+         {
+            SCIPerrorMessage("Negative priority for action %d\n", i);
+
+            return SCIP_INVALIDDATA;
+         }
+      }
+   }
 
    /* reset the random seed of the bandit algorithm */
    SCIPrandomSetSeed(bandit->rng, seed);
@@ -128,7 +154,7 @@ SCIP_RETCODE SCIPbanditSelect(
 
    SCIP_CALL( bandit->vtable->banditselect(bandit, action) );
 
-   assert(SCIPbanditGetNActions(bandit) == 0 || *action >= 0);
+   assert(*action >= 0);
    assert(*action < SCIPbanditGetNActions(bandit));
 
    return SCIP_OKAY;
@@ -240,5 +266,7 @@ int SCIPbanditGetNActions(
    SCIP_BANDIT*          bandit              /**< bandit algorithm data structure */
    )
 {
+   assert(bandit != NULL);
+
    return bandit->nactions;
 }

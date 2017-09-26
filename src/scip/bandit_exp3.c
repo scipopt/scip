@@ -40,11 +40,9 @@ struct SCIP_BanditData
    SCIP_Real             beta;               /**< gain offset between 0 and 1 at every observation */
 };
 
-
 /*
  * Local methods
  */
-
 
 /*
  * Callback methods of bandit algorithm
@@ -168,6 +166,9 @@ SCIP_DECL_BANDITUPDATE(SCIPbanditUpdateExp3)
    {
       SCIP_Real probai;
       probai = oneminusgamma * weights[selection] / weightsum + gammaoverk;
+
+      assert(probai > 0.0);
+
       gainestim = score / probai;
       newweightsum -= weights[selection];
       weights[selection] *= exp(eta * gainestim);
@@ -176,11 +177,15 @@ SCIP_DECL_BANDITUPDATE(SCIPbanditUpdateExp3)
    else
    {
       int j;
+      newweightsum = 0.0;
+
       /* loop over all items and update their weights based on the influence of the beta parameter */
       for( j = 0; j < nactions; ++j )
       {
          SCIP_Real probaj;
          probaj = oneminusgamma * weights[j] / weightsum + gammaoverk;
+
+         assert(probaj > 0.0);
 
          /* consider the score only for the chosen arm i, use constant beta offset otherwise */
          if( j == selection )
@@ -188,7 +193,6 @@ SCIP_DECL_BANDITUPDATE(SCIPbanditUpdateExp3)
          else
             gainestim = beta / probaj;
 
-         newweightsum -= weights[j];
          weights[j] *= exp(eta * gainestim);
          newweightsum += weights[j];
       }
@@ -216,7 +220,7 @@ SCIP_DECL_BANDITRESET(SCIPbanditResetExp3)
 
    assert(nactions > 0);
 
-   banditdata->weightsum = (SCIP_Real)nactions;
+   banditdata->weightsum = (1.0 + NUMTOL) * (SCIP_Real)nactions;
 
    /* in case of priorities, weights are normalized to sum up to nactions */
    if( priorities != NULL )
@@ -224,19 +228,33 @@ SCIP_DECL_BANDITRESET(SCIPbanditResetExp3)
       SCIP_Real normalization;
       SCIP_Real priosum;
       priosum = 0.0;
+
       /* compute sum of priorities */
       for( i = 0; i < nactions; ++i )
+      {
+         assert(priorities[i] >= 0);
          priosum += priorities[i];
+      }
 
-      normalization = nactions / priosum;
-      for( i = 0; i < nactions; ++i )
-         weights[i] = priorities[i] * normalization;
+      /* if there are positive priorities, normalize the weights */
+      if( priosum > 0.0 )
+      {
+         normalization = nactions / priosum;
+         for( i = 0; i < nactions; ++i )
+            weights[i] = (priorities[i] * normalization) + NUMTOL;
+      }
+      else
+      {
+         /* use uniform distribution in case of all priorities being 0.0 */
+         for( i = 0; i < nactions; ++i )
+            weights[i] = 1.0 + NUMTOL;
+      }
    }
    else
    {
       /* use uniform distribution in case of unspecified priorities */
       for( i = 0; i < nactions; ++i )
-         weights[i] = 1.0;
+         weights[i] = 1.0 + NUMTOL;
    }
 
    return SCIP_OKAY;
@@ -253,10 +271,10 @@ SCIP_RETCODE SCIPbanditCreateExp3(
    BMS_BUFMEM*           bufmem,             /**< buffer memory */
    SCIP_BANDITVTABLE*    vtable,             /**< virtual function table for callback functions of Exp.3 */
    SCIP_BANDIT**         exp3,               /**< pointer to store bandit algorithm */
-   SCIP_Real*            priorities,         /**< priorities for each action, or NULL if not needed */
+   SCIP_Real*            priorities,         /**< nonnegative priorities for each action, or NULL if not needed */
    SCIP_Real             gammaparam,         /**< weight between uniform (gamma ~ 1) and weight driven (gamma ~ 0) probability distribution */
    SCIP_Real             beta,               /**< gain offset between 0 and 1 at every observation */
-   int                   nactions,           /**< the number of actions for this bandit algorithm */
+   int                   nactions,           /**< the positive number of actions for this bandit algorithm */
    unsigned int          initseed            /**< initial random seed */
    )
 {
@@ -267,6 +285,8 @@ SCIP_RETCODE SCIPbanditCreateExp3(
 
    banditdata->gamma = gammaparam;
    banditdata->beta = beta;
+   assert(gammaparam >= 0 && gammaparam <= 1);
+   assert(beta >= 0 && beta <= 1);
 
    SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &banditdata->weights, nactions) );
 
@@ -279,10 +299,10 @@ SCIP_RETCODE SCIPbanditCreateExp3(
 SCIP_RETCODE SCIPcreateBanditExp3(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BANDIT**         exp3,               /**< pointer to store bandit algorithm */
-   SCIP_Real*            priorities,         /**< priorities for each action, or NULL if not needed */
+   SCIP_Real*            priorities,         /**< nonnegative priorities for each action, or NULL if not needed */
    SCIP_Real             gammaparam,         /**< weight between uniform (gamma ~ 1) and weight driven (gamma ~ 0) probability distribution */
    SCIP_Real             beta,               /**< gain offset between 0 and 1 at every observation */
-   int                   nactions,           /**< the number of actions for this bandit algorithm */
+   int                   nactions,           /**< the positive number of actions for this bandit algorithm */
    unsigned int          initseed            /**< initial seed for random number generation */
    )
 {
@@ -308,6 +328,8 @@ void SCIPsetGammaExp3(
 {
    SCIP_BANDITDATA* banditdata = SCIPbanditGetData(exp3);
 
+   assert(gammaparam >= 0 && gammaparam <= 1);
+
    banditdata->gamma = gammaparam;
 }
 
@@ -318,6 +340,8 @@ void SCIPsetBetaExp3(
    )
 {
    SCIP_BANDITDATA* banditdata = SCIPbanditGetData(exp3);
+
+   assert(beta >= 0 && beta <= 1);
 
    banditdata->beta = beta;
 }
@@ -330,8 +354,10 @@ SCIP_Real SCIPgetProbabilityExp3(
 {
    SCIP_BANDITDATA* banditdata = SCIPbanditGetData(exp3);
 
-   return (1.0 - banditdata->gamma) * banditdata->weights[action] / banditdata->weightsum + banditdata->gamma / (SCIP_Real)SCIPbanditGetNActions(exp3);
+   assert(banditdata->weightsum > 0.0);
+   assert(SCIPbanditGetNActions(exp3) > 0);
 
+   return (1.0 - banditdata->gamma) * banditdata->weights[action] / banditdata->weightsum + banditdata->gamma / (SCIP_Real)SCIPbanditGetNActions(exp3);
 }
 
 /* include virtual function table for Exp.3 bandit algorithms */

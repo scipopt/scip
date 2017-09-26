@@ -45,8 +45,8 @@ SCIP_RETCODE SCIPbanditCreate(
    SCIP_BANDITVTABLE*    banditvtable,       /**< virtual table for this bandit algorithm */
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
    BMS_BUFMEM*           bufmem,             /**< buffer memory */
-   SCIP_Real*            priorities,         /**< priorities for each action, or NULL if not needed */
-   int                   nactions,           /**< the number of actions for this bandit */
+   SCIP_Real*            priorities,         /**< nonnegative priorities for each action, or NULL if not needed */
+   int                   nactions,           /**< the positive number of actions for this bandit */
    unsigned int          initseed,           /**< initial seed for random number generation */
    SCIP_BANDITDATA*      banditdata          /**< algorithm specific bandit data */
    );

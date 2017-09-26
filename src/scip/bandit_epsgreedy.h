@@ -62,8 +62,8 @@ SCIP_RETCODE SCIPbanditCreateEpsgreedy(
    BMS_BUFMEM*           bufmem,             /**< buffer memory */
    SCIP_BANDITVTABLE*    vtable,             /**< virtual function table with epsilon greedy callbacks */
    SCIP_BANDIT**         epsgreedy,          /**< pointer to store the epsilon greedy bandit algorithm */
-   SCIP_Real*            priorities,         /**< priorities for each action, or NULL if not needed */
-   SCIP_Real             eps,                /**< probability for exploration between all actions */
+   SCIP_Real*            priorities,         /**< nonnegative priorities for each action, or NULL if not needed */
+   SCIP_Real             eps,                /**< parameter to increase probability for exploration between all actions */
    int                   nactions,           /**< the number of possible actions */
    unsigned int          initseed            /**< initial random seed */
    );

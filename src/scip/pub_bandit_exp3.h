@@ -58,10 +58,10 @@ EXTERN
 SCIP_RETCODE SCIPcreateBanditExp3(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BANDIT**         exp3,               /**< pointer to store bandit algorithm */
-   SCIP_Real*            priorities,         /**< priorities for each action, or NULL if not needed */
+   SCIP_Real*            priorities,         /**< nonnegative priorities for each action, or NULL if not needed */
    SCIP_Real             gammaparam,         /**< weight between uniform (gamma ~ 1) and weight driven (gamma ~ 0) probability distribution */
    SCIP_Real             beta,               /**< gain offset between 0 and 1 at every observation */
-   int                   nactions,           /**< the number of actions for this bandit algorithm */
+   int                   nactions,           /**< the positive number of actions for this bandit algorithm */
    unsigned int          initseed            /**< initial seed for random number generation */
    );
 

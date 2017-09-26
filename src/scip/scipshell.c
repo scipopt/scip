@@ -405,7 +405,7 @@ SCIP_RETCODE SCIPprocessShellArguments(
    }
    else
    {
-      printf("\nsyntax: %s [-l <logfile>] [-q] [-s <settings>] [-r <randomseed>] [-f <problem>] [-b <batchfile>] [-c \"command\"]\n"
+      printf("\nsyntax: %s [-l <logfile>] [-q] [-s <settings>] [-r <randseed>] [-f <problem>] [-b <batchfile>] [-c \"command\"]\n"
          "  -v, --version : print version and build options\n"
          "  -l <logfile>  : copy output into log file\n"
          "  -q            : suppress screen messages\n"

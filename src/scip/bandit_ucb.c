@@ -62,6 +62,7 @@ SCIP_RETCODE dataReset(
 
    assert(bufmem != NULL);
    assert(ucb != NULL);
+   assert(nactions > 0);
 
    /* clear counters and scores */
    BMSclearMemoryArray(banditdata->counter, nactions);
@@ -236,8 +237,6 @@ SCIP_DECL_BANDITRESET(SCIPbanditResetUcb)
    /* call the data reset for the given priorities */
    SCIP_CALL( dataReset(bufmem, bandit, banditdata, priorities, nactions) );
 
-
-
    return SCIP_OKAY;
 }
 
@@ -290,13 +289,19 @@ SCIP_RETCODE SCIPbanditCreateUcb(
    BMS_BUFMEM*           bufmem,             /**< buffer memory */
    SCIP_BANDITVTABLE*    vtable,             /**< virtual function table for UCB bandit algorithm */
    SCIP_BANDIT**         ucb,                /**< pointer to store bandit algorithm */
-   SCIP_Real*            priorities,         /**< priorities for each action, or NULL if not needed */
+   SCIP_Real*            priorities,         /**< nonnegative priorities for each action, or NULL if not needed */
    SCIP_Real             alpha,              /**< parameter to increase confidence width */
-   int                   nactions,           /**< the number of actions for this bandit algorithm */
+   int                   nactions,           /**< the positive number of actions for this bandit algorithm */
    unsigned int          initseed            /**< initial random seed */
    )
 {
    SCIP_BANDITDATA* banditdata;
+
+   if( alpha < 0.0 )
+   {
+      SCIPerrorMessage("UCB requires nonnegative alpha parameter, have %f\n", alpha);
+      return SCIP_INVALIDDATA;
+   }
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, &banditdata) );
    assert(banditdata != NULL);
@@ -316,9 +321,9 @@ SCIP_RETCODE SCIPbanditCreateUcb(
 SCIP_RETCODE SCIPcreateBanditUcb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BANDIT**         ucb,                /**< pointer to store bandit algorithm */
-   SCIP_Real*            priorities,         /**< priorities for each action, or NULL if not needed */
+   SCIP_Real*            priorities,         /**< nonnegative priorities for each action, or NULL if not needed */
    SCIP_Real             alpha,              /**< parameter to increase confidence width */
-   int                   nactions,           /**< the number of actions for this bandit algorithm */
+   int                   nactions,           /**< the positive number of actions for this bandit algorithm */
    unsigned int          initseed            /**< initial random number seed */
    )
 {
