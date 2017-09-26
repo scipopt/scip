@@ -143,6 +143,7 @@
 #include "scip/cons_linear.h"
 
 #define BOUNDSWITCH                0.51 /**< threshold for bound switching - see cuts.c */
+#define POSTPROCESS               FALSE /**< apply postprocessing to the cut - see cuts.c */
 #define USEVBDS                   FALSE /**< use variable bounds - see cuts.c */
 #define ALLOWLOCAL                FALSE /**< allow to generate local cuts - see cuts. */
 #define FIXINTEGRALRHS            FALSE /**< try to generate an integral rhs - see cuts.c */
@@ -6625,14 +6626,15 @@ SCIP_RETCODE tightenDualray(
       cutnnz = 0;
       cutefficacy = -SCIPsetInfinity(set);
 
-      SCIP_CALL( SCIPcalcFlowCover(set->scip, refsol, BOUNDSWITCH, ALLOWLOCAL, proofset->aggrrow, \
+      SCIP_CALL( SCIPcalcFlowCover(set->scip, refsol, POSTPROCESS, BOUNDSWITCH, ALLOWLOCAL, proofset->aggrrow, \
             cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, NULL, &islocal, &cutsuccess) );
 
       success = cutsuccess;
 
+      /* @todo what is this if for? */
       if( SCIPaggrRowGetNRows(proofset->aggrrow) >= 1 )
       {
-         SCIP_CALL( SCIPcutGenerationHeuristicCMIR(set->scip, refsol, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, INT_MAX, \
+         SCIP_CALL( SCIPcutGenerationHeuristicCMIR(set->scip, refsol, POSTPROCESS, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, INT_MAX, \
                NULL, NULL, MINFRAC, MAXFRAC, proofset->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, NULL, \
                &islocal, &cutsuccess) );
 
