@@ -435,7 +435,7 @@ SCIP_RETCODE pseudoforkCreate(
    {
       /* copy the newly created columns to the pseudofork's col array */
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*pseudofork)->addedcols, SCIPlpGetNewcols(lp), \
-            (*pseudofork)->naddedcols) );
+            (*pseudofork)->naddedcols) ); /*lint !e666*/
    }
    if( (*pseudofork)->naddedrows > 0 )
    {
@@ -443,7 +443,7 @@ SCIP_RETCODE pseudoforkCreate(
 
       /* copy the newly created rows to the pseudofork's row array */
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*pseudofork)->addedrows, SCIPlpGetNewrows(lp), \
-            (*pseudofork)->naddedrows) );
+            (*pseudofork)->naddedrows) ); /*lint !e666*/
 
       /* capture the added rows */
       for( i = 0; i < (*pseudofork)->naddedrows; ++i )
@@ -532,14 +532,14 @@ SCIP_RETCODE forkCreate(
    if( (*fork)->naddedcols > 0 )
    {
       /* copy the newly created columns to the fork's col array */
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*fork)->addedcols, SCIPlpGetNewcols(lp), (*fork)->naddedcols) );
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*fork)->addedcols, SCIPlpGetNewcols(lp), (*fork)->naddedcols) ); /*lint !e666*/
    }
    if( (*fork)->naddedrows > 0 )
    {
       int i;
 
       /* copy the newly created rows to the fork's row array */
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*fork)->addedrows, SCIPlpGetNewrows(lp), (*fork)->naddedrows) );
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*fork)->addedrows, SCIPlpGetNewrows(lp), (*fork)->naddedrows) ); /*lint !e666*/
 
       /* capture the added rows */
       for( i = 0; i < (*fork)->naddedrows; ++i )
