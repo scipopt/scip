@@ -827,17 +827,6 @@ SCIP_RETCODE consDropAllEvents(
    return SCIP_OKAY;
 }
 
-/** returns whether we are in a stage, where the variable events should be caught */
-static
-SCIP_Bool needEvents(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   assert(scip != NULL);
-
-   return (SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED && SCIPgetStage(scip) < SCIP_STAGE_FREETRANS);
-}
-
 /** creates a linear constraint data */
 static
 SCIP_RETCODE consdataCreate(
@@ -7456,6 +7445,22 @@ SCIP_RETCODE propagateCons(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+
+   if( consdata->eventdata == NULL )
+   {
+      SCIP_CONSHDLR* conshdlr;
+      SCIP_CONSHDLRDATA* conshdlrdata;
+
+      conshdlr = SCIPconsGetHdlr(cons);
+      assert(conshdlr != NULL);
+
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+
+      /* catch bound change events of variables */
+      SCIP_CALL( consCatchAllEvents(scip, cons, conshdlrdata->eventhdlr) );
+      assert(consdata->eventdata != NULL);
+   }
 
    *cutoff = FALSE;
 
@@ -15242,6 +15247,18 @@ SCIP_DECL_CONSDELETE(consDeleteLinear)
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
 
+   if( (*consdata)->eventdata != NULL )
+   {
+      SCIP_CONSHDLRDATA* conshdlrdata;
+
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+
+      /* drop all events */
+      SCIP_CALL( consDropAllEvents(scip, cons, conshdlrdata->eventhdlr) );
+      assert((*consdata)->eventdata == NULL);
+   }
+
    /* free linear constraint */
    SCIP_CALL( consdataFree(scip, consdata) );
 
@@ -15686,6 +15703,13 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
       assert(SCIPconsIsActive(cons));
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
+
+      if( consdata->eventdata == NULL )
+      {
+         /* catch bound change events of variables */
+         SCIP_CALL( consCatchAllEvents(scip, cons, conshdlrdata->eventhdlr) );
+         assert(consdata->eventdata != NULL);
+      }
 
       /* constraint should not be already presolved in the initial round */
       assert(SCIPgetNRuns(scip) > 0 || nrounds > 0 || SCIPconsIsMarkedPropagate(cons));
@@ -17293,13 +17317,6 @@ SCIP_RETCODE SCIPcreateConsLinear(
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
-
-   if( needEvents(scip) )
-   {
-      /* catch bound change events of variables */
-      SCIP_CALL( consCatchAllEvents(scip, *cons, conshdlrdata->eventhdlr) );
-      assert(consdata->eventdata != NULL);
-   }
 
    return SCIP_OKAY;
 }
