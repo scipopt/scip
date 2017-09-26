@@ -223,8 +223,10 @@ extern "C" {
 #else
 #ifdef __cplusplus
 #define RESTRICT __restrict__
-#else
+#elif __STDC_VERSION__ >= 199901L
 #define RESTRICT restrict
+#else
+#define RESTRICT
 #endif
 #endif
 #endif

@@ -811,9 +811,11 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
 
    if( heurdata->usefp20 )
    {
-      SCIP_CALL( setupProbingSCIP(scip, &probingscip, &varmapfw, heurdata->copycuts, &success) );
+      SCIP_Bool valid;
 
-      if( success )
+      SCIP_CALL( setupProbingSCIP(scip, &probingscip, &varmapfw, heurdata->copycuts, &valid) );
+
+      if( probingscip != NULL )
       {
          SCIP_CALL( setupSCIPparamsFP2(scip, probingscip) );
 
@@ -862,6 +864,13 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          SCIP_CALL( SCIPnewProbingNode(probingscip) );
 
          SCIPdebugMsg(scip, "successfully copied SCIP instance -> feasibility pump 2.0 can be used.\n");
+      }
+      else
+      {
+         assert(varmapfw == NULL);
+
+         SCIPdebugMsg(scip, "SCIP reached the depth limit -> skip heuristic\n");
+         return SCIP_OKAY;
       }
    }
 

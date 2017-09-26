@@ -81,7 +81,7 @@ set(settings_MINLP
     "nlpdiving2"
     "nlpdiving3"
     "nlpdiving1-relprop"
-#    "nlpdivingsolvesubmip"
+    "nlpdivingsolvesubmip"
     "nlpdiving4"
 )
 set(settings_Bivariate
