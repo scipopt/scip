@@ -775,6 +775,8 @@ SCIP_RETCODE SCIPapplyProximitybenders(
    /* create a subscip and copy the original scip instance into it */
    if( heurdata->subscip == NULL )
    {
+      SCIP_VAR* softvar;
+
       assert(heurdata->varmapfw == NULL);
       assert(heurdata->objcons == NULL);
 
@@ -851,6 +853,12 @@ SCIP_RETCODE SCIPapplyProximitybenders(
             SCIP_CALL( SCIPaddCoefLinear(subscip, objcons, subvars[i], SCIPvarGetObj(vars[i])) );
          }
       }
+
+      /* add a variable to impose the soft objective constraint (proximity search with incumbent) */
+      SCIP_CALL( SCIPcreateVarBasic(subscip, &softvar, "soft_var", 0.0, SCIPinfinity(subscip),
+            1e+5, SCIP_VARTYPE_CONTINUOUS) );
+      SCIP_CALL( SCIPaddCoefLinear(subscip, objcons, softvar, -minimprove) );
+      SCIP_CALL( SCIPreleaseVar(subscip, &softvar) );
 
       /* add objective constraint to the subscip */
       SCIP_CALL( SCIPaddCons(subscip, objcons) );
