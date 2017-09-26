@@ -3092,8 +3092,8 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
    SCIP_CALL( SCIPallocBufferArray(scip, &bounds, nbdchginfos) );
 
    /* allocate buffer to check whether a variable contributes multiple times */
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &seenvarslb, SCIPgetNVars(scip)) );
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &seenvarsub, SCIPgetNVars(scip)) );
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &seenvarslb, SCIPgetNVars(scip)) );
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &seenvarsub, SCIPgetNVars(scip)) );
 
    nliterals = 0;
 
@@ -3214,9 +3214,23 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
    }
 
   DISCARDCONFLICT:
+   /* clean buffer */
+   for( i = 0; i < nbdchginfos; ++i )
+   {
+      SCIP_VAR* var = SCIPbdchginfoGetVar(bdchginfos[i]);
+      int probidx;
+
+      assert(var != NULL);
+      probidx = SCIPvarGetProbindex(var);
+      assert(probidx >= 0);
+
+      seenvarslb[probidx] = 0;
+      seenvarsub[probidx] = 0;
+   }
+
    /* free temporary memory */
-   SCIPfreeBufferArray(scip, &seenvarsub);
-   SCIPfreeBufferArray(scip, &seenvarslb);
+   SCIPfreeCleanBufferArray(scip, &seenvarsub);
+   SCIPfreeCleanBufferArray(scip, &seenvarslb);
    SCIPfreeBufferArray(scip, &bounds);
    SCIPfreeBufferArray(scip, &boundtypes);
    SCIPfreeBufferArray(scip, &vars);
