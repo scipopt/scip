@@ -3775,7 +3775,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
          int firstcons;
 
          /* check, if the current domains were already propagated */
-         if( !fullpropagation && conshdlr->lastpropdomchgcount == stat->domchgcount )
+         if( !fullpropagation && conshdlr->lastpropdomchgcount == stat->domchgcount && conshdlr->nmarkedpropconss == 0 )
          {
             /* all constraints that were not yet propagated on the new domains must be useful constraints, which means,
              * that the new constraints are the last constraints of the useful ones
@@ -3795,7 +3795,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
          assert(firstcons + nconss <= conshdlr->npropconss);
          assert(nusefulconss <= nconss);
 
-         nmarkedpropconss = conshdlr->nmarkedpropconss - firstcons;
+         nmarkedpropconss = conshdlr->nmarkedpropconss;
 
          /* constraint handlers without constraints should only be called once */
          if( nconss > 0 || fullpropagation
