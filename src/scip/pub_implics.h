@@ -114,7 +114,7 @@ SCIP_Bool SCIPcliqueIsEquation(
 #define SCIPcliqueGetVars(clique)                    ((clique)->vars)
 #define SCIPcliqueGetValues(clique)                  ((clique)->values)
 #define SCIPcliqueGetId(clique)                      ((clique)->id)
-#define SCIPcliqueGetIndex(clique)                      ((clique)->index)
+#define SCIPcliqueGetIndex(clique)                   ((clique)->index)
 #define SCIPcliqueIsCleanedUp(clique)                ((clique)->startcleanup == -1)
 #define SCIPcliqueIsEquation(clique)                 ((SCIP_Bool)(clique)->equation)
 

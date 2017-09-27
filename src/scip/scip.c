@@ -14964,7 +14964,7 @@ SCIP_RETCODE transformSols(
     * order to ensure that the regarded solution in the copied array was not already freed when new solutions were added
     * and the worst solutions were freed.
     */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &sols, SCIPgetSols(scip), nsols) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &sols, SCIPgetSols(scip), nsols) );/*lint !e666*/
    SCIP_CALL( SCIPallocBufferArray(scip, &solvals, ntransvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &solvalset, ntransvars) );
 
@@ -47717,7 +47717,7 @@ SCIP_RETCODE SCIPcreateRandom(
    assert(scip != NULL);
    assert(randnumgen != NULL);
 
-   modifiedseed = SCIPinitializeRandomSeed(scip, initialseed);
+   modifiedseed = SCIPinitializeRandomSeed(scip, (int)initialseed);
 
    SCIP_CALL( SCIPrandomCreate(randnumgen, SCIPblkmem(scip), modifiedseed) );
 
@@ -47750,7 +47750,7 @@ void SCIPsetRandomSeed(
    assert(scip != NULL);
    assert(randnumgen != NULL);
 
-   modifiedseed = SCIPinitializeRandomSeed(scip, seed);
+   modifiedseed = SCIPinitializeRandomSeed(scip, (int)seed);
 
    SCIPrandomSetSeed(randnumgen, modifiedseed);
 }
