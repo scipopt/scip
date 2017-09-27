@@ -2184,7 +2184,7 @@ SCIP_RETCODE tarjan(
    SCIP_VAR** vars;
    SCIP_VAR* startvar;
    SCIP_Bool lower;
-   int index = *startindex;
+   int label = *startindex;
    int stacksize;
    int currstackidx;
    int curridx;
@@ -2223,7 +2223,7 @@ SCIP_RETCODE tarjan(
       SCIP_CLIQUE** cliques;
       int ncliques;
       SCIP_Bool found;
-      int clqidx;
+      int clqidx = -1;
       int j;
       int i;
 
@@ -2241,9 +2241,9 @@ SCIP_RETCODE tarjan(
          assert(stacknextclique[currstackidx] == 0);
          assert(stacknextcliquevar[currstackidx] == 0);
          nodeonstack[curridx] = 1;
-         nodeindex[curridx] = index;
-         nodelowlink[curridx] = index;
-         ++index;
+         nodeindex[curridx] = label;
+         nodelowlink[curridx] = label;
+         ++label;
 
 #ifdef DEBUG_TARJAN
          {
@@ -2277,7 +2277,7 @@ SCIP_RETCODE tarjan(
       else
       {
          assert(stacknextclique[currstackidx] > 0 || stacknextcliquevar[currstackidx] > 0);
-         assert(nodeindex[curridx] < index);
+         assert(nodeindex[curridx] < label);
       }
       assert(stacknextclique[currstackidx] >= 0);
 
@@ -2454,6 +2454,7 @@ SCIP_RETCODE tarjan(
          assert(idx >= 0);
          assert(!nodeonstack[idx]);
          assert(j < ncliques);
+         assert(clqidx >= 0);
 
          /* the negated node corresponding to the next node is already on the stack -> the negated assignment is
           * infeasible
@@ -2550,7 +2551,7 @@ SCIP_RETCODE tarjan(
          }
       }
       /* in a pure dfs, the node would now leave the stack, add it to the array of nodes in reverse topological order */
-      if( topoorder != NULL && (stacksize > 0 || index > *startindex + 1) )
+      if( topoorder != NULL && (stacksize > 0 || label > *startindex + 1) )
       {
          topoorder[*nordered] = curridx;
          ++(*nordered);
@@ -2565,7 +2566,7 @@ SCIP_RETCODE tarjan(
       }
    }
 
-   *startindex = index;
+   *startindex = label;
 
    return SCIP_OKAY;
 }
@@ -2695,6 +2696,7 @@ static
 SCIP_DECL_PROPPRESOL(propPresolVbounds)
 {  /*lint --e{715}*/
    SCIP_PROPDATA* propdata;
+   SCIP_VAR** tmpvars;
    SCIP_VAR** vars;
    int* dfsstack;
    int* stacknextclique;
@@ -2758,8 +2760,10 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
       return SCIP_OKAY;
    }
 
+   tmpvars = SCIPgetVars(scip);
+
    /* duplicate variable array; needed to get the fixings right later */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, SCIPgetVars(scip), nbinvars) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, tmpvars, nbinvars) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &dfsstack, nbounds) );
    SCIP_CALL( SCIPallocBufferArray(scip, &stacknextclique, nbounds) );
@@ -2819,7 +2823,7 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
       nbounds2 = 2 * (SCIPgetNVars(scip) - SCIPgetNContVars(scip));
       ncliques = SCIPgetNCliques(scip);
 
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &vars2, SCIPgetVars(scip), nbounds2/2) );
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &vars2, tmpvars, nbounds2/2) );
 
       /* clear arrays that should be initialized to 0 */
       BMSclearMemoryArray(nodeonstack, nbounds2);
