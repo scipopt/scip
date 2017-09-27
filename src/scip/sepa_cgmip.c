@@ -131,6 +131,7 @@
 /* parameters used for CMIR-generation (taken from sepa_gomory) */
 #define BOUNDSWITCH              0.9999
 #define USEVBDS                    TRUE
+#define POSTPROCESS                TRUE
 #define MINFRAC                  0.0009 /* to allow a deviation of the same size as EPSILONVALUE */
 #define MAXFRAC                  0.9991 /* to allow a deviation of the same size as EPSILONVALUE */
 #define FIXINTEGRALRHS            FALSE
@@ -3232,7 +3233,7 @@ SCIP_RETCODE createCGCutCMIR(
    if( !success )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, sepadata->allowlocal, FIXINTEGRALRHS, boundsfortrans,
+   SCIP_CALL( SCIPcalcMIR(scip, NULL, POSTPROCESS, BOUNDSWITCH, USEVBDS, sepadata->allowlocal, FIXINTEGRALRHS, boundsfortrans,
          boundtypesfortrans, MINFRAC, MAXFRAC, 1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy,
          &cutrank, &cutislocal, &success) );
 
@@ -3464,7 +3465,7 @@ SCIP_RETCODE createCGCutStrongCG(
    if( !success )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPcalcStrongCG(scip, NULL, BOUNDSWITCH, USEVBDS, sepadata->allowlocal, MINFRAC, MAXFRAC,
+   SCIP_CALL( SCIPcalcStrongCG(scip, NULL, POSTPROCESS, BOUNDSWITCH, USEVBDS, sepadata->allowlocal, MINFRAC, MAXFRAC,
          1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
 
    assert( sepadata->allowlocal || !cutislocal );

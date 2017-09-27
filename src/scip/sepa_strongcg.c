@@ -49,6 +49,7 @@
 #define SEPARATEROWS           /* separate rows with integral slack */
 
 #define BOUNDSWITCH              0.9999
+#define POSTPROCESS                TRUE
 #define USEVBDS                    TRUE
 #define MAKECONTINTEGRAL          FALSE
 #define MINFRAC                    0.05
@@ -360,7 +361,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
          continue;
 
       /* create a strong CG cut out of the aggregation row */
-      SCIP_CALL( SCIPcalcStrongCG(scip, NULL, BOUNDSWITCH, USEVBDS, allowlocal, MINFRAC, MAXFRAC,
+      SCIP_CALL( SCIPcalcStrongCG(scip, NULL, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, MINFRAC, MAXFRAC,
          1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
 
       assert(allowlocal || !cutislocal);
