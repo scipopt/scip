@@ -3102,7 +3102,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
       SCIP_VAR* var;
       SCIP_Real bound;
       SCIP_BOUNDTYPE boundtype;
-      int probidx;
+      int j;
 
       assert(bdchginfos != NULL);
 
@@ -3117,65 +3117,35 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
          bound += (boundtype == SCIP_BOUNDTYPE_LOWER ? +1.0 : -1.0);
 
       /* check whether we have seen the variable before */
-      probidx = SCIPvarGetProbindex(var);
-      assert(probidx >= 0 && probidx < SCIPgetNVars(scip));
+      for( j = nliterals-1; j >= 0; --j )
+      {
+         if( vars[j] != var )
+            continue;
 
-      /* we see the variable contributing with a lower bound the first time */
-      if( boundtype == SCIP_BOUNDTYPE_LOWER && seenvarslb[probidx] == 0 )
-      {
-         /* add with position shifted by +1 */
-         seenvarslb[probidx] = nliterals+1;
-         goto ADDTOCONS;
-      }
-      else if( boundtype == SCIP_BOUNDTYPE_UPPER && seenvarsub[probidx] == 0 )
-      {
-         /* add with position shifted by +1 */
-         seenvarsub[probidx] = nliterals+1;
-         goto ADDTOCONS;
-      }
-      else
-      {
-         /* check for overlapping bounds */
-         if( boundtype == SCIP_BOUNDTYPE_LOWER && seenvarsub[probidx] >= 1 )
+         /* check whether both literals contribute with the same bound type */
+         if( boundtypes[j] == boundtype )
          {
-            int pos = seenvarsub[probidx];
-
-            assert(boundtypes[pos] == SCIP_BOUNDTYPE_UPPER);
-
-            if( isOverlapping(scip, vars[pos], boundtypes[pos], bounds[pos], boundtype, bound) )
+            /* check whether the lower bound that can be relaxed */
+            if( boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisLT(scip, bound, bounds[j]) )
             {
-               /* the conflict is redundant -> discard the conflict constraint */
-               goto DISCARDCONFLICT;
+               bounds[j] = bound;
             }
-         }
-         else if( boundtype == SCIP_BOUNDTYPE_UPPER && seenvarslb[probidx] >= 1 )
-         {
-            int pos = seenvarslb[probidx];
-
-            assert(boundtypes[pos] == SCIP_BOUNDTYPE_LOWER);
-
-            if( isOverlapping(scip, vars[pos], boundtypes[pos], bounds[pos], boundtype, bound) )
+            /* check whether the lower bound that can be relaxed */
+            else if( boundtype == SCIP_BOUNDTYPE_UPPER && SCIPisGT(scip, bound, bounds[j]) )
             {
-               /* the conflict is redundant -> discard the conflict constraint */
-               goto DISCARDCONFLICT;
+               bounds[j] = bound;
             }
-         }
 
-         /* check whether the variable contributes with the same lower bound */
-         if( boundtype == SCIP_BOUNDTYPE_LOWER && seenvarslb[probidx] >= 1 && SCIPisLT(scip, bound, bounds[seenvarslb[probidx]]) )
-         {
-            bounds[seenvarslb[probidx]] = bound;
             continue;
          }
-         /* check whether the variable contributes with the same lower bound */
-         else if( boundtype == SCIP_BOUNDTYPE_UPPER && seenvarsub[probidx] >= 1 && SCIPisGT(scip, bound, bounds[seenvarsub[probidx]]) )
+         /* check whether the bound is overlapping */
+         else if( isOverlapping(scip, var, boundtype, bound, boundtypes[j], bounds[j]) )
          {
-            bounds[seenvarsub[probidx]] = bound;
-            continue;
+            /* the conflict is redundant -> discard the conflict constraint */
+            goto DISCARDCONFLICT;
          }
       }
 
-     ADDTOCONS:
       vars[nliterals] = var;
       boundtypes[nliterals] = boundtype;
       bounds[nliterals] = bound;
@@ -3204,7 +3174,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
    if( i == nbdchginfos && ncontinuous < conflicthdlrdata->continuousfrac * nbdchginfos + 0.5 )
    {
       (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%" SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
-      SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, consname, nbdchginfos, vars, boundtypes, bounds,
+      SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, consname, nliterals, vars, boundtypes, bounds,
             FALSE, FALSE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
 
       /* add conflict to SCIP */
