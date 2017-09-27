@@ -81,7 +81,7 @@ SCIP_Bool* SCIPcliqueGetValues(
 
 /** gets unique identifier of the clique */
 EXTERN
-unsigned int SCIPcliqueGetId(
+int SCIPcliqueGetId(
    SCIP_CLIQUE*          clique              /**< clique data structure */
    );
 
