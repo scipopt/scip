@@ -3119,12 +3119,12 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
          /* check whether both literals contribute with the same bound type */
          if( boundtypes[j] == boundtype )
          {
-            /* check whether the lower bound that can be relaxed */
+            /* check whether the lower bound can be relaxed */
             if( boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisLT(scip, bound, bounds[j]) )
             {
                bounds[j] = bound;
             }
-            /* check whether the lower bound that can be relaxed */
+            /* check whether the upper bound can be relaxed */
             else if( boundtype == SCIP_BOUNDTYPE_UPPER && SCIPisGT(scip, bound, bounds[j]) )
             {
                bounds[j] = bound;
@@ -3132,7 +3132,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
 
             continue;
          }
-         /* check whether the bound is overlapping */
+         /* check whether the bounds are overlapping */
          else if( isOverlapping(scip, var, boundtype, bound, boundtypes[j], bounds[j]) )
          {
             /* the conflict is redundant -> discard the conflict constraint */
