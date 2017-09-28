@@ -7314,12 +7314,6 @@ SCIP_DECL_CONSDELETE(consDeleteSetppc)
       }
    }
 
-   /* if constraint belongs to transformed problem space, drop bound change events on variables */
-   if( (*consdata)->nvars > 0 && SCIPvarIsTransformed((*consdata)->vars[0]) )
-   {
-      SCIP_CALL( dropAllEvents(scip, cons, conshdlrdata->eventhdlr) );
-   }
-
    /* free setppc constraint data */
    SCIP_CALL( consdataFree(scip, consdata) );
 
@@ -8423,7 +8417,6 @@ SCIP_DECL_CONSACTIVE(consActiveSetppc)
 
 
 /** constraint deactivation notification method of constraint handler */
-#ifdef VARUSES
 static
 SCIP_DECL_CONSDEACTIVE(consDeactiveSetppc)
 {  /*lint --e{715}*/
@@ -8433,12 +8426,34 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveSetppc)
    SCIPdebugMsg(scip, "deactivation information for set partitioning / packing / covering constraint <%s>\n",
       SCIPconsGetName(cons));
 
+#ifdef VARUSES
    /* decrease the number of uses for each variable in the constraint */
    SCIP_CALL( consdataDecVaruses(scip, SCIPconshdlrGetData(conshdlr), SCIPconsGetData(cons)) );
+#endif
+
+   if( SCIPconsIsDeleted(cons) )
+   {
+      SCIP_CONSHDLRDATA* conshdlrdata;
+      SCIP_CONSDATA* consdata;
+
+      /* get constraint data */
+      consdata = SCIPconsGetData(cons);
+      assert(consdata != NULL);
+
+      /* get event handler */
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+      assert(conshdlrdata->eventhdlr != NULL);
+
+      /* if constraint belongs to transformed problem space, drop bound change events on variables */
+      if( consdata->nvars > 0 && SCIPvarIsTransformed(consdata->vars[0]) )
+      {
+         SCIP_CALL( dropAllEvents(scip, cons, conshdlrdata->eventhdlr) );
+      }
+   }
 
    return SCIP_OKAY;
 }
-#endif
 
 /** variable deletion method of constraint handler */
 static
@@ -8911,9 +8926,7 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
 
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrActive(scip, conshdlr, consActiveSetppc) );
-#ifdef VARUSES
    SCIP_CALL( SCIPsetConshdlrDeactive(scip, conshdlr, consDeactiveSetppc) );
-#endif
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopySetppc, consCopySetppc) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteSetppc) );
    SCIP_CALL( SCIPsetConshdlrDelvars(scip, conshdlr, consDelvarsSetppc) );

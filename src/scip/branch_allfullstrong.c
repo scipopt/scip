@@ -429,18 +429,7 @@ SCIP_RETCODE SCIPselectVarPseudoStrongBranching(
             assert(allcolsinlp);
             assert(!exactsolve);
 
-            /* if for both infeasibilities, a conflict constraint was created, we don't need to fix the variable by hand,
-             * but better wait for the next propagation round to fix them as an inference, and potentially produce a
-             * cutoff that can be analyzed
-             */
-            if( allowaddcons && downinf == downconflict && upinf == upconflict )
-            {
-               *result = SCIP_CONSADDED;
-               SCIPdebugMsg(scip, " -> fractional variable <%s> is infeasible in %d directions - added conflict\n",
-                  SCIPvarGetName(pseudocands[c]), downinf && upinf ? 2 : 1);
-               break; /* terminate initialization loop, because constraint was added */
-            }
-            else if( downinf && upinf )
+            if( downinf && upinf )
             {
                if( integral )
                {
