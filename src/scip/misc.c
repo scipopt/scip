@@ -6535,9 +6535,9 @@ SCIP_RETCODE SCIPdigraphCopy(
          assert(sourcedigraph->successors[i] != NULL);
          assert(sourcedigraph->arcdata[i] != NULL);
 
-         SCIP_ALLOC( BMSduplicateMemoryArray(&((*targetdigraph)->successors[i]), \
+         SCIP_ALLOC( BMSduplicateMemoryArray(&((*targetdigraph)->successors[i]), /*lint !e866*/
                sourcedigraph->successors[i], sourcedigraph->nsuccessors[i]) ); /*lint !e866*/
-         SCIP_ALLOC( BMSduplicateMemoryArray(&((*targetdigraph)->arcdata[i]), \
+         SCIP_ALLOC( BMSduplicateMemoryArray(&((*targetdigraph)->arcdata[i]), /*lint !e866*/
                sourcedigraph->arcdata[i], sourcedigraph->nsuccessors[i]) ); /*lint !e866*/
       }
       /* copy node data - careful if these are pointers to some information -> need to be copied by hand */
@@ -6551,8 +6551,8 @@ SCIP_RETCODE SCIPdigraphCopy(
    {
       SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->components, sourcedigraph->components, \
             sourcedigraph->componentstarts[ncomponents]) );
-      SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->componentstarts, \
-            sourcedigraph->componentstarts,ncomponents + 1) ); /*lint !e776*/
+      SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->componentstarts,
+            sourcedigraph->componentstarts, ncomponents + 1) ); /*lint !e776*/
       (*targetdigraph)->componentstartsize = ncomponents + 1;
    }
    else
@@ -9288,7 +9288,7 @@ void SCIPprintSysError(
       SCIPmessagePrintError("Unkown error number %d or error message too long.\n", errno);
    SCIPmessagePrintError("%s: %s\n", message, buf);
 #else
-   #if (_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && ! _GNU_SOURCE
+   #if (_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && ! defined(_GNU_SOURCE)
       /* We are in the POSIX/XSI case, where strerror_r returns 0 on success; \0 termination is unclear. */
       if ( strerror_r(errno, buf, SCIP_MAXSTRLEN) != 0 )
          SCIPmessagePrintError("Unkown error number %d.\n", errno);
