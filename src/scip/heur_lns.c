@@ -3108,7 +3108,7 @@ DECL_VARFIXINGS(varFixingsDins)
    data = neighborhood->data.dins;
    assert(data != NULL);
    nmipsols = SCIPgetNSols(scip);
-   nmipsols = MIN(nsols, data->npoolsols);
+   nmipsols = MIN(nmipsols, data->npoolsols);
 
    *result = SCIP_DELAYED;
 
