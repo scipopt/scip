@@ -315,7 +315,7 @@ SCIP_RETCODE SCIPcreateBanditExp3(
    }
 
    SCIP_CALL( SCIPbanditCreateExp3(SCIPblkmem(scip), SCIPbuffer(scip), vtable, exp3,
-         priorities, gammaparam, beta, nactions, SCIPinitializeRandomSeed(scip, initseed)) );
+         priorities, gammaparam, beta, nactions, SCIPinitializeRandomSeed(scip, (int)(initseed % INT_MAX))) );
 
    return SCIP_OKAY;
 }

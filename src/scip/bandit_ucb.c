@@ -336,7 +336,7 @@ SCIP_RETCODE SCIPcreateBanditUcb(
    }
 
    SCIP_CALL( SCIPbanditCreateUcb(SCIPblkmem(scip), SCIPbuffer(scip), vtable, ucb,
-         priorities, alpha, nactions, SCIPinitializeRandomSeed(scip, initseed)) );
+         priorities, alpha, nactions, SCIPinitializeRandomSeed(scip, (int)(initseed % INT_MAX))) );
 
    return SCIP_OKAY;
 }

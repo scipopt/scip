@@ -107,7 +107,7 @@ SCIP_RETCODE SCIPdivesetReset(
    diveset->nsolcalls = 0;
 
    /* reset the random number generator */
-   SCIPrandomSetSeed(diveset->randnumgen, (unsigned int) SCIPsetInitializeRandomSeed(set, diveset->initialseed));
+   SCIPrandomSetSeed(diveset->randnumgen, (unsigned int) SCIPsetInitializeRandomSeed(set, (int)(diveset->initialseed % INT_MAX)));
 
    return SCIP_OKAY;
 }
@@ -225,7 +225,9 @@ SCIP_RETCODE SCIPdivesetCreate(
     * we create the random number generator directly, not through the public SCIP API
     */
    diveset->initialseed = initialseed;
-   SCIP_CALL( SCIPrandomCreate(&diveset->randnumgen, blkmem, (unsigned int) SCIPsetInitializeRandomSeed(set, diveset->initialseed)) );
+
+   /* simply use 0 as initial seed, the diveset seed is reset anyway a couple of lines later */
+   SCIP_CALL( SCIPrandomCreate(&diveset->randnumgen, blkmem, 0) );
 
 
    /* for convenience, the name gets inferred from the heuristic to which the diveset is added if no name is provided */
@@ -239,6 +241,8 @@ SCIP_RETCODE SCIPdivesetCreate(
    SCIP_CALL( heurAddDiveset(heur, diveset) );
    diveset->sol = NULL;
    diveset->divetypemask = divetypemask;
+
+   SCIP_CALL( SCIPdivesetReset(diveset, set) );
 
    /* add collection of diving heuristic specific parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/minreldepth", diveset->name);
@@ -311,8 +315,6 @@ SCIP_RETCODE SCIPdivesetCreate(
             "should only LP branching candidates be considered instead of the slower but "
             "more general constraint handler diving variable selection?",
             &diveset->onlylpbranchcands, FALSE, onlylpbranchcands, NULL, NULL) );
-
-   SCIP_CALL( SCIPdivesetReset(diveset, set) );
 
    return SCIP_OKAY;
 }
@@ -1647,7 +1649,7 @@ SCIP_RETCODE fillVariableGraph(
    if( nrelaxedconstraints != NULL )
       *nrelaxedconstraints = 0;
 
-   relaxlimit = relaxdensity * nvars;
+   relaxlimit = (int)(relaxdensity * nvars);
 
    for( c = 0; c < nconss; ++c )
    {
@@ -1669,7 +1671,9 @@ SCIP_RETCODE fillVariableGraph(
       /* relax constraints with density above the allowed number of free variables */
       if( relaxdenseconss && nconsvars >= relaxlimit )
       {
-         ++(*nrelaxedconstraints);
+         if( nrelaxedconstraints != NULL )
+            ++(*nrelaxedconstraints);
+
          continue;
       }
 
