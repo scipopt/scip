@@ -144,6 +144,7 @@ struct SCIP_ConsData
    unsigned int          merged:1;           /**< are the constraint's equal/negated variables already merged? */
    unsigned int          presolpropagated:1; /**< was the constraint already propagated in presolving w.r.t. the current domains? */
    unsigned int          existmultaggr:1;    /**< does this constraint contain aggregations */
+   unsigned int          catchevents:1;      /**< are events installed for this constraint? */
 };
 
 
@@ -554,6 +555,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->signature = 0;
    (*consdata)->row = NULL;
    (*consdata)->existmultaggr = FALSE;
+   (*consdata)->catchevents = FALSE;
    (*consdata)->nfixedzeros = 0;
    (*consdata)->nfixedones = 0;
 
@@ -987,11 +989,16 @@ SCIP_RETCODE catchAllEvents(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
+   if( consdata->catchevents == TRUE )
+      return SCIP_OKAY;
+
    /* catch event for every single variable */
    for( i = 0; i < consdata->nvars; ++i )
    {
       SCIP_CALL( catchEvent(scip, cons, eventhdlr, i) );
    }
+
+   consdata->catchevents = TRUE;
 
    return SCIP_OKAY;
 }
@@ -1010,11 +1017,16 @@ SCIP_RETCODE dropAllEvents(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
+   if( consdata->catchevents == FALSE )
+      return SCIP_OKAY;
+
    /* drop event of every single variable */
    for( i = 0; i < consdata->nvars; ++i )
    {
       SCIP_CALL( dropEvent(scip, cons, eventhdlr, i) );
    }
+
+   consdata->catchevents = FALSE;
 
    return SCIP_OKAY;
 }
@@ -1071,7 +1083,10 @@ SCIP_RETCODE addCoef(
       assert(conshdlrdata->eventhdlr != NULL);
 
       /* catch bound change events of variable */
-      SCIP_CALL( catchEvent(scip, cons, conshdlrdata->eventhdlr, consdata->nvars-1) );
+      if( consdata->catchevents )
+      {
+         SCIP_CALL( catchEvent(scip, cons, conshdlrdata->eventhdlr, consdata->nvars-1) );
+      }
 
       if( !consdata->existmultaggr && SCIPvarGetStatus(SCIPvarGetProbvar(var)) == SCIP_VARSTATUS_MULTAGGR )
          consdata->existmultaggr = TRUE;
@@ -1138,7 +1153,10 @@ SCIP_RETCODE delCoefPos(
       assert(conshdlrdata->eventhdlr != NULL);
 
       /* drop bound change events of variable */
-      SCIP_CALL( dropEvent(scip, cons, conshdlrdata->eventhdlr, pos) );
+      if( consdata->catchevents )
+      {
+         SCIP_CALL( dropEvent(scip, cons, conshdlrdata->eventhdlr, pos) );
+      }
 
       /* the last variable of the constraint was deleted; mark it for propagation (so that it can be deleted) */
       if( consdata->nvars == 1 )
@@ -7292,6 +7310,12 @@ SCIP_DECL_CONSDELETE(consDeleteSetppc)
          --(conshdlrdata->nsetpart);
          assert(conshdlrdata->nsetpart >= 0);
       }
+   }
+
+   /* if constraint belongs to transformed problem space, drop bound change events on variables */
+   if( (*consdata)->nvars > 0 && SCIPvarIsTransformed((*consdata)->vars[0]) )
+   {
+      SCIP_CALL( dropAllEvents(scip, cons, conshdlrdata->eventhdlr) );
    }
 
    /* free setppc constraint data */
