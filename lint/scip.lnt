@@ -161,6 +161,8 @@
 -emacro(647,SCIPallocBlockMemoryArray)
 -emacro(647,SCIPallocBufferArray)
 -emacro(647,SCIPreallocBufferArray)
+-emacro(647,SCIPduplicateBlockMemoryArray)
+-emacro(647,SCIPallocCleanBufferArray)
 
 // Avoid "Possible truncation of addition" - this might give interesting information, but clutters the output
 -emacro(776,BMSmoveMemoryArray)
@@ -200,6 +202,11 @@
 -emacro(571,SCIPcombineFourInt)
 -emacro(571,SCIPrealHashCode)
 -emacro(571,SCIPpositiveRealHashCode)
+
+// turn off messages for quad precision
+-emacro(647,QUAD_ARRAY_SIZE)
+-emacro(666,SCIPquadprecProdQD)
+-emacro(666,SCIPquadprecSumQD)
 
 // ------------------------------------------------------------------
 // turn off some warnings about C++ classes:
