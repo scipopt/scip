@@ -156,7 +156,7 @@ SCIP_RETCODE SCIPprocessShellArguments(
    char* probname = NULL;
    char* settingsname = NULL;
    char* logname = NULL;
-   unsigned int randomseed;
+   int randomseed;
    SCIP_Bool randomseedread;
    SCIP_Bool quiet;
    SCIP_Bool paramerror;

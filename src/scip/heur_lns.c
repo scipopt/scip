@@ -72,7 +72,6 @@
 #define DEFAULT_BETA           0.0  /**< default reward offset between 0 and 1 at every observation for exp3 */
 #define DEFAULT_REWARDCONTROL  0.8  /**< reward control to increase the weight of the simple solution indicator and decrease the weight of the closed gap reward */
 #define DEFAULT_SCALEBYEFFORT  TRUE /**< should the reward be scaled by the effort? */
-#define REWARDMEASURES         "bwg"
 #define DEFAULT_EPS            0.5  /**< increase exploration in epsilon-greedy bandit algorithm */
 #define DEFAULT_RESETWEIGHTS   TRUE /**< should the bandit algorithms be reset when a new problem is read? */
 #define DEFAULT_SUBSCIPRANDSEEDS FALSE /**< should random seeds of sub-SCIPs be altered to increase diversification? */
@@ -112,11 +111,6 @@
 #define DEFAULT_MAXFIXINGRATE_MUTATION 0.9
 #define DEFAULT_ACTIVE_MUTATION TRUE
 #define DEFAULT_PRIORITY_MUTATION 1.0
-
-#define DEFAULT_MINFIXINGRATE_GINS 0.3
-#define DEFAULT_MAXFIXINGRATE_GINS 0.5
-#define DEFAULT_ACTIVE_GINS TRUE
-#define DEFAULT_PRIORITY_GINS 1.0
 
 #define DEFAULT_MINFIXINGRATE_LOCALBRANCHING 0.0
 #define DEFAULT_MAXFIXINGRATE_LOCALBRANCHING 0.9
@@ -561,6 +555,7 @@ void updateTargetNodeLimit(
       case SCIP_STATUS_INFEASIBLE:
       case SCIP_STATUS_INFORUNBD:
       case SCIP_STATUS_SOLLIMIT:
+      case SCIP_STATUS_BESTSOLLIMIT:
          /* the subproblem was easy enough -> use smaller limit to speed up SCIP */
          decreaseTargetNodeLimit(heurdata);
          break;
@@ -571,6 +566,13 @@ void updateTargetNodeLimit(
             increaseTargetNodeLimit(heurdata);
          break;
       case SCIP_STATUS_USERINTERRUPT:
+      case SCIP_STATUS_UNKNOWN:
+      case SCIP_STATUS_TOTALNODELIMIT:
+      case SCIP_STATUS_TIMELIMIT:
+      case SCIP_STATUS_MEMLIMIT:
+      case SCIP_STATUS_GAPLIMIT:
+      case SCIP_STATUS_RESTARTLIMIT:
+      case SCIP_STATUS_UNBOUNDED:
          break;
       default:
          break;
@@ -647,6 +649,13 @@ void updateMinimumImprovement(
          if( runstats->nbestsolsfound <= 0 )
             decreaseMinimumImprovement(heurdata);
          break;
+      case SCIP_STATUS_UNKNOWN:
+      case SCIP_STATUS_TOTALNODELIMIT:
+      case SCIP_STATUS_TIMELIMIT:
+      case SCIP_STATUS_MEMLIMIT:
+      case SCIP_STATUS_GAPLIMIT:
+      case SCIP_STATUS_RESTARTLIMIT:
+      case SCIP_STATUS_UNBOUNDED:
       default:
          break;
    }
@@ -1183,7 +1192,9 @@ SCIP_Real getVariableRedcostScore(
 
    score = redcost * (refsolval - bestbound);
 
-   assert(score >= 0);
+   /* slight negative scores are possible due to numerical inaccuracies */
+   assert(! SCIPisNegative(scip, score));
+   score = MAX(score, 0.0);
 
    return score;
 }
@@ -2623,7 +2634,7 @@ DECL_NHINIT(nhInitCrossover)
 
    data->selsol = NULL;
 
-   SCIP_CALL( SCIPcreateRandom(scip, &data->rng, CROSSOVERSEED + SCIPgetNVars(scip)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &data->rng, CROSSOVERSEED + (unsigned int)SCIPgetNVars(scip)) );
 
    return SCIP_OKAY;
 }
@@ -2768,7 +2779,7 @@ DECL_NHINIT(nhInitMutation)
    data = neighborhood->data.mutation;
    assert(data != NULL);
 
-   SCIP_CALL( SCIPcreateRandom(scip, &data->rng, MUTATIONSEED + SCIPgetNVars(scip)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &data->rng, MUTATIONSEED + (unsigned int)SCIPgetNVars(scip)) );
 
    return SCIP_OKAY;
 }
@@ -3088,6 +3099,7 @@ DECL_VARFIXINGS(varFixingsDins)
    SCIP_SOL* rootlpsol;
    SCIP_SOL** sols;
    int nsols;
+   int nmipsols;
    int nbinvars;
    int nintvars;
    SCIP_VAR** vars;
@@ -3095,8 +3107,8 @@ DECL_VARFIXINGS(varFixingsDins)
 
    data = neighborhood->data.dins;
    assert(data != NULL);
-   nsols = data->npoolsols;
-   nsols = MIN(nsols, SCIPgetNSols(scip));
+   nmipsols = SCIPgetNSols(scip);
+   nmipsols = MIN(nsols, data->npoolsols);
 
    *result = SCIP_DELAYED;
 
@@ -3105,7 +3117,7 @@ DECL_VARFIXINGS(varFixingsDins)
 
    *result = SCIP_DIDNOTRUN;
 
-   if( SCIPgetBestSol(scip) == NULL )
+   if( nmipsols == 0 )
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPgetVarsData(scip, &vars, NULL, &nbinvars, &nintvars, NULL, NULL) );
@@ -3122,14 +3134,14 @@ DECL_VARFIXINGS(varFixingsDins)
    }
 
    /* add the node and the root LP solution */
-   nsols += 2;
+   nsols = nmipsols + 2;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &sols, nsols) );
    sols[0] = NULL; /* node LP solution */
    sols[1] = rootlpsol;
 
    /* copy the remaining MIP solutions after the LP solutions */
-   BMScopyMemoryArray(&sols[2], SCIPgetSols(scip), nsols - 2);
+   BMScopyMemoryArray(&sols[2], SCIPgetSols(scip), nmipsols);
 
    /* 1. Binary variables are fixed if their values agree in all the solutions */
    if( nbinvars > 0 )
@@ -3155,7 +3167,7 @@ DECL_VARFIXINGS(varFixingsDins)
 
    SCIPfreeBufferArray(scip, &sols);
 
-   SCIPfreeSol(scip, &rootlpsol);
+   SCIP_CALL( SCIPfreeSol(scip, &rootlpsol) );
 
    return SCIP_OKAY;
 }
@@ -3163,7 +3175,7 @@ DECL_VARFIXINGS(varFixingsDins)
 /** callback for DINS subproblem changes */
 static
 DECL_CHANGESUBSCIP(changeSubscipDins)
-{
+{  /**lint --e{715}*/
    SCIP_VAR** vars;
    int nintvars;
    int nbinvars;
@@ -3185,7 +3197,7 @@ DECL_CHANGESUBSCIP(changeSubscipDins)
    }
 
    /* 2. add local branching constraint for binary variables */
-   addLocalBranchingConstraint(sourcescip, targetscip, subvars, (int)(0.1 * SCIPgetNBinVars(sourcescip)), success, naddedconss );
+   SCIP_CALL( addLocalBranchingConstraint(sourcescip, targetscip, subvars, (int)(0.1 * SCIPgetNBinVars(sourcescip)), success, naddedconss) );
 
    *success = TRUE;
 
@@ -3206,20 +3218,20 @@ DECL_NHFREE(nhFreeDins)
 /** callback that returns the incumbent solution as a reference point */
 static
 DECL_NHREFSOL(nhRefsolIncumbent)
-{ /*lint --e{715}*/
-  assert(scip != NULL);
+{  /*lint --e{715}*/
+   assert(scip != NULL);
 
-  if( SCIPgetBestSol(scip) != NULL )
-  {
-     *result = SCIP_SUCCESS;
-     *solptr = SCIPgetBestSol(scip);
-  }
-  else
-  {
-     *result = SCIP_DIDNOTFIND;
-  }
+   if( SCIPgetBestSol(scip) != NULL )
+   {
+      *result = SCIP_SUCCESS;
+      *solptr = SCIPgetBestSol(scip);
+   }
+   else
+   {
+      *result = SCIP_DIDNOTFIND;
+   }
 
-  return SCIP_OKAY;
+   return SCIP_OKAY;
 }
 
 /** include all neighborhoods */
@@ -3350,7 +3362,8 @@ SCIP_DECL_HEURINIT(heurInitLns)
    /* active neighborhoods might change between init calls, reset functionality must take this into account */
    if( heurdata->bandit != NULL && SCIPbanditGetNActions(heurdata->bandit) != heurdata->nactiveneighborhoods )
    {
-      SCIPfreeBandit(scip, &heurdata->bandit);
+      SCIP_CALL( SCIPfreeBandit(scip, &heurdata->bandit) );
+
       heurdata->bandit = NULL;
    }
 
