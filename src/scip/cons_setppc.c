@@ -4945,6 +4945,7 @@ SCIP_RETCODE preprocessCliques(
    /* adding clique constraints which arises from global clique information */
    if( conshdlrdata->nclqpresolve == 0 && conshdlrdata->addvariablesascliques )
    {
+      SCIP_VAR** vars = SCIPgetVars(scip);
       SCIP_VAR** binvars;
       int* cliquepartition;
       int ncliques;
@@ -4952,7 +4953,7 @@ SCIP_RETCODE preprocessCliques(
       int naddconss;
 
       nbinvars = SCIPgetNBinVars(scip);
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &binvars, SCIPgetVars(scip), nbinvars) );
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &binvars, vars, nbinvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &cliquepartition, nbinvars) );
 
       /* @todo: check for better permutations/don't permutate the first round
