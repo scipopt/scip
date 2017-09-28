@@ -171,8 +171,11 @@ SCIP_RETCODE ensureSolsSize(
 
    if( num > reopt->soltree->solssize[runidx] )
    {
-      int newsize = SCIPsetCalcMemGrowSize(set, num+1);
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reopt->soltree->sols[runidx], reopt->soltree->solssize[runidx], newsize) ); /*lint !e866 */
+      int newsize = SCIPsetCalcMemGrowSize(set, num + 1);
+
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reopt->soltree->sols[runidx],
+            reopt->soltree->solssize[runidx], newsize) ); /*lint !e866 */
+
       reopt->soltree->solssize[runidx] = newsize;
    }
    assert(num <= reopt->soltree->solssize[runidx]);
