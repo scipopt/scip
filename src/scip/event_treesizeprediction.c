@@ -35,7 +35,8 @@
 #define DEFAULT_ACTIVE         FALSE
 #define DEFAULT_HASHMAP_SIZE   100000
 #define DEFAULT_MAXRATIOITERS  100
-#define DEFAULT_ESTIMATION_METHOD 'r'
+#define DEFAULT_ESTIMATE_METHOD 't'
+#define DEFAULT_PROBABILITY_METHOD 'r'
 #define DEFAULT_MEASURE_ERROR  TRUE
 #define DEFAULT_RELERROR_BOUND 10000
 /* #define DEFAULT_SMOOTHING_METHOD  'n' */
@@ -52,7 +53,8 @@
  */
 
 typedef enum {UNKNOWN, ESTIMATED, KNOWN} SizeStatus;
-typedef enum {RATIO, UNIFORM} EstimationMethod;
+typedef enum {RATIO, UNIFORM} ProbabilityMethod;
+typedef enum {SAMPLING, TREEBUILDING} EstimationMethod;
 
 typedef struct EstimatesList Elist;
 struct EstimatesList;
@@ -74,8 +76,93 @@ struct TreeSizeEstimateTree
    SCIP_Longint number; /* The number (id) of the node, as assigned by SCIP */
    SCIP_Real lowerbound; /* The lower bound at that node. TODO update this if a node gets an update */
    SizeStatus status; /* See enum SizeStatus documentation */
-   /*SCIP_Longint treesize;*/ /* The computed tree-size */
+
+   SCIP_Real portion; /* Portion of the tree at that node */
+   SCIP_Bool portionfrombounds; /* Whether portion has been computed from the lower bounds (or from pscosts if bounds were not available) */
 };
+
+/**
+ * Computes the probabilities for the left and right child.
+ * The node passed in parameted must have two children.
+ * Returns the left probability (between 0 and 1).
+ */
+static
+SCIP_Real computeProbabilities(SCIP* scip, TSEtree* node, ProbabilityMethod probabilitymethod)
+{
+   SCIP_Real fractionleft;
+   SCIP_Real fractionright;
+
+   /* We check which probability method to use */
+   switch(probabilitymethod)
+   {
+      case RATIO:
+      {
+         SCIP_BRANCHRATIO branchratio;
+         SCIP_Real LPgains[2];
+         SCIP_Bool leftLPbetterthanrightLP;
+         int maxiters;
+
+         assert(node->branchedvar != NULL);
+
+         /* TODO for code below: investigate whether for the known node, using pscosts or known bound is better for estimation. */
+         if( node->leftchild == NULL || node->rightchild == NULL || SCIPisInfinity(scip, node->leftchild->lowerbound) == TRUE || SCIPisInfinity(scip, node->rightchild->lowerbound) == TRUE )
+         {
+            LPgains[0] = SCIPgetVarPseudocostCurrentRun(scip, node->branchedvar, SCIP_BRANCHDIR_DOWNWARDS); /* Here and below we assume that left is downward, as in relpscost. */
+            LPgains[1] = SCIPgetVarPseudocostCurrentRun(scip, node->branchedvar, SCIP_BRANCHDIR_UPWARDS);
+         }
+         else
+         {
+            LPgains[0] = node->leftchild->lowerbound - node->lowerbound;
+            LPgains[1] = node->rightchild->lowerbound - node->lowerbound;
+         }
+
+         if(LPgains[0] > LPgains[1])
+            leftLPbetterthanrightLP = 1;
+         else
+            leftLPbetterthanrightLP = 0;
+         
+         /* The first LP gain passed should be the minimum one, and the second the maximum one */
+         SCIPgetIntParam(scip, "estimates/maxratioiters", &maxiters);
+         SCIPcomputeBranchVarRatio(scip, NULL, LPgains[leftLPbetterthanrightLP], LPgains[1-leftLPbetterthanrightLP], maxiters, &branchratio);
+
+         if( branchratio.valid == TRUE )
+         {
+            /* Once the ratio phi has been computed, we compute the fraction of trees as:
+             * phi^{-l} for the left side (where l denotes the leftgain), and
+             * phi^{-r} for the right side.
+             * We use the fact that the sum of the two equals 1. */
+
+            if( leftLPbetterthanrightLP == 0 )
+            {
+                fractionleft = 1.0/branchratio.upratio;
+                fractionright = 1 - fractionleft;
+                assert(fractionleft >= fractionright);
+            }
+            else
+            {
+                fractionright = 1.0/branchratio.upratio;
+                fractionleft = 1 - fractionright;
+                assert(fractionleft <= fractionright);
+            }
+            break;
+         }
+         /* If the ratio computed is not valid, we do not break the switch, and we use the UNIFORM case */
+      }
+      case UNIFORM:
+         fractionleft = .5;
+         fractionright = .5;
+         break;
+      default:
+         SCIPerrorMessage("Missing case in this switch.\n");
+         SCIPABORT();
+   }
+
+   assert(SCIPisEQ(scip, 1.0, fractionleft + fractionright));
+   assert(fractionleft > 0 && fractionright > 0);
+
+   return fractionleft;
+}
+
 
 /**
  * Estimates the tree-size of a tree, using the given upperbound to determine
@@ -85,9 +172,9 @@ struct TreeSizeEstimateTree
  * and pruned nodes according to this upper bound.
  */
 static
-SizeStatus estimateTreeSize(SCIP* scip, TSEtree *node, SCIP_Real upperbound, SCIP_Longint* totalsize, SCIP_Longint* remainingsize, SCIP_Longint* currentsize, EstimationMethod method)
+SizeStatus estimateTreeSize(SCIP* scip, TSEtree *node, SCIP_Real upperbound, SCIP_Longint* totalsize, SCIP_Longint* remainingsize, SCIP_Longint* currentsize, ProbabilityMethod probabilitymethod, EstimationMethod estimationmethod)
 {
-   SizeStatus parentstatus;
+   SizeStatus currentnodestatus;
    assert(node != NULL);
    assert(totalsize != NULL);
    assert(remainingsize != NULL);
@@ -102,14 +189,14 @@ SizeStatus estimateTreeSize(SCIP* scip, TSEtree *node, SCIP_Real upperbound, SCI
       *totalsize = 1;
       *remainingsize = 0;
       *currentsize = 1;
-      parentstatus = KNOWN;
+      currentnodestatus = KNOWN;
    }
    else if( SCIPisGE(scip, node->lowerbound, upperbound) )
    {
       *totalsize = 1;
       *remainingsize = 0;
       *currentsize = 1;
-      parentstatus = KNOWN;
+      currentnodestatus = KNOWN;
    } 
    else if(node->leftchild == NULL) /* The node is not a leaf but still needs to be solved (and possibly branched on) */
    {
@@ -117,7 +204,7 @@ SizeStatus estimateTreeSize(SCIP* scip, TSEtree *node, SCIP_Real upperbound, SCI
       *totalsize = -1;
       *remainingsize = -1;
       *currentsize = 1;
-      parentstatus = UNKNOWN;
+      currentnodestatus = UNKNOWN;
    }
    else /* The node has two children (but perhaps only the left one has been created at the moment) */
    {
@@ -132,7 +219,7 @@ SizeStatus estimateTreeSize(SCIP* scip, TSEtree *node, SCIP_Real upperbound, SCI
 
       assert(node->leftchild != NULL);
 
-      leftstatus = estimateTreeSize(scip, node->leftchild, upperbound, &lefttotalsize, &leftremainingsize, &leftcurrentsize, method);
+      leftstatus = estimateTreeSize(scip, node->leftchild, upperbound, &lefttotalsize, &leftremainingsize, &leftcurrentsize, probabilitymethod, estimationmethod);
       if( node->rightchild == NULL )
       {
          rightstatus = UNKNOWN;
@@ -141,7 +228,7 @@ SizeStatus estimateTreeSize(SCIP* scip, TSEtree *node, SCIP_Real upperbound, SCI
          rightcurrentsize = 1;
       }
       else
-         rightstatus = estimateTreeSize(scip, node->rightchild, upperbound, &righttotalsize, &rightremainingsize, &rightcurrentsize, method);
+         rightstatus = estimateTreeSize(scip, node->rightchild, upperbound, &righttotalsize, &rightremainingsize, &rightcurrentsize, probabilitymethod, estimationmethod);
 
       assert(lefttotalsize > 0 || leftstatus == UNKNOWN);
       assert(leftcurrentsize > 0 || leftstatus == UNKNOWN);
@@ -154,18 +241,18 @@ SizeStatus estimateTreeSize(SCIP* scip, TSEtree *node, SCIP_Real upperbound, SCI
       {
          *totalsize = -1;
          *remainingsize = -1;
-         parentstatus = UNKNOWN;
+         currentnodestatus = UNKNOWN;
       }
       else if ( leftstatus != UNKNOWN && rightstatus != UNKNOWN  ) /* If both left and right subtrees are known or estimated */
       {
          *totalsize = 1 + lefttotalsize + righttotalsize;
          *remainingsize = leftremainingsize + rightremainingsize;
          if( leftstatus == ESTIMATED || rightstatus == ESTIMATED)
-            parentstatus = ESTIMATED;
+            currentnodestatus = ESTIMATED;
          else
          {
              assert(leftstatus == KNOWN && rightstatus == KNOWN);
-             parentstatus = KNOWN;
+             currentnodestatus = KNOWN;
          }
       }
       else /* Exactly one subtree is UNKNOWN: we estimate */
@@ -173,75 +260,10 @@ SizeStatus estimateTreeSize(SCIP* scip, TSEtree *node, SCIP_Real upperbound, SCI
          SCIP_Real fractionleft;
          SCIP_Real fractionright;
 
-         /* We check which estimation method to use */
-         switch(method)
-         {
-            case RATIO:
-            {
-               SCIP_BRANCHRATIO branchratio;
-               SCIP_Real LPgains[2];
-               SCIP_Bool leftLPbetterthanrightLP;
-               int maxiters;
-
-               assert(node->branchedvar != NULL);
-
-               /* TODO for code below: investigate whether for the known node, using pscosts or known bound is better for estimation. */
-               if( leftstatus == UNKNOWN || SCIPisInfinity(scip, node->leftchild->lowerbound) == TRUE )
-                  LPgains[0] = SCIPgetVarPseudocostCurrentRun(scip, node->branchedvar, SCIP_BRANCHDIR_DOWNWARDS); /* Here and below we assume that left is downward, as in relpscost. */
-               else
-                  LPgains[0] = node->leftchild->lowerbound - node->lowerbound;
-               
-
-               if( rightstatus == UNKNOWN || SCIPisInfinity(scip, node->rightchild->lowerbound) == TRUE )
-                  LPgains[1] = SCIPgetVarPseudocostCurrentRun(scip, node->branchedvar, SCIP_BRANCHDIR_UPWARDS);
-               else
-                  LPgains[1] = node->rightchild->lowerbound - node->lowerbound;
-
-               if(LPgains[0] > LPgains[1])
-                  leftLPbetterthanrightLP = 1;
-               else
-                  leftLPbetterthanrightLP = 0;
-               
-               /* The first LP gain passed should be the minimum one, and the second the maximum one */
-               SCIPgetIntParam(scip, "estimates/maxratioiters", &maxiters);
-               SCIPcomputeBranchVarRatio(scip, NULL, LPgains[leftLPbetterthanrightLP], LPgains[1-leftLPbetterthanrightLP], maxiters, &branchratio);
-
-               if( branchratio.valid == TRUE )
-               {
-                  /* Once the ratio phi has been computed, we compute the fraction of trees as:
-                   * phi^{-l} for the left side (where l denotes the leftgain), and
-                   * phi^{-r} for the right side.
-                   * We use the fact that the sum of the two equals 1. */
-
-                  if( leftLPbetterthanrightLP == 0 )
-                  {
-                      fractionleft = 1.0/branchratio.upratio;
-                      fractionright = 1 - fractionleft;
-                      assert(fractionleft >= fractionright);
-                  }
-                  else
-                  {
-                      fractionright = 1.0/branchratio.upratio;
-                      fractionleft = 1 - fractionright;
-                      assert(fractionleft <= fractionright);
-                  }
-                  break;
-               }
-               /* If the ratio computed is not valid, we do not break the switch, and we use the UNIFORM case */
-            }
-            case UNIFORM:
-               fractionleft = .5;
-               fractionright = .5;
-               break;
-            default:
-               SCIPerrorMessage("Missing case in this switch.\n");
-               SCIPABORT();
-         }
-
-         assert(SCIPisEQ(scip, 1.0, fractionleft + fractionright));
-         assert(fractionleft > 0 && fractionright > 0);
-
          assert((leftstatus == UNKNOWN) ^ (rightstatus == UNKNOWN));
+
+         fractionleft = computeProbabilities(scip, node, probabilitymethod);
+         fractionright = 1.0 - fractionleft;
 
          if( leftstatus == UNKNOWN )
          {
@@ -271,7 +293,7 @@ SizeStatus estimateTreeSize(SCIP* scip, TSEtree *node, SCIP_Real upperbound, SCI
          }
          *remainingsize = leftremainingsize + rightremainingsize;
          *totalsize = 1 + lefttotalsize + righttotalsize;
-         parentstatus = ESTIMATED;
+         currentnodestatus = ESTIMATED;
       }
 
       /* We check that we do not exceed SCIP_Longint capacity */
@@ -288,7 +310,7 @@ SizeStatus estimateTreeSize(SCIP* scip, TSEtree *node, SCIP_Real upperbound, SCI
    assert(*totalsize >= -1);
    assert(*totalsize >= *remainingsize);
 
-   return parentstatus;
+   return currentnodestatus;
 }
 
 /**
@@ -335,7 +357,8 @@ struct SCIP_EventhdlrData
    SCIP_Bool active;
    int hashmapsize;
    int maxratioiters;
-   char estimatemethod;
+   char estimationmethodparam;
+   char probabilitymethodparam;
    SCIP_Bool measureerror;
    SCIP_Real relerrorbound;
    /* char smoothingmethod; */
@@ -344,12 +367,14 @@ struct SCIP_EventhdlrData
    unsigned int nodesfound;
 
    /* Enums */
+   ProbabilityMethod probabilitymethod;
    EstimationMethod estimationmethod;
 
    /* Complex Data structures */
    TSEtree *tree; /* The representation of the B&B tree */
    //SCIP_HASHMAP *opennodes; /* The open nodes (that have yet to be solved). The key is the (scip) id/number of the SCIP_Node */
    SCIP_HASHMAP *allnodes;
+   int nestimates; /* The size of the list below */
    Elist *estimatelist;
    Elist *lastestimate;
 };
@@ -373,7 +398,7 @@ SCIP_Longint SCIPtreeSizeGetEstimateRemaining(SCIP* scip)
    if(eventhdlrdata->tree == NULL)
       return -1;
 
-   status = estimateTreeSize(scip, eventhdlrdata->tree, SCIPgetUpperbound(scip), &totalsize, &remainingsize, &currentsize, eventhdlrdata->estimationmethod);
+   status = estimateTreeSize(scip, eventhdlrdata->tree, SCIPgetUpperbound(scip), &totalsize, &remainingsize, &currentsize, eventhdlrdata->probabilitymethod, eventhdlrdata->estimationmethod);
    if( status == UNKNOWN )
       return -1;
    else
@@ -419,15 +444,18 @@ SCIP_Longint SCIPtreeSizeGetEstimateTotal(SCIP* scip)
       Elist *newlistitem;
       SCIP_CALL( SCIPallocMemory(scip, &newlistitem) );
       newlistitem->next = NULL;
-      if( eventhdlrdata->estimatelist == NULL )
+      if( eventhdlrdata->nestimates == 0 )
       {
+         assert(eventhdlrdata->estimatelist == NULL);
          eventhdlrdata->estimatelist = newlistitem;
       }
       else
       {
+         assert(eventhdlrdata->estimatelist != NULL);
          eventhdlrdata->lastestimate->next = newlistitem;
       }
       eventhdlrdata->lastestimate = newlistitem;
+      ++(eventhdlrdata->nestimates);
 
       newlistitem->estimate = estimate;
    }
@@ -456,19 +484,31 @@ SCIP_DECL_EVENTINITSOL(eventInitsolTreeSizePrediction)
       return SCIP_OKAY;
    }
 
-   switch(eventhdlrdata->estimatemethod)
+   switch(eventhdlrdata->probabilitymethodparam)
    {
       case 'r':
-         eventhdlrdata->estimationmethod = RATIO;
+         eventhdlrdata->probabilitymethod = RATIO;
          break;
       case 'u':
-         eventhdlrdata->estimationmethod = UNIFORM;
+         eventhdlrdata->probabilitymethod = UNIFORM;
          break;
       default:
          SCIPerrorMessage("Missing case in this switch.\n");
          SCIPABORT();
    }
 
+   switch(eventhdlrdata->estimationmethodparam)
+   {
+      case 's':
+         eventhdlrdata->estimationmethod = SAMPLING;
+         break;
+      case 't':
+         eventhdlrdata->estimationmethod = TREEBUILDING;
+         break;
+      default:
+         SCIPerrorMessage("Missing case in this switch.\n");
+         SCIPABORT();
+   }
 
 //   eventhdlrdata->initialized = TRUE;
    eventhdlrdata->nodesfound = 0;
@@ -476,6 +516,7 @@ SCIP_DECL_EVENTINITSOL(eventInitsolTreeSizePrediction)
    //SCIP_CALL( SCIPhashmapCreate(&(eventhdlrdata->opennodes), SCIPblkmem(scip), eventhdlrdata->hashmapsize) );
    SCIP_CALL( SCIPhashmapCreate(&(eventhdlrdata->allnodes), SCIPblkmem(scip), eventhdlrdata->hashmapsize) );
 
+   eventhdlrdata->nestimates = 0;
    eventhdlrdata->estimatelist = NULL;
 
    /* We catch node solved events */
@@ -521,7 +562,7 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolTreeSizePrediction)
       SizeStatus status;
       if( eventhdlrdata->tree != NULL ) /* SCIP may not have created any node */
       {
-         status = estimateTreeSize(scip, eventhdlrdata->tree, SCIPgetUpperbound(scip), &totalsize, &remainingsize, eventhdlrdata->estimationmethod);
+         status = estimateTreeSize(scip, eventhdlrdata->tree, SCIPgetUpperbound(scip), &totalsize, &remainingsize, eventhdlrdata->probabilitymethod, eventhdlr->estimationmthod);
          assert(status == KNOWN);
          SCIPdebugMessage("Estimated remaining nodes: %" SCIP_LONGINT_FORMAT " nodes in the B&B tree\n", remainingsize);
       }
@@ -537,11 +578,10 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolTreeSizePrediction)
    }
 
    /* We measure errors if needed */
-   if( eventhdlrdata->measureerror == TRUE )
+   if( eventhdlrdata->measureerror == TRUE && eventhdlrdata->nestimates != 0 )
    {
       Elist *current;
       Elist *next;
-      int nmeasures;
       SCIP_Real relerror;
       SCIP_Real absrelerror;
 
@@ -562,7 +602,6 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolTreeSizePrediction)
       totaltreesize = SCIPgetNNodes(scip);
 
       /* We use the following measures: MAPE, VARiance, Estimates within thresholds (overall, or only at the end) */
-      nmeasures = 0;
       mape = 0;
       mapebelow = 0;
       mapeabove = 0;
@@ -585,7 +624,6 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolTreeSizePrediction)
          }
 
          /* statistics */
-         ++nmeasures;
          /* we compute the (absolute) relative error */
          relerror = (current->estimate - totaltreesize) / totaltreesize;
 
@@ -640,15 +678,15 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolTreeSizePrediction)
       SCIPmessagePrintInfo(msghdlr, "Estimation errors  :\n");
 
       /* MAPE */
-      mape = 100.0 * mape / nmeasures;
-      mapeabove = 100.0 * mapeabove / nmeasures;
-      mapebelow = 100.0 * mapebelow / nmeasures;
+      mape = 100.0 * mape / eventhdlrdata->nestimates;
+      mapeabove = 100.0 * mapeabove / eventhdlrdata->nestimates;
+      mapebelow = 100.0 * mapebelow / eventhdlrdata->nestimates;
       SCIPmessagePrintInfo(msghdlr, "  MAPE             : %lf\n", mape);
       SCIPmessagePrintInfo(msghdlr, "  MAPE above       : %lf\n", mapeabove);
       SCIPmessagePrintInfo(msghdlr, "  MAPE below       : %lf\n", mapebelow);
 
       /* VARiance (and (relative) Standard Deviation) */
-      var = var / nmeasures;
+      var = var / eventhdlrdata->nestimates;
       SCIPmessagePrintInfo(msghdlr, "  VAR              : %lf\n", var);
       SCIPmessagePrintInfo(msghdlr, "  SD               : %lf\n", sqrt(var));
       SCIPmessagePrintInfo(msghdlr, "  RSD (%)          : %lf\n", 100.0*sqrt(var)/totaltreesize);
@@ -657,7 +695,7 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolTreeSizePrediction)
       SCIPmessagePrintInfo(msghdlr, "  Levels (total,%) : ");
       for( int i = 0; i < nthresholds; ++i )
       {
-         nestimatesinthreshold[i] = 100 * nestimatesinthreshold[i]/nmeasures;
+         nestimatesinthreshold[i] = 100 * nestimatesinthreshold[i]/eventhdlrdata->nestimates;
          SCIPmessagePrintInfo(msghdlr, "T(%.2lf)=%.2lf,", thresholds[i], nestimatesinthreshold[i]);
       }
       SCIPmessagePrintInfo(msghdlr, "\n");
@@ -666,13 +704,14 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolTreeSizePrediction)
       SCIPmessagePrintInfo(msghdlr, "  Levels (end,%)   : ");
       for( int i = 0; i < nthresholds; ++i )
       {
-         nestimatesinthresholdattheend[i] = 100 * nestimatesinthresholdattheend[i]/nmeasures;
+         nestimatesinthresholdattheend[i] = 100 * nestimatesinthresholdattheend[i]/eventhdlrdata->nestimates;
          SCIPmessagePrintInfo(msghdlr, "T(%.2lf)=%.2lf,", thresholds[i], nestimatesinthresholdattheend[i]);
       }
       SCIPmessagePrintInfo(msghdlr, "\n");
 
       /* We free the estimates (Elist) memory */
       freeElistMemory(scip, eventhdlrdata->estimatelist);
+      eventhdlrdata->nestimates = 0;
       /* We set those to NULL for safety */
       eventhdlrdata->estimatelist = NULL;
       eventhdlrdata->lastestimate = NULL;
@@ -751,6 +790,7 @@ SCIP_DECL_EVENTEXEC(eventExecTreeSizePrediction)
       SCIPdebugMessage("Allocating memory for node %"SCIP_LONGINT_FORMAT"\n", scipnodenumber);
       SCIP_CALL( SCIPallocMemory(scip, &eventnode) );
       eventnode->lowerbound = SCIPnodeGetLowerbound(scipnode);
+      eventnode->portion = -1;
       eventnode->leftchild = NULL;
       eventnode->rightchild = NULL;
       eventnode->number = SCIPnodeGetNumber(scipnode);
@@ -765,6 +805,8 @@ SCIP_DECL_EVENTEXEC(eventExecTreeSizePrediction)
          /* Then this should be the root node (maybe the root node of a restart) */
          assert(SCIPgetNNodes(scip) <= 1);
          parentnode = NULL;
+         eventnode->portion = 1;
+         eventnode->portionfrombounds = TRUE; /* For the root node this is artificial */
          eventnode->parent = parentnode;
          eventhdlrdata->tree = eventnode;
       }
@@ -774,6 +816,8 @@ SCIP_DECL_EVENTEXEC(eventExecTreeSizePrediction)
          parentnode = (TSEtree*) SCIPhashmapGetImage(eventhdlrdata->allnodes, (void *)parentnumber);
          assert(parentnode != NULL);
          eventnode->parent = parentnode;
+         /* we leave eventnode->portion initialized at -1. It may be computed later */
+         assert(eventnode->portion == -1);
          if(parentnode->leftchild == NULL)
             parentnode->leftchild = eventnode;
          else
@@ -890,7 +934,9 @@ SCIP_RETCODE SCIPincludeEventHdlrTreeSizePrediction(
 
    SCIP_CALL( SCIPaddIntParam(scip, "estimates/maxratioiters", "Maximum number of iterations to compute the ratio of a variable", &(eventhdlrdata->maxratioiters), TRUE, DEFAULT_MAXRATIOITERS, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddCharParam(scip, "estimates/estimatemethod", "Method to estimate the sizes of unkown subtrees based on their siblings ('r'atio, 'u'niform)", &(eventhdlrdata->estimatemethod), TRUE, DEFAULT_ESTIMATION_METHOD, "ru", NULL, NULL) );
+   SCIP_CALL( SCIPaddCharParam(scip, "estimates/estimationmethodparam", "Method to estimate the treesize ('s'sampling, 't'ree_building)", &(eventhdlrdata->estimationmethodparam), TRUE, DEFAULT_ESTIMATE_METHOD, "st", NULL, NULL) );
+
+   SCIP_CALL( SCIPaddCharParam(scip, "estimates/probabilitymethodparam", "Method to determine the probabilities to use in the treesize estimation method ('r'atio, 'u'niform)", &(eventhdlrdata->probabilitymethodparam), TRUE, DEFAULT_PROBABILITY_METHOD, "ru", NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "estimates/measureerror", "Whether to measure the prediction error at the end of the run", &(eventhdlrdata->measureerror), FALSE, DEFAULT_MEASURE_ERROR, NULL, NULL) );
 
