@@ -33,7 +33,7 @@
 #define SEPA_NAME              "aggregation"
 #define SEPA_DESC              "aggregation heuristic for complemented mixed integer rounding cuts and flowcover cuts"
 #define SEPA_PRIORITY             -3000
-#define SEPA_FREQ                    20
+#define SEPA_FREQ                    30
 #define SEPA_MAXBOUNDDIST           1.0
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
@@ -44,7 +44,7 @@
                                          *   (-1: unlimited) */
 #define DEFAULT_MAXTRIESROOT         -1 /**< maximal number of rows to start aggregation with per round in the root node
                                          *   (-1: unlimited) */
-#define DEFAULT_MAXFAILS             20 /**< maximal number of consecutive unsuccessful aggregation tries (-1: unlimited) */
+#define DEFAULT_MAXFAILS             10 /**< maximal number of consecutive unsuccessful aggregation tries (-1: unlimited) */
 #define DEFAULT_MAXFAILSROOT        100 /**< maximal number of consecutive unsuccessful aggregation tries in the root node
                                          *   (-1: unlimited) */
 #define DEFAULT_MAXAGGRS              3 /**< maximal number of aggregations for each row per separation round */

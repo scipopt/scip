@@ -715,6 +715,7 @@ SCIP_RETCODE SCIPcutpoolAddNewRow(
    SCIP_ROW*             row                 /**< cutting plane to add */
    )
 {
+   SCIP_Real thisefficacy;
    SCIP_CUT* cut;
 
    assert(cutpool != NULL);
@@ -755,7 +756,8 @@ SCIP_RETCODE SCIPcutpoolAddNewRow(
 
    assert(SCIPhashtableExists(cutpool->hashtable, (void*)cut));
 
-   stat->bestefficacy = MAX(SCIProwGetLPEfficacy(row, set, stat, lp), stat->bestefficacy);
+   thisefficacy = SCIProwGetLPEfficacy(row, set, stat, lp);
+   stat->bestefficacy = MAX(thisefficacy, stat->bestefficacy);
 
    /* if this is the global cut pool of SCIP, mark the row to be member of the pool */
    if( cutpool->globalcutpool )
@@ -980,26 +982,34 @@ SCIP_RETCODE SCIPcutpoolSeparate(
       cutpool->firstunprocessedsol = cutpool->ncuts;
    }
 
-   if( tried && !found )
-      ++stat->ncutpoolfails;
-   else
+   if( tried )
    {
+      int maxncuts = SCIPsetGetSepaMaxcuts(set, root);
       int ncuts = SCIPsepastoreGetNCuts(sepastore) - oldncuts;
 
       /* update the number of found cuts */
       cutpool->ncutsfound += ncuts;
 
-      if( ncuts > SCIPsetGetSepaMaxcuts(set, root) )
-         stat->minefficacyfac *= 1.5;
-
-      stat->ncutpoolfails = 0;
+      if( ncuts > 0.9 * maxncuts )
+      {
+         stat->ncutpoolfails = MIN(stat->ncutpoolfails - 1, 0);
+      }
+      else if( ncuts < 0.05 * maxncuts )
+      {
+         stat->ncutpoolfails = MAX(stat->ncutpoolfails + 1, 0);
+      }
    }
 
-   if( stat->ncutpoolfails == 2 )
+   if( stat->ncutpoolfails == 5 )
    {
       cutpool->firstunprocessed = 0;
       cutpool->firstunprocessedsol = 0;
       stat->minefficacyfac *= 0.5;
+      stat->ncutpoolfails = 0;
+   }
+   else if( stat->ncutpoolfails == -3 )
+   {
+      stat->minefficacyfac *= 1.5;
       stat->ncutpoolfails = 0;
    }
 
