@@ -827,17 +827,6 @@ SCIP_RETCODE consDropAllEvents(
    return SCIP_OKAY;
 }
 
-/** returns whether we are in a stage, where the variable events should be caught */
-static
-SCIP_Bool needEvents(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   assert(scip != NULL);
-
-   return (SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED && SCIPgetStage(scip) < SCIP_STAGE_FREETRANS);
-}
-
 /** creates a linear constraint data */
 static
 SCIP_RETCODE consdataCreate(
@@ -7456,6 +7445,22 @@ SCIP_RETCODE propagateCons(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+
+   if( consdata->eventdata == NULL )
+   {
+      SCIP_CONSHDLR* conshdlr;
+      SCIP_CONSHDLRDATA* conshdlrdata;
+
+      conshdlr = SCIPconsGetHdlr(cons);
+      assert(conshdlr != NULL);
+
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+
+      /* catch bound change events of variables */
+      SCIP_CALL( consCatchAllEvents(scip, cons, conshdlrdata->eventhdlr) );
+      assert(consdata->eventdata != NULL);
+   }
 
    *cutoff = FALSE;
 
@@ -15198,28 +15203,61 @@ SCIP_DECL_CONSEXITSOL(consExitsolLinear)
 }
 
 
+/** constraint deactivation notification method of constraint handler */
+static
+SCIP_DECL_CONSDEACTIVE(consDeactiveLinear)
+{  /*lint --e{715}*/
+
+   if( SCIPconsIsDeleted(cons) )
+   {
+      SCIP_CONSHDLRDATA* conshdlrdata;
+      SCIP_CONSDATA* consdata;
+
+      assert(scip != NULL);
+      assert(conshdlr != NULL);
+      assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+      /* get constraint data */
+      consdata = SCIPconsGetData(cons);
+      assert(consdata != NULL);
+
+      /* check for event handler */
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+      assert(conshdlrdata->eventhdlr != NULL);
+
+      /* free event data */
+      if( consdata->eventdata != NULL )
+      {
+         /* drop bound change events of variables */
+         SCIP_CALL( consDropAllEvents(scip, cons, conshdlrdata->eventhdlr) );
+      }
+      assert(consdata->eventdata == NULL);
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** frees specific constraint data */
 static
 SCIP_DECL_CONSDELETE(consDeleteLinear)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
 
-   /* check for event handler */
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-   assert(conshdlrdata->eventhdlr != NULL);
-
-   /* free event datas */
    if( (*consdata)->eventdata != NULL )
    {
-      /* drop bound change events of variables */
+      SCIP_CONSHDLRDATA* conshdlrdata;
+
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+
+      /* drop all events */
       SCIP_CALL( consDropAllEvents(scip, cons, conshdlrdata->eventhdlr) );
+      assert((*consdata)->eventdata == NULL);
    }
-   assert((*consdata)->eventdata == NULL);
 
    /* free linear constraint */
    SCIP_CALL( consdataFree(scip, consdata) );
@@ -15665,6 +15703,13 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
       assert(SCIPconsIsActive(cons));
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
+
+      if( consdata->eventdata == NULL )
+      {
+         /* catch bound change events of variables */
+         SCIP_CALL( consCatchAllEvents(scip, cons, conshdlrdata->eventhdlr) );
+         assert(consdata->eventdata != NULL);
+      }
 
       /* constraint should not be already presolved in the initial round */
       assert(SCIPgetNRuns(scip) > 0 || nrounds > 0 || SCIPconsIsMarkedPropagate(cons));
@@ -16893,6 +16938,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
 
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyLinear, consCopyLinear) );
+   SCIP_CALL( SCIPsetConshdlrDeactive(scip, conshdlr, consDeactiveLinear) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteLinear) );
    SCIP_CALL( SCIPsetConshdlrDelvars(scip, conshdlr, consDelvarsLinear) );
    SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitLinear) );
@@ -17132,7 +17178,6 @@ SCIP_RETCODE SCIPcreateConsLinear(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    )
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
 
@@ -17146,11 +17191,6 @@ SCIP_RETCODE SCIPcreateConsLinear(
       SCIPerrorMessage("linear constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
-
-   /* check for event handler */
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-   assert(conshdlrdata->eventhdlr != NULL);
 
    /* for the solving process we need linear rows, containing only active variables; therefore when creating a linear
     * constraint after presolving we have to ensure that it holds active variables
@@ -17271,13 +17311,6 @@ SCIP_RETCODE SCIPcreateConsLinear(
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
-
-   if( needEvents(scip) )
-   {
-      /* catch bound change events of variables */
-      SCIP_CALL( consCatchAllEvents(scip, *cons, conshdlrdata->eventhdlr) );
-      assert(consdata->eventdata != NULL);
-   }
 
    return SCIP_OKAY;
 }

@@ -6272,6 +6272,9 @@ SCIP_RETCODE SCIPconsDelete(
    SCIPsetDebugMsg(set, "globally deleting constraint <%s> (delay updates: %d)\n",
       cons->name, cons->conshdlr->delayupdatecount);
 
+   /* mark constraint deleted */
+   cons->deleted = TRUE;
+
    /* deactivate constraint, if it is currently active */
    if( cons->active && !cons->updatedeactivate )
    {
@@ -6285,9 +6288,6 @@ SCIP_RETCODE SCIPconsDelete(
 
    assert(!cons->active || cons->updatedeactivate);
    assert(!cons->enabled || cons->updatedeactivate);
-
-   /* mark constraint deleted */
-   cons->deleted = TRUE;
 
    /* remove formerly active constraint from the conssetchg's addedconss / prob's conss array */
    if( cons->addarraypos >= 0 )
