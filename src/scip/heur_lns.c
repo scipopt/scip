@@ -1058,8 +1058,7 @@ static
 void updateNeighborhoodStats(
    SCIP*                 scip,               /**< SCIP data structure */
    NH_STATS*             runstats,           /**< run statistics */
-   NH*                   neighborhood,       /**< the selected neighborhood */
-   SCIP_STATUS           subscipstatus       /**< sub-SCIP status */
+   NH*                   neighborhood        /**< the selected neighborhood */
    )
 {
    NH_STATS* stats;
@@ -1180,7 +1179,7 @@ SCIP_Real getVariableRedcostScore(
    bestbound = SCIPvarGetBestRootSol(var);
 
    assert(! SCIPisInfinity(scip, REALABS(bestbound)));
-   assert(SCIPisZero(redcost) || SCIPisIntegral(bestbound));
+   assert(SCIPisZero(scip, redcost) || SCIPisIntegral(scip, bestbound));
 
    score = redcost * (refsolval - bestbound);
 
@@ -1412,12 +1411,10 @@ SCIP_RETCODE createBandit(
          SCIP_CALL( SCIPcreateBanditEpsgreedy(scip, &heurdata->bandit, priorities,
                heurdata->epsgreedy_eps, heurdata->nactiveneighborhoods, initseed) );
          break;
-      default:
 
+      default:
          SCIPerrorMessage("Unknown bandit parameter %c\n", heurdata->banditalgo);
          return SCIP_INVALIDDATA;
-
-         break;
    }
 
    return SCIP_OKAY;
@@ -1769,7 +1766,7 @@ SCIP_RETCODE determineLimits(
    assert(heurdata->ninitneighborhoods >= 0);
    initfactor = (heurdata->nactiveneighborhoods - heurdata->ninitneighborhoods + 1.0) / (heurdata->nactiveneighborhoods + 1.0);
    solvelimits->nodelimit = (SCIP_Longint)(solvelimits->nodelimit * initfactor);
-   solvelimits->stallnodes = solvelimits->nodelimit * heurdata->stallnodefactor;
+   solvelimits->stallnodes = (SCIP_Longint)(solvelimits->nodelimit * heurdata->stallnodefactor);
 
    /* check whether we have enough nodes left to call subproblem solving */
    if( solvelimits->nodelimit < heurdata->targetnodes )
@@ -2335,6 +2332,7 @@ SCIP_DECL_HEUREXEC(heurExecLns)
 
       SCIP_CALL( getReward(scip, heurdata, &runstats[neighborhoodidx], &rewards[neighborhoodidx]) );
 
+      /* in all rewards mode, continue with the next neighborhood */
       if( allrewardsmode && ntries < heurdata->nactiveneighborhoods )
       {
          neighborhoodidx = (neighborhoodidx + 1) % heurdata->nactiveneighborhoods;
@@ -2342,8 +2340,6 @@ SCIP_DECL_HEUREXEC(heurExecLns)
          tryagain = TRUE;
 
          SCIP_CALL( SCIPfree(&subscip) );
-
-         continue;
       }
    }
    while( tryagain && ! SCIPisStopped(scip) );
@@ -2370,7 +2366,7 @@ SCIP_DECL_HEUREXEC(heurExecLns)
       heurdata->usednodes += runstats[banditidx].usednodes;
 
       /** determine the success of this neighborhood, and update the target fixing rate for the next time */
-      updateNeighborhoodStats(scip, &runstats[banditidx], heurdata->neighborhoods[banditidx], subscipstatus[banditidx]);
+      updateNeighborhoodStats(scip, &runstats[banditidx], heurdata->neighborhoods[banditidx]);
 
       /* adjust the fixing rate for this neighborhood
        * make no adjustments in all rewards mode, because this only affects 1 of 8 heuristics
