@@ -3327,9 +3327,13 @@ unsigned int SCIPcliqueGetId(
    SCIP_CLIQUE*          clique              /**< clique data structure */
    )
 {
+   int id;
+
    assert(clique != NULL);
 
-   return clique->id;
+   id = clique->id;
+
+   return (unsigned int)id;
 }
 
 /** gets unique identifier of the clique */
