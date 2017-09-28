@@ -172,8 +172,7 @@ SCIP_RETCODE ensureSolsSize(
    if( num > reopt->soltree->solssize[runidx] )
    {
       int newsize = SCIPsetCalcMemGrowSize(set, num+1);
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reopt->soltree->sols[runidx], reopt->soltree->solssize[runidx], \
-             newsize) ); /*lint !e866 */
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reopt->soltree->sols[runidx], reopt->soltree->solssize[runidx], newsize) ); /*lint !e866 */
       reopt->soltree->solssize[runidx] = newsize;
    }
    assert(num <= reopt->soltree->solssize[runidx]);
@@ -2262,7 +2261,10 @@ SCIP_RETCODE saveConsBounddisjuction(
    SCIP_Bool*            success             /**< pointer to store the success */
    )
 {
+   SCIP_VAR** vars;
    SCIP_CONSHDLR* conshdlr;
+   SCIP_BOUNDTYPE* boundtypes;
+   SCIP_Real* bounds;
    int v;
 
    assert(reoptconsdata != NULL);
@@ -2286,12 +2288,12 @@ SCIP_RETCODE saveConsBounddisjuction(
    assert(*success);
 
    /* allocate memory for variables and values; boundtypes are not needed */
-   SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &reoptconsdata->vars, \
-         SCIPgetVarsBounddisjunction(NULL, cons), reoptconsdata->nvars) );
-   SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &reoptconsdata->vals, \
-         SCIPgetBoundsBounddisjunction(NULL, cons), reoptconsdata->nvars) );
-   SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &reoptconsdata->boundtypes, \
-         SCIPgetBoundtypesBounddisjunction(NULL, cons), reoptconsdata->nvars) );
+   vars = SCIPgetVarsBounddisjunction(NULL, cons);
+   bounds = SCIPgetBoundsBounddisjunction(NULL, cons);
+   boundtypes = SCIPgetBoundtypesBounddisjunction(NULL, cons);
+   SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &reoptconsdata->vars, vars, reoptconsdata->nvars) );
+   SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &reoptconsdata->vals, bounds, reoptconsdata->nvars) );
+   SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &reoptconsdata->boundtypes, boundtypes, reoptconsdata->nvars) );
    reoptconsdata->varssize = reoptconsdata->nvars;
    reoptconsdata->lhs = SCIP_UNKNOWN;
    reoptconsdata->rhs = SCIP_UNKNOWN;
