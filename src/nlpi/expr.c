@@ -14689,8 +14689,9 @@ SCIP_RETCODE SCIPexprgraphUpdateNodeBoundsCurvature(
 {
    SCIP_INTERVAL  childboundsstatic[SCIP_EXPRESSION_MAXCHILDEST];
    SCIP_EXPRCURV  childcurvstatic[SCIP_EXPRESSION_MAXCHILDEST];
-   SCIP_INTERVAL* childbounds;
-   SCIP_EXPRCURV* childcurv;
+   SCIP_INTERVAL* childbounds = NULL;
+   SCIP_EXPRCURV* childcurv = NULL;
+   SCIP_RETCODE retcode = SCIP_OKAY;
    int i;
 
    assert(node != NULL);
@@ -14712,7 +14713,7 @@ SCIP_RETCODE SCIPexprgraphUpdateNodeBoundsCurvature(
    if( node->nchildren > SCIP_EXPRESSION_MAXCHILDEST )
    {
       SCIP_ALLOC( BMSallocMemoryArray(&childbounds, node->nchildren) );
-      SCIP_ALLOC( BMSallocMemoryArray(&childcurv, node->nchildren) );
+      SCIP_ALLOC_TERMINATE(retcode, BMSallocMemoryArray(&childcurv, node->nchildren), TERMINATE);
    }
    else
    {
@@ -14741,7 +14742,7 @@ SCIP_RETCODE SCIPexprgraphUpdateNodeBoundsCurvature(
 
       /* calling interval evaluation function for this operand */
       assert( exprOpTable[node->op].inteval != NULL );
-      SCIP_CALL( exprOpTable[node->op].inteval(infinity, node->data, node->nchildren, childbounds, NULL, NULL, &newbounds) );
+      SCIP_CALL_TERMINATE( retcode, exprOpTable[node->op].inteval(infinity, node->data, node->nchildren, childbounds, NULL, NULL, &newbounds), TERMINATE );
 
       /* if bounds of a children were relaxed or our bounds were tightened by a (now possibly invalid) reverse propagation from a parent
        * and now our bounds are relaxed, then we have to propagate this upwards to ensure valid bounds
@@ -14786,22 +14787,22 @@ SCIP_RETCODE SCIPexprgraphUpdateNodeBoundsCurvature(
    }
    else
    {
-      SCIP_CALL( exprOpTable[node->op].curv(infinity, node->data, node->nchildren, childbounds, childcurv, &node->curv) );
+      SCIP_CALL_TERMINATE( retcode, exprOpTable[node->op].curv(infinity, node->data, node->nchildren, childbounds, childcurv, &node->curv), TERMINATE );
 
       /* SCIPdebugMessage("curvature %s for %s = ", SCIPexprcurvGetName(node->curv), SCIPexpropGetName(node->op));
        * SCIPdebug( exprgraphPrintNodeExpression(node, NULL, NULL, TRUE) );
        * SCIPdebugPrintf("\n");
        */
    }
-
+TERMINATE:
    /* free memory, if allocated before */
    if( childbounds != childboundsstatic )
    {
-      BMSfreeMemoryArray(&childbounds);
-      BMSfreeMemoryArray(&childcurv);
+      BMSfreeMemoryArrayNull(&childbounds);
+      BMSfreeMemoryArrayNull(&childcurv);
    }
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 /**@} */

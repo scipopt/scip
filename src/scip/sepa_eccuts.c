@@ -1409,8 +1409,8 @@ SCIP_RETCODE searchEcAggr(
          }
 
          /* 2.a - search and store a single edge-concave aggregation by computing a clique with a good cycle */
-         SCIP_CALL( searchEcAggrWithCliques(scip, graph, sepadata, nlrow, quadvar2aggr, *nfound, rhsaggr,
-               &foundaggr, &foundclique) );
+         SCIP_CALL_FINALLY( searchEcAggrWithCliques(scip, graph, sepadata, nlrow, quadvar2aggr, *nfound, rhsaggr,
+               &foundaggr, &foundclique), tcliqueFree(&graph) );
 
          if( foundaggr )
          {
@@ -1438,7 +1438,7 @@ SCIP_RETCODE searchEcAggr(
       }
 
       /* exclude all edges used in the last aggregation and nodes found in the clique solution */
-      SCIP_CALL( updateMIP(subscip, nlrow, forwardarcs, backwardarcs, quadvar2aggr, &nedges) );
+      SCIP_CALL_FINALLY( updateMIP(subscip, nlrow, forwardarcs, backwardarcs, quadvar2aggr, &nedges), tcliqueFree(&graph) );
    }
 
 TERMINATE:
