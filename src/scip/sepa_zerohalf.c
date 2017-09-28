@@ -1956,7 +1956,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
 
    SCIPdebugMsg(scip, "built mod2 matrix (%i rows, %i cols)\n", mod2matrix.nrows, mod2matrix.ncols);
 
-   SCIPallocBufferArray(scip, &nonzrows, mod2matrix.nrows);
+   SCIP_CALL( SCIPallocBufferArray(scip, &nonzrows, mod2matrix.nrows) );
 
    for( k = 0; k < MAXREDUCTIONROUNDS; ++k )
    {
