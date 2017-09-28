@@ -2106,31 +2106,31 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
 
    /* add zerohalf separator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/"SEPA_NAME"/maxrounds",
+         "separating/" SEPA_NAME "/maxrounds",
          "maximal number of cmir separation rounds per node (-1: unlimited)",
          &sepadata->maxrounds, FALSE, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/"SEPA_NAME"/maxroundsroot",
+         "separating/" SEPA_NAME "/maxroundsroot",
          "maximal number of cmir separation rounds in the root node (-1: unlimited)",
          &sepadata->maxroundsroot, FALSE, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/"SEPA_NAME"/maxsepacuts",
+         "separating/" SEPA_NAME "/maxsepacuts",
          "maximal number of cmir cuts separated per separation round",
          &sepadata->maxsepacuts, FALSE, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/"SEPA_NAME"/maxsepacutsroot",
+         "separating/" SEPA_NAME "/maxsepacutsroot",
          "maximal number of cmir cuts separated per separation round in the root node",
          &sepadata->maxsepacutsroot, FALSE, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "separating/"SEPA_NAME"/maxslack",
+         "separating/" SEPA_NAME "/maxslack",
          "maximal slack of rows to be used in aggregation",
          &sepadata->maxslack, TRUE, DEFAULT_MAXSLACK, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "separating/"SEPA_NAME"/maxslackroot",
+         "separating/" SEPA_NAME "/maxslackroot",
          "maximal slack of rows to be used in aggregation in the root node",
          &sepadata->maxslackroot, TRUE, DEFAULT_MAXSLACKROOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "separating/"SEPA_NAME"/dynamiccuts",
+         "separating/" SEPA_NAME "/dynamiccuts",
          "should generated cuts be removed from the LP if they are no longer tight?",
          &sepadata->dynamiccuts, FALSE, DEFAULT_DYNAMICCUTS, NULL, NULL) );
 
