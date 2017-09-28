@@ -1213,21 +1213,7 @@ SCIP_RETCODE execRelpscost(
             assert(allcolsinlp || propagate);
             assert(!exactsolve);
 
-            /* if for both infeasibilities, a conflict constraint was created, we don't need to fix the variable by hand,
-             * but better wait for the next propagation round to fix them as an inference, and potentially produce a
-             * cutoff that can be analyzed
-             */
-            if( allowaddcons && downinf == downconflict && upinf == upconflict )
-            {
-               SCIPdebugMsg(scip, " -> variable <%s> is infeasible in %s: conflict constraint added\n",
-                  SCIPvarGetName(branchcands[c]),
-                  downinf && upinf ? "both directions" : (downinf ? "downward branch" : "upward branch"));
-               *result = SCIP_CONSADDED;
-               nbdconflicts++;
-               if( (downinf && upinf) || (nbdchgs + nbdconflicts >= maxbdchgs) )
-                  break; /* terminate initialization loop, because enough roundings are performed or a cutoff was found */
-            }
-            else if( downinf && upinf )
+            if( downinf && upinf )
             {
                /* both roundings are infeasible -> node is infeasible */
                SCIPdebugMsg(scip, " -> variable <%s> is infeasible in both directions (conflict: %u/%u)\n",
