@@ -7057,8 +7057,6 @@ SCIP_RETCODE runBoundHeuristic(
                   goto FREEBUFFER;
                }
 
-               SCIPdebug( vars = SCIPprobGetVars(transprob); );
-
                BMSclearMemoryArray(proofcoefs, SCIPprobGetNVars(transprob));
                (*prooflhs) = -SCIPaggrRowGetRhs(farkasrow);
                (*proofactivity) = -(*proofactivity);
