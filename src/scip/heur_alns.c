@@ -1067,9 +1067,10 @@ static
 void updateNeighborhoodStats(
    SCIP*                 scip,               /**< SCIP data structure */
    NH_STATS*             runstats,           /**< run statistics */
-   NH*                   neighborhood        /**< the selected neighborhood */
+   NH*                   neighborhood,       /**< the selected neighborhood */
+   SCIP_STATUS           subscipstatus       /**< status of the sub-SCIP solve */
    )
-{
+{  /*lint --e{715}*/
    NH_STATS* stats;
    stats = &neighborhood->stats;
 
@@ -2377,7 +2378,7 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
       heurdata->usednodes += runstats[banditidx].usednodes;
 
       /** determine the success of this neighborhood, and update the target fixing rate for the next time */
-      updateNeighborhoodStats(scip, &runstats[banditidx], heurdata->neighborhoods[banditidx]);
+      updateNeighborhoodStats(scip, &runstats[banditidx], heurdata->neighborhoods[banditidx], subscipstatus[banditidx]);
 
       /* adjust the fixing rate for this neighborhood
        * make no adjustments in all rewards mode, because this only affects 1 of 8 heuristics
