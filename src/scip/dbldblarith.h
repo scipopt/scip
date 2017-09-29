@@ -39,7 +39,7 @@
 #define QUAD_MEMBER(x) QUAD_HI(x); QUAD_LO(x)
 #define QUAD_ROUND(x) ( QUAD_HI(x) + QUAD_LO(x) )
 #define QUAD_SCALE(x, a) do { QUAD_HI(x) *= (a); QUAD_LO(x) *= (a); } while(0)
-#define QUAD_ASSIGN(a, constant)  do { QUAD_HI(a) = constant; QUAD_LO(a) = 0.0; } while(0)
+#define QUAD_ASSIGN(a, constant)  do { QUAD_HI(a) = (constant); QUAD_LO(a) = 0.0; } while(0)
 #define QUAD_ASSIGN_Q(a, b)  do { QUAD_HI(a) = QUAD_HI(b); QUAD_LO(a) = QUAD_LO(b); } while(0)
 #define QUAD_ARRAY_SIZE(size) ((size)*2)
 #define QUAD_ARRAY_LOAD(r, a, idx) do { QUAD_HI(r) = (a)[2*(idx)]; QUAD_LO(r) = (a)[2*(idx) + 1]; } while(0)

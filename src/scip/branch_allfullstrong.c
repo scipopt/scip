@@ -64,7 +64,6 @@ static
 SCIP_RETCODE branch(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
-   SCIP_Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -122,8 +121,8 @@ SCIP_RETCODE branch(
 
    SCIP_CALL( SCIPduplicateBufferArray(scip, &pseudocandscopy, pseudocands, npseudocands) );
 
-   SCIP_CALL( SCIPselectVarPseudoStrongBranching(scip, pseudocandscopy, branchruledata->skipdown, branchruledata->skipup, npseudocands, npriopseudocands,
-      allowaddcons, &bestpseudocand, &bestdown, &bestup, &bestscore, &bestdownvalid, &bestupvalid, &provedbound, result) );
+   SCIP_CALL( SCIPselectVarPseudoStrongBranching(scip, pseudocandscopy, branchruledata->skipdown, branchruledata->skipup, npseudocands,
+         npriopseudocands, &bestpseudocand, &bestdown, &bestup, &bestscore, &bestdownvalid, &bestupvalid, &provedbound, result) );
 
    if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED )
    {
@@ -233,7 +232,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpAllfullstrong)
 
    *result = SCIP_DIDNOTRUN;
 
-   SCIP_CALL( branch(scip, branchrule, allowaddcons, result) );
+   SCIP_CALL( branch(scip, branchrule, result) );
 
    return SCIP_OKAY;
 }
@@ -251,7 +250,7 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsAllfullstrong)
 
    if( SCIPhasCurrentNodeLP(scip) )
    {
-      SCIP_CALL( branch(scip, branchrule, allowaddcons, result) );
+      SCIP_CALL( branch(scip, branchrule, result) );
    }
 
    return SCIP_OKAY;
@@ -276,7 +275,6 @@ SCIP_RETCODE SCIPselectVarPseudoStrongBranching(
    SCIP_Bool*            skipup,             /**< should up branchings be skipped? */
    int                   npseudocands,       /**< number of branching candidates                      */
    int                   npriopseudocands,   /**< number of priority branching candidates             */
-   SCIP_Bool             allowaddcons,       /**< is the branching rule allowed to add constraints?   */
    int*                  bestpseudocand,     /**< best candidate for branching                        */
    SCIP_Real*            bestdown,           /**< objective value of the down branch for bestcand     */
    SCIP_Real*            bestup,             /**< objective value of the up branch for bestcand       */
