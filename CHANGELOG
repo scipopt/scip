@@ -43,6 +43,9 @@ fixed bugs:
 - afternode heuristics are now called even if the node limit was reached and the solving process will be stopped
   after the current node
 - fixed bug when activating probing mode with a non-empty separation storage
+- fixed bug in varbound coefficient tightening: if a varbound constraint only contained one variable afterwards,
+  it may have been deleted without applying the induced bound, if the change was too small, this is now forced
+- fixed potential wrong locks update after a varbound constraint became redundant in coefficient tightening
 
 performance improvements:
 - widened a bottleneck in simplifying long signomial sums in a nonlinear constraint
