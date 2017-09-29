@@ -4968,7 +4968,7 @@ SCIP_RETCODE addConcaveEstimatorMultivariate(
    int j;
    SCIP_Bool doupper;
 
-   SCIP_RETCODE retcode = SCIP_OKAY;
+   SCIP_RETCODE retcode;
 
    static SCIP_Bool warned_highdim_concave = FALSE;
 
