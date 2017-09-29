@@ -1,4 +1,5 @@
 display/estimates/active = 2
 estimates/active = TRUE
-estimates/estimatemethod = r
+estimates/estimationmethod = t
+estimates/probabilitymethod = r
 estimates/measureerror = TRUE
