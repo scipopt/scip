@@ -7091,6 +7091,9 @@ SCIP_RETCODE runBoundHeuristic(
 
                SCIP_CALL( getDualProof(set, transprob, lp, lpi, proofrow, proofactivity, curvarlbs, curvarubs, valid) );
 
+               if( !(*valid) )
+                  break;
+
                /* in contrast to the infeasible case we don't want to analyze the (probably identical) proof again. */
 
                BMSclearMemoryArray(proofcoefs, SCIPprobGetNVars(transprob));
