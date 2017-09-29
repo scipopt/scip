@@ -2649,12 +2649,19 @@ SCIP_RETCODE createAndAddProofcons(
       toolong = FALSE;
    else
    {
+      int maxnnz;
+
+      if( transprob->startnconss < 100 )
+         maxnnz = 0.85 * transprob->nvars;
+      else
+         maxnnz = transprob->nvars;
+
       fillin = nnz;
       if( proofset->conflicttype == SCIP_CONFTYPE_INFEASLP || proofset->conflicttype == SCIP_CONFTYPE_ALTINFPROOF )
       {
          fillin += SCIPconflictstoreGetNDualInfProofs(conflictstore) * SCIPconflictstoreGetAvgNnzDualInfProofs(conflictstore);
          fillin /= (SCIPconflictstoreGetNDualInfProofs(conflictstore) + 1.0);
-         toolong = (fillin > 2.0 * stat->avgnnz);
+         toolong = (fillin > MIN(2.0 * stat->avgnnz, maxnnz));
       }
       else
       {
@@ -2662,7 +2669,7 @@ SCIP_RETCODE createAndAddProofcons(
 
          fillin += SCIPconflictstoreGetNDualBndProofs(conflictstore) * SCIPconflictstoreGetAvgNnzDualBndProofs(conflictstore);
          fillin /= (SCIPconflictstoreGetNDualBndProofs(conflictstore) + 1.0);
-         toolong = (fillin > 1.5 * stat->avgnnz);
+         toolong = (fillin > MIN(1.5 * stat->avgnnz, maxnnz));
       }
 
       toolong = (toolong && (nnz > set->conf_maxvarsfac * transprob->nvars));
