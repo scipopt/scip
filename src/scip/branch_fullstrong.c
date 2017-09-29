@@ -154,7 +154,6 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    int                   npriolpcands,       /**< number of priority branching candidates             */
    int                   ncomplete,          /**< number of branching candidates without skip         */
    int*                  start,              /**< starting index in lpcands                           */
-   SCIP_Bool             allowaddcons,       /**< is the branching rule allowed to add constraints?   */
    int                   maxproprounds,      /**< maximum number of propagation rounds to be performed during strong
                                               *   branching before solving the LP (-1: no limit, -2: parameter settings) */
    SCIP_Bool             probingbounds,      /**< should valid bounds be identified in a probing-like fashion during
@@ -569,7 +568,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
    }
 
    SCIP_CALL( SCIPselectVarStrongBranching(scip, lpcands, lpcandssol, lpcandsfrac, branchruledata->skipdown,
-         branchruledata->skipup, nlpcands, npriolpcands, nlpcands, &branchruledata->lastcand, allowaddcons,
+         branchruledata->skipup, nlpcands, npriolpcands, nlpcands, &branchruledata->lastcand,
          branchruledata->maxproprounds, branchruledata->probingbounds, branchruledata->forcestrongbranch, &bestcand,
          &bestdown, &bestup, &bestscore, &bestdownvalid, &bestupvalid, &provedbound, result) );
 

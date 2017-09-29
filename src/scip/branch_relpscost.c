@@ -487,8 +487,6 @@ static
 SCIP_RETCODE execRelpscost(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
-   SCIP_Bool             allowaddcons,       /**< is the branching rule allowed to add constraints to the current node
-                                              *   in order to cut off the current solution instead of creating a branching? */
    SCIP_VAR**            branchcands,        /**< branching candidates */
    SCIP_Real*            branchcandssol,     /**< solution value for the branching candidates */
    SCIP_Real*            branchcandsfrac,    /**< fractional part of the branching candidates */
@@ -1543,7 +1541,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
    SCIP_CALL( SCIPduplicateBufferArray(scip, &lpcandsfrac, tmplpcandsfrac, nlpcands) );
 
    /* execute branching rule */
-   SCIP_CALL( execRelpscost(scip, branchrule, allowaddcons, lpcands, lpcandssol, lpcandsfrac, nlpcands, TRUE, result) );
+   SCIP_CALL( execRelpscost(scip, branchrule, lpcands, lpcandssol, lpcandsfrac, nlpcands, TRUE, result) );
 
    SCIPfreeBufferArray(scip, &lpcandsfrac);
    SCIPfreeBufferArray(scip, &lpcandssol);
@@ -1709,8 +1707,6 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
 /** execution reliability pseudo cost branching with the given branching candidates */
 SCIP_RETCODE SCIPexecRelpscostBranching(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             allowaddcons,       /**< is the branching rule allowed to add constraints to the current node
-                                              *   in order to cut off the current solution instead of creating a branching? */
    SCIP_VAR**            branchcands,        /**< branching candidates */
    SCIP_Real*            branchcandssol,     /**< solution value for the branching candidates */
    SCIP_Real*            branchcandsfrac,    /**< fractional part of the branching candidates */
@@ -1729,7 +1725,7 @@ SCIP_RETCODE SCIPexecRelpscostBranching(
    assert(branchrule != NULL);
 
    /* execute branching rule */
-   SCIP_CALL( execRelpscost(scip, branchrule, allowaddcons, branchcands, branchcandssol, branchcandsfrac, nbranchcands, executebranching, result) );
+   SCIP_CALL( execRelpscost(scip, branchrule, branchcands, branchcandssol, branchcandsfrac, nbranchcands, executebranching, result) );
 
    return SCIP_OKAY;
 }

@@ -65,7 +65,6 @@ SCIP_RETCODE SCIPselectVarPseudoStrongBranching(
    SCIP_Bool*            skipup,             /**< should up branchings be skipped? */
    int                   npseudocands,       /**< number of branching candidates                      */
    int                   npriopseudocands,   /**< number of priority branching candidates             */
-   SCIP_Bool             allowaddcons,       /**< is the branching rule allowed to add constraints?   */
    int*                  bestpseudocand,     /**< best candidate for branching                        */
    SCIP_Real*            bestdown,           /**< objective value of the down branch for bestcand     */
    SCIP_Real*            bestup,             /**< objective value of the up branch for bestcand       */
