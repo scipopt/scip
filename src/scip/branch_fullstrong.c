@@ -371,16 +371,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
             assert(allcolsinlp || propagate);
             assert(!exactsolve);
 
-            /* if for both infeasibilities, a conflict constraint was created, we don't need to fix the variable by
-             * hand, but better wait for the next propagation round to fix them as an inference, and potentially
-             * produce a cutoff that can be analyzed
-             */
-            if( allowaddcons && downinf == downconflict && upinf == upconflict )
-            {
-               *result = SCIP_CONSADDED;
-               break; /* terminate initialization loop, because constraint was added */
-            }
-            else if( downinf && upinf )
+            if( downinf && upinf )
             {
                /* both roundings are infeasible -> node is infeasible */
                *result = SCIP_CUTOFF;

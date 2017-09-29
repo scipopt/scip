@@ -6,12 +6,12 @@ set(ZIMPL_NEEDED "@ZIMPL_FOUND@")
 set(SOPLEX_NEEDED "@SOPLEX_FOUND@")
 
 if(ZIMPL_NEEDED)
-   set(ZIMPL_DIR "@ZIMPL_DIR@")
+   set(ZIMPL_DIR "@CONF_ZIMPL_DIR@")
    find_package(ZIMPL QUIET CONFIG)
 endif()
 
 if(SOPLEX_NEEDED)
-   set(SOPLEX_DIR "@SOPLEX_DIR@")
+   set(SOPLEX_DIR "@CONF_SOPLEX_DIR@")
    find_package(SOPLEX QUIET CONFIG)
 endif()
 
