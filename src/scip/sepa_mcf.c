@@ -280,7 +280,7 @@ SCIP_RETCODE mcfnetworkCreate(
 {
    assert(mcfnetwork != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, mcfnetwork) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, mcfnetwork) );
    (*mcfnetwork)->nodeflowrows = NULL;
    (*mcfnetwork)->nodeflowscales = NULL;
    (*mcfnetwork)->nodeflowinverted = NULL;
@@ -342,7 +342,7 @@ SCIP_RETCODE mcfnetworkFree(
       SCIPfreeMemoryArrayNull(scip, &(*mcfnetwork)->arctargets);
       SCIPfreeMemoryArrayNull(scip, &(*mcfnetwork)->colcommodity);
 
-      SCIPfreeMemory(scip, mcfnetwork);
+      SCIPfreeBlockMemory(scip, mcfnetwork);
    }
 
    return SCIP_OKAY;
