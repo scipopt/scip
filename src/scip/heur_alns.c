@@ -3141,7 +3141,7 @@ DECL_VARFIXINGS(varFixingsDins)
    sols[1] = rootlpsol;
 
    /* copy the remaining MIP solutions after the LP solutions */
-   BMScopyMemoryArray(&sols[2], SCIPgetSols(scip), nmipsols);
+   BMScopyMemoryArray(&sols[2], SCIPgetSols(scip), nmipsols); /*lint !e866*/
 
    /* 1. Binary variables are fixed if their values agree in all the solutions */
    if( nbinvars > 0 )
@@ -3175,7 +3175,7 @@ DECL_VARFIXINGS(varFixingsDins)
 /** callback for DINS subproblem changes */
 static
 DECL_CHANGESUBSCIP(changeSubscipDins)
-{  /**lint --e{715}*/
+{  /*lint --e{715}*/
    SCIP_VAR** vars;
    int nintvars;
    int nbinvars;
