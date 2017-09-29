@@ -934,9 +934,9 @@ SCIP_RETCODE SCIPincludeEventHdlrTreeSizePrediction(
 
    SCIP_CALL( SCIPaddIntParam(scip, "estimates/maxratioiters", "Maximum number of iterations to compute the ratio of a variable", &(eventhdlrdata->maxratioiters), TRUE, DEFAULT_MAXRATIOITERS, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddCharParam(scip, "estimates/estimationmethodparam", "Method to estimate the treesize ('s'sampling, 't'ree_building)", &(eventhdlrdata->estimationmethodparam), TRUE, DEFAULT_ESTIMATE_METHOD, "st", NULL, NULL) );
+   SCIP_CALL( SCIPaddCharParam(scip, "estimates/estimationmethod", "Method to estimate the treesize ('s'sampling, 't'ree_building)", &(eventhdlrdata->estimationmethodparam), TRUE, DEFAULT_ESTIMATE_METHOD, "st", NULL, NULL) );
 
-   SCIP_CALL( SCIPaddCharParam(scip, "estimates/probabilitymethodparam", "Method to determine the probabilities to use in the treesize estimation method ('r'atio, 'u'niform)", &(eventhdlrdata->probabilitymethodparam), TRUE, DEFAULT_PROBABILITY_METHOD, "ru", NULL, NULL) );
+   SCIP_CALL( SCIPaddCharParam(scip, "estimates/probabilitymethod", "Method to determine the probabilities to use in the treesize estimation method ('r'atio, 'u'niform)", &(eventhdlrdata->probabilitymethodparam), TRUE, DEFAULT_PROBABILITY_METHOD, "ru", NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "estimates/measureerror", "Whether to measure the prediction error at the end of the run", &(eventhdlrdata->measureerror), FALSE, DEFAULT_MEASURE_ERROR, NULL, NULL) );
 
