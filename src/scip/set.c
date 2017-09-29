@@ -147,21 +147,6 @@
 
 /* Conflict Analysis (dual ray) */
 
-#define SCIP_DEFAULT_CONF_APPLYMIR        FALSE /**< apply MIR function to dual rays */
-#define SCIP_DEFAULT_CONF_PREFERMIR        TRUE /**< prefer a ray after applying the MIR function if the proof is still
-                                                 *   valid, use both rays otherwise
-                                                 */
-#define SCIP_DEFAULT_CONF_DUALRAYPRESOL       0 /**< which presolving strategy should be used for dualray constraints?
-                                                 *   (0: no presolving,
-                                                 *    1: keep variables contributing with its local bound
-                                                 *    2: keep variables contributing with its global bound
-                                                 *    3: keep variables contributing with its global bound and add a few
-                                                 *       variables contributing with its local bound such that the
-                                                 *       constraint is not globally redundant
-                                                 */
-#define SCIP_DEFAULT_CONF_REMOVECONTS       'd' /**< try to sparsify the dualray proof by removing continuous variables
-                                                 *   ([d]on't remove, remove [g]reedy, use [n]on-zero-cancellation)
-                                                 */
 #define SCIP_DEFAULT_CONF_SEPAALTPROOFS   FALSE /**< apply cut generating functions to construct alternative proofs */
 
 /* Constraints */

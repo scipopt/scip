@@ -3161,7 +3161,7 @@ SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
    }
    else
    {
-      SCIPhashmapRemoveAll(cliquetable->varidxtable);
+      SCIP_CALL( SCIPhashmapRemoveAll(cliquetable->varidxtable) );
    }
 
    /* loop through variables and store their respective positions in the hash map if they are binary */

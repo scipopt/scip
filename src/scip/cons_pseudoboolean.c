@@ -1089,7 +1089,9 @@ SCIP_RETCODE transformToOrig(
 
          if( consanddata->nvars > 0 )
          {
-            SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(consanddata->vars), SCIPgetVarsAnd(scip, consanddata->origcons), consanddata->nvars) );
+            SCIP_VAR** andvars = SCIPgetVarsAnd(scip, consanddata->origcons);
+
+            SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(consanddata->vars), andvars, consanddata->nvars) );
 
             /* sort variables */
             SCIPsortPtr((void**)(consanddata->vars), SCIPvarComp, consanddata->nvars);
@@ -5170,15 +5172,17 @@ SCIP_RETCODE correctConshdlrdata(
 	    if( nfixedvars > 0 )
 	    {
 	       SCIP_VAR** fixedvars;
-               SCIP_VAR** activevars = NULL;
-               SCIP_Real* activescalars = NULL;
-               SCIP_Real activeconstant;
-               int nactivevars;
-               int requiredsize;
+	       SCIP_VAR** scipfixedvars;
+	       SCIP_VAR** activevars = NULL;
+	       SCIP_Real* activescalars = NULL;
+	       SCIP_Real activeconstant;
+	       int nactivevars;
+	       int requiredsize;
 	       int pos;
 	       int w;
 
-	       SCIP_CALL( SCIPduplicateBufferArray(scip, &fixedvars, SCIPgetFixedVars(scip), nfixedvars) );
+	       scipfixedvars = SCIPgetFixedVars(scip);
+	       SCIP_CALL( SCIPduplicateBufferArray(scip, &fixedvars, scipfixedvars, nfixedvars) );
 
 	       SCIPvarsGetProbvar(fixedvars, nfixedvars);
 

@@ -226,9 +226,8 @@ SCIP_RETCODE SCIPdivesetCreate(
     */
    diveset->initialseed = initialseed;
 
-   /* simply use 0 as initial seed, the diveset seed is reset anyway a couple of lines later */
+   /* simply use 0 as initial seed, the seed is reset in SCIPdivesetReset, anyway */
    SCIP_CALL( SCIPrandomCreate(&diveset->randnumgen, blkmem, 0) );
-
 
    /* for convenience, the name gets inferred from the heuristic to which the diveset is added if no name is provided */
    divesetname = (name == NULL ? SCIPheurGetName(heur) : name);
