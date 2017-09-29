@@ -1712,24 +1712,20 @@ SCIP_RETCODE removeFixedNonlinearVariables(
          continue;
       }
 
-      do
+      vars[0]  = var;
+      coefs[0] = 1.0;
+      constant = 0.0;
+      nvars = 1;
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, coefs, &nvars, varssize, &constant, &requsize, TRUE) );
+
+      if( requsize > varssize )
       {
-         vars[0]  = var;
-         coefs[0] = 1.0;
-         constant = 0.0;
-         nvars = 1;
+         SCIP_CALL( SCIPreallocBufferArray(scip, &vars,  requsize) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, &coefs, requsize) );
+         varssize = requsize;
+
          SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, coefs, &nvars, varssize, &constant, &requsize, TRUE) );
-
-         if( requsize > varssize )
-         {
-            SCIP_CALL( SCIPreallocBufferArray(scip, &vars,  requsize) );
-            SCIP_CALL( SCIPreallocBufferArray(scip, &coefs, requsize) );
-            varssize = requsize;
-            continue;
-         }
-
       }
-      while( FALSE );
 
 #ifdef SCIP_DEBUG
       SCIPdebugMsg(scip, "replace fixed variable <%s> by %g", SCIPvarGetName(var), constant);

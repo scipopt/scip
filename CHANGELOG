@@ -46,6 +46,7 @@ fixed bugs:
 - fixed bug in varbound coefficient tightening: if a varbound constraint only contained one variable afterwards,
   it may have been deleted without applying the induced bound, if the change was too small, this is now forced
 - fixed potential wrong locks update after a varbound constraint became redundant in coefficient tightening
+- fixed potentially wrong cleanup of fixed variables in nonlinear constraint handler
 
 performance improvements:
 - widened a bottleneck in simplifying long signomial sums in a nonlinear constraint
