@@ -28809,6 +28809,7 @@ SCIP_RETCODE SCIPactiveCons(
    assert(scip != NULL);
    assert(cons != NULL);
    assert(!SCIPconsIsAdded(cons));
+   assert(!SCIPconsIsDeleted(cons));
 
    SCIP_CALL( checkStage(scip, "SCIPactiveCons", FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 

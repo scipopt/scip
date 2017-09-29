@@ -4481,7 +4481,7 @@ SCIP_RETCODE constructSNFRelaxation(
    SCIPsortDownInt(rowinds, nnz);
 
    /* array to store whether a binary variable is in the row (-1) or has been used (1) due to variable bound usage */
-   SCIPallocCleanBufferArray(scip, &binvarused, nbinvars);
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &binvarused, nbinvars) );
 
    for( i = nnz - 1; i >= 0 && rowinds[i] < nbinvars; --i )
    {

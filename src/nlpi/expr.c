@@ -8316,13 +8316,14 @@ void SCIPexprPrint(
       default:
       {
          int i;
-         const char* opstr = expr->op == SCIP_EXPR_SUM ? " + " : " * ";
+         char opstr[SCIP_MAXSTRLEN];
 
          SCIPmessageFPrintInfo(messagehdlr, file, "(");
          for( i = 0; i < expr->nchildren; ++i )
          {
             if( i > 0 )
             {
+               (void) SCIPsnprintf(opstr, SCIP_MAXSTRLEN, "%s", expr->op == SCIP_EXPR_SUM ? " + " : " * ");
                SCIPmessageFPrintInfo(messagehdlr, file, opstr);
             }
             SCIPexprPrint(expr->children[i], messagehdlr, file, varnames, paramnames, paramvals);
