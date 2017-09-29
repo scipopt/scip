@@ -2225,6 +2225,7 @@ SCIP_RETCODE parseBounds(
    )
 {
    char token[SCIP_MAXSTRLEN];
+   char* tmpend;
 
    SCIPsetDebugMsg(set, "parsing bounds: '%s'\n", str);
 
@@ -2242,7 +2243,7 @@ SCIP_RETCODE parseBounds(
    /* get lower bound */
    SCIPstrCopySection(str, '[', ',', token, SCIP_MAXSTRLEN, endptr);
    str = *endptr;
-   SCIP_CALL( parseValue(set, token, lb, endptr) );
+   SCIP_CALL( parseValue(set, token, lb, &tmpend) );
 
    /* get upper bound */
    SCIP_CALL( parseValue(set, str, ub, endptr) );

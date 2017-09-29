@@ -15413,7 +15413,7 @@ void rowprepCleanupIntegralCoefs(
             SCIPdebugMsg(scip, "var <%s> [%g,%g] has almost integral coef %.20g, round coefficient to %g without relaxing side (!)\n",
                SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), coef, roundcoef);
          }
-         rowprep->coefs[i] = coef = roundcoef;
+         rowprep->coefs[i] = roundcoef;
          *viol = SCIP_INVALID;
       }
    }

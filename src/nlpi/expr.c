@@ -6079,8 +6079,10 @@ SCIP_RETCODE SCIPexprCreate(
       /* for a sum or product of 0 terms we can finish here */
       if( nchildren == 0 )
       {
-         SCIP_CALL( exprCreate( blkmem, expr, op, 0, NULL, opdata) );
+         SCIP_RETCODE retcode;
+         retcode = exprCreate( blkmem, expr, op, 0, NULL, opdata);
          va_end( ap );  /*lint !e826*/
+         SCIP_CALL( retcode );
          break;
       }
 
