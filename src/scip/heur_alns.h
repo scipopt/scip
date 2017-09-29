@@ -13,17 +13,17 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   heur_lns.h
+/**@file   heur_alns.h
  * @ingroup PRIMALHEURISTICS
- * @brief  Large neighborhood search heuristic that orchestrates popular LNS heuristics adaptively
+ * @brief  Adaptive large neighborhood search heuristic that orchestrates popular LNS heuristics
  * @author Gregor Hendel
  *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_HEUR_LNS_H__
-#define __SCIP_HEUR_LNS_H__
+#ifndef __SCIP_HEUR_ALNS_H__
+#define __SCIP_HEUR_ALNS_H__
 
 
 #include "scip/scip.h"
@@ -32,12 +32,12 @@
 extern "C" {
 #endif
 
-/** creates the lns primal heuristic and includes it in SCIP
+/** creates the alns primal heuristic and includes it in SCIP
  *
  *  @ingroup PrimalHeuristicIncludes
  */
 EXTERN
-SCIP_RETCODE SCIPincludeHeurLns(
+SCIP_RETCODE SCIPincludeHeurAlns(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
