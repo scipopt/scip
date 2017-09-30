@@ -3600,7 +3600,7 @@ SCIP_RETCODE createCGCuts(
 {
    SCIP_BOUNDTYPE* boundtypesfortrans;
    SCIP_STAGE stage;
-   SCIP_AGGRROW* aggrrow;
+   SCIP_AGGRROW* aggrrow = NULL;
    SCIP_Real* varsolvals;
    SCIP_Real* weights;
    int* cutinds;

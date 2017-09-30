@@ -259,7 +259,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
    if( SCIPsetIsInfinity(set, row->rhs) )
       scale = -scale;
 
-   hash = row->len;
+   hash = (uint64_t) (long) row->len;
 
    for( i = 0; i < row->len; ++i )
    {

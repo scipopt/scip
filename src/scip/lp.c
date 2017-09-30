@@ -17596,7 +17596,7 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
 {
    SCIP_LPI* lpi;
 
-   SCIP_RETCODE retcode = SCIP_OKAY;
+   SCIP_RETCODE retcode;
 
    assert(set != NULL);
    assert(lp  != NULL);
