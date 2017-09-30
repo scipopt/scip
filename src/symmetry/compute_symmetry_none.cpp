@@ -53,7 +53,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
    int***                perms               /**< pointer to store permutation generators as (nperms x npermvars) matrix */
    )
-{
+{  /*lint --e{715}*/
    assert( scip != NULL );
    assert( matrixdata != NULL );
    assert( permvars != NULL );

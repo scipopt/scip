@@ -44,20 +44,14 @@
 /* constraint handler properties */
 #define CONSHDLR_NAME          "symmetry"
 #define CONSHDLR_DESC          "constraint handler for computing and storing symmetry information about current problem"
-#define CONSHDLR_SEPAPRIORITY         0 /**< priority of the constraint handler for separation */
 #define CONSHDLR_ENFOPRIORITY         0 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY -9000000 /**< priority of the constraint handler for checking feasibility */
-#define CONSHDLR_SEPAFREQ            -1 /**< frequency for separating cuts; zero means to separate only in the root node */
-#define CONSHDLR_PROPFREQ      -9000000 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
-#define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
-#define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
 #define CONSHDLR_PRESOLTIMING      SCIP_PRESOLTIMING_EXHAUSTIVE
-#define CONSHDLR_PROP_TIMING       SCIP_PROPTIMING_BEFORELP
 
 
 /* default parameter values */
@@ -102,7 +96,7 @@ struct SCIP_ConsData
 /** gets the key of the given element */
 static
 SCIP_DECL_HASHGETKEY(SYMhashGetKeyVartype)
-{
+{  /*lint --e{715}*/
    return elem;
 }
 
@@ -143,11 +137,11 @@ SCIP_DECL_HASHKEYEQ(SYMhashKeyEQVartype)
 /** returns the hash value of the key */
 static
 SCIP_DECL_HASHKEYVAL(SYMhashKeyValVartype)
-{
+{  /*lint --e{715}*/
    SYM_VARTYPE* k;
 
    k = (SYM_VARTYPE*) key;
-   return SCIPrealHashCode(k->obj) + SCIPrealHashCode(k->lb) + SCIPrealHashCode(k->ub);
+   return (uint64_t) (SCIPrealHashCode(k->obj) + SCIPrealHashCode(k->lb) + SCIPrealHashCode(k->ub));  /*lint !e776*/
 }
 
 
@@ -156,7 +150,7 @@ SCIP_DECL_HASHKEYVAL(SYMhashKeyValVartype)
 /** gets the key of the given element */
 static
 SCIP_DECL_HASHGETKEY(SYMhashGetKeyRhstype)
-{
+{  /*lint --e{715}*/
    return elem;
 }
 
@@ -189,11 +183,11 @@ SCIP_DECL_HASHKEYEQ(SYMhashKeyEQRhstype)
 /** returns the hash value of the key */
 static
 SCIP_DECL_HASHKEYVAL(SYMhashKeyValRhstype)
-{
+{  /*lint --e{715}*/
    SYM_RHSTYPE* k;
 
    k = (SYM_RHSTYPE*) key;
-   return SCIPrealHashCode(k->val) + k->sense;
+   return SCIPrealHashCode(k->val) + (uint64_t) k->sense;
 }
 
 
@@ -202,7 +196,7 @@ SCIP_DECL_HASHKEYVAL(SYMhashKeyValRhstype)
 /** gets the key of the given element */
 static
 SCIP_DECL_HASHGETKEY(SYMhashGetKeyMattype)
-{
+{  /*lint --e{715}*/
    return elem;
 }
 
@@ -231,7 +225,7 @@ SCIP_DECL_HASHKEYEQ(SYMhashKeyEQMattype)
 /** returns the hash value of the key */
 static
 SCIP_DECL_HASHKEYVAL(SYMhashKeyValMattype)
-{
+{  /*lint --e{715}*/
    SYM_MATTYPE* k;
 
    k = (SYM_MATTYPE*) key;
@@ -983,7 +977,6 @@ SCIP_RETCODE computeSymmetryGroup(
             rt->color = matrixdata.nuniquerhs++;
             SCIP_CALL( SCIPhashtableInsert(rhstypemap, (void*) rt) );
 
-            oldcoef = val;
 #ifdef SCIP_OUTPUT
             SCIPdebugMsg(scip, "have new rhs type %f, type: %u - color: %u\n", val, sense, matrixdata.nuniquerhscoef - 1);
 #endif
@@ -1056,6 +1049,7 @@ SCIP_RETCODE determineSymmetry(
 {
    int maxgenerators;
    int type = 0;
+   int nvars;
 
    assert( scip != NULL );
    assert( consdata != NULL );
@@ -1072,7 +1066,8 @@ SCIP_RETCODE determineSymmetry(
    consdata->computedsym = TRUE;
 
    /* avoid trivial cases */
-   if ( SCIPgetNVars(scip) <= 0 )
+   nvars = SCIPgetNVars(scip);
+   if ( nvars <= 0 )
       return SCIP_OKAY;
 
    /* determine symmetry specification */
@@ -1089,19 +1084,19 @@ SCIP_RETCODE determineSymmetry(
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Skip symmetry computation, since type does not match requirements (%d bin, %d int, %d cont); required: (%d bin, %d int, %d cont).\n",
          SCIPgetNBinVars(scip), SCIPgetNIntVars(scip), SCIPgetNContVars(scip) + SCIPgetNImplVars(scip),
-         (conshdlrdata->symspecrequire & SYM_SPEC_BINARY) != 0,
-         (conshdlrdata->symspecrequire & SYM_SPEC_INTEGER) != 0,
-         (conshdlrdata->symspecrequire & SYM_SPEC_REAL) != 0);
+         (conshdlrdata->symspecrequire & (int) SYM_SPEC_BINARY) != 0,
+         (conshdlrdata->symspecrequire & (int) SYM_SPEC_INTEGER) != 0,
+         (conshdlrdata->symspecrequire & (int) SYM_SPEC_REAL) != 0);
       return SCIP_OKAY;
    }
 
    SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Required symmetry:\t\t\t(%d bin, %d int, %d cont); (fixed: %d bin, %d int, %d cont)\n",
-      (conshdlrdata->symspecrequire & SYM_SPEC_BINARY) != 0,
-      (conshdlrdata->symspecrequire & SYM_SPEC_INTEGER) != 0,
-      (conshdlrdata->symspecrequire & SYM_SPEC_REAL) != 0,
-      (conshdlrdata->symspecrequirefixed & SYM_SPEC_BINARY) != 0,
-      (conshdlrdata->symspecrequirefixed & SYM_SPEC_INTEGER) != 0,
-      (conshdlrdata->symspecrequirefixed & SYM_SPEC_REAL) != 0);
+      (conshdlrdata->symspecrequire & (int) SYM_SPEC_BINARY) != 0,
+      (conshdlrdata->symspecrequire & (int) SYM_SPEC_INTEGER) != 0,
+      (conshdlrdata->symspecrequire & (int) SYM_SPEC_REAL) != 0,
+      (conshdlrdata->symspecrequirefixed & (int) SYM_SPEC_BINARY) != 0,
+      (conshdlrdata->symspecrequirefixed & (int) SYM_SPEC_INTEGER) != 0,
+      (conshdlrdata->symspecrequirefixed & (int) SYM_SPEC_REAL) != 0);
 
    if ( conshdlrdata->symspecrequire & conshdlrdata->symspecrequirefixed )
       SCIPwarningMessage(scip, "Warning: some required symmetries must be fixed.\n");
@@ -1109,7 +1104,7 @@ SCIP_RETCODE determineSymmetry(
    /* actually compute (global) symmetry */
    /* determine maximal number of generators depending on the number of variables */
    maxgenerators = conshdlrdata->maxgenerators;
-   maxgenerators = MIN(maxgenerators, MAXGENNUMERATOR / SCIPgetNVars(scip));
+   maxgenerators = MIN(maxgenerators, MAXGENNUMERATOR / nvars);
 
    SCIP_CALL( computeSymmetryGroup(scip, maxgenerators, conshdlrdata->symspecrequirefixed, FALSE,
          &consdata->npermvars, &consdata->permvars, &consdata->nperms, &consdata->nmaxperms, &consdata->perms) );
@@ -1145,7 +1140,7 @@ SCIP_RETCODE determineSymmetry(
 static
 SCIP_DECL_CONSFREE(consFreeSymmetry)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata = NULL;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -1166,7 +1161,7 @@ SCIP_DECL_CONSFREE(consFreeSymmetry)
 static
 SCIP_DECL_CONSINITPRE(consInitpreSymmetry)
 {
-   SCIP_CONSHDLRDATA* conshdlrdata = NULL;
+   SCIP_CONSHDLRDATA* conshdlrdata;
    int c;
 
    assert( scip != NULL );
@@ -1309,7 +1304,7 @@ SCIP_DECL_CONSTRANS(consTransSymmetry)
 /** constraint enforcing method of constraint handler for LP solutions */
 static
 SCIP_DECL_CONSENFOLP(consEnfolpSymmetry)
-{
+{  /*lint --e{715}*/
    assert( scip != 0 );
    assert( conshdlr != 0 );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
@@ -1325,7 +1320,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpSymmetry)
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
 SCIP_DECL_CONSENFOPS(consEnfopsSymmetry)
-{
+{  /*lint --e{715}*/
    assert( scip != 0 );
    assert( conshdlr != 0 );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
@@ -1341,7 +1336,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsSymmetry)
 /** feasibility check method of constraint handler for primal solutions */
 static
 SCIP_DECL_CONSCHECK(consCheckSymmetry)
-{
+{  /*lint --e{715}*/
    assert( scip != 0 );
    assert( conshdlr != 0 );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
@@ -1357,7 +1352,7 @@ SCIP_DECL_CONSCHECK(consCheckSymmetry)
 /** presolving method of constraint handler */
 static
 SCIP_DECL_CONSPRESOL(consPresolSymmetry)
-{
+{  /*lint --e{715}*/
    assert( scip != 0 );
    assert( conshdlr != 0 );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
@@ -1421,7 +1416,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreSymmetry)
 /** variable rounding lock method of constraint handler */
 static
 SCIP_DECL_CONSLOCK(consLockSymmetry)
-{
+{  /*lint --e{715}*/
    assert( scip != 0 );
    assert( conshdlr != 0 );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
@@ -1634,7 +1629,7 @@ void SYMsetSpecRequirement(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != 0 );
 
-   conshdlrdata->symspecrequire |= type;
+   conshdlrdata->symspecrequire |= (int) type;
 }
 
 
@@ -1652,7 +1647,7 @@ void SYMsetSpecRequirementFixed(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != 0 );
 
-   conshdlrdata->symspecrequirefixed |= fixedtype;
+   conshdlrdata->symspecrequirefixed |= (int) fixedtype;
 }
 
 
