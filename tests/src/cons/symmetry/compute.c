@@ -123,7 +123,7 @@ Test(test_compute_symmetry, basic1, .description = "compute symmetry for a simpl
    SCIP_CALL( SCIPpresolve(scip) );
 
    /* get symmetry */
-   SCIP_CALL( SCIPgetSymmetryGenerators(scip, conshdlr, &npermvars, &permvars, &nperms, &perms) );
+   SCIP_CALL( SCIPgetSymmetryGenerators(scip, conshdlr, &npermvars, &permvars, NULL, &nperms, &perms) );
    cr_assert( nperms == 3 );
 
    for (i = 0; i < nperms; ++i)
@@ -222,7 +222,7 @@ Test(test_compute_symmetry, basic2, .description = "compute symmetry for a simpl
    SCIP_CALL( SCIPpresolve(scip) );
 
    /* get symmetry */
-   SCIP_CALL( SCIPgetSymmetryGenerators(scip, conshdlr, &npermvars, &permvars, &nperms, &perms) );
+   SCIP_CALL( SCIPgetSymmetryGenerators(scip, conshdlr, &npermvars, &permvars, NULL, &nperms, &perms) );
    cr_assert( nperms == 1 );
 
    SCIPinfoMessage(scip, NULL, "Permutation: (");
@@ -335,7 +335,7 @@ Test(test_compute_symmetry, basic3, .description = "compute symmetry for a simpl
    SCIP_CALL( SCIPpresolve(scip) );
 
    /* get symmetry */
-   SCIP_CALL( SCIPgetSymmetryGenerators(scip, conshdlr, &npermvars, &permvars, &nperms, &perms) );
+   SCIP_CALL( SCIPgetSymmetryGenerators(scip, conshdlr, &npermvars, &permvars, NULL, &nperms, &perms) );
    cr_assert( nperms == 1 );
 
    for (i = 0; i < nperms; ++i)
