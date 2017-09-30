@@ -126,7 +126,7 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
       assert( var != 0 );
 
       const int color = matrixdata->permvarcolors[v];
-      assert( color < matrixdata->nuniquevars );
+      assert( 0 <= color && color < matrixdata->nuniquevars );
 
       (void) G->add_vertex((unsigned) color);
       ++nnodes;
@@ -154,9 +154,9 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
 
       SYM_RHSTYPE* rtr = (SYM_RHSTYPE*) SCIPhashtableRetrieve(matrixdata->rhstypemap, (void*) &rt);
       const int color = rtr->color;
-      assert( color < matrixdata->nuniquerhs );
+      assert( 0 <= color && color < matrixdata->nuniquerhs );
 
-      int node = G->add_vertex((unsigned) (matrixdata->nuniquevars + color));
+      int node = (int) G->add_vertex((unsigned) (matrixdata->nuniquevars + color));
       assert( node == matrixdata->npermvars + c );
       rhsnodemap[idx] = node;
       ++nnodes;
@@ -172,8 +172,8 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
     * That is, given several variable nodes which are incident to one constraint node by the same color,
     * we join these variable nodes to the constaint node by only one intermediate node.
     */
-   const bool groupByConstraints = matrixdata->nrhscoef < static_cast<int>(matrixdata->npermvars);
-   if (groupByConstraints)
+   const bool groupByConstraints = matrixdata->nrhscoef < matrixdata->npermvars;
+   if ( groupByConstraints )
       SCIPdebugMsg(scip, "Group intermediate nodes by constraints.\n");
    else
       SCIPdebugMsg(scip, "Group intermediate nodes by variables.\n");
@@ -194,7 +194,7 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
 
       SYM_MATTYPE* mtr = (SYM_MATTYPE*) SCIPhashtableRetrieve(matrixdata->mattypemap, (void*) &mt);
       const int color = mtr->color;
-      assert( color < matrixdata->nuniquemat );
+      assert( 0 <= color && color < matrixdata->nuniquemat );
 
       assert( matrixdata->matrhsidx[idx] < matrixdata->nrhscoef );
       assert( matrixdata->matvaridx[idx] < matrixdata->npermvars );
@@ -206,7 +206,7 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
       assert( matrixdata->npermvars <= rhsnode && rhsnode < matrixdata->npermvars + matrixdata->nrhscoef );
 
       /* if we have only one color, we do not need intermediate nodes */
-      if ( matrixdata->nuniquemat == 1)
+      if ( matrixdata->nuniquemat == 1 )
       {
          G->add_edge((unsigned) varnode, (unsigned) rhsnode);
          ++nedges;
@@ -214,27 +214,25 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
       else
       {
          InterPair key;
-         if (groupByConstraints)
+         if ( groupByConstraints )
             key = std::make_pair(matrixdata->matrhsidx[idx], color);
          else
             key = std::make_pair(matrixdata->matvaridx[idx], color);
 
          IntermediatesMap::const_iterator keyIt = groupedIntermediateNodes.find(key);
          int intermediatenode = 0;
-         if (keyIt == groupedIntermediateNodes.end())
+         if ( keyIt == groupedIntermediateNodes.end() )
          {
-            intermediatenode = G->add_vertex((unsigned) (nusedcolors + color));
-            groupedIntermediateNodes[ key ] = intermediatenode;
+            intermediatenode = (int) G->add_vertex((unsigned) (nusedcolors + color));
+            groupedIntermediateNodes[key] = intermediatenode;
             ++nnodes;
          }
          else
-         {
             intermediatenode = (*keyIt).second;
-         }
-         assert( intermediatenode >= static_cast<int>(matrixdata->npermvars + matrixdata->nrhscoef) );
+         assert( intermediatenode >= matrixdata->npermvars + matrixdata->nrhscoef );
 
          /* determine whether graph would be too large for bliss (can only handle int) */
-         if ( intermediatenode >= INT_MAX )
+         if ( intermediatenode >= INT_MAX/2 )
          {
             SCIPfreeBlockMemoryArray(scip, &rhsnodemap, matrixdata->nrhscoef);
             return SCIP_OKAY;
