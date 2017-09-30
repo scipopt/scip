@@ -94,9 +94,11 @@ struct SYM_Matrixdata
    int                   nuniquevars;        /**< number of unique variable types */
    int                   nuniquerhs;         /**< number of unique rhs types */
    int                   nuniquemat;         /**< number of unique matrix coefficients */
-   SCIP_HASHTABLE*       vartypemap;         /**< hash table for colors attached to non-equivalent variables */
    SCIP_HASHTABLE*       rhstypemap;         /**< hash table for colors attached to non-equivalent rhs */
    SCIP_HASHTABLE*       mattypemap;         /**< hash table for colors attached to non-equivalent matrix coefficients */
+   int                   npermvars;          /**< number of variables for permutations */
+   SCIP_VAR**            permvars;           /**< variables on which permutations act */
+   int*                  permvarcolors;      /**< array for storing the colors of the individual variables */
 };
 typedef struct SYM_Matrixdata SYM_MATRIXDATA;
 

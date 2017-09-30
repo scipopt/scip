@@ -246,6 +246,24 @@ SCIP_DECL_HASHKEYVAL(SYMhashKeyValMattype)
  * Local methods
  */
 
+/** determines whether variable should be fixed by permutations */
+static
+SCIP_Bool SymmetryFixVar(
+   int                   fixedtype,          /**< bitset of variable types that should be fixed */
+   SCIP_VAR*             var                 /**< variable to be considered */
+   )
+{
+   if ( (fixedtype & (int) SYM_SPEC_INTEGER) && SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
+      return TRUE;
+   if ( (fixedtype & (int) SYM_SPEC_BINARY) && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+      return TRUE;
+   if ( (fixedtype & (int) SYM_SPEC_REAL) &&
+      (SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT) )
+      return TRUE;
+   return FALSE;
+}
+
+
 /** Transforms given variables, scalars, and constant to the corresponding active variables, scalars, and constant.
  *
  *  @note @p constant needs to be initialized!
@@ -460,23 +478,6 @@ SCIP_RETCODE collectCoefficients(
 
 
 #ifdef SCIP_DEBUG
-/** determines whether variable should be fixed by permutations */
-static
-SCIP_Bool SymmetryFixVar(
-   int                   fixedtype,          /**< bitset of variable types that should be fixed */
-   SCIP_VAR*             var                 /**< variable to be considered */
-   )
-{
-   if ( (fixedtype & (int) SYM_SPEC_INTEGER) && SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
-      return TRUE;
-   if ( (fixedtype & (int) SYM_SPEC_BINARY) && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
-      return TRUE;
-   if ( (fixedtype & (int) SYM_SPEC_REAL) &&
-      (SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT) )
-      return TRUE;
-   return FALSE;
-}
-
 /** checks whether given permutations form a symmetry of a MIP
  *
  *  We need the matrix and rhs in the original order in order to speed up the comparison process. The matrix is needed
@@ -658,6 +659,7 @@ SCIP_RETCODE computeSymmetryGroup(
    SYM_RHSSENSE oldsense = SYM_SENSE_UNKOWN;
    SCIP_Real oldcoef = SCIP_INVALID;
    SCIP_Real val;
+   int nuniquevararray = 0;
    int nconss;
    int nvars;
    int c;
@@ -698,21 +700,26 @@ SCIP_RETCODE computeSymmetryGroup(
       return SCIP_OKAY;
 
    conss = SCIPgetConss(scip);
-   vars = SCIPgetVars(scip);
    assert( conss != NULL );
-   assert( vars != NULL );
 
    SCIPdebugMsg(scip, "Detecting %ssymmetry on %d variables and %d constraints.\n", local ? "local " : "", nvars, nconss);
 
+   /* copy variables */
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &vars, SCIPgetVars(scip), nvars) );
+   assert( vars != NULL );
+
+   /* fill matrixdata */
    matrixdata.nmaxmatcoef = 100 * nvars;
    matrixdata.nmatcoef = 0;
    matrixdata.nrhscoef = 0;
-   matrixdata.vartypemap = NULL;
    matrixdata.rhstypemap = NULL;
    matrixdata.mattypemap = NULL;
    matrixdata.nuniquemat = 0;
    matrixdata.nuniquevars = 0;
    matrixdata.nuniquerhs = 0;
+   matrixdata.npermvars = nvars;
+   matrixdata.permvars = vars;
+   matrixdata.permvarcolors = NULL;
 
    /* prepare matrix data (use block memory, since this can become large) */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &matrixdata.matcoef, matrixdata.nmaxmatcoef) );
@@ -885,9 +892,9 @@ SCIP_RETCODE computeSymmetryGroup(
    assert( vartypemap != NULL );
    assert( rhstypemap != NULL );
    assert( mattypemap != NULL );
-   matrixdata.vartypemap = vartypemap;
    matrixdata.rhstypemap = rhstypemap;
    matrixdata.mattypemap = mattypemap;
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &matrixdata.permvarcolors, nvars) );
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &uniquematarray, matrixdata.nmatcoef) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &uniquerhsarray, matrixdata.nrhscoef) );
@@ -899,33 +906,56 @@ SCIP_RETCODE computeSymmetryGroup(
    for (j = 0; j < nvars; ++j)
    {
       SCIP_VAR* var;
-      SYM_VARTYPE* vt;
 
       var = vars[j];
       assert( var != 0 );
 
-      vt = &uniquevararray[matrixdata.nuniquevars];
-      vt->obj = SCIPvarGetObj(var);
-      if ( local )
+      /* if the variable type should be fixed just increase the color */
+      if ( SymmetryFixVar(fixedtype, var) )
       {
-         vt->lb = SCIPvarGetLbLocal(var);
-         vt->ub = SCIPvarGetUbLocal(var);
+         matrixdata.permvarcolors[j] = matrixdata.nuniquevars++;
+#ifdef SCIP_OUTPUT
+         SCIPdebugMsg(scip, "Detected variable <%s> of fixed type %d - color %d.\n", SCIPvarGetName(var), SCIPvarGetType(var), matrixdata.nuniquevars - 1);
+#endif
       }
       else
       {
-         vt->lb = SCIPvarGetLbGlobal(var);
-         vt->ub = SCIPvarGetUbGlobal(var);
-      }
-      vt->type = SCIPvarGetType(var);
+         SYM_VARTYPE* vt;
 
-      if ( ! SCIPhashtableExists(vartypemap, (void*) vt) )
-      {
-         SCIP_CALL( SCIPhashtableInsert(vartypemap, (void*) vt) );
-         vt->color = matrixdata.nuniquevars++;
+         vt = &uniquevararray[nuniquevararray];
+         assert( nuniquevararray <= matrixdata.nuniquevars );
+
+         vt->obj = SCIPvarGetObj(var);
+         if ( local )
+         {
+            vt->lb = SCIPvarGetLbLocal(var);
+            vt->ub = SCIPvarGetUbLocal(var);
+         }
+         else
+         {
+            vt->lb = SCIPvarGetLbGlobal(var);
+            vt->ub = SCIPvarGetUbGlobal(var);
+         }
+         vt->type = SCIPvarGetType(var);
+
+         if ( ! SCIPhashtableExists(vartypemap, (void*) vt) )
+         {
+            SCIP_CALL( SCIPhashtableInsert(vartypemap, (void*) vt) );
+            vt->color = matrixdata.nuniquevars;
+            matrixdata.permvarcolors[j] = matrixdata.nuniquevars++;
+            ++nuniquevararray;
 #ifdef SCIP_OUTPUT
-         SCIPdebugMsg(scip, "detected variable <%s> of new type (probindex: %d, obj: %g, lb: %g, ub: %g, type: %d) - color %d\n",
-            SCIPvarGetName(var), SCIPvarGetProbindex(var), vt->obj, vt->lb, vt->ub, vt->vartype, matrixdata.nuniquevars - 1);
+            SCIPdebugMsg(scip, "Detected variable <%s> of new type (probindex: %d, obj: %g, lb: %g, ub: %g, type: %d) - color %d.\n",
+               SCIPvarGetName(var), SCIPvarGetProbindex(var), vt->obj, vt->lb, vt->ub, vt->type, matrixdata.nuniquevars - 1);
 #endif
+         }
+         else
+         {
+            SYM_VARTYPE* vtr;
+
+            vtr = (SYM_VARTYPE*) SCIPhashtableRetrieve(vartypemap, (void*) vt);
+            matrixdata.permvarcolors[j] = vtr->color;
+         }
       }
    }
 
@@ -978,7 +1008,7 @@ SCIP_RETCODE computeSymmetryGroup(
             SCIP_CALL( SCIPhashtableInsert(rhstypemap, (void*) rt) );
 
 #ifdef SCIP_OUTPUT
-            SCIPdebugMsg(scip, "have new rhs type %f, type: %u - color: %u\n", val, sense, matrixdata.nuniquerhscoef - 1);
+            SCIPdebugMsg(scip, "have new rhs type %f, type: %u - color: %u\n", val, sense, matrixdata.nuniquerhs - 1);
 #endif
          }
          oldcoef = val;
@@ -994,7 +1024,7 @@ SCIP_RETCODE computeSymmetryGroup(
       matrixdata.nuniquerhs, matrixdata.nrhscoef, matrixdata.nuniquemat, matrixdata.nmatcoef);
 
    /* determine generators */
-   SCIP_CALL( SYMcomputeSymmetryGenerators(scip, maxgenerators, local, nvars, vars, &matrixdata, nperms, nmaxperms, perms) );
+   SCIP_CALL( SYMcomputeSymmetryGenerators(scip, maxgenerators, local, &matrixdata, nperms, nmaxperms, perms) );
 
 #ifdef SCIP_DEBUG
    if ( ! SCIPisStopped(scip) )
@@ -1019,9 +1049,10 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIPfreeBlockMemoryArray(scip, &uniquerhsarray, matrixdata.nrhscoef);
    SCIPfreeBlockMemoryArray(scip, &uniquematarray, matrixdata.nmatcoef);
 
+   SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.permvarcolors, nvars);
    SCIPhashtableFree(&matrixdata.mattypemap);
    SCIPhashtableFree(&matrixdata.rhstypemap);
-   SCIPhashtableFree(&matrixdata.vartypemap);
+   SCIPhashtableFree(&vartypemap);
 
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhsidx, 2 * nconss);
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhssense, 2 * nconss);
@@ -1032,7 +1063,7 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matcoef, matrixdata.nmaxmatcoef);
 
    /* copy variables */
-   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, permvars, vars, nvars) );
+   *permvars = vars;
    *npermvars = nvars;
 
    return SCIP_OKAY;

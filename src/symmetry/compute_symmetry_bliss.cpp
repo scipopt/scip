@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define SCIP_OUTPUT
+
 /**@file   compute_symmetry_bliss.cpp
  * @brief  interface for symmetry computations to bliss
  * @author Marc Pfetsch
@@ -107,8 +107,6 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
    SCIP*                 scip,               /**< SCIP instance */
    bliss::Graph*         G,                  /**< Graph to be constructed */
    SCIP_Bool             local,              /**< Use local variable bounds? */
-   int                   npermvars,          /**< number of variables for permutations */
-   SCIP_VAR**            permvars,           /**< variables on which permutations act */
    SYM_MATRIXDATA*       matrixdata,         /**< data for MIP matrix */
    int&                  nnodes,             /**< number of nodes in graph */
    int&                  nedges,             /**< number of edges in graph */
@@ -122,34 +120,18 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
    success = FALSE;
 
    /* add nodes for variables */
-   for (int v = 0; v < npermvars; ++v)
+   for (int v = 0; v < matrixdata->npermvars; ++v)
    {
-      SCIP_VAR* var = permvars[v];
+      SCIP_VAR* var = matrixdata->permvars[v];
       assert( var != 0 );
 
-      SYM_VARTYPE vt;
-      vt.obj = SCIPvarGetObj(var);
-      if ( local )
-      {
-         vt.lb = SCIPvarGetLbLocal(var);
-         vt.ub = SCIPvarGetUbLocal(var);
-      }
-      else
-      {
-         vt.lb = SCIPvarGetLbGlobal(var);
-         vt.ub = SCIPvarGetUbGlobal(var);
-      }
-      vt.type = SCIPvarGetType(var);
-
-      assert( SCIPhashtableExists(matrixdata->vartypemap, (void*) &vt) );
-      SYM_VARTYPE* vtr = (SYM_VARTYPE*) SCIPhashtableRetrieve(matrixdata->vartypemap, (void*) &vt);
-      const int color = vtr->color;
+      const int color = matrixdata->permvarcolors[v];
       assert( color < matrixdata->nuniquevars );
 
       (void) G->add_vertex((unsigned) color);
       ++nnodes;
    }
-   assert( (int) G->get_nof_vertices() == npermvars );
+   assert( (int) G->get_nof_vertices() == matrixdata->npermvars );
 
    /* store nodes corresponding to rhs (we need the original order of rows) */
    int* rhsnodemap = 0;
@@ -175,11 +157,11 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
       assert( color < matrixdata->nuniquerhs );
 
       int node = G->add_vertex((unsigned) (matrixdata->nuniquevars + color));
-      assert( node == npermvars + c );
+      assert( node == matrixdata->npermvars + c );
       rhsnodemap[idx] = node;
       ++nnodes;
    }
-   assert( (int) G->get_nof_vertices() == npermvars + matrixdata->nrhscoef );
+   assert( (int) G->get_nof_vertices() == matrixdata->npermvars + matrixdata->nrhscoef );
 
    typedef std::pair<int, int> InterPair;
    typedef std::map<InterPair, int> IntermediatesMap;
@@ -190,7 +172,7 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
     * That is, given several variable nodes which are incident to one constraint node by the same color,
     * we join these variable nodes to the constaint node by only one intermediate node.
     */
-   const bool groupByConstraints = matrixdata->nrhscoef < static_cast<int>(npermvars);
+   const bool groupByConstraints = matrixdata->nrhscoef < static_cast<int>(matrixdata->npermvars);
    if (groupByConstraints)
       SCIPdebugMsg(scip, "Group intermediate nodes by constraints.\n");
    else
@@ -215,13 +197,13 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
       assert( color < matrixdata->nuniquemat );
 
       assert( matrixdata->matrhsidx[idx] < matrixdata->nrhscoef );
-      assert( matrixdata->matvaridx[idx] < npermvars );
+      assert( matrixdata->matvaridx[idx] < matrixdata->npermvars );
 
       const int rhsnode = rhsnodemap[matrixdata->matrhsidx[idx]];
       const int varnode = matrixdata->matvaridx[idx];
       assert( rhsnode < (int) G->get_nof_vertices() );
       assert( varnode < (int) G->get_nof_vertices() );
-      assert( npermvars <= rhsnode && rhsnode < npermvars + matrixdata->nrhscoef );
+      assert( matrixdata->npermvars <= rhsnode && rhsnode < matrixdata->npermvars + matrixdata->nrhscoef );
 
       /* if we have only one color, we do not need intermediate nodes */
       if ( matrixdata->nuniquemat == 1)
@@ -249,7 +231,7 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
          {
             intermediatenode = (*keyIt).second;
          }
-         assert( intermediatenode >= static_cast<int>(npermvars + matrixdata->nrhscoef) );
+         assert( intermediatenode >= static_cast<int>(matrixdata->npermvars + matrixdata->nrhscoef) );
 
          /* determine whether graph would be too large for bliss (can only handle int) */
          if ( intermediatenode >= INT_MAX )
@@ -294,8 +276,6 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    SCIP*                 scip,               /**< SCIP pointer */
    int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */
    SCIP_Bool             local,              /**< Use local variable bounds? */
-   int                   npermvars,          /**< number of variables for permutations */
-   SCIP_VAR**            permvars,           /**< variables on which permutations act */
    SYM_MATRIXDATA*       matrixdata,         /**< data for MIP matrix */
    int*                  nperms,             /**< pointer to store number of permutations */
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
@@ -304,7 +284,6 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
 {
    assert( scip != NULL );
    assert( matrixdata != NULL );
-   assert( permvars != NULL );
    assert( nperms != NULL );
    assert( nmaxperms != NULL );
    assert( perms != NULL );
@@ -322,7 +301,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    bliss::Graph* G = new bliss::Graph();
 
    SCIP_Bool success = FALSE;
-   SCIP_CALL( fillGraphByColoredCoefficients(scip, G, local, npermvars, permvars, matrixdata, nnodes, nedges, success) );
+   SCIP_CALL( fillGraphByColoredCoefficients(scip, G, local, matrixdata, nnodes, nedges, success) );
    if ( ! success )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Graph construction failed.\n");
@@ -340,9 +319,9 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    bliss::Stats stats;
    BLISS_Data data;
    data.scip = scip;
-   data.npermvars = npermvars;
+   data.npermvars = matrixdata->npermvars;
    data.nperms = 0;
-   data.nmaxperms = 100 * npermvars;
+   data.nmaxperms = 100 * matrixdata->npermvars;
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &data.perms, data.nmaxperms) );
 
    /* Prefer splitting partition cells corresponding to variables over those corresponding
