@@ -85,6 +85,7 @@ OPT		=	opt
 COMP		=	gnu
 LPS		=	spx2
 TPI		=	none
+SYM		=	none
 STATICLIBEXT	=	a
 SHAREDLIBEXT	=	so
 LIBEXT		=	$(STATICLIBEXT)
@@ -243,6 +244,7 @@ LIBOBJSUBDIRS	=	$(LIBOBJDIR)/scip \
 			$(LIBOBJDIR)/nlpi \
 			$(LIBOBJDIR)/xml \
 			$(LIBOBJDIR)/dijkstra \
+			$(LIBOBJDIR)/symmetry \
 			$(LIBOBJDIR)/tinycthread
 SRCDIR		=	src
 BINDIR		=	bin
@@ -465,6 +467,13 @@ TPILIB		=	$(TPILIBNAME).$(BASE)
 TPILIBFILE	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(TPILIB).$(LIBEXT)
 TPILIBSHORTLINK	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(TPILIBNAME).$(LIBEXT)
 
+#-----------------------------------------------------------------------------
+# Symmetry Interface
+#-----------------------------------------------------------------------------
+
+ifeq ($(SYM),bliss)
+LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)bliss.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+endif
 
 #-----------------------------------------------------------------------------
 # External Libraries

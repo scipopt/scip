@@ -55,6 +55,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeConshdlrSOS1(scip) );
    SCIP_CALL( SCIPincludeConshdlrSOS2(scip) );
    SCIP_CALL( SCIPincludeConshdlrSuperindicator(scip) );
+   SCIP_CALL( SCIPincludeConshdlrSymmetry(scip) );
    SCIP_CALL( SCIPincludeConshdlrVarbound(scip) );
    SCIP_CALL( SCIPincludeConshdlrXor(scip) );
    SCIP_CALL( SCIPincludeConshdlrComponents(scip) );
