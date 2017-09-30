@@ -645,6 +645,7 @@ SCIP_RETCODE computeSymmetryGroup(
    int***                perms               /**< pointer to store permutation generators as (nperms x npermvars) matrix */
    )
 {
+   SCIP_CONSHDLR* conshdlr;
    SYM_MATRIXDATA matrixdata;
    SCIP_HASHTABLE* vartypemap;
    SCIP_HASHTABLE* rhstypemap;
@@ -660,6 +661,7 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIP_Real oldcoef = SCIP_INVALID;
    SCIP_Real val;
    int nuniquevararray = 0;
+   int nhandleconss = 0;
    int nconss;
    int nvars;
    int c;
@@ -698,6 +700,29 @@ SCIP_RETCODE computeSymmetryGroup(
    /* exit if no constraints or no variables  are available */
    if ( nconss == 0 || nvars == 0 )
       return SCIP_OKAY;
+
+   /* before we set up the matrix, check whether we can handle all constraints */
+   conshdlr = SCIPfindConshdlr(scip, "linear");
+   nhandleconss += SCIPconshdlrGetNConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "setppc");
+   nhandleconss += SCIPconshdlrGetNConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "xor");
+   nhandleconss += SCIPconshdlrGetNConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "logicor");
+   nhandleconss += SCIPconshdlrGetNConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "knapsack");
+   nhandleconss += SCIPconshdlrGetNConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "varbound");
+   nhandleconss += SCIPconshdlrGetNConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "bounddisjunction");
+   nhandleconss += SCIPconshdlrGetNConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "symmetry");
+   nhandleconss += SCIPconshdlrGetNConss(conshdlr);
+   if ( nhandleconss < nconss )
+   {
+      SCIPwarningMessage(scip, "Cannot compute symmetry, since unkown constraints are present.\n");
+      return SCIP_OKAY;
+   }
 
    conss = SCIPgetConss(scip);
    assert( conss != NULL );
@@ -738,7 +763,6 @@ SCIP_RETCODE computeSymmetryGroup(
    for (c = 0; c < nconss; ++c)
    {
       const char* conshdlrname;
-      SCIP_CONSHDLR* conshdlr;
       SCIP_CONS* cons;
       SCIP_VAR** linvars;
       int nconsvars;
