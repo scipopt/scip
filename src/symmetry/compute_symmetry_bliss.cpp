@@ -106,7 +106,6 @@ static
 SCIP_RETCODE fillGraphByColoredCoefficients(
    SCIP*                 scip,               /**< SCIP instance */
    bliss::Graph*         G,                  /**< Graph to be constructed */
-   SCIP_Bool             local,              /**< Use local variable bounds? */
    SYM_MATRIXDATA*       matrixdata,         /**< data for MIP matrix */
    int&                  nnodes,             /**< number of nodes in graph */
    int&                  nedges,             /**< number of edges in graph */
@@ -273,7 +272,6 @@ const char* SYMsymmetryGetDesc(void)
 SCIP_RETCODE SYMcomputeSymmetryGenerators(
    SCIP*                 scip,               /**< SCIP pointer */
    int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */
-   SCIP_Bool             local,              /**< Use local variable bounds? */
    SYM_MATRIXDATA*       matrixdata,         /**< data for MIP matrix */
    int*                  nperms,             /**< pointer to store number of permutations */
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
@@ -299,7 +297,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    bliss::Graph* G = new bliss::Graph();
 
    SCIP_Bool success = FALSE;
-   SCIP_CALL( fillGraphByColoredCoefficients(scip, G, local, matrixdata, nnodes, nedges, success) );
+   SCIP_CALL( fillGraphByColoredCoefficients(scip, G, matrixdata, nnodes, nedges, success) );
    if ( ! success )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Graph construction failed.\n");
