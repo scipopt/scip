@@ -76,7 +76,7 @@ void blisshook(
    for (int j = 0; j < data->npermvars; ++j)
    {
       /* convert index of variable-level 0-nodes to variable indices */
-      p[j] = aut[j];
+      p[j] = (int) aut[j];
       if ( p[j] != j )
          isIdentity = false;
    }
@@ -105,7 +105,7 @@ void blisshook(
 static
 SCIP_RETCODE fillGraphByColoredCoefficients(
    SCIP*                 scip,               /**< SCIP instance */
-   bliss::Graph&         G,                  /**< Graph to be constructed */
+   bliss::Graph*         G,                  /**< Graph to be constructed */
    SCIP_Bool             local,              /**< Use local variable bounds? */
    int                   npermvars,          /**< number of variables for permutations */
    SCIP_VAR**            permvars,           /**< variables on which permutations act */
@@ -146,13 +146,13 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
       const int color = vtr->color;
       assert( color < matrixdata->nuniquevars );
 
-      (void) G.add_vertex(color);
+      (void) G->add_vertex((unsigned) color);
       ++nnodes;
    }
-   assert( (int) G.get_nof_vertices() == npermvars );
+   assert( (int) G->get_nof_vertices() == npermvars );
 
    /* store nodes corresponding to rhs (we need the original order of rows) */
-   int* rhsnodemap;
+   int* rhsnodemap = 0;
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &rhsnodemap, matrixdata->nrhscoef) );
 #ifndef NDEBUG
    for (int j = 0; j < matrixdata->nrhscoef; ++j)
@@ -174,12 +174,12 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
       const int color = rtr->color;
       assert( color < matrixdata->nuniquerhs );
 
-      int node = G.add_vertex(matrixdata->nuniquevars + color);
+      int node = G->add_vertex((unsigned) (matrixdata->nuniquevars + color));
       assert( node == npermvars + c );
       rhsnodemap[idx] = node;
       ++nnodes;
    }
-   assert( (int) G.get_nof_vertices() == npermvars + matrixdata->nrhscoef );
+   assert( (int) G->get_nof_vertices() == npermvars + matrixdata->nrhscoef );
 
    typedef std::pair<int, int> InterPair;
    typedef std::map<InterPair, int> IntermediatesMap;
@@ -219,14 +219,14 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
 
       const int rhsnode = rhsnodemap[matrixdata->matrhsidx[idx]];
       const int varnode = matrixdata->matvaridx[idx];
-      assert( rhsnode < (int) G.get_nof_vertices() );
-      assert( varnode < (int) G.get_nof_vertices() );
+      assert( rhsnode < (int) G->get_nof_vertices() );
+      assert( varnode < (int) G->get_nof_vertices() );
       assert( npermvars <= rhsnode && rhsnode < npermvars + matrixdata->nrhscoef );
 
       /* if we have only one color, we do not need intermediate nodes */
       if ( matrixdata->nuniquemat == 1)
       {
-         G.add_edge(varnode, rhsnode);
+         G->add_edge((unsigned) varnode, (unsigned) rhsnode);
          ++nedges;
       }
       else
@@ -241,7 +241,7 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
          int intermediatenode = 0;
          if (keyIt == groupedIntermediateNodes.end())
          {
-            intermediatenode = G.add_vertex(nusedcolors + color);
+            intermediatenode = G->add_vertex((unsigned) (nusedcolors + color));
             groupedIntermediateNodes[ key ] = intermediatenode;
             ++nnodes;
          }
@@ -257,8 +257,8 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
             SCIPfreeBlockMemoryArray(scip, &rhsnodemap, matrixdata->nrhscoef);
             return SCIP_OKAY;
          }
-         G.add_edge(varnode, intermediatenode);
-         G.add_edge(rhsnode, intermediatenode);
+         G->add_edge((unsigned) varnode, (unsigned) intermediatenode);
+         G->add_edge((unsigned) rhsnode, (unsigned) intermediatenode);
          nedges += 2;
       }
    }
@@ -309,6 +309,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    assert( nperms != NULL );
    assert( nmaxperms != NULL );
    assert( perms != NULL );
+   assert( maxgenerators >= 0 );
 
    /* init */
    *nperms = 0;
@@ -322,7 +323,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    bliss::Graph* G = new bliss::Graph();
 
    SCIP_Bool success = FALSE;
-   SCIP_CALL( fillGraphByColoredCoefficients(scip, *G, local, npermvars, permvars, matrixdata, nnodes, nedges, success) );
+   SCIP_CALL( fillGraphByColoredCoefficients(scip, G, local, npermvars, permvars, matrixdata, nnodes, nedges, success) );
    if ( ! success )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Graph construction failed.\n");
@@ -353,12 +354,12 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    G->set_component_recursion(false);
 
    /* do not use a node limit, but set generator limit */
-   G->set_search_limits(0, maxgenerators);
+   G->set_search_limits(0, (unsigned) maxgenerators);
 
    /* start search */
    G->find_automorphisms(stats, blisshook, (void*) &data);
 #ifdef SCIP_OUTPUT
-   stats.print(stdout);
+   (void) stats.print(stdout);
 #endif
 
    /* free graph */
