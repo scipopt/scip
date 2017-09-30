@@ -994,7 +994,7 @@ SCIP_RETCODE computeSymmetryGroup(
       matrixdata.nuniquerhs, matrixdata.nrhscoef, matrixdata.nuniquemat, matrixdata.nmatcoef);
 
    /* determine generators */
-   SCIP_CALL( SYMcomputeSymmetryGenerators(scip, maxgenerators, fixedtype, local, nvars, vars, &matrixdata, nperms, nmaxperms, perms) );
+   SCIP_CALL( SYMcomputeSymmetryGenerators(scip, maxgenerators, local, nvars, vars, &matrixdata, nperms, nmaxperms, perms) );
 
 #ifdef SCIP_DEBUG
    if ( ! SCIPisStopped(scip) )

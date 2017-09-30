@@ -44,7 +44,6 @@ const char* SYMsymmetryGetDesc(void)
 SCIP_RETCODE SYMcomputeSymmetryGenerators(
    SCIP*                 scip,               /**< SCIP pointer */
    int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */
-   int                   fixedtype,          /**< variable types that must be fixed by symmetries */
    SCIP_Bool             local,              /**< Use local variable bounds? */
    int                   npermvars,          /**< number of variables for permutations */
    SCIP_VAR**            permvars,           /**< variables on which permutations act */
