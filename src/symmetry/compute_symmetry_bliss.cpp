@@ -185,14 +185,7 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
       assert( 0 <= idx && idx < matrixdata->nmatcoef );
 
       /* find color corresponding to matrix coefficient */
-      SCIP_Real val = matrixdata->matcoef[j];
-
-      SYM_MATTYPE mt;
-      mt.val = val;
-      assert( SCIPhashtableExists(matrixdata->mattypemap, (void*) &mt) );
-
-      SYM_MATTYPE* mtr = (SYM_MATTYPE*) SCIPhashtableRetrieve(matrixdata->mattypemap, (void*) &mt);
-      const int color = mtr->color;
+      const int color = matrixdata->matcoefcolors[j];
       assert( 0 <= color && color < matrixdata->nuniquemat );
 
       assert( matrixdata->matrhsidx[idx] < matrixdata->nrhscoef );
@@ -268,7 +261,10 @@ const char* SYMsymmetryGetDesc(void)
    return "computing graph automorphism groups by T. Junttila and P. Kaski (http://www.tcs.hut.fi/Software/bliss/)";
 }
 
-/** compute generators of symmetry group */
+/** compute generators of symmetry group
+ *
+ *  @todo Check whether we want to use a hash map for the intermediate nodes below.
+ */
 SCIP_RETCODE SYMcomputeSymmetryGenerators(
    SCIP*                 scip,               /**< SCIP pointer */
    int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */

@@ -191,49 +191,6 @@ SCIP_DECL_HASHKEYVAL(SYMhashKeyValRhstype)
 }
 
 
-/* ------------------- map for matrix coefficient types ------------------- */
-
-/** gets the key of the given element */
-static
-SCIP_DECL_HASHGETKEY(SYMhashGetKeyMattype)
-{  /*lint --e{715}*/
-   return elem;
-}
-
-/** returns TRUE iff both keys are equal
- *
- *  Compare the types of two rhs according to value and sense.
- */
-static
-SCIP_DECL_HASHKEYEQ(SYMhashKeyEQMattype)
-{
-   SCIP* scip;
-   SYM_MATTYPE* k1;
-   SYM_MATTYPE* k2;
-
-   scip = (SCIP*) userptr;
-   k1 = (SYM_MATTYPE*) key1;
-   k2 = (SYM_MATTYPE*) key2;
-
-   /* first check value */
-   if ( ! SCIPisEQ(scip, k1->val, k2->val) )
-      return FALSE;
-
-   return TRUE;
-}
-
-/** returns the hash value of the key */
-static
-SCIP_DECL_HASHKEYVAL(SYMhashKeyValMattype)
-{  /*lint --e{715}*/
-   SYM_MATTYPE* k;
-
-   k = (SYM_MATTYPE*) key;
-   return SCIPrealHashCode(k->val);
-}
-
-
-
 /*
  * Local methods
  */
@@ -649,12 +606,10 @@ SCIP_RETCODE computeSymmetryGroup(
    SYM_MATRIXDATA matrixdata;
    SCIP_HASHTABLE* vartypemap;
    SCIP_HASHTABLE* rhstypemap;
-   SCIP_HASHTABLE* mattypemap;
    SCIP_VAR** consvars;
    SCIP_Real* consvals;
    SCIP_CONS** conss;
    SCIP_VAR** vars;
-   SYM_MATTYPE* uniquematarray;
    SYM_VARTYPE* uniquevararray;
    SYM_RHSTYPE* uniquerhsarray;
    SYM_RHSSENSE oldsense = SYM_SENSE_UNKOWN;
@@ -738,13 +693,13 @@ SCIP_RETCODE computeSymmetryGroup(
    matrixdata.nmatcoef = 0;
    matrixdata.nrhscoef = 0;
    matrixdata.rhstypemap = NULL;
-   matrixdata.mattypemap = NULL;
    matrixdata.nuniquemat = 0;
    matrixdata.nuniquevars = 0;
    matrixdata.nuniquerhs = 0;
    matrixdata.npermvars = nvars;
    matrixdata.permvars = vars;
    matrixdata.permvarcolors = NULL;
+   matrixdata.matcoefcolors = NULL;
 
    /* prepare matrix data (use block memory, since this can become large) */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &matrixdata.matcoef, matrixdata.nmaxmatcoef) );
@@ -912,15 +867,12 @@ SCIP_RETCODE computeSymmetryGroup(
    /* create maps for coefficients to indices */
    SCIP_CALL( SCIPhashtableCreate(&vartypemap, SCIPblkmem(scip), 5 * nvars, SYMhashGetKeyVartype, SYMhashKeyEQVartype, SYMhashKeyValVartype, (void*) scip) );
    SCIP_CALL( SCIPhashtableCreate(&rhstypemap, SCIPblkmem(scip), 5 * matrixdata.nrhscoef, SYMhashGetKeyRhstype, SYMhashKeyEQRhstype, SYMhashKeyValRhstype, (void*) scip) );
-   SCIP_CALL( SCIPhashtableCreate(&mattypemap, SCIPblkmem(scip), 5 * matrixdata.nmatcoef, SYMhashGetKeyMattype, SYMhashKeyEQMattype, SYMhashKeyValMattype, (void*) scip) );
    assert( vartypemap != NULL );
    assert( rhstypemap != NULL );
-   assert( mattypemap != NULL );
    matrixdata.rhstypemap = rhstypemap;
-   matrixdata.mattypemap = mattypemap;
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &matrixdata.permvarcolors, nvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &matrixdata.matcoefcolors, matrixdata.nmatcoef) );
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &uniquematarray, matrixdata.nmatcoef) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &uniquerhsarray, matrixdata.nrhscoef) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &uniquevararray, nvars) );
 
@@ -991,19 +943,16 @@ SCIP_RETCODE computeSymmetryGroup(
       val = matrixdata.matcoef[j];
       if ( ! SCIPisEQ(scip, val, oldcoef) )
       {
-         SYM_MATTYPE* mt;
-
-         mt = &uniquematarray[matrixdata.nuniquemat];
-         mt->val = val;
-         mt->color = matrixdata.nuniquemat++;
-
-         assert( ! SCIPhashtableExists(mattypemap, (void*) mt) );
-         SCIP_CALL( SCIPhashtableInsert(mattypemap, (void*) mt) );
-
-         oldcoef = val;
 #ifdef SCIP_OUTPUT
-         SCIPdebugMsg(scip, "detected new matrix entry type %f - color: %d\n", val, matrixdata.nuniquemat - 1);
+         SCIPdebugMsg(scip, "detected new matrix entry type %f - color: %d\n", val, matrixdata.nuniquemat);
 #endif
+         matrixdata.matcoefcolors[j] = matrixdata.nuniquemat++;
+         oldcoef = val;
+      }
+      else
+      {
+         assert( matrixdata.nuniquemat > 0 );
+         matrixdata.matcoefcolors[j] = matrixdata.nuniquemat - 1;
       }
    }
 
@@ -1071,10 +1020,9 @@ SCIP_RETCODE computeSymmetryGroup(
    /* free matrix data */
    SCIPfreeBlockMemoryArray(scip, &uniquevararray, nvars);
    SCIPfreeBlockMemoryArray(scip, &uniquerhsarray, matrixdata.nrhscoef);
-   SCIPfreeBlockMemoryArray(scip, &uniquematarray, matrixdata.nmatcoef);
 
+   SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matcoefcolors, matrixdata.nmatcoef);
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.permvarcolors, nvars);
-   SCIPhashtableFree(&matrixdata.mattypemap);
    SCIPhashtableFree(&matrixdata.rhstypemap);
    SCIPhashtableFree(&vartypemap);
 

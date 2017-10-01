@@ -68,14 +68,6 @@ struct SYM_Rhstype
 };
 typedef struct SYM_Rhstype SYM_RHSTYPE;
 
-/** data of matrix coefficients that are considered to be equivalent */
-struct SYM_Mattype
-{
-   SCIP_Real             val;                /**< value of matrix coefficient */
-   int                   color;              /**< store color */
-};
-typedef struct SYM_Mattype SYM_MATTYPE;
-
 /** data for symmetry group computation */
 struct SYM_Matrixdata
 {
@@ -95,10 +87,10 @@ struct SYM_Matrixdata
    int                   nuniquerhs;         /**< number of unique rhs types */
    int                   nuniquemat;         /**< number of unique matrix coefficients */
    SCIP_HASHTABLE*       rhstypemap;         /**< hash table for colors attached to non-equivalent rhs */
-   SCIP_HASHTABLE*       mattypemap;         /**< hash table for colors attached to non-equivalent matrix coefficients */
    int                   npermvars;          /**< number of variables for permutations */
    SCIP_VAR**            permvars;           /**< variables on which permutations act */
    int*                  permvarcolors;      /**< array for storing the colors of the individual variables */
+   int*                  matcoefcolors;      /**< array for storing the colors of all matrix coefficients */
 };
 typedef struct SYM_Matrixdata SYM_MATRIXDATA;
 
