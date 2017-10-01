@@ -76,7 +76,7 @@
 #define DEFAULT_RESETWEIGHTS   TRUE /**< should the bandit algorithms be reset when a new problem is read? */
 #define DEFAULT_SUBSCIPRANDSEEDS FALSE /**< should random seeds of sub-SCIPs be altered to increase diversification? */
 #define DEFAULT_ALPHA          0.2  /**< parameter to increase the confidence width in UCB */
-#define DEFAULT_REWARDBASELINE 0.0  /**< the reward baseline to separate successful and failed calls */
+#define DEFAULT_REWARDBASELINE 0.5  /**< the reward baseline to separate successful and failed calls */
 
 /*
  * parameters to control variable fixing
