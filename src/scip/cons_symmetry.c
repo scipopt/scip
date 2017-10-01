@@ -145,58 +145,77 @@ SCIP_DECL_HASHKEYVAL(SYMhashKeyValVartype)
 }
 
 
-/* ------------------- map for rhs types ------------------- */
+/* ------------------- sorting function for rhs types ------------------- */
 
-/** gets the key of the given element */
-static
-SCIP_DECL_HASHGETKEY(SYMhashGetKeyRhstype)
-{  /*lint --e{715}*/
-   return elem;
-}
-
-/** returns TRUE iff both keys are equal
- *
- *  Compare the types of two rhs according to value and sense.
- */
-static
-SCIP_DECL_HASHKEYEQ(SYMhashKeyEQRhstype)
+/** data struct to store arrays used for sorting rhs types */
+struct SYM_Sortrhstype
 {
-   SCIP* scip;
-   SYM_RHSTYPE* k1;
-   SYM_RHSTYPE* k2;
+   SCIP_Real*            vals;               /**< array of values */
+   SYM_RHSSENSE*         senses;             /**< array of senses of rhs */
+   int                   nrhscoef;           /**< size of arrays (for debugging) */
+};
+typedef struct SYM_Sortrhstype SYM_SORTRHSTYPE;
 
-   scip = (SCIP*) userptr;
-   k1 = (SYM_RHSTYPE*) key1;
-   k2 = (SYM_RHSTYPE*) key2;
-
-   /* first check value */
-   if ( ! SCIPisEQ(scip, k1->val, k2->val) )
-      return FALSE;
-
-   /* if still undecided, take sense */
-   if ( k1->sense != k2->sense )
-      return FALSE;
-
-   return TRUE;
-}
-
-/** returns the hash value of the key */
-static
-SCIP_DECL_HASHKEYVAL(SYMhashKeyValRhstype)
-{  /*lint --e{715}*/
-   SYM_RHSTYPE* k;
-
-   k = (SYM_RHSTYPE*) key;
-   return SCIPrealHashCode(k->val) + (uint64_t) k->sense;
-}
-
-
-/*
- * Local methods
+/** sort rhs types - first by sense, then by value
+ *
+ *  Due to numerical issues, we first sort by sense, then by value.
+ *
+ *  result:
+ *    < 0: ind1 comes before (is better than) ind2
+ *    = 0: both indices have the same value
+ *    > 0: ind2 comes after (is worse than) ind2
  */
+static
+SCIP_DECL_SORTINDCOMP(SYMsortRhsTypes)
+{
+   SYM_SORTRHSTYPE* data;
+   SCIP_Real diffvals;
 
+   data = (SYM_SORTRHSTYPE*) dataptr;
+   assert( 0 <= ind1 && ind1 < data->nrhscoef );
+   assert( 0 <= ind2 && ind2 < data->nrhscoef );
 
+   /* first sort by senses */
+   if ( data->senses[ind1] < data->senses[ind2] )
+      return -1;
+   else if ( data->senses[ind1] > data->senses[ind2] )
+      return 1;
+   else
+   {
+      /* senses are equal, use values */
+      diffvals = data->vals[ind1] - data->vals[ind2];
 
+      if ( diffvals < 0.0 )
+         return -1;
+      else if ( diffvals > 0.0 )
+         return 1;
+   }
+   return 0;
+}
+
+/** sort matrix coefficients
+ *
+ *  result:
+ *    < 0: ind1 comes before (is better than) ind2
+ *    = 0: both indices have the same value
+ *    > 0: ind2 comes after (is worse than) ind2
+ */
+static
+SCIP_DECL_SORTINDCOMP(SYMsortMatCoef)
+{
+   SCIP_Real diffvals;
+   SCIP_Real* vals;
+
+   vals = (SCIP_Real*) dataptr;
+   diffvals = vals[ind1] - vals[ind2];
+
+   if ( diffvals < 0.0 )
+      return -1;
+   else if ( diffvals > 0.0 )
+      return 1;
+
+   return 0;
+}
 
 
 /*
@@ -444,8 +463,6 @@ static
 SCIP_RETCODE checkSymmetriesAreSymmetries(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   fixedtype,          /**< variable types that must be fixed by symmetries */
-   int                   npermvars,          /**< number of variables in permutations */
-   SCIP_VAR**            permvars,           /**< variables in permutations */
    SYM_MATRIXDATA*       matrixdata,         /**< matrix data */
    int                   nperms,             /**< number of permutations */
    int**                 perms               /**< permutations */
@@ -460,15 +477,15 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
    SCIPdebugMsg(scip, "Checking whether symmetries are symmetries (generators: %u).\n", nperms);
 
    /* set up dense arrow for permuted row */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &permrow, npermvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &permrow, matrixdata->npermvars) );
 
    /* set up map between rows and first entry in matcoef array */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &rhsmatbeg, matrixdata->nrhscoef) );
    for (j = 0; j < matrixdata->nrhscoef; ++j)
-      rhsmatbeg[j] = matrixdata->nmatcoef + 1;
+      rhsmatbeg[j] = -1;
 
    /* build map from rhs into matrix */
-   oldrhs = matrixdata->nrhscoef + 1;
+   oldrhs = -1;
    for (j = 0; j < matrixdata->nmatcoef; ++j)
    {
       int rhs;
@@ -476,14 +493,14 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
       rhs = matrixdata->matrhsidx[j];
       if ( rhs != oldrhs )
       {
-         assert( rhs < matrixdata->nrhscoef );
+         assert( 0 <= rhs && rhs < matrixdata->nrhscoef );
          rhsmatbeg[rhs] = j;
          oldrhs = rhs;
       }
    }
 
    /* create row */
-   for (j = 0; j < npermvars; ++j)
+   for (j = 0; j < matrixdata->npermvars; ++j)
       permrow[j] = 0.0;
 
    /* check all generators */
@@ -497,9 +514,9 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
       P = perms[p];
       assert( P != 0 );
 
-      for (j = 0; j < npermvars; ++j)
+      for (j = 0; j < matrixdata->npermvars; ++j)
       {
-         if ( SymmetryFixVar(fixedtype, permvars[j]) && P[j] != j )
+         if ( SymmetryFixVar(fixedtype, matrixdata->permvars[j]) && P[j] != j )
          {
             SCIPdebugMsg(scip, "Permutation does not fix types %d, moving variable %d.\n", fixedtype, j);
             return SCIP_ERROR;
@@ -513,7 +530,7 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
 
          /* fill row into permrow (dense) */
          j = rhsmatbeg[r1];
-         assert( j < matrixdata->nmatcoef );
+         assert( 0 <= j && j < matrixdata->nmatcoef );
          assert( matrixdata->matrhsidx[j] == r1 ); /* note: row cannot be empty by construction */
 
          /* loop through row */
@@ -521,9 +538,9 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
          {
             int varidx;
 
-            assert( matrixdata->matvaridx[j] < npermvars );
+            assert( matrixdata->matvaridx[j] < matrixdata->npermvars );
             varidx = P[matrixdata->matvaridx[j]];
-            assert( varidx < npermvars );
+            assert( 0 <= varidx && varidx < matrixdata->npermvars );
             if ( varidx != matrixdata->matvaridx[j] )
                ++npermuted;
             assert( SCIPisZero(scip, permrow[varidx]) );
@@ -542,9 +559,9 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
                if ( matrixdata->rhssense[r1] == matrixdata->rhssense[r2] && SCIPisEQ(scip, matrixdata->rhscoef[r1], matrixdata->rhscoef[r2]) )
                {
                   j = rhsmatbeg[r2];
-                  assert( j < matrixdata->nmatcoef );
+                  assert( 0 <= j && j < matrixdata->nmatcoef );
                   assert( matrixdata->matrhsidx[j] == r2 );
-                  assert( matrixdata->matvaridx[j] < npermvars );
+                  assert( matrixdata->matvaridx[j] < matrixdata->npermvars );
 
                   /* loop through row r2 and check whether it is equal to permuted row r */
                   while (j < matrixdata->nmatcoef && matrixdata->matrhsidx[j] == r2 && SCIPisEQ(scip, permrow[matrixdata->matvaridx[j]], matrixdata->matcoef[j]) )
@@ -581,7 +598,7 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
    }
 
    SCIPfreeBlockMemoryArray(scip, &rhsmatbeg, matrixdata->nrhscoef);
-   SCIPfreeBlockMemoryArray(scip, &permrow, npermvars);
+   SCIPfreeBlockMemoryArray(scip, &permrow, matrixdata->npermvars);
 
    return SCIP_OKAY;
 }
@@ -605,14 +622,13 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIP_CONSHDLR* conshdlr;
    SYM_MATRIXDATA matrixdata;
    SCIP_HASHTABLE* vartypemap;
-   SCIP_HASHTABLE* rhstypemap;
    SCIP_VAR** consvars;
    SCIP_Real* consvals;
    SCIP_CONS** conss;
    SCIP_VAR** vars;
    SYM_VARTYPE* uniquevararray;
-   SYM_RHSTYPE* uniquerhsarray;
    SYM_RHSSENSE oldsense = SYM_SENSE_UNKOWN;
+   SYM_SORTRHSTYPE sortrhstype;
    SCIP_Real oldcoef = SCIP_INVALID;
    SCIP_Real val;
    int nuniquevararray = 0;
@@ -621,12 +637,6 @@ SCIP_RETCODE computeSymmetryGroup(
    int nvars;
    int c;
    int j;
-
-#ifdef SCIP_DEBUG
-   /* for debugging: store original coefficients */
-   SCIP_Real* matcoeforig;
-   SCIP_Real* rhscoeforig;
-#endif
 
    assert( scip != NULL );
    assert( npermvars != NULL );
@@ -692,7 +702,6 @@ SCIP_RETCODE computeSymmetryGroup(
    matrixdata.nmaxmatcoef = 100 * nvars;
    matrixdata.nmatcoef = 0;
    matrixdata.nrhscoef = 0;
-   matrixdata.rhstypemap = NULL;
    matrixdata.nuniquemat = 0;
    matrixdata.nuniquevars = 0;
    matrixdata.nuniquerhs = 0;
@@ -700,6 +709,7 @@ SCIP_RETCODE computeSymmetryGroup(
    matrixdata.permvars = vars;
    matrixdata.permvarcolors = NULL;
    matrixdata.matcoefcolors = NULL;
+   matrixdata.rhscoefcolors = NULL;
 
    /* prepare matrix data (use block memory, since this can become large) */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &matrixdata.matcoef, matrixdata.nmaxmatcoef) );
@@ -848,33 +858,28 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIPfreeBlockMemoryArray(scip, &consvals, nvars);
    SCIPfreeBlockMemoryArray(scip, &consvars, nvars);
 
-#ifdef SCIP_DEBUG
-   /* if symmetries have to be checked store original matrix and rhs coefficient arrays */
-   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &matcoeforig, matrixdata.matcoef, matrixdata.nmatcoef) );
-   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &rhscoeforig, matrixdata.rhscoef, matrixdata.nrhscoef) );
-#endif
+   /* sort matrix coefficients (leave matrix array intact) */
+   SCIPsort(matrixdata.matidx, SYMsortMatCoef, (void*) matrixdata.matcoef, matrixdata.nmatcoef);
 
-   /* determine nonredundant list of coefficients: first sort */
-   SCIPsortRealInt(matrixdata.matcoef, matrixdata.matidx, matrixdata.nmatcoef);
-   SCIPsortRealInt(matrixdata.rhscoef, matrixdata.rhsidx, matrixdata.nrhscoef);
+   /* sort rhs types (first by sense, then by value, leave rhscoef intact) */
+   sortrhstype.vals = matrixdata.rhscoef;
+   sortrhstype.senses = matrixdata.rhssense;
+   sortrhstype.nrhscoef = matrixdata.nrhscoef;
+   SCIPsort(matrixdata.rhsidx, SYMsortRhsTypes, (void*) &sortrhstype, matrixdata.nrhscoef);
 
-#ifdef SCIP_DEBUG
-   assert( matcoeforig != NULL && rhscoeforig !=  NULL );
-   for (j = 0; j < matrixdata.nrhscoef; ++j)
-      assert( SCIPisEQ(scip, matrixdata.rhscoef[j], rhscoeforig[matrixdata.rhsidx[j]]) );
-#endif
-
-   /* create maps for coefficients to indices */
+   /* create map for variables to indices */
    SCIP_CALL( SCIPhashtableCreate(&vartypemap, SCIPblkmem(scip), 5 * nvars, SYMhashGetKeyVartype, SYMhashKeyEQVartype, SYMhashKeyValVartype, (void*) scip) );
-   SCIP_CALL( SCIPhashtableCreate(&rhstypemap, SCIPblkmem(scip), 5 * matrixdata.nrhscoef, SYMhashGetKeyRhstype, SYMhashKeyEQRhstype, SYMhashKeyValRhstype, (void*) scip) );
    assert( vartypemap != NULL );
-   assert( rhstypemap != NULL );
-   matrixdata.rhstypemap = rhstypemap;
+
+   /* allocate space for mappings to colors */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &matrixdata.permvarcolors, nvars) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &matrixdata.matcoefcolors, matrixdata.nmatcoef) );
-
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &uniquerhsarray, matrixdata.nrhscoef) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &matrixdata.rhscoefcolors, matrixdata.nrhscoef) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &uniquevararray, nvars) );
+
+   for (j = 0; j < matrixdata.nrhscoef; ++j)
+      printf("%f ", matrixdata.rhscoef[matrixdata.rhsidx[j]]);
+   printf("\n");
 
    /* determine number of different coefficents */
 
@@ -938,21 +943,26 @@ SCIP_RETCODE computeSymmetryGroup(
    /* find non-equivalent matrix entries (use sorting to avoid too many map calls) */
    for (j = 0; j < matrixdata.nmatcoef; ++j)
    {
-      assert( 0 <= matrixdata.matidx[j] && matrixdata.matidx[j] < matrixdata.nmatcoef );
+      int idx;
 
-      val = matrixdata.matcoef[j];
+      idx = matrixdata.matidx[j];
+      assert( 0 <= idx && idx < matrixdata.nmatcoef );
+
+      val = matrixdata.matcoef[idx];
+      assert( oldcoef == SCIP_INVALID || oldcoef <= val );
+
       if ( ! SCIPisEQ(scip, val, oldcoef) )
       {
 #ifdef SCIP_OUTPUT
-         SCIPdebugMsg(scip, "detected new matrix entry type %f - color: %d\n", val, matrixdata.nuniquemat);
+         SCIPdebugMsg(scip, "Detected new matrix entry type %f - color: %d\n.", val, matrixdata.nuniquemat);
 #endif
-         matrixdata.matcoefcolors[j] = matrixdata.nuniquemat++;
+         matrixdata.matcoefcolors[idx] = matrixdata.nuniquemat++;
          oldcoef = val;
       }
       else
       {
          assert( matrixdata.nuniquemat > 0 );
-         matrixdata.matcoefcolors[j] = matrixdata.nuniquemat - 1;
+         matrixdata.matcoefcolors[idx] = matrixdata.nuniquemat - 1;
       }
    }
 
@@ -966,26 +976,27 @@ SCIP_RETCODE computeSymmetryGroup(
       idx = matrixdata.rhsidx[j];
       assert( 0 <= idx && idx < matrixdata.nrhscoef );
       sense = matrixdata.rhssense[idx];
-      val = matrixdata.rhscoef[j];
-      if ( ! SCIPisEQ(scip, val, oldcoef) || oldsense != sense )
+      val = matrixdata.rhscoef[idx];
+
+      /* make sure that new senses are treated with new color */
+      if ( sense != oldsense )
+         oldcoef = SCIP_INVALID;
+      oldsense = sense;
+      assert( oldcoef == SCIP_INVALID || oldcoef <= val );
+
+      /* assign new color to new type */
+      if ( ! SCIPisEQ(scip, val, oldcoef) )
       {
-         SYM_RHSTYPE* rt;
-
-         rt = &uniquerhsarray[matrixdata.nuniquerhs];
-         rt->val = val;
-         rt->sense = sense;
-
-         if ( ! SCIPhashtableExists(rhstypemap, (void*) rt) )
-         {
-            rt->color = matrixdata.nuniquerhs++;
-            SCIP_CALL( SCIPhashtableInsert(rhstypemap, (void*) rt) );
-
 #ifdef SCIP_OUTPUT
-            SCIPdebugMsg(scip, "have new rhs type %f, type: %u - color: %u\n", val, sense, matrixdata.nuniquerhs - 1);
+         SCIPdebugMsg(scip, "Detected new new rhs type %f, type: %u - color: %d\n", val, sense, matrixdata.nuniquerhs);
 #endif
-         }
+         matrixdata.rhscoefcolors[idx] = matrixdata.nuniquerhs++;
          oldcoef = val;
-         oldsense = sense;
+      }
+      else
+      {
+         assert( matrixdata.nuniquerhs > 0 );
+         matrixdata.rhscoefcolors[idx] = matrixdata.nuniquerhs - 1;
       }
    }
    assert( matrixdata.nuniquevars > 0 );
@@ -993,8 +1004,8 @@ SCIP_RETCODE computeSymmetryGroup(
    assert( matrixdata.nuniquemat > 0 );
 
    SCIPdebugMsg(scip, "Number of detected different variables: %d (total: %d).\n", matrixdata.nuniquevars, nvars);
-   SCIPdebugMsg(scip, "Number of detected different nonzero coefficients: rhs: %d (total %d), matrix: %d (total %d).\n",
-      matrixdata.nuniquerhs, matrixdata.nrhscoef, matrixdata.nuniquemat, matrixdata.nmatcoef);
+   SCIPdebugMsg(scip, "Number of detected different rhs types: %d (total: %d).\n", matrixdata.nuniquerhs, matrixdata.nrhscoef);
+   SCIPdebugMsg(scip, "Number of detected different matrix coefficients: %d (total: %d).\n", matrixdata.nuniquemat, matrixdata.nmatcoef);
 
    /* determine generators */
    SCIP_CALL( SYMcomputeSymmetryGenerators(scip, maxgenerators, &matrixdata, nperms, nmaxperms, perms) );
@@ -1002,10 +1013,8 @@ SCIP_RETCODE computeSymmetryGroup(
 #ifdef SCIP_DEBUG
    if ( ! SCIPisStopped(scip) )
    {
-      SCIP_CALL( checkSymmetriesAreSymmetries(scip, fixedtype, nvars, vars, &matrixdata, *nperms, *perms) );
+      SCIP_CALL( checkSymmetriesAreSymmetries(scip, fixedtype, &matrixdata, *nperms, *perms) );
    }
-   SCIPfreeBlockMemoryArray(scip, &rhscoeforig, matrixdata.nrhscoef);
-   SCIPfreeBlockMemoryArray(scip, &matcoeforig, matrixdata.nmatcoef);
 #endif
 
    /* output time */
@@ -1019,11 +1028,10 @@ SCIP_RETCODE computeSymmetryGroup(
 
    /* free matrix data */
    SCIPfreeBlockMemoryArray(scip, &uniquevararray, nvars);
-   SCIPfreeBlockMemoryArray(scip, &uniquerhsarray, matrixdata.nrhscoef);
 
+   SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhscoefcolors, matrixdata.nrhscoef);
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matcoefcolors, matrixdata.nmatcoef);
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.permvarcolors, nvars);
-   SCIPhashtableFree(&matrixdata.rhstypemap);
    SCIPhashtableFree(&vartypemap);
 
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhsidx, 2 * nconss);

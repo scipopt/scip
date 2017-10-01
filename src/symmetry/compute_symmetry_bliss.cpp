@@ -121,43 +121,23 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
    /* add nodes for variables */
    for (int v = 0; v < matrixdata->npermvars; ++v)
    {
-      SCIP_VAR* var = matrixdata->permvars[v];
-      assert( var != 0 );
-
       const int color = matrixdata->permvarcolors[v];
       assert( 0 <= color && color < matrixdata->nuniquevars );
 
-      (void) G->add_vertex((unsigned) color);
+      int node = (int) G->add_vertex((unsigned) color);
+      assert( node == v );
       ++nnodes;
    }
    assert( (int) G->get_nof_vertices() == matrixdata->npermvars );
 
-   /* store nodes corresponding to rhs (we need the original order of rows) */
-   int* rhsnodemap = 0;
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &rhsnodemap, matrixdata->nrhscoef) );
-#ifndef NDEBUG
-   for (int j = 0; j < matrixdata->nrhscoef; ++j)
-      rhsnodemap[j] = matrixdata->nrhscoef + 1;
-#endif
-
    /* add nodes for rhs of constraints */
    for (int c = 0; c < matrixdata->nrhscoef; ++c)
    {
-      int idx = matrixdata->rhsidx[c];
-      assert( 0 <= idx && idx < matrixdata->nrhscoef );
-
-      SYM_RHSTYPE rt;
-      rt.val = matrixdata->rhscoef[idx];
-      rt.sense = matrixdata->rhssense[idx];
-      assert( SCIPhashtableExists(matrixdata->rhstypemap, (void*) &rt) );
-
-      SYM_RHSTYPE* rtr = (SYM_RHSTYPE*) SCIPhashtableRetrieve(matrixdata->rhstypemap, (void*) &rt);
-      const int color = rtr->color;
+      const int color = matrixdata->rhscoefcolors[c];
       assert( 0 <= color && color < matrixdata->nuniquerhs );
 
       int node = (int) G->add_vertex((unsigned) (matrixdata->nuniquevars + color));
       assert( node == matrixdata->npermvars + c );
-      rhsnodemap[idx] = node;
       ++nnodes;
    }
    assert( (int) G->get_nof_vertices() == matrixdata->npermvars + matrixdata->nrhscoef );
@@ -181,21 +161,18 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
    int nusedcolors = matrixdata->nuniquevars + matrixdata->nuniquerhs;
    for (int j = 0; j < matrixdata->nmatcoef; ++j)
    {
-      int idx = matrixdata->matidx[j];
-      assert( 0 <= idx && idx < matrixdata->nmatcoef );
-
       /* find color corresponding to matrix coefficient */
       const int color = matrixdata->matcoefcolors[j];
       assert( 0 <= color && color < matrixdata->nuniquemat );
 
-      assert( matrixdata->matrhsidx[idx] < matrixdata->nrhscoef );
-      assert( matrixdata->matvaridx[idx] < matrixdata->npermvars );
+      assert( 0 <= matrixdata->matrhsidx[j] && matrixdata->matrhsidx[j] < matrixdata->nrhscoef );
+      assert( 0 <= matrixdata->matvaridx[j] && matrixdata->matvaridx[j] < matrixdata->npermvars );
 
-      const int rhsnode = rhsnodemap[matrixdata->matrhsidx[idx]];
-      const int varnode = matrixdata->matvaridx[idx];
+      const int rhsnode = matrixdata->npermvars + matrixdata->matrhsidx[j];
+      const int varnode = matrixdata->matvaridx[j];
+      assert( matrixdata->npermvars <= rhsnode && rhsnode < matrixdata->npermvars + matrixdata->nrhscoef );
       assert( rhsnode < (int) G->get_nof_vertices() );
       assert( varnode < (int) G->get_nof_vertices() );
-      assert( matrixdata->npermvars <= rhsnode && rhsnode < matrixdata->npermvars + matrixdata->nrhscoef );
 
       /* if we have only one color, we do not need intermediate nodes */
       if ( matrixdata->nuniquemat == 1 )
@@ -207,9 +184,9 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
       {
          InterPair key;
          if ( groupByConstraints )
-            key = std::make_pair(matrixdata->matrhsidx[idx], color);
+            key = std::make_pair(matrixdata->matrhsidx[j], color);
          else
-            key = std::make_pair(matrixdata->matvaridx[idx], color);
+            key = std::make_pair(matrixdata->matvaridx[j], color);
 
          IntermediatesMap::const_iterator keyIt = groupedIntermediateNodes.find(key);
          int intermediatenode = 0;
@@ -226,7 +203,6 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
          /* determine whether graph would be too large for bliss (can only handle int) */
          if ( intermediatenode >= INT_MAX/2 )
          {
-            SCIPfreeBlockMemoryArray(scip, &rhsnodemap, matrixdata->nrhscoef);
             return SCIP_OKAY;
          }
          G->add_edge((unsigned) varnode, (unsigned) intermediatenode);
@@ -234,8 +210,6 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
          nedges += 2;
       }
    }
-
-   SCIPfreeBlockMemoryArray(scip, &rhsnodemap, matrixdata->nrhscoef);
 
    success = TRUE;
 
