@@ -2649,12 +2649,12 @@ SCIP_RETCODE createAndAddProofcons(
       toolong = FALSE;
    else
    {
-      int maxnnz;
+      SCIP_Real maxnnz;
 
       if( transprob->startnconss < 100 )
          maxnnz = 0.85 * transprob->nvars;
       else
-         maxnnz = transprob->nvars;
+         maxnnz = (SCIP_Real)transprob->nvars;
 
       fillin = nnz;
       if( proofset->conflicttype == SCIP_CONFTYPE_INFEASLP || proofset->conflicttype == SCIP_CONFTYPE_ALTINFPROOF )
