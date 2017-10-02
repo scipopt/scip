@@ -169,7 +169,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    SCIP_Real*            provedbound,        /**< proved dual bound for current subtree               */
    SCIP_RESULT*          result              /**< result pointer                                      */
    )
-{
+{  /*lint --e{715}*/
    SCIP_VAR** vars = NULL;
    SCIP_Real* newlbs = NULL;
    SCIP_Real* newubs = NULL;
