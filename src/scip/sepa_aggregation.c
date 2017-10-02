@@ -195,7 +195,7 @@ SCIP_RETCODE addCut(
 
 
       /* if requested, try to scale the cut to integral values  but only if the scaling is small; otherwise keep the fractional cut */
-      if( makeintegral )
+      if( makeintegral && SCIPgetRowNumIntCols(scip, cut) == SCIProwGetNNonz(cut) )
       {
          SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
                1000LL, 1000.0, MAKECONTINTEGRAL, &success) );

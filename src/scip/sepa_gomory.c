@@ -122,7 +122,7 @@ SCIP_RETCODE evaluateCutNumerics(
    madeintegral = FALSE;
    (*useful) = FALSE;
 
-   if( sepadata->makeintegral )
+   if( sepadata->makeintegral && SCIPgetRowNumIntCols(scip, cut) == SCIProwGetNNonz(cut) )
    {
       /* try to scale the cut to integral values */
       SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),

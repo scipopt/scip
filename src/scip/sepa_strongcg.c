@@ -43,8 +43,8 @@
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
 #define DEFAULT_RANDSEED             54 /**< initial random seed */
 
-#define MAKECUTINTEGRAL        /* try to scale all cuts to integral coefficients */
-/*#define MAKEINTCUTINTEGRAL*/     /* try to scale cuts without continuous variables to integral coefficients */
+/*#define MAKECUTINTEGRAL*/        /* try to scale all cuts to integral coefficients */
+#define MAKEINTCUTINTEGRAL     /* try to scale cuts without continuous variables to integral coefficients */
 /*#define FORCECUTINTEGRAL*/       /* discard cut if conversion to integral coefficients failed */
 #define SEPARATEROWS           /* separate rows with integral slack */
 
@@ -411,16 +411,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
          /* try to scale the cut to integral values if there are no continuous variables
             *  -> leads to an integral slack variable that can later be used for other cuts
             */
+         if( SCIPgetRowNumIntCols(scip, cut) == SCIProwGetNNonz(cut) )
          {
-            int k = 0;
-            int firstcontvar = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
-            while ( k < cutnnz && cutinds[k] < firstcontvar )
-               ++k;
-            if( k == cutlen )
-            {
-               SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
-                     maxdnom, maxscale, MAKECONTINTEGRAL, &success) );
-            }
+            SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
+                                           maxdnom, maxscale, MAKECONTINTEGRAL, &success) );
          }
 #endif
 #endif
