@@ -85,6 +85,12 @@ unsigned int SCIPcliqueGetId(
    SCIP_CLIQUE*          clique              /**< clique data structure */
    );
 
+/** gets index of the clique in the clique table */
+EXTERN
+int SCIPcliqueGetIndex(
+   SCIP_CLIQUE*          clique              /**< clique data structure */
+   );
+
 /** returns whether the given clique is cleaned up */
 EXTERN
 SCIP_Bool SCIPcliqueIsCleanedUp(
@@ -108,6 +114,7 @@ SCIP_Bool SCIPcliqueIsEquation(
 #define SCIPcliqueGetVars(clique)                    ((clique)->vars)
 #define SCIPcliqueGetValues(clique)                  ((clique)->values)
 #define SCIPcliqueGetId(clique)                      ((clique)->id)
+#define SCIPcliqueGetIndex(clique)                      ((clique)->index)
 #define SCIPcliqueIsCleanedUp(clique)                ((clique)->startcleanup == -1)
 #define SCIPcliqueIsEquation(clique)                 ((SCIP_Bool)(clique)->equation)
 
