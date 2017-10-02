@@ -20855,7 +20855,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
 
    /* switch conflict analysis according to usesb parameter */
    enabledconflict = scip->set->conf_enable;
-   scip->set->conf_enable = scip->set->conf_usesb;
+   scip->set->conf_enable = (scip->set->conf_enable && scip->set->conf_usesb);
 
    /* @todo: decide the branch to look at first based on the cutoffs in previous calls? */
    switch( scip->set->branch_firstsbchild )
