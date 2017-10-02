@@ -151,6 +151,8 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 endif()
 message(STATUS "LEGACY mode for old compilers: ${LEGACY}")
 
+set(NEWLINE "\\\\n")
+
 # create a target for updating the current git hash
 file(WRITE ${CMAKE_BINARY_DIR}/scip_update_githash.cmake "
 find_program(GIT git)
@@ -160,7 +162,7 @@ if((GIT) AND (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git))
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
       OUTPUT_VARIABLE GITHASH OUTPUT_STRIP_TRAILING_WHITESPACE)
    string(REGEX REPLACE \"^.*-g\" \"\" GITHASH \${GITHASH})
-   file(WRITE \${DST} \"#define SCIP_GITHASH \\\"\${GITHASH}\\\"\")
+   file(WRITE \${DST} \"#define SCIP_GITHASH \\\"\${GITHASH}\\\"\n\")
 else()
    # read stored hash from file
    file(STRINGS \${DST} GITHASH)
@@ -173,9 +175,8 @@ add_custom_target(scip_update_githash
                                            -P ${CMAKE_BINARY_DIR}/scip_update_githash.cmake)
 
 # create a target for updating the current build configuration
-set(NEWLINE "\\\\n")
 file(WRITE ${CMAKE_BINARY_DIR}/scip_update_buildflags.cmake "
-file(WRITE \${DST} \"#define SCIP_BUILDFLAGS \\\" ARCH=\${CMAKE_SYSTEM}${NEWLINE} COMP=\${CMAKE_SYSTEM_PROCESSOR}${NEWLINE} BUILD=\${CMAKE_BUILD_TYPE}\\\"\")
+file(WRITE \${DST} \"#define SCIP_BUILDFLAGS \\\" ARCH=\${CMAKE_SYSTEM}${NEWLINE} COMP=\${CMAKE_SYSTEM_PROCESSOR}${NEWLINE} BUILD=\${CMAKE_BUILD_TYPE}${NEWLINE}\\\"\n\")
 ")
 add_custom_target(scip_update_buildflags
                   COMMAND ${CMAKE_COMMAND} -DDST=${PROJECT_SOURCE_DIR}/src/scip/buildflags.c
