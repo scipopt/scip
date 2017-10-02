@@ -1369,13 +1369,13 @@ SCIP_Real computeRelaxedLowerbound(
    else
       relaxedbd = (inferlb - constant) / coef;
 
+   /* check the computed relaxed lower/upper bound is a proper reason for the inference bound which has to be explained */
+   assert(SCIPisEQ(scip, inferlb, SCIPadjustedVarLb(scip, var, relaxedbd * coef + constant)));
+
    if( coef > 0.0 )
       relaxedbd += SCIPfeastol(scip);
    else
       relaxedbd -= SCIPfeastol(scip);
-
-   /* check the computed relaxed lower/upper bound is a proper reason for the inference bound which has to be explained */
-   assert(SCIPisEQ(scip, inferlb, SCIPadjustedVarLb(scip, var, relaxedbd * coef + constant)));
 
    return relaxedbd;
 }
@@ -1484,13 +1484,13 @@ SCIP_Real computeRelaxedUpperbound(
    else
       relaxedbd = (inferub - constant) / coef;
 
+   /* check the computed relaxed lower/upper bound is a proper reason for the inference bound which has to be explained */
+   assert(SCIPisEQ(scip, inferub, SCIPadjustedVarUb(scip, var, relaxedbd * coef + constant)));
+
    if( coef > 0.0 )
       relaxedbd -= SCIPfeastol(scip);
    else
       relaxedbd += SCIPfeastol(scip);
-
-   /* check the computed relaxed lower/upper bound is a proper reason for the inference bound which has to be explained */
-   assert(SCIPisEQ(scip, inferub, SCIPadjustedVarUb(scip, var, relaxedbd * coef + constant)));
 
    return relaxedbd;
 }
