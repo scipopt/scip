@@ -110,7 +110,7 @@
  *     3. call SCIPanalyzeConflictCons() or SCIPanalyzeConflict() to analyze the conflict
  *        and add an appropriate conflict constraint.
  */
-//#define SCIP_DEBUG
+
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
@@ -2649,12 +2649,19 @@ SCIP_RETCODE createAndAddProofcons(
       toolong = FALSE;
    else
    {
+      SCIP_Real maxnnz;
+
+      if( transprob->startnconss < 100 )
+         maxnnz = 0.85 * transprob->nvars;
+      else
+         maxnnz = (SCIP_Real)transprob->nvars;
+
       fillin = nnz;
       if( proofset->conflicttype == SCIP_CONFTYPE_INFEASLP || proofset->conflicttype == SCIP_CONFTYPE_ALTINFPROOF )
       {
          fillin += SCIPconflictstoreGetNDualInfProofs(conflictstore) * SCIPconflictstoreGetAvgNnzDualInfProofs(conflictstore);
          fillin /= (SCIPconflictstoreGetNDualInfProofs(conflictstore) + 1.0);
-         toolong = (fillin > 2.0 * stat->avgnnz);
+         toolong = (fillin > MIN(2.0 * stat->avgnnz, maxnnz));
       }
       else
       {
@@ -2662,7 +2669,7 @@ SCIP_RETCODE createAndAddProofcons(
 
          fillin += SCIPconflictstoreGetNDualBndProofs(conflictstore) * SCIPconflictstoreGetAvgNnzDualBndProofs(conflictstore);
          fillin /= (SCIPconflictstoreGetNDualBndProofs(conflictstore) + 1.0);
-         toolong = (fillin > 1.5 * stat->avgnnz);
+         toolong = (fillin > MIN(1.5 * stat->avgnnz, maxnnz));
       }
 
       toolong = (toolong && (nnz > set->conf_maxvarsfac * transprob->nvars));
@@ -6201,7 +6208,7 @@ SCIP_RETCODE getFarkasProof(
       assert(row == lp->lpirows[r]);
 
       /* ignore local rows and rows with Farkas value 0.0 */
-      if( !row->local && !SCIPsetIsZero(set, dualfarkas[r]) )
+      if( !row->local && !SCIPsetIsDualfeasZero(set, dualfarkas[r]) )
       {
 #ifndef NDEBUG
          {
@@ -6327,7 +6334,7 @@ SCIP_RETCODE getDualProof(
    assert(curvarubs != NULL);
    assert(valid != NULL);
 
-   *valid = FALSE;
+   *valid = TRUE;
 
    /* get LP rows and problem variables */
    rows = SCIPlpGetRows(lp);
@@ -6344,7 +6351,10 @@ SCIP_RETCODE getDualProof(
    /* get solution from LPI */
    retcode = SCIPlpiGetSol(lpi, NULL, primsols, dualsols, NULL, redcosts);
    if( retcode == SCIP_LPERROR ) /* on an error in the LP solver, just abort the conflict analysis */
+   {
+      (*valid) = FALSE;
       goto TERMINATE;
+   }
    SCIP_CALL( retcode );
 #ifdef SCIP_DEBUG
    {
@@ -6366,7 +6376,10 @@ SCIP_RETCODE getDualProof(
 
    /* don't consider dual solution with maxabsdualsol > 1e+07, this would almost cancel out the objective constraint */
    if( maxabsdualsol > 1e+07 )
+   {
+      (*valid) = FALSE;
       goto TERMINATE;
+   }
 
    /* clear the proof */
    SCIPaggrRowClear(farkasrow);
@@ -6406,7 +6419,7 @@ SCIP_RETCODE getDualProof(
       assert(row == lp->lpirows[r]);
 
       /* ignore dual solution values of 0.0 (in this case: y_i == z_i == 0) */
-      if( SCIPsetIsZero(set, dualsols[r]) )
+      if( SCIPsetIsDualfeasZero(set, dualsols[r]) )
          continue;
 
       /* check dual feasibility */
@@ -6414,6 +6427,7 @@ SCIP_RETCODE getDualProof(
       {
          SCIPsetDebugMsg(set, " -> infeasible dual solution %g in row <%s>: lhs=%g, rhs=%g\n",
             dualsols[r], SCIProwGetName(row), row->lhs, row->rhs);
+         (*valid) = FALSE;
          goto TERMINATE;
       }
 
@@ -6460,8 +6474,11 @@ SCIP_RETCODE getDualProof(
    /* check validity of the proof */
    *farkasact = getMinActivity(prob, farkasrow, curvarlbs, curvarubs);
 
-   if( SCIPsetIsLT(set, SCIPaggrRowGetRhs(farkasrow), *farkasact) )
-      *valid = TRUE;
+   if( SCIPsetIsLE(set, *farkasact, SCIPaggrRowGetRhs(farkasrow)) )
+   {
+      *valid = FALSE;
+      SCIPsetDebugMsg(set, " -> proof is not valid: %g <= %g\n", *farkasact, SCIPaggrRowGetRhs(farkasrow));
+   }
 
   TERMINATE:
    SCIPsetFreeBufferArray(set, &redcosts);
@@ -7028,7 +7045,10 @@ SCIP_RETCODE runBoundHeuristic(
 
                /* the constructed Farkas proof is not valid, we need to break here */
                if( !(*valid) )
+               {
+                  SCIPaggrRowFree(set->scip, &farkasrow);
                   break;
+               }
 
                /* start dual ray analysis */
                if( set->conf_useinflp == 'd' || set->conf_useinflp == 'b' )
@@ -7049,8 +7069,6 @@ SCIP_RETCODE runBoundHeuristic(
                   SCIPaggrRowFree(set->scip, &farkasrow);
                   goto FREEBUFFER;
                }
-
-               SCIPdebug( vars = SCIPprobGetVars(transprob); );
 
                BMSclearMemoryArray(proofcoefs, SCIPprobGetNVars(transprob));
                (*prooflhs) = -SCIPaggrRowGetRhs(farkasrow);
@@ -7091,6 +7109,12 @@ SCIP_RETCODE runBoundHeuristic(
 
                SCIP_CALL( getDualProof(set, transprob, lp, lpi, proofrow, proofactivity, curvarlbs, curvarubs, valid) );
 
+               /* the constructed dual proof is not valid, we need to break here */
+               if( !(*valid) )
+               {
+                  SCIPaggrRowFree(set->scip, &proofrow);
+                  break;
+               }
                /* in contrast to the infeasible case we don't want to analyze the (probably identical) proof again. */
 
                BMSclearMemoryArray(proofcoefs, SCIPprobGetNVars(transprob));
