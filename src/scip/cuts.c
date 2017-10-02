@@ -200,14 +200,14 @@ SCIP_Real calcEfficacy(
    assert(cutcoefs != NULL);
    assert(cutinds != NULL);
 
-   norm = MAX(1e-6, SCIPgetVectorEfficacyNorm(scip, cutcoefs, cutnnz));
    vars = SCIPgetVars(scip);
 
    activity = 0.0;
    for( i = 0; i < cutnnz; ++i )
       activity += cutcoefs[i] * SCIPgetSolVal(scip, sol, vars[cutinds[i]]);
 
-   return (activity - cutrhs) / norm;
+   norm = SCIPgetVectorEfficacyNorm(scip, cutcoefs, cutnnz);
+   return (activity - cutrhs) / MAX(1e-6, norm);
 }
 
 static
@@ -294,8 +294,6 @@ SCIP_Real calcEfficacyDenseStorageQuad(
    assert(cutinds != NULL);
    assert(scip->set != NULL);
 
-   norm = MAX(1e-6, calcEfficacyNormQuad(scip, cutcoefs, cutinds, cutnnz));
-
    vars = SCIPgetVars(scip);
 
    activity = 0.0;
@@ -305,7 +303,8 @@ SCIP_Real calcEfficacyDenseStorageQuad(
       activity += QUAD_ROUND(coef) * SCIPgetSolVal(scip, sol, vars[cutinds[i]]);
    }
 
-   return (activity - cutrhs) / norm;
+   norm = calcEfficacyNormQuad(scip, cutcoefs, cutinds, cutnnz);
+   return (activity - cutrhs) / MAX(1e-6, norm);
 }
 
 /** safely remove all coefficients below the given value; returns TRUE if the cut became redundant */
@@ -998,7 +997,7 @@ void SCIPaggrRowFree(
    nvars = SCIPgetNVars(scip);
 
    SCIPfreeBlockMemoryArray(scip, &(*aggrrow)->inds, nvars);
-   SCIPfreeBlockMemoryArray(scip, &(*aggrrow)->vals, QUAD_ARRAY_SIZE(nvars));
+   SCIPfreeBlockMemoryArray(scip, &(*aggrrow)->vals, QUAD_ARRAY_SIZE(nvars)); /*lint !e647*/
    SCIPfreeBlockMemoryArrayNull(scip, &(*aggrrow)->rowsinds, (*aggrrow)->rowssize);
    SCIPfreeBlockMemoryArrayNull(scip, &(*aggrrow)->slacksign, (*aggrrow)->rowssize);
    SCIPfreeBlockMemoryArrayNull(scip, &(*aggrrow)->rowweights, (*aggrrow)->rowssize);
@@ -1597,9 +1596,14 @@ void postprocessCut(
 
    maxcoef = 0.0;
    for( i = 0; i < *nnz; ++i )
-      maxcoef = MAX(REALABS(cutcoefs[cutinds[i]]), maxcoef);
+   {
+      SCIP_Real absval = REALABS(cutcoefs[cutinds[i]]);
+      maxcoef = MAX(absval, maxcoef);
+   }
 
-   minallowedcoef = MAX(SCIPsumepsilon(scip), maxcoef / scip->set->sepa_maxcoefratio);
+   maxcoef /= scip->set->sepa_maxcoefratio;
+   minallowedcoef = SCIPsumepsilon(scip);
+   minallowedcoef = MAX(minallowedcoef, maxcoef);
 
    *success = ! removeZeros(scip, minallowedcoef, cutislocal, cutcoefs, QUAD(&rhs), cutinds, nnz);
    *cutrhs = QUAD_ROUND(rhs);
@@ -1644,12 +1648,16 @@ void postprocessCutQuad(
    maxcoef = 0.0;
    for( i = 0; i < *nnz; ++i )
    {
+      SCIP_Real abscoef;
       SCIP_Real QUAD(coef);
       QUAD_ARRAY_LOAD(coef, cutcoefs, cutinds[i]); /* coef = cutcoefs[cutinds[i]] */
-      maxcoef = MAX(REALABS(QUAD_ROUND(coef)), maxcoef);
+      abscoef = REALABS(QUAD_ROUND(coef));
+      maxcoef = MAX(abscoef, maxcoef);
    }
 
-   minallowedcoef = MAX(SCIPsumepsilon(scip), maxcoef / scip->set->sepa_maxcoefratio);
+   maxcoef /= scip->set->sepa_maxcoefratio;
+   minallowedcoef = SCIPsumepsilon(scip);
+   minallowedcoef = MAX(minallowedcoef, maxcoef);
 
    *success = ! removeZerosQuad(scip, minallowedcoef, cutislocal, cutcoefs, QUAD(cutrhs), cutinds, nnz);
 }
@@ -2900,10 +2908,10 @@ SCIP_RETCODE cutsSubstituteMIR(
       SCIP_Real mul;
       int r;
 
-      r = rowinds[i];
+      r = rowinds[i]; /*lint !e613*/
       assert(0 <= r && r < SCIPgetNLPRows(scip));
-      assert(slacksign[i] == -1 || slacksign[i] == +1);
-      assert(!SCIPisZero(scip, weights[i]));
+      assert(slacksign[i] == -1 || slacksign[i] == +1); /*lint !e613*/
+      assert(!SCIPisZero(scip, weights[i])); /*lint !e613*/
 
       row = rows[r];
       assert(row != NULL);
@@ -2912,12 +2920,12 @@ SCIP_RETCODE cutsSubstituteMIR(
       assert(row->len == 0 || row->vals != NULL);
 
       /* get the slack's coefficient a'_r in the aggregated row */
-      ar = slacksign[i] * scale * weights[i];
+      ar = slacksign[i] * scale * weights[i]; /*lint !e613*/
 
       /* calculate slack variable's coefficient a^_r in the cut */
       if( row->integral
          && ((slacksign[i] == +1 && SCIPisFeasIntegral(scip, row->rhs - row->constant))
-            || (slacksign[i] == -1 && SCIPisFeasIntegral(scip, row->lhs - row->constant))) )
+            || (slacksign[i] == -1 && SCIPisFeasIntegral(scip, row->lhs - row->constant))) ) /*lint !e613*/
       {
          /* slack variable is always integral:
           *    a^_r = a~_r = down(a'_r)                      , if f_r <= f0
@@ -2954,13 +2962,13 @@ SCIP_RETCODE cutsSubstituteMIR(
        *   a*x + c + s == rhs  =>  s == - a*x - c + rhs,  or  a*x + c - s == lhs  =>  s == a*x + c - lhs
        * substitute a^_r * s_r by adding a^_r times the slack's definition to the cut.
        */
-      mul = -slacksign[i] * QUAD_ROUND(cutar);
+      mul = -slacksign[i] * QUAD_ROUND(cutar); /*lint !e613*/
 
       /* add the slack's definition multiplied with a^_j to the cut */
       SCIP_CALL( varVecAddScaledRowCoefsQuad(cutinds, cutcoefs, nnz, row, mul) );
 
       /* move slack's constant to the right hand side */
-      if( slacksign[i] == +1 )
+      if( slacksign[i] == +1 ) /*lint !e613*/
       {
          SCIP_Real QUAD(rowrhs);
 
@@ -3711,7 +3719,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    }
 
    /* no delta was found that yielded any cut */
-   if( bestdelta == SCIP_INVALID )
+   if( bestdelta == SCIP_INVALID ) /*lint !e777*/
       goto TERMINATE;
 
    /* try bestdelta divided by 2, 4 and 8 */
@@ -3747,8 +3755,8 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 
       k = bounddistpos[i];
 
-      findBestLb(scip, vars[mksetinds[k]], sol, FALSE, allowlocal, &bestlb, &bestlbtype);
-      findBestUb(scip, vars[mksetinds[k]], sol, FALSE, allowlocal, &bestub, &bestubtype);
+      SCIP_CALL( findBestLb(scip, vars[mksetinds[k]], sol, FALSE, allowlocal, &bestlb, &bestlbtype) );
+      SCIP_CALL( findBestUb(scip, vars[mksetinds[k]], sol, FALSE, allowlocal, &bestub, &bestubtype) );
 
       /* switch the complementation of this variable */
 #ifndef NDEBUG
@@ -3942,15 +3950,22 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 
 /* =========================================== flow cover =========================================== */
 
+#define NO_EXACT_KNAPSACK
+
+#ifndef NO_EXACT_KNAPSACK
 #define MAXDNOM                  1000LL
 #define MINDELTA                  1e-03
 #define MAXDELTA                  1e-09
 #define MAXSCALE                 1000.0
 #define MAXDYNPROGSPACE         1000000
+#endif
 
 #define MAXABSVBCOEF               1e+5 /**< maximal absolute coefficient in variable bounds used for snf relaxation */
-#define MAXBOUND                  1e+10 /**< maximal value of normal bounds used for snf relaxation */
-#define NO_EXACT_KNAPSACK
+
+#if 0
+/* TODO check how this was used in the old flowcover separator */
+#define MAXBOUND                  1e+10   /**< maximal value of normal bounds used for snf relaxation */
+#endif
 
 /** structure that contains all data required to perform the sequence independent lifting
  */
@@ -4481,7 +4496,7 @@ SCIP_RETCODE constructSNFRelaxation(
    SCIPsortDownInt(rowinds, nnz);
 
    /* array to store whether a binary variable is in the row (-1) or has been used (1) due to variable bound usage */
-   SCIPallocCleanBufferArray(scip, &binvarused, nbinvars);
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &binvarused, nbinvars) );
 
    for( i = nnz - 1; i >= 0 && rowinds[i] < nbinvars; --i )
    {
@@ -4497,8 +4512,8 @@ SCIP_RETCODE constructSNFRelaxation(
 
       assert(rowinds[i] >= nbinvars);
 
-      determineBoundForSNF(scip, sol, vars, rowcoefs, rowinds, i, binvarused, allowlocal, boundswitch,
-                           bestlb, bestub, bestslb, bestsub, bestlbtype, bestubtype, bestslbtype, bestsubtype, selectedbounds, &freevariable);
+      SCIP_CALL( determineBoundForSNF(scip, sol, vars, rowcoefs, rowinds, i, binvarused, allowlocal, boundswitch,
+            bestlb, bestub, bestslb, bestsub, bestlbtype, bestubtype, bestslbtype, bestsubtype, selectedbounds, &freevariable) );
 
       if( freevariable )
       {
@@ -6072,6 +6087,9 @@ SCIP_RETCODE computeLiftingData(
                SCIPquadprecSumQD(sumC1LE, sumC1LE, snf->transvarvubcoefs[i]);
             }
             break;
+         default:
+            assert(s == 2);
+            continue;
       }
    }
 
@@ -6106,13 +6124,13 @@ SCIP_RETCODE computeLiftingData(
    liftingdata->M[liftingdata->r] = QUAD_ROUND(tmp);
 
    SCIP_UNUSED( SCIPsortedvecFindDownReal(liftingdata->m, liftingdata->mp, liftingdata->r, &liftingdata->t) );
-   assert(liftingdata->m[liftingdata->t] == liftingdata->mp || SCIPisInfinity(scip, liftingdata->mp));
+   assert(liftingdata->m[liftingdata->t] == liftingdata->mp || SCIPisInfinity(scip, liftingdata->mp)); /*lint !e777*/
 
    /* compute t largest index sucht that m_t = mp
     * note that liftingdata->m[t-1] == mp due to zero based indexing of liftingdata->m
     */
    ++liftingdata->t;
-   while( liftingdata->t < liftingdata->r && liftingdata->m[liftingdata->t] == liftingdata->mp )
+   while( liftingdata->t < liftingdata->r && liftingdata->m[liftingdata->t] == liftingdata->mp ) /*lint !e777*/
       ++liftingdata->t;
 
    liftingdata->lambda = lambda;
@@ -6307,7 +6325,10 @@ SCIP_RETCODE generateLiftedFlowCoverCut(
             }
 
             SCIPquadprecSumQD(rhs, rhs, -constant);
+            break;
          }
+         default:
+            SCIPABORT();
       }
    }
 
@@ -6353,10 +6374,12 @@ SCIP_RETCODE generateLiftedFlowCoverCut(
           */
          if( aggrrow->slacksign[i] == +1 )
          {
+            SCIP_Real rhsslack;
             /* a*x + c + s == rhs  =>  s == - a*x - c + rhs: move a^_r * (rhs - c) to the right hand side */
             assert(!SCIPisInfinity(scip, row->rhs));
 
-            slackub = -aggrrow->rowweights[i] * MIN(rowrhs - SCIPgetRowMinActivity(scip, row), slackub);
+            rhsslack = rowrhs - SCIPgetRowMinActivity(scip, row);
+            slackub = -aggrrow->rowweights[i] * MIN(rhsslack, slackub);
 
             if( SCIPisGE(scip, slackub, lambda) )
                SCIPquadprecSumQD(rhs, rhs, lambda);
@@ -6365,10 +6388,12 @@ SCIP_RETCODE generateLiftedFlowCoverCut(
          }
          else
          {
+            SCIP_Real lhsslack;
             /* a*x + c - s == lhs  =>  s == a*x + c - lhs: move a^_r * (c - lhs) to the right hand side */
             assert(!SCIPisInfinity(scip, -row->lhs));
 
-            slackub = aggrrow->rowweights[i] * MIN(SCIPgetRowMaxActivity(scip, row) - rowlhs, slackub);
+            lhsslack = SCIPgetRowMaxActivity(scip, row) - rowlhs;
+            slackub = aggrrow->rowweights[i] * MIN(lhsslack, slackub);
 
             if( SCIPisGE(scip, slackub, lambda) )
                SCIPquadprecSumQD(rhs, rhs, lambda);
@@ -7246,7 +7271,6 @@ SCIP_RETCODE SCIPcalcStrongCG(
    assert(scip != NULL);
    assert(aggrrow != NULL);
    assert(SCIPisPositive(scip, scale));
-   assert(cutefficacy != NULL);
    assert(cutcoefs != NULL);
    assert(cutrhs != NULL);
    assert(cutinds != NULL);

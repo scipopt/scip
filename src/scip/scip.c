@@ -14964,7 +14964,7 @@ SCIP_RETCODE transformSols(
     * order to ensure that the regarded solution in the copied array was not already freed when new solutions were added
     * and the worst solutions were freed.
     */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &sols, SCIPgetSols(scip), nsols) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &sols, SCIPgetSols(scip), nsols) ); /*lint !e666*/
    SCIP_CALL( SCIPallocBufferArray(scip, &solvals, ntransvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &solvalset, ntransvars) );
 
@@ -20855,7 +20855,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
 
    /* switch conflict analysis according to usesb parameter */
    enabledconflict = scip->set->conf_enable;
-   scip->set->conf_enable = scip->set->conf_usesb;
+   scip->set->conf_enable = (scip->set->conf_enable && scip->set->conf_usesb);
 
    /* @todo: decide the branch to look at first based on the cutoffs in previous calls? */
    switch( scip->set->branch_firstsbchild )
@@ -28830,6 +28830,7 @@ SCIP_RETCODE SCIPactiveCons(
    assert(scip != NULL);
    assert(cons != NULL);
    assert(!SCIPconsIsAdded(cons));
+   assert(!SCIPconsIsDeleted(cons));
 
    SCIP_CALL( checkStage(scip, "SCIPactiveCons", FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
@@ -47717,7 +47718,7 @@ SCIP_RETCODE SCIPcreateRandom(
    assert(scip != NULL);
    assert(randnumgen != NULL);
 
-   modifiedseed = SCIPinitializeRandomSeed(scip, initialseed);
+   modifiedseed = SCIPinitializeRandomSeed(scip, (int)initialseed);
 
    SCIP_CALL( SCIPrandomCreate(randnumgen, SCIPblkmem(scip), modifiedseed) );
 
@@ -47750,7 +47751,7 @@ void SCIPsetRandomSeed(
    assert(scip != NULL);
    assert(randnumgen != NULL);
 
-   modifiedseed = SCIPinitializeRandomSeed(scip, seed);
+   modifiedseed = SCIPinitializeRandomSeed(scip, (int)seed);
 
    SCIPrandomSetSeed(randnumgen, modifiedseed);
 }

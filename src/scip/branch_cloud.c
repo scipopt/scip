@@ -484,7 +484,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
 
    /* the second counter should maybe be replaced at some point */
    SCIP_CALL( SCIPselectVarStrongBranching(scip, lpcandscopy, lpcandssolcopy, lpcandsfraccopy, branchruledata->skipdown,
-         branchruledata->skipup, counter, counter, ncomplete, &branchruledata->lastcand, allowaddcons, 0, FALSE, FALSE,
+         branchruledata->skipup, counter, counter, ncomplete, &branchruledata->lastcand, 0, FALSE, FALSE,
          &bestcand, &bestdown, &bestup, &bestscore, &bestdownvalid, &bestupvalid, &provedbound, result) );
 
    if( branchruledata->lastcand <= ncomplete )
@@ -564,7 +564,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
             branchruledata->ntriedunions++;
             newscore = -SCIPinfinity(scip);
             SCIP_CALL( SCIPselectVarPseudoStrongBranching(scip, newlpcands, branchruledata->skipdown, branchruledata->skipup, counter, counter,
-                  allowaddcons, &newcand, &newdown, &newup, &newscore, &newdownvalid, &newupvalid, &newbound, result) );
+                  &newcand, &newdown, &newup, &newscore, &newdownvalid, &newupvalid, &newbound, result) );
 
             if( *result == SCIP_CUTOFF || *result == SCIP_REDUCEDDOM || *result == SCIP_CONSADDED  )
             {

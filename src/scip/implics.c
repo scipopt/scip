@@ -3161,7 +3161,7 @@ SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
    }
    else
    {
-      SCIPhashmapRemoveAll(cliquetable->varidxtable);
+      SCIP_CALL( SCIPhashmapRemoveAll(cliquetable->varidxtable) );
    }
 
    /* loop through variables and store their respective positions in the hash map if they are binary */
@@ -3376,9 +3376,13 @@ unsigned int SCIPcliqueGetId(
    SCIP_CLIQUE*          clique              /**< clique data structure */
    )
 {
+   int id;
+
    assert(clique != NULL);
 
-   return clique->id;
+   id = clique->id;
+
+   return (unsigned int)id;
 }
 
 /** gets index of the clique in the clique table */

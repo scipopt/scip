@@ -2143,6 +2143,7 @@ SCIP_RETCODE SCIPtransformMinUC(
    )
 {
    SCIP_CONS** conss;
+   SCIP_CONS** probconss;
    SCIP_VAR** vars;
    char consname[SCIP_MAXSTRLEN];
    char varname[SCIP_MAXSTRLEN];
@@ -2168,7 +2169,8 @@ SCIP_RETCODE SCIPtransformMinUC(
 
    /* copy the conss array because it changes when adding and deleting constraints */
    nconss = SCIPgetNConss(scip);
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &conss, SCIPgetConss(scip), nconss) );
+   probconss = SCIPgetConss(scip);
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &conss, probconss, nconss) );
 
    /* clear objective function and compute maximal branching priority */
    maxbranchprio = 0;

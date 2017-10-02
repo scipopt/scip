@@ -1568,8 +1568,9 @@ SCIP_RETCODE printExpr(
             default:
             {
                int i;
-               const char* opstr = SCIPexprGetOperator(expr) == SCIP_EXPR_SUM ? " + " : " * ";
+               char opstr[GMS_MAX_PRINTLEN];
 
+               (void) SCIPsnprintf(opstr, GMS_MAX_PRINTLEN, SCIPexprGetOperator(expr) == SCIP_EXPR_SUM ? " + " : " * ");
                appendLineWithIndent(scip, file, linebuffer, linecnt, "(");
                for( i = 0; i < SCIPexprGetNChildren(expr); ++i )
                {

@@ -3090,6 +3090,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
    SCIP_Real* bounds;
    SCIP_CONS* cons;
    char consname[SCIP_MAXSTRLEN];
+   int nliterals;
    int ncontinuous;
    int i;
 
@@ -3116,41 +3117,86 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
    SCIP_CALL( SCIPallocBufferArray(scip, &boundtypes, nbdchginfos) );
    SCIP_CALL( SCIPallocBufferArray(scip, &bounds, nbdchginfos) );
 
+   nliterals = 0;
+
    for( i = 0; i < nbdchginfos; ++i )
    {
+      SCIP_VAR* var;
+      SCIP_Real bound;
+      SCIP_BOUNDTYPE boundtype;
+      int j;
+
       assert(bdchginfos != NULL);
 
-      vars[i] = SCIPbdchginfoGetVar(bdchginfos[i]);
-      boundtypes[i] = SCIPboundtypeOpposite(SCIPbdchginfoGetBoundtype(bdchginfos[i]));
-      bounds[i] = relaxedbds[i];
+      var = SCIPbdchginfoGetVar(bdchginfos[i]);
+      assert(var != NULL);
+
+      boundtype = SCIPboundtypeOpposite(SCIPbdchginfoGetBoundtype(bdchginfos[i]));
+      bound = relaxedbds[i];
+
+      /* for continuous variables, we can only use the relaxed version of the bounds negation: !(x <= u) -> x >= u */
+      if( SCIPvarIsIntegral(var) )
+         bound += (boundtype == SCIP_BOUNDTYPE_LOWER ? +1.0 : -1.0);
+
+      /* check whether we have seen the variable before */
+      for( j = nliterals-1; j >= 0; --j )
+      {
+         if( vars[j] != var )
+            continue;
+
+         /* check whether both literals contribute with the same bound type */
+         if( boundtypes[j] == boundtype )
+         {
+            /* check whether the lower bound can be relaxed */
+            if( boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisLT(scip, bound, bounds[j]) )
+            {
+               bounds[j] = bound;
+            }
+            /* check whether the upper bound can be relaxed */
+            else if( boundtype == SCIP_BOUNDTYPE_UPPER && SCIPisGT(scip, bound, bounds[j]) )
+            {
+               bounds[j] = bound;
+            }
+
+            continue;
+         }
+         /* check whether the bounds are overlapping */
+         else if( isOverlapping(scip, var, boundtype, bound, boundtypes[j], bounds[j]) )
+         {
+            /* the conflict is redundant -> discard the conflict constraint */
+            goto DISCARDCONFLICT;
+         }
+      }
+
+      vars[nliterals] = var;
+      boundtypes[nliterals] = boundtype;
+      bounds[nliterals] = bound;
 
       /* check if the relaxed bound is really a relaxed bound */
       assert(SCIPbdchginfoGetBoundtype(bdchginfos[i]) == SCIP_BOUNDTYPE_LOWER || SCIPisGE(scip, relaxedbds[i], SCIPbdchginfoGetNewbound(bdchginfos[i])));
       assert(SCIPbdchginfoGetBoundtype(bdchginfos[i]) == SCIP_BOUNDTYPE_UPPER || SCIPisLE(scip, relaxedbds[i], SCIPbdchginfoGetNewbound(bdchginfos[i])));
 
       /* for continuous variables, we can only use the relaxed version of the bounds negation: !(x <= u) -> x >= u */
-      if( SCIPvarIsIntegral(vars[i]) )
-      {
-         assert(SCIPisIntegral(scip, bounds[i]));
-         bounds[i] += (boundtypes[i] == SCIP_BOUNDTYPE_LOWER ? +1.0 : -1.0);
-      }
-      else if( (boundtypes[i] == SCIP_BOUNDTYPE_LOWER && SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(vars[i]), bounds[i]))
-         || (boundtypes[i] == SCIP_BOUNDTYPE_UPPER && SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(vars[i]), bounds[i])) )
+      if( !SCIPvarIsIntegral(vars[nliterals]) &&
+         ((boundtypes[i] == SCIP_BOUNDTYPE_LOWER && SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(var), bounds[nliterals]))
+            || (boundtypes[i] == SCIP_BOUNDTYPE_UPPER && SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(var), bounds[nliterals]))) )
       {
          /* the literal is satisfied in global bounds (may happen due to weak "negation" of continuous variables)
           * -> discard the conflict constraint
           */
-         break;
+         goto DISCARDCONFLICT;
       }
       else
          ncontinuous++;
+
+      nliterals++;
    }
 
    /* create a constraint out of the conflict set */
    if( i == nbdchginfos && ncontinuous < conflicthdlrdata->continuousfrac * nbdchginfos + 0.5 )
    {
       (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%" SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
-      SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, consname, nbdchginfos, vars, boundtypes, bounds,
+      SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, consname, nliterals, vars, boundtypes, bounds,
             FALSE, FALSE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
 
       /* add conflict to SCIP */
@@ -3159,6 +3205,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
       *result = SCIP_CONSADDED;
    }
 
+  DISCARDCONFLICT:
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &bounds);
    SCIPfreeBufferArray(scip, &boundtypes);
