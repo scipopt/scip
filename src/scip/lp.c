@@ -5101,7 +5101,7 @@ SCIP_RETCODE SCIProwCreate(
    (*row)->maxidx = INT_MIN;
    (*row)->nummaxval = 0;
    (*row)->numminval = 0;
-   (*row)->numintcols = 0;
+   (*row)->numintcols = -1;
    (*row)->validactivitylp = -1;
    (*row)->validpsactivitydomchg = -1;
    (*row)->validactivitybdsdomchg = -1;
@@ -6595,16 +6595,15 @@ int SCIProwGetMinidx(
 }
 
 /** gets number of integral columns in row */
-int SCIProwGetNumIntCol(
+int SCIProwGetNumIntCols(
    SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(row != NULL);
 
-   if( !row->validminmaxidx )
+   if( row->numintcols == -1 )
       rowCalcIdxsAndVals(row, set);
-   assert(row->validminmaxidx);
 
    assert(row->numintcols <= row->len && row->numintcols >= 0);
 

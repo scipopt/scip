@@ -45,7 +45,7 @@
 
 #define MAKECUTINTEGRAL        /* try to scale all cuts to integral coefficients */
 /*#define MAKEINTCUTINTEGRAL*/     /* try to scale cuts without continuous variables to integral coefficients */
-#define FORCECUTINTEGRAL       /* discard cut if conversion to integral coefficients failed */
+/*#define FORCECUTINTEGRAL*/       /* discard cut if conversion to integral coefficients failed */
 #define SEPARATEROWS           /* separate rows with integral slack */
 
 #define BOUNDSWITCH              0.9999

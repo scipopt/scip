@@ -142,6 +142,7 @@ SCIP_RETCODE addCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_Bool             makeintegral,       /**< should cut be scaled to integral coefficients if possible? */
    SCIP_Real*            cutcoefs,           /**< coefficients of active variables in cut */
    int*                  cutinds,            /**< problem indices of variables in cut */
    int                   cutnnz,             /**< number of non-zeros in cut */
@@ -192,9 +193,17 @@ SCIP_RETCODE addCut(
                    cutclassname, cutname, cutrhs, cutefficacy);
       SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
 
-      /* try to scale the cut to integral values, but only if the scaling is small; otherwise keep the fractional cut */
-      SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
-                                     (SCIP_Longint) 30, 100.0, MAKECONTINTEGRAL, &success) );
+
+      /* if requested, try to scale the cut to integral values  but only if the scaling is small; otherwise keep the fractional cut */
+      if( makeintegral )
+      {
+         SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
+               1000LL, 1000.0, MAKECONTINTEGRAL, &success) );
+      }
+      else
+      {
+         success = FALSE;
+      }
 
       if( success && !SCIPisCutEfficacious(scip, sol, cut) )
       {
@@ -834,12 +843,12 @@ SCIP_RETCODE aggregation(
 
       if( cmirsuccess )
       {
-         SCIP_CALL( addCut(scip, sol, sepadata->cmir, cutcoefs, cutinds, cutnnz, cutrhs, cutefficacy, cmircutislocal,
+         SCIP_CALL( addCut(scip, sol, sepadata->cmir, TRUE, cutcoefs, cutinds, cutnnz, cutrhs, cutefficacy, cmircutislocal,
                sepadata->dynamiccuts, cutrank, "cmir", cutoff, ncuts) );
       }
       else if ( flowcoversuccess )
       {
-         SCIP_CALL( addCut(scip, sol, sepadata->flowcover, cutcoefs, cutinds, cutnnz, cutrhs, cutefficacy, flowcovercutislocal,
+         SCIP_CALL( addCut(scip, sol, sepadata->flowcover, FALSE, cutcoefs, cutinds, cutnnz, cutrhs, cutefficacy, flowcovercutislocal,
                sepadata->dynamiccuts, cutrank, "flowcover", cutoff, ncuts) );
       }
 

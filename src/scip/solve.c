@@ -2183,12 +2183,6 @@ SCIP_RETCODE cutpoolSeparate(
    {
       SCIP_RESULT result;
 
-      /* in case of the "normal" cutpool the sepastore should be empty since the cutpool is called as first separator;
-       * in case of the delayed cutpool the sepastore should be also empty because the delayed cutpool is only called if
-       * the sepastore is empty after all separators and the the "normal" cutpool were called without success;
-       */
-      assert(SCIPsepastoreGetNCuts(sepastore) == 0);
-
       SCIP_CALL( SCIPcutpoolSeparate(cutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, NULL, cutpoolisdelayed, root, &result) );
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);

@@ -648,19 +648,22 @@ SCIP_Real SCIProwGetMinval(
    );
 
 /** gets maximal column index of row entries */
+extern
 int SCIProwGetMaxidx(
    SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** gets minimal column index of row entries */
+extern
 int SCIProwGetMinidx(
    SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** gets number of integral columns in row */
-int SCIProwGetNumIntCol(
+extern
+int SCIProwGetNumIntCols(
    SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
