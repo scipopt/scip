@@ -161,6 +161,7 @@
 -emacro(647,SCIPallocBlockMemoryArray)
 -emacro(647,SCIPallocBufferArray)
 -emacro(647,SCIPreallocBufferArray)
+-emacro(647,SCIPfreeBlockMemoryArrayNull)
 
 // Avoid "Possible truncation of addition" - this might give interesting information, but clutters the output
 -emacro(776,BMSmoveMemoryArray)

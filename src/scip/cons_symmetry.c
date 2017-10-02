@@ -695,7 +695,7 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIPdebugMsg(scip, "Detecting %ssymmetry on %d variables and %d constraints.\n", local ? "local " : "", nvars, nconss);
 
    /* copy variables */
-   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &vars, SCIPgetVars(scip), nvars) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &vars, SCIPgetVars(scip), nvars) ); /*lint !e666*/
    assert( vars != NULL );
 
    /* fill matrixdata */
@@ -949,7 +949,7 @@ SCIP_RETCODE computeSymmetryGroup(
       assert( 0 <= idx && idx < matrixdata.nmatcoef );
 
       val = matrixdata.matcoef[idx];
-      assert( oldcoef == SCIP_INVALID || oldcoef <= val );
+      assert( oldcoef == SCIP_INVALID || oldcoef <= val ); /*lint !e777*/
 
       if ( ! SCIPisEQ(scip, val, oldcoef) )
       {
@@ -982,7 +982,7 @@ SCIP_RETCODE computeSymmetryGroup(
       if ( sense != oldsense )
          oldcoef = SCIP_INVALID;
       oldsense = sense;
-      assert( oldcoef == SCIP_INVALID || oldcoef <= val );
+      assert( oldcoef == SCIP_INVALID || oldcoef <= val ); /*lint !e777*/
 
       /* assign new color to new type */
       if ( ! SCIPisEQ(scip, val, oldcoef) )
