@@ -1364,13 +1364,18 @@ SCIP_Real computeRelaxedLowerbound(
 {
    SCIP_Real relaxedbd;
 
-   if( SCIPvarIsIntegral(var) )
+   if( SCIPvarIsIntegral(var) && inferlb < SCIPgetHugeValue(scip) * SCIPepsilon(scip) )
       relaxedbd = (inferlb - 1.0 + 2*SCIPfeastol(scip) - constant) / coef;
    else
       relaxedbd = (inferlb - constant) / coef;
 
    /* check the computed relaxed lower/upper bound is a proper reason for the inference bound which has to be explained */
    assert(SCIPisEQ(scip, inferlb, SCIPadjustedVarLb(scip, var, relaxedbd * coef + constant)));
+
+   if( coef > 0.0 )
+      relaxedbd += SCIPfeastol(scip);
+   else
+      relaxedbd -= SCIPfeastol(scip);
 
    return relaxedbd;
 }
@@ -1474,13 +1479,18 @@ SCIP_Real computeRelaxedUpperbound(
 {
    SCIP_Real relaxedbd;
 
-   if( SCIPvarIsIntegral(var) )
+   if( SCIPvarIsIntegral(var) && inferub < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
       relaxedbd = (inferub + 1.0 - 2*SCIPfeastol(scip) - constant) / coef;
    else
       relaxedbd = (inferub - constant) / coef;
 
    /* check the computed relaxed lower/upper bound is a proper reason for the inference bound which has to be explained */
    assert(SCIPisEQ(scip, inferub, SCIPadjustedVarUb(scip, var, relaxedbd * coef + constant)));
+
+   if( coef > 0.0 )
+      relaxedbd -= SCIPfeastol(scip);
+   else
+      relaxedbd += SCIPfeastol(scip);
 
    return relaxedbd;
 }
