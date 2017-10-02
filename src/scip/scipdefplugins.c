@@ -48,6 +48,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeConshdlrLinking(scip) );
    SCIP_CALL( SCIPincludeConshdlrLogicor(scip) );
    SCIP_CALL( SCIPincludeConshdlrOr(scip) );
+   SCIP_CALL( SCIPincludeConshdlrOrbisack(scip) );
    SCIP_CALL( SCIPincludeConshdlrOrbitope(scip) );
    SCIP_CALL( SCIPincludeConshdlrPseudoboolean(scip) );
    SCIP_CALL( SCIPincludeConshdlrSetppc(scip) );
@@ -56,6 +57,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeConshdlrSOS2(scip) );
    SCIP_CALL( SCIPincludeConshdlrSuperindicator(scip) );
    SCIP_CALL( SCIPincludeConshdlrSymmetry(scip) );
+   SCIP_CALL( SCIPincludeConshdlrSymresack(scip) );
    SCIP_CALL( SCIPincludeConshdlrVarbound(scip) );
    SCIP_CALL( SCIPincludeConshdlrXor(scip) );
    SCIP_CALL( SCIPincludeConshdlrComponents(scip) );
@@ -91,6 +93,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludePresolInttobinary(scip) );
    SCIP_CALL( SCIPincludePresolQPKKTref(scip) );
    SCIP_CALL( SCIPincludePresolRedvub(scip) );
+   SCIP_CALL( SCIPincludePresolSymbreak(scip) );
    SCIP_CALL( SCIPincludePresolTrivial(scip) );
    SCIP_CALL( SCIPincludePresolTworowbnd(scip) );
    SCIP_CALL( SCIPincludePresolStuffing(scip) );

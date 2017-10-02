@@ -530,6 +530,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/cons_logicor.o \
 			scip/cons_nonlinear.o \
 			scip/cons_or.o \
+			scip/cons_orbisack.o \
 			scip/cons_orbitope.o \
 			scip/cons_pseudoboolean.o \
 			scip/cons_quadratic.o \
@@ -539,6 +540,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/cons_sos2.o \
 			scip/cons_superindicator.o \
 			scip/cons_symmetry.o \
+			scip/cons_symresack.o \
 			scip/cons_varbound.o \
 			scip/cons_xor.o \
 			scip/cons_components.o \
@@ -620,6 +622,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/presol_inttobinary.o \
 			scip/presol_qpkktref.o \
 			scip/presol_redvub.o \
+			scip/presol_symbreak.o \
 			scip/presol_trivial.o \
 			scip/presol_tworowbnd.o \
 			scip/presol_stuffing.o \
