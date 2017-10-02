@@ -51,7 +51,6 @@ SCIP_RETCODE SCIPgetSymmetryGenerators(
    SCIP_CONSHDLR*        conshdlr,           /**< symmetry constraint handler */
    int*                  npermvars,          /**< pointer to store number of variables for permutations */
    SCIP_VAR***           permvars,           /**< pointer to store variables on which permutations act */
-   SCIP_HASHMAP**        permvarmap,         /**< map of variables to indices in permvars array */
    int*                  nperms,             /**< pointer to store number of permutations */
    int***                perms               /**< pointer to store permutation generators as (nperms x npermvars) matrix */
    );

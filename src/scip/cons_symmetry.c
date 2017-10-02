@@ -77,9 +77,6 @@ struct SCIP_ConsData
 {
    int                   npermvars;          /**< number of variables for permutations */
    SCIP_VAR**            permvars;           /**< variables on which permutations act */
-   int                   npermbinvars;       /**< number of binary variables for permutations */
-   int*                  permbinvars;        /**< indices of binary variables for permutations */
-   SCIP_HASHMAP*         varmap;             /**< map of variables to indices in permvars array */
    SCIP_Bool             computedsym;        /**< Have we already tried to compute symmetries? */
    int                   nperms;             /**< number of permutations */
    int                   nmaxperms;          /**< maximal number of permutations (needed for freeing storage) */
@@ -1068,8 +1065,6 @@ SCIP_RETCODE determineSymmetry(
    assert( ! consdata->computedsym );
    assert( consdata->npermvars == 0 );
    assert( consdata->permvars == NULL );
-   assert( consdata->npermbinvars == 0 );
-   assert( consdata->permbinvars == NULL );
    assert( consdata->nperms == 0 );
    assert( consdata->nmaxperms == 0 );
    assert( consdata->perms == NULL );
@@ -1221,12 +1216,6 @@ SCIP_DECL_CONSDELETE(consDeleteSymmetry)
    SCIPdebugMsg(scip, "Deleting symmetry constraint <%s>.\n", SCIPconsGetName(cons));
 
    SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->permvars, (*consdata)->npermvars);
-   if ( (*consdata)->varmap != 0 )
-   {
-      SCIPhashmapFree(&(*consdata)->varmap);
-   }
-
-   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->permbinvars, (*consdata)->npermbinvars);
    for (i = 0; i < (*consdata)->nperms; ++i)
    {
       SCIPfreeBlockMemoryArray(scip, &(*consdata)->perms[i], (*consdata)->npermvars);
@@ -1260,9 +1249,6 @@ SCIP_DECL_CONSTRANS(consTransSymmetry)
    /* copy pointers to group */
    targetconsdata->npermvars = sourceconsdata->npermvars;
    targetconsdata->permvars = NULL;
-   targetconsdata->npermbinvars = sourceconsdata->npermbinvars;
-   targetconsdata->permbinvars = NULL;
-   targetconsdata->varmap = 0;
    targetconsdata->computedsym = sourceconsdata->computedsym;
    targetconsdata->nperms = 0;
    targetconsdata->nmaxperms = 0;
@@ -1271,33 +1257,10 @@ SCIP_DECL_CONSTRANS(consTransSymmetry)
    /* copy variables and set up variable map */
    if ( sourceconsdata->npermvars > 0 )
    {
-      int cnt = 0;
-      int j;
-
       assert( sourceconsdata->permvars != NULL );
 
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(targetconsdata->permvars), sourceconsdata->permvars, sourceconsdata->npermvars) );
       SCIP_CALL( SCIPgetTransformedVars(scip, sourceconsdata->npermvars, sourceconsdata->permvars, targetconsdata->permvars) );
-
-      if ( sourceconsdata->npermbinvars > 0 )
-      {
-         SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(targetconsdata->permbinvars), sourceconsdata->permbinvars, sourceconsdata->npermbinvars) );
-      }
-
-      /* create hashmap for storing the indices of variables */
-      SCIP_CALL( SCIPhashmapCreate(&targetconsdata->varmap, SCIPblkmem(scip), 5 * sourceconsdata->npermvars) );
-
-      /* insert variables and determine binary variables */
-      for (j = 0; j < targetconsdata->npermvars; ++j)
-      {
-         SCIP_CALL( SCIPhashmapInsert(targetconsdata->varmap, targetconsdata->permvars[j], (void*)(size_t) j) );
-         if ( SCIPvarGetType(targetconsdata->permvars[j]) == SCIP_VARTYPE_BINARY )
-            targetconsdata->permbinvars[cnt++] = j;
-      }
-   }
-   else
-   {
-      assert( targetconsdata->npermbinvars == 0 );
    }
 
    /* create constraint */
@@ -1554,9 +1517,6 @@ SCIP_RETCODE SCIPcreateConsSymmetry(
    SCIP_CALL( SCIPallocBlockMemory(scip, &consdata) );
    consdata->npermvars = 0;
    consdata->permvars = NULL;
-   consdata->npermbinvars = 0;
-   consdata->permbinvars = NULL;
-   consdata->varmap = NULL;
    consdata->computedsym = FALSE;
    consdata->perms = NULL;
    consdata->nperms = 0;
@@ -1575,7 +1535,6 @@ SCIP_RETCODE SCIPgetSymmetryGenerators(
    SCIP_CONSHDLR*        conshdlr,           /**< symmetry constraint handler */
    int*                  npermvars,          /**< pointer to store number of variables for permutations */
    SCIP_VAR***           permvars,           /**< pointer to store variables on which permutations act */
-   SCIP_HASHMAP**        permvarmap,         /**< map of variables to indices in permvars array */
    int*                  nperms,             /**< pointer to store number of permutations */
    int***                perms               /**< pointer to store permutation generators as (nperms x npermvars) matrix */
    )
@@ -1622,9 +1581,6 @@ SCIP_RETCODE SCIPgetSymmetryGenerators(
    *permvars = consdata->permvars;
    *nperms = consdata->nperms;
    *perms = consdata->perms;
-
-   if ( permvarmap != NULL )
-      *permvarmap = consdata->varmap;
 
    return SCIP_OKAY;
 }
