@@ -1050,6 +1050,10 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matidx, matrixdata.nmaxmatcoef);
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matcoef, matrixdata.nmaxmatcoef);
 
+   /* copy variables */
+   *permvars = vars;
+   *npermvars = nvars;
+
    return SCIP_OKAY;
 }
 
