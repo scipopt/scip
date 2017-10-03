@@ -51,6 +51,7 @@
 /* default parameter values */
 #define DEFAULT_MAXGENERATORS      1500      /**< limit on the number of generators that should be produced within symmetry detection (0 = no limit) */
 #define DEFAULT_DETECTSYMPRESOL    TRUE      /**< Should the symmetry be detected within presolving (otherwise before presol)? */
+#define DEFAULT_CHECKSYMMETRIES   FALSE      /**< Should all symmetries be checked after computation? */
 
 /* other defines */
 #define MAXGENNUMERATOR        64000000      /**< determine maximal number of generators by dividing this number by the number of variables */
@@ -61,6 +62,7 @@ struct SCIP_PresolData
 {
    SCIP_Bool             detectsympresol;    /**< Should the symmetry be detected within presolving (otherwise before presol)? */
    int                   maxgenerators;      /**< limit on the number of generators that should be produced within symmetry detection (0 = no limit) */
+   SCIP_Bool             checksymmetries;    /**< Should all symmetries be checked after computation? */
    int                   symspecrequire;     /**< symmetry specification for which we need to compute symmetries */
    int                   symspecrequirefixed;/**< symmetry specification of variables which must be fixed by symmetries */
    int                   npermvars;          /**< number of variables for permutations */
@@ -439,7 +441,6 @@ SCIP_RETCODE collectCoefficients(
 }
 
 
-#ifdef SCIP_DEBUG
 /** checks whether given permutations form a symmetry of a MIP
  *
  *  We need the matrix and rhs in the original order in order to speed up the comparison process. The matrix is needed
@@ -588,7 +589,6 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
 
    return SCIP_OKAY;
 }
-#endif
 
 
 /** compute symmetry group of MIP */
@@ -598,6 +598,7 @@ SCIP_RETCODE computeSymmetryGroup(
    int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */
    int                   fixedtype,          /**< variable types that must be fixed by symmetries */
    SCIP_Bool             local,              /**< Use local variable bounds? */
+   SCIP_Bool             checksymmetries,    /**< Should all symmetries be checked after computation? */
    int*                  npermvars,          /**< pointer to store number of variables for permutations */
    SCIP_VAR***           permvars,           /**< pointer to store variables on which permutations act */
    int*                  nperms,             /**< pointer to store number of permutations */
@@ -1017,12 +1018,10 @@ SCIP_RETCODE computeSymmetryGroup(
       /* determine generators */
       SCIP_CALL( SYMcomputeSymmetryGenerators(scip, maxgenerators, &matrixdata, nperms, nmaxperms, perms) );
 
-#ifdef SCIP_DEBUG
-      if ( ! SCIPisStopped(scip) )
+      if ( ! SCIPisStopped(scip) && checksymmetries )
       {
          SCIP_CALL( checkSymmetriesAreSymmetries(scip, fixedtype, &matrixdata, *nperms, *perms) );
       }
-#endif
 
       /* output statistics */
       if ( ! local )
@@ -1126,7 +1125,7 @@ SCIP_RETCODE determineSymmetry(
    maxgenerators = presoldata->maxgenerators;
    maxgenerators = MIN(maxgenerators, MAXGENNUMERATOR / nvars);
 
-   SCIP_CALL( computeSymmetryGroup(scip, maxgenerators, presoldata->symspecrequirefixed, FALSE,
+   SCIP_CALL( computeSymmetryGroup(scip, maxgenerators, presoldata->symspecrequirefixed, FALSE, presoldata->checksymmetries,
          &presoldata->npermvars, &presoldata->permvars, &presoldata->nperms, &presoldata->nmaxperms, &presoldata->perms, &presoldata->successful) );
 
    if ( ! presoldata->successful )
@@ -1370,11 +1369,17 @@ SCIP_RETCODE SCIPincludePresolSymmetry(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "presolvers/" PRESOL_NAME"/detectsympresol",
          "Should the symmetry be detected after presolving (otherwise before presol)?",
-         &presoldata->detectsympresol, TRUE, DEFAULT_DETECTSYMPRESOL, 0, 0) );
+         &presoldata->detectsympresol, TRUE, DEFAULT_DETECTSYMPRESOL, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
-         "presolvers/" PRESOL_NAME"/maxgenerators", "limit on the number of generators that should be produced within symmetry detection (0 = no limit)",
-         &presoldata->maxgenerators, TRUE, DEFAULT_MAXGENERATORS, 0, INT_MAX, 0, 0) );
+         "presolvers/" PRESOL_NAME"/maxgenerators",
+         "limit on the number of generators that should be produced within symmetry detection (0 = no limit)",
+         &presoldata->maxgenerators, TRUE, DEFAULT_MAXGENERATORS, 0, INT_MAX, NULL, NULL) );
+
+      SCIP_CALL( SCIPaddBoolParam(scip,
+         "presolvers/" PRESOL_NAME"/checksymmetries",
+         "Should all symmetries be checked after computation?",
+         &presoldata->checksymmetries, TRUE, DEFAULT_CHECKSYMMETRIES, NULL, NULL) );
 
    /* possibly add description */
    if ( SYMcanComputeSymmetry() )
