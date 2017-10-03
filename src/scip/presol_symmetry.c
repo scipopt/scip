@@ -692,6 +692,7 @@ SCIP_RETCODE computeSymmetryGroup(
    nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
    conshdlr = SCIPfindConshdlr(scip, "bounddisjunction");
    nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   assert( nhandleconss <= nactiveconss );
    if ( nhandleconss < nactiveconss )
    {
       SCIPwarningMessage(scip, "Cannot compute symmetry, since unkown constraints are present.\n");
