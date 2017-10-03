@@ -756,7 +756,7 @@ SCIP_RETCODE computeViolation(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_Real xyvals[2];
-   SCIP_Real zval;
+   SCIP_Real zval = 0.0;
    SCIP_Real xlb;
    SCIP_Real xub;
    SCIP_Real ylb;
@@ -774,7 +774,6 @@ SCIP_RETCODE computeViolation(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   assert(consdata->z != NULL);
 
    if( SCIPexprtreeGetInterpreterData(consdata->f) == NULL )
    {
@@ -786,7 +785,8 @@ SCIP_RETCODE computeViolation(
 
    xyvals[0] = SCIPgetSolVal(scip, sol, x);
    xyvals[1] = SCIPgetSolVal(scip, sol, y);
-   zval = SCIPgetSolVal(scip, sol, consdata->z);
+   if( consdata->z != NULL )
+      zval = SCIPgetSolVal(scip, sol, consdata->z);
 
    /* @todo proper handling of variables at infinity
     * for now, just say infeasible and keep fingers crossed
@@ -819,9 +819,12 @@ SCIP_RETCODE computeViolation(
       assert(SCIPisFeasLE(scip, xyvals[1], yub));
       xyvals[1] = MAX(ylb, MIN(yub, xyvals[1]));
 
-      assert(SCIPisFeasGE(scip, zval, SCIPvarGetLbLocal(consdata->z)));
-      assert(SCIPisFeasLE(scip, zval, SCIPvarGetUbLocal(consdata->z)));
-      zval = MAX(SCIPvarGetLbLocal(consdata->z), MIN(SCIPvarGetUbLocal(consdata->z), zval));
+      if( consdata->z != NULL )
+      {
+         assert(SCIPisFeasGE(scip, zval, SCIPvarGetLbLocal(consdata->z)));
+         assert(SCIPisFeasLE(scip, zval, SCIPvarGetUbLocal(consdata->z)));
+         zval = MAX(SCIPvarGetLbLocal(consdata->z), MIN(SCIPvarGetUbLocal(consdata->z), zval));
+      }
    }
    else
    {
@@ -841,7 +844,8 @@ SCIP_RETCODE computeViolation(
        return SCIP_OKAY;
    }
 
-   consdata->activity += consdata->zcoef * zval;
+   if( consdata->z != NULL )
+      consdata->activity += consdata->zcoef * zval;
 
    /* compute violation of constraint sides */
    if( consdata->activity < consdata->lhs && !SCIPisInfinity(scip, -consdata->lhs) )
