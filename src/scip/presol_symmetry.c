@@ -1258,6 +1258,7 @@ SCIP_DECL_CONSTRANS(consTransSymmetry)
 }
 #endif
 
+
 /** execution method of presolver */
 static
 SCIP_DECL_PRESOLEXEC(presolExecSymmetry)
@@ -1290,6 +1291,10 @@ SCIP_DECL_PRESOLEXITPRE(presolExitpreSymmetry)
 
    /* skip if we are exiting */
    if ( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
+   /* skip if we already terminated */
+   if ( SCIPgetStatus(scip) != SCIP_STATUS_UNKNOWN )
       return SCIP_OKAY;
 
    SCIPdebugMsg(scip, "Exitpre method of symmetry presolver ...\n");
