@@ -112,7 +112,7 @@ Test(test_compute_symmetry, basic1, .description = "compute symmetry for a simpl
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
 
    /* turn on checking of symmetries */
-   SCIP_CALL( SCIPsetBoolParam(scip, "presolvers/symmetry/checksymmetries", TRUE) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "presolving/symmetry/checksymmetries", TRUE) );
 
    /* mark that we want to have symmetry */
    SYMsetSpecRequirement(presol, SYM_SPEC_BINARY);
@@ -206,7 +206,7 @@ Test(test_compute_symmetry, basic2, .description = "compute symmetry for a simpl
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
 
    /* turn on checking of symmetries */
-   SCIP_CALL( SCIPsetBoolParam(scip, "presolvers/symmetry/checksymmetries", TRUE) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "presolving/symmetry/checksymmetries", TRUE) );
 
    /* mark that we want to have symmetry */
    SYMsetSpecRequirement(presol, SYM_SPEC_BINARY | SYM_SPEC_REAL);
