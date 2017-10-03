@@ -6917,7 +6917,7 @@ SCIP_RETCODE runBoundHeuristic(
       /* temporarily disable objective limit and install an iteration limit */
       maxlploops = (set->conf_maxlploops >= 0 ? set->conf_maxlploops : INT_MAX);
       lpiterations = (set->conf_lpiterations >= 0 ? set->conf_lpiterations : INT_MAX);
-      SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_UOBJLIM, lpiinfinity) );
+      SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_OBJLIM, lpiinfinity) );
       SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPITLIM, lpiterations) );
 
       /* get LP rows */
@@ -7016,7 +7016,7 @@ SCIP_RETCODE runBoundHeuristic(
             SCIP_Real objval;
 
             SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
-            (*valid) = (objval >= lp->lpiuobjlim && !SCIPlpDivingObjChanged(lp));
+            (*valid) = (objval >= lp->lpiobjlim && !SCIPlpDivingObjChanged(lp));
          }
          else
             (*valid) = SCIPlpiIsPrimalInfeasible(lpi);
@@ -7180,7 +7180,7 @@ SCIP_RETCODE runBoundHeuristic(
       }
 
       /* reinstall old objective and iteration limits in LP solver */
-      SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_UOBJLIM, lp->lpiuobjlim) );
+      SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_OBJLIM, lp->lpiobjlim) );
       SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPITLIM, lp->lpiitlim) );
 
      FREEBUFFER:
@@ -7282,12 +7282,12 @@ SCIP_RETCODE conflictAnalyzeLP(
        * additional simplex iteration yields better results.
        */
       SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
-      if( objval < lp->lpiuobjlim )
+      if( objval < lp->lpiobjlim )
       {
          SCIP_RETCODE retcode;
 
          /* temporarily disable objective limit and install an iteration limit */
-         SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_UOBJLIM, SCIPlpiInfinity(lpi)) );
+         SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_OBJLIM, SCIPlpiInfinity(lpi)) );
          SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPITLIM, 1) );
 
          /* start LP timer */
@@ -7318,7 +7318,7 @@ SCIP_RETCODE conflictAnalyzeLP(
          }
 
          /* reinstall old objective and iteration limits in LP solver */
-         SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_UOBJLIM, lp->lpiuobjlim) );
+         SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_OBJLIM, lp->lpiobjlim) );
          SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPITLIM, lp->lpiitlim) );
 
          /* abort, if the LP produced an error */
@@ -7335,14 +7335,14 @@ SCIP_RETCODE conflictAnalyzeLP(
       assert(!SCIPlpDivingObjChanged(lp));
 
       SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
-      if( objval < lp->lpiuobjlim )
+      if( objval < lp->lpiobjlim )
       {
-         SCIPsetDebugMsg(set, " -> LP does not exceed the cutoff bound: obj=%g, cutoff=%g\n", objval, lp->lpiuobjlim);
+         SCIPsetDebugMsg(set, " -> LP does not exceed the cutoff bound: obj=%g, cutoff=%g\n", objval, lp->lpiobjlim);
          return SCIP_OKAY;
       }
       else
       {
-         SCIPsetDebugMsg(set, " -> LP exceeds the cutoff bound: obj=%g, cutoff=%g\n", objval, lp->lpiuobjlim);
+         SCIPsetDebugMsg(set, " -> LP exceeds the cutoff bound: obj=%g, cutoff=%g\n", objval, lp->lpiobjlim);
       }
    }
 
@@ -7444,12 +7444,12 @@ SCIP_RETCODE conflictAnalyzeLP(
 
 #ifdef SCIP_DEBUG
       {
-         SCIP_Real uobjlim;
+         SCIP_Real objlim;
          SCIPsetDebugMsg(set, "analyzing conflict on infeasible LP (infeasible: %u, objlimexc: %u, optimal:%u) in depth %d (diving: %u)\n",
                SCIPlpiIsPrimalInfeasible(lpi), SCIPlpiIsObjlimExc(lpi), SCIPlpiIsOptimal(lpi), SCIPtreeGetCurrentDepth(tree), diving);
 
-         SCIP_CALL( SCIPlpiGetRealpar(lpi, SCIP_LPPAR_UOBJLIM, &uobjlim) );
-         SCIPsetDebugMsg(set, " -> objective limit in LP solver: %g (in LP: %g)\n", uobjlim, lp->lpiuobjlim);
+         SCIP_CALL( SCIPlpiGetRealpar(lpi, SCIP_LPPAR_OBJLIM, &objlim) );
+         SCIPsetDebugMsg(set, " -> objective limit in LP solver: %g (in LP: %g)\n", objlim, lp->lpiobjlim);
       }
 #endif
 

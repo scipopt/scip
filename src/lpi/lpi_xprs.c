@@ -3450,40 +3450,10 @@ SCIP_RETCODE SCIPlpiGetRealpar(
       CHECK_ZERO( lpi->messagehdlr, XPRSgetdblcontrol(lpi->xprslp, XPRS_MARKOWITZTOL, &dctrlval) );
       *dval = dctrlval;
       break;
-   case SCIP_LPPAR_LOBJLIM:
-   {
-      SCIP_OBJSEN objsen;
-
-      /* get objective sense of the current LP */
-      SCIP_CALL( SCIPlpiGetObjsen(lpi, &objsen) );
-
-      /* in case we have a minimization problem we cannot return an objective lower bound since Xpress does not has such
-       * a control
-       */
-      if (objsen != SCIP_OBJSEN_MAXIMIZE)
-         return SCIP_PARAMETERUNKNOWN;
-
+   case SCIP_LPPAR_OBJLIM:
       CHECK_ZERO( lpi->messagehdlr, XPRSgetdblcontrol(lpi->xprslp, XPRS_MIPABSCUTOFF, &dctrlval) );
       *dval = dctrlval;
       break;
-   }
-   case SCIP_LPPAR_UOBJLIM:
-   {
-      SCIP_OBJSEN objsen;
-
-      /* get objective sense of the current LP */
-      SCIP_CALL( SCIPlpiGetObjsen(lpi, &objsen) );
-
-      /* in case we have a maximization problem we cannot return an objective upper bound since Xpress does not has such
-       * a control
-       */
-      if (objsen != SCIP_OBJSEN_MINIMIZE)
-         return SCIP_PARAMETERUNKNOWN;
-
-      CHECK_ZERO( lpi->messagehdlr, XPRSgetdblcontrol(lpi->xprslp, XPRS_MIPABSCUTOFF, &dctrlval) );
-      *dval = dctrlval;
-      break;
-   }
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
@@ -3530,38 +3500,9 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    case SCIP_LPPAR_MARKOWITZ:
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_MARKOWITZTOL, dval) );
       break;
-   case SCIP_LPPAR_LOBJLIM:
-   {
-      SCIP_OBJSEN objsen;
-
-      /* get objective sense of the current LP */
-      SCIP_CALL( SCIPlpiGetObjsen(lpi, &objsen) );
-
-      /* in case we have a minimizationn problem we cannot return an objective lower bound since Xpress does not has such
-       * a control
-       */
-      if (objsen != SCIP_OBJSEN_MAXIMIZE)
-         return SCIP_PARAMETERUNKNOWN;
-
-      CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_MIPABSCUTOFF, dval) );
-      break;
-   }
    case SCIP_LPPAR_UOBJLIM:
-   {
-      SCIP_OBJSEN objsen;
-
-      /* get objective sense of the current LP */
-      SCIP_CALL( SCIPlpiGetObjsen(lpi, &objsen) );
-
-      /* in case we have a maximization problem we cannot return an objective upper bound since Xpress does not has such
-       * a control
-       */
-      if (objsen != SCIP_OBJSEN_MINIMIZE)
-         return SCIP_PARAMETERUNKNOWN;
-
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_MIPABSCUTOFF, dval) );
       break;
-   }
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/

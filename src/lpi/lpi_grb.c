@@ -5132,19 +5132,8 @@ SCIP_RETCODE SCIPlpiGetRealpar(
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
       return SCIP_PARAMETERUNKNOWN;
-   case SCIP_LPPAR_LOBJLIM:
-      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, &objsen) );
-      if( objsen == GRB_MAXIMIZE )
-         SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_CUTOFF, dval) );
-      else
-         return SCIP_PARAMETERUNKNOWN;
-      break;
-   case SCIP_LPPAR_UOBJLIM:
-      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, &objsen) );
-      if( objsen == GRB_MINIMIZE )
-         SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_CUTOFF, dval) );
-      else
-         return SCIP_PARAMETERUNKNOWN;
+   case SCIP_LPPAR_OBJLIM:
+      SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_CUTOFF, dval) );
       break;
    case SCIP_LPPAR_LPTILIM:
       SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_TIMELIMIT, dval) );
@@ -5183,21 +5172,8 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
       return SCIP_PARAMETERUNKNOWN;
-   case SCIP_LPPAR_LOBJLIM:
-      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, &objsen) );
-      if( objsen == GRB_MAXIMIZE )
-         SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_CUTOFF, dval) );
-      else
-         return SCIP_PARAMETERUNKNOWN;
-      break;
-   case SCIP_LPPAR_UOBJLIM:
-      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, &objsen) );
-      if( objsen == GRB_MINIMIZE )
-      {
-         SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_CUTOFF, dval) );
-      }
-      else
-         return SCIP_PARAMETERUNKNOWN;
+   case SCIP_LPPAR_OBJLIM:
+      SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_CUTOFF, dval) );
       break;
    case SCIP_LPPAR_LPTILIM:
       SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_TIMELIMIT, dval) );
