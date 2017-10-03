@@ -1753,8 +1753,11 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
          /* if we do not really have a startpoint, then we should take care that we do not fix variables to very large values
           *  thus, we set to 0.0 here and project on bounds below
           */
-         if( ABS(fixval) > 1E+10 && !refpoint && SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+         if( REALABS(fixval) > 1E+10 && !refpoint && SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
             fixval = 0.0;
+
+         /* fixing variables to infinity causes problems, we should not have been passed such a solution as refpoint */
+         assert(!SCIPisInfinity(scip, REALABS(fixval)));
 
          /* round fractional variables to the nearest integer,
           *  use exact integral value, if the variable is only integral within numerical tolerances

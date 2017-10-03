@@ -33,6 +33,7 @@
 
 #include "scip/intervalarith.h"
 #include "scip/pub_misc.h"
+#include "scip/misc.h"
 #include "scip/pub_message.h"
 
 
@@ -8315,13 +8316,14 @@ void SCIPexprPrint(
       default:
       {
          int i;
-         const char* opstr = expr->op == SCIP_EXPR_SUM ? " + " : " * ";
+         char opstr[SCIP_MAXSTRLEN];
 
          SCIPmessageFPrintInfo(messagehdlr, file, "(");
          for( i = 0; i < expr->nchildren; ++i )
          {
             if( i > 0 )
             {
+               (void) SCIPsnprintf(opstr, SCIP_MAXSTRLEN, "%s", expr->op == SCIP_EXPR_SUM ? " + " : " * ");
                SCIPmessageFPrintInfo(messagehdlr, file, opstr);
             }
             SCIPexprPrint(expr->children[i], messagehdlr, file, varnames, paramnames, paramvals);
@@ -8898,7 +8900,7 @@ SCIP_RETCODE SCIPexprtreeSimplify(
       testx[i] = SCIPrandomGetReal(randnumgen, -100.0, 100.0);  /*lint !e644*/
    SCIP_CALL( SCIPexprtreeEval(tree, testx, &testval_before) );
 
-   SCIPrandomFree(&randnumgen);
+   SCIPrandomFree(&randnumgen, tree->blkmem);
 #endif
 
    /* we should be careful about declaring numbers close to zero as zero, so take eps^2 as tolerance */
@@ -15939,7 +15941,7 @@ SCIP_RETCODE SCIPexprgraphSimplify(
          }
       }
 
-   SCIPrandomFree(&randnumgen);
+   SCIPrandomFree(&randnumgen, exprgraph->blkmem);
 #endif
 
 #ifdef SCIP_OUTPUT

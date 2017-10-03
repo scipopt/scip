@@ -228,7 +228,7 @@ SCIP_RETCODE writeProblem(
             {
                SCIPdialogMessage(scip, NULL, "no reader for requested output format\n");
 
-               SCIPdialogMessage(scip, NULL, "following readers are avaliable for writing:\n");
+               SCIPdialogMessage(scip, NULL, "The following readers are available for writing:\n");
                displayReaders(scip, FALSE, TRUE);
 
                SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, 
@@ -560,6 +560,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChecksol)
 
       if( feasible )
          SCIPdialogMessage(scip, NULL, "solution is feasible in original problem\n");
+
+      SCIPdialogMessage(scip, NULL, "%-19s: %11s %11s\n", "Violation", "absolute", "relative");
+      SCIPdialogMessage(scip, NULL, "%-19s: %11.5e %11.5e\n", "  bounds", SCIPsolGetAbsBoundViolation(sol), SCIPsolGetRelBoundViolation(sol));
+      SCIPdialogMessage(scip, NULL, "%-19s: %11.5e %11s\n", "  integrality", SCIPsolGetAbsIntegralityViolation(sol), "-");
+      SCIPdialogMessage(scip, NULL, "%-19s: %11.5e %11.5e\n", "  LP rows", SCIPsolGetAbsLPRowViolation(sol), SCIPsolGetRelLPRowViolation(sol));
+      SCIPdialogMessage(scip, NULL, "%-19s: %11.5e %11.5e\n", "  constraints", SCIPsolGetAbsConsViolation(sol), SCIPsolGetRelConsViolation(sol));
    }
    SCIPdialogMessage(scip, NULL, "\n");
 
@@ -1181,35 +1187,40 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySolution)
    int v;
 
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "write/printzeros", &printzeros) );
 
-   SCIPdialogMessage(scip, NULL, "\n");
-   SCIP_CALL( SCIPprintBestSol(scip, NULL, printzeros) );
-   SCIPdialogMessage(scip, NULL, "\n");
-
-   /* check if there are infinite fixings and print a reference to 'display finitesolution', if needed */
-   fixedvars = SCIPgetFixedVars(scip);
-   nfixedvars = SCIPgetNFixedVars(scip);
-   assert(fixedvars != NULL || nfixedvars == 0);
-
-   /* check whether there are variables fixed to an infinite value */
-   for( v = 0; v < nfixedvars; ++v )
+   if( SCIPgetStage(scip) < SCIP_STAGE_PROBLEM )
+      SCIPdialogMessage(scip, NULL, "No problem exists. Read (and solve) problem first.\n");
+   else
    {
-      var = fixedvars[v]; /*lint !e613*/
+      SCIP_CALL( SCIPgetBoolParam(scip, "write/printzeros", &printzeros) );
 
-      /* skip (multi-)aggregated variables */
-      if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_FIXED )
-         continue;
+      SCIPdialogMessage(scip, NULL, "\n");
+      SCIP_CALL( SCIPprintBestSol(scip, NULL, printzeros) );
+      SCIPdialogMessage(scip, NULL, "\n");
 
-      if( (SCIPisInfinity(scip, SCIPvarGetLbGlobal(var)) || SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var))) )
+      /* check if there are infinite fixings and print a reference to 'display finitesolution', if needed */
+      fixedvars = SCIPgetFixedVars(scip);
+      nfixedvars = SCIPgetNFixedVars(scip);
+      assert(fixedvars != NULL || nfixedvars == 0);
+
+      /* check whether there are variables fixed to an infinite value */
+      for( v = 0; v < nfixedvars; ++v )
       {
-         SCIPdialogMessage(scip, NULL, "The primal solution contains variables fixed to infinite values.\n\
+         var = fixedvars[v]; /*lint !e613*/
+
+         /* skip (multi-)aggregated variables */
+         if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_FIXED )
+            continue;
+
+         if( (SCIPisInfinity(scip, SCIPvarGetLbGlobal(var)) || SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var))) )
+         {
+            SCIPdialogMessage(scip, NULL, "The primal solution contains variables fixed to infinite values.\n\
 If you want SCIP to display an optimal solution without infinite values, use 'display finitesolution'.\n");
-         SCIPdialogMessage(scip, NULL, "\n");
-         break;
+            SCIPdialogMessage(scip, NULL, "\n");
+            break;
+         }
       }
    }
-
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
    return SCIP_OKAY;
@@ -1814,7 +1825,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecRead)
                {
                   SCIPdialogMessage(scip, NULL, "no reader for input file <%s> available\n", tmpfilename);
 
-                  SCIPdialogMessage(scip, NULL, "following readers are avaliable for reading:\n");
+                  SCIPdialogMessage(scip, NULL, "The following readers are available for reading:\n");
                   displayReaders(scip, TRUE, FALSE);
 
                   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog,
@@ -3321,6 +3332,60 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteGenTransproblem)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for solution validation */
+static
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecValidateSolve)
+{  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   if( SCIPgetStage(scip) < SCIP_STAGE_PROBLEM )
+   {
+      SCIPdialogMessage(scip, NULL, "\nNo problem available for validation\n");
+   }
+   else
+   {
+      char *refstrs[2];
+      SCIP_Real refvals[2] = {SCIP_INVALID, SCIP_INVALID};
+      const char* primaldual[] = {"primal", "dual"};
+      char promptbuffer[100];
+      int i;
+
+      /* read in primal and dual reference values */
+      for( i = 0; i < 2; ++i )
+      {
+         char * endptr;
+         SCIP_Bool endoffile;
+         sprintf(promptbuffer, "Please enter %s validation reference bound (or use +/-infinity) :", primaldual[i]);
+         SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, promptbuffer, &(refstrs[i]), &endoffile) );
+
+         /* treat no input as SCIP_UNKNOWN */
+         if( endoffile || strncmp(refstrs[i], "\0", 1) == 0 ) /*lint !e840*/
+         {
+            refvals[i] = SCIP_UNKNOWN;
+         }
+         else if( strncmp(refstrs[i], "q", 1) == 0 )
+            break;
+         else if( ! SCIPparseReal(scip, refstrs[i], &refvals[i], &endptr) )
+         {
+            SCIPdialogMessage(scip, NULL, "Could not parse value '%s', please try again or type 'q' to quit\n", refstrs[i]);
+            --i;
+         }
+      }
+
+      /* check if the loop finished by checking the value of 'i'. Do not validate if user input is missing */
+      if( i == 2 ) /*lint !e850*/
+      {
+         assert(refvals[0] != SCIP_INVALID); /*lint !e777*/
+         assert(refvals[1] != SCIP_INVALID); /*lint !e777*/
+         SCIP_CALL( SCIPvalidateSolve(scip, refvals[0], refvals[1], SCIPfeastol(scip), FALSE, NULL, NULL, NULL) );
+      }
+   }
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
 /** creates a root dialog */
 SCIP_RETCODE SCIPcreateRootDialog(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4023,9 +4088,20 @@ SCIP_RETCODE SCIPincludeDialogDefault(
             NULL,
             SCIPdialogExecWriteCommandHistory, NULL, NULL,
             "history",
-            "writes command line history to a file (only works if SCIP was compiled with 'readline')",
+            "write command line history to a file (only works if SCIP was compiled with 'readline')",
             FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* validate solve */
+   if( !SCIPdialogHasEntry(root, "validatesolve") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog, NULL, SCIPdialogExecValidateSolve, NULL, NULL,
+               "validatesolve",
+               "validate the solution against external objective reference interval",
+               FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 

@@ -2464,7 +2464,7 @@ SCIP_DECL_HEURFREE(heurFreeTM)
    assert(heurdata != NULL);
 
    /* free random number generator */
-   SCIPrandomFree(&heurdata->randnumgen);
+   SCIPfreeRandom(scip, &heurdata->randnumgen);
 
    /* free heuristic data */
    SCIPfreeMemory(scip, &heurdata);
@@ -2971,8 +2971,8 @@ SCIP_RETCODE SCIPincludeHeurTM(
 #endif
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
-         SCIPinitializeRandomSeed(scip, heurdata->randseed)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
+         heurdata->randseed) );
 
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "timing when heuristic should be called (%u:BEFORENODE, %u:DURINGLPLOOP, %u:AFTERLPLOOP, %u:AFTERNODE)", SCIP_HEURTIMING_BEFORENODE, SCIP_HEURTIMING_DURINGLPLOOP, SCIP_HEURTIMING_AFTERLPLOOP, SCIP_HEURTIMING_AFTERNODE);
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/timing", paramdesc,

@@ -355,7 +355,9 @@ SCIP_RETCODE lpStoreSolVals(
    storedsolvals->lpsolstat = lp->lpsolstat;
    storedsolvals->lpobjval = lp->lpobjval;
    storedsolvals->primalfeasible = lp->primalfeasible;
+   storedsolvals->primalchecked = lp->primalchecked;
    storedsolvals->dualfeasible = lp->dualfeasible;
+   storedsolvals->dualchecked = lp->dualchecked;
    storedsolvals->solisbasic = lp->solisbasic;
    storedsolvals->lpissolved = lp->solved;
 
@@ -385,7 +387,9 @@ SCIP_RETCODE lpRestoreSolVals(
       lp->lpsolstat = storedsolvals->lpsolstat;
       lp->lpobjval = storedsolvals->lpobjval;
       lp->primalfeasible = storedsolvals->primalfeasible;
+      lp->primalchecked = storedsolvals->primalchecked;
       lp->dualfeasible = storedsolvals->dualfeasible;
+      lp->dualchecked = storedsolvals->dualchecked;
       lp->solisbasic = storedsolvals->solisbasic;
 
       /* solution values are stored only for LPs solved to optimality or unboundedness */
@@ -406,7 +410,9 @@ SCIP_RETCODE lpRestoreSolVals(
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
       lp->lpobjval = SCIP_INVALID;
       lp->primalfeasible = FALSE;
+      lp->primalchecked = FALSE;
       lp->dualfeasible = FALSE;
+      lp->dualchecked = FALSE;
       lp->solisbasic = FALSE;
       lp->validfarkaslp = -1;
    }
@@ -1901,7 +1907,11 @@ void rowAddNorms(
             row->nummaxval = 1;
          }
          else if( SCIPsetIsGE(set, absval, row->maxval) )
+         {
+            /* make sure the maxval is always exactly the same */
+            row->maxval = MAX(absval, row->maxval);
             row->nummaxval++;
+         }
       }
       if( row->numminval > 0 )
       {
@@ -1911,15 +1921,19 @@ void rowAddNorms(
             row->numminval = 1;
          }
          else if( SCIPsetIsLE(set, absval, row->minval) )
+         {
+            /* make sure the minval is always exactly the same */
+            row->minval = MIN(absval, row->minval);
             row->numminval++;
+         }
       }
    }
    else
    {
       assert(row->minidx <= col->index);
       assert(row->maxidx >= col->index);
-      assert(row->numminval <= 0 || SCIPsetIsGE(set, absval, row->minval));
-      assert(row->nummaxval <= 0 || SCIPsetIsLE(set, absval, row->maxval));
+      assert(row->numminval <= 0 || absval >= row->minval);
+      assert(row->nummaxval <= 0 || absval <= row->maxval);
    }
 }
 
@@ -1945,8 +1959,8 @@ void rowDelNorms(
 
    absval = REALABS(val);
    assert(!SCIPsetIsZero(set, absval));
-   assert(row->nummaxval == 0 || SCIPsetIsGE(set, row->maxval, absval));
-   assert(row->numminval == 0 || SCIPsetIsLE(set, row->minval, absval));
+   assert(row->nummaxval == 0 || row->maxval >= absval);
+   assert(row->numminval == 0 || row->minval <= absval);
 
    /* update min/maxidx validity */
    if( updateindex && (col->index == row->minidx || col->index == row->maxidx) )
@@ -2625,6 +2639,7 @@ SCIP_RETCODE lpSetUobjlim(
          /* mark the current solution invalid */
          lp->solved = FALSE;
          lp->primalfeasible = FALSE;
+         lp->primalchecked = FALSE;
          lp->lpobjval = SCIP_INVALID;
          lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
          lp->lpiuobjlim = uobjlim;
@@ -2658,6 +2673,7 @@ SCIP_RETCODE lpSetFeastol(
             /* mark the current solution invalid */
             lp->solved = FALSE;
             lp->primalfeasible = FALSE;
+            lp->primalchecked = FALSE;
             lp->lpobjval = SCIP_INVALID;
             lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
          }
@@ -2694,6 +2710,7 @@ SCIP_RETCODE lpSetDualfeastol(
             /* mark the current solution invalid */
             lp->solved = FALSE;
             lp->dualfeasible = FALSE;
+            lp->dualchecked = FALSE;
             lp->lpobjval = SCIP_INVALID;
             lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
          }
@@ -2731,6 +2748,7 @@ SCIP_RETCODE lpSetBarrierconvtol(
             /* mark the current solution invalid */
             lp->solved = FALSE;
             lp->dualfeasible = FALSE;
+            lp->dualchecked = FALSE;
             lp->lpobjval = SCIP_INVALID;
             lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
          }
@@ -4740,7 +4758,11 @@ void rowCalcIdxsAndVals(
             row->nummaxval = 1;
          }
          else if( SCIPsetIsGE(set, absval, row->maxval) )
+         {
+            /* make sure the maxval is always exactly the same */
+            row->maxval = MAX(absval, row->maxval);
             row->nummaxval++;
+         }
       }
       if( row->numminval > 0 )
       {
@@ -4750,7 +4772,11 @@ void rowCalcIdxsAndVals(
             row->numminval = 1;
          }
          else if( SCIPsetIsLE(set, absval, row->minval) )
+         {
+            /* make sure the minval is always exactly the same */
+            row->minval = MIN(absval, row->minval);
             row->numminval++;
+         }
       }
    }
 }
@@ -7604,7 +7630,7 @@ SCIP_RETCODE SCIProwCatchEvent(
    assert((eventtype & ~SCIP_EVENTTYPE_ROWCHANGED) == 0);
    assert((eventtype &  SCIP_EVENTTYPE_ROWCHANGED) != 0);
 
-   SCIPsetDebugMsg(set, "catch event of type 0x%"SCIP_EVENTTYPE_FORMAT" of row <%s> with handler %p and data %p\n",
+   SCIPsetDebugMsg(set, "catch event of type 0x%" SCIP_EVENTTYPE_FORMAT " of row <%s> with handler %p and data %p\n",
       eventtype, row->name, (void*)eventhdlr, (void*)eventdata);
 
    SCIP_CALL( SCIPeventfilterAdd(row->eventfilter, blkmem, set, eventtype, eventhdlr, eventdata, filterpos) );
@@ -7712,6 +7738,7 @@ SCIP_RETCODE lpFlushDelCols(
       /* mark the LP unsolved */
       lp->solved = FALSE;
       lp->primalfeasible = FALSE;
+      lp->primalchecked = FALSE;
       lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
@@ -7909,6 +7936,7 @@ SCIP_RETCODE lpFlushAddCols(
    /* mark the LP unsolved */
    lp->solved = FALSE;
    lp->dualfeasible = FALSE;
+   lp->dualchecked = FALSE;
    lp->lpobjval = SCIP_INVALID;
    lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
 
@@ -7971,6 +7999,7 @@ SCIP_RETCODE lpFlushDelRows(
       /* mark the LP unsolved */
       lp->solved = FALSE;
       lp->dualfeasible = FALSE;
+      lp->dualchecked = FALSE;
       lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
@@ -8120,6 +8149,7 @@ SCIP_RETCODE lpFlushAddRows(
    /* mark the LP unsolved */
    lp->solved = FALSE;
    lp->primalfeasible = FALSE;
+   lp->primalchecked = FALSE;
    lp->lpobjval = SCIP_INVALID;
    lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
 
@@ -8186,8 +8216,10 @@ SCIP_RETCODE lpFlushChgCols(
             SCIP_CALL( SCIPlpiGetObj(lp->lpi, col->lpipos, col->lpipos, &lpiobj) );
             SCIP_CALL( SCIPlpiGetBounds(lp->lpi, col->lpipos, col->lpipos, &lpilb, &lpiub) );
             assert(SCIPsetIsFeasEQ(set, lpiobj, col->flushedobj));
-            assert(SCIPsetIsFeasEQ(set, lpilb, col->flushedlb));
-            assert(SCIPsetIsFeasEQ(set, lpiub, col->flushedub));
+            assert((SCIPsetIsInfinity(set, lpilb) && SCIPsetIsInfinity(set, col->flushedlb))
+                  || (!SCIPsetIsInfinity(set, lpilb) && !SCIPsetIsInfinity(set, col->flushedlb) && SCIPsetIsFeasEQ(set, lpilb, col->flushedlb)));
+            assert((SCIPsetIsInfinity(set, lpiub) && SCIPsetIsInfinity(set, col->flushedub))
+                  || (!SCIPsetIsInfinity(set, lpiub) && !SCIPsetIsInfinity(set, col->flushedub) && SCIPsetIsFeasEQ(set, lpiub, col->flushedub)));
          }
 #endif
 
@@ -8241,6 +8273,7 @@ SCIP_RETCODE lpFlushChgCols(
       /* mark the LP unsolved */
       lp->solved = FALSE;
       lp->dualfeasible = FALSE;
+      lp->dualchecked = FALSE;
       lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
@@ -8254,6 +8287,7 @@ SCIP_RETCODE lpFlushChgCols(
       /* mark the LP unsolved */
       lp->solved = FALSE;
       lp->primalfeasible = FALSE;
+      lp->primalchecked = FALSE;
       lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
@@ -8354,6 +8388,7 @@ SCIP_RETCODE lpFlushChgRows(
       /* mark the LP unsolved */
       lp->solved = FALSE;
       lp->primalfeasible = FALSE;
+      lp->primalchecked = FALSE;
       lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
@@ -8894,7 +8929,9 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->flushed = TRUE;
    (*lp)->solved = TRUE;
    (*lp)->primalfeasible = TRUE;
+   (*lp)->primalchecked = TRUE;
    (*lp)->dualfeasible = TRUE;
+   (*lp)->dualchecked = TRUE;
    (*lp)->solisbasic = FALSE;
    (*lp)->rootlpisrelax = TRUE;
    (*lp)->isrelax = TRUE;
@@ -8907,7 +8944,9 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->divinglazyapplied = FALSE;
    (*lp)->divelpistate = NULL;
    (*lp)->divelpwasprimfeas = TRUE;
+   (*lp)->divelpwasprimchecked = TRUE;
    (*lp)->divelpwasdualfeas = TRUE;
+   (*lp)->divelpwasdualchecked = TRUE;
    (*lp)->divechgsides = NULL;
    (*lp)->divechgsidetypes = NULL;
    (*lp)->divechgrows = NULL;
@@ -8916,6 +8955,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->ndivingrows = 0;
    (*lp)->divinglpiitlim = INT_MAX;
    (*lp)->resolvelperror = FALSE;
+   (*lp)->divenolddomchgs = 0;
    (*lp)->adjustlpval = FALSE;
    (*lp)->lpiuobjlim = SCIPlpiInfinity((*lp)->lpi);
    (*lp)->lpifeastol = SCIPsetLpfeastol(set);
@@ -9145,7 +9185,9 @@ SCIP_RETCODE SCIPlpReset(
    lp->validfarkaslp = -1;
    lp->solved = TRUE;
    lp->primalfeasible = TRUE;
+   lp->primalchecked = TRUE;
    lp->dualfeasible = TRUE;
+   lp->dualchecked = TRUE;
    lp->solisbasic = FALSE;
    lp->lastlpalgo = SCIP_LPALGO_DUALSIMPLEX;
 
@@ -9767,7 +9809,9 @@ SCIP_RETCODE SCIPlpSetState(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LPISTATE*        lpistate,           /**< LP state information (like basis information) */
    SCIP_Bool             wasprimfeas,        /**< primal feasibility when LP state information was stored */
-   SCIP_Bool             wasdualfeas         /**< dual feasibility when LP state information was stored */
+   SCIP_Bool             wasprimchecked,     /**< true if the LP solution has passed the primal feasibility check */
+   SCIP_Bool             wasdualfeas,        /**< dual feasibility when LP state information was stored */
+   SCIP_Bool             wasdualchecked      /**< true if the LP solution has passed the dual feasibility check */
    )
 {
    assert(lp != NULL);
@@ -9792,7 +9836,9 @@ SCIP_RETCODE SCIPlpSetState(
     *        flushed and solved, also, e.g., when we hit the iteration limit
     */
    lp->primalfeasible = wasprimfeas;
+   lp->primalchecked = wasprimchecked;
    lp->dualfeasible = wasdualfeas;
+   lp->dualchecked = wasdualchecked;
 
    return SCIP_OKAY;
 }
@@ -11081,6 +11127,70 @@ SCIP_RETCODE lpAlgorithm(
    return SCIP_OKAY;
 }
 
+/** maximal number of verblevel-high messages about numerical trouble in LP that will be printed
+ * when this number is reached and display/verblevel is not full, then further messages are suppressed in this run
+ */
+#define MAXNUMTROUBLELPMSGS 10
+
+/** prints message about numerical trouble
+ *
+ * If message has verblevel at most high and display/verblevel is not full,
+ * then the message is not printed if already MAXNUMTROUBLELPMSGS messages
+ * were printed before in the current run.
+ */
+static
+void lpNumericalTroubleMessage(
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_VERBLEVEL        verblevel,          /**< verbosity level of message */
+   const char*           formatstr,          /**< message format string */
+   ...                                       /**< arguments to format string */
+   )
+{
+   va_list ap;
+
+   assert(verblevel > SCIP_VERBLEVEL_NONE);
+   assert(verblevel <= SCIP_VERBLEVEL_FULL);
+   assert(set->disp_verblevel <= SCIP_VERBLEVEL_FULL);
+
+   if( set->disp_verblevel < SCIP_VERBLEVEL_FULL )
+   {
+      if( verblevel <= SCIP_VERBLEVEL_HIGH )
+      {
+         /* if already max number of messages about numerical trouble in LP on verblevel at most high, then skip message */
+         if( stat->nnumtroublelpmsgs > MAXNUMTROUBLELPMSGS )
+            return;
+
+         /* increase count on messages with verblevel high */
+         ++stat->nnumtroublelpmsgs ;
+      }
+
+      /* if messages wouldn't be printed, then return already */
+      if( verblevel > set->disp_verblevel )
+         return;
+   }
+
+   /* print common begin of message */
+   SCIPmessagePrintInfo(messagehdlr,
+      "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- ",
+      stat->nnodes, stat->nlps);
+
+   /* print individual part of message */
+   va_start(ap, formatstr); /*lint !e838*/
+   SCIPmessageVFPrintInfo(messagehdlr, NULL, formatstr, ap);
+   va_end(ap);
+
+   /* warn that further messages will be suppressed */
+   if( set->disp_verblevel < SCIP_VERBLEVEL_FULL && verblevel <= SCIP_VERBLEVEL_HIGH && stat->nnumtroublelpmsgs > MAXNUMTROUBLELPMSGS )
+   {
+      SCIPmessagePrintInfo(messagehdlr, " -- further messages will be suppressed (use display/verblevel=5 to see all)");
+   }
+
+   /* print closing new-line */
+   SCIPmessagePrintInfo(messagehdlr, "\n");
+}
+
 #define FEASTOLTIGHTFAC 0.001
 /** solves the LP with the given LP algorithm, and tries to resolve numerical problems */
 static
@@ -11187,9 +11297,7 @@ SCIP_RETCODE lpSolveStable(
       SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
       if( success )
       {
-         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- ignoring instability of %s\n",
-            stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+         lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "ignoring instability of %s", lpalgoName(lpalgo));
          return SCIP_OKAY;
       }
    }
@@ -11206,9 +11314,7 @@ SCIP_RETCODE lpSolveStable(
       SCIP_CALL( lpSetFastmip(lp, 0, &success) );
       if( success )
       {
-         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- solve again with %s without FASTMIP\n",
-            stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+         lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again with %s without FASTMIP", lpalgoName(lpalgo));
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
 
          /* check for stability */
@@ -11219,9 +11325,7 @@ SCIP_RETCODE lpSolveStable(
             SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
             if( success )
             {
-               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- ignoring instability of %s\n",
-                  stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+               lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "ignoring instability of %s", lpalgoName(lpalgo));
                return SCIP_OKAY;
             }
          }
@@ -11237,9 +11341,7 @@ SCIP_RETCODE lpSolveStable(
       SCIP_CALL( lpSetScaling(lp, (set->lp_scaling > 0) ? 0 : 1, &success) );
       if( success )
       {
-         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- solve again with %s %s scaling\n",
-            stat->nnodes, stat->nlps, lpalgoName(lpalgo), (set->lp_scaling == 0) ? "with" : "without");
+         lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again with %s %s scaling", lpalgoName(lpalgo), (set->lp_scaling == 0) ? "with" : "without");
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
 
          /* check for stability */
@@ -11250,9 +11352,7 @@ SCIP_RETCODE lpSolveStable(
             SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
             if( success )
             {
-               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- ignoring instability of %s\n",
-                  stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+               lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "ignoring instability of %s", lpalgoName(lpalgo));
                return SCIP_OKAY;
             }
          }
@@ -11272,9 +11372,8 @@ SCIP_RETCODE lpSolveStable(
       SCIP_CALL( lpSetPresolving(lp, !set->lp_presolving, &success) );
       if( success )
       {
-         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- solve again with %s %s presolving\n",
-            stat->nnodes, stat->nlps, lpalgoName(lpalgo), !set->lp_presolving ? "with" : "without");
+         lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again with %s %s presolving",
+            lpalgoName(lpalgo), !set->lp_presolving ? "with" : "without");
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
 
          /* check for stability */
@@ -11285,9 +11384,7 @@ SCIP_RETCODE lpSolveStable(
             SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
             if( success )
             {
-               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- ignoring instability of %s\n",
-                  stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+               lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "ignoring instability of %s", lpalgoName(lpalgo));
                return SCIP_OKAY;
             }
          }
@@ -11324,9 +11421,7 @@ SCIP_RETCODE lpSolveStable(
 
       if( success || success2 || success3 )
       {
-         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- solve again with %s with tighter primal and dual feasibility tolerance\n",
-            stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+         lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again with %s with tighter primal and dual feasibility tolerance", lpalgoName(lpalgo));
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
 
          /* check for stability */
@@ -11337,9 +11432,7 @@ SCIP_RETCODE lpSolveStable(
             SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
             if( success )
             {
-               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- ignoring instability of %s\n",
-                  stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+               lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "ignoring instability of %s", lpalgoName(lpalgo));
                return SCIP_OKAY;
             }
          }
@@ -11370,9 +11463,7 @@ SCIP_RETCODE lpSolveStable(
       SCIP_CALL( lpSetFromscratch(lp, TRUE, &success) );
       if( success )
       {
-         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- solve again from scratch with %s\n",
-            stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+         lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again from scratch with %s", lpalgoName(lpalgo));
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
 
          /* check for stability */
@@ -11383,9 +11474,7 @@ SCIP_RETCODE lpSolveStable(
             SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
             if( success )
             {
-               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- ignoring instability of %s\n",
-                  stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+               lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "ignoring instability of %s", lpalgoName(lpalgo));
                return SCIP_OKAY;
             }
          }
@@ -11396,9 +11485,7 @@ SCIP_RETCODE lpSolveStable(
    if( simplex )
    {
       lpalgo = (lpalgo == SCIP_LPALGO_PRIMALSIMPLEX ? SCIP_LPALGO_DUALSIMPLEX : SCIP_LPALGO_PRIMALSIMPLEX);
-      SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- solve again from scratch with %s\n",
-         stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+      lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again from scratch with %s", lpalgoName(lpalgo));
       SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
 
       /* check for stability */
@@ -11409,9 +11496,7 @@ SCIP_RETCODE lpSolveStable(
          SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
          if( success )
          {
-            SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- ignoring instability of %s\n",
-               stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+            lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "ignoring instability of %s", lpalgoName(lpalgo));
             return SCIP_OKAY;
          }
       }
@@ -11420,9 +11505,8 @@ SCIP_RETCODE lpSolveStable(
       SCIP_CALL( lpSetScaling(lp, (set->lp_scaling > 0) ? 0 : 1, &success) );
       if( success )
       {
-         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- solve again from scratch with %s %s scaling\n",
-            stat->nnodes, stat->nlps, lpalgoName(lpalgo), (set->lp_scaling == 0) ? "with" : "without");
+         lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again from scratch with %s %s scaling",
+            lpalgoName(lpalgo), (set->lp_scaling == 0) ? "with" : "without");
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
 
          /* check for stability */
@@ -11433,9 +11517,7 @@ SCIP_RETCODE lpSolveStable(
             SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
             if( success )
             {
-               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- ignoring instability of %s\n",
-                  stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+               lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "ignoring instability of %s", lpalgoName(lpalgo));
                return SCIP_OKAY;
             }
          }
@@ -11449,9 +11531,8 @@ SCIP_RETCODE lpSolveStable(
       SCIP_CALL( lpSetPresolving(lp, !set->lp_presolving, &success) );
       if( success )
       {
-         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- solve again from scratch with %s %s presolving\n",
-            stat->nnodes, stat->nlps, lpalgoName(lpalgo), !set->lp_presolving ? "with" : "without");
+         lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again from scratch with %s %s presolving",
+            lpalgoName(lpalgo), !set->lp_presolving ? "with" : "without");
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
 
          /* check for stability */
@@ -11462,9 +11543,7 @@ SCIP_RETCODE lpSolveStable(
             SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
             if( success )
             {
-               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- ignoring instability of %s\n",
-                  stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+               lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "ignoring instability of %s", lpalgoName(lpalgo));
                return SCIP_OKAY;
             }
          }
@@ -11491,9 +11570,7 @@ SCIP_RETCODE lpSolveStable(
 
          if( success || success2 )
          {
-            SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- solve again from scratch with %s with tighter feasibility tolerance\n",
-               stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+            lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again from scratch with %s with tighter feasibility tolerance", lpalgoName(lpalgo));
             SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
 
             /* check for stability */
@@ -11504,9 +11581,7 @@ SCIP_RETCODE lpSolveStable(
                SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
                if( success )
                {
-                  SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                     "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- ignoring instability of %s\n",
-                     stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+                  lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "ignoring instability of %s", lpalgoName(lpalgo));
                   return SCIP_OKAY;
                }
             }
@@ -11525,8 +11600,7 @@ SCIP_RETCODE lpSolveStable(
    }
 
    /* nothing worked -- exit with an LPERROR */
-   SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "(node %" SCIP_LONGINT_FORMAT ") unresolved numerical troubles in LP %" SCIP_LONGINT_FORMAT "\n",
-      stat->nnodes, stat->nlps);
+   lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_HIGH, "unresolved");
    *lperror = TRUE;
 
    return SCIP_OKAY;
@@ -11927,7 +12001,7 @@ int lpGetResolveItlim(
    if( itlim == -1 )
       itlim = INT_MAX;
    /* return resolveiterfac * average iteration number per call after root, but at least resolveitermin and at most the hard iteration limit */
-   return (int) MIN(itlim, MAX(set->lp_resolveitermin,
+   return (int) MIN(itlim, MAX(set->lp_resolveitermin, \
          (set->lp_resolveiterfac * (stat->nlpiterations - stat->nrootlpiterations) / (SCIP_Real)(stat->nlps - stat->nrootlps))));
 }
 
@@ -12041,20 +12115,28 @@ SCIP_RETCODE SCIPlpSolveAndEval(
       case SCIP_LPSOLSTAT_OPTIMAL:
          /* get LP solution and possibly check the solution's feasibility again */
          if( set->lp_checkprimfeas )
+         {
             primalfeaspointer = &primalfeasible;
+            lp->primalchecked = TRUE;
+         }
          else
          {
             /* believe in the primal feasibility of the LP solution */
             primalfeasible = TRUE;
             primalfeaspointer = NULL;
+            lp->primalchecked = FALSE;
          }
          if( set->lp_checkdualfeas )
+         {
             dualfeaspointer = &dualfeasible;
+            lp->dualchecked = TRUE;
+         }
          else
          {
             /* believe in the dual feasibility of the LP solution */
             dualfeasible = TRUE;
             dualfeaspointer = NULL;
+            lp->dualchecked = FALSE;
          }
 
          SCIP_CALL( SCIPlpGetSol(lp, set, stat, primalfeaspointer, dualfeaspointer) );
@@ -12115,8 +12197,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             }
             else
             {
-               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %" SCIP_LONGINT_FORMAT ") unresolved numerical troubles in LP %" SCIP_LONGINT_FORMAT "\n", stat->nnodes, stat->nlps);
+               lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "unresolved");
                lp->solved = FALSE;
                lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
                *lperror = TRUE;
@@ -12154,6 +12235,8 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          {
             /* get unbounded LP solution and check the solution's feasibility again */
             SCIP_CALL( SCIPlpGetUnboundedSol(lp, set, stat, &primalfeasible, &rayfeasible) );
+
+            lp->primalchecked = TRUE;
          }
          else
          {
@@ -12162,6 +12245,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
             primalfeasible = TRUE;
             rayfeasible = TRUE;
+            lp->primalchecked = FALSE;
          }
 
          /* in debug mode, check that lazy bounds (if present) are not violated */
@@ -12208,8 +12292,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                /* unbounded solution is infeasible (this can happen due to numerical problems) and nothing helped:
                 * forget about the LP at this node and mark it to be unsolved
                 */
-               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %" SCIP_LONGINT_FORMAT ") unresolved numerical troubles in unbounded LP %" SCIP_LONGINT_FORMAT "\n", stat->nnodes, stat->nlps);
+               lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "unresolved, LP unbounded");
                lp->solved = FALSE;
                lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
                *lperror = TRUE;
@@ -12325,20 +12408,28 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                {
                   /* get LP solution and possibly check the solution's feasibility again */
                   if( set->lp_checkprimfeas )
+                  {
                      primalfeaspointer = &primalfeasible;
+                     lp->primalchecked = TRUE;
+                  }
                   else
                   {
                      /* believe in the primal feasibility of the LP solution */
                      primalfeasible = TRUE;
                      primalfeaspointer = NULL;
+                     lp->primalchecked = FALSE;
                   }
                   if( set->lp_checkdualfeas )
+                  {
                      dualfeaspointer = &dualfeasible;
+                     lp->dualchecked = TRUE;
+                  }
                   else
                   {
                      /* believe in the dual feasibility of the LP solution */
                      dualfeasible = TRUE;
                      dualfeaspointer = NULL;
+                     lp->dualchecked = FALSE;
                   }
 
                   SCIP_CALL( SCIPlpGetSol(lp, set, stat, primalfeaspointer, dualfeaspointer) );
@@ -12366,8 +12457,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                      || (solstat == SCIP_LPSOLSTAT_OBJLIMIT &&
                         !SCIPsetIsGE(set, objval, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob))) )
                   {
-                     SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-                        "(node %" SCIP_LONGINT_FORMAT ") unresolved numerical troubles in LP %" SCIP_LONGINT_FORMAT "\n", stat->nnodes, stat->nlps);
+                     lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_HIGH, "unresolved");
                      lp->solved = FALSE;
                      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
                      *lperror = TRUE;
@@ -12390,6 +12480,8 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                   {
                      /* get unbounded LP solution and check the solution's feasibility again */
                      SCIP_CALL( SCIPlpGetUnboundedSol(lp, set, stat, &primalfeasible, &rayfeasible) );
+
+                     lp->primalchecked = TRUE;
                   }
                   else
                   {
@@ -12398,6 +12490,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
                      primalfeasible = TRUE;
                      rayfeasible = TRUE;
+                     lp->primalchecked = FALSE;
                   }
 
                   SCIPsetDebugMsg(set, " -> LP has unbounded primal ray\n");
@@ -12413,8 +12506,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                       * @todo: like in the default LP solving evaluation, solve without fastmip,
                       * with tighter feasibility tolerance and from scratch
                       */
-                     SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                        "(node %" SCIP_LONGINT_FORMAT ") unresolved numerical troubles in unbounded LP %" SCIP_LONGINT_FORMAT "\n", stat->nnodes, stat->nlps);
+                     lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "unresolved, unbounded LP");
                      lp->solved = FALSE;
                      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
                      *lperror = TRUE;
@@ -14163,7 +14255,7 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
       else
       {
          SCIP_Real primsolval = primsol[c] + rayscale * ray[c];
-         lpicols[c]->primsol = MAX(-SCIPsetInfinity(set), MIN(SCIPsetInfinity(set), primsolval));
+         lpicols[c]->primsol = MAX(-SCIPsetInfinity(set), MIN(SCIPsetInfinity(set), primsolval)); /*lint !e666*/
       }
       lpicols[c]->redcost = SCIP_INVALID;
       lpicols[c]->validredcostlp = -1;
@@ -14475,6 +14567,7 @@ SCIP_RETCODE lpDelColset(
       /* mark the current solution invalid */
       lp->solved = FALSE;
       lp->primalfeasible = FALSE;
+      lp->primalchecked = FALSE;
       lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
@@ -14573,6 +14666,7 @@ SCIP_RETCODE lpDelRowset(
       /* mark the current solution invalid */
       lp->solved = FALSE;
       lp->dualfeasible = FALSE;
+      lp->dualchecked = FALSE;
       lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
@@ -15130,6 +15224,8 @@ SCIP_RETCODE SCIPlpStartDive(
    SCIP_CALL( SCIPlpiGetState(lp->lpi, blkmem, &lp->divelpistate) );
    lp->divelpwasprimfeas = lp->primalfeasible;
    lp->divelpwasdualfeas = lp->dualfeasible;
+   lp->divelpwasprimchecked = lp->primalchecked;
+   lp->divelpwasdualchecked = lp->dualchecked;
 
    /* save current LP values dependent on the solution */
    SCIP_CALL( lpStoreSolVals(lp, stat, blkmem) );
@@ -15178,6 +15274,9 @@ SCIP_RETCODE SCIPlpStartDive(
 
    /* store LPI iteration limit */
    SCIP_CALL( SCIPlpiGetIntpar(lp->lpi, SCIP_LPPAR_LPITLIM, &lp->divinglpiitlim) );
+
+   /* remember the number of domain changes */
+   lp->divenolddomchgs = stat->domchgcount;
 
    /* store current number of rows */
    lp->ndivingrows = lp->nrows;
@@ -15257,10 +15356,12 @@ SCIP_RETCODE SCIPlpEndDive(
     * happens
     */
    SCIP_CALL( SCIPlpSetState(lp, blkmem, set, eventqueue, lp->divelpistate,
-         lp->divelpwasprimfeas, lp->divelpwasdualfeas) );
+         lp->divelpwasprimfeas, lp->divelpwasprimchecked, lp->divelpwasdualfeas, lp->divelpwasdualchecked) );
    SCIP_CALL( SCIPlpFreeState(lp, blkmem, &lp->divelpistate) );
    lp->divelpwasprimfeas = TRUE;
    lp->divelpwasdualfeas = TRUE;
+   lp->divelpwasprimchecked = TRUE;
+   lp->divelpwasdualchecked = TRUE;
    assert(lp->divelpistate == NULL);
 
    /* switch to standard (non-diving) mode */
@@ -15275,15 +15376,14 @@ SCIP_RETCODE SCIPlpEndDive(
     */
    assert(lp->storedsolvals != NULL);
    if( lp->storedsolvals->lpissolved
-      && (set->lp_resolverestore || lp->storedsolvals->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL) )
+      && (set->lp_resolverestore || lp->storedsolvals->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL || lp->divenolddomchgs < stat->domchgcount) )
    {
       SCIP_Bool lperror;
 
       SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr,  blkmem, stat, eventqueue, eventfilter, prob, -1LL, FALSE, FALSE, FALSE, &lperror) );
       if( lperror )
       {
-         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "(node %" SCIP_LONGINT_FORMAT ") unresolved numerical troubles while resolving LP %" SCIP_LONGINT_FORMAT " after diving\n", stat->nnodes, stat->nlps);
+         lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "unresolved when resolving LP after diving");
          lp->resolvelperror = TRUE;
       }
       else if( SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL
@@ -16819,6 +16919,26 @@ SCIP_Bool SCIPlpIsSolved(
    return lp->flushed && lp->solved;
 }
 
+/** return whether the current LP solution passed the primal feasibility check */
+SCIP_Bool SCIPlpIsPrimalReliable(
+   SCIP_LP*              lp                  /**< current LP data */
+   )
+{
+   assert(lp != NULL);
+
+   return (lp->primalchecked && lp->primalfeasible);
+}
+
+/** return whether the current LP solution passed the dual feasibility check */
+SCIP_Bool SCIPlpIsDualReliable(
+   SCIP_LP*              lp                  /**< current LP data */
+   )
+{
+   assert(lp != NULL);
+
+   return (lp->dualchecked && lp->dualfeasible);
+}
+
 /** returns whether the current LP solution is a basic solution */
 SCIP_Bool SCIPlpIsSolBasic(
    SCIP_LP*              lp                  /**< current LP data */
@@ -16882,42 +17002,10 @@ SCIP_Bool SCIPlpDivingRowsChanged(
    return (lp->ndivechgsides > 0);
 }
 
-/** compute relative interior point
- *
- *  We use the approach of@par
- *  R. Freund, R. Roundy, M. J. Todd@par
- *  "Identifying the Set of Always-Active Constraints in a System of Linear Inequalities by a Single Linear Program"@par
- *  Tech. Rep, No. 1674-85, Sloan School, M.I.T., 1985
- *
- *  to compute a relative interior point for the current LP.
- *
- *  Assume the original LP looks as follows:
- *  \f[
- *     \begin{array}{rrl}
- *        \min & c^T x &\\
- *             & A x & \geq a\\
- *             & B x & \leq b\\
- *             & D x & = d.
- *     \end{array}
- *  \f]
- *  Note that bounds should be included in the system.
- *
- *  To find an interior point the following LP does the job:
- *  \f[
- *     \begin{array}{rrl}
- *        \max & 1^T y &\\
- *             & A x - y - \alpha a & \geq 0\\
- *             & B x + y - \alpha b & \leq 0\\
- *             & D x - \alpha d & = 0\\
- *             & 0 \leq y & \leq 1\\
- *             & \alpha & \geq 1.
- *     \end{array}
- *  \f]
- *  If the original LP is feasible, this LP is feasible as well. Any optimal solution yields the relative interior point
- *  \f$x^*_j/\alpha^*\f$. Note that this will just produce some relative interior point. It does not produce a
- *  particular relative interior point, e.g., one that maximizes the distance to the boundary in some norm.
- */
-SCIP_RETCODE SCIPlpComputeRelIntPoint(
+/** compute relative interior point with auxiliary lpi, see SCIPlpComputeRelIntPoint() */
+static
+SCIP_RETCODE computeRelIntPoint(
+   SCIP_LPI*             lpi,                /**< auxiliary LP interface */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_LP*              lp,                 /**< LP data */
@@ -16930,63 +17018,28 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
    SCIP_Bool*            success             /**< buffer to indicate whether interior point was successfully computed */
    )
 {
-   SCIP_LPI* lpi;
+   SCIP_RETCODE retcode;
+   SCIP_Real* primal;
    SCIP_Real* obj;
    SCIP_Real* lb;
    SCIP_Real* ub;
-   SCIP_Real* primal;
    SCIP_Real* colvals;
    SCIP_Real zero;
    SCIP_Real minusinf;
    SCIP_Real plusinf;
    SCIP_Real objval;
    SCIP_Real alpha;
-   SCIP_RETCODE retcode;
    int* colinds;
-   int nnewcols;
 #ifndef NDEBUG
    int nslacks;
 #endif
+   int nnewcols;
+   int j;
+   int i;
    int beg;
    int cnt;
-   int i;
-   int j;
 
-   assert(set != NULL);
-   assert(lp  != NULL);
-   assert(point != NULL);
-   assert(success != NULL);
-
-   *success = FALSE;
-
-   /* check time and iteration limits */
-   if ( timelimit <= 0.0 || iterlimit <= 0 )
-      return SCIP_OKAY;
-
-   /* exit if there are no columns */
-   assert(lp->nrows >= 0);
-   assert(lp->ncols >= 0);
-   if( lp->ncols == 0 )
-      return SCIP_OKAY;
-
-   /* disable objective cutoff if we have none */
-   if( inclobjcutoff && (SCIPsetIsInfinity(set, lp->cutoffbound) || lp->looseobjvalinf > 0 || lp->looseobjval == SCIP_INVALID) ) /*lint !e777 */
-      inclobjcutoff = FALSE;
-
-   SCIPsetDebugMsg(set, "Computing relative interior point to current LP.\n");
-
-   /* if there are no rows, we return the zero point */
-   if( lp->nrows == 0 && !inclobjcutoff )
-   {
-      /* create zero point */
-      BMSclearMemoryArray(point, lp->ncols);
-      *success = TRUE;
-
-      return SCIP_OKAY;
-   }
-
-   /* create auxiliary LP */
-   SCIP_CALL( SCIPlpiCreate(&lpi, messagehdlr, "relativeInterior", SCIP_OBJSEN_MAXIMIZE) );
+   assert(lpi != NULL);
 
    retcode = SCIPlpiSetRealpar(lpi, SCIP_LPPAR_FEASTOL, SCIPsetLpfeastol(set));
    if( retcode != SCIP_OKAY && retcode != SCIP_PARAMETERUNKNOWN )
@@ -17360,14 +17413,7 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
 
    /* solve and store point */
    /* SCIP_CALL( SCIPlpiSolvePrimal(lpi) ); */
-   retcode = SCIPlpiSolveDual(lpi);  /* dual is usually faster */
-
-   /* detect possible error in LP solver */
-   if ( retcode != SCIP_OKAY )
-   {
-      SCIP_CALL( SCIPlpiFree(&lpi) );
-      return SCIP_OKAY;
-   }
+   SCIP_CALL( SCIPlpiSolveDual(lpi) );   /* dual is usually faster */
 
 #ifndef NDEBUG
    if ( SCIPlpiIsIterlimExc(lpi) )
@@ -17496,7 +17542,102 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
 
       *success = TRUE;
    }
-   SCIP_CALL( SCIPlpiFree(&lpi) );
 
    return SCIP_OKAY;
+}
+
+/** compute relative interior point
+ *
+ *  We use the approach of@par
+ *  R. Freund, R. Roundy, M. J. Todd@par
+ *  "Identifying the Set of Always-Active Constraints in a System of Linear Inequalities by a Single Linear Program"@par
+ *  Tech. Rep, No. 1674-85, Sloan School, M.I.T., 1985
+ *
+ *  to compute a relative interior point for the current LP.
+ *
+ *  Assume the original LP looks as follows:
+ *  \f[
+ *     \begin{array}{rrl}
+ *        \min & c^T x &\\
+ *             & A x & \geq a\\
+ *             & B x & \leq b\\
+ *             & D x & = d.
+ *     \end{array}
+ *  \f]
+ *  Note that bounds should be included in the system.
+ *
+ *  To find an interior point the following LP does the job:
+ *  \f[
+ *     \begin{array}{rrl}
+ *        \max & 1^T y &\\
+ *             & A x - y - \alpha a & \geq 0\\
+ *             & B x + y - \alpha b & \leq 0\\
+ *             & D x - \alpha d & = 0\\
+ *             & 0 \leq y & \leq 1\\
+ *             & \alpha & \geq 1.
+ *     \end{array}
+ *  \f]
+ *  If the original LP is feasible, this LP is feasible as well. Any optimal solution yields the relative interior point
+ *  \f$x^*_j/\alpha^*\f$. Note that this will just produce some relative interior point. It does not produce a
+ *  particular relative interior point, e.g., one that maximizes the distance to the boundary in some norm.
+ */
+SCIP_RETCODE SCIPlpComputeRelIntPoint(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_Bool             relaxrows,          /**< should the rows be relaxed */
+   SCIP_Bool             inclobjcutoff,      /**< should a row for the objective cutoff be included */
+   SCIP_Real             timelimit,          /**< time limit for LP solver */
+   int                   iterlimit,          /**< iteration limit for LP solver */
+   SCIP_Real*            point,              /**< array to store relative interior point on exit */
+   SCIP_Bool*            success             /**< buffer to indicate whether interior point was successfully computed */
+   )
+{
+   SCIP_LPI* lpi;
+
+   SCIP_RETCODE retcode = SCIP_OKAY;
+
+   assert(set != NULL);
+   assert(lp  != NULL);
+   assert(point != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   /* check time and iteration limits */
+   if ( timelimit <= 0.0 || iterlimit <= 0 )
+      return SCIP_OKAY;
+
+   /* exit if there are no columns */
+   assert(lp->nrows >= 0);
+   assert(lp->ncols >= 0);
+   if( lp->ncols == 0 )
+      return SCIP_OKAY;
+
+   /* disable objective cutoff if we have none */
+   if( inclobjcutoff && (SCIPsetIsInfinity(set, lp->cutoffbound) || lp->looseobjvalinf > 0 || lp->looseobjval == SCIP_INVALID) ) /*lint !e777 */
+      inclobjcutoff = FALSE;
+
+   SCIPsetDebugMsg(set, "Computing relative interior point to current LP.\n");
+
+   /* if there are no rows, we return the zero point */
+   if( lp->nrows == 0 && !inclobjcutoff )
+   {
+      /* create zero point */
+      BMSclearMemoryArray(point, lp->ncols);
+      *success = TRUE;
+
+      return SCIP_OKAY;
+   }
+
+   /* create auxiliary LP */
+   SCIP_CALL( SCIPlpiCreate(&lpi, messagehdlr, "relativeInterior", SCIP_OBJSEN_MAXIMIZE) );
+
+   /* catch return code and ensure that lpi is freed, anyway */
+   retcode = computeRelIntPoint(lpi, set, messagehdlr, lp, prob, relaxrows, inclobjcutoff, timelimit, iterlimit, point, success);
+
+   SCIP_CALL( SCIPlpiFree(&lpi) );
+
+   return retcode;
 }

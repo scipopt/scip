@@ -484,8 +484,8 @@ SCIP_DECL_HEURINIT(heurInitClique)
    assert(heurdata != NULL);
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
-         SCIPinitializeRandomSeed(scip, heurdata->initseed)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
+         (unsigned int)heurdata->initseed) );
 
    heurdata->usednodes = 0;
 
@@ -508,7 +508,7 @@ SCIP_DECL_HEUREXIT(heurExitClique)
    assert(heurdata != NULL);
 
    /* free random number generator */
-   SCIPrandomFree(&heurdata->randnumgen);
+   SCIPfreeRandom(scip, &heurdata->randnumgen);
 
    return SCIP_OKAY;
 }

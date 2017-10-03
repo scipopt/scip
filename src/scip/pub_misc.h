@@ -481,17 +481,15 @@ void** SCIPpqueueElems(
 
 #define SCIPcombineFourInt(a, b, c, d)      (((uint64_t) (a) << 48) + ((uint64_t) (b) << 32) + ((uint64_t) (c) << 16) + ((uint64_t) (d)) )
 
-
 /** computes a hashcode for double precision floating point values containing
  *  15 significant bits, the sign and the exponent
  */
-INLINE
+INLINE static
 uint32_t SCIPrealHashCode(double x)
 {
    int exp;
-   return (((uint32_t)(uint16_t)(int16_t)ldexp(frexp(x, &exp), 15))<<16) | (uint32_t)exp;
+   return (((uint32_t)(uint16_t)(int16_t)ldexp(frexp(x, &exp), 15))<<16) | (uint32_t)(uint16_t)exp;
 }
-
 
 /** creates a hash table */
 EXTERN
@@ -569,6 +567,19 @@ void SCIPhashtableRemoveAll(
 EXTERN
 SCIP_Longint SCIPhashtableGetNElements(
    SCIP_HASHTABLE*       hashtable           /**< hash table */
+   );
+
+/** gives the number of entries in the internal arrays of a hash table */
+EXTERN
+int SCIPhashtableGetNEntries(
+   SCIP_HASHTABLE*       hashtable           /**< hash table */
+   );
+
+/** gives the element at the given index or NULL if entry at that index has no element */
+EXTERN
+void* SCIPhashtableGetEntry(
+   SCIP_HASHTABLE*       hashtable,          /**< hash table */
+   int                   entryidx            /**< index of hash table entry */
    );
 
 /** returns the load of the given hash table in percentage */
@@ -878,6 +889,107 @@ SCIP_RETCODE SCIPhashmapRemoveAll(
 /**@} */
 
 
+/*
+ * Hash Set
+ */
+
+/**@defgroup HashSet Hash Set
+ * @ingroup DataStructures
+ * @brief very lightweight hash set of pointers
+ *
+ * @{
+ */
+
+/** creates a hash set of pointers */
+EXTERN
+SCIP_RETCODE SCIPhashsetCreate(
+   SCIP_HASHSET**        hashset,            /**< pointer to store the created hash set */
+   BMS_BLKMEM*           blkmem,             /**< block memory used to store hash set entries */
+   int                   size                /**< initial size of the hash set; it is guaranteed that the set is not
+                                              *   resized if at most that many elements are inserted */
+   );
+
+/** frees the hash set */
+EXTERN
+void SCIPhashsetFree(
+   SCIP_HASHSET**        hashset,            /**< pointer to the hash set */
+   BMS_BLKMEM*           blkmem              /**< block memory used to store hash set entries */
+   );
+
+/** inserts new element into the hash set */
+EXTERN
+SCIP_RETCODE SCIPhashsetInsert(
+   SCIP_HASHSET*         hashset,            /**< hash set */
+   BMS_BLKMEM*           blkmem,             /**< block memory used to store hash set entries */
+   void*                 element             /**< element to insert */
+   );
+
+/** checks whether an element exists in the hash set */
+EXTERN
+SCIP_Bool SCIPhashsetExists(
+   SCIP_HASHSET*         hashset,            /**< hash set */
+   void*                 element             /**< element to search for */
+   );
+
+/** removes an element from the hash set, if it exists */
+EXTERN
+SCIP_RETCODE SCIPhashsetRemove(
+   SCIP_HASHSET*         hashset,            /**< hash set */
+   void*                 element             /**< origin to remove from the list */
+   );
+
+/** prints statistics about hash set usage */
+EXTERN
+void SCIPhashsetPrintStatistics(
+   SCIP_HASHSET*         hashset,            /**< hash set */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
+   );
+
+/** indicates whether a hash set has no entries */
+EXTERN
+SCIP_Bool SCIPhashsetIsEmpty(
+   SCIP_HASHSET*         hashset             /**< hash set */
+   );
+
+/** gives the number of elements in a hash set */
+EXTERN
+int SCIPhashsetGetNElements(
+   SCIP_HASHSET*         hashset             /**< hash set */
+   );
+
+/** gives the number of slots of a hash set */
+EXTERN
+int SCIPhashsetGetNSlots(
+   SCIP_HASHSET*         hashset             /**< hash set */
+   );
+
+/** gives the array of hash set slots; contains all elements in indetermined order and may contain NULL values */
+EXTERN
+void** SCIPhashsetGetSlots(
+   SCIP_HASHSET*         hashset             /**< hash set */
+   );
+
+/** removes all entries in a hash set. */
+EXTERN
+void SCIPhashsetRemoveAll(
+   SCIP_HASHSET*         hashset             /**< hash set */
+   );
+
+#ifdef NDEBUG
+
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+
+#define SCIPhashsetIsEmpty(hashset)        ((hashset)->nelements == 0)
+#define SCIPhashsetGetNElements(hashset)   ((hashset)->nelements)
+#define SCIPhashsetGetNSlots(hashset)      (1u << (64 - (hashset)->shift))
+#define SCIPhashsetGetSlots(hashset)       ((hashset)->slots)
+
+#endif
+
+/**@} */
+
 
 /*
  * Activity
@@ -1084,31 +1196,11 @@ int SCIPprofileGetLatestFeasibleStart(
  * @{
  */
 
-/** creates directed graph structure */
-EXTERN
-SCIP_RETCODE SCIPdigraphCreate(
-   SCIP_DIGRAPH**        digraph,            /**< pointer to store the created directed graph */
-   BMS_BLKMEM*           blkmem,             /**< block memory to store the data */
-   int                   nnodes              /**< number of nodes */
-   );
-
 /** resize directed graph structure */
 EXTERN
 SCIP_RETCODE SCIPdigraphResize(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   nnodes              /**< new number of nodes */
-   );
-
-/** copies directed graph structure
- *
- *  @note The data in nodedata is copied verbatim. This possibly has to be adapted by the user.
- */
-EXTERN
-SCIP_RETCODE SCIPdigraphCopy(
-   SCIP_DIGRAPH**        targetdigraph,      /**< pointer to store the copied directed graph */
-   SCIP_DIGRAPH*         sourcedigraph,      /**< source directed graph */
-   BMS_BLKMEM*           targetblkmem        /**< block memory to store the target block memory, or NULL to use the same
-                                              *  the same block memory as used for the \p sourcedigraph */
    );
 
 /** sets the sizes of the successor lists for the nodes in a directed graph and allocates memory for the lists */
@@ -1502,6 +1594,51 @@ void SCIPbtSetRoot(
 
 /**@} */
 
+/**@addtogroup DisjoinedSet
+ *
+ * @{
+ */
+
+/*
+ * Disjoined Set data structure
+ */
+
+/** clears the disjoint set (union find) structure \p uf */
+EXTERN
+void SCIPdisjointsetClear(
+   SCIP_DISJOINTSET*     djset               /**< disjoint set (union find) data structure */
+   );
+
+/** finds and returns the component identifier of this \p element */
+EXTERN
+int SCIPdisjointsetFind(
+   SCIP_DISJOINTSET*     djset,              /**< disjoint set (union find) data structure */
+   int                   element             /**< element to be found */
+   );
+
+/** merges the components containing the elements \p p and \p q */
+EXTERN
+void SCIPdisjointsetUnion(
+   SCIP_DISJOINTSET*     djset,              /**< disjoint set (union find) data structure */
+   int                   p,                  /**< first element */
+   int                   q,                  /**< second element */
+   SCIP_Bool             forcerepofp         /**< force representative of p to be new representative */
+   );
+
+/** returns the number of independent components in this disjoint set (union find) data structure */
+EXTERN
+int SCIPdisjointsetGetComponentCount(
+   SCIP_DISJOINTSET*     djset               /**< disjoint set (union find) data structure */
+   );
+
+/** returns the size (number of nodes) of this disjoint set (union find) data structure */
+EXTERN
+int SCIPdisjointsetGetSize(
+   SCIP_DISJOINTSET*     djset               /**< disjoint set (union find) data structure */
+   );
+
+/* @} */
+
 /*
  * Numerical methods
  */
@@ -1695,21 +1832,6 @@ SCIP_Real SCIPrandomGetReal(
    SCIP_RANDNUMGEN*      randgen,            /**< random number generator data */
    SCIP_Real             minrandval,         /**< minimal value to return */
    SCIP_Real             maxrandval          /**< maximal value to return */
-   );
-
-/** creates and initializes a random number generator */
-EXTERN
-SCIP_RETCODE SCIPrandomCreate(
-   SCIP_RANDNUMGEN**     randnumgen,         /**< random number generator */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   unsigned int          initialseed         /**< initial random seed */
-   );
-
-
-/** frees a random number generator */
-EXTERN
-void SCIPrandomFree(
-   SCIP_RANDNUMGEN**     randnumgen          /**< random number generator */
    );
 
 /** returns a random real between minrandval and maxrandval

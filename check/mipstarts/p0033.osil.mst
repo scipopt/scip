@@ -1,0 +1,17 @@
+solution status: optimal solution found
+objective value:                                 3089
+C157                                                1 	(obj:171)
+C163                                                1 	(obj:163)
+C164                                                1 	(obj:69)
+C166                                                1 	(obj:183)
+C170                                                1 	(obj:49)
+C175                                                1 	(obj:500)
+C176                                                1 	(obj:250)
+C178                                                1 	(obj:159)
+C180                                                1 	(obj:159)
+C181                                                1 	(obj:318)
+C182                                                1 	(obj:159)
+C183                                                1 	(obj:318)
+C184                                                1 	(obj:159)
+C185                                                1 	(obj:318)
+C186                                                1 	(obj:114)

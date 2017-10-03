@@ -539,9 +539,9 @@ SCIP_RETCODE fillGlobalStartingData(
    /* resize arrays */
    if( propdata->gstartindicessize != propdata->ngindices )
    {
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(propdata->gstartindices), propdata->gstartindicessize,
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(propdata->gstartindices), propdata->gstartindicessize, \
             propdata->ngindices) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(propdata->gstartcomponents), propdata->gstartindicessize,
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(propdata->gstartcomponents), propdata->gstartindicessize, \
             propdata->ngindices) );
       propdata->gstartindicessize = propdata->ngindices;
    }
@@ -1413,15 +1413,15 @@ SCIP_RETCODE setUpEvents(
       /* resize arrays stored in eventdata */
       if( eventdata->startindicessize != eventdata->nstarts )
       {
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(eventdata->startcomponents), eventdata->startindicessize,
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(eventdata->startcomponents), eventdata->startindicessize, \
                eventdata->nstarts) );
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(eventdata->startindices), eventdata->startindicessize,
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(eventdata->startindices), eventdata->startindicessize, \
                eventdata->nstarts) );
          eventdata->startindicessize = eventdata->nstarts;
       }
 
       /* register event */
-      SCIP_CALL( SCIPcatchVarEvent(scip, eventdata->var, SCIP_EVENTTYPE_LBTIGHTENED, propdata->eventhdlr, eventdata,
+      SCIP_CALL( SCIPcatchVarEvent(scip, eventdata->var, SCIP_EVENTTYPE_LBTIGHTENED, propdata->eventhdlr, eventdata, \
             NULL) );
    }
 
@@ -1438,9 +1438,9 @@ SCIP_RETCODE setUpEvents(
       /* resize arrays stored in eventdata */
       if( eventdata->startindicessize != eventdata->nstarts )
       {
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(eventdata->startcomponents), eventdata->startindicessize,
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(eventdata->startcomponents), eventdata->startindicessize, \
                eventdata->nstarts) );
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(eventdata->startindices), eventdata->startindicessize,
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(eventdata->startindices), eventdata->startindicessize, \
                eventdata->nstarts) );
          eventdata->startindicessize = eventdata->nstarts;
       }
@@ -1489,7 +1489,7 @@ SCIP_RETCODE sortGenVBounds(
    SCIPdebugMsg(scip, "(re-)sort genvbounds topologically\n");
 
    /* create digraph */
-   SCIP_CALL( SCIPdigraphCreate(&graph, SCIPblkmem(scip), propdata->ngenvbounds) );
+   SCIP_CALL( SCIPcreateDigraph(scip, &graph, propdata->ngenvbounds) );
 
    /* add outgoing arcs for each genvbound */
    for( i = 0; i < propdata->ngenvbounds; i++ )
@@ -2170,6 +2170,22 @@ SCIP_RETCODE SCIPgenVBoundAdd(
  * Callback methods of propagator
  */
 
+/** copy method for propagator plugins (called when SCIP copies plugins)
+ *
+ *  @note The UG framework assumes that all default plug-ins of SCIP implement a copy callback.
+ */
+static
+SCIP_DECL_PROPCOPY(propCopyGenvbounds)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(prop != NULL);
+   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludePropGenvbounds(scip) );
+
+   return SCIP_OKAY;
+}
 
 /** initialization method of propagator (called after problem was transformed) */
 static
@@ -2721,6 +2737,7 @@ SCIP_RETCODE SCIPincludePropGenvbounds(
    SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
          propExecGenvbounds, propdata) );
 
+   SCIP_CALL( SCIPsetPropCopy(scip, prop, propCopyGenvbounds) );
    SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeGenvbounds) );
    SCIP_CALL( SCIPsetPropInit(scip, prop, propInitGenvbounds) );
    SCIP_CALL( SCIPsetPropInitpre(scip, prop, propInitpreGenvbounds) );

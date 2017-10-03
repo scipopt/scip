@@ -679,7 +679,7 @@ SCIP_RETCODE applyVbounds(
    lpstatus = SCIP_LPSOLSTAT_ERROR;
    lperror = FALSE;
    /* solve lp only if the problem is still feasible */
-   if( !infeasible && solvelp )
+   if( solvelp )
    {
       SCIPdebugMsg(scip, "starting solving vbound-lp at time %g\n", SCIPgetSolvingTime(scip));
 
@@ -751,7 +751,7 @@ SCIP_RETCODE applyVbounds(
    /*************************** END Probing LP Solving ***************************/
 
    /* if no solution has been found --> fix all other variables by subscip if necessary */
-   if( !foundsol && !lperror && lpstatus != SCIP_LPSOLSTAT_INFEASIBLE && lpstatus != SCIP_LPSOLSTAT_OBJLIMIT && !infeasible )
+   if( !foundsol && !lperror && lpstatus != SCIP_LPSOLSTAT_INFEASIBLE && lpstatus != SCIP_LPSOLSTAT_OBJLIMIT)
    {
       SCIP* subscip;
       SCIP_VAR** subvars;
@@ -946,7 +946,7 @@ SCIP_RETCODE applyVbounds(
 
 #ifdef SCIP_STATISTIC
    SCIP_CALL( SCIPstopClock(scip, clock) );
-   SCIPstatisticMessage("vbound: tighten=%d obj=%d nvars=%d presolnvars=%d ratio=%.2f infeas=%d found=%d time=%.2f\n",
+   SCIPstatisticMessage("vbound: tighten=%u obj=%u nvars=%d presolnvars=%d ratio=%.2f infeas=%u found=%d time=%.2f\n",
       tighten, obj, nvars, nprevars, (nvars - nprevars) / (SCIP_Real)nvars, infeasible,
       foundsol ? 1 : 0, SCIPclockGetTime(clock) );
 #endif

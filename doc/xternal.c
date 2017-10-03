@@ -51,7 +51,8 @@
  * @section GETTINGSTARTED Getting started
  *
  * - \ref WHATPROBLEMS "What types of optimization problems does SCIP solve?"
- * - \ref MAKE    "Installation information / Makefiles"
+ * - \ref CMAKE   "Installation information using CMake"
+ * - \ref MAKE    "Installation information using Makefiles"
  * - \ref LICENSE "License"
  *
  * - \ref SHELL       "Tutorial: the interactive shell"
@@ -59,6 +60,7 @@
  * - \ref START       "How to start a new project"
  * - \ref EXAMPLES    "Examples"
  * - \ref APPLICATIONS "Extensions of SCIP for specific applications"
+ * - \ref LPI         "Available LP solver interfaces"
  *
  * @section FURTHERINFORMATION References
  *
@@ -67,7 +69,6 @@
  *
  * - \ref DOC     "How to search the documentation for interface methods"
  * - \ref FAQ     "Frequently asked questions (FAQ)"
- * - \ref APPLICATIONS "Extensions of SCIP for specific applications"
  *
  *
  * @section PROGRAMMING Programming with SCIP
@@ -128,7 +129,7 @@
  * @subsection AUTHORS SCIP Authors
  * - <a class="el" href="http://scip.zib.de/#developers">Developers</a>
  *
- * @version  4.0.0.2
+ * @version  4.0.1.3
  *
  * \image html scippy.png
  *
@@ -297,6 +298,36 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+/** @page LPI Available LP solver interfaces
+ *
+ * SCIP provides a range of different interfaces to LP solvers:
+ *
+ * LPI name | LP solver
+ * ---------|----------
+ * `spx`    | SoPlex
+ * `cpx`    | IBM ILOG CPLEX
+ * `xprs`   | FICO XPress
+ * `grb`    | Gurobi (interface is in beta stage, version at least 7.0.2 required)
+ * `clp`    | CoinOR CLP (interface currently sometimes produces wrong results)
+ * `glop`   | Google Glop (experimental, LPI is contained in Glop package/Google OR tools)
+ * `msk`    | Mosek (experimental)
+ * `qsopt`  | QSopt (experimental)
+ * `none`   | disables LP solving entirely (not recommended; only for technical reasons)
+ *
+ * There are two different interfaces for SoPlex. The default one (`spx`) uses an updated interface that is provided
+ * by SoPlex itself (since version 2.0), resulting in a slimmer LPI that is similiar to those for CPLEX or XPRESS.
+ * The other one - `spx1` - is the older LPI that directly interfaces the internal simplex solver of SoPlex and
+ * therefore needs to duplicate some features in the LPI that are already available in SoPlex itself. It lacks some
+ * features like persistent scaling which are only available in the modern interface. Upcoming features may not be
+ * supported. Old compilers might have difficulties with the new interface because some C++11 features are required
+ * that may not be supported.
+ *
+ * To use the old interface, set the Makefile option `LPS=spx1` or configure your CMake build with `LEGACY=ON`.
+ *
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page WHATPROBLEMS What types of optimization problems does SCIP solve?
  *
  * As a stand-alone solver, \SCIP can solve mixed-integer nonlinear programs \b (MINLPs), to which it applies
@@ -389,6 +420,7 @@
  *       <ul>
  *          <li>Compile with <code>IPOPT=true</code> for better performance.</li>
  *          <li>Compile with <code>WORHP=true</code> for better performance.</li>
+ *          <li>Compile with <code>FILTERSQP=true</code> for better performance.</li>
  *          <li>Compile with <code>GAMS=true</code> to read gms-files.</li>
  *          <li>See <a href="FAQ\FILEEXT#minlptypes"> Which kind of MINLPs are supported by \SCIP? </a> in the FAQ.</li>
  *          <li>There is an interface for the modelling language AMPL, see \ref INTERFACES.</li>
@@ -558,6 +590,141 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+/**@page CMAKE Building SCIP with CMake
+ *
+ * <a href=https://cmake.org/>CMake</a> is a build system generator that can create, e.g., Makefiles for UNIX and Mac
+ * or Visual Studio project files for Windows.
+ *
+ * CMake provides an <a href="https://cmake.org/cmake/help/latest/manual/cmake.1.html">extensive documentation</a>
+ * explaining available features and use cases as well as an <a href="https://cmake.org/Wiki/CMake_FAQ">FAQ section</a>.
+ * It's recommended to use the latest stable CMake version available. `cmake --help` is also a good first step to see
+ * available options and usage information.
+ *
+ * ```
+ * cd scip
+ * mkdir build
+ * cd build
+ * cmake .. [-DSOPLEX_DIR=/path/to/soplex]
+ * make
+ *
+ * # optional: run a quick check on some instances
+ *
+ * make check
+ *
+ * # optional: install scip executable, library, and headers
+ *
+ * make install
+ *
+ * ```
+ *
+ * CMake uses an out-of-source build, i.e., compiled binaries and object files are separated from the source tree and
+ * located in another directory. Usually this directory is called `build` or `debug` or whatever you prefer. From within
+ * this directory, run `cmake <path/to/SCIP>` to configure your build, followed by `make` to compile the code according
+ * to the current configuration (this assumes that you chose Linux Makefiles as CMake Generator). By default, SCIP
+ * searches for Soplex as LP solver. If SoPlex is not installed systemwide, the path to a CMake build directory
+ * of SoPlex must be specified (ie one that contains "soplex-config.cmake"). Alternatively, a different LP solver
+ * can be specified with the `LPS` variable, see \ref CMAKE_CONFIG and \ref LPI.
+ *
+ * Afterwards,
+ * successive calls to `make` are going to recompile modified source code,
+ * without requiring another call to `cmake`. The initial configuration step checks your environment for available
+ * third-party libraries and packages and sets up the configuration accordingly, e.g., disabling support for GMP if not
+ * installed.
+ *
+ * The generated executable and libraries are put in directories `bin` and `lib` respectively and will simply be named
+ * `scip` or `libscip.so`. This is different from the naming convention of the previous Makefile setup that
+ * appended the configuration details like OS and third party dependencies directly to the name of the binary or library.
+ * The CMake setup tries to follow the established Linux/UNIX compilation conventions to facilitate the use of the
+ * libraries in other applications. The previously generated sub-libraries like `liblpi.so` or `libobjscip.so` are not
+ * created by default anymore. They can be built using the respective targets `liblpi`, `libobjscip`, etc. The main
+ * library `libscip.so` will contain all SCIP sources and won't have dependencies to the other sub-libs.
+ *
+ * @section CMAKE_CONFIG Modifying a CMake configuration
+ *
+ * There are several options that can be passed to the `cmake <path/to/SCIP>` call to modify how the code is built.
+ * For all of these options and parameters you have to use `-D<Parameter_name>=<value>`. Following a list of available
+ * options, for the full list run
+ *
+ * ```
+ * cmake <path/to/SCIP> -LH
+ * ```
+ *
+ * CMake option         | Available values               | Makefile equivalent    | Remarks                                    |
+ * ---------------------|--------------------------------|------------------------|--------------------------------------------|
+ * CMAKE_BUILD_TYPE     | Release, Debug, ...            | OPT=[opt, dbg]         |                                            |
+ * LPS                  | spx, cpx, grb, xprs, ...       | LPS=...                | See \ref LPI for a complete list           |
+ * GMP                  | on, off                        | GMP=[true, false]      |                                            |
+ * READLINE             | on, off                        | READLINE=[true, false] |                                            |
+ * ZIMPL                | on, off                        | ZIMPL=[true, false]    |                                            |
+ * CMAKE_INSTALL_PREFIX | \<path\>                       | INSTALLDIR=\<path\>    |                                            |
+ * SHARED               | on, off                        | SHARED=[true, false]   |                                            |
+ * SOPLEX_DIR           | <path/to/SoPlex/installation>  | --                     |                                            |
+ * GMP_DIR              | <path/to/GMP/installation>     | --                     |                                            |
+ * ..._DIR              | <custom/path/to/.../package>   | --                     |                                            |
+ * COVERAGE             | on, off                        | --                     | use with gcc, lcov, gcov in **debug** mode |
+ * COVERAGE_CTEST_ARGS  | ctest argument string          | --                     | see `ctest --help` for arguments           |
+ *
+ * Parameters can be set all at once or in subsequent calls to `cmake` - extending or modifying the existing
+ * configuration.
+ *
+ * @section CTEST Testing with CTest
+ *
+ * There is an extensive test suite written for <a href="https://cmake.org/cmake/help/latest/manual/ctest.1.html">CTest</a>,
+ * that may take a while to complete. To perform a quick test to see whether the compilation was really successful you may
+ * run `make check`. To see all available tests, run
+ *
+ * ```ctest -N```
+ *
+ * and to perform a memory check, run
+ *
+ * ```ctest -T MemCheck```
+ *
+ * If <a href="https://criterion.readthedocs.io/en/master/">Criterion</a> is installed (set
+ * custom path with `-DCRITERION_DIR=<path>`) the target `unittests` can be used to compile and run the available unit tests.
+ *
+ * A coverage report for the entire test suite can be generated. This requires a modification of the
+ * compilation process. Two variables govern the report generation, `COVERAGE` and `COVERAGE_CTEST_ARGS`.
+ * It is recommended to use the Debug build type.
+ *
+ * ```
+ * cmake .. -DCOVERAGE=on -DCOVERAGE_CTEST_ARGS="-R MIP -E stein -j4" -DCMAKE_BUILD_TYPE=Debug
+ * ```
+ *
+ * In this example, coverage is enabled in combination with the build type Debug. In addition, only the coverage
+ * for tests with "MIP" in the name are run, excluding those that have "stein" in the name.
+ * The tests are performed in parallel using 4 cores.
+ *
+ * Use the `coverage` target, e.g., `make coverage`, to build the coverage report. The generated report can be found
+ * under "coverage/index.html".
+ *
+ * @section CMAKE_INSTALL Installation
+ *
+ * CMake uses a default directory for installation, e.g., /usr/local on Linux. This can be modified by either changing
+ * the configuration using `-DCMAKE_INSTALL_PREFIX` as explained in \ref CMAKE_CONFIG or by setting the environment
+ * variable `DESTDIR` during or before the install command, e.g., `DESTDIR=<custom/install/dir> make install`.
+ *
+ * @section CMAKE_TARGETS Additional targets
+ *
+ * There are several further targets available, which can be listed using `make help`. For instance, there are some
+ * examples that can be built with `make examples` or by specifying a certain one: `make <example-name>`.
+ *
+ * | CMake target    | Description                                           | Requirements                          |
+ * |-----------------|-------------------------------------------------------|---------------------------------------|
+ * | scip            | build SCIP executable                                 |                                       |
+ * | applications    | build executables for all applications                |                                       |
+ * | examples        | build executables for all examples                    |                                       |
+ * | unittests       | build unit tests                                      | the Criterion package, see \ref CTEST |
+ * | all_executables | build all of the above                                |                                       |
+ * | libscip         | build the SCIP library                                |                                       |
+ * | install         | install SCIP, see \ref CMAKE_INSTALL                  |                                       |
+ * | coverage        | run the test suite and create a coverage report       | build flag `-DCOVERAGE=on`            |
+ * | liblpi          | build the LPI library                                 |                                       |
+ * | libnlpi         | build the NLPI library                                |                                       |
+ * | libobjscip      | build the ObjSCIP library for the C++ wrapper classes |                                       |
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page MAKE Makefiles / Installation information
  *
  *
@@ -639,6 +806,8 @@
  *   version of ZIMPL, if ZIMPL support is enabled.
  *
  * - <code>READLINE=\<true|false\></code> Turns support via the readline library on (default) or off, respectively.
+ *
+ * - <code>FILTERSQP=\<true|false\></code> Enable or disable (default) FilterSQP interface.
  *
  * - <code>IPOPT=\<true|false\></code> Enable or disable (default) IPOPT interface (needs IPOPT >= 3.11).
  *
@@ -3989,7 +4158,7 @@
  * If you are using relaxation handler data, you have to implement this method in order to free the relaxation handler
  * data. This can be done by the following procedure:
  *
- * @refsnippet{unittests/src/unittest-relax/relax_unittest.c,SnippetRelaxFreeUnittest}
+ * @refsnippet{tests/src/relax/relax.c,SnippetRelaxFreeUnittest}
  *
  * If you have allocated memory for fields in your relaxation handler data, remember to free this memory
  * before freeing the relaxation handler data itself.
@@ -6889,6 +7058,11 @@
   * - <b>Solutions</b>:
   *   - added argument "completely" to SCIPtrySol(), SCIPtrySolFree(), SCIPcheckSol()
   *
+  * - <b>Hashmap and Hashtable</b>:
+  *   - removed function SCIPcalcHashtableSize() since not required anymore for SCIP_HASHTABLE and SCIP_HASHMAP
+  *   - based on the initial size SCIP_HASHTABLE and SCIP_HASHMAP choose an appropriate size internally to allow insertion of that many elements without resizing
+  *   - SCIP_MULTIHASH behaves like the old SCIP_HASHTABLE and SCIPcalcMultihashSize() should be used as replacement for SCIPcalcHashtableSize()
+  *
   * <br>
   * For further information we refer to the \ref RELEASENOTES "Release notes" and the \ref CHANGELOG "Changelog".
   */
@@ -7015,12 +7189,20 @@
  * \verbinclude INSTALL
  */
 
+/**@page INSTALL_CMAKE Installation information (CMake)
+ * \verbinclude INSTALL_CMAKE
+ */
+
+
 /**@page RELEASENOTES Release notes
  *
- * A release report with an in-depth description of many of the new features is available on <a href="http://www.optimization-online.org">Optimization Online</a>.
+ * A release report with an in-depth description of many of the new features in version 4.0 is available on <a href="http://www.optimization-online.org/DB_HTML/2017/03/5895.html">Optimization Online</a>.
+ *
+ * \verbinclude SCIP-release-notes-4.0.1
+ *
  * \verbinclude SCIP-release-notes-4.0
  *
- * Please consult the <a href="http://nbn-resolving.de/urn:nbn:de:0297-zib-57675">release report</a> that explains many of the new features in detail.
+ * Please consult the <a href="http://nbn-resolving.de/urn:nbn:de:0297-zib-57675">release report</a> for version 3.2 that explains many of the new features in detail.
  *
  * \verbinclude SCIP-release-notes-3.2.1
  *
@@ -7330,6 +7512,13 @@
  *  Below you find a list of available data structures
  */
 
+/** @defgroup DisjointSet Disjoined Set (Union Find)
+ *  @ingroup DataStructures
+ *  @brief weighted disjoint set (union find) data structure with path compression
+ *
+ *  Weighted Disjoined Set is a data structure to quickly update and query connectedness information
+ *  between nodes of a graph. Disjoined Set is also known as Union Find.
+ */
 /**@defgroup MiscellaneousMethods Miscellaneous Methods
  * @ingroup PUBLICCOREAPI
  * @brief commonly used methods from different categories

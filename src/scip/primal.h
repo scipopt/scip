@@ -376,6 +376,19 @@ SCIP_RETCODE SCIPprimalTransformSol(
    SCIP_Bool*            added               /**< pointer to store whether the solution was added */
    );
 
+/** is the updating of violations enabled for this problem? */
+extern
+SCIP_Bool SCIPprimalUpdateViolations(
+   SCIP_PRIMAL*          primal              /**< problem data */
+   );
+
+/** set whether the updating of violations is turned on */
+extern
+void SCIPprimalSetUpdateViolations(
+   SCIP_PRIMAL*          primal,             /**< problem data */
+   SCIP_Bool             updateviolations    /**< TRUE to enable violation updates, FALSE otherwise */
+   );
+
 #ifdef __cplusplus
 }
 #endif

@@ -41,7 +41,7 @@
 #define snprintf _snprintf
 #endif
 
-#if ( GRB_VERSION_MAJOR < 6 || ( GRB_VERSION_MAJOR == 7 && GRB_VERSION_TECHNICAL < 2 ) )
+#if ( GRB_VERSION_MAJOR < 6 || ( GRB_VERSION_MAJOR == 7 && GRB_VERSION_MINOR == 0 && GRB_VERSION_TECHNICAL < 2 ) )
 #error "The Gurobi intreface only works for Gurobi versions at least 7.0.2"
 #endif
 
@@ -902,13 +902,13 @@ SCIP_RETCODE convertSides(
          lpi->rhsarray[i] = rhs[i];
          lpi->rngarray[i] = 0.0;
       }
-      else if( lhs[i] <= -SCIP_DEFAULT_INFINITY )
+      else if( lhs[i] <= -GRB_INFINITY )
       {
          assert(-GRB_INFINITY < rhs[i] && rhs[i] < GRB_INFINITY);
          lpi->senarray[i] = GRB_LESS_EQUAL;
          lpi->rhsarray[i] = rhs[i];
       }
-      else if( rhs[i] >= SCIP_DEFAULT_INFINITY )
+      else if( rhs[i] >= GRB_INFINITY )
       {
          assert(-GRB_INFINITY < lhs[i] && lhs[i] < GRB_INFINITY);
          lpi->senarray[i] = GRB_GREATER_EQUAL;
@@ -970,13 +970,13 @@ SCIP_RETCODE reconvertSides(
          break;
 
       case GRB_LESS_EQUAL:
-         lhs[i] = -SCIP_DEFAULT_INFINITY;
+         lhs[i] = -GRB_INFINITY;
          rhs[i] = lpi->rhsarray[i];
          break;
 
       case GRB_GREATER_EQUAL:
          lhs[i] = lpi->rhsarray[i];
-         rhs[i] = SCIP_DEFAULT_INFINITY;
+         rhs[i] = GRB_INFINITY;
          break;
 
       default:
@@ -1376,6 +1376,8 @@ SCIP_RETCODE SCIPlpiFree(
    BMSfreeMemoryArrayNull(&(*lpi)->rngrowmap);
    BMSfreeMemoryArrayNull(&(*lpi)->rngrows);
    BMSfreeMemoryArrayNull(&(*lpi)->rngvals);
+   BMSfreeMemoryArrayNull(&(*lpi)->indarray);
+   BMSfreeMemoryArrayNull(&(*lpi)->valarray);
    BMSfreeMemory(lpi);
 
    /* free environment */
@@ -1436,7 +1438,7 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    SCIP_CALL( ensureSidechgMem(lpi, nrows) );
 
    /* convert objective sense */
-   objsen = SCIP_OBJSEN_MINIMIZE ? GRB_MINIMIZE : GRB_MAXIMIZE;
+   objsen = (objsen == SCIP_OBJSEN_MINIMIZE) ? GRB_MINIMIZE : GRB_MAXIMIZE;
 
    /* convert lhs/rhs into sen/rhs/range tuples */
    SCIP_CALL( convertSides(lpi, nrows, lhs, rhs, &rngcount) );
@@ -1451,13 +1453,10 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    cnt[ncols-1] = nnonz - beg[ncols-1];
    assert(cnt[ncols-1] >= 0);
 
-   /* delete model */
-   assert( lpi->grbmodel != NULL );
-   CHECK_ZERO( lpi->messagehdlr, GRBfreemodel(lpi->grbmodel) );
-
    /* load model - all variables are continuous */
    CHECK_ZERO( lpi->messagehdlr, GRBloadmodel(lpi->grbenv, &(lpi->grbmodel), NULL, ncols, nrows, (int) objsen, 0.0, (SCIP_Real*)obj,
          lpi->senarray, lpi->rhsarray, (int*)beg, cnt, (int*)ind, (SCIP_Real*)val, (SCIP_Real*)lb, (SCIP_Real*)ub, NULL, colnames, rownames) );
+
    CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
 
    /* free temporary memory */
@@ -1537,9 +1536,6 @@ SCIP_RETCODE SCIPlpiAddCols(
       /**@todo Save and restore basis - currently, the basis is destroyed if we discard (and later re-add) range variables */
       SCIP_CALL( delRangeVars(lpi) );
    }
-
-   /* we do not need to convert infinity values, because SCIP_DEFAULT_INFINITY is large enough */
-   assert(SCIP_DEFAULT_INFINITY >= GRB_INFBOUND);
 
    /* add columns - all new variables are continuous */
    CHECK_ZERO( lpi->messagehdlr, GRBaddvars(lpi->grbmodel, ncols, nnonz, (int*)beg, (int*)ind, (SCIP_Real*)val,
@@ -2012,7 +2008,6 @@ SCIP_RETCODE SCIPlpiChgSides(
    /* convert lhs/rhs into sen/rhs/range tuples */
    SCIP_CALL( ensureSidechgMem(lpi, nrows) );
    SCIP_CALL( convertSides(lpi, nrows, lhs, rhs, &rngcount) );
-   assert( rngcount == 0 );
 
    /* change row sides */
    CHECK_ZERO( lpi->messagehdlr, GRBsetdblattrlist(lpi->grbmodel, GRB_DBL_ATTR_RHS, nrows, (int*)ind, lpi->rhsarray) );
@@ -2157,7 +2152,7 @@ SCIP_RETCODE SCIPlpiChgObjsen(
    assert(objsen == SCIP_OBJSEN_MAXIMIZE || objsen == SCIP_OBJSEN_MINIMIZE);
 
    /* convert objective sense */
-   objsen = SCIP_OBJSEN_MINIMIZE ? GRB_MINIMIZE : GRB_MAXIMIZE;
+   objsen = (objsen == SCIP_OBJSEN_MINIMIZE) ? GRB_MINIMIZE : GRB_MAXIMIZE;
 
    SCIPdebugMessage("changing objective sense in Gurobi to %d\n", objsen);
 
@@ -2224,14 +2219,14 @@ SCIP_RETCODE SCIPlpiScaleRow(
    }
 
    /* scale row sides */
-   if( lhs > -SCIP_DEFAULT_INFINITY )
+   if( lhs > -GRB_INFBOUND )
       lhs *= scaleval;
    else if( scaleval < 0.0 )
-      lhs = SCIP_DEFAULT_INFINITY;
-   if( rhs < SCIP_DEFAULT_INFINITY )
+      lhs = GRB_INFBOUND;
+   if( rhs < GRB_INFBOUND )
       rhs *= scaleval;
    else if( scaleval < 0.0 )
-      rhs = -SCIP_DEFAULT_INFINITY;
+      rhs = -GRB_INFBOUND;
    if( scaleval > 0.0 )
    {
       SCIP_CALL( SCIPlpiChgSides(lpi, 1, &row, &lhs, &rhs) );
@@ -2375,7 +2370,8 @@ SCIP_RETCODE SCIPlpiGetNNonz(
    CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMNZS, nnonz) );
 
    /* subtract number of ranged rows, as these are non-zeros for the LPI internal columns */
-   (*nnonz) -= lpi->nrngrows;
+   if ( lpi->rngvarsadded )
+      (*nnonz) -= lpi->nrngrows;
 
    return SCIP_OKAY;
 }
@@ -2410,21 +2406,10 @@ SCIP_RETCODE SCIPlpiGetCols(
 
    if( lb != NULL )
    {
-      int j;
-
       assert(ub != NULL);
 
       CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_LB, firstcol, lastcol-firstcol+1, lb) );
       CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_UB, firstcol, lastcol-firstcol+1, ub) );
-
-      /* adjust infinity values */
-      for (j = 0; j < lastcol-firstcol+1; j++)
-      {
-         if ( lb[j] <= -GRB_INFBOUND )
-            lb[j] = -SCIP_DEFAULT_INFINITY;
-         if ( ub[j] >= GRB_INFBOUND )
-            ub[j] = SCIP_DEFAULT_INFINITY;
-      }
    }
    else
       assert(ub == NULL);
@@ -5295,7 +5280,17 @@ SCIP_RETCODE SCIPlpiWriteLP(
 
    SCIPdebugMessage("writing LP to file <%s>\n", fname);
 
-   CHECK_ZERO( lpi->messagehdlr, GRBwrite(lpi->grbmodel, fname) );
+   /* if range rows were not added, add, print and remove them; otherwise, just print */
+   if ( lpi->nrngrows > 0 && !lpi->rngvarsadded )
+   {
+      SCIP_CALL( addRangeVars(lpi) );
+      CHECK_ZERO( lpi->messagehdlr, GRBwrite(lpi->grbmodel, fname) );
+      SCIP_CALL( delRangeVars(lpi) );
+   }
+   else
+   {
+      CHECK_ZERO( lpi->messagehdlr, GRBwrite(lpi->grbmodel, fname) );
+   }
 
    return SCIP_OKAY;
 }

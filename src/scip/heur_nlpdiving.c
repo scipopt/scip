@@ -1321,10 +1321,14 @@ SCIP_RETCODE solveSubMIP(
       SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
    }
 
-   /* enable conflict analysis and restrict conflict pool */
+   /* enable conflict analysis, disable analysis of boundexceeding LPs, and restrict conflict pool */
    if( !SCIPisParamFixed(subscip, "conflict/enable") )
    {
       SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", TRUE) );
+   }
+   if( !SCIPisParamFixed(subscip, "conflict/useboundlp") )
+   {
+      SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useboundlp", 'o') );
    }
    if( !SCIPisParamFixed(subscip, "conflict/maxstoresize") )
    {
@@ -1508,7 +1512,7 @@ SCIP_DECL_HEURINIT(heurInitNlpdiving) /*lint --e{715}*/
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen, DEFAULT_RANDSEED) );
 
    /* initialize data */
    heurdata->nnlpiterations = 0;
@@ -1539,7 +1543,7 @@ SCIP_DECL_HEUREXIT(heurExitNlpdiving) /*lint --e{715}*/
    assert(heurdata != NULL);
 
    /* free random number generator */
-   SCIPrandomFree(&heurdata->randnumgen);
+   SCIPfreeRandom(scip, &heurdata->randnumgen);
 
    /* free working solution */
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
@@ -1759,14 +1763,12 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
       {
          SCIPdebugMsg(scip, "initial NLP infeasible or not solvable --> stop\n");
 
-         if( SCIPgetNLPTermstat(scip) < SCIP_NLPTERMSTAT_NUMERR )
-         {
-            SCIPstatistic( heurdata->nfailcutoff++ );
-         }
-         else
-         {
-            SCIPstatistic( heurdata->nfailnlperror++ );
-         }
+         SCIPstatistic(
+            if( SCIPgetNLPTermstat(scip) < SCIP_NLPTERMSTAT_NUMERR )
+               heurdata->nfailcutoff++;
+            else
+               heurdata->nfailnlperror++;
+         )
 
          /* reset changed NLP parameters */
          SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, origiterlim) );
@@ -1818,6 +1820,16 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
 
       return SCIP_OKAY;
    }
+
+   /* for guided diving: don't dive, if no feasible solutions exist */
+   if( heurdata->varselrule == 'g' && SCIPgetNSols(scip) == 0 )
+      return SCIP_OKAY;
+
+   /* for guided diving: get best solution that should guide the search; if this solution lives in the original variable space,
+    * we cannot use it since it might violate the global bounds of the current problem
+    */
+   if( heurdata->varselrule == 'g' && SCIPsolIsOriginal(SCIPgetBestSol(scip)) )
+      return SCIP_OKAY;
 
    nlpstartsol = NULL;
    assert(nlpcandsfrac != NULL);
@@ -1944,15 +1956,8 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    /* store a copy of the best solution, if guided diving should be used */
    if( heurdata->varselrule == 'g' )
    {
-      /* don't dive, if no feasible solutions exist */
-      if( SCIPgetNSols(scip) == 0 )
-         return SCIP_OKAY;
-
-      /* get best solution that should guide the search; if this solution lives in the original variable space,
-       * we cannot use it since it might violate the global bounds of the current problem
-       */
-      if( SCIPsolIsOriginal(SCIPgetBestSol(scip)) )
-         return SCIP_OKAY;
+      assert(SCIPgetNSols(scip) > 0);
+      assert(!SCIPsolIsOriginal(SCIPgetBestSol(scip)));
 
       SCIP_CALL( SCIPcreateSolCopy(scip, &bestsol, SCIPgetBestSol(scip)) );
    }
@@ -2416,7 +2421,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
             /* set time limit for NLP solver */
             SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelim) );
             if( !SCIPisInfinity(scip, timelim) )
-               timelim -= SCIPgetSolvingTime(scip);
+               timelim = MAX(0.0, timelim-SCIPgetSolvingTime(scip));/*lint !e666*/
             SCIP_CALL( SCIPsetNLPRealPar(scip, SCIP_NLPPAR_TILIM, timelim) );
 
             /* set start solution, if we are in backtracking (previous NLP solve was infeasible) */

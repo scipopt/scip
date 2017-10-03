@@ -326,6 +326,8 @@ void* BMSallocClearMemory_call(
 {
    void* ptr;
 
+   assert(typesize > 0);
+
    debugMessage("calloc %llu elements of %llu bytes [%s:%d]\n", (unsigned long long)num, (unsigned long long)typesize,
       filename, line);
 
@@ -864,33 +866,27 @@ void checkChkmem(
    const BMS_CHKMEM*     chkmem              /**< chunk block */
    )
 {
-   CHUNK* chunk;
    FREELIST* lazy;
    int nchunks;
    int storesize;
    int lazyfreesize;
    int eagerfreesize;
-   int i;
 
    assert(chkmem != NULL);
-   assert(chkmem->chunks != NULL || chkmem->chunkssize == 0);
-   assert(chkmem->nchunks <= chkmem->chunkssize);
 
-   nchunks = 0;    
-   storesize = 0;    
-   lazyfreesize = 0; 
+   nchunks = 0;
+   storesize = 0;
+   lazyfreesize = 0;
    eagerfreesize = 0;
 
-   for( i = 0; i < chkmem->nchunks; ++i )
+   FOR_EACH_NODE(CHUNK*, chunk, chkmem->rootchunk,
    {
-      chunk = chkmem->chunks[i];
-      assert(chunk != NULL);
-
       checkChunk(chunk);
       nchunks++;
       storesize += chunk->storesize;
       eagerfreesize += chunk->eagerfreesize;
-   }
+   })
+
    assert(chkmem->nchunks == nchunks);
    assert(chkmem->storesize == storesize);
    assert(chkmem->eagerfreesize == eagerfreesize);
@@ -903,7 +899,7 @@ void checkChkmem(
    lazy = chkmem->lazyfree;
    while( lazy != NULL )
    {
-      chunk = findChunk(chkmem, lazy);
+      CHUNK* chunk = findChunk(chkmem, lazy);
       assert(chunk != NULL);
       assert(chunk->chkmem == chkmem);
       lazyfreesize++;
@@ -1667,8 +1663,7 @@ void checkBlkmem(
       while( chkmem != NULL )
       {
          checkChkmem(chkmem);
-         tmpmemalloc += ((chkmem->elemsize * chkmem->storesize) + chkmem->nchunks * sizeof(CHUNK) + sizeof(BMS_CHKMEM)
-            + chkmem->chunkssize * sizeof(CHUNK*));
+         tmpmemalloc += ((chkmem->elemsize * chkmem->storesize) + chkmem->nchunks * sizeof(CHUNK) + sizeof(BMS_CHKMEM));
          tmpmemused += (chkmem->elemsize * (chkmem->storesize - chkmem->eagerfreesize - chkmem->lazyfreesize));
          chkmem = chkmem->nextchkmem;
       }
@@ -2625,6 +2620,7 @@ void* BMSallocBufferMemory_work(
    int                   line                /**< line number in source file of the function call */
    )
 {
+   /* cppcheck-suppress unassignedVariable */
    void* ptr;
 #ifndef SCIP_NOBUFFERMEM
    size_t bufnum;
@@ -2736,6 +2732,9 @@ void* BMSallocBufferMemory_work(
 #else
    if( buffer->clean )
    {
+      /* we should allocate at least one byte, otherwise BMSallocMemorySize will fail */
+      size = MAX(size,1);
+
       BMSallocClearMemorySize(&ptr, size);
    }
    else
