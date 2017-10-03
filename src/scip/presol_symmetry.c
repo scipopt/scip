@@ -885,10 +885,6 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &matrixdata.rhscoefcolors, matrixdata.nrhscoef) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &uniquevararray, nvars) );
 
-   for (j = 0; j < matrixdata.nrhscoef; ++j)
-      printf("%f ", matrixdata.rhscoef[matrixdata.rhsidx[j]]);
-   printf("\n");
-
    /* determine number of different coefficents */
 
    /* find non-equivalent variables: same objective, lower and upper bounds, and variable type */
