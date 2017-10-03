@@ -56,7 +56,6 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeConshdlrSOS1(scip) );
    SCIP_CALL( SCIPincludeConshdlrSOS2(scip) );
    SCIP_CALL( SCIPincludeConshdlrSuperindicator(scip) );
-   SCIP_CALL( SCIPincludeConshdlrSymmetry(scip) );
    SCIP_CALL( SCIPincludeConshdlrSymresack(scip) );
    SCIP_CALL( SCIPincludeConshdlrVarbound(scip) );
    SCIP_CALL( SCIPincludeConshdlrXor(scip) );
@@ -93,10 +92,11 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludePresolInttobinary(scip) );
    SCIP_CALL( SCIPincludePresolQPKKTref(scip) );
    SCIP_CALL( SCIPincludePresolRedvub(scip) );
-   SCIP_CALL( SCIPincludePresolSymbreak(scip) );
    SCIP_CALL( SCIPincludePresolTrivial(scip) );
    SCIP_CALL( SCIPincludePresolTworowbnd(scip) );
    SCIP_CALL( SCIPincludePresolStuffing(scip) );
+   SCIP_CALL( SCIPincludePresolSymmetry(scip) );
+   SCIP_CALL( SCIPincludePresolSymbreak(scip) );   /* needs to be included after presol_symmetry */
    SCIP_CALL( SCIPincludeNodeselBfs(scip) );
    SCIP_CALL( SCIPincludeNodeselBreadthfirst(scip) );
    SCIP_CALL( SCIPincludeNodeselDfs(scip) );
