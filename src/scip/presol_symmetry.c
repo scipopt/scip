@@ -1076,6 +1076,10 @@ SCIP_RETCODE determineSymmetry(
 
    presoldata->computedsym = TRUE;
 
+   /* do not compute symmetry if there are active pricers */
+   if ( SCIPgetNActivePricers(scip) > 0 )
+      return SCIP_OKAY;
+
    /* avoid trivial cases */
    nvars = SCIPgetNVars(scip);
    if ( nvars <= 0 )
