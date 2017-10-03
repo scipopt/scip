@@ -620,6 +620,7 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIP_Real val;
    int nuniquevararray = 0;
    int nhandleconss = 0;
+   int nactiveconss = 0;
    int nconss;
    int nvars;
    int c;
@@ -651,35 +652,54 @@ SCIP_RETCODE computeSymmetryGroup(
    nconss = SCIPgetNConss(scip);
    nvars = SCIPgetNVars(scip);
 
-   /* exit if no constraints or no variables  are available */
+   /* exit if no constraints or no variables are available */
    if ( nconss == 0 || nvars == 0 )
-      return SCIP_OKAY;
-
-   /* before we set up the matrix, check whether we can handle all constraints */
-   conshdlr = SCIPfindConshdlr(scip, "linear");
-   nhandleconss += SCIPconshdlrGetNConss(conshdlr);
-   conshdlr = SCIPfindConshdlr(scip, "setppc");
-   nhandleconss += SCIPconshdlrGetNConss(conshdlr);
-   conshdlr = SCIPfindConshdlr(scip, "xor");
-   nhandleconss += SCIPconshdlrGetNConss(conshdlr);
-   conshdlr = SCIPfindConshdlr(scip, "logicor");
-   nhandleconss += SCIPconshdlrGetNConss(conshdlr);
-   conshdlr = SCIPfindConshdlr(scip, "knapsack");
-   nhandleconss += SCIPconshdlrGetNConss(conshdlr);
-   conshdlr = SCIPfindConshdlr(scip, "varbound");
-   nhandleconss += SCIPconshdlrGetNConss(conshdlr);
-   conshdlr = SCIPfindConshdlr(scip, "bounddisjunction");
-   nhandleconss += SCIPconshdlrGetNConss(conshdlr);
-   if ( nhandleconss < nconss )
    {
-      SCIPwarningMessage(scip, "Cannot compute symmetry, since unkown constraints are present.\n");
+      *success = TRUE;
       return SCIP_OKAY;
    }
 
    conss = SCIPgetConss(scip);
    assert( conss != NULL );
 
-   SCIPdebugMsg(scip, "Detecting %ssymmetry on %d variables and %d constraints.\n", local ? "local " : "", nvars, nconss);
+   /* compute the number of active constraints */
+   for (c = 0; c < nconss; ++c)
+   {
+      assert( conss[c] != NULL );
+      if ( SCIPconsIsActive(conss[c]) )
+         ++nactiveconss;
+   }
+
+   /* exit if no active constraints are available */
+   if ( nactiveconss == 0 )
+   {
+      *success = TRUE;
+      return SCIP_OKAY;
+   }
+
+   /* before we set up the matrix, check whether we can handle all constraints */
+   conshdlr = SCIPfindConshdlr(scip, "linear");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "setppc");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "xor");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "logicor");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "knapsack");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "varbound");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "bounddisjunction");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   if ( nhandleconss < nactiveconss )
+   {
+      SCIPwarningMessage(scip, "Cannot compute symmetry, since unkown constraints are present.\n");
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   SCIPdebugMsg(scip, "Detecting %ssymmetry on %d variables and %d constraints.\n", local ? "local " : "", nvars, nactiveconss);
 
    /* copy variables */
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &vars, SCIPgetVars(scip), nvars) ); /*lint !e666*/
@@ -703,9 +723,9 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &matrixdata.matidx, matrixdata.nmaxmatcoef) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &matrixdata.matrhsidx, matrixdata.nmaxmatcoef) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &matrixdata.matvaridx, matrixdata.nmaxmatcoef) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &matrixdata.rhscoef, 2 * nconss) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &matrixdata.rhssense, 2 * nconss) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &matrixdata.rhsidx, 2 * nconss) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &matrixdata.rhscoef, 2 * nactiveconss) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &matrixdata.rhssense, 2 * nactiveconss) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &matrixdata.rhsidx, 2 * nactiveconss) );
 
    /* prepare temporary constraint data (use block memory, since this can become large) */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consvars, nvars) );
@@ -722,6 +742,10 @@ SCIP_RETCODE computeSymmetryGroup(
       /* get constraint */
       cons = conss[c];
       assert( cons != NULL );
+
+      /* skip non-active constraints */
+      if ( ! SCIPconsIsActive(cons) )
+         continue;
 
       /* get constraint handler */
       conshdlr = SCIPconsGetHdlr(cons);
@@ -835,7 +859,7 @@ SCIP_RETCODE computeSymmetryGroup(
          return SCIP_ERROR;
       }
    }
-   assert( matrixdata.nrhscoef <= 2 * nconss );
+   assert( matrixdata.nrhscoef <= 2 * nactiveconss );
    assert( matrixdata.nrhscoef > 0 ); /* cannot have empty rows! */
 
    SCIPfreeBlockMemoryArray(scip, &consvals, nvars);
@@ -1017,17 +1041,13 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.permvarcolors, nvars);
    SCIPhashtableFree(&vartypemap);
 
-   SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhsidx, 2 * nconss);
-   SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhssense, 2 * nconss);
-   SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhscoef, 2 * nconss);
+   SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhsidx, 2 * nactiveconss);
+   SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhssense, 2 * nactiveconss);
+   SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhscoef, 2 * nactiveconss);
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matvaridx, matrixdata.nmaxmatcoef);
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matrhsidx, matrixdata.nmaxmatcoef);
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matidx, matrixdata.nmaxmatcoef);
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matcoef, matrixdata.nmaxmatcoef);
-
-   /* copy variables */
-   *permvars = vars;
-   *npermvars = nvars;
 
    return SCIP_OKAY;
 }
