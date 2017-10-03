@@ -367,8 +367,6 @@ Test(test_compute_symmetry, basic4, .description = "compute symmetry for a simpl
    SCIP_VAR** permvars;
    int nperms;
    int** perms;
-   int i;
-   int j;
 
    /* skip test if no symmetry can be computed */
    if ( ! SYMcanComputeSymmetry() )
@@ -440,20 +438,7 @@ Test(test_compute_symmetry, basic4, .description = "compute symmetry for a simpl
 
    /* get symmetry */
    SCIP_CALL( SCIPgetSymmetryGenerators(scip, presol, &npermvars, &permvars, &nperms, &perms) );
-   cr_assert( nperms == 1 );
-
-   for (i = 0; i < nperms; ++i)
-   {
-      SCIPinfoMessage(scip, NULL, "Permutation %d: (", i);
-      for (j = 0; j < npermvars; ++j)
-      {
-         if ( j == 0 )
-            SCIPinfoMessage(scip, NULL, "%d", perms[i][j]);
-         else
-            SCIPinfoMessage(scip, NULL, " %d", perms[i][j]);
-      }
-      SCIPinfoMessage(scip, NULL, ")\n");
-   }
+   cr_assert( nperms == 0 );  /* problem should be empty */
 
    SCIP_CALL( SCIPreleaseVar(scip, &var1) );
    SCIP_CALL( SCIPreleaseVar(scip, &var2) );
