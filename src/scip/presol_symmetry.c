@@ -1003,31 +1003,35 @@ SCIP_RETCODE computeSymmetryGroup(
          matrixdata.rhscoefcolors[idx] = matrixdata.nuniquerhs - 1;
       }
    }
-   assert( matrixdata.nuniquevars > 0 );
-   assert( matrixdata.nuniquerhs > 0 );
-   assert( matrixdata.nuniquemat > 0 );
+   assert( 0 < matrixdata.nuniquevars && matrixdata.nuniquevars <= nvars );
+   assert( 0 < matrixdata.nuniquerhs && matrixdata.nuniquerhs <= matrixdata.nrhscoef );
+   assert( 0 < matrixdata.nuniquemat && matrixdata.nuniquemat <= matrixdata.nmatcoef );
 
    SCIPdebugMsg(scip, "Number of detected different variables: %d (total: %d).\n", matrixdata.nuniquevars, nvars);
    SCIPdebugMsg(scip, "Number of detected different rhs types: %d (total: %d).\n", matrixdata.nuniquerhs, matrixdata.nrhscoef);
    SCIPdebugMsg(scip, "Number of detected different matrix coefficients: %d (total: %d).\n", matrixdata.nuniquemat, matrixdata.nmatcoef);
 
-   /* determine generators */
-   SCIP_CALL( SYMcomputeSymmetryGenerators(scip, maxgenerators, &matrixdata, nperms, nmaxperms, perms) );
+   /* do not compute symmetry if all variables are non-equivalent (unique) or if all matrix coefficients are different */
+   if ( matrixdata.nuniquevars < nvars && matrixdata.nuniquemat < matrixdata.nmatcoef )
+   {
+      /* determine generators */
+      SCIP_CALL( SYMcomputeSymmetryGenerators(scip, maxgenerators, &matrixdata, nperms, nmaxperms, perms) );
 
 #ifdef SCIP_DEBUG
-   if ( ! SCIPisStopped(scip) )
-   {
-      SCIP_CALL( checkSymmetriesAreSymmetries(scip, fixedtype, &matrixdata, *nperms, *perms) );
-   }
+      if ( ! SCIPisStopped(scip) )
+      {
+         SCIP_CALL( checkSymmetriesAreSymmetries(scip, fixedtype, &matrixdata, *nperms, *perms) );
+      }
 #endif
 
-   /* output time */
-   if ( ! local )
-   {
-      if ( maxgenerators == 0 )
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Number of generators:\t\t\t%d \t(max: -)\n", *nperms);
-      else
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Number of generators:\t\t\t%u \t(max: %u)\n", *nperms, maxgenerators);
+      /* output statistics */
+      if ( ! local )
+      {
+         if ( maxgenerators == 0 )
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Number of generators:\t\t\t%d \t(max: -)\n", *nperms);
+         else
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Number of generators:\t\t\t%u \t(max: %u)\n", *nperms, maxgenerators);
+      }
    }
 
    /* free matrix data */
