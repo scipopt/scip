@@ -13,42 +13,33 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_symmetry.h
- * @ingroup CONSHDLRS
- * @brief  constraint handler for storing symmetry information about current problem
+/**@file   presol_symmetry.h
+ * @ingroup PRESOLVERS
+ * @brief  presovler for storing symmetry information about current problem
  * @author Marc Pfetsch
  * @author Thomas Rehn
- * @author Christopher Hojny
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_CONS_SYMMETRY_H_
-#define __SCIP_CONS_SYMMETRY_H_
+#ifndef __SCIP_PRESOL_SYMMETRY_H_
+#define __SCIP_PRESOL_SYMMETRY_H_
 
 #include <scip/scip.h>
 
 #include <symmetry/type_symmetry.h>
 
-/** include symmetry constraint handler */
+/** include symmetry presolver */
 extern
-SCIP_RETCODE SCIPincludeConshdlrSymmetry(
+SCIP_RETCODE SCIPincludePresolSymmetry(
    SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** create symmetries constraint */
-extern
-SCIP_RETCODE SCIPcreateConsSymmetry(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
-   const char*           name                /**< name of constraint */
    );
 
 /** return symmetry group generators */
 extern
 SCIP_RETCODE SCIPgetSymmetryGenerators(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< symmetry constraint handler */
+   SCIP_PRESOL*          presol,             /**< symmetry presolver */
    int*                  npermvars,          /**< pointer to store number of variables for permutations */
    SCIP_VAR***           permvars,           /**< pointer to store variables on which permutations act */
    int*                  nperms,             /**< pointer to store number of permutations */
@@ -58,21 +49,21 @@ SCIP_RETCODE SCIPgetSymmetryGenerators(
 /** specify symmetry type for which we need symmetries */
 extern
 void SYMsetSpecRequirement(
-   SCIP_CONSHDLR*        conshdlr,           /**< symmetry constraint handler */
+   SCIP_PRESOL*          presol,             /**< symmetry presolver */
    SYM_SPEC              type                /**< variable types the callee is interested in */
    );
 
 /** specify symmetry type which symmetry group must fix */
 extern
 void SYMsetSpecRequirementFixed(
-   SCIP_CONSHDLR*        conshdlr,           /**< symmetry constraint handler */
+   SCIP_PRESOL*          presol,             /**< symmetry presolver */
    SYM_SPEC              fixedtype           /**< variable types that callee wants to have fixed */
    );
 
 /** whether symmetry should be computed for presolved system */
 extern
 SCIP_Bool SYMdetectSymmetryPresolved(
-   SCIP_CONSHDLR*        conshdlr            /**< symmetry constraint handler */
+   SCIP_PRESOL*          presol              /**< symmetry presolver */
    );
 
 #endif

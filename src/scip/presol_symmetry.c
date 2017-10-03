@@ -13,12 +13,12 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_symmetry.cpp
- * @brief  constraint handler for computing and storing symmetry information about current problem
+/**@file   presol_symmetry.cpp
+ * @brief  presovler for storing symmetry information about current problem
  * @author Marc Pfetsch
  * @author Thomas Rehn
  *
- * This constraint handler computes symmetries of the problem and stores this information in adequate form. It does not
+ * This presolver computes symmetries of the problem and stores this information in adequate form. It does not
  * perform additional actions. The symmetry information can be accessed through external functions. However, the user
  * has to declare the type of symmetry that is needed before execution, see SYMsetSpecRequirement().
  *
@@ -36,23 +36,17 @@
 #include <scip/cons_logicor.h>
 #include <scip/cons_xor.h>
 
-#include <scip/cons_symmetry.h>
+#include <scip/presol_symmetry.h>
 #include <symmetry/compute_symmetry.h>
 
 #include <string.h>
 
-/* constraint handler properties */
-#define CONSHDLR_NAME          "symmetry"
-#define CONSHDLR_DESC          "constraint handler for computing and storing symmetry information about current problem"
-#define CONSHDLR_ENFOPRIORITY         0 /**< priority of the constraint handler for constraint enforcing */
-#define CONSHDLR_CHECKPRIORITY -9000000 /**< priority of the constraint handler for checking feasibility */
-#define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
-                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
-#define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
-#define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
-
-#define CONSHDLR_PRESOLTIMING      SCIP_PRESOLTIMING_EXHAUSTIVE
-
+/* presolver properties */
+#define PRESOL_NAME            "symmetry"
+#define PRESOL_DESC            "presolver for computing and storing symmetry information about current problem"
+#define PRESOL_PRIORITY               0      /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
+#define PRESOL_MAXROUNDS             -1      /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+#define PRESOL_TIMING            SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 
 /* default parameter values */
 #define DEFAULT_MAXGENERATORS      1500      /**< limit on the number of generators that should be produced within symmetry detection (0 = no limit) */
@@ -62,19 +56,13 @@
 #define MAXGENNUMERATOR        64000000      /**< determine maximal number of generators by dividing this number by the number of variables */
 
 
-/** constraint handler data */
-struct SCIP_ConshdlrData
+/** presolver data */
+struct SCIP_PresolData
 {
    SCIP_Bool             detectsympresol;    /**< Should the symmetry be detected within presolving (otherwise before presol)? */
    int                   maxgenerators;      /**< limit on the number of generators that should be produced within symmetry detection (0 = no limit) */
    int                   symspecrequire;     /**< symmetry specification for which we need to compute symmetries */
    int                   symspecrequirefixed;/**< symmetry specification of variables which must be fixed by symmetries */
-};
-
-
-/** constraint data */
-struct SCIP_ConsData
-{
    int                   npermvars;          /**< number of variables for permutations */
    SCIP_VAR**            permvars;           /**< variables on which permutations act */
    SCIP_Bool             computedsym;        /**< Have we already tried to compute symmetries? */
@@ -678,8 +666,6 @@ SCIP_RETCODE computeSymmetryGroup(
    nhandleconss += SCIPconshdlrGetNConss(conshdlr);
    conshdlr = SCIPfindConshdlr(scip, "bounddisjunction");
    nhandleconss += SCIPconshdlrGetNConss(conshdlr);
-   conshdlr = SCIPfindConshdlr(scip, "symmetry");
-   nhandleconss += SCIPconshdlrGetNConss(conshdlr);
    if ( nhandleconss < nconss )
    {
       SCIPwarningMessage(scip, "Cannot compute symmetry, since unkown constraints are present.\n");
@@ -826,10 +812,6 @@ SCIP_RETCODE computeSymmetryGroup(
 
          SCIP_CALL( collectCoefficients(scip, consvars, consvals, 2, SCIPgetLhsVarbound(scip, cons),
                SCIPgetRhsVarbound(scip, cons), SCIPconsIsTransformed(cons), FALSE, &matrixdata) );
-      }
-      else if ( strcmp(conshdlrname, "symmetry") == 0 )
-      {
-         /* skip */
       }
       else if ( strcmp(conshdlrname, "bounddisjunction") == 0 )
       {
@@ -1051,8 +1033,7 @@ SCIP_RETCODE computeSymmetryGroup(
 static
 SCIP_RETCODE determineSymmetry(
    SCIP*                 scip,               /**< SCIP instance */
-   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< symmetries constraint handler data */
-   SCIP_CONSDATA*        consdata            /**< symmetries constraint data */
+   SCIP_PRESOLDATA*      presoldata          /**< presolver data */
    )
 {
    int maxgenerators;
@@ -1060,16 +1041,16 @@ SCIP_RETCODE determineSymmetry(
    int nvars;
 
    assert( scip != NULL );
-   assert( consdata != NULL );
+   assert( presoldata != NULL );
 
-   assert( ! consdata->computedsym );
-   assert( consdata->npermvars == 0 );
-   assert( consdata->permvars == NULL );
-   assert( consdata->nperms == 0 );
-   assert( consdata->nmaxperms == 0 );
-   assert( consdata->perms == NULL );
+   assert( ! presoldata->computedsym );
+   assert( presoldata->npermvars == 0 );
+   assert( presoldata->permvars == NULL );
+   assert( presoldata->nperms == 0 );
+   assert( presoldata->nmaxperms == 0 );
+   assert( presoldata->perms == NULL );
 
-   consdata->computedsym = TRUE;
+   presoldata->computedsym = TRUE;
 
    /* avoid trivial cases */
    nvars = SCIPgetNVars(scip);
@@ -1086,43 +1067,43 @@ SCIP_RETCODE determineSymmetry(
       type |= (int) SYM_SPEC_REAL;
 
    /* skip symmetry computation if required variables are not present */
-   if ( ! (type & conshdlrdata->symspecrequire) )
+   if ( ! (type & presoldata->symspecrequire) )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Skip symmetry computation, since type does not match requirements (%d bin, %d int, %d cont); required: (%d bin, %d int, %d cont).\n",
          SCIPgetNBinVars(scip), SCIPgetNIntVars(scip), SCIPgetNContVars(scip) + SCIPgetNImplVars(scip),
-         (conshdlrdata->symspecrequire & (int) SYM_SPEC_BINARY) != 0,
-         (conshdlrdata->symspecrequire & (int) SYM_SPEC_INTEGER) != 0,
-         (conshdlrdata->symspecrequire & (int) SYM_SPEC_REAL) != 0);
+         (presoldata->symspecrequire & (int) SYM_SPEC_BINARY) != 0,
+         (presoldata->symspecrequire & (int) SYM_SPEC_INTEGER) != 0,
+         (presoldata->symspecrequire & (int) SYM_SPEC_REAL) != 0);
       return SCIP_OKAY;
    }
 
    SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Required symmetry:\t\t\t(%d bin, %d int, %d cont); (fixed: %d bin, %d int, %d cont)\n",
-      (conshdlrdata->symspecrequire & (int) SYM_SPEC_BINARY) != 0,
-      (conshdlrdata->symspecrequire & (int) SYM_SPEC_INTEGER) != 0,
-      (conshdlrdata->symspecrequire & (int) SYM_SPEC_REAL) != 0,
-      (conshdlrdata->symspecrequirefixed & (int) SYM_SPEC_BINARY) != 0,
-      (conshdlrdata->symspecrequirefixed & (int) SYM_SPEC_INTEGER) != 0,
-      (conshdlrdata->symspecrequirefixed & (int) SYM_SPEC_REAL) != 0);
+      (presoldata->symspecrequire & (int) SYM_SPEC_BINARY) != 0,
+      (presoldata->symspecrequire & (int) SYM_SPEC_INTEGER) != 0,
+      (presoldata->symspecrequire & (int) SYM_SPEC_REAL) != 0,
+      (presoldata->symspecrequirefixed & (int) SYM_SPEC_BINARY) != 0,
+      (presoldata->symspecrequirefixed & (int) SYM_SPEC_INTEGER) != 0,
+      (presoldata->symspecrequirefixed & (int) SYM_SPEC_REAL) != 0);
 
-   if ( conshdlrdata->symspecrequire & conshdlrdata->symspecrequirefixed )
+   if ( presoldata->symspecrequire & presoldata->symspecrequirefixed )
       SCIPwarningMessage(scip, "Warning: some required symmetries must be fixed.\n");
 
    /* actually compute (global) symmetry */
    /* determine maximal number of generators depending on the number of variables */
-   maxgenerators = conshdlrdata->maxgenerators;
+   maxgenerators = presoldata->maxgenerators;
    maxgenerators = MIN(maxgenerators, MAXGENNUMERATOR / nvars);
 
-   SCIP_CALL( computeSymmetryGroup(scip, maxgenerators, conshdlrdata->symspecrequirefixed, FALSE,
-         &consdata->npermvars, &consdata->permvars, &consdata->nperms, &consdata->nmaxperms, &consdata->perms) );
+   SCIP_CALL( computeSymmetryGroup(scip, maxgenerators, presoldata->symspecrequirefixed, FALSE,
+         &presoldata->npermvars, &presoldata->permvars, &presoldata->nperms, &presoldata->nmaxperms, &presoldata->perms) );
 
-   if ( consdata->nperms == 0 )
+   if ( presoldata->nperms == 0 )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "No symmetry found.\n");
    }
    else
    {
       /* turn off some other presolving methods in order to be sure that they do not destroy symmetry afterwards */
-      assert( consdata->nperms > 0 );
+      assert( presoldata->nperms > 0 );
 
       /* domcol avoids S_2-symmetries and may not be compatible with other symmetry handling methods. */
       SCIP_CALL( SCIPsetIntParam(scip, "presolving/domcol/maxrounds", 0) );
@@ -1139,132 +1120,102 @@ SCIP_RETCODE determineSymmetry(
 
 
 /*
- * Callback methods of constraint handler
+ * Callback methods of presolver
  */
 
-/** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
+/** presolving initialization method of presolver (called when presolving is about to begin) */
 static
-SCIP_DECL_CONSFREE(consFreeSymmetry)
-{  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-
-   assert( scip != NULL );
-   assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
-
-   SCIPdebugMsg(scip, "Freeing symmetry constraint handler.\n");
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert( conshdlrdata != NULL );
-
-   SCIPfreeMemory(scip, &conshdlrdata);
-
-   return SCIP_OKAY;
-}
-
-
-/** presolving initialization method of constraint handler (called when presolving is about to begin) */
-static
-SCIP_DECL_CONSINITPRE(consInitpreSymmetry)
+SCIP_DECL_PRESOLINITPRE(presolInitpreSymmetry)
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   int c;
+   SCIP_PRESOLDATA* presoldata;
 
    assert( scip != NULL );
-   assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert( presol != NULL );
+   assert( strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0 );
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert( conshdlrdata != 0 );
+   presoldata = SCIPpresolGetData(presol);
+   assert( presoldata != 0 );
+
+   SCIPdebugMsg(scip, "Initialization of symmetry presolver.\n");
 
    /* compute symmetries if not requested during presolving */
-   if ( ! conshdlrdata->detectsympresol )
+   if ( ! presoldata->detectsympresol && ! presoldata->computedsym )
    {
-      SCIP_CONSDATA* consdata;
-      for (c = 0; c < nconss; ++c)
-      {
-         assert( conss[c] != 0 );
-         consdata = SCIPconsGetData(conss[c]);
-         assert( consdata != 0 );
-
-         if ( consdata->computedsym )
-            continue;
-
-         SCIPdebugMsg(scip, "Initialization of symmetry constraint <%s>.\n", SCIPconsGetName(conss[c]));
-
-         /* determine symmetry here in initpre, since other plugins specify their problem type in init() */
-         SCIP_CALL( determineSymmetry(scip, conshdlrdata, consdata) );
-      }
+      /* determine symmetry here in initpre, since other plugins specify their problem type in init() */
+      SCIP_CALL( determineSymmetry(scip, presoldata) );
    }
 
    return SCIP_OKAY;
 }
 
 
-/** frees specific constraint data */
+/** destructor of presolver to free user data (called when SCIP is exiting) */
 static
-SCIP_DECL_CONSDELETE(consDeleteSymmetry)
+SCIP_DECL_PRESOLFREE(presolFreeSymmetry)
 {  /*lint --e{715}*/
+   SCIP_PRESOLDATA* presoldata;
    int i;
 
    assert( scip != NULL );
-   assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
-   assert( consdata != NULL );
-   assert( cons != NULL );
+   assert( presol != NULL );
+   assert( strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0 );
+   assert( presoldata != NULL );
 
-   SCIPdebugMsg(scip, "Deleting symmetry constraint <%s>.\n", SCIPconsGetName(cons));
+   SCIPdebugMsg(scip, "Freeing symmetry presolver.\n");
 
-   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->permvars, (*consdata)->npermvars);
-   for (i = 0; i < (*consdata)->nperms; ++i)
+   presoldata = SCIPpresolGetData(presol);
+   assert( presoldata != NULL );
+
+   SCIPfreeBlockMemoryArrayNull(scip, &presoldata->permvars, presoldata->npermvars);
+   for (i = 0; i < presoldata->nperms; ++i)
    {
-      SCIPfreeBlockMemoryArray(scip, &(*consdata)->perms[i], (*consdata)->npermvars);
+      SCIPfreeBlockMemoryArray(scip, &presoldata->perms[i], presoldata->npermvars);
    }
-   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->perms, (*consdata)->nmaxperms);
+   SCIPfreeBlockMemoryArrayNull(scip, &presoldata->perms, presoldata->nmaxperms);
 
-   SCIPfreeBlockMemory(scip, consdata);
+   SCIPfreeBlockMemory(scip, &presoldata);
 
    return SCIP_OKAY;
 }
 
-
+#if 0
 /** transforms constraint data into data belonging to the transformed problem */
 static
 SCIP_DECL_CONSTRANS(consTransSymmetry)
 {
-   SCIP_CONSDATA* sourceconsdata;
-   SCIP_CONSDATA* targetconsdata;
+   SCIP_PRESOLDATA* sourcepresoldata;
+   SCIP_PRESOLDATA* targetpresoldata;
 
    assert( scip != NULL );
-   assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert( presol != NULL );
+   assert( strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0 );
    assert( sourcecons != NULL );
 
    SCIPdebugMsg(scip, "Transforming symmetry constraint <%s> ...\n", SCIPconsGetName(sourcecons));
 
-   sourceconsdata = SCIPconsGetData(sourcecons);
-   assert( sourceconsdata != NULL );
-   SCIP_CALL( SCIPallocBlockMemory(scip, &targetconsdata) );
+   sourcepresoldata = SCIPconsGetData(sourcecons);
+   assert( sourcepresoldata != NULL );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &targetpresoldata) );
 
    /* copy pointers to group */
-   targetconsdata->npermvars = sourceconsdata->npermvars;
-   targetconsdata->permvars = NULL;
-   targetconsdata->computedsym = sourceconsdata->computedsym;
-   targetconsdata->nperms = 0;
-   targetconsdata->nmaxperms = 0;
-   targetconsdata->perms = NULL;
+   targetpresoldata->npermvars = sourcepresoldata->npermvars;
+   targetpresoldata->permvars = NULL;
+   targetpresoldata->computedsym = sourcepresoldata->computedsym;
+   targetpresoldata->nperms = 0;
+   targetpresoldata->nmaxperms = 0;
+   targetpresoldata->perms = NULL;
 
    /* copy variables and set up variable map */
-   if ( sourceconsdata->npermvars > 0 )
+   if ( sourcepresoldata->npermvars > 0 )
    {
-      assert( sourceconsdata->permvars != NULL );
+      assert( sourcepresoldata->permvars != NULL );
 
-      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(targetconsdata->permvars), sourceconsdata->permvars, sourceconsdata->npermvars) );
-      SCIP_CALL( SCIPgetTransformedVars(scip, sourceconsdata->npermvars, sourceconsdata->permvars, targetconsdata->permvars) );
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(targetpresoldata->permvars), sourcepresoldata->permvars, sourcepresoldata->npermvars) );
+      SCIP_CALL( SCIPgetTransformedVars(scip, sourcepresoldata->npermvars, sourcepresoldata->permvars, targetpresoldata->permvars) );
    }
 
    /* create constraint */
-   SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetconsdata,
+   SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), presol, targetpresoldata,
          SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons),
          SCIPconsIsEnforced(sourcecons), SCIPconsIsChecked(sourcecons),
          SCIPconsIsPropagated(sourcecons), SCIPconsIsLocal(sourcecons),
@@ -1273,64 +1224,16 @@ SCIP_DECL_CONSTRANS(consTransSymmetry)
 
    return SCIP_OKAY;
 }
+#endif
 
-
-/** constraint enforcing method of constraint handler for LP solutions */
+/** execution method of presolver */
 static
-SCIP_DECL_CONSENFOLP(consEnfolpSymmetry)
+SCIP_DECL_PRESOLEXEC(presolExecSymmetry)
 {  /*lint --e{715}*/
-   assert( scip != 0 );
-   assert( conshdlr != 0 );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
-   assert( result != 0 );
-
-   /* do nothing */
-   *result = SCIP_FEASIBLE;
-
-   return SCIP_OKAY;
-}
-
-
-/** constraint enforcing method of constraint handler for pseudo solutions */
-static
-SCIP_DECL_CONSENFOPS(consEnfopsSymmetry)
-{  /*lint --e{715}*/
-   assert( scip != 0 );
-   assert( conshdlr != 0 );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
-   assert( result != 0 );
-
-   /* do nothing */
-   *result = SCIP_FEASIBLE;
-
-   return SCIP_OKAY;
-}
-
-
-/** feasibility check method of constraint handler for primal solutions */
-static
-SCIP_DECL_CONSCHECK(consCheckSymmetry)
-{  /*lint --e{715}*/
-   assert( scip != 0 );
-   assert( conshdlr != 0 );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
-   assert( result != 0 );
-
-   /* do nothing */
-   *result = SCIP_FEASIBLE;
-
-   return SCIP_OKAY;
-}
-
-
-/** presolving method of constraint handler */
-static
-SCIP_DECL_CONSPRESOL(consPresolSymmetry)
-{  /*lint --e{715}*/
-   assert( scip != 0 );
-   assert( conshdlr != 0 );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
-   assert( result != 0 );
+   assert( scip != NULL );
+   assert( presol != NULL );
+   assert( strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0 );
+   assert( result != NULL );
 
    /* do nothing */
    *result = SCIP_DIDNOTRUN;
@@ -1339,15 +1242,15 @@ SCIP_DECL_CONSPRESOL(consPresolSymmetry)
 }
 
 
-/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
+/** presolving deinitialization method of presolver (called after presolving has been finished) */
 static
-SCIP_DECL_CONSEXITPRE(consExitpreSymmetry)
+SCIP_DECL_PRESOLEXITPRE(presolExitpreSymmetry)
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_PRESOLDATA* presoldata;
 
    assert( scip != NULL );
-   assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert( presol != NULL );
+   assert( strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0 );
 
    /* skip if we are in a restart */
    if ( SCIPgetNRuns(scip) > 1 )
@@ -1357,85 +1260,34 @@ SCIP_DECL_CONSEXITPRE(consExitpreSymmetry)
    if ( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
-   SCIPdebugMsg(scip, "Exitpre method of symmetry constraint handler ...\n");
+   SCIPdebugMsg(scip, "Exitpre method of symmetry presolver ...\n");
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert( conshdlrdata != NULL );
+   presoldata = SCIPpresolGetData(presol);
+   assert( presoldata != NULL );
 
    /* compute symmetries if requested during presolving */
-   if ( conshdlrdata->detectsympresol )
+   if ( presoldata->detectsympresol && ! presoldata->computedsym )
    {
-      SCIP_CONSDATA* consdata;
-      int c;
-
-      for (c = 0; c < nconss; ++c)
-      {
-         assert( conss[c] != NULL );
-         consdata = SCIPconsGetData(conss[c]);
-         assert( consdata != NULL );
-
-         if ( consdata->computedsym )
-            continue;
-
-         SCIPdebugMsg(scip, "Exitpre method of symmetry constraint <%s>.\n", SCIPconsGetName(conss[c]));
-
-         SCIP_CALL( determineSymmetry(scip, conshdlrdata, consdata) );
-      }
+      SCIP_CALL( determineSymmetry(scip, presoldata) );
    }
 
    return SCIP_OKAY;
 }
 
 
-/** variable rounding lock method of constraint handler */
+/** copy method for presolver plugins (called when SCIP copies plugins) */
 static
-SCIP_DECL_CONSLOCK(consLockSymmetry)
-{  /*lint --e{715}*/
-   assert( scip != 0 );
-   assert( conshdlr != 0 );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
-
-   /* do nothing */
-
-   return SCIP_OKAY;
-}
-
-
-/** copy method for constraint handler plugins (called when SCIP copies plugins) */
-static
-SCIP_DECL_CONSHDLRCOPY(conshdlrCopySymmetry)
+SCIP_DECL_PRESOLCOPY(presolCopySymmetry)
 {
    assert( scip != NULL );
-   assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
-   assert( valid != NULL );
-
-   SCIP_CALL( SCIPincludeConshdlrSymmetry(scip) );
-   *valid = TRUE;
-
-   return SCIP_OKAY;
-}
-
-
-/** constraint copying method of constraint handler */
-static
-SCIP_DECL_CONSCOPY(consCopySymmetry)
-{  /*lint --e{715}*/
-   assert( scip != NULL );
-   assert( cons != NULL );
-   assert( sourcescip != NULL );
-   assert( sourceconshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(sourceconshdlr), CONSHDLR_NAME) == 0 );
-   assert( valid != NULL );
+   assert( presol != NULL );
+   assert( strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0 );
 
    /* Do not copy, since we do not know how to efficiently copy symmetry information, but declare copy to be valid in
     * order to not disturb sub-SCIP heuristics. */
-   *valid = TRUE;
 
    return SCIP_OKAY;
 }
-
-
 
 
 
@@ -1444,41 +1296,43 @@ SCIP_DECL_CONSCOPY(consCopySymmetry)
  */
 
 /** include symmetry constraint handler */
-SCIP_RETCODE SCIPincludeConshdlrSymmetry(
+SCIP_RETCODE SCIPincludePresolSymmetry(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CONSHDLR* conshdlr = NULL;
-   SCIP_CONSHDLRDATA* conshdlrdata = NULL;
+   SCIP_PRESOL* presol = NULL;
+   SCIP_PRESOLDATA* presoldata = NULL;
 
-   SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
-   assert( conshdlrdata != 0 );
-   conshdlrdata->symspecrequire = 0;
-   conshdlrdata->symspecrequirefixed = 0;
+   SCIP_CALL( SCIPallocBlockMemory(scip, &presoldata) );
+   assert( presoldata != 0 );
+
+   presoldata->symspecrequire = 0;
+   presoldata->symspecrequirefixed = 0;
+   presoldata->npermvars = 0;
+   presoldata->permvars = NULL;
+   presoldata->computedsym = FALSE;
+   presoldata->perms = NULL;
+   presoldata->nperms = 0;
+   presoldata->nmaxperms = 0;
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
-         CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
-         consEnfolpSymmetry, consEnfopsSymmetry, consCheckSymmetry, consLockSymmetry, conshdlrdata) );
-   assert( conshdlr != NULL );
+   SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC,
+         PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_TIMING, presolExecSymmetry, presoldata) );
+   assert( presol != NULL );
 
-   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeSymmetry) );
-   SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreSymmetry) );
-   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteSymmetry) );
-   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopySymmetry, consCopySymmetry) );
-   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransSymmetry) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolSymmetry, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
-   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreSymmetry) );
+   SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeSymmetry) );
+   SCIP_CALL( SCIPsetPresolInitpre(scip, presol, presolInitpreSymmetry) );
+   SCIP_CALL( SCIPsetPresolExitpre(scip, presol, presolExitpreSymmetry) );
 
    /* add parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/" CONSHDLR_NAME"/detectsympresol",
-         "Should the symmetry be detected within presolving (otherwise before presol)?",
-         &conshdlrdata->detectsympresol, TRUE, DEFAULT_DETECTSYMPRESOL, 0, 0) );
+         "presolvers/" PRESOL_NAME"/detectsympresol",
+         "Should the symmetry be detected after presolving (otherwise before presol)?",
+         &presoldata->detectsympresol, TRUE, DEFAULT_DETECTSYMPRESOL, 0, 0) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/" CONSHDLR_NAME"/maxgenerators", "limit on the number of generators that should be produced within symmetry detection (0 = no limit)",
-         &conshdlrdata->maxgenerators, TRUE, DEFAULT_MAXGENERATORS, 0, INT_MAX, 0, 0) );
+         "presolvers/" PRESOL_NAME"/maxgenerators", "limit on the number of generators that should be produced within symmetry detection (0 = no limit)",
+         &presoldata->maxgenerators, TRUE, DEFAULT_MAXGENERATORS, 0, INT_MAX, 0, 0) );
 
    /* possibly add description */
    if ( SYMcanComputeSymmetry() )
@@ -1490,97 +1344,43 @@ SCIP_RETCODE SCIPincludeConshdlrSymmetry(
 }
 
 
-/** create symmetry constraint */
-SCIP_RETCODE SCIPcreateConsSymmetry(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
-   const char*           name                /**< name of constraint */
-   )
-{
-   SCIP_CONSHDLR* conshdlr;
-   SCIP_CONSDATA* consdata = NULL;
-
-   assert( scip != NULL );
-   assert( cons != NULL );
-
-   /* find the symmetry constraint handler */
-   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
-   if ( conshdlr == NULL )
-   {
-      SCIPerrorMessage("symmetry constraint handler not found\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
-
-   SCIPdebugMsg(scip, "Creating symmetry constraint <%s>.\n", name);
-
-   /* create constraint data */
-   SCIP_CALL( SCIPallocBlockMemory(scip, &consdata) );
-   consdata->npermvars = 0;
-   consdata->permvars = NULL;
-   consdata->computedsym = FALSE;
-   consdata->perms = NULL;
-   consdata->nperms = 0;
-   consdata->nmaxperms = 0;
-
-   /* create constraint */
-   SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE));
-
-   return SCIP_OKAY;
-}
-
-
 /** return symmetry group generators */
 SCIP_RETCODE SCIPgetSymmetryGenerators(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< symmetry constraint handler */
+   SCIP_PRESOL*          presol,             /**< symmetry presolver */
    int*                  npermvars,          /**< pointer to store number of variables for permutations */
    SCIP_VAR***           permvars,           /**< pointer to store variables on which permutations act */
    int*                  nperms,             /**< pointer to store number of permutations */
    int***                perms               /**< pointer to store permutation generators as (nperms x npermvars) matrix */
    )
 {
-   SCIP_CONSDATA* consdata;
-   SCIP_CONS** conss;
+   SCIP_PRESOLDATA* presoldata;
 
-   assert( conshdlr != NULL );
+   assert( presol != NULL );
    assert( npermvars != NULL );
    assert( permvars != NULL );
    assert( nperms != NULL );
    assert( perms != NULL );
 
-   if ( SCIPconshdlrGetNConss(conshdlr) <= 0 )
+   presoldata = SCIPpresolGetData(presol);
+   assert( presoldata != NULL );
+
+   if ( ! presoldata->computedsym )
    {
-      SCIPerrorMessage("Could not find symmetry handling constraint.\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
-
-   /* arbitrarly get first constraint */
-   conss = SCIPconshdlrGetConss(conshdlr);
-   assert( conss != NULL );
-   assert( conss[0] != NULL );
-   consdata = SCIPconsGetData(conss[0]);
-
-   if ( ! consdata->computedsym )
-   {
-      SCIP_CONSHDLRDATA* conshdlrdata;
-
       if ( SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING && SCIPgetStage(scip) != SCIP_STAGE_PRESOLVED )
       {
          SCIPerrorMessage("Cannot call symmetry detection outside of presolving.\n");
          return SCIP_INVALIDCALL;
       }
 
-      conshdlrdata = SCIPconshdlrGetData(conshdlr);
-      assert( conshdlrdata != 0 );
-
       /* determine symmetry here */
-      SCIP_CALL( determineSymmetry(scip, conshdlrdata, consdata) );
+      SCIP_CALL( determineSymmetry(scip, presoldata) );
    }
 
-   *npermvars = consdata->npermvars;
-   *permvars = consdata->permvars;
-   *nperms = consdata->nperms;
-   *perms = consdata->perms;
+   *npermvars = presoldata->npermvars;
+   *permvars = presoldata->permvars;
+   *nperms = presoldata->nperms;
+   *perms = presoldata->perms;
 
    return SCIP_OKAY;
 }
@@ -1588,52 +1388,52 @@ SCIP_RETCODE SCIPgetSymmetryGenerators(
 
 /** specify symmetry type for which we need symmetries */
 void SYMsetSpecRequirement(
-   SCIP_CONSHDLR*        conshdlr,           /**< symmetry constraint handler */
+   SCIP_PRESOL*          presol,             /**< symmetry presolver */
    SYM_SPEC              type                /**< variable types the callee is interested in */
    )
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_PRESOLDATA* presoldata;
 
-   assert( conshdlr != 0 );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert( presol != NULL );
+   assert( strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0 );
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert( conshdlrdata != 0 );
+   presoldata = SCIPpresolGetData(presol);
+   assert( presoldata != NULL );
 
-   conshdlrdata->symspecrequire |= (int) type;
+   presoldata->symspecrequire |= (int) type;
 }
 
 
 /** specify symmetry type which symmetry group must fix */
 void SYMsetSpecRequirementFixed(
-   SCIP_CONSHDLR*        conshdlr,           /**< symmetry constraint handler */
+   SCIP_PRESOL*          presol,             /**< symmetry presolver */
    SYM_SPEC              fixedtype           /**< variable types that callee wants to have fixed */
    )
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_PRESOLDATA* presoldata;
 
-   assert( conshdlr != 0 );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert( presol != NULL );
+   assert( strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0 );
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert( conshdlrdata != 0 );
+   presoldata = SCIPpresolGetData(presol);
+   assert( presoldata != NULL );
 
-   conshdlrdata->symspecrequirefixed |= (int) fixedtype;
+   presoldata->symspecrequirefixed |= (int) fixedtype;
 }
 
 
 /** whether symmetry should be computed for presolved system */
 SCIP_Bool SYMdetectSymmetryPresolved(
-   SCIP_CONSHDLR*        conshdlr            /**< symmetry constraint handler */
+   SCIP_PRESOL*          presol              /**< symmetry presolver */
    )
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_PRESOLDATA* presoldata;
 
-   assert( conshdlr != 0 );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert( presol != NULL );
+   assert( strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0 );
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert( conshdlrdata != 0 );
+   presoldata = SCIPpresolGetData(presol);
+   assert( presoldata != NULL );
 
-   return conshdlrdata->detectsympresol;
+   return presoldata->detectsympresol;
 }
