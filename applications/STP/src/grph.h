@@ -226,7 +226,7 @@ extern SCIP_RETCODE   graph_pack(SCIP*, GRAPH*, GRAPH**, SCIP_Bool);
 extern int    graph_edge_redirect(SCIP*, GRAPH*, int, int, int, SCIP_Real);
 extern int    graph_valid(const GRAPH*);
 extern int    graph_pterm_delete(SCIP*, GRAPH*, int);
-extern SCIP_Bool graph_sol_valid(SCIP*, const GRAPH*, int*);
+extern SCIP_Bool graph_sol_valid(SCIP*, const GRAPH*, const int*);
 extern SCIP_Real graph_computeSolVal(const SCIP_Real*, const int*, SCIP_Real, int);
 
 /* grphpath.c
@@ -304,6 +304,8 @@ extern SCIP_RETCODE reduce(SCIP*, GRAPH**, SCIP_Real*, int, int, SCIP_Bool);
 
 /* reduce_alt.c
  */
+
+extern void    reduce_alt_ans(SCIP*, GRAPH*, int*, int*);
 extern SCIP_RETCODE    sdsp_reduction(SCIP*, GRAPH*, PATH*, PATH*, int*, int*, int*, int*, int*, int*, int, int*);
 extern SCIP_RETCODE    sdsp_sap_reduction(SCIP*, GRAPH*, PATH*, PATH*, int*, int*, int*, int*, int*, int*, int);
 extern SCIP_RETCODE    sd_red(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int*, int*, int*, SCIP_Bool, int*);
@@ -316,7 +318,6 @@ extern SCIP_RETCODE    nv_reduction(SCIP*, GRAPH*, PATH*, double*, int*, int*, i
 extern SCIP_RETCODE    nv_reductionAdv(SCIP*, GRAPH*, PATH*, SCIP_Real*, double*, int*, int*, int*, int*, int*, int*, int*, int*);
 extern SCIP_RETCODE    sl_reduction(SCIP*, GRAPH*, PATH*, double*, int*, int*, int*, int*, STP_Bool*, int*, int*);
 extern SCIP_RETCODE    ledge_reduction(SCIP*, GRAPH*, PATH*, int*, int*, int*, int*, int*);
-extern SCIP_RETCODE    ansReduction(SCIP*, GRAPH*, SCIP_Real*, int*, int*);
 extern SCIP_RETCODE    ansadvReduction(SCIP*, GRAPH*, SCIP_Real*, int*, int*);
 extern SCIP_RETCODE    ansadv2Reduction(SCIP*, GRAPH*, SCIP_Real*, int*, int*);
 extern SCIP_RETCODE    cnsAdvReduction(SCIP*, GRAPH*, int*, int*);

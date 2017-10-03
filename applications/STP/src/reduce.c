@@ -29,7 +29,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /*lint -esym(750,REDUCE_C) -esym(766,stdlib.h) -esym(766,string.h)           */
-#define SCIP_DEBUG
 #define REDUCE_C
 #define SDSP_BOUND    400          /**< visited edges bound for SDSP test  */
 #define BD3_BOUND     400          /**< visited edges bound for BD3 test  */
@@ -959,7 +958,7 @@ SCIP_RETCODE redLoopMw(
 
       if( ans || extensive )
       {
-         SCIP_CALL( ansReduction(scip, g, fixed, nodearrint2, &anselims) );
+         reduce_alt_ans(scip, g, nodearrint2, &anselims);
 
          if( anselims <= redbound )
             ans = FALSE;
@@ -1114,7 +1113,7 @@ SCIP_RETCODE redLoopMw(
       anselims = 0;
       ansadelims = 0;
       SCIP_CALL( npvReduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &npvelims, 400) );
-      SCIP_CALL( ansReduction(scip, g, fixed, nodearrint2, &anselims) );
+      reduce_alt_ans(scip, g, nodearrint2, &anselims);
       SCIP_CALL( ansadvReduction(scip, g, fixed, nodearrint2, &ansadelims) );
    }
 
@@ -1390,7 +1389,7 @@ SCIP_RETCODE redLoopStp(
    SCIP_Bool             bred,
    SCIP_Bool             nodereplacing,      /**< should node replacement (by edges) be performed? */
    int                   reductbound,        /**< minimal number of edges to be eliminated in order to reiterate reductions */
-   int*                  edgestate,           /**< array to store status of (directed) edge (for propagation, can otherwise be set to NULL) */
+   int*                  edgestate,          /**< array to store status of (directed) edge (for propagation, can otherwise be set to NULL) */
    SCIP_Bool             userec              /**< use recombination heuristic? */
    )
 {

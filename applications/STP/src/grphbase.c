@@ -840,9 +840,10 @@ SCIP_RETCODE graph_RerootSol(
    int                   newroot             /**< the new root */
    )
 {
-   SCIP_QUEUE* queue;
-   int nnodes;
-   int* gmark;
+   int* queue;
+   int* const gmark = g->mark;
+   int size;
+   const int nnodes = g->knots;
 
    assert(scip != NULL);
    assert(g != NULL);
@@ -852,21 +853,19 @@ SCIP_RETCODE graph_RerootSol(
    if( g->grad[newroot] == 0 )
       return SCIP_OKAY;
 
-   gmark = g->mark;
-   nnodes = g->knots;
-
    for( int k = 0; k < nnodes; k++ )
       gmark[k] = FALSE;
 
-   gmark[newroot] = TRUE;
+   SCIP_CALL( SCIPallocBufferArray(scip, &queue, nnodes) );
 
-   SCIP_CALL( SCIPqueueCreate(&queue, nnodes, 1.1) );
-   SCIP_CALL( SCIPqueueInsert(queue, &newroot));
+   gmark[newroot] = TRUE;
+   size = 0;
+   queue[size++] = newroot;
 
    /* BFS loop */
-   while( !SCIPqueueIsEmpty(queue) )
+   while( size )
    {
-      const int node = * ((int*) SCIPqueueRemove(queue));
+      const int node = queue[--size];
 
       /* traverse outgoing arcs */
       for( int a = g->outbeg[node]; a != EAT_LAST; a = g->oeat[a] )
@@ -881,11 +880,12 @@ SCIP_RETCODE graph_RerootSol(
                result[flipedge(a)] = UNKNOWN;
             }
             gmark[head] = TRUE;
-            SCIP_CALL(SCIPqueueInsert(queue, &(g->head[a])));
+            queue[size++] = head;
          }
       }
    }
-   SCIPqueueFree(&queue);
+
+   SCIPfreeBufferArray(scip, &queue);
 
    /* adjust solution if infeasible */
    for( int k = 0; k < nnodes; k++ )
@@ -902,6 +902,8 @@ SCIP_RETCODE graph_RerootSol(
          if( Is_term(g->term[k]) )
          {
             int a;
+            assert(g->stp_type != STP_SPG);
+
             for( a = g->inpbeg[k]; a != EAT_LAST; a = g->ieat[a] )
             {
                const int node = g->tail[a];
@@ -3331,56 +3333,58 @@ int graph_valid(
 SCIP_Bool graph_sol_valid(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
-   int*                  result              /**< solution array, indicating whether an edge is in the solution */
+   const int*            result              /**< solution array, indicating whether an edge is in the solution */
    )
 {
-   SCIP_QUEUE* queue;
-
-   STP_Bool* terminal;
-   int* pnode;
-   int e;
-   int i;
+   int* queue;
+   STP_Bool* reached;
    int root;
+   int size;
    int nnodes;
    int termcount;
 
    assert(graph != NULL);
    assert(result != NULL);
 
-   terminal = NULL;
+   reached = NULL;
    nnodes = graph->knots;
    root = graph->source[0];
    assert(root >= 0);
 
-   SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &terminal, nnodes) );
+   SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &reached, nnodes) );
+   SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &queue, nnodes) );
 
-   assert(terminal != NULL);
+   assert(reached != NULL);
 
-   for( i = 0; i < nnodes; i++ )
-      terminal[i] = FALSE;
+   for( int i = 0; i < nnodes; i++ )
+      reached[i] = FALSE;
 
-   /* BFS until all terminals are reached */
-   SCIP_CALL_ABORT( SCIPqueueCreate(&queue, nnodes, 2.0) );
+   /* BFS until all reacheds are reached */
 
-   SCIP_CALL_ABORT( SCIPqueueInsert(queue, &root) );
    termcount = 1;
-   terminal[root] = TRUE;
+   size = 0;
+   reached[root] = TRUE;
+   queue[size++] = root;
 
-   while( !SCIPqueueIsEmpty(queue) )
+   while( size )
    {
-      pnode = (SCIPqueueRemove(queue));
-      for( e = graph->outbeg[*pnode]; e != EAT_LAST; e = graph->oeat[e] )
+      const int node = queue[--size];
+
+      for( int e = graph->outbeg[node]; e != EAT_LAST; e = graph->oeat[e] )
       {
          if( result[e] == CONNECT )
          {
-            i = graph->head[e];
+            const int i = graph->head[e];
+
+            /* cycle? */
+            if( reached[i] )
+               return FALSE;
+
             if( Is_term(graph->term[i]) )
-            {
-               assert(!terminal[i]);
-               terminal[i] = TRUE;
                termcount++;
-            }
-            SCIP_CALL_ABORT( SCIPqueueInsert(queue, &graph->head[e]) );
+
+            reached[i] = TRUE;
+            queue[size++] = i;
          }
       }
    }
@@ -3388,13 +3392,15 @@ SCIP_Bool graph_sol_valid(
 #if 0
    if(termcount != graph->terms)
    {
-      for( i = 0; i < nnodes; i++ )
+      printf("termcount %d graph->terms %d \n", termcount, graph->terms);
+      printf("root %d \n", root);
+
+      for( int i = 0; i < nnodes && 0; i++ )
       {
-         if( Is_term(graph->term[i]) && !terminal[i] )
+         if( Is_term(graph->term[i]) && !reached[i] )
          {
-            printf("root %d \n", root);
             printf("fail %d grad %d\n", i, graph->grad[i]);
-            for( e = graph->inpbeg[i]; e != EAT_LAST; e = graph->ieat[e] )
+            for( int e = graph->inpbeg[i]; e != EAT_LAST; e = graph->ieat[e] )
             {
                printf("tail %d %d \n", graph->tail[e], graph->term[graph->tail[e]]);
             }
@@ -3402,11 +3408,8 @@ SCIP_Bool graph_sol_valid(
       }
    }
 #endif
-
-
-
-   SCIPqueueFree(&queue);
-   SCIPfreeBufferArray(scip, &terminal);
+   SCIPfreeBufferArray(scip, &queue);
+   SCIPfreeBufferArray(scip, &reached);
 
    return (termcount == graph->terms);
 }

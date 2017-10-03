@@ -1237,6 +1237,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
                assert(orgprize != NULL);
                assert(solgraph->extended);
 
+               // todo deletme
                if( !solgraph->extended )
                {
                   printf("nex %d \n", 0);
