@@ -30,13 +30,13 @@
 #include <symmetry/type_symmetry.h>
 
 /** include symmetry presolver */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludePresolSymmetry(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** return symmetry group generators */
-extern
+EXTERN
 SCIP_RETCODE SCIPgetSymmetryGenerators(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRESOL*          presol,             /**< symmetry presolver */
@@ -47,22 +47,22 @@ SCIP_RETCODE SCIPgetSymmetryGenerators(
    );
 
 /** specify symmetry type for which we need symmetries */
-extern
+EXTERN
 void SYMsetSpecRequirement(
    SCIP_PRESOL*          presol,             /**< symmetry presolver */
    SYM_SPEC              type                /**< variable types the callee is interested in */
    );
 
 /** specify symmetry type which symmetry group must fix */
-extern
+EXTERN
 void SYMsetSpecRequirementFixed(
    SCIP_PRESOL*          presol,             /**< symmetry presolver */
    SYM_SPEC              fixedtype           /**< variable types that callee wants to have fixed */
    );
 
-/** whether symmetry should be computed for presolved system */
-extern
-SCIP_Bool SYMdetectSymmetryPresolved(
+/** whether symmetry should be computed for after presolving */
+EXTERN
+SCIP_Bool SYMcomputeSymmetryPresolved(
    SCIP_PRESOL*          presol              /**< symmetry presolver */
    );
 

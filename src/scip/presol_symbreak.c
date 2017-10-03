@@ -294,7 +294,7 @@ SCIP_DECL_PRESOLINITPRE(presolInitpreSymbreak)
    assert( presoldata != NULL );
 
    /* check whether we have to run the presolver at the beginning of presolving */
-   presoldata->early = ! SYMdetectSymmetryPresolved(presoldata->symmetrypresol);
+   presoldata->early = ! SYMcomputeSymmetryPresolved(presoldata->symmetrypresol);
 
    if ( presoldata->early && presoldata->enabled )
    {
