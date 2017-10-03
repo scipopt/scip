@@ -65,10 +65,11 @@ struct SCIP_PresolData
    int                   symspecrequirefixed;/**< symmetry specification of variables which must be fixed by symmetries */
    int                   npermvars;          /**< number of variables for permutations */
    SCIP_VAR**            permvars;           /**< variables on which permutations act */
-   SCIP_Bool             computedsym;        /**< Have we already tried to compute symmetries? */
    int                   nperms;             /**< number of permutations */
    int                   nmaxperms;          /**< maximal number of permutations (needed for freeing storage) */
    int**                 perms;              /**< permutation generators as (nperms x npermvars) matrix */
+   SCIP_Bool             computedsym;        /**< Have we already tried to compute symmetries? */
+   SCIP_Bool             successful;         /**< Was the computation of symmetries successful? */
 };
 
 
@@ -601,7 +602,8 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIP_VAR***           permvars,           /**< pointer to store variables on which permutations act */
    int*                  nperms,             /**< pointer to store number of permutations */
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
-   int***                perms               /**< pointer to store permutation generators as (nperms x npermvars) matrix */
+   int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
+   SCIP_Bool*            success             /**< pointer to store whether symmetry computation was successful */
    )
 {
    SCIP_CONSHDLR* conshdlr;
@@ -629,6 +631,7 @@ SCIP_RETCODE computeSymmetryGroup(
    assert( nperms != NULL );
    assert( nmaxperms != NULL );
    assert( perms != NULL );
+   assert( success != NULL );
 
    /* init */
    *npermvars = 0;
@@ -636,6 +639,7 @@ SCIP_RETCODE computeSymmetryGroup(
    *nperms = 0;
    *nmaxperms = 0;
    *perms = NULL;
+   *success = FALSE;
 
    /* skip if no symmetry can be computed */
    if ( ! SYMcanComputeSymmetry() )
@@ -756,17 +760,17 @@ SCIP_RETCODE computeSymmetryGroup(
       }
       else if ( strcmp(conshdlrname, "xor") == 0 )
       {
-         /* get number of variables of XOR constraint (should include integer variable) */
-         SCIP_Bool success;
+         SCIP_Bool consvarssuccess;
 
-         SCIP_CALL( SCIPgetConsNVars(scip, cons, &nconsvars, &success) );
-         assert( success );
+         /* get number of variables of XOR constraint (should include integer variable) */
+         SCIP_CALL( SCIPgetConsNVars(scip, cons, &nconsvars, &consvarssuccess) );
+         assert( consvarssuccess );
          assert( nconsvars <= nvars );
          assert( nconsvars == SCIPgetNVarsXor(scip, cons) + 1 );
 
          /* get variables of XOR constraint */
-         SCIP_CALL( SCIPgetConsVars(scip, cons, consvars, nconsvars, &success) );
-         assert( success );
+         SCIP_CALL( SCIPgetConsVars(scip, cons, consvars, nconsvars, &consvarssuccess) );
+         assert( consvarssuccess );
 
          for (j = 0; j < nconsvars; ++j)
          {
@@ -1094,7 +1098,10 @@ SCIP_RETCODE determineSymmetry(
    maxgenerators = MIN(maxgenerators, MAXGENNUMERATOR / nvars);
 
    SCIP_CALL( computeSymmetryGroup(scip, maxgenerators, presoldata->symspecrequirefixed, FALSE,
-         &presoldata->npermvars, &presoldata->permvars, &presoldata->nperms, &presoldata->nmaxperms, &presoldata->perms) );
+         &presoldata->npermvars, &presoldata->permvars, &presoldata->nperms, &presoldata->nmaxperms, &presoldata->perms, &presoldata->successful) );
+
+   if ( ! presoldata->successful )
+      return SCIP_OKAY;
 
    if ( presoldata->nperms == 0 )
    {
@@ -1310,10 +1317,11 @@ SCIP_RETCODE SCIPincludePresolSymmetry(
    presoldata->symspecrequirefixed = 0;
    presoldata->npermvars = 0;
    presoldata->permvars = NULL;
-   presoldata->computedsym = FALSE;
    presoldata->perms = NULL;
    presoldata->nperms = 0;
    presoldata->nmaxperms = 0;
+   presoldata->computedsym = FALSE;
+   presoldata->successful = FALSE;
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC,
