@@ -7899,7 +7899,6 @@ SCIP_VAR* SCIPgetSlackVarIndicator(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
 SCIP_RETCODE SCIPsetSlackVarUb(
    SCIP*                 scip,                /**< SCIP data structure */
    SCIP_CONS*            cons,                /**< indicator constraint */
