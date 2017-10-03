@@ -240,7 +240,7 @@ Test(test_compute_symmetry, basic2, .description = "compute symmetry for a simpl
 
 
 /* TEST 3 */
-Test(test_compute_symmetry, basic3, .description = "compute symmetry for a simple example with 4 variables and four linear constraints")
+Test(test_compute_symmetry, basic3, .description = "compute symmetry for a simple example with 4 variables and 4 linear constraints - before presolving")
 {
    SCIP_VAR* var1;
    SCIP_VAR* var2;
@@ -316,11 +316,121 @@ Test(test_compute_symmetry, basic3, .description = "compute symmetry for a simpl
    presol = SCIPfindPresol(scip, "symmetry");
    cr_assert( presol != NULL );
 
-   /* turn off presolving in order to avoid having trivial problem afterwards */
-   SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
+   /* compute symmetry before presolving */
+   SCIP_CALL( SCIPsetBoolParam(scip, "presolving/symmetry/computepresolved", FALSE) );
 
    /* turn on checking of symmetries */
-   SCIP_CALL( SCIPsetBoolParam(scip, "presolvers/symmetry/checksymmetries", TRUE) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "presolving/symmetry/checksymmetries", TRUE) );
+
+   /* mark that we want to have symmetry */
+   SYMsetSpecRequirement(presol, SYM_SPEC_BINARY);
+
+   /* presolve problem (symmetry will be available afterwards) */
+   SCIP_CALL( SCIPpresolve(scip) );
+
+   /* get symmetry */
+   SCIP_CALL( SCIPgetSymmetryGenerators(scip, presol, &npermvars, &permvars, &nperms, &perms) );
+   cr_assert( nperms == 1 );
+
+   for (i = 0; i < nperms; ++i)
+   {
+      SCIPinfoMessage(scip, NULL, "Permutation %d: (", i);
+      for (j = 0; j < npermvars; ++j)
+      {
+         if ( j == 0 )
+            SCIPinfoMessage(scip, NULL, "%d", perms[i][j]);
+         else
+            SCIPinfoMessage(scip, NULL, " %d", perms[i][j]);
+      }
+      SCIPinfoMessage(scip, NULL, ")\n");
+   }
+
+   SCIP_CALL( SCIPreleaseVar(scip, &var1) );
+   SCIP_CALL( SCIPreleaseVar(scip, &var2) );
+   SCIP_CALL( SCIPreleaseVar(scip, &var3) );
+   SCIP_CALL( SCIPreleaseVar(scip, &var4) );
+}
+
+
+/* TEST 4 */
+Test(test_compute_symmetry, basic4, .description = "compute symmetry for a simple example with 4 variables and 4 linear constraints - after presolving")
+{
+   SCIP_VAR* var1;
+   SCIP_VAR* var2;
+   SCIP_VAR* var3;
+   SCIP_VAR* var4;
+   SCIP_CONS* cons;
+   SCIP_VAR* vars[2];
+   SCIP_Real vals[2];
+   SCIP_PRESOL* presol;
+   int npermvars;
+   SCIP_VAR** permvars;
+   int nperms;
+   int** perms;
+   int i;
+   int j;
+
+   /* skip test if no symmetry can be computed */
+   if ( ! SYMcanComputeSymmetry() )
+      return;
+
+   /* setup problem:
+    *
+    * x1 + x2          =  1
+    *          x3 + x4 =  1
+    * 2x1 +         x4 <= 2
+    *     2x2 + x3     <= 2
+    * x1, ..., x4 binary
+    */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "basic3"));
+
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var1, "x1", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
+   SCIP_CALL( SCIPaddVar(scip, var1) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var2, "x2", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
+   SCIP_CALL( SCIPaddVar(scip, var2) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var3, "x3", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
+   SCIP_CALL( SCIPaddVar(scip, var3) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var4, "x4", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
+   SCIP_CALL( SCIPaddVar(scip, var4) );
+
+   vars[0] = var1;
+   vars[1] = var2;
+   vals[0] = 1.0;
+   vals[1] = 1.0;
+   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, "e1", 2, vars, vals, 1.0, 1.0) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   vars[0] = var3;
+   vars[1] = var4;
+   vals[0] = 1.0;
+   vals[1] = 1.0;
+   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, "e2", 2, vars, vals, 1.0, 1.0) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   vars[0] = var1;
+   vars[1] = var4;
+   vals[0] = 2.0;
+   vals[1] = 1.0;
+   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, "i1", 2, vars, vals, -SCIPinfinity(scip), 2.0) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   vars[0] = var2;
+   vars[1] = var3;
+   vals[0] = 2.0;
+   vals[1] = 1.0;
+   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, "i2", 2, vars, vals, -SCIPinfinity(scip), 2.0) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   /* get constraint handler */
+   presol = SCIPfindPresol(scip, "symmetry");
+   cr_assert( presol != NULL );
+
+   /* turn on checking of symmetries */
+   SCIP_CALL( SCIPsetBoolParam(scip, "presolving/symmetry/checksymmetries", TRUE) );
 
    /* mark that we want to have symmetry */
    SYMsetSpecRequirement(presol, SYM_SPEC_BINARY);
