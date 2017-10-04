@@ -3456,12 +3456,11 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_LOBJLIM:
-      rval = QSget_param_double(lpi->prob, QS_PARAM_OBJLLIM, dval);
+      QS_CONDRET( QSget_param_double(lpi->prob, QS_PARAM_OBJLLIM, dval) );
       break;
    case SCIP_LPPAR_UOBJLIM:
-      rval = QSget_param_double(lpi->prob, QS_PARAM_OBJULIM, dval);
+      QS_CONDRET( QSget_param_double(lpi->prob, QS_PARAM_OBJULIM, dval) );
       break;
-   }
    case SCIP_LPPAR_LPTILIM:
       QS_CONDRET( QSget_param_double(lpi->prob, QS_PARAM_SIMPLEX_MAX_TIME, dval) );
       break;
@@ -3493,8 +3492,11 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    case SCIP_LPPAR_LPTILIM:
       QS_CONDRET( QSset_param_double(lpi->prob, QS_PARAM_SIMPLEX_MAX_TIME, dval) );
       break;
+   case SCIP_LPPAR_LOBJLIM:
+      QS_CONDRET( QSset_param_double(lpi->prob, QS_PARAM_OBJLLIM, dval) );
+      break;
    case SCIP_LPPAR_UOBJLIM:
-      rval = QSset_param_double(lpi->prob, QS_PARAM_OBJULIM, dval);
+      QS_CONDRET( QSset_param_double(lpi->prob, QS_PARAM_OBJULIM, dval) );
       break;
    case SCIP_LPPAR_FEASTOL:
    case SCIP_LPPAR_DUALFEASTOL:
