@@ -4765,116 +4765,48 @@ SCIP_RETCODE addConcaveEstimatorBivariate(
    return SCIP_OKAY;
 }
 
-/** adds estimator of a constraints multivariate expression tree to a row
- * Given concave function f(x) and reference point ref.
- * Let (v_i: i=1,...,n) be corner points of current domain of x.
- * Find (coef,constant) such that <coef,v_i> + constant <= f(v_i) (cut validity) and
- * such that <coef, ref> + constant is maximized (cut efficacy).
- * Then <coef, x> + constant <= f(x) for all x in current domain.
- *
- * Similar to compute an overestimator for a convex function f(x).
- * Find (coef,constant) such that <coef,v_i> + constant >= f(v_i) and
- * such that <coef, ref> + constant is minimized.
- * Then <coef, x> + constant >= f(x) for all x in current domain.
- */
+/** internal method using an auxiliary LPI, see addConcaveEstimatorMultivariate() */
 static
-SCIP_RETCODE addConcaveEstimatorMultivariate(
+SCIP_RETCODE _addConcaveEstimatorMultivariate(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_LPI*             lpi,                /**< auxiliary LPI */
    SCIP_CONS*            cons,               /**< constraint */
    int                   exprtreeidx,        /**< for which tree a secant should be added */
    SCIP_Real*            ref,                /**< reference values of expression tree variables where to generate cut */
    SCIP_ROWPREP*         rowprep,            /**< rowprep where to add estimator */
+   SCIP_VAR**            vars,               /**< variables of the constraint */
+   SCIP_EXPRTREE*        exprtree,           /**< expression tree of constraint */
+   int                   nvars,              /**< number of variables */
+   SCIP_Bool             doupper,            /**< should an upper estimator be computed */
    SCIP_Bool*            success             /**< buffer to store whether a secant was succefully added to the row */
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_EXPRTREE* exprtree;
-   SCIP_Real treecoef;
-   SCIP_LPI* lpi;
-   SCIP_Bool doupper;
-   SCIP_Real funcval;
-   SCIP_Real lpobj;
-   SCIP_RETCODE lpret;
-
-   SCIP_VAR** vars;
-   int nvars;
-
-   int ncols;
+   SCIP_Real* val;
    SCIP_Real* obj;
    SCIP_Real* lb;
    SCIP_Real* ub;
-   int nrows;
    SCIP_Real* lhs;
    SCIP_Real* rhs;
-   int nnonz;
    int* beg;
    int* ind;
-   SCIP_Real* val;
+   SCIP_Real lpobj;
+   int ncols;
+   int nrows;
+   int nnonz;
+   SCIP_Real funcval;
+   SCIP_Real treecoef;
 
    int i;
    int j;
 
-   static SCIP_Bool warned_highdim_concave = FALSE;
+   SCIP_RETCODE lpret;
 
-   assert(scip != NULL);
-   assert(cons != NULL);
-   assert(ref != NULL);
-   assert(rowprep != NULL);
-   assert(success != NULL);
+   assert(lpi != NULL);
+   assert(nvars <= 10);
 
    consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-   assert(exprtreeidx >= 0);
-   assert(exprtreeidx < consdata->nexprtrees);
-   assert(consdata->exprtrees != NULL);
-
-   exprtree = consdata->exprtrees[exprtreeidx];
-   assert(exprtree != NULL);
-
-   nvars = SCIPexprtreeGetNVars(exprtree);
-   assert(nvars >= 2);
-
-   *success = FALSE;
-
-   /* size of LP is exponential in number of variables of tree, so do only for small trees */
-   if( nvars > 10 )
-   {
-      if( !warned_highdim_concave )
-      {
-         SCIPwarningMessage(scip, "concave function in constraint <%s> too high-dimensional to compute underestimator\n", SCIPconsGetName(cons));
-         warned_highdim_concave = TRUE;
-      }
-      return SCIP_OKAY;
-   }
-
    treecoef = consdata->nonlincoefs[exprtreeidx];
-   vars = SCIPexprtreeGetVars(exprtree);
-
-   /* check whether bounds are finite
-    * make sure reference point is strictly within bounds
-    * otherwise we can easily get an unbounded LP below, e.g., with instances like ex6_2_* from GlobalLib
-    */
-   for( j = 0; j < nvars; ++j )
-   {
-      if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(vars[j])) || SCIPisInfinity(scip, SCIPvarGetUbLocal(vars[j])) )
-      {
-         SCIPdebugMsg(scip, "cannot compute underestimator for concave because variable <%s> is unbounded\n", SCIPvarGetName(vars[j]));
-         return SCIP_OKAY;
-      }
-      assert(SCIPisFeasLE(scip, SCIPvarGetLbLocal(vars[j]), ref[j]));
-      assert(SCIPisFeasGE(scip, SCIPvarGetUbLocal(vars[j]), ref[j]));
-      ref[j] = MIN(SCIPvarGetUbLocal(vars[j]), MAX(SCIPvarGetLbLocal(vars[j]), ref[j]));  /*lint !e666*/
-   }
-
-   /* create empty auxiliary LP and decide its objective sense */
-   assert(consdata->curvatures[exprtreeidx] == SCIP_EXPRCURV_CONVEX || consdata->curvatures[exprtreeidx] == SCIP_EXPRCURV_CONCAVE);
-   doupper = (consdata->curvatures[exprtreeidx] & SCIP_EXPRCURV_CONVEX);  /*lint !e641*/
-   SCIP_CALL( SCIPlpiCreate(&lpi, SCIPgetMessagehdlr(scip), "concaveunderest", doupper ? SCIP_OBJSEN_MINIMIZE : SCIP_OBJSEN_MAXIMIZE) );
-   if( lpi == NULL )
-   {
-      SCIPerrorMessage("failed to create auxiliary LP\n");
-      return SCIP_ERROR;
-   }
 
    /* columns are cut coefficients plus constant */
    ncols = nvars + 1;
@@ -5004,7 +4936,7 @@ SCIP_RETCODE addConcaveEstimatorMultivariate(
 
    *success = TRUE;
 
- TERMINATE:
+TERMINATE:
    SCIPfreeBufferArray(scip, &obj);
    SCIPfreeBufferArray(scip, &lb);
    SCIPfreeBufferArray(scip, &ub);
@@ -5014,12 +4946,111 @@ SCIP_RETCODE addConcaveEstimatorMultivariate(
    SCIPfreeBufferArray(scip, &ind);
    SCIPfreeBufferArray(scip, &val);
 
-   if( lpi != NULL )
+   return SCIP_OKAY;
+}
+
+
+
+/** adds estimator of a constraints multivariate expression tree to a row
+ * Given concave function f(x) and reference point ref.
+ * Let (v_i: i=1,...,n) be corner points of current domain of x.
+ * Find (coef,constant) such that <coef,v_i> + constant <= f(v_i) (cut validity) and
+ * such that <coef, ref> + constant is maximized (cut efficacy).
+ * Then <coef, x> + constant <= f(x) for all x in current domain.
+ *
+ * Similar to compute an overestimator for a convex function f(x).
+ * Find (coef,constant) such that <coef,v_i> + constant >= f(v_i) and
+ * such that <coef, ref> + constant is minimized.
+ * Then <coef, x> + constant >= f(x) for all x in current domain.
+ */
+static
+SCIP_RETCODE addConcaveEstimatorMultivariate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   int                   exprtreeidx,        /**< for which tree a secant should be added */
+   SCIP_Real*            ref,                /**< reference values of expression tree variables where to generate cut */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep where to add estimator */
+   SCIP_Bool*            success             /**< buffer to store whether a secant was succefully added to the row */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_CONSDATA* consdata;
+   SCIP_EXPRTREE* exprtree;
+   SCIP_LPI* lpi;
+   int nvars;
+   int j;
+   SCIP_Bool doupper;
+
+   SCIP_RETCODE retcode;
+
+   static SCIP_Bool warned_highdim_concave = FALSE;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(ref != NULL);
+   assert(rowprep != NULL);
+   assert(success != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(exprtreeidx >= 0);
+   assert(exprtreeidx < consdata->nexprtrees);
+   assert(consdata->exprtrees != NULL);
+
+   exprtree = consdata->exprtrees[exprtreeidx];
+   assert(exprtree != NULL);
+
+   nvars = SCIPexprtreeGetNVars(exprtree);
+   assert(nvars >= 2);
+
+   *success = FALSE;
+
+   /* size of LP is exponential in number of variables of tree, so do only for small trees */
+   if( nvars > 10 )
    {
-      SCIP_CALL( SCIPlpiFree(&lpi) );
+      if( !warned_highdim_concave )
+      {
+         SCIPwarningMessage(scip, "concave function in constraint <%s> too high-dimensional to compute underestimator\n", SCIPconsGetName(cons));
+         warned_highdim_concave = TRUE;
+      }
+      return SCIP_OKAY;
    }
 
-   return SCIP_OKAY;
+   vars = SCIPexprtreeGetVars(exprtree);
+
+   /* check whether bounds are finite
+    * make sure reference point is strictly within bounds
+    * otherwise we can easily get an unbounded LP below, e.g., with instances like ex6_2_* from GlobalLib
+    */
+   for( j = 0; j < nvars; ++j )
+   {
+      if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(vars[j])) || SCIPisInfinity(scip, SCIPvarGetUbLocal(vars[j])) )
+      {
+         SCIPdebugMsg(scip, "cannot compute underestimator for concave because variable <%s> is unbounded\n", SCIPvarGetName(vars[j]));
+         return SCIP_OKAY;
+      }
+      assert(SCIPisFeasLE(scip, SCIPvarGetLbLocal(vars[j]), ref[j]));
+      assert(SCIPisFeasGE(scip, SCIPvarGetUbLocal(vars[j]), ref[j]));
+      ref[j] = MIN(SCIPvarGetUbLocal(vars[j]), MAX(SCIPvarGetLbLocal(vars[j]), ref[j]));  /*lint !e666*/
+   }
+
+   /* create empty auxiliary LP and decide its objective sense */
+   assert(consdata->curvatures[exprtreeidx] == SCIP_EXPRCURV_CONVEX || consdata->curvatures[exprtreeidx] == SCIP_EXPRCURV_CONCAVE);
+   doupper = (consdata->curvatures[exprtreeidx] & SCIP_EXPRCURV_CONVEX);  /*lint !e641*/
+   SCIP_CALL( SCIPlpiCreate(&lpi, SCIPgetMessagehdlr(scip), "concaveunderest", doupper ? SCIP_OBJSEN_MINIMIZE : SCIP_OBJSEN_MAXIMIZE) );
+   if( lpi == NULL )
+   {
+      SCIPerrorMessage("failed to create auxiliary LP\n");
+      return SCIP_ERROR;
+   }
+
+   /* capture the retcode, free the LPI afterwards */
+   retcode = _addConcaveEstimatorMultivariate(scip, lpi, cons, exprtreeidx, ref, rowprep, vars, exprtree, nvars, doupper, success);
+
+   assert(lpi != NULL);
+   SCIP_CALL( SCIPlpiFree(&lpi) );
+
+   return retcode;
 }
 
 /** Computes the linear coeffs and the constant in a linear expression

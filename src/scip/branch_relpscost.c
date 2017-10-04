@@ -494,7 +494,7 @@ SCIP_RETCODE execRelpscost(
    SCIP_Bool             executebranch,      /**< execute a branching step or run probing only */
    SCIP_RESULT*          result              /**< pointer to the result of the execution */
    )
-{
+{  /*lint --e{715}*/
    SCIP_BRANCHRULEDATA* branchruledata;
    SCIP_Real lpobjval;
    SCIP_Real bestsbdown;

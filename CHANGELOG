@@ -37,6 +37,11 @@ performance improvements:
 - add and use RESTRICT macro for some pointers
 - improved the implementation of SCIPvarGetActiveRepresentatives
 
+fixed bugs:
+- fixed bug in feasibility pump heuristic when switching on the usefp20 parameter
+- fixed potential ressource leaks in SCIPsolveLinearProb, expr.c, sepa_eccuts, cons_cumulative.c, cons_nonlinear.c
+
+
 SCIP version 4.0.1
 ==================
 

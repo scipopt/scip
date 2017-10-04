@@ -8237,7 +8237,7 @@ SCIP_RETCODE SCIPbtCreate(
    assert(tree != NULL);
    assert(blkmem != NULL);
 
-   SCIP_ALLOC( BMSallocMemory(tree) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, tree) );
    (*tree)->blkmem = blkmem;
    (*tree)->root = NULL;
 
@@ -8259,7 +8259,7 @@ void SCIPbtFree(
       SCIPbtnodeFree(*tree, &((*tree)->root));
    }
 
-   BMSfreeMemory(tree);
+   BMSfreeBlockMemory((*tree)->blkmem, tree);
 }
 
 /** prints the rooted subtree of the given binary tree node in GML format into the given file */
