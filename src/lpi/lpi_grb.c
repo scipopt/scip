@@ -3418,16 +3418,12 @@ SCIP_RETCODE SCIPlpiGetSolFeasibility(
    SCIP_Bool*            dualfeasible        /**< stores dual feasibility status */
    )
 {
-   int algo;
-
    assert( lpi != NULL );
    assert( lpi->grbmodel != NULL );
    assert( lpi->grbenv != NULL );
    assert( lpi->solstat >= 1 );
 
    SCIPdebugMessage("getting solution feasibility\n");
-
-   CHECK_ZERO( lpi->messagehdlr, GRBgetintparam(lpi->grbenv, GRB_INT_PAR_METHOD, &algo) );
 
    if( primalfeasible != NULL )
       *primalfeasible = SCIPlpiIsPrimalFeasible(lpi);
