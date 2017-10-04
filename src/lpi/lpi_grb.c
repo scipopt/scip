@@ -945,8 +945,6 @@ SCIP_RETCODE reconvertSides(
 
    assert(lpi != NULL);
    assert(nrows >= 0);
-   assert(lhs != NULL);
-   assert(rhs != NULL);
 
    for (i = 0; i < nrows; ++i)
    {
@@ -970,13 +968,17 @@ SCIP_RETCODE reconvertSides(
          break;
 
       case GRB_LESS_EQUAL:
-         lhs[i] = -GRB_INFINITY;
-         rhs[i] = lpi->rhsarray[i];
+         if ( lhs != NULL )
+            lhs[i] = -GRB_INFINITY;
+         if ( rhs != NULL )
+            rhs[i] = lpi->rhsarray[i];
          break;
 
       case GRB_GREATER_EQUAL:
-         lhs[i] = lpi->rhsarray[i];
-         rhs[i] = GRB_INFINITY;
+         if ( lhs != NULL )
+            lhs[i] = lpi->rhsarray[i];
+         if ( rhs != NULL )
+            rhs[i] = GRB_INFINITY;
          break;
 
       default:
@@ -984,7 +986,7 @@ SCIP_RETCODE reconvertSides(
          SCIPABORT();
          return SCIP_LPERROR; /*lint !e527*/
       }
-      assert(lhs[i] <= rhs[i]);
+      assert(lhs == NULL || rhs == NULL || lhs[i] <= rhs[i]);
    }
    return SCIP_OKAY;
 }
