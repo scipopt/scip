@@ -1424,6 +1424,7 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    const SCIP_Real*      val                 /**< values of constraint matrix entries */
    )
 {
+   int grbobjsen;
    int* cnt;
    int rngcount;
    int c;
@@ -1440,7 +1441,7 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    SCIP_CALL( ensureSidechgMem(lpi, nrows) );
 
    /* convert objective sense */
-   objsen = (objsen == SCIP_OBJSEN_MINIMIZE) ? GRB_MINIMIZE : GRB_MAXIMIZE;
+   grbobjsen = (objsen == SCIP_OBJSEN_MINIMIZE) ? GRB_MINIMIZE : GRB_MAXIMIZE;
 
    /* convert lhs/rhs into sen/rhs/range tuples */
    SCIP_CALL( convertSides(lpi, nrows, lhs, rhs, &rngcount) );
@@ -1456,7 +1457,7 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    assert(cnt[ncols-1] >= 0);
 
    /* load model - all variables are continuous */
-   CHECK_ZERO( lpi->messagehdlr, GRBloadmodel(lpi->grbenv, &(lpi->grbmodel), NULL, ncols, nrows, (int) objsen, 0.0, (SCIP_Real*)obj,
+   CHECK_ZERO( lpi->messagehdlr, GRBloadmodel(lpi->grbenv, &(lpi->grbmodel), NULL, ncols, nrows, grbobjsen, 0.0, (SCIP_Real*)obj,
          lpi->senarray, lpi->rhsarray, (int*)beg, cnt, (int*)ind, (SCIP_Real*)val, (SCIP_Real*)lb, (SCIP_Real*)ub, NULL, colnames, rownames) );
 
    CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
