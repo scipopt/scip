@@ -11958,7 +11958,6 @@ SCIP_DECL_EVENTEXEC(processNodeSolvedEvent)
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
-   int            nconss;
 
    assert(scip != NULL);
    assert(event != NULL);
@@ -11975,9 +11974,8 @@ SCIP_DECL_EVENTEXEC(processNodeSolvedEvent)
    assert(conshdlr != NULL);
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
-   nconss = SCIPconshdlrGetNConss(conshdlr);
 
-   if( nconss == 0 )
+   if( SCIPconshdlrGetNConss(conshdlr) == 0 )
       return SCIP_OKAY;
 
    /* store all bilinear terms and compute for each term (at most) four valid linear inequalities; note that we only
