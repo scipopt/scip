@@ -128,6 +128,7 @@ struct SCIP_ConsData
    int                   nbilinterms;        /**< number of bilinear terms */
    int                   bilintermssize;     /**< length of bilinear term arrays */
    SCIP_BILINTERM*       bilinterms;         /**< bilinear terms array */
+   int*                  bilintermsidx;      /**< unique index of each bilinear term xy in the bilinestimators array of the constraint handler data */
 
    SCIP_NLROW*           nlrow;              /**< a nonlinear row representation of this constraint */
 
@@ -190,6 +191,23 @@ struct SCIP_QuadConsUpgrade
 };
 typedef struct SCIP_QuadConsUpgrade SCIP_QUADCONSUPGRADE; /**< quadratic constraint update method */
 
+/** structure to store everything needed for using linear inequalities to improve upon the McCormick relaxation */
+struct BilinearEstimator
+{
+   SCIP_VAR*             x;                 /**< first variable */
+   SCIP_VAR*             y;                 /**< second variable */
+   SCIP_Real             inequnderest[6];   /**< at most two inequalities that can be used to underestimate xy; stored as (alpha,beta,gamma) with alpha x <= beta y + gamma */
+   SCIP_Real             ineqoverest[6];    /**< at most two inequalities that can be used to overestimate xy; stored as (alpha,beta,gamma) with alpha x <= beta y + gamma */
+   int                   ninequnderest;     /**< total number of inequalities for underestimating xy */
+   int                   nineqoverest;      /**< total number of inequalities for overestimating xy */
+   unsigned int          nunderest;         /**< number of constraints that require to underestimate xy */
+   unsigned int          noverest;          /**< number of constraints that require to overestimate xy */
+
+   SCIP_Real             score;             /**< score of each bilinear term */
+   int                   nupdates;          /**< total number of score updates */
+};
+typedef struct BilinearEstimator BILINESTIMATOR;
+
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {
@@ -232,6 +250,17 @@ struct SCIP_ConshdlrData
    SCIP_QUADCONSUPGRADE** quadconsupgrades;  /**< quadratic constraint upgrade methods for specializing quadratic constraints */
    int                   quadconsupgradessize; /**< size of quadconsupgrade array */
    int                   nquadconsupgrades;  /**< number of quadratic constraint upgrade methods */
+
+   int                   lastvarorderid;     /**< unique index for the status of the variable order graph */
+
+   BILINESTIMATOR*       bilinestimators;    /**< array containing all required information for using stronger estimators for each bilinear term in all quadratic constraints */
+   int                   nbilinterms;        /**< number of bilinear terms in all quadratic constraints */
+   int                   bilinlpiterlim;     /**< total LP iteration limit for computing linear inequalities for all bilinear terms (-1: no limit) */
+   int                   nodesolvedeventfilterpos; /**< filter position of new solution event handler, if caught */
+
+   SCIP_Bool             usebilinineqroot;   /**< should linear inequalities for obtaining stronger envelopes for bilinear terms be computed in the root node? */
+   SCIP_Bool             solvedbilinineqroot; /**< did we already try to compute valid linear inequalities in the root node? */
+   SCIP_Bool             storedbilinearterms; /**< did we already try to store all bilinear terms? */
 };
 
 
@@ -1424,6 +1453,9 @@ SCIP_RETCODE consdataFree(
    SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->eigenvalues, (*consdata)->nquadvars);
    SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->eigenvectors, (int)((*consdata)->nquadvars*(*consdata)->nquadvars));
    SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->bp, (*consdata)->nquadvars);
+
+   /* free unique indices of bilinear terms array */
+   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->bilintermsidx, (*consdata)->nbilinterms);
 
    SCIPfreeBlockMemory(scip, consdata);
    *consdata = NULL;
@@ -5334,6 +5366,543 @@ SCIP_RETCODE computeViolations(
    return SCIP_OKAY;
 }
 
+
+/** index comparison method for bilinear terms */
+static
+SCIP_DECL_SORTINDCOMP(bilinTermComp2)
+{  /*lint --e{715}*/
+   SCIP_BILINTERM* bilinterms = (SCIP_BILINTERM*)dataptr;
+   int var1cmp;
+
+   assert(bilinterms != NULL);
+
+   var1cmp = SCIPvarCompare(bilinterms[ind1].var1, bilinterms[ind2].var1);
+   if( var1cmp != 0 )
+      return var1cmp;
+
+   return SCIPvarCompare(bilinterms[ind1].var2, bilinterms[ind2].var2);
+}
+
+/** volume comparison method for bilinear terms; prioritizes bilinear products with a larger volume */
+static
+SCIP_DECL_SORTINDCOMP(bilinTermCompVolume)
+{  /*lint --e{715}*/
+   SCIP_BILINTERM* bilinterms = (SCIP_BILINTERM*)dataptr;
+   SCIP_Real vol1;
+   SCIP_Real vol2;
+
+   assert(bilinterms != NULL);
+
+   vol1 = (SCIPvarGetUbLocal(bilinterms[ind1].var1) - SCIPvarGetLbLocal(bilinterms[ind1].var1))
+      * (SCIPvarGetUbLocal(bilinterms[ind1].var2) - SCIPvarGetLbLocal(bilinterms[ind1].var2));
+   vol2 = (SCIPvarGetUbLocal(bilinterms[ind2].var1) - SCIPvarGetLbLocal(bilinterms[ind2].var1))
+      * (SCIPvarGetUbLocal(bilinterms[ind2].var2) - SCIPvarGetLbLocal(bilinterms[ind2].var2));
+
+   if( vol1 > vol2 )
+      return -1;
+   else if( vol1 < vol2 )
+      return 1;
+   return bilinTermComp2(dataptr, ind1, ind2);
+}
+
+/** helper function to sort all bilinear terms in the constraint handler data */
+static
+SCIP_RETCODE sortAllBilinTerms(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BILINTERM*       bilinterms,         /**< array containing all bilinear terms */
+   int                   nbilinterms,        /**< total number of bilinear terms */
+   SCIP_CONS**           bilinconss,         /**< array for mapping each term to its constraint */
+   int*                  bilinposs           /**< array for mapping each term to its position in the corresponding
+                                               *  bilinconss constraint */
+   )
+{
+   int* perm;
+   int  i;
+   int  nexti;
+   int  v;
+   SCIP_BILINTERM bilinterm;
+   SCIP_CONS* bilincons;
+   int bilinpos;
+
+   assert(scip != NULL);
+   assert(bilinterms != NULL);
+   assert(nbilinterms > 0);
+   assert(bilinconss != NULL);
+   assert(bilinposs != NULL);
+
+   /* get temporary memory to store the sorted permutation and the inverse permutation */
+   SCIP_CALL( SCIPallocBufferArray(scip, &perm, nbilinterms) );
+
+   /* call quicksort */
+   SCIPsort(perm, bilinTermCompVolume, (void*)bilinterms, nbilinterms);
+
+   /* permute the bilinear terms according to the resulting permutation */
+   for( v = 0; v < nbilinterms; ++v )
+   {
+      if( perm[v] != v )
+      {
+         bilinterm = bilinterms[v];
+         bilincons = bilinconss[v];
+         bilinpos = bilinposs[v];
+
+         i = v;
+         do
+         {
+            assert(0 <= perm[i] && perm[i] < nbilinterms);
+            assert(perm[i] != i);
+
+            bilinterms[i] = bilinterms[perm[i]];
+            bilinconss[i] = bilinconss[perm[i]];
+            bilinposs[i] = bilinposs[perm[i]];
+
+            nexti = perm[i];
+            perm[i] = i;
+            i = nexti;
+         }
+         while( perm[i] != v );
+         bilinterms[i] = bilinterm;
+         bilinconss[i] = bilincons;
+         bilinposs[i] = bilinpos;
+         perm[i] = i;
+      }
+   }
+
+   /* free temporary memory */
+   SCIPfreeBufferArray(scip, &perm);
+
+   return SCIP_OKAY;
+}
+
+/** stores all bilinear terms in the quadratic constraint handler data; in addition, for each bilinear term we store
+ *  the number of nonconvex constraints that require to over- or underestimate this term, which only depends on the
+ *  lhs, rhs, and the bilinear coefficient
+ */
+static
+SCIP_RETCODE storeAllBilinearTerms(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   SCIP_CONS**           conss,              /**< constraints to process */
+   int                   nconss              /**< number of constraints */
+   )
+{
+   SCIP_BILINTERM* bilinterms;
+   SCIP_CONS** bilincons;
+   int* bilinpos;
+   int nbilinterms;
+   int pos;
+   int c;
+   int i;
+
+   assert(scip != NULL);
+   assert(conshdlrdata != NULL);
+   assert(conss != NULL);
+
+   /* check for all cases for which we don't want to spend time for collecting all bilinear terms */
+   if( nconss == 0 || conshdlrdata->storedbilinearterms || SCIPgetSubscipDepth(scip) != 0 || SCIPgetDepth(scip) >= 1
+	    || SCIPinProbing(scip) || SCIPinDive(scip) )
+      return SCIP_OKAY;
+
+   assert(conshdlrdata->bilinestimators == NULL);
+   assert(conshdlrdata->nbilinterms == 0);
+
+   conshdlrdata->storedbilinearterms = TRUE;
+   nbilinterms = 0;
+
+   /* count the number of bilinear terms (including duplicates) */
+   for( c = 0; c < nconss; ++c )
+   {
+      SCIP_CONSDATA* consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+      nbilinterms += consdata->nbilinterms;
+   }
+
+   /* no bilinear terms available -> stop */
+   if( nbilinterms == 0 )
+      return SCIP_OKAY;
+
+   /* allocate temporary memory for sorting all bilinear terms (including duplicates) */
+   SCIP_CALL( SCIPallocBufferArray(scip, &bilinterms, nbilinterms) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &bilincons, nbilinterms) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &bilinpos, nbilinterms) );
+
+   /* copy all bilinear terms; note that we need separate entries for x*y and y*x */
+   pos = 0;
+   for( c = 0; c < nconss; ++c )
+   {
+      SCIP_CONSDATA* consdata = SCIPconsGetData(conss[c]);
+
+      /* allocate memory to store the later computed indices of each bilinear term in the bilinterms array of the
+       * constraint handler data
+       */
+      if( consdata->nbilinterms > 0 )
+      {
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->bilintermsidx, consdata->nbilinterms) );
+      }
+
+      for( i = 0; i < consdata->nbilinterms; ++i )
+      {
+         assert(consdata->bilinterms != NULL);
+         assert(consdata->bilinterms[i].var1 != consdata->bilinterms[i].var2);
+
+         /* add xy */
+         bilinterms[pos].var1 = consdata->bilinterms[i].var1;
+         bilinterms[pos].var2 = consdata->bilinterms[i].var2;
+         bilinterms[pos].coef = consdata->bilinterms[i].coef;
+         bilincons[pos] = conss[c];
+         bilinpos[pos] = i;
+         ++pos;
+
+         /* invalidate bilinear term index */
+         assert(consdata->bilintermsidx != NULL);
+         consdata->bilintermsidx[i] = -1;
+      }
+   }
+   assert(pos == nbilinterms);
+
+   /* sorts all bilinear terms (including duplicates) */
+   SCIP_CALL( sortAllBilinTerms(scip, bilinterms, nbilinterms, bilincons, bilinpos) );
+
+   /* count the number of bilinear terms without duplicates */
+   conshdlrdata->nbilinterms = nbilinterms;
+   for( i = 0; i < nbilinterms - 1; ++i )
+   {
+      assert(bilinTermCompVolume((void*)bilinterms, i, i+1) != 0 || bilinTermComp2((void*)bilinterms, i, i+1) <= 0);
+
+      if( bilinTermComp2((void*)bilinterms, i, i+1) == 0 )
+         --(conshdlrdata->nbilinterms);
+   }
+   assert(conshdlrdata->nbilinterms <= nbilinterms && conshdlrdata->nbilinterms > 0);
+
+   /* store all information for each bilinear term into the constraint handler data */
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &conshdlrdata->bilinestimators, conshdlrdata->nbilinterms) );
+
+   /* filter duplicates and update entries in the corresponding constraint datas */
+   pos = 0;
+   for( i = 0; i < nbilinterms; ++i )
+   {
+      SCIP_CONSDATA* consdata = SCIPconsGetData(bilincons[i]);
+      SCIP_VAR* x;
+      SCIP_Bool haslhs = !SCIPisInfinity(scip, -consdata->lhs);
+      SCIP_Bool hasrhs = !SCIPisInfinity(scip, consdata->rhs);
+
+      assert(consdata != NULL);
+      assert(bilinpos[i] >= 0 && bilinpos[i] < consdata->nbilinterms);
+
+      /* check for a new bilinear term */
+      if( i == 0 || bilinTermComp2((void*)bilinterms, i-1, i) != 0 )
+      {
+         conshdlrdata->bilinestimators[pos].x = bilinterms[i].var1;
+         conshdlrdata->bilinestimators[pos].y = bilinterms[i].var2;
+         ++pos;
+      }
+
+      /* store whether under- or overestimation is needed for each bilinear term; note that we do not consider convex
+       * constraints because they will not be used in separated generateCutNonConvex(), which is the only function that
+       * uses a term-wise relaxation
+       */
+      if( SCIPisPositive(scip, bilinterms[i].coef) )
+      {
+         conshdlrdata->bilinestimators[pos-1].nunderest += hasrhs && !consdata->isconvex;
+         conshdlrdata->bilinestimators[pos-1].noverest += haslhs && !consdata->isconcave;
+      }
+      else
+      {
+         assert(SCIPisNegative(scip, bilinterms[i].coef));
+         conshdlrdata->bilinestimators[pos-1].nunderest += haslhs && !consdata->isconcave;
+         conshdlrdata->bilinestimators[pos-1].noverest += hasrhs && !consdata->isconvex;
+      }
+
+      /* update index of bilinear term in the constraint data */
+      x = consdata->bilinterms[bilinpos[i]].var1;
+
+      assert(pos > 0);
+      if( x == conshdlrdata->bilinestimators[pos-1].x )
+      {
+         assert(consdata->bilinterms[bilinpos[i]].var2 == conshdlrdata->bilinestimators[pos-1].y);
+         consdata->bilintermsidx[bilinpos[i]] = pos-1;
+      }
+   }
+   assert(pos == conshdlrdata->nbilinterms);
+
+#ifndef NDEBUG
+   /* check whether
+    * - all bilintermsidx entries have been set
+    * - variables in bilinear terms of each constraint data and the constraint handler data match
+    */
+   for( c = 0; c < nconss; ++c )
+   {
+      SCIP_CONSDATA* consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      for( i = 0; i < consdata->nbilinterms; ++i )
+      {
+         SCIP_VAR* x = consdata->bilinterms[i].var1;
+         SCIP_VAR* y = consdata->bilinterms[i].var2;
+         int idx = consdata->bilintermsidx[i];
+
+         assert(idx >= 0 && idx < conshdlrdata->nbilinterms);
+         assert(x == conshdlrdata->bilinestimators[idx].x);
+         assert(y == conshdlrdata->bilinestimators[idx].y);
+
+         /* at least one direction is important if the constraint is not convex */
+         if( !SCIPisInfinity(scip, consdata->rhs) && !consdata->isconvex )
+            assert(conshdlrdata->bilinestimators[idx].nunderest + conshdlrdata->bilinestimators[idx].noverest > 0);
+         if( !SCIPisInfinity(scip, -consdata->lhs) && !consdata->isconcave )
+            assert(conshdlrdata->bilinestimators[idx].nunderest + conshdlrdata->bilinestimators[idx].noverest > 0);
+      }
+   }
+#endif
+
+   /* free memory */
+   SCIPfreeBufferArray(scip, &bilinpos);
+   SCIPfreeBufferArray(scip, &bilincons);
+   SCIPfreeBufferArray(scip, &bilinterms);
+
+   return SCIP_OKAY;
+}
+
+/** frees memory allocated in storeAllBilinearTerms() */
+static
+SCIP_RETCODE freeAllBilinearTerms(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   SCIP_CONS**           conss,              /**< constraints to process */
+   int                   nconss              /**< number of constraints */
+
+   )
+{
+   int c;
+
+   assert(conshdlrdata != NULL);
+
+   for( c = 0; c < nconss; ++c )
+   {
+      SCIP_CONSDATA* consdata = SCIPconsGetData(conss[c]); /*lint !e613*/
+      assert(consdata != NULL);
+
+      SCIPfreeBlockMemoryArrayNull(scip, &consdata->bilintermsidx, consdata->nbilinterms);
+   }
+
+   SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->bilinestimators, conshdlrdata->nbilinterms);
+
+   conshdlrdata->nbilinterms = 0;
+   conshdlrdata->storedbilinearterms = FALSE;
+   conshdlrdata->solvedbilinineqroot = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** sets up the LP such that a sequence of LPs for different bilinear terms can be solved; function works as follows:
+ *
+ *  1. start probing mode
+ *  2. add objective cutoff (if possible)
+ *  3. set objective function to zero
+ *  4. set feasibility, optimality, and relative bound improvement tolerances of SCIP
+ *
+ *  @note call deinitBilinearLP after solving all required LPs via solveBilinearLP
+ */
+static
+SCIP_RETCODE initBilinearLP(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             feastol,            /**< feasibility tolerance */
+   SCIP_Real             dualfeastol,        /**< dual feasibility tolerance */
+   SCIP_Real             boundstrepstol      /**< relative bound improvement limit */
+  )
+{
+   SCIP_VAR** vars;
+   SCIP_Bool lperror;
+   int nvars;
+   int i;
+
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
+
+   /* 1. start probing mode */
+   assert(!SCIPinProbing(scip));
+   SCIP_CALL( SCIPstartProbing(scip) );
+
+   /* 2. add objective cutoff */
+   if( !SCIPisInfinity(scip, SCIPgetCutoffbound(scip)) )
+   {
+      SCIP_ROW* row;
+
+      SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &row, "cutoffrow", -SCIPinfinity(scip), SCIPgetCutoffbound(scip), FALSE,
+         FALSE, FALSE) );
+      SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
+      for( i = 0; i < nvars; i++ )
+      {
+         SCIP_CALL( SCIPaddVarToRow(scip, row, vars[i], SCIPvarGetObj(vars[i])) );
+      }
+      SCIP_CALL( SCIPflushRowExtensions(scip, row) );
+      SCIP_CALL( SCIPaddRowProbing(scip, row) );
+      SCIP_CALL( SCIPreleaseRow(scip, &row) );
+   }
+
+   /* 3. set objective function to zero */
+   for( i = 0; i < nvars; ++i )
+   {
+      SCIP_CALL( SCIPchgVarObjProbing(scip, vars[i], 0.0) );
+   }
+
+   /* we need to solve the probing LP before creating new probing nodes in solveBilinearLP() */
+   SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, NULL) );
+
+   /* 5. set feasibility, optimality, and relative bound improvement tolerances */
+   SCIP_CALL( SCIPchgLpfeastol(scip, feastol, FALSE) );
+   SCIP_CALL( SCIPchgDualfeastol(scip, dualfeastol) );
+   SCIP_CALL( SCIPsetRealParam(scip, "numerics/boundstreps", boundstrepstol) );
+
+   return SCIP_OKAY;
+}
+
+/** undo changes of initBilinearLP */
+static
+SCIP_RETCODE deinitBilinearLP(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             oldfeastol,         /**< old feasibility tolerance */
+   SCIP_Real             olddualfeastol,     /**< old dual feasibility tolerance */
+   SCIP_Real             oldboundstrepstol   /**< old relative bound improvement limit */
+  )
+{
+   SCIP_Bool lperror;
+
+   assert(SCIPinProbing(scip));
+
+   /* reset feasibility and optimality tolerances */
+   SCIP_CALL( SCIPchgDualfeastol(scip, olddualfeastol) );
+   SCIP_CALL( SCIPchgLpfeastol(scip, oldfeastol, FALSE) );
+
+   /* reset relative bound improvement limit */
+   SCIP_CALL( SCIPsetRealParam(scip, "numerics/boundstreps", oldboundstrepstol) );
+
+   /* end probing mode */
+   SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, NULL) ); /* TODO necessary to solve LP here again? */
+   SCIP_CALL( SCIPendProbing(scip) );
+
+   return SCIP_OKAY;
+}
+
+/** computes a valid inequality from the current LP relaxation for a bilinear term xy only involving x and y; the
+ *  inequality is found by optimizing along the line connecting the points (xs,ys) and (xt,yt); the dual solution of
+ *  optimal LP solution yields the desired inequality of the form:
+ *
+ *     alpha * x <= beta * y + gamma
+ */
+static
+SCIP_RETCODE solveBilinearLP(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             x,                  /**< first variable */
+   SCIP_VAR*             y,                  /**< second variable */
+   SCIP_Real             xs,                 /**< x-coordinate of the first point */
+   SCIP_Real             ys,                 /**< y-coordinate of the first point */
+   SCIP_Real             xt,                 /**< x-coordinate of the second point */
+   SCIP_Real             yt,                 /**< y-coordinate of the second point */
+   SCIP_Real*            alpha,              /**< pointer to store the coefficient of x */
+   SCIP_Real*            beta,               /**< pointer to store the coefficient of y */
+   SCIP_Real*            gamma,              /**< pointer to store the constant */
+   int                   iterlim             /**< iteration limit (-1: for no limit) */
+   )
+{
+   SCIP_ROW* row;
+   SCIP_Real signx;
+   SCIP_Real scale;
+   SCIP_Real side;
+   SCIP_Bool lperror;
+
+   assert(alpha != NULL);
+   assert(beta != NULL);
+   assert(gamma!= NULL);
+   assert(SCIPinProbing(scip));
+
+   *alpha = SCIP_INVALID;
+   *beta = SCIP_INVALID;
+   *gamma= SCIP_INVALID;
+
+   /* adjust reference points */
+   xs = MIN(MAX(xs, SCIPvarGetLbGlobal(x)), SCIPvarGetUbGlobal(x)); /*lint !e666*/
+   xt = MIN(MAX(xt, SCIPvarGetLbGlobal(x)), SCIPvarGetUbGlobal(x)); /*lint !e666*/
+   ys = MIN(MAX(ys, SCIPvarGetLbGlobal(y)), SCIPvarGetUbGlobal(y)); /*lint !e666*/
+   yt = MIN(MAX(yt, SCIPvarGetLbGlobal(y)), SCIPvarGetUbGlobal(y)); /*lint !e666*/
+
+   /* skip computations if (xs,ys) and (xt,yt) are too close to each other or contain too large values */
+   if( SCIPisFeasEQ(scip, xs, xt) || SCIPisFeasEQ(scip, ys, yt)
+      || SCIPisHugeValue(scip, REALABS(xs)) || SCIPisHugeValue(scip, REALABS(xt))
+      || SCIPisHugeValue(scip, REALABS(ys)) || SCIPisHugeValue(scip, REALABS(yt)) )
+      return SCIP_OKAY;
+
+   /* compute scaler for the additional linear constraint */
+   scale = MAX3(1.0, REALABS(xt-xs), REALABS(yt-ys)); /*lint !e666*/
+
+   /* set objective function */
+   signx = (xs > xt) ? 1.0 : -1.0;
+   SCIP_CALL( SCIPchgVarObjProbing(scip, x, signx) );
+
+   /* create new probing node to remove the added LP row afterwards */
+   SCIP_CALL( SCIPnewProbingNode(scip) );
+
+   /* create row */
+   side = scale * (xs/(xt-xs) - ys/(yt-ys));
+   SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &row, "bilinrow", side, side, FALSE, FALSE, TRUE) );
+   SCIP_CALL( SCIPaddVarToRow(scip, row, x, scale/(xt-xs)) );
+   SCIP_CALL( SCIPaddVarToRow(scip, row, y, -scale/(yt-ys)) );
+   SCIP_CALL( SCIPaddRowProbing(scip, row) );
+
+   /* solve probing LP */
+#ifdef NDEBUG
+   {
+      SCIP_RETCODE retstat;
+      retstat = SCIPsolveProbingLP(scip, iterlim, &lperror, NULL);
+      if( retstat != SCIP_OKAY )
+      {
+         SCIPwarningMessage(scip, "Error while solving LP in quadratic constraint handler; LP solve terminated with" \
+            "code <%d>\n", retstat);
+      }
+   }
+#else
+   SCIP_CALL( SCIPsolveProbingLP(scip, iterlim, &lperror, NULL) );
+#endif
+
+   /* collect dual and primal solution entries */
+   if( !lperror  && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
+   {
+      SCIP_Real xval = SCIPvarGetLPSol(x);
+      SCIP_Real yval = SCIPvarGetLPSol(y);
+      SCIP_Real mu = -SCIProwGetDualsol(row);
+
+      /* alpha x + beta y <= constant */
+      *alpha  = -signx - (mu * scale) / (xt - xs);
+      *beta = (mu * scale) / (yt - ys);
+      *gamma = (*alpha) * xval + (*beta) * yval;
+
+      /* alpha x <= -beta y + constant */
+      *beta = -(*beta);
+
+      /* normalize inequality */
+      if( !SCIPisZero(scip, *alpha) )
+      {
+         SCIP_Real val = REALABS(*alpha);
+         *alpha /= val;
+         *beta /= val;
+         *gamma /= val;
+      }
+      else if( !SCIPisZero(scip, *beta) )
+      {
+         SCIP_Real val = REALABS(*beta);
+         *beta /= val;
+         *gamma /= val;
+      }
+   }
+
+   /* release row and backtrack probing node */
+   SCIP_CALL( SCIPreleaseRow(scip, &row) );
+   SCIP_CALL( SCIPbacktrackProbing(scip, 0) );
+
+   /* reset objective function and row */
+   SCIP_CALL( SCIPchgVarObjProbing(scip, x, 0.0) );
+
+   return SCIP_OKAY;
+}
+
 /** tries to compute cut for multleft * <coefleft, x'> * multright <= rhs / (multright * <coefright, x'>) where x'=(x,1) */
 static
 SCIP_RETCODE generateCutFactorableDo(
@@ -6565,10 +7134,132 @@ SCIP_RETCODE generateCutConvex(
    return SCIP_OKAY;
 }
 
+/** helper function to update the best relaxation for a bilinear term when using valid linear inequalities */
+static
+void updateBilinearRelaxation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             x,                  /**< first variable */
+   SCIP_VAR*             y,                  /**< second variable */
+   SCIP_Real             bilincoef,          /**< coefficient of the bilinear term */
+   SCIP_SIDETYPE         violside,           /**< side of quadratic constraint that is violated */
+   SCIP_Real             refx,               /**< reference point for the x variable */
+   SCIP_Real             refy,               /**< reference point for the y variable */
+   SCIP_Real*            ineqs,              /**< coefficients of each linear inequality; stored as triple (xcoef,ycoef,constant) */
+   int                   nineqs,             /**< total number of inequalities */
+   SCIP_Real*            bestcoefx,          /**< pointer to update the x coefficient */
+   SCIP_Real*            bestcoefy,          /**< pointer to update the y coefficient */
+   SCIP_Real*            bestconst,          /**< pointer to update the constant */
+   SCIP_Real*            bestval,            /**< value of the best relaxation that have been found so far */
+   SCIP_Bool*            success             /**< buffer to store whether we found a better relaxation */
+   )
+{
+   SCIP_Real constant;
+   SCIP_Real xcoef;
+   SCIP_Real ycoef;
+   SCIP_Real lbx;
+   SCIP_Real ubx;
+   SCIP_Real lby;
+   SCIP_Real uby;
+   SCIP_Bool update;
+   SCIP_Bool overestimate;
+   int i;
+
+   assert(x != y);
+   assert(!SCIPisZero(scip, bilincoef));
+   assert(nineqs >= 0 && nineqs <= 2);
+   assert(bestcoefx != NULL);
+   assert(bestcoefy != NULL);
+   assert(bestconst != NULL);
+   assert(bestval != NULL);
+
+   /* no inequalities available */
+   if( nineqs == 0 )
+      return;
+   assert(ineqs != NULL);
+
+   lbx = SCIPvarGetLbLocal(x);
+   ubx = SCIPvarGetUbLocal(x);
+   lby = SCIPvarGetLbLocal(y);
+   uby = SCIPvarGetUbLocal(y);
+   overestimate = (violside == SCIP_SIDETYPE_LEFT);
+
+   /* check cases for which we can't compute a tighter relaxation */
+   if( SCIPisFeasLE(scip, refx, lbx) || SCIPisFeasGE(scip, refx, ubx)
+      || SCIPisFeasLE(scip, refy, lby) || SCIPisFeasGE(scip, refy, uby) )
+      return;
+
+   /* try to use both inequalities */
+   if( nineqs == 2 )
+   {
+      SCIPcomputeBilinEnvelope2(scip, bilincoef, lbx, ubx, refx, lby, uby, refy, overestimate, ineqs[0], ineqs[1],
+         ineqs[2], ineqs[3], ineqs[4], ineqs[5], &xcoef, &ycoef, &constant, &update);
+
+      if( update )
+      {
+	 SCIP_Real val = xcoef * refx + ycoef * refy + constant;
+
+	 /* update relaxation if possible */
+	 if( (overestimate && SCIPisFeasLT(scip, val, *bestval)) || (!overestimate && SCIPisFeasGT(scip, val, *bestval)) )
+	 {
+	    *bestcoefx = xcoef;
+	    *bestcoefy = ycoef;
+	    *bestconst = constant;
+	    *bestval = val;
+	    *success = TRUE;
+	 }
+      }
+   }
+
+   /* use inequalities individually */
+   for( i = 0; i < nineqs; ++i )
+   {
+      SCIPcomputeBilinEnvelope1(scip, bilincoef, lbx, ubx, refx, lby, uby, refy, overestimate, ineqs[3*i], ineqs[3*i+1],
+         ineqs[3*i+2], &xcoef, &ycoef, &constant, &update);
+
+      if( update )
+      {
+	 SCIP_Real val = xcoef * refx + ycoef * refy + constant;
+
+	 /* update relaxation if possible */
+	 if( (overestimate && SCIPisFeasLT(scip, val, *bestval)) || (!overestimate && SCIPisFeasGT(scip, val, *bestval)) )
+	 {
+	    *bestcoefx = xcoef;
+	    *bestcoefy = ycoef;
+	    *bestconst = constant;
+	    *bestval = val;
+	    *success = TRUE;
+	 }
+      }
+   }
+
+   return;
+}
+
+/* returns the interiority of a reference point w.r.t. local bounds */
+static
+SCIP_Real getInteriority(
+   SCIP_Real            lbx,                /**< lower bound of the first variable */
+   SCIP_Real            ubx,                /**< upper bound of the first variable  */
+   SCIP_Real            refx,               /**< reference point of the first variable */
+   SCIP_Real            lby,                /**< lower bound of the second variable */
+   SCIP_Real            uby,                /**< upper bound of the second variable  */
+   SCIP_Real            refy                /**< reference point of the second variable */
+   )
+{
+   SCIP_Real interiorityx;
+   SCIP_Real interiorityy;
+
+   interiorityx = MIN(refx-lbx, ubx-refx) / MAX(ubx-lbx, 1e-6);
+   interiorityy = MIN(refy-lby, uby-refy) / MAX(uby-lby, 1e-6);
+
+   return 2.0*MIN(interiorityx, interiorityy);
+}
+
 /** computes cut coefficients for a nonconvex quadratic function */
 static
 SCIP_RETCODE generateCutNonConvex(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SIDETYPE         violside,           /**< side for which to generate cut */
    SCIP_Real*            ref,                /**< reference solution where to generate the cut */
@@ -6578,6 +7269,7 @@ SCIP_RETCODE generateCutNonConvex(
 {
    SCIP_CONSDATA* consdata;
    SCIP_BILINTERM* bilinterm;
+   BILINESTIMATOR* bilinestimator;
    SCIP_Real sqrcoef;
    SCIP_Real coef;
    SCIP_Real coef2;
@@ -6588,6 +7280,7 @@ SCIP_RETCODE generateCutNonConvex(
    int k;
 
    assert(scip != NULL);
+   assert(conshdlrdata != NULL);
    assert(cons != NULL);
    assert(ref  != NULL);
    assert(success != NULL);
@@ -6627,9 +7320,21 @@ SCIP_RETCODE generateCutNonConvex(
          SCIPaddRowprepConstant(rowprep, constant);
       }
 
+      /* relax each bilinear term */
       for( k = 0; k < consdata->quadvarterms[j].nadjbilin && *success; ++k )
       {
-         bilinterm = &consdata->bilinterms[consdata->quadvarterms[j].adjbilin[k]];
+	 SCIP_VAR* x;
+	 SCIP_VAR* y;
+	 SCIP_Real refx;
+	 SCIP_Real refy;
+	 SCIP_Real lbx;
+	 SCIP_Real ubx;
+	 SCIP_Real lby;
+	 SCIP_Real uby;
+	 int idx;
+
+         idx = consdata->quadvarterms[j].adjbilin[k];
+         bilinterm = &consdata->bilinterms[idx];
          if( bilinterm->var1 != var )
             continue;
          assert(bilinterm->var2 != var);
@@ -6640,13 +7345,59 @@ SCIP_RETCODE generateCutNonConvex(
          assert(var2pos < consdata->nquadvars);
          assert(consdata->quadvarterms[var2pos].var == bilinterm->var2);
 
+         /* get data of the variables in the bilinear term */
+         x = var;
+         y = bilinterm->var2;
+         refx = ref[j];
+         refy = ref[var2pos];
+         lbx = SCIPvarGetLbLocal(x);
+         ubx = SCIPvarGetUbLocal(x);
+         lby = SCIPvarGetLbLocal(y);
+         uby = SCIPvarGetUbLocal(y);
+
+         /* use the McCormick relaxation for under- or overestimating the bilinear term */
          coef = 0.0;
          coef2 = 0.0;
          constant = 0.0;
-         SCIPaddBilinMcCormick(scip, bilinterm->coef,
-            SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), ref[j],
-            SCIPvarGetLbLocal(bilinterm->var2), SCIPvarGetUbLocal(bilinterm->var2), ref[var2pos],
+         SCIPaddBilinMcCormick(scip, bilinterm->coef, lbx, ubx, refx, lby, uby, refy,
             violside == SCIP_SIDETYPE_LEFT, &coef, &coef2, &constant, success);
+
+         /* tries to compute a tighter relaxation for xy by using valid linear inequalities */
+         if( conshdlrdata->bilinestimators != NULL )
+         {
+            int bilintermidx = consdata->bilintermsidx[idx];
+            SCIP_Real score = getInteriority(lbx, ubx, refx, lby, uby, refy);
+
+            /* update score of each bilinear term */
+            bilinestimator = &(conshdlrdata->bilinestimators[bilintermidx]);
+            bilinestimator->score += score;
+            ++(bilinestimator->nupdates);
+
+            /* TODO compute tighter relaxation for xy */
+         }
+
+         if( success && conshdlrdata->solvedbilinineqroot && consdata->bilintermsidx != NULL
+	    && ubx - lbx >= 0.1 /* TODO change for a parameter */
+	    && uby - lby >= 0.1 /* TODO change for a parameter */
+	    && getInteriority(lbx, ubx, refx, lby, uby, refy) > 0.01 )
+         {
+            SCIP_Real bestval = refx * coef + refy * coef2 + constant;
+            int bilintermidx = consdata->bilintermsidx[idx];
+            SCIP_Bool updaterelax = FALSE;
+
+            assert(conshdlrdata->bilinestimators != NULL);
+            bilinestimator = &(conshdlrdata->bilinestimators[bilintermidx]);
+            assert(bilinestimator->x == x);
+            assert(bilinestimator->y == y);
+
+            /* use overestimates */
+            updateBilinearRelaxation(scip, x, y, bilinterm->coef, violside, refx, refy, bilinestimator->ineqoverest,
+               bilinestimator->nineqoverest, &coef, &coef2, &constant, &bestval, &updaterelax);
+
+            /* use underestimates */
+            updateBilinearRelaxation(scip, x, y, bilinterm->coef, violside, refx, refy, bilinestimator->inequnderest,
+               bilinestimator->ninequnderest, &coef, &coef2, &constant, &bestval, &updaterelax);
+         }
 
          SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, coef) );
          SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, bilinterm->var2, coef2) );
@@ -6733,7 +7484,7 @@ SCIP_RETCODE generateCut(
       }
       else
       {
-         SCIP_CALL( generateCutNonConvex(scip, cons, violside, ref, rowprep, &success) );
+         SCIP_CALL( generateCutNonConvex(scip, conshdlrdata, cons, violside, ref, rowprep, &success) );
       }
 
       SCIP_CALL( SCIPaddRowprepTerms(scip, rowprep, consdata->nlinvars, consdata->linvars, consdata->lincoefs) );
@@ -6765,10 +7516,10 @@ SCIP_RETCODE generateCut(
    }
 
    /* check that side is finite */ /*lint --e{514} */
-   success &= !SCIPisInfinity(scip, REALABS(rowprep->side));
+   success &= !SCIPisInfinity(scip, REALABS(rowprep->side)); /*lint !e514*/
 
    /* check whether maximal coef is finite, if any */ /*lint --e{514} */
-   success &= (rowprep->nvars == 0) || !SCIPisInfinity(scip, REALABS(rowprep->coefs[0]));
+   success &= (rowprep->nvars == 0) || !SCIPisInfinity(scip, REALABS(rowprep->coefs[0])); /*lint !e514*/
 
    /* compute scaled violation, if necessary (minefficacy is given (>-inf) or efficacy is requested (!=NULL)) */
    if( success && conshdlrdata->scaling != 'o' && (!SCIPisInfinity(scip, -minefficacy) || efficacy != NULL) )
@@ -6957,7 +7708,6 @@ SCIP_RETCODE computeED(
       printf("svd computed successfully\n");
 #endif
    }
-
 
    SCIPhashmapFree(&var2index);
 
@@ -9738,7 +10488,7 @@ void propagateBoundsGetQuadActivity(
 
    if( consdata->nquadvars == 0 )
    {
-      SCIPintervalSet(&consdata->quadactivitybounds, 0.0); 
+      SCIPintervalSet(&consdata->quadactivitybounds, 0.0);
       return;
    }
 
@@ -9761,7 +10511,7 @@ void propagateBoundsGetQuadActivity(
          if( consdata->bilinterms[k].var1 != consdata->quadvarterms[i].var )
             continue; /* handle this term later */
 
-         SCIPintervalSetBounds(&tmp, 
+         SCIPintervalSetBounds(&tmp,
             -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetLbLocal(consdata->bilinterms[k].var2), SCIPvarGetUbLocal(consdata->bilinterms[k].var2))),
             +infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(consdata->bilinterms[k].var2), SCIPvarGetUbLocal(consdata->bilinterms[k].var2))));
          SCIPintervalMulScalar(intervalinfty, &tmp, tmp, consdata->bilinterms[k].coef);
@@ -9846,7 +10596,7 @@ SCIP_RETCODE propagateBoundsCons(
    SCIP_CONSDATA*     consdata;
    SCIP_INTERVAL      consbounds;    /* lower and upper bounds of constraint */
    SCIP_INTERVAL      consactivity;  /* activity of linear plus quadratic part */
-   SCIP_Real          intervalinfty; /* infinity used for interval computation */  
+   SCIP_Real          intervalinfty; /* infinity used for interval computation */
    SCIP_Real          minquadactivity; /* lower bound on finite activities of quadratic part */
    SCIP_Real          maxquadactivity; /* upper bound on finite activities of quadratic part */
    int                quadminactinf; /* number of quadratic variables that contribute -infinity to minimal activity of quadratic term */
@@ -10883,6 +11633,382 @@ SCIP_RETCODE enforceConstraint(
    return SCIP_OKAY;
 }
 
+/** checks which of the variable bounds can be tightened by using a linear inequality */
+static
+SCIP_RETCODE checkBoundsBilinVars(
+   SCIP*                 scip,              /**< SCIP data structure */
+   SCIP_VAR*             x,                 /**< first variable */
+   SCIP_VAR*             y,                 /**< second variable */
+   SCIP_Real             xcoef,             /**< coefficient of x */
+   SCIP_Real             ycoef,             /**< coefficient of y */
+   SCIP_Real             constant,          /**< constant */
+   SCIP_Bool*            successx,          /**< pointer to store whether a bound of x can be improved */
+   SCIP_Bool*            successy           /**< pointer to store whether a bound of y can be improved */
+   )
+{
+   SCIP_Real lbx;
+   SCIP_Real ubx;
+   SCIP_Real lby;
+   SCIP_Real uby;
+
+   assert(x != NULL);
+   assert(y != NULL);
+   assert(successx != NULL);
+   assert(successy != NULL);
+
+   *successx = FALSE;
+   *successy = FALSE;
+
+   /* we could not find an inequality -> skip */
+   if( xcoef == SCIP_INVALID ) /*lint !e777*/
+      return SCIP_OKAY;
+
+   assert(ycoef != SCIP_INVALID); /*lint !e777*/
+   assert(constant != SCIP_INVALID); /*lint !e777*/
+
+   lbx = SCIPvarGetLbGlobal(x);
+   ubx = SCIPvarGetUbGlobal(x);
+   lby = SCIPvarGetLbGlobal(y);
+   uby = SCIPvarGetUbGlobal(y);
+
+   /* ycoef {>,<} 0 => {lower,upper} bound on y */
+   if( SCIPisFeasPositive(scip, ycoef) )
+   {
+      SCIP_Real bound = MIN((xcoef*lbx-constant)/ycoef, (xcoef*ubx-constant)/ycoef);
+      *successy = SCIPisLbBetter(scip, bound, lby, uby);
+   }
+   /*  */
+   else if( SCIPisFeasNegative(scip, ycoef) )
+   {
+      SCIP_Real bound = MAX((xcoef*lbx-constant)/ycoef, (xcoef*ubx-constant)/ycoef);
+      *successy = SCIPisUbBetter(scip, bound, lby, uby);
+   }
+
+   /* xcoef {>,<} 0 => {upper,lower} bound on y */
+   if( SCIPisFeasPositive(scip, xcoef) )
+   {
+      SCIP_Real bound = MAX((ycoef*lby+constant)/xcoef, (ycoef*uby+constant)/xcoef);
+      *successx = SCIPisUbBetter(scip, bound, lbx, ubx);
+   }
+   /* xcoef < 0 => lower bound */
+   else if( SCIPisFeasNegative(scip, xcoef) )
+   {
+      SCIP_Real bound = MIN((ycoef*lby+constant)/xcoef, (ycoef*uby+constant)/xcoef);
+      *successx = SCIPisLbBetter(scip, bound, lbx, ubx);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** helper function to return the coordinates of the diagonals corner point; indices correspond to the following
+ *  diagonals: 0 = (BL,TR), 1 = (TR,BL), 2 = (TL,BR), 3 = (BR,TL)
+ */
+static
+void getDiagonal(
+   SCIP_VAR*             x,                 /**< first variable */
+   SCIP_VAR*             y,                 /**< second variable */
+   int                   k,                 /**< index of the corner */
+   SCIP_Real*            xs,                /**< pointer to store x-coordinate of the first point */
+   SCIP_Real*            ys,                /**< pointer to store y-coordinate of the first point */
+   SCIP_Real*            xt,                /**< pointer to store x-coordinate of the second point */
+   SCIP_Real*            yt                 /**< pointer to store y-coordinate of the second point */
+   )
+{
+   assert(x != NULL);
+   assert(y != NULL);
+   assert(k >= 0 && k < 4);
+   assert(xs != NULL);
+   assert(ys != NULL);
+   assert(xt != NULL);
+   assert(yt != NULL);
+
+   switch(k)
+   {
+   case 0:
+      *xs = SCIPvarGetLbGlobal(x);
+      *ys = SCIPvarGetLbGlobal(y);
+      *xt = SCIPvarGetUbGlobal(x);
+      *yt = SCIPvarGetUbGlobal(y);
+      break;
+   case 1:
+      *xs = SCIPvarGetUbGlobal(x);
+      *ys = SCIPvarGetUbGlobal(y);
+      *xt = SCIPvarGetLbGlobal(x);
+      *yt = SCIPvarGetLbGlobal(y);
+      break;
+   case 2:
+      *xs = SCIPvarGetLbGlobal(x);
+      *ys = SCIPvarGetUbGlobal(y);
+      *xt = SCIPvarGetUbGlobal(x);
+      *yt = SCIPvarGetLbGlobal(y);
+      break;
+   case 3:
+      *xs = SCIPvarGetUbGlobal(x);
+      *ys = SCIPvarGetLbGlobal(y);
+      *xt = SCIPvarGetLbGlobal(x);
+      *yt = SCIPvarGetUbGlobal(y);
+      break;
+   default:
+      *xs = SCIP_INVALID;
+      *xt = SCIP_INVALID;
+      *ys = SCIP_INVALID;
+      *yt = SCIP_INVALID;
+      SCIPABORT();
+   }
+}
+
+/** applies optimization-based bound tightening on a single variable */
+static
+SCIP_RETCODE applyObbt(
+   SCIP*                 scip,              /**< SCIP data structure */
+   SCIP_VAR*             x,                 /**< variable */
+   int                   iterlim            /**< iteration limit (-1: no limit) */
+   )
+{
+   SCIP_Bool lperror;
+   SCIP_Bool infeasible;
+
+   SCIP_Real time;
+
+   assert(x != NULL);
+   assert(SCIPinProbing(scip));
+
+   /* minimize x */
+   SCIP_CALL( SCIPchgVarObjProbing(scip, x, 1.0) );
+   time = -SCIPgetSolvingTime(scip);
+   SCIP_CALL( SCIPsolveProbingLP(scip, iterlim, &lperror, NULL) );
+   time += SCIPgetSolvingTime(scip);
+
+   if( !lperror && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
+   {
+      SCIP_Real val = SCIPvarGetLPSol(x);
+      SCIP_CALL( SCIPtightenVarLbGlobal(scip, x, val, FALSE, &infeasible, NULL) );
+   }
+
+   /* maximize x */
+   SCIP_CALL( SCIPchgVarObjProbing(scip, x, -1.0) );
+   time = -SCIPgetSolvingTime(scip);
+   SCIP_CALL( SCIPsolveProbingLP(scip, iterlim, &lperror, NULL) );
+   time += SCIPgetSolvingTime(scip);
+
+   if( !lperror && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
+   {
+      SCIP_Real val = SCIPvarGetLPSol(x);
+      SCIP_CALL( SCIPtightenVarUbGlobal(scip, x, val, FALSE, &infeasible, NULL) );
+   }
+
+   /* reset objective */
+   SCIP_CALL( SCIPchgVarObjProbing(scip, x, 0.0) );
+
+#ifndef NDEBUG
+   {
+      int i;
+
+      /* check whether the objective function has been reset */
+      for( i = 0; i < SCIPgetNVars(scip); ++i )
+      {
+         SCIP_VAR* var = SCIPgetVars(scip)[i];
+         assert(SCIPisZero(scip, SCIPvarGetObj(var)));
+      }
+   }
+#endif
+
+   return SCIP_OKAY;
+}
+
+/** returns the iteration limit for solving the next LP; returns -1 for no limit and 0 if no iterations are left */
+static
+SCIP_Longint getIterLeft(
+   SCIP_Longint         iterlim,            /**< LP-iteration limit; -1 for no limit */
+   SCIP_Longint         iterused            /**< LP iterations used so far */
+   )
+{
+   if( iterlim < 0 )
+      return -1;
+   return MAX(iterlim - iterused, 0);
+}
+
+/** computes for each bilinear term at most 4 linear inequalities that cut off the four extreme points of the
+ *  rectangular domain; if a cut can be used to tighten some of the variable bounds we apply OBBT to obtain the best
+ *  possible bounds for the current linear relaxation; the resulting inequalities are stored in the constraint handler
+ *  data
+ */
+static
+SCIP_RETCODE computeIneqBilinTerms(
+   SCIP*                 scip,              /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata       /**< constraint handler data */
+   )
+{
+   SCIP_Real oldboundstreps;
+   SCIP_Real olddualfeastol;
+   SCIP_Real oldfeastol;
+   int iterlim;
+   int iterused;
+   int i;
+
+   assert(conshdlrdata != NULL);
+
+   /* no bilinear terms present */
+   if( conshdlrdata->nbilinterms == 0 )
+      return SCIP_OKAY;
+
+   /* remember tolerances */
+   SCIP_CALL( SCIPgetRealParam(scip, "numerics/boundstreps", &oldboundstreps) );
+   olddualfeastol = SCIPdualfeastol(scip);
+   oldfeastol = SCIPfeastol(scip);
+
+   iterlim = conshdlrdata->bilinlpiterlim;
+   iterused = 0;
+
+   /* initialize LP */
+   SCIP_CALL( initBilinearLP(scip, oldfeastol/10.0, olddualfeastol/10.0, 0.01) );
+
+   /* main loop; solves an LP which maximizes along the diagonal of the domain variable bounds */
+   for( i = 0; i < conshdlrdata->nbilinterms && getIterLeft(iterlim, iterused) != 0 && !SCIPisStopped(scip); ++i )
+   {
+      BILINESTIMATOR* bilinestimator = &(conshdlrdata->bilinestimators[i]);
+      SCIP_VAR* x = conshdlrdata->bilinestimators[i].x;
+      SCIP_VAR* y = conshdlrdata->bilinestimators[i].y;
+      int nunderest = conshdlrdata->bilinestimators[i].nunderest;
+      int noverest = conshdlrdata->bilinestimators[i].noverest;
+      int k;
+
+      assert(bilinestimator != NULL);
+      assert(nunderest >= 0);
+      assert(noverest >= 0);
+
+      /* bilinear term only appears in convex constraints -> skip */
+      if( nunderest + noverest == 0 )
+         continue;
+
+      for( k = 0; k < 4; ++k )
+      {
+         SCIP_Real xs, xt, ys, yt;
+         SCIP_Real alpha;
+         SCIP_Real beta;
+         SCIP_Real gamma;
+         SCIP_Bool tightenx;
+         SCIP_Bool tighteny;
+         int iterleft;
+
+         /* k in {0,1} = overestimate, k in {2,3} = underestimate; check whether an under- or overestimate is needed */
+         if( (k < 2 && noverest == 0) || (k >= 2 && nunderest == 0) )
+            continue;
+
+         /* stop if no LP iterations are left */
+         iterleft = getIterLeft(iterlim, iterused);
+         if( iterleft == 0 )
+            break;
+
+         /* get the k-th diagonal; this automatically updates the corner points of the domain */
+         getDiagonal(x, y, k, &xs, &ys, &xt, &yt);
+
+         /* solve (primal) LP for xy */
+         iterused -= SCIPgetNLPIterations(scip);
+         SCIP_CALL( solveBilinearLP(scip, x, y, xs, ys, xt, yt, &alpha, &beta, &gamma, iterleft) );
+         iterused += SCIPgetNLPIterations(scip);
+
+          /* check which variable bounds can be tightened */
+          SCIP_CALL( checkBoundsBilinVars(scip, x, y, alpha, beta, gamma, &tightenx, &tighteny) );
+
+         /* check whether to resolve the LP with tighter variable bounds */
+         if( tightenx )
+         {
+            iterused -= SCIPgetNLPIterations(scip);
+            SCIP_CALL( applyObbt(scip, x, -1) );
+            iterused += SCIPgetNLPIterations(scip);
+            --k;
+            continue;
+         }
+         else if( tighteny )
+         {
+            iterused -= SCIPgetNLPIterations(scip);
+            SCIP_CALL( applyObbt(scip, y, -1) );
+            iterused += SCIPgetNLPIterations(scip);
+            --k;
+            continue;
+         }
+         /* store inequality in case it is separating the corresponding extreme point */
+         else if( !SCIPisHugeValue(scip, alpha) && !SCIPisHugeValue(scip, beta) && !SCIPisHugeValue(scip, gamma)
+            && !SCIPisFeasZero(scip, alpha) && !SCIPisFeasZero(scip, beta)
+            && SCIPisFeasGT(scip, (alpha*xt - beta*yt - gamma)/ SQRT(SQR(alpha) + SQR(beta) + SQR(gamma)), 1e-2) )
+         {
+            assert(beta != SCIP_INVALID); /*lint !e777*/
+            assert(gamma != SCIP_INVALID); /*lint !e777*/
+
+	    /* store over- and underestimates separately */
+            if( k < 2 )
+            {
+               bilinestimator->ineqoverest[3*bilinestimator->nineqoverest] = alpha;
+               bilinestimator->ineqoverest[3*bilinestimator->nineqoverest + 1] = beta;
+               bilinestimator->ineqoverest[3*bilinestimator->nineqoverest + 2] = gamma;
+               ++(bilinestimator->nineqoverest);
+            }
+            else
+            {
+               bilinestimator->inequnderest[3*bilinestimator->ninequnderest] = alpha;
+               bilinestimator->inequnderest[3*bilinestimator->ninequnderest + 1] = beta;
+               bilinestimator->inequnderest[3*bilinestimator->ninequnderest + 2] = gamma;
+               ++(bilinestimator->ninequnderest);
+            }
+         }
+      }
+   }
+
+   /* undo changes of initBilinearLP */
+   SCIP_CALL( deinitBilinearLP(scip, oldfeastol, olddualfeastol, oldboundstreps) );
+   assert(!SCIPinProbing(scip));
+
+   return SCIP_OKAY;
+}
+
+/** processes the event that a node has been solved */
+static
+SCIP_DECL_EVENTEXEC(processNodeSolvedEvent)
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONS**    conss;
+   int            nconss;
+
+   assert(scip != NULL);
+   assert(event != NULL);
+   assert(eventdata != NULL);
+   assert(eventhdlr != NULL);
+
+   assert((SCIPeventGetType(event) & SCIP_EVENTTYPE_NODESOLVED) != 0);
+
+   /* skip if we are not in the root node */
+   if( SCIPgetDepth(scip) != 0 || SCIPgetSubscipDepth(scip) != 0 || SCIPinDive(scip) || SCIPinProbing(scip) )
+      return SCIP_OKAY;
+
+   conshdlr = (SCIP_CONSHDLR*)eventdata;
+   assert(conshdlr != NULL);
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   conss = SCIPconshdlrGetConss(conshdlr);
+   assert(conss != NULL);
+   nconss = SCIPconshdlrGetNConss(conshdlr);
+
+   if( nconss == 0 )
+      return SCIP_OKAY;
+
+   /* store all bilinear terms and compute for each term (at most) four valid linear inequalities; note that we only
+    * the inequalities once and then use them for the remaining tree search; the quality of the cuts depends on the
+    * quality of the variable bounds and thus we compute the cuts after applying prop_obbt for the first time
+    */
+   if( conshdlrdata->usebilinineqroot && !conshdlrdata->solvedbilinineqroot && conshdlrdata->nbilinterms > 0 )
+   {
+      /* store bilinear terms in the constraint handler data */
+      SCIP_CALL( computeIneqBilinTerms(scip, conshdlrdata) );
+
+      /* solve static LPs only once */
+      conshdlrdata->solvedbilinineqroot = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** tries to upgrade a nonlinear constraint into a quadratic constraint */
 static
 SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdQuadratic)
@@ -11098,7 +12224,6 @@ SCIP_DECL_CONSFREE(consFreeQuadratic)
       SCIPfreeBlockMemory(scip, &conshdlrdata->quadconsupgrades[i]); /*lint !e866*/
    }
    SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->quadconsupgrades, conshdlrdata->quadconsupgradessize);
-
    SCIPfreeBlockMemory(scip, &conshdlrdata);
 
    return SCIP_OKAY;
@@ -11334,6 +12459,18 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
       SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_SOLFOUND, eventhdlr, (SCIP_EVENTDATA*)conshdlr, &conshdlrdata->newsoleventfilterpos) );
    }
 
+   conshdlrdata->nodesolvedeventfilterpos = -1;
+   if( nconss != 0 )
+   {
+      SCIP_EVENTHDLR* eventhdlr;
+
+      eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_nodesolved");
+      assert(eventhdlr != NULL);
+
+      SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_NODESOLVED, eventhdlr, (SCIP_EVENTDATA*)conshdlr,
+         &conshdlrdata->nodesolvedeventfilterpos) );
+   }
+
    if( nconss != 0 && !SCIPisIpoptAvailableIpopt() && !SCIPisInRestart(scip) )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Quadratic constraint handler does not have LAPACK for eigenvalue computation. Will assume that matrices (with size > 2x2) are indefinite.\n");
@@ -11397,6 +12534,18 @@ SCIP_DECL_CONSEXITSOL(consExitsolQuadratic)
       return SCIP_OKAY;
    }
 
+   if( conshdlrdata->nodesolvedeventfilterpos >= 0 )
+   {
+      SCIP_EVENTHDLR* eventhdlr;
+
+      eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_nodesolved");
+      assert(eventhdlr != NULL);
+
+      SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_NODESOLVED, eventhdlr, (SCIP_EVENTDATA*)conshdlr,
+         conshdlrdata->nodesolvedeventfilterpos) );
+      conshdlrdata->nodesolvedeventfilterpos = -1;
+   }
+
    if( conshdlrdata->newsoleventfilterpos >= 0 )
    {
       SCIP_EVENTHDLR* eventhdlr;
@@ -11407,6 +12556,11 @@ SCIP_DECL_CONSEXITSOL(consExitsolQuadratic)
       SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_SOLFOUND, eventhdlr, (SCIP_EVENTDATA*)conshdlr, conshdlrdata->newsoleventfilterpos) );
       conshdlrdata->newsoleventfilterpos = -1;
    }
+
+   /* free all stored bilinear terms in the constraint handler and constraint data; note that we might not want to
+    * recollect all bilinear terms and therefore keep them even if consDisableQuadratic is called
+    */
+   SCIP_CALL( freeAllBilinearTerms(scip, conshdlrdata, conss, nconss) );
 
    return SCIP_OKAY;
 }
@@ -11674,6 +12828,11 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
 
       SCIPfreeBufferArray(scip, &x);
    }
+
+   /* store all bilinear terms into constraint handler data; this code is not in initsolve because the sub-NLP
+    * heuristic triggers this callback and should not collect all bilinear terms
+    */
+   SCIP_CALL( storeAllBilinearTerms(scip, conshdlrdata, conss, nconss) );
 
    return SCIP_OKAY;
 }
@@ -13190,6 +14349,16 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          "which score to give branching candidates: convexification 'g'ap, constraint 'v'iolation, 'c'entrality of variable value in domain",
          &conshdlrdata->branchscoring, TRUE, 'g', "cgv", NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/usebilinineqroot",
+         "use linear inequalities to compute concave and convex envelopes of bilinear terms",
+         &conshdlrdata->usebilinineqroot, FALSE, TRUE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/bilinlpiterlim",
+         "total LP iteration limit for computing linear inequalities for all bilinear terms (-1: no limit)",
+         &conshdlrdata->bilinlpiterlim, TRUE, -1, -1, INT_MAX, NULL, NULL) );
+
+
+
    conshdlrdata->eventhdlr = NULL;
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->eventhdlr),CONSHDLR_NAME"_boundchange", "signals a bound change to a quadratic constraint",
          processVarEvent, NULL) );
@@ -13197,6 +14366,9 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
 
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, CONSHDLR_NAME"_newsolution", "handles the event that a new primal solution has been found",
          processNewSolutionEvent, NULL) );
+
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, NULL, CONSHDLR_NAME"_nodesolved", "handles the event that a node has been solved",
+         processNodeSolvedEvent, NULL) );
 
    /* include the quadratic constraint upgrade in the nonlinear constraint handler */
    SCIP_CALL( SCIPincludeNonlinconsUpgrade(scip, nonlinconsUpgdQuadratic, NULL, NONLINCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
