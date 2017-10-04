@@ -571,7 +571,8 @@ Test(change, testrowmethods)
          SCIP_Real newlhs[100];
          SCIP_Real newval[100];
          SCIP_Real newrhs[100];
-         int newbeg[100], newind[100];
+         int newbeg[100];
+         int newind[100];
          int newnnonz;
 
          for( j = 0; j < nrows; j++ )
@@ -681,9 +682,11 @@ Test(change, testcolmethods)
          int ind[100];
          SCIP_Real val[100];
 
-         SCIP_Real newlb[100], newval[100];
+         SCIP_Real newlb[100];
+         SCIP_Real newval[100];
          SCIP_Real newub[100];
-         int newbeg[100], newind[100];
+         int newbeg[100];
+         int newind[100];
          int newnnonz;
 
          for( j = 0; j < ncols; j++ )
@@ -741,4 +744,99 @@ Test(change, testcolmethods)
       cr_assert_eq(ncolsbefore - i, ncolsafter);
       /* assert that the rows that are left are the ones I intended */
    }
+}
+
+/** Test adding zero coeffs cols */
+Test(change, testzerosincols)
+{
+   int nrows, ncols, nnonz;
+   SCIP_OBJSEN sense;
+   /* 2x2 problem */
+   cr_assume( initProb(4, &ncols, &nrows, &nnonz, &sense) );
+   cr_assume_eq( 2, nrows );
+   cr_assume_eq( 2, ncols );
+
+   SCIP_Real lb[100] = { 0 };
+   SCIP_Real ub[100] = { 20 };
+   nnonz = 2;
+   int beg[1]  = { 0 };
+   int ind[2] = { 0, 1 };
+   SCIP_Real val[2] = { 0, 3 };
+   SCIP_Real obj[1] = { 1 };
+
+   SCIP_Real newlb[100];
+   SCIP_Real newub[100];
+   SCIP_Real newval[100];
+   int newbeg[100];
+   int newind[100];
+   int newnnonz;
+
+   /* scip calls */
+
+   SCIP_CALL( SCIPlpiAddCols(lpi, 1, obj, lb, ub, NULL, nnonz, beg, ind, val) );
+
+   SCIP_CALL( SCIPlpiGetCols(lpi, 2, 2, newlb, newub, &newnnonz, newbeg, newind, newval) );
+
+   /* lpi should drop zero entries */
+
+   nnonz = 1;
+   ind[0] = 1;
+   val[0] = 3;
+
+   /* checks */
+
+   cr_assert_eq(nnonz, newnnonz, "expecting %d, got %d\n", nnonz, newnnonz);
+
+   cr_assert_arr_eq(lb, newlb, ncols);
+   cr_assert_arr_eq(ub, newub, ncols);
+   cr_assert_arr_eq(beg, newbeg, ncols);
+   cr_assert_arr_eq(ind, newind, nnonz);
+   cr_assert_arr_eq(val, newval, nnonz);
+}
+
+/** Test adding zero coeffs in rows */
+Test(change, testzerosinrows)
+{
+   int nrows, ncols, nnonz;
+   SCIP_OBJSEN sense;
+   /* 2x2 problem */
+   cr_assume( initProb(4, &ncols, &nrows, &nnonz, &sense) );
+   cr_assume_eq( 2, nrows );
+   cr_assume_eq( 2, ncols );
+
+   SCIP_Real lhs[100] = { 0 };
+   SCIP_Real rhs[100] = { 20 };
+   nnonz = 2;
+   int beg[1]  = { 0 };
+   int ind[2] = { 0, 1 };
+   SCIP_Real val[2] = { 0, 3 };
+
+   SCIP_Real newlhs[100];
+   SCIP_Real newrhs[100];
+   SCIP_Real newval[100];
+   int newbeg[100];
+   int newind[100];
+   int newnnonz;
+
+   /* scip calls */
+
+   SCIP_CALL( SCIPlpiAddRows(lpi, 1, lhs, rhs, NULL, nnonz, beg, ind, val) );
+
+   SCIP_CALL( SCIPlpiGetRows(lpi, 2, 2, newlhs, newrhs, &newnnonz, newbeg, newind, newval) );
+
+   /* lpi should drop zero entries */
+
+   nnonz = 1;
+   ind[0] = 1;
+   val[0] = 3;
+
+   /* checks */
+
+   cr_assert_eq(nnonz, newnnonz, "expecting %d, got %d\n", nnonz, newnnonz);
+
+   cr_assert_arr_eq(lhs, newlhs, ncols);
+   cr_assert_arr_eq(rhs, newrhs, ncols);
+   cr_assert_arr_eq(beg, newbeg, ncols);
+   cr_assert_arr_eq(ind, newind, nnonz);
+   cr_assert_arr_eq(val, newval, nnonz);
 }
