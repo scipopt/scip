@@ -3256,8 +3256,8 @@ SCIP_RETCODE SCIPcalcMIR(
 static
 SCIP_Real computeMIRViolation(
    SCIP*                 scip,               /**< SCIP datastructure */
-   SCIP_Real*            coefs,              /**< array with coefficients in row */
-   SCIP_Real*            solvals,            /**< solution values of variables in the row */
+   SCIP_Real*RESTRICT    coefs,              /**< array with coefficients in row */
+   SCIP_Real*RESTRICT    solvals,            /**< solution values of variables in the row */
    SCIP_Real             rhs,                /**< right hand side of MIR cut */
    SCIP_Real             contactivity,       /**< aggregated activity of continuous variables in the row */
    SCIP_Real             delta,              /**< delta value to compute the violation for */
@@ -3267,6 +3267,7 @@ SCIP_Real computeMIRViolation(
    )
 {
    int i;
+   SCIP_Real f0pluseps;
    SCIP_Real f0;
    SCIP_Real onedivoneminusf0;
    SCIP_Real scale;
@@ -3300,19 +3301,17 @@ SCIP_Real computeMIRViolation(
    assert(!SCIPisFeasZero(scip, f0));
    assert(!SCIPisFeasZero(scip, 1.0 - f0));
 
+   f0pluseps = f0 + SCIPepsilon(scip);
+
    for( i = 0; i < nvars; ++i )
    {
       SCIP_Real floorai = floor(scale * coefs[i]);
       SCIP_Real fi = (scale * coefs[i]) - floorai;
 
-      if( SCIPisLE(scip, fi, f0) )
-      {
-         rhs -= solvals[i] * floorai;
-      }
-      else
-      {
-         rhs -= solvals[i] * (floorai + (fi - f0) * onedivoneminusf0);
-      }
+      if( fi > f0pluseps )
+         floorai += (fi - f0) * onedivoneminusf0;
+
+      rhs -= solvals[i] * floorai;
    }
 
    rhs -= scale * contactivity * onedivoneminusf0;
@@ -4049,11 +4048,14 @@ SCIP_RETCODE getClosestVlb(
       SCIP_VAR** vlbvars;
       SCIP_Real* vlbcoefs;
       SCIP_Real* vlbconsts;
+      SCIP_Real minvlbconst;
       int i;
 
       vlbvars = SCIPvarGetVlbVars(var);
       vlbcoefs = SCIPvarGetVlbCoefs(var);
       vlbconsts = SCIPvarGetVlbConstants(var);
+
+      minvlbconst = bestsub - MAX(SCIPfeastol(scip), bestsub * SCIPfeastol(scip));
 
       for( i = 0; i < nvlbs; i++ )
       {
@@ -4063,6 +4065,15 @@ SCIP_RETCODE getClosestVlb(
          SCIP_Real vlbsol;
          SCIP_Real rowcoefsign;
          int probidxbinvar;
+
+         if( minvlbconst > vlbconsts[i] )
+            continue;
+
+         /* for numerical reasons, ignore variable bounds with large absolute coefficient and
+          * those which lead to an infinite variable bound coefficient (val2) in snf relaxation
+          */
+         if( REALABS(vlbcoefs[i]) > MAXABSVBCOEF  )
+            continue;
 
          /* use only variable lower bounds l~_i * x_i + d_i with x_i binary which are active */
          probidxbinvar = SCIPvarGetProbindex(vlbvars[i]);
@@ -4075,14 +4086,6 @@ SCIP_RETCODE getClosestVlb(
 
          assert(SCIPvarIsBinary(vlbvars[i]));
 
-         if( SCIPisFeasGT(scip, bestsub, vlbconsts[i]) )
-            continue;
-
-         /* for numerical reasons, ignore variable bounds with large absolute coefficient and
-          * those which lead to an infinite variable bound coefficient (val2) in snf relaxation
-          */
-         if( REALABS(vlbcoefs[i]) > MAXABSVBCOEF  )
-            continue;
 
          /* check if current variable lower bound l~_i * x_i + d_i imposed on y_j meets the following criteria:
           * (let a_j  = coefficient of y_j in current row,
@@ -4180,11 +4183,14 @@ SCIP_RETCODE getClosestVub(
       SCIP_VAR** vubvars;
       SCIP_Real* vubcoefs;
       SCIP_Real* vubconsts;
+      SCIP_Real maxvubconst;
       int i;
 
       vubvars = SCIPvarGetVubVars(var);
       vubcoefs = SCIPvarGetVubCoefs(var);
       vubconsts = SCIPvarGetVubConstants(var);
+
+      maxvubconst = bestslb + MAX(SCIPfeastol(scip), bestslb * SCIPfeastol(scip));
 
       for( i = 0; i < nvubs; i++ )
       {
@@ -4194,6 +4200,15 @@ SCIP_RETCODE getClosestVub(
          SCIP_Real vubsol;
          SCIP_Real rowcoefsign;
          int probidxbinvar;
+
+         if( maxvubconst < vubconsts[i] )
+            continue;
+
+         /* for numerical reasons, ignore variable bounds with large absolute coefficient and
+          * those which lead to an infinite variable bound coefficient (val2) in snf relaxation
+          */
+         if( REALABS(vubcoefs[i]) > MAXABSVBCOEF  )
+            continue;
 
          /* use only variable upper bound u~_i * x_i + d_i with x_i binary and which are active */
          probidxbinvar = SCIPvarGetProbindex(vubvars[i]);
@@ -4206,14 +4221,6 @@ SCIP_RETCODE getClosestVub(
 
          assert(SCIPvarIsBinary(vubvars[i]));
 
-         if( SCIPisFeasLT(scip, bestslb, vubconsts[i]) )
-            continue;
-
-         /* for numerical reasons, ignore variable bounds with large absolute coefficient and
-          * those which lead to an infinite variable bound coefficient (val2) in snf relaxation
-          */
-         if( REALABS(vubcoefs[i]) > MAXABSVBCOEF  )
-            continue;
 
          /* checks if current variable upper bound u~_i * x_i + d_i meets the following criteria
           * (let a_j  = coefficient of y_j in current row,
