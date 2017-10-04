@@ -38,7 +38,7 @@ cd check/
 PERF_MAIL=""
 if [ "${PERFORMANCE}" == "performance" ]; then
   ./evalcheck_cluster.sh -R results/check.$TESTSET.${SCIPVERSION}.*.$SETTING[.0-9]*eval > ${OUTPUT}
-  echo "${OUTPUT}"
+  cat ${OUTPUT}
   NEWRBID=`cat $OUTPUT | grep "rubberband.zib" |sed -e 's|https://rubberband.zib.de/result/||'`
   OLDRBID=`tail $RBDB -n 1`
   PERF_MAIL=`echo "The results of the weekly performance runs are ready. Take a look at https://rubberband.zib.de/result/${NEWRBID}?compare=${OLDRBID}"`
