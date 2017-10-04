@@ -174,7 +174,7 @@ add_custom_target(scip_update_githash
 # create a target for updating the current build configuration
 set(NEWLINE "\\\\n")
 file(WRITE ${CMAKE_BINARY_DIR}/scip_update_buildflags.cmake "
-file(WRITE \${DST} \"#define SCIP_BUILDFLAGS \\\" ARCH=\${CMAKE_SYSTEM}${NEWLINE} COMP=\${CMAKE_SYSTEM_PROCESSOR}${NEWLINE} BUILD=\${CMAKE_BUILD_TYPE}\\\"\")
+file(WRITE \${DST} \"#define SCIP_BUILDFLAGS \\\" ARCH=${CMAKE_SYSTEM}${NEWLINE} COMP=${CMAKE_SYSTEM_PROCESSOR}${NEWLINE} BUILD=${CMAKE_BUILD_TYPE}\\\"\")
 ")
 add_custom_target(scip_update_buildflags
                   COMMAND ${CMAKE_COMMAND} -DDST=${PROJECT_SOURCE_DIR}/src/scip/buildflags.c
@@ -317,8 +317,19 @@ if( COVERAGE )
     include(CodeCoverage)
     APPEND_COVERAGE_COMPILER_FLAGS()
     set(COVERAGE_EXCLUDES '/usr*')
+
+    #
+    # create a CMake script file that is executed to run the coverage test.
+    # With a script file, the return code of the tests is simply ignored,
+    # and a coverage report is generated even if some tests fail currently.
+    #
+    file(WRITE ${CMAKE_BINARY_DIR}/RunCoverage.cmake "execute_process(COMMAND ctest ${CMAKE_CTEST_COMMAND} ${COVERAGE_CTEST_ARGS})")
+
+    #
+    # setup the coverage target to execute the RunCoverage script
+    #
     SETUP_TARGET_FOR_COVERAGE(NAME coverage
-                          EXECUTABLE bash -c "${CMAKE_CTEST_COMMAND} ${COVERAGE_CTEST_ARGS}"
+                          EXECUTABLE ${CMAKE_COMMAND} -P ${CMAKE_BINARY_DIR}/RunCoverage.cmake
                           DEPENDENCIES all_executables
                           )
 endif()

@@ -1751,7 +1751,7 @@ SCIP_RETCODE SCIPlpiGetObjsen(
    assert(lpi != NULL);
    assert(lpi->task != NULL);
 
-   SCIPdebugMessage("Calling SCIPlpiGetObjsen (%d)\n",lpi->lpid);
+   SCIPdebugMessage("Calling SCIPlpiGetObjsen (%d)\n", lpi->lpid);
 
    MOSEK_CALL( MSK_getobjsense(lpi->task, &mskobjsen) );
    *objsen = (mskobjsen == MSK_OBJECTIVE_SENSE_MINIMIZE ? SCIP_OBJSEN_MINIMIZE : SCIP_OBJSEN_MAXIMIZE);

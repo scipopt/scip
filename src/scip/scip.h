@@ -7903,6 +7903,8 @@ SCIP_RETCODE SCIPgetActiveVars(
  *  returns 0 if the variable has been aggregated out or fixed in presolving.
  *
  *  @pre This method can only be called if @p scip is in stage \ref SCIP_STAGE_SOLVING
+ *
+ *  @note The return value of this method should be used carefully if the dual feasibility check was explictely disabled.
  */
 EXTERN
 SCIP_Real SCIPgetVarRedcost(
@@ -7917,6 +7919,8 @@ SCIP_Real SCIPgetVarRedcost(
  *  returns 0 if the variable has been aggregated out or fixed in presolving.
  *
  *  @pre This method can only be called if @p scip is in stage \ref SCIP_STAGE_SOLVING
+ *
+ *  @note The return value of this method should be used carefully if the dual feasibility check was explictely disabled.
  */
 EXTERN
 SCIP_Real SCIPgetVarImplRedcost(
@@ -12927,6 +12931,8 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
  *
  *  @note calling this method in SCIP_STAGE_SOLVED is only recommended to experienced users and should only be called
  *        for pure LP instances (without presolving)
+ *
+ *  @note The return value of this method should be used carefully if the dual feasibility check was explictely disabled.
  */
 EXTERN
 SCIP_Real SCIPgetColRedcost(

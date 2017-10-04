@@ -19070,6 +19070,8 @@ SCIP_RETCODE SCIPgetActiveVars(
  *  returns 0 if the variable has been aggregated out or fixed in presolving.
  *
  *  @pre This method can only be called if @p scip is in stage \ref SCIP_STAGE_SOLVING
+ *
+ *  @note The return value of this method should be used carefully if the dual feasibility check was explictely disabled.
  */
 SCIP_Real SCIPgetVarRedcost(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -19079,9 +19081,6 @@ SCIP_Real SCIPgetVarRedcost(
    assert( scip != NULL );
    assert( var != NULL );
    assert( var->scip == scip );
-
-   if( !SCIPlpIsDualReliable(scip->lp) )
-      return SCIP_OKAY;
 
    switch( SCIPvarGetStatus(var) )
    {
@@ -19116,6 +19115,8 @@ SCIP_Real SCIPgetVarRedcost(
  *  returns 0 if the variable has been aggregated out or fixed in presolving.
  *
  *  @pre This method can only be called if @p scip is in stage \ref SCIP_STAGE_SOLVING
+ *
+ *  @note The return value of this method should be used carefully if the dual feasibility check was explictely disabled.
  */
 SCIP_Real SCIPgetVarImplRedcost(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -19126,9 +19127,6 @@ SCIP_Real SCIPgetVarImplRedcost(
    assert( scip != NULL );
    assert( var != NULL );
    assert( var->scip == scip );
-
-   if( !SCIPlpIsDualReliable(scip->lp) )
-      return 0.0;
 
    switch( SCIPvarGetStatus(var) )
    {
@@ -20736,7 +20734,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
 
    /* switch conflict analysis according to usesb parameter */
    enabledconflict = scip->set->conf_enable;
-   scip->set->conf_enable = scip->set->conf_usesb;
+   scip->set->conf_enable = (scip->set->conf_enable && scip->set->conf_usesb);
 
    /* @todo: decide the branch to look at first based on the cutoffs in previous calls? */
    switch( scip->set->branch_firstsbchild )
@@ -28684,6 +28682,7 @@ SCIP_RETCODE SCIPactiveCons(
    assert(scip != NULL);
    assert(cons != NULL);
    assert(!SCIPconsIsAdded(cons));
+   assert(!SCIPconsIsDeleted(cons));
 
    SCIP_CALL( checkStage(scip, "SCIPactiveCons", FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
@@ -29946,6 +29945,8 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
  *
  *  @note calling this method in SCIP_STAGE_SOLVED is only recommended to experienced users and should only be called
  *        for pure LP instances (without presolving)
+ *
+ *  @note The return value of this method should be used carefully if the dual feasibility check was explictely disabled.
  */
 SCIP_Real SCIPgetColRedcost(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -30897,7 +30898,7 @@ SCIP_RETCODE SCIPprintRow(
 {
    assert(row != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPprintRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPprintRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    SCIProwPrint(row, scip->messagehdlr, file);
 

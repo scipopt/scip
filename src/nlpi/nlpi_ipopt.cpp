@@ -668,6 +668,7 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemIpopt)
  *
  *  return: void pointer to problem instance
  */
+static
 SCIP_DECL_NLPIGETPROBLEMPOINTER(nlpiGetProblemPointerIpopt)
 {
    assert(nlpi    != NULL);

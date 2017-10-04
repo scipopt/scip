@@ -318,7 +318,13 @@ SCIP_RETCODE propagateRootRedcostVar(
 
    rootredcost = SCIPvarGetBestRootRedcost(var);
    assert(rootredcost != SCIP_INVALID); /*lint !e777*/
-   assert(!SCIPisDualfeasZero(scip, rootredcost));
+
+   /* SCIPisLPDualReliable should always return TRUE if the dual feasibility check is enabled and the LP claims to
+    * have a dual feasible solution. if the check is disabled the dual solution might be incorrect and the assert
+    * might fail. however, if the user decides to disable the dual feasibility check (which also can lead to wrong
+    * cutoffs) we don't want to skip propagating with reduced costs as an unexpected side-effect.
+    */
+   assert(!SCIPisLPDualReliable(scip) || !SCIPisDualfeasZero(scip, rootredcost));
 
    rootsol = SCIPvarGetBestRootSol(var);
    rootlpobjval = SCIPvarGetBestRootLPObjval(var);
@@ -335,7 +341,7 @@ SCIP_RETCODE propagateRootRedcostVar(
    }
    else
    {
-      assert(SCIPisDualfeasNegative(scip, rootredcost));
+      assert(!SCIPisLPDualReliable(scip) || SCIPisDualfeasNegative(scip, rootredcost));
       assert(SCIPisFeasGE(scip, rootsol, SCIPvarGetUbGlobal(var))); /* ub might have been decreased in the meantime */
 
       /* strengthen lower bound */
