@@ -14868,6 +14868,24 @@ void SCIPaddBilinLinearization(
    SCIP_Bool*            success             /**< buffer to set to FALSE if linearization has failed due to large numbers */
    );
 
+/** computes coefficients of McCormick under- or overestimation of a bilinear term */
+EXTERN
+void SCIPaddBilinMcCormick(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             bilincoef,          /**< coefficient of bilinear term */
+   SCIP_Real             lbx,                /**< lower bound on first variable */
+   SCIP_Real             ubx,                /**< upper bound on first variable */
+   SCIP_Real             refpointx,          /**< reference point for first variable */
+   SCIP_Real             lby,                /**< lower bound on second variable */
+   SCIP_Real             uby,                /**< upper bound on second variable */
+   SCIP_Real             refpointy,          /**< reference point for second variable */
+   SCIP_Bool             overestimate,       /**< whether to compute an overestimator instead of an underestimator */
+   SCIP_Real*            lincoefx,           /**< buffer to add coefficient of first  variable in linearization */
+   SCIP_Real*            lincoefy,           /**< buffer to add coefficient of second variable in linearization */
+   SCIP_Real*            linconstant,        /**< buffer to add constant of linearization */
+   SCIP_Bool*            success             /**< buffer to set to FALSE if linearization has failed due to large numbers */
+   );
+
 /** computes coefficients of linearization of a bilinear term in a reference point when given a linear inequality
  *  involving only the variables of the bilinear term
  */
@@ -14882,13 +14900,13 @@ void SCIPcomputeBilinEnvelope1(
    SCIP_Real             uby,                /**< upper bound on second variable */
    SCIP_Real             refpointy,          /**< reference point for second variable */
    SCIP_Bool             overestimate,       /**< whether to compute an overestimator instead of an underestimator */
-   SCIP_Real             alpha,              /**< x coefficient of linear inequality; must be in {-1,0,1} */
-   SCIP_Real             beta,               /**< y coefficient of linear inequality */
-   SCIP_Real             gamma,              /**< constant of linear inequality */
-   SCIP_Real*            lincoefx,           /**< buffer to store coefficient of first  variable in linearization */
-   SCIP_Real*            lincoefy,           /**< buffer to store coefficient of second variable in linearization */
-   SCIP_Real*            linconstant,        /**< buffer to store constant of linearization */
-   SCIP_Bool*            success             /**< buffer to store whether linearization was successful */
+   SCIP_Real             xcoef,              /**< x coefficient of linear inequality; must be in {-1,0,1} */
+   SCIP_Real             ycoef,              /**< y coefficient of linear inequality */
+   SCIP_Real             constant,           /**< constant of linear inequality */
+   SCIP_Real* RESTRICT   lincoefx,           /**< buffer to store coefficient of first  variable in linearization */
+   SCIP_Real* RESTRICT   lincoefy,           /**< buffer to store coefficient of second variable in linearization */
+   SCIP_Real* RESTRICT   linconstant,        /**< buffer to store constant of linearization */
+   SCIP_Bool* RESTRICT   success             /**< buffer to store whether linearization was successful */
    );
 
 /** computes coefficients of linearization of a bilinear term in a reference point when given two linear inequality
@@ -14915,24 +14933,6 @@ void SCIPcomputeBilinEnvelope2(
    SCIP_Real*            lincoefy,           /**< buffer to store coefficient of second variable in linearization */
    SCIP_Real*            linconstant,        /**< buffer to store constant of linearization */
    SCIP_Bool*            success             /**< buffer to store whether linearization was successful */
-   );
-
-/** computes coefficients of McCormick under- or overestimation of a bilinear term */
-EXTERN
-void SCIPaddBilinMcCormick(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             bilincoef,          /**< coefficient of bilinear term */
-   SCIP_Real             lbx,                /**< lower bound on first variable */
-   SCIP_Real             ubx,                /**< upper bound on first variable */
-   SCIP_Real             refpointx,          /**< reference point for first variable */
-   SCIP_Real             lby,                /**< lower bound on second variable */
-   SCIP_Real             uby,                /**< upper bound on second variable */
-   SCIP_Real             refpointy,          /**< reference point for second variable */
-   SCIP_Bool             overestimate,       /**< whether to compute an overestimator instead of an underestimator */
-   SCIP_Real*            lincoefx,           /**< buffer to add coefficient of first  variable in linearization */
-   SCIP_Real*            lincoefy,           /**< buffer to add coefficient of second variable in linearization */
-   SCIP_Real*            linconstant,        /**< buffer to add constant of linearization */
-   SCIP_Bool*            success             /**< buffer to set to FALSE if linearization has failed due to large numbers */
    );
 
 /** creates an NLP relaxation and stores it in a given NLPI problem; the function computes for each variable which the

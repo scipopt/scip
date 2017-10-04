@@ -196,8 +196,8 @@ struct BilinearEstimator
 {
    SCIP_VAR*             x;                 /**< first variable */
    SCIP_VAR*             y;                 /**< second variable */
-   SCIP_Real             inequnderest[6];   /**< at most two inequalities that can be used to underestimate xy; stored as (alpha,beta,gamma) with alpha x <= beta y + gamma */
-   SCIP_Real             ineqoverest[6];    /**< at most two inequalities that can be used to overestimate xy; stored as (alpha,beta,gamma) with alpha x <= beta y + gamma */
+   SCIP_Real             inequnderest[6];   /**< at most two inequalities that can be used to underestimate xy; stored as (xcoef,ycoef,constant) with xcoef x <= ycoef y + constant */
+   SCIP_Real             ineqoverest[6];    /**< at most two inequalities that can be used to overestimate xy; stored as (xcoef,ycoef,constant) with xcoef x <= ycoef y + constant */
    int                   ninequnderest;     /**< total number of inequalities for underestimating xy */
    int                   nineqoverest;      /**< total number of inequalities for overestimating xy */
    unsigned int          nunderest;         /**< number of constraints that require to underestimate xy */
@@ -250,8 +250,6 @@ struct SCIP_ConshdlrData
    SCIP_QUADCONSUPGRADE** quadconsupgrades;  /**< quadratic constraint upgrade methods for specializing quadratic constraints */
    int                   quadconsupgradessize; /**< size of quadconsupgrade array */
    int                   nquadconsupgrades;  /**< number of quadratic constraint upgrade methods */
-
-   int                   lastvarorderid;     /**< unique index for the status of the variable order graph */
 
    BILINESTIMATOR*       bilinestimators;    /**< array containing all required information for using stronger estimators for each bilinear term in all quadratic constraints */
    int                   nbilinterms;        /**< number of bilinear terms in all quadratic constraints */
@@ -5602,14 +5600,14 @@ SCIP_RETCODE storeAllBilinearTerms(
        */
       if( SCIPisPositive(scip, bilinterms[i].coef) )
       {
-         conshdlrdata->bilinestimators[pos-1].nunderest += hasrhs && !consdata->isconvex;
-         conshdlrdata->bilinestimators[pos-1].noverest += haslhs && !consdata->isconcave;
+         conshdlrdata->bilinestimators[pos-1].nunderest += (hasrhs && !consdata->isconvex) ? 1 : 0;
+         conshdlrdata->bilinestimators[pos-1].noverest += (haslhs && !consdata->isconcave) ? 1 : 0;
       }
       else
       {
          assert(SCIPisNegative(scip, bilinterms[i].coef));
-         conshdlrdata->bilinestimators[pos-1].nunderest += haslhs && !consdata->isconcave;
-         conshdlrdata->bilinestimators[pos-1].noverest += hasrhs && !consdata->isconvex;
+         conshdlrdata->bilinestimators[pos-1].nunderest += (haslhs && !consdata->isconcave) ? 1 : 0;
+         conshdlrdata->bilinestimators[pos-1].noverest += (hasrhs && !consdata->isconvex) ? 1 : 0;
       }
 
       /* update index of bilinear term in the constraint data */
@@ -5786,7 +5784,7 @@ SCIP_RETCODE deinitBilinearLP(
  *  inequality is found by optimizing along the line connecting the points (xs,ys) and (xt,yt); the dual solution of
  *  optimal LP solution yields the desired inequality of the form:
  *
- *     alpha * x <= beta * y + gamma
+ *     xcoef * x <= ycoef * y + constant
  */
 static
 SCIP_RETCODE solveBilinearLP(
@@ -5797,10 +5795,10 @@ SCIP_RETCODE solveBilinearLP(
    SCIP_Real             ys,                 /**< y-coordinate of the first point */
    SCIP_Real             xt,                 /**< x-coordinate of the second point */
    SCIP_Real             yt,                 /**< y-coordinate of the second point */
-   SCIP_Real*            alpha,              /**< pointer to store the coefficient of x */
-   SCIP_Real*            beta,               /**< pointer to store the coefficient of y */
-   SCIP_Real*            gamma,              /**< pointer to store the constant */
-   int                   iterlim             /**< iteration limit (-1: for no limit) */
+   SCIP_Real*            xcoef,              /**< pointer to store the coefficient of x */
+   SCIP_Real*            ycoef,              /**< pointer to store the coefficient of y */
+   SCIP_Real*            constant,           /**< pointer to store the constant */
+   SCIP_Longint          iterlim             /**< iteration limit (-1: for no limit) */
    )
 {
    SCIP_ROW* row;
@@ -5809,14 +5807,14 @@ SCIP_RETCODE solveBilinearLP(
    SCIP_Real side;
    SCIP_Bool lperror;
 
-   assert(alpha != NULL);
-   assert(beta != NULL);
-   assert(gamma!= NULL);
+   assert(xcoef != NULL);
+   assert(ycoef != NULL);
+   assert(constant!= NULL);
    assert(SCIPinProbing(scip));
 
-   *alpha = SCIP_INVALID;
-   *beta = SCIP_INVALID;
-   *gamma= SCIP_INVALID;
+   *xcoef = SCIP_INVALID;
+   *ycoef = SCIP_INVALID;
+   *constant= SCIP_INVALID;
 
    /* adjust reference points */
    xs = MIN(MAX(xs, SCIPvarGetLbGlobal(x)), SCIPvarGetUbGlobal(x)); /*lint !e666*/
@@ -5859,7 +5857,7 @@ SCIP_RETCODE solveBilinearLP(
       }
    }
 #else
-   SCIP_CALL( SCIPsolveProbingLP(scip, iterlim, &lperror, NULL) );
+   SCIP_CALL( SCIPsolveProbingLP(scip, (int)iterlim, &lperror, NULL) ); /*lint !e712*/
 #endif
 
    /* collect dual and primal solution entries */
@@ -5869,27 +5867,27 @@ SCIP_RETCODE solveBilinearLP(
       SCIP_Real yval = SCIPvarGetLPSol(y);
       SCIP_Real mu = -SCIProwGetDualsol(row);
 
-      /* alpha x + beta y <= constant */
-      *alpha  = -signx - (mu * scale) / (xt - xs);
-      *beta = (mu * scale) / (yt - ys);
-      *gamma = (*alpha) * xval + (*beta) * yval;
+      /* xcoef x + ycoef y <= constant */
+      *xcoef  = -signx - (mu * scale) / (xt - xs);
+      *ycoef = (mu * scale) / (yt - ys);
+      *constant = (*xcoef) * xval + (*ycoef) * yval;
 
-      /* alpha x <= -beta y + constant */
-      *beta = -(*beta);
+      /* xcoef x <= -ycoef y + constant */
+      *ycoef = -(*ycoef);
 
       /* normalize inequality */
-      if( !SCIPisZero(scip, *alpha) )
+      if( !SCIPisZero(scip, *xcoef) )
       {
-         SCIP_Real val = REALABS(*alpha);
-         *alpha /= val;
-         *beta /= val;
-         *gamma /= val;
+         SCIP_Real val = REALABS(*xcoef);
+         *xcoef /= val;
+         *ycoef /= val;
+         *constant /= val;
       }
-      else if( !SCIPisZero(scip, *beta) )
+      else if( !SCIPisZero(scip, *ycoef) )
       {
-         SCIP_Real val = REALABS(*beta);
-         *beta /= val;
-         *gamma /= val;
+         SCIP_Real val = REALABS(*ycoef);
+         *ycoef /= val;
+         *constant /= val;
       }
    }
 
@@ -7321,7 +7319,7 @@ SCIP_RETCODE generateCutNonConvex(
       }
 
       /* relax each bilinear term */
-      for( k = 0; k < consdata->quadvarterms[j].nadjbilin && *success; ++k )
+      for( k = 0; k < consdata->quadvarterms[j].nadjbilin && (*success); ++k )
       {
 	 SCIP_VAR* x;
 	 SCIP_VAR* y;
@@ -7376,7 +7374,7 @@ SCIP_RETCODE generateCutNonConvex(
             /* TODO compute tighter relaxation for xy */
          }
 
-         if( success && conshdlrdata->solvedbilinineqroot && consdata->bilintermsidx != NULL
+         if( *success && conshdlrdata->solvedbilinineqroot && consdata->bilintermsidx != NULL
 	    && ubx - lbx >= 0.1 /* TODO change for a parameter */
 	    && uby - lby >= 0.1 /* TODO change for a parameter */
 	    && getInteriority(lbx, ubx, refx, lby, uby, refy) > 0.01 )
@@ -11836,8 +11834,8 @@ SCIP_RETCODE computeIneqBilinTerms(
    SCIP_Real oldboundstreps;
    SCIP_Real olddualfeastol;
    SCIP_Real oldfeastol;
-   int iterlim;
-   int iterused;
+   SCIP_Longint iterlim;
+   SCIP_Longint iterused;
    int i;
 
    assert(conshdlrdata != NULL);
@@ -11863,13 +11861,11 @@ SCIP_RETCODE computeIneqBilinTerms(
       BILINESTIMATOR* bilinestimator = &(conshdlrdata->bilinestimators[i]);
       SCIP_VAR* x = conshdlrdata->bilinestimators[i].x;
       SCIP_VAR* y = conshdlrdata->bilinestimators[i].y;
-      int nunderest = conshdlrdata->bilinestimators[i].nunderest;
-      int noverest = conshdlrdata->bilinestimators[i].noverest;
+      unsigned int nunderest = conshdlrdata->bilinestimators[i].nunderest;
+      unsigned int noverest = conshdlrdata->bilinestimators[i].noverest;
       int k;
 
       assert(bilinestimator != NULL);
-      assert(nunderest >= 0);
-      assert(noverest >= 0);
 
       /* bilinear term only appears in convex constraints -> skip */
       if( nunderest + noverest == 0 )
@@ -11878,12 +11874,12 @@ SCIP_RETCODE computeIneqBilinTerms(
       for( k = 0; k < 4; ++k )
       {
          SCIP_Real xs, xt, ys, yt;
-         SCIP_Real alpha;
-         SCIP_Real beta;
-         SCIP_Real gamma;
+         SCIP_Real xcoef;
+         SCIP_Real ycoef;
+         SCIP_Real constant;
          SCIP_Bool tightenx;
          SCIP_Bool tighteny;
-         int iterleft;
+         SCIP_Longint iterleft;
 
          /* k in {0,1} = overestimate, k in {2,3} = underestimate; check whether an under- or overestimate is needed */
          if( (k < 2 && noverest == 0) || (k >= 2 && nunderest == 0) )
@@ -11899,11 +11895,11 @@ SCIP_RETCODE computeIneqBilinTerms(
 
          /* solve (primal) LP for xy */
          iterused -= SCIPgetNLPIterations(scip);
-         SCIP_CALL( solveBilinearLP(scip, x, y, xs, ys, xt, yt, &alpha, &beta, &gamma, iterleft) );
+         SCIP_CALL( solveBilinearLP(scip, x, y, xs, ys, xt, yt, &xcoef, &ycoef, &constant, iterleft) );
          iterused += SCIPgetNLPIterations(scip);
 
           /* check which variable bounds can be tightened */
-          SCIP_CALL( checkBoundsBilinVars(scip, x, y, alpha, beta, gamma, &tightenx, &tighteny) );
+          SCIP_CALL( checkBoundsBilinVars(scip, x, y, xcoef, ycoef, constant, &tightenx, &tighteny) );
 
          /* check whether to resolve the LP with tighter variable bounds */
          if( tightenx )
@@ -11923,31 +11919,31 @@ SCIP_RETCODE computeIneqBilinTerms(
             continue;
          }
          /* store inequality in case it is separating the corresponding extreme point */
-         else if( !SCIPisHugeValue(scip, alpha) && !SCIPisHugeValue(scip, beta) && !SCIPisHugeValue(scip, gamma)
-            && !SCIPisFeasZero(scip, alpha) && !SCIPisFeasZero(scip, beta)
-            && SCIPisFeasGT(scip, (alpha*xt - beta*yt - gamma)/ SQRT(SQR(alpha) + SQR(beta) + SQR(gamma)), 1e-2) )
+         else if( !SCIPisHugeValue(scip, xcoef) && !SCIPisHugeValue(scip, ycoef) && !SCIPisHugeValue(scip, constant)
+            && !SCIPisFeasZero(scip, xcoef) && !SCIPisFeasZero(scip, ycoef)
+            && SCIPisFeasGT(scip, (xcoef*xt - ycoef*yt - constant)/ SQRT(SQR(xcoef) + SQR(ycoef) + SQR(constant)), 1e-2) )
          {
-            assert(beta != SCIP_INVALID); /*lint !e777*/
-            assert(gamma != SCIP_INVALID); /*lint !e777*/
+            assert(ycoef != SCIP_INVALID); /*lint !e777*/
+            assert(constant != SCIP_INVALID); /*lint !e777*/
 
 	    /* store over- and underestimates separately */
             if( k < 2 )
             {
-               bilinestimator->ineqoverest[3*bilinestimator->nineqoverest] = alpha;
-               bilinestimator->ineqoverest[3*bilinestimator->nineqoverest + 1] = beta;
-               bilinestimator->ineqoverest[3*bilinestimator->nineqoverest + 2] = gamma;
+               bilinestimator->ineqoverest[3*bilinestimator->nineqoverest] = xcoef;
+               bilinestimator->ineqoverest[3*bilinestimator->nineqoverest + 1] = ycoef;
+               bilinestimator->ineqoverest[3*bilinestimator->nineqoverest + 2] = constant;
                ++(bilinestimator->nineqoverest);
             }
             else
             {
-               bilinestimator->inequnderest[3*bilinestimator->ninequnderest] = alpha;
-               bilinestimator->inequnderest[3*bilinestimator->ninequnderest + 1] = beta;
-               bilinestimator->inequnderest[3*bilinestimator->ninequnderest + 2] = gamma;
+               bilinestimator->inequnderest[3*bilinestimator->ninequnderest] = xcoef;
+               bilinestimator->inequnderest[3*bilinestimator->ninequnderest + 1] = ycoef;
+               bilinestimator->inequnderest[3*bilinestimator->ninequnderest + 2] = constant;
                ++(bilinestimator->ninequnderest);
             }
          }
       }
-   }
+   } /*lint !e850*/
 
    /* undo changes of initBilinearLP */
    SCIP_CALL( deinitBilinearLP(scip, oldfeastol, olddualfeastol, oldboundstreps) );
