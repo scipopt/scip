@@ -2504,7 +2504,7 @@ SCIP_RETCODE SCIPlpiGetRows(
          if ( i <= lastrow )
          {
             /* skip last non-zero of this first ranged row */
-            int newnz = (i < lastrow ? beg[i+1]-1 : (*nnonz)-1);
+            int newnz = (i < lastrow ? beg[i - firstrow +1]-1 : (*nnonz)-1);
 
             /* process remaining rows, moving non-zeros to the front */
             for (; i <= lastrow; i++)
@@ -2512,16 +2512,16 @@ SCIP_RETCODE SCIPlpiGetRows(
                int thebeg;
                int theend;
 
-               thebeg = beg[i];
-               theend = (i < lastrow ? beg[i+1] : *nnonz);
+               thebeg = beg[i - firstrow];
+               theend = (i < lastrow ? beg[i - firstrow +1] : *nnonz);
 
                assert(-1 <= lpi->rngrowmap[i] && lpi->rngrowmap[i] < lpi->nrngrows);
                if ( lpi->rngrowmap[i] >= 0 )
                   theend--;
 
-               memmove(&ind[newnz], &ind[thebeg], (theend - thebeg) * sizeof(*ind));
-               memmove(&val[newnz], &val[thebeg], (theend - thebeg) * sizeof(*val));
-               beg[i] = newnz;
+               memmove(&ind[newnz], &ind[thebeg], (theend - thebeg) * sizeof(*ind)); /*lint !e776*/
+               memmove(&val[newnz], &val[thebeg], (theend - thebeg) * sizeof(*val)); /*lint !e776*/
+               beg[i - firstrow] = newnz;
                newnz += theend - thebeg;
             }
             assert(newnz < *nnonz);
