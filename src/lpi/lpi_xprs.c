@@ -3500,7 +3500,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    case SCIP_LPPAR_MARKOWITZ:
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_MARKOWITZTOL, dval) );
       break;
-   case SCIP_LPPAR_UOBJLIM:
+   case SCIP_LPPAR_OBJLIM:
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_MIPABSCUTOFF, dval) );
       break;
    default:
