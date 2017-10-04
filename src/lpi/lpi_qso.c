@@ -1634,9 +1634,18 @@ SCIP_RETCODE SCIPlpiGetObjsen(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_OBJSEN*          objsen              /**< pointer to store objective sense */
    )
-{  /*lint --e{715}*/
-   SCIPerrorMessage("SCIPlpiGetObjsen() has not been implemented yet.\n");
-   return SCIP_LPERROR;
+{
+   int sense;
+
+   assert( objsen != NULL );
+
+   QS_CONDRET( QSget_objsense(lpi->prob, &sense) );
+   if ( sense == QS_MIN )
+      *objsen = SCIP_OBJSEN_MINIMIZE;
+   else
+      *objsen = SCIP_OBJSEN_MAXIMIZE;
+
+   return SCIP_OKAY;
 }
 
 /** gets objective coefficients from LP problem object */
