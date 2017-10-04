@@ -7361,7 +7361,7 @@ SCIP_RETCODE generateCutNonConvex(
             violside == SCIP_SIDETYPE_LEFT, &coef, &coef2, &constant, success);
 
          /* tries to compute a tighter relaxation for xy by using valid linear inequalities */
-         if( conshdlrdata->bilinestimators != NULL )
+         if( conshdlrdata->bilinestimators != NULL && ubx - lbx >= 0.1 && uby - lby >= 0.1 ) /* TODO change to a parameter? */
          {
             int bilintermidx = consdata->bilintermsidx[idx];
             SCIP_Real score = getInteriority(lbx, ubx, refx, lby, uby, refy);
@@ -7371,30 +7371,25 @@ SCIP_RETCODE generateCutNonConvex(
             bilinestimator->score += score;
             ++(bilinestimator->nupdates);
 
-            /* TODO compute tighter relaxation for xy */
-         }
+            /* compute tighter relaxation for xy if the current score is large enough */
+            if( score > 0.01 ) /* TODO change to a parameter? */
+            {
+               SCIP_Real bestval = refx * coef + refy * coef2 + constant;
+               SCIP_Bool updaterelax = FALSE;
 
-         if( *success && conshdlrdata->solvedbilinineqroot && consdata->bilintermsidx != NULL
-	    && ubx - lbx >= 0.1 /* TODO change for a parameter */
-	    && uby - lby >= 0.1 /* TODO change for a parameter */
-	    && getInteriority(lbx, ubx, refx, lby, uby, refy) > 0.01 )
-         {
-            SCIP_Real bestval = refx * coef + refy * coef2 + constant;
-            int bilintermidx = consdata->bilintermsidx[idx];
-            SCIP_Bool updaterelax = FALSE;
+               assert(conshdlrdata->bilinestimators != NULL);
+               bilinestimator = &(conshdlrdata->bilinestimators[bilintermidx]);
+               assert(bilinestimator->x == x);
+               assert(bilinestimator->y == y);
 
-            assert(conshdlrdata->bilinestimators != NULL);
-            bilinestimator = &(conshdlrdata->bilinestimators[bilintermidx]);
-            assert(bilinestimator->x == x);
-            assert(bilinestimator->y == y);
+               /* use overestimates */
+               updateBilinearRelaxation(scip, x, y, bilinterm->coef, violside, refx, refy, bilinestimator->ineqoverest,
+                  bilinestimator->nineqoverest, &coef, &coef2, &constant, &bestval, &updaterelax);
 
-            /* use overestimates */
-            updateBilinearRelaxation(scip, x, y, bilinterm->coef, violside, refx, refy, bilinestimator->ineqoverest,
-               bilinestimator->nineqoverest, &coef, &coef2, &constant, &bestval, &updaterelax);
-
-            /* use underestimates */
-            updateBilinearRelaxation(scip, x, y, bilinterm->coef, violside, refx, refy, bilinestimator->inequnderest,
-               bilinestimator->ninequnderest, &coef, &coef2, &constant, &bestval, &updaterelax);
+               /* use underestimates */
+               updateBilinearRelaxation(scip, x, y, bilinterm->coef, violside, refx, refy, bilinestimator->inequnderest,
+                  bilinestimator->ninequnderest, &coef, &coef2, &constant, &bestval, &updaterelax);
+            }
          }
 
          SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, coef) );
@@ -11675,20 +11670,18 @@ SCIP_RETCODE checkBoundsBilinVars(
       SCIP_Real bound = MIN((xcoef*lbx-constant)/ycoef, (xcoef*ubx-constant)/ycoef);
       *successy = SCIPisLbBetter(scip, bound, lby, uby);
    }
-   /*  */
    else if( SCIPisFeasNegative(scip, ycoef) )
    {
       SCIP_Real bound = MAX((xcoef*lbx-constant)/ycoef, (xcoef*ubx-constant)/ycoef);
       *successy = SCIPisUbBetter(scip, bound, lby, uby);
    }
 
-   /* xcoef {>,<} 0 => {upper,lower} bound on y */
+   /* xcoef >,<} 0 => {upper,lower} bound on y */
    if( SCIPisFeasPositive(scip, xcoef) )
    {
       SCIP_Real bound = MAX((ycoef*lby+constant)/xcoef, (ycoef*uby+constant)/xcoef);
       *successx = SCIPisUbBetter(scip, bound, lbx, ubx);
    }
-   /* xcoef < 0 => lower bound */
    else if( SCIPisFeasNegative(scip, xcoef) )
    {
       SCIP_Real bound = MIN((ycoef*lby+constant)/xcoef, (ycoef*uby+constant)/xcoef);
