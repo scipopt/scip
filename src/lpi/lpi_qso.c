@@ -3515,6 +3515,7 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_OBJLIM:
+   {
       int sense;
       rval = QSget_objsense(lpi->prob, &sense);
       if ( ! rval )
@@ -3525,6 +3526,7 @@ SCIP_RETCODE SCIPlpiGetRealpar(
             rval = QSget_param_double(lpi->prob, QS_PARAM_OBJLLIM, dval);
       }
       break;
+   }
    case SCIP_LPPAR_LPTILIM:
       rval = QSget_param_double(lpi->prob, QS_PARAM_SIMPLEX_MAX_TIME, dval);
       break;
@@ -3559,6 +3561,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       rval = QSset_param_double(lpi->prob, QS_PARAM_SIMPLEX_MAX_TIME, dval);
       break;
    case SCIP_LPPAR_OBJLIM:
+   {
       int sense;
       rval = QSget_objsense(lpi->prob, &sense);
       if ( ! rval )
@@ -3569,6 +3572,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
             rval = QSset_param_double(lpi->prob, QS_PARAM_OBJLLIM, dval);
       }
       break;
+   }
    case SCIP_LPPAR_FEASTOL:
    case SCIP_LPPAR_DUALFEASTOL:
    case SCIP_LPPAR_BARRIERCONVTOL:
