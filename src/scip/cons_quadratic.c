@@ -11958,7 +11958,6 @@ SCIP_DECL_EVENTEXEC(processNodeSolvedEvent)
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
-   SCIP_CONS**    conss;
    int            nconss;
 
    assert(scip != NULL);
@@ -11976,8 +11975,6 @@ SCIP_DECL_EVENTEXEC(processNodeSolvedEvent)
    assert(conshdlr != NULL);
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
-   conss = SCIPconshdlrGetConss(conshdlr);
-   assert(conss != NULL);
    nconss = SCIPconshdlrGetNConss(conshdlr);
 
    if( nconss == 0 )
