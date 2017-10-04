@@ -11768,16 +11768,12 @@ SCIP_RETCODE applyObbt(
    SCIP_Bool lperror;
    SCIP_Bool infeasible;
 
-   SCIP_Real time;
-
    assert(x != NULL);
    assert(SCIPinProbing(scip));
 
    /* minimize x */
    SCIP_CALL( SCIPchgVarObjProbing(scip, x, 1.0) );
-   time = -SCIPgetSolvingTime(scip);
    SCIP_CALL( SCIPsolveProbingLP(scip, iterlim, &lperror, NULL) );
-   time += SCIPgetSolvingTime(scip);
 
    if( !lperror && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
    {
@@ -11787,9 +11783,7 @@ SCIP_RETCODE applyObbt(
 
    /* maximize x */
    SCIP_CALL( SCIPchgVarObjProbing(scip, x, -1.0) );
-   time = -SCIPgetSolvingTime(scip);
    SCIP_CALL( SCIPsolveProbingLP(scip, iterlim, &lperror, NULL) );
-   time += SCIPgetSolvingTime(scip);
 
    if( !lperror && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
    {
