@@ -2090,10 +2090,14 @@ SCIP_RETCODE SCIPlpiGetSolFeasibility(
    (void) QSget_status(lpi->prob, &(lpi->solstat));
 
    if( lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_UNBOUNDED )
-      *primalfeasible = 1;
+      *primalfeasible = TRUE;
+   else
+      *primalfeasible = FALSE;
 
    if( lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_INFEASIBLE || lpi->solstat == QS_LP_OBJ_LIMIT )
-      *dualfeasible = 1;
+      *dualfeasible = TRUE;
+   else
+      *dualfeasible = FALSE;
 
    return SCIP_OKAY;
 }
