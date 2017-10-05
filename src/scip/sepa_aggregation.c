@@ -76,8 +76,6 @@
 #define MAKECONTINTEGRAL          FALSE
 #define IMPLINTSARECONT
 
-#define MAXAGGRLEN(nvars)          (0.1*(nvars)+1000) /**< maximal length of base inequality */
-
 
 /*
  * Data structures
@@ -110,7 +108,6 @@ struct SCIP_SepaData
    int                   maxsepacutsroot;    /**< maximal number of cmir cuts separated per separation round in root node */
    int                   densityoffset;      /**< additional number of variables allowed in row on top of density */
    int                   maxtestdelta;       /**< maximal number of different deltas to try (-1: unlimited) */
-   int                   maxcontsroot;       /**< maximal number of active continuous variables in aggregated row in the root */
    SCIP_Bool             trynegscaling;      /**< should negative values also be tested in scaling? */
    SCIP_Bool             fixintegralrhs;     /**< should an additional variable be complemented if f0 = 0? */
    SCIP_Bool             dynamiccuts;        /**< should generated cuts be removed from the LP if they are no longer tight? */
