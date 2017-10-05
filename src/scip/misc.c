@@ -3478,8 +3478,6 @@ SCIP_RETCODE SCIPhashsetRemove(
 
       pos = nextpos;
    }
-
-   return SCIP_ERROR; /*lint !e527*/
 }
 
 /** prints statistics about hash set usage */
