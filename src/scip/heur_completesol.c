@@ -56,7 +56,7 @@
 #define DEFAULT_IGNORECONT  FALSE       /**< should solution values for continuous variables be ignored? */
 #define DEFAULT_BESTSOLS        5       /**< heuristic stops, if the given number of improving solutions were found (-1: no limit) */
 #define DEFAULT_MAXPROPROUNDS  10       /**< maximal number of iterations in propagation (-1: no limit) */
-#define DEFAULT_MAXLPITER      -1       /**< maximal number of LP iterations (-1: no limit) */
+#define DEFAULT_MAXLPITER      -1LL     /**< maximal number of LP iterations (-1: no limit) */
 #define DEFAULT_MAXCONTVARS    -1       /**< maximal number of continuous variables after presolving (-1: no limit) */
 #define DEFAULT_BEFOREPRESOL  TRUE      /**< should the heuristic run before presolving? */
 
@@ -1219,7 +1219,7 @@ SCIP_RETCODE SCIPincludeHeurCompletesol(
 
    SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/" HEUR_NAME "/maxlpiter",
          "maximal number of LP iterations (-1: no limit)",
-         &heurdata->maxlpiter, FALSE, DEFAULT_MAXLPITER, -1, INT_MAX, NULL, NULL) );
+         &heurdata->maxlpiter, FALSE, DEFAULT_MAXLPITER, -1LL, SCIP_LONGINT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxcontvars",
          "maximal number of continuous variables after presolving",

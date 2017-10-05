@@ -7983,7 +7983,7 @@ SCIP_RETCODE propagateAllConss(
    nvars = SCIPgetNVars(scip);
    oldnfixedvars = *nfixedvars;
 
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, SCIPgetVars(scip), nvars) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, SCIPgetVars(scip), nvars) ); /*lint !e666*/
    SCIP_CALL( SCIPallocBufferArray(scip, &downlocks, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &uplocks, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &alternativelbs, nvars) );

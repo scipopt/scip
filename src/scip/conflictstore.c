@@ -1100,7 +1100,7 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
       return SCIP_OKAY;
 
    /* we can stop whenever we have found a new incumbent but the cutoff bound has not changed */
-   if( conflictstore->lastcutoffbound != SCIP_INVALID && SCIPsetIsGE(set, cutoffbound, conflictstore->lastcutoffbound)  )
+   if( conflictstore->lastcutoffbound != SCIP_INVALID && SCIPsetIsGE(set, cutoffbound, conflictstore->lastcutoffbound) ) /*lint !e777*/
       return SCIP_OKAY;
 
    conflictstore->lastcutoffbound = cutoffbound;

@@ -821,7 +821,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultAggr)
 
    /* compute strong branching among the array of fractional variables in order to get the best one */
    SCIP_CALL( SCIPselectVarStrongBranching(scip, lpcands, lpcandssol, lpcandsfrac, branchruledata->skipdown,
-         branchruledata->skipup, nlpcands, npriolpcands, nlpcands, &branchruledata->lastcand, allowaddcons,
+         branchruledata->skipup, nlpcands, npriolpcands, nlpcands, &branchruledata->lastcand,
          branchruledata->maxproprounds, branchruledata->probingbounds, TRUE,
          &bestcandpos, &bestdown, &bestup, &bestscore, &bestdownvalid, &bestupvalid, &provedbound, result) );
 

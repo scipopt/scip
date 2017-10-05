@@ -146,21 +146,6 @@
 
 /* Conflict Analysis (dual ray) */
 
-#define SCIP_DEFAULT_CONF_APPLYMIR        FALSE /**< apply MIR function to dual rays */
-#define SCIP_DEFAULT_CONF_PREFERMIR        TRUE /**< prefer a ray after applying the MIR function if the proof is still
-                                                 *   valid, use both rays otherwise
-                                                 */
-#define SCIP_DEFAULT_CONF_DUALRAYPRESOL       0 /**< which presolving strategy should be used for dualray constraints?
-                                                 *   (0: no presolving,
-                                                 *    1: keep variables contributing with its local bound
-                                                 *    2: keep variables contributing with its global bound
-                                                 *    3: keep variables contributing with its global bound and add a few
-                                                 *       variables contributing with its local bound such that the
-                                                 *       constraint is not globally redundant
-                                                 */
-#define SCIP_DEFAULT_CONF_REMOVECONTS       'd' /**< try to sparsify the dualray proof by removing continuous variables
-                                                 *   ([d]on't remove, remove [g]reedy, use [n]on-zero-cancellation)
-                                                 */
 #define SCIP_DEFAULT_CONF_SEPAALTPROOFS   FALSE /**< apply cut generating functions to construct alternative proofs */
 
 /* Constraints */
@@ -291,7 +276,10 @@
 #define SCIP_DEFAULT_MISC_ALLOWDUALREDS    TRUE /**< should dual reductions in propagation methods and presolver be allowed? */
 #define SCIP_DEFAULT_MISC_ALLOWOBJPROP     TRUE /**< should propagation to the current objective be allowed in propagation methods? */
 #define SCIP_DEFAULT_MISC_REFERENCEVALUE   1e99 /**< objective value for reference purposes */
+
+#ifdef WITH_DEBUG_SOLUTION
 #define SCIP_DEFAULT_MISC_DEBUGSOLUTION     "-" /**< path to a debug solution */
+#endif
 
 /* Randomization */
 #define SCIP_DEFAULT_RANDOM_RANDSEEDSHIFT     0 /**< global shift of all random seeds in the plugins, this will have no impact on the permutation and LP seeds */

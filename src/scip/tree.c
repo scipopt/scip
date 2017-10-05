@@ -6434,6 +6434,11 @@ SCIP_RETCODE SCIPtreeSetProbingLPState(
 
    /* get the current probing node */
    node = SCIPtreeGetCurrentNode(tree);
+
+   /* this check is necessary to avoid cppcheck warnings */
+   if( node == NULL )
+      return SCIP_INVALIDDATA;
+
    assert(SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
    assert(node->data.probingnode != NULL);
 

@@ -275,7 +275,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpNodereopt)
          /* run strong branching initialization */
          if( nbranchcands > 0 )
          {
-            SCIP_CALL( SCIPexecRelpscostBranching(scip, TRUE, branchcands, branchcandssol, branchcandsfrac, nbranchcands, FALSE, result) );
+            SCIP_CALL( SCIPexecRelpscostBranching(scip, branchcands, branchcandssol, branchcandsfrac, nbranchcands, FALSE, result) );
             assert(*result == SCIP_DIDNOTRUN || *result == SCIP_CUTOFF || *result == SCIP_REDUCEDDOM || *result == SCIP_CONSADDED);
          }
       }
