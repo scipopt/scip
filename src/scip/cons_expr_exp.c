@@ -224,7 +224,7 @@ static
 SCIP_RETCODE separatePointExp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< exponential expression */
    SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
    SCIP_ROW**            cut                 /**< pointer to store the row */
    )
