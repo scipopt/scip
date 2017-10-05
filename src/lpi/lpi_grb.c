@@ -945,8 +945,6 @@ SCIP_RETCODE reconvertSides(
 
    assert(lpi != NULL);
    assert(nrows >= 0);
-   assert(lhs != NULL);
-   assert(rhs != NULL);
 
    for (i = 0; i < nrows; ++i)
    {
@@ -970,13 +968,17 @@ SCIP_RETCODE reconvertSides(
          break;
 
       case GRB_LESS_EQUAL:
-         lhs[i] = -GRB_INFINITY;
-         rhs[i] = lpi->rhsarray[i];
+         if ( lhs != NULL )
+            lhs[i] = -GRB_INFINITY;
+         if ( rhs != NULL )
+            rhs[i] = lpi->rhsarray[i];
          break;
 
       case GRB_GREATER_EQUAL:
-         lhs[i] = lpi->rhsarray[i];
-         rhs[i] = GRB_INFINITY;
+         if ( lhs != NULL )
+            lhs[i] = lpi->rhsarray[i];
+         if ( rhs != NULL )
+            rhs[i] = GRB_INFINITY;
          break;
 
       default:
@@ -984,7 +986,7 @@ SCIP_RETCODE reconvertSides(
          SCIPABORT();
          return SCIP_LPERROR; /*lint !e527*/
       }
-      assert(lhs[i] <= rhs[i]);
+      assert(lhs == NULL || rhs == NULL || lhs[i] <= rhs[i]);
    }
    return SCIP_OKAY;
 }
@@ -1422,6 +1424,7 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    const SCIP_Real*      val                 /**< values of constraint matrix entries */
    )
 {
+   int grbobjsen;
    int* cnt;
    int rngcount;
    int c;
@@ -1438,7 +1441,7 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    SCIP_CALL( ensureSidechgMem(lpi, nrows) );
 
    /* convert objective sense */
-   objsen = (objsen == SCIP_OBJSEN_MINIMIZE) ? GRB_MINIMIZE : GRB_MAXIMIZE;
+   grbobjsen = (objsen == SCIP_OBJSEN_MINIMIZE) ? GRB_MINIMIZE : GRB_MAXIMIZE;
 
    /* convert lhs/rhs into sen/rhs/range tuples */
    SCIP_CALL( convertSides(lpi, nrows, lhs, rhs, &rngcount) );
@@ -1454,7 +1457,7 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    assert(cnt[ncols-1] >= 0);
 
    /* load model - all variables are continuous */
-   CHECK_ZERO( lpi->messagehdlr, GRBloadmodel(lpi->grbenv, &(lpi->grbmodel), NULL, ncols, nrows, (int) objsen, 0.0, (SCIP_Real*)obj,
+   CHECK_ZERO( lpi->messagehdlr, GRBloadmodel(lpi->grbenv, &(lpi->grbmodel), NULL, ncols, nrows, grbobjsen, 0.0, (SCIP_Real*)obj,
          lpi->senarray, lpi->rhsarray, (int*)beg, cnt, (int*)ind, (SCIP_Real*)val, (SCIP_Real*)lb, (SCIP_Real*)ub, NULL, colnames, rownames) );
 
    CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
@@ -2147,19 +2150,21 @@ SCIP_RETCODE SCIPlpiChgObjsen(
    SCIP_OBJSEN           objsen              /**< new objective sense */
    )
 {
+   int grbobjsen;
+
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
    assert(objsen == SCIP_OBJSEN_MAXIMIZE || objsen == SCIP_OBJSEN_MINIMIZE);
 
    /* convert objective sense */
-   objsen = (objsen == SCIP_OBJSEN_MINIMIZE) ? GRB_MINIMIZE : GRB_MAXIMIZE;
+   grbobjsen = (objsen == SCIP_OBJSEN_MINIMIZE) ? GRB_MINIMIZE : GRB_MAXIMIZE;
 
-   SCIPdebugMessage("changing objective sense in Gurobi to %d\n", objsen);
+   SCIPdebugMessage("changing objective sense in Gurobi to %d\n", grbobjsen);
 
    invalidateSolution(lpi);
 
    /* The objective sense of Gurobi and SCIP are equal */
-   CHECK_ZERO( lpi->messagehdlr, GRBsetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, (int) objsen) );
+   CHECK_ZERO( lpi->messagehdlr, GRBsetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, grbobjsen) );
    CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
 
    return SCIP_OKAY;
@@ -2499,7 +2504,7 @@ SCIP_RETCODE SCIPlpiGetRows(
          if ( i <= lastrow )
          {
             /* skip last non-zero of this first ranged row */
-            int newnz = (i < lastrow ? beg[i+1]-1 : (*nnonz)-1);
+            int newnz = (i < lastrow ? beg[i - firstrow +1]-1 : (*nnonz)-1);
 
             /* process remaining rows, moving non-zeros to the front */
             for (; i <= lastrow; i++)
@@ -2507,16 +2512,16 @@ SCIP_RETCODE SCIPlpiGetRows(
                int thebeg;
                int theend;
 
-               thebeg = beg[i];
-               theend = (i < lastrow ? beg[i+1] : *nnonz);
+               thebeg = beg[i - firstrow];
+               theend = (i < lastrow ? beg[i - firstrow +1] : *nnonz);
 
                assert(-1 <= lpi->rngrowmap[i] && lpi->rngrowmap[i] < lpi->nrngrows);
                if ( lpi->rngrowmap[i] >= 0 )
                   theend--;
 
-               memmove(&ind[newnz], &ind[thebeg], (theend - thebeg) * sizeof(*ind));
-               memmove(&val[newnz], &val[thebeg], (theend - thebeg) * sizeof(*val));
-               beg[i] = newnz;
+               memmove(&ind[newnz], &ind[thebeg], (theend - thebeg) * sizeof(*ind)); /*lint !e776*/
+               memmove(&val[newnz], &val[thebeg], (theend - thebeg) * sizeof(*val)); /*lint !e776*/
+               beg[i - firstrow] = newnz;
                newnz += theend - thebeg;
             }
             assert(newnz < *nnonz);
@@ -3367,7 +3372,6 @@ SCIP_RETCODE SCIPlpiStrongbranchesInt(
 {
    int j;
 
-   assert( iter != NULL );
    assert( cols != NULL );
    assert( psols != NULL );
    assert( down != NULL );
@@ -3418,16 +3422,12 @@ SCIP_RETCODE SCIPlpiGetSolFeasibility(
    SCIP_Bool*            dualfeasible        /**< stores dual feasibility status */
    )
 {
-   int algo;
-
    assert( lpi != NULL );
    assert( lpi->grbmodel != NULL );
    assert( lpi->grbenv != NULL );
    assert( lpi->solstat >= 1 );
 
    SCIPdebugMessage("getting solution feasibility\n");
-
-   CHECK_ZERO( lpi->messagehdlr, GRBgetintparam(lpi->grbenv, GRB_INT_PAR_METHOD, &algo) );
 
    if( primalfeasible != NULL )
       *primalfeasible = SCIPlpiIsPrimalFeasible(lpi);
@@ -3756,7 +3756,7 @@ SCIP_RETCODE SCIPlpiGetObjval(
    (void)GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJVAL, &oval);
    (void)GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJBOUND, &obnd);
 
-   assert(lpi->solstat != GRB_OPTIMAL || oval == obnd);
+   assert(lpi->solstat != GRB_OPTIMAL || oval == obnd); /*lint !e777*/
 #endif
 
    CHECK_ZERO( lpi->messagehdlr, GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJBOUND, objval) );
