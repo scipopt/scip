@@ -7156,6 +7156,7 @@ void updateBilinearRelaxation(
    SCIP_Real constant;
    SCIP_Real xcoef;
    SCIP_Real ycoef;
+   SCIP_Real constshift;
    SCIP_Real lbx;
    SCIP_Real ubx;
    SCIP_Real lby;
@@ -7188,11 +7189,27 @@ void updateBilinearRelaxation(
       || SCIPisFeasLE(scip, refy, lby) || SCIPisFeasGE(scip, refy, uby) )
       return;
 
+   /*
+    * due to the feasibility tolerances of the LP and NLP solver, it might possible that the reference point is
+    * violating the linear inequalities; to ensure that we compute a valid underestimate, we relax the linear
+    * inequality by changing its constant part
+    */
+   constshift = 0.0;
+   for( i = 0; i < nineqs; ++i )
+   {
+      SCIP_Real violation = ineqs[3*i] * refx - ineqs[3*i+1] * refy - ineqs[3*i+2];
+
+      if( SCIPisFeasLE(scip, violation, 0.0) && SCIPisGT(scip, violation, 0.0) )
+	 constshift = MAX(constshift, violation);
+   }
+   SCIPdebugMsg(scip, "shift constant by %.16f\n", constshift);
+   assert(SCIPisFeasLE(scip, constshift, 0.0));
+
    /* try to use both inequalities */
    if( nineqs == 2 )
    {
       SCIPcomputeBilinEnvelope2(scip, bilincoef, lbx, ubx, refx, lby, uby, refy, overestimate, ineqs[0], ineqs[1],
-         ineqs[2], ineqs[3], ineqs[4], ineqs[5], &xcoef, &ycoef, &constant, &update);
+         ineqs[2] + constshift, ineqs[3], ineqs[4], ineqs[5] + constshift, &xcoef, &ycoef, &constant, &update);
 
       if( update )
       {
@@ -7214,7 +7231,7 @@ void updateBilinearRelaxation(
    for( i = 0; i < nineqs; ++i )
    {
       SCIPcomputeBilinEnvelope1(scip, bilincoef, lbx, ubx, refx, lby, uby, refy, overestimate, ineqs[3*i], ineqs[3*i+1],
-         ineqs[3*i+2], &xcoef, &ycoef, &constant, &update);
+         ineqs[3*i+2] + constshift, &xcoef, &ycoef, &constant, &update);
 
       if( update )
       {
