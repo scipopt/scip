@@ -456,16 +456,14 @@ SCIP_RETCODE pseudoforkCreate(
    if( (*pseudofork)->naddedcols > 0 )
    {
       /* copy the newly created columns to the pseudofork's col array */
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*pseudofork)->addedcols, SCIPlpGetNewcols(lp), \
-            (*pseudofork)->naddedcols) );
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*pseudofork)->addedcols, SCIPlpGetNewcols(lp), (*pseudofork)->naddedcols) ); /*lint !e666*/
    }
    if( (*pseudofork)->naddedrows > 0 )
    {
       int i;
 
       /* copy the newly created rows to the pseudofork's row array */
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*pseudofork)->addedrows, SCIPlpGetNewrows(lp), \
-            (*pseudofork)->naddedrows) );
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*pseudofork)->addedrows, SCIPlpGetNewrows(lp), (*pseudofork)->naddedrows) ); /*lint !e666*/
 
       /* capture the added rows */
       for( i = 0; i < (*pseudofork)->naddedrows; ++i )
@@ -554,14 +552,14 @@ SCIP_RETCODE forkCreate(
    if( (*fork)->naddedcols > 0 )
    {
       /* copy the newly created columns to the fork's col array */
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*fork)->addedcols, SCIPlpGetNewcols(lp), (*fork)->naddedcols) );
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*fork)->addedcols, SCIPlpGetNewcols(lp), (*fork)->naddedcols) ); /*lint !e666*/
    }
    if( (*fork)->naddedrows > 0 )
    {
       int i;
 
       /* copy the newly created rows to the fork's row array */
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*fork)->addedrows, SCIPlpGetNewrows(lp), (*fork)->naddedrows) );
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*fork)->addedrows, SCIPlpGetNewrows(lp), (*fork)->naddedrows) ); /*lint !e666*/
 
       /* capture the added rows */
       for( i = 0; i < (*fork)->naddedrows; ++i )
@@ -5587,7 +5585,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
       /* create child nodes with x <= floor(x'), and x >= ceil(x') */
       downub = SCIPsetFeasFloor(set, val);
       uplb = downub + 1.0;
-      assert( SCIPsetIsRelEQ(set, SCIPsetFeasCeil(set, val), uplb) );
+      assert( SCIPsetIsRelEQ(set, SCIPsetCeil(set, val), uplb) );
       SCIPsetDebugMsg(set, "fractional branch on variable <%s> with value %g, root value %g, priority %d (current lower bound: %g)\n",
          SCIPvarGetName(var), val, SCIPvarGetRootSol(var), SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode));
    }
@@ -6490,6 +6488,7 @@ SCIP_RETCODE SCIPtreeLoadProbingLPState(
 
       /* get the current probing node */
       node = SCIPtreeGetCurrentNode(tree);
+      assert(node != NULL);
       assert(SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
 
       /* search the last node where an LP state information was attached */

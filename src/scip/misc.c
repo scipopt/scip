@@ -6953,9 +6953,9 @@ SCIP_RETCODE SCIPdigraphCopy(
          assert(sourcedigraph->successors[i] != NULL);
          assert(sourcedigraph->arcdata[i] != NULL);
 
-         SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &((*targetdigraph)->successors[i]), \
+         SCIP_ALLOC( BMSduplicateMemoryArray(&((*targetdigraph)->successors[i]), /*lint !e866*/
                sourcedigraph->successors[i], sourcedigraph->nsuccessors[i]) ); /*lint !e866*/
-         SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &((*targetdigraph)->arcdata[i]), \
+         SCIP_ALLOC( BMSduplicateMemoryArray(&((*targetdigraph)->arcdata[i]), /*lint !e866*/
                sourcedigraph->arcdata[i], sourcedigraph->nsuccessors[i]) ); /*lint !e866*/
       }
       /* copy node data - careful if these are pointers to some information -> need to be copied by hand */
@@ -6971,8 +6971,8 @@ SCIP_RETCODE SCIPdigraphCopy(
    {
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &(*targetdigraph)->components, sourcedigraph->components, \
             sourcedigraph->componentstarts[ncomponents]) );
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &(*targetdigraph)->componentstarts, \
-            sourcedigraph->componentstarts,ncomponents + 1) ); /*lint !e776*/
+      SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->componentstarts,
+            sourcedigraph->componentstarts, ncomponents + 1) ); /*lint !e776*/
       (*targetdigraph)->componentstartsize = ncomponents + 1;
    }
    else
@@ -8237,7 +8237,7 @@ SCIP_RETCODE SCIPbtCreate(
    assert(tree != NULL);
    assert(blkmem != NULL);
 
-   SCIP_ALLOC( BMSallocMemory(tree) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, tree) );
    (*tree)->blkmem = blkmem;
    (*tree)->root = NULL;
 
@@ -8259,7 +8259,7 @@ void SCIPbtFree(
       SCIPbtnodeFree(*tree, &((*tree)->root));
    }
 
-   BMSfreeMemory(tree);
+   BMSfreeBlockMemory((*tree)->blkmem, tree);
 }
 
 /** prints the rooted subtree of the given binary tree node in GML format into the given file */
@@ -8462,7 +8462,7 @@ SCIP_Longint SCIPcalcGreComDiv(
             return (val2 << t);  /*lint !e647 !e703*/
 
          /* if ((val1 xor val2) and 2) = 2, then gcd(val1, val2) = gcd((val1 + val2)/4, val2),
-          * and otherwise                        gcd(val1, val2) = gcd((val1 − val2)/4, val2)
+          * and otherwise                        gcd(val1, val2) = gcd((val1 ??? val2)/4, val2)
           */
          if( ((val1 ^ val2) & 2) == 2 )
             val1 += val2;
@@ -8483,7 +8483,7 @@ SCIP_Longint SCIPcalcGreComDiv(
             return (val1 << t);  /*lint !e647 !e703*/
 
          /* if ((val2 xor val1) and 2) = 2, then gcd(val2, val1) = gcd((val2 + val1)/4, val1),
-          * and otherwise                        gcd(val2, val1) = gcd((val2 − val1)/4, val1)
+          * and otherwise                        gcd(val2, val1) = gcd((val2 ??? val1)/4, val1)
           */
          if( ((val2 ^ val1) & 2) == 2 )
             val2 += val1;
@@ -9737,7 +9737,7 @@ void SCIPprintSysError(
       SCIPmessagePrintError("Unkown error number %d or error message too long.\n", errno);
    SCIPmessagePrintError("%s: %s\n", message, buf);
 #else
-   #if (_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && ! _GNU_SOURCE
+   #if (_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && ! defined(_GNU_SOURCE)
       /* We are in the POSIX/XSI case, where strerror_r returns 0 on success; \0 termination is unclear. */
       if ( strerror_r(errno, buf, SCIP_MAXSTRLEN) != 0 )
          SCIPmessagePrintError("Unkown error number %d.\n", errno);
