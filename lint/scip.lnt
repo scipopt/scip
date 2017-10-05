@@ -36,6 +36,7 @@
 -esym(534,vprintf,snprintf)
 -esym(534,free_history_entry)
 -esym(534,SCIPfclose,SCIPfflush,SCIPfprintf,SCIPfputc,SCIPfputs,SCIPfseek,SCIPfwrite)
+-esym(754,Chunk::_rbtreenode)
 
 -function(exit,__assertfail)
 

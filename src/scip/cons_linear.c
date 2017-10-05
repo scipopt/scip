@@ -9833,7 +9833,7 @@ SCIP_RETCODE convertLongEquality(
             /* add new variable to problem */
             SCIP_CALL( SCIPaddVar(scip, newvar) );
 
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
             if( SCIPdebugIsMainscip(scip) )
             {
                SCIP_Real varval;

@@ -735,7 +735,7 @@ struct BMS_ChkMem
 #define CHUNK_GT(ptr,chunk)  ptr >= chunk->storeend
 
 static
-SCIP_DEF_RBTREE_FIND(rbTreeFindChunk, const void*, CHUNK, CHUNK_LT, CHUNK_GT)
+SCIP_DEF_RBTREE_FIND(rbTreeFindChunk, const void*, CHUNK, CHUNK_LT, CHUNK_GT) /*lint !e123*/
 
 
 /** aligns the given byte size corresponding to the minimal alignment */

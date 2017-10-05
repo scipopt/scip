@@ -1994,7 +1994,7 @@ SCIP_RETCODE presolveUpgrade(
       return SCIP_OKAY;
 
    /* set debug solution in expression graph and evaluate nodes, so reformulation methods can compute debug solution values for new auxiliary variables */
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
    if( SCIPdebugIsMainscip(scip) )
    {
       SCIP_Real* varvals;
@@ -2262,7 +2262,7 @@ SCIP_RETCODE reformNode2Var(
          SCIP_VARTYPE_CONTINUOUS, TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, auxvar) );
    SCIP_CALL( SCIPexprgraphAddVars(exprgraph, 1, (void**)&auxvar, &auxvarnode) );
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
    if( SCIPdebugIsMainscip(scip) )
    {
       /* store debug sol value of node as value for auxvar in debug solution and as value for auxvarnode */
@@ -2405,7 +2405,7 @@ SCIP_RETCODE reformMonomial(
       SCIP_CALL( SCIPaddVar(scip, auxvar) );
       SCIP_CALL( SCIPexprgraphAddVars(exprgraph, 1, (void**)&auxvar, resultnode) );
 
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
       /* store debug sol value of node as value for auxvar in debug solution and as value for resultnode */
       if( SCIPdebugIsMainscip(scip) )
       {
@@ -2489,7 +2489,7 @@ SCIP_RETCODE reformMonomial(
          SCIP_CALL( SCIPaddVar(scip, auxvar) );
          SCIP_CALL( SCIPexprgraphAddVars(exprgraph, 1, (void**)&auxvar, resultnode) );
 
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
          if( SCIPdebugIsMainscip(scip) )
          {
             SCIPexprgraphSetVarNodeValue(*resultnode, SCIPexprgraphGetNodeVal(expnode));
@@ -2548,7 +2548,7 @@ SCIP_RETCODE reformMonomial(
       SCIP_CALL( SCIPaddVar(scip, auxvar) );
       SCIP_CALL( SCIPexprgraphAddVars(exprgraph, 1, (void**)&auxvar, &auxvarnode) );
 
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
       /* store debug sol value of node as value for auxvar in debug solution and as value for resultnode */
       if( SCIPdebugIsMainscip(scip) )
       {
@@ -2648,7 +2648,7 @@ SCIP_RETCODE reformMonomial(
          SCIP_CALL( SCIPaddVar(scip, auxvar) );
          SCIP_CALL( SCIPexprgraphAddVars(exprgraph, 1, (void**)&auxvar, resultnode) );
 
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
          if( SCIPdebugIsMainscip(scip) )
          {
             SCIPexprgraphSetVarNodeValue(*resultnode, SCIPexprgraphGetNodeVal(productnode));
@@ -2728,7 +2728,7 @@ SCIP_RETCODE reformulate(
    assert(!domainerror); /* should have been found by domain propagation */
 
    /* set debug solution in expression graph and evaluate nodes, so we can compute debug solution values for auxiliary variables */
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
    if( SCIPdebugIsMainscip(scip) )
    {
       SCIP_Real* varvals;
@@ -2945,7 +2945,7 @@ SCIP_RETCODE reformulate(
             SCIP_CALL( SCIPaddVar(scip, auxvar) );
             SCIP_CALL( SCIPexprgraphAddVars(exprgraph, 1, (void**)&auxvar, &auxvarnode) );
 
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
             if( SCIPdebugIsMainscip(scip) )
             {
                SCIP_Real debugval;

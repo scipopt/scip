@@ -538,7 +538,7 @@ SCIP_RETCODE SCIPmatrixCreate(
    matrix = *matrixptr;
 
    /* copy vars array and set number of variables */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &matrix->vars, SCIPgetVars(scip), nvars) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &matrix->vars, vars, nvars) );
    matrix->ncols = nvars;
 
    matrix->nrows = 0;
