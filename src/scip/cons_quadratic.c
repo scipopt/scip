@@ -7354,6 +7354,8 @@ SCIP_RETCODE generateCutNonConvex(
          ubx = SCIPvarGetUbLocal(x);
          lby = SCIPvarGetLbLocal(y);
          uby = SCIPvarGetUbLocal(y);
+         SCIPdebugMsg(scip, "bilinear term %g %s %s with (%g,%g) in [%g,%g]x[%g,%g] overestimate=%u\n", bilinterm->coef,
+            SCIPvarGetName(x), SCIPvarGetName(y), refx, refy, lbx, ubx, lby, uby, violside == SCIP_SIDETYPE_LEFT);
 
          /* use the McCormick relaxation for under- or overestimating the bilinear term */
          coef = 0.0;
@@ -7361,6 +7363,7 @@ SCIP_RETCODE generateCutNonConvex(
          constant = 0.0;
          SCIPaddBilinMcCormick(scip, bilinterm->coef, lbx, ubx, refx, lby, uby, refy,
             violside == SCIP_SIDETYPE_LEFT, &coef, &coef2, &constant, success);
+         SCIPdebugMsg(scip, "McCormick = %g (%u)\n", refx * coef + refy * coef2 + constant, *success);
 
          /* tries to compute a tighter relaxation for xy by using valid linear inequalities */
          if( conshdlrdata->bilinestimators != NULL && ubx - lbx >= 0.1 && uby - lby >= 0.1 ) /* TODO change to a parameter? */
@@ -7372,6 +7375,8 @@ SCIP_RETCODE generateCutNonConvex(
             bilinestimator = &(conshdlrdata->bilinestimators[bilintermidx]);
             bilinestimator->score += score;
             ++(bilinestimator->nupdates);
+            SCIPdebugMsg(scip, "score of bilinear term %s %s = %g (%g)\n", SCIPvarGetName(bilinestimator->x),
+               SCIPvarGetName(bilinestimator->y), score, bilinestimator->score / bilinestimator->nupdates);
 
             /* compute tighter relaxation for xy if the current score is large enough */
             if( SCIPisGE(scip, score, conshdlrdata->minscorebilinterms) )
@@ -7391,6 +7396,8 @@ SCIP_RETCODE generateCutNonConvex(
                /* use underestimates */
                updateBilinearRelaxation(scip, x, y, bilinterm->coef, violside, refx, refy, bilinestimator->inequnderest,
                   bilinestimator->ninequnderest, &coef, &coef2, &constant, &bestval, &updaterelax);
+
+               SCIPdebugMsg(scip, "found better relaxation value: %u (%g)\n", updaterelax, bestval);
             }
          }
 
