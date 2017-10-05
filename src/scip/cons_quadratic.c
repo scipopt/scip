@@ -7138,25 +7138,25 @@ SCIP_RETCODE generateCutConvex(
 static
 void updateBilinearRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             x,                  /**< first variable */
-   SCIP_VAR*             y,                  /**< second variable */
+   SCIP_VAR* RESTRICT    x,                  /**< first variable */
+   SCIP_VAR* RESTRICT    y,                  /**< second variable */
    SCIP_Real             bilincoef,          /**< coefficient of the bilinear term */
    SCIP_SIDETYPE         violside,           /**< side of quadratic constraint that is violated */
    SCIP_Real             refx,               /**< reference point for the x variable */
    SCIP_Real             refy,               /**< reference point for the y variable */
-   SCIP_Real*            ineqs,              /**< coefficients of each linear inequality; stored as triple (xcoef,ycoef,constant) */
+   SCIP_Real* RESTRICT   ineqs,              /**< coefficients of each linear inequality; stored as triple (xcoef,ycoef,constant) */
    int                   nineqs,             /**< total number of inequalities */
-   SCIP_Real*            bestcoefx,          /**< pointer to update the x coefficient */
-   SCIP_Real*            bestcoefy,          /**< pointer to update the y coefficient */
-   SCIP_Real*            bestconst,          /**< pointer to update the constant */
-   SCIP_Real*            bestval,            /**< value of the best relaxation that have been found so far */
+   SCIP_Real* RESTRICT   bestcoefx,          /**< pointer to update the x coefficient */
+   SCIP_Real* RESTRICT   bestcoefy,          /**< pointer to update the y coefficient */
+   SCIP_Real* RESTRICT   bestconst,          /**< pointer to update the constant */
+   SCIP_Real* RESTRICT   bestval,            /**< value of the best relaxation that have been found so far */
    SCIP_Bool*            success             /**< buffer to store whether we found a better relaxation */
    )
 {
+   SCIP_Real constshift[2] = {0.0, 0.0};
    SCIP_Real constant;
    SCIP_Real xcoef;
    SCIP_Real ycoef;
-   SCIP_Real constshift;
    SCIP_Real lbx;
    SCIP_Real ubx;
    SCIP_Real lby;
@@ -7194,20 +7194,17 @@ void updateBilinearRelaxation(
     * violating the linear inequalities; to ensure that we compute a valid underestimate, we relax the linear
     * inequality by changing its constant part
     */
-   constshift = 0.0;
    for( i = 0; i < nineqs; ++i )
    {
-      SCIP_Real violation = ineqs[3*i] * refx - ineqs[3*i+1] * refy - ineqs[3*i+2];
-      constshift = MAX(constshift, violation);
+      constshift[i] = MAX(0.0, ineqs[3*i] * refx - ineqs[3*i+1] * refy - ineqs[3*i+2]);
+      SCIPdebugMsg(scip, "constant shift of inequality %d = %.16f\n", constshift[i]);
    }
-   SCIPdebugMsg(scip, "shift constant by %.16f\n", constshift);
-   assert(SCIPisFeasLE(scip, constshift, 0.0));
 
    /* try to use both inequalities */
    if( nineqs == 2 )
    {
       SCIPcomputeBilinEnvelope2(scip, bilincoef, lbx, ubx, refx, lby, uby, refy, overestimate, ineqs[0], ineqs[1],
-         ineqs[2] + constshift, ineqs[3], ineqs[4], ineqs[5] + constshift, &xcoef, &ycoef, &constant, &update);
+         ineqs[2] + constshift[0], ineqs[3], ineqs[4], ineqs[5] + constshift[1], &xcoef, &ycoef, &constant, &update);
 
       if( update )
       {
@@ -7229,7 +7226,7 @@ void updateBilinearRelaxation(
    for( i = 0; i < nineqs; ++i )
    {
       SCIPcomputeBilinEnvelope1(scip, bilincoef, lbx, ubx, refx, lby, uby, refy, overestimate, ineqs[3*i], ineqs[3*i+1],
-         ineqs[3*i+2] + constshift, &xcoef, &ycoef, &constant, &update);
+         ineqs[3*i+2] + constshift[i], &xcoef, &ycoef, &constant, &update);
 
       if( update )
       {
