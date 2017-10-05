@@ -33499,7 +33499,7 @@ void SCIPcomputeBilinEnvelope1(
    *linconstant = SCIP_INVALID;
 
    /* reference point does not satisfy linear inequality */
-   if( SCIPisFeasGT(scip, xcoef * refpointx, ycoef * refpointy + constant) )
+   if( SCIPisFeasGT(scip, xcoef * refpointx - ycoef * refpointy - constant, 0.0) )
       return;
 
    /* check the reference point is in the interior of the domain */
@@ -33714,8 +33714,8 @@ void SCIPcomputeBilinEnvelope2(
    *linconstant = SCIP_INVALID;
 
    /* reference point does not satisfy linear inequalities */
-   if( SCIPisFeasGT(scip, xcoef1 * refpointx, ycoef1 * refpointy + constant1)
-      || SCIPisFeasGT(scip, xcoef2 * refpointx, ycoef2 * refpointy + constant2) )
+   if( SCIPisFeasGT(scip, xcoef1 * refpointx - ycoef1 * refpointy - constant1, 0.0)
+      || SCIPisFeasGT(scip, xcoef2 * refpointx - ycoef2 * refpointy - constant2, 0.0) )
       return;
 
    /* check the reference point is in the interior of the domain */
