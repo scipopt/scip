@@ -216,7 +216,7 @@ Test(sin, inteval, .description = "Tests the expression interval evaluation.")
    }
 
    /* random part */
-   for ( i = 0; i < 1; ++i )
+   for ( i = 0; i < 5; ++i )
    {
       SCIP_CALL( SCIPchgVarLb(scip, x, rndlb[i]) );
       SCIP_CALL( SCIPchgVarUb(scip, x, rndub[i]) );
