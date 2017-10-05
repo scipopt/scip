@@ -263,6 +263,38 @@ int mod2(
    return (REALABS(SCIPround(scip, val) - val) > 0.1) ? 1 : 0;
 }
 
+/** checks, whether the given scalar scales the given value to an integral number with error in the given bounds */
+static
+void getIntegralScalar(
+   SCIP_Real             val,                /**< value that should be scaled to an integral value */
+   SCIP_Real             scalar,             /**< scalar that should be tried */
+   SCIP_Real             mindelta,           /**< minimal relative allowed difference of scaled coefficient s*c and integral i */
+   SCIP_Real             maxdelta,           /**< maximal relative allowed difference of scaled coefficient s*c and integral i */
+   SCIP_Real*            sval,               /**< pointer to store the scaled value */
+   SCIP_Real*            intval              /**< pointer to store the scaled integral value */
+   )
+{
+   SCIP_Real upviol;
+   SCIP_Real downviol;
+   SCIP_Real downval;
+   SCIP_Real upval;
+
+   assert(mindelta <= 0.0);
+   assert(maxdelta >= 0.0);
+
+   *sval = val * scalar;
+   downval = floor(*sval);
+   upval = ceil(*sval);
+
+   downviol = SCIPrelDiff(*sval, downval) - maxdelta;
+   upviol = mindelta - SCIPrelDiff(*sval, upval);
+
+   if( downviol < upviol )
+      *intval = downval;
+   else
+      *intval = upval;
+}
+
 /** Tries to transform a non-integral row into an integral row that can be used in zerohalf separation */
 static
 SCIP_RETCODE transformNonIntegralRow(
@@ -440,10 +472,14 @@ SCIP_RETCODE transformNonIntegralRow(
 
    if( *success )
    {
+      SCIP_Real mindelta;
+      SCIP_Real maxdelta;
       SCIP_Real intscalar;
       SCIP_VAR** vars = SCIPgetVars(scip);
 
-      SCIP_CALL( SCIPcalcIntegralScalar(transrowvals, transrowlen, -SCIPepsilon(scip), SCIPsumepsilon(scip), MAXDNOM, MAXSCALE, &intscalar, success) );
+      mindelta = -SCIPepsilon(scip);
+      maxdelta = SCIPsumepsilon(scip);
+      SCIP_CALL( SCIPcalcIntegralScalar(transrowvals, transrowlen, mindelta, maxdelta, MAXDNOM, MAXSCALE, &intscalar, success) );
 
       if( *success )
       {
@@ -451,33 +487,71 @@ SCIP_RETCODE transformNonIntegralRow(
          SCIP_Real slack;
 
          transrowrhs *= intscalar;
-         floorrhs = SCIPfeasFloor(scip, transrowrhs);
 
-         slack = floorrhs;
+         slack = 0.0;
          for( i = 0; i < transrowlen; ++i )
          {
             SCIP_Real solval = SCIPgetVarSol(scip, vars[transrowvars[i]]);
-            transrowvals[i] = SCIPfeasRound(scip, transrowvals[i] * intscalar);
-            slack -= solval * transrowvals[i];
+            SCIP_Real intval;
+            SCIP_Real newval;
+
+            getIntegralScalar(transrowvals[i], intscalar, mindelta, maxdelta, &newval, &intval);
+
+            if( !SCIPisEQ(scip, intval, newval) )
+            {
+               if( intval < newval )
+               {
+                  SCIP_Real lb = local ? SCIPvarGetLbLocal(vars[transrowvars[i]]) : SCIPvarGetLbGlobal(vars[transrowvars[i]]);
+
+                  if( SCIPisInfinity(scip, -lb) )
+                  {
+                     *success = FALSE;
+                     break;
+                  }
+
+                  transrowrhs += (intval - newval) * lb;
+               }
+               else
+               {
+                  SCIP_Real ub = local ? SCIPvarGetUbLocal(vars[transrowvars[i]]) : SCIPvarGetUbGlobal(vars[transrowvars[i]]);
+
+                  if( SCIPisInfinity(scip, ub) )
+                  {
+                     *success = FALSE;
+                     break;
+                  }
+
+                  transrowrhs += (intval - newval) * ub;
+               }
+            }
+
+            slack -= solval * intval;
+            transrowvals[i] = intval;
          }
 
-         if( slack <= maxslack )
+         if( *success )
          {
-            introw->rhs = floorrhs;
-            introw->slack = slack;
-            introw->vals = transrowvals;
-            introw->varinds = transrowvars;
-            introw->len = transrowlen;
-            introw->size = rowlen;
-            introw->local = local;
-            introw->rank = rank;
+            floorrhs = SCIPfeasFloor(scip, transrowrhs);
+            slack += floorrhs;
 
-            if( !SCIPisEQ(scip, floorrhs, transrowrhs) )
-               introw->rank += 1;
-         }
-         else
-         {
-            *success = FALSE;
+            if( slack <= maxslack )
+            {
+               introw->rhs = floorrhs;
+               introw->slack = slack;
+               introw->vals = transrowvals;
+               introw->varinds = transrowvars;
+               introw->len = transrowlen;
+               introw->size = rowlen;
+               introw->local = local;
+               introw->rank = rank;
+
+               if( !SCIPisEQ(scip, floorrhs, transrowrhs) )
+                  introw->rank += 1;
+            }
+            else
+            {
+               *success = FALSE;
+            }
          }
       }
    }
@@ -1953,6 +2027,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
       maxslack = depth == 0 ? sepadata->maxslackroot : sepadata->maxslack;
    }
 
+   *result = SCIP_DIDNOTFIND;
 
    SCIP_CALL( SCIPaggrRowCreate(scip, &sepadata->aggrrow) );
    sepadata->ncuts = 0;
