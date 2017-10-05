@@ -367,7 +367,7 @@ SCIP_RETCODE componentSetupWorkingSol(
    }
 
    /* set up debug solution */
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
    {
       PROBLEM* problem;
       SCIP* scip;
@@ -429,7 +429,7 @@ SCIP_RETCODE createSubscip(
    {
       SCIP_CONSHDLR* newconshdlr;
       SCIP_CONSHDLRDATA* newconshdlrdata;
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
       SCIP_Bool isvalid = FALSE;
 #endif
 
@@ -451,7 +451,7 @@ SCIP_RETCODE createSubscip(
       /* reduce the effort spent for hash tables; however, if the debug solution is enabled and valid in this subtree,
        * hash tables are needed for installing the debug solution
        */
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
       SCIP_CALL( SCIPdebugSolIsValidInSubtree(scip, &isvalid) );
       if( !isvalid && SCIPgetStage(scip) > SCIP_STAGE_PRESOLVING )
 #endif
@@ -2305,7 +2305,7 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
       /* loop over all components */
       for( comp = 0; comp < ncompsmaxsize && !SCIPisStopped(scip); comp++ )
       {
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
          if( SCIPgetStage(subscip) > SCIP_STAGE_INIT )
          {
             SCIP_CALL( SCIPfree(&subscip) );
@@ -2369,7 +2369,7 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
          }
 
             /* set up debug solution */
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
          {
             SCIP_SOL* debugsol = NULL;
             SCIP_Real val;

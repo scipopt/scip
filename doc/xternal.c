@@ -5831,9 +5831,8 @@
  *    (do not forget to clean your code before with <code>make OPT=... LPS=... clean</code>). After that valgrind (or similar) helps
  *    to detect leaked memory.
  *  - If your code cuts off a feasible solution, but you do not know which component is responsible,
- *    you can define <code>SCIP_DEBUG_SOLUTION</code> in the file <code>debug.h</code> to be a filename
- *    containing a solution in SCIP format (see \ref EXAMPLE_2).
- *    This solution is then read and it is checked for every cut, whether the solution violates the cut.
+ *    you can use the debugging mechanism (see \ref EXAMPLE_2). Therefore, a given solution is read and it
+ *    is checked for every reduction, whether the solution will be pruned globally.
  *
  * @section EXAMPLE_1 How to activate debug messages
  * For example, if we include a <code>\#define SCIP_DEBUG</code> at the top of \ref heur_oneopt.h, recompile SCIP
@@ -5852,7 +5851,6 @@
  * set the parameter <code>misc/debugsol = check/p0033.sol</code>, and run SCIP again it will output:
  * \include debugexamples/example2_2.txt
  * Further debug output would only appear, if the solution was cut off in the solving process.
- * Of course, this is not the case! Hopefully...otherwise, please send a bug report ;-)
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

@@ -1211,7 +1211,7 @@ SCIP_RETCODE setObjective(
             /* add auxiliary variable to the problem */
             SCIP_CALL( SCIPaddVar(scip, var) );
 
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
             if( SCIPdebugIsMainscip(scip) )
             {
                SCIP_Real val = 0.0;
@@ -1279,7 +1279,7 @@ SCIP_RETCODE setObjective(
          /* add auxiliary variable to the problem */
          SCIP_CALL( SCIPaddVar(scip, var) );
 
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
          if( SCIPdebugIsMainscip(scip) )
          {
             SCIP_Real artval = 0.0;
