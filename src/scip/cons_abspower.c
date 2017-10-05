@@ -771,7 +771,7 @@ SCIP_RETCODE presolveFindDuplicates(
                SCIP_CALL( SCIPreleaseCons(scip, &auxcons) );
                ++*naddconss;
 
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
                if( SCIPdebugIsMainscip(scip) )
                {
                   SCIP_Real xval;
@@ -4495,7 +4495,7 @@ SCIP_DECL_QUADCONSUPGD(quadconsUpgdAbspower)
       ++*nupgdconss;
 
       /* compute and set value of auxvar in debug solution */
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
       if( SCIPdebugIsMainscip(scip) )
       {
          SCIP_Real debugval;
@@ -4847,7 +4847,7 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdAbspower)
       ++*nupgdconss;
 
       /* compute and set value of auxvar in debug solution */
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
       if( SCIPdebugIsMainscip(scip) )
       {
          SCIP_Real debugval;
@@ -5128,7 +5128,7 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAbspower)
       ++*naddcons;
 
       /* compute value of z and reformnode and set in debug solution and expression graph, resp. */
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
       if( SCIPdebugIsMainscip(scip) )
       {
          SCIP_Real xval;
@@ -5156,7 +5156,7 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAbspower)
       ++*naddcons;
 
       /* compute value of z and reformnode and set in debug solution and expression graph, resp. */
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
       if( SCIPdebugIsMainscip(scip) )
       {
          SCIP_Real xval;
