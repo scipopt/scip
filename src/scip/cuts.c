@@ -791,8 +791,8 @@ SCIP_Bool cutTightenCoefs(
    return FALSE;
 }
 
-/** perform activity based coefficient tigthening on the given cut; returns TRUE if the cut was detected
- *  to be redundant due to acitvity bounds
+/** perform activity based coefficient tightening on the given cut; returns TRUE if the cut was detected
+ *  to be redundant due to activity bounds
  */
 SCIP_Bool SCIPcutsTightenCoefficients(
    SCIP*                 scip,               /**< SCIP data structure */
