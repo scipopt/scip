@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_domcol.h
+ * @ingroup PRESOLVERS
  * @brief  dominated column presolver
  * @author Dieter Weninger
  *

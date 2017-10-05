@@ -286,7 +286,7 @@ SCIP_RETCODE SCIPselectVarPseudoStrongBranching(
    SCIP_Real*            provedbound,        /**< proved dual bound for current subtree               */
    SCIP_RESULT*          result              /**< result pointer                                      */
    )
-{
+{  /*lint --e{715}*/
    SCIP_Real lpobjval;
    SCIP_Bool allcolsinlp;
    SCIP_Bool exactsolve;

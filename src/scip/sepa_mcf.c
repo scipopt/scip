@@ -280,7 +280,7 @@ SCIP_RETCODE mcfnetworkCreate(
 {
    assert(mcfnetwork != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, mcfnetwork) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, mcfnetwork) );
    (*mcfnetwork)->nodeflowrows = NULL;
    (*mcfnetwork)->nodeflowscales = NULL;
    (*mcfnetwork)->nodeflowinverted = NULL;
@@ -322,9 +322,9 @@ SCIP_RETCODE mcfnetworkFree(
                SCIP_CALL( SCIPreleaseRow(scip, &(*mcfnetwork)->nodeflowrows[v][k]) );
             }
          }
-         SCIPfreeMemoryArrayNull(scip, &(*mcfnetwork)->nodeflowrows[v]);
-         SCIPfreeMemoryArrayNull(scip, &(*mcfnetwork)->nodeflowscales[v]);
-         SCIPfreeMemoryArrayNull(scip, &(*mcfnetwork)->nodeflowinverted[v]);
+         SCIPfreeBlockMemoryArrayNull(scip, &(*mcfnetwork)->nodeflowrows[v], (*mcfnetwork)->ncommodities);
+         SCIPfreeBlockMemoryArrayNull(scip, &(*mcfnetwork)->nodeflowscales[v], (*mcfnetwork)->ncommodities);
+         SCIPfreeBlockMemoryArrayNull(scip, &(*mcfnetwork)->nodeflowinverted[v], (*mcfnetwork)->ncommodities);
       }
       for( a = 0; a < (*mcfnetwork)->narcs; a++ )
       {
@@ -333,16 +333,16 @@ SCIP_RETCODE mcfnetworkFree(
             SCIP_CALL( SCIPreleaseRow(scip, &(*mcfnetwork)->arccapacityrows[a]) );
          }
       }
-      SCIPfreeMemoryArrayNull(scip, &(*mcfnetwork)->nodeflowrows);
-      SCIPfreeMemoryArrayNull(scip, &(*mcfnetwork)->nodeflowscales);
-      SCIPfreeMemoryArrayNull(scip, &(*mcfnetwork)->nodeflowinverted);
-      SCIPfreeMemoryArrayNull(scip, &(*mcfnetwork)->arccapacityrows);
-      SCIPfreeMemoryArrayNull(scip, &(*mcfnetwork)->arccapacityscales);
-      SCIPfreeMemoryArrayNull(scip, &(*mcfnetwork)->arcsources);
-      SCIPfreeMemoryArrayNull(scip, &(*mcfnetwork)->arctargets);
+      SCIPfreeBlockMemoryArrayNull(scip, &(*mcfnetwork)->nodeflowrows, (*mcfnetwork)->nnodes);
+      SCIPfreeBlockMemoryArrayNull(scip, &(*mcfnetwork)->nodeflowscales, (*mcfnetwork)->nnodes);
+      SCIPfreeBlockMemoryArrayNull(scip, &(*mcfnetwork)->nodeflowinverted, (*mcfnetwork)->nnodes);
+      SCIPfreeBlockMemoryArrayNull(scip, &(*mcfnetwork)->arccapacityrows, (*mcfnetwork)->narcs);
+      SCIPfreeBlockMemoryArrayNull(scip, &(*mcfnetwork)->arccapacityscales, (*mcfnetwork)->narcs);
+      SCIPfreeBlockMemoryArrayNull(scip, &(*mcfnetwork)->arcsources, (*mcfnetwork)->narcs);
+      SCIPfreeBlockMemoryArrayNull(scip, &(*mcfnetwork)->arctargets, (*mcfnetwork)->narcs);
       SCIPfreeMemoryArrayNull(scip, &(*mcfnetwork)->colcommodity);
 
-      SCIPfreeMemory(scip, mcfnetwork);
+      SCIPfreeBlockMemory(scip, mcfnetwork);
    }
 
    return SCIP_OKAY;
@@ -456,14 +456,14 @@ SCIP_RETCODE mcfnetworkFill(
    mcfnetwork->ncommodities = ncompcommodities;
 
    /* allocate memory for arrays and initialize with default values */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->nodeflowrows, mcfnetwork->nnodes) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->nodeflowscales, mcfnetwork->nnodes) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->nodeflowinverted, mcfnetwork->nnodes) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &mcfnetwork->nodeflowrows, mcfnetwork->nnodes) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &mcfnetwork->nodeflowscales, mcfnetwork->nnodes) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &mcfnetwork->nodeflowinverted, mcfnetwork->nnodes) );
    for( v = 0; v < mcfnetwork->nnodes; v++ )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->nodeflowrows[v], mcfnetwork->ncommodities) ); /*lint !e866*/
-      SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->nodeflowscales[v], mcfnetwork->ncommodities) ); /*lint !e866*/
-      SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->nodeflowinverted[v], mcfnetwork->ncommodities) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &mcfnetwork->nodeflowrows[v], mcfnetwork->ncommodities) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &mcfnetwork->nodeflowscales[v], mcfnetwork->ncommodities) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &mcfnetwork->nodeflowinverted[v], mcfnetwork->ncommodities) ); /*lint !e866*/
       for( k = 0; k < mcfnetwork->ncommodities; k++ )
       {
          mcfnetwork->nodeflowrows[v][k] = NULL;
@@ -472,18 +472,18 @@ SCIP_RETCODE mcfnetworkFill(
       }
    }
 
-   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->arccapacityrows, mcfnetwork->narcs) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->arccapacityscales, mcfnetwork->narcs) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->arcsources, mcfnetwork->narcs) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->arctargets, mcfnetwork->narcs) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &mcfnetwork->arccapacityrows, mcfnetwork->narcs) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &mcfnetwork->arccapacityscales, mcfnetwork->narcs) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &mcfnetwork->arcsources, mcfnetwork->narcs) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &mcfnetwork->arctargets, mcfnetwork->narcs) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->colcommodity, ncols) );
    for( a = 0; a < mcfnetwork->narcs; a++ )
    {
-      mcfnetwork->arccapacityrows[a] = NULL;
-      mcfnetwork->arccapacityscales[a] = 0.0;
       mcfnetwork->arcsources[a] = -1;
       mcfnetwork->arctargets[a] = -1;
    }
+   BMSclearMemoryArray(mcfnetwork->arccapacityrows, mcfnetwork->narcs);
+   BMSclearMemoryArray(mcfnetwork->arccapacityscales, mcfnetwork->narcs);
    BMSclearMemoryArray(mcfnetwork->colcommodity, mcfnetwork->ncommodities);
 
    /* fill in existing node data */
