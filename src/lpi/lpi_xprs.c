@@ -2284,6 +2284,7 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
    )
 {
    int nInfeasible;
+   int nIter;
 
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
@@ -2299,11 +2300,15 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
    if (lpi->solstat == XPRS_LP_UNBOUNDED && lpi->solmethod == 'p')
      return TRUE;
 
-   /* get number of primal infeasibilities */
+   /* get number of primal infeasibilities and number of primal infeasibilities */
    CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_PRIMALINFEAS, &nInfeasible) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_SIMPLEXITER, &nIter) );
 
-   /* check if the number of primal infeasibilities is zero */
-   if (nInfeasible == 0)
+   /* check if the number of primal infeasibilities is zero
+    * We need to make sure that the LP was indeed solved by primal, otherwise infeasibility might have been found
+    * in setup (e.g. if conflicting bounds x >= 1, x <= 0 are present),
+    */
+   if (nInfeasible == 0  && nIter > 0 && lpi->solmethod == 'p')
      return TRUE;
 
    return FALSE;
@@ -2375,6 +2380,7 @@ SCIP_Bool SCIPlpiIsDualFeasible(
    )
 {
    int nInfeasible;
+   int nIter;
 
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
@@ -2386,16 +2392,20 @@ SCIP_Bool SCIPlpiIsDualFeasible(
    if (lpi->solstat == XPRS_LP_OPTIMAL || lpi->solstat == XPRS_LP_OPTIMAL_SCALEDINFEAS)
      return TRUE;
 
-   /* check if problem infeasible detected by dual */
+   /* check if problem infeasibility detected by dual */
    if (lpi->solstat == XPRS_LP_INFEAS && lpi->solmethod == 'd')
      return TRUE;
 
-   /* get number of primal infeasibilities */
+   /* get number of dual infeasibilities and number of simplex iterations */
    CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_DUALINFEAS, &nInfeasible) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_SIMPLEXITER, &nIter) );
 
-   /* check if the number of dual infeasibilities is zero */
-   if (nInfeasible == 0)
-     return TRUE;
+   /* check if the number of dual infeasibilities is zero
+    * We need to make sure that the LP was indeed solved by primal, otherwise infeasibility might have been found
+    * in setup (e.g. if conflicting bounds x >= 1, x <= 0 are present),
+    */
+   if (nInfeasible == 0 && nIter > 0 && lpi->solmethod == 'd')
+      return TRUE;
 
    return FALSE;
 }
