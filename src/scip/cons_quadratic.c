@@ -259,6 +259,8 @@ struct SCIP_ConshdlrData
    SCIP_Bool             usebilinineqroot;   /**< should linear inequalities for obtaining stronger envelopes for bilinear terms be computed in the root node? */
    SCIP_Bool             solvedbilinineqroot; /**< did we already try to compute valid linear inequalities in the root node? */
    SCIP_Bool             storedbilinearterms; /**< did we already try to store all bilinear terms? */
+
+   SCIP_Real             minscorebilinterms; /**< minimal required score in order to use linear inequalities for tighter bilinear relaxations*/
 };
 
 
@@ -7372,7 +7374,7 @@ SCIP_RETCODE generateCutNonConvex(
             ++(bilinestimator->nupdates);
 
             /* compute tighter relaxation for xy if the current score is large enough */
-            if( score > 0.01 ) /* TODO change to a parameter? */
+            if( SCIPisGE(scip, score, conshdlrdata->minscorebilinterms) )
             {
                SCIP_Real bestval = refx * coef + refy * coef2 + constant;
                SCIP_Bool updaterelax = FALSE;
@@ -14335,7 +14337,9 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          "total LP iteration limit for computing linear inequalities for all bilinear terms (-1: no limit)",
          &conshdlrdata->bilinlpiterlim, TRUE, -1, -1, INT_MAX, NULL, NULL) );
 
-
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/minscorebilinterms",
+         "minimal required score in order to use linear inequalities for tighter bilinear relaxations",
+         &conshdlrdata->minscorebilinterms, FALSE, 0.01, 0.0, 1.0, NULL, NULL) );
 
    conshdlrdata->eventhdlr = NULL;
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->eventhdlr),CONSHDLR_NAME"_boundchange", "signals a bound change to a quadratic constraint",
