@@ -31,17 +31,17 @@
 #define SEPA_NAME              "strongcg"
 #define SEPA_DESC              "Strong CG cuts separator (Letchford and Lodi)"
 #define SEPA_PRIORITY             -2000
-#define SEPA_FREQ                     0
-#define SEPA_MAXBOUNDDIST           0.0
+#define SEPA_FREQ                    30
+#define SEPA_MAXBOUNDDIST           1.0
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define DEFAULT_MAXROUNDS             5 /**< maximal number of strong CG separation rounds per node (-1: unlimited) */
 #define DEFAULT_MAXROUNDSROOT        20 /**< maximal number of strong CG separation rounds in the root node (-1: unlimited) */
-#define DEFAULT_MAXSEPACUTS          50 /**< maximal number of strong CG cuts separated per separation round */
+#define DEFAULT_MAXSEPACUTS          20 /**< maximal number of strong CG cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT     500 /**< maximal number of strong CG cuts separated per separation round in root node */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
-#define DEFAULT_MAXWEIGHTRANGE    1e+04 /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
+#define DEFAULT_RANDSEED             54 /**< initial random seed */
 
 #define MAKECUTINTEGRAL        /* try to scale all cuts to integral coefficients */
 /*#define MAKEINTCUTINTEGRAL*/     /* try to scale cuts without continuous variables to integral coefficients */
@@ -49,8 +49,8 @@
 #define SEPARATEROWS           /* separate rows with integral slack */
 
 #define BOUNDSWITCH              0.9999
+#define POSTPROCESS                TRUE
 #define USEVBDS                    TRUE
-#define ALLOWLOCAL                 TRUE
 #define MAKECONTINTEGRAL          FALSE
 #define MINFRAC                    0.05
 #define MAXFRAC                    0.95
@@ -61,7 +61,7 @@
 /** separator data */
 struct SCIP_SepaData
 {
-   SCIP_Real             maxweightrange;     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    int                   maxrounds;          /**< maximal number of strong CG separation rounds per node (-1: unlimited) */
    int                   maxroundsroot;      /**< maximal number of strong CG separation rounds in the root node (-1: unlimited) */
    int                   maxsepacuts;        /**< maximal number of strong CG cuts separated per separation round */
@@ -69,120 +69,6 @@ struct SCIP_SepaData
    int                   lastncutsfound;     /**< total number of cuts found after last call of separator */
    SCIP_Bool             dynamiccuts;        /**< should generated cuts be removed from the LP if they are no longer tight? */
 };
-
-
-/*
- * local methods
- */
-
-/** stores nonzero elements of dense coefficient vector as sparse vector, and calculates activity and norm */
-static
-SCIP_RETCODE storeCutInArrays(
-   SCIP*                 scip,               /**< SCIP data structure */
-   int                   nvars,              /**< number of problem variables */
-   SCIP_VAR**            vars,               /**< problem variables */
-   SCIP_Real*            cutcoefs,           /**< dense coefficient vector */
-   SCIP_Real*            varsolvals,         /**< dense variable LP solution vector */
-   char                  normtype,           /**< type of norm to use for efficacy norm calculation */
-   SCIP_VAR**            cutvars,            /**< array to store variables of sparse cut vector */
-   SCIP_Real*            cutvals,            /**< array to store coefficients of sparse cut vector */
-   int*                  cutlen,             /**< pointer to store number of nonzero entries in cut */
-   SCIP_Real*            cutact,             /**< pointer to store activity of cut */
-   SCIP_Real*            cutnorm             /**< pointer to store norm of cut vector */
-   )
-{
-   SCIP_Real val;
-   SCIP_Real absval;
-   SCIP_Real cutsqrnorm;
-   SCIP_Real act;
-   SCIP_Real norm;
-   int len;
-   int v;
-
-   assert(nvars == 0 || cutcoefs != NULL);
-   assert(nvars == 0 || varsolvals != NULL);
-   assert(cutvars != NULL);
-   assert(cutvals != NULL);
-   assert(cutlen != NULL);
-   assert(cutact != NULL);
-   assert(cutnorm != NULL);
-
-   len = 0;
-   act = 0.0;
-   norm = 0.0;
-   switch( normtype )
-   {
-   case 'e':
-      cutsqrnorm = 0.0;
-      for( v = 0; v < nvars; ++v )
-      {
-         val = cutcoefs[v];
-         if( !SCIPisZero(scip, val) )
-         {
-            act += val * varsolvals[v];
-            cutsqrnorm += SQR(val);
-            cutvars[len] = vars[v];
-            cutvals[len] = val;
-            len++;
-         }
-      }
-      norm = SQRT(cutsqrnorm);
-      break;
-   case 'm':
-      for( v = 0; v < nvars; ++v )
-      {
-         val = cutcoefs[v];
-         if( !SCIPisZero(scip, val) )
-         {
-            act += val * varsolvals[v];
-            absval = ABS(val);
-            norm = MAX(norm, absval);
-            cutvars[len] = vars[v];
-            cutvals[len] = val;
-            len++;
-         }
-      }
-      break;
-   case 's':
-      for( v = 0; v < nvars; ++v )
-      {
-         val = cutcoefs[v];
-         if( !SCIPisZero(scip, val) )
-         {
-            act += val * varsolvals[v];
-            norm += ABS(val);
-            cutvars[len] = vars[v];
-            cutvals[len] = val;
-            len++;
-         }
-      }
-      break;
-   case 'd':
-      for( v = 0; v < nvars; ++v )
-      {
-         val = cutcoefs[v];
-         if( !SCIPisZero(scip, val) )
-         {
-            act += val * varsolvals[v];
-            norm = 1.0;
-            cutvars[len] = vars[v];
-            cutvals[len] = val;
-            len++;
-         }
-      }
-      break;
-   default:
-      SCIPerrorMessage("invalid efficacy norm parameter '%c'\n", normtype);
-      return SCIP_INVALIDDATA;
-   }
-
-   *cutlen = len;
-   *cutact = act;
-   *cutnorm = norm;
-
-   return SCIP_OKAY;
-}
-
 
 /*
  * Callback methods
@@ -221,6 +107,34 @@ SCIP_DECL_SEPAFREE(sepaFreeStrongcg)
    return SCIP_OKAY;
 }
 
+/** initialization method of separator (called after problem was transformed) */
+static
+SCIP_DECL_SEPAINIT(sepaInitStrongcg)
+{
+   SCIP_SEPADATA* sepadata;
+
+   sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
+
+   /* create and initialize random number generator */
+   SCIP_CALL( SCIPcreateRandom(scip, &sepadata->randnumgen, DEFAULT_RANDSEED) );
+
+   return SCIP_OKAY;
+}
+
+/** deinitialization method of separator (called before transformed problem is freed) */
+static
+SCIP_DECL_SEPAEXIT(sepaExitStrongcg)
+{  /*lint --e{715}*/
+   SCIP_SEPADATA* sepadata;
+
+   sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
+
+   SCIPfreeRandom(scip, &sepadata->randnumgen);
+
+   return SCIP_OKAY;
+}
 
 /** LP solution separation method of separator */
 static
@@ -230,15 +144,18 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
    SCIP_VAR** vars;
    SCIP_COL** cols;
    SCIP_ROW** rows;
+   SCIP_AGGRROW* aggrrow;
    SCIP_Real* varsolvals;
    SCIP_Real* binvrow;
    SCIP_Real* cutcoefs;
+   SCIP_Real* basisfrac;
    SCIP_Real cutrhs;
-   SCIP_Real cutact;
    SCIP_Real maxscale;
    SCIP_Longint maxdnom;
    int* basisind;
    int* inds;
+   int* cutinds;
+   int cutnnz;
    int ninds;
    int nvars;
    int ncols;
@@ -269,7 +186,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
    ncalls = SCIPsepaGetNCallsAtNode(sepa);
 
    /* only call separator, if we are not close to terminating */
-   if( SCIPisStopped(scip) )
+   if( SCIPisStopped(scip) || !allowlocal )
       return SCIP_OKAY;
 
    /* only call the strong CG cut separator a given number of times at each node */
@@ -348,13 +265,64 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
 
    /* allocate temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cutinds, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &basisind, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &basisfrac, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &binvrow, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &inds, nrows) );
+   SCIP_CALL( SCIPaggrRowCreate(scip, &aggrrow) );
+
    varsolvals = NULL; /* allocate this later, if needed */
 
    /* get basis indices */
    SCIP_CALL( SCIPgetLPBasisInd(scip, basisind) );
+
+   for( i = 0; i < nrows; ++i )
+   {
+      SCIP_Real frac = 0.0;
+
+      c = basisind[i];
+
+      if( c >= 0 )
+      {
+         SCIP_VAR* var;
+
+         assert(c < ncols);
+         var = SCIPcolGetVar(cols[c]);
+         if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+         {
+            frac = SCIPfeasFrac(scip, SCIPcolGetPrimsol(cols[c]));
+            frac = MIN(frac, 1.0 - frac);
+         }
+      }
+#ifdef SEPARATEROWS
+      else
+      {
+         SCIP_ROW* row;
+
+         assert(0 <= -c-1 && -c-1 < nrows);
+         row = rows[-c-1];
+         if( SCIProwIsIntegral(row) && !SCIProwIsModifiable(row) )
+         {
+            frac = SCIPfeasFrac(scip, SCIPgetRowActivity(scip, row));
+            frac = MIN(frac, 1.0 - frac);
+         }
+      }
+#endif
+
+      if( frac >= MINFRAC )
+      {
+         /* slightly change fractionality to have random order for equal fractions */
+         basisfrac[i] = frac + SCIPrandomGetReal(sepadata->randnumgen, -1e-6, 1e-6);
+      }
+      else
+      {
+         basisfrac[i] = 0.0;
+      }
+   }
+
+   /* sort basis indices by fractionality */
+   SCIPsortDownRealInt(basisfrac, basisind, nrows);
 
    /* get the maximal number of cuts allowed in a separation round */
    if( depth == 0 )
@@ -369,199 +337,162 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
    ncuts = 0;
    for( i = 0; i < nrows && ncuts < maxsepacuts && !SCIPisStopped(scip) && *result != SCIP_CUTOFF; ++i )
    {
-      SCIP_Bool tryrow;
+      SCIP_Real cutefficacy;
 
-      tryrow = FALSE;
+      if( basisfrac[i] == 0.0 )
+         break;
+
       c = basisind[i];
-      if( c >= 0 )
-      {
-         SCIP_VAR* var;
 
-         assert(c < ncols);
-         var = SCIPcolGetVar(cols[c]);
-         if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
-         {
-            SCIP_Real primsol;
-
-            primsol = SCIPcolGetPrimsol(cols[c]);
-            assert(SCIPgetVarSol(scip, var) == primsol); /*lint !e777*/
-
-            if( SCIPfeasFrac(scip, primsol) >= MINFRAC )
-            {
-               SCIPdebugMsg(scip, "trying strong CG cut for col <%s> [%g]\n", SCIPvarGetName(var), primsol);
-               tryrow = TRUE;
-            }
-         }
-      }
-#ifdef SEPARATEROWS
-      else
-      {
-         SCIP_ROW* row;
-
-         assert(0 <= -c-1 && -c-1 < nrows);
-         row = rows[-c-1];
-         if( SCIProwIsIntegral(row) && !SCIProwIsModifiable(row) )
-         {
-            SCIP_Real primsol;
-
-            primsol = SCIPgetRowActivity(scip, row);
-            if( SCIPfeasFrac(scip, primsol) >= MINFRAC )
-            {
-               SCIPdebugMsg(scip, "trying strong CG cut for row <%s> [%g]\n", SCIProwGetName(row), primsol);
-               tryrow = TRUE;
-            }
-         }
-      }
-#endif
-
-      if( tryrow )
-      {
-         /* get the row of B^-1 for this basic integer variable with fractional solution value */
-         SCIP_CALL( SCIPgetLPBInvRow(scip, i, binvrow, inds, &ninds) );
+      /* get the row of B^-1 for this basic integer variable with fractional solution value */
+      SCIP_CALL( SCIPgetLPBInvRow(scip, i, binvrow, inds, &ninds) );
 
 #ifdef SCIP_DEBUG
-         /* initialize variables, that might not have been initialized in SCIPcalcMIR if success == FALSE */
-         cutact = 0.0;
-         cutrhs = SCIPinfinity(scip);
+      /* initialize variables, that might not have been initialized in SCIPcalcMIR if success == FALSE */
+      cutefficacy = 0.0;
+      cutrhs = SCIPinfinity(scip);
 #endif
-         /* create a strong CG cut out of the weighted LP rows using the B^-1 row as weights */
-         SCIP_CALL( SCIPcalcStrongCG(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, (int) MAXAGGRLEN(nvars), sepadata->maxweightrange, MINFRAC, MAXFRAC,
-               binvrow, inds, ninds, 1.0, cutcoefs, &cutrhs, &cutact, &success, &cutislocal, &cutrank) );
-         assert(ALLOWLOCAL || !cutislocal);
-         SCIPdebugMsg(scip, " -> success=%u: %g <= %g\n", success, cutact, cutrhs);
 
-         /* if successful, convert dense cut into sparse row, and add the row as a cut */
-         if( success && SCIPisFeasGT(scip, cutact, cutrhs) )
+      /* create the aggregation row using the B^-1 row as weights */
+      SCIP_CALL( SCIPaggrRowSumRows(scip, aggrrow, binvrow, inds, ninds,
+         FALSE, allowlocal, 1, (int) MAXAGGRLEN(nvars), &success) );
+
+      if( !success )
+         continue;
+
+      /* create a strong CG cut out of the aggregation row */
+      SCIP_CALL( SCIPcalcStrongCG(scip, NULL, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, MINFRAC, MAXFRAC,
+         1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
+
+      assert(allowlocal || !cutislocal);
+      SCIPdebugMsg(scip, " -> success=%u: rhs: %g, efficacy: %g\n", success, cutrhs, cutefficacy);
+
+      if( !success )
+         continue;
+
+      /* if successful, convert dense cut into sparse row, and add the row as a cut */
+      if( SCIPisEfficacious(scip, cutefficacy) )
+      {
+         SCIP_ROW* cut;
+         char cutname[SCIP_MAXSTRLEN];
+         int v;
+
+         SCIPdebugMsg(scip, " -> strong CG cut for <%s>: act=%f, rhs=%f, norm=%f, eff=%f, rank=%d\n",
+                        c >= 0 ? SCIPvarGetName(SCIPcolGetVar(cols[c])) : SCIProwGetName(rows[-c-1]),
+                        cutefficacy * SCIPgetVectorEfficacyNorm(scip, cutcoefs, cutnnz) + cutrhs, cutrhs, SCIPgetVectorEfficacyNorm(scip, cutcoefs, cutnnz), cutefficacy, cutrank);
+
+         /* create the cut */
+         if( c >= 0 )
+            (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "scg%d_x%d", SCIPgetNLPs(scip), c);
+         else
+            (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "scg%d_s%d", SCIPgetNLPs(scip), -c-1);
+
+         SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE, sepadata->dynamiccuts) );
+
+         /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
+         SCIProwChgRank(cut, cutrank);
+
+         /* cache the row extension and only flush them if the cut gets added */
+         SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
+
+         /* collect all non-zero coefficients */
+         for( v = 0; v < cutnnz; ++v )
          {
-            SCIP_VAR** cutvars;
-            SCIP_Real* cutvals;
-            SCIP_Real cutnorm;
-            int cutlen;
+            SCIP_CALL( SCIPaddVarToRow(scip, cut, vars[cutinds[v]], cutcoefs[v]) );
+         }
 
-            /* if this is the first successful cut, get the LP solution for all COLUMN variables */
-            if( varsolvals == NULL )
-            {
-               int v;
-
-               SCIP_CALL( SCIPallocBufferArray(scip, &varsolvals, nvars) );
-               for( v = 0; v < nvars; ++v )
-               {
-                  if( SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_COLUMN )
-                     varsolvals[v] = SCIPvarGetLPSol(vars[v]);
-               }
-            }
-            assert(varsolvals != NULL);
-
-            /* get temporary memory for storing the cut as sparse row */
-            SCIP_CALL( SCIPallocBufferArray(scip, &cutvars, nvars) );
-            SCIP_CALL( SCIPallocBufferArray(scip, &cutvals, nvars) );
-
-            /* store the cut as sparse row, calculate activity and norm of cut */
-            SCIP_CALL( storeCutInArrays(scip, nvars, vars, cutcoefs, varsolvals, normtype,
-                  cutvars, cutvals, &cutlen, &cutact, &cutnorm) );
-
-            SCIPdebugMsg(scip, " -> strong CG cut for <%s>: act=%f, rhs=%f, norm=%f, eff=%f, rank=%d\n",
-               c >= 0 ? SCIPvarGetName(SCIPcolGetVar(cols[c])) : SCIProwGetName(rows[-c-1]),
-               cutact, cutrhs, cutnorm, (cutact - cutrhs)/cutnorm, cutrank);
-
-            if( SCIPisPositive(scip, cutnorm) && SCIPisEfficacious(scip, (cutact - cutrhs)/cutnorm) )
-            {
-               SCIP_ROW* cut;
-               char cutname[SCIP_MAXSTRLEN];
-
-               /* create the cut */
-               if( c >= 0 )
-                  (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "scg%d_x%d", SCIPgetNLPs(scip), c);
-               else
-                  (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "scg%d_s%d", SCIPgetNLPs(scip), -c-1);
-               SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE, sepadata->dynamiccuts) );
-               SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );
-               /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
-               SCIProwChgRank(cut, cutrank);
-
-               assert(success);
+         assert(success);
 #ifdef MAKECUTINTEGRAL
-               /* try to scale the cut to integral values */
-               SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
-                     maxdnom, maxscale, MAKECONTINTEGRAL, &success) );
+         /* try to scale the cut to integral values */
+         SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
+                                          maxdnom, maxscale, MAKECONTINTEGRAL, &success) );
 #else
 #ifdef MAKEINTCUTINTEGRAL
-               /* try to scale the cut to integral values if there are no continuous variables
-                *  -> leads to an integral slack variable that can later be used for other cuts
-                */
-               {
-                  int k = 0;
-                  while ( k < cutlen && SCIPvarIsIntegral(cutvars[k]) )
-                     ++k;
-                  if( k == cutlen )
-                  {
-                     SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
-                           maxdnom, maxscale, MAKECONTINTEGRAL, &success) );
-                  }
-               }
+         /* try to scale the cut to integral values if there are no continuous variables
+            *  -> leads to an integral slack variable that can later be used for other cuts
+            */
+         {
+            int k = 0;
+            int firstcontvar = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
+            while ( k < cutnnz && cutinds[k] < firstcontvar )
+               ++k;
+            if( k == cutlen )
+            {
+               SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
+                     maxdnom, maxscale, MAKECONTINTEGRAL, &success) );
+            }
+         }
 #endif
 #endif
 
 #ifndef FORCECUTINTEGRAL
-               success = TRUE;
+         success = TRUE;
 #endif
 
-               if( success )
+         if( success )
+         {
+            if( !SCIPisCutEfficacious(scip, NULL, cut) )
+            {
+               SCIPdebugMsg(scip, " -> strong CG cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
+                              cutname, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
+                              SCIPgetCutEfficacy(scip, NULL, cut));
+               /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
+               success = FALSE;
+            }
+            else
+            {
+               SCIP_Bool infeasible;
+
+               /* flush all changes before adding the cut */
+               SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
+
+               SCIPdebugMsg(scip, " -> found strong CG cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
+                              cutname, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
+                              SCIPgetCutEfficacy(scip, NULL, cut),
+                              SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
+                              SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
+               /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
+
+               if( SCIPisCutNew(scip, cut) )
                {
-                  if( !SCIPisCutEfficacious(scip, NULL, cut) )
+                  SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
+                  ncuts++;
+
+                  if( infeasible )
                   {
-                     SCIPdebugMsg(scip, " -> strong CG cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
-                        cutname, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
-                        SCIPgetCutEfficacy(scip, NULL, cut));
-                     /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
-                     success = FALSE;
+                     *result = SCIP_CUTOFF;
                   }
                   else
                   {
-                     SCIP_Bool infeasible;
+                     *result = SCIP_SEPARATED;
 
-                     SCIPdebugMsg(scip, " -> found strong CG cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
-                        cutname, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
-                        SCIPgetCutEfficacy(scip, NULL, cut),
-                        SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
-                        SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
-                     /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
-                     SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
-                     if ( infeasible )
-                        *result = SCIP_CUTOFF;
-                     else
+                     if( !cutislocal )
                      {
-                        if( !cutislocal )
-                        {
-                           SCIP_CALL( SCIPaddPoolCut(scip, cut) );
-                        }
-                        *result = SCIP_SEPARATED;
+                        SCIP_CALL( SCIPaddPoolCut(scip, cut) );
                      }
-                     ncuts++;
                   }
                }
-               else
-               {
-                  SCIPdebugMsg(scip, " -> strong CG cut <%s> couldn't be scaled to integral coefficients: act=%f, rhs=%f, norm=%f, eff=%f\n",
-                     cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, NULL, cut));
-               }
-
-               /* release the row */
-               SCIP_CALL( SCIPreleaseRow(scip, &cut) );
             }
-
-            /* free temporary memory */
-            SCIPfreeBufferArray(scip, &cutvals);
-            SCIPfreeBufferArray(scip, &cutvars);
          }
+         else
+         {
+            SCIPdebugMsg(scip, " -> strong CG cut <%s> couldn't be scaled to integral coefficients: act=%f, rhs=%f, norm=%f, eff=%f\n",
+                           cutname, SCIPgetRowLPActivity(scip, cut), cutrhs, SCIProwGetNorm(cut), SCIPgetCutEfficacy(scip, NULL, cut));
+         }
+
+         /* release the row */
+         SCIP_CALL( SCIPreleaseRow(scip, &cut) );
       }
    }
 
    /* free temporary memory */
+   SCIPaggrRowFree(scip, &aggrrow);
    SCIPfreeBufferArrayNull(scip, &varsolvals);
    SCIPfreeBufferArray(scip, &inds);
    SCIPfreeBufferArray(scip, &binvrow);
+   SCIPfreeBufferArray(scip, &basisfrac);
    SCIPfreeBufferArray(scip, &basisind);
+   SCIPfreeBufferArray(scip, &cutinds);
    SCIPfreeBufferArray(scip, &cutcoefs);
 
    SCIPdebugMsg(scip, "end searching strong CG cuts: found %d cuts\n", ncuts);
@@ -599,6 +530,8 @@ SCIP_RETCODE SCIPincludeSepaStrongcg(
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyStrongcg) );
    SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeStrongcg) );
+   SCIP_CALL( SCIPsetSepaInit(scip, sepa, sepaInitStrongcg) );
+   SCIP_CALL( SCIPsetSepaExit(scip, sepa, sepaExitStrongcg) );
 
    /* add separator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
@@ -617,10 +550,6 @@ SCIP_RETCODE SCIPincludeSepaStrongcg(
          "separating/strongcg/maxsepacutsroot",
          "maximal number of strong CG cuts separated per separation round in the root node",
          &sepadata->maxsepacutsroot, FALSE, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip,
-         "separating/strongcg/maxweightrange",
-         "maximal valid range max(|weights|)/min(|weights|) of row weights",
-         &sepadata->maxweightrange, TRUE, DEFAULT_MAXWEIGHTRANGE, 1.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/strongcg/dynamiccuts",
          "should generated cuts be removed from the LP if they are no longer tight?",

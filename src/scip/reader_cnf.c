@@ -165,6 +165,7 @@ SCIP_RETCODE readCnf(
       readError(scip, linecount, "problem declaration line expected");
       return SCIP_READERROR;
    }
+   /* cppcheck-suppress invalidScanfFormatWidth_smaller */
    if( sscanf(line, "p %8s %d %d", format, &nvars, &nclauses) != 3 )
    {
       readError(scip, linecount, "invalid problem declaration (must be 'p cnf <nvars> <nclauses>')");

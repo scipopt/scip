@@ -7706,17 +7706,22 @@ SCIP_RETCODE computeAlternativeBounds(
       {
          SCIP_PROFILE* profile;
 
+         SCIP_RETCODE retcode = SCIP_OKAY;
+
          /* create empty resource profile with infinity resource capacity */
          SCIP_CALL( SCIPprofileCreate(&profile, INT_MAX) );
 
          /* create worst case resource profile */
-         SCIP_CALL( SCIPcreateWorstCaseProfile(scip, profile, consdata->nvars, consdata->vars, consdata->durations, consdata->demands) );
+         retcode = SCIPcreateWorstCaseProfile(scip, profile, consdata->nvars, consdata->vars, consdata->durations, consdata->demands);
 
          hmin = SCIPcomputeHmin(scip, profile, consdata->capacity);
          hmax = SCIPcomputeHmax(scip, profile, consdata->capacity);
 
          /* free worst case profile */
          SCIPprofileFree(&profile);
+
+         if( retcode != SCIP_OKAY )
+            return retcode;
       }
       else
       {
@@ -7978,7 +7983,7 @@ SCIP_RETCODE propagateAllConss(
    nvars = SCIPgetNVars(scip);
    oldnfixedvars = *nfixedvars;
 
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, SCIPgetVars(scip), nvars) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, SCIPgetVars(scip), nvars) ); /*lint !e666*/
    SCIP_CALL( SCIPallocBufferArray(scip, &downlocks, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &uplocks, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &alternativelbs, nvars) );

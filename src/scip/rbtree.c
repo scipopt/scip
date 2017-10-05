@@ -134,16 +134,17 @@ void rbDeleteFixup(
       dir = x == p->child[LEFT] ? RIGHT : LEFT;
 
       w = p->child[dir];
-      if( IS_RED(w) )
+      assert(w != NULL);
+
+      if( COLOR(w) == RED )
       {
          MAKE_BLACK(w);
          MAKE_RED(p);
          rbRotate(root, p, OPPOSITE(dir));
          assert(p == PARENT(x == NULL ? nil : x));
          w = p->child[dir];
+         assert(w != NULL);
       }
-
-      assert(w != NULL);
 
       if( IS_BLACK(w->child[LEFT]) && IS_BLACK(w->child[RIGHT]) )
       {
@@ -177,10 +178,10 @@ void rbDeleteFixup(
 /** replaces the subtree rooted at node u with the subtree rooted at node v */
 static
 void rbTransplant(
-   SCIP_RBTREENODE**     root,             /**< pointer to store the new root */
-   SCIP_RBTREENODE*      u,                /**< node u */
-   SCIP_RBTREENODE*      v,                /**< node v */
-   SCIP_RBTREENODE*      nil               /**< fake node representing NULL to properly reassemble the tree */
+   SCIP_RBTREENODE**     root,               /**< pointer to store the new root */
+   SCIP_RBTREENODE*      u,                  /**< node u */
+   SCIP_RBTREENODE*      v,                  /**< node v */
+   SCIP_RBTREENODE*      nil                 /**< fake node representing NULL to properly reassemble the tree */
    )
 {
    SCIP_RBTREENODE* up;

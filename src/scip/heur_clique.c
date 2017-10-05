@@ -485,7 +485,7 @@ SCIP_DECL_HEURINIT(heurInitClique)
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
-         heurdata->initseed) );
+         (unsigned int)heurdata->initseed) );
 
    heurdata->usednodes = 0;
 

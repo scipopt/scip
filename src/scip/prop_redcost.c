@@ -72,7 +72,7 @@ struct SCIP_PropData
 {
    SCIP_Bool             continuous;         /**< should reduced cost fixing be also applied to continuous variables? */
    SCIP_Real             maxredcost;         /**< maximum reduced cost of a single binary variable */
-   SCIP_Bool             usefullimplics;     /**< are the implied reduced cost usefull */
+   SCIP_Bool             usefullimplics;     /**< are the implied reduced cost useful */
    SCIP_Bool             useimplics;         /**< should implications be used to strength the reduced cost for binary variables? */
    SCIP_Bool             force;              /**< should the propagator be forced even if active pricer are present? */
 };
@@ -83,8 +83,8 @@ struct SCIP_PropData
  * @{
  */
 
-/** propagate the given binary variable/column using the root reduced cost stored in the SCIP internal data structers
- *  and check if the implications can be useful. Depending on that implictions are used or not used during the search to
+/** propagate the given binary variable/column using the root reduced cost stored in the SCIP internal data structures
+ *  and check if the implications can be useful. Depending on that implications are used or not used during the search to
  *  strength the reduced costs.
  */
 static
@@ -118,7 +118,12 @@ SCIP_RETCODE propagateRootRedcostBinvar(
 
    if( rootsol > 0.5 )
    {
-      assert(!SCIPisDualfeasPositive(scip, rootredcost));
+      /* SCIPisLPDualReliable should always return TRUE if the dual feasibility check is enabled and the LP claims to
+       * have a dual feasible solution. if the check is disabled the dual solution might be incorrect and the assert
+       * might fail. however, if the user decides to disable the dual feasibility check (which also can lead to wrong
+       * cutoffs) we don't want to skip propagating with reduced costs as an unexpected side-effect.
+       */
+      assert(!SCIPisLPDualReliable(scip) || !SCIPisDualfeasPositive(scip, rootredcost));
 
       /* update maximum reduced cost of a single binary variable */
       propdata->maxredcost = MAX(propdata->maxredcost, -rootredcost);
@@ -134,7 +139,12 @@ SCIP_RETCODE propagateRootRedcostBinvar(
    }
    else
    {
-      assert(!SCIPisDualfeasNegative(scip, rootredcost));
+      /* SCIPisLPDualReliable should always return TRUE if the dual feasibility check is enabled and the LP claims to
+       * have a dual feasible solution. if the check is disabled the dual solution might be incorrect and the assert
+       * might fail. however, if the user decides to disable the dual feasibility check (which also can lead to wrong
+       * cutoffs) we don't want to skip propagating with reduced costs as an unexpected side-effect.
+       */
+      assert(!SCIPisLPDualReliable(scip) || !SCIPisDualfeasNegative(scip, rootredcost));
 
       /* update maximum reduced cost of a single binary variable */
       propdata->maxredcost = MAX(propdata->maxredcost, rootredcost);
@@ -167,12 +177,24 @@ SCIP_RETCODE propagateRootRedcostBinvar(
       {
       case SCIP_BASESTAT_LOWER:
          ubredcost -= SCIPgetVarRedcost(scip, var);
-         assert(!SCIPisDualfeasNegative(scip, ubredcost));
+
+         /* SCIPisLPDualReliable should always return TRUE if the dual feasibility check is enabled and the LP claims to
+          * have a dual feasible solution. if the check is disabled the dual solution might be incorrect and the assert
+          * might fail. however, if the user decides to disable the dual feasibility check (which also can lead to wrong
+          * cutoffs) we don't want to skip propagating with reduced costs as an unexpected side-effect.
+          */
+         assert(!SCIPisLPDualReliable(scip) || !SCIPisDualfeasNegative(scip, ubredcost));
          break;
 
       case SCIP_BASESTAT_UPPER:
          lbredcost -= SCIPgetVarRedcost(scip, var);
-         assert(!SCIPisDualfeasPositive(scip, lbredcost));
+
+         /* SCIPisLPDualReliable should always return TRUE if the dual feasibility check is enabled and the LP claims to
+          * have a dual feasible solution. if the check is disabled the dual solution might be incorrect and the assert
+          * might fail. however, if the user decides to disable the dual feasibility check (which also can lead to wrong
+          * cutoffs) we don't want to skip propagating with reduced costs as an unexpected side-effect.
+          */
+         assert(!SCIPisLPDualReliable(scip) || !SCIPisDualfeasPositive(scip, lbredcost));
          break;
 
       case SCIP_BASESTAT_BASIC:
@@ -212,7 +234,13 @@ SCIP_RETCODE propagateRedcostBinvar(
    {
    case SCIP_BASESTAT_LOWER:
       redcost = SCIPgetVarRedcost(scip, var);
-      assert(!SCIPisDualfeasNegative(scip, redcost));
+
+      /* SCIPisLPDualReliable should always return TRUE if the dual feasibility check is enabled and the LP claims to
+       * have a dual feasible solution. if the check is disabled the dual solution might be incorrect and the assert
+       * might fail. however, if the user decides to disable the dual feasibility check (which also can lead to wrong
+       * cutoffs) we don't want to skip propagating with reduced costs as an unexpected side-effect.
+       */
+      assert(!SCIPisLPDualReliable(scip) || !SCIPisDualfeasNegative(scip, redcost));
 
       if( redcost > requiredredcost )
       {
@@ -227,7 +255,13 @@ SCIP_RETCODE propagateRedcostBinvar(
 
    case SCIP_BASESTAT_UPPER:
       redcost = SCIPgetVarRedcost(scip, var);
-      assert(!SCIPisDualfeasPositive(scip, redcost));
+
+      /* SCIPisLPDualReliable should always return TRUE if the dual feasibility check is enabled and the LP claims to
+       * have a dual feasible solution. if the check is disabled the dual solution might be incorrect and the assert
+       * might fail. however, if the user decides to disable the dual feasibility check (which also can lead to wrong
+       * cutoffs) we don't want to skip propagating with reduced costs as an unexpected side-effect.
+       */
+      assert(!SCIPisLPDualReliable(scip) || !SCIPisDualfeasPositive(scip, redcost));
 
       if( -redcost > requiredredcost )
       {
@@ -244,7 +278,12 @@ SCIP_RETCODE propagateRedcostBinvar(
       return SCIP_OKAY;
 
    case SCIP_BASESTAT_ZERO:
-      assert(SCIPisDualfeasZero(scip, SCIPgetColRedcost(scip, col)));
+      /* SCIPisLPDualReliable should always return TRUE if the dual feasibility check is enabled and the LP claims to
+       * have a dual feasible solution. if the check is disabled the dual solution might be incorrect and the assert
+       * might fail. however, if the user decides to disable the dual feasibility check (which also can lead to wrong
+       * cutoffs) we don't want to skip propagating with reduced costs as an unexpected side-effect.
+       */
+      assert(!SCIPisLPDualReliable(scip) || SCIPisDualfeasZero(scip, SCIPgetColRedcost(scip, col)));
       return SCIP_OKAY;
 
    default:
@@ -259,11 +298,19 @@ SCIP_RETCODE propagateRedcostBinvar(
    {
       /* collect implied reduced costs if the variable would be fixed to its lower bound */
       lbredcost = SCIPgetVarImplRedcost(scip, var, FALSE);
-      assert(!SCIPisDualfeasPositive(scip, lbredcost) || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
+
+      /* SCIPisLPDualReliable should always return TRUE if the dual feasibility check is enabled and the LP claims to
+       * have a dual feasible solution. if the check is disabled the dual solution might be incorrect and the assert
+       * might fail. however, if the user decides to disable the dual feasibility check (which also can lead to wrong
+       * cutoffs) we don't want to skip propagating with reduced costs as an unexpected side-effect.
+       */
+      assert(!SCIPisLPDualReliable(scip) || !SCIPisDualfeasPositive(scip, lbredcost)
+            || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
 
       /* collect implied reduced costs if the variable would be fixed to its upper bound */
       ubredcost = SCIPgetVarImplRedcost(scip, var, TRUE);
-      assert(!SCIPisDualfeasNegative(scip, ubredcost) || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
+      assert(!SCIPisLPDualReliable(scip) || !SCIPisDualfeasNegative(scip, ubredcost)
+            || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
 
       if( -lbredcost > requiredredcost && ubredcost > requiredredcost )
       {
@@ -314,7 +361,14 @@ SCIP_RETCODE propagateRedcostVar(
    case SCIP_BASESTAT_LOWER:
       redcost = SCIPgetColRedcost(scip, col);
 
-      assert(!SCIPisDualfeasNegative(scip, redcost) || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
+      /* SCIPisLPDualReliable should always return TRUE if the dual feasibility check is enabled and the LP claims to
+       * have a dual feasible solution. if the check is disabled the dual solution might be incorrect and the assert
+       * might fail. however, if the user decides to disable the dual feasibility check (which also can lead to wrong
+       * cutoffs) we don't want to skip propagating with reduced costs as an unexpected side-effect.
+       */
+      assert(!SCIPisLPDualReliable(scip) || !SCIPisDualfeasNegative(scip, redcost)
+            || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
+
       if( SCIPisDualfeasPositive(scip, redcost) )
       {
          SCIP_Real oldlb;
@@ -364,7 +418,14 @@ SCIP_RETCODE propagateRedcostVar(
    case SCIP_BASESTAT_UPPER:
       redcost = SCIPgetColRedcost(scip, col);
 
-      assert(!SCIPisDualfeasPositive(scip, redcost) || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
+      /* SCIPisLPDualReliable should always return TRUE if the dual feasibility check is enabled and the LP claims to
+       * have a dual feasible solution. if the check is disabled the dual solution might be incorrect and the assert
+       * might fail. however, if the user decides to disable the dual feasibility check (which also can lead to wrong
+       * cutoffs) we don't want to skip propagating with reduced costs as an unexpected side-effect.
+       */
+      assert(!SCIPisLPDualReliable(scip) || !SCIPisDualfeasPositive(scip, redcost)
+            || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
+
       if( SCIPisDualfeasNegative(scip, redcost) )
       {
          SCIP_Real oldlb;
@@ -410,7 +471,12 @@ SCIP_RETCODE propagateRedcostVar(
       break;
 
    case SCIP_BASESTAT_ZERO:
-      assert(SCIPisDualfeasZero(scip, SCIPgetColRedcost(scip, col)));
+      /* SCIPisLPDualReliable should always return TRUE if the dual feasibility check is enabled and the LP claims to
+       * have a dual feasible solution. if the check is disabled the dual solution might be incorrect and the assert
+       * might fail. however, if the user decides to disable the dual feasibility check (which also can lead to wrong
+       * cutoffs) we don't want to skip propagating with reduced costs as an unexpected side-effect.
+       */
+      assert(!SCIPisLPDualReliable(scip) || SCIPisDualfeasZero(scip, SCIPgetColRedcost(scip, col)));
       break;
 
    default:
@@ -520,10 +586,6 @@ SCIP_DECL_PROPEXEC(propExecRedcost)
 
    /* we cannot apply reduced cost strengthening, if no simplex basis is available */
    if( !SCIPisLPSolBasic(scip) )
-      return SCIP_OKAY;
-
-   /* we cannot apply reduced cost strengthening if the dual feasibility was not checked */
-   if( !SCIPisLPDualReliable(scip) )
       return SCIP_OKAY;
 
    /* do not run if propagation w.r.t. objective is not allowed */

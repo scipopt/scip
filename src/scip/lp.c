@@ -1907,7 +1907,11 @@ void rowAddNorms(
             row->nummaxval = 1;
          }
          else if( SCIPsetIsGE(set, absval, row->maxval) )
+         {
+            /* make sure the maxval is always exactly the same */
+            row->maxval = MAX(absval, row->maxval);
             row->nummaxval++;
+         }
       }
       if( row->numminval > 0 )
       {
@@ -1917,15 +1921,19 @@ void rowAddNorms(
             row->numminval = 1;
          }
          else if( SCIPsetIsLE(set, absval, row->minval) )
+         {
+            /* make sure the minval is always exactly the same */
+            row->minval = MIN(absval, row->minval);
             row->numminval++;
+         }
       }
    }
    else
    {
       assert(row->minidx <= col->index);
       assert(row->maxidx >= col->index);
-      assert(row->numminval <= 0 || SCIPsetIsGE(set, absval, row->minval));
-      assert(row->nummaxval <= 0 || SCIPsetIsLE(set, absval, row->maxval));
+      assert(row->numminval <= 0 || absval >= row->minval);
+      assert(row->nummaxval <= 0 || absval <= row->maxval);
    }
 }
 
@@ -1951,8 +1959,8 @@ void rowDelNorms(
 
    absval = REALABS(val);
    assert(!SCIPsetIsZero(set, absval));
-   assert(row->nummaxval == 0 || SCIPsetIsGE(set, row->maxval, absval));
-   assert(row->numminval == 0 || SCIPsetIsLE(set, row->minval, absval));
+   assert(row->nummaxval == 0 || row->maxval >= absval);
+   assert(row->numminval == 0 || row->minval <= absval);
 
    /* update min/maxidx validity */
    if( updateindex && (col->index == row->minidx || col->index == row->maxidx) )
@@ -4750,7 +4758,11 @@ void rowCalcIdxsAndVals(
             row->nummaxval = 1;
          }
          else if( SCIPsetIsGE(set, absval, row->maxval) )
+         {
+            /* make sure the maxval is always exactly the same */
+            row->maxval = MAX(absval, row->maxval);
             row->nummaxval++;
+         }
       }
       if( row->numminval > 0 )
       {
@@ -4760,7 +4772,11 @@ void rowCalcIdxsAndVals(
             row->numminval = 1;
          }
          else if( SCIPsetIsLE(set, absval, row->minval) )
+         {
+            /* make sure the minval is always exactly the same */
+            row->minval = MIN(absval, row->minval);
             row->numminval++;
+         }
       }
    }
 }
@@ -8939,6 +8955,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->ndivingrows = 0;
    (*lp)->divinglpiitlim = INT_MAX;
    (*lp)->resolvelperror = FALSE;
+   (*lp)->divenolddomchgs = 0;
    (*lp)->adjustlpval = FALSE;
    (*lp)->lpiuobjlim = SCIPlpiInfinity((*lp)->lpi);
    (*lp)->lpifeastol = SCIPsetLpfeastol(set);
@@ -15258,6 +15275,9 @@ SCIP_RETCODE SCIPlpStartDive(
    /* store LPI iteration limit */
    SCIP_CALL( SCIPlpiGetIntpar(lp->lpi, SCIP_LPPAR_LPITLIM, &lp->divinglpiitlim) );
 
+   /* remember the number of domain changes */
+   lp->divenolddomchgs = stat->domchgcount;
+
    /* store current number of rows */
    lp->ndivingrows = lp->nrows;
 
@@ -15356,7 +15376,7 @@ SCIP_RETCODE SCIPlpEndDive(
     */
    assert(lp->storedsolvals != NULL);
    if( lp->storedsolvals->lpissolved
-      && (set->lp_resolverestore || lp->storedsolvals->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL) )
+      && (set->lp_resolverestore || lp->storedsolvals->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL || lp->divenolddomchgs < stat->domchgcount) )
    {
       SCIP_Bool lperror;
 
@@ -16982,42 +17002,10 @@ SCIP_Bool SCIPlpDivingRowsChanged(
    return (lp->ndivechgsides > 0);
 }
 
-/** compute relative interior point
- *
- *  We use the approach of@par
- *  R. Freund, R. Roundy, M. J. Todd@par
- *  "Identifying the Set of Always-Active Constraints in a System of Linear Inequalities by a Single Linear Program"@par
- *  Tech. Rep, No. 1674-85, Sloan School, M.I.T., 1985
- *
- *  to compute a relative interior point for the current LP.
- *
- *  Assume the original LP looks as follows:
- *  \f[
- *     \begin{array}{rrl}
- *        \min & c^T x &\\
- *             & A x & \geq a\\
- *             & B x & \leq b\\
- *             & D x & = d.
- *     \end{array}
- *  \f]
- *  Note that bounds should be included in the system.
- *
- *  To find an interior point the following LP does the job:
- *  \f[
- *     \begin{array}{rrl}
- *        \max & 1^T y &\\
- *             & A x - y - \alpha a & \geq 0\\
- *             & B x + y - \alpha b & \leq 0\\
- *             & D x - \alpha d & = 0\\
- *             & 0 \leq y & \leq 1\\
- *             & \alpha & \geq 1.
- *     \end{array}
- *  \f]
- *  If the original LP is feasible, this LP is feasible as well. Any optimal solution yields the relative interior point
- *  \f$x^*_j/\alpha^*\f$. Note that this will just produce some relative interior point. It does not produce a
- *  particular relative interior point, e.g., one that maximizes the distance to the boundary in some norm.
- */
-SCIP_RETCODE SCIPlpComputeRelIntPoint(
+/** compute relative interior point with auxiliary lpi, see SCIPlpComputeRelIntPoint() */
+static
+SCIP_RETCODE computeRelIntPoint(
+   SCIP_LPI*             lpi,                /**< auxiliary LP interface */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_LP*              lp,                 /**< LP data */
@@ -17030,63 +17018,28 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
    SCIP_Bool*            success             /**< buffer to indicate whether interior point was successfully computed */
    )
 {
-   SCIP_LPI* lpi;
+   SCIP_RETCODE retcode;
+   SCIP_Real* primal;
    SCIP_Real* obj;
    SCIP_Real* lb;
    SCIP_Real* ub;
-   SCIP_Real* primal;
    SCIP_Real* colvals;
    SCIP_Real zero;
    SCIP_Real minusinf;
    SCIP_Real plusinf;
    SCIP_Real objval;
    SCIP_Real alpha;
-   SCIP_RETCODE retcode;
    int* colinds;
-   int nnewcols;
 #ifndef NDEBUG
    int nslacks;
 #endif
+   int nnewcols;
+   int j;
+   int i;
    int beg;
    int cnt;
-   int i;
-   int j;
 
-   assert(set != NULL);
-   assert(lp  != NULL);
-   assert(point != NULL);
-   assert(success != NULL);
-
-   *success = FALSE;
-
-   /* check time and iteration limits */
-   if ( timelimit <= 0.0 || iterlimit <= 0 )
-      return SCIP_OKAY;
-
-   /* exit if there are no columns */
-   assert(lp->nrows >= 0);
-   assert(lp->ncols >= 0);
-   if( lp->ncols == 0 )
-      return SCIP_OKAY;
-
-   /* disable objective cutoff if we have none */
-   if( inclobjcutoff && (SCIPsetIsInfinity(set, lp->cutoffbound) || lp->looseobjvalinf > 0 || lp->looseobjval == SCIP_INVALID) ) /*lint !e777 */
-      inclobjcutoff = FALSE;
-
-   SCIPsetDebugMsg(set, "Computing relative interior point to current LP.\n");
-
-   /* if there are no rows, we return the zero point */
-   if( lp->nrows == 0 && !inclobjcutoff )
-   {
-      /* create zero point */
-      BMSclearMemoryArray(point, lp->ncols);
-      *success = TRUE;
-
-      return SCIP_OKAY;
-   }
-
-   /* create auxiliary LP */
-   SCIP_CALL( SCIPlpiCreate(&lpi, messagehdlr, "relativeInterior", SCIP_OBJSEN_MAXIMIZE) );
+   assert(lpi != NULL);
 
    retcode = SCIPlpiSetRealpar(lpi, SCIP_LPPAR_FEASTOL, SCIPsetLpfeastol(set));
    if( retcode != SCIP_OKAY && retcode != SCIP_PARAMETERUNKNOWN )
@@ -17460,14 +17413,7 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
 
    /* solve and store point */
    /* SCIP_CALL( SCIPlpiSolvePrimal(lpi) ); */
-   retcode = SCIPlpiSolveDual(lpi);  /* dual is usually faster */
-
-   /* detect possible error in LP solver */
-   if ( retcode != SCIP_OKAY )
-   {
-      SCIP_CALL( SCIPlpiFree(&lpi) );
-      return SCIP_OKAY;
-   }
+   SCIP_CALL( SCIPlpiSolveDual(lpi) );   /* dual is usually faster */
 
 #ifndef NDEBUG
    if ( SCIPlpiIsIterlimExc(lpi) )
@@ -17596,7 +17542,102 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
 
       *success = TRUE;
    }
-   SCIP_CALL( SCIPlpiFree(&lpi) );
 
    return SCIP_OKAY;
+}
+
+/** compute relative interior point
+ *
+ *  We use the approach of@par
+ *  R. Freund, R. Roundy, M. J. Todd@par
+ *  "Identifying the Set of Always-Active Constraints in a System of Linear Inequalities by a Single Linear Program"@par
+ *  Tech. Rep, No. 1674-85, Sloan School, M.I.T., 1985
+ *
+ *  to compute a relative interior point for the current LP.
+ *
+ *  Assume the original LP looks as follows:
+ *  \f[
+ *     \begin{array}{rrl}
+ *        \min & c^T x &\\
+ *             & A x & \geq a\\
+ *             & B x & \leq b\\
+ *             & D x & = d.
+ *     \end{array}
+ *  \f]
+ *  Note that bounds should be included in the system.
+ *
+ *  To find an interior point the following LP does the job:
+ *  \f[
+ *     \begin{array}{rrl}
+ *        \max & 1^T y &\\
+ *             & A x - y - \alpha a & \geq 0\\
+ *             & B x + y - \alpha b & \leq 0\\
+ *             & D x - \alpha d & = 0\\
+ *             & 0 \leq y & \leq 1\\
+ *             & \alpha & \geq 1.
+ *     \end{array}
+ *  \f]
+ *  If the original LP is feasible, this LP is feasible as well. Any optimal solution yields the relative interior point
+ *  \f$x^*_j/\alpha^*\f$. Note that this will just produce some relative interior point. It does not produce a
+ *  particular relative interior point, e.g., one that maximizes the distance to the boundary in some norm.
+ */
+SCIP_RETCODE SCIPlpComputeRelIntPoint(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_Bool             relaxrows,          /**< should the rows be relaxed */
+   SCIP_Bool             inclobjcutoff,      /**< should a row for the objective cutoff be included */
+   SCIP_Real             timelimit,          /**< time limit for LP solver */
+   int                   iterlimit,          /**< iteration limit for LP solver */
+   SCIP_Real*            point,              /**< array to store relative interior point on exit */
+   SCIP_Bool*            success             /**< buffer to indicate whether interior point was successfully computed */
+   )
+{
+   SCIP_LPI* lpi;
+
+   SCIP_RETCODE retcode;
+
+   assert(set != NULL);
+   assert(lp  != NULL);
+   assert(point != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   /* check time and iteration limits */
+   if ( timelimit <= 0.0 || iterlimit <= 0 )
+      return SCIP_OKAY;
+
+   /* exit if there are no columns */
+   assert(lp->nrows >= 0);
+   assert(lp->ncols >= 0);
+   if( lp->ncols == 0 )
+      return SCIP_OKAY;
+
+   /* disable objective cutoff if we have none */
+   if( inclobjcutoff && (SCIPsetIsInfinity(set, lp->cutoffbound) || lp->looseobjvalinf > 0 || lp->looseobjval == SCIP_INVALID) ) /*lint !e777 */
+      inclobjcutoff = FALSE;
+
+   SCIPsetDebugMsg(set, "Computing relative interior point to current LP.\n");
+
+   /* if there are no rows, we return the zero point */
+   if( lp->nrows == 0 && !inclobjcutoff )
+   {
+      /* create zero point */
+      BMSclearMemoryArray(point, lp->ncols);
+      *success = TRUE;
+
+      return SCIP_OKAY;
+   }
+
+   /* create auxiliary LP */
+   SCIP_CALL( SCIPlpiCreate(&lpi, messagehdlr, "relativeInterior", SCIP_OBJSEN_MAXIMIZE) );
+
+   /* catch return code and ensure that lpi is freed, anyway */
+   retcode = computeRelIntPoint(lpi, set, messagehdlr, lp, prob, relaxrows, inclobjcutoff, timelimit, iterlimit, point, success);
+
+   SCIP_CALL( SCIPlpiFree(&lpi) );
+
+   return retcode;
 }

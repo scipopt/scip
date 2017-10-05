@@ -7213,8 +7213,8 @@ SCIP_RETCODE computeInteriorPoint(
    }
 
    /* set NLP tolerances; we don't really need an optimal solution to this NLP */
-   SCIP_CALL( SCIPnlpiSetRealPar(nlpi, prob, SCIP_NLPPAR_FEASTOL, SCIPfeastol(scip)) );
-   SCIP_CALL( SCIPnlpiSetRealPar(nlpi, prob, SCIP_NLPPAR_RELOBJTOL, MAX(SCIPfeastol(scip), SCIPdualfeastol(scip))) );
+   SCIP_CALL( SCIPnlpiSetRealPar(nlpi, prob, SCIP_NLPPAR_FEASTOL, SCIPfeastol(scip)) ); /*lint !e666*/
+   SCIP_CALL( SCIPnlpiSetRealPar(nlpi, prob, SCIP_NLPPAR_RELOBJTOL, MAX(SCIPfeastol(scip), SCIPdualfeastol(scip))) ); /*lint !e666*/
 
    /* solve NLP problem */
    SCIP_CALL( SCIPnlpiSolve(nlpi, prob) );
@@ -15433,7 +15433,7 @@ void rowprepCleanupIntegralCoefs(
             SCIPdebugMsg(scip, "var <%s> [%g,%g] has almost integral coef %.20g, round coefficient to %g without relaxing side (!)\n",
                SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), coef, roundcoef);
          }
-         rowprep->coefs[i] = coef = roundcoef;
+         rowprep->coefs[i] = roundcoef;
          *viol = SCIP_INVALID;
       }
    }

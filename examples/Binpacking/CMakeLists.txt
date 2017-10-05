@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.0)
+
 project(Binpacking)
 
 find_package(SCIP REQUIRED)
@@ -13,7 +15,9 @@ add_executable(binpacking
    src/vardata_binpacking.c)
 
 target_link_libraries(binpacking ${SCIP_LIBRARIES})
-add_dependencies(examples binpacking)
+if( TARGET examples )
+    add_dependencies( examples binpacking )
+endif()
 
 #
 # add check subdirectory for tests

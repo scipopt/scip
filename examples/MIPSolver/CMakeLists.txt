@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.0)
+
 project(MIPSolver)
 
 find_package(SCIP REQUIRED)
@@ -7,4 +9,7 @@ add_executable(scipmip
    src/cppmain.cpp)
 
 target_link_libraries(scipmip ${SCIP_LIBRARIES})
-add_dependencies(examples scipmip)
+
+if( TARGET examples )
+    add_dependencies( examples scipmip )
+endif()

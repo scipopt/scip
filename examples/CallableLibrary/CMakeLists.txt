@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.0)
+
 project(CallableLibrary)
 include(CTest)
 
@@ -23,11 +25,35 @@ target_link_libraries(circle ${SCIP_LIBRARIES})
 target_link_libraries(gastrans ${SCIP_LIBRARIES} ${LIBM})
 target_link_libraries(string ${SCIP_LIBRARIES})
 
-add_dependencies(examples circle gastrans string)
+if( TARGET examples )
+    add_dependencies( examples circle gastrans string )
+endif()
 
 #
-# add tests for the three executables
+# add one test that builds the executable and one that runs it
 #
-add_test(NAME examples-callablelibrary-circle COMMAND $<TARGET_FILE:circle>)
-add_test(NAME examples-callablelibrary-gastrans COMMAND $<TARGET_FILE:gastrans>)
-add_test(NAME examples-callablelibrary-string COMMAND $<TARGET_FILE:string>)
+macro(addbuildandtest target)
+    add_test(NAME examples-callablelibrary_${target}-build
+            COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${target}
+            )
+    #
+    # avoid that several build jobs try to concurrently build the SCIP library
+    # note that this ressource lock name is not the actual libscip target
+    #
+    set_tests_properties(examples-callablelibrary_${target}-build
+                        PROPERTIES
+                            RESOURCE_LOCK libscip
+                        )
+
+    add_test(NAME examples-callablelibrary_${target}
+            COMMAND $<TARGET_FILE:${target}>
+            )
+    set_tests_properties(examples-callablelibrary_${target}
+                        PROPERTIES
+                            DEPENDS examples-callablelibrary_${target}-build
+                        )
+endmacro(addbuildandtest)
+
+addbuildandtest(circle)
+addbuildandtest(gastrans)
+addbuildandtest(string)

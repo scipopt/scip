@@ -64,53 +64,59 @@ SCIP_DECL_HASHGETKEY(hashGetKeyCut)
 static
 SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
 {  /*lint --e{715}*/
-   /* Warning: The comparison of real values is made against default epsilon.
-    *          This is ugly, but we have no settings at hand.
-    */
    SCIP_ROW* row1;
    SCIP_ROW* row2;
+   SCIP_Real row1scale;
+   SCIP_Real row2scale;
+   SCIP_SET* set;
 
    row1 = (SCIP_ROW*)key1;
    row2 = (SCIP_ROW*)key2;
    assert(row1 != NULL);
    assert(row2 != NULL);
 
-   /* Sort the column indices of both rows.
-    *
-    * The columns in a row are divided into two parts: LP columns, which are currently in the LP and non-LP columns;
-    * we sort the rows, but that only ensures that within these two parts, columns are sorted w.r.t. their index.
-    * Normally, this should be suficient, because a column contained in both rows should either be one of the LP columns
-    * for both or one of the non-LP columns for both.
-    * However, directly after a row was created, before it is added to the LP, the row is not linked to all its
-    * columns and all columns are treated as non-LP columns.
-    * Therefore, if exactly one of the rows has no LP columns, we cannot rely on the partition, because this row might
-    * just have been created and also columns that are in the LP might be in the non-LP columns part.
-    */
-   SCIProwSort(row1);
-   SCIProwSort(row2);
-   assert(row1->lpcolssorted);
-   assert(row1->nonlpcolssorted);
-   assert(row1->validminmaxidx);
-   assert(row2->lpcolssorted);
-   assert(row2->nonlpcolssorted);
-   assert(row2->validminmaxidx);
+   /* return true if the row is the same */
+   if( row1 == row2 )
+      return TRUE;
 
-   /* currently we are only handling rows which are completely linked or not linked at all */
-   assert(row1->nunlinked == 0 || row1->nlpcols == 0);
-   assert(row2->nunlinked == 0 || row2->nlpcols == 0);
+   assert(row1->validminmaxidx);
+   assert(row2->validminmaxidx);
 
    /* compare the trivial characteristics of the rows */
    if( row1->len != row2->len
       || row1->minidx != row2->minidx
       || row1->maxidx != row2->maxidx
-      || row1->nummaxval != row2->nummaxval
-      || row1->numminval != row2->numminval
-      || REALABS(row1->lhs - row2->lhs) > SCIP_DEFAULT_EPSILON
-      || REALABS(row1->rhs - row2->rhs) > SCIP_DEFAULT_EPSILON
-      || REALABS(row1->maxval - row2->maxval) > SCIP_DEFAULT_EPSILON
-      || REALABS(row1->minval - row2->minval) > SCIP_DEFAULT_EPSILON
-       )
+      )
       return FALSE;
+
+   set = (SCIP_SET*) userptr;
+
+   /* set scale for the rows such that the largest absolute coefficient is 1.0 */
+   row1scale = 1.0 / SCIProwGetMaxval(row1, set);
+   row2scale = 1.0 / SCIProwGetMaxval(row2, set);
+
+   /* check if scaled min value is feas equal first */
+   if( !SCIPsetIsFeasEQ(set, row1scale * SCIProwGetMinval(row1, set),
+                             row2scale * SCIProwGetMinval(row2, set)) )
+      return FALSE;
+
+   SCIProwSort(row1);
+   assert(row1->lpcolssorted);
+   assert(row1->nonlpcolssorted);
+
+   SCIProwSort(row2);
+   assert(row2->lpcolssorted);
+   assert(row2->nonlpcolssorted);
+
+   /* currently we are only handling rows which are completely linked or not linked at all */
+   assert(row1->nunlinked == 0 || row1->nlpcols == 0);
+   assert(row2->nunlinked == 0 || row2->nlpcols == 0);
+
+   /* set scale sign such that the rows are of the form ax <= b */
+   if( SCIPsetIsInfinity(set, row1->rhs) )
+      row1scale = -row1scale;
+   if( SCIPsetIsInfinity(set, row2->rhs) )
+      row2scale = -row2scale;
 
    /* both rows have LP columns, or none of them has, or one has only LP colums and the other only non-LP columns,
     * so we can rely on the sorting of the columns
@@ -132,11 +138,11 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
          while( i < row1->nlpcols && i2 < row2->len )
          {
             assert(row1->cols[i] != row2->cols[i2]);
-            if( row1->cols[i]->index < row2->cols[i2]->index )
+            if( row1->cols_index[i] < row2->cols_index[i2] )
                ++i;
             else
             {
-               assert(row1->cols[i]->index > row2->cols[i2]->index);
+               assert(row1->cols_index[i] > row2->cols_index[i2]);
                ++i2;
             }
          }
@@ -147,11 +153,11 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
          while( i < row1->len && i2 < row2->nlpcols )
          {
             assert(row1->cols[i] != row2->cols[i2]);
-            if( row1->cols[i]->index < row2->cols[i2]->index )
+            if( row1->cols_index[i] < row2->cols_index[i2] )
                ++i;
             else
             {
-               assert(row1->cols[i]->index > row2->cols[i2]->index);
+               assert(row1->cols_index[i] > row2->cols_index[i2]);
                ++i2;
             }
          }
@@ -166,14 +172,14 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
       /* compare the columns of the rows */
       for( i = 0; i < row1->len; ++i )
       {
-         if( row1->cols[i] != row2->cols[i] )
+         if( row1->cols_index[i] != row2->cols_index[i] )
             return FALSE;
       }
 
       /* compare the coefficients of the rows */
       for( i = 0; i < row1->len; ++i )
       {
-         if( REALABS(row1->vals[i] - row2->vals[i]) > SCIP_DEFAULT_EPSILON )
+         if( !SCIPsetIsFeasEQ(set, row1scale * row1->vals[i], row2scale * row2->vals[i]) )
             return FALSE;
       }
    }
@@ -192,9 +198,15 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
       if( row2->nlpcols == 0 )
       {
          SCIP_ROW* tmprow;
+         SCIP_Real tmpscale;
+
          tmprow = row2;
          row2 = row1;
          row1 = tmprow;
+
+         tmpscale = row2scale;
+         row2scale = row1scale;
+         row1scale = tmpscale;
       }
       assert(row1->nlpcols == 0 && row2->nlpcols > 0);
 
@@ -207,7 +219,7 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
          /* current column of row1 is the current LP column of row2, check the coefficient */
          if( ilp < row2->nlpcols && row1->cols[i1] == row2->cols[ilp] )
          {
-            if( REALABS(row1->vals[i1] - row2->vals[ilp]) > SCIP_DEFAULT_EPSILON )
+            if( !SCIPsetIsFeasEQ(set, row1scale * row1->vals[i1], row2scale * row2->vals[ilp]) )
                return FALSE;
             else
                ++ilp;
@@ -215,7 +227,7 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
          /* current column of row1 is the current non-LP column of row2, check the coefficient */
          else if( inlp < row2->len && row1->cols[i1] == row2->cols[inlp] )
          {
-            if( REALABS(row1->vals[i1] - row2->vals[inlp]) > SCIP_DEFAULT_EPSILON )
+            if( !SCIPsetIsFeasEQ(set, row1scale * row1->vals[i1], row2scale * row2->vals[inlp]) )
                return FALSE;
             else
                ++inlp;
@@ -233,22 +245,28 @@ static
 SCIP_DECL_HASHKEYVAL(hashKeyValCut)
 {  /*lint --e{715}*/
    SCIP_ROW* row;
-   SCIP_Real maxval;
-   SCIP_Real minval;
+   int i;
+   SCIP_Real scale;
    SCIP_SET* set;
+   uint64_t hash;
 
    set = (SCIP_SET*) userptr;
    row = (SCIP_ROW*)key;
    assert(row != NULL);
+   assert(row->len > 0);
 
-   maxval = SCIProwGetMaxval(row, set);
-   minval = SCIProwGetMinval(row, set);
-   assert(row->nummaxval > 0);
-   assert(row->numminval > 0);
-   assert(row->validminmaxidx);
+   scale = 1.0 / SCIProwGetMaxval(row, set);
+   if( SCIPsetIsInfinity(set, row->rhs) )
+      scale = -scale;
 
-   return SCIPhashTwo(SCIPcombineTwoInt(SCIPrealHashCode(minval), SCIPrealHashCode(maxval)),
-                      SCIPcombineThreeInt(row->len, row->minidx, row->maxidx));
+   hash = row->len;
+
+   for( i = 0; i < row->len; ++i )
+   {
+      hash += SCIPhashTwo(SCIPrealHashCode(scale * row->vals[i]), row->cols_index[i]);
+   }
+
+   return hash;
 }
 
 
@@ -344,7 +362,8 @@ SCIP_Bool cutIsAged(
 {
    assert(cut != NULL);
 
-   return (agelimit >= 0 && cut->age > agelimit);
+   /* since agelimit can be -1 cast to unsigned before comparison, then it is the maximum unsigned value in that case */
+   return (unsigned int)cut->age > (unsigned int)agelimit;
 }
 
 /** gets the row of the cut */
@@ -481,84 +500,6 @@ SCIP_RETCODE SCIPcutpoolClear(
    return SCIP_OKAY;
 }
 
-/** if not already existing, adds row to cut pool and captures it */
-SCIP_RETCODE SCIPcutpoolAddRow(
-   SCIP_CUTPOOL*         cutpool,            /**< cut pool */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_ROW*             row                 /**< cutting plane to add */
-   )
-{
-   assert(cutpool != NULL);
-   assert(row != NULL);
-
-   /* only called to ensure that minidx and maxidx are up-to-date */
-   (void) SCIProwGetMaxidx(row, set);
-   assert(row->validminmaxidx);
-
-   /* check in hash table, if cut already exists in the pool */
-   if( SCIPhashtableRetrieve(cutpool->hashtable, (void*)row) == NULL )
-   {
-      SCIP_CALL( SCIPcutpoolAddNewRow(cutpool, blkmem, set, row) );
-   }
-
-   return SCIP_OKAY;
-}
-
-/** adds row to cut pool and captures it; doesn't check for multiple cuts */
-SCIP_RETCODE SCIPcutpoolAddNewRow(
-   SCIP_CUTPOOL*         cutpool,            /**< cut pool */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_ROW*             row                 /**< cutting plane to add */
-   )
-{
-   SCIP_CUT* cut;
-
-   assert(cutpool != NULL);
-   assert(row != NULL);
-
-   /* check, if row is modifiable or local */
-   if( SCIProwIsModifiable(row) )
-   {
-      SCIPerrorMessage("cannot store modifiable row <%s> in a cut pool\n", SCIProwGetName(row));
-      return SCIP_INVALIDDATA;
-   }
-   if( SCIProwIsLocal(row) )
-   {
-      SCIPerrorMessage("cannot store locally valid row <%s> in a cut pool\n", SCIProwGetName(row));
-      return SCIP_INVALIDDATA;
-   }
-
-   /* only called to ensure that minidx and maxidx are up-to-date */
-   (void) SCIProwGetMaxidx(row, set);    
-   assert(row->validminmaxidx);   
-
-   /* create the cut */
-   SCIP_CALL( cutCreate(&cut, blkmem, row) );
-   cut->pos = cutpool->ncuts;
-
-   /* add cut to the pool */
-   SCIP_CALL( cutpoolEnsureCutsMem(cutpool, set, cutpool->ncuts+1) );
-   cutpool->cuts[cutpool->ncuts] = cut;
-   cutpool->ncuts++;
-   cutpool->maxncuts = MAX(cutpool->maxncuts, cutpool->ncuts);
-   if( SCIProwIsRemovable(row) )
-      cutpool->nremovablecuts++;
-
-   /* insert cut in the hash table */
-   SCIP_CALL( SCIPhashtableInsert(cutpool->hashtable, (void*)cut) );
-
-   /* if this is the global cut pool of SCIP, mark the row to be member of the pool */
-   if( cutpool->globalcutpool )
-      row->inglobalcutpool = TRUE;
-
-   /* lock the row */
-   SCIProwLock(row);
-
-   return SCIP_OKAY;
-}
-
 /** removes the cut from the cut pool */
 static
 SCIP_RETCODE cutpoolDelCut(
@@ -596,12 +537,13 @@ SCIP_RETCODE cutpoolDelCut(
    if( cutpool->globalcutpool )
       cut->row->inglobalcutpool = FALSE;
 
-   /* unlock the row */
-   SCIProwUnlock(cut->row);
-
    /* remove the cut from the hash table */
    assert(SCIPhashtableExists(cutpool->hashtable, (void*)cut));
    SCIP_CALL( SCIPhashtableRemove(cutpool->hashtable, (void*)cut) );
+   assert(! SCIPhashtableExists(cutpool->hashtable, (void*)cut));
+
+   /* unlock the row */
+   SCIProwUnlock(cut->row);
 
    /* free the cut */
    SCIP_CALL( cutFree(&cutpool->cuts[pos], blkmem, set, lp) );
@@ -625,6 +567,193 @@ SCIP_RETCODE cutpoolDelCut(
    }
 
    cutpool->ncuts--;
+
+   return SCIP_OKAY;
+}
+
+/** checks if cut is already existing */
+SCIP_Bool SCIPcutpoolIsCutNew(
+   SCIP_CUTPOOL*         cutpool,            /**< cut pool */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_ROW*             row                 /**< cutting plane to add */
+   )
+{
+   SCIP_CUT* othercut;
+   assert(cutpool != NULL);
+   assert(row != NULL);
+
+   if( row->len == 0 )
+   {
+      /* trivial cut is only new if it proves infeasibility */
+      return SCIPsetIsFeasLT(set, row->constant, row->lhs) || SCIPsetIsFeasGT(set, row->constant, row->rhs);
+   }
+
+   othercut = (SCIP_CUT*)SCIPhashtableRetrieve(cutpool->hashtable, (void*)row);
+   /* check in hash table, if cut already exists in the pool */
+   if( othercut == NULL )
+   {
+      return TRUE;
+   }
+   else if( othercut->row != row )
+   {
+      SCIP_ROW* otherrow = othercut->row;
+      SCIP_Real otherrhs;
+      SCIP_Real rhs;
+      SCIP_Real scale;
+      SCIP_Real otherscale;
+
+      /* since we are comparing the improvement with an absolute value, we apply a
+       * scale to both rows such that the max absolute value is 1.0.
+       * Then bring the cut into the form ax <= b
+       */
+      scale = 1.0 / SCIProwGetMaxval(row, set);
+      otherscale = 1.0 / SCIProwGetMaxval(otherrow, set);
+
+      if( SCIPsetIsInfinity(set, otherrow->rhs) )
+      {
+         otherrhs = otherscale * (otherrow->constant - otherrow->lhs);
+      }
+      else
+      {
+         otherrhs = otherscale * (otherrow->rhs - otherrow->constant);
+      }
+
+      if( SCIPsetIsInfinity(set, row->rhs) )
+      {
+         rhs = scale * (row->constant - row->lhs);
+      }
+      else
+      {
+         rhs = scale * (row->rhs - row->constant);
+      }
+
+      if( SCIPsetIsFeasLT(set, rhs, otherrhs) )
+         return TRUE;
+   }
+
+   return FALSE;
+}
+
+/** if not already existing, adds row to cut pool and captures it */
+SCIP_RETCODE SCIPcutpoolAddRow(
+   SCIP_CUTPOOL*         cutpool,            /**< cut pool */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_ROW*             row                 /**< cutting plane to add */
+   )
+{
+   SCIP_CUT* othercut;
+   assert(cutpool != NULL);
+   assert(row != NULL);
+
+   if( row->len == 0 )
+      return SCIP_OKAY;
+
+   othercut = (SCIP_CUT*)SCIPhashtableRetrieve(cutpool->hashtable, (void*)row);
+   /* check in hash table, if cut already exists in the pool */
+   if( othercut == NULL )
+   {
+      SCIP_CALL( SCIPcutpoolAddNewRow(cutpool, blkmem, set, row) );
+   }
+   else
+   {
+      SCIP_ROW* otherrow = othercut->row;
+      SCIP_Real otherrhs;
+      SCIP_Real rhs;
+      SCIP_Real scale;
+      SCIP_Real otherscale;
+
+      /* since we are comparing the improvement with an absolute value, we apply a
+       * scale to both rows such that the max absolute value is 1.0.
+       * Then bring the cut into the form ax <= b
+       */
+      scale = 1.0 / SCIProwGetMaxval(row, set);
+      otherscale = 1.0 / SCIProwGetMaxval(otherrow, set);
+
+      if( SCIPsetIsInfinity(set, otherrow->rhs) )
+      {
+         otherrhs = otherscale * (otherrow->constant - otherrow->lhs);
+      }
+      else
+      {
+         otherrhs = otherscale * (otherrow->rhs - otherrow->constant);
+      }
+
+      if( SCIPsetIsInfinity(set, row->rhs) )
+      {
+         rhs = scale * (row->constant - row->lhs);
+      }
+      else
+      {
+         rhs = scale * (row->rhs - row->constant);
+      }
+
+      if( SCIPsetIsFeasLT(set, rhs, otherrhs) )
+      {
+         SCIP_CALL( cutpoolDelCut(cutpool, blkmem, set, stat, lp, othercut) );
+         SCIP_CALL( SCIPcutpoolAddNewRow(cutpool, blkmem, set, row) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** adds row to cut pool and captures it; doesn't check for multiple cuts */
+SCIP_RETCODE SCIPcutpoolAddNewRow(
+   SCIP_CUTPOOL*         cutpool,            /**< cut pool */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_ROW*             row                 /**< cutting plane to add */
+   )
+{
+   SCIP_CUT* cut;
+
+   assert(cutpool != NULL);
+   assert(row != NULL);
+
+   /* check, if row is modifiable or local */
+   if( SCIProwIsModifiable(row) )
+   {
+      SCIPerrorMessage("cannot store modifiable row <%s> in a cut pool\n", SCIProwGetName(row));
+      return SCIP_INVALIDDATA;
+   }
+   if( SCIProwIsLocal(row) )
+   {
+      SCIPerrorMessage("cannot store locally valid row <%s> in a cut pool\n", SCIProwGetName(row));
+      return SCIP_INVALIDDATA;
+   }
+
+   /* only called to ensure that minidx and maxidx are up-to-date */
+   (void) SCIProwGetMaxidx(row, set);
+   assert(row->validminmaxidx);
+
+   /* create the cut */
+   SCIP_CALL( cutCreate(&cut, blkmem, row) );
+   cut->pos = cutpool->ncuts;
+
+   /* add cut to the pool */
+   SCIP_CALL( cutpoolEnsureCutsMem(cutpool, set, cutpool->ncuts+1) );
+   cutpool->cuts[cutpool->ncuts] = cut;
+   cutpool->ncuts++;
+   cutpool->maxncuts = MAX(cutpool->maxncuts, cutpool->ncuts);
+   if( SCIProwIsRemovable(row) )
+      cutpool->nremovablecuts++;
+
+   assert(!SCIPhashtableExists(cutpool->hashtable, (void*)cut));
+
+   /* insert cut in the hash table */
+   SCIP_CALL( SCIPhashtableInsert(cutpool->hashtable, (void*)cut) );
+
+   assert(SCIPhashtableExists(cutpool->hashtable, (void*)cut));
+
+   /* if this is the global cut pool of SCIP, mark the row to be member of the pool */
+   if( cutpool->globalcutpool )
+      row->inglobalcutpool = TRUE;
+
+   /* lock the row */
+   SCIProwLock(row);
 
    return SCIP_OKAY;
 }

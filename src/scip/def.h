@@ -103,9 +103,9 @@ extern "C" {
 #endif
 
 
-#define SCIP_VERSION                400 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION               2 /**< SCIP sub version number */
-#define SCIP_APIVERSION              13 /**< SCIP API version number */
+#define SCIP_VERSION                401 /**< SCIP version number (multiplied by 100 to get integer number) */
+#define SCIP_SUBVERSION               3 /**< SCIP sub version number */
+#define SCIP_APIVERSION              15 /**< SCIP API version number */
 #define SCIP_COPYRIGHT   "Copyright (C) 2002-2017 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
@@ -223,8 +223,10 @@ extern "C" {
 #else
 #ifdef __cplusplus
 #define RESTRICT __restrict__
-#else
+#elif __STDC_VERSION__ >= 199901L
 #define RESTRICT restrict
+#else
+#define RESTRICT
 #endif
 #endif
 #endif

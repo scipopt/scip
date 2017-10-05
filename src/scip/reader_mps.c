@@ -3313,8 +3313,9 @@ void printBoundSection(
    const char* varname;
    char valuestr[MPS_MAX_VALUELEN] = { '\0' };
 
-   assert( scip != NULL );
-   assert( vars != NULL );
+   assert(scip != NULL);
+   assert(vars != NULL);
+   assert(fixvars != NULL);
 
    sectionName = FALSE;
 
@@ -3513,7 +3514,9 @@ void printBoundSection(
    {
       /* we should print the transformed problem, otherwise no fixed variable should exists */
       assert(transformed);
+      assert(fixvars != NULL && fixvars[v] != NULL);
 
+      /* cppcheck-suppress nullPointer */
       var = fixvars[v];
 
       assert(var != NULL);
@@ -4423,7 +4426,6 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
    if( nfixedvars > 0 )
    {
-      assert(fixvars != NULL);
       SCIPfreeBufferArray(scip, &fixvars);
    }
 
