@@ -160,16 +160,18 @@ SCIP_DECL_DISPEXITSOL(dispExitsolEstimates)
 static
 SCIP_DECL_DISPOUTPUT(dispOutputEstimates)
 {  /*lint --e{715}*/
-   SCIP_Longint estimate;
+   SCIP_Real estimate;
 
    assert(scip != NULL);
 
    estimate = SCIPtreeSizeGetEstimateTotal(scip);
 
-   if( estimate != -1 )
-      SCIPdispLongint(SCIPgetMessagehdlr(scip), file, estimate, DISP_WIDTH);
-   else
+   if( estimate == -1 )
       SCIPinfoMessage(scip, file, "   -   ");
+   else if( estimate == SCIP_REAL_MAX || estimate >= SCIP_LONGINT_MAX)
+      SCIPinfoMessage(scip, file, "  inf  ");
+   else
+      SCIPdispLongint(SCIPgetMessagehdlr(scip), file, (SCIP_Longint)estimate, DISP_WIDTH);
    
    return SCIP_OKAY;
 }

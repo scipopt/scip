@@ -33,13 +33,13 @@ extern "C" {
 
 /** Returns an estimate of the tree size that remains to explore, -1 if no estimate is available */
 EXTERN
-SCIP_Longint SCIPtreeSizeGetEstimateRemaining(
+SCIP_Real SCIPtreeSizeGetEstimateRemaining(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** Returns an estimate of the total tree size to explore, -1 if no estimate is available */
 EXTERN
-SCIP_Longint SCIPtreeSizeGetEstimateTotal(
+SCIP_Real SCIPtreeSizeGetEstimateTotal(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
