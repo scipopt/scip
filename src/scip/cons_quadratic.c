@@ -7198,9 +7198,7 @@ void updateBilinearRelaxation(
    for( i = 0; i < nineqs; ++i )
    {
       SCIP_Real violation = ineqs[3*i] * refx - ineqs[3*i+1] * refy - ineqs[3*i+2];
-
-      if( SCIPisFeasLE(scip, violation, 0.0) && SCIPisGT(scip, violation, 0.0) )
-	 constshift = MAX(constshift, violation);
+      constshift = MAX(constshift, violation);
    }
    SCIPdebugMsg(scip, "shift constant by %.16f\n", constshift);
    assert(SCIPisFeasLE(scip, constshift, 0.0));
