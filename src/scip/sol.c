@@ -298,6 +298,7 @@ SCIP_RETCODE SCIPsolCreate(
    (*sol)->hasinfval = FALSE;
    stat->solindex++;
    solStamp(*sol, stat, tree, TRUE);
+   SCIPsolResetViolations(*sol);
 
    SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
 
@@ -331,6 +332,7 @@ SCIP_RETCODE SCIPsolCreateOriginal(
    (*sol)->hasinfval = FALSE;
    stat->solindex++;
    solStamp(*sol, stat, tree, TRUE);
+   SCIPsolResetViolations(*sol);
 
    SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
 
@@ -367,6 +369,13 @@ SCIP_RETCODE SCIPsolCopy(
    (*sol)->index = stat->solindex;
    (*sol)->hasinfval = sourcesol->hasinfval;
    stat->solindex++;
+   (*sol)->viol.absviolbounds = sourcesol->viol.absviolbounds;
+   (*sol)->viol.absviolcons = sourcesol->viol.absviolcons;
+   (*sol)->viol.absviolintegrality = sourcesol->viol.absviolintegrality;
+   (*sol)->viol.absviollprows = sourcesol->viol.absviollprows;
+   (*sol)->viol.relviolbounds = sourcesol->viol.relviolbounds;
+   (*sol)->viol.relviolcons = sourcesol->viol.relviolcons;
+   (*sol)->viol.relviollprows = sourcesol->viol.relviollprows;
 
    SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
 
@@ -697,6 +706,7 @@ SCIP_RETCODE SCIPsolCreatePartial(
    (*sol)->hasinfval = FALSE;
    stat->solindex++;
    solStamp(*sol, stat, NULL, TRUE);
+   SCIPsolResetViolations(*sol);
 
    SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
 
@@ -729,6 +739,7 @@ SCIP_RETCODE SCIPsolCreateUnknown(
    (*sol)->hasinfval = FALSE;
    stat->solindex++;
    solStamp(*sol, stat, tree, TRUE);
+   SCIPsolResetViolations(*sol);
 
    SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
 
