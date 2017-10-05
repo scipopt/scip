@@ -3230,7 +3230,7 @@ void hashsetInsert(
    assert(element != NULL);
 
    pos = hashSetDesiredPos(hashset, element);
-   nslots = SCIPhashsetGetNSlots(hashset);
+   nslots = (uint32_t)SCIPhashsetGetNSlots(hashset);
    mask = nslots - 1;
 
    elemdistance = 0;
@@ -3283,7 +3283,7 @@ SCIP_RETCODE hashsetCheckLoad(
       uint32_t i;
 
       /* calculate new size (always power of two) */
-      nslots = SCIPhashsetGetNSlots(hashset);
+      nslots = (uint32_t)SCIPhashsetGetNSlots(hashset);
       newnslots = 2*nslots;
       --hashset->shift;
 
@@ -3329,7 +3329,7 @@ SCIP_RETCODE SCIPhashsetCreate(
     */
    (*hashset)->shift = 64;
    (*hashset)->shift -= (int)ceil(log(MAX(8.0, size / 0.9)) / log(2.0));
-   nslots = SCIPhashsetGetNSlots(*hashset);
+   nslots = (uint32_t)SCIPhashsetGetNSlots(*hashset);
    (*hashset)->nelements = 0;
 
    SCIP_ALLOC( BMSallocClearBlockMemoryArray(blkmem, &(*hashset)->slots, nslots) );
@@ -3379,7 +3379,7 @@ SCIP_Bool SCIPhashsetExists(
    assert(hashset->slots != NULL);
 
    pos = hashSetDesiredPos(hashset, element);
-   nslots = SCIPhashsetGetNSlots(hashset);
+   nslots = (uint32_t)SCIPhashsetGetNSlots(hashset);
    mask = nslots - 1;
    elemdistance = 0;
 
@@ -3421,7 +3421,7 @@ SCIP_RETCODE SCIPhashsetRemove(
    assert(element != NULL);
 
    pos = hashSetDesiredPos(hashset, element);
-   nslots = SCIPhashsetGetNSlots(hashset);
+   nslots = (uint32_t)SCIPhashsetGetNSlots(hashset);
    mask = nslots - 1;
    elemdistance = 0;
 
@@ -3478,8 +3478,6 @@ SCIP_RETCODE SCIPhashsetRemove(
 
       pos = nextpos;
    }
-
-   return SCIP_OKAY;
 }
 
 /** prints statistics about hash set usage */
@@ -3496,7 +3494,7 @@ void SCIPhashsetPrintStatistics(
 
    assert(hashset != NULL);
 
-   nslots = SCIPhashsetGetNSlots(hashset);
+   nslots = (uint32_t)SCIPhashsetGetNSlots(hashset);
    mask = nslots - 1;
 
    /* compute the maximum and average probe length */
@@ -3546,7 +3544,7 @@ int SCIPhashsetGetNElements(
    SCIP_HASHSET*         hashset             /**< hash set */
    )
 {
-   return hashset->nelements;
+   return (int)hashset->nelements;
 }
 
 /** gives the number of slots of a hash set */
@@ -3554,7 +3552,7 @@ int SCIPhashsetGetNSlots(
    SCIP_HASHSET*         hashset             /**< hash set */
    )
 {
-   return  1u << (64 - hashset->shift);
+   return (int) (1u << (64 - hashset->shift));
 }
 
 /** gives the array of hash set slots; contains all elements in indetermined order and may contain NULL values */
