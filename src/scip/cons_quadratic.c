@@ -7383,6 +7383,9 @@ SCIP_RETCODE generateCutNonConvex(
             {
                SCIP_Real bestval = refx * coef + refy * coef2 + constant;
                SCIP_Bool updaterelax = FALSE;
+#ifndef NDEBUG
+               SCIP_Real mccormick = bestval;
+#endif
 
                assert(conshdlrdata->bilinestimators != NULL);
                bilinestimator = &(conshdlrdata->bilinestimators[bilintermidx]);
@@ -7398,6 +7401,24 @@ SCIP_RETCODE generateCutNonConvex(
                   bilinestimator->ninequnderest, &coef, &coef2, &constant, &bestval, &updaterelax);
 
                SCIPdebugMsg(scip, "found better relaxation value: %u (%g)\n", updaterelax, bestval);
+
+#ifndef NDEBUG
+               /* check whether the new relaxation is under- or overestimating xy properly */
+               if( updaterelax )
+               {
+		  assert(SCIPisEQ(scip, bestval, coef * refx + coef2 * refy + constant));
+		  if( violside == SCIP_SIDETYPE_LEFT )
+		  {
+		     assert(SCIPisGE(scip, bestval, bilinterm->coef * refx * refy));
+		     assert(SCIPisLE(scip, bestval, mccormick));
+		  }
+		  else
+		  {
+		     assert(SCIPisLE(scip, bestval, bilinterm->coef * refx * refy));
+		     assert(SCIPisGE(scip, bestval, mccormick));
+		  }
+               }
+#endif
             }
          }
 
