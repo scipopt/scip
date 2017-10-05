@@ -2300,7 +2300,7 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
    if (lpi->solstat == XPRS_LP_UNBOUNDED && lpi->solmethod == 'p')
      return TRUE;
 
-   /* get number of primal infeasibilities and number of primal infeasibilities */
+   /* get number of primal infeasibilities and number of simplex iterations */
    CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_PRIMALINFEAS, &nInfeasible) );
    CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_SIMPLEXITER, &nIter) );
 
