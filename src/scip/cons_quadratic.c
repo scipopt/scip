@@ -7394,7 +7394,8 @@ SCIP_RETCODE generateCutNonConvex(
                SCIPvarGetName(bilinestimator->y), score, bilinestimator->score / bilinestimator->nupdates);
 
             /* compute tighter relaxation for xy if the current score is large enough */
-            if( SCIPisGE(scip, score, conshdlrdata->minscorebilinterms) )
+            if( SCIPisGE(scip, score, conshdlrdata->minscorebilinterms)
+               && bilinestimator->nineqoverest + bilinestimator->ninequnderest > 0 )
             {
                SCIP_Real bestval = refx * coef + refy * coef2 + constant;
                SCIP_Bool updaterelax = FALSE;
