@@ -6807,6 +6807,9 @@ SCIP_RETCODE separateAlternativeProofs(
 
       SCIP_CALL( proofsetAddSparseData(alternativeproofset, blkmem, cutcoefs, cutinds, cutnnz, cutrhs) );
 
+      /* apply coefficient tightening */
+      tightenCoefficients(set, transprob, alternativeproofset);
+
       SCIP_CALL( conflictInsertProofset(conflict, set, alternativeproofset) );
    }
 
@@ -6966,10 +6969,7 @@ SCIP_RETCODE tightenDualproof(
    }
 
    /* apply coefficient tightening to initial proof */
-   if( TRUE )
-   {
-      tightenCoefficients(set, transprob, proofset);
-   }
+   tightenCoefficients(set, transprob, proofset);
 
    return SCIP_OKAY;
 }
