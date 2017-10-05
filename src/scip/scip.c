@@ -24691,6 +24691,33 @@ int SCIPgetNCliques(
    return SCIPcliquetableGetNCliques(scip->cliquetable);
 }
 
+/** gets the number of cliques created so far by the cliquetable
+ *
+ *  @return number of cliques created so far by the cliquetable
+ *
+ *  @note cliques do not get automatically cleaned up after presolving. Use SCIPcleanupCliques()
+ *  to prevent inactive variables in cliques when retrieved via SCIPgetCliques(). This might reduce the number of cliques
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+int SCIPgetNCliquesCreated(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNCliquesCreated", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   return SCIPcliquetableGetNCliquesCreated(scip->cliquetable);
+}
+
 /** gets the array of cliques in the clique table
  *
  *  @return array of cliques in the clique table
@@ -30922,7 +30949,7 @@ SCIP_RETCODE SCIPprintRow(
 {
    assert(row != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPprintRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPprintRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    SCIProwPrint(row, scip->messagehdlr, file);
 
