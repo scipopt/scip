@@ -30,21 +30,22 @@ EMAILFROM="adm_timo <timo-admin@zib.de>"
 EMAILTO="adm_timo <timo-admin@zib.de>"
 
 # SCIP check files are check.TESTSET.VERSION.otherstuff.SETTING.{out,err,res,meta}
-BASEFILE="check/results/check.$TESTSET.*.$SETTING"
+BASEFILE="check/results/check.${TESTSET}.${SCIPVERSION}.*.${SETTING}"
 
 # evaluate the run and upload it to rubberband
 echo "Evaluating the run and uploading it to rubberband."
 cd check/
 PERF_MAIL=""
-if [ ${PERFORMANCE} == 'performance' ]; then
-  ./evalcheck_cluster.sh -R results/check.$TESTSET.*.$SETTING[.0-9]*eval > ${OUTPUT}
+if [ "${PERFORMANCE}" == "performance" ]; then
+  ./evalcheck_cluster.sh -R results/check.$TESTSET.${SCIPVERSION}.*.$SETTING[.0-9]*eval > ${OUTPUT}
+  cat ${OUTPUT}
   NEWRBID=`cat $OUTPUT | grep "rubberband.zib" |sed -e 's|https://rubberband.zib.de/result/||'`
   OLDRBID=`tail $RBDB -n 1`
   PERF_MAIL=`echo "The results of the weekly performance runs are ready. Take a look at https://rubberband.zib.de/result/${NEWRBID}?compare=${OLDRBID}"`
   echo $NEWRBID >> $RBDB
   rm ${OUTPUT}
 else
-  ./evalcheck_cluster.sh -R results/check.$TESTSET.*.$SETTING[.0-9]*eval
+  ./evalcheck_cluster.sh -R results/check.$TESTSET.${SCIPVERSION}.*.$SETTING[.0-9]*eval
 fi
 cd ..
 
@@ -123,7 +124,7 @@ if [ -n "$RESOLVEDINSTANCES" ]; then
 fi
 rm ${STILLFAILING}
 
-if [ ${PERFORMANCE} == 'performance' ]; then
+if [ "${PERFORMANCE}" == "performance" ]; then
    SUBJECT="WEEKLYPERF [BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING=$SETTING] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH]"
    echo -e "${PERF_MAIL}" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
 fi
