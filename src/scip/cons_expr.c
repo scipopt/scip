@@ -4531,7 +4531,8 @@ SCIP_DECL_CONSFREE(consFreeExpr)
       SCIPfreeMemory(scip, &nlhdlr);
    }
 
-   SCIPfreeBlockMemoryArray(scip, &conshdlrdata->nlhdlrs, conshdlrdata->nlhdlrssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->nlhdlrs, conshdlrdata->nlhdlrssize);
+   conshdlrdata->nlhdlrssize = 0;
 
    SCIPfreeMemory(scip, &conshdlrdata);
    SCIPconshdlrSetData(conshdlr, NULL);
