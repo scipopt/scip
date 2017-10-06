@@ -79,12 +79,314 @@ struct SCIP_PresolData
    SCIP_CONS**           genconss;           /**< list of generated constraints */
    int                   ngenconss;          /**< number of generated constraints */
    int                   nsymresacks;        /**< number of symresack constraints */
+   int                   norbits;            /**< number of non-trivial orbits of permutation group */
+   int*                  nvarsinorbits;      /**< number of variables per orbit */
+   int**                 orbits;             /**< array containing for each orbit an array with the variable indices in the orbit */
+   int                   ncomponents;        /**< number of components of symmetry group */
+   int*                  npermsincomponent;  /**< array containing number of permutations per component */
+   int**                 components;         /**< array containing for each components the corresponding permutations */
 };
 
 
 /*
  * Local methods
  */
+
+/** compute orbit of a variabe; the method MUST NOT be called if no symmetries were found
+ * or symmetries have not been computed yet */
+static
+SCIP_RETCODE computeOrbitVariable(
+   SCIP*                 scip,               /**< SCIP instance */
+   SCIP_PRESOLDATA*      presoldata,         /**< memory address of data of symmetry breaking presolver */
+   int**                 orbit,              /**< memory address of preliminary orbits array */
+   int                   i                   /**< index of variable for which the orbit should be computed */
+   )
+{
+   int** perms;
+   int nperms;
+   int npermvars;
+   int* curorbit;
+   int curorbitsize;
+   SCIP_Bool* varadded;
+   int j;
+   int p;
+   int curelem;
+   int image;
+   int norbits;
+
+   assert( orbit != NULL );
+   assert( i >= 0 );
+
+   nperms = presoldata->nperms;
+   assert( nperms > 0 );
+
+   perms = presoldata->perms;
+   npermvars = presoldata->npermvars;
+
+   /* initialize orbit of variable i */
+   SCIP_CALL( SCIPallocBufferArray(scip, &curorbit, npermvars - i) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varadded, npermvars - i) ); /* TODO: can we do better by using a map that says whether we have already added a variable to curorbit? */
+
+   for (j = 0; j < npermvars - i; ++j)
+      varadded[j] = FALSE;
+
+   curorbit[0] = i;
+   curorbitsize = 1;
+   varadded[0] = TRUE; /* theoretically, this is varadded[i - i] */
+
+   /* iterate over variables in curorbit and compute their images */
+   for (j = 0; j < curorbitsize; ++j)
+   {
+      curelem = curorbit[j];
+
+      for (p = 0; p < nperms; ++p)
+      {
+         image = perms[p][curelem];
+
+         /* found new element of the orbit of i */
+         if ( ! varadded[image - i] )
+         {
+            curorbit[curorbitsize++] = image;
+            varadded[image - i] = TRUE;
+
+            (*orbit)[image] = i;
+         }
+      }
+   }
+
+   /* orbit is non-trivial -> store it */
+   if ( curorbitsize > 1 )
+   {
+      norbits =  presoldata->norbits;
+
+      if ( norbits == 0 )
+      {
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(presoldata)->nvarsinorbits, 1) );
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(presoldata)->orbits, 1) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(presoldata)->nvarsinorbits, norbits, norbits + 1) );
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(presoldata)->orbits, norbits, norbits + 1) );
+      }
+
+      presoldata->nvarsinorbits[norbits] = curorbitsize;
+
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(presoldata)->orbits[norbits], curorbitsize) );
+      for (i = 0; i < curorbitsize; ++i)
+         presoldata->orbits[norbits][i] = curorbit[i];
+
+      presoldata->norbits = norbits + 1;
+   }
+
+   SCIPfreeBufferArray(scip, &varadded);
+   SCIPfreeBufferArray(scip, &curorbit);
+
+   return SCIP_OKAY;
+}
+
+
+/** compute orbits of symmetry group; the method MUST NOT be called if no symmetries were found
+ * or symmetries have not been computed yet */
+static
+SCIP_RETCODE computeGroupOrbits(
+   SCIP*                 scip,               /**< SCIP instance */
+   SCIP_PRESOLDATA*      presoldata          /**< pointer to data of symmetry breaking presolver */
+   )
+{
+   int npermvars;
+   int* orbit;
+   int i;
+
+   assert( scip != NULL );
+   assert( presoldata != NULL );
+
+   npermvars = presoldata->npermvars;
+
+   assert( npermvars > 0 );
+
+   /* init data structures*/
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbit, npermvars) );
+
+   /* initially, every variable is contained in its own orbit */
+   for (i = 0; i < npermvars; ++i)
+      orbit[i] = i;
+
+   /* find variable orbits */
+   presoldata->norbits = 0;
+
+   for (i = 0; i < npermvars; ++i)
+   {
+      /* if variable is not contained in an orbit of a previous variable */
+      if ( orbit[i] == i )
+      {
+         /* compute and store orbit */
+         SCIP_CALL( computeOrbitVariable(scip, presoldata, &orbit, i) );
+      }
+   }
+
+   /* free memory */
+   SCIPfreeBufferArray(scip, &orbit);
+
+#if 0
+   printf("\n\n\nTESTS\n\n");
+   printf("Number of orbits:\t\t%d\n", presoldata->norbits);
+   for (i = 0; i < presoldata->norbits; ++i)
+   {
+      int j;
+      printf("Orbit %d: Number of variables: %d\n", i, presoldata->nvarsinorbits[i]);
+      for (j = 0; j < presoldata->nvarsinorbits[i]; ++j)
+      {
+         printf("%d ", presoldata->orbits[i][j]);
+      }
+      printf("\n");
+   }
+#endif
+
+   return SCIP_OKAY;
+}
+
+
+/** compute components of symmetry group */
+static
+SCIP_RETCODE computeComponents(
+   SCIP*                 scip,               /**< SCIP instance */
+   SCIP_PRESOLDATA*      presoldata          /**< data of symmetry breaking presolver */
+   )
+{
+   int npermvars;
+   int nperms;
+   int** perms;
+   int* componentstoperm;
+   int i;
+   int j;
+   int k;
+   int npermsincomponent;
+   int curcomponent;
+   int ncomponents;
+   int componentcnt;
+   int start;
+   int newstart;
+   SCIP_Bool startchanged;
+
+   assert( presoldata != NULL );
+
+   nperms = presoldata->nperms;
+
+   presoldata->ncomponents = -1;
+
+   if ( nperms <= 0 )
+      return SCIP_OKAY;
+
+   /* at this point, we have at least one non-trivial permutation */
+   npermvars = presoldata->npermvars;
+   perms = presoldata->perms;
+
+   /* init array that assigns each permutation its component of the group */
+   SCIP_CALL( SCIPallocBufferArray(scip, &componentstoperm, nperms) );
+
+   for (i = 0; i < nperms; ++i)
+      componentstoperm[i] = i;
+   ncomponents = nperms;
+
+   /* check whether two permutations belong to the same component */
+   for (i = 0; i < nperms; ++i)
+   {
+      for (j = i + 1; j < nperms; ++j)
+      {
+         if ( componentstoperm[i] == componentstoperm[j] )
+            continue;
+
+         /* belong perms[i] and perms[j] to the same component? */
+         for (k = 0; k < npermvars; ++k)
+         {
+            /* both permutations belong to the same component */
+            if ( perms[i][k] != k && perms[j][k] != k )
+            {
+               componentstoperm[j] = componentstoperm[i];
+               --ncomponents;
+               break;
+            }
+         }
+      }
+   }
+   assert( ncomponents > 0 );
+
+   /* store data */
+   presoldata->ncomponents = ncomponents;
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->npermsincomponent, ncomponents) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->components, ncomponents) );
+
+   /* copy componentstoperm adequatly to components and npermsincomponent*/
+   componentcnt = 0;
+   start = 0;
+   newstart = 0;
+   startchanged = TRUE;
+   while ( startchanged )
+   {
+      startchanged = FALSE;
+      npermsincomponent = 0;
+      curcomponent = componentstoperm[start];
+
+      /* find number of permutations in current component and detect first perm in another permutation */
+      for (i = start; i < nperms; ++i)
+      {
+         if ( componentstoperm[i] == curcomponent )
+            ++npermsincomponent;
+         else if ( ! startchanged )
+         {
+            newstart = i;
+            startchanged = TRUE;
+         }
+      }
+
+      /* store number of permutations and permutation per component */
+      presoldata->npermsincomponent[componentcnt] = npermsincomponent;
+
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(presoldata->components[componentcnt]), npermsincomponent) );
+
+      j = 0;
+      for (i = start; i < nperms; ++i)
+      {
+         if ( componentstoperm[i] == curcomponent )
+            presoldata->components[componentcnt][j++] = i;
+      }
+
+      ++componentcnt;
+      start = newstart;
+   }
+
+   SCIPfreeBufferArray(scip, &componentstoperm);
+
+#if 0
+   printf("\n\n\nTESTS\n\n");
+   printf("Number of components:\t\t%d\n", presoldata->ncomponents);
+   for (i = 0; i < presoldata->ncomponents; ++i)
+   {
+      printf("Component %d: Number of perms: %d\n", i, presoldata->npermsincomponent[i]);
+      for (j = 0; j < presoldata->npermsincomponent[i]; ++j)
+      {
+         printf("%d ", presoldata->components[i][j]);
+      }
+      printf("\n");
+   }
+
+   printf("GENERATORS:");
+   for (i = 0; i < presoldata->nperms; ++i)
+   {
+      printf("generator %d:\n", i);
+      for (j = 0; j < presoldata->npermvars; ++j)
+      {
+         if ( presoldata->perms[i][j] != j )
+            printf("%d ", presoldata->perms[i][j]);
+      }
+      printf("\n");
+   }
+#endif
+
+   return SCIP_OKAY;
+}
 
 
 /** add symresack constraints */
@@ -192,6 +494,7 @@ static
 SCIP_DECL_PRESOLFREE(presolFreeSymbreak)
 {  /*lint --e{715}*/
    SCIP_PRESOLDATA* presoldata;
+   int i;
 
    assert( scip != NULL );
    assert( presol != NULL );
@@ -202,6 +505,18 @@ SCIP_DECL_PRESOLFREE(presolFreeSymbreak)
    /* free pointers to symmetry group and binary variables */
    if ( presoldata->ngenconss > 0 )
       SCIPfreeBlockMemoryArrayNull(scip, &presoldata->genconss, presoldata->ngenconss);
+
+   /* free orbit structures */
+   for (i = 0; i < presoldata->norbits; ++i)
+      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->orbits[i], presoldata->nvarsinorbits[i]);
+   SCIPfreeBlockMemoryArrayNull(scip, &presoldata->orbits, presoldata->norbits);
+   SCIPfreeBlockMemoryArrayNull(scip, &presoldata->nvarsinorbits, presoldata->norbits);
+
+   /* free components */
+   for (i = 0; i < presoldata->ncomponents; ++i)
+      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->components[i], presoldata->npermsincomponent[i]);
+    SCIPfreeBlockMemoryArrayNull(scip, &presoldata->components, presoldata->ncomponents);
+    SCIPfreeBlockMemoryArrayNull(scip, &presoldata->npermsincomponent, presoldata->ncomponents);
 
    SCIPfreeMemory(scip, &presoldata);
 
@@ -364,6 +679,10 @@ SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
       else if ( presoldata->nperms > 0 )
       {
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(presoldata->genconss), presoldata->nperms) );
+
+         SCIP_CALL( computeGroupOrbits(scip, presoldata) );
+
+         SCIP_CALL( computeComponents(scip, presoldata) );
       }
    }
 
@@ -442,6 +761,12 @@ SCIP_RETCODE SCIPincludePresolSymbreak(
    presoldata->ngenconss = 0;
    presoldata->genconss = NULL;
    presoldata->nperms = -1;
+   presoldata->norbits = -1;
+   presoldata->nvarsinorbits = NULL;
+   presoldata->orbits = NULL;
+   presoldata->ncomponents = -1;
+   presoldata->npermsincomponent = NULL;
+   presoldata->components = NULL;
 
    /* determine cons_symmetries constraint handler (preuse presol) */
    presol = SCIPfindPresol(scip, "symmetry");
