@@ -160,7 +160,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrValue(
 {
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
 
-   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, EXPRHDLR_NAME, "constant value", EXPRHDLR_PRECEDENCE, evalValue, NULL) );
+   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE, evalValue, NULL) );
    assert(exprhdlr != NULL);
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrValue, NULL) );
