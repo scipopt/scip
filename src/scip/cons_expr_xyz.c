@@ -229,6 +229,7 @@ static
 SCIP_DECL_CONSEXPR_EXPRHASH(hashXyz)
 {  /*lint --e{715}*/
    assert(expr != NULL);
+   assert(EXPRHDLR_HASHKEY != 0.0);
 
    SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
@@ -281,13 +282,20 @@ SCIP_RETCODE SCIPcreateConsExprExprXyz(
    SCIP_CONSEXPR_EXPR**  children            /**< children (can be NULL if nchildren is 0) */
    )
 {
-   SCIP_CONSEXPR_EXPRHDLR* exprhdlr = NULL;
+   SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
    SCIP_CONSEXPR_EXPRDATA* exprdata;
 
    assert(consexprhdlr != NULL);
    assert(expr != NULL);
 
-    exprhdlr = SCIPfindConsExprExprHdlr(consexprhdlr, EXPRHDLR_NAME);
+   exprhdlr = SCIPfindConsExprExprHdlr(consexprhdlr, EXPRHDLR_NAME);
+
+   if( exprhdlr != NULL )
+   {
+      SCIPerrorMessage("could not find %s expression handler -> abort\n", EXPRHDLR_NAME);
+      SCIPABORT();
+      return SCIP_ERROR;
+   }
 
    /* create expression data */
    exprdata = NULL;

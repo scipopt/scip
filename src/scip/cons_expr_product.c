@@ -51,22 +51,6 @@
 /** first values for 2^n */
 static const int poweroftwo[] = { 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192 };
 
-/** ensures that a block memory array has at least a given size
- *
- *  if cursize is 0, then *array1 can be NULL
- */
-#define ENSUREBLOCKMEMORYARRAYSIZE(scip, array1, cursize, minsize)      \
-   do {                                                                 \
-      int __newsize;                                                    \
-      assert((scip)  != NULL);                                          \
-      if( (cursize) >= (minsize) )                                      \
-         break;                                                         \
-      __newsize = SCIPcalcMemGrowSize(scip, minsize);                   \
-      assert(__newsize >= (minsize));                                   \
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(array1), cursize, __newsize) ); \
-      (cursize) = __newsize;                                            \
-   } while( FALSE )
-
 /** macro to activate/deactivate debugging information of simplify method */
 #ifdef SIMPLIFY_DEBUG
 #define debugSimplify                   printf
@@ -1056,7 +1040,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
    }
 
    /* build product expression from finalchildren and post-simplify */
-   debugSimplify("[simplifyProduct] finalchildren has length %d\n", listLength(finalchildren));
+   debugSimplify("[simplifyProduct] finalchildren has length %d\n", listLength(finalchildren)); /*lint !e506 !e681*/
 
    /* enforces SP10: if list is empty, return value */
    if( finalchildren == NULL )
@@ -1370,7 +1354,7 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffProduct)
    child = SCIPgetConsExprExprChildren(expr)[idx];
    assert(child != NULL);
    assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child)), "val") != 0);
-   assert(SCIPgetConsExprExprValue(child) != SCIP_INVALID);
+   assert(SCIPgetConsExprExprValue(child) != SCIP_INVALID); /*lint !e777*/
 
    if( !SCIPisZero(scip, SCIPgetConsExprExprValue(child)) )
       *val = SCIPgetConsExprExprValue(expr) / SCIPgetConsExprExprValue(child);
@@ -1394,7 +1378,7 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffProduct)
 /** expression interval evaluation callback */
 static
 SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalProduct)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    int c;
 
