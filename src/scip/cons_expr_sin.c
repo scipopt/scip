@@ -40,195 +40,7 @@
  * Local methods
  */
 
-/* TODO: put your local methods here, and declare them static */
-
 /*
- * Callback methods of expression handler
- */
-
-/** expression handler copy callback */
-static
-SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrSin)
-{  /*lint --e{715}*/
-   SCIP_CALL( SCIPincludeConsExprExprHdlrSin(scip, consexprhdlr) );
-   *valid = TRUE;
-
-   return SCIP_OKAY;
-}
-
-/** simplifies a sin expression
- * Evaluates the sine value function when its child is a value expression
- * TODO: add further simplifications
- */
-static
-SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySin)
-{  /*lint --e{715}*/
-   SCIP_CONSEXPR_EXPR* child;
-   SCIP_CONSHDLR* conshdlr;
-
-   assert(scip != NULL);
-   assert(expr != NULL);
-   assert(simplifiedexpr != NULL);
-   assert(SCIPgetConsExprExprNChildren(expr) == 1);
-
-   conshdlr = SCIPfindConshdlr(scip, "expr");
-   assert(conshdlr != NULL);
-
-   child = SCIPgetConsExprExprChildren(expr)[0];
-   assert(child != NULL);
-
-   /* check for value expression */
-   if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrValue(conshdlr) )
-   {
-      SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, simplifiedexpr, SIN(SCIPgetConsExprExprValueValue(child))) );
-   }
-   else
-   {
-      *simplifiedexpr = expr;
-
-      /* we have to capture it, since it must simulate a "normal" simplified call in which a new expression is created */
-      SCIPcaptureConsExprExpr(*simplifiedexpr);
-   }
-
-   return SCIP_OKAY;
-}
-
-/** expression data copy callback */
-static
-SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataSin)
-{  /*lint --e{715}*/
-   assert(targetscip != NULL);
-   assert(targetexprdata != NULL);
-   assert(targetexprdata != NULL);
-   assert(sourceexpr != NULL);
-   assert(SCIPgetConsExprExprData(sourceexpr) == NULL);
-
-   *targetexprdata = NULL;
-
-   return SCIP_OKAY;
-}
-
-/** expression data free callback */
-static
-SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataSin)
-{  /*lint --e{715}*/
-   assert(expr != NULL);
-
-   SCIPsetConsExprExprData(expr, NULL);
-
-   return SCIP_OKAY;
-}
-
-/** expression print callback */
-static
-SCIP_DECL_CONSEXPR_EXPRPRINT(printSin)
-{  /*lint --e{715}*/
-   assert(expr != NULL);
-
-   switch( stage )
-   {
-      case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
-      {
-         /* print function with opening parenthesis */
-         SCIPinfoMessage(scip, file, "%s(", EXPRHDLR_NAME);
-         break;
-      }
-
-      case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
-      {
-         assert(SCIPgetConsExprExprWalkCurrentChild(expr) == 0);
-         break;
-      }
-
-      case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
-      {
-         /* print closing parenthesis */
-         SCIPinfoMessage(scip, file, ")");
-         break;
-      }
-
-      case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
-      default: ;
-   }
-
-   return SCIP_OKAY;
-}
-
-/** expression parse callback */
-static
-SCIP_DECL_CONSEXPR_EXPRPARSE(parseSin)
-{
-   SCIP_CONSEXPR_EXPR* childexpr;
-
-   assert(expr != NULL);
-
-   /* parse child expression from remaining string */
-   SCIP_CALL( SCIPparseConsExprExpr(scip, consexprhdlr, string, endstring, &childexpr) );
-   assert(childexpr != NULL);
-
-   /* create sine expression */
-   SCIP_CALL( SCIPcreateConsExprExprSin(scip, consexprhdlr, expr, childexpr) );
-   assert(*expr != NULL);
-
-   /* release child expression since it has been captured by the absolute expression */
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &childexpr) );
-
-   *success = TRUE;
-
-   return SCIP_OKAY;
-}
-
-/** expression (point-) evaluation callback */
-static
-SCIP_DECL_CONSEXPR_EXPREVAL(evalSin)
-{  /*lint --e{715}*/
-   assert(expr != NULL);
-   assert(SCIPgetConsExprExprNChildren(expr) == 1);
-   assert(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]) != SCIP_INVALID); /*lint !e777*/
-
-   *val = SIN(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]));
-
-   return SCIP_OKAY;
-}
-
-/** expression derivative evaluation callback */
-static
-SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffSin)
-{  /*lint --e{715}*/
-   SCIP_CONSEXPR_EXPR* child;
-
-   assert(expr != NULL);
-   assert(SCIPgetConsExprExprData(expr) != NULL);
-   assert(idx >= 0 && idx < SCIPgetConsExprExprNChildren(expr));
-   assert(SCIPgetConsExprExprValue(expr) != SCIP_INVALID); /*lint !e777*/
-
-   child = SCIPgetConsExprExprChildren(expr)[idx];
-   assert(child != NULL);
-   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child)), "val") != 0);
-
-   *val = COS(SCIPgetConsExprExprValue(child));
-
-   return SCIP_OKAY;
-}
-
-/** expression interval evaluation callback */
-static
-SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalSin)
-{  /*lint --e{715}*/
-   SCIP_INTERVAL childinterval;
-
-   assert(expr != NULL);
-   assert(SCIPgetConsExprExprNChildren(expr) == 1);
-
-   childinterval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]);
-   assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), childinterval));
-
-   SCIPintervalSin(SCIPinfinity(scip), interval, childinterval);
-
-   return SCIP_OKAY;
-}
-
-/**
  * finds root of given function using newton procedure from given starting point
  * returns SCIP_INVALID if the procedure failed or iteration limit was reached
  */
@@ -662,6 +474,191 @@ SCIP_RETCODE computeCutsSin(
          }
       }
    }
+
+   return SCIP_OKAY;
+}
+/*
+ * Callback methods of expression handler
+ */
+
+/** expression handler copy callback */
+static
+SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrSin)
+{  /*lint --e{715}*/
+   SCIP_CALL( SCIPincludeConsExprExprHdlrSin(scip, consexprhdlr) );
+   *valid = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** simplifies a sin expression
+ * Evaluates the sine value function when its child is a value expression
+ * TODO: add further simplifications
+ */
+static
+SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySin)
+{  /*lint --e{715}*/
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_CONSHDLR* conshdlr;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(simplifiedexpr != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+
+   conshdlr = SCIPfindConshdlr(scip, "expr");
+   assert(conshdlr != NULL);
+
+   child = SCIPgetConsExprExprChildren(expr)[0];
+   assert(child != NULL);
+
+   /* check for value expression */
+   if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrValue(conshdlr) )
+   {
+      SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, simplifiedexpr, SIN(SCIPgetConsExprExprValueValue(child))) );
+   }
+   else
+   {
+      *simplifiedexpr = expr;
+
+      /* we have to capture it, since it must simulate a "normal" simplified call in which a new expression is created */
+      SCIPcaptureConsExprExpr(*simplifiedexpr);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** expression data copy callback */
+static
+SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataSin)
+{  /*lint --e{715}*/
+   assert(targetscip != NULL);
+   assert(targetexprdata != NULL);
+   assert(targetexprdata != NULL);
+   assert(sourceexpr != NULL);
+   assert(SCIPgetConsExprExprData(sourceexpr) == NULL);
+
+   *targetexprdata = NULL;
+
+   return SCIP_OKAY;
+}
+
+/** expression data free callback */
+static
+SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataSin)
+{  /*lint --e{715}*/
+   assert(expr != NULL);
+
+   SCIPsetConsExprExprData(expr, NULL);
+
+   return SCIP_OKAY;
+}
+
+/** expression print callback */
+static
+SCIP_DECL_CONSEXPR_EXPRPRINT(printSin)
+{  /*lint --e{715}*/
+   assert(expr != NULL);
+
+   switch( stage )
+   {
+      case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
+      {
+         /* print function with opening parenthesis */
+         SCIPinfoMessage(scip, file, "%s(", EXPRHDLR_NAME);
+         break;
+      }
+
+      case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
+      {
+         assert(SCIPgetConsExprExprWalkCurrentChild(expr) == 0);
+         break;
+      }
+
+      case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
+      {
+         /* print closing parenthesis */
+         SCIPinfoMessage(scip, file, ")");
+         break;
+      }
+
+      case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
+      default: ;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** expression parse callback */
+static
+SCIP_DECL_CONSEXPR_EXPRPARSE(parseSin)
+{
+   SCIP_CONSEXPR_EXPR* childexpr;
+
+   assert(expr != NULL);
+
+   /* parse child expression from remaining string */
+   SCIP_CALL( SCIPparseConsExprExpr(scip, consexprhdlr, string, endstring, &childexpr) );
+   assert(childexpr != NULL);
+
+   /* create sine expression */
+   SCIP_CALL( SCIPcreateConsExprExprSin(scip, consexprhdlr, expr, childexpr) );
+   assert(*expr != NULL);
+
+   /* release child expression since it has been captured by the absolute expression */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &childexpr) );
+
+   *success = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** expression (point-) evaluation callback */
+static
+SCIP_DECL_CONSEXPR_EXPREVAL(evalSin)
+{  /*lint --e{715}*/
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+   assert(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]) != SCIP_INVALID); /*lint !e777*/
+
+   *val = SIN(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]));
+
+   return SCIP_OKAY;
+}
+
+/** expression derivative evaluation callback */
+static
+SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffSin)
+{  /*lint --e{715}*/
+   SCIP_CONSEXPR_EXPR* child;
+
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprData(expr) != NULL);
+   assert(idx >= 0 && idx < SCIPgetConsExprExprNChildren(expr));
+   assert(SCIPgetConsExprExprValue(expr) != SCIP_INVALID); /*lint !e777*/
+
+   child = SCIPgetConsExprExprChildren(expr)[idx];
+   assert(child != NULL);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child)), "val") != 0);
+
+   *val = COS(SCIPgetConsExprExprValue(child));
+
+   return SCIP_OKAY;
+}
+
+/** expression interval evaluation callback */
+static
+SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalSin)
+{  /*lint --e{715}*/
+   SCIP_INTERVAL childinterval;
+
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+
+   childinterval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]);
+   assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), childinterval));
+
+   SCIPintervalSin(SCIPinfinity(scip), interval, childinterval);
 
    return SCIP_OKAY;
 }
