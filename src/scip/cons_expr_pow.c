@@ -86,7 +86,7 @@ SCIP_DECL_CONSEXPR_EXPRCMP(comparePow)
    expo1 = SCIPgetConsExprExprPowExponent(expr1);
    expo2 = SCIPgetConsExprExprPowExponent(expr2);
 
-   return  expo1 == expo2 ? 0 : expo1 < expo2 ? -1 : 1;
+   return expo1 == expo2 ? 0 : expo1 < expo2 ? -1 : 1; /*lint !e777*/
 }
 
 /** simplifies a pow expression.
@@ -94,7 +94,7 @@ SCIP_DECL_CONSEXPR_EXPRCMP(comparePow)
  */
 static
 SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyPow)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* base;
    SCIP_CONSHDLR* conshdlr;
    SCIP_Real exponent;
@@ -480,7 +480,7 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffPow)
    assert(expr != NULL);
    assert(SCIPgetConsExprExprData(expr) != NULL);
    assert(idx >= 0 && idx < SCIPgetConsExprExprNChildren(expr));
-   assert(SCIPgetConsExprExprValue(expr) != SCIP_INVALID);
+   assert(SCIPgetConsExprExprValue(expr) != SCIP_INVALID); /*lint !e777*/
 
    child = SCIPgetConsExprExprChildren(expr)[idx];
    assert(child != NULL);
@@ -501,7 +501,7 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffPow)
 /** expression interval evaluation callback */
 static
 SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalPow)
-{
+{  /*lint --e{715}*/
    SCIP_INTERVAL childinterval;
    SCIP_Real exponent;
 

@@ -194,7 +194,7 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffExp)
    assert(expr != NULL);
    assert(idx >= 0 && idx < SCIPgetConsExprExprNChildren(expr));
    assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(SCIPgetConsExprExprChildren(expr)[idx])), "val") != 0);
-   assert(SCIPgetConsExprExprValue(expr) != SCIP_INVALID);
+   assert(SCIPgetConsExprExprValue(expr) != SCIP_INVALID); /*lint !e777*/
 
    *val = SCIPgetConsExprExprValue(expr);
 
@@ -204,7 +204,7 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffExp)
 /** expression interval evaluation callback */
 static
 SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalExp)
-{
+{  /*lint --e{715}*/
    SCIP_INTERVAL childinterval;
 
    assert(expr != NULL);

@@ -839,7 +839,7 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffSum)
 /** expression interval evaluation callback */
 static
 SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalSum)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    SCIP_INTERVAL suminterval;
    int c;
