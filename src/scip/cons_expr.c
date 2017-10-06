@@ -6056,6 +6056,8 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
          SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &factors[1], children[1], -1.0) );
          SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, expr, 2, factors, 1.0) );
 
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &factors[1]) );
+
          break;
       }
 
