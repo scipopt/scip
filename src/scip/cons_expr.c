@@ -1644,7 +1644,7 @@ int nlhdlrCmp(
    h2 = (SCIP_CONSEXPR_NLHDLR*)hdlr2;
 
    if( h1->priority != h2->priority )
-      return h1->priority - h2->priority;
+      return (int)(h1->priority - h2->priority);
 
    return strcmp(h1->name, h2->name);
 }
@@ -1703,7 +1703,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(bwdiffExprVisitChild)
    SCIP_Real derivative;
 
    assert(expr != NULL);
-   assert(expr->evalvalue != SCIP_INVALID);
+   assert(expr->evalvalue != SCIP_INVALID); /*lint !e777*/
    assert(expr->children[expr->walkcurrentchild] != NULL);
 
    bwdiffdata = (EXPRBWDIFF_DATA*) data;
@@ -1739,7 +1739,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(bwdiffExprVisitChild)
       SCIP_CALL( (*expr->exprhdlr->bwdiff)(scip, expr, expr->walkcurrentchild, &derivative) );
    }
 
-   if( derivative == SCIP_INVALID )
+   if( derivative == SCIP_INVALID ) /*lint !e777*/
    {
       bwdiffdata->aborted = TRUE;
       *result = SCIP_CONSEXPREXPRWALK_ABORT;
@@ -3207,6 +3207,7 @@ SCIP_RETCODE makeClassicExpr(
    else if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr), "pow") == 0 )
    {
       assert(nchildren == 1);
+      assert(children != NULL && children[0] != NULL);
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), targetexpr, SCIP_EXPR_REALPOWER, *children,
             SCIPgetConsExprExprPowExponent(sourceexpr)) );
    }
@@ -3427,6 +3428,7 @@ SCIP_RETCODE computeBranchingScores(
 
    for( i = 0; i < nconss; ++i )
    {
+      assert(conss != NULL);
       assert(conss[i] != NULL);
 
       consdata = SCIPconsGetData(conss[i]);
@@ -3471,7 +3473,7 @@ SCIP_RETCODE registerBranchingCandidates(
 
    for( c = 0; c < nconss; ++c )
    {
-      assert(conss[c] != NULL);
+      assert(conss != NULL && conss[c] != NULL);
 
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
@@ -3542,7 +3544,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(createAuxVarsEnterExpr)
 
       /* @todo add an unique variable name */
       SCIP_CALL( SCIPcreateVarBasic(scip, &expr->auxvar, name, MAX( -SCIPinfinity(scip), expr->interval.inf ),
-               MIN( SCIPinfinity(scip), expr->interval.sup ), 0.0, SCIP_VARTYPE_CONTINUOUS) );
+               MIN( SCIPinfinity(scip), expr->interval.sup ), 0.0, SCIP_VARTYPE_CONTINUOUS) ); /*lint !e666*/
       SCIP_CALL( SCIPaddVar(scip, expr->auxvar) );
       ++(conshdlrdata->auxvarid);
 
@@ -4237,13 +4239,13 @@ SCIP_RETCODE enforceConstraint(
    /* try to separate the LP solution */
    minviolation = MIN(0.75*maxviol, conshdlrdata->mincutviolationenfofac * SCIPfeastol(scip));  /*lint !e666*/
    minviolation = MAX(minviolation, SCIPfeastol(scip));  /*lint !e666*/
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, minviolation, result) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, minviolation, result) );
 
    if( *result == SCIP_CUTOFF || *result == SCIP_SEPARATED )
       return SCIP_OKAY;
 
    /* find branching candidates */
-   SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, NULL, &nnotify) );
+   SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, sol, &nnotify) );
    SCIPdebugMsg(scip, "registered %d external branching candidates\n", nnotify);
 
    /* all variables have been fixed -> cutoff node */
@@ -6020,6 +6022,8 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
       case SCIP_EXPR_PLUS:
       {
          assert(nchildren == 2);
+         assert(children != NULL && children[0] != NULL && children[1] != NULL);
+
          SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, expr, 2, children, NULL, 0.0) );
 
          break;
@@ -6030,6 +6034,8 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
          SCIP_Real coefs[2] = {1.0, -1.0};
 
          assert(nchildren == 2);
+         assert(children != NULL && children[0] != NULL && children[1] != NULL);
+
          SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, expr, 2, children, coefs, 0.0) );
 
          break;
@@ -6038,6 +6044,7 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
       case SCIP_EXPR_MUL:
       {
          assert(nchildren == 2);
+         assert(children != NULL && children[0] != NULL && children[1] != NULL);
 
          SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, expr, 2, children, 1.0) );
 
@@ -6049,6 +6056,8 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
          SCIP_CONSEXPR_EXPR* factors[2];
 
          assert(nchildren == 2);
+         assert(children != NULL && children[0] != NULL && children[1] != NULL);
+
          factors[0] = children[0];
          SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &factors[1], children[1], -1.0) );
          SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, expr, 2, factors, 1.0) );
@@ -6059,6 +6068,8 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
       case SCIP_EXPR_SQUARE:
       {
          assert(nchildren == 1);
+         assert(children != NULL && children[0] != NULL);
+
          SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, expr, *children, 2.0) );
 
          break;
@@ -6067,6 +6078,8 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
       case SCIP_EXPR_SQRT:
       {
          assert(nchildren == 1);
+         assert(children != NULL && children[0] != NULL);
+
          SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, expr, *children, 0.5) );
 
          break;
@@ -6079,6 +6092,8 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
          exponent = SCIPexprgraphGetNodeRealPowerExponent(node);
 
          assert(nchildren == 1);
+         assert(children != NULL && children[0] != NULL);
+
          SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, expr, *children, exponent) );
 
          break;
@@ -6091,6 +6106,8 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
          exponent = (SCIP_Real)SCIPexprgraphGetNodeIntPowerExponent(node);
 
          assert(nchildren == 1);
+         assert(children != NULL && children[0] != NULL);
+
          SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, expr, *children, exponent) );
 
          break;
@@ -6684,7 +6701,7 @@ SCIP_RETCODE SCIPcomputeConsExprExprGradient(
    }
 
    /* check if expression could not be evaluated */
-   if( SCIPgetConsExprExprValue(expr) == SCIP_INVALID )
+   if( SCIPgetConsExprExprValue(expr) == SCIP_INVALID ) /*lint !e777*/
    {
       expr->derivative = SCIP_INVALID;
       return SCIP_OKAY;
@@ -6896,7 +6913,7 @@ SCIP_Real SCIPgetConsExprExprPartialDiff(
       return 0.0;
 
    /* return 0.0 for value expression */
-   if( expr->derivative == SCIP_INVALID )
+   if( expr->derivative == SCIP_INVALID ) /*lint !e777*/
       return SCIP_INVALID;
 
    /* use variable to expressions mapping which is stored as the expression handler data */
@@ -7758,9 +7775,9 @@ SCIP_RETCODE SCIPmassageConsExprExprCut(
    assert(scip != NULL);
    assert(cut != NULL);
    assert(*cut != NULL);
-   assert(minviolation >= 0.0 || minviolation == -SCIPinfinity(scip));
+   assert(minviolation >= 0.0 || minviolation == -SCIPinfinity(scip)); /*lint !e777*/
 
-   if( minviolation != -SCIPinfinity(scip) )
+   if( minviolation != -SCIPinfinity(scip) ) /*lint !e777*/
    {
       /* get current violation */
       violation = -SCIPgetRowSolFeasibility(scip, *cut, sol);
@@ -7892,7 +7909,7 @@ SCIP_RETCODE SCIPmassageConsExprExprCut(
    }
 
    /* check violation again if cut was changed */
-   if( violation == SCIP_INVALID && minviolation != -SCIPinfinity(scip) )
+   if( violation == SCIP_INVALID && minviolation != -SCIPinfinity(scip) ) /*lint !e777*/
    {
       violation = -SCIPgetRowSolFeasibility(scip, *cut, sol);
 
@@ -8000,13 +8017,13 @@ void SCIPsetConsExprNlhdlrInitExit(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
    SCIP_DECL_CONSEXPR_NLHDLRINIT((*init)),   /**< initialization callback (can be NULL) */
-   SCIP_DECL_CONSEXPR_NLHDLREXIT((*exit))    /**< deinitialization callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_NLHDLREXIT((*exit_))    /**< deinitialization callback (can be NULL) */
 )
 {
    assert(nlhdlr != NULL);
 
    nlhdlr->init = init;
-   nlhdlr->exit = exit;
+   nlhdlr->exit = exit_;
 }
 
 /** set the separation callback of a nonlinear handler */
@@ -8042,7 +8059,7 @@ const char* SCIPgetConsExprNlhdlrDesc(
 }
 
 /** gives priority of nonlinear handler */
-int SCIPgetConsExprNlhdlrPriority(
+unsigned int SCIPgetConsExprNlhdlrPriority(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
 )
 {
