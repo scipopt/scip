@@ -1041,7 +1041,7 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    int                   ncols,              /**< length of integrality array */
    int*                  intInfo             /**< integrality array (0: continuous, 1: integer) */
    )
-{
+{  /*lint --e{715}*/
    SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -2210,7 +2210,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    if( CPXgetnumrows(lpi->cpxenv, lpi->cpxlp) == 0 )
    {
       CHECK_ZERO( lpi->messagehdlr, CPXgetintparam(lpi->cpxenv, CPX_PARAM_PREIND, &presolving) );
-      CPXsetintparam(lpi->cpxenv, CPX_PARAM_PREIND, CPX_ON);
+      CHECK_ZERO( lpi->messagehdlr, CPXsetintparam(lpi->cpxenv, CPX_PARAM_PREIND, CPX_ON) );
    }
 #endif
 
@@ -2222,7 +2222,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    /* restore previous value for presolving */
    if( CPXgetnumrows(lpi->cpxenv, lpi->cpxlp) == 0 )
    {
-      CPXsetintparam(lpi->cpxenv, CPX_PARAM_PREIND, presolving);
+      CHECK_ZERO( lpi->messagehdlr, CPXsetintparam(lpi->cpxenv, CPX_PARAM_PREIND, presolving) ); /*lint !e644*/
    }
 #endif
 

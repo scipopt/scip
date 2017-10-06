@@ -4538,7 +4538,8 @@ SCIP_DECL_CONSFREE(consFreeExpr)
       SCIPfreeMemory(scip, &nlhdlr);
    }
 
-   SCIPfreeBlockMemoryArray(scip, &conshdlrdata->nlhdlrs, conshdlrdata->nlhdlrssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->nlhdlrs, conshdlrdata->nlhdlrssize);
+   conshdlrdata->nlhdlrssize = 0;
 
    SCIPfreeMemory(scip, &conshdlrdata);
    SCIPconshdlrSetData(conshdlr, NULL);
@@ -6014,7 +6015,7 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
          assert(varidx >= 0);
          assert(varidx < SCIPexprgraphGetNVars(exprgraph));
 
-         SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, expr, SCIPexprgraphGetVars(exprgraph)[varidx]) );
+         SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, expr, (SCIP_VAR*)SCIPexprgraphGetVars(exprgraph)[varidx]) );
 
          break;
       }
@@ -6061,6 +6062,8 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
          factors[0] = children[0];
          SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &factors[1], children[1], -1.0) );
          SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, expr, 2, factors, 1.0) );
+
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &factors[1]) );
 
          break;
       }

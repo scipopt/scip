@@ -1320,7 +1320,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySolutionPool)
    }
 
    /* parse solution number */
-   (void) SCIPsnprintf(prompt, SCIP_MAXSTRLEN-1, "index of solution [0-%d]: ", nsols-1);
+   (void) SCIPsnprintf(prompt, SCIP_MAXSTRLEN, "index of solution [0-%d]: ", nsols-1);
 
    SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &idxstr, &endoffile) );
 
@@ -3347,7 +3347,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecValidateSolve)
       char *refstrs[2];
       SCIP_Real refvals[2] = {SCIP_INVALID, SCIP_INVALID};
       const char* primaldual[] = {"primal", "dual"};
-      char promptbuffer[100];
+      char prompt[SCIP_MAXSTRLEN];
       int i;
 
       /* read in primal and dual reference values */
@@ -3355,8 +3355,9 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecValidateSolve)
       {
          char * endptr;
          SCIP_Bool endoffile;
-         sprintf(promptbuffer, "Please enter %s validation reference bound (or use +/-infinity) :", primaldual[i]);
-         SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, promptbuffer, &(refstrs[i]), &endoffile) );
+
+         (void)SCIPsnprintf(prompt, SCIP_MAXSTRLEN, "Please enter %s validation reference bound (or use +/-infinity) :", primaldual[i]);
+         SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &(refstrs[i]), &endoffile) );
 
          /* treat no input as SCIP_UNKNOWN */
          if( endoffile || strncmp(refstrs[i], "\0", 1) == 0 ) /*lint !e840*/

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_dualagg.h
+ * @ingroup PRESOLVERS
  * @brief  aggregate variables by dual arguments
  * @author Dieter Weninger
  *
