@@ -15166,7 +15166,7 @@ SCIP_RETCODE freeSolve(
    /* switch stage to EXITSOLVE */
    scip->set->stage = SCIP_STAGE_EXITSOLVE;
 
-   /* deinitialize conflict store */
+   /* cleanup the conflict storage */
    SCIP_CALL( SCIPconflictstoreClean(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->reopt) );
 
    /* inform plugins that the branch and bound process is finished */
@@ -15253,7 +15253,7 @@ SCIP_RETCODE freeReoptSolve(
    }
 
    /* deinitialize conflict store */
-   SCIP_CALL( SCIPconflictstoreClean(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->reopt) );
+   SCIP_CALL( SCIPconflictstoreClear(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->reopt) );
 
    /* invalidate the dual bound */
    SCIPprobInvalidateDualbound(scip->transprob);
@@ -15470,12 +15470,12 @@ SCIP_RETCODE freeTransform(
 
    if( !reducedfree )
    {
-      /* clean the conflict store
+      /* clear the conflict store
        *
        * since the conflict store can contain transformed constraints we need to remove them. the store will be finally
        * freed in SCIPfreeProb().
        */
-      SCIP_CALL( SCIPconflictstoreClean(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->reopt) );
+      SCIP_CALL( SCIPconflictstoreClear(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->reopt) );
 
    }
 
