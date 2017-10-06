@@ -756,8 +756,7 @@ Test(solve, test5)
    /* set objective limit */
    SCIP_CALL_PARAM( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_FROMSCRATCH, 1) );
    SCIP_CALL_PARAM( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_PRESOLVING, 0) );
-   SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_UOBJLIM, 0.0) );
-   SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_LOBJLIM, 0.0) );
+   SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_OBJLIM, 0.0) );
 
    /* set basis */
    SCIP_CALL( SCIPlpiSetBase(lpi, cstat, rstat) );
@@ -859,7 +858,7 @@ Test(solve, test6)
    SCIP_CALL( SCIPlpiClearState(lpi) );
 
    /* set objlimit */
-   SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_UOBJLIM, 4.320412501) );
+   SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_OBJLIM, 4.320412501) );
 
    /* solve problem */
    SCIP_CALL( SCIPlpiSolveDual(lpi) );
@@ -894,7 +893,7 @@ Test(solve, test6)
    SCIP_CALL( SCIPlpiChgBounds(lpi, 12, varind, lb, ub) );
 
    /* set objlimit */
-   SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_UOBJLIM, -2.0625) );
+   SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_OBJLIM, -2.0625) );
 
    SCIP_CALL( SCIPlpiClearState(lpi) );
 

@@ -31,6 +31,8 @@ interface:
   SCIPactivateSolViolationUpdates() and SCIPdeactivateSolViolationUpdates() for activating/deactivating violation updates globally
 - added method SCIPcliqueGetIndex() which returns the unique identifier for the given clique
 - added method SCIPgetNCliquesCreated() which returns the number of cliques created so far
+- unify handling of objective limit by only using one parameter and not distinguishing w.r.t. lower and upper limits
+- replaced LPI parameters SCIP_LPPAR_LOBJLIM and SCIP_LPPAR_UOBJLIM by SCIP_LPPAR_OBJLIM
 
 performance improvements:
 - use disjoint set to reduce peak memory usage and time to compute of clique table connectedness information
