@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_redvub.h
+ * @ingroup PRESOLVERS
  * @brief  remove redundant variable upper bound constraints
  * @author Dieter Weninger
  */

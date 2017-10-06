@@ -107,7 +107,7 @@ SCIP_RETCODE SCIPdivesetReset(
    diveset->nsolcalls = 0;
 
    /* reset the random number generator */
-   SCIPrandomSetSeed(diveset->randnumgen, (unsigned int) SCIPsetInitializeRandomSeed(set, diveset->initialseed));
+   SCIPrandomSetSeed(diveset->randnumgen, (unsigned int) SCIPsetInitializeRandomSeed(set, (int)(diveset->initialseed % INT_MAX)));
 
    return SCIP_OKAY;
 }
@@ -225,8 +225,9 @@ SCIP_RETCODE SCIPdivesetCreate(
     * we create the random number generator directly, not through the public SCIP API
     */
    diveset->initialseed = initialseed;
-   SCIP_CALL( SCIPrandomCreate(&diveset->randnumgen, blkmem, (unsigned int) SCIPsetInitializeRandomSeed(set, diveset->initialseed)) );
 
+   /* simply use 0 as initial seed, the seed is reset in SCIPdivesetReset, anyway */
+   SCIP_CALL( SCIPrandomCreate(&diveset->randnumgen, blkmem, 0) );
 
    /* for convenience, the name gets inferred from the heuristic to which the diveset is added if no name is provided */
    divesetname = (name == NULL ? SCIPheurGetName(heur) : name);
@@ -239,6 +240,8 @@ SCIP_RETCODE SCIPdivesetCreate(
    SCIP_CALL( heurAddDiveset(heur, diveset) );
    diveset->sol = NULL;
    diveset->divetypemask = divetypemask;
+
+   SCIP_CALL( SCIPdivesetReset(diveset, set) );
 
    /* add collection of diving heuristic specific parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/minreldepth", diveset->name);
@@ -312,7 +315,6 @@ SCIP_RETCODE SCIPdivesetCreate(
             "more general constraint handler diving variable selection?",
             &diveset->onlylpbranchcands, FALSE, onlylpbranchcands, NULL, NULL) );
 
-   SCIP_CALL( SCIPdivesetReset(diveset, set) );
 
    return SCIP_OKAY;
 }

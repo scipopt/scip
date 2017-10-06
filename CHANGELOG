@@ -9,6 +9,8 @@ features:
 - added interface to the NLP solver WORHP; set WORHP=true in order to link to WORHP
 - added interface to the NLP solver FilterSQP; set FILTERSQP=true in order to link to FilterSQP
 - new numerical solution violations get printed when checksol is called
+- added analysis of the conflict graph which identifies possible aggregations via the search for
+  strongly connected components and may detect infeasible assignments on the way
 
 parameters:
 - new parameter misc/debugsol to specify a debug solution that should be checked during the solve
@@ -27,11 +29,20 @@ interface:
 - added methods SCIPupdateSolIntegralityViolation(), SCIPupdateSolBoundViolation(), SCIPupdateSolLPRowViolation(),
   SCIPupdateSolConsViolation() and SCIPupdateSolLPConsViolation() for updating numerical solution violations, as well as
   SCIPactivateSolViolationUpdates() and SCIPdeactivateSolViolationUpdates() for activating/deactivating violation updates globally
+- added method SCIPcliqueGetIndex() which returns the unique identifier for the given clique
+- added method SCIPgetNCliquesCreated() which returns the number of cliques created so far
+- unify handling of objective limit by only using one parameter and not distinguishing w.r.t. lower and upper limits
+- replaced LPI parameters SCIP_LPPAR_LOBJLIM and SCIP_LPPAR_UOBJLIM by SCIP_LPPAR_OBJLIM
 
 performance improvements:
 - use disjoint set to reduce peak memory usage and time to compute of clique table connectedness information
 - add and use RESTRICT macro for some pointers
 - improved the implementation of SCIPvarGetActiveRepresentatives
+
+fixed bugs:
+- fixed bug in feasibility pump heuristic when switching on the usefp20 parameter
+- fixed potential ressource leaks in SCIPsolveLinearProb, expr.c, sepa_eccuts, cons_cumulative.c, cons_nonlinear.c
+
 
 SCIP version 4.0.1
 ==================
@@ -72,6 +83,10 @@ fixed bugs:
 - afternode heuristics are now called even if the node limit was reached and the solving process will be stopped
   after the current node
 - fixed bug when activating probing mode with a non-empty separation storage
+- fixed bug in varbound coefficient tightening: if a varbound constraint only contained one variable afterwards,
+  it may have been deleted without applying the induced bound, if the change was too small, this is now forced
+- fixed potential wrong locks update after a varbound constraint became redundant in coefficient tightening
+- fixed potentially wrong cleanup of fixed variables in nonlinear constraint handler
 
 performance improvements:
 - widened a bottleneck in simplifying long signomial sums in a nonlinear constraint

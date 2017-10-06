@@ -13,42 +13,38 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   presol_dualinfer.h
- * @ingroup PRESOLVERS
- * @brief  dual inference presolver
- * @author Dieter Weninger
- *
- * This presolver exploits dual information for primal variable fixings:
- * 1. The first method is an enhanced dual fixing technique.
- * 2. The second method does dual bound strengthening on continuous primal
- *    variables and applies complementary slackness \f$(A^T y - c)_i > 0 \Rightarrow x_i = 0\f$
- *    for fixing primal variables at their lower bound.
- *
+/**@file   enforelaximplemented.c
+ * @brief  unit test to check if all core constraint handlers implement enforelax callback
+ * @author Tristan Gally
  */
-
-/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
-#ifndef __SCIP_PRESOL_DUALINFER_H__
-#define __SCIP_PRESOL_DUALINFER_H__
-
 
 #include "scip/scip.h"
+#include "scip/scipdefplugins.h"
+#include "scip/cons.h"
+#include "include/scip_test.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/** creates the dual inference presolver and includes it in SCIP
- *
- * @ingroup PresolverIncludes
+/** All conshdlrs should implement enforelax callback, otherwise relaxation solution cannot be enforced. The callback
+ *  is non-mandatory only to not break the code of users who are not interested in relaxations anyways.
  */
-extern
-SCIP_RETCODE SCIPincludePresolDualinfer(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
+Test(cons, enforelaximplemented, .description = "tests if all constraint handlers implement enforelax callback")
+{
+   SCIP* scip;
+   SCIP_CONSHDLR** conshdlrs;
+   int nconshdlrs;
+   int h;
 
-#ifdef __cplusplus
+   SCIP_CALL( SCIPcreate(&scip) );
+
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
+
+   /* iterate over all conshdlrs and check if they implement the enforelax callback */
+   nconshdlrs = SCIPgetNConshdlrs(scip);
+   conshdlrs = SCIPgetConshdlrs(scip);
+   for( h = 0; h < nconshdlrs; h++ )
+   {
+      cr_expect_not_null(conshdlrs[h]->consenforelax, "conshdlr %s should implement enforelax callback",
+            SCIPconshdlrGetName(conshdlrs[h]));
+   }
+
+   SCIP_CALL( SCIPfree(&scip) );
 }
-#endif
-
-#endif

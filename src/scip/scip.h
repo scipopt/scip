@@ -7903,6 +7903,8 @@ SCIP_RETCODE SCIPgetActiveVars(
  *  returns 0 if the variable has been aggregated out or fixed in presolving.
  *
  *  @pre This method can only be called if @p scip is in stage \ref SCIP_STAGE_SOLVING
+ *
+ *  @note The return value of this method should be used carefully if the dual feasibility check was explictely disabled.
  */
 EXTERN
 SCIP_Real SCIPgetVarRedcost(
@@ -7917,6 +7919,8 @@ SCIP_Real SCIPgetVarRedcost(
  *  returns 0 if the variable has been aggregated out or fixed in presolving.
  *
  *  @pre This method can only be called if @p scip is in stage \ref SCIP_STAGE_SOLVING
+ *
+ *  @note The return value of this method should be used carefully if the dual feasibility check was explictely disabled.
  */
 EXTERN
 SCIP_Real SCIPgetVarImplRedcost(
@@ -9488,6 +9492,26 @@ SCIP_RETCODE SCIPcleanupCliques(
  */
 EXTERN
 int SCIPgetNCliques(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets the number of cliques created so far by the cliquetable
+ *
+ *  @return number of cliques created so far by the cliquetable
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+EXTERN
+int SCIPgetNCliquesCreated(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -12846,6 +12870,8 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
  *
  *  @note calling this method in SCIP_STAGE_SOLVED is only recommended to experienced users and should only be called
  *        for pure LP instances (without presolving)
+ *
+ *  @note The return value of this method should be used carefully if the dual feasibility check was explictely disabled.
  */
 EXTERN
 SCIP_Real SCIPgetColRedcost(

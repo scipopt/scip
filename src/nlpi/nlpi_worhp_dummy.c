@@ -31,7 +31,7 @@ SCIP_RETCODE SCIPcreateNlpSolverWorhp(
    *nlpi = NULL;
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 /** gets string that identifies Worhp (version number) */
 const char* SCIPgetSolverNameWorhp(void)
@@ -40,14 +40,12 @@ const char* SCIPgetSolverNameWorhp(void)
 }
 
 /** gets string that describes Worhp (version number) */
-extern
 const char* SCIPgetSolverDescWorhp(void)
 {
    return "this is WORHP";
 }
 
 /** returns whether Worhp is available, i.e., whether it has been linked in */
-extern
 SCIP_Bool SCIPisWorhpAvailableWorhp(void)
 {
    return FALSE;

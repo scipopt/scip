@@ -1745,8 +1745,18 @@ SCIP_RETCODE SCIPlpiGetObjsen(
    SCIP_OBJSEN*          objsen              /**< pointer to store objective sense */
    )
 {
-   SCIPerrorMessage("SCIPlpiGetObjsen() has not been implemented yet.\n");
-   return SCIP_LPERROR;
+   MSKobjsensee mskobjsen;
+
+   assert(MosekEnv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->task != NULL);
+
+   SCIPdebugMessage("Calling SCIPlpiGetObjsen (%d)\n", lpi->lpid);
+
+   MOSEK_CALL( MSK_getobjsense(lpi->task, &mskobjsen) );
+   *objsen = (mskobjsen == MSK_OBJECTIVE_SENSE_MINIMIZE ? SCIP_OBJSEN_MINIMIZE : SCIP_OBJSEN_MAXIMIZE);
+
+   return SCIP_OKAY;
 }
 
 /** gets objective coefficients from LP problem object */
@@ -4533,12 +4543,17 @@ SCIP_RETCODE SCIPlpiGetRealpar(
       MOSEK_CALL( MSK_getdouparam(lpi->task, MSK_DPAR_INTPNT_TOL_REL_GAP, dval) );
       break;
 #endif
-   case SCIP_LPPAR_LOBJLIM:                   /* lower objective limit */
-      MOSEK_CALL( MSK_getdouparam(lpi->task, MSK_DPAR_LOWER_OBJ_CUT, dval) );
-      break;
-   case SCIP_LPPAR_UOBJLIM:                   /* upper objective limit */
-      MOSEK_CALL( MSK_getdouparam(lpi->task, MSK_DPAR_UPPER_OBJ_CUT, dval) );
-      break;
+   case SCIP_LPPAR_OBJLIM:                    /* objective limit */
+      MSKobjsensee objsen;
+      MOSEK_CALL( MSK_getobjsense(lpi->task, &objsen) );
+      if (objsen == MSK_OBJECTIVE_SENSE_MINIMIZE)
+      {
+         MOSEK_CALL( MSK_getdouparam(lpi->task, MSK_DPAR_UPPER_OBJ_CUT, &bound) );
+      }
+      else /* objsen == MSK_OBJECTIVE_SENSE_MAX */
+      {
+         MOSEK_CALL( MSK_getdouparam(lpi->task, MSK_DPAR_LOWER_OBJ_CUT, &bound) );
+      }
    case SCIP_LPPAR_LPTILIM:                   /* LP time limit */
       MOSEK_CALL( MSK_getdouparam(lpi->task, MSK_DPAR_OPTIMIZER_MAX_TIME, dval) );
       break;
