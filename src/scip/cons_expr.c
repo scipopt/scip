@@ -6007,7 +6007,7 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
          assert(varidx >= 0);
          assert(varidx < SCIPexprgraphGetNVars(exprgraph));
 
-         SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, expr, SCIPexprgraphGetVars(exprgraph)[varidx]) );
+         SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, expr, (SCIP_VAR*)SCIPexprgraphGetVars(exprgraph)[varidx]) );
 
          break;
       }
