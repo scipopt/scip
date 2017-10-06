@@ -647,7 +647,6 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffSin)
    SCIP_CONSEXPR_EXPR* child;
 
    assert(expr != NULL);
-   assert(SCIPgetConsExprExprData(expr) != NULL);
    assert(idx >= 0 && idx < SCIPgetConsExprExprNChildren(expr));
    assert(SCIPgetConsExprExprValue(expr) != SCIP_INVALID); /*lint !e777*/
 
