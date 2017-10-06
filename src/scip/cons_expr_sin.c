@@ -43,111 +43,61 @@
  * Local methods
  */
 
-/**
- *  finds root of given function using newton procedure from given starting point
- *  returns SCIP_INVALID if the procedure failed or iteration limit was reached
+/** evaluates the function a*x + b - sin(x) for some coefficient a and constant b at a given point p
+ *  the constants a and b are expected to be stored in that order in params
  */
 static
-SCIP_Real newtonProcedure(
-   SCIP_Real(*function)(SCIP_Real, SCIP_Real* params, int nparams),          /**< pointer to function for which roots are computed */
-   SCIP_Real(*derivative)(SCIP_Real, SCIP_Real* params, int nparams),        /**< pointer to derivative of above function */
-   SCIP_Real*            params,                                             /**< parameters needed for function (can be NULL) */
-   int                   nparams,                                            /**< number of parameters (can be 0) */
-   SCIP_Real             x,                                                  /**< starting point */
-   SCIP_Real             eps,                                                /**< tolerance */
-   int                   k                                                   /**< iteration limit */
-   )
-{
-   SCIP_Real result = x;
-   int iteration = 0;
-
-   assert(function != NULL);
-   assert(derivative != NULL);
-   assert(params != NULL || nparams == 0);
-   assert(eps > 0.0);
-   assert(k >= 0);
-   assert(x != SCIP_INVALID); /*lint !e777*/
-
-   while( iteration < k )
-   {
-      SCIP_Real deriv = derivative(result, params, nparams);
-
-      /* if we arrive at a stationary point, the procedure is aborted */
-      if( REALABS(deriv) <= eps || deriv == SCIP_INVALID ) /*lint !e777*/
-         return SCIP_INVALID;
-
-      result = result - function(result, params, nparams) / derivative(result, params, nparams);
-
-      /* if new point is within eps-range of 0, we are done */
-      if( REALABS(function(result, params, nparams)) <= eps )
-         break;
-
-      ++iteration;
-   }
-
-   if( k == iteration )
-      return SCIP_INVALID;
-   else
-      return result;
-}
-
-/** evaluates the function a*x + b - sin(x) for some coefficient a and constant b at a given point p */
-static
-SCIP_Real function1(
-   SCIP_Real             p,                  /**< point where to evaluate */
-   SCIP_Real*            params,             /**< array which stores a and b in this order (nothing more) */
-   int                   nparams             /**< number of parameters (expected be 2) */
-   )
+SCIP_DECL_FUNCTIONVALUE(function1)
 {
    assert(params != NULL);
    assert(nparams == 2);
 
-   return params[0]*p + params[1] - SIN(p);
+   return params[0]*point + params[1] - SIN(point);
 }
 
-/** evaluates the derivative of a*x + b - sin(x) for some coefficient a and constant b at a given point p */
+/** evaluates the derivative of a*x + b - sin(x) for some coefficient a and constant b at a given point p
+ *  the constants a and b are expected to be stored in that order in params
+ */
 static
-SCIP_Real derivative1(
-   SCIP_Real             p,                  /**< point where to evaluate */
-   SCIP_Real*            params,             /**< array which stores a and b in this order (nothing more) */
-   int                   nparams             /**< number of parameters (expected be 2) */
-   )
+SCIP_DECL_FUNCTIONVALUE(derivative1)
 {
    assert(params != NULL);
    assert(nparams == 2);
 
-   return params[0] - COS(p);
+   return params[0] - COS(point);
 }
 
-/** evaluates the function sin(x) + (alpha-x)*cos(x) - sin(alpha) for some constant alpha at a given point p */
+/** evaluates the function sin(x) + (alpha - x)*cos(x) - sin(alpha) for some constant alpha at a given point p
+ *  the constant alpha is expected to be stored in params
+ * */
 static
-SCIP_Real function2(
-   SCIP_Real             p,                  /**< point where to evaluate */
-   SCIP_Real*            params,             /**< pointer to alpha (nothing more) */
-   int                   nparams             /**< number of parameters (expected be 1) */
-   )
+SCIP_DECL_FUNCTIONVALUE(function2)
 {
    assert(params != NULL);
    assert(nparams == 1);
 
-   return SIN(p) + (params[0] - p) * COS(p) - SIN(params[0]);
+   return SIN(point) + (params[0] - point) * COS(point) - SIN(params[0]);
 }
 
-/** evaluates the derivative of sin(x) + (alpha-x)*cos(x) - sin(alpha) for some constant alpha at a given point p */
+/** evaluates the derivative of sin(x) + (alpha - x)*cos(x) - sin(alpha) for some constant alpha at a given point p
+ *  the constant alpha is expected to be stored in params
+ */
 static
-SCIP_Real derivative2(
-   SCIP_Real             p,                  /**< point where to evaluate */
-   SCIP_Real*            params,             /**< pointer to alpha (nothing more) */
-   int                   nparams             /**< number of parameters (expected be 1) */
-   )
+SCIP_DECL_FUNCTIONVALUE(derivative2)
 {
    assert(params != NULL);
    assert(nparams == 1);
 
-   return (p - params[0]) * SIN(p);
+   return (point - params[0]) * SIN(point);
 }
 
-/** helper function to separate a given point; needed for proper unittest */
+/** helper function to create cuts for point- or initial separation
+ *
+ *  A total of 6 different cuts can be generated. All except soltangent are independent of a specific solution and
+ *  use only the bounds of the child variable. If their pointers are passed with NULL, the respective coputation
+ *  is not performed at all. If one of the computations failes or turns out to be irrelevant, the respective argument
+ *  pointer is set to NULL.
+ */
 static
 SCIP_RETCODE computeCutsSin(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -159,7 +109,9 @@ SCIP_RETCODE computeCutsSin(
    SCIP_ROW**            rtangent,           /**< pointer to store the right tangent */
    SCIP_ROW**            lmidtangent,        /**< pointer to store the left middle tangent */
    SCIP_ROW**            rmidtangent,        /**< pointer to store the right middle tangent */
-   SCIP_ROW**            soltangent          /**< pointer to store the solution tangent */
+   SCIP_ROW**            soltangent,         /**< pointer to store the solution tangent */
+   SCIP_Bool             overestimate,       /**< whether overestimating cuts are wanted */
+   SCIP_Bool             underestimate       /**< whether underestimating cuts are wanted */
    )
 {
    SCIP_CONSEXPR_EXPR* child;
@@ -170,10 +122,8 @@ SCIP_RETCODE computeCutsSin(
    SCIP_Real childub;                    /* upper bound of x */
    SCIP_Real shiftedlbhalf;              /* lb mod pi */
    SCIP_Real shiftedubhalf;              /* ub mod pi */
-   SCIP_Real shiftedlbfull;              /* lb mod 2pi */
-   SCIP_Real shiftedubfull;              /* ub mod 2pi */
+   SCIP_Bool isoverestimating;           /* whether a computed cut is overestimating */
 
-   SCIP_Real violation;
    SCIP_Real refpoint;
    char name[SCIP_MAXSTRLEN];
 
@@ -183,6 +133,7 @@ SCIP_RETCODE computeCutsSin(
    assert(expr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
    assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
+   assert(overestimate || underestimate);
 
    /* get expression data */
    auxvar = SCIPgetConsExprExprLinearizationVar(expr);
@@ -204,17 +155,13 @@ SCIP_RETCODE computeCutsSin(
    /* compute shifted bounds for case evaluation */
    shiftedlbhalf = fmod(childlb, M_PI);
    shiftedubhalf = fmod(childub, M_PI);
-   shiftedlbfull = fmod(childlb, 2*M_PI);
-   shiftedubfull = fmod(childub, 2*M_PI);
    if( childlb < 0.0 )
    {
       shiftedlbhalf += M_PI;
-      shiftedlbfull += 2*M_PI;
    }
    if( childub < 0.0 )
    {
       shiftedubhalf += M_PI;
-      shiftedubfull += 2*M_PI;
    }
 
    /*
@@ -239,20 +186,27 @@ SCIP_RETCODE computeCutsSin(
          params[0] = (SIN(childub) - SIN(childlb)) / (childub - childlb);
          params[1] = SIN(childub) - params[0] * childub;
 
-         /* depending on bay, cut is over- or underestimating */
-         if( shiftedlbfull < M_PI )
-         {
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, secant, conshdlr, name, -SCIPinfinity(scip), -params[1],
-                  TRUE, FALSE, FALSE) );
-         }
-         else
+         /* inside the negative bay the cut is overestimating */
+         isoverestimating = (SIN(childlb) < 0.0 || (SCIPisZero(scip, SIN(childlb)) && COS(childlb) < 0.0));
+
+         /* inside the negative bay the cut is overestimating */
+         if( isoverestimating && overestimate )
          {
             SCIP_CALL( SCIPcreateEmptyRowCons(scip, secant, conshdlr, name, -params[1], SCIPinfinity(scip),
                   TRUE, FALSE, FALSE) );
+
+            SCIP_CALL( SCIPaddVarToRow(scip, *secant, auxvar, -1.0) );
+            SCIP_CALL( SCIPaddVarToRow(scip, *secant, childvar, params[0]) );
+         }
+         else if( !isoverestimating && underestimate )
+         {
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, secant, conshdlr, name, -SCIPinfinity(scip), -params[1],
+                  TRUE, FALSE, FALSE) );
+
+            SCIP_CALL( SCIPaddVarToRow(scip, *secant, auxvar, -1.0) );
+            SCIP_CALL( SCIPaddVarToRow(scip, *secant, childvar, params[0]) );
          }
 
-         SCIP_CALL( SCIPaddVarToRow(scip, *secant, auxvar, -1.0) );
-         SCIP_CALL( SCIPaddVarToRow(scip, *secant, childvar, params[0]) );
       }
    }
 
@@ -268,20 +222,25 @@ SCIP_RETCODE computeCutsSin(
          params[0] = COS(childlb);
          params[1] = SIN(childlb) - params[0] * childlb;
 
-         /* depending on bay, cut is over- or underestimating */
-         if( shiftedlbfull >= M_PI )
-         {
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, ltangent, conshdlr, name, -SCIPinfinity(scip), -params[1],
-                  TRUE, FALSE, FALSE) );
-         }
-         else
+         /* inside the positive bay the cut ist overestimating */
+         isoverestimating = (SIN(childlb) > 0.0 || (SCIPisZero(scip, SIN(childlb)) && COS(childlb) > 0.0));
+
+         if( isoverestimating && overestimate )
          {
             SCIP_CALL( SCIPcreateEmptyRowCons(scip, ltangent, conshdlr, name, -params[1], SCIPinfinity(scip),
                   TRUE, FALSE, FALSE) );
-         }
 
-         SCIP_CALL( SCIPaddVarToRow(scip, *ltangent, auxvar, -1.0) );
-         SCIP_CALL( SCIPaddVarToRow(scip, *ltangent, childvar, params[0]) );
+            SCIP_CALL( SCIPaddVarToRow(scip, *ltangent, auxvar, -1.0) );
+            SCIP_CALL( SCIPaddVarToRow(scip, *ltangent, childvar, params[0]) );
+         }
+         else if( !isoverestimating && underestimate )
+         {
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, ltangent, conshdlr, name, -SCIPinfinity(scip), -params[1],
+                  TRUE, FALSE, FALSE) );
+
+            SCIP_CALL( SCIPaddVarToRow(scip, *ltangent, auxvar, -1.0) );
+            SCIP_CALL( SCIPaddVarToRow(scip, *ltangent, childvar, params[0]) );
+         }
       }
    }
 
@@ -297,30 +256,36 @@ SCIP_RETCODE computeCutsSin(
          params[0] = COS(childub);
          params[1] = SIN(childub) - params[0] * childub;
 
-         /* depending on bay, cut is over- or underestimating */
-         if( shiftedubfull > M_PI || shiftedubfull == 0.0)
-         {
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, rtangent, conshdlr, name, -SCIPinfinity(scip), -params[1],
-                  TRUE, FALSE, FALSE) );
-         }
-         else
+         /* inside the positive bay the cut ist overestimating */
+         isoverestimating = (SIN(childub) > 0.0 || (SCIPisZero(scip, SIN(childlb)) && COS(childlb) < 0.0));
+
+         if( isoverestimating && overestimate )
          {
             SCIP_CALL( SCIPcreateEmptyRowCons(scip, rtangent, conshdlr, name, -params[1], SCIPinfinity(scip),
                   TRUE, FALSE, FALSE) );
-         }
 
-         SCIP_CALL( SCIPaddVarToRow(scip, *rtangent, auxvar, -1.0) );
-         SCIP_CALL( SCIPaddVarToRow(scip, *rtangent, childvar, params[0]) );
+            SCIP_CALL( SCIPaddVarToRow(scip, *rtangent, auxvar, -1.0) );
+            SCIP_CALL( SCIPaddVarToRow(scip, *rtangent, childvar, params[0]) );
+
+         }
+         else if( !isoverestimating && underestimate )
+         {
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, rtangent, conshdlr, name, -SCIPinfinity(scip), -params[1],
+                  TRUE, FALSE, FALSE) );
+
+            SCIP_CALL( SCIPaddVarToRow(scip, *rtangent, auxvar, -1.0) );
+            SCIP_CALL( SCIPaddVarToRow(scip, *rtangent, childvar, params[0]) );
+
+         }
       }
    }
 
    /* compute left middle tangent, that is tangent at some other point which goes through (lb,sin(lb)) */
-   if( lmidtangent != NULL )
+   if( lmidtangent != NULL && (secant == NULL || *secant == NULL) )
    {
       SCIP_Real tangentpoint;
       SCIP_Real connectionpoint;
       SCIP_Real testpoint;
-      SCIP_Bool overestimate;
 
       *lmidtangent = NULL;
 
@@ -340,33 +305,35 @@ SCIP_RETCODE computeCutsSin(
 
          /* determine whether the cut is under- or overestimating */
          testpoint = 0.5 * (connectionpoint - childlb);
-         overestimate = SCIPisGT(scip, params[0] * testpoint + params[1] - SIN(testpoint),  0.0);
+         isoverestimating = SCIPisGT(scip, params[0] * testpoint + params[1] - SIN(testpoint),  0.0);
 
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sin_lmidtangent_%s", SCIPvarGetName(childvar));
 
-         if( overestimate )
+         if( isoverestimating && overestimate )
          {
             SCIP_CALL( SCIPcreateEmptyRowCons(scip, lmidtangent, conshdlr, name, -params[1], -SCIPinfinity(scip),
                   TRUE, FALSE, FALSE) );
+
+            SCIP_CALL( SCIPaddVarToRow(scip, *lmidtangent, auxvar, -1.0) );
+            SCIP_CALL( SCIPaddVarToRow(scip, *lmidtangent, childvar, params[0]) );
          }
-         else
+         else if( !isoverestimating && underestimate )
          {
             SCIP_CALL( SCIPcreateEmptyRowCons(scip, lmidtangent, conshdlr, name, -SCIPinfinity(scip), -params[1],
                   TRUE, FALSE, FALSE) );
-         }
 
-         SCIP_CALL( SCIPaddVarToRow(scip, *lmidtangent, auxvar, -1.0) );
-         SCIP_CALL( SCIPaddVarToRow(scip, *lmidtangent, childvar, params[0]) );
+            SCIP_CALL( SCIPaddVarToRow(scip, *lmidtangent, auxvar, -1.0) );
+            SCIP_CALL( SCIPaddVarToRow(scip, *lmidtangent, childvar, params[0]) );
+         }
       }
    }
 
    /* compute right middle tangent, that is tangent at some other point which goes through (ub,sin(ub)) */
-   if( rmidtangent != NULL )
+   if( rmidtangent != NULL && (secant == NULL || *secant != NULL) )
    {
       SCIP_Real tangentpoint;
       SCIP_Real connectionpoint;
       SCIP_Real testpoint;
-      SCIP_Bool overestimate;
 
       *rmidtangent = NULL;
 
@@ -386,72 +353,51 @@ SCIP_RETCODE computeCutsSin(
 
          /* determine whether the cut is under- or overestimating */
          testpoint = 0.5 * (childub - connectionpoint);
-         overestimate = SCIPisGT(scip, params[0] * testpoint + params[1] - SIN(testpoint),  0.0);
+         isoverestimating = SCIPisGT(scip, params[0] * testpoint + params[1] - SIN(testpoint),  0.0);
 
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sin_rmidtangent_%s", SCIPvarGetName(childvar));
 
-         if( overestimate )
+         if( isoverestimating && overestimate )
          {
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, rmidtangent, conshdlr, name, -params[1], -SCIPinfinity(scip),
-                  TRUE, FALSE, FALSE) );
-         }
-         else
-         {
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, rmidtangent, conshdlr, name, -SCIPinfinity(scip), -params[1], TRUE,
-                  FALSE, FALSE) );
-         }
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, lmidtangent, conshdlr, name, -params[1], -SCIPinfinity(scip),
+               TRUE, FALSE, FALSE) );
 
-         SCIP_CALL( SCIPaddVarToRow(scip, *rmidtangent, auxvar, -1.0) );
-         SCIP_CALL( SCIPaddVarToRow(scip, *rmidtangent, childvar, params[0]) );
+            SCIP_CALL( SCIPaddVarToRow(scip, *lmidtangent, auxvar, -1.0) );
+            SCIP_CALL( SCIPaddVarToRow(scip, *lmidtangent, childvar, params[0]) );
+         }
+         else if( !isoverestimating && underestimate )
+         {
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, lmidtangent, conshdlr, name, -SCIPinfinity(scip), -params[1],
+               TRUE, FALSE, FALSE) );
+
+            SCIP_CALL( SCIPaddVarToRow(scip, *lmidtangent, auxvar, -1.0) );
+            SCIP_CALL( SCIPaddVarToRow(scip, *lmidtangent, childvar, params[0]) );
+         }
       }
    }
 
    /* compute tangent at solution point */
    if( soltangent != NULL )
    {
-      SCIP_Real shiftedpointfull;
       SCIP_Real shiftedpointhalf;
       SCIP_Real startingpoint;
       SCIP_Real intersection;
-      SCIP_Bool overestimate;
 
       *soltangent = NULL;
 
-      /* compute the violation; this determines whether we need to over- or underestimate */
-      violation = SIN(SCIPgetSolVal(scip, sol, childvar)) - SCIPgetSolVal(scip, sol, auxvar);
-
-      /* determine if we need to under- or overestimate */
-      overestimate = SCIPisLT(scip, violation, 0.0);
       refpoint = SCIPgetSolVal(scip, sol, childvar);
 
-      /* compute refpoint mod 2*pi and refpoint mod pi */
-      shiftedpointfull = fmod(refpoint, 2*M_PI);
+      /* compute refpoint mod pi */
       shiftedpointhalf = fmod(refpoint, M_PI);
-      if( shiftedpointfull < 0.0 )
+      if( refpoint < 0.0 )
       {
-         shiftedpointfull += 2 * M_PI;
          shiftedpointhalf += M_PI;
       }
 
-      /*
-       * in the following cases the tangent will not cut the solution off:
-       * (a) there is no violation
-       * (b) the point does not lie within the bounds
-       * (c) the bounds are too far off
-       * (d) the point is a root or local extremum of sine
-       * (e) the point lies in a bay where the tangent doesn't cut it off anyway
-       */
-      if( !SCIPisEQ(scip, violation, 0.0)                                  /* (a) */
-         && !SCIPisLT(scip, refpoint, childlb)                             /* (b) */
-         && !SCIPisGT(scip, refpoint, childub)                             /* (b) */
-         && !SCIPisGE(scip, refpoint - childlb, 2*M_PI)                    /* (c) */
-         && !SCIPisGE(scip, childub - refpoint, 2*M_PI)                    /* (c) */
-         && !SCIPisEQ(scip, shiftedpointhalf, 0.0)                         /* (d) */
-         && !SCIPisEQ(scip, shiftedpointhalf, 0.5*M_PI)                    /* (d) */
-         && !(overestimate && SCIPisGT(scip, shiftedpointfull, M_PI))      /* (e) */
-         && !(!overestimate && SCIPisLT(scip, shiftedpointfull, M_PI)) )   /* (e) */
+      /* if the point is too far away from the bounds or is at a multiple of pi, the cut will not help */
+      if( SCIPisLE(scip, refpoint - childlb, 2*M_PI) && SCIPisGE(scip, childub - refpoint, 2*M_PI)
+         && !SCIPisZero(scip, shiftedpointhalf) )
       {
-
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sin_soltangent_%s", SCIPvarGetName(childvar));
 
          params[0] = COS(refpoint);
@@ -459,30 +405,35 @@ SCIP_RETCODE computeCutsSin(
 
          /* choose starting point for newton such that the computed root is not refpoint */
          if( SCIPisGT(scip, shiftedpointhalf, 0.5*M_PI) )
-            startingpoint = refpoint + M_PI;
+            startingpoint = refpoint + 2.0*M_PI;
          else
-            startingpoint = refpoint - M_PI;
+            startingpoint = refpoint - 2.0*M_PI;
 
          /* use newton procedure to test if cut is valid */
-
          intersection = newtonProcedure(function1, derivative1, params, 2, startingpoint, NEWTON_PRECISION,
             NEWTON_NITERATIONS);
+         assert(!SCIPisEQ(scip, intersection, refpoint));
 
          if( intersection != SCIP_INVALID && (intersection <= childlb || intersection >= childub) ) /*lint !e777*/
          {
-            if( overestimate )
-            {
-               SCIP_CALL( SCIPcreateEmptyRowCons(scip, soltangent, conshdlr, name, -params[1], -SCIPinfinity(scip),
-                     TRUE, FALSE, FALSE) );
-            }
-            else
-            {
-               SCIP_CALL( SCIPcreateEmptyRowCons(scip, soltangent, conshdlr, name, -SCIPinfinity(scip), -params[1],
-                     TRUE, FALSE, FALSE) );
-            }
+            isoverestimating = (SIN(intersection) > 0.0);
 
-            SCIP_CALL( SCIPaddVarToRow(scip, *soltangent, auxvar, -1.0) );
-            SCIP_CALL( SCIPaddVarToRow(scip, *soltangent, childvar, params[0]) );
+            if( isoverestimating && overestimate )
+            {
+               SCIP_CALL( SCIPcreateEmptyRowCons(scip, lmidtangent, conshdlr, name, -params[1], -SCIPinfinity(scip),
+                  TRUE, FALSE, FALSE) );
+
+               SCIP_CALL( SCIPaddVarToRow(scip, *lmidtangent, auxvar, -1.0) );
+               SCIP_CALL( SCIPaddVarToRow(scip, *lmidtangent, childvar, params[0]) );
+            }
+            else if( !isoverestimating && underestimate )
+            {
+               SCIP_CALL( SCIPcreateEmptyRowCons(scip, lmidtangent, conshdlr, name, -SCIPinfinity(scip), -params[1],
+                  TRUE, FALSE, FALSE) );
+
+               SCIP_CALL( SCIPaddVarToRow(scip, *lmidtangent, auxvar, -1.0) );
+               SCIP_CALL( SCIPaddVarToRow(scip, *lmidtangent, childvar, params[0]) );
+            }
          }
       }
    }
@@ -685,7 +636,8 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSin)
 
    *infeasible = FALSE;
 
-   SCIP_CALL( computeCutsSin(scip, conshdlr, expr, NULL, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4], NULL) );
+   SCIP_CALL( computeCutsSin(scip, conshdlr, expr, NULL, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4], NULL,
+         TRUE, TRUE) );
 
    for( i = 0; i < 5; ++i)
    {
@@ -713,14 +665,36 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSin)
 static
 SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSin)
 {
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_VAR* auxvar;
+   SCIP_VAR* childvar;
    SCIP_ROW* cuts[4] = {NULL, NULL, NULL, NULL};
    SCIP_Real violation;
+   SCIP_Bool overestimate;
    SCIP_Bool infeasible;
    int i;
+
+   /* get expression data */
+   auxvar = SCIPgetConsExprExprLinearizationVar(expr);
+   assert(auxvar != NULL);
+   child = SCIPgetConsExprExprChildren(expr)[0];
+   assert(child != NULL);
+   childvar = SCIPgetConsExprExprLinearizationVar(child);
+   assert(childvar != NULL);
 
    infeasible = FALSE;
    *ncuts = 0;
    *result = SCIP_DIDNOTFIND;
+
+   /* compute the violation; this determines whether we need to over- or underestimate */
+   violation = exp(SCIPgetSolVal(scip, sol, childvar)) - SCIPgetSolVal(scip, sol, auxvar);
+
+   /* check if there is a violation */
+   if( SCIPisEQ(scip, violation, 0.0) )
+      return SCIP_OKAY;
+
+   /* determine if we need to under- or overestimate */
+   overestimate = SCIPisLT(scip, violation, 0.0);
 
    /* compute all possible inequalities; the resulting cuts are stored in the cuts array
     *
@@ -729,7 +703,8 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSin)
     *  - cuts[1] = secant connecting (ub,sin(ubx)) with right tangent point
     *  - cuts[3] = solution tangent (for convex / concave segments that globally under- / overestimate)
     */
-   SCIP_CALL( computeCutsSin(scip, conshdlr, expr, sol, &cuts[0], NULL, NULL, &cuts[1], &cuts[2], &cuts[3]) );
+   SCIP_CALL( computeCutsSin(scip, conshdlr, expr, sol, &cuts[0], NULL, NULL, &cuts[1], &cuts[2], &cuts[3],
+         overestimate, !overestimate) );
 
    for( i = 0; i < 4; ++i )
    {

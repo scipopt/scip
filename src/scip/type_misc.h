@@ -171,6 +171,9 @@ typedef struct SCIP_DisjointSet SCIP_DISJOINTSET;
 /** returns the hash value of the key */
 #define SCIP_DECL_HASHKEYVAL(x) uint64_t x (void* userptr, void* key)
 
+/** evaluates the real function at the given point */
+#define SCIP_DECL_FUNCTIONVALUE(x) SCIP_Real x (SCIP_Real point, SCIP_Real* params, int nparams)
+
 
 #ifdef __cplusplus
 }

@@ -1721,6 +1721,20 @@ SCIP_Bool SCIPfindSimpleRational(
    SCIP_Longint*         denominator         /**< pointer to store the denominator d of the rational number */
    );
 
+/** Performs the Newton Procedure from a given starting point to compute a root of the given function with
+ *  specified precision and maximum number of iterations. If the procedure fails, SCIP_INVALID is returned.
+ */
+EXTERN
+SCIP_Real newtonProcedure(
+   SCIP_Real(*function)(SCIP_Real, SCIP_Real* params, int nparams),       /**< pointer to function for which roots are computed */
+   SCIP_Real(*derivative)(SCIP_Real, SCIP_Real* params, int nparams),     /**< pointer to derivative of above function */
+   SCIP_Real*            params,                                          /**< parameters needed for function (can be NULL) */
+   int                   nparams,                                         /**< number of parameters (can be 0) */
+   SCIP_Real             x,                                               /**< starting point */
+   SCIP_Real             eps,                                             /**< tolerance */
+   int                   k                                                /**< iteration limit */
+   );
+
 /** given a (usually very small) interval, selects a value inside this interval; it is tried to select a rational number
  *  with simple denominator (i.e. a small number, probably multiplied with powers of 10);
  *  if no valid rational number inside the interval was found, selects the central value of the interval

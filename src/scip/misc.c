@@ -8965,6 +8965,52 @@ SCIP_Real SCIPselectSimpleValue(
    return val;
 }
 
+/** given a (usually very small) interval, tries to find a rational number with simple denominator (i.e. a small
+ *  number, probably multiplied with powers of 10) out of this interval; returns TRUE iff a valid rational
+ *  number inside the interval was found
+ */
+SCIP_Real newtonProcedure(
+   SCIP_Real(*function)(SCIP_Real, SCIP_Real* params, int nparams),          /**< pointer to function for which roots are computed */
+   SCIP_Real(*derivative)(SCIP_Real, SCIP_Real* params, int nparams),        /**< pointer to derivative of above function */
+   SCIP_Real*            params,                                             /**< parameters needed for function (can be NULL) */
+   int                   nparams,                                            /**< number of parameters (can be 0) */
+   SCIP_Real             x,                                                  /**< starting point */
+   SCIP_Real             eps,                                                /**< tolerance */
+   int                   k                                                   /**< iteration limit */
+)
+{
+   SCIP_Real result = x;
+   int iteration = 0;
+
+   assert(function != NULL);
+   assert(derivative != NULL);
+   assert(params != NULL || nparams == 0);
+   assert(eps > 0.0);
+   assert(k >= 0);
+   assert(x != SCIP_INVALID); /*lint !e777*/
+
+   while( iteration < k )
+   {
+      SCIP_Real deriv = derivative(result, params, nparams);
+
+      /* if we arrive at a stationary point, the procedure is aborted */
+      if( REALABS(deriv) <= eps || deriv == SCIP_INVALID ) /*lint !e777*/
+         return SCIP_INVALID;
+
+      result = result - function(result, params, nparams) / deriv;
+
+      /* if new point is within eps-range of 0, we are done */
+      if( REALABS(function(result, params, nparams)) <= eps )
+         break;
+
+      ++iteration;
+   }
+
+   if( k == iteration )
+      return SCIP_INVALID;
+   else
+      return result;
+}
 
 
 
