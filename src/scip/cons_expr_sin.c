@@ -73,7 +73,7 @@ SCIP_Real newtonProcedure(
       SCIP_Real deriv = derivative(result, params, nparams);
 
       /* if we arrive at a stationary point, the procedure is aborted */
-      if( SCIPisZero(scip, deriv) || deriv == SCIP_INVALID ) /*lint !e777*/
+      if( REALABS(deriv) <= eps || deriv == SCIP_INVALID ) /*lint !e777*/
          return SCIP_INVALID;
 
       result = result - function(result, params, nparams) / derivative(result, params, nparams);

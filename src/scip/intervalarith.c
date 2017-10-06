@@ -2684,7 +2684,7 @@ void SCIPintervalSin(
 
    /* compute extreme point that is left to operand.inf */
    k = (int) floor(operand.inf/M_PI - 0.5);
-   extr = ((2*k+1)*M_PI)/2.0;
+   extr = ((2.0*k+1.0)*M_PI)/2.0;
    assert(extr <= operand.inf);
 
    /* check how many minimums and maximums are contained in [inf,sup] */
