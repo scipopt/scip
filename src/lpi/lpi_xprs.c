@@ -1486,7 +1486,7 @@ SCIP_RETCODE SCIPlpiGetCols(
 {
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
-   assert(lb == ub);
+   assert( (lb == NULL && ub == NULL) || (lb != NULL && ub != NULL) );
 
    debugCheckColrang(lpi, firstcol, lastcol);
 
