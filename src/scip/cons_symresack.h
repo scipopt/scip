@@ -15,7 +15,7 @@
 
 /**@file   cons_symresack.h
  * @ingroup CONSHDLRS
- * @brief  constraint handler for orbisack constraints
+ * @brief  constraint handler for symresack constraints
  * @author Christopher Hojny
  *
  */
@@ -51,10 +51,9 @@ SCIP_RETCODE SCIPcreateConsSymresack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
-   unsigned int*         perm,               /**< permutation */
+   int*                  perm,               /**< permutation */
    SCIP_VAR**            vars,               /**< variables */
-   unsigned int          nVars,              /**< number of variables in problem */
-   SCIP_Bool*            success,            /**< whether permutation is acting only on binary points */
+   int                   nvars,              /**< number of variables in problem */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -75,12 +74,13 @@ SCIP_RETCODE SCIPcreateConsSymresack(
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
-   SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
+   SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node?
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
+   SCIP_Bool*            success             /**< pointer to store whether permutation is acting only on binary points */
    );
 
-/** creates and captures an orbisack constraint
+/** creates and captures a symresack constraint
  *  in its most basic variant, i. e., with all constraint flags set to their default values, which can be set
  *  afterwards using SCIPsetConsFLAGNAME() in scip.h
  *
@@ -96,10 +96,10 @@ SCIP_RETCODE SCIPcreateConsBasicSymresack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
-   unsigned int*         perm,               /**< permutation */
+   int*                  perm,               /**< permutation */
    SCIP_VAR**            vars,               /**< variables */
-   unsigned int          nVars,              /**< number of variables in problem */
-   SCIP_Bool*            success             /**< whether permutation is acting only on binary points */
+   int                   nvars,              /**< number of variables in problem */
+   SCIP_Bool*            success             /**< pointer to store whether permutation is acting only on binary points */
    );
 
 #ifdef __cplusplus

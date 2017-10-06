@@ -427,8 +427,8 @@ SCIP_RETCODE addSymresackConss(
       SCIP_CONS* cons;
       SCIP_Bool success = FALSE;
 
-      SCIP_CALL( SCIPcreateConsSymresack(scip, &cons, "symresack", (unsigned int*) perms[p], permvars, npermvars, &success,
-            conssaddlp, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+      SCIP_CALL( SCIPcreateConsSymresack(scip, &cons, "symresack", perms[p], permvars, npermvars,
+            conssaddlp, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
 
       /* add the constraint only if the constraint is not trivial */
       if ( success )
