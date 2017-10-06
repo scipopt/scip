@@ -48,7 +48,7 @@
 #define PRESOL_NAME            "symbreak"
 #define PRESOL_DESC            "presolver for adding symmetry breaking constraints"
 #define PRESOL_PRIORITY         -10000000    /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
-#define PRESOL_MAXROUNDS                0    /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+#define PRESOL_MAXROUNDS               -1    /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_DELAY                 TRUE    /**< should presolver be delayed, if other presolvers found reductions? */
 #define PRESOL_TIMING   SCIP_PRESOLTIMING_EXHAUSTIVE   /**< timing for presolving */
 
@@ -341,7 +341,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
    if ( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("Presolving method of symmetry breaking presolver ...\n");
+   SCIPdebugMsg(scip, "Presolving method of symmetry breaking presolver ...\n");
 
    /* get symmetry information, if not already computed */
    if ( ! presoldata->computedsymmetry )
