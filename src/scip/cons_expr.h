@@ -916,7 +916,7 @@ const char* SCIPgetConsExprNlhdlrDesc(
 
 /** gives priority of nonlinear handler */
 EXTERN
-int SCIPgetConsExprNlhdlrPriority(
+unsigned int SCIPgetConsExprNlhdlrPriority(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
 );
 
