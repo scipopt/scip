@@ -439,14 +439,14 @@ SCIP_RETCODE computeCutsSin(
        * (e) the point lies in a bay where the tangent doesn't cut it off anyway
        */
       if( !SCIPisEQ(scip, violation, 0.0)                                     /* (a) */
-            && !SCIPisLT(scip, refpoint, childlb)                             /* (b) */
-            && !SCIPisGT(scip, refpoint, childub)                             /* (b) */
-            && !SCIPisGE(scip, refpoint - childlb, 2*M_PI)                    /* (c) */
-            && !SCIPisGE(scip, childub - refpoint, 2*M_PI)                    /* (c) */
-            && !SCIPisEQ(scip, shiftedpointhalf, 0.0)                         /* (d) */
-            && !SCIPisEQ(scip, shiftedpointhalf, 0.5*M_PI)                    /* (d) */
-            && !(overestimate && SCIPisGT(scip, shiftedpointfull, M_PI))      /* (e) */
-            && !(!overestimate && SCIPisLT(scip, shiftedpointfull, M_PI)) )   /* (e) */
+          && !SCIPisLT(scip, refpoint, childlb)                             /* (b) */
+          && !SCIPisGT(scip, refpoint, childub)                             /* (b) */
+          && !SCIPisGE(scip, refpoint - childlb, 2*M_PI)                    /* (c) */
+          && !SCIPisGE(scip, childub - refpoint, 2*M_PI)                    /* (c) */
+          && !SCIPisEQ(scip, shiftedpointhalf, 0.0)                         /* (d) */
+          && !SCIPisEQ(scip, shiftedpointhalf, 0.5*M_PI)                    /* (d) */
+          && !(overestimate && SCIPisGT(scip, shiftedpointfull, M_PI))      /* (e) */
+          && !(!overestimate && SCIPisLT(scip, shiftedpointfull, M_PI)) )   /* (e) */
       {
 
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sin_soltangent_%s", SCIPvarGetName(childvar));
@@ -574,28 +574,28 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printSin)
 
    switch( stage )
    {
-      case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
-      {
-         /* print function with opening parenthesis */
-         SCIPinfoMessage(scip, file, "%s(", EXPRHDLR_NAME);
-         break;
-      }
+   case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
+   {
+      /* print function with opening parenthesis */
+      SCIPinfoMessage(scip, file, "%s(", EXPRHDLR_NAME);
+      break;
+   }
 
-      case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
-      {
-         assert(SCIPgetConsExprExprWalkCurrentChild(expr) == 0);
-         break;
-      }
+   case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
+   {
+      assert(SCIPgetConsExprExprWalkCurrentChild(expr) == 0);
+      break;
+   }
 
-      case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
-      {
-         /* print closing parenthesis */
-         SCIPinfoMessage(scip, file, ")");
-         break;
-      }
+   case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
+   {
+      /* print closing parenthesis */
+      SCIPinfoMessage(scip, file, ")");
+      break;
+   }
 
-      case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
-      default: ;
+   case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
+   default: ;
    }
 
    return SCIP_OKAY;
