@@ -199,7 +199,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
             SCIPABORT();
             return SCIP_INVALIDDATA; /*lint !e527*/
       } /*lint !e788*/
-      *score = SCIPvarGetNLocksUp(cand)/MAX(1.0, softlocksum) + 0.0001 * SCIPvarGetNLocksSoftUp(cand);
+      *score = SCIPvarGetNLocksSoftUp(cand)/MAX(1.0, softlocksum) + 0.0001 * SCIPvarGetNLocksUp(cand);
    }
    else
    {
