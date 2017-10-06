@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_convertinttobin.h
+ * @ingroup PRESOLVERS
  * @brief  presolver that converts integer variables with domain [a,a+1] to binaries
  * @author Michael Winkler
  */

@@ -3150,11 +3150,15 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
             /* check whether the lower bound can be relaxed */
             if( boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisLT(scip, bound, bounds[j]) )
             {
+               SCIPdebugMsg(scip, "relax lower bound of variable <%s> from %g to %g in bounddisjunction conflict\n",
+                  SCIPvarGetName(var), bounds[j], bound);
                bounds[j] = bound;
             }
             /* check whether the upper bound can be relaxed */
             else if( boundtype == SCIP_BOUNDTYPE_UPPER && SCIPisGT(scip, bound, bounds[j]) )
             {
+               SCIPdebugMsg(scip, "relax upper bound of variable <%s> from %g to %g in bounddisjunction conflict\n",
+                  SCIPvarGetName(var), bounds[j], bound);
                bounds[j] = bound;
             }
 
@@ -3164,6 +3168,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
          else if( isOverlapping(scip, var, boundtype, bound, boundtypes[j], bounds[j]) )
          {
             /* the conflict is redundant -> discard the conflict constraint */
+            SCIPdebugMsg(scip, "redundant bounddisjunction conflict due to overlapping\n");
             goto DISCARDCONFLICT;
          }
       }
@@ -3177,17 +3182,20 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
       assert(SCIPbdchginfoGetBoundtype(bdchginfos[i]) == SCIP_BOUNDTYPE_UPPER || SCIPisLE(scip, relaxedbds[i], SCIPbdchginfoGetNewbound(bdchginfos[i])));
 
       /* for continuous variables, we can only use the relaxed version of the bounds negation: !(x <= u) -> x >= u */
-      if( !SCIPvarIsIntegral(vars[nliterals]) &&
-         ((boundtypes[i] == SCIP_BOUNDTYPE_LOWER && SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(var), bounds[nliterals]))
-            || (boundtypes[i] == SCIP_BOUNDTYPE_UPPER && SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(var), bounds[nliterals]))) )
+      if( !SCIPvarIsIntegral(vars[nliterals]) )
       {
-         /* the literal is satisfied in global bounds (may happen due to weak "negation" of continuous variables)
-          * -> discard the conflict constraint
-          */
-         goto DISCARDCONFLICT;
+         if( (boundtypes[i] == SCIP_BOUNDTYPE_LOWER && SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(var), bounds[nliterals]))
+            || (boundtypes[i] == SCIP_BOUNDTYPE_UPPER && SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(var), bounds[nliterals])) )
+         {
+            /* the literal is satisfied in global bounds (may happen due to weak "negation" of continuous variables)
+             * -> discard the conflict constraint
+             */
+            SCIPdebugMsg(scip, "redundant bounddisjunction conflict due to globally fulfilled literal\n");
+            goto DISCARDCONFLICT;
+         }
+         else
+            ncontinuous++;
       }
-      else
-         ncontinuous++;
 
       nliterals++;
    }
@@ -3201,7 +3209,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
 
       /* add conflict to SCIP */
       SCIP_CALL( SCIPaddConflict(scip, node, cons, validnode, conftype, cutoffinvolved) );
-
+      SCIPdebugMsg(scip, "added conflict\n");
       *result = SCIP_CONSADDED;
    }
 

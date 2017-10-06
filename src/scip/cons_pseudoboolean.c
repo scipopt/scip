@@ -2088,7 +2088,7 @@ SCIP_RETCODE createAndAddAndCons(
 
 #if 0 /* does not work for since the value of artificial resultants must not be equal to the value computed by their
        * product, since these variables are irrelevant */
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
       if( SCIPdebugIsMainscip(scip) )
       {
          SCIP_Real val;

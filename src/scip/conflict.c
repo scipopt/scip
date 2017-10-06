@@ -2749,16 +2749,30 @@ SCIP_RETCODE createAndAddProofcons(
 
          if( !SCIPsetIsInfinity(set, -side) )
          {
-            scale = SCIPaggrRowGetRhs(proofset->aggrrow) / side;
-            assert(SCIPsetIsNegative(set, scale));
+            if( SCIPsetIsZero(set, side) )
+            {
+               scale = 1.0;
+            }
+            else
+            {
+               scale = SCIPaggrRowGetRhs(proofset->aggrrow) / side;
+               assert(SCIPsetIsNegative(set, scale));
+            }
          }
          else
          {
             side = SCIPgetRhsLinear(set->scip, cons);
             assert(!SCIPsetIsInfinity(set, side));
 
-            scale = SCIPaggrRowGetRhs(proofset->aggrrow) / side;
-            assert(SCIPsetIsPositive(set, scale));
+            if( SCIPsetIsZero(set, side) )
+            {
+               scale = 1.0;
+            }
+            else
+            {
+               scale = SCIPaggrRowGetRhs(proofset->aggrrow) / side;
+               assert(SCIPsetIsPositive(set, scale));
+            }
          }
          updateside = TRUE;
       }

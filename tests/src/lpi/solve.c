@@ -41,6 +41,18 @@ typedef enum SCIPfeasStatus SCIPFEASSTATUS;
 /* global variables */
 static SCIP_LPI* lpi = NULL;
 
+/* macro for parameters */
+#define SCIP_CALL_PARAM(x) /*lint -e527 */ do                                                   \
+{                                                                                               \
+   SCIP_RETCODE _restat_;                                                                       \
+   if ( (_restat_ = (x)) != SCIP_OKAY && (_restat_ != SCIP_PARAMETERUNKNOWN) )                  \
+   {                                                                                            \
+      SCIPerrorMessage("[%s:%d] Error <%d> in function call\n", __FILE__, __LINE__, _restat_);  \
+      abort();                                                                                  \
+   }                                                                                            \
+}                                                                                               \
+while ( FALSE )
+
 /** setup of test suite */
 static
 void setup(void)
@@ -742,8 +754,8 @@ Test(solve, test5)
    SCIP_CALL( SCIPlpiLoadColLP(lpi, SCIP_OBJSEN_MAXIMIZE, 2, obj, lb, ub, NULL, 2, lhs, rhs, NULL, 4, beg, ind, val) );
 
    /* set objective limit */
-   SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_FROMSCRATCH, 1) );
-   SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_PRESOLVING, 0) );
+   SCIP_CALL_PARAM( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_FROMSCRATCH, 1) );
+   SCIP_CALL_PARAM( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_PRESOLVING, 0) );
    SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_OBJLIM, 0.0) );
 
    /* set basis */
@@ -835,13 +847,13 @@ Test(solve, test6)
    SCIP_CALL( SCIPlpiLoadColLP(lpi, SCIP_OBJSEN_MINIMIZE, 12, obj, lb, ub, NULL, 8, lhs, rhs, NULL, 30, beg, ind, val) );
 
    /* set some parameters - simulate settings in SCIP */
-   SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_FROMSCRATCH, 0) );
-   SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_SCALING, 1) );
-   SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_PRESOLVING, 1) );
-   SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_PRICING, 0) );
+   SCIP_CALL_PARAM( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_FROMSCRATCH, 0) );
+   SCIP_CALL_PARAM( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_SCALING, 1) );
+   SCIP_CALL_PARAM( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_PRESOLVING, 1) );
+   SCIP_CALL_PARAM( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_PRICING, 0) );
 
-   SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_FEASTOL, 1e-06) );
-   SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_DUALFEASTOL, 1e-07) );
+   SCIP_CALL_PARAM( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_FEASTOL, 1e-06) );
+   SCIP_CALL_PARAM( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_DUALFEASTOL, 1e-07) );
 
    SCIP_CALL( SCIPlpiClearState(lpi) );
 

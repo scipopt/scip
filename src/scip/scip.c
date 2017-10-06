@@ -30949,7 +30949,7 @@ SCIP_RETCODE SCIPprintRow(
 {
    assert(row != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPprintRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPprintRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    SCIProwPrint(row, scip->messagehdlr, file);
 
