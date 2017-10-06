@@ -20,7 +20,10 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#define _USE_MATH_DEFINES   /* to get M_PI on Windows */  /*lint !750 */
+
 #include <string.h>
+#include <math.h>
 #include "scip/cons_expr_sin.h"
 #include "cons_expr_value.h"
 
