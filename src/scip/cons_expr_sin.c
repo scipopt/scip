@@ -323,7 +323,7 @@ SCIP_RETCODE computeCutsSin(
 
       /* use newton procedure to find the point where the tangent intersects sine at lower bound */
       tangentpoint = newtonProcedure(function2, derivative2, &childlb, 1, childlb + 2*M_PI, NEWTON_PRECISION,
-            NEWTON_NITERATIONS);
+         NEWTON_NITERATIONS);
 
       /* if newton procedure failed, no cut is added */
       if( tangentpoint != SCIP_INVALID ) /*lint !e777*/
@@ -344,12 +344,12 @@ SCIP_RETCODE computeCutsSin(
          if( overestimate )
          {
             SCIP_CALL( SCIPcreateEmptyRowCons(scip, lmidtangent, conshdlr, name, -params[1], -SCIPinfinity(scip),
-               TRUE, FALSE, FALSE) );
+                  TRUE, FALSE, FALSE) );
          }
          else
          {
             SCIP_CALL( SCIPcreateEmptyRowCons(scip, lmidtangent, conshdlr, name, -SCIPinfinity(scip), -params[1],
-               TRUE, FALSE, FALSE) );
+                  TRUE, FALSE, FALSE) );
          }
 
          SCIP_CALL( SCIPaddVarToRow(scip, *lmidtangent, auxvar, -1.0) );
@@ -369,7 +369,7 @@ SCIP_RETCODE computeCutsSin(
 
       /* use newton procedure to find the point where the tangent intersects sine at upper bound */
       tangentpoint = newtonProcedure(function2, derivative2, &childub, 1, childub - 2*M_PI, NEWTON_PRECISION,
-            NEWTON_NITERATIONS);
+         NEWTON_NITERATIONS);
 
       /* if newton procedure failed, no cut is added */
       if( tangentpoint != SCIP_INVALID ) /*lint !e777*/
@@ -438,15 +438,15 @@ SCIP_RETCODE computeCutsSin(
        * (d) the point is a root or local extremum of sine
        * (e) the point lies in a bay where the tangent doesn't cut it off anyway
        */
-      if( !SCIPisEQ(scip, violation, 0.0)                                     /* (a) */
-          && !SCIPisLT(scip, refpoint, childlb)                             /* (b) */
-          && !SCIPisGT(scip, refpoint, childub)                             /* (b) */
-          && !SCIPisGE(scip, refpoint - childlb, 2*M_PI)                    /* (c) */
-          && !SCIPisGE(scip, childub - refpoint, 2*M_PI)                    /* (c) */
-          && !SCIPisEQ(scip, shiftedpointhalf, 0.0)                         /* (d) */
-          && !SCIPisEQ(scip, shiftedpointhalf, 0.5*M_PI)                    /* (d) */
-          && !(overestimate && SCIPisGT(scip, shiftedpointfull, M_PI))      /* (e) */
-          && !(!overestimate && SCIPisLT(scip, shiftedpointfull, M_PI)) )   /* (e) */
+      if( !SCIPisEQ(scip, violation, 0.0)                                  /* (a) */
+         && !SCIPisLT(scip, refpoint, childlb)                             /* (b) */
+         && !SCIPisGT(scip, refpoint, childub)                             /* (b) */
+         && !SCIPisGE(scip, refpoint - childlb, 2*M_PI)                    /* (c) */
+         && !SCIPisGE(scip, childub - refpoint, 2*M_PI)                    /* (c) */
+         && !SCIPisEQ(scip, shiftedpointhalf, 0.0)                         /* (d) */
+         && !SCIPisEQ(scip, shiftedpointhalf, 0.5*M_PI)                    /* (d) */
+         && !(overestimate && SCIPisGT(scip, shiftedpointfull, M_PI))      /* (e) */
+         && !(!overestimate && SCIPisLT(scip, shiftedpointfull, M_PI)) )   /* (e) */
       {
 
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sin_soltangent_%s", SCIPvarGetName(childvar));
@@ -471,12 +471,12 @@ SCIP_RETCODE computeCutsSin(
             if( overestimate )
             {
                SCIP_CALL( SCIPcreateEmptyRowCons(scip, soltangent, conshdlr, name, -params[1], -SCIPinfinity(scip),
-                  TRUE, FALSE, FALSE) );
+                     TRUE, FALSE, FALSE) );
             }
             else
             {
                SCIP_CALL( SCIPcreateEmptyRowCons(scip, soltangent, conshdlr, name, -SCIPinfinity(scip), -params[1],
-                  TRUE, FALSE, FALSE) );
+                     TRUE, FALSE, FALSE) );
             }
 
             SCIP_CALL( SCIPaddVarToRow(scip, *soltangent, auxvar, -1.0) );
@@ -527,7 +527,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySin)
    if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrValue(conshdlr) )
    {
       SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, simplifiedexpr,
-         SIN(SCIPgetConsExprExprValueValue(child))) );
+            SIN(SCIPgetConsExprExprValueValue(child))) );
    }
    else
    {
@@ -912,7 +912,7 @@ SCIP_RETCODE SCIPcreateConsExprExprSin(
    assert(SCIPfindConsExprExprHdlr(consexprhdlr, EXPRHDLR_NAME) != NULL);
 
    SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, SCIPfindConsExprExprHdlr(consexprhdlr, EXPRHDLR_NAME), NULL, 1,
-      &child) );
+         &child) );
 
    return SCIP_OKAY;
 }
