@@ -1235,7 +1235,7 @@ SCIP_RETCODE SCIPconstructCurrentLP(
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    )
 {
-   SCIP_Bool initroot;
+   SCIP_Bool initroot = FALSE;
 
    assert(tree != NULL);
    assert(cutoff != NULL);
