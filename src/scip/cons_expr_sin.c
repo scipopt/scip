@@ -73,7 +73,7 @@ SCIP_Real newtonProcedure(
       SCIP_Real deriv = derivative(result, params, nparams);
 
       /* if we arrive at a stationary point, the procedure is aborted */
-      if( deriv == 0.0 || deriv == SCIP_INVALID ) /*lint !e777*/
+      if( SCIPisZero(scip, deriv) || deriv == SCIP_INVALID ) /*lint !e777*/
          return SCIP_INVALID;
 
       result = result - function(result, params, nparams) / derivative(result, params, nparams);
@@ -468,8 +468,7 @@ SCIP_RETCODE computeCutsSin(
          intersection = newtonProcedure(function1, derivative1, params, 2, startingpoint, NEWTON_PRECISION,
             NEWTON_NITERATIONS);
 
-         if( intersection != SCIP_INVALID && SCIPisGE(scip, intersection, childlb) /*lint !e777*/
-            && SCIPisLE(scip, intersection, childub) )
+         if( intersection != SCIP_INVALID && (intersection <= childlb || intersection >= childub) ) /*lint !e777*/
          {
             if( overestimate )
             {
