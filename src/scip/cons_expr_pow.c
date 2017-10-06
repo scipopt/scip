@@ -431,8 +431,15 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printPow)
 
       case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
       {
+
+         SCIP_Real exponent = SCIPgetConsExprExprPowExponent(expr);
+
          /* print closing parenthesis */
-         SCIPinfoMessage(scip, file, ")^%g", SCIPgetConsExprExprPowExponent(expr));
+         if( exponent >= 0.0 )
+            SCIPinfoMessage(scip, file, ")^%g", exponent);
+         else
+            SCIPinfoMessage(scip, file, ")^(%g)", exponent);
+
          break;
       }
 
