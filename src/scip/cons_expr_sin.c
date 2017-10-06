@@ -231,7 +231,7 @@ SCIP_RETCODE computeCutsSin(
       /* if bounds are not within one bay, secant does not make sense */
       if( childub - childlb <= M_PI - shiftedlbhalf )
       {
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "abs_secant_%s", SCIPvarGetName(childvar));
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sin_secant_%s", SCIPvarGetName(childvar));
 
          params[0] = (SIN(childub) - SIN(childlb)) / (childub - childlb);
          params[1] = SIN(childub) - params[0] * childub;
@@ -260,7 +260,7 @@ SCIP_RETCODE computeCutsSin(
 
       if( shiftedlbhalf < 0.5*M_PI )
       {
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "abs_ltangent_%s", SCIPvarGetName(childvar));
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sin_ltangent_%s", SCIPvarGetName(childvar));
 
          params[0] = COS(childlb);
          params[1] = SIN(childlb) - params[0] * childlb;
@@ -289,7 +289,7 @@ SCIP_RETCODE computeCutsSin(
 
       if( shiftedubhalf > 0.5*M_PI || shiftedubhalf == 0.0 )
       {
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "abs_rtangent_%s", SCIPvarGetName(childvar));
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sin_rtangent_%s", SCIPvarGetName(childvar));
 
          params[0] = COS(childub);
          params[1] = SIN(childub) - params[0] * childub;
@@ -442,7 +442,7 @@ SCIP_RETCODE computeCutsSin(
             && !(!overestimate && SCIPisLT(scip, shiftedpointfull, M_PI)) )   /* (e) */
       {
 
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "abs_soltangent_%s", SCIPvarGetName(childvar));
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sin_soltangent_%s", SCIPvarGetName(childvar));
 
          params[0] = COS(refpoint);
          params[1] = SIN(refpoint) - params[0] * refpoint;
@@ -477,6 +477,7 @@ SCIP_RETCODE computeCutsSin(
 
    return SCIP_OKAY;
 }
+
 /*
  * Callback methods of expression handler
  */
@@ -700,7 +701,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSin)
 static
 SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSin)
 {
-   SCIP_ROW* cuts[4];      /* 0: secant, 1: left middle tangent, 2: right middle tangent, 3: solution tangent */
+   SCIP_ROW* cuts[4] = {NULL, NULL, NULL, NULL};
    SCIP_Real violation;
    SCIP_Bool infeasible;
    int i;
@@ -709,6 +710,13 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSin)
    *ncuts = 0;
    *result = SCIP_DIDNOTFIND;
 
+   /* compute all possible inequalities; the resulting cuts are stored in the cuts array
+    *
+    *  - cuts[0] = secant
+    *  - cuts[1] = secant connecting (lb,sin(lbx)) with left tangent point
+    *  - cuts[1] = secant connecting (ub,sin(ubx)) with right tangent point
+    *  - cuts[3] = solution tangent (for convex / concave segments that globally under- / overestimate)
+    */
    SCIP_CALL( computeCutsSin(scip, conshdlr, expr, sol, &cuts[0], NULL, NULL, &cuts[1], &cuts[2], &cuts[3]) );
 
    for( i = 0; i < 4; ++i )
