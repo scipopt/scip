@@ -40,9 +40,9 @@
  * Local methods
  */
 
-/*
- * finds root of given function using newton procedure from given starting point
- * returns SCIP_INVALID if the procedure failed or iteration limit was reached
+/**
+ *  finds root of given function using newton procedure from given starting point
+ *  returns SCIP_INVALID if the procedure failed or iteration limit was reached
  */
 static
 SCIP_Real newtonProcedure(
