@@ -355,7 +355,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
 
       presoldata->computedsymmetry = TRUE;
 
-      if ( presoldata->nperms < 0 )
+      if ( presoldata->nperms <= 0 )
       {
          SCIPdebugMessage("Symmetry breaking presolver: no symmetry has been found, turning presolver off.\n");
          presoldata->enabled = FALSE;
