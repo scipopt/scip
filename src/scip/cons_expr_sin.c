@@ -102,7 +102,7 @@ SCIP_Real function1(
    return params[0]*p + params[1] - SIN(p);
 }
 
-/** evaluates the derivative of the function a*x + b - sin(x) for some coefficient a and constant b at a given point p */
+/** evaluates the derivative of a*x + b - sin(x) for some coefficient a and constant b at a given point p */
 static
 SCIP_Real derivative1(
    SCIP_Real             p,                  /**< point where to evaluate */
@@ -130,7 +130,7 @@ SCIP_Real function2(
    return SIN(p) + (params[0] - p) * COS(p) - SIN(params[0]);
 }
 
-/** evaluates the derivative of the function sin(x) + (alpha-x)*cos(x) - sin(alpha) for some constant alpha at a given point p */
+/** evaluates the derivative of sin(x) + (alpha-x)*cos(x) - sin(alpha) for some constant alpha at a given point p */
 static
 SCIP_Real derivative2(
    SCIP_Real             p,                  /**< point where to evaluate */
@@ -322,7 +322,8 @@ SCIP_RETCODE computeCutsSin(
       *lmidtangent = NULL;
 
       /* use newton procedure to find the point where the tangent intersects sine at lower bound */
-      tangentpoint = newtonProcedure(function2, derivative2, &childlb, 1, childlb + 2*M_PI, NEWTON_PRECISION, NEWTON_NITERATIONS);
+      tangentpoint = newtonProcedure(function2, derivative2, &childlb, 1, childlb + 2*M_PI, NEWTON_PRECISION,
+            NEWTON_NITERATIONS);
 
       /* if newton procedure failed, no cut is added */
       if( tangentpoint != SCIP_INVALID ) /*lint !e777*/
@@ -367,7 +368,8 @@ SCIP_RETCODE computeCutsSin(
       *rmidtangent = NULL;
 
       /* use newton procedure to find the point where the tangent intersects sine at upper bound */
-      tangentpoint = newtonProcedure(function2, derivative2, &childub, 1, childub - 2*M_PI, NEWTON_PRECISION, NEWTON_NITERATIONS);
+      tangentpoint = newtonProcedure(function2, derivative2, &childub, 1, childub - 2*M_PI, NEWTON_PRECISION,
+            NEWTON_NITERATIONS);
 
       /* if newton procedure failed, no cut is added */
       if( tangentpoint != SCIP_INVALID ) /*lint !e777*/
@@ -388,12 +390,12 @@ SCIP_RETCODE computeCutsSin(
          if( overestimate )
          {
             SCIP_CALL( SCIPcreateEmptyRowCons(scip, rmidtangent, conshdlr, name, -params[1], -SCIPinfinity(scip),
-               TRUE, FALSE, FALSE) );
+                  TRUE, FALSE, FALSE) );
          }
          else
          {
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, rmidtangent, conshdlr, name, -SCIPinfinity(scip), -params[1],
-               TRUE, FALSE, FALSE) );
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, rmidtangent, conshdlr, name, -SCIPinfinity(scip), -params[1], TRUE,
+                  FALSE, FALSE) );
          }
 
          SCIP_CALL( SCIPaddVarToRow(scip, *rmidtangent, auxvar, -1.0) );
@@ -460,8 +462,11 @@ SCIP_RETCODE computeCutsSin(
 
          /* use newton procedure to test if cut is valid */
 
-         intersection = newtonProcedure(function1, derivative1, params, 2, startingpoint, NEWTON_PRECISION, NEWTON_NITERATIONS);
-         if( intersection != SCIP_INVALID && SCIPisGE(scip, intersection, childlb) && SCIPisLE(scip, intersection, childub) ) /*lint !e777*/
+         intersection = newtonProcedure(function1, derivative1, params, 2, startingpoint, NEWTON_PRECISION,
+            NEWTON_NITERATIONS);
+
+         if( intersection != SCIP_INVALID && SCIPisGE(scip, intersection, childlb) /*lint !e777*/
+            && SCIPisLE(scip, intersection, childub) )
          {
             if( overestimate )
             {
@@ -521,7 +526,8 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySin)
    /* check for value expression */
    if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrValue(conshdlr) )
    {
-      SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, simplifiedexpr, SIN(SCIPgetConsExprExprValueValue(child))) );
+      SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, simplifiedexpr,
+         SIN(SCIPgetConsExprExprValueValue(child))) );
    }
    else
    {
@@ -905,7 +911,8 @@ SCIP_RETCODE SCIPcreateConsExprExprSin(
    assert(child != NULL);
    assert(SCIPfindConsExprExprHdlr(consexprhdlr, EXPRHDLR_NAME) != NULL);
 
-   SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, SCIPfindConsExprExprHdlr(consexprhdlr, EXPRHDLR_NAME), NULL, 1, &child) );
+   SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, SCIPfindConsExprExprHdlr(consexprhdlr, EXPRHDLR_NAME), NULL, 1,
+      &child) );
 
    return SCIP_OKAY;
 }
