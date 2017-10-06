@@ -45,7 +45,6 @@
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
 #define CONSHDLR_PROP_TIMING       SCIP_PROPTIMING_BEFORELP
@@ -532,7 +531,7 @@ SCIP_RETCODE initLP(
    SCIP_CALL( SCIPreleaseRow(scip, &row) );
 
    /* check whether we have a packing/partioning symresack */
-   if ( consdata->ppupgrade && ! infeasible )
+   if ( consdata->ppupgrade && ! *infeasible )
    {
       ncycles = consdata->ncycles;
       cycledecomposition = consdata->cycledecomposition;
@@ -1135,7 +1134,7 @@ SCIP_DECL_CONSDELETE(consDeleteSymresack)
 static
 SCIP_DECL_CONSFREE(consFreeSymresack)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata = NULL;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    assert( scip != 0 );
    assert( conshdlr != 0 );
@@ -1212,7 +1211,7 @@ SCIP_DECL_CONSTRANS(consTransSymresack)
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->cycledecomposition, sourcedata->cycledecomposition, sourcedata->ncycles) );
       for (i = 0; i < sourcedata->ncycles; ++i)
       {
-         SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->cycledecomposition[i], sourcedata->cycledecomposition[i], nvars + 1) );
+         SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->cycledecomposition[i], sourcedata->cycledecomposition[i], nvars + 1) ); /*lint !e866*/
       }
    }
 
@@ -1410,7 +1409,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpSymresack)
          return SCIP_OKAY;
       }
 
-      /* SCIPdebugMessage("Generated symresack inequalities for <%s>: %u\n", SCIPconsGetName(conss[c]), ngen); */
+      /* SCIPdebugMessage("Generated symresack inequalities for <%s>: %d\n", SCIPconsGetName(conss[c]), ngen); */
 
       if ( ngen > 0 )
          *result = SCIP_SEPARATED;
@@ -1550,7 +1549,7 @@ SCIP_DECL_CONSCHECK(consCheckSymresack)
       assert( consdata->vars != NULL );
       assert( consdata->invperm != NULL );
 
-      SCIPdebugMessage("Check method for symresack constraint <%s> (%u rows) ...\n", SCIPconsGetName(conss[c]), consdata->nvars);
+      SCIPdebugMessage("Check method for symresack constraint <%s> (%d rows) ...\n", SCIPconsGetName(conss[c]), consdata->nvars);
 
       nvars = consdata->nvars;
       vars = consdata->vars;
@@ -1591,7 +1590,7 @@ SCIP_DECL_CONSCHECK(consCheckSymresack)
          terminated = TRUE;
 
          if ( printreason )
-            SCIPinfoMessage(scip, NULL, "First non-constant pair (%u, %u) of variables has pattern (0,1).\n", i, invperm[i]);
+            SCIPinfoMessage(scip, NULL, "First non-constant pair (%d, %d) of variables has pattern (0,1).\n", i, invperm[i]);
 
          break;
       }
