@@ -709,7 +709,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSin)
    *ncuts = 0;
    *result = SCIP_DIDNOTFIND;
 
-   SCIP_CALL( computeCutsSin(scip, conshdlr, expr, NULL, &cuts[0], NULL, NULL, &cuts[1], &cuts[2], &cuts[3]) );
+   SCIP_CALL( computeCutsSin(scip, conshdlr, expr, sol, &cuts[0], NULL, NULL, &cuts[1], &cuts[2], &cuts[3]) );
 
    for( i = 0; i < 4; ++i )
    {
