@@ -53,7 +53,7 @@ SCIP_Real newtonProcedure(
    SCIP_Real             x,                                                  /**< starting point */
    SCIP_Real             eps,                                                /**< tolerance */
    int                   k                                                   /**< iteration limit */
-)
+   )
 {
    SCIP_Real result = x;
    int iteration = 0;
@@ -63,20 +63,20 @@ SCIP_Real newtonProcedure(
    assert(params != NULL || nparams == 0);
    assert(eps > 0.0);
    assert(k >= 0);
-   assert(x != SCIP_INVALID);
+   assert(x != SCIP_INVALID); /*lint !e777*/
 
    while( iteration < k )
    {
       SCIP_Real deriv = derivative(result, params, nparams);
 
       /* if we arrive at a stationary point, the procedure is aborted */
-      if( deriv == 0.0 || deriv == SCIP_INVALID )
+      if( deriv == 0.0 || deriv == SCIP_INVALID ) /*lint !e777*/
          return SCIP_INVALID;
 
       result = result - function(result, params, nparams) / derivative(result, params, nparams);
 
       /* if new point is within eps-range of 0, we are done */
-      if( ABS(function(result, params, nparams)) <= eps )
+      if( REALABS(function(result, params, nparams)) <= eps )
          break;
 
       ++iteration;
@@ -94,7 +94,7 @@ SCIP_Real function1(
    SCIP_Real             p,                  /**< point where to evaluate */
    SCIP_Real*            params,             /**< array which stores a and b in this order (nothing more) */
    int                   nparams             /**< number of parameters (expected be 2) */
-)
+   )
 {
    assert(params != NULL);
    assert(nparams == 2);
@@ -108,7 +108,7 @@ SCIP_Real derivative1(
    SCIP_Real             p,                  /**< point where to evaluate */
    SCIP_Real*            params,             /**< array which stores a and b in this order (nothing more) */
    int                   nparams             /**< number of parameters (expected be 2) */
-)
+   )
 {
    assert(params != NULL);
    assert(nparams == 2);
@@ -122,7 +122,7 @@ SCIP_Real function2(
    SCIP_Real             p,                  /**< point where to evaluate */
    SCIP_Real*            params,             /**< pointer to alpha (nothing more) */
    int                   nparams             /**< number of parameters (expected be 1) */
-)
+   )
 {
    assert(params != NULL);
    assert(nparams == 1);
@@ -136,7 +136,7 @@ SCIP_Real derivative2(
    SCIP_Real             p,                  /**< point where to evaluate */
    SCIP_Real*            params,             /**< pointer to alpha (nothing more) */
    int                   nparams             /**< number of parameters (expected be 1) */
-)
+   )
 {
    assert(params != NULL);
    assert(nparams == 1);
@@ -157,7 +157,7 @@ SCIP_RETCODE computeCutsSin(
    SCIP_ROW**            lmidtangent,        /**< pointer to store the left middle tangent */
    SCIP_ROW**            rmidtangent,        /**< pointer to store the right middle tangent */
    SCIP_ROW**            soltangent          /**< pointer to store the solution tangent */
-)
+   )
 {
    SCIP_CONSEXPR_EXPR* child;
    SCIP_VAR* auxvar;                     /* auxiliary variable for sine expression */
@@ -311,7 +311,7 @@ SCIP_RETCODE computeCutsSin(
       }
    }
 
-   /* compute left middle tangent, that is tangent at some other point which goes through sin(lb) */
+   /* compute left middle tangent, that is tangent at some other point which goes through (lb,sin(lb)) */
    if( lmidtangent != NULL )
    {
       SCIP_Real tangentpoint;
@@ -325,7 +325,7 @@ SCIP_RETCODE computeCutsSin(
       tangentpoint = newtonProcedure(function2, derivative2, &childlb, 1, childlb + 2*M_PI, NEWTON_PRECISION, NEWTON_NITERATIONS);
 
       /* if newton procedure failed, no cut is added */
-      if( tangentpoint != SCIP_INVALID )
+      if( tangentpoint != SCIP_INVALID ) /*lint !e777*/
       {
          /* if the computed point lies outside the bounds, it is shifted to upper bound */
          connectionpoint = SCIPisGE(scip, tangentpoint, childub) ? childub : tangentpoint;
@@ -337,6 +337,8 @@ SCIP_RETCODE computeCutsSin(
          /* determine whether the cut is under- or overestimating */
          testpoint = 0.5 * (connectionpoint - childlb);
          overestimate = SCIPisGT(scip, params[0] * testpoint + params[1] - SIN(testpoint),  0.0);
+
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sin_lmidtangent_%s", SCIPvarGetName(childvar));
 
          if( overestimate )
          {
@@ -354,7 +356,7 @@ SCIP_RETCODE computeCutsSin(
       }
    }
 
-   /* compute right middle tangent, that is tangent at some other point which goes through sin(ub) */
+   /* compute right middle tangent, that is tangent at some other point which goes through (ub,sin(ub)) */
    if( rmidtangent != NULL )
    {
       SCIP_Real tangentpoint;
@@ -368,7 +370,7 @@ SCIP_RETCODE computeCutsSin(
       tangentpoint = newtonProcedure(function2, derivative2, &childub, 1, childub - 2*M_PI, NEWTON_PRECISION, NEWTON_NITERATIONS);
 
       /* if newton procedure failed, no cut is added */
-      if( tangentpoint != SCIP_INVALID )
+      if( tangentpoint != SCIP_INVALID ) /*lint !e777*/
       {
          /* if the computed point lies outside the bounds, it is shifted to lower bound */
          connectionpoint = SCIPisLE(scip, tangentpoint, childlb) ? childlb : tangentpoint;
@@ -380,6 +382,8 @@ SCIP_RETCODE computeCutsSin(
          /* determine whether the cut is under- or overestimating */
          testpoint = 0.5 * (childub - connectionpoint);
          overestimate = SCIPisGT(scip, params[0] * testpoint + params[1] - SIN(testpoint),  0.0);
+
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sin_rmidtangent_%s", SCIPvarGetName(childvar));
 
          if( overestimate )
          {
@@ -418,7 +422,8 @@ SCIP_RETCODE computeCutsSin(
       /* compute refpoint mod 2*pi and refpoint mod pi */
       shiftedpointfull = fmod(refpoint, 2*M_PI);
       shiftedpointhalf = fmod(refpoint, M_PI);
-      if( shiftedpointfull < 0.0 ) {
+      if( shiftedpointfull < 0.0 )
+      {
          shiftedpointfull += 2 * M_PI;
          shiftedpointhalf += M_PI;
       }
@@ -456,7 +461,7 @@ SCIP_RETCODE computeCutsSin(
          /* use newton procedure to test if cut is valid */
 
          intersection = newtonProcedure(function1, derivative1, params, 2, startingpoint, NEWTON_PRECISION, NEWTON_NITERATIONS);
-         if( intersection != SCIP_INVALID && SCIPisGE(scip, intersection, childlb) && SCIPisLE(scip, intersection, childub) )
+         if( intersection != SCIP_INVALID && SCIPisGE(scip, intersection, childlb) && SCIPisLE(scip, intersection, childub) ) /*lint !e777*/
          {
             if( overestimate )
             {
