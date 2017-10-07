@@ -1886,7 +1886,7 @@ SCIP_RETCODE SCIPincludeConshdlrSymresack(
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpSymresack) );
 
    /* get enforcing setting */
-   SCIP_CALL( SCIPaddBoolParam(scip, "cons/" CONSHDLR_NAME "/symresack/enforcing",
+   SCIP_CALL( SCIPaddBoolParam(scip, "cons/" CONSHDLR_NAME "/enforcing",
          "Enforce symresack constraints?",
          &conshdlrdata->symresackEnforcing, TRUE, DEFAULT_ENFORCING, NULL, NULL) );
 
