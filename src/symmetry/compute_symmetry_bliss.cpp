@@ -157,19 +157,37 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
    else
       SCIPdebugMsg(scip, "Group intermediate nodes by variables.\n");
 
-   /* "colored" edges based on all matrix coefficients */
+   /* "colored" edges based on all matrix coefficients - loop through ordered matrix coefficients */
    int nusedcolors = matrixdata->nuniquevars + matrixdata->nuniquerhs;
+   int oldcolor = -1;
+   int firstcoloridx = -1;
+
+   int* internodes;
+   int ninternodes;
+
+   if ( groupByConstraints )
+      ninternodes = matrixdata->nrhscoef;
+   else
+      ninternodes = matrixdata->npermvars;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &internodes, ninternodes) );
+   for (int l = 0; l < ninternodes; ++l)
+      internodes[l] = -1;
+
    for (int j = 0; j < matrixdata->nmatcoef; ++j)
    {
+      int idx = matrixdata->matidx[j];
+      assert( 0 <= idx && idx < matrixdata->nmatcoef );
+
       /* find color corresponding to matrix coefficient */
-      const int color = matrixdata->matcoefcolors[j];
+      const int color = matrixdata->matcoefcolors[idx];
       assert( 0 <= color && color < matrixdata->nuniquemat );
 
-      assert( 0 <= matrixdata->matrhsidx[j] && matrixdata->matrhsidx[j] < matrixdata->nrhscoef );
-      assert( 0 <= matrixdata->matvaridx[j] && matrixdata->matvaridx[j] < matrixdata->npermvars );
+      assert( 0 <= matrixdata->matrhsidx[idx] && matrixdata->matrhsidx[idx] < matrixdata->nrhscoef );
+      assert( 0 <= matrixdata->matvaridx[idx] && matrixdata->matvaridx[idx] < matrixdata->npermvars );
 
-      const int rhsnode = matrixdata->npermvars + matrixdata->matrhsidx[j];
-      const int varnode = matrixdata->matvaridx[j];
+      const int rhsnode = matrixdata->npermvars + matrixdata->matrhsidx[idx];
+      const int varnode = matrixdata->matvaridx[idx];
       assert( matrixdata->npermvars <= rhsnode && rhsnode < matrixdata->npermvars + matrixdata->nrhscoef );
       assert( rhsnode < (int) G->get_nof_vertices() );
       assert( varnode < (int) G->get_nof_vertices() );
@@ -182,34 +200,57 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
       }
       else
       {
-         InterPair key;
-         if ( groupByConstraints )
-            key = std::make_pair(matrixdata->matrhsidx[j], color);
-         else
-            key = std::make_pair(matrixdata->matvaridx[j], color);
-
-         IntermediatesMap::const_iterator keyIt = groupedIntermediateNodes.find(key);
-         int intermediatenode = 0;
-         if ( keyIt == groupedIntermediateNodes.end() )
+         /* clear node array if we have a new color */
+         if ( color != oldcolor )
          {
-            intermediatenode = (int) G->add_vertex((unsigned) (nusedcolors + color));
-            groupedIntermediateNodes[key] = intermediatenode;
+            if ( firstcoloridx >= 0 )
+            {
+               for (int l = firstcoloridx; l < j; ++l)
+               {
+                  int idxl = matrixdata->matidx[l];
+                  int varrhsidx;
+                  if ( groupByConstraints )
+                     varrhsidx = matrixdata->matrhsidx[idxl];
+                  else
+                     varrhsidx = matrixdata->matvaridx[idxl];
+                  internodes[varrhsidx] = -1;
+               }
+            }
+            firstcoloridx = j;
+
+#ifndef NDEBUG
+            for (int l = 0; l < ninternodes; ++l)
+               assert( internodes[l] < 0 );
+#endif
+         }
+
+         int varrhsidx;
+         if ( groupByConstraints )
+            varrhsidx = matrixdata->matrhsidx[idx];
+         else
+            varrhsidx = matrixdata->matvaridx[idx];
+         assert( 0 <= varrhsidx && varrhsidx < ninternodes );
+
+         if ( internodes[varrhsidx] < 0 )
+         {
+            internodes[varrhsidx] = (int) G->add_vertex((unsigned) (nusedcolors + color));
             ++nnodes;
          }
-         else
-            intermediatenode = (*keyIt).second;
-         assert( intermediatenode >= matrixdata->npermvars + matrixdata->nrhscoef );
+         assert( internodes[varrhsidx] >= matrixdata->npermvars + matrixdata->nrhscoef );
 
          /* determine whether graph would be too large for bliss (can only handle int) */
-         if ( intermediatenode >= INT_MAX/2 )
+         if ( internodes[varrhsidx] >= INT_MAX/2 )
          {
+            SCIPfreeBufferArray(scip, &internodes);
             return SCIP_OKAY;
          }
-         G->add_edge((unsigned) varnode, (unsigned) intermediatenode);
-         G->add_edge((unsigned) rhsnode, (unsigned) intermediatenode);
+
+         G->add_edge((unsigned) varnode, internodes[varrhsidx]);
+         G->add_edge((unsigned) rhsnode, internodes[varrhsidx]);
          nedges += 2;
       }
    }
+   SCIPfreeBufferArray(scip, &internodes);
 
    success = TRUE;
 
