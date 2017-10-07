@@ -72,8 +72,6 @@ struct SYM_Matrixdata
    int                   nmatcoef;           /**< number of coefficients in matrix */
    int                   nrhscoef;           /**< number of coefficients in rhs */
    int                   nmaxmatcoef;        /**< maximal number of matrix coefficients (will be increase on demand) */
-   SCIP_Real*            matcoeforig;        /**< original coefficients in matrix */
-   SCIP_Real*            rhscoeforig;        /**< original coefficients in rhs */
    int                   nuniquevars;        /**< number of unique variable types */
    int                   nuniquerhs;         /**< number of unique rhs types */
    int                   nuniquemat;         /**< number of unique matrix coefficients */
