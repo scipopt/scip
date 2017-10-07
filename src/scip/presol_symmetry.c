@@ -25,6 +25,10 @@
  * @note We treat implict integer variables as if they were continuous/real variables. The reason is that there is
  * currently no distinction between implicit integer and implicit binary. Moreover, currently implicit integer variables
  * hurt our code more than continuous/real variables (we basically do not handle integral variables at all).
+ *
+ * @note We do not copy symmetry information, since it is not clear how this information transfers. Moreover, copying
+ * symmetry might inhibit heuristics. But note that solving the a sub-SCIP might then happen without symmetry
+ * information!
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1242,54 +1246,6 @@ SCIP_DECL_PRESOLFREE(presolFreeSymmetry)
    return SCIP_OKAY;
 }
 
-#if 0
-/** transforms constraint data into data belonging to the transformed problem */
-static
-SCIP_DECL_CONSTRANS(consTransSymmetry)
-{
-   SCIP_PRESOLDATA* sourcepresoldata;
-   SCIP_PRESOLDATA* targetpresoldata;
-
-   assert( scip != NULL );
-   assert( presol != NULL );
-   assert( strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0 );
-   assert( sourcecons != NULL );
-
-   SCIPdebugMsg(scip, "Transforming symmetry constraint <%s> ...\n", SCIPconsGetName(sourcecons));
-
-   sourcepresoldata = SCIPconsGetData(sourcecons);
-   assert( sourcepresoldata != NULL );
-   SCIP_CALL( SCIPallocBlockMemory(scip, &targetpresoldata) );
-
-   /* copy pointers to group */
-   targetpresoldata->npermvars = sourcepresoldata->npermvars;
-   targetpresoldata->permvars = NULL;
-   targetpresoldata->computedsym = sourcepresoldata->computedsym;
-   targetpresoldata->nperms = 0;
-   targetpresoldata->nmaxperms = 0;
-   targetpresoldata->perms = NULL;
-
-   /* copy variables and set up variable map */
-   if ( sourcepresoldata->npermvars > 0 )
-   {
-      assert( sourcepresoldata->permvars != NULL );
-
-      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(targetpresoldata->permvars), sourcepresoldata->permvars, sourcepresoldata->npermvars) );
-      SCIP_CALL( SCIPgetTransformedVars(scip, sourcepresoldata->npermvars, sourcepresoldata->permvars, targetpresoldata->permvars) );
-   }
-
-   /* create constraint */
-   SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), presol, targetpresoldata,
-         SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons),
-         SCIPconsIsEnforced(sourcecons), SCIPconsIsChecked(sourcecons),
-         SCIPconsIsPropagated(sourcecons), SCIPconsIsLocal(sourcecons),
-         SCIPconsIsModifiable(sourcecons), SCIPconsIsDynamic(sourcecons),
-         SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
-
-   return SCIP_OKAY;
-}
-#endif
-
 
 /** execution method of presolver */
 static
@@ -1339,21 +1295,6 @@ SCIP_DECL_PRESOLEXITPRE(presolExitpreSymmetry)
    {
       SCIP_CALL( determineSymmetry(scip, presoldata) );
    }
-
-   return SCIP_OKAY;
-}
-
-
-/** copy method for presolver plugins (called when SCIP copies plugins) */
-static
-SCIP_DECL_PRESOLCOPY(presolCopySymmetry)
-{
-   assert( scip != NULL );
-   assert( presol != NULL );
-   assert( strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0 );
-
-   /* Do not copy, since we do not know how to efficiently copy symmetry information, but declare copy to be valid in
-    * order to not disturb sub-SCIP heuristics. */
 
    return SCIP_OKAY;
 }
