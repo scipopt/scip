@@ -1516,6 +1516,56 @@ SCIP_DECL_CONSENFOPS(consEnfopsSymresack)
 }
 
 
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxSymresack)
+{
+   SCIP_CONSDATA* consdata;
+   int c;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert( result != NULL );
+
+   SCIPdebugMessage("Enforcing method for symresack constraints (relaxation solutions) ...\n");
+
+   /* we have a negative priority, so we should come after the integrality conshdlr. */
+   assert( SCIPgetNLPBranchCands(scip) == 0 );
+
+   *result = SCIP_FEASIBLE;
+
+   /* loop through constraints */
+   for (c = 0; c < nconss; ++c)
+   {
+      SCIP_Bool infeasible = FALSE;
+      int ngen = 0;
+
+      /* get data of constraint */
+      assert( conss[c] != 0 );
+      consdata = SCIPconsGetData(conss[c]);
+
+      /* get solution */
+      SCIP_CALL( SCIPgetSolVals(scip, sol, consdata->nvars, consdata->vars, consdata->vals) );
+
+      SCIPdebugMessage("Enforcing symresack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
+
+      SCIP_CALL( separateSymresackCovers(scip, conss[c], consdata, &ngen, &infeasible) );
+
+      if ( infeasible )
+      {
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+
+      if ( ngen > 0 )
+         *result = SCIP_SEPARATED;
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** feasibility check method of constraint handler for integral solutions */
 static
 SCIP_DECL_CONSCHECK(consCheckSymresack)
@@ -1875,6 +1925,7 @@ SCIP_RETCODE SCIPincludeConshdlrSymresack(
    assert( conshdlr != NULL );
 
    /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxSymresack) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeSymresack) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteSymresack) );
    SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolSymresack, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );

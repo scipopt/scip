@@ -1214,6 +1214,61 @@ SCIP_DECL_CONSENFOPS(consEnfopsOrbisack)
 }
 
 
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxOrbisack)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+   SCIP_Bool infeasible = FALSE;
+   int ngen = 0;
+   int c;
+
+   assert( scip != 0 );
+   assert( conshdlr != 0 );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert( result != 0 );
+
+   SCIPdebugMessage("Enforelax method for orbisack constraints.\n");
+
+   /* we have a negative priority, so we should come after the integrality conshdlr. */
+   assert( SCIPgetNLPBranchCands(scip) == 0 );
+
+   *result = SCIP_FEASIBLE;
+
+   /* loop through constraints */
+   for (c = 0; c < nconss; ++c)
+   {
+      /* get data of constraint */
+      assert( conss[c] != 0 );
+      consdata = SCIPconsGetData(conss[c]);
+
+      /* get solution */
+      SCIP_CALL( SCIPgetSolVals(scip, sol, consdata->nrows, consdata->vars1, consdata->vals1) );
+      SCIP_CALL( SCIPgetSolVals(scip, sol, consdata->nrows, consdata->vars2, consdata->vals2) );
+
+      SCIPdebugMessage("Enforcing orbisack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
+
+      /* Separate only cover inequalities to ensure that enforcing works correctly. */
+      /* Otherwise, it may happen that infeasible solutions cannot be detected, since */
+      /* we bound the size of the coefficients for the orbisack inequalities. */
+      SCIP_CALL( separateOrbisackCovers(scip, conss[c], consdata, &ngen, &infeasible) );
+
+      if ( infeasible )
+      {
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+
+      SCIPdebugMessage("Generated orbisack inequalities for <%s>: %d\n", SCIPconsGetName(conss[c]), ngen);
+
+      if ( ngen > 0 )
+         *result = SCIP_SEPARATED;
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** feasibility check method of constraint handler for integral solutions */
 static
 SCIP_DECL_CONSCHECK(consCheckOrbisack)
@@ -1532,8 +1587,8 @@ SCIP_RETCODE SCIPincludeConshdlrOrbisack(
    assert( conshdlr != NULL );
 
    /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxOrbisack) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeOrbisack) );
-
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteOrbisack) );
    SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolOrbisack, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintOrbisack) );
