@@ -875,7 +875,7 @@ SCIP_DECL_CONSDELETE(consDeleteOrbisack)
 static
 SCIP_DECL_CONSFREE(consFreeOrbisack)
 {   /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata = NULL;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    assert( scip != 0 );
    assert( conshdlr != 0 );
