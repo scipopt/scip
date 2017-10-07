@@ -159,21 +159,25 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
 
    /* "colored" edges based on all matrix coefficients - loop through ordered matrix coefficients */
    int nusedcolors = matrixdata->nuniquevars + matrixdata->nuniquerhs;
-   int oldcolor = -1;
-   int firstcoloridx = -1;
 
-   int* internodes;
    int ninternodes;
-
    if ( groupByConstraints )
       ninternodes = matrixdata->nrhscoef;
    else
       ninternodes = matrixdata->npermvars;
 
+   int* internodes;
    SCIP_CALL( SCIPallocBufferArray(scip, &internodes, ninternodes) );
    for (int l = 0; l < ninternodes; ++l)
       internodes[l] = -1;
 
+   /* We pass through the matrix coeficients, grouped by color, i.e., different coefficients. If the coeffients appear
+    * in the same row or column, it suffices to only generate a single node (depending on groupByConstraints). We store
+    * this node in the array internodes. In order to avoid reinitialization, we store the node number with increasing
+    * numbers for each color. The smallest number for the current color is stored in firstcolornodenumber. */
+   int oldcolor = -1;
+   SCIP_Real oldcoef = SCIP_INVALID;
+   int firstcolornodenumber = -1;
    for (int j = 0; j < matrixdata->nmatcoef; ++j)
    {
       int idx = matrixdata->matidx[j];
@@ -200,28 +204,12 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
       }
       else
       {
-         /* clear node array if we have a new color */
+         /* if new group of coefficients has been reached */
          if ( color != oldcolor )
          {
-            if ( firstcoloridx >= 0 )
-            {
-               for (int l = firstcoloridx; l < j; ++l)
-               {
-                  int idxl = matrixdata->matidx[l];
-                  int varrhsidx;
-                  if ( groupByConstraints )
-                     varrhsidx = matrixdata->matrhsidx[idxl];
-                  else
-                     varrhsidx = matrixdata->matvaridx[idxl];
-                  internodes[varrhsidx] = -1;
-               }
-            }
-            firstcoloridx = j;
-
-#ifndef NDEBUG
-            for (int l = 0; l < ninternodes; ++l)
-               assert( internodes[l] < 0 );
-#endif
+            assert( ! SCIPisEQ(scip, oldcoef, matrixdata->matcoef[idx]) );
+            oldcolor = color;
+            firstcolornodenumber = nnodes;
          }
 
          int varrhsidx;
@@ -231,15 +219,16 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
             varrhsidx = matrixdata->matvaridx[idx];
          assert( 0 <= varrhsidx && varrhsidx < ninternodes );
 
-         if ( internodes[varrhsidx] < 0 )
+         if ( internodes[varrhsidx] < firstcolornodenumber )
          {
             internodes[varrhsidx] = (int) G->add_vertex((unsigned) (nusedcolors + color));
             ++nnodes;
          }
          assert( internodes[varrhsidx] >= matrixdata->npermvars + matrixdata->nrhscoef );
+         assert( internodes[varrhsidx] >= firstcolornodenumber );
 
          /* determine whether graph would be too large for bliss (can only handle int) */
-         if ( internodes[varrhsidx] >= INT_MAX/2 )
+         if ( nnodes >= INT_MAX/2 )
          {
             SCIPfreeBufferArray(scip, &internodes);
             return SCIP_OKAY;
