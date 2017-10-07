@@ -29,8 +29,8 @@ fi
 EMAILFROM="adm_timo <timo-admin@zib.de>"
 EMAILTO="adm_timo <timo-admin@zib.de>"
 
-# SCIP check files are check.TESTSET.VERSION.otherstuff.SETTING.{out,err,res,meta}
-BASEFILE="check/results/check.${TESTSET}.${SCIPVERSION}.*.${SETTING}"
+# SCIP check files are check.TESTSET.scip-VERSION.otherstuff.SETTING.{out,err,res,meta}
+BASEFILE="check/results/check.${TESTSET}.${SCIPVERSION}*.${SETTING}"
 
 # evaluate the run and upload it to rubberband
 echo "Evaluating the run and uploading it to rubberband."
