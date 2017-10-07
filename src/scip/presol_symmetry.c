@@ -1198,7 +1198,6 @@ SCIP_DECL_PRESOLEXIT(presolExitSymmetry)
    assert( scip != NULL );
    assert( presol != NULL );
    assert( strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0 );
-   assert( presoldata != NULL );
 
    SCIPdebugMsg(scip, "Exiting symmetry presolver.\n");
 
@@ -1234,7 +1233,6 @@ SCIP_DECL_PRESOLFREE(presolFreeSymmetry)
    assert( scip != NULL );
    assert( presol != NULL );
    assert( strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0 );
-   assert( presoldata != NULL );
 
    SCIPdebugMsg(scip, "Freeing symmetry presolver.\n");
 
