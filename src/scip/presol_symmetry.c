@@ -1184,10 +1184,10 @@ SCIP_DECL_PRESOLINITPRE(presolInitpreSymmetry)
 }
 
 
-/** destructor of presolver to free user data (called when SCIP is exiting) */
+/** deinitialization method of presolver (called before transformed problem is freed) */
 static
-SCIP_DECL_PRESOLFREE(presolFreeSymmetry)
-{  /*lint --e{715}*/
+SCIP_DECL_PRESOLEXIT(presolExitSymmetry)
+{
    SCIP_PRESOLDATA* presoldata;
    int i;
 
@@ -1196,7 +1196,7 @@ SCIP_DECL_PRESOLFREE(presolFreeSymmetry)
    assert( strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0 );
    assert( presoldata != NULL );
 
-   SCIPdebugMsg(scip, "Freeing symmetry presolver.\n");
+   SCIPdebugMsg(scip, "Exiting symmetry presolver.\n");
 
    presoldata = SCIPpresolGetData(presol);
    assert( presoldata != NULL );
@@ -1207,6 +1207,35 @@ SCIP_DECL_PRESOLFREE(presolFreeSymmetry)
       SCIPfreeBlockMemoryArray(scip, &presoldata->perms[i], presoldata->npermvars);
    }
    SCIPfreeBlockMemoryArrayNull(scip, &presoldata->perms, presoldata->nmaxperms);
+
+   /* reset settings */
+   presoldata->symspecrequire = 0;
+   presoldata->symspecrequirefixed = 0;
+   presoldata->npermvars = 0;
+   presoldata->nperms = 0;
+   presoldata->nmaxperms = 0;
+   presoldata->computedsym = FALSE;
+   presoldata->successful = FALSE;
+
+   return SCIP_OKAY;
+}
+
+
+/** destructor of presolver to free user data (called when SCIP is exiting) */
+static
+SCIP_DECL_PRESOLFREE(presolFreeSymmetry)
+{  /*lint --e{715}*/
+   SCIP_PRESOLDATA* presoldata;
+
+   assert( scip != NULL );
+   assert( presol != NULL );
+   assert( strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0 );
+   assert( presoldata != NULL );
+
+   SCIPdebugMsg(scip, "Freeing symmetry presolver.\n");
+
+   presoldata = SCIPpresolGetData(presol);
+   assert( presoldata != NULL );
 
    SCIPfreeBlockMemory(scip, &presoldata);
 
@@ -1362,6 +1391,7 @@ SCIP_RETCODE SCIPincludePresolSymmetry(
    assert( presol != NULL );
 
    SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeSymmetry) );
+   SCIP_CALL( SCIPsetPresolExit(scip, presol, presolExitSymmetry) );
    SCIP_CALL( SCIPsetPresolInitpre(scip, presol, presolInitpreSymmetry) );
    SCIP_CALL( SCIPsetPresolExitpre(scip, presol, presolExitpreSymmetry) );
 
