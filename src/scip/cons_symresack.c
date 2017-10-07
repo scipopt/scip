@@ -1886,20 +1886,24 @@ SCIP_RETCODE SCIPincludeConshdlrSymresack(
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpSymresack) );
 
    /* get enforcing setting */
-   SCIP_CALL( SCIPaddBoolParam(scip, "cons/symresack/enforcing", "Enforce symresack constraints?", &conshdlrdata->symresackEnforcing, TRUE,
-         DEFAULT_ENFORCING, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "cons/" CONSHDLR_NAME "/symresack/enforcing",
+         "Enforce symresack constraints?",
+         &conshdlrdata->symresackEnforcing, TRUE, DEFAULT_ENFORCING, NULL, NULL) );
 
    /* get check setting */
-   SCIP_CALL( SCIPaddBoolParam(scip, "cons/symresack/check", "Check symresack constraints?", &conshdlrdata->symresackCheck, TRUE,
-         DEFAULT_CHECK, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "cons/" CONSHDLR_NAME "/check",
+         "Check symresack constraints?",
+         &conshdlrdata->symresackCheck, TRUE, DEFAULT_CHECK, NULL, NULL) );
 
    /* whether we allow upgrading to orbisack constraints*/
-   SCIP_CALL( SCIPaddBoolParam(scip, "cons/symresack/upgrade", "Upgrade symresack constraints to orbisack constraints?", &conshdlrdata->symresackUpgrade, TRUE,
-         DEFAULT_UPGRADE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "cons/" CONSHDLR_NAME "/upgrade",
+         "Upgrade symresack constraints to orbisack constraints?",
+         &conshdlrdata->symresackUpgrade, TRUE, DEFAULT_UPGRADE, NULL, NULL) );
 
    /* whether we allow upgrading to packing/partioning symresack constraints*/
-   SCIP_CALL( SCIPaddBoolParam(scip, "cons/symresack/ppsymresack", "Upgrade symresack constraints to packing/partioning symresacks?", &conshdlrdata->checkPPsymresack, TRUE,
-         DEFAULT_PPSYMRESACK, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "cons/" CONSHDLR_NAME "/ppsymresack",
+         "Upgrade symresack constraints to packing/partioning symresacks?",
+         &conshdlrdata->checkPPsymresack, TRUE, DEFAULT_PPSYMRESACK, NULL, NULL) );
 
    return SCIP_OKAY;
 }
