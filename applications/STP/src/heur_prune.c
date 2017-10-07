@@ -56,7 +56,6 @@
 #define PRUNE_MINREDELIMS        2            /**< maximum number of eliminations for reduction package when called by prune heuristic */
 #define PRUNE_MAXREDROUNDS       6            /**< maximum number of reduction rounds in prune heuristic */
 #define BREAKONERROR FALSE
-#define PRINTDEBUG FALSE
 #define MAXNTERMINALS 500
 #define MAXNEDGES     10000
 
@@ -393,9 +392,9 @@ SCIP_DECL_HEUREXEC(heurExecPrune)
 
    vars = SCIPprobdataGetVars(scip);
    nvars = SCIPprobdataGetNVars(scip);
-#if PRINTDEBUG
-      printf("START PRUNE %d \n", 0);
-#endif
+
+   SCIPdebugMessage("START prune heuristic \n");
+
    assert(vars != NULL);
 
    /* allocate array to store primal solution */
@@ -418,9 +417,9 @@ SCIP_DECL_HEUREXEC(heurExecPrune)
       SCIP_SOL* sol;
       SCIP_Real pobj;
       SCIP_Real* nval;
-#if PRINTDEBUG
-         printf("ADDED sol valid in prune \n");
-#endif
+
+      SCIPdebugMessage("ADDED valid solution in prune \n");
+
       assert(graph_sol_valid(scip, graph, soledge));
       pobj = 0.0;
 
@@ -439,7 +438,7 @@ SCIP_DECL_HEUREXEC(heurExecPrune)
             nval[e] = 0.0;
          }
       }
-#if PRINTDEBUG
+#ifdef SCIP_DEBUG
       printf("prune, best: old %f, new %f \n  \n",  SCIPgetSolOrigObj(scip, bestsol) - SCIPprobdataGetOffset(scip), pobj);
 #endif
       /* try to add new solution to pool */
@@ -449,7 +448,7 @@ SCIP_DECL_HEUREXEC(heurExecPrune)
       /* has solution been added? */
       if( success )
       {
-#if PRINTDEBUG
+#ifdef SCIP_DEBUG
          printf("solution added by PRUNE \n  \n");
 #endif
          *result = SCIP_FOUNDSOL;
@@ -501,71 +500,60 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
    const SCIP_Bool       reducegraph         /**< try to reduce graph initially? */
    )
 {
-   SCIP_HEURDATA* tmheurdata;
-   GRAPH*    prunegraph;
-   PATH*    vnoi;
-   PATH*    path;
-   SCIP_Real    uborg;
-   SCIP_Real    hopfactor;
-   SCIP_Real    offsetnew;
-   SCIP_Real    offsetold;
-   SCIP_Real*    cost;
-   SCIP_Real*    costrev;
-   SCIP_Real*    nodearrreal;
-   IDX**    ancestors;
-   SCIP_Bool    pc;
-   SCIP_Bool    mw;
-   SCIP_Bool    pcmw;
-   SCIP_Bool    solvalid;
-   int     i;
-   int     k;
-   int     e;
-   int     nnodes;
-   int     nedges;
-   int     annodes;
-   int     anedges;
-   int     anterms;
-   int     probtype;
-   int     minnelims;
-   int     lminnelims;
-   int     best_start;
-   int     reductbound;
-   int*     heap;
-   int*     state;
-   int*     vbase;
-   int*     solnode;
-   int*     nodearrint;
-   int*     edgearrint;
-   int*     nodearrint2;
+   GRAPH* prunegraph;
+   PATH* vnoi;
+   PATH* path;
+   SCIP_Real bestobj;
+   SCIP_Real uborg;
+   SCIP_Real hopfactor;
+   SCIP_Real offsetnew;
+   SCIP_Real offsetold;
+   SCIP_Real* cost;
+   SCIP_Real* costrev;
+   SCIP_Real* nodearrreal;
+   IDX** ancestors;
+   const int probtype = g->stp_type;
+   const SCIP_Bool pc = (probtype == STP_RPCSPG || probtype == STP_PCSPG);
+   const SCIP_Bool mw = (probtype == STP_MWCSP || probtype == STP_RMWCSP);
+   const SCIP_Bool pcmw = (pc || mw);
+   SCIP_Bool solvalid;
+   const int nnodes = g->knots;
+   const int nedges = g->edges;
+   int annodes;
+   int anedges;
+   int anterms;
+   int minnelims;
+   int lminnelims;
+   int best_start;
+   int reductbound;
+   int* heap;
+   int* state;
+   int* vbase;
+   int* solnode;
+   int* nodearrint;
+   int* edgearrint;
+   int* nodearrint2;
+   int* bestsoledges;
    STP_Bool* nodearrchar;
+
+   solvalid = TRUE;
+   *success = TRUE;
+   hopfactor = DEFAULT_HOPFACTOR;
 
    assert(g != NULL);
    assert(scip != NULL);
    assert(soledge != NULL);
-
-   nedges = g->edges;
-   nnodes = g->knots;
-   solvalid = TRUE;
-   *success = TRUE;
-   probtype = g->stp_type;
-   hopfactor = DEFAULT_HOPFACTOR;
-
-   mw = (probtype == STP_MWCSP || probtype == STP_RMWCSP);
-   pc = (probtype == STP_RPCSPG || probtype == STP_PCSPG);
-   pcmw = (pc || mw);
+   assert(probtype != STP_DHCSTP);
 
    if( g->terms <= 1)
    {
-      for( e = 0; e < nedges; e++ )
+      for( int e = 0; e < nedges; e++ )
          soledge[e] = UNKNOWN;
       return SCIP_OKAY;
    }
 
-   /* get TM heuristic data */
-   assert(SCIPfindHeur(scip, "TM") != NULL);
-   tmheurdata = SCIPheurGetData(SCIPfindHeur(scip, "TM"));
-
    /* allocate memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &bestsoledges, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &solnode, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cost, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nedges) );
@@ -612,22 +600,18 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
 
       if( pcmw )
       {
-         for( e = 0; e < nedges; e += 2 )
-         {
+         for( int e = 0; e < nedges; e += 2 )
             /* both e and its anti-parallel edge fixed to zero? */
             if( SCIPvarGetUbLocal(vars[e]) < 0.5 && SCIPvarGetUbLocal(vars[e + 1]) < 0.5 )
             {
-               if( (!solgiven || (soledge[e] != CONNECT && soledge[e + 1] != CONNECT))
-                  && !Is_term(prunegraph->head[e]) && !Is_term(prunegraph->tail[e]) )
+               if( (!solgiven || (soledge[e] != CONNECT && soledge[e + 1] != CONNECT)) && !Is_term(prunegraph->head[e]) && !Is_term(prunegraph->tail[e]) )
                   graph_edge_del(scip, prunegraph, e, TRUE);
                nfixedges++;
             }
-         }
       }
       else
       {
-         for( e = 0; e < nedges; e += 2 )
-         {
+         for( int e = 0; e < nedges; e += 2 )
             /* both e and its anti-parallel edge fixed to zero? */
             if( SCIPvarGetUbLocal(vars[e]) < 0.5 && SCIPvarGetUbLocal(vars[e + 1]) < 0.5 )
             {
@@ -635,7 +619,6 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
                   graph_edge_del(scip, prunegraph, e, TRUE);
                nfixedges++;
             }
-         }
       }
 
       SCIPdebugMessage("fixed edges in prune: %d \n", nfixedges);
@@ -644,7 +627,6 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
       {
          /* get number of remaining edges */
          graph_getNVET(prunegraph, &annodes, &anedges, &anterms);
-
          reductbound = getRedBound(0, anedges);
       }
    }
@@ -683,27 +665,17 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
    /* no solution provided and graph not completely reduced? */
    if( !solgiven && annodes > 0 )
    {
-      /* create new solution by means of shortest path heuristic */
-
-      for( e = 0; e < nedges; e += 2 )
-      {
-         k = e + 1;
-         cost[e] = prunegraph->cost[e];
-         cost[k] = prunegraph->cost[k];
-         costrev[e] = cost[k];
-         costrev[k] = cost[e];
-      }
-
-      /* compute new solution on given graph */
+      /*
+       * compute new solution on given graph
+       */
 
       if( reducegraph )
       {
          int nruns = 0;
          int* tmstarts;
 
-         for( k = 0; k < nnodes; k++ )
+         for( int k = 0; k < nnodes; k++ )
          {
-            nodearrchar[k] = FALSE;
             prunegraph->mark[k] = (prunegraph->grad[k] > 0);
             if( prunegraph->mark[k] )
                nruns++;
@@ -715,7 +687,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
          {
             SCIPStpHeurTMCompStarts(prunegraph, nodearrint, &nruns);
 
-            for( k = 0; k < nruns; k++ )
+            for( int k = 0; k < nruns; k++ )
                assert(prunegraph->grad[nodearrint[k]] > 0 );
             tmstarts = nodearrint;
          }
@@ -729,16 +701,13 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
          assert(graph_valid(prunegraph));
 
          /* run shortest path heuristic */
-         SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, prunegraph, tmstarts, &best_start, edgearrint, nruns,
-               prunegraph->source[0], cost, costrev, &hopfactor, NULL, 0.0, success, FALSE) );
+         SCIP_CALL( SCIPStpHeurTMRun(scip, NULL, prunegraph, tmstarts, &best_start, edgearrint, nruns,
+               prunegraph->source[0], prunegraph->cost, prunegraph->cost, &hopfactor, NULL, 0.0, success, FALSE) );
 
          if( pcmw )
          {
             SCIP_Bool dummy;
             SCIP_CALL( SCIPStpHeurLocalExtendPcMw(scip, prunegraph, prunegraph->cost, path, edgearrint, nodearrint, nodearrchar, &dummy) );
-
-            for( k = 0; k < nnodes; k++ )
-               nodearrchar[k] = FALSE;
          }
 
          setSolArray(prunegraph, &uborg, solnode, edgearrint);
@@ -747,7 +716,10 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
 
          ancestors = prunegraph->ancestors;
 
-         for( e = 0; e < nedges; e++ )
+         for( int k = 0; k < nnodes; k++ )
+            nodearrchar[k] = FALSE;
+
+         for( int e = 0; e < nedges; e++ )
          {
             soledge[e] = UNKNOWN;
 
@@ -760,39 +732,28 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
 
          if( pcmw )
          {
-            IDX* curr;
-            int idx;
-            for( k = 0; k < nnodes; k++ )
-            {
+            for( int k = 0; k < nnodes; k++ )
                if( nodearrchar[k] )
                {
-                  curr = prunegraph->pcancestors[k];
+                  IDX* curr = prunegraph->pcancestors[k];
                   while( curr != NULL )
                   {
-                     idx = curr->index;
-                     if( nodearrchar[g->tail[idx]] == FALSE )
-                        nodearrchar[g->tail[idx]] = TRUE;
-
-                     if( nodearrchar[g->head[idx]] == FALSE )
-                        nodearrchar[g->head[idx]] = TRUE;
+                     const int idx = curr->index;
+                     nodearrchar[g->tail[idx]] = TRUE;
+                     nodearrchar[g->head[idx]] = TRUE;
 
                      curr = curr->parent;
                   }
                }
-            }
          }
 
          /* prune solution (in the original graph) */
          if( pcmw )
-         {
             SCIP_CALL( SCIPStpHeurTMPrunePc(scip, g, g->cost, soledge, nodearrchar) );
-         }
          else
-         {
             SCIP_CALL( SCIPStpHeurTMPrune(scip, g, g->cost, 0, soledge, nodearrchar) );
-         }
 
-#if PRINTDEBUG
+#ifdef SCIP_DEBUG
          SCIP_Real tmpub = graph_computeSolVal(g->cost, soledge, 0.0, nedges);
          printf("first obj %f \n", tmpub);
 #endif
@@ -801,15 +762,14 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
       else
       {
          int nruns;
-         graph_getNVET(prunegraph, &annodes, &anedges, &anterms);
 
          nruns = MIN(annodes, DEFAULT_PRUNE_TMRUNS);
 
          assert(graph_valid(prunegraph));
 
          /* run shortest path heuristic */
-         SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, prunegraph, NULL, &best_start, soledge, nruns,
-               prunegraph->source[0], cost, costrev, &hopfactor, NULL, 0.0, success, FALSE) );
+         SCIP_CALL( SCIPStpHeurTMRun(scip, NULL, prunegraph, NULL, &best_start, soledge, nruns,
+               prunegraph->source[0], prunegraph->cost, prunegraph->cost, &hopfactor, NULL, 0.0, success, FALSE) );
 
          if( pcmw )
          {
@@ -819,87 +779,37 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
 
          setSolArray(prunegraph, &uborg, solnode, soledge);
 
-         for( e = 0; e < nedges; e++ )
+         for( int e = 0; e < nedges; e++ )
             edgearrint[e] = soledge[e];
       }
 
       assert(*success);
       assert(graph_sol_valid(scip, g, soledge));
 
+      // todo
       if( !(*success) )
       {
          printf("failed to build initial tree in prune \n");
-         graph_path_exit(scip, prunegraph);
-         goto TERMINATE;
+         return SCIP_ERROR;
       }
    }
    else if( annodes > 0 && !reducegraph )
    {
-      for( e = 0; e < nedges; e++ )
-         edgearrint[e] = soledge[e];
+      BMScopyMemoryArray(edgearrint, soledge, nedges);
    }
-#if 1
-   if( mw )
-   {
-      graph_getNVET(prunegraph, &annodes, &anedges, &anterms);
 
-      if( annodes == 0 )
-      {
-         IDX* curr;
-         for( k = 0; k < nnodes; k++ )
-            nodearrchar[k] = FALSE;
-         /* retransform edges fixed during graph reduction */
-         graph_listSetSolNode(g, nodearrchar, prunegraph->fixedges);
-
-         assert(prunegraph->source[0] == g->source[0]);
-
-         nodearrchar[prunegraph->source[0]] = TRUE;
-
-         for( k = 0; k < nnodes; k++ )
-         {
-            if( nodearrchar[k] && !(Is_term(g->term[k]) && k != prunegraph->source[0]) )
-            {
-               curr = prunegraph->pcancestors[k];
-               while( curr != NULL )
-               {
-                  if( nodearrchar[g->tail[curr->index]] == FALSE )
-                     nodearrchar[g->tail[curr->index]] = TRUE;
-
-                  if( nodearrchar[g->head[curr->index]] == FALSE )
-                     nodearrchar[g->head[curr->index]] = TRUE;
-
-                  curr = curr->parent;
-               }
-            }
-         }
-
-         /* prune solution (in the original graph) */
-
-         for( e = 0; e < nedges; e++ )
-            soledge[e] = UNKNOWN;
-
-         SCIP_CALL( SCIPStpHeurTMPrunePc(scip, g, g->cost, soledge, nodearrchar) );
-
-         *success = graph_sol_valid(scip, g, soledge);
-         assert(*success);
-      }
-      graph_path_exit(scip, prunegraph);
-      goto TERMINATE;
-   }
-#endif
    offsetnew = offsetold;
 
    if( annodes > 0 )
    {
-      int l;
       int brednelims;
-      int* pmark = prunegraph->mark;
+      int* const pmark = prunegraph->mark;
 
       if( solgiven && !reducegraph )
          setSolArray(g, &uborg, solnode, soledge);
 
       /* main reduction loop */
-      for( i = 0; i < PRUNE_MAXREDROUNDS; i++ )
+      for( int i = 0; i < PRUNE_MAXREDROUNDS; i++ )
       {
          brednelims = 0;
 
@@ -910,9 +820,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
 
          if( anterms <= 2 )
          {
-#if PRINTDEBUG
-            printf("less than two terminals, break !! \n");
-#endif
+            SCIPdebugMessage("less than two terminals, break !! \n");
             break;
          }
 
@@ -925,23 +833,12 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
             SCIP_Real objnew;
             int nruns = 0;
 
-#if PRINTDEBUG
-               printf("compute new temporary solution in prune  \n");
-#endif
+            SCIPdebugMessage("compute new temporary solution in prune  \n");
 
-            for( e = 0; e < nedges; e += 2 )
+            for( int k = 0; k < nnodes; k++ )
             {
-               l  = e + 1;
-               cost[e] = prunegraph->cost[e];
-               cost[l] = prunegraph->cost[l];
-               costrev[e] = cost[l];
-               costrev[l] = cost[e];
-            }
-
-            for( l = 0; l < nnodes; l++ )
-            {
-               pmark[l] = (prunegraph->grad[l] > 0);
-               if( pmark[l] )
+               pmark[k] = (prunegraph->grad[k] > 0);
+               if( pmark[k] )
                   nruns++;
             }
 
@@ -951,8 +848,8 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
             assert(graph_valid(prunegraph));
 
             /* run shortest path heuristic */
-            SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, prunegraph, nodearrint, &best_start, edgearrint, nruns,
-                  prunegraph->source[0], cost, costrev, &hopfactor, NULL, 0.0, success, FALSE) );
+            SCIP_CALL( SCIPStpHeurTMRun(scip, NULL, prunegraph, nodearrint, &best_start, edgearrint, nruns,
+                  prunegraph->source[0], prunegraph->cost, prunegraph->cost, &hopfactor, NULL, 0.0, success, FALSE) );
 
             if( pcmw )
             {
@@ -980,16 +877,17 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
                SCIP_CALL( SCIPStpHeurTMBuildTree(scip, prunegraph, path, cost, &objold, solnode) );
             }
 
-#if PRINTDEBUG
+#ifdef SCIP_DEBUG
             printf("objold %f objnew %f \n", objold, objnew);
 #endif
             if( SCIPisLT(scip, objold, objnew ) )
             {
+               int e;
                for( e = 0; e < nedges; e++ )
                   edgearrint[e] = UNKNOWN;
-               for( l = 0; l < nnodes; l++ )
+               for( int k = 0; k < nnodes; k++ )
                {
-                  e = path[l].edge;
+                  e = path[k].edge;
 
                   if( e >= 0 )
                      edgearrint[e] = CONNECT;
@@ -998,8 +896,8 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
 
             assert(graph_sol_valid(scip, prunegraph, edgearrint));
 
-            for( l = 0; l < nnodes; l++ )
-               pmark[l] = (prunegraph->grad[l] > 0);
+            for( int k = 0; k < nnodes; k++ )
+               pmark[k] = (prunegraph->grad[k] > 0);
 
             setSolArray(prunegraph, &hopfactor, solnode, edgearrint);
          }
@@ -1014,14 +912,14 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
                return SCIP_ERROR;
             }
 #endif
-#if PRINTDEBUG
+#ifdef SCIP_DEBUG
                printf("continue with temporary solution in prune  \n");
 #endif
             /* prune solution */
-            for( l = 0; l < nnodes; l++ )
-               solnode[l] = UNKNOWN;
+            for( int k = 0; k < nnodes; k++ )
+               solnode[k] = UNKNOWN;
 
-            for( e = 0; e < nedges; e++ )
+            for( int e = 0; e < nedges; e++ )
             {
                if( edgearrint[e] == CONNECT)
                {
@@ -1033,24 +931,25 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
             do
             {
                count = 0;
-               for( l = nnodes - 1; l >= 0; --l )
+               for( int k = nnodes - 1; k >= 0; --k )
                {
-                  if( (solnode[l] != CONNECT) || Is_term(prunegraph->term[l]) )
+                  int e;
+                  if( (solnode[k] != CONNECT) || Is_term(prunegraph->term[k]) )
                      continue;
 
-                  for( e = prunegraph->outbeg[l]; e != EAT_LAST; e = prunegraph->oeat[e] )
+                  for( e = prunegraph->outbeg[k]; e != EAT_LAST; e = prunegraph->oeat[e] )
                      if( edgearrint[e] == CONNECT )
                         break;
 
                   if( e == EAT_LAST )
                   {
                      /* there has to be exactly one incoming edge */
-                     for( e = prunegraph->inpbeg[l]; e != EAT_LAST; e = prunegraph->ieat[e] )
+                     for( e = prunegraph->inpbeg[k]; e != EAT_LAST; e = prunegraph->ieat[e] )
                      {
                         if( edgearrint[e] == CONNECT )
                         {
                            edgearrint[e] = UNKNOWN;
-                           solnode[l] = UNKNOWN;
+                           solnode[k] = UNKNOWN;
                            count++;
                            break;
                         }
@@ -1061,8 +960,8 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
             }
             while( count > 0 );
 
-            for( l = 0; l < nnodes; l++ )
-               pmark[l] = (prunegraph->grad[l] > 0);
+            for( int k = 0; k < nnodes; k++ )
+               pmark[k] = (prunegraph->grad[k] > 0);
          }
 
 #if BREAKONERROR
@@ -1072,25 +971,21 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
             return SCIP_ERROR;
          }
 #endif
-#if PRINTDEBUG
+#ifdef SCIP_DEBUG
          if( !graph_valid(prunegraph) )
             printf("reduced graph in prune not valid \n");
 #endif
 
          if( pcmw )
-         {
             SCIP_CALL( graph_2org(scip, prunegraph) );
-         }
 
          SCIP_CALL( bound_reducePrune(scip, prunegraph, vnoi, cost, (pcmw) ? prunegraph->prize : NULL, nodearrreal, costrev,
                &offsetnew, heap, state, vbase, solnode, edgearrint, &brednelims, minnelims));
 
          if( pcmw )
-         {
             SCIP_CALL( graph_2trans(scip, prunegraph) );
-         }
 
-#if PRINTDEBUG
+#ifdef SCIP_DEBUG
          graph_getNVET(prunegraph, &annodes, &anedges, &anterms);
          printf("PRUNE round: %d edges %d  nodes: %d \n", i, anedges / 2, annodes);
          printf("PRUNE round: %d minelims %d  really reduced: %d \n", i, minnelims, brednelims);
@@ -1099,7 +994,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
          /* not enough reductions possible? */
          if( brednelims < lminnelims  )
          {
-#if PRINTDEBUG
+#ifdef SCIP_DEBUG
             printf("too little elims in PRUNE; out !! %d \n\n", brednelims);
 #endif
             i = PRUNE_MAXREDROUNDS;
@@ -1141,6 +1036,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
                   nodearrint2, solnode, nodearrchar, &offsetnew, -1.0, FALSE, FALSE, TRUE, reductbound, NULL, FALSE));
          }
 
+
          /* delete all vertices not reachable from the root */
          SCIP_CALL( level0(scip, prunegraph) );
 
@@ -1149,9 +1045,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
 
          if( anterms <= 2 )
          {
-#if PRINTDEBUG
-               printf("less than two terminals, break !! \n");
-#endif
+            SCIPdebugMessage("less than two terminals, break !! \n");
             break;
          }
 
@@ -1163,20 +1057,15 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
       }
    }
 
-   if( !solvalid )
-   {
-      graph_path_exit(scip, prunegraph);
-      goto TERMINATE;
-   }
+   assert(solvalid);
 
-   for( k = 0; k < nnodes; k++ )
+
+   for( int k = 0; k < nnodes; k++ )
       nodearrchar[k] = FALSE;
 
    graph_getNVET(prunegraph, &annodes, &anedges, &anterms);
+   SCIPdebugMessage("Xin prune grad: %d , nedges: %d nodes: %d \n", prunegraph->grad[prunegraph->source[0]], anedges, annodes);
 
-#if PRINTDEBUG
-      printf("Xin prune grad: %d , nedges: %d nodes: %d \n", prunegraph->grad[prunegraph->source[0]], anedges, annodes);
-#endif
    /* if graph not vanished, compute solution */
    if( prunegraph->grad[prunegraph->source[0]] > 0 )
    {
@@ -1203,10 +1092,8 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
       /* solution valid? */
       if( SCIPisLT(scip, objprune, FARAWAY) )
       {
-#if PRINTDEBUG
-            printf("solution in prune finally still valid \n");
-#endif
-         for( k = 0; k < nnodes; k++ )
+         SCIPdebugMessage("solution in prune finally still valid \n");
+         for( int k = 0; k < nnodes; k++ )
             if( path[k].edge >= 0 )
                graph_listSetSolNode(g, nodearrchar, ancestors[path[k].edge]);
       }
@@ -1223,16 +1110,8 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
       ancestors = prunegraph->ancestors;
       npruneedges = prunegraph->edges;
 
-      for( e = 0; e < npruneedges; e += 2 )
-      {
-         k = e + 1;
-         cost[e] = prunegraph->cost[e];
-         cost[k] = prunegraph->cost[k];
-         costrev[e] = cost[k];
-         costrev[k] = cost[e];
+      for( int e = 0; e < npruneedges; e++ )
          soledge[e] = UNKNOWN;
-         soledge[k] = UNKNOWN;
-      }
 
       /* initialize shortest path algorithm */
       SCIP_CALL( graph_path_init(scip, prunegraph) );
@@ -1240,8 +1119,8 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
       /* compute new solution on heuristically reduced graph */
 
       /* run TM heuristic */
-      SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, prunegraph, NULL, &best_start, soledge, DEFAULT_PRUNE_TMRUNS,
-            prunegraph->source[0], cost, costrev, &hopfactor, NULL, 0.0, success, FALSE) );
+      SCIP_CALL( SCIPStpHeurTMRun(scip, NULL, prunegraph, NULL, &best_start, soledge, DEFAULT_PRUNE_TMRUNS,
+            prunegraph->source[0], prunegraph->cost, prunegraph->cost, &hopfactor, NULL, 0.0, success, FALSE) );
 
       if( pcmw )
       {
@@ -1268,17 +1147,17 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
       /* retransform solution found by TM heuristic */
 
       objsph = graph_computeSolVal(prunegraph->cost, soledge, 0.0, npruneedges);
-#if PRINTDEBUG
+#ifdef SCIP_DEBUG
       printf("prune: sph weight %f \n", objsph);
       printf("prune: recovered weight %f \n", objprune);
 #endif
 
       if( SCIPisLT(scip, objsph, objprune) )
       {
-         for( k = 0; k < nnodes; k++ )
+         for( int k = 0; k < nnodes; k++ )
             nodearrchar[k] = FALSE;
 
-         for( e = 0; e < npruneedges; e++ )
+         for( int e = 0; e < npruneedges; e++ )
             if( soledge[e] == CONNECT )
                graph_listSetSolNode(g, nodearrchar, ancestors[e]);
       }
@@ -1296,7 +1175,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
       IDX* curr;
       nodearrchar[prunegraph->source[0]] = TRUE;
 
-      for( k = 0; k < nnodes; k++ )
+      for( int k = 0; k < nnodes; k++ )
       {
          if( nodearrchar[k] )
          {
@@ -1317,7 +1196,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
 
    /* prune solution (in the original graph) */
 
-   for( e = 0; e < nedges; e++ )
+   for( int e = 0; e < nedges; e++ )
       soledge[e] = UNKNOWN;
 
    if( pcmw )
@@ -1328,7 +1207,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
    *success = graph_sol_valid(scip, g, soledge);
    assert(*success);
 
-#if PRINTDEBUG
+#ifdef SCIP_DEBUG
    SCIP_Real x = 0.0;
    int s = 0;
    for( e = 0; e < nedges; e++ )
@@ -1366,6 +1245,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
    SCIPfreeBufferArray(scip, &costrev);
    SCIPfreeBufferArray(scip, &cost);
    SCIPfreeBufferArray(scip, &solnode);
+   SCIPfreeBufferArray(scip, &bestsoledges);
 
    return SCIP_OKAY;
 }

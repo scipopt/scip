@@ -344,7 +344,7 @@ SCIP_RETCODE computePertubedSol(
    BMScopyMemoryArray(costrev, cost, extnedges);
 
    // todo
-   if( graph->stp_type == STP_MWCSP || 1 )
+   if( graph->stp_type == STP_MWCSP )
    {
       SCIP_Real* transcost;
 
@@ -370,7 +370,6 @@ SCIP_RETCODE computePertubedSol(
 
    }
    SCIPdebugMessage("DA: pertubated sol value %f \n", *upperbound);
-
 
    BMScopyMemoryArray(transresult, result, nedges);
 
@@ -401,6 +400,10 @@ SCIP_RETCODE computePertubedSol(
          }
       }
    }
+
+   assert(graph_valid(transgraph));
+
+   printf("OK %d \n", 0);
 
    SCIP_CALL( SCIPdualAscentStpSol(scip, transgraph, cost, pathdist, &lb, FALSE, FALSE, gnodearr, transresult, NULL, state, root, 1, NULL, nodearrchar) );
 
@@ -586,7 +589,7 @@ int reducePcMw(
       }
    }
 
-   SCIPdebugMessage("DA: eliminations %d \n", nfixed);
+   printf("DA: eliminations %d \n", nfixed);
 
    return nfixed;
 }
@@ -1915,6 +1918,8 @@ SCIP_RETCODE da_reducePcMw(
 
    SCIP_CALL( SCIPdualAscentStp(scip, transgraph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, transresult, state, root, 1, marked, nodearrchar) );
 
+   printf("DA done %d \n", 0);
+
    /* compute first primal solution */
    upperbound = FARAWAY;
    apsol = FALSE;
@@ -1955,7 +1960,6 @@ SCIP_RETCODE da_reducePcMw(
          if( Is_term(graph->term[i]) && transgraph->term[i] == -1 )
             graph->mark[i] = FALSE;
 
-      solbasedda = FALSE;
       varyroot = FALSE;
    }
 
@@ -1964,6 +1968,8 @@ SCIP_RETCODE da_reducePcMw(
 
    if( pool != NULL )
    printf("FIRST lb %f ub %f \n", lpobjval, upperbound);
+
+
 
    /* try to reduce the graph */
    nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, TRUE);
@@ -1997,9 +2003,8 @@ SCIP_RETCODE da_reducePcMw(
 
       computeTransVoronoi(scip, transgraph, vnoi, cost, costrev, pathdist, vbase, pathedge);
 
-
       if( pool != NULL )
-      printf("RERUN lb %f ub %f \n", lpobjval, upperbound);
+         printf("RERUN lb %f ub %f \n", lpobjval, upperbound);
 
       /* try to reduce the graph */
       nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, apsol);
@@ -2243,12 +2248,6 @@ SCIP_RETCODE da_reducePcMw(
       SCIP_CALL( graph_2org(scip, graph) );
 
       assert(graph->mark[tmproot]);
-      if( !graph->mark[tmproot] )
-      {
-         int todo;
-         exit(1);
-      }
-
       graph->mark[tmproot] = FALSE;
 
       /* try to eliminate vertices and edges */

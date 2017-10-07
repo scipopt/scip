@@ -1521,11 +1521,9 @@ SCIP_RETCODE SCIPdualAscentStp(
    SCIP_PQUEUE* pqueue;
    SCIP_VAR** vars;
    SCIP_Real min;
-   SCIP_Real prio1;
    SCIP_Real degsum;
    SCIP_Real dualobj;
    SCIP_Real currscore;
-   SCIP_Real maxdeviation;
    SCIP_Real* RESTRICT rescap;
 #if 0
    SCIP_Bool infeasible;
@@ -1592,7 +1590,6 @@ SCIP_RETCODE SCIPdualAscentStp(
    ncutverts = 0;
    nunsatarcs = 0;
    norgcutverts = 0;
-   maxdeviation = DEFAULT_DAMAXDEVIATION;
 
    /* if specified root is not a terminal, take default root */
    if( !Is_term(g->term[root]) )
@@ -1742,11 +1739,22 @@ SCIP_RETCODE SCIPdualAscentStp(
    /* (main) dual ascent loop */
    while( SCIPpqueueNElems(pqueue) > 0 && !SCIPisStopped(scip) )
    {
+      SCIP_Real prio1;
+      SCIP_Real prio2;
+
       /* get active vertex of minimum score */
       gnodeact = (GNODE*) SCIPpqueueRemove(pqueue);
       v = gnodeact->number;
 
       prio1 = gnodeact->dist;
+
+      if( SCIPpqueueNElems(pqueue) > 0 )
+         prio2 = ((GNODE*) SCIPpqueueFirst(pqueue))->dist;
+      else
+         prio2 = FARAWAY;
+
+      SCIPdebugMessage("DA: START WITH v %d prio1 %f prio2 %f \n", v, prio1, prio2);
+
       firstrun = TRUE;
 
       /* perform augmentation as long as priority of root component does not exceed max deviation */
@@ -1785,7 +1793,7 @@ SCIP_RETCODE SCIPdualAscentStp(
             }
          }
 #ifdef DFS
-         while( stacklength > 0 )
+         while( stacklength )
          {
             int end;
             node = stackarr[--stacklength];
@@ -1840,8 +1848,11 @@ SCIP_RETCODE SCIPdualAscentStp(
          currscore = degsum - (ncutverts - 1);
          assert(SCIPisGE(scip, currscore, prio1));
 
+         SCIPdebugMessage("DA: deviation %f \n", (currscore - prio1) / prio1);
+         SCIPdebugMessage("DA: currscore %f prio1 %f prio2 %f \n", currscore, prio1, prio2);
+
          /* augmentation criteria met? */
-         if( SCIPisLT(scip, (currscore - prio1) / prio1, maxdeviation) || (SCIPpqueueNElems(pqueue) == 0) )
+         if( SCIPisLT(scip, (currscore - prio1) / prio1, DEFAULT_DAMAXDEVIATION) || currscore <= prio2 )
          {
 #if 0
             SCIP_ROW* row;
@@ -2076,7 +2087,6 @@ SCIP_RETCODE SCIPdualAscentStpSol(
    SCIP_VAR** vars;
    SCIP_Real min;
    SCIP_Real prio1;
-   SCIP_Real degsum;
    SCIP_Real dualobj;
    SCIP_Real currscore;
    SCIP_Real maxdeviation;
@@ -2093,6 +2103,7 @@ SCIP_RETCODE SCIPdualAscentStpSol(
    int e;
    int tail;
    int shift;
+   int degsum;
    int nnodes;
    int nterms;
    int nedges;
@@ -2133,7 +2144,7 @@ SCIP_RETCODE SCIPdualAscentStpSol(
       vars = NULL;
    }
 
-   degsum = 0.0;
+   degsum = 0;
    nnodes = g->knots;
    nedges = g->edges;
    nterms = g->terms;
@@ -2302,7 +2313,7 @@ SCIP_RETCODE SCIPdualAscentStpSol(
          }
 
 #ifdef DFS
-         while( stacklength > 0 )
+         while( stacklength )
          {
             const int node = stackarr[--stacklength];
             const int end = start[node + 1];
@@ -2384,12 +2395,10 @@ SCIP_RETCODE SCIPdualAscentStpSol(
          currscore = degsum - (ncutverts - 1);
 
          assert(nsolarcs > 0);
-         assert(currscore <= nnodes);
-
-         //printf("nsolarcs %d \n", nsolarcs);
+         assert(currscore <= nedges);
 
          if( nsolarcs > 1 )
-           currscore += (SCIP_Real) ((nsolarcs) * 2 * nnodes);
+           currscore += (SCIP_Real) ((nsolarcs - 1) * nedges);
 
          /* augmentation criteria met? */
          if( SCIPisLT(scip, (currscore - prio1) / prio1, maxdeviation) || (SCIPpqueueNElems(pqueue) == 0) )
@@ -2398,9 +2407,6 @@ SCIP_RETCODE SCIPdualAscentStpSol(
             SCIP_ROW* row;
 #endif
             SCIP_CONS* cons = NULL;
-
-            //printf("perform for nsolarcs %d \n", nsolarcs);
-
 
             /* 3. step: perform augmentation */
 #if 0
@@ -2572,7 +2578,6 @@ SCIP_RETCODE SCIPdualAscentPcStp(
    GRAPH* transgraph;
    SCIP_Real min;
    SCIP_Real prio1;
-   SCIP_Real degsum;
    SCIP_Real offset;
    SCIP_Real dualobj;
    SCIP_Real currscore;
@@ -2592,6 +2597,7 @@ SCIP_RETCODE SCIPdualAscentPcStp(
    int nnodes;
    int nterms;
    int nedges;
+   int degsum;
    int ncutverts;
    int pseudoroot;
    int nunsatarcs;
@@ -2624,7 +2630,7 @@ SCIP_RETCODE SCIPdualAscentPcStp(
    }
 
    root = g->source[0];
-   degsum = 0.0;
+   degsum = 0;
    offset = 0.0;
    dualobj = 0.0;
 #if 0
@@ -2853,7 +2859,6 @@ SCIP_RETCODE SCIPdualAscentPcStp(
          currscore = degsum - (ncutverts - 1);
 
          assert(SCIPisGE(scip, currscore, prio1));
-
 
          /* augmentation criteria met? */
          if( SCIPisLE(scip, (currscore - prio1) / prio1, maxdeviation) || (SCIPpqueueNElems(pqueue) == 0) )

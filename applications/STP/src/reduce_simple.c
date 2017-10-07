@@ -403,7 +403,6 @@ SCIP_RETCODE contractZeroEdges(
    GRAPH*                g                   /**< graph data structure */
    )
 {
-   int e;
    int count;
    int nedges;
 
@@ -415,7 +414,7 @@ SCIP_RETCODE contractZeroEdges(
    do
    {
       count = 0;
-      for( e = 0; e < nedges; e += 2 )
+      for( int e = 0; e < nedges; e += 2 )
       {
          if( g->oeat[e] != EAT_FREE && SCIPisZero(scip, g->cost[e]) )
          {

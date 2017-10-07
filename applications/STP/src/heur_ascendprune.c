@@ -840,7 +840,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRunPcMw(
    const SCIP_Real*      redcosts,           /**< the reduced costs */
    int*                  edgearrint,         /**< int edges array to store solution */
    int*                  nodearrint,         /**< int vertices array for internal computations */
-   int                   root,               /**< the root (used for dual ascent) */
+   int                   daroot,             /**< the root (used for dual ascent) */
    STP_Bool*             nodearrchar,        /**< STP_Bool vertices array for internal computations */
    SCIP_Bool*            solfound,           /**< has a solution been found? */
    SCIP_Bool             dualascredcosts,    /**< reduced costs from dual ascent? */
@@ -848,28 +848,19 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRunPcMw(
    )
 {
    GRAPH* newgraph;
-   SCIP_QUEUE* queue;
    SCIP_Real maxcost;
    SCIP_Real* nval;
-   IDX* curr;
-   IDX** ancestors;
-   int k;
-   int i;
-   int a;
-   int e;
-   int tail;
-   int head;
-   int nvars;
-   int nnodes;
-   int nedges;
-   int probtype;
-   int nnewnodes;
-   int nnewedges;
-   int* mark;
-   int* pnode;
-   int* newedges;
-   int* nodechild;
+   int* const mark = g->mark;
+   int* const newedges = edgearrint;
+   int* const nodechild = nodearrint;
    int* edgeancestor;
+   const int root = g->source[0];
+   const int nnodes = g->knots;
+   const int nedges = g->edges;
+   const int probtype = g->stp_type;
+   int nnewnodes = 0;
+   int nnewedges = 0;
+
    SCIP_Bool success;
 
 #if XXX
@@ -882,37 +873,24 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRunPcMw(
    assert(edgearrint != NULL);
    assert(nodearrint != NULL);
    assert(nodearrchar != NULL);
-
-   root = g->source[0];
-
-   mark = g->mark;
-   nnodes = g->knots;
-   nedges = g->edges;
-   newedges = edgearrint;
-   probtype = g->stp_type;
-   nnewnodes = 0;
-   nnewedges = 0;
-   nodechild = nodearrint;
-
-   nvars = SCIPprobdataGetNVars(scip);
-
    assert(probtype == STP_PCSPG || probtype == STP_MWCSP);
 
    if( addsol || !dualascredcosts )
    {
+      const int nvars = SCIPprobdataGetNVars(scip);
+      assert(nvars >= nedges);
       SCIP_CALL( SCIPallocBufferArray(scip, &nval, nvars) );
    }
    else
    {
       nval = NULL;
    }
-   SCIP_CALL( SCIPqueueCreate(&queue, nnodes, 2.0) );
 
    /* red costs not from dual ascent? */
    if( !dualascredcosts )
    {
       /* construct new graph by using reduced costs */
-
+      SCIP_QUEUE* queue;
       PATH* vnoi;
       SCIP_Real* costrevorg;
       SCIP_Real* pathdistroot;
@@ -922,6 +900,8 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRunPcMw(
       assert(nval != NULL);
       assert(nedges >= nnodes);
 
+      SCIP_CALL( SCIPqueueCreate(&queue, nnodes, 2.0) );
+
       maxcost = -FARAWAY;
       costrevorg = nval;
       pathedgeroot = nodearrint;
@@ -929,17 +909,17 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRunPcMw(
       SCIP_CALL( SCIPallocBufferArray(scip, &pathdistroot, nnodes) );
       SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, nnodes) );
 
-      for( e = 0; e < nedges; e++ )
+      for( int e = 0; e < nedges; e++ )
          costrevorg[e] = redcosts[flipedge(e)];
 
-      for( k = 0; k < nnodes; k++ )
+      for( int k = 0; k < nnodes; k++ )
          mark[k] = TRUE;
 
       /* shortest paths from root to all other vertices with respect to reduced costs */
       graph_path_execX(scip, g, root, redcosts, pathdistroot, pathedgeroot);
 
       /* compute maximum shortest path from a root to another terminal */
-      for( k = 0; k < nnodes; k++ )
+      for( int k = 0; k < nnodes; k++ )
       {
          if( Is_term(g->term[k]) && k != root )
          {
@@ -956,7 +936,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRunPcMw(
       scanned = nodearrint;
 
       /* mark vertices that are to stay in the graph */
-      for( k = 0; k < nnodes; k++ )
+      for( int k = 0; k < nnodes; k++ )
       {
          mark[k] = FALSE;
          scanned[k] = FALSE;
@@ -975,15 +955,15 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRunPcMw(
 
       while( !SCIPqueueIsEmpty(queue) )
       {
-         pnode = (SCIPqueueRemove(queue));
-         k = *pnode;
+         const int* pnode = (SCIPqueueRemove(queue));
+         int k = *pnode;
 
          scanned[k] = TRUE;
 
          /* traverse outgoing arcs */
-         for( a = g->outbeg[k]; a != EAT_LAST; a = g->oeat[a] )
+         for( int a = g->outbeg[k]; a != EAT_LAST; a = g->oeat[a] )
          {
-            head = g->head[a];
+            const int head = g->head[a];
 
             if( nodearrchar[head] )
             {
@@ -1001,40 +981,39 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRunPcMw(
          }
       }
 
-      for( k = 0; k < nnodes; k++ )
-         nodechild[k] = -1;
-
       /* free memory */
       SCIPfreeBufferArray(scip, &vnoi);
       SCIPfreeBufferArray(scip, &pathdistroot);
+      SCIPqueueFree(&queue);
    }
    else
    {
-      int* scanned = nodearrint;
+      int* const queue = nodearrint;
+      STP_Bool* const scanned = nodearrchar;
+      int qsize;
 
-      /* construct new graph corresponding to zero cost paths from the root to all terminals */
-      for( k = 0; k < nnodes; k++ )
-      {
-         scanned[k] = FALSE;
-         mark[k] = FALSE;
-      }
+      /*
+       * construct new graph corresponding to zero cost paths from the root to all terminals
+       */
 
-      /* BFS from root along outgoing arcs of zero cost */
+      BMSclearMemoryArray(mark, nnodes);
+      BMSclearMemoryArray(scanned, nnodes);
+
+      qsize = 0;
       mark[root] = TRUE;
+      queue[qsize++] = root;
       nnewnodes++;
-      SCIP_CALL( SCIPqueueInsert(queue, &g->head[g->inpbeg[root]]) );
 
-      while( !SCIPqueueIsEmpty(queue) )
+      /* DFS */
+      while( qsize )
       {
-         pnode = (SCIPqueueRemove(queue));
-         k = *pnode;
-
+         const int k = queue[--qsize];
          scanned[k] = TRUE;
 
          /* traverse outgoing arcs */
-         for( a = g->outbeg[k]; a != EAT_LAST; a = g->oeat[a] )
+         for( int a = g->outbeg[k]; a != EAT_LAST; a = g->oeat[a] )
          {
-            head = g->head[a];
+            const int head = g->head[a];
 
             if( SCIPisZero(scip, redcosts[a]) )
             {
@@ -1046,7 +1025,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRunPcMw(
                {
                   mark[head] = TRUE;
                   nnewnodes++;
-                  SCIP_CALL( SCIPqueueInsert(queue, &(g->head[a])) );
+                  queue[qsize++] = head;
                }
                if( (!scanned[head] || !SCIPisZero(scip, redcosts[flipedge(a)])) && k != root )
                {
@@ -1060,28 +1039,21 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRunPcMw(
       }
 
 //#ifdef SCIP_DEBUG
-      for( k = 0; k < nnewedges; k++ )
+      for( int k = 0; k < nnewedges; k++ )
       {
-         e = newedges[k];
+         const int e = newedges[k];
          assert(!(g->tail[e] == root && Is_pterm(g->term[g->head[e]])));
          assert(!(g->head[e] == root && Is_pterm(g->term[g->tail[e]])));
       }
 //#endif
 
-      for( a = g->outbeg[root]; a != EAT_LAST; a = g->oeat[a] )
+      for( int a = g->outbeg[root]; a != EAT_LAST; a = g->oeat[a] )
       {
-         head = g->head[a];
+         const int head = g->head[a];
          if( mark[head] )
             newedges[nnewedges++] = a;
       }
-
-      /* has to be reset because scanned == nodearrint == nodechild */
-      for( k = 0; k < nnodes; k++ )
-         nodechild[k] = -1;
    }
-
-
-   SCIPqueueFree(&queue);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &edgeancestor, 2 * nnewedges) );
 
@@ -1092,7 +1064,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRunPcMw(
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &(newgraph->prize), nnewnodes) );
 
-   for( k = 0; k < nnodes; k++ )
+   for( int k = 0; k < nnodes; k++ )
    {
       if( mark[k] )
       {
@@ -1105,6 +1077,8 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRunPcMw(
 
          graph_knot_add(newgraph, g->term[k]);
       }
+      else
+         nodechild[k] = -1;
    }
 
    newgraph->norgmodelknots = nnewnodes;
@@ -1115,12 +1089,12 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRunPcMw(
    newgraph->source[0] = nodechild[root];
 
    /* add edges to new graph */
-   for( a = 0; a < nnewedges; a++ )
+   for( int a = 0; a < nnewedges; a++ )
    {
-      e = newedges[a];
-
-      tail = nodechild[g->tail[e]];
-      head = nodechild[g->head[e]];
+      int i;
+      const int e = newedges[a];
+      const int tail = nodechild[g->tail[e]];
+      const int head = nodechild[g->head[e]];
 
       assert(tail >= 0);
       assert(head >= 0);
@@ -1136,15 +1110,14 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRunPcMw(
          graph_edge_add(scip, newgraph, tail, head, g->cost[e], g->cost[flipedge(e)]);
       }
    }
-   newgraph->norgmodeledges = newgraph->edges;
-   newgraph->extended = TRUE;
-
-   SCIP_CALL( level0(scip, newgraph) );
-
-   /* initialize ancestors of new graph edges */
-   SCIP_CALL( graph_init_history(scip, newgraph) );
 
    nnewedges = newgraph->edges;
+   newgraph->norgmodeledges = nnewedges;
+   newgraph->extended = TRUE;
+
+   printf("SIZE OF A&P SUBGRAPH: n %d, m %d \n", newgraph->knots, nnewedges);
+
+   SCIP_CALL( level0(scip, newgraph) );
 
    /* initialize shortest path algorithm */
    SCIP_CALL( graph_path_init(scip, newgraph) );
@@ -1154,17 +1127,8 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRunPcMw(
    /* get solution on new graph by PRUNE heuristic */
    SCIP_CALL( SCIPStpHeurPruneRun(scip, NULL, newgraph, newedges, &success, FALSE, TRUE) );
 
-   PATH* path;
-   SCIP_Bool dummy;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &path, newgraph->knots) );
-
-   SCIP_CALL( SCIPStpHeurLocalExtendPcMw(scip, newgraph, newgraph->cost, path, newedges, nodechild, nodearrchar, &dummy) );
-
-   SCIPfreeBufferArray(scip, &path);
-
+   assert(success);
    assert(graph_sol_valid(scip, newgraph, newedges));
-
    graph_path_exit(scip, newgraph);
 
    if( !success )
@@ -1173,42 +1137,24 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRunPcMw(
       goto TERMINATE;
    }
 
-   /* re-transform solution found by prune heuristic
-    *
-    * NOTE: actually not necessary */
+   /*
+    * prune solution (in the original graph)
+    */
 
-   ancestors = newgraph->ancestors;
+   BMSclearMemoryArray(nodearrchar, nnodes);
 
-   for( k = 0; k < nnodes; k++ )
-      nodearrchar[k] = FALSE;
-
-   for( e = 0; e < nnewedges; e++ )
-   {
+   for( int e = 0; e < nnewedges; e++ )
       if( newedges[e] == CONNECT )
       {
-         /* iterate through list of ancestors */
-         curr = ancestors[e];
-
-         while( curr != NULL )
-         {
-            i = edgeancestor[curr->index];
-
-            nodearrchar[g->tail[i]] = TRUE;
-            nodearrchar[g->head[i]] = TRUE;
-
-            curr = curr->parent;
-         }
+         const int eorg = edgeancestor[e];
+         nodearrchar[g->tail[eorg]] = TRUE;
+         nodearrchar[g->head[eorg]] = TRUE;
       }
-   }
 
-   /* prune solution (in the original graph) */
-
-   for( e = 0; e < nedges; e++ )
+   for( int e = 0; e < nedges; e++ )
       newedges[e] = UNKNOWN;
 
    SCIP_CALL( SCIPStpHeurTMPrunePc(scip, g, g->cost, newedges, nodearrchar) );
-
-   assert(graph_sol_valid(scip, g, newedges));
 
 #if XXX
    SCIP_Real pobj;
@@ -1232,13 +1178,14 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRunPcMw(
 #endif
 
    success = graph_sol_valid(scip, g, newedges);
+   assert(success);
 
    if( success && addsol )
    {
       SCIP_SOL* sol = NULL;
       assert(nval != NULL);
 
-      for( e = 0; e < nedges; e++ )
+      for( int e = 0; e < nedges; e++ )
       {
          if( newedges[e] == CONNECT )
             nval[e] = 1.0;
@@ -1254,7 +1201,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRunPcMw(
 
  TERMINATE:
 
-   for( k = 0; k < nnodes; k++ )
+   for( int k = 0; k < nnodes; k++ )
       mark[k] = (g->grad[k] > 0);
 
    /* free memory */

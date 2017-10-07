@@ -29,6 +29,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /*lint -esym(750,REDUCE_C) -esym(766,stdlib.h) -esym(766,string.h)           */
+//#define SCIP_DEBUG
 #define REDUCE_C
 #define SDSP_BOUND    400          /**< visited edges bound for SDSP test  */
 #define BD3_BOUND     400          /**< visited edges bound for BD3 test  */
@@ -1286,12 +1287,12 @@ SCIP_RETCODE redLoopPc(
       if( da || (dualascent && extensive) )
       {
          if( userec )
-         printf("FIXED %f CHECK WHETHER ENOUGH TERMINALS COULD BE REDUCED \n\n\n", fix);
+            printf("FIXED %f \n\n\n", fix);
          if( rpc )
             SCIP_CALL( da_reduce(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap,
                   nodearrint, nodearrint2, nodearrchar, &danelims, 0, randnumgen, TRUE, NULL) );
          else
-            SCIP_CALL( da_reducePcMw(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, vbase, heap, edgearrint, state, nodearrchar, &danelims, TRUE, FALSE, !FALSE, FALSE, userec) );
+            SCIP_CALL( da_reducePcMw(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, vbase, heap, edgearrint, state, nodearrchar, &danelims, TRUE, FALSE, FALSE, FALSE, userec) );
 
          if( danelims <= reductbound )
             da = FALSE;

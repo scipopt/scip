@@ -1008,6 +1008,173 @@ SCIP_RETCODE nv_reduction_optimal(
    return SCIP_OKAY;
 }
 
+
+
+
+
+
+
+
+
+
+
+
+* C. W. Duin and A. Volganant
+ *
+ * "An Edge Elimination Test for the Steiner Problem in Graphs"
+ *
+ * Operations Research Letters 8, (1989), 79-83
+ *
+ * Special Distance Test
+ */
+int sd_reduction(
+   SCIP* scip,
+   GRAPH* g,
+   double*  sddist,
+   double*  sdtrans,
+   double*  sdrand,
+   double* cost,
+   double* random,
+   int*    heap,
+   int*    state,
+   int*    knotexamined,
+   int     runnum
+   )
+{
+   SCIP_Real redstarttime;
+   SCIP_Real timelimit;
+   SCIP_Real stalltime;
+   int     count = 0;
+   int     i;
+   int     e;
+   int     j;
+   int     elimins = 0;
+   int     knotoffset = 0;
+
+   SCIPdebugMessage("SD-Reduktion: ");
+   fflush(stdout);
+
+   /*
+     heap  = malloc((size_t)g->knots * sizeof(int));
+     state = malloc((size_t)g->knots * sizeof(int));
+   */
+   assert(heap  != NULL);
+   assert(state != NULL);
+   /*
+     sd = malloc((size_t)g->knots * sizeof(SDPTH));
+   */
+   assert(sddist != NULL);
+   assert(sdtrans != NULL);
+   /*
+     cost  = malloc((size_t)g->edges * sizeof(double));
+   */
+   assert(cost != NULL);
+
+   assert(knotexamined != NULL);
+
+   redstarttime = SCIPgetTotalTime(scip);
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+   stalltime = timelimit*0.1; /* this should be set as a parameter */
+
+   for(i = 0; i < g->knots; i++)
+   {
+      g->mark[i] = (g->grad[i] > 0);
+      for(e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e])
+      {
+         random[e] = (double)(rand() % 512);
+         cost[e] = g->cost[e] * 1000.0 + random[e];
+      }
+   }
+
+   /* this is the offset used to minimise the number of knots to examine in large graphs. */
+   if( g->knots > KNOTLIMIT )
+   {
+      srand(runnum*100);
+      i = 0;
+      do
+      {
+         knotoffset = rand() % KNOTFREQ;
+         i++;
+      } while( g->knots > KNOTLIMIT && knotexamined[knotoffset] >= 0 && i < 50 );
+      knotexamined[knotoffset]++;
+   }
+
+
+   for(i = 0; i < g->knots; i++)
+   {
+      if( i % 100 == 0 && elimins == 0 && SCIPgetTotalTime(scip) - redstarttime > stalltime)
+         break;
+
+      if (!(i % 100))
+      {
+         SCIPdebug(fputc('.', stdout));
+         SCIPdebug(fflush(stdout));
+      }
+      if (g->grad[i] == 0)
+         continue;
+
+
+      if( g->knots > KNOTLIMIT && i % KNOTFREQ != knotoffset )
+         continue;
+
+      /* For the prize collecting variants all edges from the "dummy" root node must be retained. */
+      if ( (g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_ROOTED_PRIZE_COLLECTING
+            || g->stp_type == STP_MAX_NODE_WEIGHT) && i == g->source[0] )
+         continue;
+
+      for(e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e])
+      {
+         assert(g->mark[g->head[e]] == 1);
+
+         g->mark[g->head[e]] = 2;
+      }
+
+      compute_sd(g, i, cost, random, heap, state, &count, sddist, sdtrans, sdrand);
+
+      for(e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e])
+      {
+         assert(g->mark[g->head[e]] == 2);
+         /* assert(sd[g->head[e]].dist < FARAWAY); */
+
+         g->mark[g->head[e]] = 1;
+      }
+
+      for(e = g->outbeg[i]; e != EAT_LAST; e = j)
+      {
+         assert(g->tail[e] == i);
+
+         j = g->oeat[e];
+
+         if (LT(g->cost[e], FARAWAY) && LT(sddist[g->head[e]], cost[e])
+            && LT(sddist[g->head[e]] - sdrand[g->head[e]], cost[e] - random[e]))
+         {
+       SCIPindexListNodeFree(&((g->ancestors)[e]));
+       assert(g->ancestors[e] == NULL);
+            graph_edge_del(g, e);
+            elimins++;
+         }
+      }
+   }
+#if 0
+   free(heap);
+   free(state);
+
+   heap  = NULL;
+   state = NULL;
+
+   free(sd);
+   free(cost);
+#endif
+   assert(graph_valid(g));
+
+   SCIPdebugMessage("%d Edges deleted\n", elimins * 2);
+   /*printf("%d SD: Edges deleted\n", elimins * 2);*/
+   return(elimins);
+}
+
+
+
+
 #endif
 
 /** Special distance test */

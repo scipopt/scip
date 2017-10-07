@@ -817,7 +817,6 @@ void graph_path_st(
    STP_Bool*             connected           /**< array to mark whether a vertex is part of computed Steiner tree */
    )
 {
-   int   z;
    int   k;
    int   m;
    int   e;
@@ -858,9 +857,9 @@ void graph_path_st(
    {
       int node;
       int nterms = 0;
-      int hnnodes = nnodes / 2;
+      int z = SCIPrandomGetInt(randnumgen, 0, 1);
+      assert(z >= 0);
 
-      z = SCIPrandomGetInt(randnumgen, 0, nnodes - 1);
       count       = 1;
       heap[count] = k;
       state[k]    = count;
@@ -879,7 +878,8 @@ void graph_path_st(
             connected[k] = TRUE;
             pathdist[k] = 0.0;
             node = k;
-            z = SCIPrandomGetInt(randnumgen, 0, nnodes - 1);
+            z = SCIPrandomGetInt(randnumgen, 0, 1);
+            assert(z >= 0);
 
             if( k != start )
             {
@@ -897,7 +897,7 @@ void graph_path_st(
                break;
          }
 
-         if( z > hnnodes )
+         if( z )
          {
             /* update adjacent vertices */
             for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )

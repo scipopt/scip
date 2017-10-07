@@ -3326,6 +3326,29 @@ int graph_valid(
          && g->stp_type != STP_PCSPG && g->stp_type != STP_MWCSP && g->stp_type != STP_RMWCSP )
          return((void)fprintf(stderr, fehler7, k), FALSE);
    }
+
+   if( (g->stp_type == STP_PCSPG || g->stp_type == STP_MWCSP) && g->extended )
+   {
+      // todo
+      const int root = g->source[0];
+
+      /*
+      for( e = g->outbeg[root]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         SCIP_Real p;
+         const int head = g->head;
+         if( Is_term(g->term[head]) )
+         {
+            p = g->cost[e];
+            for( int e2 = g->inpbeg[]; e2 != EAT_LAST; e2 = g->ieat[e2] )
+            {
+
+            }
+         }
+      }
+      */
+   }
+
    return TRUE;
 }
 

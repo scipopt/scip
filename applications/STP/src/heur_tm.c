@@ -2754,19 +2754,17 @@ SCIP_DECL_HEUREXEC(heurExecTM)
             }
          }
 
-         if( graph->stp_type == STP_DCSTP )
+         for( e = 0; e < nedges; e++ )
          {
-            for( e = 0; e < nedges; e++ )
+            if( SCIPisZero(scip, cost[e]) )
             {
-               if( SCIPisZero(scip, cost[e]) )
-               {
-                  cost[e] = SCIPepsilon(scip) * 2;
-                  assert(!SCIPisZero(scip, cost[e]));
-                  assert(SCIPisZero(scip, costrev[flipedge(e)]));
-                  costrev[flipedge(e)] = cost[e];
-               }
+               cost[e] = SCIPepsilon(scip) * 2.0;
+               assert(!SCIPisZero(scip, cost[e]));
+               assert(SCIPisZero(scip, costrev[flipedge(e)]));
+               costrev[flipedge(e)] = cost[e];
             }
          }
+
          /* can we connect the network */
          SCIP_CALL( SCIPStpHeurTMRun(scip, heurdata, graph, NULL, &best_start, results, runs, heurdata->beststartnode,
                cost, costrev, &(heurdata->hopfactor), nodepriority, maxcost, &success, FALSE) );
