@@ -33,7 +33,7 @@
 extern "C" {
 #endif
 
-/** creates the handler for orbitope constraints and includes it in SCIP */
+/** creates the handler for orbisack constraints and includes it in SCIP */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrOrbisack(
    SCIP*                 scip                /**< SCIP data structure */
@@ -51,8 +51,8 @@ SCIP_RETCODE SCIPcreateConsOrbisack(
    const char*           name,               /**< name of constraint */
    SCIP_VAR*const*       vars1,              /**< first column matrix of variables on which the symmetry acts */
    SCIP_VAR*const*       vars2,              /**< second column matrix of variables on which the symmetry acts */
-   unsigned int          nrows,              /**< number of rows in variable matrix */
-   SCIP_Bool             isPporbisack,       /**< whether the orbisack is a packing/partitioning orbisack */
+   int                   nrows,              /**< number of rows in variable matrix */
+   SCIP_Bool             ispporbisack,       /**< whether the orbisack is a packing/partitioning orbisack */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -93,7 +93,7 @@ SCIP_RETCODE SCIPcreateConsBasicOrbisack(
    const char*           name,               /**< name of constraint */
    SCIP_VAR**            vars1,              /**< first column of matrix of variables on which the symmetry acts */
    SCIP_VAR**            vars2,              /**< second column of matrix of variables on which the symmetry acts */
-   unsigned int          nRows               /**< number of rows in constraint matrix */
+   int                   nrows               /**< number of rows in constraint matrix */
    );
 
 #ifdef __cplusplus
