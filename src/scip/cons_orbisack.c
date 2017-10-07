@@ -1089,8 +1089,8 @@ SCIP_DECL_CONSENFOLP(consEnfolpOrbisack)
       consdata = SCIPconsGetData(conss[c]);
 
       /* get solution */
-      SCIP_CALL( SCIPgetSolVals(scip, sol, consdata->nrows, consdata->vars1, consdata->vals1) );
-      SCIP_CALL( SCIPgetSolVals(scip, sol, consdata->nrows, consdata->vars2, consdata->vals2) );
+      SCIP_CALL( SCIPgetSolVals(scip, NULL, consdata->nrows, consdata->vars1, consdata->vals1) );
+      SCIP_CALL( SCIPgetSolVals(scip, NULL, consdata->nrows, consdata->vars2, consdata->vals2) );
 
       SCIPdebugMessage("Enforcing orbisack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
 
