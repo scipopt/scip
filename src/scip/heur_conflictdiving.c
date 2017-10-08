@@ -29,7 +29,7 @@
 #define HEUR_DESC                    "LP diving heuristic that chooses fixings w.r.t. soft locks"
 #define HEUR_DISPCHAR                '~'
 #define HEUR_PRIORITY                -1000250
-#define HEUR_FREQ                    1
+#define HEUR_FREQ                    2
 #define HEUR_FREQOFS                 0
 #define HEUR_MAXDEPTH                -1
 #define HEUR_TIMING                  SCIP_HEURTIMING_DURINGLPLOOP
@@ -52,7 +52,7 @@
 #define DEFAULT_MAXDIVEUBQUOTNOSOL  0.1 /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_MAXDIVEAVGQUOTNOSOL 0.0 /**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_BACKTRACK          TRUE /**< use one level of backtracking if infeasibility is encountered? */
-#define DEFAULT_LPRESOLVEDOMCHGQUOT 0.01 /**< percentage of immediate domain changes during probing to trigger LP resolve */
+#define DEFAULT_LPRESOLVEDOMCHGQUOT 0.2 /**< percentage of immediate domain changes during probing to trigger LP resolve */
 #define DEFAULT_LPSOLVEFREQ           0 /**< LP solve frequency for diving heuristics */
 #define DEFAULT_ONLYLPBRANCHCANDS FALSE /**< should only LP branching candidates be considered instead of the slower but
                                          *   more general constraint handler diving variable selection? */
@@ -98,6 +98,7 @@ SCIP_DECL_HEURFREE(heurFreeConflictdiving) /*lint --e{715}*/
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
+
    SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
@@ -165,13 +166,21 @@ SCIP_DECL_HEUREXEC(heurExecConflictdiving) /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
+#define MIN_RAND 1e-06
+#define MAX_RAND 1e-05
+#define LOCKFRAC 1e-04
+
 /** returns a score for the given candidate -- the best candidate maximizes the diving score */
 static
 SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
 {
+   SCIP_RANDNUMGEN* rng = SCIPdivesetGetRandnumgen(diveset);
    SCIP_Real softlocksum = SCIPvarGetNLocksSoftDown(cand) + SCIPvarGetNLocksSoftUp(cand);
+   SCIP_Real locksum = SCIPvarGetNLocksDown(cand) + SCIPvarGetNLocksUp(cand);
    SCIP_Bool mayrounddown = SCIPvarMayRoundDown(cand);
    SCIP_Bool mayroundup = SCIPvarMayRoundUp(cand);
+
+   assert(rng != NULL);
 
    /* variable can be rounded in exactly one direction */
    if( mayrounddown != mayroundup )
@@ -199,13 +208,15 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
             SCIPABORT();
             return SCIP_INVALIDDATA; /*lint !e527*/
       } /*lint !e788*/
-      *score = SCIPvarGetNLocksSoftUp(cand)/MAX(1.0, softlocksum) + 0.0001 * SCIPvarGetNLocksUp(cand);
+      *score = SCIPvarGetNLocksSoftUp(cand)/MAX(1.0, softlocksum)
+            + (LOCKFRAC + SCIPrandomGetReal(rng, MIN_RAND, MAX_RAND)) * SCIPvarGetNLocksUp(cand)/MAX(1.0, locksum);
    }
    else
    {
       if ( divetype == SCIP_DIVETYPE_SOS1VARIABLE && SCIPisFeasNegative(scip, candsol) )
          candsfrac = 1.0 - candsfrac;
-      *score = SCIPvarGetNLocksSoftDown(cand)/MAX(1.0, softlocksum) + 0.0001 * SCIPvarGetNLocksDown(cand);
+      *score = SCIPvarGetNLocksSoftDown(cand)/MAX(1.0, softlocksum)
+            + (LOCKFRAC + SCIPrandomGetReal(rng, MIN_RAND, MAX_RAND)) * SCIPvarGetNLocksDown(cand)/MAX(1.0, locksum);
    }
 
 
