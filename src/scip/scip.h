@@ -326,7 +326,7 @@ SCIP_Bool SCIPisTransformed(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns whether the solution process should be probably correct
+/** returns whether the solution process is arithmetically exact, i.e., not subject to roundoff errors
  *
  *  @note This feature is not supported yet!
  *
