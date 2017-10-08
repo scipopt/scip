@@ -353,7 +353,7 @@ SCIP_RETCODE computePertubedSol(
 
       pertubateEdgeCosts(scip, graph, transgraph, result, nodearrchar, pertubation);
 
-      SCIP_CALL( SCIPdualAscentStp(scip, transgraph, cost, pathdist, &lb, FALSE, FALSE, gnodearr, transresult, state, root, 1, NULL, nodearrchar) );
+      SCIP_CALL( SCIPStpDualAscent(scip, transgraph, cost, pathdist, &lb, FALSE, FALSE, gnodearr, NULL, transresult, state, root, 1, NULL, nodearrchar) );
 
       BMScopyMemoryArray(transgraph->cost, transcost, transnedges);
 
@@ -405,7 +405,7 @@ SCIP_RETCODE computePertubedSol(
 
    printf("OK %d \n", 0);
 
-   SCIP_CALL( SCIPdualAscentStpSol(scip, transgraph, cost, pathdist, &lb, FALSE, FALSE, gnodearr, transresult, NULL, state, root, 1, NULL, nodearrchar) );
+   SCIP_CALL( SCIPStpDualAscent(scip, transgraph, cost, pathdist, &lb, FALSE, FALSE, gnodearr, transresult, NULL, state, root, 1, NULL, nodearrchar) );
 
    lb += offset;
 
@@ -879,7 +879,7 @@ SCIP_RETCODE da_reduce(
 
       if( externsol && (run == 0) && graph->stp_type != STP_RSMT )
       {
-         SCIP_CALL( SCIPdualAscentStpSol(scip, graph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, result, edgearrint, state, root, 1, NULL, nodearrchar) );
+         SCIP_CALL( SCIPStpDualAscent(scip, graph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, result, edgearrint, state, root, 1, NULL, nodearrchar) );
       }
       else if( run > 0 && graph->stp_type != STP_RSMT )
       {
@@ -895,12 +895,12 @@ SCIP_RETCODE da_reduce(
          assert(graph_sol_valid(scip, graph, result));
          graph->source[0] = realroot;
 
-         SCIP_CALL( SCIPdualAscentStpSol(scip, graph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, result, edgearrint, state, root, 1, NULL, nodearrchar) );
+         SCIP_CALL( SCIPStpDualAscent(scip, graph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, result, edgearrint, state, root, 1, NULL, nodearrchar) );
 
       }
       else
       {
-         SCIP_CALL( SCIPdualAscentStp(scip, graph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, edgearrint, state, root, 1, NULL, nodearrchar) );
+         SCIP_CALL( SCIPStpDualAscent(scip, graph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, NULL, edgearrint, state, root, 1, NULL, nodearrchar) );
       }
 
       /* perform ascent and prune */
@@ -1477,13 +1477,13 @@ SCIP_RETCODE da_reduceSlackPrune(
    {
       obj = graph_computeSolVal(graph->cost, edgearrint, 0.0, nedges);
 
-      SCIP_CALL( SCIPdualAscentStpSol(scip, graph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, edgearrint, edgearrint2, state, root, 1, edgearrchar, nodearrchar) );
+      SCIP_CALL( SCIPStpDualAscent(scip, graph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, edgearrint, edgearrint2, state, root, 1, edgearrchar, nodearrchar) );
 
    }
    else
    {
       obj = FARAWAY;
-      SCIP_CALL( SCIPdualAscentStp(scip, graph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, edgearrint2, state, root, 1, edgearrchar, nodearrchar) );
+      SCIP_CALL( SCIPStpDualAscent(scip, graph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, NULL, edgearrint2, state, root, 1, edgearrchar, nodearrchar) );
    }
 
 #if 0
@@ -1916,7 +1916,7 @@ SCIP_RETCODE da_reducePcMw(
    /* initialize data structures for shortest paths */
    SCIP_CALL( graph_path_init(scip, transgraph) );
 
-   SCIP_CALL( SCIPdualAscentStp(scip, transgraph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, transresult, state, root, 1, marked, nodearrchar) );
+   SCIP_CALL( SCIPStpDualAscent(scip, transgraph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, NULL, transresult, state, root, 1, marked, nodearrchar) );
 
    printf("DA done %d \n", 0);
 
@@ -2153,7 +2153,7 @@ SCIP_RETCODE da_reducePcMw(
 
          pertubateEdgeCosts(scip, graph, transgraph, result, nodearrchar, run - 1);
 
-         SCIP_CALL( SCIPdualAscentStp(scip, transgraph, cost, pathdist, &bestlb, FALSE, FALSE, gnodearr, transresult, state, tmproot, 1, marked, nodearrchar) );
+         SCIP_CALL( SCIPStpDualAscent(scip, transgraph, cost, pathdist, &bestlb, FALSE, FALSE, gnodearr, NULL, transresult, state, tmproot, 1, marked, nodearrchar) );
 
          BMScopyMemoryArray(transgraph->cost, transcost, transgraph->edges);
 
@@ -2177,7 +2177,7 @@ SCIP_RETCODE da_reducePcMw(
 
          assert(graph_sol_valid(scip, transgraph, result) );
 
-         SCIP_CALL( SCIPdualAscentStpSol(scip, transgraph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, result, transresult, state, tmproot, 1, marked, nodearrchar) );
+         SCIP_CALL( SCIPStpDualAscent(scip, transgraph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, result, transresult, state, tmproot, 1, marked, nodearrchar) );
       }
       else
       {
@@ -2186,11 +2186,11 @@ SCIP_RETCODE da_reducePcMw(
             BMScopyMemoryArray(transresult, result, graph->edges);
             SCIP_CALL( graph_RerootSol(scip, transgraph, transresult, tmproot) );
             printf("RUN  %d \n\n \n", 0);
-            SCIP_CALL( SCIPdualAscentStpSol(scip, transgraph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, transresult, result2, state, tmproot, 1, marked, nodearrchar) );
+            SCIP_CALL( SCIPStpDualAscent(scip, transgraph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, transresult, result2, state, tmproot, 1, marked, nodearrchar) );
          }
          else
          {
-            SCIP_CALL( SCIPdualAscentStp(scip, transgraph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, transresult, state, tmproot, 1, marked, nodearrchar) );
+            SCIP_CALL( SCIPStpDualAscent(scip, transgraph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, NULL, transresult, state, tmproot, 1, marked, nodearrchar) );
          }
       }
 
@@ -2485,7 +2485,7 @@ SCIP_RETCODE da_reduceSlackPruneMw(
    }
 
    /* compute lower bound and reduced costs todo use SCIPdualAscentStpSol */
-   SCIP_CALL( SCIPdualAscentStp(scip, transgraph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, transresult, state, root, 1, marked, nodearrchar) );
+   SCIP_CALL( SCIPStpDualAscent(scip, transgraph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, NULL, transresult, state, root, 1, marked, nodearrchar) );
 
    SCIP_CALL( SCIPStpHeurAscendPruneRunPcMw(scip, NULL, graph, cost, transresult, vbase, root, nodearrchar, &success, TRUE, FALSE) );
 

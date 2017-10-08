@@ -2099,8 +2099,6 @@ SCIP_RETCODE SCIPprobdataCreate(
    probdata->graph = graph;
    probdata->stp_type = graph->stp_type;
 
-
-
 #if 1
    if( (graph->edges > CUT_MAXNEDGES) && (graph->terms > CUT_MAXNTERMINALS)  )
    {
@@ -2126,33 +2124,6 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    /* update type for MWCSP (might be RMWCSP now) */
    mw = (graph->stp_type == STP_MWCSP);
-
-#if 0 //heur info output (bad hack)
-   SCIP_Real lb;
-   FILE *fptr;
-   probdata->offset = presolinfo.fixed + offset;
-   SCIP_CALL( graph_path_init(scip, graph) );
-   if( pc || mw )
-   {
-      SCIP_CALL( SCIPdualAscentPcStp(scip, graph, NULL, &lb, FALSE, TRUE, 1) );
-   }
-   else
-   {
-      SCIP_CALL( SCIPdualAscentStp(scip, graph, NULL, NULL, &lb, FALSE, TRUE, NULL, NULL, NULL, graph->source[0], 1, NULL, NULL) );
-   }
-
-   fptr=fopen("redStats.txt","a");
-
-   assert(fptr!=NULL);
-
-   if( mw )
-   fprintf(fptr,"%f  %f  %f \n", (- probdata->offset - lb), SCIPgetReadingTime(scip), SCIPgetTotalTime (scip) );
-   else
-   fprintf(fptr,"%f  %f  %f %f %s\n", lb, SCIPgetReadingTime(scip), SCIPgetTotalTime (scip), offset, filename);
-
-   fclose(fptr);
-   return SCIP_ERROR;
-#endif
 
    SCIP_CALL( SCIPsetRealParam(scip, "limits/time", oldtimelimit) );
 
@@ -2329,17 +2300,17 @@ SCIP_RETCODE SCIPprobdataCreate(
 
       if( pc || mw )
       {
-         SCIP_CALL( SCIPdualAscentPcStp(scip, graph, NULL, &lpobjval, TRUE, TRUE, 1) );
+         SCIP_CALL( SCIPStpDualAscentPcMw(scip, graph, NULL, &lpobjval, TRUE, TRUE, 1) );
       }
       else
       {
          if( graph->stp_type != STP_RPCSPG && graph->stp_type != STP_SPG && graph->stp_type != STP_RSMT && graph->stp_type != STP_OARSMT && graph->stp_type != STP_GSTP )
          {
-            SCIP_CALL( SCIPdualAscentStp(scip, graph, NULL, NULL, &lpobjval, TRUE, FALSE, NULL, NULL, NULL, graph->source[0], 1, NULL, NULL) );
+            SCIP_CALL( SCIPStpDualAscent(scip, graph, NULL, NULL, &lpobjval, TRUE, FALSE, NULL, NULL, NULL, NULL, graph->source[0], 1, NULL, NULL) );
          }
          else
          {
-            SCIP_CALL( SCIPdualAscentStp(scip, graph, NULL, NULL, &lpobjval, TRUE, TRUE, NULL, NULL, NULL, graph->source[0], 1, NULL, NULL) );
+            SCIP_CALL( SCIPStpDualAscent(scip, graph, NULL, NULL, &lpobjval, TRUE, TRUE, NULL, NULL, NULL, NULL, graph->source[0], 1, NULL, NULL) );
          }
       }
    }

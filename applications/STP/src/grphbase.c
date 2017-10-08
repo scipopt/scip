@@ -2012,6 +2012,37 @@ void graph_show(
    (void)fputc('\n', stdout);
 }
 
+/* get compressed sparse row arrays representing current graph */
+void graph_get_csr(
+   const GRAPH*          g,                  /**< the graph */
+   int* RESTRICT         edgearr,            /**< original edge array [0,...,nedges - 1] */
+   int* RESTRICT         tailarr,            /**< tail of csr edge [0,...,nedges - 1]  */
+   int* RESTRICT         start,              /**< start array [0,...,nnodes] */
+   int*                  nnewedges           /**< pointer to store number of new edges */
+      )
+{
+   int i = 0;
+   const int nnodes = g->knots;
+
+   assert(g != NULL);
+   assert(tailarr != NULL);
+   assert(edgearr != NULL);
+   assert(start != NULL);
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      start[k] = i;
+      for( int e = g->inpbeg[k]; e != EAT_LAST; e = g->ieat[e] )
+      {
+         edgearr[i] = e;
+         tailarr[i++] = g->tail[e];
+      }
+   }
+
+   *nnewedges = i;
+   start[nnodes] = i;
+}
+
 void graph_ident(
    const GRAPH*          p                   /**< the graph */
    )
