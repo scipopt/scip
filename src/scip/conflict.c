@@ -2781,7 +2781,8 @@ SCIP_RETCODE createAndAddProofcons(
       SCIP_CALL( SCIPconflictstoreAddDualsolcons(conflictstore, cons, blkmem, set, stat, transprob, reopt, scale, updateside) );
    }
 
-   SCIP_CALL( SCIPnodeAddCons(tree->path[0], blkmem, set, stat, tree, cons) );
+   /* add the constraint to the global problem */
+   SCIP_CALL( SCIPprobAddCons(transprob, set, stat, cons) );
 
    SCIPsetDebugMsg(set, "added proof-constraint to node %p in depth 0 (nproofconss %d)\n", (void*)tree->path[0],
          SCIPconflictstoreGetNDualInfProofs(conflictstore));
