@@ -31,23 +31,24 @@ jobidsstr=${jobidsstr:1}
 export TESTSET=$1
 export SETTING=$2
 
+# get some relevant information
 # process optional variables
 if [ "${PERF}" != "" ]; then
   export PERFORMANCE=${PERF}
 fi
-# get some relevant information
 if [ "${VERSION}" == "" ]; then
-  export SCIPVERSION="scip"
+  # when version not given explicitly, recover it from executable
   SCIPVERSIONOUTPUT=`bin/scip -v | sed -e 's/$/@/'`
+  export SCIPVERSION=scip-`echo $SCIPVERSIONOUTPUT | sed -e 's/.* VERSION=\([^@]*\).*/\1/'`
 else
   export SCIPVERSION="scip-${VERSION}"
   SCIPVERSIONOUTPUT=`bin/${SCIPVERSION}* -v | sed -e 's/$/@/'`
 fi
 
-# execute checker after all jobs completed
 export GITHASH=`git describe --always --dirty  | sed -re 's/^.+-g//'`
 export GITBRANCH=`git ls-remote --heads origin | grep $(git rev-parse HEAD)| cut -d / -f 3`
 export OPT=`echo $SCIPVERSIONOUTPUT | sed -e 's/.* OPT=\([^@]*\).*/\1/'`
 export LPS=`echo $SCIPVERSIONOUTPUT | sed -e 's/.* LPS=\([^@]*\).*/\1/'`
 
+# execute checker after all jobs completed
 sbatch --dependency=afterany:${jobidsstr} --kill-on-invalid-dep=yes --cpus-per-task=1 --mem=100 --time=10 --partition=mip-dbg --account=mip check/jenkins_failcheck.sh

@@ -4409,11 +4409,11 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    case SCIP_LPPAR_BARRIERCONVTOL:
       *dval = getDblParam(lpi, CPX_PARAM_BAREPCOMP);
       break;
-   case SCIP_LPPAR_LOBJLIM:
-      *dval = getDblParam(lpi, CPX_PARAM_OBJLLIM);
-      break;
-   case SCIP_LPPAR_UOBJLIM:
-      *dval = getDblParam(lpi, CPX_PARAM_OBJULIM);
+   case SCIP_LPPAR_OBJLIM:
+      if ( CPXgetobjsen(lpi->cpxenv, lpi->cpxlp) == CPX_MIN )
+         *dval = getDblParam(lpi, CPX_PARAM_OBJULIM);
+      else
+         *dval = getDblParam(lpi, CPX_PARAM_OBJLLIM);
       break;
    case SCIP_LPPAR_LPTILIM:
       *dval = getDblParam(lpi, CPX_PARAM_TILIM);
@@ -4455,11 +4455,11 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    case SCIP_LPPAR_BARRIERCONVTOL:
       setDblParam(lpi, CPX_PARAM_BAREPCOMP, dval);
       break;
-   case SCIP_LPPAR_LOBJLIM:
-      setDblParam(lpi, CPX_PARAM_OBJLLIM, dval);
-      break;
-   case SCIP_LPPAR_UOBJLIM:
-      setDblParam(lpi, CPX_PARAM_OBJULIM, dval);
+   case SCIP_LPPAR_OBJLIM:
+      if ( CPXgetobjsen(lpi->cpxenv, lpi->cpxlp) == CPX_MIN )
+         setDblParam(lpi, CPX_PARAM_OBJULIM, dval);
+      else
+         setDblParam(lpi, CPX_PARAM_OBJLLIM, dval);
       break;
    case SCIP_LPPAR_LPTILIM:
       setDblParam(lpi, CPX_PARAM_TILIM, dval);

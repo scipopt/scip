@@ -4895,7 +4895,7 @@ SCIP_RETCODE _addConcaveEstimatorMultivariate(
    /*SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_ROWREPSWITCH, 5.0) ); */
    /* get accurate coefficients */
    SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_FEASTOL, SCIPfeastol(scip)/100.0) );
-   SCIP_CALL( SCIPlpiSetRealpar(lpi, doupper ? SCIP_LPPAR_LOBJLIM : SCIP_LPPAR_UOBJLIM, funcval) );
+   SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_OBJLIM, funcval) );
    SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPITLIM, 10 * nvars) );
    SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_SCALING, 1) );
    SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_FROMSCRATCH, 1) );
