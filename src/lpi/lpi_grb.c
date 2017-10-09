@@ -3520,6 +3520,7 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
+   SCIP_Bool violated;
    int algo;
    int res;
 
@@ -3537,7 +3538,38 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
       return FALSE; /*lint !e527*/
    }
 
-   return (lpi->solstat == GRB_OPTIMAL || (lpi->solstat == GRB_UNBOUNDED && algo == GRB_METHOD_PRIMAL));
+   if( lpi->solstat == GRB_ITERATION_LIMIT )
+   {
+      double consviol;
+      double boundviol;
+      double eps;
+
+      res = GRBgetdblparam(lpi->grbenv, GRB_DBL_PAR_OPTIMALITYTOL, &eps);
+      if ( res != 0 )
+      {
+         SCIPABORT();
+         return FALSE; /*lint !e527*/
+      }
+      res = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_CONSTR_VIO, &consviol);
+      if ( res != 0 )
+      {
+         SCIPABORT();
+         return FALSE; /*lint !e527*/
+      }
+      res = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_BOUND_VIO, &boundviol);
+      if ( res != 0 )
+      {
+         SCIPABORT();
+         return FALSE; /*lint !e527*/
+      }
+
+      violated = (consviol > eps || boundviol > eps);
+   }
+   else
+      violated = FALSE;
+
+   return (lpi->solstat == GRB_OPTIMAL || (!violated && lpi->solstat == GRB_ITERATION_LIMIT && algo == GRB_METHOD_PRIMAL)
+     || (lpi->solstat == GRB_UNBOUNDED && algo == GRB_METHOD_PRIMAL));
 }
 
 /** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point);
