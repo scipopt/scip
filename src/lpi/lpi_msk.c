@@ -605,7 +605,7 @@ const char* SCIPlpiGetSolverName(
    void
    )
 {
-   sprintf(mskname, "MOSEK %.2f", (SCIP_Real)MSK_VERSION_MAJOR);
+   sprintf(mskname, "MOSEK %d.%d.%d.%d", MSK_VERSION_MAJOR, MSK_VERSION_MINOR, MSK_VERSION_BUILD, MSK_VERSION_REVISION);
    return mskname;
 }
 
