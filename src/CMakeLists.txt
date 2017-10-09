@@ -69,6 +69,7 @@ set(scipsources
     scip/heur_clique.c
     scip/heur_coefdiving.c
     scip/heur_completesol.c
+    scip/heur_conflictdiving.c
     scip/heur_crossover.c
     scip/heur_dins.c
     scip/heur_distributiondiving.c
@@ -405,6 +406,7 @@ set(scipheaders
     scip/heur_clique.h
     scip/heur_coefdiving.h
     scip/heur_completesol.h
+    scip/heur_conflictdiving.h
     scip/heur_crossover.h
     scip/heur_dins.h
     scip/heur_distributiondiving.h
