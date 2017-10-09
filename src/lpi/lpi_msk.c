@@ -2781,8 +2781,8 @@ SCIP_Bool SCIPlpiWasSolved(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
+   MSKbooleant exists;
    MSKsolstae solsta;
-   MSKrescodee restat;
 #if MSK_VERSION_MAJOR < 7
    MSKprostae prosta;
 #endif
@@ -2793,14 +2793,17 @@ SCIP_Bool SCIPlpiWasSolved(
 
    SCIPdebugMessage("Calling SCIPlpiWasSolved (%d)\n",lpi->lpid);
 
+   MOSEK_CALL( MSK_solutiondef(lpi->task, MSK_SOL_BAS, &exists) );
+
+   if ( ! exists )
+      return FALSE;
+
 #if MSK_VERSION_MAJOR >= 7
-   restat = MSK_getsolsta(lpi->task, MSK_SOL_BAS, &solsta);
+   MOSEK_CALL( MSK_getsolsta(lpi->task, MSK_SOL_BAS, &solsta) );
 #else
-   restat = MSK_getsolutionstatus(lpi->task, MSK_SOL_BAS, &prosta, &solsta);
+   MOSEK_CALL( MSK_getsolutionstatus(lpi->task, MSK_SOL_BAS, &prosta, &solsta) );
 #endif
 
-   if ( restat != MSK_RES_OK )
-      return FALSE;
    return (solsta != MSK_SOL_STA_UNKNOWN);
 }
 
