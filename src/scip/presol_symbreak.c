@@ -39,6 +39,7 @@
 #include <scip/cons_linear.h>
 #include <scip/cons_setppc.h>
 #include <scip/cons_symresack.h>
+#include <scip/misc.h>
 #include <scip/prop_probing.h>
 #include <scip/presol_symbreak.h>
 #include <scip/presol_symmetry.h>
@@ -257,7 +258,6 @@ SCIP_RETCODE computeComponents(
    int npermvars;
    int nperms;
    int** perms;
-   int* componentstoperm;
    int i;
    int j;
    int k;
@@ -268,6 +268,7 @@ SCIP_RETCODE computeComponents(
    int start;
    int newstart;
    SCIP_Bool startchanged;
+   SCIP_DISJOINTSET* componentstoperm;
 
    assert( presoldata != NULL );
 
@@ -283,10 +284,7 @@ SCIP_RETCODE computeComponents(
    perms = presoldata->perms;
 
    /* init array that assigns each permutation its component of the group */
-   SCIP_CALL( SCIPallocBufferArray(scip, &componentstoperm, nperms) );
-
-   for (i = 0; i < nperms; ++i)
-      componentstoperm[i] = i;
+   SCIP_CALL( SCIPdisjointsetCreate(&componentstoperm, SCIPblkmem(scip), nperms) );
    ncomponents = nperms;
 
    /* check whether two permutations belong to the same component */
@@ -294,7 +292,9 @@ SCIP_RETCODE computeComponents(
    {
       for (j = i + 1; j < nperms; ++j)
       {
-         if ( componentstoperm[i] == componentstoperm[j] )
+         int componentI = SCIPdisjointsetFind(componentstoperm, i);
+         int componentJ = SCIPdisjointsetFind(componentstoperm, j);
+         if ( componentI == componentJ )
             continue;
 
          /* belong perms[i] and perms[j] to the same component? */
@@ -303,7 +303,12 @@ SCIP_RETCODE computeComponents(
             /* both permutations belong to the same component */
             if ( perms[i][k] != k && perms[j][k] != k )
             {
-               componentstoperm[j] = componentstoperm[i];
+               /* keep the smallest identifier to keep track of where a new component starts */
+               if ( componentI < componentJ )
+                  SCIPdisjointsetUnion(componentstoperm, i, j, TRUE);
+               else
+                  SCIPdisjointsetUnion(componentstoperm, j, i, TRUE);
+
                --ncomponents;
                break;
             }
@@ -327,14 +332,15 @@ SCIP_RETCODE computeComponents(
    {
       startchanged = FALSE;
       npermsincomponent = 0;
-      curcomponent = componentstoperm[start];
+      curcomponent = SCIPdisjointsetFind(componentstoperm, start);
 
       /* find number of permutations in current component and detect first perm in another permutation */
       for (i = start; i < nperms; ++i)
       {
-         if ( componentstoperm[i] == curcomponent )
+         if ( SCIPdisjointsetFind(componentstoperm, i) == curcomponent )
             ++npermsincomponent;
-         else if ( ! startchanged )
+         /* only store other component if it has the same identifier as its node (mark that new component starts) */
+         else if ( ! startchanged && SCIPdisjointsetFind(componentstoperm, i) == i )
          {
             newstart = i;
             startchanged = TRUE;
@@ -349,7 +355,7 @@ SCIP_RETCODE computeComponents(
       j = 0;
       for (i = start; i < nperms; ++i)
       {
-         if ( componentstoperm[i] == curcomponent )
+         if ( SCIPdisjointsetFind(componentstoperm, i) == curcomponent )
             presoldata->components[componentcnt][j++] = i;
       }
 
@@ -357,7 +363,7 @@ SCIP_RETCODE computeComponents(
       start = newstart;
    }
 
-   SCIPfreeBufferArray(scip, &componentstoperm);
+   SCIPdisjointsetFree(&componentstoperm, SCIPblkmem(scip));
 
 #if 0
    printf("\n\n\nTESTS\n\n");
