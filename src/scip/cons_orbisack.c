@@ -58,8 +58,6 @@
 /* default parameters for separation routines: */
 #define DEFAULT_ORBISEPARATION               FALSE     /**< whether orbisack inequalities should be separated */
 #define DEFAULT_COVERSEPARATION              FALSE     /**< whether cover inequalities should be separated */
-#define DEFAULT_ENFORCING                    FALSE     /**< whether we use enforcing methods of the constraint handler */
-#define DEFAULT_CHECK                        FALSE     /**< whether we use check methods of the constraint handler */
 
 /* default parameters for constraints */
 #define DEFAULT_COEFFBOUND               1000000.0     /**< maximum size of coefficients in orbisack inequalities */
@@ -74,8 +72,6 @@ struct SCIP_ConshdlrData
 {
    SCIP_Bool             coverseparation_;   /**< whether only cover inequalities should be separated */
    SCIP_Bool             orbiSeparation_;    /**< whether orbisack as well as cover inequalities should be separated */
-   SCIP_Bool             orbiEnforcing_;     /**< whether we use enforcing methods of constraint hanlder */
-   SCIP_Bool             orbiCheck_;         /**< whether we use check methods of constraint hanlder */
    SCIP_Real             coeffbound_;        /**< maximum size of coefficients in orbisack inequalities */
 };
 
@@ -1557,6 +1553,42 @@ SCIP_DECL_CONSLOCK(consLockOrbisack)
 static
 SCIP_DECL_CONSPRINT(consPrintOrbisack)
 {   /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** vars1;
+   SCIP_VAR** vars2;
+   int nrows;
+   int i;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert( cons != NULL );
+
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+   assert( consdata->vars1 != NULL );
+   assert( consdata->vars2 != NULL );
+   assert( consdata->nrows > 0 );
+
+   vars1 = consdata->vars1;
+   vars2 = consdata->vars2;
+   nrows = consdata->nrows;
+
+   SCIPdebugMsg(scip, "Printing method for orbisack constraint handler\n");
+
+   if ( consdata->ispporbisack )
+      SCIPinfoMessage(scip, file, "ppOrbisack(");
+   else
+      SCIPinfoMessage(scip, file, "orbisack(");
+
+   for (i = 0; i < nrows; ++i)
+   {
+      SCIPinfoMessage(scip, file, "%s,%s", SCIPvarGetName(vars1[i]), SCIPvarGetName(vars2[i]));
+      if ( i < nrows-1 )
+         SCIPinfoMessage(scip, file, ".");
+   }
+   SCIPinfoMessage(scip, file, ")");
+
    return SCIP_OKAY;
 }
 
@@ -1599,14 +1631,6 @@ SCIP_RETCODE SCIPincludeConshdlrOrbisack(
    SCIP_CALL( SCIPaddBoolParam(scip, "cons/" CONSHDLR_NAME "/orbiSeparation",
          "Separate orbisack inequalities?",
          &conshdlrdata->orbiSeparation_, TRUE, DEFAULT_ORBISEPARATION, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "cons/" CONSHDLR_NAME "/enforcing",
-         "Enforce orbisack constraints?",
-         &conshdlrdata->orbiEnforcing_, TRUE, DEFAULT_ENFORCING, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "cons/" CONSHDLR_NAME "/check",
-         "Check orbisack constraints?",
-         &conshdlrdata->orbiCheck_, TRUE, DEFAULT_CHECK, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "cons/" CONSHDLR_NAME "/coeffbound",
          "Maximum size of coefficients for orbisack inequalities",
@@ -1672,12 +1696,6 @@ SCIP_RETCODE SCIPcreateConsOrbisack(
 
    /* create constraint data */
    SCIP_CALL( consdataCreate(scip, &consdata, vars1, vars2, nrows, ispporbisack) );
-
-   /* do we use enforcing? */
-   SCIP_CALL( SCIPgetBoolParam(scip, "cons/orbisack/enforcing", &enforce) );
-
-   /* do we use check routines? */
-   SCIP_CALL( SCIPgetBoolParam(scip, "cons/orbisack/check", &check) );
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
