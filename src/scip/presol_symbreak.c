@@ -500,29 +500,12 @@ static
 SCIP_DECL_PRESOLFREE(presolFreeSymbreak)
 {  /*lint --e{715}*/
    SCIP_PRESOLDATA* presoldata;
-   int i;
 
    assert( scip != NULL );
    assert( presol != NULL );
 
    presoldata = SCIPpresolGetData(presol);
    assert( presoldata != NULL );
-
-   /* free pointers to symmetry group and binary variables */
-   if ( presoldata->ngenconss > 0 )
-      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->genconss, presoldata->ngenconss);
-
-   /* free orbit structures */
-   for (i = 0; i < presoldata->norbits; ++i)
-      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->orbits[i], presoldata->nvarsinorbits[i]);
-   SCIPfreeBlockMemoryArrayNull(scip, &presoldata->orbits, presoldata->norbits);
-   SCIPfreeBlockMemoryArrayNull(scip, &presoldata->nvarsinorbits, presoldata->norbits);
-
-   /* free components */
-   for (i = 0; i < presoldata->ncomponents; ++i)
-      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->components[i], presoldata->npermsincomponent[i]);
-    SCIPfreeBlockMemoryArrayNull(scip, &presoldata->components, presoldata->ncomponents);
-    SCIPfreeBlockMemoryArrayNull(scip, &presoldata->npermsincomponent, presoldata->ncomponents);
 
    SCIPfreeMemory(scip, &presoldata);
 
@@ -597,6 +580,43 @@ SCIP_DECL_PRESOLEXIT(presolExitSymbreak)
 
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
+
+   /* reset data (necessary if another problem is read in the SCIP shell) */
+
+   /* free pointers to symmetry group and binary variables */
+   if ( presoldata->ngenconss > 0 )
+      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->genconss, presoldata->ngenconss);
+
+   presoldata->genconss = NULL;
+   presoldata->ngenconss = 0;
+
+   /* free orbit structures */
+   for (i = 0; i < presoldata->norbits; ++i)
+      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->orbits[i], presoldata->nvarsinorbits[i]);
+   SCIPfreeBlockMemoryArrayNull(scip, &presoldata->orbits, presoldata->norbits);
+   SCIPfreeBlockMemoryArrayNull(scip, &presoldata->nvarsinorbits, presoldata->norbits);
+
+   presoldata->orbits = NULL;
+   presoldata->nvarsinorbits = NULL;
+   presoldata->norbits = -1;
+
+   /* free components */
+   for (i = 0; i < presoldata->ncomponents; ++i)
+      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->components[i], presoldata->npermsincomponent[i]);
+    SCIPfreeBlockMemoryArrayNull(scip, &presoldata->components, presoldata->ncomponents);
+    SCIPfreeBlockMemoryArrayNull(scip, &presoldata->npermsincomponent, presoldata->ncomponents);
+
+    presoldata->components = NULL;
+    presoldata->npermsincomponent = NULL;
+    presoldata->ncomponents = -1;
+
+    /* reset basic data */
+    presoldata->addedconss = FALSE;
+    presoldata->computedsymmetry = FALSE;
+    presoldata->enabled = TRUE;
+    presoldata->early = FALSE;
+    presoldata->nperms = -1;
+    presoldata->nsymresacks = 0;
 
    return SCIP_OKAY;
 }
