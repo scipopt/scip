@@ -109,6 +109,13 @@ SCIP_RETCODE consdataFree(
 
    nvars = (*consdata)->nvars;
 
+   if ( nvars == 0 )
+   {
+      SCIPfreeBlockMemory(scip, consdata);
+
+      return SCIP_OKAY;
+   }
+
    if ( (*consdata)->ppupgrade )
    {
       for (i = 0; i < (*consdata)->ncycles; ++i)
@@ -1192,26 +1199,29 @@ SCIP_DECL_CONSTRANS(consTransSymresack)
 
    consdata->nvars = nvars;
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->vars, nvars) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->vals, nvars) );
-   SCIP_CALL( SCIPgetTransformedVars(scip, nvars, sourcedata->vars, consdata->vars) );
-   for (i = 0; i < nvars; ++i)
+   if ( nvars > 0 )
    {
-      SCIP_CALL( SCIPcaptureVar(scip, consdata->vars[i]) );
-   }
-
-   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->perm, sourcedata->perm, nvars) );
-   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->invperm, sourcedata->invperm, nvars) );
-
-   consdata->ppupgrade = sourcedata->ppupgrade;
-
-   if ( sourcedata->ppupgrade )
-   {
-      consdata->ncycles = sourcedata->ncycles;
-      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->cycledecomposition, sourcedata->cycledecomposition, sourcedata->ncycles) );
-      for (i = 0; i < sourcedata->ncycles; ++i)
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->vars, nvars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->vals, nvars) );
+      SCIP_CALL( SCIPgetTransformedVars(scip, nvars, sourcedata->vars, consdata->vars) );
+      for (i = 0; i < nvars; ++i)
       {
-         SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->cycledecomposition[i], sourcedata->cycledecomposition[i], nvars + 1) ); /*lint !e866*/
+         SCIP_CALL( SCIPcaptureVar(scip, consdata->vars[i]) );
+      }
+
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->perm, sourcedata->perm, nvars) );
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->invperm, sourcedata->invperm, nvars) );
+
+      consdata->ppupgrade = sourcedata->ppupgrade;
+
+      if ( sourcedata->ppupgrade )
+      {
+         consdata->ncycles = sourcedata->ncycles;
+         SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->cycledecomposition, sourcedata->cycledecomposition, sourcedata->ncycles) );
+         for (i = 0; i < sourcedata->ncycles; ++i)
+         {
+            SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->cycledecomposition[i], sourcedata->cycledecomposition[i], nvars + 1) ); /*lint !e866*/
+         }
       }
    }
 
@@ -1703,11 +1713,15 @@ static
 SCIP_DECL_CONSPRESOL(consPresolSymresack)
 {  /*lint --e{715}*/
    int c;
+   int ngen = 0;
+   int oldndelconss;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
+
+   oldndelconss = *ndelconss;
 
    SCIPdebugMessage("Presolving method of symresack constraint handler. Propagating symresack inequalities.\n");
    *result = SCIP_DIDNOTRUN;
@@ -1717,10 +1731,24 @@ SCIP_DECL_CONSPRESOL(consPresolSymresack)
    {
       SCIP_Bool infeasible = FALSE;
       SCIP_Bool found = FALSE;
-      int ngen = 0;
+      SCIP_CONSDATA* consdata;
+      int localngen = 0;
 
       assert( conss[c] != 0 );
-      SCIP_CALL( propVariables(scip, conss[c], &infeasible, &found, &ngen) );
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert( consdata != NULL );
+
+      /* avoid trivial problems */
+      if ( consdata->nvars == 0 )
+      {
+         SCIP_CALL( SCIPdelCons(scip, conss[c]) );
+         (*ndelconss)++;
+      }
+      else
+      {
+         SCIP_CALL( propVariables(scip, conss[c], &infeasible, &found, &ngen) );
+      }
 
       if ( infeasible )
       {
@@ -1728,15 +1756,18 @@ SCIP_DECL_CONSPRESOL(consPresolSymresack)
          break;
       }
 
-      if ( ngen > 0 )
+      if ( localngen > 0 )
       {
-         *nfixedvars += (int) ngen;
-         *result = SCIP_SUCCESS;
+         *nfixedvars += localngen;
+         ngen += localngen;
       }
 
       if ( *result == SCIP_DIDNOTRUN )
          *result = SCIP_DIDNOTFIND;
    }
+
+   if ( *ndelconss > oldndelconss ||  ngen > 0 )
+      *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;
 }

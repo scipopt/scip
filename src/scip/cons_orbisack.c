@@ -185,6 +185,7 @@ SCIP_RETCODE initLP(
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != 0 );
+   assert( consdata->nrows > 0 );
    assert( consdata->vars1 != NULL );
    assert( consdata->vars2 != NULL );
    assert( consdata->vals1 != NULL );
@@ -193,10 +194,6 @@ SCIP_RETCODE initLP(
    nrows = consdata->nrows;
    vars1 = consdata->vars1;
    vars2 = consdata->vars2;
-
-   /* avoid stupid problems */
-   if ( nrows == 0 )
-      return SCIP_OKAY;
 
    tmpvars[0] = vars1[0];
    tmpvars[1] = vars2[0];
@@ -491,7 +488,7 @@ SCIP_RETCODE separateOrbisack(
    vals1 = consdata->vals1;
    vals2 = consdata->vals2;
 
-   /* avoid trivial problems */
+   /* if there is only one row, all cuts are added by initLP */
    if ( nrows < 2 )
       return SCIP_OKAY;
 
@@ -647,10 +644,6 @@ SCIP_RETCODE propVariables(
    nrows = consdata->nrows;
    vars1 = consdata->vars1;
    vars2 = consdata->vars2;
-
-   /* avoid trivial cases */
-   if ( nrows < 2 )
-      return SCIP_OKAY;
 
    /* determine current solution */
    SCIP_CALL( SCIPallocBufferArray(scip, &solu1, nrows) );
