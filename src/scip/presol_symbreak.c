@@ -68,8 +68,6 @@ struct SCIP_PresolData
    int                   nperms;             /**< number of permutations in perms */
    int                   npermvars;          /**< number of variables affected by permutations */
    SCIP_VAR**            permvars;           /**< array of variables on which permutations act */
-   int                   nvars;              /**< number of variables for symmetry computations */
-   SCIP_VAR**            vars;               /**< variables used for symmetry computations */
    SCIP_Bool             addedconss;         /**< whether we already added symmetry breaking constraints */
    SCIP_Bool             computedsymmetry;   /**< whether symmetry has been computed already */
    SCIP_Bool             conssaddlp;         /**< Should the symmetry breaking constraints be added to the LP? */
@@ -771,8 +769,6 @@ SCIP_RETCODE SCIPincludePresolSymbreak(
    SCIP_CALL( SCIPallocMemory(scip, &presoldata) );
 
    /* we must call the constructor explictly, because memory was m'alloced and not new'ed */
-   presoldata->vars = NULL;
-   presoldata->nvars = 0;
    presoldata->addedconss = FALSE;
    presoldata->computedsymmetry = FALSE;
    presoldata->enabled = TRUE;
