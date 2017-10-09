@@ -210,7 +210,10 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
             assert( ! SCIPisEQ(scip, oldcoef, matrixdata->matcoef[idx]) );
             oldcolor = color;
             firstcolornodenumber = nnodes;
+            oldcoef = matrixdata->matcoef[idx];
          }
+         else
+            assert( SCIPisEQ(scip, oldcoef, matrixdata->matcoef[idx]) );
 
          int varrhsidx;
          if ( groupByConstraints )
