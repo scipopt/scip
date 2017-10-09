@@ -1908,7 +1908,7 @@ SCIP_DECL_CONSLOCK(consLockSymresack)
 
    for (i = 0; i < nvars; ++i)
    {
-      /* there are no fixed points */
+      /* due to clean-up in consdataCreate, there are no fixed points */
       assert( perm[i] != i );
 
       if ( perm[i] > i )
