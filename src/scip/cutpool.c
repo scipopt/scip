@@ -818,10 +818,10 @@ SCIP_RETCODE SCIPcutpoolSeparate(
    SCIP_Bool found;
    SCIP_Bool cutoff;
    SCIP_Real minefficacy;
-   SCIP_Bool tried;
    SCIP_Bool retest;
    int firstunproc;
    int oldncuts;
+   int nefficaciouscuts;
    int c;
 
    assert(cutpool != NULL);
@@ -858,7 +858,6 @@ SCIP_RETCODE SCIPcutpoolSeparate(
    *result = SCIP_DIDNOTFIND;
    cutpool->ncalls++;
    found = FALSE;
-   tried = FALSE;
    minefficacy = stat->bestefficacy * stat->minefficacyfac;
 
    if( sol == NULL )
@@ -879,6 +878,7 @@ SCIP_RETCODE SCIPcutpoolSeparate(
 
    /* remember the current total number of found cuts */
    oldncuts = SCIPsepastoreGetNCuts(sepastore);
+   nefficaciouscuts = 0;
 
    /* process all unprocessed cuts in the pool */
    cutoff = FALSE;
@@ -923,8 +923,9 @@ SCIP_RETCODE SCIPcutpoolSeparate(
                continue;
             }
 
-            tried = TRUE;
             efficacy = sol == NULL ? SCIProwGetLPEfficacy(row, set, stat, lp) : SCIProwGetSolEfficacy(row, set, stat, sol);
+            if( SCIPsetIsFeasPositive(set, efficacy) )
+               ++nefficaciouscuts;
 
             if( efficacy >= minefficacy )
             {
@@ -982,34 +983,34 @@ SCIP_RETCODE SCIPcutpoolSeparate(
       cutpool->firstunprocessedsol = cutpool->ncuts;
    }
 
-   if( tried )
+   if( nefficaciouscuts > 0 )
    {
-      int maxncuts = SCIPsetGetSepaMaxcuts(set, root);
+      int maxncuts = MIN(SCIPsetGetSepaMaxcuts(set, root), nefficaciouscuts);
       int ncuts = SCIPsepastoreGetNCuts(sepastore) - oldncuts;
 
       /* update the number of found cuts */
       cutpool->ncutsfound += ncuts;
 
-      if( ncuts > 0.9 * maxncuts )
+      if( ncuts > (0.5 * maxncuts) )
       {
-         stat->ncutpoolfails = MIN(stat->ncutpoolfails - 1, 0);
+         stat->ncutpoolfails = MIN(stat->ncutpoolfails - 1, -1);
       }
-      else if( ncuts < 0.05 * maxncuts )
+      else if( ncuts == 0 || (ncuts < (0.05 * maxncuts)) )
       {
-         stat->ncutpoolfails = MAX(stat->ncutpoolfails + 1, 0);
+         stat->ncutpoolfails = MAX(stat->ncutpoolfails + 1, 1);
       }
    }
 
-   if( stat->ncutpoolfails == 5 )
+   if( stat->ncutpoolfails == (root ? 2 : 10) )
    {
       cutpool->firstunprocessed = 0;
       cutpool->firstunprocessedsol = 0;
       stat->minefficacyfac *= 0.5;
       stat->ncutpoolfails = 0;
    }
-   else if( stat->ncutpoolfails == -3 )
+   else if( stat->ncutpoolfails == -2 )
    {
-      stat->minefficacyfac *= 1.5;
+      stat->minefficacyfac *= 1.2;
       stat->ncutpoolfails = 0;
    }
 
