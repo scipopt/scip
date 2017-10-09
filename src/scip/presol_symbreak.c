@@ -565,12 +565,6 @@ SCIP_DECL_PRESOLEXIT(presolExitSymbreak)
 
    ngenconss = presoldata->ngenconss;
 
-   if ( ngenconss > 0 )
-   {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Number of symresacks handled:\t\t\t\t\t%u\n", presoldata->nsymresacks);
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Total number of constraints added:\t\t\t\t%u\n\n", presoldata->ngenconss);
-   }
-
    /* release constraints */
    genconss = presoldata->genconss;
    for (i = 0; i < ngenconss; ++i)
