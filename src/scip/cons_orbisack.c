@@ -1614,7 +1614,7 @@ SCIP_DECL_CONSPRINT(consPrintOrbisack)
       if ( i < nrows-1 )
          SCIPinfoMessage(scip, file, ".");
    }
-   SCIPinfoMessage(scip, file, ")");
+   SCIPinfoMessage(scip, file, ")\n");
 
    return SCIP_OKAY;
 }
