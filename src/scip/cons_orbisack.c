@@ -17,12 +17,24 @@
  * @brief  constraint handler for orbisack constraints
  * @author Christopher Hojny
  *
- * The constraint works on two vectors of variables, which are interpreted as columns of a matrix such that the first
- * column is lexicographically not smaller than the second.
  *
- * @todo Currently, the copy methods of the constraint handler are deactivated, as otherwise, we would reduce the
- * effect of heuristics. The trade-off for this is that we cannot transfer the symmetry information to the sub-SCIPs
- * of the components presolver.
+ * The type of constraints of this constraint handler is described in cons_orbisack.h.
+ *
+ * The details of the method implemented here are described in the following papers:
+ *
+ * Describing Orbitopes by Linear Inequalities and Projection Based Tools@n
+ * Andreas Loos,@n
+ * PhD thesis, Otto-von-Guericke-Universitaet Magdeburg (2010).
+ *
+ * This thesis provides a complete linear description of orbisacks and a separation
+ * routine for its inequalities.
+ *
+ * Polytopes Associated with Symmetry Handling@n
+ * Christopher Hojny and Marc E. Pfetsch,@n
+ * (2017), preprint available at http://www.optimization-online.org/DB_HTML/2017/01/5835.html
+ *
+ * This paper describes a linear time separation routine for so-called cover inequalities of
+ * orbisacks.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

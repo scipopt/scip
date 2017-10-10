@@ -33,6 +33,25 @@
 extern "C" {
 #endif
 
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ *
+ * @name Orbisack Constraints
+ *
+ * @{
+ *
+ * This constraint handler can be used to handle symmetries in certain 0/1-programs. The principle
+ * structure is that some variables can be ordered in matrix form with two columns, such that
+ * permuting both columns does not change the validity and objective function value of a solution.
+ * That is, there exists a permutation symmetry of the program that permutes the variables of the
+ * first and second column row-wise.
+ *
+ * In more mathematical terms the structure has to be as follows: There are 0/1-variables
+ * \f$x_{ij}\f$, \f$i \in \{1, \dots, n\}\f$, \f$j \in \{1, 2\}\f$. Permuting columns of
+ * \f$x\f$ does not change the validity and objective function value of any feasible solution.
+ */
+
 /** creates the handler for orbisack constraints and includes it in SCIP */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrOrbisack(

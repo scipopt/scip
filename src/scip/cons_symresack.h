@@ -32,6 +32,30 @@ extern "C" {
 #endif
 
 
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ *
+ * @name Symresack Constraints
+ *
+ * @{
+ *
+ * Given a permutation that acts on the order of the variables of a (mixed) 0/1-program
+ * such that the permutation is a symmetry of the program, this constraint handler can
+ * be used to handle the symmetries corresponding to the permutation. The symmetries
+ * are handled by enforcing that a binary solution is lexicographically not smaller than
+ * its permutation.
+ *
+ * Moreover, the constraint handler checks whether each cycle of the permutation is
+ * contained in a set packing or partitioning constraint. In this case, the symresack
+ * is upgraded to a ppsymresack and strong symmetry handling inequalities are added during
+ * the initialization of the constraint handler.
+ *
+ * Furthermore, the constraint handler checks whether the permutation is a composition of
+ * 2-cycles. In this case, the symresack is a so-called orbisack and will be treated by
+ * specialized methods of the orbisack constraint handler.
+ */
+
 /** creates the handler for symresack constraints and includes it in SCIP */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrSymresack(
@@ -41,8 +65,8 @@ SCIP_RETCODE SCIPincludeConshdlrSymresack(
 
 /** creates and captures a symresack constraint
  *
- *  In a presolving step, we check whether the permutation acts only on binary points. Otherwise, the boolean
- *  success is set to false.
+ *  In a presolving step, we check whether the permutation acts only on binary points. Otherwise, we eliminate
+ *  the non-binary variables from the permutation.
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
@@ -77,15 +101,14 @@ SCIP_RETCODE SCIPcreateConsSymresack(
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node?
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
-   SCIP_Bool*            success             /**< pointer to store whether permutation is acting only on binary points */
+   SCIP_Bool*            success             /**< pointer to store whether permutation was created */
    );
 
 /** creates and captures a symresack constraint
- *  in its most basic variant, i. e., with all constraint flags set to their default values, which can be set
+ *  in its most basic variant, i.e., with all constraint flags set to their default values, which can be set
  *  afterwards using SCIPsetConsFLAGNAME() in scip.h
  *
- *  In a presolving step, we check whether the permutation acts only on binary points. Otherwise, the boolean
- *  success is set to false.
+ *  In a presolving step, we remove all fixed points and cycles that act on non-binary variables of the permutation
  *
  *  @see SCIPcreateConsSymresack() for the default constraint flag configuration
  *
@@ -99,7 +122,7 @@ SCIP_RETCODE SCIPcreateConsBasicSymresack(
    int*                  perm,               /**< permutation */
    SCIP_VAR**            vars,               /**< variables */
    int                   nvars,              /**< number of variables in problem */
-   SCIP_Bool*            success             /**< pointer to store whether permutation is acting only on binary points */
+   SCIP_Bool*            success             /**< pointer to store whether permutation was created */
    );
 
 #ifdef __cplusplus

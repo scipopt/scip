@@ -17,9 +17,31 @@
  * @brief  constraint handler for symresack constraints
  * @author Christopher Hojny
  *
- * Currently, the copy methods of the constraint handler are deactivated, as otherwise, we would reduce the
- * effect of heuristics. The trade-off for this is that we cannot transfer the symmetry information to the sub-scips
- * of the components presolver.
+ * The type of constraints of this constraint handler is described in cons_symresack.h.
+ *
+ * The details of the method implemented here are described in the following papers:
+ *
+ * Fundamental Domains for Integer Programs with Symmetries@n
+ * Eric J. Friedman,@n
+ * Combinatorial Optimization, volume 4616 of LNCS, 146-153 (2007)
+ *
+ * This paper describes an inequality to handle symmetries of a single permutation. This
+ * so-called FD-inequality is the basic for the propagation routine of our implementation.
+ *
+ * Polytopes Associated with Symmetry Handling@n
+ * Christopher Hojny and Marc E. Pfetsch,@n
+ * (2017), preprint available at http://www.optimization-online.org/DB_HTML/2017/01/5835.html
+ *
+ * This paper describes an almost linear time separation routine for so-called cove
+ * inequalities of symresacks. In our implementation, however, we use a separation routine with
+ * quadratic worst case running time.
+ *
+ * Packing, Partitioning, and Covering Symresacks@n
+ * Christopher Hojny,@n
+ * (2017), preprint available at http://www.optimization-online.org/DB_HTML/2017/05/5990.html
+ *
+ * This paper introduces linearly many inequalities with ternary coefficients that suffice to
+ * characterize the binary points contained in a packing and partitioning symresack completely.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -477,7 +499,7 @@ SCIP_RETCODE consdataCreate(
  *
  *  We generate the ordering inequality for the pair \f$(1, \gamma^{-1}(1))\f$, i.e.,
  *  the inequality \f$-x_{1} + x_{\gamma^{-1}(1)} \leq 0\f$. This inequality is valid,
- *  because we guaranteed in a preprocessing stept that all variables are binary.
+ *  because we guaranteed in a preprocessing step that all variables are binary.
  *
  *  Furthermore, we add facet inequalities of packing/partitioning symresacks if
  *  we deal with packing/partitioning symresacks.
@@ -544,7 +566,7 @@ SCIP_RETCODE initLP(
 
       coeffs[0] = 1.0;
 
-      /* add packing/partioning symresack constraints */
+      /* add packing/partitioning symresack constraints */
       for (i = 0; i < ncycles; ++i)
       {
          assert( cycledecomposition[i][0] > 0 );
@@ -884,7 +906,7 @@ SCIP_RETCODE separateSymresackCovers(
          /* Check effect of fixing entry i to 1 and apply all implied fixing to other entries.
           *
           * Observe: Experiments indicate that entries are more often fixed to 1 than to 0.
-          * For this reason, we apply the 1-fixings directly. If it turs out that the 1-fixings
+          * For this reason, we apply the 1-fixings directly. If it turns out that the 1-fixings
           * have a negative impact on the objective, we undo these fixings afterwards and apply
           * 0-fixings instead. */
 
@@ -2033,8 +2055,7 @@ SCIP_RETCODE SCIPincludeConshdlrSymresack(
 /** creates and captures a symresack constraint
  *
  *  In a presolving step, we check whether the permutation acts only on binary points. Otherwise, we eliminate
- *  the non-binary variables from the permutation. If the permutation is the identity (after variable elimination)
- *  the boolean success is set to false.
+ *  the non-binary variables from the permutation.
  *
  *  @note The constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons().
  */
@@ -2068,7 +2089,7 @@ SCIP_RETCODE SCIPcreateConsSymresack(
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node?
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
-   SCIP_Bool*            success             /**< pointer to store whether permutation is acting only on binary points */
+   SCIP_Bool*            success             /**< pointer to store whether permutation was created */
    )
 {
    SCIP_CONSHDLR* conshdlr;
@@ -2121,8 +2142,7 @@ SCIP_RETCODE SCIPcreateConsSymresack(
 /** creates and captures a symresack constraint
  *  in its most basic variant, i.e., with all constraint flags set to their default values
  *
- *  In a presolving step, we check whether the permutation acts only on binary points. Otherwise, the boolean
- *  success is set to false.
+ *  In a presolving step, we remove all fixed points and cycles that act on non-binary variables of the permutation
  *
  *  @note The constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons().
  */
@@ -2133,7 +2153,7 @@ SCIP_RETCODE SCIPcreateConsBasicSymresack(
    int*                  perm,               /**< permutation */
    SCIP_VAR**            vars,               /**< variables */
    int                   nvars,              /**< number of variables in problem */
-   SCIP_Bool*            success             /**< pointer to store whether permutation is acting only on binary points */
+   SCIP_Bool*            success             /**< pointer to store whether permutation was created */
    )
 {
    SCIP_CALL( SCIPcreateConsSymresack(scip, cons, name, perm, vars, nvars,
