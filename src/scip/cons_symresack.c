@@ -87,8 +87,8 @@
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {
-   SCIP_Bool             symresackUpgrade;   /**< whether we allow upgrading symresack constraints to orbisack constraints */
-   SCIP_Bool             checkPPsymresack;   /**< whether we allow upgrading to packing/partitioning symresacks */
+   SCIP_Bool             symresackupgrade;   /**< whether we allow upgrading symresack constraints to orbisack constraints */
+   SCIP_Bool             checkppsymresack;   /**< whether we allow upgrading to packing/partitioning symresacks */
 };
 
 
@@ -2037,12 +2037,12 @@ SCIP_RETCODE SCIPincludeConshdlrSymresack(
    /* whether we allow upgrading to orbisack constraints*/
    SCIP_CALL( SCIPaddBoolParam(scip, "cons/" CONSHDLR_NAME "/upgrade",
          "Upgrade symresack constraints to orbisack constraints?",
-         &conshdlrdata->symresackUpgrade, TRUE, DEFAULT_UPGRADE, NULL, NULL) );
+         &conshdlrdata->symresackupgrade, TRUE, DEFAULT_UPGRADE, NULL, NULL) );
 
    /* whether we allow upgrading to packing/partioning symresack constraints*/
    SCIP_CALL( SCIPaddBoolParam(scip, "cons/" CONSHDLR_NAME "/ppsymresack",
          "Upgrade symresack constraints to packing/partioning symresacks?",
-         &conshdlrdata->checkPPsymresack, TRUE, DEFAULT_PPSYMRESACK, NULL, NULL) );
+         &conshdlrdata->checkppsymresack, TRUE, DEFAULT_PPSYMRESACK, NULL, NULL) );
 
    return SCIP_OKAY;
 }

@@ -82,9 +82,9 @@
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {
-   SCIP_Bool             coverseparation_;   /**< whether only cover inequalities should be separated */
-   SCIP_Bool             orbiSeparation_;    /**< whether orbisack as well as cover inequalities should be separated */
-   SCIP_Real             coeffbound_;        /**< maximum size of coefficients in orbisack inequalities */
+   SCIP_Bool             coverseparation;    /**< whether only cover inequalities should be separated */
+   SCIP_Bool             orbiseparation;     /**< whether orbisack as well as cover inequalities should be separated */
+   SCIP_Real             coeffbound;         /**< maximum size of coefficients in orbisack inequalities */
 };
 
 /** constraint data for orbisack constraints */
@@ -830,12 +830,12 @@ SCIP_RETCODE separateInequalities(
    conshdlrdata = SCIPconshdlrGetData(SCIPconsGetHdlr(cons));
    assert( conshdlrdata != NULL );
 
-   if ( conshdlrdata->orbiSeparation_ )
+   if ( conshdlrdata->orbiseparation )
    {
-      SCIP_CALL( separateOrbisack(scip, cons, consdata, FALSE, conshdlrdata->coeffbound_, &ngen1, &infeasible) );
+      SCIP_CALL( separateOrbisack(scip, cons, consdata, FALSE, conshdlrdata->coeffbound, &ngen1, &infeasible) );
    }
 
-   if ( ! infeasible && conshdlrdata->coverseparation_ )
+   if ( ! infeasible && conshdlrdata->coverseparation )
    {
       SCIP_CALL( separateOrbisackCovers(scip, cons, consdata, &ngen2, &infeasible) );
    }
@@ -1665,15 +1665,15 @@ SCIP_RETCODE SCIPincludeConshdlrOrbisack(
    /* separation methods */
    SCIP_CALL( SCIPaddBoolParam(scip, "cons/" CONSHDLR_NAME "/orbisack/coverseparation",
          "Separate cover inequalities for orbisacks?",
-         &conshdlrdata->coverseparation_, TRUE, DEFAULT_COVERSEPARATION, NULL, NULL) );
+         &conshdlrdata->coverseparation, TRUE, DEFAULT_COVERSEPARATION, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "cons/" CONSHDLR_NAME "/orbiSeparation",
          "Separate orbisack inequalities?",
-         &conshdlrdata->orbiSeparation_, TRUE, DEFAULT_ORBISEPARATION, NULL, NULL) );
+         &conshdlrdata->orbiseparation, TRUE, DEFAULT_ORBISEPARATION, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "cons/" CONSHDLR_NAME "/coeffbound",
          "Maximum size of coefficients for orbisack inequalities",
-         &conshdlrdata->coeffbound_, TRUE, DEFAULT_COEFFBOUND, 0.0, DBL_MAX, NULL, NULL) );
+         &conshdlrdata->coeffbound, TRUE, DEFAULT_COEFFBOUND, 0.0, DBL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
