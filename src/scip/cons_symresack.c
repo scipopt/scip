@@ -594,7 +594,6 @@ SCIP_RETCODE propVariables(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONS*            cons,               /**< constraint to be propagated */
    SCIP_Bool*            infeasible,         /**< pointer to store whether it was detected that the node is infeasible */
-   SCIP_Bool*            found,              /**< pointer to store whether a new propagation could be found */
    int*                  ngen                /**< pointer to store number of generated bound strengthenings */
    )
 {
@@ -611,14 +610,12 @@ SCIP_RETCODE propVariables(
    assert( scip != NULL );
    assert( cons != NULL );
    assert( infeasible != NULL );
-   assert( found != NULL );
    assert( ngen != NULL );
 
    SCIPdebugMessage("Propagating variables of constraint <%s>.\n", SCIPconsGetName(cons));
 
    *ngen = 0;
    *infeasible = FALSE;
-   *found = FALSE;
 
    /* get data of constraint */
    consdata = SCIPconsGetData(cons);
@@ -687,7 +684,6 @@ SCIP_RETCODE propVariables(
          SCIP_CALL( SCIPinferVarUbCons(scip, var2, 0.0, cons, i, FALSE, infeasible, &tightened) ); /*lint !e713*/
          assert( ! *infeasible );
 
-         *found = *found || tightened;
          if ( tightened )
             ++(*ngen);
       }
@@ -704,7 +700,6 @@ SCIP_RETCODE propVariables(
          SCIP_CALL( SCIPinferVarLbCons(scip, var, 1.0, cons, i + nvars, FALSE, infeasible, &tightened) ); /*lint !e713*/
          assert( ! *infeasible );
 
-         *found = *found || tightened;
          if ( tightened )
             ++(*ngen);
       }
@@ -1664,6 +1659,7 @@ static
 SCIP_DECL_CONSPROP(consPropSymresack)
 {  /*lint --e{715}*/
    int c;
+   int ngen = 0;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -1678,12 +1674,11 @@ SCIP_DECL_CONSPROP(consPropSymresack)
    for (c = 0; c < nconss; ++c)
    {
       SCIP_Bool infeasible = FALSE;
-      SCIP_Bool found = FALSE;
-      int ngen = 0;
+      int localngen = 0;
 
       assert( conss[c] != 0 );
 
-      SCIP_CALL( propVariables(scip, conss[c], &infeasible, &found, &ngen) );
+      SCIP_CALL( propVariables(scip, conss[c], &infeasible, &localngen) );
 
       if ( infeasible )
       {
@@ -1691,13 +1686,15 @@ SCIP_DECL_CONSPROP(consPropSymresack)
          return SCIP_OKAY;
       }
 
-      if ( found )
-      {
-         *result = SCIP_REDUCEDDOM;
-          return SCIP_OKAY;
-      }
+      ngen += localngen;
 
       *result = SCIP_DIDNOTFIND;
+   }
+
+   if ( ngen > 0 )
+   {
+      *result = SCIP_REDUCEDDOM;
+      return SCIP_OKAY;
    }
 
    return SCIP_OKAY;
@@ -1726,7 +1723,6 @@ SCIP_DECL_CONSPRESOL(consPresolSymresack)
    for (c = 0; c < nconss; ++c)
    {
       SCIP_Bool infeasible = FALSE;
-      SCIP_Bool found = FALSE;
       SCIP_CONSDATA* consdata;
       int localngen = 0;
 
@@ -1743,7 +1739,7 @@ SCIP_DECL_CONSPRESOL(consPresolSymresack)
       }
       else
       {
-         SCIP_CALL( propVariables(scip, conss[c], &infeasible, &found, &ngen) );
+         SCIP_CALL( propVariables(scip, conss[c], &infeasible, &localngen) );
       }
 
       if ( infeasible )
@@ -1758,8 +1754,7 @@ SCIP_DECL_CONSPRESOL(consPresolSymresack)
          ngen += localngen;
       }
 
-      if ( *result == SCIP_DIDNOTRUN )
-         *result = SCIP_DIDNOTFIND;
+      *result = SCIP_DIDNOTFIND;
    }
 
    if ( *ndelconss > oldndelconss ||  ngen > 0 )
