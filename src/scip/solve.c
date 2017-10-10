@@ -2450,7 +2450,7 @@ SCIP_RETCODE priceAndCutLoop(
       /* check, if we exceeded the separation round limit */
       mustsepa = mustsepa
          && stat->nseparounds < maxseparounds
-         && stat->nincseparounds < 20
+         && stat->nincseparounds < 25
          && nsepastallrounds < maxnsepastallrounds
          && !(*cutoff);
 

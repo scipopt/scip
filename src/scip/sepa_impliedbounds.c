@@ -31,7 +31,7 @@
 #define SEPA_NAME              "impliedbounds"
 #define SEPA_DESC              "implied bounds separator"
 #define SEPA_PRIORITY               -50
-#define SEPA_FREQ                    30
+#define SEPA_FREQ                    10
 #define SEPA_MAXBOUNDDIST           1.0
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */

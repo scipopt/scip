@@ -33,7 +33,7 @@
 #define SEPA_NAME              "aggregation"
 #define SEPA_DESC              "aggregation heuristic for complemented mixed integer rounding cuts and flowcover cuts"
 #define SEPA_PRIORITY             -3000
-#define SEPA_FREQ                    30
+#define SEPA_FREQ                    10
 #define SEPA_MAXBOUNDDIST           1.0
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
@@ -1443,7 +1443,7 @@ SCIP_RETCODE SCIPincludeSepaAggregation(
          "separating/" SEPA_NAME "/maxtriesroot",
          "maximal number of rows to start aggregation with per separation round in the root node (-1: unlimited)",
          &sepadata->maxtriesroot, TRUE, DEFAULT_MAXTRIESROOT, -1, INT_MAX, NULL, NULL) );
-     SCIP_CALL( SCIPaddIntParam(scip,
+   SCIP_CALL( SCIPaddIntParam(scip,
          "separating/" SEPA_NAME "/maxfails",
          "maximal number of consecutive unsuccessful aggregation tries (-1: unlimited)",
          &sepadata->maxfails, TRUE, DEFAULT_MAXFAILS, -1, INT_MAX, NULL, NULL) );
