@@ -1929,7 +1929,61 @@ static
 SCIP_DECL_CONSPRINT(consPrintSymresack)
 {  /*lint --e{715}*/
 
-   /* not yet implemented */
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** vars;
+   int nvars;
+   int* perm;
+   SCIP_Bool* covered;
+   int i;
+   int j;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert( cons != NULL );
+
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+   assert( consdata->vars != NULL );
+   assert( consdata->nvars > 0 );
+   assert( consdata->perm != NULL );
+
+   vars = consdata->vars;
+   nvars = consdata->nvars;
+   perm = consdata->perm;
+
+   SCIPdebugMsg(scip, "Printing method for symresack constraint handler\n");
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &covered, nvars) );
+   for (i = 0; i < nvars; ++i)
+      covered[i] = FALSE;
+
+   if ( consdata->ppupgrade )
+      SCIPinfoMessage(scip, file, "ppSymresack(");
+   else
+      SCIPinfoMessage(scip, file, "symresack(");
+
+   for (i = 0; i < nvars; ++i)
+   {
+      if ( covered[i] )
+         continue;
+
+      /* print cycle of perm containing i */
+      SCIPinfoMessage(scip, file, "[%s", SCIPvarGetName(vars[i]));
+      covered[i] = TRUE;
+      j = perm[i];
+      while ( j != i )
+      {
+         SCIPinfoMessage(scip, file, ",%s", SCIPvarGetName(vars[j]));
+         covered[j] = TRUE;
+         j = perm[j];
+      }
+      SCIPinfoMessage(scip, file, "]");
+   }
+   SCIPinfoMessage(scip, file, ")\n");
+
+   SCIPfreeBufferArray(scip, &covered);
+
    return SCIP_OKAY;
 }
 
