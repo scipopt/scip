@@ -12947,9 +12947,12 @@ SCIP_RETCODE SCIPaddConflict(
       SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
    }
 
-   /* add the conflict to the conflict store */
-   SCIP_CALL( SCIPconflictstoreAddConflict(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->tree,
-         scip->transprob, scip->reopt, cons, conftype, iscutoffinvolved, primalbound) );
+   if( node == NULL || SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
+   {
+      /* add the conflict to the conflict store */
+      SCIP_CALL( SCIPconflictstoreAddConflict(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->tree,
+            scip->transprob, scip->reopt, cons, conftype, iscutoffinvolved, primalbound) );
+   }
 
    /* mark constraint to be a conflict */
    SCIPconsMarkConflict(cons);
