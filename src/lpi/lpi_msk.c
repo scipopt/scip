@@ -4298,6 +4298,11 @@ static const char* paramname[] = {
    "SCIP_LPPAR_ROWREPSWITCH",                /* simplex algorithm shall use row representation of the basis
                                               * if number of rows divided by number of columns exceeds this value */
    "SCIP_LPPAR_THREADS"                      /* number of threads used to solve the LP */
+   "SCIP_LPPAR_CONDITIONLIMIT"               /* maximum condition number of LP basis counted as stable */
+   "SCIP_LPPAR_TIMING"                       /* type of timer (1 - cpu, 2 - wallclock, 0 - off) */
+   "SCIP_LPPAR_RANDOMSEED"                   /* inital random seed, e.g. for perturbations in the simplex (0: LP default) */
+   "SCIP_LPPAR_POLISHING"                    /* set solution polishing (0 - disable, 1 - enable) */
+   "SCIP_LPPAR_REFACTOR"                     /* set refactorization interval (0 - automatic) */
 };
 
 /** method mapping parameter index to parameter name */
@@ -4322,6 +4327,11 @@ const char* paramty2str(
    assert(SCIP_LPPAR_MARKOWITZ == 12);       /* Markowitz tolerance */
    assert(SCIP_LPPAR_ROWREPSWITCH == 13);    /* row representation switch */
    assert(SCIP_LPPAR_THREADS == 14);         /* number of threads used to solve the LP */
+   assert(SCIP_LPPAR_CONDITIONLIMIT == 15);  /* maximum condition number of LP basis counted as stable */
+   assert(SCIP_LPPAR_TIMING == 16);          /* type of timer (1 - cpu, 2 - wallclock, 0 - off) */
+   assert(SCIP_LPPAR_RANDOMSEED == 17);      /* inital random seed, e.g. for perturbations in the simplex (0: LP default) */
+   assert(SCIP_LPPAR_POLISHING == 18);       /* set solution polishing (0 - disable, 1 - enable) */
+   assert(SCIP_LPPAR_REFACTOR == 19);        /* set refactorization interval (0 - automatic) */
 
    return paramname[type];
 }
@@ -4369,6 +4379,12 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       break;
    case SCIP_LPPAR_LPITLIM:                   /* LP iteration limit */
       MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_SIM_MAX_ITERATIONS, ival) );
+      break;
+   case SCIP_LPPAR_THREADS:                   /* number of threads */
+      MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_NUM_THREADS, ival) );
+      break;
+   case SCIP_LPPAR_REFACTOR:                  /* refactorization interval */
+      MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_SIM_REFACTOR_FREQ, ival) );
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
@@ -4510,6 +4526,14 @@ SCIP_RETCODE SCIPlpiSetIntpar(
 #endif
 
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_MAX_ITERATIONS, ival) );
+      break;
+   case SCIP_LPPAR_THREADS:                   /* number of threads (0 => MOSEK chooses) */
+      assert(ival >= 0);
+      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_NUM_THREADS, ival) );
+      break;
+   case SCIP_LPPAR_REFACTOR:                  /* refactorization interval */
+      assert(ival >= 0);
+      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_REFACTOR_FREQ, ival) );
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
