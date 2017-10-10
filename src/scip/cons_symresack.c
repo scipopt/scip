@@ -50,8 +50,6 @@
 #define CONSHDLR_PROP_TIMING       SCIP_PROPTIMING_BEFORELP
 #define CONSHDLR_PRESOLTIMING      SCIP_PRESOLTIMING_EXHAUSTIVE
 
-#define DEFAULT_ENFORCING         FALSE /**< whether we use enforcing methods of constraint handler */
-#define DEFAULT_CHECK             FALSE /**< whether we use check methods of constraint handler */
 #define DEFAULT_UPGRADE            TRUE /**< whether we allow upgrading to orbisack constraints */
 #define DEFAULT_PPSYMRESACK       FALSE /**< whether we allow upgrading to packing/partitioning symresacks */
 
@@ -67,8 +65,6 @@
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {
-   SCIP_Bool             symresackEnforcing; /**< whether we use enforcing methods of constraint handler */
-   SCIP_Bool             symresackCheck;     /**< whether we use check methods of constraint handler */
    SCIP_Bool             symresackUpgrade;   /**< whether we allow upgrading symresack constraints to orbisack constraints */
    SCIP_Bool             checkPPsymresack;   /**< whether we allow upgrading to packing/partitioning symresacks */
 };
@@ -1967,16 +1963,6 @@ SCIP_RETCODE SCIPincludeConshdlrSymresack(
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransSymresack) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpSymresack) );
 
-   /* get enforcing setting */
-   SCIP_CALL( SCIPaddBoolParam(scip, "cons/" CONSHDLR_NAME "/enforcing",
-         "Enforce symresack constraints?",
-         &conshdlrdata->symresackEnforcing, TRUE, DEFAULT_ENFORCING, NULL, NULL) );
-
-   /* get check setting */
-   SCIP_CALL( SCIPaddBoolParam(scip, "cons/" CONSHDLR_NAME "/check",
-         "Check symresack constraints?",
-         &conshdlrdata->symresackCheck, TRUE, DEFAULT_CHECK, NULL, NULL) );
-
    /* whether we allow upgrading to orbisack constraints*/
    SCIP_CALL( SCIPaddBoolParam(scip, "cons/" CONSHDLR_NAME "/upgrade",
          "Upgrade symresack constraints to orbisack constraints?",
@@ -2053,10 +2039,6 @@ SCIP_RETCODE SCIPcreateConsSymresack(
       SCIPerrorMessage("Symresack constraint handler not found.\n");
       return SCIP_PLUGINNOTFOUND;
    }
-
-   /* get enforce and check settings */
-   SCIP_CALL( SCIPgetBoolParam(scip, "cons/symresack/enforcing", &enforce) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "cons/symresack/check", &check) );
 
    /* check whether constraint can be upgraded to an orbisack constraint */
    SCIP_CALL( SCIPgetBoolParam(scip, "cons/symresack/upgrade", &upgrade) );
