@@ -1407,6 +1407,7 @@ static
 SCIP_DECL_CONSPRESOL(consPresolOrbisack)
 {  /*lint --e{715}*/
    int c;
+   int ngen;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -1422,10 +1423,34 @@ SCIP_DECL_CONSPRESOL(consPresolOrbisack)
    {
       SCIP_Bool infeasible = FALSE;
       SCIP_Bool found = FALSE;
-      int ngen = 0;
+      int curngen = 0;
+      SCIP_CONSDATA* consdata;
 
       assert( conss[c] != NULL );
-      SCIP_CALL( propVariables(scip, conss[c], &infeasible, &found, &ngen) );
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert( consdata != NULL );
+
+      if ( consdata->ispporbisack )
+      {
+         assert( consdata->nrows > 0 );
+         assert( consdata->vars2 != NULL );
+
+         SCIP_CALL( SCIPfixVar(scip, consdata->vars2[0], 0, &infeasible, &found) );
+
+         if ( infeasible )
+         {
+            *result = SCIP_CUTOFF;
+            break;
+         }
+         else
+         {
+            ++curngen;
+            found = FALSE;
+         }
+      }
+
+      SCIP_CALL( propVariables(scip, conss[c], &infeasible, &found, &curngen) );
 
       if ( infeasible )
       {
@@ -1433,11 +1458,13 @@ SCIP_DECL_CONSPRESOL(consPresolOrbisack)
          break;
       }
 
-      if ( ngen > 0 )
-      {
-         *nfixedvars += (int) ngen;
-         *result = SCIP_SUCCESS;
-      }
+      ngen += curngen;
+   }
+
+   if ( ngen > 0 )
+   {
+      *nfixedvars += ngen;
+      *result = SCIP_SUCCESS;
    }
 
    return SCIP_OKAY;
