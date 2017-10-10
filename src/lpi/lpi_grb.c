@@ -5165,10 +5165,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    case SCIP_LPPAR_LPINFO:
       assert(ival == TRUE || ival == FALSE);
       if( ival )
-      {
          SCIP_CALL( setIntParam(lpi, GRB_INT_PAR_OUTPUTFLAG, 1) );
-         SCIP_CALL( setIntParam(lpi, GRB_INT_PAR_LOGTOCONSOLE, 1) );
-      }
       else
          SCIP_CALL( setIntParam(lpi, GRB_INT_PAR_OUTPUTFLAG, 0) );
       break;
