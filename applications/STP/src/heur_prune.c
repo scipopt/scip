@@ -626,7 +626,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
       if( nfixedges >= reductbound )
       {
          /* get number of remaining edges */
-         graph_getNVET(prunegraph, &annodes, &anedges, &anterms);
+         graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
          reductbound = getRedBound(0, anedges);
       }
    }
@@ -658,7 +658,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
    }
 
    /* get number of remaining nodes, edges and terminals */
-   graph_getNVET(prunegraph, &annodes, &anedges, &anterms);
+   graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
 
    SCIPdebugMessage("entering prune \n\n");
 
@@ -724,11 +724,11 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
             soledge[e] = UNKNOWN;
 
             if( edgearrint[e] == CONNECT )
-               graph_listSetSolNode(g, nodearrchar, ancestors[e]);
+               graph_sol_setNodeList(g, nodearrchar, ancestors[e]);
          }
 
          /* retransform edges fixed during graph reduction */
-         graph_listSetSolNode(g, nodearrchar, prunegraph->fixedges);
+         graph_sol_setNodeList(g, nodearrchar, prunegraph->fixedges);
 
          if( pcmw )
          {
@@ -754,7 +754,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
             SCIP_CALL( SCIPStpHeurTMPrune(scip, g, g->cost, 0, soledge, nodearrchar) );
 
 #ifdef SCIP_DEBUG
-         SCIP_Real tmpub = graph_computeSolVal(g->cost, soledge, 0.0, nedges);
+         SCIP_Real tmpub = graph_sol_getObj(g->cost, soledge, 0.0, nedges);
          printf("first obj %f \n", tmpub);
 #endif
          assert(graph_sol_valid(scip, g, soledge));
@@ -816,7 +816,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
          offsetold = offsetnew;
 
          /* get number of remaining edges */
-         graph_getNVET(prunegraph, &annodes, &anedges, &anterms);
+         graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
 
          if( anterms <= 2 )
          {
@@ -857,7 +857,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
                SCIP_CALL( SCIPStpHeurLocalExtendPcMw(scip, prunegraph, prunegraph->cost, path, edgearrint, nodearrint, nodearrchar, &dummy) );
             }
 
-            objnew = graph_computeSolVal(prunegraph->cost, edgearrint, 0.0, nedges);
+            objnew = graph_sol_getObj(prunegraph->cost, edgearrint, 0.0, nedges);
 
             assert(graph_sol_valid(scip, prunegraph, edgearrint));
 
@@ -977,16 +977,16 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
 #endif
 
          if( pcmw )
-            SCIP_CALL( graph_2org(scip, prunegraph) );
+            SCIP_CALL( graph_pc_2org(scip, prunegraph) );
 
          SCIP_CALL( bound_reducePrune(scip, prunegraph, vnoi, cost, (pcmw) ? prunegraph->prize : NULL, nodearrreal, costrev,
                &offsetnew, heap, state, vbase, solnode, edgearrint, &brednelims, minnelims));
 
          if( pcmw )
-            SCIP_CALL( graph_2trans(scip, prunegraph) );
+            SCIP_CALL( graph_pc_2trans(scip, prunegraph) );
 
 #ifdef SCIP_DEBUG
-         graph_getNVET(prunegraph, &annodes, &anedges, &anterms);
+         graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
          printf("PRUNE round: %d edges %d  nodes: %d \n", i, anedges / 2, annodes);
          printf("PRUNE round: %d minelims %d  really reduced: %d \n", i, minnelims, brednelims);
 #endif
@@ -1015,7 +1015,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
          }
 
          /* get number of remaining edges */
-         graph_getNVET(prunegraph, &annodes, &anedges, &anterms);
+         graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
 
          reductbound = getRedBound(i + 1, anedges);
 
@@ -1041,7 +1041,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
          SCIP_CALL( level0(scip, prunegraph) );
 
          /* get number of remaining terminals */
-         graph_getNVET(prunegraph, &annodes, &anedges, &anterms);
+         graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
 
          if( anterms <= 2 )
          {
@@ -1063,7 +1063,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
    for( int k = 0; k < nnodes; k++ )
       nodearrchar[k] = FALSE;
 
-   graph_getNVET(prunegraph, &annodes, &anedges, &anterms);
+   graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
    SCIPdebugMessage("Xin prune grad: %d , nedges: %d nodes: %d \n", prunegraph->grad[prunegraph->source[0]], anedges, annodes);
 
    /* if graph not vanished, compute solution */
@@ -1095,7 +1095,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
          SCIPdebugMessage("solution in prune finally still valid \n");
          for( int k = 0; k < nnodes; k++ )
             if( path[k].edge >= 0 )
-               graph_listSetSolNode(g, nodearrchar, ancestors[path[k].edge]);
+               graph_sol_setNodeList(g, nodearrchar, ancestors[path[k].edge]);
       }
 
       graph_path_exit(scip, prunegraph);
@@ -1146,7 +1146,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
 
       /* retransform solution found by TM heuristic */
 
-      objsph = graph_computeSolVal(prunegraph->cost, soledge, 0.0, npruneedges);
+      objsph = graph_sol_getObj(prunegraph->cost, soledge, 0.0, npruneedges);
 #ifdef SCIP_DEBUG
       printf("prune: sph weight %f \n", objsph);
       printf("prune: recovered weight %f \n", objprune);
@@ -1159,7 +1159,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
 
          for( int e = 0; e < npruneedges; e++ )
             if( soledge[e] == CONNECT )
-               graph_listSetSolNode(g, nodearrchar, ancestors[e]);
+               graph_sol_setNodeList(g, nodearrchar, ancestors[e]);
       }
    }
    else
@@ -1168,7 +1168,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
    }
 
    /* retransform edges fixed during graph reduction */
-   graph_listSetSolNode(g, nodearrchar, prunegraph->fixedges);
+   graph_sol_setNodeList(g, nodearrchar, prunegraph->fixedges);
 
    if( pcmw )
    {

@@ -936,7 +936,7 @@ SCIP_RETCODE redLoopMw(
 
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
 
-   SCIP_CALL( graph_2org(scip, g) );
+   SCIP_CALL( graph_pc_2org(scip, g) );
 
    degelims = 0;
 
@@ -1120,13 +1120,13 @@ SCIP_RETCODE redLoopMw(
 
 
    /* go back to the extended graph */
-   SCIP_CALL( graph_2trans(scip, g) );
+   SCIP_CALL( graph_pc_2trans(scip, g) );
 
    SCIP_CALL( level0(scip, g) );
 
    if( tryrmw )
    {
-      SCIP_CALL( graph_MwToRmw(scip, g) );
+      SCIP_CALL( graph_pc_mw2rmw(scip, g) );
    }
 
    return SCIP_OKAY;
@@ -1192,7 +1192,7 @@ SCIP_RETCODE redLoopPc(
    ub = -1.0;
    fix = 0.0;
 
-   SCIP_CALL( graph_2org(scip, g) );
+   SCIP_CALL( graph_pc_2org(scip, g) );
 
    SCIP_CALL( degree_test_pc(scip, g, &fix, &degnelims, solnode, FALSE) );
 
@@ -1355,7 +1355,7 @@ SCIP_RETCODE redLoopPc(
    if( rpc )
       g->prize[g->source[0]] = rootprize;
 
-   SCIP_CALL( graph_2trans(scip, g) );
+   SCIP_CALL( graph_pc_2trans(scip, g) );
 
    /* free random number generator */
    SCIPrandomFree(&randnumgen);

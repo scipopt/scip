@@ -1727,7 +1727,7 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    if( graph->stp_type == STP_RPCSPG || graph->stp_type == STP_PCSPG || graph->stp_type == STP_MWCSP || graph->stp_type == STP_RMWCSP )
    {
       mode = TM_DIJKSTRA;
-      SCIP_CALL( graph_2transcheck(scip, graph) );
+      SCIP_CALL( graph_pc_2transcheck(scip, graph) );
    }
    else if( graph->stp_type == STP_DHCSTP )
    {

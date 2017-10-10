@@ -2153,7 +2153,7 @@ SCIP_RETCODE SCIPStpDualAscentPcMw(
    norgcutverts = 0;
    maxdeviation = DEFAULT_DAMAXDEVIATION;
 
-   SCIP_CALL( graph_PcSapCopy(scip, g, &transgraph, &offset) );
+   SCIP_CALL( graph_pc_getSap(scip, g, &transgraph, &offset) );
 
    nnodes = transgraph->knots;
    nedges = transgraph->edges;

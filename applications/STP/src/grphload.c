@@ -1222,7 +1222,7 @@ SCIP_RETCODE graph_load(
                         assert(nodes == termcount);
                         if( g != NULL )
                         {
-                          SCIP_CALL( graph_rootmaxweight_transform(scip, g) );
+                          SCIP_CALL( graph_pc_2rmw(scip, g) );
                         }
                         else
                         {
@@ -1236,7 +1236,7 @@ SCIP_RETCODE graph_load(
                         assert(nodes == termcount);
                         if( g != NULL )
                         {
-                          SCIP_CALL( graph_maxweight_transform(scip, g, g->prize) );
+                          SCIP_CALL( graph_pc_2mw(scip, g, g->prize) );
                         }
                         else
                         {
@@ -1247,11 +1247,11 @@ SCIP_RETCODE graph_load(
                      }
                      else if( stp_type == STP_PCSPG )
                      {
-                        SCIP_CALL( graph_prize_transform(scip, g) );
+                        SCIP_CALL( graph_pc_2pc(scip, g) );
                      }
                      else if( stp_type == STP_RPCSPG )
                      {
-                        SCIP_CALL( graph_rootprize_transform(scip, g) );
+                        SCIP_CALL( graph_pc_2rpc(scip, g) );
                      }
                   }
                   curf.section = &section_table[0];
@@ -1265,7 +1265,9 @@ SCIP_RETCODE graph_load(
                      assert(terms == nodes);
                      assert(g != NULL);
                      if( g->prize == NULL )
+                     {
                         SCIP_CALL( SCIPallocMemoryArray(scip, &(g->prize), terms) );
+                     }
                   }
                   break;
                case KEY_TERMINALS_GROUPS :

@@ -654,7 +654,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
 
       if( nfixedges > reductbound && reducegraph )
       {
-         graph_getNVET(prunegraph, &annodes, &anedges, &anterms);
+         graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
          reductbound = getRedBound(0, anedges);
       }
    }
@@ -672,7 +672,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    nprunenodes = prunegraph->knots;
 
    /* get number of remaining vertices, edges and terminals */
-   graph_getNVET(prunegraph, &annodes, &anedges, &anterms);
+   graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
 
    /* main reduction loop */
    for( i = 0; i < SLACKPRUNE_MAXREDROUNDS && anterms > 2; i++ )
@@ -711,7 +711,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
 
       assert(graph_valid(prunegraph));
 
-      graph_getNVET(prunegraph, &annodes, &anedges, &anterms);
+      graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
 
       if( anterms <= 2 )
          break;
@@ -737,7 +737,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
          int j;
 
          /* calculate objective value of solution */
-         obj = graph_computeSolVal(prunegraph->cost, edgearrint, offsetnew, npruneedges);
+         obj = graph_sol_getObj(prunegraph->cost, edgearrint, offsetnew, npruneedges);
 
 #if PRINTDEBUG
             printf("SP: old solution: %f new solution %f \n\n", ubbest + SCIPprobdataGetOffset(scip), obj + SCIPprobdataGetOffset(scip));
@@ -769,7 +769,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
       }
 
       /* get number of remaining edges */
-      graph_getNVET(prunegraph, &annodes, &anedges, &anterms);
+      graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
 
       reductbound = getRedBound(i, anedges);
 
@@ -782,7 +782,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
          break;
 
       /* get number of remaining edges */
-      graph_getNVET(prunegraph, &annodes, &anedges, &anterms);
+      graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
 
    } /* reduction loop */
 
@@ -850,7 +850,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
          {
             if( soledge[e] == CONNECT )
             {
-               graph_listSetSolNode(g, nodearrchar, ancestors[e]);
+               graph_sol_setNodeList(g, nodearrchar, ancestors[e]);
                objorg += prunegraph->cost[e];
             }
          }
@@ -890,7 +890,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
 
          for( e = 0; e < nedges; e++ )
             if( soledge[e] == CONNECT )
-               graph_listSetSolNode(g, nodearrchar, ancestors[e]);
+               graph_sol_setNodeList(g, nodearrchar, ancestors[e]);
       }
    }
    else
@@ -899,7 +899,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    }
 
    /* retransform edges fixed during graph reduction */
-   graph_listSetSolNode(g, nodearrchar, prunegraph->fixedges);
+   graph_sol_setNodeList(g, nodearrchar, prunegraph->fixedges);
 
    /* prune the solution tree (in the original graph) */
 
@@ -1076,7 +1076,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRunPcMw(
    prunegraph->norgmodelknots = nprunenodes;
 
    /* get number of remaining vertices, edges and terminals */
-   graph_getNVET(prunegraph, &annodes, &anedges, &anterms);
+   graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
 
    /* main reduction loop */
    for( i = 0; i < SLACKPRUNE_MAXREDROUNDS && anterms > 3; i++ )
@@ -1103,7 +1103,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRunPcMw(
       updateSolNodeArray(prunegraph, edgearrint, solnode, nprunenodes, npruneedges);
 
       /* calculate objective value of solution */
-      obj = graph_computeSolVal(prunegraph->cost, edgearrint, offsetnew, npruneedges);
+      obj = graph_sol_getObj(prunegraph->cost, edgearrint, offsetnew, npruneedges);
 
       ubbest = obj;
 
@@ -1120,7 +1120,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRunPcMw(
       }
 
       /* get number of remaining vertices, edges and terminals */
-      graph_getNVET(prunegraph, &annodes, &anedges, &anterms);
+      graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
 
       /* update reduction bounds */
       setMinMaxElims(scip, &minnelims, &lminnelims, annodes, anedges, anterms, i + 1, SLACKPRUNE_MAXREDROUNDS);
@@ -1152,7 +1152,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRunPcMw(
       if( apsuccess )
       {
          /* calculate objective value of solution */
-         obj = graph_computeSolVal(prunegraph->cost, edgearrint, offsetnew, npruneedges);
+         obj = graph_sol_getObj(prunegraph->cost, edgearrint, offsetnew, npruneedges);
 
 #if PRINTDEBUG
             printf(" old solution: %f AP solution %f \n", ubbest + SCIPprobdataGetOffset(scip), obj + SCIPprobdataGetOffset(scip));
@@ -1165,7 +1165,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRunPcMw(
       }
 
       /* get number of remaining edges */
-      graph_getNVET(prunegraph, &annodes, &anedges, &anterms);
+      graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
 
       reductbound = getRedBound(i, anedges);
 
@@ -1184,7 +1184,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRunPcMw(
 #endif
 
       /* get number of remaining edges */
-      graph_getNVET(prunegraph, &annodes, &anedges, &anterms);
+      graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
    } /* reduction loop */
 
    /* if graph not vanished, compute solution */
@@ -1209,17 +1209,17 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRunPcMw(
 
          for( e = 0; e < nedges; e++ )
             if( soledge[e] == CONNECT )
-               graph_listSetSolNode(g, nodearrchar, ancestors[e]);
+               graph_sol_setNodeList(g, nodearrchar, ancestors[e]);
 
          /* calculate objective value of solution */
-         objorg = graph_computeSolVal(prunegraph->cost, soledge, offsetnew, nedges);
+         objorg = graph_sol_getObj(prunegraph->cost, soledge, offsetnew, nedges);
 
       printf("\n\n obj of solution from solnode %f \n", objorg + SCIPprobdataGetOffset(scip));
 
       /* compute new solution on heuristically reduced graph */
 
 #if PRINTDEBUG
-      graph_getNVET(prunegraph, &annodes, &anedges, &anterms);
+      graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
       printf("final SP anedges: %d anterms: %d \n", anedges, anterms);
 #endif
 
@@ -1235,7 +1235,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRunPcMw(
       }
 
       /* calculate objective value of solution */
-      objprune = graph_computeSolVal(prunegraph->cost, soledge, offsetnew, nedges);
+      objprune = graph_sol_getObj(prunegraph->cost, soledge, offsetnew, nedges);
 
       if( SCIPisLT(scip, objprune, objorg) )
       {
@@ -1246,7 +1246,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRunPcMw(
 
          for( e = 0; e < nedges; e++ )
             if( soledge[e] == CONNECT )
-               graph_listSetSolNode(g, nodearrchar, ancestors[e]);
+               graph_sol_setNodeList(g, nodearrchar, ancestors[e]);
 
       }
    }
@@ -1257,7 +1257,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRunPcMw(
    }
 
    /* retransform edges fixed during graph reduction */
-   graph_listSetSolNode(g, nodearrchar, prunegraph->fixedges);
+   graph_sol_setNodeList(g, nodearrchar, prunegraph->fixedges);
 
    /* prune the solution tree (in the original graph) */
    for( k = 0; k < nnodes; k++ )

@@ -107,7 +107,7 @@ SCIP_RETCODE trydg1edgepc(
          (*rerun) = TRUE;
       SCIPdebugMessage("Delete (degree 1) terminal %d \n", i);
       (*offset) += g->prize[i];
-      (*count) += graph_pterm_delete(scip, g, i);
+      (*count) += graph_pc_deleteTerm(scip, g, i);
    }
    else
    {
@@ -138,7 +138,7 @@ SCIP_RETCODE trydg1edgepc(
             SCIPintListNodeFree(scip, &(g->pcancestors[i]));
          }
          SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->pcancestors[i1]), g->ancestors[iout], NULL) );
-         (*count) += graph_pterm_delete(scip, g, i);
+         (*count) += graph_pc_deleteTerm(scip, g, i);
          return SCIP_OKAY;
       }
 
@@ -1126,7 +1126,7 @@ SCIP_RETCODE degree_test_mw(
             {
                SCIPdebugMessage("delete degree 0 term %d prize: %f count:%d\n ", i, g->prize[i], localcount);
                (*fixed) += g->prize[i];
-               localcount += graph_pterm_delete(scip, g, i);
+               localcount += graph_pc_deleteTerm(scip, g, i);
             }
          }
          /* terminal of (real) degree 1? */
@@ -1401,7 +1401,7 @@ SCIP_RETCODE degree_test_pc(
             {
                SCIPdebugMessage("delete 0 term %d prize: %f count:%d\n ", i, g->prize[i], *count);
                (*fixed) += g->prize[i];
-               (*count) += graph_pterm_delete(scip, g, i);
+               (*count) += graph_pc_deleteTerm(scip, g, i);
             }
          }
          /* terminal of (real) degree 1? */
@@ -1461,7 +1461,7 @@ SCIP_RETCODE degree_test_pc(
                      SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->ancestors[n1]), ancestors, NULL) );
                      SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(n1)]), revancestors, NULL) );
                   }
-                  (*count) += graph_pterm_delete(scip, g, i);
+                  (*count) += graph_pc_deleteTerm(scip, g, i);
                   (*fixed) += g->prize[i];
                   SCIPintListNodeFree(scip, &(ancestors));
                   SCIPintListNodeFree(scip, &(revancestors));

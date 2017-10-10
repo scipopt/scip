@@ -1078,7 +1078,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
    }
 
    /* get objective value of incumbent */
-   incumentobj = graph_computeSolVal(graph->cost, incumbentedges, 0.0, nedges);
+   incumentobj = graph_sol_getObj(graph->cost, incumbentedges, 0.0, nedges);
 
    SCIPdebugMessage("REC: incumbent obj: %f \n", incumentobj);
 
@@ -1467,7 +1467,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
             SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, graph->cost, 0, newsoledges, stnodes) );
 
          assert(graph_sol_valid(scip, graph, newsoledges));
-         pobj = graph_computeSolVal(graph->cost, newsoledges, 0.0, nedges);
+         pobj = graph_sol_getObj(graph->cost, newsoledges, 0.0, nedges);
 
          SCIPdebugMessage("REC: new obj: %f \n", pobj);
 
@@ -1658,7 +1658,7 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
 
    BMSclearMemoryArray(stvertex, nnodes);
 
-   cc = graph_computeSolVal(graph->cost, result, 0.0, nedges);
+   cc = graph_sol_getObj(graph->cost, result, 0.0, nedges);
 
    int *x1;
    int *x2;
@@ -1707,9 +1707,9 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
          return SCIP_ERROR;
       }
 
-   if( !SCIPisEQ(scip, cc, graph_computeSolVal(graph->cost, result, 0.0, nedges)) )
+   if( !SCIPisEQ(scip, cc, graph_sol_getObj(graph->cost, result, 0.0, nedges)) )
    {
-      printf("fail2 %f %f \n", cc, graph_computeSolVal(graph->cost, result, 0.0, nedges));
+      printf("fail2 %f %f \n", cc, graph_sol_getObj(graph->cost, result, 0.0, nedges));
       return SCIP_ERROR;
    }
 
@@ -2124,8 +2124,8 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
 
    /* solution better than original one?  */
 
-   if( SCIPisLT(scip, graph_computeSolVal(graph->cost, newresult, 0.0, nedges),
-         graph_computeSolVal(graph->cost, result, 0.0, nedges)) )
+   if( SCIPisLT(scip, graph_sol_getObj(graph->cost, newresult, 0.0, nedges),
+         graph_sol_getObj(graph->cost, result, 0.0, nedges)) )
       *success = TRUE;
    else
       *success = FALSE;
