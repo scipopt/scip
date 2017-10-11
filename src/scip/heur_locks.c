@@ -12,7 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+//#define SCIP_DEBUG
+//#define DONTADDSOL
+//#define NOCONFLICT
+//#define COLLECTSTATISTICS
 /**@file   heur_locks.c
  * @brief  rounding locks primal heuristic
  * @author Michael Winkler
@@ -29,7 +32,7 @@
 #define HEUR_NAME             "locks"
 #define HEUR_DESC             "heuristic that fixes variables based on their rounding locks"
 #define HEUR_DISPCHAR         'k'
-#define HEUR_PRIORITY         2000
+#define HEUR_PRIORITY         3000
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
@@ -38,7 +41,7 @@
 
 #define DEFAULT_MAXNODES      5000LL                     /**< maximum number of nodes to regard in the subproblem */
 #define DEFAULT_ROUNDUPPROBABILITY 0.67                  /**< probability for rounding a variable up in case of ties */
-#define DEFAULT_MINFIXINGRATE 0.25                       /**< minimum percentage of variables that have to be fixed */
+#define DEFAULT_MINFIXINGRATE 0.65                       /**< minimum percentage of variables that have to be fixed */
 #define DEFAULT_MINIMPROVE    0.01                       /**< factor by which locks heuristic should at least improve the
                                                           *   incumbent
                                                           */
@@ -112,10 +115,10 @@ SCIP_RETCODE createNewSol(
    SCIP_CALL( SCIPgetSolVals(subscip, subsol, nvars, subvars, subsolvals) );
 
    SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
-
+#ifndef DONTADDSOL
    /* try to add new solution to scip and free it immediately */
    SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
-
+#endif
    SCIPfreeBufferArray(scip, &subsolvals);
 
    return SCIP_OKAY;
@@ -168,7 +171,7 @@ SCIP_DECL_HEURINIT(heurInitLocks) /*lint --e{715}*/
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
-         DEFAULT_RANDSEED) );
+         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
    return SCIP_OKAY;
 }
@@ -219,6 +222,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
    SCIP_Real lastfixval;
    SCIP_Real randnumber;
    SCIP_Real roundupprobability;
+   SCIP_Real lowerbound;
    SCIP_Bool cutoff;
    SCIP_Bool propagate;
    SCIP_Bool propagated;
@@ -226,6 +230,9 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
    SCIP_Bool hasrhs;
    SCIP_Bool updatelocks;
    SCIP_Bool lperror;
+#ifdef NOCONFLICT
+   SCIP_Bool enabledconflicts;
+#endif
    int oldnpscands;
    int npscands;
    int lastfixlocks;
@@ -292,6 +299,17 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
 
    *result = SCIP_DIDNOTFIND;
 
+#ifdef NOCONFLICT
+   /* disable conflict analysis */
+   SCIP_CALL( SCIPgetBoolParam(scip, "conflict/enable", &enabledconflicts) );
+
+   if( !SCIPisParamFixed(scip, "conflict/enable") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(scip, "conflict/enable", FALSE) );
+   }
+#endif
+
+   lowerbound = SCIPgetLowerbound(scip);
    updatelocks = heurdata->updatelocks && (SCIPgetNCheckConss(scip) == SCIPgetNLPRows(scip));
 
    SCIPdebugMsg(scip, "%d constraints: %d logicor, updatelocks=%d\n", SCIPgetNConss(scip), SCIPconshdlrGetNCheckConss(SCIPfindConshdlr(scip, "logicor")), updatelocks);
@@ -343,6 +361,11 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
    SCIP_CALL( SCIPstartProbing(scip) );
    propagated = TRUE;
    lastbestscore = INT_MAX;
+
+#ifdef COLLECTSTATISTICS
+   SCIPenableVarHistory(scip);
+#endif
+
 
    /* fix variables */
    for( v = 0; v < nbinvars && !cutoff; v++ )
@@ -504,6 +527,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
                {
                   SCIP_CALL( SCIPfixVarProbing(scip, var, 1.0) );
                }
+               lastfixval = 1.0;
             }
             else
             {
@@ -511,13 +535,18 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
                {
                   SCIP_CALL( SCIPfixVarProbing(scip, var, 0.0) );
                }
+               lastfixval = 0.0;
             }
 
             SCIPdebugMsg(scip, "last fixing led to infeasibility trying other bound\n");
 
             SCIP_CALL( SCIPpropagateProbing(scip, maxproprounds, &cutoff, NULL) );
             if( cutoff )
+            {
+               SCIPdebugMsg(scip, "probing was infeasible\n");
+
                break;
+            }
          }
          /* @todo collect propagated bounds and use them to update row activities as well */
       }
@@ -577,8 +606,8 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
                int pos;
                int w;
 
-               SCIPdebugMsg(scip, "Row <%s> has activity [%g, %g], lhs=%g, rhs=%g\n", SCIProwGetName(row), minact[rowpos], maxact[rowpos], SCIProwGetLhs(row), SCIProwGetRhs(row));
-               SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
+               //SCIPdebugMsg(scip, "Row <%s> has activity [%g, %g], lhs=%g, rhs=%g\n", SCIProwGetName(row), minact[rowpos], maxact[rowpos], SCIProwGetLhs(row), SCIProwGetRhs(row));
+               //SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
 
                if( varpos == NULL )
                {
@@ -625,9 +654,9 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
             else if( SCIPisFeasLT(scip, maxact[rowpos], SCIProwGetLhs(row)) || SCIPisFeasGT(scip, minact[rowpos], SCIProwGetRhs(row)) )
             {
                cutoff = TRUE;
-               SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
-               SCIPdebugMsg(scip, "row <%s> activity [%g,%g] violates bounds, lhs = %g, rhs = %g\n",
-                  SCIProwGetName(row), minact[rowpos], maxact[rowpos], SCIProwGetLhs(row), SCIProwGetRhs(row));
+               //SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
+               //SCIPdebugMsg(scip, "row <%s> activity [%g,%g] violates bounds, lhs = %g, rhs = %g\n",
+               //   SCIProwGetName(row), minact[rowpos], maxact[rowpos], SCIProwGetLhs(row), SCIProwGetRhs(row));
                break;
             }
          }
@@ -635,7 +664,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
          if( cutoff )
          {
             SCIPdebugMsg(scip, "found infeasible row, stopping heur\n");
-            break;
+            goto TERMINATE;
          }
 
          nglbfulfilledrows += nfulfilledrows;
@@ -649,7 +678,8 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
    /* check that we had enough fixings */
    npscands = SCIPgetNPseudoBranchCands(scip);
 
-   SCIPdebugMsg(scip, "npscands=%d, oldnpscands=%d, heurdata->minfixingrate=%g\n", npscands, oldnpscands, heurdata->minfixingrate);
+   SCIPdebugMsg(scip, "npscands=%d, oldnpscands=%d, fulfilledrows=%d/%d heurdata->minfixingrate=%g\n",
+      npscands, oldnpscands, nglbfulfilledrows, nlprows, heurdata->minfixingrate);
 
    if( nglbfulfilledrows != nlprows && npscands > oldnpscands * (1 - heurdata->minfixingrate) )
    {
@@ -661,7 +691,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
    lpstatus = SCIP_LPSOLSTAT_ERROR;
    if( !cutoff )
    {
-      SCIPdebugMsg(scip, "solve probing LP in LOCKS heuristic: %d unfixed integer variables\n", SCIPgetNPseudoBranchCands(scip));
+      SCIPdebugMsg(scip, "starting solving locks-lp at time %g\n", SCIPgetSolvingTime(scip));
 
       /* solve LP;
        * errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
@@ -675,21 +705,24 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
          {
             SCIPwarningMessage(scip, "Error while solving LP in LOCKS heuristic; LP solve terminated with code <%d>\n",
                retstat);
-            goto TERMINATE;
          }
       }
 #else
       SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
 #endif
+      SCIPdebugMsg(scip, "ending solving locks-lp at time %g\n", SCIPgetSolvingTime(scip));
+
       lpstatus = SCIPgetLPSolstat(scip);
 
-      SCIPdebugMsg(scip, " -> new LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
+      SCIPdebugMsg(scip, " -> new LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
       SCIPdebugMsg(scip, " -> error=%u, status=%d\n", lperror, SCIPgetLPSolstat(scip));
 
       /* check if this is a feasible solution */
       if( !lperror && lpstatus == SCIP_LPSOLSTAT_OPTIMAL )
       {
          SCIP_Bool success;
+
+         lowerbound = SCIPgetLPObjval(scip);
 
          /* copy the current LP solution to the working solution */
          SCIP_CALL( SCIPlinkLPSol(scip, sol) );
@@ -699,7 +732,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
          if( success )
          {
             SCIP_Bool stored;
-
+#ifndef DONTADDSOL
             /* check solution for feasibility, and add it to solution store if possible.
              * Neither integrality nor feasibility of LP rows have to be checked, because they
              * are guaranteed by the heuristic at this stage.
@@ -718,7 +751,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
                SCIPdebug(SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE)) );
                *result = SCIP_FOUNDSOL;
             }
-
+#endif
             /* we found a solution, so we are done */
             goto TERMINATE;
          }
@@ -789,7 +822,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
 
 #ifdef SCIP_DEBUG
       /* for debugging, enable full output */
-      SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
+      SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) ); // ???????????????
       SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
 #else
       /* disable statistic timing inside sub SCIP and output to console */
@@ -843,9 +876,9 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
 
          upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
 
-         if( !SCIPisInfinity(scip, -1.0 * SCIPgetLowerbound(scip)) )
+         if( !SCIPisInfinity(scip, -1.0 * lowerbound) )
          {
-            cutoffbound = (1-minimprove) * SCIPgetUpperbound(scip) + minimprove * SCIPgetLowerbound(scip);
+            cutoffbound = (1-minimprove) * SCIPgetUpperbound(scip) + minimprove * lowerbound;
          }
          else
          {
@@ -880,7 +913,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
       SCIP_CALL_ABORT( SCIPpresolve(subscip) );
 #endif
 
-      SCIPdebugMsg(scip, "locks heuristic presolved subproblem: %d vars, %d cons; fixing value = %g\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip), ((nvars - SCIPgetNVars(subscip)) / (SCIP_Real)nvars));
+      SCIPdebugMsg(scip, "locks heuristic presolved subproblem at time %g : %d vars, %d cons; fixing value = %g\n", SCIPgetSolvingTime(scip), SCIPgetNVars(subscip), SCIPgetNConss(subscip), ((nvars - SCIPgetNVars(subscip)) / (SCIP_Real)nvars));
 
       /* after presolving, we should have at least reached a certain fixing rate over ALL variables (including continuous)
        * to ensure that not only the MIP but also the LP relaxation is easy enough
@@ -907,7 +940,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
 #else
          SCIP_CALL_ABORT( SCIPsolve(subscip) );
 #endif
-         SCIPdebugMsg(scip, "ending locks locks-submip at time %g, status = %d\n", SCIPgetSolvingTime(scip), SCIPgetStatus(subscip));
+         SCIPdebugMsg(scip, "ending solving locks-submip at time %g, status = %d\n", SCIPgetSolvingTime(scip), SCIPgetStatus(subscip));
 
          /* check, whether a solution was found; due to numerics, it might happen that not all solutions are feasible ->
           * try all solutions until one was accepted
@@ -925,7 +958,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
       }
 
 #ifdef SCIP_DEBUG
-      SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
+      //SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
 #endif
 
       heurdata->usednodes += SCIPgetNNodes(subscip);
@@ -941,6 +974,14 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
  TERMINATE:
    /* exit probing mode */
    SCIP_CALL( SCIPendProbing(scip) );
+
+#ifdef NOCONFLICT
+   /* reset the conflict analysis */
+   if( !SCIPisParamFixed(scip, "conflict/enable") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(scip, "conflict/enable", enabledconflicts) );
+   }
+#endif
 
    SCIPfreeBufferArrayNull(scip, &varpos);
    SCIPfreeBufferArray(scip, &fulfilled);
