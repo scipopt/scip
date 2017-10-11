@@ -60,7 +60,7 @@
 #define DEFAULT_DENSITYOFFSET       100 /**< additional number of variables allowed in row on top of density */
 #define DEFAULT_MAXROWFAC          1e+4 /**< maximal row aggregation factor */
 #define DEFAULT_MAXTESTDELTA         -1 /**< maximal number of different deltas to try (-1: unlimited) */
-#define DEFAULT_AGGRTOL             0.1 /**< aggregation heuristic: we try to delete continuous variables from the current
+#define DEFAULT_AGGRTOL            1e-2 /**< aggregation heuristic: we try to delete continuous variables from the current
                                          *   aggregation, whose distance to its tightest bound is >= L - DEFAULT_AGGRTOL,
                                          *   where L is the largest of the distances between a continuous variable's value
                                          *   and its tightest bound in the current aggregation */
@@ -153,7 +153,8 @@ SCIP_RETCODE addCut(
    int                   cutrank,            /**< rank of the cut */
    const char*           cutclassname,       /**< name of cut class to use for row names */
    SCIP_Bool*            cutoff,             /**< whether a cutoff has been detected */
-   int*                  ncuts               /**< pointer to count the number of added cuts */
+   int*                  ncuts,              /**< pointer to count the number of added cuts */
+   SCIP_ROW**            thecut
    )
 {
    assert(scip != NULL);
@@ -238,6 +239,9 @@ SCIP_RETCODE addCut(
             {
                SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, cutoff) );
             }
+
+            *thecut = cut;
+            SCIP_CALL( SCIPcaptureRow(scip, cut) );
          }
       }
 
@@ -246,23 +250,6 @@ SCIP_RETCODE addCut(
    }
 
    return SCIP_OKAY;
-}
-
-/** decreases the score of a row in order to not aggregate it again too soon */
-static
-void decreaseRowScore(
-   SCIP_Real*            rowlhsscores,       /**< aggregation scores for left hand sides of row */
-   SCIP_Real*            rowrhsscores,       /**< aggregation scores for right hand sides of row */
-   int                   rowidx              /**< index of row to decrease score for */
-   )
-{
-   assert(rowlhsscores != NULL);
-   assert(rowrhsscores != NULL);
-   assert(rowlhsscores[rowidx] >= 0.0);
-   assert(rowrhsscores[rowidx] >= 0.0);
-
-   rowlhsscores[rowidx] *= 0.99;
-   rowrhsscores[rowidx] *= 0.99;
 }
 
 /** setup data for aggregating rows */
@@ -594,7 +581,7 @@ SCIP_RETCODE aggregateNextRow(
 
       /* if no best row was found yet, this variable has the currently best bound distance */
       if( aggrfac == 0.0 )
-         minbddist = -badvarbddist[i] - sepadata->aggrtol;
+         minbddist = -badvarbddist[i] * (1.0 - sepadata->aggrtol);
 
       /* if the bound distance of the current variable is smaller than the minimum bound distance stop looping */
       if( -badvarbddist[i] < minbddist )
@@ -620,7 +607,7 @@ SCIP_RETCODE aggregateNextRow(
          rowaggrfac = - SCIPaggrRowGetProbvarValue(aggrrow, probvaridx) / candrowcoefs[k];
 
          /* if factor is too extreme skip this row */
-         if( SCIPisZero(scip, rowaggrfac) )
+         if( SCIPisFeasZero(scip, rowaggrfac) )
             continue;
 
          lppos = SCIProwGetLPPos(candrows[k]);
@@ -664,7 +651,7 @@ SCIP_RETCODE aggregateNextRow(
 
       /* if no best row was found yet, this variable has the currently best bound distance */
       if( aggrfac == 0.0 )
-         minbddist = badvarbddist[i] - sepadata->aggrtol;
+         minbddist = badvarbddist[i] * (1.0 - sepadata->aggrtol);
 
       /* if the bound distance of the current variable is smaller than the minimum bound distance stop looping */
       if( badvarbddist[i] < minbddist )
@@ -692,7 +679,7 @@ SCIP_RETCODE aggregateNextRow(
          rowaggrfac = - SCIPaggrRowGetProbvarValue(aggrrow, probvaridx) / candrowcoefs[k];
 
          /* if factor is too extreme skip this row */
-         if( SCIPisZero(scip, rowaggrfac) )
+         if( SCIPisFeasZero(scip, rowaggrfac) )
             continue;
 
          lppos = SCIProwGetLPPos(candrows[k]);
@@ -716,7 +703,8 @@ SCIP_RETCODE aggregateNextRow(
             }
 
             /* if this rows score is better than the currently best score, remember it */
-            if( aggrfac == 0.0 || rowscore > bestrowscore )
+            if( aggrfac == 0.0 || SCIPisGT(scip, rowscore, bestrowscore) ||
+                (SCIPisEQ(scip, rowscore, bestrowscore) && aggrdata->nbadvarsinrow[lppos] < aggrdata->nbadvarsinrow[SCIProwGetLPPos(bestrow)]) )
             {
                bestrow = candrows[k];
                aggrfac = rowaggrfac;
@@ -824,6 +812,7 @@ SCIP_RETCODE aggregation(
       SCIP_Bool flowcoversuccess;
       SCIP_Real flowcoverefficacy;
       SCIP_Bool flowcovercutislocal;
+      SCIP_ROW* cut;
 
       *wastried = TRUE;
 
@@ -840,16 +829,17 @@ SCIP_RETCODE aggregation(
          aggrdata->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cmircutislocal, &cmirsuccess) );
 
       oldncuts = *ncuts;
+      cut = NULL;
 
       if( cmirsuccess )
       {
          SCIP_CALL( addCut(scip, sol, sepadata->cmir, TRUE, cutcoefs, cutinds, cutnnz, cutrhs, cutefficacy, cmircutislocal,
-               sepadata->dynamiccuts, cutrank, "cmir", cutoff, ncuts) );
+               sepadata->dynamiccuts, cutrank, "cmir", cutoff, ncuts, &cut) );
       }
       else if ( flowcoversuccess )
       {
          SCIP_CALL( addCut(scip, sol, sepadata->flowcover, FALSE, cutcoefs, cutinds, cutnnz, cutrhs, cutefficacy, flowcovercutislocal,
-               sepadata->dynamiccuts, cutrank, "flowcover", cutoff, ncuts) );
+               sepadata->dynamiccuts, cutrank, "flowcover", cutoff, ncuts, &cut) );
       }
 
       if ( *cutoff )
@@ -858,17 +848,24 @@ SCIP_RETCODE aggregation(
       /* if the cut was successfully added, decrease the score of the rows used in the aggregation and clean the aggregation
        * row (and call this function again with a different start row for aggregation)
        */
-      if( *ncuts > oldncuts )
+      if( cut != NULL )
       {
-         int i;
          int* rowinds;
+         int i;
 
          rowinds = SCIPaggrRowGetRowInds(aggrdata->aggrrow);
          nrows = SCIPaggrRowGetNRows(aggrdata->aggrrow);
 
          /* decrease row score of used rows slightly */
          for( i = 0; i < nrows; ++i )
-            decreaseRowScore(rowlhsscores, rowrhsscores, rowinds[i]);
+         {
+            SCIP_Real fac = 1 - 0.999 * SCIProwGetParallelism(rows[rowinds[i]], cut, 'e');
+
+            rowlhsscores[rowinds[i]] *= fac;
+            rowrhsscores[rowinds[i]] *= fac;
+         }
+
+         SCIP_CALL( SCIPreleaseRow(scip, &cut) );
 
          SCIPdebugMsg(scip, " -> abort aggregation: cut found\n");
          break;
@@ -1227,8 +1224,7 @@ SCIP_RETCODE separateCuts(
    /* start aggregation heuristic for each row in the LP and generate resulting cuts */
    ntries = 0;
    nfails = 0;
-   for( r = 0; r < nrows && ntries < maxtries && ncuts < maxsepacuts && rowscores[roworder[r]] > 0.0
-           && !SCIPisStopped(scip); r++ )
+   for( r = 0; r < nnonzrows && ntries < maxtries && ncuts < maxsepacuts && !SCIPisStopped(scip); r++ )
    {
       SCIP_Bool wastried;
       int oldncuts;

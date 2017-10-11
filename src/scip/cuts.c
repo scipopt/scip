@@ -1690,8 +1690,20 @@ int* SCIPaggrRowGetRowInds(
    )
 {
    assert(aggrrow != NULL);
+   assert(aggrrow->rowsinds != NULL || aggrrow->nrows == 0);
 
    return aggrrow->rowsinds;
+}
+
+/** get array with weights of aggregated rows */
+SCIP_Real* SCIPaggrRowGetRowWeights(
+   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
+   )
+{
+   assert(aggrrow != NULL);
+   assert(aggrrow->rowweights != NULL || aggrrow->nrows == 0);
+
+   return aggrrow->rowweights;
 }
 
 /** checks whether a given row has been added to the aggregation row */
