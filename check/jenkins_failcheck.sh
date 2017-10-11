@@ -29,7 +29,7 @@ fi
 EMAILFROM="adm_timo <timo-admin@zib.de>"
 EMAILTO="adm_timo <timo-admin@zib.de>"
 
-# SCIP check files are check.TESTSET.VERSION.otherstuff.SETTING.{out,err,res,meta}
+# SCIP check files are check.TESTSET.SCIPVERSION.otherstuff.SETTING.{out,err,res,meta} (SCIPVERSION is of the form scip-VERSION)
 BASEFILE="check/results/check.${TESTSET}.${SCIPVERSION}.*.${SETTING}"
 
 # evaluate the run and upload it to rubberband

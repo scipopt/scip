@@ -494,27 +494,97 @@ SCIP_RETCODE cleanDeletedConflicts(
 
    (*ndelconfs) = 0;
 
-   for( i = 0; i < conflictstore->nconflicts; )
+   /* we traverse backwards to avoid swapping of pointers */
+   for( i = conflictstore->nconflicts-1; i >= 0; i-- )
    {
       assert(conflictstore->conflicts[i] != NULL);
 
       /* check whether the constraint is already marked as deleted */
       if( SCIPconsIsDeleted(conflictstore->conflicts[i]) )
       {
-         /* remove conflict at current position
-          *
-          * don't increase i because delPosConflict will swap the last pointer to the i-th position
-          */
+         /* remove conflict at current position */
          SCIP_CALL( delPosConflict(conflictstore, set, stat, NULL, blkmem, reopt, i, FALSE) );
 
          ++(*ndelconfs);
       }
-      else
-         /* increase i */
-         i++;
+   }
+   SCIPsetDebugMsg(set, "> removed %d/%d as deleted marked conflicts.\n", *ndelconfs, conflictstore->nconflicts + (*ndelconfs));
+
+   return SCIP_OKAY;
+}
+
+/** removes all deleted dual proofs of infeasible LP relaxations from the storage */
+static
+SCIP_RETCODE cleanDeletedDualrayCons(
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_REOPT*           reopt,              /**< reoptimization data */
+   int*                  ndelproofs          /**< pointer to store the number of deleted conflicts */
+   )
+{
+   int i;
+
+   assert(conflictstore != NULL);
+
+   (*ndelproofs) = 0;
+
+   /* we traverse backwards to avoid swapping of pointers */
+   for( i = conflictstore->ndualrayconfs-1; i >= 0; i-- )
+   {
+      assert(conflictstore->dualrayconfs[i] != NULL);
+
+      /* check whether the constraint is already marked as deleted */
+      if( SCIPconsIsDeleted(conflictstore->dualrayconfs[i]) )
+      {
+         /* remove proof at current position */
+         SCIP_CALL( delPosDualray(conflictstore, set, stat, NULL, blkmem, reopt, i, FALSE) );
+
+         ++(*ndelproofs);
+      }
    }
 
-   SCIPsetDebugMsg(set, "removed %d/%d as deleted marked conflicts.\n", *ndelconfs, conflictstore->nconflicts);
+   SCIPsetDebugMsg(set, "> removed %d/%d as deleted marked dual infeasibility proofs.\n",
+         *ndelproofs, conflictstore->ndualrayconfs + (*ndelproofs));
+
+   return SCIP_OKAY;
+}
+
+/** removes all deleted dual proofs of bound exceeding LP relaxations from the storage */
+static
+SCIP_RETCODE cleanDeletedDualsolCons(
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_REOPT*           reopt,              /**< reoptimization data */
+   int*                  ndelproofs          /**< pointer to store the number of deleted conflicts */
+   )
+{
+   int i;
+
+   assert(conflictstore != NULL);
+
+   (*ndelproofs) = 0;
+
+   /* we traverse backwards to avoid swapping of pointers */
+   for( i = conflictstore->ndualsolconfs-1; i >= 0; i-- )
+   {
+      assert(conflictstore->dualsolconfs[i] != NULL);
+
+      /* check whether the constraint is already marked as deleted */
+      if( SCIPconsIsDeleted(conflictstore->dualsolconfs[i]) )
+      {
+         /* remove proof at current position */
+         SCIP_CALL( delPosDualsol(conflictstore, set, stat, NULL, blkmem, reopt, i, FALSE) );
+
+         ++(*ndelproofs);
+      }
+   }
+
+   SCIPsetDebugMsg(set, "> removed %d/%d as deleted marked dual boundexceeding proofs.\n",
+         *ndelproofs, conflictstore->ndualrayconfs + (*ndelproofs));
 
    return SCIP_OKAY;
 }
@@ -713,7 +783,7 @@ SCIP_RETCODE SCIPconflictstoreFree(
    assert(*conflictstore != NULL);
 
    /* clear the storage */
-   SCIP_CALL( SCIPconflictstoreClean(*conflictstore, blkmem, set, stat, reopt) );
+   SCIP_CALL( SCIPconflictstoreClear(*conflictstore, blkmem, set, stat, reopt) );
 
    BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictstore)->origconfs, (*conflictstore)->origconflictsize);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictstore)->conflicts, (*conflictstore)->conflictsize);
@@ -728,8 +798,8 @@ SCIP_RETCODE SCIPconflictstoreFree(
    return SCIP_OKAY;
 }
 
-/** cleans conflict store */
-SCIP_RETCODE SCIPconflictstoreClean(
+/** clears conflict store */
+SCIP_RETCODE SCIPconflictstoreClear(
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -741,8 +811,8 @@ SCIP_RETCODE SCIPconflictstoreClean(
 
    assert(conflictstore != NULL);
 
-   SCIPsetDebugMsg(set, "cleaning conflict store: %d origconfs, %d conflicts, %d dual rays\n",
-         conflictstore->norigconfs, conflictstore->nconflicts, conflictstore->ndualrayconfs);
+   SCIPsetDebugMsg(set, "clearing conflict store: %d origconfs, %d conflicts, %d dual proofs\n",
+         conflictstore->norigconfs, conflictstore->nconflicts, conflictstore->ndualrayconfs + conflictstore->ndualsolconfs);
 
    /* remove original constraints (if present) */
    if( conflictstore->origconfs != NULL )
@@ -791,6 +861,51 @@ SCIP_RETCODE SCIPconflictstoreClean(
    return SCIP_OKAY;
 }
 
+/** cleans up conflict store */
+SCIP_RETCODE SCIPconflictstoreClean(
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
+   SCIP_REOPT*           reopt               /**< reoptimization data */
+   )
+{
+   int ndelconfs;
+   int ndeldualray;
+   int ndeldualsol;
+
+   assert(conflictstore != NULL);
+
+   SCIPsetDebugMsg(set, "cleaning conflict store: %d conflicts, %d dual proofs\n",
+         conflictstore->norigconfs, conflictstore->nconflicts, conflictstore->ndualrayconfs + conflictstore->ndualsolconfs);
+
+   ndelconfs = 0;
+   ndeldualray = 0;
+   ndeldualsol = 0;
+
+   /* remove all as deleted marked conflicts */
+   SCIP_CALL( cleanDeletedConflicts(conflictstore, set, stat, blkmem, reopt, &ndelconfs) );
+
+   /* remove all as deleted marked dual infeasibility proofs */
+   SCIP_CALL( cleanDeletedDualrayCons(conflictstore, set, stat, blkmem, reopt, &ndeldualray) );
+
+   /* remove all as deleted marked dual bound exceeding proofs */
+   SCIP_CALL( cleanDeletedDualsolCons(conflictstore, set, stat, blkmem, reopt, &ndeldualsol) );
+
+   /* don't update bound exceeding proofs after a restart
+    *
+    * TODO: check whether we want to delete bound exceeding proofs in general during a restart
+    */
+   if( SCIPisInRestart(set->scip) )
+   {
+      int i;
+      for( i = 0; i < conflictstore->ndualsolconfs; i++ )
+         conflictstore->updateside[i] = FALSE;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** adds a constraint to the pool of proof constraints based on dual rays
  *
  *  @note this methods captures the constraint
@@ -828,23 +943,9 @@ SCIP_RETCODE SCIPconflictstoreAddDualraycons(
    if( conflictstore->ndualrayconfs == CONFLICTSTORE_DUALRAYSIZE )
    {
       int ndeleted = 0;
-      int i;
 
-      for( i = 0; i < conflictstore->ndualrayconfs; )
-      {
-         if( SCIPconsIsDeleted(conflictstore->dualrayconfs[i]) )
-         {
-            /* remove dual proof at current position
-             *
-             * don't increase i because delPosDualray will swap the last pointer to the i-th position
-             */
-            SCIP_CALL( delPosDualray(conflictstore, set, stat, transprob, blkmem, reopt, i, TRUE) );
-
-            ++ndeleted;
-         }
-         else
-            ++i;
-      }
+      /* remove all as deleted marked dual infeasibility proofs */
+      SCIP_CALL( cleanDeletedDualrayCons(conflictstore, set, stat, blkmem, reopt, &ndeleted) );
 
       /* if we could not remove a dual ray that is already marked as deleted we need to remove the oldest active one */
       if( ndeleted == 0 )
@@ -915,25 +1016,10 @@ SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
     */
    if( conflictstore->ndualsolconfs == CONFLICTSTORE_DUALSOLSIZE )
    {
-      int ndeleted;
-      int i;
+      int ndeleted = 0;
 
-      ndeleted = 0;
-      for( i = 0; i < conflictstore->ndualsolconfs; )
-      {
-         if( SCIPconsIsDeleted(conflictstore->dualsolconfs[i]) )
-         {
-            /* remove dual proof at current position
-             *
-             * don't increase i because delPosDualsol will swap the last pointer to the i-th position
-             */
-            SCIP_CALL( delPosDualsol(conflictstore, set, stat, transprob, blkmem, reopt, i, TRUE) );
-
-            ++ndeleted;
-         }
-         else
-            ++i;
-      }
+      /* remove all as deleted marked dual bound exceeding proofs */
+      SCIP_CALL( cleanDeletedDualsolCons(conflictstore, set, stat, blkmem, reopt, &ndeleted) );
 
       /* if we could not remove a dual proof that is already marked as deleted we need to remove the oldest active one */
       if( ndeleted == 0 )

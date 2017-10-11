@@ -3520,6 +3520,7 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
+   SCIP_Bool violated;
    int algo;
    int res;
 
@@ -3537,7 +3538,38 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
       return FALSE; /*lint !e527*/
    }
 
-   return (lpi->solstat == GRB_OPTIMAL || (lpi->solstat == GRB_UNBOUNDED && algo == GRB_METHOD_PRIMAL));
+   if( lpi->solstat == GRB_ITERATION_LIMIT )
+   {
+      double consviol;
+      double boundviol;
+      double eps;
+
+      res = GRBgetdblparam(lpi->grbenv, GRB_DBL_PAR_OPTIMALITYTOL, &eps);
+      if ( res != 0 )
+      {
+         SCIPABORT();
+         return FALSE; /*lint !e527*/
+      }
+      res = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_CONSTR_VIO, &consviol);
+      if ( res != 0 )
+      {
+         SCIPABORT();
+         return FALSE; /*lint !e527*/
+      }
+      res = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_BOUND_VIO, &boundviol);
+      if ( res != 0 )
+      {
+         SCIPABORT();
+         return FALSE; /*lint !e527*/
+      }
+
+      violated = (consviol > eps || boundviol > eps);
+   }
+   else
+      violated = FALSE;
+
+   return (lpi->solstat == GRB_OPTIMAL || (!violated && lpi->solstat == GRB_ITERATION_LIMIT && algo == GRB_METHOD_PRIMAL)
+     || (lpi->solstat == GRB_UNBOUNDED && algo == GRB_METHOD_PRIMAL));
 }
 
 /** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point);
@@ -5114,8 +5146,6 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    SCIP_Real*            dval                /**< buffer to store the parameter value */
    )
 {
-   int objsen;
-
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
    assert(dval != NULL);
@@ -5132,19 +5162,8 @@ SCIP_RETCODE SCIPlpiGetRealpar(
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
       return SCIP_PARAMETERUNKNOWN;
-   case SCIP_LPPAR_LOBJLIM:
-      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, &objsen) );
-      if( objsen == GRB_MAXIMIZE )
-         SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_CUTOFF, dval) );
-      else
-         return SCIP_PARAMETERUNKNOWN;
-      break;
-   case SCIP_LPPAR_UOBJLIM:
-      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, &objsen) );
-      if( objsen == GRB_MINIMIZE )
-         SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_CUTOFF, dval) );
-      else
-         return SCIP_PARAMETERUNKNOWN;
+   case SCIP_LPPAR_OBJLIM:
+      SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_CUTOFF, dval) );
       break;
    case SCIP_LPPAR_LPTILIM:
       SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_TIMELIMIT, dval) );
@@ -5166,8 +5185,6 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    SCIP_Real             dval                /**< parameter value */
    )
 {
-   int objsen;
-
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
 
@@ -5183,21 +5200,8 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
       return SCIP_PARAMETERUNKNOWN;
-   case SCIP_LPPAR_LOBJLIM:
-      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, &objsen) );
-      if( objsen == GRB_MAXIMIZE )
-         SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_CUTOFF, dval) );
-      else
-         return SCIP_PARAMETERUNKNOWN;
-      break;
-   case SCIP_LPPAR_UOBJLIM:
-      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, &objsen) );
-      if( objsen == GRB_MINIMIZE )
-      {
-         SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_CUTOFF, dval) );
-      }
-      else
-         return SCIP_PARAMETERUNKNOWN;
+   case SCIP_LPPAR_OBJLIM:
+      SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_CUTOFF, dval) );
       break;
    case SCIP_LPPAR_LPTILIM:
       SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_TIMELIMIT, dval) );

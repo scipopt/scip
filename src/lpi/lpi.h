@@ -51,6 +51,17 @@
  * The creation of a new LP should always be done in the following ways: Either one can use SCIPlpiLoadColLP() or one
  * first adds empty columns or rows. Then the matrix entries can be added by adding columns and rows, respectively. It
  * is an error, if matrix entries are added for rows or columns that have not been added before.
+ *
+ * The handling of the objective limit is as follows, if supported by the LP-solver: If the objective is larger than the
+ * objective limit for minimization problems or smaller than the objective limit for maximization problems, the solution
+ * process can be stopped. This naturally occurs in a branch-and-bound process, where the objective limit is set to the
+ * value of the best solution found so far. If the problem is a minimization problem and we use the dual simplex, the
+ * dual feasible solutions are maximized. If their value are larger than the objective limit, the process can be
+ * stopped. In this case, no feasible integer solution can be found in the corresponding branch.
+ *
+ * Some LP-solvers also support the opposite setting, but this can easily be checked after the solution process (i.e.,
+ * for a minimization problem a check whether the optimal value is smaller than the limit). Note that this check can
+ * only be determined at the end of the optimization. Thus, we do not support this.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

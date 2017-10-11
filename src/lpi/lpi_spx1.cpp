@@ -5205,11 +5205,11 @@ SCIP_RETCODE SCIPlpiGetRealpar(
       *dval = lpi->spx->opttol();
       break;
 #endif
-   case SCIP_LPPAR_LOBJLIM:
-      *dval = lpi->spx->getObjLoLimit();
-      break;
-   case SCIP_LPPAR_UOBJLIM:
-      *dval = lpi->spx->getObjUpLimit();
+   case SCIP_LPPAR_OBJLIM:
+      if ( spx->getSense() == SPxLP::MINIMIZE )
+         *dval = lpi->spx->getObjUpLimit();
+      else
+         *dval = lpi->spx->getObjLoLimit();
       break;
    case SCIP_LPPAR_LPTILIM:
       *dval = lpi->spx->terminationTime();
@@ -5249,11 +5249,11 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       lpi->spx->setOpttol(dval);
       break;
 #endif
-   case SCIP_LPPAR_LOBJLIM:
-      lpi->spx->setObjLoLimit(dval);
-      break;
-   case SCIP_LPPAR_UOBJLIM:
-      lpi->spx->setObjUpLimit(dval);
+   case SCIP_LPPAR_OBJLIM:
+      if ( spx->getSense() == SPxLP::MINIMIZE )
+         lpi->spx->setObjUpLimit(dval);
+      else
+         lpi->spx->setObjLoLimit(dval);
       break;
    case SCIP_LPPAR_LPTILIM:
       lpi->spx->setTerminationTime(dval);
