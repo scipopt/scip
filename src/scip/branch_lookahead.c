@@ -2403,9 +2403,10 @@ SCIP_RETCODE executeBranching(
 
             if( ndomredsfound > 0 )
             {
-               LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Found %d domain reductions.\n", ndomredsfound);
+               LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Found %d domain reductions via propagation.\n", ndomredsfound);
 
-               if( config->usedomainreduction )
+               /* domreds != NULL iff config->usedomainreduction */
+               if( domreds != NULL )
                {
                   int i;
                   SCIP_VAR** problemvars = SCIPgetVars(scip);
@@ -3955,8 +3956,8 @@ SCIP_RETCODE selectVarRecursive(
             }
             else
             {
-               DOMAINREDUCTIONS* downdomainreductions;
-               DOMAINREDUCTIONS* updomainreductions;
+               DOMAINREDUCTIONS* downdomainreductions = NULL;
+               DOMAINREDUCTIONS* updomainreductions = NULL;
 
                LABdebugMessage(scip, SCIP_VERBLEVEL_NORMAL, "Started branching on var <%s> with val <%g> and bounds [<%g>..<%g>]\n",
                   SCIPvarGetName(branchvar), branchval, SCIPvarGetLbLocal(branchvar), SCIPvarGetUbLocal(branchvar));
@@ -4351,8 +4352,8 @@ SCIP_RETCODE selectVarStart(
          LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Applying found data to the base node.\n");
 
          if( persistent != NULL && config->storeunviolatedsol && (
-            (config->usebincons && binconsdata->createdconstraints->nconstraints > 0 && binconsdata->createdconstraints->nviolatedcons == 0)
-            || (config->usedomainreduction && domainreductions->nchangedvars > 0 && domainreductions->nviolatedvars == 0)) )
+            (binconsdata != NULL && binconsdata->createdconstraints->nconstraints > 0 && binconsdata->createdconstraints->nviolatedcons == 0)
+            || (domainreductions != NULL && domainreductions->nchangedvars > 0 && domainreductions->nviolatedvars == 0)) )
          {
             SCIP_CALL( SCIPlinkLPSol(scip, persistent->prevbinsolution) );
             SCIP_CALL( SCIPunlinkSol(scip, persistent->prevbinsolution) );
@@ -4360,7 +4361,8 @@ SCIP_RETCODE selectVarStart(
             branchingDecisionCopy(decision, persistent->prevdecision);
          }
 
-         if( config->usebincons )
+         /* binconsdata != NULL iff config->usebincons == TRUE */
+         if( binconsdata != NULL )
          {
             SCIP_NODE* basenode;
 
@@ -4379,7 +4381,8 @@ SCIP_RETCODE selectVarStart(
 
          }
 
-         if( config->usedomainreduction )
+         /* domainreductions != NULL iff config->usedomainreduction == TRUE */
+         if( domainreductions != NULL )
          {
             if( !status->lperror && !status->depthtoosmall && !status->cutoff )
             {
@@ -4886,7 +4889,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       localStatisticsFree(scip, &localstats);
 #endif
       candidateListFree(scip, &allcandidates);
-      if( branchruledata->config->abbreviated )
+
+      /* scorecontainer != NULL iff branchruledata->config->abbreviated == TRUE */
+      if( scorecontainer != NULL )
       {
          SCIP_CALL( scoreContainerFree(scip, &scorecontainer) );
       }
