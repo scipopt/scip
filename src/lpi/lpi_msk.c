@@ -65,8 +65,8 @@
    }                                                                    \
    while( FALSE )
 
-#define IS_POSINF(x) ((x) >= SCIP_DEFAULT_INFINITY)
-#define IS_NEGINF(x) ((x) <= -SCIP_DEFAULT_INFINITY)
+#define IS_POSINF(x) ((x) >= MSK_INFINITY)
+#define IS_NEGINF(x) ((x) <= -MSK_INFINITY)
 
 static MSKenv_t MosekEnv =           NULL;
 static int numlp         =           0;
@@ -322,13 +322,11 @@ static SCIP_RETCODE scip_checkdata(
  */
 
 static
-void generateMskBounds(
+void generateMskBoundkeys(
    int                   n,
    const double*         lb,
    const double*         ub,
-   MSKboundkeye*         bk,
-   double*               msklb,
-   double*               mskub
+   MSKboundkeye*         bk
    )
 {
    int i;
@@ -336,19 +334,13 @@ void generateMskBounds(
    assert(lb != NULL);
    assert(ub != NULL);
    assert(bk != NULL);
-   assert(msklb != NULL);
-   assert(mskub != NULL);
 
    for( i = 0; i < n; i++ )
    {
-      msklb[i] = lb[i];
-      mskub[i] = ub[i];
       if (IS_NEGINF(lb[i]))
       {
-         msklb[i] = -MSK_INFINITY;
          if (IS_POSINF(ub[i]))
          {
-            mskub[i] = MSK_INFINITY;
             bk[i] = MSK_BK_FR;
          }
          else
@@ -362,7 +354,6 @@ void generateMskBounds(
          assert(!IS_POSINF(lb[i]));
          if (IS_POSINF(ub[i]))
          {
-            mskub[i] = MSK_INFINITY;
             bk[i] = MSK_BK_LO;
          }
          else if (lb[i] == ub[i])  /**@todo is this good idea to compare the bound without any epsilontic? */
@@ -757,10 +748,6 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    int* aptre;
    MSKboundkeye* bkc;
    MSKboundkeye* bkx;
-   double* blc;
-   double* buc;
-   double* blx;
-   double* bux;
 
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
@@ -772,10 +759,6 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    aptre = NULL;
    bkc = NULL;
    bkx = NULL;
-   blc = NULL;
-   buc = NULL;
-   blx = NULL;
-   bux = NULL;
 
 #if DEBUG_CHECK_DATA > 0
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiLoadColLP") );
@@ -784,25 +767,21 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    if (nrows > 0)
    {
       SCIP_ALLOC( BMSallocMemoryArray( &bkc, nrows) );
-      SCIP_ALLOC( BMSallocMemoryArray( &blc, nrows) );
-      SCIP_ALLOC( BMSallocMemoryArray( &buc, nrows) );
 
-      generateMskBounds(nrows, lhs, rhs, bkc, blc, buc);
+      generateMskBoundkeys(nrows, lhs, rhs, bkc);
    }
 
    if (ncols > 0)
    {
       SCIP_ALLOC( BMSallocMemoryArray( &bkx, ncols) );
-      SCIP_ALLOC( BMSallocMemoryArray( &blx, ncols) );
-      SCIP_ALLOC( BMSallocMemoryArray( &bux, ncols) );
 
-      generateMskBounds(ncols, lb, ub, bkx, blx, bux);
+      generateMskBoundkeys(ncols, lb, ub, bkx);
 
       SCIP_CALL( getEndptrs(ncols, beg, nnonz, &aptre) );
    }
 
    MOSEK_CALL( MSK_inputdata(lpi->task, nrows, ncols, nrows, ncols, obj, 0.0, beg, aptre, ind, val,
-         bkc, blc, buc, bkx, blx, bux) );
+         bkc, lhs, rhs, bkx, lb, ub) );
 
    MOSEK_CALL( MSK_putobjsense(lpi->task, SENSE2MOSEK(objsen)) );
 
@@ -810,15 +789,11 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    if( ncols > 0 )
    {
       BMSfreeMemoryArray(&aptre);
-      BMSfreeMemoryArray(&bux);
-      BMSfreeMemoryArray(&blx);
       BMSfreeMemoryArray(&bkx);
    }
 
    if( nrows > 0 )
    {
-      BMSfreeMemoryArray(&buc);
-      BMSfreeMemoryArray(&blc);
       BMSfreeMemoryArray(&bkc);
    }
 
@@ -845,8 +820,6 @@ SCIP_RETCODE SCIPlpiAddCols(
 {  /*lint --e{715}*/
    int* aptre;
    MSKboundkeye* bkx;
-   double* blx;
-   double* bux;
    int oldcols;
 
    assert(MosekEnv != NULL);
@@ -871,15 +844,13 @@ SCIP_RETCODE SCIPlpiAddCols(
       return SCIP_OKAY;
 
    SCIP_ALLOC( BMSallocMemoryArray(&bkx, ncols) );
-   SCIP_ALLOC( BMSallocMemoryArray(&blx, ncols) );
-   SCIP_ALLOC( BMSallocMemoryArray(&bux, ncols) );
-   generateMskBounds(ncols, lb, ub, bkx, blx, bux);
+   generateMskBoundkeys(ncols, lb, ub, bkx);
 
    MOSEK_CALL( MSK_getnumvar(lpi->task, &oldcols) );
 
    MOSEK_CALL( MSK_appendvars(lpi->task, ncols) );
    MOSEK_CALL( MSK_putcslice(lpi->task, oldcols, oldcols+ncols, obj) );
-   MOSEK_CALL( MSK_putvarboundslice(lpi->task, oldcols, oldcols+ncols, bkx, blx, bux) );
+   MOSEK_CALL( MSK_putvarboundslice(lpi->task, oldcols, oldcols+ncols, bkx, lb, ub) );
 
    if( nnonz > 0 )
    {
@@ -898,8 +869,6 @@ SCIP_RETCODE SCIPlpiAddCols(
       BMSfreeMemoryArray(&aptre);
    }
 
-   BMSfreeMemoryArray(&bux);
-   BMSfreeMemoryArray(&blx);
    BMSfreeMemoryArray(&bkx);
 
 #if DEBUG_CHECK_DATA > 0
@@ -1014,8 +983,6 @@ SCIP_RETCODE SCIPlpiAddRows(
 {  /*lint --e{715}*/
    int* aptre;
    MSKboundkeye* bkc;
-   double* blc;
-   double* buc;
    int oldrows;
 
    assert(MosekEnv != NULL);
@@ -1032,15 +999,13 @@ SCIP_RETCODE SCIPlpiAddRows(
       return SCIP_OKAY;
 
    SCIP_ALLOC( BMSallocMemoryArray(&bkc, nrows) );
-   SCIP_ALLOC( BMSallocMemoryArray(&blc, nrows) );
-   SCIP_ALLOC( BMSallocMemoryArray(&buc, nrows) );
 
-   generateMskBounds(nrows, lhs, rhs, bkc, blc, buc);
+   generateMskBoundkeys(nrows, lhs, rhs, bkc);
 
    MOSEK_CALL( MSK_getnumcon(lpi->task, &oldrows) );
 
    MOSEK_CALL( MSK_appendcons(lpi->task, nrows) );
-   MOSEK_CALL( MSK_putconboundslice(lpi->task, oldrows, oldrows+nrows, bkc, blc, buc) );
+   MOSEK_CALL( MSK_putconboundslice(lpi->task, oldrows, oldrows+nrows, bkc, lhs, rhs) );
 
    if( nnonz > 0 )
    {
@@ -1059,8 +1024,6 @@ SCIP_RETCODE SCIPlpiAddRows(
       BMSfreeMemoryArray(&aptre);
    }
 
-   BMSfreeMemoryArray(&buc);
-   BMSfreeMemoryArray(&blc);
    BMSfreeMemoryArray(&bkc);
 
 #if DEBUG_CHECK_DATA > 0
@@ -1194,8 +1157,6 @@ SCIP_RETCODE SCIPlpiChgBounds(
    )
 {
    MSKboundkeye* bkx;
-   double* blx;
-   double* bux;
    int i;
 
    assert(MosekEnv != NULL);
@@ -1212,7 +1173,7 @@ SCIP_RETCODE SCIPlpiChgBounds(
    if (ncols == 0)
       return SCIP_OKAY;
 
-   /* @todo This test could be integrated into generateMskBounds, but then this function needs to be able to return an
+   /* @todo This test could be integrated into generateMskBoundkeys, but then this function needs to be able to return an
     * error, which requires some rewriting. */
    for (i = 0; i < ncols; ++i)
    {
@@ -1229,14 +1190,10 @@ SCIP_RETCODE SCIPlpiChgBounds(
    }
 
    SCIP_ALLOC( BMSallocMemoryArray(&bkx, ncols) );
-   SCIP_ALLOC( BMSallocMemoryArray(&blx, ncols) );
-   SCIP_ALLOC( BMSallocMemoryArray(&bux, ncols) );
 
-   generateMskBounds(ncols, lb, ub, bkx, blx, bux);
-   MOSEK_CALL( MSK_putboundlist(lpi->task, MSK_ACC_VAR, ncols, ind, bkx, blx, bux) );
+   generateMskBoundkeys(ncols, lb, ub, bkx);
+   MOSEK_CALL( MSK_putboundlist(lpi->task, MSK_ACC_VAR, ncols, ind, bkx, lb, ub) );
 
-   BMSfreeMemoryArray(&bux);
-   BMSfreeMemoryArray(&blx);
    BMSfreeMemoryArray(&bkx);
 
 #if DEBUG_CHECK_DATA > 0
@@ -1256,8 +1213,6 @@ SCIP_RETCODE SCIPlpiChgSides(
    )
 {
    MSKboundkeye* bkc;
-   double* blc;
-   double* buc;
 
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
@@ -1273,14 +1228,10 @@ SCIP_RETCODE SCIPlpiChgSides(
       return SCIP_OKAY;
 
    SCIP_ALLOC( BMSallocMemoryArray(&bkc, nrows) );
-   SCIP_ALLOC( BMSallocMemoryArray(&blc, nrows) );
-   SCIP_ALLOC( BMSallocMemoryArray(&buc, nrows) );
 
-   generateMskBounds(nrows, lhs, rhs, bkc, blc, buc);
-   MOSEK_CALL( MSK_putboundlist(lpi->task, MSK_ACC_CON, nrows, ind, bkc, blc, buc) );
+   generateMskBoundkeys(nrows, lhs, rhs, bkc);
+   MOSEK_CALL( MSK_putboundlist(lpi->task, MSK_ACC_CON, nrows, ind, bkc, lhs, rhs) );
 
-   BMSfreeMemoryArray(&buc);
-   BMSfreeMemoryArray(&blc);
    BMSfreeMemoryArray(&bkc);
 
 #if DEBUG_CHECK_DATA > 0
