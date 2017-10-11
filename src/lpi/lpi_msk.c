@@ -87,10 +87,10 @@ static int numdualobj               =  0;
 #define SHOW_ERRORS                  0
 #define ASSERT_ON_NUMERICAL_TROUBLES 0
 #define ASSERT_ON_WARNING            0
-#define FORCE_MOSEK_LOG              0
+#define FORCE_MOSEK_LOG              0       /* note that changing this AND setting lpinfo will lead to asserts in lpCheckIntpar */
 #define FORCE_MOSEK_SUMMARY          0
 #define FORCE_NO_MAXITER             0
-#define FORCE_SILENCE                1
+#define FORCE_SILENCE                1       /* note that changing this AND setting lpinfo will lead to asserts in lpCheckIntpar */
 #define SETBACK_LIMIT                250
 #define SCIP_CONTROLS_PRICING        1
 #define SCIP_CONTROLS_TOLERANCES     1
@@ -145,6 +145,7 @@ struct SCIP_LPi
    MSKstakeye*           skc;
    SCIP_Bool             fromscratch;        /**< shall solves be performed with MSK_IPAR_SIM_HOTSTART turned off? */
    SCIP_Bool             clearstate;         /**< shall next solve be performed with MSK_IPAR_SIM_HOTSTART turned off? */
+   SCIP_Bool             lpinfo;             /**< should LP solver output information to the screen? */
    SCIP_MESSAGEHDLR*     messagehdlr;        /**< messagehdlr handler to printing messages, or NULL */
 };
 
@@ -195,7 +196,7 @@ void MSKAPI printstr(
       return;
 #endif
 
-   SCIPdebugMessage("MOSEK: %s", str);
+   printf("MOSEK: %s", str);
 }
 
 #if DEBUG_CHECK_DATA > 0
@@ -696,6 +697,7 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->skcsize = 0;
    (*lpi)->skx = NULL;
    (*lpi)->skc = NULL;
+   (*lpi)->lpinfo = FALSE;
    (*lpi)->fromscratch = FALSE;
    (*lpi)->clearstate = FALSE;
    (*lpi)->messagehdlr = messagehdlr;
@@ -1952,10 +1954,6 @@ SCIP_RETCODE SolveWSimplex(
    {
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG, MSK_OFF) );
    }
-#else
-   {
-      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG, MSK_OFF) );
-   }
 #endif
 
    MOSEK_CALL( MSK_solutiondef(lpi->task, MSK_SOL_BAS, &gotbasicsol) );
@@ -2021,6 +2019,11 @@ SCIP_RETCODE SolveWSimplex(
 
 #if FORCE_MOSEK_SUMMARY
    if( optimizecount > WRITE_ABOVE )
+   {
+      MOSEK_CALL( MSK_solutionsummary(lpi->task,MSK_STREAM_LOG) );
+   }
+#else
+   if( lpi->lpinfo )
    {
       MOSEK_CALL( MSK_solutionsummary(lpi->task,MSK_STREAM_LOG) );
    }
@@ -2363,10 +2366,6 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG, MSK_ON) );
    }
    else
-   {
-      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG, MSK_OFF) );
-   }
-#else
    {
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG, MSK_OFF) );
    }
@@ -4398,8 +4397,7 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       *ival = lpi->pricing;
       break;
    case SCIP_LPPAR_LPINFO:                    /* should LP solver output information to the screen? */
-      MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_LOG, ival) );
-      *ival = (*ival == MSK_ON);
+      *ival = (int) lpi->lpinfo;
       break;
    case SCIP_LPPAR_LPITLIM:                   /* LP iteration limit */
       MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_SIM_MAX_ITERATIONS, ival) );
@@ -4538,6 +4536,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       SCIPdebugMessage("Ignoring log setting!\n");
 #else
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_LOG, ival ? MSK_ON : MSK_OFF) );
+      lpi->lpinfo = (SCIP_Bool) ival;
 #endif
       break;
    case SCIP_LPPAR_LPITLIM:                   /* LP iteration limit */
