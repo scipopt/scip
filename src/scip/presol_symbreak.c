@@ -393,6 +393,480 @@ SCIP_RETCODE computeComponents(
 }
 
 
+/** check whether a permutation is a composition of 2-cycles and determines in this case
+    the number of 2-cycles */
+static
+SCIP_RETCODE getPermProperties(
+   int*                  perm,               /**< permutation */
+   int                   n,                  /**< length of permutation array */
+   SCIP_Bool*            iscompoftwocycles,  /**< memory address to store whether permutation is
+                                                  a composition of 2-cycles */
+   int*                  ntwocyclesperm      /**< memory address to store number of 2-cycles */
+   )
+{
+   int i;
+   int ntwocycles = 0;
+
+   assert( perm != NULL );
+   assert( iscompoftwocycles != NULL );
+   assert( ntwocyclesperm != NULL );
+
+   *iscompoftwocycles = TRUE;
+   *ntwocyclesperm = 0;
+   for (i = 0; i < n; ++i)
+   {
+      /* skip fixed points and avoid treating the same 2-cycle twice */
+      if ( perm[i] <= i )
+         continue;
+
+      if ( perm[perm[i]] == i )
+         ++ntwocycles;
+      else
+         break;
+   }
+
+   if ( i < n )
+      *iscompoftwocycles = FALSE;
+   else
+      *ntwocyclesperm = ntwocycles;
+
+   return SCIP_OKAY;
+}
+
+
+/** Given a matrix with nrows and #perms + 1 columns whose first
+ *  nfilledcols contain entries of variables, this routine checks
+ *  whether the 2-cycles of perm intersect each row of column
+ *  coltoextend in exactly one position. In this case, we add one
+ *  column to the sub orbitope of the first nfilledcols columns.
+ *
+ *  @pre Every non-trivial cycle of perm is a 2-cycle.
+ *  @pre perm has nrows many 2-cycles
+ */
+static
+SCIP_RETCODE extendSubOrbitope(
+   int***                suborbitope,        /**< memory address of matrix containing sub orbitope entries */
+   int                   nrows,              /**< number of rows of suborbitope */
+   int                   nfilledcols,        /**< number of columns of suborbitope which are filled with entries */
+   int                   coltoextend,        /**< index of column that should be extended by perm */
+   int*                  perm,               /**< permutation */
+   SCIP_Bool             leftextension,      /**< whether we extend the sub orbitope to the left */
+   SCIP_Bool*            success,            /**< memory address to store whether extension was successful */
+   SCIP_Bool*            infeasible          /**< memory address to store if the number of intersecting cycles is too small */
+   )
+{
+   int row;
+   int idx1;
+   int idx2;
+   int nintersections = 0;
+
+   assert( suborbitope != NULL );
+   assert( nfilledcols > 0 );
+   assert( perm != NULL );
+   assert( success != NULL );
+
+   *success = FALSE;
+   *infeasible = FALSE;
+
+   /* if we try to extend the first orbitope generator by another one,
+    * we can change the order of entries in each row of suborbitope */
+   if ( nfilledcols == 2 )
+   {
+      /* check whether each cycle of perm intersects with a row of suborbitope */
+      for (row = 0; row < nrows; ++row)
+      {
+         idx1 = (*suborbitope)[row][0];
+         idx2 = (*suborbitope)[row][1];
+
+         /* if idx1 or idx2 is affected by perm, we can extend the row of the orbitope */
+         if ( idx1 != perm[idx1] )
+         {
+            /* change order of idx1 and idx2 for right extensions */
+            if ( ! leftextension )
+            {
+               (*suborbitope)[row][0] = idx2;
+               (*suborbitope)[row][1] = idx1;
+            }
+            (*suborbitope)[row][2] = perm[idx1];
+            ++nintersections;
+         }
+         else if ( idx2 != perm[idx2] )
+         {
+            /* change order of idx1 and idx2 for left extensions */
+            if ( leftextension )
+            {
+               (*suborbitope)[row][0] = idx2;
+               (*suborbitope)[row][1] = idx1;
+            }
+            (*suborbitope)[row][2] = perm[idx2];
+            ++nintersections;
+         }
+      }
+   }
+   else
+   {
+      /* check whether each cycle of perm intersects with a row of suborbitope */
+      for (row = 0; row < nrows; ++row)
+      {
+         idx1 = (*suborbitope)[row][coltoextend];
+
+         /* if idx1 is affected by perm, we can extend the row of the orbitope */
+         if ( idx1 != perm[idx1] )
+         {
+            (*suborbitope)[row][nfilledcols] = perm[idx1];
+            ++nintersections;
+         }
+      }
+   }
+
+   /* if there are too few intersection, this is not an orbitope */
+   if ( nintersections > 0 && nintersections < nrows )
+      *infeasible = TRUE;
+   else if ( nintersections == nrows )
+      *success = TRUE;
+
+   return SCIP_OKAY;
+}
+
+
+/** generate variable matrix for orbitope constraint handler */
+static
+SCIP_RETCODE generateOrbitopeVarsMatrix(
+   SCIP_VAR****          vars,               /**< memory address to store pointer to orbitope variables */
+   int                   nrows,              /**< number of rows of orbitope */
+   int                   ncols,              /**< number of columns of orbitope */
+   SCIP_VAR**            permvars,           /**< superset of variables that are contained in orbitope */
+   int                   npermvars,          /**< number of variables in permvars array */
+   int**                 orbitopevaridx,     /**< permuted index table of variables in permvars that are contained in orbitope */
+   int*                  columnorder         /**< permutation to reorder column of orbitopevaridx */
+   )
+{
+   int i;
+   int curcolumn;
+   int nfilledcols = 0;
+
+   assert( vars != NULL );
+   assert( nrows > 0 );
+   assert( ncols > 0 );
+   assert( permvars != NULL );
+   assert( orbitopevaridx != NULL );
+   assert( columnorder != NULL );
+
+   curcolumn = ncols - 1;
+   nfilledcols = 0;
+
+   /* start filling vars matrix with the right-most column w.r.t. columnorder */
+   while ( curcolumn >= 0 && columnorder[curcolumn] >= 0 )
+   {
+      for (i = 0; i < nrows; ++i)
+      {
+         assert( orbitopevaridx[i][curcolumn] < npermvars );
+
+         (*vars)[i][nfilledcols] = permvars[orbitopevaridx[i][curcolumn]];
+      }
+      --curcolumn;
+      ++nfilledcols;
+   }
+
+   /* There are three possibilities for the structure of columnorder:
+    * 1)  [0, 1, -1, -1, ..., -1]
+    * 2)  [0, 1, 1, 1, ..., 1]
+    * 3)  [0, 1, -1, -1, ...., -1, 1, 1, ..., 1]
+    */
+   /* If we are in case 2), all columns should have been added to vars */
+   if ( columnorder[curcolumn] == 0 )
+      assert( nfilledcols == ncols );
+   /* Otherwise, we are in case 1) or 3) and the only remaining non-negative
+    *  column orders are 0 and 1. */
+   else
+   {
+      /* add column with columnorder 1 to vars*/
+      for (i = 0; i < nrows; ++i)
+      {
+         assert( orbitopevaridx[i][1] < npermvars );
+
+         (*vars)[i][nfilledcols] = permvars[orbitopevaridx[i][1]];
+      }
+      ++nfilledcols;
+
+      /* add column with columnorder 0 to vars*/
+      for (i = 0; i < nrows; ++i)
+      {
+         assert( orbitopevaridx[i][0] < npermvars );
+
+         (*vars)[i][nfilledcols] = permvars[orbitopevaridx[i][0]];
+      }
+      ++nfilledcols;
+
+      /* add columns with a negative column order to vars */
+      if ( nfilledcols < ncols )
+      {
+         curcolumn = 2;
+         while ( nfilledcols < ncols )
+         {
+            if ( columnorder[curcolumn] >= 0 )
+               printf("Error\n");
+            assert( columnorder[curcolumn] < 0 );
+
+            for (i = 0; i < nrows; ++i)
+            {
+               assert( orbitopevaridx[i][curcolumn] < npermvars );
+
+               (*vars)[i][nfilledcols] = permvars[orbitopevaridx[i][curcolumn]];
+            }
+            ++curcolumn;
+            ++nfilledcols;
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** check whether components of the symmetry group can be handled completely
+ *  by orbitopes */
+static
+SCIP_RETCODE detectOrbitopes(
+   SCIP*                 scip,               /**< SCIP instance */
+   SCIP_PRESOLDATA*      presoldata          /**< pointer to data of symbreak presolver */
+   )
+{
+   int ncomponents;
+   int* npermsincomponent;
+   int** components;
+   int** perms;
+   int npermvars;
+   SCIP_VAR** permvars;
+   int i;
+
+   assert( scip != NULL );
+   assert( presoldata != NULL );
+
+   /* terminate if no symmetry is present or compute components if not done yet */
+   if ( presoldata->nperms == 0 )
+      return SCIP_OKAY;
+   else if ( presoldata->ncomponents == -1 )
+   {
+      SCIP_CALL( computeComponents(scip, presoldata) );
+   }
+   assert( presoldata->nperms > 0 );
+   assert( presoldata->perms != NULL );
+   assert( presoldata->npermvars > 0 );
+   assert( presoldata->permvars != NULL );
+   assert( presoldata->ncomponents > 0 );
+   assert( presoldata->components != NULL );
+   assert( presoldata->npermsincomponent != NULL );
+
+   perms = presoldata->perms;
+   npermvars = presoldata->npermvars;
+   permvars = presoldata->permvars;
+   ncomponents = presoldata->ncomponents;
+   npermsincomponent = presoldata->npermsincomponent;
+   components = presoldata->components;
+
+   /* iterate over components */
+   for (i = 0; i < ncomponents; ++i)
+   {
+      int ntwocyclescomp = -1;
+      SCIP_Bool isorbitope = TRUE;
+      SCIP_Bool* usedperm;
+      int** orbitopevaridx;
+      int* columnorder;
+      int j;
+      int row;
+      int nfilledcols;
+      int nusedperms;
+      SCIP_VAR*** vars;
+      int coltoextend;
+
+      /* get properties of permutations */
+      for (j = 0; j < npermsincomponent[i]; ++j)
+      {
+         SCIP_Bool iscompoftwocycles = FALSE;
+         int ntwocyclesperm = 0;
+
+         SCIP_CALL( getPermProperties(perms[components[i][j]], npermvars, &iscompoftwocycles, &ntwocyclesperm) );
+
+         if ( ntwocyclescomp == -1 )
+            ntwocyclescomp = ntwocyclesperm;
+
+         /* no or different number of 2-cycles: permutations cannot generate orbitope */
+         if ( ntwocyclescomp == 0 || ntwocyclescomp != ntwocyclesperm )
+         {
+            isorbitope = FALSE;
+            break;
+         }
+      }
+
+      if ( ! isorbitope )
+         continue;
+
+      /* iterate over permutations and check whether for each permutation there exists
+       * another permutation whose 2-cycles intersect pairwise in exactly one element */
+
+      /* whether a permutation was considered to contribute to orbitope */
+      SCIP_CALL( SCIPallocBufferArray(scip, &usedperm, npermsincomponent[i]) );
+      for (j = 0; j < npermsincomponent[i]; ++j)
+         usedperm[j] = FALSE;
+      nusedperms = 0;
+
+      /* orbitope matrix for indices of variables in permvars array */
+      SCIP_CALL( SCIPallocBufferArray(scip, &orbitopevaridx, ntwocyclescomp) );
+      for (j = 0; j < ntwocyclescomp; ++j)
+      {
+         SCIP_CALL( SCIPallocBufferArray(scip, &orbitopevaridx[j], npermsincomponent[i] + 1) );
+      }
+
+      /* order of columns of orbitopevaridx */
+      SCIP_CALL( SCIPallocBufferArray(scip, &columnorder, npermsincomponent[i] + 1) );
+      for (j = 0; j < npermsincomponent[i] + 1; ++j)
+         columnorder[j] = npermsincomponent[i] + 2;
+
+      /* fill first two columns of orbitopevaridx matrix */
+      row = 0;
+      for (j = 0; j < npermvars; ++j)
+      {
+         int permidx = components[i][0];
+
+         /* avoid adding the same 2-cycle twice */
+         if ( perms[permidx][j] > j )
+         {
+            orbitopevaridx[row][0] = j;
+            orbitopevaridx[row++][1] = perms[permidx][j];
+         }
+
+         if ( row == ntwocyclescomp )
+            break;
+      }
+      assert( row == ntwocyclescomp );
+
+      usedperm[0] = TRUE;
+      ++nusedperms;
+      columnorder[0] = 0;
+      columnorder[1] = 1;
+      nfilledcols = 2;
+
+      /* extend orbitopevaridx matrix to the left, i.e., find iteratively new permutations that
+       * intersect the last added left column in each row in exactly one entry, starting with
+       * column 0 */
+      coltoextend = 0;
+      for (j = 0; j < npermsincomponent[i]; ++j)
+      {
+         SCIP_Bool success = FALSE;
+         SCIP_Bool infeasible = FALSE;
+
+         if ( nusedperms == npermsincomponent[i] )
+            break;
+
+         if ( usedperm[j] )
+            continue;
+
+         SCIP_CALL( extendSubOrbitope(&orbitopevaridx, ntwocyclescomp, nfilledcols, coltoextend,
+               perms[components[i][j]], TRUE, &success, &infeasible) );
+
+         if ( infeasible )
+         {
+            isorbitope = FALSE;
+            break;
+         }
+         else if ( success )
+         {
+            usedperm[j] = TRUE;
+            ++nusedperms;
+            coltoextend = nfilledcols;
+            columnorder[nfilledcols++] = -1; /* mark column to be filled from the left */
+            j = 0; /* reset j since previous permutations can now intersect with the latest added column */
+         }
+      }
+
+      if ( ! isorbitope )
+      {
+         /* free data structures */
+         SCIPfreeBufferArray(scip, &columnorder);
+         for (j = 0; j < ntwocyclescomp; ++j)
+            SCIPfreeBufferArray(scip, &orbitopevaridx[j]);
+         SCIPfreeBufferArray(scip, &orbitopevaridx);
+         SCIPfreeBufferArray(scip, &usedperm);
+
+         continue;
+      }
+
+      coltoextend = 1;
+      for (j = 0; j < npermsincomponent[i]; ++j)
+      {
+         SCIP_Bool success = FALSE;
+         SCIP_Bool infeasible = FALSE;
+
+         if ( nusedperms == npermsincomponent[i] )
+            break;
+
+         if ( usedperm[j] )
+            continue;
+
+         SCIP_CALL( extendSubOrbitope(&orbitopevaridx, ntwocyclescomp, nfilledcols, coltoextend,
+               perms[components[i][j]], FALSE, &success, &infeasible) );
+
+         if ( infeasible )
+         {
+            isorbitope = FALSE;
+            break;
+         }
+         else if ( success )
+         {
+            usedperm[j] = TRUE;
+            ++nusedperms;
+            coltoextend = nfilledcols;
+            columnorder[nfilledcols] = 1; /* mark column to be filled from the right */
+            ++nfilledcols;
+            j = 0; /* reset j since previous permutations can now intersect with the latest added column */
+         }
+      }
+
+      if ( nusedperms < npermsincomponent[i] )
+         isorbitope = FALSE;
+
+      if ( ! isorbitope )
+      {
+         /* free data structures */
+         SCIPfreeBufferArray(scip, &columnorder);
+         for (j = 0; j < ntwocyclescomp; ++j)
+            SCIPfreeBufferArray(scip, &orbitopevaridx[j]);
+         SCIPfreeBufferArray(scip, &orbitopevaridx);
+         SCIPfreeBufferArray(scip, &usedperm);
+
+         continue;
+      }
+
+      /* we have found an orbitope, prepare data for orbitope conshdlr */
+      SCIP_CALL( SCIPallocBufferArray(scip, &vars, ntwocyclescomp) );
+      for (j = 0; j < ntwocyclescomp; ++j)
+      {
+         SCIP_CALL( SCIPallocBufferArray(scip, &vars[j], npermsincomponent[i]) );
+      }
+
+      /* prepare variable matrix (reorder columns of orbitopevaridx) */
+      SCIP_CALL( generateOrbitopeVarsMatrix(&vars, ntwocyclescomp, npermsincomponent[i] + 1, permvars, npermvars,
+            orbitopevaridx, columnorder) );
+
+      /* @todo: add orbitope if full orbitope conshdlr is implemented */
+      SCIPinfoMessage(scip, NULL, "Component %d is an orbitope with %d rows and %d columns.\n", i, ntwocyclescomp, npermsincomponent[i] + 1);
+
+      /* free data structures */
+      for (j = 0; j < ntwocyclescomp; ++j)
+         SCIPfreeBufferArray(scip, &vars[j]);
+      SCIPfreeBufferArray(scip, &vars);
+      SCIPfreeBufferArray(scip, &columnorder);
+      for (j = 0; j < ntwocyclescomp; ++j)
+         SCIPfreeBufferArray(scip, &orbitopevaridx[j]);
+      SCIPfreeBufferArray(scip, &orbitopevaridx);
+      SCIPfreeBufferArray(scip, &usedperm);
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** add symresack constraints */
 static
 SCIP_RETCODE addSymresackConss(
@@ -701,6 +1175,9 @@ SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
          SCIP_CALL( computeGroupOrbits(scip, presoldata) );
 
          SCIP_CALL( computeComponents(scip, presoldata) );
+
+         SCIP_CALL( detectOrbitopes(scip, presoldata) );
+
       }
    }
 
