@@ -188,7 +188,7 @@ do
           if test "$OPT" = "dbg"
           then
               RB_EXP_DATE=`date '+%Y-%b-%d' -d "+3 months"`
-              rbcli up -e $RB_EXP_DATE $OUTFILE $ERRFILE $SETFILE $METAFILE
+              rbcli -e $RB_EXP_DATE up $OUTFILE $ERRFILE $SETFILE $METAFILE
           else
               rbcli up $OUTFILE $ERRFILE $SETFILE $METAFILE
           fi
