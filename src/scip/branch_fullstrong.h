@@ -100,36 +100,6 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
 
 /* @} */
 
-EXTERN
-SCIP_RETCODE SCIPselectVarStrongBranchingRanking(
-   SCIP*                 scip,               /**< original SCIP data structure                        */
-   SCIP_VAR**            lpcands,            /**< branching candidates                                */
-   SCIP_Real*            lpcandssol,         /**< solution values of the branching candidates         */
-   SCIP_Real*            lpcandsfrac,        /**< fractional values of the branching candidates       */
-   SCIP_Bool*            skipdown,           /**< should down branchings be skipped? */
-   SCIP_Bool*            skipup,             /**< should up branchings be skipped? */
-   SCIP_Real*            scores,             /**< array to be filled with the calculated score for each index. has to have
-                                              *   the length nlpcands. May be NULL. */
-   int                   nlpcands,           /**< number of branching candidates                      */
-   int                   npriolpcands,       /**< number of priority branching candidates             */
-   int                   ncomplete,          /**< number of branching candidates without skip         */
-   int*                  start,              /**< starting index in lpcands                           */
-   SCIP_Bool             allowaddcons,       /**< is the branching rule allowed to add constraints?   */
-   int                   maxproprounds,      /**< maximum number of propagation rounds to be performed during strong
-                                              *   branching before solving the LP (-1: no limit, -2: parameter settings) */
-   SCIP_Bool             probingbounds,      /**< should valid bounds be identified in a probing-like fashion during
-                                              *   strong branching (only with propagation)? */
-   SCIP_Bool             forcestrongbranch,  /**< should strong branching be applied even if there is just a single candidate? */
-   int*                  bestcand,           /**< best candidate for branching                        */
-   SCIP_Real*            bestdown,           /**< objective value of the down branch for bestcand     */
-   SCIP_Real*            bestup,             /**< objective value of the up branch for bestcand       */
-   SCIP_Real*            bestscore,          /**< score for bestcand                                  */
-   SCIP_Bool*            bestdownvalid,      /**< is bestdown a valid dual bound for the down branch? */
-   SCIP_Bool*            bestupvalid,        /**< is bestup a valid dual bound for the up branch?     */
-   SCIP_Real*            provedbound,        /**< proved dual bound for current subtree               */
-   SCIP_RESULT*          result              /**< result pointer                                      */
-   );
-
 #ifdef __cplusplus
 }
 #endif
