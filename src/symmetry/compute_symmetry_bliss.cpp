@@ -28,7 +28,6 @@
 
 #include <vector>
 #include <list>
-#include <map>
 
 /** struct for bliss callback */
 struct BLISS_Data
@@ -264,10 +263,7 @@ const char* SYMsymmetryGetDesc(void)
    return "computing graph automorphism groups by T. Junttila and P. Kaski (http://www.tcs.hut.fi/Software/bliss/)";
 }
 
-/** compute generators of symmetry group
- *
- *  @todo Check whether we want to use a hash map for the intermediate nodes below.
- */
+/** compute generators of symmetry group */
 SCIP_RETCODE SYMcomputeSymmetryGenerators(
    SCIP*                 scip,               /**< SCIP pointer */
    int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */
