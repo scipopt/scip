@@ -888,6 +888,17 @@ SCIP_RETCODE SCIPconflictstoreClean(
    /* remove all as deleted marked dual bound exceeding proofs */
    SCIP_CALL( cleanDeletedDualsolCons(conflictstore, set, stat, blkmem, reopt, &ndeldualsol) );
 
+   /* don't update bound exceeding proofs after a restart
+    *
+    * TODO: check whether we want to delete bound exceeding proofs in general during a restart
+    */
+   if( SCIPisInRestart(set->scip) )
+   {
+      int i;
+      for( i = 0; i < conflictstore->ndualsolconfs; i++ )
+         conflictstore->updateside[i] = FALSE;
+   }
+
    return SCIP_OKAY;
 }
 

@@ -3538,7 +3538,7 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
       return FALSE; /*lint !e527*/
    }
 
-   if( lpi->solstat == GRB_ITERATION_LIMIT )
+   if( lpi->solstat == GRB_ITERATION_LIMIT || lpi->solstat == GRB_UNBOUNDED )
    {
       double consviol;
       double boundviol;
@@ -3569,7 +3569,7 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
       violated = FALSE;
 
    return (lpi->solstat == GRB_OPTIMAL || (!violated && lpi->solstat == GRB_ITERATION_LIMIT && algo == GRB_METHOD_PRIMAL)
-     || (lpi->solstat == GRB_UNBOUNDED && algo == GRB_METHOD_PRIMAL));
+     || (! violated && lpi->solstat == GRB_UNBOUNDED && algo == GRB_METHOD_PRIMAL));
 }
 
 /** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point);
