@@ -72,17 +72,38 @@ elif test $CLUSTERQUEUE = "opt-low"
 then
     CLUSTERQUEUE="opt"
     NICE="--nice=10000"
+
+    # wakeup the cluster
+    make --makefile=wakeup-slurm wake_opt
 elif test $CLUSTERQUEUE = "M610-low"
 then
     NICE="--nice=10000"
     CLUSTERQUEUE="M610"
+
+    # wakeup the cluster
+    make --makefile=wakeup-slurm wake_M610
 elif test $CLUSTERQUEUE = "M620-low"
 then
     NICE="--nice=10000"
     CLUSTERQUEUE="M620"
+
+    # wakeup the cluster
+    make --makefile=wakeup-slurm wake_M620
+elif test $CLUSTERQUEUE = "M620v3-low"
+then
+    NICE="--nice=10000"
+    CLUSTERQUEUE="M620v3"
+
+    # wakeup the cluster
+    make --makefile=wakeup-slurm wake_M620v3
 elif test $CLUSTERQUEUE = "M620x"
 then
     CLUSTERQUEUE="M620,M620v2,M620v3"
+
+    # wakeup the cluster
+    make --makefile=wakeup-slurm wake_M620
+    make --makefile=wakeup-slurm wake_M620v2
+    make --makefile=wakeup-slurm wake_M620v3
 elif test $CLUSTERQUEUE = "moskito"
 then
     ACCOUNT="dopt"

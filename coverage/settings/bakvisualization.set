@@ -1,0 +1,9 @@
+# SCIP version 4.0.1
+
+# name of the BAK tool output file, or - if no BAK tool output should be created
+# [type: string, advanced: FALSE, default: "-"]
+visual/bakfilename = "temp/tmp.bak"
+
+# should be output the external value of the objective?
+# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: TRUE]
+visual/objextern = FALSE

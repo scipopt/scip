@@ -555,14 +555,6 @@ SCIP_Bool SCIPvarDoNotMultaggr(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** marks variable to be deleted from global structures (cliques etc.) when cleaning up
- *
- *  @note: this is not equivalent to marking the variable itself for deletion, this is done by using SCIPvarMarkDeletable()
- */
-void SCIPvarMarkDeleteGlobalStructures(
-   SCIP_VAR*             var                 /**< problem variable */
-   );
-
 /** returns whether the variable was flagged for deletion from global structures (cliques etc.) */
 SCIP_Bool SCIPvarIsMarkedDeleteGlobalStructures(
    SCIP_VAR*             var                 /**< problem variable */
@@ -1654,13 +1646,6 @@ SCIP_RETCODE SCIPvarRemoveCliquesImplicsVbs(
    SCIP_Bool             irrelevantvar,      /**< has the variable become irrelevant? */
    SCIP_Bool             onlyredundant,      /**< should only the redundant implications and variable bounds be removed? */
    SCIP_Bool             removefromvar       /**< should the implications and variable bounds be removed from the var itself? */
-   );
-
-/** sets the index of the connected component of the clique graph that the variable belongs to, or -1 if not computed */
-extern
-void SCIPvarSetCliqueComponentIdx(
-   SCIP_VAR*             var,                /**< problem variable */
-   int                   idx                 /**< clique component index of this variable */
    );
 
 #ifdef NDEBUG

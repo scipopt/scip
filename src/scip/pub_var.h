@@ -457,6 +457,15 @@ SCIP_Bool SCIPvarIsDeletable(
    SCIP_VAR*             var
    );
 
+/** marks variable to be deleted from global structures (cliques etc.) when cleaning up
+ *
+ *  @note: this is not equivalent to marking the variable itself for deletion, this is done by using SCIPvarMarkDeletable()
+ */
+EXTERN
+void SCIPvarMarkDeleteGlobalStructures(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
 /** returns whether variable is an active (neither fixed nor aggregated) variable */
 EXTERN
 SCIP_Bool SCIPvarIsActive(
@@ -847,12 +856,6 @@ int SCIPvarGetNBdchgInfosUb(
 /** returns the value based history for the variable */
 EXTERN
 SCIP_VALUEHISTORY* SCIPvarGetValuehistory(
-   SCIP_VAR*             var                 /**< problem variable */
-   );
-
-/** returns the index of the connected component of the clique graph that the variable belongs to, or -1 if not computed */
-EXTERN
-int SCIPvarGetCliqueComponentIdx(
    SCIP_VAR*             var                 /**< problem variable */
    );
 

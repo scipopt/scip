@@ -36,6 +36,7 @@
 #include "nlpi/exprinterpret.h"
 #include "scip/interrupt.h"
 #include "scip/pub_misc.h"
+#include "scip/misc.h"
 
 #include <new>      /* for std::bad_alloc */
 #include <sstream>
@@ -60,7 +61,7 @@ using namespace Ipopt;
 
 #define NLPI_NAME          "ipopt"           /**< short concise name of solver */
 #define NLPI_DESC          "Ipopt interface" /**< description of solver */
-#define NLPI_PRIORITY      0                 /**< priority */
+#define NLPI_PRIORITY      1000              /**< priority */
 
 #ifdef SCIP_DEBUG
 #define DEFAULT_PRINTLEVEL J_WARNING         /**< default print level of Ipopt */
@@ -165,6 +166,7 @@ class ScipNLP : public TNLP
 private:
    SCIP_NLPIPROBLEM*     nlpiproblem;        /**< NLPI problem data */
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
+   BMS_BLKMEM*           blkmem;             /**< block memory */
 
    SCIP_Real             conv_prtarget[convcheck_nchecks]; /**< target primal infeasibility for each convergence check */
    SCIP_Real             conv_dutarget[convcheck_nchecks]; /**< target dual infeasibility for each convergence check */
@@ -178,9 +180,9 @@ public:
    /** constructor */
    ScipNLP(
       SCIP_NLPIPROBLEM*  nlpiproblem_ = NULL,/**< NLPI problem data */
-      BMS_BLKMEM*        blkmem = NULL       /**< block memory */
+      BMS_BLKMEM*        blkmem_ = NULL       /**< block memory */
       )
-      : nlpiproblem(nlpiproblem_), randnumgen(NULL), approxhessian(false)
+      : nlpiproblem(nlpiproblem_), randnumgen(NULL), blkmem(blkmem_), conv_lastrestoiter(-1), approxhessian(false)
    {
       assert(blkmem != NULL);
       SCIP_CALL_ABORT_QUIET( SCIPrandomCreate(&randnumgen, blkmem, DEFAULT_RANDSEED) );
@@ -190,7 +192,7 @@ public:
    ~ScipNLP()
    {
       assert(randnumgen != NULL);
-      SCIPrandomFree(&randnumgen);
+      SCIPrandomFree(&randnumgen, blkmem);
    }
 
    /** sets NLPI data structure */
@@ -450,6 +452,8 @@ void setFeastol(
    SCIP_Real         feastol
    )
 {
+   assert(nlpiproblem != NULL);
+
    nlpiproblem->ipopt->Options()->SetNumericValue("tol", FEASTOLFACTOR * feastol);
    nlpiproblem->ipopt->Options()->SetNumericValue("constr_viol_tol", FEASTOLFACTOR * feastol);
 
@@ -462,6 +466,27 @@ void setFeastol(
     * Thus, we turn off the bound_relax_factor completely if it would be below its default value of 1e-8.
     */
    nlpiproblem->ipopt->Options()->SetNumericValue("bound_relax_factor", feastol < 1e-8/FEASTOLFACTOR ? 0.0 : FEASTOLFACTOR * feastol);
+}
+
+/** sets optimality tolerance parameters in Ipopt
+ *
+ * Sets dual_inf_tol and compl_inf_tol to opttol.
+ * We leave acceptable_dual_inf_tol and acceptable_compl_inf_tol untouched, which means that if Ipopt has convergence problems, then
+ * it can stop with a solution that is still feasible (see setFeastol), but essentially without a proof of local optimality.
+ * Note, that we report the solution as feasible only if Ipopt stopped on an "acceptable point" (see ScipNLP::finalize_solution).
+ *
+ * Note, that parameters tol and acceptable_tol (set in setFeastol) also apply.
+ */
+static
+void setOpttol(
+   SCIP_NLPIPROBLEM* nlpiproblem,
+   SCIP_Real         opttol
+   )
+{
+   assert(nlpiproblem != NULL);
+
+   nlpiproblem->ipopt->Options()->SetNumericValue("dual_inf_tol", opttol);
+   nlpiproblem->ipopt->Options()->SetNumericValue("compl_inf_tol", opttol);
 }
 
 /** copy method of NLP interface (called when SCIP copies plugins)
@@ -602,6 +627,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
    (*problem)->ipopt->Options()->SetStringValue("derivative_test", "second-order");
 #endif
    setFeastol(*problem, SCIP_DEFAULT_FEASTOL);
+   setOpttol(*problem, SCIP_DEFAULT_DUALFEASTOL);
 
    /* apply user's given modifications to Ipopt's default settings */
    if( data->defoptions.length() > 0 )
@@ -668,6 +694,7 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemIpopt)
  *
  *  return: void pointer to problem instance
  */
+static
 SCIP_DECL_NLPIGETPROBLEMPOINTER(nlpiGetProblemPointerIpopt)
 {
    assert(nlpi    != NULL);
@@ -778,12 +805,18 @@ SCIP_DECL_NLPISETOBJECTIVE(nlpiSetObjectiveIpopt)
    assert(problem != NULL);
    assert(problem->oracle != NULL);
 
+   /* We pass the objective gradient in dense form to Ipopt, so if the sparsity of that gradient changes, we do not need to reset Ipopt (firstrun=TRUE).
+    * However, if the sparsity of the Hessian matrix of the objective changes, then the sparsity pattern of the Hessian of the Lagrangian may change.
+    * Thus, reset Ipopt if the objective was and/or becomes nonlinear, but leave firstrun untouched if it was and stays linear.
+    */
+   if( nquadelems > 0 || exprtree != NULL || SCIPnlpiOracleGetConstraintDegree(problem->oracle, -1) > 1 )
+      problem->firstrun = TRUE;
+
    SCIP_CALL( SCIPnlpiOracleSetObjective(problem->oracle,
          constant, nlins, lininds, linvals,
          nquadelems, quadelems,
          exprvaridxs, exprtree) );
 
-   problem->firstrun = TRUE;
    invalidateSolution(problem);
 
    return SCIP_OKAY;
@@ -802,9 +835,19 @@ SCIP_DECL_NLPISETOBJECTIVE(nlpiSetObjectiveIpopt)
 static
 SCIP_DECL_NLPICHGVARBOUNDS(nlpiChgVarBoundsIpopt)
 {
+   int i;
+
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
+
+   /* If some variable is fixed or unfixed, then better don't reoptimize the NLP in the next solve.
+    * Calling Optimize instead of ReOptimize should remove fixed variables from the problem that is solved by Ipopt.
+    * This way, the variable fixing is satisfied exactly in a solution, see also #1254.
+    */
+   for( i = 0; i < nvars && !problem->firstrun; ++i )
+      if( (SCIPnlpiOracleGetVarLbs(problem->oracle)[indices[i]] == SCIPnlpiOracleGetVarUbs(problem->oracle)[indices[i]]) != (lbs[i] == ubs[i]) )
+         problem->firstrun = TRUE;
 
    SCIP_CALL( SCIPnlpiOracleChgVarBounds(problem->oracle, nvars, indices, lbs, ubs) );
 
@@ -1134,6 +1177,12 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
          problem->lastniter = stats->IterationCount();
          problem->lasttime  = stats->TotalCPUTime();
       }
+      else
+      {
+         /* Ipopt does not provide access to the statistics when all variables have been fixed */
+         problem->lastniter = 0;
+         problem->lasttime  = 0.0;
+      }
    }
    catch( IpoptException& except )
    {
@@ -1189,6 +1238,7 @@ SCIP_DECL_NLPIGETTERMSTAT(nlpiGetTermstatIpopt)
  *  - consdualvalues buffer to store pointer to array to dual values of constraints, or NULL if not needed
  *  - varlbdualvalues buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed
  *  - varubdualvalues buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed
+ *  - objval buffer store the objective value, or NULL if not needed
  */
 static
 SCIP_DECL_NLPIGETSOLUTION(nlpiGetSolutionIpopt)
@@ -1207,6 +1257,17 @@ SCIP_DECL_NLPIGETSOLUTION(nlpiGetSolutionIpopt)
 
    if( varubdualvalues != NULL )
       *varubdualvalues = problem->lastsoldualvarub;
+
+   if( objval != NULL )
+   {
+      if( problem->lastsolprimals != NULL )
+      {
+         /* TODO store last solution value instead of reevaluating the objective function */
+         SCIP_CALL( SCIPnlpiOracleEvalObjectiveValue(problem->oracle, problem->lastsolprimals, objval) );
+      }
+      else
+         *objval = SCIP_INVALID;
+   }
 
    return SCIP_OKAY;
 }
@@ -1671,7 +1732,7 @@ SCIP_DECL_NLPISETREALPAR(nlpiSetRealParIpopt)
    {
       if( dval >= 0 )
       {
-         problem->ipopt->Options()->SetNumericValue("dual_inf_tol", dval);
+         setOpttol(problem, dval);
       }
       else
       {
@@ -2001,7 +2062,7 @@ const char* SCIPgetSolverNameIpopt(void)
    return "Ipopt " IPOPT_VERSION;
 }
 
-/** gets string that describes Ipopt (version number) */
+/** gets string that describes Ipopt */
 const char* SCIPgetSolverDescIpopt(void)
 {
    return "Interior Point Optimizer developed by A. Waechter et.al. (www.coin-or.org/Ipopt)";
@@ -2661,13 +2722,13 @@ void ScipNLP::finalize_solution(
 
    case MAXITER_EXCEEDED:
       check_feasibility = true;
-      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_ITLIM;
       break;
 
    case CPUTIME_EXCEEDED:
       check_feasibility = true;
-      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_TILIM;
       break;
 
@@ -2675,7 +2736,7 @@ void ScipNLP::finalize_solution(
    case RESTORATION_FAILURE:
    case ERROR_IN_STEP_COMPUTATION:
       check_feasibility = true;
-      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_NUMERR;
       break;
 
@@ -2688,7 +2749,7 @@ void ScipNLP::finalize_solution(
 
    case DIVERGING_ITERATES:
       nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNBOUNDED;
-      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_UOBJLIM;
+      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
       break;
 
    case INVALID_NUMBER_DETECTED:
@@ -2736,7 +2797,7 @@ void ScipNLP::finalize_solution(
       if( nlpiproblem->lastsolinfeas <= constrvioltol )
          nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
       else
-         nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+         nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
 
       SCIPdebugMessage("drop Ipopt's final point and report intermediate locally %sfeasible solution with infeas %g instead (acceptable: %g)\n",
          nlpiproblem->lastsolstat == SCIP_NLPSOLSTAT_LOCINFEASIBLE ? "in" : "", nlpiproblem->lastsolinfeas, constrvioltol);
@@ -2783,7 +2844,7 @@ void ScipNLP::finalize_solution(
          if( constrviol <= constrvioltol )
             nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
          else
-            nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+            nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       }
    }
 }

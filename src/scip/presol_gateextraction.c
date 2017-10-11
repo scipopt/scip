@@ -244,8 +244,8 @@ SCIP_DECL_HASHKEYVAL(setppcHashdataKeyValCons)
    assert(hashdata->vars != NULL);
    assert(hashdata->nvars >= 2);
 
-   return SCIPhashTwo(SCIPcombineTwoInt(hashdata->nvars, SCIPvarGetIndex(hashdata->vars[0])),
-                      SCIPcombineTwoInt(SCIPvarGetIndex(hashdata->vars[hashdata->nvars/2]),
+   return SCIPhashTwo(SCIPcombineTwoInt(hashdata->nvars, SCIPvarGetIndex(hashdata->vars[0])), \
+                      SCIPcombineTwoInt(SCIPvarGetIndex(hashdata->vars[hashdata->nvars/2]), \
                                         SCIPvarGetIndex(hashdata->vars[hashdata->nvars-1])));
 }
 
@@ -375,10 +375,11 @@ SCIP_RETCODE createPresoldata(
          h = 0;
          for( c = 0; c < nusefulconss; ++c )
          {
+            SCIP_VAR** setppcvars = SCIPgetVarsSetppc(scip, usefulconss[c]);
             assert(SCIPconsIsActive(usefulconss[c]));
             assert(SCIPgetNVarsSetppc(scip, usefulconss[c]) == 2);
 
-            SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(presoldata->setppchashdatas[h].vars), SCIPgetVarsSetppc(scip, usefulconss[c]), 2) );
+            SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(presoldata->setppchashdatas[h].vars), setppcvars, 2) );
 
             SCIP_CALL( SCIPgetBinvarRepresentative(scip, presoldata->setppchashdatas[h].vars[0], &(presoldata->setppchashdatas[h].vars[0]), &(negated[0])) );
             SCIP_CALL( SCIPgetBinvarRepresentative(scip, presoldata->setppchashdatas[h].vars[1], &(presoldata->setppchashdatas[h].vars[1]), &(negated[1])) );
@@ -628,6 +629,7 @@ SCIP_RETCODE correctPresoldata(
          /* check if constraint is new, and correct array size if necessary */
          if( !SCIPhashtableExists(presoldata->setppchashtable, (void*) setppcs[c]) )
          {
+            SCIP_VAR** setppcvars;
             SCIP_Bool negated[2];
 
             /* resize array if necessary */
@@ -659,8 +661,9 @@ SCIP_RETCODE correctPresoldata(
             SCIP_CALL( SCIPhashtableInsert(presoldata->setppchashtable, (void*) setppcs[c]) );
 
             assert(SCIPgetNVarsSetppc(scip, setppcs[c]) == 2);
+            setppcvars = SCIPgetVarsSetppc(scip, setppcs[c]);
 
-            SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(presoldata->setppchashdatas[presoldata->nsetppchashdatas].vars), SCIPgetVarsSetppc(scip, setppcs[c]), 2) );
+            SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(presoldata->setppchashdatas[presoldata->nsetppchashdatas].vars), setppcvars, 2) );
             SCIP_CALL( SCIPgetBinvarRepresentative(scip, presoldata->setppchashdatas[presoldata->nsetppchashdatas].vars[0], &(presoldata->setppchashdatas[presoldata->nsetppchashdatas].vars[0]), &(negated[0])) );
             SCIP_CALL( SCIPgetBinvarRepresentative(scip, presoldata->setppchashdatas[presoldata->nsetppchashdatas].vars[1], &(presoldata->setppchashdatas[presoldata->nsetppchashdatas].vars[1]), &(negated[1])) );
 
@@ -1365,7 +1368,7 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
    *result = SCIP_DIDNOTFIND;
 
    /* get active constraints */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &setppcconss, SCIPconshdlrGetConss(conshdlrsetppc), nsetppcconss) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &setppcconss, SCIPconshdlrGetConss(conshdlrsetppc), nsetppcconss) ); /*lint !e666*/
 
    assert(setppcconss != NULL);
    logicorconss = SCIPconshdlrGetConss(conshdlrlogicor);

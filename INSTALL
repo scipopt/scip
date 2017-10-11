@@ -58,12 +58,22 @@ You will need either the .a or the .so files and can skip the others by
 just pressing return.
 
 The most common compiling issue is that some libraries are missing on
-your system or that they are outdated. SCIP per default requires zlib,
-gmp and readline.  Try compiling with:
-make ZLIB=false READLINE=false GMP=false
-or, better, install them. Note that under Linux-based systems, you
-need to install the developer-versions of gmp/zlib/readline, in order
-to also have the header-files available.
+your system or that they are outdated. SCIP per default requires the
+following packages (with usual names for Linux systems in
+parentheses):
+
+- zlib     (libz-dev)
+- gmp      (libgmp-dev),
+- readline (libreadline-dev), and
+- ncurses  (libncurses-dev)
+
+Note that under Linux-based systems, you need to install the
+developer-versions of gmp/zlib/readline, in order to also have the
+header-files available.
+
+If you are not able or do not want to install these packages, try compiling with:
+make ZLIB=false READLINE=false GMP=false.
+
 
 II Detailed installation description
 ************************************
@@ -149,8 +159,14 @@ Here is what you have to do to get SCIP running:
    - "ZIMPL=false"     to disable ZIMPL file reader
    - "ZIMPL=auto"      to automatically enable ZIMPL support if and only if the GMP library is available (default)
 
+   - "FILTERSQP=true"  to enable FilterSQP interface
+   - "FILTERSQP=false" to disable FilterSQP interface (default)
+
    - "IPOPT=true"      to enable IPOPT interface (needs IPOPT >= 3.11)
    - "IPOPT=false"     to disable IPOPT interface (default)
+
+   - "WORHP=true"      to enable WORHP interface (needs WORHP >= 1.10)
+   - "WORHP=false"     to disable WORHP interface (default)
 
    - "EXPRINT=cppad"   to use CppAD as expressions interpreter (default)
    - "EXPRINT=none"    to use no expressions interpreter
@@ -291,6 +307,48 @@ make[1]: Entering directory `/sw/scip'
 
 make[1]: Leaving directory `/sw/scip'
 ---
+
+   Example 4 (default: SoPlex, IPOPT, WORHP, FILTERSQP):
+   =====================================================
+
+   Typing "make IPOPT=true WORHP=true FILTERSQP=true" uses SoPlex as LP solver, and activates
+   the interfaces to IPOPT, WORHP, and FilterSQP. You will be asked the following questions on
+   the first call to "make" (example answers are already given):
+
+- Current settings: LPS=spx2 OSTYPE=linux ARCH=x86_64 COMP=gnu SHARED=false SUFFIX= ZIMPL=false ZIMPLOPT=opt IPOPT=true IPOPTOPT=opt FILTERSQP=true EXPRINT=cppad GAMS=false
+
+* SCIP needs some softlinks to external programs, in particular, LP-solvers.
+* Please insert the paths to the corresponding directories/libraries below.
+* The links will be installed in the 'lib/include' and 'lib/static' directories.
+* For more information and if you experience problems see the INSTALL file.
+
+  -> "spxinc" is the path to the SoPlex "src" directory, e.g., "<SoPlex-path>/src".
+  -> "libsoplex.*" is the path to the SoPlex library, e.g., "<SoPlex-path>/lib/libsoplex.linux.x86.gnu.opt.a"
+  -> "ipopt.linux.x86_64.gnu.opt" is a directory containing the ipopt installation, i.e., "ipopt.linux.x86_64.gnu.opt/include/coin/IpIpoptApplication.hpp", "ipopt.linux.x86_64.gnu.opt/lib/libipopt*", ... should exist.
+  -> "libfiltersqp.linux.x86_64.gnu.*" is the path to the filterSQP library.
+  -> "libbqpd.linux.x86_64.gnu.*" is the path to the BQPD library.
+  -> "worhp.linux.x86_64.gnu.opt" is a directory containing the WORHP installation, i.e., "worhp.linux.x86_64.gnu.opt/include/worhp/worhp.h" should exist.
+
+
+> Enter soft-link target file or directory for "lib/static/ipopt.linux.x86_64.gnu.opt" (return if not needed):
+> /sw/ipopt-3.12.5
+-> creating softlink "lib/static/ipopt.linux.x86_64.gnu.opt" -> "/sw/ipopt-3.12.5"
+
+> Enter soft-link target file or directory for "lib/static/libfiltersqp.linux.x86_64.gnu.a" (return if not needed):
+> /sw/libfiltersqp.a
+-> creating softlink "lib/static/libfiltersqp.linux.x86_64.gnu.a" -> "/sw/libfiltersqp.a"
+
+> Enter soft-link target file or directory for "lib/static/libbqpd.linux.x86_64.gnu.a" (return if not needed):
+> /sw/libbqpd.a
+-> creating softlink "lib/static/libbqpd.linux.x86_64.gnu.a" -> "/sw/libbqpd.a"
+
+> Enter soft-link target file or directory for "lib/static/worhp.linux.x86_64.gnu.opt" (return if not needed):
+> /sw/worhp-2.0
+-> creating softlink "lib/static/worhp.linux.x86_64.gnu.opt" -> "/sw/worhp-2.0"
+
+make[1]: Leaving directory `/sw/scip'
+---
+
    Note on how to (locally) install CLP:
     - create a target directory for the installation, e.g. "clp-build" (this is the directory SCIP has to link to)
     - from within "clp-build", run the "configure" script of coin-Clp, followed by "make install"
@@ -401,10 +459,10 @@ make[1]: Leaving directory `/sw/scip'
 
    (d) to use MOSEK
        - ln -s <path to directory of mosek.h> <path to SCIP>/lib/include/mskinc
-         (e.g. "cd scip; ln -s /mosek/4/tools/platform/linux32x86/h lib/include/mskinc")
+         (e.g. "cd scip; ln -s /mosek/8/tools/platform/linux64x86/h lib/include/mskinc")
        - ln -s <file libmosek.so> <path to SCIP>/lib/shared/libmosek.$(OSTYPE).$(ARCH).$(COMP).so
          for each operation system and architecture to use
-         (e.g. "cd scip; ln -s /mosek/4/tools/platform/linux32x86/bin/libmosek.so lib/shared/libmosek.linux.x86.gnu.so")
+         (e.g. "cd scip; ln -s /mosek/8/tools/platform/linux64x86/bin/libmosek64.so lib/shared/libmosek.linux.x86_64.gnu.so")
        - since MOSEK is a shared library, make sure your LD_LIBRARY_PATH contains <path to SCIP>/lib/shared
 
    (e) to use CLP
@@ -425,7 +483,17 @@ make[1]: Leaving directory `/sw/scip'
          It should contain the directories include/coin with the Ipopt header files, the directory lib with the Ipopt libraries,
          and the directory share/coin/doc/Ipopt with the ipopt_addlibs_cpp.txt file.
 
-   (h) to use GAMS
+   (h) to use WORHP as NLP solver
+       - ln -s <path to WORHP installation> <path to SCIP>/lib/shared/worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)
+         (e.g. "cd scip; ln -s /Worhp lib/shared/worhp.linux.x86.gnu.opt")
+         The path to the WORHP installation is the path under where the Worhp build has been installed.
+         It should contain the directories include/worhp with the WORHP header files and the directory lib with the WORHP libraries.
+
+   (i) to use FilterSQP as NLP solver
+       - ln -s <path to FilterSQP library> <path to SCIP>/lib/libfiltersqp.$(OSTYPE).$(ARCH).$(COMP).a
+       - ln -s <path to BQPD library> <path to SCIP>/lib/libbqpd.$(OSTYPE).$(ARCH).$(COMP).a
+
+   (j) to use GAMS
        - ln -s <path to GAMS system directory> <path to SCIP>/lib/shared/gams.$(OSTYPE).$(ARCH).$(COMP)
 
 4. To run the program enter "bin/scip.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LPS)"

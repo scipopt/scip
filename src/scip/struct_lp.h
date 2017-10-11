@@ -109,7 +109,9 @@ struct SCIP_LpSolVals
    SCIP_LPSOLSTAT        lpsolstat;          /**< solution status of last LP solution */
    SCIP_Real             lpobjval;           /**< objective value of LP without loose variables, or SCIP_INVALID */
    SCIP_Bool             primalfeasible;     /**< is current LP solution primal feasible? */
+   SCIP_Bool             primalchecked;      /**< was current LP solution checked for primal feasibility? */
    SCIP_Bool             dualfeasible;       /**< is current LP solution dual feasible? */
+   SCIP_Bool             dualchecked;        /**< was current LP solution checked for primal feasibility? */
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
    SCIP_Bool             lpissolved;         /**< is current LP solved? */
 };
@@ -269,7 +271,7 @@ struct SCIP_Lp
    SCIP_Real             rootlpobjval;       /**< objective value of root LP without loose variables, or SCIP_INVALID */
    SCIP_Real             rootlooseobjval;    /**< objective value of loose variables in root node, or SCIP_INVALID */
    SCIP_Real             cutoffbound;        /**< upper objective limit of LP (copy of primal->cutoffbound) */
-   SCIP_Real             lpiuobjlim;         /**< current upper objective limit in LPI */
+   SCIP_Real             lpiobjlim;          /**< current objective limit in LPI */
    SCIP_Real             lpifeastol;         /**< current feasibility tolerance in LPI */
    SCIP_Real             lpidualfeastol;     /**< current reduced costs feasibility tolerance in LPI */
    SCIP_Real             lpibarrierconvtol;  /**< current convergence tolerance used in barrier algorithm in LPI */
@@ -291,6 +293,7 @@ struct SCIP_Lp
    SCIP_LPSOLVALS*       storedsolvals;      /**< collected values of the LP data which depend on the LP solution */
    SCIP_Longint          validsollp;         /**< LP number for which the currently stored solution values are valid */
    SCIP_Longint          validfarkaslp;      /**< LP number for which the currently stored Farkas row multipliers are valid */
+   SCIP_Longint          divenolddomchgs;    /**< number of domain changes before diving has started */
    int                   lpicolssize;        /**< available slots in lpicols vector */
    int                   nlpicols;           /**< number of columns in the LP solver */
    int                   lpifirstchgcol;     /**< first column of the LP which differs from the column in the LP solver */
@@ -325,6 +328,7 @@ struct SCIP_Lp
    int                   lpitiming;          /**< current timing type in LPI */
    int                   lpirandomseed;      /**< current initial random seed in LPI */
    int                   lpiscaling;         /**< current SCALING setting in LPI */
+   int                   lpirefactorinterval;/**< current refactorization interval */
    SCIP_PRICING          lpipricing;         /**< current pricing setting in LPI */
    SCIP_LPSOLSTAT        lpsolstat;          /**< solution status of last LP solution */
    SCIP_LPALGO           lastlpalgo;         /**< algorithm used for last LP solve */
@@ -342,7 +346,9 @@ struct SCIP_Lp
    SCIP_Bool             flushed;            /**< are all cached changes applied to the LP solver? */
    SCIP_Bool             solved;             /**< is current LP solved? */
    SCIP_Bool             primalfeasible;     /**< is current LP solution (rather LPI state) primal feasible? */
+   SCIP_Bool             primalchecked;      /**< was current LP solution checked for primal feasibility?? */
    SCIP_Bool             dualfeasible;       /**< is current LP solution (rather LPI state) dual feasible? */
+   SCIP_Bool             dualchecked;        /**< was current LP solution checked for primal feasibility?? */
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
    SCIP_Bool             rootlpisrelax;      /**< is root LP a relaxation of the problem and its solution value a valid global lower bound? */
    SCIP_Bool             isrelax;            /**< is the current LP a relaxation of the problem for which it has been solved and its 
@@ -367,10 +373,13 @@ struct SCIP_Lp
    SCIP_Bool             lpihaspresolving;   /**< does the LPI support the PRESOLVING parameter? */
    SCIP_Bool             lpihasrowrep;       /**< does the LPI support row representation of a simplex basis? */
    SCIP_Bool             lpihaspolishing;    /**< does the LPI support solution polishing? */
+   SCIP_Bool             lpihasrefactor;     /**< does the LPI support changing the refactorization interval? */
    SCIP_Real             lpirowrepswitch;    /**< simplex algorithm shall use row representation of the basis
                                               *   if number of rows divided by number of columns exceeds this value */
    SCIP_Bool             divelpwasprimfeas;  /**< primal feasibility when diving started */
+   SCIP_Bool             divelpwasprimchecked;/**< primal feasibility was checked when diving started */
    SCIP_Bool             divelpwasdualfeas;  /**< dual feasibility when diving started */
+   SCIP_Bool             divelpwasdualchecked;/**< dual feasibility was checked when diving started */
 };
 
 #ifdef __cplusplus

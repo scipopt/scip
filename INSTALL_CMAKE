@@ -1,0 +1,60 @@
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+*                                                                           *
+*                  This file is part of the program and library             *
+*         SCIP --- Solving Constraint Integer Programs                      *
+*                                                                           *
+*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            *
+*                            fuer Informationstechnik Berlin                *
+*                                                                           *
+*  SCIP is distributed under the terms of the ZIB Academic License.         *
+*                                                                           *
+*  You should have received a copy of the ZIB Academic License              *
+*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
+*                                                                           *
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+Installation description using CMake
+************************************
+
+The easiest way to install SCIP is to use the SCIP Optimization Suite which
+contains SCIP, SoPlex, and ZIMPL. For that we refer to the INSTALL file of
+the SCIP Optimization Suite (In case of the SCIP Optimization Suite, there is
+no need to specify any directories, the compiling process is fully
+automated).
+
+Compiling SCIP directly can be done as follows:
+
+1) unpack the tarball "tar xvzf scip-x.y.z.tgz"
+2) change into the directory "cd scip-x.y.z"
+3) create a new directory "build"
+4) configure the build "cmake .."
+5) start compiling SCIP "make"
+6) (recommended) check your SCIP installation "make check" or "ctest -R -default"
+7) (optional) install the header, libraries, and binary, e.g.,
+   "DESTDIR=<custom/install/path> make install"
+
+CMake checks for available third-party libraries like GMP or ZLIB and sets up
+the configuration accordingly.
+
+There are multiple options to customize the configuration. You can list them
+using "cmake .. -LH" and set them by running "cmake .. -D<option>=<value>".
+Options can be chained together or be specified in subsequent calls
+to cmake. The existing configuration will be updated or extended.
+
+To specify a custom path to a library you may specify "-D<name>_DIR=<path>",
+e.g., "cmake .. -DSOPLEX_DIR=<path/to/SoPlex/build/or/install>".
+
+Refer to the online documentation and the FAQ section for further information.
+
+
+Windows instructions
+********************
+
+To build SCIP on Windows you may use the CMake GUI to specify the path to SCIP
+and the desired location for the build. Available options are listed and can
+be modified to suit your needs. After the configuration step is done, open
+the generated Visual Studio solution file and compile it.
+
+Alternatively you may use the command line to build SCIP in an already-generated
+configuration directory: "cmake --build <path>"

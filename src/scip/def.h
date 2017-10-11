@@ -84,6 +84,15 @@
 #endif
 #endif
 
+/* define INLINE */
+#ifndef INLINE
+#if defined(_WIN32) || defined(_WIN64) || defined(__STDC__)
+#define INLINE                 __inline
+#else
+#define INLINE                 inline
+#endif
+#endif
+
 
 
 #include "scip/type_retcode.h"
@@ -94,9 +103,9 @@ extern "C" {
 #endif
 
 
-#define SCIP_VERSION                400 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION               1 /**< SCIP sub version number */
-#define SCIP_APIVERSION               4 /**< SCIP API version number */
+#define SCIP_VERSION                401 /**< SCIP version number (multiplied by 100 to get integer number) */
+#define SCIP_SUBVERSION               3 /**< SCIP sub version number */
+#define SCIP_APIVERSION              16 /**< SCIP API version number */
 #define SCIP_COPYRIGHT   "Copyright (C) 2002-2017 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
@@ -153,8 +162,8 @@ extern "C" {
 #define SCIP_DEFAULT_HUGEVAL          1e+15  /**< values larger than this are considered huge and should be handled separately (e.g., in activity computation) */
 #define SCIP_MAXEPSILON               1e-03  /**< maximum value for any numerical epsilon */
 #define SCIP_MINEPSILON               1e-20  /**< minimum value for any numerical epsilon */
-#define SCIP_INVALID                  1e+99  /**< floating point value is not valid */
-#define SCIP_UNKNOWN                  1e+98  /**< floating point value is not known (in primal solution) */
+#define SCIP_INVALID          (double)1e+99  /**< floating point value is not valid */
+#define SCIP_UNKNOWN          (double)1e+98  /**< floating point value is not known (in primal solution) */
 
 
 #define REALABS(x)        (fabs(x))
@@ -214,8 +223,10 @@ extern "C" {
 #else
 #ifdef __cplusplus
 #define RESTRICT __restrict__
-#else
+#elif __STDC_VERSION__ >= 199901L
 #define RESTRICT restrict
+#else
+#define RESTRICT
 #endif
 #endif
 #endif

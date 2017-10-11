@@ -29,10 +29,42 @@ fi
 OUTFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.out
 ERRFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.err
 SOLFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.sol
-TMPFILE=$SOLVERPATH/results/$BASENAME.tmp
+TMPFILE=$SOLVERPATH/$OUTPUTDIR/$BASENAME.tmp
 
 uname -a                            > $OUTFILE
 uname -a                            > $ERRFILE
+
+# check if the scripts runs a *.zib.de host
+if hostname -f | grep -q zib.de ;
+then
+  # access /optimi once to force a mount
+  ls /nfs/optimi/QUOTAS >/dev/null 2>&1
+
+  # check if /optimi is mounted
+  MOUNTED=0
+
+  # count number of fails and abort after 10 min to avoid an endless loop
+  FAILED=0
+
+  while [ "$MOUNTED" -ne 1 ]
+  do
+      # stop if the system does not mount /optimi for ~10 minutes
+      if [ "$FAILED" -eq 600 ]
+      then
+          exit 1
+      fi
+
+      if [ -f /nfs/optimi/QUOTAS ] ;
+      then
+          MOUNTED=1
+      else
+          ((FAILED++))
+          echo "/optimi is not mounted yet, waiting 1 second"
+          sleep 1
+      fi
+  done
+fi
+
 echo                                >> $OUTFILE
 top -b -n 1 | head -n 15            >> $OUTFILE
 echo                                >> $OUTFILE
@@ -48,10 +80,12 @@ date                                >> $OUTFILE
 date                                >> $ERRFILE
 echo -----------------------------  >> $OUTFILE
 date +"@03 %s"                      >> $OUTFILE
+echo @05 $TIMELIMIT                 >> $OUTFILE
 
 #if we use a debugger command, we need to replace the errfile place holder by the actual err-file for logging
-EXECNAME=${EXECNAME/ERRFILE_PLACEHOLDER/${ERRFILE}}
-bash -c "$EXECNAME                < $TMPFILE 2>>$ERRFILE"  | tee -a $OUTFILE
+#and if we run on the cluster we want to use srun with CPU binding which is defined by the check_cluster script
+EXECNAME=$SRUN${EXECNAME/ERRFILE_PLACEHOLDER/${ERRFILE}}
+eval $EXECNAME                < $TMPFILE 2>>$ERRFILE  | tee -a $OUTFILE
 retcode=${PIPESTATUS[0]}
 if test $retcode != 0
 then
@@ -88,11 +122,11 @@ date                                >> $ERRFILE
 echo                                >> $OUTFILE
 echo =ready=                        >> $OUTFILE
 
-mv $OUTFILE $SOLVERPATH/results/$BASENAME.out
-mv $ERRFILE $SOLVERPATH/results/$BASENAME.err
+mv $OUTFILE $SOLVERPATH/$OUTPUTDIR/$BASENAME.out
+mv $ERRFILE $SOLVERPATH/$OUTPUTDIR/$BASENAME.err
 
 rm -f $TMPFILE
 rm -f $SOLFILE
 #chmod g+r $ERRFILE
-#chmod g+r $SCIPPATH/results/$BASENAME.out
-#chmod g+r $SCIPPATH/results/$BASENAME.set
+#chmod g+r $SCIPPATH/$OUTPUTDIR/$BASENAME.out
+#chmod g+r $SCIPPATH/$OUTPUTDIR/$BASENAME.set

@@ -39,7 +39,6 @@ struct SCIP_Diveset
    SCIP_HEUR*            heur;               /**< the heuristic to which this dive set belongs */
    char*                 name;               /**< name of dive controller, in case that a heuristic has several */
    SCIP_SOL*             sol;                /**< working solution of this dive set */
-   BMS_BLKMEM*           blkmem;             /**< block memory for parameter settings */
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    SCIP_Real             minreldepth;        /**< minimal relative depth to start diving */
    SCIP_Real             maxreldepth;        /**< maximal relative depth to start diving */

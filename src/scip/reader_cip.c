@@ -26,7 +26,7 @@
 #include <string.h>
 #if defined(_WIN32) || defined(_WIN64)
 #else
-#include <strings.h>
+#include <strings.h> /*lint --e{766}*/
 #endif
 #include <ctype.h>
 
@@ -589,12 +589,12 @@ SCIP_RETCODE getFixedVariable(
          str = SCIPvarGetName(var);
          if ( strncmp(str, "indslack", 8) == 0 )
          {
-            (void) strcpy(name, "indlin");
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "indlin");
             (void) strncat(name, str+8, SCIP_MAXSTRLEN-7);
          }
          else if ( strncmp(str, "t_indslack", 10) == 0 )
          {
-            (void) strcpy(name, "indlin");
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "indlin");
             (void) strncat(name, str+10, SCIP_MAXSTRLEN-7);
          }
          else

@@ -2786,8 +2786,8 @@ void voronoi_repair(
             /* check whether there is a better new boundary edge adjacent to vertex k */
             else
             {
-               node1 = SCIPunionfindFind(uf, vbase[m]);
-               node2 = SCIPunionfindFind(uf, vbase[k]);
+               node1 = SCIPSTPunionfindFind(uf, vbase[m]);
+               node2 = SCIPSTPunionfindFind(uf, vbase[k]);
                if( state[m] == CONNECT && ((node1 == crucnode) != (node2 == crucnode)) && g->mark[m] && g->mark[vbase[m]]
                   && g->mark[node1] && g->mark[node2] && ((e == UNKNOWN) || SCIPisGT(scip,
                         (path[g->tail[e]].dist + cost[e] + path[g->head[e]].dist), path[k].dist + cost[i] + path[m].dist)) )
@@ -2864,7 +2864,7 @@ void voronoi_repair_mult(
                vbase[m] = vbase[k];
             }
             /* check whether there is a new boundary edge adjacent to vertex k */
-            else if( (state[m] == CONNECT) && ((node1 = SCIPunionfindFind(uf, vbase[m])) != (node2 = SCIPunionfindFind(uf, vbase[k])))
+            else if( (state[m] == CONNECT) && ((node1 = SCIPSTPunionfindFind(uf, vbase[m])) != (node2 = SCIPSTPunionfindFind(uf, vbase[k])))
                && g->mark[node1] && g->mark[node2] && (nodesmark[node1] || nodesmark[node2]) )
             {
                boundedges[(*nboundedges)++] = i;

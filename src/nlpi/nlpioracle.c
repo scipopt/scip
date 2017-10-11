@@ -812,7 +812,10 @@ SCIP_RETCODE evalFunctionValue(
    return SCIP_OKAY;
 }
 
-/** computes the value and gradient of a function */
+/** computes the value and gradient of a function
+ *
+ * @return SCIP_INVALIDDATA, if the function or its gradient could not be evaluated (domain error, etc.)
+ */
 static
 SCIP_RETCODE evalFunctionGradient(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
@@ -2449,7 +2452,10 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintValues(
    return SCIP_OKAY;
 }
 
-/** computes the objective gradient in a given point */
+/** computes the objective gradient in a given point
+ *
+ * @return SCIP_INVALIDDATA, if the function or its gradient could not be evaluated (domain error, etc.)
+ */
 SCIP_RETCODE SCIPnlpiOracleEvalObjectiveGradient(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const SCIP_Real*      x,                  /**< point where to evaluate */
@@ -2470,7 +2476,10 @@ SCIP_RETCODE SCIPnlpiOracleEvalObjectiveGradient(
    return SCIP_OKAY;
 }
 
-/** computes a constraints gradient in a given point */
+/** computes a constraints gradient in a given point
+ *
+ * @return SCIP_INVALIDDATA, if the function or its gradient could not be evaluated (domain error, etc.)
+ */
 SCIP_RETCODE SCIPnlpiOracleEvalConstraintGradient(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const int             considx,            /**< index of constraint to compute gradient for */
@@ -2634,6 +2643,8 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
  * 
  *  The values in the Jacobi matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetJacobianSparsity.
  *  The user need to call SCIPnlpiOracleGetJacobianSparsity at least ones before using this function. 
+ *
+ * @return SCIP_INVALIDDATA, if the Jacobian could not be evaluated (domain error, etc.)
  */
 SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
@@ -2870,6 +2881,8 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
  *  The values in the Hessian matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetHessianLagSparsity.
  *  The user must call SCIPnlpiOracleGetHessianLagSparsity at least ones before using this function. 
  *  Only elements of the lower left triangle and the diagonal are computed.
+ *
+ * @return SCIP_INVALIDDATA, if the Hessian could not be evaluated (domain error, etc.)
  */
 SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
@@ -2993,7 +3006,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
    int i;
    int nllevel; /* level of nonlinearity of problem: linear = 0, quadratic, smooth nonlinear, nonsmooth */
    static const char* nllevelname[4] = { "LP", "QCP", "NLP", "DNLP" };
-   const char* problemname;
+   char problemname[SCIP_MAXSTRLEN];
    char namebuf[70];
    SCIP_Bool havelongvarnames;
    SCIP_Bool havelongequnames;
@@ -3130,7 +3143,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
          nllevel = 3;
    }
 
-   problemname = oracle->name ? oracle->name : "m";
+   (void) SCIPsnprintf(problemname, SCIP_MAXSTRLEN, "%s", oracle->name ? oracle->name : "m");
 
    SCIPmessageFPrintInfo(messagehdlr, file, "Model %s / all /;\n", problemname);
    SCIPmessageFPrintInfo(messagehdlr, file, "option limrow = 0;\n");

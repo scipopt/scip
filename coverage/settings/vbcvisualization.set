@@ -1,0 +1,13 @@
+# SCIP version 4.0.1
+
+# name of the VBC tool output file, or - if no VBC tool output should be created
+# [type: string, advanced: FALSE, default: "-"]
+visual/vbcfilename = "temp/tmp.dat"
+
+# should the real solving time be used instead of a time step counter in visualization?
+# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: TRUE]
+visual/realtime = FALSE
+
+# should the node where solutions are found be visualized?
+# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
+visual/dispsols = TRUE

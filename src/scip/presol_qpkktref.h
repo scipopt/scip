@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_qpkktref.h
+ * @ingroup PRESOLVERS
  * @brief  qpkktref presolver
  * @author Tobias Fischer
  *

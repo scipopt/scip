@@ -79,13 +79,13 @@ void setup(void)
    cr_assert( heursubnlp != NULL );
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&randumgen, SCIPblkmem(scip), 777) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randumgen, 777) );
 }
 
 static
 void teardown(void)
 {
-   SCIPrandomFree(&randumgen);
+   SCIPfreeRandom(scip, &randumgen);
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
    SCIP_CALL( SCIPexprintFree(&exprint) );
    SCIPhashmapFree(&varindex);

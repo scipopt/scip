@@ -1616,7 +1616,7 @@ SCIP_RETCODE createRelaxation(
                SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, consdata->intvar) );
 
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
          if( SCIPdebugIsMainscip(scip) )
          {
             SCIP_Real solval;
@@ -1842,6 +1842,9 @@ SCIP_RETCODE checkCons(
       {
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
       }
+      /* update constraint violation in solution */
+      else if ( *violated && sol != NULL )
+         SCIPupdateSolConsViolation(scip, sol, 1.0, 1.0);
    }
 
    return SCIP_OKAY;

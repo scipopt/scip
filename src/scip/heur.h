@@ -146,7 +146,8 @@ SCIP_RETCODE SCIPheurCreate(
 extern
 SCIP_RETCODE SCIPheurFree(
    SCIP_HEUR**           heur,               /**< pointer to primal heuristic data structure */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 /** initializes primal heuristic */

@@ -264,8 +264,8 @@ SCIP_DECL_HEURINIT(heurInitMutation)
    heurdata->usednodes = 0;
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
-         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
+         DEFAULT_RANDSEED) );
 
    return SCIP_OKAY;
 }
@@ -284,7 +284,7 @@ SCIP_DECL_HEUREXIT(heurExitMutation)
    assert(heurdata != NULL);
 
    /* free random number generator */
-   SCIPrandomFree(&heurdata->randnumgen);
+   SCIPfreeRandom(scip, &heurdata->randnumgen);
 
    return SCIP_OKAY;
 }
@@ -452,10 +452,14 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
       SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
    }
 
-   /* enable conflict analysis and restrict conflict pool */
+   /* enable conflict analysis, disable analysis of boundexceeding LPs, and restrict conflict pool */
    if( !SCIPisParamFixed(subscip, "conflict/enable") )
    {
       SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", TRUE) );
+   }
+   if( !SCIPisParamFixed(subscip, "conflict/useboundlp") )
+   {
+      SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useboundlp", 'o') );
    }
    if( !SCIPisParamFixed(subscip, "conflict/maxstoresize") )
    {

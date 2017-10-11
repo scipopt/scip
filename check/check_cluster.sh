@@ -24,37 +24,38 @@
 # of each computer. Of course, the value depends on the specific computer/queue.
 #
 # To get the result files call "./evalcheck_cluster.sh
-# results/check.$TSTNAME.$BINNAME.$SETNAME.eval in directory check/
+# $OUTPUTDIR/check.$TSTNAME.$BINNAME.$SETNAME.eval in directory check/
 # This leads to result files
-#  - results/check.$TSTNAME.$BINNAME.$SETNAME.out
-#  - results/check.$TSTNAME.$BINNAME.$SETNAME.res
-#  - results/check.$TSTNAME.$BINNAME.$SETNAME.err
+#  - $OUTPUTDIR/check.$TSTNAME.$BINNAME.$SETNAME.out
+#  - $OUTPUTDIR/check.$TSTNAME.$BINNAME.$SETNAME.res
+#  - $OUTPUTDIR/check.$TSTNAME.$BINNAME.$SETNAME.err
 
 TSTNAME=$1
 BINNAME=$2
 SETNAMES=$3
 BINID=$4
-TIMELIMIT=$5
-NODELIMIT=$6
-MEMLIMIT=$7
-THREADS=$8
-FEASTOL=$9
-LPS=${10}
-DISPFREQ=${11}
-CONTINUE=${12}
-QUEUETYPE=${13}
-QUEUE=${14}
-PPN=${15}
-CLIENTTMPDIR=${16}
-NOWAITCLUSTER=${17}
-EXCLUSIVE=${18}
-PERMUTE=${19}
-SEEDS=${20}
-DEBUGTOOL=${21}
-REOPT=${22}
-OPTCOMMAND=${23}
-SETCUTOFF=${24}
-VISUALIZE=${25}
+OUTPUTDIR=$5
+TIMELIMIT=$6
+NODELIMIT=$7
+MEMLIMIT=$8
+THREADS=$9
+FEASTOL=${10}
+LPS=${11}
+DISPFREQ=${12}
+CONTINUE=${13}
+QUEUETYPE=${14}
+QUEUE=${15}
+PPN=${16}
+CLIENTTMPDIR=${17}
+NOWAITCLUSTER=${18}
+EXCLUSIVE=${19}
+PERMUTE=${20}
+SEEDS=${21}
+DEBUGTOOL=${22}
+REOPT=${23}
+OPTCOMMAND=${24}
+SETCUTOFF=${25}
+VISUALIZE=${26}
 
 # check if all variables defined (by checking the last one)
 if test -z $VISUALIZE
@@ -62,8 +63,9 @@ then
     echo Skipping test since not all variables are defined
     echo "TSTNAME       = $TSTNAME"
     echo "BINNAME       = $BINNAME"
-    echo "SETNAMES      = $SETNAME"
+    echo "SETNAMES      = $SETNAMES"
     echo "BINID         = $BINID"
+    echo "OUTPUTDIR     = $OUTPUTDIR"
     echo "TIMELIMIT     = $TIMELIMIT"
     echo "NODELIMIT     = $NODELIMIT"
     echo "MEMLIMIT      = $MEMLIMIT"
@@ -80,7 +82,7 @@ then
     echo "EXCLUSIVE     = $EXCLUSIVE"
     echo "PERMUTE       = $PERMUTE"
     echo "SEEDS         = $SEEDS"
-    echo "DEBUGTOOL      = $DEBUGTOOL"
+    echo "DEBUGTOOL     = $DEBUGTOOL"
     echo "REOPT         = $REOPT"
     echo "OPTCOMMAND    = $OPTCOMMAND"
     echo "SETCUTOFF     = $SETCUTOFF"
@@ -169,30 +171,39 @@ do
 
 
 		JOBNAME="`capitalize ${SOLVER}`${SHORTPROBNAME}"
-		if test "$SOLVER" = "scip"
-		then
-		    export EXECNAME=${DEBUGTOOLCMD}$SCIPPATH/../$BINNAME
-		else
-		    export EXECNAME=$BINNAME
-		fi
 
-		# check queue type
+                # check if binary exists. The second condition checks whether there is a binary of that name directly available
+                # independent of whether it is a symlink, file in the working directory, or application in the path
+        if test -e $SCIPPATH/../$BINNAME
+        then
+           export EXECNAME=${DEBUGTOOLCMD}$SCIPPATH/../$BINNAME
+        elif type $BINNAME >/dev/null 2>&1
+        then
+           export EXECNAME=${DEBUGTOOLCMD}$BINNAME
+        fi
+
+                # check queue type
 		if test  "$QUEUETYPE" = "srun"
 		then
 		# additional environment variables needed by run.sh
 		    export SOLVERPATH=$SCIPPATH
+                    # this looks wrong but is totally correct
 		    export BASENAME=$FILENAME
 		    export FILENAME=$INSTANCE
 		    export CLIENTTMPDIR
+                    export OUTPUTDIR
 		    export HARDTIMELIMIT
 		    export HARDMEMLIMIT
 		    export CHECKERPATH=$SCIPPATH/solchecker
 		    export SETFILE
-		    sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null run.sh
+		    export TIMELIMIT
+		    # the space at the end is necessary
+		    export SRUN="srun --cpu_bind=cores -v -v "
+		    sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run.sh
 		else
 		    # -V to copy all environment variables
 		    qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N ${JOBNAME} \
-			-v SOLVERPATH=$SCIPPATH,EXECNAME=${EXECNAME},BASENAME=$FILENAME,FILENAME=$INSTANCE,CLIENTTMPDIR=$CLIENTTMPDIR \
+			-v SOLVERPATH=$SCIPPATH,EXECNAME=${EXECNAME},BASENAME=$FILENAME,FILENAME=$INSTANCE,CLIENTTMPDIR=$CLIENTTMPDIR,OUTPUTDIR=$OUTPUTDIR \
 			-V -q $CLUSTERQUEUE -o /dev/null -e /dev/null run.sh
 		fi
 	    done # end for SETNAME

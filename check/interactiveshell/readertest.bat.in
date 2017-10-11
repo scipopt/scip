@@ -1,0 +1,10 @@
+read "${PROJECT_SOURCE_DIR}"/check/"${path}"
+write problem temp/${basename}.${extension}
+presolve
+write transproblem temp/${basename}_trans.${extension}
+read temp/${basename}_trans.${extension}
+optimize
+read temp/${basename}.${extension}
+optimize
+validatesolve "${optval}" "${optval}"
+quit

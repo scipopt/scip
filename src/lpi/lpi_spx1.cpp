@@ -79,6 +79,10 @@
 #ifndef SOPLEX_SUBVERSION
 #define SOPLEX_SUBVERSION 0
 #endif
+/* define API version for versions <= 3.0.0 */
+#ifndef SOPLEX_APIVERSION
+#define SOPLEX_APIVERSION 0
+#endif
 
 /* check version */
 #if (SOPLEX_VERSION < 133)
@@ -5201,11 +5205,11 @@ SCIP_RETCODE SCIPlpiGetRealpar(
       *dval = lpi->spx->opttol();
       break;
 #endif
-   case SCIP_LPPAR_LOBJLIM:
-      *dval = lpi->spx->getObjLoLimit();
-      break;
-   case SCIP_LPPAR_UOBJLIM:
-      *dval = lpi->spx->getObjUpLimit();
+   case SCIP_LPPAR_OBJLIM:
+      if ( spx->getSense() == SPxLP::MINIMIZE )
+         *dval = lpi->spx->getObjUpLimit();
+      else
+         *dval = lpi->spx->getObjLoLimit();
       break;
    case SCIP_LPPAR_LPTILIM:
       *dval = lpi->spx->terminationTime();
@@ -5245,11 +5249,11 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       lpi->spx->setOpttol(dval);
       break;
 #endif
-   case SCIP_LPPAR_LOBJLIM:
-      lpi->spx->setObjLoLimit(dval);
-      break;
-   case SCIP_LPPAR_UOBJLIM:
-      lpi->spx->setObjUpLimit(dval);
+   case SCIP_LPPAR_OBJLIM:
+      if ( spx->getSense() == SPxLP::MINIMIZE )
+         lpi->spx->setObjUpLimit(dval);
+      else
+         lpi->spx->setObjLoLimit(dval);
       break;
    case SCIP_LPPAR_LPTILIM:
       lpi->spx->setTerminationTime(dval);

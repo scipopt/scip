@@ -545,10 +545,14 @@ SCIP_RETCODE setSubscipParameters(
       SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 500) );
    }
 
-   /* enable conflict analysis and restrict conflict pool */
+   /* enable conflict analysis, disable analysis of boundexceeding LPs, and restrict conflict pool */
    if( !SCIPisParamFixed(subscip, "conflict/enable") )
    {
       SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", TRUE) );
+   }
+   if( !SCIPisParamFixed(subscip, "conflict/useboundlp") )
+   {
+      SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useboundlp", 'o') );
    }
    if( !SCIPisParamFixed(subscip, "conflict/maxstoresize") )
    {
@@ -1083,6 +1087,8 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
 
          /* copy all variables */
          SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, NULL, NULL, NULL, 0, TRUE) );
+
+         SCIP_CALL( SCIPcopyParamSettings(scip, subscip) );
       }
       else
       {

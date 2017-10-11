@@ -430,6 +430,8 @@ SCIP_Bool checkCons(
 {
    SCIP_CONSDATA* consdata;
    SCIP_Real solval;
+   SCIP_Real absviol;
+   SCIP_Real relviol;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -446,8 +448,18 @@ SCIP_Bool checkCons(
    if( checklprows || consdata->row == NULL || !SCIProwIsInLP(consdata->row) )
    {
       SCIP_Real sum;
+      SCIP_Real lhsrelviol;
+      SCIP_Real rhsrelviol;
 
       sum = solval + consdata->vbdcoef * SCIPgetSolVal(scip, sol, consdata->vbdvar);
+
+      /* calculate constraint violation and update it in solution */
+      absviol = MAX(consdata->lhs - sum, sum - consdata->rhs);
+      lhsrelviol = SCIPrelDiff(consdata->lhs, sum);
+      rhsrelviol = SCIPrelDiff(sum, consdata->rhs);
+      relviol = MAX(lhsrelviol, rhsrelviol);
+      if( sol != NULL )
+         SCIPupdateSolLPConsViolation(scip, sol, absviol, relviol);
 
       return (SCIPisInfinity(scip, -consdata->lhs) || SCIPisFeasGE(scip, sum, consdata->lhs))
          && (SCIPisInfinity(scip, consdata->rhs) || SCIPisFeasLE(scip, sum, consdata->rhs));
@@ -3097,12 +3109,15 @@ SCIP_RETCODE tightenCoefs(
    SCIP_CONS*            cons,               /**< variable bound constraint */
    int*                  nchgcoefs,          /**< pointer to count the number of changed coefficients */
    int*                  nchgsides,          /**< pointer to count the number of left and right hand sides */
-   int*                  ndelconss           /**< pointer to count number of deleted constraints */
+   int*                  ndelconss,          /**< pointer to count number of deleted constraints */
+   SCIP_Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
+   int*                  nchgbds             /**< pointer to count number of bound changes */
    )
 {
    SCIP_CONSDATA* consdata;
    SCIP_Real xlb;
    SCIP_Real xub;
+   SCIP_Real oldcoef;
    int oldnchgcoefs;
    int oldnchgsides;
 
@@ -3146,6 +3161,7 @@ SCIP_RETCODE tightenCoefs(
 
    oldnchgcoefs = *nchgcoefs;
    oldnchgsides = *nchgsides;
+   oldcoef = consdata->vbdcoef;
 
    /* coefficients tightening when all variables are integer */
    /* we consider the following varbound constraint: lhs <= x + b*y <= rhs (sides are possibly infinity)
@@ -3308,10 +3324,43 @@ SCIP_RETCODE tightenCoefs(
    /* check if due to tightening the constraint got redundant */
    if( SCIPisZero(scip, consdata->vbdcoef) )
    {
-      assert(SCIPisGE(scip, SCIPvarGetLbGlobal(consdata->var), consdata->lhs));
-      assert(SCIPisLE(scip, SCIPvarGetUbGlobal(consdata->var), consdata->rhs));
+      /* we have to make sure that the induced bound(s) is (are) actually applied;
+       * if the relative change is too small, this may have been skipped in propagation
+       */
+      if( SCIPisLT(scip, SCIPvarGetLbGlobal(consdata->var), consdata->lhs) )
+      {
+         SCIP_Bool tightened;
+
+         SCIP_CALL( SCIPtightenVarLbGlobal(scip, consdata->var, consdata->lhs, TRUE, cutoff, &tightened) );
+
+         if( tightened )
+         {
+            SCIPdebugMsg(scip, " -> tighten domain of <%s> to [%.15g,%.15g]\n", SCIPvarGetName(consdata->var),
+               SCIPvarGetLbGlobal(consdata->var), SCIPvarGetUbGlobal(consdata->var));
+            (*nchgbds)++;
+         }
+      }
+      if( SCIPisGT(scip, SCIPvarGetUbGlobal(consdata->var), consdata->rhs) )
+      {
+         SCIP_Bool tightened;
+
+         SCIP_CALL( SCIPtightenVarUbGlobal(scip, consdata->var, consdata->rhs, TRUE, cutoff, &tightened) );
+
+         if( tightened )
+         {
+            SCIPdebugMsg(scip, " -> tighten domain of <%s> to [%.15g,%.15g]\n", SCIPvarGetName(consdata->var),
+               SCIPvarGetLbGlobal(consdata->var), SCIPvarGetUbGlobal(consdata->var));
+            (*nchgbds)++;
+         }
+      }
 
       SCIPdebugMsg(scip, " -> variable bound constraint <%s> is redundant\n", SCIPconsGetName(cons));
+
+      /* in order to correctly update the rounding locks, we need the coefficient to have the same sign as before the
+       * coefficient tightening
+       */
+      consdata->vbdcoef = oldcoef;
+
       SCIP_CALL( SCIPdelCons(scip, cons) );
       ++(*ndelconss);
 
@@ -3366,7 +3415,7 @@ SCIP_RETCODE tightenCoefs(
          if( !SCIPisFeasIntegral(scip, oldrhs) && SCIPisFeasIntegral(scip, newrhs) )
          {
             consdata->tightened = FALSE;
-            SCIP_CALL( tightenCoefs(scip, cons, nchgcoefs, nchgsides, ndelconss) );
+            SCIP_CALL( tightenCoefs(scip, cons, nchgcoefs, nchgsides, ndelconss, cutoff, nchgbds) );
             assert(consdata->tightened);
          }
          else
@@ -3406,7 +3455,7 @@ SCIP_RETCODE tightenCoefs(
          if( !SCIPisFeasIntegral(scip, oldlhs) && SCIPisFeasIntegral(scip, newlhs) )
          {
             consdata->tightened = FALSE;
-            SCIP_CALL( tightenCoefs(scip, cons, nchgcoefs, nchgsides, ndelconss) );
+            SCIP_CALL( tightenCoefs(scip, cons, nchgcoefs, nchgsides, ndelconss, cutoff, nchgbds) );
             assert(consdata->tightened);
          }
          else
@@ -3581,8 +3630,10 @@ SCIP_RETCODE upgradeConss(
       if( !consdata->tightened )
       {
          /* tighten variable bound coefficient */
-         SCIP_CALL( tightenCoefs(scip, cons, nchgcoefs, nchgsides, ndelconss) );
+         SCIP_CALL( tightenCoefs(scip, cons, nchgcoefs, nchgsides, ndelconss, cutoff, nchgbds) );
 
+         if( *cutoff )
+            return SCIP_OKAY;
          if( !SCIPconsIsActive(cons) )
             continue;
 
@@ -4237,7 +4288,9 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
          continue;
 
       /* tighten variable bound coefficient */
-      SCIP_CALL( tightenCoefs(scip, cons, nchgcoefs, nchgsides, ndelconss) );
+      SCIP_CALL( tightenCoefs(scip, cons, nchgcoefs, nchgsides, ndelconss, &cutoff, nchgbds) );
+      if( cutoff )
+         break;
       if( !SCIPconsIsActive(cons) )
          continue;
 
@@ -4284,7 +4337,9 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
          if( *nchgbds > localoldnchgbds )
          {
             /* tighten variable bound coefficient */
-            SCIP_CALL( tightenCoefs(scip, cons, nchgcoefs, nchgsides, ndelconss) );
+            SCIP_CALL( tightenCoefs(scip, cons, nchgcoefs, nchgsides, ndelconss, &cutoff, nchgbds) );
+            if( cutoff )
+               break;
          }
       }
    }

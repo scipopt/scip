@@ -367,7 +367,7 @@ SCIP_RETCODE componentSetupWorkingSol(
    }
 
    /* set up debug solution */
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
    {
       PROBLEM* problem;
       SCIP* scip;
@@ -429,7 +429,7 @@ SCIP_RETCODE createSubscip(
    {
       SCIP_CONSHDLR* newconshdlr;
       SCIP_CONSHDLRDATA* newconshdlrdata;
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
       SCIP_Bool isvalid = FALSE;
 #endif
 
@@ -451,9 +451,9 @@ SCIP_RETCODE createSubscip(
       /* reduce the effort spent for hash tables; however, if the debug solution is enabled and valid in this subtree,
        * hash tables are needed for installing the debug solution
        */
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
       SCIP_CALL( SCIPdebugSolIsValidInSubtree(scip, &isvalid) );
-      if( !isvalid )
+      if( !isvalid && SCIPgetStage(scip) > SCIP_STAGE_PRESOLVING )
 #endif
       {
          SCIP_CALL( SCIPsetBoolParam(*subscip, "misc/usevartable", FALSE) );
@@ -866,6 +866,7 @@ SCIP_RETCODE solveAndEvalSubscip(
                assert(SCIPisGE(scip, fixvals[i], SCIPvarGetLbGlobal(vars[i])));
 
                SCIP_CALL( SCIPfixVar(scip, vars[i], fixvals[i], &infeasible, &fixed) );
+               SCIPvarMarkDeleteGlobalStructures(vars[i]);
                assert(!infeasible);
                assert(fixed);
                (*nfixedvars)++;
@@ -1917,7 +1918,7 @@ SCIP_RETCODE findComponents(
          SCIP_DIGRAPH* digraph;
 
          /* create and fill directed graph */
-         SCIP_CALL( SCIPdigraphCreate(&digraph, SCIPblkmem(scip), nunfixedvars) );
+         SCIP_CALL( SCIPcreateDigraph(scip, &digraph, nunfixedvars) );
          SCIP_CALL( SCIPdigraphSetSizes(digraph, varlocks) );
          SCIP_CALL( fillDigraph(scip, digraph, sortedconss, *nsortedconss, unfixedvarpos, nunfixedvars, firstvaridxpercons, &success) );
 
@@ -2304,6 +2305,13 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
       /* loop over all components */
       for( comp = 0; comp < ncompsmaxsize && !SCIPisStopped(scip); comp++ )
       {
+#ifdef WITH_DEBUG_SOLUTION
+         if( SCIPgetStage(subscip) > SCIP_STAGE_INIT )
+         {
+            SCIP_CALL( SCIPfree(&subscip) );
+            SCIP_CALL( createSubscip(scip, conshdlrdata, &subscip) );
+         }
+#endif
          /* get component variables */
          compvars = &(sortedvars[compstartsvars[comp]]);
          ncompvars = compstartsvars[comp + 1 ] - compstartsvars[comp];
@@ -2359,6 +2367,26 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
             SCIPhashmapFree(&varmap);
             continue;
          }
+
+            /* set up debug solution */
+#ifdef WITH_DEBUG_SOLUTION
+         {
+            SCIP_SOL* debugsol = NULL;
+            SCIP_Real val;
+            int i;
+
+            SCIPdebugSolEnable(subscip);
+
+            SCIP_CALL( SCIPdebugGetSol(scip, &debugsol) );
+            assert(debugsol != NULL);
+
+            for( i = 0; i < ncompvars; ++i )
+            {
+               SCIP_CALL( SCIPdebugGetSolVal(scip, compvars[i], &val) );
+               SCIP_CALL( SCIPdebugAddSolVal(subscip, subvars[i], val) );
+            }
+         }
+#endif
 
          /* solve the subproblem and evaluate the result, i.e. apply fixings of variables and remove constraints */
          SCIP_CALL( solveAndEvalSubscip(scip, conshdlrdata, subscip, compvars, subvars, compconss,

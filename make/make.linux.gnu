@@ -1,6 +1,6 @@
 ARFLAGS		=	crs
 ifeq ($(IPOPT),true)
-LDFLAGS		+=	-Wl,--no-as-needed
+LDFLAGS                +=      -Wl,--no-as-needed
 endif
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	-lz
@@ -10,3 +10,5 @@ READLINE_FLAGS	=
 READLINE_LDFLAGS=	-lreadline -lncurses
 CXXFLAGS	=	-std=c++0x
 CFLAGS		=	-std=c99 -D_XOPEN_SOURCE=600
+FORTRANLIBS	=	-lgfortran
+FORTRAN_NAMING_CONVENTION = LCASE_DECOR
