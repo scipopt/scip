@@ -263,7 +263,7 @@ int mod2(
    return (REALABS(SCIPround(scip, val) - val) > 0.1) ? 1 : 0;
 }
 
-/** checks, whether the given scalar scales the given value to an integral number with error in the given bounds */
+/** returns the integral value for the given scaling parameters, see SCIPcalcIntegralScalar() */
 static
 void getIntegralScalar(
    SCIP_Real             val,                /**< value that should be scaled to an integral value */

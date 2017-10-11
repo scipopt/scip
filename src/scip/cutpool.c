@@ -862,13 +862,13 @@ SCIP_RETCODE SCIPcutpoolSeparate(
 
    if( sol == NULL )
    {
-      retest = cutpool->processedlpsolefficacy > minefficacy;
-      cutpool->processedlpsolefficacy = minefficacy;
+      retest = cutpool->processedlpefficacy > minefficacy;
+      cutpool->processedlpefficacy = minefficacy;
    }
    else
    {
-      retest = cutpool->processedlpefficacy > minefficacy;
-      cutpool->processedlpefficacy = minefficacy;
+      retest = cutpool->processedlpsolefficacy > minefficacy;
+      cutpool->processedlpsolefficacy = minefficacy;
    }
 
    SCIPsetDebugMsg(set, "separating%s cut pool %p with %d cuts, beginning with cut %d\n", ( sol == NULL ) ? "" : " solution from", (void*)cutpool, cutpool->ncuts, firstunproc);
