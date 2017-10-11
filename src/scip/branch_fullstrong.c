@@ -167,7 +167,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    SCIP_Bool*            bestupvalid,        /**< is bestup a valid dual bound for the up branch?     */
    SCIP_Real*            provedbound,        /**< proved dual bound for current subtree               */
    SCIP_RESULT*          result              /**< result pointer                                      */
-)
+   )
 {  /*lint --e{715}*/
    SCIP_VAR** vars = NULL;
    SCIP_Real* newlbs = NULL;
