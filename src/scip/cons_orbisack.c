@@ -525,35 +525,16 @@ SCIP_RETCODE separateOrbisack(
    coeff1[1] = -1.0;
    coeff2[1] = 1.0;
 
-   while ( basement < nrows )
+   /* check whether cut for basement row = 1 is violated */
+   if ( SCIPisEfficacious(scip, lhs - rhs) )
    {
-      /* to avoid numerical troubles, we bound the size of coefficients and rhs */
-      if ( rhs > coeffbound || -coeff1[0] > coeffbound || coeff2[0] > coeffbound )
-      {
-         /* avoid separating cover inequalities twice */
-         if ( ! coverseparation )
-         {
-            int ncuts;
-            SCIP_CALL( separateOrbisackCovers(scip, conss, consdata, &ncuts, infeasible) );
-            *ngen += ncuts;
-         }
-         break;
-      }
+      SCIP_CALL( addOrbisackInequality(scip, conss, consdata, coeff1, coeff2, rhs, infeasible) );
+      ++(*ngen);
+   }
 
-      /* if current inequality is violated */
-      if ( SCIPisEfficacious(scip, lhs - rhs) )
-      {
-         SCIP_CALL( addOrbisackInequality(scip, conss, consdata, coeff1, coeff2, rhs, infeasible) );
-         ++(*ngen);
-         if ( *infeasible )
-            break;
-      }
-
-      /* if we cannot extend the inequality by a further row */
-      if ( basement >= nrows - 1 )
-         break;
-
-      assert( basement < nrows - 1 );
+   /* check whether there exists a cut with basement rows > 1 that is violated */
+   while ( basement < nrows - 1 && ! *infeasible )
+   {
       valueA = lhs + vals1[basement] - vals1[basement + 1] + vals2[basement + 1] - rhs - 1.0; /*lint !e679, !e834*/
       valueB = lhs - vals2[basement] - vals1[basement + 1] + vals2[basement + 1] - rhs; /*lint !e679, !e834*/
       valueC = 2.0 * lhs + vals1[basement] - vals2[basement] - vals1[basement + 1] + vals2[basement + 1] - 2.0 * rhs; /*lint !e679, !e834*/
@@ -594,6 +575,26 @@ SCIP_RETCODE separateOrbisack(
          coeff2[basement] = 1.0;
          lhs -= vals1[basement];
          lhs += vals2[basement];
+      }
+
+      /* to avoid numerical troubles, we bound the size of coefficients and rhs */
+      if ( rhs > coeffbound || -coeff1[0] > coeffbound || coeff2[0] > coeffbound )
+      {
+         /* avoid separating cover inequalities twice */
+         if ( ! coverseparation )
+         {
+            int ncuts;
+            SCIP_CALL( separateOrbisackCovers(scip, conss, consdata, &ncuts, infeasible) );
+            *ngen += ncuts;
+         }
+         break;
+      }
+
+      /* if current inequality is violated */
+      if ( SCIPisEfficacious(scip, lhs - rhs) )
+      {
+         SCIP_CALL( addOrbisackInequality(scip, conss, consdata, coeff1, coeff2, rhs, infeasible) );
+         ++(*ngen);
       }
    }
 
