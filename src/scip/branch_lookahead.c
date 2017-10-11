@@ -627,7 +627,7 @@ void statisticsPrint(
             i, statistics->nfullcutoffs[i], statistics->nsinglecutoffs[i]);
          SCIPinfoMessage(scip, NULL, "In depth <%i>, <%i> LPs were solved, <%i> of them to calculate the FSB score.\n",
             i, statistics->nlpssolved[i], statistics->nlpssolvedfsb[i]);
-         SCIPinfoMessage(scip, NULL, "In depth <%i>, <%"SCIP_LONGINT_FORMAT"> iterations were needed to solve the LPs, <%"SCIP_LONGINT_FORMAT"> of them to calculate the FSB score.\n",
+         SCIPinfoMessage(scip, NULL, "In depth <%i>, <%" SCIP_LONGINT_FORMAT "> iterations were needed to solve the LPs, <%" SCIP_LONGINT_FORMAT "> of them to calculate the FSB score.\n",
             i, statistics->nlpiterations[i], statistics->nlpiterationsfsb[i]);
          SCIPinfoMessage(scip, NULL, "In depth <%i>, a decision was discarded <%i> times due to domain reduction because of propagation.\n",
             i, statistics->npropdomred[i]);
@@ -3460,23 +3460,23 @@ SCIP_RETCODE executeDownBranchingRecursive(
    statistics->nlpssolved[probingdepth]++;
    statistics->nlpiterations[probingdepth] += downbranchingresult->niterations;
 #endif
-   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Solving the LP took %"SCIP_LONGINT_FORMAT" iterations.\n", downbranchingresult->niterations);
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Solving the LP took %" SCIP_LONGINT_FORMAT " iterations.\n", downbranchingresult->niterations);
 
-   SCIPdebug(
-      if( status->lperror )
-      {
-         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The LP could not be solved.\n");
-      }
-      else if( downbranchingresult->cutoff )
-      {
-         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The solved LP was infeasible and as such is cutoff\n");
-      }
-      else
-      {
-         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The solved LP was feasible and has an objval <%g> (the parent objval was <%g>)\n",
-            downbranchingresult->objval, localbaselpsolval);
-      }
-   )
+#ifdef SCIP_DEBUG
+   if( status->lperror )
+   {
+      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The LP could not be solved.\n");
+   }
+   else if( downbranchingresult->cutoff )
+   {
+      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The solved LP was infeasible and as such is cutoff\n");
+   }
+   else
+   {
+      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The solved LP was feasible and has an objval <%g> (the parent objval was <%g>)\n",
+         downbranchingresult->objval, localbaselpsolval);
+   }
+#endif
 
    if( !downbranchingresult->cutoff && !status->lperror && !status->limitreached )
    {
@@ -3659,23 +3659,23 @@ SCIP_RETCODE executeUpBranchingRecursive(
       statistics->nlpssolved[probingdepth]++;
       statistics->nlpiterations[probingdepth] += upbranchingresult->niterations;
 #endif
-   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Solving the LP took %"SCIP_LONGINT_FORMAT" iterations.\n", upbranchingresult->niterations);
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Solving the LP took %" SCIP_LONGINT_FORMAT " iterations.\n", upbranchingresult->niterations);
 
-   SCIPdebug(
-      if( status->lperror )
-      {
-         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The LP could not be solved.\n");
-      }
-      else if( upbranchingresult->cutoff )
-      {
-         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The solved LP was infeasible and as such cutoff\n", probingdepth);
-      }
-      else
-      {
-         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The solved LP feasible and has an objval <%g> (the parent objval was <%g>)\n",
-            upbranchingresult->objval, localbaselpsolval);
-      }
-   )
+#ifdef SCIP_DEBUG
+   if( status->lperror )
+   {
+      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The LP could not be solved.\n");
+   }
+   else if( upbranchingresult->cutoff )
+   {
+      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The solved LP was infeasible and as such cutoff\n", probingdepth);
+   }
+   else
+   {
+      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The solved LP feasible and has an objval <%g> (the parent objval was <%g>)\n",
+         upbranchingresult->objval, localbaselpsolval);
+   }
+#endif
 
    if( !upbranchingresult->cutoff && !status->lperror && !status->limitreached )
    {
@@ -4846,6 +4846,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
          *result = SCIP_BRANCHED;
       }
 
+#ifdef SCIP_DEBUG
       LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Result after branching is %s\n", getStatusString(*result));
 
       if( *result == SCIP_BRANCHED )
@@ -4876,6 +4877,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       {
          LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Result: Could not find any variable to branch on.\n");
       }
+#endif
 
 #ifdef SCIP_STATISTIC
       localStatisticsFree(scip, &localstats);
