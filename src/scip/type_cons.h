@@ -406,6 +406,11 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  feasibility is already checked or implicitly given. In these cases, 'checkintegrality' or
  *  'checklprows' is FALSE.
  *
+ *  If the solution is not NULL, SCIP should also be informed about the constraint violation with a call to
+ *  SCIPupdateSolConsViolation() for general constraints or SCIPupdateSolLPRowViolation() if the constraint
+ *  is represented by an LP row. Note that these constraint violations are only used for displaying statistics
+ *  in the end.
+ *
  *  input:
  *  - scip            : SCIP main data structure
  *  - conshdlr        : the constraint handler itself
