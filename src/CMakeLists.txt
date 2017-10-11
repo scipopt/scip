@@ -22,6 +22,7 @@ set(scipsources
     scip/branch_fullstrong.c
     scip/branch_inference.c
     scip/branch_leastinf.c
+    scip/branch_lookahead.c
     scip/branch_mostinf.c
     scip/branch_multaggr.c
     scip/branch_nodereopt.c
