@@ -2763,8 +2763,12 @@ SCIP_Bool areBoundsChanged(
    SCIP_Real             upperbound
    )
 {
-   return !SCIPisEQ(scip, SCIPvarGetLbLocal(var), lowerbound) || !SCIPisEQ(scip, SCIPvarGetUbLocal(var), upperbound) ||
-      SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+   assert(SCIPisFeasIntegral(scip, lowerbound));
+   assert(SCIPisFeasIntegral(scip, upperbound));
+   assert(!SCIPisEQ(scip, lowerbound, upperbound));
+   assert(SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS);
+
+   return SCIPvarGetLbLocal(var) > lowerbound + 0.5 || SCIPvarGetUbLocal(var) < upperbound - 0.5;
 }
 
 static
@@ -2995,12 +2999,11 @@ SCIP_DECL_SORTINDCOMP(scoreSortContainerScoreComp)
    score1 = container->scorecontainer->scores[probindex1];
    score2 = container->scorecontainer->scores[probindex2];
 
-   /*lint --e{777}*/
-   if( score1 == score2 )
+   if( score1 == score2 ) /*lint !e777*/
    {
       return 0;
    }
-   else if( score1 < score2 )
+   else if( score1 < score2 ) /*lint !e777*/
    {
       return -1;
    }
@@ -4551,9 +4554,8 @@ SCIP_RETCODE initBranchruleData(
       branchruledata->persistent->lastbranchid[i] = -1;
       branchruledata->persistent->lastbranchnlps[i] = 0;
 
-      /*lint --e{866}*/
-      SCIP_CALL( SCIPallocMemory(scip, &branchruledata->persistent->lastbranchupres[i]) );
-      SCIP_CALL( SCIPallocMemory(scip, &branchruledata->persistent->lastbranchdownres[i]) );
+      SCIP_CALL( SCIPallocMemory(scip, &branchruledata->persistent->lastbranchupres[i]) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocMemory(scip, &branchruledata->persistent->lastbranchdownres[i]) ); /*lint !e866*/
    }
 
    branchruledata->isinitialized = TRUE;
