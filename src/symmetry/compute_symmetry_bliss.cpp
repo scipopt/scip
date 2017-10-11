@@ -142,10 +142,6 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
    }
    assert( (int) G->get_nof_vertices() == matrixdata->npermvars + matrixdata->nrhscoef );
 
-   typedef std::pair<int, int> InterPair;
-   typedef std::map<InterPair, int> IntermediatesMap;
-   IntermediatesMap groupedIntermediateNodes;
-
    /* Grouping of nodes depends on the number of nodes in the bipartite graph class.
     * If there are more variables than constraints, we group by constraints.
     * That is, given several variable nodes which are incident to one constraint node by the same color,
