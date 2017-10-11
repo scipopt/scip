@@ -185,7 +185,13 @@ do
       # upload results to rubberband.zib.de
       if test "$UPLOAD" = "1"
       then
-          rbcli up $OUTFILE $ERRFILE $SETFILE $METAFILE
+          if test "$OPT" = "dbg"
+          then
+              RB_EXP_DATE=`date '+%Y-%b-%d' -d "+3 months"`
+              rbcli up -e $RB_EXP_DATE $OUTFILE $ERRFILE $SETFILE $METAFILE
+          else
+              rbcli up $OUTFILE $ERRFILE $SETFILE $METAFILE
+          fi
       fi
   fi
 done
