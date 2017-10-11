@@ -143,6 +143,8 @@ struct SCIP_LPi
    int                   skcsize;
    MSKstakeye*           skx;
    MSKstakeye*           skc;
+   SCIP_Bool             fromscratch;        /**< shall solves be performed with MSK_IPAR_SIM_HOTSTART turned off? */
+   SCIP_Bool             clearstate;         /**< shall next solve be performed with MSK_IPAR_SIM_HOTSTART turned off? */
    SCIP_MESSAGEHDLR*     messagehdlr;        /**< messagehdlr handler to printing messages, or NULL */
 };
 
@@ -684,8 +686,6 @@ SCIP_RETCODE SCIPlpiCreate(
    MOSEK_CALL( MSK_putintparam((*lpi)->task, MSK_IPAR_OPTIMIZER, MSK_OPTIMIZER_FREE_SIMPLEX) );
    MOSEK_CALL( MSK_putintparam((*lpi)->task, MSK_IPAR_SIM_DEGEN, DEGEN_LEVEL) );
    MOSEK_CALL( MSK_putintparam((*lpi)->task, MSK_IPAR_SIM_SWITCH_OPTIMIZER, MSK_ON) );
-   /* We only have status keys (recalculate dual solution without dual superbasics) */
-   MOSEK_CALL( MSK_putintparam((*lpi)->task, MSK_IPAR_SIM_HOTSTART, MSK_SIM_HOTSTART_STATUS_KEYS) );
    MOSEK_CALL( MSK_puttaskname((*lpi)->task, (char*) name) );
 
    (*lpi)->termcode = MSK_RES_OK;
@@ -696,6 +696,8 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->skcsize = 0;
    (*lpi)->skx = NULL;
    (*lpi)->skc = NULL;
+   (*lpi)->fromscratch = FALSE;
+   (*lpi)->clearstate = FALSE;
    (*lpi)->messagehdlr = messagehdlr;
 
    return SCIP_OKAY;
@@ -2233,6 +2235,11 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_HOTSTART_LU, MSK_ON) );
 
+   /* Set warmstarting information in MOSEK. We only have status keys (recalculate dual solution without dual superbasics) */
+   MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_HOTSTART, lpi->fromscratch || lpi->clearstate ?
+         MSK_SIM_HOTSTART_NONE : MSK_SIM_HOTSTART_STATUS_KEYS) );
+   lpi->clearstate = FALSE;
+
 #if DEBUG_CHECK_DATA > 0
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiSolvePrimal") );
 #endif
@@ -2292,6 +2299,12 @@ SCIP_RETCODE SCIPlpiSolveDual(
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_INTEGER, MSK_ON) );
 #endif
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_HOTSTART_LU, MSK_ON) );
+
+   /* Set warmstarting information in MOSEK. We only have status keys (recalculate dual solution without dual superbasics) */
+   MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_HOTSTART, lpi->fromscratch || lpi->clearstate ?
+         MSK_SIM_HOTSTART_NONE : MSK_SIM_HOTSTART_STATUS_KEYS) );
+   lpi->clearstate = FALSE;
+
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_OPTIMIZER, MSK_OPTIMIZER_DUAL_SIMPLEX) );
 
 #if WRITE_DUAL > 0
@@ -2365,6 +2378,13 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
 #if DEBUG_CHECK_DATA > 0
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiSolveBarrier") );
 #endif
+
+#ifdef SCIP_DISABLED_CODE
+   /* The parameter exists in MOSEK, but as of version 8, it is not in use and the interior-point solver is never warmstarted */
+   MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_INTPNT_HOTSTART, lpi->fromscratch || lpi->clearstate ?
+         MSK_SIM_HOTSTART_NONE : MSK_INTPNT_HOTSTART_PRIMAL_DUAL) );
+#endif
+   lpi->clearstate = FALSE;
 
    MOSEK_CALL( MSK_putintparam(lpi->task,MSK_IPAR_INTPNT_BASIS, crossover ? MSK_BI_ALWAYS : MSK_BI_NEVER) );
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_OPTIMIZER, MSK_OPTIMIZER_INTPNT) );
@@ -4038,7 +4058,7 @@ SCIP_RETCODE SCIPlpiGetState(
 
    MOSEK_CALL( MSK_solutiondef(lpi->task, MSK_SOL_BAS, &gotbasicsol) );
 
-   if ( gotbasicsol == 0 || SCIPlpiExistsDualRay(lpi) )
+   if ( gotbasicsol == 0 || SCIPlpiExistsDualRay(lpi) || lpi->clearstate )
       return SCIP_OKAY;
 
    MOSEK_CALL( MSK_getnumcon(lpi->task, &nrows) );
@@ -4139,8 +4159,7 @@ SCIP_RETCODE SCIPlpiClearState(
 {
    assert(lpi != NULL);
 
-   /**@todo implement SCIPlpiClearState() for MOSEK */
-   SCIPmessagePrintWarning(lpi->messagehdlr, "MOSEK interface does not implement SCIPlpiClearState()\n");
+   lpi->clearstate = TRUE;
 
    return SCIP_OKAY;
 }
@@ -4209,6 +4228,12 @@ SCIP_RETCODE SCIPlpiWriteState(
    assert(lpi->task != NULL);
 
    SCIPdebugMessage("writing LP state to file <%s>\n", fname);
+
+   if( lpi->clearstate )
+   {
+      SCIPdebugMessage("No LP state written, since it was cleared after the last solve \n");
+      return SCIP_OKAY;
+   }
 
    /* set parameter to be able to write */
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_WRITE_SOL_HEAD, MSK_ON) );
@@ -4352,8 +4377,7 @@ SCIP_RETCODE SCIPlpiGetIntpar(
    switch (type)
    {
    case SCIP_LPPAR_FROMSCRATCH:               /* solver should start from scratch at next call? */
-      MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_SIM_HOTSTART, ival) );
-      *ival = (*ival == MSK_SIM_HOTSTART_NONE);
+      *ival = (int) lpi->fromscratch;
       break;
    case SCIP_LPPAR_FASTMIP:                   /* fast mip setting of LP solver */
       return  SCIP_PARAMETERUNKNOWN;
@@ -4433,8 +4457,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    switch (type)
    {
    case SCIP_LPPAR_FROMSCRATCH:               /* solver should start from scratch at next call? */
-      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_HOTSTART,
-            ival ? MSK_SIM_HOTSTART_NONE : MSK_SIM_HOTSTART_STATUS_KEYS ) );
+      lpi->fromscratch = (SCIP_Bool) ival;
       break;
    case SCIP_LPPAR_FASTMIP:                   /* fast mip setting of LP solver */
       return SCIP_PARAMETERUNKNOWN;
