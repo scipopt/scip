@@ -112,7 +112,8 @@ SCIP_RETCODE SCIPcreateConsBasicOrbisack(
    const char*           name,               /**< name of constraint */
    SCIP_VAR**            vars1,              /**< first column of matrix of variables on which the symmetry acts */
    SCIP_VAR**            vars2,              /**< second column of matrix of variables on which the symmetry acts */
-   int                   nrows               /**< number of rows in constraint matrix */
+   int                   nrows,              /**< number of rows in constraint matrix */
+   SCIP_Bool             ispporbisack        /**< whether the orbisack is a packing/partitioning orbisack */
    );
 
 #ifdef __cplusplus
