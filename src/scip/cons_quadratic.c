@@ -206,7 +206,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             checkfactorable;    /**< whether functions should be checked to be factorable */
    char                  checkquadvarlocks;  /**< whether quadratic variables contained in a single constraint should be forced to be at their lower or upper bounds ('d'isable, change 't'ype, add 'b'ound disjunction) */
    SCIP_Bool             linfeasshift;       /**< whether to make solutions in check feasible if possible */
-   SCIP_Bool             disaggregate;       /**< whether to disaggregate quadratic constraints */
+   int                   maxdisaggrsize;     /**< maximum number of components when disaggregating a quadratic constraint (<= 1: off) */
    int                   maxproprounds;      /**< limit on number of propagation rounds for a single constraint within one round of SCIP propagation during solve */
    int                   maxproproundspresolve; /**< limit on number of propagation rounds for a single constraint within one presolving round */
    SCIP_Real             sepanlpmincont;     /**< minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation */
@@ -4282,7 +4282,8 @@ SCIP_RETCODE presolveDisaggregate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler data structure */
    SCIP_CONS*            cons,               /**< source constraint to try to convert */
-   int*                  naddconss           /**< pointer to counter of added constraints */
+   int*                  naddconss,          /**< pointer to counter of added constraints */
+   int                   nmaxcomponents      /**< maximum number of components that should be used */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -4299,6 +4300,7 @@ SCIP_RETCODE presolveDisaggregate(
    assert(conshdlr != NULL);
    assert(cons != NULL);
    assert(naddconss != NULL);
+   assert(nmaxcomponents > 1);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -4323,9 +4325,18 @@ SCIP_RETCODE presolveDisaggregate(
       if( SCIPhashmapExists(var2component, (void*)consdata->quadvarterms[i].var) )
          continue;
 
-      SCIP_CALL( presolveDisaggregateMarkComponent(scip, consdata, i, var2component, ncomponents) );
-      ++ncomponents;
+      if( ncomponents < nmaxcomponents )
+      {
+         SCIP_CALL( presolveDisaggregateMarkComponent(scip, consdata, i, var2component, ncomponents) );
+         ++ncomponents;
+      }
+      else
+      {
+         /* put all other quadratic variables into the last component after we hit the limit for the number of components */
+         SCIP_CALL( SCIPhashmapInsert(var2component, consdata->quadvarterms[i].var, (void*)(size_t)(ncomponents - 1)) );
+      }
    }
+
    assert(ncomponents >= 1);
 
    /* if there is only one component, we cannot disaggregate
@@ -4363,6 +4374,8 @@ SCIP_RETCODE presolveDisaggregate(
     * delete adjacency information */
    for( i = 0; i < consdata->nquadvars; ++i )
    {
+      assert(SCIPhashmapExists(var2component, consdata->quadvarterms[i].var));
+
       comp = (int)(size_t) SCIPhashmapGetImage(var2component, consdata->quadvarterms[i].var);
       assert(comp >= 0);
       assert(comp < ncomponents);
@@ -4384,6 +4397,9 @@ SCIP_RETCODE presolveDisaggregate(
    /* add bilinear terms to each component constraint */
    for( i = 0; i < consdata->nbilinterms; ++i )
    {
+      assert(SCIPhashmapExists(var2component, consdata->bilinterms[i].var1));
+      assert(SCIPhashmapExists(var2component, consdata->bilinterms[i].var2));
+
       comp = (int)(size_t) SCIPhashmapGetImage(var2component, consdata->bilinterms[i].var1);
       assert(comp == (int)(size_t) SCIPhashmapGetImage(var2component, consdata->bilinterms[i].var2));
       assert(!SCIPisZero(scip, consdata->bilinterms[i].coef));
@@ -4416,14 +4432,14 @@ SCIP_RETCODE presolveDisaggregate(
    SCIP_CALL( consdataEnsureLinearVarsSize(scip, consdata, consdata->nlinvars + ncomponents) );
    for( comp = 0; comp < ncomponents; ++comp )
    {
-      SCIP_CALL( SCIPaddLinearVarQuadratic(scip, auxconss[comp], auxvars[comp], -auxcoefs[comp]) );
+      SCIP_CALL( SCIPaddLinearVarQuadratic(scip, auxconss[comp], auxvars[comp], -auxcoefs[comp] * ncomponents) );
 
       SCIP_CALL( SCIPaddVar(scip, auxvars[comp]) );
 
       SCIP_CALL( SCIPaddCons(scip, auxconss[comp]) );
       SCIPdebugPrintCons(scip, auxconss[comp], NULL);
 
-      SCIP_CALL( addLinearCoef(scip, cons, auxvars[comp], auxcoefs[comp]) );
+      SCIP_CALL( addLinearCoef(scip, cons, auxvars[comp], auxcoefs[comp] * ncomponents) );
 
       SCIP_CALL( SCIPreleaseCons(scip, &auxconss[comp]) );
       SCIP_CALL( SCIPreleaseVar(scip, &auxvars[comp]) );
@@ -12108,10 +12124,10 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
             assert(*naddconss >= naddconss_old);
          }
 
-         if( conshdlrdata->disaggregate )
+         if( conshdlrdata->maxdisaggrsize > 1 )
          {
             /* try disaggregation, if enabled */
-            SCIP_CALL( presolveDisaggregate(scip, conshdlr, conss[c], naddconss) );
+            SCIP_CALL( presolveDisaggregate(scip, conshdlr, conss[c], naddconss, conshdlrdata->maxdisaggrsize) );
          }
 
          if( *naddconss > naddconss_old )
@@ -13150,9 +13166,9 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          "whether to try to make solutions in check function feasible by shifting a linear variable (esp. useful if constraint was actually objective function)",
          &conshdlrdata->linfeasshift, TRUE, TRUE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/disaggregate",
-         "whether to disaggregate quadratic parts that decompose into a sum of non-overlapping quadratic terms",
-         &conshdlrdata->disaggregate, TRUE, FALSE, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/maxdisaggrsize",
+         "maximum number of components when disaggregating a quadratic constraint (<= 1: off)",
+         &conshdlrdata->maxdisaggrsize, TRUE, 10, 1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/maxproprounds",
          "limit on number of propagation rounds for a single constraint within one round of SCIP propagation during solve",
