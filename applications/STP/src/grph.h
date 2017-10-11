@@ -58,7 +58,6 @@ typedef struct
 {
    /* Nodes */
    int                   norgmodelknots;     /**< Number of nodes in the original model               */
-   int                   flags;              /**< To store attributes                                 */
    int                   ksize;              /**< Count of allocated knot slots                       */
    int                   knots;              /**< Count of nodes in graph                             */
    int                   orgknots;           /**< Count of nodes prior to graph reduction             */
@@ -181,7 +180,8 @@ typedef enum { FF_BEA, FF_STP, FF_PRB, FF_GRD } FILETYPE;
 
 /* grphbase.c
  */
-extern void   graph_flags(GRAPH*, int);
+extern void   graph_pc_updateTerm2edge(GRAPH*, const GRAPH*, int, int, int, int);
+extern void   graph_pc_subtractPrize(SCIP*, GRAPH*, SCIP_Real, int);
 extern void   graph_show(const GRAPH*);
 extern void   graph_knot_add(GRAPH*, int);
 extern void   graph_knot_chg(GRAPH*, int, int);
@@ -191,36 +191,36 @@ extern void   graph_edge_add(SCIP*, GRAPH*, int, int, double, double);
 extern void   graph_edge_del(SCIP*, GRAPH*, int, SCIP_Bool);
 extern void   graph_edge_hide(GRAPH*, int);
 extern void   graph_uncover(GRAPH*);
-extern void   graph_pc_subtractPrize(SCIP*, GRAPH*, SCIP_Real, int);
 extern void   graph_trail(const GRAPH*, int);
 extern void   graph_free(SCIP*, GRAPH*, SCIP_Bool);
 extern void   graph_get_NVET(const GRAPH*, int*, int*, int*);
 extern void   graph_sol_setNodeList(const GRAPH*, STP_Bool*, IDX*);
-extern SCIP_RETCODE   graph_trail_arr(SCIP*, const GRAPH*, int);
-extern SCIP_RETCODE   graph_init(SCIP*, GRAPH**, int, int, int, int);
+extern SCIP_RETCODE   graph_pc_init(SCIP*, GRAPH*, int, int);
 extern SCIP_RETCODE   graph_pc_2org(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_pc_2trans(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_pc_2orgcheck(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_pc_2transcheck(SCIP*, GRAPH*);
-extern SCIP_RETCODE   graph_init_history(SCIP*, GRAPH*);
-extern SCIP_RETCODE   graph_resize(SCIP*, GRAPH*, int, int, int);
-extern SCIP_RETCODE   graph_knot_contract(SCIP*, GRAPH*, int*, int, int);
-extern SCIP_RETCODE   graph_knot_contractpc(SCIP*, GRAPH*, int*, int, int, int);
-extern SCIP_RETCODE   graph_sol_reroot(SCIP*, GRAPH*, int*, int);
-extern SCIP_RETCODE   graph_pc_mw2rmw(SCIP*, GRAPH*);
-extern SCIP_RETCODE   graph_pc_getSap(SCIP*, GRAPH*, GRAPH**, SCIP_Real*);
-extern SCIP_RETCODE   graph_pc_getSapShift(SCIP*, GRAPH*, GRAPH**, SCIP_Real*);
-extern SCIP_RETCODE   graph_pc_getRsap(SCIP*, GRAPH*, GRAPH**, int*, int, int);
-extern SCIP_RETCODE   graph_edge_reinsert(SCIP*, GRAPH*, int, int, int, SCIP_Real, IDX*, IDX*, IDX*, IDX*);
 extern SCIP_RETCODE   graph_pc_2pc(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_pc_2rpc(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_pc_2mw(SCIP*, GRAPH*, SCIP_Real*);
 extern SCIP_RETCODE   graph_pc_2rmw(SCIP*, GRAPH*);
+extern SCIP_RETCODE   graph_pc_mw2rmw(SCIP*, GRAPH*);
+extern SCIP_RETCODE   graph_pc_getSap(SCIP*, GRAPH*, GRAPH**, SCIP_Real*);
+extern SCIP_RETCODE   graph_pc_getSapShift(SCIP*, GRAPH*, GRAPH**, SCIP_Real*);
+extern SCIP_RETCODE   graph_pc_getRsap(SCIP*, GRAPH*, GRAPH**, int*, int, int);
+extern SCIP_RETCODE   graph_resize(SCIP*, GRAPH*, int, int, int);
+extern SCIP_RETCODE   graph_knot_contract(SCIP*, GRAPH*, int*, int, int);
+extern SCIP_RETCODE   graph_pc_contractEdge(SCIP*, GRAPH*, int*, int, int, int);
+extern SCIP_RETCODE   graph_sol_reroot(SCIP*, GRAPH*, int*, int);
+extern SCIP_RETCODE   graph_edge_reinsert(SCIP*, GRAPH*, int, int, int, SCIP_Real, IDX*, IDX*, IDX*, IDX*);
 extern SCIP_RETCODE   graph_grid_create(SCIP*, GRAPH**, int**, int, int, int);
 extern SCIP_RETCODE   graph_obstgrid_create(SCIP*, GRAPH**, int**, int**, int, int, int, int);
 extern SCIP_RETCODE   graph_grid_coordinates(SCIP*, int**, int**, int*, int, int);
 extern SCIP_RETCODE   graph_copy(SCIP*, const GRAPH*, GRAPH**);
 extern SCIP_RETCODE   graph_pack(SCIP*, GRAPH*, GRAPH**, SCIP_Bool);
+extern SCIP_RETCODE   graph_trail_arr(SCIP*, const GRAPH*, int);
+extern SCIP_RETCODE   graph_init(SCIP*, GRAPH**, int, int, int);
+extern SCIP_RETCODE   graph_init_history(SCIP*, GRAPH*);
 extern int    graph_edge_redirect(SCIP*, GRAPH*, int, int, int, SCIP_Real);
 extern int    graph_valid(const GRAPH*);
 extern int    graph_pc_deleteTerm(SCIP*, GRAPH*, int);

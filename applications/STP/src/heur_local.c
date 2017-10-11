@@ -962,7 +962,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
                voronoi_repair_mult(scip, graph, graph->cost, &count, vbase, boundedges, &nboundedges, nodesmark, &uf, vnoi);
 
                /* create a supergraph, having the endpoints of the key-paths incident to the current crucial node as (super-) vertices */
-               SCIP_CALL( graph_init(scip, &supergraph, nsupernodes, nboundedges * 2, 1, 0) );
+               SCIP_CALL( graph_init(scip, &supergraph, nsupernodes, nboundedges * 2, 1) );
                supergraph->stp_type = STP_SPG;
 
                /* add vertices to the supergraph */

@@ -144,7 +144,7 @@ SCIP_RETCODE trydg1edgepc(
 
       degsum = g->grad[i] + g->grad[i1];
 
-      SCIP_CALL( graph_knot_contractpc(scip, g, solnode, i, i1, i) );
+      SCIP_CALL( graph_pc_contractEdge(scip, g, solnode, i, i1, i) );
 
       degsum -= g->grad[i];
 
@@ -984,7 +984,7 @@ SCIP_RETCODE degree_test_mw(
                }
             }
 
-            SCIP_CALL( graph_knot_contractpc(scip, g, solnode, i, i1, i));
+            SCIP_CALL( graph_pc_contractEdge(scip, g, solnode, i, i1, i));
 
             localcount++;
 
@@ -1010,7 +1010,7 @@ SCIP_RETCODE degree_test_mw(
          {
             if( Is_term(g->term[i2]) )
             {
-               SCIP_CALL(graph_knot_contractpc(scip, g, solnode, i2, i, i2));
+               SCIP_CALL(graph_pc_contractEdge(scip, g, solnode, i2, i, i2));
             }
             else
             {
@@ -1170,7 +1170,7 @@ SCIP_RETCODE degree_test_mw(
             if( g->mark[i2] && Is_term(g->term[i2]) )
             {
                SCIPdebugMessage("contract tt after (local) main loop %d->%d\n ", i1, i2);
-               SCIP_CALL( graph_knot_contractpc(scip, g, solnode, i1, i2, i1) );
+               SCIP_CALL( graph_pc_contractEdge(scip, g, solnode, i1, i2, i1) );
                localcount++;
                contracted = TRUE;
                break;
@@ -1553,7 +1553,7 @@ SCIP_RETCODE degree_test_pc(
                }
                else
                {
-                  SCIP_CALL( graph_knot_contractpc(scip, g, solnode, i, i1, i) );
+                  SCIP_CALL( graph_pc_contractEdge(scip, g, solnode, i, i1, i) );
                }
 
                rerun = TRUE;

@@ -1254,7 +1254,7 @@ SCIP_RETCODE sd_red(
    /* construct auxiliary graph to compute paths between terminals */
 
    /* initialize the new graph */
-   SCIP_CALL( graph_init(scip, &netgraph, nterms, maxnedges, 1, 0) );
+   SCIP_CALL( graph_init(scip, &netgraph, nterms, maxnedges, 1) );
 
    j = 0;
    for( k = 0; k < nnodes; k++ )
@@ -1648,7 +1648,7 @@ SCIP_RETCODE sdpc_reduction(
    /* construct auxiliary graph to compute paths between terminals */
 
    /* initialize new graph */
-   SCIP_CALL( graph_init(scip, &netgraph, nterms, maxnedges, 1, 0) );
+   SCIP_CALL( graph_init(scip, &netgraph, nterms, maxnedges, 1) );
 
    for( k = 0; k < 4; k++ )
    {
@@ -2700,7 +2700,7 @@ SCIP_RETCODE bdr_reduction(
 
    /* initialize mst struct and new graph for bd4, bd5 tests */
    SCIP_CALL( SCIPallocBufferArray(scip, &mst, 5) );
-   SCIP_CALL( graph_init(scip, &auxg, 5, 40, 1, 0) );
+   SCIP_CALL( graph_init(scip, &auxg, 5, 40, 1) );
 
    for( k = 0; k < 4; k++ )
       graph_knot_add(auxg, -1);
@@ -2981,7 +2981,7 @@ SCIP_RETCODE bd3_reduction(
 
    /* initialize mst struct and new graph for bd4, bd5 tests */
    SCIP_CALL( SCIPallocBufferArray(scip, &mst, 5) );
-   SCIP_CALL( graph_init(scip, &auxg, 5, 40, 1, 0) );
+   SCIP_CALL( graph_init(scip, &auxg, 5, 40, 1) );
 
    for( k = 0; k < 4; k++ )
       graph_knot_add(auxg, -1);
@@ -3406,7 +3406,7 @@ SCIP_RETCODE sl_reduction(
 
             if( pc )
             {
-               SCIP_CALL( graph_knot_contractpc(scip, g, solnode, j, k, i) );
+               SCIP_CALL( graph_pc_contractEdge(scip, g, solnode, j, k, i) );
             }
             else
             {
@@ -3602,7 +3602,7 @@ SCIP_RETCODE nv_reduction(
 
          if( pc )
          {
-            SCIP_CALL( graph_knot_contractpc(scip, g, solnode, i, k, i) );
+            SCIP_CALL( graph_pc_contractEdge(scip, g, solnode, i, k, i) );
          }
          else
          {
@@ -3846,7 +3846,7 @@ SCIP_RETCODE nv_reductionAdv(
 
          if( pc )
          {
-            SCIP_CALL( graph_knot_contractpc(scip, g, solnode, i, k, i) );
+            SCIP_CALL( graph_pc_contractEdge(scip, g, solnode, i, k, i) );
          }
          else
          {
@@ -3930,7 +3930,7 @@ SCIP_RETCODE ledge_reduction(
    SCIP_CALL( SCIPallocBufferArray(scip, &nodesid, nnodes) );
 
    /* initialize the new graph */
-   SCIP_CALL( graph_init(scip, &netgraph, nterms, maxnedges, 1, 0) );
+   SCIP_CALL( graph_init(scip, &netgraph, nterms, maxnedges, 1) );
 
    e = 0;
    for( k = 0; k < nnodes; k++ )
@@ -4909,7 +4909,7 @@ SCIP_RETCODE npvReduction(
    /* --- NPV4 test --- */
 
    /* initialize mst struct and new graph for further tests */
-   SCIP_CALL( graph_init(scip, &auxg, 5, 40, 1, 0) );
+   SCIP_CALL( graph_init(scip, &auxg, 5, 40, 1) );
 
    for( k = 0; k < 4; k++ )
       graph_knot_add(auxg, -1);

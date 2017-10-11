@@ -217,7 +217,7 @@ SCIP_RETCODE computeDaSolPcMw(
 
    /* compute new solution and store it in result2 */
 
-   SCIP_CALL( SCIPStpHeurAscendPruneRunPcMw(scip, NULL, graph, cost, result2, vbase, root, nodearrchar, &success, TRUE, FALSE) );
+   SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, graph, cost, result2, vbase, -1, nodearrchar, &success, FALSE) );
    assert(success);
 
    if( pool != NULL )
@@ -910,7 +910,7 @@ SCIP_RETCODE da_reduce(
       }
       else if( !directed )
       {
-         SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, graph, cost, result, nodearrint, root, nodearrchar, &success, TRUE, FALSE) );
+         SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, graph, cost, result, nodearrint, root, nodearrchar, &success, FALSE) );
          assert(success);
 
          /* calculate objective value of solution */
@@ -1531,7 +1531,7 @@ SCIP_RETCODE da_reduceSlackPrune(
             printf("in bnd  FAIL %d not marked, but terminal, \n", k);
 #endif
 
-   SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, graph, cost, edgearrint2, vbase, root, nodearrchar, &success, TRUE, FALSE) );
+   SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, graph, cost, edgearrint2, vbase, root, nodearrchar, &success, FALSE) );
 
    objprune = graph_sol_getObj(graph->cost, edgearrint2, 0.0, nedges);
 
@@ -2487,7 +2487,7 @@ SCIP_RETCODE da_reduceSlackPruneMw(
    /* compute lower bound and reduced costs todo use SCIPdualAscentStpSol */
    SCIP_CALL( SCIPStpDualAscent(scip, transgraph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, NULL, transresult, state, root, 1, marked, nodearrchar) );
 
-   SCIP_CALL( SCIPStpHeurAscendPruneRunPcMw(scip, NULL, graph, cost, transresult, vbase, root, nodearrchar, &success, TRUE, FALSE) );
+   SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, graph, cost, transresult, vbase, -1, nodearrchar, &success, FALSE) );
 
    assert(success);
    assert(graph_sol_valid(scip, graph, transresult));
@@ -2925,7 +2925,7 @@ SCIP_RETCODE bound_reduce(
    /* init auxiliary graph */
    if( !mw )
    {
-      SCIP_CALL( graph_init(scip, &adjgraph, nterms, MIN(nedges, (nterms - 1) * nterms), 1, 0) );
+      SCIP_CALL( graph_init(scip, &adjgraph, nterms, MIN(nedges, (nterms - 1) * nterms), 1) );
    }
    else
    {
@@ -3708,7 +3708,7 @@ SCIP_RETCODE bound_reducePrune(
    /* no MWCSP? */
    if( !mw )
    {
-      SCIP_CALL( graph_init(scip, &adjgraph, nterms, MIN(nedges, (nterms - 1) * nterms), 1, 0) );
+      SCIP_CALL( graph_init(scip, &adjgraph, nterms, MIN(nedges, (nterms - 1) * nterms), 1) );
 
       /* build Voronoi regions, concomitantly building adjgraph and computing radii values*/
       SCIP_CALL( voronoi_radius(scip, graph, adjgraph, vnoi, radius, cost, costrev, vbase, heap, state) );
@@ -4262,7 +4262,7 @@ SCIP_RETCODE hopbound_reduce(
    }
 
    /* init auxiliary graph */
-   SCIP_CALL( graph_init(scip, &adjgraph, nterms, MIN(nedges, (nterms - 1) * nterms), 1, 0) );
+   SCIP_CALL( graph_init(scip, &adjgraph, nterms, MIN(nedges, (nterms - 1) * nterms), 1) );
 
    SCIP_CALL( voronoi_radius(scip, graph, adjgraph, vnoi, radius, cost, costrev, vbase, heap, state) );
 

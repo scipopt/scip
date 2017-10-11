@@ -674,7 +674,7 @@ SCIP_RETCODE buildsolgraph(
       }
 
       /* initialize new graph */
-      SCIP_CALL( graph_init(scip, &newgraph, nsolnodes, 2 * nsoledges, 1, 0) );
+      SCIP_CALL( graph_init(scip, &newgraph, nsolnodes, 2 * nsoledges, 1) );
 
       if( graph->stp_type == STP_RSMT || graph->stp_type == STP_OARSMT || graph->stp_type == STP_GSTP )
          newgraph->stp_type = STP_SPG;
@@ -683,7 +683,7 @@ SCIP_RETCODE buildsolgraph(
 
       if( pcmw )
       {
-         SCIP_CALL( SCIPallocMemoryArray(scip, &(newgraph->prize), nsolnodes) );
+         SCIP_CALL( graph_pc_init(scip, newgraph, nsolnodes, nsolnodes) );
       }
 
       newgraph->hoplimit = graph->hoplimit;
@@ -715,7 +715,7 @@ SCIP_RETCODE buildsolgraph(
 
       /* set root */
       newgraph->source[0] = dnodemap[graph->source[0]];
-      if( newgraph->stp_type == STP_RPCSPG )
+      if( newgraph->stp_type == STP_RPCSPG || newgraph->stp_type == STP_RMWCSP )
          newgraph->prize[newgraph->source[0]] = FARAWAY;
 
       assert(newgraph->source[0] >= 0);
@@ -742,9 +742,18 @@ SCIP_RETCODE buildsolgraph(
       {
          if( soledge[i / 2] )
          {
+            const int orgtail = graph->tail[i];
+            const int orghead = graph->head[i];
+
             (*edgeancestor)[j++] = i;
             (*edgeancestor)[j++] = i + 1;
-            graph_edge_add(scip, newgraph, dnodemap[graph->tail[i]], dnodemap[graph->head[i]], graph->cost[i], graph->cost[i + 1]);
+
+            assert(newgraph->term2edge != NULL);
+
+            if( pcmw )
+               graph_pc_updateTerm2edge(newgraph, graph, dnodemap[orgtail], dnodemap[orghead], orgtail, orghead);
+
+            graph_edge_add(scip, newgraph, dnodemap[orgtail], dnodemap[orghead], graph->cost[i], graph->cost[i + 1]);
 
             /* (*edgeweight)[e]: number of solutions containing edge e */
             for( int k = 0; k < selectedsols; k++ )
@@ -1884,7 +1893,7 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
    nsoledges *= 2;
 
    /* create new graph */
-   SCIP_CALL( graph_init(scip, &newgraph, nsolnodes, nsoledges, 1, 0) );
+   SCIP_CALL( graph_init(scip, &newgraph, nsolnodes, nsoledges, 1) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &unodemap, nsolnodes) );
 

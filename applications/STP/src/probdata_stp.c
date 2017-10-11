@@ -2750,7 +2750,7 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
       SCIP_CALL( SCIPallocBufferArray(scip, &edgeancestor, 2 * nsoledges) );
 
       /* initialize new graph */
-      SCIP_CALL( graph_init(scip, &solgraph, nsolnodes, 2 * nsoledges, 1, 0) );
+      SCIP_CALL( graph_init(scip, &solgraph, nsolnodes, 2 * nsoledges, 1) );
 
       /* add vertices to new graph */
       for( k = 0; k < norgnodes; k++ )

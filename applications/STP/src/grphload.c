@@ -831,8 +831,6 @@ SCIP_RETCODE graph_load(
    int          termcount = 0;
    int          nobstacles = -1;
    int          scale_order = 1;
-   int          is_gridgraph = FALSE;
-   int          has_coordinates = FALSE;
    int          obstacle_counter = 0;
    int**        scaled_coordinates = NULL;
    int**        obstacle_coords = NULL;
@@ -1088,9 +1086,10 @@ SCIP_RETCODE graph_load(
                   if( g == NULL )
                   {
                      if( stp_type == STP_GSTP )
-                        SCIP_CALL( graph_init(scip, graph, nodes * 2, edges * 2 + nodes * nodes, 1, 0) );
+                        SCIP_CALL( graph_init(scip, graph, nodes * 2, edges * 2 + nodes * nodes, 1) );
                      else
-                        SCIP_CALL( graph_init(scip, graph, nodes, edges * 2, 1, 0) );
+                        SCIP_CALL( graph_init(scip, graph, nodes, edges * 2, 1) );
+
                      g = *graph;
                      assert(g != NULL);
                      assert(g->source[0] == UNKNOWN);
@@ -1204,7 +1203,7 @@ SCIP_RETCODE graph_load(
                   }
                   assert(g == NULL);
 
-                  // ætodo fix problem with edges over obstacles
+                  // todo fix problem with edges over obstacles
                   message(MSG_FATAL, &curf, "Obstacle avoiding RSMT problems are currently not supported in this format \n");
 
                   SCIP_CALL( graph_obstgrid_create(scip, graph, scaled_coordinates, obstacle_coords, nodes, grid_dim, nobstacles, scale_order) );
@@ -1222,7 +1221,7 @@ SCIP_RETCODE graph_load(
                         assert(nodes == termcount);
                         if( g != NULL )
                         {
-                          SCIP_CALL( graph_pc_2rmw(scip, g) );
+                           SCIP_CALL( graph_pc_2rmw(scip, g) );
                         }
                         else
                         {
@@ -1236,7 +1235,7 @@ SCIP_RETCODE graph_load(
                         assert(nodes == termcount);
                         if( g != NULL )
                         {
-                          SCIP_CALL( graph_pc_2mw(scip, g, g->prize) );
+                           SCIP_CALL( graph_pc_2mw(scip, g, g->prize) );
                         }
                         else
                         {
@@ -1265,9 +1264,7 @@ SCIP_RETCODE graph_load(
                      assert(terms == nodes);
                      assert(g != NULL);
                      if( g->prize == NULL )
-                     {
-                        SCIP_CALL( SCIPallocMemoryArray(scip, &(g->prize), terms) );
-                     }
+                        SCIP_CALL( graph_pc_init(scip, g, terms, -1) );
                   }
                   break;
                case KEY_TERMINALS_GROUPS :
@@ -1301,7 +1298,8 @@ SCIP_RETCODE graph_load(
                   graph_knot_chg(g, (int)para[0].n - 1, 0);
                   stp_type = STP_RPCSPG;
                   if( g->prize == NULL )
-                     SCIP_CALL( SCIPallocMemoryArray(scip, &(g->prize), nodes) );
+                     SCIP_CALL( graph_pc_init(scip, g, nodes, -1) );
+
                   g->prize[(int)para[0].n - 1] = FARAWAY;
                   break;
                case KEY_TERMINALS_T :
@@ -1330,7 +1328,7 @@ SCIP_RETCODE graph_load(
                   {
                      assert(stp_type != STP_RPCSPG);
                      stp_type = STP_PCSPG;
-                     SCIP_CALL( SCIPallocMemoryArray(scip, &(g->prize), nodes) );
+                     SCIP_CALL( graph_pc_init(scip, g, nodes, -1) );
                   }
                   g->prize[(int)para[0].n - 1] = (double)para[1].n;
                   termcount++;
@@ -1401,7 +1399,6 @@ SCIP_RETCODE graph_load(
 
                   break;
                case KEY_COORDINATES_GRID :
-                  is_gridgraph = TRUE;
                   break;
                case KEY_PRESOLVE_FIXED :
                   if (presol != NULL)
@@ -1471,8 +1468,6 @@ SCIP_RETCODE graph_load(
          else
             g->stp_type = STP_SPG;
       }
-      graph_flags(g, (has_coordinates ? GRAPH_HAS_COORDINATES : 0)
-         | (is_gridgraph ? GRAPH_IS_GRIDGRAPH    : 0));
 
       (void)printf(msg_finish_dddd,
          g->knots, g->edges, g->terms, g->source[0]);

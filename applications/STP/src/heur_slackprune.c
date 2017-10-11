@@ -729,7 +729,8 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
          i = SLACKPRUNE_MAXREDROUNDS;
       }
       /* compute new guiding solution */
-      SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, prunegraph, cost, edgearrint, nodearrint, prunegraph->source[0], nodearrchar, &apsuccess, (i != 0), FALSE) );
+      int todo;
+      SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, prunegraph, cost, edgearrint, nodearrint, prunegraph->source[0], nodearrchar, &apsuccess, FALSE) );
 
       /* solution found by ascend and prune? */
       if( apsuccess )
@@ -1146,7 +1147,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRunPcMw(
       }
 
       /* compute new guiding solution */
-      SCIP_CALL( SCIPStpHeurAscendPruneRunPcMw(scip, NULL, prunegraph, cost, edgearrint, vbase, root, nodearrchar, &apsuccess, TRUE, FALSE) );
+      SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, prunegraph, cost, edgearrint, vbase, -1, nodearrchar, &apsuccess, FALSE) );
 
       /* solution found by ascend and prune? */
       if( apsuccess )

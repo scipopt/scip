@@ -55,24 +55,9 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    int                   root,               /**< the root (used for dual ascent) */
    STP_Bool*             nodearrchar,        /**< char vertices array for internal computations */
    SCIP_Bool*            solfound,           /**< has a solution been found? */
-   SCIP_Bool             dualascredcosts,    /**< reduced costs from dual ascent? */
    SCIP_Bool             addsol              /**< should the solution be added to SCIP by this method? */
    );
 
-/** ascent and prune for prize-collecting Steiner tree and maximum weight connected subgraph */
-SCIP_RETCODE SCIPStpHeurAscendPruneRunPcMw(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEUR*            heur,               /**< heuristic data structure or NULL */
-   const GRAPH*          g,                  /**< the graph */
-   const SCIP_Real*      redcosts,           /**< the reduced costs */
-   int*                  edgearrint,         /**< int edges array to store solution */
-   int*                  nodearrint,         /**< int vertices array for internal computations */
-   int                   daroot,             /**< the root (used for dual ascent) */
-   STP_Bool*             nodearrchar,        /**< char vertices array for internal computations */
-   SCIP_Bool*            solfound,           /**< has a solution been found? */
-   SCIP_Bool             dualascredcosts,    /**< reduced costs from dual ascent? */
-   SCIP_Bool             addsol              /**< should the solution be added to SCIP by this method? */
-   );
 
 #ifdef __cplusplus
 }
