@@ -19,6 +19,7 @@ export LANG=C
 REMOVE=0
 UPLOAD=0
 APPEND=0
+EXPIRE=0
 AWKARGS=""
 FILES=""
 
@@ -33,6 +34,11 @@ do
       then
           REMOVE=1
           UPLOAD=1
+      elif test "$i" = "-T"
+      then
+          REMOVE=1
+          UPLOAD=1
+          EXPIRE=1
       else
           AWKARGS="$AWKARGS $i"
       fi
@@ -185,7 +191,7 @@ do
       # upload results to rubberband.zib.de
       if test "$UPLOAD" = "1"
       then
-          if test "$OPT" = "dbg"
+          if test "$EXPIRE" = "1"
           then
               RB_EXP_DATE=`date '+%Y-%b-%d' -d "+3 months"`
               rbcli -e $RB_EXP_DATE up $OUTFILE $ERRFILE $SETFILE $METAFILE
