@@ -1147,7 +1147,7 @@ SCIP_RETCODE applyVbounds(
  TERMINATE:
 #ifdef SCIP_STATISTIC
    SCIP_CALL( SCIPstopClock(scip, clock) );
-   SCIPstatisticMessage("vbound: tighten=%d obj=%d nvars=%d presolnvars=%d ratio=%.2f infeas=%d found=%d time=%.4f\n",
+   SCIPstatisticMessage("vbound: tighten=%u obj=%d nvars=%d presolnvars=%d ratio=%.2f infeas=%u found=%d time=%.4f\n",
       tighten, obj, nvars, nprevars, (nvars - nprevars) / (SCIP_Real)nvars, cutoff,
       wasfeas ? 1 : 0, SCIPclockGetTime(clock) );
 #endif

@@ -159,7 +159,6 @@ SCIP_RETCODE applyCliqueFixings(
    SCIP_Bool newnode;
    int probingdepthofonefix;
    int ncliquevars;
-   int nbinvars = SCIPgetNBinVars(scip);
    int ncliques;
    int bestpos;
    int firstclique;
@@ -467,7 +466,7 @@ SCIP_RETCODE applyCliqueFixings(
    SCIPfreeBufferArray(scip, &permutation);
    SCIPfreeBufferArray(scip, &cliquesizes);
 
-   SCIPdebugMsg(scip, "fixed %d of %d variables in probing\n", v, nbinvars);
+   SCIPdebugMsg(scip, "fixed %d of %d variables in probing\n", v, SCIPgetNBinVars(scip));
    SCIPdebugMsg(scip, "applied %d of %d cliques in probing\n", c, ncliques);
    SCIPdebugMsg(scip, "probing was %sfeasible\n", (*cutoff) ? "in" : "");
 
