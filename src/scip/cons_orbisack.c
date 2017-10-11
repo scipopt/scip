@@ -69,7 +69,7 @@
 
 /* default parameters for separation routines: */
 #define DEFAULT_ORBISEPARATION               FALSE     /**< whether orbisack inequalities should be separated */
-#define DEFAULT_COVERSEPARATION              FALSE     /**< whether cover inequalities should be separated */
+#define DEFAULT_COVERSEPARATION               TRUE     /**< whether cover inequalities should be separated */
 
 /* default parameters for constraints */
 #define DEFAULT_COEFFBOUND               1000000.0     /**< maximum size of coefficients in orbisack inequalities */
