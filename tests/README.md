@@ -112,8 +112,13 @@ This will start a `gdbserver`. To connect, in another terminal use
 >> gdb bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx2 -ex "target remote localhost:1234"
 ```
 
-To use `undodb-gdb` or `gdb` when one doesn't want to use a `gdbserver` use:
+If one doesn't want to use a `gdbserver` use:
 ```
 >> bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx2 --filter *gauge* --debug=idle
 ```
-This will give the PID of the process which can then be attached to a `undodb-gdb` or `gdb` session.
+This will give the PID of the process which can then be attached to a `undodb-gdb` or `gdb` session with
+```
+>> gdb --pid <pid-number>
+```
+
+After this, execute `continue` twice in gdb.
