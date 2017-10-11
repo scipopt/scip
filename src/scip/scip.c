@@ -42556,9 +42556,9 @@ int SCIPgetNCutsApplied(
    return SCIPsepastoreGetNCutsApplied(scip->sepastore);
 }
 
-/** get total number of constraints found in conflict analysis (conflict and reconvergence constraints)
+/** get total number of constraints found in conflict analysis (conflict, reconvergence constraints, and dual proofs)
  *
- *  @return the total number of constraints found in conflict analysis (conflict and reconvergence constraints)
+ *  @return the total number of constraints found in conflict analysis (conflict, reconvergence constraints, and dual proofs)
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_TRANSFORMED
@@ -42586,7 +42586,9 @@ SCIP_Longint SCIPgetNConflictConssFound(
       + SCIPconflictGetNStrongbranchConflictConss(scip->conflict)
       + SCIPconflictGetNStrongbranchReconvergenceConss(scip->conflict)
       + SCIPconflictGetNPseudoConflictConss(scip->conflict)
-      + SCIPconflictGetNPseudoReconvergenceConss(scip->conflict);
+      + SCIPconflictGetNPseudoReconvergenceConss(scip->conflict)
+      + SCIPconflictGetNDualrayBndGlobal(scip->conflict)
+      + SCIPconflictGetNDualrayInfGlobal(scip->conflict);
 }
 
 /** get number of conflict constraints found so far at the current node
