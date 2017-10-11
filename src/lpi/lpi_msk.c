@@ -33,6 +33,10 @@
 #define snprintf _snprintf
 #endif
 
+#if ( MSK_VERSION_MAJOR < 7 )
+#error "The MOSEK intreface only works for MOSEK versions 7.0.0.0 and newer"
+#endif
+
 #define scipmskobjsen MSKobjsensee
 #define SENSE2MOSEK(objsen) (((objsen)==SCIP_OBJSEN_MINIMIZE)?(MSK_OBJECTIVE_SENSE_MINIMIZE):(MSK_OBJECTIVE_SENSE_MAXIMIZE))
 
@@ -103,7 +107,6 @@ static int numdualobj               =  0;
 #define DEGEN_LEVEL                  MSK_SIM_DEGEN_FREE
 #define ALWAYS_SOLVE_PRIMAL          1
 
-#if MSK_VERSION_MAJOR >= 7
 /** gives problem and solution status for a Mosek Task
  *
  * With Mosek 7.0, the routine MSK_getsolutionstatus was replaced by
@@ -128,7 +131,6 @@ MSKrescodee MSK_getsolutionstatus(
 
    return MSK_RES_OK;
 }
-#endif
 
 /**********************************************/
 
@@ -663,11 +665,7 @@ SCIP_RETCODE SCIPlpiCreate(
 
    if (!MosekEnv)
    {
-#if MSK_VERSION_MAJOR < 7
-      MOSEK_CALL( MSK_makeenv(&MosekEnv, NULL, NULL, NULL, NULL) );
-#else
       MOSEK_CALL( MSK_makeenv(&MosekEnv, NULL) );
-#endif
       MOSEK_CALL( MSK_linkfunctoenvstream(MosekEnv, MSK_STREAM_LOG, NULL, printstr) );
 #if MSK_VERSION_MAJOR < 8
       MOSEK_CALL( MSK_initenv(MosekEnv) );
@@ -845,9 +843,6 @@ SCIP_RETCODE SCIPlpiAddCols(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {  /*lint --e{715}*/
-#if MSK_VERSION_MAJOR < 7
-   const int* aptrb;
-#endif
    int* aptre;
    MSKboundkeye* bkx;
    double* blx;
@@ -882,19 +877,6 @@ SCIP_RETCODE SCIPlpiAddCols(
 
    MOSEK_CALL( MSK_getnumvar(lpi->task, &oldcols) );
 
-#if MSK_VERSION_MAJOR < 7
-   SCIP_CALL( getEndptrs(ncols, beg, nnonz, &aptre) );
-
-   if (nnonz == 0)
-      aptrb = aptre;
-   else
-      aptrb = beg;
-
-   MOSEK_CALL( MSK_appendvars(lpi->task, ncols, obj, aptrb, aptre, ind, val, bkx, blx, bux) );
-
-   BMSfreeMemoryArray(&aptre);
-
-#else
    MOSEK_CALL( MSK_appendvars(lpi->task, ncols) );
    MOSEK_CALL( MSK_putcslice(lpi->task, oldcols, oldcols+ncols, obj) );
    MOSEK_CALL( MSK_putvarboundslice(lpi->task, oldcols, oldcols+ncols, bkx, blx, bux) );
@@ -915,7 +897,6 @@ SCIP_RETCODE SCIPlpiAddCols(
       MOSEK_CALL( MSK_putacolslice(lpi->task, oldcols, oldcols+ncols, beg, aptre, ind, val) );
       BMSfreeMemoryArray(&aptre);
    }
-#endif
 
    BMSfreeMemoryArray(&bux);
    BMSfreeMemoryArray(&blx);
@@ -950,11 +931,7 @@ SCIP_RETCODE SCIPlpiDelCols(
    SCIP_CALL( getIndicesRange(firstcol, lastcol, &sub) );
 
    /*printf("Deleting vars %d to %d\n",firstcol,lastcol);*/
-#if MSK_VERSION_MAJOR < 7
-   MOSEK_CALL( MSK_remove(lpi->task,MSK_ACC_VAR, lastcol-firstcol+1, sub) );
-#else
    MOSEK_CALL( MSK_removevars(lpi->task, lastcol-firstcol+1, sub) );
-#endif
 
    BMSfreeMemoryArray(&sub);
 
@@ -1011,11 +988,7 @@ SCIP_RETCODE SCIPlpiDelColset(
    if (count > 0)
    {
       SCIPdebugMessage("Deleting %d vars %d,...\n", count, sub[0]);
-#if MSK_VERSION_MAJOR < 7
-      MOSEK_CALL( MSK_remove(lpi->task, MSK_ACC_VAR, count, sub) );
-#else
       MOSEK_CALL( MSK_removevars(lpi->task, count, sub) );
-#endif
       BMSfreeMemoryArray(&sub);
    }
 
@@ -1039,9 +1012,6 @@ SCIP_RETCODE SCIPlpiAddRows(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {  /*lint --e{715}*/
-#if MSK_VERSION_MAJOR < 7
-   const int* aptrb;
-#endif
    int* aptre;
    MSKboundkeye* bkc;
    double* blc;
@@ -1069,19 +1039,6 @@ SCIP_RETCODE SCIPlpiAddRows(
 
    MOSEK_CALL( MSK_getnumcon(lpi->task, &oldrows) );
 
-#if MSK_VERSION_MAJOR < 7
-   SCIP_CALL( getEndptrs(nrows, beg, nnonz, &aptre) );
-
-   if (nnonz == 0)
-      aptrb = aptre;
-   else
-      aptrb = beg;
-
-   MOSEK_CALL( MSK_appendcons(lpi->task, nrows, aptrb, aptre, ind, val, bkc, blc, buc) );
-
-   BMSfreeMemoryArray(&aptre);
-
-#else
    MOSEK_CALL( MSK_appendcons(lpi->task, nrows) );
    MOSEK_CALL( MSK_putconboundslice(lpi->task, oldrows, oldrows+nrows, bkc, blc, buc) );
 
@@ -1101,7 +1058,6 @@ SCIP_RETCODE SCIPlpiAddRows(
       MOSEK_CALL( MSK_putarowslice(lpi->task, oldrows, oldrows+nrows, beg, aptre, ind, val) );
       BMSfreeMemoryArray(&aptre);
    }
-#endif
 
    BMSfreeMemoryArray(&buc);
    BMSfreeMemoryArray(&blc);
@@ -1137,11 +1093,7 @@ SCIP_RETCODE SCIPlpiDelRows(
 
    SCIPdebugMessage("Deleting cons %d to %d\n",firstrow,lastrow);
 
-#if MSK_VERSION_MAJOR < 7
-   MOSEK_CALL( MSK_remove(lpi->task, MSK_ACC_CON, lastrow-firstrow+1, sub) );
-#else
    MOSEK_CALL( MSK_removecons(lpi->task, lastrow-firstrow+1, sub) );
-#endif
 
    BMSfreeMemoryArray(&sub);
 
@@ -1198,11 +1150,7 @@ SCIP_RETCODE SCIPlpiDelRowset(
    if (count > 0)
    {
       SCIPdebugMessage("Deleting %d cons %d,...\n",count,sub[0]);
-#if MSK_VERSION_MAJOR < 7
-      MOSEK_CALL( MSK_remove(lpi->task, MSK_ACC_CON, count, sub) );
-#else
       MOSEK_CALL( MSK_removecons(lpi->task, count, sub) );
-#endif
       BMSfreeMemoryArray(&sub);
    }
 
@@ -1439,26 +1387,16 @@ SCIP_RETCODE SCIPlpiScaleRow(
 
    assert(scaleval != 0);
 
-#if MSK_VERSION_MAJOR < 7
-   MOSEK_CALL( MSK_getavecnumnz(lpi->task, MSK_ACC_CON, row, &nnonz) );
-#else
    MOSEK_CALL( MSK_getarownumnz(lpi->task, row, &nnonz) );
-#endif
 
    if (nnonz != 0)
    {
       SCIP_ALLOC( BMSallocMemoryArray(&sub, nnonz) );
       SCIP_ALLOC( BMSallocMemoryArray(&val, nnonz) );
 
-#if MSK_VERSION_MAJOR < 7
-      MOSEK_CALL( MSK_getavec(lpi->task, MSK_ACC_CON, row, &nnonz, sub, val) );
-      scale_vec(nnonz, val, scaleval);
-      MOSEK_CALL( MSK_putavec(lpi->task, MSK_ACC_CON, row, nnonz, sub, val) );
-#else
       MOSEK_CALL( MSK_getarow(lpi->task, row, &nnonz, sub, val) );
       scale_vec(nnonz, val, scaleval);
       MOSEK_CALL( MSK_putarow(lpi->task, row, nnonz, sub, val) );
-#endif
 
       BMSfreeMemoryArray(&val);
       BMSfreeMemoryArray(&sub);
@@ -1501,26 +1439,16 @@ SCIP_RETCODE SCIPlpiScaleCol(
 #endif
 
    assert(scaleval != 0);
-#if MSK_VERSION_MAJOR < 7
-   MOSEK_CALL( MSK_getavecnumnz(lpi->task, MSK_ACC_VAR, col, &nnonz) );
-#else
    MOSEK_CALL( MSK_getacolnumnz(lpi->task, col, &nnonz) );
-#endif
 
    if (nnonz != 0)
    {
       SCIP_ALLOC( BMSallocMemoryArray(&sub, nnonz) );
       SCIP_ALLOC( BMSallocMemoryArray(&val, nnonz) );
 
-#if MSK_VERSION_MAJOR < 7
-      MOSEK_CALL( MSK_getavec(lpi->task, MSK_ACC_VAR, col, &nnonz, sub, val) );
-      scale_vec(nnonz, val, scaleval);
-      MOSEK_CALL( MSK_putavec(lpi->task, MSK_ACC_VAR, col, nnonz, sub, val) );
-#else
       MOSEK_CALL( MSK_getacol(lpi->task, col, &nnonz, sub, val) );
       scale_vec(nnonz, val, scaleval);
       MOSEK_CALL( MSK_putacol(lpi->task, col, nnonz, sub, val) );
-#endif
 
       BMSfreeMemoryArray(&val);
       BMSfreeMemoryArray(&sub);
@@ -2802,9 +2730,6 @@ SCIP_Bool SCIPlpiWasSolved(
 {
    MSKbooleant exists;
    MSKsolstae solsta;
-#if MSK_VERSION_MAJOR < 7
-   MSKprostae prosta;
-#endif
 
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
@@ -2817,11 +2742,7 @@ SCIP_Bool SCIPlpiWasSolved(
    if ( ! exists )
       return FALSE;
 
-#if MSK_VERSION_MAJOR >= 7
    MOSEK_CALL( MSK_getsolsta(lpi->task, MSK_SOL_BAS, &solsta) );
-#else
-   MOSEK_CALL( MSK_getsolutionstatus(lpi->task, MSK_SOL_BAS, &prosta, &solsta) );
-#endif
 
    return (solsta != MSK_SOL_STA_UNKNOWN);
 }
@@ -3780,11 +3701,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    {
       coef[i] = 0;
 
-#if MSK_VERSION_MAJOR < 7
-      MOSEK_CALL( MSK_getavec(lpi->task, MSK_ACC_VAR, i, &numnz, csub, cval) );
-#else
       MOSEK_CALL( MSK_getacol(lpi->task, i, &numnz, csub, cval) );
-#endif
 
       /* construct dense vector */
       for (k = 0; k < numnz; ++k)
@@ -3829,11 +3746,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIPdebugMessage("Calling SCIPlpiGetBInvACol (%d)\n",lpi->lpid);
 
    MOSEK_CALL( MSK_getnumcon(lpi->task, &nrows) );
-#if MSK_VERSION_MAJOR < 7
-   MOSEK_CALL( MSK_getavecnumnz(lpi->task, MSK_ACC_VAR, c, &numnz) );
-#else
    MOSEK_CALL( MSK_getacolnumnz(lpi->task, c, &numnz) );
-#endif
    SCIP_ALLOC( BMSallocMemoryArray( &val, numnz+1) );
 
    /* init coefficients */
@@ -3843,11 +3756,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    /* check whether we require a dense or sparse result vector */
    if ( ninds != NULL && inds != NULL )
    {
-#if MSK_VERSION_MAJOR < 7
-      MOSEK_CALL( MSK_getavec(lpi->task, MSK_ACC_VAR, c, &numnz, inds, val) );
-#else
       MOSEK_CALL( MSK_getacol(lpi->task, c, &numnz, inds, val) );
-#endif
 
       for (i = 0; i < numnz; ++i)
          coef[inds[i]] = val[i];
@@ -3862,11 +3771,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
       int* sub;
       SCIP_ALLOC( BMSallocMemoryArray( &sub, nrows) );
 
-#if MSK_VERSION_MAJOR < 7
-      MOSEK_CALL( MSK_getavec(lpi->task, MSK_ACC_VAR, c, &numnz, sub, val) );
-#else
       MOSEK_CALL( MSK_getacol(lpi->task, c, &numnz, sub, val) );
-#endif
 
       for (i = 0; i < numnz; ++i)
          coef[sub[i]] = val[i];
