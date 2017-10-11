@@ -2327,8 +2327,8 @@ void SCIPsolUpdateConsViolation(
 {
    assert(sol != NULL);
 
-   sol->viol.absviolcons = MAX(sol->viol.absviollprows, absviolcons);
-   sol->viol.relviolcons = MAX(sol->viol.relviollprows, relviolcons);
+   sol->viol.absviolcons = MAX(sol->viol.absviolcons, absviolcons);
+   sol->viol.relviolcons = MAX(sol->viol.relviolcons, relviolcons);
 }
 
 /** update violation of a constraint that is represented in the LP */
