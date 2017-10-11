@@ -2916,7 +2916,7 @@ SCIP_RETCODE createAndAddProofcons(
             }
             else
             {
-               scale = SCIPaggrRowGetRhs(proofset->aggrrow) / side;
+               scale = proofsetGetRhs(proofset) / side;
                assert(SCIPsetIsNegative(set, scale));
             }
          }
@@ -2931,7 +2931,7 @@ SCIP_RETCODE createAndAddProofcons(
             }
             else
             {
-               scale = SCIPaggrRowGetRhs(proofset->aggrrow) / side;
+               scale = proofsetGetRhs(proofset) / side;
                assert(SCIPsetIsPositive(set, scale));
             }
          }
