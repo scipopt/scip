@@ -54,8 +54,10 @@ SCIP_RETCODE SCIPincludeConshdlrOrbitope(
  * structure is that some variables can be ordered in matrix form, such that permuting columns does
  * not change the validity and objective function value of a solution. That is, the symmetry group
  * of the program contains the full symmetric group obtained by permuting the columns of this
- * matrix. The variables in each row have to be contained in set packing or partitioning
- * constraints.
+ * matrix. These symmetries can be handled by so-called full orbitopes.
+ *
+ * Moreover, if the variables in each row are contained in set packing or partitioning
+ * constraint, these symmetries can be handled by specialized packing or partitioning orbitopes.
  *
  * In more mathematical terms the structure has to be as follows: There are 0/1-variables
  * \f$x_{ij}\f$, \f$i \in \{1, \dots, p\}\f$, \f$j \in \{1, \dots, q\}\f$. The variables are coupled
@@ -65,6 +67,15 @@ SCIP_RETCODE SCIPincludeConshdlrOrbitope(
  * \f]
  * Permuting columns of \f$x\f$ does not change the validity and objective function value of any feasible solution.
  */
+
+/** type of orbitope constraint: full, packing, or partitioning orbitope */
+enum SCIP_OrbitopeType
+{
+   SCIP_ORBITOPETYPE_FULL         = 0,     /**< constraint is a full orbitope constraint:         rowsum(x) unrestricted */
+   SCIP_ORBITOPETYPE_PARTITIONING = 1,     /**< constraint is a partitioning orbitope constraint: rowsum(x) == 1 */
+   SCIP_ORBITOPETYPE_PACKING      = 2      /**< constraint is a packing orbitope constraint:      rowsum(x) <= 1 */
+};
+typedef enum SCIP_OrbitopeType SCIP_ORBITOPETYPE;
 
 /** creates and captures a orbitope constraint
  *
@@ -76,7 +87,7 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
    SCIP_VAR***           vars,               /**< matrix of variables on which the symmetry acts */
-   SCIP_Bool             ispart,             /**< whether we deal with the partitioning case (packing otherwise) */
+   SCIP_ORBITOPETYPE     orbitopetype,       /**< type of orbitope constraint */
    int                   nspcons,            /**< number of set partitioning/packing constraints  <=> p */
    int                   nblocks,            /**< number of symmetric variable blocks             <=> q */
    SCIP_Bool             resolveprop,        /**< should propagation be resolved? */
@@ -119,7 +130,7 @@ SCIP_RETCODE SCIPcreateConsBasicOrbitope(
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
    SCIP_VAR***           vars,               /**< matrix of variables on which the symmetry acts */
-   SCIP_Bool             ispart,             /**< whether we deal with the partitioning case (packing otherwise) */
+   SCIP_ORBITOPETYPE     orbitopetype,       /**< type of orbitope constraint */
    int                   nspcons,            /**< number of set partitioning/packing constraints  <=> p */
    int                   nblocks,            /**< number of symmetric variable blocks             <=> q */
    SCIP_Bool             resolveprop         /**< should propagation be resolved? */

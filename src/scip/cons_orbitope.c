@@ -55,6 +55,17 @@
  *   <tr><td>lastones     </td><td>\\alpha </td></tr>
  *   <tr><td>frontiersteps</td><td>\\Gamma </td></tr>
  * </table>
+ *
+ *
+ * @todo implement consenfops for full orbitopes
+ *
+ * @todo implement conscheck for full orbitopes
+ *
+ * @todo implement propagation routine for full orbitopes
+ *
+ * @todo implement separation routine for full orbitopes
+ *
+ * @todo implement resolution routine for propagation of full orbitopes
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -99,7 +110,7 @@ struct SCIP_ConsData
    int**                 cases;              /**< indicator of the SC cases                                 */
    int                   nspcons;            /**< number of set partitioning/packing constraints  <=> p     */
    int                   nblocks;            /**< number of symmetric variable blocks             <=> q     */
-   SCIP_Bool             ispart;             /**< whether we deal with the partitioning case (packing otherwise) */
+   SCIP_ORBITOPETYPE     orbitopetype;       /**< type of orbitope constraint                               */
    SCIP_Bool             resolveprop;        /**< should propagation be resolved?                           */
    SCIP_Bool             istrianglefixed;    /**< has the upper right triangle already globally been fixed to zero?  */
 };
@@ -155,7 +166,7 @@ SCIP_RETCODE consdataCreate(
    SCIP_VAR***           vars,               /**< variables array, must have size nspcons x nblocks       */
    int                   nspcons,            /**< number of set partitioning (packing) constraints  <=> p */
    int                   nblocks,            /**< number of symmetric variable blocks               <=> q */
-   SCIP_Bool             ispart,             /**< deal with the partitioning case (packing otherwise)     */
+   SCIP_ORBITOPETYPE     orbitopetype,       /**< type of orbitope constraint                             */
    SCIP_Bool             resolveprop         /**< should propagation be resolved?                         */
    )
 {
@@ -183,7 +194,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->tmpvars = NULL;
    (*consdata)->nspcons = nspcons;
    (*consdata)->nblocks = nblocks;
-   (*consdata)->ispart  = ispart;
+   (*consdata)->orbitopetype = orbitopetype;
    (*consdata)->resolveprop = resolveprop;
    (*consdata)->istrianglefixed = FALSE;
 
@@ -726,9 +737,9 @@ SCIP_RETCODE separateSCIs(
 }
 
 
-/** propagation method for a single orbitope constraint */
+/** propagation method for a single packing or partitioning orbitope constraint */
 static
-SCIP_RETCODE propagateCons(
+SCIP_RETCODE propagatePackingPartitioningCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to be processed */
    SCIP_Bool*            infeasible,         /**< pointer to store TRUE, if the node can be cut off */
@@ -737,7 +748,7 @@ SCIP_RETCODE propagateCons(
 {
    SCIP_CONSDATA* consdata;
    SCIP_VAR*** vars;
-   SCIP_Bool ispart;
+   SCIP_ORBITOPETYPE orbitopetype;
    int* firstnonzeros;
    int* lastones;
    int* frontiersteps;
@@ -767,7 +778,9 @@ SCIP_RETCODE propagateCons(
    nspcons = consdata->nspcons;
    nblocks = consdata->nblocks;
    vars = consdata->vars;
-   ispart = consdata->ispart;
+   orbitopetype = consdata->orbitopetype;
+
+   assert( orbitopetype == SCIP_ORBITOPETYPE_PACKING || orbitopetype == SCIP_ORBITOPETYPE_PARTITIONING );
 
    /* fix upper right triangle if still necessary */
    if ( ! consdata->istrianglefixed )
@@ -791,7 +804,7 @@ SCIP_RETCODE propagateCons(
    lastoneprevrow = 0;
    lastones[0] = 0;
 
-   if ( ! ispart )
+   if ( orbitopetype == SCIP_ORBITOPETYPE_PACKING )
    {
       /* packing case: if entry (0,0) is fixed to 0 */
       if ( SCIPvarGetUbLocal(vars[0][0]) < 0.5 )
@@ -818,7 +831,7 @@ SCIP_RETCODE propagateCons(
       firstnonzeroinrow = -1;
       for (j = 0; j <= lastcolumn; ++j)
       {
-         if ( ispart )
+         if ( orbitopetype == SCIP_ORBITOPETYPE_PARTITIONING )
          {
             /* partitioning case: if variable is not fixed to 0 */
             if ( SCIPvarGetUbLocal(vars[i][j]) > 0.5 )
@@ -838,7 +851,7 @@ SCIP_RETCODE propagateCons(
          }
       }
       /* if all variables are fixed to 0 in the partitioning case - should not happen */
-      if ( firstnonzeroinrow == -1 && ispart )
+      if ( firstnonzeroinrow == -1 && orbitopetype == SCIP_ORBITOPETYPE_PARTITIONING )
       {
          SCIPdebugMsg(scip, " -> Infeasible node: all variables in row %d are fixed to 0.\n", i);
          *infeasible = TRUE;
@@ -846,11 +859,11 @@ SCIP_RETCODE propagateCons(
          goto TERMINATE;
       }
       firstnonzeros[i] = firstnonzeroinrow;
-      assert( !ispart || firstnonzeroinrow >= 0 );
+      assert( orbitopetype == SCIP_ORBITOPETYPE_PACKING || firstnonzeroinrow >= 0 );
       assert( -1 <= firstnonzeroinrow && firstnonzeroinrow <= lastcolumn );
 
       /* compute rightmost possible position for a 1 */
-      assert( !ispart || 0 <= lastoneprevrow );
+      assert( orbitopetype == SCIP_ORBITOPETYPE_PACKING || 0 <= lastoneprevrow );
       assert( lastoneprevrow <= lastcolumn );
 
       /* if we are at right border or if entry in column lastoneprevrow+1 is fixed to 0 */
@@ -866,7 +879,7 @@ SCIP_RETCODE propagateCons(
       }
 
       /* store lastoneinrow */
-      assert( !ispart || 0 <= lastoneinrow );
+      assert( orbitopetype == SCIP_ORBITOPETYPE_PACKING || 0 <= lastoneinrow );
       assert( lastoneinrow <= lastcolumn );
       lastones[i] = lastoneinrow;
 
@@ -876,7 +889,7 @@ SCIP_RETCODE propagateCons(
          int k;
 
 #ifdef SCIP_DEBUG
-         if ( ispart )
+         if ( orbitopetype == SCIP_ORBITOPETYPE_PARTITIONING )
          {
             SCIPdebugMsg(scip, " -> Infeasible node: row %d, leftmost nonzero at %d, rightmost 1 at %d\n",
                i, firstnonzeroinrow, lastoneinrow);
@@ -896,7 +909,7 @@ SCIP_RETCODE propagateCons(
             /* perform conflict analysis */
             SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
-            if ( ispart )
+            if ( orbitopetype == SCIP_ORBITOPETYPE_PARTITIONING )
             {
                /* add bounds (variables fixed to 0) that result in the first nonzero entry */
                for (j = 0; j <= lastcolumn; ++j)
@@ -982,7 +995,7 @@ SCIP_RETCODE propagateCons(
                   SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
 
                   /* add bounds that result in the last one - check top left entry for packing case */
-                  if ( ! ispart && lastones[0] == -1 )
+                  if ( orbitopetype == SCIP_ORBITOPETYPE_PACKING && lastones[0] == -1 )
                   {
                      assert( SCIPvarGetUbLocal(vars[0][0]) < 0.5 );
                      SCIP_CALL( SCIPaddConflictBinvar(scip, vars[0][0]) );
@@ -1080,6 +1093,42 @@ SCIP_RETCODE propagateCons(
 }
 
 
+/** propagation method for a single orbitope constraint */
+static
+SCIP_RETCODE propagateCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to be processed */
+   SCIP_Bool*            infeasible,         /**< pointer to store TRUE, if the node can be cut off */
+   int*                  nfixedvars          /**< pointer to add up the number of found domain reductions */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_ORBITOPETYPE orbitopetype;
+
+   assert( scip != NULL );
+   assert( cons != NULL );
+   assert( infeasible != NULL );
+   assert( nfixedvars != NULL );
+
+   consdata = SCIPconsGetData(cons);
+
+   assert( consdata != NULL );
+
+   orbitopetype = consdata->orbitopetype;
+
+   if ( orbitopetype == SCIP_ORBITOPETYPE_FULL )
+   {
+      ;
+   }
+   else
+   {
+      SCIP_CALL( propagatePackingPartitioningCons(scip, cons, infeasible, nfixedvars) );
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** Propagation conflict resolving method of propagator
  *
  *  In this function we use that the propagation method above implicitly propagates SCIs, i.e., every
@@ -1114,7 +1163,7 @@ SCIP_RETCODE resolvePropagation(
    SCIP_Real** vals;
    SCIP_Real** weights;
    SCIP_VAR*** vars;
-   SCIP_Bool ispart;
+   SCIP_ORBITOPETYPE orbitopetype;
    int** cases;
 
    int i;
@@ -1145,7 +1194,7 @@ SCIP_RETCODE resolvePropagation(
    vars = consdata->vars;
    vals = consdata->vals;
    weights = consdata->weights;
-   ispart = consdata->ispart;
+   orbitopetype = consdata->orbitopetype;
    cases = consdata->cases;
 
    SCIPdebugMsg(scip, "Propagation resolution method of orbitope constraint using orbitopal fixing\n");
@@ -1323,7 +1372,7 @@ SCIP_RETCODE resolvePropagation(
          assert( pos1 >= 0 && pos2 >= 0 );
 
          /* distinguish partitioning/packing */
-         if ( ispart )
+         if ( orbitopetype == SCIP_ORBITOPETYPE_PARTITIONING )
          {
             /* partitioning case */
 #ifdef SCIP_DEBUG
@@ -1400,8 +1449,9 @@ SCIP_RETCODE separateConstraints(
    for (c = 0; c < nconss && ! infeasible; c++)
    {
       SCIP_CONSDATA* consdata;
-      int nconsfixedvars;
-      int nconscuts;
+      int nconsfixedvars = 0;
+      int nconscuts = 0;
+      SCIP_ORBITOPETYPE orbitopetype;
 
       assert( conss[c] != NULL );
 
@@ -1413,7 +1463,17 @@ SCIP_RETCODE separateConstraints(
       copyValues(scip, consdata, sol);
 
       /* separate */
-      SCIP_CALL( separateSCIs(scip, conshdlr, conss[c], consdata, &infeasible, &nconsfixedvars, &nconscuts) );
+      orbitopetype = consdata->orbitopetype;
+
+      if ( orbitopetype == SCIP_ORBITOPETYPE_PACKING || orbitopetype == SCIP_ORBITOPETYPE_PARTITIONING )
+      {
+         SCIP_CALL( separateSCIs(scip, conshdlr, conss[c], consdata, &infeasible, &nconsfixedvars, &nconscuts) );
+      }
+      else
+      {
+         /* @todo separate orbisack inequalities */
+         ;
+      }
       nfixedvars += nconsfixedvars;
       ncuts += nconscuts;
 
@@ -1439,7 +1499,7 @@ SCIP_RETCODE separateConstraints(
    }
    else
    {
-      SCIPdebugMsg(scip, "No violated SCI found during separation.\n");
+      SCIPdebugMsg(scip, "No violated inequality found during separation.\n");
    }
 
    return SCIP_OKAY;
@@ -1495,7 +1555,7 @@ SCIP_DECL_CONSTRANS(consTransOrbitope)
 
    /* create linear constraint data for target constraint */
    SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->vars, sourcedata->nspcons, sourcedata->nblocks,
-         sourcedata->ispart, sourcedata->resolveprop) );
+         sourcedata->orbitopetype, sourcedata->resolveprop) );
 
    /* create target constraint */
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
@@ -1945,13 +2005,28 @@ SCIP_DECL_CONSPRESOL(consPresolOrbitope)
 static
 SCIP_DECL_CONSRESPROP(consRespropOrbitope)
 {  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+   SCIP_ORBITOPETYPE orbitopetype;
+
    assert( scip != NULL );
    assert( cons != NULL );
    assert( infervar != NULL );
    assert( bdchgidx != NULL );
    assert( result != NULL );
 
-   SCIP_CALL( resolvePropagation(scip, cons, infervar, inferinfo, boundtype, bdchgidx, result) );
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+
+   orbitopetype = consdata->orbitopetype;
+
+   if ( orbitopetype == SCIP_ORBITOPETYPE_PACKING || orbitopetype == SCIP_ORBITOPETYPE_PARTITIONING )
+   {
+      SCIP_CALL( resolvePropagation(scip, cons, infervar, inferinfo, boundtype, bdchgidx, result) );
+   }
+   else
+   {
+      ;
+   }
 
    return SCIP_OKAY;
 }
@@ -2006,6 +2081,7 @@ SCIP_DECL_CONSPRINT(consPrintOrbitope)
    int j;
    int nspcons;
    int nblocks;
+   SCIP_ORBITOPETYPE orbitopetype;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -2021,13 +2097,16 @@ SCIP_DECL_CONSPRINT(consPrintOrbitope)
    nspcons = consdata->nspcons;
    nblocks = consdata->nblocks;
    vars = consdata->vars;
+   orbitopetype = consdata->orbitopetype;
 
    SCIPdebugMsg(scip, "Printing method for orbitope constraint handler\n");
 
-   if ( consdata->ispart )
+   if ( orbitopetype == SCIP_ORBITOPETYPE_PARTITIONING )
       SCIPinfoMessage(scip, file, "partOrbitope(");
-   else
+   else if ( orbitopetype == SCIP_ORBITOPETYPE_PACKING )
       SCIPinfoMessage(scip, file, "packOrbitope(");
+   else
+      SCIPinfoMessage(scip, file, "fullOrbitope(");
 
    for (i = 0; i < nspcons; ++i)
    {
@@ -2102,7 +2181,7 @@ SCIP_DECL_CONSCOPY(consCopyOrbitope)
          name = SCIPconsGetName(sourcecons);
 
       SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, name,
-            vars, sourcedata->ispart, nspcons, nblocks, sourcedata->resolveprop,
+            vars, sourcedata->orbitopetype, nspcons, nblocks, sourcedata->resolveprop,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
 
@@ -2121,7 +2200,7 @@ static
 SCIP_DECL_CONSPARSE(consParseOrbitope)
 {  /*lint --e{715}*/
    const char* s;
-   SCIP_Bool ispart;
+   SCIP_ORBITOPETYPE orbitopetype;
    char varname[SCIP_MAXSTRLEN];
    SCIP_VAR*** vars;
    SCIP_VAR* var;
@@ -2141,14 +2220,16 @@ SCIP_DECL_CONSPARSE(consParseOrbitope)
    while ( *s != '\0' && isspace((unsigned char)*s) )
       ++s;
 
-   ispart = FALSE;
+   orbitopetype = SCIP_ORBITOPETYPE_FULL;
    if ( strncmp(s, "partOrbitope(", 13) == 0 )
-      ispart = TRUE;
+      orbitopetype = SCIP_ORBITOPETYPE_PARTITIONING;
+   else if ( strncmp(s, "packOrbitope(", 13) == 0 )
+      orbitopetype = SCIP_ORBITOPETYPE_PACKING;
    else
    {
-      if ( strncmp(s, "packOrbitope(", 13) != 0 )
+      if ( strncmp(s, "fullOrbitope(", 13) != 0 )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error - expected \"partOrbitope\" or \"packOrbitope\": %s\n", s);
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error - expected \"fullOrbitope(\", \"partOrbitope\" or \"packOrbitope\": %s\n", s);
          *success = FALSE;
          return SCIP_OKAY;
       }
@@ -2231,7 +2312,7 @@ SCIP_DECL_CONSPARSE(consParseOrbitope)
    while ( *s != ')' );
    ++nspcons;
 
-   SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, name, vars, ispart, nspcons, nblocks, TRUE, 
+   SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, name, vars, orbitopetype, nspcons, nblocks, TRUE,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
    for (k = 0; k < nspcons; ++k)
@@ -2345,7 +2426,7 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
    SCIP_VAR***           vars,               /**< matrix of variables on which the symmetry acts */
-   SCIP_Bool             ispart,             /**< whether we deal with the partitioning case (packing otherwise) */
+   SCIP_ORBITOPETYPE     orbitopetype,       /**< type of orbitope constraint */
    int                   nspcons,            /**< number of set partitioning/packing constraints  <=> p */
    int                   nblocks,            /**< number of symmetric variable blocks             <=> q */
    SCIP_Bool             resolveprop,        /**< should propagation be resolved? */
@@ -2430,7 +2511,7 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
 #endif
 
    /* create constraint data */
-   SCIP_CALL( consdataCreate(scip, &consdata, vars, nspcons, nblocks, ispart, resolveprop) );
+   SCIP_CALL( consdataCreate(scip, &consdata, vars, nspcons, nblocks, orbitopetype, resolveprop) );
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
@@ -2449,13 +2530,13 @@ SCIP_RETCODE SCIPcreateConsBasicOrbitope(
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
    SCIP_VAR***           vars,               /**< matrix of variables on which the symmetry acts */
-   SCIP_Bool             ispart,             /**< whether we deal with the partitioning case (packing otherwise) */
+   SCIP_ORBITOPETYPE     orbitopetype,       /**< type of orbitope constraint */
    int                   nspcons,            /**< number of set partitioning/packing constraints  <=> p */
    int                   nblocks,            /**< number of symmetric variable blocks             <=> q */
    SCIP_Bool             resolveprop         /**< should propagation be resolved? */
    )
 {
-   SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, name, vars, ispart, nspcons, nblocks, resolveprop,
+   SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, name, vars, orbitopetype, nspcons, nblocks, resolveprop,
          TRUE, TRUE, TRUE, TRUE, TRUE,
          FALSE, FALSE, FALSE, FALSE, FALSE) );
 
