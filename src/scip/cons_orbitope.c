@@ -645,8 +645,8 @@ SCIP_RETCODE separateSCIs(
          lastcolumn = i;
 
       /* traverse row from right to left: */
-      /* j >= 2, since for j = 1 we look at column 0, which is uninteresting due to the one at position (0,0) */
-      for (j = lastcolumn; j > 1; --j)
+      /* j >= 1, since for j = 0, i.e., the bar is a complete row, there does not exist an SCI */
+      for (j = lastcolumn; j > 0; --j)
       {
          bar += vals[i][j];
 
