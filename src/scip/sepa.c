@@ -469,7 +469,7 @@ SCIP_RETCODE SCIPsepaExecSol(
    if( sepa->sepaexecsol != NULL &&
        ( (depth == 0 && sepa->freq != -1) ||
          (sepa->freq > 0 && depth % sepa->freq == 0 &&
-            (sepa->expbackoff == 1 || SCIPsetIsIntegral(set, log2(depth * (1.0 / sepa->freq) / log2((SCIP_Real)sepa->expbackoff))))) ||
+            (sepa->expbackoff == 1 || SCIPsetIsIntegral(set, LOG2(depth * (1.0 / sepa->freq) / LOG2((SCIP_Real)sepa->expbackoff))))) ||
          sepa->solwasdelayed )
      )
    {
