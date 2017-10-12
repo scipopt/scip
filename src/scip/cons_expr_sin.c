@@ -359,19 +359,19 @@ SCIP_RETCODE computeCutsSin(
 
          if( isoverestimating && overestimate )
          {
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, lmidtangent, conshdlr, name, -params[1], -SCIPinfinity(scip),
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, rmidtangent, conshdlr, name, -params[1], -SCIPinfinity(scip),
                TRUE, FALSE, FALSE) );
 
-            SCIP_CALL( SCIPaddVarToRow(scip, *lmidtangent, auxvar, -1.0) );
-            SCIP_CALL( SCIPaddVarToRow(scip, *lmidtangent, childvar, params[0]) );
+            SCIP_CALL( SCIPaddVarToRow(scip, *rmidtangent, auxvar, -1.0) );
+            SCIP_CALL( SCIPaddVarToRow(scip, *rmidtangent, childvar, params[0]) );
          }
          else if( !isoverestimating && underestimate )
          {
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, lmidtangent, conshdlr, name, -SCIPinfinity(scip), -params[1],
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, rmidtangent, conshdlr, name, -SCIPinfinity(scip), -params[1],
                TRUE, FALSE, FALSE) );
 
-            SCIP_CALL( SCIPaddVarToRow(scip, *lmidtangent, auxvar, -1.0) );
-            SCIP_CALL( SCIPaddVarToRow(scip, *lmidtangent, childvar, params[0]) );
+            SCIP_CALL( SCIPaddVarToRow(scip, *rmidtangent, auxvar, -1.0) );
+            SCIP_CALL( SCIPaddVarToRow(scip, *rmidtangent, childvar, params[0]) );
          }
       }
    }
@@ -420,19 +420,19 @@ SCIP_RETCODE computeCutsSin(
 
             if( isoverestimating && overestimate )
             {
-               SCIP_CALL( SCIPcreateEmptyRowCons(scip, lmidtangent, conshdlr, name, -params[1], -SCIPinfinity(scip),
+               SCIP_CALL( SCIPcreateEmptyRowCons(scip, soltangent, conshdlr, name, -params[1], -SCIPinfinity(scip),
                   TRUE, FALSE, FALSE) );
 
-               SCIP_CALL( SCIPaddVarToRow(scip, *lmidtangent, auxvar, -1.0) );
-               SCIP_CALL( SCIPaddVarToRow(scip, *lmidtangent, childvar, params[0]) );
+               SCIP_CALL( SCIPaddVarToRow(scip, *soltangent, auxvar, -1.0) );
+               SCIP_CALL( SCIPaddVarToRow(scip, *soltangent, childvar, params[0]) );
             }
             else if( !isoverestimating && underestimate )
             {
-               SCIP_CALL( SCIPcreateEmptyRowCons(scip, lmidtangent, conshdlr, name, -SCIPinfinity(scip), -params[1],
+               SCIP_CALL( SCIPcreateEmptyRowCons(scip, soltangent, conshdlr, name, -SCIPinfinity(scip), -params[1],
                   TRUE, FALSE, FALSE) );
 
-               SCIP_CALL( SCIPaddVarToRow(scip, *lmidtangent, auxvar, -1.0) );
-               SCIP_CALL( SCIPaddVarToRow(scip, *lmidtangent, childvar, params[0]) );
+               SCIP_CALL( SCIPaddVarToRow(scip, *soltangent, auxvar, -1.0) );
+               SCIP_CALL( SCIPaddVarToRow(scip, *soltangent, childvar, params[0]) );
             }
          }
       }
