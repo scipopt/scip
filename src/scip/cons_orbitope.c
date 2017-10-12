@@ -1865,7 +1865,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsOrbitope)
             lastcolumn = i;
 
          /* traverse row from right to left */
-         for (j = lastcolumn; j > 1; --j)
+         for (j = lastcolumn; j > 0; --j)
          {
             bar += vals[i][j];
             assert( SCIPisIntegral(scip, vals[i][j]) );
@@ -1977,7 +1977,7 @@ SCIP_DECL_CONSCHECK(consCheckOrbitope)
             lastcolumn = i;
 
          /* traverse row from right to left */
-         for (j = lastcolumn; j > 1; --j)
+         for (j = lastcolumn; j > 0; --j)
          {
             bar += vals[i][j];
             assert( SCIPisFeasIntegral(scip, vals[i][j]) );
