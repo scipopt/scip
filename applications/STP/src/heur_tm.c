@@ -133,7 +133,7 @@ void SCIPStpHeurTMCompStarts(
    assert(starts != NULL);
 
    nruns = *runs;
-   root = graph->source[0];
+   root = graph->source;
    nnodes = graph->knots;
    nterms = graph->terms;
 
@@ -187,7 +187,7 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
    SCIP_Bool rmw = (g->stp_type == STP_RMWCSP);
    SCIP_Bool rpc = (g->stp_type == STP_RPCSPG);
    nnodes = g->knots;
-   root = g->source[0];
+   root = g->source;
 
    if( rmw )
    {
@@ -236,7 +236,7 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
       if( a == EAT_LAST )
       {
          printf("trivial solution in pruning \n");
-         for( a = g->outbeg[g->source[0]]; a != EAT_LAST; a = g->oeat[a] )
+         for( a = g->outbeg[g->source]; a != EAT_LAST; a = g->oeat[a] )
          {
             i = g->head[a];
             if( Is_term(g->term[i]) )
@@ -271,7 +271,7 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
    /* connect all terminals */
    for( i = 0; i < nnodes; i++ )
    {
-      if( Is_term(g->term[i]) && i != g->source[0] )
+      if( Is_term(g->term[i]) && i != g->source )
       {
          if( rmw )
             if( g->mark[i] )
@@ -292,20 +292,20 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
             assert(g->ieat[e2] == EAT_LAST);
             k1 = g->tail[e1];
             k2 = g->tail[e2];
-            assert(k1 == g->source[0] || k2 == g->source[0]);
-            if( k1 != g->source[0] && g->path_state[k1] == CONNECT )
+            assert(k1 == g->source || k2 == g->source);
+            if( k1 != g->source && g->path_state[k1] == CONNECT )
             {
                result[e1] = CONNECT;
             }
-            else if( k2 != g->source[0] && g->path_state[k2] == CONNECT )
+            else if( k2 != g->source && g->path_state[k2] == CONNECT )
             {
                result[e2] = CONNECT;
             }
-            else if( k1 == g->source[0] )
+            else if( k1 == g->source )
             {
                result[e1] = CONNECT;
             }
-            else if( k2 == g->source[0] )
+            else if( k2 == g->source )
             {
                result[e2] = CONNECT;
             }
@@ -314,7 +314,7 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
       else if( i == root && !rpc && !rmw )
       {
          for( e1 = g->inpbeg[i]; e1 != EAT_LAST; e1 = g->ieat[e1] )
-            if( g->tail[e1] == g->source[0] )
+            if( g->tail[e1] == g->source )
                break;
          assert(e1 != EAT_LAST);
          result[e1] = CONNECT;
@@ -394,7 +394,7 @@ SCIP_RETCODE SCIPStpHeurTMBuildTreePcMw(
 
    obj = 0.0;
    nnodes = g->knots;
-   orgroot = g->source[0];
+   orgroot = g->source;
 
    /* compute the MST, exclude all terminals */
    for( i = nnodes - 1; i >= 0; --i )
@@ -573,11 +573,11 @@ SCIP_RETCODE SCIPStpHeurTMPrune(
       g->mark[i] = connected[i];
    }
 
-   assert(g->source[layer] >= 0);
-   assert(g->source[layer] <  nnodes);
+   assert(g->source >= 0);
+   assert(g->source < nnodes);
    assert(j >= g->terms);
 
-   graph_path_exec(scip, g, MST_MODE, g->source[layer], cost, mst);
+   graph_path_exec(scip, g, MST_MODE, g->source, cost, mst);
 
    for( i = nnodes - 1; i >= 0; --i )
    {
@@ -660,7 +660,7 @@ SCIP_RETCODE SCIPStpHeurTMBuildTree(
    assert(connected != NULL);
 
    obj = 0.0;
-   root = g->source[0];
+   root = g->source;
    nnodes = g->knots;
 
    /* compute the MST */
@@ -722,13 +722,12 @@ SCIP_RETCODE SCIPStpHeurTMBuildTreeDc(
    STP_Bool*             connected           /**< ST nodes (to be set) */
    )
 {
-   SCIP_QUEUE* queue;
+   int* queue;
    int i;
    int j;
-   int e;
+   int qsize;
    int count;
    int nnodes;
-   int* pnode;
    assert(scip != NULL);
    assert(g != NULL);
    assert(result != NULL);
@@ -736,19 +735,23 @@ SCIP_RETCODE SCIPStpHeurTMBuildTreeDc(
 
    nnodes = g->knots;
 
-   /* BFS until all terminals are reached */
-   SCIP_CALL( SCIPqueueCreate(&queue, nnodes, 2.0) );
-
-   SCIP_CALL( SCIPqueueInsert(queue, &(g->source[0])) );
+   /*
+    * DFS until all terminals are reached
+    */
 
    for( i = 0; i < nnodes; i++ )
       connected[i] = FALSE;
 
-   connected[g->source[0]] = TRUE;
-   while( !SCIPqueueIsEmpty(queue) )
+   SCIP_CALL( SCIPallocBufferArray(scip, &queue, nnodes) );
+
+   qsize = 0;
+   queue[qsize++] = g->source;
+   connected[g->source] = TRUE;
+
+   while( qsize )
    {
-      pnode = (SCIPqueueRemove(queue));
-      for( e = g->outbeg[*pnode]; e != EAT_LAST; e = g->oeat[e] )
+      const int node = queue[--qsize];
+      for( int e = g->outbeg[node]; e != EAT_LAST; e = g->oeat[e] )
       {
          if( (result[e] == CONNECT || result[flipedge(e)] == CONNECT) && !(connected[g->head[e]]) )
          {
@@ -756,12 +759,12 @@ SCIP_RETCODE SCIPStpHeurTMBuildTreeDc(
             result[e] = CONNECT;
             result[flipedge(e)] = UNKNOWN;
             connected[i] = TRUE;
-            SCIP_CALL( SCIPqueueInsert(queue, &(g->head[e])) );
+            queue[qsize++] = i;
          }
       }
    }
 
-   SCIPqueueFree(&queue);
+   SCIPfreeBufferArray(scip, &queue);
 
    /* prune */
    do
@@ -953,7 +956,7 @@ SCIP_RETCODE computeSteinerTree(
    assert(cluster != NULL);
    assert(perm != NULL);
 
-   root = g->source[0];
+   root = g->source;
    csize = 0;
    nnodes = g->knots;
 
@@ -1353,7 +1356,7 @@ SCIP_RETCODE computeSteinerTreeVnoi(
       SCIP_Real* vcost;
       int old;
       int oedge;
-      int root = g->source[0];
+      int root = g->source;
       int   ntovisit;
       int   nneighbnodes;
       int   nneighbterms;
@@ -1690,7 +1693,7 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    }
 
    best = bestincstart;
-   root = graph->source[0];
+   root = graph->source;
    nnodes = graph->knots;
    nedges = graph->edges;
    nterms = graph->terms;
@@ -2598,7 +2601,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
 
             if( !partrand && (heurdata->nlpiterations == SCIPgetNLPIterations(scip) || SCIPrandomGetInt(heurdata->randnumgen, 0, 25) == 10) )
                totalrand = TRUE;
-            else if( graph->stp_type == STP_DCSTP && heurdata->ncalls != 1 && SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 1 && (graph->maxdeg[graph->source[0]] == 1  ||
+            else if( graph->stp_type == STP_DCSTP && heurdata->ncalls != 1 && SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 1 && (graph->maxdeg[graph->source] == 1  ||
                   SCIPrandomGetInt(heurdata->randnumgen, 0, 5) == 5)  )
                totalrand = TRUE;
 

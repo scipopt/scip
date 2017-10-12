@@ -413,10 +413,10 @@ SCIP_DECL_PROPEXEC(propExecStp)
       graph->mark[k] = (graph->grad[k] > 0);
 
    /* distance from root to all nodes */
-   graph_path_execX(scip, graph, graph->source[0], cost, pathdist, pathedge);
+   graph_path_execX(scip, graph, graph->source, cost, pathdist, pathedge);
 
    /* no paths should go back to the root */
-   for( e = graph->outbeg[graph->source[0]]; e != EAT_LAST; e = graph->oeat[e] )
+   for( e = graph->outbeg[graph->source]; e != EAT_LAST; e = graph->oeat[e] )
         costrev[e] = FARAWAY;
 
    /* build voronoi diagram */

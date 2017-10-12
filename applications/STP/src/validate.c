@@ -143,7 +143,7 @@ static void trail2(
    int* stackedge = malloc((size_t)g->knots * sizeof(int));
    int* stacktail = malloc((size_t)g->knots * sizeof(int));
    int k;
-   int i = g->source[layer];
+   int i = g->source;
    int stacksize = 1;
 
    stackstart[0] = i;
@@ -234,7 +234,7 @@ SCIP_RETCODE SCIPvalidateStpSol(
          memset(connected, 0, (size_t)g->knots * sizeof(STP_Bool));
 #endif
 #if 1
-      trail(g, g->source[layer], xval + layer * g->edges, -1,
+      trail(g, g->source, xval + layer * g->edges, -1,
          connected,
          0, 1000000000);
 #else

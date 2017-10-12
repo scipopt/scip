@@ -207,7 +207,7 @@ SCIP_RETCODE central_terminal(
    assert(g         != NULL);
    assert(g->layers == 1);
 
-   *central_term = g->source[0];
+   *central_term = g->source;
 
    if( centertype == CENTER_OK )
       return SCIP_OKAY;
@@ -278,7 +278,7 @@ SCIP_RETCODE central_terminal(
          if( sum > maximum )
             maximum = sum;
 
-         if( i == g->source[0] )
+         if( i == g->source )
             oldval = sum;
       }
       else
@@ -298,7 +298,7 @@ SCIP_RETCODE central_terminal(
          if( max > maximum )
             maximum = max;
 
-         if( i == g->source[0] )
+         if( i == g->source )
             oldval = max;
       }
    }
@@ -509,7 +509,7 @@ SCIP_RETCODE probdataPrintGraph(
    for( n = 0; n < graph->knots; n++ )
    {
 
-      if( n == graph->source[0] )
+      if( n == graph->source )
       {
          (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Root", n);
          SCIPgmlWriteNode(file, (unsigned int) n, label, "rectangle", "#666666", NULL);
@@ -633,7 +633,7 @@ SCIP_RETCODE createPrizeConstraints(
 
    assert(graph != NULL);
 
-   root = graph->source[0];
+   root = graph->source;
    nedges = graph->edges;
 
    SCIPdebugMessage("createPrizeConstraints \n");
@@ -831,7 +831,7 @@ SCIP_RETCODE createConstraints(
             for( k = 0; k < nnodes; ++k )
             {
                /* if node k is not the root */
-               if( k !=  graph->source[0])
+               if( k !=  graph->source)
                {
                   /* if node k is not the t-th terminal, set RHS = 0 */
                   if( k != probdata->realterms[t] )
@@ -864,7 +864,7 @@ SCIP_RETCODE createConstraints(
 	 for( k = 0; k < nnodes; ++k )
          {
             /* if node k is not the root */
-            if( k != graph->source[0])
+            if( k != graph->source)
 	    {
 	       /* if node k is not a terminal, set RHS = 0 */
 	       if( graph->term[k] != 0 )
@@ -923,7 +923,7 @@ SCIP_RETCODE createVariables(
       int nedges = probdata->nedges;
       int nvars = probdata->nvars;
       int realnterms = probdata->realnterms;
-      int root = graph->source[0];
+      int root = graph->source;
       int nnodes = graph->knots;
       SCIP_Bool objint = SCIPisIntegral(scip, offset);
 
@@ -2070,7 +2070,7 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    /* select a root node */
    if( compcentral != CENTER_DEG && !pc && !mw && !rpc && graph->stp_type != STP_DHCSTP && graph->stp_type != STP_SAP && graph->stp_type != STP_RMWCSP )
-      SCIP_CALL( central_terminal(scip, graph, &(graph->source[0]), compcentral) );
+      SCIP_CALL( central_terminal(scip, graph, &(graph->source), compcentral) );
 
    /* print the graph */
    if( print )
@@ -2087,7 +2087,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    }
 
    /* save original root */
-   graph->orgsource = graph->source[0];
+   graph->orgsource = graph->source;
 
    probdata->norgedges = graph->edges;
 
@@ -2212,7 +2212,7 @@ SCIP_RETCODE SCIPprobdataCreate(
       probdata->nterms = graph->terms;
       probdata->nlayers = graph->layers;
 
-      assert(Is_term(graph->term[graph->source[0]]));
+      assert(Is_term(graph->term[graph->source]));
 
       /* compute the real number of terminals (nterm-1 iff root is a terminal) */
       realnterms = graph->terms - 1;
@@ -2223,7 +2223,7 @@ SCIP_RETCODE SCIPprobdataCreate(
       t = 0;
       for( k = 0; k < nnodes; ++k )
       {
-         if( graph->term[k] == 0 && k != graph->source[0] )
+         if( graph->term[k] == 0 && k != graph->source )
          {
             probdata->realterms[t] = k;
             SCIPdebugMessage("realterms[%d] = %d \n ", t, probdata->realterms[t]);
@@ -2306,11 +2306,11 @@ SCIP_RETCODE SCIPprobdataCreate(
       {
          if( graph->stp_type != STP_RPCSPG && graph->stp_type != STP_SPG && graph->stp_type != STP_RSMT && graph->stp_type != STP_OARSMT && graph->stp_type != STP_GSTP )
          {
-            SCIP_CALL( SCIPStpDualAscent(scip, graph, NULL, NULL, &lpobjval, TRUE, FALSE, NULL, NULL, NULL, NULL, graph->source[0], 1, NULL, NULL) );
+            SCIP_CALL( SCIPStpDualAscent(scip, graph, NULL, NULL, &lpobjval, TRUE, FALSE, NULL, NULL, NULL, NULL, graph->source, 1, NULL, NULL) );
          }
          else
          {
-            SCIP_CALL( SCIPStpDualAscent(scip, graph, NULL, NULL, &lpobjval, TRUE, TRUE, NULL, NULL, NULL, NULL, graph->source[0], 1, NULL, NULL) );
+            SCIP_CALL( SCIPStpDualAscent(scip, graph, NULL, NULL, &lpobjval, TRUE, TRUE, NULL, NULL, NULL, NULL, graph->source, 1, NULL, NULL) );
          }
       }
    }
@@ -2458,7 +2458,7 @@ int SCIPprobdataGetRoot(
    graph = probdata->graph;
    assert(graph != NULL);
 
-   return graph->source[0];
+   return graph->source;
 }
 
 /** returns numer of original edges */
@@ -2770,7 +2770,7 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
       assert(nodechild[solgraph->orgsource] >= 0);
 
       /* set root of new graph */
-      solgraph->source[0] = nodechild[graph->orgsource];
+      solgraph->source = nodechild[graph->orgsource];
 
       /* add edges to new graph */
       for( e = 0; e < norgedges; e++ )
@@ -2796,8 +2796,8 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
          orgnodes[k] = FALSE;
 
       SCIP_CALL( SCIPqueueCreate(&queue, nsolnodes, 1.1) );
-      SCIP_CALL( SCIPqueueInsert(queue, &(solgraph->source[0])) );
-      solgraph->mark[solgraph->source[0]] = FALSE;
+      SCIP_CALL( SCIPqueueInsert(queue, &(solgraph->source)) );
+      solgraph->mark[solgraph->source] = FALSE;
 
       nsolnodes = 1;
 
@@ -2949,7 +2949,7 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
       || graph->stp_type == STP_RPCSPG )
    {
       int root;
-      root = graph->source[0];
+      root = graph->source;
       assert(root >= 0);
 
       for( e = 0; e <= graph->edges; e++ )
@@ -3154,7 +3154,7 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
 
       for( e = 0; e < graph->knots; e++ )
          graph->mark[e] = 1;
-      graph_path_exec(scip, graph, FSP_MODE, graph->source[0], edgecost, path);
+      graph_path_exec(scip, graph, FSP_MODE, graph->source, edgecost, path);
 
       /* create and add path variables (Price mode) or set the flow variables (Flow mode) */
       for( t = 0; t < realnterms; ++t )
@@ -3175,7 +3175,7 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
          tail = probdata->realterms[t];
 
          /* walk from terminal t to the root */
-         while( tail != graph->source[0] )
+         while( tail != graph->source )
          {
             if( !probdata->bigt )
             {
@@ -3257,7 +3257,7 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
          for( k = 0; k < graph->knots; ++k )
          {
             /* is the kth node a terminal other than the root? */
-            if( Is_term(graph->term[k]) && k != graph->source[0] )
+            if( Is_term(graph->term[k]) && k != graph->source )
             {
                int origterm;
                int edge1 = graph->inpbeg[k];
@@ -3388,7 +3388,7 @@ SCIP_RETCODE SCIPprobdataPrintGraph2(
    m = 0;
    for( n = 0; n < graph->knots; ++n )
    {
-      if( n == graph->source[0] )
+      if( n == graph->source )
       {
          (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Root", n);
 	 SCIPgmlWriteNode(file, (unsigned int)n, label, "rectangle", "#666666", NULL);

@@ -600,7 +600,7 @@ SCIP_RETCODE buildsolgraph(
       }
       if( pcmw ) /* todo this probably won't work for RMWCSP */
       {
-         const int oldroot = graph->source[0];
+         const int oldroot = graph->source;
          for( int i = graph->outbeg[oldroot]; i != EAT_LAST; i = graph->oeat[i] )
          {
             if( Is_gterm(graph->term[graph->head[i]]) )
@@ -714,11 +714,11 @@ SCIP_RETCODE buildsolgraph(
       SCIPdebugMessage("REC: sol graph with nodes: %d, edges: %d, terminals: %d  \n", nsolnodes, 2 * nsoledges, newgraph->terms);
 
       /* set root */
-      newgraph->source[0] = dnodemap[graph->source[0]];
+      newgraph->source = dnodemap[graph->source];
       if( newgraph->stp_type == STP_RPCSPG || newgraph->stp_type == STP_RMWCSP )
-         newgraph->prize[newgraph->source[0]] = FARAWAY;
+         newgraph->prize[newgraph->source] = FARAWAY;
 
-      assert(newgraph->source[0] >= 0);
+      assert(newgraph->source >= 0);
 
       /* copy max degrees*/
       if( graph->stp_type == STP_DCSTP )
@@ -748,10 +748,11 @@ SCIP_RETCODE buildsolgraph(
             (*edgeancestor)[j++] = i;
             (*edgeancestor)[j++] = i + 1;
 
-            assert(newgraph->term2edge != NULL);
-
             if( pcmw )
+            {
+               assert(newgraph->term2edge != NULL);
                graph_pc_updateTerm2edge(newgraph, graph, dnodemap[orgtail], dnodemap[orghead], orgtail, orghead);
+            }
 
             graph_edge_add(scip, newgraph, dnodemap[orgtail], dnodemap[orghead], graph->cost[i], graph->cost[i + 1]);
 
@@ -1239,7 +1240,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
             /* adapted prizes */
             if( pcmw )
             {
-               const int solgraphroot = solgraph->source[0];
+               const int solgraphroot = solgraph->source;
                SCIP_Real* const prize = solgraph->prize;
 
                assert(prize != NULL);
@@ -1310,7 +1311,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
 
             /* run TM heuristic */
             SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, solgraph, NULL, &best_start, soledges, heurdata->ntmruns,
-                  solgraph->source[0], cost, costrev, &hopfactor, nodepriority, maxcost, &success, FALSE) );
+                  solgraph->source, cost, costrev, &hopfactor, nodepriority, maxcost, &success, FALSE) );
 
             assert(success);
             assert(graph_valid(solgraph));
@@ -1324,7 +1325,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
                assert(orgprize != NULL);
 
                for( int k = 0; k < nsolnodes; k++ )
-                  if( Is_pterm(solgraph->term[k]) && k != solgraph->source[0] )
+                  if( Is_pterm(solgraph->term[k]) && k != solgraph->source )
                      prize[k] = orgprize[k];
 
                SCIPfreeBufferArray(scip, &orgprize);
@@ -1731,7 +1732,7 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
 
    BMSclearMemoryArray(stvertex, nnodes);
 
-   root = graph->source[0];
+   root = graph->source;
    nsolnodes = 1;
    nsolterms = 0;
    stvertex[root] = 1;
@@ -1932,11 +1933,11 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
    assert(j == nsolnodes);
 
    /* set root */
-   newgraph->source[0] = dnodemap[root];
+   newgraph->source = dnodemap[root];
    if( newgraph->stp_type == STP_RPCSPG )
-      newgraph->prize[newgraph->source[0]] = FARAWAY;
+      newgraph->prize[newgraph->source] = FARAWAY;
 
-   assert(newgraph->source[0] >= 0);
+   assert(newgraph->source >= 0);
 
    /* add edges */
    for( int i = 0; i < nedges; i += 2 )
@@ -1948,7 +1949,7 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
 #if 0
    if( pcmw && result2 != NULL )
    {
-      const int newroot = newgraph->source[0];
+      const int newroot = newgraph->source;
       srand(nsolnodes);
 
       for( int i = 0; i < nsolnodes; i++ )
@@ -2017,7 +2018,7 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
          for( ; e != EAT_LAST; e = newgraph->oeat[e] )
          {
             int head = newgraph->head[e];
-            if( newgraph->source[0] != head && Is_term(newgraph->term[head]) )
+            if( newgraph->source != head && Is_term(newgraph->term[head]) )
                break;
 
          }
@@ -2033,7 +2034,7 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
          for( ; e != EAT_LAST; e = newgraph->oeat[e] )
          {
             int head = newgraph->head[e];
-            if( newgraph->source[0] != head && Is_pterm(newgraph->term[head]) )
+            if( newgraph->source != head && Is_pterm(newgraph->term[head]) )
                break;
 
          }
@@ -2045,7 +2046,7 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
       }
    }
 
-   for( int e = newgraph->outbeg[newgraph->source[0]] ; e != EAT_LAST; e = newgraph->oeat[e] )
+   for( int e = newgraph->outbeg[newgraph->source] ; e != EAT_LAST; e = newgraph->oeat[e] )
    {
       if( Is_term(newgraph->term[newgraph->head[e]]) &&  SCIPisZero(scip, newgraph->cost[e] ) )
       {
@@ -2090,8 +2091,8 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
    graph_path_init(scip, newgraph);
 
    /* compute Steiner tree to obtain upper bound */
-   best_start = newgraph->source[0];
-   SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, newgraph, NULL, &best_start, newresult, MIN(50, nsolterms), newgraph->source[0], newgraph->cost, newgraph->cost, &dummy, NULL, 0.0, success, FALSE) );
+   best_start = newgraph->source;
+   SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, newgraph, NULL, &best_start, newresult, MIN(50, nsolterms), newgraph->source, newgraph->cost, newgraph->cost, &dummy, NULL, 0.0, success, FALSE) );
 
    graph_path_exit(scip, newgraph);
 

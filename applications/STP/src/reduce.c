@@ -159,7 +159,7 @@ SCIP_RETCODE level0(
    for( k = nnodes - 1; k >= 0 ; k-- )
       g->mark[k] = FALSE;
 
-   SCIP_CALL( graph_trail_arr(scip, g, g->source[0]) );
+   SCIP_CALL( graph_trail_arr(scip, g, g->source) );
 
    for( k = nnodes - 1; k >= 0 ; k-- )
    {
@@ -1185,12 +1185,21 @@ SCIP_RETCODE redLoopPc(
 
    if( rpc )
    {
-      rootprize = g->prize[g->source[0]];
-      g->prize[g->source[0]] = FARAWAY;
+      rootprize = g->prize[g->source];
+      g->prize[g->source] = FARAWAY;
    }
 
    ub = -1.0;
    fix = 0.0;
+
+#if 0
+   assert(g->term2edge);
+   for( int i = 0; i < g->knots; i++ )
+   {
+       if( Is_gterm(g->term[k]) && k != g->source )
+
+   }
+#endif
 
    SCIP_CALL( graph_pc_2org(scip, g) );
 
@@ -1353,7 +1362,7 @@ SCIP_RETCODE redLoopPc(
    SCIP_CALL( degree_test_pc(scip, g, &fix, &degnelims, solnode, TRUE) );
 
    if( rpc )
-      g->prize[g->source[0]] = rootprize;
+      g->prize[g->source] = rootprize;
 
    SCIP_CALL( graph_pc_2trans(scip, g) );
 

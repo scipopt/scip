@@ -228,7 +228,7 @@ SCIP_RETCODE printGraph(
    {
       if( stnodes[n] )
       {
-         if( n == graph->source[0] )
+         if( n == graph->source )
          {
             (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Root", n);
             SCIPgmlWriteNode(file, (unsigned int)n, label, "rectangle", "#666666", NULL);
@@ -730,7 +730,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
       }
       /* compute new guiding solution */
       int todo;
-      SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, prunegraph, cost, edgearrint, nodearrint, prunegraph->source[0], nodearrchar, &apsuccess, FALSE) );
+      SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, prunegraph, cost, edgearrint, nodearrint, prunegraph->source, nodearrchar, &apsuccess, FALSE) );
 
       /* solution found by ascend and prune? */
       if( apsuccess )
@@ -779,7 +779,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
             vbase, nodearrint, soledge, nodearrint2, solnode, nodearrchar, &offsetnew, -1.0, TRUE, FALSE, TRUE, reductbound, NULL, TRUE) );
 
       /* graph vanished? */
-      if( prunegraph->grad[prunegraph->source[0]] == 0 )
+      if( prunegraph->grad[prunegraph->source] == 0 )
          break;
 
       /* get number of remaining edges */
@@ -793,13 +793,13 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
       nodearrchar[k] = FALSE;
 
    /* if graph not vanished, compute solution */
-   if( prunegraph->grad[prunegraph->source[0]] > 0 )
+   if( prunegraph->grad[prunegraph->source] > 0 )
    {
       IDX** ancestors = prunegraph->ancestors;
       SCIP_Real objorg = 0.0;
       SCIP_Real objprune = 0.0;
 
-      int proot = prunegraph->source[0];
+      int proot = prunegraph->source;
 
       /* try to build MST on solnode nodes */
 
@@ -996,7 +996,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRunPcMw(
    assert(soledge != NULL);
    assert(graph_sol_valid(scip, g, soledge));
 
-   root = g->source[0];
+   root = g->source;
    nterms = g->terms;
    nedges = g->edges;
    nnodes = g->knots;
@@ -1189,7 +1189,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRunPcMw(
    } /* reduction loop */
 
    /* if graph not vanished, compute solution */
-   if( prunegraph->grad[prunegraph->source[0]] > 0 )
+   if( prunegraph->grad[prunegraph->source] > 0 )
    {
       IDX** ancestors = prunegraph->ancestors;
       SCIP_Real objorg;

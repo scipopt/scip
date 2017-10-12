@@ -259,7 +259,7 @@ SCIP_DECL_HEUREXEC(heurExecAscendPrune)
    }
 
    /* perform ascent and prune */
-   SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, heur, graph, redcosts, edgearrint, nodearrint, graph->source[0], nodearrchar, &success, TRUE) );
+   SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, heur, graph, redcosts, edgearrint, nodearrint, graph->source, nodearrchar, &success, TRUE) );
 
    if( success )
    {
@@ -324,7 +324,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    assert(nodearrchar != NULL);
 
    if( root < 0 )
-      root = g->source[0];
+      root = g->source;
 
    assert(Is_term(g->term[root]));
 
@@ -447,11 +447,11 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    assert(nnewnodes == newgraph->knots);
 
    /* set root of new graph */
-   newgraph->source[0] = nodechild[root];
-   assert(newgraph->source[0] >= 0);
+   newgraph->source = nodechild[root];
+   assert(newgraph->source >= 0);
 
    if( g->stp_type == STP_RPCSPG || g->stp_type == STP_RMWCSP )
-      newgraph->prize[newgraph->source[0]] = FARAWAY;
+      newgraph->prize[newgraph->source] = FARAWAY;
 
    /* add edges to new graph */
    for( int a = 0; a < nnewedges; a++ )
@@ -483,7 +483,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    nnewedges = newgraph->edges;
    newgraph->norgmodeledges = nnewedges;
 
-   assert(!pcmw || -1 == newgraph->term2edge[newgraph->source[0]]);
+   assert(!pcmw || -1 == newgraph->term2edge[newgraph->source]);
 
    /* initialize ancestors of new graph edges */
    SCIP_CALL( graph_init_history(scip, newgraph) );
@@ -631,7 +631,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRunPcMw(
    int* const newedges = edgearrint;
    int* const nodechild = nodearrint;
    int* edgeancestor;
-   const int root = g->source[0];
+   const int root = g->source;
    const int nnodes = g->knots;
    const int nedges = g->edges;
    const int probtype = g->stp_type;
@@ -762,7 +762,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRunPcMw(
    assert(nnewnodes == newgraph->knots);
 
    /* set root of new graph */
-   newgraph->source[0] = nodechild[root];
+   newgraph->source = nodechild[root];
 
    /* add edges to new graph */
    for( int a = 0; a < nnewedges; a++ )

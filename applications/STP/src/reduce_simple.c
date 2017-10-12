@@ -47,16 +47,16 @@ SCIP_Bool maxprize(
    int t = -1;
    SCIP_Real max = -1.0;
 
-   if( g->stp_type == STP_RPCSPG && i != g->source[0] )
+   if( g->stp_type == STP_RPCSPG && i != g->source )
       return FALSE;
-   else if( g->stp_type == STP_RPCSPG && i == g->source[0] )
+   else if( g->stp_type == STP_RPCSPG && i == g->source )
       return TRUE;
 
    for( k = 0; k < g->knots; k++ )
    {
       if( Is_term(g->term[k]) && g->mark[k] && g->grad[k] > 0 )
       {
-         assert(k != g->source[0]);
+         assert(k != g->source);
          if( SCIPisGT(scip, g->prize[k], max) )
          {
             max = g->prize[k];
@@ -128,7 +128,7 @@ SCIP_RETCODE trydg1edgepc(
          *offset += g->cost[iout];
       }
 
-      if( g->source[0] == i1 )
+      if( g->source == i1 )
       {
          assert(g->stp_type == STP_RPCSPG );
 
@@ -160,9 +160,9 @@ SCIP_RETCODE trydg1edgepc(
             for (e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e])
             {
                i1 = g->head[e];
-               if( Is_pterm(g->term[i1]) && g->source[0] != i1 )
+               if( Is_pterm(g->term[i1]) && g->source != i1 )
                   t = i1;
-               else if( g->source[0] == i1 )
+               else if( g->source == i1 )
                   e2 = e;
             }
 
@@ -228,7 +228,7 @@ SCIP_RETCODE trydg1edgepc(
                      g->cost[e] = 0.0;
                   }
                }
-               else if( Is_pterm(g->term[i1]) && g->source[0] != i1 )
+               else if( Is_pterm(g->term[i1]) && g->source != i1 )
                {
                   t = i1;
                }
@@ -237,7 +237,7 @@ SCIP_RETCODE trydg1edgepc(
             assert(t != UNKNOWN);
 
             for (e = g->inpbeg[t]; e != EAT_LAST; e = g->ieat[e])
-               if( g->tail[e] == g->source[0] )
+               if( g->tail[e] == g->source )
                   break;
             assert(e != EAT_LAST);
             g->cost[e] = g->prize[i];
@@ -359,7 +359,7 @@ void adjust0term(
    int i1;
 
    assert(Is_term(g->term[i]));
-   assert(g->source[0] != i);
+   assert(g->source != i);
    assert(SCIPisZero(scip, g->prize[i]));
 
    t = UNKNOWN;
@@ -371,9 +371,9 @@ void adjust0term(
    for (e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e])
    {
       i1 = g->head[e];
-      if( Is_pterm(g->term[i1]) && g->source[0] != i1 )
+      if( Is_pterm(g->term[i1]) && g->source != i1 )
          t = i1;
-      else if( g->source[0] == i1 )
+      else if( g->source == i1 )
          e2 = e;
    }
 
@@ -643,7 +643,7 @@ SCIP_RETCODE degree_test_sap(
    assert(fixed  != NULL);
    assert(count != NULL);
 
-   root = g->source[0];
+   root = g->source;
    rerun = TRUE;
    nnodes = g->knots;
 
@@ -840,7 +840,7 @@ SCIP_RETCODE rptReduction(
    assert(fixed != NULL);
    assert(count != NULL);
 
-   root = g->source[0];
+   root = g->source;
    nnodes = g->knots;
    *count = 0;
 
@@ -916,7 +916,7 @@ SCIP_RETCODE degree_test_mw(
    assert(count != NULL);
    assert(g->stp_type == STP_MWCSP);
 
-   root = g->source[0];
+   root = g->source;
    localcount = 0;
    nnodes = g->knots;
 
@@ -1137,7 +1137,7 @@ SCIP_RETCODE degree_test_mw(
                   break;
 
             assert(e != EAT_LAST);
-            assert(g->head[e] != g->source[0]);
+            assert(g->head[e] != g->source);
 
             if( !Is_term(g->term[g->head[e]]) )
             {
@@ -1207,7 +1207,7 @@ SCIP_RETCODE degree_test_hc(
    assert(g->stp_type == STP_DHCSTP);
 
    nnodes = g->knots;
-   root = g->source[0];
+   root = g->source;
 
    SCIPdebugMessage("basic HC test: \n");
 
@@ -1295,7 +1295,7 @@ SCIP_RETCODE degree_test_pc(
    assert(g->stp_type == STP_PCSPG || g->stp_type == STP_RPCSPG);
 
    pc = (g->stp_type == STP_PCSPG);
-   root = g->source[0];
+   root = g->source;
 
    nnodes = g->knots;
    *count = 0;
@@ -1364,8 +1364,8 @@ SCIP_RETCODE degree_test_pc(
                assert(e1 >= 0);
                assert(e2 >= 0);
 
-               assert(g->mark[i1] || i1 == g->source[0]);
-               assert(g->mark[i2] || i2 == g->source[0]);
+               assert(g->mark[i1] || i1 == g->source);
+               assert(g->mark[i2] || i2 == g->source);
                assert(EQ(g->cost[e2], g->cost[Edge_anti(e2)]));
 
                g->cost[e1]            += g->cost[e2];
@@ -1538,7 +1538,7 @@ SCIP_RETCODE degree_test_pc(
                   e = g->inpbeg[j];
 
                   assert(e != EAT_LAST);
-                  assert(g->source[0] == g->tail[e] || g->source[0] == j);
+                  assert(g->source == g->tail[e] || g->source == j);
                   assert(SCIPisEQ(scip, g->prize[i], g->cost[e]));
 
                   graph_edge_del(scip, g, e, TRUE);

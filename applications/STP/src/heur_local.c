@@ -237,7 +237,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
    pc = ((probtype == STP_PCSPG) || (probtype == STP_RPCSPG));
    mw = (probtype == STP_MWCSP);
    mwpc = (pc || mw);
-   root = graph->source[0];
+   root = graph->source;
    nnodes = graph->knots;
    nedges = graph->edges;
    newnverts = 0;
@@ -636,7 +636,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
          /* find a DFS order of the ST nodes */
          nstnodes = 0;
          dfsorder(graph, best_result, &(root), &nstnodes, dfstree);
-         assert(root == graph->source[0]);
+         assert(root == graph->source);
 
          /* compute a voronoi diagram with the ST nodes as bases */
          voronoi(scip, graph, graph->cost, graph->cost, steinertree, vbase, vnoi);
@@ -1703,7 +1703,7 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    assert(pred != NULL);
    assert(stvertex != NULL);
 
-   root = graph->source[0];
+   root = graph->source;
    nnodes = graph->knots;
    nedges = graph->edges;
 
@@ -1713,8 +1713,8 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    /* initialize solution vertex array with FALSE */
    BMSclearMemoryArray(stvertex, nnodes);
 
-   stvertex[graph->source[0]] = TRUE;
-   path[graph->source[0]].edge = UNKNOWN;
+   stvertex[graph->source] = TRUE;
+   path[graph->source].edge = UNKNOWN;
 
    for( int e = 0; e < nedges; e++ )
       if( stedge[e] == CONNECT )
@@ -2032,7 +2032,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    if( SCIPgetBestSol(scip) == NULL )
       return SCIP_OKAY;
 
-   root = graph->source[0];
+   root = graph->source;
    sols = SCIPgetSols(scip);
    nsols = SCIPgetNSols(scip);
    nedges = graph->edges;

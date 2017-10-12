@@ -1092,7 +1092,7 @@ SCIP_RETCODE graph_load(
 
                      g = *graph;
                      assert(g != NULL);
-                     assert(g->source[0] == UNKNOWN);
+                     assert(g->source == UNKNOWN);
                      for( i = 0; i < nodes; i++ )
                         graph_knot_add(g, -1);
 
@@ -1281,7 +1281,7 @@ SCIP_RETCODE graph_load(
 
                   if ((int)para[0].n <= nodes)
                   {
-                     g->source[0] = (int)para[0].n - 1;
+                     g->source = (int)para[0].n - 1;
                      graph_knot_chg(g, (int)para[0].n - 1, 0);
                   }
                   else
@@ -1294,7 +1294,7 @@ SCIP_RETCODE graph_load(
                case KEY_TERMINALS_ROOTP :
                   assert(g != NULL);
                   assert(terms > 0);
-                  g->source[0] = (int)para[0].n - 1;
+                  g->source = (int)para[0].n - 1;
                   graph_knot_chg(g, (int)para[0].n - 1, 0);
                   stp_type = STP_RPCSPG;
                   if( g->prize == NULL )
@@ -1453,12 +1453,12 @@ SCIP_RETCODE graph_load(
    {
       assert(g != NULL);
 
-      if( g->source[0] == UNKNOWN )
+      if( g->source == UNKNOWN )
       {
          for( i = 0; i < g->knots; i++ )
             if ((g->term[i] == 0)
-               && ((g->source[0] < 0) || (g->grad[i] > g->grad[g->source[0]])))
-               g->source[0] = i;
+               && ((g->source < 0) || (g->grad[i] > g->grad[g->source])))
+               g->source = i;
       }
 
       if( g->stp_type == UNKNOWN )
@@ -1470,7 +1470,7 @@ SCIP_RETCODE graph_load(
       }
 
       (void)printf(msg_finish_dddd,
-         g->knots, g->edges, g->terms, g->source[0]);
+         g->knots, g->edges, g->terms, g->source);
 
       assert(graph_valid(g));
       return SCIP_OKAY;

@@ -64,10 +64,7 @@ typedef struct
    int                   terms;              /**< Count of terminals                                  */
    int                   layers;             /**< Count of different networks                         */
    int                   orgsource;          /**< root of unreduced graph                             */
-   int*                  locals;             /**< Array [0..layers-1] of count of terminals           */
-                                             /**< in network [i]                                      */
-   int* RESTRICT         source;             /**< Array [0..layers-1] of knot number of the           */
-                                             /**< root of network [i], -1 if unknown                  */
+   int                   source;             /**< The root                                            */
    int* RESTRICT         term;               /**< Array [0..nodes-1] of networknumber for             */
                                              /**< knot [i], -1 if [i] is never a terminal             */
    int* RESTRICT         mark;               /**< Array [0..nodes-1], normally TRUE or FALSE          */

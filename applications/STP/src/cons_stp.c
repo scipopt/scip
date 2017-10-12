@@ -178,7 +178,7 @@ SCIP_RETCODE cut_add(
 
    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
-   assert(gmark[g->source[0]]);
+   assert(gmark[g->source]);
 
    for( i = 0; i < nedges; i++ )
    {
@@ -401,7 +401,7 @@ SCIP_RETCODE sep_flow(
       for(layer = 0; layer < g->layers; layer++)
       {
          /* continue at root */
-         if( i == g->source[layer] )
+         if( i == g->source )
             continue;
 
          /* at terminal: input sum == 1
@@ -570,7 +570,7 @@ SCIP_RETCODE sep_flow(
             SCIP_Bool infeasible;
 
             SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "bala", 0.0,
-                  (g->locals[layer] == 2) ? 0.0 : SCIPinfinity(scip), FALSE, FALSE, TRUE) );
+                  (g->terms == 2) ? 0.0 : SCIPinfinity(scip), FALSE, FALSE, TRUE) );
 
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
@@ -678,7 +678,7 @@ SCIP_RETCODE sep_2cut(
    g = consdata->graph;
    assert(g != NULL);
 
-   root = g->source[0];
+   root = g->source;
    excess = g->mincut_e;
    nedges = g->edges;
    nnodes = g->knots;
@@ -692,7 +692,6 @@ SCIP_RETCODE sep_2cut(
    assert(edgecurr != NULL);
    assert(headactive != NULL);
    assert(headinactive != NULL);
-   assert(g->locals[0] == g->terms);
 
    xval = SCIPprobdataGetXval(scip, NULL);
    assert(xval != NULL);
@@ -702,7 +701,7 @@ SCIP_RETCODE sep_2cut(
    assert(disjunct_cut == FALSE);
 
    /* for 2-terminal nets no cuts are necessary if flows are given */
-   if( flowsep && (g->locals[0] == 2) )
+   if( flowsep && (g->terms == 2) )
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &capa, nedges) );
@@ -908,7 +907,7 @@ SCIP_RETCODE sep_2cut(
       terms--;
 
       assert(g->term[i]       == 0);
-      assert(g->source[0] != i);
+      assert(g->source != i);
 
       if( nested_cut && !disjunct_cut )
          set_capacity(g, creep_flow, 0, capa, xval);
@@ -923,7 +922,7 @@ SCIP_RETCODE sep_2cut(
          assert(fptr != NULL);
 
          fprintf(fptr, "p max %d %d \n", nnodes, nedges);
-         fprintf(fptr, "n %d s \n", g->source[0] + 1);
+         fprintf(fptr, "n %d s \n", g->source + 1);
          fprintf(fptr, "n %d t \n", i + 1);
 
          for( k = 0; k < nnodes; k++ )
@@ -1013,7 +1012,7 @@ SCIP_RETCODE sep_2cut(
             terms--;
 
             assert(g->term[i]       == 0);
-            assert(g->source[0] != i);
+            assert(g->source != i);
 
             if( nested_cut && !disjunct_cut )
                set_capacity(g, creep_flow, 1, capa, xval);
@@ -1022,7 +1021,7 @@ SCIP_RETCODE sep_2cut(
 
             do
             {
-               graph_mincut_exec(g, i, g->source[0], nedges, capa, w, start, edgearr, headarr, rerun);
+               graph_mincut_exec(g, i, g->source, nedges, capa, w, start, edgearr, headarr, rerun);
 
                rerun = TRUE;
 
@@ -1590,7 +1589,7 @@ SCIP_RETCODE SCIPStpDualAscent(
 
    /* if specified root is not a terminal, take default root */
    if( !Is_term(g->term[root]) )
-      root = g->source[0];
+      root = g->source;
 
 #ifdef BITFIELDSARRAY
    u_int32_t* bitarr;
@@ -2142,7 +2141,7 @@ SCIP_RETCODE SCIPStpDualAscentPcMw(
       vars = NULL;
    }
 
-   root = g->source[0];
+   root = g->source;
    degsum = 0;
    offset = 0.0;
    dualobj = 0.0;

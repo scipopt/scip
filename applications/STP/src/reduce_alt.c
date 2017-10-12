@@ -815,16 +815,16 @@ SCIP_RETCODE nv_reduction_optimal(
       }
    }
 
-   assert(g->source[0] >= 0);
+   assert(g->source >= 0);
 
    /* computing the voronoi regions inward to a node */
    voronoi_term(g, g->cost, distance, radius, pathfromterm, vregion, heap, state, pred, 1);
 
    /* computing the shortest paths from the source node */
-   graph_path_exec(scip, g, FSP_MODE, g->source[0], g->cost, pathfromsource);
+   graph_path_exec(scip, g, FSP_MODE, g->source, g->cost, pathfromsource);
 
    /* computing the shortest hops paths from the source node */
-   graph_path_exec(scip, g, FSP_MODE, g->source[0], hopscost, pathhops);
+   graph_path_exec(scip, g, FSP_MODE, g->source, hopscost, pathhops);
 
    /* this is the offset used to minimise the number of knots to examine in large graphs. */
    srand(runnum*100);
@@ -833,10 +833,10 @@ SCIP_RETCODE nv_reduction_optimal(
    for(i = 0; i < g->knots; i++)
    {
       /* For the prize collecting variants all edges from the "dummy" root node must be retained. */
-      if ((g->stp_type == STP_PCSPG || g->stp_type == STP_MWCSP) && i == g->source[0] )
+      if ((g->stp_type == STP_PCSPG || g->stp_type == STP_MWCSP) && i == g->source )
          continue;
 
-      if( g->stp_type == STP_SAP && i != g->source[0] )
+      if( g->stp_type == STP_SAP && i != g->source )
          continue;
 
 
@@ -854,7 +854,7 @@ SCIP_RETCODE nv_reduction_optimal(
          antiedgeexists = FALSE;
          for(e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e])
          {
-            if( g->stp_type == STP_SAP && i == g->source[0] )
+            if( g->stp_type == STP_SAP && i == g->source )
             {
                if( LT(g->cost[e], FARAWAY) )
                {
@@ -891,7 +891,7 @@ SCIP_RETCODE nv_reduction_optimal(
             assert(shortarctail >= 0);
 
             if ((g->stp_type == STP_PCSPG || g->stp_type == STP_MWCSP
-                  || g->stp_type == STP_SAP) && shortarctail == g->source[0] )
+                  || g->stp_type == STP_SAP) && shortarctail == g->source )
                continue;
 
             if( g->stp_type == STP_DHCSTP && GT(pathfromsource[shortarctail].hops, pathhops[i].dist - 1) )
@@ -933,7 +933,7 @@ SCIP_RETCODE nv_reduction_optimal(
             }
 
             /* computing the shortest paths from the source node */
-            graph_path_exec(scip, g, FSP_MODE, g->source[0], g->cost, pathfromsource);
+            graph_path_exec(scip, g, FSP_MODE, g->source, g->cost, pathfromsource);
          }
       }
       /* The knot is not a terminal so we can perform the short link test */
@@ -970,7 +970,7 @@ SCIP_RETCODE nv_reduction_optimal(
          i = g->head[e];
          j = g->tail[e];
 
-         if ((g->stp_type == STP_PCSPG || g->stp_type == STP_MWCSP) && (i == g->source[0] || j == g->source[0]) )
+         if ((g->stp_type == STP_PCSPG || g->stp_type == STP_MWCSP) && (i == g->source || j == g->source) )
             continue;
 
 
@@ -1119,7 +1119,7 @@ int sd_reduction(
 
       /* For the prize collecting variants all edges from the "dummy" root node must be retained. */
       if ( (g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_ROOTED_PRIZE_COLLECTING
-            || g->stp_type == STP_MAX_NODE_WEIGHT) && i == g->source[0] )
+            || g->stp_type == STP_MAX_NODE_WEIGHT) && i == g->source )
          continue;
 
       for(e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e])
@@ -1343,7 +1343,7 @@ SCIP_RETCODE sd_red(
 
    /* compute MST on netgraph */
    graph_knot_chg(netgraph, 0, 0);
-   netgraph->source[0] = 0;
+   netgraph->source = 0;
 
    SCIP_CALL( graph_path_init(scip, netgraph) );
    SCIP_CALL( SCIPallocBufferArray(scip, &mst, nterms) );
@@ -1625,7 +1625,7 @@ SCIP_RETCODE sdpc_reduction(
    assert(nodesorg != NULL);
    assert(boundedges != NULL);
 
-   root = g->source[0];
+   root = g->source;
    nnodes = g->knots;
    nterms = g->terms;
    nedges = g->edges;
@@ -3269,7 +3269,7 @@ SCIP_RETCODE sl_reduction(
 
    *nelims = 0;
    nnodes = g->knots;
-   root = g->source[0];
+   root = g->source;
    pc = (g->stp_type == STP_PCSPG) || (g->stp_type == STP_RPCSPG);
 
    if( g->terms <= 1 )
@@ -3583,12 +3583,12 @@ SCIP_RETCODE nv_reduction(
       }
       if( pc )
       {
-         if( i != g->source[0] )
+         if( i != g->source )
             pi = g->prize[i];
          else
             pi = FARAWAY;
 
-         if( t != g->source[0] )
+         if( t != g->source )
             pt = g->prize[t];
          else
             pt = FARAWAY;
@@ -3806,14 +3806,14 @@ SCIP_RETCODE nv_reductionAdv(
       }
       if( pc )
       {
-         if( i != g->source[0] )
+         if( i != g->source )
             pi = g->prize[i];
          else
             pi = FARAWAY;
 
          if( t == UNKNOWN )
             pt = -1.0;
-         else if( t != g->source[0] )
+         else if( t != g->source )
             pt = g->prize[t];
          else
             pt = FARAWAY;
@@ -4002,7 +4002,7 @@ SCIP_RETCODE ledge_reduction(
          }
       }
    }
-   netgraph->source[0] = 0;
+   netgraph->source = 0;
 
    assert(graph_valid(netgraph));
 
@@ -4873,7 +4873,7 @@ SCIP_RETCODE npvReduction(
       k = 0;
       for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
       {
-         assert(g->head[e] != g->source[0]);
+         assert(g->head[e] != g->source);
          adjverts[k++] = g->head[e];
       }
 

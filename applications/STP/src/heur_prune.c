@@ -233,7 +233,7 @@ SCIP_RETCODE printGraph(
    {
       if( stnodes[n] )
       {
-         if( n == graph->source[0] )
+         if( n == graph->source )
          {
             (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Root", n);
             SCIPgmlWriteNode(file, (unsigned int)n, label, "rectangle", "#666666", NULL);
@@ -702,7 +702,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
 
          /* run shortest path heuristic */
          SCIP_CALL( SCIPStpHeurTMRun(scip, NULL, prunegraph, tmstarts, &best_start, edgearrint, nruns,
-               prunegraph->source[0], prunegraph->cost, prunegraph->cost, &hopfactor, NULL, 0.0, success, FALSE) );
+               prunegraph->source, prunegraph->cost, prunegraph->cost, &hopfactor, NULL, 0.0, success, FALSE) );
 
          if( pcmw )
          {
@@ -769,7 +769,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
 
          /* run shortest path heuristic */
          SCIP_CALL( SCIPStpHeurTMRun(scip, NULL, prunegraph, NULL, &best_start, soledge, nruns,
-               prunegraph->source[0], prunegraph->cost, prunegraph->cost, &hopfactor, NULL, 0.0, success, FALSE) );
+               prunegraph->source, prunegraph->cost, prunegraph->cost, &hopfactor, NULL, 0.0, success, FALSE) );
 
          if( pcmw )
          {
@@ -849,7 +849,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
 
             /* run shortest path heuristic */
             SCIP_CALL( SCIPStpHeurTMRun(scip, NULL, prunegraph, nodearrint, &best_start, edgearrint, nruns,
-                  prunegraph->source[0], prunegraph->cost, prunegraph->cost, &hopfactor, NULL, 0.0, success, FALSE) );
+                  prunegraph->source, prunegraph->cost, prunegraph->cost, &hopfactor, NULL, 0.0, success, FALSE) );
 
             if( pcmw )
             {
@@ -1064,10 +1064,10 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
       nodearrchar[k] = FALSE;
 
    graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
-   SCIPdebugMessage("Xin prune grad: %d , nedges: %d nodes: %d \n", prunegraph->grad[prunegraph->source[0]], anedges, annodes);
+   SCIPdebugMessage("Xin prune grad: %d , nedges: %d nodes: %d \n", prunegraph->grad[prunegraph->source], anedges, annodes);
 
    /* if graph not vanished, compute solution */
-   if( prunegraph->grad[prunegraph->source[0]] > 0 )
+   if( prunegraph->grad[prunegraph->source] > 0 )
    {
       GRAPH* pprunegraph;
       SCIP_Real objsph;
@@ -1120,7 +1120,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
 
       /* run TM heuristic */
       SCIP_CALL( SCIPStpHeurTMRun(scip, NULL, prunegraph, NULL, &best_start, soledge, DEFAULT_PRUNE_TMRUNS,
-            prunegraph->source[0], prunegraph->cost, prunegraph->cost, &hopfactor, NULL, 0.0, success, FALSE) );
+            prunegraph->source, prunegraph->cost, prunegraph->cost, &hopfactor, NULL, 0.0, success, FALSE) );
 
       if( pcmw )
       {
@@ -1173,7 +1173,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
    if( pcmw )
    {
       IDX* curr;
-      nodearrchar[prunegraph->source[0]] = TRUE;
+      nodearrchar[prunegraph->source] = TRUE;
 
       for( int k = 0; k < nnodes; k++ )
       {

@@ -777,7 +777,7 @@ void graph_path_invroot(
 
    if( nnodes > 1 )
    {
-      int root = g->source[0];
+      int root = g->source;
 
       count       = 1;
       heap[count] = k;
@@ -962,7 +962,7 @@ void graph_path_st_rpc(
    assert(connected != NULL);
    assert(g->stp_type == STP_RPCSPG);
 
-   root = g->source[0];
+   root = g->source;
    heap = g->path_heap;
    count = 0;
    state = g->path_state;
@@ -1362,7 +1362,7 @@ void graph_path_st_pcmw_extend(
 
          state[k]     = count;
          path[k].dist = 0.0;
-         assert(path[k].edge != UNKNOWN || k == g->source[0]);
+         assert(path[k].edge != UNKNOWN || k == g->source);
       }
       else
       {
@@ -1472,7 +1472,7 @@ void graph_path_st_rmw(
    assert(cost   != NULL);
    assert(connected != NULL);
 
-   root = g->source[0];
+   root = g->source;
    count = 0;
    nrterms = 0;
    state = g->path_state;
@@ -1689,7 +1689,7 @@ void voronoi(
    if( g->knots == 0 )
       return;
 
-   root = g->source[0];
+   root = g->source;
    heap = g->path_heap;
    state = g->path_state;
 
@@ -1772,7 +1772,7 @@ void get2next(
    assert(state   != NULL);
    assert(costrev   != NULL);
 
-   root = g->source[0];
+   root = g->source;
    count = 0;
    nnodes = g->knots;
 
@@ -1871,7 +1871,7 @@ void get3next(
    assert(state   != NULL);
    assert(costrev   != NULL);
 
-   root = g->source[0];
+   root = g->source;
    nnodes = g->knots;
    dnnodes = 2 * nnodes;
 
@@ -1979,7 +1979,7 @@ void get4next(
    assert(state   != NULL);
    assert(costrev   != NULL);
 
-   root = g->source[0];
+   root = g->source;
    nnodes = g->knots;
    dnnodes = 2 * nnodes;
    tnnodes = 3 * nnodes;
@@ -2556,7 +2556,7 @@ SCIP_RETCODE voronoi_radius(
    nnodes = graph->knots;
    if( nnodes == 0 || graph->terms == 0 )
       return SCIP_OKAY;
-   root = graph->source[0];
+   root = graph->source;
    mw = (graph->stp_type == STP_MWCSP);
    pc = ((graph->stp_type == STP_PCSPG) || (graph->stp_type == STP_RPCSPG));
    SCIP_CALL( SCIPallocBufferArray(scip, &nodesid, nnodes) );
@@ -2792,7 +2792,7 @@ void voronoi_mw_radius(
    if( nnodes == 0 || nterms <= 0 )
       return;
 
-   assert(!g->mark[g->source[0]]);
+   assert(!g->mark[g->source]);
 
    /* initialize data */
    for( i = 0; i < nnodes; i++ )

@@ -63,8 +63,8 @@ void pertubateEdgeCosts(
 )
 {
    int e;
-   const int root = graph->source[0];
-   const int newroot = transgraph->source[0];
+   const int root = graph->source;
+   const int newroot = transgraph->source;
    const int nnodes = graph->knots;
    const int nedges = graph->edges;
 
@@ -335,7 +335,7 @@ SCIP_RETCODE computePertubedSol(
 {
    SCIP_Real lb;
    int e;
-   const int root = graph->source[0];
+   const int root = graph->source;
    const int nedges = graph->edges;
    const int transnedges = transgraph->edges;
 
@@ -436,7 +436,7 @@ void computeTransVoronoi(
     int* pathedge
 )
 {
-   const int root = transgraph->source[0];
+   const int root = transgraph->source;
    const int transnnodes = transgraph->knots;
    const int transnedges = transgraph->edges;
 
@@ -671,7 +671,7 @@ SCIP_RETCODE da_reduce(
    checkstate = (edgestate != NULL);
    deletable = TRUE;
 
-   root = graph->source[0];
+   root = graph->source;
    apsol = FALSE;
    nfixed = 0;
    nedges = graph->edges;
@@ -868,7 +868,7 @@ SCIP_RETCODE da_reduce(
    for( int run = 0; run < nruns; run++ )
    {
       /* graph vanished? */
-      if( grad[graph->source[0]] == 0 )
+      if( grad[graph->source] == 0 )
          break;
 
       if( !rpc && !directed )
@@ -883,7 +883,7 @@ SCIP_RETCODE da_reduce(
       }
       else if( run > 0 && graph->stp_type != STP_RSMT )
       {
-         const int realroot = graph->source[0];
+         const int realroot = graph->source;
 
          // solution might not be valid anymore due to pseudo-node elimination
          if( !graph_sol_valid(scip, graph, result) )
@@ -891,9 +891,9 @@ SCIP_RETCODE da_reduce(
 
          SCIP_CALL( graph_sol_reroot(scip, graph, result, root) );
 
-         graph->source[0] = root;
+         graph->source = root;
          assert(graph_sol_valid(scip, graph, result));
-         graph->source[0] = realroot;
+         graph->source = realroot;
 
          SCIP_CALL( SCIPStpDualAscent(scip, graph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, result, edgearrint, state, root, 1, NULL, nodearrchar) );
 
@@ -1352,13 +1352,13 @@ SCIP_RETCODE da_reduceSlackPrune(
 
    rpc = (graph->stp_type == STP_RPCSPG);
    grad = graph->grad;
-   root = graph->source[0];
+   root = graph->source;
    nfixed = 0;
    nedges = graph->edges;
    nnodes = graph->knots;
 
    /* graph vanished? */
-   if( grad[graph->source[0]] == 0 )
+   if( grad[graph->source] == 0 )
       return SCIP_OKAY;
 
    marked = edgearrchar;
@@ -1500,9 +1500,9 @@ SCIP_RETCODE da_reduceSlackPrune(
 
       /* BFS from root along incoming arcs of zero cost */
 
-      mark[prunegraph->source[0]] = TRUE;
+      mark[prunegraph->source] = TRUE;
 
-      SCIP_CALL( SCIPqueueInsert(queue, &(prunegraph->source[0])) );
+      SCIP_CALL( SCIPqueueInsert(queue, &(prunegraph->source)) );
 
       while( !SCIPqueueIsEmpty(queue) )
       {
@@ -1858,7 +1858,7 @@ SCIP_RETCODE da_reducePcMw(
    if( graph->terms <= 1 )
       return SCIP_OKAY;
 
-   root = graph->source[0];
+   root = graph->source;
    nroots = 0;
    nfixed = 0;
    nnodes = graph->knots;
@@ -1977,7 +1977,7 @@ SCIP_RETCODE da_reducePcMw(
    //exit(1);
 
    SCIPdebugMessage("DA: 1. NFIXED %d \n", nfixed);
-   assert(root == transgraph->source[0]);
+   assert(root == transgraph->source);
 
    /* rerun dual ascent? */
    if( solbasedda && graph->terms > 2 )
@@ -2205,12 +2205,12 @@ SCIP_RETCODE da_reducePcMw(
       for( int e = graph->outbeg[tmproot]; e != EAT_LAST; e = graph->oeat[e] )
       {
           const int k = graph->head[e];
-          if( Is_term(graph->term[k]) )
-          {
-             if( k == root )
-                cost[flipedge(e)] = 0.0;
-             else
-                cost[e] = 0.0;
+         if( Is_term(graph->term[k]) )
+         {
+            if( k == root )
+               cost[flipedge(e)] = 0.0;
+            else
+               cost[e] = 0.0;
           }
       }
 
@@ -2342,7 +2342,7 @@ SCIP_RETCODE da_reduceSlackPruneMw(
    assert(nelims != NULL);
    assert(nodearrchar != NULL);
 
-   root = graph->source[0];
+   root = graph->source;
    nfixed = 0;
    nnodes = graph->knots;
    nedges = graph->edges;
@@ -2451,7 +2451,7 @@ SCIP_RETCODE da_reduceSlackPruneMw(
 
          for( e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
          {
-            if( graph->head[e] == graph->source[0] )
+            if( graph->head[e] == graph->source )
             {
                break;
             }
@@ -2711,7 +2711,7 @@ SCIP_RETCODE da_reduceSlackPruneMw(
          }
       }
    }
-   assert(root == transgraph->source[0]);
+   assert(root == transgraph->source);
 
    SCIPdebugMessage("fixed by da: %d \n", nfixed );
 
@@ -2818,13 +2818,13 @@ SCIP_RETCODE bound_reduce(
    assert(state != NULL);
    assert(vbase != NULL);
    assert(nelims != NULL);
-   assert(graph->source[0] >= 0);
+   assert(graph->source >= 0);
    assert(upperbound != NULL);
 
    mst = NULL;
    obj = DEFAULT_HOPFACTOR;
    perm = NULL;
-   root = graph->source[0];
+   root = graph->source;
    nedges = graph->edges;
    nnodes = graph->knots;
    mstobj = 0.0;
@@ -2950,7 +2950,7 @@ SCIP_RETCODE bound_reduce(
    {
       assert(adjgraph != NULL);
       graph_knot_chg(adjgraph, 0, 0);
-      adjgraph->source[0] = 0;
+      adjgraph->source = 0;
 
       /* compute MST on adjgraph */
       SCIP_CALL( SCIPallocBufferArray(scip, &mst, nterms) );
@@ -2978,13 +2978,13 @@ SCIP_RETCODE bound_reduce(
    /* for (rooted) prize collecting an maximum weight problems: correct radius values */
    if( graph->stp_type == STP_RPCSPG )
    {
-      assert(graph->mark[graph->source[0]]);
+      assert(graph->mark[graph->source]);
       for( k = 0; k < nnodes; k++ )
       {
          if( !Is_term(graph->term[k]) || !graph->mark[k] )
             continue;
 
-         if( SCIPisGT(scip, radius[k], prize[k]) && k != graph->source[0] )
+         if( SCIPisGT(scip, radius[k], prize[k]) && k != graph->source )
             radius[k] = prize[k];
       }
    }
@@ -3343,7 +3343,7 @@ SCIP_RETCODE bound_reduce(
       for( k = 0; k < nnodes; k++ )
       {
          /* is k a terminal other than the root? */
-         if( Is_term(graph->term[k]) && graph->mark[k] && graph->grad[k] > 2 && k != graph->source[0] )
+         if( Is_term(graph->term[k]) && graph->mark[k] && graph->grad[k] > 2 && k != graph->source )
          {
             assert(perm != NULL);
             for( l = 0; l < nterms; l++ )
@@ -3458,7 +3458,7 @@ SCIP_RETCODE bound_reduceMw(
    assert(state != NULL);
    assert(vbase != NULL);
    assert(nelims != NULL);
-   assert(graph->source[0] >= 0);
+   assert(graph->source >= 0);
 
    mst = NULL;
    prize = graph->prize;
@@ -3652,7 +3652,7 @@ SCIP_RETCODE bound_reducePrune(
    assert(costrev != NULL);
    assert(solnode != NULL);
    assert(soledge != NULL);
-   assert(graph->source[0] >= 0);
+   assert(graph->source >= 0);
 
    mst = NULL;
    nedges = graph->edges;
@@ -3662,7 +3662,7 @@ SCIP_RETCODE bound_reducePrune(
    mw = (graph->stp_type == STP_MWCSP);
    pc = (graph->stp_type == STP_RPCSPG) || (graph->stp_type == STP_PCSPG);
    pcmw = (pc || mw);
-   root = graph->source[0];
+   root = graph->source;
 
    cost3 = NULL;
    edges3 = NULL;
@@ -3721,7 +3721,7 @@ SCIP_RETCODE bound_reducePrune(
 
       assert(adjgraph != NULL);
       graph_knot_chg(adjgraph, 0, 0);
-      adjgraph->source[0] = 0;
+      adjgraph->source = 0;
 
       /* compute MST on adjgraph */
       SCIP_CALL( SCIPallocBufferArray(scip, &mst, nterms) );
@@ -3760,13 +3760,13 @@ SCIP_RETCODE bound_reducePrune(
    /* for (rooted) prize collecting an maximum weight problems: correct radius values */
    if( graph->stp_type == STP_RPCSPG )
    {
-      assert(graph->mark[graph->source[0]]);
+      assert(graph->mark[graph->source]);
       for( k = 0; k < nnodes; k++ )
       {
          if( !Is_term(graph->term[k]) || !graph->mark[k] )
             continue;
 
-         if( SCIPisGT(scip, radius[k], prize[k]) && k != graph->source[0] )
+         if( SCIPisGT(scip, radius[k], prize[k]) && k != graph->source )
             radius[k] = prize[k];
       }
    }
@@ -3983,7 +3983,7 @@ SCIP_RETCODE bound_reducePrune(
                      e = graph->outbeg[k];
                      (*nelims)++;
 
-                     assert(!pc || graph->tail[e] != graph->source[0]);
+                     assert(!pc || graph->tail[e] != graph->source);
                      assert(!pc || graph->mark[graph->head[e]]);
                      assert(!Is_pterm(graph->term[graph->head[e]]));
                      assert(!Is_pterm(graph->term[graph->tail[e]]));
@@ -4271,7 +4271,7 @@ SCIP_RETCODE hopbound_reduce(
 
    /* compute MST on adjgraph */
    graph_knot_chg(adjgraph, 0, 0);
-   adjgraph->source[0] = 0;
+   adjgraph->source = 0;
    assert(graph_valid(adjgraph));
    SCIP_CALL( SCIPallocBufferArray(scip, &mst, nterms) );
    SCIP_CALL( graph_path_init(scip, adjgraph) );
@@ -4427,7 +4427,7 @@ SCIP_RETCODE hcrbound_reduce(
 
    *nelims = 0;
    nterms = 0;
-   root = graph->source[0];
+   root = graph->source;
    nedges = graph->edges;
    nnodes = graph->knots;
    hoplimit = graph->hoplimit;
@@ -4568,7 +4568,7 @@ SCIP_RETCODE hcrcbound_reduce(
    best_start = 0;
    success = TRUE;
    vars = NULL;
-   root = graph->source[0];
+   root = graph->source;
    nedges = graph->edges;
    nnodes = graph->knots;
 
