@@ -1031,7 +1031,7 @@ SCIP_RETCODE computeScore(
    /* calculate resulting score */
    cutscore = cutefficacy + 0.1 * SCIProwGetObjParallelism(cut, set, lp)
                           + 0.1 * SCIProwGetNumIntCols(cut, set) / (SCIP_Real) SCIProwGetNNonz(cut)
-                          + 1e-4 * (handlepool && !SCIProwIsInGlobalCutpool(cut));
+                          + 1e-4 * (handlepool && !SCIProwIsInGlobalCutpool(cut)); /*lint !e514*/
    assert( !SCIPsetIsInfinity(set, cutscore) );
    sepastore->scores[pos] = cutscore;
    *bestscore = MAX(*bestscore, cutscore);
