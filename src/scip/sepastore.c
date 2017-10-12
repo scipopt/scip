@@ -399,15 +399,12 @@ SCIP_RETCODE SCIPsepastoreAddCut(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events */
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
    SCIP_ROW*             cut,                /**< separated cut */
    SCIP_Bool             forcecut,           /**< should the cut be forced to enter the LP? */
    SCIP_Bool             root,               /**< are we at the root node? */
    SCIP_Bool*            infeasible          /**< pointer to store whether the cut is infeasible */
    )
 {
-   SCIP_Real cutefficacy;
-   SCIP_Real cutobjparallelism;
    SCIP_Real cutscore;
    SCIP_Bool redundant;
    int pos;
@@ -484,21 +481,12 @@ SCIP_RETCODE SCIPsepastoreAddCut(
 
    if( forcecut )
    {
-      cutefficacy = SCIPsetInfinity(set);
       cutscore = SCIPsetInfinity(set);
-      cutobjparallelism = 1.0;
    }
    else
    {
       /* initialize values to invalid (will be initialized during cut filtering) */
-      cutefficacy = SCIP_INVALID;
       cutscore = SCIP_INVALID;
-
-      /* initialize parallelism to objective (constant throughout filtering) */
-      if( set->sepa_objparalfac > 0.0 )
-         cutobjparallelism = SCIProwGetObjParallelism(cut, set, lp);
-      else
-         cutobjparallelism = 0.0; /* no need to calculate it */
    }
 
    SCIPsetDebugMsg(set, "adding cut <%s> to separation storage of size %d (forcecut=%u, len=%d)\n",
@@ -1256,18 +1244,33 @@ SCIP_RETCODE SCIPsepastoreRemoveInefficaciousCuts(
    /* check non-forced cuts only */
    cnt = 0;
    c = sepastore->nforcedcuts;
-//    while( c < sepastore->ncuts )
-//    {
-//       assert( sepastore->efficacies[c] == SCIP_INVALID ); /*lint !e777*/
-//       SCIP_CALL( computeScore(sepastore, set, stat, lp, FALSE, c, efficiacychoice) );
-//       if( !SCIPsetIsEfficacious(set, root, sepastore->efficacies[c]) )
-//       {
-//          SCIP_CALL( sepastoreDelCut(sepastore, blkmem, set, eventqueue, eventfilter, lp, c) );
-//          ++cnt;
-//       }
-//       else
-//          ++c;
-//    }
+   while( c < sepastore->ncuts )
+   {
+      SCIP_Real cutefficacy;
+      /* calculate cut's efficacy */
+      switch ( efficiacychoice )
+      {
+         case SCIP_EFFICIACYCHOICE_LP:
+            cutefficacy = SCIProwGetLPEfficacy(sepastore->cuts[c], set, stat, lp);
+            break;
+         case SCIP_EFFICIACYCHOICE_RELAX:
+            cutefficacy = SCIProwGetRelaxEfficacy(sepastore->cuts[c], set, stat);
+            break;
+         case SCIP_EFFICIACYCHOICE_NLP:
+            cutefficacy = SCIProwGetNLPEfficacy(sepastore->cuts[c], set, stat);
+            break;
+         default:
+            SCIPerrorMessage("Invalid efficiacy choice.\n");
+            return SCIP_INVALIDCALL;
+      }
+      if( !SCIPsetIsEfficacious(set, root, cutefficacy) )
+      {
+         SCIP_CALL( sepastoreDelCut(sepastore, blkmem, set, eventqueue, eventfilter, lp, c) );
+         ++cnt;
+      }
+      else
+         ++c;
+   }
    SCIPsetDebugMsg(set, "removed %d non-efficacious cuts\n", cnt);
 
    return SCIP_OKAY;

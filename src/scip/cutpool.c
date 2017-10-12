@@ -914,7 +914,7 @@ SCIP_RETCODE SCIPcutpoolSeparate(
             if( !SCIProwIsModifiable(row) && SCIProwGetNNonz(row) == 1 )
             {
                /* insert bound change cut into separation store which will force that cut */
-               SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, sol, row, FALSE, root, &cutoff) );
+               SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, row, FALSE, root, &cutoff) );
                SCIP_CALL( cutpoolDelCut(cutpool, blkmem, set, stat, lp, cut) );
 
                if ( cutoff )
@@ -932,7 +932,7 @@ SCIP_RETCODE SCIPcutpoolSeparate(
                /* insert cut in separation storage */
                SCIPsetDebugMsg(set, " -> separated cut <%s> from the cut pool (feasibility: %g)\n",
                   SCIProwGetName(row), ( sol == NULL ) ? SCIProwGetLPFeasibility(row, set, stat, lp) : SCIProwGetSolFeasibility(row, set, stat, sol) );
-               SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, sol, row, FALSE, root, &cutoff) );
+               SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, row, FALSE, root, &cutoff) );
 
                /* count cuts */
                if ( cutpoolisdelayed )
