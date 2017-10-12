@@ -167,6 +167,30 @@ SCIP_DECL_HEUREXIT(heurExitConflictdiving) /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
+/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
+static
+SCIP_DECL_HEUREXITSOL(heurExitsolConflictdiving) /*lint --e{715}*/
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   /* get heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   if( heurdata->ninds > -1 )
+   {
+      SCIPfreeBlockMemoryArray(scip, &heurdata->inds, SCIPgetNVars(scip));
+      SCIPfreeBlockMemoryArray(scip, &heurdata->nsoftlocks, SCIPgetNVars(scip));
+      heurdata->inds = NULL;
+      heurdata->nsoftlocks = NULL;
+      heurdata->ninds = -1;
+   }
+
+   return SCIP_OKAY;
+}
 
 /** execution method of primal heuristic */
 static
@@ -186,17 +210,14 @@ SCIP_DECL_HEUREXEC(heurExecConflictdiving) /*lint --e{715}*/
    diveset = SCIPheurGetDivesets(heur)[0];
    assert(diveset != NULL);
 
-   *result = SCIP_DIDNOTRUN;
+   *result = SCIP_DELAYED;
+
+   /* don't run if no conflict constraints where found */
+   if( SCIPgetNConflictConssFound(scip) == 0 )
+      return SCIP_OKAY;
 
    if( heurtiming == SCIP_HEURTIMING_DURINGLPLOOP && SCIPgetDepth(scip) != 0 )
       return SCIP_OKAY;
-
-   assert((heurtiming & SCIP_HEURTIMING_AFTERLPPLUNGE) == 0);
-
-   if( heurtiming == SCIP_HEURTIMING_AFTERLPPLUNGE && SCIPgetDepth(scip) != 0 )
-      return SCIP_OKAY;
-
-   *result = SCIP_DELAYED;
 
    vars = SCIPgetVars(scip);
    assert(vars != NULL);
@@ -370,6 +391,7 @@ SCIP_RETCODE SCIPincludeHeurConflictdiving(
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeConflictdiving) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitConflictdiving) );
    SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitConflictdiving) );
+   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolConflictdiving) );
 
    /* create a diveset (this will automatically install some additional parameters for the heuristic)*/
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
