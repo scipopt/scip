@@ -45,6 +45,7 @@
 
 #include "scip/cons_orbisack.h"
 #include "scip/cons_orbitope.h"
+#include "scip/cons_setppc.h"
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "orbisack"
@@ -72,6 +73,8 @@
 /* default parameters for constraints */
 #define DEFAULT_COEFFBOUND               1000000.0     /**< maximum size of coefficients in orbisack inequalities */
 
+#define DEFAULT_PPORBISACK        TRUE /**< whether we allow upgrading to packing/partitioning orbisacks */
+
 
 /*
  * Data structures
@@ -83,6 +86,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             coverseparation;    /**< whether only cover inequalities should be separated */
    SCIP_Bool             orbiseparation;     /**< whether orbisack as well as cover inequalities should be separated */
    SCIP_Real             coeffbound;         /**< maximum size of coefficients in orbisack inequalities */
+   SCIP_Bool             checkpporbisack;    /**< whether we allow upgrading to packing/partitioning orbisacks */
 };
 
 /** constraint data for orbisack constraints */
@@ -156,6 +160,180 @@ SCIP_RETCODE consdataCreate(
 #endif
 
    (*consdata)->nrows = nrows;
+
+   return SCIP_OKAY;
+}
+
+
+/** check wether an orbisack is even a packing/partitioning orbisack */
+static
+SCIP_RETCODE packingUpgrade(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_VAR*const*       vars1,              /**< first column of matrix of variables on which the symmetry acts */
+   SCIP_VAR*const*       vars2,              /**< variables of second column */
+   int                   nrows,              /**< number of rows of orbisack */
+   SCIP_Bool*            success,            /**< memory address to store whether constraint can be upgraded */
+   SCIP_Bool*            isparttype          /**< memory address to store whether upgraded orbisack is partitioning orbisack */
+   )
+{
+   SCIP_CONSHDLR* setppcconshdlr;
+   SCIP_CONS** setppcconss;
+   int nsetppcconss;
+   SCIP_Bool* rowcovered;
+   int i;
+   int c;
+
+   assert( scip != NULL );
+   assert( vars1 != NULL );
+   assert( vars2 != NULL );
+   assert( success != NULL );
+   assert( isparttype != NULL );
+
+   *success = FALSE;
+
+   /* get data of setppc conshdlr */
+   setppcconshdlr = SCIPfindConshdlr(scip, "setppc");
+   if ( setppcconshdlr == NULL )
+   {
+      SCIPerrorMessage("Setppc constraint handler not found.\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+   setppcconss = SCIPconshdlrGetConss(setppcconshdlr);
+   nsetppcconss = SCIPconshdlrGetNConss(setppcconshdlr);
+
+   /* upgrade cannot be successful */
+   if ( nsetppcconss == 0 )
+      return SCIP_OKAY;
+   assert( setppcconss != NULL );
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &rowcovered, nrows) );
+
+   /* iterate over orbisack rows and check whether rows are contained in partitioning constraints */
+   *success = TRUE;
+   for (i = 0; i < nrows; ++i)
+   {
+      /* iterate over constraints */
+      for (c = 0; c < nsetppcconss; ++c)
+      {
+         int nsetppcvars;
+         SCIP_VAR** setppcvars;
+         SCIP_VAR* var;
+         int varidx1;
+         int varidx2;
+
+         /* check type */
+         if ( SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_COVERING ||
+            SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_PACKING )
+            continue;
+         assert( SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_PARTITIONING );
+
+         /* get set packing/partitioning variables */
+         nsetppcvars = SCIPgetNVarsSetppc(scip, setppcconss[c]);
+         assert( nsetppcvars > 0 );
+
+         /* partitioning constraint contains too much variables */
+         if ( nsetppcvars != 2 )
+            continue;
+         assert( nsetppcvars == 2 );
+
+         setppcvars = SCIPgetVarsSetppc(scip, setppcconss[c]);
+         assert( setppcvars != NULL );
+
+         /* check whether i-th row is contained in partitioning constraint */
+         var = setppcvars[0];
+         if ( SCIPvarIsNegated(var) )
+            continue;
+
+         varidx1 = SCIPvarGetProbindex(var);
+
+         var = setppcvars[1];
+         if ( SCIPvarIsNegated(var) )
+            continue;
+
+         varidx2 = SCIPvarGetProbindex(var);
+
+         if ( (varidx1 == SCIPvarGetProbindex(vars1[i]) && varidx2 == SCIPvarGetProbindex(vars2[i])) ||
+            (varidx2 == SCIPvarGetProbindex(vars1[i]) && varidx1 == SCIPvarGetProbindex(vars2[i])))
+         {
+            rowcovered[i] = TRUE;
+            break;
+         }
+      }
+
+      /* no partitioning constraint corresponds to row i */
+      if ( c >= nsetppcconss )
+         *success = FALSE;
+   }
+
+   if ( *success )
+   {
+      *isparttype = TRUE;
+      SCIPfreeBufferArray(scip, &rowcovered);
+
+      return SCIP_OKAY;
+   }
+
+   /* Iterate over orbisack rows and check whether rows are contained in packing constraints.
+    * In particular, it is possible that variables in row i form a subset of variables in the
+    * a packing/partitioning constraint. */
+   *success = TRUE;
+   for (i = 0; i < nrows; ++i)
+   {
+      /* skip already covered rows */
+      if ( rowcovered[i] )
+         continue;
+
+      /* iterate over constraints */
+      for (c = 0; c < nsetppcconss; ++c)
+      {
+         int nsetppcvars;
+         SCIP_VAR** setppcvars;
+         int varidx;
+         SCIP_VAR* var;
+         int nfound = 0;
+         int j;
+
+         /* check type */
+         if ( SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_COVERING )
+            continue;
+         assert( SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_PARTITIONING ||
+            SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_PACKING );
+
+         /* get set packing/partitioning variables */
+         nsetppcvars = SCIPgetNVarsSetppc(scip, setppcconss[c]);
+         assert( nsetppcvars > 0 );
+
+         setppcvars = SCIPgetVarsSetppc(scip, setppcconss[c]);
+         assert( setppcvars != NULL );
+
+         /* check whether all variables of the cycle are contained in setppc constraint */
+         for (j = 0; j < nsetppcvars && nfound < 2; ++j)
+         {
+            var = setppcvars[j];
+
+            if ( SCIPvarIsNegated(var) )
+               continue;
+
+            varidx = SCIPvarGetProbindex(var);
+
+            if ( varidx == SCIPvarGetProbindex(vars1[i]) || varidx == SCIPvarGetProbindex(vars2[i]) )
+               ++nfound;
+         }
+
+         if ( nfound == 2 )
+            break;
+      }
+
+      /* row i is not contained in an setppc constraint */
+      if ( c >= nsetppcconss )
+         *success = FALSE;
+   }
+
+   /* we have found a packing orbisack */
+   if ( *success )
+      *isparttype = FALSE;
+
+   SCIPfreeBufferArray(scip, &rowcovered);
 
    return SCIP_OKAY;
 }
@@ -1610,6 +1788,12 @@ SCIP_RETCODE SCIPincludeConshdlrOrbisack(
          "Maximum size of coefficients for orbisack inequalities",
          &conshdlrdata->coeffbound, TRUE, DEFAULT_COEFFBOUND, 0.0, DBL_MAX, NULL, NULL) );
 
+   /* whether we allow upgrading to packing/partioning orbisack constraints*/
+   SCIP_CALL( SCIPaddBoolParam(scip, "cons/" CONSHDLR_NAME "/checkpporbisack",
+         "Upgrade orbisack constraints to packing/partioning orbisacks?",
+         &conshdlrdata->checkpporbisack, TRUE, DEFAULT_PPORBISACK, NULL, NULL) );
+
+
    return SCIP_OKAY;
 }
 
@@ -1630,6 +1814,7 @@ SCIP_RETCODE SCIPcreateConsOrbisack(
    SCIP_VAR*const*       vars2,              /**< second column of matrix of variables on which the symmetry acts */
    int                   nrows,              /**< number of rows in variable matrix */
    SCIP_Bool             ispporbisack,       /**< whether the orbisack is a packing/partitioning orbisack */
+   SCIP_Bool             isparttype,         /**< whether the orbisack is a partitioning orbisack */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -1658,7 +1843,9 @@ SCIP_RETCODE SCIPcreateConsOrbisack(
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
    SCIP_VAR*** vars;
+   SCIP_Bool checkupgrade = FALSE;
    int i;
+   SCIP_Bool success;
 
    /* find the orbisack constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -1669,6 +1856,16 @@ SCIP_RETCODE SCIPcreateConsOrbisack(
    }
 
    assert( nrows > 0 );
+
+   /* check for upgrade to packing/partitioning orbisacks*/
+   SCIP_CALL( SCIPgetBoolParam(scip, "cons/orbisack/checkpporbisack", &checkupgrade) );
+   if ( ! ispporbisack && checkupgrade )
+   {
+      SCIP_CALL( packingUpgrade(scip, vars1, vars2, nrows, &success, &isparttype) );
+
+      if ( success )
+         ispporbisack = TRUE;
+   }
 
    /* create constraint, if it is a packing/partitioning orbisack, add orbitope constraint
     * instead of orbitsack constraint */
@@ -1682,7 +1879,7 @@ SCIP_RETCODE SCIPcreateConsOrbisack(
          vars[i][1] = vars2[i];
       }
 
-      SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, "pporbisack", vars, FALSE, nrows, 2, TRUE, initial, separate, enforce, check, propagate,
+      SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, "pporbisack", vars, isparttype, nrows, 2, TRUE, initial, separate, enforce, check, propagate,
             local, modifiable, dynamic, removable, stickingatnode) );
 
       for (i = 0; i < nrows; ++i)
@@ -1716,10 +1913,11 @@ SCIP_RETCODE SCIPcreateConsBasicOrbisack(
    SCIP_VAR**            vars1,              /**< first column of matrix of variables on which the symmetry acts */
    SCIP_VAR**            vars2,              /**< second column of matrix of variables on which the symmetry acts */
    int                   nrows,              /**< number of rows in constraint matrix */
-   SCIP_Bool             ispporbisack        /**< whether the orbisack is a packing/partitioning orbisack */
+   SCIP_Bool             ispporbisack,       /**< whether the orbisack is a packing/partitioning orbisack */
+   SCIP_Bool             isparttype          /**< whether the orbisack is a partitioning orbisack */
    )
 {
-   SCIP_CALL( SCIPcreateConsOrbisack(scip, cons, name, vars1, vars2, nrows, ispporbisack,
+   SCIP_CALL( SCIPcreateConsOrbisack(scip, cons, name, vars1, vars2, nrows, ispporbisack, isparttype,
          TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIP_OKAY;

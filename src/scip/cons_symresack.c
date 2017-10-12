@@ -1120,7 +1120,7 @@ SCIP_RETCODE orbisackUpgrade(
    /* if permutation can be upgraded to an orbisack */
    if ( *success )
    {
-      SCIP_CALL( SCIPcreateConsOrbisack(scip, cons, "orbisack", vars1, vars2, nrows, FALSE,
+      SCIP_CALL( SCIPcreateConsOrbisack(scip, cons, "orbisack", vars1, vars2, nrows, FALSE, FALSE,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
 

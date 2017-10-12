@@ -72,6 +72,7 @@ SCIP_RETCODE SCIPcreateConsOrbisack(
    SCIP_VAR*const*       vars2,              /**< second column matrix of variables on which the symmetry acts */
    int                   nrows,              /**< number of rows in variable matrix */
    SCIP_Bool             ispporbisack,       /**< whether the orbisack is a packing/partitioning orbisack */
+   SCIP_Bool             isparttype,         /**< whether the orbisack is a partitioning orbisack */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -113,7 +114,8 @@ SCIP_RETCODE SCIPcreateConsBasicOrbisack(
    SCIP_VAR**            vars1,              /**< first column of matrix of variables on which the symmetry acts */
    SCIP_VAR**            vars2,              /**< second column of matrix of variables on which the symmetry acts */
    int                   nrows,              /**< number of rows in constraint matrix */
-   SCIP_Bool             ispporbisack        /**< whether the orbisack is a packing/partitioning orbisack */
+   SCIP_Bool             ispporbisack,       /**< whether the orbisack is a packing/partitioning orbisack */
+   SCIP_Bool             isparttype          /**< whether the orbisack is a partitioning orbisack */
    );
 
 #ifdef __cplusplus
