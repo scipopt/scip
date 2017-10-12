@@ -488,6 +488,9 @@ SCIP_RETCODE transformNonIntegralRow(
 
          transrowrhs *= intscalar;
 
+         /* slack is initialized to zero since the transrowrhs can still change due to bound usage in the loop below;
+          * the floored right hand side is then added afterwards
+          */
          slack = 0.0;
          for( i = 0; i < transrowlen; ++i )
          {
@@ -602,7 +605,7 @@ SCIP_RETCODE mod2MatrixTransformContRows(
 
       lhs = SCIProwGetLhs(rows[i]) - SCIProwGetConstant(rows[i]);
       rhs = SCIProwGetRhs(rows[i]) - SCIProwGetConstant(rows[i]);
-      activity = SCIPgetRowLPActivity(scip, rows[i]);
+      activity = SCIPgetRowLPActivity(scip, rows[i]) - SCIProwGetConstant(rows[i]);
 
       /* compute lhsslack: activity - lhs */
       if( SCIPisInfinity(scip, -SCIProwGetLhs(rows[i])) )
@@ -1045,6 +1048,8 @@ SCIP_RETCODE buildMod2Matrix(
    /* add all integral rows using the created columns */
    for( i = 0; i < nrows; ++i )
    {
+      SCIP_Real lhs;
+      SCIP_Real rhs;
       SCIP_Real activity;
       SCIP_Real lhsslack;
       SCIP_Real rhsslack;
@@ -1057,15 +1062,19 @@ SCIP_RETCODE buildMod2Matrix(
 
       lhsmod2 = 0;
       rhsmod2 = 0;
-      activity = SCIPgetRowLPActivity(scip, rows[i]);
+      activity = SCIPgetRowLPActivity(scip, rows[i]) - SCIProwGetConstant(rows[i]);
+
+      /* since row is integral we can ceil/floor the lhs/rhs after subtracting the constant */
+      lhs = SCIPfeasCeil(scip, SCIProwGetLhs(rows[i]) - SCIProwGetConstant(rows[i]));
+      rhs = SCIPfeasFloor(scip, SCIProwGetRhs(rows[i]) - SCIProwGetConstant(rows[i]));
 
       /* compute lhsslack: activity - lhs */
       if( SCIPisInfinity(scip, -SCIProwGetLhs(rows[i])) )
          lhsslack = SCIPinfinity(scip);
       else
       {
-         lhsslack = activity - SCIProwGetLhs(rows[i]);
-         lhsmod2 = mod2(scip, SCIProwGetLhs(rows[i]) - SCIProwGetConstant(rows[i]));
+         lhsslack = activity - lhs;
+         lhsmod2 = mod2(scip, lhs);
       }
 
       /* compute rhsslack: rhs - activity */
@@ -1073,8 +1082,8 @@ SCIP_RETCODE buildMod2Matrix(
          rhsslack = SCIPinfinity(scip);
       else
       {
-         rhsslack = SCIProwGetRhs(rows[i]) - activity;
-         rhsmod2 = mod2(scip, SCIProwGetRhs(rows[i]) - SCIProwGetConstant(rows[i]));
+         rhsslack = rhs - activity;
+         rhsmod2 = mod2(scip, rhs);
       }
 
       if( rhsslack <= maxslack && lhsslack <= maxslack )
@@ -1084,7 +1093,7 @@ SCIP_RETCODE buildMod2Matrix(
             /* maxslack < 1 implies rhs - lhs = rhsslack + lhsslack < 2. Therefore lhs = rhs (mod2) can only hold if they
              * are equal
              */
-            assert(SCIPisEQ(scip, SCIProwGetLhs(rows[i]), SCIProwGetRhs(rows[i])));
+            assert(SCIPisEQ(scip, lhs, rhs));
 
             /* use rhs */
             SCIP_CALL( mod2MatrixAddOrigRow(scip, blkmem, mod2matrix, origcol2col, rows[i], rhsslack, ORIG_RHS, rhsmod2) );
