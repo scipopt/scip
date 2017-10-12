@@ -776,8 +776,8 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSin)
       if( SCIPisLT(scip, SIN(newinf), interval.inf) )
       {
          SCIP_Real a = ASIN(interval.inf);
-         int k = (int) ceil((newinf - a) / 2*M_PI);
-         newinf = a + 2*M_PI * k;
+         int k = (int) ceil((newinf - a) / (2.0*M_PI));
+         newinf = a + 2.0*M_PI * k;
          assert(newinf >= childbound.inf);
       }
 
@@ -793,26 +793,26 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSin)
       }
    }
 
-   if( !SCIPisInfinity(scip, interval.sup) )
+   if( !SCIPisInfinity(scip, newsup) )
    {
       /* if sin(u(x)) > u(s), we are looking for k minimal s.t. a + 2k*pi > u(x) - 2*pi where a = asin(u(s))
-       * then the new lower bound is a + 2k*pi
+       * then the new upper bound is a + 2k*pi
        */
       if ( SCIPisGT(scip, SIN(newsup), interval.sup) )
       {
          SCIP_Real a = ASIN(interval.sup);
-         int k = (int) ceil((newsup - a ) / 2*M_PI) - 1;
-         newsup = a + 2*M_PI * k;
+         int k = (int) ceil((newsup - a ) / (2.0*M_PI)) - 1;
+         newsup = a + 2.0*M_PI * k;
          assert(newsup <= childbound.sup);
       }
 
       /* if sin(u(x)) < l(s), we are looking for k minimal s.t. pi - a + 2k*pi > l(x) - 2*pi where a = asin(l(s))
-       * then the new lower bound is pi - a + 2k*pi
+       * then the new upper bound is pi - a + 2k*pi
        */
       if( SCIPisLT(scip, SIN(newsup), interval.inf) )
       {
          SCIP_Real a = ASIN(interval.inf);
-         int k = (int) ceil((newsup + a) / 2*M_PI - 0.5) - 1;
+         int k = (int) ceil((newsup + a) / (2*M_PI) - 0.5) - 1;
          newsup = M_PI * (2.0*k + 1.0) - a;
          assert(newsup <= childbound.sup);
       }
