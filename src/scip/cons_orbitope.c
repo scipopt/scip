@@ -56,11 +56,6 @@
  *   <tr><td>frontiersteps</td><td>\\Gamma </td></tr>
  * </table>
  *
- *
- * @todo implement consenfops for full orbitopes
- *
- * @todo implement conscheck for full orbitopes
- *
  * @todo implement separation routine for full orbitopes
  *
  * @note resolution of full orbitope propagation not available yet
@@ -72,6 +67,7 @@
 #include <string.h>
 #include <ctype.h>
 
+#include "scip/cons_orbisack.h"
 #include "scip/cons_orbitope.h"
 
 /* constraint handler properties */
@@ -1796,6 +1792,63 @@ SCIP_RETCODE checkPackingPartitioningOrbitopeSolution(
 }
 
 
+/** check full orbitope solution for feasibility */
+static
+SCIP_RETCODE checkFullOrbitopeSolution(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to process */
+   SCIP_SOL*             sol,                /**< solution to be checked */
+   SCIP_Bool*            feasible            /**< memory address to store whether solution is feasible */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR*** vars;
+   int nrows;
+   int ncols;
+   SCIP_VAR** vars1;
+   SCIP_VAR** vars2;
+   int j;
+   int i;
+
+   assert( scip != NULL );
+   assert( cons != NULL );
+   assert( feasible != NULL );
+
+   consdata = SCIPconsGetData(cons);
+
+   assert( consdata != NULL );
+   assert( consdata->vars != NULL );
+   assert( consdata->nspcons > 0 );
+   assert( consdata->nblocks > 0 );
+
+   vars = consdata->vars;
+   nrows = consdata->nspcons;
+   ncols = consdata->nblocks;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars1, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars2, nrows) );
+
+   /* iterate over adjacent columns of orbitope and check whether the first column in this
+    * column pair is lexicographically not smaller than the second column in the pair */
+   *feasible = TRUE;
+   for (j = 1; j < ncols && *feasible; ++j)
+   {
+      for (i = 0; i < nrows; ++i)
+      {
+         vars1[i] = vars[i][j - 1];
+         vars2[i] = vars[i][j];
+      }
+
+      SCIP_CALL( SCIPcheckOrbisackSolution(scip, sol, vars1, vars2, nrows, feasible) );
+   }
+
+   SCIPfreeBufferArray(scip, &vars2);
+   SCIPfreeBufferArray(scip, &vars1);
+
+   return SCIP_OKAY;
+}
+
+
 /** separate or enforce constraints */
 static
 SCIP_RETCODE separateConstraints(
@@ -2041,6 +2094,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsOrbitope)
       SCIP_CONS* cons;
       SCIP_CONSDATA* consdata;
       SCIP_ORBITOPETYPE orbitopetype;
+      SCIP_Bool feasible;
 
       /* get data of constraint */
       cons = conss[c];
@@ -2057,8 +2111,10 @@ SCIP_DECL_CONSENFOPS(consEnfopsOrbitope)
       }
       else
       {
-         ;
-         /* SCIP_CALL( checkFullOrbitopeSolution() ); */
+         SCIP_CALL( checkFullOrbitopeSolution(scip, cons, NULL, &feasible) );
+
+         if ( ! feasible )
+            *result = SCIP_INFEASIBLE;
       }
 
       if ( *result == SCIP_INFEASIBLE )
@@ -2076,6 +2132,7 @@ SCIP_DECL_CONSCHECK(consCheckOrbitope)
    int c;
    SCIP_CONSDATA* consdata;
    SCIP_ORBITOPETYPE orbitopetype;
+   SCIP_Bool feasible;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -2100,7 +2157,10 @@ SCIP_DECL_CONSCHECK(consCheckOrbitope)
       }
       else
       {
-         ;
+         SCIP_CALL( checkFullOrbitopeSolution(scip, conss[c], sol, &feasible) );
+
+         if ( ! feasible )
+            *result = SCIP_INFEASIBLE;
       }
    }
    SCIPdebugMsg(scip, "Solution is feasible.\n");
