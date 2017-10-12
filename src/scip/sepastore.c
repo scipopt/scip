@@ -1024,13 +1024,13 @@ SCIP_RETCODE computeScore(
    }
 
    /* If a cut is not member of the cut pool, we slightly decrease its score to prefer identical
-    * cuts which are in the cut pool.  This is because the conversion of cuts into linear
+    * cuts which are in the cut pool. This is because the conversion of cuts into linear
     * constraints after a restart looks at the cut pool and cannot find tight non-pool cuts.
     */
 
    /* calculate resulting score */
-   cutscore = cutefficacy + 0.1 * SCIProwGetObjParallelism(cut, set, lp)
-                          + 0.1 * SCIProwGetNumIntCols(cut, set) / (SCIP_Real) SCIProwGetNNonz(cut)
+   cutscore = cutefficacy + set->sepa_objparalfac * SCIProwGetObjParallelism(cut, set, lp)
+                          + set->sepa_intsupportfac * SCIProwGetNumIntCols(cut, set) / (SCIP_Real) SCIProwGetNNonz(cut)
                           + 1e-4 * (handlepool && !SCIProwIsInGlobalCutpool(cut)); /*lint !e514*/
    assert( !SCIPsetIsInfinity(set, cutscore) );
    sepastore->scores[pos] = cutscore;

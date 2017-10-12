@@ -472,7 +472,7 @@ struct SCIP_Set
    SCIP_Real             sepa_minortho;      /**< minimal orthogonality for a cut to enter the LP */
    SCIP_Real             sepa_minorthoroot;  /**< minimal orthogonality for a cut to enter the LP in the root node */
    SCIP_Real             sepa_objparalfac;   /**< factor to scale objective parallelism of cut in separation score calc. */
-   SCIP_Real             sepa_orthofac;      /**< factor to scale orthogonality of cut in separation score calculation */
+   SCIP_Real             sepa_intsupportfac; /**< factor to scale integral support of cut in separation score calculation */
    SCIP_Real             sepa_feastolfac;    /**< factor on cut infeasibility to limit feasibility tolerance for relaxation solver (-1: off) */
    SCIP_Real             sepa_primfeastol;   /**< primal feasibility tolerance derived from cut feasibility (set by sepastore, not a parameter) */
    SCIP_Real             sepa_minactivityquot; /**< minimum cut activity quotient to convert cuts into constraints
