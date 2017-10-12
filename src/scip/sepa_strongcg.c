@@ -423,7 +423,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
          success = TRUE;
 #endif
 
-         if( success )
+         if( success ) /*lint !e774*/
          {
             if( !SCIPisCutEfficacious(scip, NULL, cut) )
             {

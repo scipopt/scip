@@ -851,7 +851,6 @@ static
 SCIP_RETCODE addRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< knapsack constraint */
-   SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
    SCIP_Bool*            cutoff              /**< whether a cutoff has been detected */
    )
 {
@@ -6187,7 +6186,7 @@ SCIP_RETCODE separateCons(
    if( violated )
    {
       /* add knapsack constraint as LP row to the LP */
-      SCIP_CALL( addRelaxation(scip, cons, sol, cutoff) );
+      SCIP_CALL( addRelaxation(scip, cons, cutoff) );
       (*ncuts)++;
    }
    else if( sepacuts )
@@ -11770,7 +11769,7 @@ SCIP_RETCODE enforceConstraint(
       if( violated )
       {
          /* add knapsack constraint as LP row to the relaxation */
-         SCIP_CALL( addRelaxation(scip, conss[i], sol, &cutoff) );
+         SCIP_CALL( addRelaxation(scip, conss[i], &cutoff) );
          ncuts++;
       }
    }
@@ -11782,7 +11781,7 @@ SCIP_RETCODE enforceConstraint(
       if( violated )
       {
          /* add knapsack constraint as LP row to the relaxation */
-         SCIP_CALL( addRelaxation(scip, conss[i], sol, &cutoff) );
+         SCIP_CALL( addRelaxation(scip, conss[i], &cutoff) );
          ncuts++;
       }
    }
@@ -12192,7 +12191,7 @@ SCIP_DECL_CONSINITLP(consInitlpKnapsack)
    for( i = 0; i < nconss && !(*infeasible); i++ )
    {
       assert(SCIPconsIsInitial(conss[i]));
-      SCIP_CALL( addRelaxation(scip, conss[i], NULL, infeasible) );
+      SCIP_CALL( addRelaxation(scip, conss[i], infeasible) );
    }
 
    return SCIP_OKAY;

@@ -211,9 +211,7 @@ SCIP_RETCODE addCut(
          SCIPdebugMsg(scip, " -> %s cut <%s> no longer efficacious: rhs=%f, eff=%f\n",
                       cutclassname, cutname, cutrhs, cutefficacy);
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
-         success = FALSE;
       }
-      else
 
       SCIPdebugMsg(scip, " -> found %s cut <%s>: rhs=%f, eff=%f, rank=%d, min=%f, max=%f (range=%g)\n",
                      cutclassname, cutname, cutrhs, cutefficacy, SCIProwGetRank(cut),

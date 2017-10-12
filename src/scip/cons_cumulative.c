@@ -8915,7 +8915,6 @@ static
 SCIP_RETCODE createCapacityRestrictionIntvars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to be checked */
-   SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
    int*                  startindices,       /**< permutation with rspect to the start times */
    int                   curtime,            /**< current point in time */
    int                   nstarted,           /**< number of jobs that start before the curtime or at curtime */
@@ -9062,7 +9061,7 @@ SCIP_RETCODE separateConsOnIntegerVariables(
       if( freecapacity < 0 && curtime >= hmin)
       {
          /* create capacity restriction row for current event point */
-         SCIP_CALL( createCapacityRestrictionIntvars(scip, cons, sol, startindices, curtime, j+1, endindex, lower) );
+         SCIP_CALL( createCapacityRestrictionIntvars(scip, cons, startindices, curtime, j+1, endindex, lower) );
          *separated = TRUE;
       }
    } /*lint --e{850}*/

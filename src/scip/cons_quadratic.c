@@ -8269,7 +8269,6 @@ SCIP_RETCODE processCut(
    SCIP_ROW**            row,                /**< cut to process */
    SCIP_CONSHDLR*        conshdlr,           /**< quadratic constraints handler */
    SCIP_CONS*            cons,               /**< constraint */
-   SCIP_SOL*             sol,                /**< solution to separate, or NULL if LP solution should be used */
    SCIP_Real             efficacy,           /**< efficacy of row in reference solution */
    SCIP_Real             actminefficacy,     /**< actual minimal efficacy (whatever that is) */
    SCIP_Bool             inenforcement,      /**< whether we are in constraint enforcement */
@@ -8440,7 +8439,7 @@ SCIP_RETCODE separatePoint(
                   return SCIP_INVALIDDATA;  /*lint !e527*/
             }
 
-            SCIP_CALL( processCut(scip, &row, conshdlr, conss[c], sol, efficacy, actminefficacy, inenforcement, bestefficacy, result) );
+            SCIP_CALL( processCut(scip, &row, conshdlr, conss[c], efficacy, actminefficacy, inenforcement, bestefficacy, result) );
          }
          continue;
       }
@@ -8449,7 +8448,7 @@ SCIP_RETCODE separatePoint(
          SCIP_CALL( generateCutSol(scip, conshdlr, conss[c], sol, NULL, violside, &row, &efficacy,
             conshdlrdata->checkcurvature, actminefficacy, 'd') );
          /* @todo If generation failed not because of low efficacy, then probably because of numerical issues */
-         SCIP_CALL( processCut(scip, &row, conshdlr, conss[c], sol, efficacy, actminefficacy, inenforcement, bestefficacy, result) );
+         SCIP_CALL( processCut(scip, &row, conshdlr, conss[c], efficacy, actminefficacy, inenforcement, bestefficacy, result) );
       }
 
       if( *result == SCIP_CUTOFF )

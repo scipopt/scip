@@ -1631,7 +1631,6 @@ static
 SCIP_RETCODE addCuts(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linking constraint */
-   SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
    SCIP_Bool*            cutoff              /**< whether a cutoff has been detected */
    )
 {
@@ -1760,7 +1759,7 @@ SCIP_RETCODE separateCons(
    {
       /* insert LP row as cut */
       assert(!(*cutoff));
-      SCIP_CALL( addCuts(scip, cons, sol, cutoff) );
+      SCIP_CALL( addCuts(scip, cons, cutoff) );
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
       *separated = TRUE;
    }
@@ -2078,7 +2077,7 @@ SCIP_DECL_CONSINITLP(consInitlpLinking)
       if( consdata->nbinvars <= 1 )
          continue;
 
-      SCIP_CALL( addCuts(scip, conss[c], NULL, infeasible) );
+      SCIP_CALL( addCuts(scip, conss[c], infeasible) );
    }
 
    return SCIP_OKAY;
