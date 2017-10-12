@@ -187,6 +187,14 @@ extern "C" {
 #define SQRT(x)       (sqrt(x))
 #endif
 
+#ifndef LOG2
+#if defined(_MSC_VER) && (_MSC_VER < 1800)
+#define LOG2(x) (log(x) / log(2.0))
+#else
+#define LOG2(x) log2(x)
+#endif
+#endif
+
 #ifndef ABS
 #define ABS(x)        ((x) >= 0 ? (x) : -(x))
 #endif
