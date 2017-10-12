@@ -61,11 +61,9 @@
  *
  * @todo implement conscheck for full orbitopes
  *
- * @todo implement propagation routine for full orbitopes
- *
  * @todo implement separation routine for full orbitopes
  *
- * @todo implement resolution routine for propagation of full orbitopes
+ * @note resolution of full orbitope propagation not available yet
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1093,6 +1091,140 @@ SCIP_RETCODE propagatePackingPartitioningCons(
 }
 
 
+/** propagation of full orbitopes (called recursively) */
+static
+SCIP_RETCODE propagateFullOrbitope(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_VAR***           vars,               /**< variable matrix */
+   unsigned int          firstcol,           /**< first column to consider */
+   unsigned int          lastcol,            /**< last column to consider + 1 */
+   int                   currow,             /**< current row */
+   int                   nrows,              /**< number of rows */
+   int*                  nfixedvars,         /**< pointer to store the number of variables fixed during propagation */
+   SCIP_Bool*            infeasible          /**< pointer to store whether infeasibility was detected */
+   )
+{
+   int lastone;
+   int firstzero = -1;
+   int j;
+   int l;
+
+   assert( scip != NULL );
+   assert( vars != NULL );
+   assert( infeasible != NULL );
+   assert( nfixedvars != NULL );
+
+   /* possibly stop recursion */
+   if ( *infeasible || currow >= nrows )
+      return SCIP_OKAY;
+
+   /* init indicators of 1-entry position */
+   lastone = firstcol - 1;
+
+   /* iterate over entries of current row and perform orbitope propagation */
+   for (j = (int) firstcol; j < (int) lastcol; ++j)
+   {
+      assert( vars[currow][j] != NULL );
+
+      if ( SCIPvarGetLbLocal(vars[currow][j]) > 0.5 )
+      {
+         /* fix all variables smaller than j to 1 */
+         for (l = lastone + 1; l < j; ++l)
+         {
+            assert( SCIPvarGetLbLocal(vars[currow][l]) < 0.5 );
+            assert( SCIPvarGetUbLocal(vars[currow][l]) > 0.5 );
+
+            SCIP_CALL( SCIPchgVarLb(scip, vars[currow][l], 1.0) );
+            ++(*nfixedvars);
+         }
+
+         lastone = j;
+      }
+      else if ( SCIPvarGetUbLocal(vars[currow][j]) < 0.5 )
+      {
+         firstzero = j;
+
+         /* fix all remaining entries to 0 */
+         for (l = j + 1; l < (int) lastcol; ++l)
+         {
+            if ( SCIPvarGetUbLocal(vars[currow][l]) > 0.5 && SCIPvarGetLbLocal(vars[currow][l]) < 0.5 )
+            {
+               SCIP_CALL( SCIPchgVarUb(scip, vars[currow][l], 0.0) );
+               ++(*nfixedvars);
+            }
+            /* -> infeasible */
+            else if ( SCIPvarGetLbLocal(vars[currow][l]) > 0.5 )
+            {
+               *infeasible = TRUE;
+
+               return SCIP_OKAY;
+            }
+         }
+
+         break;
+      }
+   }
+
+   /* The orbitope can be split into the sub orbitopes w.r.t. the 1-entries (firstcol, ..., lastone) and the 0-entries
+    * (firstzero, ..., lastcol - 1). Furthermore, avoid trivial cases, i.e., the sub-orbitopes contain only one
+    * column. */
+   if ( lastone > (int) firstcol )
+   {
+      SCIP_CALL( propagateFullOrbitope(scip, vars, firstcol, lastone + 1, currow + 1, nrows, nfixedvars, infeasible) );
+   }
+
+   if ( firstzero >= 0 && firstzero < (int) lastcol - 1 )
+   {
+      SCIP_CALL( propagateFullOrbitope(scip, vars, firstzero, lastcol, currow + 1, nrows, nfixedvars, infeasible) );
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** propagation method for a single packing or partitioning orbitope constraint */
+static
+SCIP_RETCODE propagateFullOrbitopeCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to be processed */
+   SCIP_Bool*            infeasible,         /**< pointer to store TRUE, if the node can be cut off */
+   int*                  nfixedvars          /**< pointer to add up the number of found domain reductions */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR*** vars;
+   int nspcons;
+   int nblocks;
+
+   assert( scip != NULL );
+   assert( cons != NULL );
+   assert( infeasible != NULL );
+   assert( nfixedvars != NULL );
+
+   *nfixedvars = 0;
+   *infeasible = FALSE;
+
+   /* @todo Can the following be removed? */
+   if ( ! SCIPallowDualReds(scip) )
+      return SCIP_OKAY;
+
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+   assert( consdata->nspcons > 0 );
+   assert( consdata->nblocks > 0 );
+   assert( consdata->vars != NULL );
+   assert( consdata->orbitopetype == SCIP_ORBITOPETYPE_FULL );
+
+   nspcons = consdata->nspcons;
+   nblocks = consdata->nblocks;
+   vars = consdata->vars;
+
+   SCIP_CALL( propagateFullOrbitope(scip, vars, 0, nblocks, 0, nspcons, nfixedvars, infeasible) );
+
+   return SCIP_OKAY;
+}
+
+
 /** propagation method for a single orbitope constraint */
 static
 SCIP_RETCODE propagateCons(
@@ -1118,7 +1250,7 @@ SCIP_RETCODE propagateCons(
 
    if ( orbitopetype == SCIP_ORBITOPETYPE_FULL )
    {
-      ;
+      SCIP_CALL( propagateFullOrbitopeCons(scip, cons, infeasible, nfixedvars) );
    }
    else
    {
@@ -2019,13 +2151,10 @@ SCIP_DECL_CONSRESPROP(consRespropOrbitope)
 
    orbitopetype = consdata->orbitopetype;
 
+   /* resolution for full orbitopes not availabe yet */
    if ( orbitopetype == SCIP_ORBITOPETYPE_PACKING || orbitopetype == SCIP_ORBITOPETYPE_PARTITIONING )
    {
       SCIP_CALL( resolvePropagation(scip, cons, infervar, inferinfo, boundtype, bdchgidx, result) );
-   }
-   else
-   {
-      ;
    }
 
    return SCIP_OKAY;
