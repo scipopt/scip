@@ -179,6 +179,9 @@ struct SCIP_ConsData
    SCIP_Real*            eigenvalues;        /**< eigenvalues of A */
    SCIP_Real*            eigenvectors;       /**< orthonormal eigenvectors of A; if A = P D P^T, then eigenvectors is P^T */
    SCIP_Real*            bp;                 /**< stores b * P where b are the linear coefficients of the quadratic vars */
+
+   SCIP_Bool             isdisaggregated;    /**< has the constraint already been disaggregated? if might happen that more disaggreation would be potentially
+                                                  possible, but we reached the maximum number of sparsity components during presolveDisaggregate() */
 };
 
 /** quadratic constraint update method */
@@ -4305,6 +4308,12 @@ SCIP_RETCODE presolveDisaggregate(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
+   /* skip if constraint has been already disaggregated */
+   if( consdata->isdisaggregated )
+      return SCIP_OKAY;
+
+   consdata->isdisaggregated = TRUE;
+
    /* make sure there are no quadratic variables without coefficients */
    SCIP_CALL( mergeAndCleanBilinearTerms(scip, cons) );
    SCIP_CALL( mergeAndCleanQuadVarTerms(scip, cons) );
@@ -4432,6 +4441,8 @@ SCIP_RETCODE presolveDisaggregate(
    SCIP_CALL( consdataEnsureLinearVarsSize(scip, consdata, consdata->nlinvars + ncomponents) );
    for( comp = 0; comp < ncomponents; ++comp )
    {
+      SCIP_CONSDATA* auxconsdata;
+
       SCIP_CALL( SCIPaddLinearVarQuadratic(scip, auxconss[comp], auxvars[comp], -auxcoefs[comp] * ncomponents) );
 
       SCIP_CALL( SCIPaddVar(scip, auxvars[comp]) );
@@ -4440,6 +4451,11 @@ SCIP_RETCODE presolveDisaggregate(
       SCIPdebugPrintCons(scip, auxconss[comp], NULL);
 
       SCIP_CALL( addLinearCoef(scip, cons, auxvars[comp], auxcoefs[comp] * ncomponents) );
+
+      /* mark that the constraint should not further be disaggregated */
+      auxconsdata = SCIPconsGetData(auxconss[comp]);
+      assert(auxconsdata != NULL);
+      auxconsdata->isdisaggregated = TRUE;
 
       SCIP_CALL( SCIPreleaseCons(scip, &auxconss[comp]) );
       SCIP_CALL( SCIPreleaseVar(scip, &auxvars[comp]) );
