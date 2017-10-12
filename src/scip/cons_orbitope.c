@@ -1555,6 +1555,247 @@ SCIP_RETCODE resolvePropagation(
    return SCIP_OKAY;
 }
 
+
+/** check packing/partitioning orbitope solution for feasibility */
+static
+SCIP_RETCODE enfopsPackingPartitioningOrbitopeSolution(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< pointer to orbitope constraint */
+   SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Real** weights;
+   SCIP_Real** vals;
+   int** cases;
+   int nspcons;
+   int nblocks;
+   int i;
+   int j;
+
+   assert( cons != NULL );
+
+   consdata = SCIPconsGetData(cons);
+
+   assert( scip != NULL );
+   assert( consdata != NULL );
+   assert( consdata->nspcons > 0 );
+   assert( consdata->nblocks > 0 );
+   assert( consdata->vals != NULL );
+   assert( consdata->weights != NULL );
+   assert( consdata->cases != NULL );
+
+   /* check for upper right triangle */
+   if ( ! consdata->istrianglefixed )
+   {
+      SCIP_Bool infeasible = FALSE;
+      int nfixedvars = 0;
+
+      SCIP_CALL( fixTriangle(scip, cons, &infeasible, &nfixedvars) );
+      if ( infeasible )
+      {
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+      if ( nfixedvars > 0 )
+      {
+         *result = SCIP_REDUCEDDOM;
+         return SCIP_OKAY;
+      }
+   }
+
+   nspcons = consdata->nspcons;
+   nblocks = consdata->nblocks;
+   vals = consdata->vals;
+   weights = consdata->weights;
+   cases = consdata->cases;
+
+   /* get solution */
+   copyValues(scip, consdata, NULL);
+   SCIPdebugMsg(scip, "Enforcing (pseudo solutions) for orbitope constraint <%s>\n", SCIPconsGetName(cons));
+
+   /* compute table */
+   assert( consdata->istrianglefixed );
+   computeSCTable(scip, nspcons, nblocks, weights, cases, vals);
+
+   /* loop through rows */
+   for (i = 1; i < nspcons; ++i)
+   {
+      SCIP_Real bar = 0.0;
+      int lastcolumn;
+
+      lastcolumn = nblocks - 1;
+
+      /* last column considered as part of the bar: */
+      if ( lastcolumn > i )
+         lastcolumn = i;
+
+      /* traverse row from right to left */
+      for (j = lastcolumn; j > 0; --j)
+      {
+         bar += vals[i][j];
+         assert( SCIPisIntegral(scip, vals[i][j]) );
+
+         /* check whether weights[i-1][j-1] < bar  (<=> bar - weights[i-1][j-1] > 0), i.e. cut is violated) */
+         if ( SCIPisGT(scip, bar - weights[i-1][j-1], 0.0) )
+         {
+            SCIPdebugMsg(scip, "Solution is infeasible.\n");
+            *result = SCIP_INFEASIBLE;
+            return SCIP_OKAY;
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** check packing/partitioning orbitope solution for feasibility */
+static
+SCIP_RETCODE checkPackingPartitioningOrbitopeSolution(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< pointer to orbitope constraint */
+   SCIP_SOL*             sol,                /**< solution to be checked */
+   SCIP_RESULT*          result,             /**< pointer to store the result of the enforcing call */
+   SCIP_Bool             printreason         /**< whether reason for infeasibility should be printed */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR*** vars;
+   SCIP_Real** vals;
+   SCIP_Real** weights;
+   int** cases;
+   int nspcons;
+   int nblocks;
+   int i;
+   int j;
+
+   /* get data of constraint */
+   assert( cons != 0 );
+   consdata = SCIPconsGetData(cons);
+
+   assert( consdata != NULL );
+   assert( consdata->nspcons > 0 );
+   assert( consdata->nblocks > 0 );
+   assert( consdata->vars != NULL );
+   assert( consdata->vals != NULL );
+   assert( consdata->weights != NULL );
+   assert( consdata->cases != NULL );
+
+   nspcons = consdata->nspcons;
+   nblocks = consdata->nblocks;
+   vars = consdata->vars;
+   vals = consdata->vals;
+   weights  = consdata->weights;
+   cases = consdata->cases;
+
+   /* get solution */
+   copyValues(scip, consdata, sol);
+   SCIPdebugMsg(scip, "Checking orbitope constraint <%s> ...\n", SCIPconsGetName(cons));
+
+   /* check upper right triangle (if not yet fixed to zero or in debug mode */
+#ifdef NDEBUG
+   if ( ! consdata->istrianglefixed )
+#endif
+   {
+      int diagsize;
+
+      /* get last row of triangle */
+      diagsize = nblocks;
+      if ( nspcons < nblocks )
+         diagsize = nspcons;
+
+      /* check variables */
+      for (i = 0; i < diagsize; ++i)
+      {
+         for (j = i+1; j < nblocks; ++j)
+         {
+            if ( ! SCIPisFeasZero(scip, vals[i][j]) )
+            {
+               if ( printreason )
+                  SCIPinfoMessage(scip, NULL, "variable x[%d][%d] = %f on upper right nonzero.\n", i, j, vals[i][j]);
+               *result = SCIP_INFEASIBLE;
+            }
+         }
+      }
+   }
+
+   /* compute table */
+   computeSCTable(scip, nspcons, nblocks, weights, cases, vals);
+
+   /* loop through rows */
+   for (i = 1; i < nspcons; ++i)
+   {
+      SCIP_Real bar;
+      int lastcolumn;
+
+      lastcolumn = nblocks - 1;
+      bar = 0.0;
+      /* last column considered as part of the bar: */
+      if ( lastcolumn > i )
+         lastcolumn = i;
+
+      /* traverse row from right to left */
+      for (j = lastcolumn; j > 0; --j)
+      {
+         bar += vals[i][j];
+         assert( SCIPisFeasIntegral(scip, vals[i][j]) );
+
+         /* check whether weights[i-1][j-1] < bar  (<=> bar - weights[i-1][j-1] > 0), i.e. cut is violated) */
+         if ( SCIPisGT(scip, bar - weights[i-1][j-1], 0.0) )
+         {
+            SCIPdebugMsg(scip, "Solution is infeasible.\n");
+            *result = SCIP_INFEASIBLE;
+
+            if ( printreason )
+            {
+               int l;
+               int p1;
+               int p2;
+
+               SCIPinfoMessage(scip, NULL, "violated SCI: bar(");
+
+               /* first output bar */
+               for (l = j; l < nblocks; ++l)
+                  SCIPinfoMessage(scip, NULL, "<%s> (%f)", SCIPvarGetName(vars[i][l]), consdata->vals[i][l]);
+
+               SCIPinfoMessage(scip, NULL, ")  SC(");
+
+               /* output shifted column */
+               p1 = i-1;
+               p2 = j-1;
+               do
+               {
+                  assert( cases[p1][p2] != -1 );
+                  assert( p1 >= 0 && p1 < i );
+                  assert( p2 >= 0 && p2 < j );
+
+                  /* if case 1 */
+                  if (cases[p1][p2] == 1)
+                     --p2;   /* decrease column */
+                  else
+                  {
+                     /* case 2 or 3: */
+                     assert( cases[p1][p2] == 2 || cases[p1][p2] == 3 );
+                     SCIPinfoMessage(scip, NULL, "<%s> (%f)", SCIPvarGetName(vars[p1][p2]), consdata->vals[p1][p2]);
+                     if ( cases[p1][p2] == 3 )
+                        break;
+                  }
+                  --p1;  /* decrease row */
+               }
+               while ( p1 >= 0 );   /* should always be true, i.e. the break should end the loop */
+               assert( cases[p1][p2] == 3 );
+
+               SCIPinfoMessage(scip, NULL, ")");
+            }
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** separate or enforce constraints */
 static
 SCIP_RETCODE separateConstraints(
@@ -1797,15 +2038,9 @@ SCIP_DECL_CONSENFOPS(consEnfopsOrbitope)
    /* loop through constraints */
    for (c = 0; c < nconss; ++c)
    {
-      SCIP_CONSDATA* consdata;
-      SCIP_Real** weights;
-      SCIP_Real** vals;
       SCIP_CONS* cons;
-      int** cases;
-      int nspcons;
-      int nblocks;
-      int i;
-      int j;
+      SCIP_CONSDATA* consdata;
+      SCIP_ORBITOPETYPE orbitopetype;
 
       /* get data of constraint */
       cons = conss[c];
@@ -1813,72 +2048,21 @@ SCIP_DECL_CONSENFOPS(consEnfopsOrbitope)
       consdata = SCIPconsGetData(cons);
 
       assert( consdata != NULL );
-      assert( consdata->nspcons > 0 );
-      assert( consdata->nblocks > 0 );
-      assert( consdata->vals != NULL );
-      assert( consdata->weights != NULL );
-      assert( consdata->cases != NULL );
 
-      /* check for upper right triangle */
-      if ( ! consdata->istrianglefixed )
+      orbitopetype = consdata->orbitopetype;
+
+      if ( orbitopetype == SCIP_ORBITOPETYPE_PACKING || orbitopetype == SCIP_ORBITOPETYPE_PARTITIONING )
       {
-         SCIP_Bool infeasible = FALSE;
-         int nfixedvars = 0;
-
-         SCIP_CALL( fixTriangle(scip, cons, &infeasible, &nfixedvars) );
-         if ( infeasible )
-         {
-            *result = SCIP_CUTOFF;
-            return SCIP_OKAY;
-         }
-         if ( nfixedvars > 0 )
-         {
-            *result = SCIP_REDUCEDDOM;
-            return SCIP_OKAY;
-         }
+         SCIP_CALL( enfopsPackingPartitioningOrbitopeSolution(scip, cons, result) );
+      }
+      else
+      {
+         ;
+         /* SCIP_CALL( checkFullOrbitopeSolution() ); */
       }
 
-      nspcons = consdata->nspcons;
-      nblocks = consdata->nblocks;
-      vals = consdata->vals;
-      weights = consdata->weights;
-      cases = consdata->cases;
-
-      /* get solution */
-      copyValues(scip, consdata, NULL);
-      SCIPdebugMsg(scip, "Enforcing (pseudo solutions) for orbitope constraint <%s>\n", SCIPconsGetName(conss[c]));
-
-      /* compute table */
-      assert( consdata->istrianglefixed );
-      computeSCTable(scip, nspcons, nblocks, weights, cases, vals);
-
-      /* loop through rows */
-      for (i = 1; i < nspcons; ++i)
-      {
-         SCIP_Real bar = 0.0;
-         int lastcolumn;
-
-         lastcolumn = nblocks - 1;
-
-         /* last column considered as part of the bar: */
-         if ( lastcolumn > i )
-            lastcolumn = i;
-
-         /* traverse row from right to left */
-         for (j = lastcolumn; j > 0; --j)
-         {
-            bar += vals[i][j];
-            assert( SCIPisIntegral(scip, vals[i][j]) );
-
-            /* check whether weights[i-1][j-1] < bar  (<=> bar - weights[i-1][j-1] > 0), i.e. cut is violated) */
-            if ( SCIPisGT(scip, bar - weights[i-1][j-1], 0.0) )
-            {
-               SCIPdebugMsg(scip, "Solution is infeasible.\n");
-               *result = SCIP_INFEASIBLE;
-               return SCIP_OKAY;
-            }
-         }
-      }
+      if ( *result == SCIP_INFEASIBLE )
+         break;
    }
 
    return SCIP_OKAY;
@@ -1890,6 +2074,8 @@ static
 SCIP_DECL_CONSCHECK(consCheckOrbitope)
 {  /*lint --e{715}*/
    int c;
+   SCIP_CONSDATA* consdata;
+   SCIP_ORBITOPETYPE orbitopetype;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -1901,136 +2087,20 @@ SCIP_DECL_CONSCHECK(consCheckOrbitope)
    /* loop through constraints */
    for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c )
    {
-      SCIP_CONSDATA* consdata;
-      SCIP_VAR*** vars;
-      SCIP_Real** vals;
-      SCIP_Real** weights;
-      int** cases;
-      int nspcons;
-      int nblocks;
-      int i;
-      int j;
-
-      /* get data of constraint */
       assert( conss[c] != 0 );
       consdata = SCIPconsGetData(conss[c]);
 
       assert( consdata != NULL );
-      assert( consdata->nspcons > 0 );
-      assert( consdata->nblocks > 0 );
-      assert( consdata->vars != NULL );
-      assert( consdata->vals != NULL );
-      assert( consdata->weights != NULL );
-      assert( consdata->cases != NULL );
 
-      nspcons = consdata->nspcons;
-      nblocks = consdata->nblocks;
-      vars = consdata->vars;
-      vals = consdata->vals;
-      weights  = consdata->weights;
-      cases = consdata->cases;
+      orbitopetype = consdata->orbitopetype;
 
-      /* get solution */
-      copyValues(scip, consdata, sol);
-      SCIPdebugMsg(scip, "Checking orbitope constraint <%s> ...\n", SCIPconsGetName(conss[c]));
-
-      /* check upper right triangle (if not yet fixed to zero or in debug mode */
-#ifdef NDEBUG
-      if ( ! consdata->istrianglefixed )
-#endif
+      if ( orbitopetype == SCIP_ORBITOPETYPE_PACKING || orbitopetype == SCIP_ORBITOPETYPE_PARTITIONING )
       {
-         int diagsize;
-
-         /* get last row of triangle */
-         diagsize = nblocks;
-         if ( nspcons < nblocks )
-            diagsize = nspcons;
-
-         /* check variables */
-         for (i = 0; i < diagsize; ++i)
-         {
-            for (j = i+1; j < nblocks; ++j)
-            {
-               if ( ! SCIPisFeasZero(scip, vals[i][j]) )
-               {
-                  if ( printreason )
-                     SCIPinfoMessage(scip, NULL, "variable x[%d][%d] = %f on upper right nonzero.\n", i, j, vals[i][j]);
-                  *result = SCIP_INFEASIBLE;
-               }
-            }
-         }
+         SCIP_CALL( checkPackingPartitioningOrbitopeSolution(scip, conss[c], sol, result, printreason) );
       }
-
-      /* compute table */
-      computeSCTable(scip, nspcons, nblocks, weights, cases, vals);
-
-      /* loop through rows */
-      for (i = 1; i < nspcons; ++i)
+      else
       {
-         SCIP_Real bar;
-         int lastcolumn;
-
-         lastcolumn = nblocks - 1;
-         bar = 0.0;
-         /* last column considered as part of the bar: */
-         if ( lastcolumn > i )
-            lastcolumn = i;
-
-         /* traverse row from right to left */
-         for (j = lastcolumn; j > 0; --j)
-         {
-            bar += vals[i][j];
-            assert( SCIPisFeasIntegral(scip, vals[i][j]) );
-
-            /* check whether weights[i-1][j-1] < bar  (<=> bar - weights[i-1][j-1] > 0), i.e. cut is violated) */
-            if ( SCIPisGT(scip, bar - weights[i-1][j-1], 0.0) )
-            {
-               SCIPdebugMsg(scip, "Solution is infeasible.\n");
-               *result = SCIP_INFEASIBLE;
-
-               if ( printreason )
-               {
-                  int l;
-                  int p1;
-                  int p2;
-
-                  SCIPinfoMessage(scip, NULL, "violated SCI: bar(");
-
-                  /* first output bar */
-                  for (l = j; l < nblocks; ++l)
-                     SCIPinfoMessage(scip, NULL, "<%s> (%f)", SCIPvarGetName(vars[i][l]), consdata->vals[i][l]);
-
-                  SCIPinfoMessage(scip, NULL, ")  SC(");
-
-                  /* output shifted column */
-                  p1 = i-1;
-                  p2 = j-1;
-                  do
-                  {
-                     assert( cases[p1][p2] != -1 );
-                     assert( p1 >= 0 && p1 < i );
-                     assert( p2 >= 0 && p2 < j );
-
-                     /* if case 1 */
-                     if (cases[p1][p2] == 1)
-                        --p2;   /* decrease column */
-                     else
-                     {
-                        /* case 2 or 3: */
-                        assert( cases[p1][p2] == 2 || cases[p1][p2] == 3 );
-                        SCIPinfoMessage(scip, NULL, "<%s> (%f)", SCIPvarGetName(vars[p1][p2]), consdata->vals[p1][p2]);
-                        if ( cases[p1][p2] == 3 )
-                           break;
-                     }
-                     --p1;  /* decrease row */
-                  }
-                  while ( p1 >= 0 );   /* should always be true, i.e. the break should end the loop */
-                  assert( cases[p1][p2] == 3 );
-
-                  SCIPinfoMessage(scip, NULL, ")");
-               }
-            }
-         }
+         ;
       }
    }
    SCIPdebugMsg(scip, "Solution is feasible.\n");
