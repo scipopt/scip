@@ -1725,14 +1725,14 @@ SCIP_Bool SCIPfindSimpleRational(
  *  specified precision and maximum number of iterations. If the procedure fails, SCIP_INVALID is returned.
  */
 EXTERN
-SCIP_Real newtonProcedure(
-   SCIP_Real(*function)(SCIP_Real, SCIP_Real* params, int nparams),       /**< pointer to function for which roots are computed */
-   SCIP_Real(*derivative)(SCIP_Real, SCIP_Real* params, int nparams),     /**< pointer to derivative of above function */
-   SCIP_Real*            params,                                          /**< parameters needed for function (can be NULL) */
-   int                   nparams,                                         /**< number of parameters (can be 0) */
-   SCIP_Real             x,                                               /**< starting point */
-   SCIP_Real             eps,                                             /**< tolerance */
-   int                   k                                                /**< iteration limit */
+SCIP_Real SCIPcomputeRootNewton(
+   SCIP_DECL_NEWTONEVAL((*function)),       /**< pointer to function for which roots are computed */
+   SCIP_DECL_NEWTONEVAL((*derivative)),      /**< pointer to derivative of above function */
+   SCIP_Real*            params,            /**< parameters needed for function (can be NULL) */
+   int                   nparams,           /**< number of parameters (can be 0) */
+   SCIP_Real             x,                 /**< starting point */
+   SCIP_Real             eps,               /**< tolerance */
+   int                   k                  /**< iteration limit */
    );
 
 /** given a (usually very small) interval, selects a value inside this interval; it is tried to select a rational number

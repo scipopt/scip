@@ -47,7 +47,7 @@
  *  the constants a and b are expected to be stored in that order in params
  */
 static
-SCIP_DECL_FUNCTIONVALUE(function1)
+SCIP_DECL_NEWTONEVAL(function1)
 {
    assert(params != NULL);
    assert(nparams == 2);
@@ -59,7 +59,7 @@ SCIP_DECL_FUNCTIONVALUE(function1)
  *  the constants a and b are expected to be stored in that order in params
  */
 static
-SCIP_DECL_FUNCTIONVALUE(derivative1)
+SCIP_DECL_NEWTONEVAL(derivative1)
 {
    assert(params != NULL);
    assert(nparams == 2);
@@ -71,7 +71,7 @@ SCIP_DECL_FUNCTIONVALUE(derivative1)
  *  the constant alpha is expected to be stored in params
  * */
 static
-SCIP_DECL_FUNCTIONVALUE(function2)
+SCIP_DECL_NEWTONEVAL(function2)
 {
    assert(params != NULL);
    assert(nparams == 1);
@@ -83,7 +83,7 @@ SCIP_DECL_FUNCTIONVALUE(function2)
  *  the constant alpha is expected to be stored in params
  */
 static
-SCIP_DECL_FUNCTIONVALUE(derivative2)
+SCIP_DECL_NEWTONEVAL(derivative2)
 {
    assert(params != NULL);
    assert(nparams == 1);
@@ -290,7 +290,7 @@ SCIP_RETCODE computeCutsSin(
       *lmidtangent = NULL;
 
       /* use newton procedure to find the point where the tangent intersects sine at lower bound */
-      tangentpoint = newtonProcedure(function2, derivative2, &childlb, 1, childlb + 2*M_PI, NEWTON_PRECISION,
+      tangentpoint = SCIPcomputeRootNewton(function2, derivative2, &childlb, 1, childlb + 2*M_PI, NEWTON_PRECISION,
          NEWTON_NITERATIONS);
 
       /* if newton procedure failed, no cut is added */
@@ -338,7 +338,7 @@ SCIP_RETCODE computeCutsSin(
       *rmidtangent = NULL;
 
       /* use newton procedure to find the point where the tangent intersects sine at upper bound */
-      tangentpoint = newtonProcedure(function2, derivative2, &childub, 1, childub - 2*M_PI, NEWTON_PRECISION,
+      tangentpoint = SCIPcomputeRootNewton(function2, derivative2, &childub, 1, childub - 2*M_PI, NEWTON_PRECISION,
          NEWTON_NITERATIONS);
 
       /* if newton procedure failed, no cut is added */
@@ -410,7 +410,7 @@ SCIP_RETCODE computeCutsSin(
             startingpoint = refpoint - 2.0*M_PI;
 
          /* use newton procedure to test if cut is valid */
-         intersection = newtonProcedure(function1, derivative1, params, 2, startingpoint, NEWTON_PRECISION,
+         intersection = SCIPcomputeRootNewton(function1, derivative1, params, 2, startingpoint, NEWTON_PRECISION,
             NEWTON_NITERATIONS);
          assert(!SCIPisEQ(scip, intersection, refpoint));
 
