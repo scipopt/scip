@@ -4067,7 +4067,7 @@ SCIP_RETCODE getClosestVlb(
       vlbcoefs = SCIPvarGetVlbCoefs(var);
       vlbconsts = SCIPvarGetVlbConstants(var);
 
-      minvlbconst = bestsub - MAX(SCIPfeastol(scip), bestsub * SCIPfeastol(scip));
+      minvlbconst = bestsub - MAX(SCIPfeastol(scip), bestsub * SCIPfeastol(scip)); /*lint !e666*/
 
       for( i = 0; i < nvlbs; i++ )
       {
@@ -4202,7 +4202,7 @@ SCIP_RETCODE getClosestVub(
       vubcoefs = SCIPvarGetVubCoefs(var);
       vubconsts = SCIPvarGetVubConstants(var);
 
-      maxvubconst = bestslb + MAX(SCIPfeastol(scip), bestslb * SCIPfeastol(scip));
+      maxvubconst = bestslb + MAX(SCIPfeastol(scip), bestslb * SCIPfeastol(scip)); /*lint !e666*/
 
       for( i = 0; i < nvubs; i++ )
       {

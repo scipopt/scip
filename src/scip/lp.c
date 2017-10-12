@@ -4751,7 +4751,7 @@ void rowCalcIdxsAndVals(
       /* update min/maxidx */
       row->minidx = MIN(row->minidx, col->index);
       row->maxidx = MAX(row->maxidx, col->index);
-      row->numintcols += SCIPcolIsIntegral(col);
+      row->numintcols += SCIPcolIsIntegral(col); /*lint !e713*/
 
       /* update maximal and minimal non-zero value */
       if( row->nummaxval > 0 )

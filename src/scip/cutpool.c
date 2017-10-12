@@ -985,8 +985,10 @@ SCIP_RETCODE SCIPcutpoolSeparate(
 
    if( nefficaciouscuts > 0 )
    {
-      int maxncuts = MIN(SCIPsetGetSepaMaxcuts(set, root), nefficaciouscuts);
+      int maxncuts = SCIPsetGetSepaMaxcuts(set, root);
       int ncuts = SCIPsepastoreGetNCuts(sepastore) - oldncuts;
+
+      maxncuts = MIN(maxncuts, nefficaciouscuts);
 
       /* update the number of found cuts */
       cutpool->ncutsfound += ncuts;
