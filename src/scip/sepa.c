@@ -173,9 +173,9 @@ SCIP_RETCODE SCIPsepaCreate(
          &(*sepa)->delay, TRUE, delay, NULL, NULL) ); /*lint !e740*/
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/expbackoff", name);
-   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
-         "should separator be called with an exponential backoff strategy with increasing depth?",
-         &(*sepa)->expbackoff, TRUE, TRUE, NULL, NULL) ); /*lint !e740*/
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "base for exponential increase of frequency at which separator <%s> is called (1: call at each multiple of frequency)", name);
+   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
+         &(*sepa)->expbackoff, TRUE, 4, 1, 100, NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -361,7 +361,7 @@ SCIP_RETCODE SCIPsepaExecLP(
    if( sepa->sepaexeclp != NULL && SCIPsetIsLE(set, bounddist, sepa->maxbounddist) &&
        ( (depth == 0 && sepa->freq != -1) ||
          (sepa->freq > 0 && depth % sepa->freq == 0 &&
-            (!sepa->expbackoff || SCIPsetIsIntegral(set, log2(depth * (1.0 / sepa->freq))))) ||
+            (sepa->expbackoff == 1 || SCIPsetIsIntegral(set, log2(depth * (1.0 / sepa->freq)) / log2(sepa->expbackoff)))) ||
          sepa->lpwasdelayed )
      )
    {
@@ -469,7 +469,7 @@ SCIP_RETCODE SCIPsepaExecSol(
    if( sepa->sepaexecsol != NULL &&
        ( (depth == 0 && sepa->freq != -1) ||
          (sepa->freq > 0 && depth % sepa->freq == 0 &&
-            (!sepa->expbackoff || SCIPsetIsIntegral(set, log2(depth * (1.0 / sepa->freq))))) ||
+            (sepa->expbackoff == 1 || SCIPsetIsIntegral(set, log2(depth * (1.0 / sepa->freq) / log2(sepa->expbackoff))))) ||
          sepa->solwasdelayed )
      )
    {

@@ -2239,6 +2239,7 @@ SCIP_RETCODE priceAndCutLoop(
    SCIP_Bool root;
    SCIP_Bool allowlocal;
    int maxseparounds;
+   int maxincseparounds;
    int nsepastallrounds;
    int maxnsepastallrounds;
    int stallnfracs;
@@ -2285,6 +2286,9 @@ SCIP_RETCODE priceAndCutLoop(
    maxnsepastallrounds = root ? set->sepa_maxstallroundsroot : set->sepa_maxstallrounds;
    if( maxnsepastallrounds == -1 )
       maxnsepastallrounds = INT_MAX;
+   maxincseparounds = set->sepa_maxincrounds;
+   if( maxincseparounds == -1 )
+      maxincseparounds = INT_MAX;
 
    /* solve initial LP of price-and-cut loop */
    /* @todo check if LP is always already solved, because of calling solveNodeInitialLP() in solveNodeLP()? */
@@ -2450,7 +2454,7 @@ SCIP_RETCODE priceAndCutLoop(
       /* check, if we exceeded the separation round limit */
       mustsepa = mustsepa
          && stat->nseparounds < maxseparounds
-         && stat->nincseparounds < 25
+         && stat->nincseparounds < maxincseparounds
          && nsepastallrounds < maxnsepastallrounds
          && !(*cutoff);
 
@@ -2481,7 +2485,6 @@ SCIP_RETCODE priceAndCutLoop(
       {
          SCIP_Longint olddomchgcount;
          SCIP_Longint oldninitconssadded;
-         int oldmaxnlprows;
          int oldnlprows;
          SCIP_Bool enoughcuts;
 
@@ -2494,7 +2497,6 @@ SCIP_RETCODE priceAndCutLoop(
 
          mustsepa = FALSE;
          enoughcuts = (SCIPsetGetSepaMaxcuts(set, root) == 0);
-         oldmaxnlprows = lp->nrowsmax;
          oldnlprows = lp->nrows;
 
          /* global cut pool separation */
@@ -2712,10 +2714,10 @@ SCIP_RETCODE priceAndCutLoop(
          stat->nseparounds++;
 
          /* if size of lp relaxation increased also count this round separately */
-         if( lp->nrows > oldmaxnlprows )
+         if( lp->nrows > oldnlprows )
             ++stat->nincseparounds;
          else if( lp->nrows < oldnlprows )
-            --stat->nincseparounds;
+            stat->nincseparounds = 0;
       }
    }
 

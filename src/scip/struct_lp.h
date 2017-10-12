@@ -313,7 +313,6 @@ struct SCIP_Lp
    int                   firstnewcol;        /**< first column added at the current node */
    int                   rowssize;           /**< available slots in rows vector */
    int                   nrows;              /**< current number of LP rows (number of used slots in rows vector) */
-   int                   nrowsmax;           /**< maximum number of rows in the LP */
    int                   nremovablerows;     /**< number of removable rows in the LP */
    int                   firstnewrow;        /**< first row added at the current node */
    int                   looseobjvalinf;     /**< number of loose variables with infinite best bound in current solution */

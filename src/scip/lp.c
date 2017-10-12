@@ -8929,7 +8929,6 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->ncols = 0;
    (*lp)->lazycolssize = 0;
    (*lp)->nlazycols = 0;
-   (*lp)->nrowsmax = 0;
    (*lp)->rowssize = 0;
    (*lp)->nrows = 0;
    (*lp)->chgcolssize = 0;
@@ -9313,7 +9312,6 @@ SCIP_RETCODE SCIPlpAddRow(
    row->lpdepth = depth;
    row->age = 0;
    lp->nrows++;
-   lp->nrowsmax = MAX(lp->nrowsmax, lp->nrows);
    if( row->removable )
       lp->nremovablerows++;
 
@@ -9527,7 +9525,6 @@ SCIP_RETCODE SCIPlpShrinkRows(
       }
       assert(lp->nrows == newnrows);
       lp->lpifirstchgrow = MIN(lp->lpifirstchgrow, newnrows);
-      lp->nrowsmax = lp->nrows;
 
       /* mark the current LP unflushed */
       lp->flushed = FALSE;
@@ -15046,7 +15043,6 @@ SCIP_RETCODE lpCleanupRows(
       SCIP_CALL( lpDelRowset(lp, blkmem, set, eventqueue, eventfilter, rowdstat) );
    }
    assert(lp->nrows == nrows - ndelrows);
-   lp->nrowsmax = lp->nrows;
 
    /* release temporary memory */
    SCIPsetFreeBufferArray(set, &rowdstat);
@@ -15199,7 +15195,6 @@ SCIP_RETCODE SCIPlpRemoveRedundantRows(
       SCIP_CALL( lpDelRowset(lp, blkmem, set, eventqueue, eventfilter, rowdstat) );
    }
    assert(lp->nrows == nrows - ndelrows);
-   lp->nrowsmax = lp->nrows;
 
    /* release temporary memory */
    SCIPsetFreeBufferArray(set, &rowdstat);

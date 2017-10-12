@@ -859,7 +859,7 @@ SCIP_RETCODE aggregation(
          /* decrease row score of used rows slightly */
          for( i = 0; i < nrows; ++i )
          {
-            SCIP_Real fac = 1 - 0.999 * SCIProwGetParallelism(rows[rowinds[i]], cut, 'e');
+            SCIP_Real fac = 1.0 - 0.999 * SCIProwGetParallelism(rows[rowinds[i]], cut, 'e');
 
             rowlhsscores[rowinds[i]] *= fac;
             rowrhsscores[rowinds[i]] *= fac;
