@@ -52,6 +52,18 @@ extern "C" {
  * \f$x\f$ does not change the validity and objective function value of any feasible solution.
  */
 
+/** checks whether a given binary solution is feasible for the orbisack */
+EXTERN
+SCIP_RETCODE SCIPcheckOrbisackSolution(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_SOL*          sol,                /**< solution to check for feasibility */
+   SCIP_VAR**         vars1,              /**< variables of first column */
+   SCIP_VAR**         vars2,              /**< variables of second column */
+   int                nrows,              /**< number of rows */
+   SCIP_Bool*         feasible            /**< memory address to store whether sol is feasible */
+   );
+
+
 /** creates the handler for orbisack constraints and includes it in SCIP */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrOrbisack(

@@ -1255,15 +1255,11 @@ SCIP_DECL_CONSENFOLP(consEnfolpOrbisack)
 static
 SCIP_DECL_CONSENFOPS(consEnfopsOrbisack)
 {  /*lint --e{715}*/
-   SCIP_Bool terminated = FALSE;
+   SCIP_Bool feasible = TRUE;
    SCIP_CONSDATA* consdata;
    SCIP_VAR** vars1;
    SCIP_VAR** vars2;
-   SCIP_Real* solu1;
-   SCIP_Real* solu2;
-   SCIP_Real val;
    int nrows;
-   int i;
    int c;
 
    assert( scip != NULL );
@@ -1292,58 +1288,13 @@ SCIP_DECL_CONSENFOPS(consEnfopsOrbisack)
       vars1 = consdata->vars1;
       vars2 = consdata->vars2;
 
-      /* determine solution */
-      SCIP_CALL( SCIPallocBufferArray(scip, &solu1, (int) nrows) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &solu2, (int) nrows) );
+      SCIP_CALL( SCIPcheckOrbisackSolution(scip, NULL, vars1, vars2, nrows, &feasible) );
 
-      for (i = 0; i < nrows; ++i)
+      if ( ! feasible )
       {
-         /* get value of first column */
-         val = SCIPgetSolVal(scip, NULL, vars1[i]);
-         assert( SCIPisFeasIntegral(scip, val) );
-
-         /* if variable is fixes to 1 -> solu[i][j] = 1, else = 0 */
-         if ( val > 0.5 )
-            solu1[i] = 1;
-         else
-            solu1[i] = 0;
-
-         /* get value of first column */
-         val = SCIPgetSolVal(scip, NULL, vars2[i]);
-         assert( SCIPisFeasIntegral(scip, val) );
-
-         /* if variable is fixes to 1 -> solu[i][j] = 1, else = 0 */
-         if ( val > 0.5 )
-            solu2[i] = 1;
-         else
-            solu2[i] = 0;
-      }
-
-      /* check whether columns of solution are not lexicographically maximal */
-      for (i = 0; i < nrows; ++i)
-      {
-         /* if row i is constant */
-         if ( SCIPisEQ(scip, solu1[i],solu2[i]) )
-            continue;
-
-         /* if first non-constant row is [1,0]: feasible */
-         if ( SCIPisEQ(scip, solu1[i], 1.0) )
-            break;
-         else /* infeasible */
-         {
-            SCIPdebugMessage("Solution is infeasible.\n");
-            *result = SCIP_INFEASIBLE;
-            terminated = TRUE;
-            break;
-         }
-      }
-
-      /* free buffers */
-      SCIPfreeBufferArrayNull(scip, &solu2);
-      SCIPfreeBufferArrayNull(scip, &solu1);
-
-      if ( terminated )
+         *result = SCIP_INFEASIBLE;
          break;
+      }
    }
 
    return SCIP_OKAY;
@@ -1409,15 +1360,11 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxOrbisack)
 static
 SCIP_DECL_CONSCHECK(consCheckOrbisack)
 {  /*lint --e{715}*/
-   SCIP_Bool terminated = FALSE;
+   SCIP_Bool feasible = TRUE;
    SCIP_CONSDATA* consdata;
    SCIP_VAR** vars1;
    SCIP_VAR** vars2;
-   SCIP_Real* solu1;
-   SCIP_Real* solu2;
-   SCIP_Real val;
    int nrows;
-   int i;
    int c;
 
    assert( scip != NULL );
@@ -1444,65 +1391,17 @@ SCIP_DECL_CONSCHECK(consCheckOrbisack)
       vars1 = consdata->vars1;
       vars2 = consdata->vars2;
 
-      /* determine solution */
-      SCIP_CALL( SCIPallocBufferArray(scip, &solu1, (int) nrows) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &solu2, (int) nrows) );
+      SCIP_CALL( SCIPcheckOrbisackSolution(scip, sol, vars1, vars2, nrows, &feasible) );
 
-      for (i = 0; i < nrows; ++i)
+      if ( ! feasible )
       {
-         /* get value of first column */
-         val = SCIPgetSolVal(scip, sol, vars1[i]);
-         assert( SCIPisFeasIntegral(scip, val) );
-
-         /* if variable is fixes to 1 -> solu[i][j] = 1, else = 0 */
-         if ( val > 0.5 )
-            solu1[i] = 1;
-         else
-            solu1[i] = 0;
-
-         /* get value of second column */
-         val = SCIPgetSolVal(scip, sol, vars2[i]);
-         assert( SCIPisFeasIntegral(scip, val) );
-
-         /* if variable is fixes to 1 -> solu[i][j] = 1, else = 0 */
-         if ( val > 0.5 )
-            solu2[i] = 1;
-         else
-            solu2[i] = 0;
-      }
-
-      /* check whether columns of solution are not lexicographically maximal */
-      for (i = 0; i < nrows; ++i)
-      {
-         /* if row i is constant */
-         if ( SCIPisEQ(scip, solu1[i], solu2[i]) )
-            continue;
-
-         /* if first non-constant row is [1,0]: feasible */
-         if ( SCIPisEQ(scip, solu1[i], 1.0) )
-            break;
-         else /* infeasible */
-         {
-            SCIPdebugMessage("Solution is infeasible.\n");
-            *result = SCIP_INFEASIBLE;
-            terminated = TRUE;
-
-            if ( printreason )
-               SCIPinfoMessage(scip, NULL, "First non-constant row (%d) of orbisack is (0,1).\n", i);
-
-            break;
-         }
-      }
-
-      /* free buffers */
-      SCIPfreeBufferArrayNull(scip, &solu2);
-      SCIPfreeBufferArrayNull(scip, &solu1);
-
-      if ( terminated )
+         *result = SCIP_INFEASIBLE;
+         SCIPdebugMsg(scip, "Solution is feasible.\n");
          break;
+      }
    }
 
-   if ( ! terminated )
+   if ( feasible )
       SCIPdebugMessage("Solution is feasible.\n");
 
    return SCIP_OKAY;
@@ -1740,6 +1639,51 @@ SCIP_DECL_CONSPRINT(consPrintOrbisack)
          SCIPinfoMessage(scip, file, ".");
    }
    SCIPinfoMessage(scip, file, ")\n");
+
+   return SCIP_OKAY;
+}
+
+
+/** checks given solution for feasibility */
+SCIP_RETCODE SCIPcheckOrbisackSolution(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_SOL*          sol,                /**< solution to check for feasibility */
+   SCIP_VAR**         vars1,              /**< variables of first column */
+   SCIP_VAR**         vars2,              /**< variables of second column */
+   int                nrows,              /**< number of rows */
+   SCIP_Bool*         feasible            /**< memory address to store whether sol is feasible */
+   )
+{
+   int i;
+   int val1;
+   int val2;
+
+   assert( scip != NULL );
+   assert( vars1 != NULL );
+   assert( vars2 != NULL );
+   assert( nrows > 0 );
+   assert( feasible != NULL );
+
+   *feasible = TRUE;
+   /* find first non-constant row and check for feasibility */
+   for (i = 0; i < nrows; ++i)
+   {
+      /* get values of i-th row */
+      val1 = SCIPgetSolVal(scip, sol, vars1[i]) > 0.5 ? 1 : 0;
+      val2 = SCIPgetSolVal(scip, sol, vars2[i]) > 0.5 ? 1 : 0;
+
+      /* if row i is constrant */
+      if ( SCIPisEQ(scip, val1, val2) )
+         continue;
+      /* row i has type (1,0) -> feasible */
+      else if ( SCIPisEQ(scip, val1, 1.0) )
+         break;
+      else /* infeasible */
+      {
+         *feasible = FALSE;
+         break;
+      }
+   }
 
    return SCIP_OKAY;
 }
