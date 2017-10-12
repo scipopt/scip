@@ -154,7 +154,7 @@ SCIP_RETCODE addCut(
    const char*           cutclassname,       /**< name of cut class to use for row names */
    SCIP_Bool*            cutoff,             /**< whether a cutoff has been detected */
    int*                  ncuts,              /**< pointer to count the number of added cuts */
-   SCIP_ROW**            thecut
+   SCIP_ROW**            thecut              /**< pointer to return cut if it was added */
    )
 {
    assert(scip != NULL);
@@ -214,39 +214,35 @@ SCIP_RETCODE addCut(
          success = FALSE;
       }
       else
-         success = TRUE; /* also use cut if scaling failed */
 
-      /* if scaling was successful, add the cut */
-      if( success )
+      SCIPdebugMsg(scip, " -> found %s cut <%s>: rhs=%f, eff=%f, rank=%d, min=%f, max=%f (range=%g)\n",
+                     cutclassname, cutname, cutrhs, cutefficacy, SCIProwGetRank(cut),
+                     SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
+                     SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
+      SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
+
+      SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
+
+      if( SCIPisCutNew(scip, cut) )
       {
-         SCIPdebugMsg(scip, " -> found %s cut <%s>: rhs=%f, eff=%f, rank=%d, min=%f, max=%f (range=%g)\n",
-                      cutclassname, cutname, cutrhs, cutefficacy, SCIProwGetRank(cut),
-                      SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
-                      SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
-         SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
+         (*ncuts)++;
 
-         SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
-
-         if( SCIPisCutNew(scip, cut) )
+         if( !cutislocal )
          {
-            (*ncuts)++;
-
-            if( !cutislocal )
-            {
-               SCIP_CALL( SCIPaddPoolCut(scip, cut) );
-            }
-            else
-            {
-               SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, cutoff) );
-            }
-
-            *thecut = cut;
-            SCIP_CALL( SCIPcaptureRow(scip, cut) );
+            SCIP_CALL( SCIPaddPoolCut(scip, cut) );
          }
-      }
+         else
+         {
+            SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, cutoff) );
+         }
 
-      /* release the row */
-      SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+         *thecut = cut;
+      }
+      else
+      {
+         /* release the row */
+         SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+      }
    }
 
    return SCIP_OKAY;
@@ -805,7 +801,6 @@ SCIP_RETCODE aggregation(
    {
       int cutrank;
       int cutnnz;
-      int oldncuts;
       SCIP_Bool aggrsuccess;
       SCIP_Bool cmirsuccess;
       SCIP_Bool cmircutislocal;
@@ -828,7 +823,6 @@ SCIP_RETCODE aggregation(
       SCIP_CALL( SCIPcutGenerationHeuristicCMIR(scip, sol, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, maxtestdelta, NULL, NULL, MINFRAC, MAXFRAC,
          aggrdata->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cmircutislocal, &cmirsuccess) );
 
-      oldncuts = *ncuts;
       cut = NULL;
 
       if( cmirsuccess )
