@@ -8301,7 +8301,7 @@ SCIP_RETCODE processCut(
       SCIP_Bool infeasible;
 
       /* cut cuts off solution */
-      SCIP_CALL( SCIPaddCut(scip, sol, *row, FALSE /* forcecut */, &infeasible) );
+      SCIP_CALL( SCIPaddCut(scip, *row, FALSE /* forcecut */, &infeasible) );
       if( infeasible )
       {
          SCIPdebugMessage("cut for constraint <%s> is infeasible -> cutoff.\n", SCIPconsGetName(cons));
@@ -8572,7 +8572,7 @@ SCIP_RETCODE addLinearizationCuts(
 
             *separatedlpsol = TRUE;
             addedtolp = TRUE;
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, TRUE, &infeasible) );
+            SCIP_CALL( SCIPaddCut(scip, row, TRUE, &infeasible) );
             assert( ! infeasible );
             SCIPdebugMsg(scip, "added linearization cut <%s> to LP, efficacy = %g\n", SCIProwGetName(row), efficacy);
          }
@@ -11523,7 +11523,7 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
          SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(conss[c]), SCIPconsGetName(conss[c]), consdata->lhs, consdata->rhs,
                SCIPconsIsLocal(conss[c]), FALSE , TRUE) );  /*lint !e613 */
          SCIP_CALL( SCIPaddVarsToRow(scip, row, consdata->nlinvars, consdata->linvars, consdata->lincoefs) );
-         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, infeasible) );
+         SCIP_CALL( SCIPaddCut(scip, row, FALSE, infeasible) );
          SCIP_CALL( SCIPreleaseRow (scip, &row) );
          continue;
       }
@@ -11573,7 +11573,7 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
                SCIPdebugMsg(scip, "initlp adds row <%s> for lambda = %g of conss <%s>\n", SCIProwGetName(row), lambda, SCIPconsGetName(conss[c]));  /*lint !e613 */
                SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
 
-               SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, infeasible) );
+               SCIP_CALL( SCIPaddCut(scip, row, FALSE, infeasible) );
                SCIP_CALL( SCIPreleaseRow (scip, &row) );
             }
          }
@@ -11645,7 +11645,7 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
                   SCIPdebugMsg(scip, "initlp adds row <%s> for rhs of conss <%s>, round %d\n", SCIProwGetName(row), SCIPconsGetName(conss[c]), k);  /*lint !e613 */
                   SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
 
-                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, infeasible) );
+                  SCIP_CALL( SCIPaddCut(scip, row, FALSE, infeasible) );
                   SCIP_CALL( SCIPreleaseRow (scip, &row) );
                }
             }
@@ -11658,7 +11658,7 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
                   SCIPdebugMsg(scip, "initlp adds row <%s> for lhs of conss <%s>, round %d\n", SCIProwGetName(row), SCIPconsGetName(conss[c]), k);  /*lint !e613 */
                   SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
 
-                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, infeasible) );
+                  SCIP_CALL( SCIPaddCut(scip, row, FALSE, infeasible) );
                   SCIP_CALL( SCIPreleaseRow (scip, &row) );
                }
             }

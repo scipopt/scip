@@ -1706,7 +1706,7 @@ SCIP_RETCODE generateZerohalfCut(
             }
             else
             {
-               SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &sepadata->infeasible) );
+               SCIP_CALL( SCIPaddCut(scip, cut, FALSE, &sepadata->infeasible) );
             }
          }
 

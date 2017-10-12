@@ -1660,14 +1660,14 @@ SCIP_RETCODE addCuts(
    if( !SCIProwIsInLP(consdata->row1) )
    {
       SCIPdebugMsg(scip, "adding linking row of constraint <%s> as cut to the LP\n", SCIPconsGetName(cons));
-      SCIP_CALL( SCIPaddCut(scip, sol, consdata->row1, TRUE/*FALSE*/, cutoff) );
+      SCIP_CALL( SCIPaddCut(scip, consdata->row1, TRUE/*FALSE*/, cutoff) );
    }
 
    /* insert LP set partitioning row as cut */
    if( !SCIProwIsInLP(consdata->row2) )
    {
       SCIPdebugMsg(scip, "adding set partitioning row of constraint <%s> as cut to the LP\n", SCIPconsGetName(cons));
-      SCIP_CALL( SCIPaddCut(scip, sol, consdata->row2, TRUE/*FALSE*/, cutoff) );
+      SCIP_CALL( SCIPaddCut(scip, consdata->row2, TRUE/*FALSE*/, cutoff) );
    }
 
    return SCIP_OKAY;

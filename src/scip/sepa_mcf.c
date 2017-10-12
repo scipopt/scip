@@ -5820,7 +5820,7 @@ SCIP_RETCODE addCut(
    }
    else
    {
-      SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, cutoff) );
+      SCIP_CALL( SCIPaddCut(scip, cut, FALSE, cutoff) );
    }
    (*ncuts)++;
 

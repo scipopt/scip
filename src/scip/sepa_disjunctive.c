@@ -814,7 +814,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
             SCIProwChgRank(row, cutrank);
 
             /* add cut */
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+            SCIP_CALL( SCIPaddCut(scip, row, FALSE, &infeasible) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
             if ( infeasible )
             {

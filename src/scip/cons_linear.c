@@ -7411,7 +7411,7 @@ SCIP_RETCODE addRelaxation(
       /* if presolving is turned off, the row might be trivial */
       if ( ! SCIPisInfinity(scip, -consdata->lhs) || ! SCIPisInfinity(scip, consdata->rhs) )
       {
-         SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE, cutoff) );
+         SCIP_CALL( SCIPaddCut(scip, consdata->row, FALSE, cutoff) );
       }
 #ifndef NDEBUG
       else

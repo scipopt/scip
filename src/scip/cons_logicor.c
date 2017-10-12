@@ -1601,7 +1601,7 @@ SCIP_RETCODE addCut(
    if( !SCIProwIsInLP(consdata->row) )
    {
       SCIPdebugMsg(scip, "adding constraint <%s> as cut to the LP\n", SCIPconsGetName(cons));
-      SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE, cutoff) );
+      SCIP_CALL( SCIPaddCut(scip, consdata->row, FALSE, cutoff) );
    }
 
    return SCIP_OKAY;

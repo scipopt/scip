@@ -492,7 +492,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                /* add the bound change as cut to avoid that the LP gets modified. that would mean the LP is not flushed
                 * and the method SCIPgetLPBInvRow() fails; SCIP internally will apply that bound change automatically
                 */
-               SCIP_CALL( SCIPaddCut(scip, NULL, cut, TRUE, &cutoff) );
+               SCIP_CALL( SCIPaddCut(scip, cut, TRUE, &cutoff) );
                naddedcuts++;
             }
             else
@@ -537,7 +537,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                      else
                      {
                         /* local cuts we add to the sepastore */
-                        SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &cutoff) );
+                        SCIP_CALL( SCIPaddCut(scip, cut, FALSE, &cutoff) );
                      }
 
                      naddedcuts++;
