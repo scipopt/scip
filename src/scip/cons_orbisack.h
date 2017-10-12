@@ -52,6 +52,20 @@ extern "C" {
  * \f$x\f$ does not change the validity and objective function value of any feasible solution.
  */
 
+/** separate orbisack solutions */
+EXTERN
+SCIP_RETCODE SCIPseparateOrbisackCovers(
+   SCIP*                 scip,               /**< pointer to scip */
+   SCIP_CONS*            cons,               /**< pointer to constraint for which cover inequality should be added */
+   SCIP_SOL*             sol,                /**< solution to be separated */
+   SCIP_VAR**            vars1,              /**< variables of first columns */
+   SCIP_VAR**            vars2,              /**< variables of second columns */
+   int                   nrows,              /**< number of rows */
+   SCIP_Bool*            infeasible,         /**< memory address to store whether we detected infeasibility */
+   int*                  ngen                /**< memory address to store number of generated cuts */
+   );
+
+
 /** checks whether a given binary solution is feasible for the orbisack */
 EXTERN
 SCIP_RETCODE SCIPcheckOrbisackSolution(

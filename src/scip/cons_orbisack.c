@@ -1689,6 +1689,112 @@ SCIP_RETCODE SCIPcheckOrbisackSolution(
 }
 
 
+/** separate orbisack cover inequalities for a given solution */
+SCIP_RETCODE SCIPseparateOrbisackCovers(
+   SCIP*                 scip,               /**< pointer to scip */
+   SCIP_CONS*            cons,               /**< pointer to constraint for which cover inequality should be added */
+   SCIP_SOL*             sol,                /**< solution to be separated */
+   SCIP_VAR**            vars1,              /**< variables of first columns */
+   SCIP_VAR**            vars2,              /**< variables of second columns */
+   int                   nrows,              /**< number of rows */
+   SCIP_Bool*            infeasible,         /**< memory address to store whether we detected infeasibility */
+   int*                  ngen                /**< memory address to store number of generated cuts */
+   )
+{
+   SCIP_ROW* row;
+   SCIP_Real rhs = 0.0;
+   SCIP_Real lhs = 0.0;
+   SCIP_Real* solvals1;
+   SCIP_Real* solvals2;
+   SCIP_Real* coeff1;
+   SCIP_Real* coeff2;
+   int i;
+
+   assert( scip != NULL );
+   assert( vars1 != NULL );
+   assert( vars2 != NULL );
+   assert( nrows > 0 );
+   assert( infeasible != NULL );
+   assert( ngen != NULL );
+
+   *infeasible = FALSE;
+   *ngen = 0;
+
+   /* allocate memory for inequality coefficients */
+   SCIP_CALL( SCIPallocBufferArray(scip, &coeff1, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &coeff2, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &solvals1, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &solvals2, nrows) );
+
+   /* initialize coefficient matrix and solution values */
+   for (i = 0; i < nrows; ++i)
+   {
+      coeff1[i] = 0.0;
+      coeff2[i] = 0.0;
+   }
+   SCIP_CALL( SCIPgetSolVals(scip, sol, nrows, vars1, solvals1) );
+   SCIP_CALL( SCIPgetSolVals(scip, sol, nrows, vars2, solvals2) );
+
+   /* detect violated covers */
+   for (i = 0; i < nrows; ++i)
+   {
+      /* cover inequality is violated */
+      if ( SCIPisEfficacious(scip, -solvals1[i] + solvals2[i] + lhs - rhs) )
+      {
+         /* set coefficients for inequality */
+         coeff1[i] = -1.0;
+         coeff2[i] = 1.0;
+
+         /* add inequality */
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), "orbisackcover", -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
+         SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
+         for (i = 0; i < nrows; ++i)
+         {
+            SCIP_CALL( SCIPaddVarToRow(scip, row, vars1[i], coeff1[i]) );
+            SCIP_CALL( SCIPaddVarToRow(scip, row, vars2[i], coeff2[i]) );
+         }
+         SCIP_CALL( SCIPflushRowExtensions(scip, row) );
+
+         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, infeasible) );
+#ifdef SCIP_DEBUG
+         SCIP_CALL( SCIPprintRow(scip, row, NULL) );
+#endif
+         SCIP_CALL( SCIPreleaseRow(scip, &row) );
+
+         ++(*ngen);
+         if ( *infeasible )
+            break;
+
+         /* reset coefficients for next inequality */
+         coeff1[i] = 0.0;
+         coeff2[i] = 0.0;
+      }
+
+      /* add argmax( 1 - solvals[i][0], solvals[i][1] ) as coefficient */
+      if ( SCIPisEfficacious(scip, 1.0 - solvals1[i] - solvals2[i]) )
+      {
+         coeff1[i] = -1.0;
+         lhs = lhs - solvals1[i];
+      }
+      else
+      {
+         coeff2[i] = 1.0;
+         rhs += 1.0;
+         lhs = lhs + solvals2[i];
+      }
+   }
+
+   /* free coefficient matrix */
+   SCIPfreeBufferArray(scip, &solvals2);
+   SCIPfreeBufferArray(scip, &solvals1);
+   SCIPfreeBufferArray(scip, &coeff2);
+   SCIPfreeBufferArray(scip, &coeff1);
+
+   return SCIP_OKAY;
+
+}
+
+
 /** creates the handler for orbisack constraints and includes it in SCIP */
 SCIP_RETCODE SCIPincludeConshdlrOrbisack(
    SCIP*                 scip                /**< SCIP data structure */
@@ -1790,6 +1896,7 @@ SCIP_RETCODE SCIPcreateConsOrbisack(
    SCIP_Bool checkupgrade = FALSE;
    int i;
    SCIP_Bool success;
+   SCIP_ORBITOPETYPE orbitopetype;
 
    /* find the orbisack constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -1823,7 +1930,12 @@ SCIP_RETCODE SCIPcreateConsOrbisack(
          vars[i][1] = vars2[i];
       }
 
-      SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, "pporbisack", vars, isparttype, nrows, 2, TRUE, initial, separate, enforce, check, propagate,
+      if ( isparttype )
+         orbitopetype = SCIP_ORBITOPETYPE_PARTITIONING;
+      else
+         orbitopetype = SCIP_ORBITOPETYPE_PACKING;
+
+      SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, "pporbisack", vars, isparttype, nrows, 2, orbitopetype, initial, separate, enforce, check, propagate,
             local, modifiable, dynamic, removable, stickingatnode) );
 
       for (i = 0; i < nrows; ++i)
