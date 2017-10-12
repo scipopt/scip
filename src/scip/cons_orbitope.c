@@ -56,8 +56,6 @@
  *   <tr><td>frontiersteps</td><td>\\Gamma </td></tr>
  * </table>
  *
- * @todo implement separation routine for full orbitopes
- *
  * @note resolution of full orbitope propagation not available yet
  */
 
@@ -1878,6 +1876,12 @@ SCIP_RETCODE separateConstraints(
       int nconsfixedvars = 0;
       int nconscuts = 0;
       SCIP_ORBITOPETYPE orbitopetype;
+      SCIP_VAR*** vars;
+      SCIP_VAR** vars1;
+      SCIP_VAR** vars2;
+      int nrows;
+      int i;
+      int j;
 
       assert( conss[c] != NULL );
 
@@ -1897,8 +1901,29 @@ SCIP_RETCODE separateConstraints(
       }
       else
       {
-         /* @todo separate orbisack inequalities */
-         ;
+         assert( consdata->nspcons > 0 );
+         assert( consdata->vars != NULL );
+
+         nrows = consdata->nspcons;
+         vars = consdata->vars;
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &vars1, nrows) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &vars2, nrows) );
+
+         /* iterate over adjacent columns of orbitope and separate inequalities for the corresponding orbisacks */
+         for (j = 1; j < consdata->nblocks && ! infeasible; ++j)
+         {
+            for (i = 0; i < nrows; ++i)
+            {
+               vars1[i] = vars[i][j - 1];
+               vars2[i] = vars[i][j];
+            }
+
+            SCIP_CALL( SCIPseparateOrbisackCovers(scip, conss[c], sol, vars1, vars2, nrows, &infeasible, &nconscuts) );
+         }
+
+         SCIPfreeBufferArray(scip, &vars2);
+         SCIPfreeBufferArray(scip, &vars1);
       }
       nfixedvars += nconsfixedvars;
       ncuts += nconscuts;
