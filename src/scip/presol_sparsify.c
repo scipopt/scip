@@ -167,6 +167,7 @@ SCIP_RETCODE cancelRow(
       ROWVARPAIR rowvarpair;
       int maxlen;
 
+      bestscale = 1.0;
       bestcand = -1;
       bestncancel = 0;
       bestnfillin = 0;
