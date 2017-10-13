@@ -203,6 +203,8 @@ struct BilinearEstimator
    unsigned int          nunderest;         /**< number of constraints that require to underestimate xy */
    unsigned int          noverest;          /**< number of constraints that require to overestimate xy */
 
+   SCIP_Real             lastimprfac;
+
    SCIP_Real             score;             /**< score of each bilinear term */
    int                   nupdates;          /**< total number of score updates */
 };
@@ -5593,6 +5595,7 @@ SCIP_RETCODE storeAllBilinearTerms(
       {
          conshdlrdata->bilinestimators[pos].x = bilinterms[i].var1;
          conshdlrdata->bilinestimators[pos].y = bilinterms[i].var2;
+         conshdlrdata->bilinestimators[pos].lastimprfac = 0.0;
          ++pos;
       }
 
@@ -7208,10 +7211,12 @@ void updateBilinearRelaxation(
 
       if( update )
       {
-	 SCIP_Real val = xcoef * refx + ycoef * refy + constant;
+         SCIP_Real val = xcoef * refx + ycoef * refy + constant;
+         SCIP_Real relimpr = 1.0 - (REALABS(val - bilincoef * refx * refy) + 1e-4) / (REALABS(*bestval - bilincoef * refx * refy) + 1e-4);
+         SCIP_Real absimpr = REALABS(val - (*bestval));
 
 	 /* update relaxation if possible */
-	 if( (overestimate && SCIPisFeasLT(scip, val, *bestval)) || (!overestimate && SCIPisFeasGT(scip, val, *bestval)) )
+	 if( relimpr > 0.05 && absimpr > 0.001 &&  ((overestimate && SCIPisFeasLT(scip, val, *bestval)) || (!overestimate && SCIPisFeasGT(scip, val, *bestval))) )
 	 {
 	    *bestcoefx = xcoef;
 	    *bestcoefy = ycoef;
@@ -7230,10 +7235,12 @@ void updateBilinearRelaxation(
 
       if( update )
       {
-	 SCIP_Real val = xcoef * refx + ycoef * refy + constant;
+         SCIP_Real val = xcoef * refx + ycoef * refy + constant;
+         SCIP_Real relimpr = 1.0 - (REALABS(val - bilincoef * refx * refy) + 1e-4) / (REALABS(*bestval - bilincoef * refx * refy) + 1e-4);
+         SCIP_Real absimpr = REALABS(val - (*bestval));
 
 	 /* update relaxation if possible */
-	 if( (overestimate && SCIPisFeasLT(scip, val, *bestval)) || (!overestimate && SCIPisFeasGT(scip, val, *bestval)) )
+	 if( relimpr > 0.05 && absimpr > 0.001 &&  ((overestimate && SCIPisFeasLT(scip, val, *bestval)) || (!overestimate && SCIPisFeasGT(scip, val, *bestval))) )
 	 {
 	    *bestcoefx = xcoef;
 	    *bestcoefy = ycoef;
@@ -7382,6 +7389,7 @@ SCIP_RETCODE generateCutNonConvex(
          {
             int bilintermidx = consdata->bilintermsidx[idx];
             SCIP_Real score = getInteriority(lbx, ubx, refx, lby, uby, refy);
+            SCIP_Real mccormick = refx * coef + refy * coef2 + constant;
 
             /* update score of each bilinear term */
             bilinestimator = &(conshdlrdata->bilinestimators[bilintermidx]);
@@ -7390,15 +7398,15 @@ SCIP_RETCODE generateCutNonConvex(
             SCIPdebugMsg(scip, "score of bilinear term %s %s = %g (%g)\n", SCIPvarGetName(bilinestimator->x),
                SCIPvarGetName(bilinestimator->y), score, bilinestimator->score / bilinestimator->nupdates);
 
+            /* reset the last improvement factor (used for getting better branching decisions) */
+            bilinestimator->lastimprfac = 0.0;
+
             /* compute tighter relaxation for xy if the current score is large enough */
             if( SCIPisGE(scip, score, conshdlrdata->minscorebilinterms)
                && bilinestimator->nineqoverest + bilinestimator->ninequnderest > 0 )
             {
-               SCIP_Real bestval = refx * coef + refy * coef2 + constant;
+               SCIP_Real bestval = mccormick;
                SCIP_Bool updaterelax = FALSE;
-#ifndef NDEBUG
-               SCIP_Real mccormick = bestval;
-#endif
 
                assert(conshdlrdata->bilinestimators != NULL);
                bilinestimator = &(conshdlrdata->bilinestimators[bilintermidx]);
@@ -7415,10 +7423,13 @@ SCIP_RETCODE generateCutNonConvex(
 
                SCIPdebugMsg(scip, "found better relaxation value: %u (%g)\n", updaterelax, bestval);
 
-#ifndef NDEBUG
                /* check whether the new relaxation is under- or overestimating xy properly */
                if( updaterelax )
                {
+                  /* update improvement factor */
+                  bilinestimator->lastimprfac = 1.0 - REALABS(bestval - bilinterm->coef * refx * refy) / REALABS(mccormick - bilinterm->coef * refx * refy);
+
+#ifndef NDEBUG
 		  assert(SCIPisEQ(scip, bestval, coef * refx + coef2 * refy + constant));
 		  if( violside == SCIP_SIDETYPE_LEFT )
 		  {
@@ -7430,8 +7441,8 @@ SCIP_RETCODE generateCutNonConvex(
 		     assert(SCIPisLE(scip, bestval, bilinterm->coef * refx * refy));
 		     assert(SCIPisGE(scip, bestval, mccormick));
 		  }
-               }
 #endif
+               }
             }
          }
 
@@ -9439,6 +9450,7 @@ SCIP_RETCODE registerBranchingCandidatesGap(
    int*                  nnotify             /**< counter for number of notifications performed */
    )
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
    int                c;
    int                j;
@@ -9464,6 +9476,9 @@ SCIP_RETCODE registerBranchingCandidatesGap(
    *nnotify = 0;
    yval = SCIP_INVALID;
    xval = SCIP_INVALID;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlr != NULL);
 
    for( c = 0; c < nconss; ++c )
    {
@@ -9563,6 +9578,26 @@ SCIP_RETCODE registerBranchingCandidatesGap(
             assert(!SCIPisNegative(scip, gap / MAX3(MAX(REALABS(xlb), REALABS(xub)), MAX(REALABS(ylb), REALABS(yub)), 1.0)));  /*lint !e666*/
             if( gap < 0.0 )
                gap = 0.0;
+
+            /* use tighter relaxation when using linear inequalities to adjust the branching scores for bilinear terms */
+            if( consdata->bilintermsidx != NULL )
+            {
+               BILINESTIMATOR* bilinestimator;
+               int bilinidx;
+
+               assert(conshdlrdata->bilinestimators != NULL);
+
+               bilinidx = consdata->bilintermsidx[j];
+               assert(bilinidx >= 0 && bilinidx < conshdlrdata->nbilinterms);
+
+               bilinestimator = &conshdlrdata->bilinestimators[bilinidx];
+               assert(bilinestimator != NULL);
+               assert(bilinestimator->x == x);
+               assert(bilinestimator->y == y);
+
+               if( SCIPisGT(scip, bilinestimator->lastimprfac, 0.0) )
+                  gap *= MAX(0.0, 1.0 - bilinestimator->lastimprfac);
+            }
          }
 
          /* if one of the variables is binary or integral with domain width 1, then branching on this makes the term linear, so prefer this */
