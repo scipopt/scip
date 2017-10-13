@@ -280,8 +280,86 @@ SCIP_RETCODE computeCutsSin(
       }
    }
 
-   /* compute left middle tangent, that is tangent at some other point which goes through (lb,sin(lb)) */
-   if( lmidtangent != NULL && (secant == NULL || *secant == NULL) )
+   /* compute tangent at solution point */
+   if( soltangent != NULL )
+   {
+      SCIP_Real startingpoints[3];
+      SCIP_Real shiftedpointhalf;
+      SCIP_Real intersection;
+      int i;
+
+      *soltangent = NULL;
+
+      refpoint = SCIPgetSolVal(scip, sol, childvar);
+
+      /* compute refpoint mod pi */
+      shiftedpointhalf = fmod(refpoint, M_PI);
+      if( refpoint < 0.0 )
+      {
+         shiftedpointhalf += M_PI;
+      }
+
+      /* if the point is too far away from the bounds or is at a multiple of pi, the cut will not help */
+      if( SCIPisLE(scip, refpoint - childlb, 2*M_PI) && SCIPisLE(scip, childub - refpoint, 2*M_PI)
+         && !SCIPisZero(scip, shiftedpointhalf) )
+      {
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sin_soltangent_%s", SCIPvarGetName(childvar));
+
+         params[0] = COS(refpoint);
+         params[1] = SIN(refpoint) - params[0] * refpoint;
+
+         /* choose starting points for newton procedure */
+         if( SCIPisGT(scip, shiftedpointhalf, 0.5*M_PI) )
+         {
+            startingpoints[0] = refpoint + (M_PI - shiftedpointhalf) + 0.5*M_PI;
+            startingpoints[1] = startingpoints[0] + 0.5*M_PI;
+            startingpoints[2] = startingpoints[1] + 0.5*M_PI;
+         }
+         else
+         {
+            startingpoints[0] = refpoint - shiftedpointhalf - 0.5*M_PI;
+            startingpoints[1] = startingpoints[0] - 0.5*M_PI;
+            startingpoints[2] = startingpoints[1] - 0.5*M_PI;
+         }
+
+         /* use newton procedure to test if cut is valid */
+         for( i = 0; i < 3; ++i)
+         {
+            intersection = SCIPcomputeRootNewton(function1, derivative1, params, 2, startingpoints[i], NEWTON_PRECISION,
+               NEWTON_NITERATIONS);
+
+            if( intersection != SCIP_INVALID && intersection != refpoint)
+               break;
+         }
+
+         if( intersection != SCIP_INVALID && (intersection <= childlb || intersection >= childub) ) /*lint !e777*/
+         {
+            isoverestimating = (SIN(refpoint) > 0.0);
+
+            if( isoverestimating && overestimate )
+            {
+               SCIP_CALL( SCIPcreateEmptyRowCons(scip, soltangent, conshdlr, name, -params[1], SCIPinfinity(scip),
+                  TRUE, FALSE, FALSE) );
+
+               SCIP_CALL( SCIPaddVarToRow(scip, *soltangent, auxvar, -1.0) );
+               SCIP_CALL( SCIPaddVarToRow(scip, *soltangent, childvar, params[0]) );
+            }
+            else if( !isoverestimating && underestimate )
+            {
+               SCIP_CALL( SCIPcreateEmptyRowCons(scip, soltangent, conshdlr, name, -SCIPinfinity(scip), -params[1],
+                  TRUE, FALSE, FALSE) );
+
+               SCIP_CALL( SCIPaddVarToRow(scip, *soltangent, auxvar, -1.0) );
+               SCIP_CALL( SCIPaddVarToRow(scip, *soltangent, childvar, params[0]) );
+            }
+         }
+      }
+   }
+
+   /* compute left middle tangent, that is tangent at some other point which goes through (lb,sin(lb))
+    * if secant or soltangent are feasible, this cut can never beat them
+    */
+   if( lmidtangent != NULL && (secant == NULL || *secant == NULL) && (soltangent == NULL || *soltangent == NULL) )
    {
       SCIP_Real tangentpoint;
       SCIP_Real connectionpoint;
@@ -311,7 +389,7 @@ SCIP_RETCODE computeCutsSin(
 
          if( isoverestimating && overestimate )
          {
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, lmidtangent, conshdlr, name, -params[1], -SCIPinfinity(scip),
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, lmidtangent, conshdlr, name, -params[1], SCIPinfinity(scip),
                   TRUE, FALSE, FALSE) );
 
             SCIP_CALL( SCIPaddVarToRow(scip, *lmidtangent, auxvar, -1.0) );
@@ -327,9 +405,13 @@ SCIP_RETCODE computeCutsSin(
          }
       }
    }
+   else if( lmidtangent != NULL )
+      *lmidtangent = NULL;
 
-   /* compute right middle tangent, that is tangent at some other point which goes through (ub,sin(ub)) */
-   if( rmidtangent != NULL && (secant == NULL || *secant != NULL) )
+   /* compute right middle tangent, that is tangent at some other point which goes through (ub,sin(ub))
+    * if secant or soltangent are feasible, this cut can never beat them
+    */
+   if( rmidtangent != NULL && (secant == NULL || *secant != NULL) && (soltangent == NULL || *soltangent == NULL) )
    {
       SCIP_Real tangentpoint;
       SCIP_Real connectionpoint;
@@ -359,7 +441,7 @@ SCIP_RETCODE computeCutsSin(
 
          if( isoverestimating && overestimate )
          {
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, rmidtangent, conshdlr, name, -params[1], -SCIPinfinity(scip),
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, rmidtangent, conshdlr, name, -params[1], SCIPinfinity(scip),
                TRUE, FALSE, FALSE) );
 
             SCIP_CALL( SCIPaddVarToRow(scip, *rmidtangent, auxvar, -1.0) );
@@ -375,68 +457,8 @@ SCIP_RETCODE computeCutsSin(
          }
       }
    }
-
-   /* compute tangent at solution point */
-   if( soltangent != NULL )
-   {
-      SCIP_Real shiftedpointhalf;
-      SCIP_Real startingpoint;
-      SCIP_Real intersection;
-
-      *soltangent = NULL;
-
-      refpoint = SCIPgetSolVal(scip, sol, childvar);
-
-      /* compute refpoint mod pi */
-      shiftedpointhalf = fmod(refpoint, M_PI);
-      if( refpoint < 0.0 )
-      {
-         shiftedpointhalf += M_PI;
-      }
-
-      /* if the point is too far away from the bounds or is at a multiple of pi, the cut will not help */
-      if( SCIPisLE(scip, refpoint - childlb, 2*M_PI) && SCIPisGE(scip, childub - refpoint, 2*M_PI)
-         && !SCIPisZero(scip, shiftedpointhalf) )
-      {
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sin_soltangent_%s", SCIPvarGetName(childvar));
-
-         params[0] = COS(refpoint);
-         params[1] = SIN(refpoint) - params[0] * refpoint;
-
-         /* choose starting point for newton such that the computed root is not refpoint */
-         if( SCIPisGT(scip, shiftedpointhalf, 0.5*M_PI) )
-            startingpoint = refpoint + 2.0*M_PI;
-         else
-            startingpoint = refpoint - 2.0*M_PI;
-
-         /* use newton procedure to test if cut is valid */
-         intersection = SCIPcomputeRootNewton(function1, derivative1, params, 2, startingpoint, NEWTON_PRECISION,
-            NEWTON_NITERATIONS);
-         assert(!SCIPisEQ(scip, intersection, refpoint));
-
-         if( intersection != SCIP_INVALID && (intersection <= childlb || intersection >= childub) ) /*lint !e777*/
-         {
-            isoverestimating = (SIN(intersection) > 0.0);
-
-            if( isoverestimating && overestimate )
-            {
-               SCIP_CALL( SCIPcreateEmptyRowCons(scip, soltangent, conshdlr, name, -params[1], -SCIPinfinity(scip),
-                  TRUE, FALSE, FALSE) );
-
-               SCIP_CALL( SCIPaddVarToRow(scip, *soltangent, auxvar, -1.0) );
-               SCIP_CALL( SCIPaddVarToRow(scip, *soltangent, childvar, params[0]) );
-            }
-            else if( !isoverestimating && underestimate )
-            {
-               SCIP_CALL( SCIPcreateEmptyRowCons(scip, soltangent, conshdlr, name, -SCIPinfinity(scip), -params[1],
-                  TRUE, FALSE, FALSE) );
-
-               SCIP_CALL( SCIPaddVarToRow(scip, *soltangent, auxvar, -1.0) );
-               SCIP_CALL( SCIPaddVarToRow(scip, *soltangent, childvar, params[0]) );
-            }
-         }
-      }
-   }
+   else if( rmidtangent != NULL )
+      *rmidtangent = NULL;
 
    return SCIP_OKAY;
 }
