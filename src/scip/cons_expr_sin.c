@@ -409,7 +409,7 @@ SCIP_RETCODE computeCutsSin(
       }
 
       /* use newton procedure to find the point where the tangent intersects sine at lower bound */
-      if( startingpoint == SCIP_INVALID)
+      if( startingpoint == SCIP_INVALID ) /*lint !e777*/
          tangentpoint = SCIP_INVALID;
       else
          tangentpoint = SCIPcomputeRootNewton(function2, derivative2, &childlb, 1, startingpoint, NEWTON_PRECISION,
@@ -505,7 +505,7 @@ SCIP_RETCODE computeCutsSin(
       }
 
       /* use newton procedure to find the point where the tangent intersects sine at upper bound */
-      if( startingpoint == SCIP_INVALID)
+      if( startingpoint == SCIP_INVALID ) /*lint !e777*/
          tangentpoint = SCIP_INVALID;
       else
          tangentpoint = SCIPcomputeRootNewton(function2, derivative2, &childub, 1, startingpoint, NEWTON_PRECISION,
