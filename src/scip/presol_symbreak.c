@@ -1080,22 +1080,29 @@ SCIP_DECL_PRESOLEXIT(presolExitSymbreak)
    presoldata->ngenconss = 0;
 
    /* free orbit structures */
-   for (i = 0; i < presoldata->norbits; ++i)
-      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->orbits[i], presoldata->nvarsinorbits[i]);
-   SCIPfreeBlockMemoryArrayNull(scip, &presoldata->orbits, presoldata->norbits);
-   SCIPfreeBlockMemoryArrayNull(scip, &presoldata->nvarsinorbits, presoldata->norbits);
+   if ( presoldata->norbits > 0 )
+   {
+      for (i = 0; i < presoldata->norbits; ++i)
+         SCIPfreeBlockMemoryArrayNull(scip, &presoldata->orbits[i], presoldata->nvarsinorbits[i]);
+      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->orbits, presoldata->norbits);
+      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->nvarsinorbits, presoldata->norbits);
+   }
 
    presoldata->orbits = NULL;
    presoldata->nvarsinorbits = NULL;
    presoldata->norbits = -1;
 
    /* free components */
-   SCIPfreeBlockMemoryArrayNull(scip, &presoldata->componentblocked, presoldata->ncomponents);
-   for (i = 0; i < presoldata->ncomponents; ++i)
-      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->components[i], presoldata->npermsincomponent[i]);
-    SCIPfreeBlockMemoryArrayNull(scip, &presoldata->components, presoldata->ncomponents);
-    SCIPfreeBlockMemoryArrayNull(scip, &presoldata->npermsincomponent, presoldata->ncomponents);
+   if ( presoldata->ncomponents > 0 )
+   {
+      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->componentblocked, presoldata->ncomponents);
+      for (i = 0; i < presoldata->ncomponents; ++i)
+         SCIPfreeBlockMemoryArrayNull(scip, &presoldata->components[i], presoldata->npermsincomponent[i]);
+      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->components, presoldata->ncomponents);
+      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->npermsincomponent, presoldata->ncomponents);
+   }
 
+    presoldata->componentblocked = NULL;
     presoldata->components = NULL;
     presoldata->npermsincomponent = NULL;
     presoldata->ncomponents = -1;
@@ -1106,6 +1113,7 @@ SCIP_DECL_PRESOLEXIT(presolExitSymbreak)
     presoldata->enabled = TRUE;
     presoldata->early = FALSE;
     presoldata->nperms = -1;
+    presoldata->norbitopes = 0;
     presoldata->nsymresacks = 0;
 
    return SCIP_OKAY;
