@@ -38,20 +38,19 @@
 
 #define PRESOL_NAME            "sparsify"
 #define PRESOL_DESC            "eliminate non-zero coefficients"
+
 #define PRESOL_PRIORITY            -24000    /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS               -1    /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_TIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 
-#define MIN_EQS_NONZEROS                3    /**< minimal number of non-zeros of the equalities */
-#define CHECK_INTERVAL               1000    /**< number of observed row pairs after which the success is verified */
-#define THRESHOLD        ((SCIP_Real)0.02)   /**< minimal ratio of non-zero cancellation per observed row pairs */
 #define DEFAULT_MAX_CONT_FILLIN         0    /**< default value for the maximal fillin for continuous variables */
 #define DEFAULT_MAX_BIN_FILLIN          0    /**< default value for the maximal fillin for binary variables */
 #define DEFAULT_MAX_INT_FILLIN          0    /**< default value for the maximal fillin for integer variables */
+
 #define DEFAULT_FULL_SEARCH             0    /**< default value for full search */
 
+#define MAXCONSIDEREDNONZEROS          50    /**< maximal size of considered non-zeros */
 
-#define MAXCONSIDEREDNONZEROS 70
 /*
  * Data structures
   */
@@ -80,6 +79,7 @@ struct RowVarPair
 
 typedef struct RowVarPair ROWVARPAIR;
 
+/** returns TRUE iff both keys are equal */
 static
 SCIP_DECL_HASHKEYEQ(varPairsEqual)
 {
@@ -104,6 +104,7 @@ SCIP_DECL_HASHKEYEQ(varPairsEqual)
    return TRUE;
 }
 
+/** returns the hash value of the key */
 static
 SCIP_DECL_HASHKEYVAL(varPairHashval)
 {
@@ -115,6 +116,7 @@ SCIP_DECL_HASHKEYVAL(varPairHashval)
                       SCIPrealHashCode(varpair->varcoef2 / varpair->varcoef1));
 }
 
+/** non-zero cancellation of rows */
 static
 SCIP_RETCODE cancelRow(
    SCIP*                 scip,
@@ -156,13 +158,19 @@ SCIP_RETCODE cancelRow(
    while(TRUE)
    {
       SCIP_Real bestscale;
-      int bestcand = -1;
-      int bestncancel = 0;
-      int bestnfillin = 0;
+      int bestcand;
+      int bestncancel;
+      int bestnfillin;
+      SCIP_Bool bestdeccond;
       int i;
       int j;
       ROWVARPAIR rowvarpair;
       int maxlen;
+
+      bestcand = -1;
+      bestncancel = 0;
+      bestnfillin = 0;
+      bestdeccond = FALSE;
 
       for( i = 0; i < cancelrowlen; ++i )
       {
@@ -188,8 +196,10 @@ SCIP_RETCODE cancelRow(
             ROWVARPAIR* eqrowvarpair;
             SCIP_Real* eqrowvals;
             int* eqrowinds;
+            SCIP_Real eqrowside;
             SCIP_Real scale;
             int i1,i2;
+            SCIP_Bool deccond;
 
             i1 = tmpinds[i];
             i2 = tmpinds[j];
@@ -213,19 +223,20 @@ SCIP_RETCODE cancelRow(
 
             eqrowvarpair = SCIPhashtableRetrieve(pairtable, (void*) &rowvarpair);
 
-            /* if the row we want to cancel is an equality, we will only use equalities
-             * with less non-zeros and if the number of non-zeros is equal we use the
-             * rowindex as tie-breaker to avoid cyclic non-zero cancellation
-             */
             if( eqrowvarpair == NULL || eqrowvarpair->rowindex == rowidx )
                continue;
 
+            /* if the row we want to cancel is an equality, we will only use equalities
+             * for canceling with less non-zeros and if the number of non-zeros is equal we use the
+             * rowindex as tie-breaker to avoid cyclic non-zero cancellation
+             */
             eqrowlen = SCIPmatrixGetRowNNonzs(matrix, eqrowvarpair->rowindex);
             if( rowiseq && (cancelrowlen < eqrowlen || (cancelrowlen == eqrowlen && rowidx < eqrowvarpair->rowindex)) )
                continue;
 
             eqrowvals = SCIPmatrixGetRowValPtr(matrix, eqrowvarpair->rowindex);
             eqrowinds = SCIPmatrixGetRowIdxPtr(matrix, eqrowvarpair->rowindex);
+            eqrowside = SCIPmatrixGetRowRhs(matrix, eqrowvarpair->rowindex);
 
             scale = -rowvarpair.varcoef1 / eqrowvarpair->varcoef1;
 
@@ -298,15 +309,32 @@ SCIP_RETCODE cancelRow(
             if( ncontfillin > maxcontfillin || nbinfillin > maxbinfillin || nintfillin > maxintfillin )
                continue;
 
+            /* secure that integer lhs stays integer after scaling */
+            if( !SCIPisInfinity(scip, -cancellhs) )
+               if( SCIPisIntegral(scip, cancellhs) && !SCIPisIntegral(scip, cancellhs + scale * eqrowside) )
+                  continue;
+
+            /* secure that integer rhs stays integer after scaling */
+            if( !SCIPisInfinity(scip, cancelrhs) )
+               if( SCIPisIntegral(scip, cancelrhs) && !SCIPisIntegral(scip, cancelrhs + scale * eqrowside) )
+                  continue;
+
             nfillin = nbinfillin + nintfillin + ncontfillin;
 
-            if( ((ncancel - nfillin) > (bestncancel - bestnfillin) ||
-               ((ncancel - nfillin) == (bestncancel - bestnfillin) && nfillin < bestnfillin) ) )
+            /* the case if all non-zeros of the equation for cancelling are cancelled in the
+             * cancel row is a necessary condition for generating independent components
+             */
+            deccond = (nfillin == 0 && ncancel == eqrowlen);
+
+            if( (deccond && !bestdeccond) ||
+                ((ncancel - nfillin) >  (bestncancel - bestnfillin) ||
+                ((ncancel - nfillin) == (bestncancel - bestnfillin) && nfillin < bestnfillin) ) )
             {
                bestncancel = ncancel;
                bestnfillin = nfillin;
                bestcand = eqrowvarpair->rowindex;
                bestscale = scale;
+               bestdeccond = deccond;
             }
          }
       }
@@ -413,10 +441,15 @@ SCIP_RETCODE cancelRow(
                                       cancellhs, cancelrhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPdelCons(scip, SCIPmatrixGetCons(matrix, rowidx)) );
       SCIP_CALL( SCIPaddCons(scip, cons) );
-      #ifdef SCIP_MORE_DEBUG
+
+#ifdef SCIP_DEBUG
+      SCIPdebugMsg(scip, "########\n");
+      SCIPdebugMsg(scip, "old:\n");
+      SCIPmatrixPrintRow(scip, matrix, rowidx);
+      SCIPdebugMsg(scip, "new:\n");
       SCIPdebugPrintCons(scip, cons, NULL);
       SCIPdebugMsg(scip, "########\n");
-      #endif
+#endif
 
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
@@ -579,7 +612,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
                                 SCIPmatrixGetColNUplocks(matrix, othervarpair->varindex1) +
                                 SCIPmatrixGetColNUplocks(matrix, othervarpair->varindex2);
 
-            /* only override old var pair if this one has more locks or if it has the same number of locks but its row is sparser */
+            /* override other var pair if it has more locks or if it has the same number of locks and a greater support */
             if( othervarpairlocks < thisvarpairlocks || (othervarpairlocks == thisvarpairlocks &&
                SCIPmatrixGetRowNNonzs(matrix, othervarpair->rowindex) <= SCIPmatrixGetRowNNonzs(matrix, varpairs[r].rowindex)) )
                continue;
