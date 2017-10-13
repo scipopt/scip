@@ -628,4 +628,7 @@ Test(separation, sinus_z, .init = setup, .fini = teardown,
 
    /* release cuts */
    SCIP_CALL( SCIPreleaseRow(scip, &secant) );
+
+   /* release expression */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
