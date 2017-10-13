@@ -233,6 +233,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    SCIP_Real* cutcoefs;
    SCIP_Real* basisfrac;
    int* basisind;
+   int* basisperm;
    int* inds;
    int* cutinds;
    SCIP_Real maxscale;
@@ -346,6 +347,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cutinds, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &basisind, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &basisperm, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &basisfrac, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &binvrow, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &inds, nrows) );
@@ -359,6 +361,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       SCIP_Real frac = 0.0;
 
       c = basisind[i];
+
+      basisperm[i] = i;
 
       if( c >= 0 )
       {
@@ -397,7 +401,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    }
 
    /* sort basis indices by fractionality */
-   SCIPsortDownRealInt(basisfrac, basisind, nrows);
+   SCIPsortDownRealInt(basisfrac, basisperm, nrows);
 
    /* get the maximal number of cuts allowed in a separation round */
    if( depth == 0 )
@@ -420,15 +424,17 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       SCIP_Bool cutislocal;
       int cutnnz;
       int cutrank;
+      int j;
 
       if( basisfrac[i] == 0.0 )
          break;
 
-      c = basisind[i];
+      j = basisperm[i];
+      c = basisind[j];
 
       /* get the row of B^-1 for this basic integer variable with fractional solution value */
       ninds = -1;
-      SCIP_CALL( SCIPgetLPBInvRow(scip, i, binvrow, inds, &ninds) );
+      SCIP_CALL( SCIPgetLPBInvRow(scip, j, binvrow, inds, &ninds) );
 
       SCIP_CALL( SCIPaggrRowSumRows(scip, aggrrow, binvrow, inds, ninds,
          sepadata->sidetypebasis, allowlocal, 2, (int) MAXAGGRLEN(nvars), &success) );
@@ -554,6 +560,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    SCIPfreeBufferArray(scip, &inds);
    SCIPfreeBufferArray(scip, &binvrow);
    SCIPfreeBufferArray(scip, &basisfrac);
+   SCIPfreeBufferArray(scip, &basisperm);
    SCIPfreeBufferArray(scip, &basisind);
    SCIPfreeBufferArray(scip, &cutinds);
    SCIPfreeBufferArray(scip, &cutcoefs);
