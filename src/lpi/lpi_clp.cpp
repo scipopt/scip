@@ -1338,7 +1338,7 @@ SCIP_RETCODE SCIPlpiGetCols(
    SCIP_Real*            ub,                 /**< buffer to store the upper bound vector, or 0 */
    int*                  nnonz,              /**< pointer to store the number of nonzero elements returned, or 0 */
    int*                  beg,                /**< buffer to store start index of each column in ind- and val-array, or 0 */
-   int*                  ind,                /**< buffer to store column indices of constraint matrix entries, or 0 */
+   int*                  ind,                /**< buffer to store row indices of constraint matrix entries, or 0 */
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or 0 */
    )
 {
@@ -1405,7 +1405,7 @@ SCIP_RETCODE SCIPlpiGetRows(
    SCIP_Real*            rhs,                /**< buffer to store right hand side vector, or 0 */
    int*                  nnonz,              /**< pointer to store the number of nonzero elements returned, or 0 */
    int*                  beg,                /**< buffer to store start index of each row in ind- and val-array, or 0 */
-   int*                  ind,                /**< buffer to store row indices of constraint matrix entries, or 0 */
+   int*                  ind,                /**< buffer to store column indices of constraint matrix entries, or 0 */
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or 0 */
    )
 {
