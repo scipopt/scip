@@ -37,6 +37,7 @@
 #include <assert.h>
 
 #include <scip/cons_linear.h>
+#include <scip/cons_orbitope.h>
 #include <scip/cons_setppc.h>
 #include <scip/cons_symresack.h>
 #include <scip/misc.h>
@@ -78,12 +79,14 @@ struct SCIP_PresolData
    SCIP_CONS**           genconss;           /**< list of generated constraints */
    int                   ngenconss;          /**< number of generated constraints */
    int                   nsymresacks;        /**< number of symresack constraints */
+   int                   norbitopes;         /**< number of orbitope constraints */
    int                   norbits;            /**< number of non-trivial orbits of permutation group */
    int*                  nvarsinorbits;      /**< number of variables per orbit */
    int**                 orbits;             /**< array containing for each orbit an array with the variable indices in the orbit */
    int                   ncomponents;        /**< number of components of symmetry group */
    int*                  npermsincomponent;  /**< array containing number of permutations per component */
    int**                 components;         /**< array containing for each components the corresponding permutations */
+   SCIP_Bool*            componentblocked;   /**< array to store whether a component is blocked to be considered by symmetry handling techniques */
 };
 
 
@@ -363,6 +366,10 @@ SCIP_RETCODE computeComponents(
 
    SCIPdisjointsetFree(&componentstoperm, SCIPblkmem(scip));
 
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(presoldata->componentblocked), ncomponents) );
+   for (i = 0; i < ncomponents; ++i)
+      presoldata->componentblocked[i] = FALSE;
+
 #if 0
    printf("\n\n\nTESTS\n\n");
    printf("Number of components:\t\t%d\n", presoldata->ncomponents);
@@ -574,12 +581,14 @@ SCIP_RETCODE generateOrbitopeVarsMatrix(
     * 3)  [0, 1, -1, -1, ...., -1, 1, 1, ..., 1]
     */
    /* If we are in case 2), all columns should have been added to vars */
-   if ( columnorder[curcolumn] == 0 )
+   if ( curcolumn < 0 )
       assert( nfilledcols == ncols );
    /* Otherwise, we are in case 1) or 3) and the only remaining non-negative
     *  column orders are 0 and 1. */
    else
    {
+      assert( curcolumn > 1 );
+
       /* add column with columnorder 1 to vars*/
       for (i = 0; i < nrows; ++i)
       {
@@ -601,6 +610,8 @@ SCIP_RETCODE generateOrbitopeVarsMatrix(
       /* add columns with a negative column order to vars */
       if ( nfilledcols < ncols )
       {
+         assert( ncols > 2 );
+
          curcolumn = 2;
          while ( nfilledcols < ncols )
          {
@@ -679,6 +690,7 @@ SCIP_RETCODE detectOrbitopes(
       int nusedperms;
       SCIP_VAR*** vars;
       int coltoextend;
+      SCIP_CONS* cons;
 
       /* get properties of permutations */
       for (j = 0; j < npermsincomponent[i]; ++j)
@@ -842,7 +854,7 @@ SCIP_RETCODE detectOrbitopes(
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, ntwocyclescomp) );
       for (j = 0; j < ntwocyclescomp; ++j)
       {
-         SCIP_CALL( SCIPallocBufferArray(scip, &vars[j], npermsincomponent[i]) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &vars[j], npermsincomponent[i] + 1) );
       }
 
       /* prepare variable matrix (reorder columns of orbitopevaridx) */
@@ -851,6 +863,17 @@ SCIP_RETCODE detectOrbitopes(
 
       /* @todo: add orbitope if full orbitope conshdlr is implemented */
       SCIPinfoMessage(scip, NULL, "Component %d is an orbitope with %d rows and %d columns.\n", i, ntwocyclescomp, npermsincomponent[i] + 1);
+
+      SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, "orbitope", vars, SCIP_ORBITOPETYPE_FULL, ntwocyclescomp, npermsincomponent[i] + 1, FALSE,
+            presoldata->conssaddlp, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+      SCIP_CALL( SCIPaddCons(scip, cons) );
+
+      /* do not release constraint here - will be done later */
+      presoldata->genconss[presoldata->ngenconss] = cons;
+      ++presoldata->ngenconss;
+      ++presoldata->norbitopes;
+      presoldata->componentblocked[i] = TRUE;
 
       /* free data structures */
       for (j = 0; j < ntwocyclescomp; ++j)
@@ -1067,6 +1090,7 @@ SCIP_DECL_PRESOLEXIT(presolExitSymbreak)
    presoldata->norbits = -1;
 
    /* free components */
+   SCIPfreeBlockMemoryArrayNull(scip, &presoldata->componentblocked, presoldata->ncomponents);
    for (i = 0; i < presoldata->ncomponents; ++i)
       SCIPfreeBlockMemoryArrayNull(scip, &presoldata->components[i], presoldata->npermsincomponent[i]);
     SCIPfreeBlockMemoryArrayNull(scip, &presoldata->components, presoldata->ncomponents);
@@ -1195,7 +1219,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
       /* add symmetry breaking constraints */
       int noldngenconns = presoldata->ngenconss;
 
-      SCIP_CALL( addSymmetryBreakingConstraints(scip, presol) );
+      /* SCIP_CALL( addSymmetryBreakingConstraints(scip, presol) ); */
 
       presoldata->addedconss = TRUE;
       *naddconss += presoldata->ngenconss - noldngenconns;
@@ -1251,6 +1275,7 @@ SCIP_RETCODE SCIPincludePresolSymbreak(
    presoldata->enabled = TRUE;
    presoldata->early = FALSE;
    presoldata->nsymresacks = 0;
+   presoldata->norbitopes = 0;
    presoldata->ngenconss = 0;
    presoldata->genconss = NULL;
    presoldata->nperms = -1;
@@ -1260,6 +1285,7 @@ SCIP_RETCODE SCIPincludePresolSymbreak(
    presoldata->ncomponents = -1;
    presoldata->npermsincomponent = NULL;
    presoldata->components = NULL;
+   presoldata->componentblocked = NULL;
 
    /* determine cons_symmetries constraint handler (preuse presol) */
    presol = SCIPfindPresol(scip, "symmetry");
