@@ -362,14 +362,58 @@ SCIP_RETCODE computeCutsSin(
    if( lmidtangent != NULL && (secant == NULL || *secant == NULL) && (soltangent == NULL || *soltangent == NULL) )
    {
       SCIP_Real tangentpoint;
+      SCIP_Real startingpoint;
       SCIP_Real connectionpoint;
       SCIP_Real testpoint;
 
       *lmidtangent = NULL;
 
+      /* choose starting point for newton procedure */
+      if( overestimate )
+      {
+         if( COS(childlb) > 0.0 )
+         {
+            /* in [-pi/2,0] overestimating doesn't work; otherwise, take the midpoint of the possible area */
+            if( SIN(childlb) >= 0.0 )
+               startingpoint = SCIP_INVALID;
+            else
+               startingpoint = childlb + 1.25*M_PI - shiftedlbhalf;
+         }
+         else
+         {
+            /* in descending area, take the midpoint of the possible area in ascending part */
+            if( SIN(childlb) >= 0.0 )
+               startingpoint = childlb + 2.25*M_PI - shiftedlbhalf;
+            else
+               startingpoint = childlb + 1.25*M_PI - shiftedlbhalf;
+         }
+      }
+      else
+      {
+         if( COS(childlb) < 0.0 )
+         {
+            /* in [pi/2,pi] underestimating doesn't work; othherwise, take the midpoint of possible area */
+            if( SIN(childlb) <= 0.0 )
+               startingpoint = SCIP_INVALID;
+            else
+               startingpoint = childlb + 1.25*M_PI - shiftedlbhalf;
+         }
+         else
+         {
+            /* in ascending area, take the midpoint of the possible area in descending part */
+            if( SIN(childlb) <= 0.0 )
+               startingpoint = childlb + 2.25*M_PI - shiftedlbhalf;
+            else
+               startingpoint = childlb + 1.25*M_PI - shiftedlbhalf;
+         }
+      }
+
       /* use newton procedure to find the point where the tangent intersects sine at lower bound */
-      tangentpoint = SCIPcomputeRootNewton(function2, derivative2, &childlb, 1, childlb + 2*M_PI, NEWTON_PRECISION,
-         NEWTON_NITERATIONS);
+      if( startingpoint == SCIP_INVALID)
+         tangentpoint = SCIP_INVALID;
+      else
+         tangentpoint = SCIPcomputeRootNewton(function2, derivative2, &childlb, 1, startingpoint, NEWTON_PRECISION,
+            NEWTON_NITERATIONS);
 
       /* if newton procedure failed, no cut is added */
       if( tangentpoint != SCIP_INVALID ) /*lint !e777*/
@@ -378,7 +422,7 @@ SCIP_RETCODE computeCutsSin(
          connectionpoint = SCIPisGE(scip, tangentpoint, childub) ? childub : tangentpoint;
 
          /* compute secant between lower bound and connection point */
-         params[0] = (SIN(connectionpoint) - SIN(childlb)) / (connectionpoint - childlb );
+         params[0] = (SIN(connectionpoint) - SIN(childlb)) / (connectionpoint - childlb);
          params[1] = SIN(childlb) - params[0] * childlb;
 
          /* determine whether the cut is under- or overestimating */
@@ -414,14 +458,58 @@ SCIP_RETCODE computeCutsSin(
    if( rmidtangent != NULL && (secant == NULL || *secant != NULL) && (soltangent == NULL || *soltangent == NULL) )
    {
       SCIP_Real tangentpoint;
+      SCIP_Real startingpoint;
       SCIP_Real connectionpoint;
       SCIP_Real testpoint;
 
       *rmidtangent = NULL;
 
+      /* choose starting point for newton procedure */
+      if( overestimate )
+      {
+         if( COS(childub) < 0.0 )
+         {
+            /* in [-pi/2,0] overestimating doesn't work; otherwise, take the midpoint of the possible area */
+            if( SIN(childub) >= 0.0 )
+               startingpoint = SCIP_INVALID;
+            else
+               startingpoint = childub - 0.25*M_PI - shiftedubhalf;
+         }
+         else
+         {
+            /* in descending area, take the midpoint of the possible area in ascending part */
+            if( SIN(childub) >= 0.0 )
+               startingpoint = childub - 1.25*M_PI - shiftedubhalf;
+            else
+               startingpoint = childub - 0.25*M_PI - shiftedubhalf;
+         }
+      }
+      else
+      {
+         if( COS(childub) > 0.0 )
+         {
+            /* in [pi/2,pi] underestimating doesn't work; othherwise, take the midpoint of possible area */
+            if( SIN(childub) <= 0.0 )
+               startingpoint = SCIP_INVALID;
+            else
+               startingpoint = childub - 0.25*M_PI - shiftedubhalf;
+         }
+         else
+         {
+            /* in ascending area, take the midpoint of the possible area in descending part */
+            if( SIN(childub) <= 0.0 )
+               startingpoint = childub - 1.25*M_PI - shiftedubhalf;
+            else
+               startingpoint = childub - 0.25*M_PI - shiftedubhalf;
+         }
+      }
+
       /* use newton procedure to find the point where the tangent intersects sine at upper bound */
-      tangentpoint = SCIPcomputeRootNewton(function2, derivative2, &childub, 1, childub - 2*M_PI, NEWTON_PRECISION,
-         NEWTON_NITERATIONS);
+      if( startingpoint == SCIP_INVALID)
+         tangentpoint = SCIP_INVALID;
+      else
+         tangentpoint = SCIPcomputeRootNewton(function2, derivative2, &childub, 1, startingpoint, NEWTON_PRECISION,
+            NEWTON_NITERATIONS);
 
       /* if newton procedure failed, no cut is added */
       if( tangentpoint != SCIP_INVALID ) /*lint !e777*/
