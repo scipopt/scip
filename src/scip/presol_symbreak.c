@@ -861,7 +861,6 @@ SCIP_RETCODE detectOrbitopes(
       SCIP_CALL( generateOrbitopeVarsMatrix(&vars, ntwocyclescomp, npermsincomponent[i] + 1, permvars, npermvars,
             orbitopevaridx, columnorder) );
 
-      /* @todo: add orbitope if full orbitope conshdlr is implemented */
       SCIPinfoMessage(scip, NULL, "Component %d is an orbitope with %d rows and %d columns.\n", i, ntwocyclescomp, npermsincomponent[i] + 1);
 
       SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, "orbitope", vars, SCIP_ORBITOPETYPE_FULL, ntwocyclescomp, npermsincomponent[i] + 1, FALSE,
@@ -1073,8 +1072,8 @@ SCIP_DECL_PRESOLEXIT(presolExitSymbreak)
    /* reset data (necessary if another problem is read in the SCIP shell) */
 
    /* free pointers to symmetry group and binary variables */
-   if ( presoldata->ngenconss > 0 )
-      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->genconss, presoldata->ngenconss);
+   if ( presoldata->nperms > 0 )
+      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->genconss, presoldata->nperms);
 
    presoldata->genconss = NULL;
    presoldata->ngenconss = 0;
@@ -1209,7 +1208,6 @@ SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
          SCIP_CALL( computeComponents(scip, presoldata) );
 
          SCIP_CALL( detectOrbitopes(scip, presoldata) );
-
       }
    }
 
