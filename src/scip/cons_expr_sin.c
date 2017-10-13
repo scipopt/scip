@@ -328,7 +328,7 @@ SCIP_RETCODE computeCutsSin(
             intersection = SCIPcomputeRootNewton(function1, derivative1, params, 2, startingpoints[i], NEWTON_PRECISION,
                NEWTON_NITERATIONS);
 
-            if( intersection != SCIP_INVALID && intersection != refpoint)
+            if( intersection != SCIP_INVALID && !SCIPisEQ(scip, intersection, refpoint) ) /*lint !e777*/
                break;
          }
 
