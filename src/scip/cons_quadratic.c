@@ -259,6 +259,7 @@ struct SCIP_ConshdlrData
    int                   nodesolvedeventfilterpos; /**< filter position of new solution event handler, if caught */
 
    SCIP_Bool             usebilinineqroot;   /**< should linear inequalities for obtaining stronger envelopes for bilinear terms be computed in the root node? */
+   SCIP_Bool             usebilinineqbranch; /**< should linear inequalities be consindered when computing the branching scores for bilinear terms? */
    SCIP_Bool             solvedbilinineqroot; /**< did we already try to compute valid linear inequalities in the root node? */
    SCIP_Bool             storedbilinearterms; /**< did we already try to store all bilinear terms? */
 
@@ -9580,7 +9581,7 @@ SCIP_RETCODE registerBranchingCandidatesGap(
                gap = 0.0;
 
             /* use tighter relaxation when using linear inequalities to adjust the branching scores for bilinear terms */
-            if( consdata->bilintermsidx != NULL )
+            if( consdata->bilintermsidx != NULL && conshdlrdata->usebilinineqbranch )
             {
                BILINESTIMATOR* bilinestimator;
                int bilinidx;
@@ -14408,6 +14409,10 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/usebilinineqroot",
          "use linear inequalities to compute concave and convex envelopes of bilinear terms",
          &conshdlrdata->usebilinineqroot, FALSE, TRUE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/usebilinineqbranch",
+         "should linear inequalities be consindered when computing the branching scores for bilinear terms?",
+         &conshdlrdata->usebilinineqbranch, FALSE, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/bilinlpiterlim",
          "total LP iteration limit for computing linear inequalities for all bilinear terms (-1: no limit)",
