@@ -14412,7 +14412,7 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/usebilinineqbranch",
          "should linear inequalities be consindered when computing the branching scores for bilinear terms?",
-         &conshdlrdata->usebilinineqbranch, FALSE, TRUE, NULL, NULL) );
+         &conshdlrdata->usebilinineqbranch, FALSE, FALSE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/bilinlpiterlim",
          "total LP iteration limit for computing linear inequalities for all bilinear terms (-1: no limit)",
