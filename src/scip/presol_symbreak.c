@@ -405,10 +405,12 @@ SCIP_RETCODE computeComponents(
 static
 SCIP_RETCODE getPermProperties(
    int*                  perm,               /**< permutation */
+   SCIP_Bool**           vars,               /**< array of variables perm is acting on */
    int                   n,                  /**< length of permutation array */
    SCIP_Bool*            iscompoftwocycles,  /**< memory address to store whether permutation is
                                                   a composition of 2-cycles */
-   int*                  ntwocyclesperm      /**< memory address to store number of 2-cycles */
+   int*                  ntwocyclesperm,     /**< memory address to store number of 2-cycles */
+   SCIP_Bool*            allvarsbinary       /**< memory address to store whether perm is acting on binary variables only */
    )
 {
    int i;
@@ -420,6 +422,7 @@ SCIP_RETCODE getPermProperties(
 
    *iscompoftwocycles = TRUE;
    *ntwocyclesperm = 0;
+   *allvarsbinary = TRUE;
    for (i = 0; i < n; ++i)
    {
       /* skip fixed points and avoid treating the same 2-cycle twice */
@@ -427,7 +430,15 @@ SCIP_RETCODE getPermProperties(
          continue;
 
       if ( perm[perm[i]] == i )
-         ++ntwocycles;
+      {
+         if ( SCIPvarIsBinary(vars[i]) && SCIPvarIsBinary(vars[perm[i]]) )
+            ++ntwocycles;
+         else
+         {
+            *allvarsbinary = FALSE;
+            break;
+         }
+      }
       else
          break;
    }
@@ -697,14 +708,15 @@ SCIP_RETCODE detectOrbitopes(
       {
          SCIP_Bool iscompoftwocycles = FALSE;
          int ntwocyclesperm = 0;
+         SCIP_Bool allvarsbinary = TRUE;
 
-         SCIP_CALL( getPermProperties(perms[components[i][j]], npermvars, &iscompoftwocycles, &ntwocyclesperm) );
+         SCIP_CALL( getPermProperties(perms[components[i][j]], permvars, npermvars, &iscompoftwocycles, &ntwocyclesperm, &allvarsbinary) );
 
          if ( ntwocyclescomp == -1 )
             ntwocyclescomp = ntwocyclesperm;
 
-         /* no or different number of 2-cycles: permutations cannot generate orbitope */
-         if ( ntwocyclescomp == 0 || ntwocyclescomp != ntwocyclesperm )
+         /* no or different number of 2-cycles or not all vars binary: permutations cannot generate orbitope */
+         if ( ntwocyclescomp == 0 || ntwocyclescomp != ntwocyclesperm || ! allvarsbinary )
          {
             isorbitope = FALSE;
             break;
