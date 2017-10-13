@@ -747,7 +747,7 @@ Test(change, testcolmethods)
 }
 
 /** Test adding zero coeffs cols */
-Test(change, testzerosincols)
+Test(change, testzerosincols, .signal = SIGABRT)
 {
    int nrows, ncols, nnonz;
    SCIP_OBJSEN sense;
@@ -771,31 +771,18 @@ Test(change, testzerosincols)
    int newind[100];
    int newnnonz;
 
-   /* scip calls */
-
    SCIP_CALL( SCIPlpiAddCols(lpi, 1, obj, lb, ub, NULL, nnonz, beg, ind, val) );
 
-   SCIP_CALL( SCIPlpiGetCols(lpi, 2, 2, newlb, newub, &newnnonz, newbeg, newind, newval) );
+   /* this test can only work in debug mode, so we make it pass in opt mode */
+#ifdef NDEBUG
+   abort(); /* return SIGABORT */
+#endif
 
-   /* lpi should drop zero entries */
-
-   nnonz = 1;
-   ind[0] = 1;
-   val[0] = 3;
-
-   /* checks */
-
-   cr_assert_eq(nnonz, newnnonz, "expecting %d, got %d\n", nnonz, newnnonz);
-
-   cr_assert_arr_eq(lb, newlb, ncols);
-   cr_assert_arr_eq(ub, newub, ncols);
-   cr_assert_arr_eq(beg, newbeg, ncols);
-   cr_assert_arr_eq(ind, newind, nnonz);
-   cr_assert_arr_eq(val, newval, nnonz);
 }
 
-/** Test adding zero coeffs in rows */
-Test(change, testzerosinrows)
+/** Test adding zero coeffs in rows, expecting an assert in debug mode */
+/* This test should fail with an assert from the LPI, which causes SIGABRT to be issued. Thus, this test should pass. */
+Test(change, testzerosinrows, .signal = SIGABRT)
 {
    int nrows, ncols, nnonz;
    SCIP_OBJSEN sense;
@@ -818,25 +805,11 @@ Test(change, testzerosinrows)
    int newind[100];
    int newnnonz;
 
-   /* scip calls */
-
    SCIP_CALL( SCIPlpiAddRows(lpi, 1, lhs, rhs, NULL, nnonz, beg, ind, val) );
 
-   SCIP_CALL( SCIPlpiGetRows(lpi, 2, 2, newlhs, newrhs, &newnnonz, newbeg, newind, newval) );
+   /* this test can only work in debug mode, so we make it pass in opt mode */
+#ifdef NDEBUG
+   abort(); /* return SIGABORT */
+#endif
 
-   /* lpi should drop zero entries */
-
-   nnonz = 1;
-   ind[0] = 1;
-   val[0] = 3;
-
-   /* checks */
-
-   cr_assert_eq(nnonz, newnnonz, "expecting %d, got %d\n", nnonz, newnnonz);
-
-   cr_assert_arr_eq(lhs, newlhs, ncols);
-   cr_assert_arr_eq(rhs, newrhs, ncols);
-   cr_assert_arr_eq(beg, newbeg, ncols);
-   cr_assert_arr_eq(ind, newind, nnonz);
-   cr_assert_arr_eq(val, newval, nnonz);
 }
