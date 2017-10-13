@@ -41,6 +41,7 @@
 #include "scip/scip.h"
 #include "scip/pub_implics.h"
 #include "scip/heur_clique.h"
+#include "scip/heur_locks.h"
 #include "scip/cons_logicor.h"
 #include "scip/pub_misc.h"
 
@@ -703,9 +704,36 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
    if( npscands > oldnpscands * (1 - heurdata->minintfixingrate) )
    {
-      SCIPdebugMsg(scip, "--> too few fixings\n");
+      if( /*heurdata->uselockfixing &&*/ npscands <= 2 * oldnpscands * (1 - heurdata->minintfixingrate) )
+      {
+         SCIP_Bool allrowsfulfilled = FALSE;
 
-      goto TERMINATE;
+         SCIP_CALL( SCIPapplyLockFixings(scip, NULL, &cutoff, &allrowsfulfilled) );
+
+         if( cutoff || SCIPisStopped(scip) )
+         {
+            SCIPdebugMsg(scip, "cutoff or timeout in locks fixing\n");
+            goto TERMINATE;
+         }
+
+         npscands = SCIPgetNPseudoBranchCands(scip);
+
+         SCIPdebugMsg(scip, "after lockfixings: npscands=%d, oldnpscands=%d, allrowsfulfilled=%u, heurdata->minintfixingrate=%g\n",
+            npscands, oldnpscands, allrowsfulfilled, heurdata->minintfixingrate);
+
+         if( !allrowsfulfilled && npscands > oldnpscands * (1 - heurdata->minintfixingrate) )
+         {
+            SCIPdebugMsg(scip, "--> too few fixings\n");
+
+            goto TERMINATE;
+         }
+      }
+      else
+      {
+         SCIPdebugMsg(scip, "--> too few fixings\n");
+
+         goto TERMINATE;
+      }
    }
 
    /*************************** Probing LP Solving ***************************/

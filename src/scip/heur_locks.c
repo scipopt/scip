@@ -197,12 +197,17 @@ SCIP_DECL_HEUREXIT(heurExitLocks) /*lint --e{715}*/
 #define heurInitsolLocks NULL
 #define heurExitsolLocks NULL
 
-/** execution method of primal heuristic */
-static
-SCIP_DECL_HEUREXEC(heurExecLocks)
-{  /*lint --e{715}*/
-   SCIP_HEURDATA* heurdata;
-   SCIP_SOL* sol;
+/** apply fix-and-propagate scheme based on variable locks
+ *
+ *  @note probing mode of SCIP needs to be enabled before
+ */
+SCIP_RETCODE SCIPapplyLockFixings(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< primal heuristic data */
+   SCIP_Bool*            cutoff,             /**< pointer to store if a cutoff was detected */
+   SCIP_Bool*            allrowsfulfilled    /**< pointer to store if all rows became redundant */
+   )
+{
    SCIP_ROW** lprows;
    SCIP_VAR** vars;
    SCIP_VAR** sortvars;
@@ -218,23 +223,14 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
    int* ndownlocks;
    int* nuplocks;
    int* varpos = NULL;
-   SCIP_LPSOLSTAT lpstatus;
    SCIP_Real lastfixval;
    SCIP_Real randnumber;
    SCIP_Real roundupprobability;
-   SCIP_Real lowerbound;
-   SCIP_Bool cutoff;
    SCIP_Bool propagate;
    SCIP_Bool propagated;
    SCIP_Bool haslhs;
    SCIP_Bool hasrhs;
    SCIP_Bool updatelocks;
-   SCIP_Bool lperror;
-#ifdef NOCONFLICT
-   SCIP_Bool enabledconflicts;
-#endif
-   int oldnpscands;
-   int npscands;
    int lastfixlocks;
    int maxproprounds;
    int nglbfulfilledrows;
@@ -251,20 +247,20 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
    int r;
    int i;
 
-   *result = SCIP_DIDNOTRUN;
+   assert(scip != NULL);
+   assert(cutoff != NULL);
+   assert(allrowsfulfilled != NULL);
+   assert(SCIPinProbing(scip));
 
-   /* only run once */
-   if( SCIPgetNRuns(scip) > 1 )
-      return SCIP_OKAY;
-
-   if( SCIPgetNBinVars(scip) == 0 )
-      return SCIP_OKAY;
-
-   cutoff = FALSE;
-   lperror = FALSE;
-
-   heurdata = SCIPheurGetData(heur);
+   if( heurdata == NULL )
+   {
+      SCIP_HEUR* heur = SCIPfindHeur(scip, HEUR_NAME);
+      heurdata = SCIPheurGetData(heur);
+   }
    assert(heurdata != NULL);
+
+   *cutoff = FALSE;
+   *allrowsfulfilled = FALSE;
 
    propagate = (heurdata->maxproprounds != 0);
 
@@ -275,51 +271,13 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
 
    roundupprobability = heurdata->roundupprobability;
 
-   /* only run if we are allowed to solve an LP at the current node in the tree */
-   if( !SCIPhasCurrentNodeLP(scip) )
-      return SCIP_OKAY;
 
-   if( !SCIPisLPConstructed(scip) )
-   {
-      SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
-
-      /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a result) */
-      if( cutoff )
-      {
-         SCIP_CALL( SCIPcutoffNode(scip, SCIPgetCurrentNode(scip)) );
-         return SCIP_OKAY;
-      }
-
-      SCIP_CALL( SCIPflushLP(scip) );
-
-      /* we need an LP */
-      if( SCIPgetNLPRows(scip) == 0 )
-         return SCIP_OKAY;
-   }
-
-   *result = SCIP_DIDNOTFIND;
-
-#ifdef NOCONFLICT
-   /* disable conflict analysis */
-   SCIP_CALL( SCIPgetBoolParam(scip, "conflict/enable", &enabledconflicts) );
-
-   if( !SCIPisParamFixed(scip, "conflict/enable") )
-   {
-      SCIP_CALL( SCIPsetBoolParam(scip, "conflict/enable", FALSE) );
-   }
-#endif
-
-   lowerbound = SCIPgetLowerbound(scip);
    updatelocks = heurdata->updatelocks && (SCIPgetNCheckConss(scip) == SCIPgetNLPRows(scip));
 
    SCIPdebugMsg(scip, "%d constraints: %d logicor, updatelocks=%d\n", SCIPgetNConss(scip), SCIPconshdlrGetNCheckConss(SCIPfindConshdlr(scip, "logicor")), updatelocks);
 
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, NULL, NULL, NULL) );
    assert(vars != NULL);
-   oldnpscands = SCIPgetNPseudoBranchCands(scip);
-
-   /* create solution */
-   SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
 
    /* allocate memory */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &sortvars, vars, nbinvars) );
@@ -357,21 +315,16 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
       maxact[r] = SCIPgetRowMaxActivity(scip, row);
    }
 
-   /* start probing mode */
-   SCIP_CALL( SCIPstartProbing(scip) );
    propagated = TRUE;
    lastbestscore = INT_MAX;
 
-#ifdef COLLECTSTATISTICS
-   SCIPenableVarHistory(scip);
-#endif
-
-
    /* fix variables */
-   for( v = 0; v < nbinvars && !cutoff; v++ )
+   for( v = 0; v < nbinvars; v++ )
    {
       if( SCIPisStopped(scip) )
-         goto TERMINATE;
+         break;
+
+      assert(!(*cutoff));
 
       nfulfilledrows = 0;
 
@@ -514,10 +467,10 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
       if( propagate && lastfixlocks > 0 )
       {
          /* apply propagation */
-         SCIP_CALL( SCIPpropagateProbing(scip, maxproprounds, &cutoff, NULL) );
+         SCIP_CALL( SCIPpropagateProbing(scip, maxproprounds, cutoff, NULL) );
          propagated = TRUE;
 
-         if( cutoff )
+         if( *cutoff )
          {
             /* fix cutoff variable in other direction */
             SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip) - 1) );
@@ -540,8 +493,8 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
 
             SCIPdebugMsg(scip, "last fixing led to infeasibility trying other bound\n");
 
-            SCIP_CALL( SCIPpropagateProbing(scip, maxproprounds, &cutoff, NULL) );
-            if( cutoff )
+            SCIP_CALL( SCIPpropagateProbing(scip, maxproprounds, cutoff, NULL) );
+            if( *cutoff )
             {
                SCIPdebugMsg(scip, "probing was infeasible\n");
 
@@ -653,35 +606,137 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
             }
             else if( SCIPisFeasLT(scip, maxact[rowpos], SCIProwGetLhs(row)) || SCIPisFeasGT(scip, minact[rowpos], SCIProwGetRhs(row)) )
             {
-               cutoff = TRUE;
-               //SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
-               //SCIPdebugMsg(scip, "row <%s> activity [%g,%g] violates bounds, lhs = %g, rhs = %g\n",
-               //   SCIProwGetName(row), minact[rowpos], maxact[rowpos], SCIProwGetLhs(row), SCIProwGetRhs(row));
+               *cutoff = TRUE;
                break;
             }
          }
 
-         if( cutoff )
+         if( *cutoff )
          {
             SCIPdebugMsg(scip, "found infeasible row, stopping heur\n");
-            goto TERMINATE;
+            break;
          }
 
          nglbfulfilledrows += nfulfilledrows;
          SCIPdebugMsg(scip, "last fixing led to %d fulfilled rows, now %d of %d rows are fulfilled\n", nfulfilledrows, nglbfulfilledrows, nlprows);
 
          if( nglbfulfilledrows == nlprows )
+         {
+            *allrowsfulfilled = TRUE;
             break;
+         }
       }
    } /*lint --e{850}*/
+
+   SCIPfreeBufferArrayNull(scip, &varpos);
+   SCIPfreeBufferArray(scip, &fulfilled);
+   SCIPfreeBufferArray(scip, &maxact);
+   SCIPfreeBufferArray(scip, &minact);
+   SCIPfreeBufferArray(scip, &ndownlocks);
+   SCIPfreeBufferArray(scip, &nuplocks);
+   SCIPfreeBufferArray(scip, &sortvars);
+
+   return SCIP_OKAY;
+}
+
+
+
+
+/** execution method of primal heuristic */
+static
+SCIP_DECL_HEUREXEC(heurExecLocks)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+   SCIP_SOL* sol;
+   SCIP_VAR** vars;
+   SCIP_LPSOLSTAT lpstatus;
+   SCIP_Real lowerbound;
+   SCIP_Bool cutoff;
+   SCIP_Bool lperror;
+   SCIP_Bool allrowsfulfilled = FALSE;
+#ifdef NOCONFLICT
+   SCIP_Bool enabledconflicts;
+#endif
+   int oldnpscands;
+   int npscands;
+
+   int nvars;
+   int i;
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* only run once */
+   if( SCIPgetNRuns(scip) > 1 )
+      return SCIP_OKAY;
+
+   if( SCIPgetNBinVars(scip) == 0 )
+      return SCIP_OKAY;
+
+   /* only run if we are allowed to solve an LP at the current node in the tree */
+   if( !SCIPhasCurrentNodeLP(scip) )
+      return SCIP_OKAY;
+
+   if( !SCIPisLPConstructed(scip) )
+   {
+      SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
+
+      /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a result) */
+      if( cutoff )
+      {
+         SCIP_CALL( SCIPcutoffNode(scip, SCIPgetCurrentNode(scip)) );
+         return SCIP_OKAY;
+      }
+
+      SCIP_CALL( SCIPflushLP(scip) );
+
+      /* we need an LP */
+      if( SCIPgetNLPRows(scip) == 0 )
+         return SCIP_OKAY;
+   }
+
+   *result = SCIP_DIDNOTFIND;
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+#ifdef NOCONFLICT
+   /* disable conflict analysis */
+   SCIP_CALL( SCIPgetBoolParam(scip, "conflict/enable", &enabledconflicts) );
+
+   if( !SCIPisParamFixed(scip, "conflict/enable") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(scip, "conflict/enable", FALSE) );
+   }
+#endif
+
+   /* create solution */
+   SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
+
+   lowerbound = SCIPgetLowerbound(scip);
+   oldnpscands = SCIPgetNPseudoBranchCands(scip);
+
+   /* start probing mode */
+   SCIP_CALL( SCIPstartProbing(scip) );
+
+#ifdef COLLECTSTATISTICS
+   SCIPenableVarHistory(scip);
+#endif
+
+   cutoff = FALSE;
+   lperror = FALSE;
+
+   SCIP_CALL( SCIPapplyLockFixings(scip, heurdata, &cutoff, &allrowsfulfilled) );
+
+   if( cutoff || SCIPisStopped(scip) )
+      goto TERMINATE;
 
    /* check that we had enough fixings */
    npscands = SCIPgetNPseudoBranchCands(scip);
 
-   SCIPdebugMsg(scip, "npscands=%d, oldnpscands=%d, fulfilledrows=%d/%d heurdata->minfixingrate=%g\n",
-      npscands, oldnpscands, nglbfulfilledrows, nlprows, heurdata->minfixingrate);
+   SCIPdebugMsg(scip, "npscands=%d, oldnpscands=%d, allrowsfulfilled=%u heurdata->minfixingrate=%g\n",
+      npscands, oldnpscands, allrowsfulfilled, heurdata->minfixingrate);
 
-   if( nglbfulfilledrows != nlprows && npscands > oldnpscands * (1 - heurdata->minfixingrate) )
+   if( !allrowsfulfilled && npscands > oldnpscands * (1 - heurdata->minfixingrate) )
    {
       SCIPdebugMsg(scip, "--> too few fixings\n");
 
@@ -982,14 +1037,6 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
       SCIP_CALL( SCIPsetBoolParam(scip, "conflict/enable", enabledconflicts) );
    }
 #endif
-
-   SCIPfreeBufferArrayNull(scip, &varpos);
-   SCIPfreeBufferArray(scip, &fulfilled);
-   SCIPfreeBufferArray(scip, &maxact);
-   SCIPfreeBufferArray(scip, &minact);
-   SCIPfreeBufferArray(scip, &ndownlocks);
-   SCIPfreeBufferArray(scip, &nuplocks);
-   SCIPfreeBufferArray(scip, &sortvars);
 
    /* free all allocated memory */
    SCIP_CALL( SCIPfreeSol(scip, &sol) );

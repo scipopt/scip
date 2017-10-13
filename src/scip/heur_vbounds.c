@@ -42,6 +42,7 @@
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 #include "scip/heur_vbounds.h"
+#include "scip/heur_locks.h"
 
 #ifdef SCIP_STATISTIC
 #include "scip/clock.h"
@@ -869,17 +870,36 @@ SCIP_RETCODE applyVbounds(
    /* check fixing rate */
    if( npscands > oldnpscands * (1 - heurdata->minintfixingrate) )
    {
-      SCIPdebugMsg(scip, "--> too few fixings\n");
-
-      if( !backtracked )
+      if( /*heurdata->uselockfixing &&*/ npscands <= 2 * oldnpscands * (1 - heurdata->minintfixingrate) )
       {
-         if( skipobj1 != NULL )
-            *skipobj1 = TRUE;
-         if( skipobj2 != NULL )
-            *skipobj2 = TRUE;
-      }
+         SCIP_Bool allrowsfulfilled = FALSE;
 
-      goto TERMINATE;
+         SCIP_CALL( SCIPapplyLockFixings(scip, NULL, &cutoff, &allrowsfulfilled) );
+
+         if( cutoff || SCIPisStopped(scip) )
+         {
+            SCIPdebugMsg(scip, "cutoff or timeout in locks fixing\n");
+            goto TERMINATE;
+         }
+
+         npscands = SCIPgetNPseudoBranchCands(scip);
+
+         SCIPdebugMsg(scip, "after lockfixings: npscands=%d, oldnpscands=%d, allrowsfulfilled=%u, heurdata->minintfixingrate=%g\n",
+            npscands, oldnpscands, allrowsfulfilled, heurdata->minintfixingrate);
+
+         if( !allrowsfulfilled && npscands > oldnpscands * (1 - heurdata->minintfixingrate) )
+         {
+            SCIPdebugMsg(scip, "--> too few fixings\n");
+
+            goto TERMINATE;
+         }
+      }
+      else
+      {
+         SCIPdebugMsg(scip, "--> too few fixings\n");
+
+         goto TERMINATE;
+      }
    }
 
    assert(!cutoff);
