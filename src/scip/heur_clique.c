@@ -708,9 +708,9 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
    SCIPdebugMsg(scip, "npscands=%d, oldnpscands=%d, heurdata->minintfixingrate=%g\n", npscands, oldnpscands, heurdata->minintfixingrate);
 
-   if( npscands > oldnpscands * (1 - heurdata->minintfixingrate) )
+   if( npscands > oldnpscands * (1.0 - heurdata->minintfixingrate) )
    {
-      if( heurdata->uselockfixings && npscands <= 2 * oldnpscands * (1 - heurdata->minintfixingrate) )
+      if( heurdata->uselockfixings && npscands <= 2.0 * oldnpscands * (1.0 - heurdata->minintfixingrate) )
       {
          SCIP_Bool allrowsfulfilled = FALSE;
 

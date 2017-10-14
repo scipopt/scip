@@ -649,7 +649,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
    SCIP_HEURDATA* heurdata;
    SCIP_SOL* sol;
    SCIP_VAR** vars;
-   SCIP_LPSOLSTAT lpstatus;
+   SCIP_LPSOLSTAT lpstatus = SCIP_LPSOLSTAT_ERROR;
    SCIP_Real lowerbound;
    SCIP_Bool cutoff;
    SCIP_Bool lperror;
@@ -742,9 +742,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
 
       goto TERMINATE;
    }
-
-   lpstatus = SCIP_LPSOLSTAT_ERROR;
-   if( !cutoff )
+   else
    {
       SCIPdebugMsg(scip, "starting solving locks-lp at time %g\n", SCIPgetSolvingTime(scip));
 
