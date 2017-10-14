@@ -784,7 +784,7 @@ SCIP_RETCODE detectOrbitopes(
        * column 0 */
       coltoextend = 0;
       for (j = 0; j < npermsincomponent[i]; ++j)
-      {
+      {  /*lint --e{850}*/
          SCIP_Bool success = FALSE;
          SCIP_Bool infeasible = FALSE;
 
@@ -808,7 +808,7 @@ SCIP_RETCODE detectOrbitopes(
             ++nusedperms;
             coltoextend = nfilledcols;
             columnorder[nfilledcols++] = -1; /* mark column to be filled from the left */
-            j = 0; /* reset j since previous permutations can now intersect with the latest added column */ /*lint !e850*/
+            j = 0; /* reset j since previous permutations can now intersect with the latest added column */
          }
       }
 
@@ -826,7 +826,7 @@ SCIP_RETCODE detectOrbitopes(
 
       coltoextend = 1;
       for (j = 0; j < npermsincomponent[i]; ++j)
-      {
+      {  /*lint --e{850}*/
          SCIP_Bool success = FALSE;
          SCIP_Bool infeasible = FALSE;
 
@@ -851,7 +851,7 @@ SCIP_RETCODE detectOrbitopes(
             coltoextend = nfilledcols;
             columnorder[nfilledcols] = 1; /* mark column to be filled from the right */
             ++nfilledcols;
-            j = 0; /* reset j since previous permutations can now intersect with the latest added column */ /*lint !e850*/
+            j = 0; /* reset j since previous permutations can now intersect with the latest added column */
          }
       }
 
