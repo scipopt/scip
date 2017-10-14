@@ -51,7 +51,7 @@
 /* this macro is only called in functions returning SCIP_Bool; thus, we return FALSE if there is an error in optimized mode */
 #define SCIP_ABORT_FALSE(x) do                                          \
    {                                                                    \
-      int _restat_;                                                     \
+      SCIP_RETCODE _restat_;                                            \
       if( (_restat_ = (x)) != SCIP_OKAY )                               \
       {                                                                 \
          SCIPerrorMessage("LP Error: MOSEK returned %d.\n", (int)_restat_); \
@@ -114,23 +114,29 @@ static int numdualobj               =  0;
  * MSK_getprosta and MSK_getsolsta.
  */
 static
-SCIP_RETCODE MSK_getsolutionstatus(
+MSKrescodee MSK_getsolutionstatus(
    MSKtask_t             task,               /**< Mosek Task */
    MSKsoltypee           whichsol,           /**< for which type of solution a status is requested */
    MSKprostae*           prosta,             /**< buffer to store problem status, or NULL if not needed */
    MSKsolstae*           solsta              /**< buffer to store solution status, or NULL if not needed */
    )
 {
+   MSKrescodee res;
+
    if( prosta != NULL )
    {
-      MOSEK_CALL( MSK_getprosta(task, whichsol, prosta) );
+      res = MSK_getprosta(task, whichsol, prosta);
+      if ( res != MSK_RES_OK )
+         return res;
    }
    if( solsta != NULL )
    {
-      MOSEK_CALL( MSK_getsolsta(task, whichsol, solsta) );
+      res = MSK_getsolsta(task, whichsol, solsta);
+      if ( res != MSK_RES_OK )
+         return res;
    }
 
-   return SCIP_OKAY;
+   return MSK_RES_OK;
 }
 #endif
 
@@ -1903,7 +1909,7 @@ SCIP_RETCODE getSolutionStatus(
    assert(lpi != NULL);
    assert(lpi->task != NULL);
 
-   MOSEK_CALL( MSK_getsolutionstatus (lpi->task, MSK_SOL_BAS, prosta, solsta) );
+   MOSEK_CALL( MSK_getsolutionstatus(lpi->task, MSK_SOL_BAS, prosta, solsta) );
 
    return SCIP_OKAY;
 }
@@ -2015,10 +2021,9 @@ SCIP_RETCODE SolveWSimplex(
       MOSEK_CALL( MSK_putintparam(lpi->task,  MSK_IPAR_SIM_PRIMAL_RESTRICT_SELECTION, 0) );
    }
 
-   if( FORCE_NO_MAXITER )
-   {
-      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_MAX_ITERATIONS, 2000000000) );
-   }
+#if FORCE_NO_MAXITER >  0
+   MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_MAX_ITERATIONS, 2000000000) );
+#endif
 
 
 #if DEBUG_CHECK_DATA > 0
@@ -2159,7 +2164,7 @@ SCIP_RETCODE SolveWSimplex(
    if( solsta == MSK_SOL_STA_OPTIMAL && fabs(dobj)+fabs(dobj) > 1.0e-6 && fabs(pobj-dobj)>0.0001*(fabs(pobj)+fabs(dobj)))
    {
       SCIPerrorMessage("Simplex[%d] returned optimal solution with different objvals %g != %g reldiff %.2g%%\n",
-         optimizecount, pobj, dobj, 100*fabs(pobj-dobj)/ MAX(fabs(pobj),fabs(dobj)));
+         optimizecount, pobj, dobj, 100*fabs(pobj-dobj)/ MAX(fabs(pobj), fabs(dobj))); /*lint !e666*/
    }
 
    if (lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE)
@@ -2735,7 +2740,6 @@ SCIP_RETCODE SCIPlpiStrongbranchesFrac(
 {
    int j;
 
-   assert( iter != NULL );
    assert( cols != NULL );
    assert( psols != NULL );
    assert( down != NULL );
@@ -2794,7 +2798,6 @@ SCIP_RETCODE SCIPlpiStrongbranchesInt(
 {
    int j;
 
-   assert( iter != NULL );
    assert( cols != NULL );
    assert( psols != NULL );
    assert( down != NULL );
@@ -2826,7 +2829,7 @@ SCIP_Bool SCIPlpiWasSolved(
    )
 {
    MSKsolstae solsta;
-   MSKrescodee restat;
+      MSKrescodee res;
 #if MSK_VERSION_MAJOR < 7
    MSKprostae prosta;
 #endif
@@ -2837,14 +2840,20 @@ SCIP_Bool SCIPlpiWasSolved(
 
    SCIPdebugMessage("Calling SCIPlpiWasSolved (%d)\n",lpi->lpid);
 
+   res = MSK_solutiondef(lpi->task, MSK_SOL_BAS, &exists);
+
+   if ( res != MSK_RES_OK || ! exists )
+      return FALSE;
+
 #if MSK_VERSION_MAJOR >= 7
-   restat = MSK_getsolsta(lpi->task, MSK_SOL_BAS, &solsta);
+   res = MSK_getsolsta(lpi->task, MSK_SOL_BAS, &solsta);
 #else
-   restat = MSK_getsolutionstatus(lpi->task, MSK_SOL_BAS, &prosta, &solsta);
+   res = MSK_getsolutionstatus(lpi->task, MSK_SOL_BAS, &prosta, &solsta);
 #endif
 
    if ( restat != MSK_RES_OK )
       return FALSE;
+
    return (solsta != MSK_SOL_STA_UNKNOWN);
 }
 
@@ -2926,7 +2935,7 @@ SCIP_Bool SCIPlpiExistsPrimalRay(
 
    SCIP_ABORT_FALSE( getSolutionStatus(lpi, &prosta, &solsta) );
 
-   return (   solsta == MSK_SOL_STA_DUAL_INFEAS_CER
+   return ( solsta == MSK_SOL_STA_DUAL_INFEAS_CER
       || prosta == MSK_PRO_STA_DUAL_INFEAS
       || prosta == MSK_PRO_STA_PRIM_AND_DUAL_INFEAS);
 }
@@ -3568,7 +3577,6 @@ SCIP_RETCODE SCIPlpiSetBase(
 }
 
 /** returns the indices of the basic columns and rows; basic column n gives value n, basic row m gives value -1-m */
-extern
 SCIP_RETCODE SCIPlpiGetBasisInd(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int*                  bind                /**< pointer to store basis indices ready to keep number of rows entries */
@@ -3761,7 +3769,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    int*                  ninds               /**< pointer to store the number of non-zero indices
                                                *  (-1: if we do not store sparsity informations) */
    )
-{
+{  /*lint --e{715}*/
    int nrows;
    int ncols;
    int numnz;
