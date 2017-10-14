@@ -1090,8 +1090,8 @@ static
 SCIP_RETCODE propagateFullOrbitope(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_VAR***           vars,               /**< variable matrix */
-   unsigned int          firstcol,           /**< first column to consider */
-   unsigned int          lastcol,            /**< last column to consider + 1 */
+   int                   firstcol,           /**< first column to consider */
+   int                   lastcol,            /**< last column to consider + 1 */
    int                   currow,             /**< current row */
    int                   nrows,              /**< number of rows */
    int*                  nfixedvars,         /**< pointer to store the number of variables fixed during propagation */
@@ -1105,6 +1105,7 @@ SCIP_RETCODE propagateFullOrbitope(
 
    assert( scip != NULL );
    assert( vars != NULL );
+   assert( 0 <= firstcol && firstcol < lastcol );
    assert( infeasible != NULL );
    assert( nfixedvars != NULL );
 
@@ -1116,7 +1117,7 @@ SCIP_RETCODE propagateFullOrbitope(
    lastone = firstcol - 1;
 
    /* iterate over entries of current row and perform orbitope propagation */
-   for (j = (int) firstcol; j < (int) lastcol; ++j)
+   for (j = firstcol; j < lastcol; ++j)
    {
       assert( vars[currow][j] != NULL );
 
@@ -1139,7 +1140,7 @@ SCIP_RETCODE propagateFullOrbitope(
          firstzero = j;
 
          /* fix all remaining entries to 0 */
-         for (l = j + 1; l < (int) lastcol; ++l)
+         for (l = j + 1; l < lastcol; ++l)
          {
             if ( SCIPvarGetUbLocal(vars[currow][l]) > 0.5 && SCIPvarGetLbLocal(vars[currow][l]) < 0.5 )
             {
@@ -1162,12 +1163,12 @@ SCIP_RETCODE propagateFullOrbitope(
    /* The orbitope can be split into the sub orbitopes w.r.t. the 1-entries (firstcol, ..., lastone) and the 0-entries
     * (firstzero, ..., lastcol - 1). Furthermore, avoid trivial cases, i.e., the sub-orbitopes contain only one
     * column. */
-   if ( lastone > (int) firstcol )
+   if ( lastone > firstcol )
    {
       SCIP_CALL( propagateFullOrbitope(scip, vars, firstcol, lastone + 1, currow + 1, nrows, nfixedvars, infeasible) );
    }
 
-   if ( firstzero >= 0 && firstzero < (int) lastcol - 1 )
+   if ( firstzero >= 0 && firstzero < lastcol - 1 )
    {
       SCIP_CALL( propagateFullOrbitope(scip, vars, firstzero, lastcol, currow + 1, nrows, nfixedvars, infeasible) );
    }
@@ -1801,10 +1802,10 @@ SCIP_RETCODE checkFullOrbitopeSolution(
 {
    SCIP_CONSDATA* consdata;
    SCIP_VAR*** vars;
-   int nrows;
-   int ncols;
    SCIP_VAR** vars1;
    SCIP_VAR** vars2;
+   int nrows;
+   int ncols;
    int j;
    int i;
 
@@ -2385,12 +2386,20 @@ SCIP_DECL_CONSPRINT(consPrintOrbitope)
 
    SCIPdebugMsg(scip, "Printing method for orbitope constraint handler\n");
 
-   if ( orbitopetype == SCIP_ORBITOPETYPE_PARTITIONING )
+   switch ( orbitopetype )
+   {
+   case SCIP_ORBITOPETYPE_PARTITIONING:
       SCIPinfoMessage(scip, file, "partOrbitope(");
-   else if ( orbitopetype == SCIP_ORBITOPETYPE_PACKING )
+      break;
+   case SCIP_ORBITOPETYPE_PACKING:
       SCIPinfoMessage(scip, file, "packOrbitope(");
-   else
+      break;
+   case SCIP_ORBITOPETYPE_FULL:
       SCIPinfoMessage(scip, file, "fullOrbitope(");
+      break;
+   default:
+      SCIPABORT();
+   }
 
    for (i = 0; i < nspcons; ++i)
    {
@@ -2504,7 +2513,6 @@ SCIP_DECL_CONSPARSE(consParseOrbitope)
    while ( *s != '\0' && isspace((unsigned char)*s) )
       ++s;
 
-   orbitopetype = SCIP_ORBITOPETYPE_FULL;
    if ( strncmp(s, "partOrbitope(", 13) == 0 )
       orbitopetype = SCIP_ORBITOPETYPE_PARTITIONING;
    else if ( strncmp(s, "packOrbitope(", 13) == 0 )
@@ -2517,6 +2525,7 @@ SCIP_DECL_CONSPARSE(consParseOrbitope)
          *success = FALSE;
          return SCIP_OKAY;
       }
+      orbitopetype = SCIP_ORBITOPETYPE_FULL;
    }
    s += 13;
 
