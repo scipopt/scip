@@ -94,27 +94,29 @@ struct SCIP_PresolData
  * Local methods
  */
 
-/** compute orbit of a variabe; the method MUST NOT be called if no symmetries were found
- * or symmetries have not been computed yet */
+/** compute orbit of a variabe
+ *
+ *  The method MUST NOT be called if no symmetries were found or symmetries have not been computed yet.
+ */
 static
 SCIP_RETCODE computeOrbitVariable(
    SCIP*                 scip,               /**< SCIP instance */
-   SCIP_PRESOLDATA*      presoldata,         /**< memory address of data of symmetry breaking presolver */
-   int**                 orbit,              /**< memory address of preliminary orbits array */
+   SCIP_PRESOLDATA*      presoldata,         /**< data of symmetry breaking presolver */
+   int**                 orbit,              /**< preliminary orbits array */
    int                   i                   /**< index of variable for which the orbit should be computed */
    )
 {
+   SCIP_Bool* varadded;
    int** perms;
+   int* curorbit;
    int nperms;
    int npermvars;
-   int* curorbit;
    int curorbitsize;
-   SCIP_Bool* varadded;
-   int j;
-   int p;
+   int norbits;
    int curelem;
    int image;
-   int norbits;
+   int j;
+   int p;
 
    assert( orbit != NULL );
    assert( i >= 0 );
@@ -159,7 +161,7 @@ SCIP_RETCODE computeOrbitVariable(
    /* orbit is non-trivial -> store it */
    if ( curorbitsize > 1 )
    {
-      norbits =  presoldata->norbits;
+      norbits = presoldata->norbits;
 
       if ( norbits == 0 )
       {
@@ -188,12 +190,14 @@ SCIP_RETCODE computeOrbitVariable(
 }
 
 
-/** compute orbits of symmetry group; the method MUST NOT be called if no symmetries were found
- * or symmetries have not been computed yet */
+/** compute orbits of symmetry group
+ *
+ *  The method MUST NOT be called if no symmetries were found or symmetries have not been computed yet
+ */
 static
 SCIP_RETCODE computeGroupOrbits(
    SCIP*                 scip,               /**< SCIP instance */
-   SCIP_PRESOLDATA*      presoldata          /**< pointer to data of symmetry breaking presolver */
+   SCIP_PRESOLDATA*      presoldata          /**< data of symmetry breaking presolver */
    )
 {
    int npermvars;
@@ -256,21 +260,22 @@ SCIP_RETCODE computeComponents(
    SCIP_PRESOLDATA*      presoldata          /**< data of symmetry breaking presolver */
    )
 {
-   int npermvars;
-   int nperms;
+   SCIP_DISJOINTSET* componentstoperm;
+   SCIP_Bool startchanged;
    int** perms;
-   int i;
-   int j;
-   int k;
    int npermsincomponent;
    int curcomponent;
    int ncomponents;
    int componentcnt;
-   int start;
+   int npermvars;
+   int nperms;
    int newstart;
-   SCIP_Bool startchanged;
-   SCIP_DISJOINTSET* componentstoperm;
+   int start;
+   int i;
+   int j;
+   int k;
 
+   assert( scip != NULL );
    assert( presoldata != NULL );
 
    nperms = presoldata->nperms;
@@ -284,7 +289,7 @@ SCIP_RETCODE computeComponents(
    npermvars = presoldata->npermvars;
    perms = presoldata->perms;
 
-   /* init array that assigns each permutation its component of the group */
+   /* init array that assigns to each permutation its component of the group */
    SCIP_CALL( SCIPdisjointsetCreate(&componentstoperm, SCIPblkmem(scip), nperms) );
    ncomponents = nperms;
 
@@ -293,16 +298,24 @@ SCIP_RETCODE computeComponents(
    {
       for (j = i + 1; j < nperms; ++j)
       {
-         int componentI = SCIPdisjointsetFind(componentstoperm, i);
-         int componentJ = SCIPdisjointsetFind(componentstoperm, j);
+         int componentI;
+         int componentJ;
+         int* permI;
+         int* permJ;
+
+         componentI = SCIPdisjointsetFind(componentstoperm, i);
+         componentJ = SCIPdisjointsetFind(componentstoperm, j);
          if ( componentI == componentJ )
             continue;
 
-         /* belong perms[i] and perms[j] to the same component? */
+         permI = perms[i];
+         permJ = perms[j];
+
+         /* Do perms[i] and perms[j] belong to the same component? */
          for (k = 0; k < npermvars; ++k)
          {
             /* both permutations belong to the same component */
-            if ( perms[i][k] != k && perms[j][k] != k )
+            if ( permI[k] != k && permJ[k] != k )
             {
                /* keep the smallest identifier to keep track of where a new component starts */
                if ( componentI < componentJ )
@@ -324,7 +337,7 @@ SCIP_RETCODE computeComponents(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->npermsincomponent, ncomponents) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->components, ncomponents) );
 
-   /* copy componentstoperm adequatly to components and npermsincomponent*/
+   /* copy componentstoperm adequatly to components and npermsincomponent */
    componentcnt = 0;
    start = 0;
    newstart = 0;
@@ -400,30 +413,28 @@ SCIP_RETCODE computeComponents(
 }
 
 
-/** check whether a permutation is a composition of 2-cycles and determines in this case
-    the number of 2-cycles */
+/** check whether a permutation is a composition of 2-cycles of binary variables and in this case determines the number of 2-cycles */
 static
 SCIP_RETCODE getPermProperties(
    int*                  perm,               /**< permutation */
-   SCIP_Bool**           vars,               /**< array of variables perm is acting on */
-   int                   n,                  /**< length of permutation array */
-   SCIP_Bool*            iscompoftwocycles,  /**< memory address to store whether permutation is
-                                                  a composition of 2-cycles */
-   int*                  ntwocyclesperm,     /**< memory address to store number of 2-cycles */
-   SCIP_Bool*            allvarsbinary       /**< memory address to store whether perm is acting on binary variables only */
+   SCIP_VAR**            vars,               /**< array of variables perm is acting on */
+   int                   nvars,              /**< number of variables */
+   SCIP_Bool*            iscompoftwocycles,  /**< pointer to store whether permutation is a composition of 2-cycles */
+   int*                  ntwocyclesperm,     /**< pointer to store number of 2-cycles */
+   SCIP_Bool*            allvarsbinary       /**< pointer to store whether perm is acting on binary variables only */
    )
 {
-   int i;
    int ntwocycles = 0;
+   int i;
 
    assert( perm != NULL );
    assert( iscompoftwocycles != NULL );
    assert( ntwocyclesperm != NULL );
 
-   *iscompoftwocycles = TRUE;
+   *iscompoftwocycles = FALSE;
    *ntwocyclesperm = 0;
    *allvarsbinary = TRUE;
-   for (i = 0; i < n; ++i)
+   for (i = 0; i < nvars; ++i)
    {
       /* skip fixed points and avoid treating the same 2-cycle twice */
       if ( perm[i] <= i )
@@ -435,48 +446,49 @@ SCIP_RETCODE getPermProperties(
             ++ntwocycles;
          else
          {
+            /* at least one variable is not binary */
             *allvarsbinary = FALSE;
-            break;
+            return SCIP_OKAY;
          }
       }
       else
-         break;
+      {
+         /* we do not have a 2-cycle */
+         return SCIP_OKAY;
+      }
    }
 
-   if ( i < n )
-      *iscompoftwocycles = FALSE;
-   else
-      *ntwocyclesperm = ntwocycles;
+   /* at this point the permutation is a composition of 2-cycles on binary variables */
+   *iscompoftwocycles = TRUE;
+   *ntwocyclesperm = ntwocycles;
 
    return SCIP_OKAY;
 }
 
 
-/** Given a matrix with nrows and #perms + 1 columns whose first
- *  nfilledcols contain entries of variables, this routine checks
- *  whether the 2-cycles of perm intersect each row of column
- *  coltoextend in exactly one position. In this case, we add one
- *  column to the sub orbitope of the first nfilledcols columns.
+/** Given a matrix with nrows and #perms + 1 columns whose first nfilledcols contain entries of variables, this routine
+ *  checks whether the 2-cycles of perm intersect each row of column coltoextend in exactly one position. In this case,
+ *  we add one column to the suborbitope of the first nfilledcols columns.
  *
  *  @pre Every non-trivial cycle of perm is a 2-cycle.
  *  @pre perm has nrows many 2-cycles
  */
 static
 SCIP_RETCODE extendSubOrbitope(
-   int***                suborbitope,        /**< memory address of matrix containing sub orbitope entries */
+   int**                 suborbitope,        /**< matrix containing suborbitope entries */
    int                   nrows,              /**< number of rows of suborbitope */
    int                   nfilledcols,        /**< number of columns of suborbitope which are filled with entries */
    int                   coltoextend,        /**< index of column that should be extended by perm */
    int*                  perm,               /**< permutation */
-   SCIP_Bool             leftextension,      /**< whether we extend the sub orbitope to the left */
-   SCIP_Bool*            success,            /**< memory address to store whether extension was successful */
-   SCIP_Bool*            infeasible          /**< memory address to store if the number of intersecting cycles is too small */
+   SCIP_Bool             leftextension,      /**< whether we extend the suborbitope to the left */
+   SCIP_Bool*            success,            /**< pointer to store whether extension was successful */
+   SCIP_Bool*            infeasible          /**< pointer to store if the number of intersecting cycles is too small */
    )
 {
+   int nintersections = 0;
    int row;
    int idx1;
    int idx2;
-   int nintersections = 0;
 
    assert( suborbitope != NULL );
    assert( nfilledcols > 0 );
@@ -493,8 +505,8 @@ SCIP_RETCODE extendSubOrbitope(
       /* check whether each cycle of perm intersects with a row of suborbitope */
       for (row = 0; row < nrows; ++row)
       {
-         idx1 = (*suborbitope)[row][0];
-         idx2 = (*suborbitope)[row][1];
+         idx1 = suborbitope[row][0];
+         idx2 = suborbitope[row][1];
 
          /* if idx1 or idx2 is affected by perm, we can extend the row of the orbitope */
          if ( idx1 != perm[idx1] )
@@ -502,10 +514,10 @@ SCIP_RETCODE extendSubOrbitope(
             /* change order of idx1 and idx2 for right extensions */
             if ( ! leftextension )
             {
-               (*suborbitope)[row][0] = idx2;
-               (*suborbitope)[row][1] = idx1;
+               suborbitope[row][0] = idx2;
+               suborbitope[row][1] = idx1;
             }
-            (*suborbitope)[row][2] = perm[idx1];
+            suborbitope[row][2] = perm[idx1];
             ++nintersections;
          }
          else if ( idx2 != perm[idx2] )
@@ -513,10 +525,10 @@ SCIP_RETCODE extendSubOrbitope(
             /* change order of idx1 and idx2 for left extensions */
             if ( leftextension )
             {
-               (*suborbitope)[row][0] = idx2;
-               (*suborbitope)[row][1] = idx1;
+               suborbitope[row][0] = idx2;
+               suborbitope[row][1] = idx1;
             }
-            (*suborbitope)[row][2] = perm[idx2];
+            suborbitope[row][2] = perm[idx2];
             ++nintersections;
          }
       }
@@ -526,12 +538,12 @@ SCIP_RETCODE extendSubOrbitope(
       /* check whether each cycle of perm intersects with a row of suborbitope */
       for (row = 0; row < nrows; ++row)
       {
-         idx1 = (*suborbitope)[row][coltoextend];
+         idx1 = suborbitope[row][coltoextend];
 
          /* if idx1 is affected by perm, we can extend the row of the orbitope */
          if ( idx1 != perm[idx1] )
          {
-            (*suborbitope)[row][nfilledcols] = perm[idx1];
+            suborbitope[row][nfilledcols] = perm[idx1];
             ++nintersections;
          }
       }
@@ -550,7 +562,7 @@ SCIP_RETCODE extendSubOrbitope(
 /** generate variable matrix for orbitope constraint handler */
 static
 SCIP_RETCODE generateOrbitopeVarsMatrix(
-   SCIP_VAR****          vars,               /**< memory address to store pointer to orbitope variables */
+   SCIP_VAR***           vars,               /**< matrix of orbitope variables */
    int                   nrows,              /**< number of rows of orbitope */
    int                   ncols,              /**< number of columns of orbitope */
    SCIP_VAR**            permvars,           /**< superset of variables that are contained in orbitope */
@@ -559,9 +571,9 @@ SCIP_RETCODE generateOrbitopeVarsMatrix(
    int*                  columnorder         /**< permutation to reorder column of orbitopevaridx */
    )
 {
-   int i;
-   int curcolumn;
    int nfilledcols = 0;
+   int curcolumn;
+   int i;
 
    assert( vars != NULL );
    assert( nrows > 0 );
@@ -571,7 +583,6 @@ SCIP_RETCODE generateOrbitopeVarsMatrix(
    assert( columnorder != NULL );
 
    curcolumn = ncols - 1;
-   nfilledcols = 0;
 
    /* start filling vars matrix with the right-most column w.r.t. columnorder */
    while ( curcolumn >= 0 && columnorder[curcolumn] >= 0 )
@@ -580,7 +591,7 @@ SCIP_RETCODE generateOrbitopeVarsMatrix(
       {
          assert( orbitopevaridx[i][curcolumn] < npermvars );
 
-         (*vars)[i][nfilledcols] = permvars[orbitopevaridx[i][curcolumn]];
+         vars[i][nfilledcols] = permvars[orbitopevaridx[i][curcolumn]];
       }
       --curcolumn;
       ++nfilledcols;
@@ -594,27 +605,26 @@ SCIP_RETCODE generateOrbitopeVarsMatrix(
    /* If we are in case 2), all columns should have been added to vars */
    if ( curcolumn < 0 )
       assert( nfilledcols == ncols );
-   /* Otherwise, we are in case 1) or 3) and the only remaining non-negative
-    *  column orders are 0 and 1. */
+   /* Otherwise, we are in case 1) or 3) and the only remaining non-negative column orders are 0 and 1. */
    else
    {
       assert( curcolumn > 1 );
 
-      /* add column with columnorder 1 to vars*/
+      /* add column with columnorder 1 to vars */
       for (i = 0; i < nrows; ++i)
       {
          assert( orbitopevaridx[i][1] < npermvars );
 
-         (*vars)[i][nfilledcols] = permvars[orbitopevaridx[i][1]];
+         vars[i][nfilledcols] = permvars[orbitopevaridx[i][1]];
       }
       ++nfilledcols;
 
-      /* add column with columnorder 0 to vars*/
+      /* add column with columnorder 0 to vars */
       for (i = 0; i < nrows; ++i)
       {
          assert( orbitopevaridx[i][0] < npermvars );
 
-         (*vars)[i][nfilledcols] = permvars[orbitopevaridx[i][0]];
+         vars[i][nfilledcols] = permvars[orbitopevaridx[i][0]];
       }
       ++nfilledcols;
 
@@ -626,15 +636,13 @@ SCIP_RETCODE generateOrbitopeVarsMatrix(
          curcolumn = 2;
          while ( nfilledcols < ncols )
          {
-            if ( columnorder[curcolumn] >= 0 )
-               printf("Error\n");
             assert( columnorder[curcolumn] < 0 );
 
             for (i = 0; i < nrows; ++i)
             {
                assert( orbitopevaridx[i][curcolumn] < npermvars );
 
-               (*vars)[i][nfilledcols] = permvars[orbitopevaridx[i][curcolumn]];
+               vars[i][nfilledcols] = permvars[orbitopevaridx[i][curcolumn]];
             }
             ++curcolumn;
             ++nfilledcols;
@@ -646,29 +654,30 @@ SCIP_RETCODE generateOrbitopeVarsMatrix(
 }
 
 
-/** check whether components of the symmetry group can be handled completely
- *  by orbitopes */
+/** check whether components of the symmetry group can be completely handled by orbitopes */
 static
 SCIP_RETCODE detectOrbitopes(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_PRESOLDATA*      presoldata          /**< pointer to data of symbreak presolver */
    )
 {
-   int ncomponents;
-   int* npermsincomponent;
+   SCIP_VAR** permvars;
    int** components;
    int** perms;
+   int* npermsincomponent;
+   int ncomponents;
    int npermvars;
-   SCIP_VAR** permvars;
    int i;
 
    assert( scip != NULL );
    assert( presoldata != NULL );
 
-   /* terminate if no symmetry is present or compute components if not done yet */
+   /* exit if no symmetry is present */
    if ( presoldata->nperms == 0 )
       return SCIP_OKAY;
-   else if ( presoldata->ncomponents == -1 )
+
+   /* compute components if not done yet */
+   if ( presoldata->ncomponents == -1 )
    {
       SCIP_CALL( computeComponents(scip, presoldata) );
    }
@@ -690,25 +699,25 @@ SCIP_RETCODE detectOrbitopes(
    /* iterate over components */
    for (i = 0; i < ncomponents; ++i)
    {
-      int ntwocyclescomp = -1;
+      SCIP_VAR*** vars;
+      SCIP_CONS* cons;
       SCIP_Bool isorbitope = TRUE;
       SCIP_Bool* usedperm;
       int** orbitopevaridx;
       int* columnorder;
-      int j;
-      int row;
+      int ntwocyclescomp = -1;
       int nfilledcols;
       int nusedperms;
-      SCIP_VAR*** vars;
       int coltoextend;
-      SCIP_CONS* cons;
+      int j;
+      int row;
 
       /* get properties of permutations */
       for (j = 0; j < npermsincomponent[i]; ++j)
       {
          SCIP_Bool iscompoftwocycles = FALSE;
-         int ntwocyclesperm = 0;
          SCIP_Bool allvarsbinary = TRUE;
+         int ntwocyclesperm = 0;
 
          SCIP_CALL( getPermProperties(perms[components[i][j]], permvars, npermvars, &iscompoftwocycles, &ntwocyclesperm, &allvarsbinary) );
 
@@ -771,7 +780,7 @@ SCIP_RETCODE detectOrbitopes(
       columnorder[1] = 1;
       nfilledcols = 2;
 
-      /* extend orbitopevaridx matrix to the left, i.e., find iteratively new permutations that
+      /* extend orbitopevaridx matrix to the left, i.e., iteratively find new permutations that
        * intersect the last added left column in each row in exactly one entry, starting with
        * column 0 */
       coltoextend = 0;
@@ -786,7 +795,7 @@ SCIP_RETCODE detectOrbitopes(
          if ( usedperm[j] )
             continue;
 
-         SCIP_CALL( extendSubOrbitope(&orbitopevaridx, ntwocyclescomp, nfilledcols, coltoextend,
+         SCIP_CALL( extendSubOrbitope(orbitopevaridx, ntwocyclescomp, nfilledcols, coltoextend,
                perms[components[i][j]], TRUE, &success, &infeasible) );
 
          if ( infeasible )
@@ -828,7 +837,7 @@ SCIP_RETCODE detectOrbitopes(
          if ( usedperm[j] )
             continue;
 
-         SCIP_CALL( extendSubOrbitope(&orbitopevaridx, ntwocyclescomp, nfilledcols, coltoextend,
+         SCIP_CALL( extendSubOrbitope(orbitopevaridx, ntwocyclescomp, nfilledcols, coltoextend,
                perms[components[i][j]], FALSE, &success, &infeasible) );
 
          if ( infeasible )
@@ -870,7 +879,7 @@ SCIP_RETCODE detectOrbitopes(
       }
 
       /* prepare variable matrix (reorder columns of orbitopevaridx) */
-      SCIP_CALL( generateOrbitopeVarsMatrix(&vars, ntwocyclescomp, npermsincomponent[i] + 1, permvars, npermvars,
+      SCIP_CALL( generateOrbitopeVarsMatrix(vars, ntwocyclescomp, npermsincomponent[i] + 1, permvars, npermvars,
             orbitopevaridx, columnorder) );
 
       SCIPinfoMessage(scip, NULL, "Component %d is an orbitope with %d rows and %d columns.\n", i, ntwocyclescomp, npermsincomponent[i] + 1);
@@ -909,12 +918,12 @@ SCIP_RETCODE addSymresackConss(
    )
 {
    SCIP_PRESOLDATA* presoldata;
-   int nperms;
-   int** perms;
-   int nsymresackcons = 0;
    SCIP_VAR** permvars;
-   int npermvars;
    SCIP_Bool conssaddlp;
+   int** perms;
+   int nperms;
+   int nsymresackcons = 0;
+   int npermvars;
    int ncomponents;
    int i;
    int p;
@@ -966,7 +975,7 @@ SCIP_RETCODE addSymresackConss(
                ++presoldata->ngenconss;
                ++presoldata->nsymresacks;
                ++nsymresackcons;
-               SCIPdebugMsg(scip, "Added symresack constraint: %u.\n", nsymresackcons);
+               SCIPdebugMsg(scip, "Added symresack constraint: %d.\n", nsymresackcons);
             }
             else
             {
@@ -997,7 +1006,7 @@ SCIP_RETCODE addSymresackConss(
             ++presoldata->ngenconss;
             ++presoldata->nsymresacks;
             ++nsymresackcons;
-            SCIPdebugMsg(scip, "Added symresack constraint: %u.\n", nsymresackcons);
+            SCIPdebugMsg(scip, "Added symresack constraint: %d.\n", nsymresackcons);
          }
          else
          {
@@ -1019,7 +1028,6 @@ SCIP_RETCODE addSymmetryBreakingConstraints(
    )
 {
    SCIP_PRESOLDATA* presoldata;
-   SCIP_Bool decision;
 
    assert( scip != 0 );
    assert( presol != 0 );
@@ -1031,9 +1039,7 @@ SCIP_RETCODE addSymmetryBreakingConstraints(
    if ( presoldata->nperms < 1 )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPgetBoolParam(scip, "presolving/" PRESOL_NAME"/addsymresacks", &decision) );
-
-   if ( decision )
+   if ( presoldata->addsymresacks )
    {
       SCIP_CALL( addSymresackConss(scip, presol) );
    }
@@ -1103,9 +1109,9 @@ static
 SCIP_DECL_PRESOLEXIT(presolExitSymbreak)
 {
    SCIP_PRESOLDATA* presoldata;
-   int i;
    SCIP_CONS** genconss;
    int ngenconss;
+   int i;
 
    assert( scip != NULL );
    assert( presol != NULL );
@@ -1113,7 +1119,7 @@ SCIP_DECL_PRESOLEXIT(presolExitSymbreak)
    SCIPdebugMessage("Exit method of symmetry breaking presolver ...\n");
 
    presoldata = SCIPpresolGetData(presol);
-   assert( presoldata != 0 );
+   assert( presoldata != NULL );
 
    ngenconss = presoldata->ngenconss;
 
@@ -1121,17 +1127,14 @@ SCIP_DECL_PRESOLEXIT(presolExitSymbreak)
    genconss = presoldata->genconss;
    for (i = 0; i < ngenconss; ++i)
    {
-      SCIP_CONS* cons = genconss[i];
-      assert( cons != NULL );
-
-      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      assert( genconss[i] != NULL );
+      SCIP_CALL( SCIPreleaseCons(scip, &genconss[i]) );
    }
 
    /* reset data (necessary if another problem is read in the SCIP shell) */
 
    /* free pointers to symmetry group and binary variables */
-   if ( presoldata->nperms > 0 )
-      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->genconss, presoldata->nperms);
+   SCIPfreeBlockMemoryArrayNull(scip, &presoldata->genconss, presoldata->nperms);
 
    presoldata->genconss = NULL;
    presoldata->ngenconss = 0;
@@ -1140,9 +1143,9 @@ SCIP_DECL_PRESOLEXIT(presolExitSymbreak)
    if ( presoldata->norbits > 0 )
    {
       for (i = 0; i < presoldata->norbits; ++i)
-         SCIPfreeBlockMemoryArrayNull(scip, &presoldata->orbits[i], presoldata->nvarsinorbits[i]);
-      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->orbits, presoldata->norbits);
-      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->nvarsinorbits, presoldata->norbits);
+         SCIPfreeBlockMemoryArray(scip, &presoldata->orbits[i], presoldata->nvarsinorbits[i]);
+      SCIPfreeBlockMemoryArray(scip, &presoldata->orbits, presoldata->norbits);
+      SCIPfreeBlockMemoryArray(scip, &presoldata->nvarsinorbits, presoldata->norbits);
    }
 
    presoldata->orbits = NULL;
@@ -1152,26 +1155,26 @@ SCIP_DECL_PRESOLEXIT(presolExitSymbreak)
    /* free components */
    if ( presoldata->ncomponents > 0 )
    {
-      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->componentblocked, presoldata->ncomponents);
+      SCIPfreeBlockMemoryArray(scip, &presoldata->componentblocked, presoldata->ncomponents);
       for (i = 0; i < presoldata->ncomponents; ++i)
-         SCIPfreeBlockMemoryArrayNull(scip, &presoldata->components[i], presoldata->npermsincomponent[i]);
-      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->components, presoldata->ncomponents);
-      SCIPfreeBlockMemoryArrayNull(scip, &presoldata->npermsincomponent, presoldata->ncomponents);
+         SCIPfreeBlockMemoryArray(scip, &presoldata->components[i], presoldata->npermsincomponent[i]);
+      SCIPfreeBlockMemoryArray(scip, &presoldata->components, presoldata->ncomponents);
+      SCIPfreeBlockMemoryArray(scip, &presoldata->npermsincomponent, presoldata->ncomponents);
    }
 
-    presoldata->componentblocked = NULL;
-    presoldata->components = NULL;
-    presoldata->npermsincomponent = NULL;
-    presoldata->ncomponents = -1;
+   presoldata->componentblocked = NULL;
+   presoldata->components = NULL;
+   presoldata->npermsincomponent = NULL;
+   presoldata->ncomponents = -1;
 
-    /* reset basic data */
-    presoldata->addedconss = FALSE;
-    presoldata->computedsymmetry = FALSE;
-    presoldata->enabled = TRUE;
-    presoldata->early = FALSE;
-    presoldata->nperms = -1;
-    presoldata->norbitopes = 0;
-    presoldata->nsymresacks = 0;
+   /* reset basic data */
+   presoldata->addedconss = FALSE;
+   presoldata->computedsymmetry = FALSE;
+   presoldata->enabled = TRUE;
+   presoldata->early = FALSE;
+   presoldata->nperms = -1;
+   presoldata->norbitopes = 0;
+   presoldata->nsymresacks = 0;
 
    return SCIP_OKAY;
 }
@@ -1208,12 +1211,11 @@ static
 SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
 {  /*lint --e{715}*/
    SCIP_PRESOLDATA* presoldata;
-   int i;
    int noldfixedvars = *nfixedvars;
    int noldaggrvars = *naggrvars;
    int noldbdchgs = *nchgbds;
    int noldaddconss = *naddconss;
-
+   int i;
 
    assert( scip != NULL );
    assert( presol != NULL );
@@ -1287,7 +1289,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
 
       presoldata->addedconss = TRUE;
       *naddconss += presoldata->ngenconss - noldngenconns;
-      SCIPdebugMsg(scip, "Added symmetry breaking constraints: %u.\n", presoldata->ngenconss - noldngenconns);
+      SCIPdebugMsg(scip, "Added symmetry breaking constraints: %d.\n", presoldata->ngenconss - noldngenconns);
 
       /* if constraints have been added, loop through generated constraints and presolve each */
       for (i = 0; i < presoldata->ngenconss; ++i)
@@ -1303,11 +1305,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
             return SCIP_OKAY;
          }
       }
-      SCIPdebugMsg(scip, "Presolved %u constraints generated by symbreak.\n", presoldata->ngenconss);
-
-      /* possibly stop */
-      if ( SCIPisStopped(scip) )
-         return SCIP_OKAY;
+      SCIPdebugMsg(scip, "Presolved %d constraints generated by symbreak.\n", presoldata->ngenconss);
    }
 
    /* determine success */
@@ -1327,8 +1325,8 @@ SCIP_RETCODE SCIPincludePresolSymbreak(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_PRESOLDATA* presoldata = 0;
-   SCIP_PRESOL* presol = 0;
+   SCIP_PRESOLDATA* presoldata = NULL;
+   SCIP_PRESOL* presol = NULL;
 
    /* create presolver data */
    SCIP_CALL( SCIPallocMemory(scip, &presoldata) );
