@@ -51,7 +51,6 @@
 #define PRESOL_DESC            "presolver for adding symmetry breaking constraints"
 #define PRESOL_PRIORITY         -10000000    /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS               -1    /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
-#define PRESOL_DELAY                 TRUE    /**< should presolver be delayed, if other presolvers found reductions? */
 #define PRESOL_TIMING   SCIP_PRESOLTIMING_EXHAUSTIVE   /**< timing for presolving */
 
 /* default parameters */
@@ -748,7 +747,7 @@ SCIP_RETCODE detectOrbitopes(
       SCIP_CALL( SCIPallocBufferArray(scip, &orbitopevaridx, ntwocyclescomp) );
       for (j = 0; j < ntwocyclescomp; ++j)
       {
-         SCIP_CALL( SCIPallocBufferArray(scip, &orbitopevaridx[j], npermsincomponent[i] + 1) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &orbitopevaridx[j], npermsincomponent[i] + 1) ); /*lint !e866*/
       }
 
       /* order of columns of orbitopevaridx */
@@ -809,7 +808,7 @@ SCIP_RETCODE detectOrbitopes(
             ++nusedperms;
             coltoextend = nfilledcols;
             columnorder[nfilledcols++] = -1; /* mark column to be filled from the left */
-            j = 0; /* reset j since previous permutations can now intersect with the latest added column */
+            j = 0; /* reset j since previous permutations can now intersect with the latest added column */ /*lint !e850*/
          }
       }
 
@@ -852,7 +851,7 @@ SCIP_RETCODE detectOrbitopes(
             coltoextend = nfilledcols;
             columnorder[nfilledcols] = 1; /* mark column to be filled from the right */
             ++nfilledcols;
-            j = 0; /* reset j since previous permutations can now intersect with the latest added column */
+            j = 0; /* reset j since previous permutations can now intersect with the latest added column */ /*lint !e850*/
          }
       }
 
@@ -875,7 +874,7 @@ SCIP_RETCODE detectOrbitopes(
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, ntwocyclescomp) );
       for (j = 0; j < ntwocyclescomp; ++j)
       {
-         SCIP_CALL( SCIPallocBufferArray(scip, &vars[j], npermsincomponent[i] + 1) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &vars[j], npermsincomponent[i] + 1) ); /*lint !e866*/
       }
 
       /* prepare variable matrix (reorder columns of orbitopevaridx) */
@@ -1326,7 +1325,7 @@ SCIP_RETCODE SCIPincludePresolSymbreak(
    )
 {
    SCIP_PRESOLDATA* presoldata = NULL;
-   SCIP_PRESOL* presol = NULL;
+   SCIP_PRESOL* presol;
 
    /* create presolver data */
    SCIP_CALL( SCIPallocMemory(scip, &presoldata) );
