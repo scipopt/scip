@@ -60,7 +60,6 @@
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
 #define CONSHDLR_PROP_TIMING       SCIP_PROPTIMING_BEFORELP
@@ -1453,7 +1452,7 @@ static
 SCIP_DECL_CONSPRESOL(consPresolOrbisack)
 {  /*lint --e{715}*/
    int c;
-   int ngen;
+   int ngen = 0;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -1665,19 +1664,26 @@ SCIP_RETCODE SCIPcheckOrbisackSolution(
    assert( feasible != NULL );
 
    *feasible = TRUE;
+
    /* find first non-constant row and check for feasibility */
    for (i = 0; i < nrows; ++i)
    {
+      assert( SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, sol, vars1[i])) );
+      assert( SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, sol, vars2[i])) );
+
       /* get values of i-th row */
       val1 = SCIPgetSolVal(scip, sol, vars1[i]) > 0.5 ? 1 : 0;
       val2 = SCIPgetSolVal(scip, sol, vars2[i]) > 0.5 ? 1 : 0;
 
       /* if row i is constrant */
-      if ( SCIPisEQ(scip, val1, val2) )
+      if ( val1 == val2 )
          continue;
       /* row i has type (1,0) -> feasible */
-      else if ( SCIPisEQ(scip, val1, 1.0) )
+      else if ( val1 == 1 )
+      {
+         assert( val2 == 0 );
          break;
+      }
       else /* infeasible */
       {
          *feasible = FALSE;
@@ -1935,7 +1941,7 @@ SCIP_RETCODE SCIPcreateConsOrbisack(
       else
          orbitopetype = SCIP_ORBITOPETYPE_PACKING;
 
-      SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, "pporbisack", vars, isparttype, nrows, 2, orbitopetype, initial, separate, enforce, check, propagate,
+      SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, "pporbisack", vars, orbitopetype, nrows, 2, TRUE, initial, separate, enforce, check, propagate,
             local, modifiable, dynamic, removable, stickingatnode) );
 
       for (i = 0; i < nrows; ++i)

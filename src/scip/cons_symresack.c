@@ -1542,7 +1542,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsSymresack)
 /** constraint enforcing method of constraint handler for relaxation solutions */
 static
 SCIP_DECL_CONSENFORELAX(consEnforelaxSymresack)
-{
+{   /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
    int c;
 
