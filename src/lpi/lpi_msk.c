@@ -56,7 +56,7 @@
 /* this macro is only called in functions returning SCIP_Bool; thus, we return FALSE if there is an error in optimized mode */
 #define SCIP_ABORT_FALSE(x) do                                          \
    {                                                                    \
-      int _restat_;                                                     \
+      SCIP_RETCODE _restat_;                                            \
       if( (_restat_ = (x)) != SCIP_OKAY )                               \
       {                                                                 \
          SCIPerrorMessage("LP Error: MOSEK returned %d.\n", (int)_restat_); \
@@ -114,23 +114,29 @@ static int numdualobj               =  0;
  *  With Mosek 7.0, the routine MSK_getsolutionstatus was replaced by MSK_getprosta and MSK_getsolsta.
  */
 static
-SCIP_RETCODE MSK_getsolutionstatus(
+MSKrescodee MSK_getsolutionstatus(
    MSKtask_t             task,               /**< Mosek Task */
    MSKsoltypee           whichsol,           /**< for which type of solution a status is requested */
    MSKprostae*           prosta,             /**< buffer to store problem status, or NULL if not needed */
    MSKsolstae*           solsta              /**< buffer to store solution status, or NULL if not needed */
    )
 {
+   MSKrescodee res;
+
    if( prosta != NULL )
    {
-      MOSEK_CALL( MSK_getprosta(task, whichsol, prosta) );
+      res = MSK_getprosta(task, whichsol, prosta);
+      if ( res != MSK_RES_OK )
+         return res;
    }
    if( solsta != NULL )
    {
-      MOSEK_CALL( MSK_getsolsta(task, whichsol, solsta) );
+      res = MSK_getsolsta(task, whichsol, solsta);
+      if ( res != MSK_RES_OK )
+         return res;
    }
 
-   return SCIP_OKAY;
+   return MSK_RES_OK;
 }
 
 /** internal data for Mosek LPI */
@@ -1756,7 +1762,7 @@ SCIP_RETCODE getSolutionStatus(
    assert(lpi != NULL);
    assert(lpi->task != NULL);
 
-   MOSEK_CALL( MSK_getsolutionstatus (lpi->task, MSK_SOL_BAS, prosta, solsta) );
+   MOSEK_CALL( MSK_getsolutionstatus(lpi->task, MSK_SOL_BAS, prosta, solsta) );
 
    return SCIP_OKAY;
 }
@@ -1864,10 +1870,9 @@ SCIP_RETCODE SolveWSimplex(
       MOSEK_CALL( MSK_putintparam(lpi->task,  MSK_IPAR_SIM_PRIMAL_RESTRICT_SELECTION, 0) );
    }
 
-   if( FORCE_NO_MAXITER )
-   {
-      MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_MAX_ITERATIONS, 2000000000) );
-   }
+#if FORCE_NO_MAXITER >  0
+   MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_MAX_ITERATIONS, 2000000000) );
+#endif
 
 
 #if DEBUG_CHECK_DATA > 0
@@ -2012,7 +2017,7 @@ SCIP_RETCODE SolveWSimplex(
    if( solsta == MSK_SOL_STA_OPTIMAL && fabs(dobj) + fabs(dobj) > 1.0e-6 && fabs(pobj-dobj) > 0.0001*(fabs(pobj) + fabs(dobj)))
    {
       SCIPerrorMessage("Simplex[%d] returned optimal solution with different objvals %g != %g reldiff %.2g%%\n",
-         optimizecount, pobj, dobj, 100*fabs(pobj-dobj)/ MAX(fabs(pobj), fabs(dobj)));
+         optimizecount, pobj, dobj, 100*fabs(pobj-dobj)/ MAX(fabs(pobj), fabs(dobj))); /*lint !e666*/
    }
 
    if (lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE)
@@ -2307,7 +2312,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
 SCIP_RETCODE SCIPlpiStartStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
-{
+{  /*lint --e{715}*/
    /* currently do nothing */
    return SCIP_OKAY;
 }
@@ -2316,7 +2321,7 @@ SCIP_RETCODE SCIPlpiStartStrongbranch(
 SCIP_RETCODE SCIPlpiEndStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
-{
+{  /*lint --e{715}*/
    /* currently do nothing */
    return SCIP_OKAY;
 }
@@ -2588,7 +2593,6 @@ SCIP_RETCODE SCIPlpiStrongbranchesFrac(
 {
    int j;
 
-   assert( iter != NULL );
    assert( cols != NULL );
    assert( psols != NULL );
    assert( down != NULL );
@@ -2647,7 +2651,6 @@ SCIP_RETCODE SCIPlpiStrongbranchesInt(
 {
    int j;
 
-   assert( iter != NULL );
    assert( cols != NULL );
    assert( psols != NULL );
    assert( down != NULL );
@@ -2680,6 +2683,7 @@ SCIP_Bool SCIPlpiWasSolved(
 {
    MSKbooleant exists;
    MSKsolstae solsta;
+   MSKrescodee res;
 
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
@@ -2687,12 +2691,14 @@ SCIP_Bool SCIPlpiWasSolved(
 
    SCIPdebugMessage("Calling SCIPlpiWasSolved (%d)\n", lpi->lpid);
 
-   MOSEK_CALL( MSK_solutiondef(lpi->task, MSK_SOL_BAS, &exists) );
+   res = MSK_solutiondef(lpi->task, MSK_SOL_BAS, &exists);
 
-   if ( ! exists )
+   if ( res != MSK_RES_OK || ! exists )
       return FALSE;
 
-   MOSEK_CALL( MSK_getsolsta(lpi->task, MSK_SOL_BAS, &solsta) );
+   res = MSK_getsolsta(lpi->task, MSK_SOL_BAS, &solsta);
+   if ( res != MSK_RES_OK )
+      return FALSE;
 
    return (solsta != MSK_SOL_STA_UNKNOWN);
 }
@@ -2775,7 +2781,7 @@ SCIP_Bool SCIPlpiExistsPrimalRay(
 
    SCIP_ABORT_FALSE( getSolutionStatus(lpi, &prosta, &solsta) );
 
-   return (   solsta == MSK_SOL_STA_DUAL_INFEAS_CER
+   return ( solsta == MSK_SOL_STA_DUAL_INFEAS_CER
       || prosta == MSK_PRO_STA_DUAL_INFEAS
       || prosta == MSK_PRO_STA_PRIM_AND_DUAL_INFEAS);
 }
@@ -3147,7 +3153,7 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
    SCIP_LPSOLQUALITY     qualityindicator,   /**< indicates which quality should be returned */
    SCIP_Real*            quality             /**< pointer to store quality number */
    )
-{
+{  /*lint --e{715}*/
    assert(lpi != NULL);
    assert(quality != NULL);
 
@@ -3417,7 +3423,6 @@ SCIP_RETCODE SCIPlpiSetBase(
 }
 
 /** returns the indices of the basic columns and rows; basic column n gives value n, basic row m gives value -1-m */
-extern
 SCIP_RETCODE SCIPlpiGetBasisInd(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int*                  bind                /**< pointer to store basis indices ready to keep number of rows entries */
@@ -3610,7 +3615,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    int*                  ninds               /**< pointer to store the number of non-zero indices
                                                *  (-1: if we do not store sparsity informations) */
    )
-{
+{  /*lint --e{715}*/
    int nrows;
    int ncols;
    int numnz;
@@ -4114,7 +4119,7 @@ SCIP_RETCODE SCIPlpiGetNorms(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information */
    )
-{
+{  /*lint --e{715}*/
    assert(lpinorms != NULL);
 
    (*lpinorms) = NULL;
@@ -4130,7 +4135,7 @@ SCIP_RETCODE SCIPlpiSetNorms(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information */
    )
-{
+{  /*lint --e{715}*/
    assert(lpinorms == NULL);
 
    /* no work necessary */
@@ -4143,7 +4148,7 @@ SCIP_RETCODE SCIPlpiFreeNorms(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information */
    )
-{
+{  /*lint --e{715}*/
    assert(lpinorms == NULL);
 
    /* no work necessary */
@@ -4173,11 +4178,11 @@ static const char* paramname[] = {
    "SCIP_LPPAR_MARKOWITZ",                   /* Markowitz tolerance */
    "SCIP_LPPAR_ROWREPSWITCH",                /* simplex algorithm shall use row representation of the basis
                                               * if number of rows divided by number of columns exceeds this value */
-   "SCIP_LPPAR_THREADS"                      /* number of threads used to solve the LP */
-   "SCIP_LPPAR_CONDITIONLIMIT"               /* maximum condition number of LP basis counted as stable */
-   "SCIP_LPPAR_TIMING"                       /* type of timer (1 - cpu, 2 - wallclock, 0 - off) */
-   "SCIP_LPPAR_RANDOMSEED"                   /* inital random seed, e.g. for perturbations in the simplex (0: LP default) */
-   "SCIP_LPPAR_POLISHING"                    /* set solution polishing (0 - disable, 1 - enable) */
+   "SCIP_LPPAR_THREADS",                     /* number of threads used to solve the LP */
+   "SCIP_LPPAR_CONDITIONLIMIT",              /* maximum condition number of LP basis counted as stable */
+   "SCIP_LPPAR_TIMING",                      /* type of timer (1 - cpu, 2 - wallclock, 0 - off) */
+   "SCIP_LPPAR_RANDOMSEED",                  /* inital random seed, e.g. for perturbations in the simplex (0: LP default) */
+   "SCIP_LPPAR_POLISHING",                   /* set solution polishing (0 - disable, 1 - enable) */
    "SCIP_LPPAR_REFACTOR"                     /* set refactorization interval (0 - automatic) */
 };
 
