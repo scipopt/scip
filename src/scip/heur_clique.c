@@ -71,6 +71,9 @@
 #define DEFAULT_COPYCUTS      TRUE                       /**< should all active cuts from the cutpool of the
                                                           *   original scip be copied to constraints of the subscip
                                                           */
+#define DEFAULT_USELOCKFIXINGS FALSE                     /**< should more variables be fixed based on variable locks if
+                                                          *   the fixing rate was not reached?
+                                                          */
 
 
 /*
@@ -93,6 +96,9 @@ struct SCIP_HeurData
    int                   maxbacktracks;      /**< maximum number of backtracks during the fixing process */
    SCIP_Bool             copycuts;           /**< should all active cuts from cutpool be copied to constraints in
                                               *   subproblem?
+                                              */
+   SCIP_Bool             uselockfixings;     /**< should more variables be fixed based on variable locks if
+                                              *   the fixing rate was not reached?
                                               */
 };
 
@@ -704,7 +710,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
    if( npscands > oldnpscands * (1 - heurdata->minintfixingrate) )
    {
-      if( /*heurdata->uselockfixing &&*/ npscands <= 2 * oldnpscands * (1 - heurdata->minintfixingrate) )
+      if( heurdata->uselockfixings && npscands <= 2 * oldnpscands * (1 - heurdata->minintfixingrate) )
       {
          SCIP_Bool allrowsfulfilled = FALSE;
 
@@ -1128,6 +1134,10 @@ SCIP_RETCODE SCIPincludeHeurClique(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copycuts",
          "should all active cuts from cutpool be copied to constraints in subproblem?",
          &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
+
+      SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/uselockfixings",
+         "should more variables be fixed based on variable locks if the fixing rate was not reached?",
+         &heurdata->uselockfixings, TRUE, DEFAULT_USELOCKFIXINGS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxbacktracks",
          "maximum number of backtracks during the fixing process",
