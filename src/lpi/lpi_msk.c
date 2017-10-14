@@ -114,7 +114,7 @@ static int numdualobj               =  0;
  *  With Mosek 7.0, the routine MSK_getsolutionstatus was replaced by MSK_getprosta and MSK_getsolsta.
  */
 static
-MSKrescodee MSK_getsolutionstatus(
+SCIP_RETCODE MSK_getsolutionstatus(
    MSKtask_t             task,               /**< Mosek Task */
    MSKsoltypee           whichsol,           /**< for which type of solution a status is requested */
    MSKprostae*           prosta,             /**< buffer to store problem status, or NULL if not needed */
@@ -130,7 +130,7 @@ MSKrescodee MSK_getsolutionstatus(
       MOSEK_CALL( MSK_getsolsta(task, whichsol, solsta) );
    }
 
-   return MSK_RES_OK;
+   return SCIP_OKAY;
 }
 
 /** internal data for Mosek LPI */
@@ -358,7 +358,7 @@ void generateMskBoundkeys(
          {
             bk[i] = MSK_BK_LO;
          }
-         else if (lb[i] == ub[i])  /**@todo is this good idea to compare the bound without any epsilontic? */
+         else if (lb[i] == ub[i])/*lint !e777*/  /**@todo is this good idea to compare the bound without any epsilontic? */
          {
             assert(lb[i] - ub[i] == 0);
             assert(ub[i] - lb[i] == 0);
@@ -626,7 +626,7 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    int                   ncols,              /**< length of integrality array */
    int*                  intInfo             /**< integrality array (0: continuous, 1: integer) */
    )
-{
+{  /*lint --e{715}*/
    SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -1601,7 +1601,7 @@ SCIP_RETCODE SCIPlpiGetColNames(
    int                   namestoragesize,    /**< size of namestorage (if 0, storageleft returns the storage needed) */
    int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
    )
-{
+{  /*lint --e{715}*/
    SCIPerrorMessage("SCIPlpiGetColNames() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -1616,7 +1616,7 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    int                   namestoragesize,    /**< size of namestorage (if 0, -storageleft returns the storage needed) */
    int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
    )
-{
+{  /*lint --e{715}*/
    SCIPerrorMessage("SCIPlpiGetRowNames() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -1632,6 +1632,7 @@ SCIP_RETCODE SCIPlpiGetObjsen(
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+   assert(objsen != NULL);
 
    SCIPdebugMessage("Calling SCIPlpiGetObjsen (%d)\n", lpi->lpid);
 
@@ -1755,7 +1756,7 @@ SCIP_RETCODE getSolutionStatus(
    assert(lpi != NULL);
    assert(lpi->task != NULL);
 
-   MOSEK_CALL( MSK_getsolutionstatus ( lpi->task, MSK_SOL_BAS, prosta, solsta) );
+   MOSEK_CALL( MSK_getsolutionstatus (lpi->task, MSK_SOL_BAS, prosta, solsta) );
 
    return SCIP_OKAY;
 }
