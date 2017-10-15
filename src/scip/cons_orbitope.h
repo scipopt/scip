@@ -15,10 +15,10 @@
 
 /**@file   cons_orbitope.h
  * @ingroup CONSHDLRS
- * @brief  constraint handler for (partitioning/packing) orbitope constraints w.r.t. the full symmetric group
+ * @brief  constraint handler for (partitioning/packing/full) orbitope constraints w.r.t. the full symmetric group
  * @author Timo Berthold
  * @author Marc Pfetsch
- *
+ * @author Christopher Hojny
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -60,7 +60,7 @@ SCIP_RETCODE SCIPincludeConshdlrOrbitope(
  * constraint, these symmetries can be handled by specialized packing or partitioning orbitopes.
  *
  * In more mathematical terms the structure has to be as follows: There are 0/1-variables
- * \f$x_{ij}\f$, \f$i \in \{1, \dots, p\}\f$, \f$j \in \{1, \dots, q\}\f$. The variables are coupled
+ * \f$x_{ij}\f$, \f$i \in \{1, \dots, p\}\f$, \f$j \in \{1, \dots, q\}\f$. The variables may be coupled
  * through set packing or partitioning constraints:
  * \f[
  *    \sum_{j = 1}^q x_{ij} \leq 1  \quad \mbox{or} \quad \sum_{j = 1}^q x_{ij} = 1 \quad \mbox{for all }i = 1, \ldots, p.

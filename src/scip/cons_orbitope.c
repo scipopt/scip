@@ -14,9 +14,10 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_orbitope.c
- * @brief  constraint handler for (partitioning/packing) orbitope constraints w.r.t. the full symmetric group
+ * @brief  constraint handler for (partitioning/packing/full) orbitope constraints w.r.t. the full symmetric group
  * @author Timo Berthold
  * @author Marc Pfetsch
+ * @author Christopher Hojny
  *
  * The type of constraints of this constraint handler is described in cons_orbitope.h.
  *
@@ -1187,9 +1188,6 @@ SCIP_RETCODE propagateFullOrbitopeCons(
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_VAR*** vars;
-   int nspcons;
-   int nblocks;
 
    assert( scip != NULL );
    assert( cons != NULL );
@@ -1210,11 +1208,7 @@ SCIP_RETCODE propagateFullOrbitopeCons(
    assert( consdata->vars != NULL );
    assert( consdata->orbitopetype == SCIP_ORBITOPETYPE_FULL );
 
-   nspcons = consdata->nspcons;
-   nblocks = consdata->nblocks;
-   vars = consdata->vars;
-
-   SCIP_CALL( propagateFullOrbitope(scip, vars, 0, nblocks, 0, nspcons, nfixedvars, infeasible) );
+   SCIP_CALL( propagateFullOrbitope(scip, consdata->vars, 0, consdata->nblocks, 0, consdata->nspcons, nfixedvars, infeasible) );
 
    return SCIP_OKAY;
 }
@@ -1238,7 +1232,6 @@ SCIP_RETCODE propagateCons(
    assert( nfixedvars != NULL );
 
    consdata = SCIPconsGetData(cons);
-
    assert( consdata != NULL );
 
    orbitopetype = consdata->orbitopetype;
@@ -1249,6 +1242,7 @@ SCIP_RETCODE propagateCons(
    }
    else
    {
+      assert( orbitopetype == SCIP_ORBITOPETYPE_PACKING || orbitopetype == SCIP_ORBITOPETYPE_PARTITIONING );
       SCIP_CALL( propagatePackingPartitioningCons(scip, cons, infeasible, nfixedvars) );
    }
 
