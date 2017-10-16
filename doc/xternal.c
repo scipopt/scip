@@ -1522,10 +1522,14 @@
  * The CONSCHECK callback gets a primal solution candidate in a SCIP_SOL* data structure
  * and has to check this solution for global feasibility.
  * It has to return a result SCIP_FEASIBLE, if the solution satisfies all the constraints of the constraint handler,
- * and a result SCIP_INFEASIBLE if there is at least one constraint that is violated. Furthermore, if called for a
- * solution which is not NULL, it should inform SCIP about the absolute and relative constraint violation with a call
- * to SCIPupdateSolLPRowViolation(), if the constraint is represented in the LP, or SCIPupdateSolConsViolation()
- * otherwise (Note that these are only used for displaying statistics in the end).
+ * and a result SCIP_INFEASIBLE if there is at least one constraint that is violated.
+ *
+ * If the solution is not NULL, SCIP should also be informed about the constraint violation with a call to
+ * SCIPupdateSolConsViolation() for general constraints or SCIPupdateSolLPRowViolation() for every row
+ * of the constraints current representation in the LP relaxation.
+ * As a convenience method, SCIPupdateSolLPConsViolation() can be used if the constraint
+ * is represented completely by a set of LP rows.
+ *
  * The callback is used by primal heuristics to check a constructed solution for feasibility.
  * That means, the constraint handler has to deal with arbitrary solutions that do not necessarily satisfy the bounds
  * and constraints of the local subproblem.
