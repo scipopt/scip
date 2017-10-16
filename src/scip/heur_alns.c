@@ -233,6 +233,13 @@ typedef struct VarPrio VARPRIO;
    SCIP_RESULT*          result              /**< pointer to indicate the callback success whether a reference solution is available */ \
 )
 
+/** callback function to deactivate neighborhoods on problems where they are irrelevant */
+#define DECL_NHDEACTIVATE(x) SCIP_RETCODE x (\
+   SCIP*                 scip,               /**< SCIP data structure */  \
+   NH*                   neighborhood,       /**< neighborhood data structure */ \
+   SCIP_Bool*            deactivate          /**< pointer to store whether the neighborhood should be deactivated (TRUE) for an instance */ \
+   )
+
 #ifdef SCIP_STATISTIC
 /** sub-SCIP status code enumerator */
 enum HistIndex
@@ -288,6 +295,7 @@ struct Nh
    DECL_NHEXIT           ((*nhexit));        /**< deinitialization callback when exiting a problem */
    DECL_NHFREE           ((*nhfree));        /**< deinitialization callback before SCIP is freed */
    DECL_NHREFSOL         ((*nhrefsol));      /**< callback function to return a reference solution for further fixings, or NULL */
+   DECL_NHDEACTIVATE     ((*nhdeactivate));  /**< callback function to deactivate neighborhoods on problems where they are irrelevant, or NULL if it is always active */
    SCIP_Bool             active;             /**< is this neighborhood active or not? */
    SCIP_Real             priority;           /**< positive call priority to initialize bandit algorithms */
    union
@@ -701,7 +709,8 @@ SCIP_RETCODE alnsIncludeNeighborhood(
    DECL_NHINIT           ((*nhinit)),        /**< initialization callback for neighborhood, or NULL */
    DECL_NHEXIT           ((*nhexit)),        /**< deinitialization callback for neighborhood, or NULL */
    DECL_NHFREE           ((*nhfree)),        /**< deinitialization callback before SCIP is freed, or NULL */
-   DECL_NHREFSOL         ((*nhrefsol))       /**< callback function to return a reference solution for further fixings, or NULL */
+   DECL_NHREFSOL         ((*nhrefsol)),      /**< callback function to return a reference solution for further fixings, or NULL */
+   DECL_NHDEACTIVATE     ((*nhdeactivate))   /**< callback function to deactivate neighborhoods on problems where they are irrelevant, or NULL if neighborhood is always active */
    )
 {
    char paramname[SCIP_MAXSTRLEN];
@@ -725,6 +734,7 @@ SCIP_RETCODE alnsIncludeNeighborhood(
    (*neighborhood)->nhexit = nhexit;
    (*neighborhood)->nhfree = nhfree;
    (*neighborhood)->nhrefsol = nhrefsol;
+   (*neighborhood)->nhdeactivate = nhdeactivate;
 
    /* add parameters for this neighborhood */
    sprintf(paramname, "heuristics/alns/%s/minfixingrate", name);
@@ -2900,9 +2910,11 @@ SCIP_RETCODE addLocalBranchingConstraint(
    SCIP_Real rhs;
 
    assert(sourcescip != NULL);
+   assert(*success == FALSE);
 
    nbinvars = SCIPgetNBinVars(sourcescip);
    vars = SCIPgetVars(sourcescip);
+
 
    if( nbinvars <= 3 )
       return SCIP_OKAY;
@@ -3003,7 +3015,13 @@ DECL_CHANGESUBSCIP(changeSubscipZeroobjective)
    int nvars;
    int i;
 
+   assert(*success == FALSE);
+
    SCIP_CALL( SCIPgetVarsData(sourcescip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+
+   /* do not run if no objective variables are present */
+   if( SCIPgetNObjVars(scip) == 0 )
+      return SCIP_OKAY;
 
    /* loop over the variables and change their objective coefficients to 0 */
    for( i = 0; i < nvars; ++i )
@@ -3235,6 +3253,44 @@ DECL_NHREFSOL(nhRefsolIncumbent)
    return SCIP_OKAY;
 }
 
+
+/** callback function that deactivates a neighborhood on problems with no discrete variables */
+DECL_NHDEACTIVATE(nhDeactivateDiscreteVars)
+{ /*line --e{715}*/
+   assert(scip != NULL);
+   assert(deactivate != NULL);
+
+   /* deactivate if no discrete variables are present */
+   *deactivate = (SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) == 0);
+
+   return SCIP_OKAY;
+}
+
+/** callback function that deactivates a neighborhood on problems with no binary variables */
+DECL_NHDEACTIVATE(nhDeactivateBinVars)
+{ /*line --e{715}*/
+   assert(scip != NULL);
+   assert(deactivate != NULL);
+
+   /* deactivate if no discrete variables are present */
+   *deactivate = (SCIPgetNBinVars(scip) == 0);
+
+   return SCIP_OKAY;
+}
+
+/** callback function that deactivates a neighborhood on problems with no objective variables */
+DECL_NHDEACTIVATE(nhDeactivateObjVars)
+{ /*line --e{715}*/
+   assert(scip != NULL);
+   assert(deactivate != NULL);
+
+   /* deactivate if no discrete variables are present */
+   *deactivate = (SCIPgetNObjVars(scip) == 0);
+
+   return SCIP_OKAY;
+}
+
+
 /** include all neighborhoods */
 static
 SCIP_RETCODE includeNeighborhoods(
@@ -3256,28 +3312,28 @@ SCIP_RETCODE includeNeighborhoods(
    /* include the RENS neighborhood */
    SCIP_CALL( alnsIncludeNeighborhood(scip, heurdata, &rens, "rens",
          DEFAULT_MINFIXINGRATE_RENS, DEFAULT_MAXFIXINGRATE_RENS, DEFAULT_ACTIVE_RENS, DEFAULT_PRIORITY_RENS,
-         varFixingsRens, changeSubscipRens, NULL, NULL, NULL, NULL) );
+         varFixingsRens, changeSubscipRens, NULL, NULL, NULL, NULL, nhDeactivateDiscreteVars) );
 
    /* include the RINS neighborhood */
    SCIP_CALL( alnsIncludeNeighborhood(scip, heurdata, &rins, "rins",
          DEFAULT_MINFIXINGRATE_RINS, DEFAULT_MAXFIXINGRATE_RINS, DEFAULT_ACTIVE_RINS, DEFAULT_PRIORITY_RINS,
-         varFixingsRins, NULL, NULL, NULL, NULL, nhRefsolIncumbent) );
+         varFixingsRins, NULL, NULL, NULL, NULL, nhRefsolIncumbent, nhDeactivateDiscreteVars) );
 
    /* include the mutation neighborhood */
    SCIP_CALL( alnsIncludeNeighborhood(scip, heurdata, &mutation, "mutation",
          DEFAULT_MINFIXINGRATE_MUTATION, DEFAULT_MAXFIXINGRATE_MUTATION, DEFAULT_ACTIVE_MUTATION, DEFAULT_PRIORITY_MUTATION,
-         varFixingsMutation, NULL, nhInitMutation, nhExitMutation, NULL, nhRefsolIncumbent) );
+         varFixingsMutation, NULL, nhInitMutation, nhExitMutation, NULL, nhRefsolIncumbent, nhDeactivateDiscreteVars) );
 
    /* include the local branching neighborhood */
    SCIP_CALL( alnsIncludeNeighborhood(scip, heurdata, &localbranching, "localbranching",
          DEFAULT_MINFIXINGRATE_LOCALBRANCHING, DEFAULT_MAXFIXINGRATE_LOCALBRANCHING, DEFAULT_ACTIVE_LOCALBRANCHING, DEFAULT_PRIORITY_LOCALBRANCHING,
-         NULL, changeSubscipLocalbranching, NULL, NULL, NULL, nhRefsolIncumbent) );
+         NULL, changeSubscipLocalbranching, NULL, NULL, NULL, nhRefsolIncumbent, nhDeactivateBinVars) );
 
    /* include the crossover neighborhood */
    SCIP_CALL( alnsIncludeNeighborhood(scip, heurdata, &crossover, "crossover",
          DEFAULT_MINFIXINGRATE_CROSSOVER, DEFAULT_MAXFIXINGRATE_CROSSOVER, DEFAULT_ACTIVE_CROSSOVER, DEFAULT_PRIORITY_CROSSOVER,
          varFixingsCrossover, NULL,
-         nhInitCrossover, nhExitCrossover, nhFreeCrossover, nhRefsolCrossover) );
+         nhInitCrossover, nhExitCrossover, nhFreeCrossover, nhRefsolCrossover, nhDeactivateDiscreteVars) );
 
    /* allocate data for crossover to include the parameter */
    SCIP_CALL( SCIPallocBlockMemory(scip, &crossover->data.crossover) );
@@ -3290,17 +3346,17 @@ SCIP_RETCODE includeNeighborhoods(
    /* include the Proximity neighborhood */
    SCIP_CALL( alnsIncludeNeighborhood(scip, heurdata, &proximity, "proximity",
          DEFAULT_MINFIXINGRATE_PROXIMITY, DEFAULT_MAXFIXINGRATE_PROXIMITY, DEFAULT_ACTIVE_PROXIMITY, DEFAULT_PRIORITY_PROXIMITY,
-         NULL, changeSubscipProximity, NULL, NULL, NULL, nhRefsolIncumbent) );
+         NULL, changeSubscipProximity, NULL, NULL, NULL, nhRefsolIncumbent, nhDeactivateBinVars) );
 
    /* include the Zeroobjective neighborhood */
    SCIP_CALL( alnsIncludeNeighborhood(scip, heurdata, &zeroobjective, "zeroobjective",
          DEFAULT_MINFIXINGRATE_ZEROOBJECTIVE, DEFAULT_MAXFIXINGRATE_ZEROOBJECTIVE, DEFAULT_ACTIVE_ZEROOBJECTIVE, DEFAULT_PRIORITY_ZEROOBJECTIVE,
-         NULL, changeSubscipZeroobjective, NULL, NULL, NULL, nhRefsolIncumbent) );
+         NULL, changeSubscipZeroobjective, NULL, NULL, NULL, nhRefsolIncumbent, nhDeactivateObjVars) );
 
    /* include the DINS neighborhood */
    SCIP_CALL( alnsIncludeNeighborhood(scip, heurdata, &dins, "dins",
          DEFAULT_MINFIXINGRATE_DINS, DEFAULT_MAXFIXINGRATE_DINS, DEFAULT_ACTIVE_DINS, DEFAULT_PRIORITY_DINS,
-         varFixingsDins, changeSubscipDins, NULL, NULL, nhFreeDins, nhRefsolIncumbent) );
+         varFixingsDins, changeSubscipDins, NULL, NULL, nhFreeDins, nhRefsolIncumbent, nhDeactivateBinVars) );
 
    /* allocate data for DINS to include the parameter */
    SCIP_CALL( SCIPallocBlockMemory(scip, &dins->data.dins) );
@@ -3315,7 +3371,7 @@ SCIP_RETCODE includeNeighborhoods(
 
 /** initialization method of primal heuristic (called after problem was transformed) */
 static
-SCIP_DECL_HEURINIT(heurInitAlns)
+SCIP_DECL_HEURINITSOL(heurInitsolAlns)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    int i;
@@ -3335,6 +3391,7 @@ SCIP_DECL_HEURINIT(heurInitAlns)
    for( i = heurdata->nneighborhoods - 1; i >= 0; --i )
    {
       NH* neighborhood = heurdata->neighborhoods[i];
+      SCIP_Bool deactivate;
 
       SCIP_CALL( neighborhoodInit(scip, neighborhood) );
 
@@ -3342,8 +3399,10 @@ SCIP_DECL_HEURINIT(heurInitAlns)
 
       SCIP_CALL( neighborhoodStatsReset(scip, &neighborhood->stats) );
 
+      SCIP_CALL( neighborhood->nhdeactivate(scip, neighborhood, &deactivate) );
+
       /* disable inactive neighborhoods */
-      if( ! neighborhood->active )
+      if( deactivate || ! neighborhood->active )
       {
          if( heurdata->nactiveneighborhoods - 1 > i )
          {
@@ -3412,7 +3471,7 @@ SCIP_DECL_HEURINIT(heurInitAlns)
 
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
 static
-SCIP_DECL_HEUREXIT(heurExitAlns)
+SCIP_DECL_HEUREXITSOL(heurExitsolAlns)
 {  /*lint --e{715}*/
 
    SCIP_HEURDATA* heurdata;
@@ -3514,8 +3573,8 @@ SCIP_RETCODE SCIPincludeHeurAlns(
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyAlns) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeAlns) );
-   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitAlns) );
-   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitAlns) );
+   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolAlns) );
+   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolAlns) );
 
    /* add alns primal heuristic parameters */
    SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/" HEUR_NAME "/maxnodes",
