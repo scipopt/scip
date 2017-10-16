@@ -414,9 +414,10 @@ SCIP_RETCODE computeComponents(
          ++componentcnt;
          start = newstart;
       }
-
-      SCIPdisjointsetFree(&componentstoperm, SCIPblkmem(scip));
    }
+
+   if ( presoldata->norbits != 1 )
+      SCIPdisjointsetFree(&componentstoperm, SCIPblkmem(scip));
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(presoldata->componentblocked), ncomponents) );
    for (i = 0; i < ncomponents; ++i)
@@ -1310,11 +1311,11 @@ SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
       {
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(presoldata->genconss), presoldata->nperms) );
 
-         SCIP_CALL( computeGroupOrbits(scip, presoldata) );
+         /* SCIP_CALL( computeGroupOrbits(scip, presoldata) ); */
 
          SCIP_CALL( computeComponents(scip, presoldata) );
 
-         SCIP_CALL( detectOrbitopes(scip, presoldata) );
+         /* SCIP_CALL( detectOrbitopes(scip, presoldata) ); */
       }
    }
 
