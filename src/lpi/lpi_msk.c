@@ -844,11 +844,18 @@ SCIP_RETCODE SCIPlpiAddCols(
 #if MSK_VERSION_MAJOR < 7
    const int* aptrb;
 #endif
+
    int* aptre;
    MSKboundkeye* bkx;
    double* blx;
    double* bux;
    int oldcols;
+
+#ifndef NDEBUG
+   int j;
+   for (j = 0; j < nnonz; j++)
+      assert(val[j] != 0);
+#endif
 
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
@@ -1043,6 +1050,12 @@ SCIP_RETCODE SCIPlpiAddRows(
    double* blc;
    double* buc;
    int oldrows;
+
+#ifndef NDEBUG
+   int j;
+   for (j = 0; j < nnonz; j++)
+      assert(val[j] != 0);
+#endif
 
    assert(MosekEnv != NULL);
    assert(lpi != NULL);

@@ -1505,6 +1505,13 @@ SCIP_RETCODE SCIPlpiAddCols(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {
+
+#ifndef NDEBUG
+   int j;
+   for (j = 0; j < nnonz; j++)
+      assert(val[j] != 0);
+#endif
+
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
    assert(obj != 0);
@@ -1662,6 +1669,12 @@ SCIP_RETCODE SCIPlpiAddRows(
 {
    int rngcount;
    int oldnrows = -1;
+
+#ifndef NDEBUG
+   int j;
+   for (j = 0; j < nnonz; j++)
+      assert(val[j] != 0);
+#endif
 
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);

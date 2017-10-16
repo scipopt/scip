@@ -879,6 +879,12 @@ SCIP_RETCODE SCIPlpiAddCols(
 {
    int c;
 
+#ifndef NDEBUG
+   int j;
+   for (j = 0; j < nnonz; j++)
+      assert(val[j] != 0);
+#endif
+
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
    assert(ncols > 0);
@@ -1017,6 +1023,12 @@ SCIP_RETCODE SCIPlpiAddRows(
    )
 {
    int r;
+
+#ifndef NDEBUG
+   int j;
+   for (j = 0; j < nnonz; j++)
+      assert(val[j] != 0);
+#endif
 
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);

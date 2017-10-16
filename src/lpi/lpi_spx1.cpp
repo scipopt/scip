@@ -1834,6 +1834,12 @@ SCIP_RETCODE SCIPlpiAddCols(
 {
    SCIPdebugMessage("calling SCIPlpiAddCols()\n");
 
+#ifndef NDEBUG
+   int j;
+   for (j = 0; j < nnonz; j++)
+      assert(val[j] != 0);
+#endif
+
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
    assert(obj != NULL);
@@ -1964,6 +1970,12 @@ SCIP_RETCODE SCIPlpiAddRows(
    )
 {
    SCIPdebugMessage("calling SCIPlpiAddRows()\n");
+
+#ifndef NDEBUG
+   int j;
+   for (j = 0; j < nnonz; j++)
+      assert(val[j] != 0);
+#endif
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
