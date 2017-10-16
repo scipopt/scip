@@ -43,6 +43,8 @@ fixed bugs:
 - fixed bug in feasibility pump heuristic when switching on the usefp20 parameter
 - fixed potential ressource leaks in SCIPsolveLinearProb, expr.c, sepa_eccuts, cons_cumulative.c, cons_nonlinear.c
 
+misc:
+- dropped support for MOSEK < 7.0.0.0
 
 SCIP version 4.0.1
 ==================
