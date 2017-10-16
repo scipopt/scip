@@ -2086,21 +2086,20 @@ SCIP_RETCODE SCIPcreateConsSymresack(
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
-   SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
+   SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node?
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
-   SCIP_Bool*            success             /**< pointer to store whether permutation was created */
    )
 {
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
    SCIP_Bool upgrade;
+   SCIP_Bool success;
 
    assert( cons != NULL );
-   assert( success != NULL );
    assert( nvars > 0 );
 
-   *success = FALSE;
+   success = FALSE;
 
    /* find the symresack constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -2115,10 +2114,10 @@ SCIP_RETCODE SCIPcreateConsSymresack(
 
    if ( upgrade )
    {
-      SCIP_CALL( orbisackUpgrade(scip, perm, nvars, vars, success, cons, initial, separate, enforce, check, propagate,
+      SCIP_CALL( orbisackUpgrade(scip, perm, nvars, vars, &success, cons, initial, separate, enforce, check, propagate,
             local, modifiable, dynamic, removable, stickingatnode) );
 
-      if ( *success )
+      if ( success )
       {
          SCIPdebugMessage("Upgraded symresack constraint to orbisack constraint.\n");
 
@@ -2132,8 +2131,6 @@ SCIP_RETCODE SCIPcreateConsSymresack(
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate && (! consdata->ppupgrade), enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
-
-   *success = TRUE;
 
    return SCIP_OKAY;
 }
@@ -2152,12 +2149,11 @@ SCIP_RETCODE SCIPcreateConsBasicSymresack(
    const char*           name,               /**< name of constraint */
    int*                  perm,               /**< permutation */
    SCIP_VAR**            vars,               /**< variables */
-   int                   nvars,              /**< number of variables in problem */
-   SCIP_Bool*            success             /**< pointer to store whether permutation was created */
+   int                   nvars               /**< number of variables in problem */
    )
 {
    SCIP_CALL( SCIPcreateConsSymresack(scip, cons, name, perm, vars, nvars,
-         TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, success) );
+         TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIP_OKAY;
 }

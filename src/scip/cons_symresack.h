@@ -98,10 +98,9 @@ SCIP_RETCODE SCIPcreateConsSymresack(
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
-   SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
+   SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node?
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
-   SCIP_Bool*            success             /**< pointer to store whether permutation was created */
    );
 
 /** creates and captures a symresack constraint
@@ -121,8 +120,7 @@ SCIP_RETCODE SCIPcreateConsBasicSymresack(
    const char*           name,               /**< name of constraint */
    int*                  perm,               /**< permutation */
    SCIP_VAR**            vars,               /**< variables */
-   int                   nvars,              /**< number of variables in problem */
-   SCIP_Bool*            success             /**< pointer to store whether permutation was created */
+   int                   nvars               /**< number of variables in problem */
    );
 
 #ifdef __cplusplus
