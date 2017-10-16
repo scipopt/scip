@@ -508,6 +508,12 @@ SCIP_RETCODE SCIPlpiLoadColLP(
 {
    register int i;
 
+#ifndef NDEBUG
+   int j;
+   for (j = 0; j < nnonz; j++)
+      assert(val[j] != 0);
+#endif
+
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
 

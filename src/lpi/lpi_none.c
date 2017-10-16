@@ -191,6 +191,12 @@ SCIP_RETCODE SCIPlpiLoadColLP(
 {  /*lint --e{715}*/
    assert( lpi != NULL );
 
+#ifndef NDEBUG
+   int j;
+   for (j = 0; j < nnonz; j++)
+      assert(val[j] != 0);
+#endif
+
    lpi->nrows = nrows;
    lpi->ncols = ncols;
    assert( lpi->nrows >= 0 );

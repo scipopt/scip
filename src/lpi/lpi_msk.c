@@ -760,6 +760,12 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    double* blx;
    double* bux;
 
+#ifndef NDEBUG
+   int j;
+   for (j = 0; j < nnonz; j++)
+      assert(val[j] != 0);
+#endif
+
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);

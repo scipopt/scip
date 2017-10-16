@@ -1429,6 +1429,12 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    int rngcount;
    int c;
 
+#ifndef NDEBUG
+   int j;
+   for (j = 0; j < nnonz; j++)
+      assert(val[j] != 0);
+#endif
+
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
    assert(lpi->grbenv != NULL);

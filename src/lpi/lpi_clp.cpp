@@ -600,6 +600,12 @@ SCIP_RETCODE SCIPlpiLoadColLP(
 {
    SCIPdebugMessage("calling SCIPlpiLoadColLP()\n");
 
+#ifndef NDEBUG
+   int j;
+   for (j = 0; j < nnonz; j++)
+      assert(val[j] != 0);
+#endif
+
    assert(lpi != 0);
    assert(lpi->clp != 0);
    assert(lhs != 0);
