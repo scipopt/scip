@@ -264,6 +264,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             storedbilinearterms; /**< did we already try to store all bilinear terms? */
 
    SCIP_Real             minscorebilinterms; /**< minimal required score in order to use linear inequalities for tighter bilinear relaxations*/
+   int                   bilinineqmaxseparounds; /**< maximum number of separation rounds to use linear inequalities for the bilinear term relaxation in a local node */
 };
 
 
@@ -7289,7 +7290,6 @@ SCIP_RETCODE generateCutNonConvex(
 {
    SCIP_CONSDATA* consdata;
    SCIP_BILINTERM* bilinterm;
-   BILINESTIMATOR* bilinestimator;
    SCIP_Real sqrcoef;
    SCIP_Real coef;
    SCIP_Real coef2;
@@ -7386,14 +7386,20 @@ SCIP_RETCODE generateCutNonConvex(
          SCIPdebugMsg(scip, "McCormick = %g (%u)\n", refx * coef + refy * coef2 + constant, *success);
 
          /* tries to compute a tighter relaxation for xy by using valid linear inequalities */
-         if( conshdlrdata->bilinestimators != NULL && ubx - lbx >= 0.1 && uby - lby >= 0.1 ) /* TODO change to a parameter? */
+         if( conshdlrdata->bilinestimators != NULL && ubx - lbx >= 0.1 && uby - lby >= 0.1
+            && (SCIPgetNSepaRounds(scip) <= conshdlrdata->bilinineqmaxseparounds || SCIPgetDepth(scip) == 0) )
          {
-            int bilintermidx = consdata->bilintermsidx[idx];
-            SCIP_Real score = getInteriority(lbx, ubx, refx, lby, uby, refy);
-            SCIP_Real mccormick = refx * coef + refy * coef2 + constant;
+            BILINESTIMATOR* bilinestimator;
+            SCIP_Real mccormick;
+            SCIP_Real score;
+            int bilintermidx;
+
+            mccormick = refx * coef + refy * coef2 + constant;
+            score = getInteriority(lbx, ubx, refx, lby, uby, refy);
+            bilintermidx = consdata->bilintermsidx[idx];
+            bilinestimator = &(conshdlrdata->bilinestimators[bilintermidx]);
 
             /* update score of each bilinear term */
-            bilinestimator = &(conshdlrdata->bilinestimators[bilintermidx]);
             bilinestimator->score += score;
             ++(bilinestimator->nupdates);
             SCIPdebugMsg(scip, "score of bilinear term %s %s = %g (%g)\n", SCIPvarGetName(bilinestimator->x),
@@ -14421,6 +14427,10 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/minscorebilinterms",
          "minimal required score in order to use linear inequalities for tighter bilinear relaxations",
          &conshdlrdata->minscorebilinterms, FALSE, 0.01, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/bilinineqmaxseparounds",
+         "maximum number of separation rounds to use linear inequalities for the bilinear term relaxation in a local node",
+         &conshdlrdata->bilinineqmaxseparounds, TRUE, 3, 0, INT_MAX, NULL, NULL) );
 
    conshdlrdata->eventhdlr = NULL;
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->eventhdlr),CONSHDLR_NAME"_boundchange", "signals a bound change to a quadratic constraint",
