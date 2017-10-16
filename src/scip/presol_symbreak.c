@@ -761,14 +761,14 @@ SCIP_RETCODE detectOrbitopes(
 
          SCIP_CALL( getPermProperties(perms[components[i][j]], permvars, npermvars, &iscompoftwocycles, &ntwocyclesperm, &allvarsbinary) );
 
-         ntwocyclescomp = ntwocyclesperm;
-
          /* no or different number of 2-cycles or not all vars binary: permutations cannot generate orbitope */
          if ( ntwocyclescomp == 0 || ntwocyclescomp != ntwocyclesperm || ! allvarsbinary )
          {
             isorbitope = FALSE;
             break;
          }
+
+         ntwocyclescomp = ntwocyclesperm;
       }
 
       if ( ! isorbitope )
@@ -811,6 +811,8 @@ SCIP_RETCODE detectOrbitopes(
          if ( row == ntwocyclescomp )
             break;
       }
+      if ( row != ntwocyclescomp )
+         printf("number of rows is %d, but it should be %d\n", row, ntwocyclescomp);
       assert( row == ntwocyclescomp );
 
       usedperm[0] = TRUE;
