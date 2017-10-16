@@ -710,7 +710,7 @@ SCIP_RETCODE separateSCIs(
 #endif
             SCIP_CALL( SCIPaddVarsToRow(scip, row, nvars, tmpvars, tmpvals) );
             /*SCIP_CALL( SCIPprintRow(scip, row, NULL) ); */
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, infeasible) );
+            SCIP_CALL( SCIPaddCut(scip, row, FALSE, infeasible) );
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
             ++(*ncuts);
 

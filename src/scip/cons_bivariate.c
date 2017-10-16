@@ -4740,7 +4740,7 @@ SCIP_RETCODE separatePoint(
             SCIP_Bool infeasible;
 
             /* cut cuts off solution sufficiently */
-            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, &infeasible) );
+            SCIP_CALL( SCIPaddCut(scip, row, FALSE, &infeasible) );
             if( infeasible )
             {
                SCIPdebugMsg(scip, "cut for constraint <%s> is infeasible -> cutoff.\n", SCIPconsGetName(conss[c]));
@@ -6747,7 +6747,7 @@ SCIP_DECL_CONSINITLP(consInitlpBivariate)
                /* add row to LP */
                else
                {
-                  SCIP_CALL( SCIPaddCut(scip, NULL, row1, FALSE /* forcecut */, infeasible) );
+                  SCIP_CALL( SCIPaddCut(scip, row1, FALSE /* forcecut */, infeasible) );
                   SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row1, NULL) ) );
                }
                SCIP_CALL( SCIPreleaseRow(scip, &row1) );
@@ -6769,7 +6769,7 @@ SCIP_DECL_CONSINITLP(consInitlpBivariate)
                /* add row to LP */
                else if( !(*infeasible) )
                {
-                  SCIP_CALL( SCIPaddCut(scip, NULL, row2, FALSE /* forcecut */, infeasible) );
+                  SCIP_CALL( SCIPaddCut(scip, row2, FALSE /* forcecut */, infeasible) );
                   SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row2, NULL) ) );
                }
                SCIP_CALL( SCIPreleaseRow(scip, &row2) );

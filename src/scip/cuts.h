@@ -180,6 +180,12 @@ int* SCIPaggrRowGetRowInds(
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    );
 
+/** get array with weights of aggregated rows */
+extern
+SCIP_Real* SCIPaggrRowGetRowWeights(
+   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
+   );
+
 /** checks whether a given row has been added to the aggregation row */
 extern
 SCIP_Bool SCIPaggrRowHasRowBeenAdded(

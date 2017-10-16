@@ -61,9 +61,6 @@ SCIP_RETCODE sepastoreEnsureCutsMem(
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
       SCIP_ALLOC( BMSreallocMemoryArray(&sepastore->cuts, newsize) );
-      SCIP_ALLOC( BMSreallocMemoryArray(&sepastore->efficacies, newsize) );
-      SCIP_ALLOC( BMSreallocMemoryArray(&sepastore->objparallelisms, newsize) );
-      SCIP_ALLOC( BMSreallocMemoryArray(&sepastore->orthogonalities, newsize) );
       SCIP_ALLOC( BMSreallocMemoryArray(&sepastore->scores, newsize) );
       sepastore->cutssize = newsize;
    }
@@ -85,9 +82,6 @@ SCIP_RETCODE SCIPsepastoreCreate(
    SCIP_ALLOC( BMSallocMemory(sepastore) );
 
    (*sepastore)->cuts = NULL;
-   (*sepastore)->efficacies = NULL;
-   (*sepastore)->objparallelisms = NULL;
-   (*sepastore)->orthogonalities = NULL;
    (*sepastore)->scores = NULL;
    (*sepastore)->cutssize = 0;
    (*sepastore)->ncuts = 0;
@@ -111,9 +105,6 @@ SCIP_RETCODE SCIPsepastoreFree(
    assert((*sepastore)->ncuts == 0);
 
    BMSfreeMemoryArrayNull(&(*sepastore)->cuts);
-   BMSfreeMemoryArrayNull(&(*sepastore)->efficacies);
-   BMSfreeMemoryArrayNull(&(*sepastore)->objparallelisms);
-   BMSfreeMemoryArrayNull(&(*sepastore)->orthogonalities);
    BMSfreeMemoryArrayNull(&(*sepastore)->scores);
    BMSfreeMemory(sepastore);
 
@@ -391,9 +382,6 @@ SCIP_RETCODE sepastoreDelCut(
 
    /* move last cut to the empty position */
    sepastore->cuts[pos] = sepastore->cuts[sepastore->ncuts-1];
-   sepastore->efficacies[pos] = sepastore->efficacies[sepastore->ncuts-1];
-   sepastore->objparallelisms[pos] = sepastore->objparallelisms[sepastore->ncuts-1];
-   sepastore->orthogonalities[pos] = sepastore->orthogonalities[sepastore->ncuts-1];
    sepastore->scores[pos] = sepastore->scores[sepastore->ncuts-1];
    sepastore->ncuts--;
 
@@ -411,15 +399,12 @@ SCIP_RETCODE SCIPsepastoreAddCut(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events */
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
    SCIP_ROW*             cut,                /**< separated cut */
    SCIP_Bool             forcecut,           /**< should the cut be forced to enter the LP? */
    SCIP_Bool             root,               /**< are we at the root node? */
    SCIP_Bool*            infeasible          /**< pointer to store whether the cut is infeasible */
    )
 {
-   SCIP_Real cutefficacy;
-   SCIP_Real cutobjparallelism;
    SCIP_Real cutscore;
    SCIP_Bool redundant;
    int pos;
@@ -496,21 +481,12 @@ SCIP_RETCODE SCIPsepastoreAddCut(
 
    if( forcecut )
    {
-      cutefficacy = SCIPsetInfinity(set);
       cutscore = SCIPsetInfinity(set);
-      cutobjparallelism = 1.0;
    }
    else
    {
       /* initialize values to invalid (will be initialized during cut filtering) */
-      cutefficacy = SCIP_INVALID;
       cutscore = SCIP_INVALID;
-
-      /* initialize parallelism to objective (constant throughout filtering) */
-      if( set->sepa_objparalfac > 0.0 )
-         cutobjparallelism = SCIProwGetObjParallelism(cut, set, lp);
-      else
-         cutobjparallelism = 0.0; /* no need to calculate it */
    }
 
    SCIPsetDebugMsg(set, "adding cut <%s> to separation storage of size %d (forcecut=%u, len=%d)\n",
@@ -526,9 +502,6 @@ SCIP_RETCODE SCIPsepastoreAddCut(
       /* make room at the beginning of the array for forced cut */
       pos = sepastore->nforcedcuts;
       sepastore->cuts[sepastore->ncuts] = sepastore->cuts[pos];
-      sepastore->efficacies[sepastore->ncuts] = sepastore->efficacies[pos];
-      sepastore->objparallelisms[sepastore->ncuts] = sepastore->objparallelisms[pos];
-      sepastore->orthogonalities[sepastore->ncuts] = sepastore->orthogonalities[pos];
       sepastore->scores[sepastore->ncuts] = sepastore->scores[pos];
       sepastore->nforcedcuts++;
    }
@@ -536,9 +509,6 @@ SCIP_RETCODE SCIPsepastoreAddCut(
       pos = sepastore->ncuts;
 
    sepastore->cuts[pos] = cut;
-   sepastore->efficacies[pos] = cutefficacy;
-   sepastore->objparallelisms[pos] = cutobjparallelism;
-   sepastore->orthogonalities[pos] = 1.0;
    sepastore->scores[pos] = cutscore;
    sepastore->ncuts++;
 
@@ -866,7 +836,8 @@ SCIP_RETCODE sepastoreUpdateOrthogonalities(
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_ROW*             cut,                /**< cut that was applied */
-   SCIP_Real             mincutorthogonality /**< minimal orthogonality of cuts to apply to LP */
+   SCIP_Real             mincutorthogonality,/**< minimal orthogonality of cuts to apply to LP */
+   SCIP_Real             bestscore           /**< best score in this round */
    )
 {
    int pos;
@@ -880,28 +851,16 @@ SCIP_RETCODE sepastoreUpdateOrthogonalities(
 
       /* update orthogonality */
       thisortho = SCIProwGetOrthogonality(cut, sepastore->cuts[pos], set->sepa_orthofunc);
-      if( thisortho < sepastore->orthogonalities[pos] )
+
+      if( thisortho < 0.5 || (thisortho < mincutorthogonality && sepastore->scores[pos] < 0.9 * bestscore) )
       {
-         if( thisortho < mincutorthogonality )
-         {
-            /* cut is too parallel: release the row and delete the cut */
-            SCIPsetDebugMsg(set, "    -> deleting parallel cut <%s> after adding <%s> (pos=%d, len=%d, orthogonality=%g, score=%g)\n",
-               SCIProwGetName(sepastore->cuts[pos]), SCIProwGetName(cut), pos, SCIProwGetNNonz(cut), thisortho, sepastore->scores[pos]);
-            SCIP_CALL( sepastoreDelCut(sepastore, blkmem, set, eventqueue, eventfilter, lp, pos) );
-            continue;
-         }
-         else
-         {
-            /* recalculate score */
-            sepastore->orthogonalities[pos] = thisortho;
-            assert( sepastore->objparallelisms[pos] != SCIP_INVALID ); /*lint !e777*/
-            assert( sepastore->scores[pos] != SCIP_INVALID ); /*lint !e777*/
-            assert( sepastore->efficacies[pos] != SCIP_INVALID ); /*lint !e777*/
-            sepastore->scores[pos] = sepastore->efficacies[pos]
-               + set->sepa_objparalfac * sepastore->objparallelisms[pos]
-               + set->sepa_orthofac * thisortho;
-         }
+         /* cut is too parallel: release the row and delete the cut */
+         SCIPsetDebugMsg(set, "    -> deleting parallel cut <%s> after adding <%s> (pos=%d, len=%d, orthogonality=%g, score=%g)\n",
+                         SCIProwGetName(sepastore->cuts[pos]), SCIProwGetName(cut), pos, SCIProwGetNNonz(cut), thisortho, sepastore->scores[pos]);
+         SCIP_CALL( sepastoreDelCut(sepastore, blkmem, set, eventqueue, eventfilter, lp, pos) );
+         continue;
       }
+
       pos++;
    }
 
@@ -920,6 +879,7 @@ SCIP_RETCODE sepastoreApplyCut(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_ROW*             cut,                /**< cut to apply to the LP */
    SCIP_Real             mincutorthogonality,/**< minimal orthogonality of cuts to apply to LP */
+   SCIP_Real             bestscore,          /**< best score in this round */
    int                   depth,              /**< depth of current node */
    SCIP_EFFICIACYCHOICE  efficiacychoice,    /**< type of solution to base feasibility computation on */
    int*                  ncutsapplied        /**< pointer to count the number of applied cuts */
@@ -961,7 +921,7 @@ SCIP_RETCODE sepastoreApplyCut(
       }
 
       /* update the orthogonalities */
-      SCIP_CALL( sepastoreUpdateOrthogonalities(sepastore, blkmem, set, eventqueue, eventfilter, lp, cut, mincutorthogonality) );
+      SCIP_CALL( sepastoreUpdateOrthogonalities(sepastore, blkmem, set, eventqueue, eventfilter, lp, cut, mincutorthogonality, bestscore) );
       (*ncutsapplied)++;
 
       if( !sepastore->initiallp && set->sepa_feastolfac > 0.0 )
@@ -1036,7 +996,8 @@ SCIP_RETCODE computeScore(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_Bool             handlepool,         /**< whether the efficacy of cuts in the pool should be reduced  */
    int                   pos,                /**< position of cut to handle */
-   SCIP_EFFICIACYCHOICE  efficiacychoice     /**< type of solution to base efficiacy computation on */
+   SCIP_EFFICIACYCHOICE  efficiacychoice,    /**< type of solution to base efficiacy computation on */
+   SCIP_Real*            bestscore           /**< pointer to update best score */
    )
 {
    SCIP_ROW* cut;
@@ -1063,22 +1024,17 @@ SCIP_RETCODE computeScore(
    }
 
    /* If a cut is not member of the cut pool, we slightly decrease its score to prefer identical
-    * cuts which are in the cut pool.  This is because the conversion of cuts into linear
+    * cuts which are in the cut pool. This is because the conversion of cuts into linear
     * constraints after a restart looks at the cut pool and cannot find tight non-pool cuts.
     */
-   if( handlepool && !SCIProwIsInGlobalCutpool(cut) )
-      cutefficacy *= 0.9999;
 
    /* calculate resulting score */
-   assert( sepastore->objparallelisms[pos] != SCIP_INVALID ); /*lint !e777*/
-   cutscore = cutefficacy + set->sepa_objparalfac * sepastore->objparallelisms[pos] + set->sepa_orthofac * 1.0;
+   cutscore = cutefficacy + set->sepa_objparalfac * SCIProwGetObjParallelism(cut, set, lp)
+                          + set->sepa_intsupportfac * SCIProwGetNumIntCols(cut, set) / (SCIP_Real) SCIProwGetNNonz(cut)
+                          + 1e-4 * (handlepool && !SCIProwIsInGlobalCutpool(cut)); /*lint !e514*/
    assert( !SCIPsetIsInfinity(set, cutscore) );
-
-   sepastore->efficacies[pos] = cutefficacy;
    sepastore->scores[pos] = cutscore;
-
-   /* make sure that the orthogonalities are initialized to 1.0 */
-   sepastore->orthogonalities[pos] = 1.0;
+   *bestscore = MAX(*bestscore, cutscore);
 
    return SCIP_OKAY;
 }
@@ -1105,6 +1061,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
 {
    SCIP_NODE* node;
    SCIP_Real mincutorthogonality;
+   SCIP_Real bestscore;
    SCIP_Bool applied;
    int depth;
    int maxsepacuts;
@@ -1135,10 +1092,12 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    mincutorthogonality = root ? set->sepa_minorthoroot : set->sepa_minortho;
    mincutorthogonality = MAX(mincutorthogonality, set->num_epsilon);
 
+   bestscore = 0.0;
+
    /* Compute scores for all non-forced cuts and initialize orthogonalities - make sure all cuts are initialized again for the current LP solution */
    for( pos = sepastore->nforcedcuts; pos < sepastore->ncuts; pos++ )
    {
-      SCIP_CALL( computeScore(sepastore, set, stat, lp, TRUE, pos, efficiacychoice) );
+      SCIP_CALL( computeScore(sepastore, set, stat, lp, TRUE, pos, efficiacychoice, &bestscore) );
    }
 
    /* apply all forced cuts */
@@ -1165,7 +1124,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
          /* add cut to the LP and update orthogonalities */
          SCIPsetDebugMsg(set, " -> applying forced cut <%s>\n", SCIProwGetName(cut));
          /*SCIPdebug( SCIProwPrint(cut, set->scip->messagehdlr, NULL));*/
-         SCIP_CALL( sepastoreApplyCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, cut, mincutorthogonality, depth, efficiacychoice, &ncutsapplied) );
+         SCIP_CALL( sepastoreApplyCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, cut, mincutorthogonality, bestscore, depth, efficiacychoice, &ncutsapplied) );
       }
    }
 
@@ -1180,23 +1139,22 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
       bestpos = sepastoreGetBestCut(sepastore);
       assert(sepastore->nforcedcuts <= bestpos && bestpos < sepastore->ncuts);
       assert(sepastore->scores[bestpos] != SCIP_INVALID ); /*lint !e777*/
-      assert(sepastore->efficacies[bestpos] != SCIP_INVALID ); /*lint !e777*/
       cut = sepastore->cuts[bestpos];
       assert(SCIProwIsModifiable(cut) || SCIProwGetNNonz(cut) != 1 || !sepastoreIsBdchgApplicable(set, cut)); /* applicable bound changes are forced cuts */
       assert(!SCIPsetIsInfinity(set, sepastore->scores[bestpos]));
 
-      SCIPsetDebugMsg(set, " -> applying cut <%s> (pos=%d/%d, len=%d, efficacy=%g, objparallelism=%g, orthogonality=%g, score=%g)\n",
-         SCIProwGetName(cut), bestpos, sepastore->ncuts, SCIProwGetNNonz(cut), sepastore->efficacies[bestpos], sepastore->objparallelisms[bestpos],
-         sepastore->orthogonalities[bestpos], sepastore->scores[bestpos]);
+      SCIPsetDebugMsg(set, " -> applying cut <%s> (pos=%d/%d, len=%d, LP efficacy=%g, objparallelism=%g, score=%g)\n",
+         SCIProwGetName(cut), bestpos, sepastore->ncuts, SCIProwGetNNonz(cut), SCIProwGetLPEfficacy(cut, set, stat, lp),
+                      SCIProwGetObjParallelism(cut, set, lp), sepastore->scores[bestpos]);
       /*SCIPdebug(SCIProwPrint(cut, set->scip->messagehdlr, NULL));*/
 
       /* capture cut such that it is not destroyed in sepastoreDelCut() */
       SCIProwCapture(cut);
-      efficacy = sepastore->efficacies[bestpos];
 
       /* release the row and delete the cut (also issuing ROWDELETEDSEPA event) */
       SCIP_CALL( sepastoreDelCut(sepastore, blkmem, set, eventqueue, eventfilter, lp, bestpos) );
 
+      efficacy = SCIProwGetLPEfficacy(cut, set, stat, lp);
       /* Do not add (non-forced) non-violated cuts.
        * Note: do not take SCIPsetIsEfficacious(), because constraint handlers often add cuts w.r.t. SCIPsetIsFeasPositive().
        * Note2: if separating/feastolfac != -1, constraint handlers may even add cuts w.r.t. SCIPsetIsPositive(); those are currently rejected here
@@ -1204,7 +1162,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
       if( SCIPsetIsFeasPositive(set, efficacy) )
       {
          /* add cut to the LP and update orthogonalities */
-         SCIP_CALL( sepastoreApplyCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, cut, mincutorthogonality, depth, efficiacychoice, &ncutsapplied) );
+         SCIP_CALL( sepastoreApplyCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, cut, mincutorthogonality, bestscore, depth, efficiacychoice, &ncutsapplied) );
       }
 
       /* release cut */
@@ -1288,9 +1246,24 @@ SCIP_RETCODE SCIPsepastoreRemoveInefficaciousCuts(
    c = sepastore->nforcedcuts;
    while( c < sepastore->ncuts )
    {
-      assert( sepastore->efficacies[c] == SCIP_INVALID ); /*lint !e777*/
-      SCIP_CALL( computeScore(sepastore, set, stat, lp, FALSE, c, efficiacychoice) );
-      if( !SCIPsetIsEfficacious(set, root, sepastore->efficacies[c]) )
+      SCIP_Real cutefficacy;
+      /* calculate cut's efficacy */
+      switch ( efficiacychoice )
+      {
+         case SCIP_EFFICIACYCHOICE_LP:
+            cutefficacy = SCIProwGetLPEfficacy(sepastore->cuts[c], set, stat, lp);
+            break;
+         case SCIP_EFFICIACYCHOICE_RELAX:
+            cutefficacy = SCIProwGetRelaxEfficacy(sepastore->cuts[c], set, stat);
+            break;
+         case SCIP_EFFICIACYCHOICE_NLP:
+            cutefficacy = SCIProwGetNLPEfficacy(sepastore->cuts[c], set, stat);
+            break;
+         default:
+            SCIPerrorMessage("Invalid efficiacy choice.\n");
+            return SCIP_INVALIDCALL;
+      }
+      if( !SCIPsetIsEfficacious(set, root, cutefficacy) )
       {
          SCIP_CALL( sepastoreDelCut(sepastore, blkmem, set, eventqueue, eventfilter, lp, c) );
          ++cnt;

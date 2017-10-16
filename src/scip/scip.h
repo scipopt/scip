@@ -13330,6 +13330,20 @@ void SCIPmarkRowNotRemovableLocal(
    SCIP_ROW*             row                 /**< LP row */
    );
 
+/** returns number of integral columns in the row
+ *
+ *  @return number of integral columns in the row
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+int SCIPgetRowNumIntCols(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< LP row */
+   );
+
 /** returns minimal absolute value of row vector's non-zero coefficients
  *
  *  @return minimal absolute value of row vector's non-zero coefficients
@@ -15026,7 +15040,6 @@ SCIP_Bool SCIPisCutApplicable(
 EXTERN
 SCIP_RETCODE SCIPaddCut(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
    SCIP_ROW*             cut,                /**< separated cut */
    SCIP_Bool             forcecut,           /**< should the cut be forced to enter the LP? */
    SCIP_Bool*            infeasible          /**< pointer to store whether cut has been detected to be infeasible for local bounds */

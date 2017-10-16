@@ -296,6 +296,7 @@ void SCIPstatReset(
    stat->ninitconssadded = 0;
    stat->nactiveconssadded = 0;
    stat->externmemestim = 0;
+   stat->nincseparounds = 0;
    stat->nrunsbeforefirst = -1;
    stat->firstprimalheur = NULL;
    stat->firstprimaltime = SCIP_DEFAULT_INFINITY;
@@ -315,6 +316,9 @@ void SCIPstatReset(
    stat->marked_ncolidx = -1;
    stat->marked_nrowidx = -1;
    stat->branchedunbdvar = FALSE;
+   stat->bestefficacy = 0.0;
+   stat->minefficacyfac = 0.5;
+   stat->ncutpoolfails = 0;
 
    stat->ndivesetlpiterations = 0;
    stat->ndivesetcalls = 0;

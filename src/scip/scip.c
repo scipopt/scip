@@ -12947,9 +12947,12 @@ SCIP_RETCODE SCIPaddConflict(
       SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
    }
 
-   /* add the conflict to the conflict store */
-   SCIP_CALL( SCIPconflictstoreAddConflict(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->tree,
-         scip->transprob, scip->reopt, cons, conftype, iscutoffinvolved, primalbound) );
+   if( node == NULL || SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
+   {
+      /* add the conflict to the conflict store */
+      SCIP_CALL( SCIPconflictstoreAddConflict(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->tree,
+            scip->transprob, scip->reopt, cons, conftype, iscutoffinvolved, primalbound) );
+   }
 
    /* mark constraint to be a conflict */
    SCIPconsMarkConflict(cons);
@@ -30645,6 +30648,24 @@ void SCIPmarkRowNotRemovableLocal(
    SCIProwMarkNotRemovableLocal(row, scip->stat);
 }
 
+/** returns number of integral columns in the row
+ *
+ *  @return number of integral columns in the row
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+int SCIPgetRowNumIntCols(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< LP row */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetRowNumIntCols", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIProwGetNumIntCols(row, scip->set);
+}
+
 /** returns minimal absolute value of row vector's non-zero coefficients
  *
  *  @return minimal absolute value of row vector's non-zero coefficients
@@ -34051,7 +34072,6 @@ SCIP_Bool SCIPisCutApplicable(
  */
 SCIP_RETCODE SCIPaddCut(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
    SCIP_ROW*             cut,                /**< separated cut */
    SCIP_Bool             forcecut,           /**< should the cut be forced to enter the LP? */
    SCIP_Bool*            infeasible          /**< pointer to store whether cut has been detected to be infeasible for local bounds */
@@ -34062,7 +34082,7 @@ SCIP_RETCODE SCIPaddCut(
    assert(SCIPtreeGetCurrentNode(scip->tree) != NULL);
 
    SCIP_CALL( SCIPsepastoreAddCut(scip->sepastore, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
-         scip->eventfilter, scip->lp, sol, cut, forcecut, (SCIPtreeGetCurrentDepth(scip->tree) == 0), infeasible) );
+         scip->eventfilter, scip->lp, cut, forcecut, (SCIPtreeGetCurrentDepth(scip->tree) == 0), infeasible) );
 
    /* possibly run conflict analysis */
    if ( *infeasible && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && SCIPisConflictAnalysisApplicable(scip) )
@@ -34344,7 +34364,7 @@ SCIP_RETCODE SCIPaddNewRowCutpool(
 {
    SCIP_CALL( checkStage(scip, "SCIPaddNewRowCutpool", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPcutpoolAddNewRow(cutpool, scip->mem->probmem, scip->set, row) );
+   SCIP_CALL( SCIPcutpoolAddNewRow(cutpool, scip->mem->probmem, scip->set, scip->stat, scip->lp, row) );
 
    return SCIP_OKAY;
 }
