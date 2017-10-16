@@ -165,8 +165,6 @@ SCIP_RETCODE computeOrbitVariable(
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(presoldata)->orbits, 1) );
 
          presoldata->maxnorbits = 1;
-
-         printf("Max N Orbits: %d\n", presoldata->maxnorbits);
       }
       else if ( norbits >= presoldata->maxnorbits )
       {
@@ -179,8 +177,6 @@ SCIP_RETCODE computeOrbitVariable(
          SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(presoldata)->orbits, norbits, newsize) );
 
          presoldata->maxnorbits = newsize;
-
-         printf("New Max N Orbits: %d\n", presoldata->maxnorbits);
       }
 
       presoldata->nvarsinorbits[norbits] = curorbitsize;
@@ -1186,11 +1182,7 @@ SCIP_DECL_PRESOLEXIT(presolExitSymbreak)
    if ( presoldata->norbits > 0 )
    {
       for (i = 0; i < presoldata->norbits; ++i)
-      {
-         printf("Freeing data of orbit %d\n", i);
          SCIPfreeBlockMemoryArray(scip, &presoldata->orbits[i], presoldata->nvarsinorbits[i]);
-      }
-      printf("Free orbits and nvarsinorbits array of length %d\n", presoldata->maxnorbits);
       SCIPfreeBlockMemoryArray(scip, &presoldata->orbits, presoldata->maxnorbits);
       SCIPfreeBlockMemoryArray(scip, &presoldata->nvarsinorbits, presoldata->maxnorbits);
    }
