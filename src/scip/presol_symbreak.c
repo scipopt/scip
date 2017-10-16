@@ -102,14 +102,14 @@ SCIP_RETCODE computeOrbitVariable(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_PRESOLDATA*      presoldata,         /**< data of symmetry breaking presolver */
    int**                 orbit,              /**< preliminary orbits array */
-   int                   i                   /**< index of variable for which the orbit should be computed */
+   int                   i,                  /**< index of variable for which the orbit should be computed */
+   int*                  curorbit,           /**< array that stores orbit of i (allocated outside since it can be used for multiple orbit computations) */
+   SCIP_Bool*            varadded            /**< array that stores which variables were added to the current orbit, has to be initialized with FALSE in
+                                              *   each position, since it is used multiple times (and, for this reason, allocated outside) */
    )
 {
-   SCIP_Bool* varadded;
    int** perms;
-   int* curorbit;
    int nperms;
-   int npermvars;
    int curorbitsize;
    int norbits;
    int curelem;
@@ -118,24 +118,20 @@ SCIP_RETCODE computeOrbitVariable(
    int p;
 
    assert( orbit != NULL );
+   assert( curorbit != NULL );
+   assert( varadded != NULL );
    assert( i >= 0 );
+   assert( i < presoldata->npermvars );
 
    nperms = presoldata->nperms;
    assert( nperms > 0 );
 
    perms = presoldata->perms;
-   npermvars = presoldata->npermvars;
 
    /* initialize orbit of variable i */
-   SCIP_CALL( SCIPallocBufferArray(scip, &curorbit, npermvars - i) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &varadded, npermvars - i) ); /* TODO: can we do better by using a map that says whether we have already added a variable to curorbit? */
-
-   for (j = 0; j < npermvars - i; ++j)
-      varadded[j] = FALSE;
-
    curorbit[0] = i;
    curorbitsize = 1;
-   varadded[0] = TRUE; /* theoretically, this is varadded[i - i] */
+   varadded[i] = TRUE; /* theoretically, this is varadded[i - i] */
 
    /* iterate over variables in curorbit and compute their images */
    for (j = 0; j < curorbitsize; ++j)
@@ -147,10 +143,10 @@ SCIP_RETCODE computeOrbitVariable(
          image = perms[p][curelem];
 
          /* found new element of the orbit of i */
-         if ( ! varadded[image - i] )
+         if ( ! varadded[image] )
          {
             curorbit[curorbitsize++] = image;
-            varadded[image - i] = TRUE;
+            varadded[image] = TRUE;
 
             (*orbit)[image] = i;
          }
@@ -182,8 +178,12 @@ SCIP_RETCODE computeOrbitVariable(
       presoldata->norbits = norbits + 1;
    }
 
-   SCIPfreeBufferArray(scip, &varadded);
-   SCIPfreeBufferArray(scip, &curorbit);
+   /* reset data for other orbit computations (only necessary if not all variables are contained in the same orbit) */
+   if ( curorbitsize < presoldata->npermvars )
+   {
+      for (i = 0; i < curorbitsize; ++i)
+         varadded[curorbit[i]] = FALSE;
+   }
 
    return SCIP_OKAY;
 }
@@ -201,6 +201,8 @@ SCIP_RETCODE computeGroupOrbits(
 {
    int npermvars;
    int* orbit;
+   int* curorbit;
+   SCIP_Bool* varadded;
    int i;
 
    assert( scip != NULL );
@@ -212,10 +214,15 @@ SCIP_RETCODE computeGroupOrbits(
 
    /* init data structures*/
    SCIP_CALL( SCIPallocBufferArray(scip, &orbit, npermvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &curorbit, npermvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varadded, npermvars) );
 
    /* initially, every variable is contained in its own orbit */
    for (i = 0; i < npermvars; ++i)
+   {
       orbit[i] = i;
+      varadded[i] = FALSE;
+   }
 
    /* find variable orbits */
    presoldata->norbits = 0;
@@ -226,11 +233,13 @@ SCIP_RETCODE computeGroupOrbits(
       if ( orbit[i] == i )
       {
          /* compute and store orbit */
-         SCIP_CALL( computeOrbitVariable(scip, presoldata, &orbit, i) );
+         SCIP_CALL( computeOrbitVariable(scip, presoldata, &orbit, i, curorbit, varadded) );
       }
    }
 
    /* free memory */
+   SCIPfreeBufferArray(scip, &varadded);
+   SCIPfreeBufferArray(scip, &curorbit);
    SCIPfreeBufferArray(scip, &orbit);
 
 #if 0
