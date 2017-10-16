@@ -1578,7 +1578,6 @@ static
 SCIP_RETCODE addCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< logic or constraint */
-   SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
    SCIP_Bool*            cutoff              /**< whether a cutoff has been detected */
    )
 {
@@ -1601,7 +1600,7 @@ SCIP_RETCODE addCut(
    if( !SCIProwIsInLP(consdata->row) )
    {
       SCIPdebugMsg(scip, "adding constraint <%s> as cut to the LP\n", SCIPconsGetName(cons));
-      SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE, cutoff) );
+      SCIP_CALL( SCIPaddCut(scip, consdata->row, FALSE, cutoff) );
    }
 
    return SCIP_OKAY;
@@ -1676,7 +1675,7 @@ SCIP_RETCODE separateCons(
    if( addcut )
    {
       /* insert LP row as cut */
-      SCIP_CALL( addCut(scip, cons, sol, cutoff) );
+      SCIP_CALL( addCut(scip, cons, cutoff) );
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
       *separated = TRUE;
    }
@@ -4106,7 +4105,7 @@ SCIP_DECL_CONSINITLP(consInitlpLogicor)
    for( c = 0; c < nconss && !(*infeasible); ++c )
    {
       assert(SCIPconsIsInitial(conss[c]));
-      SCIP_CALL( addCut(scip, conss[c], NULL, infeasible) );
+      SCIP_CALL( addCut(scip, conss[c], infeasible) );
    }
 
    return SCIP_OKAY;

@@ -45,7 +45,7 @@ if [ "${PERFORMANCE}" == "performance" ]; then
   echo $NEWRBID >> $RBDB
   rm ${OUTPUT}
 else
-  ./evalcheck_cluster.sh -R results/check.$TESTSET.${SCIPVERSION}.*.$SETTING[.0-9]*eval
+  ./evalcheck_cluster.sh -T results/check.$TESTSET.${SCIPVERSION}.*.$SETTING[.0-9]*eval
 fi
 cd ..
 

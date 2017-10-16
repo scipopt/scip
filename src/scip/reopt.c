@@ -7777,7 +7777,7 @@ SCIP_RETCODE SCIPreoptApplyCuts(
          {
             SCIP_CALL( SCIProwCreate(&cut, blkmem, set, stat, lp, cutname, ncols, cols, vals, cons->lhs, cons->rhs,
                   SCIP_ROWORIGINTYPE_REOPT, NULL, TRUE, TRUE, TRUE) );
-            SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, NULL, cut, FALSE, root,
+            SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, cut, FALSE, root,
                   &infeasible) );
 
             SCIPsetDebugMsg(set, "add cut <%s> of size %d to sepastore, [lhs, rhs] = [%g,%g] to node %lld\n", cutname,
