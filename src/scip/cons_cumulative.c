@@ -7706,17 +7706,22 @@ SCIP_RETCODE computeAlternativeBounds(
       {
          SCIP_PROFILE* profile;
 
+         SCIP_RETCODE retcode = SCIP_OKAY;
+
          /* create empty resource profile with infinity resource capacity */
          SCIP_CALL( SCIPprofileCreate(&profile, INT_MAX) );
 
          /* create worst case resource profile */
-         SCIP_CALL( SCIPcreateWorstCaseProfile(scip, profile, consdata->nvars, consdata->vars, consdata->durations, consdata->demands) );
+         retcode = SCIPcreateWorstCaseProfile(scip, profile, consdata->nvars, consdata->vars, consdata->durations, consdata->demands);
 
          hmin = SCIPcomputeHmin(scip, profile, consdata->capacity);
          hmax = SCIPcomputeHmax(scip, profile, consdata->capacity);
 
          /* free worst case profile */
          SCIPprofileFree(&profile);
+
+         if( retcode != SCIP_OKAY )
+            return retcode;
       }
       else
       {
@@ -8709,7 +8714,7 @@ SCIP_RETCODE addRelaxation(
       if( !SCIProwIsInLP(consdata->demandrows[r]) )
       {
          assert(consdata->demandrows[r] != NULL);
-         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->demandrows[r], FALSE, infeasible) );
+         SCIP_CALL( SCIPaddCut(scip, consdata->demandrows[r], FALSE, infeasible) );
       }
    }
 
@@ -8765,7 +8770,7 @@ SCIP_RETCODE separateConsBinaryRepresentation(
 
          if( SCIPisFeasNegative(scip, feasibility) )
          {
-            SCIP_CALL( SCIPaddCut(scip, sol,  consdata->demandrows[r], FALSE, cutoff) );
+            SCIP_CALL( SCIPaddCut(scip, consdata->demandrows[r], FALSE, cutoff) );
             if ( *cutoff )
             {
                SCIP_CALL( SCIPresetConsAge(scip, cons) );
@@ -8858,7 +8863,7 @@ SCIP_RETCODE separateCoverCutsCons(
          SCIPconsGetName(cons), minfeasibility);
 
       assert(row != NULL);
-      SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, cutoff) );
+      SCIP_CALL( SCIPaddCut(scip, row, FALSE, cutoff) );
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
       if ( *cutoff )
          return SCIP_OKAY;
@@ -8895,7 +8900,7 @@ SCIP_RETCODE separateCoverCutsCons(
          SCIPconsGetName(cons), minfeasibility);
 
       assert(row != NULL);
-      SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, cutoff) );
+      SCIP_CALL( SCIPaddCut(scip, row, FALSE, cutoff) );
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
       if ( *cutoff )
          return SCIP_OKAY;
@@ -8910,7 +8915,6 @@ static
 SCIP_RETCODE createCapacityRestrictionIntvars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to be checked */
-   SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
    int*                  startindices,       /**< permutation with rspect to the start times */
    int                   curtime,            /**< current point in time */
    int                   nstarted,           /**< number of jobs that start before the curtime or at curtime */
@@ -8963,7 +8967,7 @@ SCIP_RETCODE createCapacityRestrictionIntvars(
    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
    SCIPdebug( SCIP_CALL(SCIPprintRow(scip, row, NULL)) );
 
-   SCIP_CALL( SCIPaddCut(scip, sol, row, TRUE, &infeasible) );
+   SCIP_CALL( SCIPaddCut(scip, row, TRUE, &infeasible) );
    assert( ! infeasible );
 
    SCIP_CALL( SCIPreleaseRow(scip, &row) );
@@ -9057,7 +9061,7 @@ SCIP_RETCODE separateConsOnIntegerVariables(
       if( freecapacity < 0 && curtime >= hmin)
       {
          /* create capacity restriction row for current event point */
-         SCIP_CALL( createCapacityRestrictionIntvars(scip, cons, sol, startindices, curtime, j+1, endindex, lower) );
+         SCIP_CALL( createCapacityRestrictionIntvars(scip, cons, startindices, curtime, j+1, endindex, lower) );
          *separated = TRUE;
       }
    } /*lint --e{850}*/

@@ -12487,6 +12487,7 @@ SCIP_RETCODE SCIPaddCons(
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_EXITPRESOLVE:
    case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_SOLVING:
       assert( SCIPtreeGetCurrentDepth(scip->tree) >= 0 ||  scip->set->stage == SCIP_STAGE_PRESOLVED );
       if( SCIPtreeGetCurrentDepth(scip->tree) <= SCIPtreeGetEffectiveRootDepth(scip->tree) )
@@ -12950,9 +12951,12 @@ SCIP_RETCODE SCIPaddConflict(
       SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
    }
 
-   /* add the conflict to the conflict store */
-   SCIP_CALL( SCIPconflictstoreAddConflict(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->tree,
-         scip->transprob, scip->reopt, cons, conftype, iscutoffinvolved, primalbound) );
+   if( node == NULL || SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
+   {
+      /* add the conflict to the conflict store */
+      SCIP_CALL( SCIPconflictstoreAddConflict(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->tree,
+            scip->transprob, scip->reopt, cons, conftype, iscutoffinvolved, primalbound) );
+   }
 
    /* mark constraint to be a conflict */
    SCIPconsMarkConflict(cons);
@@ -15172,7 +15176,7 @@ SCIP_RETCODE freeSolve(
    /* switch stage to EXITSOLVE */
    scip->set->stage = SCIP_STAGE_EXITSOLVE;
 
-   /* deinitialize conflict store */
+   /* cleanup the conflict storage */
    SCIP_CALL( SCIPconflictstoreClean(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->reopt) );
 
    /* inform plugins that the branch and bound process is finished */
@@ -15259,7 +15263,7 @@ SCIP_RETCODE freeReoptSolve(
    }
 
    /* deinitialize conflict store */
-   SCIP_CALL( SCIPconflictstoreClean(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->reopt) );
+   SCIP_CALL( SCIPconflictstoreClear(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->reopt) );
 
    /* invalidate the dual bound */
    SCIPprobInvalidateDualbound(scip->transprob);
@@ -15476,12 +15480,12 @@ SCIP_RETCODE freeTransform(
 
    if( !reducedfree )
    {
-      /* clean the conflict store
+      /* clear the conflict store
        *
        * since the conflict store can contain transformed constraints we need to remove them. the store will be finally
        * freed in SCIPfreeProb().
        */
-      SCIP_CALL( SCIPconflictstoreClean(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->reopt) );
+      SCIP_CALL( SCIPconflictstoreClear(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->reopt) );
 
    }
 
@@ -20861,7 +20865,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
 
    /* switch conflict analysis according to usesb parameter */
    enabledconflict = scip->set->conf_enable;
-   scip->set->conf_enable = scip->set->conf_usesb;
+   scip->set->conf_enable = (scip->set->conf_enable && scip->set->conf_usesb);
 
    /* @todo: decide the branch to look at first based on the cutoffs in previous calls? */
    switch( scip->set->branch_firstsbchild )
@@ -24695,6 +24699,33 @@ int SCIPgetNCliques(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNCliques", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    return SCIPcliquetableGetNCliques(scip->cliquetable);
+}
+
+/** gets the number of cliques created so far by the cliquetable
+ *
+ *  @return number of cliques created so far by the cliquetable
+ *
+ *  @note cliques do not get automatically cleaned up after presolving. Use SCIPcleanupCliques()
+ *  to prevent inactive variables in cliques when retrieved via SCIPgetCliques(). This might reduce the number of cliques
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+int SCIPgetNCliquesCreated(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNCliquesCreated", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   return SCIPcliquetableGetNCliquesCreated(scip->cliquetable);
 }
 
 /** gets the array of cliques in the clique table
@@ -30623,6 +30654,24 @@ void SCIPmarkRowNotRemovableLocal(
    SCIProwMarkNotRemovableLocal(row, scip->stat);
 }
 
+/** returns number of integral columns in the row
+ *
+ *  @return number of integral columns in the row
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+int SCIPgetRowNumIntCols(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< LP row */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetRowNumIntCols", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIProwGetNumIntCols(row, scip->set);
+}
+
 /** returns minimal absolute value of row vector's non-zero coefficients
  *
  *  @return minimal absolute value of row vector's non-zero coefficients
@@ -30928,7 +30977,7 @@ SCIP_RETCODE SCIPprintRow(
 {
    assert(row != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPprintRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPprintRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    SCIProwPrint(row, scip->messagehdlr, file);
 
@@ -34029,7 +34078,6 @@ SCIP_Bool SCIPisCutApplicable(
  */
 SCIP_RETCODE SCIPaddCut(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
    SCIP_ROW*             cut,                /**< separated cut */
    SCIP_Bool             forcecut,           /**< should the cut be forced to enter the LP? */
    SCIP_Bool*            infeasible          /**< pointer to store whether cut has been detected to be infeasible for local bounds */
@@ -34040,7 +34088,7 @@ SCIP_RETCODE SCIPaddCut(
    assert(SCIPtreeGetCurrentNode(scip->tree) != NULL);
 
    SCIP_CALL( SCIPsepastoreAddCut(scip->sepastore, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
-         scip->eventfilter, scip->lp, sol, cut, forcecut, (SCIPtreeGetCurrentDepth(scip->tree) == 0), infeasible) );
+         scip->eventfilter, scip->lp, cut, forcecut, (SCIPtreeGetCurrentDepth(scip->tree) == 0), infeasible) );
 
    /* possibly run conflict analysis */
    if ( *infeasible && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && SCIPisConflictAnalysisApplicable(scip) )
@@ -34322,7 +34370,7 @@ SCIP_RETCODE SCIPaddNewRowCutpool(
 {
    SCIP_CALL( checkStage(scip, "SCIPaddNewRowCutpool", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPcutpoolAddNewRow(cutpool, scip->mem->probmem, scip->set, row) );
+   SCIP_CALL( SCIPcutpoolAddNewRow(cutpool, scip->mem->probmem, scip->set, scip->stat, scip->lp, row) );
 
    return SCIP_OKAY;
 }

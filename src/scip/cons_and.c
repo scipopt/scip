@@ -965,7 +965,7 @@ SCIP_RETCODE addRelaxation(
    /* insert aggregated LP row as cut */
    if( !SCIProwIsInLP(consdata->aggrrow) )
    {
-      SCIP_CALL( SCIPaddCut(scip, NULL, consdata->aggrrow, FALSE, infeasible) );
+      SCIP_CALL( SCIPaddCut(scip, consdata->aggrrow, FALSE, infeasible) );
    }
 
    if( !(*infeasible) )
@@ -981,7 +981,7 @@ SCIP_RETCODE addRelaxation(
       /* add additional row */
       if( !SCIProwIsInLP(consdata->rows[0]) )
       {
-         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[0], FALSE, infeasible) );
+         SCIP_CALL( SCIPaddCut(scip, consdata->rows[0], FALSE, infeasible) );
       }
    }
 
@@ -1156,7 +1156,7 @@ SCIP_RETCODE separateCons(
          feasibility = SCIPgetRowSolFeasibility(scip, consdata->rows[r], sol);
          if( SCIPisFeasNegative(scip, feasibility) )
          {
-            SCIP_CALL( SCIPaddCut(scip, sol, consdata->rows[r], FALSE, cutoff) );
+            SCIP_CALL( SCIPaddCut(scip, consdata->rows[r], FALSE, cutoff) );
             if ( *cutoff )
                return SCIP_OKAY;
             *separated = TRUE;
@@ -3775,7 +3775,7 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAnd)
       TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, var) );
 
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
    if( SCIPdebugIsMainscip(scip) )
    {
       SCIP_Bool debugval;

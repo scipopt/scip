@@ -328,7 +328,7 @@ SCIP_Bool SCIPisTransformed(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns whether the solution process should be probably correct
+/** returns whether the solution process is arithmetically exact, i.e., not subject to roundoff errors
  *
  *  @note This feature is not supported yet!
  *
@@ -9541,6 +9541,26 @@ int SCIPgetNCliques(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** gets the number of cliques created so far by the cliquetable
+ *
+ *  @return number of cliques created so far by the cliquetable
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+EXTERN
+int SCIPgetNCliquesCreated(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** gets the array of cliques in the clique table
  *
  *  @return array of cliques in the clique table
@@ -13356,6 +13376,20 @@ void SCIPmarkRowNotRemovableLocal(
    SCIP_ROW*             row                 /**< LP row */
    );
 
+/** returns number of integral columns in the row
+ *
+ *  @return number of integral columns in the row
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+int SCIPgetRowNumIntCols(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< LP row */
+   );
+
 /** returns minimal absolute value of row vector's non-zero coefficients
  *
  *  @return minimal absolute value of row vector's non-zero coefficients
@@ -15052,7 +15086,6 @@ SCIP_Bool SCIPisCutApplicable(
 EXTERN
 SCIP_RETCODE SCIPaddCut(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
    SCIP_ROW*             cut,                /**< separated cut */
    SCIP_Bool             forcecut,           /**< should the cut be forced to enter the LP? */
    SCIP_Bool*            infeasible          /**< pointer to store whether cut has been detected to be infeasible for local bounds */

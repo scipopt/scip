@@ -1616,7 +1616,7 @@ SCIP_RETCODE createRelaxation(
                SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, consdata->intvar) );
 
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
          if( SCIPdebugIsMainscip(scip) )
          {
             SCIP_Real solval;
@@ -1744,7 +1744,7 @@ SCIP_RETCODE addRelaxation(
    {
       if( consdata->rows[r] != NULL && !SCIProwIsInLP(consdata->rows[r]) )
       {
-         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[r], FALSE, infeasible) );
+         SCIP_CALL( SCIPaddCut(scip, consdata->rows[r], FALSE, infeasible) );
       }
    }
 
@@ -1927,7 +1927,7 @@ SCIP_RETCODE separateCons(
          feasibility = SCIPgetRowSolFeasibility(scip, consdata->rows[r], sol);
          if( SCIPisFeasNegative(scip, feasibility) )
          {
-            SCIP_CALL( SCIPaddCut(scip, sol, consdata->rows[r], FALSE, cutoff) );
+            SCIP_CALL( SCIPaddCut(scip, consdata->rows[r], FALSE, cutoff) );
             if ( *cutoff )
                return SCIP_OKAY;
             *separated = TRUE;
@@ -2004,7 +2004,7 @@ SCIP_RETCODE separateCons(
             }
             SCIP_CALL( SCIPflushRowExtensions(scip, row) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, cutoff) );
+            SCIP_CALL( SCIPaddCut(scip, row, FALSE, cutoff) );
             assert( SCIPisGT(scip, SCIPgetRowLPActivity(scip, row), (SCIP_Real) (cnt-1)) );
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
             ++ngen;
@@ -2044,7 +2044,7 @@ SCIP_RETCODE separateCons(
             }
             SCIP_CALL( SCIPflushRowExtensions(scip, row) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, cutoff) );
+            SCIP_CALL( SCIPaddCut(scip, row, FALSE, cutoff) );
             assert( SCIPisGT(scip, SCIPgetRowLPActivity(scip, row), (SCIP_Real) (cnt-2)) );
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
             ++ngen;
@@ -2080,7 +2080,7 @@ SCIP_RETCODE separateCons(
             }
             SCIP_CALL( SCIPflushRowExtensions(scip, row) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, cutoff) );
+            SCIP_CALL( SCIPaddCut(scip, row, FALSE, cutoff) );
             assert( *cutoff || SCIPisGT(scip, SCIPgetRowLPActivity(scip, row), (SCIP_Real)(j-1)) );
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
             ++ngen;

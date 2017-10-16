@@ -59,7 +59,17 @@ SCIP_RETCODE SCIPconflictstoreFree(
    SCIP_REOPT*           reopt               /**< reoptimization data */
    );
 
-/** cleans conflict store */
+/** clears conflict store */
+extern
+SCIP_RETCODE SCIPconflictstoreClear(
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
+   SCIP_REOPT*           reopt               /**< reoptimization data */
+   );
+
+/** cleans up conflict store */
 extern
 SCIP_RETCODE SCIPconflictstoreClean(
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */

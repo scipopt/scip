@@ -1010,7 +1010,7 @@ SCIP_RETCODE generateOddCycleCut(
    {
       SCIP_Bool infeasible;
 
-      SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, &infeasible) );
+      SCIP_CALL( SCIPaddCut(scip, cut, FALSE, &infeasible) );
       ++sepadata->ncuts;
       if ( nlifted > 0 )
          ++sepadata->nliftedcuts;

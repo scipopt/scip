@@ -212,7 +212,7 @@ SCIP_RETCODE cut_add(
 
       SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
 
-      SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+      SCIP_CALL( SCIPaddCut(scip, row, FALSE, &infeasible) );
 
 #if ADDCUTSTOPOOL
       /* if at root node, add cut to pool */
@@ -421,7 +421,7 @@ SCIP_RETCODE sep_flow(
 
                SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 
-               SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+               SCIP_CALL( SCIPaddCut(scip, row, FALSE, &infeasible) );
 
 #if ADDCUTSTOPOOL
                /* add cut to pool */
@@ -475,7 +475,7 @@ SCIP_RETCODE sep_flow(
 
                SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 
-               SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+               SCIP_CALL( SCIPaddCut(scip, row, FALSE, &infeasible) );
 
 #if ADDCUTSTOPOOL
                /* add cut to pool */
@@ -522,7 +522,7 @@ SCIP_RETCODE sep_flow(
 
             SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+            SCIP_CALL( SCIPaddCut(scip, row, FALSE, &infeasible) );
 
 #if ADDCUTSTOPOOL
             /* if at root node, add cut to pool */
@@ -575,7 +575,7 @@ SCIP_RETCODE sep_flow(
 
             SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+            SCIP_CALL( SCIPaddCut(scip, row, FALSE, &infeasible) );
 
 #if ADDCUTSTOPOOL
             /* if at root node, add cut to pool */
@@ -1893,7 +1893,7 @@ SCIP_RETCODE SCIPdualAscentStp(
 
 #if 0
             SCIP_CALL( SCIPflushRowExtensions(scip, row) );
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+            SCIP_CALL( SCIPaddCut(scip, row, FALSE, &infeasible) );
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
 #endif
             if( addcuts )
@@ -2465,7 +2465,7 @@ SCIP_RETCODE SCIPdualAscentStpSol(
             }
 #if 0
             SCIP_CALL( SCIPflushRowExtensions(scip, row) );
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+            SCIP_CALL( SCIPaddCut(scip, row, FALSE, &infeasible) );
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
 #endif
             if( addcuts )
@@ -2894,7 +2894,7 @@ SCIP_RETCODE SCIPdualAscentPcStp(
 #else
                SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "dualascentcut", 1.0, SCIPinfinity(scip), FALSE, FALSE, TRUE) );
                SCIP_CALL( SCIPflushRowExtensions(scip, row) );
-               SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+               SCIP_CALL( SCIPaddCut(scip, row, FALSE, &infeasible) );
 
 #if ADDCUTSTOPOOL
                /* add cut to pool */

@@ -476,7 +476,7 @@ struct SCIP_Set
    SCIP_Real             sepa_minortho;      /**< minimal orthogonality for a cut to enter the LP */
    SCIP_Real             sepa_minorthoroot;  /**< minimal orthogonality for a cut to enter the LP in the root node */
    SCIP_Real             sepa_objparalfac;   /**< factor to scale objective parallelism of cut in separation score calc. */
-   SCIP_Real             sepa_orthofac;      /**< factor to scale orthogonality of cut in separation score calculation */
+   SCIP_Real             sepa_intsupportfac; /**< factor to scale integral support of cut in separation score calculation */
    SCIP_Real             sepa_feastolfac;    /**< factor on cut infeasibility to limit feasibility tolerance for relaxation solver (-1: off) */
    SCIP_Real             sepa_primfeastol;   /**< primal feasibility tolerance derived from cut feasibility (set by sepastore, not a parameter) */
    SCIP_Real             sepa_minactivityquot; /**< minimum cut activity quotient to convert cuts into constraints
@@ -496,6 +496,7 @@ struct SCIP_Set
                                               *   or integrality improvement (-1: no additional restriction) */
    int                   sepa_maxstallroundsroot;/**< maximal number of consecutive separation rounds without objective
                                               *   or integrality improvement (-1: no additional restriction) */
+   int                   sepa_maxincrounds;  /**< maximal number of consecutive separation rounds that increase the size of the LP relaxation per node (-1: unlimited) */
    int                   sepa_maxcuts;       /**< maximal number of cuts separated per separation round */
    int                   sepa_maxcutsroot;   /**< maximal number of separated cuts at the root node */
    int                   sepa_cutagelimit;   /**< maximum age a cut can reach before it is deleted from the global cut pool */

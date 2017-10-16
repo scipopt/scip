@@ -2041,11 +2041,7 @@ SCIP_RETCODE SCIPhashtableCreate(
     * to the next power of two.
     */
    (*hashtable)->shift = 32;
-#if defined(_MSC_VER) && (_MSC_VER < 1800)
-   (*hashtable)->shift -= (int)ceil(log(MAX(32.0, tablesize / 0.9)) / log(2.0));
-#else
-   (*hashtable)->shift -= (int)ceil(log2(MAX(32.0, tablesize / 0.9)));
-#endif
+   (*hashtable)->shift -= (int)ceil(LOG2(MAX(32.0, tablesize / 0.9)));
 
    /* compute size from shift */
    nslots = 1u << (32 - (*hashtable)->shift);
@@ -3230,7 +3226,7 @@ void hashsetInsert(
    assert(element != NULL);
 
    pos = hashSetDesiredPos(hashset, element);
-   nslots = SCIPhashsetGetNSlots(hashset);
+   nslots = (uint32_t)SCIPhashsetGetNSlots(hashset);
    mask = nslots - 1;
 
    elemdistance = 0;
@@ -3283,7 +3279,7 @@ SCIP_RETCODE hashsetCheckLoad(
       uint32_t i;
 
       /* calculate new size (always power of two) */
-      nslots = SCIPhashsetGetNSlots(hashset);
+      nslots = (uint32_t)SCIPhashsetGetNSlots(hashset);
       newnslots = 2*nslots;
       --hashset->shift;
 
@@ -3329,7 +3325,7 @@ SCIP_RETCODE SCIPhashsetCreate(
     */
    (*hashset)->shift = 64;
    (*hashset)->shift -= (int)ceil(log(MAX(8.0, size / 0.9)) / log(2.0));
-   nslots = SCIPhashsetGetNSlots(*hashset);
+   nslots = (uint32_t)SCIPhashsetGetNSlots(*hashset);
    (*hashset)->nelements = 0;
 
    SCIP_ALLOC( BMSallocClearBlockMemoryArray(blkmem, &(*hashset)->slots, nslots) );
@@ -3379,7 +3375,7 @@ SCIP_Bool SCIPhashsetExists(
    assert(hashset->slots != NULL);
 
    pos = hashSetDesiredPos(hashset, element);
-   nslots = SCIPhashsetGetNSlots(hashset);
+   nslots = (uint32_t)SCIPhashsetGetNSlots(hashset);
    mask = nslots - 1;
    elemdistance = 0;
 
@@ -3421,7 +3417,7 @@ SCIP_RETCODE SCIPhashsetRemove(
    assert(element != NULL);
 
    pos = hashSetDesiredPos(hashset, element);
-   nslots = SCIPhashsetGetNSlots(hashset);
+   nslots = (uint32_t)SCIPhashsetGetNSlots(hashset);
    mask = nslots - 1;
    elemdistance = 0;
 
@@ -3478,8 +3474,6 @@ SCIP_RETCODE SCIPhashsetRemove(
 
       pos = nextpos;
    }
-
-   return SCIP_OKAY;
 }
 
 /** prints statistics about hash set usage */
@@ -3496,7 +3490,7 @@ void SCIPhashsetPrintStatistics(
 
    assert(hashset != NULL);
 
-   nslots = SCIPhashsetGetNSlots(hashset);
+   nslots = (uint32_t)SCIPhashsetGetNSlots(hashset);
    mask = nslots - 1;
 
    /* compute the maximum and average probe length */
@@ -3546,7 +3540,7 @@ int SCIPhashsetGetNElements(
    SCIP_HASHSET*         hashset             /**< hash set */
    )
 {
-   return hashset->nelements;
+   return (int)hashset->nelements;
 }
 
 /** gives the number of slots of a hash set */
@@ -3554,7 +3548,7 @@ int SCIPhashsetGetNSlots(
    SCIP_HASHSET*         hashset             /**< hash set */
    )
 {
-   return  1u << (64 - hashset->shift);
+   return (int) (1u << (64 - hashset->shift));
 }
 
 /** gives the array of hash set slots; contains all elements in indetermined order and may contain NULL values */
@@ -5132,6 +5126,14 @@ void SCIPsort(
 #define SORTTPL_PTRCOMP
 #include "scip/sorttpl.c" /*lint !e451*/
 
+/* SCIPsortPtrRealRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     PtrRealRealInt
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_PTRCOMP
+#include "scip/sorttpl.c" /*lint !e451*/
 
 /* SCIPsortPtrRealBool(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     PtrRealBool
@@ -8237,7 +8239,7 @@ SCIP_RETCODE SCIPbtCreate(
    assert(tree != NULL);
    assert(blkmem != NULL);
 
-   SCIP_ALLOC( BMSallocMemory(tree) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, tree) );
    (*tree)->blkmem = blkmem;
    (*tree)->root = NULL;
 
@@ -8259,7 +8261,7 @@ void SCIPbtFree(
       SCIPbtnodeFree(*tree, &((*tree)->root));
    }
 
-   BMSfreeMemory(tree);
+   BMSfreeBlockMemory((*tree)->blkmem, tree);
 }
 
 /** prints the rooted subtree of the given binary tree node in GML format into the given file */
