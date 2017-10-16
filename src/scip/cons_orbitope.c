@@ -1139,7 +1139,7 @@ SCIP_RETCODE propagateFullOrbitope(
             assert( SCIPvarGetUbLocal(vars[currow][l]) > 0.5 );
 
             tightened = FALSE;
-            inferinfo = currow * ncols + l;
+            inferinfo = currow * ncols + j;
 
             SCIP_CALL( SCIPinferBinvarCons(scip, vars[currow][l], TRUE, cons, inferinfo, infeasible, &tightened) );
             if ( tightened )
@@ -1158,7 +1158,7 @@ SCIP_RETCODE propagateFullOrbitope(
             if ( SCIPvarGetUbLocal(vars[currow][l]) > 0.5 && SCIPvarGetLbLocal(vars[currow][l]) < 0.5 )
             {
                tightened = FALSE;
-               inferinfo = currow * ncols + l;
+               inferinfo = currow * ncols + j;
 
                SCIP_CALL( SCIPinferBinvarCons(scip, vars[currow][l], FALSE, cons, inferinfo, infeasible, &tightened) );
 
