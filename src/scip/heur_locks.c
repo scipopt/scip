@@ -12,10 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-//#define SCIP_DEBUG
-//#define DONTADDSOL
-//#define NOCONFLICT
-//#define COLLECTSTATISTICS
+
 /**@file   heur_locks.c
  * @brief  rounding locks primal heuristic
  * @author Michael Winkler
@@ -115,10 +112,10 @@ SCIP_RETCODE createNewSol(
    SCIP_CALL( SCIPgetSolVals(subscip, subsol, nvars, subvars, subsolvals) );
 
    SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
-#ifndef DONTADDSOL
+
    /* try to add new solution to scip and free it immediately */
    SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
-#endif
+
    SCIPfreeBufferArray(scip, &subsolvals);
 
    return SCIP_OKAY;
@@ -559,8 +556,8 @@ SCIP_RETCODE SCIPapplyLockFixings(
                int pos;
                int w;
 
-               //SCIPdebugMsg(scip, "Row <%s> has activity [%g, %g], lhs=%g, rhs=%g\n", SCIProwGetName(row), minact[rowpos], maxact[rowpos], SCIProwGetLhs(row), SCIProwGetRhs(row));
-               //SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
+               SCIPdebugMsg(scip, "Row <%s> has activity [%g, %g], lhs=%g, rhs=%g\n", SCIProwGetName(row), minact[rowpos], maxact[rowpos], SCIProwGetLhs(row), SCIProwGetRhs(row));
+               SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
 
                if( varpos == NULL )
                {
@@ -785,7 +782,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
          if( success )
          {
             SCIP_Bool stored;
-#ifndef DONTADDSOL
+
             /* check solution for feasibility, and add it to solution store if possible.
              * Neither integrality nor feasibility of LP rows have to be checked, because they
              * are guaranteed by the heuristic at this stage.
@@ -804,7 +801,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
                SCIPdebug(SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE)) );
                *result = SCIP_FOUNDSOL;
             }
-#endif
+
             /* we found a solution, so we are done */
             goto TERMINATE;
          }
@@ -875,7 +872,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
 
 #ifdef SCIP_DEBUG
       /* for debugging, enable full output */
-      SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) ); // ???????????????
+      SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
       SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
 #else
       /* disable statistic timing inside sub SCIP and output to console */
@@ -1011,7 +1008,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
       }
 
 #ifdef SCIP_DEBUG
-      //SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
+      SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
 #endif
 
       heurdata->usednodes += SCIPgetNNodes(subscip);

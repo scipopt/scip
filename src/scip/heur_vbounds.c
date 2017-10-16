@@ -12,11 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-//#define SCIP_DEBUG
-//#define SCIP_STATISTIC
-//#define DONTADDSOL
-//#define NOCONFLICT
-//#define COLLECTSTATISTICS
+
 /**@file   heur_vbounds.c
  * @brief  LNS heuristic uses the variable lower and upper bounds to determine the search neighborhood
  * @author Timo Berthold
@@ -732,10 +728,10 @@ SCIP_RETCODE createNewSol(
    SCIP_CALL( SCIPgetSolVals(subscip, subsol, nvars, subvars, subsolvals) );
 
    SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
-#ifndef DONTADDSOL
+
    /* try to add new solution to scip and free it immediately */
    SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
-#endif
+
    SCIPfreeBufferArray(scip, &subsolvals);
 
    return SCIP_OKAY;
@@ -967,14 +963,10 @@ SCIP_RETCODE applyVbounds(
           * Neither integrality nor feasibility of LP rows have to be checked, because they
           * are guaranteed by the heuristic at this stage.
           */
-#ifndef DONTADDSOL
 #ifdef SCIP_DEBUG
          SCIP_CALL( SCIPtrySol(scip, sol, TRUE, TRUE, TRUE, TRUE, TRUE, &stored) );
 #else
          SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, FALSE, FALSE, &stored) );
-#endif
-#else
-         stored = FALSE;
 #endif
 
 #ifdef SCIP_DEBUG
@@ -1037,7 +1029,7 @@ SCIP_RETCODE applyVbounds(
 
 #ifdef SCIP_DEBUG
       /* for debugging, enable full output */
-      SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) ); // ??????????????????
+      SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
       SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
 #else
       /* disable statistic timing inside sub SCIP and output to console */
@@ -1162,7 +1154,7 @@ SCIP_RETCODE applyVbounds(
       }
 
 #ifdef SCIP_DEBUG
-      //SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
+      SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
 #endif
 
       /* free subproblem */

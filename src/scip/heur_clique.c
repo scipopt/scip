@@ -12,10 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-//#define SCIP_DEBUG
-//#define DONTADDSOL
-//#define NOCONFLICT
-//#define COLLECTSTATISTICS
+
 /**@file   heur_clique.c
  * @brief  LNS heuristic using a clique partition to restrict the search neighborhood
  * @brief  clique primal heuristic
@@ -257,16 +254,6 @@ SCIP_RETCODE applyCliqueFixings(
       cliquevars = SCIPcliqueGetVars(clique);
       cliquevals = SCIPcliqueGetValues(clique);
 
-#if 0
-      SCIPdebugMessage("clique %d:\n", c);
-      for( v = 0; v < ncliquevars-1; ++v )
-      {
-         printf("%s<%s>(%g), ", cliquevals[v] ? "":"~", SCIPvarGetName(cliquevars[v]), SCIPvarGetObj(cliquevars[v]));
-      }
-      printf("%s<%s>(%g)\n", cliquevals[ncliquevars-1] ? "":"~", SCIPvarGetName(cliquevars[ncliquevars-1]),
-         SCIPvarGetObj(cliquevars[ncliquevars-1]));
-#endif
-
       for( v = 0; v < ncliquevars; ++v )
       {
          var = cliquevars[v];
@@ -274,7 +261,7 @@ SCIP_RETCODE applyCliqueFixings(
          /* variable is already fixed */
          if( SCIPvarGetUbLocal(var) < SCIPvarGetLbLocal(var) + 0.5 )
          {
-            //SCIPdebugMessage("<%s> is already fixed to %g\n", SCIPvarGetName(var), SCIPvarGetUbLocal(var));
+            SCIPdebugMessage("<%s> is already fixed to %g\n", SCIPvarGetName(var), SCIPvarGetUbLocal(var));
 
             /* clique variable is fixed to 1 */
             if( cliquevals[v] == (SCIPvarGetLbLocal(var) > 0.5) )
@@ -302,7 +289,7 @@ SCIP_RETCODE applyCliqueFixings(
                {
                   SCIP_CALL( SCIPfixVarProbing(scip, cliquevars[bestpos], 1.0) );
                }
-               //SCIPdebugMessage("fixed <%s> to %g\n", SCIPvarGetName(cliquevars[bestpos]), SCIPvarGetUbLocal(cliquevars[bestpos]));
+               SCIPdebugMessage("fixed <%s> to %g\n", SCIPvarGetName(cliquevars[bestpos]), SCIPvarGetUbLocal(cliquevars[bestpos]));
                newnode = TRUE;
             }
 
@@ -322,7 +309,7 @@ SCIP_RETCODE applyCliqueFixings(
             {
                SCIP_CALL( SCIPfixVarProbing(scip, var, 1.0) );
             }
-            //SCIPdebugMessage("fixed <%s> to %g\n", SCIPvarGetName(var), SCIPvarGetUbLocal(var));
+            SCIPdebugMessage("fixed <%s> to %g\n", SCIPvarGetName(var), SCIPvarGetUbLocal(var));
             newnode = TRUE;
          }
       }
@@ -340,7 +327,7 @@ SCIP_RETCODE applyCliqueFixings(
             {
                SCIP_CALL( SCIPfixVarProbing(scip, cliquevars[bestpos], 1.0) );
             }
-            //SCIPdebugMessage("fixed <%s> to %g\n", SCIPvarGetName(cliquevars[bestpos]), SCIPvarGetUbLocal(cliquevars[bestpos]));
+            SCIPdebugMessage("fixed <%s> to %g\n", SCIPvarGetName(cliquevars[bestpos]), SCIPvarGetUbLocal(cliquevars[bestpos]));
             newnode = TRUE;
          }
 
@@ -360,7 +347,7 @@ SCIP_RETCODE applyCliqueFixings(
             {
                SCIP_CALL( SCIPfixVarProbing(scip, var, 1.0) );
             }
-            //SCIPdebugMessage("fixed <%s> to %g\n", SCIPvarGetName(var), SCIPvarGetUbLocal(var));
+            SCIPdebugMessage("fixed <%s> to %g\n", SCIPvarGetName(var), SCIPvarGetUbLocal(var));
             newnode = TRUE;
          }
       }
@@ -383,7 +370,7 @@ SCIP_RETCODE applyCliqueFixings(
             SCIP_CALL( SCIPfixVarProbing(scip, cliquevars[bestpos], 0.0) );
             onefixvals[(*nonefixvars)] = 0;
          }
-         //SCIPdebugMessage("fixed <%s> to %g*\n", SCIPvarGetName(cliquevars[bestpos]), SCIPvarGetUbLocal(cliquevars[bestpos]));
+         SCIPdebugMessage("fixed <%s> to %g*\n", SCIPvarGetName(cliquevars[bestpos]), SCIPvarGetUbLocal(cliquevars[bestpos]));
          ++(*nonefixvars);
          newnode = TRUE;
       }
@@ -515,10 +502,10 @@ SCIP_RETCODE createNewSol(
    SCIP_CALL( SCIPgetSolVals(subscip, subsol, nvars, subvars, subsolvals) );
 
    SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
-#ifndef DONTADDSOL
+
    /* try to add new solution to scip and free it immediately */
    SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
-#endif
+
    SCIPfreeBufferArray(scip, &subsolvals);
 
    return SCIP_OKAY;
@@ -796,7 +783,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       {
          SCIPdebugMsg(scip, "clique heuristic found roundable primal solution: obj=%g\n",
             SCIPgetSolOrigObj(scip, sol));
-#ifndef DONTADDSOL
+
          /* check solution for feasibility, and add it to solution store if possible.
           * Neither integrality nor feasibility of LP rows have to be checked, because they
           * are guaranteed by the heuristic at this stage.
@@ -813,7 +800,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
             SCIPdebug( SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) ) );
             *result = SCIP_FOUNDSOL;
          }
-#endif
+
          /* we found a solution, so we are done */
          goto TERMINATE;
       }
@@ -897,7 +884,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
 #ifdef SCIP_DEBUG
       /* for debugging, enable full output */
-      SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) ); // ?????????????
+      SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
       SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
 #else
       /* disable statistic timing inside sub SCIP and output to console */
@@ -1033,7 +1020,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       }
 
 #ifdef SCIP_DEBUG
-      //SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
+      SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
 #endif
 
       /* free subproblem */
