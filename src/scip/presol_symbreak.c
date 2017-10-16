@@ -1349,7 +1349,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
    }
 
    /* determine success */
-   if ( noldaddconss + noldbdchgs + noldaggrvars + noldfixedvars > 0 )
+   if ( naddconss + nbdchgs + naggrvars + nfixedvars > noldaddconss + noldbdchgs + noldaggrvars + noldfixedvars )
       *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;
