@@ -293,9 +293,9 @@ SCIP_RETCODE computeComponents(
    ncomponents = nperms;
 
    /* check whether two permutations belong to the same component */
-   for (i = 0; i < nperms; ++i)
+   for (i = 0; i < nperms && ncomponents > 1; ++i)
    {
-      for (j = i + 1; j < nperms; ++j)
+      for (j = i + 1; j < nperms && ncomponents > 1; ++j)
       {
          int componentI;
          int componentJ;
