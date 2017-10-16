@@ -1715,6 +1715,7 @@ SCIP_RETCODE SCIPseparateOrbisackCovers(
    SCIP_Real* coeff1;
    SCIP_Real* coeff2;
    int i;
+   int j;
 
    assert( scip != NULL );
    assert( vars1 != NULL );
@@ -1754,7 +1755,7 @@ SCIP_RETCODE SCIPseparateOrbisackCovers(
          /* add inequality */
          SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), "orbisackcover", -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
          SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
-         for (i = 0; i < nrows; ++i)
+         for (j = 0; j < nrows; ++j)
          {
             SCIP_CALL( SCIPaddVarToRow(scip, row, vars1[i], coeff1[i]) );
             SCIP_CALL( SCIPaddVarToRow(scip, row, vars2[i], coeff2[i]) );
