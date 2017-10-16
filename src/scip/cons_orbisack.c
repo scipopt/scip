@@ -1287,7 +1287,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsOrbisack)
       vars1 = consdata->vars1;
       vars2 = consdata->vars2;
 
-      SCIP_CALL( SCIPcheckOrbisackSolution(scip, NULL, vars1, vars2, nrows, &feasible) );
+      SCIP_CALL( SCIPcheckOrbisackSolution(scip, NULL, vars1, vars2, nrows, FALSE, &feasible) );
 
       if ( ! feasible )
       {
@@ -1390,7 +1390,7 @@ SCIP_DECL_CONSCHECK(consCheckOrbisack)
       vars1 = consdata->vars1;
       vars2 = consdata->vars2;
 
-      SCIP_CALL( SCIPcheckOrbisackSolution(scip, sol, vars1, vars2, nrows, &feasible) );
+      SCIP_CALL( SCIPcheckOrbisackSolution(scip, sol, vars1, vars2, nrows, printreason, &feasible) );
 
       if ( ! feasible )
       {
@@ -1650,6 +1650,7 @@ SCIP_RETCODE SCIPcheckOrbisackSolution(
    SCIP_VAR**         vars1,              /**< variables of first column */
    SCIP_VAR**         vars2,              /**< variables of second column */
    int                nrows,              /**< number of rows */
+   SCIP_Bool          printreason,        /**< whether reason for infeasibility should be printed */
    SCIP_Bool*         feasible            /**< memory address to store whether sol is feasible */
    )
 {
@@ -1686,6 +1687,8 @@ SCIP_RETCODE SCIPcheckOrbisackSolution(
       }
       else /* infeasible */
       {
+         if ( printreason )
+            SCIPinfoMessage(scip, NULL, "First non-constant row %d is fixed to (0,1).\n", i);
          *feasible = FALSE;
          break;
       }

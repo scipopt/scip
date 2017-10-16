@@ -1791,6 +1791,7 @@ SCIP_RETCODE checkFullOrbitopeSolution(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to process */
    SCIP_SOL*             sol,                /**< solution to be checked */
+   SCIP_Bool             printreason,        /**< whether reason for infeasibility should be printed */
    SCIP_Bool*            feasible            /**< memory address to store whether solution is feasible */
    )
 {
@@ -1832,7 +1833,7 @@ SCIP_RETCODE checkFullOrbitopeSolution(
          vars2[i] = vars[i][j];
       }
 
-      SCIP_CALL( SCIPcheckOrbisackSolution(scip, sol, vars1, vars2, nrows, feasible) );
+      SCIP_CALL( SCIPcheckOrbisackSolution(scip, sol, vars1, vars2, nrows, printreason, feasible) );
    }
 
    SCIPfreeBufferArray(scip, &vars2);
@@ -2131,7 +2132,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsOrbitope)
       }
       else
       {
-         SCIP_CALL( checkFullOrbitopeSolution(scip, cons, NULL, &feasible) );
+         SCIP_CALL( checkFullOrbitopeSolution(scip, cons, NULL, FALSE, &feasible) );
 
          if ( ! feasible )
             *result = SCIP_INFEASIBLE;
@@ -2177,7 +2178,7 @@ SCIP_DECL_CONSCHECK(consCheckOrbitope)
       }
       else
       {
-         SCIP_CALL( checkFullOrbitopeSolution(scip, conss[c], sol, &feasible) );
+         SCIP_CALL( checkFullOrbitopeSolution(scip, conss[c], sol, printreason, &feasible) );
 
          if ( ! feasible )
             *result = SCIP_INFEASIBLE;

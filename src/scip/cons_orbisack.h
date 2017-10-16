@@ -74,6 +74,7 @@ SCIP_RETCODE SCIPcheckOrbisackSolution(
    SCIP_VAR**         vars1,              /**< variables of first column */
    SCIP_VAR**         vars2,              /**< variables of second column */
    int                nrows,              /**< number of rows */
+   SCIP_Bool          printreason,        /**< whether reason for infeasibility should be printed */
    SCIP_Bool*         feasible            /**< memory address to store whether sol is feasible */
    );
 
