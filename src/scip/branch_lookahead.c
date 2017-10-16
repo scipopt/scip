@@ -4307,11 +4307,14 @@ SCIP_Bool isStoreDecision(
    DOMAINREDUCTIONS      *domainreductions
    )
 {
+   SCIP_Bool noviolatingbincons;
+   SCIP_Bool noviolatingdomreds;
+
    assert(persistent != NULL);
 
-   SCIP_Bool noviolatingbincons = binconsdata != NULL && binconsdata->createdconstraints->nconstraints > 0 &&
+   noviolatingbincons = binconsdata != NULL && binconsdata->createdconstraints->nconstraints > 0 &&
          binconsdata->createdconstraints->nviolatedcons == 0;
-   SCIP_Bool noviolatingdomreds = domainreductions != NULL && domainreductions->nchangedvars > 0 &&
+   noviolatingdomreds = domainreductions != NULL && domainreductions->nchangedvars > 0 &&
          domainreductions->nviolatedvars == 0;
    return config->storeunviolatedsol && noviolatingbincons && noviolatingdomreds;
 }
