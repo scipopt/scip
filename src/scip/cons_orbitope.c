@@ -1090,25 +1090,33 @@ SCIP_RETCODE propagatePackingPartitioningCons(
 static
 SCIP_RETCODE propagateFullOrbitope(
    SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to be processed */
    SCIP_VAR***           vars,               /**< variable matrix */
    int                   firstcol,           /**< first column to consider */
    int                   lastcol,            /**< last column to consider + 1 */
    int                   currow,             /**< current row */
    int                   nrows,              /**< number of rows */
+   int                   ncols,              /**< number of columns */
    int*                  nfixedvars,         /**< pointer to store the number of variables fixed during propagation */
    SCIP_Bool*            infeasible          /**< pointer to store whether infeasibility was detected */
    )
 {
    int lastone;
    int firstzero = -1;
+   int i;
    int j;
    int l;
+   SCIP_Bool tightened;
+   int inferinfo;
 
    assert( scip != NULL );
+   assert( cons != NULL );
    assert( vars != NULL );
    assert( 0 <= firstcol && firstcol < lastcol );
    assert( infeasible != NULL );
    assert( nfixedvars != NULL );
+   assert( nrows > 0 );
+   assert( ncols > 0 );
 
    /* possibly stop recursion */
    if ( *infeasible || currow >= nrows )
@@ -1130,8 +1138,12 @@ SCIP_RETCODE propagateFullOrbitope(
             assert( SCIPvarGetLbLocal(vars[currow][l]) < 0.5 );
             assert( SCIPvarGetUbLocal(vars[currow][l]) > 0.5 );
 
-            SCIP_CALL( SCIPchgVarLb(scip, vars[currow][l], 1.0) );
-            ++(*nfixedvars);
+            tightened = FALSE;
+            inferinfo = currow * ncols + l;
+
+            SCIP_CALL( SCIPinferBinvarCons(scip, vars[currow][l], TRUE, cons, inferinfo, infeasible, &tightened) );
+            if ( tightened )
+               ++(*nfixedvars);
          }
 
          lastone = j;
@@ -1145,12 +1157,31 @@ SCIP_RETCODE propagateFullOrbitope(
          {
             if ( SCIPvarGetUbLocal(vars[currow][l]) > 0.5 && SCIPvarGetLbLocal(vars[currow][l]) < 0.5 )
             {
-               SCIP_CALL( SCIPchgVarUb(scip, vars[currow][l], 0.0) );
-               ++(*nfixedvars);
+               tightened = FALSE;
+               inferinfo = currow * ncols + l;
+
+               SCIP_CALL( SCIPinferBinvarCons(scip, vars[currow][l], FALSE, cons, inferinfo, infeasible, &tightened) );
+
+               if ( tightened )
+                  ++(*nfixedvars);
             }
             /* -> infeasible */
             else if ( SCIPvarGetLbLocal(vars[currow][l]) > 0.5 )
             {
+               if ( SCIPisConflictAnalysisApplicable(scip) )
+               {
+                  SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
+
+                  for (i = 0; i <= currow; ++i)
+                  {
+                     for (j = 0; j <= l; ++j)
+                     {
+                        SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
+                     }
+                  }
+
+                  SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
+               }
                *infeasible = TRUE;
 
                return SCIP_OKAY;
@@ -1166,12 +1197,12 @@ SCIP_RETCODE propagateFullOrbitope(
     * column. */
    if ( lastone > firstcol )
    {
-      SCIP_CALL( propagateFullOrbitope(scip, vars, firstcol, lastone + 1, currow + 1, nrows, nfixedvars, infeasible) );
+      SCIP_CALL( propagateFullOrbitope(scip, cons, vars, firstcol, lastone + 1, currow + 1, nrows, ncols, nfixedvars, infeasible) );
    }
 
    if ( firstzero >= 0 && firstzero < lastcol - 1 )
    {
-      SCIP_CALL( propagateFullOrbitope(scip, vars, firstzero, lastcol, currow + 1, nrows, nfixedvars, infeasible) );
+      SCIP_CALL( propagateFullOrbitope(scip, cons, vars, firstzero, lastcol, currow + 1, nrows, ncols, nfixedvars, infeasible) );
    }
 
    return SCIP_OKAY;
@@ -1208,7 +1239,7 @@ SCIP_RETCODE propagateFullOrbitopeCons(
    assert( consdata->vars != NULL );
    assert( consdata->orbitopetype == SCIP_ORBITOPETYPE_FULL );
 
-   SCIP_CALL( propagateFullOrbitope(scip, consdata->vars, 0, consdata->nblocks, 0, consdata->nspcons, nfixedvars, infeasible) );
+   SCIP_CALL( propagateFullOrbitope(scip, cons, consdata->vars, 0, consdata->nblocks, 0, consdata->nspcons, consdata->nblocks, nfixedvars, infeasible) );
 
    return SCIP_OKAY;
 }
@@ -2306,6 +2337,10 @@ SCIP_DECL_CONSRESPROP(consRespropOrbitope)
    if ( orbitopetype == SCIP_ORBITOPETYPE_PACKING || orbitopetype == SCIP_ORBITOPETYPE_PARTITIONING )
    {
       SCIP_CALL( resolvePropagation(scip, cons, infervar, inferinfo, boundtype, bdchgidx, result) );
+   }
+   else
+   {
+      *result = SCIP_DIDNOTFIND;
    }
 
    return SCIP_OKAY;
