@@ -617,8 +617,6 @@ SCIP_RETCODE SCIPrelaxationCreate(
    (*relaxation)->relaxsolobjval = 0.0;
    (*relaxation)->relaxsolvalid = FALSE;
    (*relaxation)->relaxsolzero = TRUE;
-   SCIP_CALL( SCIPsolCreateUnknown(&((*relaxation)->bestrelaxsol), blkmem, set, stat, primal, tree, NULL) );
-   (*relaxation)->bestrelaxsolobj = -SCIPsetInfinity(set);
 
    return SCIP_OKAY;
 }
@@ -631,8 +629,6 @@ SCIP_RETCODE SCIPrelaxationFree(
    )
 {
    assert(relaxation != NULL);
-
-   SCIP_CALL( SCIPsolFree(&((*relaxation)->bestrelaxsol), blkmem, primal) );
 
    BMSfreeMemory(relaxation);
 
@@ -711,37 +707,6 @@ void SCIPrelaxationSolObjAdd(
    assert(relaxation != NULL);
 
    relaxation->relaxsolobjval += val;
-}
-
-/** gets pointer to best relaxation solution */
-SCIP_SOL* SCIPrelaxationGetBestRelaxSol(
-   SCIP_RELAXATION*      relaxation          /**< global relaxation data */
-   )
-{
-   assert(relaxation != NULL);
-
-   return relaxation->bestrelaxsol;
-}
-
-/** sets the objective value of the best relaxation solution */
-void SCIPrelaxationSetBestRelaxSolObj(
-   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
-   SCIP_Real             obj                 /**< objective value of best relaxation solution */
-   )
-{
-   assert(relaxation != NULL);
-
-   relaxation->bestrelaxsolobj = obj;
-}
-
-/** returns the objective value of the best relaxation solution (or minus infinity if it should not be enforced) */
-SCIP_Real SCIPrelaxationGetBestRelaxSolObj(
-   SCIP_RELAXATION*      relaxation          /**< global relaxation data */
-   )
-{
-   assert(relaxation != NULL);
-
-   return relaxation->bestrelaxsolobj;
 }
 
 /** updates objective value of current relaxation solution after change of objective coefficient */

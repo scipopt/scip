@@ -249,25 +249,6 @@ void SCIPrelaxationSolObjAdd(
    SCIP_Real             val                 /**< value to add to the objective value */
    );
 
-/** gets pointer to best relaxation solution */
-extern
-SCIP_SOL* SCIPrelaxationGetBestRelaxSol(
-   SCIP_RELAXATION*      relaxation          /**< global relaxation data */
-   );
-
-/** sets the objective value of the best relaxation solution */
-extern
-void SCIPrelaxationSetBestRelaxSolObj(
-   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
-   SCIP_Real             obj                 /**< objective value of best relaxation solution */
-   );
-
-/** returns the objective value of the best relaxation solution */
-extern
-SCIP_Real SCIPrelaxationGetBestRelaxSolObj(
-   SCIP_RELAXATION*      relaxation          /**< global relaxation data */
-   );
-
 /** updates objective value of current relaxation solution after change of objective coefficient */
 extern
 void SCIPrelaxationUpdateVarObj(

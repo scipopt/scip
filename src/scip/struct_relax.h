@@ -62,8 +62,6 @@ struct SCIP_Relaxation
    SCIP_Real             relaxsolobjval;
    SCIP_Bool             relaxsolvalid;
    SCIP_Bool             relaxsolzero;
-   SCIP_SOL*             bestrelaxsol;
-   SCIP_Real             bestrelaxsolobj;
 };
 
 
