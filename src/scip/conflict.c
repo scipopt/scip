@@ -6686,11 +6686,13 @@ void debugPrintViolationInfo(
 #define debugPrintViolationInfo(...) /**/
 #endif
 
+/** apply coefficient tightening */
 static
 void tightenCoefficients(
-   SCIP_SET*             set,
-   SCIP_PROB*            transprob,
-   SCIP_PROOFSET*        proofset
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROOFSET*        proofset,           /**< proof set */
+   int*                  nchgcoefs           /**< pointer to store number of changed coefficients */
    )
 {
    SCIP_Bool redundant;
@@ -6720,26 +6722,27 @@ void tightenCoefficients(
          newabsmin = MIN(newabsmin, REALABS(proofset->vals[i]));
       }
 
-      SCIPsetDebugMsg(set, "coefficient tightening: [%.15g,%.15g] -> [%.15g,%.15g] (nnz: %d, rhs: %.15g)\n",
-            absmin, absmax, newabsmin, newabsmax, proofsetGetNVars(proofset), proofsetGetRhs(proofset));
-      printf("coefficient tightening: [%.15g,%.15g] -> [%.15g,%.15g] (nnz: %d, rhs: %.15g)\n",
-            absmin, absmax, newabsmin, newabsmax, proofsetGetNVars(proofset), proofsetGetRhs(proofset));
+      SCIPsetDebugMsg(set, "coefficient tightening: [%.15g,%.15g] -> [%.15g,%.15g] (nnz: %d, nchg: %d rhs: %.15g)\n",
+            absmin, absmax, newabsmin, newabsmax, proofsetGetNVars(proofset), *nchgcoefs, proofsetGetRhs(proofset));
+      printf("coefficient tightening: [%.15g,%.15g] -> [%.15g,%.15g] (nnz: %d, nchg: %d rhs: %.15g)\n",
+            absmin, absmax, newabsmin, newabsmax, proofsetGetNVars(proofset), *nchgcoefs, proofsetGetRhs(proofset));
    }
 #endif
 }
 
+/** try to generate alternative proofs by applying subadditive functions */
 static
 SCIP_RETCODE separateAlternativeProofs(
-   SCIP_CONFLICT*        conflict,
-   SCIP_SET*             set,
-   SCIP_STAT*            stat,
-   SCIP_PROB*            transprob,
-   SCIP_TREE*            tree,
-   BMS_BLKMEM*           blkmem,
-   SCIP_AGGRROW*         proofrow,
-   SCIP_Real*            curvarlbs,
-   SCIP_Real*            curvarubs,
-   SCIP_CONFTYPE         conflicttype
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_TREE*            tree,               /**< tree data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_AGGRROW*         proofrow,           /**< proof rows data */
+   SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables */
+   SCIP_Real*            curvarubs,          /**< current upper bounds of active problem variables */
+   SCIP_CONFTYPE         conflicttype        /**< type of the conflict */
    )
 {
    SCIP_VAR** vars;
@@ -7010,7 +7013,7 @@ SCIP_RETCODE conflictAnalyzeDualProof(
    SCIP_TREE*            tree,               /**< tree data */
    SCIP_REOPT*           reopt,              /**< reoptimization data */
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_AGGRROW*         proofrow,          /**< aggregated row representing the proof */
+   SCIP_AGGRROW*         proofrow,           /**< aggregated row representing the proof */
    SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables */
    SCIP_Real*            curvarubs,          /**< current upper bounds of active problem variables */
    SCIP_Bool             diving,             /**< are we in strong branching or diving mode? */
