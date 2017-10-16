@@ -407,10 +407,11 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  'checklprows' is FALSE.
  *
  *  If the solution is not NULL, SCIP should also be informed about the constraint violation with a call to
- *  SCIPupdateSolConsViolation() for general constraints or SCIPupdateSolLPRowViolation() for every row
- *  of the constraints current representation in the LP relaxation.
+ *  SCIPupdateSolConsViolation() and additionally SCIPupdateSolLPRowViolation() for every row of the constraint's current
+ *  representation in the LP relaxation, if any such rows exist.
  *  As a convenience method, SCIPupdateSolLPConsViolation() can be used if the constraint
- *  is represented completely by a set of LP rows.
+ *  is represented completely by a set of LP rows, meaning that the current constraint violation is equal to the maximum
+ *  of the contraint violations of the corresponding LP rows.
  *
  *  input:
  *  - scip            : SCIP main data structure
