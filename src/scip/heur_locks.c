@@ -168,7 +168,7 @@ SCIP_DECL_HEURINIT(heurInitLocks) /*lint --e{715}*/
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
-         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+         DEFAULT_RANDSEED) );
 
    return SCIP_OKAY;
 }

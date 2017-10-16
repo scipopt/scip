@@ -144,7 +144,7 @@ SCIP_RETCODE applyCliqueFixings(
    SCIP*                 scip,               /**< original SCIP data structure */
    SCIP_HEURDATA*        heurdata,           /**< structure containing heurdata */
    SCIP_VAR**            onefixvars,         /**< array to store all variables which are fixed to one in the cliques */
-   SCIP_Bool*            onefixvals,         /**< array to store the values of all variables fixed to one in the cliques */
+   uint8_t*              onefixvals,         /**< array to store the values of all variables fixed to one in the cliques */
    int*                  nonefixvars,        /**< pointer to store the number of variables fixed to one */
    SCIP_Bool*            cutoff              /**< pointer to store whether the propagation stopped with infeasibility */
    )
@@ -585,7 +585,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    SCIP_Bool lperror;
 
    SCIP_VAR** onefixvars;
-   SCIP_Bool* onefixvals;
+   uint8_t* onefixvals;
    int nonefixvars;
    SCIP_Bool enabledconflicts;
    SCIP_LPSOLSTAT lpstatus;

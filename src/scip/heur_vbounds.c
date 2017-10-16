@@ -118,11 +118,11 @@ struct SCIP_HeurData
 
 };
 
-/**@name Propagator defines
+/**@name Heuristic defines
  *
  * @{
  *
- * The propagator works on indices representing a bound of a variable. This index will be called bound index in the
+ * The heuristic works on indices representing a bound of a variable. This index will be called bound index in the
  * following. For a given active variable with problem index i (note that active variables have problem indices
  * between 0 and nactivevariable - 1), the bound index of its lower bound is 2*i, the bound index of its upper
  * bound is 2*i + 1. The other way around, a given bound index i corresponds to the variable with problem index
@@ -136,10 +136,6 @@ struct SCIP_HeurData
 #define isIndexLowerbound(idx) ((idx) % 2 == 0)
 #define getOtherBoundIndex(idx) (((idx) % 2 == 0) ? (idx) + 1 : (idx) - 1)
 
-
-/*
- * Hash map callback methods
- */
 
 /*
  * Local methods
@@ -209,7 +205,7 @@ SCIP_RETCODE dfs(
    stacksize = 1;
    idx = -1;
 
-   /* we run until no more bounds indices are on the stack, i.e. all changed bounds were propagated */
+   /* we run until no more bounds indices are on the stack */
    while( stacksize > 0 )
    {
       /* get next node from stack */
@@ -1070,7 +1066,7 @@ SCIP_RETCODE applyVbounds(
       {
          SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 10) );
       }
-#if 1
+
       if( SCIPgetNSols(scip) > 0 )
       {
          SCIP_Real upperbound;
@@ -1095,7 +1091,7 @@ SCIP_RETCODE applyVbounds(
          }
          heurdata->cutoffbound = MIN(upperbound, cutoffbound);
       }
-#endif
+
       if( !SCIPisInfinity(scip, heurdata->cutoffbound) )
       {
          SCIP_CALL( SCIPsetObjlimit(subscip, heurdata->cutoffbound) );
