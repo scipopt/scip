@@ -12,15 +12,28 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/*
-#define PRINTNODECONS
-#define SCIP_DEBUG
-#define SCIP_STATISTIC
-*/
+
 /**@file   branch_lookahead.c
- * @brief  lookahead branching rule
+ * @ingroup BRANCHINGRULES
+ * @brief  lookahead LP branching rule
  * @author Christoph Schubert
+ *
+ * The (multi-level) lookahead branching rule applies strong branching to every fractional value of the LP solution
+ * at the current node of the branch-and-bound tree, as well as recursivly to every temporary childproblem created by this
+ * strong branching. The rule selects the candidate with the best proven dual bound.
+ *
+ * For a more mathematical description and a comparison between lookahead branching and other branching rules
+ * in SCIP, we refer to
+ *
+ * @par
+ * Christoph Schubert@n
+ * Multi-Level Lookahead Branching@n
+ * Master Thesis, Technische Universität Berlin, 2017@n
  */
+/* Supported defines:
+ * PRINTNODECONS: prints the binary constraints added
+ * SCIP_DEBUG: prints detailed execution information
+ * SCIP_STATISTIC: prints some statistical values after the branching rule is freed */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
@@ -38,24 +51,32 @@
 #define BRANCHRULE_MAXDEPTH        (-1)
 #define BRANCHRULE_MAXBOUNDDIST    1.0
 
-#define DEFAULT_USEBINARYCONSTRAINTS         TRUE
-#define DEFAULT_USEDOMAINREDUCTION           TRUE
-#define DEFAULT_ADDBINCONSROW                FALSE
-#define DEFAULT_MAXNUMBERVIOLATEDCONS        1
-#define DEFAULT_REEVALAGE                    10LL
-#define DEFAULT_FORCEBRANCHING               FALSE
-#define DEFAULT_RECURSIONDEPTH               2
-#define DEFAULT_ADDNONVIOCONS                FALSE
-#define DEFAULT_DOWNFIRST                    TRUE
-#define DEFAULT_ABBREVIATED                  FALSE
-#define DEFAULT_MAXNCANDS                    4
-#define DEFAULT_REUSEBASIS                   TRUE
-#define DEFAULT_STOREUNVIOLATEDSOL           TRUE
-#define DEFAULT_ABBREVPSEUDO                 FALSE
-#define DEFAULT_ADDCLIQUE                    FALSE
-#define DEFAULT_PROPAGATE                    FALSE
+#define DEFAULT_USEBINARYCONSTRAINTS         TRUE  /* Should binary constraints be collected and applied? */
+#define DEFAULT_ADDCLIQUE                    FALSE /* Add binary constraints also as a clique. */
+#define DEFAULT_ADDBINCONSROW                FALSE /* Should binary constraints be added as rows to the base LP? */
+#define DEFAULT_USEDOMAINREDUCTION           TRUE  /* Should domain reductions be collected and applied? */
+#define DEFAULT_MAXNUMBERVIOLATEDCONS        1     /* How many constraints that are violated by the base lp solution should
+                                                    * be gathered until the rule is stopped and they are added? */
+#define DEFAULT_STOREUNVIOLATEDSOL           TRUE  /* If only non violating constraints are added, should the branching
+                                                    * decision be stored till the next call? */
+#define DEFAULT_REEVALAGE                    10LL  /* Max number of LPs solved after which a previous prob branching results
+                                                    * are recalculated. */
+#define DEFAULT_FORCEBRANCHING               FALSE /* Should LAB be forced, if only one candidate is given? */
+#define DEFAULT_RECURSIONDEPTH               2     /* The max depth of LAB. */
+#define DEFAULT_ADDNONVIOCONS                FALSE /* Should binary constraints, that are not violated by the base LP, be
+                                                    * collected and added? */
+#define DEFAULT_DOWNFIRST                    TRUE  /* Should the down branch be evaluated first? */
+#define DEFAULT_PROPAGATE                    FALSE /* Should domain propagation be executed before each temporary node is
+                                                    * solved? */
+#define DEFAULT_ABBREVIATED                  FALSE /* Toggles the abbreviated LAB. */
+#define DEFAULT_MAXNCANDS                    4     /* If abbreviated: The max number of candidates to consider per node */
+#define DEFAULT_REUSEBASIS                   TRUE  /* If abbreviated: Should the information gathered to obtain the best
+                                                    * candidates be reused? */
+#define DEFAULT_ABBREVPSEUDO                 FALSE /* If abbreviated: Use pseudo costs to estimate the score of a
+                                                    * candidate. */
 
 #ifdef SCIP_DEBUG
+/* Adjusted debug message that also prints the current probing depth. */
 #define LABdebugMessage(scip,lvl,...)        do                                                                            \
                                              {                                                                             \
                                                 SCIP_STAGE stage;                                                          \
@@ -81,6 +102,7 @@
                                                 SCIPverbMessage(scip, lvl, NULL, __VA_ARGS__);                             \
                                              }                                                                             \
                                              while( FALSE )
+/* Writes a debug message without the leading information. Can be used to append something to an output of LABdebugMessage*/
 #define LABdebugMessageCont(scip,lvl,...)    do                                                                            \
                                              {                                                                             \
                                                 SCIPverbMessage(scip, lvl, NULL, __VA_ARGS__);                             \
@@ -296,7 +318,6 @@ typedef struct
                                               *   the scoring? */
    SCIP_Bool             addclique;          /**< Should binary constraints found in the root node be added as cliques? */
    SCIP_Bool             propagate;          /**< Should the problem be propagated before solving each inner node? */
-   /* add new entries to the 'configurationAllocate' method! */
 } CONFIGURATION;
 
 /** Allocates a configuration in the buffer and initiates it with the default values. */
@@ -357,7 +378,7 @@ static const char* names[18] = { "", "SCIP_DIDNOTRUN", "SCIP_DELAYED", "SCIP_DID
 /** Returns a human readable name for the given result enum value. */
 static
 const char* getStatusString(
-   SCIP_RESULT           result
+   SCIP_RESULT           result              /**< Enum value to get the string representation for */
    )
 {
    /* the result can be used as an array index, as it is internally handled as an int value. */
@@ -466,13 +487,14 @@ SCIP_RETCODE statisticsAllocate(
    SCIP*                 scip,               /**< SCIP data structure */
    STATISTICS**          statistics,         /**< pointer to the statistics to be allocated */
    int                   recursiondepth,     /**< the LAB recursion depth */
-   int                   maxncands
+   int                   maxncands           /**< the max number of candidates to be used in ALAB */
    )
 {
 
    assert(scip != NULL);
    assert(statistics != NULL);
    assert(recursiondepth > 0);
+   assert(maxncands > 0);
 
    SCIP_CALL( SCIPallocBuffer(scip, statistics) );
    /* 17 current number of possible result values and the index is 1 based, so 17 + 1 as array size with unused 0 element */
@@ -4625,11 +4647,11 @@ SCIP_RETCODE initBranchruleData(
     */
    nvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
 
-   SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->persistent->lastbranchid, nvars) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->persistent->lastbranchnlps, nvars) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->persistent->lastbranchupres, nvars) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->persistent->lastbranchdownres, nvars) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->persistent->lastbranchlpobjval, nvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->persistent->lastbranchid, nvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->persistent->lastbranchnlps, nvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->persistent->lastbranchupres, nvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->persistent->lastbranchdownres, nvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->persistent->lastbranchlpobjval, nvars) );
 
    branchruledata->persistent->prevdecision->var = NULL;
 
@@ -4638,8 +4660,8 @@ SCIP_RETCODE initBranchruleData(
       branchruledata->persistent->lastbranchid[i] = -1;
       branchruledata->persistent->lastbranchnlps[i] = 0;
 
-      SCIP_CALL( SCIPallocMemory(scip, &branchruledata->persistent->lastbranchupres[i]) ); /*lint !e866*/
-      SCIP_CALL( SCIPallocMemory(scip, &branchruledata->persistent->lastbranchdownres[i]) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata->persistent->lastbranchupres[i]) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata->persistent->lastbranchdownres[i]) ); /*lint !e866*/
    }
 
    branchruledata->isinitialized = TRUE;
@@ -4789,15 +4811,15 @@ SCIP_DECL_BRANCHEXITSOL(branchExitSolLookahead)
 
       for( i = nvars-1; i >= 0; i--)
       {
-         SCIPfreeMemory(scip, &branchruledata->persistent->lastbranchdownres[i]);
-         SCIPfreeMemory(scip, &branchruledata->persistent->lastbranchupres[i]);
+         SCIPfreeBlockMemory(scip, &branchruledata->persistent->lastbranchdownres[i]);
+         SCIPfreeBlockMemory(scip, &branchruledata->persistent->lastbranchupres[i]);
       }
 
-      SCIPfreeMemoryArray(scip, &branchruledata->persistent->lastbranchlpobjval);
-      SCIPfreeMemoryArray(scip, &branchruledata->persistent->lastbranchdownres);
-      SCIPfreeMemoryArray(scip, &branchruledata->persistent->lastbranchupres);
-      SCIPfreeMemoryArray(scip, &branchruledata->persistent->lastbranchnlps);
-      SCIPfreeMemoryArray(scip, &branchruledata->persistent->lastbranchid);
+      SCIPfreeBlockMemoryArray(scip, &branchruledata->persistent->lastbranchlpobjval, nvars);
+      SCIPfreeBlockMemoryArray(scip, &branchruledata->persistent->lastbranchdownres, nvars);
+      SCIPfreeBlockMemoryArray(scip, &branchruledata->persistent->lastbranchupres, nvars);
+      SCIPfreeBlockMemoryArray(scip, &branchruledata->persistent->lastbranchnlps, nvars);
+      SCIPfreeBlockMemoryArray(scip, &branchruledata->persistent->lastbranchid, nvars);
 
       /* Free the solution that was used for implied binary bounds. */
       SCIP_CALL( SCIPfreeSol(scip, &branchruledata->persistent->prevbinsolution) );
@@ -5038,65 +5060,65 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
    /* add lookahead branching rule parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/lookahead/useimpliedbincons",
-         "should implied binary constraints found via cutoffs on the second level be applied?",
+         "should binary constraints be collected and applied?",
          &branchruledata->config->usebincons, TRUE, DEFAULT_USEBINARYCONSTRAINTS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/lookahead/addbinconsrow",
-         "should implied binary constraints be added as a row to the LP?",
+         "should binary constraints be added as rows to the base LP?",
          &branchruledata->config->addbinconsrow, TRUE, DEFAULT_ADDBINCONSROW, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "branching/lookahead/maxnumberviolatedcons",
-         "how many constraints that are violated by the base lp solution should be gathered until they are added?",
+         "how many constraints that are violated by the base lp solution should be gathered until the rule is stopped and "
+               "they are added?",
          &branchruledata->config->maxnviolatedcons, TRUE, DEFAULT_MAXNUMBERVIOLATEDCONS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddLongintParam(scip,
          "branching/lookahead/reevalage",
-         "number of intermediate LPs solved to trigger reevaluation of strong branching value for a variable that was "
-         "already evaluated at the current node",
+         "max number of LPs solved after which a previous prob branching results are recalculated",
          &branchruledata->config->reevalage, TRUE, DEFAULT_REEVALAGE, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/lookahead/forcebranching",
-         "should lookahead branching be applied even if there is just a single candidate?",
+         "should LAB be forced, if only one candidate is given?",
          &branchruledata->config->forcebranching, TRUE, DEFAULT_FORCEBRANCHING, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "branching/lookahead/recursiondepth",
-         "In case of recursion, how deep should it go?",
+         "the max depth of LAB.",
          &branchruledata->config->recursiondepth, TRUE, DEFAULT_RECURSIONDEPTH, 1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/lookahead/usedomainreduction",
-         "should domain reductions found via cutoff be applied (only in recursion)?",
+         "should domain reductions be collected and applied?",
          &branchruledata->config->usedomainreduction, TRUE, DEFAULT_USEDOMAINREDUCTION, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/lookahead/addnonviocons",
-         "should constraints be added, that are not violated by the base LP?",
+         "should binary constraints, that are not violated by the base LP, be collected and added?",
          &branchruledata->config->addnonviocons, TRUE, DEFAULT_ADDNONVIOCONS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/lookahead/downbranchfirst",
-         "should the down branch be chosen first?",
+         "should the down branch be evaluated first?",
          &branchruledata->config->downfirst, TRUE, DEFAULT_DOWNFIRST, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/lookahead/abbreviated",
-         "should the abbreviated version of the LAB be used?",
+         "toggles the abbreviated LAB.",
          &branchruledata->config->abbreviated, TRUE, DEFAULT_ABBREVIATED, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "branching/lookahead/maxncands",
-         "If abbreviated, at most how many cands should be handled?",
+         "if abbreviated: The max number of candidates to consider per node.",
          &branchruledata->config->maxncands, TRUE, DEFAULT_MAXNCANDS, 2, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/lookahead/reusebasis",
-         "If abbreviated, should an optimal FSB basis be reused in the first ALAB level?",
+         "if abbreviated: Should the information gathered to obtain the best candidates be reused?",
          &branchruledata->config->reusebasis, TRUE, DEFAULT_REUSEBASIS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/lookahead/storeunviolatedsol",
-         "Schould an unviolated solution/decision be stored to speed up the next run?",
+         "if only non violating constraints are added, should the branching decision be stored till the next call?",
          &branchruledata->config->storeunviolatedsol, TRUE, DEFAULT_STOREUNVIOLATEDSOL, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/lookahead/abbrevpseudo",
-         "If abbreviated, should pseudocost be used to approximate scores?",
+         "if abbreviated: Use pseudo costs to estimate the score of a candidate.",
          &branchruledata->config->abbrevpseudo, TRUE, DEFAULT_ABBREVPSEUDO, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/lookahead/addclique",
-         "Should binary constraints found in the root node be added as cliques?",
+         "Add binary constraints also as a clique.",
          &branchruledata->config->addclique, TRUE, DEFAULT_ADDCLIQUE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/lookahead/propagate",
-         "Should the problem be propagated before solving each inner node?",
+         "Should domain propagation be executed before each temporary node is solved?",
          &branchruledata->config->propagate, TRUE, DEFAULT_PROPAGATE, NULL, NULL) );
 
    return SCIP_OKAY;
