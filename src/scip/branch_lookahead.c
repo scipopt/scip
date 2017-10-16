@@ -58,8 +58,9 @@
 #ifdef SCIP_DEBUG
 #define LABdebugMessage(scip,lvl,...)        do                                                                            \
                                              {                                                                             \
+                                                SCIP_STAGE stage;                                                          \
                                                 SCIPverbMessage(scip, lvl, NULL, "[%s:%-4d] ", __FILE__, __LINE__);        \
-                                                SCIP_STAGE stage = SCIPgetStage(scip);                                     \
+                                                stage = SCIPgetStage(scip);                                                \
                                                 if( stage == SCIP_STAGE_INIT )                                             \
                                                 {                                                                          \
                                                    SCIPverbMessage(scip, lvl, NULL, "Init   : ");                          \
