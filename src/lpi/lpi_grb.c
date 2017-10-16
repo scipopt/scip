@@ -1430,9 +1430,11 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    int c;
 
 #ifndef NDEBUG
-   int j;
-   for( j = 0; j < nnonz; j++ )
-      assert( val[j] != 0 );
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
 #endif
 
    assert(lpi != NULL);
@@ -1513,9 +1515,11 @@ SCIP_RETCODE SCIPlpiAddCols(
 {
 
 #ifndef NDEBUG
-   int j;
-   for( j = 0; j < nnonz; j++ )
-      assert( val[j] != 0 );
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
 #endif
 
    assert(lpi != NULL);
@@ -1677,9 +1681,11 @@ SCIP_RETCODE SCIPlpiAddRows(
    int oldnrows = -1;
 
 #ifndef NDEBUG
-   int j;
-   for( j = 0; j < nnonz; j++ )
-      assert( val[j] != 0 );
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
 #endif
 
    assert(lpi != NULL);

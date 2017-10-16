@@ -631,7 +631,7 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    int                   ncols,              /**< length of integrality array */
    int*                  intInfo             /**< integrality array (0: continuous, 1: integer) */
    )
-{
+{ /*lint --e{715}*/
    SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -761,9 +761,11 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    double* bux;
 
 #ifndef NDEBUG
-   int j;
-   for( j = 0; j < nnonz; j++ )
-      assert( val[j] != 0 );
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
 #endif
 
    assert(MosekEnv != NULL);
@@ -858,9 +860,11 @@ SCIP_RETCODE SCIPlpiAddCols(
    int oldcols;
 
 #ifndef NDEBUG
-   int j;
-   for( j = 0; j < nnonz; j++ )
-      assert( val[j] != 0 );
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
 #endif
 
    assert(MosekEnv != NULL);
@@ -1058,9 +1062,11 @@ SCIP_RETCODE SCIPlpiAddRows(
    int oldrows;
 
 #ifndef NDEBUG
-   int j;
-   for( j = 0; j < nnonz; j++ )
-      assert( val[j] != 0 );
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
 #endif
 
    assert(MosekEnv != NULL);
@@ -1738,7 +1744,7 @@ SCIP_RETCODE SCIPlpiGetColNames(
    int                   namestoragesize,    /**< size of namestorage (if 0, storageleft returns the storage needed) */
    int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
    )
-{
+{ /*lint --e{715}*/
    SCIPerrorMessage("SCIPlpiGetColNames() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -1753,7 +1759,7 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    int                   namestoragesize,    /**< size of namestorage (if 0, -storageleft returns the storage needed) */
    int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
    )
-{
+{ /*lint --e{715}*/
    SCIPerrorMessage("SCIPlpiGetRowNames() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -2429,7 +2435,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
 SCIP_RETCODE SCIPlpiStartStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
-{
+{ /*lint --e{715}*/
    /* currently do nothing */
    return SCIP_OKAY;
 }
@@ -2438,7 +2444,7 @@ SCIP_RETCODE SCIPlpiStartStrongbranch(
 SCIP_RETCODE SCIPlpiEndStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
-{
+{ /*lint --e{715}*/
    /* currently do nothing */
    return SCIP_OKAY;
 }
@@ -3273,7 +3279,7 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
    SCIP_LPSOLQUALITY     qualityindicator,   /**< indicates which quality should be returned */
    SCIP_Real*            quality             /**< pointer to store quality number */
    )
-{
+{ /*lint --e{715}*/
    assert(lpi != NULL);
    assert(quality != NULL);
 
@@ -4254,7 +4260,7 @@ SCIP_RETCODE SCIPlpiGetNorms(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information */
    )
-{
+{ /*lint --e{715}*/
    assert(lpinorms != NULL);
 
    (*lpinorms) = NULL;
@@ -4270,7 +4276,7 @@ SCIP_RETCODE SCIPlpiSetNorms(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information */
    )
-{
+{ /*lint --e{715}*/
    assert(lpinorms == NULL);
 
    /* no work necessary */
@@ -4283,7 +4289,7 @@ SCIP_RETCODE SCIPlpiFreeNorms(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information */
    )
-{
+{ /*lint --e{715}*/
    assert(lpinorms == NULL);
 
    /* no work necessary */
