@@ -50,7 +50,8 @@ SCIP_Bool SCIPcutsTightenCoefficients(
    SCIP_Real*            cutcoefs,           /**< array of the non-zero coefficients in the cut */
    SCIP_Real*            cutrhs,             /**< the right hand side of the cut */
    int*                  cutinds,            /**< array of the problem indices of variables with a non-zero coefficient in the cut */
-   int*                  cutnnz              /**< the number of non-zeros in the cut */
+   int*                  cutnnz,             /**< the number of non-zeros in the cut */
+   int*                  nchgcoefs           /**< number of changed coefficients */
    );
 
 /** create an empty the aggregation row */

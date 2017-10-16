@@ -800,7 +800,8 @@ SCIP_Bool SCIPcutsTightenCoefficients(
    SCIP_Real*            cutcoefs,           /**< array of the non-zero coefficients in the cut */
    SCIP_Real*            cutrhs,             /**< the right hand side of the cut */
    int*                  cutinds,            /**< array of the problem indices of variables with a non-zero coefficient in the cut */
-   int*                  cutnnz              /**< the number of non-zeros in the cut */
+   int*                  cutnnz,             /**< the number of non-zeros in the cut */
+   int*                  nchgcoefs           /**< number of changed coefficients */
    )
 {
    int i;
@@ -810,11 +811,15 @@ SCIP_Bool SCIPcutsTightenCoefficients(
    SCIP_Real maxact;
    SCIP_Real maxabsval;
 
+   assert(nchgcoefs != NULL);
+
    QUAD_ASSIGN(maxacttmp, 0.0);
 
    vars = SCIPgetVars(scip);
    nintegralvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
    maxabsval = 0.0;
+
+   *nchgcoefs = 0;
 
    for( i = 0; i < *cutnnz; ++i )
    {
@@ -890,6 +895,8 @@ SCIP_Bool SCIPcutsTightenCoefficients(
 
             assert(!SCIPisPositive(scip, coef));
 
+            ++(*nchgcoefs);
+
             if( SCIPisNegative(scip, coef) )
             {
                SCIPquadprecSumQQ(maxacttmp, maxacttmp, delta);
@@ -926,6 +933,8 @@ SCIP_Bool SCIPcutsTightenCoefficients(
             *cutrhs = QUAD_ROUND(tmp);
 
             assert(!SCIPisNegative(scip, coef));
+
+            ++(*nchgcoefs);
 
             if( SCIPisPositive(scip, coef) )
             {

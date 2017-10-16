@@ -2872,9 +2872,8 @@ SCIP_RETCODE createAndAddProofcons(
 
          if( conflicttype == SCIP_CONFTYPE_INFEASLP )
             conflicttype = SCIP_CONFTYPE_ALTINFPROOF;
-         else
+         else if( conflicttype == SCIP_CONFTYPE_BNDEXCEEDING )
             conflicttype = SCIP_CONFTYPE_ALTBNDPROOF;
-
       }
    }
 
@@ -6707,7 +6706,7 @@ void tightenCoefficients(
    }
 #endif
 
-   redundant = SCIPcutsTightenCoefficients(set->scip, FALSE, proofset->vals, &proofset->rhs, proofset->inds, &proofset->nnz);
+   redundant = SCIPcutsTightenCoefficients(set->scip, FALSE, proofset->vals, &proofset->rhs, proofset->inds, &proofset->nnz, nchgcoefs);
    assert(!redundant); /* the constraint should never be global redundant w.r.t to the maximal activity */
 
 #ifdef SCIP_DEBUG
@@ -6816,6 +6815,7 @@ SCIP_RETCODE separateAlternativeProofs(
    if( success && !islocal && SCIPsetIsPositive(set, cutefficacy) && cutefficacy * nnz > proofefficiacy * cutnnz )
    {
       SCIP_PROOFSET* alternativeproofset;
+      int nchgcoefs;
 
       SCIP_CALL( proofsetCreate(&alternativeproofset, blkmem) );
       alternativeproofset->conflicttype = (conflicttype == SCIP_CONFTYPE_INFEASLP ? SCIP_CONFTYPE_ALTINFPROOF : SCIP_CONFTYPE_ALTBNDPROOF);
@@ -6823,7 +6823,7 @@ SCIP_RETCODE separateAlternativeProofs(
       SCIP_CALL( proofsetAddSparseData(alternativeproofset, blkmem, cutcoefs, cutinds, cutnnz, cutrhs) );
 
       /* apply coefficient tightening */
-      tightenCoefficients(set, transprob, alternativeproofset);
+      tightenCoefficients(set, transprob, alternativeproofset, &nchgcoefs);
 
       SCIP_CALL( conflictInsertProofset(conflict, set, alternativeproofset) );
    }
@@ -6870,6 +6870,7 @@ SCIP_RETCODE tightenDualproof(
    SCIP_Bool valid;
    int nvars;
    int nnz;
+   int nchgcoefs;
    int nbinvars;
    int ncontvars;
    int nintvars;
@@ -6984,7 +6985,11 @@ SCIP_RETCODE tightenDualproof(
    }
 
    /* apply coefficient tightening to initial proof */
-   tightenCoefficients(set, transprob, proofset);
+   tightenCoefficients(set, transprob, proofset, &nchgcoefs);
+
+   if( nchgcoefs > 0 )
+      proofset->conflicttype = (SCIP_CONFTYPE_INFEASLP ? SCIP_CONFTYPE_ALTINFPROOF :
+            (SCIP_CONFTYPE_BNDEXCEEDING ? SCIP_CONFTYPE_ALTBNDPROOF : proofset->conflicttype));
 
    return SCIP_OKAY;
 }
