@@ -144,7 +144,7 @@ struct SCIP_LPi
 {
    MSKtask_t             task;               /**< Mosek task */
    MSKrescodee           termcode;           /**< termination code of last optimization run */
-   int                   itercount;          /**< iteration count of last optimizatino run */
+   int                   itercount;          /**< iteration count of last optimization run */
    SCIP_PRICING          pricing;            /**< SCIP pricing setting */
    int                   lpid;               /**< id for LP within same task */
    MSKstakeye*           skx;                /**< basis status for columns */
