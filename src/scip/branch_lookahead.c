@@ -13,10 +13,10 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*
-*/
 #define PRINTNODECONS
 #define SCIP_DEBUG
 #define SCIP_STATISTIC
+*/
 /**@file   branch_lookahead.c
  * @brief  lookahead branching rule
  * @author Christoph Schubert
@@ -3146,6 +3146,13 @@ SCIP_Bool isCandidateReliable(
    return size >= reliable;
 }
 
+static SCIP_Bool isCurrentLPInfeasible(
+   SCIP*                  scip
+   )
+{
+   return SCIPgetCutoffdepth(scip) <= SCIPgetDepth(scip);
+}
+
 static
 SCIP_RETCODE getBestCandidates(
    SCIP*                 scip,
@@ -3342,6 +3349,11 @@ SCIP_RETCODE getBestCandidates(
       statusPrint(scip, SCIP_VERBLEVEL_HIGH, status);
    }
 #endif
+
+   if( isCurrentLPInfeasible(scip) )
+   {
+      status->cutoff = TRUE;
+   }
 
    return SCIP_OKAY;
 }
@@ -3893,7 +3905,7 @@ SCIP_RETCODE selectVarRecursive(
          SCIP_Real bestscore = -SCIPinfinity(scip);
          SCIP_Real bestscorelowerbound;
          SCIP_Real bestscoreupperbound;
-         SCIP_Real localbaselpsolval = SCIPgetLPObjval(scip);
+         SCIP_Real localbaselpsolval = lpobjval;
          SCIP_LPI* lpi;
          BRANCHINGRESULTDATA* downbranchingresult;
          BRANCHINGRESULTDATA* upbranchingresult;
