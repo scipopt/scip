@@ -1773,13 +1773,13 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    const SCIP_Real*      val                 /**< values of constraint matrix entries */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiLoadColLP()\n");
-
 #ifndef NDEBUG
    int j;
-   for (j = 0; j < nnonz; j++)
-      assert(val[j] != 0);
+   for ( j = 0; j < nnonz; j++ )
+      assert( val[j] != 0 );
 #endif
+
+   SCIPdebugMessage("calling SCIPlpiLoadColLP()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
@@ -1838,13 +1838,13 @@ SCIP_RETCODE SCIPlpiAddCols(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiAddCols()\n");
-
 #ifndef NDEBUG
    int j;
-   for (j = 0; j < nnonz; j++)
-      assert(val[j] != 0);
+   for ( j = 0; j < nnonz; j++ )
+      assert( val[j] != 0 );
 #endif
+
+   SCIPdebugMessage("calling SCIPlpiAddCols()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
@@ -1975,13 +1975,13 @@ SCIP_RETCODE SCIPlpiAddRows(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiAddRows()\n");
-
 #ifndef NDEBUG
    int j;
-   for (j = 0; j < nnonz; j++)
-      assert(val[j] != 0);
+   for ( j = 0; j < nnonz; j++ )
+      assert( val[j] != 0 );
 #endif
+
+   SCIPdebugMessage("calling SCIPlpiAddRows()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
