@@ -13,10 +13,10 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*
-#define SCIP_STATISTIC
+*/
 #define PRINTNODECONS
 #define SCIP_DEBUG
-*/
+#define SCIP_STATISTIC
 /**@file   branch_lookahead.c
  * @brief  lookahead branching rule
  * @author Christoph Schubert
@@ -59,22 +59,23 @@
 #define LABdebugMessage(scip,lvl,...)        do                                                                            \
                                              {                                                                             \
                                                 SCIPverbMessage(scip, lvl, NULL, "[%s:%-4d] ", __FILE__, __LINE__);        \
-                                                switch( SCIPgetStage(scip) )                                               \
+                                                SCIP_STAGE stage = SCIPgetStage(scip);                                     \
+                                                if( stage == SCIP_STAGE_INIT )                                             \
                                                 {                                                                          \
-                                                   case SCIP_STAGE_INIT:                                                   \
-                                                      SCIPverbMessage(scip, lvl, NULL, "Init   : ");break;                 \
-                                                   case SCIP_STAGE_FREE:                                                   \
-                                                      SCIPverbMessage(scip, lvl, NULL, "Free   : ");break;                 \
-                                                   default:                                                                \
-                                                      if( SCIPinProbing(scip) )                                            \
-                                                      {                                                                    \
-                                                         SCIPverbMessage(scip, lvl, NULL, "Depth %i: ",                    \
-                                                            SCIPgetProbingDepth(scip));                                    \
-                                                      }                                                                    \
-                                                      else                                                                 \
-                                                      {                                                                    \
-                                                         SCIPverbMessage(scip, lvl, NULL, "Base   : ");                    \
-                                                      }                                                                    \
+                                                   SCIPverbMessage(scip, lvl, NULL, "Init   : ");                          \
+                                                }                                                                          \
+                                                else if( stage == SCIP_STAGE_FREE )                                        \
+                                                {                                                                          \
+                                                   SCIPverbMessage(scip, lvl, NULL, "Free   : ");                          \
+                                                }                                                                          \
+                                                else if( SCIPinProbing(scip) )                                             \
+                                                {                                                                          \
+                                                   SCIPverbMessage(scip, lvl, NULL, "Depth %i: ",                          \
+                                                      SCIPgetProbingDepth(scip));                                          \
+                                                }                                                                          \
+                                                else                                                                       \
+                                                {                                                                          \
+                                                   SCIPverbMessage(scip, lvl, NULL, "Base   : ");                          \
                                                 }                                                                          \
                                                 SCIPverbMessage(scip, lvl, NULL, __VA_ARGS__);                             \
                                              }                                                                             \
@@ -643,7 +644,7 @@ SCIP_RETCODE localStatisticsAllocate(
    assert(scip != NULL);
    assert(localstats != NULL);
 
-   SCIPallocBuffer(scip, localstats);
+   SCIP_CALL( SCIPallocBuffer(scip, localstats) );
 
    (*localstats)->ncutoffproofnodes = 0;
    (*localstats)->ndomredproofnodes = 0;
@@ -1971,8 +1972,10 @@ SCIP_RETCODE applyDomainReductions(
    int i;
    SCIP_VAR** probvars;
    int nprobvars;
+#if defined(SCIP_DEBUG) || defined(SCIP_STATISTIC)
    int nboundsadded = 0;
    int nboundsaddedvio = 0;
+#endif
 
    assert(scip != NULL);
    assert(baselpsol != NULL);
@@ -1997,8 +2000,10 @@ SCIP_RETCODE applyDomainReductions(
    {
       SCIP_VAR* var;
       SCIP_Real baselpval;
+#if defined(SCIP_DEBUG) || defined(SCIP_STATISTIC)
       SCIP_Bool boundadded = FALSE;
       SCIP_Bool boundaddedvio = FALSE;
+#endif
 
       var = probvars[i];
 
@@ -2042,8 +2047,10 @@ SCIP_RETCODE applyDomainReductions(
             /* the lb is now strictly greater than before */
             LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The lower bound of variable <%s> was successfully tightened.\n",
                   SCIPvarGetName(var));
-            boundadded = TRUE;
             *domred = TRUE;
+#if defined(SCIP_DEBUG) || defined(SCIP_STATISTIC)
+            boundadded = TRUE;
+#endif
 #ifdef SCIP_STATISTIC
             statistics->ndomredproofnodes += domreds->lowerboundnproofs[i];
 #endif
@@ -2052,7 +2059,10 @@ SCIP_RETCODE applyDomainReductions(
             {
                LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The lower bound of variable <%s> is violated by the base lp "
                      "value <%g>.\n", SCIPvarGetName(var), baselpval);
+
+#if defined(SCIP_DEBUG) || defined(SCIP_STATISTIC)
                boundaddedvio = TRUE;
+#endif
             }
          }
       }
@@ -2092,8 +2102,10 @@ SCIP_RETCODE applyDomainReductions(
             /* the ub is now strictly smaller than before */
             LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The upper bound of variable <%s> was successfully tightened.\n",
                   SCIPvarGetName(var));
-            boundadded = TRUE;
             *domred = TRUE;
+#if defined(SCIP_DEBUG) || defined(SCIP_STATISTIC)
+            boundadded = TRUE;
+#endif
 #ifdef SCIP_STATISTIC
             statistics->ndomredproofnodes += domreds->upperboundnproofs[i];
 #endif
@@ -2102,11 +2114,14 @@ SCIP_RETCODE applyDomainReductions(
             {
                LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The upper bound of variable <%s> is violated by the base lp "
                      "value <%g>.\n", SCIPvarGetName(var), baselpval);
+#if defined(SCIP_DEBUG) || defined(SCIP_STATISTIC)
                boundaddedvio = TRUE;
+#endif
             }
          }
       }
 
+#if defined(SCIP_DEBUG) || defined(SCIP_STATISTIC)
       /* We increment the number of bounds added at most once per var */
       if( boundadded )
       {
@@ -2118,6 +2133,7 @@ SCIP_RETCODE applyDomainReductions(
       {
          nboundsaddedvio++;
       }
+#endif
    }
 
 #ifdef SCIP_STATISTIC
@@ -2127,7 +2143,6 @@ SCIP_RETCODE applyDomainReductions(
 
    LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Truly changed <%d> domains of the problem, <%d> of them are violated by the "
          "base lp.\n", nboundsadded, nboundsaddedvio);
-
    return SCIP_OKAY;
 }
 
@@ -2401,7 +2416,8 @@ SCIP_RETCODE executeBranching(
                   SCIP_VAR** problemvars = SCIPgetVars(scip);
                   int nproblemvars = SCIPgetNVars(scip);
 
-                  for( i = 0; i < nproblemvars; i++ ){
+                  for( i = 0; i < nproblemvars; i++ )
+                  {
                      SCIP_VAR* var = problemvars[i];
 
                      SCIP_Real lowerbound = SCIPvarGetLbLocal(var);
@@ -2669,7 +2685,7 @@ SCIP_RETCODE applyBinaryConstraints(
       SCIP_CONS* constraint = conslist->constraints[i];
 
 #ifdef PRINTNODECONS
-      SCIPprintCons(scip, constraint, NULL);
+      SCIP_CALL( SCIPprintCons(scip, constraint, NULL) );
       SCIPinfoMessage(scip, NULL, "\n");
 #endif
 
@@ -2737,8 +2753,8 @@ SCIP_RETCODE applyBinaryConstraints(
    }
 
 #ifdef SCIP_STATISTIC
-      statistics->nbinconst += conslist->nconstraints;
-      statistics->nbinconstvio += conslist->nviolatedcons;
+   statistics->nbinconst += conslist->nconstraints;
+   statistics->nbinconstvio += conslist->nviolatedcons;
 #endif
 
    return SCIP_OKAY;
@@ -4290,11 +4306,13 @@ SCIP_Bool isStoreDecision(
    DOMAINREDUCTIONS      *domainreductions
    )
 {
+   assert(persistent != NULL);
+
    SCIP_Bool noviolatingbincons = binconsdata != NULL && binconsdata->createdconstraints->nconstraints > 0 &&
          binconsdata->createdconstraints->nviolatedcons == 0;
    SCIP_Bool noviolatingdomreds = domainreductions != NULL && domainreductions->nchangedvars > 0 &&
          domainreductions->nviolatedvars == 0;
-   return persistent != NULL && config->storeunviolatedsol && noviolatingbincons && noviolatingdomreds;
+   return config->storeunviolatedsol && noviolatingbincons && noviolatingdomreds;
 }
 
 static
@@ -4390,7 +4408,7 @@ SCIP_RETCODE selectVarStart(
 
          LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Applying found data to the base node.\n");
 
-         if( isStoreDecision(persistent, config, binconsdata, domainreductions) )
+         if( persistent != NULL && isStoreDecision(persistent, config, binconsdata, domainreductions) )
          {
             SCIP_CALL( SCIPlinkLPSol(scip, persistent->prevbinsolution) );
             SCIP_CALL( SCIPunlinkSol(scip, persistent->prevbinsolution) );
@@ -4480,35 +4498,35 @@ SCIP_RETCODE selectVarStart(
 #endif
 
 #ifdef SCIP_DEBUG
-      if( config->abbreviated )
+   if( config->abbreviated )
+   {
+      if( candidates->ncandidates > 0 )
       {
-         if( candidates->ncandidates > 0 )
-         {
-            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Strong Branching would branch on variable <%s>\n",
-               SCIPvarGetName(candidates->candidates[0]->branchvar));
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Strong Branching would branch on variable <%s>\n",
+            SCIPvarGetName(candidates->candidates[0]->branchvar));
 
-            if( isBranchFurther(status) && branchingDecisionIsValid(decision) )
-            {
-               LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Lookahead Branching would branch on variable <%s>\n",
-                  SCIPvarGetName(decision->var));
-            }
+         if( isBranchFurther(status) && branchingDecisionIsValid(decision) )
+         {
+            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Lookahead Branching would branch on variable <%s>\n",
+               SCIPvarGetName(decision->var));
+         }
 
-         }
-         else if( status->domred )
-         {
-            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Strong Branching has added domain reductions. LAB restarts.\n");
-         }
-         else if( status->cutoff )
-         {
-            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Strong Branching cutoff this node. LAB restarts.\n");
-         }
-         else
-         {
-            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Something unexpected happened. Status: ");
-            statusPrint(scip, SCIP_VERBLEVEL_FULL, status);
-            SCIPABORT();
-         }
       }
+      else if( status->domred )
+      {
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Strong Branching has added domain reductions. LAB restarts.\n");
+      }
+      else if( status->cutoff )
+      {
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Strong Branching cutoff this node. LAB restarts.\n");
+      }
+      else
+      {
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Something unexpected happened. Status: ");
+         statusPrint(scip, SCIP_VERBLEVEL_FULL, status);
+         SCIPABORT();
+      }
+   }
 #endif
 
    SCIP_CALL( candidateListFree(scip, &candidates) );
