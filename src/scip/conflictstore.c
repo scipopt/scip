@@ -1018,8 +1018,8 @@ SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
       if( ndeleted == 0 )
       {
          /* sort dual rays */
-         SCIPsortPtrRealInt((void**)conflictstore->dualsolconfs, conflictstore->dualprimalbnds, (int*)conflictstore->updateside,
-               compareConss, conflictstore->ndualsolconfs);
+         SCIPsortPtrRealRealInt((void**)conflictstore->dualsolconfs, conflictstore->dualprimalbnds,
+               conflictstore->scalefactors, (int*)conflictstore->updateside, compareConss, conflictstore->ndualsolconfs);
          assert(SCIPsetIsGE(set, SCIPconsGetAge(conflictstore->dualsolconfs[0]),
                SCIPconsGetAge(conflictstore->dualsolconfs[conflictstore->ndualsolconfs-1])));
 
