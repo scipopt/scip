@@ -920,7 +920,7 @@ void proofsetFree(
    (*proofset) = NULL;
 }
 
-//#ifdef SCIP_DEBUG
+#ifdef SCIP_DEBUG
 static
 void proofsetPrint(
    SCIP_PROOFSET*        proofset,
@@ -941,7 +941,7 @@ void proofsetPrint(
       printf("%+.15g <%s> ", proofset->vals[i], SCIPvarGetName(vars[proofset->inds[i]]));
    printf(" <= %.15g\n", proofset->rhs);
 }
-//#endif
+#endif
 
 /** return the indices of variables in the proofset */
 static
@@ -6692,10 +6692,10 @@ void tightenCoefficients(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROOFSET*        proofset,           /**< proof set */
-   int*                  nchgcoefs           /**< pointer to store number of changed coefficients */
+   int*                  nchgcoefs,          /**< pointer to store number of changed coefficients */
+   SCIP_Bool*            redundant           /**< pointer to store whether the proof set is redundant */
    )
 {
-   SCIP_Bool redundant;
 #ifdef SCIP_DEBUG
    SCIP_Real absmax = 0.0;
    SCIP_Real absmin = SCIPsetInfinity(set);
@@ -6708,8 +6708,7 @@ void tightenCoefficients(
    }
 #endif
 
-   redundant = SCIPcutsTightenCoefficients(set->scip, FALSE, proofset->vals, &proofset->rhs, proofset->inds, &proofset->nnz, nchgcoefs);
-   assert(!redundant); /* the constraint should never be global redundant w.r.t to the maximal activity */
+   (*redundant) = SCIPcutsTightenCoefficients(set->scip, FALSE, proofset->vals, &proofset->rhs, proofset->inds, &proofset->nnz, nchgcoefs);
 
 #ifdef SCIP_DEBUG
    {
@@ -6818,6 +6817,7 @@ SCIP_RETCODE separateAlternativeProofs(
    if( success && !islocal && SCIPsetIsPositive(set, cutefficacy) && cutefficacy * nnz > proofefficiacy * cutnnz )
    {
       SCIP_PROOFSET* alternativeproofset;
+      SCIP_Bool redundant;
       int nchgcoefs;
 
       SCIP_CALL( proofsetCreate(&alternativeproofset, blkmem) );
@@ -6826,9 +6826,16 @@ SCIP_RETCODE separateAlternativeProofs(
       SCIP_CALL( proofsetAddSparseData(alternativeproofset, blkmem, cutcoefs, cutinds, cutnnz, cutrhs) );
 
       /* apply coefficient tightening */
-      tightenCoefficients(set, transprob, alternativeproofset, &nchgcoefs);
+      tightenCoefficients(set, transprob, alternativeproofset, &nchgcoefs, &redundant);
 
-      SCIP_CALL( conflictInsertProofset(conflict, set, alternativeproofset) );
+      if( !redundant )
+      {
+         SCIP_CALL( conflictInsertProofset(conflict, set, alternativeproofset) );
+      }
+      else
+      {
+         proofsetFree(&alternativeproofset, blkmem);
+      }
    }
 
    SCIPsetFreeBufferArray(set, &cutinds);
@@ -6869,9 +6876,8 @@ SCIP_RETCODE tightenDualproof(
    SCIP_Real* vals;
    int* inds;
    SCIP_PROOFSET* proofset;
-   SCIP_Real rhs;
    SCIP_Bool valid;
-   int nvars;
+   SCIP_Bool redundant;
    int nnz;
    int nchgcoefs;
    int nbinvars;
@@ -6882,7 +6888,6 @@ SCIP_RETCODE tightenDualproof(
    assert(conflict->proofset != NULL);
 
    vars = SCIPprobGetVars(transprob);
-   nvars = SCIPprobGetNVars(transprob);
    nbinvars = 0;
    nintvars = 0;
    ncontvars = 0;
@@ -6930,7 +6935,6 @@ SCIP_RETCODE tightenDualproof(
    /* get proof data */
    vals = proofsetGetVals(proofset);
    inds = proofsetGetInds(proofset);
-   rhs = proofsetGetRhs(proofset);
    nnz = proofsetGetNVars(proofset);
 
    /* remove continuous variable contributing with their global bound
@@ -6988,7 +6992,8 @@ SCIP_RETCODE tightenDualproof(
    }
 
    /* apply coefficient tightening to initial proof */
-   tightenCoefficients(set, transprob, proofset, &nchgcoefs);
+   tightenCoefficients(set, transprob, proofset, &nchgcoefs, &redundant);
+   assert(!redundant); /* the constraint should never be global redundant w.r.t to the maximal activity */
 
    if( nchgcoefs > 0 )
       proofset->conflicttype = (SCIP_CONFTYPE_INFEASLP ? SCIP_CONFTYPE_ALTINFPROOF :
