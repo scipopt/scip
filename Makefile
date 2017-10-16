@@ -798,14 +798,14 @@ ifeq ($(FILES),)
 			do \
 				echo $$i; \
 				$(LINT) lint/main-gcc.lnt +os\(lint.out\) -u -zero \
-				$(FLAGS) -I/usr/include -UNDEBUG -UWITH_READLINE -UROUNDING_FE -D_BSD_SOURCE $$i; \
+				$(USRFLAGS) $(FLAGS) -I/usr/include -UNDEBUG -UWITH_READLINE -UROUNDING_FE -D_BSD_SOURCE $$i; \
 			done'
 else
 		$(SHELL) -ec  'for i in $(FILES); \
 			do \
 				echo $$i; \
 				$(LINT) lint/main-gcc.lnt +os\(lint.out\) -u -zero \
-				$(FLAGS) -I/usr/include -UNDEBUG -UWITH_READLINE -UROUNDING_FE -D_BSD_SOURCE $$i; \
+				$(USRFLAGS) $(FLAGS) -I/usr/include -UNDEBUG -UWITH_READLINE -UROUNDING_FE -D_BSD_SOURCE $$i; \
 			done'
 endif
 
