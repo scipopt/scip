@@ -15486,7 +15486,7 @@ SCIP_RETCODE freeTransform(
    /* free transformed problem data structures */
    SCIP_CALL( SCIPprobFree(&scip->transprob, scip->messagehdlr, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
    SCIP_CALL( SCIPcliquetableFree(&scip->cliquetable, scip->mem->probmem) );
-   SCIP_CALL( SCIPconflictFree(&scip->conflict, scip->set, scip->mem->probmem) );
+   SCIP_CALL( SCIPconflictFree(&scip->conflict, scip->mem->probmem) );
 
    if( !reducedfree )
    {

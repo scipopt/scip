@@ -857,8 +857,7 @@ void lpbdchgsFree(
 /** resets the data structure of a proofset */
 static
 void proofsetClear(
-   SCIP_PROOFSET*        proofset,           /**< proof set */
-   BMS_BLKMEM*           blkmem              /**< block memory of transformed problem */
+   SCIP_PROOFSET*        proofset            /**< proof set */
    )
 {
    assert(proofset != NULL);
@@ -2723,7 +2722,7 @@ SCIP_RETCODE propagateLongProof(
          SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp, branchcand, \
             eventqueue, cliquetable, var, val, rhs-resminact, conflicttype) );
       }
-      assert(minact == getMinActivity(transprob, coefs, inds, nnz, NULL, NULL));
+      assert(SCIPsetIsEQ(set, minact, getMinActivity(transprob, coefs, inds, nnz, NULL, NULL)));
    }
 
    return SCIP_OKAY;
@@ -3038,7 +3037,7 @@ SCIP_RETCODE conflictFlushProofset(
       }
 
       /* clear the proof set anyway */
-      proofsetClear(conflict->proofset, blkmem);
+      proofsetClear(conflict->proofset);
    }
 
    if( conflict->nproofsets > 0 )
@@ -3686,7 +3685,6 @@ SCIP_RETCODE SCIPconflictCreate(
 /** frees conflict analysis data for propagation conflicts */
 SCIP_RETCODE SCIPconflictFree(
    SCIP_CONFLICT**       conflict,           /**< pointer to conflict analysis data */
-   SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem              /**< block memory of transformed problem */
    )
 {
@@ -6690,7 +6688,6 @@ void debugPrintViolationInfo(
 static
 void tightenCoefficients(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROOFSET*        proofset,           /**< proof set */
    int*                  nchgcoefs,          /**< pointer to store number of changed coefficients */
    SCIP_Bool*            redundant           /**< pointer to store whether the proof set is redundant */
@@ -6826,7 +6823,7 @@ SCIP_RETCODE separateAlternativeProofs(
       SCIP_CALL( proofsetAddSparseData(alternativeproofset, blkmem, cutcoefs, cutinds, cutnnz, cutrhs) );
 
       /* apply coefficient tightening */
-      tightenCoefficients(set, transprob, alternativeproofset, &nchgcoefs, &redundant);
+      tightenCoefficients(set, alternativeproofset, &nchgcoefs, &redundant);
 
       if( !redundant )
       {
@@ -6863,13 +6860,10 @@ SCIP_RETCODE tightenDualproof(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_TREE*            tree,               /**< tree data */
-   SCIP_LP*              lp,                 /**< LP data */
    SCIP_AGGRROW*         proofrow,           /**< aggregated row representing the proof */
    SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables */
    SCIP_Real*            curvarubs,          /**< current upper bounds of active problem variables */
-   SCIP_Bool             diving,             /**< are we in strong branching or diving mode? */
-   SCIP_Bool             initialproof,       /**< do we analyze the initial reason of infeasibility? */
-   SCIP_Bool*            globalcutoff        /**< pointer to store whether a global cutoff was detected */
+   SCIP_Bool             initialproof        /**< do we analyze the initial reason of infeasibility? */
    )
 {
    SCIP_VAR** vars;
@@ -6992,12 +6986,16 @@ SCIP_RETCODE tightenDualproof(
    }
 
    /* apply coefficient tightening to initial proof */
-   tightenCoefficients(set, transprob, proofset, &nchgcoefs, &redundant);
+   tightenCoefficients(set, proofset, &nchgcoefs, &redundant);
    assert(!redundant); /* the constraint should never be global redundant w.r.t to the maximal activity */
 
    if( nchgcoefs > 0 )
-      proofset->conflicttype = (SCIP_CONFTYPE_INFEASLP ? SCIP_CONFTYPE_ALTINFPROOF :
-            (SCIP_CONFTYPE_BNDEXCEEDING ? SCIP_CONFTYPE_ALTBNDPROOF : proofset->conflicttype));
+   {
+      if( proofset->conflicttype == SCIP_CONFTYPE_INFEASLP )
+         proofset->conflicttype = SCIP_CONFTYPE_ALTINFPROOF;
+      else if( proofset->conflicttype == SCIP_CONFTYPE_BNDEXCEEDING )
+         proofset->conflicttype = SCIP_CONFTYPE_ALTBNDPROOF;
+   }
 
    return SCIP_OKAY;
 }
@@ -7021,7 +7019,6 @@ SCIP_RETCODE conflictAnalyzeDualProof(
    SCIP_AGGRROW*         proofrow,           /**< aggregated row representing the proof */
    SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables */
    SCIP_Real*            curvarubs,          /**< current upper bounds of active problem variables */
-   SCIP_Bool             diving,             /**< are we in strong branching or diving mode? */
    SCIP_Bool             initialproof,       /**< do we analyze the initial reason of infeasibility? */
    SCIP_Bool*            globalinfeasible,   /**< pointer to store whether global infeasibility could be proven */
    SCIP_Bool*            success             /**< pointer to store success result */
@@ -7064,8 +7061,7 @@ SCIP_RETCODE conflictAnalyzeDualProof(
    }
 
    /* try to enforce the constraint based on a dual ray */
-   SCIP_CALL( tightenDualproof(conflict, set, stat, blkmem, transprob, tree, lp, proofrow, curvarlbs, curvarubs, diving, \
-         initialproof, globalinfeasible) );
+   SCIP_CALL( tightenDualproof(conflict, set, stat, blkmem, transprob, tree, proofrow, curvarlbs, curvarubs, initialproof) );
 
    if( *globalinfeasible )
    {
@@ -7112,7 +7108,6 @@ SCIP_RETCODE runBoundHeuristic(
    int*                  lbchginfoposs,      /**< positions of currently active lower bound change information in variables' arrays */
    int*                  ubchginfoposs,      /**< positions of currently active upper bound change information in variables' arrays */
    int*                  iterations,         /**< pointer to store the total number of LP iterations used */
-   SCIP_Bool             diving,             /**< are we in strong branching or diving mode? */
    SCIP_Bool             marklpunsolved,     /**< whether LP should be marked unsolved after analysis (needed for strong branching) */
    SCIP_Bool*            dualraysuccess,     /**< pointer to store success result of dualray analysis */
    SCIP_Bool*            valid               /**< pointer to store whether the result is still a valid proof */
@@ -7324,7 +7319,7 @@ SCIP_RETCODE runBoundHeuristic(
 
                   /* start dual ray analysis */
                   SCIP_CALL( conflictAnalyzeDualProof(conflict, set, stat, blkmem, origprob, transprob, tree, reopt, lp, \
-                        farkasrow, curvarlbs, curvarubs, diving, FALSE, &globalinfeasible, dualraysuccess) );
+                        farkasrow, curvarlbs, curvarubs, FALSE, &globalinfeasible, dualraysuccess) );
 
                   conflict->conflictset->conflicttype = oldconftype;
                }
@@ -7694,7 +7689,7 @@ SCIP_RETCODE conflictAnalyzeLP(
    {
       /* start dual ray analysis */
       SCIP_CALL( conflictAnalyzeDualProof(conflict, set, stat, blkmem, origprob, transprob, tree, reopt, lp, farkasrow, \
-            curvarlbs, curvarubs, diving, TRUE, &globalinfeasible, dualraysuccess) );
+            curvarlbs, curvarubs, TRUE, &globalinfeasible, dualraysuccess) );
    }
 
    assert(valid);
@@ -7736,9 +7731,9 @@ SCIP_RETCODE conflictAnalyzeLP(
          farkascoefs[i] = -SCIPaggrRowGetProbvarValue(farkasrow, i);
       }
 
-      SCIP_CALL( runBoundHeuristic(conflict, set, stat, origprob, transprob, tree, reopt, lp, lpi, blkmem, farkascoefs, \
-            &farkaslhs, &farkasactivity, curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs, iterations, diving, \
-            marklpunsolved, dualraysuccess, &valid) );
+      SCIP_CALL( runBoundHeuristic(conflict, set, stat, origprob, transprob, tree, reopt, lp, lpi, blkmem, farkascoefs,
+            &farkaslhs, &farkasactivity, curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs, iterations, marklpunsolved,
+            dualraysuccess, &valid) );
 
       SCIPsetFreeBufferArray(set, &farkascoefs);
 
