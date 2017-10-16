@@ -1576,6 +1576,102 @@ SCIP_RETCODE resolvePropagation(
 }
 
 
+/** Propagation conflict resolving method of propagator for full orbitope constraints */
+static
+SCIP_RETCODE resolvePropagationFullOrbitopes(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint that inferred the bound change */
+   SCIP_VAR*             infervar,           /**< variable that was deduced */
+   int                   inferinfo,          /**< inference information */
+   SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
+   SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR*** vars;
+   int nrows;
+   int ncols;
+   int inferrow;
+   int infercol;
+   int i;
+   int j;
+   int k;
+
+   assert( scip != NULL );
+   assert( cons != NULL );
+   assert( infervar != NULL );
+   assert( bdchgidx != NULL );
+   assert( result != NULL );
+
+   *result = SCIP_DIDNOTFIND;
+
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+   assert( consdata->nspcons > 0 );
+   assert( consdata->nblocks > 0 );
+
+   vars = consdata->vars;
+   nrows = consdata->nspcons;
+   ncols = consdata->nblocks;
+
+   infercol = inferinfo % ncols;
+   inferrow = (int) inferinfo / ncols;
+
+   assert( inferrow < nrows );
+
+   /* reson for 1-fixing */
+   if ( SCIPvarGetLbAtIndex(infervar, bdchgidx, FALSE) < 0.5 &&  SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > 0.5 )
+   {
+      SCIPdebugMsg(scip, " -> reason for fixing variable with index %d to 1 was the fixing of the upperleft %dx%d-matrix and x[%d][%d] = 1.\n",
+         SCIPvarGetIndex(infervar), inferrow - 1, infercol, inferrow, infercol);
+
+      for (i = 0; i < inferrow; ++i)
+      {
+         for (j = 0; j <= infercol; ++j)
+         {
+            SCIP_CALL( SCIPaddConflictLb(scip, vars[i][j], bdchgidx) );
+            SCIP_CALL( SCIPaddConflictUb(scip, vars[i][j], bdchgidx) );
+         }
+      }
+      SCIP_CALL( SCIPaddConflictLb(scip, vars[inferrow][infercol], bdchgidx) );
+
+      *result = SCIP_SUCCESS;
+   }
+   else if ( SCIPvarGetUbAtIndex(infervar, bdchgidx, FALSE) > 0.5 &&  SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < 0.5 )
+   {
+      SCIP_Bool success = FALSE;
+
+      /* find position of infervar in vars matrix (it has to be contained in inferrow behind infercol)*/
+      for (k = infercol + 1; k < ncols; ++k)
+      {
+         if ( SCIPvarGetIndex(infervar) == SCIPvarGetIndex(vars[inferrow][k]) )
+         {
+            success = TRUE;
+
+            SCIPdebugMsg(scip, " -> reason for fixing variable with index %d to 0 was the fixing of the upper left %dx%d-matrix and x[%d][%d] = 0.\n",
+               SCIPvarGetIndex(infervar), inferrow - 1, k, inferrow, infercol);
+
+            for (i = 0; i < inferrow; ++i)
+            {
+               for (j = 0; j <= k; ++j)
+               {
+                  SCIP_CALL( SCIPaddConflictLb(scip, vars[i][j], bdchgidx) );
+                  SCIP_CALL( SCIPaddConflictUb(scip, vars[i][j], bdchgidx) );
+               }
+            }
+            SCIP_CALL( SCIPaddConflictUb(scip, vars[inferrow][infercol], bdchgidx) );
+
+            *result = SCIP_SUCCESS;
+         }
+      }
+      assert( success );
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** check packing/partitioning orbitope solution for feasibility */
 static
 SCIP_RETCODE enfopsPackingPartitioningOrbitopeSolution(
@@ -2340,7 +2436,7 @@ SCIP_DECL_CONSRESPROP(consRespropOrbitope)
    }
    else
    {
-      *result = SCIP_DIDNOTFIND;
+      SCIP_CALL( resolvePropagationFullOrbitopes(scip, cons, infervar, inferinfo, boundtype, bdchgidx, result) );
    }
 
    return SCIP_OKAY;
