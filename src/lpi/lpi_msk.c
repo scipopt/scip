@@ -329,12 +329,13 @@ SCIP_RETCODE scip_checkdata(
  * Local functions
  */
 
+/** compute boundkeys to inform MOSEK about fixed/free/ranged/lower bounded/upper bounded variables or constraints */
 static
 void generateMskBoundkeys(
-   int                   n,
-   const double*         lb,
-   const double*         ub,
-   MSKboundkeye*         bk
+   int                   n,                  /**< array size */
+   const double*         lb,                 /**< lower bounds of variables or left-hand sides of ranged rows */
+   const double*         ub,                 /**< upper bounds of variables or right-hand sides of ranged rows */
+   MSKboundkeye*         bk                  /**< pointer to store boundkeys to inform MOSEK about status of var/row */
    )
 {
    int i;
@@ -364,7 +365,7 @@ void generateMskBoundkeys(
          {
             bk[i] = MSK_BK_LO;
          }
-         else if (lb[i] == ub[i])/*lint !e777*/  /**@todo is this good idea to compare the bound without any epsilontic? */
+         else if (lb[i] == ub[i])/*lint !e777*/  /** No epsilon-test since MOSEK will also test for exact equality */
          {
             assert(lb[i] - ub[i] == 0);
             assert(ub[i] - lb[i] == 0);
