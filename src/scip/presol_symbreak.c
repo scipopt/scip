@@ -511,7 +511,7 @@ SCIP_RETCODE getPermProperties(
  */
 static
 SCIP_RETCODE extendSubOrbitope(
-   int***                suborbitope,        /**< pointer to matrix containing suborbitope entries */
+   int**                 suborbitope,        /**< matrix containing suborbitope entries */
    int                   nrows,              /**< number of rows of suborbitope */
    int                   nfilledcols,        /**< number of columns of suborbitope which are filled with entries */
    int                   coltoextend,        /**< index of column that should be extended by perm */
@@ -541,8 +541,8 @@ SCIP_RETCODE extendSubOrbitope(
       /* check whether each cycle of perm intersects with a row of suborbitope */
       for (row = 0; row < nrows; ++row)
       {
-         idx1 = (*suborbitope)[row][0];
-         idx2 = (*suborbitope)[row][1];
+         idx1 = suborbitope[row][0];
+         idx2 = suborbitope[row][1];
 
          /* if idx1 or idx2 is affected by perm, we can extend the row of the orbitope */
          if ( idx1 != perm[idx1] )
@@ -550,10 +550,10 @@ SCIP_RETCODE extendSubOrbitope(
             /* change order of idx1 and idx2 for right extensions */
             if ( ! leftextension )
             {
-               (*suborbitope)[row][0] = idx2;
-               (*suborbitope)[row][1] = idx1;
+               suborbitope[row][0] = idx2;
+               suborbitope[row][1] = idx1;
             }
-            (*suborbitope)[row][2] = perm[idx1];
+            suborbitope[row][2] = perm[idx1];
             ++nintersections;
          }
          else if ( idx2 != perm[idx2] )
@@ -561,10 +561,10 @@ SCIP_RETCODE extendSubOrbitope(
             /* change order of idx1 and idx2 for left extensions */
             if ( leftextension )
             {
-               (*suborbitope)[row][0] = idx2;
-               (*suborbitope)[row][1] = idx1;
+               suborbitope[row][0] = idx2;
+               suborbitope[row][1] = idx1;
             }
-            (*suborbitope)[row][2] = perm[idx2];
+            suborbitope[row][2] = perm[idx2];
             ++nintersections;
          }
       }
@@ -574,12 +574,12 @@ SCIP_RETCODE extendSubOrbitope(
       /* check whether each cycle of perm intersects with a row of suborbitope */
       for (row = 0; row < nrows; ++row)
       {
-         idx1 = (*suborbitope)[row][coltoextend];
+         idx1 = suborbitope[row][coltoextend];
 
          /* if idx1 is affected by perm, we can extend the row of the orbitope */
          if ( idx1 != perm[idx1] )
          {
-            (*suborbitope)[row][nfilledcols] = perm[idx1];
+            suborbitope[row][nfilledcols] = perm[idx1];
             ++nintersections;
          }
       }
@@ -834,7 +834,7 @@ SCIP_RETCODE detectOrbitopes(
          if ( usedperm[j] )
             continue;
 
-         SCIP_CALL( extendSubOrbitope(&orbitopevaridx, ntwocyclescomp, nfilledcols, coltoextend,
+         SCIP_CALL( extendSubOrbitope(orbitopevaridx, ntwocyclescomp, nfilledcols, coltoextend,
                perms[components[i][j]], TRUE, &success, &infeasible) );
 
          if ( infeasible )
@@ -876,7 +876,7 @@ SCIP_RETCODE detectOrbitopes(
          if ( usedperm[j] )
             continue;
 
-         SCIP_CALL( extendSubOrbitope(&orbitopevaridx, ntwocyclescomp, nfilledcols, coltoextend,
+         SCIP_CALL( extendSubOrbitope(orbitopevaridx, ntwocyclescomp, nfilledcols, coltoextend,
                perms[components[i][j]], FALSE, &success, &infeasible) );
 
          if ( infeasible )
@@ -1285,11 +1285,11 @@ SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
       {
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(presoldata->genconss), presoldata->nperms) );
 
-         /* SCIP_CALL( computeGroupOrbits(scip, presoldata) ); */
+         SCIP_CALL( computeGroupOrbits(scip, presoldata) );
 
          SCIP_CALL( computeComponents(scip, presoldata) );
 
-         /* SCIP_CALL( detectOrbitopes(scip, presoldata) ); */
+         SCIP_CALL( detectOrbitopes(scip, presoldata) );
       }
    }
 
