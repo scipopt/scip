@@ -22,6 +22,7 @@
 #include "scip/cons_expr_sin.c"
 #include "separation.h"
 
+/* tests for interval [-1,5] */
 Test(separation, sinus_x, .init = setup, .fini = teardown,
    .description = "test separation for a sinus expression in large range"
    )
@@ -225,6 +226,7 @@ Test(separation, sinus_x, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
 
+/* tests for interval [-6,-3] */
 Test(separation, sinus_y, .init = setup, .fini = teardown,
    .description = "test separation for a sinus expression in mid size range"
 )
@@ -449,6 +451,7 @@ Test(separation, sinus_y, .init = setup, .fini = teardown,
 
 }
 
+/* tests for interval [1,3] */
 Test(separation, sinus_z, .init = setup, .fini = teardown,
    .description = "test separation for a sinus expression in short range"
 )
