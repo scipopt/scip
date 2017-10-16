@@ -310,9 +310,11 @@ SCIP_RETCODE SCIPlpiAddRows(
 {  /*lint --e{715}*/
 
 #ifndef NDEBUG
-   int j;
-   for( j = 0; j < nnonz; j++ )
-      assert( val[j] != 0 );
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
 #endif
 
    assert( lpi != NULL );
