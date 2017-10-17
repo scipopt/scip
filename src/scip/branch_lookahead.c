@@ -3305,6 +3305,7 @@ SCIP_RETCODE filterBestCandidates(
       LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, " Index %2i: Var %s Val %g\n", i, SCIPvarGetName(candidate->branchvar),
             candidate->branchval);
    }
+   return SCIP_OKAY;
 }
 
 /** Gets the best candidates, according the fsb score of each candidate */
@@ -3629,25 +3630,7 @@ SCIP_RETCODE executeBranchingRecursive(
 
    if( config->usebincons && SCIPvarIsBinary(branchvar) )
    {
-#ifdef SCIP_DEBUG
-      SCIP_VAR* compvar;
-      SCIP_VAR* droppedelement;
-
-      if( downbranching )
-      {
-         SCIP_CALL( SCIPgetNegatedVar(scip, branchvar, &compvar) );
-         assert(compvar != NULL);
-      }
-      else
-      {
-         compvar = branchvar;
-      }
-
-      droppedelement = binaryVarListDrop(binconsdata->binaryvars);
-      assert(droppedelement == compvar);
-#else
       binaryVarListDrop(binconsdata->binaryvars);
-#endif
    }
 
    /* reset the probing depth to undo the previous branching */
@@ -3717,6 +3700,7 @@ SCIP_RETCODE executeDownBranchingRecursive(
    SCIP_CALL( executeBranchingRecursive(scip, status, config, baselpsol, candidate, localbaselpsolval, recursiondepth,
          downdomreds, binconsdata, downbranchingresult, scorecontainer, lpimemory, TRUE) );
 #endif
+   return SCIP_OKAY;
 }
 
 /** Updates the status to reflect that a domain reduction was found via domain propagation */
@@ -4702,8 +4686,8 @@ SCIP_DECL_BRANCHEXITSOL(branchExitSolLookahead)
 
       for( i = nvars-1; i >= 0; i--)
       {
-         SCIPfreeBlockMemory(scip, &branchruledata->persistent->lastbranchdownres[i]);
-         SCIPfreeBlockMemory(scip, &branchruledata->persistent->lastbranchupres[i]);
+         SCIPfreeBlockMemory(scip, &branchruledata->persistent->lastbranchdownres[i]); /*lint !e866*/
+         SCIPfreeBlockMemory(scip, &branchruledata->persistent->lastbranchupres[i]); /*lint !e866*/
       }
 
       SCIPfreeBlockMemoryArray(scip, &branchruledata->persistent->lastbranchlpobjval, nvars);
