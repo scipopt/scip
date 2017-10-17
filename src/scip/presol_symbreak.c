@@ -265,14 +265,14 @@ SCIP_RETCODE computeGroupOrbits(
 
 #if 0
    printf("\n\n\nTESTS\n\n");
-   printf("Number of orbits:\t\t%d\n", presoldata->norbits);
-   for (i = 0; i < presoldata->norbits; ++i)
+   printf("Number of orbits:\t\t%d\n", *norbits);
+   for (i = 0; i < *norbits; ++i)
    {
       int j;
-      printf("Orbit %d: Number of variables: %d\n", i, presoldata->nvarsinorbits[i]);
-      for (j = 0; j < presoldata->nvarsinorbits[i]; ++j)
+      printf("Orbit %d: Number of variables: %d\n", i, (*nvarsinorbits)[i]);
+      for (j = 0; j < (*nvarsinorbits)[i]; ++j)
       {
-         printf("%d ", presoldata->orbits[i][j]);
+         printf("%d ", (*orbits)[i][j]);
       }
       printf("\n");
    }
