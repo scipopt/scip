@@ -236,6 +236,7 @@ struct SCIP_Tree
    SCIP_Bool             probinglpwasdualfeas;/**< dual feasibility when probing started */
    SCIP_Bool             probinglpwasdualchecked;/**< dual feasibility has been check when probing started */
    SCIP_Bool             probdiverelaxstored; /**< was a relax solution stored before diving or probing ? */
+   SCIP_Bool             probdiverelaxincludeslp; /**< did the stored relaxation solution include all lp cuts ? */
 };
 
 #ifdef __cplusplus

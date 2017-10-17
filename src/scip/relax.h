@@ -59,7 +59,6 @@ SCIP_RETCODE SCIPrelaxCreate(
    const char*           desc,               /**< description of relaxator */
    int                   priority,           /**< priority of the relaxator (negative: after LP, non-negative: before LP) */
    int                   freq,               /**< frequency for calling relaxator */
-   SCIP_Bool             includeslp,         /**< Does the relaxator contain all cuts in the LP? */
    SCIP_DECL_RELAXCOPY   ((*relaxcopy)),     /**< copy method of relaxator or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_RELAXFREE   ((*relaxfree)),     /**< destructor of relaxator */
    SCIP_DECL_RELAXINIT   ((*relaxinit)),     /**< initialize relaxator */
@@ -216,16 +215,23 @@ SCIP_Bool SCIPrelaxationIsSolZero(
    SCIP_RELAXATION*      relaxation          /**< global relaxation data */
    );
 
-/** sets the relaxsolvalid flag in the relaxation data to the given value */
+/** sets the relaxsolvalid and includeslp flags in the relaxation data to the given values */
 extern
 void SCIPrelaxationSetSolValid(
    SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
-   SCIP_Bool             isvalid             /**< is the stored solution valid? */
+   SCIP_Bool             isvalid,            /**< is the stored solution valid? */
+   SCIP_Bool             includeslp          /**< does the relaxator contain all cuts in the LP? */
    );
 
 /** returns whether the global relaxation solution is valid */
 extern
 SCIP_Bool SCIPrelaxationIsSolValid(
+   SCIP_RELAXATION*      relaxation          /**< global relaxation data */
+   );
+
+/** returns whether the global relaxation solution was computed by a relaxator which included all LP cuts */
+extern
+SCIP_Bool SCIPrelaxationIsLpIncludedForSol(
    SCIP_RELAXATION*      relaxation          /**< global relaxation data */
    );
 

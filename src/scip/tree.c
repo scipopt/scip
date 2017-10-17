@@ -4763,6 +4763,7 @@ SCIP_RETCODE SCIPtreeCreate(
    (*tree)->probinglpwasprimfeas = TRUE;
    (*tree)->probinglpwasdualfeas = TRUE;
    (*tree)->probdiverelaxstored = FALSE;
+   (*tree)->probdiverelaxincludeslp = FALSE;
 
    return SCIP_OKAY;
 }
@@ -6390,7 +6391,7 @@ SCIP_RETCODE SCIPtreeStartProbing(
    /* remember the relaxation solution to reset it later */
    if( SCIPrelaxationIsSolValid(relaxation) )
    {
-      SCIP_CALL( SCIPtreeStoreRelaxSol(tree, set, transprob) );
+      SCIP_CALL( SCIPtreeStoreRelaxSol(tree, set, relaxation, transprob) );
    }
 
    /* create temporary probing root node */
@@ -6935,6 +6936,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
 SCIP_RETCODE SCIPtreeStoreRelaxSol(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
    SCIP_PROB*            transprob           /**< transformed problem after presolve */
    )
 {
@@ -6944,6 +6946,9 @@ SCIP_RETCODE SCIPtreeStoreRelaxSol(
 
    assert(tree != NULL);
    assert(set != NULL);
+   assert(relaxation != NULL);
+   assert(transprob != NULL);
+   assert(SCIPrelaxationIsSolValid(relaxation));
 
    nvars = transprob->nvars;
    vars = transprob->vars;
@@ -6959,6 +6964,7 @@ SCIP_RETCODE SCIPtreeStoreRelaxSol(
       tree->probdiverelaxsol[v] = SCIPvarGetRelaxSol(vars[v], set);
 
    tree->probdiverelaxstored = TRUE;
+   tree->probdiverelaxincludeslp = SCIPrelaxationIsLpIncludedForSol(relaxation);
 
    return SCIP_OKAY;
 }
@@ -6990,6 +6996,7 @@ SCIP_RETCODE SCIPtreeRestoreRelaxSol(
    }
 
    tree->probdiverelaxstored = FALSE;
+   SCIPrelaxationSetSolValid(relaxation, TRUE, tree->probdiverelaxincludeslp);
 
    return SCIP_OKAY;
 }

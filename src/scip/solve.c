@@ -2860,7 +2860,7 @@ void markRelaxsUnsolved(
    assert(set != NULL);
    assert(relaxation != NULL);
 
-   SCIPrelaxationSetSolValid(relaxation, FALSE);
+   SCIPrelaxationSetSolValid(relaxation, FALSE, FALSE);
 
    for( r = 0; r < set->nrelaxs; ++r )
       SCIPrelaxMarkUnsolved(set->relaxs[r]);
@@ -3259,7 +3259,7 @@ SCIP_RETCODE enforceConstraints(
 
 
    /* enforce (best) relaxation solution if the LP has a worse objective value */
-   enforcerelaxsol = SCIPrelaxationIsSolValid(relaxation) && (!SCIPtreeHasFocusNodeLP(tree)
+   enforcerelaxsol = SCIPrelaxationIsSolValid(relaxation) && SCIPrelaxationIsLpIncludedForSol(relaxation) && (!SCIPtreeHasFocusNodeLP(tree)
          || SCIPsetIsGT(set, SCIPrelaxationGetSolObj(relaxation), SCIPlpGetObjval(lp, set, prob)));
 
    /* check if all constraint handlers implement the enforelax callback, otherwise enforce the LP solution */
@@ -4057,7 +4057,7 @@ SCIP_RETCODE solveNode(
    actdepth = SCIPnodeGetDepth(focusnode);
 
    /* invalidate relaxation solution */
-   SCIPrelaxationSetSolValid(relaxation, FALSE);
+   SCIPrelaxationSetSolValid(relaxation, FALSE, FALSE);
 
    /* clear the storage of external branching candidates */
    SCIPbranchcandClearExternCands(branchcand);
@@ -4288,7 +4288,7 @@ SCIP_RETCODE solveNode(
          SCIP_Bool stored;
 
          /* in case the relaxation was enforced add this solution, otherwise decide between LP and pseudosol */
-         if( SCIPrelaxationIsSolValid(relaxation) && (!SCIPtreeHasFocusNodeLP(tree)
+         if( SCIPrelaxationIsSolValid(relaxation) && SCIPrelaxationIsLpIncludedForSol(relaxation) && (!SCIPtreeHasFocusNodeLP(tree)
                || SCIPsetIsGT(set, SCIPrelaxationGetSolObj(relaxation), SCIPlpGetObjval(lp, set, transprob))) )
          {
             SCIP_SOL* relaxsol;
@@ -4647,7 +4647,7 @@ SCIP_RETCODE addCurrentSolution(
    SCIP_Bool foundsol;
 
    /* found a feasible solution */
-   if( SCIPrelaxationIsSolValid(relaxation) && (!SCIPtreeHasFocusNodeLP(tree)
+   if( SCIPrelaxationIsSolValid(relaxation) && SCIPrelaxationIsLpIncludedForSol(relaxation) && (!SCIPtreeHasFocusNodeLP(tree)
          || SCIPsetIsGT(set, SCIPrelaxationGetSolObj(relaxation), SCIPlpGetObjval(lp, set, transprob))) )
    {
       /* start clock for relaxation solutions */
@@ -4962,7 +4962,7 @@ SCIP_RETCODE SCIPsolveCIP(
             {
                SCIP_SOL* sol;
 
-               if( SCIPrelaxationIsSolValid(relaxation) && (!SCIPtreeHasFocusNodeLP(tree)
+               if( SCIPrelaxationIsSolValid(relaxation) && SCIPrelaxationIsLpIncludedForSol(relaxation) && (!SCIPtreeHasFocusNodeLP(tree)
                      || SCIPsetIsGT(set, SCIPrelaxationGetSolObj(relaxation), SCIPlpGetObjval(lp, set, transprob))) )
                {
                   SCIP_CALL( SCIPsolCreateRelaxSol(&sol, blkmem, set, stat, primal, tree, relaxation, NULL) );

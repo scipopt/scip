@@ -53,7 +53,6 @@ struct SCIP_Relax
    int                   priority;           /**< priority of the relaxator */
    int                   freq;               /**< frequency for calling relaxator */
    SCIP_Bool             initialized;        /**< is relaxator initialized? */
-   SCIP_Bool             includeslp;         /**< does the relaxator contain all cuts in the LP? */
 };
 
 /** relaxation information data */
@@ -61,6 +60,7 @@ struct SCIP_Relaxation
 {
    SCIP_Real             relaxsolobjval;
    SCIP_Bool             relaxsolvalid;
+   SCIP_Bool             relaxsolincludeslp;
    SCIP_Bool             relaxsolzero;
 };
 

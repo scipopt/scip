@@ -813,6 +813,7 @@ extern
 SCIP_RETCODE SCIPtreeStoreRelaxSol(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
    SCIP_PROB*            transprob           /**< transformed problem after presolve */
    );
 
