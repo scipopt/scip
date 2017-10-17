@@ -2838,6 +2838,11 @@ SCIP_RETCODE SCIPincludeConshdlrOrbitope(
 
 /** creates and captures a orbitope constraint
  *
+ *  @pre If packing/partitioning orbitopes are used, this constraint handler assumes that constraints which enforce
+ *  the packing/partitioning constraints are contained in the problem. It does not implement, e.g., separation and
+ *  propagation of set packing/partitioning constraints, since this would just copy large parts of the code of the
+ *  setppc constraint handler.
+ *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
 SCIP_RETCODE SCIPcreateConsOrbitope(
