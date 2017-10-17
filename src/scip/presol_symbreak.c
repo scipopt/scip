@@ -101,33 +101,38 @@ struct SCIP_PresolData
 static
 SCIP_RETCODE computeOrbitVariable(
    SCIP*                 scip,               /**< SCIP instance */
-   SCIP_PRESOLDATA*      presoldata,         /**< data of symmetry breaking presolver */
-   int**                 orbit,              /**< preliminary orbits array */
+   int**                 perms,              /**< matrix containing in each row a permutation of the symmetry group */
+   int                   nperms,             /**< number of permutations encoded in perms */
+   int                   npermvars,          /**< length of a permutation array */
+   int***                orbits,             /**< pointer to matrix containing in each row a variable orbit */
+   int*                  norbits,            /**< pointer to number of orbits currently stores in orbits */
+   int**                 nvarsinorbits,      /**< pointer to array containing for each orbit the number of variables contained in it */
+   int*                  maxnorbits,         /**< pointer to maximal number of orbits that can be stored in orbits */
+   int**                 iorbit,              /**< preliminary orbits array */
    int                   i,                  /**< index of variable for which the orbit should be computed */
    int*                  curorbit,           /**< array that stores orbit of i (allocated outside since it can be used for multiple orbit computations) */
    SCIP_Bool*            varadded            /**< array that stores which variables were added to the current orbit, has to be initialized with FALSE in
                                               *   each position, since it is used multiple times (and, for this reason, allocated outside) */
    )
 {
-   int** perms;
-   int nperms;
    int curorbitsize;
-   int norbits;
    int curelem;
    int image;
    int j;
    int p;
 
-   assert( orbit != NULL );
+   assert( perms != NULL );
+   assert( nperms > 0 );
+   assert( nperms > 0 );
+   assert( orbits != NULL );
+   assert( norbits != NULL );
+   assert( nvarsinorbits != NULL );
+   assert( maxnorbits != NULL );
+   assert( iorbit != NULL );
    assert( curorbit != NULL );
    assert( varadded != NULL );
    assert( i >= 0 );
-   assert( i < presoldata->npermvars );
-
-   nperms = presoldata->nperms;
-   assert( nperms > 0 );
-
-   perms = presoldata->perms;
+   assert( i < npermvars );
 
    /* initialize orbit of variable i */
    curorbit[0] = i;
@@ -149,7 +154,7 @@ SCIP_RETCODE computeOrbitVariable(
             curorbit[curorbitsize++] = image;
             varadded[image] = TRUE;
 
-            (*orbit)[image] = i;
+            (*iorbit)[image] = i;
          }
       }
    }
@@ -157,39 +162,37 @@ SCIP_RETCODE computeOrbitVariable(
    /* orbit is non-trivial -> store it */
    if ( curorbitsize > 1 )
    {
-      norbits = presoldata->norbits;
-
-      if ( norbits == 0 )
+      if ( *norbits == 0 )
       {
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(presoldata)->nvarsinorbits, 1) );
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(presoldata)->orbits, 1) );
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, nvarsinorbits, 1) );
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, orbits, 1) );
 
-         presoldata->maxnorbits = 1;
+         *maxnorbits = 1;
       }
-      else if ( norbits >= presoldata->maxnorbits )
+      else if ( *norbits >= *maxnorbits )
       {
          int newsize;
 
-         /* newsize = (int) MIN(1.5 * norbits + 1, presoldata->npermvars); */
-         newsize = norbits + 1;
+         newsize = (int) MIN(1.5 * (*norbits) + 1, npermvars);
+         /* newsize = *norbits + 1; */
 
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(presoldata)->nvarsinorbits, norbits, newsize) );
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(presoldata)->orbits, norbits, newsize) );
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, nvarsinorbits, *norbits, newsize) );
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, orbits, *norbits, newsize) );
 
-         presoldata->maxnorbits = newsize;
+         *maxnorbits = newsize;
       }
 
-      presoldata->nvarsinorbits[norbits] = curorbitsize;
+      (*nvarsinorbits)[*norbits] = curorbitsize;
 
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(presoldata)->orbits[norbits], curorbitsize) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*orbits)[*norbits], curorbitsize) );
       for (i = 0; i < curorbitsize; ++i)
-         presoldata->orbits[norbits][i] = curorbit[i];
+         (*orbits)[*norbits][i] = curorbit[i];
 
-      presoldata->norbits = norbits + 1;
+      *norbits = *norbits + 1;
    }
 
    /* reset data for other orbit computations (only necessary if not all variables are contained in the same orbit) */
-   if ( curorbitsize < presoldata->npermvars )
+   if ( curorbitsize < npermvars )
    {
       for (i = 0; i < curorbitsize; ++i)
          varadded[curorbit[i]] = FALSE;
@@ -243,7 +246,8 @@ SCIP_RETCODE computeGroupOrbits(
       if ( orbit[i] == i )
       {
          /* compute and store orbit */
-         SCIP_CALL( computeOrbitVariable(scip, presoldata, &orbit, i, curorbit, varadded) );
+         SCIP_CALL( computeOrbitVariable(scip, presoldata->perms, presoldata->nperms, presoldata->npermvars, &(presoldata)->orbits,
+               &presoldata->norbits, &presoldata->nvarsinorbits, &presoldata->maxnorbits, &orbit, i, curorbit, varadded) );
       }
    }
 
