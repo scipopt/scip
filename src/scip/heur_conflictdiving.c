@@ -293,8 +293,8 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
       (*score) *= 0.1;
 
    /* penalize the variable if it may be rounded. */
-   if( mayrounddown || mayroundup )
-      (*score) -= SCIPgetNLPRows(scip);
+//   if( mayrounddown || mayroundup )
+//      (*score) -= SCIPgetNLPRows(scip);
 
    /* check, if candidate is new best candidate: prefer unroundable candidates in any case */
    assert( (0.0 < candsfrac && candsfrac < 1.0) || SCIPvarIsBinary(cand) || divetype == SCIP_DIVETYPE_SOS1VARIABLE );
