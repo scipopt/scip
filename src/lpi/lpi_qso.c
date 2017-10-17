@@ -33,11 +33,21 @@ typedef SCIP_DUALPACKET COLPACKET;           /* each column needs two bits of in
 typedef SCIP_DUALPACKET ROWPACKET;           /* each row needs two bit of information (basic/on_lower/on_upper) */
 #define ROWS_PER_PACKET SCIP_DUALPACKETSIZE
 
+enum LPI_QSOPT_Algo
+{
+   LPI_QSOPT_ALGO_UNKNOWN = 0,               /**< unknown */
+   LPI_QSOPT_ALGO_PRIMAL  = 1,               /**< primal simplex */
+   LPI_QSOPT_ALGO_DUAL    = 2                /**< dual simplex */
+};
+typedef enum LPI_QSOPT_Algo LPI_QSOPT_ALGO;
+
+
 /** LP interface */
 struct SCIP_LPi
 {
    QSprob                prob;               /**< LP struct pointer */
    int                   solstat;            /**< solution status of last optimization call */
+   LPI_QSOPT_ALGO        algo;               /**< previously used algorithm */
    int                   previt;             /**< previous number of simplex iterations performed */
    int                   rowspace;           /**< current size of internal row-related arrays */
    char*                 isen;               /**< array of length rowspace */
@@ -1825,6 +1835,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
       QSget_rowcount(lpi->prob), QSget_nzcount(lpi->prob));
 
    QS_CONDRET( QSopt_primal(lpi->prob, &(lpi->solstat)) );
+   lpi->algo = LPI_QSOPT_ALGO_PRIMAL;
 
    return SCIP_OKAY;
 }
@@ -1841,6 +1852,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
       QSget_rowcount(lpi->prob), QSget_nzcount(lpi->prob));
 
    QS_CONDRET( QSopt_dual(lpi->prob, &(lpi->solstat)) );
+   lpi->algo = LPI_QSOPT_ALGO_DUAL;
 
    return SCIP_OKAY;
 }
@@ -2089,17 +2101,16 @@ SCIP_RETCODE SCIPlpiGetSolFeasibility(
 {
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
+   assert(lpi->solstat != 0 );
 
    SCIPdebugMessage("getting solution feasibility\n");
 
-   (void) QSget_status(lpi->prob, &(lpi->solstat));
-
-   if( lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_UNBOUNDED )
+   if( lpi->solstat == QS_LP_OPTIMAL || (lpi->algo == LPI_QSOPT_ALGO_PRIMAL && lpi->solstat == QS_LP_UNBOUNDED) )
       *primalfeasible = TRUE;
    else
       *primalfeasible = FALSE;
 
-   if( lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_INFEASIBLE || lpi->solstat == QS_LP_OBJ_LIMIT )
+   if( lpi->solstat == QS_LP_OPTIMAL || (lpi->algo == LPI_QSOPT_ALGO_DUAL && lpi->solstat == QS_LP_INFEASIBLE) || lpi->solstat == QS_LP_OBJ_LIMIT )
       *dualfeasible = TRUE;
    else
       *dualfeasible = FALSE;
@@ -2148,9 +2159,7 @@ SCIP_Bool SCIPlpiIsPrimalUnbounded(
 
    SCIPdebugMessage("checking for primal unboundedness\n");
 
-   (void) QSget_status(lpi->prob, &(lpi->solstat));
-
-   return (lpi->solstat == QS_LP_UNBOUNDED);
+   return (lpi->algo == LPI_QSOPT_ALGO_PRIMAL && lpi->solstat == QS_LP_UNBOUNDED);
 }
 
 /** returns TRUE iff LP is proven to be primal infeasible */
@@ -2193,9 +2202,7 @@ SCIP_Bool SCIPlpiExistsDualRay(
 
    SCIPdebugMessage("checking for dual ray availability\n");
 
-   (void) QSget_status(lpi->prob, &(lpi->solstat));
-
-   return (lpi->solstat == QS_LP_INFEASIBLE);
+   return (lpi->algo == LPI_QSOPT_ALGO_DUAL && lpi->solstat == QS_LP_INFEASIBLE);
 }
 
 /** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point),
@@ -2210,9 +2217,7 @@ SCIP_Bool SCIPlpiHasDualRay(
 
    SCIPdebugMessage("checking for dual ray availability\n");
 
-   (void) QSget_status(lpi->prob, &(lpi->solstat));
-
-   return (lpi->solstat == QS_LP_INFEASIBLE);
+   return (lpi->algo == LPI_QSOPT_ALGO_DUAL && lpi->solstat == QS_LP_INFEASIBLE);
 }
 
 /** returns TRUE iff LP is dual unbounded */
@@ -2225,9 +2230,7 @@ SCIP_Bool SCIPlpiIsDualUnbounded(
 
    SCIPdebugMessage("checking for dual unboundedness\n");
 
-   (void) QSget_status(lpi->prob, &(lpi->solstat));
-
-   return (lpi->solstat == QS_LP_INFEASIBLE);
+   return (lpi->algo == LPI_QSOPT_ALGO_DUAL && lpi->solstat == QS_LP_INFEASIBLE);
 }
 
 /** returns TRUE iff LP is dual infeasible */
@@ -2240,9 +2243,7 @@ SCIP_Bool SCIPlpiIsDualInfeasible(
 
    SCIPdebugMessage("checking for dual infeasibility\n");
 
-   (void) QSget_status(lpi->prob, &(lpi->solstat));
-
-   return (lpi->solstat == QS_LP_UNBOUNDED);
+   return (lpi->algo == LPI_QSOPT_ALGO_DUAL && lpi->solstat == QS_LP_INFEASIBLE);
 }
 
 /** returns TRUE iff LP is proven to be dual feasible */
@@ -2255,9 +2256,7 @@ SCIP_Bool SCIPlpiIsDualFeasible(
 
    SCIPdebugMessage("checking for dual feasibility\n");
 
-   (void) QSget_status(lpi->prob, &(lpi->solstat));
-
-   return (lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_OBJ_LIMIT);
+   return ( lpi->solstat == QS_LP_OPTIMAL || (lpi->algo == LPI_QSOPT_ALGO_DUAL && lpi->solstat == QS_LP_INFEASIBLE) || lpi->solstat == QS_LP_OBJ_LIMIT );
 }
 
 /** returns TRUE iff LP was solved to optimality */
