@@ -772,14 +772,15 @@ SCIP_RETCODE detectOrbitopes(
 
          SCIP_CALL( getPermProperties(perms[components[i][j]], permvars, npermvars, &iscompoftwocycles, &ntwocyclesperm, &allvarsbinary) );
 
+         if ( ntwocyclescomp == - 1 )
+            ntwocyclescomp = ntwocyclesperm;
+
          /* no or different number of 2-cycles or not all vars binary: permutations cannot generate orbitope */
          if ( ntwocyclescomp == 0 || ntwocyclescomp != ntwocyclesperm || ! allvarsbinary )
          {
             isorbitope = FALSE;
             break;
          }
-
-         ntwocyclescomp = ntwocyclesperm;
       }
 
       if ( ! isorbitope )
