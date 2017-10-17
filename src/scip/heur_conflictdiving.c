@@ -178,7 +178,13 @@ SCIP_DECL_HEUREXEC(heurExecConflictdiving) /*lint --e{715}*/
    if( heurtiming == SCIP_HEURTIMING_DURINGLPLOOP && SCIPgetDepth(scip) != 0 )
       return SCIP_OKAY;
 
+   SCIP_CALL( SCIPsetCharParam(scip, "conflict/useinflp", 'd') );
+   SCIP_CALL( SCIPsetCharParam(scip, "conflict/useboundlp", 'd') );
+
    SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible) );
+
+   SCIP_CALL( SCIPsetCharParam(scip, "conflict/useinflp", 'b') );
+   SCIP_CALL( SCIPsetCharParam(scip, "conflict/useboundlp", 'b') );
 
    return SCIP_OKAY;
 }
