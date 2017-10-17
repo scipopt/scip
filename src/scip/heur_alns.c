@@ -12,6 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#define SCIP_STATISTIC
 
 /**@file   heur_alns.c
  * @brief  Adaptive large neighborhood search heuristic that orchestrates popular LNS heuristics
@@ -3379,6 +3380,51 @@ SCIP_RETCODE includeNeighborhoods(
 
 /** initialization method of primal heuristic (called after problem was transformed) */
 static
+SCIP_DECL_HEURINIT(heurInitAlns)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+   int i;
+
+   assert(scip != NULL);
+   assert(heur != NULL);
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* todo initialize neighborhoods for new problem */
+   for( i = 0; i < heurdata->nneighborhoods; ++i )
+   {
+      NH* neighborhood = heurdata->neighborhoods[i];
+
+      SCIP_CALL( neighborhoodInit(scip, neighborhood) );
+
+      SCIP_CALL( resetFixingRate(scip, &neighborhood->fixingrate) );
+
+      SCIP_CALL( neighborhoodStatsReset(scip, &neighborhood->stats) );
+   }
+
+   /* open reward file for reading */
+   if( strncasecmp(heurdata->rewardfilename, DEFAULT_REWARDFILENAME, strlen(DEFAULT_REWARDFILENAME)) != 0 )
+   {
+      heurdata->rewardfile = fopen(heurdata->rewardfilename, "w");
+
+      if( heurdata->rewardfile == NULL )
+      {
+         SCIPerrorMessage("Error: Could not open reward file <%s>\n", heurdata->rewardfilename);
+         return SCIP_FILECREATEERROR;
+      }
+
+      SCIPdebugMsg(scip, "Writing reward information to <%s>\n", heurdata->rewardfilename);
+   }
+   else
+      heurdata->rewardfile = NULL;
+
+   return SCIP_OKAY;
+}
+
+
+/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
+static
 SCIP_DECL_HEURINITSOL(heurInitsolAlns)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
@@ -3400,12 +3446,6 @@ SCIP_DECL_HEURINITSOL(heurInitsolAlns)
    {
       NH* neighborhood = heurdata->neighborhoods[i];
       SCIP_Bool deactivate;
-
-      SCIP_CALL( neighborhoodInit(scip, neighborhood) );
-
-      SCIP_CALL( resetFixingRate(scip, &neighborhood->fixingrate) );
-
-      SCIP_CALL( neighborhoodStatsReset(scip, &neighborhood->stats) );
 
       SCIP_CALL( neighborhood->nhdeactivate(scip, &deactivate) );
 
@@ -3459,29 +3499,13 @@ SCIP_DECL_HEURINITSOL(heurInitsolAlns)
 
    SCIPfreeBufferArray(scip, &priorities);
 
-   /* open reward file for reading */
-   if( strncasecmp(heurdata->rewardfilename, DEFAULT_REWARDFILENAME, strlen(DEFAULT_REWARDFILENAME)) != 0 )
-   {
-      heurdata->rewardfile = fopen(heurdata->rewardfilename, "w");
-
-      if( heurdata->rewardfile == NULL )
-      {
-         SCIPerrorMessage("Error: Could not open reward file <%s>\n", heurdata->rewardfilename);
-         return SCIP_FILECREATEERROR;
-      }
-
-      SCIPdebugMsg(scip, "Writing reward information to <%s>\n", heurdata->rewardfilename);
-   }
-   else
-      heurdata->rewardfile = NULL;
-
    return SCIP_OKAY;
 }
 
 
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
 static
-SCIP_DECL_HEUREXITSOL(heurExitsolAlns)
+SCIP_DECL_HEUREXIT(heurExitAlns)
 {  /*lint --e{715}*/
 
    SCIP_HEURDATA* heurdata;
@@ -3583,8 +3607,9 @@ SCIP_RETCODE SCIPincludeHeurAlns(
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyAlns) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeAlns) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitAlns) );
    SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolAlns) );
-   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolAlns) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitAlns) );
 
    /* add alns primal heuristic parameters */
    SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/" HEUR_NAME "/maxnodes",
