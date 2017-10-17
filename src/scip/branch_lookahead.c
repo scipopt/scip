@@ -109,7 +109,6 @@
                                                 SCIPverbMessage(scip, lvl, NULL, __VA_ARGS__);                             \
                                              }                                                                             \
                                              while( FALSE )
-#define Bool(value)                          value ? "TRUE" : "FALSE"
 #else
 #define LABdebugMessage(scip,lvl,...)        /**/
 #endif
