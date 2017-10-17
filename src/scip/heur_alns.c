@@ -89,6 +89,7 @@
 #define FIXINGRATE_DECAY         0.75  /**< geometric decay for fixing rate adjustments */
 #define FIXINGRATE_STARTINC      0.2   /**< initial increment value for fixing rate */
 #define DEFAULT_USESUBSCIPHEURS  FALSE /**< should the heuristic activate other sub-SCIP heuristics during its search?  */
+#define DEFAULT_COPYCUTS         TRUE  /**< should cutting planes be copied to the sub-SCIP? */
 #define DEFAULT_REWARDFILENAME   "-"   /**< file name to store all rewards and the selection of the bandit */
 
 /* individual random seeds */
@@ -371,6 +372,7 @@ struct SCIP_HeurData
    SCIP_Bool             resetweights;       /**< should the bandit algorithms be reset when a new problem is read? */
    SCIP_Bool             subsciprandseeds;   /**< should random seeds of sub-SCIPs be altered to increase diversification? */
    SCIP_Bool             scalebyeffort;      /**< should the reward be scaled by the effort? */
+   SCIP_Bool             copycuts;           /**< should cutting planes be copied to the sub-SCIP? */
 };
 
 /** event handler data */
@@ -2291,7 +2293,7 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
       SCIP_CALL( SCIPhashmapCreate(&varmapf, SCIPblkmem(scip), nvars) );
 
       /** todo later: run global propagation for this set of fixings */
-      SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapf, neighborhood->name, varbuf, valbuf, nfixings, FALSE, TRUE, &success, NULL) );
+      SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapf, neighborhood->name, varbuf, valbuf, nfixings, FALSE, heurdata->copycuts, &success, NULL) );
 
       /* store sub-SCIP variables in array for faster access */
       for( v = 0; v < nvars; ++v )
@@ -3700,6 +3702,10 @@ SCIP_RETCODE SCIPincludeHeurAlns(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/scalebyeffort",
          "should the reward be scaled by the effort?",
          &heurdata->scalebyeffort, TRUE, DEFAULT_SCALEBYEFFORT, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copycuts",
+         "should cutting planes be copied to the sub-SCIP?",
+         &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
