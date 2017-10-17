@@ -2717,7 +2717,7 @@ SCIP_RETCODE priceAndCutLoop(
          if( lp->nrows > oldnlprows )
             ++stat->nincseparounds;
          else if( lp->nrows < oldnlprows )
-            stat->nincseparounds = 0;
+            stat->nincseparounds = set->lp_rowagelimit;
       }
    }
 

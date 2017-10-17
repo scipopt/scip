@@ -53,7 +53,7 @@
 #define SEPA_NAME              "zerohalf"
 #define SEPA_DESC              "{0,1/2}-cuts separator"
 #define SEPA_PRIORITY             -6000
-#define SEPA_FREQ                    -1
+#define SEPA_FREQ                    10
 #define SEPA_MAXBOUNDDIST           1.0
 #define SEPA_USESSUBSCIP          FALSE
 #define SEPA_DELAY                FALSE
@@ -62,9 +62,11 @@
 #define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of zerohalf separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_MAXSEPACUTS         100 /**< maximal number of zerohalf cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT     500 /**< maximal number of zerohalf cuts separated per separation round in root node */
-#define DEFAULT_MAXSLACK           0.25 /**< maximal slack of rows to be used in aggregation */
-#define DEFAULT_MAXSLACKROOT        0.5 /**< maximal slack of rows to be used in aggregation in the root node */
+#define DEFAULT_MAXSLACK           1e-4 /**< maximal slack of rows to be used in aggregation */
+#define DEFAULT_MAXSLACKROOT       0.25 /**< maximal slack of rows to be used in aggregation in the root node */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
+#define DEFAULT_MAXROWDENSITY      0.05 /**< maximal density of row to be used in aggregation */
+#define DEFAULT_DENSITYOFFSET       100 /**< additional number of variables allowed in row on top of density */
 
 /* SCIPcalcRowIntegralScalar parameters */
 #define MAXDNOM                  1000LL
@@ -73,7 +75,7 @@
 /* other defines */
 #define MAXREDUCTIONROUNDS          100 /**< maximum number of rounds to perform reductions on the mod 2 system */
 #define BOUNDSWITCH                 0.5 /**< threshold for bound switching */
-
+#define MAXAGGRLEN(nvars)          (0.1*(nvars)+1000)
 
 typedef struct Mod2Col MOD2_COL;
 typedef struct Mod2Row MOD2_ROW;
@@ -156,10 +158,12 @@ struct SCIP_SepaData
 {
    SCIP_Real             maxslack;           /**< maximal slack of rows to be used in aggregation */
    SCIP_Real             maxslackroot;       /**< maximal slack of rows to be used in aggregation in the root node */
+   SCIP_Real             maxrowdensity;      /**< maximal density of row to be used in aggregation */
    int                   maxrounds;          /**< maximal number of cmir separation rounds per node (-1: unlimited) */
    int                   maxroundsroot;      /**< maximal number of cmir separation rounds in the root node (-1: unlimited) */
    int                   maxsepacuts;        /**< maximal number of cmir cuts separated per separation round */
    int                   maxsepacutsroot;    /**< maximal number of cmir cuts separated per separation round in root node */
+   int                   densityoffset;      /**< additional number of variables allowed in row on top of density */
    SCIP_Bool             dynamiccuts;        /**< should generated cuts be removed from the LP if they are no longer tight? */
    SCIP_AGGRROW*         aggrrow;            /**< aggregation row used for generating cuts */
    int                   ncuts;              /**< number of cuts generated in the current call */
@@ -383,7 +387,7 @@ SCIP_RETCODE transformNonIntegralRow(
          SCIP_CALL( SCIPgetVarClosestVlb(scip, colvar, NULL, &closestvbd, &closestvbdind) );
 
          /* if a suitable variable bound exists which is at least as good as the simple bound we use it */
-         if( closestvbdind >= 0 && SCIPisGE(scip, closestvbd, closestbound) )
+         if( closestvbdind >= 0 && (SCIPisGT(scip, closestvbd, closestbound) || (localbound && SCIPisEQ(scip, closestvbd, closestbound))) )
          {
             vbdcoef = SCIPvarGetVlbCoefs(colvar)[closestvbdind];
             vbdvar = SCIPvarGetVlbVars(colvar)[closestvbdind];
@@ -409,7 +413,7 @@ SCIP_RETCODE transformNonIntegralRow(
          SCIP_CALL( SCIPgetVarClosestVub(scip, colvar, NULL, &closestvbd, &closestvbdind) );
 
          /* if a suitable variable bound exists which is at least as good as the simple bound we use it */
-         if( closestvbdind >= 0 && SCIPisLE(scip, closestvbd, closestbound) )
+         if( closestvbdind >= 0 && (SCIPisLT(scip, closestvbd, closestbound) || (localbound && SCIPisEQ(scip, closestvbd, closestbound))) )
          {
             vbdcoef = SCIPvarGetVubCoefs(colvar)[closestvbdind];
             vbdvar = SCIPvarGetVubVars(colvar)[closestvbdind];
@@ -573,6 +577,7 @@ SCIP_RETCODE transformNonIntegralRow(
 static
 SCIP_RETCODE mod2MatrixTransformContRows(
    SCIP*                 scip,               /**< scip data structure */
+   SCIP_SEPADATA*        sepadata,           /**< zerohalf separator data */
    MOD2_MATRIX*          mod2matrix,         /**< mod2 matrix structure */
    SCIP_Bool             allowlocal,         /**< should local cuts be allowed */
    SCIP_Real             maxslack            /**< maximum slack allowed for mod 2 rows */
@@ -582,11 +587,14 @@ SCIP_RETCODE mod2MatrixTransformContRows(
    int nrows;
    int* intvarpos;
    int i;
+   int maxnonzeros;
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &mod2matrix->transintrows, 2*nrows) );
    mod2matrix->ntransintrows = 0;
 
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &intvarpos, SCIPgetNVars(scip)) );
+
+   maxnonzeros = (int)(SCIPgetNLPCols(scip) * sepadata->maxrowdensity) + sepadata->densityoffset;
 
    for( i = 0; i < nrows; ++i )
    {
@@ -600,7 +608,7 @@ SCIP_RETCODE mod2MatrixTransformContRows(
       SCIP_COL** rowcols;
 
       /* skip integral rows and rows not suitable for generating cuts */
-      if( SCIProwIsModifiable(rows[i]) || SCIProwIsIntegral(rows[i]) || (SCIProwIsLocal(rows[i]) && !allowlocal) )
+      if( SCIProwIsModifiable(rows[i]) || SCIProwIsIntegral(rows[i]) || (SCIProwIsLocal(rows[i]) && !allowlocal) || SCIProwGetNNonz(rows[i]) > maxnonzeros )
          continue;
 
       lhs = SCIProwGetLhs(rows[i]) - SCIProwGetConstant(rows[i]);
@@ -965,6 +973,7 @@ void destroyMod2Matrix(
 static
 SCIP_RETCODE buildMod2Matrix(
    SCIP*                 scip,               /**< scip data structure */
+   SCIP_SEPADATA*        sepadata,           /**< zerohalf separator data */
    BMS_BLKMEM*           blkmem,             /**< block memory shell */
    MOD2_MATRIX*          mod2matrix,         /**< mod 2 matrix */
    SCIP_Bool             allowlocal,         /**< should local cuts be allowed */
@@ -978,6 +987,7 @@ SCIP_RETCODE buildMod2Matrix(
    int ncols;
    int nrows;
    int nintvars;
+   int maxnonzeros;
    int i;
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
    SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
@@ -1045,6 +1055,8 @@ SCIP_RETCODE buildMod2Matrix(
       }
    }
 
+   maxnonzeros = (int)(SCIPgetNLPCols(scip) * sepadata->maxrowdensity) + sepadata->densityoffset;
+
    /* add all integral rows using the created columns */
    for( i = 0; i < nrows; ++i )
    {
@@ -1057,7 +1069,7 @@ SCIP_RETCODE buildMod2Matrix(
       int rhsmod2;
 
       /* skip non-integral rows and rows not suitable for generating cuts */
-      if( SCIProwIsModifiable(rows[i]) || !SCIProwIsIntegral(rows[i]) || (SCIProwIsLocal(rows[i]) && !allowlocal) )
+      if( SCIProwIsModifiable(rows[i]) || !SCIProwIsIntegral(rows[i]) || (SCIProwIsLocal(rows[i]) && !allowlocal) || SCIProwGetNNonz(rows[i]) > maxnonzeros )
          continue;
 
       lhsmod2 = 0;
@@ -1118,7 +1130,7 @@ SCIP_RETCODE buildMod2Matrix(
    }
 
    /* transform non-integral rows */
-   SCIP_CALL( mod2MatrixTransformContRows(scip, mod2matrix, allowlocal, maxslack) );
+   SCIP_CALL( mod2MatrixTransformContRows(scip, sepadata, mod2matrix, allowlocal, maxslack) );
 
    /* add all transformed integral rows using the created columns */
    for( i = 0; i < mod2matrix->ntransintrows; ++i )
@@ -1513,6 +1525,7 @@ SCIP_RETCODE generateZerohalfCut(
    int cutnnz;
    int cutrank;
    int nvars;
+   int maxaggrlen;
    int* cutinds;
    SCIP_ROW** rows;
    SCIP_VAR** vars;
@@ -1524,6 +1537,8 @@ SCIP_RETCODE generateZerohalfCut(
    rows = SCIPgetLPRows(scip);
    nvars = SCIPgetNVars(scip);
    vars = SCIPgetVars(scip);
+
+   maxaggrlen = MAXAGGRLEN(SCIPgetNLPCols(scip));
 
    /* right hand side must be odd, otherwise no cut can be generated */
    assert(row->rhs == 1);
@@ -1561,6 +1576,18 @@ SCIP_RETCODE generateZerohalfCut(
          default:
             SCIPABORT();
       }
+   }
+
+   /* abort if aggregation is too long */
+   if( cutnnz > maxaggrlen )
+   {
+      /* clean buffer array must be set to zero before jumping to the terminate label */
+      for( i = 0; i < cutnnz; ++i )
+      {
+         int k = cutinds[i];
+         tmpcoefs[k] = 0.0;
+      }
+      goto TERMINATE;
    }
 
    /* compute the cut coefficients and update right handside due to complementation if necessary */
@@ -1715,6 +1742,7 @@ SCIP_RETCODE generateZerohalfCut(
       }
    }
 
+  TERMINATE:
    SCIPfreeBufferArray(scip, &cutinds);
    SCIPfreeBufferArray(scip, &cutcoefs);
    SCIPfreeCleanBufferArray(scip, &tmpcoefs);
@@ -2042,7 +2070,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
    sepadata->ncuts = 0;
    sepadata->infeasible = FALSE;
 
-   SCIP_CALL( buildMod2Matrix(scip, SCIPblkmem(scip), &mod2matrix, allowlocal, maxslack) );
+   SCIP_CALL( buildMod2Matrix(scip, sepadata, SCIPblkmem(scip), &mod2matrix, allowlocal, maxslack) );
 
    SCIPdebugMsg(scip, "built mod2 matrix (%i rows, %i cols)\n", mod2matrix.nrows, mod2matrix.ncols);
 
@@ -2223,6 +2251,14 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
          "separating/" SEPA_NAME "/dynamiccuts",
          "should generated cuts be removed from the LP if they are no longer tight?",
          &sepadata->dynamiccuts, FALSE, DEFAULT_DYNAMICCUTS, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "separating/" SEPA_NAME "/maxrowdensity",
+         "maximal density of row to be used in aggregation",
+         &sepadata->maxrowdensity, TRUE, DEFAULT_MAXROWDENSITY, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "separating/" SEPA_NAME "/densityoffset",
+         "additional number of variables allowed in row on top of density",
+         &sepadata->densityoffset, TRUE, DEFAULT_DENSITYOFFSET, 0, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
