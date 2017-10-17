@@ -78,6 +78,8 @@
 #define DEFAULT_SUBSCIPRANDSEEDS FALSE /**< should random seeds of sub-SCIPs be altered to increase diversification? */
 #define DEFAULT_ALPHA          0.2  /**< parameter to increase the confidence width in UCB */
 #define DEFAULT_REWARDBASELINE 0.5  /**< the reward baseline to separate successful and failed calls */
+#define DEFAULT_FIXTOL         0.0  /**< tolerance by which the fixing rate may be missed/exceeded without generic (unfixing) */
+#define DEFAULT_USELOCALREDCOST FALSE /**< should local reduced costs be used for generic (un)fixing? */
 
 /*
  * parameters to control variable fixing
@@ -355,6 +357,7 @@ struct SCIP_HeurData
    SCIP_Real             targetnodefactor;   /**< factor by which target node number is increased/decreased at every adjustment */
    SCIP_Real             stallnodefactor;    /**< stall node limit as a fraction of total node limit */
    SCIP_Real             rewardbaseline;     /**< the reward baseline to separate successful and failed calls */
+   SCIP_Real             fixtol;             /**< tolerance by which the fixing rate may be missed/exceeded without generic (unfixing) */
    int                   nneighborhoods;     /**< number of neighborhoods */
    int                   nactiveneighborhoods;/**< number of active neighborhoods */
    int                   ninitneighborhoods; /**< neighborhoods that were used at least one time */
@@ -374,6 +377,7 @@ struct SCIP_HeurData
    SCIP_Bool             subsciprandseeds;   /**< should random seeds of sub-SCIPs be altered to increase diversification? */
    SCIP_Bool             scalebyeffort;      /**< should the reward be scaled by the effort? */
    SCIP_Bool             copycuts;           /**< should cutting planes be copied to the sub-SCIP? */
+   SCIP_Bool             uselocalredcost;    /**< should local reduced costs be used for generic (un)fixing? */
 };
 
 /** event handler data */
@@ -1184,7 +1188,8 @@ static
 SCIP_Real getVariableRedcostScore(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< the variable for which the score should be computed */
-   SCIP_Real             refsolval           /**< solution value in reference solution */
+   SCIP_Real             refsolval,          /**< solution value in reference solution */
+   SCIP_Bool             uselocalredcost     /**< should local reduced costs be used for generic (un)fixing? */
    )
 {
    SCIP_Real bestbound;
@@ -1197,9 +1202,22 @@ SCIP_Real getVariableRedcostScore(
    if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
       return SCIPinfinity(scip);
 
-   redcost = SCIPvarGetBestRootRedcost(var);
+   if( ! uselocalredcost )
+   {
+      redcost = SCIPvarGetBestRootRedcost(var);
 
-   bestbound = SCIPvarGetBestRootSol(var);
+      bestbound = SCIPvarGetBestRootSol(var);
+   }
+   else
+   {
+      /* this can be safely asserted here, since the heuristic would not reach this point, otherwise */
+      assert(SCIPhasCurrentNodeLP(scip));
+      assert(SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL);
+
+      redcost = SCIPgetVarRedcost(scip, var);
+
+      bestbound = SCIPvarGetLPSol(var);
+   }
 
    assert(! SCIPisInfinity(scip, REALABS(bestbound)));
    assert(SCIPisZero(scip, redcost) || SCIPisIntegral(scip, bestbound));
@@ -1369,9 +1387,8 @@ SCIP_RETCODE alnsFixMoreVariables(
       SCIP_VAR* var = vars[b];
       randscores[b] = SCIPrandomGetReal(rng, 0.0, 1.0);
       perm[b] = b;
-      redcostscores[b] = getVariableRedcostScore(scip, var, solvals[b]);
+      redcostscores[b] = getVariableRedcostScore(scip, var, solvals[b], heurdata->uselocalredcost);
    }
-
 
    /* loop over already fixed variables and assign large penalties for their values */
    for( b = 0; b < *nfixings; ++b )
@@ -1565,7 +1582,7 @@ SCIP_RETCODE alnsUnfixVariables(
       SCIP_Real fixval = valbuf[i];
 
       /* use negative reduced cost scores to prefer variable fixings with small reduced cost score */
-      redcostscores[i] = - getVariableRedcostScore(scip, fixedvar, fixval);
+      redcostscores[i] = - getVariableRedcostScore(scip, fixedvar, fixval, heurdata->uselocalredcost);
       randscores[i] = SCIPrandomGetReal(rng, 0.0, 1.0);
       perm[i] = i;
    }
@@ -1643,7 +1660,7 @@ SCIP_RETCODE neighborhoodFixVariables(
    SCIPdebugMsg(scip, "Neighborhood Fixings/Target: %d / %d\n",*nfixings, ntargetfixings);
 
    /** if too few fixings, use a strategy to select more variable fixings: randomized, LP graph, ReducedCost based, mix */
-   if( (*result == SCIP_SUCCESS || *result == SCIP_DIDNOTRUN) && (*nfixings < ntargetfixings) )
+   if( (*result == SCIP_SUCCESS || *result == SCIP_DIDNOTRUN) && (*nfixings <= (1.0 - heurdata->fixtol) * ntargetfixings) )
    {
       SCIP_Bool success;
       SCIP_SOL* refsol;
@@ -1668,7 +1685,7 @@ SCIP_RETCODE neighborhoodFixVariables(
 
       SCIPdebugMsg(scip, "After additional fixings: %d / %d\n",*nfixings, ntargetfixings);
    }
-   else if( (SCIP_Real)(*nfixings) > (1.1 * ntargetfixings) )
+   else if( (SCIP_Real)(*nfixings) > (1.0 + heurdata->fixtol) * ntargetfixings)
    {
       SCIP_Bool success;
 
@@ -2137,6 +2154,16 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
 
    if( ! run )
       return SCIP_OKAY;
+
+   /* delay the heuristic if local reduced costs should be used for generic variable unfixing */
+   if( heurdata->uselocalredcost && (nodeinfeasible || ! SCIPhasCurrentNodeLP(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL) )
+   {
+      *result = SCIP_DELAYED;
+
+      return SCIP_OKAY;
+   }
+
+
 
    allrewardsmode = heurdata->rewardfile != NULL;
 
@@ -3731,6 +3758,14 @@ SCIP_RETCODE SCIPincludeHeurAlns(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copycuts",
          "should cutting planes be copied to the sub-SCIP?",
          &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/fixtol",
+         "tolerance by which the fixing rate may be missed/exceeded without generic (unfixing)",
+         &heurdata->fixtol, TRUE, DEFAULT_FIXTOL, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/uselocalredcost",
+         "should local reduced costs be used for generic (un)fixing?",
+         &heurdata->uselocalredcost, TRUE, DEFAULT_USELOCALREDCOST, NULL, NULL) );
 
    return SCIP_OKAY;
 }

@@ -5,3 +5,7 @@
 heuristics/alns/banditalgo = e
 
 heuristics/alns/rewardcontrol = 1.0
+
+heuristics/alns/uselocalredcost = TRUE
+
+heuristics/alns/fixtol = 0.15
