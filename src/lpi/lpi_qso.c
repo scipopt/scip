@@ -1666,6 +1666,7 @@ SCIP_RETCODE SCIPlpiGetObj(
 {  /*lint --e{715}*/
    int len;
    register int i;
+   double* qsoptvals;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
@@ -1680,7 +1681,17 @@ SCIP_RETCODE SCIPlpiGetObj(
       lpi->iccnt[i] = i + firstcol;
 
    /* get data from qsopt */
+
+   /* There seems to be a bug in qsopt: The function QSget_obj_list might return values for slack variables. We
+    * therefore have to use a workarround. */
+#if 0
    QS_CONDRET( QSget_obj_list(lpi->prob, len, lpi->iccnt, vals) );
+#endif
+
+   QS_CONDRET( QSget_columns_list(lpi->prob, len, lpi->iccnt, NULL, NULL, NULL, NULL, &qsoptvals, NULL, NULL, NULL) );
+   for (i = 0; i < len; ++i)
+      vals[i] = qsoptvals[i];
+   free( qsoptvals );
 
    return SCIP_OKAY;
 }
