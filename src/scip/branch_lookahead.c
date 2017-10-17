@@ -845,28 +845,21 @@ SCIP_RETCODE binaryVarListAppend(
    return SCIP_OKAY;
 }
 
-/** Remove and return the last element from the list. */
+/** Remove the last element from the list. */
 static
 SCIP_VAR* binaryVarListDrop(
    BINARYVARLIST*        list                /**< The list to remove the last element from. */
    )
 {
-   SCIP_VAR* lastelement;
-
    assert(list != NULL);
    assert(list->nbinaryvars > 0);
    assert(list->binaryvars[list->nbinaryvars-1] != NULL);
 
    /* get the last element and set the last pointer to NULL (maybe unnecessary, but feels cleaner) */
-   lastelement = list->binaryvars[list->nbinaryvars-1];
    list->binaryvars[list->nbinaryvars-1] = NULL;
-
-   assert(lastelement != NULL);
 
    /* decrement the number of entries in the actual list */
    list->nbinaryvars--;
-
-   return lastelement;
 }
 
 /** Frees all resources allocated by a BINARYVARLIST in opposite order of allocation. */
