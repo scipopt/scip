@@ -50,7 +50,7 @@ heuristics/objpscostdiving/freq = -1
 
 # priority of heuristic <proximity-benders>
 # [type: int, advanced: TRUE, range: [-536870912,536870911], default: -2000000]
-heuristics/proximity-benders/priority = 0
+heuristics/proximity-benders/priority = -2000000
 
 # frequency for calling primal heuristic <proximity-benders> (-1: never, 0: only at depth freqofs)
 # [type: int, advanced: FALSE, range: [-1,65534], default: -1]
@@ -74,7 +74,7 @@ heuristics/proximity-benders/waitingnodes = 0
 
 # factor by which proximity should at least improve the incumbent
 # [type: real, advanced: TRUE, range: [0,1], default: 0.02]
-heuristics/proximity-benders/minimprove = 0.0001
+heuristics/proximity-benders/minimprove = 0.02
 
 # sub-MIP node limit w.r.t number of original nodes
 # [type: real, advanced: TRUE, range: [0,1e+20], default: 0.1]

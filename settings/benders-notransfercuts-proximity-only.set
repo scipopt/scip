@@ -50,7 +50,7 @@ heuristics/objpscostdiving/freq = -1
 
 # priority of heuristic <proximity-benders>
 # [type: int, advanced: TRUE, range: [-536870912,536870911], default: -2000000]
-heuristics/proximity-benders/priority = 0
+heuristics/proximity-benders/priority = -2000000
 
 # frequency for calling primal heuristic <proximity-benders> (-1: never, 0: only at depth freqofs)
 # [type: int, advanced: FALSE, range: [-1,65534], default: -1]

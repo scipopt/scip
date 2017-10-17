@@ -14,7 +14,7 @@ heuristics/crossover/freq = -1
 
 # priority of heuristic <dins-benders>
 # [type: int, advanced: TRUE, range: [-536870912,536870911], default: -1105000]
-heuristics/dins-benders/priority = 0
+heuristics/dins-benders/priority = -1105000
 
 # frequency for calling primal heuristic <dins-benders> (-1: never, 0: only at depth freqofs)
 # [type: int, advanced: FALSE, range: [-1,65534], default: -1]
