@@ -51,11 +51,12 @@ NOWAITCLUSTER=${18}
 EXCLUSIVE=${19}
 PERMUTE=${20}
 SEEDS=${21}
-DEBUGTOOL=${22}
-REOPT=${23}
-OPTCOMMAND=${24}
-SETCUTOFF=${25}
-VISUALIZE=${26}
+GLBSEEDSHIFT=${22}
+DEBUGTOOL=${23}
+REOPT=${24}
+OPTCOMMAND=${25}
+SETCUTOFF=${26}
+VISUALIZE=${27}
 
 # check if all variables defined (by checking the last one)
 if test -z $VISUALIZE
@@ -82,6 +83,7 @@ then
     echo "EXCLUSIVE     = $EXCLUSIVE"
     echo "PERMUTE       = $PERMUTE"
     echo "SEEDS         = $SEEDS"
+    echo "GLBSEEDSHIFT  = $GLBSEEDSHIFT"
     echo "DEBUGTOOL     = $DEBUGTOOL"
     echo "REOPT         = $REOPT"
     echo "OPTCOMMAND    = $OPTCOMMAND"
