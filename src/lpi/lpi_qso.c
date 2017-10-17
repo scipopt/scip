@@ -2077,8 +2077,6 @@ SCIP_Bool SCIPlpiWasSolved(
    assert(lpi!=NULL);
    assert(lpi->prob!=NULL);
 
-   (void) QSget_status(lpi->prob, &(lpi->solstat));
-
    return (lpi->solstat != 0 && lpi->solstat != QS_LP_MODIFIED);
 }
 
@@ -2120,8 +2118,6 @@ SCIP_Bool SCIPlpiExistsPrimalRay(
    assert(lpi->prob != NULL);
 
    SCIPdebugMessage("checking primal ray existence\n");
-
-   (void) QSget_status(lpi->prob, &(lpi->solstat));
 
    return (lpi->solstat == QS_LP_UNBOUNDED);
 }
@@ -2181,8 +2177,6 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
    assert(lpi->prob != NULL);
 
    SCIPdebugMessage("checking for primal feasibility\n");
-
-   (void) QSget_status(lpi->prob, &(lpi->solstat));
 
    return (lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_UNBOUNDED);
 }
@@ -2276,8 +2270,6 @@ SCIP_Bool SCIPlpiIsOptimal(
 
    SCIPdebugMessage("checking for optimality\n");
 
-   (void) QSget_status(lpi->prob, &(lpi->solstat));
-
    return (lpi->solstat == QS_LP_OPTIMAL);
 }
 
@@ -2290,8 +2282,6 @@ SCIP_Bool SCIPlpiIsStable(
    assert(lpi->prob != NULL);
 
    SCIPdebugMessage("checking for numerical stability\n");
-
-   (void) QSget_status(lpi->prob, &(lpi->solstat));
 
    return (lpi->solstat != QS_LP_NUMERR);
 }
@@ -2306,8 +2296,6 @@ SCIP_Bool SCIPlpiIsObjlimExc(
 
    SCIPdebugMessage("checking for objective limit exceeded\n");
 
-   (void) QSget_status(lpi->prob, &(lpi->solstat));
-
    return (lpi->solstat == QS_LP_OBJ_LIMIT);
 }
 
@@ -2320,8 +2308,6 @@ SCIP_Bool SCIPlpiIsIterlimExc(
    assert(lpi->prob != NULL);
 
    SCIPdebugMessage("checking for iteration limit exceeded\n");
-
-   (void) QSget_status(lpi->prob, &(lpi->solstat));
 
    return (lpi->solstat == QS_LP_ITER_LIMIT);
 }
@@ -2336,8 +2322,6 @@ SCIP_Bool SCIPlpiIsTimelimExc(
 
    SCIPdebugMessage("checking for time limit exceeded\n");
 
-   (void) QSget_status(lpi->prob, &(lpi->solstat));
-
    return (lpi->solstat == QS_LP_TIME_LIMIT);
 }
 
@@ -2350,8 +2334,6 @@ int SCIPlpiGetInternalStatus(
    assert(lpi->prob != NULL);
 
    SCIPdebugMessage("getting internal solution status\n");
-
-   (void) QSget_status(lpi->prob, &(lpi->solstat));
 
    return lpi->solstat;
 }
