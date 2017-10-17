@@ -4650,27 +4650,24 @@ SCIP_RETCODE addCurrentSolution(
    if( SCIPrelaxationIsSolValid(relaxation) && (!SCIPtreeHasFocusNodeLP(tree)
          || SCIPsetIsGT(set, SCIPrelaxationGetSolObj(relaxation), SCIPlpGetObjval(lp, set, transprob))) )
    {
-      SCIP_SOL* relaxsol;
-
       /* start clock for relaxation solutions */
       SCIPclockStart(stat->relaxsoltime, set);
 
-      SCIP_CALL( SCIPsolCreateRelaxSol(&relaxsol, blkmem, set, stat, primal, tree, relaxation, NULL) );
+      SCIP_CALL( SCIPsolCreateRelaxSol(&sol, blkmem, set, stat, primal, tree, relaxation, NULL) );
+
+      SCIPsetDebugMsg(set, "found relaxation solution with objective %f\n", SCIPsolGetObj(sol, set, transprob, origprob));
 
       if( checksol || set->misc_exactsolve )
       {
          /* if we want to solve exactly, we have to check the solution exactly again */
-         SCIP_CALL( SCIPprimalTrySol(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
-               eventqueue, eventfilter, relaxsol, FALSE, FALSE, TRUE, TRUE, TRUE,
-               &foundsol) );
+         SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
+               eventqueue, eventfilter, &sol, FALSE, FALSE, TRUE, TRUE, TRUE, &foundsol) );
       }
       else
       {
-         SCIP_CALL( SCIPprimalAddSol(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
-               eventqueue, eventfilter, relaxsol, &foundsol) );
+         SCIP_CALL( SCIPprimalAddSolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
+               eventqueue, eventfilter, &sol, &foundsol) );
       }
-
-      SCIP_CALL( SCIPsolFree(&relaxsol, blkmem, primal) );
 
       if( foundsol )
       {
@@ -4696,6 +4693,9 @@ SCIP_RETCODE addCurrentSolution(
 
       /* add solution to storage */
       SCIP_CALL( SCIPsolCreateLPSol(&sol, blkmem, set, stat, transprob, primal, tree, lp, NULL) );
+
+      SCIPsetDebugMsg(set, "found lp solution with objective %f\n", SCIPsolGetObj(sol, set, transprob, origprob));
+
       if( checksol || set->misc_exactsolve )
       {
          /* if we want to solve exactly, we have to check the solution exactly again */
@@ -4729,6 +4729,9 @@ SCIP_RETCODE addCurrentSolution(
 
       /* add solution to storage */
       SCIP_CALL( SCIPsolCreatePseudoSol(&sol, blkmem, set, stat, transprob, primal, tree, lp, NULL) );
+
+      SCIPsetDebugMsg(set, "found pseudo solution with objective %f\n", SCIPsolGetObj(sol, set, transprob, origprob));
+
       if( checksol || set->misc_exactsolve )
       {
          /* if we want to solve exactly, we have to check the solution exactly again */

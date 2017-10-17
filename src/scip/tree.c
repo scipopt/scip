@@ -4733,6 +4733,7 @@ SCIP_RETCODE SCIPtreeCreate(
    (*tree)->probinglpistate = NULL;
    (*tree)->probinglpinorms = NULL;
    (*tree)->pendingbdchgs = NULL;
+   (*tree)->probdiverelaxsol = NULL;
    (*tree)->pendingbdchgssize = 0;
    (*tree)->npendingbdchgs = 0;
    (*tree)->focuslpstateforklpcount = -1;
@@ -4761,6 +4762,7 @@ SCIP_RETCODE SCIPtreeCreate(
    (*tree)->sbprobing = FALSE;
    (*tree)->probinglpwasprimfeas = TRUE;
    (*tree)->probinglpwasdualfeas = TRUE;
+   (*tree)->probdiverelaxstored = FALSE;
 
    return SCIP_OKAY;
 }
@@ -4805,6 +4807,7 @@ SCIP_RETCODE SCIPtreeFree(
    BMSfreeMemoryArrayNull(&(*tree)->siblingsprio);
    BMSfreeMemoryArrayNull(&(*tree)->pathnlpcols);
    BMSfreeMemoryArrayNull(&(*tree)->pathnlprows);
+   BMSfreeMemoryArrayNull(&(*tree)->probdiverelaxsol);
    BMSfreeMemoryArrayNull(&(*tree)->pendingbdchgs);
 
    BMSfreeMemory(tree);
@@ -6338,6 +6341,8 @@ SCIP_RETCODE SCIPtreeStartProbing(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_Bool             strongbranching     /**< is the probing mode used for strongbranching? */
    )
 {
@@ -6380,6 +6385,12 @@ SCIP_RETCODE SCIPtreeStartProbing(
       tree->probinglpwasprimchecked = lp->primalchecked;
       tree->probinglpwasdualfeas = lp->dualfeasible;
       tree->probinglpwasdualchecked = lp->dualchecked;
+   }
+
+   /* remember the relaxation solution to reset it later */
+   if( SCIPrelaxationIsSolValid(relaxation) )
+   {
+      SCIP_CALL( SCIPtreeStoreRelaxSol(tree, set, transprob) );
    }
 
    /* create temporary probing root node */
@@ -6893,6 +6904,12 @@ SCIP_RETCODE SCIPtreeEndProbing(
       SCIP_CALL( SCIPlpiClearState(lp->lpi) );
    }
 
+   /* if a relaxation was stored before probing, restore it now */
+   if( tree->probdiverelaxstored )
+   {
+      SCIP_CALL( SCIPtreeRestoreRelaxSol(tree, set, relaxation, transprob) );
+   }
+
    assert(tree->probingobjchanged == SCIPlpDivingObjChanged(lp));
 
    /* reset flags */
@@ -6910,6 +6927,69 @@ SCIP_RETCODE SCIPtreeEndProbing(
    SCIP_CALL( SCIPconshdlrsResetPropagationStatus(set, blkmem, set->conshdlrs, set->nconshdlrs) );
 
    SCIPsetDebugMsg(set, "probing ended in depth %d (LP flushed: %u, solstat: %d)\n", tree->pathlen-1, lp->flushed, SCIPlpGetSolstat(lp));
+
+   return SCIP_OKAY;
+}
+
+/** stores relaxation solution before diving or probing */
+SCIP_RETCODE SCIPtreeStoreRelaxSol(
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            transprob           /**< transformed problem after presolve */
+   )
+{
+   SCIP_VAR** vars;
+   int nvars;
+   int v;
+
+   assert(tree != NULL);
+   assert(set != NULL);
+
+   nvars = transprob->nvars;
+   vars = transprob->vars;
+
+   /* check if memory still needs to be allocated */
+   if( tree->probdiverelaxsol == NULL )
+   {
+      SCIP_ALLOC( BMSallocMemoryArray(&(tree->probdiverelaxsol), nvars) );
+   }
+
+   /* iterate over all variables to save the relaxation solution */
+   for( v = 0; v < nvars; ++v )
+      tree->probdiverelaxsol[v] = SCIPvarGetRelaxSol(vars[v], set);
+
+   tree->probdiverelaxstored = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** restores relaxation solution after diving or probing */
+SCIP_RETCODE SCIPtreeRestoreRelaxSol(
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
+   SCIP_PROB*            transprob           /**< transformed problem after presolve */
+   )
+{
+   SCIP_VAR** vars;
+   int nvars;
+   int v;
+
+   assert(tree != NULL);
+   assert(set != NULL);
+   assert(tree->probdiverelaxstored);
+   assert(tree->probdiverelaxsol != NULL);
+
+   nvars = transprob->nvars;
+   vars = transprob->vars;
+
+   /* iterate over all variables to restore the relaxation solution */
+   for( v = 0; v < nvars; ++v )
+   {
+      SCIP_CALL( SCIPvarSetRelaxSol(vars[v], set, relaxation, tree->probdiverelaxsol[v], TRUE) );
+   }
+
+   tree->probdiverelaxstored = FALSE;
 
    return SCIP_OKAY;
 }

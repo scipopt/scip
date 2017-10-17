@@ -200,6 +200,7 @@ struct SCIP_Tree
    SCIP_LPISTATE*        focuslpistate;      /**< LP state information of focus node */
    SCIP_LPINORMS*        probinglpinorms;    /**< LP pricing norms information before probing started */
    SCIP_PENDINGBDCHG*    pendingbdchgs;      /**< array of pending bound changes, or NULL */
+   SCIP_Real*            probdiverelaxsol;   /**< array with stored original relaxation solution during diving or probing */
    SCIP_Longint          focuslpstateforklpcount; /**< LP number of last solved LP in current LP state fork, or -1 if unknown */
    int                   divebdchgsize[2];   /**< holds the two sizes of the dive bound change information */
    int                   ndivebdchanges[2];  /**< current number of stored dive bound changes for the next depth */
@@ -234,6 +235,7 @@ struct SCIP_Tree
    SCIP_Bool             probinglpwasprimchecked;/**< primal feasibility has been checked when probing started */
    SCIP_Bool             probinglpwasdualfeas;/**< dual feasibility when probing started */
    SCIP_Bool             probinglpwasdualchecked;/**< dual feasibility has been check when probing started */
+   SCIP_Bool             probdiverelaxstored; /**< was a relax solution stored before diving or probing ? */
 };
 
 #ifdef __cplusplus

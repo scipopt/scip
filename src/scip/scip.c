@@ -20017,7 +20017,7 @@ SCIP_RETCODE SCIPstartStrongbranch(
        * we cannot disable it, because the pseudo costs would not be updated, otherwise,
        * and reliability branching would end up doing strong branching all the time
        */
-      SCIP_CALL( SCIPtreeStartProbing(scip->tree, scip->mem->probmem, scip->set, scip->lp, TRUE) );
+      SCIP_CALL( SCIPtreeStartProbing(scip->tree, scip->mem->probmem, scip->set, scip->lp, scip->relaxation, scip->transprob, TRUE) );
 
       /* inform the LP that the current probing mode is used for strong branching */
       SCIPlpStartStrongbranchProbing(scip->lp);
@@ -34725,6 +34725,12 @@ SCIP_RETCODE SCIPstartDive(
 
    SCIP_CALL( SCIPlpStartDive(scip->lp, scip->mem->probmem, scip->set, scip->stat) );
 
+   /* remember the relaxation solution to reset it later */
+   if( SCIPisRelaxSolValid(scip) )
+   {
+      SCIP_CALL( SCIPtreeStoreRelaxSol(scip->tree, scip->set, scip->transprob) );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -34774,6 +34780,12 @@ SCIP_RETCODE SCIPendDive(
    {
       SCIP_CALL( SCIPtreeCutoff(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
             scip->lp, scip->primal->cutoffbound) );
+   }
+
+   /* if a relaxation was stored before diving, restore it now */
+   if( scip->tree->probdiverelaxstored )
+   {
+      SCIP_CALL( SCIPtreeRestoreRelaxSol(scip->tree, scip->set, scip->relaxation, scip->transprob) );
    }
 
    return SCIP_OKAY;
@@ -35300,7 +35312,7 @@ SCIP_RETCODE SCIPstartProbing(
       SCIPswapPointers((void**)&scip->sepastore, (void**)&scip->sepastoreprobing);
    }
 
-   SCIP_CALL( SCIPtreeStartProbing(scip->tree, scip->mem->probmem, scip->set, scip->lp, FALSE) );
+   SCIP_CALL( SCIPtreeStartProbing(scip->tree, scip->mem->probmem, scip->set, scip->lp, scip->relaxation, scip->transprob, FALSE) );
 
    /* disables the collection of any statistic for a variable */
    SCIPstatDisableVarHistory(scip->stat);
