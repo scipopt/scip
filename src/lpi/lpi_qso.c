@@ -3503,6 +3503,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       {
          QS_CONDRET( QSset_param_double(lpi->prob, QS_PARAM_OBJLLIM, dval) );
       }
+      break;
    }
    case SCIP_LPPAR_FEASTOL:
    case SCIP_LPPAR_DUALFEASTOL:
