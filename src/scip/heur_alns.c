@@ -1014,9 +1014,9 @@ void printNeighborhoodStatistics(
    int j;
    HISTINDEX statusses[] = {HIDX_OPT, HIDX_INFEAS, HIDX_NODELIM, HIDX_STALLNODE, HIDX_SOLLIM, HIDX_USR, HIDX_OTHER};
 
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Neighborhoods      :%11s %11s %11s %11s %11s %11s %11s %11s %11s %11s %4s %4s %4s %4s %4s %4s %4s\n",
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Neighborhoods      :%11s %11s %11s %11s %11s %11s %11s %11s %11s %11s %4s %4s %4s %4s %4s %4s %4s %4s\n",
             "Calls", "SetupTime", "SubmipTime", "SubmipNodes", "Sols", "Best", "Exp3", "EpsGreedy", "UCB", "TgtFixRate",
-            "Opt", "Inf", "Node", "Stal", "Sol", "Usr", "Othr");
+            "Opt", "Inf", "Node", "Stal", "Sol", "Usr", "Othr", "Actv");
 
 
    /* loop over neighborhoods and fill in statistics */
@@ -1039,7 +1039,7 @@ void printNeighborhoodStatistics(
       ucb = 1.0;
       epsgreedyweight = -1.0;
 
-      if( neighborhood->active )
+      if( i < heurdata->nactiveneighborhoods )
       {
          switch (heurdata->banditalgo) {
             case 'u':
@@ -1065,6 +1065,7 @@ void printNeighborhoodStatistics(
       for( j = 0; j < NHISTENTRIES; ++j )
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, " %4d", neighborhood->stats.statushist[statusses[j]]);
 
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, " %4d", i < heurdata->nactiveneighborhoods ? 1 : 0);
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "\n");
    }
 }
@@ -2114,6 +2115,9 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
    assert(heurdata != NULL);
 
    *result = SCIP_DIDNOTRUN;
+
+   if( heurdata->nactiveneighborhoods == 0 )
+      return SCIP_OKAY;
 
    /* wait for a sufficient number of nodes since last incumbent solution */
    if( SCIPgetDepth(scip) > 0 && SCIPgetBestSol(scip) != NULL
@@ -3429,20 +3433,22 @@ SCIP_DECL_HEURINITSOL(heurInitsolAlns)
       heurdata->bandit = NULL;
    }
 
-   /* create or reset bandit algorithm */
-   if( heurdata->bandit == NULL )
-   {
-      SCIP_CALL( createBandit(scip, heurdata, priorities, initseed) );
+   if( heurdata->nactiveneighborhoods > 0 )
+   {  /* create or reset bandit algorithm */
+      if( heurdata->bandit == NULL )
+      {
+         SCIP_CALL( createBandit(scip, heurdata, priorities, initseed) );
 
-      resetMinimumImprovement(heurdata);
-      resetTargetNodeLimit(heurdata);
-   }
-   else if( heurdata->resetweights )
-   {
-      SCIP_CALL( SCIPresetBandit(scip, heurdata->bandit, priorities, initseed) );
+         resetMinimumImprovement(heurdata);
+         resetTargetNodeLimit(heurdata);
+      }
+      else if( heurdata->resetweights )
+      {
+         SCIP_CALL( SCIPresetBandit(scip, heurdata->bandit, priorities, initseed) );
 
-      resetMinimumImprovement(heurdata);
-      resetTargetNodeLimit(heurdata);
+         resetMinimumImprovement(heurdata);
+         resetTargetNodeLimit(heurdata);
+      }
    }
 
    heurdata->usednodes = 0;
