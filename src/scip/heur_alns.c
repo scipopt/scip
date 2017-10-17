@@ -236,7 +236,6 @@ typedef struct VarPrio VARPRIO;
 /** callback function to deactivate neighborhoods on problems where they are irrelevant */
 #define DECL_NHDEACTIVATE(x) SCIP_RETCODE x (\
    SCIP*                 scip,               /**< SCIP data structure */  \
-   NH*                   neighborhood,       /**< neighborhood data structure */ \
    SCIP_Bool*            deactivate          /**< pointer to store whether the neighborhood should be deactivated (TRUE) for an instance */ \
    )
 
@@ -3020,7 +3019,7 @@ DECL_CHANGESUBSCIP(changeSubscipZeroobjective)
    SCIP_CALL( SCIPgetVarsData(sourcescip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
    /* do not run if no objective variables are present */
-   if( SCIPgetNObjVars(scip) == 0 )
+   if( SCIPgetNObjVars(sourcescip) == 0 )
       return SCIP_OKAY;
 
    /* loop over the variables and change their objective coefficients to 0 */
@@ -3255,6 +3254,7 @@ DECL_NHREFSOL(nhRefsolIncumbent)
 
 
 /** callback function that deactivates a neighborhood on problems with no discrete variables */
+static
 DECL_NHDEACTIVATE(nhDeactivateDiscreteVars)
 { /*line --e{715}*/
    assert(scip != NULL);
@@ -3267,6 +3267,7 @@ DECL_NHDEACTIVATE(nhDeactivateDiscreteVars)
 }
 
 /** callback function that deactivates a neighborhood on problems with no binary variables */
+static
 DECL_NHDEACTIVATE(nhDeactivateBinVars)
 { /*line --e{715}*/
    assert(scip != NULL);
@@ -3279,6 +3280,7 @@ DECL_NHDEACTIVATE(nhDeactivateBinVars)
 }
 
 /** callback function that deactivates a neighborhood on problems with no objective variables */
+static
 DECL_NHDEACTIVATE(nhDeactivateObjVars)
 { /*line --e{715}*/
    assert(scip != NULL);
@@ -3399,7 +3401,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolAlns)
 
       SCIP_CALL( neighborhoodStatsReset(scip, &neighborhood->stats) );
 
-      SCIP_CALL( neighborhood->nhdeactivate(scip, neighborhood, &deactivate) );
+      SCIP_CALL( neighborhood->nhdeactivate(scip, &deactivate) );
 
       /* disable inactive neighborhoods */
       if( deactivate || ! neighborhood->active )
