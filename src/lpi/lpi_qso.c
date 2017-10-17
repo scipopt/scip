@@ -291,7 +291,7 @@ SCIP_RETCODE convertSides(
    int state;
    register int i;
 
-   for( i = nrows ; i-- ; )
+   for( i = 0 ; i < nrows ; ++i )
    {
       state = ((lhs[i] <= -QS_MAXDOUBLE ? 1U:0U) | (rhs[i] >= QS_MAXDOUBLE ? 2U:0U));
       lpi->ircnt[i] = 0;
@@ -325,7 +325,7 @@ SCIP_RETCODE convertSides(
          lpi->irng[i] = 0;
          break;
       default:
-         SCIPerrorMessage("Error, constraint %d has no bounds!",i);
+         SCIPerrorMessage("Error, constraint %d has no bounds!", i);
          SCIPABORT();
          return SCIP_INVALIDDATA; /*lint !e527*/
       }
@@ -512,6 +512,7 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    assert(lpi->prob != NULL);
 
    lpi->solstat = 0;
+
    SCIPdebugMessage("loading LP in column format into QSopt: %d cols, %d rows\n", ncols, nrows);
 
    /* delete old LP */
@@ -662,6 +663,7 @@ SCIP_RETCODE SCIPlpiDelCols(
 
    len = lastcol - firstcol +1;
    lpi->solstat = 0;
+
    assert(0 <= firstcol && len > 0 && lastcol < QSget_colcount(lpi->prob));
 
    SCIPdebugMessage("deleting %d columns from QSopt\n", len);
@@ -929,6 +931,7 @@ SCIP_RETCODE SCIPlpiDelRows(
    assert(lpi->prob != NULL);
 
    lpi->solstat = 0;
+
    assert(0 <= firstrow && len > 0 && lastrow < QSget_rowcount (lpi->prob));
 
    SCIPdebugMessage("deleting %d rows from QSopt\n", len);
@@ -1083,6 +1086,7 @@ SCIP_RETCODE SCIPlpiChgSides(
    assert(lpi->prob != NULL);
 
    lpi->solstat = 0;
+
    SCIPdebugMessage("changing %d sides in QSopt\n", nrows);
 
    SCIP_CALL( ensureRowMem(lpi, nrows) );
@@ -1165,6 +1169,7 @@ SCIP_RETCODE SCIPlpiChgObj(
    assert(lpi->prob != NULL);
 
    lpi->solstat = 0;
+
    SCIPdebugMessage("changing %d objective values in QSopt\n", ncols);
 
    for( i = 0; i < ncols; ++i )
@@ -1193,6 +1198,7 @@ SCIP_RETCODE SCIPlpiScaleRow(
    assert(lpi->prob != NULL);
 
    lpi->solstat = 0;
+
    SCIPdebugMessage("scaling row %d with factor %g in QSopt\n", row, scaleval);
 
    rowlist[0] = row;
@@ -1299,6 +1305,7 @@ SCIP_RETCODE SCIPlpiScaleCol(
    assert(lpi->prob != NULL);
 
    lpi->solstat = 0;
+
    SCIPdebugMessage("scaling column %d with factor %g in QSopt\n", col, scaleval);
 
    /* get the column */
@@ -2357,6 +2364,7 @@ SCIP_RETCODE SCIPlpiIgnoreInstability(
 {
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
+   assert(success != NULL);
 
    SCIPdebugMessage("ignore instability (will fail)\n");
 
