@@ -1000,9 +1000,9 @@ SCIP_RETCODE SCIPlpiClear(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   register int i;
-   int ncols;
-   int nrows;
+   char savename[1024];
+   char* name;
+   int objsen;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
@@ -1010,23 +1010,14 @@ SCIP_RETCODE SCIPlpiClear(
    SCIPdebugMessage("clearing QSopt LP\n");
    lpi->solstat = 0;
 
-   ncols = QSget_colcount(lpi->prob);
-   nrows = QSget_rowcount(lpi->prob);
-   if( ncols >= 1 )
-   {
-      SCIP_CALL( ensureColMem(lpi,ncols) );
-      for( i = 0; i < ncols; ++i )
-         lpi->iccnt[i] = i;
-      QS_CONDRET( QSdelete_cols(lpi->prob, ncols, lpi->iccnt) );
-   }
+   /* save sense and name of problem */
+   QS_CONDRET( QSget_objsense(lpi->prob, &objsen) );
 
-   if( nrows >= 1 )
-   {
-      SCIP_CALL( ensureRowMem(lpi, nrows) );
-      for( i = 0; i < nrows; ++i )
-         lpi->ircnt[i] = i;
-      QS_CONDRET( QSdelete_rows(lpi->prob, nrows, lpi->ircnt) );
-   }
+   name = QSget_probname(lpi->prob);
+   (void) strncpy(savename, name, 1024);
+
+   QSfree_prob(lpi->prob);
+   lpi->prob = QScreate_prob(savename, objsen);
 
    return SCIP_OKAY;
 }
