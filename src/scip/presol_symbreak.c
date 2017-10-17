@@ -108,7 +108,7 @@ SCIP_RETCODE computeOrbitVariable(
    int*                  norbits,            /**< pointer to number of orbits currently stores in orbits */
    int**                 nvarsinorbits,      /**< pointer to array containing for each orbit the number of variables contained in it */
    int*                  maxnorbits,         /**< pointer to maximal number of orbits that can be stored in orbits */
-   int**                 iorbit,              /**< preliminary orbits array */
+   int**                 iorbit,             /**< preliminary orbits array */
    int                   i,                  /**< index of variable for which the orbit should be computed */
    int*                  curorbit,           /**< array that stores orbit of i (allocated outside since it can be used for multiple orbit computations) */
    SCIP_Bool*            varadded            /**< array that stores which variables were added to the current orbit, has to be initialized with FALSE in

@@ -1620,7 +1620,7 @@ SCIP_RETCODE resolvePropagationFullOrbitopes(
 
    assert( inferrow < nrows );
 
-   /* reson for 1-fixing */
+   /* reason for 1-fixing */
    if ( SCIPvarGetLbAtIndex(infervar, bdchgidx, FALSE) < 0.5 &&  SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > 0.5 )
    {
       SCIPdebugMsg(scip, " -> reason for fixing variable with index %d to 1 was the fixing of the upperleft %dx%d-matrix and x[%d][%d] = 1.\n",
