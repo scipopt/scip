@@ -3256,7 +3256,7 @@ DECL_NHREFSOL(nhRefsolIncumbent)
 /** callback function that deactivates a neighborhood on problems with no discrete variables */
 static
 DECL_NHDEACTIVATE(nhDeactivateDiscreteVars)
-{ /*line --e{715}*/
+{ /*lint --e{715}*/
    assert(scip != NULL);
    assert(deactivate != NULL);
 
@@ -3269,7 +3269,7 @@ DECL_NHDEACTIVATE(nhDeactivateDiscreteVars)
 /** callback function that deactivates a neighborhood on problems with no binary variables */
 static
 DECL_NHDEACTIVATE(nhDeactivateBinVars)
-{ /*line --e{715}*/
+{ /*lint --e{715}*/
    assert(scip != NULL);
    assert(deactivate != NULL);
 
@@ -3282,7 +3282,7 @@ DECL_NHDEACTIVATE(nhDeactivateBinVars)
 /** callback function that deactivates a neighborhood on problems with no objective variables */
 static
 DECL_NHDEACTIVATE(nhDeactivateObjVars)
-{ /*line --e{715}*/
+{ /*lint --e{715}*/
    assert(scip != NULL);
    assert(deactivate != NULL);
 
