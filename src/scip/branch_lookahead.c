@@ -847,7 +847,7 @@ SCIP_RETCODE binaryVarListAppend(
 
 /** Remove the last element from the list. */
 static
-SCIP_VAR* binaryVarListDrop(
+void binaryVarListDrop(
    BINARYVARLIST*        list                /**< The list to remove the last element from. */
    )
 {
