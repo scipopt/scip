@@ -123,7 +123,7 @@ SCIP_RETCODE computeOrbitVariable(
 
    assert( perms != NULL );
    assert( nperms > 0 );
-   assert( nperms > 0 );
+   assert( npermvars > 0 );
    assert( orbits != NULL );
    assert( norbits != NULL );
    assert( nvarsinorbits != NULL );
@@ -209,21 +209,28 @@ SCIP_RETCODE computeOrbitVariable(
 static
 SCIP_RETCODE computeGroupOrbits(
    SCIP*                 scip,               /**< SCIP instance */
-   SCIP_PRESOLDATA*      presoldata          /**< data of symmetry breaking presolver */
+   int**                 perms,              /**< matrix containing in each row a permutation of the symmetry group */
+   int                   nperms,             /**< number of permutations encoded in perms */
+   int                   npermvars,          /**< length of a permutation array */
+   int***                orbits,             /**< pointer to matrix containing in each row a variable orbit */
+   int*                  norbits,            /**< pointer to number of orbits currently stores in orbits */
+   int**                 nvarsinorbits,      /**< pointer to array containing for each orbit the number of variables contained in it */
+   int*                  maxnorbits          /**< pointer to maximal number of orbits that can be stored in orbits */
    )
 {
-   int npermvars;
    int* orbit;
    int* curorbit;
    SCIP_Bool* varadded;
    int i;
 
    assert( scip != NULL );
-   assert( presoldata != NULL );
-
-   npermvars = presoldata->npermvars;
-
+   assert( perms != NULL );
+   assert( nperms > 0 );
    assert( npermvars > 0 );
+   assert( orbits != NULL );
+   assert( norbits != NULL );
+   assert( nvarsinorbits != NULL );
+   assert( maxnorbits != NULL );
 
    /* init data structures*/
    SCIP_CALL( SCIPallocBufferArray(scip, &orbit, npermvars) );
@@ -238,7 +245,7 @@ SCIP_RETCODE computeGroupOrbits(
    }
 
    /* find variable orbits */
-   presoldata->norbits = 0;
+   *norbits = 0;
 
    for (i = 0; i < npermvars; ++i)
    {
@@ -246,8 +253,8 @@ SCIP_RETCODE computeGroupOrbits(
       if ( orbit[i] == i )
       {
          /* compute and store orbit */
-         SCIP_CALL( computeOrbitVariable(scip, presoldata->perms, presoldata->nperms, presoldata->npermvars, &(presoldata)->orbits,
-               &presoldata->norbits, &presoldata->nvarsinorbits, &presoldata->maxnorbits, &orbit, i, curorbit, varadded) );
+         SCIP_CALL( computeOrbitVariable(scip, perms, nperms, npermvars, orbits, norbits, nvarsinorbits,
+               maxnorbits, &orbit, i, curorbit, varadded) );
       }
    }
 
@@ -1291,7 +1298,8 @@ SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
       {
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(presoldata->genconss), presoldata->nperms) );
 
-         SCIP_CALL( computeGroupOrbits(scip, presoldata) );
+         SCIP_CALL( computeGroupOrbits(scip, presoldata->perms, presoldata->nperms, presoldata->npermvars,
+               &presoldata->orbits, &presoldata->norbits, &presoldata->nvarsinorbits, &presoldata->maxnorbits) );
 
          SCIP_CALL( computeComponents(scip, presoldata) );
 
