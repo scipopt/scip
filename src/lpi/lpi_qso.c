@@ -394,7 +394,7 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    int                   ncols,              /**< length of integrality array */
    int*                  intInfo             /**< integrality array (0: continuous, 1: integer) */
    )
-{
+{  /*lint --e{715}*/
    SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -453,6 +453,7 @@ SCIP_RETCODE SCIPlpiCreate(
    SCIP_ALLOC( BMSallocMemoryArray(&((*lpi)->ibas), 1024) );
 
    (*lpi)->messagehdlr = messagehdlr;
+   (*lpi)->algo = LPI_QSOPT_ALGO_UNKNOWN;
 
    return SCIP_OKAY;
 }
