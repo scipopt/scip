@@ -3244,13 +3244,15 @@ SCIP_RETCODE filterBestCandidates(
    CANDIDATELIST*        bestcandidates      /**< list to store the best candidates in */
    )
 {
-   int permutation[allcandidates->ncandidates];
+   int* permutation;
    int i;
    int nusedcands;
    int probingdepth;
 
+   SCIP_CALL( SCIPallocBufferArray(scip, &permutation, allcandidates->ncandidates) );
+
    nusedcands = MIN(config->maxncands, allcandidates->ncandidates);
-   probingdepth= SCIPinProbing(scip) ? SCIPgetProbingDepth(scip) : 0;
+   probingdepth = SCIPinProbing(scip) ? SCIPgetProbingDepth(scip) : 0;
 
    SCIP_CALL( candidateListInit(scip, bestcandidates, nusedcands, config->reusebasis) );
 
@@ -3297,6 +3299,9 @@ SCIP_RETCODE filterBestCandidates(
       LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, " Index %2i: Var %s Val %g\n", i, SCIPvarGetName(candidate->branchvar),
             candidate->branchval);
    }
+
+   SCIPfreeBufferArray(scip, &permutation);
+
    return SCIP_OKAY;
 }
 
