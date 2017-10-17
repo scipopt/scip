@@ -4048,12 +4048,6 @@
  * 0, 7, 14, ... of the branching tree. A frequency of 0 means that the callback is only executed at the root node, i.e.,
  * only the relaxation of the root problem is solved. A frequency of -1 disables the relaxation handler.
  *
- * \par RELAX_INCLUDESLP: whether the whole lp is included in the relaxation.
- * This flag should be set to TRUE if all active LP-rows are included in the relaxation and every feasible solution produced
- * by the relaxator will satisfy all these LP-constraints. Only if this is set to TRUE, the solutions of this relaxator can
- * be enforced using the \ref CONSENFORELAX callback, meaning that they will be used as primal solutions if feasible and can
- * be separated or branched on. If this flag is set to FALSE, only the lowerbound computed by the relaxator will be used in
- * the solving process.
  *
  *
  * @section RELAX_DATA Relaxation Handler Data
@@ -4117,13 +4111,17 @@
  * make sure that the LP of the current node is constructed and its data can be accessed via calls to SCIPgetLPRowsData()
  * and SCIPgetLPColsData(), and SCIPseparateSol() to call the cutting plane separators for a given primal solution.
  *
- * The lowerbound computed by the relaxation should be returned in the lowerbound pointer. The primal solution of the relaxation can
- * be stored inside the data structures of SCIP with <code>SCIPsetRelaxSolVal()</code> and <code>SCIPsetRelaxSolVals()</code>. If the
- * RELAX_INCLUDESLP flag is set to true, this solution will be enforced and, if feasible, added to the solution storage if the
- * lowerbound of this relaxator is the largest among all relaxators and the LP. You may also call SCIPtrySolFree() directly from the
+ * The lowerbound computed by the relaxation should be returned in the lowerbound pointer. If the relaxation improves on the best
+ * relaxation already computed (either <code>SCIPrelaxationIsSolValid()</code> returns FALSE, meaning that no relaxation solution
+ * is available so far, or the lowerbound is larger than the value returned by <code>SCIPgetRelaxSolObj()</code>), then the primal
+ * solution of the relaxation should be stored inside the data structures of SCIP with <code>SCIPsetRelaxSolVal()</code>,
+ * <code>SCIPsetRelaxSolVals()</code> or <code>SCIPsetRelaxSolValsSol()</code>. If you set the values one by one, you will need to call
+ * <code>SCIPmarkRelaxSolValid()</code> to inform SCIP that the solution is complete and valid. With the "includeslp" argument of
+ * <code>SCIPsetRelaxSolVals()</code>, <code>SCIPsetRelaxSolValsSol()</code> and <code>SCIPmarkRelaxSolValid()</code> you need to tell SCIP
+ * whether the relaxation included all lp rows. In this case the  solution will be enforced and, if feasible, added to the solution storage if the
+ * lowerbound of this relaxator is larger than the LP's. You may also call SCIPtrySolFree() directly from the
  * relaxation handler to make sure that a solution is added to the solution storage if it is feasible, even if the relaxator does not
- * include the LP or another relaxator produced a stronger bound. After the relaxation round is finished, the best relaxation solution
- * can be accessed via <code>SCIPgetRelaxSolVal()</code>.
+ * include the LP or another relaxator produced a stronger bound.
  * Furthermore, there is a list of external branching candidates, that can be filled by relaxation handlers and constraint handlers,
  * allowing branching rules to take these candidates as a guide on how to split the problem into subproblems. If the relaxation
  * solution is enforced, the integrality constraint handler will add external branching candidates for the relaxation solution
