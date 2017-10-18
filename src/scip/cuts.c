@@ -441,6 +441,48 @@ SCIP_Bool removeZeros(
    return FALSE;
 }
 
+static
+SCIP_DECL_SORTINDCOMP(compareAbsCoefsQuad)
+{
+   SCIP_Real abscoef1;
+   SCIP_Real abscoef2;
+   SCIP_Real QUAD(coef1);
+   SCIP_Real QUAD(coef2);
+   SCIP_Real* coefs = (SCIP_Real*) dataptr;
+
+   QUAD_ARRAY_LOAD(coef1, coefs, ind1);
+   QUAD_ARRAY_LOAD(coef2, coefs, ind2);
+
+   abscoef1 = REALABS(QUAD_ROUND(coef1));
+   abscoef2 = REALABS(QUAD_ROUND(coef2));
+
+   if( abscoef1 < abscoef2 )
+      return -1;
+   if( abscoef2 < abscoef1 )
+      return 1;
+
+   return 0;
+}
+
+static
+SCIP_DECL_SORTINDCOMP(compareAbsCoefs)
+{
+   SCIP_Real abscoef1;
+   SCIP_Real abscoef2;
+   SCIP_Real* coefs = (SCIP_Real*) dataptr;
+
+   abscoef1 = REALABS(coefs[ind1]);
+   abscoef2 = REALABS(coefs[ind2]);
+
+   if( abscoef1 < abscoef2 )
+      return -1;
+   if( abscoef2 < abscoef1 )
+      return 1;
+
+   return 0;
+}
+
+
 /** tighten the coefficients of the given cut based on the maximal activity; see cons_linear.c for details
  *  the cut is given in a semi-sparse quad precision array; returns TRUE if the cut was detected
  *  to be redundant due to acitvity bounds
@@ -520,6 +562,8 @@ SCIP_Bool cutTightenCoefsQuad(
    if( SCIPisGT(scip, maxact - maxabsval, QUAD_ROUND(*cutrhs)) )
       return FALSE;
 
+   SCIPsortDownInd(cutinds, compareAbsCoefsQuad, (void*) cutcoefs, *cutnnz);
+
    /* loop over the integral variables and try to tighten the coefficients; see cons_linear for more details */
    for( i = 0; i < *cutnnz; )
    {
@@ -541,7 +585,9 @@ SCIP_Bool cutTightenCoefsQuad(
          SCIP_Real lb = cutislocal ? SCIPvarGetLbLocal(vars[cutinds[i]]) : SCIPvarGetLbGlobal(vars[cutinds[i]]);
 
          SCIPquadprecSumQQ(coef, *cutrhs, -maxacttmp);
-         if( !SCIPisSumRelEQ(scip, QUAD_ROUND(coef), QUAD_ROUND(val)) )
+         QUAD_ASSIGN(coef, SCIPfeasCeil(scip, QUAD_ROUND(coef) - 1.0));
+
+         if( SCIPisSumRelGT(scip, QUAD_ROUND(coef), QUAD_ROUND(val)) )
          {
             SCIP_Real QUAD(delta);
             SCIP_Real QUAD(tmp);
@@ -579,8 +625,9 @@ SCIP_Bool cutTightenCoefsQuad(
          SCIP_Real ub = cutislocal ? SCIPvarGetUbLocal(vars[cutinds[i]]) : SCIPvarGetUbGlobal(vars[cutinds[i]]);
 
          SCIPquadprecSumQQ(coef, maxacttmp, -*cutrhs);
+         QUAD_ASSIGN(coef, SCIPfeasFloor(scip, QUAD_ROUND(coef) + 1.0));
 
-         if( !SCIPisSumRelEQ(scip, QUAD_ROUND(coef), QUAD_ROUND(val)) )
+         if( SCIPisSumRelLT(scip, QUAD_ROUND(coef), QUAD_ROUND(val)) )
          {
             SCIP_Real QUAD(delta);
             SCIP_Real QUAD(tmp);
@@ -612,6 +659,8 @@ SCIP_Bool cutTightenCoefsQuad(
             }
          }
       }
+      else /* due to sorting we can stop completely if the precondition was not fulfilled for this variable */
+         break;
 
       ++i;
    }
@@ -691,6 +740,8 @@ SCIP_Bool cutTightenCoefs(
    if( SCIPisGT(scip, maxact - maxabsval, QUAD_ROUND(*cutrhs)) )
       return FALSE;
 
+   SCIPsortDownInd(cutinds, compareAbsCoefs, (void*) cutcoefs, *cutnnz);
+
    /* loop over the integral variables and try to tighten the coefficients; see cons_linear for more details */
    for( i = 0; i < *cutnnz; )
    {
@@ -712,8 +763,9 @@ SCIP_Bool cutTightenCoefs(
          SCIP_Real lb = cutislocal ? SCIPvarGetLbLocal(vars[cutinds[i]]) : SCIPvarGetLbGlobal(vars[cutinds[i]]);
 
          SCIPquadprecSumQQ(coef, -maxacttmp, *cutrhs);
+         QUAD_ASSIGN(coef, SCIPfeasCeil(scip, QUAD_ROUND(coef) - 1.0));
 
-         if( !SCIPisSumRelEQ(scip, QUAD_ROUND(coef), val) )
+         if( SCIPisSumRelGT(scip, QUAD_ROUND(coef), val) )
          {
             SCIP_Real QUAD(delta);
             SCIP_Real QUAD(tmp);
@@ -751,8 +803,9 @@ SCIP_Bool cutTightenCoefs(
          SCIP_Real ub = cutislocal ? SCIPvarGetUbLocal(vars[cutinds[i]]) : SCIPvarGetUbGlobal(vars[cutinds[i]]);
 
          SCIPquadprecSumQQ(coef, maxacttmp, -*cutrhs);
+         QUAD_ASSIGN(coef, SCIPfeasFloor(scip, QUAD_ROUND(coef) + 1.0));
 
-         if( !SCIPisSumRelEQ(scip, QUAD_ROUND(coef), val) )
+         if( SCIPisSumRelLT(scip, QUAD_ROUND(coef), val) )
          {
             SCIP_Real QUAD(delta);
             SCIP_Real QUAD(tmp);
@@ -784,6 +837,8 @@ SCIP_Bool cutTightenCoefs(
             }
          }
       }
+      else /* due to sorting we can stop completely if the precondition was not fulfilled for this variable */
+         break;
 
       ++i;
    }
@@ -873,7 +928,9 @@ SCIP_Bool SCIPcutsTightenCoefficients(
          SCIP_Real coef = (*cutrhs) - maxact;
          SCIP_Real lb = cutislocal ? SCIPvarGetLbLocal(vars[cutinds[i]]) : SCIPvarGetLbGlobal(vars[cutinds[i]]);
 
-         if( !SCIPisSumRelEQ(scip, coef, cutcoefs[i]) )
+         coef = SCIPfeasCeil(scip, coef - 1.0);
+
+         if( SCIPisSumRelGT(scip, coef, cutcoefs[i]) )
          {
             SCIP_Real QUAD(delta);
             SCIP_Real QUAD(tmp);
@@ -910,7 +967,9 @@ SCIP_Bool SCIPcutsTightenCoefficients(
          SCIP_Real coef = maxact - (*cutrhs);
          SCIP_Real ub = cutislocal ? SCIPvarGetUbLocal(vars[cutinds[i]]) : SCIPvarGetUbGlobal(vars[cutinds[i]]);
 
-         if( !SCIPisEQ(scip, coef, cutcoefs[i]) )
+         coef = SCIPfeasFloor(scip, coef + 1.0);
+
+         if( SCIPisSumRelLT(scip, coef, cutcoefs[i]) )
          {
             SCIP_Real QUAD(delta);
             SCIP_Real QUAD(tmp);
