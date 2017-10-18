@@ -735,7 +735,81 @@ SCIP_RETCODE graph_pc_init(
    return SCIP_OKAY;
 }
 
-/* updates term2edge array for new graph*/
+/** checks consistency of term2edge array ONLY for non-extended graphs! */
+SCIP_Bool graph_pc_term2edgeConsistent(
+   const GRAPH*          g                   /**< the graph */
+)
+{
+   assert(g != NULL);
+   assert(g->term2edge);
+   assert(!g->extended);
+
+   if( g->term2edge[g->source] != -1 )
+      return FALSE;
+
+   for( int i = 0; i < g->knots; i++ )
+   {
+      if( Is_gterm(g->term[i]) && i != g->source && g->term2edge[i] < 0 )
+      {
+         printf("term2edge consistency fail1 %d \n", i);
+         return FALSE;
+      }
+
+      if( !Is_gterm(g->term[i]) && g->term2edge[i] != -1 )
+      {
+         printf("term2edge consistency fail2 %d \n", i);
+         return FALSE;
+      }
+
+      if( Is_pterm(g->term[i]) && i != g->source )
+      {
+         int k;
+         int e;
+
+         for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
+         {
+            k = g->head[e];
+            if( Is_term(g->term[k]) && k != g->source )
+               break;
+         }
+         assert(e != EAT_LAST);
+
+         if( g->term2edge[i] != e )
+         {
+            printf("term2edge consistency fail3 %d \n", i);
+            return FALSE;
+         }
+
+         if( g->term2edge[k] != flipedge(e) )
+         {
+            printf("term2edge consistency fail4 %d \n", i);
+            return FALSE;
+         }
+      }
+   }
+   return TRUE;
+}
+
+/** change property of node to non-terminal */
+void graph_pc_knot2nonTerm(
+   GRAPH*                g,                  /**< the graph */
+   int                   node                /**< node to be changed */
+   )
+{
+   assert(g      != NULL);
+   assert(node   >= 0);
+   assert(node   < g->knots);
+   assert(g->stp_type == STP_PCSPG || g->stp_type == STP_RPCSPG || g->stp_type == STP_MWCSP || g->stp_type == STP_RMWCSP);
+   assert(g->term2edge);
+
+   if( Is_term(g->term[node]) )
+      g->terms--;
+
+   g->term[node] = -1;
+   g->term2edge[node] = -1;
+}
+
+/** updates term2edge array for new graph */
 void graph_pc_updateTerm2edge(
    GRAPH*                newgraph,           /**< the new graph */
    const GRAPH*          oldgraph,           /**< the old graph */
@@ -753,11 +827,15 @@ void graph_pc_updateTerm2edge(
    assert(newhead >= 0);
    assert(oldtail >= 0);
    assert(oldhead >= 0);
+   assert(oldgraph->extended);
+   assert(newgraph->extended);
 
    assert(newgraph->term2edge != NULL);
-   if( oldgraph->term2edge[oldtail] >= 0 && oldgraph->term2edge[oldhead] >= 0 )
+   if( oldgraph->term2edge[oldtail] >= 0 && oldgraph->term2edge[oldhead] >= 0 && oldgraph->term[oldtail] != oldgraph->term[oldhead] )
    {
       assert(Is_gterm(newgraph->term[newtail]) && Is_gterm(newgraph->term[newhead]));
+      assert(Is_gterm(oldgraph->term[oldtail]) && Is_gterm(oldgraph->term[oldhead]));
+      assert(oldgraph->source != oldtail && oldgraph->source != oldhead);
       assert(flipedge(newgraph->edges) == newgraph->edges + 1);
 
       newgraph->term2edge[newtail] = newgraph->edges;
@@ -1145,6 +1223,8 @@ SCIP_RETCODE graph_pc_getRsap(
    assert(graph->knots == graph->ksize);
    assert(graph->edges == graph->esize);
 
+   SCIP_CALL( graph_pc_2transcheck(scip, graph) );
+
    aterm = -1;
    proot = graph->source;
    stp_type = graph->stp_type;
@@ -1208,17 +1288,20 @@ SCIP_RETCODE graph_pc_getRsap(
 
    assert(p->grad[graph->source] == 0);
 
-   SCIP_CALL( SCIPallocMemoryArray(scip, &((*newgraph)->prize), nnodes) );
+   SCIP_CALL( graph_pc_init(scip, p, nnodes, nnodes) );
+
+   assert(graph->term2edge != NULL);
 
    for( k = 0; k < nnodes; k++)
    {
+      p->term2edge[k] = graph->term2edge[k];
       if( k < graph->norgmodelknots )
-      {
          p->prize[k] = graph->prize[k];
-      }
       else
          p->prize[k] = 0.0;
    }
+   p->term2edge[root] = -1;
+   p->term2edge[aterm] = -1;
 
    if( nrootcands > 0 )
    {
@@ -1706,7 +1789,8 @@ int graph_pc_deleteTerm(
 
    /* delete terminal */
 
-   graph_knot_chg(g, i, -1);
+   assert(g->term2edge[i] != -1);
+   graph_pc_knot2nonTerm(g, i);
    g->mark[i] = FALSE;
 
    while( (e = g->outbeg[i]) != EAT_LAST )
@@ -1719,10 +1803,11 @@ int graph_pc_deleteTerm(
    }
 
    assert(t != UNKNOWN);
+   assert(g->term2edge != NULL);
 
    /* delete artificial terminal */
 
-   graph_knot_chg(g, t, -1);
+   graph_pc_knot2nonTerm(g, t);
 
    while( g->outbeg[t] != EAT_LAST )
       graph_edge_del(scip, g, g->outbeg[t], TRUE);
@@ -1826,10 +1911,12 @@ SCIP_RETCODE graph_pc_contractEdge(
 
       assert(j != g->source);
       assert(!g->mark[j]);
+      assert(g->term2edge != NULL);
 
       /* delete edge and unmark artificial terminal */
       graph_knot_chg(g, j, -1);
       graph_edge_del(scip, g, e, TRUE);
+      g->term2edge[j] = -1;
 
       /* delete remaining incident edge of artificial terminal */
       e = g->inpbeg[j];
@@ -1846,6 +1933,7 @@ SCIP_RETCODE graph_pc_contractEdge(
       /* contract s into t */
       SCIP_CALL( graph_knot_contract(scip, g, solnode, t, s) );
       graph_knot_chg(g, s, -1);
+      g->term2edge[s] = -1;
 
       assert(g->grad[s] == 0);
 
@@ -2712,7 +2800,6 @@ SCIP_RETCODE graph_init(
    )
 {
    GRAPH* p;
-   int    i;
 
    assert(ksize > 0);
    assert(ksize < INT_MAX);
@@ -2853,7 +2940,6 @@ SCIP_RETCODE graph_resize(
    int                   layers              /**< layers (set to -1 by default) */
    )
 {
-   int i;
    assert(scip      != NULL);
    assert(g      != NULL);
    assert((ksize  < 0) || (ksize  >= g->knots));

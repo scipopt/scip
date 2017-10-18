@@ -592,7 +592,7 @@ void sdpaths(
    assert(nlbl   != NULL);
    assert(memlbl != NULL);
 
-   limit1 = limit - limit / 3;
+   limit1 = limit / 2;
    *nlbl = 0;
    nchecks = 0;
 
@@ -613,16 +613,17 @@ void sdpaths(
    {
       m = g->head[e];
 
-      if( g->mark[m] )
+      if( g->mark[m] && SCIPisGE(scip, distlimit, cost[e]) )
       {
          assert(SCIPisGT(scip, path[m].dist, path[tail].dist + cost[e]));
 
          /* m labelled the first time */
          memlbl[(*nlbl)++] = m;
          correct(scip, heap, state, &count, path, m, tail, e, cost[e], FSP_MODE);
+
+         if( nchecks++ > limit1 )
+            break;
       }
-      if( nchecks++ > limit1 )
-         break;
    }
    g->mark[head] = TRUE;
 
@@ -646,11 +647,11 @@ void sdpaths(
       for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
       {
          m = g->head[e];
-         if( state[m] && g->mark[m] && SCIPisGT(scip, path[m].dist, path[k].dist + cost[e]) )
+         if( state[m] && g->mark[m] && SCIPisGT(scip, path[m].dist, path[k].dist + cost[e]) && SCIPisGE(scip, distlimit, cost[e]) )
          {
             /* m labelled for the first time? */
             if( state[m] == UNKNOWN )
-	       memlbl[(*nlbl)++] = m;
+               memlbl[(*nlbl)++] = m;
             correct(scip, heap, state, &count, path, m, k, e, cost[e], FSP_MODE);
          }
          if( nchecks++ > limit )
@@ -658,6 +659,119 @@ void sdpaths(
       }
    }
 }
+
+
+/** limited Dijkstra for PCSTP, taking terminals into account */
+void graph_path_PcMwSd(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   PATH*                 path,               /**< shortest paths data structure */
+   SCIP_Real*            cost,               /**< edge costs */
+   SCIP_Real             distlimit,          /**< distance limit of the search */
+   int*                  pathmaxnode,        /**< maximum weight node on path */
+   int*                  heap,               /**< array representing a heap */
+   int*                  state,              /**< array to indicate whether a node has been scanned during SP calculation */
+   int*                  stateblock,         /**< array to indicate whether a node has been scanned during previous SP calculation */
+   int*                  memlbl,             /**< array to save labelled nodes */
+   int*                  nlbl,               /**< number of labelled nodes */
+   int                   tail,               /**< tail of the edge */
+   int                   head,               /**< head of the edge */
+   int                   limit               /**< maximum number of edges to consider during execution */
+   )
+{
+   const int limit1 = limit / 2;
+   int count;
+   int nchecks;
+   const SCIP_Bool block = (stateblock != NULL);
+
+   assert(g      != NULL);
+   assert(heap   != NULL);
+   assert(path   != NULL);
+   assert(cost   != NULL);
+   assert(nlbl   != NULL);
+   assert(memlbl != NULL);
+   assert(g->prize != NULL);
+   assert(pathmaxnode != NULL);
+
+   *nlbl = 0;
+
+   if( g->grad[tail] == 0 || g->grad[head] == 0 )
+      return;
+
+   assert(g->mark[head] && g->mark[tail]);
+
+   nchecks = 0;
+   count = 0;
+   path[tail].dist = 0.0;
+   state[tail] = CONNECT;
+   memlbl[(*nlbl)++] = tail;
+
+   if( g->stp_type != STP_MWCSP )
+      g->mark[head] = FALSE;
+
+   for( int e = g->outbeg[tail]; e != EAT_LAST; e = g->oeat[e] )
+   {
+      const int m = g->head[e];
+
+      if( g->mark[m] && SCIPisLE(scip, cost[e], distlimit) )
+      {
+         assert(SCIPisGT(scip, path[m].dist, path[tail].dist + cost[e]));
+
+         /* m labelled the first time */
+         memlbl[(*nlbl)++] = m;
+         correct(scip, heap, state, &count, path, m, tail, e, cost[e], FSP_MODE);
+
+         if( nchecks++ > limit1 )
+            break;
+      }
+   }
+
+   g->mark[head] = TRUE;
+
+   /* main loop */
+   while( count > 0 && nchecks <= limit )
+   {
+      const int k = nearest(heap, state, &count, path);
+      const SCIP_Real maxweight = pathmaxnode[k] >= 0 ? g->prize[pathmaxnode[k]] : 0.0;
+
+      assert(k != tail);
+      assert(maxweight >= 0);
+      assert(SCIPisLE(scip, path[k].dist - maxweight, distlimit));
+
+      /* scanned */
+      state[k] = CONNECT;
+
+      /* stop at other end */
+      if( k == head )
+         continue;
+
+      /* don't update pathmaxnode for head! */
+      if( Is_term(g->term[k]) && SCIPisGT(scip, g->prize[k], maxweight) )
+         pathmaxnode[k] = k;
+
+      /* stop at node visited in first run */
+      if( block && stateblock[k] != UNKNOWN )
+         continue;
+
+      /* correct incident nodes */
+      for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         const int m = g->head[e];
+
+         if( state[m] && g->mark[m] && SCIPisGT(scip, path[m].dist, path[k].dist + cost[e])
+               && SCIPisGE(scip, distlimit, path[k].dist + cost[e] - maxweight  ) )
+         {
+            if( state[m] == UNKNOWN ) /* m labeled for the first time? */
+               memlbl[(*nlbl)++] = m;
+
+            correct(scip, heap, state, &count, path, m, k, e, cost[e], FSP_MODE);
+         }
+         if( nchecks++ > limit )
+            break;
+      }
+   }
+}
+
 
 
 /** Dijkstra's algorithm starting from node 'start' */
@@ -2135,17 +2249,17 @@ void getnext4terms(
 
 
 /** get 4 close terminals to each terminal */
-void getnext4tterms(
+SCIP_RETCODE getnext4tterms(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    SCIP_Real*            cost,               /**< edge costs */
-   SCIP_Real*            boundedges,         /**< array to store boundary edges */
-   PATH*                 path,               /**< path data struture (leading to first, second, third and fouth nearest terminal) */
+   PATH*                 path,               /**< path data structure (leading to first, second, third and fourth nearest terminal) */
    int*                  vbase,              /**< first, second and third nearest terminal to each non terminal */
    int*                  heap,               /**< array representing a heap */
    int*                  state               /**< array to mark the state of each node during calculation */
    )
 {
+   int* boundedges;
    int k;
    int e;
    int l;
@@ -2160,7 +2274,8 @@ void getnext4tterms(
    assert(cost   != NULL);
    assert(heap   != NULL);
    assert(state   != NULL);
-   assert(boundedges   != NULL);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &boundedges, g->edges) );
 
    shift = 0;
    nnodes = g->knots;
@@ -2189,8 +2304,8 @@ void getnext4tterms(
       }
       if( Is_term(g->term[k]) )
       {
-	 path[k].dist = FARAWAY;
-	 vbase[k] = UNKNOWN;
+         path[k].dist = FARAWAY;
+         vbase[k] = UNKNOWN;
       }
 
    }
@@ -2199,7 +2314,7 @@ void getnext4tterms(
    {
       for( e = 0; e < nboundedges; e++ )
       {
-         bedge = (int) boundedges[e];
+         bedge = boundedges[e];
          k = g->tail[bedge];
          k2 = g->head[bedge];
          utdist(scip, g, path, cost[bedge], vbase, k, l, k2, shift, nnodes);
@@ -2207,7 +2322,10 @@ void getnext4tterms(
       }
       shift += nnodes;
    }
-   return;
+
+   SCIPfreeBufferArray(scip, &boundedges);
+
+   return SCIP_OKAY;
 }
 
 /** build a Voronoi region in presolving, w.r.t. shortest paths, for all terminals */

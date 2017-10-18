@@ -177,6 +177,7 @@ typedef enum { FF_BEA, FF_STP, FF_PRB, FF_GRD } FILETYPE;
 
 /* grphbase.c
  */
+extern void   graph_pc_knot2nonTerm(GRAPH*, int);
 extern void   graph_pc_updateTerm2edge(GRAPH*, const GRAPH*, int, int, int, int);
 extern void   graph_pc_subtractPrize(SCIP*, GRAPH*, SCIP_Real, int);
 extern void   graph_show(const GRAPH*);
@@ -205,9 +206,9 @@ extern SCIP_RETCODE   graph_pc_mw2rmw(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_pc_getSap(SCIP*, GRAPH*, GRAPH**, SCIP_Real*);
 extern SCIP_RETCODE   graph_pc_getSapShift(SCIP*, GRAPH*, GRAPH**, SCIP_Real*);
 extern SCIP_RETCODE   graph_pc_getRsap(SCIP*, GRAPH*, GRAPH**, int*, int, int);
+extern SCIP_RETCODE   graph_pc_contractEdge(SCIP*, GRAPH*, int*, int, int, int);
 extern SCIP_RETCODE   graph_resize(SCIP*, GRAPH*, int, int, int);
 extern SCIP_RETCODE   graph_knot_contract(SCIP*, GRAPH*, int*, int, int);
-extern SCIP_RETCODE   graph_pc_contractEdge(SCIP*, GRAPH*, int*, int, int, int);
 extern SCIP_RETCODE   graph_sol_reroot(SCIP*, GRAPH*, int*, int);
 extern SCIP_RETCODE   graph_edge_reinsert(SCIP*, GRAPH*, int, int, int, SCIP_Real, IDX*, IDX*, IDX*, IDX*);
 extern SCIP_RETCODE   graph_grid_create(SCIP*, GRAPH**, int**, int, int, int);
@@ -221,6 +222,7 @@ extern SCIP_RETCODE   graph_init_history(SCIP*, GRAPH*);
 extern int    graph_edge_redirect(SCIP*, GRAPH*, int, int, int, SCIP_Real);
 extern int    graph_valid(const GRAPH*);
 extern int    graph_pc_deleteTerm(SCIP*, GRAPH*, int);
+extern SCIP_Bool graph_pc_term2edgeConsistent(const GRAPH*);
 extern SCIP_Bool graph_sol_valid(SCIP*, const GRAPH*, const int*);
 extern SCIP_Real graph_sol_getObj(const SCIP_Real*, const int*, SCIP_Real, int);
 
@@ -243,7 +245,6 @@ extern void   get3next(SCIP*, const GRAPH*, const SCIP_Real*, const SCIP_Real*, 
 extern void   get4next(SCIP*, const GRAPH*, const SCIP_Real*, const SCIP_Real*, PATH*, int*, int*, int*);
 extern void   getnext3terms(SCIP*, const GRAPH*, SCIP_Real*, SCIP_Real*, PATH*, int*, int*, int*);
 extern void   getnext4terms(SCIP*, const GRAPH*, SCIP_Real*, SCIP_Real*, PATH*, int*, int*, int*);
-extern void   getnext4tterms(SCIP*, const GRAPH*, SCIP_Real*, SCIP_Real*, PATH*, int*, int*, int*);
 extern void   voronoi_mw(SCIP*, const GRAPH*, const SCIP_Real*, PATH*, int*, int*, int*);
 extern void   voronoi_terms(SCIP*, const GRAPH*, const SCIP_Real*, PATH*, int*, int*, int*);
 extern void   voronoi_inout(const GRAPH*);
@@ -253,11 +254,13 @@ extern void   voronoi_repair(SCIP*, const GRAPH*, SCIP_Real*, int*, int*, PATH*,
 extern void   voronoi_repair_mult(SCIP*, const GRAPH*, SCIP_Real*, int*, int*, int*, int*, STP_Bool*, UF*, PATH*);
 extern void   voronoiSteinerTreeExt(SCIP*, const GRAPH*, SCIP_Real*, int*, STP_Bool*, PATH*);
 extern void   sdpaths(SCIP*, const GRAPH*, PATH*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int, int, int);
+extern void   graph_path_PcMwSd(SCIP*, const GRAPH*, PATH*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int*, int*, int, int, int);
 extern void   voronoi_mw_radius(SCIP* scip, const GRAPH*, PATH*, const SCIP_Real*, SCIP_Real*, int*, int*, int*);
 extern SCIP_RETCODE   voronoi_extend(SCIP*, const GRAPH*, SCIP_Real*, PATH*, SCIP_Real**, int**, int**, STP_Bool*, int*, int*, int*, int, int, int);
 extern SCIP_RETCODE   graph_path_init(SCIP*, GRAPH*);
 extern SCIP_RETCODE   voronoi_dist(SCIP*, const GRAPH*, SCIP_Real*, double*, int*, int*, int*, int*, int*, int*, PATH*);
 extern SCIP_RETCODE   voronoi_radius(SCIP* scip, const GRAPH*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*);
+extern SCIP_RETCODE   getnext4tterms(SCIP*, const GRAPH*, SCIP_Real*, PATH*, int*, int*, int*);
 
 
 
@@ -304,10 +307,9 @@ extern void    reduce_alt_ans(SCIP*, GRAPH*, int*, int*);
 extern SCIP_RETCODE    sdsp_reduction(SCIP*, GRAPH*, PATH*, PATH*, int*, int*, int*, int*, int*, int*, int, int*);
 extern SCIP_RETCODE    sdsp_sap_reduction(SCIP*, GRAPH*, PATH*, PATH*, int*, int*, int*, int*, int*, int*, int);
 extern SCIP_RETCODE    sd_red(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int*, int*, int*, SCIP_Bool, int*);
-extern SCIP_RETCODE    sdpc_reduction(SCIP*, GRAPH*, PATH*, SCIP_Real*, int*, int*, int*, int*, int*, int*);
-extern SCIP_RETCODE    sd2_reduction(SCIP*, GRAPH*, SCIP_Real*, int*, int*);
+extern SCIP_RETCODE    sdpc_reduction(SCIP*, GRAPH*, PATH*, int*, int*, int*, int*, int*, int*);
 extern SCIP_RETCODE    getSD(SCIP*, GRAPH*, PATH*, PATH*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int*, int, int, int, SCIP_Bool, SCIP_Bool);
-extern SCIP_RETCODE    bd3_reduction(SCIP*, GRAPH*, PATH*, PATH*, int*, int*, int*, int*, int*, int*, int);
+extern SCIP_RETCODE    reduce_alt_bd34(SCIP*, GRAPH*, PATH*, PATH*, int*, int*, int*, int*, int*, int*, int);
 extern SCIP_RETCODE    bdr_reduction(SCIP*, GRAPH*, GRAPH*, PATH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int*);
 extern SCIP_RETCODE    nv_reduction(SCIP*, GRAPH*, PATH*, double*, int*, int*, int*, int*, int*, int*);
 extern SCIP_RETCODE    nv_reductionAdv(SCIP*, GRAPH*, PATH*, SCIP_Real*, double*, int*, int*, int*, int*, int*, int*, int*, int*);

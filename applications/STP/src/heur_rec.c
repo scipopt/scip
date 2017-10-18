@@ -156,13 +156,6 @@ inline int edgecostMultiplier(
    upper = (int) (maxpolyx0 - 2 * maxpolyx0 * normed + maxpolyx0 * (normed * normed));
    lower = (int) (minpolyx0 - 2 * minpolyx0 * normed + minpolyx0 * (normed * normed));
 
-   if( !(SCIPisGE(scip, normed, -1.0) && SCIPisLE(scip, normed, 1.0)) )
-   {
-      int todo;
-      printf("normed %f \n", normed);
-      exit(1);
-   }
-
    assert(SCIPisGE(scip, normed, -1.0) && SCIPisLE(scip, normed, 1.0));
 
    lower = MAX(0, lower);
@@ -171,14 +164,7 @@ inline int edgecostMultiplier(
    factor = SCIPrandomGetInt(heurdata->randnumgen, lower, upper);
    factor++;
 
-   if( factor > 1501 && avg > 2.0 )
-   {
-      printf(" %f \n", avg);
-      printf("upper  %d  lower %d \n", upper, lower);
-      printf("WTF %d %d\n", factor, heurdata->nusedsols);
-      exit(1);
-   }
-
+   assert(factor <= COST_MAX_POLY_x0 * 3 + 1 || avg <= 2.0);
    assert(factor >= 1);
 
    return factor;

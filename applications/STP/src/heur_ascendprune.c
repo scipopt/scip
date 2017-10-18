@@ -392,7 +392,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
       }
 
 //#ifdef SCIP_DEBUG
-      for (int k = 0; k < nnewedges && pcmw; k++)
+      for( int k = 0; k < nnewedges && pcmw; k++ )
       {
          const int e = newedges[k];
          assert(!(g->tail[e] == root && Is_pterm(g->term[g->head[e]])));
@@ -514,6 +514,10 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
          }
       }
    }
+
+   graph_pc_2orgcheck(scip, newgraph);
+   assert(graph_pc_term2edgeConsistent(newgraph));
+   graph_pc_2transcheck(scip, newgraph);
 #endif
    assert(graph_valid(newgraph));
 

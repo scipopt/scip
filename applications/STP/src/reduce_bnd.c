@@ -2128,7 +2128,6 @@ SCIP_RETCODE da_reducePcMw(
       if( graph->terms <= 2 )
          break;
 
-      SCIP_CALL( graph_pc_2trans(scip, graph) );
       SCIP_CALL( graph_pc_getRsap(scip, graph, &transgraph, roots, nroots, tmproot) );
 
       assert(graph_valid(transgraph));
@@ -3338,7 +3337,7 @@ SCIP_RETCODE bound_reduce(
    /* for(R)PC: try to eliminate terminals */
    if( pc )
    {
-      getnext4tterms(scip, graph, cost, costrev, vnoi, vbase, heap, state);
+      SCIP_CALL( getnext4tterms(scip, graph, cost, vnoi, vbase, heap, state) );
 
       for( k = 0; k < nnodes; k++ )
       {
