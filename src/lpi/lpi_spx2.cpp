@@ -4077,6 +4077,12 @@ SCIP_RETCODE SCIPlpiGetIntpar(
          assert(scaleparam == SoPlex::SCALER_LEASTSQ);
          *ival = 2;
       }
+#else
+      else
+      {
+         assert(scaleparam == SoPlex::SCALER_GEO8);
+         *ival = 2;
+      }
 #endif
       break;
 #if SOPLEX_VERSION >= 201
@@ -4159,9 +4165,11 @@ SCIP_RETCODE SCIPlpiSetIntpar(
          (void) lpi->spx->setIntParam(SoPlex::SCALER, SoPlex::SCALER_OFF);
       else if( ival == 1 )
          (void) lpi->spx->setIntParam(SoPlex::SCALER, SoPlex::SCALER_BIEQUI);
-#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 2)
       else
+#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 2)
          (void) lpi->spx->setIntParam(SoPlex::SCALER, SoPlex::SCALER_LEASTSQ);
+#else
+         (void) lpi->spx->setIntParam(SoPlex::SCALER, SoPlex::SCALER_GEO8);
 #endif
 
       break;
