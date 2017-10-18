@@ -54,36 +54,17 @@ Test(separation, sinus_x, .init = setup, .fini = teardown,
    expr->auxvar = auxvar;
 
    /*
-    * test initial separation
+    * test intial overestimation
     */
 
    SCIP_CALL( computeCutsSin(scip, conshdlr, expr, sol, &secant, &ltangent, &rtangent, &lmidtangent, &rmidtangent, NULL,
-         TRUE, TRUE) );
+      FALSE) );
 
-   /* check infeasible cuts */
+   /* check infeasible or underestimating cuts */
    cr_expect(secant == NULL);
    cr_expect(ltangent == NULL);
 
-   /* check rtangent, should be underestimating */
-   cr_assert(rtangent != NULL);
-   cr_expect_eq(SCIProwGetNNonz(rtangent), 2);
-   cr_expect_eq(SCIProwGetLhs(rtangent), -SCIPinfinity(scip));
-   cr_expect(SCIPisEQ(scip, SCIProwGetRhs(rtangent), 5 * COS(5) - SIN(5)));
-
-   for( i = 0; i < SCIProwGetNNonz(rtangent); ++i )
-   {
-      var = SCIPcolGetVar(SCIProwGetCols(rtangent)[i]);
-      coef = SCIProwGetVals(rtangent)[i];
-
-      if( var == SCIPvarGetTransVar(x) )
-         cr_expect(SCIPisEQ(scip, coef, COS(5)));
-      else if( var == SCIPvarGetTransVar(auxvar) )
-         cr_expect_eq(coef, -1.0);
-      else
-         cr_expect(FALSE, "found an unknown variable");
-   }
-
-   /* check lmidtangent, should be overestimating */
+   /* check lmidtangent */
    cr_assert(lmidtangent != NULL);
    cr_expect_eq(SCIProwGetNNonz(lmidtangent), 2);
    newtonpoint = 0.4936608602;
@@ -103,12 +84,12 @@ Test(separation, sinus_x, .init = setup, .fini = teardown,
          cr_expect(FALSE, "found an unknown variable");
    }
 
-   /* check rmidtangent, should be overestimating */
+   /* check rmidtangent */
    cr_assert(rmidtangent != NULL);
    cr_expect_eq(SCIProwGetNNonz(rmidtangent), 2);
-   cr_expect_eq(SCIProwGetLhs(rmidtangent), -SCIPinfinity(scip));
    newtonpoint = 2.2544608804;
-   cr_expect(SCIPisEQ(scip, SCIProwGetRhs(rmidtangent), 5 * COS(newtonpoint) - SIN(5)));
+   cr_expect(SCIPisEQ(scip, SCIProwGetLhs(rmidtangent), 5 * COS(newtonpoint) - SIN(5)));
+   cr_expect_eq(SCIProwGetRhs(rmidtangent), SCIPinfinity(scip));
 
    for( i = 0; i < SCIProwGetNNonz(rmidtangent); ++i )
    {
@@ -124,12 +105,66 @@ Test(separation, sinus_x, .init = setup, .fini = teardown,
    }
 
    /* release cuts */
-   SCIP_CALL( SCIPreleaseRow(scip, &rtangent) );
    SCIP_CALL( SCIPreleaseRow(scip, &lmidtangent) );
    SCIP_CALL( SCIPreleaseRow(scip, &rmidtangent) );
 
    /*
-    * test overestimation
+    * test initial underestimation
+    */
+
+   SCIP_CALL( computeCutsSin(scip, conshdlr, expr, sol, &secant, &ltangent, &rtangent, &lmidtangent, &rmidtangent, NULL,
+         TRUE) );
+
+   /* check infeasible or overestimating cuts */
+   cr_expect(secant == NULL);
+   cr_expect(ltangent == NULL);
+   cr_expect(rmidtangent == NULL);
+
+   /* check rtangent */
+   cr_assert(rtangent != NULL);
+   cr_expect_eq(SCIProwGetNNonz(rtangent), 2);
+   cr_expect_eq(SCIProwGetLhs(rtangent), -SCIPinfinity(scip));
+   cr_expect(SCIPisEQ(scip, SCIProwGetRhs(rtangent), 5 * COS(5) - SIN(5)));
+
+   for( i = 0; i < SCIProwGetNNonz(rtangent); ++i )
+   {
+      var = SCIPcolGetVar(SCIProwGetCols(rtangent)[i]);
+      coef = SCIProwGetVals(rtangent)[i];
+
+      if( var == SCIPvarGetTransVar(x) )
+         cr_expect(SCIPisEQ(scip, coef, COS(5)));
+      else if( var == SCIPvarGetTransVar(auxvar) )
+         cr_expect_eq(coef, -1.0);
+      else
+         cr_expect(FALSE, "found an unknown variable");
+   }
+
+   /* check lmidtangent */
+   cr_assert(lmidtangent != NULL);
+   cr_expect_eq(SCIProwGetNNonz(lmidtangent), 2);
+   newtonpoint = 4.6845658560;
+   cr_expect_eq(SCIProwGetLhs(lmidtangent), -SCIPinfinity(scip));
+   cr_expect(SCIPisEQ(scip, SCIProwGetRhs(lmidtangent), -COS(newtonpoint) - SIN(-1)));
+
+   for( i = 0; i < SCIProwGetNNonz(lmidtangent); ++i )
+   {
+      var = SCIPcolGetVar(SCIProwGetCols(lmidtangent)[i]);
+      coef = SCIProwGetVals(lmidtangent)[i];
+
+      if( var == SCIPvarGetTransVar(x) )
+         cr_expect(SCIPisEQ(scip, coef, COS(newtonpoint)));
+      else if( var == SCIPvarGetTransVar(auxvar) )
+         cr_expect_eq(coef, -1.0);
+      else
+         cr_expect(FALSE, "found an unknown variable");
+   }
+
+   /* release cuts */
+   SCIP_CALL( SCIPreleaseRow(scip, &rtangent) );
+   SCIP_CALL( SCIPreleaseRow(scip, &lmidtangent) );
+
+   /*
+    * test solution overestimation
     */
 
    /* create solution that induces overestimating cut */
@@ -137,7 +172,7 @@ Test(separation, sinus_x, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, 2.0) );
 
    SCIP_CALL( computeCutsSin(scip, conshdlr, expr, sol, &secant, NULL, NULL, &lmidtangent, &rmidtangent, &soltangent,
-      TRUE, FALSE) );
+      FALSE) );
 
    /* check infeasible cuts */
    cr_expect(secant == NULL);
@@ -167,7 +202,7 @@ Test(separation, sinus_x, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPreleaseRow(scip, &soltangent) );
 
    /*
-    * test underestimation
+    * test solution underestimation
     */
 
    /* create solution that induces underestimating cut */
@@ -175,7 +210,7 @@ Test(separation, sinus_x, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, -2.0) );
 
    SCIP_CALL( computeCutsSin(scip, conshdlr, expr, sol, &secant, NULL, NULL, &lmidtangent, &rmidtangent, &soltangent,
-      FALSE, TRUE) );
+      TRUE) );
 
    /* check infeasible cuts */
    cr_expect(secant == NULL);
@@ -213,14 +248,35 @@ Test(separation, sinus_x, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, -2.0) );
 
    SCIP_CALL( computeCutsSin(scip, conshdlr, expr, sol, &secant, NULL, NULL, &lmidtangent, &rmidtangent, &soltangent,
-      FALSE, TRUE) );
+      TRUE) );
 
    /* check infeasible cuts */
    cr_expect(secant == NULL);
-   cr_expect(lmidtangent == NULL);
    cr_expect(rmidtangent == NULL);
    cr_expect(soltangent == NULL);
 
+   /* check lmidtangent */
+   cr_assert(lmidtangent != NULL);
+   cr_expect_eq(SCIProwGetNNonz(lmidtangent), 2);
+   newtonpoint = 4.6845658560;
+   cr_expect_eq(SCIProwGetLhs(lmidtangent), -SCIPinfinity(scip));
+   cr_expect(SCIPisEQ(scip, SCIProwGetRhs(lmidtangent), -COS(newtonpoint) - SIN(-1)));
+
+   for( i = 0; i < SCIProwGetNNonz(lmidtangent); ++i )
+   {
+      var = SCIPcolGetVar(SCIProwGetCols(lmidtangent)[i]);
+      coef = SCIProwGetVals(lmidtangent)[i];
+
+      if( var == SCIPvarGetTransVar(x) )
+         cr_expect(SCIPisEQ(scip, coef, COS(newtonpoint)));
+      else if( var == SCIPvarGetTransVar(auxvar) )
+         cr_expect_eq(coef, -1.0);
+      else
+         cr_expect(FALSE, "found an unknown variable");
+   }
+
+   /* release cuts */
+   SCIP_CALL( SCIPreleaseRow(scip, &lmidtangent) );
 
    /* release expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -258,17 +314,18 @@ Test(separation, sinus_y, .init = setup, .fini = teardown,
    expr->auxvar = auxvar;
 
    /*
-    * test initial separation
+    * test initial overestimation
     */
 
    SCIP_CALL( computeCutsSin(scip, conshdlr, expr, sol, &secant, &ltangent, &rtangent, &lmidtangent, &rmidtangent, NULL,
-      TRUE, TRUE) );
+      FALSE) );
 
    /* check infeasible cuts */
    cr_expect(secant == NULL);
    cr_expect(rtangent == NULL);
+   cr_expect(lmidtangent == NULL);
 
-   /* check ltangent, should be overestimating */
+   /* check ltangent */
    cr_assert(ltangent != NULL);
    cr_expect_eq(SCIProwGetNNonz(ltangent), 2);
    cr_expect(SCIPisEQ(scip, SCIProwGetLhs(ltangent), (-6) * COS(-6) - SIN(-6)));
@@ -287,26 +344,7 @@ Test(separation, sinus_y, .init = setup, .fini = teardown,
          cr_expect(FALSE, "found an unknown variable");
    }
 
-   /* check lmidtangent, should be underestimating */
-   cr_assert(lmidtangent != NULL);
-   cr_expect_eq(SCIProwGetNNonz(lmidtangent), 2);
-   cr_expect_eq(SCIProwGetLhs(lmidtangent), -SCIPinfinity(scip));
-   cr_expect(SCIPisEQ(scip, SCIProwGetRhs(lmidtangent), 2.0 * SIN(-3) - SIN(-6)));
-
-   for( i = 0; i < SCIProwGetNNonz(lmidtangent); ++i )
-   {
-      var = SCIPcolGetVar(SCIProwGetCols(lmidtangent)[i]);
-      coef = SCIProwGetVals(lmidtangent)[i];
-
-      if( var == SCIPvarGetTransVar(y) )
-         cr_expect(SCIPisEQ(scip, coef, (SIN(-3) - SIN(-6)) / 3.0));
-      else if( var == SCIPvarGetTransVar(auxvar) )
-         cr_expect_eq(coef, -1.0);
-      else
-         cr_expect(FALSE, "found an unknown variable");
-   }
-
-   /* check rmidtangent, should be overestimating */
+   /* check rmidtangent */
    cr_assert(rmidtangent != NULL);
    cr_expect_eq(SCIProwGetNNonz(rmidtangent), 2);
    newtonpoint = -3.2123712333;
@@ -328,11 +366,45 @@ Test(separation, sinus_y, .init = setup, .fini = teardown,
 
    /* release cuts */
    SCIP_CALL( SCIPreleaseRow(scip, &ltangent) );
-   SCIP_CALL( SCIPreleaseRow(scip, &lmidtangent) );
    SCIP_CALL( SCIPreleaseRow(scip, &rmidtangent) );
 
    /*
-    * test overestimation
+    * test initial underestimation
+    */
+
+   SCIP_CALL( computeCutsSin(scip, conshdlr, expr, sol, &secant, &ltangent, &rtangent, &lmidtangent, &rmidtangent, NULL,
+      TRUE) );
+
+   /* check infeasible cuts */
+   cr_expect(ltangent == NULL);
+   cr_expect(rtangent == NULL);
+   cr_expect(lmidtangent == NULL);
+   cr_expect(rmidtangent == NULL);
+
+   /* check secant */
+   cr_assert(secant != NULL);
+   cr_expect_eq(SCIProwGetNNonz(secant), 2);
+   cr_expect_eq(SCIProwGetLhs(secant), -SCIPinfinity(scip));
+   cr_expect(SCIPisEQ(scip, SCIProwGetRhs(secant), SIN(-6) - 2.0 * SIN(-3)));
+
+   for( i = 0; i < SCIProwGetNNonz(secant); ++i )
+   {
+      var = SCIPcolGetVar(SCIProwGetCols(secant)[i]);
+      coef = SCIProwGetVals(secant)[i];
+
+      if( var == SCIPvarGetTransVar(y) )
+         cr_expect(SCIPisEQ(scip, coef, (SIN(-3) - SIN(-6)) / 3.0));
+      else if( var == SCIPvarGetTransVar(auxvar) )
+         cr_expect_eq(coef, -1.0);
+      else
+         cr_expect(FALSE, "found an unknown variable");
+   }
+
+   /* release cuts */
+   SCIP_CALL( SCIPreleaseRow(scip, &secant) );
+
+   /*
+    * test solution overestimation
     */
 
    /* create solution */
@@ -340,14 +412,14 @@ Test(separation, sinus_y, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, 2.0) );
 
    SCIP_CALL( computeCutsSin(scip, conshdlr, expr, sol, &secant, NULL, NULL, &lmidtangent, &rmidtangent, &soltangent,
-      TRUE, FALSE) );
+      FALSE) );
 
    /* check infeasible cuts */
    cr_expect(secant == NULL);
    cr_expect(lmidtangent == NULL);
    cr_expect(rmidtangent == NULL);
 
-   /* check soltangent, should be overestimating */
+   /* check soltangent */
    cr_assert(soltangent != NULL);
    cr_expect_eq(SCIProwGetNNonz(soltangent), 2);
    cr_expect(SCIPisEQ(scip, SCIProwGetLhs(soltangent), (-4) * COS(-4) - SIN(-4)));
@@ -370,7 +442,7 @@ Test(separation, sinus_y, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPreleaseRow(scip, &soltangent) );
 
    /*
-    * test underestimation (not possible in this case)
+    * test solution underestimation (not possible in this case)
     */
 
    /* create solution */
@@ -378,23 +450,23 @@ Test(separation, sinus_y, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, -2.0) );
 
    SCIP_CALL( computeCutsSin(scip, conshdlr, expr, sol, &secant, NULL, NULL, &lmidtangent, &rmidtangent, &soltangent,
-      FALSE, TRUE) );
+      TRUE) );
 
    /* check infeasible cuts */
-   cr_expect(secant == NULL);
+   cr_expect(lmidtangent == NULL);
    cr_expect(rmidtangent == NULL);
    cr_expect(soltangent == NULL);
 
-   /* check lmidtangent, should be underestimating */
-   cr_assert(lmidtangent != NULL);
-   cr_expect_eq(SCIProwGetNNonz(lmidtangent), 2);
-   cr_expect_eq(SCIProwGetLhs(lmidtangent), -SCIPinfinity(scip));
-   cr_expect(SCIPisEQ(scip, SCIProwGetRhs(lmidtangent), 2.0 * SIN(-3) - SIN(-6)));
+   /* check secant */
+   cr_assert(secant != NULL);
+   cr_expect_eq(SCIProwGetNNonz(secant), 2);
+   cr_expect_eq(SCIProwGetLhs(secant), -SCIPinfinity(scip));
+   cr_expect(SCIPisEQ(scip, SCIProwGetRhs(secant), SIN(-6) - 2.0 * SIN(-3)));
 
-   for( i = 0; i < SCIProwGetNNonz(lmidtangent); ++i )
+   for( i = 0; i < SCIProwGetNNonz(secant); ++i )
    {
-      var = SCIPcolGetVar(SCIProwGetCols(lmidtangent)[i]);
-      coef = SCIProwGetVals(lmidtangent)[i];
+      var = SCIPcolGetVar(SCIProwGetCols(secant)[i]);
+      coef = SCIProwGetVals(secant)[i];
 
       if( var == SCIPvarGetTransVar(y) )
          cr_expect(SCIPisEQ(scip, coef, (SIN(-3) - SIN(-6)) / 3.0));
@@ -405,7 +477,7 @@ Test(separation, sinus_y, .init = setup, .fini = teardown,
    }
 
    /* release cuts */
-   SCIP_CALL( SCIPreleaseRow(scip, &lmidtangent) );
+   SCIP_CALL( SCIPreleaseRow(scip, &secant) );
 
    /*
     * test point where solution tangent is infeasible
@@ -416,14 +488,14 @@ Test(separation, sinus_y, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, 2.0) );
 
    SCIP_CALL( computeCutsSin(scip, conshdlr, expr, sol, &secant, NULL, NULL, &lmidtangent, &rmidtangent, &soltangent,
-      TRUE, FALSE) );
+      FALSE) );
 
    /* check infeasible cuts */
    cr_expect(secant == NULL);
    cr_expect(lmidtangent == NULL);
    cr_expect(soltangent == NULL);
 
-   /* check rmidtangent, should be overestimating */
+   /* check rmidtangent */
    cr_assert(rmidtangent != NULL);
    cr_expect_eq(SCIProwGetNNonz(rmidtangent), 2);
    newtonpoint = -3.2123712333;
@@ -482,36 +554,17 @@ Test(separation, sinus_z, .init = setup, .fini = teardown,
    expr->auxvar = auxvar;
 
    /*
-    * test initial separation
+    * test initial overestimation
     */
-
    SCIP_CALL( computeCutsSin(scip, conshdlr, expr, sol, &secant, &ltangent, &rtangent, &lmidtangent, &rmidtangent, NULL,
-      TRUE, TRUE) );
+      FALSE) );
 
    /* check infeasible cuts */
+   cr_expect(secant == NULL);
    cr_expect(lmidtangent == NULL);
    cr_expect(rmidtangent == NULL);
 
-   /* check secant, should be underestimating */
-   cr_assert(secant != NULL);
-   cr_expect_eq(SCIProwGetNNonz(secant), 2);
-   cr_expect_eq(SCIProwGetLhs(secant), -SCIPinfinity(scip));
-   cr_expect(SCIPisEQ(scip, SCIProwGetRhs(secant), 0.5 * SIN(3) - 1.5 * SIN(1)));
-
-   for( i = 0; i < SCIProwGetNNonz(secant); ++i )
-   {
-      var = SCIPcolGetVar(SCIProwGetCols(secant)[i]);
-      coef = SCIProwGetVals(secant)[i];
-
-      if( var == SCIPvarGetTransVar(z) )
-         cr_expect(SCIPisEQ(scip, coef, 0.5 * (SIN(3) - SIN(1))));
-      else if( var == SCIPvarGetTransVar(auxvar) )
-         cr_expect_eq(coef, -1.0);
-      else
-         cr_expect(FALSE, "found an unknown variable");
-   }
-
-   /* check ltangent, should be overestimating */
+   /* check ltangent */
    cr_assert(ltangent != NULL);
    cr_expect_eq(SCIProwGetNNonz(ltangent), 2);
    cr_expect(SCIPisEQ(scip, SCIProwGetLhs(ltangent), COS(1) - SIN(1)));
@@ -530,7 +583,7 @@ Test(separation, sinus_z, .init = setup, .fini = teardown,
          cr_expect(FALSE, "found an unknown variable");
    }
 
-   /* check rtangent, should be overestimating */
+   /* check rtangent */
    cr_assert(rtangent != NULL);
    cr_expect_eq(SCIProwGetNNonz(rtangent), 2);
    cr_expect(SCIPisEQ(scip, SCIProwGetLhs(rtangent), 3 * COS(3) - SIN(3)));
@@ -550,12 +603,46 @@ Test(separation, sinus_z, .init = setup, .fini = teardown,
    }
 
    /* release cuts */
-   SCIP_CALL( SCIPreleaseRow(scip, &secant) );
    SCIP_CALL( SCIPreleaseRow(scip, &ltangent) );
    SCIP_CALL( SCIPreleaseRow(scip, &rtangent) );
 
    /*
-    * test overestimation
+    * test initial underestimation
+    */
+
+   SCIP_CALL( computeCutsSin(scip, conshdlr, expr, sol, &secant, &ltangent, &rtangent, &lmidtangent, &rmidtangent, NULL,
+      TRUE) );
+
+   /* check infeasible cuts */
+   cr_expect(ltangent == NULL);
+   cr_expect(rtangent == NULL);
+   cr_expect(lmidtangent == NULL);
+   cr_expect(rmidtangent == NULL);
+
+   /* check secant */
+   cr_assert(secant != NULL);
+   cr_expect_eq(SCIProwGetNNonz(secant), 2);
+   cr_expect_eq(SCIProwGetLhs(secant), -SCIPinfinity(scip));
+   cr_expect(SCIPisEQ(scip, SCIProwGetRhs(secant), 0.5 * SIN(3) - 1.5 * SIN(1)));
+
+   for( i = 0; i < SCIProwGetNNonz(secant); ++i )
+   {
+      var = SCIPcolGetVar(SCIProwGetCols(secant)[i]);
+      coef = SCIProwGetVals(secant)[i];
+
+      if( var == SCIPvarGetTransVar(z) )
+         cr_expect(SCIPisEQ(scip, coef, 0.5 * (SIN(3) - SIN(1))));
+      else if( var == SCIPvarGetTransVar(auxvar) )
+         cr_expect_eq(coef, -1.0);
+      else
+         cr_expect(FALSE, "found an unknown variable");
+   }
+
+   /* release cuts */
+   SCIP_CALL( SCIPreleaseRow(scip, &secant) );
+
+   /*
+    * test solution overestimation
     */
 
    /* create solution */
@@ -563,7 +650,7 @@ Test(separation, sinus_z, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, 2.0) );
 
    SCIP_CALL( computeCutsSin(scip, conshdlr, expr, sol, &secant, NULL, NULL, &lmidtangent, &rmidtangent, &soltangent,
-      TRUE, FALSE) );
+      FALSE) );
 
    /* check infeasible cuts */
    cr_expect(secant == NULL);
@@ -592,7 +679,7 @@ Test(separation, sinus_z, .init = setup, .fini = teardown,
    /* release cuts */
    SCIP_CALL( SCIPreleaseRow(scip, &soltangent) );
 
-   /* note: underestimation doesn't make sense in [1,3] */
+   /* note: solution underestimation doesn't make sense in [1,3] */
 
    /*
     * test point where solution tangent is infeasible (underestimation)
@@ -603,7 +690,7 @@ Test(separation, sinus_z, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, -2.0) );
 
    SCIP_CALL( computeCutsSin(scip, conshdlr, expr, sol, &secant, NULL, NULL, &lmidtangent, &rmidtangent, &soltangent,
-      FALSE, TRUE) );
+      TRUE) );
 
    /* check infeasible cuts */
    cr_expect(lmidtangent == NULL);
