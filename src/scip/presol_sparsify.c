@@ -49,7 +49,7 @@
 
 #define DEFAULT_FULL_SEARCH             0    /**< default value for full search */
 
-#define MAXCONSIDEREDNONZEROS          50    /**< maximal size of considered non-zeros */
+#define MAXCONSIDEREDNONZEROS          70    /**< maximal size of considered non-zeros */
 
 /*
  * Data structures
