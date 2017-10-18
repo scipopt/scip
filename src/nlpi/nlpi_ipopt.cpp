@@ -56,6 +56,10 @@
 #pragma GCC diagnostic warning "-Wshadow"
 #endif
 
+#if (IPOPT_VERSION_MAJOR < 3) || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 11))
+#error "The Ipopt interface requires at least 3.11."
+#endif
+
 using namespace Ipopt;
 
 #define NLPI_NAME          "ipopt"           /**< short concise name of solver */
