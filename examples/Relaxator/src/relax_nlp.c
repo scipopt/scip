@@ -150,7 +150,7 @@ SCIP_DECL_RELAXEXEC(relaxExecNlp)
             ub = SCIPvarGetUbLocal(vars[i]);
             assert(SCIPisInfinity(scip, -lb) || SCIPisLE(scip, lb, primal[i]));
             assert(SCIPisInfinity(scip, ub) || SCIPisLE(scip, primal[i], ub));
-            //SCIPdebugMsg(scip, "relax value of %s = %g in [%g,%g]\n", SCIPvarGetName(vars[i]), primal[i], lb, ub);
+            SCIPdebugMsg(scip, "relax value of %s = %g in [%g,%g]\n", SCIPvarGetName(vars[i]), primal[i], lb, ub);
    #endif
 
             SCIP_CALL( SCIPsetRelaxSolVal(scip, vars[i], primal[i]) );
