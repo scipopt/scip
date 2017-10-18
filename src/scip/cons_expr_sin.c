@@ -137,7 +137,7 @@ SCIP_Bool computeLeftTangentSin(
    assert(lincoef != NULL);
    assert(linconst != NULL);
 
-   if( lb == SCIPinfinity(scip) )
+   if( SCIPisInfinity(scip, lb) )
       return FALSE;
 
    /* left tangent is only feasible and underestimating in [pi, 1.5*pi) *2kpi */
@@ -165,7 +165,7 @@ SCIP_Bool computeRightTangentSin(
    assert(lincoef != NULL);
    assert(linconst != NULL);
 
-   if( ub == SCIPinfinity(scip) )
+   if( SCIPisInfinity(scip, ub) )
       return FALSE;
 
    /* left tangent is only feasible and underestimating in (1.5*pi, 2*pi] *2kpi */
@@ -278,7 +278,7 @@ SCIP_Bool computeLeftMidTangentSin(
 
    *issecant = FALSE;
 
-   if( lb == SCIPinfinity(scip) )
+   if( SCIPisInfinity(scip, lb) )
       return FALSE;
 
    /* compute shifted bounds for case evaluation */
@@ -356,7 +356,7 @@ SCIP_Bool computeRightMidTangentSin(
 
    *issecant = FALSE;
 
-   if( ub == SCIPinfinity(scip) )
+   if( SCIPisInfinity(scip, ub) )
       return FALSE;
 
    /* compute shifted bounds for case evaluation */
@@ -593,7 +593,7 @@ SCIP_RETCODE computeCutsSin(
          success = computeRightMidTangentSin(scip, &lincoef, &linconst, &issecant, -childub, -childlb);
 
       /* if the cut connects bounds it is stored in secant */
-      cutbuffer = issecant ? secant : lmidtangent;
+      cutbuffer = (issecant && secant != NULL) ? secant : lmidtangent;
 
       if( success )
       {
@@ -628,7 +628,7 @@ SCIP_RETCODE computeCutsSin(
          success = computeLeftMidTangentSin(scip, &lincoef, &linconst, &issecant, -childub, -childlb);
 
       /* if the cut connects bounds it is stored in secant */
-      cutbuffer = issecant ? secant : rmidtangent;
+      cutbuffer = (issecant && secant != NULL) ? secant : rmidtangent;
 
       if( success )
       {
