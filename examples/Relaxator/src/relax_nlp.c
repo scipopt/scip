@@ -28,9 +28,8 @@
 
 #define RELAX_NAME             "nlp"
 #define RELAX_DESC             "relaxator solving a convex NLP relaxation"
-#define RELAX_PRIORITY         0
+#define RELAX_PRIORITY         10
 #define RELAX_FREQ             1
-#define RELAX_FULLLPINFO       TRUE
 
 #define NLPITERLIMIT           500       /**< iteration limit of NLP solver */
 #define NLPVERLEVEL            0         /**< verbosity level of NLP solver */
@@ -123,40 +122,46 @@ SCIP_DECL_RELAXEXEC(relaxExecNlp)
    /* solve NLP */
    SCIP_CALL( SCIPnlpiSolve(nlpi, nlpiprob) );
 
-   /* store solution if we solved to optimality; local optimality is enough since the NLP is convex */
+   /* forward solution if we solved to optimality; local optimality is enough since the NLP is convex */
    if( SCIPnlpiGetSolstat(nlpi, nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT )
    {
       SCIP_VAR** vars;
       SCIP_Real* primal;
+      SCIP_Real relaxval;
       int nvars;
       int i;
 
       vars = SCIPgetVars(scip);
       nvars = SCIPgetNVars(scip);
 
-      SCIP_CALL( SCIPnlpiGetSolution(nlpi, nlpiprob, &primal, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPnlpiGetSolution(nlpi, nlpiprob, &primal, NULL, NULL, NULL, &relaxval) );
 
-      for( i = 0; i < nvars; ++i )
+      /* store relaxation solution in original SCIP if it improves the best relaxation solution thus far */
+      if( (! SCIPisRelaxSolValid(scip)) || SCIPisGT(scip, relaxval, SCIPgetRelaxSolObj(scip)) )
       {
-#ifndef NDEBUG
-         SCIP_Real lb;
-         SCIP_Real ub;
+         SCIPdebugMsg(scip, "Setting NLP relaxation solution, which improved upon earlier solution\n");
+         for( i = 0; i < nvars; ++i )
+         {
+   #ifndef NDEBUG
+            SCIP_Real lb;
+            SCIP_Real ub;
 
-         lb = SCIPvarGetLbLocal(vars[i]);
-         ub = SCIPvarGetUbLocal(vars[i]);
-         assert(SCIPisInfinity(scip, -lb) || SCIPisLE(scip, lb, primal[i]));
-         assert(SCIPisInfinity(scip, ub) || SCIPisLE(scip, primal[i], ub));
-         SCIPdebugMsg(scip, "relax value of %s = %g in [%g,%g]\n", SCIPvarGetName(vars[i]), primal[i], lb, ub);
-#endif
+            lb = SCIPvarGetLbLocal(vars[i]);
+            ub = SCIPvarGetUbLocal(vars[i]);
+            assert(SCIPisInfinity(scip, -lb) || SCIPisLE(scip, lb, primal[i]));
+            assert(SCIPisInfinity(scip, ub) || SCIPisLE(scip, primal[i], ub));
+            //SCIPdebugMsg(scip, "relax value of %s = %g in [%g,%g]\n", SCIPvarGetName(vars[i]), primal[i], lb, ub);
+   #endif
 
-         SCIP_CALL( SCIPsetRelaxSolVal(scip, vars[i], primal[i]) );
+            SCIP_CALL( SCIPsetRelaxSolVal(scip, vars[i], primal[i]) );
+         }
+
+         /* mark relaxation solution to be valid */
+         SCIP_CALL( SCIPmarkRelaxSolValid(scip, TRUE) );
       }
 
-      /* mark relaxation solution to be valid */
-      SCIP_CALL( SCIPmarkRelaxSolValid(scip) );
-
-      SCIPdebugMsg(scip, "lower bound = %g\n", SCIPgetRelaxSolObj(scip));
-      *lowerbound = SCIPgetRelaxSolObj(scip);
+      SCIPdebugMsg(scip, "NLP lower bound = %g\n", relaxval);
+      *lowerbound = relaxval;
       *result = SCIP_SUCCESS;
    }
 
@@ -185,7 +190,7 @@ SCIP_RETCODE SCIPincludeRelaxNlp(
    relax = NULL;
 
    /* include relaxator */
-   SCIP_CALL( SCIPincludeRelaxBasic(scip, &relax, RELAX_NAME, RELAX_DESC, RELAX_PRIORITY, RELAX_FREQ, RELAX_FULLLPINFO,
+   SCIP_CALL( SCIPincludeRelaxBasic(scip, &relax, RELAX_NAME, RELAX_DESC, RELAX_PRIORITY, RELAX_FREQ,
          relaxExecNlp, relaxdata) );
 
    assert(relax != NULL);

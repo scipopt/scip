@@ -33,6 +33,7 @@ interface:
 - added method SCIPgetNCliquesCreated() which returns the number of cliques created so far
 - unify handling of objective limit by only using one parameter and not distinguishing w.r.t. lower and upper limits
 - replaced LPI parameters SCIP_LPPAR_LOBJLIM and SCIP_LPPAR_UOBJLIM by SCIP_LPPAR_OBJLIM
+- added parameter "objval" to SCIPnlpiGetSolution() for returning the optimal objective value (can be set to NULL)
 - removed argument "includeslp" from SCIPrelaxCreate() and added it to SCIPmarkRelaxSolValid(), SCIPsetRelaxSolVals() and
   SCIPsetRelaxSolValsSol()
 

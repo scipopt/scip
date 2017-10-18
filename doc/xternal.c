@@ -4112,7 +4112,7 @@
  * and SCIPgetLPColsData(), and SCIPseparateSol() to call the cutting plane separators for a given primal solution.
  *
  * The lowerbound computed by the relaxation should be returned in the lowerbound pointer. If the relaxation improves on the best
- * relaxation already computed (either <code>SCIPrelaxationIsSolValid()</code> returns FALSE, meaning that no relaxation solution
+ * relaxation already computed (either <code>SCIPisRelaxSolValid()</code> returns FALSE, meaning that no relaxation solution
  * is available so far, or the lowerbound is larger than the value returned by <code>SCIPgetRelaxSolObj()</code>), then the primal
  * solution of the relaxation should be stored inside the data structures of SCIP with <code>SCIPsetRelaxSolVal()</code>,
  * <code>SCIPsetRelaxSolVals()</code> or <code>SCIPsetRelaxSolValsSol()</code>. If you set the values one by one, you will need to call

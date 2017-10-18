@@ -28,7 +28,6 @@
 #define RELAX_DESC             "relaxator solving LP relaxation"
 #define RELAX_PRIORITY         0
 #define RELAX_FREQ             0
-#define RELAX_FULLLPINFO       TRUE
 
 
 /*
@@ -80,31 +79,35 @@ SCIP_DECL_RELAXEXEC(relaxExecLp)
    SCIPsetMessagehdlrQuiet(relaxscip, TRUE);
    SCIP_CALL( SCIPtransformProb(relaxscip) );
    SCIP_CALL( SCIPsolve(relaxscip) );
-
    relaxval = SCIPgetPrimalbound(relaxscip);
    SCIPdebugMessage("relaxation bound = %e status = %d\n", relaxval, SCIPgetStatus(relaxscip));
 
    if( SCIPgetStatus(relaxscip) == SCIP_STATUS_OPTIMAL )
    {
-      *lowerbound = relaxval;
-      *result = SCIP_SUCCESS;
-
-      /* store relaxation solution in original SCIP */
-      for( i = 0; i < SCIPgetNVars(scip); ++i )
+      /* store relaxation solution in original SCIP if it improves the best relaxation solution thus far */
+      if( (! SCIPisRelaxSolValid(scip)) || SCIPisGT(scip, relaxval, SCIPgetRelaxSolObj(scip)) )
       {
-         SCIP_VAR* relaxvar;
-         SCIP_Real solval;
+         SCIPdebugMsg(scip, "Setting LP relaxation solution, which improved upon earlier solution\n");
+         for( i = 0; i < SCIPgetNVars(scip); ++i )
+         {
+            SCIP_VAR* relaxvar;
+            SCIP_Real solval;
 
-         relaxvar = SCIPhashmapGetImage(varmap, SCIPgetVars(scip)[i]);
-         assert(relaxvar != NULL);
+            relaxvar = SCIPhashmapGetImage(varmap, SCIPgetVars(scip)[i]);
+            assert(relaxvar != NULL);
 
-         solval = SCIPgetSolVal(relaxscip, SCIPgetBestSol(relaxscip), relaxvar);
+            solval = SCIPgetSolVal(relaxscip, SCIPgetBestSol(relaxscip), relaxvar);
 
-         SCIP_CALL( SCIPsetRelaxSolVal(scip, SCIPgetVars(scip)[i], solval) );
+            SCIP_CALL( SCIPsetRelaxSolVal(scip, SCIPgetVars(scip)[i], solval) );
+         }
+
+         /* mark relaxation solution to be valid and inform SCIP that the relaxation included all LP rows */
+         SCIP_CALL( SCIPmarkRelaxSolValid(scip, TRUE) );
       }
 
-      /* mark relaxation solution to be valid */
-      SCIP_CALL( SCIPmarkRelaxSolValid(scip) );
+      SCIPdebugMsg(scip, "LP lower bound = %g\n", relaxval);
+      *lowerbound = relaxval;
+      *result = SCIP_SUCCESS;
    }
 
    /* free memory */
@@ -132,7 +135,7 @@ SCIP_RETCODE SCIPincludeRelaxLp(
    relax = NULL;
 
    /* include relaxator */
-   SCIP_CALL( SCIPincludeRelaxBasic(scip, &relax, RELAX_NAME, RELAX_DESC, RELAX_PRIORITY, RELAX_FREQ, RELAX_FULLLPINFO,
+   SCIP_CALL( SCIPincludeRelaxBasic(scip, &relax, RELAX_NAME, RELAX_DESC, RELAX_PRIORITY, RELAX_FREQ,
          relaxExecLp, relaxdata) );
    assert(relax != NULL);
 
