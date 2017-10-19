@@ -15295,7 +15295,7 @@ SCIP_RETCODE freeReoptSolve(
    SCIP_CALL( SCIPprobExitSolve(scip->transprob, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp, FALSE) );
 
    /* free solution process data structures */
-   SCIP_CALL( SCIPrelaxationFree(&scip->relaxation, scip->mem->probmem, scip->primal) );
+   SCIP_CALL( SCIPrelaxationFree(&scip->relaxation) );
 
    SCIP_CALL( SCIPcutpoolFree(&scip->cutpool, scip->mem->probmem, scip->set, scip->lp) );
    SCIP_CALL( SCIPcutpoolFree(&scip->delayedcutpool, scip->mem->probmem, scip->set, scip->lp) );
@@ -15487,7 +15487,7 @@ SCIP_RETCODE freeTransform(
 
    if( !reducedfree )
    {
-      SCIP_CALL( SCIPrelaxationFree(&scip->relaxation, scip->mem->probmem, scip->primal) );
+      SCIP_CALL( SCIPrelaxationFree(&scip->relaxation) );
    }
    SCIP_CALL( SCIPtreeFree(&scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
 

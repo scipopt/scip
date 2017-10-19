@@ -197,9 +197,7 @@ SCIP_RETCODE SCIPrelaxationCreate(
 /** frees global relaxation data */
 extern
 SCIP_RETCODE SCIPrelaxationFree(
-   SCIP_RELAXATION**     relaxation,         /**< global relaxation data */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_PRIMAL*          primal              /**< primal data */
+   SCIP_RELAXATION**     relaxation          /**< global relaxation data */
    );
 
 /** sets the relaxsolzero flag in the relaxation data to the given value */

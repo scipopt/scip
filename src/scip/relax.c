@@ -601,9 +601,7 @@ SCIP_RETCODE SCIPrelaxationCreate(
 
 /** frees global relaxation data */
 SCIP_RETCODE SCIPrelaxationFree(
-   SCIP_RELAXATION**     relaxation,         /**< global relaxation data */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_PRIMAL*          primal              /**< primal data */
+   SCIP_RELAXATION**     relaxation          /**< global relaxation data */
    )
 {
    assert(relaxation != NULL);
