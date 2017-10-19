@@ -1199,7 +1199,7 @@ SCIP_RETCODE redLoopPc(
    SCIP_CALL( degree_test_pc(scip, g, &fix, &degnelims, solnode, FALSE) );
 
    assert(graph_pc_term2edgeConsistent(g));
-sd = FALSE;
+
    /* get timelimit parameter */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
 
