@@ -22,7 +22,7 @@ if [ $# -ge 3 ] || [ $# -eq 0 ]; then
 fi;
 
 QUEUE=$1
-EXECUTABLE=`pwd`/$2
+export EXECUTABLE=`pwd`/$2
 DATETIME=`date '+%Y%m%d-%H%M%S'`
 
 echo "queue      :" $QUEUE
@@ -136,11 +136,13 @@ for Q in ${split_queue[@]}; do
     # create an empty settings file named by the slurm queue, node, date, and time
     SETTINGS=$Q-$n-$DATETIME
     mkdir -p settings
+    mkdir -p check/results/clusterbench
     touch settings/$SETTINGS.set
 
     # run full test set on each node
-    echo "     CLUSTERNODES=$n SETTINGS=$SETTINGS"
-    make testcluster EXECUTABLE=$EXECUTABLE QUEUE=$Q CLUSTERNODES=$n EXCLUSIVE=true TEST=$TEST SETTINGS=$SETTINGS TIME=600 OUTPUTDIR=results/clusterbench >/dev/null
+    echo "     CLUSTERNODES=$n"
+    echo "     SETTINGS=$SETTINGS"
+    make testcluster EXECUTABLE=$EXECUTABLE QUEUE=$Q CLUSTERNODES=$n EXCLUSIVE=true TEST=$TEST SETTINGS=$SETTINGS TIME=601 OUTPUTDIR=results/clusterbench
 
     # artificial settings file may only be removed after executable was started
   done
