@@ -75,14 +75,6 @@ static int numlp         =           0;
 
 static int optimizecount            =  0;
 static int nextlpid                 =  1;
-static int numstrongbranchmaxiterup =  0;
-static int numstrongbranchmaxiterdo =  0;
-static int numprimalmaxiter         =  0;
-static int numdualmaxiter           =  0;
-static int numstrongbranchobjup     =  0;
-static int numstrongbranchobjdo     =  0;
-static int numprimalobj             =  0;
-static int numdualobj               =  0;
 
 #define DEBUG_PARAM_SETTING          0
 #define DEBUG_PRINT_STAT             0
@@ -105,9 +97,22 @@ static int numdualobj               =  0;
 #define WRITE_DUAL                   0
 #define WRITE_PRIMAL                 0
 #define WRITE_INTPNT                 0
+#if WRITE_DUAL > 0 || WRITE_PRIMAL > 0 || WRITE_INTPNT > 0
 #define WRITE_ABOVE                  0
+#endif
 #define DEGEN_LEVEL                  MSK_SIM_DEGEN_FREE
 #define ALWAYS_SOLVE_PRIMAL          1
+
+#if DEBUG_PRINT_STAT > 0
+static int numstrongbranchmaxiterup =  0;
+static int numstrongbranchmaxiterdo =  0;
+static int numprimalmaxiter         =  0;
+static int numdualmaxiter           =  0;
+static int numstrongbranchobjup     =  0;
+static int numstrongbranchobjdo     =  0;
+static int numprimalobj             =  0;
+static int numdualobj               =  0;
+#endif
 
 /** gives problem and solution status for a Mosek Task
  *
@@ -2159,11 +2164,15 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
       }
    }
 
+#if DEBUG_PRINT_STAT > 0
    if (lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE)
       ++numprimalobj;
+#endif
 
+#if DEBUG_PRINT_STAT > 0
    if (lpi->termcode == MSK_RES_TRM_MAX_ITERATIONS)
       ++numprimalmaxiter;
+#endif
 
 #if DEBUG_CHECK_DATA > 0
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiSolvePrimal") );
@@ -2223,11 +2232,15 @@ SCIP_RETCODE SCIPlpiSolveDual(
       }
    }
 
+#if DEBUG_PRINT_STAT > 0
    if (lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE)
       ++numdualobj;
+#endif
 
+#if DEBUG_PRINT_STAT > 0
    if (lpi->termcode == MSK_RES_TRM_MAX_ITERATIONS)
       ++numdualmaxiter;
+#endif
 
    return SCIP_OKAY;
 }
@@ -2286,8 +2299,10 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
 
    MOSEK_CALL( filterTRMrescode(lpi->messagehdlr, &lpi->termcode, MSK_optimize(lpi->task)) );
 
+#if DEBUG_PRINT_STAT > 0
    if (lpi->termcode == MSK_RES_TRM_MAX_ITERATIONS)
       ++numdualmaxiter;
+#endif
 
    MOSEK_CALL( MSK_getintinf(lpi->task, MSK_IINF_INTPNT_ITER, &lpi->itercount) );
 
@@ -2460,11 +2475,13 @@ SCIP_RETCODE SCIPlpiStrongbranch(
          }
       }
 
+#if DEBUG_PRINT_STAT > 0
       if (lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE)
          ++numstrongbranchobjup;
 
       if (lpi->termcode == MSK_RES_TRM_MAX_ITERATIONS)
          ++numstrongbranchmaxiterup;
+#endif
    }
 
    /* Reset basis solution before doing the up branch */
@@ -2529,11 +2546,13 @@ SCIP_RETCODE SCIPlpiStrongbranch(
          }
       }
 
+#if DEBUG_PRINT_STAT > 0
       if (lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE)
          ++numstrongbranchobjdo;
 
       if (lpi->termcode == MSK_RES_TRM_MAX_ITERATIONS)
          ++numstrongbranchmaxiterdo;
+#endif
    }
 
    MOSEK_CALL( MSK_putbound(lpi->task, MSK_ACC_VAR, col, bkx, blx, bux) );
