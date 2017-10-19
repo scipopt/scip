@@ -205,7 +205,7 @@ void MSKAPI printstr(
       return;
 #endif
 
-   printf("MOSEK: %s", str);
+   SCIPmessagePrintInfo((SCIP_MESSAGEHDLR *) handle, "MOSEK: %s", str);
 }
 
 #if DEBUG_CHECK_DATA > 0
@@ -663,7 +663,7 @@ SCIP_RETCODE SCIPlpiCreate(
    if (!MosekEnv)
    {
       MOSEK_CALL( MSK_makeenv(&MosekEnv, NULL) );
-      MOSEK_CALL( MSK_linkfunctoenvstream(MosekEnv, MSK_STREAM_LOG, NULL, printstr) );
+      MOSEK_CALL( MSK_linkfunctoenvstream(MosekEnv, MSK_STREAM_LOG, messagehdlr, printstr) );
 #if MSK_VERSION_MAJOR < 8
       MOSEK_CALL( MSK_initenv(MosekEnv) );
 #endif
@@ -675,7 +675,7 @@ SCIP_RETCODE SCIPlpiCreate(
 
    MOSEK_CALL( MSK_makeemptytask(MosekEnv, &((*lpi)->task)) );
 
-   MOSEK_CALL( MSK_linkfunctotaskstream((*lpi)->task, MSK_STREAM_LOG, NULL, printstr) );
+   MOSEK_CALL( MSK_linkfunctotaskstream((*lpi)->task, MSK_STREAM_LOG, messagehdlr, printstr) );
 
    MOSEK_CALL( MSK_putobjsense((*lpi)->task, SENSE2MOSEK(objsen)) );
    MOSEK_CALL( MSK_putintparam((*lpi)->task, MSK_IPAR_SIM_MAX_NUM_SETBACKS, SETBACK_LIMIT) );
