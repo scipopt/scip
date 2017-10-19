@@ -1889,7 +1889,10 @@ SCIP_RETCODE sdpc_reduction(
          else
             nnterms1 = getcloseterms(scip, vnoi, termdist1, ecost, vbase, neighbterms1, i, nnodes);
 #else
-         nnterms1 = getcloseterms(scip, vnoi, termdist1, ecost, vbase, neighbterms1, i, nnodes);
+         if( Is_term(g->term[i]) )
+            nnterms1 = 0;
+         else
+            nnterms1 = getcloseterms(scip, vnoi, termdist1, ecost, vbase, neighbterms1, i, nnodes);
 #endif
 
          if( nnterms1 == 0 )
@@ -1902,7 +1905,10 @@ SCIP_RETCODE sdpc_reduction(
          else
             nnterms2 = getcloseterms(scip, vnoi, termdist2, ecost, vbase, neighbterms2, i2, nnodes);
 #else
-         nnterms2 = getcloseterms(scip, vnoi, termdist2, ecost, vbase, neighbterms2, i2, nnodes);
+         if( Is_term(g->term[i2]) )
+            nnterms2 = 0;
+         else
+            nnterms2 = getcloseterms(scip, vnoi, termdist2, ecost, vbase, neighbterms2, i2, nnodes);
 #endif
 
          if( nnterms2 == 0 )
@@ -1971,7 +1977,7 @@ SCIP_RETCODE sdpc_reduction(
                      && SCIPisGT(scip, ecost, necost + termdist2[k] - g->prize[tk])
                      && SCIPisGT(scip, ecost, necost + termdist1[j] + termdist2[k] - g->prize[tj] - g->prize[tk]) )
                   {
-                     printf("SDPC delete: %d %d (%d)\n", g->tail[e], g->head[e], e);
+                     SCIPdebugMessage("SDPC delete: %d %d (%d)\n", g->tail[e], g->head[e], e);
                      graph_edge_del(scip, g, e, TRUE);
                      (*nelims)++;
                      break;
@@ -1982,7 +1988,7 @@ SCIP_RETCODE sdpc_reduction(
       }
    }
 
-   printf("SDPC eliminations: %d \n", *nelims);
+   SCIPdebugMessage("SDPC eliminations: %d \n", *nelims);
 
    graph_free(scip, netgraph, TRUE);
    return SCIP_OKAY;
@@ -2477,7 +2483,7 @@ SCIP_RETCODE sdsp_sap_reduction(
    return SCIP_OKAY;
 }
 
-
+#define IS_ON 1
 /** SD test using only limited dijkstra from both endpoints of an edge */
 SCIP_RETCODE sdsp_reduction(
    SCIP*                 scip,
@@ -2564,7 +2570,7 @@ SCIP_RETCODE sdsp_reduction(
 
          /* execute limited Dijkstra from both sides */
 
-         if( pc && 0 )
+         if( pc && IS_ON )
          {
             graph_path_PcMwSd(scip, g, pathtail, g->cost, ecost, pathmaxnodetail, heap, statetail, NULL, memlbltail, &nlbltail, i, i2, limit);
             graph_path_PcMwSd(scip, g, pathhead, g->cost, ecost, pathmaxnodehead, heap, statehead, statetail, memlblhead, &nlblhead, i2, i, limit);
@@ -2578,19 +2584,19 @@ SCIP_RETCODE sdsp_reduction(
          deletable = FALSE;
 
          /* check whether edge e can be deleted and restore data structures */
-         for( int k = 0; k < nlbltail; k++ )
+         for( int k = 0; k < nlbltail && !deletable; k++ )
          {
             const int l = memlbltail[k];
 
             assert(g->mark[l]);
             assert(statetail[l] != UNKNOWN);
 
-            if( statehead[l] != UNKNOWN && !deletable )
+            if( statehead[l] != UNKNOWN )
             {
                assert(SCIPisGT(scip, FARAWAY, pathtail[l].dist));
                assert(SCIPisGT(scip, FARAWAY, pathhead[l].dist));
 
-               if( pc && 0 )
+               if( pc && IS_ON )
                {
                   const int tailmaxterm = pathmaxnodetail[l];
                   const int headmaxterm = pathmaxnodehead[l];
@@ -2608,12 +2614,15 @@ SCIP_RETCODE sdsp_reduction(
                         assert(SCIPisGE(scip, ecost, pathhead[headmaxterm].dist) && SCIPisGE(scip, ecost, pathtail[tailmaxterm].dist));
 
                         if( SCIPisGE(scip, ecost, pathhead[l].dist + pathtail[l].dist - g->prize[l]) )
+                        {
                            deletable = TRUE;
+                           SCIPdebugMessage("delete1Term \n");
+                        }
                      }
                      else if( tailmaxterm >= 0 && headmaxterm >= 0 )
                      {
                         const SCIP_Real distl2tailmax = pathtail[l].dist - pathtail[tailmaxterm].dist;
-                        const SCIP_Real distl2headmax = pathhead[l].dist - pathhead[headmaxterm].dist;;
+                        const SCIP_Real distl2headmax = pathhead[l].dist - pathhead[headmaxterm].dist;
 
                         assert(tailmaxterm != headmaxterm);
                         assert(!SCIPisNegative(scip, distl2tailmax));
@@ -2627,6 +2636,7 @@ SCIP_RETCODE sdsp_reduction(
                               && SCIPisGE(scip, ecost, pathhead[l].dist + pathtail[l].dist - g->prize[tailmaxterm] - g->prize[headmaxterm]) )
                         {
                            deletable = TRUE;
+                           SCIPdebugMessage("delete2Term \n");
                         }
                      }
                      else if( tailmaxterm >= 0 )
@@ -2634,7 +2644,6 @@ SCIP_RETCODE sdsp_reduction(
                         const SCIP_Real distl2tailmax = pathtail[l].dist - pathtail[tailmaxterm].dist;
 
                         assert(headmaxterm < 0);
-                        assert(tailmaxterm != l);
                         assert(SCIPisGE(scip, ecost, pathtail[tailmaxterm].dist));
                         assert(SCIPisPositive(scip, g->prize[tailmaxterm]));
 
@@ -2642,14 +2651,15 @@ SCIP_RETCODE sdsp_reduction(
                               && SCIPisGE(scip, ecost, pathhead[l].dist + pathtail[l].dist - g->prize[tailmaxterm]) )
                         {
                            deletable = TRUE;
+                           SCIPdebugMessage("deleteHalfTerm1 \n");
+
                         }
                      }
                      else if( headmaxterm >= 0 )
                      {
-                        const SCIP_Real distl2headmax = pathhead[l].dist - pathhead[headmaxterm].dist;;
+                        const SCIP_Real distl2headmax = pathhead[l].dist - pathhead[headmaxterm].dist;
 
                         assert(tailmaxterm < 0);
-                        assert(headmaxterm != l);
                         assert(SCIPisGE(scip, ecost, pathhead[headmaxterm].dist));
                         assert(SCIPisPositive(scip, g->prize[headmaxterm]));
 
@@ -2657,12 +2667,20 @@ SCIP_RETCODE sdsp_reduction(
                               && SCIPisGE(scip, ecost, pathhead[l].dist + pathtail[l].dist - g->prize[headmaxterm]) )
                         {
                            deletable = TRUE;
+                           SCIPdebugMessage("deleteHalfTerm2 \n");
                         }
                      }
                   }
                   else if( SCIPisGE(scip, ecost, pathhead[l].dist + pathtail[l].dist) )
                   {
                      deletable = TRUE;
+                  }
+
+                  if( Is_term(g->term[l]) )
+                  {
+                     if( SCIPisGE(scip, ecost, pathhead[l].dist) && SCIPisGE(scip, ecost, pathtail[l].dist)
+                           && SCIPisGE(scip, ecost, pathhead[l].dist + pathtail[l].dist - g->prize[l]) )
+                        deletable = TRUE;
                   }
                }
                else
@@ -2685,8 +2703,12 @@ SCIP_RETCODE sdsp_reduction(
                   }
                }
             }
+         }
 
-            statetail[l]     = UNKNOWN;
+         for( int k = 0; k < nlbltail; k++ )
+         {
+            const int l = memlbltail[k];
+            statetail[l] = UNKNOWN;
             pathtail[l].dist = FARAWAY;
             pathtail[l].edge = UNKNOWN;
             pathmaxnodetail[l] = -1;
@@ -2711,8 +2733,8 @@ SCIP_RETCODE sdsp_reduction(
             assert(statehead[k]     == UNKNOWN);
             assert(pathhead[k].dist == FARAWAY);
             assert(pathhead[k].edge == UNKNOWN);
-            assert(pathmaxnodetail[k] == -1.0);
-            assert(pathmaxnodehead[k] == -1.0);
+            assert(pathmaxnodetail[k] == -1);
+            assert(pathmaxnodehead[k] == -1);
          }
 #endif
          /* can edge be deleted? */

@@ -684,6 +684,7 @@ void graph_path_PcMwSd(
    int nchecks;
    const SCIP_Bool block = (stateblock != NULL);
 
+   assert(limit > 0);
    assert(g      != NULL);
    assert(heap   != NULL);
    assert(path   != NULL);
@@ -729,10 +730,10 @@ void graph_path_PcMwSd(
    g->mark[head] = TRUE;
 
    /* main loop */
-   while( count > 0 && nchecks <= limit )
+   while( count > 0 )
    {
       const int k = nearest(heap, state, &count, path);
-      const SCIP_Real maxweight = pathmaxnode[k] >= 0 ? g->prize[pathmaxnode[k]] : 0.0;
+      SCIP_Real maxweight = pathmaxnode[k] >= 0 ? g->prize[pathmaxnode[k]] : 0.0;
 
       assert(k != tail);
       assert(maxweight >= 0);
@@ -745,12 +746,14 @@ void graph_path_PcMwSd(
       if( k == head )
          continue;
 
-      /* don't update pathmaxnode for head! */
-      if( Is_term(g->term[k]) && SCIPisGT(scip, g->prize[k], maxweight) )
+      if( Is_term(g->term[k]) && SCIPisGT(scip, g->prize[k], maxweight) && SCIPisGE(scip, distlimit, path[k].dist) )
+      {
          pathmaxnode[k] = k;
+         maxweight = g->prize[k];
+      }
 
-      /* stop at node visited in first run */
-      if( block && stateblock[k] != UNKNOWN )
+      /* stop at node scanned in first run */
+      if( block && stateblock[k] == CONNECT )
          continue;
 
       /* correct incident nodes */
@@ -759,11 +762,12 @@ void graph_path_PcMwSd(
          const int m = g->head[e];
 
          if( state[m] && g->mark[m] && SCIPisGT(scip, path[m].dist, path[k].dist + cost[e])
-               && SCIPisGE(scip, distlimit, path[k].dist + cost[e] - maxweight  ) )
+               && SCIPisGE(scip, distlimit, path[k].dist + cost[e] - maxweight) )
          {
             if( state[m] == UNKNOWN ) /* m labeled for the first time? */
                memlbl[(*nlbl)++] = m;
 
+            pathmaxnode[m] = pathmaxnode[k];
             correct(scip, heap, state, &count, path, m, k, e, cost[e], FSP_MODE);
          }
          if( nchecks++ > limit )

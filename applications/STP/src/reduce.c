@@ -29,9 +29,9 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /*lint -esym(750,REDUCE_C) -esym(766,stdlib.h) -esym(766,string.h)           */
-#define SCIP_DEBUG
+//#define SCIP_DEBUG
 #define REDUCE_C
-#define SDSP_BOUND    400          /**< visited edges bound for SDSP test  */
+#define SDSP_BOUND    400         /**< visited edges bound for SDSP test  */
 #define BD3_BOUND     400          /**< visited edges bound for BD3 test  */
 #define EXTENSIVE FALSE
 #define MW_TERM_BOUND 400
@@ -1194,13 +1194,6 @@ SCIP_RETCODE redLoopPc(
 
    assert(graph_pc_term2edgeConsistent(g));
 
-   SCIP_CALL( sdpc_reduction(scip, g, vnoi, heap, state, vbase, nodearrint, nodearrint2, &sdnelims) );
-
-   SCIP_CALL( sdsp_reduction(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &sdcnelims, SDSP_BOUND, NULL) );
-printf("SDsp: %d \n", sdcnelims);
-   assert(0);
-
-
    SCIP_CALL( degree_test_pc(scip, g, &fix, &degnelims, solnode, FALSE) );
 
    assert(graph_pc_term2edgeConsistent(g));
@@ -1229,6 +1222,8 @@ printf("SDsp: %d \n", sdcnelims);
          if( sdcnelims <= reductbound )
             sdc = FALSE;
 
+         printf("SDsp: %d \n", sdcnelims);
+
          SCIPdebugMessage("SDsp: %d \n", sdcnelims);
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
@@ -1239,6 +1234,9 @@ printf("SDsp: %d \n", sdcnelims);
          SCIP_CALL( sdpc_reduction(scip, g, vnoi, heap, state, vbase, nodearrint, nodearrint2, &sdnelims) );
          if( sdnelims <= reductbound )
             sd = FALSE;
+
+         printf("SDpc: %d \n", sdnelims);
+
 
          SCIPdebugMessage("SDpc: %d \n", sdnelims);
          if( SCIPgetTotalTime(scip) > timelimit )
