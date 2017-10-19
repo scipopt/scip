@@ -4118,10 +4118,12 @@
  * <code>SCIPsetRelaxSolVals()</code> or <code>SCIPsetRelaxSolValsSol()</code>. If you set the values one by one, you will need to call
  * <code>SCIPmarkRelaxSolValid()</code> to inform SCIP that the solution is complete and valid. With the "includeslp" argument of
  * <code>SCIPsetRelaxSolVals()</code>, <code>SCIPsetRelaxSolValsSol()</code> and <code>SCIPmarkRelaxSolValid()</code> you need to tell SCIP
- * whether the relaxation included all lp rows. In this case the  solution will be enforced and, if feasible, added to the solution storage if the
+ * whether the relaxation included all lp rows. In this case, the  solution will be enforced and, if feasible, added to the solution storage if the
  * lowerbound of this relaxator is larger than the LP's. You may also call SCIPtrySolFree() directly from the
  * relaxation handler to make sure that a solution is added to the solution storage if it is feasible, even if the relaxator does not
- * include the LP or another relaxator produced a stronger bound.
+ * include the LP or another relaxator produced a stronger bound. Also note that when setting the values of the relaxation solution one by one,
+ * the objective value of the relaxation solution will be updated incrementally. If the whole solution should be updated, using SCIPsetRelaxSolVals()
+ * instead or calling SCIPclearRelaxSolVals() before setting the first value to reset the solution and the objective value to 0 may help the numerics.
  * Furthermore, there is a list of external branching candidates, that can be filled by relaxation handlers and constraint handlers,
  * allowing branching rules to take these candidates as a guide on how to split the problem into subproblems. If the relaxation
  * solution is enforced, the integrality constraint handler will add external branching candidates for the relaxation solution

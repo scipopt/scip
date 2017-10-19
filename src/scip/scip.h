@@ -8041,6 +8041,10 @@ SCIP_RETCODE SCIPclearRelaxSolVals(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note This method incrementally updates the objective value of the relaxation solution. If the whole solution
+ *        should be updated, using SCIPsetRelaxSolVals() instead or calling SCIPclearRelaxSolVals() before setting
+ *        the first value to reset the solution and the objective value to 0 may help the numerics.
  */
 EXTERN
 SCIP_RETCODE SCIPsetRelaxSolVal(

@@ -88,6 +88,8 @@ SCIP_DECL_RELAXEXEC(relaxExecLp)
       if( (! SCIPisRelaxSolValid(scip)) || SCIPisGT(scip, relaxval, SCIPgetRelaxSolObj(scip)) )
       {
          SCIPdebugMsg(scip, "Setting LP relaxation solution, which improved upon earlier solution\n");
+         SCIP_CALL( SCIPclearRelaxSolVals(scip) );
+
          for( i = 0; i < SCIPgetNVars(scip); ++i )
          {
             SCIP_VAR* relaxvar;

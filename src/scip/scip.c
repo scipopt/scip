@@ -16031,6 +16031,7 @@ SCIP_RETCODE SCIPsolve(
          /* an extra blank line should be printed separately since the buffer message handler only handles up to one line
           * correctly */
          SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "\n");
+         SCIP_CALL( SCIPclearRelaxSolVals(scip) );
          SCIP_CALL( freeSolve(scip, TRUE) );
          assert(scip->set->stage == SCIP_STAGE_TRANSFORMED);
       }

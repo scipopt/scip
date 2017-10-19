@@ -140,6 +140,8 @@ SCIP_DECL_RELAXEXEC(relaxExecNlp)
       if( (! SCIPisRelaxSolValid(scip)) || SCIPisGT(scip, relaxval, SCIPgetRelaxSolObj(scip)) )
       {
          SCIPdebugMsg(scip, "Setting NLP relaxation solution, which improved upon earlier solution\n");
+         SCIP_CALL( SCIPclearRelaxSolVals(scip) );
+
          for( i = 0; i < nvars; ++i )
          {
    #ifndef NDEBUG
