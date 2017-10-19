@@ -63,7 +63,7 @@
 #define DEFAULT_MAXSEPACUTS         100 /**< maximal number of zerohalf cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT     500 /**< maximal number of zerohalf cuts separated per separation round in root node */
 #define DEFAULT_MAXSLACK           1e-4 /**< maximal slack of rows to be used in aggregation */
-#define DEFAULT_MAXSLACKROOT       0.25 /**< maximal slack of rows to be used in aggregation in the root node */
+#define DEFAULT_MAXSLACKROOT        0.5 /**< maximal slack of rows to be used in aggregation in the root node */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
 #define DEFAULT_MAXROWDENSITY      0.05 /**< maximal density of row to be used in aggregation */
 #define DEFAULT_DENSITYOFFSET       100 /**< additional number of variables allowed in row on top of density */
@@ -481,9 +481,14 @@ SCIP_RETCODE transformNonIntegralRow(
       SCIP_Real intscalar;
       SCIP_VAR** vars = SCIPgetVars(scip);
 
-      mindelta = -SCIPepsilon(scip);
-      maxdelta = SCIPsumepsilon(scip);
-      SCIP_CALL( SCIPcalcIntegralScalar(transrowvals, transrowlen, mindelta, maxdelta, MAXDNOM, MAXSCALE, &intscalar, success) );
+      *success = !SCIPcutsTightenCoefficients(scip, local, transrowvals, &transrowrhs, transrowvars, &transrowlen);
+
+      if( *success )
+      {
+         mindelta = -SCIPepsilon(scip);
+         maxdelta = SCIPsumepsilon(scip);
+         SCIP_CALL( SCIPcalcIntegralScalar(transrowvals, transrowlen, mindelta, maxdelta, MAXDNOM, MAXSCALE, &intscalar, success) );
+      }
 
       if( *success )
       {
@@ -2102,7 +2107,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
       SCIPdebugMsg(scip, "preprocessed columns (%i rows, %i cols)\n", mod2matrix.nrows, mod2matrix.ncols);
 
       if( mod2matrix.ncols == 0 )
-         break;
+         continue;
 
       SCIPsortPtr((void**) mod2matrix.rows, compareRowSlack, mod2matrix.nrows);
       nzeroslackrows = mod2matrix.nzeroslackrows;
@@ -2162,13 +2167,14 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
 
       SCIPdebugMsg(scip, "applied proposition five (%i rows, %i cols)\n", mod2matrix.nrows, mod2matrix.ncols);
 
-      if( sepadata->nreductions == 0 || sepadata->ncuts >= maxsepacuts || mod2matrix.ncols == 0 )
+      if( sepadata->nreductions == 0 )
       {
          SCIPdebugMsg(scip, "no change, stopping (%i rows, %i cols)\n", mod2matrix.nrows, mod2matrix.ncols);
          break;
       }
    }
 
+#if 0
    for( i = 0; sepadata->ncuts < maxsepacuts && i < mod2matrix.nrows; ++i )
    {
       MOD2_ROW* row = mod2matrix.rows[i];
@@ -2187,6 +2193,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
          goto TERMINATE;
       }
    }
+#endif
 
    SCIPdebugMsg(scip, "total number of cuts found: %i\n", sepadata->ncuts);
    if( sepadata->ncuts > 0  )

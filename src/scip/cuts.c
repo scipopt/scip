@@ -1026,6 +1026,8 @@ SCIP_Bool SCIPcutsTightenCoefficients(
             }
          }
       }
+      else /* due to sorting we can stop completely if the precondition was not fulfilled for this variable */
+         break;
 
       ++i;
    }
