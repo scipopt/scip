@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -19,9 +19,10 @@
  * @author Christoph Schubert
  *
  * The (multi-level) lookahead branching rule applies strong branching to every fractional value of the LP solution
- * at the current node of the branch-and-bound tree, as well as recursivly to every temporary childproblem created by this
+ * at the current node of the branch-and-bound tree, as well as recursivly to every temporary child problem created by this
  * strong branching. The rule selects the candidate with the best proven dual bound.
  *
+ * @todo add Glankwamdee paper
  * For a more mathematical description and a comparison between lookahead branching and other branching rules
  * in SCIP, we refer to
  *
@@ -43,7 +44,7 @@
 extern "C" {
 #endif
 
-/** creates the Lookahead branching rule and includes it in SCIP */
+/** creates the lookahead branching rule and includes it in SCIP */
 EXTERN
 SCIP_RETCODE SCIPincludeBranchruleLookahead(
    SCIP*                 scip                /**< SCIP data structure */

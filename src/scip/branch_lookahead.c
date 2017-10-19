@@ -31,10 +31,11 @@
  * Multi-Level Lookahead Branching@n
  * Master Thesis, Technische Universität Berlin, 2017@n
  */
+
 /* Supported defines:
  * PRINTNODECONS: prints the binary constraints added
  * SCIP_DEBUG: prints detailed execution information
- * SCIP_STATISTIC: prints some statistical values after the branching rule is freed */
+ * SCIP_STATISTIC: prints some statistics after the branching rule is freed */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
@@ -49,32 +50,32 @@
 #define BRANCHRULE_NAME            "lookahead"
 #define BRANCHRULE_DESC            "fullstrong branching over two levels"
 #define BRANCHRULE_PRIORITY        0
-#define BRANCHRULE_MAXDEPTH        (-1)
+#define BRANCHRULE_MAXDEPTH        -1
 #define BRANCHRULE_MAXBOUNDDIST    1.0
 
-#define DEFAULT_USEBINARYCONSTRAINTS         TRUE  /* Should binary constraints be collected and applied? */
-#define DEFAULT_ADDCLIQUE                    FALSE /* Add binary constraints also as a clique. */
-#define DEFAULT_ADDBINCONSROW                FALSE /* Should binary constraints be added as rows to the base LP? */
-#define DEFAULT_USEDOMAINREDUCTION           TRUE  /* Should domain reductions be collected and applied? */
-#define DEFAULT_MAXNUMBERVIOLATEDCONS        1     /* How many constraints that are violated by the base lp solution should
-                                                    * be gathered until the rule is stopped and they are added? */
-#define DEFAULT_STOREUNVIOLATEDSOL           TRUE  /* If only non violating constraints are added, should the branching
-                                                    * decision be stored till the next call? */
-#define DEFAULT_REEVALAGE                    10LL  /* Max number of LPs solved after which a previous prob branching results
-                                                    * are recalculated. */
-#define DEFAULT_FORCEBRANCHING               FALSE /* Should LAB be forced, if only one candidate is given? */
-#define DEFAULT_RECURSIONDEPTH               2     /* The max depth of LAB. */
-#define DEFAULT_ADDNONVIOCONS                FALSE /* Should binary constraints, that are not violated by the base LP, be
-                                                    * collected and added? */
-#define DEFAULT_DOWNFIRST                    TRUE  /* Should the down branch be evaluated first? */
-#define DEFAULT_PROPAGATE                    FALSE /* Should domain propagation be executed before each temporary node is
-                                                    * solved? */
-#define DEFAULT_ABBREVIATED                  FALSE /* Toggles the abbreviated LAB. */
-#define DEFAULT_MAXNCANDS                    4     /* If abbreviated: The max number of candidates to consider per node */
-#define DEFAULT_REUSEBASIS                   TRUE  /* If abbreviated: Should the information gathered to obtain the best
-                                                    * candidates be reused? */
-#define DEFAULT_ABBREVPSEUDO                 FALSE /* If abbreviated: Use pseudo costs to estimate the score of a
-                                                    * candidate. */
+#define DEFAULT_USEBINARYCONSTRAINTS         TRUE  /**< Should binary constraints be collected and applied? */
+#define DEFAULT_ADDCLIQUE                    FALSE /**< Add binary constraints also as a clique. */
+#define DEFAULT_ADDBINCONSROW                FALSE /**< Should binary constraints be added as rows to the base LP? */
+#define DEFAULT_USEDOMAINREDUCTION           TRUE  /**< Should domain reductions be collected and applied? */
+#define DEFAULT_MAXNUMBERVIOLATEDCONS        1     /**< How many constraints that are violated by the base lp solution should
+                                                    *   be gathered until the rule is stopped and they are added? */
+#define DEFAULT_STOREUNVIOLATEDSOL           TRUE  /**< If only non violating constraints are added, should the branching
+                                                    *   decision be stored till the next call? */
+#define DEFAULT_REEVALAGE                    10LL  /**< Max number of LPs solved after which a previous prob branching results
+                                                    *   are recalculated. */
+#define DEFAULT_FORCEBRANCHING               FALSE /**< Should LAB be forced, if only one candidate is given? */
+#define DEFAULT_RECURSIONDEPTH               2     /**< The max depth of LAB. */
+#define DEFAULT_ADDNONVIOCONS                FALSE /**< Should binary constraints, that are not violated by the base LP, be
+                                                    *   collected and added? */
+#define DEFAULT_DOWNFIRST                    TRUE  /**< Should the down branch be evaluated first? */
+#define DEFAULT_PROPAGATE                    FALSE /**< Should domain propagation be executed before each temporary node is
+                                                    *   solved? */
+#define DEFAULT_ABBREVIATED                  FALSE /**< Toggles the abbreviated LAB. */
+#define DEFAULT_MAXNCANDS                    4     /**< If abbreviated: The max number of candidates to consider per node */
+#define DEFAULT_REUSEBASIS                   TRUE  /**< If abbreviated: Should the information gathered to obtain the best
+                                                    *   candidates be reused? */
+#define DEFAULT_ABBREVPSEUDO                 FALSE /**< If abbreviated: Use pseudo costs to estimate the score of a
+                                                    *   candidate. */
 
 #ifdef SCIP_DEBUG
 /* Adjusted debug message that also prints the current probing depth. */
@@ -104,7 +105,7 @@
                                              }                                                                             \
                                              while( FALSE )
 /* Writes a debug message without the leading information. Can be used to append something to an output of LABdebugMessage*/
-#define LABdebugMessageCont(scip,lvl,...)    do                                                                            \
+#define LABdebugMessagePrint(scip,lvl,...)   do                                                                            \
                                              {                                                                             \
                                                 SCIPverbMessage(scip, lvl, NULL, __VA_ARGS__);                             \
                                              }                                                                             \
@@ -122,15 +123,16 @@ typedef struct
 {
    SCIP_VAR*             var;                /**< Variable to branch on. May be NULL.*/
    SCIP_Real             val;                /**< the fractional value of the variable to branch on */
-   SCIP_Real             downdb;             /**< the highest dual bound found in the down branch */
+   SCIP_Real             downdb;             /**< dual bound for down branch */
+   SCIP_Real             updb;               /**< dual bound for the up branch */
+   SCIP_Real             proveddb;           /**< proven dual bound for the current node */
    SCIP_Bool             downdbvalid;        /**< Indicator for the validity of the downdb value. Is FALSE, if no actual
                                               *   branching occurred or the value was determined by an LP not solved to
                                               *   optimality. */
-   SCIP_Real             updb;               /**< the highest dual bound found in the up branch */
+
    SCIP_Bool             updbvalid;          /**< Indicator for the validity of the updb value. Is FALSE, if no actual
                                               *   branching occurred or the value was determined by an LP not solved to
                                               *   optimality. */
-   SCIP_Real             proveddb;           /**< the highest dual bound found with optimally solved LPs */
 } BRANCHINGDECISION;
 
 /** Allocates a branching decision in the buffer and initiates it with default values. */
@@ -203,12 +205,12 @@ typedef struct
 {
    SCIP_Real             objval;             /**< The objective value of the solved lp. Only contains meaningful data, if
                                               *   cutoff == FALSE. */
+   SCIP_Real             dualbound;          /**< The best dual bound for this branching, may be changed by deeper level
+                                              *   branchings. */
+   SCIP_Longint          niterations;        /**< The number of probing iterations needed in sub branch. */
    SCIP_Bool             cutoff;             /**< Indicates whether the node was infeasible and was cutoff. */
    SCIP_Bool             dualboundvalid;     /**< Us the value of the dual bound valid? That means, was the according LP
                                               *   or the sub problems solved to optimality? */
-   SCIP_Real             dualbound;          /**< The best dual bound for this branching, may be changed by higher level
-                                              *   branchings. */
-   SCIP_Longint          niterations;        /**< The number of probing iterations needed in sub branch. */
 } BRANCHINGRESULTDATA;
 
 /** Allocates a branching result in the buffer. */
@@ -222,6 +224,7 @@ SCIP_RETCODE branchingResultDataAllocate(
    assert(resultdata != NULL);
 
    SCIP_CALL( SCIPallocBuffer(scip, resultdata) );
+
    return SCIP_OKAY;
 }
 
@@ -235,8 +238,8 @@ void branchingResultDataInit(
    assert(scip != NULL);
    assert(resultdata != NULL);
 
-   resultdata->objval = SCIPinfinity(scip);
-   resultdata->dualbound = SCIPinfinity(scip);
+   resultdata->objval = -SCIPinfinity(scip);
+   resultdata->dualbound = -SCIPinfinity(scip);
    resultdata->cutoff = FALSE;
    resultdata->dualboundvalid = FALSE;
    resultdata->niterations = 0;
@@ -279,7 +282,6 @@ typedef struct
                                               *   non-violating implied binary constraints were added. */
    BRANCHINGDECISION*    prevdecision;       /**< The previous decision that gets used for the case that in the previous run
                                               *   only non-violating implied binary constraints were added.*/
-   int                   restartindex;       /**< The index at which the iteration over the number of candidates starts. */
    SCIP_Longint*         lastbranchid;       /**< The node id at which the var was last branched on (for a given branching
                                               *   var). */
    SCIP_Longint*         lastbranchnlps;     /**< The number of (non-probing) LPs that where solved when the var was last
@@ -287,11 +289,18 @@ typedef struct
    SCIP_Real*            lastbranchlpobjval; /**< The lp objval at which var was last branched on. */
    BRANCHINGRESULTDATA** lastbranchupres;    /**< The result of the last up branching for a given var. */
    BRANCHINGRESULTDATA** lastbranchdownres;  /**< The result of the last down branching for a given var. */
+   int                   restartindex;       /**< The index at which the iteration over the number of candidates starts. */
 } PERSISTENTDATA;
 
 /** The parameter that can be changed by the user/caller and alter the behaviour of the lookahead branching. */
 typedef struct
 {
+   SCIP_Longint          reevalage;          /**< The number of "normal" (not probing) lps that may have been solved before
+                                              *   we stop using old data and start recalculating new first level data. */
+   int                   maxnviolatedcons;   /**< The number of constraints we want to gather before restarting the run. Set
+                                              *   to -1 for an unbounded list. */
+   int                   recursiondepth;     /**< How deep should the recursion go? Default for Lookahead: 2 */
+   int                   maxncands;          /**< If abbreviated == TRUE, at most how many candidates should be handled? */
    SCIP_Bool             usedomainreduction; /**< indicates whether the data for domain reductions should be gathered and
                                               *   used. */
    SCIP_Bool             usebincons;         /**< indicates whether the data for the implied binary constraints should
@@ -299,17 +308,11 @@ typedef struct
    SCIP_Bool             addbinconsrow;      /**< Add the implied binary constraints as a row to the problem matrix */
    SCIP_Bool             stopbranching;      /**< indicates whether we should stop the first level branching after finding
                                               *   an infeasible first branch */
-   SCIP_Longint          reevalage;          /**< The number of "normal" (not probing) lps that may have been solved before
-                                              *   we stop using old data and start recalculating new first level data. */
-   int                   maxnviolatedcons;   /**< The number of constraints we want to gather before restarting the run. Set
-                                              *   to -1 for an unbounded list. */
    SCIP_Bool             forcebranching;     /**< Execute the lookahead logic even if only one branching candidate is given.
                                               *   May be used to calculate the score of a single candidate. */
-   int                   recursiondepth;     /**< How deep should the recursion go? Default for Lookahead: 2 */
    SCIP_Bool             addnonviocons;      /**< Should constraints be added, that are not violated by the base LP? */
    SCIP_Bool             downfirst;          /**< Should the down branch be executed first? */
    SCIP_Bool             abbreviated;        /**< Should the abbreviated version be used? */
-   int                   maxncands;          /**< If abbreviated == TRUE, at most how many candidates should be handled? */
    SCIP_Bool             reusebasis;         /**< If abbreviated == TRUE, should the solution lp-basis of the FSB run be
                                               *   used in the first abbreviated level?  */
    SCIP_Bool             storeunviolatedsol; /**< Should a solution/decision be stored, to speed up the next iteration
@@ -321,6 +324,8 @@ typedef struct
 } CONFIGURATION;
 
 /** Allocates a configuration in the buffer and initiates it with the default values. */
+/* @todo split this into alloc and copy method */
+/* @todo rename allocate to create everywhere */
 static
 SCIP_RETCODE configurationAllocate(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -378,7 +383,7 @@ static const char* names[18] = { "", "SCIP_DIDNOTRUN", "SCIP_DELAYED", "SCIP_DID
 /** Returns a human readable name for the given result enum value. */
 static
 const char* getStatusString(
-   SCIP_RESULT           result              /**< Enum value to get the string representation for */
+   SCIP_RESULT           result              /**< enum value to get the string representation for */
    )
 {
    /* the result can be used as an array index, as it is internally handled as an int value. */
@@ -390,7 +395,6 @@ const char* getStatusString(
 /** The data used for some statistical analysis. */
 typedef struct
 {
-   int                   ntotalresults;      /**< The total sum of the entries in nresults. */
    int*                  nresults;           /**< Array of counters for each result state the lookahead branching finished.
                                               *   The first (0) entry is unused, as the result states are indexed 1-based
                                               *   and we use this index as our array index. */
@@ -407,6 +411,9 @@ typedef struct
                                               *   per probingdepth. */
    int*                  noldbranchused;     /**< The number of times old branching data is used (see the reevalage
                                               *   parameter in the CONFIGURATION struct) */
+   int*                  chosenfsbcand;      /**< If abbreviated, this is the number of times each candidate was finally
+                                              *   chosen by the following LAB */
+   int                   ntotalresults;      /**< The total sum of the entries in nresults. */
    int                   nbinconst;          /**< The number of binary constraints added to the base node. */
    int                   nbinconstvio;       /**< The number of binary constraints added to the base node, that are violated
                                               *   by the LP at that node. */
@@ -423,8 +430,6 @@ typedef struct
                                               *   scoring candidates by FSB because of a found cutoff. */
    int                   domredafterfsb;     /**< If abbreviated, this is the number of times the rule was stopped after
                                               *   scoring candidates by FSB because of a found domain reduction. */
-   int*                  chosenfsbcand;      /**< If abbreviated, this is the number of times each candidate was finally
-                                              *   chosen by the following LAB */
    int                   ncliquesadded;      /**< The number of cliques added in the root node. */
    int                   maxnbestcands;      /**< If abbreviated, this is the maximum number of candidates the method
                                               *   getBestCandidates will return. */
@@ -497,7 +502,7 @@ SCIP_RETCODE statisticsAllocate(
    assert(maxncands > 0);
 
    SCIP_CALL( SCIPallocBuffer(scip, statistics) );
-   /* 17 current number of possible result values and the index is 1 based, so 17 + 1 as array size with unused 0 element */
+   /* 17 current number of possible result values and the enum is 1 based, so 17 + 1 as array size with unused 0 element */
    SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->nresults, 17+1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->nsinglecutoffs, recursiondepth) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->nfullcutoffs, recursiondepth) );
@@ -695,9 +700,9 @@ void localStatisticsFree(
 /** branching rule data */
 struct SCIP_BranchruleData
 {
-   SCIP_Bool             isinitialized;      /**< indicates whether the fields in this struct are initialized */
    CONFIGURATION*        config;             /**< the parameter that influence the behaviour of the lookahead branching */
    PERSISTENTDATA*       persistent;         /**< the data that persists over multiple branching decisions */
+   SCIP_Bool             isinitialized;      /**< indicates whether the fields in this struct are initialized */
 #ifdef SCIP_STATISTIC
    STATISTICS*           statistics;         /**< statistical data container */
 #endif
@@ -710,7 +715,7 @@ typedef struct
    int                   nconstraints;       /**< The number of entries in the array 'constraints'. */
    int                   memorysize;         /**< The number of entries that the array 'constraints' may hold before the
                                               *   array is reallocated. */
-   int                   nviolatedcons;      /**< Tracks the number of constraints, that are violated by the base LP
+   int                   nviolatedcons;      /**< Tracks the number of constraints that are violated by the base LP
                                               *   solution. */
 } CONSTRAINTLIST;
 
@@ -783,7 +788,7 @@ void constraintListFree(
  * list of binary variables currently branched on
  * a down branching (x <= 0) is saved as the negated variable (1-x)
  * an up branching (x >= 1) is saved as the original variable (x)
- * these variables are used to build the binary constraint in case that a ('binary') brunch is cutoff
+ * these variables are used to build the binary constraint in case that a ('binary') branch is cut off
  */
 typedef struct
 {
@@ -918,8 +923,8 @@ void binConsDataFree(
    SCIPfreeBuffer(scip, consdata);
 }
 
-/** A struct holding information to speed up the solving time of the same problem. This is filled by the FSB scoring routine
- *  that is run to get the best candidates. This is read on the first level of the ALAB routine. */
+/** A struct holding information to speed up the solving time for solving a problem again. This is filled by the FSB
+ *  scoring routine that is run to get the best candidates. This is read on the first level of the ALAB routine. */
 typedef struct
 {
    SCIP_LPISTATE*        lpistate;           /**< the basis information that may be set before another solve lp call */
@@ -1058,6 +1063,7 @@ SCIP_RETCODE candidateAllocate(
    assert(candidate != NULL);
 
    SCIP_CALL( SCIPallocBuffer(scip, candidate) );
+
    if( storelpi )
    {
       SCIP_CALL( lpiMemoryAllocate(scip, &(*candidate)->downlpimemory) );
@@ -1220,7 +1226,7 @@ SCIP_RETCODE candidateListGetAllFractionalCandidates(
 }
 
 /** Copies the candidates from the source list into the target list. The lpi information in the source candidates is reset,
- * to prevent multiple release calls. */
+ *  to prevent multiple release calls. */
 static
 void candidateListCopy(
    CANDIDATELIST*        source,             /**< the list to take the data from */
@@ -1277,8 +1283,8 @@ SCIP_RETCODE candidateListFree(
 typedef struct
 {
    SCIP_Real*            lowerbounds;        /**< The new lower bounds found for each variable in the problem. */
-   SCIP_Bool*            lowerboundset;      /**< Indicates whether the lower bound may be added to the base node. */
    SCIP_Real*            upperbounds;        /**< The new upper bounds found for each variable in the problem. */
+   SCIP_Bool*            lowerboundset;      /**< Indicates whether the lower bound may be added to the base node. */
    SCIP_Bool*            upperboundset;      /**< Indicates whether the upper bound may be added to the base node. */
    SCIP_Bool*            baselpviolated;     /**< Indicates whether the base lp solution violates the new bounds of a var.*/
    int                   nviolatedvars;      /**< Tracks the number of vars that have a violated (by the base lp) new lower
@@ -1291,7 +1297,7 @@ typedef struct
 #endif
 } DOMAINREDUCTIONS;
 
-/** allocate the struct on the Buffer and initialize it with the default values */
+/** allocate the struct on the buffer and initialize it with the default values */
 static
 SCIP_RETCODE domainReductionsAllocate(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1299,7 +1305,6 @@ SCIP_RETCODE domainReductionsAllocate(
    )
 {
    int ntotalvars;
-   int i;
 
    assert(scip != NULL);
    assert(domreds != NULL);
@@ -1307,29 +1312,17 @@ SCIP_RETCODE domainReductionsAllocate(
    /* The arrays saves the data for all variables in the problem via the ProbIndex. See SCIPvarGetProbindex() */
    ntotalvars = SCIPgetNVars(scip);
 
-   /* Allocate the struct and the contained arrays. */
+   /* Allocate the struct and the contained arrays; initialize flags to FALSE */
    SCIP_CALL( SCIPallocBuffer(scip, domreds) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*domreds)->lowerbounds, ntotalvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*domreds)->upperbounds, ntotalvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*domreds)->lowerboundset, ntotalvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*domreds)->upperboundset, ntotalvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*domreds)->baselpviolated, ntotalvars) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &(*domreds)->lowerboundset, ntotalvars) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &(*domreds)->upperboundset, ntotalvars) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &(*domreds)->baselpviolated, ntotalvars) );
 #ifdef SCIP_STATISTIC
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*domreds)->lowerboundnproofs, ntotalvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*domreds)->upperboundnproofs, ntotalvars) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &(*domreds)->lowerboundnproofs, ntotalvars) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &(*domreds)->upperboundnproofs, ntotalvars) );
 #endif
-
-   /* Initialize the validity arrays to FALSE, such that the (undefined) starting values are not used. */
-   for( i = 0; i < ntotalvars; i++ )
-   {
-      (*domreds)->lowerboundset[i] = FALSE;
-      (*domreds)->upperboundset[i] = FALSE;
-      (*domreds)->baselpviolated[i] = FALSE;
-#ifdef SCIP_STATISTIC
-      (*domreds)->lowerboundnproofs[i] = 0;
-      (*domreds)->upperboundnproofs[i] = 0;
-#endif
-   }
 
    /* At the start we have no domain reductions for any variable. */
    (*domreds)->nviolatedvars = 0;
@@ -1442,6 +1435,7 @@ SCIP_RETCODE scoreContainerAllocate(
    SCIP_CALL( SCIPallocBuffer(scip, scorecontainer) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*scorecontainer)->scores, ntotalvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*scorecontainer)->sourcedepth, ntotalvars) );
+
    if( full )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &(*scorecontainer)->downlpimemories, ntotalvars) );
@@ -1458,7 +1452,7 @@ SCIP_RETCODE scoreContainerAllocate(
 
    for( i = 0; i < ntotalvars; i++ )
    {
-      (*scorecontainer)->scores[i] = -1;
+      (*scorecontainer)->scores[i] = -1.0;
       (*scorecontainer)->sourcedepth[i] = -1;
       if( full )
       {
@@ -1492,12 +1486,13 @@ void scoreContainerSetScore(
    assert(score >= 0);
 
    probindex = SCIPvarGetProbindex(var);
-   currentprobingdepth = SCIPinProbing(scip) ? SCIPgetProbingDepth(scip) : 0;
+   currentprobingdepth = (SCIPinProbing(scip) ? SCIPgetProbingDepth(scip) : 0);
    previousprobingdepth = scorecontainer->sourcedepth[probindex];
 
    if( previousprobingdepth == -1 || currentprobingdepth < previousprobingdepth )
    {
       /* we don't want to override the scores of lower probing depths */
+      /* @todo: check if a variable can be scored more than once */
       scorecontainer->scores[probindex] = score;
       scorecontainer->sourcedepth[probindex] = currentprobingdepth;
       if( scorecontainer->lpimemorywritable &&
@@ -2905,6 +2900,7 @@ SCIP_RETCODE getFSBResult(
    scorecontainer->lpimemorywritable = TRUE;
 
    SCIP_CALL( configurationAllocate(scip, &config, parentconfig) );
+
    /* we need to allocate enough space for all possible depth, as there is currently a problem with setting the fsb stats.
     * E.G.: we want to gather statistics for the FSB run started on layer 2 (1-indexed). Then we start in probing depth 1
     * and solve the nodes in depth 2. */
@@ -3001,7 +2997,7 @@ void printCandidates(
    int i;
    int ncands = list->ncandidates;
 
-   LABdebugMessageCont(scip, lvl, "[");
+   LABdebugMessagePrint(scip, lvl, "[");
 
    for( i = 0; i < ncands; i++ )
    {
@@ -3010,13 +3006,13 @@ void printCandidates(
       assert(cand != NULL);
       assert(cand->branchvar != NULL);
 
-      LABdebugMessageCont(scip, lvl, "%s", SCIPvarGetName(cand->branchvar));
+      LABdebugMessagePrint(scip, lvl, "%s", SCIPvarGetName(cand->branchvar));
       if(i != ncands-1)
       {
-         LABdebugMessageCont(scip, lvl, ", ");
+         LABdebugMessagePrint(scip, lvl, ", ");
       }
    }
-   LABdebugMessageCont(scip, lvl, "]\n");
+   LABdebugMessagePrint(scip, lvl, "]\n");
 }
 #endif
 
@@ -3365,7 +3361,7 @@ SCIP_RETCODE getBestCandidates(
 }
 
 /** Get the candidates to temporarily branch on. In the LAB case this is the complete list of possible candidates. In the
- * ALAB case only the 'best' candidates are returned. */
+ *  ALAB case only the 'best' candidates are returned. */
 static
 SCIP_RETCODE getCandidates(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3395,6 +3391,7 @@ SCIP_RETCODE getCandidates(
       SCIP_Bool lpmemoryinit = FALSE;
 
       LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Getting the branching candidates by selecting all candidates.\n");
+
       /* get all candidates for the current node lp solution */
       SCIP_CALL( candidateListInit(scip, candidates, possiblecandidates->ncandidates, lpmemoryinit) );
       candidateListCopy(possiblecandidates, candidates);
@@ -4986,11 +4983,11 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          &branchruledata->config->abbrevpseudo, TRUE, DEFAULT_ABBREVPSEUDO, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/lookahead/addclique",
-         "Add binary constraints also as a clique.",
+         "add binary constraints also as a clique.",
          &branchruledata->config->addclique, TRUE, DEFAULT_ADDCLIQUE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/lookahead/propagate",
-         "Should domain propagation be executed before each temporary node is solved?",
+         "should domain propagation be executed before each temporary node is solved?",
          &branchruledata->config->propagate, TRUE, DEFAULT_PROPAGATE, NULL, NULL) );
 
    return SCIP_OKAY;

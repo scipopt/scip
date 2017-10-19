@@ -17,6 +17,7 @@
  * @ingroup BRANCHINGRULES
  * @brief  all variables full strong LP branching rule
  * @author Tobias Achterberg
+ * @author Gerald Gamrath
  *
  * The all variables full strong branching rule applies strong branching to every non-fixed variable
  * at the current node of the branch-and-bound search. The rule selects the candidate
