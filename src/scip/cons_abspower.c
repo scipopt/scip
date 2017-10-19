@@ -771,7 +771,7 @@ SCIP_RETCODE presolveFindDuplicates(
                SCIP_CALL( SCIPreleaseCons(scip, &auxcons) );
                ++*naddconss;
 
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
                if( SCIPdebugIsMainscip(scip) )
                {
                   SCIP_Real xval;
@@ -1978,6 +1978,7 @@ SCIP_RETCODE computeViolation(
    SCIP_Real val;
    SCIP_Real xval;
    SCIP_Real zval;
+   SCIP_Real relviol;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -2023,15 +2024,26 @@ SCIP_RETCODE computeViolation(
    val  = SIGN(xval) * consdata->power(REALABS(xval), consdata->exponent);
    val += consdata->zcoef * zval;
 
+   *viol = 0.0;
+   relviol = 0.0;
    if( val < consdata->lhs && !SCIPisInfinity(scip, -consdata->lhs) )
+   {
       consdata->lhsviol = *viol = consdata->lhs - val;
+      relviol = SCIPrelDiff(consdata->lhs, val);
+   }
    else
       consdata->lhsviol = 0.0;
 
    if( val > consdata->rhs && !SCIPisInfinity(scip,  consdata->rhs) )
+   {
       consdata->rhsviol = *viol = val - consdata->rhs;
+      relviol = SCIPrelDiff(val, consdata->rhs);
+   }
    else
       consdata->rhsviol = 0.0;
+
+   if( sol != NULL )
+      SCIPupdateSolConsViolation(scip, sol, *viol, relviol);
 
    switch( conshdlrdata->scaling )
    {
@@ -3936,7 +3948,7 @@ SCIP_RETCODE separatePoint(
          {
             SCIP_Bool infeasible;
 
-            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, &infeasible) );
+            SCIP_CALL( SCIPaddCut(scip, row, FALSE, &infeasible) );
             if ( infeasible )
                *cutoff = TRUE;
             else
@@ -4078,7 +4090,7 @@ SCIP_RETCODE addLinearizationCuts(
 
             *separatedlpsol = TRUE;
             addedtolp = TRUE;
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, TRUE, &infeasible) );
+            SCIP_CALL( SCIPaddCut(scip, row, TRUE, &infeasible) );
             assert( ! infeasible );
          }
       }
@@ -4483,7 +4495,7 @@ SCIP_DECL_QUADCONSUPGD(quadconsUpgdAbspower)
       ++*nupgdconss;
 
       /* compute and set value of auxvar in debug solution */
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
       if( SCIPdebugIsMainscip(scip) )
       {
          SCIP_Real debugval;
@@ -4835,7 +4847,7 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdAbspower)
       ++*nupgdconss;
 
       /* compute and set value of auxvar in debug solution */
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
       if( SCIPdebugIsMainscip(scip) )
       {
          SCIP_Real debugval;
@@ -5116,7 +5128,7 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAbspower)
       ++*naddcons;
 
       /* compute value of z and reformnode and set in debug solution and expression graph, resp. */
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
       if( SCIPdebugIsMainscip(scip) )
       {
          SCIP_Real xval;
@@ -5144,7 +5156,7 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAbspower)
       ++*naddcons;
 
       /* compute value of z and reformnode and set in debug solution and expression graph, resp. */
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
       if( SCIPdebugIsMainscip(scip) )
       {
          SCIP_Real xval;
@@ -5751,7 +5763,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                      SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
 
                      assert(!(*infeasible));
-                     SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, infeasible) );
+                     SCIP_CALL( SCIPaddCut(scip, row, FALSE /* forcecut */, infeasible) );
 
                      if( conshdlrdata->conshdlrindicator != NULL && !SCIProwIsLocal(row) )
                      {
@@ -5775,7 +5787,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                   SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
 
                   assert(!(*infeasible));
-                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, infeasible) );
+                  SCIP_CALL( SCIPaddCut(scip, row, FALSE /* forcecut */, infeasible) );
 
                   if( conshdlrdata->conshdlrindicator != NULL )
                   {
@@ -5802,7 +5814,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                   SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
 
                   assert(!(*infeasible));
-                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, infeasible) );
+                  SCIP_CALL( SCIPaddCut(scip, row, FALSE /* forcecut */, infeasible) );
 
                   if( conshdlrdata->conshdlrindicator != NULL )
                   {
@@ -5832,7 +5844,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                      SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
 
                      assert(!(*infeasible));
-                     SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, infeasible) );
+                     SCIP_CALL( SCIPaddCut(scip, row, FALSE /* forcecut */, infeasible) );
 
                      if( conshdlrdata->conshdlrindicator != NULL && !SCIProwIsLocal(row) )
                      {
@@ -5856,7 +5868,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                   SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
 
                   assert(!(*infeasible));
-                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, infeasible) );
+                  SCIP_CALL( SCIPaddCut(scip, row, FALSE /* forcecut */, infeasible) );
 
                   if( conshdlrdata->conshdlrindicator != NULL )
                   {
@@ -5883,7 +5895,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                   SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
 
                   assert(!(*infeasible));
-                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, infeasible) );
+                  SCIP_CALL( SCIPaddCut(scip, row, FALSE /* forcecut */, infeasible) );
 
                   if( conshdlrdata->conshdlrindicator != NULL )
                   {

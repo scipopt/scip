@@ -1712,24 +1712,20 @@ SCIP_RETCODE removeFixedNonlinearVariables(
          continue;
       }
 
-      do
+      vars[0]  = var;
+      coefs[0] = 1.0;
+      constant = 0.0;
+      nvars = 1;
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, coefs, &nvars, varssize, &constant, &requsize, TRUE) );
+
+      if( requsize > varssize )
       {
-         vars[0]  = var;
-         coefs[0] = 1.0;
-         constant = 0.0;
-         nvars = 1;
+         SCIP_CALL( SCIPreallocBufferArray(scip, &vars,  requsize) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, &coefs, requsize) );
+         varssize = requsize;
+
          SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, coefs, &nvars, varssize, &constant, &requsize, TRUE) );
-
-         if( requsize > varssize )
-         {
-            SCIP_CALL( SCIPreallocBufferArray(scip, &vars,  requsize) );
-            SCIP_CALL( SCIPreallocBufferArray(scip, &coefs, requsize) );
-            varssize = requsize;
-            continue;
-         }
-
       }
-      while( FALSE );
 
 #ifdef SCIP_DEBUG
       SCIPdebugMsg(scip, "replace fixed variable <%s> by %g", SCIPvarGetName(var), constant);
@@ -1998,7 +1994,7 @@ SCIP_RETCODE presolveUpgrade(
       return SCIP_OKAY;
 
    /* set debug solution in expression graph and evaluate nodes, so reformulation methods can compute debug solution values for new auxiliary variables */
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
    if( SCIPdebugIsMainscip(scip) )
    {
       SCIP_Real* varvals;
@@ -2266,7 +2262,7 @@ SCIP_RETCODE reformNode2Var(
          SCIP_VARTYPE_CONTINUOUS, TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, auxvar) );
    SCIP_CALL( SCIPexprgraphAddVars(exprgraph, 1, (void**)&auxvar, &auxvarnode) );
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
    if( SCIPdebugIsMainscip(scip) )
    {
       /* store debug sol value of node as value for auxvar in debug solution and as value for auxvarnode */
@@ -2409,7 +2405,7 @@ SCIP_RETCODE reformMonomial(
       SCIP_CALL( SCIPaddVar(scip, auxvar) );
       SCIP_CALL( SCIPexprgraphAddVars(exprgraph, 1, (void**)&auxvar, resultnode) );
 
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
       /* store debug sol value of node as value for auxvar in debug solution and as value for resultnode */
       if( SCIPdebugIsMainscip(scip) )
       {
@@ -2493,7 +2489,7 @@ SCIP_RETCODE reformMonomial(
          SCIP_CALL( SCIPaddVar(scip, auxvar) );
          SCIP_CALL( SCIPexprgraphAddVars(exprgraph, 1, (void**)&auxvar, resultnode) );
 
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
          if( SCIPdebugIsMainscip(scip) )
          {
             SCIPexprgraphSetVarNodeValue(*resultnode, SCIPexprgraphGetNodeVal(expnode));
@@ -2552,7 +2548,7 @@ SCIP_RETCODE reformMonomial(
       SCIP_CALL( SCIPaddVar(scip, auxvar) );
       SCIP_CALL( SCIPexprgraphAddVars(exprgraph, 1, (void**)&auxvar, &auxvarnode) );
 
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
       /* store debug sol value of node as value for auxvar in debug solution and as value for resultnode */
       if( SCIPdebugIsMainscip(scip) )
       {
@@ -2652,7 +2648,7 @@ SCIP_RETCODE reformMonomial(
          SCIP_CALL( SCIPaddVar(scip, auxvar) );
          SCIP_CALL( SCIPexprgraphAddVars(exprgraph, 1, (void**)&auxvar, resultnode) );
 
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
          if( SCIPdebugIsMainscip(scip) )
          {
             SCIPexprgraphSetVarNodeValue(*resultnode, SCIPexprgraphGetNodeVal(productnode));
@@ -2732,7 +2728,7 @@ SCIP_RETCODE reformulate(
    assert(!domainerror); /* should have been found by domain propagation */
 
    /* set debug solution in expression graph and evaluate nodes, so we can compute debug solution values for auxiliary variables */
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
    if( SCIPdebugIsMainscip(scip) )
    {
       SCIP_Real* varvals;
@@ -2949,7 +2945,7 @@ SCIP_RETCODE reformulate(
             SCIP_CALL( SCIPaddVar(scip, auxvar) );
             SCIP_CALL( SCIPexprgraphAddVars(exprgraph, 1, (void**)&auxvar, &auxvarnode) );
 
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
             if( SCIPdebugIsMainscip(scip) )
             {
                SCIP_Real debugval;
@@ -4037,6 +4033,23 @@ SCIP_RETCODE computeViolation(
    else
       consdata->rhsviol = 0.0;
 
+   /* update absolute and relative violation of the solution */
+   if( sol != NULL )
+   {
+      SCIP_Real absviol;
+      SCIP_Real relviol;
+      SCIP_Real lhsrelviol;
+      SCIP_Real rhsrelviol;
+
+      absviol = MAX(consdata->lhsviol, consdata->rhsviol);
+
+      lhsrelviol = SCIPrelDiff(consdata->lhs, consdata->activity);
+      rhsrelviol = SCIPrelDiff(consdata->activity, consdata->rhs);
+      relviol = MAX(lhsrelviol, rhsrelviol);
+
+      SCIPupdateSolConsViolation(scip, sol, absviol, relviol);
+   }
+
    switch( conshdlrdata->scaling )
    {
    case 'o' :
@@ -4752,116 +4765,48 @@ SCIP_RETCODE addConcaveEstimatorBivariate(
    return SCIP_OKAY;
 }
 
-/** adds estimator of a constraints multivariate expression tree to a row
- * Given concave function f(x) and reference point ref.
- * Let (v_i: i=1,...,n) be corner points of current domain of x.
- * Find (coef,constant) such that <coef,v_i> + constant <= f(v_i) (cut validity) and
- * such that <coef, ref> + constant is maximized (cut efficacy).
- * Then <coef, x> + constant <= f(x) for all x in current domain.
- *
- * Similar to compute an overestimator for a convex function f(x).
- * Find (coef,constant) such that <coef,v_i> + constant >= f(v_i) and
- * such that <coef, ref> + constant is minimized.
- * Then <coef, x> + constant >= f(x) for all x in current domain.
- */
+/** internal method using an auxiliary LPI, see addConcaveEstimatorMultivariate() */
 static
-SCIP_RETCODE addConcaveEstimatorMultivariate(
+SCIP_RETCODE _addConcaveEstimatorMultivariate(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_LPI*             lpi,                /**< auxiliary LPI */
    SCIP_CONS*            cons,               /**< constraint */
    int                   exprtreeidx,        /**< for which tree a secant should be added */
    SCIP_Real*            ref,                /**< reference values of expression tree variables where to generate cut */
    SCIP_ROWPREP*         rowprep,            /**< rowprep where to add estimator */
+   SCIP_VAR**            vars,               /**< variables of the constraint */
+   SCIP_EXPRTREE*        exprtree,           /**< expression tree of constraint */
+   int                   nvars,              /**< number of variables */
+   SCIP_Bool             doupper,            /**< should an upper estimator be computed */
    SCIP_Bool*            success             /**< buffer to store whether a secant was succefully added to the row */
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_EXPRTREE* exprtree;
-   SCIP_Real treecoef;
-   SCIP_LPI* lpi;
-   SCIP_Bool doupper;
-   SCIP_Real funcval;
-   SCIP_Real lpobj;
-   SCIP_RETCODE lpret;
-
-   SCIP_VAR** vars;
-   int nvars;
-
-   int ncols;
+   SCIP_Real* val;
    SCIP_Real* obj;
    SCIP_Real* lb;
    SCIP_Real* ub;
-   int nrows;
    SCIP_Real* lhs;
    SCIP_Real* rhs;
-   int nnonz;
    int* beg;
    int* ind;
-   SCIP_Real* val;
+   SCIP_Real lpobj;
+   int ncols;
+   int nrows;
+   int nnonz;
+   SCIP_Real funcval;
+   SCIP_Real treecoef;
 
    int i;
    int j;
 
-   static SCIP_Bool warned_highdim_concave = FALSE;
+   SCIP_RETCODE lpret;
 
-   assert(scip != NULL);
-   assert(cons != NULL);
-   assert(ref != NULL);
-   assert(rowprep != NULL);
-   assert(success != NULL);
+   assert(lpi != NULL);
+   assert(nvars <= 10);
 
    consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-   assert(exprtreeidx >= 0);
-   assert(exprtreeidx < consdata->nexprtrees);
-   assert(consdata->exprtrees != NULL);
-
-   exprtree = consdata->exprtrees[exprtreeidx];
-   assert(exprtree != NULL);
-
-   nvars = SCIPexprtreeGetNVars(exprtree);
-   assert(nvars >= 2);
-
-   *success = FALSE;
-
-   /* size of LP is exponential in number of variables of tree, so do only for small trees */
-   if( nvars > 10 )
-   {
-      if( !warned_highdim_concave )
-      {
-         SCIPwarningMessage(scip, "concave function in constraint <%s> too high-dimensional to compute underestimator\n", SCIPconsGetName(cons));
-         warned_highdim_concave = TRUE;
-      }
-      return SCIP_OKAY;
-   }
-
    treecoef = consdata->nonlincoefs[exprtreeidx];
-   vars = SCIPexprtreeGetVars(exprtree);
-
-   /* check whether bounds are finite
-    * make sure reference point is strictly within bounds
-    * otherwise we can easily get an unbounded LP below, e.g., with instances like ex6_2_* from GlobalLib
-    */
-   for( j = 0; j < nvars; ++j )
-   {
-      if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(vars[j])) || SCIPisInfinity(scip, SCIPvarGetUbLocal(vars[j])) )
-      {
-         SCIPdebugMsg(scip, "cannot compute underestimator for concave because variable <%s> is unbounded\n", SCIPvarGetName(vars[j]));
-         return SCIP_OKAY;
-      }
-      assert(SCIPisFeasLE(scip, SCIPvarGetLbLocal(vars[j]), ref[j]));
-      assert(SCIPisFeasGE(scip, SCIPvarGetUbLocal(vars[j]), ref[j]));
-      ref[j] = MIN(SCIPvarGetUbLocal(vars[j]), MAX(SCIPvarGetLbLocal(vars[j]), ref[j]));  /*lint !e666*/
-   }
-
-   /* create empty auxiliary LP and decide its objective sense */
-   assert(consdata->curvatures[exprtreeidx] == SCIP_EXPRCURV_CONVEX || consdata->curvatures[exprtreeidx] == SCIP_EXPRCURV_CONCAVE);
-   doupper = (consdata->curvatures[exprtreeidx] & SCIP_EXPRCURV_CONVEX);  /*lint !e641*/
-   SCIP_CALL( SCIPlpiCreate(&lpi, SCIPgetMessagehdlr(scip), "concaveunderest", doupper ? SCIP_OBJSEN_MINIMIZE : SCIP_OBJSEN_MAXIMIZE) );
-   if( lpi == NULL )
-   {
-      SCIPerrorMessage("failed to create auxiliary LP\n");
-      return SCIP_ERROR;
-   }
 
    /* columns are cut coefficients plus constant */
    ncols = nvars + 1;
@@ -4950,7 +4895,7 @@ SCIP_RETCODE addConcaveEstimatorMultivariate(
    /*SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_ROWREPSWITCH, 5.0) ); */
    /* get accurate coefficients */
    SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_FEASTOL, SCIPfeastol(scip)/100.0) );
-   SCIP_CALL( SCIPlpiSetRealpar(lpi, doupper ? SCIP_LPPAR_LOBJLIM : SCIP_LPPAR_UOBJLIM, funcval) );
+   SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_OBJLIM, funcval) );
    SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPITLIM, 10 * nvars) );
    SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_SCALING, 1) );
    SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_FROMSCRATCH, 1) );
@@ -4991,7 +4936,7 @@ SCIP_RETCODE addConcaveEstimatorMultivariate(
 
    *success = TRUE;
 
- TERMINATE:
+TERMINATE:
    SCIPfreeBufferArray(scip, &obj);
    SCIPfreeBufferArray(scip, &lb);
    SCIPfreeBufferArray(scip, &ub);
@@ -5001,12 +4946,111 @@ SCIP_RETCODE addConcaveEstimatorMultivariate(
    SCIPfreeBufferArray(scip, &ind);
    SCIPfreeBufferArray(scip, &val);
 
-   if( lpi != NULL )
+   return SCIP_OKAY;
+}
+
+
+
+/** adds estimator of a constraints multivariate expression tree to a row
+ * Given concave function f(x) and reference point ref.
+ * Let (v_i: i=1,...,n) be corner points of current domain of x.
+ * Find (coef,constant) such that <coef,v_i> + constant <= f(v_i) (cut validity) and
+ * such that <coef, ref> + constant is maximized (cut efficacy).
+ * Then <coef, x> + constant <= f(x) for all x in current domain.
+ *
+ * Similar to compute an overestimator for a convex function f(x).
+ * Find (coef,constant) such that <coef,v_i> + constant >= f(v_i) and
+ * such that <coef, ref> + constant is minimized.
+ * Then <coef, x> + constant >= f(x) for all x in current domain.
+ */
+static
+SCIP_RETCODE addConcaveEstimatorMultivariate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   int                   exprtreeidx,        /**< for which tree a secant should be added */
+   SCIP_Real*            ref,                /**< reference values of expression tree variables where to generate cut */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep where to add estimator */
+   SCIP_Bool*            success             /**< buffer to store whether a secant was succefully added to the row */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_CONSDATA* consdata;
+   SCIP_EXPRTREE* exprtree;
+   SCIP_LPI* lpi;
+   int nvars;
+   int j;
+   SCIP_Bool doupper;
+
+   SCIP_RETCODE retcode;
+
+   static SCIP_Bool warned_highdim_concave = FALSE;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(ref != NULL);
+   assert(rowprep != NULL);
+   assert(success != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(exprtreeidx >= 0);
+   assert(exprtreeidx < consdata->nexprtrees);
+   assert(consdata->exprtrees != NULL);
+
+   exprtree = consdata->exprtrees[exprtreeidx];
+   assert(exprtree != NULL);
+
+   nvars = SCIPexprtreeGetNVars(exprtree);
+   assert(nvars >= 2);
+
+   *success = FALSE;
+
+   /* size of LP is exponential in number of variables of tree, so do only for small trees */
+   if( nvars > 10 )
    {
-      SCIP_CALL( SCIPlpiFree(&lpi) );
+      if( !warned_highdim_concave )
+      {
+         SCIPwarningMessage(scip, "concave function in constraint <%s> too high-dimensional to compute underestimator\n", SCIPconsGetName(cons));
+         warned_highdim_concave = TRUE;
+      }
+      return SCIP_OKAY;
    }
 
-   return SCIP_OKAY;
+   vars = SCIPexprtreeGetVars(exprtree);
+
+   /* check whether bounds are finite
+    * make sure reference point is strictly within bounds
+    * otherwise we can easily get an unbounded LP below, e.g., with instances like ex6_2_* from GlobalLib
+    */
+   for( j = 0; j < nvars; ++j )
+   {
+      if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(vars[j])) || SCIPisInfinity(scip, SCIPvarGetUbLocal(vars[j])) )
+      {
+         SCIPdebugMsg(scip, "cannot compute underestimator for concave because variable <%s> is unbounded\n", SCIPvarGetName(vars[j]));
+         return SCIP_OKAY;
+      }
+      assert(SCIPisFeasLE(scip, SCIPvarGetLbLocal(vars[j]), ref[j]));
+      assert(SCIPisFeasGE(scip, SCIPvarGetUbLocal(vars[j]), ref[j]));
+      ref[j] = MIN(SCIPvarGetUbLocal(vars[j]), MAX(SCIPvarGetLbLocal(vars[j]), ref[j]));  /*lint !e666*/
+   }
+
+   /* create empty auxiliary LP and decide its objective sense */
+   assert(consdata->curvatures[exprtreeidx] == SCIP_EXPRCURV_CONVEX || consdata->curvatures[exprtreeidx] == SCIP_EXPRCURV_CONCAVE);
+   doupper = (consdata->curvatures[exprtreeidx] & SCIP_EXPRCURV_CONVEX);  /*lint !e641*/
+   SCIP_CALL( SCIPlpiCreate(&lpi, SCIPgetMessagehdlr(scip), "concaveunderest", doupper ? SCIP_OBJSEN_MINIMIZE : SCIP_OBJSEN_MAXIMIZE) );
+   if( lpi == NULL )
+   {
+      SCIPerrorMessage("failed to create auxiliary LP\n");
+      return SCIP_ERROR;
+   }
+
+   /* capture the retcode, free the LPI afterwards */
+   retcode = _addConcaveEstimatorMultivariate(scip, lpi, cons, exprtreeidx, ref, rowprep, vars, exprtree, nvars, doupper, success);
+
+   assert(lpi != NULL);
+   SCIP_CALL( SCIPlpiFree(&lpi) );
+
+   return retcode;
 }
 
 /** Computes the linear coeffs and the constant in a linear expression
@@ -5667,7 +5711,7 @@ SCIP_RETCODE separatePoint(
          SCIP_Bool infeasible;
 
          /* cut cuts off solution */
-         SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE /* forcecut */, &infeasible) );
+         SCIP_CALL( SCIPaddCut(scip, row, FALSE /* forcecut */, &infeasible) );
          if ( infeasible )
             *result = SCIP_CUTOFF;
          else
@@ -5805,7 +5849,7 @@ SCIP_RETCODE addLinearizationCuts(
 
             *separatedlpsol = TRUE;
             addedtolp = TRUE;
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, TRUE, &infeasible) );
+            SCIP_CALL( SCIPaddCut(scip, row, TRUE, &infeasible) );
             assert( ! infeasible );
          }
       }
@@ -7713,7 +7757,7 @@ SCIP_DECL_CONSINITLP(consInitlpNonlinear)
          SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(conss[c]), SCIPconsGetName(conss[c]), consdata->lhs, consdata->rhs,
                SCIPconsIsLocal(conss[c]), FALSE , TRUE) );  /*lint !e613*/
          SCIP_CALL( SCIPaddVarsToRow(scip, row, consdata->nlinvars, consdata->linvars, consdata->lincoefs) );
-         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, infeasible) );
+         SCIP_CALL( SCIPaddCut(scip, row, FALSE, infeasible) );
          SCIP_CALL( SCIPreleaseRow (scip, &row) );
          continue;
       }
@@ -7768,7 +7812,7 @@ SCIP_DECL_CONSINITLP(consInitlpNonlinear)
 
          if( row != NULL )
          {
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, infeasible) );
+            SCIP_CALL( SCIPaddCut(scip, row, FALSE /* forcecut */, infeasible) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
          }
@@ -7782,7 +7826,7 @@ SCIP_DECL_CONSINITLP(consInitlpNonlinear)
 
          if( row != NULL )
          {
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, infeasible) );
+            SCIP_CALL( SCIPaddCut(scip, row, FALSE /* forcecut */, infeasible) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
          }

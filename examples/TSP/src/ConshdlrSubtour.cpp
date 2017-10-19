@@ -196,7 +196,7 @@ SCIP_RETCODE sepaSubtour(
             if( SCIPisCutEfficacious(scip, sol, row) )
             {
                SCIP_Bool infeasible;
-               SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, &infeasible) );
+               SCIP_CALL( SCIPaddCut(scip, row, FALSE, &infeasible) );
                if ( infeasible )
                   *result = SCIP_CUTOFF;
                else

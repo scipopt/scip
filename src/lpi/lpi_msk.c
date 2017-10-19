@@ -605,7 +605,7 @@ const char* SCIPlpiGetSolverName(
    void
    )
 {
-   sprintf(mskname, "MOSEK %.2f", (SCIP_Real)MSK_VERSION_MAJOR);
+   sprintf(mskname, "MOSEK %d.%d.%d.%d", MSK_VERSION_MAJOR, MSK_VERSION_MINOR, MSK_VERSION_BUILD, MSK_VERSION_REVISION);
    return mskname;
 }
 
@@ -1745,8 +1745,18 @@ SCIP_RETCODE SCIPlpiGetObjsen(
    SCIP_OBJSEN*          objsen              /**< pointer to store objective sense */
    )
 {
-   SCIPerrorMessage("SCIPlpiGetObjsen() has not been implemented yet.\n");
-   return SCIP_LPERROR;
+   MSKobjsensee mskobjsen;
+
+   assert(MosekEnv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->task != NULL);
+
+   SCIPdebugMessage("Calling SCIPlpiGetObjsen (%d)\n", lpi->lpid);
+
+   MOSEK_CALL( MSK_getobjsense(lpi->task, &mskobjsen) );
+   *objsen = (mskobjsen == MSK_OBJECTIVE_SENSE_MINIMIZE ? SCIP_OBJSEN_MINIMIZE : SCIP_OBJSEN_MAXIMIZE);
+
+   return SCIP_OKAY;
 }
 
 /** gets objective coefficients from LP problem object */
@@ -2771,8 +2781,8 @@ SCIP_Bool SCIPlpiWasSolved(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
+   MSKbooleant exists;
    MSKsolstae solsta;
-   MSKrescodee restat;
 #if MSK_VERSION_MAJOR < 7
    MSKprostae prosta;
 #endif
@@ -2783,14 +2793,17 @@ SCIP_Bool SCIPlpiWasSolved(
 
    SCIPdebugMessage("Calling SCIPlpiWasSolved (%d)\n",lpi->lpid);
 
+   MOSEK_CALL( MSK_solutiondef(lpi->task, MSK_SOL_BAS, &exists) );
+
+   if ( ! exists )
+      return FALSE;
+
 #if MSK_VERSION_MAJOR >= 7
-   restat = MSK_getsolsta(lpi->task, MSK_SOL_BAS, &solsta);
+   MOSEK_CALL( MSK_getsolsta(lpi->task, MSK_SOL_BAS, &solsta) );
 #else
-   restat = MSK_getsolutionstatus(lpi->task, MSK_SOL_BAS, &prosta, &solsta);
+   MOSEK_CALL( MSK_getsolutionstatus(lpi->task, MSK_SOL_BAS, &prosta, &solsta) );
 #endif
 
-   if ( restat != MSK_RES_OK )
-      return FALSE;
    return (solsta != MSK_SOL_STA_UNKNOWN);
 }
 
@@ -4278,8 +4291,7 @@ static const char* paramname[] = {
    "SCIP_LPPAR_FEASTOL",                     /* feasibility tolerance for primal variables and slacks */
    "SCIP_LPPAR_DUALFEASTOL",                 /* feasibility tolerance for dual variables and reduced costs */
    "SCIP_LPPAR_BARRIERCONVTOL",              /* convergence tolerance used in barrier algorithm */
-   "SCIP_LPPAR_LOBJLIM",                     /* lower objective limit */
-   "SCIP_LPPAR_UOBJLIM",                     /* upper objective limit */
+   "SCIP_LPPAR_OBJLIM",                      /* objective limit (stop if objective is known be larger/smaller than limit for min/max-imization) */
    "SCIP_LPPAR_LPITLIM",                     /* LP iteration limit */
    "SCIP_LPPAR_LPTILIM",                     /* LP time limit */
    "SCIP_LPPAR_MARKOWITZ",                   /* Markowitz tolerance */
@@ -4304,13 +4316,12 @@ const char* paramty2str(
    assert(SCIP_LPPAR_FEASTOL == 6);          /* feasibility tolerance for primal variables and slacks */
    assert(SCIP_LPPAR_DUALFEASTOL == 7);      /* feasibility tolerance for dual variables and reduced costs */
    assert(SCIP_LPPAR_BARRIERCONVTOL == 8);   /* convergence tolerance used in barrier algorithm */
-   assert(SCIP_LPPAR_LOBJLIM == 9);          /* lower objective limit */
-   assert(SCIP_LPPAR_UOBJLIM == 10);         /* upper objective limit */
-   assert(SCIP_LPPAR_LPITLIM == 11);         /* LP iteration limit */
-   assert(SCIP_LPPAR_LPTILIM == 12);         /* LP time limit */
-   assert(SCIP_LPPAR_MARKOWITZ == 13);       /* Markowitz tolerance */
-   assert(SCIP_LPPAR_ROWREPSWITCH == 14);    /* row representation switch */
-   assert(SCIP_LPPAR_THREADS == 15);         /* number of threads used to solve the LP */
+   assert(SCIP_LPPAR_OBJLIM == 9);           /* objective limit (stop if objective is known be larger/smaller than limit for min/max-imization) */
+   assert(SCIP_LPPAR_LPITLIM == 10);         /* LP iteration limit */
+   assert(SCIP_LPPAR_LPTILIM == 11);         /* LP time limit */
+   assert(SCIP_LPPAR_MARKOWITZ == 12);       /* Markowitz tolerance */
+   assert(SCIP_LPPAR_ROWREPSWITCH == 13);    /* row representation switch */
+   assert(SCIP_LPPAR_THREADS == 14);         /* number of threads used to solve the LP */
 
    return paramname[type];
 }
@@ -4533,12 +4544,20 @@ SCIP_RETCODE SCIPlpiGetRealpar(
       MOSEK_CALL( MSK_getdouparam(lpi->task, MSK_DPAR_INTPNT_TOL_REL_GAP, dval) );
       break;
 #endif
-   case SCIP_LPPAR_LOBJLIM:                   /* lower objective limit */
-      MOSEK_CALL( MSK_getdouparam(lpi->task, MSK_DPAR_LOWER_OBJ_CUT, dval) );
+   case SCIP_LPPAR_OBJLIM:                    /* objective limit */
+   {
+      MSKobjsensee objsen;
+      MOSEK_CALL( MSK_getobjsense(lpi->task, &objsen) );
+      if (objsen == MSK_OBJECTIVE_SENSE_MINIMIZE)
+      {
+         MOSEK_CALL( MSK_getdouparam(lpi->task, MSK_DPAR_UPPER_OBJ_CUT, dval) );
+      }
+      else /* objsen == MSK_OBJECTIVE_SENSE_MAX */
+      {
+         MOSEK_CALL( MSK_getdouparam(lpi->task, MSK_DPAR_LOWER_OBJ_CUT, dval) );
+      }
       break;
-   case SCIP_LPPAR_UOBJLIM:                   /* upper objective limit */
-      MOSEK_CALL( MSK_getdouparam(lpi->task, MSK_DPAR_UPPER_OBJ_CUT, dval) );
-      break;
+   }
    case SCIP_LPPAR_LPTILIM:                   /* LP time limit */
       MOSEK_CALL( MSK_getdouparam(lpi->task, MSK_DPAR_OPTIMIZER_MAX_TIME, dval) );
       break;
@@ -4585,12 +4604,20 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       MOSEK_CALL( MSK_putdouparam(lpi->task, MSK_DPAR_INTPNT_TOL_REL_GAP, dval) );
       break;
 #endif
-   case SCIP_LPPAR_LOBJLIM:                   /* lower objective limit */
-      MOSEK_CALL( MSK_putdouparam(lpi->task, MSK_DPAR_LOWER_OBJ_CUT, dval) );
+   case SCIP_LPPAR_OBJLIM:                    /* objective limit */
+   {
+      MSKobjsensee objsen;
+      MOSEK_CALL( MSK_getobjsense(lpi->task, &objsen) );
+      if (objsen == MSK_OBJECTIVE_SENSE_MINIMIZE)
+      {
+         MOSEK_CALL( MSK_putdouparam(lpi->task, MSK_DPAR_UPPER_OBJ_CUT, dval) );
+      }
+      else /* objsen == MSK_OBJECTIVE_SENSE_MAX */
+      {
+         MOSEK_CALL( MSK_putdouparam(lpi->task, MSK_DPAR_LOWER_OBJ_CUT, dval) );
+      }
       break;
-   case SCIP_LPPAR_UOBJLIM:                   /* upper objective limit */
-      MOSEK_CALL( MSK_putdouparam(lpi->task, MSK_DPAR_UPPER_OBJ_CUT, dval) );
-      break;
+   }
    case SCIP_LPPAR_LPTILIM:                   /* LP time limit */
       MOSEK_CALL( MSK_putdouparam(lpi->task, MSK_DPAR_OPTIMIZER_MAX_TIME, dval) );
       break;

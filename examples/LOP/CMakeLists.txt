@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.0)
+
 project(LOP)
 include(CTest)
 find_package(SCIP REQUIRED)
@@ -9,7 +11,10 @@ add_executable(lop
    src/reader_lop.c)
 
 target_link_libraries(lop ${SCIP_LIBRARIES})
-add_dependencies(examples lop)
+
+if( TARGET examples )
+    add_dependencies( examples lop )
+endif()
 
 add_subdirectory(check)
 enable_testing()

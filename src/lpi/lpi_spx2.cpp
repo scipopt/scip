@@ -4226,11 +4226,11 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    case SCIP_LPPAR_DUALFEASTOL:
       *dval = lpi->spx->opttol();
       break;
-   case SCIP_LPPAR_LOBJLIM:
-      *dval = lpi->spx->realParam(SoPlex::OBJLIMIT_LOWER);
-      break;
-   case SCIP_LPPAR_UOBJLIM:
-      *dval = lpi->spx->realParam(SoPlex::OBJLIMIT_UPPER);
+   case SCIP_LPPAR_OBJLIM:
+      if ( lpi->spx->intParam(SoPlex::OBJSENSE) == SoPlex::OBJSENSE_MINIMIZE )
+         *dval = lpi->spx->realParam(SoPlex::OBJLIMIT_UPPER);
+      else
+         *dval = lpi->spx->realParam(SoPlex::OBJLIMIT_LOWER);
       break;
    case SCIP_LPPAR_LPTILIM:
       *dval = lpi->spx->realParam(SoPlex::TIMELIMIT);
@@ -4270,11 +4270,11 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    case SCIP_LPPAR_DUALFEASTOL:
       lpi->spx->setOpttol(dval);
       break;
-   case SCIP_LPPAR_LOBJLIM:
-      (void) lpi->spx->setRealParam(SoPlex::OBJLIMIT_LOWER, dval);
-      break;
-   case SCIP_LPPAR_UOBJLIM:
-      (void) lpi->spx->setRealParam(SoPlex::OBJLIMIT_UPPER, dval);
+   case SCIP_LPPAR_OBJLIM:
+      if ( lpi->spx->intParam(SoPlex::OBJSENSE) == SoPlex::OBJSENSE_MINIMIZE )
+         (void) lpi->spx->setRealParam(SoPlex::OBJLIMIT_UPPER, dval);
+      else
+         (void) lpi->spx->setRealParam(SoPlex::OBJLIMIT_LOWER, dval);
       break;
    case SCIP_LPPAR_LPTILIM:
       (void) lpi->spx->setRealParam(SoPlex::TIMELIMIT, dval);

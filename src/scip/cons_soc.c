@@ -161,7 +161,8 @@ SCIP_RETCODE catchLhsVarEvents(
 
    consdata->lhsbndchgeventdata[varidx].cons = cons;
    consdata->lhsbndchgeventdata[varidx].varidx   = varidx;
-   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[varidx], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, (SCIP_EVENTDATA*)&consdata->lhsbndchgeventdata[varidx], &consdata->lhsbndchgeventdata[varidx].filterpos) );
+   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[varidx], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr,
+         (SCIP_EVENTDATA*)&consdata->lhsbndchgeventdata[varidx], &consdata->lhsbndchgeventdata[varidx].filterpos) );
 
    /* since bound changes were not catched before, a possibly stored activity may have become outdated */
    SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
@@ -188,7 +189,8 @@ SCIP_RETCODE catchRhsVarEvents(
 
    consdata->rhsbndchgeventdata.cons = cons;
    consdata->rhsbndchgeventdata.varidx   = -1;
-   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->rhsvar, SCIP_EVENTTYPE_UBTIGHTENED, eventhdlr, (SCIP_EVENTDATA*)&consdata->rhsbndchgeventdata, &consdata->rhsbndchgeventdata.filterpos) );
+   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->rhsvar, SCIP_EVENTTYPE_UBTIGHTENED, eventhdlr,
+         (SCIP_EVENTDATA*)&consdata->rhsbndchgeventdata, &consdata->rhsbndchgeventdata.filterpos) );
 
    /* since bound changes were not catched before, a possibly stored activity may have become outdated */
    SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
@@ -255,7 +257,8 @@ SCIP_RETCODE dropLhsVarEvents(
    assert(consdata->lhsbndchgeventdata != NULL);
    assert(consdata->lhsbndchgeventdata[varidx].varidx == varidx);
 
-   SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[varidx], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, (SCIP_EVENTDATA*)&consdata->lhsbndchgeventdata[varidx], consdata->lhsbndchgeventdata[varidx].filterpos) );
+   SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[varidx], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr,
+         (SCIP_EVENTDATA*)&consdata->lhsbndchgeventdata[varidx], consdata->lhsbndchgeventdata[varidx].filterpos) );
 
    return SCIP_OKAY;
 }
@@ -278,7 +281,8 @@ SCIP_RETCODE dropRhsVarEvents(
    assert(consdata  != NULL);
    assert(consdata->rhsbndchgeventdata.varidx == -1);
 
-   SCIP_CALL( SCIPdropVarEvent(scip, consdata->rhsvar, SCIP_EVENTTYPE_UBTIGHTENED, eventhdlr, (SCIP_EVENTDATA*)&consdata->rhsbndchgeventdata, consdata->rhsbndchgeventdata.filterpos) );
+   SCIP_CALL( SCIPdropVarEvent(scip, consdata->rhsvar, SCIP_EVENTTYPE_UBTIGHTENED, eventhdlr,
+         (SCIP_EVENTDATA*)&consdata->rhsbndchgeventdata, consdata->rhsbndchgeventdata.filterpos) );
 
    return SCIP_OKAY;
 }
@@ -600,8 +604,7 @@ SCIP_RETCODE createNlRow(
 
    case 'd':
    {
-      /* construct division form (gamma + sum_{i=1}^n (alpha_i(x_i+beta_i))^2)/(alpha_{n+1}(x_{n+1}+beta_{n+1})) <= alpha_{n+1}(x_{n+1}+beta_{n+1})
-       */
+      /* construct division form (gamma + sum_{i=1}^n (alpha_i(x_i+beta_i))^2)/(alpha_{n+1}(x_{n+1}+beta_{n+1})) <= alpha_{n+1}(x_{n+1}+beta_{n+1}) */
       SCIP_EXPRTREE* exprtree;
       SCIP_EXPR* expr;
       SCIP_EXPR* nominator;
@@ -720,7 +723,7 @@ SCIP_RETCODE evalLhs(
    return SCIP_OKAY;
 }
 
-/* computes the norm of the gradient of the SOC function */ 
+/** computes the norm of the gradient of the SOC function */
 static
 SCIP_Real getGradientNorm(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -765,6 +768,9 @@ SCIP_RETCODE computeViolation(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_Real rhsval;
+   SCIP_Real rhs;
+   SCIP_Real absviol;
+   SCIP_Real relviol;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -803,7 +809,10 @@ SCIP_RETCODE computeViolation(
       return SCIP_OKAY;
    }
 
-   consdata->violation = consdata->lhsval - consdata->rhscoeff * (rhsval + consdata->rhsoffset);
+   rhs = consdata->rhscoeff * (rhsval + consdata->rhsoffset);
+   consdata->violation = consdata->lhsval - rhs;
+   absviol = consdata->violation;
+   relviol = SCIPrelDiff(consdata->lhsval, rhs);
    if( consdata->violation <= 0.0 )
    {
       /* constraint is not violated for sure */
@@ -850,6 +859,9 @@ SCIP_RETCODE computeViolation(
          return SCIP_INVALIDDATA;  /*lint !e527*/
       }
    }
+
+   if( sol != NULL )
+      SCIPupdateSolConsViolation(scip, sol, absviol, relviol);
 
    return SCIP_OKAY;
 }
@@ -1025,7 +1037,7 @@ SCIP_RETCODE generateCutPoint(
  * 
  * The generated cut is very similar to the unprojected form.
  * The only difference is in the right hand side, which is (in the case beta = 0) multiplied by 1/(1-lambda).
- * */
+ */
 static
 SCIP_RETCODE generateCutProjectedPoint(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -1288,7 +1300,7 @@ SCIP_RETCODE separatePoint(
          SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
          if( SCIPisCutApplicable(scip, row) )
          {
-            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, cutoff) );
+            SCIP_CALL( SCIPaddCut(scip, row, FALSE, cutoff) );
             SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );  /*lint !e613*/
 
             *success = TRUE;
@@ -1318,9 +1330,10 @@ SCIP_RETCODE separatePoint(
 }
 
 /** adds linearizations cuts for convex constraints w.r.t. a given reference point to cutpool and sepastore
- * if separatedlpsol is not NULL, then a cut that separates the LP solution is added to the sepastore and is forced to enter the LP
- * if separatedlpsol is not NULL, but cut does not separate the LP solution, then it is added to the cutpool only
- * if separatedlpsol is NULL, then cut is added to cutpool only
+ *
+ * If separatedlpsol is not NULL, then a cut that separates the LP solution is added to the sepastore and is forced to enter the LP.
+ * If separatedlpsol is not NULL, but cut does not separate the LP solution, then it is added to the cutpool only.
+ * If separatedlpsol is NULL, then cut is added to cutpool only.
  */
 static
 SCIP_RETCODE addLinearizationCuts(
@@ -1385,7 +1398,7 @@ SCIP_RETCODE addLinearizationCuts(
             SCIP_ROW* row;
 
             SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, TRUE, cutoff) );
+            SCIP_CALL( SCIPaddCut(scip, row, TRUE, cutoff) );
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
 
             *separatedlpsol = TRUE;
@@ -1449,7 +1462,8 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
    conss = SCIPconshdlrGetConss(conshdlr);
    assert(conss != NULL);
 
-   SCIPdebugMsg(scip, "caught new sol event %" SCIP_EVENTTYPE_FORMAT " from heur <%s>; have %d conss\n", SCIPeventGetType(event), SCIPheurGetName(SCIPsolGetHeur(sol)), nconss);
+   SCIPdebugMsg(scip, "caught new sol event %" SCIP_EVENTTYPE_FORMAT " from heur <%s>; have %d conss\n", SCIPeventGetType(event),
+      SCIPheurGetName(SCIPsolGetHeur(sol)), nconss);
 
    SCIP_CALL( addLinearizationCuts(scip, conshdlr, conss, nconss, sol, NULL, 0.0, &cutoff) );
    /* ignore cutoff, cannot return status */
@@ -1894,10 +1908,10 @@ SCIP_RETCODE presolveRemoveFixedVariables(
 
 
 /** adds the linear outer-approximation of Glineur et.al. for a SOC constraint of dimension 3
- * 
- * Input is the data for a constraint \f$\sqrt{(\alpha_1(x_1+offset1))^2 + (\alpha_2(x_2+offset2))^2) \leq \alpha_3(x_3+offset3)}\f$.
- * Here constant >= 0.0, alpha3 > 0.0, and the lower bound of x3 >= -offset3.
- * Also x2 = NULL is allowed, in which case the second term is assumed to be constant, and offset2 != 0 is needed.
+ *
+ * Input is the data for a constraint \f$\sqrt{(\alpha_1(x_1+offset1))^2 + (\alpha_2(x_2+offset2))^2)} \leq \alpha_3(x_3+offset3)\f$.
+ * Here \f$\alpha3 > 0\f$, and the lower bound of \f$x_3 \geq -offset3\f$.
+ * Also x2 = NULL is allowed, in which case the second term is assumed to be constant, and \f$offset2 \neq 0\f$ is needed.
  */
 static
 SCIP_RETCODE presolveCreateGlineurApproxDim3(
@@ -1981,7 +1995,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
    SCIP_CALL( SCIPaddCons(scip, lincons) );
    SCIPdebugPrintCons(scip, lincons, NULL);
    SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
-   ++*naddconss;
+   ++(*naddconss);
 
    if( x2 != NULL )
    {
@@ -2000,7 +2014,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
       SCIP_CALL( SCIPaddCons(scip, lincons) );
       SCIPdebugPrintCons(scip, lincons, NULL);
       SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
-      ++*naddconss;
+      ++(*naddconss);
 
       vars[0] = x2;
       vals[0] = alpha2;
@@ -2017,7 +2031,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
       SCIP_CALL( SCIPaddCons(scip, lincons) );
       SCIPdebugPrintCons(scip, lincons, NULL);
       SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
-      ++*naddconss;
+      ++(*naddconss);
    }
    else
    { /* x2 == NULL ->  b_1 >= |alpha2*offset2| */
@@ -2053,7 +2067,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
       SCIP_CALL( SCIPaddCons(scip, lincons) );
       SCIPdebugPrintCons(scip, lincons, NULL);
       SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
-      ++*naddconss;
+      ++(*naddconss);
 
       vars[0] = avars[i];
       vals[0] = -sin(val);
@@ -2072,7 +2086,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
       SCIP_CALL( SCIPaddCons(scip, lincons) );
       SCIPdebugPrintCons(scip, lincons, NULL);
       SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
-      ++*naddconss;
+      ++(*naddconss);
 
       vars[0] = avars[i];
       vals[0] = -sin(val);
@@ -2091,7 +2105,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
       SCIP_CALL( SCIPaddCons(scip, lincons) );
       SCIPdebugPrintCons(scip, lincons, NULL);
       SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
-      ++*naddconss;
+      ++(*naddconss);
    }
 
    /* create last linear constraint */
@@ -2113,7 +2127,7 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
    SCIP_CALL( SCIPaddCons(scip, lincons) );
    SCIPdebugPrintCons(scip, lincons, NULL);
    SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
-   ++*naddconss;
+   ++(*naddconss);
 
    for( i = 1; i <= N; ++i )
    {
@@ -2127,10 +2141,10 @@ SCIP_RETCODE presolveCreateGlineurApproxDim3(
 }
 
 /** adds the linear outer-approximation of Ben-Tal and Nemirovski for a SOC constraint of dimension 3
- * 
- * Input is the data for a constraint \f$\sqrt{constant + (\alpha_1(x_1+offset1))^2 + (\alpha_2(x_2+offset2))^2) \leq \alpha_3(x_3+offset3)}\f$.
- * Here constant >= 0.0, alpha3 > 0.0, and the lower bound of x3 >= -offset3.
- * Also x2 = NULL is allowed, in which case the second term is assumed to be constant, and offset2 != 0 is needed.
+ *
+ * Input is the data for a constraint \f$\sqrt{constant + (\alpha_1(x_1+offset1))^2 + (\alpha_2(x_2+offset2))^2)} \leq \alpha_3(x_3+offset3)\f$.
+ * Here \f$\alpha3 > 0.0\f$, and the lower bound of \f$x_3 \geq -offset3\f$.
+ * Also x2 = NULL is allowed, in which case the second term is assumed to be constant, and \f$offset2 \neq 0\f$ is needed.
  * */
 static
 SCIP_RETCODE presolveCreateBenTalNemirovskiApproxDim3(
@@ -2204,7 +2218,7 @@ SCIP_RETCODE presolveCreateBenTalNemirovskiApproxDim3(
          TRUE /* removable */, SCIPconsIsStickingAtNode(cons)) );
    SCIP_CALL( SCIPaddCons(scip, lincons) );
    SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
-   ++*naddconss;
+   ++(*naddconss);
 
    vars[0] = avars[0];
    vals[0] = 1.0;
@@ -2220,7 +2234,7 @@ SCIP_RETCODE presolveCreateBenTalNemirovskiApproxDim3(
          TRUE /* removable */, SCIPconsIsStickingAtNode(cons)) );
    SCIP_CALL( SCIPaddCons(scip, lincons) );
    SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
-   ++*naddconss;
+   ++(*naddconss);
 
    if( x2 != NULL )
    {
@@ -2238,7 +2252,7 @@ SCIP_RETCODE presolveCreateBenTalNemirovskiApproxDim3(
             TRUE /* removable */, SCIPconsIsStickingAtNode(cons)) );
       SCIP_CALL( SCIPaddCons(scip, lincons) );
       SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
-      ++*naddconss;
+      ++(*naddconss);
 
       vars[0] = bvars[0];
       vals[0] = 1.0;
@@ -2254,7 +2268,7 @@ SCIP_RETCODE presolveCreateBenTalNemirovskiApproxDim3(
             TRUE /* removable */, SCIPconsIsStickingAtNode(cons)) );
       SCIP_CALL( SCIPaddCons(scip, lincons) );
       SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
-      ++*naddconss;
+      ++(*naddconss);
    }
    else
    { /* second summand is just a constant */
@@ -2291,7 +2305,7 @@ SCIP_RETCODE presolveCreateBenTalNemirovskiApproxDim3(
             TRUE /* removable */, SCIPconsIsStickingAtNode(cons)) );
       SCIP_CALL( SCIPaddCons(scip, lincons) );
       SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
-      ++*naddconss;
+      ++(*naddconss);
 
       vars[0] = avars[i-1];
       vals[0] = sin(val);
@@ -2309,7 +2323,7 @@ SCIP_RETCODE presolveCreateBenTalNemirovskiApproxDim3(
             TRUE /* removable */, SCIPconsIsStickingAtNode(cons)) );
       SCIP_CALL( SCIPaddCons(scip, lincons) );
       SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
-      ++*naddconss;
+      ++(*naddconss);
 
       vars[0] = avars[i-1];
       vals[0] = -sin(val);
@@ -2327,7 +2341,7 @@ SCIP_RETCODE presolveCreateBenTalNemirovskiApproxDim3(
             TRUE /* removable */, SCIPconsIsStickingAtNode(cons)) );
       SCIP_CALL( SCIPaddCons(scip, lincons) );
       SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
-      ++*naddconss;
+      ++(*naddconss);
    }
 
    /* create last linear constraints */
@@ -2345,7 +2359,7 @@ SCIP_RETCODE presolveCreateBenTalNemirovskiApproxDim3(
          SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
    SCIP_CALL( SCIPaddCons(scip, lincons) );
    SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
-   ++*naddconss;
+   ++(*naddconss);
 
    vars[0] = avars[N];
    vals[0] = tan( M_PI / pow(2.0, (double) (N+1)) );
@@ -2361,7 +2375,7 @@ SCIP_RETCODE presolveCreateBenTalNemirovskiApproxDim3(
          TRUE /* removable */, SCIPconsIsStickingAtNode(cons)) );
    SCIP_CALL( SCIPaddCons(scip, lincons) );
    SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
-   ++*naddconss;
+   ++(*naddconss);
 
    for( i = 0; i <= N; ++i )
    {
@@ -2409,10 +2423,10 @@ SCIP_RETCODE presolveCreateOuterApproxDim3(
    return SCIP_OKAY;
 }
 
-/** adds linear outer approximation of Ben-Tal and Nemirovski for a constraint \f$\gamma + \sum_{i=1}^n (\alpha_i (x_i + \beta_i))^2 <= (\alpha_{n+1} (x_{n+1} + \beta_{n+1}))^2\f$ to the LP
- * 
- * if n>2, calls same function recursively;
- * if n=2, calls presolveCreateBenTalNemirovskiApproxDim3
+/** adds linear outer approximation of Ben-Tal and Nemirovski for a constraint \f$\gamma + \sum_{i=1}^n (\alpha_i (x_i + \beta_i))^2 \leq (\alpha_{n+1} (x_{n+1} + \beta_{n+1}))^2\f$ to the LP
+ *
+ * if n > 2, calls same function recursively;
+ * if n = 2, calls presolveCreateBenTalNemirovskiApproxDim3
  */
 static
 SCIP_RETCODE presolveCreateOuterApprox(
@@ -2816,8 +2830,8 @@ SCIP_RETCODE polishSolution(
 }
 
 /** disaggregates a (sufficiently large) SOC constraint into smaller ones; for each term on the lhs we add a quadratic
- *  constraint (alpha_i * (x_i + beta_i))^2 <= alpha_{n+1} (x_{n+1} + beta_{n+1}) * z_i and a single linear constraint
- *  sum { z_i } <= alpha_{n+1} * (x_{n+1} + beta_{n+1}); each quadratic constraint might be upgraded to a SOC; since the
+ *  constraint \f$(\alpha_i * (x_i + \beta_i))^2 \leq \alpha_{n+1} (x_{n+1} + \beta_{n+1})\, z_i\f$ and a single linear constraint
+ *  \f$\sum_i z_i \leq \alpha_{n+1}\, (x_{n+1} + \beta_{n+1})\f$; each quadratic constraint might be upgraded to a SOC; since the
  *  violations of all quadratic constraints sum up we scale each constraint by the number of lhs terms + 1
  *
  *  @todo if rhsvar is NULL, then the disaggregation does not produce further cones. Should it then be upgraded
@@ -4347,9 +4361,8 @@ SCIP_DECL_CONSSEPALP(consSepalpSOC)
          /* if we solved the NLP and solution is integral, then pass it to trysol heuristic */
          if( solvednlp && conshdlrdata->trysolheur != NULL )
          {
-            int nfracvars;
+            int nfracvars = 0;
 
-            nfracvars = 0;
             if( SCIPgetNBinVars(scip) > 0 || SCIPgetNIntVars(scip) > 0 )
             {
                SCIP_CALL( SCIPgetNLPFracVars(scip, NULL, NULL, NULL, &nfracvars, NULL) );
@@ -4647,7 +4660,9 @@ SCIP_DECL_CONSPRESOL(consPresolSOC)
 
       if( conshdlrdata->nauxvars > 0 && !consdata->isapproxadded && consdata->nvars > 1 )
       {
-         SCIP_CALL( presolveCreateOuterApprox(scip, consdata->nvars, consdata->vars, consdata->coefs, consdata->offsets, consdata->rhsvar, consdata->rhscoeff, consdata->rhscoeff, consdata->constant, SCIPconsGetName(conss[c]), conss[c], conshdlrdata->nauxvars, conshdlrdata->glineur, naddconss) );  /*lint !e613*/
+         SCIP_CALL( presolveCreateOuterApprox(scip, consdata->nvars, consdata->vars, consdata->coefs, consdata->offsets,
+               consdata->rhsvar, consdata->rhscoeff, consdata->rhscoeff, consdata->constant, SCIPconsGetName(conss[c]), conss[c],
+               conshdlrdata->nauxvars, conshdlrdata->glineur, naddconss) );  /*lint !e613*/
          consdata->isapproxadded = TRUE;
       }
 
@@ -5277,8 +5292,10 @@ SCIP_RETCODE SCIPcreateConsSOC(
    {
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->coefs, coefs, nvars) );
       for( i = 0; i < nvars; ++i )
+      {
          if( consdata->coefs[i] < 0.0 )
             consdata->coefs[i] = -consdata->coefs[i];
+      }
    }
    else
    {
@@ -5353,8 +5370,7 @@ SCIP_RETCODE SCIPcreateConsBasicSOC(
    return SCIP_OKAY;
 }
 
-/** Gets the SOC constraint as a nonlinear row representation.
- */
+/** Gets the SOC constraint as a nonlinear row representation. */
 SCIP_RETCODE SCIPgetNlRowSOC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
@@ -5379,8 +5395,7 @@ SCIP_RETCODE SCIPgetNlRowSOC(
    return SCIP_OKAY;
 }
 
-/** Gets the number of variables on the left hand side of a SOC constraint.
- */
+/** Gets the number of variables on the left hand side of a SOC constraint. */
 int SCIPgetNLhsVarsSOC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -5392,8 +5407,7 @@ int SCIPgetNLhsVarsSOC(
    return SCIPconsGetData(cons)->nvars;
 }
 
-/** Gets the variables on the left hand side of a SOC constraint.
- */
+/** Gets the variables on the left hand side of a SOC constraint. */
 SCIP_VAR** SCIPgetLhsVarsSOC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -5405,8 +5419,7 @@ SCIP_VAR** SCIPgetLhsVarsSOC(
    return SCIPconsGetData(cons)->vars;
 }
 
-/** Gets the coefficients of the variables on the left hand side of a SOC constraint, or NULL if all are equal to 1.0.
- */
+/** Gets the coefficients of the variables on the left hand side of a SOC constraint, or NULL if all are equal to 1.0. */
 SCIP_Real* SCIPgetLhsCoefsSOC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -5418,8 +5431,7 @@ SCIP_Real* SCIPgetLhsCoefsSOC(
    return SCIPconsGetData(cons)->coefs;
 }
 
-/** Gets the offsets of the variables on the left hand side of a SOC constraint, or NULL if all are equal to 0.0.
- */
+/** Gets the offsets of the variables on the left hand side of a SOC constraint, or NULL if all are equal to 0.0. */
 SCIP_Real* SCIPgetLhsOffsetsSOC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -5431,8 +5443,7 @@ SCIP_Real* SCIPgetLhsOffsetsSOC(
    return SCIPconsGetData(cons)->offsets;
 }
 
-/** Gets the constant on the left hand side of a SOC constraint.
- */
+/** Gets the constant on the left hand side of a SOC constraint. */
 SCIP_Real SCIPgetLhsConstantSOC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -5444,8 +5455,7 @@ SCIP_Real SCIPgetLhsConstantSOC(
    return SCIPconsGetData(cons)->constant;
 }
 
-/** Gets the variable on the right hand side of a SOC constraint.
- */
+/** Gets the variable on the right hand side of a SOC constraint. */
 SCIP_VAR* SCIPgetRhsVarSOC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -5457,8 +5467,7 @@ SCIP_VAR* SCIPgetRhsVarSOC(
    return SCIPconsGetData(cons)->rhsvar;
 }
 
-/** Gets the coefficient of the variable on the right hand side of a SOC constraint.
- */
+/** Gets the coefficient of the variable on the right hand side of a SOC constraint. */
 SCIP_Real SCIPgetRhsCoefSOC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -5470,8 +5479,7 @@ SCIP_Real SCIPgetRhsCoefSOC(
    return SCIPconsGetData(cons)->rhscoeff;
 }
 
-/** Gets the offset of the variables on the right hand side of a SOC constraint.
- */
+/** Gets the offset of the variables on the right hand side of a SOC constraint. */
 SCIP_Real SCIPgetRhsOffsetSOC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -5484,7 +5492,7 @@ SCIP_Real SCIPgetRhsOffsetSOC(
 }
 
 /** Adds the constraint to an NLPI problem.
- * Uses nonconvex formulation as quadratic function.
+ *  Uses nonconvex formulation as quadratic function.
  */
 SCIP_RETCODE SCIPaddToNlpiProblemSOC(
    SCIP*                 scip,               /**< SCIP data structure */

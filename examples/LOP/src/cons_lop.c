@@ -106,7 +106,7 @@ SCIP_RETCODE LOPseparate(
 #ifdef SCIP_DEBUG
 	    SCIPdebug( SCIPprintRow(scip, row, NULL) );
 #endif
-	    SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, cutoff) );
+	    SCIP_CALL( SCIPaddCut(scip, row, FALSE, cutoff) );
 	    SCIP_CALL( SCIPreleaseRow(scip, &row));
 	    ++(*nGen);
 
@@ -140,7 +140,7 @@ SCIP_RETCODE LOPseparate(
 #ifdef SCIP_DEBUG
 	       SCIPdebug( SCIPprintRow(scip, row, NULL) );
 #endif
-	       SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, cutoff) );
+	       SCIP_CALL( SCIPaddCut(scip, row, FALSE, cutoff) );
 	       SCIP_CALL( SCIPreleaseRow(scip, &row));
 	       ++(*nGen);
 

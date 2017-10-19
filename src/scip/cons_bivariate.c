@@ -756,11 +756,13 @@ SCIP_RETCODE computeViolation(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_Real xyvals[2];
-   SCIP_Real zval;
+   SCIP_Real zval = 0.0;
    SCIP_Real xlb;
    SCIP_Real xub;
    SCIP_Real ylb;
    SCIP_Real yub;
+   SCIP_Real absviol;
+   SCIP_Real relviol;
    SCIP_VAR* x;
    SCIP_VAR* y;
 
@@ -774,7 +776,6 @@ SCIP_RETCODE computeViolation(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   assert(consdata->z != NULL);
 
    if( SCIPexprtreeGetInterpreterData(consdata->f) == NULL )
    {
@@ -786,7 +787,8 @@ SCIP_RETCODE computeViolation(
 
    xyvals[0] = SCIPgetSolVal(scip, sol, x);
    xyvals[1] = SCIPgetSolVal(scip, sol, y);
-   zval = SCIPgetSolVal(scip, sol, consdata->z);
+   if( consdata->z != NULL )
+      zval = SCIPgetSolVal(scip, sol, consdata->z);
 
    /* @todo proper handling of variables at infinity
     * for now, just say infeasible and keep fingers crossed
@@ -819,9 +821,12 @@ SCIP_RETCODE computeViolation(
       assert(SCIPisFeasLE(scip, xyvals[1], yub));
       xyvals[1] = MAX(ylb, MIN(yub, xyvals[1]));
 
-      assert(SCIPisFeasGE(scip, zval, SCIPvarGetLbLocal(consdata->z)));
-      assert(SCIPisFeasLE(scip, zval, SCIPvarGetUbLocal(consdata->z)));
-      zval = MAX(SCIPvarGetLbLocal(consdata->z), MIN(SCIPvarGetUbLocal(consdata->z), zval));
+      if( consdata->z != NULL )
+      {
+         assert(SCIPisFeasGE(scip, zval, SCIPvarGetLbLocal(consdata->z)));
+         assert(SCIPisFeasLE(scip, zval, SCIPvarGetUbLocal(consdata->z)));
+         zval = MAX(SCIPvarGetLbLocal(consdata->z), MIN(SCIPvarGetUbLocal(consdata->z), zval));
+      }
    }
    else
    {
@@ -841,18 +846,32 @@ SCIP_RETCODE computeViolation(
        return SCIP_OKAY;
    }
 
-   consdata->activity += consdata->zcoef * zval;
+   if( consdata->z != NULL )
+      consdata->activity += consdata->zcoef * zval;
 
    /* compute violation of constraint sides */
+   absviol = 0.0;
+   relviol = 0.0;
    if( consdata->activity < consdata->lhs && !SCIPisInfinity(scip, -consdata->lhs) )
+   {
       consdata->lhsviol = consdata->lhs - consdata->activity;
+      absviol = consdata->lhsviol;
+      relviol = SCIPrelDiff(consdata->lhs, consdata->activity);
+   }
    else
       consdata->lhsviol = 0.0;
 
    if( consdata->activity > consdata->rhs && !SCIPisInfinity(scip,  consdata->rhs) )
+   {
       consdata->rhsviol = consdata->activity - consdata->rhs;
+      absviol = consdata->rhsviol;
+      relviol = SCIPrelDiff(consdata->activity, consdata->rhs);
+   }
    else
       consdata->rhsviol = 0.0;
+
+   if( sol != NULL )
+      SCIPupdateSolConsViolation(scip, sol, absviol, relviol);
 
    switch( conshdlrdata->scaling )
    {
@@ -4721,7 +4740,7 @@ SCIP_RETCODE separatePoint(
             SCIP_Bool infeasible;
 
             /* cut cuts off solution sufficiently */
-            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, &infeasible) );
+            SCIP_CALL( SCIPaddCut(scip, row, FALSE, &infeasible) );
             if( infeasible )
             {
                SCIPdebugMsg(scip, "cut for constraint <%s> is infeasible -> cutoff.\n", SCIPconsGetName(conss[c]));
@@ -6728,7 +6747,7 @@ SCIP_DECL_CONSINITLP(consInitlpBivariate)
                /* add row to LP */
                else
                {
-                  SCIP_CALL( SCIPaddCut(scip, NULL, row1, FALSE /* forcecut */, infeasible) );
+                  SCIP_CALL( SCIPaddCut(scip, row1, FALSE /* forcecut */, infeasible) );
                   SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row1, NULL) ) );
                }
                SCIP_CALL( SCIPreleaseRow(scip, &row1) );
@@ -6750,7 +6769,7 @@ SCIP_DECL_CONSINITLP(consInitlpBivariate)
                /* add row to LP */
                else if( !(*infeasible) )
                {
-                  SCIP_CALL( SCIPaddCut(scip, NULL, row2, FALSE /* forcecut */, infeasible) );
+                  SCIP_CALL( SCIPaddCut(scip, row2, FALSE /* forcecut */, infeasible) );
                   SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row2, NULL) ) );
                }
                SCIP_CALL( SCIPreleaseRow(scip, &row2) );
@@ -7687,7 +7706,7 @@ SCIP_DECL_QUADCONSUPGD(quadconsUpgdBivariate)
          ++*nupgdconss;
 
          /* compute value of auxvar in debug solution */
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
          if( SCIPdebugIsMainscip(scip) )
          {
             SCIP_Real xval;
@@ -7865,7 +7884,7 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformBivariate)
    SCIP_CALL( SCIPexprgraphAddVars(exprgraph, 1, (void**)&auxvar, reformnode) );
 
    /* set value of auxvar and reformnode in debug solution */
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
    if( SCIPdebugIsMainscip(scip) )
    {
       SCIPdebugAddSolVal(scip, auxvar, SCIPexprgraphGetNodeVal(node));

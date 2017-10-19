@@ -2224,6 +2224,7 @@ SCIP_RETCODE parseBounds(
    )
 {
    char token[SCIP_MAXSTRLEN];
+   char* tmpend;
 
    SCIPsetDebugMsg(set, "parsing bounds: '%s'\n", str);
 
@@ -2241,7 +2242,7 @@ SCIP_RETCODE parseBounds(
    /* get lower bound */
    SCIPstrCopySection(str, '[', ',', token, SCIP_MAXSTRLEN, endptr);
    str = *endptr;
-   SCIP_CALL( parseValue(set, token, lb, endptr) );
+   SCIP_CALL( parseValue(set, token, lb, &tmpend) );
 
    /* get upper bound */
    SCIP_CALL( parseValue(set, str, ub, endptr) );
@@ -7279,8 +7280,10 @@ SCIP_RETCODE varProcessChgLbLocal(
    assert(var != NULL);
    assert(set != NULL);
    assert(var->scip == set->scip);
-   assert((SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && (SCIPsetIsZero(set, newbound) || SCIPsetIsEQ(set, newbound, 1.0)))
-      || (SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS && SCIPsetIsIntegral(set, newbound))
+   assert((SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && (SCIPsetIsZero(set, newbound) || SCIPsetIsEQ(set, newbound, 1.0)
+            || SCIPsetIsEQ(set, newbound, var->locdom.ub)))
+      || (SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS && (SCIPsetIsIntegral(set, newbound)
+            || SCIPsetIsEQ(set, newbound, var->locdom.ub)))
       || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
 
    /* check that the bound is feasible */
@@ -7444,8 +7447,10 @@ SCIP_RETCODE varProcessChgUbLocal(
    assert(var != NULL);
    assert(set != NULL);
    assert(var->scip == set->scip);
-   assert((SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && (SCIPsetIsZero(set, newbound) || SCIPsetIsEQ(set, newbound, 1.0)))
-      || (SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS && SCIPsetIsIntegral(set, newbound))
+   assert((SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && (SCIPsetIsZero(set, newbound) || SCIPsetIsEQ(set, newbound, 1.0)
+            || SCIPsetIsEQ(set, newbound, var->locdom.lb)))
+      || (SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS && (SCIPsetIsIntegral(set, newbound)
+            || SCIPsetIsEQ(set, newbound, var->locdom.lb)))
       || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
 
    /* check that the bound is feasible */
@@ -12815,7 +12820,7 @@ SCIP_Real getImplVarRedcost(
    SCIP_LP*              lp                  /**< current LP data */
    )
 {
-   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN && SCIPlpIsDualReliable(lp) )
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
    {
       SCIP_COL* col;
       SCIP_Real primsol;
@@ -12875,9 +12880,6 @@ SCIP_Real SCIPvarGetImplRedcost(
 
    assert(SCIPvarIsBinary(var));
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-
-   if( !SCIPlpIsDualReliable(lp) )
-      return 0.0;
 
    /* get reduced cost of given variable */
    implredcost = getImplVarRedcost(var, set, varfixing, stat, lp);

@@ -2,7 +2,7 @@
 
 # For release versions, only use VERSION="x.x.x".
 # For development versions, use VERSION="x.x.x.x" with subversion number.
-VERSION="4.0.0.2"
+VERSION="4.0.1.3"
 NAME="scip-$VERSION"
 rm -f $NAME
 ln -s . $NAME
@@ -25,7 +25,7 @@ chmod 750 bin/* scripts/* interfaces/ampl/get.ASL check/cmpres.awk
 tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
 --exclude="*~" \
 --exclude=".*" \
-$NAME/COPYING $NAME/INSTALL $NAME/CHANGELOG $NAME/Makefile \
+$NAME/COPYING $NAME/INSTALL $NAME/INSTALL_CMAKE $NAME/CHANGELOG $NAME/Makefile \
 $NAME/doc/scip* $NAME/doc/xternal.c $NAME/doc/builddoc.sh \
 $NAME/doc/inc/codestyle/* $NAME/doc/inc/shelltutorial $NAME/doc/inc/debugexamples \
 $NAME/doc/inc/faq/faqtext.txt $NAME/doc/inc/faq/*.py $NAME/doc/inc/faq/localfaq.php \
@@ -63,18 +63,23 @@ $NAME/src/blockmemshell/*.c $NAME/src/blockmemshell/*.h \
 $NAME/src/tclique/*.c $NAME/src/tclique/*.h \
 $NAME/src/objscip/*.cpp $NAME/src/objscip/*.h \
 $NAME/src/cppad/* $NAME/src/cppad/local/* $NAME/src/cppad/utility/* \
+$NAME/applications/CMakeLists.txt \
 $NAME/applications/Coloring/* $NAME/applications/Coloring/doc/* $NAME/applications/Coloring/data/* \
+$NAME/applications/Coloring/check/CMakeLists.txt \
 $NAME/applications/Coloring/check/testset/short.test $NAME/applications/Coloring/check/testset/short.solu \
 $NAME/applications/Coloring/src/depend.* \
 $NAME/applications/Coloring/src/*.c $NAME/applications/Coloring/src/*.h \
 $NAME/applications/Scheduler/doc/* \
+$NAME/applications/Scheduler/check/CMakeLists.txt \
 $NAME/applications/Scheduler/check/testset/short.test $NAME/applications/Scheduler/check/testset/short.solu \
 $NAME/applications/Scheduler/src/depend.* \
 $NAME/applications/Scheduler/src/*.c $NAME/applications/Scheduler/src/*.cpp $NAME/applications/Scheduler/src/*.h \
 $NAME/applications/Scheduler/data/*.sm \
 $NAME/applications/Scheduler/data/*.cmin \
 $NAME/applications/Scheduler/Makefile \
-$NAME/applications/MinIISC/Makefile $NAME/applications/MinIISC/INSTALL \
+$NAME/applications/Scheduler/CMakeLists.txt \
+$NAME/applications/MinIISC/* \
+$NAME/applications/MinIISC/check/CMakeLists.txt \
 $NAME/applications/MinIISC/doc/* \
 $NAME/applications/MinIISC/src/* \
 $NAME/applications/MinIISC/data/* \
@@ -94,12 +99,14 @@ $NAME/applications/PolySCIP/INSTALL $NAME/applications/PolySCIP/LICENCE \
 $NAME/applications/PolySCIP/README $NAME/applications/PolySCIP/scipmip.set \
 $NAME/applications/PolySCIP/src/CMakeLists.txt \
 $NAME/applications/PolySCIP/CMakeLists.txt     \
+$NAME/applications/PolySCIP/cmake/PolySCIPConfig.h.in \
 $NAME/applications/STP/doc/* \
 $NAME/applications/STP/src/depend.* \
 $NAME/applications/STP/src/*.c $NAME/applications/STP/src/*.h \
 $NAME/applications/STP/check/testset/*.test $NAME/applications/STP/check/testset/*.solu \
+$NAME/applications/STP/check/CMakeLists.txt \
 $NAME/applications/STP/data/short/* \
-$NAME/applications/STP/Makefile $NAME/applications/STP/INSTALL \
+$NAME/applications/STP/* \
 $NAME/examples/xternal_examples.c \
 $NAME/examples/Binpacking/Makefile $NAME/examples/Binpacking/INSTALL \
 $NAME/examples/Binpacking/CMakeLists.txt \

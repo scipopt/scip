@@ -1349,7 +1349,7 @@ uint32_t hashvalue(
    uint64_t              input               /**< key value */
    )
 {
-   return ( (uint32_t) ((0x9e3779b97f4a7c15ULL * input)>>32) ) | 1u;
+   return ( (uint32_t) ((UINT64_C(0x9e3779b97f4a7c15) * input)>>32) ) | 1u;
 }
 
 /** returns a reasonable hash table size (a prime number) that is at least as large as the specified value */
@@ -2041,7 +2041,7 @@ SCIP_RETCODE SCIPhashtableCreate(
     * to the next power of two.
     */
    (*hashtable)->shift = 32;
-   (*hashtable)->shift -= (int)ceil(log(MAX(32.0, tablesize / 0.9)) / log(2.0));
+   (*hashtable)->shift -= (int)ceil(LOG2(MAX(32.0, tablesize / 0.9)));
 
    /* compute size from shift */
    nslots = 1u << (32 - (*hashtable)->shift);
@@ -2477,6 +2477,23 @@ SCIP_Longint SCIPhashtableGetNElements(
    assert(hashtable != NULL);
 
    return hashtable->nelements;
+}
+
+/** gives the number of entries in the internal arrays of a hash table */
+int SCIPhashtableGetNEntries(
+   SCIP_HASHTABLE*       hashtable           /**< hash table */
+   )
+{
+   return (int) hashtable->mask + 1;
+}
+
+/** gives the element at the given index or NULL if entry at that index has no element */
+void* SCIPhashtableGetEntry(
+   SCIP_HASHTABLE*       hashtable,          /**< hash table */
+   int                   entryidx            /**< index of hash table entry */
+   )
+{
+   return hashtable->hashes[entryidx] == 0 ? NULL : hashtable->slots[entryidx];
 }
 
 /** returns the load of the given hash table in percentage */
@@ -3173,6 +3190,384 @@ SCIP_RETCODE SCIPhashmapRemoveAll(
    return SCIP_OKAY;
 }
 
+
+/*
+ * Hash Set
+ */
+
+/* redefine ELEM_DISTANCE macro for hashset */
+#undef ELEM_DISTANCE
+/* computes the distance from it's desired position for the element stored at pos */
+#define ELEM_DISTANCE(pos) (((pos) + nslots - hashSetDesiredPos(hashset, hashset->slots[(pos)])) & mask)
+
+/* calculate desired position of element in hash set */
+static
+uint32_t hashSetDesiredPos(
+   SCIP_HASHSET*         hashset,            /**< the hash set */
+   void*                 element             /**< element to calculate position for */
+   )
+{
+   return (uint32_t)((UINT64_C(0x9e3779b97f4a7c15) * (uintptr_t)element)>>(hashset->shift));
+}
+
+static
+void hashsetInsert(
+   SCIP_HASHSET*         hashset,            /**< hash set */
+   void*                 element             /**< element to insert */
+   )
+{
+   uint32_t elemdistance;
+   uint32_t pos;
+   uint32_t nslots;
+   uint32_t mask;
+
+   assert(hashset != NULL);
+   assert(hashset->slots != NULL);
+   assert(element != NULL);
+
+   pos = hashSetDesiredPos(hashset, element);
+   nslots = (uint32_t)SCIPhashsetGetNSlots(hashset);
+   mask = nslots - 1;
+
+   elemdistance = 0;
+   while( TRUE ) /*lint !e716*/
+   {
+      uint32_t distance;
+
+      /* if position is empty or key equal insert element */
+      if( hashset->slots[pos] == NULL )
+      {
+         hashset->slots[pos] = element;
+         ++hashset->nelements;
+         return;
+      }
+
+      if( hashset->slots[pos] == element )
+         return;
+
+      /* otherwise check if the current element at this position is closer to its hashvalue */
+      distance = ELEM_DISTANCE(pos);
+      if( distance < elemdistance )
+      {
+         /* if this is the case we insert the new element here and find a new position for the old one */
+         elemdistance = distance;
+         SCIPswapPointers(&hashset->slots[pos], &element);
+      }
+
+      /* continue until we have found an empty position */
+      pos = (pos + 1) & mask;
+      ++elemdistance;
+   }
+}
+
+/** check if the load factor of the hash set is too high and rebuild if necessary */
+static
+SCIP_RETCODE hashsetCheckLoad(
+   SCIP_HASHSET*         hashset,            /**< hash set */
+   BMS_BLKMEM*           blkmem              /**< block memory used to store hash set entries */
+   )
+{
+   assert(hashset != NULL);
+   assert(hashset->shift < 64);
+
+   /* use integer arithmetic to approximately check if load factor is above 90% */
+   if( ((((uint64_t)hashset->nelements)<<10)>>(64-hashset->shift) > 921) )
+   {
+      void** slots;
+      uint32_t nslots;
+      uint32_t newnslots;
+      uint32_t i;
+
+      /* calculate new size (always power of two) */
+      nslots = (uint32_t)SCIPhashsetGetNSlots(hashset);
+      newnslots = 2*nslots;
+      --hashset->shift;
+
+      /* reallocate array */
+      SCIP_ALLOC( BMSallocClearBlockMemoryArray(blkmem, &slots, newnslots) );
+
+      SCIPswapPointers((void**) &slots, (void**) &hashset->slots);
+      hashset->nelements = 0;
+
+      /* reinsert all elements */
+      for( i = 0; i < nslots; ++i )
+      {
+         if( slots[i] != NULL )
+            hashsetInsert(hashset, slots[i]);
+      }
+
+      BMSfreeBlockMemoryArray(blkmem, &slots, nslots);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** creates a hash set of pointers */
+SCIP_RETCODE SCIPhashsetCreate(
+   SCIP_HASHSET**        hashset,            /**< pointer to store the created hash set */
+   BMS_BLKMEM*           blkmem,             /**< block memory used to store hash set entries */
+   int                   size                /**< initial size of the hash set; it is guaranteed that the set is not
+                                              *   resized if at most that many elements are inserted */
+   )
+{
+   uint32_t nslots;
+
+   assert(hashset != NULL);
+   assert(size >= 0);
+   assert(blkmem != NULL);
+
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, hashset) );
+
+   /* dont create too small hashtables, i.e. at least size 32, and increase
+    * the given size by divinding it by 0.9, since then no rebuilding will
+    * be necessary if the given number of elements are inserted. Finally round
+    * to the next power of two.
+    */
+   (*hashset)->shift = 64;
+   (*hashset)->shift -= (int)ceil(log(MAX(8.0, size / 0.9)) / log(2.0));
+   nslots = (uint32_t)SCIPhashsetGetNSlots(*hashset);
+   (*hashset)->nelements = 0;
+
+   SCIP_ALLOC( BMSallocClearBlockMemoryArray(blkmem, &(*hashset)->slots, nslots) );
+
+   return SCIP_OKAY;
+}
+
+/** frees the hash set */
+void SCIPhashsetFree(
+   SCIP_HASHSET**        hashset,            /**< pointer to the hash set */
+   BMS_BLKMEM*           blkmem              /**< block memory used to store hash set entries */
+   )
+{
+   BMSfreeBlockMemoryArray(blkmem, &(*hashset)->slots, SCIPhashsetGetNSlots(*hashset));
+   BMSfreeBlockMemory(blkmem, hashset);
+}
+
+/** inserts new element into the hash set */
+SCIP_RETCODE SCIPhashsetInsert(
+   SCIP_HASHSET*         hashset,            /**< hash set */
+   BMS_BLKMEM*           blkmem,             /**< block memory used to store hash set entries */
+   void*                 element             /**< element to insert */
+   )
+{
+   assert(hashset != NULL);
+   assert(hashset->slots != NULL);
+
+   SCIP_CALL( hashsetCheckLoad(hashset, blkmem) );
+
+   hashsetInsert(hashset, element);
+
+   return SCIP_OKAY;
+}
+
+/** checks whether an element exists in the hash set */
+SCIP_Bool SCIPhashsetExists(
+   SCIP_HASHSET*         hashset,            /**< hash set */
+   void*                 element             /**< element to search for */
+   )
+{
+   uint32_t pos;
+   uint32_t nslots;
+   uint32_t mask;
+   uint32_t elemdistance;
+
+   assert(hashset != NULL);
+   assert(hashset->slots != NULL);
+
+   pos = hashSetDesiredPos(hashset, element);
+   nslots = (uint32_t)SCIPhashsetGetNSlots(hashset);
+   mask = nslots - 1;
+   elemdistance = 0;
+
+   while( TRUE ) /*lint !e716*/
+   {
+      uint32_t distance;
+
+      /* found element */
+      if( hashset->slots[pos] == element )
+         return TRUE;
+
+      /* slots is empty so element cannot be contained */
+      if( hashset->slots[pos] == NULL )
+         return FALSE;
+
+      distance = ELEM_DISTANCE(pos);
+      /* element can not be contained since otherwise we would have swapped it with this one during insert */
+      if( elemdistance > distance )
+         return FALSE;
+
+      pos = (pos + 1) & mask;
+      ++elemdistance;
+   }
+}
+
+/** removes an element from the hash set, if it exists */
+SCIP_RETCODE SCIPhashsetRemove(
+   SCIP_HASHSET*         hashset,            /**< hash set */
+   void*                 element             /**< origin to remove from the list */
+   )
+{
+   uint32_t pos;
+   uint32_t nslots;
+   uint32_t mask;
+   uint32_t elemdistance;
+
+   assert(hashset != NULL);
+   assert(hashset->slots != NULL);
+   assert(element != NULL);
+
+   pos = hashSetDesiredPos(hashset, element);
+   nslots = (uint32_t)SCIPhashsetGetNSlots(hashset);
+   mask = nslots - 1;
+   elemdistance = 0;
+
+   while( TRUE ) /*lint !e716*/
+   {
+      uint32_t distance;
+
+      /* found element */
+      if( hashset->slots[pos] == element )
+         break;
+
+      /* slots is empty so element cannot be contained */
+      if( hashset->slots[pos] == NULL )
+         return SCIP_OKAY;
+
+      distance = ELEM_DISTANCE(pos);
+      /* element can not be contained since otherwise we would have swapped it with this one during insert */
+      if( elemdistance > distance )
+         return SCIP_OKAY;
+
+      pos = (pos + 1) & mask;
+      ++elemdistance;
+   }
+
+   assert(hashset->slots[pos] == element);
+   assert(SCIPhashsetExists(hashset, element));
+
+   /* remove element */
+   --hashset->nelements;
+
+   /* move other elements if necessary */
+   while( TRUE ) /*lint !e716*/
+   {
+      uint32_t nextpos = (pos + 1) & mask;
+
+      /* nothing to do since there is no chain that needs to be moved */
+      if( hashset->slots[nextpos] == NULL )
+      {
+         hashset->slots[pos] = NULL;
+         assert(!SCIPhashsetExists(hashset, element));
+         return SCIP_OKAY;
+      }
+
+      /* check if the element is the start of a new chain and return if that is the case */
+      if( hashSetDesiredPos(hashset, hashset->slots[nextpos]) == nextpos )
+      {
+         hashset->slots[pos] = NULL;
+         assert(!SCIPhashsetExists(hashset, element));
+         return SCIP_OKAY;
+      }
+
+      /* element should be moved to the left and next element needs to be checked */
+      hashset->slots[pos] = hashset->slots[nextpos];
+
+      pos = nextpos;
+   }
+}
+
+/** prints statistics about hash set usage */
+void SCIPhashsetPrintStatistics(
+   SCIP_HASHSET*         hashset,            /**< hash set */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
+   )
+{
+   uint32_t maxprobelen = 0;
+   uint64_t probelensum = 0;
+   uint32_t nslots;
+   uint32_t mask;
+   uint32_t i;
+
+   assert(hashset != NULL);
+
+   nslots = (uint32_t)SCIPhashsetGetNSlots(hashset);
+   mask = nslots - 1;
+
+   /* compute the maximum and average probe length */
+   for( i = 0; i < nslots; ++i )
+   {
+      if( hashset->slots[i] != NULL )
+      {
+         uint32_t probelen = ((hashSetDesiredPos(hashset, hashset->slots[i]) + nslots - i) & mask) + 1;
+         probelensum += probelen;
+         maxprobelen = MAX(probelen, maxprobelen);
+      }
+   }
+
+   /* print general hash set statistics */
+   SCIPmessagePrintInfo(messagehdlr, "%u hash entries, used %u/%u slots (%.1f%%)",
+                        (unsigned int)hashset->nelements, (unsigned int)hashset->nelements,
+                        (unsigned int)nslots, 100.0*(SCIP_Real)hashset->nelements/(SCIP_Real)(nslots));
+
+   /* if not empty print average and maximum probe length */
+   if( hashset->nelements > 0 )
+      SCIPmessagePrintInfo(messagehdlr, ", avg. probe length is %.1f, max. probe length is %u",
+         (SCIP_Real)(probelensum)/(SCIP_Real)hashset->nelements, (unsigned int)maxprobelen);
+   SCIPmessagePrintInfo(messagehdlr, "\n");
+}
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ * In optimized mode, the methods are implemented as defines to improve performance.
+ * However, we want to have them in the library anyways, so we have to undef the defines.
+ */
+
+#undef SCIPhashsetIsEmpty
+#undef SCIPhashsetGetNElements
+#undef SCIPhashsetGetNSlots
+#undef SCIPhashsetGetSlots
+
+/** indicates whether a hash set has no entries */
+SCIP_Bool SCIPhashsetIsEmpty(
+   SCIP_HASHSET*         hashset             /**< hash set */
+   )
+{
+   return hashset->nelements == 0;
+}
+
+/** gives the number of elements in a hash set */
+int SCIPhashsetGetNElements(
+   SCIP_HASHSET*         hashset             /**< hash set */
+   )
+{
+   return (int)hashset->nelements;
+}
+
+/** gives the number of slots of a hash set */
+int SCIPhashsetGetNSlots(
+   SCIP_HASHSET*         hashset             /**< hash set */
+   )
+{
+   return (int) (1u << (64 - hashset->shift));
+}
+
+/** gives the array of hash set slots; contains all elements in indetermined order and may contain NULL values */
+void** SCIPhashsetGetSlots(
+   SCIP_HASHSET*         hashset             /**< hash set */
+   )
+{
+   return hashset->slots;
+}
+
+/** removes all entries in a hash set. */
+void SCIPhashsetRemoveAll(
+   SCIP_HASHSET*         hashset             /**< hash set */
+   )
+{
+   BMSclearMemoryArray(hashset->slots, SCIPhashsetGetNSlots(hashset));
+
+   hashset->nelements = 0;
+}
 
 /*
  * Dynamic Arrays
@@ -6552,9 +6947,9 @@ SCIP_RETCODE SCIPdigraphCopy(
          assert(sourcedigraph->successors[i] != NULL);
          assert(sourcedigraph->arcdata[i] != NULL);
 
-         SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &((*targetdigraph)->successors[i]), \
+         SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &((*targetdigraph)->successors[i]),
                sourcedigraph->successors[i], sourcedigraph->nsuccessors[i]) ); /*lint !e866*/
-         SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &((*targetdigraph)->arcdata[i]), \
+         SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &((*targetdigraph)->arcdata[i]),
                sourcedigraph->arcdata[i], sourcedigraph->nsuccessors[i]) ); /*lint !e866*/
       }
       /* copy node data - careful if these are pointers to some information -> need to be copied by hand */
@@ -6568,9 +6963,9 @@ SCIP_RETCODE SCIPdigraphCopy(
    /* copy component data */
    if( ncomponents > 0 )
    {
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &(*targetdigraph)->components, sourcedigraph->components, \
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &(*targetdigraph)->components, sourcedigraph->components,
             sourcedigraph->componentstarts[ncomponents]) );
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &(*targetdigraph)->componentstarts, \
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &(*targetdigraph)->componentstarts,
             sourcedigraph->componentstarts,ncomponents + 1) ); /*lint !e776*/
       (*targetdigraph)->componentstartsize = ncomponents + 1;
    }
@@ -7836,7 +8231,7 @@ SCIP_RETCODE SCIPbtCreate(
    assert(tree != NULL);
    assert(blkmem != NULL);
 
-   SCIP_ALLOC( BMSallocMemory(tree) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, tree) );
    (*tree)->blkmem = blkmem;
    (*tree)->root = NULL;
 
@@ -7858,7 +8253,7 @@ void SCIPbtFree(
       SCIPbtnodeFree(*tree, &((*tree)->root));
    }
 
-   BMSfreeMemory(tree);
+   BMSfreeBlockMemory((*tree)->blkmem, tree);
 }
 
 /** prints the rooted subtree of the given binary tree node in GML format into the given file */
@@ -9326,20 +9721,29 @@ void SCIPprintSysError(
    )
 {
 #ifdef NO_STRERROR_R
-   char* buf;
-   buf = strerror(errno);
+   SCIPmessagePrintError("%s: %s\n", message, strerror(errno));
 #else
    char buf[SCIP_MAXSTRLEN];
 
 #if defined(_WIN32) || defined(_WIN64)
-   (void)(strerror_s(buf, SCIP_MAXSTRLEN, errno) + 1);
-#else
-   (void)(strerror_r(errno, buf, SCIP_MAXSTRLEN) + 1);
-#endif
-
-   buf[SCIP_MAXSTRLEN - 1] = '\0';
-#endif
+   /* strerror_s returns 0 on success; the string is \0 terminated. */
+   if ( strerror_s(buf, SCIP_MAXSTRLEN, errno) != 0 )
+      SCIPmessagePrintError("Unkown error number %d or error message too long.\n", errno);
    SCIPmessagePrintError("%s: %s\n", message, buf);
+#else
+   #if (_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && ! defined(_GNU_SOURCE)
+      /* We are in the POSIX/XSI case, where strerror_r returns 0 on success; \0 termination is unclear. */
+      if ( strerror_r(errno, buf, SCIP_MAXSTRLEN) != 0 )
+         SCIPmessagePrintError("Unkown error number %d.\n", errno);
+      buf[SCIP_MAXSTRLEN - 1] = '\0';
+      SCIPmessagePrintError("%s: %s\n", message, buf);
+#else
+      /* We are in the GNU case, where strerror_r returns a string to the error string. This string is possibly stored
+       * in buf and is always \0 terminated. */
+      SCIPmessagePrintError("%s: %s\n", message, strerror_r(errno, buf, SCIP_MAXSTRLEN));
+   #endif
+#endif
+#endif
 }
 
 /** extracts tokens from strings - wrapper method for strtok_r() */

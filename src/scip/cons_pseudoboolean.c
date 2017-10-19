@@ -1089,7 +1089,9 @@ SCIP_RETCODE transformToOrig(
 
          if( consanddata->nvars > 0 )
          {
-            SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(consanddata->vars), SCIPgetVarsAnd(scip, consanddata->origcons), consanddata->nvars) );
+            SCIP_VAR** andvars = SCIPgetVarsAnd(scip, consanddata->origcons);
+
+            SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(consanddata->vars), andvars, consanddata->nvars) );
 
             /* sort variables */
             SCIPsortPtr((void**)(consanddata->vars), SCIPvarComp, consanddata->nvars);
@@ -2086,7 +2088,7 @@ SCIP_RETCODE createAndAddAndCons(
 
 #if 0 /* does not work for since the value of artificial resultants must not be equal to the value computed by their
        * product, since these variables are irrelevant */
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
       if( SCIPdebugIsMainscip(scip) )
       {
          SCIP_Real val;
@@ -3434,6 +3436,11 @@ SCIP_RETCODE checkOrigPbCons(
    SCIP_Real activity;
    int c;
 
+   SCIP_Real lhsviol;
+   SCIP_Real rhsviol;
+   SCIP_Real absviol;
+   SCIP_Real relviol;
+
    assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsIsOriginal(cons));
@@ -3584,6 +3591,25 @@ SCIP_RETCODE checkOrigPbCons(
       activity += andvalue * andcoefs[c];
    }
    SCIPdebugMsg(scip, "lhs = %g, overall activity = %g, rhs = %g\n", lhs, activity, rhs);
+
+   /* calculate absolute and relative violation */
+   lhsviol = lhs - activity;
+   rhsviol = activity - rhs;
+
+   if(lhsviol > rhsviol)
+   {
+      absviol = lhsviol;
+      relviol = SCIPrelDiff(lhs, activity);
+   }
+   else
+   {
+      absviol = rhsviol;
+      relviol = SCIPrelDiff(activity, rhs);
+   }
+
+   /* update absolute and relative violation of the solution */
+   if( sol != NULL )
+      SCIPupdateSolConsViolation(scip, sol, absviol, relviol);
 
    /* check left hand side for violation */
    if( SCIPisFeasLT(scip, activity, lhs) )
@@ -5146,15 +5172,17 @@ SCIP_RETCODE correctConshdlrdata(
 	    if( nfixedvars > 0 )
 	    {
 	       SCIP_VAR** fixedvars;
-               SCIP_VAR** activevars = NULL;
-               SCIP_Real* activescalars = NULL;
-               SCIP_Real activeconstant;
-               int nactivevars;
-               int requiredsize;
+	       SCIP_VAR** scipfixedvars;
+	       SCIP_VAR** activevars = NULL;
+	       SCIP_Real* activescalars = NULL;
+	       SCIP_Real activeconstant;
+	       int nactivevars;
+	       int requiredsize;
 	       int pos;
 	       int w;
 
-	       SCIP_CALL( SCIPduplicateBufferArray(scip, &fixedvars, SCIPgetFixedVars(scip), nfixedvars) );
+	       scipfixedvars = SCIPgetFixedVars(scip);
+	       SCIP_CALL( SCIPduplicateBufferArray(scip, &fixedvars, scipfixedvars, nfixedvars) );
 
 	       SCIPvarsGetProbvar(fixedvars, nfixedvars);
 

@@ -851,7 +851,6 @@ static
 SCIP_RETCODE addRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< knapsack constraint */
-   SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
    SCIP_Bool*            cutoff              /**< whether a cutoff has been detected */
    )
 {
@@ -875,7 +874,7 @@ SCIP_RETCODE addRelaxation(
       SCIPdebugMsg(scip, "adding relaxation of knapsack constraint <%s> (capacity %" SCIP_LONGINT_FORMAT "): ",
          SCIPconsGetName(cons), consdata->capacity);
       SCIPdebug( SCIP_CALL(SCIPprintRow(scip, consdata->row, NULL)) );
-      SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE, cutoff) );
+      SCIP_CALL( SCIPaddCut(scip, consdata->row, FALSE, cutoff) );
    }
 
    return SCIP_OKAY;
@@ -909,6 +908,8 @@ SCIP_RETCODE checkCons(
       SCIP_Real sum;
       SCIP_Longint integralsum;
       SCIP_Bool ishuge;
+      SCIP_Real absviol;
+      SCIP_Real relviol;
       int v;
 
       /* increase age of constraint; age is reset to zero, if a violation was found only in case we are in
@@ -921,7 +922,7 @@ SCIP_RETCODE checkCons(
 
       sum = 0.0;
       integralsum = 0;
-      /* we perform an more exact comparison if the capacity does not exceed the huge value */
+      /* we perform a more exact comparison if the capacity does not exceed the huge value */
       if( SCIPisHugeValue(scip, (SCIP_Real) consdata->capacity) )
       {
          ishuge = TRUE;
@@ -947,7 +948,14 @@ SCIP_RETCODE checkCons(
          }
       }
 
-      if( (!ishuge && integralsum > consdata->capacity) || (ishuge && SCIPisFeasGT(scip, sum, (SCIP_Real)consdata->capacity)) )
+      /* calculate constraint violation and update it in solution */
+      absviol = ishuge ? sum : (SCIP_Real)integralsum;
+      absviol -= consdata->capacity;
+      relviol = SCIPrelDiff(absviol + consdata->capacity, (SCIP_Real)consdata->capacity);
+      if( sol != NULL )
+         SCIPupdateSolLPConsViolation(scip, sol, absviol, relviol);
+
+      if( SCIPisFeasPositive(scip, absviol) )
       {
          *violated = TRUE;
 
@@ -959,17 +967,13 @@ SCIP_RETCODE checkCons(
 
          if( printreason )
          {
-            SCIP_Real viol = ishuge ? sum : (SCIP_Real)integralsum;
-
-            viol -= consdata->capacity;
-            assert(viol > 0);
-
             SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
 
             SCIPinfoMessage(scip, NULL, ";\n");
-            SCIPinfoMessage(scip, NULL, "violation: the capacity is violated by %.15g\n", viol);
+            SCIPinfoMessage(scip, NULL, "violation: the capacity is violated by %.15g\n", absviol);
          }
       }
+
    }
 
    return SCIP_OKAY;
@@ -4970,7 +4974,7 @@ SCIP_RETCODE separateSequLiftedMinimalCoverInequality(
          {
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
          }
-         SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, cutoff) );
+         SCIP_CALL( SCIPaddCut(scip, row, FALSE, cutoff) );
          (*ncuts)++;
       }
       SCIP_CALL( SCIPreleaseRow(scip, &row) );
@@ -5137,7 +5141,7 @@ SCIP_RETCODE separateSequLiftedExtendedWeightInequality(
          {
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
          }
-         SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, cutoff) );
+         SCIP_CALL( SCIPaddCut(scip, row, FALSE, cutoff) );
          (*ncuts)++;
       }
       SCIP_CALL( SCIPreleaseRow(scip, &row) );
@@ -5251,7 +5255,7 @@ SCIP_RETCODE separateSupLiftedMinimalCoverInequality(
          {
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
          }
-         SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, cutoff) );
+         SCIP_CALL( SCIPaddCut(scip, row, FALSE, cutoff) );
          (*ncuts)++;
       }
       SCIP_CALL( SCIPreleaseRow(scip, &row) );
@@ -6182,7 +6186,7 @@ SCIP_RETCODE separateCons(
    if( violated )
    {
       /* add knapsack constraint as LP row to the LP */
-      SCIP_CALL( addRelaxation(scip, cons, sol, cutoff) );
+      SCIP_CALL( addRelaxation(scip, cons, cutoff) );
       (*ncuts)++;
    }
    else if( sepacuts )
@@ -11765,7 +11769,7 @@ SCIP_RETCODE enforceConstraint(
       if( violated )
       {
          /* add knapsack constraint as LP row to the relaxation */
-         SCIP_CALL( addRelaxation(scip, conss[i], sol, &cutoff) );
+         SCIP_CALL( addRelaxation(scip, conss[i], &cutoff) );
          ncuts++;
       }
    }
@@ -11777,7 +11781,7 @@ SCIP_RETCODE enforceConstraint(
       if( violated )
       {
          /* add knapsack constraint as LP row to the relaxation */
-         SCIP_CALL( addRelaxation(scip, conss[i], sol, &cutoff) );
+         SCIP_CALL( addRelaxation(scip, conss[i], &cutoff) );
          ncuts++;
       }
    }
@@ -12187,7 +12191,7 @@ SCIP_DECL_CONSINITLP(consInitlpKnapsack)
    for( i = 0; i < nconss && !(*infeasible); i++ )
    {
       assert(SCIPconsIsInitial(conss[i]));
-      SCIP_CALL( addRelaxation(scip, conss[i], NULL, infeasible) );
+      SCIP_CALL( addRelaxation(scip, conss[i], infeasible) );
    }
 
    return SCIP_OKAY;

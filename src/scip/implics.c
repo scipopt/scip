@@ -1607,7 +1607,7 @@ SCIP_Bool SCIPcliquelistsHaveCommonClique(
 
    if( i1 < ncliques1 && i2 < ncliques2 )
    {
-      int cliqueid;
+      unsigned int cliqueid;
 
       /* make the bigger clique the first one */
       if( ncliques2 > ncliques1 )
@@ -3161,7 +3161,7 @@ SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
    }
    else
    {
-      SCIPhashmapRemoveAll(cliquetable->varidxtable);
+      SCIP_CALL( SCIPhashmapRemoveAll(cliquetable->varidxtable) );
    }
 
    /* loop through variables and store their respective positions in the hash map if they are binary */
@@ -3247,6 +3247,7 @@ SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
 #undef SCIPcliqueGetVars
 #undef SCIPcliqueGetValues
 #undef SCIPcliqueGetId
+#undef SCIPcliqueGetIndex
 #undef SCIPcliqueIsCleanedUp
 #undef SCIPcliqueIsEquation
 #undef SCIPcliquelistGetNCliques
@@ -3371,13 +3372,27 @@ SCIP_Bool* SCIPcliqueGetValues(
 }
 
 /** gets unique identifier of the clique */
-int SCIPcliqueGetId(
+unsigned int SCIPcliqueGetId(
+   SCIP_CLIQUE*          clique              /**< clique data structure */
+   )
+{
+   int id;
+
+   assert(clique != NULL);
+
+   id = clique->id;
+
+   return (unsigned int)id;
+}
+
+/** gets index of the clique in the clique table */
+int SCIPcliqueGetIndex(
    SCIP_CLIQUE*          clique              /**< clique data structure */
    )
 {
    assert(clique != NULL);
 
-   return (int) clique->id;
+   return clique->index;
 }
 
 /** gets unique identifier of the clique */
@@ -3468,6 +3483,16 @@ int SCIPcliquetableGetNCliques(
    assert(cliquetable != NULL);
 
    return cliquetable->ncliques;
+}
+
+/** gets the number of cliques created so far by the clique table */
+int SCIPcliquetableGetNCliquesCreated(
+   SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
+   )
+{
+   assert(cliquetable != NULL);
+
+   return cliquetable->ncreatedcliques;
 }
 
 /** gets the array of cliques stored in the clique table */
