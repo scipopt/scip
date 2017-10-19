@@ -56,8 +56,8 @@
 #pragma GCC diagnostic warning "-Wshadow"
 #endif
 
-#if (IPOPT_VERSION_MAJOR < 3) || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 11))
-#error "The Ipopt interface requires at least 3.11."
+#if (IPOPT_VERSION_MAJOR < 3 || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 12))
+#error "The Ipopt interface requires at least 3.12."
 #endif
 
 using namespace Ipopt;
