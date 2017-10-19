@@ -31,10 +31,12 @@
 /*lint -esym(750,REDUCE_C) -esym(766,stdlib.h) -esym(766,string.h)           */
 //#define SCIP_DEBUG
 #define REDUCE_C
-#define SDSP_BOUND    400         /**< visited edges bound for SDSP test  */
-#define BD3_BOUND     400          /**< visited edges bound for BD3 test  */
-#define EXTENSIVE FALSE
-#define MW_TERM_BOUND 400
+#define STP_RED_SDSPBOUND    200         /**< visited edges bound for SDSP test  */
+#define STP_RED_SDSPBOUND2   400         /**< visited edges bound for SDSP test  */
+#define STP_RED_BD3BOUND     400         /**< visited edges bound for BD3 test  */
+#define STP_RED_EXTENSIVE FALSE
+#define STP_RED_MWTERMBOUND 400
+#define STP_RED_MAXNROUNDS 15
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -916,7 +918,7 @@ SCIP_RETCODE redLoopMw(
    STP_Bool ansad2 = TRUE;
    STP_Bool chain2 = TRUE;
    STP_Bool boolarr[16];
-   STP_Bool extensive = EXTENSIVE;
+   STP_Bool extensive = STP_RED_EXTENSIVE;
 
    assert(scip != NULL);
    assert(g != NULL);
@@ -1086,7 +1088,7 @@ SCIP_RETCODE redLoopMw(
          SCIP_CALL( cnsAdvReduction(scip, g, nodearrint2, &cnsadvelims) );
 #endif
 
-         SCIP_CALL( da_reducePcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint, state, nodearrchar, &daelims, TRUE, (g->terms > MW_TERM_BOUND), FALSE, FALSE, userec) );
+         SCIP_CALL( da_reducePcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint, state, nodearrchar, &daelims, TRUE, (g->terms > STP_RED_MWTERMBOUND), FALSE, FALSE, userec) );
 
          if( cnsadvelims + daelims >= redbound || (extensive && (cnsadvelims + daelims > 0))  )
          {
@@ -1174,7 +1176,7 @@ SCIP_RETCODE redLoopPc(
    SCIP_Bool bd3 = TRUE;
    SCIP_Bool nvsl = TRUE;
    SCIP_Bool rerun = TRUE;
-   SCIP_Bool extensive = EXTENSIVE;
+   SCIP_Bool extensive = STP_RED_EXTENSIVE;
    SCIP_Bool advancedrun = dualascent;
    SCIP_RANDNUMGEN* randnumgen;
 
@@ -1197,11 +1199,11 @@ SCIP_RETCODE redLoopPc(
    SCIP_CALL( degree_test_pc(scip, g, &fix, &degnelims, solnode, FALSE) );
 
    assert(graph_pc_term2edgeConsistent(g));
-
+sd = FALSE;
    /* get timelimit parameter */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
 
-   while( rerun && !SCIPisStopped(scip) )
+   for( int rounds = 0; rounds < STP_RED_MAXNROUNDS && !SCIPisStopped(scip) && rerun; rounds++ )
    {
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
@@ -1217,7 +1219,8 @@ SCIP_RETCODE redLoopPc(
 
       if( sdc || extensive )
       {
-         SCIP_CALL( sdsp_reduction(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &sdcnelims, SDSP_BOUND, NULL) );
+         SCIP_CALL( sdsp_reduction(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &sdcnelims,
+               ((rounds > 0) ? STP_RED_SDSPBOUND2 : STP_RED_SDSPBOUND), NULL) );
 
          if( sdcnelims <= reductbound )
             sdc = FALSE;
@@ -1249,7 +1252,7 @@ SCIP_RETCODE redLoopPc(
 
       if( bd3 && dualascent )
       {
-         SCIP_CALL( reduce_alt_bd34(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &bd3nelims, BD3_BOUND) );
+         SCIP_CALL( reduce_alt_bd34(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &bd3nelims, STP_RED_BD3BOUND) );
          if( bd3nelims <= reductbound )
          {
             bd3 = FALSE;
@@ -1257,7 +1260,7 @@ SCIP_RETCODE redLoopPc(
          else if( !rpc )
          {
             SCIP_CALL( sdpc_reduction(scip, g, vnoi, heap, state, vbase, nodearrint, nodearrint2, &sdnelims) );
-            SCIP_CALL( sdsp_reduction(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &sdcnelims, SDSP_BOUND, NULL) );
+            SCIP_CALL( sdsp_reduction(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &sdcnelims, STP_RED_SDSPBOUND, NULL) );
          }
 
          SCIPdebugMessage("bd3: %d \n", bd3nelims);
@@ -1475,7 +1478,7 @@ SCIP_RETCODE redLoopStp(
 
       if( sdc )
       {
-         SCIP_CALL( sdsp_reduction(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &sdcnelims, SDSP_BOUND, edgestate) );
+         SCIP_CALL( sdsp_reduction(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &sdcnelims, STP_RED_SDSPBOUND, edgestate) );
 
          if( sdcnelims <= reductbound )
             sdc = FALSE;
@@ -1490,7 +1493,7 @@ SCIP_RETCODE redLoopStp(
 
       if( bd3 )
       {
-         SCIP_CALL( reduce_alt_bd34(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &bd3nelims, BD3_BOUND) );
+         SCIP_CALL( reduce_alt_bd34(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &bd3nelims, STP_RED_BD3BOUND) );
          if( bd3nelims <= reductbound )
             bd3 = FALSE;
          else

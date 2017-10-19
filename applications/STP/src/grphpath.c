@@ -746,7 +746,7 @@ void graph_path_PcMwSd(
       if( k == head )
          continue;
 
-      if( Is_term(g->term[k]) && SCIPisGT(scip, g->prize[k], maxweight) && SCIPisGE(scip, distlimit, path[k].dist) )
+      if( Is_term(g->term[k]) && g->prize[k] > maxweight && distlimit >= path[k].dist )
       {
          pathmaxnode[k] = k;
          maxweight = g->prize[k];
@@ -761,8 +761,8 @@ void graph_path_PcMwSd(
       {
          const int m = g->head[e];
 
-         if( state[m] && g->mark[m] && SCIPisGT(scip, path[m].dist, path[k].dist + cost[e])
-               && SCIPisGE(scip, distlimit, path[k].dist + cost[e] - maxweight) )
+         if( state[m] && g->mark[m] && path[m].dist > (path[k].dist + cost[e])
+               && distlimit >= (path[k].dist + cost[e] - maxweight) )
          {
             if( state[m] == UNKNOWN ) /* m labeled for the first time? */
                memlbl[(*nlbl)++] = m;
