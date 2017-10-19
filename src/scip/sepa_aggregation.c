@@ -835,7 +835,13 @@ SCIP_RETCODE aggregation(
       }
 
       if ( *cutoff )
+      {
+         if( cut != NULL )
+         {
+            SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+         }
          break;
+      }
 
       /* if the cut was successfully added, decrease the score of the rows used in the aggregation and clean the aggregation
        * row (and call this function again with a different start row for aggregation)
