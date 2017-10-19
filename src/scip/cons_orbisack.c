@@ -1760,8 +1760,8 @@ SCIP_RETCODE SCIPseparateOrbisackCovers(
          SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
          for (j = 0; j < nrows; ++j)
          {
-            SCIP_CALL( SCIPaddVarToRow(scip, row, vars1[i], coeff1[i]) );
-            SCIP_CALL( SCIPaddVarToRow(scip, row, vars2[i], coeff2[i]) );
+            SCIP_CALL( SCIPaddVarToRow(scip, row, vars1[j], coeff1[j]) );
+            SCIP_CALL( SCIPaddVarToRow(scip, row, vars2[j], coeff2[j]) );
          }
          SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 
