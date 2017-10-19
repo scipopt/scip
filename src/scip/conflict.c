@@ -2547,6 +2547,9 @@ SCIP_RETCODE propagateLongProof(
          resminact -= (val * lb);
          newub = (rhs - resminact)/val;
 
+         if( SCIPsetIsInfinity(set, newub) )
+            continue;
+
          /* we cannot tighten the upper bound */
          if( SCIPsetIsGE(set, newub, ub) )
             continue;
@@ -2558,6 +2561,9 @@ SCIP_RETCODE propagateLongProof(
 
          resminact -= (val * ub);
          newlb = (rhs - resminact)/val;
+
+         if( SCIPsetIsInfinity(set, -newlb) )
+            continue;
 
          /* we cannot tighten the lower bound */
          if( SCIPsetIsLE(set, newlb, lb) )
