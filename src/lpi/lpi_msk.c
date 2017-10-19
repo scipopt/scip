@@ -194,7 +194,7 @@ int rowpacketNum(
 /** create error string */
 static
 void MSKAPI printstr(
-   void*                 handle,             /**< error handle */
+   MSKuserhandle_t       handle,             /**< error handle */
    const char*           str                 /**< string that contains string on output */
    )
 {  /*lint --e{715}*/
@@ -663,7 +663,7 @@ SCIP_RETCODE SCIPlpiCreate(
    if (!MosekEnv)
    {
       MOSEK_CALL( MSK_makeenv(&MosekEnv, NULL) );
-      MOSEK_CALL( MSK_linkfunctoenvstream(MosekEnv, MSK_STREAM_LOG, messagehdlr, printstr) );
+      MOSEK_CALL( MSK_linkfunctoenvstream(MosekEnv, MSK_STREAM_LOG, (MSKuserhandle_t) messagehdlr, printstr) );
 #if MSK_VERSION_MAJOR < 8
       MOSEK_CALL( MSK_initenv(MosekEnv) );
 #endif
@@ -675,7 +675,7 @@ SCIP_RETCODE SCIPlpiCreate(
 
    MOSEK_CALL( MSK_makeemptytask(MosekEnv, &((*lpi)->task)) );
 
-   MOSEK_CALL( MSK_linkfunctotaskstream((*lpi)->task, MSK_STREAM_LOG, messagehdlr, printstr) );
+   MOSEK_CALL( MSK_linkfunctotaskstream((*lpi)->task, MSK_STREAM_LOG, (MSKuserhandle_t) messagehdlr, printstr) );
 
    MOSEK_CALL( MSK_putobjsense((*lpi)->task, SENSE2MOSEK(objsen)) );
    MOSEK_CALL( MSK_putintparam((*lpi)->task, MSK_IPAR_SIM_MAX_NUM_SETBACKS, SETBACK_LIMIT) );
