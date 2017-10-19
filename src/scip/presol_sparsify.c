@@ -85,7 +85,8 @@ SCIP_DECL_HASHKEYEQ(varPairsEqual)
 {
    ROWVARPAIR* varpair1;
    ROWVARPAIR* varpair2;
-   SCIP_Real scale;
+   SCIP_Real ratio1;
+   SCIP_Real ratio2;
 
    varpair1 = (ROWVARPAIR*) key1;
    varpair2 = (ROWVARPAIR*) key2;
@@ -96,9 +97,10 @@ SCIP_DECL_HASHKEYEQ(varPairsEqual)
    if( varpair1->varindex2 != varpair2->varindex2 )
       return FALSE;
 
-   scale = varpair1->varcoef1 / varpair2->varcoef1;
+   ratio1 = varpair1->varcoef2 / varpair1->varcoef1;
+   ratio2 = varpair2->varcoef2 / varpair2->varcoef1;
 
-   if( !EPSEQ(varpair1->varcoef2, scale * varpair2->varcoef2, SCIP_DEFAULT_EPSILON) )
+   if( !EPSEQ(ratio1, ratio2, SCIP_DEFAULT_EPSILON) )
       return FALSE;
 
    return TRUE;
