@@ -143,6 +143,7 @@ for Q in ${split_queue[@]}; do
     echo "     CLUSTERNODES=$n"
     echo "     SETTINGS=$SETTINGS"
     make testcluster EXECUTABLE=$EXECUTABLE QUEUE=$Q CLUSTERNODES=$n EXCLUSIVE=true TEST=$TEST SETTINGS=$SETTINGS TIME=601 OUTPUTDIR=results/clusterbench
+    exit
 
     # artificial settings file may only be removed after executable was started
   done
