@@ -50,7 +50,7 @@
 #define DEFAULT_FULL_SEARCH             0    /**< default value for full search */
 
 #define MAXCONSIDEREDNONZEROS          70    /**< maximal size of considered non-zeros */
-
+#define MAXSCALE                   1000.0    /**< maximal allowed scale for cancelling non-zeros */
 /*
  * Data structures
   */
@@ -241,6 +241,9 @@ SCIP_RETCODE cancelRow(
 
             scale = -rowvarpair.varcoef1 / eqrowvarpair->varcoef1;
 
+            if( scale > MAXSCALE )
+               continue;
+
             a = 0;
             b = 0;
             ncancel = 0;
@@ -265,15 +268,15 @@ SCIP_RETCODE cancelRow(
                {
                   SCIP_VAR* var = SCIPmatrixGetVar(matrix, eqrowinds[b]);
                   ++b;
-                  if( SCIPvarIsBinary(var) )
-                  {
-                     if( ++nbinfillin > maxbinfillin )
-                        break;
-                  }
-                  else if( SCIPvarIsIntegral(var) )
+                  if( SCIPvarIsIntegral(var) )
                   {
                      if( ++nintfillin > maxintfillin )
                         break;
+                     if( SCIPvarIsBinary(var) )
+                     {
+                        if( ++nbinfillin > maxbinfillin )
+                           break;
+                     }
                   }
                   else
                   {
@@ -598,26 +601,8 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
 
          othervarpair = SCIPhashtableRetrieve(pairtable, (void*) &varpairs[r]);
 
-         if( othervarpair != NULL )
-         {
-            int thisvarpairlocks;
-            int othervarpairlocks;
-
-            thisvarpairlocks = SCIPmatrixGetColNDownlocks(matrix, varpairs[r].varindex1) +
-                               SCIPmatrixGetColNDownlocks(matrix, varpairs[r].varindex2) +
-                               SCIPmatrixGetColNUplocks(matrix, varpairs[r].varindex1) +
-                               SCIPmatrixGetColNUplocks(matrix, varpairs[r].varindex2);
-
-            othervarpairlocks = SCIPmatrixGetColNDownlocks(matrix, othervarpair->varindex1) +
-                                SCIPmatrixGetColNDownlocks(matrix, othervarpair->varindex2) +
-                                SCIPmatrixGetColNUplocks(matrix, othervarpair->varindex1) +
-                                SCIPmatrixGetColNUplocks(matrix, othervarpair->varindex2);
-
-            /* override other var pair if it has more locks or if it has the same number of locks and a greater support */
-            if( othervarpairlocks < thisvarpairlocks || (othervarpairlocks == thisvarpairlocks &&
-               SCIPmatrixGetRowNNonzs(matrix, othervarpair->rowindex) <= SCIPmatrixGetRowNNonzs(matrix, varpairs[r].rowindex)) )
-               continue;
-         }
+         if( othervarpair != NULL && SCIPmatrixGetRowNNonzs(matrix, othervarpair->rowindex) <= SCIPmatrixGetRowNNonzs(matrix, varpairs[r].rowindex) )
+            continue;
 
          SCIP_CALL( SCIPhashtableInsert(pairtable, (void*) &varpairs[r]) );
       }
