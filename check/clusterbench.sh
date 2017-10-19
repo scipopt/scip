@@ -22,7 +22,7 @@ if [ $# -ge 3 ] || [ $# -eq 0 ]; then
 fi;
 
 QUEUE=$1
-export EXECUTABLE=`pwd`/$2
+EXECUTABLE=`pwd`/$2
 DATETIME=`date '+%Y%m%d-%H%M%S'`
 
 echo "queue      :" $QUEUE
