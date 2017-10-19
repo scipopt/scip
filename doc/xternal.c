@@ -4118,7 +4118,7 @@
  * <code>SCIPsetRelaxSolVals()</code> or <code>SCIPsetRelaxSolValsSol()</code>. If you set the values one by one, you will need to call
  * <code>SCIPmarkRelaxSolValid()</code> to inform SCIP that the solution is complete and valid. With the "includeslp" argument of
  * <code>SCIPsetRelaxSolVals()</code>, <code>SCIPsetRelaxSolValsSol()</code> and <code>SCIPmarkRelaxSolValid()</code> you need to tell SCIP
- * whether the relaxation included all lp rows. In this case, the  solution will be enforced and, if feasible, added to the solution storage if the
+ * whether the relaxation included all lp rows. In this case, the solution will be enforced and, if feasible, added to the solution storage if the
  * lowerbound of this relaxator is larger than the LP's. You may also call SCIPtrySolFree() directly from the
  * relaxation handler to make sure that a solution is added to the solution storage if it is feasible, even if the relaxator does not
  * include the LP or another relaxator produced a stronger bound. Also note that when setting the values of the relaxation solution one by one,
