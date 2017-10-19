@@ -4,6 +4,7 @@ SCIP version 4.0.2
 fixed bugs:
 - fixed bug in feasibility pump heuristic when switching on the usefp20 parameter
 - fixed potential ressource leaks in SCIPsolveLinearProb, expr.c, sepa_eccuts, cons_cumulative.c, cons_nonlinear.c
+- fixed order of SCIPcalcCliquePartition in corner case where no cliques are available
 
 SCIP version 4.0.1
 ==================
