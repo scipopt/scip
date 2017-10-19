@@ -2,7 +2,7 @@
 
 #
 # Usage:
-# clusterbench.sh QUEUES EXECUTABLE | check/jenkins_check_results_benchmark.sh
+# clusterbench.sh QUEUES EXECUTABLE | jenkins_check_results_benchmark.sh
 
 # This script reads stdout from clusterbench.sh, parses the slurm job ids, and starts a
 # job after the previously queued slurm jobs finish. This job waits for 5 seconds, then
@@ -28,4 +28,4 @@ jobidsstr=$(printf ",%s" "${slurmjobids[@]}")
 jobidsstr=${jobidsstr:1}
 
 # execute checker after all jobs completed
-sbatch --dependency=afterany:${jobidsstr} --kill-on-invalid-dep=yes --cpus-per-task=1 --mem=100 --time=100 --partition=mip-dbg --account=mip check/jenkins_failcheck_benchmark.sh
+sbatch --dependency=afterany:${jobidsstr} --kill-on-invalid-dep=yes --cpus-per-task=1 --mem=100 --time=100 --partition=mip-dbg --account=mip jenkins_failcheck_benchmark.sh

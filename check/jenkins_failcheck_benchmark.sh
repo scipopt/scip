@@ -5,10 +5,10 @@
 # but to be called by jenkins_check_results_benchmark.sh.
 # Note: TESTSET etc are read from the environment, see
 # jenkins_check_results_benchmark.sh
+# Careful: WE ARE IN check/ !
 
 sleep 5
 
-cd check/
 
 # evaluate the run and upload it to rubberband
 echo "Evaluating the runs and uploading them to rubberband."
