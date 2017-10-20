@@ -12,7 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define SCIP_STATISTIC
 
 /**@file   heur_alns.c
  * @brief  Adaptive large neighborhood search heuristic that orchestrates popular LNS heuristics
@@ -34,7 +33,7 @@
 #define HEUR_DESC             "Large neighborhood search heuristic that orchestrates the popular neighborhoods Local Branching, RINS, RENS, DINS etc."
 #define HEUR_DISPCHAR         'L'
 #define HEUR_PRIORITY         -1010000
-#define HEUR_FREQ             20
+#define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
@@ -92,7 +91,7 @@
 #define FIXINGRATE_DECAY         0.75  /**< geometric decay for fixing rate adjustments */
 #define FIXINGRATE_STARTINC      0.2   /**< initial increment value for fixing rate */
 #define DEFAULT_USESUBSCIPHEURS  FALSE /**< should the heuristic activate other sub-SCIP heuristics during its search?  */
-#define DEFAULT_COPYCUTS         TRUE  /**< should cutting planes be copied to the sub-SCIP? */
+#define DEFAULT_COPYCUTS         FALSE /**< should cutting planes be copied to the sub-SCIP? */
 #define DEFAULT_REWARDFILENAME   "-"   /**< file name to store all rewards and the selection of the bandit */
 
 /* individual random seeds */
