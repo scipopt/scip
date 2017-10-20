@@ -44,7 +44,7 @@ if [ "${EVALFILE}" == "" ]; then
     exit 1
 fi
 # found more than one evalfile matching the pattern
-if [ `wc -w << ${EVALFILE}` > 1 ]; then
+if [ `wc -w <<< ${EVALFILE}` > 1 ]; then
     SUBJECT="ERROR [BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING=$SETTING] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH]"
     echo -e "Aborting because there were more than one .eval files found.\n\n After fixing this run\ncd `pwd`\nPERFORMANCE=$PERFORMANCE SCIPVERSION=$SCIPVERSION SETTING=$SETTING LPS=$LPS GITHASH=$GITHASH OPT=$OPT TESTSET=$TESTSET ./jenkins_failcheck.sh\n" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
     exit 1
