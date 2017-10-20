@@ -17,8 +17,8 @@ parameters:
 - fixed typo: heuristics/completesol/maxunkownrate has changed to heuristics/completesol/maxunknownrate
 - new parameters: beforepresol, maxlpiter, and maxcontvars in heur_completesol.c
 - new parameter: lp/refactorinterval to change the refactorization interval of the LP solver
-- change parameter: constraints/quadratic/disaggregate changes to constraints/quadratic/maxdisaggrsize to bound
-  the total number of sparsity components when disaggregating a quadratic constraint
+- replaced constraints/quadratic/disaggregate by constraints/quadratic/maxdisaggrsize to bound
+  the total number of created constraints when disaggregating a quadratic constraint
 
 interface:
 - removed clique component index from SCIP_Var struct and the public interface method SCIPvarGetCliqueComponentIdx

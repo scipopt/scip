@@ -13183,7 +13183,7 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          &conshdlrdata->linfeasshift, TRUE, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/maxdisaggrsize",
-         "maximum number of components when disaggregating a quadratic constraint (<= 1: off)",
+         "maximum number of created constraints when disaggregating a quadratic constraint (<= 1: off)",
          &conshdlrdata->maxdisaggrsize, TRUE, 10, 1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/maxproprounds",
