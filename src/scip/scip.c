@@ -81,6 +81,7 @@
 #include "scip/scip.h"
 #include "lpi/lpi.h"
 
+#include "scip/scipcoreplugins.h"
 #include "scip/branch.h"
 #include "scip/conflict.h"
 #include "scip/cons.h"
@@ -710,6 +711,9 @@ SCIP_RETCODE SCIPcreate(
    SCIP_CALL( SCIPdialoghdlrCreate((*scip)->set, &(*scip)->dialoghdlr) );
    SCIP_CALL( SCIPclockCreate(&(*scip)->totaltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPsyncstoreCreate( &(*scip)->syncstore ) );
+
+   /* include additional core functionality */
+   SCIP_CALL( SCIPincludeCorePlugins(*scip) );
 
    SCIPclockStart((*scip)->totaltime, (*scip)->set);
    (*scip)->stat = NULL;
@@ -14941,6 +14945,7 @@ SCIP_RETCODE transformSols(
    )
 {
    SCIP_SOL** sols;
+   SCIP_SOL** scipsols;
    SCIP_SOL* sol;
    SCIP_Real* solvals;
    SCIP_Bool* solvalset;
@@ -14968,7 +14973,8 @@ SCIP_RETCODE transformSols(
     * order to ensure that the regarded solution in the copied array was not already freed when new solutions were added
     * and the worst solutions were freed.
     */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &sols, SCIPgetSols(scip), nsols) ); /*lint !e666*/
+   scipsols = SCIPgetSols(scip);
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &sols, scipsols, nsols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &solvals, ntransvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &solvalset, ntransvars) );
 
@@ -47739,7 +47745,7 @@ SCIP_RETCODE SCIPcreateRandom(
    assert(scip != NULL);
    assert(randnumgen != NULL);
 
-   modifiedseed = SCIPinitializeRandomSeed(scip, (int)initialseed);
+   modifiedseed = SCIPinitializeRandomSeed(scip, (int)(initialseed % INT_MAX));
 
    SCIP_CALL( SCIPrandomCreate(randnumgen, SCIPblkmem(scip), modifiedseed) );
 
@@ -47772,7 +47778,7 @@ void SCIPsetRandomSeed(
    assert(scip != NULL);
    assert(randnumgen != NULL);
 
-   modifiedseed = SCIPinitializeRandomSeed(scip, (int)seed);
+   modifiedseed = SCIPinitializeRandomSeed(scip, (int)(seed % INT_MAX));
 
    SCIPrandomSetSeed(randnumgen, modifiedseed);
 }

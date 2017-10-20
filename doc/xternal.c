@@ -7549,6 +7549,13 @@
  * @brief  methods for timing
  */
 
+/**@defgroup PublicBanditMethods Bandit Algorithms
+ * @ingroup MiscellaneousMethods
+ * @brief  methods for bandit algorithms
+ */
+
+
+
 /**@defgroup DebugSolutionMethods Debug Solution
  * @ingroup PUBLICCOREAPI
  * @brief methods to control the SCIP debug solution mechanism, see also \ref DEBUG
