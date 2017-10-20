@@ -4279,7 +4279,27 @@ SCIP_RETCODE presolveDisaggregateMarkComponent(
    return SCIP_OKAY;
 }
 
-/** for quadratic constraints that consists of a sum of quadratic terms, disaggregates the sum into a set of constraints by introducing auxiliary variables */
+/** for quadratic constraints that consists of a sum of quadratic terms, disaggregates the sum into a set of constraints by introducing auxiliary variables
+ *
+ * Assume the quadratic constraint can be written in the form
+ *   lhs <= b'x + sum_{k=1..p} q_k(x_k) <= rhs
+ * where x_k denotes a subset of the variables in x and these subsets are pairwise disjunct
+ * and q_k(.) is a quadratic form.
+ * p is selected as large as possible, but to be <= nmaxcomponents.
+ *
+ * Without additional scaling, the constraint is disaggregated into
+ *   lhs <= b'x + sum_k c_k z_k <= rhs
+ *   c_k z_k ~ q_k(x)
+ * where "~" is either "<=", "==", or ">=", depending on whether lhs or rhs are infinite.
+ * Further, c_k is chosen to be the maximal absolute value of the coefficients of the quadratic terms in q_k(x).
+ * This is done to ensure that z_k takes values with a similar magnitute as the variables in x_k (better for separation).
+ *
+ * However, a solution of this disaggregated system can violate the original constraint by (p+1)*epsilon
+ * (assuming unscaled violations are used, which is the default).
+ * Therefore, all constraints are scaled by p+1:
+ *   (p+1)*lhs <= (p+1)*b'x + (p+1) * sum_k c_k z_k <= (p+1) * rhs
+ *   (p+1)*c_k z_k ~ (p+1)*q_k(x)
+ */
 static
 SCIP_RETCODE presolveDisaggregate(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4297,6 +4317,7 @@ SCIP_RETCODE presolveDisaggregate(
    SCIP_CONS** auxconss;
    SCIP_VAR** auxvars;
    SCIP_Real* auxcoefs;
+   SCIP_Real scale;
    char name[SCIP_MAXSTRLEN];
 
    assert(scip != NULL);
@@ -4357,6 +4378,9 @@ SCIP_RETCODE presolveDisaggregate(
       return SCIP_OKAY;
    }
 
+   /* scale all new constraints (ncomponents+1 many) by ncomponents+1, so violations sum up to at most epsilon */
+   scale = ncomponents + 1.0;
+
    SCIP_CALL( SCIPallocBufferArray(scip, &auxconss, ncomponents) );
    SCIP_CALL( SCIPallocBufferArray(scip, &auxvars,  ncomponents) );
    SCIP_CALL( SCIPallocBufferArray(scip, &auxcoefs, ncomponents) );
@@ -4390,7 +4414,7 @@ SCIP_RETCODE presolveDisaggregate(
       assert(comp < ncomponents);
 
       /* add variable term to corresponding constraint */
-      SCIP_CALL( SCIPaddQuadVarQuadratic(scip, auxconss[comp], consdata->quadvarterms[i].var, consdata->quadvarterms[i].lincoef, consdata->quadvarterms[i].sqrcoef) );
+      SCIP_CALL( SCIPaddQuadVarQuadratic(scip, auxconss[comp], consdata->quadvarterms[i].var, scale * consdata->quadvarterms[i].lincoef, scale * consdata->quadvarterms[i].sqrcoef) );
 
       /* reduce coefficient of aux variable */
       if( !SCIPisZero(scip, consdata->quadvarterms[i].lincoef) && ABS(consdata->quadvarterms[i].lincoef) < auxcoefs[comp] )
@@ -4414,7 +4438,7 @@ SCIP_RETCODE presolveDisaggregate(
       assert(!SCIPisZero(scip, consdata->bilinterms[i].coef));
 
       SCIP_CALL( SCIPaddBilinTermQuadratic(scip, auxconss[comp], 
-            consdata->bilinterms[i].var1, consdata->bilinterms[i].var2, consdata->bilinterms[i].coef) );
+            consdata->bilinterms[i].var1, consdata->bilinterms[i].var2, scale * consdata->bilinterms[i].coef) );
 
       if( ABS(consdata->bilinterms[i].coef) < auxcoefs[comp] )
          auxcoefs[comp] = ABS(consdata->bilinterms[i].coef);
@@ -4432,6 +4456,22 @@ SCIP_RETCODE presolveDisaggregate(
    }
    assert(consdata->nquadvars == 0);
 
+   /* scale remaining linear variables and sides by scale */
+   for( i = 0; i < consdata->nlinvars; ++i )
+   {
+      SCIP_CALL( chgLinearCoefPos(scip, cons, i, scale * consdata->lincoefs[i]) );
+   }
+   if( !SCIPisInfinity(scip, -consdata->lhs) )
+   {
+      consdata->lhs *= scale;
+      assert(!SCIPisInfinity(scip, -consdata->lhs) );
+   }
+   if( !SCIPisInfinity(scip, consdata->rhs) )
+   {
+      consdata->rhs *= scale;
+      assert(!SCIPisInfinity(scip, consdata->rhs) );
+   }
+
    /* add auxiliary variables to auxiliary constraints
     * add aux vars and constraints to SCIP 
     * add aux vars to this constraint
@@ -4443,14 +4483,14 @@ SCIP_RETCODE presolveDisaggregate(
    {
       SCIP_CONSDATA* auxconsdata;
 
-      SCIP_CALL( SCIPaddLinearVarQuadratic(scip, auxconss[comp], auxvars[comp], -auxcoefs[comp]) );
+      SCIP_CALL( SCIPaddLinearVarQuadratic(scip, auxconss[comp], auxvars[comp], -scale * auxcoefs[comp]) );
 
       SCIP_CALL( SCIPaddVar(scip, auxvars[comp]) );
 
       SCIP_CALL( SCIPaddCons(scip, auxconss[comp]) );
       SCIPdebugPrintCons(scip, auxconss[comp], NULL);
 
-      SCIP_CALL( addLinearCoef(scip, cons, auxvars[comp], auxcoefs[comp]) );
+      SCIP_CALL( addLinearCoef(scip, cons, auxvars[comp], scale * auxcoefs[comp]) );
 
       /* mark that the constraint should not further be disaggregated */
       auxconsdata = SCIPconsGetData(auxconss[comp]);
