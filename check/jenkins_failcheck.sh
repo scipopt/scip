@@ -30,8 +30,7 @@ EMAILFROM="adm_timo <timo-admin@zib.de>"
 EMAILTO="adm_timo <timo-admin@zib.de>"
 
 # SCIP check files are check.TESTSET.SCIPVERSION.otherstuff.SETTING.{out,err,res,meta} (SCIPVERSION is of the form scip-VERSION)
-BBASEFILE="results/check.${TESTSET}.${SCIPVERSION}.*.${SETTING}"
-BASEFILE="check/${BBASEFILE}"
+BASEFILE="check/results/check.${TESTSET}.${SCIPVERSION}.*.${SETTING}"
 EVALFILE=`ls ${BASEFILE}[.0-9]*eval`
 # found no evalfile
 if [ "${EVALFILE}" == "" ]; then
