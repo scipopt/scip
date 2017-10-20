@@ -54,7 +54,7 @@
 #define DEFAULT_BACKTRACK          TRUE /**< use one level of backtracking if infeasibility is encountered? */
 #define DEFAULT_LPRESOLVEDOMCHGQUOT 0.15/**< percentage of immediate domain changes during probing to trigger LP resolve */
 #define DEFAULT_LPSOLVEFREQ           0 /**< LP solve frequency for diving heuristics */
-#define DEFAULT_ONLYLPBRANCHCANDS  TRUE /**< should only LP branching candidates be considered instead of the slower but
+#define DEFAULT_ONLYLPBRANCHCANDS FALSE /**< should only LP branching candidates be considered instead of the slower but
                                          *   more general constraint handler diving variable selection? */
 
 #define DEFAULT_ADDSOLUTION        TRUE /**< should the solution be added to the solution pool */
@@ -160,6 +160,9 @@ SCIP_DECL_HEUREXEC(heurExecConflictdiving) /*lint --e{715}*/
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    SCIP_DIVESET* diveset;
+   SCIP_Longint nconflictsfound;
+   SCIP_Real maxvarsfac;
+   int minmaxvars;
 
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
@@ -178,13 +181,33 @@ SCIP_DECL_HEUREXEC(heurExecConflictdiving) /*lint --e{715}*/
    if( heurtiming == SCIP_HEURTIMING_DURINGLPLOOP && SCIPgetDepth(scip) != 0 )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPsetCharParam(scip, "conflict/useinflp", 'd') );
-   SCIP_CALL( SCIPsetCharParam(scip, "conflict/useboundlp", 'd') );
+
+   if( !SCIPisParamFixed(scip, "conflict/maxvarsfac") )
+   {
+      SCIP_CALL( SCIPgetRealParam(scip, "conflict/maxvarsfac", &maxvarsfac) );
+      SCIP_CALL( SCIPsetRealParam(scip, "conflict/maxvarsfac", 0.05) );
+   }
+   if( !SCIPisParamFixed(scip, "conflict/minmaxvars") )
+   {
+      SCIP_CALL( SCIPgetIntParam(scip, "conflict/minmaxvars", &minmaxvars) );
+      SCIP_CALL( SCIPsetIntParam(scip, "conflict/minmaxvars", 15) );
+   }
+
+   nconflictsfound = SCIPgetNConflictConssFound(scip);
 
    SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible) );
 
-   SCIP_CALL( SCIPsetCharParam(scip, "conflict/useinflp", 'b') );
-   SCIP_CALL( SCIPsetCharParam(scip, "conflict/useboundlp", 'b') );
+//   if( *result != SCIP_DELAYED )
+//      printf("found %lld new conflicts\n", SCIPgetNConflictConssFound(scip) - nconflictsfound);
+
+   if( !SCIPisParamFixed(scip, "conflict/maxvarsfac") )
+   {
+      SCIP_CALL( SCIPsetRealParam(scip, "conflict/maxvarsfac", maxvarsfac) );
+   }
+   if( !SCIPisParamFixed(scip, "conflict/minmaxvars") )
+   {
+      SCIP_CALL( SCIPsetIntParam(scip, "conflict/minmaxvars", minmaxvars) );
+   }
 
    return SCIP_OKAY;
 }
@@ -204,6 +227,10 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
    SCIP_Real locksum;
    SCIP_Bool mayrounddown;
    SCIP_Bool mayroundup;
+   int nlocksup;
+   int nlocksdown;
+   int nsoftlocksup;
+   int nsoftlocksdown;
 
    rng = SCIPdivesetGetRandnumgen(diveset);
    assert(rng != NULL);
@@ -214,33 +241,68 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   softlocksum = SCIPvarGetNLocksSoftDown(cand) + SCIPvarGetNLocksSoftUp(cand);
-   locksum = SCIPvarGetNLocksDown(cand) + SCIPvarGetNLocksUp(cand);
+   nlocksup = SCIPvarGetNLocksUp(cand);
+   nlocksdown = SCIPvarGetNLocksDown(cand);
 
-   mayrounddown = (SCIPvarGetNLocksSoftDown(cand) == 0);
-   mayroundup = (SCIPvarGetNLocksSoftUp(cand) == 0);
+   nsoftlocksup = SCIPvarGetNLocksSoftUp(cand);
+   nsoftlocksdown = SCIPvarGetNLocksSoftDown(cand);
+
+   softlocksum = nsoftlocksup + nsoftlocksdown;
+   locksum = nlocksdown + nlocksup;
+
+   mayrounddown = (nsoftlocksdown == 0);
+   mayroundup = (nsoftlocksup == 0);
 
    /* variable can be rounded in exactly one direction */
    if( mayrounddown != mayroundup )
    {
-      *roundup = mayroundup;
-   }
-   /* variable can be rounded in both directions, look at the "normal" locks */
-   else if( mayroundup )
-   {
-      assert(mayrounddown);
-
       if( heurdata->maxviol )
-         *roundup = (SCIPvarGetNLocksUp(cand) >= SCIPvarGetNLocksDown(cand));
+         *roundup = mayrounddown;
       else
-         *roundup = (SCIPvarGetNLocksUp(cand) <= SCIPvarGetNLocksDown(cand));
+         *roundup = mayroundup;
    }
+   /* variable is locked in both directions */
+   else if( !mayroundup )
+   {
+      assert(!mayrounddown);
+
+      if( nsoftlocksup != nsoftlocksdown || nlocksup != nlocksdown )
+      {
+         if( nsoftlocksup != nsoftlocksdown )
+         {
+            *roundup = (nsoftlocksup > nsoftlocksdown);
+         }
+         else
+         {
+            assert(nlocksup != nlocksdown);
+            *roundup = (nlocksup > nlocksdown);
+         }
+
+         if( !heurdata->maxviol )
+            *roundup = !(*roundup);
+      }
+      else if( !SCIPisEQ(scip, candsfrac, 0.5) )
+         *roundup = (candsfrac > 0.5);
+      else
+         *roundup = (SCIPrandomGetInt(rng, 0, 1) == 1);
+   }
+   /* the variable is not locked by conflict constraints */
    else
    {
-      if( heurdata->maxviol )
-         *roundup = (SCIPvarGetNLocksSoftUp(cand) >= SCIPvarGetNLocksSoftDown(cand));
+      assert(nsoftlocksdown == 0 && nsoftlocksup == 0);
+
+//      if( nlocksup != nlocksdown )
+//      {
+//         if( heurdata->maxviol )
+//            *roundup = (nlocksup > nlocksdown);
+//         else
+//            *roundup = (nlocksup < nlocksdown);
+//      }
+//      else
+      if( !SCIPisEQ(scip, candsfrac, 0.5) )
+         *roundup = (candsfrac > 0.5);
       else
-         *roundup = (SCIPvarGetNLocksSoftUp(cand) <= SCIPvarGetNLocksSoftDown(cand));
+         *roundup = (SCIPrandomGetInt(rng, 0, 1) == 1);
    }
 
    if( *roundup )
@@ -260,24 +322,22 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
             return SCIP_INVALIDDATA; /*lint !e527*/
       } /*lint !e788*/
 
-      if( heurdata->maxviol )
-         *score = SCIPvarGetNLocksSoftUp(cand)/MAX(1.0, softlocksum)
-               + (LOCKFRAC + SCIPrandomGetReal(rng, MIN_RAND, MAX_RAND)) * SCIPvarGetNLocksUp(cand)/MAX(1.0, locksum);
+      if( nsoftlocksup > 0 )
+         *score = nsoftlocksup /* /MAX(1.0, softlocksum) */
+            + (LOCKFRAC + SCIPrandomGetReal(rng, MIN_RAND, MAX_RAND)) * nlocksup/MAX(1.0, locksum);
       else
-         *score = SCIPvarGetNLocksSoftDown(cand)/MAX(1.0, softlocksum)
-               + (LOCKFRAC + SCIPrandomGetReal(rng, MIN_RAND, MAX_RAND)) * SCIPvarGetNLocksDown(cand)/MAX(1.0, locksum);
+         *score = LOCKFRAC * (nlocksup / MAX(1.0, locksum));
    }
    else
    {
       if ( divetype == SCIP_DIVETYPE_SOS1VARIABLE && SCIPisFeasNegative(scip, candsol) )
          candsfrac = 1.0 - candsfrac;
 
-      if( heurdata->maxviol )
-         *score = SCIPvarGetNLocksSoftDown(cand)/MAX(1.0, softlocksum)
-               + (LOCKFRAC + SCIPrandomGetReal(rng, MIN_RAND, MAX_RAND)) * SCIPvarGetNLocksDown(cand)/MAX(1.0, locksum);
+      if( nsoftlocksdown > 0 )
+         *score = nsoftlocksdown /* /MAX(1.0, softlocksum) */
+               + (LOCKFRAC + SCIPrandomGetReal(rng, MIN_RAND, MAX_RAND)) * nlocksdown/MAX(1.0, locksum);
       else
-         *score = SCIPvarGetNLocksSoftUp(cand)/MAX(1.0, softlocksum)
-               + (LOCKFRAC + SCIPrandomGetReal(rng, MIN_RAND, MAX_RAND)) * SCIPvarGetNLocksUp(cand)/MAX(1.0, locksum);
+         *score = LOCKFRAC * (nlocksdown / MAX(1.0, locksum));
    }
 
    /* penalize too less softlocks */
@@ -295,6 +355,8 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
    /* penalize the variable if it may be rounded. */
 //   if( mayrounddown || mayroundup )
 //      (*score) -= SCIPgetNLPRows(scip);
+
+//   printf("cand <%s> has score: %.10g and slocks [%d,%d]\n", SCIPvarGetName(cand), *score, nsoftlocksdown, nsoftlocksup);
 
    /* check, if candidate is new best candidate: prefer unroundable candidates in any case */
    assert( (0.0 < candsfrac && candsfrac < 1.0) || SCIPvarIsBinary(cand) || divetype == SCIP_DIVETYPE_SOS1VARIABLE );
