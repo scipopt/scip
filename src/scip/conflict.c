@@ -2585,11 +2585,10 @@ SCIP_RETCODE propagateLongProof(
       SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp, branchcand, \
          eventqueue, cliquetable, var, val, rhs-resminact, proofset->conflicttype) );
 
-      /* get the new minimal activity
-       *
-       * todo this could by more efficient if we update the current activity w.r.t the old and new bound
+      /* the minimal activity should stay unchanged because we tightened the bound that doesn't contribute to the
+       * minimal activity
        */
-      minact = getMinActivity(transprob, proofset->aggrrow, NULL, NULL);
+      assert(SCIPsetIsEQ(set, minact, getMinActivity(transprob, proofset->aggrrow, NULL, NULL));
    }
 
    return SCIP_OKAY;
