@@ -4443,14 +4443,14 @@ SCIP_RETCODE presolveDisaggregate(
    {
       SCIP_CONSDATA* auxconsdata;
 
-      SCIP_CALL( SCIPaddLinearVarQuadratic(scip, auxconss[comp], auxvars[comp], -auxcoefs[comp] * ncomponents) );
+      SCIP_CALL( SCIPaddLinearVarQuadratic(scip, auxconss[comp], auxvars[comp], -auxcoefs[comp]) );
 
       SCIP_CALL( SCIPaddVar(scip, auxvars[comp]) );
 
       SCIP_CALL( SCIPaddCons(scip, auxconss[comp]) );
       SCIPdebugPrintCons(scip, auxconss[comp], NULL);
 
-      SCIP_CALL( addLinearCoef(scip, cons, auxvars[comp], auxcoefs[comp] * ncomponents) );
+      SCIP_CALL( addLinearCoef(scip, cons, auxvars[comp], auxcoefs[comp]) );
 
       /* mark that the constraint should not further be disaggregated */
       auxconsdata = SCIPconsGetData(auxconss[comp]);
