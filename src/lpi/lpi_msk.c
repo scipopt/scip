@@ -2828,8 +2828,9 @@ SCIP_Bool SCIPlpiWasSolved(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
+   MSKbooleant exists;
    MSKsolstae solsta;
-      MSKrescodee res;
+   MSKrescodee res;
 #if MSK_VERSION_MAJOR < 7
    MSKprostae prosta;
 #endif
@@ -2851,7 +2852,7 @@ SCIP_Bool SCIPlpiWasSolved(
    res = MSK_getsolutionstatus(lpi->task, MSK_SOL_BAS, &prosta, &solsta);
 #endif
 
-   if ( restat != MSK_RES_OK )
+   if ( res != MSK_RES_OK )
       return FALSE;
 
    return (solsta != MSK_SOL_STA_UNKNOWN);
