@@ -2594,7 +2594,7 @@ SCIP_RETCODE propagateLongProof(
       /* the minimal activity should stay unchanged because we tightened the bound that doesn't contribute to the
        * minimal activity
        */
-      assert(SCIPsetIsEQ(set, minact, getMinActivity(transprob, proofset->aggrrow, NULL, NULL));
+      assert(SCIPsetIsEQ(set, minact, getMinActivity(transprob, proofset->aggrrow, NULL, NULL)));
    }
 
    return SCIP_OKAY;
