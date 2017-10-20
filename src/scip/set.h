@@ -28,6 +28,7 @@
 
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
+#include "scip/type_bandit.h"
 #include "scip/type_set.h"
 #include "scip/type_stat.h"
 #include "scip/type_clock.h"
@@ -945,6 +946,20 @@ SCIP_RETCODE SCIPsetIncludeExternalCode(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of external code */
    const char*           description         /**< description of external code, can be NULL */
+   );
+
+/** inserts bandit virtual function table into set */
+extern
+SCIP_RETCODE SCIPsetIncludeBanditvtable(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_BANDITVTABLE*    banditvtable        /**< bandit algorithm virtual function table */
+   );
+
+/** returns the bandit virtual function table of the given name, or NULL if not existing */
+extern
+SCIP_BANDITVTABLE* SCIPsetFindBanditvtable(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of bandit algorithm virtual function table */
    );
 
 /** calls init methods of all plugins */
