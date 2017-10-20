@@ -1217,6 +1217,19 @@ SCIP_RETCODE redLoopPc(
       degnelims = 0;
       brednelims = 0;
 
+      if( sd || extensive )
+      {
+         SCIP_CALL( sdpc_reduction(scip, g, vnoi, heap, state, vbase, nodearrint, nodearrint2, &sdnelims) );
+         if( sdnelims <= reductbound )
+            sd = FALSE;
+
+         printf("SDpc: %d \n", sdnelims);
+
+         SCIPdebugMessage("SDpc: %d \n", sdnelims);
+         if( SCIPgetTotalTime(scip) > timelimit )
+            break;
+      }
+
       if( sdc || extensive )
       {
          SCIP_CALL( sdsp_reduction(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &sdcnelims,
@@ -1228,20 +1241,6 @@ SCIP_RETCODE redLoopPc(
          printf("SDsp: %d \n", sdcnelims);
 
          SCIPdebugMessage("SDsp: %d \n", sdcnelims);
-         if( SCIPgetTotalTime(scip) > timelimit )
-            break;
-      }
-
-      if( sd || extensive )
-      {
-         SCIP_CALL( sdpc_reduction(scip, g, vnoi, heap, state, vbase, nodearrint, nodearrint2, &sdnelims) );
-         if( sdnelims <= reductbound )
-            sd = FALSE;
-
-         printf("SDpc: %d \n", sdnelims);
-
-
-         SCIPdebugMessage("SDpc: %d \n", sdnelims);
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
       }
@@ -1262,6 +1261,7 @@ SCIP_RETCODE redLoopPc(
             SCIP_CALL( sdpc_reduction(scip, g, vnoi, heap, state, vbase, nodearrint, nodearrint2, &sdnelims) );
             SCIP_CALL( sdsp_reduction(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &sdcnelims, STP_RED_SDSPBOUND, NULL) );
          }
+         printf("BD3: %d \n", bd3nelims);
 
          SCIPdebugMessage("bd3: %d \n", bd3nelims);
          if( SCIPgetTotalTime(scip) > timelimit )

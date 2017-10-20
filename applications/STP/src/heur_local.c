@@ -2160,7 +2160,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
       !(strcmp(SCIPheurGetName(SCIPsolGetHeur(newsol)), "rec") == 0 ||
          strcmp(SCIPheurGetName(SCIPsolGetHeur(newsol)), "TM") == 0) )
    {
-      int nnodes = graph->knots;
+      const int nnodes = graph->knots;
       STP_Bool* steinertree;
       SCIP_CALL( SCIPallocBufferArray(scip, &steinertree, nnodes) );
       assert(graph_sol_valid(scip, graph, results));

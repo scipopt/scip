@@ -763,7 +763,7 @@ SCIP_Bool graph_pc_term2edgeConsistent(
 
       if( Is_pterm(g->term[i]) && i != g->source )
       {
-         int k;
+         int k = -1;
          int e;
 
          for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
@@ -773,6 +773,7 @@ SCIP_Bool graph_pc_term2edgeConsistent(
                break;
          }
          assert(e != EAT_LAST);
+         assert(k >= 0);
 
          if( g->term2edge[i] != e )
          {
