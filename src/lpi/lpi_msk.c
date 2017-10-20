@@ -760,6 +760,14 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    MSKboundkeye* bkc;
    MSKboundkeye* bkx;
 
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
+
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
@@ -829,9 +837,21 @@ SCIP_RETCODE SCIPlpiAddCols(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {  /*lint --e{715}*/
+#if MSK_VERSION_MAJOR < 7
+   const int* aptrb;
+#endif
+
    int* aptre;
    MSKboundkeye* bkx;
    int oldcols;
+
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
 
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
@@ -995,6 +1015,14 @@ SCIP_RETCODE SCIPlpiAddRows(
    int* aptre;
    MSKboundkeye* bkc;
    int oldrows;
+
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
 
    assert(MosekEnv != NULL);
    assert(lpi != NULL);

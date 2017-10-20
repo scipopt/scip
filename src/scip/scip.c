@@ -24403,7 +24403,7 @@ SCIP_RETCODE SCIPcalcCliquePartition(
    /* early abort if no cliques are present */
    if( SCIPgetNCliques(scip) == 0 )
    {
-      for( i = nvars - 1; i >= 0; --i )
+      for( i = 0; i < nvars; ++i )
          cliquepartition[i] = i;
 
       *ncliques = nvars;
