@@ -2382,11 +2382,29 @@ SCIP_RETCODE tightenSingleVar(
             SCIPvarGetName(var), (boundtype == SCIP_BOUNDTYPE_LOWER ? SCIPvarGetLbGlobal(var) : SCIPvarGetUbGlobal(var)),
             newbound);
 
-      SCIP_CALL( SCIPnodeAddBoundchg(tree->root, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, \
-            eventqueue, cliquetable, var, newbound, boundtype, FALSE) );
+      if( lp->strongbranching )
+      {
+         SCIP_CONS* cons;
+         char name[SCIP_MAXSTRLEN];
 
-      /* mark the node in the repropdepth to be propagated again */
-      SCIPnodePropagateAgain(tree->path[0], set, stat, tree);
+         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "pc_fix_%s", SCIPvarGetName(var));
+
+         SCIP_CALL( SCIPcreateConsLinear(set->scip, &cons, name, 0, NULL, NULL, newbound, newbound,
+               FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+
+         SCIP_CALL( SCIPaddCoefLinear(set->scip, cons, var, 1.0) );
+
+         SCIP_CALL( SCIPprobAddCons(transprob, set, stat, cons) );
+         SCIP_CALL( SCIPconsRelease(&cons, blkmem, set) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPnodeAddBoundchg(tree->root, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, \
+               eventqueue, cliquetable, var, newbound, boundtype, FALSE) );
+
+         /* mark the node in the repropdepth to be propagated again */
+         SCIPnodePropagateAgain(tree->path[0], set, stat, tree);
+      }
    }
 
    ++conflict->nglbchgbds;
