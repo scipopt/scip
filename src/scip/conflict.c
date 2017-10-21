@@ -913,8 +913,8 @@ void proofsetFree(
    assert(*proofset != NULL);
    assert(blkmem != NULL);
 
-   BMSfreeBlockMemoryArray(blkmem, &(*proofset)->vals, (*proofset)->size);
-   BMSfreeBlockMemoryArray(blkmem, &(*proofset)->inds, (*proofset)->size);
+   BMSfreeBlockMemoryArrayNull(blkmem, &(*proofset)->vals, (*proofset)->size);
+   BMSfreeBlockMemoryArrayNull(blkmem, &(*proofset)->inds, (*proofset)->size);
    BMSfreeBlockMemory(blkmem, proofset);
    (*proofset) = NULL;
 }
