@@ -203,7 +203,7 @@ struct BilinearEstimator
    unsigned int          nunderest;         /**< number of constraints that require to underestimate xy */
    unsigned int          noverest;          /**< number of constraints that require to overestimate xy */
 
-   SCIP_Real             lastimprfac;
+   SCIP_Real             lastimprfac;       /**< last achieved improvement factor */
 
    SCIP_Real             score;             /**< score of each bilinear term */
    int                   nupdates;          /**< total number of score updates */
@@ -256,14 +256,14 @@ struct SCIP_ConshdlrData
    BILINESTIMATOR*       bilinestimators;    /**< array containing all required information for using stronger estimators for each bilinear term in all quadratic constraints */
    int                   nbilinterms;        /**< number of bilinear terms in all quadratic constraints */
    int                   bilinlpiterlim;     /**< total LP iteration limit for computing linear inequalities for all bilinear terms (-1: no limit) */
-   int                   nodesolvedeventfilterpos; /**< filter position of new solution event handler, if caught */
+   int                   nodesolvedeventfilterpos; /**< filter position of node solved event handler, if caught */
 
    SCIP_Bool             usebilinineqroot;   /**< should linear inequalities for obtaining stronger envelopes for bilinear terms be computed in the root node? */
-   SCIP_Bool             usebilinineqbranch; /**< should linear inequalities be consindered when computing the branching scores for bilinear terms? */
+   SCIP_Bool             usebilinineqbranch; /**< should linear inequalities be considered when computing the branching scores for bilinear terms? */
    SCIP_Bool             solvedbilinineqroot; /**< did we already try to compute valid linear inequalities in the root node? */
    SCIP_Bool             storedbilinearterms; /**< did we already try to store all bilinear terms? */
 
-   SCIP_Real             minscorebilinterms; /**< minimal required score in order to use linear inequalities for tighter bilinear relaxations*/
+   SCIP_Real             minscorebilinterms; /**< minimal required score in order to use linear inequalities for tighter bilinear relaxations */
    int                   bilinineqmaxseparounds; /**< maximum number of separation rounds to use linear inequalities for the bilinear term relaxation in a local node */
 };
 
@@ -5549,9 +5549,7 @@ SCIP_RETCODE storeAllBilinearTerms(
          assert(consdata->bilinterms[i].var1 != consdata->bilinterms[i].var2);
 
          /* add xy */
-         bilinterms[pos].var1 = consdata->bilinterms[i].var1;
-         bilinterms[pos].var2 = consdata->bilinterms[i].var2;
-         bilinterms[pos].coef = consdata->bilinterms[i].coef;
+         bilinterms[pos] = consdata->bilinterms[i];
          bilincons[pos] = conss[c];
          bilinpos[pos] = i;
          ++pos;
@@ -5816,7 +5814,7 @@ SCIP_RETCODE solveBilinearLP(
 
    assert(xcoef != NULL);
    assert(ycoef != NULL);
-   assert(constant!= NULL);
+   assert(constant != NULL);
    assert(SCIPinProbing(scip));
 
    *xcoef = SCIP_INVALID;
@@ -5902,7 +5900,7 @@ SCIP_RETCODE solveBilinearLP(
    SCIP_CALL( SCIPreleaseRow(scip, &row) );
    SCIP_CALL( SCIPbacktrackProbing(scip, 0) );
 
-   /* reset objective function and row */
+   /* reset objective function */
    SCIP_CALL( SCIPchgVarObjProbing(scip, x, 0.0) );
 
    return SCIP_OKAY;
@@ -7194,8 +7192,7 @@ void updateBilinearRelaxation(
       || SCIPisFeasLE(scip, refy, lby) || SCIPisFeasGE(scip, refy, uby) )
       return;
 
-   /*
-    * due to the feasibility tolerances of the LP and NLP solver, it might possible that the reference point is
+   /* due to the feasibility tolerances of the LP and NLP solver, it might possible that the reference point is
     * violating the linear inequalities; to ensure that we compute a valid underestimate, we relax the linear
     * inequality by changing its constant part
     */
@@ -7252,11 +7249,9 @@ void updateBilinearRelaxation(
 	 }
       }
    }
-
-   return;
 }
 
-/* returns the interiority of a reference point w.r.t. local bounds */
+/* returns the interiority of a reference point w.r.t. given bounds */
 static
 SCIP_Real getInteriority(
    SCIP_Real            lbx,                /**< lower bound of the first variable */
