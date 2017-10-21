@@ -31,6 +31,23 @@ EMAILTO="adm_timo <timo-admin@zib.de>"
 
 # SCIP check files are check.TESTSET.SCIPVERSION.otherstuff.SETTING.{out,err,res,meta} (SCIPVERSION is of the form scip-VERSION)
 BASEFILE="check/results/check.${TESTSET}.${SCIPVERSION}.*.${SETTING}"
+EVALFILE=`ls ${BASEFILE}[.0-9]*eval`
+# found no evalfile
+if [ "${EVALFILE}" == "" ]; then
+    EVALFILE="check/results/check.${TESTSET}.fscip.*.${SETTING}"
+fi
+# found no evalfile
+if [ "${EVALFILE}" == "" ]; then
+    SUBJECT="ERROR [BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING=$SETTING] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH]"
+    echo -e "Aborting because the .eval file cannot be found." | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+    exit 1
+fi
+# found more than one evalfile matching the pattern
+if [ `wc -w <<< ${EVALFILE}` > 1 ]; then
+    SUBJECT="ERROR [BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING=$SETTING] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH]"
+    echo -e "Aborting because there were more than one .eval files found.\n\n After fixing this run\ncd `pwd`\nPERFORMANCE=$PERFORMANCE SCIPVERSION=$SCIPVERSION SETTING=$SETTING LPS=$LPS GITHASH=$GITHASH OPT=$OPT TESTSET=$TESTSET ./jenkins_failcheck.sh\n" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+    exit 1
+fi
 
 # evaluate the run and upload it to rubberband
 echo "Evaluating the run and uploading it to rubberband."
