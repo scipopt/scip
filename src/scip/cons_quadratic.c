@@ -11708,7 +11708,7 @@ SCIP_RETCODE enforceConstraint(
 
 /** checks which of the variable bounds can be tightened by using a linear inequality xcoef * x <= ycoef * y + constant */
 static
-SCIP_RETCODE checkBoundsBilinVars(
+void checkBoundsBilinVars(
    SCIP*                 scip,              /**< SCIP data structure */
    SCIP_VAR*             x,                 /**< first variable */
    SCIP_VAR*             y,                 /**< second variable */
@@ -11735,7 +11735,7 @@ SCIP_RETCODE checkBoundsBilinVars(
 
    /* we could not find an inequality -> skip */
    if( xcoef == SCIP_INVALID ) /*lint !e777*/
-      return SCIP_OKAY;
+      return;
 
    assert(ycoef != SCIP_INVALID); /*lint !e777*/
    assert(constant != SCIP_INVALID); /*lint !e777*/
@@ -11773,7 +11773,7 @@ SCIP_RETCODE checkBoundsBilinVars(
       *successx = SCIPisLbBetter(scip, bound, lbx, ubx);
    }
 
-   return SCIP_OKAY;
+   return;
 }
 
 /** helper function to return the coordinates of the diagonals corner point; indices correspond to the following
@@ -11977,7 +11977,7 @@ SCIP_RETCODE computeIneqBilinTerms(
          iterused += SCIPgetNLPIterations(scip);
 
           /* check which variable bounds can be tightened */
-          SCIP_CALL( checkBoundsBilinVars(scip, x, y, xcoef, ycoef, constant, &tightenx, &tighteny) );
+          checkBoundsBilinVars(scip, x, y, xcoef, ycoef, constant, &tightenx, &tighteny);
 
          /* check whether to resolve the LP with tighter variable bounds */
          if( tightenx )
