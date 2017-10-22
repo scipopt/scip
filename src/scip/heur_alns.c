@@ -1799,7 +1799,8 @@ SCIP_RETCODE determineLimits(
    if( solvelimits->timelimit <= 0.0 || solvelimits->memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
       *runagain = FALSE;
 
-   nodesquot = (SCIPheurGetNBestSolsFound(heur) + 1.0)/(SCIPheurGetNCalls(heur) + 1.0);
+   nodesquot = heurdata->nodesquot;
+   nodesquot *= (SCIPheurGetNBestSolsFound(heur) + 1.0)/(SCIPheurGetNCalls(heur) + 1.0);
 
    /* calculate the search node limit of the heuristic  */
    solvelimits->nodelimit = (SCIP_Longint)(nodesquot * SCIPgetNNodes(scip));
