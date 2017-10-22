@@ -11706,7 +11706,7 @@ SCIP_RETCODE enforceConstraint(
    return SCIP_OKAY;
 }
 
-/** checks which of the variable bounds can be tightened by using a linear inequality */
+/** checks which of the variable bounds can be tightened by using a linear inequality xcoef * x <= ycoef * y + constant */
 static
 SCIP_RETCODE checkBoundsBilinVars(
    SCIP*                 scip,              /**< SCIP data structure */
@@ -11723,6 +11723,7 @@ SCIP_RETCODE checkBoundsBilinVars(
    SCIP_Real ubx;
    SCIP_Real lby;
    SCIP_Real uby;
+   SCIP_Real bound;
 
    assert(x != NULL);
    assert(y != NULL);
@@ -11744,27 +11745,31 @@ SCIP_RETCODE checkBoundsBilinVars(
    lby = SCIPvarGetLbGlobal(y);
    uby = SCIPvarGetUbGlobal(y);
 
-   /* ycoef {>,<} 0 => {lower,upper} bound on y */
+   /* ycoef * y >= xcoef * x - constant */
    if( SCIPisFeasPositive(scip, ycoef) )
    {
-      SCIP_Real bound = MIN((xcoef*lbx-constant)/ycoef, (xcoef*ubx-constant)/ycoef);
+      /* ycoef > 0 => y >= xcoef/ycoef * x - constant/ycoef >= bound => lower bound on y */
+      bound = (xcoef * (xcoef < 0.0 ? ubx : lbx) - constant) / ycoef;
       *successy = SCIPisLbBetter(scip, bound, lby, uby);
    }
    else if( SCIPisFeasNegative(scip, ycoef) )
    {
-      SCIP_Real bound = MAX((xcoef*lbx-constant)/ycoef, (xcoef*ubx-constant)/ycoef);
+      /* ycoef < 0 => y <= xcoef/ycoef * x - constant/ycoef >= bound => upper bound on y */
+      bound = (xcoef * (xcoef < 0.0 ? ubx : lbx) - constant) / ycoef;
       *successy = SCIPisUbBetter(scip, bound, lby, uby);
    }
 
-   /* xcoef >,<} 0 => {upper,lower} bound on y */
+   /* xcoef * x <= ycoef * y + constant */
    if( SCIPisFeasPositive(scip, xcoef) )
    {
-      SCIP_Real bound = MAX((ycoef*lby+constant)/xcoef, (ycoef*uby+constant)/xcoef);
+      /* xcoef > 0 => x <= ycoef/xcoef * x + constant/xcoef >= bound => upper bound on y */
+      bound = (ycoef * (ycoef < 0.0 ? lby : uby) + constant) / xcoef;
       *successx = SCIPisUbBetter(scip, bound, lbx, ubx);
    }
    else if( SCIPisFeasNegative(scip, xcoef) )
    {
-      SCIP_Real bound = MIN((ycoef*lby+constant)/xcoef, (ycoef*uby+constant)/xcoef);
+      /* xcoef < 0 => x >= ycoef/xcoef * y + constant/xcoef >= bound => lower bound on y */
+      bound = (ycoef * (ycoef < 0.0 ? lby : uby) + constant) / xcoef;
       *successx = SCIPisLbBetter(scip, bound, lbx, ubx);
    }
 
