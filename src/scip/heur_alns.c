@@ -1800,7 +1800,7 @@ SCIP_RETCODE determineLimits(
       *runagain = FALSE;
 
    nodesquot = heurdata->nodesquot;
-   nodesquot = (SCIPheurGetNBestSolsFound(heur) + 1.0)/(SCIPheurGetNCalls(heur) + 1.0);
+   nodesquot *= (SCIPheurGetNBestSolsFound(heur) + 1.0)/(SCIPheurGetNCalls(heur) + 1.0);
 
    /* calculate the search node limit of the heuristic  */
    solvelimits->nodelimit = (SCIP_Longint)(nodesquot * SCIPgetNNodes(scip));
