@@ -542,7 +542,7 @@ void decreaseTargetNodeLimit(
    SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
-   heurdata->targetnodes = (SCIP_Longint)(heurdata->targetnodes * heurdata->targetnodefactor);
+   heurdata->targetnodes = (SCIP_Longint)(heurdata->targetnodes / heurdata->targetnodefactor);
    heurdata->targetnodes = MAX(heurdata->targetnodes, heurdata->minnodes);
 }
 
@@ -1773,6 +1773,8 @@ SCIP_RETCODE determineLimits(
 {
    SCIP_HEURDATA* heurdata;
    SCIP_Real initfactor;
+   SCIP_Real nodesquot;
+
    assert(scip != NULL);
    assert(heur != NULL);
    assert(solvelimits != NULL);
@@ -1797,11 +1799,15 @@ SCIP_RETCODE determineLimits(
    if( solvelimits->timelimit <= 0.0 || solvelimits->memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
       *runagain = FALSE;
 
+   nodesquot = heurdata->nodesquot;
+   nodesquot = (SCIPheurGetNBestSolsFound(heur) + 1.0)/(SCIPheurGetNCalls(heur) + 1.0);
+
    /* calculate the search node limit of the heuristic  */
-   solvelimits->nodelimit = (SCIP_Longint)(heurdata->nodesquot * SCIPgetNNodes(scip));
+   solvelimits->nodelimit = (SCIP_Longint)(nodesquot * SCIPgetNNodes(scip));
    solvelimits->nodelimit += heurdata->nodesoffset;
    solvelimits->nodelimit -= heurdata->usednodes;
    solvelimits->nodelimit -= 100 * SCIPheurGetNCalls(heur);
+   solvelimits->nodelimit = MIN(heurdata->maxnodes, solvelimits->nodelimit);
 
    /* use a smaller budget if not all neighborhoods have been initialized yet */
    assert(heurdata->ninitneighborhoods >= 0);
@@ -2052,6 +2058,9 @@ SCIP_RETCODE setupSubScip(
       }
       cutoff = MIN(upperbound, cutoff);
 
+      if( SCIPisObjIntegral(scip) )
+         cutoff = SCIPfloor(scip, cutoff);
+
       SCIPdebugMsg(scip, "Sub-SCIP cutoff: %15.9" SCIP_REAL_FORMAT " (%15.9" SCIP_REAL_FORMAT " in original space)\n",
          cutoff, SCIPretransformObj(scip, cutoff));
 
@@ -2098,7 +2107,7 @@ SCIP_RETCODE setupSubScip(
    }
 
    SCIPdebugMsg(scip, "Solve Limits: %lld (%lld) nodes (stall nodes), %.1f sec., %d sols\n",
-         solvelimits->nodelimit, solvelimits->nodelimit / 2, solvelimits->timelimit, heurdata->nsolslim);
+         solvelimits->nodelimit, solvelimits->stallnodes, solvelimits->timelimit, heurdata->nsolslim);
 
    return SCIP_OKAY;
 }
@@ -2149,7 +2158,7 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
    run = TRUE;
    /** check if budget allows a run of the next selected neighborhood */
    SCIP_CALL( determineLimits(scip, heur, &solvelimits, &run) );
-   SCIPdebugMsg(scip, "Budget check: %" SCIP_LONGINT_FORMAT " %s\n", solvelimits.nodelimit, run ? "passed" : "must wait");
+   SCIPdebugMsg(scip, "Budget check: %" SCIP_LONGINT_FORMAT " (%" SCIP_LONGINT_FORMAT ") %s\n", solvelimits.nodelimit, heurdata->targetnodes, run ? "passed" : "must wait");
 
    if( ! run )
       return SCIP_OKAY;
@@ -2422,12 +2431,17 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
       /** determine the success of this neighborhood, and update the target fixing rate for the next time */
       updateNeighborhoodStats(scip, &runstats[banditidx], heurdata->neighborhoods[banditidx], subscipstatus[banditidx]);
 
+      SCIPdebugMsg(scip, "Status of sub-SCIP run: %d\n", subscipstatus[banditidx]);
+
       /* adjust the fixing rate for this neighborhood
        * make no adjustments in all rewards mode, because this only affects 1 of 8 heuristics
        */
       if( heurdata->adjustfixingrate && ! allrewardsmode )
+      {
+         SCIPdebugMsg(scip, "Update fixing rate: %.2f\n", heurdata->neighborhoods[banditidx]->fixingrate.targetfixingrate);
          updateFixingRate(scip, heurdata->neighborhoods[banditidx], subscipstatus[banditidx], &runstats[banditidx]);
-
+         SCIPdebugMsg(scip, "New fixing rate: %.2f\n", heurdata->neighborhoods[banditidx]->fixingrate.targetfixingrate);
+      }
       /* similarly, update the minimum improvement for the ALNS heuristic
        * make no adjustments in all rewards mode
        */
