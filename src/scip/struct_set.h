@@ -322,7 +322,7 @@ struct SCIP_Set
    SCIP_Real             lp_resolveiterfac;  /**< factor of average LP iterations that is used as LP iteration limit
                                               *   for LP resolve (-1: unlimited) */
    int                   lp_resolveitermin;  /**< minimum number of iterations that are allowed for LP resolve */
-   int                   lp_solutionpolishing;/**< LP solution polishing method (0: disabled, 1: only root, 2: always) */
+   int                   lp_solutionpolishing;/**< LP solution polishing method (0: disabled, 1: only root, 2: always, 3: only probing and diving) */
    int                   lp_refactorinterval;/**< LP refactorization interval (0: automatic) */
 
    /* NLP settings */

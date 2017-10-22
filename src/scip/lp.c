@@ -11268,7 +11268,8 @@ SCIP_RETCODE lpSolveStable(
    itlimishard = (itlim == harditlim);
 
    /* check whether solution polishing should be used */
-   if( lp->lpihaspolishing && (set->lp_solutionpolishing == 2 || (set->lp_solutionpolishing == 1 && stat->nnodes == 1 && !lp->probing)))
+   if( lp->lpihaspolishing && (set->lp_solutionpolishing == 2 || (set->lp_solutionpolishing == 1 && stat->nnodes == 1 && !lp->probing)
+         || (set->lp_solutionpolishing == 3 && ((lp->probing && !lp->strongbranchprobing) || lp->diving))) )
    {
       usepolishing = TRUE;
       if( lp->updateintegrality )
