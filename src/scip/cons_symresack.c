@@ -1103,7 +1103,11 @@ SCIP_RETCODE orbisackUpgrade(
    /* check whether permutation is a composition of 2-cycles */
    for (i = 0; i < nvars; ++i)
    {
-      if ( perm[perm[i]] != i || ! SCIPvarIsBinary(inputvars[i]) )
+      /* ignore non-binary variables */
+      if ( ! SCIPvarIsBinary(inputvars[i]) )
+         continue;
+
+      if ( perm[perm[i]] != i )
       {
          *success = FALSE;
          break;
