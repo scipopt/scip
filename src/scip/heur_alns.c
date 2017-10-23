@@ -1223,8 +1223,8 @@ SCIP_Real getVariableRedcostScore(
 
    score = redcost * (refsolval - bestbound);
 
-   /* slight negative scores are possible due to numerical inaccuracies */
-   assert(! SCIPisNegative(scip, score));
+   /* slight negative scores are possible due to numerical inaccuracies or if local LP solutions are used */
+   assert(uselocalredcost || ! SCIPisNegative(scip, score));
    score = MAX(score, 0.0);
 
    return score;
@@ -1315,6 +1315,8 @@ SCIP_RETCODE alnsFixMoreVariables(
    SCIP_Real* redcostscores;
    SCIP_Real* solvals;
    SCIP_RANDNUMGEN* rng;
+   SCIP_VAR** unfixedvars;
+   SCIP_Bool* isfixed;
    int* distances;
    int* perm;
    SCIP_Real* randscores;
@@ -1324,6 +1326,7 @@ SCIP_RETCODE alnsFixMoreVariables(
    int nvars;
    int b;
    int nvarstoadd;
+   int nunfixedvars;
 
    assert(scip != NULL);
    assert(varbuf != NULL);
@@ -1350,7 +1353,7 @@ SCIP_RETCODE alnsFixMoreVariables(
    if( nvarstoadd == 0 )
       return SCIP_OKAY;
 
-   varprio.usedistances = heurdata->usedistances;
+   varprio.usedistances = heurdata->usedistances && (*nfixings >= 1);
    varprio.useredcost = heurdata->useredcost;
    varprio.scip = scip;
    rng = SCIPbanditGetRandnumgen(heurdata->bandit);
@@ -1361,9 +1364,11 @@ SCIP_RETCODE alnsFixMoreVariables(
    SCIP_CALL( SCIPallocBufferArray(scip, &distances, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &redcostscores, nbinintvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &solvals, nbinintvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &isfixed, nbinintvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &unfixedvars, nbinintvars) );
 
    /* initialize variable graph distances from already fixed variables */
-   if( *nfixings >= 1 && heurdata->usedistances )
+   if( varprio.usedistances )
    {
       SCIP_CALL( SCIPvariablegraphBreadthFirst(scip, NULL, varbuf, *nfixings, distances, INT_MAX, INT_MAX, ntargetfixings) );
    }
@@ -1373,51 +1378,70 @@ SCIP_RETCODE alnsFixMoreVariables(
       BMSclearMemoryArray(distances, nbinintvars);
    }
 
-   /* todo filter already selected variables directly without penalty */
-   varprio.randscores = randscores;
-   varprio.distances = distances;
-   varprio.redcostscores = redcostscores;
+   BMSclearMemoryArray(isfixed, nbinintvars);
+
+   /* mark binary and integer variables if they are fixed */
+   for( b = 0; b < *nfixings; ++b )
+   {
+      int probindex;
+
+      assert(varbuf[b] != NULL);
+      probindex = SCIPvarGetProbindex(varbuf[b]);
+      assert(probindex >= 0);
+
+      if( probindex < nbinintvars )
+         isfixed[probindex] = TRUE;
+   }
+
 
    SCIP_CALL( SCIPgetSolVals(scip, refsol, nbinintvars, vars, solvals) );
 
-   /* assign scores to every discrete variable of the problem */
+   /* assign scores to unfixed every discrete variable of the problem */
+   nunfixedvars = 0;
    for( b = 0; b < nbinintvars; ++b )
    {
       SCIP_VAR* var = vars[b];
-      randscores[b] = SCIPrandomGetReal(rng, 0.0, 1.0);
-      perm[b] = b;
-      redcostscores[b] = getVariableRedcostScore(scip, var, solvals[b], heurdata->uselocalredcost);
-   }
 
-   /* loop over already fixed variables and assign large penalties for their values */
-   for( b = 0; b < *nfixings; ++b )
-   {
-      int probindex = SCIPvarGetProbindex(varbuf[b]);
+      /* filter fixed variables */
+      if( isfixed[b] )
+         continue;
 
-      if( probindex < nbinintvars )
-      {
-         randscores[probindex] = 2.0;
-         redcostscores[probindex] = SCIP_REAL_MAX;
-      }
-      distances[probindex] = -1;
+      redcostscores[nunfixedvars] = getVariableRedcostScore(scip, var, solvals[b], heurdata->uselocalredcost);
+
+      unfixedvars[nunfixedvars] = var;
+      perm[nunfixedvars] = nunfixedvars;
+      randscores[nunfixedvars] = SCIPrandomGetReal(rng, 0.0, 1.0);
+
+      /* these assignments are based on the fact that nunfixedvars <= b */
+      solvals[nunfixedvars] = solvals[b];
+      distances[nunfixedvars] = distances[b];
+
+      nunfixedvars++;
    }
 
    /* use selection algorithm (order of the variables does not matter) for quickly completing the fixing */
-   SCIPselectInd(perm, sortIndCompAlns, &varprio, nvarstoadd, nbinintvars);
+   varprio.randscores = randscores;
+   varprio.distances = distances;
+   varprio.redcostscores = redcostscores;
+   assert(nvarstoadd <= nunfixedvars);
+
+   SCIPselectInd(perm, sortIndCompAlns, &varprio, nvarstoadd, nunfixedvars);
 
    /* loop over the first elements of the selection defined in permutation. They represent the best variables */
    for( b = 0; b < nvarstoadd; ++b )
    {
       int permindex = perm[b];
       assert(permindex >= 0);
-      assert(permindex < nbinintvars);
+      assert(permindex < nunfixedvars);
 
-      tryAdd2variableBuffer(scip, vars[permindex], solvals[permindex], varbuf, valbuf, nfixings, TRUE);
+      tryAdd2variableBuffer(scip, unfixedvars[permindex], solvals[permindex], varbuf, valbuf, nfixings, TRUE);
    }
 
    *success = TRUE;
 
    /* free buffer arrays */
+   SCIPfreeBufferArray(scip, &unfixedvars);
+   SCIPfreeBufferArray(scip, &isfixed);
    SCIPfreeBufferArray(scip, &solvals);
    SCIPfreeBufferArray(scip, &redcostscores);
    SCIPfreeBufferArray(scip, &distances);
@@ -1555,8 +1579,10 @@ SCIP_RETCODE alnsUnfixVariables(
          unfixedvars[nunfixed++] = vars[i];
    }
 
+   varprio.usedistances = heurdata->usedistances && nunfixed > 0;
+
    /* collect distances of all fixed variables from those that are not fixed */
-   if( heurdata->usedistances && nunfixed > 0 )
+   if( varprio.usedistances )
    {
       SCIP_CALL( SCIPvariablegraphBreadthFirst(scip, NULL, unfixedvars, nunfixed, distances, INT_MAX, INT_MAX, INT_MAX) );
 
@@ -1589,7 +1615,6 @@ SCIP_RETCODE alnsUnfixVariables(
    varprio.distances = fixeddistances;
    varprio.randscores = randscores;
    varprio.redcostscores = redcostscores;
-   varprio.usedistances = heurdata->usedistances;
    varprio.useredcost = heurdata->useredcost;
    varprio.scip = scip;
 
@@ -1602,6 +1627,7 @@ SCIP_RETCODE alnsUnfixVariables(
       valbuf[i] = valbufcpy[perm[i]];
       varbuf[i] = varbufcpy[perm[i]];
    }
+
    *nfixings = ntargetfixings;
 
    /* free the buffer arrays in reverse order of allocation */
