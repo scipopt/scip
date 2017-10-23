@@ -401,14 +401,26 @@ SCIP_RETCODE applyCliqueFixings(
                   probingdepthofonefix = 0;
                   ++nbacktracks;
 
-                  /* fix the last variable, which was fixed to 1 and led to the cutoff, to 0 */
-                  SCIP_CALL( SCIPfixVarProbing(scip, onefixvars[*nonefixvars - 1], 1.0 - onefixvals[*nonefixvars - 1]) );
-                  --(*nonefixvars);
+                  /* because of the limited number of propagation rounds, it may happen that conflict analysis finds a
+                   * valid global fixing for the last fixed variable that conflicts with applying the reverse fixing
+                   * after backtracking; in that case, we ran into a deadend and stop
+                   */
+                  if( SCIPvarGetLbLocal(onefixvars[*nonefixvars - 1]) < 1.5 - onefixvals[*nonefixvars - 1]
+                     && SCIPvarGetUbLocal(onefixvars[*nonefixvars - 1]) > 0.5 - onefixvals[*nonefixvars - 1] )
+                  {
+                     /* fix the last variable, which was fixed to 1 and led to the cutoff, to 0 */
+                     SCIP_CALL( SCIPfixVarProbing(scip, onefixvars[*nonefixvars - 1], 1.0 - onefixvals[*nonefixvars - 1]) );
+                     --(*nonefixvars);
 
-                  /* propagate fixings */
-                  SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, cutoff, NULL) );
+                     /* propagate fixings */
+                     SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, cutoff, NULL) );
 
-                  SCIPdebugMessage("backtrack %d was %sfeasible\n", nbacktracks, (*cutoff ? "in" : ""));
+                     SCIPdebugMessage("backtrack %d was %sfeasible\n", nbacktracks, (*cutoff ? "in" : ""));
+                  }
+#ifndef NDEBUG
+                  else
+                     assert(*cutoff == TRUE);
+#endif
                }
                if( *cutoff )
                {
