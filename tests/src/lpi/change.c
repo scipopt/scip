@@ -13,11 +13,18 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   TODO.c
- * @brief  unit test for TODO
+/**@file   change.c
+ * @brief  unit tests for testing the methods that change and get coefficients in the lpi.
  * @author Franziska Schloesser
  *
- * TODO long desc
+ * The tested methods are:
+ * SCIPlpiChgCoef, SCIPlpiGetCoef,
+ * SCIPlpiChgObj, SCIPlpiGetObj,
+ * SCIPlpiChgBounds, SCIPlpiGetBounds,
+ * SCIPlpiChgSides, SCIPlpiGetSides,
+ * SCIPlpiChgObjsen, SCIPlpiGetObjsen,
+ * SCIPlpiGetNCols, SCIPlpiGetNRows, SCIPlpiGetNNonz,
+ * SCIPlpiGetCols, SCIPlpiGetRows,
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
