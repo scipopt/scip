@@ -1184,10 +1184,6 @@ SCIP_DECL_PRESOLINIT(presolInitSymbreak)
       SYMsetSpecRequirement(presoldata->symmetrypresol, SYM_SPEC_BINARY);
       SYMsetSpecRequirement(presoldata->symmetrypresol, SYM_SPEC_INTEGER);
       SYMsetSpecRequirement(presoldata->symmetrypresol, SYM_SPEC_REAL);
-
-      /* deactivate presolvers that may conflict with symmetry handling routines */
-      SCIP_CALL( SCIPsetIntParam(scip, "presolving/domcol/maxrounds", 0) );
-      SCIP_CALL( SCIPsetIntParam(scip, "presolving/gateextraction/maxrounds", 0) );
    }
 
    return SCIP_OKAY;
@@ -1366,6 +1362,10 @@ SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
    /* at this point, the symmetry group should be computed and nontrivial */
    assert( presoldata->nperms > 0 );
    *result = SCIP_DIDNOTFIND;
+
+   /* deactivate presolvers that may conflict with symmetry handling routines */
+   SCIP_CALL( SCIPsetIntParam(scip, "presolving/domcol/maxrounds", 0) );
+   SCIP_CALL( SCIPsetIntParam(scip, "presolving/gateextraction/maxrounds", 0) );
 
    /* possibly stop */
    if ( SCIPisStopped(scip) )
