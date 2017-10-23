@@ -2310,6 +2310,24 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyOrbitope)
    return SCIP_OKAY;
 }
 
+/** frees constraint handler */
+static
+SCIP_DECL_CONSFREE(consFreeOrbitope)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert( scip != 0 );
+   assert( conshdlr != 0 );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   SCIPfreeBlockMemory(scip, &conshdlrdata);
+
+   return SCIP_OKAY;
+}
+
 /** frees specific constraint data */
 static
 SCIP_DECL_CONSDELETE(consDeleteOrbitope)
@@ -3029,6 +3047,7 @@ SCIP_RETCODE SCIPincludeConshdlrOrbitope(
 
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyOrbitope, consCopyOrbitope) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeOrbitope) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteOrbitope) );
    SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsOrbitope) );
    SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsOrbitope) );
