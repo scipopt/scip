@@ -33,7 +33,7 @@
 #define EXPRHDLR_PRECEDENCE   91000
 #define EXPRHDLR_HASHKEY      SCIPcalcFibHash(82457.0)
 #define NEWTON_NITERATIONS    100
-#define NEWTON_PRECISION      1e-10
+#define NEWTON_PRECISION      1e-12
 
 /*
  * Data structures
@@ -1010,7 +1010,6 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSin)
          SCIP_Real a = ASIN(interval.inf);
          int k = (int) ceil((newinf - a) / (2.0*M_PI));
          newinf = a + 2.0*M_PI * k;
-         assert(newinf >= childbound.inf);
       }
 
       /* if sin(l(x)) > u(s), we are looking for k minimal s.t. pi - a + 2k*pi > l(x) where a = asin(u(s))
@@ -1021,7 +1020,6 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSin)
          SCIP_Real a = ASIN(interval.sup);
          int k = (int) ceil((newinf + a) / (2.0*M_PI) - 0.5);
          newinf = M_PI * (2.0*k + 1.0) - a;
-         assert(newinf >= childbound.inf);
       }
    }
 
@@ -1035,7 +1033,6 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSin)
          SCIP_Real a = ASIN(interval.sup);
          int k = (int) ceil((newsup - a ) / (2.0*M_PI)) - 1;
          newsup = a + 2.0*M_PI * k;
-         assert(newsup <= childbound.sup);
       }
 
       /* if sin(u(x)) < l(s), we are looking for k minimal s.t. pi - a + 2k*pi > l(x) - 2*pi where a = asin(l(s))
@@ -1046,9 +1043,16 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSin)
          SCIP_Real a = ASIN(interval.inf);
          int k = (int) ceil((newsup + a) / (2*M_PI) - 0.5) - 1;
          newsup = M_PI * (2.0*k + 1.0) - a;
-         assert(newsup <= childbound.sup);
       }
    }
+
+   assert(newinf >= childbound.inf);
+   assert(newsup <= childbound.sup);
+   assert(newinf <= newsup);
+   assert(SCIPisGE(scip, SIN(newinf), interval.inf));
+   assert(SCIPisLE(scip, SIN(newinf), interval.sup));
+   assert(SCIPisGE(scip, SIN(newsup), interval.inf));
+   assert(SCIPisLE(scip, SIN(newsup), interval.sup));
 
    SCIPintervalSetBounds(&childbound, newinf, newsup);
 
