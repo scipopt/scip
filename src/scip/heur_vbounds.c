@@ -648,28 +648,40 @@ SCIP_RETCODE applyVboundsFixings(
 
          SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip) - 1) );
          ++nbacktracks;
+         *infeasible = FALSE;
 
          /* increase the lower bound of the variable which caused the infeasibility */
-         if( lastfixedlb )
+         if( lastfixedlb && lastfixval + 0.5 < SCIPvarGetUbLocal(lastvar) )
          {
-            if( lastfixval + 0.5 > SCIPvarGetLbLocal(var) )
+            if( lastfixval + 0.5 > SCIPvarGetLbLocal(lastvar) )
             {
-               SCIP_CALL( SCIPchgVarLbProbing(scip, lastvar, SCIPvarGetLbLocal(var) + 1.0) );
+               SCIP_CALL( SCIPchgVarLbProbing(scip, lastvar, lastfixval + 1.0) );
             }
          }
+         else if( !lastfixedlb && lastfixval - 0.5 > SCIPvarGetLbLocal(lastvar) )
+         {
+            if( lastfixval - 0.5 < SCIPvarGetUbLocal(lastvar) )
+            {
+               SCIP_CALL( SCIPchgVarUbProbing(scip, lastvar, lastfixval - 1.0) );
+            }
+         }
+         /* because of the limited number of propagation rounds, it may happen that conflict analysis finds a valid
+          * global bound for the last fixed variable that conflicts with applying the reverse bound change after backtracking;
+          * in that case, we ran into a deadend and stop
+          */
          else
          {
-            if( lastfixval - 0.5 < SCIPvarGetUbLocal(var) )
-            {
-               SCIP_CALL( SCIPchgVarUbProbing(scip, lastvar, SCIPvarGetUbLocal(var) - 1.0) );
-            }
+            *infeasible = TRUE;
          }
          lastvar = NULL;
 
-         /* propagate fixings */
-         SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, infeasible, NULL) );
+         if( !(*infeasible) )
+         {
+            /* propagate fixings */
+            SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, infeasible, NULL) );
 
-         SCIPdebugMessage("backtrack %d was %sfeasible\n", nbacktracks, (*infeasible ? "in" : ""));
+            SCIPdebugMessage("backtrack %d was %sfeasible\n", nbacktracks, (*infeasible ? "in" : ""));
+         }
 
          if( *infeasible )
          {

@@ -866,6 +866,7 @@ SCIP_Bool SCIPcutsTightenCoefficients(
    SCIP_Real QUAD(maxacttmp);
    SCIP_Real maxact;
    SCIP_Real maxabsval;
+   SCIP_Bool redundant;
 
    assert(nchgcoefs != NULL);
 
@@ -877,6 +878,7 @@ SCIP_Bool SCIPcutsTightenCoefficients(
    SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &absvals, *cutnnz) );
 
    *nchgcoefs = 0;
+   redundant = FALSE;
 
    for( i = 0; i < *cutnnz; ++i )
    {
@@ -888,7 +890,7 @@ SCIP_Bool SCIPcutsTightenCoefficients(
          SCIP_Real lb = cutislocal ? SCIPvarGetLbLocal(vars[cutinds[i]]) : SCIPvarGetLbGlobal(vars[cutinds[i]]);
 
          if( SCIPisInfinity(scip, -lb) )
-            return FALSE;
+            goto TERMINATE;
 
          if( cutinds[i] < nintegralvars )
          {
@@ -907,7 +909,7 @@ SCIP_Bool SCIPcutsTightenCoefficients(
          SCIP_Real ub = cutislocal ? SCIPvarGetUbLocal(vars[cutinds[i]]) : SCIPvarGetUbGlobal(vars[cutinds[i]]);
 
          if( SCIPisInfinity(scip, ub) )
-            return FALSE;
+            goto TERMINATE;
 
          if( cutinds[i] < nintegralvars )
          {
@@ -928,16 +930,13 @@ SCIP_Bool SCIPcutsTightenCoefficients(
    /* cut is redundant in activity bounds */
    if( SCIPisFeasLE(scip, maxact, *cutrhs) )
    {
-      SCIPfreeBufferArray(scip, &absvals);
-      return TRUE;
+      redundant = TRUE;
+      goto TERMINATE;
    }
 
    /* no coefficient tightening can be performed since the precondition doesn't hold for any of the variables */
    if( SCIPisGT(scip, maxact - maxabsval, *cutrhs) )
-   {
-      SCIPfreeBufferArray(scip, &absvals);
-      return FALSE;
-   }
+      goto TERMINATE;
 
    SCIPsortDownRealRealInt(absvals, cutcoefs, cutinds, *cutnnz);
    SCIPfreeBufferArray(scip, &absvals);
@@ -1039,7 +1038,10 @@ SCIP_Bool SCIPcutsTightenCoefficients(
       ++i;
    }
 
-   return FALSE;
+  TERMINATE:
+   SCIPfreeBufferArrayNull(scip, &absvals);
+
+   return redundant;
 }
 
 /* =========================================== aggregation row =========================================== */
