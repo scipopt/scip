@@ -44,7 +44,9 @@ enum SYM_Rhssense
    SYM_SENSE_UNKOWN     = 0,                 /**< unknown sense */
    SYM_SENSE_INEQUALITY = 1,                 /**< linear inequality */
    SYM_SENSE_EQUATION   = 2,                 /**< linear equation */
-   SYM_SENSE_XOR        = 3                  /**< XOR constraint */
+   SYM_SENSE_XOR        = 3,                 /**< XOR constraint */
+   SYM_SENSE_AND        = 4,                 /**< AND constraint */
+   SYM_SENSE_OR         = 5                  /**< OR constrant */
 };
 typedef enum SYM_Rhssense SYM_RHSSENSE;
 
