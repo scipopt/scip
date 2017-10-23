@@ -261,7 +261,7 @@ SCIP_RETCODE computeInteriorPoint(
    iterlimit = sepadata->nlpiterlimit > 0 ? sepadata->nlpiterlimit : INT_MAX;
    SCIP_CALL( SCIPnlpiSetIntPar(nlpi, nlpiprob, SCIP_NLPPAR_ITLIM, iterlimit) );
    SCIP_CALL( SCIPnlpiSetRealPar(nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, NLPFEASFAC * SCIPfeastol(scip)) );
-   SCIP_CALL( SCIPnlpiSetRealPar(nlpi, nlpiprob, SCIP_NLPPAR_RELOBJTOL, MAX(SCIPfeastol(scip), SCIPdualfeastol(scip))) );  /* TODO maybe this tolerance could be relaxed, as the point doesn't need to be the perfect center of the interior */
+   SCIP_CALL( SCIPnlpiSetRealPar(nlpi, nlpiprob, SCIP_NLPPAR_RELOBJTOL, MAX(SCIPfeastol(scip), SCIPdualfeastol(scip))) ); /*lint !e666*/
    SCIP_CALL( SCIPnlpiSetIntPar(nlpi, nlpiprob, SCIP_NLPPAR_VERBLEVEL, NLPVERBOSITY) );
 
    /* compute interior point */
@@ -815,7 +815,7 @@ SCIP_RETCODE separateCuts(
          SCIP_Bool infeasible;
 
          SCIPdebugMsg(scip, "adding cut\n");
-         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+         SCIP_CALL( SCIPaddCut(scip, row, FALSE, &infeasible) );
 
          if( infeasible )
          {
@@ -1073,11 +1073,11 @@ SCIP_RETCODE SCIPincludeSepaGauge(
    SCIP_CALL( SCIPsetSepaExitsol(scip, sepa, sepaExitsolGauge) );
 
    /* add gauge separator parameters */
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/"SEPA_NAME"/nlpiterlimit",
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/nlpiterlimit",
          "iteration limit of NLP solver; 0 for no limit",
          &sepadata->nlpiterlimit, TRUE, DEFAULT_NLPITERLIM, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "separating/"SEPA_NAME"/nlptimelimit",
+   SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/nlptimelimit",
          "time limit of NLP solver; 0.0 for no limit",
          &sepadata->nlptimelimit, TRUE, DEFAULT_NLPTIMELIMIT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 

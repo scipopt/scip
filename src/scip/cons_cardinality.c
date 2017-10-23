@@ -2150,7 +2150,7 @@ SCIP_RETCODE initsepaBoundInequalityFromCardinality(
          assert(SCIPisInfinity(scip, -SCIProwGetLhs(rowub)));
          assert(SCIPisLE(scip, SCIProwGetRhs(rowub), (SCIP_Real)consdata->cardval));
 
-         SCIP_CALL( SCIPaddCut(scip, NULL, rowub, FALSE, cutoff) );
+         SCIP_CALL( SCIPaddCut(scip, rowub, FALSE, cutoff) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, rowub, NULL) ) );
 
          if( solvedinitlp )
@@ -2167,7 +2167,7 @@ SCIP_RETCODE initsepaBoundInequalityFromCardinality(
          assert(SCIPisInfinity(scip, -SCIProwGetLhs(rowlb)));
          assert(SCIPisLE(scip, SCIProwGetRhs(rowlb), (SCIP_Real)consdata->cardval));
 
-         SCIP_CALL( SCIPaddCut(scip, NULL, rowlb, FALSE, cutoff) );
+         SCIP_CALL( SCIPaddCut(scip, rowlb, FALSE, cutoff) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, rowlb, NULL) ) );
 
          if( solvedinitlp )
@@ -2494,8 +2494,11 @@ SCIP_DECL_CONSTRANS(consTransCardinality)
 static
 SCIP_DECL_CONSPRESOL(consPresolCardinality)
 {  /*lint --e{715}*/
+   /* cppcheck-suppress unassignedVariable */
    int oldnfixedvars;
+   /* cppcheck-suppress unassignedVariable */
    int oldndelconss;
+   /* cppcheck-suppress unassignedVariable */
    int oldnupgdconss;
    int nremovedvars;
    SCIP_EVENTHDLR* eventhdlr;
@@ -2717,6 +2720,8 @@ SCIP_DECL_CONSCHECK(consCheckCardinality)
                   }
                   SCIPinfoMessage(scip, NULL, "\n");
                }
+               if( sol != NULL )
+                  SCIPupdateSolConsViolation(scip, sol, 1.0, 1.0);
                return SCIP_OKAY;
             }
          }
@@ -3234,11 +3239,11 @@ SCIP_RETCODE SCIPincludeConshdlrCardinality(
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxCardinality) );
 
    /* add cardinality constraint handler parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/branchbalanced",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/branchbalanced",
          "whether to use balanced instead of unbalanced branching",
          &conshdlrdata->branchbalanced, TRUE, DEFAULT_BRANCHBALANCED, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/balanceddepth",
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/balanceddepth",
          "maximum depth for using balanced branching (-1: no limit)",
          &conshdlrdata->balanceddepth, TRUE, DEFAULT_BALANCEDDEPTH, -1, INT_MAX, NULL, NULL) );
 

@@ -16,6 +16,10 @@ set(scipsources
     blockmemshell/memory.c
     scip/message.c
     scip/bitencode.c
+    scip/bandit.c
+    scip/bandit_epsgreedy.c
+    scip/bandit_exp3.c
+    scip/bandit_ucb.c
     scip/branch_allfullstrong.c
     scip/branch_cloud.c
     scip/branch_distribution.c
@@ -85,6 +89,7 @@ set(scipsources
     scip/heur_localbranching.c
     scip/heur_lpface.c
     scip/heur_locks.c
+    scip/heur_alns.c
     scip/heur_mutation.c
     scip/heur_multistart.c
     scip/heur_mpec.c
@@ -172,11 +177,10 @@ set(scipsources
     scip/sepa_cgmip.c
     scip/sepa_clique.c
     scip/sepa_closecuts.c
-    scip/sepa_cmir.c
+    scip/sepa_aggregation.c
     scip/sepa_convexproj.c
     scip/sepa_disjunctive.c
     scip/sepa_eccuts.c
-    scip/sepa_flowcover.c
     scip/sepa_gauge.c
     scip/sepa_gomory.c
     scip/sepa_impliedbounds.c
@@ -227,8 +231,10 @@ set(scipsources
     scip/reopt.c
     scip/retcode.c
     scip/scip.c
+    scip/scip_bandit.c
     scip/scipbuildflags.c
     scip/scipdefplugins.c
+    scip/scipcoreplugins.c
     scip/scipgithash.c
     scip/scipshell.c
     scip/sepa.c
@@ -336,6 +342,10 @@ set(objscipheaders
 )
 
 set(scipheaders
+    scip/bandit.h
+    scip/bandit_epsgreedy.h
+    scip/bandit_exp3.h
+    scip/bandit_ucb.h
     scip/bitencode.h
     scip/boundstore.h
     scip/branch_allfullstrong.h
@@ -423,6 +433,7 @@ set(scipheaders
     scip/heur_linesearchdiving.h
     scip/heur_localbranching.h
     scip/heur_locks.h
+    scip/heur_alns.h
     scip/heur_lpface.h
     scip/heur_multistart.h
     scip/heur_mutation.h
@@ -507,6 +518,10 @@ set(scipheaders
     scip/prop_sync.h
     scip/prop_vbounds.h
     scip/pub_branch.h
+    scip/pub_bandit.h
+    scip/pub_bandit_epsgreedy.h
+    scip/pub_bandit_exp3.h
+    scip/pub_bandit_ucb.h
     scip/pub_compr.h
     scip/pub_conflict.h
     scip/pub_cons.h
@@ -563,6 +578,7 @@ set(scipheaders
     scip/reopt.h
     scip/retcode.h
     scip/scipbuildflags.h
+    scip/scipcoreplugins.h
     scip/scipdefplugins.h
     scip/scipgithash.h
     scip/scip.h
@@ -570,7 +586,7 @@ set(scipheaders
     scip/sepa_cgmip.h
     scip/sepa_clique.h
     scip/sepa_closecuts.h
-    scip/sepa_cmir.h
+    scip/sepa_aggregation.h
     scip/sepa_convexproj.h
     scip/sepa_disjunctive.h
     scip/sepa_eccuts.h
@@ -590,6 +606,7 @@ set(scipheaders
     scip/sol.h
     scip/solve.h
     scip/stat.h
+    scip/struct_bandit.h
     scip/struct_branch.h
     scip/struct_clock.h
     scip/struct_compr.h
@@ -634,6 +651,7 @@ set(scipheaders
     scip/struct_visual.h
     scip/syncstore.h
     scip/tree.h
+    scip/type_bandit.h
     scip/type_branch.h
     scip/type_clock.h
     scip/type_compr.h
@@ -711,6 +729,11 @@ set(xmlheaders
     xml/xml.h
 )
 
+# all source files should be compiled with a c++ compiler
+if(CXXONLY)
+    set_source_files_properties(${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${tpisources} PROPERTIES LANGUAGE CXX)
+endif()
+
 add_library(libobjscip EXCLUDE_FROM_ALL ${objscipsources})
 setLibProperties(libobjscip "objscip")
 
@@ -750,6 +773,8 @@ else()
     target_link_libraries(scip libscip)
 endif()
 
+target_compile_definitions(scip PRIVATE EXTERN=extern)
+
 target_link_libraries(scip ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES}
    ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${THREAD_LIBRARIES} ${NLPI_LIBRARIES})
 
@@ -784,12 +809,21 @@ install(TARGETS scip libscip EXPORT scip-targets
 
 # Add all targets to the build-tree export set
 export(TARGETS scip libscip
-  FILE "${PROJECT_BINARY_DIR}/scip-targets.cmake")
+  FILE "${CMAKE_BINARY_DIR}/scip-targets.cmake")
+
+#make soplex and zimpl dir absolute for the config file
+if(SOPLEX_FOUND)
+    get_filename_component(CONF_SOPLEX_DIR ${SOPLEX_DIR} REALPATH BASE_DIR ${CMAKE_SOURCE_DIR})
+endif()
+
+if(ZIMPL_FOUND)
+    get_filename_component(CONF_ZIMPL_DIR ${ZIMPL_DIR} REALPATH BASE_DIR ${CMAKE_SOURCE_DIR})
+endif()
 
 #configure the config file for the build tree
 set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src")
 configure_file(${PROJECT_SOURCE_DIR}/scip-config.cmake.in
-  "${PROJECT_BINARY_DIR}/scip-config.cmake" @ONLY)
+  "${CMAKE_BINARY_DIR}/scip-config.cmake" @ONLY)
 
 #configure the config file for the install
 set(CONF_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/../../../include")

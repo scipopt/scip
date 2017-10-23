@@ -1,13 +1,25 @@
+cmake_minimum_required(VERSION 3.0)
+
 project(GMI)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../src)
+find_package(SCIP REQUIRED)
+include_directories(${SCIP_INCLUDE_DIRS})
 
 add_executable(gmi
    src/cmain.c
    src/sepa_gmi.c)
 
-target_link_libraries(gmi libscip m)
-add_dependencies(examples gmi)
+# link to math library if it is available
+find_library(LIBM m)
+if(NOT LIBM)
+  set(LIBM "")
+endif()
+
+target_link_libraries(gmi ${SCIP_LIBRARIES} ${LIBM})
+
+if( TARGET examples )
+    add_dependencies( examples gmi )
+endif()
 
 include(CTest)
 
@@ -35,6 +47,21 @@ set(settings
     "scipdefault")
 
 #
+# add the build of the binary as a test
+#
+add_test(NAME examples-gmi-build
+        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target gmi
+        )
+#
+# avoid that several build jobs try to concurrently build the SCIP library
+# note that this ressource lock name is not the actual libscip target
+#
+set_tests_properties(examples-gmi-build
+                    PROPERTIES
+                        RESOURCE_LOCK libscip
+                    )
+#
+#
 # loop over the instances
 #
 foreach(instance ${instances})
@@ -45,6 +72,12 @@ foreach(instance ${instances})
         #
         # treat the instance as a tuple (list) of two values
         #
-        add_test(NAME examples-gmi-${setting}-${basename} COMMAND $<TARGET_FILE:gmi> ${CMAKE_CURRENT_SOURCE_DIR}/../../check/${path} ${CMAKE_CURRENT_SOURCE_DIR}/settings/${setting}.set -o ${optval} ${optval})
+        add_test(NAME examples-gmi-${setting}-${basename}
+                COMMAND $<TARGET_FILE:gmi> ${CMAKE_CURRENT_SOURCE_DIR}/../../check/${path} ${CMAKE_CURRENT_SOURCE_DIR}/settings/${setting}.set -o ${optval} ${optval}
+                )
+        set_tests_properties(examples-gmi-${setting}-${basename}
+                            PROPERTIES
+                                DEPENDS examples-gmi-build
+                            )
     endforeach(setting)
 endforeach(instance)

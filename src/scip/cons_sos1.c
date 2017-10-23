@@ -6236,7 +6236,7 @@ SCIP_RETCODE addBoundCutSepa(
       {
          SCIP_Bool infeasible;
 
-         SCIP_CALL( SCIPaddCut(scip, NULL, rowlb, FALSE, &infeasible) );
+         SCIP_CALL( SCIPaddCut(scip, rowlb, FALSE, &infeasible) );
          if ( infeasible )
             *cutoff = TRUE;
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, rowlb, NULL) ) );
@@ -6253,7 +6253,7 @@ SCIP_RETCODE addBoundCutSepa(
       {
          SCIP_Bool infeasible;
 
-         SCIP_CALL( SCIPaddCut(scip, NULL, rowub, FALSE, &infeasible) );
+         SCIP_CALL( SCIPaddCut(scip, rowub, FALSE, &infeasible) );
          if ( infeasible )
             *cutoff = TRUE;
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, rowub, NULL) ) );
@@ -6915,7 +6915,7 @@ SCIP_RETCODE initsepaBoundInequalityFromSOS1Cons(
       /* put corresponding rows into LP */
       if ( rowub != NULL && ! SCIProwIsInLP(rowub) && ( solvedinitlp || SCIPisCutEfficacious(scip, sol, rowub) ) )
       {
-         SCIP_CALL( SCIPaddCut(scip, NULL, rowub, FALSE, cutoff) );
+         SCIP_CALL( SCIPaddCut(scip, rowub, FALSE, cutoff) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, rowub, NULL) ) );
 
          if ( solvedinitlp )
@@ -6927,7 +6927,7 @@ SCIP_RETCODE initsepaBoundInequalityFromSOS1Cons(
 
       if ( ! (*cutoff) && rowlb != NULL && ! SCIProwIsInLP(rowlb) && ( solvedinitlp || SCIPisCutEfficacious(scip, sol, rowlb) ) )
       {
-         SCIP_CALL( SCIPaddCut(scip, NULL, rowlb, FALSE, cutoff) );
+         SCIP_CALL( SCIPaddCut(scip, rowlb, FALSE, cutoff) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, rowlb, NULL) ) );
 
          if ( solvedinitlp )
@@ -7148,7 +7148,7 @@ SCIP_RETCODE sepaImplBoundCutsSOS1(
                if ( ! SCIProwIsInLP(cut) && SCIPisCutEfficacious(scip, NULL, cut) )
                {
                   SCIP_Bool infeasible;
-                  SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
+                  SCIP_CALL( SCIPaddCut(scip, cut, FALSE, &infeasible) );
                   if ( infeasible )
                   {
                      genbreak = TRUE;
@@ -9196,9 +9196,13 @@ static
 SCIP_DECL_CONSPRESOL(consPresolSOS1)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
+   /* cppcheck-suppress unassignedVariable */
    int oldnfixedvars;
+   /* cppcheck-suppress unassignedVariable */
    int oldnchgbds;
+   /* cppcheck-suppress unassignedVariable */
    int oldndelconss;
+   /* cppcheck-suppress unassignedVariable */
    int oldnupgdconss;
    int nremovedvars;
 
@@ -9462,6 +9466,10 @@ SCIP_DECL_CONSCHECK(consCheckSOS1)
             {
                SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
                *result = SCIP_INFEASIBLE;
+
+               /* update constraint violation in solution */
+               if ( sol != NULL )
+                  SCIPupdateSolConsViolation(scip, sol, 1.0, 1.0);
 
                if ( printreason )
                {

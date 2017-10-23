@@ -1416,8 +1416,11 @@ SCIP_Bool checkCons(
    int* vals;
    SCIP_Real solval;
    SCIP_Real linksum;
+   SCIP_VAR* intvarval;
    SCIP_Real setpartsum;
    SCIP_Real setpartsumbound;
+   SCIP_Real absviol;
+   SCIP_Real relviol;
    int nbinvars;
    int b;
 
@@ -1452,6 +1455,19 @@ SCIP_Bool checkCons(
       linksum += vals[b] * solval;
       setpartsum += solval;
    }
+
+   /* calculate and update absolute and relative violation of the equality constraint */
+   intvarval = consdata->intvar;
+   absviol = REALABS(linksum - SCIPgetSolVal(scip, sol, intvarval));
+   relviol = REALABS(SCIPrelDiff(linksum, SCIPgetSolVal(scip, sol, intvarval)));
+   if( sol != NULL )
+      SCIPupdateSolLPConsViolation(scip, sol, absviol, relviol);
+
+   /* calculate and update absolute and relative violation of the set partitioning constraint */
+   absviol = REALABS(setpartsum - 1.0);
+   relviol = REALABS(SCIPrelDiff(setpartsum, 1.0));
+   if( sol != NULL )
+      SCIPupdateSolLPConsViolation(scip, sol, absviol, relviol);
 
    /* check if the fixed binary variable match with the integer variable */
    return SCIPisFeasEQ(scip, linksum, SCIPgetSolVal(scip, sol, consdata->intvar)) && SCIPisFeasEQ(scip, setpartsum, 1.0);
@@ -1615,7 +1631,6 @@ static
 SCIP_RETCODE addCuts(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linking constraint */
-   SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
    SCIP_Bool*            cutoff              /**< whether a cutoff has been detected */
    )
 {
@@ -1644,14 +1659,14 @@ SCIP_RETCODE addCuts(
    if( !SCIProwIsInLP(consdata->row1) )
    {
       SCIPdebugMsg(scip, "adding linking row of constraint <%s> as cut to the LP\n", SCIPconsGetName(cons));
-      SCIP_CALL( SCIPaddCut(scip, sol, consdata->row1, TRUE/*FALSE*/, cutoff) );
+      SCIP_CALL( SCIPaddCut(scip, consdata->row1, TRUE/*FALSE*/, cutoff) );
    }
 
    /* insert LP set partitioning row as cut */
    if( !SCIProwIsInLP(consdata->row2) )
    {
       SCIPdebugMsg(scip, "adding set partitioning row of constraint <%s> as cut to the LP\n", SCIPconsGetName(cons));
-      SCIP_CALL( SCIPaddCut(scip, sol, consdata->row2, TRUE/*FALSE*/, cutoff) );
+      SCIP_CALL( SCIPaddCut(scip, consdata->row2, TRUE/*FALSE*/, cutoff) );
    }
 
    return SCIP_OKAY;
@@ -1744,7 +1759,7 @@ SCIP_RETCODE separateCons(
    {
       /* insert LP row as cut */
       assert(!(*cutoff));
-      SCIP_CALL( addCuts(scip, cons, sol, cutoff) );
+      SCIP_CALL( addCuts(scip, cons, cutoff) );
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
       *separated = TRUE;
    }
@@ -2062,7 +2077,7 @@ SCIP_DECL_CONSINITLP(consInitlpLinking)
       if( consdata->nbinvars <= 1 )
          continue;
 
-      SCIP_CALL( addCuts(scip, conss[c], NULL, infeasible) );
+      SCIP_CALL( addCuts(scip, conss[c], infeasible) );
    }
 
    return SCIP_OKAY;

@@ -1,6 +1,9 @@
+cmake_minimum_required(VERSION 3.0)
+
 project(Binpacking)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../src)
+find_package(SCIP REQUIRED)
+include_directories(${SCIP_INCLUDE_DIRS})
 
 add_executable(binpacking
    src/branch_ryanfoster.c
@@ -11,8 +14,10 @@ add_executable(binpacking
    src/reader_bpa.c
    src/vardata_binpacking.c)
 
-target_link_libraries(binpacking libscip)
-add_dependencies(examples binpacking)
+target_link_libraries(binpacking ${SCIP_LIBRARIES})
+if( TARGET examples )
+    add_dependencies( examples binpacking )
+endif()
 
 #
 # add check subdirectory for tests

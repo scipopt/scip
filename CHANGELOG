@@ -2,11 +2,19 @@ SCIP version NEXT
 =================
 
 features:
+- new command line parameter "-r" to pass a nonnegative integer as random seed.
+- new disjoint set data structure SCIP_DISJOINTSET to incrementally update connectedness information for a graph on nodes {0,...,n-1}
 - added macros to do computations with a higher precision by using double double arithmetic
 - new compiler flag DEBUGSOL={true,false} to enable an internal debugging mechanism to check against a user given debug solution
 - add new heuristic MPEC that solves a MPEC reformulation of a mixed-binary nonlinear problem by regularized NLP reformulations
 - added interface to the NLP solver WORHP; set WORHP=true in order to link to WORHP
 - added interface to the NLP solver FilterSQP; set FILTERSQP=true in order to link to FilterSQP
+- new numerical solution violations get printed when checksol is called
+- three bandit selection algorithms to face sequential decision problems under uncertainty
+- new primal heuristic LNS that orchestrates eight different LNS heuristics adaptively
+  using algorithms for the multi-armed bandit problem
+- added analysis of the conflict graph which identifies possible aggregations via the search for
+  strongly connected components and may detect infeasible assignments on the way
 
 parameters:
 - new parameter misc/debugsol to specify a debug solution that should be checked during the solve
@@ -15,19 +23,47 @@ parameters:
 - new parameter: lp/refactorinterval to change the refactorization interval of the LP solver
 
 interface:
+- new interface methods to create and use bandit algorithms implemented as SCIP core plugins --
+  algorithms that can be used from all user plugins
+- new public methods SCIPvariableGraphBreadthFirst() and SCIPvariableGraph{Create,Free}() to
+  perform breadth-first search on the variable constraint graph used by the GINS and LNS heuristics
+- removed clique component index from SCIP_Var struct and the public interface method SCIPvarGetCliqueComponentIdx
 - new interface methods SCIPcreateRandom, SCIPfreeRandom that replace SCIPrandomCreate and SCIPrandomFree
   in the public SCIP API.
 - new interface method SCIPsetRandomSeed to (re)set a random number generator seed
 - added method SCIPsetProbingLPState() to install given LP state and/or norms at the current probing node
 - added functions SCIPbranchcandGetLPMaxPrio() and SCIPbranchcandGetExternMaxPrio() get the maximal branching priority of given
   branching candidates; also added SCIPbranchcandGetNPrioLPCands() to access the number of LP candidates with this priority.
+- added methods SCIPupdateSolIntegralityViolation(), SCIPupdateSolBoundViolation(), SCIPupdateSolLPRowViolation(),
+  SCIPupdateSolConsViolation() and SCIPupdateSolLPConsViolation() for updating numerical solution violations, as well as
+  SCIPactivateSolViolationUpdates() and SCIPdeactivateSolViolationUpdates() for activating/deactivating violation updates globally
+- added method SCIPcliqueGetIndex() which returns the unique identifier for the given clique
+- added method SCIPgetNCliquesCreated() which returns the number of cliques created so far
+- unify handling of objective limit by only using one parameter and not distinguishing w.r.t. lower and upper limits
+- replaced LPI parameters SCIP_LPPAR_LOBJLIM and SCIP_LPPAR_UOBJLIM by SCIP_LPPAR_OBJLIM
 
 performance improvements:
+- use disjoint set to reduce peak memory usage and time to compute of clique table connectedness information
 - add and use RESTRICT macro for some pointers
 - improved the implementation of SCIPvarGetActiveRepresentatives
 
+fixed bugs:
+- fixed bug in feasibility pump heuristic when switching on the usefp20 parameter
+- fixed potential ressource leaks in SCIPsolveLinearProb, expr.c, sepa_eccuts, cons_cumulative.c, cons_nonlinear.c
+- fixed order of SCIPcalcCliquePartition in corner case where no cliques are available
+
+misc:
+- dropped support for MOSEK < 7.0.0.0
+
 SCIP version 4.0.1
 ==================
+
+interface:
+- add function SCIPsetSlackVarUb() to control upper bound of slack variable in cons_indicator
+- SCIPheurPassIndicator has a new parameter which allows to pass the objective of the solution
+
+parameters:
+- new paramter "constraints/indicator/maxsepanonviolated" to stop separation after separation of non violated cuts
 
 features
 - added parsing functionality to cardinality constraint handler for CIP format
@@ -37,6 +73,8 @@ features
 - suppress excessive printing about numerical troubles in LP on default verblevel (high)
 - updated Mosek interface to compile with Mosek 8.1, too
 - updates GAMS interface to latest version
+- new LP interface to Glop (Google OR tools); CMake only
+
 
 fixed bugs:
 - fixed bug in shift and propagate--variable information with a negation transformation is correctly reset after backtracking
@@ -63,8 +101,19 @@ fixed bugs:
   allowing to use them as indicator variables
 - afternode heuristics are now called even if the node limit was reached and the solving process will be stopped
   after the current node
+- fixed bug when activating probing mode with a non-empty separation storage
+- fixed bug in varbound coefficient tightening: if a varbound constraint only contained one variable afterwards,
+  it may have been deleted without applying the induced bound, if the change was too small, this is now forced
+- fixed potential wrong locks update after a varbound constraint became redundant in coefficient tightening
+- fixed potentially wrong cleanup of fixed variables in nonlinear constraint handler
+- fixed wrong handling of unboundedness status in lpi_grb.c
+- fixed wrong handling of row basis status in lpi_grb.c
 
 performance improvements:
+- stop separation in cons_indicator after maxsepanonviolated many non violated separated cuts
+- improve choice of variable to enter support in separation of cons_indicator
+- only accept passed improving solutions in heur_indicator
+- add and use RESTRICT macro for some pointers
 - widened a bottleneck in simplifying long signomial sums in a nonlinear constraint
 - sorting of parents and children for some expression types is now independent of memory layout
 - unified and extended code that improves numerics of cuts generated by nonlinear constraint handlers
@@ -73,6 +122,12 @@ interface:
 - new function SCIPvalidateSolve() to compare solving result with an external primal and dual reference
   value
 - new function SCIPisObjChangedProbing() to check whether the objective function has changed during probing mode
+- new function SCIPgetDualSolVal() to get the dual solution value of a constraint
+- new functions SCIPisLPPrimalReliable() and SCIPisLPDualReliable() to check whether the current primal / dual LP solution
+  were successfully checked for feasibility
+
+testing:
+- added make options for specifying EXECUTABLE and OUTPUTDIR variables for the make test target
 
 SCIP version 4.0.0
 ==================

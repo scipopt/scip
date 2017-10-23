@@ -1010,7 +1010,7 @@ SCIP_RETCODE generateOddCycleCut(
    {
       SCIP_Bool infeasible;
 
-      SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, &infeasible) );
+      SCIP_CALL( SCIPaddCut(scip, cut, FALSE, &infeasible) );
       ++sepadata->ncuts;
       if ( nlifted > 0 )
          ++sepadata->nliftedcuts;
@@ -3536,10 +3536,11 @@ SCIP_DECL_SEPAINITSOL(sepaInitsolOddcycle)
 /** LP solution separation method of separator */
 static
 SCIP_DECL_SEPAEXECLP(sepaExeclpOddcycle)
-{
+{  /*lint --e{715}*/
    SCIP_SEPADATA* sepadata;
    int depth;
    int ncalls;
+   /* cppcheck-suppress unassignedVariable */
    int oldnliftedcuts;
 
    *result = SCIP_DIDNOTRUN;

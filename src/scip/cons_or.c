@@ -738,7 +738,7 @@ SCIP_RETCODE addRelaxation(
    {
       if( !SCIProwIsInLP(consdata->rows[r]) )
       {
-         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[r], FALSE, infeasible) );
+         SCIP_CALL( SCIPaddCut(scip, consdata->rows[r], FALSE, infeasible) );
       }
    }
 
@@ -822,6 +822,9 @@ SCIP_RETCODE checkCons(
          {
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
          }
+         /* update constraint violation in solution */
+         else
+            SCIPupdateSolConsViolation(scip, sol, 1.0, 1.0);
 
          if( printreason )
          {
@@ -884,7 +887,7 @@ SCIP_RETCODE separateCons(
          {
             SCIP_Bool infeasible;
 
-            SCIP_CALL( SCIPaddCut(scip, sol, consdata->rows[r], FALSE, &infeasible) );
+            SCIP_CALL( SCIPaddCut(scip, consdata->rows[r], FALSE, &infeasible) );
             assert( ! infeasible );
             *separated = TRUE;
          }

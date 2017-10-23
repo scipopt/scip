@@ -1276,6 +1276,7 @@
 =inf=        enlight11
 =opt=        enlight13                            71.0
 =inf=        enlight14
+=opt=        enlight15                            69.0
 =inf=        enlight16
 =inf=        enlight4
 =inf=        enlight5
@@ -2698,7 +2699,6 @@
 =opt=        neos-1171448                         -309.0
 =opt=        neos-1171692                         -273.0
 =opt=       neos-1171737                         -195.0
-=opt=        neos-1173026                         0.4218
 =opt=        neos-1200887                         -74.0
 =opt=        neos-1208069                         2.0
 =opt=        neos-1208135                         2.0
@@ -6994,3 +6994,5 @@
 =opt=        zeroin.i.3.stab                      123.0
 =inf=        zib02
 =opt=        zib54-UUE                            10334015.82
+=opt=        neos-777800                          -80
+=opt=        neos-1173026                         0.42184174

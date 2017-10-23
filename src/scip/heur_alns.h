@@ -13,16 +13,17 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   sepa_flowcover.h
- * @ingroup SEPARATORS
- * @brief  flowcover separator
- * @author Tobias Achterberg
+/**@file   heur_alns.h
+ * @ingroup PRIMALHEURISTICS
+ * @brief  Adaptive large neighborhood search heuristic that orchestrates popular LNS heuristics
+ * @author Gregor Hendel
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_SEPA_FLOWCOVER_H__
-#define __SCIP_SEPA_FLOWCOVER_H__
+#ifndef __SCIP_HEUR_ALNS_H__
+#define __SCIP_HEUR_ALNS_H__
 
 
 #include "scip/scip.h"
@@ -31,12 +32,12 @@
 extern "C" {
 #endif
 
-/** creates the flowcover separator and includes it in SCIP
+/** creates the alns primal heuristic and includes it in SCIP
  *
- * @ingroup SeparatorIncludes
+ *  @ingroup PrimalHeuristicIncludes
  */
 EXTERN
-SCIP_RETCODE SCIPincludeSepaFlowcover(
+SCIP_RETCODE SCIPincludeHeurAlns(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

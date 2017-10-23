@@ -230,7 +230,7 @@ TAB_SIZE               = 8
 # newlines.
 
 ALIASES                = "SCIP=<b>SCIP</b>" \
-                         FILEEXT=.shtml \
+                         FILEEXT=.html \
                          "PUBLICAPIDESCRIPTION=The public API of \SCIP is separated into a Core API and a Plugin API. The first contains all methods that can be accessed by including the header scip.h. The Plugin API is a collection of methods that are provided by the default plugins of \SCIP. The Plugin API is provided by scipdefplugins.h." \
                          "refsnippet{2}=@snippet \1 \2 \n\(Source: \1\)"
 
@@ -1205,7 +1205,7 @@ HTML_OUTPUT            = html
 # The default value is: .html.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-HTML_FILE_EXTENSION    = .shtml
+HTML_FILE_EXTENSION    = .html
 
 # The HTML_HEADER tag can be used to specify a user-defined HTML header file for
 # each generated HTML page. If the tag is left blank doxygen will generate a

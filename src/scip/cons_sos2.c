@@ -1491,7 +1491,9 @@ SCIP_DECL_CONSTRANS(consTransSOS2)
 static
 SCIP_DECL_CONSPRESOL(consPresolSOS2)
 {  /*lint --e{715}*/
+   /* cppcheck-suppress unassignedVariable */
    int oldnfixedvars;
+   /* cppcheck-suppress unassignedVariable */
    int oldndelconss;
    int nremovedvars;
    SCIP_EVENTHDLR* eventhdlr;
@@ -1593,7 +1595,7 @@ SCIP_DECL_CONSINITLP(consInitlpSOS2)
       {
          assert( ! SCIPisInfinity(scip, REALABS(SCIProwGetLhs(consdata->row))) || ! SCIPisInfinity(scip, REALABS(SCIProwGetRhs(consdata->row))) );
 
-         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, FALSE, infeasible) );
+         SCIP_CALL( SCIPaddCut(scip, consdata->row, FALSE, infeasible) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, consdata->row, NULL) ) );
       }
    }
@@ -1642,7 +1644,7 @@ SCIP_DECL_CONSSEPALP(consSepalpSOS2)
       /* possibly add row to LP if it is useful */
       if ( row != NULL && ! SCIProwIsInLP(row) && SCIPisCutEfficacious(scip, NULL, row) )
       {
-         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &cutoff) );
+         SCIP_CALL( SCIPaddCut(scip, row, FALSE, &cutoff) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
          SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
          ++ngen;
@@ -1698,7 +1700,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolSOS2)
       /* possibly add row to LP if it is useful */
       if ( row != NULL && ! SCIProwIsInLP(row) && SCIPisCutEfficacious(scip, sol, row) )
       {
-         SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, &cutoff) );
+         SCIP_CALL( SCIPaddCut(scip, row, FALSE, &cutoff) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
          SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
          ++ngen;
@@ -1809,6 +1811,10 @@ SCIP_DECL_CONSCHECK(consCheckSOS2)
                {
                   SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
                   *result = SCIP_INFEASIBLE;
+
+                  /* update constraint violation in solution */
+                  if ( sol != NULL )
+                     SCIPupdateSolConsViolation(scip, sol, 1.0, 1.0);
 
                   if ( printreason )
                   {

@@ -209,7 +209,7 @@
 #define CONSHDLR_DESC          "indicator constraint handler"
 #define CONSHDLR_SEPAPRIORITY        10 /**< priority of the constraint handler for separation */
 #define CONSHDLR_ENFOPRIORITY      -100 /**< priority of the constraint handler for constraint enforcing */
-#define CONSHDLR_CHECKPRIORITY -1000000 /**< priority of the constraint handler for checking feasibility */
+#define CONSHDLR_CHECKPRIORITY -6000000 /**< priority of the constraint handler for checking feasibility */
 #define CONSHDLR_SEPAFREQ            10 /**< frequency for separating cuts; zero means to separate only in the root node */
 #define CONSHDLR_PROPFREQ             1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
@@ -251,6 +251,7 @@
 #define DEFAULT_SEPAALTERNATIVELP   FALSE    /**< Separate using the alternative LP? */
 #define DEFAULT_SEPAPERSPECTIVE     FALSE    /**< Separate cuts based on perspective formulation? */
 #define DEFAULT_SEPAPERSPLOCAL       TRUE    /**< Allow to use local bounds in order to separate perspectice cuts? */
+#define DEFAULT_MAXSEPANONVIOLATED      3    /**< maximal number of separated non violated IISs, before separation is stopped */
 #define DEFAULT_TRYSOLFROMCOVER     FALSE    /**< Try to construct a feasible solution from a cover? */
 #define DEFAULT_UPGRADELINEAR       FALSE    /**< Try to upgrade linear constraints to indicator constraints? */
 #define DEFAULT_USEOTHERCONSS       FALSE    /**< Collect other constraints to alternative LP? */
@@ -341,6 +342,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             performedrestart;   /**< whether a restart has been performed already */
    int                   maxsepacuts;        /**< maximal number of cuts separated per separation round */
    int                   maxsepacutsroot;    /**< maximal number of cuts separated per separation round in root node */
+   int                   maxsepanonviolated; /**< maximal number of separated non violated IISs, before separation is stopped */
    int                   nbinvarszero;       /**< binary variables globally fixed to zero */
    int                   ninitconss;         /**< initial number of indicator constraints (needed in event handlers) */
    SCIP_Real             maxcouplingvalue;   /**< maximum coefficient for binary variable in initial coupling constraint */
@@ -2723,8 +2725,6 @@ SCIP_RETCODE checkAltLPInfeasible(
  *
  *  @pre It is assumed that all parameters for the alternative LP are set and that the variables
  *  corresponding to @a S are fixed. Furthermore @c xVal_ should contain the current LP solution.
- *
- *  @todo Improve the choice of the entering variable; currently the first is used.
  */
 static
 SCIP_RETCODE extendToCover(
@@ -2749,6 +2749,7 @@ SCIP_RETCODE extendToCover(
    char name[SCIP_MAXSTRLEN];
 #endif
    SCIP_Real* primsol;
+   int nnonviolated = 0;
    int step = 0;
    int nCols;
 
@@ -2774,11 +2775,12 @@ SCIP_RETCODE extendToCover(
    {
       SCIP_Bool infeasible;
       SCIP_Real sum = 0.0;
-      SCIP_Real candObj = -1.0;
+      SCIP_Real candobj = -1.0;
+      SCIP_Real candval = 2.0;
       SCIP_Real norm = 1.0;
       int sizeIIS = 0;
       int candidate = -1;
-      int candIndex = -1;
+      int candindex = -1;
       int j;
 
       if ( step == 0 )
@@ -2817,7 +2819,7 @@ SCIP_RETCODE extendToCover(
                   return SCIP_PLUGINNOTFOUND;
                }
 
-               SCIP_CALL( SCIPheurPassIndicator(scip, heurindicator, nconss, conss, S) );
+               SCIP_CALL( SCIPheurPassIndicator(scip, heurindicator, nconss, conss, S, -*value) );
                SCIPdebugMsg(scip, "Passed feasible solution to indicator heuristic.\n");
             }
          }
@@ -2844,16 +2846,20 @@ SCIP_RETCODE extendToCover(
             /* check support of the solution, i.e., the corresponding IIS */
             if ( ! SCIPisFeasZero(scip, primsol[ind]) )
             {
+               SCIP_Real val;
+
                assert( ! S[j] );
                ++sizeIIS;
-               sum += SCIPgetSolVal(scip, sol, consdata->binvar);
+               val = SCIPgetSolVal(scip, sol, consdata->binvar);
+               sum += val;
 
-               /* take first element */
-               if ( candidate < 0 )
+               /* take element with smallest relaxation value */
+               if ( val < candval )
                {
                   candidate = j;
-                  candIndex = ind;
-                  candObj = varGetObjDelta(consdata->binvar);
+                  candindex = ind;
+                  candval = val;
+                  candobj = varGetObjDelta(consdata->binvar);
                }
             }
          }
@@ -2892,15 +2898,15 @@ SCIP_RETCODE extendToCover(
       }
 
       SCIPdebugMsg(scip, "   size: %4d, add var. %4d (obj: %-6g, alt-LP sol: %-8.4f); IIS size: %4d, eff.: %g.\n",
-         *size, candidate, candObj, primsol[SCIPconsGetData(conss[candidate])->colindex], sizeIIS, (sum - (SCIP_Real) (sizeIIS - 1))/norm);
+         *size, candidate, candobj, primsol[SCIPconsGetData(conss[candidate])->colindex], sizeIIS, (sum - (SCIP_Real) (sizeIIS - 1))/norm);
 
       /* update new set S */
       S[candidate] = TRUE;
       ++(*size);
-      *value += candObj;
+      *value += candobj;
 
       /* fix chosen variable to 0 */
-      SCIP_CALL( fixAltLPVariable(lp, candIndex) );
+      SCIP_CALL( fixAltLPVariable(lp, candindex) );
 
       /* if cut is violated, i.e., sum - sizeIIS + 1 > 0 */
       if ( SCIPisEfficacious(scip, (sum - (SCIP_Real) (sizeIIS - 1))/norm) )
@@ -3008,7 +3014,7 @@ SCIP_RETCODE extendToCover(
 #ifdef SCIP_OUTPUT
             SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 #endif
-            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, cutoff) );
+            SCIP_CALL( SCIPaddCut(scip, row, FALSE, cutoff) );
             if ( *cutoff )
             {
                SCIPfreeBufferArray(scip, &primsol);
@@ -3024,8 +3030,17 @@ SCIP_RETCODE extendToCover(
             SCIP_CALL( SCIPreleaseRow(scip, &row));
             ++(*nGen);
          }
+         nnonviolated = 0;
       }
+      else
+         ++nnonviolated;
       ++step;
+
+      if ( nnonviolated > conshdlrdata->maxsepanonviolated )
+      {
+         SCIPdebugMsg(scip, "Stop separation after %d non violated IISs.\n", nnonviolated);
+         break;
+      }
    }
    while (step < nconss);
 
@@ -4167,6 +4182,7 @@ SCIP_RETCODE separateIISRounding(
    SCIP_Bool* S;
    SCIP_Bool error;
    int oldsize = -1;
+   /* cppcheck-suppress unassignedVariable */
    int nGenOld;
 
    assert( scip != NULL );
@@ -4537,7 +4553,7 @@ SCIP_RETCODE separatePerspective(
 #ifdef SCIP_OUTPUT
             SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 #endif
-            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, &infeasible) );
+            SCIP_CALL( SCIPaddCut(scip, row, FALSE, &infeasible) );
             assert( ! infeasible );
             SCIP_CALL( SCIPreleaseRow(scip, &row));
             SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
@@ -4656,7 +4672,7 @@ SCIP_RETCODE separateIndicators(
 #ifdef SCIP_OUTPUT
                SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 #endif
-               SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, &infeasible) );
+               SCIP_CALL( SCIPaddCut(scip, row, FALSE, &infeasible) );
                assert( ! infeasible );
                SCIP_CALL( SCIPreleaseRow(scip, &row));
 
@@ -5971,7 +5987,7 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
 #ifdef SCIP_OUTPUT
             SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 #endif
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, infeasible) );
+            SCIP_CALL( SCIPaddCut(scip, row, FALSE, infeasible) );
             SCIP_CALL( SCIPreleaseRow(scip, &row));
          }
       }
@@ -6155,6 +6171,11 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
       if ( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, consdata->binvar)) &&
            ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, consdata->slackvar)) )
       {
+         SCIP_Real absviol = REALABS(SCIPgetSolVal(scip, sol, consdata->slackvar));
+         SCIP_Real relviol = SCIPrelDiff(absviol, 0.0);
+         if( sol != NULL )
+            SCIPupdateSolConsViolation(scip, sol, absviol, relviol);
+
          SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
          *result = SCIP_INFEASIBLE;
 
@@ -7127,6 +7148,11 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
          "Allow to use local bounds in order to separate perspective cuts?",
          &conshdlrdata->sepapersplocal, TRUE, DEFAULT_SEPAPERSPLOCAL, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "constraints/indicator/maxsepanonviolated",
+         "maximal number of separated non violated IISs, before separation is stopped",
+         &conshdlrdata->maxsepanonviolated, FALSE, DEFAULT_MAXSEPANONVIOLATED, 0, INT_MAX, NULL, NULL) );
+
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/indicator/updatebounds",
          "Update bounds of original variables for separation?",
@@ -7861,6 +7887,40 @@ SCIP_VAR* SCIPgetSlackVarIndicator(
    assert( consdata != NULL );
 
    return consdata->slackvar;
+}
+
+
+/** sets upper bound for slack variable corresponding to indicator constraint
+ *
+ *  Use with care if you know that the maximal violation of the corresponding constraint is at most @p ub. This bound
+ *  might be improved automatically during the solution process.
+ *
+ *  @pre This method should only be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+SCIP_RETCODE SCIPsetSlackVarUb(
+   SCIP*                 scip,                /**< SCIP data structure */
+   SCIP_CONS*            cons,                /**< indicator constraint */
+   SCIP_Real             ub                   /**< upper bound for slack variable */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert( scip != NULL );
+   assert( cons != NULL );
+   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0 );
+
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+
+   if ( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM )
+      return SCIP_OKAY;
+
+   assert( consdata->slackvar != NULL );
+   SCIP_CALL( SCIPchgVarUb(scip, consdata->slackvar, ub) );
+
+   return SCIP_OKAY;
 }
 
 

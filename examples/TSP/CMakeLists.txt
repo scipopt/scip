@@ -1,6 +1,9 @@
+cmake_minimum_required(VERSION 3.0)
+
 project(TSP)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../src)
+find_package(SCIP REQUIRED)
+include_directories(${SCIP_INCLUDE_DIRS})
 
 add_executable(sciptsp
    src/ConshdlrSubtour.cpp
@@ -13,8 +16,11 @@ add_executable(sciptsp
    src/ProbDataTSP.cpp
    src/ReaderTSP.cpp)
 
-target_link_libraries(sciptsp libscip)
-add_dependencies(examples sciptsp)
+target_link_libraries(sciptsp ${SCIP_LIBRARIES})
+
+if( TARGET examples )
+    add_dependencies( examples sciptsp )
+endif()
 
 add_subdirectory(check)
 enable_testing()

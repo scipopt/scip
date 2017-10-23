@@ -290,7 +290,7 @@ SCIP_DECL_READERREAD(ReaderTSP::scip_read)
             if( edgeweighttype == "EUC_2D")
                edgeforw->length = sqrt( x*x + y*y );
             else if( edgeweighttype == "MAX_2D")
-               edgeforw->length = max( ABS(x), ABS(y) );
+               edgeforw->length = MAX( ABS(x), ABS(y) );
             else if( edgeweighttype == "MAN_2D")
                edgeforw->length = ABS(x) + ABS(y);
             else if( edgeweighttype == "ATT")

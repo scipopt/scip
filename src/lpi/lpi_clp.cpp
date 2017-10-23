@@ -598,6 +598,14 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    const SCIP_Real*      val                 /**< values of constraint matrix entries */
    )
 {
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
+
    SCIPdebugMessage("calling SCIPlpiLoadColLP()\n");
 
    assert(lpi != 0);
@@ -659,6 +667,14 @@ SCIP_RETCODE SCIPlpiAddCols(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or 0 if nnonz == 0 */
    )
 {
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
+
    SCIPdebugMessage("calling SCIPlpiAddCols()\n");
 
    assert(lpi != 0);
@@ -802,6 +818,14 @@ SCIP_RETCODE SCIPlpiAddRows(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or 0 if nnonz == 0 */
    )
 {
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
+
    SCIPdebugMessage("calling SCIPlpiAddRows()\n");
 
    assert(lpi != 0);
@@ -3632,17 +3656,11 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    case SCIP_LPPAR_BARRIERCONVTOL:
       /**@todo add BARRIERCONVTOL parameter */
       return SCIP_PARAMETERUNKNOWN;
-   case SCIP_LPPAR_LOBJLIM:
-      if ( lpi->clp->optimizationDirection() > 0 )   // if minimization
-	 *dval = lpi->clp->primalObjectiveLimit();
+   case SCIP_LPPAR_OBJLIM:
+      if ( lpi->clp->optimizationDirection() > 0 )
+	 *dval = lpi->clp->primalObjectiveLimit();   // minimization
       else
-	 *dval = lpi->clp->dualObjectiveLimit();
-      break;
-   case SCIP_LPPAR_UOBJLIM:
-      if ( lpi->clp->optimizationDirection() > 0 )   // if minimization
-	 *dval = lpi->clp->dualObjectiveLimit();
-      else
-	 *dval = lpi->clp->primalObjectiveLimit();
+	 *dval = lpi->clp->dualObjectiveLimit();     // maximization
       break;
    case SCIP_LPPAR_LPTILIM:
       *dval = lpi->clp->maximumSeconds();
@@ -3677,17 +3695,11 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    case SCIP_LPPAR_BARRIERCONVTOL:
       /**@todo add BARRIERCONVTOL parameter */
       return SCIP_PARAMETERUNKNOWN;
-   case SCIP_LPPAR_LOBJLIM:
-      if ( lpi->clp->optimizationDirection() > 0 )   // if minimization
-	 lpi->clp->setPrimalObjectiveLimit(dval);
+   case SCIP_LPPAR_OBJLIM:
+      if ( lpi->clp->optimizationDirection() > 0 )
+	 lpi->clp->setPrimalObjectiveLimit(dval);   // minimization
       else
-	 lpi->clp->setDualObjectiveLimit(dval);
-      break;
-   case SCIP_LPPAR_UOBJLIM:
-      if ( lpi->clp->optimizationDirection() > 0 )   // if minimization
-	 lpi->clp->setDualObjectiveLimit(dval);
-      else
-	 lpi->clp->setPrimalObjectiveLimit(dval);
+	 lpi->clp->setDualObjectiveLimit(dval);     // maximization
       break;
    case SCIP_LPPAR_LPTILIM:
       lpi->clp->setMaximumSeconds(dval);

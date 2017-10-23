@@ -18,25 +18,27 @@ TSTNAME=$1
 BINNAME=$2
 SETNAMES=$3
 BINID=$4
-TIMELIMIT=$5
-NODELIMIT=$6
-MEMLIMIT=$7
-THREADS=$8
-FEASTOL=$9
-DISPFREQ=${10}
-CONTINUE=${11}
-LOCK=${12}
-VERSION=${13}
-LPS=${14}
-DEBUGTOOL=${15}
-CLIENTTMPDIR=${16}
-REOPT=${17}
-OPTCOMMAND=${18}
-SETCUTOFF=${19}
-MAXJOBS=${20}
-VISUALIZE=${21}
-PERMUTE=${22}
-SEEDS=${23}
+OUTPUTDIR=$5
+TIMELIMIT=$6
+NODELIMIT=$7
+MEMLIMIT=$8
+THREADS=$9
+FEASTOL=${10}
+DISPFREQ=${11}
+CONTINUE=${12}
+LOCK=${13}
+VERSION=${14}
+LPS=${15}
+DEBUGTOOL=${16}
+CLIENTTMPDIR=${17}
+REOPT=${18}
+OPTCOMMAND=${19}
+SETCUTOFF=${20}
+MAXJOBS=${21}
+VISUALIZE=${22}
+PERMUTE=${23}
+SEEDS=${24}
+GLBSEEDSHIFT=${25}
 
 # check if all variables defined (by checking the last one)
 if test -z $SEEDS
@@ -46,6 +48,7 @@ then
     echo "BINNAME       = $BINNAME"
     echo "SETNAMES      = $SETNAMES"
     echo "BINID         = $BINID"
+    echo "OUTPUTDIR     = $OUTPUTDIR"
     echo "TIMELIMIT     = $TIMELIMIT"
     echo "NODELIMIT     = $NODELIMIT"
     echo "MEMLIMIT      = $MEMLIMIT"
@@ -66,6 +69,7 @@ then
     echo "VISUALIZE     = $VISUALIZE"
     echo "PERMUTE       = $PERMUTE"
     echo "SEEDS         = $SEEDS"
+    echo "GLBSEEDSHIFT  = $GLBSEEDSHIFT"
     exit 1;
 fi
 
@@ -171,6 +175,7 @@ do
 		export SOLNAME=$SOLCHECKFILE
                 export TIMELIMIT
 		export CLIENTTMPDIR
+                export OUTPUTDIR
 		export CHECKERPATH=$SCIPPATH/solchecker
 
 		echo Solving instance $INSTANCE with settings $SETNAME, hard time $HARDTIMELIMIT, hard mem $HARDMEMLIMIT

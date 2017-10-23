@@ -1127,7 +1127,7 @@ SCIP_RETCODE SCIPdomchgMakeStatic(
             else
             {
                /* shrink dynamic size arrays to their minimal sizes */
-               SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.boundchgs,
+               SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.boundchgs, \
                      (*domchg)->domchgdyn.boundchgssize, (*domchg)->domchgdyn.nboundchgs) ); /*lint !e571*/
                BMSfreeBlockMemoryArrayNull(blkmem, &(*domchg)->domchgdyn.holechgs, (*domchg)->domchgdyn.holechgssize);
 
@@ -1139,9 +1139,9 @@ SCIP_RETCODE SCIPdomchgMakeStatic(
          else
          {
             /* shrink dynamic size arrays to their minimal sizes */
-            SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.boundchgs,
+            SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.boundchgs, \
                   (*domchg)->domchgdyn.boundchgssize, (*domchg)->domchgdyn.nboundchgs) ); /*lint !e571*/
-            SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.holechgs,
+            SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.holechgs, \
                   (*domchg)->domchgdyn.holechgssize, (*domchg)->domchgdyn.nholechgs) );
 
             /* convert into static domain change */
@@ -1972,7 +1972,6 @@ SCIP_RETCODE varCreate(
    (*var)->eventqueueimpl = FALSE;
    (*var)->deletable = FALSE;
    (*var)->delglobalstructs = FALSE;
-   (*var)->clqcomponentidx = -1;
 
    stat->nvaridx++;
 
@@ -2225,6 +2224,7 @@ SCIP_RETCODE parseBounds(
    )
 {
    char token[SCIP_MAXSTRLEN];
+   char* tmpend;
 
    SCIPsetDebugMsg(set, "parsing bounds: '%s'\n", str);
 
@@ -2242,7 +2242,7 @@ SCIP_RETCODE parseBounds(
    /* get lower bound */
    SCIPstrCopySection(str, '[', ',', token, SCIP_MAXSTRLEN, endptr);
    str = *endptr;
-   SCIP_CALL( parseValue(set, token, lb, endptr) );
+   SCIP_CALL( parseValue(set, token, lb, &tmpend) );
 
    /* get upper bound */
    SCIP_CALL( parseValue(set, str, ub, endptr) );
@@ -7280,8 +7280,10 @@ SCIP_RETCODE varProcessChgLbLocal(
    assert(var != NULL);
    assert(set != NULL);
    assert(var->scip == set->scip);
-   assert((SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && (SCIPsetIsZero(set, newbound) || SCIPsetIsEQ(set, newbound, 1.0)))
-      || (SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS && SCIPsetIsIntegral(set, newbound))
+   assert((SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && (SCIPsetIsZero(set, newbound) || SCIPsetIsEQ(set, newbound, 1.0)
+            || SCIPsetIsEQ(set, newbound, var->locdom.ub)))
+      || (SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS && (SCIPsetIsIntegral(set, newbound)
+            || SCIPsetIsEQ(set, newbound, var->locdom.ub)))
       || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
 
    /* check that the bound is feasible */
@@ -7445,8 +7447,10 @@ SCIP_RETCODE varProcessChgUbLocal(
    assert(var != NULL);
    assert(set != NULL);
    assert(var->scip == set->scip);
-   assert((SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && (SCIPsetIsZero(set, newbound) || SCIPsetIsEQ(set, newbound, 1.0)))
-      || (SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS && SCIPsetIsIntegral(set, newbound))
+   assert((SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && (SCIPsetIsZero(set, newbound) || SCIPsetIsEQ(set, newbound, 1.0)
+            || SCIPsetIsEQ(set, newbound, var->locdom.lb)))
+      || (SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS && (SCIPsetIsIntegral(set, newbound)
+            || SCIPsetIsEQ(set, newbound, var->locdom.lb)))
       || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
 
    /* check that the bound is feasible */
@@ -17735,26 +17739,6 @@ SCIP_Real SCIPvarGetVSIDS(
       return SCIPvarGetVSIDS_rec(var, stat, dir);
 }
 
-/** returns the index of the connected component of the clique graph that the variable belongs to, or -1 if not computed */
-int SCIPvarGetCliqueComponentIdx(
-   SCIP_VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-   return var->clqcomponentidx;
-}
-
-/** sets the index of the connected component of the clique graph that the variable belongs to, or -1 if not computed */
-void SCIPvarSetCliqueComponentIdx(
-   SCIP_VAR*             var,                /**< problem variable */
-   int                   idx                 /**< clique component index of this variable */
-   )
-{
-   assert(var != NULL);
-   var->clqcomponentidx = idx;
-}
-
-
 /** includes event handler with given data in variable's event filter */
 SCIP_RETCODE SCIPvarCatchEvent(
    SCIP_VAR*             var,                /**< problem variable */
@@ -17774,7 +17758,7 @@ SCIP_RETCODE SCIPvarCatchEvent(
    assert((eventtype & SCIP_EVENTTYPE_VARCHANGED) != 0);
    assert(SCIPvarIsTransformed(var));
 
-   SCIPsetDebugMsg(set, "catch event of type 0x%"SCIP_EVENTTYPE_FORMAT" of variable <%s> with handler %p and data %p\n",
+   SCIPsetDebugMsg(set, "catch event of type 0x%" SCIP_EVENTTYPE_FORMAT " of variable <%s> with handler %p and data %p\n",
       eventtype, var->name, (void*)eventhdlr, (void*)eventdata);
 
    SCIP_CALL( SCIPeventfilterAdd(var->eventfilter, blkmem, set, eventtype, eventhdlr, eventdata, filterpos) );

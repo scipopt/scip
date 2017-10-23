@@ -42,6 +42,7 @@
 #include "scip/sepastore.h"
 #include "scip/scip.h"
 #include "scip/branch.h"
+#include "scip/solve.h"
 
 #include "scip/struct_branch.h"
 
@@ -472,7 +473,6 @@ SCIP_RETCODE SCIPbranchcandGetExternCands(
 }
 
 /** gets maximal branching priority of LP branching candidates */
-extern
 int SCIPbranchcandGetLPMaxPrio(
    SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
    )
@@ -483,7 +483,6 @@ int SCIPbranchcandGetLPMaxPrio(
 }
 
 /** gets number of LP branching candidates with maximal branch priority */
-extern
 int SCIPbranchcandGetNPrioLPCands(
    SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
    )
@@ -494,7 +493,6 @@ int SCIPbranchcandGetNPrioLPCands(
 }
 
 /** gets maximal branching priority of external branching candidates */
-extern
 int SCIPbranchcandGetExternMaxPrio(
    SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
    )
@@ -2497,7 +2495,7 @@ SCIP_RETCODE SCIPbranchExecLP(
    SCIPsetSortBranchrules(set);
 
    /* try all branching rules until one succeeded to branch */
-   for( i = 0; i < set->nbranchrules && (*result == SCIP_DIDNOTRUN || *result == SCIP_DIDNOTFIND); ++i )
+   for( i = 0; i < set->nbranchrules && (*result == SCIP_DIDNOTRUN || *result == SCIP_DIDNOTFIND) && !SCIPsolveIsStopped(set, stat, FALSE); ++i )
    {
       SCIP_CALL( SCIPbranchruleExecLPSol(set->branchrules[i], set, stat, tree, sepastore, cutoffbound, allowaddcons, result) );
    }

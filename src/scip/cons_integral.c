@@ -186,6 +186,10 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
       for( v = 0; v < ninteger; ++v )
       {
          solval = SCIPgetSolVal(scip, sol, vars[v]);
+
+         if( sol != NULL )
+            SCIPupdateSolIntegralityViolation(scip, sol, EPSFRAC(solval, SCIPfeastol(scip)));
+
          if( !SCIPisFeasIntegral(scip, solval) )
          {
             *result = SCIP_INFEASIBLE;

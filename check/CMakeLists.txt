@@ -41,12 +41,14 @@ set(settings_MIP
     "fullstrongbfs"
     "indicatorlogicor"
     "mostinf"
+    "distribution"
     "oddcylcelift"
     "oddcylce"
     "oddcylceliftheur"
     "indicatorsepa"
     "proporbit"
     "allfull"
+
     "cgmipviol"
 #    "dynamic"
     "heurlprows"
@@ -67,6 +69,8 @@ set(settings_MIP
     "vbcvisualization"
     "bakvisualization"
     "solvingphases"
+    "lns_epsgreedy"
+    "lns_exp3"
 )
 
 set(settings_MINLP
@@ -77,7 +81,7 @@ set(settings_MINLP
     "nlpdiving2"
     "nlpdiving3"
     "nlpdiving1-relprop"
-#    "nlpdivingsolvesubmip"
+    "nlpdivingsolvesubmip"
     "nlpdiving4"
 )
 set(settings_Bivariate
@@ -100,7 +104,7 @@ set(instances_Indicator
 set(instances_MIP
     "instances/MIP/bell5.mps\;8966406.49"
     "instances/MIP/blend2.mps\;7.598985"
-    "instances/MIP/dcmulti.mps\;188182"
+#    "instances/MIP/dcmulti.mps\;188182"
     "instances/MIP/egout.mps\;568.1007"
     "instances/MIP/enigma.mps\;0"
     "instances/MIP/flugpl.mps\;1201500"
@@ -206,12 +210,29 @@ set(scip_reader_extensions
     "ppm"
     "pbm"
     "ccg"
-#    "opb"
+    "opb"
     "pip"
     "rlp"
 #    "mps"
     "lp"
     )
+
+#
+# add a test to build the SCIP binary that all further tests depend on
+#
+add_test(NAME scip-build
+        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target scip
+        )
+
+#
+# avoid that several build jobs try to concurrently build the SCIP library
+# note that this ressource lock name is not the actual libscip target
+#
+set_tests_properties(scip-build
+                    PROPERTIES
+                        RESOURCE_LOCK libscip
+                    )
+
 
 #
 # macro to split an instance into its relevant information
@@ -238,8 +259,14 @@ macro(add_instancetests instances settings prefix)
             #
             # treat the instance as a tuple (list) of two values
             #
-            add_test(NAME ${prefix}-${setting}-${basename} COMMAND $<TARGET_FILE:scip> -f ${PROJECT_SOURCE_DIR}/check/${path} -s ${PROJECT_SOURCE_DIR}/coverage/settings/${setting}.set -o ${optval} ${optval})
-            set_tests_properties(${prefix}-${setting}-${basename} PROPERTIES PASS_REGULAR_EXPRESSION "Validation         : Success")
+            add_test(NAME ${prefix}-${setting}-${basename}
+                    COMMAND $<TARGET_FILE:scip> -f ${PROJECT_SOURCE_DIR}/check/${path} -s ${PROJECT_SOURCE_DIR}/coverage/settings/${setting}.set -o ${optval} ${optval}
+                    )
+            set_tests_properties(${prefix}-${setting}-${basename}
+                                PROPERTIES
+                                    PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                    DEPENDS scip-build
+                                )
         endforeach(setting)
     endforeach(instance)
 endmacro(add_instancetests)
@@ -265,10 +292,31 @@ foreach(instance ${instances_MINLP})
     #
     configure_file(interactiveshell/solutiontest.bat.in interactiveshell/solutiontest-${basename}.bat)
         add_test(NAME MINLP-solutiontest-${basename}
-            COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/solutiontest-${basename}.bat
-            )
-        set_tests_properties(MINLP-solutiontest-${basename} PROPERTIES PASS_REGULAR_EXPRESSION "Validation         : Success")
+                COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/solutiontest-${basename}.bat
+                )
+        set_tests_properties(MINLP-solutiontest-${basename}
+                            PROPERTIES
+                                PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                DEPENDS scip-build
+                            )
 endforeach(instance)
+
+#
+# the following instances are not pure binary and hence cannot be written out in opb format
+#
+set(basenames_opb_wrongformat
+    bell5.mps
+    blend2.mps
+    egout.mps
+    flugpl.mps
+    gt2.mps
+    MANN_a9.clq.lp
+    misc03.mps
+    rgn.mps
+    vpm2.fzn
+    )
+set(message_format_opb "WARNING: only binary problems can be written in OPB format.")
+
 
 
 #
@@ -280,11 +328,30 @@ foreach(instance ${instances_MIP})
         #
         # configure the batch file for this test by substituting placeholders in the in.file
         #
-        configure_file(interactiveshell/readertest.bat.in interactiveshell/readertest-${extension}-${basename}.bat)
+
+        # does this instance match the requirements of this format?
+        list(FIND basenames_${extension}_wrongformat ${basename} wrongformat)
+
+        #
+        # use different template batch files depending on the format requirements
+        #
+        if( wrongformat EQUAL -1 )
+            configure_file(interactiveshell/readertest.bat.in interactiveshell/readertest-${extension}-${basename}.bat)
+            set(regex "Validation         : Success")
+        else()
+            configure_file(interactiveshell/readertest-wrongformat.bat.in interactiveshell/readertest-${extension}-${basename}.bat)
+            set(regex "${message_format_${extension}}")
+        endif()
+
         add_test(NAME MIP-readertest-${extension}-${basename}
-            COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/readertest-${extension}-${basename}.bat
-            )
-        set_tests_properties(MIP-readertest-${extension}-${basename} PROPERTIES PASS_REGULAR_EXPRESSION "Validation         : Success")
+                COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/readertest-${extension}-${basename}.bat
+                )
+        set_tests_properties(MIP-readertest-${extension}-${basename}
+                            PROPERTIES
+                                PASS_REGULAR_EXPRESSION ${regex}
+#                                     FAIL_REGULAR_EXPRESSION ERROR
+                                DEPENDS scip-build
+                            )
     endforeach(extension)
 endforeach(instance)
 
@@ -299,11 +366,43 @@ if(NOT ${TPI} STREQUAL "none")
         #
         configure_file(interactiveshell/concurrentsolve.bat.in interactiveshell/concurrentsolve-${basename}.bat)
         add_test(NAME MIP-concurrentsolve-${basename}
-            COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/concurrentsolve-${basename}.bat
-            )
-        set_tests_properties(MIP-concurrentsolve-${basename} PROPERTIES PASS_REGULAR_EXPRESSION "Validation         : Success")
+                COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/concurrentsolve-${basename}.bat
+                )
+        set_tests_properties(MIP-concurrentsolve-${basename}
+                            PROPERTIES
+                                PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                DEPENDS scip-build
+                            )
     endforeach(instance)
 endif()
+
+#
+# add tests that read partial solutions
+#
+foreach(instance ${instances_MIP})
+    split_instance(instance)
+    #
+    # if there is a partial solution file in mipstarts, we add a test
+    #
+    if( EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/mipstarts/${basename}.mst" )
+        #
+        # configure the template batch file and store it under the binary (build) directory
+        #
+        configure_file(interactiveshell/mipstarts.bat.in interactiveshell/MIP-mipstart-${basename}.bat)
+
+        #
+        # add test that executes the configured batch file and greps the validation expression
+        #
+        add_test(NAME MIP-mipstart-${basename}
+                COMMAND $<TARGET_FILE:scip> -b interactiveshell/MIP-mipstart-${basename}.bat
+                )
+        set_tests_properties(MIP-mipstart-${basename}
+                            PROPERTIES
+                                PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                DEPENDS scip-build
+                            )
+    endif()
+endforeach(instance)
 
 #
 # interactive shell test.
@@ -315,7 +414,16 @@ file(MAKE_DIRECTORY ${shell_tmp_dir})
 
 configure_file(interactiveshell/interactiveshell.bat.in interactiveshell/interactiveshell.bat)
 
-add_test(NAME interactiveshell COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/interactiveshell.bat)
-set_tests_properties(interactiveshell PROPERTIES PASS_REGULAR_EXPRESSION "increased branching priority of new binary variables")
+add_test(NAME interactiveshell
+        COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/interactiveshell.bat
+        )
+set_tests_properties(interactiveshell
+                    PROPERTIES
+                        PASS_REGULAR_EXPRESSION "increased branching priority of new binary variables"
+                        DEPENDS scip-build
+                    )
 
-add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} -R "-default" --schedule-random DEPENDS all_executables)
+add_custom_target(check
+                COMMAND ${CMAKE_CTEST_COMMAND} -R "-default" --schedule-random
+                DEPENDS scip
+                )
