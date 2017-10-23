@@ -688,10 +688,10 @@ SCIP_RETCODE propVariables(
             }
 
             SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
-
-            *infeasible = TRUE;
-            break;
          }
+
+         *infeasible = TRUE;
+         break;
       }
       /* if first part of the variable pair is fixed to 0 and the second part is free --> fix second part to 0 */
       else if ( ISFIXED0(var) && ( ! ISFIXED0(var2) ) )
@@ -770,6 +770,7 @@ SCIP_RETCODE addSymresackInequality(
 
    SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), "symresack", -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
+
    for (i = 0; i < (consdata->nvars); ++i)
    {
       if ( coeffs[i] == 1 )
@@ -1856,7 +1857,7 @@ SCIP_DECL_CONSRESPROP(consRespropSymresack)
 
       if ( SCIPvarGetLbAtIndex(vars[inferinfo2], bdchgidx, FALSE) < 0.5 && SCIPvarGetLbAtIndex(vars[inferinfo2], bdchgidx, TRUE) > 0.5 )
       {
-         SCIPdebugMessage(" -> reason for setting x[%d] = 1 was fixing x[%d] to 0 and each pair of binary variables before (%d,%d) which are not fixed points is constant.\n",
+         SCIPdebugMessage(" -> reason for setting x[%d] = 1 was fixing x[%d] to 1 and each pair of binary variables before (%d,%d) which are not fixed points is constant.\n",
             inferinfo2, invperm[inferinfo2], inferinfo2, invperm[inferinfo2]);
 
          SCIP_CALL( SCIPaddConflictLb(scip, vars[invperm[inferinfo2]], bdchgidx) );
