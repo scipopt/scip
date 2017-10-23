@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+#define SCIP_DEBUG
 /**@file   cons_knapsack.c
  * @brief  Constraint handler for knapsack constraints of the form  \f$a^T x \le b\f$, x binary and \f$a \ge 0\f$.
  * @author Tobias Achterberg
@@ -5863,7 +5863,23 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
 
       if( SCIPvarIsBinary(var) && SCIPvarIsActive(var) )
       {
+         SCIP_Real solval;
          assert(0 <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < nbinvars);
+
+         solval = SCIPgetSolVal(scip, sol, var);
+
+         /* if the variable bounds cut off the current solution (it should not be the LP solution in that case),
+          * there is no need to separate the solution further
+          */
+         if( SCIPisFeasLT(scip, solval, SCIPvarGetLbLocal(var))
+               || SCIPisFeasGT(scip, solval, SCIPvarGetUbLocal(var)) )
+         {
+            *cutoff = TRUE;
+            SCIPdebugMsg(scip, "Solution value %.15g violates binary variable bounds: <%s>[%.15g,%.15g]\n",
+                  solval, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+            goto TERMINATE;
+         }
+
          binvals[SCIPvarGetProbindex(var)] += valscale * knapvals[i];
          if( !noknapsackconshdlr )
          {
