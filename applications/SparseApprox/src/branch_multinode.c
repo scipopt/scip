@@ -184,7 +184,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultinode)
    if( ncands != 0 )
    {
       /* compute the relpcost for the candidates */
-      SCIP_CALL( SCIPexecRelpscostBranching(scip, TRUE, branchcands, branchcandssol, branchcandsfrac, ncands, FALSE,  result) );
+      SCIP_CALL( SCIPexecRelpscostBranching(scip, branchcands, branchcandssol, branchcandsfrac, ncands, FALSE,  result) );
       assert(*result == SCIP_DIDNOTRUN || *result == SCIP_CUTOFF || *result == SCIP_REDUCEDDOM);
       if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM )
       {

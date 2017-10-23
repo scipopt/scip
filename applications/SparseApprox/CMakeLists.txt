@@ -15,7 +15,6 @@ set (SOURCE_FILES
         src/heur_fuzzyround.c
         src/heur_spakerlin.c
         src/branch_multinode.c
-        src/cons_triangle.c
         src/reader_spa.c
         src/probdata_spa.c )
 
