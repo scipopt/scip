@@ -844,8 +844,16 @@ SCIP_RETCODE SCIPlpiAddRows(
    int* mybeg = NULL;
    SCIP_ALLOC( BMSallocMemoryArray( &mybeg, nrows + 1) );
 
-   if ( nnonz != 0 )
+   if ( nnonz > 0 )
    {
+#ifndef NDEBUG
+      /* perform check that no new columns are added - this is likely to be a mistake */
+      int ncols = lpi->clp->getNumCols();
+      for (int j = 0; j < nnonz; ++j)
+         assert( 0 <= ind[j] && ind[j] < ncols );
+#endif
+
+
       // copy beg-array
       BMScopyMemoryArray( mybeg, beg, nrows);
       mybeg[nrows] = nnonz;   // add additional entry at end
