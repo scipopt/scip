@@ -471,7 +471,7 @@ SCIP_RETCODE computeCutsSin(
     *
     * a = cos(x^)    and     b = sin(x^) - a * x^        where x^ is any known point in [lb,ub]
     *
-    * and the resulting cut is       a*x - z <=/>= -b           depending on bay
+    * and the resulting cut is       a*x - z <=/>= -b           depending on over-/underestimation
     */
 
    /* compute secant between lower and upper bound */
@@ -533,6 +533,7 @@ SCIP_RETCODE computeCutsSin(
          success = computeRightTangentSin(scip, &lincoef, &linconst, childub);
       else
          success = computeLeftTangentSin(scip, &lincoef, &linconst, -childub);
+
       if( success )
       {
          lhs = underestimate ? -SCIPinfinity(scip) : linconst;
@@ -936,9 +937,12 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSin)
 
    for( i = 0; i < 4; ++i )
    {
+      if( cuts[i] == NULL )
+         continue;
+
       SCIP_CALL( SCIPmassageConsExprExprCut(scip, &cuts[i], sol, minviolation) );
 
-      if( cuts[i] == NULL || SCIProwIsInLP(cuts[i]) )
+      if( cuts[i] == NULL )
          continue;
 
       violation = -SCIPgetRowSolFeasibility(scip, cuts[i], sol);

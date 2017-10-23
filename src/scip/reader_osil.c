@@ -1356,7 +1356,8 @@ SCIP_RETCODE readExpression(
       strcmp(exprname, "square") == 0 ||
       strcmp(exprname, "exp") == 0 ||
       strcmp(exprname, "ln") == 0 ||
-      strcmp(exprname, "log10") == 0
+      strcmp(exprname, "log10") == 0 ||
+      strcmp(exprname, "sin") == 0
       )
    {
       SCIP_EXPR* arg;
@@ -1402,7 +1403,7 @@ SCIP_RETCODE readExpression(
       {
          SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_LOG, arg) );
       }
-      else /* if( strcmp(exprname, "log10") == 0 ) */
+      else if( strcmp(exprname, "log10") == 0 )
       {
          /* log10(expr) = ln(expr)*1/ln(10) */
          SCIP_EXPR* tmp;
@@ -1412,6 +1413,10 @@ SCIP_RETCODE readExpression(
          SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &tmp, SCIP_EXPR_CONST, 1.0/log(10.0)) );
          SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &arg, SCIP_EXPR_LOG, arg) );
          SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_MUL, arg, tmp) );
+      }
+      else if( strcmp(exprname, "sin") == 0 )
+      {
+         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_SIN, arg) );
       }
 
       return SCIP_OKAY;
