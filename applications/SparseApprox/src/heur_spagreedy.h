@@ -16,7 +16,8 @@
 
 /**@file   heur_spagreedy.h
  * @ingroup PRIMALHEURISTICS
- * @brief  spagreedy primal heuristic
+ * @brief  Greedy primal heuristic. States are assigned to clusters iteratively. At each iteration all possible
+ * assignments are computed and the one with the best change in objective value is selected.
  * @author Leon Eifler
  *
  */

@@ -7,19 +7,12 @@
 #include "probdata_spa.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
+#include "scip/cons_quadratic.h"
 #include "scip/var.h"
-#include <math.h>
 #include <assert.h>
-#include <string.h>
-#include <ctype.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include "scip/cons_pseudoboolean.h"
 
 
-/**
- * assign the variables in scip according to the found clusterassignment
- */
+/** Check if the clustering has exactly one state in every cluster. */
 SCIP_Bool isPartition(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real**           solclustering,      /**< Matrix with the clustering */
@@ -44,6 +37,7 @@ SCIP_Bool isPartition(
    return TRUE;
 }
 
+/** Assign the variables in scip according to the found clustering. */
 SCIP_RETCODE assignVars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< The SCIP solution */
@@ -68,7 +62,7 @@ SCIP_RETCODE assignVars(
 
    for ( c = 0; c < ncluster; ++c )
    {
-      /* set values of binary variables */
+      /* set values of state-variables */
       for ( i = 0; i < nbins; ++i )
       {
          if( NULL != binvars[i][c] )
@@ -78,26 +72,28 @@ SCIP_RETCODE assignVars(
             else
                var = SCIPvarGetTransVar(binvars[i][c] );
 
-            /* check if the clusterassignment ist feasible for the variable bounds. If not do not assign the variable */
+            /* check if the clusterassignment is feasible for the variable bounds. If not do not assign the variable */
             if( var != NULL && SCIPisLE(scip, SCIPvarGetLbGlobal(var), clustering[i][c]) && SCIPisGE(scip, SCIPvarGetUbGlobal(var), clustering[i][c]) && SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
                SCIP_CALL( SCIPsetSolVal( scip, sol, var, clustering[i][c]) );
             assert( SCIPisIntegral(scip, clustering[i][c]) );
          }
       }
 
-      /* set the value for the edgevariables */
+      /* set the value for the edgevariables for each pair of states */
       for( i = 0; i < nbins; ++i )
       {
          for( j = 0; j < i; ++j )
          {
             if( NULL == edgevars[i][j] || NULL == edgevars[j][i])
                continue;
+            /* check if bins are in same cluster */
             if( SCIPisEQ(scip, 1.0, clustering[i][c] * clustering[j][c]) )
             {
                var = edgevars[i][j][0];
                if( var != NULL && SCIPisGE(scip, SCIPvarGetUbGlobal(var), clustering[j][c] * clustering[i][c]) && SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
                   SCIP_CALL( SCIPsetSolVal( scip, sol, var, 1.0 ) );
             }
+            /* check if bins are in consecutive clusters */
             else if( SCIPisEQ(scip, 1.0, clustering[i][c] * clustering[j][phi(c, ncluster)]) )
             {
                var = edgevars[i][j][1];
@@ -117,22 +113,21 @@ SCIP_RETCODE assignVars(
    return SCIP_OKAY;
 }
 
-
 struct SCIP_ProbData
 {
-   SCIP_VAR****          edgevars;         /**< variables for the edges cut by a partioning */
-   SCIP_VAR***           binvars;          /**< variable-matrix belonging to the bin-cluster assignment */
-   SCIP_Real**           cmatrix;          /**< matrix to save the transition matrix */
-   SCIP_Real             scale;        /**< The weight for the coherence in the objective function */
-   char                  model_variant;     /**< The model that is used. w for weighted objective, e for normal edge-representation */
+   SCIP_VAR****          edgevars;           /**< variables for the edges (pairs of states) inside and between consecutive clusters */
+   SCIP_VAR***           binvars;            /**< variable-matrix belonging to the state(bin)-cluster assignment */
+   SCIP_Real**           cmatrix;            /**< matrix to save the transition matrix */
+   SCIP_Real             scale;              /**< The weight-factor for the coherence in the objective function */
+   char                  model_variant;      /**< The model that is used. w for weighted objective, e for normal edge-representation */
    int                   nbins;
    int                   ncluster;
 };
 
-
+/** Function that returns the successive cluster along the cycle */
 int phi(
-   int                   k,
-   int                   ncluster
+   int                   k,                  /**< the cluster */
+   int                   ncluster            /**< the number of clusters*/
 )
 {
    assert(k < ncluster && k >= 0);
@@ -140,10 +135,10 @@ int phi(
    return (k+1) % ncluster;
 }
 
-
+/** Function that returns the predecessor-cluster along the cycle */
 int phiinv(
-   int                   k,
-   int                   ncluster
+   int                   k,                  /**< the cluster */
+   int                   ncluster            /**< the number of clusters */
 )
 {
    assert(k < ncluster && k >= 0);
@@ -152,12 +147,10 @@ int phiinv(
       return ncluster - 1;
    else
       return
-         k - 1;
+            k - 1;
 }
 
-
-
-/** Creates all the variables for the problem. The constraints are added later, depending on the model that is used */
+/** Creates all the variables for the problem.  The constraints are added later, depending on the model that is used */
 static
 SCIP_RETCODE createVariables(
    SCIP*                 scip,               /**< SCIP Data Structure */
@@ -209,7 +202,7 @@ SCIP_RETCODE createVariables(
             if( edgetype == 0 && i < j )
                continue;
             (void)SCIPsnprintf(varname, SCIP_MAXSTRLEN, "y_%d_%d_%d", i, j, edgetype );
-            SCIP_CALL( SCIPcreateVarBasic(scip, &probdata->edgevars[i][j][edgetype], varname, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT) );
+            SCIP_CALL( SCIPcreateVarBasic(scip, &probdata->edgevars[i][j][edgetype], varname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY) );
             SCIP_CALL( SCIPaddVar(scip, probdata->edgevars[i][j][edgetype]) );
          }
       }
@@ -218,11 +211,12 @@ SCIP_RETCODE createVariables(
    return SCIP_OKAY;
 }
 
-/** create the problem without variable amount of clusters */
+/** Create the problem without variable amount of clusters, using three edge-variables for each pair of states.
+ * This is the tested default version*/
 static
 SCIP_RETCODE createProbSimplified(
-   SCIP*                 scip,               /**< SCIP Data Structure */
-   SCIP_PROBDATA*        probdata            /**< The problem data */
+      SCIP*                 scip,               /**< SCIP Data Structure */
+      SCIP_PROBDATA*        probdata            /**< The problem data */
 )
 {
    int i;
@@ -254,7 +248,7 @@ SCIP_RETCODE createProbSimplified(
       SCIP_CALL( SCIPreleaseCons(scip, &temp) );
    }
 
-   /* create constraints for the edge-cut variables */
+   /* create constraints for the edge-variables */
    SCIPinfoMessage(scip, NULL, "Using edge-representation with simplified structure. No variable amount of cluster. \n");
    for( i = 0; i < nbins; ++i )
    {
@@ -263,11 +257,12 @@ SCIP_RETCODE createProbSimplified(
          if( NULL == probdata->edgevars[i][j] )
             continue;
 
-         if( ncluster > 3 )
+         /* the general formulation is needed if there are more than 3 clusters. In the case of three clusters the formulation is simplified */
+         if( ncluster >= 3 )
          {
             /* set the objective weight for the edge-variables */
 
-            /* these edges are not within a cluster */
+            /* these edges are within a cluster */
             SCIP_CALL( SCIPchgVarObj(scip, probdata->edgevars[i][j][0], (probdata->cmatrix[i][j] + probdata->cmatrix[j][i]) * scale ) );
             /* these are the edges that are between consequtive clusters */
             SCIP_CALL( SCIPchgVarObj(scip, probdata->edgevars[i][j][1], (probdata->cmatrix[i][j] - probdata->cmatrix[j][i])) );
@@ -276,7 +271,7 @@ SCIP_RETCODE createProbSimplified(
             /* create constraints that determine when the edge-variables have to be non-zero*/
             for( c1 = 0; c1 < ncluster; ++c1 )
             {
-               /* constraints for edges within clusters*/
+               /* constraints for edges within clusters and between clusters*/
                (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "bins_%d_%d_incluster_%d", i, j, c1 );
                SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE ) );
                SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][j][0], -1.0) );
@@ -299,7 +294,6 @@ SCIP_RETCODE createProbSimplified(
                SCIP_CALL( SCIPaddCons(scip, temp) );
                SCIP_CALL( SCIPreleaseCons(scip, &temp) );
 
-               /* constraints for edges within clusters*/
                (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "bins_%d_%d_incluster_%d_%d", i, j, c1, phi(c1,ncluster) );
                SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE ) );
                SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][j][1], -1.0) );
@@ -311,7 +305,6 @@ SCIP_RETCODE createProbSimplified(
                SCIP_CALL( SCIPaddCons(scip, temp) );
                SCIP_CALL( SCIPreleaseCons(scip, &temp) );
 
-               /* constraints for edges within clusters*/
                (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "bins_%d_%d_incluster_%d_%d", i, j, c1, phiinv(c1, ncluster) );
                SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE ) );
                SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[j][i][1], -1.0) );
@@ -323,54 +316,11 @@ SCIP_RETCODE createProbSimplified(
                SCIP_CALL( SCIPaddCons(scip, temp) );
                SCIP_CALL( SCIPreleaseCons(scip, &temp) );
 
-#if 0
-               /*  constraints for edges between clusters*/
-               for( c2 = 0; c2 < ncluster; ++c2 )
-               {
-                  SCIP_VAR* var;
-                  if( c2 == c1 )
-                     continue;
-                  if( !(c2 == c1 + 1) && !(c2 == 0 && c1 == ncluster -1) && !(c2 == c1 - 1) && !(c1 == 0 && c2 == ncluster -1) )
-                  {
-                     (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "bins_%d_%d_inclusters_%d_%d", i, j, c1, c2 );
-                     SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 2.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE ) );
-                     SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->binvars[i][c1], 1.0) );
-                     SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->binvars[j][c2], 1.0) );
-                     SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][j][1], 1.0) );
-                     SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[j][i][1], 1.0) );
-                     SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][j][0], 1.0) );
-                     SCIP_CALL( SCIPaddCons(scip, temp) );
-                     SCIP_CALL( SCIPreleaseCons(scip, &temp) );
-                  }
-                  else
-                  {
-                     if( c2 == c1 + 1 || ( c2 == 0 && c1 == ncluster -1) )
-                        var = probdata->edgevars[i][j][1];
-                     else if( c2 == c1 - 1 || ( c1 == 0 && c2 == ncluster -1) )
-                        var = probdata->edgevars[j][i][1];
-                     else
-                        var = NULL;
-
-                     /*                  f two bins are in a different cluster, then the corresponding edge must be cut*/
-                     (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "bins_%d_%d_inclusters_%d_%d", i, j, c1, c2 );
-                     SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE ) );
-                     SCIP_CALL( SCIPaddCoefLinear(scip, temp, var, -1.0) );
-                     SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->binvars[i][c1], 1.0) );
-                     SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->binvars[j][c2], 1.0) );
-                     SCIP_CALL( SCIPaddCons(scip, temp) );
-                     SCIP_CALL( SCIPreleaseCons(scip, &temp) );
-                  }
-
-               }
-#endif
             }
          }
+         /* some variables become obsolete with three clusters */
          else
          {
-            /* set the objective weight for the edge-variables */
-
-            /* these edges are not within a cluster */
-            SCIP_CALL( SCIPchgVarObj(scip, probdata->edgevars[i][j][0], (probdata->cmatrix[i][j] + probdata->cmatrix[j][i]) * scale ) );
             /* these are the edges that are between consequtive clusters */
             SCIP_CALL( SCIPchgVarObj(scip, probdata->edgevars[i][j][1], (probdata->cmatrix[i][j] - probdata->cmatrix[j][i]) -  (probdata->cmatrix[i][j] + probdata->cmatrix[j][i]) * scale ) );
             SCIP_CALL( SCIPchgVarObj(scip, probdata->edgevars[j][i][1], (probdata->cmatrix[j][i] - probdata->cmatrix[i][j]) -  (probdata->cmatrix[i][j] + probdata->cmatrix[j][i]) * scale ) );
@@ -378,7 +328,7 @@ SCIP_RETCODE createProbSimplified(
             /* create constraints that determine when the edge-variables have to be non-zero*/
             for( c1 = 0; c1 < ncluster; ++c1 )
             {
-               /* constraints for edges within clusters*/
+               /* if bins are in same cluster, edge-variables are 0 */
                (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "bins_%d_%d_incluster_%d", i, j, c1 );
                SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 2.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE ) );
                SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][j][1], 1.0) );
@@ -388,7 +338,7 @@ SCIP_RETCODE createProbSimplified(
                SCIP_CALL( SCIPaddCons(scip, temp) );
                SCIP_CALL( SCIPreleaseCons(scip, &temp) );
 
-               /* constraints for edges within clusters*/
+               /* determines when edge-variables are set to one */
                (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "bins_%d_%d_incluster_%d_%d", i, j, c1, phi(c1,ncluster) );
                SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE ) );
                SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][j][1], -1.0) );
@@ -397,7 +347,6 @@ SCIP_RETCODE createProbSimplified(
                SCIP_CALL( SCIPaddCons(scip, temp) );
                SCIP_CALL( SCIPreleaseCons(scip, &temp) );
 
-               /* constraints for edges within clusters*/
                (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "bins_%d_%d_incluster_%d_%d", i, j, c1, phiinv(c1, ncluster) );
                SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE ) );
                SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[j][i][1], -1.0) );
@@ -447,24 +396,180 @@ SCIP_RETCODE createProbSimplified(
    return SCIP_OKAY;
 }
 
-
-/** create the problem without variable amount of clusters */
+/** create the problem without variable amount of clusters, using quadratic formulations. This is inferior to the simplified variant.
+ * Only useful for comparing relaxations.*/
 static
-SCIP_RETCODE createProbOnlyEdge(
-   SCIP*                 scip,               /**< SCIP Data Structure */
-   SCIP_PROBDATA*        probdata            /**< The problem data */
+SCIP_RETCODE createProbQP(
+      SCIP*                 scip,               /**< SCIP Data Structure */
+      SCIP_PROBDATA*        probdata            /**< The problem data */
 )
 {
    int i;
    int j;
+   int c1;
+   int c;
+   int edgetype;
+   char consname[SCIP_MAXSTRLEN];
+   SCIP_CONS* temp;
+   int nbins = probdata->nbins;
+   int ncluster = probdata->ncluster;
+   SCIP_Real scale;
+   char varname[SCIP_MAXSTRLEN];
+   SCIP_VAR** edgevars;
+
+   SCIPgetRealParam(scip, "scale_coherence", &scale);
+   probdata->scale = scale;
+   /* create variables for bins */
+   SCIP_CALL( SCIPsetObjsense(scip, SCIP_OBJSENSE_MAXIMIZE) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->binvars), nbins) );
+   for( i = 0; i < nbins; ++i )
+   {
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->binvars[i]), ncluster) );
+   }
+
+   for( i = 0; i < nbins; ++i )
+   {
+      for( c = 0; c < ncluster; ++c )
+      {
+         (void)SCIPsnprintf(varname, SCIP_MAXSTRLEN, "x_%d_%d", i, c);
+         SCIP_CALL( SCIPcreateVarBasic(scip, &probdata->binvars[i][c], varname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY) );
+         SCIP_CALL( SCIPaddVar(scip, probdata->binvars[i][c]) );
+      }
+   }
+   /* fix one bin now to reduce symmetry */
+   SCIP_CALL( SCIPchgVarLbGlobal(scip, probdata->binvars[nbins - 1][0], 1.0) );
+
+
+   /* create variables for the edges in each cluster combination. Index 0 are edges within cluster, 1 edges between consequtive clusters and 2 edges between non-consequtive clusters */
+   SCIP_CALL( SCIPallocClearMemoryArray(scip, &(edgevars), 2 * ncluster) );
+   for( i = 0; i < 2 * ncluster; ++i ) {
+      (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "f_%d", i);
+
+      SCIP_CALL(SCIPcreateVarBasic(scip, &edgevars[i], varname, 0.0, 1.0, 1.0, SCIP_VARTYPE_CONTINUOUS));
+      SCIP_CALL(SCIPaddVar(scip, edgevars[i]));
+   }
+
+   /* create variables for the edges in each cluster combination. Index 0 are edges within cluster, 1 edges between consequtive clusters and 2 edges between non-consequtive clusters */
+   SCIP_CALL( SCIPallocClearMemoryArray(scip, &(probdata->edgevars), nbins) );
+   for( i = 0; i < nbins; ++i )
+   {
+      SCIP_CALL( SCIPallocClearMemoryArray(scip, &(probdata->edgevars[i]), nbins) );
+      for( j = 0; j < nbins; ++j )
+      {
+         if( i == j || (SCIPisZero(scip, (probdata->cmatrix[i][j] - probdata->cmatrix[j][i])) && SCIPisZero(scip, (probdata->cmatrix[i][j] + probdata->cmatrix[j][i]) )) )
+            continue;
+         SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->edgevars[i][j]), 3) );
+         for( edgetype = 0; edgetype < 2; ++edgetype )
+         {
+            if( edgetype == 0 && i < j )
+               continue;
+            (void)SCIPsnprintf(varname, SCIP_MAXSTRLEN, "y_%d_%d_%d", i, j, edgetype );
+            SCIP_CALL( SCIPcreateVarBasic(scip, &probdata->edgevars[i][j][edgetype], varname, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT) );
+            SCIP_CALL( SCIPaddVar(scip, probdata->edgevars[i][j][edgetype]) );
+         }
+      }
+   }
+   /*
+    *  create constraints
+    */
+
+   /* create the set-partitioning constraints of the bins */
+   for( i = 0; i < nbins; ++i )
+   {
+      (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "setpart_%d", i+1 );
+      SCIP_CALL( SCIPcreateConsSetpart(scip, &temp, consname, 0, NULL, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+      for ( c1 = 0; c1 < ncluster; ++c1 )
+      {
+         SCIP_CALL( SCIPaddCoefSetppc(scip, temp, probdata->binvars[i][c1]) );
+      }
+      SCIP_CALL( SCIPaddCons(scip, temp) );
+      SCIP_CALL( SCIPreleaseCons(scip, &temp) );
+   }
+   /* add constraint that ensures that each cluster is used */
+   for( c1 = 0; c1 < ncluster; ++c1 )
+   {
+      (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cluster_%d_used", c1 );
+      SCIP_CALL( SCIPcreateConsBasicLogicor(scip, &temp, consname, 0, NULL) );
+      for( i = 0; i < nbins; ++i )
+      {
+         SCIP_CALL( SCIPaddCoefLogicor(scip, temp, probdata->binvars[i][c1]) );
+      }
+      SCIP_CALL( SCIPaddCons(scip, temp) );
+      SCIP_CALL( SCIPreleaseCons(scip, &temp) );
+   }
+
+   for( c = 0; c < ncluster; ++c)
+   {
+      (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "irrev_%d", c );
+      SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &temp, consname, 0, NULL, NULL, 0, NULL, NULL, NULL, 0, 0) );
+      SCIP_CALL( SCIPaddLinearVarQuadratic(scip, temp, edgevars[c], -1.0) );
+      for( i = 0; i < nbins; ++i)
+      {
+         for( j = 0; j < nbins; ++j)
+         {
+            if( i == j )
+               continue;
+            SCIP_CALL( SCIPaddBilinTermQuadratic(scip, temp, probdata->binvars[i][c], probdata->binvars[j][phi(c,ncluster)],probdata->cmatrix[i][j] - probdata->cmatrix[j][i]) );
+         }
+      }
+      SCIP_CALL( SCIPaddCons(scip, temp) );
+      SCIP_CALL( SCIPreleaseCons(scip, &temp) );
+   }
+
+   for( c = 0; c < ncluster; ++c)
+   {
+      (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "coh_%d", c );
+      SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &temp, consname, 0, NULL, NULL, 0, NULL, NULL, NULL, 0, 0) );
+      SCIP_CALL( SCIPaddLinearVarQuadratic(scip, temp, edgevars[c+ncluster], -1.0) );
+      for( i = 0; i < nbins; ++i)
+      {
+         for( j = 0; j < nbins; ++j)
+         {
+            if( i <= j )
+               continue;
+            SCIP_CALL( SCIPaddBilinTermQuadratic(scip, temp, probdata->binvars[i][c], probdata->binvars[j][c], scale * (probdata->cmatrix[i][j] + probdata->cmatrix[j][i])) );
+         }
+      }
+      SCIP_CALL( SCIPaddCons(scip, temp) );
+      SCIP_CALL( SCIPreleaseCons(scip, &temp) );
+   }
+
+   for (i = 0; i < 2*ncluster; i++)
+   {
+      SCIP_CALL( SCIPreleaseVar(scip, &edgevars[i]) );
+   }
+   SCIPfreeMemoryArray(scip, &edgevars);
+   return SCIP_OKAY;
+}
+
+
+/** create the problem with variable amount of clusters. Very large number of constraints not viable for large scale problems. */
+static
+SCIP_RETCODE createProbOnlyEdge(
+      SCIP*                 scip,               /**< SCIP Data Structure */
+      SCIP_PROBDATA*        probdata            /**< The problem data */
+)
+{
+   int i;
+   int j;
+   int k;
    char consname[SCIP_MAXSTRLEN];
    SCIP_CONS* temp;
    int nbins = probdata->nbins;
    SCIP_Real scale;
+   int sign[3][3];
 
    SCIPgetRealParam(scip, "scale_coherence", &scale);
    probdata->scale = scale;
 
+   for( i = 0; i < 3; ++i )
+   {
+      for( j = 0; j < 3; ++j )
+      {
+         sign[i][j] = 1;
+      }
+      sign[i][i] = -1;
+   }
    /*
     *  create constraints
     */
@@ -493,7 +598,56 @@ SCIP_RETCODE createProbOnlyEdge(
             SCIP_CALL( SCIPaddCons(scip, temp) );
             SCIP_CALL( SCIPreleaseCons(scip, &temp) );
          }
+         for( k =  0; k < nbins; ++k) {
+            if( i == k || i == j || k == j )
+               continue;
+            if( k < j && j < i )
+            {
+               int l;
+               for (l = 0; l < 3; l++) {
+                  (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "tri_%d_%d_%d", i, j, k);
+                  SCIP_CALL(
+                     SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, TRUE, TRUE,
+                                          TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE));
+                  SCIP_CALL(SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][j][0], sign[l][0]));
+                  SCIP_CALL(SCIPaddCoefLinear(scip, temp, probdata->edgevars[j][k][0], sign[l][1]));
+                  SCIP_CALL(SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][k][0], sign[l][2]));
+                  SCIP_CALL(SCIPaddCons(scip, temp));
+                  SCIP_CALL(SCIPreleaseCons(scip, &temp));
+               }
+            }
+            (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "tri_%d_%d_%d", i, j, k);
+            SCIP_CALL(SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE));
+            SCIP_CALL(SCIPaddCoefLinear(scip, temp, probdata->edgevars[MAX(i,j)][MIN(i,j)][0], 1));
+            SCIP_CALL(SCIPaddCoefLinear(scip, temp, probdata->edgevars[j][k][1], 1));
+            SCIP_CALL(SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][k][1], -1));
+            SCIP_CALL(SCIPaddCons(scip, temp));
+            SCIP_CALL(SCIPreleaseCons(scip, &temp));
 
+            (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "tri_%d_%d_%d", i, j, k);
+            SCIP_CALL(SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE));
+            SCIP_CALL(SCIPaddCoefLinear(scip, temp, probdata->edgevars[MAX(i,j)][MIN(i,j)][0], 1));
+            SCIP_CALL(SCIPaddCoefLinear(scip, temp, probdata->edgevars[k][j][1], 1));
+            SCIP_CALL(SCIPaddCoefLinear(scip, temp, probdata->edgevars[k][i][1], -1));
+            SCIP_CALL(SCIPaddCons(scip, temp));
+            SCIP_CALL(SCIPreleaseCons(scip, &temp));
+
+            (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "tri_%d_%d_%d", i, j, k);
+            SCIP_CALL(SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE));
+            SCIP_CALL(SCIPaddCoefLinear(scip, temp, probdata->edgevars[MAX(i,j)][MIN(i,j)][0], -1));
+            SCIP_CALL(SCIPaddCoefLinear(scip, temp, probdata->edgevars[j][k][1], 1));
+            SCIP_CALL(SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][k][1], 1));
+            SCIP_CALL(SCIPaddCons(scip, temp));
+            SCIP_CALL(SCIPreleaseCons(scip, &temp));
+
+            (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "tri_%d_%d_%d", i, j, k);
+            SCIP_CALL(SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE));
+            SCIP_CALL(SCIPaddCoefLinear(scip, temp, probdata->edgevars[MAX(i,j)][MIN(i,j)][0], -1));
+            SCIP_CALL(SCIPaddCoefLinear(scip, temp, probdata->edgevars[k][j][1], 1));
+            SCIP_CALL(SCIPaddCoefLinear(scip, temp, probdata->edgevars[k][i][1], 1));
+            SCIP_CALL(SCIPaddCons(scip, temp));
+            SCIP_CALL(SCIPreleaseCons(scip, &temp));
+         }
       }
    }
 
@@ -819,11 +973,11 @@ SCIP_DECL_PROBCOPY(probcopySpa)
  * Create the probdata for an spa-clustering problem
  */
 SCIP_RETCODE SCIPcreateProbSpa(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const char*           name,               /**< problem name */
-   int                   nbins,              /**< number of bins */
-   int                   ncluster,           /**< number of cluster */
-   SCIP_Real**           cmatrix             /**< The transition matrix */
+      SCIP*                 scip,               /**< SCIP data structure */
+      const char*           name,               /**< problem name */
+      int                   nbins,              /**< number of bins */
+      int                   ncluster,           /**< number of cluster */
+      SCIP_Real**           cmatrix             /**< The transition matrix */
 )
 {
    SCIP_PROBDATA* probdata = NULL;
@@ -859,20 +1013,24 @@ SCIP_RETCODE SCIPcreateProbSpa(
    probdata->nbins=nbins;
    probdata->ncluster=ncluster;
 
-   SCIP_CALL( createVariables(scip, probdata) );
    SCIP_CALL( SCIPgetCharParam(scip, "model", &model) );
 
    /* create constraints depending on model selection */
    switch( model ){
-   case 's':
-      SCIP_CALL( createProbSimplified(scip, probdata) );
-      break;
-   case 'e':
-      SCIP_CALL( createProbOnlyEdge(scip, probdata) );
-      break;
-   default:
-      SCIPABORT();
-      break;
+      case 's':
+         SCIP_CALL( createVariables(scip, probdata) );
+         SCIP_CALL( createProbSimplified(scip, probdata) );
+         break;
+      case 'e':
+         SCIP_CALL( createVariables(scip, probdata) );
+         SCIP_CALL( createProbOnlyEdge(scip, probdata) );
+         break;
+      case 'q':
+         SCIP_CALL( createProbQP(scip, probdata) );
+         break;
+      default:
+         SCIPABORT();
+         break;
    }
 
    /** add callback methods to scip */
@@ -888,7 +1046,7 @@ SCIP_RETCODE SCIPcreateProbSpa(
 
 /**  Getter methods for the various parts of the probdata */
 SCIP_Real** SCIPspaGetCmatrix(
-   SCIP*                 scip                /**< SCIP data structure */
+      SCIP*                 scip                /**< SCIP data structure */
 )
 {
    SCIP_PROBDATA* probdata;
@@ -901,7 +1059,7 @@ SCIP_Real** SCIPspaGetCmatrix(
 }
 
 int SCIPspaGetNrBins(
-   SCIP*                 scip                /**< SCIP data structure */
+      SCIP*                 scip                /**< SCIP data structure */
 )
 {
    SCIP_PROBDATA* probdata;
@@ -913,7 +1071,7 @@ int SCIPspaGetNrBins(
 }
 
 int SCIPspaGetNrCluster(
-   SCIP*                 scip                /**< SCIP data structure */
+      SCIP*                 scip                /**< SCIP data structure */
 )
 {
    SCIP_PROBDATA* probdata;
@@ -925,7 +1083,7 @@ int SCIPspaGetNrCluster(
 }
 
 SCIP_VAR*** SCIPspaGetBinvars(
-   SCIP*                 scip                /**< SCIP data structure */
+      SCIP*                 scip                /**< SCIP data structure */
 )
 {
    SCIP_PROBDATA* probdata;
@@ -938,7 +1096,7 @@ SCIP_VAR*** SCIPspaGetBinvars(
 }
 
 SCIP_Real SCIPspaGetScale(
-   SCIP*                 scip                /**< SCIP data structure */
+      SCIP*                 scip                /**< SCIP data structure */
 )
 {
    SCIP_PROBDATA* probdata;
@@ -950,7 +1108,7 @@ SCIP_Real SCIPspaGetScale(
 }
 
 SCIP_VAR**** SCIPspaGetEdgevars(
-   SCIP*                 scip                /**< SCIP data structure */
+      SCIP*                 scip                /**< SCIP data structure */
 )
 {
    SCIP_PROBDATA* probdata;
@@ -964,8 +1122,8 @@ SCIP_VAR**** SCIPspaGetEdgevars(
 
 /** print the model-values like coherence in the clusters and transition-probabilities between clusters that are not evident from the scip-solution */
 SCIP_RETCODE SCIPspaPrintSolutionValues(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol                 /**< The solution containg the values */
+      SCIP*                 scip,               /**< SCIP data structure */
+      SCIP_SOL*             sol                 /**< The solution containg the values */
 )
 {
    SCIP_PROBDATA* probdata;

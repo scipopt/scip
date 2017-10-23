@@ -22,17 +22,13 @@
 
 #include "spaplugins.h"
 
-#include "scip/debug.h"
 #include "scip/scipdefplugins.h"
-#include "event_newsol.h"
-#include "sepa_sparseapprox.h"
 #include "sepa_edge.h"
 #include "sepa_subtour.h"
 #include "sepa_partition.h"
 #include "heur_fuzzyround.h"
 #include "heur_spakerlin.h"
 #include "branch_multinode.h"
-#include "cons_triangle.h"
 
 /** includes default plugins for coloring into SCIP */
 SCIP_RETCODE SCIPincludeSpaPlugins(
@@ -43,15 +39,14 @@ SCIP_RETCODE SCIPincludeSpaPlugins(
    SCIP_CALL( SCIPincludeReaderSpa(scip) );
 
    SCIP_CALL( SCIPincludeHeurSpakerlin(scip) );
-   SCIP_CALL( SCIPincludeSepaSubtour(scip) );
    SCIP_CALL( SCIPincludeHeurFuzzyround(scip) );
-
    SCIP_CALL( SCIPincludeHeurSpaGreedy(scip) );
-   SCIP_CALL( SCIPincludeSepaEdge(scip) );
-   SCIP_CALL( SCIPincludeBranchruleMultinode(scip) );
-   SCIP_CALL( SCIPincludeSepaPartition(scip) );
 
-/*   SCIP_CALL( SCIPincludeConshdlrTriangle(scip) );*/
+   SCIP_CALL( SCIPincludeSepaEdge(scip) );
+   SCIP_CALL( SCIPincludeSepaPartition(scip) );
+   SCIP_CALL( SCIPincludeSepaSubtour(scip) );
+
+   SCIP_CALL( SCIPincludeBranchruleMultinode(scip) );
 
    return SCIP_OKAY;
 }

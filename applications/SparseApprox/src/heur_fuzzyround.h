@@ -16,7 +16,8 @@
 
 /**@file   heur_fuzzyround.h
  * @ingroup PRIMALHEURISTICS
- * @brief  fuzzy rounding primal heuristic
+ * @brief  primal heuristic that constructs a feasible solution from the lp-relaxation. Round only on the bin-variables
+ * and then reconstruct the rest of the variables accordingly.
  * @author Leon Eifler
  *
  */

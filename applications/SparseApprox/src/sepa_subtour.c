@@ -14,7 +14,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file   sepa_edge.c
- * @brief  edge-separator. Separates triangle-inequalities in SparseApprox Problem
+ * @brief  If there exists a transition forward along the cycle, then the state that the transition originates from can be reached only after
+ * another ncluster - 1 transitions. Therefore cycles with a number of transitions smaller than that can be separated.
  * @author Leon Eifler
  */
 
@@ -26,6 +27,8 @@
 #include "probdata_spa.h"
 #include "scip/cons_linear.h"
 #include "scip/pub_misc.h"
+#include "scip/misc.h"
+
 
 #define SEPA_NAME              "subtour"
 #define SEPA_DESC              "separator that elininates subtours of length smaller than |NCluster| in cycle-clusterign application"
@@ -84,7 +87,6 @@ SCIP_RETCODE addSubtourCuts(
    int nbins;
    int successor;
    int currnode;
-   int i;
    int k;
    int l;
    edgevars = SCIPspaGetEdgevars(scip);
@@ -174,7 +176,6 @@ SCIP_RETCODE addPathCuts(
    char cutname[SCIP_MAXSTRLEN];
    SCIP_ROW* cut;
    int path[pathlength + 1];
-   SCIP_Bool* processed;
    SCIP_Bool nullvars = FALSE;
    int nbins;
    int successor;
@@ -278,9 +279,8 @@ SCIP_Bool computeNextAdj(
             }
          }
       }
-      /* Check if we have found a violated subtour constraint */
-
    }
+   /* Check if we have found a violated subtour constraint */
    if( SCIPisGT(scip, adjmatrices[cyclelength - 1][start][start], cyclelength - 1) )
       foundviolation = TRUE;
    return foundviolation;
@@ -321,7 +321,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSubtour)
    int k;
    int cyclelength;
    int rounds;
-   SCIP_Bool possible;
 
    rounds = SCIPsepaGetNCallsAtNode(sepa);
    /*if( rounds >= MAXROUNDS )

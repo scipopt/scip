@@ -15,7 +15,7 @@
 
 /**@file   sepa_subtour.h
  * @ingroup SEPARATORS
- * @brief  Separate Subtours-Elimination inequalies in Cycle-Clustering Applications
+ * @brief  Separate Subtours-Elimination inequalities in Cycle-Clustering Applications
  * @author Leon Eifler
  */
 

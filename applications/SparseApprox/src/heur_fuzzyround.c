@@ -15,7 +15,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_fuzzyround.c
- * @brief  primal heuristic that constructs a feasible solution from the lp-relaxation
+ * @brief  primal heuristic that constructs a feasible solution from the lp-relaxation. Round only on the bin-variables
+ * and then reconstruct the rest of the variables accordingly.
  * @author Leon Eifler
  */
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -54,75 +55,6 @@
  * assign the variables in scip according to the found clusterassignment
  */
 
-#ifdef SCIP_DEBIG
-static
-SCIP_RETCODE writeLPSolSpa(
-   SCIP*                scip
-   )
-{
-   int i,j;
-   int nbins;
-   int ncluster;
-   SCIP_VAR**** edgevars;
-   SCIP_VAR*** binvars;
-
-   edgevars = SCIPspaGetEdgevars(scip);
-   binvars = SCIPspaGetBinvars(scip);
-   nbins = SCIPspaGetNrBins(scip);
-   ncluster = SCIPspaGetNrCluster(scip);
-
-   for( i = 0; i < nbins; ++i )
-   {
-      for( j = 0; j < ncluster; ++j )
-      {
-         printf("x_%d_%d %f, ", i, j, SCIPvarGetLPSol(binvars[i][j]));
-      }
-      printf("\n");
-   }
-
-   for( i = 0; i < nbins; ++i )
-   {
-      for( j = 0; j < nbins; ++j )
-      {
-         if( 0 != edgevars[i][j] )
-            printf("y_%d_%d %f, ", i, j, SCIPvarGetLPSol(edgevars[i][j][1]));
-      }
-      printf("\n");
-   }
-
-   return SCIP_OKAY;
-}
-#endif
-/**
- *  Initialize the q-matrix from a given (possibly incomplete) clusterassignment
- */
-static
-void computeIrrevMat(
-   SCIP_Real**           clustering,         /**< The matrix containing the clusterassignment */
-   SCIP_Real**           qmatrix,            /**< The matrix with the return-values, in each cell is the transition probability between two clusters */
-   SCIP_Real**           cmatrix,            /**< The transition-matrix containg the probability-data */
-   int                   nbins,              /**< The number of bins */
-   int                   ncluster            /**< The number of possible clusters */
-)
-{
-   int i,j,k,l;
-   for( k = 0; k < ncluster; ++k )
-   {
-      for( l = 0; l < ncluster; ++l )
-      {
-         qmatrix[k][l] = 0;
-         for( i = 0; i < nbins; ++i )
-         {
-            for( j = 0; j < nbins; ++j )
-            {
-               /* As -1 and 0 are both interpreted as 0, this check is necessary. Compute x_ik*x_jl*c_ij */
-               qmatrix[k][l] += cmatrix[i][j] * clustering[i][k] * clustering[j][l];
-            }
-         }
-      }
-   }
-}
-
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecFuzzyround)
@@ -138,7 +70,6 @@ SCIP_DECL_HEUREXEC(heurExecFuzzyround)
    SCIP_Real** clustering;
    int* binsincluster;
    SCIP_Bool feasible = FALSE;
-   char model;
 
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);

@@ -194,16 +194,12 @@ SCIP_DECL_READERREAD(readerReadSpa)
    assert(strcmp( SCIPreaderGetName(reader), READER_NAME) == 0);
    assert( scip != NULL);
    assert(result != NULL);
-
    SCIP_CALL( readSpa( scip, filename) );
 
    *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;
 }
-
-
-
 
 /*
  * col file reader specific interface methods
@@ -229,7 +225,7 @@ SCIP_RETCODE SCIPincludeReaderSpa(
 
    SCIP_CALL( SCIPaddRealParam(scip,"scale_coherence","factor to scale the cohrence in the target function", NULL, FALSE, 0.001, 0.0, 1.0, NULL, NULL ) );
    SCIP_CALL( SCIPaddIntParam(scip, "ncluster", "the amount of clusters allowed", NULL, FALSE, 3, 1, 100, NULL, NULL) );
-   SCIP_CALL( SCIPaddCharParam(scip, "model", "the model variant", NULL, FALSE, 's', "se", NULL, NULL) );
+   SCIP_CALL( SCIPaddCharParam(scip, "model", "the model variant", NULL, FALSE, 's', "seq", NULL, NULL) );
 
    return SCIP_OKAY;
 }

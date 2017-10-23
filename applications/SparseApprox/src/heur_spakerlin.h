@@ -25,7 +25,7 @@
 
 /**@file   heur_spaswitch.h
  * @ingroup PRIMALHEURISTICS
- * @brief  Improvement heuristic that trades variables between clusters
+ * @brief  Improvement heuristic that trades bin-variables between clusters
  * @author Leon Eifler
  *
  *

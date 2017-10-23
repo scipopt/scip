@@ -15,7 +15,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_partition.c
- * @brief  partition-separator. Separates triangle-inequalities in SparseApprox Problem
+ * @brief  partition-separator. Searches for two partitions of size 2 and 3 (extension of triangle-inequalities).
  * @author Leon Eifler
  */
 
@@ -36,17 +36,19 @@
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define MAXCUTS                     500
 
+
+/** Given two partitions S, T creates the corresponding cut and adds it do SCIP */
 static
 SCIP_RETCODE createPartitionCut(
-   SCIP*                 scip,
-   SCIP_SEPA*            sepa,
-   SCIP_VAR****          edgevars,
-   int*                  S,
-   int*                  T,
-   int                   nS,
-   int                   nT,
-   SCIP_RESULT*          result,
-   int*                  ncuts
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< Separator */
+   SCIP_VAR****          edgevars,           /**< The edge-variables */
+   int*                  S,                  /**< The first partition */
+   int*                  T,                  /**< The second partition */
+   int                   nS,                 /**< Number of states in first partition */
+   int                   nT,                 /**< Number of states in second partition */
+   SCIP_RESULT*          result,             /**< Result pointer */
+   int*                  ncuts               /**< Number of generated cuts */
 )
 {
    SCIP_ROW* cut;
@@ -126,15 +128,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
    int i;
    int j;
    int k;
-   int l,l2;
-   int rounds;
+   int l;
    int ncuts;
    SCIP_Real* fractionality;
    int*       idx;
    SCIP_Real triangleval;
-   SCIP_Real violation;
 
-   rounds = SCIPsepaGetNCallsAtNode(sepa);
    ncuts = 0;
    edgevars = SCIPspaGetEdgevars(scip);
    nbins = SCIPspaGetNrBins(scip);

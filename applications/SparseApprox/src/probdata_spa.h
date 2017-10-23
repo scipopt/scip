@@ -96,24 +96,21 @@ SCIP_RETCODE SCIPcreateProbSpa(
    SCIP_Real**           cmatrix             /**< the transition matrix */
 );
 
-extern
-void SCIPspaCheckSolution(
-   SCIP* scip,
-   SCIP_SOL* sol
-);
-
+/** Function that returns the successive cluster along the cycle */
 extern
 int phi(
-   int k,
-   int ncluster
-   );
+   int                   k,                  /**< the cluster */
+   int                   ncluster            /**< the number of clusters*/
+);
 
+/** Function that returns the previous cluster along the cycle */
 extern
 int phiinv(
-   int k,
-   int cluster
+   int                   k,                  /**< the cluster */
+   int                   ncluster            /**< the number of clusters*/
    );
 
+/** Assign the variables in scip according to the found clustering. */
 extern
 SCIP_RETCODE assignVars(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -123,6 +120,7 @@ SCIP_RETCODE assignVars(
    int                   ncluster            /**< The number of cluster */
 );
 
+/** Check if the clustering has exactly one state in every cluster. */
 extern
 SCIP_Bool isPartition(
    SCIP*                 scip,               /**< SCIP data structure */
