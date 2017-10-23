@@ -886,7 +886,7 @@ SCIP_Bool SCIPcutsTightenCoefficients(
          SCIP_Real lb = cutislocal ? SCIPvarGetLbLocal(vars[cutinds[i]]) : SCIPvarGetLbGlobal(vars[cutinds[i]]);
 
          if( SCIPisInfinity(scip, -lb) )
-            goto FREEBUFFER;
+            goto TERMINATE;
 
          if( cutinds[i] < nintegralvars )
          {
@@ -905,7 +905,7 @@ SCIP_Bool SCIPcutsTightenCoefficients(
          SCIP_Real ub = cutislocal ? SCIPvarGetUbLocal(vars[cutinds[i]]) : SCIPvarGetUbGlobal(vars[cutinds[i]]);
 
          if( SCIPisInfinity(scip, ub) )
-            goto FREEBUFFER;
+            goto TERMINATE;
 
          if( cutinds[i] < nintegralvars )
          {
@@ -927,14 +927,15 @@ SCIP_Bool SCIPcutsTightenCoefficients(
    if( SCIPisFeasLE(scip, maxact, *cutrhs) )
    {
       redundant = TRUE;
-      goto FREEBUFFER;
+      goto TERMINATE;
    }
 
    /* no coefficient tightening can be performed since the precondition doesn't hold for any of the variables */
    if( SCIPisGT(scip, maxact - maxabsval, *cutrhs) )
-      goto FREEBUFFER;
+      goto TERMINATE;
 
    SCIPsortDownRealRealInt(absvals, cutcoefs, cutinds, *cutnnz);
+   SCIPfreeBufferArray(scip, &absvals);
 
    /* loop over the integral variables and try to tighten the coefficients; see cons_linear for more details */
    for( i = 0; i < *cutnnz;)
@@ -1029,8 +1030,8 @@ SCIP_Bool SCIPcutsTightenCoefficients(
       ++i;
    }
 
-  FREEBUFFER:
-   SCIPfreeBufferArray(scip, &absvals);
+  TERMINATE:
+   SCIPfreeBufferArrayNull(scip, &absvals);
 
    return redundant;
 }
