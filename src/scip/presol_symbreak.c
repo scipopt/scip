@@ -477,6 +477,7 @@ SCIP_RETCODE getPermProperties(
    assert( perm != NULL );
    assert( iscompoftwocycles != NULL );
    assert( ntwocyclesperm != NULL );
+   assert( allvarsbinary != NULL );
 
    *iscompoftwocycles = FALSE;
    *ntwocyclesperm = 0;
@@ -513,7 +514,7 @@ SCIP_RETCODE getPermProperties(
 }
 
 
-/** Given a matrix with nrows and #perms + 1 columns whose first nfilledcols contain entries of variables, this routine
+/** Given a matrix with nrows and #perms + 1 columns whose first nfilledcols columns contain entries of variables, this routine
  *  checks whether the 2-cycles of perm intersect each row of column coltoextend in exactly one position. In this case,
  *  we add one column to the suborbitope of the first nfilledcols columns.
  *
@@ -541,7 +542,9 @@ SCIP_RETCODE extendSubOrbitope(
    assert( suborbitope != NULL );
    assert( nfilledcols > 0 );
    assert( perm != NULL );
+   assert( nusedelems != NULL );
    assert( success != NULL );
+   assert( infeasible != NULL );
 
    *success = FALSE;
    *infeasible = FALSE;
@@ -571,7 +574,7 @@ SCIP_RETCODE extendSubOrbitope(
             (*nusedelems)[idx1] += 1;
             (*nusedelems)[perm[idx1]] += 1;
 
-            /* if an element appears to often in the orbitope matrix */
+            /* if an element appears too often in the orbitope matrix */
             if ( (*nusedelems)[idx1] > 2 || (*nusedelems)[perm[idx1]] > 2 )
             {
                *infeasible = TRUE;
@@ -592,7 +595,7 @@ SCIP_RETCODE extendSubOrbitope(
             (*nusedelems)[idx2] += 1;
             (*nusedelems)[perm[idx2]] += 1;
 
-            /* if an element appears to often in the orbitope matrix */
+            /* if an element appears too often in the orbitope matrix */
             if ( (*nusedelems)[idx2] > 2 || (*nusedelems)[perm[idx2]] > 2 )
             {
                *infeasible = TRUE;
@@ -660,8 +663,10 @@ SCIP_RETCODE generateOrbitopeVarsMatrix(
    assert( nrows > 0 );
    assert( ncols > 0 );
    assert( permvars != NULL );
+   assert( npermvars > 0 );
    assert( orbitopevaridx != NULL );
    assert( columnorder != NULL );
+   assert( nusedelems != NULL );
    assert( infeasible != NULL );
 
    curcolumn = ncols - 1;
@@ -699,6 +704,7 @@ SCIP_RETCODE generateOrbitopeVarsMatrix(
    else
    {
       assert( curcolumn > 1 );
+
       /* add column with columnorder 1 to vars */
       for (i = 0; i < nrows; ++i)
       {
@@ -795,17 +801,6 @@ SCIP_RETCODE detectOrbitopes(
    npermsincomponent = presoldata->npermsincomponent;
    components = presoldata->components;
 
-
-   for (i = 0; i < npermsincomponent[0]; ++i)
-   {
-      int j;
-      for (j = 0; j < npermvars; ++j)
-      {
-         if ( j >= perms[i][j] )
-            continue;
-      }
-   }
-
    /* iterate over components */
    for (i = 0; i < ncomponents; ++i)
    {
@@ -822,7 +817,7 @@ SCIP_RETCODE detectOrbitopes(
       int coltoextend;
       int j;
       int row;
-      SCIP_Bool infeasibleOrbitope;
+      SCIP_Bool infeasibleorbitope;
 
       /* get properties of permutations */
       for (j = 0; j < npermsincomponent[i]; ++j)
@@ -833,6 +828,7 @@ SCIP_RETCODE detectOrbitopes(
 
          SCIP_CALL( getPermProperties(perms[components[i][j]], permvars, npermvars, &iscompoftwocycles, &ntwocyclesperm, &allvarsbinary) );
 
+         /* if we are checking the first permutation */
          if ( ntwocyclescomp == - 1 )
             ntwocyclescomp = ntwocyclesperm;
 
@@ -891,8 +887,6 @@ SCIP_RETCODE detectOrbitopes(
          if ( row == ntwocyclescomp )
             break;
       }
-      if ( row != ntwocyclescomp )
-         printf("number of rows is %d, but it should be %d\n", row, ntwocyclescomp);
       assert( row == ntwocyclescomp );
 
       usedperm[0] = TRUE;
@@ -935,17 +929,7 @@ SCIP_RETCODE detectOrbitopes(
       }
 
       if ( ! isorbitope )
-      {
-         /* free data structures */
-         SCIPfreeBufferArray(scip, &nusedelems);
-         SCIPfreeBufferArray(scip, &columnorder);
-         for (j = 0; j < ntwocyclescomp; ++j)
-            SCIPfreeBufferArray(scip, &orbitopevaridx[j]);
-         SCIPfreeBufferArray(scip, &orbitopevaridx);
-         SCIPfreeBufferArray(scip, &usedperm);
-
-         continue;
-      }
+         goto FREEDATASTRUCTURES;
 
       coltoextend = 1;
       for (j = 0; j < npermsincomponent[i]; ++j)
@@ -982,17 +966,7 @@ SCIP_RETCODE detectOrbitopes(
          isorbitope = FALSE;
 
       if ( ! isorbitope )
-      {
-         /* free data structures */
-         SCIPfreeBufferArray(scip, &nusedelems);
-         SCIPfreeBufferArray(scip, &columnorder);
-         for (j = 0; j < ntwocyclescomp; ++j)
-            SCIPfreeBufferArray(scip, &orbitopevaridx[j]);
-         SCIPfreeBufferArray(scip, &orbitopevaridx);
-         SCIPfreeBufferArray(scip, &usedperm);
-
-         continue;
-      }
+         goto FREEDATASTRUCTURES;
 
       /* we have found a potential orbitope, prepare data for orbitope conshdlr */
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, ntwocyclescomp) );
@@ -1002,11 +976,11 @@ SCIP_RETCODE detectOrbitopes(
       }
 
       /* prepare variable matrix (reorder columns of orbitopevaridx) */
-      infeasibleOrbitope = FALSE;
+      infeasibleorbitope = FALSE;
       SCIP_CALL( generateOrbitopeVarsMatrix(&vars, ntwocyclescomp, npermsincomponent[i] + 1, permvars, npermvars,
-            orbitopevaridx, columnorder, nusedelems, &infeasibleOrbitope) );
+            orbitopevaridx, columnorder, nusedelems, &infeasibleorbitope) );
 
-      if ( ! infeasibleOrbitope )
+      if ( ! infeasibleorbitope )
       {
          SCIPinfoMessage(scip, NULL, "Component %d is an orbitope with %d rows and %d columns.\n", i, ntwocyclescomp, npermsincomponent[i] + 1);
 
