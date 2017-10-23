@@ -36,6 +36,7 @@
 #include "scip/lp.h"
 #include "scip/paramset.h"
 #include "scip/scip.h"
+#include "scip/bandit.h"
 #include "scip/branch.h"
 #include "scip/conflict.h"
 #include "scip/cons.h"
@@ -1074,6 +1075,9 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->branchrulessize = 0;
    (*set)->branchrulessorted = FALSE;
    (*set)->branchrulesnamesorted = FALSE;
+   (*set)->banditvtables = NULL;
+   (*set)->banditvtablessize = 0;
+   (*set)->nbanditvtables = 0;
    (*set)->disps = NULL;
    (*set)->ndisps = 0;
    (*set)->dispssize = 0;
@@ -2625,6 +2629,13 @@ SCIP_RETCODE SCIPsetFree(
    /* free all debug data */
    SCIP_CALL( SCIPdebugFreeDebugData(*set) ); /*lint !e506 !e774*/
 
+   /* free virtual tables of bandit algorithms */
+   for( i = 0; i < (*set)->nbanditvtables; ++i )
+   {
+      SCIPbanditvtableFree(&(*set)->banditvtables[i]);
+   }
+   BMSfreeMemoryArrayNull(&(*set)->banditvtables);
+
    BMSfreeMemory(set);
 
    return SCIP_OKAY;
@@ -3997,6 +4008,49 @@ void SCIPsetSortPropsName(
       set->propssorted = FALSE;
       set->propsnamesorted = TRUE;
    }
+}
+
+/** inserts bandit virtual function table into set */
+SCIP_RETCODE SCIPsetIncludeBanditvtable(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_BANDITVTABLE*    banditvtable        /**< bandit algorithm virtual function table */
+   )
+{
+   assert(set != NULL);
+   assert(banditvtable != NULL);
+
+   if( set->nbanditvtables >= set->banditvtablessize )
+   {
+      int newsize = SCIPsetCalcMemGrowSize(set, set->nbanditvtables + 1);
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->banditvtables, newsize) );
+      set->banditvtablessize = newsize;
+   }
+
+   assert(set->nbanditvtables < set->banditvtablessize);
+   set->banditvtables[set->nbanditvtables++] = banditvtable;
+
+   return SCIP_OKAY;
+}
+
+/** returns the bandit virtual function table of the given name, or NULL if not existing */
+SCIP_BANDITVTABLE* SCIPsetFindBanditvtable(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of bandit algorithm virtual function table */
+   )
+{
+   int b;
+
+   assert(set != NULL);
+   assert(name != NULL);
+
+   /* search for a bandit v table of the given name */
+   for( b = 0; b < set->nbanditvtables; ++b )
+   {
+      if( strcmp(name, SCIPbanditvtableGetName(set->banditvtables[b])) == 0 )
+         return set->banditvtables[b];
+   }
+
+   return NULL;
 }
 
 /** inserts concurrent solver type into the concurrent solver type list */

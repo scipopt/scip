@@ -209,6 +209,15 @@ extern "C" {
 #define MIN3(x,y,z) ((x) <= (y) ? MIN(x,z) : MIN(y,z))  /**< returns minimum of x, y, and z */
 #endif
 
+/* platform-dependent specification of the log1p, which is numerically more stable around x = 0.0 */
+#ifndef LOG1P
+#if defined(_WIN32) || defined(_WIN64)
+#define LOG1P(x) (log(1.0+x))
+#else
+#define LOG1P(x) (log1p(x))
+#endif
+#endif
+
 #ifndef COPYSIGN
 #if defined(_MSC_VER) && (_MSC_VER < 1800)
 #define COPYSIGN _copysign

@@ -809,7 +809,7 @@
  *
  * - <code>FILTERSQP=\<true|false\></code> Enable or disable (default) FilterSQP interface.
  *
- * - <code>IPOPT=\<true|false\></code> Enable or disable (default) IPOPT interface (needs IPOPT >= 3.11).
+ * - <code>IPOPT=\<true|false\></code> Enable or disable (default) IPOPT interface (needs IPOPT >= 3.12).
  *
  * - <code>WORHP=\<true|false\></code> Enable or disable (default) WORHP interface (needs WORHP >= 2.0).
  *
@@ -7548,6 +7548,13 @@
  * @ingroup MiscellaneousMethods
  * @brief  methods for timing
  */
+
+/**@defgroup PublicBanditMethods Bandit Algorithms
+ * @ingroup MiscellaneousMethods
+ * @brief  methods for bandit algorithms
+ */
+
+
 
 /**@defgroup DebugSolutionMethods Debug Solution
  * @ingroup PUBLICCOREAPI

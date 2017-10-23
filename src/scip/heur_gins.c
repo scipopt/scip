@@ -85,25 +85,12 @@
  * Data structures
  */
 
-/** variable graph data structure to determine breadth-first distances between variables
- *
- *  the variable graph internally stores a mapping from the variables to the constraints in which they appear.
- */
-struct VariableGraph
-{
-   SCIP_CONS***          varconss;           /**< constraints of each variable */
-   SCIP_HASHTABLE*       visitedconss;       /**< hash table that keeps a record of visited constraints during breadth-first search */
-   int*                  nvarconss;          /**< number of constraints for each variable */
-   int*                  varconssize;        /**< size array for every varconss entry */
-};
-typedef struct VariableGraph VARIABLEGRAPH;
-
 /** rolling horizon data structure to control multiple LNS heuristic runs away from an original source variable
  *
  */
 struct RollingHorizon
 {
-   VARIABLEGRAPH*        variablegraph;      /**< variable graph data structure for breadth-first-search neighborhoods */
+   SCIP_VGRAPH*          variablegraph;      /**< variable graph data structure for breadth-first-search neighborhoods */
    int*                  distances;          /**< distances of the heuristic rolling horizon from the original source
                                               *   variable indexed by probindex */
    SCIP_Bool*            used;               /**< array that represents for every variable whether it has been used
@@ -205,353 +192,6 @@ void addHistogramEntry(
 
 #endif
 
-/* fills variable graph data structure
- *
- * loops over global problem constraints and creates a mapping from the variables to their respective constraints
- */
-static
-SCIP_RETCODE fillVariableGraph(
-   SCIP*                 scip,               /**< SCIP data structure */
-   VARIABLEGRAPH*        vargraph,           /**< variable graph data structure for breadth-first-search neighborhoods */
-   SCIP_HEURDATA*        heurdata            /**< heuristic data */
-   )
-{
-   SCIP_CONS** conss;
-   int nconss;
-   int nvars;
-   int c;
-   SCIP_VAR** varbuffer;
-
-   assert(scip != NULL);
-   assert(vargraph != NULL);
-
-   conss = SCIPgetConss(scip);
-   nconss = SCIPgetNConss(scip);
-
-   nvars = SCIPgetNVars(scip);
-   SCIP_CALL( SCIPallocBufferArray(scip, &varbuffer, nvars) );
-
-#ifdef SCIP_STATISTIC
-   resetHistogram(heurdata->consvarshist);
-   resetHistogram(heurdata->consdiscvarshist);
-   resetHistogram(heurdata->conscontvarshist);
-#endif
-
-   heurdata->nrelaxedconstraints = 0;
-
-   for( c = 0; c < nconss; ++c )
-   {
-      int nconsvars;
-      int v;
-      SCIP_Bool success;
-      SCIP_CONS* cons = conss[c];
-
-#ifdef SCIP_STATISTIC
-      int nconsdiscvars;
-      int nconscontvars;
-#endif
-
-      /* we only consider constraints that are checkable */
-      if( !SCIPconsIsChecked(cons) )
-         continue;
-
-      /* request number of variables */
-      SCIP_CALL( SCIPgetConsNVars(scip, cons, &nconsvars, &success) );
-
-      if( !success )
-         continue;
-
-      /* relax constraints with density above the allowed number of free variables */
-      if( heurdata->relaxdenseconss && nconsvars >= (1.0 - heurdata->minfixingrate) * nvars )
-      {
-         ++heurdata->nrelaxedconstraints;
-         continue;
-      }
-
-      /* collect constraint variables in buffer */
-      SCIP_CALL( SCIPgetConsVars(scip, cons, varbuffer, nvars, &success) );
-
-      if( !success )
-         continue;
-
-#ifdef SCIP_STATISTIC
-      nconscontvars = 0;
-      nconsdiscvars = 0;
-#endif
-
-      /* loop over constraint variables and add this constraint to them if they are active */
-      for( v = 0; v < nconsvars; ++v )
-      {
-         int varpos = SCIPvarGetProbindex(varbuffer[v]);
-
-         /* skip inactive variables */
-         if( varpos == -1 )
-            continue;
-
-#ifdef SCIP_STATISTIC
-         /* count discrete and continuous problem variables */
-         if( SCIPvarIsIntegral(varbuffer[v]) )
-            ++nconsdiscvars;
-         else
-            ++nconscontvars;
-#endif
-         /* ensure array size */
-         if( vargraph->varconssize[varpos] == vargraph->nvarconss[varpos]  )
-         {
-            int newmem = SCIPcalcMemGrowSize(scip, vargraph->nvarconss[varpos] + 1);
-
-            assert(newmem > vargraph->varconssize[varpos]);
-
-            if( vargraph->varconss[varpos] == NULL )
-            {
-               SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vargraph->varconss[varpos], newmem) );
-            }
-            else
-            {
-               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &vargraph->varconss[varpos], vargraph->varconssize[varpos], newmem) ); /*lint !e866*/
-            }
-            vargraph->varconssize[varpos] = newmem;
-         }
-
-         assert(vargraph->nvarconss[varpos] < vargraph->varconssize[varpos]);
-
-         /* add constraint to constraint array for this variable */
-         vargraph->varconss[varpos][vargraph->nvarconss[varpos]] = cons;
-         vargraph->nvarconss[varpos] += 1;
-      }
-
-      /* update the histograms */
-#ifdef SCIP_STATISTIC
-      addHistogramEntry(heurdata->consvarshist, nconsvars, SCIPgetNVars(scip));
-      addHistogramEntry(heurdata->consdiscvarshist, nconsdiscvars, SCIPgetNVars(scip) - SCIPgetNContVars(scip));
-      addHistogramEntry(heurdata->conscontvarshist, nconscontvars, nconsvars);
-#endif
-   }
-
-   /* free the buffer */
-   SCIPfreeBufferArray(scip, &varbuffer);
-
-   return SCIP_OKAY;
-}
-
-/** initialization method of variable graph data structure */
-static
-SCIP_RETCODE variableGraphCreate(
-   SCIP*                 scip,               /**< SCIP data structure */
-   VARIABLEGRAPH**       vargraph,           /**< pointer to the variable graph */
-   SCIP_HEURDATA*        heurdata            /**< heuristic data */
-   )
-{
-   int nvars;
-   int nconss;
-
-   assert(scip != NULL);
-   assert(vargraph != NULL);
-
-   nvars = SCIPgetNVars(scip);
-   nconss = SCIPgetNConss(scip);
-
-   if( nvars == 0 )
-      return SCIP_OKAY;
-
-   SCIP_CALL( SCIPallocBlockMemory(scip, vargraph) );
-
-   SCIP_CALL( SCIPhashtableCreate(&(*vargraph)->visitedconss, SCIPblkmem(scip), 2 * nconss, SCIPhashGetKeyStandard,
-         SCIPhashKeyEqPtr, SCIPhashKeyValPtr, NULL) );
-
-   /* allocate and clear memory */
-   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(*vargraph)->varconss, nvars) );
-   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(*vargraph)->nvarconss, nvars) );
-   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(*vargraph)->varconssize, nvars) );
-
-   /* fill the variable graph with variable-constraint mapping for breadth-first search*/
-   SCIP_CALL( fillVariableGraph(scip, *vargraph, heurdata) );
-
-   return SCIP_OKAY;
-}
-
-/** deinitialization method of variable graph data structure */
-static
-void variableGraphFree(
-   SCIP*                 scip,               /**< SCIP data structure */
-   VARIABLEGRAPH**       vargraph            /**< pointer to the variable graph */
-   )
-{
-   int nvars;
-   int v;
-   assert(scip != NULL);
-   assert(vargraph != NULL);
-
-   nvars = SCIPgetNVars(scip);
-
-   for( v = nvars - 1; v >= 0; --v )
-   {
-      SCIPfreeBlockMemoryArrayNull(scip, &(*vargraph)->varconss[v], (*vargraph)->varconssize[v]); /*lint !e866*/
-   }
-
-   /* allocate and clear memory */
-   SCIPfreeBlockMemoryArray(scip, &(*vargraph)->varconssize, nvars);
-   SCIPfreeBlockMemoryArray(scip, &(*vargraph)->nvarconss, nvars);
-   SCIPfreeBlockMemoryArray(scip, &(*vargraph)->varconss, nvars);
-
-   SCIPhashtableFree(&(*vargraph)->visitedconss);
-
-   SCIPfreeBlockMemory(scip, vargraph);
-}
-
-/* breadth-first (BFS) search on the variable constraint graph; uses a special kind of queue data structure that holds
- * two queue levels at the same time: the variables at the current distance and the ones at the next distance
- */
-static
-SCIP_RETCODE variablegraphBreadthFirst(
-   SCIP*                 scip,               /**< SCIP data structure */
-   VARIABLEGRAPH*        vargraph,           /**< pointer to the variable graph */
-   SCIP_VAR*             startvar,           /**< variable to calculate distance from */
-   int*                  distances,          /**< array to keep distance in vargraph from startvar for every variable */
-   int                   maxdistance         /**< maximum distance >= 0 from start variable (INT_MAX for complete BFS)*/
-   )
-{
-   SCIP_VAR** vars;
-
-   int* queue;
-   int  nvars;
-   int i;
-   int currlvlidx;
-   int nextlvlidx;
-   int increment = 1;
-   int currentdistance;
-   SCIP_VAR** varbuffer;
-
-   assert(scip != NULL);
-   assert(vargraph != NULL);
-   assert(startvar != NULL);
-   assert(distances != NULL);
-   assert(maxdistance >= 0);
-
-   /* get variable data */
-   nvars = SCIPgetNVars(scip);
-   vars = SCIPgetVars(scip);
-   SCIP_CALL( SCIPallocBufferArray(scip, &queue, nvars) );
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &varbuffer, nvars) );
-
-   SCIPhashtableRemoveAll(vargraph->visitedconss);
-
-   /* initialize distances to -1 */
-   for( i = 0; i < nvars; ++i )
-   {
-      queue[i] = -1;
-      distances[i] = -1;
-   }
-
-   /* start variable has a distance of 0 */
-   distances[SCIPvarGetProbindex(startvar)] = 0;
-
-   queue[0] = SCIPvarGetProbindex(startvar);
-   currlvlidx = 0;
-   nextlvlidx = nvars - 1;
-
-   /* loop over the queue and pop the next variable, starting with start variable */
-   do
-   {
-      SCIP_VAR* currvar;
-      int c;
-      int varpos;
-
-      currvar = vars[queue[currlvlidx]];
-      varpos = SCIPvarGetProbindex(currvar);
-      currentdistance = distances[varpos];
-      assert(currentdistance >= 0);
-
-      /* distances must only be computed up to maxdistance  */
-      assert(currentdistance <= maxdistance);
-
-      /* check for termination because maximum distance has been reached */
-      if( currentdistance == maxdistance )
-         break;
-
-      assert(varpos >= 0);
-
-      /* loop over variable constraints and enqueue variables that were not visited yet */
-      for( c = 0; c < vargraph->nvarconss[varpos]; ++c )
-      {
-         int nconsvars;
-         int v;
-         SCIP_Bool success;
-         SCIP_CONS* cons = vargraph->varconss[varpos][c];
-
-         /* check first if this constraint has already been visited */
-         if( SCIPhashtableExists(vargraph->visitedconss, (void *)cons) )
-            continue;
-
-         /* request number of constraint variables */
-         SCIP_CALL( SCIPgetConsNVars(scip, cons, &nconsvars, &success) );
-
-         if( !success )
-            continue;
-
-         /* collect constraint variables in buffer */
-         SCIP_CALL( SCIPgetConsVars(scip, cons, varbuffer, nvars, &success) );
-
-         if( !success )
-            continue;
-
-         /* collect previously unvisited variables of the constraint and enqueue them for breadth-first search */
-         for( v = 0; v < nconsvars; ++v )
-         {
-            SCIP_VAR* nextvar = varbuffer[v];
-            int nextvarpos;
-            assert(nextvar != NULL);
-            if( !SCIPvarIsActive(nextvar) )
-               continue;
-
-            nextvarpos = SCIPvarGetProbindex(nextvar);
-            assert(nextvarpos >= 0);
-
-            /* insert variables that were not considered yet into the next level queue */
-            if( distances[nextvarpos] == -1 )
-            {
-               distances[nextvarpos] = currentdistance + 1;
-               queue[nextlvlidx] = nextvarpos;
-               nextlvlidx -= increment;
-            }
-         } /* end constraint variables loop */
-
-         /* mark the constraint as visited */
-         SCIP_CALL( SCIPhashtableInsert(vargraph->visitedconss, (void *)cons) );
-
-      } /* end constraint loop */
-
-      queue[currlvlidx] = -1;
-      currlvlidx += increment;
-
-      /* check if we need to swap current and next level index and reverse the increment */
-      if( currlvlidx == nvars || currlvlidx == 0 || queue[currlvlidx] == -1 || currlvlidx == nextlvlidx )
-      {
-         /* increment knows whether we are currently looping upwards (all variables with odd distance) or downwards the
-          * queue
-          */
-         if( increment == +1 )
-         {
-            currlvlidx = nvars - 1;
-            nextlvlidx = 0;
-            increment = -1;
-         }
-         else
-         {
-            currlvlidx = 0;
-            nextlvlidx = nvars - 1;
-            increment = +1;
-         }
-      }
-   }
-   while( queue[currlvlidx] != -1 && distances[queue[currlvlidx]] >= currentdistance );
-
-   SCIPfreeBufferArray(scip, &varbuffer);
-   SCIPfreeBufferArray(scip, &queue);
-
-   return SCIP_OKAY;
-}
-
 /** create a rolling horizon data structure */
 static
 SCIP_RETCODE rollingHorizonCreate(
@@ -590,7 +230,7 @@ SCIP_RETCODE rollingHorizonFree(
 
    if( (*rollinghorizon)->variablegraph != NULL )
    {
-      variableGraphFree(scip, &(*rollinghorizon)->variablegraph);
+      SCIPvariableGraphFree(scip, &(*rollinghorizon)->variablegraph);
    }
 
    SCIPfreeBlockMemoryArray(scip, &(*rollinghorizon)->distances, (*rollinghorizon)->distancessize);
@@ -863,7 +503,7 @@ static
 SCIP_RETCODE selectInitialVariable(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
-   VARIABLEGRAPH*        vargraph,           /**< variable graph data structure to work on */
+   SCIP_VGRAPH*          vargraph,           /**< variable graph data structure to work on */
    int*                  distances,          /**< breadth-first distances indexed by Probindex of variables */
    SCIP_VAR**            selvar,             /**< pointer to store the selected variable */
    int*                  selvarmaxdistance   /**< maximal distance k to consider for selected variable neighborhood */
@@ -962,7 +602,7 @@ SCIP_RETCODE selectInitialVariable(
       SCIP_CALL( SCIPallocBufferArray(scip, &neighborhood, nvars) );
 
       /* determine breadth-first distances from the chosen variable */
-      SCIP_CALL( variablegraphBreadthFirst(scip, vargraph, choosevar, distances, maxdistance) );
+      SCIP_CALL( SCIPvariablegraphBreadthFirst(scip, vargraph, &choosevar, 1, distances, maxdistance, INT_MAX, INT_MAX) );
 
       /* use either automatic or user-defined max-distance for neighborhood in variable constraint graph */
       if( heurdata->maxdistance != -1 )
@@ -1100,7 +740,7 @@ SCIP_RETCODE selectNextVariable(
       }
 
       /* determine the distances to other variables from this variable */
-      SCIP_CALL( variablegraphBreadthFirst(scip, rollinghorizon->variablegraph, *selvar, distances, *selvarmaxdistance) );
+      SCIP_CALL( SCIPvariablegraphBreadthFirst(scip, rollinghorizon->variablegraph, selvar, 1, distances, *selvarmaxdistance, INT_MAX, INT_MAX) );
 
       SCIP_CALL( determineMaxDistance(scip, heurdata, distances, selvarmaxdistance) );
 
@@ -1140,7 +780,7 @@ SCIP_RETCODE determineVariableFixings(
    SCIP_VAR** vars;
    SCIP_SOL* sol;                            /* pool of solutions */
    int* distances;
-   VARIABLEGRAPH* vargraph;
+   SCIP_VGRAPH* vargraph;
    SCIP_VAR* selvar;
    int nvars;
    int nbinvars;
@@ -1170,7 +810,7 @@ SCIP_RETCODE determineVariableFixings(
    {
       if( rollinghorizon->niterations == 0 )
       {
-         SCIP_CALL( variableGraphCreate(scip, &rollinghorizon->variablegraph, heurdata) );
+         SCIP_CALL( SCIPvariableGraphCreate(scip, &rollinghorizon->variablegraph, heurdata->relaxdenseconss, 1.0 - heurdata->minfixingrate, &heurdata->nrelaxedconstraints) );
       }
       else
          assert(rollinghorizon->variablegraph != NULL);
@@ -1179,7 +819,7 @@ SCIP_RETCODE determineVariableFixings(
    }
    else
    {
-      SCIP_CALL( variableGraphCreate(scip, &vargraph, heurdata) );
+      SCIP_CALL( SCIPvariableGraphCreate(scip, &vargraph, heurdata->relaxdenseconss, 1.0 - heurdata->minfixingrate, &heurdata->nrelaxedconstraints) );
    }
 
    /* allocate buffer memory to hold distances */
@@ -1196,7 +836,7 @@ SCIP_RETCODE determineVariableFixings(
       if( selvar != NULL && rollinghorizon != NULL )
       {
          /* collect distances in the variable graph of all variables to the selected variable */
-         SCIP_CALL( variablegraphBreadthFirst(scip, vargraph, selvar, distances, INT_MAX) );
+         SCIP_CALL( SCIPvariablegraphBreadthFirst(scip, vargraph, &selvar, 1, distances, INT_MAX, INT_MAX, INT_MAX) );
          rollingHorizonStoreDistances(scip, rollinghorizon, distances);
          rollinghorizon->lastmaxdistance = selvarmaxdistance;
       }
@@ -1235,7 +875,7 @@ SCIP_RETCODE determineVariableFixings(
 
    SCIPfreeBufferArray(scip, &distances);
    if( rollinghorizon == NULL )
-      variableGraphFree(scip, &vargraph);
+      SCIPvariableGraphFree(scip, &vargraph);
 
    return SCIP_OKAY;
 }
