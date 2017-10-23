@@ -236,7 +236,7 @@
 #define SCIP_DEFAULT_LP_RESOLVEITERFAC     -1.0 /**< factor of average LP iterations that is used as LP iteration limit
                                                  *   for LP resolve (-1.0: unlimited) */
 #define SCIP_DEFAULT_LP_RESOLVEITERMIN     1000 /**< minimum number of iterations that are allowed for LP resolve */
-#define SCIP_DEFAULT_LP_SOLUTIONPOLISHING     0 /**< LP solution polishing method (0: disabled, 1: only root, 2: always, 3: only probing and diving) */
+#define SCIP_DEFAULT_LP_SOLUTIONPOLISHING     3 /**< LP solution polishing method (0: disabled, 1: only root, 2: always, 3: auto) */
 #define SCIP_DEFAULT_LP_REFACTORINTERVAL      0 /**< LP refactorization interval (0: automatic) */
 
 /* NLP */
@@ -1685,7 +1685,7 @@ SCIP_RETCODE SCIPsetCreate(
 
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "lp/solutionpolishing",
-         "LP solution polishing method (0: disabled, 1: only root, 2: always, 3: only probing and diving)",
+         "LP solution polishing method (0: disabled, 1: only root, 2: always, 3: auto)",
          &(*set)->lp_solutionpolishing, TRUE, SCIP_DEFAULT_LP_SOLUTIONPOLISHING, 0, 3,
          NULL, NULL) );
 
