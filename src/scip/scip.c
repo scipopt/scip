@@ -33534,14 +33534,16 @@ void SCIPcomputeBilinEnvelope1(
       SCIP_Real activity = xcoef * xs[i] - ycoef * ys[i] - constant;
       if( SCIPisLE(scip, activity, 0.0) )
       {
+         /* corner point is satisfies inequality */
 	 vx = xs[i];
 	 vy = ys[i];
       }
       else if( SCIPisFeasGT(scip, activity, 0.0) )
+         /* corner point is clearly cut off */
 	 ++n;
    }
 
-   /* skip if no corner point satisfies the inequality or if no corner point it cut off */
+   /* skip if no corner point satisfies the inequality or if no corner point is cut off (that is, all corner points satisfy the inequality almost [1e-9..1e-6]) */
    if( n != 1 || vx == SCIP_INVALID || vy == SCIP_INVALID ) /*lint !e777*/
       return;
 
@@ -33592,7 +33594,7 @@ void SCIPcomputeBilinEnvelope1(
 #endif
 }
 
-/** helper function to compute the convex envelope of a bilinear term when two given linear inequalities are given; we
+/** helper function to compute the convex envelope of a bilinear term when two linear inequalities are given; we
  *  use the same notation and formulas as in Locatelli 2016
  */
 static
