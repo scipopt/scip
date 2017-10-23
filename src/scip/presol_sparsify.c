@@ -46,6 +46,7 @@
 #define DEFAULT_MAX_CONT_FILLIN         0    /**< default value for the maximal fillin for continuous variables */
 #define DEFAULT_MAX_BIN_FILLIN          0    /**< default value for the maximal fillin for binary variables */
 #define DEFAULT_MAX_INT_FILLIN          0    /**< default value for the maximal fillin for integer variables */
+#define DEFAULT_MAXRETRIEVEFAC          100  /**< default value for the maximal number of hashtable retrieves as a multiple of the number of constraints */
 
 #define DEFAULT_FULL_SEARCH             0    /**< default value for full search */
 
@@ -61,6 +62,8 @@ struct SCIP_PresolData
    int                   maxcontfillin;      /**< maximal fillin for continuous variables */
    int                   maxintfillin;       /**< maximal fillin for integer variables*/
    int                   maxbinfillin;       /**< maximal fillin for binary variables */
+   SCIP_Longint          nretrieves;         /**< number of hashtable retrieves */
+   SCIP_Real             maxretrievefac;     /**< maximal number of hashtable retrieves as a multiple of the number of constraints */
    SCIP_Bool             fullsearch;         /**< flag indicating that full sparsification is required */
 };
 
@@ -128,6 +131,7 @@ SCIP_RETCODE cancelRow(
    unsigned int          maxcontfillin,
    unsigned int          maxintfillin,
    unsigned int          maxbinfillin,
+   SCIP_Longint*         nretrieves,
    int*                  nchgcoefs,
    int*                  ncanceled
    )
@@ -225,6 +229,7 @@ SCIP_RETCODE cancelRow(
             }
 
             eqrowvarpair = SCIPhashtableRetrieve(pairtable, (void*) &rowvarpair);
+            (*nretrieves)++;
 
             if( eqrowvarpair == NULL || eqrowvarpair->rowindex == rowidx )
                continue;
@@ -493,6 +498,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
    int nvarpairs;
    int varpairssize;
    SCIP_PRESOLDATA* presoldata;
+   SCIP_Longint maxretrieves;
 
    assert(result != NULL);
    *result = SCIP_DIDNOTRUN;
@@ -506,6 +512,8 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
    *result = SCIP_DIDNOTFIND;
 
    presoldata = SCIPpresolGetData(presol);
+
+   presoldata->nretrieves = 0;
 
    matrix = NULL;
    SCIP_CALL( SCIPmatrixCreate(scip, &matrix, &initialized, &complete) );
@@ -609,12 +617,13 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
          SCIP_CALL( SCIPhashtableInsert(pairtable, (void*) &varpairs[r]) );
       }
 
-      /* loop over the rows and cancel non-zeros */
-      for( r = 0; r < nrows; r++ )
+      /* loop over the rows and cancel non-zeros until maximum number of retrieves is reached */
+      maxretrieves = presoldata->maxretrievefac * nrows;
+      for( r = 0; r < nrows && presoldata->nretrieves <= maxretrieves; r++ )
       {
          SCIP_CALL( cancelRow(scip, matrix, pairtable, r, \
                               (unsigned int)presoldata->maxcontfillin, (unsigned int)presoldata->maxintfillin, (unsigned int)presoldata->maxbinfillin, \
-                              nchgcoefs, &numcancel) );
+                              &presoldata->nretrieves, nchgcoefs, &numcancel) );
       }
 
       SCIPhashtableFree(&pairtable);
@@ -693,6 +702,11 @@ SCIP_RETCODE SCIPincludePresolSparsify(
          "presolving/sparsify/fullsearch",
          "require full search for sparsification",
          &presoldata->fullsearch, TRUE, DEFAULT_FULL_SEARCH, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "presolving/sparsify/maxretrievefac",
+         "maximal number of hashtable retrieves as a multiple of the number of constraints",
+         &presoldata->maxretrievefac, TRUE, DEFAULT_MAXRETRIEVEFAC, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
