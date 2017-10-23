@@ -79,7 +79,11 @@ struct SCIP_ConflictSet
 /** set of conflicting bound changes */
 struct SCIP_ProofSet
 {
-   SCIP_AGGRROW*         aggrrow;            /**< aggregation row representing the proof */
+   SCIP_Real*            vals;
+   int*                  inds;
+   SCIP_Real             rhs;
+   int                   nnz;
+   int                   size;
    SCIP_CONFTYPE         conflicttype;       /**< conflict type: unknown, infeasible LP, bound exceeding LP */
 };
 
