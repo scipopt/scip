@@ -1026,6 +1026,8 @@ SCIP_RETCODE detectOrbitopes(
       for (j = 0; j < ntwocyclescomp; ++j)
          SCIPfreeBufferArray(scip, &vars[j]);
       SCIPfreeBufferArray(scip, &vars);
+
+   FREEDATASTRUCTURES:
       SCIPfreeBufferArray(scip, &nusedelems);
       SCIPfreeBufferArray(scip, &columnorder);
       for (j = 0; j < ntwocyclescomp; ++j)
@@ -1374,12 +1376,12 @@ SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
       {
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(presoldata->genconss), presoldata->nperms) );
 
-         SCIP_CALL( computeGroupOrbits(scip, presoldata->perms, presoldata->nperms, presoldata->npermvars,
-               &presoldata->orbits, &presoldata->norbits, &presoldata->nvarsinorbits, &presoldata->maxnorbits) );
+         /* SCIP_CALL( computeGroupOrbits(scip, presoldata->perms, presoldata->nperms, presoldata->npermvars, */
+         /*       &presoldata->orbits, &presoldata->norbits, &presoldata->nvarsinorbits, &presoldata->maxnorbits) ); */
 
-         SCIP_CALL( computeComponents(scip, presoldata) );
+         /* SCIP_CALL( computeComponents(scip, presoldata) ); */
 
-         SCIP_CALL( detectOrbitopes(scip, presoldata) );
+         /* SCIP_CALL( detectOrbitopes(scip, presoldata) ); */
       }
    }
 
