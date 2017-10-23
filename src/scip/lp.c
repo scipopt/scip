@@ -17307,12 +17307,13 @@ SCIP_RETCODE computeRelIntPoint(
          /* add artificial variable */
          if ( ! SCIPsetIsZero(set, col->ub) )
          {
-            colinds[1] = lp->ncols;
-            colvals[1] = -col->lb;
-
-            /* add row */
-            SCIP_CALL( SCIPlpiAddRows(lpi, 1, &zero, &zero, NULL, 2, &beg, colinds, colvals) );
+            colinds[nnonz] = lp->ncols;
+            colvals[nnonz] = -col->lb;
+            ++nnonz;
          }
+
+         /* add row */
+         SCIP_CALL( SCIPlpiAddRows(lpi, 1, &zero, &zero, NULL, nnonz, &beg, colinds, colvals) );
 
          continue;
       }
