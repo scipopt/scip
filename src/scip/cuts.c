@@ -883,7 +883,10 @@ SCIP_Bool SCIPcutsTightenCoefficients(
          SCIP_Real lb = cutislocal ? SCIPvarGetLbLocal(vars[cutinds[i]]) : SCIPvarGetLbGlobal(vars[cutinds[i]]);
 
          if( SCIPisInfinity(scip, -lb) )
+         {
+            SCIPfreeBufferArray(scip, &absvals);
             return FALSE;
+         }
 
          if( cutinds[i] < nintegralvars )
          {
@@ -902,7 +905,10 @@ SCIP_Bool SCIPcutsTightenCoefficients(
          SCIP_Real ub = cutislocal ? SCIPvarGetUbLocal(vars[cutinds[i]]) : SCIPvarGetUbGlobal(vars[cutinds[i]]);
 
          if( SCIPisInfinity(scip, ub) )
+         {
+            SCIPfreeBufferArray(scip, &absvals);
             return FALSE;
+         }
 
          if( cutinds[i] < nintegralvars )
          {
