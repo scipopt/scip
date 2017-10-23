@@ -62,8 +62,9 @@
 #define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of zerohalf separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_MAXSEPACUTS         100 /**< maximal number of zerohalf cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT     500 /**< maximal number of zerohalf cuts separated per separation round in root node */
-#define DEFAULT_MAXSLACK           1e-4 /**< maximal slack of rows to be used in aggregation */
-#define DEFAULT_MAXSLACKROOT        0.5 /**< maximal slack of rows to be used in aggregation in the root node */
+#define DEFAULT_MAXSLACK            0.0 /**< maximal slack of rows to be used in aggregation */
+#define DEFAULT_MAXSLACKROOT        0.0 /**< maximal slack of rows to be used in aggregation in the root node */
+#define DEFAULT_MINVIOL             0.1 /**< minimal violation to generate zerohalfcut for */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
 #define DEFAULT_MAXROWDENSITY      0.05 /**< maximal density of row to be used in aggregation */
 #define DEFAULT_DENSITYOFFSET       100 /**< additional number of variables allowed in row on top of density */
@@ -156,6 +157,7 @@ struct Mod2Matrix
 /** data of separator */
 struct SCIP_SepaData
 {
+   SCIP_Real             minviol;            /**< minimal violation to generate zerohalfcut for */
    SCIP_Real             maxslack;           /**< maximal slack of rows to be used in aggregation */
    SCIP_Real             maxslackroot;       /**< maximal slack of rows to be used in aggregation in the root node */
    SCIP_Real             maxrowdensity;      /**< maximal density of row to be used in aggregation */
@@ -1512,6 +1514,41 @@ SCIP_Real calcEfficacy(
    return (activity - cutrhs) / MAX(1e-6, norm);
 }
 
+/** computes maximal violation that can be achieved for zerohalf cuts where this row particiaptes */
+static
+SCIP_Real computeMaxViolation(
+   MOD2_ROW*             row                 /**< mod 2 row */
+   )
+{
+   SCIP_Real viol;
+
+   viol = 1.0 - row->slack;
+   viol *= 0.5;
+
+   return viol;
+}
+
+/** computes violation of zerohalf cut generated from given mod 2 row */
+static
+SCIP_Real computeViolation(
+   MOD2_ROW*             row                 /**< mod 2 row */
+   )
+{
+   int i;
+   SCIP_Real viol;
+
+   viol = 1.0 - row->slack;
+
+   for( i = 0; i < row->nnonzcols; ++i )
+   {
+      viol -= row->nonzcols[i]->solval;
+   }
+
+   viol *= 0.5;
+
+   return viol;
+}
+
 /** generate a zerohalf cut from a given mod 2 row, i.e., try if aggregations of rows of the
  *  mod2 matrix give violated cuts
  */
@@ -1538,6 +1575,9 @@ SCIP_RETCODE generateZerohalfCut(
    SCIP_Real* cutcoefs;
    SCIP_Real cutrhs;
    SCIP_Real cutefficacy;
+
+   if( computeViolation(row) < sepadata->minviol )
+      return SCIP_OKAY;
 
    rows = SCIPgetLPRows(scip);
    nvars = SCIPgetNVars(scip);
@@ -1765,8 +1805,7 @@ SCIP_RETCODE mod2matrixPreprocessRows(
    MOD2_MATRIX*          mod2matrix,         /**< the mod 2 matrix */
    SCIP_SEPA*            sepa,               /**< the zerohalf separator */
    SCIP_SEPADATA*        sepadata,           /**< data of the zerohalf separator */
-   SCIP_Bool             allowlocal,         /**< should local cuts be allowed */
-   SCIP_Real             maxslack            /**< maximum slack allowed for mod 2 rows */
+   SCIP_Bool             allowlocal          /**< should local cuts be allowed */
    )
 {
    int i;
@@ -1784,7 +1823,7 @@ SCIP_RETCODE mod2matrixPreprocessRows(
 
       assert(row->nnonzcols == 0 || row->nonzcols != NULL);
 
-      if( (row->nnonzcols == 0 && row->rhs == 0) || row->slack > maxslack )
+      if( (row->nnonzcols == 0 && row->rhs == 0) || computeMaxViolation(row) < sepadata->minviol )
       { /* (a) and (c) */
          sepadata->nreductions += row->nnonzcols;
          SCIP_CALL( mod2matrixRemoveRow(scip, mod2matrix, row) );
@@ -2067,6 +2106,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
 
       maxsepacuts = depth == 0 ? sepadata->maxsepacutsroot : sepadata->maxsepacuts;
       maxslack = depth == 0 ? sepadata->maxslackroot : sepadata->maxslack;
+      maxslack += 2 * SCIPfeastol(scip);
    }
 
    *result = SCIP_DIDNOTFIND;
@@ -2087,7 +2127,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
       sepadata->nreductions = 0;
 
       assert(mod2matrix.nzeroslackrows <= mod2matrix.nrows);
-      SCIP_CALL( mod2matrixPreprocessRows(scip, &mod2matrix, sepa, sepadata, allowlocal, maxslack) );
+      SCIP_CALL( mod2matrixPreprocessRows(scip, &mod2matrix, sepa, sepadata, allowlocal) );
       assert(mod2matrix.nzeroslackrows <= mod2matrix.nrows);
 
       if( sepadata->infeasible )
@@ -2106,10 +2146,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
 
       SCIPdebugMsg(scip, "preprocessed columns (%i rows, %i cols)\n", mod2matrix.nrows, mod2matrix.ncols);
 
-      if( mod2matrix.ncols == 0 )
-         continue;
-
       SCIPsortPtr((void**) mod2matrix.rows, compareRowSlack, mod2matrix.nrows);
+
+      if( mod2matrix.ncols == 0 )
+         break;
+
       nzeroslackrows = mod2matrix.nzeroslackrows;
       assert(mod2matrix.nzeroslackrows <= mod2matrix.nrows);
       /* apply Prop5 */ /* TODO: this should be in another function, just like the preprocess stuff */
@@ -2174,15 +2215,15 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
       }
    }
 
-#if 0
-   for( i = 0; sepadata->ncuts < maxsepacuts && i < mod2matrix.nrows; ++i )
+   for( i = 0; i < mod2matrix.nrows; ++i )
    {
+      int j;
       MOD2_ROW* row = mod2matrix.rows[i];
 
-      if( SCIPisGE(scip, row->slack, 1.0) )
+      if( computeMaxViolation(row) < sepadata->minviol )
          break;
 
-      if( row->rhs == 0 || row->slack > maxslack )
+      if( row->rhs == 0 )
          continue;
 
       SCIP_CALL( generateZerohalfCut(scip, &mod2matrix, sepa, sepadata, allowlocal, row) );
@@ -2193,7 +2234,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
          goto TERMINATE;
       }
    }
-#endif
 
    SCIPdebugMsg(scip, "total number of cuts found: %i\n", sepadata->ncuts);
    if( sepadata->ncuts > 0  )
@@ -2254,6 +2294,10 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
          "separating/" SEPA_NAME "/maxslackroot",
          "maximal slack of rows to be used in aggregation in the root node",
          &sepadata->maxslackroot, TRUE, DEFAULT_MAXSLACKROOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "separating/" SEPA_NAME "/minviol",
+         "minimal violation to generate zerohalfcut for",
+         &sepadata->minviol, TRUE, DEFAULT_MINVIOL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/" SEPA_NAME "/dynamiccuts",
          "should generated cuts be removed from the LP if they are no longer tight?",
