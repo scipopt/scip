@@ -1413,6 +1413,8 @@ typedef struct
    LPIMEMORY**           downlpimemories;    /**< the lpi memories of the down branches obtained during FSB */
    LPIMEMORY**           uplpimemories;      /**< the lpi memories of the up branches obtained during FSB */
    SCIP_Bool             lpimemorywritable;  /**< indicates that the lpi memory arrays can be changed */
+   int*                  bestsortedindices;  /**< array containing the best sorted variable indices w.r.t. their score */
+   int                   nbestsortedindices; /**< number of elements in bestsortedindices */
 } SCORECONTAINER;
 
 /**  */
@@ -1420,7 +1422,7 @@ static
 SCIP_RETCODE scoreContainerAllocate(
    SCIP*                 scip,
    SCORECONTAINER**      scorecontainer,
-   SCIP_Bool             full
+   CONFIGURATION*        config
    )
 {
    int ntotalvars;
@@ -1435,8 +1437,9 @@ SCIP_RETCODE scoreContainerAllocate(
    SCIP_CALL( SCIPallocBuffer(scip, scorecontainer) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*scorecontainer)->scores, ntotalvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*scorecontainer)->sourcedepth, ntotalvars) );
-
-   if( full )
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*scorecontainer)->bestsortedindices, config->maxncands) );
+   (*scorecontainer)->nbestsortedindices = config->maxncands;
+   if( config->reusebasis )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &(*scorecontainer)->downlpimemories, ntotalvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &(*scorecontainer)->uplpimemories, ntotalvars) );
@@ -1449,21 +1452,74 @@ SCIP_RETCODE scoreContainerAllocate(
       (*scorecontainer)->lpimemorywritable = FALSE;
    }
 
-
    for( i = 0; i < ntotalvars; i++ )
    {
       (*scorecontainer)->scores[i] = -1.0;
       (*scorecontainer)->sourcedepth[i] = -1;
-      if( full )
+      if( config->reusebasis )
       {
          SCIP_CALL( lpiMemoryAllocate(scip, &(*scorecontainer)->downlpimemories[i]) );
          SCIP_CALL( lpiMemoryAllocate(scip, &(*scorecontainer)->uplpimemories[i]) );
-
       }
    }
-
+   for( i = 0; i < (*scorecontainer)->nbestsortedindices; i++ )
+   {
+      (*scorecontainer)->bestsortedindices[i] = -1;
+   }
 
    return SCIP_OKAY;
+}
+
+static
+int findScoreInsertionPoint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCORECONTAINER*       scorecontainer,
+   SCIP_Real             score
+   )
+{
+   int left = 0;
+   int right = scorecontainer->nbestsortedindices - 1;
+
+   while( left <= right )
+   {
+      int mid = left + ((right - left) / 2);
+      int midindex = scorecontainer->bestsortedindices[mid];
+      SCIP_Real midscore = -SCIPinfinity(scip);
+      if( midindex >= 0 )
+      {
+         midscore = scorecontainer->scores[midindex];
+      }
+
+      if( score > midscore )
+      {
+         right = mid - 1;
+      }
+      else
+      {
+         left = mid + 1;
+      }
+   }
+   return right + 1;
+}
+
+static
+int insertScore(
+   SCORECONTAINER*       scorecontainer,
+   SCIP_Real             score,
+   int                   probindex,
+   int                   insertpoint
+   )
+{
+   int i;
+   int moveindex = probindex;
+
+   for( i = insertpoint; i < scorecontainer->nbestsortedindices; i++ )
+   {
+      int oldindex = scorecontainer->bestsortedindices[i];
+      scorecontainer->bestsortedindices[i] = moveindex;
+      moveindex = oldindex;
+   }
+   return moveindex;
 }
 
 static
@@ -1491,10 +1547,17 @@ void scoreContainerSetScore(
 
    if( previousprobingdepth == -1 || currentprobingdepth < previousprobingdepth )
    {
+      int insertpoint;
+      int droppedprobindex;
+
       /* we don't want to override the scores of lower probing depths */
       /* @todo: check if a variable can be scored more than once */
       scorecontainer->scores[probindex] = score;
       scorecontainer->sourcedepth[probindex] = currentprobingdepth;
+
+      insertpoint = findScoreInsertionPoint(scip, scorecontainer, score);
+      droppedprobindex = insertScore(scorecontainer, score, probindex, insertpoint);
+
       if( scorecontainer->lpimemorywritable &&
          scorecontainer->downlpimemories != NULL && downlpimemory != NULL
          && scorecontainer->uplpimemories != NULL && uplpimemory != NULL )
@@ -1530,6 +1593,7 @@ SCIP_RETCODE scoreContainerFree(
       SCIPfreeBufferArray(scip, &(*scorecontainer)->uplpimemories);
       SCIPfreeBufferArray(scip, &(*scorecontainer)->downlpimemories);
    }
+   SCIPfreeBufferArray(scip, &(*scorecontainer)->bestsortedindices);
    SCIPfreeBufferArray(scip, &(*scorecontainer)->sourcedepth);
    SCIPfreeBufferArray(scip, &(*scorecontainer)->scores);
    SCIPfreeBuffer(scip, scorecontainer);
@@ -4763,7 +4827,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       if( branchruledata->config->abbreviated )
       {
          /* allocate and init the container used to store the FSB scores, later used to filter the candidates */
-         SCIP_CALL( scoreContainerAllocate(scip, &scorecontainer, branchruledata->config->reusebasis) );
+         SCIP_CALL( scoreContainerAllocate(scip, &scorecontainer, branchruledata->config) );
       }
       SCIP_CALL( candidateListGetAllFractionalCandidates(scip, &allcandidates) );
 
