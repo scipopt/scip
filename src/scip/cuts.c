@@ -865,6 +865,7 @@ SCIP_Bool SCIPcutsTightenCoefficients(
    SCIP_Real QUAD(maxacttmp);
    SCIP_Real maxact;
    SCIP_Real maxabsval;
+   SCIP_Bool redundant;
 
    QUAD_ASSIGN(maxacttmp, 0.0);
 
@@ -872,6 +873,8 @@ SCIP_Bool SCIPcutsTightenCoefficients(
    nintegralvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
    maxabsval = 0.0;
    SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &absvals, *cutnnz) );
+
+   redundant = FALSE;
 
    for( i = 0; i < *cutnnz; ++i )
    {
@@ -883,10 +886,7 @@ SCIP_Bool SCIPcutsTightenCoefficients(
          SCIP_Real lb = cutislocal ? SCIPvarGetLbLocal(vars[cutinds[i]]) : SCIPvarGetLbGlobal(vars[cutinds[i]]);
 
          if( SCIPisInfinity(scip, -lb) )
-         {
-            SCIPfreeBufferArray(scip, &absvals);
-            return FALSE;
-         }
+            goto FREEBUFFER;
 
          if( cutinds[i] < nintegralvars )
          {
@@ -905,10 +905,7 @@ SCIP_Bool SCIPcutsTightenCoefficients(
          SCIP_Real ub = cutislocal ? SCIPvarGetUbLocal(vars[cutinds[i]]) : SCIPvarGetUbGlobal(vars[cutinds[i]]);
 
          if( SCIPisInfinity(scip, ub) )
-         {
-            SCIPfreeBufferArray(scip, &absvals);
-            return FALSE;
-         }
+            goto FREEBUFFER;
 
          if( cutinds[i] < nintegralvars )
          {
@@ -929,19 +926,15 @@ SCIP_Bool SCIPcutsTightenCoefficients(
    /* cut is redundant in activity bounds */
    if( SCIPisFeasLE(scip, maxact, *cutrhs) )
    {
-      SCIPfreeBufferArray(scip, &absvals);
-      return TRUE;
+      redundant = TRUE;
+      goto FREEBUFFER;
    }
 
    /* no coefficient tightening can be performed since the precondition doesn't hold for any of the variables */
    if( SCIPisGT(scip, maxact - maxabsval, *cutrhs) )
-   {
-      SCIPfreeBufferArray(scip, &absvals);
-      return FALSE;
-   }
+      goto FREEBUFFER;
 
    SCIPsortDownRealRealInt(absvals, cutcoefs, cutinds, *cutnnz);
-   SCIPfreeBufferArray(scip, &absvals);
 
    /* loop over the integral variables and try to tighten the coefficients; see cons_linear for more details */
    for( i = 0; i < *cutnnz;)
@@ -1036,7 +1029,10 @@ SCIP_Bool SCIPcutsTightenCoefficients(
       ++i;
    }
 
-   return FALSE;
+  FREEBUFFER:
+   SCIPfreeBufferArray(scip, &absvals);
+
+   return redundant;
 }
 
 /* =========================================== aggregation row =========================================== */
