@@ -1161,22 +1161,19 @@ SCIP_DECL_PRESOLFREE(presolFreeSymbreak)
 static
 SCIP_DECL_PRESOLINIT(presolInitSymbreak)
 {
+#if 0
    SCIP_PRESOLDATA* presoldata;
 
    assert( scip != NULL );
    assert( presol != NULL );
 
-   SCIPdebugMsg(scip, "Initpre method of symmetry breaking presolver ...\n");
+   SCIPdebugMsg(scip, "Init method of symmetry breaking presolver ...\n");
 
    presoldata = SCIPpresolGetData(presol);
    assert( presoldata != 0 );
 
    /* check whether we should run */
-#if 0
-   SCIP_CALL( SCIPgetBoolParam(scip, "usesymbreak", &presoldata->enabled) );
-#else
-   presoldata->enabled = TRUE;
-#endif
+   SCIP_CALL( SCIPgetBoolParam(scip, "misc/usesymmetry", &presoldata->enabled) );
 
    if ( presoldata->enabled )
    {
@@ -1185,6 +1182,7 @@ SCIP_DECL_PRESOLINIT(presolInitSymbreak)
       SYMsetSpecRequirement(presoldata->symmetrypresol, SYM_SPEC_INTEGER);
       SYMsetSpecRequirement(presoldata->symmetrypresol, SYM_SPEC_REAL);
    }
+#endif
 
    return SCIP_OKAY;
 }
@@ -1272,6 +1270,7 @@ static
 SCIP_DECL_PRESOLINITPRE(presolInitpreSymbreak)
 {  /*lint --e{715}*/
    SCIP_PRESOLDATA* presoldata;
+   int maxrounds;
 
    assert( scip != NULL );
    assert( presol != NULL );
@@ -1281,6 +1280,19 @@ SCIP_DECL_PRESOLINITPRE(presolInitpreSymbreak)
 
    /* check whether we have to run the presolver at the beginning of presolving */
    presoldata->early = ! SYMcomputeSymmetryPresolved(presoldata->symmetrypresol);
+
+   /* check whether we should run */
+   SCIP_CALL( SCIPgetBoolParam(scip, "misc/usesymmetry", &presoldata->enabled) );
+   SCIP_CALL( SCIPgetIntParam(scip, "presolving/symbreak/maxrounds", &maxrounds) );
+   presoldata->enabled = presoldata->enabled && (maxrounds != 0);
+
+   if ( presoldata->enabled )
+   {
+      /* allow all problem specifications, since we handle them in the code above */
+      SYMsetSpecRequirement(presoldata->symmetrypresol, SYM_SPEC_BINARY);
+      SYMsetSpecRequirement(presoldata->symmetrypresol, SYM_SPEC_INTEGER);
+      SYMsetSpecRequirement(presoldata->symmetrypresol, SYM_SPEC_REAL);
+   }
 
    if ( presoldata->early && presoldata->enabled )
    {
