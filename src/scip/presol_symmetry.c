@@ -797,75 +797,60 @@ SCIP_RETCODE computeSymmetryGroup(
       }
       else if ( strcmp(conshdlrname, "xor") == 0 )
       {
-         SCIP_Bool consvarssuccess;
-
-         /* get number of variables of XOR constraint (should include integer variable) */
-         SCIP_CALL( SCIPgetConsNVars(scip, cons, &nconsvars, &consvarssuccess) );
-         assert( consvarssuccess );
+         /* get number of variables of XOR constraint (without integer variable) */
+         nconsvars = SCIPgetNVarsXor(scip, cons);
          assert( nconsvars <= nvars );
-         assert( nconsvars == SCIPgetNVarsXor(scip, cons) + 1 );
 
          /* get variables of XOR constraint */
-         SCIP_CALL( SCIPgetConsVars(scip, cons, consvars, nconsvars, &consvarssuccess) );
-         assert( consvarssuccess );
+         consvars = SCIPgetVarsXor(scip, cons);
+         assert( consvars != NULL );
 
          for (j = 0; j < nconsvars; ++j)
-         {
-            /* mark integer variable with a coefficient of 2 to distinguish it from the other variables */
-            if ( SCIPvarGetType(consvars[j]) == SCIP_VARTYPE_INTEGER )
-               consvals[j] = 2.0;
-            else
-               consvals[j] = 1.0;
-         }
+            consvals[j] = 1.0;
+         consvars[nconsvars] = SCIPgetIntVarXor(scip, cons);
+         consvals[nconsvars] = 2.0;
+         ++nconsvars;
 
          SCIP_CALL( collectCoefficients(scip, consvars, consvals, nconsvars, (SCIP_Real) SCIPgetRhsXor(scip, cons),
                (SCIP_Real) SCIPgetRhsXor(scip, cons), SCIPconsIsTransformed(cons), SYM_SENSE_XOR, &matrixdata) );
       }
       else if ( strcmp(conshdlrname, "and") == 0 )
       {
-         SCIP_Bool consvarssuccess;
-
-         /* get number of variables of AND constraint (should include integer variable) */
-         SCIP_CALL( SCIPgetConsNVars(scip, cons, &nconsvars, &consvarssuccess) );
-         assert( consvarssuccess );
+         /* get number of variables of AND constraint (without resultant) */
+         nconsvars = SCIPgetNVarsAnd(scip, cons);
          assert( nconsvars <= nvars );
-         assert( nconsvars == SCIPgetNVarsAnd(scip, cons) + 1 );
 
          /* get variables of AND constraint */
-         SCIP_CALL( SCIPgetConsVars(scip, cons, consvars, nconsvars, &consvarssuccess) );
-         assert( consvarssuccess );
+         consvars = SCIPgetVarsAnd(scip, cons);
+         assert( consvars != NULL );
 
-         /* mark resultant of AND constraint with 2 to distinguish it from the other variables */
-         assert( SCIPvarGetIndex(consvars[nconsvars - 1]) == SCIPvarGetIndex(SCIPgetResultantAnd(scip, cons)) );
-         for (j = 0; j < nconsvars - 1; ++j)
+         for (j = 0; j < nconsvars; ++j)
             consvals[j] = 1.0;
-         consvals[nconsvars - 1] = 2.0;
+         consvars[nconsvars] = SCIPgetResultantAnd(scip, cons);
+         consvals[nconsvars] = 2.0;
+         ++nconsvars;
 
-         SCIP_CALL( collectCoefficients(scip, consvars, consvals, nconsvars, 0.0,
-               0.0, SCIPconsIsTransformed(cons), SYM_SENSE_AND, &matrixdata) );
+         SCIP_CALL( collectCoefficients(scip, consvars, consvals, nconsvars, 0.0, 0.0,
+               SCIPconsIsTransformed(cons), SYM_SENSE_AND, &matrixdata) );
       }
       else if ( strcmp(conshdlrname, "or") == 0 )
       {
-         SCIP_Bool consvarssuccess;
-
-         /* get number of variables of OR constraint */
-         SCIP_CALL( SCIPgetConsNVars(scip, cons, &nconsvars, &consvarssuccess) );
-         assert( consvarssuccess );
+         /* get number of variables of OR constraint (without resultant) */
+         nconsvars = SCIPgetNVarsOr(scip, cons);
          assert( nconsvars <= nvars );
-         assert( nconsvars == SCIPgetNVarsOr(scip, cons) + 1 );
 
          /* get variables of OR constraint */
-         SCIP_CALL( SCIPgetConsVars(scip, cons, consvars, nconsvars, &consvarssuccess) );
-         assert( consvarssuccess );
+         consvars = SCIPgetVarsOr(scip, cons);
+         assert( consvars != NULL );
 
-         /* mark resultant of OR constraint with 2 to distinguish it from the other variables */
-         assert( SCIPvarGetIndex(consvars[nconsvars - 1]) == SCIPvarGetIndex(SCIPgetResultantOr(scip, cons)) );
-         for (j = 0; j < nconsvars - 1; ++j)
+         for (j = 0; j < nconsvars; ++j)
             consvals[j] = 1.0;
-         consvals[nconsvars - 1] = 2.0;
+         consvars[nconsvars] = SCIPgetResultantOr(scip, cons);
+         consvals[nconsvars] = 2.0;
+         ++nconsvars;
 
-         SCIP_CALL( collectCoefficients(scip, consvars, consvals, nconsvars, 0.0,
-               0.0, SCIPconsIsTransformed(cons), SYM_SENSE_OR, &matrixdata) );
+         SCIP_CALL( collectCoefficients(scip, consvars, consvals, nconsvars, 0.0, 0.0,
+               SCIPconsIsTransformed(cons), SYM_SENSE_OR, &matrixdata) );
       }
       else if ( strcmp(conshdlrname, "logicor") == 0 )
       {
