@@ -187,10 +187,23 @@ else()
   set(IPOPT_LINK_FLAGS "")
 endif()
 
+# parse the version number
+if(EXISTS ${IPOPT_INCLUDE_DIRS} )
+  file(STRINGS ${IPOPT_INCLUDE_DIRS}/IpoptConfig.h CONFIGFILE)
+
+  foreach(STR ${CONFIGFILE})
+    if("${STR}" MATCHES "^#define IPOPT_VERSION ")
+      string(REGEX REPLACE "#define IPOPT_VERSION " "" IPOPT_VERSION ${STR})
+      string(REGEX REPLACE "\"" "" IPOPT_VERSION ${IPOPT_VERSION})
+    endif()
+  endforeach()
+  # MESSAGE("found Ipopt ${IPOPT_VERSION}")
+endif()
+
 mark_as_advanced(IPOPT_INCLUDE_DIRS
                  IPOPT_LIBRARIES
                  IPOPT_DEFINITIONS
                  IPOPT_LINK_FLAGS)
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(IPOPT DEFAULT_MSG IPOPT_LIBRARIES)
+find_package_handle_standard_args(IPOPT FOUND_VAR IPOPT_FOUND REQUIRED_VARS IPOPT_LIBRARIES VERSION_VAR IPOPT_VERSION)

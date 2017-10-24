@@ -352,7 +352,7 @@ endif()
 
 # IPOPT
 if(IPOPT)
-    find_package(IPOPT)
+    find_package(IPOPT 3.12.0)
 endif()
 if(IPOPT_FOUND)
     include_directories(${IPOPT_INCLUDE_DIRS})
