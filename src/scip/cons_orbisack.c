@@ -435,7 +435,7 @@ SCIP_RETCODE addOrbisackCover(
 }
 
 
-/** Separate orbisack cover inequalities
+/** Separate lifted orbisack cover inequalities
  *
  *  We currently do NOT enter cuts into the pool.
  *
@@ -497,6 +497,7 @@ SCIP_RETCODE separateOrbisackCovers(
          /* set coefficients for inequality */
          coeff1[i] = -1.0;
          coeff2[i] = 1.0;
+
          SCIP_CALL( addOrbisackCover(scip, cons, consdata, coeff1, coeff2, rhs, infeasible) );
          ++(*ngen);
          if ( *infeasible )
@@ -507,17 +508,33 @@ SCIP_RETCODE separateOrbisackCovers(
          coeff2[i] = 0.0;
       }
 
-      /* add argmax( 1 - vals[i][0], vals[i][1] ) as coefficient */
+      /* add argmax( 1 - vals[i][0], vals[i][1] ) as coefficient and ensure that both vars1[0] and vars2[0] are
+       * contained in the LIFTED cover inequality */
       if ( SCIPisEfficacious(scip, 1.0 - vals1[i] - vals2[i]) )
       {
          coeff1[i] = -1.0;
          lhs = lhs - vals1[i];
+
+         /* lifting */
+         if ( i == 0 )
+         {
+            coeff2[0] = 1.0;
+            lhs += vals2[i];
+         }
       }
       else
       {
          coeff2[i] = 1.0;
          rhs += 1.0;
          lhs = lhs + vals2[i];
+
+         /* lifting */
+         if ( i == 0 )
+         {
+            coeff1[0] = -1.0;
+            lhs -= vals1[i];
+            rhs -= 1.0;
+         }
       }
    }
 
