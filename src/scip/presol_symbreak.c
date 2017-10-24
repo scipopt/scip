@@ -1365,7 +1365,6 @@ SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
 
    /* deactivate presolvers that may conflict with symmetry handling routines */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/domcol/maxrounds", 0) );
-   SCIP_CALL( SCIPsetIntParam(scip, "presolving/gateextraction/maxrounds", 0) );
 
    /* possibly stop */
    if ( SCIPisStopped(scip) )
