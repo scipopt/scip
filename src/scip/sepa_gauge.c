@@ -815,7 +815,7 @@ SCIP_RETCODE separateCuts(
          SCIP_Bool infeasible;
 
          SCIPdebugMsg(scip, "adding cut\n");
-         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+         SCIP_CALL( SCIPaddCut(scip, row, FALSE, &infeasible) );
 
          if( infeasible )
          {

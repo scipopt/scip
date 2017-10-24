@@ -38,6 +38,7 @@ MAXJOBS=${21}
 VISUALIZE=${22}
 PERMUTE=${23}
 SEEDS=${24}
+GLBSEEDSHIFT=${25}
 
 # check if all variables defined (by checking the last one)
 if test -z $SEEDS
@@ -68,6 +69,7 @@ then
     echo "VISUALIZE     = $VISUALIZE"
     echo "PERMUTE       = $PERMUTE"
     echo "SEEDS         = $SEEDS"
+    echo "GLBSEEDSHIFT  = $GLBSEEDSHIFT"
     exit 1;
 fi
 

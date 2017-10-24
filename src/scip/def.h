@@ -105,7 +105,7 @@ extern "C" {
 
 #define SCIP_VERSION                401 /**< SCIP version number (multiplied by 100 to get integer number) */
 #define SCIP_SUBVERSION               3 /**< SCIP sub version number */
-#define SCIP_APIVERSION              15 /**< SCIP API version number */
+#define SCIP_APIVERSION              16 /**< SCIP API version number */
 #define SCIP_COPYRIGHT   "Copyright (C) 2002-2017 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
@@ -187,6 +187,14 @@ extern "C" {
 #define SQRT(x)       (sqrt(x))
 #endif
 
+#ifndef LOG2
+#if defined(_MSC_VER) && (_MSC_VER < 1800)
+#define LOG2(x) (log(x) / log(2.0))
+#else
+#define LOG2(x) log2(x)
+#endif
+#endif
+
 #ifndef ABS
 #define ABS(x)        ((x) >= 0 ? (x) : -(x))
 #endif
@@ -199,6 +207,15 @@ extern "C" {
 #ifndef MAX3
 #define MAX3(x,y,z) ((x) >= (y) ? MAX(x,z) : MAX(y,z))  /**< returns maximum of x, y, and z */
 #define MIN3(x,y,z) ((x) <= (y) ? MIN(x,z) : MIN(y,z))  /**< returns minimum of x, y, and z */
+#endif
+
+/* platform-dependent specification of the log1p, which is numerically more stable around x = 0.0 */
+#ifndef LOG1P
+#if defined(_WIN32) || defined(_WIN64)
+#define LOG1P(x) (log(1.0+x))
+#else
+#define LOG1P(x) (log1p(x))
+#endif
 #endif
 
 #ifndef COPYSIGN

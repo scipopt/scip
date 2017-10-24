@@ -1429,6 +1429,14 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    int rngcount;
    int c;
 
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
+
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
    assert(lpi->grbenv != NULL);
@@ -1505,6 +1513,15 @@ SCIP_RETCODE SCIPlpiAddCols(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {
+
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
+
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
    assert(obj != 0);
@@ -1662,6 +1679,14 @@ SCIP_RETCODE SCIPlpiAddRows(
 {
    int rngcount;
    int oldnrows = -1;
+
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
 
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
@@ -2504,7 +2529,7 @@ SCIP_RETCODE SCIPlpiGetRows(
          if ( i <= lastrow )
          {
             /* skip last non-zero of this first ranged row */
-            int newnz = (i < lastrow ? beg[i - firstrow +1]-1 : (*nnonz)-1);
+            int newnz = (i < lastrow ? beg[i - firstrow +1]-1 : (*nnonz)-1); /*lint !e661*/
 
             /* process remaining rows, moving non-zeros to the front */
             for (; i <= lastrow; i++)
@@ -2512,7 +2537,7 @@ SCIP_RETCODE SCIPlpiGetRows(
                int thebeg;
                int theend;
 
-               thebeg = beg[i - firstrow];
+               thebeg = beg[i - firstrow]; /*lint !e661*/
                theend = (i < lastrow ? beg[i - firstrow +1] : *nnonz);
 
                assert(-1 <= lpi->rngrowmap[i] && lpi->rngrowmap[i] < lpi->nrngrows);
@@ -2521,7 +2546,7 @@ SCIP_RETCODE SCIPlpiGetRows(
 
                memmove(&ind[newnz], &ind[thebeg], (theend - thebeg) * sizeof(*ind)); /*lint !e776*/
                memmove(&val[newnz], &val[thebeg], (theend - thebeg) * sizeof(*val)); /*lint !e776*/
-               beg[i - firstrow] = newnz;
+               beg[i - firstrow] = newnz; /*lint !e661*/
                newnz += theend - thebeg;
             }
             assert(newnz < *nnonz);
@@ -3520,6 +3545,7 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
+   SCIP_Bool violated;
    int algo;
    int res;
 
@@ -3537,7 +3563,38 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
       return FALSE; /*lint !e527*/
    }
 
-   return (lpi->solstat == GRB_OPTIMAL || (lpi->solstat == GRB_UNBOUNDED && algo == GRB_METHOD_PRIMAL));
+   if( lpi->solstat == GRB_ITERATION_LIMIT || lpi->solstat == GRB_UNBOUNDED )
+   {
+      double consviol;
+      double boundviol;
+      double eps;
+
+      res = GRBgetdblparam(lpi->grbenv, GRB_DBL_PAR_OPTIMALITYTOL, &eps);
+      if ( res != 0 )
+      {
+         SCIPABORT();
+         return FALSE; /*lint !e527*/
+      }
+      res = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_CONSTR_VIO, &consviol);
+      if ( res != 0 )
+      {
+         SCIPABORT();
+         return FALSE; /*lint !e527*/
+      }
+      res = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_BOUND_VIO, &boundviol);
+      if ( res != 0 )
+      {
+         SCIPABORT();
+         return FALSE; /*lint !e527*/
+      }
+
+      violated = (consviol > eps || boundviol > eps);
+   }
+   else
+      violated = FALSE;
+
+   return (lpi->solstat == GRB_OPTIMAL || (!violated && lpi->solstat == GRB_ITERATION_LIMIT && algo == GRB_METHOD_PRIMAL)
+     || (! violated && lpi->solstat == GRB_UNBOUNDED && algo == GRB_METHOD_PRIMAL));
 }
 
 /** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point);
@@ -3963,11 +4020,14 @@ SCIP_RETCODE SCIPlpiGetBase(
    SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
    SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
 
-   if( rstat != 0 )
+   if( rstat != NULL )
    {
       int i;
 
+      SCIP_CALL( ensureSidechgMem(lpi, nrows) );
+
       CHECK_ZERO( lpi->messagehdlr, GRBgetintattrarray(lpi->grbmodel, GRB_INT_ATTR_CBASIS, 0, nrows, rstat) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetcharattrarray(lpi->grbmodel, GRB_CHAR_ATTR_SENSE, 0, nrows, lpi->senarray) );
 
       for( i = 0; i < nrows; ++i )
       {
@@ -3979,30 +4039,56 @@ SCIP_RETCODE SCIPlpiGetBase(
             idx = ncols + lpi->rngrowmap[i];
             assert(lpi->rngrowmap[i] < lpi->nrngrows);
             CHECK_ZERO( lpi->messagehdlr, GRBgetintattrelement(lpi->grbmodel, GRB_INT_ATTR_VBASIS, idx, &rstat[i]) );
+
+            switch( rstat[i] )
+            {
+            case GRB_BASIC:
+               rstat[i] = (int) SCIP_BASESTAT_BASIC;
+               break;
+
+            case GRB_NONBASIC_LOWER:
+               rstat[i] = (int) SCIP_BASESTAT_LOWER;
+               break;
+
+            case GRB_NONBASIC_UPPER:
+               rstat[i] = (int) SCIP_BASESTAT_UPPER;
+               break;
+
+               /*lint -fallthrough*/
+            case GRB_SUPERBASIC:
+            default:
+               SCIPerrorMessage("invalid basis status %d for ranged row.\n", rstat[i]);
+               SCIPABORT();
+               return SCIP_INVALIDDATA; /*lint !e527*/
+            }
          }
-
-         switch( rstat[i] )
+         else
          {
-         case GRB_BASIC:
-            rstat[i] = (int) SCIP_BASESTAT_BASIC;
-            break;
+            /* Slack variables can only be basic or at their lower bounds in Gurobi. */
+            switch( rstat[i] )
+            {
+            case GRB_BASIC:
+               rstat[i] = (int) SCIP_BASESTAT_BASIC;
+               break;
 
-         case GRB_NONBASIC_LOWER:
-            rstat[i] = (int) SCIP_BASESTAT_LOWER;
-            break;
+            case GRB_NONBASIC_LOWER:
+               if ( lpi->senarray[i] == '>' || lpi->senarray[i] == '=' )
+                  rstat[i] = (int) SCIP_BASESTAT_LOWER;
+               else
+               {
+                  assert( lpi->senarray[i] == '<' );
+                  rstat[i] = (int) SCIP_BASESTAT_UPPER;
+               }
+               break;
 
-         case GRB_NONBASIC_UPPER:
-            rstat[i] = (int) SCIP_BASESTAT_UPPER;
-            break;
-
-         case GRB_SUPERBASIC:
-            rstat[i] = (int) SCIP_BASESTAT_ZERO;
-            break;
-
-         default:
-            SCIPerrorMessage("invalid basis status %d\n", rstat[i]);
-            SCIPABORT();
-            return SCIP_INVALIDDATA; /*lint !e527*/
+               /*lint -fallthrough*/
+            case GRB_NONBASIC_UPPER:
+            case GRB_SUPERBASIC:
+            default:
+               SCIPerrorMessage("invalid basis status %d for row.\n", rstat[i]);
+               SCIPABORT();
+               return SCIP_INVALIDDATA; /*lint !e527*/
+            }
          }
       }
    }
@@ -4028,12 +4114,13 @@ SCIP_RETCODE SCIPlpiGetBase(
          case GRB_NONBASIC_UPPER:
             cstat[j] = (int) SCIP_BASESTAT_UPPER;
             break;
+
          case GRB_SUPERBASIC:
             cstat[j] = (int) SCIP_BASESTAT_ZERO;
             break;
 
          default:
-            SCIPerrorMessage("invalid basis status %d\n", cstat[j]);
+            SCIPerrorMessage("invalid basis status %d for column.\n", cstat[j]);
             SCIPABORT();
             return SCIP_INVALIDDATA; /*lint !e527*/
          }
@@ -4073,35 +4160,11 @@ SCIP_RETCODE SCIPlpiSetBase(
 
    for( i = 0; i < nrows; ++i )
    {
-      switch( rstat[i] )
-      {
-      case SCIP_BASESTAT_BASIC:
-         lpi->rstat[i] = GRB_BASIC;
-         break;
-
-      case SCIP_BASESTAT_LOWER:
-         lpi->rstat[i] = GRB_NONBASIC_LOWER;
-         break;
-
-      case SCIP_BASESTAT_UPPER:
-         lpi->rstat[i] = GRB_NONBASIC_UPPER;
-         break;
-
-      case SCIP_BASESTAT_ZERO:
-         lpi->rstat[i] = GRB_SUPERBASIC;
-         break;
-
-      default:
-         SCIPerrorMessage("invalid basis status %d\n", rstat[i]);
-         SCIPABORT();
-         return SCIP_INVALIDDATA; /*lint !e527*/
-      }
-
       if ( lpi->rngrowmap != NULL && lpi->rngrowmap[i] >= 0 )
       {
-         /* set basis status of corresponding range variable; ranged row is always non-basic */
          int idx;
 
+         /* set basis status of corresponding range variable; ranged row is always non-basic */
          idx = ncols + lpi->rngrowmap[i];
          assert(lpi->rngrowmap[i] < lpi->nrngrows);
          lpi->cstat[idx] = lpi->rstat[i];
@@ -4109,6 +4172,44 @@ SCIP_RETCODE SCIPlpiSetBase(
 #ifndef NDEBUG
          nrngsfound++;
 #endif
+      }
+      else
+      {
+         switch( rstat[i] )
+         {
+         case SCIP_BASESTAT_BASIC:
+            lpi->rstat[i] = GRB_BASIC;
+            break;
+
+         case SCIP_BASESTAT_UPPER:
+         {
+#ifndef NDEBUG
+            char sense;
+            CHECK_ZERO( lpi->messagehdlr, GRBgetcharattrarray(lpi->grbmodel, GRB_CHAR_ATTR_SENSE, i, 1, &sense) );
+            assert( sense == '<' );
+#endif
+            /* Slack variables can only be basic or at their lower bounds in Gurobi. */
+            lpi->rstat[i] = GRB_NONBASIC_LOWER;
+            break;
+         }
+
+         case SCIP_BASESTAT_LOWER:
+         {
+#ifndef NDEBUG
+            char sense;
+            CHECK_ZERO( lpi->messagehdlr, GRBgetcharattrarray(lpi->grbmodel, GRB_CHAR_ATTR_SENSE, i, 1, &sense) );
+            assert( sense == '>' || sense == '=' );
+#endif
+            lpi->rstat[i] = GRB_NONBASIC_LOWER;
+            break;
+         }
+
+         case SCIP_BASESTAT_ZERO:
+         default:
+            SCIPerrorMessage("invalid basis status %d for row.\n", rstat[i]);
+            SCIPABORT();
+            return SCIP_INVALIDDATA; /*lint !e527*/
+         }
       }
    }
 

@@ -48,6 +48,7 @@
 #include "scip/type_tree.h"
 #include "scip/type_scip.h"
 
+#include "scip/type_bandit.h"
 #include "scip/type_branch.h"
 #include "scip/type_conflict.h"
 #include "scip/type_cons.h"
@@ -68,6 +69,7 @@
 #include "scip/type_syncstore.h"
 
 /* include public interfaces, s.t. the user only needs to include scip.h */
+#include "scip/pub_bandit.h"
 #include "scip/pub_branch.h"
 #include "scip/pub_conflict.h"
 #include "scip/pub_cons.h"
@@ -326,7 +328,7 @@ SCIP_Bool SCIPisTransformed(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns whether the solution process should be probably correct
+/** returns whether the solution process is arithmetically exact, i.e., not subject to roundoff errors
  *
  *  @note This feature is not supported yet!
  *
@@ -4510,6 +4512,50 @@ EXTERN
 SCIP_NODESEL* SCIPgetNodesel(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup PublicBanditAlgorithms
+ *
+ * @{
+ */
+
+/** includes a bandit algorithm virtual function table  */
+EXTERN
+SCIP_RETCODE SCIPincludeBanditvtable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BANDITVTABLE**   banditvtable,       /**< bandit algorithm virtual function table */
+   const char*           name,               /**< a name for the algorithm represented by this vtable */
+   SCIP_DECL_BANDITFREE  ((*banditfree)),    /**< callback to free bandit specific data structures */
+   SCIP_DECL_BANDITSELECT((*banditselect)),  /**< selection callback for bandit selector */
+   SCIP_DECL_BANDITUPDATE((*banditupdate)),  /**< update callback for bandit algorithms */
+   SCIP_DECL_BANDITRESET ((*banditreset))    /**< update callback for bandit algorithms */
+   );
+
+/** returns the bandit virtual function table of the given name, or NULL if not existing */
+EXTERN
+SCIP_BANDITVTABLE* SCIPfindBanditvtable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of bandit algorithm virtual function table */
+   );
+
+/** calls destructor and frees memory of bandit algorithm */
+EXTERN
+SCIP_RETCODE SCIPfreeBandit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BANDIT**         bandit              /**< pointer to bandit algorithm data structure */
+   );
+
+/** reset the bandit algorithm */
+EXTERN
+SCIP_RETCODE SCIPresetBandit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BANDIT*          bandit,             /**< pointer to bandit algorithm data structure */
+   SCIP_Real*            priorities,         /**< priorities for every action, or NULL if not needed */
+   unsigned int          seed                /**< initial random seed for bandit selection */
+   );
+
+/* @} */
+
+
 
 /* @} */
 
@@ -13330,6 +13376,20 @@ void SCIPmarkRowNotRemovableLocal(
    SCIP_ROW*             row                 /**< LP row */
    );
 
+/** returns number of integral columns in the row
+ *
+ *  @return number of integral columns in the row
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+int SCIPgetRowNumIntCols(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< LP row */
+   );
+
 /** returns minimal absolute value of row vector's non-zero coefficients
  *
  *  @return minimal absolute value of row vector's non-zero coefficients
@@ -15026,7 +15086,6 @@ SCIP_Bool SCIPisCutApplicable(
 EXTERN
 SCIP_RETCODE SCIPaddCut(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
    SCIP_ROW*             cut,                /**< separated cut */
    SCIP_Bool             forcecut,           /**< should the cut be forced to enter the LP? */
    SCIP_Bool*            infeasible          /**< pointer to store whether cut has been detected to be infeasible for local bounds */

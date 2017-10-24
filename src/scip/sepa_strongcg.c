@@ -31,7 +31,7 @@
 #define SEPA_NAME              "strongcg"
 #define SEPA_DESC              "Strong CG cuts separator (Letchford and Lodi)"
 #define SEPA_PRIORITY             -2000
-#define SEPA_FREQ                    30
+#define SEPA_FREQ                    10
 #define SEPA_MAXBOUNDDIST           1.0
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
@@ -43,9 +43,9 @@
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
 #define DEFAULT_RANDSEED             54 /**< initial random seed */
 
-#define MAKECUTINTEGRAL        /* try to scale all cuts to integral coefficients */
-/*#define MAKEINTCUTINTEGRAL*/     /* try to scale cuts without continuous variables to integral coefficients */
-#define FORCECUTINTEGRAL       /* discard cut if conversion to integral coefficients failed */
+/*#define MAKECUTINTEGRAL*/        /* try to scale all cuts to integral coefficients */
+#define MAKEINTCUTINTEGRAL     /* try to scale cuts without continuous variables to integral coefficients */
+/*#define FORCECUTINTEGRAL*/       /* discard cut if conversion to integral coefficients failed */
 #define SEPARATEROWS           /* separate rows with integral slack */
 
 #define BOUNDSWITCH              0.9999
@@ -153,6 +153,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
    SCIP_Real maxscale;
    SCIP_Longint maxdnom;
    int* basisind;
+   int* basisperm;
    int* inds;
    int* cutinds;
    int cutnnz;
@@ -267,6 +268,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
    SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cutinds, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &basisind, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &basisperm, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &basisfrac, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &binvrow, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &inds, nrows) );
@@ -282,6 +284,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
       SCIP_Real frac = 0.0;
 
       c = basisind[i];
+
+      basisperm[i] = i;
 
       if( c >= 0 )
       {
@@ -322,7 +326,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
    }
 
    /* sort basis indices by fractionality */
-   SCIPsortDownRealInt(basisfrac, basisind, nrows);
+   SCIPsortDownRealInt(basisfrac, basisperm, nrows);
 
    /* get the maximal number of cuts allowed in a separation round */
    if( depth == 0 )
@@ -337,15 +341,17 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
    ncuts = 0;
    for( i = 0; i < nrows && ncuts < maxsepacuts && !SCIPisStopped(scip) && *result != SCIP_CUTOFF; ++i )
    {
+      int j;
       SCIP_Real cutefficacy;
 
       if( basisfrac[i] == 0.0 )
          break;
 
-      c = basisind[i];
+      j = basisperm[i];
+      c = basisind[j];
 
       /* get the row of B^-1 for this basic integer variable with fractional solution value */
-      SCIP_CALL( SCIPgetLPBInvRow(scip, i, binvrow, inds, &ninds) );
+      SCIP_CALL( SCIPgetLPBInvRow(scip, j, binvrow, inds, &ninds) );
 
 #ifdef SCIP_DEBUG
       /* initialize variables, that might not have been initialized in SCIPcalcMIR if success == FALSE */
@@ -411,16 +417,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
          /* try to scale the cut to integral values if there are no continuous variables
             *  -> leads to an integral slack variable that can later be used for other cuts
             */
+         if( SCIPgetRowNumIntCols(scip, cut) == SCIProwGetNNonz(cut) )
          {
-            int k = 0;
-            int firstcontvar = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
-            while ( k < cutnnz && cutinds[k] < firstcontvar )
-               ++k;
-            if( k == cutlen )
-            {
-               SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
-                     maxdnom, maxscale, MAKECONTINTEGRAL, &success) );
-            }
+            SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
+                                           maxdnom, maxscale, MAKECONTINTEGRAL, &success) );
          }
 #endif
 #endif
@@ -429,7 +429,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
          success = TRUE;
 #endif
 
-         if( success )
+         if( success ) /*lint !e774*/
          {
             if( !SCIPisCutEfficacious(scip, NULL, cut) )
             {
@@ -441,7 +441,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
             }
             else
             {
-               SCIP_Bool infeasible;
+               SCIP_Bool infeasible = FALSE;
 
                /* flush all changes before adding the cut */
                SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
@@ -455,7 +455,15 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
 
                if( SCIPisCutNew(scip, cut) )
                {
-                  SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
+                  if( !cutislocal )
+                  {
+                     SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+                  }
+                  else
+                  {
+                     SCIP_CALL( SCIPaddCut(scip, cut, FALSE, &infeasible) );
+                  }
+
                   ncuts++;
 
                   if( infeasible )
@@ -465,11 +473,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
                   else
                   {
                      *result = SCIP_SEPARATED;
-
-                     if( !cutislocal )
-                     {
-                        SCIP_CALL( SCIPaddPoolCut(scip, cut) );
-                     }
                   }
                }
             }
@@ -491,6 +494,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
    SCIPfreeBufferArray(scip, &inds);
    SCIPfreeBufferArray(scip, &binvrow);
    SCIPfreeBufferArray(scip, &basisfrac);
+   SCIPfreeBufferArray(scip, &basisperm);
    SCIPfreeBufferArray(scip, &basisind);
    SCIPfreeBufferArray(scip, &cutinds);
    SCIPfreeBufferArray(scip, &cutcoefs);

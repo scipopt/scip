@@ -51,11 +51,13 @@ NOWAITCLUSTER=${18}
 EXCLUSIVE=${19}
 PERMUTE=${20}
 SEEDS=${21}
-DEBUGTOOL=${22}
-REOPT=${23}
-OPTCOMMAND=${24}
-SETCUTOFF=${25}
-VISUALIZE=${26}
+GLBSEEDSHIFT=${22}
+DEBUGTOOL=${23}
+REOPT=${24}
+OPTCOMMAND=${25}
+SETCUTOFF=${26}
+VISUALIZE=${27}
+CLUSTERNODES=${28}
 
 # check if all variables defined (by checking the last one)
 if test -z $VISUALIZE
@@ -82,6 +84,7 @@ then
     echo "EXCLUSIVE     = $EXCLUSIVE"
     echo "PERMUTE       = $PERMUTE"
     echo "SEEDS         = $SEEDS"
+    echo "GLBSEEDSHIFT  = $GLBSEEDSHIFT"
     echo "DEBUGTOOL     = $DEBUGTOOL"
     echo "REOPT         = $REOPT"
     echo "OPTCOMMAND    = $OPTCOMMAND"
@@ -199,7 +202,12 @@ do
 		    export TIMELIMIT
 		    # the space at the end is necessary
 		    export SRUN="srun --cpu_bind=cores -v -v "
-		    sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run.sh
+		    if test "$CLUSTERNODES" = "all"
+		    then
+				  sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run.sh
+		    else
+				  sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} -w $CLUSTERNODES --output=/dev/null run.sh
+		    fi
 		else
 		    # -V to copy all environment variables
 		    qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N ${JOBNAME} \

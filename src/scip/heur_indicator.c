@@ -40,7 +40,7 @@
 #define HEUR_TIMING           SCIP_HEURTIMING_DURINGLPLOOP
 #define HEUR_USESSUBSCIP      FALSE          /**< does the heuristic use a secondary SCIP instance? */
 
-#define DEFAULT_ONEOPT        TRUE           /**< whether the one-opt heuristic should be started */
+#define DEFAULT_ONEOPT        FALSE          /**< whether the one-opt heuristic should be started */
 #define DEFAULT_IMPROVESOLS   FALSE          /**< Try to improve other solutions by one-opt? */
 
 
@@ -50,6 +50,7 @@ struct SCIP_HeurData
    int                   nindconss;          /**< number of indicator constraints */
    SCIP_CONS**           indconss;           /**< indicator constraints */
    SCIP_Bool*            solcand;            /**< bitset of indicator variables in solution candidate */
+   SCIP_Real             obj;                /**< objective of previously stored solution */
    SCIP_Bool             oneopt;             /**< whether the one-opt heuristic should be started */
    SCIP_CONSHDLR*        indicatorconshdlr;  /**< indicator constraint handler */
    SCIP_SOL*             lastsol;            /**< last solution considered for improvement */
@@ -92,7 +93,7 @@ SCIP_RETCODE tryOneOpt(
 
    SCIP_CALL( SCIPstartProbing(scip) );
 
-   for (i = 0; i < nindconss; ++i)
+   for (i = 0; i < nindconss && ! SCIPisStopped(scip); ++i)
    {
       SCIP_VAR* binvar;
 
@@ -110,6 +111,9 @@ SCIP_RETCODE tryOneOpt(
       /* return if the we would exceed the depth limit of the tree */
       if( SCIP_MAXTREEDEPTH <= SCIPgetDepth(scip) )
          break;
+
+      if ( solcand[i] )
+         continue;
 
       /* get rid of all bound changes */
       SCIP_CALL( SCIPnewProbingNode(scip) );
@@ -219,7 +223,7 @@ SCIP_RETCODE trySolCandidate(
    assert( solcand != NULL );
    assert( nfoundsols != NULL );
 
-   SCIPdebugMsg(scip, "Trying to generate feasible solution with indicators from solution candidate ...\n");
+   SCIPdebugMsg(scip, "Trying to generate feasible solution with indicators from solution candidate (obj: %f) ...\n", heurdata->obj);
    *nfoundsols = 0;
 
    SCIP_CALL( SCIPstartProbing(scip) );
@@ -532,6 +536,7 @@ SCIP_RETCODE SCIPincludeHeurIndicator(
    heurdata->solcand = NULL;
    heurdata->lastsol = NULL;
    heurdata->indicatorconshdlr = NULL;
+   heurdata->obj = SCIPinfinity(scip);
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
@@ -566,7 +571,8 @@ SCIP_RETCODE SCIPheurPassIndicator(
    SCIP_HEUR*            heur,               /**< indicator heuristic */
    int                   nindconss,          /**< number of indicator constraints */
    SCIP_CONS**           indconss,           /**< indicator constraints */
-   SCIP_Bool*            solcand             /**< values for indicator variables in partial solution */
+   SCIP_Bool*            solcand,            /**< values for indicator variables in partial solution */
+   SCIP_Real             obj                 /**< objective of solution */
    )
 {
    SCIP_HEURDATA* heurdata;
@@ -582,6 +588,9 @@ SCIP_RETCODE SCIPheurPassIndicator(
    heurdata = SCIPheurGetData(heur);
    assert( heurdata != NULL );
 
+   if ( obj >= heurdata->obj )
+      return SCIP_OKAY;
+
    /* copy indicator information */
    if ( heurdata->indconss != NULL )
       SCIPfreeBlockMemoryArray(scip, &(heurdata->indconss), heurdata->nindconss);
@@ -594,6 +603,7 @@ SCIP_RETCODE SCIPheurPassIndicator(
       BMScopyMemoryArray(heurdata->solcand, solcand, nindconss);
    else
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(heurdata->solcand), solcand, nindconss) );
+   heurdata->obj = obj;
 
    return SCIP_OKAY;
 }

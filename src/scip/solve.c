@@ -1256,7 +1256,7 @@ SCIP_RETCODE SCIPconstructCurrentLP(
             /* keep all active global cuts that where applied in the previous node in the lp */
             if( !lp->rows[i]->local && lp->rows[i]->age == 0 )
             {
-               SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, NULL, lp->rows[i], TRUE, (SCIPtreeGetCurrentDepth(tree) == 0), cutoff) );
+               SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, lp->rows[i], TRUE, (SCIPtreeGetCurrentDepth(tree) == 0), cutoff) );
             }
          }
       }
@@ -2183,12 +2183,6 @@ SCIP_RETCODE cutpoolSeparate(
    {
       SCIP_RESULT result;
 
-      /* in case of the "normal" cutpool the sepastore should be empty since the cutpool is called as first separator;
-       * in case of the delayed cutpool the sepastore should be also empty because the delayed cutpool is only called if
-       * the sepastore is empty after all separators and the the "normal" cutpool were called without success;
-       */
-      assert(SCIPsepastoreGetNCuts(sepastore) == 0);
-
       SCIP_CALL( SCIPcutpoolSeparate(cutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, NULL, cutpoolisdelayed, root, &result) );
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);
@@ -2245,6 +2239,7 @@ SCIP_RETCODE priceAndCutLoop(
    SCIP_Bool root;
    SCIP_Bool allowlocal;
    int maxseparounds;
+   int maxincseparounds;
    int nsepastallrounds;
    int maxnsepastallrounds;
    int stallnfracs;
@@ -2291,6 +2286,9 @@ SCIP_RETCODE priceAndCutLoop(
    maxnsepastallrounds = root ? set->sepa_maxstallroundsroot : set->sepa_maxstallrounds;
    if( maxnsepastallrounds == -1 )
       maxnsepastallrounds = INT_MAX;
+   maxincseparounds = set->sepa_maxincrounds;
+   if( maxincseparounds == -1 )
+      maxincseparounds = INT_MAX;
 
    /* solve initial LP of price-and-cut loop */
    /* @todo check if LP is always already solved, because of calling solveNodeInitialLP() in solveNodeLP()? */
@@ -2456,6 +2454,7 @@ SCIP_RETCODE priceAndCutLoop(
       /* check, if we exceeded the separation round limit */
       mustsepa = mustsepa
          && stat->nseparounds < maxseparounds
+         && stat->nincseparounds < maxincseparounds
          && nsepastallrounds < maxnsepastallrounds
          && !(*cutoff);
 
@@ -2486,6 +2485,7 @@ SCIP_RETCODE priceAndCutLoop(
       {
          SCIP_Longint olddomchgcount;
          SCIP_Longint oldninitconssadded;
+         int oldnlprows;
          SCIP_Bool enoughcuts;
 
          assert(lp->flushed);
@@ -2497,6 +2497,7 @@ SCIP_RETCODE priceAndCutLoop(
 
          mustsepa = FALSE;
          enoughcuts = (SCIPsetGetSepaMaxcuts(set, root) == 0);
+         oldnlprows = lp->nrows;
 
          /* global cut pool separation */
          if( !enoughcuts && !delayedsepa )
@@ -2534,6 +2535,18 @@ SCIP_RETCODE priceAndCutLoop(
                      tree, lp, sepastore, actdepth, bounddist, allowlocal, delayedsepa,
                      &delayedsepa, &enoughcuts, cutoff, lperror, &mustsepa, &mustprice) );
                assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
+            }
+         }
+
+         /* call global cut pool separation again since separators may add cuts to the pool instead of the sepastore */
+         if( !(*cutoff) && !(*lperror) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && !enoughcuts && lp->solved )
+         {
+            SCIP_CALL( cutpoolSeparate(cutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, FALSE, root,
+                  actdepth, &enoughcuts, cutoff) );
+
+            if( *cutoff )
+            {
+               SCIPsetDebugMsg(set, " -> global cut pool detected cutoff\n");
             }
          }
 
@@ -2699,6 +2712,12 @@ SCIP_RETCODE priceAndCutLoop(
 
          /* increase separation round counter */
          stat->nseparounds++;
+
+         /* if size of lp relaxation increased also count this round separately */
+         if( lp->nrows > oldnlprows )
+            ++stat->nincseparounds;
+         else if( lp->nrows < oldnlprows )
+            stat->nincseparounds = 0;
       }
    }
 
@@ -4091,6 +4110,7 @@ SCIP_RETCODE solveNode(
    nlperrors = 0;
    stat->npricerounds = 0;
    stat->nseparounds = 0;
+   stat->nincseparounds = 0;
    solverelaxagain = TRUE;
    solvelpagain = TRUE;
    propagateagain = TRUE;
