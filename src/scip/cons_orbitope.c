@@ -236,9 +236,12 @@ SCIP_RETCODE upgradeOrbitopeConstraint(
    SCIP_CONS** setppcconss;
    int nsetppcconss;
    SCIP_Bool* covered;
+   int nprobvars;
+   int* rowidxvar;
    int ncovered;
    int i;
-   SCIP_Bool success;
+   int j;
+   SCIP_Bool success = TRUE;
 
    assert( scip != NULL );
    assert( vars != NULL );
@@ -267,8 +270,32 @@ SCIP_RETCODE upgradeOrbitopeConstraint(
       covered[i] = FALSE;
    ncovered = 0;
 
+   /* array storing index of orbitope row a variable is contained in */
+   nprobvars = SCIPgetNVars(scip);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &rowidxvar, nprobvars) );
+
+   for (i = 0; i < nprobvars; ++i)
+      rowidxvar[i] = -1;
+
+   for (i = 0; i < nrows && success; ++i)
+   {
+      for (j = 0; j < ncols; ++j)
+      {
+         if ( SCIPvarIsNegated(vars[i][j]) )
+         {
+            success = FALSE;
+            break;
+         }
+
+         rowidxvar[SCIPvarGetProbindex(vars[i][j])] = i;
+      }
+   }
+
+   if ( ! success )
+      goto FREEUPGRADESTRUCTURES;
+
    /* iterate over rows of orbitope and check whether rows are contained in partitioning constraints */
-   success = TRUE;
    for (i = 0; i < nrows && success; ++i)
    {
       /* iterate over constraints */
@@ -279,7 +306,6 @@ SCIP_RETCODE upgradeOrbitopeConstraint(
          SCIP_VAR** setppcvars;
          SCIP_VAR* var;
          int nfound = 0;
-         int j;
 
          /* check type */
          if ( SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_COVERING ||
@@ -303,30 +329,16 @@ SCIP_RETCODE upgradeOrbitopeConstraint(
          for (j = 0; j < nsetppcvars; ++j)
          {
             int idx;
-            int k;
 
             var = setppcvars[j];
             if ( SCIPvarIsNegated(var) )
-            {
-               success = FALSE;
                break;
-            }
 
             idx = SCIPvarGetProbindex(var);
 
-            for (k = 0; k < ncols; ++k)
-            {
-               if ( SCIPvarIsNegated(vars[i][k]) )
-               {
-                  success = FALSE;
-                  break;
-               }
-               else if ( SCIPvarGetProbindex(vars[i][k]) == idx )
-                  ++nfound;
-            }
-
-            /* if there is a setppcvar that is not contained in row i */
-            if ( k >= ncols )
+            if ( rowidxvar[idx] == i )
+               ++nfound;
+            else
                break;
          }
 
@@ -341,16 +353,7 @@ SCIP_RETCODE upgradeOrbitopeConstraint(
    if ( ncovered == nrows )
    {
       *type = SCIP_ORBITOPETYPE_PARTITIONING;
-      SCIPfreeBufferArray(scip, &covered);
-
-      return SCIP_OKAY;
-   }
-   /* there exist negated variables */
-   else if ( ! success )
-   {
-      SCIPfreeBufferArray(scip, &covered);
-
-      return SCIP_OKAY;
+      goto FREEUPGRADESTRUCTURES;
    }
 
    /* iterate over rows of orbitope and check whether rows are contained in packing constraints */
@@ -368,7 +371,6 @@ SCIP_RETCODE upgradeOrbitopeConstraint(
          SCIP_VAR** setppcvars;
          SCIP_VAR* var;
          int nfound = 0;
-         int j;
 
          /* check type */
          if ( SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_COVERING )
@@ -387,10 +389,9 @@ SCIP_RETCODE upgradeOrbitopeConstraint(
          assert( setppcvars != NULL );
 
          /* check whether i-th row is contained in packing constraint */
-         for (j = 0; j < nsetppcvars; ++j)
+         for (j = 0; j < nsetppcvars && nfound < ncols; ++j)
          {
             int idx;
-            int k;
 
             var = setppcvars[j];
             if ( SCIPvarIsNegated(var) )
@@ -398,13 +399,8 @@ SCIP_RETCODE upgradeOrbitopeConstraint(
 
             idx = SCIPvarGetProbindex(var);
 
-            for (k = 0; k < ncols; ++k)
-            {
-               if ( SCIPvarIsNegated(vars[i][k]) )
-                  continue;
-               else if ( SCIPvarGetProbindex(vars[i][k]) == idx )
-                  ++nfound;
-            }
+            if ( rowidxvar[idx] == i )
+               ++nfound;
          }
 
          if ( nfound == ncols && ! covered[i] )
@@ -418,6 +414,8 @@ SCIP_RETCODE upgradeOrbitopeConstraint(
    if ( ncovered == nrows )
       *type = SCIP_ORBITOPETYPE_PACKING;
 
+ FREEUPGRADESTRUCTURES:
+   SCIPfreeBufferArray(scip, &rowidxvar);
    SCIPfreeBufferArray(scip, &covered);
 
    return SCIP_OKAY;
