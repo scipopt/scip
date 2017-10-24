@@ -23,6 +23,7 @@ parameters:
 - fixed typo: heuristics/completesol/maxunkownrate has changed to heuristics/completesol/maxunknownrate
 - new parameters: beforepresol, maxlpiter, and maxcontvars in heur_completesol.c
 - new parameter: lp/refactorinterval to change the refactorization interval of the LP solver
+- new parameter: misc/usesymmetry to determine whether symmetry handling should be used
 
 interface:
 - new interface methods to create and use bandit algorithms implemented as SCIP core plugins --

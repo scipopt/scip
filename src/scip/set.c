@@ -277,6 +277,8 @@
 #define SCIP_DEFAULT_MISC_ALLOWDUALREDS    TRUE /**< should dual reductions in propagation methods and presolver be allowed? */
 #define SCIP_DEFAULT_MISC_ALLOWOBJPROP     TRUE /**< should propagation to the current objective be allowed in propagation methods? */
 #define SCIP_DEFAULT_MISC_REFERENCEVALUE   1e99 /**< objective value for reference purposes */
+#define SCIP_DEFAULT_MISC_USESYMMETRY     FALSE /**< should symmetry handling techniques be used if applicable? */
+
 
 #ifdef WITH_DEBUG_SOLUTION
 #define SCIP_DEFAULT_MISC_DEBUGSOLUTION     "-" /**< path to a debug solution */
@@ -1837,6 +1839,7 @@ SCIP_RETCODE SCIPsetCreate(
          "objective value for reference purposes",
          &(*set)->misc_referencevalue, FALSE, SCIP_DEFAULT_MISC_REFERENCEVALUE, SCIP_REAL_MIN, SCIP_REAL_MAX,
          NULL, NULL) );
+
 #ifdef WITH_DEBUG_SOLUTION
    SCIP_CALL( SCIPsetAddStringParam(*set, messagehdlr, blkmem,
          "misc/debugsol",
@@ -1844,6 +1847,12 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->misc_debugsol, FALSE, SCIP_DEFAULT_MISC_DEBUGSOLUTION,
          NULL, NULL) );
 #endif
+
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "misc/usesymmetry",
+         "should symmetry handling techniques be used if applicable?",
+         &(*set)->misc_usesymmetry, FALSE, SCIP_DEFAULT_MISC_USESYMMETRY,
+         NULL, NULL) );
 
    /* randomization parameters */
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,

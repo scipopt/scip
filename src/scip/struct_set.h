@@ -360,6 +360,7 @@ struct SCIP_Set
    SCIP_Bool             misc_allowdualreds; /**< should dual reductions in propagation methods and presolver be allowed? */
    SCIP_Bool             misc_allowobjprop;  /**< should propagation to the current objective be allowed in propagation methods? */
    SCIP_Real             misc_referencevalue;/**< objective value for reference purposes */
+   SCIP_Bool             misc_usesymmetry;   /**< should symmetry handling techniques be used if applicable? */
    char*                 misc_debugsol;      /**< path to a debug solution */
 
    /* randomization parameters */
