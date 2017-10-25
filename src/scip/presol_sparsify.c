@@ -46,10 +46,11 @@
 #define DEFAULT_MAX_CONT_FILLIN         0    /**< default value for the maximal fillin for continuous variables */
 #define DEFAULT_MAX_BIN_FILLIN          0    /**< default value for the maximal fillin for binary variables */
 #define DEFAULT_MAX_INT_FILLIN          0    /**< default value for the maximal fillin for integer variables */
-#define DEFAULT_MAXRETRIEVEFAC        100    /**< default value for the maximal number of hashtable retrieves as a multiple of the number of constraints */
 #define DEFAULT_MAXNONZEROS            70    /**< maximal support of one equality to be used for cancelling (-1: no limit) */
 #define DEFAULT_MAXCONSIDEREDNONZEROS  70    /**< maximal number of considered non-zeros within one row (-1: no limit) */
+#define DEFAULT_ROWSORT               'n'    /**< order in which to process inequalities ('n'o sorting, 'i'ncreasing nonzeros, 'd'ecreasing nonzeros) */
 #define DEFAULT_FULL_SEARCH             0    /**< default value for full search */
+#define DEFAULT_MAXRETRIEVEFAC        100    /**< default value for the maximal number of hashtable retrieves as a multiple of the number of constraints */
 
 #define MAXSCALE                   1000.0    /**< maximal allowed scale for cancelling non-zeros */
 /*
@@ -66,6 +67,7 @@ struct SCIP_PresolData
    int                   maxconsiderednonzeros;/**< maximal number of considered non-zeros within one row (-1: no limit) */
    SCIP_Longint          nretrieves;         /**< number of hashtable retrieves */
    SCIP_Real             maxretrievefac;     /**< maximal number of hashtable retrieves as a multiple of the number of constraints */
+   char                  rowsort;            /**< order in which to process inequalities ('n'o sorting, 'i'ncreasing nonzeros, 'd'ecreasing nonzeros) */
    SCIP_Bool             fullsearch;         /**< flag indicating that full sparsification is required */
 };
 
@@ -499,6 +501,8 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
    int numcancel;
    int* locks;
    int* perm;
+   int* rowidxsorted;
+   int* rowsparsity;
    SCIP_HASHTABLE* pairtable;
    ROWVARPAIR* varpairs;
    int nvarpairs;
@@ -546,6 +550,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       nvarpairs = 0;
       varpairs = NULL;
       SCIP_CALL( SCIPhashtableCreate(&pairtable, SCIPblkmem(scip), 1, SCIPhashGetKeyStandard, varPairsEqual, varPairHashval, NULL) );
+
       /* collect equalities and their number of non-zeros */
       for( r = 0; r < nrows; r++ )
       {
@@ -557,7 +562,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
           * processed by trivial presolving
           */
          if( nnonz >= 2 && (presoldata->maxnonzeros < 0 || nnonz <= presoldata->maxnonzeros)
-            && SCIPisEQ(scip, SCIPmatrixGetRowRhs(matrix,r), SCIPmatrixGetRowLhs(matrix,r)) )
+            && SCIPisEQ(scip, SCIPmatrixGetRowRhs(matrix, r), SCIPmatrixGetRowLhs(matrix, r)) )
          {
             int* rowinds;
             SCIP_Real* rowvals;
@@ -630,15 +635,52 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
          SCIP_CALL( SCIPhashtableInsert(pairtable, (void*) &varpairs[r]) );
       }
 
+      /* sort rows according to parameter value */
+      switch( presoldata->rowsort )
+      {
+      case 'i':
+         SCIP_CALL( SCIPallocBufferArray(scip, &rowidxsorted, nrows) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &rowsparsity, nrows) );
+         for( r = 0; r < nrows; ++r )
+         {
+            rowidxsorted[r] = r;
+            rowsparsity[r] = SCIPmatrixGetRowNNonzs(matrix, r);
+         }
+         SCIPsortIntInt(rowsparsity, rowidxsorted, nrows);
+         break;
+
+      case 'd':
+         SCIP_CALL( SCIPallocBufferArray(scip, &rowidxsorted, nrows) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &rowsparsity, nrows) );
+         for( r = 0; r < nrows; ++r )
+         {
+            rowidxsorted[r] = r;
+            rowsparsity[r] = -SCIPmatrixGetRowNNonzs(matrix, r);
+         }
+         SCIPsortIntInt(rowsparsity, rowidxsorted, nrows);
+         break;
+
+      default:
+         assert(presoldata->rowsort == 'n');
+         rowidxsorted = NULL;
+         rowsparsity = NULL;
+      }
+
       /* loop over the rows and cancel non-zeros until maximum number of retrieves is reached */
       maxretrieves = presoldata->maxretrievefac * nrows;
       for( r = 0; r < nrows && presoldata->nretrieves <= maxretrieves; r++ )
       {
-         SCIP_CALL( cancelRow(scip, matrix, pairtable, r, \
+         int rowidx;
+
+         rowidx = rowidxsorted != NULL ? rowidxsorted[r] : r;
+         SCIP_CALL( cancelRow(scip, matrix, pairtable, rowidx, \
                (unsigned int)presoldata->maxcontfillin, (unsigned int)presoldata->maxintfillin, (unsigned int)presoldata->maxbinfillin, \
                presoldata->maxnonzeros, presoldata->maxconsiderednonzeros, \
                &presoldata->nretrieves, nchgcoefs, &numcancel) );
       }
+
+      SCIPfreeBufferArrayNull(scip, &rowsparsity);
+      SCIPfreeBufferArrayNull(scip, &rowidxsorted);
 
       SCIPhashtableFree(&pairtable);
       SCIPfreeBufferArrayNull(scip, &varpairs);
@@ -721,6 +763,11 @@ SCIP_RETCODE SCIPincludePresolSparsify(
          "presolving/sparsify/maxconsiderednonzeros",
          "maximal number of considered non-zeros within one row (-1: no limit)",
          &presoldata->maxconsiderednonzeros, TRUE, DEFAULT_MAXCONSIDEREDNONZEROS, -1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddCharParam(scip,
+         "presolving/sparsify/rowsort",
+         "order in which to process inequalities ('n'o sorting, 'i'ncreasing nonzeros, 'd'ecreasing nonzeros)",
+         &presoldata->rowsort, TRUE, DEFAULT_ROWSORT, "nid", NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "presolving/sparsify/fullsearch",
