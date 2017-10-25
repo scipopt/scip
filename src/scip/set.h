@@ -46,6 +46,7 @@
 #include "scip/type_reader.h"
 #include "scip/type_relax.h"
 #include "scip/type_sepa.h"
+#include "scip/type_table.h"
 #include "scip/type_prop.h"
 #include "scip/struct_set.h"
 
@@ -894,7 +895,21 @@ SCIP_RETCODE SCIPsetIncludeDisp(
 extern
 SCIP_DISP* SCIPsetFindDisp(
    SCIP_SET*             set,                /**< global SCIP settings */
-   const char*           name                /**< name of event handler */
+   const char*           name                /**< name of display */
+   );
+
+/** inserts statistics table in statistics table list */
+extern
+SCIP_RETCODE SCIPsetIncludeTable(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_TABLE*           table               /**< statistics table */
+   );
+
+/** returns the statistics table of the given name, or NULL if not existing */
+extern
+SCIP_TABLE* SCIPsetFindTable(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of statistics table */
    );
 
 /** inserts dialog in dialog list */

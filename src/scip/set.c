@@ -50,6 +50,7 @@
 #include "scip/reader.h"
 #include "scip/relax.h"
 #include "scip/sepa.h"
+#include "scip/table.h"
 #include "scip/prop.h"
 #include "nlpi/nlpi.h"
 #include "scip/struct_scip.h" /* for SCIPsetPrintDebugMessage() */
@@ -1077,6 +1078,10 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->disps = NULL;
    (*set)->ndisps = 0;
    (*set)->dispssize = 0;
+   (*set)->tables = NULL;
+   (*set)->ntables = 0;
+   (*set)->tablessize = 0;
+   (*set)->tablessorted = FALSE;
    (*set)->dialogs = NULL;
    (*set)->ndialogs = 0;
    (*set)->dialogssize = 0;
@@ -2584,6 +2589,13 @@ SCIP_RETCODE SCIPsetFree(
       SCIP_CALL( SCIPbranchruleFree(&(*set)->branchrules[i], *set) );
    }
    BMSfreeMemoryArrayNull(&(*set)->branchrules);
+
+   /* free statistics tables */
+   for( i = 0; i < (*set)->ntables; ++i )
+   {
+      SCIP_CALL( SCIPtableFree(&(*set)->tables[i], *set) );
+   }
+   BMSfreeMemoryArrayNull(&(*set)->tables);
 
    /* free display columns */
    for( i = 0; i < (*set)->ndisps; ++i )
@@ -4488,6 +4500,51 @@ SCIP_DISP* SCIPsetFindDisp(
    {
       if( strcmp(SCIPdispGetName(set->disps[i]), name) == 0 )
          return set->disps[i];
+   }
+
+   return NULL;
+}
+
+/** inserts statistics table in statistics table list */
+SCIP_RETCODE SCIPsetIncludeTable(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_TABLE*           table               /**< statistics table */
+   )
+{
+   assert(set != NULL);
+   assert(table != NULL);
+   assert(!SCIPtableIsInitialized(table));
+
+   if( set->ntables >= set->tablessize )
+   {
+      set->tablessize = SCIPsetCalcMemGrowSize(set, set->ntables+1);
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->tables, set->tablessize) );
+   }
+   assert(set->ntables < set->tablessize);
+
+   /* we insert in arbitrary order and sort once before printing statistics */
+   set->tables[set->ntables] = table;
+   set->ntables++;
+   set->tablessorted = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** returns the statistics table of the given name, or NULL if not existing */
+SCIP_TABLE* SCIPsetFindTable(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of statistics table */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+   assert(name != NULL);
+
+   for( i = 0; i < set->ntables; ++i )
+   {
+      if( strcmp(SCIPtableGetName(set->tables[i]), name) == 0 )
+         return set->tables[i];
    }
 
    return NULL;
