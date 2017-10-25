@@ -36,6 +36,7 @@
 #include "scip/lp.h"
 #include "scip/paramset.h"
 #include "scip/scip.h"
+#include "scip/bandit.h"
 #include "scip/branch.h"
 #include "scip/conflict.h"
 #include "scip/cons.h"
@@ -235,7 +236,7 @@
 #define SCIP_DEFAULT_LP_RESOLVEITERFAC     -1.0 /**< factor of average LP iterations that is used as LP iteration limit
                                                  *   for LP resolve (-1.0: unlimited) */
 #define SCIP_DEFAULT_LP_RESOLVEITERMIN     1000 /**< minimum number of iterations that are allowed for LP resolve */
-#define SCIP_DEFAULT_LP_SOLUTIONPOLISHING     0 /**< LP solution polishing method (0: disabled, 1: only root, 2: always) */
+#define SCIP_DEFAULT_LP_SOLUTIONPOLISHING     3 /**< LP solution polishing method (0: disabled, 1: only root, 2: always, 3: auto) */
 #define SCIP_DEFAULT_LP_REFACTORINTERVAL      0 /**< LP refactorization interval (0: automatic) */
 
 /* NLP */
@@ -1074,6 +1075,9 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->branchrulessize = 0;
    (*set)->branchrulessorted = FALSE;
    (*set)->branchrulesnamesorted = FALSE;
+   (*set)->banditvtables = NULL;
+   (*set)->banditvtablessize = 0;
+   (*set)->nbanditvtables = 0;
    (*set)->disps = NULL;
    (*set)->ndisps = 0;
    (*set)->dispssize = 0;
@@ -1681,8 +1685,8 @@ SCIP_RETCODE SCIPsetCreate(
 
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "lp/solutionpolishing",
-         "LP solution polishing method (0: disabled, 1: only root, 2: always)",
-         &(*set)->lp_solutionpolishing, TRUE, SCIP_DEFAULT_LP_SOLUTIONPOLISHING, 0, 2,
+         "LP solution polishing method (0: disabled, 1: only root, 2: always, 3: auto)",
+         &(*set)->lp_solutionpolishing, TRUE, SCIP_DEFAULT_LP_SOLUTIONPOLISHING, 0, 3,
          NULL, NULL) );
 
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
@@ -2624,6 +2628,13 @@ SCIP_RETCODE SCIPsetFree(
 
    /* free all debug data */
    SCIP_CALL( SCIPdebugFreeDebugData(*set) ); /*lint !e506 !e774*/
+
+   /* free virtual tables of bandit algorithms */
+   for( i = 0; i < (*set)->nbanditvtables; ++i )
+   {
+      SCIPbanditvtableFree(&(*set)->banditvtables[i]);
+   }
+   BMSfreeMemoryArrayNull(&(*set)->banditvtables);
 
    BMSfreeMemory(set);
 
@@ -3997,6 +4008,49 @@ void SCIPsetSortPropsName(
       set->propssorted = FALSE;
       set->propsnamesorted = TRUE;
    }
+}
+
+/** inserts bandit virtual function table into set */
+SCIP_RETCODE SCIPsetIncludeBanditvtable(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_BANDITVTABLE*    banditvtable        /**< bandit algorithm virtual function table */
+   )
+{
+   assert(set != NULL);
+   assert(banditvtable != NULL);
+
+   if( set->nbanditvtables >= set->banditvtablessize )
+   {
+      int newsize = SCIPsetCalcMemGrowSize(set, set->nbanditvtables + 1);
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->banditvtables, newsize) );
+      set->banditvtablessize = newsize;
+   }
+
+   assert(set->nbanditvtables < set->banditvtablessize);
+   set->banditvtables[set->nbanditvtables++] = banditvtable;
+
+   return SCIP_OKAY;
+}
+
+/** returns the bandit virtual function table of the given name, or NULL if not existing */
+SCIP_BANDITVTABLE* SCIPsetFindBanditvtable(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of bandit algorithm virtual function table */
+   )
+{
+   int b;
+
+   assert(set != NULL);
+   assert(name != NULL);
+
+   /* search for a bandit v table of the given name */
+   for( b = 0; b < set->nbanditvtables; ++b )
+   {
+      if( strcmp(name, SCIPbanditvtableGetName(set->banditvtables[b])) == 0 )
+         return set->banditvtables[b];
+   }
+
+   return NULL;
 }
 
 /** inserts concurrent solver type into the concurrent solver type list */

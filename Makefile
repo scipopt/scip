@@ -537,6 +537,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_linesearchdiving.o \
 			scip/heur_localbranching.o \
 			scip/heur_lpface.o \
+			scip/heur_alns.o \
 			scip/heur_locks.o \
 			scip/heur_mutation.o \
 			scip/heur_multistart.o \
@@ -640,6 +641,10 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 
 SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/branch.o \
+			scip/bandit.o \
+			scip/bandit_epsgreedy.o \
+			scip/bandit_exp3.o \
+			scip/bandit_ucb.o \
 			scip/clock.o \
 			scip/concsolver.o \
 			scip/concurrent.o \
@@ -679,7 +684,9 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/reopt.o \
 			scip/retcode.o \
 			scip/scip.o \
+			scip/scip_bandit.o \
 			scip/scipbuildflags.o \
+			scip/scipcoreplugins.o \
 			scip/scipdefplugins.o \
 			scip/scipgithash.o \
 			scip/scipshell.o \
@@ -877,7 +884,7 @@ test:
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(EXECUTABLE) $(SETTINGS) $(BINID) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
 		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) \
-                $(SEEDS);
+                $(SEEDS) $(GLBSEEDSHIFT);
 
 .PHONY: testcount
 testcount:

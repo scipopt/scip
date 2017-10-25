@@ -16,6 +16,10 @@ set(scipsources
     blockmemshell/memory.c
     scip/message.c
     scip/bitencode.c
+    scip/bandit.c
+    scip/bandit_epsgreedy.c
+    scip/bandit_exp3.c
+    scip/bandit_ucb.c
     scip/branch_allfullstrong.c
     scip/branch_cloud.c
     scip/branch_distribution.c
@@ -85,6 +89,7 @@ set(scipsources
     scip/heur_localbranching.c
     scip/heur_lpface.c
     scip/heur_locks.c
+    scip/heur_alns.c
     scip/heur_mutation.c
     scip/heur_multistart.c
     scip/heur_mpec.c
@@ -227,8 +232,10 @@ set(scipsources
     scip/reopt.c
     scip/retcode.c
     scip/scip.c
+    scip/scip_bandit.c
     scip/scipbuildflags.c
     scip/scipdefplugins.c
+    scip/scipcoreplugins.c
     scip/scipgithash.c
     scip/scipshell.c
     scip/sepa.c
@@ -336,6 +343,10 @@ set(objscipheaders
 )
 
 set(scipheaders
+    scip/bandit.h
+    scip/bandit_epsgreedy.h
+    scip/bandit_exp3.h
+    scip/bandit_ucb.h
     scip/bitencode.h
     scip/boundstore.h
     scip/branch_allfullstrong.h
@@ -423,6 +434,7 @@ set(scipheaders
     scip/heur_linesearchdiving.h
     scip/heur_localbranching.h
     scip/heur_locks.h
+    scip/heur_alns.h
     scip/heur_lpface.h
     scip/heur_multistart.h
     scip/heur_mutation.h
@@ -507,6 +519,10 @@ set(scipheaders
     scip/prop_sync.h
     scip/prop_vbounds.h
     scip/pub_branch.h
+    scip/pub_bandit.h
+    scip/pub_bandit_epsgreedy.h
+    scip/pub_bandit_exp3.h
+    scip/pub_bandit_ucb.h
     scip/pub_compr.h
     scip/pub_conflict.h
     scip/pub_cons.h
@@ -563,6 +579,7 @@ set(scipheaders
     scip/reopt.h
     scip/retcode.h
     scip/scipbuildflags.h
+    scip/scipcoreplugins.h
     scip/scipdefplugins.h
     scip/scipgithash.h
     scip/scip.h
@@ -590,6 +607,7 @@ set(scipheaders
     scip/sol.h
     scip/solve.h
     scip/stat.h
+    scip/struct_bandit.h
     scip/struct_branch.h
     scip/struct_clock.h
     scip/struct_compr.h
@@ -634,6 +652,7 @@ set(scipheaders
     scip/struct_visual.h
     scip/syncstore.h
     scip/tree.h
+    scip/type_bandit.h
     scip/type_branch.h
     scip/type_clock.h
     scip/type_compr.h

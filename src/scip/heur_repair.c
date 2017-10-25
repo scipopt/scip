@@ -20,7 +20,7 @@
  *
  */
 
-/* This heuristic takes a infeasible solution and tries to repair it.
+/* This heuristic takes an infeasible solution and tries to repair it.
  * This can happen by variable fixing as long as the sum of all potential possible shiftings
  * is higher than alpha*slack or slack variables with a strong penalty on the objective function.
  * This heuristic cannot run if variable fixing and slack variables are turned off.

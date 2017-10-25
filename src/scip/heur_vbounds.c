@@ -38,31 +38,48 @@
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 #include "scip/heur_vbounds.h"
+#include "scip/heur_locks.h"
 
 #ifdef SCIP_STATISTIC
 #include "scip/clock.h"
 #endif
 
+#define VBOUNDVARIANT_NOOBJ      0x001u
+#define VBOUNDVARIANT_BESTBOUND  0x002u
+#define VBOUNDVARIANT_WORSTBOUND 0x004u
+
 #define HEUR_NAME             "vbounds"
 #define HEUR_DESC             "LNS heuristic uses the variable lower and upper bounds to determine the search neighborhood"
 #define HEUR_DISPCHAR         'V'
-#define HEUR_PRIORITY         -1106000
-#define HEUR_FREQ             -1
+#define HEUR_PRIORITY         2500
+#define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_BEFORENODE
-#define HEUR_USESSUBSCIP      TRUE           /**< does the heuristic use a secondary SCIP instance? */
+#define HEUR_USESSUBSCIP      TRUE      /**< does the heuristic use a secondary SCIP instance? */
 
-#define DEFAULT_MAXNODES      5000LL    /* maximum number of nodes to regard in the subproblem                 */
-#define DEFAULT_MINFIXINGRATE 0.25      /* minimum percentage of integer variables that have to be fixed       */
-#define DEFAULT_MINIMPROVE    0.01      /* factor by which vbounds heuristic should at least improve the incumbent          */
-#define DEFAULT_MINNODES      500LL     /* minimum number of nodes to regard in the subproblem                 */
-#define DEFAULT_NODESOFS      500LL     /* number of nodes added to the contingent of the total nodes          */
-#define DEFAULT_NODESQUOT     0.1       /* subproblem nodes in relation to nodes of the original problem       */
-#define DEFAULT_MAXPROPROUNDS 2         /* maximum number of propagation rounds during probing */
+#define DEFAULT_MAXNODES      5000LL    /**< maximum number of nodes to regard in the subproblem */
+#define DEFAULT_MININTFIXINGRATE 0.65    /**< minimum percentage of integer variables that have to be fixed */
+#define DEFAULT_MINMIPFIXINGRATE 0.65    /**< minimuskipobjm percentage of variables that have to be fixed within sub-SCIP
+                                         *   (integer and continuous) */
+#define DEFAULT_MINIMPROVE    0.01      /**< factor by which vbounds heuristic should at least improve the
+                                         *   incumbent */
+#define DEFAULT_MINNODES      500LL     /**< minimum number of nodes to regard in the subproblem */
+#define DEFAULT_NODESOFS      500LL     /**< number of nodes added to the contingent of the total nodes */
+#define DEFAULT_NODESQUOT     0.1       /**< subproblem nodes in relation to nodes of the original problem */
+#define DEFAULT_MAXPROPROUNDS 2         /**< maximum number of propagation rounds during probing */
+#define DEFAULT_MAXBACKTRACKS 10        /**< maximum number of backtracks during the fixing process */
 #define DEFAULT_COPYCUTS      TRUE      /**< should all active cuts from the cutpool of the original scip be copied to
-                                         *   constraints of the subscip
+                                         *   constraints of the subscip? */
+#define DEFAULT_USELOCKFIXINGS FALSE    /**< should more variables be fixed based on variable locks if
+                                         *   the fixing rate was not reached?
                                          */
+
+/**< which variants of the vbounds heuristic that try to stay feasible should be called? */
+#define DEFAULT_FEASVARIANT   (VBOUNDVARIANT_BESTBOUND | VBOUNDVARIANT_WORSTBOUND)
+
+/**< which tightening variants of the vbounds heuristic should be called? */
+#define DEFAULT_TIGHTENVARIANT   (VBOUNDVARIANT_NOOBJ | VBOUNDVARIANT_BESTBOUND | VBOUNDVARIANT_WORSTBOUND)
 
 
 /*
@@ -75,26 +92,37 @@ struct SCIP_HeurData
    SCIP_VAR**            vbvars;             /**< topological sorted variables with respect to the variable bounds */
    SCIP_BOUNDTYPE*       vbbounds;           /**< topological sorted variables with respect to the variable bounds */
    int                   nvbvars;            /**< number of variables in variable lower bound array */
-   SCIP_Longint          maxnodes;           /**< maximum number of nodes to regard in the subproblem                 */
-   SCIP_Longint          minnodes;           /**< minimum number of nodes to regard in the subproblem                 */
-   SCIP_Longint          nodesofs;           /**< number of nodes added to the contingent of the total nodes          */
-   SCIP_Longint          usednodes;          /**< nodes already used by vbounds heuristic in earlier calls                         */
-   SCIP_Real             minfixingrate;      /**< minimum percentage of integer variables that have to be fixed       */
-   SCIP_Real             minimprove;         /**< factor by which vbounds heuristic should at least improve the incumbent          */
-   SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem       */
+   SCIP_Longint          maxnodes;           /**< maximum number of nodes to regard in the subproblem */
+   SCIP_Longint          minnodes;           /**< minimum number of nodes to regard in the subproblem */
+   SCIP_Longint          nodesofs;           /**< number of nodes added to the contingent of the total nodes */
+   SCIP_Longint          usednodes;          /**< nodes already used by vbounds heuristic in earlier calls */
+   SCIP_Real             minintfixingrate;   /**< minimum percentage of integer variables that have to be fixed */
+   SCIP_Real             minmipfixingrate;   /**< minimum percentage of variables that have to be fixed within sub-SCIP
+                                              *   (integer and continuous) */
+   SCIP_Real             minimprove;         /**< factor by which vbounds heuristic should at least improve the incumbent */
+   SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem */
+   SCIP_Real             cutoffbound;
    int                   maxproprounds;      /**< maximum number of propagation rounds during probing */
-   SCIP_Bool             initialized;        /**< are the candidate list initialized? */
+   int                   maxbacktracks;      /**< maximum number of backtracks during the fixing process */
+   int                   feasvariant;        /**< which variants of the vbounds heuristic that try to stay feasible
+                                              *   should be called? */
+   int                   tightenvariant;     /**< which tightening variants of the vbounds heuristic should be called? */
+   SCIP_Bool             initialized;        /**< is the candidate list initialized? */
    SCIP_Bool             applicable;         /**< is the heuristic applicable? */
    SCIP_Bool             copycuts;           /**< should all active cuts from cutpool be copied to constraints in
-                                              *   subproblem?
+                                              *   subproblem? */
+   SCIP_Bool             uselockfixings;     /**< should more variables be fixed based on variable locks if
+                                              *   the fixing rate was not reached?
                                               */
+
+
 };
 
-/**@name Propagator defines
+/**@name Heuristic defines
  *
  * @{
  *
- * The propagator works on indices representing a bound of a variable. This index will be called bound index in the
+ * The heuristic works on indices representing a bound of a variable. This index will be called bound index in the
  * following. For a given active variable with problem index i (note that active variables have problem indices
  * between 0 and nactivevariable - 1), the bound index of its lower bound is 2*i, the bound index of its upper
  * bound is 2*i + 1. The other way around, a given bound index i corresponds to the variable with problem index
@@ -106,11 +134,8 @@ struct SCIP_HeurData
 #define getVarIndex(idx) ((idx)/2)
 #define getBoundtype(idx) (((idx) % 2 == 0) ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER)
 #define isIndexLowerbound(idx) ((idx) % 2 == 0)
+#define getOtherBoundIndex(idx) (((idx) % 2 == 0) ? (idx) + 1 : (idx) - 1)
 
-
-/*
- * Hash map callback methods
- */
 
 /*
  * Local methods
@@ -135,12 +160,15 @@ static
 SCIP_RETCODE dfs(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   startnode,          /**< node to start the depth-first-search */
-   SCIP_Bool*            visited,            /**< array to store for each node, whether it was already visited */
+   uint8_t*              visited,            /**< array to store for each node, whether it was already visited */
    int*                  dfsstack,           /**< array of size number of nodes to store the stack;
                                               *   only needed for performance reasons */
    int*                  stacknextedge,      /**< array of size number of nodes to store the number of adjacent nodes
                                               *   already visited for each node on the stack; only needed for
                                               *   performance reasons */
+   int*                  stacknextcliquevar, /**< array of size number of nodes to store the number of variables
+                                              *   already evaluated for the clique currently being evaluated */
+   int*                  cliqueexit,         /**< exit node when entering a clique */
    int*                  dfsnodes,           /**< array of nodes that can be reached starting at startnode, in reverse
                                               *   dfs order */
    int*                  ndfsnodes           /**< pointer to store number of nodes that can be reached starting at
@@ -152,6 +180,8 @@ SCIP_RETCODE dfs(
    SCIP_VAR** vbvars;
    SCIP_Real* coefs;
    SCIP_Bool lower;
+   SCIP_Bool found;
+   int maxstacksize;
    int stacksize;
    int curridx;
    int idx;
@@ -171,70 +201,175 @@ SCIP_RETCODE dfs(
    /* put start node on the stack */
    dfsstack[0] = startnode;
    stacknextedge[0] = 0;
+   maxstacksize = 1;
    stacksize = 1;
    idx = -1;
 
-   /* we run until no more bounds indices are on the stack, i.e. all changed bounds were propagated */
+   /* we run until no more bounds indices are on the stack */
    while( stacksize > 0 )
    {
       /* get next node from stack */
       curridx = dfsstack[stacksize - 1];
 
       /* mark current node as visited */
-      assert(visited[curridx] == (stacknextedge[stacksize - 1] > 0));
+      assert(visited[curridx] == (stacknextedge[stacksize - 1] != 0));
       visited[curridx] = TRUE;
+      found = FALSE;
 
       startvar = vars[getVarIndex(curridx)];
       lower = isIndexLowerbound(curridx);
 
-      /* go over edges corresponding to varbounds */
-      if( lower )
+      if( stacknextedge[stacksize - 1] >= 0 )
       {
-         vbvars = SCIPvarGetVlbVars(startvar);
-         coefs = SCIPvarGetVlbCoefs(startvar);
-         nvbvars = SCIPvarGetNVlbs(startvar);
-      }
-      else
-      {
-         vbvars = SCIPvarGetVubVars(startvar);
-         coefs = SCIPvarGetVubCoefs(startvar);
-         nvbvars = SCIPvarGetNVubs(startvar);
-      }
+         /* go over edges corresponding to varbounds */
+         if( lower )
+         {
+            vbvars = SCIPvarGetVlbVars(startvar);
+            coefs = SCIPvarGetVlbCoefs(startvar);
+            nvbvars = SCIPvarGetNVlbs(startvar);
+         }
+         else
+         {
+            vbvars = SCIPvarGetVubVars(startvar);
+            coefs = SCIPvarGetVubCoefs(startvar);
+            nvbvars = SCIPvarGetNVubs(startvar);
+         }
 
-      /* iterate over all vbounds for the given bound */
-      for( i = stacknextedge[stacksize - 1]; i < nvbvars; ++i )
-      {
-         if( !SCIPvarIsActive(vbvars[i]) )
+         /* iterate over all vbounds for the given bound */
+         for( i = stacknextedge[stacksize - 1]; i < nvbvars; ++i )
+         {
+            if( !SCIPvarIsActive(vbvars[i]) )
+               continue;
+
+            idx = (SCIPisPositive(scip, coefs[i]) == lower) ? getLbIndex(SCIPvarGetProbindex(vbvars[i])) : getUbIndex(SCIPvarGetProbindex(vbvars[i]));
+            assert(idx >= 0);
+
+            /* break when the first unvisited node is reached */
+            if( !visited[idx] )
+               break;
+         }
+
+         /* we stopped because we found an unhandled node and not because we reached the end of the list */
+         if( i < nvbvars )
+         {
+            assert(!visited[idx]);
+
+            /* put the adjacent node onto the stack */
+            dfsstack[stacksize] = idx;
+            stacknextedge[stacksize] = 0;
+            stacknextedge[stacksize - 1] = i + 1;
+            stacksize++;
+            assert(stacksize <= 2* SCIPgetNVars(scip));
+
+            /* restart while loop, get next index from stack */
             continue;
-
-         idx = (SCIPisPositive(scip, coefs[i]) == lower) ? getLbIndex(SCIPvarGetProbindex(vbvars[i])) : getUbIndex(SCIPvarGetProbindex(vbvars[i]));
-         assert(idx >= 0);
-
-         /* break when the first unvisited node is reached */
-         if( !visited[idx] )
-            break;
+         }
       }
 
-      /* we stopped because we found an unhandled node and not because we reached the end of the list */
-      if( i < nvbvars )
+      stacknextedge[stacksize - 1] = -1;
+
+      /* treat cliques */
+      if( SCIPvarIsBinary(startvar) )
       {
-         assert(!visited[idx]);
+         SCIP_CLIQUE** cliques = SCIPvarGetCliques(startvar, !lower);
+         int ncliques = SCIPvarGetNCliques(startvar, !lower);
+         int j;
 
-         /* put the adjacent node onto the stack */
-         dfsstack[stacksize] = idx;
-         stacknextedge[stacksize] = 0;
-         stacknextedge[stacksize - 1] = i + 1;
-         stacksize++;
-         assert(stacksize <= 2* SCIPgetNVars(scip));
+         /* iterate over all not yet handled cliques and search for an unvisited node */
+         for( j = -stacknextedge[stacksize - 1] - 1; j < ncliques; ++j )
+         {
+            SCIP_VAR** cliquevars;
+            SCIP_Bool* cliquevals;
+            int ncliquevars;
 
+            /* the first time we evaluate this clique for the current node */
+            if( stacknextcliquevar[stacksize - 1] == 0 )
+            {
+               if( cliqueexit[SCIPcliqueGetIndex(cliques[j])] > 0 )
+               {
+                  if( !visited[cliqueexit[SCIPcliqueGetIndex(cliques[j])] - 1] &&
+                     cliqueexit[SCIPcliqueGetIndex(cliques[j])] - 1 != curridx )
+                  {
+                     stacknextedge[stacksize - 1] = -j - 2;
+                     stacknextcliquevar[stacksize - 1] = 0;
+                     idx = cliqueexit[SCIPcliqueGetIndex(cliques[j])] - 1;
+                     cliqueexit[SCIPcliqueGetIndex(cliques[j])] = -1;
+                     found = TRUE;
+                  }
+                  else
+                     continue;
+               }
+               else if( cliqueexit[SCIPcliqueGetIndex(cliques[j])] == 0 )
+               {
+                  cliqueexit[SCIPcliqueGetIndex(cliques[j])] = getOtherBoundIndex(curridx) + 1;
+               }
+               else
+                  continue;
+            }
+            if( !found )
+            {
+               cliquevars = SCIPcliqueGetVars(cliques[j]);
+               cliquevals = SCIPcliqueGetValues(cliques[j]);
+               ncliquevars = SCIPcliqueGetNVars(cliques[j]);
+
+               for( i = 0; i < ncliquevars; ++i )
+               {
+                  if( cliquevars[i] == startvar )
+                     continue;
+
+                  if( SCIPvarGetIndex(cliquevars[i]) < 0 )
+                     continue;
+
+                  if( cliquevals[i] )
+                     idx = getLbIndex(SCIPvarGetProbindex(cliquevars[i]));
+                  else
+                     idx = getUbIndex(SCIPvarGetProbindex(cliquevars[i]));
+
+                  assert(idx >= 0 && idx < 2 * SCIPgetNVars(scip));
+
+                  /* break when the first unvisited node is reached */
+                  if( idx >= 0 && !visited[idx] )
+                  {
+                     if( i < ncliquevars - 1 )
+                     {
+                        stacknextedge[stacksize - 1] = -j - 1;
+                        stacknextcliquevar[stacksize - 1] = i + 1;
+                     }
+                     else
+                     {
+                        stacknextedge[stacksize - 1] = -j - 2;
+                        stacknextcliquevar[stacksize - 1] = 0;
+                     }
+                     found = TRUE;
+                     break;
+                  }
+               }
+            }
+            if( found )
+            {
+               assert(!visited[idx]);
+
+               /* put the adjacent node onto the stack */
+               dfsstack[stacksize] = idx;
+               stacknextedge[stacksize] = 0;
+               stacknextcliquevar[stacksize] = 0;
+               stacksize++;
+               assert(stacksize <= 2* SCIPgetNVars(scip));
+
+               break;
+            }
+         }
          /* restart while loop, get next index from stack */
-         continue;
+         if( found )
+            continue;
       }
 
-      /* the current node was completely handled, remove it from stack */
+      maxstacksize = MAX(maxstacksize, stacksize);
+
+      /* the current node was completely handled, remove it from the stack */
       stacksize--;
 
-      if( (stacksize > 0 || nvbvars > 0) && SCIPvarGetType(startvar) != SCIP_VARTYPE_CONTINUOUS )
+      if( (maxstacksize > 1) && SCIPvarGetType(startvar) != SCIP_VARTYPE_CONTINUOUS )
       {
          /* store node in the sorted nodes array */
          dfsnodes[(*ndfsnodes)] = curridx;
@@ -253,12 +388,14 @@ static
 SCIP_RETCODE topologicalSort(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  vbvars,             /**< array to store variable bounds in topological order */
-   int*                  nvbvars             /**< array to store number of variable bounds in the graph */
+   int*                  nvbvars             /**< pointer to store number of variable bounds in the graph */
    )
 {
    int* dfsstack;
    int* stacknextedge;
-   SCIP_Bool* inqueue;
+   int* stacknextcliquevar;
+   int* cliqueexit;
+   uint8_t* visited;
    int nbounds;
    int i;
 
@@ -268,23 +405,27 @@ SCIP_RETCODE topologicalSort(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &dfsstack, nbounds) );
    SCIP_CALL( SCIPallocBufferArray(scip, &stacknextedge, nbounds) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &inqueue, nbounds) );
-   BMSclearMemoryArray(inqueue, nbounds);
+   SCIP_CALL( SCIPallocBufferArray(scip, &stacknextcliquevar, nbounds) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &cliqueexit, SCIPgetNCliques(scip)) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &visited, nbounds) );
 
-   /* while there are unvisited nodes, run dfs starting from one of these nodes; the dfs orders are stored in the
-    * topoorder array, later dfs calls are just appended after the stacks of previous dfs calls, which gives us a
-    * reverse topological order
+
+   /* while there are unvisited nodes, run dfs on the inverse graph starting from one of these nodes; the dfs orders are
+    * stored in the topoorder array, later dfs calls are just appended after the stacks of previous dfs calls, which
+    * gives us a topological order
     */
    for( i = 0; i < nbounds; ++i )
    {
-      if( !inqueue[i] )
+      if( !visited[i] )
       {
-         SCIP_CALL( dfs(scip, i, inqueue, dfsstack, stacknextedge, vbvars, nvbvars) );
+         SCIP_CALL( dfs(scip, i, visited, dfsstack, stacknextedge, stacknextcliquevar, cliqueexit, vbvars, nvbvars) );
       }
    }
    assert(*nvbvars <= nbounds);
 
-   SCIPfreeBufferArray(scip, &inqueue);
+   SCIPfreeBufferArray(scip, &visited);
+   SCIPfreeBufferArray(scip, &cliqueexit);
+   SCIPfreeBufferArray(scip, &stacknextcliquevar);
    SCIPfreeBufferArray(scip, &stacknextedge);
    SCIPfreeBufferArray(scip, &dfsstack);
 
@@ -307,8 +448,15 @@ SCIP_RETCODE initializeCandsLists(
    SCIPdebugMsg(scip, "initialize variable bound heuristic (%s)\n", SCIPgetProbName(scip));
 
    vars = SCIPgetVars(scip);
-   nvars = SCIPgetNVars(scip);
+   nvars = SCIPgetNIntVars(scip) + SCIPgetNBinVars(scip) + SCIPgetNImplVars(scip);
    nvbs = 0;
+
+   /* initialize data */
+   heurdata->usednodes = 0;
+   heurdata->initialized = TRUE;
+
+   if( nvars == 0 )
+      return SCIP_OKAY;
 
    /* allocate memory for the arrays of the heurdata */
    SCIP_CALL( SCIPallocBufferArray(scip, &vbs, 2 * nvars) );
@@ -317,7 +465,7 @@ SCIP_RETCODE initializeCandsLists(
    SCIP_CALL( topologicalSort(scip, vbs, &nvbs) );
 
    /* check if the candidate list contains enough candidates */
-   if( nvbs >= heurdata->minfixingrate * nvars )
+   if( nvbs > 0 && nvbs >= 0.1 * heurdata->minintfixingrate * nvars )
    {
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->vbvars, nvbs) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->vbbounds, nvbs) );
@@ -327,6 +475,7 @@ SCIP_RETCODE initializeCandsLists(
       {
          heurdata->vbvars[v] = vars[getVarIndex(vbs[v])];
          heurdata->vbbounds[v] = getBoundtype(vbs[v]);
+         assert(SCIPvarIsIntegral(heurdata->vbvars[v]));
 
          SCIP_CALL( SCIPcaptureVar(scip, heurdata->vbvars[v]) );
       }
@@ -338,13 +487,36 @@ SCIP_RETCODE initializeCandsLists(
    /* free buffer arrays */
    SCIPfreeBufferArray(scip, &vbs);
 
-   /* initialize data */
-   heurdata->usednodes = 0;
-   heurdata->initialized = TRUE;
-
    SCIPstatisticMessage("vbvars %.3g (%s)\n",
       (nvbs * 100.0) / nvars, SCIPgetProbName(scip));
 
+   /* if there is already a solution, add an objective cutoff */
+   if( SCIPgetNSols(scip) > 0 )
+   {
+      SCIP_Real upperbound;
+      SCIP_Real minimprove;
+      SCIP_Real cutoffbound;
+
+      minimprove = heurdata->minimprove;
+      assert( !SCIPisInfinity(scip,SCIPgetUpperbound(scip)) );
+
+      upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
+
+      if( !SCIPisInfinity(scip, -1.0 * SCIPgetLowerbound(scip)) )
+      {
+         cutoffbound = (1-minimprove) * SCIPgetUpperbound(scip) + minimprove * SCIPgetLowerbound(scip);
+      }
+      else
+      {
+         if( SCIPgetUpperbound ( scip ) >= 0 )
+            cutoffbound = (1 - minimprove) * SCIPgetUpperbound(scip);
+         else
+            cutoffbound = (1 + minimprove) * SCIPgetUpperbound(scip);
+      }
+      heurdata->cutoffbound = MIN(upperbound, cutoffbound);
+   }
+   else
+      heurdata->cutoffbound = SCIPinfinity(scip);
    return SCIP_OKAY;
 }
 
@@ -356,14 +528,20 @@ SCIP_RETCODE applyVboundsFixings(
    SCIP_VAR**            vars,               /**< variables to fix during probing */
    int                   nvbvars,            /**< number of variables in the variable bound graph */
    SCIP_Bool             tighten,            /**< should variables be fixed to cause other fixings? */
-   SCIP_Bool             obj,                /**< should the objective be taken into account? */
-   SCIP_Bool*            infeasible,         /**< pointer to store whether problem is infeasible */
-   SCIP_VAR**            lastvar,            /**< last fixed variable */
-   SCIP_Bool*            fixedtolb           /**< was last fixed variable fixed to its lower bound? */
+   int                   obj,                /**< should the objective be taken into account? */
+   SCIP_Bool*            allobj1,            /**< pointer to store whether all variables were fixed according to obj=1 scheme */
+   SCIP_Bool*            allobj2,            /**< pointer to store whether all variables were fixed according to obj=2 scheme */
+   SCIP_Bool*            backtracked,        /**< was backtracking performed at least once? */
+   SCIP_Bool*            infeasible          /**< pointer to store whether propagation detected infeasibility */
    )
 {
+   SCIP_VAR* lastvar;
    SCIP_VAR* var;
+   SCIP_Real lastfixval;
+   SCIP_Bool lastfixedlb;
+   SCIP_Bool fixtolower;
    SCIP_BOUNDTYPE bound;
+   int nbacktracks = 0;
    int v;
 
    /* loop over variables in topological order */
@@ -372,9 +550,10 @@ SCIP_RETCODE applyVboundsFixings(
       var = vars[v];
       bound = heurdata->vbbounds[v];
 
-      /*SCIPdebugMsg(scip, "topoorder[%d]: %s(%s) (%s)\n", v,
+      /*SCIPdebugMsg(scip, "topoorder[%d]: %s(%s) (%s) [%g,%g] (obj=%g)\n", v,
          bound == SCIP_BOUNDTYPE_UPPER ? "ub" : "lb", SCIPvarGetName(var),
-         SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS ? "c" : "d");*/
+         SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS ? "c" : "d",
+         SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetObj(var));*/
 
       /* only check integer or binary variables */
       if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
@@ -384,29 +563,43 @@ SCIP_RETCODE applyVboundsFixings(
       if( SCIPvarGetLbLocal(var) + 0.5 > SCIPvarGetUbLocal(var) )
          continue;
 
-      /* if obj == TRUE, we only regard bounds which are the worse bound w.r.t. the objective function (but possibly
-       * change this bound)
-       */
-      if( obj && ((SCIPvarGetObj(var) >= 0) == (bound == SCIP_BOUNDTYPE_LOWER)) )
-         continue;
 
-      *lastvar = var;
-
-      /* there are four cases:
-       * 1) obj == FALSE; tighten == TRUE: we go through the list of variables and fix variables to force propagation;
-       *                                   this is be obtained by fixing the variable to the other bound (which means
-       *                                   that the current bound is changed and so, much propagation is triggered
-       *                                   since we are starting with the bounds which are most influential).
-       * 2) obj == tighten == FALSE:       we fix variables to avoid too much propagation in order to avoid reaching
-       *                                   infeasibility. Therefore, we fix the variable to the current bound, so that
-       *                                   this bound is not changed and does not propagate. The other bound is changed
-       *                                   and propagates, but is later in the order, so less influential.
-       * 3) obj == tighten == TRUE:        we only fix variables to their best bound w.r.t. the objective function;
-       *                                   this should give us better solutions, if we are successful
-       * 4) obj == TRUE, tighten == FALSE: we only fix variables to their worse bound w.r.t. the objective function;
-       *                                   this tends to keep the problem feasible, while finding not so good solutions
+      /* there are two cases for tighten:
+       * 1) tighten == TRUE:  we go through the list of variables and fix variables to force propagation;
+       *                      this is be obtained by fixing the variable to the other bound (which means
+       *                      that the current bound is changed and so, much propagation is triggered
+       *                      since we are starting with the bounds which are most influential).
+       * 2) tighten == FALSE: we fix variables to avoid too much propagation in order to avoid reaching
+       *                      infeasibility. Therefore, we fix the variable to the current bound, so that
+       *                      this bound is not changed and does not propagate. The other bound is changed
+       *                      and propagates, but is later in the order, so less influential.
        */
-      if( obj ? (tighten == (SCIPvarGetObj(var) >= 0)) : (tighten == (bound == SCIP_BOUNDTYPE_UPPER)) )
+      fixtolower = (tighten == (bound == SCIP_BOUNDTYPE_UPPER));
+
+      /* if we want to take into account the objective function coefficients, we only perform a fixing if the variable
+       *  would be fixed to its best bound; otherwise, we just continue
+       */
+      if( ((SCIPvarGetObj(var) >= 0) != fixtolower) )
+      {
+         if( obj == 1 )
+            continue;
+         else
+            *allobj1 = FALSE;
+      }
+      /* if we want to take into account the objective function coefficients but reverted, we only perform a fixing if the variable
+       *  would be fixed to its worst bound; otherwise, we just continue
+       */
+      if( ((SCIPvarGetObj(var) >= 0) == fixtolower) )
+      {
+         if( obj == 2 )
+            continue;
+         else
+            *allobj2 = FALSE;
+      }
+      lastvar = var;
+
+      /* fix the variable to its bound */
+      if( fixtolower )
       {
          /* we cannot fix to infinite bounds */
          if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) )
@@ -420,15 +613,13 @@ SCIP_RETCODE applyVboundsFixings(
 
          /* fix variable to lower bound */
          SCIP_CALL( SCIPfixVarProbing(scip, var, SCIPvarGetLbLocal(var)) );
-         SCIPdebugMsg(scip, "fixing %d: variable <%s> to lower bound <%g> (%d pseudo cands)\n",
-            v, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPgetNPseudoBranchCands(scip));
-         *fixedtolb = TRUE;
+         SCIPdebugMsg(scip, "fixing %d: variable <%s> (obj=%g) to lower bound <%g> (%d pseudo cands)\n",
+            v, SCIPvarGetName(var), SCIPvarGetObj(var), SCIPvarGetLbLocal(var), SCIPgetNPseudoBranchCands(scip));
+         lastfixedlb = TRUE;
+         lastfixval = SCIPvarGetLbLocal(var);
       }
       else
       {
-         assert((obj && (tighten == (SCIPvarGetObj(var) < 0)))
-            || (!obj && (tighten == (bound == SCIP_BOUNDTYPE_LOWER))));
-
          /* we cannot fix to infinite bounds */
          if( SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
             continue;
@@ -441,16 +632,72 @@ SCIP_RETCODE applyVboundsFixings(
 
          /* fix variable to upper bound */
          SCIP_CALL( SCIPfixVarProbing(scip, var, SCIPvarGetUbLocal(var)) );
-         SCIPdebugMsg(scip, "fixing %d: variable <%s> to upper bound <%g> (%d pseudo cands)\n",
-            v, SCIPvarGetName(var), SCIPvarGetUbLocal(var), SCIPgetNPseudoBranchCands(scip));
-         *fixedtolb = FALSE;
+         SCIPdebugMsg(scip, "fixing %d: variable <%s> (obj=%g) to upper bound <%g> (%d pseudo cands)\n",
+            v, SCIPvarGetName(var), SCIPvarGetObj(var), SCIPvarGetUbLocal(var), SCIPgetNPseudoBranchCands(scip));
+         lastfixedlb = FALSE;
+         lastfixval = SCIPvarGetUbLocal(var);
       }
 
       /* check if problem is already infeasible */
       SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, infeasible, NULL) );
+
+      /* probing detected infeasibility: backtrack */
+      if( *infeasible )
+      {
+         assert(lastvar != NULL);
+
+         SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip) - 1) );
+         ++nbacktracks;
+         *infeasible = FALSE;
+
+         /* increase the lower bound of the variable which caused the infeasibility */
+         if( lastfixedlb && lastfixval + 0.5 < SCIPvarGetUbLocal(lastvar) )
+         {
+            if( lastfixval + 0.5 > SCIPvarGetLbLocal(lastvar) )
+            {
+               SCIP_CALL( SCIPchgVarLbProbing(scip, lastvar, lastfixval + 1.0) );
+            }
+         }
+         else if( !lastfixedlb && lastfixval - 0.5 > SCIPvarGetLbLocal(lastvar) )
+         {
+            if( lastfixval - 0.5 < SCIPvarGetUbLocal(lastvar) )
+            {
+               SCIP_CALL( SCIPchgVarUbProbing(scip, lastvar, lastfixval - 1.0) );
+            }
+         }
+         /* because of the limited number of propagation rounds, it may happen that conflict analysis finds a valid
+          * global bound for the last fixed variable that conflicts with applying the reverse bound change after backtracking;
+          * in that case, we ran into a deadend and stop
+          */
+         else
+         {
+            *infeasible = TRUE;
+         }
+         lastvar = NULL;
+
+         if( !(*infeasible) )
+         {
+            /* propagate fixings */
+            SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, infeasible, NULL) );
+
+            SCIPdebugMessage("backtrack %d was %sfeasible\n", nbacktracks, (*infeasible ? "in" : ""));
+         }
+
+         if( *infeasible )
+         {
+            SCIPdebugMsg(scip, "probing was infeasible after %d backtracks\n", nbacktracks);
+
+            break;
+         }
+         else if( nbacktracks > heurdata->maxbacktracks )
+         {
+            SCIPdebugMsg(scip, "interrupt probing after %d backtracks\n", nbacktracks);
+            break;
+         }
+      }
    }
 
-   SCIPdebugMsg(scip, "probing ended with %sfeasible problem\n", (*infeasible) ? "in" : "");
+   *backtracked = (nbacktracks > 0);
 
    return SCIP_OKAY;
 }
@@ -507,21 +754,25 @@ SCIP_RETCODE applyVbounds(
    SCIP_VAR**            vbvars,             /**< variables to fix during probing */
    int                   nvbvars,            /**< number of variables to fix */
    SCIP_Bool             tighten,            /**< should variables be fixed to cause other fixings? */
-   SCIP_Bool             obj,                /**< should the objective be taken into account? */
+   int                   obj,                /**< should the objective be taken into account? */
+   SCIP_Bool*            skipobj1,           /**< pointer to store whether the run with obj=1 can be skipped, or NULL */
+   SCIP_Bool*            skipobj2,           /**< pointer to store whether the run with obj=2 can be skipped, or NULL */
    SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
    SCIPstatistic( SCIP_CLOCK* clock; )
    SCIP_VAR** vars;
-   SCIP_VAR* lastfixedvar = NULL;
-   SCIP_SOL* newsol;
-   SCIP_Longint nstallnodes;                 /* number of stalling nodes for the subproblem */
+   SCIP_SOL* sol = NULL;
+   SCIP_Longint nstallnodes;
    SCIP_LPSOLSTAT lpstatus;
-   SCIP_Bool infeasible;
-   SCIP_Bool lastfixedlower = TRUE;
+   SCIP_Real lowerbound;
+   SCIP_Bool wasfeas = FALSE;
+   SCIP_Bool cutoff;
    SCIP_Bool lperror;
    SCIP_Bool solvelp;
-   SCIP_Bool foundsol = FALSE;
+   SCIP_Bool allobj1 = TRUE;
+   SCIP_Bool allobj2 = TRUE;
+   SCIP_Bool backtracked = TRUE;
    int oldnpscands;
    int npscands;
    int nvars;
@@ -532,18 +783,25 @@ SCIP_RETCODE applyVbounds(
    assert(nvbvars > 0);
 
    /* initialize default values */
-   infeasible = FALSE;
+   cutoff = FALSE;
+
+   if( skipobj1 != NULL )
+      *skipobj1 = FALSE;
+   if( skipobj2 != NULL )
+      *skipobj2 = FALSE;
 
    /* get variable data of original problem */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
    SCIPstatistic( nprevars = nvars; )
 
-   if( nvbvars < nvars * heurdata->minfixingrate )
+   if( nvbvars < nvars * heurdata->minintfixingrate )
       return SCIP_OKAY;
 
    if( *result == SCIP_DIDNOTRUN )
       *result = SCIP_DIDNOTFIND;
+
+   lowerbound = SCIPgetLowerbound(scip);
 
    oldnpscands = SCIPgetNPseudoBranchCands(scip);
 
@@ -559,6 +817,9 @@ SCIP_RETCODE applyVbounds(
    nstallnodes -= heurdata->usednodes;
    nstallnodes = MIN(nstallnodes, heurdata->maxnodes);
 
+   SCIPdebugMsg(scip, "apply variable bounds heuristic at node %lld on %d variable bounds, tighten: %d obj: %d\n",
+      SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), nvbvars, tighten, obj);
+
    /* check whether we have enough nodes left to call subproblem solving */
    if( nstallnodes < heurdata->minnodes )
    {
@@ -572,9 +833,6 @@ SCIP_RETCODE applyVbounds(
    SCIPstatistic( SCIP_CALL( SCIPcreateClock(scip, &clock) ) );
    SCIPstatistic( SCIP_CALL( SCIPstartClock(scip, clock) ) );
 
-   SCIPdebugMsg(scip, "apply variable bounds heuristic at node %lld on %d variable bounds\n",
-      SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), nvbvars);
-
    /* check whether the LP should be solved at the current node in the tree to determine whether the heuristic
     * is allowed to solve an LP
     */
@@ -582,100 +840,83 @@ SCIP_RETCODE applyVbounds(
 
    if( !SCIPisLPConstructed(scip) && solvelp )
    {
-      SCIP_Bool cutoff;
-
       SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
 
       /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a result) */
       if( cutoff )
       {
          SCIP_CALL( SCIPcutoffNode(scip, SCIPgetCurrentNode(scip)) );
-         return SCIP_OKAY;
+         goto TERMINATE;
       }
 
       SCIP_CALL( SCIPflushLP(scip) );
    }
 
-
    /* start probing */
    SCIP_CALL( SCIPstartProbing(scip) );
 
+#ifdef COLLECTSTATISTICS
+   SCIPenableVarHistory(scip);
+#endif
+
    /* create temporary solution */
-   SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
+   SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
 
    /* apply the variable fixings */
-   SCIP_CALL( applyVboundsFixings(scip, heurdata, vbvars, nvbvars, tighten, obj, &infeasible,
-         &lastfixedvar, &lastfixedlower) );
+   SCIP_CALL( applyVboundsFixings(scip, heurdata, vbvars, nvbvars, tighten, obj, &allobj1, &allobj2, &backtracked, &cutoff) );
 
-   /* try to repair probing */
-   if( infeasible )
-   {
-      SCIP_Real newbound;
+   if( skipobj1 != NULL )
+      *skipobj1 = allobj1;
 
-      assert(lastfixedvar != NULL);
-      assert(SCIPvarGetType(lastfixedvar) != SCIP_VARTYPE_CONTINUOUS);
+   if( skipobj2 != NULL )
+      *skipobj2 = allobj2;
 
-      SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip) - 1) );
-
-      if( lastfixedlower )
-      {
-         newbound = SCIPvarGetUbLocal(lastfixedvar);
-
-         if( SCIPisInfinity(scip, newbound) )
-         {
-            newbound = SCIPvarGetLbLocal(lastfixedvar) + 1.0;
-
-            /* increase lower bound */
-            SCIP_CALL( SCIPchgVarLbProbing(scip, lastfixedvar, newbound) );
-         }
-         else
-         {
-            /* fix the last variable, which was fixed to the opposite bound */
-            SCIP_CALL( SCIPfixVarProbing(scip, lastfixedvar, newbound) );
-         }
-      }
-      else
-      {
-         newbound = SCIPvarGetLbLocal(lastfixedvar);
-
-         if( SCIPisInfinity(scip, -newbound) )
-         {
-            newbound = SCIPvarGetUbLocal(lastfixedvar) - 1.0;
-
-            /* decrease lower bound */
-            SCIP_CALL( SCIPchgVarUbProbing(scip, lastfixedvar, newbound) );
-         }
-         else
-         {
-            /* fix the last variable, which was fixed to the opposite bound */
-            SCIP_CALL( SCIPfixVarProbing(scip, lastfixedvar, newbound) );
-         }
-      }
-
-      /* propagate fixings */
-      SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, &infeasible, NULL) );
-
-      SCIPdebugMsg(scip, "backtracking ended with %sfeasible problem\n", (infeasible ? "in" : ""));
-   }
-
-   if( infeasible )
+   if( cutoff || SCIPisStopped(scip) )
       goto TERMINATE;
 
    /* check that we had enough fixings */
    npscands = SCIPgetNPseudoBranchCands(scip);
 
-   SCIPdebugMsg(scip, "npscands=%d, oldnpscands=%d, heurdata->minfixingrate=%g\n", npscands, oldnpscands, heurdata->minfixingrate);
+   SCIPdebugMsg(scip, "npscands=%d, oldnpscands=%d, heurdata->minintfixingrate=%g\n", npscands, oldnpscands, heurdata->minintfixingrate);
 
    /* check fixing rate */
-   if( npscands > oldnpscands * (1 - heurdata->minfixingrate) )
+   if( npscands > oldnpscands * (1.0 - heurdata->minintfixingrate) )
    {
-      SCIPdebugMsg(scip, "--> too few fixings\n");
+      if( heurdata->uselockfixings && npscands <= 2.0 * oldnpscands * (1.0 - heurdata->minintfixingrate) )
+      {
+         SCIP_Bool allrowsfulfilled = FALSE;
 
-      goto TERMINATE;
+         SCIP_CALL( SCIPapplyLockFixings(scip, NULL, &cutoff, &allrowsfulfilled) );
+
+         if( cutoff || SCIPisStopped(scip) )
+         {
+            SCIPdebugMsg(scip, "cutoff or timeout in locks fixing\n");
+            goto TERMINATE;
+         }
+
+         npscands = SCIPgetNPseudoBranchCands(scip);
+
+         SCIPdebugMsg(scip, "after lockfixings: npscands=%d, oldnpscands=%d, allrowsfulfilled=%u, heurdata->minintfixingrate=%g\n",
+            npscands, oldnpscands, allrowsfulfilled, heurdata->minintfixingrate);
+
+         if( !allrowsfulfilled && npscands > oldnpscands * (1 - heurdata->minintfixingrate) )
+         {
+            SCIPdebugMsg(scip, "--> too few fixings\n");
+
+            goto TERMINATE;
+         }
+      }
+      else
+      {
+         SCIPdebugMsg(scip, "--> too few fixings\n");
+
+         goto TERMINATE;
+      }
    }
 
-   /*************************** Probing LP Solving ***************************/
+   assert(!cutoff);
 
+   /*************************** Probing LP Solving ***************************/
    lpstatus = SCIP_LPSOLSTAT_ERROR;
    lperror = FALSE;
    /* solve lp only if the problem is still feasible */
@@ -714,44 +955,48 @@ SCIP_RETCODE applyVbounds(
       SCIP_Bool stored;
       SCIP_Bool success;
 
-      /* copy the current LP solution to the working solution */
-      SCIP_CALL( SCIPlinkLPSol(scip, newsol) );
+      lowerbound = SCIPgetLPObjval(scip);
 
-      SCIP_CALL( SCIProundSol(scip, newsol, &success) );
+      /* copy the current LP solution to the working solution */
+      SCIP_CALL( SCIPlinkLPSol(scip, sol) );
+
+      SCIP_CALL( SCIProundSol(scip, sol, &success) );
 
       if( success )
       {
          SCIPdebugMsg(scip, "vbound heuristic found roundable primal solution: obj=%g\n",
-            SCIPgetSolOrigObj(scip, newsol));
+            SCIPgetSolOrigObj(scip, sol));
 
          /* check solution for feasibility, and add it to solution store if possible.
           * Neither integrality nor feasibility of LP rows have to be checked, because they
           * are guaranteed by the heuristic at this stage.
           */
 #ifdef SCIP_DEBUG
-         SCIP_CALL( SCIPtrySol(scip, newsol, TRUE, TRUE, TRUE, TRUE, TRUE, &stored) );
+         SCIP_CALL( SCIPtrySol(scip, sol, TRUE, TRUE, TRUE, TRUE, TRUE, &stored) );
 #else
-         SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, FALSE, TRUE, FALSE, FALSE, &stored) );
+         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, FALSE, FALSE, &stored) );
 #endif
 
-         foundsol = TRUE;
+#ifdef SCIP_DEBUG
+         SCIP_CALL( SCIPcheckSol(scip, sol, FALSE, FALSE, TRUE, TRUE, TRUE, &wasfeas) );
+         assert(wasfeas);
+         SCIPdebugMsg(scip, "found feasible solution by LP rounding: %16.9g\n", SCIPgetSolOrigObj(scip, sol));
+#endif
 
          if( stored )
          {
-            SCIPdebugMsg(scip, "found feasible solution:\n");
             *result = SCIP_FOUNDSOL;
          }
+
+         /* we found a solution, so we are done */
+         goto TERMINATE;
       }
    }
-   else
-   {
-      SCIP_CALL( SCIPclearSol(scip, newsol) );
-   }
-
    /*************************** END Probing LP Solving ***************************/
 
+   /*************************** Start Subscip Solving ***************************/
    /* if no solution has been found --> fix all other variables by subscip if necessary */
-   if( !foundsol && !lperror && lpstatus != SCIP_LPSOLSTAT_INFEASIBLE && lpstatus != SCIP_LPSOLSTAT_OBJLIMIT)
+   if( !lperror && lpstatus != SCIP_LPSOLSTAT_INFEASIBLE && lpstatus != SCIP_LPSOLSTAT_OBJLIMIT )
    {
       SCIP* subscip;
       SCIP_VAR** subvars;
@@ -805,6 +1050,9 @@ SCIP_RETCODE applyVbounds(
       SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", nstallnodes) );
       SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", heurdata->maxnodes) );
 
+      /* speed up sub-SCIP by not checking dual LP feasibility */
+      SCIP_CALL( SCIPsetBoolParam(subscip, "lp/checkdualfeas", FALSE) );
+
       /* forbid call of heuristics and separators solving sub-CIPs */
       SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
 
@@ -813,27 +1061,12 @@ SCIP_RETCODE applyVbounds(
 
       /* disable expensive presolving */
       SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
-#if 0
-      /* use best estimate node selection */
-      if( SCIPfindNodesel(subscip, "uct") != NULL && !SCIPisParamFixed(subscip, "nodeselection/uct/stdpriority") )
-      {
-         SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/uct/stdpriority", INT_MAX/4) );
-      }
-#endif
+
       /* use inference branching */
       if( SCIPfindBranchrule(subscip, "inference") != NULL && !SCIPisParamFixed(subscip, "branching/inference/priority") )
       {
          SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
       }
-
-      /* disable conflict analysis */
-      if( !SCIPisParamFixed(subscip, "conflict/enable") )
-      {
-         SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", FALSE) );
-      }
-
-      /* speed up sub-SCIP by not checking dual LP feasibility */
-      SCIP_CALL( SCIPsetBoolParam(subscip, "lp/checkdualfeas", FALSE) );
 
       /* employ a limit on the number of enforcement rounds in the quadratic constraint handlers; this fixes the issue that
        * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
@@ -846,77 +1079,63 @@ SCIP_RETCODE applyVbounds(
          SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 10) );
       }
 
-      /* if there is already a solution, add an objective cutoff */
       if( SCIPgetNSols(scip) > 0 )
       {
          SCIP_Real upperbound;
          SCIP_Real minimprove;
-         SCIP_Real cutoff;
+         SCIP_Real cutoffbound;
 
          minimprove = heurdata->minimprove;
          assert( !SCIPisInfinity(scip,SCIPgetUpperbound(scip)) );
 
          upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
 
-         if( !SCIPisInfinity(scip,-1.0*SCIPgetLowerbound(scip)) )
+         if( !SCIPisInfinity(scip, -1.0 * lowerbound) )
          {
-            cutoff = (1-minimprove)*SCIPgetUpperbound(scip) + minimprove*SCIPgetLowerbound(scip);
+            cutoffbound = (1-minimprove) * SCIPgetUpperbound(scip) + minimprove * lowerbound;
          }
          else
          {
             if( SCIPgetUpperbound ( scip ) >= 0 )
-               cutoff = ( 1 - minimprove ) * SCIPgetUpperbound ( scip );
+               cutoffbound = (1 - minimprove) * SCIPgetUpperbound(scip);
             else
-               cutoff = ( 1 + minimprove ) * SCIPgetUpperbound ( scip );
+               cutoffbound = (1 + minimprove) * SCIPgetUpperbound(scip);
          }
-         cutoff = MIN(upperbound, cutoff);
-         SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
+         heurdata->cutoffbound = MIN(upperbound, cutoffbound);
       }
+
+      if( !SCIPisInfinity(scip, heurdata->cutoffbound) )
+      {
+         SCIP_CALL( SCIPsetObjlimit(subscip, heurdata->cutoffbound) );
+         SCIPdebugMsg(scip, "setting objlimit for subscip to %g\n", heurdata->cutoffbound);
+      }
+
+      SCIPdebugMsg(scip, "starting solving vbound-submip at time %g\n", SCIPgetSolvingTime(scip));
 
       /* solve the subproblem */
       /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
        * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
        */
-#ifdef NDEBUG
-      {
-         SCIP_RETCODE retstat;
-         retstat = SCIPpresolve(subscip);
-         if( retstat != SCIP_OKAY )
-         {
-            SCIPwarningMessage(scip, "Error while presolving subMIP in vbounds heuristic; sub-SCIP terminated with code <%d>\n", retstat);
-         }
-      }
-#else
       SCIP_CALL_ABORT( SCIPpresolve(subscip) );
-#endif
 
-      SCIPdebugMsg(scip, "vbounds heuristic presolved subproblem: %d vars, %d cons\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip));
+      SCIPdebugMsg(scip, "vbounds heuristic presolved subproblem at time %g : %d vars, %d cons; fixing value = %g\n", SCIPgetSolvingTime(scip), SCIPgetNVars(subscip), SCIPgetNConss(subscip), ((nvars - SCIPgetNVars(subscip)) / (SCIP_Real)nvars));
+
+      SCIPstatistic( nprevars = SCIPgetNVars(subscip) );
 
       /* after presolving, we should have at least reached a certain fixing rate over ALL variables (including continuous)
        * to ensure that not only the MIP but also the LP relaxation is easy enough
        */
-      if( ( nvars - SCIPgetNVars(subscip) ) / (SCIP_Real)nvars >= heurdata->minfixingrate )
+      if( ((nvars - SCIPgetNVars(subscip)) / (SCIP_Real)nvars) >= heurdata->minmipfixingrate )
       {
          SCIP_SOL** subsols;
          SCIP_Bool success;
          int nsubsols;
 
-         SCIPstatistic( nprevars = SCIPgetNVars(subscip) );
-
          SCIPdebugMsg(scip, "solving subproblem: nstallnodes=%" SCIP_LONGINT_FORMAT ", maxnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->maxnodes);
 
-#ifdef NDEBUG
-         {
-            SCIP_RETCODE retstat;
-            retstat = SCIPsolve(subscip);
-            if( retstat != SCIP_OKAY )
-            {
-               SCIPwarningMessage(scip, "Error while solving subMIP in vbounds heuristic; sub-SCIP terminated with code <%d>\n",retstat);
-            }
-         }
-#else
          SCIP_CALL_ABORT( SCIPsolve(subscip) );
-#endif
+
+         SCIPdebugMsg(scip, "ending solving vbounds-submip at time %g, status = %d\n", SCIPgetSolvingTime(scip), SCIPgetStatus(subscip));
 
          /* check, whether a solution was found; due to numerics, it might happen that not all solutions are feasible ->
           * try all solutions until one was accepted
@@ -924,13 +1143,22 @@ SCIP_RETCODE applyVbounds(
          nsubsols = SCIPgetNSols(subscip);
          subsols = SCIPgetSols(subscip);
          success = FALSE;
+         wasfeas = FALSE;
 
          for( i = 0; i < nsubsols && !success; ++i )
          {
-            SCIP_CALL( createNewSol(scip, subscip, subvars, newsol, subsols[i], &success) );
+            SCIP_CALL( createNewSol(scip, subscip, subvars, sol, subsols[i], &success) );
+            if( !wasfeas )
+            {
+               SCIP_CALL( SCIPcheckSol(scip, sol, FALSE, FALSE, TRUE, TRUE, TRUE, &wasfeas) );
+               if( wasfeas )
+                  SCIPdebugMsg(scip, "found feasible solution in sub-MIP: %16.9g\n", SCIPgetSolOrigObj(scip, sol));
+            }
          }
          if( success )
+         {
             *result = SCIP_FOUNDSOL;
+         }
       }
 
 #ifdef SCIP_DEBUG
@@ -942,22 +1170,29 @@ SCIP_RETCODE applyVbounds(
       SCIP_CALL( SCIPfree(&subscip) );
    }
 
- TERMINATE:
+   /*************************** End Subscip Solving ***************************/
 
+ TERMINATE:
 #ifdef SCIP_STATISTIC
    SCIP_CALL( SCIPstopClock(scip, clock) );
-   SCIPstatisticMessage("vbound: tighten=%u obj=%u nvars=%d presolnvars=%d ratio=%.2f infeas=%u found=%d time=%.2f\n",
-      tighten, obj, nvars, nprevars, (nvars - nprevars) / (SCIP_Real)nvars, infeasible,
-      foundsol ? 1 : 0, SCIPclockGetTime(clock) );
+   SCIPstatisticMessage("vbound: tighten=%u obj=%d nvars=%d presolnvars=%d ratio=%.2f infeas=%u found=%d time=%.4f\n",
+      tighten, obj, nvars, nprevars, (nvars - nprevars) / (SCIP_Real)nvars, cutoff,
+      wasfeas ? 1 : 0, SCIPclockGetTime(clock) );
 #endif
 
    SCIPstatistic( SCIP_CALL( SCIPfreeClock(scip, &clock) ) );
 
    /* free solution */
-   SCIP_CALL( SCIPfreeSol(scip, &newsol) );
+   if( sol != NULL )
+   {
+      SCIP_CALL( SCIPfreeSol(scip, &sol) );
+   }
 
    /* exit probing mode */
-   SCIP_CALL( SCIPendProbing(scip) );
+   if( SCIPinProbing(scip) )
+   {
+      SCIP_CALL( SCIPendProbing(scip) );
+   }
 
    return SCIP_OKAY;
 }
@@ -1028,6 +1263,11 @@ static
 SCIP_DECL_HEUREXEC(heurExecVbounds)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
+   SCIP_Bool skipobj1;
+   SCIP_Bool skipobj2;
+#ifdef NOCONFLICT
+   SCIP_Bool enabledconflicts;
+#endif
 
    assert( heur != NULL );
    assert( scip != NULL );
@@ -1049,11 +1289,56 @@ SCIP_DECL_HEUREXEC(heurExecVbounds)
    if( !heurdata->applicable )
       return SCIP_OKAY;
 
+#ifdef NOCONFLICT
+   /* disable conflict analysis */
+   SCIP_CALL( SCIPgetBoolParam(scip, "conflict/enable", &enabledconflicts) );
+
+   if( !SCIPisParamFixed(scip, "conflict/enable") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(scip, "conflict/enable", FALSE) );
+   }
+#endif
+
    /* try variable bounds */
-   SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, TRUE, TRUE, result) );
-   SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, TRUE, FALSE, result) );
-   SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, FALSE, FALSE, result) );
-   SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, FALSE, TRUE, result) );
+   skipobj1 = FALSE;
+   skipobj2 = FALSE;
+   if( (heurdata->feasvariant & VBOUNDVARIANT_NOOBJ) != 0 )
+   {
+      SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, FALSE, 0,
+            &skipobj1, &skipobj2, result) );
+   }
+   if( !skipobj1 && (heurdata->feasvariant & VBOUNDVARIANT_BESTBOUND) != 0)
+   {
+      SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, FALSE, 1, NULL, NULL, result) );
+   }
+   if( !skipobj2 && (heurdata->feasvariant & VBOUNDVARIANT_WORSTBOUND) != 0)
+   {
+      SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, FALSE, 2, NULL, NULL, result) );
+   }
+
+   skipobj1 = FALSE;
+   skipobj2 = FALSE;
+   if( (heurdata->tightenvariant & VBOUNDVARIANT_NOOBJ) != 0 )
+   {
+      SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, TRUE, 0,
+            &skipobj1, &skipobj2, result) );
+   }
+   if( !skipobj1 && (heurdata->tightenvariant & VBOUNDVARIANT_BESTBOUND) != 0)
+   {
+      SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, TRUE, 1, NULL, NULL, result) );
+   }
+   if( !skipobj2 && (heurdata->tightenvariant & VBOUNDVARIANT_WORSTBOUND) != 0)
+   {
+      SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, TRUE, 2, NULL, NULL, result) );
+   }
+
+#ifdef NOCONFLICT
+   /* reset the conflict analysis */
+   if( !SCIPisParamFixed(scip, "conflict/enable") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(scip, "conflict/enable", enabledconflicts) );
+   }
+#endif
 
    return SCIP_OKAY;
 }
@@ -1087,9 +1372,13 @@ SCIP_RETCODE SCIPincludeHeurVbounds(
    SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolVbounds) );
 
    /* add variable bounds primal heuristic parameters */
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/minfixingrate",
-         "minimum percentage of integer variables that have to be fixable",
-         &heurdata->minfixingrate, FALSE, DEFAULT_MINFIXINGRATE, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/minintfixingrate",
+         "minimum percentage of integer variables that have to be fixed",
+         &heurdata->minintfixingrate, FALSE, DEFAULT_MININTFIXINGRATE, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/minmipfixingrate",
+         "minimum percentage of variables that have to be fixed within sub-SCIP (integer and continuous)",
+         &heurdata->minmipfixingrate, FALSE, DEFAULT_MINMIPFIXINGRATE, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/" HEUR_NAME "/maxnodes",
          "maximum number of nodes to regard in the subproblem",
@@ -1118,6 +1407,22 @@ SCIP_RETCODE SCIPincludeHeurVbounds(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copycuts",
          "should all active cuts from cutpool be copied to constraints in subproblem?",
          &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/uselockfixings",
+         "should more variables be fixed based on variable locks if the fixing rate was not reached?",
+         &heurdata->uselockfixings, TRUE, DEFAULT_USELOCKFIXINGS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxbacktracks",
+         "maximum number of backtracks during the fixing process",
+         &heurdata->maxbacktracks, TRUE, DEFAULT_MAXBACKTRACKS, -1, INT_MAX/4, NULL, NULL) );
+
+      SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/feasvariant",
+         "which variants of the vbounds heuristic that try to stay feasible should be called? (0: off, 1: w/o looking at obj, 2: only fix to best bound, 4: only fix to worst bound",
+         &heurdata->feasvariant, TRUE, DEFAULT_FEASVARIANT, 0, 7, NULL, NULL) );
+
+      SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/tightenvariant",
+         "which tightening variants of the vbounds heuristic should be called? (0: off, 1: w/o looking at obj, 2: only fix to best bound, 4: only fix to worst bound",
+         &heurdata->tightenvariant, TRUE, DEFAULT_TIGHTENVARIANT, 0, 7, NULL, NULL) );
 
    return SCIP_OKAY;
 }

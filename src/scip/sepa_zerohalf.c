@@ -53,7 +53,7 @@
 #define SEPA_NAME              "zerohalf"
 #define SEPA_DESC              "{0,1/2}-cuts separator"
 #define SEPA_PRIORITY             -6000
-#define SEPA_FREQ                    10
+#define SEPA_FREQ                    -1
 #define SEPA_MAXBOUNDDIST           1.0
 #define SEPA_USESSUBSCIP          FALSE
 #define SEPA_DELAY                FALSE
@@ -1513,6 +1513,7 @@ SCIP_RETCODE generateZerohalfCut(
    int cutnnz;
    int cutrank;
    int nvars;
+   int nchgcoefs;
    int* cutinds;
    SCIP_ROW** rows;
    SCIP_VAR** vars;
@@ -1661,7 +1662,7 @@ SCIP_RETCODE generateZerohalfCut(
    assert(SCIPisFeasIntegral(scip, cutrhs));
    cutrhs = SCIPfeasRound(scip, cutrhs);
 
-   if( ! SCIPcutsTightenCoefficients(scip, cutislocal, cutcoefs, &cutrhs, cutinds, &cutnnz) )
+   if( ! SCIPcutsTightenCoefficients(scip, cutislocal, cutcoefs, &cutrhs, cutinds, &cutnnz, &nchgcoefs) )
    {
       /* calculate efficacy */
       cutefficacy = calcEfficacy(scip, cutcoefs, cutrhs, cutinds, cutnnz);

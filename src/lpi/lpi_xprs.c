@@ -672,7 +672,7 @@ const char* SCIPlpiGetSolverDesc(
 void* SCIPlpiGetSolverPointer(
    SCIP_LPI*             lpi                 /**< pointer to an LP interface structure */
    )
-{
+{ /*lint --e{715}*/
    return (void*) lpi->xprslp;
 }
 
@@ -682,7 +682,7 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    int                   ncols,              /**< length of integrality array */
    int*                  intInfo             /**< integrality array (0: continuous, 1: integer) */
    )
-{
+{ /*lint --e{715}*/
    SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -825,8 +825,16 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    const int*            ind,                /**< row indices of constraint matrix entries */
    const SCIP_Real*      val                 /**< values of constraint matrix entries */
    )
-{
+{ /*lint --e{715}*/
    int c;
+
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
 
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
@@ -876,8 +884,16 @@ SCIP_RETCODE SCIPlpiAddCols(
    const int*            ind,                /**< row indices of constraint matrix entries, or NULL if nnonz == 0 */
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
-{
+{ /*lint --e{715}*/
    int c;
+
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
 
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
@@ -1015,8 +1031,16 @@ SCIP_RETCODE SCIPlpiAddRows(
    const int*            ind,                /**< column indices of constraint matrix entries, or NULL if nnonz == 0 */
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
-{
+{ /*lint --e{715}*/
    int r;
+
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
 
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
@@ -1617,7 +1641,7 @@ SCIP_RETCODE SCIPlpiGetColNames(
    int                   namestoragesize,    /**< size of namestorage (if 0, storageleft returns the storage needed) */
    int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
    )
-{
+{ /*lint --e{715}*/
    SCIPerrorMessage("SCIPlpiGetColNames() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -1632,7 +1656,7 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    int                   namestoragesize,    /**< size of namestorage (if 0, -storageleft returns the storage needed) */
    int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
    )
-{
+{ /*lint --e{715}*/
    SCIPerrorMessage("SCIPlpiGetRowNames() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -1876,7 +1900,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
 SCIP_RETCODE SCIPlpiStartStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
-{
+{ /*lint --e{715}*/
    /* currently do nothing */
    return SCIP_OKAY;
 }
@@ -1885,7 +1909,7 @@ SCIP_RETCODE SCIPlpiStartStrongbranch(
 SCIP_RETCODE SCIPlpiEndStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
-{
+{ /*lint --e{715}*/
    /* currently do nothing */
    return SCIP_OKAY;
 }
@@ -3243,7 +3267,7 @@ SCIP_RETCODE SCIPlpiGetNorms(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information */
    )
-{
+{ /*lint --e{715}*/
    assert(lpinorms != NULL);
 
    (*lpinorms) = NULL;
@@ -3259,7 +3283,7 @@ SCIP_RETCODE SCIPlpiSetNorms(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information */
    )
-{
+{ /*lint --e{715}*/
    assert(lpinorms == NULL);
 
    /* no work necessary */
@@ -3272,7 +3296,7 @@ SCIP_RETCODE SCIPlpiFreeNorms(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information */
    )
-{
+{ /*lint --e{715}*/
    assert(lpinorms == NULL);
 
    /* no work necessary */

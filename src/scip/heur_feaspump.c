@@ -322,6 +322,10 @@ SCIP_RETCODE handle1Cycle(
             sign = -1.0;
             solval = SCIPfeasCeil(scip, solval);
          }
+         else
+         {
+            solval = SCIPfeasFloor(scip, solval);
+         }
       }
       else if( frac > 0.5 )
          solval = SCIPfeasFloor(scip, solval);
@@ -332,7 +336,12 @@ SCIP_RETCODE handle1Cycle(
       }
       newobjcoeff = sign * (1.0 - alpha) + alpha * orgobjcoeff;
 
+      SCIPdebugMsg(scip, "1-cycle flip: variable <%s> [%g,%g] LP sol %.15g sol %.15g -> %.15g\n",
+            SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
+            SCIPvarGetLPSol(var), SCIPgetSolVal(scip, heurdata->roundedsol, var), solval);
+
       /* updating the rounded solution and the objective */
+      assert(SCIPisIntegral(scip, solval));
       SCIP_CALL( SCIPsetSolVal(scip, heurdata->roundedsol, var, solval) );
       SCIP_CALL( SCIPchgVarObjDive(scip, var, newobjcoeff) );
    }
@@ -381,6 +390,10 @@ SCIP_RETCODE handleCycle(
                sign = -1.0;
                solval = SCIPfeasCeil(scip, solval);
             }
+            else
+            {
+               solval = SCIPfeasFloor(scip, solval);
+            }
          }
          if( frac > 0.5 )
             solval = SCIPfeasFloor(scip, solval);
@@ -392,6 +405,7 @@ SCIP_RETCODE handleCycle(
 
          newobjcoeff = sign * (1.0 - alpha) + alpha * orgobjcoeff;
 
+         assert(SCIPisIntegral(scip, solval));
          SCIP_CALL( SCIPsetSolVal(scip, heurdata->roundedsol, var, solval) );
          SCIP_CALL( SCIPchgVarObjDive(scip, var, newobjcoeff) );
       }

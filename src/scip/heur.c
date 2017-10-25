@@ -315,7 +315,6 @@ SCIP_RETCODE SCIPdivesetCreate(
             "more general constraint handler diving variable selection?",
             &diveset->onlylpbranchcands, FALSE, onlylpbranchcands, NULL, NULL) );
 
-
    return SCIP_OKAY;
 }
 
@@ -1400,4 +1399,392 @@ int SCIPheurGetNDivesets(
    assert(heur != NULL);
 
    return heur->ndivesets;
+}
+
+/** Perform breadth-first (BFS) search on the variable constraint graph.
+ *
+ *  The result of the algorithm is that the \p distances array contains the correct distances for
+ *  every variable from the start variables. The distance of a variable can then be accessed through its
+ *  problem index (calling SCIPvarGetProbindex()).
+ *  Hence, The method assumes that the length of \p distances is at least
+ *  SCIPgetNVars().
+ *  Variables that are not connected through constraints to the start variables have a distance of -1.
+ *
+ *  Limits can be provided to further restrict the breadth-first search. If a distance limit is given,
+ *  the search will be performed until the first variable at this distance is popped from the queue, i.e.,
+ *  all variables with a distance < maxdistance have been labeled by the search.
+ *  If a variable limit is given, the search stops after it completes the distance level at which
+ *  the limit was reached. Hence, more variables may be actually labeled.
+ *  The start variables are accounted for those variable limits.
+ *
+ *  If no variable variable constraint graph is provided, the method will create one and free it at the end
+ *  This is useful for a single use of the variable constraint graph. For several consecutive uses,
+ *  it is advised to create a variable constraint graph via SCIPvariableGraphCreate().
+ */
+SCIP_RETCODE SCIPvariablegraphBreadthFirst(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VGRAPH*          vargraph,           /**< pointer to the variable graph, or NULL to let the function create a local graph */
+   SCIP_VAR**            startvars,          /**< array of start variables to calculate distance from */
+   int                   nstartvars,         /**< number of starting variables, at least 1 */
+   int*                  distances,          /**< array to keep distance in vargraph from start variables for every variable */
+   int                   maxdistance,        /**< maximum distance >= 0 from start variable (INT_MAX for complete BFS) */
+   int                   maxvars,            /**< maximum number of variables to compute distance for */
+   int                   maxbinintvars       /**< maximum number of binary or integer variables to compute distance for */
+   )
+{
+   SCIP_VAR** vars;
+
+   int* queue;
+   int  nvars;
+   int i;
+   int currlvlidx;
+   int nextlvlidx;
+   int increment = 1;
+   int currentdistance;
+   int nbinintvarshit;
+   int nvarshit;
+   int nbinvars;
+   int nintvars;
+   int nbinintvars;
+   SCIP_VAR** varbuffer;
+   SCIP_Bool localvargraph;
+
+   assert(scip != NULL);
+   assert(startvars != NULL);
+   assert(nstartvars >= 1);
+   assert(distances != NULL);
+   assert(maxdistance >= 0);
+
+
+   /* get variable data */
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
+   nbinintvars = nbinvars + nintvars;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &queue, nvars) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &varbuffer, nvars) );
+
+   /* create a variable graph locally for this method, if none is provided */
+   if( vargraph == NULL )
+   {
+      SCIP_CALL( SCIPvariableGraphCreate(scip, &vargraph, FALSE, 1.0, NULL) );
+      localvargraph = TRUE;
+   }
+   else
+      localvargraph = FALSE;
+
+   SCIPhashtableRemoveAll(vargraph->visitedconss);
+
+   /* initialize distances to -1 */
+   for( i = 0; i < nvars; ++i )
+   {
+      queue[i] = -1;
+      distances[i] = -1;
+   }
+
+   nvarshit = 0;
+   nbinintvarshit = 0;
+   /* initialize distances for starting variables and add them to the queue */
+   for( i = 0; i < nstartvars; ++i )
+   {
+      int probindex = SCIPvarGetProbindex(startvars[i]);
+      assert(probindex >= 0);
+      /* start variables have a distance of 0 */
+      distances[probindex] = 0;
+      queue[i] = probindex;
+      nvarshit++;
+
+      if( probindex < nbinintvars )
+         nbinintvarshit++;
+   }
+   currlvlidx = 0;
+   nextlvlidx = nvars - 1;
+
+   /* loop over the queue and pop the next variable, starting with start variables */
+   do
+   {
+      SCIP_VAR* currvar;
+      int c;
+      int varpos;
+
+      currvar = vars[queue[currlvlidx]];
+      varpos = SCIPvarGetProbindex(currvar);
+      currentdistance = distances[varpos];
+      assert(currentdistance >= 0);
+
+      /* distances must only be computed up to maxdistance  */
+      assert(currentdistance <= maxdistance);
+
+      /* check for termination because maximum distance has been reached */
+      if( currentdistance == maxdistance )
+         break;
+
+      assert(varpos >= 0);
+
+      /* loop over variable constraints and enqueue variables that were not visited yet */
+      for( c = 0; c < vargraph->nvarconss[varpos]; ++c )
+      {
+         int nconsvars;
+         int v;
+         SCIP_Bool success;
+         SCIP_CONS* cons = vargraph->varconss[varpos][c];
+
+         /* check first if this constraint has already been visited */
+         if( SCIPhashtableExists(vargraph->visitedconss, (void *)cons) )
+            continue;
+
+         /* request number of constraint variables */
+         SCIP_CALL( SCIPgetConsNVars(scip, cons, &nconsvars, &success) );
+
+         if( !success )
+            continue;
+
+         /* collect constraint variables in buffer */
+         SCIP_CALL( SCIPgetConsVars(scip, cons, varbuffer, nvars, &success) );
+
+         if( !success )
+            continue;
+
+         /* collect previously unvisited variables of the constraint and enqueue them for breadth-first search */
+         for( v = 0; v < nconsvars; ++v )
+         {
+            SCIP_VAR* nextvar = varbuffer[v];
+            int nextvarpos;
+            assert(nextvar != NULL);
+            if( !SCIPvarIsActive(nextvar) )
+               continue;
+
+            nextvarpos = SCIPvarGetProbindex(nextvar);
+            assert(nextvarpos >= 0);
+
+            /* insert variables that were not considered yet into the next level queue */
+            if( distances[nextvarpos] == -1 )
+            {
+               distances[nextvarpos] = currentdistance + 1;
+               queue[nextlvlidx] = nextvarpos;
+               nextlvlidx -= increment;
+
+               nvarshit++;
+               if( nextvarpos < nbinintvars )
+                  ++nbinintvarshit;
+            }
+         } /* end constraint variables loop */
+
+         /* mark the constraint as visited */
+         SCIP_CALL( SCIPhashtableInsert(vargraph->visitedconss, (void *)cons) );
+
+      } /* end constraint loop */
+
+      queue[currlvlidx] = -1;
+      currlvlidx += increment;
+
+      /* check if we need to swap current and next level index and reverse the increment */
+      if( currlvlidx == nvars || currlvlidx == 0 || queue[currlvlidx] == -1 || currlvlidx == nextlvlidx )
+      {
+         /* break early if the distance has been determined for enough variables */
+         if( nvarshit >= maxvars || nbinintvarshit >= maxbinintvars )
+            break;
+
+         /* increment knows whether we are currently looping upwards (all variables with odd distance) or downwards the
+          * queue
+          */
+         if( increment == +1 )
+         {
+            currlvlidx = nvars - 1;
+            nextlvlidx = 0;
+            increment = -1;
+         }
+         else
+         {
+            currlvlidx = 0;
+            nextlvlidx = nvars - 1;
+            increment = +1;
+         }
+      }
+   }
+   while( queue[currlvlidx] != -1 && distances[queue[currlvlidx]] >= currentdistance );
+
+   SCIPfreeBufferArray(scip, &varbuffer);
+   SCIPfreeBufferArray(scip, &queue);
+
+   /* free also the variable graph, if it wasn't provided by the caller */
+   if( localvargraph )
+   {
+      SCIPvariableGraphFree(scip, &vargraph);
+   }
+
+   return SCIP_OKAY;
+}
+
+/* fills variable graph data structure
+ *
+ * loops over global problem constraints and creates a mapping from the variables to their respective constraints
+ */
+static
+SCIP_RETCODE fillVariableGraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VGRAPH*          vargraph,           /**< variable graph data structure for breadth-first-search neighborhoods */
+   SCIP_Bool             relaxdenseconss,    /**< should dense constraints (at least as dense as \p density) be
+                                              *   ignored by connectivity graph? */
+   SCIP_Real             relaxdensity,       /**< density (with respect to number of variables) to relax constraint from graph */
+   int*                  nrelaxedconstraints  /**< pointer to store the number of constraints that were relaxed, or NULL if not needed */
+   )
+{
+   SCIP_CONS** conss;
+   int nconss;
+   int nvars;
+   int c;
+   int relaxlimit;
+   SCIP_VAR** varbuffer;
+
+   assert(scip != NULL);
+   assert(vargraph != NULL);
+
+   conss = SCIPgetConss(scip);
+   nconss = SCIPgetNConss(scip);
+
+   nvars = SCIPgetNVars(scip);
+   SCIP_CALL( SCIPallocBufferArray(scip, &varbuffer, nvars) );
+
+   if( nrelaxedconstraints != NULL )
+      *nrelaxedconstraints = 0;
+
+   relaxlimit = (int)(relaxdensity * nvars);
+
+   for( c = 0; c < nconss; ++c )
+   {
+      int nconsvars;
+      int v;
+      SCIP_Bool success;
+      SCIP_CONS* cons = conss[c];
+
+      /* we only consider constraints that are checkable */
+      if( !SCIPconsIsChecked(cons) )
+         continue;
+
+      /* request number of variables */
+      SCIP_CALL( SCIPgetConsNVars(scip, cons, &nconsvars, &success) );
+
+      if( !success )
+         continue;
+
+      /* relax constraints with density above the allowed number of free variables */
+      if( relaxdenseconss && nconsvars >= relaxlimit )
+      {
+         if( nrelaxedconstraints != NULL )
+            ++(*nrelaxedconstraints);
+
+         continue;
+      }
+
+      /* collect constraint variables in buffer */
+      SCIP_CALL( SCIPgetConsVars(scip, cons, varbuffer, nvars, &success) );
+
+      if( !success )
+         continue;
+
+      /* loop over constraint variables and add this constraint to them if they are active */
+      for( v = 0; v < nconsvars; ++v )
+      {
+         int varpos = SCIPvarGetProbindex(varbuffer[v]);
+
+         /* skip inactive variables */
+         if( varpos == -1 )
+            continue;
+
+         /* ensure array size */
+         if( vargraph->varconssize[varpos] == vargraph->nvarconss[varpos]  )
+         {
+            int newmem = SCIPcalcMemGrowSize(scip, vargraph->nvarconss[varpos] + 1);
+
+            assert(newmem > vargraph->varconssize[varpos]);
+
+            if( vargraph->varconss[varpos] == NULL )
+            {
+               SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vargraph->varconss[varpos], newmem) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &vargraph->varconss[varpos], vargraph->varconssize[varpos], newmem) ); /*lint !e866*/
+            }
+            vargraph->varconssize[varpos] = newmem;
+         }
+
+         assert(vargraph->nvarconss[varpos] < vargraph->varconssize[varpos]);
+
+         /* add constraint to constraint array for this variable */
+         vargraph->varconss[varpos][vargraph->nvarconss[varpos]] = cons;
+         vargraph->nvarconss[varpos] += 1;
+      }
+   }
+
+   /* free the buffer */
+   SCIPfreeBufferArray(scip, &varbuffer);
+
+   return SCIP_OKAY;
+}
+
+/** initialization method of variable graph data structure */
+SCIP_RETCODE SCIPvariableGraphCreate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VGRAPH**         vargraph,           /**< pointer to the variable graph */
+   SCIP_Bool             relaxdenseconss,    /**< should dense constraints (at least as dense as \p density) be
+                                              *   ignored by connectivity graph? */
+   SCIP_Real             relaxdensity,       /**< density (with respect to number of variables) to relax constraint from graph */
+   int*                  nrelaxedconstraints  /**< pointer to store the number of constraints that were relaxed, or NULL if not needed */
+   )
+{
+   int nvars;
+   int nconss;
+
+   assert(scip != NULL);
+   assert(vargraph != NULL);
+
+   nvars = SCIPgetNVars(scip);
+   nconss = SCIPgetNConss(scip);
+
+   if( nvars == 0 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPallocBlockMemory(scip, vargraph) );
+
+   SCIP_CALL( SCIPhashtableCreate(&(*vargraph)->visitedconss, SCIPblkmem(scip), 2 * nconss, SCIPhashGetKeyStandard,
+         SCIPhashKeyEqPtr, SCIPhashKeyValPtr, NULL) );
+
+   /* allocate and clear memory */
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(*vargraph)->varconss, nvars) );
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(*vargraph)->nvarconss, nvars) );
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(*vargraph)->varconssize, nvars) );
+
+   /* fill the variable graph with variable-constraint mapping for breadth-first search*/
+   SCIP_CALL( fillVariableGraph(scip, *vargraph, relaxdenseconss, relaxdensity, nrelaxedconstraints) );
+
+   return SCIP_OKAY;
+}
+
+/** deinitialization method of variable graph data structure */
+void SCIPvariableGraphFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VGRAPH**         vargraph            /**< pointer to the variable graph */
+   )
+{
+   int nvars;
+   int v;
+   assert(scip != NULL);
+   assert(vargraph != NULL);
+
+   nvars = SCIPgetNVars(scip);
+
+   for( v = nvars - 1; v >= 0; --v )
+   {
+      SCIPfreeBlockMemoryArrayNull(scip, &(*vargraph)->varconss[v], (*vargraph)->varconssize[v]); /*lint !e866*/
+   }
+
+   /* allocate and clear memory */
+   SCIPfreeBlockMemoryArray(scip, &(*vargraph)->varconssize, nvars);
+   SCIPfreeBlockMemoryArray(scip, &(*vargraph)->nvarconss, nvars);
+   SCIPfreeBlockMemoryArray(scip, &(*vargraph)->varconss, nvars);
+
+   SCIPhashtableFree(&(*vargraph)->visitedconss);
+
+   SCIPfreeBlockMemory(scip, vargraph);
 }
