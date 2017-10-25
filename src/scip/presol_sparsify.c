@@ -132,9 +132,9 @@ SCIP_RETCODE cancelRow(
    SCIP_MATRIX*          matrix,
    SCIP_HASHTABLE*       pairtable,
    int                   rowidx,
-   unsigned int          maxcontfillin,
-   unsigned int          maxintfillin,
-   unsigned int          maxbinfillin,
+   int                   maxcontfillin,
+   int                   maxintfillin,
+   int                   maxbinfillin,
    int                   maxconsiderednonzeros,
    SCIP_Longint*         nretrieves,
    int*                  nchgcoefs,
@@ -681,7 +681,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
 
          rowidx = rowidxsorted != NULL ? rowidxsorted[r] : r;
          SCIP_CALL( cancelRow(scip, matrix, pairtable, rowidx, \
-               (unsigned int)presoldata->maxcontfillin, (unsigned int)presoldata->maxintfillin, (unsigned int)presoldata->maxbinfillin, \
+               presoldata->maxcontfillin, presoldata->maxintfillin, presoldata->maxbinfillin, \
                presoldata->maxconsiderednonzeros, \
                &presoldata->nretrieves, nchgcoefs, &numcancel) );
       }
