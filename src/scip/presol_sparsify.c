@@ -50,7 +50,7 @@
 #define DEFAULT_MAXCONSIDEREDNONZEROS  70    /**< maximal number of considered non-zeros within one row (-1: no limit) */
 #define DEFAULT_ROWSORT               'n'    /**< order in which to process inequalities ('n'o sorting, 'i'ncreasing nonzeros, 'd'ecreasing nonzeros) */
 #define DEFAULT_FULL_SEARCH             0    /**< default value for full search */
-#define DEFAULT_MAXRETRIEVEFAC        100    /**< default value for the maximal number of hashtable retrieves as a multiple of the number of constraints */
+#define DEFAULT_MAXRETRIEVEFAC      100.0    /**< default value for the maximal number of hashtable retrieves as a multiple of the number of constraints */
 
 #define MAXSCALE                   1000.0    /**< maximal allowed scale for cancelling non-zeros */
 /*
@@ -135,7 +135,6 @@ SCIP_RETCODE cancelRow(
    unsigned int          maxcontfillin,
    unsigned int          maxintfillin,
    unsigned int          maxbinfillin,
-   int                   maxnonzeros,
    int                   maxconsiderednonzeros,
    SCIP_Longint*         nretrieves,
    int*                  nchgcoefs,
@@ -627,6 +626,8 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       {
          ROWVARPAIR* othervarpair;
 
+         assert(varpairs != NULL);
+
          othervarpair = (ROWVARPAIR*)SCIPhashtableRetrieve(pairtable, (void*) &varpairs[r]);
 
          if( othervarpair != NULL && SCIPmatrixGetRowNNonzs(matrix, othervarpair->rowindex) <= SCIPmatrixGetRowNNonzs(matrix, varpairs[r].rowindex) )
@@ -675,7 +676,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
          rowidx = rowidxsorted != NULL ? rowidxsorted[r] : r;
          SCIP_CALL( cancelRow(scip, matrix, pairtable, rowidx, \
                (unsigned int)presoldata->maxcontfillin, (unsigned int)presoldata->maxintfillin, (unsigned int)presoldata->maxbinfillin, \
-               presoldata->maxnonzeros, presoldata->maxconsiderednonzeros, \
+               presoldata->maxconsiderednonzeros, \
                &presoldata->nretrieves, nchgcoefs, &numcancel) );
       }
 
