@@ -43763,9 +43763,6 @@ SCIP_RETCODE SCIPprintTransProblem(
 
 /** outputs status statistics
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
  *  @note If limits have been changed between the solution and the call to this function, the status is recomputed and
  *        thus may to correspond to the original status.
  *
@@ -43780,7 +43777,7 @@ SCIP_RETCODE SCIPprintTransProblem(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-SCIP_RETCODE SCIPprintStatusStatistics(
+void SCIPprintStatusStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
@@ -43788,20 +43785,15 @@ SCIP_RETCODE SCIPprintStatusStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPprintStatusStatistics", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintStatusStatistics", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "SCIP Status        : ");
-   SCIP_CALL( SCIPprintStage(scip, file) );
+   SCIP_CALL_ABORT( SCIPprintStage(scip, file) );
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
-
-   return SCIP_OKAY;
 }
 
 /** outputs statistics for original problem
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMED
@@ -43812,7 +43804,7 @@ SCIP_RETCODE SCIPprintStatusStatistics(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-SCIP_RETCODE SCIPprintOrigProblemStatistics(
+void SCIPprintOrigProblemStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
@@ -43820,19 +43812,14 @@ SCIP_RETCODE SCIPprintOrigProblemStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPprintOrigProblemStatistics", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintOrigProblemStatistics", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Original Problem   :\n");
    SCIPprobPrintStatistics(scip->origprob, scip->set, scip->messagehdlr, file);
-
-   return SCIP_OKAY;
 }
 
 /** outputs statistics for transformed problem
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMED
@@ -43843,7 +43830,7 @@ SCIP_RETCODE SCIPprintOrigProblemStatistics(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-SCIP_RETCODE SCIPprintTransProblemStatistics(
+void SCIPprintTransProblemStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
@@ -43851,18 +43838,13 @@ SCIP_RETCODE SCIPprintTransProblemStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPprintTransProblemStatistics", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintTransProblemStatistics", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Presolved Problem  :\n");
    SCIPprobPrintStatistics(scip->transprob, scip->set, scip->messagehdlr, file);
-
-   return SCIP_OKAY;
 }
 
 /** outputs presolver statistics
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_TRANSFORMED
@@ -43873,7 +43855,7 @@ SCIP_RETCODE SCIPprintTransProblemStatistics(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-SCIP_RETCODE SCIPprintPresolverStatistics(
+void SCIPprintPresolverStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
@@ -43883,7 +43865,7 @@ SCIP_RETCODE SCIPprintPresolverStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPprintPresolverStatistics", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintPresolverStatistics", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Presolvers         :   ExecTime  SetupTime  Calls  FixedVars   AggrVars   ChgTypes  ChgBounds   AddHoles    DelCons    AddCons   ChgSides   ChgCoefs\n");
 
@@ -43978,14 +43960,9 @@ SCIP_RETCODE SCIPprintPresolverStatistics(
    /* root node bound changes */
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  root node        :          -          -      - %10d          -          - %10d          -          -          -          -          -\n",
       scip->stat->nrootintfixings, scip->stat->nrootboundchgs);
-
-   return SCIP_OKAY;
 }
 
 /** outputs constraint statistics
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_TRANSFORMED
@@ -43996,7 +43973,7 @@ SCIP_RETCODE SCIPprintPresolverStatistics(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-SCIP_RETCODE SCIPprintConstraintStatistics(
+void SCIPprintConstraintStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
@@ -44006,7 +43983,7 @@ SCIP_RETCODE SCIPprintConstraintStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPprintConstraintStatistics", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintConstraintStatistics", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    /* Add maximal number of constraints of the same type? So far this information is not added because of lack of space. */
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Constraints        :     Number  MaxNumber  #Separate #Propagate    #EnfoLP    #EnfoRelax  #EnfoPS    #Check   #ResProp    Cutoffs    DomReds       Cuts    Applied      Conss   Children\n");
@@ -44042,14 +44019,9 @@ SCIP_RETCODE SCIPprintConstraintStatistics(
             SCIPconshdlrGetNChildren(conshdlr));
       }
    }
-
-   return SCIP_OKAY;
 }
 
 /** outputs constraint timing statistics
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_TRANSFORMED
@@ -44060,7 +44032,7 @@ SCIP_RETCODE SCIPprintConstraintStatistics(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-SCIP_RETCODE SCIPprintConstraintTimingStatistics(
+void SCIPprintConstraintTimingStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
@@ -44070,7 +44042,7 @@ SCIP_RETCODE SCIPprintConstraintTimingStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPprintConstraintTimingStatistics", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintConstraintTimingStatistics", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Constraint Timings :  TotalTime  SetupTime   Separate  Propagate     EnfoLP     EnfoPS     EnfoRelax   Check    ResProp    SB-Prop\n");
 
@@ -44108,14 +44080,9 @@ SCIP_RETCODE SCIPprintConstraintTimingStatistics(
             SCIPconshdlrGetStrongBranchPropTime(conshdlr));
       }
    }
-
-   return SCIP_OKAY;
 }
 
 /** outputs propagator statistics
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_TRANSFORMED
@@ -44126,7 +44093,7 @@ SCIP_RETCODE SCIPprintConstraintTimingStatistics(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-SCIP_RETCODE SCIPprintPropagatorStatistics(
+void SCIPprintPropagatorStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
@@ -44136,7 +44103,7 @@ SCIP_RETCODE SCIPprintPropagatorStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPprintPropagatorStatistics", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintPropagatorStatistics", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Propagators        : #Propagate   #ResProp    Cutoffs    DomReds\n");
 
@@ -44176,14 +44143,9 @@ SCIP_RETCODE SCIPprintPropagatorStatistics(
 	 SCIPpropGetRespropTime(prop),
 	 SCIPpropGetStrongBranchPropTime(prop));
    }
-
-   return SCIP_OKAY;
 }
 
 /** outputs conflict statistics
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_TRANSFORMED
@@ -44194,7 +44156,7 @@ SCIP_RETCODE SCIPprintPropagatorStatistics(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-SCIP_RETCODE SCIPprintConflictStatistics(
+void SCIPprintConflictStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
@@ -44205,7 +44167,7 @@ SCIP_RETCODE SCIPprintConflictStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPprintConflictStatistics", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintConflictStatistics", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( scip->set->conf_maxstoresize == 0 )
    {
@@ -44319,20 +44281,15 @@ SCIP_RETCODE SCIPprintConflictStatistics(
       / (SCIP_Real)SCIPconflictGetNAppliedLocalConss(scip->conflict) : 0,
       SCIPconflictGetNDualrayInfSuccess(scip->conflict) + SCIPconflictGetNDualrayBndSuccess(scip->conflict)
       - SCIPconflictGetNDualrayInfGlobal(scip->conflict) - SCIPconflictGetNDualrayBndGlobal(scip->conflict));
-
-   return SCIP_OKAY;
 }
 
 /** outputs separator statistics
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-SCIP_RETCODE SCIPprintSeparatorStatistics(
+void SCIPprintSeparatorStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
@@ -44342,7 +44299,7 @@ SCIP_RETCODE SCIPprintSeparatorStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPprintSeparatorStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintSeparatorStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Separators         :   ExecTime  SetupTime      Calls    Cutoffs    DomReds       Cuts    Applied      Conss\n");
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  cut pool         : %10.2f            %10" SCIP_LONGINT_FORMAT "          -          - %10" SCIP_LONGINT_FORMAT "          -          -    (maximal pool size: %d)\n",
@@ -44367,20 +44324,15 @@ SCIP_RETCODE SCIPprintSeparatorStatistics(
          SCIPsepaGetNCutsApplied(scip->set->sepas[i]),
          SCIPsepaGetNConssFound(scip->set->sepas[i]));
    }
-
-   return SCIP_OKAY;
 }
 
 /** outputs pricer statistics
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-SCIP_RETCODE SCIPprintPricerStatistics(
+void SCIPprintPricerStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
@@ -44390,7 +44342,7 @@ SCIP_RETCODE SCIPprintPricerStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPprintPricerStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintPricerStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Pricers            :   ExecTime  SetupTime      Calls       Vars\n");
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  problem variables: %10.2f          - %10d %10d\n",
@@ -44410,20 +44362,15 @@ SCIP_RETCODE SCIPprintPricerStatistics(
          SCIPpricerGetNCalls(scip->set->pricers[i]),
          SCIPpricerGetNVarsFound(scip->set->pricers[i]));
    }
-
-   return SCIP_OKAY;
 }
 
 /** outputs branching rule statistics
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-SCIP_RETCODE SCIPprintBranchruleStatistics(
+void SCIPprintBranchruleStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
@@ -44433,7 +44380,7 @@ SCIP_RETCODE SCIPprintBranchruleStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPprintBranchruleStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintBranchruleStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Branching Rules    :   ExecTime  SetupTime   BranchLP  BranchExt   BranchPS    Cutoffs    DomReds       Cuts      Conss   Children\n");
 
@@ -44455,14 +44402,9 @@ SCIP_RETCODE SCIPprintBranchruleStatistics(
          SCIPbranchruleGetNConssFound(scip->set->branchrules[i]),
          SCIPbranchruleGetNChildren(scip->set->branchrules[i]));
    }
-
-   return SCIP_OKAY;
 }
 
 /** outputs heuristics statistics
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PRESOLVING
@@ -44471,7 +44413,7 @@ SCIP_RETCODE SCIPprintBranchruleStatistics(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-SCIP_RETCODE SCIPprintHeuristicStatistics(
+void SCIPprintHeuristicStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
@@ -44483,7 +44425,7 @@ SCIP_RETCODE SCIPprintHeuristicStatistics(
    assert(scip->set != NULL);
    assert(scip->tree != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPprintHeuristicStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintHeuristicStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Primal Heuristics  :   ExecTime  SetupTime      Calls      Found       Best\n");
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  LP solutions     : %10.2f          -          - %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
@@ -44554,14 +44496,9 @@ SCIP_RETCODE SCIPprintHeuristicStatistics(
          }
       }
    }
-
-   return SCIP_OKAY;
 }
 
 /** outputs compression statistics
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PRESOLVING
@@ -44570,7 +44507,7 @@ SCIP_RETCODE SCIPprintHeuristicStatistics(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-SCIP_RETCODE SCIPprintCompressionStatistics(
+void SCIPprintCompressionStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
@@ -44579,11 +44516,11 @@ SCIP_RETCODE SCIPprintCompressionStatistics(
 
    assert(scip != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPprintCompressionStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintCompressionStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    /* only print compression statistics if tree reoptimization is enabled */
    if( !scip->set->reopt_enable )
-      return SCIP_OKAY;;
+      return;
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Tree Compressions  :   ExecTime  SetupTime      Calls      Found\n");
 
@@ -44599,20 +44536,15 @@ SCIP_RETCODE SCIPprintCompressionStatistics(
          SCIPcomprGetNCalls(scip->set->comprs[i]),
          SCIPcomprGetNFound(scip->set->comprs[i]));
    }
-
-   return SCIP_OKAY;
 }
 
 /** outputs LP statistics
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-SCIP_RETCODE SCIPprintLPStatistics(
+void SCIPprintLPStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
@@ -44621,7 +44553,7 @@ SCIP_RETCODE SCIPprintLPStatistics(
    assert(scip->stat != NULL);
    assert(scip->lp != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPprintLPStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintLPStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "LP                 :       Time      Calls Iterations  Iter/call   Iter/sec  Time-0-It Calls-0-It    ItLimit\n");
 
@@ -44710,20 +44642,15 @@ SCIP_RETCODE SCIPprintLPStatistics(
       SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f\n", (SCIP_Real)scip->stat->nconflictlpiterations/SCIPclockGetTime(scip->stat->conflictlptime));
    else
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -\n");
-
-   return SCIP_OKAY;
 }
 
 /** outputs NLP statistics
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-SCIP_RETCODE SCIPprintNLPStatistics(
+void SCIPprintNLPStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
@@ -44731,30 +44658,25 @@ SCIP_RETCODE SCIPprintNLPStatistics(
    assert(scip != NULL);
    assert(scip->stat != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPprintNLPStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintNLPStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( scip->nlp == NULL )
-      return SCIP_OKAY;
+      return;
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "NLP                :       Time      Calls\n");
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  all NLPs         : %10.2f %10" SCIP_LONGINT_FORMAT "\n",
       SCIPclockGetTime(scip->stat->nlpsoltime),
       scip->stat->nnlps);
-
-   return SCIP_OKAY;
 }
 
 /** outputs relaxator statistics
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-SCIP_RETCODE SCIPprintRelaxatorStatistics(
+void SCIPprintRelaxatorStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
@@ -44764,10 +44686,10 @@ SCIP_RETCODE SCIPprintRelaxatorStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPprintRelaxatorStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintRelaxatorStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( scip->set->nrelaxs == 0 )
-      return SCIP_OKAY;;
+      return;
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Relaxators         :       Time      Calls\n");
 
@@ -44781,20 +44703,15 @@ SCIP_RETCODE SCIPprintRelaxatorStatistics(
          SCIPrelaxGetTime(scip->set->relaxs[i]),
          SCIPrelaxGetNCalls(scip->set->relaxs[i]));
    }
-
-   return SCIP_OKAY;
 }
 
 /** outputs tree statistics
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-SCIP_RETCODE SCIPprintTreeStatistics(
+void SCIPprintTreeStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
@@ -44803,7 +44720,7 @@ SCIP_RETCODE SCIPprintTreeStatistics(
    assert(scip->stat != NULL);
    assert(scip->tree != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPprintTreeStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintTreeStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "B&B Tree           :\n");
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  number of runs   : %10d\n", scip->stat->nruns);
@@ -44833,14 +44750,9 @@ SCIP_RETCODE SCIPprintTreeStatistics(
       scip->stat->nnodes > 0
       ? (SCIP_Real)(scip->stat->nactivatednodes + scip->stat->ndeactivatednodes) / (SCIP_Real)scip->stat->nnodes : 0.0);
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  switching time   : %10.2f\n", SCIPclockGetTime(scip->stat->nodeactivationtime));
-
-   return SCIP_OKAY;
 }
 
 /** outputs solution statistics
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PRESOLVING
@@ -44849,7 +44761,7 @@ SCIP_RETCODE SCIPprintTreeStatistics(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-SCIP_RETCODE SCIPprintSolutionStatistics(
+void SCIPprintSolutionStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
@@ -44866,7 +44778,7 @@ SCIP_RETCODE SCIPprintSolutionStatistics(
    assert(scip->stat != NULL);
    assert(scip->primal != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPprintSolutionStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintSolutionStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    primalbound = getPrimalbound(scip);
    dualbound = getDualbound(scip);
@@ -45006,14 +44918,9 @@ SCIP_RETCODE SCIPprintSolutionStatistics(
    }
    else
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Avg. Gap         :          - (not evaluated)\n");
-
-   return SCIP_OKAY;
 }
 
 /** outputs concurrent solver statistics
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_TRANSFORMED
@@ -45024,7 +44931,7 @@ SCIP_RETCODE SCIPprintSolutionStatistics(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-SCIP_RETCODE SCIPprintConcsolverStatistics(
+void SCIPprintConcsolverStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
@@ -45037,10 +44944,10 @@ SCIP_RETCODE SCIPprintConcsolverStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPprintConflictStatistics", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintConflictStatistics", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( !SCIPsyncstoreIsInitialized(scip->syncstore) )
-      return SCIP_OKAY;
+      return;
 
    nconcsolvers = SCIPgetNConcurrentSolvers(scip);
    concsolvers = SCIPgetConcurrentSolvers(scip);
@@ -45065,20 +44972,15 @@ SCIP_RETCODE SCIPprintConcsolverStatistics(
                               );
       }
    }
-
-   return SCIP_OKAY;
 }
 
 /** outputs root statistics
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-SCIP_RETCODE SCIPprintRootStatistics(
+void SCIPprintRootStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
@@ -45092,7 +44994,7 @@ SCIP_RETCODE SCIPprintRootStatistics(
    assert(scip->stat != NULL);
    assert(scip->primal != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPprintRootStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintRootStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    dualboundroot = SCIPgetDualboundRoot(scip);
    firstdualboundroot = SCIPgetFirstLPDualboundRoot(scip);
@@ -45129,14 +45031,9 @@ SCIP_RETCODE SCIPprintRootStatistics(
    }
    else
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "%21s\n","-");
-
-   return SCIP_OKAY;
 }
 
 /** outputs timing statistics
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
@@ -45148,7 +45045,7 @@ SCIP_RETCODE SCIPprintRootStatistics(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-SCIP_RETCODE SCIPprintTimingStatistics(
+void SCIPprintTimingStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
@@ -45158,7 +45055,7 @@ SCIP_RETCODE SCIPprintTimingStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPprintTimingStatistics", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintTimingStatistics", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    readingtime = SCIPgetReadingTime(scip);
 
@@ -45196,8 +45093,6 @@ SCIP_RETCODE SCIPprintTimingStatistics(
       else
 	 SCIPmessageFPrintInfo(scip->messagehdlr, file, "  copying          : %10.2f %s\n", 0.0, "(0 times copied the problem)");
    }
-
-   return SCIP_OKAY;
 }
 
 /** comparison method for statistics tables */

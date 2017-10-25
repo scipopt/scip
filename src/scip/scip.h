@@ -20800,9 +20800,6 @@ SCIP_RETCODE SCIPprintTransProblem(
 
 /** outputs status statistics
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
  *  @note If limits have been changed between the solution and the call to this function, the status is recomputed and
  *        thus may to correspond to the original status.
  *
@@ -20818,16 +20815,13 @@ SCIP_RETCODE SCIPprintTransProblem(
  *       - \ref SCIP_STAGE_SOLVED
  */
 EXTERN
-SCIP_RETCODE SCIPprintStatusStatistics(
+void SCIPprintStatusStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    );
 
 /** outputs timing statistics
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMED
@@ -20839,16 +20833,13 @@ SCIP_RETCODE SCIPprintStatusStatistics(
  *       - \ref SCIP_STAGE_SOLVED
  */
 EXTERN
-SCIP_RETCODE SCIPprintTimingStatistics(
+void SCIPprintTimingStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    );
 
 /** outputs statistics for original problem
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMED
@@ -20860,16 +20851,13 @@ SCIP_RETCODE SCIPprintTimingStatistics(
  *       - \ref SCIP_STAGE_SOLVED
  */
 EXTERN
-SCIP_RETCODE SCIPprintOrigProblemStatistics(
+void SCIPprintOrigProblemStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
 /** outputs statistics for transformed problem
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMED
@@ -20881,16 +20869,13 @@ SCIP_RETCODE SCIPprintOrigProblemStatistics(
  *       - \ref SCIP_STAGE_SOLVED
  */
 EXTERN
-SCIP_RETCODE SCIPprintTransProblemStatistics(
+void SCIPprintTransProblemStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    );
 
 /** outputs presolver statistics
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
@@ -20901,16 +20886,13 @@ SCIP_RETCODE SCIPprintTransProblemStatistics(
  *       - \ref SCIP_STAGE_SOLVED
  */
 EXTERN
-SCIP_RETCODE SCIPprintPresolverStatistics(
+void SCIPprintPresolverStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    );
 
 /** outputs constraint statistics
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
@@ -20921,16 +20903,13 @@ SCIP_RETCODE SCIPprintPresolverStatistics(
  *       - \ref SCIP_STAGE_SOLVED
  */
 EXTERN
-SCIP_RETCODE SCIPprintConstraintStatistics(
+void SCIPprintConstraintStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    );
 
 /** outputs constraint timing statistics
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
@@ -20941,16 +20920,13 @@ SCIP_RETCODE SCIPprintConstraintStatistics(
  *       - \ref SCIP_STAGE_SOLVED
  */
 EXTERN
-SCIP_RETCODE SCIPprintConstraintTimingStatistics(
+void SCIPprintConstraintTimingStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    );
 
 /** outputs propagator statistics
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
@@ -20961,16 +20937,13 @@ SCIP_RETCODE SCIPprintConstraintTimingStatistics(
  *       - \ref SCIP_STAGE_SOLVED
  */
 EXTERN
-SCIP_RETCODE SCIPprintPropagatorStatistics(
+void SCIPprintPropagatorStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    );
 
 /** outputs conflict statistics
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
@@ -20981,61 +20954,49 @@ SCIP_RETCODE SCIPprintPropagatorStatistics(
  *       - \ref SCIP_STAGE_SOLVED
  */
 EXTERN
-SCIP_RETCODE SCIPprintConflictStatistics(
+void SCIPprintConflictStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    );
 
 /** outputs separator statistics
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
 EXTERN
-SCIP_RETCODE SCIPprintSeparatorStatistics(
+void SCIPprintSeparatorStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    );
 
 /** outputs pricer statistics
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
 EXTERN
-SCIP_RETCODE SCIPprintPricerStatistics(
+void SCIPprintPricerStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    );
 
 /** outputs branching rule statistics
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
 EXTERN
-SCIP_RETCODE SCIPprintBranchruleStatistics(
+void SCIPprintBranchruleStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    );
 
 /** outputs heuristics statistics
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_EXITPRESOLVE
@@ -21044,16 +21005,13 @@ SCIP_RETCODE SCIPprintBranchruleStatistics(
  *       - \ref SCIP_STAGE_SOLVED
  */
 EXTERN
-SCIP_RETCODE SCIPprintHeuristicStatistics(
+void SCIPprintHeuristicStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    );
 
 /** outputs compression statistics
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_EXITPRESOLVE
@@ -21062,90 +21020,72 @@ SCIP_RETCODE SCIPprintHeuristicStatistics(
  *       - \ref SCIP_STAGE_SOLVED
  */
 EXTERN
-SCIP_RETCODE SCIPprintCompressionStatistics(
+void SCIPprintCompressionStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    );
 
 /** outputs LP statistics
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
 EXTERN
-SCIP_RETCODE SCIPprintLPStatistics(
+void SCIPprintLPStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    );
 
 /** outputs NLP statistics
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
 EXTERN
-SCIP_RETCODE SCIPprintNLPStatistics(
+void SCIPprintNLPStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    );
 
 /** outputs relaxator statistics
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
 EXTERN
-SCIP_RETCODE SCIPprintRelaxatorStatistics(
+void SCIPprintRelaxatorStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    );
 
 /** outputs tree statistics
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
 EXTERN
-SCIP_RETCODE SCIPprintTreeStatistics(
+void SCIPprintTreeStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    );
 
 /** outputs root statistics
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
 EXTERN
-SCIP_RETCODE SCIPprintRootStatistics(
+void SCIPprintRootStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    );
 
 /** outputs solution statistics
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PRESOLVING
@@ -21155,15 +21095,12 @@ SCIP_RETCODE SCIPprintRootStatistics(
  *       - \ref SCIP_STAGE_SOLVED
  */
 EXTERN
-SCIP_RETCODE SCIPprintSolutionStatistics(
+void SCIPprintSolutionStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    );
 
 /** outputs concurrent solver statistics
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_TRANSFORMED
@@ -21175,7 +21112,7 @@ SCIP_RETCODE SCIPprintSolutionStatistics(
  *       - \ref SCIP_STAGE_SOLVED
  */
 EXTERN
-SCIP_RETCODE SCIPprintConcsolverStatistics(
+void SCIPprintConcsolverStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    );

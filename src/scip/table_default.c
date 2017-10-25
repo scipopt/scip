@@ -153,7 +153,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputStatus)
    assert(scip != NULL);
    assert(table != NULL);
 
-   SCIP_CALL( SCIPprintStatusStatistics(scip, file) );
+   SCIPprintStatusStatistics(scip, file);
 
    return SCIP_OKAY;
 }
@@ -165,7 +165,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputTiming)
    assert(scip != NULL);
    assert(table != NULL);
 
-   SCIP_CALL( SCIPprintTimingStatistics(scip, file) );
+   SCIPprintTimingStatistics(scip, file);
 
    return SCIP_OKAY;
 }
@@ -177,7 +177,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputOrigProb)
    assert(scip != NULL);
    assert(table != NULL);
 
-   SCIP_CALL( SCIPprintOrigProblemStatistics(scip, file) );
+   SCIPprintOrigProblemStatistics(scip, file);
 
    return SCIP_OKAY;
 }
@@ -189,7 +189,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputTransProb)
    assert(scip != NULL);
    assert(table != NULL);
 
-   SCIP_CALL( SCIPprintTransProblemStatistics(scip, file) );
+   SCIPprintTransProblemStatistics(scip, file);
 
    return SCIP_OKAY;
 }
@@ -201,7 +201,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputPresol)
    assert(scip != NULL);
    assert(table != NULL);
 
-   SCIP_CALL( SCIPprintPresolverStatistics(scip, file) );
+   SCIPprintPresolverStatistics(scip, file);
 
    return SCIP_OKAY;
 }
@@ -213,7 +213,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputCons)
    assert(scip != NULL);
    assert(table != NULL);
 
-   SCIP_CALL( SCIPprintConstraintStatistics(scip, file) );
+   SCIPprintConstraintStatistics(scip, file);
 
    return SCIP_OKAY;
 }
@@ -225,7 +225,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputConstiming)
    assert(scip != NULL);
    assert(table != NULL);
 
-   SCIP_CALL( SCIPprintConstraintTimingStatistics(scip, file) );
+   SCIPprintConstraintTimingStatistics(scip, file);
 
    return SCIP_OKAY;
 }
@@ -237,7 +237,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputProp)
    assert(scip != NULL);
    assert(table != NULL);
 
-   SCIP_CALL( SCIPprintPropagatorStatistics(scip, file) );
+   SCIPprintPropagatorStatistics(scip, file);
 
    return SCIP_OKAY;
 }
@@ -249,7 +249,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputConflict)
    assert(scip != NULL);
    assert(table != NULL);
 
-   SCIP_CALL( SCIPprintConflictStatistics(scip, file) );
+   SCIPprintConflictStatistics(scip, file);
 
    return SCIP_OKAY;
 }
@@ -261,7 +261,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputSepa)
    assert(scip != NULL);
    assert(table != NULL);
 
-   SCIP_CALL( SCIPprintSeparatorStatistics(scip, file) );
+   SCIPprintSeparatorStatistics(scip, file);
 
    return SCIP_OKAY;
 }
@@ -273,7 +273,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputPricer)
    assert(scip != NULL);
    assert(table != NULL);
 
-   SCIP_CALL( SCIPprintPricerStatistics(scip, file) );
+   SCIPprintPricerStatistics(scip, file);
 
    return SCIP_OKAY;
 }
@@ -285,7 +285,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputBranch)
    assert(scip != NULL);
    assert(table != NULL);
 
-   SCIP_CALL( SCIPprintBranchruleStatistics(scip, file) );
+   SCIPprintBranchruleStatistics(scip, file);
 
    return SCIP_OKAY;
 }
@@ -297,7 +297,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputHeur)
    assert(scip != NULL);
    assert(table != NULL);
 
-   SCIP_CALL( SCIPprintHeuristicStatistics(scip, file) );
+   SCIPprintHeuristicStatistics(scip, file);
 
    return SCIP_OKAY;
 }
@@ -309,7 +309,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputCompression)
    assert(scip != NULL);
    assert(table != NULL);
 
-   SCIP_CALL( SCIPprintCompressionStatistics(scip, file) );
+   SCIPprintCompressionStatistics(scip, file);
 
    return SCIP_OKAY;
 }
@@ -321,7 +321,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputLP)
    assert(scip != NULL);
    assert(table != NULL);
 
-   SCIP_CALL( SCIPprintLPStatistics(scip, file) );
+   SCIPprintLPStatistics(scip, file);
 
    return SCIP_OKAY;
 }
@@ -333,7 +333,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputNLP)
    assert(scip != NULL);
    assert(table != NULL);
 
-   SCIP_CALL( SCIPprintNLPStatistics(scip, file) );
+   SCIPprintNLPStatistics(scip, file);
 
    return SCIP_OKAY;
 }
@@ -345,7 +345,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputRelax)
    assert(scip != NULL);
    assert(table != NULL);
 
-   SCIP_CALL( SCIPprintRelaxatorStatistics(scip, file) );
+   SCIPprintRelaxatorStatistics(scip, file);
 
    return SCIP_OKAY;
 }
@@ -357,7 +357,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputTree)
    assert(scip != NULL);
    assert(table != NULL);
 
-   SCIP_CALL( SCIPprintTreeStatistics(scip, file) );
+   SCIPprintTreeStatistics(scip, file);
 
    return SCIP_OKAY;
 }
@@ -369,7 +369,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputRoot)
    assert(scip != NULL);
    assert(table != NULL);
 
-   SCIP_CALL( SCIPprintRootStatistics(scip, file) );
+   SCIPprintRootStatistics(scip, file);
 
    return SCIP_OKAY;
 }
@@ -381,7 +381,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputSol)
    assert(scip != NULL);
    assert(table != NULL);
 
-   SCIP_CALL( SCIPprintSolutionStatistics(scip, file) );
+   SCIPprintSolutionStatistics(scip, file);
 
    return SCIP_OKAY;
 }
@@ -393,7 +393,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputConc)
    assert(scip != NULL);
    assert(table != NULL);
 
-   SCIP_CALL( SCIPprintConcsolverStatistics(scip, file) );
+   SCIPprintConcsolverStatistics(scip, file);
 
    return SCIP_OKAY;
 }
