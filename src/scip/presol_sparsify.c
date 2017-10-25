@@ -157,11 +157,11 @@ SCIP_RETCODE cancelRow(
 
    cancelrowlen = SCIPmatrixGetRowNNonzs(matrix, rowidx);
 
-   SCIPduplicateBufferArray(scip, &cancelrowinds, SCIPmatrixGetRowIdxPtr(matrix, rowidx), cancelrowlen);
-   SCIPduplicateBufferArray(scip, &cancelrowvals, SCIPmatrixGetRowValPtr(matrix, rowidx), cancelrowlen);
-   SCIPallocBufferArray(scip, &tmpinds, cancelrowlen);
-   SCIPallocBufferArray(scip, &tmpvals, cancelrowlen);
-   SCIPallocBufferArray(scip, &locks, cancelrowlen);
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &cancelrowinds, SCIPmatrixGetRowIdxPtr(matrix, rowidx), cancelrowlen) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &cancelrowvals, SCIPmatrixGetRowValPtr(matrix, rowidx), cancelrowlen) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &tmpinds, cancelrowlen) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &tmpvals, cancelrowlen) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &locks, cancelrowlen) );
 
    cancellhs = SCIPmatrixGetRowLhs(matrix, rowidx);
    cancelrhs = SCIPmatrixGetRowRhs(matrix, rowidx);
@@ -236,7 +236,7 @@ SCIP_RETCODE cancelRow(
                rowvarpair.varcoef2 = cancelrowvals[i1];
             }
 
-            eqrowvarpair = SCIPhashtableRetrieve(pairtable, (void*) &rowvarpair);
+            eqrowvarpair = (ROWVARPAIR*)SCIPhashtableRetrieve(pairtable, (void*) &rowvarpair);
             (*nretrieves)++;
 
             if( eqrowvarpair == NULL || eqrowvarpair->rowindex == rowidx )
@@ -450,7 +450,7 @@ SCIP_RETCODE cancelRow(
 
       int i;
 
-      SCIPallocBufferArray(scip, &consvars, cancelrowlen);
+      SCIP_CALL( SCIPallocBufferArray(scip, &consvars, cancelrowlen) );
 
       for( i = 0; i < cancelrowlen; ++i )
          consvars[i] = SCIPmatrixGetVar(matrix, cancelrowinds[i]);
@@ -541,8 +541,8 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
          SCIPsortIntReal(rowpnt, valpnt, SCIPmatrixGetRowNNonzs(matrix, i));
       }
 
-      SCIPallocBufferArray(scip, &locks, SCIPmatrixGetNColumns(matrix));
-      SCIPallocBufferArray(scip, &perm, SCIPmatrixGetNColumns(matrix));
+      SCIP_CALL( SCIPallocBufferArray(scip, &locks, SCIPmatrixGetNColumns(matrix)) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &perm, SCIPmatrixGetNColumns(matrix)) );
 
       /* loop over all rows and create var pairs */
       numcancel = 0;
@@ -587,7 +587,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
             if( nvarpairs + npairs > varpairssize )
             {
                int newsize = SCIPcalcMemGrowSize(scip, nvarpairs + npairs);
-               SCIPreallocBufferArray(scip, &varpairs, newsize);
+               SCIP_CALL( SCIPreallocBufferArray(scip, &varpairs, newsize) );
                varpairssize = newsize;
             }
 
@@ -627,7 +627,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       {
          ROWVARPAIR* othervarpair;
 
-         othervarpair = SCIPhashtableRetrieve(pairtable, (void*) &varpairs[r]);
+         othervarpair = (ROWVARPAIR*)SCIPhashtableRetrieve(pairtable, (void*) &varpairs[r]);
 
          if( othervarpair != NULL && SCIPmatrixGetRowNNonzs(matrix, othervarpair->rowindex) <= SCIPmatrixGetRowNNonzs(matrix, varpairs[r].rowindex) )
             continue;
@@ -667,7 +667,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       }
 
       /* loop over the rows and cancel non-zeros until maximum number of retrieves is reached */
-      maxretrieves = presoldata->maxretrievefac * nrows;
+      maxretrieves = (SCIP_Longint)(presoldata->maxretrievefac * (SCIP_Real)nrows);
       for( r = 0; r < nrows && presoldata->nretrieves <= maxretrieves; r++ )
       {
          int rowidx;
@@ -691,7 +691,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       /* update result */
       if( numcancel > 0 )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "cancelled %.1f%%(%i) non-zeros\n", 100 * numcancel / (SCIP_Real)SCIPmatrixGetNNonzs(matrix), numcancel);
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "cancelled %.1f%%(%i) non-zeros\n", 100.0 * (SCIP_Real)numcancel / (SCIP_Real)SCIPmatrixGetNNonzs(matrix), numcancel);
          *result = SCIP_SUCCESS;
       }
    }
