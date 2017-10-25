@@ -35,7 +35,7 @@
 extern "C" {
 #endif
 
-/**@addtogroup PublicDisplayMethods
+/**@addtogroup PublicTableMethods
  *
  * @{
  */
