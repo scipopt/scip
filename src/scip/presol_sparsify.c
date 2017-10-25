@@ -206,9 +206,9 @@ SCIP_RETCODE cancelRow(
          {
             int a,b;
             int ncancel;
-            unsigned int ncontfillin;
-            unsigned int nintfillin;
-            unsigned int nbinfillin;
+            int ncontfillin;
+            int nintfillin;
+            int nbinfillin;
             int nfillin;
             int eqrowlen;
             ROWVARPAIR* eqrowvarpair;
