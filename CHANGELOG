@@ -24,6 +24,7 @@ parameters:
 - new parameters: beforepresol, maxlpiter, and maxcontvars in heur_completesol.c
 - new parameter: lp/refactorinterval to change the refactorization interval of the LP solver
 - new parameter: misc/usesymmetry to determine whether symmetry handling should be used
+- new value 3 for parameter "lp/solutionpolishing" to enable LP polishing only during probing and diving mode
 
 interface:
 - new interface methods to create and use bandit algorithms implemented as SCIP core plugins --
