@@ -780,7 +780,7 @@ SCIP_DECL_CONSEXPR_EXPRPARSE(parseSin)
    SCIP_CALL( SCIPcreateConsExprExprSin(scip, consexprhdlr, expr, childexpr) );
    assert(*expr != NULL);
 
-   /* release child expression since it has been captured by the absolute expression */
+   /* release child expression since it has been captured by the sine expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &childexpr) );
 
    *success = TRUE;
@@ -1092,6 +1092,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSin(
 {
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
 
+   /* include expression handler */
    SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC,
          EXPRHDLR_PRECEDENCE, evalSin, NULL) );
    assert(exprhdlr != NULL);
