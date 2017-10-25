@@ -89,7 +89,7 @@ typedef struct RowVarPair ROWVARPAIR;
 /** returns TRUE iff both keys are equal */
 static
 SCIP_DECL_HASHKEYEQ(varPairsEqual)
-{
+{  /*lint --e{715}*/
    ROWVARPAIR* varpair1;
    ROWVARPAIR* varpair2;
    SCIP_Real ratio1;
@@ -116,7 +116,7 @@ SCIP_DECL_HASHKEYEQ(varPairsEqual)
 /** returns the hash value of the key */
 static
 SCIP_DECL_HASHKEYVAL(varPairHashval)
-{
+{  /*lint --e{715}*/
    ROWVARPAIR* varpair;
 
    varpair = (ROWVARPAIR*) key;
@@ -149,15 +149,19 @@ SCIP_RETCODE cancelRow(
    int* locks;
    SCIP_Real* tmpvals;
    int cancelrowlen;
+   int* rowidxptr;
+   SCIP_Real* rowvalptr;
    int nchgcoef;
    SCIP_Bool rowiseq;
 
    rowiseq = SCIPisEQ(scip, SCIPmatrixGetRowLhs(matrix, rowidx), SCIPmatrixGetRowRhs(matrix, rowidx));
 
    cancelrowlen = SCIPmatrixGetRowNNonzs(matrix, rowidx);
+   rowidxptr = SCIPmatrixGetRowIdxPtr(matrix, rowidx);
+   rowvalptr = SCIPmatrixGetRowValPtr(matrix, rowidx);
 
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &cancelrowinds, SCIPmatrixGetRowIdxPtr(matrix, rowidx), cancelrowlen) );
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &cancelrowvals, SCIPmatrixGetRowValPtr(matrix, rowidx), cancelrowlen) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &cancelrowinds, rowidxptr, cancelrowlen) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &cancelrowvals, rowvalptr, cancelrowlen) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpinds, cancelrowlen) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpvals, cancelrowlen) );
    SCIP_CALL( SCIPallocBufferArray(scip, &locks, cancelrowlen) );
@@ -166,7 +170,7 @@ SCIP_RETCODE cancelRow(
    cancelrhs = SCIPmatrixGetRowRhs(matrix, rowidx);
 
    nchgcoef = 0;
-   while( TRUE )
+   while( TRUE ) /*lint !e716 */
    {
       SCIP_Real bestscale;
       int bestcand;
@@ -595,7 +599,9 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
                for( j = i + 1; j < nnonz; ++j )
                {
                   int i1,i2;
+
                   assert(nvarpairs < varpairssize);
+                  assert(varpairs != NULL);
 
                   i1 = perm[i];
                   i2 = perm[j];
