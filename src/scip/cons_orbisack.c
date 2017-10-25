@@ -1486,13 +1486,8 @@ SCIP_DECL_CONSPRESOL(consPresolOrbisack)
       SCIP_Bool infeasible = FALSE;
       SCIP_Bool found = FALSE;
       int curngen = 0;
-      SCIP_CONSDATA* consdata;
 
       assert( conss[c] != NULL );
-
-      consdata = SCIPconsGetData(conss[c]);
-      assert( consdata != NULL );
-
       SCIP_CALL( propVariables(scip, conss[c], &infeasible, &found, &curngen) );
 
       if ( infeasible )
@@ -1952,7 +1947,7 @@ SCIP_RETCODE SCIPcreateConsOrbisack(
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, nrows) );
       for (i = 0; i < nrows; ++i)
       {
-         SCIP_CALL( SCIPallocBufferArray(scip, &vars[i], 2) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &vars[i], 2) ); /*lint !e866*/
          vars[i][0] = vars1[i];
          vars[i][1] = vars2[i];
       }

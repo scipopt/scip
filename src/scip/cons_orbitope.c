@@ -1383,9 +1383,10 @@ SCIP_RETCODE propagateFullOrbitope(
 
                   for (i = 0; i <= currow; ++i)
                   {
-                     for (j = 0; j <= l; ++j)
+                     int s;
+                     for (s = 0; s <= l; ++s)
                      {
-                        SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
+                        SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][s]) );
                      }
                   }
 
@@ -1796,7 +1797,7 @@ SCIP_RETCODE resolvePropagationFullOrbitopes(
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
    )
-{
+{  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
    SCIP_VAR*** vars;
    int nrows;

@@ -289,7 +289,7 @@ SCIP_RETCODE computeComponents(
    SCIP_PRESOLDATA*      presoldata          /**< data of symmetry breaking presolver */
    )
 {
-   SCIP_DISJOINTSET* componentstoperm;
+   SCIP_DISJOINTSET* componentstoperm = NULL;
    SCIP_Bool startchanged;
    int** perms;
    int npermsincomponent;
@@ -391,6 +391,7 @@ SCIP_RETCODE computeComponents(
       {
          startchanged = FALSE;
          npermsincomponent = 0;
+         assert( componentstoperm != NULL );
          curcomponent = SCIPdisjointsetFind(componentstoperm, start);
 
          /* find number of permutations in current component and detect first perm in another permutation */
@@ -900,7 +901,7 @@ SCIP_RETCODE detectOrbitopes(
        * column 0 */
       coltoextend = 0;
       for (j = 0; j < npermsincomponent[i]; ++j)
-      {  /*lint --e{850}*/
+      {  /* lint --e{850} */
          SCIP_Bool success = FALSE;
          SCIP_Bool infeasible = FALSE;
 
@@ -928,12 +929,12 @@ SCIP_RETCODE detectOrbitopes(
          }
       }
 
-      if ( ! isorbitope )
+      if ( ! isorbitope ) /*lint !e850*/
          goto FREEDATASTRUCTURES;
 
       coltoextend = 1;
       for (j = 0; j < npermsincomponent[i]; ++j)
-      {  /*lint --e{850}*/
+      {  /*lint --e(850)*/
          SCIP_Bool success = FALSE;
          SCIP_Bool infeasible = FALSE;
 
@@ -962,7 +963,7 @@ SCIP_RETCODE detectOrbitopes(
          }
       }
 
-      if ( nusedperms < npermsincomponent[i] )
+      if ( nusedperms < npermsincomponent[i] ) /*lint !e850*/
          isorbitope = FALSE;
 
       if ( ! isorbitope )
