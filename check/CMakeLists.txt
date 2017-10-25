@@ -59,7 +59,7 @@ set(settings_MIP
     "setppclifting"
     "xorsepaparity"
 #    "cloud"
-#    "feaspump20"
+    "feaspump20"
     "indicatoralterlp"
     "leastinf"
     "presolfast"
