@@ -65,12 +65,14 @@ public:
       SCIP*              scip,               /**< SCIP data structure */
       const char*        name,               /**< name of statistics table */
       const char*        desc,               /**< description of statistics table */
-      int                position            /**< position of statistics table */
+      int                position,           /**< position of statistics table */
+      SCIP_STAGE         earlieststage       /**< output of the statistics table is only printed from this stage onwards */
       )
       : scip_(scip),
         scip_name_(0),
         scip_desc_(0),
-        scip_position_(position)
+        scip_position_(position),
+        scip_earlieststage_(earlieststage)
    {
       /* the macro SCIPduplicateMemoryArray does not need the first argument: */
       SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_name_, name, std::strlen(name)+1) );
@@ -84,7 +86,6 @@ public:
       /*lint --e{64}*/
       SCIPfreeMemoryArray(scip_, &scip_name_);
       SCIPfreeMemoryArray(scip_, &scip_desc_);
-      SCIPfreeMemoryArray(scip_, &scip_header_);
    }
 
    /** destructor of statistics table to free user data (called when SCIP is exiting)
