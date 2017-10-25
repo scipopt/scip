@@ -549,14 +549,20 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       /* collect equalities and their number of non-zeros */
       for( r = 0; r < nrows; r++ )
       {
-         if( SCIPisEQ(scip, SCIPmatrixGetRowRhs(matrix,r), SCIPmatrixGetRowLhs(matrix,r)) )
+         int nnonz;
+
+         nnonz = SCIPmatrixGetRowNNonzs(matrix, r);
+
+         /* consider equalities with support at most maxnonzeros; skip singleton equalities, because these are faster
+          * processed by trivial presolving
+          */
+         if( nnonz >= 2 && (presoldata->maxnonzeros < 0 || nnonz <= presoldata->maxnonzeros)
+            && SCIPisEQ(scip, SCIPmatrixGetRowRhs(matrix,r), SCIPmatrixGetRowLhs(matrix,r)) )
          {
             int* rowinds;
             SCIP_Real* rowvals;
-            int nnonz;
             int npairs;
 
-            nnonz = SCIPmatrixGetRowNNonzs(matrix, r);
             rowinds = SCIPmatrixGetRowIdxPtr(matrix, r);
             rowvals = SCIPmatrixGetRowValPtr(matrix, r);
 
