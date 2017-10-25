@@ -4778,13 +4778,13 @@ SCIP_TABLE* SCIPfindTable(
    const char*           name                /**< name of statistics table */
    );
 
-/** returns the array of currently available statistics table */
+/** returns the array of currently available statistics tables */
 EXTERN
 SCIP_TABLE** SCIPgetTables(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns the number of currently available statistics table */
+/** returns the number of currently available statistics tables */
 EXTERN
 int SCIPgetNTables(
    SCIP*                 scip                /**< SCIP data structure */

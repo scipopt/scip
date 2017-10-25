@@ -11,6 +11,7 @@ features:
 - new numerical solution violations get printed when checksol is called
 - added analysis of the conflict graph which identifies possible aggregations via the search for
   strongly connected components and may detect infeasible assignments on the way
+- added new plugin type "table" for adding user-defined statistics tables
 
 parameters:
 - new parameter misc/debugsol to specify a debug solution that should be checked during the solve
