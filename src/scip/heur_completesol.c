@@ -899,6 +899,15 @@ SCIP_RETCODE applyCompletesol(
       SCIPdebugMsg(scip, "presolved instance has too many continuous variables (maxcontvars: %d)\n", heurdata->maxcontvars);
       goto TERMINATE;
    }
+
+   /* set node limit of 1 if the presolved problem is an LP, otherwise we would start branching if an LP iteration
+    * limit was set by the user.
+    */
+   if( SCIPgetNContVars(subscip) == SCIPgetNVars(subscip) )
+   {
+      SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 1) );
+   }
+
    SCIP_CALL_ABORT( SCIPsolve(subscip) );
 
    SCIP_CALL( SCIPdropEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, -1) );
