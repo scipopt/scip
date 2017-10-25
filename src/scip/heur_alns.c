@@ -77,7 +77,7 @@
 #define DEFAULT_SUBSCIPRANDSEEDS FALSE /**< should random seeds of sub-SCIPs be altered to increase diversification? */
 #define DEFAULT_ALPHA          0.2  /**< parameter to increase the confidence width in UCB */
 #define DEFAULT_REWARDBASELINE 0.5  /**< the reward baseline to separate successful and failed calls */
-#define DEFAULT_FIXTOL         0.0  /**< tolerance by which the fixing rate may be missed/exceeded without generic (unfixing) */
+#define DEFAULT_FIXTOL         0.1  /**< tolerance by which the fixing rate may be missed/exceeded without generic (unfixing) */
 #define DEFAULT_USELOCALREDCOST FALSE /**< should local reduced costs be used for generic (un)fixing? */
 
 /*
