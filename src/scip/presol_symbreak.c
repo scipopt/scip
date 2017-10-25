@@ -1161,7 +1161,6 @@ SCIP_DECL_PRESOLFREE(presolFreeSymbreak)
 static
 SCIP_DECL_PRESOLINIT(presolInitSymbreak)
 {
-#if 0
    SCIP_PRESOLDATA* presoldata;
 
    assert( scip != NULL );
@@ -1182,7 +1181,6 @@ SCIP_DECL_PRESOLINIT(presolInitSymbreak)
       SYMsetSpecRequirement(presoldata->symmetrypresol, SYM_SPEC_INTEGER);
       SYMsetSpecRequirement(presoldata->symmetrypresol, SYM_SPEC_REAL);
    }
-#endif
 
    return SCIP_OKAY;
 }
