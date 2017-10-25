@@ -1123,7 +1123,9 @@ SCIP_RETCODE orbisackUpgrade(
    }
 
    /* if permutation can be upgraded to an orbisack */
-   if ( *success )
+   if ( nrows == 0 )
+      *success = FALSE;
+   else if ( *success )
    {
       SCIP_CALL( SCIPcreateConsOrbisack(scip, cons, "orbisack", vars1, vars2, nrows, FALSE, FALSE,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
@@ -2071,6 +2073,7 @@ SCIP_RETCODE SCIPcreateConsSymresack(
    int*                  perm,               /**< permutation */
    SCIP_VAR**            vars,               /**< variables */
    int                   nvars,              /**< number of variables in problem */
+   SCIP_Bool*            createdcons,        /**< pointer to store whether constraint was created */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -2105,6 +2108,7 @@ SCIP_RETCODE SCIPcreateConsSymresack(
    assert( nvars > 0 );
 
    success = FALSE;
+   *createdcons = TRUE;
 
    /* find the symresack constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -2134,8 +2138,17 @@ SCIP_RETCODE SCIPcreateConsSymresack(
    SCIP_CALL( consdataCreate(scip, &consdata, vars, nvars, perm) );
 
    /* create constraint */
-   SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate && (! consdata->ppupgrade), enforce, check, propagate,
-         local, modifiable, dynamic, removable, stickingatnode) );
+   if ( consdata->nvars > 0 )
+   {
+      SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate && (! consdata->ppupgrade), enforce, check, propagate,
+            local, modifiable, dynamic, removable, stickingatnode) );
+   }
+   else
+   {
+      SCIPdebugMsg(scip, "Symresack constraint could not be added since symmetry acts not on binary variables.\n");
+
+      *createdcons = FALSE;
+   }
 
    return SCIP_OKAY;
 }
@@ -2154,10 +2167,11 @@ SCIP_RETCODE SCIPcreateConsBasicSymresack(
    const char*           name,               /**< name of constraint */
    int*                  perm,               /**< permutation */
    SCIP_VAR**            vars,               /**< variables */
-   int                   nvars               /**< number of variables in problem */
+   int                   nvars,              /**< number of variables in problem */
+   SCIP_Bool*            createdcons         /**< pointer to store whether constraint was created */
    )
 {
-   SCIP_CALL( SCIPcreateConsSymresack(scip, cons, name, perm, vars, nvars,
+   SCIP_CALL( SCIPcreateConsSymresack(scip, cons, name, perm, vars, nvars, createdcons,
          TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIP_OKAY;
