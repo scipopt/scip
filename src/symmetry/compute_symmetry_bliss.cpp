@@ -162,7 +162,7 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
       ninternodes = matrixdata->npermvars;
 
    int* internodes;
-   SCIP_CALL( SCIPallocBufferArray(scip, &internodes, ninternodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &internodes, ninternodes) ); /*lint !e530*/
    for (int l = 0; l < ninternodes; ++l)
       internodes[l] = -1;
 
@@ -232,14 +232,14 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
             return SCIP_OKAY;
          }
 
-         G->add_edge((unsigned) varnode, internodes[varrhsidx]);
-         G->add_edge((unsigned) rhsnode, internodes[varrhsidx]);
+         G->add_edge((unsigned) varnode, (unsigned) internodes[varrhsidx]);
+         G->add_edge((unsigned) rhsnode, (unsigned) internodes[varrhsidx]);
          nedges += 2;
       }
    }
    SCIPfreeBufferArray(scip, &internodes);
 
-   success = TRUE;
+   success = TRUE; /*lint !e838*/
 
    return SCIP_OKAY;
 }
