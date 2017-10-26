@@ -152,6 +152,7 @@ SCIP_RETCODE cancelRow(
    int* rowidxptr;
    SCIP_Real* rowvalptr;
    int nchgcoef;
+   int naddedretrieves;
    SCIP_Bool rowiseq;
 
    rowiseq = SCIPisEQ(scip, SCIPmatrixGetRowLhs(matrix, rowidx), SCIPmatrixGetRowRhs(matrix, rowidx));
@@ -170,6 +171,7 @@ SCIP_RETCODE cancelRow(
    cancelrhs = SCIPmatrixGetRowRhs(matrix, rowidx);
 
    nchgcoef = 0;
+   naddedretrieves = 0;
    while( TRUE ) /*lint !e716 */
    {
       SCIP_Real bestscale;
@@ -240,7 +242,7 @@ SCIP_RETCODE cancelRow(
             }
 
             eqrowvarpair = (ROWVARPAIR*)SCIPhashtableRetrieve(pairtable, (void*) &rowvarpair);
-            (*nretrieves)++;
+            naddedretrieves++;
 
             if( eqrowvarpair == NULL || eqrowvarpair->rowindex == rowidx )
                continue;
@@ -480,6 +482,9 @@ SCIP_RETCODE cancelRow(
 
       SCIPfreeBufferArray(scip, &consvars);
    }
+   /* if we were not successful, increase useless hashtable retrieves counter */
+   else
+      (*nretrieves) += naddedretrieves;
 
    SCIPfreeBufferArray(scip, &locks);
    SCIPfreeBufferArray(scip, &tmpvals);
