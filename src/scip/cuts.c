@@ -371,6 +371,10 @@ SCIP_Bool removeZerosQuad(
          ++i;
    }
 
+   /* relax rhs to zero, if it's very close to */
+   if( QUAD_ROUND(*cutrhs) < 0.0 && QUAD_ROUND(*cutrhs) >= SCIPepsilon(scip) )
+      QUAD_ASSIGN(*cutrhs, 0.0);
+
    return FALSE;
 }
 
@@ -437,6 +441,10 @@ SCIP_Bool removeZeros(
       else
          ++i;
    }
+
+   /* relax rhs to zero, if it's very close to */
+   if( QUAD_ROUND(*cutrhs) < 0.0 && QUAD_ROUND(*cutrhs) >= SCIPepsilon(scip) )
+      QUAD_ASSIGN(*cutrhs, 0.0);
 
    return FALSE;
 }
