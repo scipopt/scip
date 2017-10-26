@@ -778,6 +778,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
+   SCIP_Bool             copytables,         /**< should the statistics tables be copied */
    SCIP_Bool             copynlpis,          /**< should the NLP interfaces be copied */
    SCIP_Bool*            allvalid            /**< pointer to store whether all plugins were validly copied */
    )
@@ -945,6 +946,15 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       {
          /* @todo: the copying process of dialog handlers is currently not checked for consistency */
          SCIP_CALL( SCIPdialogCopyInclude(sourceset->dialogs[p], targetset) );
+      }
+   }
+
+   /* copy all table plugins */
+   if( copytables && sourceset->tables != NULL )
+   {
+      for( p = sourceset->ntables - 1; p >= 0; --p )
+      {
+         SCIP_CALL( SCIPtableCopyInclude(sourceset->tables[p], targetset) );
       }
    }
 
@@ -4788,6 +4798,12 @@ SCIP_RETCODE SCIPsetInitPlugins(
    }
    SCIP_CALL( SCIPdispAutoActivate(set) );
 
+   /* statistics tables */
+   for( i = 0; i < set->ntables; ++i )
+   {
+      SCIP_CALL( SCIPtableInit(set->tables[i], set) );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -4879,6 +4895,12 @@ SCIP_RETCODE SCIPsetExitPlugins(
    for( i = 0; i < set->ndisps; ++i )
    {
       SCIP_CALL( SCIPdispExit(set->disps[i], set) );
+   }
+
+   /* statistics tables */
+   for( i = 0; i < set->ntables; ++i )
+   {
+      SCIP_CALL( SCIPtableExit(set->tables[i], set) );
    }
 
    return SCIP_OKAY;
@@ -5026,6 +5048,12 @@ SCIP_RETCODE SCIPsetInitsolPlugins(
       SCIP_CALL( SCIPdispInitsol(set->disps[i], set) );
    }
 
+   /* statistics tables */
+   for( i = 0; i < set->ntables; ++i )
+   {
+      SCIP_CALL( SCIPtableInitsol(set->tables[i], set) );
+   }
+
    /* reset feasibility tolerance for relaxations */
    set->sepa_primfeastol = SCIP_INVALID;
 
@@ -5109,6 +5137,12 @@ SCIP_RETCODE SCIPsetExitsolPlugins(
    for( i = 0; i < set->ndisps; ++i )
    {
       SCIP_CALL( SCIPdispExitsol(set->disps[i], set) );
+   }
+
+   /* statistics tables */
+   for( i = 0; i < set->ntables; ++i )
+   {
+      SCIP_CALL( SCIPtableExitsol(set->tables[i], set) );
    }
 
    return SCIP_OKAY;
