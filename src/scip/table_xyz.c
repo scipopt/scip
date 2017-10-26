@@ -182,7 +182,7 @@ SCIP_RETCODE SCIPincludeTableXyz(
    /* TODO: (optional) create statistics table specific data here */
 
    /* include display column */
-   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME, TABLE_DESC, SCIP_TABLESTATUS_ON,
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME, TABLE_DESC, TRUE,
          tableCopyXyz, tableFreeXyz, tableInitXyz, tableExitXyz,
          tableInitsolXyz, tableExitsolXyz, tableOutputXyz,
          tabledata, TABLE_POSITION, TABLE_EARLIEST_STAGE) );
