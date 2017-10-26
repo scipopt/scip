@@ -1,0 +1,12 @@
+CPPFLAGS		=	$(CPPFLAGS) /D_WIN32
+CFLAGS			=	$(CFLAGS) /Zi /W2 /wd4001 /wd4127 /wd4206
+CXXFLAGS		=	$(CXXFLAGS) /Zi /W2 /wd4001 /wd4127 /wd4206
+
+!if "$(SHARED)" == "true"
+LIBRTLFLAG		=	/LDd
+BINRTLFLAG		=	/MTd
+CPPFLAGS		=	$(CPPFLAGS) /DEXTERN=__declspec(dllexport)
+!else
+LIBRTLFLAG		=	/MTd
+BINRTLFLAG		=	/MTd
+!endif
