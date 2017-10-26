@@ -5786,10 +5786,29 @@ SCIP_RETCODE deinitBilinearLP(
 }
 
 /** computes a valid inequality from the current LP relaxation for a bilinear term xy only involving x and y; the
- *  inequality is found by optimizing along the line connecting the points (xs,ys) and (xt,yt); the dual solution of
- *  optimal LP solution yields the desired inequality of the form:
+ *  inequality is found by optimizing along the line connecting the points (xs,ys) and (xt,yt) over the currently given
+ *  linear relaxation of the problem; this optimization problem is an LP
  *
- *     xcoef * x <= ycoef * y + constant
+ *  max lambda
+ *  s.t. Ax <= b
+ *       (x,y) = (xs,ys) + lambda ((xt,yt) - (xs,ys))
+ *       lambda in [0,1]
+ *
+ *  which is equivalent to
+ *
+ *  max x
+ *  s.t. (1) Ax <= b
+ *       (2) (x - xs) / (xt - xs) = (y - ys) / (yt - ys)
+ *
+ *  Let x* be the optimal primal and (mu,theta) be the optimal dual solution of this LP. The KKT conditions imply that
+ *  the aggregation of the linear constraints mu*Ax <= mu*b can be written as
+ *
+ *  x * (1 - theta) / (xt - xs) + y * theta / (yt - ys) = mu * Ax <= mu * b
+ *
+ *  <=> alpha * x + beta * y <= mu * b = alpha * (x*) + beta * (y*)
+ *
+ *  which is a valid inequality in the (x,y)-space; in order to avoid numerical difficulties when (xs,ys) is too close
+ *  to (xt,yt), we scale constraint (1) by max{1,|xt-xs|,|yt-ys|} beforehand
  */
 static
 SCIP_RETCODE solveBilinearLP(
