@@ -1,25 +1,31 @@
 cmake_minimum_required(VERSION 3.0)
 
-project(ccscip)
+project(CycleClustering)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../src)
-link_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../lib)
+find_package(SCIP REQUIRED)
 
-set (SOURCE_FILES
-        src/main.c
-        src/spaplugins.c
-        src/sepa_partition.c
-        src/sepa_edge.c
-        src/sepa_subtour.c
-        src/heur_spagreedy.c
-        src/heur_fuzzyround.c
-        src/heur_spakerlin.c
-        src/branch_multinode.c
-        src/reader_spa.c
-        src/probdata_spa.c )
+include_directories(${SCIP_INCLUDE_DIRS})
 
-add_executable(ccscip
-        ${SOURCE_FILES}
-        )
+add_executable(cycleclustering
+    src/main.c
+    src/spaplugins.c
+    src/sepa_partition.c
+    src/sepa_edge.c
+    src/sepa_subtour.c
+    src/heur_spagreedy.c
+    src/heur_fuzzyround.c
+    src/heur_spakerlin.c
+    src/branch_multinode.c
+    src/reader_spa.c
+    src/probdata_spa.c
+)
 
-        target_link_libraries(ccscip libscip.so)
+target_link_libraries(cycleclustering ${SCIP_LIBRARIES} m)
+
+if( TARGET applications )
+    add_dependencies( applications ccscip )
+endif()
+
+add_subdirectory(check)
+
+enable_testing()
