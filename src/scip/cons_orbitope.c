@@ -1846,17 +1846,23 @@ SCIP_RETCODE resolvePropagationFullOrbitopes(
       SCIP_CALL( SCIPaddConflictLb(scip, vars[inferrow][infercol], bdchgidx) );
 
       *result = SCIP_SUCCESS;
+
+      return SCIP_OKAY;
    }
    else if ( SCIPvarGetUbAtIndex(infervar, bdchgidx, FALSE) > 0.5 &&  SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < 0.5 )
    {
+#ifndef NDEBUG
       SCIP_Bool success = FALSE;
+#endif
 
       /* find position of infervar in vars matrix (it has to be contained in inferrow behind infercol)*/
       for (k = infercol + 1; k < ncols; ++k)
       {
          if ( SCIPvarGetIndex(infervar) == SCIPvarGetIndex(vars[inferrow][k]) )
          {
+#ifndef NDEBUG
             success = TRUE;
+#endif
 
             SCIPdebugMsg(scip, " -> reason for fixing variable with index %d to 0 was the fixing of the upper left %dx%d-matrix and x[%d][%d] = 0.\n",
                SCIPvarGetIndex(infervar), inferrow - 1, k, inferrow, infercol);
@@ -1872,9 +1878,13 @@ SCIP_RETCODE resolvePropagationFullOrbitopes(
             SCIP_CALL( SCIPaddConflictUb(scip, vars[inferrow][infercol], bdchgidx) );
 
             *result = SCIP_SUCCESS;
+
+            return SCIP_OKAY;
          }
       }
+#ifndef NDEBUG
       assert( success );
+#endif
    }
 
    return SCIP_OKAY;
