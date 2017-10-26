@@ -14114,7 +14114,8 @@ SCIP_RETCODE initPresolve(
    /* retransform all existing solutions to original problem space, because the transformed problem space may
     * get modified in presolving and the solutions may become invalid for the transformed problem
     */
-   SCIP_CALL( SCIPprimalRetransformSolutions(scip->primal, scip->set, scip->stat, scip->origprob, scip->transprob) );
+   SCIP_CALL( SCIPprimalRetransformSolutions(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
+         scip->origprob, scip->transprob, scip->tree, scip->reopt, scip->lp) );
 
    /* reset statistics for presolving and current branch and bound run */
    SCIPstatResetPresolving(scip->stat, scip->set, scip->transprob, scip->origprob);
