@@ -5008,7 +5008,6 @@ SCIP_RETCODE checkFactorable(
 static
 SCIP_RETCODE computeViolation(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SOL*             sol,                /**< solution or NULL if LP solution should be used */
    SCIP_Bool*            solviolbounds       /**< buffer to store whether quadratic variables in solution are outside their bounds by more than feastol */
@@ -5195,7 +5194,6 @@ SCIP_RETCODE computeViolation(
 static
 SCIP_RETCODE computeViolations(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< number of constraints */
    SCIP_SOL*             sol,                /**< solution or NULL if LP solution should be used */
@@ -5224,7 +5222,7 @@ SCIP_RETCODE computeViolations(
       assert(conss != NULL);
       assert(conss[c] != NULL);
 
-      SCIP_CALL( computeViolation(scip, conshdlr, conss[c], sol, &solviolbounds1) );
+      SCIP_CALL( computeViolation(scip, conss[c], sol, &solviolbounds1) );
       *solviolbounds |= solviolbounds1;
 
       consdata = SCIPconsGetData(conss[c]);
@@ -10400,13 +10398,13 @@ SCIP_RETCODE proposeFeasibleSolution(
        */
       if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) )
       {
-         SCIP_CALL( computeViolation(scip, conshdlr, conss[c], newsol, &solviolbounds) );  /*lint !e613*/
+         SCIP_CALL( computeViolation(scip, conss[c], newsol, &solviolbounds) );  /*lint !e613*/
          assert(!solviolbounds);
          viol = consdata->lhs - consdata->activity;
       }
       else if( SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
       {
-         SCIP_CALL( computeViolation(scip, conshdlr, conss[c], newsol, &solviolbounds) );  /*lint !e613*/
+         SCIP_CALL( computeViolation(scip, conss[c], newsol, &solviolbounds) );  /*lint !e613*/
          assert(!solviolbounds);
          viol = consdata->rhs - consdata->activity;
       }
@@ -10534,7 +10532,7 @@ SCIP_RETCODE enforceConstraint(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIP_CALL( computeViolations(scip, conshdlr, conss, nconss, sol, &solviolbounds, &maxviolcon) );
+   SCIP_CALL( computeViolations(scip, conss, nconss, sol, &solviolbounds, &maxviolcon) );
 
    if( maxviolcon == NULL )
    {
@@ -11528,7 +11526,7 @@ SCIP_DECL_CONSSEPALP(consSepalpQuadratic)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIP_CALL( computeViolations(scip, conshdlr, conss, nconss, NULL, &solviolbounds, &maxviolcon) );
+   SCIP_CALL( computeViolations(scip, conss, nconss, NULL, &solviolbounds, &maxviolcon) );
 
    /* don't try to separate solutions that violate variable bounds */
    if( solviolbounds )
@@ -11681,7 +11679,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolQuadratic)
 
    *result = SCIP_DIDNOTFIND;
 
-   SCIP_CALL( computeViolations(scip, conshdlr, conss, nconss, sol, &solviolbounds, &maxviolcon) );
+   SCIP_CALL( computeViolations(scip, conss, nconss, sol, &solviolbounds, &maxviolcon) );
 
    /* don't separate solution that are outside variable bounds */
    if( solviolbounds )
@@ -11731,7 +11729,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsQuadratic)
    assert(scip != NULL);
    assert(conss != NULL || nconss == 0);
 
-   SCIP_CALL( computeViolations(scip, conshdlr, conss, nconss, NULL, &solviolbounds, &maxviolcon) );
+   SCIP_CALL( computeViolations(scip, conss, nconss, NULL, &solviolbounds, &maxviolcon) );
 
    /* pseudo solutions should be within bounds by definition */
    assert(!solviolbounds);
@@ -12448,7 +12446,7 @@ SCIP_DECL_CONSCHECK(consCheckQuadratic)
    for( c = 0; c < nconss; ++c )
    {
       assert(conss != NULL);
-      SCIP_CALL( computeViolation(scip, conshdlr, conss[c], sol, &solviolbounds) );
+      SCIP_CALL( computeViolation(scip, conss[c], sol, &solviolbounds) );
       assert(!solviolbounds);  /* see also issue #627 */
 
       consdata = SCIPconsGetData(conss[c]);
@@ -13944,7 +13942,6 @@ SCIP_RETCODE SCIPgetViolationQuadratic(
    SCIP_Real*            violation           /**< pointer to store violation of constraint */
    )
 {
-   SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
    SCIP_Bool solviolbounds;
 
@@ -13952,10 +13949,7 @@ SCIP_RETCODE SCIPgetViolationQuadratic(
    assert(cons != NULL);
    assert(violation != NULL);
 
-   conshdlr = SCIPconsGetHdlr(cons);
-   assert(conshdlr != NULL);
-
-   SCIP_CALL( computeViolation(scip, conshdlr, cons, sol, &solviolbounds) );
+   SCIP_CALL( computeViolation(scip, cons, sol, &solviolbounds) );
    /* we don't care here whether the solution violated variable bounds */
 
    consdata = SCIPconsGetData(cons);
@@ -14258,7 +14252,7 @@ SCIP_RETCODE SCIPgetFeasibilityQuadratic(
       SCIPABORT();
    }
 
-   SCIP_CALL( computeViolation(scip, SCIPconsGetHdlr(cons), cons, sol, &solviolbounds) );
+   SCIP_CALL( computeViolation(scip, cons, sol, &solviolbounds) );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -14300,7 +14294,7 @@ SCIP_RETCODE SCIPgetActivityQuadratic(
       SCIPABORT();
    }
 
-   SCIP_CALL( computeViolation(scip, SCIPconsGetHdlr(cons), cons, sol, &solviolbounds) );
+   SCIP_CALL( computeViolation(scip, cons, sol, &solviolbounds) );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
