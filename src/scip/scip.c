@@ -87,6 +87,7 @@
 #include "scip/cons.h"
 #include "scip/dialog.h"
 #include "scip/disp.h"
+#include "scip/table.h"
 #include "scip/heur.h"
 #include "scip/concsolver.h"
 #include "scip/compr.h"
@@ -1579,6 +1580,7 @@ SCIP_RETCODE SCIPcopyPlugins(
    SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
+   SCIP_Bool             copytables,         /**< should the statistics tables be copied */
    SCIP_Bool             copynlpis,          /**< should the NLPIs be copied */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
    SCIP_Bool*            valid               /**< pointer to store whether plugins, in particular all constraint
@@ -1602,7 +1604,7 @@ SCIP_RETCODE SCIPcopyPlugins(
 
    SCIP_CALL( SCIPsetCopyPlugins(sourcescip->set, targetscip->set,
          copyreaders, copypricers, copyconshdlrs, copyconflicthdlrs, copypresolvers, copyrelaxators, copyseparators, copypropagators,
-         copyheuristics, copyeventhdlrs, copynodeselectors, copybranchrules, copydisplays, copydialogs, copynlpis, valid) );
+         copyheuristics, copyeventhdlrs, copynodeselectors, copybranchrules, copydisplays, copydialogs, copytables, copynlpis, valid) );
 
    return SCIP_OKAY;
 }
@@ -3609,7 +3611,7 @@ SCIP_RETCODE doCopy(
 
    /* copy all plugins */
    SCIP_CALL( SCIPcopyPlugins(sourcescip, targetscip, TRUE, enablepricing, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, passmessagehdlr, &localvalid) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, passmessagehdlr, &localvalid) );
 
    /* in case there are active pricers and pricing is disabled, targetscip will not be a valid copy of sourcescip */
    if( ! enablepricing && SCIPgetNActivePricers(sourcescip) > 0 )
@@ -9397,6 +9399,79 @@ void SCIPchgDispMode(
    assert(disp != NULL);
 
    SCIPdispChgMode(disp, mode);
+}
+
+/** creates a statistics table and includes it in SCIP */
+SCIP_RETCODE SCIPincludeTable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name,               /**< name of statistics table */
+   const char*           desc,               /**< description of statistics table */
+   SCIP_Bool             active,             /**< should the table be activated by default? */
+   SCIP_DECL_TABLECOPY   ((*tablecopy)),     /**< copy method of statistics table or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_TABLEFREE   ((*tablefree)),     /**< destructor of statistics table */
+   SCIP_DECL_TABLEINIT   ((*tableinit)),     /**< initialize statistics table */
+   SCIP_DECL_TABLEEXIT   ((*tableexit)),     /**< deinitialize statistics table */
+   SCIP_DECL_TABLEINITSOL ((*tableinitsol)), /**< solving process initialization method of statistics table */
+   SCIP_DECL_TABLEEXITSOL ((*tableexitsol)), /**< solving process deinitialization method of statistics table */
+   SCIP_DECL_TABLEOUTPUT ((*tableoutput)),   /**< output method */
+   SCIP_TABLEDATA*       tabledata,          /**< statistics table data */
+   int                   position,           /**< position of statistics table */
+   SCIP_STAGE            earlieststage       /**< output of the statistics table is only printed from this stage onwards */
+   )
+{
+   SCIP_TABLE* table;
+
+   SCIP_CALL( checkStage(scip, "SCIPincludeTable", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* check whether statistics table is already present */
+   if( SCIPfindTable(scip, name) != NULL )
+   {
+      SCIPerrorMessage("statistics table <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
+
+   SCIP_CALL( SCIPtableCreate(&table, scip->set, scip->messagehdlr, scip->mem->setmem,
+         name, desc, active, tablecopy,
+         tablefree, tableinit, tableexit, tableinitsol, tableexitsol, tableoutput, tabledata,
+         position, earlieststage) );
+   SCIP_CALL( SCIPsetIncludeTable(scip->set, table) );
+
+   return SCIP_OKAY;
+}
+
+/** returns the statistics table of the given name, or NULL if not existing */
+SCIP_TABLE* SCIPfindTable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of statistics table */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+   assert(name != NULL);
+
+   return SCIPsetFindTable(scip->set, name);
+}
+
+/** returns the array of currently available statistics tables */
+SCIP_TABLE** SCIPgetTables(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return scip->set->tables;
+}
+
+/** returns the number of currently available statistics tables */
+int SCIPgetNTables(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return scip->set->ntables;
 }
 
 /** method to call, when the priority of an NLPI was changed */
@@ -43693,8 +43768,101 @@ SCIP_RETCODE SCIPprintTransProblem(
    return SCIP_OKAY;
 }
 
-static
-void printPresolverStatistics(
+/** outputs status statistics
+ *
+ *  @note If limits have been changed between the solution and the call to this function, the status is recomputed and
+ *        thus may to correspond to the original status.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+void SCIPprintStatusStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file                /**< output file */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintStatusStatistics", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "SCIP Status        : ");
+   SCIP_CALL_ABORT( SCIPprintStage(scip, file) );
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
+}
+
+/** outputs statistics for original problem
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+void SCIPprintOrigProblemStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file                /**< output file */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintOrigProblemStatistics", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Original Problem   :\n");
+   SCIPprobPrintStatistics(scip->origprob, scip->set, scip->messagehdlr, file);
+}
+
+/** outputs statistics for transformed problem
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+void SCIPprintTransProblemStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file                /**< output file */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintTransProblemStatistics", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Presolved Problem  :\n");
+   SCIPprobPrintStatistics(scip->transprob, scip->set, scip->messagehdlr, file);
+}
+
+/** outputs presolver statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+void SCIPprintPresolverStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
@@ -43703,6 +43871,8 @@ void printPresolverStatistics(
 
    assert(scip != NULL);
    assert(scip->set != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintPresolverStatistics", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Presolvers         :   ExecTime  SetupTime  Calls  FixedVars   AggrVars   ChgTypes  ChgBounds   AddHoles    DelCons    AddCons   ChgSides   ChgCoefs\n");
 
@@ -43799,9 +43969,18 @@ void printPresolverStatistics(
       scip->stat->nrootintfixings, scip->stat->nrootboundchgs);
 }
 
-/** print constraint statistics to output file */
-static
-void printConstraintStatistics(
+/** outputs constraint statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+void SCIPprintConstraintStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
@@ -43810,6 +43989,8 @@ void printConstraintStatistics(
 
    assert(scip != NULL);
    assert(scip->set != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintConstraintStatistics", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    /* Add maximal number of constraints of the same type? So far this information is not added because of lack of space. */
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Constraints        :     Number  MaxNumber  #Separate #Propagate    #EnfoLP    #EnfoRelax  #EnfoPS    #Check   #ResProp    Cutoffs    DomReds       Cuts    Applied      Conss   Children\n");
@@ -43847,9 +44028,18 @@ void printConstraintStatistics(
    }
 }
 
-/** print constraint timing statistics to output file */
-static
-void printConstraintTimingStatistics(
+/** outputs constraint timing statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+void SCIPprintConstraintTimingStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
@@ -43858,6 +44048,8 @@ void printConstraintTimingStatistics(
 
    assert(scip != NULL);
    assert(scip->set != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintConstraintTimingStatistics", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Constraint Timings :  TotalTime  SetupTime   Separate  Propagate     EnfoLP     EnfoPS     EnfoRelax   Check    ResProp    SB-Prop\n");
 
@@ -43897,9 +44089,18 @@ void printConstraintTimingStatistics(
    }
 }
 
-/** print propagator statistics to output file */
-static
-void printPropagatorStatistics(
+/** outputs propagator statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+void SCIPprintPropagatorStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
@@ -43908,6 +44109,8 @@ void printPropagatorStatistics(
 
    assert(scip != NULL);
    assert(scip->set != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintPropagatorStatistics", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Propagators        : #Propagate   #ResProp    Cutoffs    DomReds\n");
 
@@ -43949,15 +44152,29 @@ void printPropagatorStatistics(
    }
 }
 
-/** print conflict statistic to given output stream */
-static
-void printConflictStatistics(
+/** outputs conflict statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+void SCIPprintConflictStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
 {
    char initstoresize[SCIP_MAXSTRLEN];
    char maxstoresize[SCIP_MAXSTRLEN];
+
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintConflictStatistics", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( scip->set->conf_maxstoresize == 0 )
    {
@@ -44073,8 +44290,13 @@ void printConflictStatistics(
       - SCIPconflictGetNDualrayInfGlobal(scip->conflict) - SCIPconflictGetNDualrayBndGlobal(scip->conflict));
 }
 
-static
-void printSeparatorStatistics(
+/** outputs separator statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+void SCIPprintSeparatorStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
@@ -44083,6 +44305,8 @@ void printSeparatorStatistics(
 
    assert(scip != NULL);
    assert(scip->set != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintSeparatorStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Separators         :   ExecTime  SetupTime      Calls    Cutoffs    DomReds       Cuts    Applied      Conss\n");
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  cut pool         : %10.2f            %10" SCIP_LONGINT_FORMAT "          -          - %10" SCIP_LONGINT_FORMAT "          -          -    (maximal pool size: %d)\n",
@@ -44109,8 +44333,13 @@ void printSeparatorStatistics(
    }
 }
 
-static
-void printPricerStatistics(
+/** outputs pricer statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+void SCIPprintPricerStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
@@ -44119,6 +44348,8 @@ void printPricerStatistics(
 
    assert(scip != NULL);
    assert(scip->set != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintPricerStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Pricers            :   ExecTime  SetupTime      Calls       Vars\n");
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  problem variables: %10.2f          - %10d %10d\n",
@@ -44140,8 +44371,13 @@ void printPricerStatistics(
    }
 }
 
-static
-void printBranchruleStatistics(
+/** outputs branching rule statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+void SCIPprintBranchruleStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
@@ -44150,6 +44386,8 @@ void printBranchruleStatistics(
 
    assert(scip != NULL);
    assert(scip->set != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintBranchruleStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Branching Rules    :   ExecTime  SetupTime   BranchLP  BranchExt   BranchPS    Cutoffs    DomReds       Cuts      Conss   Children\n");
 
@@ -44173,8 +44411,16 @@ void printBranchruleStatistics(
    }
 }
 
-static
-void printHeuristicStatistics(
+/** outputs heuristics statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+void SCIPprintHeuristicStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
@@ -44185,6 +44431,8 @@ void printHeuristicStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
    assert(scip->tree != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintHeuristicStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Primal Heuristics  :   ExecTime  SetupTime      Calls      Found       Best\n");
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  LP solutions     : %10.2f          -          - %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
@@ -44257,9 +44505,16 @@ void printHeuristicStatistics(
    }
 }
 
-/* print compression statistics if tree reoptimization is enabled */
-static
-void printCompressionStatistics(
+/** outputs compression statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+void SCIPprintCompressionStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
@@ -44267,6 +44522,8 @@ void printCompressionStatistics(
    int i;
 
    assert(scip != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintCompressionStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    /* only print compression statistics if tree reoptimization is enabled */
    if( !scip->set->reopt_enable )
@@ -44288,8 +44545,13 @@ void printCompressionStatistics(
    }
 }
 
-static
-void printLPStatistics(
+/** outputs LP statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+void SCIPprintLPStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
@@ -44297,6 +44559,8 @@ void printLPStatistics(
    assert(scip != NULL);
    assert(scip->stat != NULL);
    assert(scip->lp != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintLPStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "LP                 :       Time      Calls Iterations  Iter/call   Iter/sec  Time-0-It Calls-0-It    ItLimit\n");
 
@@ -44387,14 +44651,21 @@ void printLPStatistics(
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -\n");
 }
 
-static
-void printNLPStatistics(
+/** outputs NLP statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+void SCIPprintNLPStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
 {
    assert(scip != NULL);
    assert(scip->stat != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintNLPStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( scip->nlp == NULL )
       return;
@@ -44406,8 +44677,13 @@ void printNLPStatistics(
       scip->stat->nnlps);
 }
 
-static
-void printRelaxatorStatistics(
+/** outputs relaxator statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+void SCIPprintRelaxatorStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
@@ -44416,6 +44692,8 @@ void printRelaxatorStatistics(
 
    assert(scip != NULL);
    assert(scip->set != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintRelaxatorStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( scip->set->nrelaxs == 0 )
       return;
@@ -44434,8 +44712,13 @@ void printRelaxatorStatistics(
    }
 }
 
-static
-void printTreeStatistics(
+/** outputs tree statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+void SCIPprintTreeStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
@@ -44443,6 +44726,8 @@ void printTreeStatistics(
    assert(scip != NULL);
    assert(scip->stat != NULL);
    assert(scip->tree != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintTreeStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "B&B Tree           :\n");
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  number of runs   : %10d\n", scip->stat->nruns);
@@ -44474,9 +44759,16 @@ void printTreeStatistics(
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  switching time   : %10.2f\n", SCIPclockGetTime(scip->stat->nodeactivationtime));
 }
 
-/** display solution statistics */
-static
-void printSolutionStatistics(
+/** outputs solution statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+void SCIPprintSolutionStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
@@ -44492,6 +44784,8 @@ void printSolutionStatistics(
    assert(scip != NULL);
    assert(scip->stat != NULL);
    assert(scip->primal != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintSolutionStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    primalbound = getPrimalbound(scip);
    dualbound = getDualbound(scip);
@@ -44633,9 +44927,18 @@ void printSolutionStatistics(
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Avg. Gap         :          - (not evaluated)\n");
 }
 
-/** display thread statistics */
-static
-void printConcsolverStatistics(
+/** outputs concurrent solver statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+void SCIPprintConcsolverStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
@@ -44644,6 +44947,11 @@ void printConcsolverStatistics(
    int               nconcsolvers;
    int               i;
    int               winner;
+
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintConflictStatistics", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( !SCIPsyncstoreIsInitialized(scip->syncstore) )
       return;
@@ -44673,9 +44981,13 @@ void printConcsolverStatistics(
    }
 }
 
-/** display first LP statistics */
-static
-void printRootStatistics(
+/** outputs root statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+void SCIPprintRootStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
@@ -44688,6 +45000,8 @@ void printRootStatistics(
    assert(scip != NULL);
    assert(scip->stat != NULL);
    assert(scip->primal != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintRootStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    dualboundroot = SCIPgetDualboundRoot(scip);
    firstdualboundroot = SCIPgetFirstLPDualboundRoot(scip);
@@ -44726,16 +45040,29 @@ void printRootStatistics(
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "%21s\n","-");
 }
 
-/** display timing statistics */
-static
-void printTimingStatistics(
+/** outputs timing statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+void SCIPprintTimingStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
    )
 {
    SCIP_Real readingtime;
 
-   assert(SCIPgetStage(scip) >= SCIP_STAGE_PROBLEM);
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintTimingStatistics", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    readingtime = SCIPgetReadingTime(scip);
 
@@ -44775,6 +45102,13 @@ void printTimingStatistics(
    }
 }
 
+/** comparison method for statistics tables */
+static
+SCIP_DECL_SORTPTRCOMP(tablePosComp)
+{  /*lint --e{715}*/
+   return (SCIPtableGetPosition((SCIP_TABLE*)elem1) - (SCIPtableGetPosition((SCIP_TABLE*)elem2)));
+}
+
 /** outputs solving statistics
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -44799,93 +45133,36 @@ SCIP_RETCODE SCIPprintStatistics(
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
+   SCIP_TABLE** tables;
+   int ntables;
+   int i;
+
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
    SCIP_CALL( checkStage(scip, "SCIPprintStatistics", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "SCIP Status        : ");
-   SCIP_CALL( SCIPprintStage(scip, file) );
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
+   ntables = SCIPgetNTables(scip);
+   tables = SCIPgetTables(scip);
 
-   switch( scip->set->stage )
+   /* sort all tables by position unless this has already been done */
+   if( ! scip->set->tablessorted )
    {
-   case SCIP_STAGE_INIT:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "Original Problem   : no problem exists.\n");
-      return SCIP_OKAY;
+      SCIPsortPtr((void**)tables, tablePosComp, ntables);
 
-   case SCIP_STAGE_PROBLEM:
-   {
-      printTimingStatistics(scip, file);
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "Original Problem   :\n");
-      SCIPprobPrintStatistics(scip->origprob, scip->set, scip->messagehdlr, file);
-      return SCIP_OKAY;
+      scip->set->tablessorted = TRUE;
    }
-   case SCIP_STAGE_TRANSFORMED:
-   case SCIP_STAGE_INITPRESOLVE:
-   {
-      printTimingStatistics(scip, file);
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "Original Problem   :\n");
-      SCIPprobPrintStatistics(scip->origprob, scip->set, scip->messagehdlr, file);
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "Presolved Problem  :\n");
-      SCIPprobPrintStatistics(scip->transprob, scip->set, scip->messagehdlr, file);
-      printPresolverStatistics(scip, file);
-      printConstraintStatistics(scip, file);
-      printConstraintTimingStatistics(scip, file);
-      printPropagatorStatistics(scip, file);
-      printConflictStatistics(scip, file);
-      printConcsolverStatistics(scip, file);
-      return SCIP_OKAY;
-   }
-   case SCIP_STAGE_PRESOLVING:
-   case SCIP_STAGE_EXITPRESOLVE:
-   case SCIP_STAGE_PRESOLVED:
-   {
-      printTimingStatistics(scip, file);
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "Original Problem   :\n");
-      SCIPprobPrintStatistics(scip->origprob, scip->set, scip->messagehdlr, file);
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "Presolved Problem  :\n");
-      SCIPprobPrintStatistics(scip->transprob, scip->set, scip->messagehdlr, file);
-      printPresolverStatistics(scip, file);
-      printConstraintStatistics(scip, file);
-      printConstraintTimingStatistics(scip, file);
-      printPropagatorStatistics(scip, file);
-      printConflictStatistics(scip, file);
-      printHeuristicStatistics(scip, file);
-      printCompressionStatistics(scip, file);
-      printSolutionStatistics(scip, file);
-      printConcsolverStatistics(scip, file);
-      return SCIP_OKAY;
-   }
-   case SCIP_STAGE_SOLVING:
-   case SCIP_STAGE_SOLVED:
-   {
-      printTimingStatistics(scip, file);
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "Original Problem   :\n");
-      SCIPprobPrintStatistics(scip->origprob, scip->set, scip->messagehdlr, file);
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "Presolved Problem  :\n");
-      SCIPprobPrintStatistics(scip->transprob, scip->set, scip->messagehdlr, file);
-      printPresolverStatistics(scip, file);
-      printConstraintStatistics(scip, file);
-      printConstraintTimingStatistics(scip, file);
-      printPropagatorStatistics(scip, file);
-      printConflictStatistics(scip, file);
-      printSeparatorStatistics(scip, file);
-      printPricerStatistics(scip, file);
-      printBranchruleStatistics(scip, file);
-      printHeuristicStatistics(scip, file);
-      printCompressionStatistics(scip, file);
-      printLPStatistics(scip, file);
-      printNLPStatistics(scip, file);
-      printRelaxatorStatistics(scip, file);
-      printTreeStatistics(scip, file);
-      printRootStatistics(scip, file);
-      printSolutionStatistics(scip, file);
-      printConcsolverStatistics(scip, file);
 
-      return SCIP_OKAY;
+   for( i = 0; i < ntables; ++i )
+   {
+      /* skip tables which are not active or only used in later stages */
+      if( ( ! SCIPtableIsActive(tables[i]) ) || SCIPtableGetEarliestStage(tables[i]) > SCIPgetStage(scip) )
+         continue;
+
+      SCIP_CALL( SCIPtableOutput(tables[i], scip->set, file) );
    }
-   default:
-      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      return SCIP_INVALIDCALL;
-   }  /*lint !e788*/
+
+   return SCIP_OKAY;
 }
 
 /** outputs reoptimization statistics

@@ -17,6 +17,7 @@
  * @brief  main document page
  * @author Tobias Achterberg
  * @author Timo Berthold
+ * @author Tristan Gally
  * @author Gerald Gamrath
  * @author Stefan Heinz
  * @author Gregor Hendel
@@ -101,6 +102,7 @@
  *   - \ref NLPI    "Interfaces to NLP solvers"
  *   - \ref EXPRINT "Interfaces to expression interpreters"
  *   - \ref PARAM   "additional user parameters"
+ *   - \ref TABLE   "Statistics tables"
  *
  * @subsection HOWTOUSESECTION How to use ...
  *
@@ -4632,7 +4634,7 @@
  * \n
  * A complete list of all displays contained in this release can be found \ref DISPLAYS "here".
  *
- * We now explain users can add their own display columns.
+ * We now explain how users can add their own display columns.
  * We give the explanation for creating your own source file for each additional display column. Of course, you can collect
  * different additional display columns in one source file.
  * Take src/scip/disp_default.c, where all default display columns are collected, as an example.
@@ -4805,7 +4807,7 @@
  * @subsection DISPEXITSOL
  *
  * The DISPEXITSOL callback is executed before the branch-and-bound process is freed. The display column should use this
- * call to clean up its branch-and-bound data specific data.
+ * call to clean up its branch-and-bound specific data.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -4973,7 +4975,7 @@
  * @subsection EVENTEXITSOL
  *
  * The EVENTEXITSOL callback is executed before the branch-and-bound process is freed. The event handler should use this
- * call to clean up its branch-and-bound data specific data.
+ * call to clean up its branch-and-bound specific data.
  *
  * @section EVENTUSAGE Catching and Dropping Events
  *
@@ -5371,6 +5373,185 @@
  * @subsection SCIPexprintHessianDense
  *
  * The SCIPexprintHessianDense method is called when the Hessian of an expression represented by an expression tree should be computed for a point.
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/**@page TABLE How to add statistics tables
+ *
+ * After solving a constraint integer program, SCIP can display statistics tables with information about, e.g., the solving time,
+ * number of nodes, LP iterations or the number of calls and successes of different plugins via "display statistics" in the shell
+ * or via SCIPprintStatistics() in the C-interface. There already exists a wide variety of statistics tables which can be activated
+ * or deactivated on demand, see src/scip/table_default.c. Additionally, the user can implement his/her own statistics tables
+ * in order to display problem or algorithm specific values.
+ * \n
+ * A complete list of all statistics tables contained in this release can be found \ref TABLES "here".
+ *
+ * We now explain how users can add their own statistics tables.
+ * We give the explanation for creating your own source file for each additional statistics table. Of course, you can collect
+ * different additional statistics tables in one source file.
+ * Take src/scip/table_default.c, where all default statistics tables are collected, as an example.
+ * As all other default plugins, the default statistics table plugins and the statistics table template are written in C.
+ * C++ users can easily adapt the code by using the scip::ObjTable wrapper base class and implement the scip_...() virtual methods
+ * instead of the SCIP_DECL_TABLE... callback methods.
+ *
+ *
+ * Additional documentation for the callback methods of a statistics table can be found in the file type_table.h.
+ *
+ * Here is what you have to do to implement a statistics table (assuming your statistics table is named "mystatisticstable"):
+ * -# Copy the template files src/scip/table_xyz.c and src/scip/table_xyz.h into files named "table_mystatisticstable.c"
+ *    and "table_mystatisticstable.h".
+ *    \n
+ *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Use SCIPincludeTableMystatisticstable() in order to include the statistics table into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mystatisticstable".
+ * -# Adjust the \ref TABLE_PROPERTIES "properties of the statistics table".
+ * -# Define the  \ref TABLE_DATA "statistics table data". This is optional.
+ * -# Implement the \ref TABLE_INTERFACE "interface methods".
+ * -# Implement the \ref TABLE_FUNDAMENTALCALLBACKS "fundamental callback methods".
+ * -# Implement the \ref TABLE_ADDITIONALCALLBACKS "additional callback methods". This is optional.
+ *
+ *
+ * @section TABLE_PROPERTIES Properties of a Statistics Table
+ *
+ * At the top of the new file "table_mystatisticstable.c" you can find the statistics table properties.
+ * These are given as compiler defines.
+ * In the C++ wrapper class, you have to provide the statistics table properties by calling the constructor
+ * of the abstract base class scip::ObjTable from within your constructor.
+ * The properties you have to set have the following meaning:
+ *
+ * \par TABLE_NAME: the name of the statistics table.
+ * This name is used in the interactive shell to address the statistics table.
+ * Additionally, if you are searching for a statistics table with SCIPfindTable(), this name is looked up.
+ * Names have to be unique: no two statistic tables may have the same name.
+ *
+ * \par TABLE_DESC: the description of the statistics table.
+ * This string is printed as a description of the statistics table in the interactive shell.
+ *
+ * \par TABLE_POSITION: the position of the statistics table.
+ * In the statistics output, the statistics tables will be ordered by increasing position. Compare with the
+ * default statistics tables in "table_default.c" to find a value which will give you the desired position
+ * between the default statistics tables. If you give your table a negative position value, it will appear
+ * before all SCIP statistcs, with a value larger than 20000 it will appear after all default statistics.
+ *
+ * \par TABLE_EARLIEST_STAGE: output of the statistics table is only printed from this stage onwards
+ * The output routine of your statistics table will only be called if SCIP has reached this stage. For
+ * example, the default table "tree" will only output information starting from SCIP_STAGE_SOLVING, because
+ * there is no meaningful information available before, while the "presolver" table can already be called
+ * in SCIP_STAGE_TRANSFORMED.
+ *
+ * @section TABLE_DATA Statistics Table Data
+ *
+ * Below the header "Data structures" you can find a struct which is called "struct SCIP_TableData".
+ * In this data structure, you can store the data of your statistics table. For example, you should store the adjustable
+ * parameters of the statistics table in this data structure.
+ * If you are using C++, you can add statistics table data as usual as object variables to your class.
+ * \n
+ * Defining statistics table data is optional. You can leave the struct empty.
+ *
+ *
+ * @section TABLE_INTERFACE Interface Methods
+ *
+ * At the bottom of "table_mystatisticstable.c" you can find the interface method SCIPincludeTableMystatisticstable(), which also
+ * appears in "table_mystatisticstable.h".
+ * \n
+ * This method only has to be adjusted slightly.
+ * It is responsible for notifying SCIP of the presence of the statistics table by calling the method
+ * SCIPincludeTable().
+ *
+ * The interface method is called by the user, if (s)he wants to include the statistics table, i.e., if (s)he wants to use the statistics table in an
+ * application.
+ *
+ * If you are using statistics table data, you have to allocate the memory for the data at this point.
+ * You can do this by calling:
+ * \code
+ * SCIP_CALL( SCIPallocBlockMemory(scip, &tabledata) );
+ * \endcode
+ * You also have to initialize the fields in struct SCIP_TableData afterwards.
+ *
+ * Although this is very uncommon, you may also add user parameters for your statistics table, see the method
+ * SCIPincludeConshdlrKnapsack() in the \ref cons_knapsack.h "knapsack constraint handler" for an example.
+ *
+ *
+ * @section TABLE_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Statistics Table
+ *
+ * Statistics table plugins have only one fundamental callback method, namely the \ref TABLEOUTPUT method.
+ * This method has to be implemented for every display column; the other callback methods are optional.
+ * In the C++ wrapper class scip::ObjTable, the scip_output() method (which corresponds to the \ref TABLEOUTPUT callback) is a virtual
+ * abstract member function.
+ * You have to implement it in order to be able to construct an object of your statistics table class.
+ *
+ * Additional documentation for the callback methods can be found in type_table.h.
+ *
+ * @subsection TABLEOUTPUT
+ *
+ * The TABLEOUTPUT callback is called whenever SCIP is asked to print statistics (because the user typed "display statistics"
+ * in the shell or called SCIPprintStatistics()). In this callback, the table should print all of its information to the given file
+ * (which may be NULL if the output should be printed to the console).
+ *
+ * Typical methods called by a statistics table are, for example, SCIPdispLongint(), SCIPdispInt(), SCIPdispTime(), and
+ * SCIPinfoMessage().
+ *
+ *
+ * @section TABLE_ADDITIONALCALLBACKS Additional Callback Methods of a Statistics Table
+ *
+ * The additional callback methods do not need to be implemented in every case.
+ * They can be used, for example, to initialize and free private data.
+ *
+ * @subsection TABLECOPY
+ *
+ * The TABLECOPY callback is executed when a SCIP instance is copied, e.g. to solve a sub-SCIP. By defining this callback
+ * as <code>NULL</code> the user disables the execution of the specified column. In general it is probably not needed to
+ * implement that callback since the output of the copied instance is usually suppressed. In the other case or for
+ * debugging the callback should be implement.
+ *
+ *
+ * @subsection TABLEFREE
+ *
+ * If you are using statistics table data, you have to implement this method in order to free the statistics table data.
+ * This can be done by the following procedure:
+ * \code
+ * static
+ * SCIP_DECL_TABLEFREE(tableFreeMystatisticstable)
+ * {
+ *    SCIP_TABLEDATA* tabledata;
+ *
+ *    tabledata = SCIPtableGetData(table);
+ *    assert(tabledata != NULL);
+ *
+ *    SCIPfreeMemory(scip, &tabledata);
+ *
+ *    SCIPtableSetData(disp, NULL);
+ *
+ *    return SCIP_OKAY;
+ * }
+ * \endcode
+ * If you have allocated memory for fields in your statistics table data, remember to free this memory
+ * before freeing the statistics table data itself.
+ * If you are using the C++ wrapper class, this method is not available.
+ * Instead, just use the destructor of your class to free the member variables of your class.
+ *
+ * @subsection TABLEINIT
+ *
+ * The TABLEINIT callback is executed after the problem is transformed.
+ * The statistics table may, e.g., use this call to initialize its statistics table data.
+ *
+ * @subsection TABLEEXIT
+ *
+ * The TABLEEXIT callback is executed before the transformed problem is freed.
+ * In this method, the statistics table should free all resources that have been allocated for the solving process in
+ * \ref TABLEINIT.
+ *
+ * @subsection TABLEINITSOL
+ *
+ * The TABLEINITSOL callback is executed when the presolving is finished and the branch-and-bound process is about to
+ * begin. The statistics table may use this call to initialize its branch-and-bound specific data.
+ *
+ * @subsection TABLEEXITSOL
+ *
+ * The TABLEEXITSOL callback is executed before the branch-and-bound process is freed. The statistics table should use this
+ * call to clean up its branch-and-bound specific data.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -7652,6 +7833,11 @@
  * @brief methods for separator plugins
  */
 
+/**@defgroup PublicTableMethods Tables
+ * @ingroup PluginManagementMethods
+ * @brief  methods for the inclusion and access of statistics tables
+ */
+
 /**@defgroup PublicConcsolverTypeMethods Concurrent Solver Types
  * @ingroup PluginManagementMethods
  * @brief methods for concurrent solver type plugins
@@ -7983,6 +8169,25 @@
  * This module contains methods to include specific separators into \SCIP.
  *
  * @note All default plugins can be included at once (including all default separators) using SCIPincludeDefaultPlugins()
+ *
+ */
+
+/**@defgroup TABLES Tables
+ * @ingroup PUBLICPLUGINAPI
+ * @brief methods and files provided by the default statistics tables of \SCIP
+ *
+ * A detailed description what a table does and how to add a table to SCIP can be found
+ * \ref TABLE "here".
+ *
+ */
+
+/**@defgroup TableIncludes Inclusion methods
+ * @ingroup TABLES
+ * @brief methods to include specific tables into \SCIP
+ *
+ * This module contains methods to include specific statistics tables into \SCIP.
+ *
+ * @note All default plugins can be included at once (including all default statisticstables) using SCIPincludeDefaultPlugins()
  *
  */
 
