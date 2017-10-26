@@ -903,7 +903,7 @@ SCIP_RETCODE applyCompletesol(
    /* set node limit of 1 if the presolved problem is an LP, otherwise we would start branching if an LP iteration
     * limit was set by the user.
     */
-   if( SCIPgetNContVars(subscip) == SCIPgetNVars(subscip) )
+   if( !SCIPisNLPEnabled(subscip) && SCIPgetNContVars(subscip) == SCIPgetNVars(subscip) )
    {
       SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 1LL) );
    }
