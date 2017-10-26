@@ -141,7 +141,7 @@ fi
 # send email if there are fixed instances
 if [ -n "$RESOLVEDINSTANCES" ]; then
    SUBJECT="FIX [BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING=$SETTING] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH]"
-   echo -e "Congratulations!\n\nThe following errors have been fixed:\n${RESOLVEDINSTANCES}\n\nThe following instances are still failing:\n${STILLFAILINGDB}\n\n" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+   echo -e "Congratulations, see bottom for fixed instances!\n\nThe following instances are still failing:\n${STILLFAILINGDB}\n\nThe files can be found here:\n$DESTINATION\n\nThe following errors have been fixed:\n${RESOLVEDINSTANCES}" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
 fi
 rm ${STILLFAILING}
 

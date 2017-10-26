@@ -1383,9 +1383,10 @@ SCIP_RETCODE propagateFullOrbitope(
 
                   for (i = 0; i <= currow; ++i)
                   {
-                     for (j = 0; j <= l; ++j)
+                     int s;
+                     for (s = 0; s <= l; ++s)
                      {
-                        SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
+                        SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][s]) );
                      }
                   }
 
@@ -1796,10 +1797,9 @@ SCIP_RETCODE resolvePropagationFullOrbitopes(
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
    )
-{
+{  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
    SCIP_VAR*** vars;
-   int nrows;
    int ncols;
    int inferrow;
    int infercol;
@@ -1821,13 +1821,12 @@ SCIP_RETCODE resolvePropagationFullOrbitopes(
    assert( consdata->nblocks > 0 );
 
    vars = consdata->vars;
-   nrows = consdata->nspcons;
    ncols = consdata->nblocks;
 
    infercol = inferinfo % ncols;
    inferrow = (int) inferinfo / ncols;
 
-   assert( inferrow < nrows );
+   assert( inferrow < consdata->nspcons );
 
    /* reason for 1-fixing */
    if ( SCIPvarGetLbAtIndex(infervar, bdchgidx, FALSE) < 0.5 &&  SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > 0.5 )
@@ -1851,19 +1850,11 @@ SCIP_RETCODE resolvePropagationFullOrbitopes(
    }
    else if ( SCIPvarGetUbAtIndex(infervar, bdchgidx, FALSE) > 0.5 &&  SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < 0.5 )
    {
-#ifndef NDEBUG
-      SCIP_Bool success = FALSE;
-#endif
-
       /* find position of infervar in vars matrix (it has to be contained in inferrow behind infercol)*/
       for (k = infercol + 1; k < ncols; ++k)
       {
          if ( SCIPvarGetIndex(infervar) == SCIPvarGetIndex(vars[inferrow][k]) )
          {
-#ifndef NDEBUG
-            success = TRUE;
-#endif
-
             SCIPdebugMsg(scip, " -> reason for fixing variable with index %d to 0 was the fixing of the upper left %dx%d-matrix and x[%d][%d] = 0.\n",
                SCIPvarGetIndex(infervar), inferrow - 1, k, inferrow, infercol);
 
@@ -1882,9 +1873,7 @@ SCIP_RETCODE resolvePropagationFullOrbitopes(
             return SCIP_OKAY;
          }
       }
-#ifndef NDEBUG
-      assert( success );
-#endif
+      assert( *result == SCIP_SUCCESS );
    }
 
    return SCIP_OKAY;
