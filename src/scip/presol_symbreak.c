@@ -56,6 +56,8 @@
 /* default parameters */
 #define DEFAULT_CONSSADDLP           TRUE    /**< Should the symmetry breaking constraints be added to the LP? */
 #define DEFAULT_ADDSYMRESACKS        TRUE    /**< Add inequalities for symresacks for each generator? */
+#define DEFAULT_COMPUTEORBITS       FALSE    /**< Should the orbits of the symmetry group be computed? */
+#define DEFAULT_DETECTORBITOPES      TRUE    /** Should we check whether the components of the symmetry group can be handled by orbitopes */
 
 /*
  * Data structures
@@ -78,9 +80,11 @@ struct SCIP_PresolData
    SCIP_CONS**           genconss;           /**< list of generated constraints */
    int                   ngenconss;          /**< number of generated constraints */
    int                   nsymresacks;        /**< number of symresack constraints */
+   SCIP_Bool             detectorbitopes;    /**< Should we check whether the components of the symmetry group can be handled by orbitopes? */
    int                   norbitopes;         /**< number of orbitope constraints */
    int                   norbits;            /**< number of non-trivial orbits of permutation group */
    int*                  nvarsinorbits;      /**< number of variables per orbit */
+   SCIP_Bool             computeorbits;      /**< whether the orbits of the symmetry group should be computed */
    int**                 orbits;             /**< array containing for each orbit an array with the variable indices in the orbit */
    int                   maxnorbits;         /**< maximal number of orbits for which memory was allocated */
    int                   ncomponents;        /**< number of components of symmetry group */
@@ -1369,12 +1373,16 @@ SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
       {
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(presoldata->genconss), presoldata->nperms) );
 
-         /* SCIP_CALL( computeGroupOrbits(scip, presoldata->perms, presoldata->nperms, presoldata->npermvars, */
-         /*       &presoldata->orbits, &presoldata->norbits, &presoldata->nvarsinorbits, &presoldata->maxnorbits) ); */
+         if ( presoldata->computeorbits )
+         {
+            SCIP_CALL( computeGroupOrbits(scip, presoldata->perms, presoldata->nperms, presoldata->npermvars,
+                  &presoldata->orbits, &presoldata->norbits, &presoldata->nvarsinorbits, &presoldata->maxnorbits) );
+         }
 
-         /* SCIP_CALL( computeComponents(scip, presoldata) ); */
-
-         /* SCIP_CALL( detectOrbitopes(scip, presoldata) ); */
+         if ( presoldata->detectorbitopes )
+         {
+            SCIP_CALL( detectOrbitopes(scip, presoldata) );
+         }
       }
    }
 
@@ -1489,6 +1497,17 @@ SCIP_RETCODE SCIPincludePresolSymbreak(
          "presolving/" PRESOL_NAME"/addsymresacks",
          "Add inequalities for symresacks for each generator?",
          &presoldata->addsymresacks, TRUE, DEFAULT_ADDSYMRESACKS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "presolving/" PRESOL_NAME"/computeorbits",
+         "Should the orbits of the symmetry group be computed?",
+         &presoldata->computeorbits, TRUE, DEFAULT_COMPUTEORBITS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "presolving/" PRESOL_NAME"/detectorbitopes",
+         "Should we check whether the components of the symmetry group can be handled by orbitopes?",
+         &presoldata->detectorbitopes, TRUE, DEFAULT_DETECTORBITOPES, NULL, NULL) );
+
 
    return SCIP_OKAY;
 }
