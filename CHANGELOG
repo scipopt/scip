@@ -40,6 +40,7 @@ performance improvements:
 - improved the implementation of SCIPvarGetActiveRepresentatives
 
 fixed bugs:
+- fix linear knapsack relaxation during separation if a binary variable does not have a feasible solution value.
 - fixed bug in feasibility pump heuristic when switching on the usefp20 parameter
 - fixed potential ressource leaks in SCIPsolveLinearProb, expr.c, sepa_eccuts, cons_cumulative.c, cons_nonlinear.c
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define SCIP_DEBUG
+
 /**@file   cons_knapsack.c
  * @brief  Constraint handler for knapsack constraints of the form  \f$a^T x \le b\f$, x binary and \f$a \ge 0\f$.
  * @author Tobias Achterberg
@@ -5868,15 +5868,12 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
 
          solval = SCIPgetSolVal(scip, sol, var);
 
-         /* if the variable bounds cut off the current solution (it should not be the LP solution in that case),
-          * there is no need to separate the solution further
-          */
-         if( SCIPisFeasLT(scip, solval, SCIPvarGetLbLocal(var))
-               || SCIPisFeasGT(scip, solval, SCIPvarGetUbLocal(var)) )
+         /* knapsack relaxation assumes solution values between 0.0 and 1.0 for binary variables */
+         if( SCIPisFeasLT(scip, solval, 0.0 )
+               || SCIPisFeasGT(scip, solval, 1.0) )
          {
-            *cutoff = TRUE;
-            SCIPdebugMsg(scip, "Solution value %.15g violates binary variable bounds: <%s>[%.15g,%.15g]\n",
-                  solval, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+            SCIPdebugMsg(scip, "Solution value %.15g <%s> outside domain [0.0, 1.0]\n",
+                  solval, SCIPvarGetName(var));
             goto TERMINATE;
          }
 
