@@ -987,8 +987,6 @@ SCIP_RETCODE detectOrbitopes(
 
       if ( ! infeasibleorbitope )
       {
-         SCIPinfoMessage(scip, NULL, "Component %d is an orbitope with %d rows and %d columns.\n", i, ntwocyclescomp, npermsincomponent[i] + 1);
-
          SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, "orbitope", vars, SCIP_ORBITOPETYPE_FULL, ntwocyclescomp, npermsincomponent[i] + 1, TRUE,
                presoldata->conssaddlp, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
