@@ -13,11 +13,18 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   TODO.c
- * @brief  unit test for TODO
+/**@file   change.c
+ * @brief  unit tests for testing the methods that change and get coefficients in the lpi.
  * @author Franziska Schloesser
  *
- * TODO long desc
+ * The tested methods are:
+ * SCIPlpiChgCoef, SCIPlpiGetCoef,
+ * SCIPlpiChgObj, SCIPlpiGetObj,
+ * SCIPlpiChgBounds, SCIPlpiGetBounds,
+ * SCIPlpiChgSides, SCIPlpiGetSides,
+ * SCIPlpiChgObjsen, SCIPlpiGetObjsen,
+ * SCIPlpiGetNCols, SCIPlpiGetNRows, SCIPlpiGetNNonz,
+ * SCIPlpiGetCols, SCIPlpiGetRows,
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -32,7 +39,6 @@
 
 /* GLOBAL VARIABLES */
 static SCIP_LPI* lpi = NULL;
-static int nprobs = 10;
 
 /** write ncols, nrows and objsen into variables to check later */
 static
@@ -764,13 +770,6 @@ Test(change, testzerosincols, .signal = SIGABRT)
    SCIP_Real val[2] = { 0, 3 };
    SCIP_Real obj[1] = { 1 };
 
-   SCIP_Real newlb[100];
-   SCIP_Real newub[100];
-   SCIP_Real newval[100];
-   int newbeg[100];
-   int newind[100];
-   int newnnonz;
-
    SCIP_CALL( SCIPlpiAddCols(lpi, 1, obj, lb, ub, NULL, nnonz, beg, ind, val) );
 
    /* this test can only work in debug mode, so we make it pass in opt mode */
@@ -797,13 +796,6 @@ Test(change, testzerosinrows, .signal = SIGABRT)
    int beg[1]  = { 0 };
    int ind[2] = { 0, 1 };
    SCIP_Real val[2] = { 0, 3 };
-
-   SCIP_Real newlhs[100];
-   SCIP_Real newrhs[100];
-   SCIP_Real newval[100];
-   int newbeg[100];
-   int newind[100];
-   int newnnonz;
 
    SCIP_CALL( SCIPlpiAddRows(lpi, 1, lhs, rhs, NULL, nnonz, beg, ind, val) );
 

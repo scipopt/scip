@@ -337,7 +337,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpClosecuts)
          SCIP_Bool cutoff;
 
          noldcuts = SCIPgetNCuts(scip);
-         isroot = (SCIP_Bool) (SCIPgetNNodes(scip) == 0);
+         isroot = (SCIP_Bool) (SCIPgetDepth(scip) == 0);
 
          /* separate solution via other separators */
          SCIP_CALL( SCIPseparateSol(scip, point, isroot, TRUE, FALSE, &delayed, &cutoff) );

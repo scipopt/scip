@@ -484,9 +484,11 @@ SCIP_RETCODE transformNonIntegralRow(
       SCIP_Real mindelta;
       SCIP_Real maxdelta;
       SCIP_Real intscalar;
+      int nchgcoefs;
+
       SCIP_VAR** vars = SCIPgetVars(scip);
 
-      *success = !SCIPcutsTightenCoefficients(scip, local, transrowvals, &transrowrhs, transrowvars, &transrowlen);
+      *success = !SCIPcutsTightenCoefficients(scip, local, transrowvals, &transrowrhs, transrowvars, &transrowlen, &nchgcoefs);
 
       if( *success )
       {
@@ -1571,6 +1573,7 @@ SCIP_RETCODE generateZerohalfCut(
    int cutrank;
    int nvars;
    int maxaggrlen;
+   int nchgcoefs;
    int* cutinds;
    SCIP_ROW** rows;
    SCIP_VAR** vars;
@@ -1736,7 +1739,7 @@ SCIP_RETCODE generateZerohalfCut(
    assert(SCIPisFeasIntegral(scip, cutrhs));
    cutrhs = SCIPfeasRound(scip, cutrhs);
 
-   if( ! SCIPcutsTightenCoefficients(scip, cutislocal, cutcoefs, &cutrhs, cutinds, &cutnnz) )
+   if( ! SCIPcutsTightenCoefficients(scip, cutislocal, cutcoefs, &cutrhs, cutinds, &cutnnz, &nchgcoefs) )
    {
       /* calculate efficacy */
       cutefficacy = calcEfficacy(scip, cutcoefs, cutrhs, cutinds, cutnnz);

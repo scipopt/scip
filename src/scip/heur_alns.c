@@ -33,7 +33,7 @@
 #define HEUR_DESC             "Large neighborhood search heuristic that orchestrates the popular neighborhoods Local Branching, RINS, RENS, DINS etc."
 #define HEUR_DISPCHAR         'L'
 #define HEUR_PRIORITY         -1010000
-#define HEUR_FREQ             -1
+#define HEUR_FREQ             20
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
@@ -77,7 +77,7 @@
 #define DEFAULT_SUBSCIPRANDSEEDS FALSE /**< should random seeds of sub-SCIPs be altered to increase diversification? */
 #define DEFAULT_ALPHA          0.2  /**< parameter to increase the confidence width in UCB */
 #define DEFAULT_REWARDBASELINE 0.5  /**< the reward baseline to separate successful and failed calls */
-#define DEFAULT_FIXTOL         0.0  /**< tolerance by which the fixing rate may be missed/exceeded without generic (unfixing) */
+#define DEFAULT_FIXTOL         0.1  /**< tolerance by which the fixing rate may be missed/exceeded without generic (unfixing) */
 #define DEFAULT_USELOCALREDCOST FALSE /**< should local reduced costs be used for generic (un)fixing? */
 
 /*
@@ -542,7 +542,7 @@ void decreaseTargetNodeLimit(
    SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
-   heurdata->targetnodes = (SCIP_Longint)(heurdata->targetnodes * heurdata->targetnodefactor);
+   heurdata->targetnodes = (SCIP_Longint)(heurdata->targetnodes / heurdata->targetnodefactor);
    heurdata->targetnodes = MAX(heurdata->targetnodes, heurdata->minnodes);
 }
 
@@ -1223,8 +1223,8 @@ SCIP_Real getVariableRedcostScore(
 
    score = redcost * (refsolval - bestbound);
 
-   /* slight negative scores are possible due to numerical inaccuracies */
-   assert(! SCIPisNegative(scip, score));
+   /* slight negative scores are possible due to numerical inaccuracies or if local LP solutions are used */
+   assert(uselocalredcost || ! SCIPisNegative(scip, score));
    score = MAX(score, 0.0);
 
    return score;
@@ -1315,6 +1315,8 @@ SCIP_RETCODE alnsFixMoreVariables(
    SCIP_Real* redcostscores;
    SCIP_Real* solvals;
    SCIP_RANDNUMGEN* rng;
+   SCIP_VAR** unfixedvars;
+   SCIP_Bool* isfixed;
    int* distances;
    int* perm;
    SCIP_Real* randscores;
@@ -1324,6 +1326,7 @@ SCIP_RETCODE alnsFixMoreVariables(
    int nvars;
    int b;
    int nvarstoadd;
+   int nunfixedvars;
 
    assert(scip != NULL);
    assert(varbuf != NULL);
@@ -1350,7 +1353,7 @@ SCIP_RETCODE alnsFixMoreVariables(
    if( nvarstoadd == 0 )
       return SCIP_OKAY;
 
-   varprio.usedistances = heurdata->usedistances;
+   varprio.usedistances = heurdata->usedistances && (*nfixings >= 1);
    varprio.useredcost = heurdata->useredcost;
    varprio.scip = scip;
    rng = SCIPbanditGetRandnumgen(heurdata->bandit);
@@ -1361,9 +1364,11 @@ SCIP_RETCODE alnsFixMoreVariables(
    SCIP_CALL( SCIPallocBufferArray(scip, &distances, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &redcostscores, nbinintvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &solvals, nbinintvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &isfixed, nbinintvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &unfixedvars, nbinintvars) );
 
    /* initialize variable graph distances from already fixed variables */
-   if( *nfixings >= 1 && heurdata->usedistances )
+   if( varprio.usedistances )
    {
       SCIP_CALL( SCIPvariablegraphBreadthFirst(scip, NULL, varbuf, *nfixings, distances, INT_MAX, INT_MAX, ntargetfixings) );
    }
@@ -1373,51 +1378,70 @@ SCIP_RETCODE alnsFixMoreVariables(
       BMSclearMemoryArray(distances, nbinintvars);
    }
 
-   /* todo filter already selected variables directly without penalty */
-   varprio.randscores = randscores;
-   varprio.distances = distances;
-   varprio.redcostscores = redcostscores;
+   BMSclearMemoryArray(isfixed, nbinintvars);
+
+   /* mark binary and integer variables if they are fixed */
+   for( b = 0; b < *nfixings; ++b )
+   {
+      int probindex;
+
+      assert(varbuf[b] != NULL);
+      probindex = SCIPvarGetProbindex(varbuf[b]);
+      assert(probindex >= 0);
+
+      if( probindex < nbinintvars )
+         isfixed[probindex] = TRUE;
+   }
+
 
    SCIP_CALL( SCIPgetSolVals(scip, refsol, nbinintvars, vars, solvals) );
 
-   /* assign scores to every discrete variable of the problem */
+   /* assign scores to unfixed every discrete variable of the problem */
+   nunfixedvars = 0;
    for( b = 0; b < nbinintvars; ++b )
    {
       SCIP_VAR* var = vars[b];
-      randscores[b] = SCIPrandomGetReal(rng, 0.0, 1.0);
-      perm[b] = b;
-      redcostscores[b] = getVariableRedcostScore(scip, var, solvals[b], heurdata->uselocalredcost);
-   }
 
-   /* loop over already fixed variables and assign large penalties for their values */
-   for( b = 0; b < *nfixings; ++b )
-   {
-      int probindex = SCIPvarGetProbindex(varbuf[b]);
+      /* filter fixed variables */
+      if( isfixed[b] )
+         continue;
 
-      if( probindex < nbinintvars )
-      {
-         randscores[probindex] = 2.0;
-         redcostscores[probindex] = SCIP_REAL_MAX;
-      }
-      distances[probindex] = -1;
+      redcostscores[nunfixedvars] = getVariableRedcostScore(scip, var, solvals[b], heurdata->uselocalredcost);
+
+      unfixedvars[nunfixedvars] = var;
+      perm[nunfixedvars] = nunfixedvars;
+      randscores[nunfixedvars] = SCIPrandomGetReal(rng, 0.0, 1.0);
+
+      /* these assignments are based on the fact that nunfixedvars <= b */
+      solvals[nunfixedvars] = solvals[b];
+      distances[nunfixedvars] = distances[b];
+
+      nunfixedvars++;
    }
 
    /* use selection algorithm (order of the variables does not matter) for quickly completing the fixing */
-   SCIPselectInd(perm, sortIndCompAlns, &varprio, nvarstoadd, nbinintvars);
+   varprio.randscores = randscores;
+   varprio.distances = distances;
+   varprio.redcostscores = redcostscores;
+   assert(nvarstoadd <= nunfixedvars);
+
+   SCIPselectInd(perm, sortIndCompAlns, &varprio, nvarstoadd, nunfixedvars);
 
    /* loop over the first elements of the selection defined in permutation. They represent the best variables */
    for( b = 0; b < nvarstoadd; ++b )
    {
       int permindex = perm[b];
       assert(permindex >= 0);
-      assert(permindex < nbinintvars);
+      assert(permindex < nunfixedvars);
 
-      tryAdd2variableBuffer(scip, vars[permindex], solvals[permindex], varbuf, valbuf, nfixings, TRUE);
+      tryAdd2variableBuffer(scip, unfixedvars[permindex], solvals[permindex], varbuf, valbuf, nfixings, TRUE);
    }
 
    *success = TRUE;
 
    /* free buffer arrays */
+   SCIPfreeBufferArray(scip, &unfixedvars);
+   SCIPfreeBufferArray(scip, &isfixed);
    SCIPfreeBufferArray(scip, &solvals);
    SCIPfreeBufferArray(scip, &redcostscores);
    SCIPfreeBufferArray(scip, &distances);
@@ -1555,8 +1579,10 @@ SCIP_RETCODE alnsUnfixVariables(
          unfixedvars[nunfixed++] = vars[i];
    }
 
+   varprio.usedistances = heurdata->usedistances && nunfixed > 0;
+
    /* collect distances of all fixed variables from those that are not fixed */
-   if( heurdata->usedistances && nunfixed > 0 )
+   if( varprio.usedistances )
    {
       SCIP_CALL( SCIPvariablegraphBreadthFirst(scip, NULL, unfixedvars, nunfixed, distances, INT_MAX, INT_MAX, INT_MAX) );
 
@@ -1589,7 +1615,6 @@ SCIP_RETCODE alnsUnfixVariables(
    varprio.distances = fixeddistances;
    varprio.randscores = randscores;
    varprio.redcostscores = redcostscores;
-   varprio.usedistances = heurdata->usedistances;
    varprio.useredcost = heurdata->useredcost;
    varprio.scip = scip;
 
@@ -1602,6 +1627,7 @@ SCIP_RETCODE alnsUnfixVariables(
       valbuf[i] = valbufcpy[perm[i]];
       varbuf[i] = varbufcpy[perm[i]];
    }
+
    *nfixings = ntargetfixings;
 
    /* free the buffer arrays in reverse order of allocation */
@@ -1773,6 +1799,8 @@ SCIP_RETCODE determineLimits(
 {
    SCIP_HEURDATA* heurdata;
    SCIP_Real initfactor;
+   SCIP_Real nodesquot;
+
    assert(scip != NULL);
    assert(heur != NULL);
    assert(solvelimits != NULL);
@@ -1797,11 +1825,15 @@ SCIP_RETCODE determineLimits(
    if( solvelimits->timelimit <= 0.0 || solvelimits->memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
       *runagain = FALSE;
 
+   nodesquot = heurdata->nodesquot;
+   nodesquot *= (SCIPheurGetNBestSolsFound(heur) + 1.0)/(SCIPheurGetNCalls(heur) + 1.0);
+
    /* calculate the search node limit of the heuristic  */
-   solvelimits->nodelimit = (SCIP_Longint)(heurdata->nodesquot * SCIPgetNNodes(scip));
+   solvelimits->nodelimit = (SCIP_Longint)(nodesquot * SCIPgetNNodes(scip));
    solvelimits->nodelimit += heurdata->nodesoffset;
    solvelimits->nodelimit -= heurdata->usednodes;
    solvelimits->nodelimit -= 100 * SCIPheurGetNCalls(heur);
+   solvelimits->nodelimit = MIN(heurdata->maxnodes, solvelimits->nodelimit);
 
    /* use a smaller budget if not all neighborhoods have been initialized yet */
    assert(heurdata->ninitneighborhoods >= 0);
@@ -2052,6 +2084,9 @@ SCIP_RETCODE setupSubScip(
       }
       cutoff = MIN(upperbound, cutoff);
 
+      if( SCIPisObjIntegral(scip) )
+         cutoff = SCIPfloor(scip, cutoff);
+
       SCIPdebugMsg(scip, "Sub-SCIP cutoff: %15.9" SCIP_REAL_FORMAT " (%15.9" SCIP_REAL_FORMAT " in original space)\n",
          cutoff, SCIPretransformObj(scip, cutoff));
 
@@ -2098,7 +2133,7 @@ SCIP_RETCODE setupSubScip(
    }
 
    SCIPdebugMsg(scip, "Solve Limits: %lld (%lld) nodes (stall nodes), %.1f sec., %d sols\n",
-         solvelimits->nodelimit, solvelimits->nodelimit / 2, solvelimits->timelimit, heurdata->nsolslim);
+         solvelimits->nodelimit, solvelimits->stallnodes, solvelimits->timelimit, heurdata->nsolslim);
 
    return SCIP_OKAY;
 }
@@ -2149,7 +2184,7 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
    run = TRUE;
    /** check if budget allows a run of the next selected neighborhood */
    SCIP_CALL( determineLimits(scip, heur, &solvelimits, &run) );
-   SCIPdebugMsg(scip, "Budget check: %" SCIP_LONGINT_FORMAT " %s\n", solvelimits.nodelimit, run ? "passed" : "must wait");
+   SCIPdebugMsg(scip, "Budget check: %" SCIP_LONGINT_FORMAT " (%" SCIP_LONGINT_FORMAT ") %s\n", solvelimits.nodelimit, heurdata->targetnodes, run ? "passed" : "must wait");
 
    if( ! run )
       return SCIP_OKAY;
@@ -2422,12 +2457,17 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
       /** determine the success of this neighborhood, and update the target fixing rate for the next time */
       updateNeighborhoodStats(scip, &runstats[banditidx], heurdata->neighborhoods[banditidx], subscipstatus[banditidx]);
 
+      SCIPdebugMsg(scip, "Status of sub-SCIP run: %d\n", subscipstatus[banditidx]);
+
       /* adjust the fixing rate for this neighborhood
        * make no adjustments in all rewards mode, because this only affects 1 of 8 heuristics
        */
       if( heurdata->adjustfixingrate && ! allrewardsmode )
+      {
+         SCIPdebugMsg(scip, "Update fixing rate: %.2f\n", heurdata->neighborhoods[banditidx]->fixingrate.targetfixingrate);
          updateFixingRate(scip, heurdata->neighborhoods[banditidx], subscipstatus[banditidx], &runstats[banditidx]);
-
+         SCIPdebugMsg(scip, "New fixing rate: %.2f\n", heurdata->neighborhoods[banditidx]->fixingrate.targetfixingrate);
+      }
       /* similarly, update the minimum improvement for the ALNS heuristic
        * make no adjustments in all rewards mode
        */
