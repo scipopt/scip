@@ -168,6 +168,9 @@ struct SCIP_SepaData
    int                   densityoffset;      /**< additional number of variables allowed in row on top of density */
    SCIP_Bool             dynamiccuts;        /**< should generated cuts be removed from the LP if they are no longer tight? */
    SCIP_AGGRROW*         aggrrow;            /**< aggregation row used for generating cuts */
+   SCIP_ROW**            cuts;               /**< generated in the current call */
+   SCIP_Real*            cutscores;          /**< score for each cut genereted in the current call */
+   int                   cutssize;           /**< size of cuts and cutscores arrays */
    int                   ncuts;              /**< number of cuts generated in the current call */
    int                   nreductions;        /**< number of reductions to the mod 2 system found so far */
    SCIP_Bool             infeasible;         /**< infeasibility was detected after adding a zerohalf cut */
@@ -1770,20 +1773,24 @@ SCIP_RETCODE generateZerohalfCut(
 
          if( SCIPisCutNew(scip, cut) )
          {
-            sepadata->ncuts++;
+            int pos = sepadata->ncuts++;
 
-            if( !cutislocal )
+            if( sepadata->ncuts > sepadata->cutssize )
             {
-               SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+               int newsize = SCIPcalcMemGrowSize(scip, sepadata->ncuts);
+               SCIPreallocBlockMemoryArray(scip, &sepadata->cuts, sepadata->cutssize, newsize);
+               SCIPreallocBlockMemoryArray(scip, &sepadata->cutscores, sepadata->cutssize, newsize);
+               sepadata->cutssize = newsize;
             }
-            else
-            {
-               SCIP_CALL( SCIPaddCut(scip, cut, FALSE, &sepadata->infeasible) );
-            }
+
+            sepadata->cuts[pos] = cut;
+            sepadata->cutscores[pos] = cutefficacy;
          }
-
-         /* release the row */
-         SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+         else
+         {
+            /* release the row */
+            SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+         }
       }
    }
 
@@ -2113,6 +2120,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
 
    SCIP_CALL( SCIPaggrRowCreate(scip, &sepadata->aggrrow) );
    sepadata->ncuts = 0;
+   sepadata->cutssize = 0;
+   sepadata->cutscores = NULL;
+   sepadata->cuts = NULL;
    sepadata->infeasible = FALSE;
 
    SCIP_CALL( buildMod2Matrix(scip, sepadata, SCIPblkmem(scip), &mod2matrix, allowlocal, maxslack) );
@@ -2129,12 +2139,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
       assert(mod2matrix.nzeroslackrows <= mod2matrix.nrows);
       SCIP_CALL( mod2matrixPreprocessRows(scip, &mod2matrix, sepa, sepadata, allowlocal) );
       assert(mod2matrix.nzeroslackrows <= mod2matrix.nrows);
-
-      if( sepadata->infeasible )
-      {
-         *result = SCIP_CUTOFF;
-         goto TERMINATE;
-      }
 
       SCIPdebugMsg(scip, "preprocessed rows (%i rows, %i cols, %i cuts) \n", mod2matrix.nrows, mod2matrix.ncols,
                    sepadata->ncuts);
@@ -2227,19 +2231,77 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
          continue;
 
       SCIP_CALL( generateZerohalfCut(scip, &mod2matrix, sepa, sepadata, allowlocal, row) );
-
-      if( sepadata->infeasible )
-      {
-         *result = SCIP_CUTOFF;
-         goto TERMINATE;
-      }
    }
 
    SCIPdebugMsg(scip, "total number of cuts found: %i\n", sepadata->ncuts);
    if( sepadata->ncuts > 0  )
-      *result = SCIP_SEPARATED;
+   {
+      SCIP_Real goodscore;
 
-TERMINATE:
+      SCIPsortDownRealPtr(sepadata->cutscores, (void**)sepadata->cuts, sepadata->ncuts);
+
+      goodscore = 0.9 * sepadata->cutscores[0];
+
+      for( i = 0; i < sepadata->ncuts; ++i )
+      {
+         int j;
+
+         if( sepadata->cuts[i] == NULL )
+            continue;
+
+         if( SCIProwIsLocal(sepadata->cuts[i]) )
+         {
+            SCIP_CALL( SCIPaddCut(scip, sepadata->cuts[i], FALSE, &sepadata->infeasible) );
+
+            for( j = i+1; j < sepadata->ncuts; ++j )
+            {
+               SCIP_Real ortho;
+
+               if( sepadata->cuts[j] == NULL || !SCIProwIsLocal(sepadata->cuts[j]) )
+                  continue;
+
+               ortho = SCIProwGetOrthogonality(sepadata->cuts[j], sepadata->cuts[i], 'e');
+
+               if( ortho < 0.5 || (ortho < 0.9 && sepadata->cutscores[j] < goodscore) )
+               {
+                  SCIP_CALL( SCIPreleaseRow(scip, &sepadata->cuts[j]) );
+               }
+            }
+
+            SCIP_CALL( SCIPreleaseRow(scip, &sepadata->cuts[i]) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPaddPoolCut(scip, sepadata->cuts[i]) );
+
+            for( j = i+1; j < sepadata->ncuts; ++j )
+            {
+               SCIP_Real ortho;
+
+               if( sepadata->cuts[j] == NULL )
+                  continue;
+
+               ortho = SCIProwGetOrthogonality(sepadata->cuts[j], sepadata->cuts[i], 'e');
+
+               if( ortho < 0.5 || (ortho < 0.9 && sepadata->cutscores[j] < goodscore) )
+               {
+                  SCIPreleaseRow(scip, &sepadata->cuts[j]);
+               }
+            }
+
+            SCIP_CALL( SCIPreleaseRow(scip, &sepadata->cuts[i]) );
+         }
+      }
+
+      SCIPfreeBlockMemoryArray(scip, &sepadata->cuts, sepadata->cutssize);
+      SCIPfreeBlockMemoryArray(scip, &sepadata->cutscores, sepadata->cutssize);
+
+      if( sepadata->infeasible )
+         *result = SCIP_CUTOFF;
+      else
+         *result = SCIP_SEPARATED;
+   }
+
    SCIPfreeBufferArray(scip, &nonzrows);
    SCIPaggrRowFree(scip, &sepadata->aggrrow);
 
