@@ -3161,7 +3161,7 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
                obj = SCIPvarGetObj(var);
             else
             {
-               assert( fixedZero || SCIPisEQ(scip, obj, SCIPvarGetObj(var)) );
+               assert( fixedZero || ! SCIPvarIsActive(var) || SCIPisEQ(scip, obj, SCIPvarGetObj(var)) );
             }
          }
       }
