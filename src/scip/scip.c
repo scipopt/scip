@@ -16031,7 +16031,10 @@ SCIP_RETCODE SCIPsolve(
          /* an extra blank line should be printed separately since the buffer message handler only handles up to one line
           * correctly */
          SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "\n");
+         /* reset relaxation solution, so that the objective value is recomputed from scratch next time, using the new
+          * fixings which may be produced during the presolving after the restart */
          SCIP_CALL( SCIPclearRelaxSolVals(scip) );
+
          SCIP_CALL( freeSolve(scip, TRUE) );
          assert(scip->set->stage == SCIP_STAGE_TRANSFORMED);
       }
