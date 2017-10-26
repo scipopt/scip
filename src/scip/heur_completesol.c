@@ -905,7 +905,7 @@ SCIP_RETCODE applyCompletesol(
     */
    if( SCIPgetNContVars(subscip) == SCIPgetNVars(subscip) )
    {
-      SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 1) );
+      SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 1LL) );
    }
 
    SCIP_CALL_ABORT( SCIPsolve(subscip) );
