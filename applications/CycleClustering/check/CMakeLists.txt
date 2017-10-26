@@ -4,9 +4,9 @@ include(CTest)
 # instances in the Coloring data set and their optimal objective value
 #
 set(instances
-"Paper/Pot3/Pot3_T_20.txt_3cluster\;0.005242"
-"Paper/Pot4/Pot4_T_20.txt_4cluster\;0.010748"
-"Paper/Pot6/Pot6_T_20.txt_6cluster\;0.004931"
+"Paper/Pot3/Pot3_T_20.txt_3cluster"
+"Paper/Pot4/Pot4_T_20.txt_4cluster"
+"Paper/Pot6/Pot6_T_20.txt_6cluster"
 )
 
 #
@@ -29,16 +29,15 @@ set_tests_properties(applications-cycleclustering-build
 #
 foreach(instance ${instances})
     list(GET instance 0 basename)
-    list(GET instance 1 optval)
     #
     # call the Binpacking binary and validate the solve with the given objective value
     #
     add_test(NAME "applications-cycleclustering-${basename}"
-            COMMAND $<TARGET_FILE:cycleclustering> -f ${CMAKE_CURRENT_SOURCE_DIR}/../instances/${basename}.spa -o ${optval} ${optval}
+            COMMAND $<TARGET_FILE:cycleclustering> -f ${CMAKE_CURRENT_SOURCE_DIR}/../instances/${basename}.spa
             )
     set_tests_properties("applications-cycleclustering-${basename}"
                         PROPERTIES
-                            PASS_REGULAR_EXPRESSION "Validation         : Success"
+                            PASS_REGULAR_EXPRESSION "optimal solution found"
                             DEPENDS applications-cycleclustering-build
                         )
 endforeach()
