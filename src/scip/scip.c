@@ -39039,7 +39039,7 @@ SCIP_RETCODE printDualSol(
             if( boundconstraint )
                SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g*\n", solval);
             else
-               SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g*\n", solval);
+               SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g\n", solval);
          }
       }
 

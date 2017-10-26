@@ -550,7 +550,7 @@ SCIP_RETCODE createSwitchSolution(
 /** Method that randomly creates a different solution from a given solution. From each cluster, half the states are
  * randomly selected and added to the next cluster.*/
 static
-void permuteStartSolution(
+SCIP_RETCODE permuteStartSolution(
    SCIP_Real**           startclustering,
    SCIP_RANDNUMGEN*      rand,
    int                   nbins,
@@ -564,7 +564,7 @@ void permuteStartSolution(
    int binsincluster[ncluster];
    int **bins;
 
-   SCIPallocMemoryArray(scip, &bins, ncluster);
+   SCIP_CALL( SCIPallocMemoryArray(scip, &bins, ncluster) );
 
    for( t = 0; t < ncluster; ++t )
    {
@@ -574,7 +574,7 @@ void permuteStartSolution(
          if( 0 < startclustering[i][t])
             binsincluster[t]++;
       }
-      SCIPallocClearMemoryArray(scip, &bins[t], binsincluster[t]);
+      SCIP_CALL( SCIPallocClearMemoryArray(scip, &bins[t], binsincluster[t]) );
       c = 0;
       for( i = 0; i < nbins; ++i )
       {
@@ -603,6 +603,7 @@ void permuteStartSolution(
       SCIPfreeMemory(scip, &bins[t]);
    }
    SCIPfreeMemory(scip, &bins);
+   return SCIP_OKAY;
 }
 /*
  * Callback methods of primal heuristic
@@ -726,12 +727,11 @@ SCIP_DECL_HEUREXEC(heurExecSpakerlin)
    if( SCIPgetNNodes(scip) > 1 )
       SCIPheurSetTimingmask(heur, HEUR_TIMING);
 
-
    /* get problem variables */
    nbins = SCIPspaGetNrBins(scip);
    ncluster = SCIPspaGetNrCluster(scip);
    cmatrix = SCIPspaGetCmatrix(scip);
-   SCIPrandomCreate(&rand, SCIPblkmem(scip),SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED));
+   SCIP_CALL( SCIPrandomCreate(&rand, SCIPblkmem(scip),SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
    /* we do not want to run the heurtistic if there is no 'flow' between the clusters.
     * in case of a (ideally) full reversible problem there cannot be a better solution, in the other case, i.e., the
@@ -791,6 +791,7 @@ SCIP_DECL_HEUREXEC(heurExecSpakerlin)
       SCIPfreeMemoryArray(scip, &qmatrix[c]);
    }
 
+   SCIPrandomFree(&rand, SCIPblkmem(scip));
    SCIPfreeMemoryArray(scip, &qmatrix);
    SCIPfreeMemoryArray(scip, &startclustering);
    SCIPfreeMemoryArray(scip, &binfixed);
