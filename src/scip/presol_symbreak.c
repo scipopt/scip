@@ -1069,40 +1069,10 @@ SCIP_RETCODE addSymresackConss(
          {
             SCIP_CONS* cons;
             int permidx = presoldata->components[i][p];
-            SCIP_Bool createdcons = FALSE;
 
-            SCIP_CALL( SCIPcreateConsSymresack(scip, &cons, "symresack", perms[permidx], permvars, npermvars, &createdcons,
+            SCIP_CALL( SCIPcreateConsSymresack(scip, &cons, "symresack", perms[permidx], permvars, npermvars,
                   conssaddlp, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-            /* add the constraint only if the constraint is not trivial */
-            if ( createdcons )
-            {
-               SCIP_CALL( SCIPaddCons(scip, cons) );
-
-               /* do not release constraint here - will be done later */
-               presoldata->genconss[presoldata->ngenconss] = cons;
-               ++presoldata->ngenconss;
-               ++presoldata->nsymresacks;
-               ++nsymresackcons;
-               SCIPdebugMsg(scip, "Added symresack constraint: %d.\n", nsymresackcons);
-            }
-         }
-      }
-   }
-   else
-   {
-      /* loop through perms and add symresack constraints */
-      for (p = 0; p < nperms; ++p)
-      {
-         SCIP_CONS* cons;
-         SCIP_Bool createdcons = FALSE;
-
-         SCIP_CALL( SCIPcreateConsSymresack(scip, &cons, "symresack", perms[p], permvars, npermvars, &createdcons,
-               conssaddlp, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-
-         /* add the constraint only if the constraint is not trivial */
-         if ( createdcons )
-         {
             SCIP_CALL( SCIPaddCons(scip, cons) );
 
             /* do not release constraint here - will be done later */
@@ -1112,6 +1082,26 @@ SCIP_RETCODE addSymresackConss(
             ++nsymresackcons;
             SCIPdebugMsg(scip, "Added symresack constraint: %d.\n", nsymresackcons);
          }
+      }
+   }
+   else
+   {
+      /* loop through perms and add symresack constraints */
+      for (p = 0; p < nperms; ++p)
+      {
+         SCIP_CONS* cons;
+
+         SCIP_CALL( SCIPcreateConsSymresack(scip, &cons, "symresack", perms[p], permvars, npermvars,
+               conssaddlp, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+         SCIP_CALL( SCIPaddCons(scip, cons) );
+
+         /* do not release constraint here - will be done later */
+         presoldata->genconss[presoldata->ngenconss] = cons;
+         ++presoldata->ngenconss;
+         ++presoldata->nsymresacks;
+         ++nsymresackcons;
+         SCIPdebugMsg(scip, "Added symresack constraint: %d.\n", nsymresackcons);
       }
    }
 
