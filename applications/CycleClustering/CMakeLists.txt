@@ -23,7 +23,7 @@ add_executable(cycleclustering
 target_link_libraries(cycleclustering ${SCIP_LIBRARIES} m)
 
 if( TARGET applications )
-    add_dependencies( applications ccscip )
+    add_dependencies( applications cycleclustering)
 endif()
 
 add_subdirectory(check)
