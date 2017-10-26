@@ -6649,8 +6649,7 @@ SCIP_RETCODE generateCut(
    /* check if reference point violates cut at least a little bit */
    if( success && !SCIPisInfinity(scip, -minefficacy) )
    {
-      viol = SCIPgetRowprepViolation(scip, rowprep, sol, 'o');
-
+      viol = SCIPgetRowprepViolation(scip, rowprep, sol);
       if( viol <= 0.0 ) /*lint !e644*/
       {
          SCIPdebugMsg(scip, "skip cut for constraint <%s> because efficacy %g too low (< %g)\n", SCIPconsGetName(cons), viol, minefficacy);
@@ -14755,21 +14754,14 @@ void SCIPaddRowprepConstant(
    SCIPaddRowprepSide(rowprep, -constant);
 }
 
-/* computes violation of cut in a given solution
- *
- * If scaling == 'g', assumes that terms in rowprep are sorted by abs value of coef, in decreasing order.
- *
- * @param scaling 'o' for no scaling, 'g' for scaling by the absolute value of the maximal coefficient, or 's' for scaling by side
- */
+/** computes violation of cut in a given solution */
 SCIP_Real SCIPgetRowprepViolation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be turned into a row */
-   SCIP_SOL*             sol,                /**< solution or NULL for LP solution */
-   char                  scaling             /**< how to scale cut violation: o, g, or s */
+   SCIP_SOL*             sol                 /**< solution or NULL for LP solution */
    )
 {
    SCIP_Real activity;
-   SCIP_Real viol;
    int i;
 
    activity = -rowprep->side;
@@ -14786,40 +14778,10 @@ SCIP_Real SCIPgetRowprepViolation(
 
    if( rowprep->sidetype == SCIP_SIDETYPE_RIGHT )
       /* cut is activity <= 0.0 -> violation is activity, if positive */
-      viol = MAX(activity, 0.0);
+      return MAX(activity, 0.0);
    else
       /* cut is activity >= 0.0 -> violation is -activity, if positive */
-      viol = MAX(-activity, 0.0);
-
-   switch( scaling )
-   {
-   case 'o' :
-      break;
-
-   case 'g' :
-      /* in difference to SCIPgetCutEfficacy, we scale by norm only if the norm is > 1.0 this avoid finding cuts
-       * efficient which are only very slightly violated
-       * CPLEX does not seem to scale row coefficients up too
-       * also we use infinity norm, since that seem to be the usual scaling strategy in LP solvers (equilibrium scaling)
-       */
-      if( rowprep->nvars > 0 )  /*lint --e{666} */
-         viol /= MAX(1.0, REALABS(rowprep->coefs[0]));
-      break;
-
-   case 's' :
-   {
-      /*lint --e{666} */
-      viol /= MAX(1.0, REALABS(rowprep->side));
-      break;
-   }
-
-   default:
-      SCIPerrorMessage("Unknown scaling method '%c'.", scaling);
-      SCIPABORT();
-      return SCIP_INVALID;
-   }
-
-   return viol;
+      return MAX(-activity, 0.0);
 }
 
 /** Merge terms that use same variable and eliminate zero coefficients.
@@ -15344,7 +15306,7 @@ SCIP_RETCODE SCIPcleanupRowprep(
    rowprepCleanupImproveCoefrange(scip, rowprep, sol, maxcoefrange);
 
    /* get current violation in sol */
-   myviol = SCIPgetRowprepViolation(scip, rowprep, sol, 'o');
+   myviol = SCIPgetRowprepViolation(scip, rowprep, sol);
    assert(myviol >= 0.0);
 
 #ifdef SCIP_DEBUG
@@ -15392,11 +15354,11 @@ SCIP_RETCODE SCIPcleanupRowprep(
    /* If we updated myviol correctly, then it should coincide with freshly computed violation.
     * I leave this assert off for now, since getting the tolerance in the EQ correctly is not trivial. We recompute viol below anyway.
     */
-   /* assert(myviol == SCIP_INVALID || SCIPisEQ(scip, myviol, SCIPgetRowprepViolation(scip, rowprep, sol, 'o'))); */
+   /* assert(myviol == SCIP_INVALID || SCIPisEQ(scip, myviol, SCIPgetRowprepViolation(scip, rowprep, sol))); */
 
    /* compute final violation, if requested by caller */
    if( viol != NULL )  /*lint --e{777} */
-      *viol = myviol == SCIP_INVALID ? SCIPgetRowprepViolation(scip, rowprep, sol, 'o') : myviol;
+      *viol = myviol == SCIP_INVALID ? SCIPgetRowprepViolation(scip, rowprep, sol) : myviol;
 
    return SCIP_OKAY;
 }

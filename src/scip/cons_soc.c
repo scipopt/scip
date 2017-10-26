@@ -1101,8 +1101,7 @@ SCIP_RETCODE generateSparseCut(
 
       if( *rowprep != NULL )
       {
-         efficacy = SCIPgetRowprepViolation(scip, *rowprep, sol, 'o');
-
+         efficacy = SCIPgetRowprepViolation(scip, *rowprep, sol);
          if( SCIPisGT(scip, efficacy, goodefficacy) ||
             (maxnz >= consdata->nvars && SCIPisGT(scip, efficacy, minefficacy)) )
          {
@@ -1308,7 +1307,7 @@ SCIP_RETCODE addLinearizationCuts(
       /* if caller wants, then check if cut separates LP solution and add to sepastore if so */
       if( separatedlpsol != NULL )
       {
-         if( SCIPgetRowprepViolation(scip, rowprep, NULL, 'o') >= minefficacy )
+         if( SCIPgetRowprepViolation(scip, rowprep, NULL) >= minefficacy )
          {
             SCIP_ROW* row;
 
