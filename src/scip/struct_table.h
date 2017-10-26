@@ -47,7 +47,6 @@ struct SCIP_Table
    SCIP_TABLEDATA*       tabledata;          /**< statistics table data */
    int                   position;           /**< relative position of statistics table */
    SCIP_STAGE            earlieststage;      /**< output of the statistics table is only printed from this stage onwards */
-   SCIP_TABLESTATUS      tablestatus;        /**< display activation status of statistics table */
    SCIP_Bool             initialized;        /**< is statistics table initialized? */
    SCIP_Bool             active;             /**< should statistics table be displayed to the screen? */
 };

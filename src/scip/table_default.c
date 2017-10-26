@@ -413,7 +413,7 @@ SCIP_RETCODE SCIPincludeTableDefault(
    tmptable = SCIPfindTable(scip, TABLE_NAME_STATUS);
    if( tmptable == NULL )
    {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_STATUS, TABLE_DESC_STATUS, SCIP_TABLESTATUS_ON,
+      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_STATUS, TABLE_DESC_STATUS, TRUE,
             tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputStatus,
             NULL, TABLE_POSITION_STATUS, TABLE_EARLIEST_STAGE_STATUS) );
    }
@@ -421,7 +421,7 @@ SCIP_RETCODE SCIPincludeTableDefault(
    tmptable = SCIPfindTable(scip, TABLE_NAME_TIMING);
    if( tmptable == NULL )
    {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_TIMING, TABLE_DESC_TIMING, SCIP_TABLESTATUS_ON,
+      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_TIMING, TABLE_DESC_TIMING, TRUE,
             tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputTiming,
             NULL, TABLE_POSITION_TIMING, TABLE_EARLIEST_STAGE_TIMING) );
    }
@@ -429,7 +429,7 @@ SCIP_RETCODE SCIPincludeTableDefault(
    tmptable = SCIPfindTable(scip, TABLE_NAME_ORIGPROB);
    if( tmptable == NULL )
    {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_ORIGPROB, TABLE_DESC_ORIGPROB, SCIP_TABLESTATUS_ON,
+      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_ORIGPROB, TABLE_DESC_ORIGPROB, TRUE,
             tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputOrigProb,
             NULL, TABLE_POSITION_ORIGPROB, TABLE_EARLIEST_STAGE_ORIGPROB) );
    }
@@ -437,7 +437,7 @@ SCIP_RETCODE SCIPincludeTableDefault(
    tmptable = SCIPfindTable(scip, TABLE_NAME_TRANSPROB);
    if( tmptable == NULL )
    {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_TRANSPROB, TABLE_DESC_TRANSPROB, SCIP_TABLESTATUS_ON,
+      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_TRANSPROB, TABLE_DESC_TRANSPROB, TRUE,
             tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputTransProb,
             NULL, TABLE_POSITION_TRANSPROB, TABLE_EARLIEST_STAGE_TRANSPROB) );
    }
@@ -445,7 +445,7 @@ SCIP_RETCODE SCIPincludeTableDefault(
    tmptable = SCIPfindTable(scip, TABLE_NAME_PRESOL);
    if( tmptable == NULL )
    {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_PRESOL, TABLE_DESC_PRESOL, SCIP_TABLESTATUS_ON,
+      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_PRESOL, TABLE_DESC_PRESOL, TRUE,
             tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputPresol,
             NULL, TABLE_POSITION_PRESOL, TABLE_EARLIEST_STAGE_PRESOL) );
    }
@@ -453,7 +453,7 @@ SCIP_RETCODE SCIPincludeTableDefault(
    tmptable = SCIPfindTable(scip, TABLE_NAME_CONS);
    if( tmptable == NULL )
    {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_CONS, TABLE_DESC_CONS, SCIP_TABLESTATUS_ON,
+      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_CONS, TABLE_DESC_CONS, TRUE,
             tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputCons,
             NULL, TABLE_POSITION_CONS, TABLE_EARLIEST_STAGE_CONS) );
    }
@@ -461,7 +461,7 @@ SCIP_RETCODE SCIPincludeTableDefault(
    tmptable = SCIPfindTable(scip, TABLE_NAME_CONSTIMING);
    if( tmptable == NULL )
    {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_CONSTIMING, TABLE_DESC_CONSTIMING, SCIP_TABLESTATUS_ON,
+      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_CONSTIMING, TABLE_DESC_CONSTIMING, TRUE,
             tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputConstiming,
             NULL, TABLE_POSITION_CONSTIMING, TABLE_EARLIEST_STAGE_CONSTIMING) );
    }
@@ -469,7 +469,7 @@ SCIP_RETCODE SCIPincludeTableDefault(
    tmptable = SCIPfindTable(scip, TABLE_NAME_PROP);
    if( tmptable == NULL )
    {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_PROP, TABLE_DESC_PROP, SCIP_TABLESTATUS_ON,
+      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_PROP, TABLE_DESC_PROP, TRUE,
             tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputProp,
             NULL, TABLE_POSITION_PROP, TABLE_EARLIEST_STAGE_PROP) );
    }
@@ -477,7 +477,7 @@ SCIP_RETCODE SCIPincludeTableDefault(
    tmptable = SCIPfindTable(scip, TABLE_NAME_CONFLICT);
    if( tmptable == NULL )
    {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_CONFLICT, TABLE_DESC_CONFLICT, SCIP_TABLESTATUS_ON,
+      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_CONFLICT, TABLE_DESC_CONFLICT, TRUE,
             tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputConflict,
             NULL, TABLE_POSITION_CONFLICT, TABLE_EARLIEST_STAGE_CONFLICT) );
    }
@@ -485,7 +485,7 @@ SCIP_RETCODE SCIPincludeTableDefault(
    tmptable = SCIPfindTable(scip, TABLE_NAME_SEPA);
    if( tmptable == NULL )
    {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_SEPA, TABLE_DESC_SEPA, SCIP_TABLESTATUS_ON,
+      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_SEPA, TABLE_DESC_SEPA, TRUE,
             tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputSepa,
             NULL, TABLE_POSITION_SEPA, TABLE_EARLIEST_STAGE_SEPA) );
    }
@@ -493,7 +493,7 @@ SCIP_RETCODE SCIPincludeTableDefault(
    tmptable = SCIPfindTable(scip, TABLE_NAME_PRICER);
    if( tmptable == NULL )
    {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_PRICER, TABLE_DESC_PRICER, SCIP_TABLESTATUS_ON,
+      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_PRICER, TABLE_DESC_PRICER, TRUE,
             tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputPricer,
             NULL, TABLE_POSITION_PRICER, TABLE_EARLIEST_STAGE_PRICER) );
    }
@@ -501,7 +501,7 @@ SCIP_RETCODE SCIPincludeTableDefault(
    tmptable = SCIPfindTable(scip, TABLE_NAME_BRANCH);
    if( tmptable == NULL )
    {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_BRANCH, TABLE_DESC_BRANCH, SCIP_TABLESTATUS_ON,
+      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_BRANCH, TABLE_DESC_BRANCH, TRUE,
             tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputBranch,
             NULL, TABLE_POSITION_BRANCH, TABLE_EARLIEST_STAGE_BRANCH) );
    }
@@ -509,7 +509,7 @@ SCIP_RETCODE SCIPincludeTableDefault(
    tmptable = SCIPfindTable(scip, TABLE_NAME_HEUR);
    if( tmptable == NULL )
    {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_HEUR, TABLE_DESC_HEUR, SCIP_TABLESTATUS_ON,
+      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_HEUR, TABLE_DESC_HEUR, TRUE,
             tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputHeur,
             NULL, TABLE_POSITION_HEUR, TABLE_EARLIEST_STAGE_HEUR) );
    }
@@ -517,7 +517,7 @@ SCIP_RETCODE SCIPincludeTableDefault(
    tmptable = SCIPfindTable(scip, TABLE_NAME_COMPRESSION);
    if( tmptable == NULL )
    {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_COMPRESSION, TABLE_DESC_COMPRESSION, SCIP_TABLESTATUS_ON,
+      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_COMPRESSION, TABLE_DESC_COMPRESSION, TRUE,
             tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputCompression,
             NULL, TABLE_POSITION_COMPRESSION, TABLE_EARLIEST_STAGE_COMPRESSION) );
    }
@@ -525,7 +525,7 @@ SCIP_RETCODE SCIPincludeTableDefault(
    tmptable = SCIPfindTable(scip, TABLE_NAME_LP);
    if( tmptable == NULL )
    {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_LP, TABLE_DESC_LP, SCIP_TABLESTATUS_ON,
+      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_LP, TABLE_DESC_LP, TRUE,
             tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputLP,
             NULL, TABLE_POSITION_LP, TABLE_EARLIEST_STAGE_LP) );
    }
@@ -533,7 +533,7 @@ SCIP_RETCODE SCIPincludeTableDefault(
    tmptable = SCIPfindTable(scip, TABLE_NAME_NLP);
    if( tmptable == NULL )
    {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_NLP, TABLE_DESC_NLP, SCIP_TABLESTATUS_ON,
+      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_NLP, TABLE_DESC_NLP, TRUE,
             tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputNLP,
             NULL, TABLE_POSITION_NLP, TABLE_EARLIEST_STAGE_NLP) );
    }
@@ -541,7 +541,7 @@ SCIP_RETCODE SCIPincludeTableDefault(
    tmptable = SCIPfindTable(scip, TABLE_NAME_RELAX);
    if( tmptable == NULL )
    {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_RELAX, TABLE_DESC_RELAX, SCIP_TABLESTATUS_ON,
+      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_RELAX, TABLE_DESC_RELAX, TRUE,
             tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputRelax,
             NULL, TABLE_POSITION_RELAX, TABLE_EARLIEST_STAGE_RELAX) );
    }
@@ -549,7 +549,7 @@ SCIP_RETCODE SCIPincludeTableDefault(
    tmptable = SCIPfindTable(scip, TABLE_NAME_TREE);
    if( tmptable == NULL )
    {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_TREE, TABLE_DESC_TREE, SCIP_TABLESTATUS_ON,
+      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_TREE, TABLE_DESC_TREE, TRUE,
             tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputTree,
             NULL, TABLE_POSITION_TREE, TABLE_EARLIEST_STAGE_TREE) );
    }
@@ -557,7 +557,7 @@ SCIP_RETCODE SCIPincludeTableDefault(
    tmptable = SCIPfindTable(scip, TABLE_NAME_ROOT);
    if( tmptable == NULL )
    {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_ROOT, TABLE_DESC_ROOT, SCIP_TABLESTATUS_ON,
+      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_ROOT, TABLE_DESC_ROOT, TRUE,
             tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputRoot,
             NULL, TABLE_POSITION_ROOT, TABLE_EARLIEST_STAGE_ROOT) );
    }
@@ -565,7 +565,7 @@ SCIP_RETCODE SCIPincludeTableDefault(
    tmptable = SCIPfindTable(scip, TABLE_NAME_SOL);
    if( tmptable == NULL )
    {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_SOL, TABLE_DESC_SOL, SCIP_TABLESTATUS_ON,
+      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_SOL, TABLE_DESC_SOL, TRUE,
             tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputSol,
             NULL, TABLE_POSITION_SOL, TABLE_EARLIEST_STAGE_SOL) );
    }
@@ -573,7 +573,7 @@ SCIP_RETCODE SCIPincludeTableDefault(
    tmptable = SCIPfindTable(scip, TABLE_NAME_CONC);
    if( tmptable == NULL )
    {
-      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_CONC, TABLE_DESC_CONC, SCIP_TABLESTATUS_ON,
+      SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_CONC, TABLE_DESC_CONC, TRUE,
             tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputConc,
             NULL, TABLE_POSITION_CONC, TABLE_EARLIEST_STAGE_CONC) );
    }

@@ -40,14 +40,6 @@
 extern "C" {
 #endif
 
-/** display activation status of statistics table */
-enum SCIP_TableStatus
-{
-   SCIP_TABLESTATUS_OFF  = 0,                /**< statistics table is not displayed */
-   SCIP_TABLESTATUS_ON   = 1                 /**< statistics table is displayed */
-};
-typedef enum SCIP_TableStatus SCIP_TABLESTATUS;
-
 typedef struct SCIP_Table SCIP_TABLE;        /**< statistics table data structure */
 typedef struct SCIP_TableData SCIP_TABLEDATA; /**< statistics table specific data */
 

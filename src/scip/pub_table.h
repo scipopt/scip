@@ -77,9 +77,9 @@ SCIP_STAGE SCIPtableGetEarliestStage(
    SCIP_TABLE*           table               /**< statistics table */
    );
 
-/** gets status of statistics table */
+/** is statistics table currently active? */
 EXTERN
-SCIP_TABLESTATUS SCIPtableGetStatus(
+SCIP_Bool SCIPtableIsActive(
    SCIP_TABLE*           table               /**< statistics table */
    );
 

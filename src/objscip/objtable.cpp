@@ -209,7 +209,7 @@ SCIP_RETCODE SCIPincludeObjTable(
    tabledata->deleteobject = deleteobject;
 
    /* include statistics table */
-   SCIP_CALL( SCIPincludeTable(scip, objtable->scip_name_, objtable->scip_desc_, SCIP_TABLESTATUS_ON,
+   SCIP_CALL( SCIPincludeTable(scip, objtable->scip_name_, objtable->scip_desc_, TRUE,
          tableCopyObj, tableFreeObj, tableInitObj, tableExitObj, tableInitsolObj,
          tableExitsolObj, tableOutputObj, tabledata, objtable->scip_position_, objtable->scip_earlieststage_) ); /*lint !e429*/
 

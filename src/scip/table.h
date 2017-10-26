@@ -55,7 +55,7 @@ SCIP_RETCODE SCIPtableCreate(
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
    const char*           name,               /**< name of statistics table */
    const char*           desc,               /**< description of statistics table */
-   SCIP_TABLESTATUS      tablestatus,        /**< activation status of statistics table */
+   SCIP_Bool             active,             /**< should the table be activated by default? */
    SCIP_DECL_TABLECOPY   ((*tablecopy)),     /**< copy method of statistics table or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_TABLEFREE   ((*tablefree)),     /**< destructor of statistics table */
    SCIP_DECL_TABLEINIT   ((*tableinit)),     /**< initialize statistics table */

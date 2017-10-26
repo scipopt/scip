@@ -67,7 +67,7 @@ SCIP_RETCODE SCIPtableCreate(
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
    const char*           name,               /**< name of statistics table */
    const char*           desc,               /**< description of statistics table */
-   SCIP_TABLESTATUS      tablestatus,        /**< activation status of statistics table */
+   SCIP_Bool             active,             /**< should the table be activated by default? */
    SCIP_DECL_TABLECOPY   ((*tablecopy)),     /**< copy method of statistics table or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_TABLEFREE   ((*tablefree)),     /**< destructor of statistics table */
    SCIP_DECL_TABLEINIT   ((*tableinit)),     /**< initialize statistics table */
@@ -91,7 +91,6 @@ SCIP_RETCODE SCIPtableCreate(
    SCIP_ALLOC( BMSallocMemory(table) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*table)->name, name, strlen(name)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*table)->desc, desc, strlen(desc)+1) );
-   (*table)->tablestatus = tablestatus;
    (*table)->tablecopy = tablecopy;
    (*table)->tablefree = tablefree;
    (*table)->tableinit = tableinit;
@@ -103,13 +102,13 @@ SCIP_RETCODE SCIPtableCreate(
    (*table)->position = position;
    (*table)->earlieststage = earlieststage;
    (*table)->initialized = FALSE;
-   (*table)->active = (tablestatus == SCIP_TABLESTATUS_ON);
+   (*table)->active = active;
 
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "table/%s/active", name);
-   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "table activation status of statistics table <%s> (0: off, 1:on)", name);
-   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-         (int*)(&(*table)->tablestatus), FALSE, (int)tablestatus, 0, 1, NULL, NULL) );
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "is statistics table <%s> active", name);
+   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname, paramdesc,
+         &(*table)->active, FALSE, active, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -299,14 +298,14 @@ SCIP_STAGE SCIPtableGetEarliestStage(
    return table->earlieststage;
 }
 
-/** gets status of statistics table */
-SCIP_TABLESTATUS SCIPtableGetStatus(
+/** is statistics table currently active? */
+SCIP_Bool SCIPtableIsActive(
    SCIP_TABLE*           table               /**< statistics table */
    )
 {
    assert(table != NULL);
 
-   return table->tablestatus;
+   return table->active;
 }
 
 /** is statistics table initialized? */

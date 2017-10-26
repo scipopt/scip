@@ -38,7 +38,7 @@ namespace scip
  *
  * - \ref TABLE "Instructions for implementing a statistics table"
  * - \ref TABLES "List of available statistics tables"
- *  - \ref type_table.h "Corresponding C interface"
+ * - \ref type_table.h "Corresponding C interface"
  */
 class ObjTable : public ObjCloneable
 {

@@ -9401,7 +9401,7 @@ SCIP_RETCODE SCIPincludeTable(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of statistics table */
    const char*           desc,               /**< description of statistics table */
-   SCIP_TABLESTATUS      tablestatus,        /**< display activation status of statistics table */
+   SCIP_Bool             active,             /**< should the table be activated by default? */
    SCIP_DECL_TABLECOPY   ((*tablecopy)),     /**< copy method of statistics table or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_TABLEFREE   ((*tablefree)),     /**< destructor of statistics table */
    SCIP_DECL_TABLEINIT   ((*tableinit)),     /**< initialize statistics table */
@@ -9426,7 +9426,7 @@ SCIP_RETCODE SCIPincludeTable(
    }
 
    SCIP_CALL( SCIPtableCreate(&table, scip->set, scip->messagehdlr, scip->mem->setmem,
-         name, desc, tablestatus, tablecopy,
+         name, desc, active, tablecopy,
          tablefree, tableinit, tableexit, tableinitsol, tableexitsol, tableoutput, tabledata,
          position, earlieststage) );
    SCIP_CALL( SCIPsetIncludeTable(scip->set, table) );
@@ -45149,7 +45149,7 @@ SCIP_RETCODE SCIPprintStatistics(
    for( i = 0; i < ntables; ++i )
    {
       /* skip tables which are not active or only used in later stages */
-      if( SCIPtableGetStatus(tables[i]) == SCIP_TABLESTATUS_OFF || SCIPtableGetEarliestStage(tables[i]) > SCIPgetStage(scip) )
+      if( ( ! SCIPtableIsActive(tables[i]) ) || SCIPtableGetEarliestStage(tables[i]) > SCIPgetStage(scip) )
          continue;
 
       SCIP_CALL( SCIPtableOutput(tables[i], scip->set, file) );
