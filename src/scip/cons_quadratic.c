@@ -5910,6 +5910,7 @@ SCIP_RETCODE solveBilinearLP(
       else if( !SCIPisZero(scip, *ycoef) )
       {
          SCIP_Real val = REALABS(*ycoef);
+         *xcoef /= val;
          *ycoef /= val;
          *constant /= val;
       }
