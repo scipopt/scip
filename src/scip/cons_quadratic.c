@@ -11875,7 +11875,7 @@ SCIP_RETCODE applyObbt(
    if( !lperror && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
    {
       SCIP_Real val = SCIPvarGetLPSol(x);
-      SCIP_CALL( SCIPtightenVarLbGlobal(scip, x, val, FALSE, &infeasible, NULL) );
+      SCIP_CALL( SCIPtightenVarLbLocal(scip, x, val, FALSE, &infeasible, NULL) );
    }
 
    /* maximize x */
@@ -11885,7 +11885,7 @@ SCIP_RETCODE applyObbt(
    if( !lperror && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
    {
       SCIP_Real val = SCIPvarGetLPSol(x);
-      SCIP_CALL( SCIPtightenVarUbGlobal(scip, x, val, FALSE, &infeasible, NULL) );
+      SCIP_CALL( SCIPtightenVarUbLocal(scip, x, val, FALSE, &infeasible, NULL) );
    }
 
    /* reset objective */
