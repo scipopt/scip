@@ -3792,6 +3792,10 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    /* print NAME of the problem */
    SCIPinfoMessage(scip, file, "%-14s%s\n", "NAME", name);
 
+   /* print OBJSENSE of the problem */
+   SCIPinfoMessage(scip, file, "OBJSENSE\n");
+   SCIPinfoMessage(scip, file, "%s\n", objsense == SCIP_OBJSENSE_MAXIMIZE ? "  MAX" : "  MIN");
+
    /* start ROWS section */
    SCIPinfoMessage(scip, file, "ROWS\n");
 
@@ -3812,10 +3816,6 @@ SCIP_DECL_READERWRITE(readerWriteMps)
        */
       if( !SCIPisZero(scip, value) || SCIPvarGetType(var) < SCIP_VARTYPE_IMPLINT || ((SCIPvarGetNLocksDown(var) == 0) && (SCIPvarGetNLocksUp(var) == 0)) )
       {
-         /* convert maximization problem into minimization since MPS format the objective is to minimize */
-         if( objsense == SCIP_OBJSENSE_MAXIMIZE )
-            value *= -1.0;
-
          assert( matrix->nentries < matrix->sentries );
 
          matrix->values[matrix->nentries] = value;
