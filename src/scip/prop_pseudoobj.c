@@ -2007,7 +2007,7 @@ SCIP_RETCODE adjustCutoffbound(
    int                   inferinfo,          /**< inference information */
    SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
-   SCIP_HASHTABLE*       addedvars,          /**< hash table which contains variable which are already added or implict given as reason for the resolve, or NULL */
+   SCIP_HASHTABLE*       addedvars,          /**< hash table which contains variable which are already added or implicit given as reason for the resolve, or NULL */
    SCIP_Real*            cutoffbound         /**< pointer to store the adjusted cutoff bound */
    )
 {
@@ -2045,7 +2045,10 @@ SCIP_RETCODE adjustCutoffbound(
          end = objimplics->nlbimpls + objimplics->nubimpls;
       }
 
-      SCIP_CALL( getConflictImplics(scip, objimplics->objvars, start, end, bdchgidx, addedvars, cutoffbound, &foundimplics) );
+      if( addedvars != NULL )
+      {
+         SCIP_CALL( getConflictImplics(scip, objimplics->objvars, start, end, bdchgidx, addedvars, cutoffbound, &foundimplics) );
+      }
    }
    else
    {
@@ -2079,7 +2082,7 @@ SCIP_RETCODE adjustCutoffbound(
             newbound -= 1 - 10 * SCIPfeastol(scip);
       }
 
-      /* adjust the cutoff bound by the portion the inference variable contributes to the presudo objective activitiy
+      /* adjust the cutoff bound by the portion the inference variable contributes to the presudo objective activity
        * (minactivity)
        */
       assert(!SCIPisNegative(scip, objval * (newbound - glbbound)));
