@@ -1411,7 +1411,11 @@ SCIP_RETCODE cliqueGetCommonSuccessorsSOS1(
    /* determine successors of variable var[0] that are not in the clique */
    assert(vars[0] != NULL );
    ind =  varGetNodeSOS1(conshdlrdata, vars[0]);
-   assert( ind >= 0 && ind < SCIPdigraphGetNNodes(conflictgraph) );
+
+   if( ind == -1 )
+      return SCIP_INVALIDDATA;
+
+   assert( ind < SCIPdigraphGetNNodes(conflictgraph) );
    nsucc = SCIPdigraphGetNSuccessors(conflictgraph, ind);
    succ = SCIPdigraphGetSuccessors(conflictgraph, ind);
 
