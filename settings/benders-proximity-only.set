@@ -58,7 +58,7 @@ heuristics/proximity-benders/freq = 5
 
 # maximum number of nodes to regard in the subproblem
 # [type: longint, advanced: TRUE, range: [0,9223372036854775807], default: 10000]
-heuristics/proximity-benders/maxnodes = 500
+heuristics/proximity-benders/maxnodes = 20
 
 # number of nodes added to the contingent of the total nodes
 # [type: longint, advanced: TRUE, range: [0,9223372036854775807], default: 50]
@@ -74,7 +74,7 @@ heuristics/proximity-benders/waitingnodes = 0
 
 # factor by which proximity should at least improve the incumbent
 # [type: real, advanced: TRUE, range: [0,1], default: 0.02]
-heuristics/proximity-benders/minimprove = 0.02
+heuristics/proximity-benders/minimprove = 0.01
 
 # sub-MIP node limit w.r.t number of original nodes
 # [type: real, advanced: TRUE, range: [0,1e+20], default: 0.1]
