@@ -797,16 +797,21 @@ SCIP_RETCODE computeSymmetryGroup(
       }
       else if ( strcmp(conshdlrname, "xor") == 0 )
       {
+         SCIP_VAR** curconsvars;
+
          /* get number of variables of XOR constraint (without integer variable) */
          nconsvars = SCIPgetNVarsXor(scip, cons);
          assert( nconsvars <= nvars );
 
          /* get variables of XOR constraint */
-         consvars = SCIPgetVarsXor(scip, cons);
+         curconsvars = SCIPgetVarsXor(scip, cons);
          assert( consvars != NULL );
 
          for (j = 0; j < nconsvars; ++j)
+         {
+            consvars[j] = curconsvars[j];
             consvals[j] = 1.0;
+         }
          consvars[nconsvars] = SCIPgetIntVarXor(scip, cons);
          consvals[nconsvars] = 2.0;
          ++nconsvars;
@@ -816,16 +821,21 @@ SCIP_RETCODE computeSymmetryGroup(
       }
       else if ( strcmp(conshdlrname, "and") == 0 )
       {
+         SCIP_VAR** curconsvars;
+
          /* get number of variables of AND constraint (without resultant) */
          nconsvars = SCIPgetNVarsAnd(scip, cons);
          assert( nconsvars <= nvars );
 
          /* get variables of AND constraint */
-         consvars = SCIPgetVarsAnd(scip, cons);
+         curconsvars = SCIPgetVarsAnd(scip, cons);
          assert( consvars != NULL );
 
          for (j = 0; j < nconsvars; ++j)
+         {
+            consvars[j] = curconsvars[j];
             consvals[j] = 1.0;
+         }
          consvars[nconsvars] = SCIPgetResultantAnd(scip, cons);
          consvals[nconsvars] = 2.0;
          ++nconsvars;
@@ -835,16 +845,21 @@ SCIP_RETCODE computeSymmetryGroup(
       }
       else if ( strcmp(conshdlrname, "or") == 0 )
       {
+         SCIP_VAR** curconsvars;
+
          /* get number of variables of OR constraint (without resultant) */
          nconsvars = SCIPgetNVarsOr(scip, cons);
          assert( nconsvars <= nvars );
 
          /* get variables of OR constraint */
-         consvars = SCIPgetVarsOr(scip, cons);
+         curconsvars = SCIPgetVarsOr(scip, cons);
          assert( consvars != NULL );
 
          for (j = 0; j < nconsvars; ++j)
+         {
+            consvars[j] = curconsvars[j];
             consvals[j] = 1.0;
+         }
          consvars[nconsvars] = SCIPgetResultantOr(scip, cons);
          consvals[nconsvars] = 2.0;
          ++nconsvars;
