@@ -1835,6 +1835,9 @@ SCIP_DECL_CONSCOPY(consCopyOr)
    sourcevars = SCIPgetVarsOr(sourcescip, sourcecons);
    nvars = SCIPgetNVarsOr(sourcescip, sourcecons);
 
+   if( nvars == -1 )
+      return SCIP_INVALIDCALL;
+
    /* allocate buffer array */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
 
