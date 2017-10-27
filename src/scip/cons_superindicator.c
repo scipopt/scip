@@ -1508,7 +1508,7 @@ SCIP_DECL_CONSPRESOL(consPresolSuperindicator)
             SCIPerrorMessage("invalid SCIP result %d\n", locresult);
             return SCIP_INVALIDRESULT;
          }
-      }
+      } /*lint !e788*/
    }
 
    SCIPdebugMsg(scip, "presol result=%d\n", *result);
