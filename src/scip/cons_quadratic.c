@@ -5503,7 +5503,7 @@ SCIP_RETCODE storeAllBilinearTerms(
 
    /* check for all cases for which we don't want to spend time for collecting all bilinear terms */
    if( nconss == 0 || conshdlrdata->storedbilinearterms || SCIPgetSubscipDepth(scip) != 0 || SCIPgetDepth(scip) >= 1
-	    || SCIPinProbing(scip) || SCIPinDive(scip) )
+      || SCIPinProbing(scip) || SCIPinDive(scip) )
       return SCIP_OKAY;
 
    assert(conshdlrdata->bilinestimators == NULL);
@@ -7234,15 +7234,15 @@ void updateBilinearRelaxation(
          SCIP_Real relimpr = 1.0 - (REALABS(val - bilincoef * refx * refy) + 1e-4) / (REALABS(*bestval - bilincoef * refx * refy) + 1e-4);
          SCIP_Real absimpr = REALABS(val - (*bestval));
 
-	 /* update relaxation if possible */
-	 if( relimpr > 0.05 && absimpr > 0.001 &&  ((overestimate && SCIPisFeasLT(scip, val, *bestval)) || (!overestimate && SCIPisFeasGT(scip, val, *bestval))) )
-	 {
-	    *bestcoefx = xcoef;
-	    *bestcoefy = ycoef;
-	    *bestconst = constant;
-	    *bestval = val;
-	    *success = TRUE;
-	 }
+         /* update relaxation if possible */
+         if( relimpr > 0.05 && absimpr > 0.001 &&  ((overestimate && SCIPisFeasLT(scip, val, *bestval)) || (!overestimate && SCIPisFeasGT(scip, val, *bestval))) )
+         {
+            *bestcoefx = xcoef;
+            *bestcoefy = ycoef;
+            *bestconst = constant;
+            *bestval = val;
+            *success = TRUE;
+         }
       }
    }
 
@@ -7258,15 +7258,15 @@ void updateBilinearRelaxation(
          SCIP_Real relimpr = 1.0 - (REALABS(val - bilincoef * refx * refy) + 1e-4) / (REALABS(*bestval - bilincoef * refx * refy) + 1e-4);
          SCIP_Real absimpr = REALABS(val - (*bestval));
 
-	 /* update relaxation if possible */
-	 if( relimpr > 0.05 && absimpr > 0.001 &&  ((overestimate && SCIPisFeasLT(scip, val, *bestval)) || (!overestimate && SCIPisFeasGT(scip, val, *bestval))) )
-	 {
-	    *bestcoefx = xcoef;
-	    *bestcoefy = ycoef;
-	    *bestconst = constant;
-	    *bestval = val;
-	    *success = TRUE;
-	 }
+         /* update relaxation if possible */
+         if( relimpr > 0.05 && absimpr > 0.001 &&  ((overestimate && SCIPisFeasLT(scip, val, *bestval)) || (!overestimate && SCIPisFeasGT(scip, val, *bestval))) )
+         {
+            *bestcoefx = xcoef;
+            *bestcoefy = ycoef;
+            *bestconst = constant;
+            *bestval = val;
+            *success = TRUE;
+         }
       }
    }
 }
@@ -7358,15 +7358,15 @@ SCIP_RETCODE generateCutNonConvex(
       /* relax each bilinear term */
       for( k = 0; k < consdata->quadvarterms[j].nadjbilin && (*success); ++k )
       {
-	 SCIP_VAR* x;
-	 SCIP_VAR* y;
-	 SCIP_Real refx;
-	 SCIP_Real refy;
-	 SCIP_Real lbx;
-	 SCIP_Real ubx;
-	 SCIP_Real lby;
-	 SCIP_Real uby;
-	 int idx;
+         SCIP_VAR* x;
+         SCIP_VAR* y;
+         SCIP_Real refx;
+         SCIP_Real refy;
+         SCIP_Real lbx;
+         SCIP_Real ubx;
+         SCIP_Real lby;
+         SCIP_Real uby;
+         int idx;
 
          idx = consdata->quadvarterms[j].adjbilin[k];
          bilinterm = &consdata->bilinterms[idx];
@@ -7452,17 +7452,17 @@ SCIP_RETCODE generateCutNonConvex(
                   bilinestimator->lastimprfac = 1.0 - REALABS(bestval - bilinterm->coef * refx * refy) / REALABS(mccormick - bilinterm->coef * refx * refy);
 
 #ifndef NDEBUG
-		  assert(SCIPisEQ(scip, bestval, coef * refx + coef2 * refy + constant));
-		  if( violside == SCIP_SIDETYPE_LEFT )
-		  {
-		     assert(SCIPisGE(scip, bestval, bilinterm->coef * refx * refy));
-		     assert(SCIPisLE(scip, bestval, mccormick));
-		  }
-		  else
-		  {
-		     assert(SCIPisLE(scip, bestval, bilinterm->coef * refx * refy));
-		     assert(SCIPisGE(scip, bestval, mccormick));
-		  }
+                  assert(SCIPisEQ(scip, bestval, coef * refx + coef2 * refy + constant));
+                  if( violside == SCIP_SIDETYPE_LEFT )
+                  {
+                     assert(SCIPisGE(scip, bestval, bilinterm->coef * refx * refy));
+                     assert(SCIPisLE(scip, bestval, mccormick));
+                  }
+                  else
+                  {
+                     assert(SCIPisLE(scip, bestval, bilinterm->coef * refx * refy));
+                     assert(SCIPisGE(scip, bestval, mccormick));
+                  }
 #endif
                }
             }
@@ -12024,7 +12024,7 @@ SCIP_RETCODE computeIneqBilinTerms(
             assert(ycoef != SCIP_INVALID); /*lint !e777*/
             assert(constant != SCIP_INVALID); /*lint !e777*/
 
-	    /* store over- and underestimates separately */
+            /* store over- and underestimates separately */
             if( k < 2 )
             {
                bilinestimator->ineqoverest[3*bilinestimator->nineqoverest] = xcoef;

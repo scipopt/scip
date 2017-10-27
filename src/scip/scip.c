@@ -33535,12 +33535,12 @@ void SCIPcomputeBilinEnvelope1(
       if( SCIPisLE(scip, activity, 0.0) )
       {
          /* corner point is satisfies inequality */
-	 vx = xs[i];
-	 vy = ys[i];
+         vx = xs[i];
+         vy = ys[i];
       }
       else if( SCIPisFeasGT(scip, activity, 0.0) )
          /* corner point is clearly cut off */
-	 ++n;
+         ++n;
    }
 
    /* skip if no corner point satisfies the inequality or if no corner point is cut off (that is, all corner points satisfy the inequality almost [1e-9..1e-6]) */
@@ -33583,13 +33583,13 @@ void SCIPcomputeBilinEnvelope1(
 
       /* cut needs to under- or overestimate the bilinear term at the reference point */
       if( bilincoef < 0.0 )
-	 overestimate = !overestimate;
+         overestimate = !overestimate;
 
       activity = (*lincoefx)*refpointx + (*lincoefy)*refpointy + (*linconstant);
       if( overestimate )
-	 assert(SCIPisFeasGE(scip, activity, bilincoef*refpointx*refpointy));
+         assert(SCIPisFeasGE(scip, activity, bilincoef*refpointx*refpointy));
       else
-	 assert(SCIPisFeasLE(scip, activity, bilincoef*refpointx*refpointy));
+         assert(SCIPisFeasLE(scip, activity, bilincoef*refpointx*refpointy));
    }
 #endif
 }
@@ -33763,13 +33763,13 @@ void SCIPcomputeBilinEnvelope2(
 
       /* cut needs to under- or overestimate the bilinear term at the reference point */
       if( bilincoef < 0.0 )
-	 overestimate = !overestimate;
+         overestimate = !overestimate;
 
       activity = (*lincoefx)*refpointx + (*lincoefy)*refpointy + (*linconstant);
       if( overestimate )
-	 assert(SCIPisFeasGE(scip, activity, bilincoef*refpointx*refpointy));
+         assert(SCIPisFeasGE(scip, activity, bilincoef*refpointx*refpointy));
       else
-	 assert(SCIPisFeasLE(scip, activity, bilincoef*refpointx*refpointy));
+         assert(SCIPisFeasLE(scip, activity, bilincoef*refpointx*refpointy));
    }
 #endif
 }
