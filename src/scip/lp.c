@@ -15874,16 +15874,9 @@ SCIP_RETCODE SCIPlpWriteMip(
          SCIPmessageFPrintInfo(messagehdlr, file, "%s_lhs: ", rowname);
          break;
       default:
-         if( type == 'B' )
-         {
-            SCIPmessageFPrintInfo(messagehdlr, file, "%s_rhs: ", rowname);
-            break;
-         }
-         else
-         {
-            SCIPerrorMessage("Undefined row type!\n");
-            return SCIP_ERROR;
-         }
+         assert(type == 'B');
+         SCIPmessageFPrintInfo(messagehdlr, file, "%s_rhs: ", rowname);
+         break;
       }
 
       /* print coefficients and variables */
@@ -15971,16 +15964,9 @@ SCIP_RETCODE SCIPlpWriteMip(
             SCIPmessageFPrintInfo(messagehdlr, file, "%s_lhs: ", rowname);
             break;
          default:
-            if( type == 'B' )
-            {
-               SCIPmessageFPrintInfo(messagehdlr, file, "%s_rhs: ", rowname);
-               break;
-            }
-            else
-            {
-               SCIPerrorMessage("Undefined row type!\n");
-               return SCIP_ERROR;
-            }
+            assert(type == 'B');
+            SCIPmessageFPrintInfo(messagehdlr, file, "%s_rhs: ", rowname);
+            break;
          }
 
          /* print coefficients and variables */

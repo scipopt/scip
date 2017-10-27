@@ -2007,7 +2007,7 @@ SCIP_RETCODE adjustCutoffbound(
    int                   inferinfo,          /**< inference information */
    SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
-   SCIP_HASHTABLE*       addedvars,          /**< hash table which contains variable which are already added or implicit given as reason for the resolve, or NULL */
+   SCIP_HASHTABLE*       addedvars,          /**< hash table which contains variables which are already added or implicitly given as reason for the resolve, or NULL */
    SCIP_Real*            cutoffbound         /**< pointer to store the adjusted cutoff bound */
    )
 {

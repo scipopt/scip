@@ -1912,8 +1912,8 @@ SCIP_RETCODE scaleFirstRow(
       SCIP_Real* val;
       SCIP_LPI* altlp;
       int* ind;
-      int* beg;
       SCIP_Real sum = 0.0;
+      int beg[1];
       int nCols;
       int cnt;
       int j;
@@ -1922,7 +1922,6 @@ SCIP_RETCODE scaleFirstRow(
       SCIP_CALL( SCIPlpiGetNCols(altlp, &nCols) );
       SCIP_CALL( SCIPallocBufferArray(scip, &ind, nCols) );
       SCIP_CALL( SCIPallocBufferArray(scip, &val, nCols) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &beg, SCIPgetNVars(scip)) );
 
       SCIP_CALL( SCIPlpiGetRows(altlp, 0, 0, NULL, NULL, &cnt, beg, ind, val) );
 
@@ -1938,7 +1937,6 @@ SCIP_RETCODE scaleFirstRow(
          SCIP_CALL( SCIPlpiChgSides(altlp, 1, &j, &sum, &sum) );
       }
 
-      SCIPfreeBufferArray(scip, &beg);
       SCIPfreeBufferArray(scip, &val);
       SCIPfreeBufferArray(scip, &ind);
 
