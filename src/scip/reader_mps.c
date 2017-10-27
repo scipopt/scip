@@ -3297,7 +3297,7 @@ void printBoundSection(
    int                   nvars,              /**< number of active variables */
    SCIP_VAR**            aggvars,            /**< needed aggregated variables */
    int                   naggvars,           /**< number of aggregated variables */
-   SCIP_VAR**            fixvars,            /**< all fixed variables */
+   SCIP_VAR**            fixvars,            /**< all fixed variables (or NULL if nfixvars is 0)*/
    int                   nfixvars,           /**< number of fixed variables */
    SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
    const char**          varnames,           /**< array with variable names */
@@ -3315,7 +3315,7 @@ void printBoundSection(
 
    assert(scip != NULL);
    assert(vars != NULL);
-   assert(fixvars != NULL);
+   assert(nfixvars == 0 || fixvars != NULL);
 
    sectionName = FALSE;
 
