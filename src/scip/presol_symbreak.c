@@ -1373,6 +1373,8 @@ SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
          }
       }
    }
+   else if ( presoldata->nperms <= 0 )
+      return SCIP_OKAY;
 
    /* at this point, the symmetry group should be computed and nontrivial */
    assert( presoldata->nperms > 0 );
