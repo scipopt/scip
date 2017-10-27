@@ -7274,19 +7274,20 @@ void updateBilinearRelaxation(
 /* returns the interiority of a reference point w.r.t. given bounds */
 static
 SCIP_Real getInteriority(
-   SCIP_Real            lbx,                /**< lower bound of the first variable */
-   SCIP_Real            ubx,                /**< upper bound of the first variable  */
-   SCIP_Real            refx,               /**< reference point of the first variable */
-   SCIP_Real            lby,                /**< lower bound of the second variable */
-   SCIP_Real            uby,                /**< upper bound of the second variable  */
-   SCIP_Real            refy                /**< reference point of the second variable */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             lbx,                /**< lower bound of the first variable */
+   SCIP_Real             ubx,                /**< upper bound of the first variable  */
+   SCIP_Real             refx,               /**< reference point of the first variable */
+   SCIP_Real             lby,                /**< lower bound of the second variable */
+   SCIP_Real             uby,                /**< upper bound of the second variable  */
+   SCIP_Real             refy                /**< reference point of the second variable */
    )
 {
    SCIP_Real interiorityx;
    SCIP_Real interiorityy;
 
-   interiorityx = MIN(refx-lbx, ubx-refx) / MAX(ubx-lbx, 1e-6);
-   interiorityy = MIN(refy-lby, uby-refy) / MAX(uby-lby, 1e-6);
+   interiorityx = MIN(refx-lbx, ubx-refx) / MAX(ubx-lbx, SCIPepsilon(scip));
+   interiorityy = MIN(refy-lby, uby-refy) / MAX(uby-lby, SCIPepsilon(scip));
 
    return 2.0*MIN(interiorityx, interiorityy);
 }
@@ -7410,7 +7411,7 @@ SCIP_RETCODE generateCutNonConvex(
             int bilintermidx;
 
             mccormick = refx * coef + refy * coef2 + constant;
-            score = getInteriority(lbx, ubx, refx, lby, uby, refy);
+            score = getInteriority(scip, lbx, ubx, refx, lby, uby, refy);
             bilintermidx = consdata->bilintermsidx[idx];
             bilinestimator = &(conshdlrdata->bilinestimators[bilintermidx]);
 
