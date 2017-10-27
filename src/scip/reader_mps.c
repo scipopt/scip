@@ -3902,7 +3902,6 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
       /* construct constraint name */
       consname = consnames[c];
-      assert( 0 == strncmp(consname, SCIPconsGetName(cons), maxnamelen) );
 
       if( strcmp(conshdlrname, "linear") == 0 )
       {
