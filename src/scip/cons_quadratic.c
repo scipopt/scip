@@ -7412,8 +7412,13 @@ SCIP_RETCODE generateCutNonConvex(
 
             mccormick = refx * coef + refy * coef2 + constant;
             score = getInteriority(scip, lbx, ubx, refx, lby, uby, refy);
+
+            /* get data for bilinear term */
             bilintermidx = consdata->bilintermsidx[idx];
+            assert(conshdlrdata->bilinestimators != NULL);
             bilinestimator = &(conshdlrdata->bilinestimators[bilintermidx]);
+            assert(bilinestimator->x == x);
+            assert(bilinestimator->y == y);
 
             /* update score of each bilinear term */
             bilinestimator->score += score;
@@ -7430,11 +7435,6 @@ SCIP_RETCODE generateCutNonConvex(
             {
                SCIP_Real bestval = mccormick;
                SCIP_Bool updaterelax = FALSE;
-
-               assert(conshdlrdata->bilinestimators != NULL);
-               bilinestimator = &(conshdlrdata->bilinestimators[bilintermidx]);
-               assert(bilinestimator->x == x);
-               assert(bilinestimator->y == y);
 
                /* use overestimates */
                updateBilinearRelaxation(scip, x, y, bilinterm->coef, violside, refx, refy, bilinestimator->ineqoverest,
