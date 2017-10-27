@@ -5425,8 +5425,10 @@ SCIP_RETCODE enforceConflictgraph(
             SCIP_VAR* var;
 
             var = vars[i];
-            indi =  varGetNodeSOS1(conshdlrdata, var);
-            assert( indi >= 0 );
+            indi = varGetNodeSOS1(conshdlrdata, var);
+
+            if( indi == -1 )
+               return SCIP_INVALIDDATA;
 
             if ( ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) || ! SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) )
             {
@@ -5434,7 +5436,9 @@ SCIP_RETCODE enforceConflictgraph(
                {
                   var = vars[j];
                   indj = varGetNodeSOS1(conshdlrdata, var);
-                  assert( indj >= 0 );
+
+                  if( indj == -1 )
+                     return SCIP_INVALIDDATA;
 
                   if ( ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) || ! SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) )
                   {
