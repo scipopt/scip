@@ -56,7 +56,7 @@
 
 /* default parameter values */
 #define DEFAULT_MAXGENERATORS      1500      /**< limit on the number of generators that should be produced within symmetry detection (0 = no limit) */
-#define DEFAULT_COMPUTEPRESOLVED   TRUE      /**< Should the symmetry be computed after resolving (otherwise before presol)? */
+#define DEFAULT_COMPUTEPRESOLVED   TRUE      /**< Should the symmetry be computed after presolving (otherwise before presol)? */
 #define DEFAULT_CHECKSYMMETRIES   FALSE      /**< Should all symmetries be checked after computation? */
 
 /* other defines */
