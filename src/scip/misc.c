@@ -9285,13 +9285,13 @@ void SCIPprintSysError(
 #if defined(_WIN32) || defined(_WIN64)
    /* strerror_s returns 0 on success; the string is \0 terminated. */
    if ( strerror_s(buf, SCIP_MAXSTRLEN, errno) != 0 )
-      SCIPmessagePrintError("Unkown error number %d or error message too long.\n", errno);
+      SCIPmessagePrintError("Unknown error number %d or error message too long.\n", errno);
    SCIPmessagePrintError("%s: %s\n", message, buf);
 #else
    #if (_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && ! defined(_GNU_SOURCE)
       /* We are in the POSIX/XSI case, where strerror_r returns 0 on success; \0 termination is unclear. */
       if ( strerror_r(errno, buf, SCIP_MAXSTRLEN) != 0 )
-         SCIPmessagePrintError("Unkown error number %d.\n", errno);
+         SCIPmessagePrintError("Unknown error number %d.\n", errno);
       buf[SCIP_MAXSTRLEN - 1] = '\0';
       SCIPmessagePrintError("%s: %s\n", message, buf);
 #else
