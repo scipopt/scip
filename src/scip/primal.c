@@ -546,8 +546,6 @@ SCIP_Bool SCIPprimalUpperboundIsSol(
    )
 {
    assert(primal != NULL);
-   assert(primal->nsols == 0 || SCIPprobIsObjIntegral(transprob) || (primal->upperbound <= SCIPsolGetObj(primal->sols[0], set, transprob, origprob)));
-   assert(primal->nsols == 0 || !SCIPprobIsObjIntegral(transprob) || (primal->cutoffbound <= SCIPsolGetObj(primal->sols[0], set, transprob, origprob)));
 
    return (primal->nsols > 0 && SCIPsetIsEQ(set, primal->upperbound, SCIPsolGetObj(primal->sols[0], set, transprob, origprob)));
 }
