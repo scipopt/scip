@@ -953,19 +953,6 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
 
       success = FALSE;
 
-      /* create solution from diving LP and try to round it */
-      SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
-      SCIP_CALL( SCIProundSol(scip, heurdata->sol, &success) );
-
-      /* if the rounded solution is feasible and better, add it to SCIP */
-      /*if( success )
-      {
-         SCIPdebugMsg(scip, "feasibility pump trying rounded solution\n");
-         SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, &success) );
-         if( success )
-            *result = SCIP_FOUNDSOL;
-      }*/
-
       SCIP_CALL( SCIPlinkLPSol(scip, heurdata->roundedsol) );
 
       /* randomly choose maximum number of variables to flip in current pumping round in case of a 1-cycle */
@@ -1026,8 +1013,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
             if( !SCIPisFeasEQ(probingscip, lb, ub) )
             {
                assert(SCIPisFeasLE(probingscip, lb, ub));
-               /* SCIP_CALL( SCIPnewProbingNode(probingscip) ); */
-               SCIPdebugMsg(scip, "try to fix variable <%s> (domain [%f,%f] to %f\n",SCIPvarGetName(probingvar), lb, ub,
+               SCIPdebugMsg(scip, "try to fix variable <%s> (domain [%f,%f] to %f\n", SCIPvarGetName(probingvar), lb, ub,
                   solval);
                SCIP_CALL( SCIPfixVarProbing(probingscip, probingvar, solval) );
                SCIP_CALL( SCIPpropagateProbing(probingscip, -1, &infeasible, &ndomreds) );
@@ -1036,12 +1022,12 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
                if( infeasible )
                {
                   SCIPdebugMsg(scip, "  -> infeasible!\n");
-                  SCIP_CALL( SCIPbacktrackProbing(probingscip, 0/*SCIPgetProbingDepth(probingscip)-1*/) );
+                  SCIP_CALL( SCIPbacktrackProbing(probingscip, 0) );
                }
             }
             else
             {
-               SCIPdebugMsg(scip, "variable <%s> is already fixed to %f\n",SCIPvarGetName(probingvar), solval);
+               SCIPdebugMsg(scip, "variable <%s> is already fixed to %f\n", SCIPvarGetName(probingvar), solval);
             }
          }
 
@@ -1269,11 +1255,6 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    {
       SCIP_CALL( SCIPendProbing(probingscip) );
    }
-
-   /*if( heurdata->usefp20 )
-   {
-         SCIP_CALL( SCIPprintStatistics(probingscip, NULL) );
-   }*/
 
    /* only do stage 3 if we have not found a solution yet */
    /* only do stage 3 if the distance of the closest infeasible solution to the polyhedron is below a certain threshold */
