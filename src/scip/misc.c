@@ -9287,18 +9287,21 @@ void SCIPprintSysError(
    if ( strerror_s(buf, SCIP_MAXSTRLEN, errno) != 0 )
       SCIPmessagePrintError("Unknown error number %d or error message too long.\n", errno);
    SCIPmessagePrintError("%s: %s\n", message, buf);
+#elif (_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && ! defined(_GNU_SOURCE)
+   /* We are in the POSIX/XSI case, where strerror_r returns 0 on success; \0 termination is unclear. */
+   if ( strerror_r(errno, buf, SCIP_MAXSTRLEN) != 0 )
+      SCIPmessagePrintError("Unknown error number %d.\n", errno);
+   buf[SCIP_MAXSTRLEN - 1] = '\0';
+   SCIPmessagePrintError("%s: %s\n", message, buf);
 #else
-   #if (_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && ! defined(_GNU_SOURCE)
-      /* We are in the POSIX/XSI case, where strerror_r returns 0 on success; \0 termination is unclear. */
-      if ( strerror_r(errno, buf, SCIP_MAXSTRLEN) != 0 )
-         SCIPmessagePrintError("Unknown error number %d.\n", errno);
-      buf[SCIP_MAXSTRLEN - 1] = '\0';
-      SCIPmessagePrintError("%s: %s\n", message, buf);
-#else
-      /* We are in the GNU case, where strerror_r returns a string to the error string. This string is possibly stored
-       * in buf and is always \0 terminated. */
-      SCIPmessagePrintError("%s: %s\n", message, strerror_r(errno, buf, SCIP_MAXSTRLEN));
-   #endif
+   /* We are in the GNU case, where strerror_r returns a string to the error string. This string is possibly stored
+    * in buf and is always \0 terminated.
+    * However, if compiling on one system and executing on another system, we might actually call a different
+    * variant of the strerror_r function than we had at compile time, so better print buf than the return value.
+    */
+   *buf = '\0';
+   strerror_r(errno, buf, SCIP_MAXSTRLEN);
+   SCIPmessagePrintError("%s: %s\n", message, buf);
 #endif
 #endif
 }
