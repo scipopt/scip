@@ -156,8 +156,13 @@ SCIP_RETCODE setupSCIPparamsFP2(
    SCIP_CALL( SCIPsetIntParam(probingscip, "display/verblevel", 0) );
 #endif
 
-   /* disable expensive and useless stuff */
+   /* do not multiaggregate variables, because otherwise they have to be skipped in the fix-and-propagate loop */
+   SCIP_CALL( SCIPsetBoolParam(probingscip, "presolving/donotmultaggr", TRUE) );
+
+   /* limit to root node solving */
    SCIP_CALL( SCIPsetLongintParam(probingscip, "limits/nodes", 1LL) );
+
+   /* disable LP solving and expensive techniques */
    if( SCIPisParamFixed(probingscip, "lp/solvefreq") )
    {
       SCIPwarningMessage(scip, "unfixing parameter lp/solvefreq in probingscip of " HEUR_NAME " heuristic to speed up propagation\n");
@@ -169,6 +174,7 @@ SCIP_RETCODE setupSCIPparamsFP2(
    SCIP_CALL( SCIPsetBoolParam(probingscip, "constraints/knapsack/negatedclique", FALSE) );
    SCIP_CALL( SCIPsetPresolving(probingscip, SCIP_PARAMSETTING_FAST, TRUE) );
    SCIP_CALL( SCIPsetHeuristics(probingscip, SCIP_PARAMSETTING_OFF, TRUE) );
+
    return SCIP_OKAY;
 }
 
