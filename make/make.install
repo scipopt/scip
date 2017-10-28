@@ -70,6 +70,13 @@ ifneq ($(INSTALLDIR),)
 		@echo "-> install SCIP binary into INSTALLDIR <$(INSTALLDIR)>"
 		@-install -m 755 -d $(INSTALLDIR)/$(BINDIR)/
 		@-install -m 755 -p $(MAINFILE) $(INSTALLDIR)/$(BINDIR)/
+ifeq ($(SHARED)$(OSTYPE),truedarwin)  # update library paths when using shared libs on Mac OS X
+		@install_name_tool -change $(LPILIBFILE) @loader_path/../$(LIBDIR)/$(notdir $(LPILIBFILE)) $(INSTALLDIR)/$(MAINFILE)
+		@install_name_tool -change $(NLPILIBFILE) @loader_path/../$(LIBDIR)/$(notdir $(NLPILIBFILE)) $(INSTALLDIR)/$(MAINFILE)
+		@install_name_tool -change $(TPILIBFILE) @loader_path/../$(LIBDIR)/$(notdir $(TPILIBFILE)) $(INSTALLDIR)/$(MAINFILE)
+		@install_name_tool -change $(SCIPLIBFILE) @loader_path/../$(LIBDIR)/$(notdir $(SCIPLIBFILE)) $(INSTALLDIR)/$(MAINFILE)
+		@install_name_tool -change $(OBJSCIPLIBFILE) @loader_path/../$(LIBDIR)/$(notdir $(OBJSCIPLIBFILE)) $(INSTALLDIR)/$(MAINFILE)
+endif
 		@-(cd $(INSTALLDIR)/$(BINDIR)/ && rm -f $(notdir $(MAINLINK)) && $(LN_s) $(notdir $(MAINFILE)) $(notdir $(MAINLINK)));
 		@-(cd $(INSTALLDIR)/$(BINDIR)/ && rm -f $(notdir $(MAINSHORTLINK)) && $(LN_s) $(notdir $(MAINLINK)) $(notdir $(MAINSHORTLINK)));
 endif
