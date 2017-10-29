@@ -959,13 +959,14 @@ SCIP_RETCODE generateOddCycleCut(
       }
       i = pred[i];
    }
+   assert(startnode == i);
 
    /* insert startnode */
    if( startnode < nbinvars )
    {
       /* inserting original variable */
       SCIP_CALL( SCIPaddVarToRow(scip, cut, vars[startnode], 1.0) );
-      incut[i] = TRUE;
+      incut[startnode] = TRUE;
    }
    else
    {

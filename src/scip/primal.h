@@ -339,14 +339,23 @@ void SCIPprimalUpdateVarObj(
    SCIP_Real             newobj              /**< new objective value */
    );
 
-/** retransforms all existing solutions to original problem space */
+/** retransforms all existing solutions to original problem space
+ *
+ * @note as a side effect, the objective value of the solutions can change (numerical errors)
+ * so we update the objective cutoff value and upper bound accordingly
+ */
 extern
 SCIP_RETCODE SCIPprimalRetransformSolutions(
    SCIP_PRIMAL*          primal,             /**< primal data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_PROB*            origprob,           /**< original problem */
-   SCIP_PROB*            transprob           /**< transformed problem */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LP*              lp                  /**< current LP data */
    );
 
 /** tries to transform original solution to the transformed problem space */

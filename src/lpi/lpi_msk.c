@@ -102,6 +102,16 @@ static int nextlpid                 =  1;
 #endif
 #define DEGEN_LEVEL                  MSK_SIM_DEGEN_FREE
 #define ALWAYS_SOLVE_PRIMAL          1
+#if DEBUG_PRINT_STAT > 0
+static int numstrongbranchmaxiterup =  0;
+static int numstrongbranchmaxiterdo =  0;
+static int numprimalmaxiter         =  0;
+static int numdualmaxiter           =  0;
+static int numstrongbranchobjup     =  0;
+static int numstrongbranchobjdo     =  0;
+static int numprimalobj             =  0;
+static int numdualobj               =  0;
+#endif
 
 #if DEBUG_PRINT_STAT > 0
 static int numstrongbranchmaxiterup =  0;
@@ -2745,6 +2755,7 @@ SCIP_Bool SCIPlpiWasSolved(
       return FALSE;
 
    res = MSK_getsolsta(lpi->task, MSK_SOL_BAS, &solsta);
+
    if ( res != MSK_RES_OK )
       return FALSE;
 

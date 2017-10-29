@@ -29,10 +29,20 @@ do
 done
 rm ${OUTPUT}
 
+# last benchmarkrun is in database
+RBDB="/nfs/OPTI/adm_timo/databases/rbdb/clusterbenchmark_rb.txt"
+touch $RBDB
+LASTRUN=`tail $RBDB -n 1`
+
 # construct rubberband link and mailtext
 IDSTR=$(printf ",%s" "${RBIDS[@]:1}")
 IDSTR=${IDSTR:1}
-IDSTR="${RBIDS[0]}?compare=${IDSTR}"
+IDSTR="${RBIDS[0]}?compare=${IDSTR}${LASTRUN}"
+
+# save comma seperated string of ids in database
+SVESTR=$(printf ",%s" "${RBIDS[@]}")
+echo $SVESTR >> $RBDB
+
 MAILTEXT="The results of the clusterbenchmark are ready. Take a look at https://rubberband.zib.de/result/${IDSTR}"
 
 # send email with cluster results
