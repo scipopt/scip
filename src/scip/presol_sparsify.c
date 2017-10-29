@@ -645,6 +645,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
             int* rowinds;
             SCIP_Real* rowvals;
             int npairs;
+            int failshift;
 
             rowinds = SCIPmatrixGetRowIdxPtr(matrix, r);
             rowvals = SCIPmatrixGetRowValPtr(matrix, r);
@@ -661,6 +662,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
                nnonz = MIN(nnonz, presoldata->maxconsiderednonzeros);
 
             npairs = (nnonz * (nnonz - 1)) / 2;
+            failshift = presoldata->nfailures*presoldata->maxconsiderednonzeros;
 
             if( nvarpairs + npairs > varpairssize )
             {
@@ -673,13 +675,14 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
             {
                for( j = i + 1; j < nnonz; ++j )
                {
-                  int i1,i2;
+                  int i1;
+                  int i2;
 
                   assert(nvarpairs < varpairssize);
                   assert(varpairs != NULL);
 
-                  i1 = perm[i];
-                  i2 = perm[j];
+                  i1 = perm[(i + failshift) % nnonz];
+                  i2 = perm[(j + failshift) % nnonz];
                   varpairs[nvarpairs].rowindex = r;
 
                   if( rowinds[i1] < rowinds[i2])
