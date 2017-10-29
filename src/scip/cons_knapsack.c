@@ -12824,7 +12824,8 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
                SCIPdebugMessage("Upgrading knapsack constraint <%s> to cardinality constraint ...\n", SCIPconsGetName(cons));
 
                /* create cardinality constraint */
-               SCIP_CALL( SCIPcreateConsCardinality(scip, &cardcons, SCIPconsGetName(cons), nvars, cardvars, (int) consdata->capacity, NULL, cardweights,
+               assert( ! SCIPconsIsModifiable(cons) );
+               SCIP_CALL( SCIPcreateConsCardinality(scip, &cardcons, SCIPconsGetName(cons), nvars, cardvars, (int) consdata->capacity, vars, cardweights,
                      SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
                      SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
                      SCIPconsIsLocal(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
