@@ -695,31 +695,26 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       }
 
       /* sort rows according to parameter value */
-      switch( presoldata->rowsort )
+      if( presoldata->rowsort == 'i' || presoldata->rowsort == 'd' )
       {
-      case 'i':
          SCIP_CALL( SCIPallocBufferArray(scip, &rowidxsorted, nrows) );
          SCIP_CALL( SCIPallocBufferArray(scip, &rowsparsity, nrows) );
          for( r = 0; r < nrows; ++r )
-         {
             rowidxsorted[r] = r;
-            rowsparsity[r] = SCIPmatrixGetRowNNonzs(matrix, r);
+         if( presoldata->rowsort == 'i' )
+         {
+            for( r = 0; r < nrows; ++r )
+               rowsparsity[r] = SCIPmatrixGetRowNNonzs(matrix, r);
+         }
+         else if( presoldata->rowsort == 'd' )
+         {
+            for( r = 0; r < nrows; ++r )
+               rowsparsity[r] = -SCIPmatrixGetRowNNonzs(matrix, r);
          }
          SCIPsortIntInt(rowsparsity, rowidxsorted, nrows);
-         break;
-
-      case 'd':
-         SCIP_CALL( SCIPallocBufferArray(scip, &rowidxsorted, nrows) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &rowsparsity, nrows) );
-         for( r = 0; r < nrows; ++r )
-         {
-            rowidxsorted[r] = r;
-            rowsparsity[r] = -SCIPmatrixGetRowNNonzs(matrix, r);
-         }
-         SCIPsortIntInt(rowsparsity, rowidxsorted, nrows);
-         break;
-
-      default:
+      }
+      else
+      {
          assert(presoldata->rowsort == 'n');
          rowidxsorted = NULL;
          rowsparsity = NULL;
