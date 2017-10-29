@@ -12671,7 +12671,6 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
    {
       SCIP_HASHMAP* varhash;
       SCIP_VAR** cardvars;
-      SCIP_VAR** indicatorvars;
       SCIP_Real* cardweights;
       int noldupgdconss;
       int nscipvars;
@@ -12680,7 +12679,6 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
       noldupgdconss = *nupgdconss;
       nscipvars = SCIPgetNVars(scip);
       SCIP_CALL( SCIPallocClearBufferArray(scip, &cardvars, nscipvars) );
-      SCIP_CALL( SCIPallocClearBufferArray(scip, &indicatorvars, nscipvars) );
       SCIP_CALL( SCIPallocClearBufferArray(scip, &cardweights, nscipvars) );
 
       /* set up hash map */
@@ -12773,7 +12771,6 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
                      continue;
 
                   cardvars[v] = implvars[j];
-                  indicatorvars[v] = vars[v];
                   cardweights[v] = (SCIP_Real) v;
 
                   break;
@@ -12863,7 +12860,6 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
       }
       SCIPhashmapFree(&varhash);
       SCIPfreeBufferArray(scip, &cardweights);
-      SCIPfreeBufferArray(scip, &indicatorvars);
       SCIPfreeBufferArray(scip, &cardvars);
 
       if ( *nupgdconss > noldupgdconss )
