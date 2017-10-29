@@ -44,6 +44,7 @@
 #define PRESOL_MAXROUNDS               -1    /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_TIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 
+#define DEFAULT_ENABLECOPY           TRUE    /**< should sparsify presolver be copied to sub-SCIPs? */
 #define DEFAULT_MAX_CONT_FILLIN         0    /**< default value for the maximal fillin for continuous variables */
 #define DEFAULT_MAX_BIN_FILLIN          0    /**< default value for the maximal fillin for binary variables */
 #define DEFAULT_MAX_INT_FILLIN          0    /**< default value for the maximal fillin for integer variables */
@@ -73,6 +74,7 @@ struct SCIP_PresolData
    int                   maxconsiderednonzeros;/**< maximal number of considered non-zeros within one row (-1: no limit) */
    SCIP_Real             maxretrievefac;     /**< limit on the number of useless vs. useful hashtable retrieves as a multiple of the number of constraints */
    char                  rowsort;            /**< order in which to process inequalities ('n'o sorting, 'i'ncreasing nonzeros, 'd'ecreasing nonzeros) */
+   SCIP_Bool             enablecopy;         /**< should sparsify presolver be copied to sub-SCIPs? */
 };
 
 
@@ -544,12 +546,19 @@ void updateFailureStatistic(
 static
 SCIP_DECL_PRESOLCOPY(presolCopySparsify)
 {
+   SCIP_PRESOLDATA* presoldata;
+
    assert(scip != NULL);
    assert(presol != NULL);
    assert(strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0);
 
-   /* call inclusion method of presolver */
-   SCIP_CALL( SCIPincludePresolSparsify(scip) );
+   /* call inclusion method of presolver if copying is enabled */
+   presoldata = SCIPpresolGetData(presol);
+   assert(presoldata != NULL);
+   if( presoldata->enablecopy )
+   {
+      SCIP_CALL( SCIPincludePresolSparsify(scip) );
+   }
 
    return SCIP_OKAY;
 }
@@ -855,6 +864,11 @@ SCIP_RETCODE SCIPincludePresolSparsify(
    SCIP_CALL( SCIPsetPresolCopy(scip, presol, presolCopySparsify) );
    SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeSparsify) );
    SCIP_CALL( SCIPsetPresolInit(scip, presol, presolInitSparsify) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "presolving/sparsify/enablecopy",
+         "should sparsify presolver be copied to sub-SCIPs?",
+         &presoldata->enablecopy, TRUE, DEFAULT_ENABLECOPY, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/sparsify/maxcontfillin",
