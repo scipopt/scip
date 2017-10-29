@@ -138,6 +138,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurLocalbranching(scip) );
    SCIP_CALL( SCIPincludeHeurLocks(scip) );
    SCIP_CALL( SCIPincludeHeurLpface(scip) );
+   SCIP_CALL( SCIPincludeHeurAlns(scip) );
    SCIP_CALL( SCIPincludeHeurNlpdiving(scip) );
    SCIP_CALL( SCIPincludeHeurMutation(scip) );
    SCIP_CALL( SCIPincludeHeurMultistart(scip) );
@@ -193,6 +194,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeSepaStrongcg(scip) );
    SCIP_CALL( SCIPincludeSepaZerohalf(scip) );
    SCIP_CALL( SCIPincludeDispDefault(scip) );
+   SCIP_CALL( SCIPincludeTableDefault(scip) );
    SCIP_CALL( SCIPincludeEventHdlrSofttimelimit(scip) );
    SCIP_CALL( SCIPincludeConcurrentScipSolvers(scip) );
 

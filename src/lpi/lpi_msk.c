@@ -75,14 +75,6 @@ static int numlp         =           0;
 
 static int optimizecount            =  0;
 static int nextlpid                 =  1;
-static int numstrongbranchmaxiterup =  0;
-static int numstrongbranchmaxiterdo =  0;
-static int numprimalmaxiter         =  0;
-static int numdualmaxiter           =  0;
-static int numstrongbranchobjup     =  0;
-static int numstrongbranchobjdo     =  0;
-static int numprimalobj             =  0;
-static int numdualobj               =  0;
 
 #define DEBUG_PARAM_SETTING          0
 #define DEBUG_PRINT_STAT             0
@@ -105,9 +97,32 @@ static int numdualobj               =  0;
 #define WRITE_DUAL                   0
 #define WRITE_PRIMAL                 0
 #define WRITE_INTPNT                 0
+#if WRITE_DUAL > 0 || WRITE_PRIMAL > 0 || WRITE_INTPNT > 0
 #define WRITE_ABOVE                  0
+#endif
 #define DEGEN_LEVEL                  MSK_SIM_DEGEN_FREE
 #define ALWAYS_SOLVE_PRIMAL          1
+#if DEBUG_PRINT_STAT > 0
+static int numstrongbranchmaxiterup =  0;
+static int numstrongbranchmaxiterdo =  0;
+static int numprimalmaxiter         =  0;
+static int numdualmaxiter           =  0;
+static int numstrongbranchobjup     =  0;
+static int numstrongbranchobjdo     =  0;
+static int numprimalobj             =  0;
+static int numdualobj               =  0;
+#endif
+
+#if DEBUG_PRINT_STAT > 0
+static int numstrongbranchmaxiterup =  0;
+static int numstrongbranchmaxiterdo =  0;
+static int numprimalmaxiter         =  0;
+static int numdualmaxiter           =  0;
+static int numstrongbranchobjup     =  0;
+static int numstrongbranchobjdo     =  0;
+static int numprimalobj             =  0;
+static int numdualobj               =  0;
+#endif
 
 /** gives problem and solution status for a Mosek Task
  *
@@ -194,7 +209,7 @@ int rowpacketNum(
 /** create error string */
 static
 void MSKAPI printstr(
-   void*                 handle,             /**< error handle */
+   MSKuserhandle_t       handle,             /**< error handle */
    const char*           str                 /**< string that contains string on output */
    )
 {  /*lint --e{715}*/
@@ -205,7 +220,7 @@ void MSKAPI printstr(
       return;
 #endif
 
-   printf("MOSEK: %s", str);
+   SCIPmessagePrintInfo((SCIP_MESSAGEHDLR *) handle, "MOSEK: %s", str);
 }
 
 #if DEBUG_CHECK_DATA > 0
@@ -663,7 +678,7 @@ SCIP_RETCODE SCIPlpiCreate(
    if (!MosekEnv)
    {
       MOSEK_CALL( MSK_makeenv(&MosekEnv, NULL) );
-      MOSEK_CALL( MSK_linkfunctoenvstream(MosekEnv, MSK_STREAM_LOG, NULL, printstr) );
+      MOSEK_CALL( MSK_linkfunctoenvstream(MosekEnv, MSK_STREAM_LOG, (MSKuserhandle_t) messagehdlr, printstr) );
 #if MSK_VERSION_MAJOR < 8
       MOSEK_CALL( MSK_initenv(MosekEnv) );
 #endif
@@ -675,7 +690,7 @@ SCIP_RETCODE SCIPlpiCreate(
 
    MOSEK_CALL( MSK_makeemptytask(MosekEnv, &((*lpi)->task)) );
 
-   MOSEK_CALL( MSK_linkfunctotaskstream((*lpi)->task, MSK_STREAM_LOG, NULL, printstr) );
+   MOSEK_CALL( MSK_linkfunctotaskstream((*lpi)->task, MSK_STREAM_LOG, (MSKuserhandle_t) messagehdlr, printstr) );
 
    MOSEK_CALL( MSK_putobjsense((*lpi)->task, SENSE2MOSEK(objsen)) );
    MOSEK_CALL( MSK_putintparam((*lpi)->task, MSK_IPAR_SIM_MAX_NUM_SETBACKS, SETBACK_LIMIT) );
@@ -755,6 +770,14 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    MSKboundkeye* bkc;
    MSKboundkeye* bkx;
 
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
+
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
@@ -824,9 +847,21 @@ SCIP_RETCODE SCIPlpiAddCols(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {  /*lint --e{715}*/
+#if MSK_VERSION_MAJOR < 7
+   const int* aptrb;
+#endif
+
    int* aptre;
    MSKboundkeye* bkx;
    int oldcols;
+
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
 
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
@@ -990,6 +1025,14 @@ SCIP_RETCODE SCIPlpiAddRows(
    int* aptre;
    MSKboundkeye* bkc;
    int oldrows;
+
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
 
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
@@ -2159,11 +2202,15 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
       }
    }
 
+#if DEBUG_PRINT_STAT > 0
    if (lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE)
       ++numprimalobj;
+#endif
 
+#if DEBUG_PRINT_STAT > 0
    if (lpi->termcode == MSK_RES_TRM_MAX_ITERATIONS)
       ++numprimalmaxiter;
+#endif
 
 #if DEBUG_CHECK_DATA > 0
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiSolvePrimal") );
@@ -2223,11 +2270,15 @@ SCIP_RETCODE SCIPlpiSolveDual(
       }
    }
 
+#if DEBUG_PRINT_STAT > 0
    if (lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE)
       ++numdualobj;
+#endif
 
+#if DEBUG_PRINT_STAT > 0
    if (lpi->termcode == MSK_RES_TRM_MAX_ITERATIONS)
       ++numdualmaxiter;
+#endif
 
    return SCIP_OKAY;
 }
@@ -2286,8 +2337,10 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
 
    MOSEK_CALL( filterTRMrescode(lpi->messagehdlr, &lpi->termcode, MSK_optimize(lpi->task)) );
 
+#if DEBUG_PRINT_STAT > 0
    if (lpi->termcode == MSK_RES_TRM_MAX_ITERATIONS)
       ++numdualmaxiter;
+#endif
 
    MOSEK_CALL( MSK_getintinf(lpi->task, MSK_IINF_INTPNT_ITER, &lpi->itercount) );
 
@@ -2460,11 +2513,13 @@ SCIP_RETCODE SCIPlpiStrongbranch(
          }
       }
 
+#if DEBUG_PRINT_STAT > 0
       if (lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE)
          ++numstrongbranchobjup;
 
       if (lpi->termcode == MSK_RES_TRM_MAX_ITERATIONS)
          ++numstrongbranchmaxiterup;
+#endif
    }
 
    /* Reset basis solution before doing the up branch */
@@ -2529,11 +2584,13 @@ SCIP_RETCODE SCIPlpiStrongbranch(
          }
       }
 
+#if DEBUG_PRINT_STAT > 0
       if (lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE)
          ++numstrongbranchobjdo;
 
       if (lpi->termcode == MSK_RES_TRM_MAX_ITERATIONS)
          ++numstrongbranchmaxiterdo;
+#endif
    }
 
    MOSEK_CALL( MSK_putbound(lpi->task, MSK_ACC_VAR, col, bkx, blx, bux) );
@@ -2698,6 +2755,7 @@ SCIP_Bool SCIPlpiWasSolved(
       return FALSE;
 
    res = MSK_getsolsta(lpi->task, MSK_SOL_BAS, &solsta);
+
    if ( res != MSK_RES_OK )
       return FALSE;
 

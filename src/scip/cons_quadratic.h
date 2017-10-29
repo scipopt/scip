@@ -728,18 +728,12 @@ void SCIPaddRowprepConstant(
 #define SCIPaddRowprepConstant(rowprep, constant)  SCIPaddRowprepSide(rowprep, -(constant))
 #endif
 
-/* computes violation of cut in a given solution
- *
- * If scaling == 'g', assumes that terms in rowprep are sorted by abs value of coef, in decreasing order.
- *
- * @param scaling 'o' for no scaling, 'g' for scaling by the absolute value of the maximal coefficient, or 's' for scaling by side
- */
+/** computes violation of cut in a given solution */
 EXTERN
 SCIP_Real SCIPgetRowprepViolation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be turned into a row */
-   SCIP_SOL*             sol,                /**< solution or NULL for LP solution */
-   char                  scaling             /**< how to scale cut violation: o, g, or s */
+   SCIP_SOL*             sol                 /**< solution or NULL for LP solution */
 );
 
 /** Merge terms that use same variable and eliminate zero coefficients.

@@ -7590,6 +7590,7 @@ SCIP_RETCODE SCIPreoptApplyGlbConss(
       int nintvars;
       int v;
 
+      assert(reopt->glbconss[c] != NULL);
       assert(reopt->glbconss[c]->nvars > 0);
 
       cons = NULL;

@@ -1,0 +1,11 @@
+# SCIP version 4.0.0.2
+
+# the bandit algorithm: (u)pper confidence bounds, (e)xp.3, epsilon (g)reedy
+# [type: char, advanced: TRUE, range: {ueg}, default: u]
+heuristics/alns/banditalgo = g
+
+heuristics/alns/freq = 10
+
+heuristics/alns/rewardcontrol = 0.0
+
+heuristics/alns/copycuts = FALSE

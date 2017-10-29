@@ -208,9 +208,6 @@ void F77_FUNC(hessian,HESSIAN)(real *x, fint *n, fint *m, fint *phase, real *lam
     real *ws, fint *lws, real *user, fint *iuser,
     fint *l_hess, fint *li_hess, fint *errflag);
 
-/** @group access to filter common bloc
- * @{
- */
 /** common block for problemname */
 extern struct
 {
@@ -253,7 +250,6 @@ extern struct
    fint scale_mode, phe;
 }
 F77_FUNC(scalec,SCALEC);
-/** @} */
 
 #ifndef NPARASCIP
 static pthread_mutex_t filtersqpmutex = PTHREAD_MUTEX_INITIALIZER;

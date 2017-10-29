@@ -469,28 +469,47 @@ SCIP_RETCODE SCIPapplyLockFixings(
 
          if( *cutoff )
          {
+            SCIPdebugMsg(scip, "last fixing led to infeasibility trying other bound\n");
+
             /* fix cutoff variable in other direction */
             SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip) - 1) );
+            *cutoff = FALSE;
+
             if( lastfixval < 0.5 )
             {
+               lastfixval = 1.0;
+
                if( SCIPvarGetUbLocal(var) > 0.5 )
                {
                   SCIP_CALL( SCIPfixVarProbing(scip, var, 1.0) );
                }
-               lastfixval = 1.0;
+               /* because of the limited number of propagation rounds, it may happen that conflict analysis finds a
+                * valid global fixing for the last fixed variable that conflicts with applying the reverse fixing
+                * after backtracking; in that case, we ran into a deadend and stop
+                */
+               else
+                  *cutoff = TRUE;
             }
             else
             {
+               lastfixval = 0.0;
+
                if( SCIPvarGetLbLocal(var) < 0.5 )
                {
                   SCIP_CALL( SCIPfixVarProbing(scip, var, 0.0) );
                }
-               lastfixval = 0.0;
+               /* because of the limited number of propagation rounds, it may happen that conflict analysis finds a
+                * valid global fixing for the last fixed variable that conflicts with applying the reverse fixing
+                * after backtracking; in that case, we ran into a deadend and stop
+                */
+               else
+                  *cutoff = TRUE;
             }
 
-            SCIPdebugMsg(scip, "last fixing led to infeasibility trying other bound\n");
-
-            SCIP_CALL( SCIPpropagateProbing(scip, maxproprounds, cutoff, NULL) );
+            if( !(*cutoff) )
+            {
+               SCIP_CALL( SCIPpropagateProbing(scip, maxproprounds, cutoff, NULL) );
+            }
             if( *cutoff )
             {
                SCIPdebugMsg(scip, "probing was infeasible\n");

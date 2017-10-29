@@ -36,6 +36,7 @@
 #include "scip/lp.h"
 #include "scip/paramset.h"
 #include "scip/scip.h"
+#include "scip/bandit.h"
 #include "scip/branch.h"
 #include "scip/conflict.h"
 #include "scip/cons.h"
@@ -50,6 +51,7 @@
 #include "scip/reader.h"
 #include "scip/relax.h"
 #include "scip/sepa.h"
+#include "scip/table.h"
 #include "scip/prop.h"
 #include "nlpi/nlpi.h"
 #include "scip/struct_scip.h" /* for SCIPsetPrintDebugMessage() */
@@ -235,7 +237,7 @@
 #define SCIP_DEFAULT_LP_RESOLVEITERFAC     -1.0 /**< factor of average LP iterations that is used as LP iteration limit
                                                  *   for LP resolve (-1.0: unlimited) */
 #define SCIP_DEFAULT_LP_RESOLVEITERMIN     1000 /**< minimum number of iterations that are allowed for LP resolve */
-#define SCIP_DEFAULT_LP_SOLUTIONPOLISHING     0 /**< LP solution polishing method (0: disabled, 1: only root, 2: always) */
+#define SCIP_DEFAULT_LP_SOLUTIONPOLISHING     3 /**< LP solution polishing method (0: disabled, 1: only root, 2: always, 3: auto) */
 #define SCIP_DEFAULT_LP_REFACTORINTERVAL      0 /**< LP refactorization interval (0: automatic) */
 
 /* NLP */
@@ -777,6 +779,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
+   SCIP_Bool             copytables,         /**< should the statistics tables be copied */
    SCIP_Bool             copynlpis,          /**< should the NLP interfaces be copied */
    SCIP_Bool*            allvalid            /**< pointer to store whether all plugins were validly copied */
    )
@@ -947,6 +950,15 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       }
    }
 
+   /* copy all table plugins */
+   if( copytables && sourceset->tables != NULL )
+   {
+      for( p = sourceset->ntables - 1; p >= 0; --p )
+      {
+         SCIP_CALL( SCIPtableCopyInclude(sourceset->tables[p], targetset) );
+      }
+   }
+
    /* copy all NLP interfaces */
    if( copynlpis && sourceset->nlpis != NULL )
    {
@@ -1074,9 +1086,16 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->branchrulessize = 0;
    (*set)->branchrulessorted = FALSE;
    (*set)->branchrulesnamesorted = FALSE;
+   (*set)->banditvtables = NULL;
+   (*set)->banditvtablessize = 0;
+   (*set)->nbanditvtables = 0;
    (*set)->disps = NULL;
    (*set)->ndisps = 0;
    (*set)->dispssize = 0;
+   (*set)->tables = NULL;
+   (*set)->ntables = 0;
+   (*set)->tablessize = 0;
+   (*set)->tablessorted = FALSE;
    (*set)->dialogs = NULL;
    (*set)->ndialogs = 0;
    (*set)->dialogssize = 0;
@@ -1681,8 +1700,8 @@ SCIP_RETCODE SCIPsetCreate(
 
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "lp/solutionpolishing",
-         "LP solution polishing method (0: disabled, 1: only root, 2: always)",
-         &(*set)->lp_solutionpolishing, TRUE, SCIP_DEFAULT_LP_SOLUTIONPOLISHING, 0, 2,
+         "LP solution polishing method (0: disabled, 1: only root, 2: always, 3: auto)",
+         &(*set)->lp_solutionpolishing, TRUE, SCIP_DEFAULT_LP_SOLUTIONPOLISHING, 0, 3,
          NULL, NULL) );
 
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
@@ -2585,6 +2604,13 @@ SCIP_RETCODE SCIPsetFree(
    }
    BMSfreeMemoryArrayNull(&(*set)->branchrules);
 
+   /* free statistics tables */
+   for( i = 0; i < (*set)->ntables; ++i )
+   {
+      SCIP_CALL( SCIPtableFree(&(*set)->tables[i], *set) );
+   }
+   BMSfreeMemoryArrayNull(&(*set)->tables);
+
    /* free display columns */
    for( i = 0; i < (*set)->ndisps; ++i )
    {
@@ -2624,6 +2650,13 @@ SCIP_RETCODE SCIPsetFree(
 
    /* free all debug data */
    SCIP_CALL( SCIPdebugFreeDebugData(*set) ); /*lint !e506 !e774*/
+
+   /* free virtual tables of bandit algorithms */
+   for( i = 0; i < (*set)->nbanditvtables; ++i )
+   {
+      SCIPbanditvtableFree(&(*set)->banditvtables[i]);
+   }
+   BMSfreeMemoryArrayNull(&(*set)->banditvtables);
 
    BMSfreeMemory(set);
 
@@ -3999,6 +4032,49 @@ void SCIPsetSortPropsName(
    }
 }
 
+/** inserts bandit virtual function table into set */
+SCIP_RETCODE SCIPsetIncludeBanditvtable(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_BANDITVTABLE*    banditvtable        /**< bandit algorithm virtual function table */
+   )
+{
+   assert(set != NULL);
+   assert(banditvtable != NULL);
+
+   if( set->nbanditvtables >= set->banditvtablessize )
+   {
+      int newsize = SCIPsetCalcMemGrowSize(set, set->nbanditvtables + 1);
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->banditvtables, newsize) );
+      set->banditvtablessize = newsize;
+   }
+
+   assert(set->nbanditvtables < set->banditvtablessize);
+   set->banditvtables[set->nbanditvtables++] = banditvtable;
+
+   return SCIP_OKAY;
+}
+
+/** returns the bandit virtual function table of the given name, or NULL if not existing */
+SCIP_BANDITVTABLE* SCIPsetFindBanditvtable(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of bandit algorithm virtual function table */
+   )
+{
+   int b;
+
+   assert(set != NULL);
+   assert(name != NULL);
+
+   /* search for a bandit v table of the given name */
+   for( b = 0; b < set->nbanditvtables; ++b )
+   {
+      if( strcmp(name, SCIPbanditvtableGetName(set->banditvtables[b])) == 0 )
+         return set->banditvtables[b];
+   }
+
+   return NULL;
+}
+
 /** inserts concurrent solver type into the concurrent solver type list */
 SCIP_RETCODE SCIPsetIncludeConcsolverType(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -4493,6 +4569,51 @@ SCIP_DISP* SCIPsetFindDisp(
    return NULL;
 }
 
+/** inserts statistics table in statistics table list */
+SCIP_RETCODE SCIPsetIncludeTable(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_TABLE*           table               /**< statistics table */
+   )
+{
+   assert(set != NULL);
+   assert(table != NULL);
+   assert(!SCIPtableIsInitialized(table));
+
+   if( set->ntables >= set->tablessize )
+   {
+      set->tablessize = SCIPsetCalcMemGrowSize(set, set->ntables+1);
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->tables, set->tablessize) );
+   }
+   assert(set->ntables < set->tablessize);
+
+   /* we insert in arbitrary order and sort once before printing statistics */
+   set->tables[set->ntables] = table;
+   set->ntables++;
+   set->tablessorted = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** returns the statistics table of the given name, or NULL if not existing */
+SCIP_TABLE* SCIPsetFindTable(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of statistics table */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+   assert(name != NULL);
+
+   for( i = 0; i < set->ntables; ++i )
+   {
+      if( strcmp(SCIPtableGetName(set->tables[i]), name) == 0 )
+         return set->tables[i];
+   }
+
+   return NULL;
+}
+
 /** inserts dialog in dialog list */
 SCIP_RETCODE SCIPsetIncludeDialog(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -4731,6 +4852,12 @@ SCIP_RETCODE SCIPsetInitPlugins(
    }
    SCIP_CALL( SCIPdispAutoActivate(set) );
 
+   /* statistics tables */
+   for( i = 0; i < set->ntables; ++i )
+   {
+      SCIP_CALL( SCIPtableInit(set->tables[i], set) );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -4822,6 +4949,12 @@ SCIP_RETCODE SCIPsetExitPlugins(
    for( i = 0; i < set->ndisps; ++i )
    {
       SCIP_CALL( SCIPdispExit(set->disps[i], set) );
+   }
+
+   /* statistics tables */
+   for( i = 0; i < set->ntables; ++i )
+   {
+      SCIP_CALL( SCIPtableExit(set->tables[i], set) );
    }
 
    return SCIP_OKAY;
@@ -4969,6 +5102,12 @@ SCIP_RETCODE SCIPsetInitsolPlugins(
       SCIP_CALL( SCIPdispInitsol(set->disps[i], set) );
    }
 
+   /* statistics tables */
+   for( i = 0; i < set->ntables; ++i )
+   {
+      SCIP_CALL( SCIPtableInitsol(set->tables[i], set) );
+   }
+
    /* reset feasibility tolerance for relaxations */
    set->sepa_primfeastol = SCIP_INVALID;
 
@@ -5052,6 +5191,12 @@ SCIP_RETCODE SCIPsetExitsolPlugins(
    for( i = 0; i < set->ndisps; ++i )
    {
       SCIP_CALL( SCIPdispExitsol(set->disps[i], set) );
+   }
+
+   /* statistics tables */
+   for( i = 0; i < set->ntables; ++i )
+   {
+      SCIP_CALL( SCIPtableExitsol(set->tables[i], set) );
    }
 
    return SCIP_OKAY;
