@@ -19,6 +19,7 @@
  * @author Xin Liu
  * @author Kati Wolter
  * @author Michael Winkler
+ * @author Tobias Fischer
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -12664,8 +12665,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
          }
       }
    }
-   
-   
+
    /* upgrade to cardinality constraints */
    if ( ! cutoff && conshdlrdata->upgdcardinality && (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
    {
@@ -12686,11 +12686,11 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
       /* set up hash map */
       SCIP_CALL( SCIPhashmapCreate(&varhash, SCIPblkmem(scip), nscipvars) );
 
-      /* we loop through all cardinality constraints for two times
-       * - first, to determine in how many cardinality constraints that can be upgraded to a knapsack constraint,
-       * a binary variable is involved in; this number has to coincide with the number of variable up locks;
-       * otherwise it would be infeasible to delete the knapsack constraints after the constraint update
-       * - second, to upgrade knapsack constraints to cardinality constraints */
+      /* We loop through all cardinality constraints twice:
+       * - First, determine for each binary variable the number of cardinality constraints that can be upgraded to a
+       *   knapsack constraint and contain this variable; this number has to coincide with the number of variable up
+       *   locks; otherwise it would be infeasible to delete the knapsack constraints after the constraint update.
+       * - Second, upgrade knapsack constraints to cardinality constraints. */
       for (makeupgrade = 0; makeupgrade < 2; ++makeupgrade)
       {
          for (c = nconss-1; c >= 0 && ! SCIPisStopped(scip); --c)
@@ -12712,17 +12712,21 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
             vars = consdata->vars;
             weights = consdata->weights;
 
-            /* check, if linear knapsack can be upgraded to a cardinality constraint
+            /* Check, whether linear knapsack can be upgraded to a cardinality constraint:
              * - all variables must be binary
              * - all coefficients must be 1.0
              * - the right hand side must be smaller than nvars
              */
             if ( consdata->capacity >= nvars )
-               upgd = FALSE;
-            for (v = 0; v < nvars && upgd; ++v)
+               continue;
+
+            for (v = 0; v < nvars; ++v)
             {
-               if ( ! SCIPvarIsBinary(vars[v]) && ! (weights[v] == 1) )
+               if ( ! SCIPvarIsBinary(vars[v]) && weights[v] != 1 )
+               {
                   upgd = FALSE;
+                  break;
+               }
             }
             if ( ! upgd )
                continue;
@@ -12784,7 +12788,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
             if ( v < nvars )
                break;
 
-            /* save number of knapsack constraints that can be updated to a cardinality constraint,
+            /* save number of knapsack constraints that can be upgraded to a cardinality constraint,
              * in which the binary variable is involved in */
             if ( makeupgrade == 0 )
             {
@@ -12795,8 +12799,8 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
                      int image;
 
                      image = (int) (size_t) SCIPhashmapGetImage(varhash, vars[v]);
-                     SCIP_CALL( SCIPhashmapSetImage(varhash, vars[v], (void*) (size_t) (image+1)) );/*lint !e776*/
-                     assert( image+1 == (int) (size_t) SCIPhashmapGetImage(varhash, vars[v]) );
+                     SCIP_CALL( SCIPhashmapSetImage(varhash, vars[v], (void*) (size_t) (image + 1)) );/*lint !e776*/
+                     assert( image + 1 == (int) (size_t) SCIPhashmapGetImage(varhash, vars[v]) );
                   }
                   else
                   {
@@ -12837,12 +12841,13 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
                SCIP_CALL( SCIPreleaseCons(scip, &cardcons) );
                ++(*nupgdconss);
 
-               /* delete knapsack constraint */
+               /* delete oknapsack constraint */
+               SCIP_CALL( SCIPdelCons(scip, cons) );
+
+               /* disable original constraint */
                origcons = SCIPfindOrigCons(scip, SCIPconsGetName(cons));
                assert( origcons != NULL );
                SCIP_CALL( SCIPsetConsChecked(scip, origcons, FALSE) );
-               SCIP_CALL( SCIPdelCons(scip, cons) );
-               /*          ++(*ndelconss);*/
 
                for (v = 0; v < nvars; ++v)
                {
@@ -12850,8 +12855,8 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
 
                   assert ( SCIPhashmapExists(varhash, vars[v]) );
                   image = (int) (size_t) SCIPhashmapGetImage(varhash, vars[v]);
-                  SCIP_CALL( SCIPhashmapSetImage(varhash, vars[v], (void*) (size_t) (image-1)) );
-                  assert( image-1 == (int) (size_t) SCIPhashmapGetImage(varhash, vars[v]) );
+                  SCIP_CALL( SCIPhashmapSetImage(varhash, vars[v], (void*) (size_t) (image - 1)) );
+                  assert( image - 1 == (int) (size_t) SCIPhashmapGetImage(varhash, vars[v]) );
                }
             }
          }
@@ -12864,7 +12869,6 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
       if ( *nupgdconss > noldupgdconss )
          success = TRUE;
    }
-   
 
    if( cutoff )
       *result = SCIP_CUTOFF;
