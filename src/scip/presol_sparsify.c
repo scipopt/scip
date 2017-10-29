@@ -47,7 +47,7 @@
 #define DEFAULT_MAX_CONT_FILLIN         0    /**< default value for the maximal fillin for continuous variables */
 #define DEFAULT_MAX_BIN_FILLIN          0    /**< default value for the maximal fillin for binary variables */
 #define DEFAULT_MAX_INT_FILLIN          0    /**< default value for the maximal fillin for integer variables */
-#define DEFAULT_MAXNONZEROS            70    /**< maximal support of one equality to be used for cancelling (-1: no limit) */
+#define DEFAULT_MAXNONZEROS            -1    /**< maximal support of one equality to be used for cancelling (-1: no limit) */
 #define DEFAULT_MAXCONSIDEREDNONZEROS  70    /**< maximal number of considered non-zeros within one row (-1: no limit) */
 #define DEFAULT_ROWSORT               'd'    /**< order in which to process inequalities ('n'o sorting, 'i'ncreasing nonzeros, 'd'ecreasing nonzeros) */
 #define DEFAULT_MAXRETRIEVEFAC      100.0    /**< limit on the number of useless vs. useful hashtable retrieves as a multiple of the number of constraints */
