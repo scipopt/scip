@@ -62,6 +62,8 @@
 /** presolver data */
 struct SCIP_PresolData
 {
+   int                   ncancels;           /**< total number of canceled nonzeros (net value, i.e., removed minus added nonzeros) */
+   int                   nfillin;            /**< total number of added nonzeros */
    int                   nfailures;          /**< number of calls to presolver without success */
    int                   nwaitingcalls;      /**< number of presolver calls until next real execution */
    int                   maxcontfillin;      /**< maximal fillin for continuous variables */
@@ -471,7 +473,7 @@ SCIP_RETCODE cancelRow(
       SCIP_CALL( SCIPdelCons(scip, SCIPmatrixGetCons(matrix, rowidx)) );
       SCIP_CALL( SCIPaddCons(scip, cons) );
 
-#ifdef SCIP_DEBUG
+#ifdef SCIP_MORE_DEBUG
       SCIPdebugMsg(scip, "########\n");
       SCIPdebugMsg(scip, "old:\n");
       SCIPmatrixPrintRow(scip, matrix, rowidx);
@@ -576,7 +578,6 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
    SCIP_PRESOLDATA* presoldata;
    SCIP_Longint maxuseless;
    SCIP_Longint nuseless;
-   int noldchgcoefs;
 
    assert(result != NULL);
 
@@ -593,8 +594,11 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
    if( presoldata->nwaitingcalls > 0 )
    {
       presoldata->nwaitingcalls--;
+      SCIPdebugMsg(scip, "skipping sparsify: nfailures=%d, nwaitingcalls=%d\n", presoldata->nfailures,
+         presoldata->nwaitingcalls);
       return SCIP_OKAY;
    }
+   SCIPdebugMsg(scip, "starting sparsify. . .\n");
 
    *result = SCIP_DIDNOTFIND;
 
@@ -742,7 +746,6 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       /* loop over the rows and cancel non-zeros until maximum number of retrieves is reached */
       maxuseless = (SCIP_Longint)(presoldata->maxretrievefac * (SCIP_Real)nrows);
       nuseless = 0;
-      noldchgcoefs = *nchgcoefs;
       for( r = 0; r < nrows && nuseless <= maxuseless; r++ )
       {
          int rowidx;
@@ -764,15 +767,30 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       SCIPfreeBufferArray(scip, &locks);
 
       /* update result */
+      presoldata->ncancels += numcancel;
+      presoldata->nfillin += nfillin;
+
       if( numcancel > 0 )
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-            "   (%.1fs) sparsify %s: %d/%d (%.1f%%) nonzeros canceled, %d changed coefficients, %d added nonzeros\n",
-            SCIPgetSolvingTime(scip), (nuseless > maxuseless ? "aborted" : "finished"), numcancel, SCIPmatrixGetNNonzs(matrix),
-            100.0*(SCIP_Real)numcancel/(SCIP_Real)SCIPmatrixGetNNonzs(matrix), *nchgcoefs - noldchgcoefs, nfillin);
+            "   (%.1fs) sparsify %s: %d/%d (%.1f%%) nonzeros canceled"
+            " - in total %d canceled nonzeros, %d changed coefficients, %d added nonzeros\n",
+            SCIPgetSolvingTime(scip), (nuseless > maxuseless ? "aborted" : "finished"), numcancel,
+            SCIPmatrixGetNNonzs(matrix), 100.0*(SCIP_Real)numcancel/(SCIP_Real)SCIPmatrixGetNNonzs(matrix),
+            presoldata->ncancels, SCIPpresolGetNChgCoefs(presol), presoldata->nfillin);
          *result = SCIP_SUCCESS;
       }
+
       updateFailureStatistic(presoldata, numcancel > 0);
+
+      SCIPdebugMsg(scip, "sparsify failure statistic: nfailures=%d, nwaitingcalls=%d\n", presoldata->nfailures,
+         presoldata->nwaitingcalls);
+   }
+   /* if matrix construction fails once, we do not ever want to be called again */
+   else
+   {
+      updateFailureStatistic(presoldata, FALSE);
+      presoldata->nwaitingcalls = INT_MAX;
    }
 
    SCIPmatrixFree(scip, &matrix);
@@ -806,10 +824,10 @@ SCIP_DECL_PRESOLINIT(presolInitSparsify)
 {
    SCIP_PRESOLDATA* presoldata;
 
-   /* we set the nfailures counter in the init (and not in the initpre) callback, because we want it to persist across
-    * restarts
-    */
+   /* set the counters in the init (and not in the initpre) callback such that they persist across restarts */
    presoldata = SCIPpresolGetData(presol);
+   presoldata->ncancels = 0;
+   presoldata->nfillin = 0;
    presoldata->nfailures = 0;
    presoldata->nwaitingcalls = 0;
 
