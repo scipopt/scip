@@ -36,6 +36,7 @@
 #include "scip/cons_linear.h"
 #include "scip/presol_sparsify.h"
 
+
 #define PRESOL_NAME            "sparsify"
 #define PRESOL_DESC            "eliminate non-zero coefficients"
 
@@ -50,7 +51,7 @@
 #define DEFAULT_MAXCONSIDEREDNONZEROS  70    /**< maximal number of considered non-zeros within one row (-1: no limit) */
 #define DEFAULT_ROWSORT               'n'    /**< order in which to process inequalities ('n'o sorting, 'i'ncreasing nonzeros, 'd'ecreasing nonzeros) */
 #define DEFAULT_FULL_SEARCH             0    /**< default value for full search */
-#define DEFAULT_MAXRETRIEVEFAC      100.0    /**< default value for the maximal number of useless hashtable retrieves as a multiple of the number of constraints */
+#define DEFAULT_MAXRETRIEVEFAC      100.0    /**< limit on the number of useless vs. useful hashtable retrieves as a multiple of the number of constraints */
 
 #define MAXSCALE                   1000.0    /**< maximal allowed scale for cancelling non-zeros */
 
@@ -66,10 +67,11 @@ struct SCIP_PresolData
    int                   maxbinfillin;       /**< maximal fillin for binary variables */
    int                   maxnonzeros;        /**< maximal support of one equality to be used for cancelling (-1: no limit) */
    int                   maxconsiderednonzeros;/**< maximal number of considered non-zeros within one row (-1: no limit) */
-   SCIP_Real             maxretrievefac;     /**< maximal number of useless hashtable retrieves as a multiple of the number of constraints */
+   SCIP_Real             maxretrievefac;     /**< limit on the number of useless vs. useful hashtable retrieves as a multiple of the number of constraints */
    char                  rowsort;            /**< order in which to process inequalities ('n'o sorting, 'i'ncreasing nonzeros, 'd'ecreasing nonzeros) */
    SCIP_Bool             fullsearch;         /**< flag indicating that full sparsification is required */
 };
+
 
 /*
  * Local methods
@@ -479,15 +481,26 @@ SCIP_RETCODE cancelRow(
 
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
+      /* update counters */
       *nchgcoefs += nchgcoef;
       *ncanceled += SCIPmatrixGetRowNNonzs(matrix, rowidx) - cancelrowlen;
       *nfillin += bestnfillin;
 
+      /* if successful, decrease the useless hashtable retrieves counter; the rationale here is that we want to keep
+       * going if, after many useless calls that almost exceeded the budget, we finally reach a useful section; but we
+       * don't allow a negative build-up for the case that the useful section is all at the beginning and we just want
+       * to quit quickly afterwards
+       */
+      *nuseless -= nretrieves;
+      *nuseless = MAX(*nuseless, 0);
+
       SCIPfreeBufferArray(scip, &consvars);
    }
-   /* if we were not successful, increase useless hashtable retrieves counter */
    else
-      (*nuseless) += nretrieves;
+   {
+      /* if not successful, increase useless hashtable retrieves counter */
+      *nuseless += nretrieves;
+   }
 
    SCIPfreeBufferArray(scip, &locks);
    SCIPfreeBufferArray(scip, &tmpvals);
@@ -536,8 +549,6 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
    *result = SCIP_DIDNOTFIND;
 
    presoldata = SCIPpresolGetData(presol);
-
-   nuseless = 0;
 
    matrix = NULL;
    SCIP_CALL( SCIPmatrixCreate(scip, &matrix, &initialized, &complete) );
@@ -687,6 +698,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
 
       /* loop over the rows and cancel non-zeros until maximum number of retrieves is reached */
       maxuseless = (SCIP_Longint)(presoldata->maxretrievefac * (SCIP_Real)nrows);
+      nuseless = 0;
       noldchgcoefs = *nchgcoefs;
       for( r = 0; r < nrows && nuseless <= maxuseless; r++ )
       {
@@ -798,7 +810,7 @@ SCIP_RETCODE SCIPincludePresolSparsify(
 
    SCIP_CALL( SCIPaddRealParam(scip,
          "presolving/sparsify/maxretrievefac",
-         "maximal number of useless hashtable retrieves as a multiple of the number of constraints",
+         "limit on the number of useless vs. useful hashtable retrieves as a multiple of the number of constraints",
          &presoldata->maxretrievefac, TRUE, DEFAULT_MAXRETRIEVEFAC, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
