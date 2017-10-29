@@ -50,7 +50,6 @@
 #define DEFAULT_MAXNONZEROS            70    /**< maximal support of one equality to be used for cancelling (-1: no limit) */
 #define DEFAULT_MAXCONSIDEREDNONZEROS  70    /**< maximal number of considered non-zeros within one row (-1: no limit) */
 #define DEFAULT_ROWSORT               'd'    /**< order in which to process inequalities ('n'o sorting, 'i'ncreasing nonzeros, 'd'ecreasing nonzeros) */
-#define DEFAULT_FULL_SEARCH             0    /**< default value for full search */
 #define DEFAULT_MAXRETRIEVEFAC      100.0    /**< limit on the number of useless vs. useful hashtable retrieves as a multiple of the number of constraints */
 
 #define MAXSCALE                   1000.0    /**< maximal allowed scale for cancelling non-zeros */
@@ -69,7 +68,6 @@ struct SCIP_PresolData
    int                   maxconsiderednonzeros;/**< maximal number of considered non-zeros within one row (-1: no limit) */
    SCIP_Real             maxretrievefac;     /**< limit on the number of useless vs. useful hashtable retrieves as a multiple of the number of constraints */
    char                  rowsort;            /**< order in which to process inequalities ('n'o sorting, 'i'ncreasing nonzeros, 'd'ecreasing nonzeros) */
-   SCIP_Bool             fullsearch;         /**< flag indicating that full sparsification is required */
 };
 
 
@@ -802,11 +800,6 @@ SCIP_RETCODE SCIPincludePresolSparsify(
          "presolving/sparsify/rowsort",
          "order in which to process inequalities ('n'o sorting, 'i'ncreasing nonzeros, 'd'ecreasing nonzeros)",
          &presoldata->rowsort, TRUE, DEFAULT_ROWSORT, "nid", NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "presolving/sparsify/fullsearch",
-         "require full search for sparsification",
-         &presoldata->fullsearch, TRUE, DEFAULT_FULL_SEARCH, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
          "presolving/sparsify/maxretrievefac",
