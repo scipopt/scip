@@ -54,13 +54,16 @@
 
 #define MAXSCALE                   1000.0    /**< maximal allowed scale for cancelling non-zeros */
 
+
 /*
  * Data structures
  */
 
-/** control parameters */
+/** presolver data */
 struct SCIP_PresolData
 {
+   int                   nfailures;          /**< number of calls to presolver without success */
+   int                   nwaitingcalls;      /**< number of presolver calls until next real execution */
    int                   maxcontfillin;      /**< maximal fillin for continuous variables */
    int                   maxintfillin;       /**< maximal fillin for integer variables*/
    int                   maxbinfillin;       /**< maximal fillin for binary variables */
@@ -509,6 +512,27 @@ SCIP_RETCODE cancelRow(
    return SCIP_OKAY;
 }
 
+/** updates failure counter after one execution */
+static
+void updateFailureStatistic(
+   SCIP_PRESOLDATA*      presoldata,         /**< presolver data */
+   SCIP_Bool             success             /**< was this execution successful? */
+   )
+{
+   assert(presoldata != NULL);
+
+   if( success )
+   {
+      presoldata->nfailures = 0;
+      presoldata->nwaitingcalls = 0;
+   }
+   else
+   {
+      presoldata->nfailures++;
+      presoldata->nwaitingcalls = 2*presoldata->nfailures;
+   }
+}
+
 /** execution method of presolver */
 static
 SCIP_DECL_PRESOLEXEC(presolExecSparsify)
@@ -536,6 +560,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
    int noldchgcoefs;
 
    assert(result != NULL);
+
    *result = SCIP_DIDNOTRUN;
 
    if( (SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING) || SCIPinProbing(scip) || SCIPisNLPEnabled(scip) )
@@ -544,9 +569,15 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
    if( SCIPisStopped(scip) || SCIPgetNActivePricers(scip) > 0 )
       return SCIP_OKAY;
 
-   *result = SCIP_DIDNOTFIND;
-
    presoldata = SCIPpresolGetData(presol);
+
+   if( presoldata->nwaitingcalls > 0 )
+   {
+      presoldata->nwaitingcalls--;
+      return SCIP_OKAY;
+   }
+
+   *result = SCIP_DIDNOTFIND;
 
    matrix = NULL;
    SCIP_CALL( SCIPmatrixCreate(scip, &matrix, &initialized, &complete) );
@@ -727,6 +758,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
             100.0*(SCIP_Real)numcancel/(SCIP_Real)SCIPmatrixGetNNonzs(matrix), *nchgcoefs - noldchgcoefs, nfillin);
          *result = SCIP_SUCCESS;
       }
+      updateFailureStatistic(presoldata, numcancel > 0);
    }
 
    SCIPmatrixFree(scip, &matrix);
@@ -754,6 +786,22 @@ SCIP_DECL_PRESOLFREE(presolFreeSparsify)
    return SCIP_OKAY;
 }
 
+/** initialization method of presolver (called after problem was transformed) */
+static
+SCIP_DECL_PRESOLINIT(presolInitSparsify)
+{
+   SCIP_PRESOLDATA* presoldata;
+
+   /* we set the nfailures counter in the init (and not in the initpre) callback, because we want it to persist across
+    * restarts
+    */
+   presoldata = SCIPpresolGetData(presol);
+   presoldata->nfailures = 0;
+   presoldata->nwaitingcalls = 0;
+
+   return SCIP_OKAY;
+}
+
 /** creates the sparsify presolver and includes it in SCIP */
 SCIP_RETCODE SCIPincludePresolSparsify(
    SCIP*                 scip                /**< SCIP data structure */
@@ -770,6 +818,7 @@ SCIP_RETCODE SCIPincludePresolSparsify(
          PRESOL_TIMING, presolExecSparsify, presoldata) );
 
    SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeSparsify) );
+   SCIP_CALL( SCIPsetPresolInit(scip, presol, presolInitSparsify) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/sparsify/maxcontfillin",
