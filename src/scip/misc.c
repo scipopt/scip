@@ -9268,10 +9268,11 @@ int SCIPmemccpy(
    }
 }
 
-/** prints an error message containing of the given string followed by a string describing the current system error;
- *  prefers to use the strerror_r method, which is threadsafe; on systems where this method does not exist,
- *  NO_STRERROR_R should be defined (see INSTALL), in this case, strerror is used which is not guaranteed to be
- *  threadsafe (on SUN-systems, it actually is)
+/** prints an error message containing of the given string followed by a string describing the current system error
+ *
+ *  Prefers to use the strerror_r method, which is threadsafe. On systems where this method does not exist,
+ *  NO_STRERROR_R should be defined (see INSTALL). In this case, strerror is used which is not guaranteed to be
+ *  threadsafe (on SUN-systems, it actually is).
  */
 void SCIPprintSysError(
    const char*           message             /**< first part of the error message, e.g. the filename */
@@ -9294,7 +9295,7 @@ void SCIPprintSysError(
    buf[SCIP_MAXSTRLEN - 1] = '\0';
    SCIPmessagePrintError("%s: %s\n", message, buf);
 #else
-   /* We are in the GNU case, where strerror_r returns a string to the error string. This string is possibly stored
+   /* We are in the GNU case, where strerror_r returns a pointer to the error string. This string is possibly stored
     * in buf and is always \0 terminated.
     * However, if compiling on one system and executing on another system, we might actually call a different
     * variant of the strerror_r function than we had at compile time, so better print buf than the return value.
