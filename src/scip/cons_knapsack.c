@@ -177,6 +177,7 @@ struct SCIP_ConshdlrData
    SCIP_Real             clqpartupdatefac;   /**< factor on the growth of global cliques to decide when to update a previous
                                               *   (negated) clique partition (used only if updatecliquepartitions is set to TRUE) */
    SCIP_Bool             upgdcardinality;    /**< if TRUE then try to update knapsack constraints to cardinality constraints */
+   SCIP_Bool             upgradedcard;       /**< whether we have already upgraded knapsack constraints to cardinality constraints */
 };
 
 
@@ -12064,6 +12065,8 @@ SCIP_DECL_CONSINITPRE(consInitpreKnapsack)
    conshdlrdata->bools3size = nvars;
    conshdlrdata->bools4size = nvars;
 
+   conshdlrdata->upgradedcard = FALSE;
+
    return SCIP_OKAY;
 }
 
@@ -12666,8 +12669,8 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
       }
    }
 
-   /* upgrade to cardinality constraints */
-   if ( ! cutoff && conshdlrdata->upgdcardinality && (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
+   /* upgrade to cardinality constraints - only try to upgrade towards the end of presolving, since the process below is quite expensive */
+   if ( ! cutoff && conshdlrdata->upgdcardinality && (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 && SCIPisPresolveFinished(scip) && ! conshdlrdata->upgradedcard )
    {
       SCIP_HASHMAP* varhash;
       SCIP_VAR** cardvars;
@@ -12818,6 +12821,9 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
                }
                if ( v < nvars )
                   break;
+
+               /* store that we have upgraded */
+               conshdlrdata->upgradedcard = TRUE;
 
                /* at this point we found suitable variable upper bounds */
                SCIPdebugMessage("Upgrading knapsack constraint <%s> to cardinality constraint ...\n", SCIPconsGetName(cons));
