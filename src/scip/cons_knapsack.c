@@ -111,7 +111,7 @@
 #define DEFAULT_CLQPARTUPDATEFAC   1.5  /**< factor on the growth of global cliques to decide when to update a previous
                                          *   (negated) clique partition (used only if updatecliquepartitions is set to TRUE) */
 #define DEFAULT_UPDATECLIQUEPARTITIONS FALSE /**< should clique partition information be updated when old partition seems outdated? */
-#define DEFAULT_UPGDCARDINALITY    TRUE /**< if TRUE then try to update knapsack constraints to cardinality constraints */
+#define DEFAULT_UPGDCARDINALITY   FALSE /**< if TRUE then try to update knapsack constraints to cardinality constraints */
 
 #define MAXNCLIQUEVARSCOMP 1000000      /**< limit on number of pairwise comparisons in clique partitioning algorithm */
 
@@ -12693,7 +12693,6 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
       {
          for (c = nconss-1; c >= 0 && ! SCIPisStopped(scip); --c)
          {
-            SCIP_CONS* origcons;
             SCIP_CONS* cardcons;
             SCIP_VAR** vars;
             SCIP_Longint* weights;
@@ -12841,11 +12840,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
 
                /* delete oknapsack constraint */
                SCIP_CALL( SCIPdelCons(scip, cons) );
-
-               /* disable original constraint */
-               origcons = SCIPfindOrigCons(scip, SCIPconsGetName(cons));
-               assert( origcons != NULL );
-               SCIP_CALL( SCIPsetConsChecked(scip, origcons, FALSE) );
+               ++(*ndelconss);
 
                for (v = 0; v < nvars; ++v)
                {
