@@ -533,6 +533,25 @@ void updateFailureStatistic(
    }
 }
 
+
+/*
+ * Callback methods of presolver
+ */
+
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_PRESOLCOPY(presolCopySparsify)
+{
+   assert(scip != NULL);
+   assert(presol != NULL);
+   assert(strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0);
+
+   /* call inclusion method of presolver */
+   SCIP_CALL( SCIPincludePresolSparsify(scip) );
+
+   return SCIP_OKAY;
+}
+
 /** execution method of presolver */
 static
 SCIP_DECL_PRESOLEXEC(presolExecSparsify)
@@ -812,6 +831,7 @@ SCIP_RETCODE SCIPincludePresolSparsify(
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,
          PRESOL_TIMING, presolExecSparsify, presoldata) );
 
+   SCIP_CALL( SCIPsetPresolCopy(scip, presol, presolCopySparsify) );
    SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeSparsify) );
    SCIP_CALL( SCIPsetPresolInit(scip, presol, presolInitSparsify) );
 
