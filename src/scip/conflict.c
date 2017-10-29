@@ -2385,11 +2385,24 @@ SCIP_RETCODE tightenSingleVar(
       if( lp->strongbranching )
       {
          SCIP_CONS* cons;
+         SCIP_Real conslhs;
+         SCIP_Real consrhs;
          char name[SCIP_MAXSTRLEN];
 
          (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "pc_fix_%s", SCIPvarGetName(var));
 
-         SCIP_CALL( SCIPcreateConsLinear(set->scip, &cons, name, 0, NULL, NULL, newbound, newbound,
+         if( boundtype == SCIP_BOUNDTYPE_UPPER )
+         {
+	    conslhs = -SCIPsetInfinity(set);
+            consrhs = newbound;
+         }
+	 else
+         {
+	    conslhs = newbound;
+            consrhs = SCIPsetInfinity(set);
+	 }
+
+         SCIP_CALL( SCIPcreateConsLinear(set->scip, &cons, name, 0, NULL, NULL, conslhs, consrhs,
                FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
          SCIP_CALL( SCIPaddCoefLinear(set->scip, cons, var, 1.0) );
@@ -2977,7 +2990,7 @@ SCIP_RETCODE conflictAddConflictCons(
    /* try to derive global bound changes and shorten the conflictset by using implication and clique and variable bound
     * information
     */
-   if( conflictset->nbdchginfos > 1 && insertdepth == 0 )
+   if( conflictset->nbdchginfos > 1 && insertdepth == 0 && !lp->strongbranching )
    {
       int nbdchgs;
       int nredvars;
