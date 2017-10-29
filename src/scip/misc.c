@@ -9298,11 +9298,26 @@ void SCIPprintSysError(
    /* We are in the GNU case, where strerror_r returns a pointer to the error string. This string is possibly stored
     * in buf and is always \0 terminated.
     * However, if compiling on one system and executing on another system, we might actually call a different
-    * variant of the strerror_r function than we had at compile time, so better print buf than the return value.
+    * variant of the strerror_r function than we had at compile time.
     */
+   char* errordescr;
    *buf = '\0';
-   strerror_r(errno, buf, SCIP_MAXSTRLEN);
-   SCIPmessagePrintError("%s: %s\n", message, buf);
+   errordescr = strerror_r(errno, buf, SCIP_MAXSTRLEN);
+   if( *buf != '\0' )
+   {
+      /* strerror_r wrote into buf */
+      SCIPmessagePrintError("%s: %s\n", message, buf);
+   }
+   else if( errordescr != NULL )
+   {
+      /* strerror_r returned something non-NULL */
+      SCIPmessagePrintError("%s: %s\n", message, errordescr);
+   }
+   else
+   {
+      /* strerror_r did return NULL and did not write into buf */
+      SCIPmessagePrintError("Could not obtain description for error %d.\n", errno);
+   }
 #endif
 #endif
 }
