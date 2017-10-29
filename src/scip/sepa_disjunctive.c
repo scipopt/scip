@@ -505,6 +505,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
 
    *result = SCIP_DIDNOTRUN;
 
+   if( !allowlocal )
+      return SCIP_OKAY;
+
    /* only generate disjunctive cuts if we are not close to terminating */
    if ( SCIPisStopped(scip) )
       return SCIP_OKAY;
@@ -811,7 +814,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
             SCIProwChgRank(row, cutrank);
 
             /* add cut */
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+            SCIP_CALL( SCIPaddCut(scip, row, FALSE, &infeasible) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
             if ( infeasible )
             {

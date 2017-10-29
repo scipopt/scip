@@ -1922,6 +1922,12 @@ SCIP_RETCODE getFixingValue(
       break;
    }
 
+   /* due to propagation (during probing) it might happen that the LP and NLP solution value of var might be outside of
+    * its bounds
+    */
+   *val = MAX(*val, SCIPvarGetLbLocal(var)); /*lint !e666*/
+   *val = MIN(*val, SCIPvarGetUbLocal(var)); /*lint !e666*/
+
    return SCIP_OKAY;
 }
 
@@ -3133,8 +3139,8 @@ SCIP_DECL_HEURINIT(heurInitUndercover)
    assert(heurdata != NULL);
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
-         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
+         DEFAULT_RANDSEED) );
 
    return SCIP_OKAY;
 }
@@ -3153,7 +3159,7 @@ SCIP_DECL_HEUREXIT(heurExitUndercover)
    assert(heurdata != NULL);
 
    /* free random number generator */
-   SCIPrandomFree(&heurdata->randnumgen);
+   SCIPfreeRandom(scip, &heurdata->randnumgen);
 
    return SCIP_OKAY;
 }

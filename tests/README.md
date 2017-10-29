@@ -71,7 +71,7 @@ You can also run a single test, e.g. `
 
 TODO: Define a policy for moving/removing tests in `src/bugs` once the bugs are fixed.
 
-## Debug
+## Debug (up to Criterion 2.2.2)
 
 If a test fails, use `gdb` to debug. For example:
 
@@ -90,3 +90,35 @@ The test suite is `separation` and the test name is `gauge`. To debug:
 ```
 
 Criterion by default prints all of the critical debugging information (test_suite::test_name, file and line number were to break). When a test crashes, there is no need to `break` in `gdb`.
+
+## Debug (with Criterion 2.3 and later)
+
+If a test fails, one can use `gdb` or `undodb-gdb` to debug. For example:
+
+```
+ >> ./bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx2
+         [----] src/cons/quadratic/gauge.c:112: Assertion failed: gauge unavailable, pointless to continue
+         [FAIL] separation::gauge: (0.00s)
+         [====] Synthesis: Tested: 1 | Passing: 0 | Failing: 1 | Crashing: 0
+```
+
+The test suite is `separation` and the test name is `gauge`. To debug with `gdb` write in one terminal:
+
+```
+>> bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx2 --filter *gauge* --debug
+```
+This will start a `gdbserver`. To connect, in another terminal use
+```
+>> gdb bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx2 -ex "target remote localhost:1234"
+```
+
+If one doesn't want to use a `gdbserver` use:
+```
+>> bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx2 --filter *gauge* --debug=idle
+```
+This will give the PID of the process which can then be attached to a `undodb-gdb` or `gdb` session with
+```
+>> gdb --pid <pid-number>
+```
+
+After this, execute `continue` twice in gdb.

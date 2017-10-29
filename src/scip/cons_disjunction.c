@@ -292,6 +292,8 @@ SCIP_RETCODE checkCons(
 
    *result = SCIP_INFEASIBLE;
 
+   SCIPdeactivateSolViolationUpdates(scip);
+
    /* check all constraints */
    for( i = 0; i < nconss && *result != SCIP_FEASIBLE; ++i )
    {
@@ -299,10 +301,18 @@ SCIP_RETCODE checkCons(
       assert(*result == SCIP_FEASIBLE || *result == SCIP_INFEASIBLE);
    }
 
-   if( printreason && *result == SCIP_INFEASIBLE )
+   SCIPactivateSolViolationUpdates(scip);
+
+   if( *result == SCIP_INFEASIBLE )
    {
-      SCIPinfoMessage(scip, NULL, "constraint %s is violated, all sub-constraints in this disjunction are violated by this given solution\n", SCIPconsGetName(cons));
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+      if( sol != NULL )
+         SCIPupdateSolConsViolation(scip, sol, 1.0, 1.0);
+
+      if( printreason )
+      {
+         SCIPinfoMessage(scip, NULL, "constraint %s is violated, all sub-constraints in this disjunction are violated by this given solution\n", SCIPconsGetName(cons));
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+      }
    }
 
    return SCIP_OKAY;

@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.0)
+
 project(MinIISC)
 
 find_package(SCIP REQUIRED)
@@ -12,7 +14,9 @@ add_executable(miniisc
 
 target_link_libraries(miniisc ${SCIP_LIBRARIES} m)
                                                  
-add_dependencies(applications miniisc)
+if( TARGET applications )
+    add_dependencies( applications miniisc )
+endif()
 
 add_subdirectory(check)
 

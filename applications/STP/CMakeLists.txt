@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.0)
+
 project(scipstp)
 
 find_package(SCIP REQUIRED)
@@ -35,7 +37,9 @@ add_executable(scipstp
 
 target_link_libraries(scipstp ${SCIP_LIBRARIES} m)
                                                  
-add_dependencies(applications scipstp)
+if( TARGET applications )
+    add_dependencies( applications scipstp )
+endif()
 
 add_subdirectory(check)
 

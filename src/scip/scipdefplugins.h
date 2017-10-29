@@ -95,8 +95,10 @@
 #include "scip/heur_localbranching.h"
 #include "scip/heur_locks.h"
 #include "scip/heur_lpface.h"
+#include "scip/heur_alns.h"
 #include "scip/heur_multistart.h"
 #include "scip/heur_mutation.h"
+#include "scip/heur_mpec.h"
 #include "scip/heur_nlpdiving.h"
 #include "scip/heur_objpscostdiving.h"
 #include "scip/heur_octane.h"
@@ -179,10 +181,9 @@
 #include "scip/sepa_cgmip.h"
 #include "scip/sepa_clique.h"
 #include "scip/sepa_closecuts.h"
-#include "scip/sepa_cmir.h"
+#include "scip/sepa_aggregation.h"
 #include "scip/sepa_convexproj.h"
 #include "scip/sepa_disjunctive.h"
-#include "scip/sepa_flowcover.h"
 #include "scip/sepa_gauge.h"
 #include "scip/sepa_gomory.h"
 #include "scip/sepa_impliedbounds.h"
@@ -193,9 +194,13 @@
 #include "scip/sepa_strongcg.h"
 #include "scip/sepa_zerohalf.h"
 #include "scip/scipshell.h"
+#include "scip/table_default.h"
 #include "scip/concsolver_scip.h"
 
 #include "nlpi/nlpi_ipopt.h"
+#include "nlpi/nlpi_filtersqp.h"
+#include "nlpi/nlpi_worhp.h"
+#include "nlpi/nlpi_all.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -49,6 +49,19 @@ SCIP_RETCODE SCIPincludeHeurLocks(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+
+/** apply fix-and-propagate scheme based on variable locks
+ *
+ *  @note probing mode of SCIP needs to be enabled before
+ */
+EXTERN
+SCIP_RETCODE SCIPapplyLockFixings(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< primal heuristic data */
+   SCIP_Bool*            cutoff,             /**< pointer to store if a cutoff was detected */
+   SCIP_Bool*            allrowsfulfilled    /**< pointer to store if all rows became redundant */
+   );
+
 #ifdef __cplusplus
 }
 #endif

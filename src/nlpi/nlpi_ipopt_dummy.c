@@ -46,7 +46,7 @@ const char* SCIPgetSolverNameIpopt(void)
    return "";
 }
 
-/** gets string that describes Ipopt (version number) */
+/** gets string that describes Ipopt */
 const char* SCIPgetSolverDescIpopt(void)
 {
    return "";
@@ -225,6 +225,8 @@ SCIP_RETCODE SCIPsolveLinearProb(
    int* pivot;
    int k;
 
+   SCIP_RETCODE retcode = SCIP_OKAY;
+
    assert(N > 0);
    assert(A != NULL);
    assert(b != NULL);
@@ -245,9 +247,9 @@ SCIP_RETCODE SCIPsolveLinearProb(
    pivot = NULL;
 
    /* copy arrays */
-   SCIP_ALLOC( BMSduplicateMemoryArray(&LU, A, N*N) ); /*lint !e647*/
-   SCIP_ALLOC( BMSduplicateMemoryArray(&y, b, N) );
-   SCIP_ALLOC( BMSallocMemoryArray(&pivot, N) );
+   SCIP_ALLOC_TERMINATE( retcode, BMSduplicateMemoryArray(&LU, A, N*N), TERMINATE ); /*lint !e647*/
+   SCIP_ALLOC_TERMINATE( retcode, BMSduplicateMemoryArray(&y, b, N), TERMINATE );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&pivot, N), TERMINATE );
 
    /* initialize values */
    for( k = 0; k < N; ++k )
@@ -329,9 +331,9 @@ SCIP_RETCODE SCIPsolveLinearProb(
 
    TERMINATE:
    /* free arrays */
-   BMSfreeMemoryArray(&pivot);
-   BMSfreeMemoryArray(&y);
-   BMSfreeMemoryArray(&LU);
+   BMSfreeMemoryArrayNull(&pivot);
+   BMSfreeMemoryArrayNull(&y);
+   BMSfreeMemoryArrayNull(&LU);
 
-   return SCIP_OKAY;
+   return retcode;
 }

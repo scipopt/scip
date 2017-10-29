@@ -2877,20 +2877,24 @@ SCIP_RETCODE paramsetSetHeuristicsFast(
 {
    int i;
 
-#define NEXPENSIVEHEURFREQS 15
+#define NEXPENSIVEHEURFREQS 19
    static const char* const expensiveheurfreqs[NEXPENSIVEHEURFREQS] = {
       "heuristics/coefdiving/freq",
       "heuristics/crossover/freq",
       "heuristics/distributiondiving/freq",
       "heuristics/feaspump/freq",
       "heuristics/fracdiving/freq",
+      "heuristics/gins/freq",
       "heuristics/guideddiving/freq",
       "heuristics/linesearchdiving/freq",
+      "heuristics/lpface/freq",
+      "heuristics/mpec/freq",
       "heuristics/nlpdiving/freq",
       "heuristics/subnlp/freq",
       "heuristics/objpscostdiving/freq",
       "heuristics/pscostdiving/freq",
       "heuristics/rens/freq",
+      "heuristics/rins/freq",
       "heuristics/rootsoldiving/freq",
       "heuristics/undercover/freq",
       "heuristics/veclendiving/freq"
@@ -3360,12 +3364,16 @@ SCIP_RETCODE paramsetSetSeparatingDefault(
    SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/maxaddrounds") );
    SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/maxcutsroot") );
    SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/poolfreq") );
-   SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/cmir/maxfailsroot") );
+   SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/aggregation/maxfailsroot") );
    SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/mcf/maxtestdelta") );
    SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/mcf/trynegscaling") );
-   SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/cmir/maxtriesroot") );
-   SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/cmir/maxaggrsroot") );
+   SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/aggregation/maxtriesroot") );
+   SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/aggregation/maxaggrsroot") );
    SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/maxbounddist") );
+   SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/zerohalf/maxslackroot") );
+   SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/zerohalf/maxslack") );
+   SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/zerohalf/maxsepacutsroot") );
+   SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/zerohalf/maxroundsroot") );
 
    return SCIP_OKAY;
 }
@@ -3526,10 +3534,10 @@ SCIP_RETCODE paramsetSetSeparatingAggressive(
 
    /* explicitly change a separating parameter of cmir separator, if included */
 #ifndef NDEBUG
-   if( SCIPsetFindSepa(set, "cmir") != NULL )
+   if( SCIPsetFindSepa(set, "aggregation") != NULL )
 #endif
    {
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/cmir/maxfailsroot", 200, quiet) );
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/aggregation/maxfailsroot", 200, quiet) );
    }
 
    /* explicitly change separating parameters of mcf separator, if included */
@@ -3567,19 +3575,22 @@ SCIP_RETCODE paramsetSetSeparatingFast(
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/and/sepafreq", 0, quiet) );
    }
 #ifndef NDEBUG
-   if( SCIPsetFindSepa(set, "cmir") != NULL )
+   if( SCIPsetFindSepa(set, "aggregation") != NULL )
 #endif
    {
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/cmir/maxroundsroot", 5, quiet) );
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/cmir/maxtriesroot", 100, quiet) );
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/cmir/maxaggrsroot", 3, quiet) );
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/cmir/maxsepacutsroot", 200, quiet) );
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/aggregation/maxroundsroot", 5, quiet) );
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/aggregation/maxtriesroot", 100, quiet) );
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/aggregation/maxaggrsroot", 3, quiet) );
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/aggregation/maxsepacutsroot", 200, quiet) );
    }
 #ifndef NDEBUG
-   if( SCIPsetFindSepa(set, "flowcover") != NULL )
+   if( SCIPsetFindSepa(set, "zerohalf") != NULL )
 #endif
    {
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/flowcover/freq", -1, quiet) );
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "separating/zerohalf/maxslackroot", 0.0, quiet) );
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "separating/zerohalf/maxslack", 0.0, quiet) );
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/zerohalf/maxsepacutsroot", 200, quiet) );
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/zerohalf/maxroundsroot", 5, quiet) );
    }
 #ifndef NDEBUG
    if( SCIPsetFindSepa(set, "gomory") != NULL )
@@ -3793,8 +3804,7 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       /* reduce the amount of separation rounds and disable most expensive separators */
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/maxrounds", 1, quiet) );
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/maxroundsroot", 5, quiet) );
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/cmir/freq", -1, quiet) );
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/flowcover/freq", -1, quiet) );
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/aggregation/freq", -1, quiet) );
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/mcf/freq", -1, quiet) );
 
       /* set priority for node selection "restartdfs" to be higher as the current used one */

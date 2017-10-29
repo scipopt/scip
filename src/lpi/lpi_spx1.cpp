@@ -79,6 +79,10 @@
 #ifndef SOPLEX_SUBVERSION
 #define SOPLEX_SUBVERSION 0
 #endif
+/* define API version for versions <= 3.0.0 */
+#ifndef SOPLEX_APIVERSION
+#define SOPLEX_APIVERSION 0
+#endif
 
 /* check version */
 #if (SOPLEX_VERSION < 133)
@@ -1773,6 +1777,14 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    const SCIP_Real*      val                 /**< values of constraint matrix entries */
    )
 {
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
+
    SCIPdebugMessage("calling SCIPlpiLoadColLP()\n");
 
    assert(lpi != NULL);
@@ -1832,6 +1844,14 @@ SCIP_RETCODE SCIPlpiAddCols(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
+
    SCIPdebugMessage("calling SCIPlpiAddCols()\n");
 
    assert(lpi != NULL);
@@ -1963,6 +1983,14 @@ SCIP_RETCODE SCIPlpiAddRows(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
+
    SCIPdebugMessage("calling SCIPlpiAddRows()\n");
 
    assert(lpi != NULL);
@@ -5201,11 +5229,11 @@ SCIP_RETCODE SCIPlpiGetRealpar(
       *dval = lpi->spx->opttol();
       break;
 #endif
-   case SCIP_LPPAR_LOBJLIM:
-      *dval = lpi->spx->getObjLoLimit();
-      break;
-   case SCIP_LPPAR_UOBJLIM:
-      *dval = lpi->spx->getObjUpLimit();
+   case SCIP_LPPAR_OBJLIM:
+      if ( spx->getSense() == SPxLP::MINIMIZE )
+         *dval = lpi->spx->getObjUpLimit();
+      else
+         *dval = lpi->spx->getObjLoLimit();
       break;
    case SCIP_LPPAR_LPTILIM:
       *dval = lpi->spx->terminationTime();
@@ -5245,11 +5273,11 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       lpi->spx->setOpttol(dval);
       break;
 #endif
-   case SCIP_LPPAR_LOBJLIM:
-      lpi->spx->setObjLoLimit(dval);
-      break;
-   case SCIP_LPPAR_UOBJLIM:
-      lpi->spx->setObjUpLimit(dval);
+   case SCIP_LPPAR_OBJLIM:
+      if ( spx->getSense() == SPxLP::MINIMIZE )
+         lpi->spx->setObjUpLimit(dval);
+      else
+         lpi->spx->setObjLoLimit(dval);
       break;
    case SCIP_LPPAR_LPTILIM:
       lpi->spx->setTerminationTime(dval);

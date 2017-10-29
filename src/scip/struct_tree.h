@@ -44,6 +44,7 @@ extern "C" {
 struct SCIP_Probingnode
 {
    SCIP_LPISTATE*        lpistate;           /**< LP state information */
+   SCIP_LPINORMS*        lpinorms;           /**< LP pricing norms information */
    int                   ninitialcols;       /**< number of LP columns before the node was processed */
    int                   ninitialrows;       /**< number of LP rows before the node was processed */
    int                   ncols;              /**< total number of columns of this node's LP */

@@ -2150,7 +2150,7 @@ SCIP_RETCODE initsepaBoundInequalityFromCardinality(
          assert(SCIPisInfinity(scip, -SCIProwGetLhs(rowub)));
          assert(SCIPisLE(scip, SCIProwGetRhs(rowub), (SCIP_Real)consdata->cardval));
 
-         SCIP_CALL( SCIPaddCut(scip, NULL, rowub, FALSE, cutoff) );
+         SCIP_CALL( SCIPaddCut(scip, rowub, FALSE, cutoff) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, rowub, NULL) ) );
 
          if( solvedinitlp )
@@ -2167,7 +2167,7 @@ SCIP_RETCODE initsepaBoundInequalityFromCardinality(
          assert(SCIPisInfinity(scip, -SCIProwGetLhs(rowlb)));
          assert(SCIPisLE(scip, SCIProwGetRhs(rowlb), (SCIP_Real)consdata->cardval));
 
-         SCIP_CALL( SCIPaddCut(scip, NULL, rowlb, FALSE, cutoff) );
+         SCIP_CALL( SCIPaddCut(scip, rowlb, FALSE, cutoff) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, rowlb, NULL) ) );
 
          if( solvedinitlp )
@@ -2720,6 +2720,8 @@ SCIP_DECL_CONSCHECK(consCheckCardinality)
                   }
                   SCIPinfoMessage(scip, NULL, "\n");
                }
+               if( sol != NULL )
+                  SCIPupdateSolConsViolation(scip, sol, 1.0, 1.0);
                return SCIP_OKAY;
             }
          }

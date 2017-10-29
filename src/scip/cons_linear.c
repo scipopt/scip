@@ -827,17 +827,6 @@ SCIP_RETCODE consDropAllEvents(
    return SCIP_OKAY;
 }
 
-/** returns whether we are in a stage, where the variable events should be caught */
-static
-SCIP_Bool needEvents(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   assert(scip != NULL);
-
-   return (SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED && SCIPgetStage(scip) < SCIP_STAGE_FREETRANS);
-}
-
 /** creates a linear constraint data */
 static
 SCIP_RETCODE consdataCreate(
@@ -1106,6 +1095,78 @@ SCIP_RETCODE consdataPrint(
       SCIPinfoMessage(scip, file, " >= %.15g", consdata->lhs);
    else
       SCIPinfoMessage(scip, file, " [free]");
+
+   return SCIP_OKAY;
+}
+
+/** prints linear constraint and contained solution values of variables to file stream */
+static
+SCIP_RETCODE consPrintConsSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< linear constraint */
+   SCIP_SOL*             sol,                /**< solution to print */
+   FILE*                 file                /**< output file (or NULL for standard output) */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, "  [%s] <%s>: ", SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), SCIPconsGetName(cons));
+
+   /* print left hand side for ranged rows */
+   if( !SCIPisInfinity(scip, -consdata->lhs)
+      && !SCIPisInfinity(scip, consdata->rhs)
+      && !SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
+      SCIPinfoMessage(scip, file, "%.15g <= ", consdata->lhs);
+
+   /* print coefficients and variables */
+   if( consdata->nvars == 0 )
+      SCIPinfoMessage(scip, file, "0");
+   else
+   {
+      int v;
+
+      /* post linear sum of the linear constraint */
+      for( v = 0; v < consdata->nvars; ++v )
+      {
+         if( consdata->vals != NULL )
+         {
+            if( consdata->vals[v] == 1.0 )
+            {
+               if( v > 0 )
+                  SCIPinfoMessage(scip, file, " +");
+            }
+            else if( consdata->vals[v] == -1.0 )
+               SCIPinfoMessage(scip, file, " -");
+            else
+               SCIPinfoMessage(scip, file, " %+.9g", consdata->vals[v]);
+         }
+         else if( consdata->nvars > 0 )
+            SCIPinfoMessage(scip, file, " +");
+
+         /* print variable name */
+         SCIP_CALL( SCIPwriteVarName(scip, file, consdata->vars[v], TRUE) );
+
+         SCIPinfoMessage(scip, file, " (%+.9g)", SCIPgetSolVal(scip, sol, consdata->vars[v]));
+      }
+   }
+
+   /* print right hand side */
+   if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
+      SCIPinfoMessage(scip, file, " == %.15g", consdata->rhs);
+   else if( !SCIPisInfinity(scip, consdata->rhs) )
+      SCIPinfoMessage(scip, file, " <= %.15g", consdata->rhs);
+   else if( !SCIPisInfinity(scip, -consdata->lhs) )
+      SCIPinfoMessage(scip, file, " >= %.15g", consdata->lhs);
+   else
+      SCIPinfoMessage(scip, file, " [free]");
+
+   SCIPinfoMessage(scip, file, ";\n");
 
    return SCIP_OKAY;
 }
@@ -7062,6 +7123,10 @@ SCIP_RETCODE checkCons(
 {
    SCIP_CONSDATA* consdata;
    SCIP_Real activity;
+   SCIP_Real absviol;
+   SCIP_Real relviol;
+   SCIP_Real lhsviol;
+   SCIP_Real rhsviol;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -7092,6 +7157,23 @@ SCIP_RETCODE checkCons(
       consdata->row == NULL ? 0 : SCIProwIsInLP(consdata->row), (void*)sol,
       consdata->row == NULL ? FALSE : SCIPhasCurrentNodeLP(scip));
 
+   /* calculate absolute and relative bound violations */
+   lhsviol = consdata->lhs - activity;
+   rhsviol = activity - consdata->rhs;
+
+   absviol = 0.0;
+   relviol = 0.0;
+   if( (lhsviol > 0) && (lhsviol > rhsviol) )
+   {
+      absviol = lhsviol;
+      relviol = SCIPrelDiff(consdata->lhs, activity);
+   }
+   else if( rhsviol > 0 )
+   {
+      absviol = rhsviol;
+      relviol = SCIPrelDiff(activity, consdata->rhs);
+   }
+
    /* the activity of pseudo solutions may be invalid if it comprises positive and negative infinity contributions; we
     * return infeasible for safety
     */
@@ -7099,6 +7181,10 @@ SCIP_RETCODE checkCons(
    {
       assert(sol == NULL);
       *violated = TRUE;
+
+      /* set violation of invalid pseudo solutions */
+      absviol = SCIP_INVALID;
+      relviol = SCIP_INVALID;
 
       /* reset constraint age since we are in enforcement */
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
@@ -7152,7 +7238,7 @@ SCIP_RETCODE checkCons(
             {
                SCIPdebugMsg(scip, "  lhs violated due to random noise: violation=%16.9g, maxabs=%16.9g\n",
                   consdata->lhs - activity, maxabs);
-               SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+               SCIPdebug( SCIP_CALL( consPrintConsSol(scip, cons, sol, NULL) ) );
 
                /* only increase constraint age if we are in enforcement */
                if( sol == NULL )
@@ -7167,7 +7253,7 @@ SCIP_RETCODE checkCons(
                {
                   SCIPdebugMsg(scip, "  lhs violated absolutely (violation=%16.9g), but feasible when using relative tolerance w.r.t. maximum absolute value (%16.9g)\n",
                      consdata->lhs - activity, maxabs);
-                  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+                  SCIPdebug( SCIP_CALL( consPrintConsSol(scip, cons, sol, NULL) ) );
 
                   /* only increase constraint age if we are in enforcement */
                   if( sol == NULL )
@@ -7206,7 +7292,7 @@ SCIP_RETCODE checkCons(
             {
                SCIPdebugMsg(scip, "  rhs violated due to random noise: violation=%16.9g, maxabs=%16.9g\n",
                   activity - consdata->rhs, maxabs);
-               SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+               SCIPdebug( SCIP_CALL( consPrintConsSol(scip, cons, sol, NULL) ) );
 
                /* only increase constraint age if we are in enforcement */
                if( sol == NULL )
@@ -7221,7 +7307,7 @@ SCIP_RETCODE checkCons(
                {
                   SCIPdebugMsg(scip, "  rhs violated absolutely (violation=%16.9g), but feasible when using relative tolerance w.r.t. maximum absolute value (%16.9g)\n",
                      activity - consdata->rhs, maxabs);
-                  SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+                  SCIPdebug( SCIP_CALL( consPrintConsSol(scip, cons, sol, NULL) ) );
 
                   /* only increase constraint age if we are in enforcement */
                   if( sol == NULL )
@@ -7262,6 +7348,10 @@ SCIP_RETCODE checkCons(
       }
    }
 
+   /* update absolute and relative violation of the solution */
+   if( sol != NULL )
+      SCIPupdateSolLPConsViolation(scip, sol, absviol, relviol);
+
    return SCIP_OKAY;
 }
 
@@ -7294,7 +7384,6 @@ static
 SCIP_RETCODE addRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linear constraint */
-   SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
    SCIP_Bool*            cutoff              /**< pointer to store whether a cutoff was found */
    )
 {
@@ -7321,7 +7410,7 @@ SCIP_RETCODE addRelaxation(
       /* if presolving is turned off, the row might be trivial */
       if ( ! SCIPisInfinity(scip, -consdata->lhs) || ! SCIPisInfinity(scip, consdata->rhs) )
       {
-         SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE, cutoff) );
+         SCIP_CALL( SCIPaddCut(scip, consdata->row, FALSE, cutoff) );
       }
 #ifndef NDEBUG
       else
@@ -7373,7 +7462,7 @@ SCIP_RETCODE separateCons(
    if( violated )
    {
       /* insert LP row as cut */
-      SCIP_CALL( addRelaxation(scip, cons, sol, cutoff) );
+      SCIP_CALL( addRelaxation(scip, cons, cutoff) );
       (*ncuts)++;
    }
    else if( !SCIPconsIsModifiable(cons) && separatecards )
@@ -7456,6 +7545,22 @@ SCIP_RETCODE propagateCons(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+
+   if( consdata->eventdata == NULL )
+   {
+      SCIP_CONSHDLR* conshdlr;
+      SCIP_CONSHDLRDATA* conshdlrdata;
+
+      conshdlr = SCIPconsGetHdlr(cons);
+      assert(conshdlr != NULL);
+
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+
+      /* catch bound change events of variables */
+      SCIP_CALL( consCatchAllEvents(scip, cons, conshdlrdata->eventhdlr) );
+      assert(consdata->eventdata != NULL);
+   }
 
    *cutoff = FALSE;
 
@@ -9799,7 +9904,7 @@ SCIP_RETCODE convertLongEquality(
             /* add new variable to problem */
             SCIP_CALL( SCIPaddVar(scip, newvar) );
 
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
             if( SCIPdebugIsMainscip(scip) )
             {
                SCIP_Real varval;
@@ -14598,7 +14703,7 @@ SCIP_RETCODE enforceConstraint(
       if( violated )
       {
          /* insert LP row as cut */
-         SCIP_CALL( addRelaxation(scip, conss[c], sol, &cutoff) );
+         SCIP_CALL( addRelaxation(scip, conss[c], &cutoff) );
          if ( cutoff )
             *result = SCIP_CUTOFF;
          else
@@ -14614,7 +14719,7 @@ SCIP_RETCODE enforceConstraint(
       if( violated )
       {
          /* insert LP row as cut */
-         SCIP_CALL( addRelaxation(scip, conss[c], sol, &cutoff) );
+         SCIP_CALL( addRelaxation(scip, conss[c], &cutoff) );
          if ( cutoff )
             *result = SCIP_CUTOFF;
          else
@@ -15198,28 +15303,61 @@ SCIP_DECL_CONSEXITSOL(consExitsolLinear)
 }
 
 
+/** constraint deactivation notification method of constraint handler */
+static
+SCIP_DECL_CONSDEACTIVE(consDeactiveLinear)
+{  /*lint --e{715}*/
+
+   if( SCIPconsIsDeleted(cons) )
+   {
+      SCIP_CONSHDLRDATA* conshdlrdata;
+      SCIP_CONSDATA* consdata;
+
+      assert(scip != NULL);
+      assert(conshdlr != NULL);
+      assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+      /* get constraint data */
+      consdata = SCIPconsGetData(cons);
+      assert(consdata != NULL);
+
+      /* check for event handler */
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+      assert(conshdlrdata->eventhdlr != NULL);
+
+      /* free event data */
+      if( consdata->eventdata != NULL )
+      {
+         /* drop bound change events of variables */
+         SCIP_CALL( consDropAllEvents(scip, cons, conshdlrdata->eventhdlr) );
+      }
+      assert(consdata->eventdata == NULL);
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** frees specific constraint data */
 static
 SCIP_DECL_CONSDELETE(consDeleteLinear)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
 
-   /* check for event handler */
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-   assert(conshdlrdata->eventhdlr != NULL);
-
-   /* free event datas */
    if( (*consdata)->eventdata != NULL )
    {
-      /* drop bound change events of variables */
+      SCIP_CONSHDLRDATA* conshdlrdata;
+
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+
+      /* drop all events */
       SCIP_CALL( consDropAllEvents(scip, cons, conshdlrdata->eventhdlr) );
+      assert((*consdata)->eventdata == NULL);
    }
-   assert((*consdata)->eventdata == NULL);
 
    /* free linear constraint */
    SCIP_CALL( consdataFree(scip, consdata) );
@@ -15276,7 +15414,7 @@ SCIP_DECL_CONSINITLP(consInitlpLinear)
    for( c = 0; c < nconss && !(*infeasible); ++c )
    {
       assert(SCIPconsIsInitial(conss[c]));
-      SCIP_CALL( addRelaxation(scip, conss[c], NULL, infeasible) );
+      SCIP_CALL( addRelaxation(scip, conss[c], infeasible) );
    }
 
    return SCIP_OKAY;
@@ -15520,7 +15658,7 @@ SCIP_DECL_CONSCHECK(consCheckLinear)
 
             activity = consdataGetActivity(scip, consdata, sol);
 
-            SCIP_CALL( SCIPprintCons(scip, conss[c], NULL ) );
+            SCIP_CALL( consPrintConsSol(scip, conss[c], sol, NULL ) );
             SCIPinfoMessage(scip, NULL, ";\n");
 
             if( activity == SCIP_INVALID ) /*lint !e777*/
@@ -15665,6 +15803,13 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
       assert(SCIPconsIsActive(cons));
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
+
+      if( consdata->eventdata == NULL )
+      {
+         /* catch bound change events of variables */
+         SCIP_CALL( consCatchAllEvents(scip, cons, conshdlrdata->eventhdlr) );
+         assert(consdata->eventdata != NULL);
+      }
 
       /* constraint should not be already presolved in the initial round */
       assert(SCIPgetNRuns(scip) > 0 || nrounds > 0 || SCIPconsIsMarkedPropagate(cons));
@@ -16893,6 +17038,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
 
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyLinear, consCopyLinear) );
+   SCIP_CALL( SCIPsetConshdlrDeactive(scip, conshdlr, consDeactiveLinear) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteLinear) );
    SCIP_CALL( SCIPsetConshdlrDelvars(scip, conshdlr, consDelvarsLinear) );
    SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitLinear) );
@@ -17132,7 +17278,6 @@ SCIP_RETCODE SCIPcreateConsLinear(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    )
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
 
@@ -17146,11 +17291,6 @@ SCIP_RETCODE SCIPcreateConsLinear(
       SCIPerrorMessage("linear constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
-
-   /* check for event handler */
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-   assert(conshdlrdata->eventhdlr != NULL);
 
    /* for the solving process we need linear rows, containing only active variables; therefore when creating a linear
     * constraint after presolving we have to ensure that it holds active variables
@@ -17271,13 +17411,6 @@ SCIP_RETCODE SCIPcreateConsLinear(
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
-
-   if( needEvents(scip) )
-   {
-      /* catch bound change events of variables */
-      SCIP_CALL( consCatchAllEvents(scip, *cons, conshdlrdata->eventhdlr) );
-      assert(consdata->eventdata != NULL);
-   }
 
    return SCIP_OKAY;
 }

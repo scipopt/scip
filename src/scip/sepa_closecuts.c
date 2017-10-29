@@ -305,8 +305,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpClosecuts)
                nlpiters = SCIPgetNRootLPIterations(scip);
             iterlimit = (int)(sepadata->maxlpiterfactor * nlpiters);
             iterlimit = MAX(iterlimit, SCIP_MIN_LPITERS);
-            if ( iterlimit <= 0 )
-               return SCIP_OKAY;
+            assert(iterlimit > 0);
          }
 
          SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Computing relative interior point (time limit: %g, iter limit: %d) ...\n", timelimit, iterlimit);
@@ -337,10 +336,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpClosecuts)
          SCIP_Bool cutoff;
 
          noldcuts = SCIPgetNCuts(scip);
-         isroot = (SCIP_Bool) (SCIPgetNNodes(scip) == 0);
+         isroot = (SCIP_Bool) (SCIPgetDepth(scip) == 0);
 
          /* separate solution via other separators */
-         SCIP_CALL( SCIPseparateSol(scip, point, isroot, FALSE, &delayed, &cutoff) );
+         SCIP_CALL( SCIPseparateSol(scip, point, isroot, TRUE, FALSE, &delayed, &cutoff) );
 
          SCIP_CALL( SCIPfreeSol(scip, &point) );
          assert( point == NULL );

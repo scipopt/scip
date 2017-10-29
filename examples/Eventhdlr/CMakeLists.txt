@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.0)
+
 project(Eventhdlr)
 
 find_package(SCIP REQUIRED)
@@ -9,7 +11,10 @@ add_executable(eventhdlr
    src/event_boundwriting.c)
 
 target_link_libraries(eventhdlr ${SCIP_LIBRARIES})
-add_dependencies(examples eventhdlr)
+
+if( TARGET examples )
+    add_dependencies( examples eventhdlr )
+endif()
 
 #
 # add some trivial tests
@@ -37,6 +42,20 @@ set(instances
     )
 
 #
+#
+#
+add_test(NAME examples-eventhdlr-build
+        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target eventhdlr
+        )
+#
+# avoid that several build jobs try to concurrently build the SCIP library
+# note that this ressource lock name is not the actual libscip target
+#
+set_tests_properties(examples-eventhdlr-build
+                    PROPERTIES
+                        RESOURCE_LOCK libscip
+                    )
+#
 # loop over the instances
 #
 foreach(instance ${instances})
@@ -44,8 +63,14 @@ foreach(instance ${instances})
     list(GET instance 1 optval)
     get_filename_component(basename ${path} NAME)
     #
-    # loop over all settings
+    # add a test that depends on the build job and executes the example binary for this instance
     #
-    add_test(NAME examples-eventhdlr-${basename} COMMAND $<TARGET_FILE:eventhdlr> -f ${CMAKE_CURRENT_SOURCE_DIR}/../../check/${path} -o ${optval} ${optval})
-    set_tests_properties(examples-eventhdlr-${basename} PROPERTIES PASS_REGULAR_EXPRESSION "Validation         : Success")
+    add_test(NAME examples-eventhdlr-${basename}
+            COMMAND $<TARGET_FILE:eventhdlr> -f ${CMAKE_CURRENT_SOURCE_DIR}/../../check/${path} -o ${optval} ${optval}
+            )
+    set_tests_properties(examples-eventhdlr-${basename}
+                        PROPERTIES
+                            PASS_REGULAR_EXPRESSION "Validation         : Success"
+                            DEPENDS examples-eventhdlr-build
+                            )
 endforeach(instance)

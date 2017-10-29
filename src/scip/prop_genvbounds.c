@@ -357,7 +357,7 @@ SCIP_Real getGenVBoundsBound(
    return boundval;
 }
 
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
 /** checks whether a generalized variable bound violates the debug solution */
 static
 SCIP_RETCODE checkDebugSolutionGenVBound(
@@ -1489,7 +1489,7 @@ SCIP_RETCODE sortGenVBounds(
    SCIPdebugMsg(scip, "(re-)sort genvbounds topologically\n");
 
    /* create digraph */
-   SCIP_CALL( SCIPdigraphCreate(&graph, propdata->ngenvbounds) );
+   SCIP_CALL( SCIPcreateDigraph(scip, &graph, propdata->ngenvbounds) );
 
    /* add outgoing arcs for each genvbound */
    for( i = 0; i < propdata->ngenvbounds; i++ )
@@ -2158,7 +2158,7 @@ SCIP_RETCODE SCIPgenVBoundAdd(
    /* debug message */
    SCIPdebugMsg(scip, "added genvbound ");
    SCIPdebug( printGenVBound(scip, genvbound) );
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
    SCIP_CALL( checkDebugSolutionGenVBound(scip, genvbound) );
 #endif
 
