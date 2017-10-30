@@ -200,6 +200,7 @@ SCIP_RETCODE dfs(
 
    /* put start node on the stack */
    dfsstack[0] = startnode;
+   stacknextcliquevar[0] = 0;
    stacknextedge[0] = 0;
    maxstacksize = 1;
    stacksize = 1;
