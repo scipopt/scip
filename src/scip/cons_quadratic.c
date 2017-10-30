@@ -12167,12 +12167,11 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
 
    *result = SCIP_DIDNOTFIND;
 
-   /* if other presolvers did not find enough changes for another presolving round,
+   /* if other presolvers did not find enough changes for another presolving round and we are in exhaustive presolving,
     * then try the reformulations (replacing products with binaries, disaggregation, setting default variable bounds)
     * otherwise, we wait with these
-    * @todo first do all usual presolving steps, then check SCIPisPresolveFinished(scip), and if true then do reformulations (and usual steps again)
     */
-   doreformulations = nrounds > 0  && ((presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 || SCIPisPresolveFinished(scip));
+   doreformulations = ((presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0) && SCIPisPresolveFinished(scip);
    SCIPdebugMsg(scip, "presolving will %swait with reformulation\n", doreformulations ? "not " : "");
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
