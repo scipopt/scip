@@ -16076,6 +16076,9 @@ SCIP_RETCODE SCIPaddBilinearIneqQuadratic(
    bilinest = &conshdlrdata->bilinestimators[i];
    assert(bilinest != NULL);
 
+   SCIPdebugMsg(scip, "add bilinear term inequality: %g %s <= %g %s + %g\n", xcoef, SCIPvarGetName(bilinest->x),
+      ycoef, SCIPvarGetName(bilinest->y), constant);
+
    /* inequality can be used for underestimating xy if and only if xcoef * ycoef > 0 */
    if( xcoef * ycoef >= 0.0 )
    {
