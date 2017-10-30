@@ -104,15 +104,12 @@ struct SCIP_PresolData
 
 /** compute non-trivial orbits of symmetry group
  *
- *  The orbits of the group action are stores in the array orbits of length npermvars. This array contains
+ *  The orbits of the group action are stored in the array orbits of length npermvars. This array contains
  *  the indices of variables from the permvars array such that variables that are contained in the same
  *  orbit appear consecutively in the orbits array. To detect when a new orbit starts, we use the array
  *  orbitbegins:
  *    The variables of the i-th orbit have indices orbits[orbitbegins[i]], ... , orbits[orbitbegins[i + 1] - 1]
- *
- *  The method MUST NOT be called if no symmetries were found or symmetries have not been computed yet
  */
-static
 SCIP_RETCODE computeGroupOrbits(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_VAR**            permvars,           /**< variables considered by symbreak presolver */
@@ -191,7 +188,7 @@ SCIP_RETCODE computeGroupOrbits(
                orbits[beginneworbit++] = curorbit[j];
 
             *nvarsinorbits += curorbitsize;
-            *norbits += 1;
+            ++(*norbits);
          }
       }
    }
