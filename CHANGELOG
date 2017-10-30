@@ -45,11 +45,15 @@ interface:
 - unify handling of objective limit by only using one parameter and not distinguishing w.r.t. lower and upper limits
 - replaced LPI parameters SCIP_LPPAR_LOBJLIM and SCIP_LPPAR_UOBJLIM by SCIP_LPPAR_OBJLIM
 - added additional parameter for statistics tables to SCIPcopyPlugins
+- added parameter "objval" to SCIPnlpiGetSolution() for returning the optimal objective value (can be set to NULL)
+- removed argument "includeslp" from SCIPrelaxCreate() and added it to SCIPmarkRelaxSolValid(), SCIPsetRelaxSolVals() and
+  SCIPsetRelaxSolValsSol()
 
 performance improvements:
 - use disjoint set to reduce peak memory usage and time to compute of clique table connectedness information
 - add and use RESTRICT macro for some pointers
 - improved the implementation of SCIPvarGetActiveRepresentatives
+- removed bestrelaxsol and directly access relaxation solution instead to decrease overhead when using relaxation handlers
 
 fixed bugs:
 - fix linear knapsack relaxation during separation if a binary variable does not have a solution value in [0,1].
