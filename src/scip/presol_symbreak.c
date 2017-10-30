@@ -116,6 +116,7 @@ SCIP_RETCODE computeGroupOrbits(
    int                   npermvars,          /**< length of a permutation array */
    int**                 perms,              /**< matrix containing in each row a permutation of the symmetry group */
    int                   nperms,             /**< number of permutations encoded in perms */
+   SCIP_Bool*            activeperms,        /**< array for marking active permutations (or NULL) */
    int*                  orbits,             /**< array of non-trivial orbits */
    int*                  orbitbegins,        /**< array containing begin positions of new orbits in orbits array */
    int*                  norbits,            /**< pointer to number of orbits currently stored in orbits */
@@ -170,13 +171,16 @@ SCIP_RETCODE computeGroupOrbits(
 
             for (p = 0; p < nperms; ++p)
             {
-               image = perms[p][curelem];
-
-               /* found new element of the orbit of i */
-               if ( ! varadded[image] )
+               if ( activeperms == NULL || activeperms[p] )
                {
-                  curorbit[curorbitsize++] = image;
-                  varadded[image] = TRUE;
+                  image = perms[p][curelem];
+
+                  /* found new element of the orbit of i */
+                  if ( ! varadded[image] )
+                  {
+                     curorbit[curorbitsize++] = image;
+                     varadded[image] = TRUE;
+                  }
                }
             }
          }
@@ -1072,7 +1076,7 @@ SCIP_RETCODE addSymmetryBreakingConstraints(
             SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->orbits, presoldata->npermvars) );
             SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->orbitbegins, presoldata->npermvars) );
 
-            SCIP_CALL( computeGroupOrbits(scip, presoldata->permvars, presoldata->npermvars, presoldata->perms, presoldata->nperms,
+            SCIP_CALL( computeGroupOrbits(scip, presoldata->permvars, presoldata->npermvars, presoldata->perms, presoldata->nperms, NULL,
                   presoldata->orbits, presoldata->orbitbegins, &presoldata->norbits, &presoldata->nvarsinorbits) );
          }
 
@@ -1324,7 +1328,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
             SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->orbits, presoldata->npermvars) );
             SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->orbitbegins, presoldata->npermvars) );
 
-            SCIP_CALL( computeGroupOrbits(scip, presoldata->permvars, presoldata->npermvars, presoldata->perms, presoldata->nperms,
+            SCIP_CALL( computeGroupOrbits(scip, presoldata->permvars, presoldata->npermvars, presoldata->perms, presoldata->nperms, NULL,
                   presoldata->orbits, presoldata->orbitbegins, &presoldata->norbits, &presoldata->nvarsinorbits) );
          }
 
