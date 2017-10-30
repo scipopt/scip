@@ -5863,7 +5863,20 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
 
       if( SCIPvarIsBinary(var) && SCIPvarIsActive(var) )
       {
+         SCIP_Real solval;
          assert(0 <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < nbinvars);
+
+         solval = SCIPgetSolVal(scip, sol, var);
+
+         /* knapsack relaxation assumes solution values between 0.0 and 1.0 for binary variables */
+         if( SCIPisFeasLT(scip, solval, 0.0 )
+               || SCIPisFeasGT(scip, solval, 1.0) )
+         {
+            SCIPdebugMsg(scip, "Solution value %.15g <%s> outside domain [0.0, 1.0]\n",
+                  solval, SCIPvarGetName(var));
+            goto TERMINATE;
+         }
+
          binvals[SCIPvarGetProbindex(var)] += valscale * knapvals[i];
          if( !noknapsackconshdlr )
          {

@@ -26,6 +26,7 @@ parameters:
 - new parameter: lp/refactorinterval to change the refactorization interval of the LP solver
 - new parameter: misc/usesymmetry to determine whether symmetry handling should be used
 - new value 3 for parameter "lp/solutionpolishing" to enable LP polishing only during probing and diving mode
+- removed parameters "constraints/{abspower,bivariate,nonlinear,quadratic,soc}/scaling"
 
 interface:
 - new interface methods to create and use bandit algorithms implemented as SCIP core plugins --
@@ -52,14 +53,19 @@ interface:
 - added cons_orbisack.c to handle special permutation symmetries in a binary programs via inequalities and propagation
 - added presol_symbreak.c to detect special symmetry structures and to add symmetry handling constraints
 - added additional parameter for statistics tables to SCIPcopyPlugins
+- added parameter "objval" to SCIPnlpiGetSolution() for returning the optimal objective value (can be set to NULL)
+- removed argument "includeslp" from SCIPrelaxCreate() and added it to SCIPmarkRelaxSolValid(), SCIPsetRelaxSolVals() and
+  SCIPsetRelaxSolValsSol(); removed function SCIPrelaxIncludesLp() and SCIPrelaxSetIncludesLp()
 
 performance improvements:
 - use disjoint set to reduce peak memory usage and time to compute of clique table connectedness information
 - add and use RESTRICT macro for some pointers
 - improved the implementation of SCIPvarGetActiveRepresentatives
 - speed-up reverse propagation
+- removed bestrelaxsol and directly access relaxation solution instead to decrease overhead when using relaxation handlers
 
 fixed bugs:
+- fix linear knapsack relaxation during separation if a binary variable does not have a solution value in [0,1].
 - fixed bug in feasibility pump heuristic when switching on the usefp20 parameter
 - fixed potential ressource leaks in SCIPsolveLinearProb, expr.c, sepa_eccuts, cons_cumulative.c, cons_nonlinear.c
 - fixed bug in cons_orbitope.c, where wrong terminating index in separation of SCIs was used
