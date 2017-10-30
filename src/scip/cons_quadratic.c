@@ -4339,6 +4339,8 @@ SCIP_RETCODE presolveDisaggregateMergeComponents(
       return SCIP_PARAMETERWRONGVAL;
    }
 
+   SCIPdebugMsg(scip, "%-30s: % 4d components of size % 4d to % 4d, median: % 4d\n", SCIPgetProbName(scip), *ncomponents, componentssize[0], componentssize[*ncomponents-1], componentssize[*ncomponents/2]);
+
    /* get inverse permutation */
    for( i = 0; i < *ncomponents; ++i )
       invperm[perm[i]] = i;
@@ -4462,6 +4464,7 @@ SCIP_RETCODE presolveDisaggregate(
       return SCIP_OKAY;
    }
 
+   /* merge some components, if necessary */
    SCIP_CALL( presolveDisaggregateMergeComponents(scip, conshdlr, var2component, &ncomponents, componentssize) );
 
    SCIPfreeBufferArray(scip, &componentssize);
