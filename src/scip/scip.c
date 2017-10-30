@@ -3549,6 +3549,29 @@ int SCIPgetSubscipDepth(
    return scip->stat->subscipdepth;
 }
 
+/** sets depth of scip instance
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
+ *  @note SCIP stage does not get changed
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+void SCIPsetSubscipDepth(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   newdepth            /**< new subscip depth */
+   )
+{
+   assert( scip != NULL );
+   assert( scip->stat != NULL );
+   assert( newdepth > 0 );
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPsetSubscipDepth", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   scip->stat->subscipdepth = newdepth;
+}
+
 /** copies source SCIP data into target SCIP data structure
  *
  * distinguishes between

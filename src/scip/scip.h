@@ -1351,6 +1351,21 @@ int SCIPgetSubscipDepth(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** sets depth of scip instance
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
+ *  @note SCIP stage does not get changed
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+void SCIPsetSubscipDepth(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   newdepth            /**< new subscip depth */
+   );
+
 /** copies source SCIP to target SCIP; the copying process is done in the following order:
  *  1) copy the plugins
  *  2) copy the settings
