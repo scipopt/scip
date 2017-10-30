@@ -2080,11 +2080,17 @@ SCIP_RETCODE solveBilinearLP(
    *ycoef = SCIP_INVALID;
    *constant= SCIP_INVALID;
 
+   SCIPdebugMsg(scip, "   solve bilinear LP for (%s,%s) from (%g,%g) to (%g,%g)\n", SCIPvarGetName(x), SCIPvarGetName(y), xs,
+      ys, xt, yt);
+
    /* skip computations if (xs,ys) and (xt,yt) are too close to each other or contain too large values */
    if( SCIPisFeasEQ(scip, xs, xt) || SCIPisFeasEQ(scip, ys, yt)
       || SCIPisHugeValue(scip, REALABS(xs)) || SCIPisHugeValue(scip, REALABS(xt))
       || SCIPisHugeValue(scip, REALABS(ys)) || SCIPisHugeValue(scip, REALABS(yt)) )
+   {
+      SCIPdebugMsg(scip, "   -> skip: bounds are too close/large\n");
       return SCIP_OKAY;
+   }
 
    /* compute scaler for the additional linear constraint */
    scale = MAX3(1.0, REALABS(xt-xs), REALABS(yt-ys)); /*lint !e666*/
@@ -2118,12 +2124,16 @@ SCIP_RETCODE solveBilinearLP(
    SCIP_CALL( SCIPsolveProbingLP(scip, (int)iterlim, &lperror, NULL) ); /*lint !e712*/
 #endif
 
+   SCIPdebugMsg(scip, "   solved probing LP -> lperror=%u lpstat=%d\n", lperror, SCIPgetLPSolstat(scip));
+
    /* collect dual and primal solution entries */
    if( !lperror  && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
    {
       SCIP_Real xval = SCIPvarGetLPSol(x);
       SCIP_Real yval = SCIPvarGetLPSol(y);
       SCIP_Real mu = -SCIProwGetDualsol(row);
+
+      SCIPdebugMsg(scip, "   primal=(%g,%g) dual=%g\n", xval, yval, mu);
 
       /* xcoef x + ycoef y <= constant */
       *xcoef  = -signx - (mu * scale) / (xt - xs);
@@ -2193,6 +2203,8 @@ SCIP_RETCODE applyObbtBilinear(
    if( propdata->nbilinbounds <= 0 || SCIPgetDepth(scip) != 0 || propdata->lastbilinidx >= propdata->nbilinbounds )
       return SCIP_OKAY;
 
+   SCIPdebugMsg(scip, "call applyObbtBilinear starting from %d\n", propdata->lastbilinidx);
+
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
    oldfeastol = SCIPfeastol(scip);
@@ -2224,10 +2236,12 @@ SCIP_RETCODE applyObbtBilinear(
       BILINBOUND* bilinbound;
       int k;
 
-      printf("process %d\n", i);
-
       bilinbound = &propdata->bilinbounds[i];
       assert(bilinbound != NULL);
+
+      SCIPdebugMsg(scip, "process %d: %s %s done=%u filtered=%d nunderest=%d noverest=%d\n", i,
+         SCIPvarGetName(bilinbound->x), SCIPvarGetName(bilinbound->y), bilinbound->done, bilinbound->filtered,
+         bilinbound->nunderest, bilinbound->noverest);
 
       /* we already solved LPs for this bilinear term */
       if( bilinbound->done || bilinbound->filtered == FILTERED )
@@ -2272,6 +2286,9 @@ SCIP_RETCODE applyObbtBilinear(
          {
             SCIP_CALL( SCIPaddBilinearIneqQuadratic(scip, bilinbound->x, bilinbound->y, bilinbound->index, xcoef, ycoef, constant) );
             *result = SCIP_REDUCEDDOM;
+
+            SCIPdebugMsg(scip, "   found %g x <= %g y + %g with violation %g\n", xcoef, ycoef, constant,
+               (xcoef*xt - ycoef*yt - constant) / SQRT(SQR(xcoef) + SQR(ycoef) + SQR(constant)));
          }
       }
 
