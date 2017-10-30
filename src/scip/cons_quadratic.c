@@ -210,7 +210,7 @@ struct SCIP_ConshdlrData
    char                  checkquadvarlocks;  /**< whether quadratic variables contained in a single constraint should be forced to be at their lower or upper bounds ('d'isable, change 't'ype, add 'b'ound disjunction) */
    SCIP_Bool             linfeasshift;       /**< whether to make solutions in check feasible if possible */
    int                   maxdisaggrsize;     /**< maximum number of components when disaggregating a quadratic constraint (<= 1: off) */
-   char                  disaggrstrategy;    /**< disaggregation strategy: some 's'mall and one big components, some 'b'ig and one remaining component */
+   char                  disaggrmergemethod; /**< method on merging blocks in disaggregation */
    int                   maxproprounds;      /**< limit on number of propagation rounds for a single constraint within one round of SCIP propagation during solve */
    int                   maxproproundspresolve; /**< limit on number of propagation rounds for a single constraint within one presolving round */
    SCIP_Real             sepanlpmincont;     /**< minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation */
@@ -4288,6 +4288,7 @@ SCIP_RETCODE presolveDisaggregateMergeComponents(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler data structure */
    SCIP_HASHMAP*         var2component,      /**< variables to component mapping */
+   int                   nvars,              /**< number of variables */
    int*                  ncomponents,        /**< number of components */
    int*                  componentssize      /**< size of components */
 )
@@ -4295,8 +4296,8 @@ SCIP_RETCODE presolveDisaggregateMergeComponents(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_HASHMAPENTRY* entry;
    int maxncomponents;
-   int* perm;
-   int* invperm;
+   int* oldcompidx;
+   int* newcompidx;
    int i;
    int oldcomponent;
    int newcomponent;
@@ -4317,35 +4318,70 @@ SCIP_RETCODE presolveDisaggregateMergeComponents(
    if( *ncomponents <= maxncomponents )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &perm, *ncomponents) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &invperm, *ncomponents) );
+   /*
+   printf("component sizes before:");
+   for( i = 0; i < *ncomponents; ++i )
+      printf(" %d", componentssize[i]);
+   printf("\n");
+   */
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &oldcompidx, *ncomponents) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &newcompidx, *ncomponents) );
 
    for( i = 0; i < *ncomponents; ++i )
-      perm[i] = i;
+      oldcompidx[i] = i;
 
-   if( conshdlrdata->disaggrstrategy == 's' )
+   switch( conshdlrdata->disaggrmergemethod )
    {
-      /* sort components by size, increasing order */
-      SCIPsortIntInt(componentssize, perm, *ncomponents);
-   }
-   else if( conshdlrdata->disaggrstrategy == 'b' )
-   {
-      /* sort components by size, decreasing order */
-      SCIPsortDownIntInt(componentssize, perm, *ncomponents);
-   }
-   else
-   {
-      SCIPerrorMessage("invalid value for constraints/quadratic/disaggrstrategy parameter");
-      return SCIP_PARAMETERWRONGVAL;
+      case 's' :
+         /* sort components by size, increasing order */
+         SCIPsortIntInt(componentssize, oldcompidx, *ncomponents);
+         break;
+      case 'b' :
+      case 'm' :
+         /* sort components by size, decreasing order */
+         SCIPsortDownIntInt(componentssize, oldcompidx, *ncomponents);
+         break;
+      default :
+         SCIPerrorMessage("invalid value for constraints/quadratic/disaggrmergemethod parameter");
+         return SCIP_PARAMETERWRONGVAL;
    }
 
    SCIPdebugMsg(scip, "%-30s: % 4d components of size % 4d to % 4d, median: % 4d\n", SCIPgetProbName(scip), *ncomponents, componentssize[0], componentssize[*ncomponents-1], componentssize[*ncomponents/2]);
 
-   /* get inverse permutation */
-   for( i = 0; i < *ncomponents; ++i )
-      invperm[perm[i]] = i;
+   if( conshdlrdata->disaggrmergemethod == 'm' )
+   {
+      int targetsize;
 
-   /* assign new component numbers to variables, cutting of at maxncomponents */
+      /* a minimal component size we should reach to have all components roughly the same size */
+      targetsize = nvars / maxncomponents;
+      for( i = 0; i < *ncomponents; ++i )
+      {
+         newcompidx[oldcompidx[i]] = i;
+
+         /* fill with small components until we reach targetsize */
+         while( componentssize[i] < targetsize && i < *ncomponents-1 )
+         {
+            /* map last (=smallest) component to component i */
+            newcompidx[oldcompidx[*ncomponents-1]] = i;
+
+            /* increase size of component i accordingly */
+            componentssize[i] += componentssize[*ncomponents-1];
+
+            /* forget about last component */
+            --*ncomponents;
+         }
+      }
+   }
+   else
+   {
+      /* get inverse permutation */
+      for( i = 0; i < *ncomponents; ++i )
+         newcompidx[oldcompidx[i]] = i;
+      *ncomponents = maxncomponents;
+   }
+
+   /* assign new component numbers to variables, cutting off at maxncomponents */
    for( i = 0; i < SCIPhashmapGetNEntries(var2component); ++i )
    {
       entry = SCIPhashmapGetEntry(var2component, i);
@@ -4354,17 +4390,25 @@ SCIP_RETCODE presolveDisaggregateMergeComponents(
 
       oldcomponent = (int)(size_t)SCIPhashmapEntryGetImage(entry);
 
-      newcomponent = invperm[oldcomponent];
+      newcomponent = newcompidx[oldcomponent];
       if( newcomponent >= maxncomponents )
+      {
          newcomponent = maxncomponents-1;
+         ++componentssize[maxncomponents-1];
+      }
 
       SCIPhashmapEntrySetImage(entry, (void*)(size_t)newcomponent);
    }
 
-   *ncomponents = maxncomponents;
+   /*
+   printf("component sizes after :");
+   for( i = 0; i < *ncomponents; ++i )
+      printf(" %d", componentssize[i]);
+   printf("\n");
+   */
 
-   SCIPfreeBufferArray(scip, &invperm);
-   SCIPfreeBufferArray(scip, &perm);
+   SCIPfreeBufferArray(scip, &newcompidx);
+   SCIPfreeBufferArray(scip, &oldcompidx);
 
    return SCIP_OKAY;
 }
@@ -4465,7 +4509,7 @@ SCIP_RETCODE presolveDisaggregate(
    }
 
    /* merge some components, if necessary */
-   SCIP_CALL( presolveDisaggregateMergeComponents(scip, conshdlr, var2component, &ncomponents, componentssize) );
+   SCIP_CALL( presolveDisaggregateMergeComponents(scip, conshdlr, var2component, consdata->nquadvars, &ncomponents, componentssize) );
 
    SCIPfreeBufferArray(scip, &componentssize);
 
@@ -13316,9 +13360,9 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          "maximum number of created constraints when disaggregating a quadratic constraint (<= 1: off)",
          &conshdlrdata->maxdisaggrsize, TRUE, 10, 1, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/disaggrstrategy",
-         "strategy how to merge independent blocks to reach maxdisaggrsize limit",
-         &conshdlrdata->disaggrstrategy, TRUE, 's', "bs", NULL, NULL) );
+   SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/disaggrmergemethod",
+         "strategy how to merge independent blocks to reach maxdisaggrsize limit (keep 'b'iggest blocks and merge others; keep 's'mallest blocks and merge other; merge small blocks into bigger blocks to reach 'm'ean sizes)",
+         &conshdlrdata->disaggrmergemethod, TRUE, 's', "bms", NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/maxproprounds",
          "limit on number of propagation rounds for a single constraint within one round of SCIP propagation during solve",
