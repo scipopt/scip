@@ -57,7 +57,8 @@
 #define DEFAULT_CONSSADDLP           TRUE    /**< Should the symmetry breaking constraints be added to the LP? */
 #define DEFAULT_ADDSYMRESACKS        TRUE    /**< Add inequalities for symresacks for each generator? */
 #define DEFAULT_COMPUTEORBITS       FALSE    /**< Should the orbits of the symmetry group be computed? */
-#define DEFAULT_DETECTORBITOPES      TRUE    /** Should we check whether the components of the symmetry group can be handled by orbitopes */
+#define DEFAULT_DETECTORBITOPES      TRUE    /**< Should we check whether the components of the symmetry group can be handled by orbitopes? */
+#define DEFAULT_FORCEADDINGCONSTRAINTS FALSE /**< Should we add symmetry handling constraints even if only few symmetries are detected? */
 
 /*
  * Data structures
@@ -75,6 +76,7 @@ struct SCIP_PresolData
    SCIP_Bool             computedsymmetry;   /**< whether symmetry has been computed already */
    SCIP_Bool             conssaddlp;         /**< Should the symmetry breaking constraints be added to the LP? */
    SCIP_Bool             addsymresacks;      /**< Add symresack constraints for each generator? */
+   SCIP_Bool             forceaddingconstraints; /**< Add symmetry handling constraints even if problem has almost no symmetries? */
    SCIP_PRESOL*          symmetrypresol;     /**< pointer to symmetry presolver */
    SCIP_Bool             enabled;            /**< run presolver? */
    SCIP_Bool             early;              /**< run presolver as early as possible if symmetry has been detected in initpre() */
@@ -1045,6 +1047,7 @@ SCIP_RETCODE addSymmetryBreakingConstraints(
    )
 {
    SCIP_PRESOLDATA* presoldata;
+   SCIP_Bool addsymresacks;
 
    assert( scip != 0 );
    assert( presol != 0 );
@@ -1058,7 +1061,36 @@ SCIP_RETCODE addSymmetryBreakingConstraints(
 
    if ( presoldata->addsymresacks )
    {
-      SCIP_CALL( addSymresackConss(scip, presol) );
+      SCIP_CALL( SCIPgetBoolParam(scip, "presolving/" PRESOL_NAME"/forceaddingconstraints", &addsymresacks) );
+
+      if ( ! addsymresacks )
+      {
+         /* get statistics whether we should use symmetry handling inequalities */
+         SCIP_Real ratiogroupsizengens = presoldata->log10groupsize / (SCIP_Real) presoldata->nperms;
+         SCIP_Bool decision = FALSE;
+
+         /* if not already computed */
+         if ( presoldata->norbits == -1 )
+         {
+            SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->orbits, presoldata->npermvars) );
+            SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->orbitbegins, presoldata->npermvars) );
+
+            SCIP_CALL( computeGroupOrbits(scip, presoldata->permvars, presoldata->npermvars, presoldata->perms, presoldata->nperms,
+                  presoldata->orbits, presoldata->orbitbegins, &presoldata->norbits, &presoldata->nvarsinorbits) );
+         }
+
+         if ( presoldata->nvarsinorbits >= 0.95 * presoldata->npermvars ||
+            (presoldata->nvarsinorbits >= 0.05 * presoldata->npermvars && ratiogroupsizengens <= 0.55) )
+            decision = TRUE;
+
+         if ( decision )
+            addsymresacks = TRUE;
+      }
+
+      if ( addsymresacks )
+      {
+         SCIP_CALL( addSymresackConss(scip, presol) );
+      }
    }
 
    return SCIP_OKAY;
@@ -1431,6 +1463,9 @@ SCIP_RETCODE SCIPincludePresolSymbreak(
          "Should we check whether the components of the symmetry group can be handled by orbitopes?",
          &presoldata->detectorbitopes, TRUE, DEFAULT_DETECTORBITOPES, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "presolving/" PRESOL_NAME"/forceaddingconstraints",
+         "Should we add symmetry handling constraints even if only few symmetries are detected?",
+         &presoldata->forceaddingconstraints, TRUE, DEFAULT_FORCEADDINGCONSTRAINTS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
