@@ -2555,8 +2555,8 @@ SCIP_RETCODE tightenSingleVar(
 /** calculates the minimal activity of a given aggregation row */
 static
 SCIP_Real aggrRowGetMinActivity(
-   SCIP_PROB*            transprob,          /** transformed problem data */
-   SCIP_AGGRROW*         aggrrow,
+   SCIP_PROB*            transprob,          /**< transformed problem data */
+   SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
    SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables (or NULL for global bounds) */
    SCIP_Real*            curvarubs           /**< current upper bounds of active problem variables (or NULL for global bounds) */
    )
@@ -2595,10 +2595,10 @@ SCIP_Real aggrRowGetMinActivity(
 /** calculates the minimal activity of a given set of bounds and coefficients */
 static
 SCIP_Real getMinActivity(
-   SCIP_PROB*            transprob,          /** transformed problem data */
-   SCIP_Real*            coefs,
-   int*                  inds,
-   int                   nnz,
+   SCIP_PROB*            transprob,          /**< transformed problem data */
+   SCIP_Real*            coefs,              /**< coefficients in sparse representation */
+   int*                  inds,               /**< non-zero indices */
+   int                   nnz,                /**< number of non-zero indices */
    SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables (or NULL for global bounds) */
    SCIP_Real*            curvarubs           /**< current upper bounds of active problem variables (or NULL for global bounds) */
    )
@@ -2635,10 +2635,10 @@ SCIP_Real getMinActivity(
 /** calculates the minimal activity of a given set of bounds and coefficients */
 static
 SCIP_Real getMaxActivity(
-   SCIP_PROB*            transprob,          /** transformed problem data */
-   SCIP_Real*            coefs,
-   int*                  inds,
-   int                   nnz,
+   SCIP_PROB*            transprob,          /**< transformed problem data */
+   SCIP_Real*            coefs,              /**< coefficients in sparse representation */
+   int*                  inds,               /**< non-zero indices */
+   int                   nnz,                /**< number of non-zero indices */
    SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables (or NULL for global bounds) */
    SCIP_Real*            curvarubs           /**< current upper bounds of active problem variables (or NULL for global bounds) */
    )
@@ -2686,11 +2686,11 @@ SCIP_RETCODE propagateLongProof(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
-   SCIP_Real*            coefs,
-   int*                  inds,
-   int                   nnz,
-   SCIP_Real             rhs,
-   SCIP_CONFTYPE         conflicttype
+   SCIP_Real*            coefs,              /**< coefficients in sparse representation */
+   int*                  inds,               /**< non-zero indices */
+   int                   nnz,                /**< number of non-zero indices */
+   SCIP_Real             rhs,                /**< right-hand side */
+   SCIP_CONFTYPE         conflicttype        /**< type of the conflict */
    )
 {
    SCIP_VAR** vars;
