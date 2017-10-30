@@ -1429,6 +1429,14 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    int rngcount;
    int c;
 
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
+
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
    assert(lpi->grbenv != NULL);
@@ -1505,6 +1513,15 @@ SCIP_RETCODE SCIPlpiAddCols(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {
+
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
+
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
    assert(obj != 0);
@@ -1662,6 +1679,14 @@ SCIP_RETCODE SCIPlpiAddRows(
 {
    int rngcount;
    int oldnrows = -1;
+
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
 
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
@@ -2504,7 +2529,7 @@ SCIP_RETCODE SCIPlpiGetRows(
          if ( i <= lastrow )
          {
             /* skip last non-zero of this first ranged row */
-            int newnz = (i < lastrow ? beg[i - firstrow +1]-1 : (*nnonz)-1);
+            int newnz = (i < lastrow ? beg[i - firstrow +1]-1 : (*nnonz)-1); /*lint !e661*/
 
             /* process remaining rows, moving non-zeros to the front */
             for (; i <= lastrow; i++)
@@ -2512,7 +2537,7 @@ SCIP_RETCODE SCIPlpiGetRows(
                int thebeg;
                int theend;
 
-               thebeg = beg[i - firstrow];
+               thebeg = beg[i - firstrow]; /*lint !e661*/
                theend = (i < lastrow ? beg[i - firstrow +1] : *nnonz);
 
                assert(-1 <= lpi->rngrowmap[i] && lpi->rngrowmap[i] < lpi->nrngrows);
@@ -2521,7 +2546,7 @@ SCIP_RETCODE SCIPlpiGetRows(
 
                memmove(&ind[newnz], &ind[thebeg], (theend - thebeg) * sizeof(*ind)); /*lint !e776*/
                memmove(&val[newnz], &val[thebeg], (theend - thebeg) * sizeof(*val)); /*lint !e776*/
-               beg[i - firstrow] = newnz;
+               beg[i - firstrow] = newnz; /*lint !e661*/
                newnz += theend - thebeg;
             }
             assert(newnz < *nnonz);

@@ -95,6 +95,7 @@
 #include "scip/heur_localbranching.h"
 #include "scip/heur_locks.h"
 #include "scip/heur_lpface.h"
+#include "scip/heur_alns.h"
 #include "scip/heur_multistart.h"
 #include "scip/heur_mutation.h"
 #include "scip/heur_mpec.h"
@@ -193,6 +194,7 @@
 #include "scip/sepa_strongcg.h"
 #include "scip/sepa_zerohalf.h"
 #include "scip/scipshell.h"
+#include "scip/table_default.h"
 #include "scip/concsolver_scip.h"
 
 #include "nlpi/nlpi_ipopt.h"
