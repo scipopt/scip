@@ -15993,14 +15993,38 @@ SCIP_RETCODE SCIPchgBilinCoefQuadratic(
    return SCIP_OKAY;
 }
 
-/** returns all bilinear terms that are contained in all quadratic constraints*/
+/** returns the total number of bilinear terms that are contained in all quadratic constraints */
+int SCIPgetNAllBilinearTermsQuadratic(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
+
+   assert(scip != NULL);
+
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+
+   if( conshdlr == NULL )
+      return 0;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   return conshdlrdata->nbilinterms;
+}
+
+/** adds a globally valid inequality of the form xcoef x <= ycoef y + constant for a bilinear term (x,y)
+ *
+ *  @note the indices of bilinear terms match with the entries of bilinear terms returned by SCIPgetAllBilinearTermsQuadratic
+ */
 SCIP_RETCODE SCIPgetAllBilinearTermsQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR**            x,                  /**< array to store first variable of each bilinear term */
-   SCIP_VAR**            y,                  /**< array to second variable of each bilinear term */
-   int*                  nbilinterms,        /**< buffer to store the total number of bilinear terms */
-   int*                  nunderests,         /**< array to store the total number of constraints that require to underestimate a bilinear term */
-   int*                  noverests           /**< array to store the total number of constraints that require to overestimate a bilinear term */
+   SCIP_VAR** RESTRICT   x,                  /**< array to store first variable of each bilinear term */
+   SCIP_VAR** RESTRICT   y,                  /**< array to second variable of each bilinear term */
+   int* RESTRICT         nbilinterms,        /**< buffer to store the total number of bilinear terms */
+   int* RESTRICT         nunderests,         /**< array to store the total number of constraints that require to underestimate a bilinear term */
+   int* RESTRICT         noverests           /**< array to store the total number of constraints that require to overestimate a bilinear term */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -16044,6 +16068,8 @@ SCIP_RETCODE SCIPgetAllBilinearTermsQuadratic(
  */
 SCIP_RETCODE SCIPaddBilinearIneqQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             x,                  /**< first variable */
+   SCIP_VAR*             y,                  /**< second variable */
    int                   i,                  /**< index of the bilinear term */
    SCIP_Real             xcoef,              /**< x coefficient */
    SCIP_Real             ycoef,              /**< y coefficient */
@@ -16055,12 +16081,14 @@ SCIP_RETCODE SCIPaddBilinearIneqQuadratic(
    BILINESTIMATOR* bilinest;
 
    assert(scip != NULL);
+   assert(x != NULL);
+   assert(y != NULL);
    assert(i >= 0);
    assert(xcoef != SCIP_INVALID); /*lint !e777 */
    assert(ycoef != SCIP_INVALID); /*lint !e777 */
    assert(constant != SCIP_INVALID); /*lint !e777 */
 
-   /* ignore inequalities that only yield to a possible bound tightening */
+   /* ignore inequalities that only yield to a (possible) bound tightening */
    if( SCIPisFeasZero(scip, xcoef) || SCIPisFeasZero(scip, ycoef) )
       return SCIP_OKAY;
 
@@ -16075,6 +16103,8 @@ SCIP_RETCODE SCIPaddBilinearIneqQuadratic(
 
    bilinest = &conshdlrdata->bilinestimators[i];
    assert(bilinest != NULL);
+   assert(bilinest->x == x);
+   assert(bilinest->y == y);
 
    SCIPdebugMsg(scip, "add bilinear term inequality: %g %s <= %g %s + %g\n", xcoef, SCIPvarGetName(bilinest->x),
       ycoef, SCIPvarGetName(bilinest->y), constant);

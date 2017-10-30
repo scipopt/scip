@@ -636,15 +636,20 @@ SCIP_RETCODE SCIPchgBilinCoefQuadratic(
    SCIP_Real             coef                /**< coefficient of bilinear term */
    );
 
-/** returns all bilinear terms that are contained in all quadratic constraints*/
+/** returns the total number of bilinear terms that are contained in all quadratic constraints */
+int SCIPgetNAllBilinearTermsQuadratic(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns all bilinear terms that are contained in all quadratic constraints */
 EXTERN
 SCIP_RETCODE SCIPgetAllBilinearTermsQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR**            x,                  /**< array to store first variable of each bilinear term (NULL if not needed) */
-   SCIP_VAR**            y,                  /**< array to second variable of each bilinear term (NULL if not needed) */
-   int*                  nbilins,            /**< buffer to store the total number of bilinear terms (NULL if not needed) */
-   int*                  nunderests,         /**< array to store the total number of constraints that require to underestimate a bilinear term (NULL if not needed) */
-   int*                  noverests           /**< array to store the total number of constraints that require to overestimate a bilinear term (NULL if not needed) */
+   SCIP_VAR** RESTRICT   x,                  /**< array to store first variable of each bilinear term */
+   SCIP_VAR** RESTRICT   y,                  /**< array to second variable of each bilinear term */
+   int* RESTRICT         nbilinterms,        /**< buffer to store the total number of bilinear terms */
+   int* RESTRICT         nunderests,         /**< array to store the total number of constraints that require to underestimate a bilinear term */
+   int* RESTRICT         noverests           /**< array to store the total number of constraints that require to overestimate a bilinear term */
    );
 
 /** adds a globally valid inequality of the form xcoef x <= ycoef y + constant for a bilinear term (x,y)
@@ -654,6 +659,8 @@ SCIP_RETCODE SCIPgetAllBilinearTermsQuadratic(
 EXTERN
 SCIP_RETCODE SCIPaddBilinearIneqQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             x,                  /**< first variable */
+   SCIP_VAR*             y,                  /**< second variable */
    int                   i,                  /**< index of the bilinear term */
    SCIP_Real             xcoef,              /**< x coefficient */
    SCIP_Real             ycoef,              /**< y coefficient */
