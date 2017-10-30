@@ -4240,7 +4240,8 @@ SCIP_RETCODE presolveDisaggregateMarkComponent(
    SCIP_CONSDATA*        consdata,           /**< constraint data */
    int                   quadvaridx,         /**< index of quadratic variable to mark */
    SCIP_HASHMAP*         var2component,      /**< variables to components mapping */
-   int                   componentnr         /**< the component number to mark to */ 
+   int                   componentnr,        /**< the component number to mark to */
+   int*                  componentsize       /**< buffer to store size of component (incremented by 1) */
    )
 {
    SCIP_QUADVARTERM* quadvarterm;
@@ -4265,6 +4266,7 @@ SCIP_RETCODE presolveDisaggregateMarkComponent(
 
    /* assign component number to variable */
    SCIP_CALL( SCIPhashmapInsert(var2component, quadvarterm->var, (void*)(size_t)componentnr) );
+   ++*componentsize;
 
    /* assign same component number to all variables this variable is multiplied with */
    for( i = 0; i < quadvarterm->nadjbilin; ++i )
@@ -4273,8 +4275,80 @@ SCIP_RETCODE presolveDisaggregateMarkComponent(
          consdata->bilinterms[quadvarterm->adjbilin[i]].var2 : consdata->bilinterms[quadvarterm->adjbilin[i]].var1;
       SCIP_CALL( consdataFindQuadVarTerm(scip, consdata, othervar, &othervaridx) );
       assert(othervaridx >= 0);
-      SCIP_CALL( presolveDisaggregateMarkComponent(scip, consdata, othervaridx, var2component, componentnr) );
+      SCIP_CALL( presolveDisaggregateMarkComponent(scip, consdata, othervaridx, var2component, componentnr, componentsize) );
    }
+
+   return SCIP_OKAY;
+}
+
+/** merges components in variables connectivity graph */
+static
+SCIP_RETCODE presolveDisaggregateMergeComponents(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler data structure */
+   SCIP_HASHMAP*         var2component,      /**< variables to component mapping */
+   int*                  ncomponents,        /**< number of components */
+   int*                  componentssize      /**< size of components */
+)
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_HASHMAPENTRY* entry;
+   int maxncomponents;
+   int* perm;
+   int* invperm;
+   int i;
+   int oldcomponent;
+   int newcomponent;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(var2component != NULL);
+   assert(ncomponents != NULL);
+   assert(componentssize != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   maxncomponents = conshdlrdata->maxdisaggrsize;
+   assert(maxncomponents > 0);
+
+   /* if already not too many components, then nothing to do */
+   if( *ncomponents <= maxncomponents )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &perm, *ncomponents) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &invperm, *ncomponents) );
+
+   for( i = 0; i < *ncomponents; ++i )
+      perm[i] = i;
+
+   /* sort components by size, increasing order */ /* @todo optionally do in decreasing order */
+   SCIPsortIntInt(componentssize, perm, *ncomponents);
+
+   /* get inverse permutation */
+   for( i = 0; i < *ncomponents; ++i )
+      invperm[perm[i]] = i;
+
+   /* assign new component numbers to variables, cutting of at maxncomponents */
+   for( i = 0; i < SCIPhashmapGetNEntries(var2component); ++i )
+   {
+      entry = SCIPhashmapGetEntry(var2component, i);
+      if( entry == NULL )
+         continue;
+
+      oldcomponent = (int)(size_t)SCIPhashmapEntryGetImage(entry);
+
+      newcomponent = invperm[oldcomponent];
+      if( newcomponent >= maxncomponents )
+         newcomponent = maxncomponents-1;
+
+      SCIPhashmapEntrySetImage(entry, (void*)(size_t)newcomponent);
+   }
+
+   *ncomponents = maxncomponents;
+
+   SCIPfreeBufferArray(scip, &invperm);
+   SCIPfreeBufferArray(scip, &perm);
 
    return SCIP_OKAY;
 }
@@ -4285,7 +4359,7 @@ SCIP_RETCODE presolveDisaggregateMarkComponent(
  *   lhs <= b'x + sum_{k=1..p} q_k(x_k) <= rhs
  * where x_k denotes a subset of the variables in x and these subsets are pairwise disjunct
  * and q_k(.) is a quadratic form.
- * p is selected as large as possible, but to be <= nmaxcomponents.
+ * p is selected as large as possible, but to be <= conshdlrdata->maxdisaggrsize.
  *
  * Without additional scaling, the constraint is disaggregated into
  *   lhs <= b'x + sum_k c_k z_k <= rhs
@@ -4305,12 +4379,12 @@ SCIP_RETCODE presolveDisaggregate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler data structure */
    SCIP_CONS*            cons,               /**< source constraint to try to convert */
-   int*                  naddconss,          /**< pointer to counter of added constraints */
-   int                   nmaxcomponents      /**< maximum number of components that should be used */
+   int*                  naddconss           /**< pointer to counter of added constraints */
    )
 {
    SCIP_CONSDATA* consdata;
    SCIP_HASHMAP* var2component;
+   int* componentssize;
    int ncomponents;
    int i;
    int comp;
@@ -4324,7 +4398,6 @@ SCIP_RETCODE presolveDisaggregate(
    assert(conshdlr != NULL);
    assert(cons != NULL);
    assert(naddconss != NULL);
-   assert(nmaxcomponents > 1);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -4346,25 +4419,21 @@ SCIP_RETCODE presolveDisaggregate(
    SCIP_CALL( consdataSortQuadVarTerms(scip, consdata) );
 
    /* check how many quadratic terms with non-overlapping variables we have
-    * in other words, the number of components in the sparsity graph of the quadratic term matrix */
+    * in other words, the number of components in the sparsity graph of the quadratic term matrix
+    */
    ncomponents = 0;
    SCIP_CALL( SCIPhashmapCreate(&var2component, SCIPblkmem(scip), consdata->nquadvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &componentssize, consdata->nquadvars) );
    for( i = 0; i < consdata->nquadvars; ++i )
    {
       /* if variable was marked already, skip it */
       if( SCIPhashmapExists(var2component, (void*)consdata->quadvarterms[i].var) )
          continue;
 
-      if( ncomponents < nmaxcomponents )
-      {
-         SCIP_CALL( presolveDisaggregateMarkComponent(scip, consdata, i, var2component, ncomponents) );
-         ++ncomponents;
-      }
-      else
-      {
-         /* put all other quadratic variables into the last component after we hit the limit for the number of components */
-         SCIP_CALL( SCIPhashmapInsert(var2component, consdata->quadvarterms[i].var, (void*)(size_t)(ncomponents - 1)) );
-      }
+      /* start a new component with variable i */
+      componentssize[ncomponents] = 0;
+      SCIP_CALL( presolveDisaggregateMarkComponent(scip, consdata, i, var2component, ncomponents, componentssize + ncomponents) );
+      ++ncomponents;
    }
 
    assert(ncomponents >= 1);
@@ -4375,8 +4444,13 @@ SCIP_RETCODE presolveDisaggregate(
    if( ncomponents == 1 )
    {
       SCIPhashmapFree(&var2component);
+      SCIPfreeBufferArray(scip, &componentssize);
       return SCIP_OKAY;
    }
+
+   SCIP_CALL( presolveDisaggregateMergeComponents(scip, conshdlr, var2component, &ncomponents, componentssize) );
+
+   SCIPfreeBufferArray(scip, &componentssize);
 
    /* scale all new constraints (ncomponents+1 many) by ncomponents+1, so violations sum up to at most epsilon */
    scale = ncomponents + 1.0;
@@ -12183,7 +12257,7 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
          if( conshdlrdata->maxdisaggrsize > 1 )
          {
             /* try disaggregation, if enabled */
-            SCIP_CALL( presolveDisaggregate(scip, conshdlr, conss[c], naddconss, conshdlrdata->maxdisaggrsize) );
+            SCIP_CALL( presolveDisaggregate(scip, conshdlr, conss[c], naddconss) );
          }
 
          if( *naddconss > naddconss_old )
