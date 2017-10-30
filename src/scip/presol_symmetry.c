@@ -1450,7 +1450,8 @@ SCIP_RETCODE SCIPgetSymmetryGenerators(
    int*                  npermvars,          /**< pointer to store number of variables for permutations */
    SCIP_VAR***           permvars,           /**< pointer to store variables on which permutations act */
    int*                  nperms,             /**< pointer to store number of permutations */
-   int***                perms               /**< pointer to store permutation generators as (nperms x npermvars) matrix */
+   int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
+   SCIP_Real*            log10groupsize      /**< pointer to store log10 of group size */
    )
 {
    SCIP_PRESOLDATA* presoldata;
@@ -1460,6 +1461,7 @@ SCIP_RETCODE SCIPgetSymmetryGenerators(
    assert( permvars != NULL );
    assert( nperms != NULL );
    assert( perms != NULL );
+   assert( log10groupsize != NULL );
 
    presoldata = SCIPpresolGetData(presol);
    assert( presoldata != NULL );
@@ -1480,6 +1482,7 @@ SCIP_RETCODE SCIPgetSymmetryGenerators(
    *permvars = presoldata->permvars;
    *nperms = presoldata->nperms;
    *perms = presoldata->perms;
+   *log10groupsize = presoldata->log10groupsize;
 
    return SCIP_OKAY;
 }

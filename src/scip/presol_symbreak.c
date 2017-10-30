@@ -69,6 +69,7 @@ struct SCIP_PresolData
    int**                 perms;              /**< list of permutations */
    int                   nperms;             /**< number of permutations in perms */
    int                   npermvars;          /**< number of variables affected by permutations */
+   SCIP_Real             log10groupsize;     /**< log10 of group size */
    SCIP_VAR**            permvars;           /**< array of variables on which permutations act */
    SCIP_Bool             addedconss;         /**< whether we already added symmetry breaking constraints */
    SCIP_Bool             computedsymmetry;   /**< whether symmetry has been computed already */
@@ -1184,6 +1185,7 @@ SCIP_DECL_PRESOLEXIT(presolExitSymbreak)
    presoldata->enabled = TRUE;
    presoldata->early = FALSE;
    presoldata->nperms = -1;
+   presoldata->log10groupsize = -1.0;
    presoldata->norbitopes = 0;
    presoldata->nsymresacks = 0;
 
@@ -1274,7 +1276,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
 
       /* get symmetries */
       SCIP_CALL( SCIPgetSymmetryGenerators(scip, presoldata->symmetrypresol, &(presoldata->npermvars),
-            &(presoldata->permvars), &(presoldata->nperms), &(presoldata->perms)) );
+            &(presoldata->permvars), &(presoldata->nperms), &(presoldata->perms), &(presoldata->log10groupsize)) );
 
       presoldata->computedsymmetry = TRUE;
 
@@ -1379,6 +1381,7 @@ SCIP_RETCODE SCIPincludePresolSymbreak(
    presoldata->ngenconss = 0;
    presoldata->genconss = NULL;
    presoldata->nperms = -1;
+   presoldata->log10groupsize = -1.0;
    presoldata->norbits = -1;
    presoldata->nvarsinorbits = 0;
    presoldata->orbits = NULL;
