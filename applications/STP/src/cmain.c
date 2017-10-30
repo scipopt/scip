@@ -120,6 +120,7 @@ SCIP_RETCODE runShell(
 #endif
 
    SCIP_CALL( SCIPsetIntParam(scip, "branching/relpscost/maxproprounds", 0) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/alns/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/coefdiving/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/feaspump/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/fracdiving/freq", -1) );
