@@ -16013,11 +16013,7 @@ int SCIPgetNAllBilinearTermsQuadratic(
 
    return conshdlrdata->nbilinterms;
 }
-
-/** adds a globally valid inequality of the form xcoef x <= ycoef y + constant for a bilinear term (x,y)
- *
- *  @note the indices of bilinear terms match with the entries of bilinear terms returned by SCIPgetAllBilinearTermsQuadratic
- */
+/** returns all bilinear terms that are contained in all quadratic constraints */
 SCIP_RETCODE SCIPgetAllBilinearTermsQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR** RESTRICT   x,                  /**< array to store first variable of each bilinear term */
