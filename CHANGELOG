@@ -17,6 +17,7 @@ features:
   strongly connected components and may detect infeasible assignments on the way
 - SCIP can now automatically detect and compute symmetries in MIPs (if a graph automorphism code is linked in)
 - cons_orbitope.c can now handle full orbitopes as well
+- added new plugin type "table" for adding user-defined statistics tables
 
 parameters:
 - new parameter misc/debugsol to specify a debug solution that should be checked during the solve
@@ -50,6 +51,7 @@ interface:
 - added cons_symresack.c to handle permutation symmetries in a binary programs via inequalities and propagation
 - added cons_orbisack.c to handle special permutation symmetries in a binary programs via inequalities and propagation
 - added presol_symbreak.c to detect special symmetry structures and to add symmetry handling constraints
+- added additional parameter for statistics tables to SCIPcopyPlugins
 
 performance improvements:
 - use disjoint set to reduce peak memory usage and time to compute of clique table connectedness information

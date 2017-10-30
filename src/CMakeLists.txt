@@ -190,6 +190,7 @@ set(scipsources
     scip/sepa_rapidlearning.c
     scip/sepa_strongcg.c
     scip/sepa_zerohalf.c
+    scip/table_default.c
     scip/boundstore.c
     scip/branch.c
     scip/clock.c
@@ -244,6 +245,7 @@ set(scipsources
     scip/solve.c
     scip/stat.c
     scip/syncstore.c
+    scip/table.c
     scip/tree.c
     scip/var.c
     scip/visual.c
@@ -271,6 +273,7 @@ set(objscipsources
     objscip/objreader.cpp
     objscip/objrelax.cpp
     objscip/objsepa.cpp
+    objscip/objtable.cpp
     objscip/objvardata.cpp
 )
 
@@ -336,6 +339,7 @@ set(objscipheaders
     objscip/objscipdefplugins.h
     objscip/objscip.h
     objscip/objsepa.h
+    objscip/objtable.h
     objscip/objvardata.h
     objscip/type_objcloneable.h
     objscip/type_objprobcloneable.h
@@ -550,6 +554,7 @@ set(scipheaders
     scip/pub_reopt.h
     scip/pub_sepa.h
     scip/pub_sol.h
+    scip/pub_table.h
     scip/pub_tree.h
     scip/pub_var.h
     scip/rbtree.h
@@ -646,10 +651,13 @@ set(scipheaders
     scip/struct_sol.h
     scip/struct_stat.h
     scip/struct_syncstore.h
+    scip/struct_table.h
     scip/struct_tree.h
     scip/struct_var.h
     scip/struct_visual.h
     scip/syncstore.h
+    scip/table_default.h
+    scip/table.h
     scip/tree.h
     scip/type_bandit.h
     scip/type_branch.h
@@ -694,6 +702,7 @@ set(scipheaders
     scip/type_sol.h
     scip/type_stat.h
     scip/type_syncstore.h
+    scip/type_table.h
     scip/type_timing.h
     scip/type_tree.h
     scip/type_var.h

@@ -169,6 +169,7 @@ SCIP_RETCODE createSubSCIP(
          TRUE,  /* nodeselectors (SCIP gives an error if there is none) */
          FALSE,  /* branchrules */
          copydisplays, /* displays */
+         FALSE, /* tables */
          FALSE, /* dialogs */
          TRUE,  /* nlpis */
          TRUE,  /* message handler */

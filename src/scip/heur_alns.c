@@ -1206,6 +1206,12 @@ SCIP_Real getVariableRedcostScore(
       redcost = SCIPvarGetBestRootRedcost(var);
 
       bestbound = SCIPvarGetBestRootSol(var);
+
+      /* using global reduced costs, the two factors yield a nonnegative score within tolerances */
+      assert(SCIPisFeasZero(scip, redcost)
+         || (SCIPisFeasNegative(scip, redcost) && ! SCIPisFeasPositive(scip, refsolval - bestbound))
+         || (SCIPisFeasPositive(scip, redcost) && ! SCIPisFeasNegative(scip, refsolval - bestbound)));
+
    }
    else
    {
@@ -1219,13 +1225,13 @@ SCIP_Real getVariableRedcostScore(
    }
 
    assert(! SCIPisInfinity(scip, REALABS(bestbound)));
-   assert(SCIPisZero(scip, redcost) || SCIPisIntegral(scip, bestbound));
+   assert(SCIPisFeasZero(scip, redcost) || SCIPisFeasIntegral(scip, bestbound));
 
    score = redcost * (refsolval - bestbound);
 
-   /* slight negative scores are possible due to numerical inaccuracies or if local LP solutions are used */
-   assert(uselocalredcost || ! SCIPisNegative(scip, score));
-   score = MAX(score, 0.0);
+   /* max out numerical inaccuracies from global scores */
+   if( ! uselocalredcost )
+      score = MAX(score, 0.0);
 
    return score;
 }
