@@ -47,7 +47,8 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    SYM_MATRIXDATA*       matrixdata,         /**< data for MIP matrix */
    int*                  nperms,             /**< pointer to store number of permutations */
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
-   int***                perms               /**< pointer to store permutation generators as (nperms x npermvars) matrix */
+   int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
+   SCIP_Real*            log10groupsize      /**< pointer to store size of group */
    )
 {  /*lint --e{715}*/
    assert( scip != NULL );
@@ -55,11 +56,13 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    assert( nperms != NULL );
    assert( nmaxperms != NULL );
    assert( perms != NULL );
+   assert( log10groupsize != NULL );
 
    /* init */
    *nperms = 0;
    *nmaxperms = 0;
    *perms = NULL;
+   *log10groupsize = 0;
 
    return SCIP_OKAY;
 }
