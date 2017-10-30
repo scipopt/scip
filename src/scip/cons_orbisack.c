@@ -829,11 +829,6 @@ SCIP_RETCODE propVariables(
    {
       /* determine value in first column */
       var = vars1[i];
-
-      /* possibly get non-negated variables (variables might have been aggregated in between) */
-      if ( SCIPvarIsNegated(var) )
-         var = SCIPvarGetNegatedVar(var);
-      assert( ! SCIPvarIsNegated(var) );
       assert( SCIPvarIsBinary(var) );
 
       /* get local upper and lower bound on variable */
@@ -852,11 +847,6 @@ SCIP_RETCODE propVariables(
 
       /* determine value in second column */
       var = vars2[i];
-
-      /* possibly get non-negated variables (variables might have been aggregated in between) */
-      if ( SCIPvarIsNegated(var) )
-         var = SCIPvarGetNegatedVar(var);
-      assert( ! SCIPvarIsNegated(var) );
       assert( SCIPvarIsBinary(var) );
 
       /* get local upper and lower bound on variable */
@@ -882,15 +872,6 @@ SCIP_RETCODE propVariables(
       var2 = vars2[i];
       assert( var1 != NULL );
       assert( var2 != NULL );
-
-      /* possibly get non-negated variables (variables might have been aggregated in between) */
-      if ( SCIPvarIsNegated(var1) )
-         var1 = SCIPvarGetNegatedVar(var1);
-      assert( ! SCIPvarIsNegated(var1) );
-
-      if ( SCIPvarIsNegated(var2) )
-         var2 = SCIPvarGetNegatedVar(var2);
-      assert( ! SCIPvarIsNegated(var2) );
 
       /* if variable in first column is fixed to 0 and variable in second column is fixed to 1 */
       if ( SCIPvarGetUbLocal(var1) < 0.5 && SCIPvarGetLbLocal(var2) > 0.5 )
