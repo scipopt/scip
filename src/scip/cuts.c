@@ -510,11 +510,13 @@ SCIP_Bool cutTightenCoefsQuad(
    SCIP_VAR** vars;
    SCIP_Real QUAD(maxacttmp);
    SCIP_Real maxact;
+   SCIP_Real maxabsintval;
    SCIP_Real maxabsval;
 
    QUAD_ASSIGN(maxacttmp, 0.0);
 
    vars = SCIPgetVars(scip);
+   maxabsintval = 0.0;
    maxabsval = 0.0;
    nintegralvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
 
@@ -537,8 +539,10 @@ SCIP_Bool cutTightenCoefsQuad(
          if( SCIPisInfinity(scip, -lb) )
             return FALSE;
 
+         maxabsval = MAX(maxabsval, -QUAD_ROUND(val));
+
          if( cutinds[i] < nintegralvars )
-            maxabsval = MAX(maxabsval, -QUAD_ROUND(val));
+            maxabsintval = MAX(maxabsintval, -QUAD_ROUND(val));
 
          SCIPquadprecProdQD(val, val, lb);
 
@@ -551,8 +555,10 @@ SCIP_Bool cutTightenCoefsQuad(
          if( SCIPisInfinity(scip, ub) )
             return FALSE;
 
+         maxabsval = MAX(maxabsval, QUAD_ROUND(val));
+
          if( cutinds[i] < nintegralvars )
-            maxabsval = MAX(maxabsval, QUAD_ROUND(val));
+            maxabsintval = MAX(maxabsintval, QUAD_ROUND(val));
 
          SCIPquadprecProdQD(val, val, ub);
 
@@ -566,8 +572,63 @@ SCIP_Bool cutTightenCoefsQuad(
    if( SCIPisFeasLE(scip, maxact, QUAD_ROUND(*cutrhs)) )
       return TRUE;
 
+   /* if the largest absolute coefficient is below 1.0, we scale the cut up
+    * @todo also scale the smalles absolute coefficient of integers to 1.0?
+    *       this can increase the chance of obtaining an integral cut due
+    *       to the coefficient tightening being restricted to integral coefficients
+    */
+   if( (maxabsintval < 1.0 && ! SCIPisFeasZero(scip, maxabsintval)) || (maxabsval < 1.0 && ! SCIPisFeasZero(scip, maxabsval)) )
+   {
+      SCIP_Real scale = 1.0 / maxabsval;
+
+      if( !SCIPisFeasZero(scip, maxabsintval) )
+      {
+         scale = 1.0 / maxabsintval;
+
+#if 1
+         for( i = 0; i < *cutnnz; ++i )
+         {
+            SCIP_Real QUAD(val);
+
+            if( cutinds[i] >= nintegralvars )
+               continue;
+
+            QUAD_ARRAY_LOAD(val, cutcoefs, cutinds[i]);
+
+            if( SCIPisFeasNegative(scip, QUAD_ROUND(val)) )
+            {
+               SCIPquadprecDivDQ(val, -1.0, val);
+               scale = MAX(scale, QUAD_ROUND(val));
+            }
+            else if( SCIPisFeasPositive(scip, QUAD_ROUND(val)) )
+            {
+               SCIPquadprecDivDQ(val, 1.0, val);
+               scale = MAX(scale, QUAD_ROUND(val));
+            }
+         }
+#endif
+      }
+
+      /* perform the scaling */
+      SCIPquadprecProdQD(maxacttmp, maxacttmp, scale);
+      maxact = QUAD_ROUND(maxacttmp);
+
+      SCIPquadprecProdQD(*cutrhs, *cutrhs, scale);
+
+      maxabsintval *= scale;
+
+      for( i = 0; i < *cutnnz; ++i )
+      {
+         SCIP_Real QUAD(val);
+
+         QUAD_ARRAY_LOAD(val, cutcoefs, cutinds[i]);
+         SCIPquadprecProdQD(val, val, scale);
+         QUAD_ARRAY_STORE(cutcoefs, cutinds[i], val);
+      }
+   }
+
    /* no coefficient tightening can be performed since the precondition doesn't hold for any of the variables */
-   if( SCIPisGT(scip, maxact - maxabsval, QUAD_ROUND(*cutrhs)) )
+   if( SCIPisGT(scip, maxact - maxabsintval, QUAD_ROUND(*cutrhs)) )
       return FALSE;
 
    SCIPsortDownInd(cutinds, compareAbsCoefsQuad, (void*) cutcoefs, *cutnnz);
@@ -695,11 +756,13 @@ SCIP_Bool cutTightenCoefs(
    SCIP_VAR** vars;
    SCIP_Real QUAD(maxacttmp);
    SCIP_Real maxact;
+   SCIP_Real maxabsintval;
    SCIP_Real maxabsval;
 
    QUAD_ASSIGN(maxacttmp, 0.0);
 
    vars = SCIPgetVars(scip);
+   maxabsintval = 0.0;
    maxabsval = 0.0;
    nintegralvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
 
@@ -719,8 +782,10 @@ SCIP_Bool cutTightenCoefs(
          if( SCIPisInfinity(scip, -lb) )
             return FALSE;
 
+         maxabsval = MAX(maxabsval, -val);
+
          if( cutinds[i] < nintegralvars )
-            maxabsval = MAX(maxabsval, -val);
+            maxabsintval = MAX(maxabsintval, -val);
 
          SCIPquadprecSumQD(maxacttmp, maxacttmp, val * lb);
       }
@@ -731,8 +796,10 @@ SCIP_Bool cutTightenCoefs(
          if( SCIPisInfinity(scip, ub) )
             return FALSE;
 
+         maxabsval = MAX(maxabsval, val);
+
          if( cutinds[i] < nintegralvars )
-            maxabsval = MAX(maxabsval, val);
+            maxabsintval = MAX(maxabsintval, val);
 
          SCIPquadprecSumQD(maxacttmp, maxacttmp, val * ub);
       }
@@ -744,8 +811,54 @@ SCIP_Bool cutTightenCoefs(
    if( SCIPisFeasLE(scip, maxact, QUAD_ROUND(*cutrhs)) )
       return TRUE;
 
+   /* if the largest absolute coefficient is below 1.0, we scale the cut up
+    * @todo also scale the smallest absolute coefficient of integers to 1.0?
+    *       this can increase the chance of obtaining an integral cut due
+    *       to the coefficient tightening being restricted to integral coefficients
+    */
+   if( (maxabsintval < 1.0 && ! SCIPisFeasZero(scip, maxabsintval)) || (maxabsval < 1.0 && ! SCIPisFeasZero(scip, maxabsval)) )
+   {
+      SCIP_Real scale = 1.0 / maxabsval;
+
+      if( !SCIPisFeasZero(scip, maxabsintval) )
+      {
+         scale = 1.0 / maxabsintval;
+
+#if 1
+         for( i = 0; i < *cutnnz; ++i )
+         {
+            SCIP_Real absval;
+
+            if( cutinds[i] >= nintegralvars )
+               continue;
+
+            absval = REALABS(cutcoefs[cutinds[i]]);
+
+            if( absval > SCIPfeastol(scip) )
+            {
+               absval = 1.0 / absval;
+               scale = MAX(scale, absval);
+            }
+         }
+#endif
+      }
+
+      /* perform the scaling */
+      SCIPquadprecProdQD(maxacttmp, maxacttmp, scale);
+      maxact = QUAD_ROUND(maxacttmp);
+
+        maxabsintval *= scale;
+
+      SCIPquadprecProdQD(*cutrhs, *cutrhs, scale);
+
+      for( i = 0; i < *cutnnz; ++i )
+      {
+         cutcoefs[cutinds[i]] *= scale;
+      }
+   }
+
    /* no coefficient tightening can be performed since the precondition doesn't hold for any of the variables */
-   if( SCIPisGT(scip, maxact - maxabsval, QUAD_ROUND(*cutrhs)) )
+   if( SCIPisGT(scip, maxact - maxabsintval, QUAD_ROUND(*cutrhs)) )
       return FALSE;
 
    SCIPsortDownInd(cutinds, compareAbsCoefs, (void*) cutcoefs, *cutnnz);
