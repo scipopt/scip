@@ -689,6 +689,7 @@ SCIP_RETCODE neighborhoodStatsReset(
    stats->nrunsbestsol = 0;
    stats->nsolsfound = 0;
    stats->usednodes = 0L;
+   stats->nfixings = 0L;
 
    SCIPstatistic( BMSclearMemoryArray(stats->statushist, NHISTENTRIES); )
 
