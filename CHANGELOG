@@ -47,7 +47,7 @@ interface:
 - added additional parameter for statistics tables to SCIPcopyPlugins
 - added parameter "objval" to SCIPnlpiGetSolution() for returning the optimal objective value (can be set to NULL)
 - removed argument "includeslp" from SCIPrelaxCreate() and added it to SCIPmarkRelaxSolValid(), SCIPsetRelaxSolVals() and
-  SCIPsetRelaxSolValsSol()
+  SCIPsetRelaxSolValsSol(); removed function SCIPrelaxIncludesLp() and SCIPrelaxSetIncludesLp()
 
 performance improvements:
 - use disjoint set to reduce peak memory usage and time to compute of clique table connectedness information
