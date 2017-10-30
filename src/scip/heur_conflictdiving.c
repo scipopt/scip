@@ -58,9 +58,11 @@
                                          *   more general constraint handler diving variable selection? */
 
 #define DEFAULT_ADDSOLUTION        TRUE /**< should the solution be added to the solution pool */
-#define DEFAULT_MAXVIOL           FALSE /**< prefer rounding direction with most violation */
+#define DEFAULT_MAXVIOL            TRUE /**< prefer rounding direction with most violation */
 
 #define DEFAULT_MINNUMSOFTLOCKS      0
+#define DEFAULT_MAXVARSFAC         0.1
+#define DEFAULT_MINMAXVARS          30
 
 /* locally defined heuristic data */
 struct SCIP_HeurData
@@ -69,7 +71,11 @@ struct SCIP_HeurData
 
    SCIP_Bool             addsol;
    SCIP_Bool             maxviol;
+   SCIP_Real             maxvarsfac;
+   int                   minmaxvars;
    int                   minnumsoftlocks;
+
+   SCIP_Longint          nconflictsfound;
 };
 
 /*
@@ -131,6 +137,8 @@ SCIP_DECL_HEURINIT(heurInitConflictdiving) /*lint --e{715}*/
    /* create working solution */
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
 
+   heurdata->nconflictsfound = 0LL;
+
    return SCIP_OKAY;
 }
 
@@ -150,6 +158,8 @@ SCIP_DECL_HEUREXIT(heurExitConflictdiving) /*lint --e{715}*/
 
    /* free working solution */
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
+
+   printf("conflictdiving found %lld conflicts\n", heurdata->nconflictsfound);
 
    return SCIP_OKAY;
 }
@@ -181,24 +191,27 @@ SCIP_DECL_HEUREXEC(heurExecConflictdiving) /*lint --e{715}*/
    if( heurtiming == SCIP_HEURTIMING_DURINGLPLOOP && SCIPgetDepth(scip) != 0 )
       return SCIP_OKAY;
 
-
    if( !SCIPisParamFixed(scip, "conflict/maxvarsfac") )
    {
       SCIP_CALL( SCIPgetRealParam(scip, "conflict/maxvarsfac", &maxvarsfac) );
-      SCIP_CALL( SCIPsetRealParam(scip, "conflict/maxvarsfac", 0.05) );
+      SCIP_CALL( SCIPsetRealParam(scip, "conflict/maxvarsfac", heurdata->maxvarsfac) );
    }
    if( !SCIPisParamFixed(scip, "conflict/minmaxvars") )
    {
       SCIP_CALL( SCIPgetIntParam(scip, "conflict/minmaxvars", &minmaxvars) );
-      SCIP_CALL( SCIPsetIntParam(scip, "conflict/minmaxvars", 15) );
+      SCIP_CALL( SCIPsetIntParam(scip, "conflict/minmaxvars", heurdata->minmaxvars) );
    }
 
    nconflictsfound = SCIPgetNConflictConssFound(scip);
 
    SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible) );
 
-//   if( *result != SCIP_DELAYED )
-//      printf("found %lld new conflicts\n", SCIPgetNConflictConssFound(scip) - nconflictsfound);
+   heurdata->nconflictsfound += (SCIPgetNConflictConssFound(scip) - nconflictsfound);
+
+#if SCIP_DEBUG
+   if( *result != SCIP_DELAYED )
+      SCIPdebugMsg(scip, "found %lld (%lld) new conflicts\n", SCIPgetNConflictConssFound(scip) - nconflictsfound, heurdata->nconflictsfound);
+#endif
 
    if( !SCIPisParamFixed(scip, "conflict/maxvarsfac") )
    {
@@ -399,11 +412,17 @@ SCIP_RETCODE SCIPincludeHeurConflictdiving(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/addsol", "should solution be added to the solution pool",
          &heurdata->addsol, TRUE, DEFAULT_ADDSOLUTION, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/maxviol", "try to maximize the violation",
+         &heurdata->maxviol, TRUE, DEFAULT_MAXVIOL, NULL, NULL) );
+
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/minnumsoftlocks", "minimal number of softlocks per variable",
          &heurdata->minnumsoftlocks, TRUE, DEFAULT_MINNUMSOFTLOCKS, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/maxviol", "try to maximize the violation",
-         &heurdata->maxviol, TRUE, DEFAULT_MAXVIOL, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/minmaxvars", " ... ",
+         &heurdata->minmaxvars, TRUE, DEFAULT_MINMAXVARS, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/maxvarsfac", " ... ",
+         &heurdata->maxvarsfac, TRUE, DEFAULT_MAXVARSFAC, 0.0, 1.0, NULL, NULL) );
 
    return SCIP_OKAY;
 }
