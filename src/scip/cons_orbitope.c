@@ -1344,10 +1344,8 @@ SCIP_RETCODE propagateFullOrbitope(
          /* fix all variables smaller than j to 1 */
          for (l = lastone + 1; l < j; ++l)
          {
-            assert( SCIPvarGetUbLocal(vars[currow][l]) > 0.5 );
-
             /* check again since fixing previous entries may have modified the current entry */
-            if ( SCIPvarGetLbLocal(vars[currow][l]) < 0.5 )
+            if ( SCIPvarGetLbLocal(vars[currow][l]) < 0.5 && SCIPvarGetUbLocal(vars[currow][l]) > 0.5 )
             {
                tightened = FALSE;
                inferinfo = currow * ncols + j;
@@ -1355,6 +1353,27 @@ SCIP_RETCODE propagateFullOrbitope(
                SCIP_CALL( SCIPinferBinvarCons(scip, vars[currow][l], TRUE, cons, inferinfo, infeasible, &tightened) );
                if ( tightened )
                   ++(*nfixedvars);
+            }
+            else if ( SCIPvarGetUbLocal(vars[currow][l]) < 0.5 )
+            {
+               if ( SCIPisConflictAnalysisApplicable(scip) )
+               {
+                  SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
+
+                  for (i = 0; i <= currow; ++i)
+                  {
+                     int s;
+                     for (s = 0; s <= l; ++s)
+                     {
+                        SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][s]) );
+                     }
+                  }
+
+                  SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
+               }
+               *infeasible = TRUE;
+
+               return SCIP_OKAY;
             }
          }
 
