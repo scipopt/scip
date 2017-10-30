@@ -636,7 +636,8 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/sepa_oddcycle.o \
 			scip/sepa_rapidlearning.o \
 			scip/sepa_strongcg.o \
-			scip/sepa_zerohalf.o
+			scip/sepa_zerohalf.o \
+			scip/table_default.o \
 
 SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/branch.o \
@@ -696,6 +697,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/solve.o \
 			scip/stat.o \
 			scip/syncstore.o \
+			scip/table.o \
 			scip/tree.o \
 			scip/var.o \
 			scip/visual.o \
@@ -754,6 +756,7 @@ OBJSCIPLIBOBJ	=	objscip/objbranchrule.o \
 			objscip/objreader.o \
 			objscip/objrelax.o \
 			objscip/objsepa.o \
+			objscip/objtable.o \
 			objscip/objvardata.o
 
 OBJSCIPLIB	=	$(OBJSCIPLIBNAME).$(BASE)
