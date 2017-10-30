@@ -961,7 +961,7 @@ SCIP_RETCODE graph_load(
             message(MSG_ERROR, &curf, err_unknown_s, keyword);
          else
          {
-            char* format = (char*) p->format;
+            char newformat[4] = "";
             assert(p != NULL);
 
             message(MSG_DEBUG, &curf, msg_keyword_sd, p->keyword, p->sw_code);
@@ -969,18 +969,11 @@ SCIP_RETCODE graph_load(
             /* Yes, so lets get the rest of the line if possible
              */
             if( (stp_type == STP_MWCSP || stp_type == STP_RMWCSP) && p->format != NULL && (p->sw_code == KEY_TERMINALS_T || p->sw_code == KEY_GRAPH_E) )
-            {
-               if( p->sw_code == KEY_TERMINALS_T)
-                  format = (char*)"nn";
-               else if( p->sw_code == KEY_GRAPH_E )
-                  format = (char*)"nn";
-            }
+               strcpy(newformat, "nn");
+            else if( stp_type == STP_SAP && p->sw_code == KEY_GRAPH_A )
+               strcpy(newformat, "nnnn");
 
-            if( stp_type == STP_SAP && p->sw_code == KEY_GRAPH_A )
-            {
-               format = (char*)"nnnn";
-            }
-            if( p->format == NULL || !get_arguments(&curf, (const char*) format, s, para) )
+            if( p->format == NULL || !get_arguments(&curf, (const char*)( newformat[0] != '\0' ? newformat : p->format ), s, para) )
             {
                /* Now, what should we do ?
                 */

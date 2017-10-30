@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_implfree.h
+ * @ingroup PRESOLVERS
  * @brief  exploit implied free variables for multi-aggregation
  * @author Dieter Weninger
  *

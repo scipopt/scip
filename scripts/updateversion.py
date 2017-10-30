@@ -29,8 +29,8 @@ if vpos == -1:
     apos = 1
 
 # check correct usage
-if len(sys.argv) > 4 or vpos == len(sys.argv)-1 or vpos == apos -1:
-    print "usage: scripts/updateversion.py  [-a] [-v <VERSION>]"
+if len(sys.argv) == 1 or len(sys.argv) > 4 or vpos == len(sys.argv)-1 or vpos == apos -1:
+    print "usage: scripts/updateversion.py [-a] [-v <MAJOR>.<MINOR>.<PATCH>[.<SUB>]]"
 else:
     # old version numbers
     oldversion = commands.getoutput("grep SCIP_VERSION src/scip/def.h").split()[2]
@@ -84,9 +84,15 @@ else:
     commands.getoutput('sed -i "s/\@version.*/\@version  %-s/" doc/xternal.c' %(newversionstring))
     commands.getoutput('sed -i "s/^SCIP_VERSION.*/SCIP_VERSION	=	%-s/" make/make.project' %(newversionstring))
     commands.getoutput('''sed -i 's/^VERSION=.*/VERSION=\"%s\"/' makedist.sh''' %(newversionstring))
+    commands.getoutput('sed -i "s/set(SCIP_VERSION_MAJOR %s)/set(SCIP_VERSION_MAJOR %s)/" CMakeLists.txt' %(oldmajor, newmajor))
+    commands.getoutput('sed -i "s/set(SCIP_VERSION_MINOR %s)/set(SCIP_VERSION_MINOR %s)/" CMakeLists.txt' %(oldminor, newminor))
+    commands.getoutput('sed -i "s/set(SCIP_VERSION_PATCH %s)/set(SCIP_VERSION_PATCH %s)/" CMakeLists.txt' %(oldpatch, newpatch))
+    commands.getoutput('sed -i "s/set(SCIP_VERSION_SUB %s)/set(SCIP_VERSION_SUB %s)/" CMakeLists.txt' %(oldsubversion, newsubversion))
 
     if newapiversion != None:
         if newsubversion == "0":
             print "Warning: API version increased for what seems to be a bugfix version (%s)" %(newversionstring)
         commands.getoutput('sed -i "s/\#define SCIP_APIVERSION.*%3s/\#define SCIP_APIVERSION             %3s/" src/scip/def.h' \
+                           %(oldapiversion, newapiversion))
+        commands.getoutput('sed -i "s/set(SCIP_VERSION_API %s)/set(SCIP_VERSION_API %s)/" CMakeLists.txt' \
                            %(oldapiversion, newapiversion))

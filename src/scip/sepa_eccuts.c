@@ -2518,7 +2518,7 @@ SCIP_RETCODE computeCut(
       /* add the cut if it is separating the given solution by at least minviolation */
       if( SCIPisGE(scip, cutactivity - nlrowaggr->rhs, sepadata->minviolation) )
       {
-         SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, cutoff) );
+         SCIP_CALL( SCIPaddCut(scip, cut, FALSE, cutoff) );
          *separated = TRUE;
          SCIPdebugMsg(scip, "added separating cut\n");
       }
