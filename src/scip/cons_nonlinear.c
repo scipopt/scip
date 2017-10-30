@@ -4782,6 +4782,7 @@ SCIP_RETCODE _addConcaveEstimatorMultivariate(
 
    int i;
    int j;
+   int idx;
 
    SCIP_RETCODE lpret;
 
@@ -4870,6 +4871,21 @@ SCIP_RETCODE _addConcaveEstimatorMultivariate(
    /* get function value in reference point, so we can use this as a cutoff */
    SCIP_CALL( SCIPexprtreeEval(exprtree, ref, &funcval) );
    funcval *= treecoef;
+
+   /* remove zeroes from val for SCIPlpiAddRows */
+   idx = 0;
+   for( i = 0; i < nrows; ++i )
+   {
+      beg[i] = idx;
+      for( j = 0; j < ncols; ++j )
+         if( val[i * nrows + j] != 0.0 )
+         {
+            ind[idx] = ind[i * nrows + j];
+            val[idx] = val[i * nrows + j];
+            ++idx;
+         }
+   }
+   nnonz = idx;
 
    SCIP_CALL( SCIPlpiAddCols(lpi, ncols, obj, lb, ub, NULL, 0, NULL, NULL, NULL) );
    SCIP_CALL( SCIPlpiAddRows(lpi, nrows, lhs, rhs, NULL, nnonz, beg, ind, val) );
