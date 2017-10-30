@@ -44,7 +44,7 @@ SCIP_RETCODE SCIPgetSymmetryGenerators(
    SCIP_VAR***           permvars,           /**< pointer to store variables on which permutations act */
    int*                  nperms,             /**< pointer to store number of permutations */
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
-   SCIP_Real*            log10groupsize      /**< pointer to store log10 of group size */
+   SCIP_Real*            log10groupsize      /**< pointer to store log10 of group size (or NULL) */
    );
 
 /** specify symmetry type for which we need symmetries */
