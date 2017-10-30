@@ -15993,6 +15993,115 @@ SCIP_RETCODE SCIPchgBilinCoefQuadratic(
    return SCIP_OKAY;
 }
 
+/** returns all bilinear terms that are contained in all quadratic constraints*/
+SCIP_RETCODE SCIPgetAllBilinearTermsQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            x,                  /**< array to store first variable of each bilinear term */
+   SCIP_VAR**            y,                  /**< array to second variable of each bilinear term */
+   int*                  nbilinterms,        /**< buffer to store the total number of bilinear terms */
+   int*                  nunderests,         /**< array to store the total number of constraints that require to underestimate a bilinear term */
+   int*                  noverests           /**< array to store the total number of constraints that require to overestimate a bilinear term */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
+   int i;
+
+   assert(scip != NULL);
+   assert(x != NULL);
+   assert(y != NULL);
+   assert(nbilinterms != NULL);
+   assert(nunderests != NULL);
+   assert(noverests!= NULL);
+
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+
+   if( conshdlr == NULL )
+   {
+      *nbilinterms = 0;
+      return SCIP_OKAY;
+   }
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   for( i = 0; i < conshdlrdata->nbilinterms; ++i )
+   {
+      x[i] = conshdlrdata->bilinestimators[i].x;
+      y[i] = conshdlrdata->bilinestimators[i].y;
+      nunderests[i] = conshdlrdata->bilinestimators[i].nunderest;
+      noverests[i] = conshdlrdata->bilinestimators[i].noverest;
+   }
+
+   *nbilinterms = conshdlrdata->nbilinterms;
+
+   return SCIP_OKAY;
+}
+
+/** adds a globally valid inequality of the form xcoef x <= ycoef y + constant for a bilinear term (x,y)
+ *
+ *  @note the indices of bilinear terms match with the entries of bilinear terms returned by SCIPgetAllBilinearTermsQuadratic
+ */
+SCIP_RETCODE SCIPaddBilinearIneqQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   i,                  /**< index of the bilinear term */
+   SCIP_Real             xcoef,              /**< x coefficient */
+   SCIP_Real             ycoef,              /**< y coefficient */
+   SCIP_Real             constant            /**< constant part */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
+   BILINESTIMATOR* bilinest;
+
+   assert(scip != NULL);
+   assert(i >= 0);
+   assert(xcoef != SCIP_INVALID);
+   assert(ycoef != SCIP_INVALID);
+   assert(constant != SCIP_INVALID);
+
+   /* ignore inequalities that only yield to a possible bound tightening */
+   if( SCIPisFeasZero(scip, xcoef) || SCIPisFeasZero(scip, ycoef) )
+      return SCIP_OKAY;
+
+   /* get constraint handler and its data */
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   if( conshdlr == NULL )
+      return SCIP_OKAY;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(i < conshdlrdata->nbilinterms);
+
+   bilinest = &conshdlrdata->bilinestimators[i];
+   assert(bilinest != NULL);
+
+   /* inequality can be used for underestimating xy if and only if xcoef * ycoef > 0 */
+   if( xcoef * ycoef >= 0.0 )
+   {
+      /* TODO do not overwrite the last inequality */
+      int idx = MIN(bilinest->ninequnderest, 1);
+
+      bilinest->inequnderest[3*idx] = xcoef;
+      bilinest->inequnderest[3*idx+1] = ycoef;
+      bilinest->inequnderest[3*idx+2] = constant;
+      bilinest->ninequnderest = idx + 1;
+   }
+   else
+   {
+      /* TODO do not overwrite the last inequality */
+      int idx = MIN(bilinest->nineqoverest, 1);
+
+      bilinest->ineqoverest[3*idx] = xcoef;
+      bilinest->ineqoverest[3*idx+1] = ycoef;
+      bilinest->ineqoverest[3*idx+2] = constant;
+      bilinest->nineqoverest = idx + 1;
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** creates a SCIP_ROWPREP datastructure
  *
  * Initial cut represents 0 <= 0.
