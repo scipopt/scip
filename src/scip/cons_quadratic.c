@@ -210,6 +210,7 @@ struct SCIP_ConshdlrData
    char                  checkquadvarlocks;  /**< whether quadratic variables contained in a single constraint should be forced to be at their lower or upper bounds ('d'isable, change 't'ype, add 'b'ound disjunction) */
    SCIP_Bool             linfeasshift;       /**< whether to make solutions in check feasible if possible */
    int                   maxdisaggrsize;     /**< maximum number of components when disaggregating a quadratic constraint (<= 1: off) */
+   char                  disaggrstrategy;    /**< disaggregation strategy: some 's'mall and one big components, some 'b'ig and one remaining component */
    int                   maxproprounds;      /**< limit on number of propagation rounds for a single constraint within one round of SCIP propagation during solve */
    int                   maxproproundspresolve; /**< limit on number of propagation rounds for a single constraint within one presolving round */
    SCIP_Real             sepanlpmincont;     /**< minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation */
@@ -4322,8 +4323,21 @@ SCIP_RETCODE presolveDisaggregateMergeComponents(
    for( i = 0; i < *ncomponents; ++i )
       perm[i] = i;
 
-   /* sort components by size, increasing order */ /* @todo optionally do in decreasing order */
-   SCIPsortIntInt(componentssize, perm, *ncomponents);
+   if( conshdlrdata->disaggrstrategy == 's' )
+   {
+      /* sort components by size, increasing order */
+      SCIPsortIntInt(componentssize, perm, *ncomponents);
+   }
+   else if( conshdlrdata->disaggrstrategy == 'b' )
+   {
+      /* sort components by size, decreasing order */
+      SCIPsortDownIntInt(componentssize, perm, *ncomponents);
+   }
+   else
+   {
+      SCIPerrorMessage("invalid value for constraints/quadratic/disaggrstrategy parameter");
+      return SCIP_PARAMETERWRONGVAL;
+   }
 
    /* get inverse permutation */
    for( i = 0; i < *ncomponents; ++i )
@@ -13299,6 +13313,10 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/maxdisaggrsize",
          "maximum number of created constraints when disaggregating a quadratic constraint (<= 1: off)",
          &conshdlrdata->maxdisaggrsize, TRUE, 10, 1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/disaggrstrategy",
+         "strategy how to merge independent blocks to reach maxdisaggrsize limit",
+         &conshdlrdata->disaggrstrategy, TRUE, 's', "bs", NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/maxproprounds",
          "limit on number of propagation rounds for a single constraint within one round of SCIP propagation during solve",
