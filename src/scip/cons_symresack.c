@@ -491,6 +491,18 @@ SCIP_RETCODE consdataCreate(
 
    (*consdata)->ppupgrade = upgrade;
 
+   /* get transformed variables, if we are in the transformed problem */
+   if ( SCIPisTransformed(scip) )
+   {
+      /* Make sure that all variables cannot be multiaggregated (cannot be handled by cons_symresack, since one cannot
+       * easily eliminate single variables from a symresack constraint. */
+      for (i = 0; i < naffectedvariables; ++i)
+      {
+         SCIP_CALL( SCIPgetTransformedVar(scip, (*consdata)->vars[i], &(*consdata)->vars[i]) );
+         SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, (*consdata)->vars[i]) );
+      }
+   }
+
    return SCIP_OKAY;
 }
 

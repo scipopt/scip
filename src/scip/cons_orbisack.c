@@ -138,6 +138,8 @@ SCIP_RETCODE consdataCreate(
    int                   nrows               /**< number of rows in variable matrix */
    )
 {
+   int i;
+
    assert( consdata != NULL );
 
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
@@ -149,7 +151,6 @@ SCIP_RETCODE consdataCreate(
 
 #ifndef NDEBUG
    {
-      int i;
       for (i = 0; i < nrows; ++i)
       {
          assert( SCIPvarIsBinary(vars1[i]) );
@@ -159,6 +160,21 @@ SCIP_RETCODE consdataCreate(
 #endif
 
    (*consdata)->nrows = nrows;
+
+   /* get transformed variables, if we are in the transformed problem */
+   if ( SCIPisTransformed(scip) )
+   {
+      /* Make sure that all variables cannot be multiaggregated (cannot be handled by cons_orbisack, since one cannot
+       * easily eliminate single variables from an orbisack constraint. */
+      for (i = 0; i < nrows; ++i)
+      {
+         SCIP_CALL( SCIPgetTransformedVar(scip, (*consdata)->vars1[i], &(*consdata)->vars1[i]) );
+         SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, (*consdata)->vars1[i]) );
+
+         SCIP_CALL( SCIPgetTransformedVar(scip, (*consdata)->vars2[i], &(*consdata)->vars2[i]) );
+         SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, (*consdata)->vars2[i]) );
+      }
+   }
 
    return SCIP_OKAY;
 }
