@@ -2209,7 +2209,7 @@ SCIP_RETCODE getSD(
    int nnodes;
    int nlbltail;
    int nlblhead;
-   SCIP_Bool pcmw;
+   const SCIP_Bool pcmw = (pc || mw);
 
    assert(g != NULL);
    assert(scip  != NULL);
@@ -2222,7 +2222,6 @@ SCIP_RETCODE getSD(
    assert(memlblhead != NULL);
    assert(sdist != NULL);
 
-   pcmw = pc || mw;
    nnodes = g->knots;
 
    /* start from tail */
@@ -2320,10 +2319,6 @@ SCIP_RETCODE getSD(
    *sdist = sd;
    return SCIP_OKAY;
 }
-
-
-
-
 
 
 /** SDC test for the SAP using a limited version of Dijkstra's algorithm from both endpoints of an arc */
