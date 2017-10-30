@@ -28,6 +28,7 @@
 
 #include <vector>
 #include <list>
+#include <math.h>
 
 /** struct for bliss callback */
 struct BLISS_Data
@@ -270,7 +271,8 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    SYM_MATRIXDATA*       matrixdata,         /**< data for MIP matrix */
    int*                  nperms,             /**< pointer to store number of permutations */
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
-   int***                perms               /**< pointer to store permutation generators as (nperms x npermvars) matrix */
+   int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
+   SCIP_Real*            log10groupsize      /**< pointer to store size of group */
    )
 {
    assert( scip != NULL );
@@ -278,12 +280,14 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    assert( nperms != NULL );
    assert( nmaxperms != NULL );
    assert( perms != NULL );
+   assert( log10groupsize != NULL );
    assert( maxgenerators >= 0 );
 
    /* init */
    *nperms = 0;
    *nmaxperms = 0;
    *perms = NULL;
+   *log10groupsize = 0;
 
    int nnodes = 0;
    int nedges = 0;
@@ -338,6 +342,9 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    *perms = data.perms;
    *nperms = data.nperms;
    *nmaxperms = data.nmaxperms;
+
+   /* determine log10 of symmetry group size */
+   *log10groupsize = log(stats.get_group_size_approx());
 
    return SCIP_OKAY;
 }

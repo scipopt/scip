@@ -76,6 +76,7 @@ struct SCIP_PresolData
    int                   nperms;             /**< number of permutations */
    int                   nmaxperms;          /**< maximal number of permutations (needed for freeing storage) */
    int**                 perms;              /**< permutation generators as (nperms x npermvars) matrix */
+   SCIP_Real             log10groupsize;     /**< log10 of size of symmetry group */
    SCIP_Bool             computedsym;        /**< Have we already tried to compute symmetries? */
    SCIP_Bool             successful;         /**< Was the computation of symmetries successful? */
 };
@@ -611,6 +612,7 @@ SCIP_RETCODE computeSymmetryGroup(
    int*                  nperms,             /**< pointer to store number of permutations */
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
+   SCIP_Real*            log10groupsize,     /**< pointer to store log10 of size of group */
    SCIP_Bool*            success             /**< pointer to store whether symmetry computation was successful */
    )
 {
@@ -640,6 +642,7 @@ SCIP_RETCODE computeSymmetryGroup(
    assert( nperms != NULL );
    assert( nmaxperms != NULL );
    assert( perms != NULL );
+   assert( log10groupsize != NULL );
    assert( success != NULL );
 
    /* init */
@@ -648,6 +651,7 @@ SCIP_RETCODE computeSymmetryGroup(
    *nperms = 0;
    *nmaxperms = 0;
    *perms = NULL;
+   *log10groupsize = 0;
    *success = FALSE;
 
    /* skip if no symmetry can be computed */
@@ -1073,7 +1077,7 @@ SCIP_RETCODE computeSymmetryGroup(
    if ( matrixdata.nuniquevars < nvars && matrixdata.nuniquemat < matrixdata.nmatcoef )
    {
       /* determine generators */
-      SCIP_CALL( SYMcomputeSymmetryGenerators(scip, maxgenerators, &matrixdata, nperms, nmaxperms, perms) );
+      SCIP_CALL( SYMcomputeSymmetryGenerators(scip, maxgenerators, &matrixdata, nperms, nmaxperms, perms, log10groupsize) );
 
       if ( ! SCIPisStopped(scip) && checksymmetries )
       {
@@ -1084,9 +1088,15 @@ SCIP_RETCODE computeSymmetryGroup(
       if ( ! local )
       {
          if ( maxgenerators == 0 )
+         {
             SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Number of generators:\t\t\t%d \t(max: -)\n", *nperms);
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Log10 of symmetry group size:\t\t%f\n", *log10groupsize);
+         }
          else
+         {
             SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Number of generators:\t\t\t%u \t(max: %u)\n", *nperms, maxgenerators);
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Log10 of symmetry group size:\t\t%f\n", *log10groupsize);
+         }
       }
    }
 
@@ -1191,7 +1201,7 @@ SCIP_RETCODE determineSymmetry(
    maxgenerators = MIN(maxgenerators, MAXGENNUMERATOR / nvars);
 
    SCIP_CALL( computeSymmetryGroup(scip, maxgenerators, presoldata->symspecrequirefixed, FALSE, presoldata->checksymmetries,
-         &presoldata->npermvars, &presoldata->permvars, &presoldata->nperms, &presoldata->nmaxperms, &presoldata->perms, &presoldata->successful) );
+         &presoldata->npermvars, &presoldata->permvars, &presoldata->nperms, &presoldata->nmaxperms, &presoldata->perms, &presoldata->log10groupsize, &presoldata->successful) );
 
    if ( ! presoldata->successful )
       return SCIP_OKAY;
