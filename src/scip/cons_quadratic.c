@@ -16056,9 +16056,9 @@ SCIP_RETCODE SCIPaddBilinearIneqQuadratic(
 
    assert(scip != NULL);
    assert(i >= 0);
-   assert(xcoef != SCIP_INVALID);
-   assert(ycoef != SCIP_INVALID);
-   assert(constant != SCIP_INVALID);
+   assert(xcoef != SCIP_INVALID); /*lint !e777 */
+   assert(ycoef != SCIP_INVALID); /*lint !e777 */
+   assert(constant != SCIP_INVALID); /*lint !e777 */
 
    /* ignore inequalities that only yield to a possible bound tightening */
    if( SCIPisFeasZero(scip, xcoef) || SCIPisFeasZero(scip, ycoef) )
