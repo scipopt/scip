@@ -1344,15 +1344,18 @@ SCIP_RETCODE propagateFullOrbitope(
          /* fix all variables smaller than j to 1 */
          for (l = lastone + 1; l < j; ++l)
          {
-            assert( SCIPvarGetLbLocal(vars[currow][l]) < 0.5 );
             assert( SCIPvarGetUbLocal(vars[currow][l]) > 0.5 );
 
-            tightened = FALSE;
-            inferinfo = currow * ncols + j;
+            /* check again since fixing previous entries may have modified the current entry */
+            if ( SCIPvarGetLbLocal(vars[currow][l]) < 0.5 )
+            {
+               tightened = FALSE;
+               inferinfo = currow * ncols + j;
 
-            SCIP_CALL( SCIPinferBinvarCons(scip, vars[currow][l], TRUE, cons, inferinfo, infeasible, &tightened) );
-            if ( tightened )
-               ++(*nfixedvars);
+               SCIP_CALL( SCIPinferBinvarCons(scip, vars[currow][l], TRUE, cons, inferinfo, infeasible, &tightened) );
+               if ( tightened )
+                  ++(*nfixedvars);
+            }
          }
 
          lastone = j;
