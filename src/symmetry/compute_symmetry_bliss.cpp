@@ -341,7 +341,9 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    G->set_component_recursion(false);
 
    /* do not use a node limit, but set generator limit */
+#ifdef BLISS_PATCH_PRESENT
    G->set_search_limits(0, (unsigned) maxgenerators);
+#endif
 
    /* start search */
    G->find_automorphisms(stats, blisshook, (void*) &data);
