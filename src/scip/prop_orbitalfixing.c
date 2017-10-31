@@ -279,6 +279,7 @@ SCIP_RETCODE computeBranchingVariables(
 }
 
 
+#ifndef NDEBUG
 /** return objective coefficient, resolves negated or aggregated variables */
 static
 SCIP_Real varGetObjResolved(
@@ -322,6 +323,7 @@ SCIP_Real varGetObjResolved(
 
    return 0.0;
 }
+#endif
 
 
 /** propagate orbital fixing */
