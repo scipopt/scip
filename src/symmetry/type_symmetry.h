@@ -81,7 +81,7 @@ struct SYM_Matrixdata
    SCIP_VAR**            permvars;           /**< variables on which permutations act */
    int*                  permvarcolors;      /**< array for storing the colors of the individual variables */
    int*                  matcoefcolors;      /**< array for storing the colors of all matrix coefficients */
-   int*                  rhscoefcolors;      /**< array for storing the colors of all matrix coefficients */
+   int*                  rhscoefcolors;      /**< array for storing the colors of all rhs coefficients */
 };
 typedef struct SYM_Matrixdata SYM_MATRIXDATA;
 
