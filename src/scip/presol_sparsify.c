@@ -228,6 +228,7 @@ SCIP_RETCODE cancelRow(
             SCIP_Real scale;
             int i1,i2;
             SCIP_Bool deccond;
+            SCIP_Bool abortpair;
 
             i1 = tmpinds[i];
             i2 = tmpinds[j];
@@ -278,11 +279,29 @@ SCIP_RETCODE cancelRow(
             ncontfillin = 0;
             nintfillin = 0;
             nbinfillin = 0;
+            abortpair = FALSE;
             while( a < cancelrowlen && b < eqrowlen )
             {
                if( cancelrowinds[a] == eqrowinds[b] )
                {
-                  if( SCIPisZero(scip, cancelrowvals[a] + scale * eqrowvals[b]) )
+                  SCIP_Real newcoef;
+
+                  newcoef = cancelrowvals[a] + scale * eqrowvals[b];
+
+                  if( SCIPisIntegral(scip, cancelrowvals[a]) && !SCIPisIntegral(scip, newcoef) )
+                  {
+                     abortpair = TRUE;
+                     break;
+                  }
+
+                  if( (SCIPisEQ(scip, cancelrowvals[a], 1.0) || SCIPisEQ(scip, cancelrowvals[a], -1.0))
+                     && !SCIPisEQ(scip, newcoef, 1.0) && !SCIPisEQ(scip, newcoef, -1.0) && !SCIPisZero(scip, newcoef) )
+                  {
+                     abortpair = TRUE;
+                     break;
+                  }
+
+                  if( SCIPisZero(scip, newcoef) )
                      ++ncancel;
 
                   ++a;
@@ -313,6 +332,9 @@ SCIP_RETCODE cancelRow(
                   }
                }
             }
+
+            if( abortpair )
+               continue;
 
             if( ncontfillin > maxcontfillin || nbinfillin > maxbinfillin || nintfillin > maxintfillin )
                continue;
