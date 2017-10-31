@@ -252,13 +252,13 @@ SCIP_RETCODE getActiveVariables(
    int requiredsize;
    int v;
 
-   assert( scip != 0 );
-   assert( vars != 0 );
-   assert( scalars != 0 );
-   assert( *vars != 0 );
-   assert( *scalars != 0 );
-   assert( nvars != 0 );
-   assert( constant != 0 );
+   assert( scip != NULL );
+   assert( vars != NULL );
+   assert( scalars != NULL );
+   assert( *vars != NULL );
+   assert( *scalars != NULL );
+   assert( nvars != NULL );
+   assert( constant != NULL );
 
    if ( transformed )
    {
