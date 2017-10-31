@@ -4378,7 +4378,6 @@ SCIP_RETCODE presolveDisaggregateMergeComponents(
       /* get inverse permutation */
       for( i = 0; i < *ncomponents; ++i )
          newcompidx[oldcompidx[i]] = i;
-      *ncomponents = maxncomponents;
    }
 
    /* assign new component numbers to variables, cutting off at maxncomponents */
@@ -4399,6 +4398,8 @@ SCIP_RETCODE presolveDisaggregateMergeComponents(
 
       SCIPhashmapEntrySetImage(entry, (void*)(size_t)newcomponent);
    }
+   if( *ncomponents > maxncomponents )
+      *ncomponents = maxncomponents;
 
    /*
    printf("component sizes after :");
