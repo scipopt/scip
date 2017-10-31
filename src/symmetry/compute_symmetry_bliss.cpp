@@ -24,6 +24,7 @@
 #include "compute_symmetry.h"
 
 /* include bliss graph */
+#include <defs.hh>
 #include <graph.hh>
 
 #include <vector>
@@ -266,10 +267,14 @@ SCIP_Bool SYMcanComputeSymmetry(void)
    return TRUE;
 }
 
+/** static variable for holding the name of bliss */
+static char blissname[100];
+
 /** return name of external program used to compute generators */
 const char* SYMsymmetryGetName(void)
 {
-   return "bliss";
+   sprintf(blissname, "bliss %s", bliss::version);
+   return blissname;
 }
 
 /** return description of external program used to compute generators */
