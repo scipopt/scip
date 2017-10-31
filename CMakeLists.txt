@@ -325,8 +325,8 @@ endif()
 if(BLISS_FOUND)
     include_directories(${BLISS_INCLUDE_DIRS})
     set(sym symmetry/compute_symmetry_bliss.cpp)
-    set(SYM_LIBRARIES ${SYM_LIBRARIES})
-    set(SYM_PIC_LIBRARIES ${SYM_LIBRARIES})
+    set(SYM_LIBRARIES ${BLISS_LIBRARIES})
+    set(SYM_PIC_LIBRARIES ${BLISS_LIBRARIES})
 endif()
 
 

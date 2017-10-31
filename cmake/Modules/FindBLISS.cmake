@@ -1,11 +1,12 @@
 find_path(BLISS_INCLUDE_DIRS
     NAMES graph.hh
     HINTS ${BLISS_DIR}
-    PATH_SUFFIXES hh)
+    PATH_SUFFIXES include/bliss include)
 
 find_library(BLISS_LIBRARY
     NAMES bliss
-    HINTS ${BLISS_DIR})
+    HINTS ${BLISS_DIR}
+    PATH_SUFFIXES lib)
 
 set(BLISS_LIBRARIES ${BLISS_LIBRARY})
 
