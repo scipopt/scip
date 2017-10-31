@@ -359,7 +359,6 @@ SCIP_RETCODE propagate(
    assert( propdata->npermvars > 0 );
    assert( propdata->permvarmap != NULL );
    assert( propdata->perms != NULL );
-   assert( propdata->permvars != NULL );
 
    permvars = propdata->permvars;
    npermvars = propdata->npermvars;
@@ -581,6 +580,10 @@ SCIP_DECL_PROPEXEC(propExecOrbitalfixing)
    /* get data */
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
+
+   /* do not run if not enabled */
+   if ( ! propdata->enabled )
+      return SCIP_OKAY;
 
    /* return if there is no symmetry available */
    if ( propdata->npermvars == 0 || propdata->permvars == NULL )
