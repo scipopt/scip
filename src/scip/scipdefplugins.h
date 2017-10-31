@@ -156,6 +156,7 @@
 #include "scip/prop_genvbounds.h"
 #include "scip/prop_nlobbt.h"
 #include "scip/prop_obbt.h"
+#include "scip/prop_orbitalfixing.h"
 #include "scip/prop_probing.h"
 #include "scip/prop_pseudoobj.h"
 #include "scip/prop_redcost.h"
