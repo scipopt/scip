@@ -1446,26 +1446,26 @@ SCIP_RETCODE SCIPincludePresolSymbreak(
 
    /* add symmetry breaking presolver parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "presolving/" PRESOL_NAME"/conssaddlp",
+         "presolving/" PRESOL_NAME "/conssaddlp",
          "Should the symmetry breaking constraints be added to the LP?",
          &presoldata->conssaddlp, TRUE, DEFAULT_CONSSADDLP, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "presolving/" PRESOL_NAME"/addsymresacks",
+         "presolving/" PRESOL_NAME "/addsymresacks",
          "Add inequalities for symresacks for each generator?",
          &presoldata->addsymresacks, TRUE, DEFAULT_ADDSYMRESACKS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "presolving/" PRESOL_NAME"/computeorbits",
+         "presolving/" PRESOL_NAME "/computeorbits",
          "Should the orbits of the symmetry group be computed?",
          &presoldata->computeorbits, TRUE, DEFAULT_COMPUTEORBITS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "presolving/" PRESOL_NAME"/detectorbitopes",
+         "presolving/" PRESOL_NAME "/detectorbitopes",
          "Should we check whether the components of the symmetry group can be handled by orbitopes?",
          &presoldata->detectorbitopes, TRUE, DEFAULT_DETECTORBITOPES, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "presolving/" PRESOL_NAME"/forceaddingconss",
+   SCIP_CALL( SCIPaddBoolParam(scip, "presolving/" PRESOL_NAME "/forceaddingconss",
          "Should we add symmetry handling constraints even if only few symmetries are detected?",
          &presoldata->forceaddingconss, TRUE, DEFAULT_FORCEADDINGCONSS, NULL, NULL) );
 

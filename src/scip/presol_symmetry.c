@@ -1419,17 +1419,17 @@ SCIP_RETCODE SCIPincludePresolSymmetry(
 
    /* add parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "presolving/" PRESOL_NAME"/computepresolved",
+         "presolving/" PRESOL_NAME "/computepresolved",
          "Should the symmetry be computed after presolving (otherwise before presol)?",
          &presoldata->computepresolved, TRUE, DEFAULT_COMPUTEPRESOLVED, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
-         "presolving/" PRESOL_NAME"/maxgenerators",
+         "presolving/" PRESOL_NAME "/maxgenerators",
          "limit on the number of generators that should be produced within symmetry detection (0 = no limit)",
          &presoldata->maxgenerators, TRUE, DEFAULT_MAXGENERATORS, 0, INT_MAX, NULL, NULL) );
 
       SCIP_CALL( SCIPaddBoolParam(scip,
-         "presolving/" PRESOL_NAME"/checksymmetries",
+         "presolving/" PRESOL_NAME "/checksymmetries",
          "Should all symmetries be checked after computation?",
          &presoldata->checksymmetries, TRUE, DEFAULT_CHECKSYMMETRIES, NULL, NULL) );
 
