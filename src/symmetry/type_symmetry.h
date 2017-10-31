@@ -50,40 +50,8 @@ enum SYM_Rhssense
 };
 typedef enum SYM_Rhssense SYM_RHSSENSE;
 
-/** data of variables that are considered to be equivalent */
-struct SYM_Vartype
-{
-   SCIP_Real             obj;                /**< objective of variable */
-   SCIP_Real             lb;                 /**< lower bound of variable */
-   SCIP_Real             ub;                 /**< upper bound of variable */
-   SCIP_VARTYPE          type;               /**< type of variable */
-   int                   color;              /**< store color */
-};
-typedef struct SYM_Vartype SYM_VARTYPE;
-
-/** data for symmetry group computation */
-struct SYM_Matrixdata
-{
-   SCIP_Real*            matcoef;            /**< nonzero coefficients appearing in the matrix */
-   SCIP_Real*            rhscoef;            /**< rhs coefficients */
-   SYM_RHSSENSE*         rhssense;           /**< sense of rhs */
-   int*                  matrhsidx;          /**< indices of rhs corresponding to matrix entries */
-   int*                  matvaridx;          /**< indices of variables for matrix entries */
-   int*                  matidx;             /**< indices in mat(rhs/var)idx array corresponding to matrix coefficients */
-   int*                  rhsidx;             /**< indices in rhstype array corresponding to rhs coefficients */
-   int                   nmatcoef;           /**< number of coefficients in matrix */
-   int                   nrhscoef;           /**< number of coefficients in rhs */
-   int                   nmaxmatcoef;        /**< maximal number of matrix coefficients (will be increase on demand) */
-   int                   nuniquevars;        /**< number of unique variable types */
-   int                   nuniquerhs;         /**< number of unique rhs types */
-   int                   nuniquemat;         /**< number of unique matrix coefficients */
-   int                   npermvars;          /**< number of variables for permutations */
-   SCIP_VAR**            permvars;           /**< variables on which permutations act */
-   int*                  permvarcolors;      /**< array for storing the colors of the individual variables */
-   int*                  matcoefcolors;      /**< array for storing the colors of all matrix coefficients */
-   int*                  rhscoefcolors;      /**< array for storing the colors of all rhs coefficients */
-};
-typedef struct SYM_Matrixdata SYM_MATRIXDATA;
+typedef struct SYM_Vartype SYM_VARTYPE;      /**< data of variables that are considered to be equivalent */
+typedef struct SYM_Matrixdata SYM_MATRIXDATA;/**< data for symmetry group computation */
 
 #ifdef __cplusplus
 }

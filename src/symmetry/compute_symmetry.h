@@ -23,9 +23,9 @@
 #ifndef __SCIP_COMPUTE_SYMMETRY_H_
 #define __SCIP_COMPUTE_SYMMETRY_H_
 
-#include <scip/scip.h>
+#include "scip/scip.h"
 
-#include <symmetry/type_symmetry.h>
+#include "symmetry/struct_symmetry.h"
 
 #ifdef __cplusplus
 extern "C" {
