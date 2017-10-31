@@ -4769,6 +4769,7 @@ SCIP_RETCODE _addConcaveEstimatorMultivariate(
    SCIP_Real* obj;
    SCIP_Real* lb;
    SCIP_Real* ub;
+   SCIP_Real* corner;
    SCIP_Real* lhs;
    SCIP_Real* rhs;
    int* beg;
@@ -4797,22 +4798,23 @@ SCIP_RETCODE _addConcaveEstimatorMultivariate(
    SCIP_CALL( SCIPallocBufferArray(scip, &obj, ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lb, ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &ub, ncols) );
+   corner = lb; /* will not use lb and corner simultaneously, so can share memory */
 
    /* one row for each corner of domain, i.e., 2^nvars many */
    nrows = (int)(1u << nvars);
    SCIP_CALL( SCIPallocBufferArray(scip, &lhs, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &rhs, nrows) );
 
-   /* dense coefficients matrix, i.e., ncols * nrows many potential nonzeros */
+   /* the coefficients matrix will have at most ncols * nrows many nonzeros */
    nnonz = nrows * ncols;
    SCIP_CALL( SCIPallocBufferArray(scip, &beg, nrows+1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &ind, nnonz) );
    SCIP_CALL( SCIPallocBufferArray(scip, &val, nnonz) );
 
    /* setup LP data */
+   idx = 0;
    for( i = 0; i < nrows; ++i )
    {
-      beg[i] = i * ncols;
       /* assemble corner point */
       SCIPdebugMsg(scip, "f(");
       for( j = 0; j < nvars; ++j )
@@ -4820,17 +4822,15 @@ SCIP_RETCODE _addConcaveEstimatorMultivariate(
          /* if j'th bit of row index i is set, then take upper bound on var j, otherwise lower bound var j
           * we check this by shifting i for j positions to the right and checking whether the j'th bit is set */
          if( ((unsigned int)i >> j) & 0x1 )
-            val[i * ncols + j] = SCIPvarGetUbLocal(vars[j]);
+            corner[j] = SCIPvarGetUbLocal(vars[j]);
          else
-            val[i * ncols + j] = SCIPvarGetLbLocal(vars[j]);
-         SCIPdebugMsgPrint(scip, "%g, ", val[i*ncols+j]);
-         assert(!SCIPisInfinity(scip, REALABS(val[i*ncols+j])));
-
-         ind[i * ncols + j] = j;
+            corner[j] = SCIPvarGetLbLocal(vars[j]);
+         SCIPdebugMsgPrint(scip, "%g, ", corner[j]);
+         assert(!SCIPisInfinity(scip, REALABS(corner[j])));
       }
 
       /* evaluate function in current corner */
-      SCIP_CALL( SCIPexprtreeEval(exprtree, &val[i*ncols], &funcval) );
+      SCIP_CALL( SCIPexprtreeEval(exprtree, corner, &funcval) );
       SCIPdebugMsgPrint(scip, ") = %g\n", funcval);
 
       if( !SCIPisFinite(funcval) || SCIPisInfinity(scip, REALABS(funcval)) )
@@ -4852,10 +4852,24 @@ SCIP_RETCODE _addConcaveEstimatorMultivariate(
          rhs[i] = SCIPlpiInfinity(lpi);
       }
 
+      /* add nonzeros of corner to matrix */
+      beg[i] = idx;
+      for( j = 0; j < nvars; ++j )
+      {
+         if( corner[j] != 0.0 )
+         {
+            ind[idx] = j;
+            val[idx] = corner[j];
+            ++idx;
+         }
+      }
+
       /* coefficient for constant is 1.0 */
-      val[i * ncols + nvars] = 1.0;
-      ind[i * ncols + nvars] = nvars;
+      val[idx] = 1.0;
+      ind[idx] = nvars;
+      ++idx;
    }
+   nnonz = idx;
    beg[nrows] = nnonz;
 
    for( j = 0; j < ncols; ++j )
@@ -4871,21 +4885,6 @@ SCIP_RETCODE _addConcaveEstimatorMultivariate(
    /* get function value in reference point, so we can use this as a cutoff */
    SCIP_CALL( SCIPexprtreeEval(exprtree, ref, &funcval) );
    funcval *= treecoef;
-
-   /* remove zeroes from val for SCIPlpiAddRows */
-   idx = 0;
-   for( i = 0; i < nrows; ++i )
-   {
-      beg[i] = idx;
-      for( j = 0; j < ncols; ++j )
-         if( val[i * nrows + j] != 0.0 )
-         {
-            ind[idx] = ind[i * nrows + j];
-            val[idx] = val[i * nrows + j];
-            ++idx;
-         }
-   }
-   nnonz = idx;
 
    SCIP_CALL( SCIPlpiAddCols(lpi, ncols, obj, lb, ub, NULL, 0, NULL, NULL, NULL) );
    SCIP_CALL( SCIPlpiAddRows(lpi, nrows, lhs, rhs, NULL, nnonz, beg, ind, val) );
