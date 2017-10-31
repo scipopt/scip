@@ -4351,27 +4351,38 @@ SCIP_RETCODE presolveDisaggregateMergeComponents(
 
    if( conshdlrdata->disaggrmergemethod == 'm' )
    {
-      int targetsize;
+      SCIP_Real targetsize;
+      int count = 0;
 
       /* a minimal component size we should reach to have all components roughly the same size */
       targetsize = nvars / maxncomponents;
       for( i = 0; i < *ncomponents; ++i )
       {
          newcompidx[oldcompidx[i]] = i;
+         count += componentssize[i];
 
-         /* fill with small components until we reach targetsize */
-         while( componentssize[i] < targetsize && i < *ncomponents-1 )
+         /* fill with small components until we reach targetsize
+          * Since targetsize might be fractional, we also add another component if
+          * the number of variables remaining (=nvars-count) is larger than
+          * what we expect to put into the remaining components (=targetsize * (maxncomponents - i-1)).
+          * Thus, from time to time, a component is made larger than the targetsize to avoid
+          * having to add much into the last component.
+          */
+         while( i < *ncomponents-1 && (componentssize[i] + componentssize[*ncomponents-1] <= targetsize ||
+            nvars - count > targetsize * (maxncomponents - i)) )
          {
             /* map last (=smallest) component to component i */
             newcompidx[oldcompidx[*ncomponents-1]] = i;
 
             /* increase size of component i accordingly */
             componentssize[i] += componentssize[*ncomponents-1];
+            count += componentssize[*ncomponents-1];
 
             /* forget about last component */
             --*ncomponents;
          }
       }
+      assert(count == nvars);
    }
    else
    {
