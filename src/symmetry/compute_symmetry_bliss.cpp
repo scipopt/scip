@@ -124,8 +124,13 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
       const int color = matrixdata->permvarcolors[v];
       assert( 0 <= color && color < matrixdata->nuniquevars );
 
+#ifndef NDEBUG
       int node = (int) G->add_vertex((unsigned) color);
       assert( node == v );
+#else
+      (void) G->add_vertex((unsigned) color);
+#endif
+
       ++nnodes;
    }
    assert( (int) G->get_nof_vertices() == matrixdata->npermvars );
@@ -136,8 +141,13 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
       const int color = matrixdata->rhscoefcolors[c];
       assert( 0 <= color && color < matrixdata->nuniquerhs );
 
+#ifndef NDEBUG
       int node = (int) G->add_vertex((unsigned) (matrixdata->nuniquevars + color));
       assert( node == matrixdata->npermvars + c );
+#else
+      (void) G->add_vertex((unsigned) (matrixdata->nuniquevars + color));
+#endif
+
       ++nnodes;
    }
    assert( (int) G->get_nof_vertices() == matrixdata->npermvars + matrixdata->nrhscoef );
@@ -172,7 +182,9 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
     * this node in the array internodes. In order to avoid reinitialization, we store the node number with increasing
     * numbers for each color. The smallest number for the current color is stored in firstcolornodenumber. */
    int oldcolor = -1;
+#ifndef NDEBUG
    SCIP_Real oldcoef = SCIP_INVALID;
+#endif
    int firstcolornodenumber = -1;
    for (int j = 0; j < matrixdata->nmatcoef; ++j)
    {
@@ -206,7 +218,9 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
             assert( ! SCIPisEQ(scip, oldcoef, matrixdata->matcoef[idx]) );
             oldcolor = color;
             firstcolornodenumber = nnodes;
+#ifndef NDEBUG
             oldcoef = matrixdata->matcoef[idx];
+#endif
          }
          else
             assert( SCIPisEQ(scip, oldcoef, matrixdata->matcoef[idx]) );
