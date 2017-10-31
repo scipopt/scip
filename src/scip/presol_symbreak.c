@@ -979,7 +979,7 @@ SCIP_RETCODE addSymresackConss(
    conssaddlp = presoldata->conssaddlp;
    ncomponents = presoldata->ncomponents;
 
-   assert( nperms <= 0 || (nperms > 0 && perms != NULL) );
+   assert( nperms <= 0 || perms != NULL );
    assert( permvars != NULL );
    assert( npermvars > 0 );
 
@@ -1321,8 +1321,10 @@ SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
          presoldata->enabled = FALSE;
          return SCIP_OKAY;
       }
-      else if ( presoldata->nperms > 0 )
+      else
       {
+         assert( presoldata->nperms > 0 );
+
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(presoldata->genconss), presoldata->nperms) );
 
          if ( presoldata->computeorbits )
