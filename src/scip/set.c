@@ -51,6 +51,7 @@
 #include "scip/reader.h"
 #include "scip/relax.h"
 #include "scip/sepa.h"
+#include "scip/table.h"
 #include "scip/prop.h"
 #include "nlpi/nlpi.h"
 #include "scip/struct_scip.h" /* for SCIPsetPrintDebugMessage() */
@@ -778,6 +779,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
+   SCIP_Bool             copytables,         /**< should the statistics tables be copied */
    SCIP_Bool             copynlpis,          /**< should the NLP interfaces be copied */
    SCIP_Bool*            allvalid            /**< pointer to store whether all plugins were validly copied */
    )
@@ -948,6 +950,15 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       }
    }
 
+   /* copy all table plugins */
+   if( copytables && sourceset->tables != NULL )
+   {
+      for( p = sourceset->ntables - 1; p >= 0; --p )
+      {
+         SCIP_CALL( SCIPtableCopyInclude(sourceset->tables[p], targetset) );
+      }
+   }
+
    /* copy all NLP interfaces */
    if( copynlpis && sourceset->nlpis != NULL )
    {
@@ -1081,6 +1092,10 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->disps = NULL;
    (*set)->ndisps = 0;
    (*set)->dispssize = 0;
+   (*set)->tables = NULL;
+   (*set)->ntables = 0;
+   (*set)->tablessize = 0;
+   (*set)->tablessorted = FALSE;
    (*set)->dialogs = NULL;
    (*set)->ndialogs = 0;
    (*set)->dialogssize = 0;
@@ -2588,6 +2603,13 @@ SCIP_RETCODE SCIPsetFree(
       SCIP_CALL( SCIPbranchruleFree(&(*set)->branchrules[i], *set) );
    }
    BMSfreeMemoryArrayNull(&(*set)->branchrules);
+
+   /* free statistics tables */
+   for( i = 0; i < (*set)->ntables; ++i )
+   {
+      SCIP_CALL( SCIPtableFree(&(*set)->tables[i], *set) );
+   }
+   BMSfreeMemoryArrayNull(&(*set)->tables);
 
    /* free display columns */
    for( i = 0; i < (*set)->ndisps; ++i )
@@ -4547,6 +4569,51 @@ SCIP_DISP* SCIPsetFindDisp(
    return NULL;
 }
 
+/** inserts statistics table in statistics table list */
+SCIP_RETCODE SCIPsetIncludeTable(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_TABLE*           table               /**< statistics table */
+   )
+{
+   assert(set != NULL);
+   assert(table != NULL);
+   assert(!SCIPtableIsInitialized(table));
+
+   if( set->ntables >= set->tablessize )
+   {
+      set->tablessize = SCIPsetCalcMemGrowSize(set, set->ntables+1);
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->tables, set->tablessize) );
+   }
+   assert(set->ntables < set->tablessize);
+
+   /* we insert in arbitrary order and sort once before printing statistics */
+   set->tables[set->ntables] = table;
+   set->ntables++;
+   set->tablessorted = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** returns the statistics table of the given name, or NULL if not existing */
+SCIP_TABLE* SCIPsetFindTable(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of statistics table */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+   assert(name != NULL);
+
+   for( i = 0; i < set->ntables; ++i )
+   {
+      if( strcmp(SCIPtableGetName(set->tables[i]), name) == 0 )
+         return set->tables[i];
+   }
+
+   return NULL;
+}
+
 /** inserts dialog in dialog list */
 SCIP_RETCODE SCIPsetIncludeDialog(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -4785,6 +4852,12 @@ SCIP_RETCODE SCIPsetInitPlugins(
    }
    SCIP_CALL( SCIPdispAutoActivate(set) );
 
+   /* statistics tables */
+   for( i = 0; i < set->ntables; ++i )
+   {
+      SCIP_CALL( SCIPtableInit(set->tables[i], set) );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -4876,6 +4949,12 @@ SCIP_RETCODE SCIPsetExitPlugins(
    for( i = 0; i < set->ndisps; ++i )
    {
       SCIP_CALL( SCIPdispExit(set->disps[i], set) );
+   }
+
+   /* statistics tables */
+   for( i = 0; i < set->ntables; ++i )
+   {
+      SCIP_CALL( SCIPtableExit(set->tables[i], set) );
    }
 
    return SCIP_OKAY;
@@ -5023,6 +5102,12 @@ SCIP_RETCODE SCIPsetInitsolPlugins(
       SCIP_CALL( SCIPdispInitsol(set->disps[i], set) );
    }
 
+   /* statistics tables */
+   for( i = 0; i < set->ntables; ++i )
+   {
+      SCIP_CALL( SCIPtableInitsol(set->tables[i], set) );
+   }
+
    /* reset feasibility tolerance for relaxations */
    set->sepa_primfeastol = SCIP_INVALID;
 
@@ -5106,6 +5191,12 @@ SCIP_RETCODE SCIPsetExitsolPlugins(
    for( i = 0; i < set->ndisps; ++i )
    {
       SCIP_CALL( SCIPdispExitsol(set->disps[i], set) );
+   }
+
+   /* statistics tables */
+   for( i = 0; i < set->ntables; ++i )
+   {
+      SCIP_CALL( SCIPtableExitsol(set->tables[i], set) );
    }
 
    return SCIP_OKAY;

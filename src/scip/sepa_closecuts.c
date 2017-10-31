@@ -305,8 +305,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpClosecuts)
                nlpiters = SCIPgetNRootLPIterations(scip);
             iterlimit = (int)(sepadata->maxlpiterfactor * nlpiters);
             iterlimit = MAX(iterlimit, SCIP_MIN_LPITERS);
-            if ( iterlimit <= 0 )
-               return SCIP_OKAY;
+            assert(iterlimit > 0);
          }
 
          SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Computing relative interior point (time limit: %g, iter limit: %d) ...\n", timelimit, iterlimit);

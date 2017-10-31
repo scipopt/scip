@@ -15873,12 +15873,10 @@ SCIP_RETCODE SCIPlpWriteMip(
       case 'b':
          SCIPmessageFPrintInfo(messagehdlr, file, "%s_lhs: ", rowname);
          break;
-      case 'B':
+      default:
+         assert(type == 'B');
          SCIPmessageFPrintInfo(messagehdlr, file, "%s_rhs: ", rowname);
          break;
-      default:
-         SCIPerrorMessage("Undefined row type!\n");
-         return SCIP_ERROR;
       }
 
       /* print coefficients and variables */
@@ -15965,12 +15963,10 @@ SCIP_RETCODE SCIPlpWriteMip(
          case 'b':
             SCIPmessageFPrintInfo(messagehdlr, file, "%s_lhs: ", rowname);
             break;
-         case 'B':
+         default:
+            assert(type == 'B');
             SCIPmessageFPrintInfo(messagehdlr, file, "%s_rhs: ", rowname);
             break;
-         default:
-            SCIPerrorMessage("Undefined row type!\n");
-            return SCIP_ERROR;
          }
 
          /* print coefficients and variables */
@@ -17400,41 +17396,45 @@ SCIP_RETCODE computeRelIntPoint(
       /* lower bound */
       if( !SCIPsetIsInfinity(set, abscollb) )
       {
+         int nnonzlb = nnonz;
+
          /* add artificial variable */
          if ( ! SCIPsetIsZero(set, col->lb) )
          {
-            colinds[nnonz] = lp->ncols;
-            colvals[nnonz] = -col->lb;
-            ++nnonz;
+            colinds[nnonzlb] = lp->ncols;
+            colvals[nnonzlb] = -col->lb;
+            ++nnonzlb;
          }
 
          /* add slack variable */
-         colvals[nnonz] = -MAX(1.0, abscollb);
-         colinds[nnonz] = lp->ncols + 1 + cnt;
-         ++nnonz;
+         colvals[nnonzlb] = -MAX(1.0, abscollb);
+         colinds[nnonzlb] = lp->ncols + 1 + cnt;
+         ++nnonzlb;
          ++cnt;
 
-         SCIP_CALL( SCIPlpiAddRows(lpi, 1, &zero, &plusinf, NULL, nnonz, &beg, colinds, colvals) );
+         SCIP_CALL( SCIPlpiAddRows(lpi, 1, &zero, &plusinf, NULL, nnonzlb, &beg, colinds, colvals) );
       }
 
       /* upper bound */
       if( !SCIPsetIsInfinity(set, abscolub) )
       {
+         int nnonzub = nnonz;
+
          /* add artificial variable */
          if ( ! SCIPsetIsZero(set, col->ub) )
          {
-            colinds[nnonz] = lp->ncols;
-            colvals[nnonz] = -col->ub;
-            ++nnonz;
+            colinds[nnonzub] = lp->ncols;
+            colvals[nnonzub] = -col->ub;
+            ++nnonzub;
          }
 
          /* add slack variable */
-         colvals[nnonz] = MAX(1.0, abscolub);
-         colinds[nnonz] = lp->ncols + 1 + cnt;
-         ++nnonz;
+         colvals[nnonzub] = MAX(1.0, abscolub);
+         colinds[nnonzub] = lp->ncols + 1 + cnt;
+         ++nnonzub;
          ++cnt;
 
-         SCIP_CALL( SCIPlpiAddRows(lpi, 1, &minusinf, &zero, NULL, nnonz, &beg, colinds, colvals) );
+         SCIP_CALL( SCIPlpiAddRows(lpi, 1, &minusinf, &zero, NULL, nnonzub, &beg, colinds, colvals) );
       }
    }
    assert( cnt == nslacks );

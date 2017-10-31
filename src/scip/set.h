@@ -47,6 +47,7 @@
 #include "scip/type_reader.h"
 #include "scip/type_relax.h"
 #include "scip/type_sepa.h"
+#include "scip/type_table.h"
 #include "scip/type_prop.h"
 #include "scip/struct_set.h"
 
@@ -81,6 +82,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
+   SCIP_Bool             copytables,         /**< should the statistics tables be copied */
    SCIP_Bool             copynlpis,          /**< should the NLP interfaces be copied */
    SCIP_Bool*            allvalid            /**< pointer to store whether all plugins  were validly copied */
    );
@@ -895,7 +897,21 @@ SCIP_RETCODE SCIPsetIncludeDisp(
 extern
 SCIP_DISP* SCIPsetFindDisp(
    SCIP_SET*             set,                /**< global SCIP settings */
-   const char*           name                /**< name of event handler */
+   const char*           name                /**< name of display */
+   );
+
+/** inserts statistics table in statistics table list */
+extern
+SCIP_RETCODE SCIPsetIncludeTable(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_TABLE*           table               /**< statistics table */
+   );
+
+/** returns the statistics table of the given name, or NULL if not existing */
+extern
+SCIP_TABLE* SCIPsetFindTable(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of statistics table */
    );
 
 /** inserts dialog in dialog list */

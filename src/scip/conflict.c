@@ -2494,11 +2494,42 @@ SCIP_RETCODE tightenSingleVar(
             SCIPvarGetName(var), (boundtype == SCIP_BOUNDTYPE_LOWER ? SCIPvarGetLbGlobal(var) : SCIPvarGetUbGlobal(var)),
             newbound);
 
-      SCIP_CALL( SCIPnodeAddBoundchg(tree->root, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, \
-            eventqueue, cliquetable, var, newbound, boundtype, FALSE) );
+      if( lp->strongbranching )
+      {
+         SCIP_CONS* cons;
+         SCIP_Real conslhs;
+         SCIP_Real consrhs;
+         char name[SCIP_MAXSTRLEN];
 
-      /* mark the node in the repropdepth to be propagated again */
-      SCIPnodePropagateAgain(tree->path[0], set, stat, tree);
+         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "pc_fix_%s", SCIPvarGetName(var));
+
+         if( boundtype == SCIP_BOUNDTYPE_UPPER )
+         {
+	    conslhs = -SCIPsetInfinity(set);
+            consrhs = newbound;
+         }
+	 else
+         {
+	    conslhs = newbound;
+            consrhs = SCIPsetInfinity(set);
+	 }
+
+         SCIP_CALL( SCIPcreateConsLinear(set->scip, &cons, name, 0, NULL, NULL, conslhs, consrhs,
+               FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+
+         SCIP_CALL( SCIPaddCoefLinear(set->scip, cons, var, 1.0) );
+
+         SCIP_CALL( SCIPprobAddCons(transprob, set, stat, cons) );
+         SCIP_CALL( SCIPconsRelease(&cons, blkmem, set) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPnodeAddBoundchg(tree->root, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, \
+               eventqueue, cliquetable, var, newbound, boundtype, FALSE) );
+
+         /* mark the node in the repropdepth to be propagated again */
+         SCIPnodePropagateAgain(tree->path[0], set, stat, tree);
+      }
    }
 
    ++conflict->nglbchgbds;
@@ -2726,8 +2757,12 @@ SCIP_RETCODE propagateLongProof(
             continue;
 
          SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp, branchcand, \
-            eventqueue, cliquetable, var, val, rhs-resminact, conflicttype) );
+               eventqueue, cliquetable, var, val, rhs-resminact, conflicttype) );
       }
+
+      /* the minimal activity should stay unchanged because we tightened the bound that doesn't contribute to the
+       * minimal activity
+       */
       assert(SCIPsetIsEQ(set, minact, getMinActivity(transprob, coefs, inds, nnz, NULL, NULL)));
    }
 
@@ -3127,7 +3162,7 @@ SCIP_RETCODE conflictAddConflictCons(
    /* try to derive global bound changes and shorten the conflictset by using implication and clique and variable bound
     * information
     */
-   if( conflictset->nbdchginfos > 1 && insertdepth == 0 )
+   if( conflictset->nbdchginfos > 1 && insertdepth == 0 && !lp->strongbranching )
    {
       int nbdchgs;
       int nredvars;

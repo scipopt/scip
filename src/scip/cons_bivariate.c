@@ -116,7 +116,6 @@ struct SCIP_ConshdlrData
    int                   maxproprounds;      /**< limit on number of propagation rounds for a single constraint within one round of SCIP propagation */
    int                   ninitlprefpoints;   /**< number of reference points in each direction where to compute linear support for envelope in LP initialization */
    SCIP_Bool             enfocutsremovable;  /**< are cuts added during enforcement removable from the LP in the same node? */
-   char                  scaling;            /**< scaling method of constraints in feasibility check */
 
    SCIP_EVENTHDLR*       linvareventhdlr;    /**< handler for linear variable bound change events */
    SCIP_EVENTHDLR*       nonlinvareventhdlr; /**< handler for nonlinear variable bound change events */
@@ -872,55 +871,6 @@ SCIP_RETCODE computeViolation(
 
    if( sol != NULL )
       SCIPupdateSolConsViolation(scip, sol, absviol, relviol);
-
-   switch( conshdlrdata->scaling )
-   {
-   case 'o' :
-      /* no scaling */
-      break;
-
-   case 'g' :
-      /* scale by sup-norm of gradient in current point */
-      if( consdata->lhsviol > 0.0 || consdata->rhsviol > 0.0 )
-      {
-         SCIP_Real grad[2];
-         SCIP_Real norm;
-         SCIP_Real val;
-
-         /* compute gradient of f in (x,y) */
-         SCIP_CALL( SCIPexprintGrad(conshdlrdata->exprinterpreter, consdata->f, xyvals, TRUE, &val, grad) );
-
-         if( SCIPisFinite(grad[0]) && SCIPisFinite(grad[1]) )
-         {
-            /* compute maximal absolute element of gradient, to use for scaling if > 1.0 */
-            norm = MAX(REALABS(grad[0]), REALABS(grad[1]));
-            if( consdata->z != NULL )
-               norm = MAX(norm, REALABS(consdata->zcoef));
-
-            if( norm > 1.0 )
-            {
-               consdata->lhsviol /= norm;
-               consdata->rhsviol /= norm;
-            }
-         }
-      }
-      break;
-
-   case 's' :
-      /* scale by left/right hand side of constraint */
-      if( consdata->lhsviol > 0.0 )
-         consdata->lhsviol /= MAX(1.0, REALABS(consdata->lhs));
-
-      if( consdata->rhsviol > 0.0 )
-         consdata->rhsviol /= MAX(1.0, REALABS(consdata->rhs));
-
-      break;
-
-   default :
-      SCIPerrorMessage("Unknown scaling method '%c'.", conshdlrdata->scaling);
-      SCIPABORT();
-      return SCIP_INVALIDDATA;  /*lint !e527*/
-   }
 
    return SCIP_OKAY;
 }
@@ -4657,7 +4607,6 @@ SCIP_RETCODE separatePoint(
    SCIP_SIDETYPE      violside;
    SCIP_Real          feasibility;
    SCIP_Real          efficacy;
-   SCIP_Real          norm;
    int                c;
    SCIP_ROW*          row;
 
@@ -4698,37 +4647,7 @@ SCIP_RETCODE separatePoint(
             feasibility = SCIPgetRowLPFeasibility(scip, row);
          else
             feasibility = SCIPgetRowSolFeasibility(scip, row, sol);
-
-         switch( conshdlrdata->scaling )
-         {
-         case 'o' :
-            efficacy = -feasibility;
-            break;
-
-         case 'g' :
-            /* in difference to SCIPgetCutEfficacy, we scale by norm only if the norm is > 1.0 this avoid finding cuts
-             * efficient which are only very slightly violated CPLEX does not seem to scale row coefficients up too
-             * also we use infinity norm, since that seem to be the usual scaling strategy in LP solvers (equilibrium
-             * scaling) */
-            norm = SCIPgetRowMaxCoef(scip, row);
-            efficacy = -feasibility / MAX(1.0, norm);
-            break;
-
-         case 's' :
-         {
-            SCIP_Real abslhs = REALABS(SCIProwGetLhs(row));
-            SCIP_Real absrhs = REALABS(SCIProwGetRhs(row));
-            SCIP_Real minval = MIN(abslhs, absrhs);
-
-            efficacy = -feasibility / MAX(1.0, minval);
-            break;
-         }
-
-         default:
-            SCIPerrorMessage("Unknown scaling method '%c'.", conshdlrdata->scaling);
-            SCIPABORT();
-            return SCIP_INVALIDDATA;  /*lint !e527*/
-         }
+         efficacy = -feasibility;
 
          SCIPdebug( printEstimator(scip, sol, conss[c], violside, row) );
 
@@ -7981,10 +7900,6 @@ SCIP_RETCODE SCIPincludeConshdlrBivariate(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/enfocutsremovable",
          "are cuts added during enforcement removable from the LP in the same node?",
          &conshdlrdata->enfocutsremovable, TRUE, FALSE, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/scaling",
-         "whether scaling of infeasibility is 'o'ff, by sup-norm of function 'g'radient, or by left/right hand 's'ide",
-         &conshdlrdata->scaling, TRUE, 'o', "ogs", NULL, NULL) );
 
    conshdlrdata->linvareventhdlr = NULL;
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->linvareventhdlr), CONSHDLR_NAME"_boundchange", "signals a bound tightening in a linear variable to a bivariate constraint",
