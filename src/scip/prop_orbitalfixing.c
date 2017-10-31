@@ -55,8 +55,6 @@ struct SCIP_PropData
    SCIP_PRESOL*          symmetrypresol;     /**< pointer to symmetry presolver */
 };
 
-/* define Bool type for less space */
-typedef uint8_t SCIP_Shortbool;
 
 
 

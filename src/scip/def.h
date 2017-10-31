@@ -58,11 +58,15 @@
  */
 
 #ifndef SCIP_Bool
-#define SCIP_Bool unsigned int                    /**< type used for boolean values */
+#define SCIP_Bool unsigned int               /**< type used for Boolean values */
 #ifndef TRUE
-#define TRUE  1                         /**< boolean value TRUE */
-#define FALSE 0                         /**< boolean value FALSE */
+#define TRUE  1                              /**< Boolean value TRUE */
+#define FALSE 0                              /**< Boolean value FALSE */
 #endif
+#endif
+
+#ifndef SCIP_Shortbool
+#define SCIP_Shortbool uint8_t               /**< type used for Boolean values with less space */
 #endif
 
 /*

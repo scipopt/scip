@@ -64,10 +64,6 @@
  * Data structures
  */
 
-/* define Bool type for less space */
-typedef uint8_t SCIP_Shortbool;
-
-
 /** presolver data */
 struct SCIP_PresolData
 {

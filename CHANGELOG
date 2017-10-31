@@ -74,6 +74,8 @@ fixed bugs:
 
 misc:
 - dropped support for MOSEK < 7.0.0.0
+- new type SCIP_Shortbool (equal to uint8_t) for storing Boolean values in a more compact manner
+
 
 SCIP version 4.0.1
 ==================
