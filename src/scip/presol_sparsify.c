@@ -389,7 +389,15 @@ SCIP_RETCODE cancelRow(
                bestcand = eqrowvarpair->rowindex;
                bestscale = scale;
                bestdeccond = deccond;
+
+               /* stop looking if the current candidate does not create any fill-in */
+               if( ntotfillin == 0 )
+                  break;
             }
+
+            /* we accept the best candidate immediately if it does not create any fill-in */
+            if( bestcand != -1 && bestnfillin == 0 )
+               break;
          }
       }
 
@@ -629,8 +637,8 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
          presoldata->nwaitingcalls);
       return SCIP_OKAY;
    }
-   SCIPdebugMsg(scip, "starting sparsify. . .\n");
 
+   SCIPdebugMsg(scip, "starting sparsify. . .\n");
    *result = SCIP_DIDNOTFIND;
 
    matrix = NULL;
