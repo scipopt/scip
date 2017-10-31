@@ -25,11 +25,11 @@
 
 #include "scip/scip.h"
 
-#include "symmetry/struct_symmetry.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#include "symmetry/struct_symmetry.h"
 
 /** return whether symmetry can be computed */
 EXTERN

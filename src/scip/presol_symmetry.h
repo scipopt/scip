@@ -27,6 +27,10 @@
 
 #include <scip/scip.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <symmetry/type_symmetry.h>
 
 /** include symmetry presolver */
@@ -66,5 +70,9 @@ EXTERN
 SCIP_Bool SYMcomputeSymmetryPresolved(
    SCIP_PRESOL*          presol              /**< symmetry presolver */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

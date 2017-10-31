@@ -27,6 +27,10 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** creates the symmetry breaking presolver and includes it in SCIP */
 EXTERN
 SCIP_RETCODE SCIPincludePresolSymbreak(
