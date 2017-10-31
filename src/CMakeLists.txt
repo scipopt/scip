@@ -53,6 +53,7 @@ set(scipsources
     scip/cons_logicor.c
     scip/cons_nonlinear.c
     scip/cons_or.c
+    scip/cons_orbisack.c
     scip/cons_orbitope.c
     scip/cons_pseudoboolean.c
     scip/cons_quadratic.c
@@ -61,6 +62,7 @@ set(scipsources
     scip/cons_sos1.c
     scip/cons_sos2.c
     scip/cons_superindicator.c
+    scip/cons_symresack.c
     scip/cons_varbound.c
     scip/cons_xor.c
     scip/dialog_default.c
@@ -141,6 +143,8 @@ set(scipsources
     scip/presol_inttobinary.c
     scip/presol_qpkktref.c
     scip/presol_redvub.c
+    scip/presol_symbreak.c
+    scip/presol_symmetry.c
     scip/presol_trivial.c
     scip/presol_tworowbnd.c
     scip/presol_stuffing.c
@@ -148,6 +152,7 @@ set(scipsources
     scip/prop_genvbounds.c
     scip/prop_nlobbt.c
     scip/prop_obbt.c
+    scip/prop_orbitalfixing.c
     scip/prop_probing.c
     scip/prop_pseudoobj.c
     scip/prop_redcost.c
@@ -291,6 +296,10 @@ set(lpisources
    ${lpi}
    )
 
+set(symsources
+   ${sym}
+   )
+
 set(blockmemshellheader
     blockmemshell/memory.h
 )
@@ -392,6 +401,7 @@ set(scipheaders
     scip/cons_linking.h
     scip/cons_logicor.h
     scip/cons_nonlinear.h
+    scip/cons_orbisack.h
     scip/cons_orbitope.h
     scip/cons_or.h
     scip/cons_pseudoboolean.h
@@ -401,6 +411,7 @@ set(scipheaders
     scip/cons_sos1.h
     scip/cons_sos2.h
     scip/cons_superindicator.h
+    scip/cons_symretope.h
     scip/cons_varbound.h
     scip/cons_xor.h
     scip/cutpool.h
@@ -503,6 +514,8 @@ set(scipheaders
     scip/presol_qpkktref.h
     scip/presol_redvub.h
     scip/presol_stuffing.h
+    scip/presol_symbreak.h
+    scip/presol_symmetry.h
     scip/presol_trivial.h
     scip/presol_tworowbnd.h
     scip/presolve.h
@@ -711,6 +724,11 @@ set(scipheaders
     scip/visual.h
 )
 
+set(symheaders
+  symmetry/compute_symmetry.h
+  symmetry/type_symmetry.h
+)
+
 set(tcliqueheaders
     tclique/tclique_coloring.h
     tclique/tclique_def.h
@@ -740,7 +758,7 @@ set(xmlheaders
 
 # all source files should be compiled with a c++ compiler
 if(CXXONLY)
-    set_source_files_properties(${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${tpisources} PROPERTIES LANGUAGE CXX)
+    set_source_files_properties(${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${tpisources} ${symsources} PROPERTIES LANGUAGE CXX)
 endif()
 
 add_library(libobjscip EXCLUDE_FROM_ALL ${objscipsources})
@@ -763,7 +781,7 @@ add_library(liblpi EXCLUDE_FROM_ALL
     scip/message.c)
 setLibProperties(liblpi "lpi")
 
-add_library(libscip ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${tpisources})
+add_library(libscip ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${tpisources} ${symsources})
 setLibProperties(libscip "scip")
 
 target_link_libraries(libscip PRIVATE
@@ -771,13 +789,14 @@ target_link_libraries(libscip PRIVATE
     ${Readline_LIBRARY}
     ${GMP_LIBRARIES}
     ${THREAD_LIBRARIES}
-    ${NLPI_LIBRARIES})
+    ${NLPI_LIBRARIES}
+    ${SYM_LIBRARIES})
 
 if(SHARED)
-    target_link_libraries(libscip PRIVATE ${ZIMPL_PIC_LIBRARIES} ${LPS_PIC_LIBRARIES})
-    add_executable(scip main.c ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${tpisources})
+    target_link_libraries(libscip PRIVATE ${ZIMPL_PIC_LIBRARIES} ${LPS_PIC_LIBRARIES} ${SYM_PIC_LIBRARIES})
+    add_executable(scip main.c ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${tpisources} ${symsources})
 else()
-    target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES})
+    target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES})
     add_executable(scip main.c)
     target_link_libraries(scip libscip)
 endif()
@@ -785,7 +804,7 @@ endif()
 target_compile_definitions(scip PRIVATE EXTERN=extern)
 
 target_link_libraries(scip ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES}
-   ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${THREAD_LIBRARIES} ${NLPI_LIBRARIES})
+   ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES} ${THREAD_LIBRARIES} ${NLPI_LIBRARIES})
 
 add_dependencies(libscip scip_update_githash scip_update_buildflags)
 add_dependencies(scip scip_update_githash scip_update_buildflags)
@@ -807,6 +826,7 @@ install(FILES ${tcliqueheaders} DESTINATION include/tclique)
 install(FILES ${tinycthreadheader} DESTINATION include/tinycthread)
 install(FILES ${tpiheaders} DESTINATION include/tpi)
 install(FILES ${xmlheaders} DESTINATION include/xml)
+install(FILES ${symheaders} DESTINATION include/symmetry)
 install(FILES ${blockmemshellheader} DESTINATION include/blockmemshell)
 
 # install the binary and the library to appropriate lcoations and add them to an export group

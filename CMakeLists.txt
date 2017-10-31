@@ -63,6 +63,9 @@ set_property(CACHE EXPRINT PROPERTY STRINGS none cppad )  #define list of values
 set(LPS spx CACHE STRING "options for LP solver")  #create the variable
 set_property(CACHE LPS PROPERTY STRINGS spx cpx grb xprs clp glop msk none )  #define list of values GUI will offer for the variable
 
+set(SYM none CACHE STRING "options for symmetry computation")  #create the variable
+set_property(CACHE SYM PROPERTY STRINGS bliss none )  #define list of values GUI will offer for the variable
+
 #set options for memory management
 if( NOBLKBUFMEM )
    set(NOBLKMEM ON FORCE)
@@ -309,6 +312,23 @@ if(MOSEK_FOUND)
     set(LPS_LIBRARIES ${MOSEK_LIBRARIES})
     set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
 endif()
+
+#search the selected symmetry computation program
+if(SYM STREQUAL "bliss")
+    find_package(BLISS REQUIRED)
+elseif(SYM STREQUAL "none")
+    set(sym symmetry/compute_symmetry_none.cpp)
+else()
+    message(FATAL_ERROR "option SYM has wrong value")
+endif()
+
+if(BLISS_FOUND)
+    include_directories(${BLISS_INCLUDE_DIRS})
+    set(sym symmetry/compute_symmetry_bliss.cpp)
+    set(SYM_LIBRARIES ${SYM_LIBRARIES})
+    set(SYM_PIC_LIBRARIES ${SYM_LIBRARIES})
+endif()
+
 
 #
 # enable coverage support
