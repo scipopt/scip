@@ -50,17 +50,17 @@ struct SYM_Matrixdata
    int*                  matvaridx;          /**< indices of variables for matrix entries */
    int*                  matidx;             /**< indices in mat(rhs/var)idx array corresponding to matrix coefficients */
    int*                  rhsidx;             /**< indices in rhstype array corresponding to rhs coefficients */
+   int*                  permvarcolors;      /**< array for storing the colors of the individual variables */
+   int*                  matcoefcolors;      /**< array for storing the colors of all matrix coefficients */
+   int*                  rhscoefcolors;      /**< array for storing the colors of all rhs coefficients */
+   SCIP_VAR**            permvars;           /**< variables on which permutations act */
+   int                   npermvars;          /**< number of variables for permutations */
    int                   nmatcoef;           /**< number of coefficients in matrix */
    int                   nrhscoef;           /**< number of coefficients in rhs */
    int                   nmaxmatcoef;        /**< maximal number of matrix coefficients (will be increase on demand) */
    int                   nuniquevars;        /**< number of unique variable types */
    int                   nuniquerhs;         /**< number of unique rhs types */
    int                   nuniquemat;         /**< number of unique matrix coefficients */
-   int                   npermvars;          /**< number of variables for permutations */
-   SCIP_VAR**            permvars;           /**< variables on which permutations act */
-   int*                  permvarcolors;      /**< array for storing the colors of the individual variables */
-   int*                  matcoefcolors;      /**< array for storing the colors of all matrix coefficients */
-   int*                  rhscoefcolors;      /**< array for storing the colors of all rhs coefficients */
 };
 
 #ifdef __cplusplus
