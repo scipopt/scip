@@ -617,6 +617,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
    SCIP_PRESOLDATA* presoldata;
    SCIP_Longint maxuseless;
    SCIP_Longint nuseless;
+   SCIP_CONSHDLR* linearhdlr;
 
    assert(result != NULL);
 
@@ -635,6 +636,13 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       presoldata->nwaitingcalls--;
       SCIPdebugMsg(scip, "skipping sparsify: nfailures=%d, nwaitingcalls=%d\n", presoldata->nfailures,
          presoldata->nwaitingcalls);
+      return SCIP_OKAY;
+   }
+
+   linearhdlr = SCIPfindConshdlr(scip, "linear");
+   if( linearhdlr != NULL && SCIPconshdlrGetNActiveConss(linearhdlr) >= SCIPgetNActiveConss(scip) )
+   {
+      SCIPdebugMsg(scip, "skipping sparsify: only linear constraints found\n");
       return SCIP_OKAY;
    }
 
@@ -792,8 +800,13 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       {
          int rowidx;
 
+         /* we only cancel from specialized constraints */
          rowidx = rowidxsorted != NULL ? rowidxsorted[r] : r;
-         SCIP_CALL( cancelRow(scip, matrix, pairtable, rowidx, \
+         assert(SCIPmatrixGetCons(matrix, rowidx) != NULL);
+         if( SCIPconsGetHdlr(SCIPmatrixGetCons(matrix, rowidx)) == linearhdlr )
+            continue;
+
+         SCIP_CALL( cancelRow(scip, matrix, pairtable, rowidx,          \
                presoldata->maxcontfillin, presoldata->maxintfillin, presoldata->maxbinfillin, \
                presoldata->maxconsiderednonzeros, \
                &nuseless, nchgcoefs, &numcancel, &nfillin) );
