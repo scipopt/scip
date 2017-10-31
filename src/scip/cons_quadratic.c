@@ -13370,11 +13370,11 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/maxdisaggrsize",
          "maximum number of created constraints when disaggregating a quadratic constraint (<= 1: off)",
-         &conshdlrdata->maxdisaggrsize, TRUE, 10, 1, INT_MAX, NULL, NULL) );
+         &conshdlrdata->maxdisaggrsize, TRUE, 100, 1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/disaggrmergemethod",
          "strategy how to merge independent blocks to reach maxdisaggrsize limit (keep 'b'iggest blocks and merge others; keep 's'mallest blocks and merge other; merge small blocks into bigger blocks to reach 'm'ean sizes)",
-         &conshdlrdata->disaggrmergemethod, TRUE, 's', "bms", NULL, NULL) );
+         &conshdlrdata->disaggrmergemethod, TRUE, 'm', "bms", NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/maxproprounds",
          "limit on number of propagation rounds for a single constraint within one round of SCIP propagation during solve",
