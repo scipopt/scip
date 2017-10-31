@@ -175,16 +175,15 @@ SCIP_DECL_SORTINDCOMP(SYMsortRhsTypes)
       return -1;
    else if ( data->senses[ind1] > data->senses[ind2] )
       return 1;
-   else
-   {
-      /* senses are equal, use values */
-      diffvals = data->vals[ind1] - data->vals[ind2];
 
-      if ( diffvals < 0.0 )
-         return -1;
-      else if ( diffvals > 0.0 )
-         return 1;
-   }
+   /* senses are equal, use values */
+   diffvals = data->vals[ind1] - data->vals[ind2];
+
+   if ( diffvals < 0.0 )
+      return -1;
+   else if ( diffvals > 0.0 )
+      return 1;
+
    return 0;
 }
 
