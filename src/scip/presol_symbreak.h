@@ -28,18 +28,18 @@
 #include "scip/scip.h"
 
 /** creates the symmetry breaking presolver and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludePresolSymbreak(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** compute non-trivial orbits of symmetry group
  *
- *  The orbits of the group action are stored in the array orbits of length npermvars. This array contains
- *  the indices of variables from the permvars array such that variables that are contained in the same
- *  orbit appear consecutively in the orbits array. To detect when a new orbit starts, we use the array
- *  orbitbegins:
- *    The variables of the i-th orbit have indices orbits[orbitbegins[i]], ... , orbits[orbitbegins[i + 1] - 1]
+ *  The non-tivial orbits of the group action are stored in the array orbits of length npermvars. This array contains
+ *  the indices of variables from the permvars array such that variables that are contained in the same orbit appear
+ *  consecutively in the orbits array. The variables of the i-th orbit have indices
+ *  orbits[orbitbegins[i]], ... , orbits[orbitbegins[i + 1] - 1].
+ *  Note that the description of the orbits ends at orbitbegins[norbits] - 1.
  */
 EXTERN
 SCIP_RETCODE computeGroupOrbits(
@@ -51,8 +51,7 @@ SCIP_RETCODE computeGroupOrbits(
    SCIP_Bool*            activeperms,        /**< array for marking active permutations (or NULL) */
    int*                  orbits,             /**< array of non-trivial orbits */
    int*                  orbitbegins,        /**< array containing begin positions of new orbits in orbits array */
-   int*                  norbits,            /**< pointer to number of orbits currently stored in orbits */
-   int*                  nvarsinorbits       /**< pointer to number of variables contained in non-trivial orbits */
+   int*                  norbits             /**< pointer to number of orbits currently stored in orbits */
    );
 
 #ifdef __cplusplus

@@ -86,7 +86,6 @@ struct SCIP_PresolData
    SCIP_Bool             detectorbitopes;    /**< Should we check whether the components of the symmetry group can be handled by orbitopes? */
    int                   norbitopes;         /**< number of orbitope constraints */
    int                   norbits;            /**< number of non-trivial orbits of permutation group */
-   int                   nvarsinorbits;      /**< number of variables that are contained in non-trivial orbits */
    SCIP_Bool             computeorbits;      /**< whether the orbits of the symmetry group should be computed */
    int*                  orbits;             /**< array containing the indices of variables sorted by orbits */
    int*                  orbitbegins;        /**< array containing in i-th position the first position of orbit i in orbits array */
@@ -104,11 +103,11 @@ struct SCIP_PresolData
 
 /** compute non-trivial orbits of symmetry group
  *
- *  The orbits of the group action are stored in the array orbits of length npermvars. This array contains
- *  the indices of variables from the permvars array such that variables that are contained in the same
- *  orbit appear consecutively in the orbits array. To detect when a new orbit starts, we use the array
- *  orbitbegins:
- *    The variables of the i-th orbit have indices orbits[orbitbegins[i]], ... , orbits[orbitbegins[i + 1] - 1]
+ *  The non-tivial orbits of the group action are stored in the array orbits of length npermvars. This array contains
+ *  the indices of variables from the permvars array such that variables that are contained in the same orbit appear
+ *  consecutively in the orbits array. The variables of the i-th orbit have indices
+ *  orbits[orbitbegins[i]], ... , orbits[orbitbegins[i + 1] - 1].
+ *  Note that the description of the orbits ends at orbitbegins[norbits] - 1.
  */
 SCIP_RETCODE computeGroupOrbits(
    SCIP*                 scip,               /**< SCIP instance */
@@ -119,8 +118,7 @@ SCIP_RETCODE computeGroupOrbits(
    SCIP_Bool*            activeperms,        /**< array for marking active permutations (or NULL) */
    int*                  orbits,             /**< array of non-trivial orbits */
    int*                  orbitbegins,        /**< array containing begin positions of new orbits in orbits array */
-   int*                  norbits,            /**< pointer to number of orbits currently stored in orbits */
-   int*                  nvarsinorbits       /**< pointer to number of variables contained in non-trivial orbits */
+   int*                  norbits             /**< pointer to number of orbits currently stored in orbits */
    )
 {
    int* curorbit;
@@ -136,7 +134,6 @@ SCIP_RETCODE computeGroupOrbits(
    assert( npermvars > 0 );
    assert( orbits != NULL );
    assert( norbits != NULL );
-   assert( nvarsinorbits != NULL );
 
    /* init data structures*/
    SCIP_CALL( SCIPallocBufferArray(scip, &curorbit, npermvars) );
@@ -148,7 +145,6 @@ SCIP_RETCODE computeGroupOrbits(
 
    /* find variable orbits */
    *norbits = 0;
-   *nvarsinorbits = 0;
    for (i = 0; i < npermvars; ++i)
    {
       /* if variable is not contained in an orbit of a previous variable */
@@ -191,21 +187,23 @@ SCIP_RETCODE computeGroupOrbits(
             for (j = 0; j < curorbitsize; ++j)
                orbits[beginneworbit++] = curorbit[j];
 
-            *nvarsinorbits += curorbitsize;
             ++(*norbits);
          }
       }
    }
 
-#if 0
+   /* store end in "last" orbitbegins entry */
+   assert( *norbits < npermvars );
+   orbitbegins[*norbits] = beginneworbit;
+
+#ifdef SCIP_OUTPUT
    printf("Orbits (total number: %d):\n", *norbits);
    for (i = 0; i < *norbits; ++i)
    {
       int j;
-      int end = i < *norbits - 1 ? orbitbegins[i + 1] : *nvarsinorbits;
 
       printf("%d: ", i);
-      for (j = orbitbegins[i]; j < end; ++j)
+      for (j = orbitbegins[i]; j < orbitbegins[i+1]; ++j)
          printf("%d ", orbits[j]);
       printf("\n");
    }
@@ -368,7 +366,7 @@ SCIP_RETCODE computeComponents(
    for (i = 0; i < ncomponents; ++i)
       presoldata->componentblocked[i] = FALSE;
 
-#if 0
+#ifdef SCIP_OUTPUT
    printf("\n\n\nTESTS\n\n");
    printf("Number of components:\t\t%d\n", presoldata->ncomponents);
    for (i = 0; i < presoldata->ncomponents; ++i)
@@ -1067,8 +1065,9 @@ SCIP_RETCODE addSymmetryBreakingConstraints(
       if ( ! addsymresacks )
       {
          /* get statistics whether we should use symmetry handling inequalities */
-         SCIP_Real ratiogroupsizengens = presoldata->log10groupsize / (SCIP_Real) presoldata->nperms;
+         SCIP_Real ratiogroupsizengens;
          SCIP_Bool decision = FALSE;
+         int nvarsinorbits;
 
          /* if not already computed */
          if ( presoldata->norbits == -1 )
@@ -1077,11 +1076,15 @@ SCIP_RETCODE addSymmetryBreakingConstraints(
             SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->orbitbegins, presoldata->npermvars) );
 
             SCIP_CALL( computeGroupOrbits(scip, presoldata->permvars, presoldata->npermvars, presoldata->perms, presoldata->nperms, NULL,
-                  presoldata->orbits, presoldata->orbitbegins, &presoldata->norbits, &presoldata->nvarsinorbits) );
+                  presoldata->orbits, presoldata->orbitbegins, &presoldata->norbits) );
          }
 
-         if ( presoldata->nvarsinorbits >= 0.95 * presoldata->npermvars ||
-            (presoldata->nvarsinorbits >= 0.05 * presoldata->npermvars && ratiogroupsizengens <= 0.55) )
+         ratiogroupsizengens = presoldata->log10groupsize / (SCIP_Real) presoldata->nperms;
+         nvarsinorbits = presoldata->orbitbegins[presoldata->norbits];
+         assert( 0 <= nvarsinorbits && nvarsinorbits <= presoldata->npermvars );
+
+         if ( nvarsinorbits >= 0.95 * presoldata->npermvars ||
+            ( nvarsinorbits >= 0.05 * presoldata->npermvars && ratiogroupsizengens <= 0.55) )
             decision = TRUE;
 
          if ( decision )
@@ -1194,7 +1197,6 @@ SCIP_DECL_PRESOLEXIT(presolExitSymbreak)
 
    presoldata->orbitbegins = NULL;
    presoldata->orbits = NULL;
-   presoldata->nvarsinorbits = 0;
    presoldata->norbits = -1;
 
    /* free components */
@@ -1329,7 +1331,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
             SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->orbitbegins, presoldata->npermvars) );
 
             SCIP_CALL( computeGroupOrbits(scip, presoldata->permvars, presoldata->npermvars, presoldata->perms, presoldata->nperms, NULL,
-                  presoldata->orbits, presoldata->orbitbegins, &presoldata->norbits, &presoldata->nvarsinorbits) );
+                  presoldata->orbits, presoldata->orbitbegins, &presoldata->norbits) );
          }
 
          if ( presoldata->detectorbitopes )
@@ -1416,7 +1418,6 @@ SCIP_RETCODE SCIPincludePresolSymbreak(
    presoldata->nperms = -1;
    presoldata->log10groupsize = -1.0;
    presoldata->norbits = -1;
-   presoldata->nvarsinorbits = 0;
    presoldata->orbits = NULL;
    presoldata->orbitbegins = NULL;
    presoldata->ncomponents = -1;
