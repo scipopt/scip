@@ -55,6 +55,8 @@ struct SCIP_PropData
    SCIP_PRESOL*          symmetrypresol;     /**< pointer to symmetry presolver */
 };
 
+/* define Bool type for less space */
+typedef uint8_t SCIP_Shortbool;
 
 
 
@@ -211,7 +213,7 @@ SCIP_RETCODE computeBranchingVariables(
    SCIP*                 scip,               /**< SCIP pointer */
    int                   nvars,              /**< number of variables */
    SCIP_HASHMAP*         varmap,             /**< map of variables to indices in vars array */
-   SCIP_Bool*            b1                  /**< bitset marking the variables branched to 1 */
+   SCIP_Shortbool*       b1                  /**< bitset marking the variables branched to 1 */
    )
 {
    SCIP_NODE* node;
@@ -335,9 +337,9 @@ SCIP_RETCODE propagate(
    int*                  ngen                /**< pointer to store the number of propagations */
    )
 {
+   SCIP_Shortbool* activeperms;
+   SCIP_Shortbool* b1;
    SCIP_VAR** permvars;
-   SCIP_Bool* activeperms;
-   SCIP_Bool* b1;
    int* orbitbegins;
    int* orbits;
    int norbits;

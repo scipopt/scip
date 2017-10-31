@@ -64,6 +64,10 @@
  * Data structures
  */
 
+/* define Bool type for less space */
+typedef uint8_t SCIP_Shortbool;
+
+
 /** presolver data */
 struct SCIP_PresolData
 {
@@ -92,7 +96,7 @@ struct SCIP_PresolData
    int                   ncomponents;        /**< number of components of symmetry group */
    int*                  npermsincomponent;  /**< array containing number of permutations per component */
    int**                 components;         /**< array containing for each components the corresponding permutations */
-   SCIP_Bool*            componentblocked;   /**< array to store whether a component is blocked to be considered by symmetry handling techniques */
+   SCIP_Shortbool*       componentblocked;   /**< array to store whether a component is blocked to be considered by symmetry handling techniques */
 };
 
 
@@ -115,14 +119,14 @@ SCIP_RETCODE computeGroupOrbits(
    int                   npermvars,          /**< length of a permutation array */
    int**                 perms,              /**< matrix containing in each row a permutation of the symmetry group */
    int                   nperms,             /**< number of permutations encoded in perms */
-   SCIP_Bool*            activeperms,        /**< array for marking active permutations (or NULL) */
+   SCIP_Shortbool*       activeperms,        /**< array for marking active permutations (or NULL) */
    int*                  orbits,             /**< array of non-trivial orbits */
    int*                  orbitbegins,        /**< array containing begin positions of new orbits in orbits array */
    int*                  norbits             /**< pointer to number of orbits currently stored in orbits */
    )
 {
+   SCIP_Shortbool* varadded;
    int* curorbit;
-   SCIP_Bool* varadded;
    int i;
    int curorbitsize;
    int beginneworbit = 0;
