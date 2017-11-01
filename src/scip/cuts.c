@@ -581,11 +581,11 @@ SCIP_Bool cutTightenCoefsQuad(
    {
       SCIP_Real scale = 1.0 / maxabsval;
 
+      /* compute scale to make the smallest coefficient of integer variables 1.0 */
       if( !SCIPisFeasZero(scip, maxabsintval) )
       {
          scale = 1.0 / maxabsintval;
 
-#if 1
          for( i = 0; i < *cutnnz; ++i )
          {
             SCIP_Real QUAD(val);
@@ -606,7 +606,6 @@ SCIP_Bool cutTightenCoefsQuad(
                scale = MAX(scale, QUAD_ROUND(val));
             }
          }
-#endif
       }
 
       /* perform the scaling */
@@ -820,11 +819,11 @@ SCIP_Bool cutTightenCoefs(
    {
       SCIP_Real scale = 1.0 / maxabsval;
 
+      /* compute scale to make the smallest coefficient of integer variables 1.0 */
       if( !SCIPisFeasZero(scip, maxabsintval) )
       {
          scale = 1.0 / maxabsintval;
 
-#if 1
          for( i = 0; i < *cutnnz; ++i )
          {
             SCIP_Real absval;
@@ -840,14 +839,13 @@ SCIP_Bool cutTightenCoefs(
                scale = MAX(scale, absval);
             }
          }
-#endif
       }
 
       /* perform the scaling */
       SCIPquadprecProdQD(maxacttmp, maxacttmp, scale);
       maxact = QUAD_ROUND(maxacttmp);
 
-        maxabsintval *= scale;
+      maxabsintval *= scale;
 
       SCIPquadprecProdQD(*cutrhs, *cutrhs, scale);
 
