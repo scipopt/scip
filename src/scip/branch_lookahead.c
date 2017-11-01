@@ -950,7 +950,7 @@ SCIP_RETCODE warmStartInfoCreate(
    assert(scip != NULL);
    assert(warmstartinfo != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, warmstartinfo) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, warmstartinfo) );
 
    (*warmstartinfo)->lpistate = NULL;
    (*warmstartinfo)->lpinorms = NULL;
@@ -998,7 +998,7 @@ SCIP_RETCODE warmStartInfoFree(
       (*warmstartinfo)->lpinorms = NULL;
    }
 
-   SCIPfreeMemory(scip, warmstartinfo);
+   SCIPfreeBlockMemory(scip, warmstartinfo);
 
    return SCIP_OKAY;
 }
@@ -1024,7 +1024,7 @@ SCIP_RETCODE candidateCreate(
    assert(scip != NULL);
    assert(candidate != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, candidate) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, candidate) );
 
    if( storelpi )
    {
@@ -1062,7 +1062,7 @@ SCIP_RETCODE candidateFree(
       SCIP_CALL( warmStartInfoFree(scip, &(*candidate)->downwarmstartinfo) );
    }
 
-   SCIPfreeMemory(scip, candidate);
+   SCIPfreeBlockMemory(scip, candidate);
    return SCIP_OKAY;
 }
 
