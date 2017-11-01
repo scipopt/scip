@@ -111,9 +111,9 @@ SCIP_RETCODE computeCutsCos(
       *secant = NULL;
 
       if( underestimate )
-         success = computeSecantSin(scip, &lincoef, &linconst, childlb, childub);
+         success = SCIPcomputeSecantSin(scip, &lincoef, &linconst, childlb, childub);
       else
-         success = computeSecantSin(scip, &lincoef, &linconst, -childub, -childlb);
+         success = SCIPcomputeSecantSin(scip, &lincoef, &linconst, -childub, -childlb);
 
       if( success )
       {
@@ -139,9 +139,9 @@ SCIP_RETCODE computeCutsCos(
       *ltangent = NULL;
 
       if( underestimate )
-         success = computeLeftTangentSin(scip, &lincoef, &linconst, childlb);
+         success = SCIPcomputeLeftTangentSin(scip, &lincoef, &linconst, childlb);
       else
-         success = computeRightTangentSin(scip, &lincoef, &linconst, -childlb);
+         success = SCIPcomputeRightTangentSin(scip, &lincoef, &linconst, -childlb);
 
       if( success )
       {
@@ -167,9 +167,9 @@ SCIP_RETCODE computeCutsCos(
       *rtangent = NULL;
 
       if( underestimate )
-         success = computeRightTangentSin(scip, &lincoef, &linconst, childub);
+         success = SCIPcomputeRightTangentSin(scip, &lincoef, &linconst, childub);
       else
-         success = computeLeftTangentSin(scip, &lincoef, &linconst, -childub);
+         success = SCIPcomputeLeftTangentSin(scip, &lincoef, &linconst, -childub);
 
       if( success )
       {
@@ -198,9 +198,9 @@ SCIP_RETCODE computeCutsCos(
       refpoint = SCIPgetSolVal(scip, sol, childvar);
 
       if( underestimate )
-         success = computeSolTangentSin(scip, &lincoef, &linconst, childlb, childub, refpoint);
+         success = SCIPcomputeSolTangentSin(scip, &lincoef, &linconst, childlb, childub, refpoint);
       else
-         success = computeSolTangentSin(scip, &lincoef, &linconst, -childub, -childlb, -refpoint);
+         success = SCIPcomputeSolTangentSin(scip, &lincoef, &linconst, -childub, -childlb, -refpoint);
 
       if( success )
       {
@@ -233,9 +233,9 @@ SCIP_RETCODE computeCutsCos(
       *lmidtangent = NULL;
 
       if( underestimate )
-         success = computeLeftMidTangentSin(scip, &lincoef, &linconst, &issecant, childlb, childub);
+         success = SCIPcomputeLeftMidTangentSin(scip, &lincoef, &linconst, &issecant, childlb, childub);
       else
-         success = computeRightMidTangentSin(scip, &lincoef, &linconst, &issecant, -childub, -childlb);
+         success = SCIPcomputeRightMidTangentSin(scip, &lincoef, &linconst, &issecant, -childub, -childlb);
 
       /* if the cut connects bounds it is stored in secant */
       cutbuffer = (issecant && secant != NULL) ? secant : lmidtangent;
@@ -271,9 +271,9 @@ SCIP_RETCODE computeCutsCos(
       *rmidtangent = NULL;
 
       if( underestimate )
-         success = computeRightMidTangentSin(scip, &lincoef, &linconst, &issecant, childlb, childub);
+         success = SCIPcomputeRightMidTangentSin(scip, &lincoef, &linconst, &issecant, childlb, childub);
       else
-         success = computeLeftMidTangentSin(scip, &lincoef, &linconst, &issecant, -childub, -childlb);
+         success = SCIPcomputeLeftMidTangentSin(scip, &lincoef, &linconst, &issecant, -childub, -childlb);
 
       /* if the cut connects bounds it is stored in secant */
       cutbuffer = (issecant && secant != NULL) ? secant : rmidtangent;
