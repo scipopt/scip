@@ -1070,7 +1070,9 @@ SCIP_RETCODE candidateFree(
 typedef struct
 {
    CANDIDATE**           candidates;         /**< the array of candidates */
-   int                   ncandidates;        /**< the number of actual entries in candidates (without trailing NULLs) */
+   int                   ncandidates;        /**< the number of actual entries in candidates (without trailing NULLs); this
+                                              *   is NOT the length of the candidates array, but the number of candidates in
+                                              *   it */
 } CANDIDATELIST;
 
 /** Allocates the candidate list on the buffer WITHOUT initializing the contained array of candidates. */
