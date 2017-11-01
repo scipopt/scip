@@ -3178,12 +3178,16 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
                variables were fixed and this problem was copied.) */
             fixedZero = ( SCIPisZero(scip, SCIPvarGetLbGlobal(var)) && SCIPisZero(scip, SCIPvarGetUbGlobal(var)) );
 
-            /* check whether all variables in a row have the same objective */
-            if ( ! fixedZero && SCIPisInfinity(scip, obj) )
-               obj = SCIPvarGetObj(var);
-            else
+            /* @todo adapt correctness of the following check for sub-scips */
+            if ( SCIPgetSubscipDepth(scip) == 0 )
             {
-               assert( fixedZero || ! SCIPvarIsActive(var) || SCIPisEQ(scip, obj, SCIPvarGetObj(var)) );
+               /* check whether all variables in a row have the same objective */
+               if ( ! fixedZero && SCIPisInfinity(scip, obj) )
+                  obj = SCIPvarGetObj(var);
+               else
+               {
+                  assert( fixedZero || ! SCIPvarIsActive(var) || SCIPisEQ(scip, obj, SCIPvarGetObj(var)) );
+               }
             }
          }
       }
