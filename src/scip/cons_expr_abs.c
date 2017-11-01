@@ -274,12 +274,12 @@ SCIP_RETCODE computeCutsAbs(
       SCIP_CALL( SCIPaddVarsToRow(scip, *rowneg, 2, vars, coefs) );
    }
 
-   /* compute right tangent 0 <= -z + x */
+   /* compute right tangent -z +x <= 0 */
    if( rowpos != NULL )
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "abs_pos_%s", SCIPvarGetName(x));
       coefs[1] = 1.0;
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowpos, conshdlr, name, 0.0, SCIPinfinity(scip), FALSE, FALSE, FALSE) );
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowpos, conshdlr, name, -SCIPinfinity(scip), 0.0, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddVarsToRow(scip, *rowpos, 2, vars, coefs) );
    }
 
