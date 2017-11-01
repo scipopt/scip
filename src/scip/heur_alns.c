@@ -998,7 +998,8 @@ int getHistIndex(
    SCIP_STATUS           subscipstatus       /**< sub-SCIP status */
    )
 {
-   switch (subscipstatus) {/*lint --e{788}*/
+   switch (subscipstatus)
+   {
       case SCIP_STATUS_OPTIMAL:
          return (int)HIDX_OPT;
       case SCIP_STATUS_INFEASIBLE:
@@ -1013,7 +1014,7 @@ int getHistIndex(
          return (int)HIDX_USR;
       default:
          return (int)HIDX_OTHER;
-   }
+   } /*lint !e788*/
 }
 
 /** print neighborhood statistics */
