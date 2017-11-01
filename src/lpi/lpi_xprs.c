@@ -712,7 +712,7 @@ SCIP_RETCODE SCIPlpiCreate(
    SCIPdebugMessage("SCIPlpiCreate()\n");
 
    /* the interface is revised for Xpress 26 or higher */
-   if( XPVERSION < 26 )
+   if( XPVERSION < 26 ) /*lint !e506*/
    {
       SCIPmessagePrintWarning(messagehdlr, "Please use Xpress version 26 or higher, you are using %d\n", XPVERSION);
       return SCIP_LPERROR;
