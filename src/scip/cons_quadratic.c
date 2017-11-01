@@ -7106,6 +7106,11 @@ SCIP_RETCODE generateCutNonConvex(
                SCIP_Real bestval = mccormick;
                SCIP_Bool updaterelax = FALSE;
 
+               /*
+                * note that we check the sign of the bilinear coefficient together with violside in
+                * updateBilinearRelaxation in order to decide whether a valid under- or overestimate can be computed
+                */
+
                /* use overestimates */
                updateBilinearRelaxation(scip, x, y, bilinterm->coef, violside, refx, refy, bilinestimator->ineqoverest,
                   bilinestimator->nineqoverest, &coef, &coef2, &constant, &bestval, &updaterelax);
