@@ -9698,13 +9698,13 @@ SCIP_RETCODE SCIPcomputeArraysSetminus(
 /** copies characters from 'src' to 'dest', copying is stopped when either the 'stop' character is reached or after
  *  'cnt' characters have been copied, whichever comes first.
  *
- *  @note undefined behaviuor on overlapping arrays
+ *  @note undefined behavior on overlapping arrays
  */
 int SCIPmemccpy(
    char*                 dest,               /**< destination pointer to copy to */
-   const char*           src,                /**< source pointer to copy to */
+   const char*           src,                /**< source pointer to copy from */
    char                  stop,               /**< character when found stop copying */
-   unsigned int          cnt                 /**< maximal number of characters to copy too */
+   unsigned int          cnt                 /**< maximal number of characters to copy */
    )
 {
    if( dest == NULL || src == NULL || cnt == 0 )

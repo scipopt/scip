@@ -8871,6 +8871,7 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
    const char* exprlastchar;
    int* varnames;
    int* curvarname;
+   int varnameslength;
    int i;
 
    SCIPdebugMsg(scip, "cons_nonlinear::consparse parsing %s\n",str);
@@ -8995,10 +8996,11 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
    }
 
    /* alloc some space for variable names incl. indices; shouldn't be longer than expression string, and we even give it sizeof(int) times this length (plus 5) */
-   SCIP_CALL( SCIPallocBufferArray(scip, &varnames, (int) (exprlastchar - exprstart) + 5) );
+   varnameslength = (int) (exprlastchar - exprstart) + 5;
+   SCIP_CALL( SCIPallocBufferArray(scip, &varnames, varnameslength) );
 
    /* parse expression */
-   retcode = SCIPexprParse(SCIPblkmem(scip), SCIPgetMessagehdlr(scip), &expr, exprstart, exprlastchar, &nvars, varnames);
+   retcode = SCIPexprParse(SCIPblkmem(scip), SCIPgetMessagehdlr(scip), &expr, exprstart, exprlastchar, &nvars, varnames, varnameslength);
 
    if( retcode != SCIP_OKAY )
    {
