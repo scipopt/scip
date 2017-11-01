@@ -66,7 +66,6 @@
 #define DEFAULT_RECURSIONDEPTH               2     /**< The max depth of LAB. */
 #define DEFAULT_ADDNONVIOCONS                FALSE /**< Should binary constraints, that are not violated by the base LP, be
                                                     *   collected and added? */
-#define DEFAULT_DOWNFIRST                    TRUE  /**< Should the down branch be evaluated first? */
 #define DEFAULT_PROPAGATE                    FALSE /**< Should domain propagation be executed before each temporary node is
                                                     *   solved? */
 #define DEFAULT_ABBREVIATED                  FALSE /**< Toggles the abbreviated LAB. */
@@ -311,7 +310,6 @@ typedef struct
    SCIP_Bool             forcebranching;     /**< Execute the lookahead logic even if only one branching candidate is given.
                                               *   May be used to calculate the score of a single candidate. */
    SCIP_Bool             addnonviocons;      /**< Should constraints be added, that are not violated by the base LP? */
-   SCIP_Bool             downfirst;          /**< Should the down branch be executed first? */
    SCIP_Bool             abbreviated;        /**< Should the abbreviated version be used? */
    SCIP_Bool             reusebasis;         /**< If abbreviated == TRUE, should the solution lp-basis of the FSB run be
                                               *   used in the first abbreviated level?  */
@@ -350,7 +348,6 @@ void configurationCopy(
 
    config->addbinconsrow = copysource->addbinconsrow;
    config->addnonviocons = copysource->addnonviocons;
-   config->downfirst = copysource->downfirst;
    config->forcebranching = copysource->forcebranching;
    config->maxnviolatedcons = copysource->maxnviolatedcons;
    config->recursiondepth = copysource->recursiondepth;
@@ -3629,8 +3626,8 @@ SCIP_RETCODE selectVarRecursive(
    }
    else
    {
-      BRANCHINGRESULTDATA* downbranchingresult;
-      BRANCHINGRESULTDATA* upbranchingresult;
+      BRANCHINGRESULTDATA* downbranchingresult = NULL;
+      BRANCHINGRESULTDATA* upbranchingresult = NULL;
       SCIP_LPI* lpi;
       SCIP_Real bestscore = -SCIPinfinity(scip);
       SCIP_Real bestscorelowerbound;
@@ -3645,6 +3642,9 @@ SCIP_RETCODE selectVarRecursive(
 
       SCIP_CALL( branchingResultDataCreate(scip, &downbranchingresult) );
       SCIP_CALL( branchingResultDataCreate(scip, &upbranchingresult) );
+
+      assert(downbranchingresult != NULL);
+      assert(upbranchingresult != NULL);
 
       SCIP_CALL( SCIPgetLPI(scip, &lpi) );
 
@@ -3739,7 +3739,7 @@ SCIP_RETCODE selectVarRecursive(
                SCIP_CALL( domainReductionsCreate(scip, &updomainreductions) );
             }
 
-            down = config->downfirst;
+            SCIP_CALL( SCIPgetBranchingDirection(scip, branchvar, TRUE, &down) );
 
             for( k = 0; k < 2; ++k )
             {
@@ -4775,11 +4775,6 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          "branching/lookahead/addnonviocons",
          "should binary constraints, that are not violated by the base LP, be collected and added?",
          &branchruledata->config->addnonviocons, TRUE, DEFAULT_ADDNONVIOCONS, NULL, NULL) );
-   /* @todo: make switch in scip.c:20818 publicly available and use this here instead of the parameter */
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "branching/lookahead/downbranchfirst",
-         "should the down branch be evaluated first?",
-         &branchruledata->config->downfirst, TRUE, DEFAULT_DOWNFIRST, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/lookahead/abbreviated",
          "toggles the abbreviated LAB.",
