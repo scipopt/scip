@@ -84,6 +84,7 @@
  * parameters to control variable fixing
  */
 #define DEFAULT_USEREDCOST       TRUE  /**< should reduced cost scores be used for variable priorization? */
+#define DEFAULT_USEPSCOST       FALSE  /**< should pseudo cost scores be used for variable priorization? */
 #define DEFAULT_USEDISTANCES     TRUE  /**< should distances from fixed variables be used for variable priorization */
 #define DEFAULT_DOMOREFIXINGS    TRUE  /**< should the ALNS heuristic do more fixings by itself based on variable prioritization
                                          *  until the target fixing rate is reached? */
@@ -367,6 +368,7 @@ struct SCIP_HeurData
    char                  banditalgo;         /**< the bandit algorithm: (u)pper confidence bounds, (e)xp.3, epsilon (g)reedy */
    SCIP_Bool             useredcost;         /**< should reduced cost scores be used for variable prioritization? */
    SCIP_Bool             usedistances;       /**< should distances from fixed variables be used for variable prioritization */
+   SCIP_Bool             usepscost;          /**< should pseudo cost scores be used for variable prioritization? */
    SCIP_Bool             domorefixings;      /**< should the ALNS heuristic do more fixings by itself based on variable prioritization
                                                *  until the target fixing rate is reached? */
    SCIP_Bool             adjustfixingrate;   /**< should the heuristic adjust the target fixing rate based on the success? */
@@ -409,8 +411,10 @@ struct VarPrio
    SCIP_Real*            randscores;         /**< random scores for prioritization */
    int*                  distances;          /**< breadth-first distances from already fixed variables */
    SCIP_Real*            redcostscores;      /**< reduced cost scores for fixing a variable to a reference value */
+   SCIP_Real*            pscostscores;       /**< pseudocost scores for fixing a variable to a reference value */
    unsigned int          useredcost:1;       /**< should reduced cost scores be used for variable prioritization? */
    unsigned int          usedistances:1;     /**< should distances from fixed variables be used for variable prioritization */
+   unsigned int          usepscost:1;        /**< should pseudo cost scores be used for variable prioritization? */
 };
 
 /*
@@ -1128,6 +1132,7 @@ SCIP_DECL_SORTINDCOMP(sortIndCompAlns)
 
    varprio = (VARPRIO*)dataptr;
    assert(varprio != NULL);
+   assert(varprio->randscores != NULL);
 
    scip = varprio->scip;
    assert(scip != NULL);
@@ -1173,7 +1178,18 @@ SCIP_DECL_SORTINDCOMP(sortIndCompAlns)
 
    assert(! varprio->useredcost || SCIPisEQ(scip, varprio->redcostscores[ind1], varprio->redcostscores[ind2]));
 
-   assert(varprio->randscores != NULL);
+   /* use pseudo cost scores if reduced costs are disabled or a tie was found */
+   if( varprio->usepscost )
+   {
+      assert(varprio->pscostscores != NULL);
+
+      /* prefer the variable with smaller pseudocost score */
+      if( SCIPisLT(scip, varprio->pscostscores[ind1], varprio->pscostscores[ind2]) )
+         return -1;
+      else if( SCIPisGT(scip, varprio->pscostscores[ind1], varprio->pscostscores[ind2]) )
+         return 1;
+   }
+
 
    if( varprio->randscores[ind1] < varprio->randscores[ind2] )
       return -1;
@@ -1235,6 +1251,31 @@ SCIP_Real getVariableRedcostScore(
       score = MAX(score, 0.0);
 
    return score;
+}
+
+/** get the pseudo cost score of this variable with respect to the reference solution */
+static
+SCIP_Real getVariablePscostScore(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< the variable for which the score should be computed */
+   SCIP_Real             refsolval           /**< solution value in reference solution */
+   )
+{
+   SCIP_Real rootsolval;
+   assert(scip != NULL);
+   assert(var != NULL);
+
+   /* variables that aren't LP columns have no pseudocost score */
+   if( ! SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
+      return 0.0;
+
+   rootsolval = SCIPvarGetRootSol(var);
+
+   /* the score is 0.0 if the values are equal */
+   if( SCIPisEQ(scip, rootsolval, refsolval) )
+      return 0.0;
+   else
+      return SCIPgetVarPseudocostVal(scip, var, refsolval - rootsolval);
 }
 
 /** add variable and solution value to buffer data structure for variable fixings. The method checks if
@@ -1320,6 +1361,7 @@ SCIP_RETCODE alnsFixMoreVariables(
    VARPRIO varprio;
    SCIP_VAR** vars;
    SCIP_Real* redcostscores;
+   SCIP_Real* pscostscores;
    SCIP_Real* solvals;
    SCIP_RANDNUMGEN* rng;
    SCIP_VAR** unfixedvars;
@@ -1362,6 +1404,7 @@ SCIP_RETCODE alnsFixMoreVariables(
 
    varprio.usedistances = heurdata->usedistances && (*nfixings >= 1);
    varprio.useredcost = heurdata->useredcost;
+   varprio.usepscost = heurdata->usepscost;
    varprio.scip = scip;
    rng = SCIPbanditGetRandnumgen(heurdata->bandit);
    assert(rng != NULL);
@@ -1373,6 +1416,7 @@ SCIP_RETCODE alnsFixMoreVariables(
    SCIP_CALL( SCIPallocBufferArray(scip, &solvals, nbinintvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &isfixed, nbinintvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &unfixedvars, nbinintvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &pscostscores, nbinintvars) );
 
    /* initialize variable graph distances from already fixed variables */
    if( varprio.usedistances )
@@ -1414,14 +1458,20 @@ SCIP_RETCODE alnsFixMoreVariables(
          continue;
 
       redcostscores[nunfixedvars] = getVariableRedcostScore(scip, var, solvals[b], heurdata->uselocalredcost);
+      pscostscores[nunfixedvars] = getVariablePscostScore(scip, var, solvals[b]);
 
       unfixedvars[nunfixedvars] = var;
       perm[nunfixedvars] = nunfixedvars;
       randscores[nunfixedvars] = SCIPrandomGetReal(rng, 0.0, 1.0);
 
+
       /* these assignments are based on the fact that nunfixedvars <= b */
       solvals[nunfixedvars] = solvals[b];
       distances[nunfixedvars] = distances[b];
+
+      SCIPdebugMsg(scip, "Var <%s> scores: dist %3d, red cost %15.9g, pscost %15.9g rand %6.4f\n",
+         SCIPvarGetName(var), distances[nunfixedvars], redcostscores[nunfixedvars],
+         pscostscores[nunfixedvars], randscores[nunfixedvars]);
 
       nunfixedvars++;
    }
@@ -1430,6 +1480,7 @@ SCIP_RETCODE alnsFixMoreVariables(
    varprio.randscores = randscores;
    varprio.distances = distances;
    varprio.redcostscores = redcostscores;
+   varprio.pscostscores = pscostscores;
    assert(nvarstoadd <= nunfixedvars);
 
    SCIPselectInd(perm, sortIndCompAlns, &varprio, nvarstoadd, nunfixedvars);
@@ -1447,6 +1498,7 @@ SCIP_RETCODE alnsFixMoreVariables(
    *success = TRUE;
 
    /* free buffer arrays */
+   SCIPfreeBufferArray(scip, &pscostscores);
    SCIPfreeBufferArray(scip, &unfixedvars);
    SCIPfreeBufferArray(scip, &isfixed);
    SCIPfreeBufferArray(scip, &solvals);
@@ -1529,6 +1581,7 @@ SCIP_RETCODE alnsUnfixVariables(
 {
    VARPRIO varprio;
    SCIP_Real* redcostscores;
+   SCIP_Real* pscostscores;
    SCIP_Real* randscores;
    SCIP_VAR** unfixedvars;
    SCIP_VAR** varbufcpy;
@@ -1560,6 +1613,8 @@ SCIP_RETCODE alnsUnfixVariables(
    SCIP_CALL( SCIPallocBufferArray(scip, &redcostscores, *nfixings) );
    SCIP_CALL( SCIPallocBufferArray(scip, &randscores, *nfixings) );
    SCIP_CALL( SCIPallocBufferArray(scip, &perm, *nfixings) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &pscostscores, *nfixings) );
+
    SCIP_CALL( SCIPduplicateBufferArray(scip, &varbufcpy, varbuf, *nfixings) );
    SCIP_CALL( SCIPduplicateBufferArray(scip, &valbufcpy, valbuf, *nfixings) );
 
@@ -1605,7 +1660,6 @@ SCIP_RETCODE alnsUnfixVariables(
       BMSclearMemoryArray(fixeddistances, *nfixings);
    }
 
-
    /* collect reduced cost scores of the fixings and assign random scores */
    rng = SCIPbanditGetRandnumgen(heurdata->bandit);
    for( i = 0; i < *nfixings; ++i )
@@ -1613,16 +1667,22 @@ SCIP_RETCODE alnsUnfixVariables(
       SCIP_VAR* fixedvar = varbuf[i];
       SCIP_Real fixval = valbuf[i];
 
-      /* use negative reduced cost scores to prefer variable fixings with small reduced cost score */
+      /* use negative reduced cost and pseudo cost scores to prefer variable fixings with small score */
       redcostscores[i] = - getVariableRedcostScore(scip, fixedvar, fixval, heurdata->uselocalredcost);
+      pscostscores[i] = - getVariablePscostScore(scip, fixedvar, fixval);
       randscores[i] = SCIPrandomGetReal(rng, 0.0, 1.0);
       perm[i] = i;
+
+      SCIPdebugMsg(scip, "Var <%s> scores: dist %3d, red cost %15.9g, pscost %15.9g rand %6.4f\n",
+            SCIPvarGetName(fixedvar), fixeddistances[i], redcostscores[i], pscostscores[i], randscores[i]);
    }
 
    varprio.distances = fixeddistances;
    varprio.randscores = randscores;
    varprio.redcostscores = redcostscores;
+   varprio.pscostscores = pscostscores;
    varprio.useredcost = heurdata->useredcost;
+   varprio.usepscost = heurdata->usepscost;
    varprio.scip = scip;
 
    /* scores are assigned in such a way that variables with a smaller score should be fixed last */
@@ -1640,6 +1700,7 @@ SCIP_RETCODE alnsUnfixVariables(
    /* free the buffer arrays in reverse order of allocation */
    SCIPfreeBufferArray(scip, &valbufcpy);
    SCIPfreeBufferArray(scip, &varbufcpy);
+   SCIPfreeBufferArray(scip, &pscostscores);
    SCIPfreeBufferArray(scip, &perm);
    SCIPfreeBufferArray(scip, &randscores);
    SCIPfreeBufferArray(scip, &redcostscores);
@@ -3812,6 +3873,10 @@ SCIP_RETCODE SCIPincludeHeurAlns(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/uselocalredcost",
          "should local reduced costs be used for generic (un)fixing?",
          &heurdata->uselocalredcost, TRUE, DEFAULT_USELOCALREDCOST, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/usepscost",
+            "should pseudo cost scores be used for variable priorization?",
+            &heurdata->usepscost, TRUE, DEFAULT_USEPSCOST, NULL, NULL) );
 
    return SCIP_OKAY;
 }
