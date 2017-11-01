@@ -289,6 +289,7 @@ typedef struct
    BRANCHINGRESULTDATA** lastbranchupres;    /**< The result of the last up branching for a given var. */
    BRANCHINGRESULTDATA** lastbranchdownres;  /**< The result of the last down branching for a given var. */
    int                   restartindex;       /**< The index at which the iteration over the number of candidates starts. */
+   int                   nvars;              /**< The number of variables that can be stored in the arrays. */
 } PERSISTENTDATA;
 
 /** The parameter that can be changed by the user/caller and alter the behaviour of the lookahead branching. */
@@ -4307,6 +4308,47 @@ SCIP_RETCODE usePreviousResult(
    return SCIP_OKAY;
 }
 
+static
+SCIP_RETCODE freePersistent(
+   SCIP*                 scip,
+   SCIP_BRANCHRULEDATA*  branchruledata
+   )
+{
+   int nvars;
+   int i;
+
+   nvars = branchruledata->persistent->nvars;
+
+   for( i = nvars-1; i >= 0; i--)
+   {
+      SCIPfreeBlockMemory(scip, &branchruledata->persistent->lastbranchdownres[i]); /*lint !e866*/
+      SCIPfreeBlockMemory(scip, &branchruledata->persistent->lastbranchupres[i]); /*lint !e866*/
+   }
+
+   SCIPfreeBlockMemoryArray(scip, &branchruledata->persistent->lastbranchlpobjval, nvars);
+   SCIPfreeBlockMemoryArray(scip, &branchruledata->persistent->lastbranchdownres, nvars);
+   SCIPfreeBlockMemoryArray(scip, &branchruledata->persistent->lastbranchupres, nvars);
+   SCIPfreeBlockMemoryArray(scip, &branchruledata->persistent->lastbranchnlps, nvars);
+   SCIPfreeBlockMemoryArray(scip, &branchruledata->persistent->lastbranchid, nvars);
+
+   /* Free the solution that was used for implied binary bounds. */
+   SCIP_CALL( SCIPfreeSol(scip, &branchruledata->persistent->prevbinsolution) );
+
+   branchruledata->isinitialized = FALSE;
+}
+
+/** Checks whether the branchruledata struct has to be (re-)initialized. */
+static
+SCIP_Bool isInitBranchruleData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULEDATA*  branchruledata      /**< branch rule data that may get initialized */
+   )
+{
+   int nvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
+
+   return !branchruledata->isinitialized || (nvars != branchruledata->persistent->nvars);
+}
+
 /** initializes the branchruledata and the contained structs */
 static
 SCIP_RETCODE initBranchruleData(
@@ -4317,7 +4359,10 @@ SCIP_RETCODE initBranchruleData(
    int nvars;
    int i;
 
-   LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Entering initBranchruleData\n");
+   if( branchruledata->isinitialized )
+   {
+      freePersistent(scip, branchruledata);
+   }
 
    /* Create an empty solution. Gets filled in case of implied binary bounds. */
    SCIP_CALL( SCIPcreateSol(scip, &branchruledata->persistent->prevbinsolution, NULL) );
@@ -4336,6 +4381,7 @@ SCIP_RETCODE initBranchruleData(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->persistent->lastbranchlpobjval, nvars) );
 
    branchruledata->persistent->prevdecision->var = NULL;
+   branchruledata->persistent->nvars = nvars;
 
    for( i = 0; i < nvars; i++ )
    {
@@ -4348,7 +4394,7 @@ SCIP_RETCODE initBranchruleData(
 
    branchruledata->isinitialized = TRUE;
 
-   LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Leaving initBranchruleData\n");
+   LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Initialized the branchruledata\n");
 
    return SCIP_OKAY;
 }
@@ -4361,15 +4407,11 @@ SCIP_RETCODE initBranchruleData(
 static
 SCIP_DECL_BRANCHCOPY(branchCopyLookahead)
 {  /*lint --e{715}*/
-   LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Entering branchCopyLookahead\n");
-
    assert(scip != NULL);
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
 
    SCIP_CALL( SCIPincludeBranchruleLookahead(scip) );
-
-   LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Leaving branchCopyLookahead\n");
 
    return SCIP_OKAY;
 }
@@ -4380,8 +4422,6 @@ SCIP_DECL_BRANCHFREE(branchFreeLookahead)
 {  /*lint --e{715}*/
    SCIP_BRANCHRULEDATA* branchruledata;
 
-   LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Entering branchFreeLookahead\n");
-
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
@@ -4390,8 +4430,6 @@ SCIP_DECL_BRANCHFREE(branchFreeLookahead)
    SCIPfreeMemory(scip, &branchruledata->config);
    SCIPfreeMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
-
-   LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Leaving branchFreeLookahead\n");
 
    return SCIP_OKAY;
 }
@@ -4480,38 +4518,12 @@ SCIP_DECL_BRANCHEXITSOL(branchExitSolLookahead)
 {  /*lint --e{715}*/
    SCIP_BRANCHRULEDATA* branchruledata;
 
-   LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Entering branchExitSolLookahead\n");
-
    branchruledata = SCIPbranchruleGetData(branchrule);
 
    if( branchruledata->isinitialized )
    {
-      int nvars;
-      int i;
-
-      nvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
-
-      for( i = nvars-1; i >= 0; i--)
-      {
-         SCIPfreeBlockMemory(scip, &branchruledata->persistent->lastbranchdownres[i]); /*lint !e866*/
-         SCIPfreeBlockMemory(scip, &branchruledata->persistent->lastbranchupres[i]); /*lint !e866*/
-      }
-
-      SCIPfreeBlockMemoryArray(scip, &branchruledata->persistent->lastbranchlpobjval, nvars);
-      SCIPfreeBlockMemoryArray(scip, &branchruledata->persistent->lastbranchdownres, nvars);
-      SCIPfreeBlockMemoryArray(scip, &branchruledata->persistent->lastbranchupres, nvars);
-      SCIPfreeBlockMemoryArray(scip, &branchruledata->persistent->lastbranchnlps, nvars);
-      SCIPfreeBlockMemoryArray(scip, &branchruledata->persistent->lastbranchid, nvars);
-
-      /* Free the solution that was used for implied binary bounds. */
-      SCIP_CALL( SCIPfreeSol(scip, &branchruledata->persistent->prevbinsolution) );
-
-      branchruledata->isinitialized = FALSE;
-
-      LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Freed branchruledata\n");
+      freePersistent(scip, branchruledata);
    }
-
-   LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Leaving branchExitSolLookahead\n");
 
    return SCIP_OKAY;
 }
@@ -4541,7 +4553,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
    userusebincons = config->usebincons;
    config->usebincons = config->usebincons && allowaddcons;
 
-   if( !branchruledata->isinitialized )
+   if( isInitBranchruleData(scip, branchruledata) )
    {
       SCIP_CALL( initBranchruleData(scip, branchruledata) );
    }
