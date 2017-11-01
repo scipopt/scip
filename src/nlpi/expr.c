@@ -4979,7 +4979,7 @@ SCIP_RETCODE exprparseReadVariable(
       /* variable is new */
       varidx = *nvars;
 
-      (*varnameslength) -= (1 + (strlen(varname) + 1) / sizeof(int) + 1);
+      (*varnameslength) -= (int)(1 + (strlen(varname) + 1) / sizeof(int) + 1);
       if( *varnameslength < 0 )
       {
          SCIPerrorMessage("Buffer in exprparseReadVariable is too short for varaible name %.*s.\n", namelength, str);
