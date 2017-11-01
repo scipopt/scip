@@ -259,7 +259,7 @@ struct SCIP_ConsExpr_PrintDotData
 typedef struct
 {
    SCIP_CONSHDLR*          conshdlr;         /**< expression constraint handler */
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
    SCIP_SOL*               debugsol;         /**< debug solution (or NULL if not debugging) */
 #endif
    SCIP_CONSEXPR_NLHDLR**  nlhdlrssuccess;   /**< buffer for nlhdlrs that had success detecting structure at expression */
@@ -3558,7 +3558,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(createAuxVarsEnterExpr)
       /* add variable locks in both directions */
       SCIP_CALL( SCIPaddVarLocks(scip, expr->auxvar, 1, 1) );
 
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
       if( SCIPdebugIsMainscip(scip) )
       {
          /* store debug solution of auxiliary variable */
@@ -3709,7 +3709,7 @@ SCIP_RETCODE createAuxVars(
 
    createdata.conshdlr = conshdlr;
 
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
    if( SCIPdebugIsMainscip(scip) )
    {
       createdata.debugsol = NULL;
