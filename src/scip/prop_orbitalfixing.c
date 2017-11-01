@@ -506,6 +506,15 @@ SCIP_DECL_PROPEXIT(propExitOrbitalfixing)
       SCIPhashmapFree(&propdata->permvarmap);
    }
 
+   /* reset paramters */
+   propdata->nodenumber = -1;
+   propdata->nfixedzero = 0;
+   propdata->nfixedone = 0;
+
+   propdata->permvars = NULL;
+   propdata->npermvars = -1;
+   propdata->permvarmap = NULL;
+
    return SCIP_OKAY;
 }
 
@@ -529,26 +538,30 @@ SCIP_DECL_PROPINITSOL(propInitsolOrbitalfixing)
 
    assert( SCIPisTransformed(scip) );
 
-   /* get symmetries */
-   SCIP_CALL( SCIPgetSymmetryGenerators(scip, propdata->symmetrypresol, &(propdata->npermvars),
-         &(propdata->permvars), &(propdata->nperms), &(propdata->perms), NULL) );
-
-   if ( propdata->nperms <= 0 )
+   /* possibly get symmetries */
+   if ( propdata->npermvars < 0 )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Skip orbital fixing, since no symmetries were found.\n");
-      propdata->enabled = FALSE;
-   }
-   else
-   {
-      int j;
+      SCIP_CALL( SCIPgetSymmetryGenerators(scip, propdata->symmetrypresol, &(propdata->npermvars),
+            &(propdata->permvars), &(propdata->nperms), &(propdata->perms), NULL) );
 
-      /* create hashmap for storing the indices of variables */
-      SCIP_CALL( SCIPhashmapCreate(&propdata->permvarmap, SCIPblkmem(scip), propdata->npermvars) );
-
-      /* insert variables */
-      for (j = 0; j < propdata->npermvars; ++j)
+      if ( propdata->nperms <= 0 )
       {
-         SCIP_CALL( SCIPhashmapInsert(propdata->permvarmap, propdata->permvars[j], (void*) (size_t) j) );
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Skip orbital fixing, since no symmetries were found.\n");
+         propdata->enabled = FALSE;
+      }
+      else
+      {
+         int j;
+
+         /* create hashmap for storing the indices of variables */
+         assert( propdata->permvarmap == NULL );
+         SCIP_CALL( SCIPhashmapCreate(&propdata->permvarmap, SCIPblkmem(scip), propdata->npermvars) );
+
+         /* insert variables */
+         for (j = 0; j < propdata->npermvars; ++j)
+         {
+            SCIP_CALL( SCIPhashmapInsert(propdata->permvarmap, propdata->permvars[j], (void*) (size_t) j) );
+         }
       }
    }
 
@@ -642,7 +655,7 @@ SCIP_RETCODE SCIPincludePropOrbitalfixing(
    propdata->nfixedone = 0;
 
    propdata->permvars = NULL;
-   propdata->npermvars = 0;
+   propdata->npermvars = -1;
    propdata->permvarmap = NULL;
 
    /* determine cons_symmetries constraint handler (preuse presol) */
