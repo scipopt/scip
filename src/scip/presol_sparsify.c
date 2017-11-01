@@ -640,7 +640,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
    }
 
    linearhdlr = SCIPfindConshdlr(scip, "linear");
-   if( linearhdlr != NULL && SCIPconshdlrGetNActiveConss(linearhdlr) >= SCIPgetNActiveConss(scip) )
+   if( linearhdlr != NULL && SCIPconshdlrGetNConss(linearhdlr) >= SCIPgetNConss(scip) )
    {
       SCIPdebugMsg(scip, "skipping sparsify: only linear constraints found\n");
       return SCIP_OKAY;
