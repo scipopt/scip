@@ -54,7 +54,7 @@ SCIP_RETCODE SCIPcreateConsExprExprSin(
 /** evaluates the function a*x + b - sin(x) for some coefficient a and constant b at a given point p
  *  the constants a and b are expected to be stored in that order in params
  */
-EXTERN
+static
 SCIP_DECL_NEWTONEVAL(function1)
 {
    assert(params != NULL);
@@ -66,7 +66,7 @@ SCIP_DECL_NEWTONEVAL(function1)
 /** evaluates the derivative of a*x + b - sin(x) for some coefficient a and constant b at a given point p
  *  the constants a and b are expected to be stored in that order in params
  */
-EXTERN
+static
 SCIP_DECL_NEWTONEVAL(derivative1)
 {
    assert(params != NULL);
@@ -78,7 +78,7 @@ SCIP_DECL_NEWTONEVAL(derivative1)
 /** evaluates the function sin(x) + (alpha - x)*cos(x) - sin(alpha) for some constant alpha at a given point p
  *  the constant alpha is expected to be stored in params
  * */
-EXTERN
+static
 SCIP_DECL_NEWTONEVAL(function2)
 {
    assert(params != NULL);
@@ -90,7 +90,7 @@ SCIP_DECL_NEWTONEVAL(function2)
 /** evaluates the derivative of sin(x) + (alpha - x)*cos(x) - sin(alpha) for some constant alpha at a given point p
  *  the constant alpha is expected to be stored in params
  */
-EXTERN
+static
 SCIP_DECL_NEWTONEVAL(derivative2)
 {
    assert(params != NULL);
@@ -102,7 +102,7 @@ SCIP_DECL_NEWTONEVAL(derivative2)
 /** helper function to compute the secant if it is a feasible underestimating cut
  *  returns true if the cut was computed successfully
  */
-EXTERN
+static
 SCIP_Bool computeSecantSin(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real*            lincoef,            /**< buffer to store linear coefficient of secant */
@@ -133,7 +133,7 @@ SCIP_Bool computeSecantSin(
 /** helper function to compute the tangent at lower bound if it is a feasible underestimating cut
  *  returns true if the cut was computed successfully
  */
-EXTERN
+static
 SCIP_Bool computeLeftTangentSin(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real*            lincoef,            /**< buffer to store linear coefficient of secant */
@@ -161,7 +161,7 @@ SCIP_Bool computeLeftTangentSin(
 /** helper function to compute the tangent at upper bound if it is a feasible underestimating cut
  *  returns true if the cut was computed successfully
  */
-EXTERN
+static
 SCIP_Bool computeRightTangentSin(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real*            lincoef,            /**< buffer to store linear coefficient of secant */
@@ -189,7 +189,7 @@ SCIP_Bool computeRightTangentSin(
 /** helper function to compute the tangent at solution point if it is a feasible underestimating cut
  *  returns true if the cut was computed successfully
  */
-EXTERN
+static
 SCIP_Bool computeSolTangentSin(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real*            lincoef,            /**< buffer to store linear coefficient of secant */
@@ -264,7 +264,7 @@ SCIP_Bool computeSolTangentSin(
 /** helper function to compute the tangent at some other point that goes through (lb,sin(lb)) and is underestimating
  *  returns true if the cut was computed successfully
  */
-EXTERN
+static
 SCIP_Bool computeLeftMidTangentSin(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real*            lincoef,            /**< buffer to store linear coefficient of secant */
@@ -342,7 +342,7 @@ SCIP_Bool computeLeftMidTangentSin(
 /** helper function to compute the tangent at some other point that goes through (ub,sin(ub)) and is underestimating
  *  returns true if the cut was computed successfully
  */
-EXTERN
+static
 SCIP_Bool computeRightMidTangentSin(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real*            lincoef,            /**< buffer to store linear coefficient of secant */
