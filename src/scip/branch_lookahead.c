@@ -110,7 +110,7 @@
                                              while( FALSE )
 #else
 #define LABdebugMessage(scip,lvl,...)        /**/
-#define LABdebugMessagePrint(scip,lvl,...)   /**/
+/*#define LABdebugMessagePrint(scip,lvl,...)   only used with SCIP_DEBUG defined */
 #endif
 
 /*
@@ -1207,12 +1207,12 @@ SCIP_RETCODE candidateListKeep(
    /* move the candidates to keep to the tmplist */
    for( i = 0; i < nindices; i++ )
    {
-      int index = indices[i];
-      CANDIDATE* cand = candidatelist->candidates[index];
+      int ind = indices[i];
+      CANDIDATE* cand = candidatelist->candidates[ind];
       assert(cand != NULL);
 
       tmplist->candidates[i] = cand;
-      candidatelist->candidates[index] = NULL;
+      candidatelist->candidates[ind] = NULL;
    }
 
    /* free the remaining candidates */
