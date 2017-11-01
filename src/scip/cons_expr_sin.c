@@ -1040,13 +1040,15 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSin)
 
    assert(newinf >= childbound.inf);
    assert(newsup <= childbound.sup);
-   assert(newinf <= newsup);
    assert(SCIPisGE(scip, SIN(newinf), interval.inf));
    assert(SCIPisLE(scip, SIN(newinf), interval.sup));
    assert(SCIPisGE(scip, SIN(newsup), interval.inf));
    assert(SCIPisLE(scip, SIN(newsup), interval.sup));
 
-   SCIPintervalSetBounds(&childbound, newinf, newsup);
+   if( newinf <= newsup )
+      SCIPintervalSetBounds(&childbound, newinf, newsup);
+   else
+      SCIPintervalSetEmpty(&childbound);
 
    /* try to tighten the bounds of the child node */
    SCIP_CALL( SCIPtightenConsExprExprInterval(scip, child, childbound, force, infeasible, nreductions) );
