@@ -204,9 +204,6 @@ struct BilinearEstimator
    unsigned int          noverest;          /**< number of constraints that require to overestimate xy */
 
    SCIP_Real             lastimprfac;       /**< last achieved improvement factor */
-
-   SCIP_Real             score;             /**< score of each bilinear term */
-   int                   nupdates;          /**< total number of score updates */
 };
 typedef struct BilinearEstimator BILINESTIMATOR;
 
@@ -7089,12 +7086,6 @@ SCIP_RETCODE generateCutNonConvex(
             bilinestimator = &(conshdlrdata->bilinestimators[bilintermidx]);
             assert(bilinestimator->x == x);
             assert(bilinestimator->y == y);
-
-            /* update score of each bilinear term */
-            bilinestimator->score += score;
-            ++(bilinestimator->nupdates);
-            SCIPdebugMsg(scip, "score of bilinear term %s %s = %g (%g)\n", SCIPvarGetName(bilinestimator->x),
-               SCIPvarGetName(bilinestimator->y), score, bilinestimator->score / bilinestimator->nupdates);
 
             /* reset the last improvement factor (used for getting better branching decisions) */
             bilinestimator->lastimprfac = 0.0;
