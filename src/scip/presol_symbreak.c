@@ -773,7 +773,8 @@ SCIP_RETCODE detectOrbitopes(
          }
       }
 
-      if ( ! isorbitope )
+      /* if no orbitope was detected or orbitope has too few rows */
+      if ( ! isorbitope || ntwocyclescomp <= 1 )
          continue;
 
       /* iterate over permutations and check whether for each permutation there exists
