@@ -15257,10 +15257,11 @@ SCIP_RETCODE SCIPaddBilinearIneqQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             x,                  /**< first variable */
    SCIP_VAR*             y,                  /**< second variable */
-   int                   i,                  /**< index of the bilinear term */
+   int                   idx,                /**< index of the bilinear term */
    SCIP_Real             xcoef,              /**< x coefficient */
    SCIP_Real             ycoef,              /**< y coefficient */
-   SCIP_Real             constant            /**< constant part */
+   SCIP_Real             constant,           /**< constant part */
+   SCIP_Bool*            success             /**< buffer to store whether inequality has been accepted */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -15270,10 +15271,13 @@ SCIP_RETCODE SCIPaddBilinearIneqQuadratic(
    assert(scip != NULL);
    assert(x != NULL);
    assert(y != NULL);
-   assert(i >= 0);
+   assert(idx >= 0);
    assert(xcoef != SCIP_INVALID); /*lint !e777 */
    assert(ycoef != SCIP_INVALID); /*lint !e777 */
    assert(constant != SCIP_INVALID); /*lint !e777 */
+   assert(success != NULL);
+
+   *success = FALSE;
 
    /* ignore inequalities that only yield to a (possible) bound tightening */
    if( SCIPisFeasZero(scip, xcoef) || SCIPisFeasZero(scip, ycoef) )
@@ -15286,9 +15290,9 @@ SCIP_RETCODE SCIPaddBilinearIneqQuadratic(
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
-   assert(i < conshdlrdata->nbilinterms);
+   assert(idx < conshdlrdata->nbilinterms);
 
-   bilinest = &conshdlrdata->bilinestimators[i];
+   bilinest = &conshdlrdata->bilinestimators[idx];
    assert(bilinest != NULL);
    assert(bilinest->x == x);
    assert(bilinest->y == y);
@@ -15300,22 +15304,22 @@ SCIP_RETCODE SCIPaddBilinearIneqQuadratic(
    if( xcoef * ycoef >= 0.0 )
    {
       /* TODO do not overwrite the last inequality */
-      int idx = MIN(bilinest->ninequnderest, 1);
+      int pos = MIN(bilinest->ninequnderest, 1);
 
-      bilinest->inequnderest[3*idx] = xcoef;
-      bilinest->inequnderest[3*idx+1] = ycoef;
-      bilinest->inequnderest[3*idx+2] = constant;
-      bilinest->ninequnderest = idx + 1;
+      bilinest->inequnderest[3*pos] = xcoef;
+      bilinest->inequnderest[3*pos+1] = ycoef;
+      bilinest->inequnderest[3*pos+2] = constant;
+      bilinest->ninequnderest = pos + 1;
    }
    else
    {
       /* TODO do not overwrite the last inequality */
-      int idx = MIN(bilinest->nineqoverest, 1);
+      int pos = MIN(bilinest->nineqoverest, 1);
 
-      bilinest->ineqoverest[3*idx] = xcoef;
-      bilinest->ineqoverest[3*idx+1] = ycoef;
-      bilinest->ineqoverest[3*idx+2] = constant;
-      bilinest->nineqoverest = idx + 1;
+      bilinest->ineqoverest[3*pos] = xcoef;
+      bilinest->ineqoverest[3*pos+1] = ycoef;
+      bilinest->ineqoverest[3*pos+2] = constant;
+      bilinest->nineqoverest = pos + 1;
    }
 
    return SCIP_OKAY;

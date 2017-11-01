@@ -661,10 +661,11 @@ SCIP_RETCODE SCIPaddBilinearIneqQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             x,                  /**< first variable */
    SCIP_VAR*             y,                  /**< second variable */
-   int                   i,                  /**< index of the bilinear term */
+   int                   idx,                /**< index of the bilinear term */
    SCIP_Real             xcoef,              /**< x coefficient */
    SCIP_Real             ycoef,              /**< y coefficient */
-   SCIP_Real             constant            /**< constant part */
+   SCIP_Real             constant,           /**< constant part */
+   SCIP_Bool*            success             /**< buffer to store whether inequality has been accepted */
    );
 
 /* @} */

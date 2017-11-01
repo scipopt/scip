@@ -112,8 +112,6 @@ struct Bound
    unsigned int          done:1;             /**< has this bound been processed already? */
    unsigned int          nonconvex:1;        /**< is this bound affecting a nonconvex term? */
    int                   index;              /**< unique index */
-   int                   nadjbilinterms;     /**< total number of bilinear terms involving var */
-   int*                  adjbilinterms;      /**< array containing indices of bilinear terms containing var */
 };
 typedef struct Bound BOUND;
 
@@ -707,16 +705,53 @@ void exchangeBounds(
    propdata->lastidx -= 1;
 }
 
+/** helper function to return a corner of the domain of two variables */
+static
+void getCorner(
+   SCIP_VAR*            x,                  /**< first variable */
+   SCIP_VAR*            y,                  /**< second variable */
+   CORNER               corner,             /**< corner */
+   SCIP_Real*           px,                 /**< buffer to store point for x */
+   SCIP_Real*           py                  /**< buffer to store point for y */
+   )
+{
+   assert(x != NULL);
+   assert(y != NULL);
+   assert(px != NULL);
+   assert(py != NULL);
+
+   switch( corner )
+   {
+      case LEFTBOTTOM:
+         *px = SCIPvarGetLbGlobal(x);
+         *py = SCIPvarGetLbGlobal(y);
+         break;
+      case RIGHTBOTTOM:
+         *px = SCIPvarGetUbGlobal(x);
+         *py = SCIPvarGetLbGlobal(y);
+         break;
+      case LEFTTOP:
+         *px = SCIPvarGetLbGlobal(x);
+         *py = SCIPvarGetUbGlobal(y);
+         break;
+      default:
+         assert(corner == RIGHTTOP);
+         *px = SCIPvarGetUbGlobal(x);
+         *py = SCIPvarGetUbGlobal(y);
+         break;
+   }
+}
+
 /** helper function to return the two end points of a diagonal */
 static
 void getCorners(
    SCIP_VAR*            x,                  /**< first variable */
    SCIP_VAR*            y,                  /**< second variable */
    CORNER               corner,             /**< corner */
-   SCIP_Real*           xs,                 /**< start point for x */
-   SCIP_Real*           ys,                 /**< start point for y */
-   SCIP_Real*           xt,                 /**< end point for x */
-   SCIP_Real*           yt                  /**< end point for y */
+   SCIP_Real*           xs,                 /**< buffer to store start point for x */
+   SCIP_Real*           ys,                 /**< buffer to store start point for y */
+   SCIP_Real*           xt,                 /**< buffer to store end point for x */
+   SCIP_Real*           yt                  /**< buffer to store end point for y */
    )
 {
    assert(x != NULL);
@@ -726,32 +761,24 @@ void getCorners(
    assert(xt != NULL);
    assert(yt != NULL);
 
+   /* get end point */
+   getCorner(x,y, corner, xt, yt);
+
+   /* get start point */
    switch( corner )
    {
       case LEFTBOTTOM:
-         *xs = SCIPvarGetUbGlobal(x);
-         *ys = SCIPvarGetUbGlobal(y);
-         *xt = SCIPvarGetLbGlobal(x);
-         *yt = SCIPvarGetLbGlobal(y);
+         getCorner(x,y, RIGHTTOP, xs, ys);
          break;
       case RIGHTBOTTOM:
-         *xs = SCIPvarGetLbGlobal(x);
-         *ys = SCIPvarGetUbGlobal(y);
-         *xt = SCIPvarGetUbGlobal(x);
-         *yt = SCIPvarGetLbGlobal(y);
+         getCorner(x,y, LEFTTOP, xs, ys);
          break;
       case LEFTTOP:
-         *xs = SCIPvarGetUbGlobal(x);
-         *ys = SCIPvarGetLbGlobal(y);
-         *xt = SCIPvarGetLbGlobal(x);
-         *yt = SCIPvarGetUbGlobal(y);
+         getCorner(x,y, RIGHTBOTTOM, xs, ys);
          break;
       default:
          assert(corner == RIGHTTOP);
-         *xs = SCIPvarGetLbGlobal(x);
-         *ys = SCIPvarGetLbGlobal(y);
-         *xt = SCIPvarGetUbGlobal(x);
-         *yt = SCIPvarGetUbGlobal(y);
+         getCorner(x,y, LEFTBOTTOM, xs, ys);
          break;
    }
 }
@@ -903,12 +930,10 @@ SCIP_RETCODE filterExistingLP(
       /* check all corners */
       for( j = 0; j < 4; ++j )
       {
-         SCIP_Real xs; /* not used */
-         SCIP_Real ys; /* not used */
          SCIP_Real xt;
          SCIP_Real yt;
 
-         getCorners(bilinbound->x, bilinbound->y, corners[j], &xs, &ys, &xt, &yt);
+         getCorner(bilinbound->x, bilinbound->y, corners[j], &xt, &yt);
 
          if( SCIPisFeasEQ(scip, xt, solx) && SCIPisFeasEQ(scip, yt, soly) )
             bilinbound->filtered = bilinbound->filtered | corners[j];
@@ -2284,11 +2309,18 @@ SCIP_RETCODE applyObbtBilinear(
          if( xcoef != SCIP_INVALID && !SCIPisFeasZero(scip, xcoef) && !SCIPisFeasZero(scip, ycoef)
             && SCIPisFeasGT(scip, (xcoef*xt - ycoef*yt - constant) / SQRT(SQR(xcoef) + SQR(ycoef) + SQR(constant)), 1e-2) )
          {
-            SCIP_CALL( SCIPaddBilinearIneqQuadratic(scip, bilinbound->x, bilinbound->y, bilinbound->index, xcoef, ycoef, constant) );
-            *result = SCIP_REDUCEDDOM;
+            SCIP_Bool success;
 
-            SCIPdebugMsg(scip, "   found %g x <= %g y + %g with violation %g\n", xcoef, ycoef, constant,
-               (xcoef*xt - ycoef*yt - constant) / SQRT(SQR(xcoef) + SQR(ycoef) + SQR(constant)));
+            SCIP_CALL( SCIPaddBilinearIneqQuadratic(scip, bilinbound->x, bilinbound->y, bilinbound->index, xcoef,
+               ycoef, constant, &success) );
+
+            /* check whether the inequality has been accepted by the quadratic constraint handler */
+            if( success )
+            {
+               *result = SCIP_REDUCEDDOM;
+               SCIPdebugMsg(scip, "   found %g x <= %g y + %g with violation %g\n", xcoef, ycoef, constant,
+                  (xcoef*xt - ycoef*yt - constant) / SQRT(SQR(xcoef) + SQR(ycoef) + SQR(constant)));
+            }
          }
       }
 
@@ -2669,8 +2701,6 @@ SCIP_RETCODE initBounds(
          propdata->bounds[bdidx]->done = FALSE;
          propdata->bounds[bdidx]->nonconvex = (nccount[i] > 0);
          propdata->bounds[bdidx]->index = bdidx;
-         propdata->bounds[bdidx]->nadjbilinterms = 0;
-         propdata->bounds[bdidx]->adjbilinterms = NULL;
          bdidx++;
 
          /* create upper bound */
@@ -2685,8 +2715,6 @@ SCIP_RETCODE initBounds(
          propdata->bounds[bdidx]->done = FALSE;
          propdata->bounds[bdidx]->nonconvex = (nccount[i] > 0);
          propdata->bounds[bdidx]->index = bdidx;
-         propdata->bounds[bdidx]->nadjbilinterms = 0;
-         propdata->bounds[bdidx]->adjbilinterms = NULL;
          bdidx++;
       }
    }
