@@ -536,6 +536,10 @@ SCIP_DECL_PROPINITSOL(propInitsolOrbitalfixing)
    if ( ! propdata->enabled )
       return SCIP_OKAY;
 
+   /* possibly stop */
+   if ( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
    assert( SCIPisTransformed(scip) );
 
    /* possibly get symmetries */
