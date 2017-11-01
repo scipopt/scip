@@ -291,7 +291,7 @@ SCIP_Bool SCIPcomputeLeftMidTangentSin(
    else
    {
       /* in ascending area, take the midpoint of the possible area in descending part */
-      if( SIN(lb) <= 0.0 )
+      if( SIN(lb) < 0.0 )
          startingpoint = lb + 2.25*M_PI - lbmodpi;
       else
          startingpoint = lb + 1.25*M_PI - lbmodpi;
@@ -368,7 +368,7 @@ SCIP_Bool SCIPcomputeRightMidTangentSin(
    else
    {
       /* in ascending area, take the midpoint of the possible area in descending part */
-      if( SIN(ub) <= 0.0 )
+      if( SIN(ub) < 0.0 )
          startingpoint = ub - 1.25*M_PI - ubmodpi;
       else
          startingpoint = ub - 0.25*M_PI - ubmodpi;
@@ -628,7 +628,7 @@ SCIP_RETCODE computeCutsSin(
          lhs = underestimate ? -SCIPinfinity(scip) : linconst;
          rhs = underestimate ? -linconst : SCIPinfinity(scip);
 
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sin_lmidtangent_%s", SCIPvarGetName(childvar));
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sin_rmidtangent_%s", SCIPvarGetName(childvar));
 
          SCIP_CALL( SCIPcreateEmptyRowCons(scip, cutbuffer, conshdlr, name, lhs, rhs,
             TRUE, FALSE, FALSE) );
@@ -863,7 +863,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSin)
    /* compute overestimating cuts */
    SCIP_CALL( computeCutsSin(scip, conshdlr, expr, NULL, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4], NULL, FALSE) );
 
-   for( i = 0; i < 5; ++i) {
+   for( i = 0; i < 5; ++i ) {
       /* only the cuts which could be created are added */
       if (!*infeasible && cuts[i] != NULL) {
          SCIP_CALL(SCIPmassageConsExprExprCut(scip, &cuts[i], NULL, -SCIPinfinity(scip)));

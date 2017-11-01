@@ -123,7 +123,7 @@ SCIP_RETCODE computeCutsCos(
          lhs = underestimate ? -SCIPinfinity(scip) : linconst;
          rhs = underestimate ? -linconst : SCIPinfinity(scip);
 
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sin_secant_%s", SCIPvarGetName(childvar));
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cos_secant_%s", SCIPvarGetName(childvar));
 
          SCIP_CALL( SCIPcreateEmptyRowCons(scip, secant, conshdlr, name, lhs, rhs,
                                            TRUE, FALSE, FALSE) );
@@ -151,7 +151,7 @@ SCIP_RETCODE computeCutsCos(
          lhs = underestimate ? -SCIPinfinity(scip) : linconst;
          rhs = underestimate ? -linconst : SCIPinfinity(scip);
 
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sin_ltangent_%s", SCIPvarGetName(childvar));
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cos_ltangent_%s", SCIPvarGetName(childvar));
 
          SCIP_CALL( SCIPcreateEmptyRowCons(scip, ltangent, conshdlr, name, lhs, rhs,
                                            TRUE, FALSE, FALSE) );
@@ -179,7 +179,7 @@ SCIP_RETCODE computeCutsCos(
          lhs = underestimate ? -SCIPinfinity(scip) : linconst;
          rhs = underestimate ? -linconst : SCIPinfinity(scip);
 
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sin_rtangent_%s", SCIPvarGetName(childvar));
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cos_rtangent_%s", SCIPvarGetName(childvar));
 
          SCIP_CALL( SCIPcreateEmptyRowCons(scip, rtangent, conshdlr, name, lhs, rhs,
                                            TRUE, FALSE, FALSE) );
@@ -211,7 +211,7 @@ SCIP_RETCODE computeCutsCos(
          lhs = underestimate ? -SCIPinfinity(scip) : linconst;
          rhs = underestimate ? -linconst : SCIPinfinity(scip);
 
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sin_soltangent_%s", SCIPvarGetName(childvar));
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cos_soltangent_%s", SCIPvarGetName(childvar));
 
          SCIP_CALL( SCIPcreateEmptyRowCons(scip, soltangent, conshdlr, name, lhs, rhs,
                                            TRUE, FALSE, FALSE) );
@@ -248,7 +248,7 @@ SCIP_RETCODE computeCutsCos(
          lhs = underestimate ? -SCIPinfinity(scip) : linconst;
          rhs = underestimate ? -linconst : SCIPinfinity(scip);
 
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sin_lmidtangent_%s", SCIPvarGetName(childvar));
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cos_lmidtangent_%s", SCIPvarGetName(childvar));
 
          SCIP_CALL( SCIPcreateEmptyRowCons(scip, cutbuffer, conshdlr, name, lhs, rhs,
                                            TRUE, FALSE, FALSE) );
@@ -287,7 +287,7 @@ SCIP_RETCODE computeCutsCos(
          lhs = underestimate ? -SCIPinfinity(scip) : linconst;
          rhs = underestimate ? -linconst : SCIPinfinity(scip);
 
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sin_lmidtangent_%s", SCIPvarGetName(childvar));
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cos_lmidtangent_%s", SCIPvarGetName(childvar));
 
          SCIP_CALL( SCIPcreateEmptyRowCons(scip, cutbuffer, conshdlr, name, lhs, rhs,
                                            TRUE, FALSE, FALSE) );
