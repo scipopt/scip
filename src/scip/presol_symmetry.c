@@ -136,7 +136,8 @@ SCIP_DECL_HASHKEYVAL(SYMhashKeyValVartype)
    SYM_VARTYPE* k;
 
    k = (SYM_VARTYPE*) key;
-   return (uint64_t) (SCIPrealHashCode(k->obj) + SCIPrealHashCode(k->lb) + SCIPrealHashCode(k->ub));  /*lint !e776*/
+
+   return SCIPhashTwo(SCIPcombineTwoInt(SCIPrealHashCode(k->obj), SCIPrealHashCode(k->lb)), SCIPrealHashCode(k->ub));
 }
 
 
