@@ -3564,25 +3564,6 @@ SCIP_RETCODE executeBranchingRecursive(
    return SCIP_OKAY;
 }
 
-/** Updates the status to reflect that a domain reduction was found via domain propagation */
-static
-void foundDomainReductionViaPropagation(
-   STATUS*               status              /**< current status */
-#ifdef SCIP_STATISTIC
-   ,SCIP*                scip                /**< SCIP data structure */
-   ,STATISTICS*          statistics          /**< general statistical data */
-#endif
-   )
-{
-   status->propagationdomred = TRUE;
-#ifdef SCIP_STATISTIC
-   {
-      int probingdepth = SCIPgetProbingDepth(scip);
-      statistics->npropdomred[probingdepth]++;
-   }
-#endif
-}
-
 /** branches recursively on all given candidates */
 static
 SCIP_RETCODE selectVarRecursive(
@@ -3719,10 +3700,12 @@ SCIP_RETCODE selectVarRecursive(
                /* if both bounds are equal the variable is fixed and we cannot branch
                 * this may happen if domain propagation on other candidates finds better bounds for the current candidate
                 */
+               status->propagationdomred = TRUE;
 #ifdef SCIP_STATISTIC
-               foundDomainReductionViaPropagation(status, scip, statistics);
-#else
-               foundDomainReductionViaPropagation(status);
+               {
+                  int probingdepth = SCIPgetProbingDepth(scip);
+                  statistics->npropdomred[probingdepth]++;
+               }
 #endif
                LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Domain Propagation changed the bounds of a branching candidate."
                      "\n");
@@ -3999,10 +3982,12 @@ SCIP_RETCODE selectVarRecursive(
                /* in case the bounds of the current highest scored solution have changed due to domain propagation during
                 * the lookahead branching we can/should not branch on this variable but instead report the domain
                 * reduction */
+               status->propagationdomred = TRUE;
 #ifdef SCIP_STATISTIC
-               foundDomainReductionViaPropagation(status, scip, statistics);
-#else
-               foundDomainReductionViaPropagation(status);
+               {
+                  int probingdepth = SCIPgetProbingDepth(scip);
+                  statistics->npropdomred[probingdepth]++;
+               }
 #endif
                LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Domain Propagation changed the bounds of a branching candidate."
                      "\n");
