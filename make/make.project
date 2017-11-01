@@ -207,7 +207,7 @@ GCCWARN		=	-pedantic -Wno-long-long -Wall -W -Wpointer-arith -Wcast-align -Wwrit
 			-Wno-unknown-pragmas -Wno-unused-parameter \
 			-Wredundant-decls -Wdisabled-optimization \
 			-Wsign-compare -Wstrict-prototypes \
-			-Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement #-Wno-variadic-macros
+			-Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement -Wno-maybe-uninitialized #-Wno-variadic-macros
 
 GXXWARN		=	-pedantic -Wno-long-long -Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
 			-Wno-unknown-pragmas -Wno-unused-parameter \
