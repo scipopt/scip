@@ -4323,6 +4323,8 @@ SCIP_RETCODE freePersistent(
    SCIP_CALL( SCIPfreeSol(scip, &branchruledata->persistent->prevbinsolution) );
 
    branchruledata->isinitialized = FALSE;
+
+   return SCIP_OKAY;
 }
 
 /** Checks whether the branchruledata struct has to be (re-)initialized. */
@@ -4349,7 +4351,7 @@ SCIP_RETCODE initBranchruleData(
 
    if( branchruledata->isinitialized )
    {
-      freePersistent(scip, branchruledata);
+      SCIP_CALL( freePersistent(scip, branchruledata) );
    }
 
    /* Create an empty solution. Gets filled in case of implied binary bounds. */
@@ -4510,7 +4512,7 @@ SCIP_DECL_BRANCHEXITSOL(branchExitSolLookahead)
 
    if( branchruledata->isinitialized )
    {
-      freePersistent(scip, branchruledata);
+      SCIP_CALL( freePersistent(scip, branchruledata) );
    }
 
    return SCIP_OKAY;
