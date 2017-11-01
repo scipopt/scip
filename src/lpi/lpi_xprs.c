@@ -703,7 +703,7 @@ SCIP_RETCODE SCIPlpiCreate(
    SCIP_OBJSEN           objsen              /**< objective sense */
    )
 {
-   int zero;
+   int zero = 0;
 
    assert(sizeof(SCIP_Real) == sizeof(double)); /* Xpress only works with doubles as floating points */
    assert(sizeof(SCIP_Bool) == sizeof(int));    /* Xpress only works with ints as bools */
@@ -1171,7 +1171,7 @@ SCIP_RETCODE SCIPlpiClear(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   int zero;
+   int zero = 0;
 
    assert(lpi != NULL);
 
@@ -2021,6 +2021,7 @@ SCIP_RETCODE lpiStrongbranches(
    int*    mbndind;
    int*    mstatus;
    SCIP_OBJSEN objsen;
+   int nbranches;
    int j;
 
    assert( lpi != NULL );
@@ -2037,15 +2038,18 @@ SCIP_RETCODE lpiStrongbranches(
    if( iter != NULL )
       *iter = 0;
 
+   /* compute the number of branches; for each column we have 2 branches */
+   nbranches = 2*ncols;
+
    /* get objective sense of the current LP */
    SCIP_CALL( SCIPlpiGetObjsen(lpi, &objsen) );
 
    /* Set the branching bounds (down first, up second). */
-   SCIP_ALLOC( BMSallocMemoryArray(&mbndind, 2*ncols) );
-   SCIP_ALLOC( BMSallocMemoryArray(&dbndval, 2*ncols) );
-   SCIP_ALLOC( BMSallocMemoryArray(&cbndtype, 2*ncols) );
-   SCIP_ALLOC( BMSallocMemoryArray(&dobjval, 2*ncols) );
-   SCIP_ALLOC( BMSallocMemoryArray(&mstatus, 2*ncols) );
+   SCIP_ALLOC( BMSallocMemoryArray(&mbndind, nbranches) );
+   SCIP_ALLOC( BMSallocMemoryArray(&dbndval, nbranches) );
+   SCIP_ALLOC( BMSallocMemoryArray(&cbndtype, nbranches) );
+   SCIP_ALLOC( BMSallocMemoryArray(&dobjval, nbranches) );
+   SCIP_ALLOC( BMSallocMemoryArray(&mstatus, nbranches) );
 
    /* construct the bounds for the strong branches */
    for( j = 0; j < ncols; ++j )
@@ -2060,7 +2064,7 @@ SCIP_RETCODE lpiStrongbranches(
    }
 
    /* apply strong branching to the 2*ncols branches. */
-   CHECK_ZERO( lpi->messagehdlr, XPRSstrongbranch(lpi->xprslp, 2*ncols, mbndind, cbndtype, dbndval, itlim, dobjval, mstatus) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSstrongbranch(lpi->xprslp, nbranches, mbndind, cbndtype, dbndval, itlim, dobjval, mstatus) );
 
    for( j = 0; j < ncols; ++j )
    {
