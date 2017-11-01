@@ -998,21 +998,21 @@ int getHistIndex(
    SCIP_STATUS           subscipstatus       /**< sub-SCIP status */
    )
 {
-   switch (subscipstatus) {
+   switch (subscipstatus) {/*lint --e{788}*/
       case SCIP_STATUS_OPTIMAL:
-         return HIDX_OPT;
+         return (int)HIDX_OPT;
       case SCIP_STATUS_INFEASIBLE:
-         return HIDX_INFEAS;
+         return (int)HIDX_INFEAS;
       case SCIP_STATUS_NODELIMIT:
-         return HIDX_NODELIM;
+         return (int)HIDX_NODELIM;
       case SCIP_STATUS_STALLNODELIMIT:
-         return HIDX_STALLNODE;
+         return (int)HIDX_STALLNODE;
       case SCIP_STATUS_SOLLIMIT:
-         return HIDX_SOLLIM;
+         return (int)HIDX_SOLLIM;
       case SCIP_STATUS_USERINTERRUPT:
-         return HIDX_USR;
+         return (int)HIDX_USR;
       default:
-         return HIDX_OTHER;
+         return (int)HIDX_OTHER;
    }
 }
 
@@ -1267,7 +1267,7 @@ SCIP_Real getVariablePscostScore(
    assert(var != NULL);
 
    /* variables that aren't LP columns have no pseudocost score */
-   if( ! SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
+   if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
       return 0.0;
 
    rootsolval = SCIPvarGetRootSol(var);
