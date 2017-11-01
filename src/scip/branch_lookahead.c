@@ -117,11 +117,146 @@
  * Data structures
  */
 
+/** A struct holding information to speed up the solving time for solving a problem again. This is filled by the FSB
+ *  scoring routine that is run to get the best candidates. It is then read by the actual ALAB routine. */
+typedef struct
+{
+   SCIP_LPISTATE*        lpistate;           /**< the basis information that may be set before another solve lp call */
+   SCIP_LPINORMS*        lpinorms;           /**< the norms that may be set before another solve lp call */
+   SCIP_Bool             primalfeas;         /**< indicates whether the solution was primal feasible */
+   SCIP_Bool             dualfeas;           /**< indicates whether the solution was dual feasible */
+} WARMSTARTINFO;
+
+/** Allocates the warm start information on the buffer and initializes it with default values. */
+static
+SCIP_RETCODE warmStartInfoCreate(
+      SCIP*                 scip,               /**< SCIP data structure */
+      WARMSTARTINFO**       warmstartinfo       /**< the warmstartinfo to allocate and initialize */
+)
+{
+   assert(scip != NULL);
+   assert(warmstartinfo != NULL);
+
+   SCIP_CALL( SCIPallocBlockMemory(scip, warmstartinfo) );
+
+   (*warmstartinfo)->lpistate = NULL;
+   (*warmstartinfo)->lpinorms = NULL;
+   (*warmstartinfo)->primalfeas = FALSE;
+   (*warmstartinfo)->dualfeas = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** Checks that the warm start info can be read into the lp solver. */
+static
+SCIP_Bool warmStartInfoIsReadable(
+      WARMSTARTINFO*        memory              /**< The warm start info to check. May be NULL. */
+)
+{
+   /* the lpinorms may be NULL */
+   return memory != NULL && memory->lpistate != NULL;
+}
+
+/** Frees the allocated buffer memory of the warm start info. */
+static
+SCIP_RETCODE warmStartInfoFree(
+      SCIP*                 scip,               /**< SCIP data structure */
+      WARMSTARTINFO**       warmstartinfo       /**< the warm start info to free */
+)
+{
+   SCIP_LPI* lpi;
+   BMS_BLKMEM* blkmem;
+
+   assert(scip != NULL);
+   assert(warmstartinfo != NULL);
+
+   SCIP_CALL( SCIPgetLPI(scip, &lpi) );
+   blkmem = SCIPblkmem(scip);
+
+   if( (*warmstartinfo)->lpistate != NULL )
+   {
+      SCIP_CALL( SCIPlpiFreeState(lpi, blkmem, &(*warmstartinfo)->lpistate) );
+      (*warmstartinfo)->lpistate = NULL;
+   }
+
+   if( (*warmstartinfo)->lpinorms != NULL )
+   {
+      SCIP_CALL( SCIPlpiFreeNorms(lpi, blkmem, &(*warmstartinfo)->lpinorms) );
+      (*warmstartinfo)->lpinorms = NULL;
+   }
+
+   SCIPfreeBlockMemory(scip, warmstartinfo);
+
+   return SCIP_OKAY;
+}
+
+/** A struct containing all information needed to branch on a variable. */
+typedef struct
+{
+   SCIP_VAR*             branchvar;          /**< the variable to branch on */
+   SCIP_Real             branchval;          /**< the fractional value to branch on */
+   SCIP_Real             fracval;            /**< the fractional part of the value to branch on (val - floor(val)) */
+   WARMSTARTINFO*        downwarmstartinfo;  /**< the warm start info containing the lp data from a previous down branch */
+   WARMSTARTINFO*        upwarmstartinfo;    /**< the warm start info containing the lp data from a previous up branch */
+} CANDIDATE;
+
+/** Allocates the candidate on the buffer and initializes it with default values. */
+static
+SCIP_RETCODE candidateCreate(
+      SCIP*                 scip,               /**< SCIP data structure */
+      CANDIDATE**           candidate,          /**< the candidate to allocate and initialize */
+      SCIP_Bool             storelpi            /**< should the candidate be able to store its lpi information? */
+)
+{
+   assert(scip != NULL);
+   assert(candidate != NULL);
+
+   SCIP_CALL( SCIPallocBlockMemory(scip, candidate) );
+
+   if( storelpi )
+   {
+      SCIP_CALL(warmStartInfoCreate(scip, &(*candidate)->downwarmstartinfo) );
+      SCIP_CALL(warmStartInfoCreate(scip, &(*candidate)->upwarmstartinfo) );
+   }
+   else
+   {
+      (*candidate)->downwarmstartinfo = NULL;
+      (*candidate)->upwarmstartinfo = NULL;
+   }
+
+   (*candidate)->branchvar = NULL;
+
+   return SCIP_OKAY;
+}
+
+/** Frees the allocated buffer memory of the candidate and clears the contained lpi memories. */
+static
+SCIP_RETCODE candidateFree(
+      SCIP*                 scip,               /**< SCIP data structure */
+      CANDIDATE**           candidate           /**< the candidate to free */
+)
+{
+   assert(scip != NULL);
+   assert(candidate != NULL);
+
+   /* if a candidate is freed, we no longer need the content of the warm start info */
+   if( (*candidate)->upwarmstartinfo != NULL )
+   {
+      SCIP_CALL( warmStartInfoFree(scip, &(*candidate)->upwarmstartinfo) );
+   }
+   if( (*candidate)->downwarmstartinfo != NULL )
+   {
+      SCIP_CALL( warmStartInfoFree(scip, &(*candidate)->downwarmstartinfo) );
+   }
+
+   SCIPfreeBlockMemory(scip, candidate);
+   return SCIP_OKAY;
+}
+
 /** Holds the information needed for branching on a variable. */
 typedef struct
 {
-   SCIP_VAR*             var;                /**< Variable to branch on. May be NULL.*/
-   SCIP_Real             val;                /**< the fractional value of the variable to branch on */
+   CANDIDATE*            cand;               /**< Candidate to branch on. May be NULL.*/
    SCIP_Real             downdb;             /**< dual bound for down branch */
    SCIP_Real             updb;               /**< dual bound for the up branch */
    SCIP_Real             proveddb;           /**< proven dual bound for the current node */
@@ -145,7 +280,7 @@ SCIP_RETCODE branchingDecisionCreate(
    assert(decision != NULL);
 
    SCIP_CALL( SCIPallocBuffer(scip, decision) );
-   (*decision)->var = NULL;
+   (*decision)->cand = NULL;
    (*decision)->downdb = -SCIPinfinity(scip);
    (*decision)->downdbvalid = FALSE;
    (*decision)->updb = -SCIPinfinity(scip);
@@ -165,8 +300,7 @@ void branchingDecisionCopy(
    assert(sourcedecision != NULL);
    assert(targetdecision != NULL);
 
-   targetdecision->var = sourcedecision->var;
-   targetdecision->val = sourcedecision->val;
+   targetdecision->cand = sourcedecision->cand;
    targetdecision->downdb = sourcedecision->downdb;
    targetdecision->downdbvalid = sourcedecision->downdbvalid;
    targetdecision->updb = sourcedecision->updb;
@@ -183,7 +317,7 @@ SCIP_Bool branchingDecisionIsValid(
    assert(decision != NULL);
 
    /* a branching decision is deemed valid, if the var point is not on the default NULL value (see the allocate method) */
-   return decision->var != NULL;
+   return decision->cand != NULL;
 }
 
 /** Frees the allocated buffer memory of the branching decision. */
@@ -928,142 +1062,6 @@ void binConsDataFree(
    SCIPfreeBuffer(scip, consdata);
 }
 
-/** A struct holding information to speed up the solving time for solving a problem again. This is filled by the FSB
- *  scoring routine that is run to get the best candidates. It is then read by the actual ALAB routine. */
-typedef struct
-{
-   SCIP_LPISTATE*        lpistate;           /**< the basis information that may be set before another solve lp call */
-   SCIP_LPINORMS*        lpinorms;           /**< the norms that may be set before another solve lp call */
-   SCIP_Bool             primalfeas;         /**< indicates whether the solution was primal feasible */
-   SCIP_Bool             dualfeas;           /**< indicates whether the solution was dual feasible */
-} WARMSTARTINFO;
-
-/** Allocates the warm start information on the buffer and initializes it with default values. */
-static
-SCIP_RETCODE warmStartInfoCreate(
-   SCIP*                 scip,               /**< SCIP data structure */
-   WARMSTARTINFO**       warmstartinfo       /**< the warmstartinfo to allocate and initialize */
-   )
-{
-   assert(scip != NULL);
-   assert(warmstartinfo != NULL);
-
-   SCIP_CALL( SCIPallocBlockMemory(scip, warmstartinfo) );
-
-   (*warmstartinfo)->lpistate = NULL;
-   (*warmstartinfo)->lpinorms = NULL;
-   (*warmstartinfo)->primalfeas = FALSE;
-   (*warmstartinfo)->dualfeas = FALSE;
-
-   return SCIP_OKAY;
-}
-
-/** Checks that the warm start info can be read into the lp solver. */
-static
-SCIP_Bool warmStartInfoIsReadable(
-   WARMSTARTINFO*        memory              /**< The warm start info to check. May be NULL. */
-   )
-{
-   /* the lpinorms may be NULL */
-   return memory != NULL && memory->lpistate != NULL;
-}
-
-/** Frees the allocated buffer memory of the warm start info. */
-static
-SCIP_RETCODE warmStartInfoFree(
-   SCIP*                 scip,               /**< SCIP data structure */
-   WARMSTARTINFO**       warmstartinfo       /**< the warm start info to free */
-   )
-{
-   SCIP_LPI* lpi;
-   BMS_BLKMEM* blkmem;
-
-   assert(scip != NULL);
-   assert(warmstartinfo != NULL);
-
-   SCIP_CALL( SCIPgetLPI(scip, &lpi) );
-   blkmem = SCIPblkmem(scip);
-
-   if( (*warmstartinfo)->lpistate != NULL )
-   {
-      SCIP_CALL( SCIPlpiFreeState(lpi, blkmem, &(*warmstartinfo)->lpistate) );
-      (*warmstartinfo)->lpistate = NULL;
-   }
-
-   if( (*warmstartinfo)->lpinorms != NULL )
-   {
-      SCIP_CALL( SCIPlpiFreeNorms(lpi, blkmem, &(*warmstartinfo)->lpinorms) );
-      (*warmstartinfo)->lpinorms = NULL;
-   }
-
-   SCIPfreeBlockMemory(scip, warmstartinfo);
-
-   return SCIP_OKAY;
-}
-
-/** A struct containing all information needed to branch on a variable. */
-typedef struct
-{
-   SCIP_VAR*             branchvar;          /**< the variable to branch on */
-   SCIP_Real             branchval;          /**< the fractional value to branch on */
-   SCIP_Real             fracval;            /**< the fractional part of the value to branch on (val - floor(val)) */
-   WARMSTARTINFO*        downwarmstartinfo;  /**< the warm start info containing the lp data from a previous down branch */
-   WARMSTARTINFO*        upwarmstartinfo;    /**< the warm start info containing the lp data from a previous up branch */
-} CANDIDATE;
-
-/** Allocates the candidate on the buffer and initializes it with default values. */
-static
-SCIP_RETCODE candidateCreate(
-   SCIP*                 scip,               /**< SCIP data structure */
-   CANDIDATE**           candidate,          /**< the candidate to allocate and initialize */
-   SCIP_Bool             storelpi            /**< should the candidate be able to store its lpi information? */
-   )
-{
-   assert(scip != NULL);
-   assert(candidate != NULL);
-
-   SCIP_CALL( SCIPallocBlockMemory(scip, candidate) );
-
-   if( storelpi )
-   {
-      SCIP_CALL(warmStartInfoCreate(scip, &(*candidate)->downwarmstartinfo) );
-      SCIP_CALL(warmStartInfoCreate(scip, &(*candidate)->upwarmstartinfo) );
-   }
-   else
-   {
-      (*candidate)->downwarmstartinfo = NULL;
-      (*candidate)->upwarmstartinfo = NULL;
-   }
-
-   (*candidate)->branchvar = NULL;
-
-   return SCIP_OKAY;
-}
-
-/** Frees the allocated buffer memory of the candidate and clears the contained lpi memories. */
-static
-SCIP_RETCODE candidateFree(
-   SCIP*                 scip,               /**< SCIP data structure */
-   CANDIDATE**           candidate           /**< the candidate to free */
-   )
-{
-   assert(scip != NULL);
-   assert(candidate != NULL);
-
-   /* if a candidate is freed, we no longer need the content of the warm start info */
-   if( (*candidate)->upwarmstartinfo != NULL )
-   {
-      SCIP_CALL( warmStartInfoFree(scip, &(*candidate)->upwarmstartinfo) );
-   }
-   if( (*candidate)->downwarmstartinfo != NULL )
-   {
-      SCIP_CALL( warmStartInfoFree(scip, &(*candidate)->downwarmstartinfo) );
-   }
-
-   SCIPfreeBlockMemory(scip, candidate);
-   return SCIP_OKAY;
-}
-
 /** A struct acting as a fixed list of candidates */
 typedef struct
 {
@@ -1372,9 +1370,8 @@ void statusFree(
 typedef struct
 {
    SCIP_Real*            scores;             /**< the scores for each problem variable */
-   int*                  bestsortedindices;  /**< array containing the best sorted variable indices w.r.t. their score */
+   CANDIDATE**           bestsortedcands;    /**< array containing the best sorted variable indices w.r.t. their score */
    int                   nbestsortedindices; /**< number of elements in bestsortedindices */
-/* TODO: replace the int array by a CANDIDATE* array? */
 } SCORECONTAINER;
 
 /** Resets the array containing the sorted indices w.r.t. their score. */
@@ -1387,7 +1384,7 @@ void scoreContainterResetBestSortedIndices(
 
    for( i = 0; i < scorecontainer->nbestsortedindices; i++ )
    {
-      scorecontainer->bestsortedindices[i] = -1;
+      scorecontainer->bestsortedcands[i] = NULL;
    }
 }
 
@@ -1410,7 +1407,7 @@ SCIP_RETCODE scoreContainerCreate(
 
    SCIP_CALL( SCIPallocBuffer(scip, scorecontainer) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*scorecontainer)->scores, ntotalvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*scorecontainer)->bestsortedindices, config->maxncands) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*scorecontainer)->bestsortedcands, config->maxncands) );
 
    (*scorecontainer)->nbestsortedindices = config->maxncands;
 
@@ -1440,10 +1437,12 @@ int scoreContainerFindScoreInsertionPoint(
    while( left <= right )
    {
       int mid = left + ((right - left) / 2);
-      int midindex = scorecontainer->bestsortedindices[mid];
+      CANDIDATE* midcand = scorecontainer->bestsortedcands[mid];
       SCIP_Real midscore = -SCIPinfinity(scip);
-      if( midindex >= 0 )
+      if( midcand != NULL )
       {
+         SCIP_VAR *midvar = midcand->branchvar;
+         int midindex = SCIPvarGetProbindex(midvar);
          midscore = scorecontainer->scores[midindex];
       }
 
@@ -1462,22 +1461,22 @@ int scoreContainerFindScoreInsertionPoint(
 /** Inserts the given proindex into the sorted array in the container, moving all indices after it to the right. Then
  * returns the element that does not fit into the array any longer. */
 static
-int scoreContainerUpdateSortOrder(
+CANDIDATE* scoreContainerUpdateSortOrder(
    SCORECONTAINER*       scorecontainer,     /**< container to the insert the index into */
-   int                   probindex,          /**< the probindex of a vairable to store */
+   CANDIDATE*            candidate,          /**< the probindex of a vairable to store */
    int                   insertpoint         /**< point to store the index at */
    )
 {
    int i;
-   int moveindex = probindex;
+   CANDIDATE* movecand = candidate;
 
    for( i = insertpoint; i < scorecontainer->nbestsortedindices; i++ )
    {
-      int oldindex = scorecontainer->bestsortedindices[i];
-      scorecontainer->bestsortedindices[i] = moveindex;
-      moveindex = oldindex;
+      CANDIDATE* oldcand = scorecontainer->bestsortedcands[i];
+      scorecontainer->bestsortedcands[i] = movecand;
+      movecand = oldcand;
    }
-   return moveindex;
+   return movecand;
 }
 
 /** Sets the score for the variable in the score container. */
@@ -1485,45 +1484,35 @@ static
 SCIP_RETCODE scoreContainerSetScore(
    SCIP*                 scip,               /**< SCIP data structure */
    SCORECONTAINER*       scorecontainer,     /**< the container to write into */
-   CANDIDATELIST*        candidates,         /**< TODO: to be removed */
-   SCIP_VAR*             var,                /**< variable to add the score for */
+   CANDIDATE*            cand,               /**< candidate to add the score for */
    SCIP_Real             score               /**< score to add */
    )
 {
+   CANDIDATE* droppedcandidate;
    int probindex;
    int insertpoint;
-   int droppedprobindex;
-   int i;
 
    assert(scip != NULL);
    assert(scorecontainer != NULL);
-   assert(var != NULL);
    assert(SCIPisGE(scip, score, 0.0));
 
-   probindex = SCIPvarGetProbindex(var);
+   probindex = SCIPvarGetProbindex(cand->branchvar);
 
    scorecontainer->scores[probindex] = score;
 
    /* find the point in the sorted array where the new score should be inserted */
    insertpoint = scoreContainerFindScoreInsertionPoint(scip, scorecontainer, score);
 
-   /* insert the current variable (probindex) at the position calculated above, returning the index of the variable that
-    * was removed at the end of the list; this index can be the given probindex for the case that the score does not
+   /* insert the current variable (cand) at the position calculated above, returning the candidate that
+    * was removed at the end of the list; this candidate can be the given candidate for the case that the score does not
     * belong to the best ones */
-   droppedprobindex = scoreContainerUpdateSortOrder(scorecontainer, probindex, insertpoint);
+   droppedcandidate = scoreContainerUpdateSortOrder(scorecontainer, cand, insertpoint);
 
    /* remove the warm start info from the dropped candidate */
-   /* TODO: maybe rework to use a map probindex->CANDIDATE*? */
-   for( i = 0; i < candidates->ncandidates; i++ )
+   if( droppedcandidate != NULL )
    {
-      CANDIDATE* cand = candidates->candidates[i];
-      probindex = SCIPvarGetProbindex(cand->branchvar);
-
-      if( droppedprobindex == probindex )
-      {
-         SCIP_CALL( warmStartInfoFree(scip, &cand->downwarmstartinfo) );
-         SCIP_CALL( warmStartInfoFree(scip, &cand->upwarmstartinfo) );
-      }
+      SCIP_CALL(warmStartInfoFree(scip, &droppedcandidate->downwarmstartinfo));
+      SCIP_CALL(warmStartInfoFree(scip, &droppedcandidate->upwarmstartinfo));
    }
 
    LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Stored score <%g> for var <%s>.\n", score, SCIPvarGetName(var));
@@ -1540,7 +1529,8 @@ SCIP_RETCODE scoreContainerFree(
    assert(scip != NULL);
    assert(scorecontainer != NULL);
 
-   SCIPfreeBufferArray(scip, &(*scorecontainer)->bestsortedindices);
+   /* don't free the candidates inside the cands array, as those are handled by the candidate list */
+   SCIPfreeBufferArray(scip, &(*scorecontainer)->bestsortedcands);
    SCIPfreeBufferArray(scip, &(*scorecontainer)->scores);
    SCIPfreeBuffer(scip, scorecontainer);
 
@@ -2162,8 +2152,8 @@ SCIP_RETCODE branchOnVar(
    BRANCHINGDECISION*    decision            /**< the decision with all the needed data */
    )
 {
-   SCIP_VAR* bestvar = decision->var;
-   SCIP_Real bestval = decision->val;
+   SCIP_VAR* bestvar = decision->cand->branchvar;
+   SCIP_Real bestval = decision->cand->branchval;
 
    SCIP_NODE* downchild = NULL;
    SCIP_NODE* upchild = NULL;
@@ -3134,7 +3124,7 @@ SCIP_RETCODE ensureScoresPresent(
          else
          {
             SCIP_Real score = calculateScoreFromPseudocosts(scip, lpcand);
-            SCIP_CALL( scoreContainerSetScore(scip, scorecontainer, allcandidates, branchvar, score) );
+            SCIP_CALL( scoreContainerSetScore(scip, scorecontainer, lpcand, score) );
          }
       }
       else
@@ -3609,8 +3599,7 @@ SCIP_RETCODE selectVarRecursive(
 #endif
 
    /* init default decision */
-   decision->var = candidates->candidates[0]->branchvar;
-   decision->val = candidates->candidates[0]->branchval;
+   decision->cand = candidates->candidates[0];
    decision->downdb = lpobjval;
    decision->downdbvalid = TRUE;
    decision->updb = lpobjval;
@@ -3638,8 +3627,8 @@ SCIP_RETCODE selectVarRecursive(
       int i;
       int c;
 
-      bestscorelowerbound = SCIPvarGetLbLocal(decision->var);
-      bestscoreupperbound = SCIPvarGetUbLocal(decision->var);
+      bestscorelowerbound = SCIPvarGetLbLocal(decision->cand->branchvar);
+      bestscoreupperbound = SCIPvarGetUbLocal(decision->cand->branchvar);
 
       SCIP_CALL( branchingResultDataCreate(scip, &downbranchingresult) );
       SCIP_CALL( branchingResultDataCreate(scip, &upbranchingresult) );
@@ -3896,8 +3885,7 @@ SCIP_RETCODE selectVarRecursive(
 
                bestscore = score;
 
-               decision->var = branchvar;
-               decision->val = branchval;
+               decision->cand = candidate;
                decision->downdb = downbranchingresult->dualbound;
                decision->downdbvalid = downbranchingresult->dualboundvalid;
                decision->updb = upbranchingresult->dualbound;
@@ -3927,7 +3915,7 @@ SCIP_RETCODE selectVarRecursive(
                /* store the score for this variable to reuse it later (assuming this is a FSB run, later means the
                 * following LAB run.) ??????????????????????
                 */
-               SCIP_CALL( scoreContainerSetScore(scip, scorecontainer, candidates, branchvar, score) );
+               SCIP_CALL( scoreContainerSetScore(scip, scorecontainer, candidate, score) );
             }
 
             if( config->maxnviolatedcons != -1 && (config->usebincons || config->usedomainreduction) &&
@@ -3966,7 +3954,7 @@ SCIP_RETCODE selectVarRecursive(
 #endif
          }
 
-         if( areBoundsChanged(scip, decision->var, bestscorelowerbound, bestscoreupperbound) )
+         if( areBoundsChanged(scip, decision->cand->branchvar, bestscorelowerbound, bestscoreupperbound) )
          {
             /* in case the bounds of the current highest scored solution have changed due to domain propagation during
              * the lookahead branching we can/should not branch on this variable but instead report the domain
@@ -4303,7 +4291,7 @@ SCIP_RETCODE usePreviousResult(
       SCIPvarGetName(decision->var));
 
    /* reset the var pointer, as this is our indicator whether we should branch on prev data in the next call */
-   decision->var = NULL;
+   decision->cand = NULL;
 
    return SCIP_OKAY;
 }
@@ -4380,7 +4368,7 @@ SCIP_RETCODE initBranchruleData(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->persistent->lastbranchdownres, nvars) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->persistent->lastbranchlpobjval, nvars) );
 
-   branchruledata->persistent->prevdecision->var = NULL;
+   branchruledata->persistent->prevdecision->cand = NULL;
    branchruledata->persistent->nvars = nvars;
 
    for( i = 0; i < nvars; i++ )
