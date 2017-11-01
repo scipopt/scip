@@ -387,7 +387,8 @@ SCIP_RETCODE propagate(
          if ( img != v )
          {
             assert( SCIPvarGetType(permvars[v]) == SCIPvarGetType(permvars[img]) );
-            assert( SCIPisEQ(scip, varGetObjResolved(permvars[v]), varGetObjResolved(permvars[img])) );
+            assert( SCIPvarGetStatus(permvars[v]) == SCIP_VARSTATUS_MULTAGGR || SCIPvarGetStatus(permvars[img]) == SCIP_VARSTATUS_MULTAGGR ||
+               SCIPisEQ(scip, varGetObjResolved(permvars[v]), varGetObjResolved(permvars[img])) );
 
             /* we are moving a variable branched to 1 to another variable */
             if ( b1[v] && ! b1[img] )
