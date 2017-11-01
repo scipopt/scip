@@ -636,52 +636,55 @@ SCIP_RETCODE generateOrbitopeVarsMatrix(
    /* Either we are in case 1) or case 3), or all columns should have been added to vars in case 2) */
    assert( curcolumn > 1 || (curcolumn < 0 && nfilledcols == ncols) );
 
-   /* add column with columnorder 1 to vars */
-   for (i = 0; i < nrows; ++i)
+   if ( curcolumn > 1 )
    {
-      assert( orbitopevaridx[i][1] < npermvars );
-      assert( SCIPvarIsBinary(permvars[orbitopevaridx[i][1]]) );
-
-      (*vars)[i][nfilledcols] = permvars[orbitopevaridx[i][1]];
-   }
-   ++nfilledcols;
-
-   /* add column with columnorder 0 to vars */
-   for (i = 0; i < nrows; ++i)
-   {
-      assert( orbitopevaridx[i][0] < npermvars );
-      assert( SCIPvarIsBinary(permvars[orbitopevaridx[i][0]]) );
-
-      (*vars)[i][nfilledcols] = permvars[orbitopevaridx[i][0]];
-   }
-   ++nfilledcols;
-
-   /* add columns with a negative column order to vars */
-   if ( nfilledcols < ncols )
-   {
-      assert( ncols > 2 );
-
-      curcolumn = 2;
-      while ( nfilledcols < ncols )
+      /* add column with columnorder 1 to vars */
+      for (i = 0; i < nrows; ++i)
       {
-         assert( columnorder[curcolumn] < 0 );
+         assert( orbitopevaridx[i][1] < npermvars );
+         assert( SCIPvarIsBinary(permvars[orbitopevaridx[i][1]]) );
 
-         for (i = 0; i < nrows; ++i)
+         (*vars)[i][nfilledcols] = permvars[orbitopevaridx[i][1]];
+      }
+      ++nfilledcols;
+
+      /* add column with columnorder 0 to vars */
+      for (i = 0; i < nrows; ++i)
+      {
+         assert( orbitopevaridx[i][0] < npermvars );
+         assert( SCIPvarIsBinary(permvars[orbitopevaridx[i][0]]) );
+
+         (*vars)[i][nfilledcols] = permvars[orbitopevaridx[i][0]];
+      }
+      ++nfilledcols;
+
+      /* add columns with a negative column order to vars */
+      if ( nfilledcols < ncols )
+      {
+         assert( ncols > 2 );
+
+         curcolumn = 2;
+         while ( nfilledcols < ncols )
          {
-            assert( orbitopevaridx[i][curcolumn] < npermvars );
-            assert( SCIPvarIsBinary(permvars[orbitopevaridx[i][curcolumn]]) );
+            assert( columnorder[curcolumn] < 0 );
 
-            /* elements in last column of orbitope have to appear exactly once in the orbitope */
-            if ( nfilledcols == ncols - 1 && nusedelems[orbitopevaridx[i][curcolumn]] > 1 )
+            for (i = 0; i < nrows; ++i)
             {
-               *infeasible = TRUE;
-               break;
-            }
+               assert( orbitopevaridx[i][curcolumn] < npermvars );
+               assert( SCIPvarIsBinary(permvars[orbitopevaridx[i][curcolumn]]) );
 
-            (*vars)[i][nfilledcols] = permvars[orbitopevaridx[i][curcolumn]];
+               /* elements in last column of orbitope have to appear exactly once in the orbitope */
+               if ( nfilledcols == ncols - 1 && nusedelems[orbitopevaridx[i][curcolumn]] > 1 )
+               {
+                  *infeasible = TRUE;
+                  break;
+               }
+
+               (*vars)[i][nfilledcols] = permvars[orbitopevaridx[i][curcolumn]];
+            }
+            ++curcolumn;
+            ++nfilledcols;
          }
-         ++curcolumn;
-         ++nfilledcols;
       }
    }
 
