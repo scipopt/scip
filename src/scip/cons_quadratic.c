@@ -200,8 +200,8 @@ struct BilinearEstimator
    SCIP_Real             ineqoverest[6];    /**< at most two inequalities that can be used to overestimate xy; stored as (xcoef,ycoef,constant) with xcoef x <= ycoef y + constant */
    int                   ninequnderest;     /**< total number of inequalities for underestimating xy */
    int                   nineqoverest;      /**< total number of inequalities for overestimating xy */
-   unsigned int          nunderest;         /**< number of constraints that require to underestimate xy */
-   unsigned int          noverest;          /**< number of constraints that require to overestimate xy */
+   int                   nunderest;         /**< number of constraints that require to underestimate xy */
+   int                   noverest;          /**< number of constraints that require to overestimate xy */
 
    SCIP_Real             lastimprfac;       /**< last achieved improvement factor */
 };
@@ -6952,8 +6952,8 @@ SCIP_Real getInteriority(
    SCIP_Real interiorityx;
    SCIP_Real interiorityy;
 
-   interiorityx = MIN(refx-lbx, ubx-refx) / MAX(ubx-lbx, SCIPepsilon(scip));
-   interiorityy = MIN(refy-lby, uby-refy) / MAX(uby-lby, SCIPepsilon(scip));
+   interiorityx = MIN(refx-lbx, ubx-refx) / MAX(ubx-lbx, SCIPepsilon(scip)); /*lint !e666*/
+   interiorityy = MIN(refy-lby, uby-refy) / MAX(uby-lby, SCIPepsilon(scip)); /*lint !e666*/
 
    return 2.0*MIN(interiorityx, interiorityy);
 }
@@ -15265,14 +15265,14 @@ void getIneqViol(
    if( xcoef * ycoef >= 0 )
    {
       /* violation for top-left and bottom-right corner */
-      *viol1 = MAX(0, (xcoef * SCIPvarGetLbLocal(x)  - ycoef * SCIPvarGetUbLocal(y) - constant) / norm);
-      *viol2 = MAX(0, (xcoef * SCIPvarGetUbLocal(x)  - ycoef * SCIPvarGetLbLocal(y) - constant) / norm);
+      *viol1 = MAX(0, (xcoef * SCIPvarGetLbLocal(x)  - ycoef * SCIPvarGetUbLocal(y) - constant) / norm); /*lint !e666*/
+      *viol2 = MAX(0, (xcoef * SCIPvarGetUbLocal(x)  - ycoef * SCIPvarGetLbLocal(y) - constant) / norm); /*lint !e666*/
    }
    else
    {
       /* violation for top-right and bottom-left corner */
-      *viol1 = MAX(0, (xcoef * SCIPvarGetUbLocal(x)  - ycoef * SCIPvarGetUbLocal(y) - constant) / norm);
-      *viol2 = MAX(0, (xcoef * SCIPvarGetLbLocal(x)  - ycoef * SCIPvarGetLbLocal(y) - constant) / norm);
+      *viol1 = MAX(0, (xcoef * SCIPvarGetUbLocal(x)  - ycoef * SCIPvarGetUbLocal(y) - constant) / norm); /*lint !e666*/
+      *viol2 = MAX(0, (xcoef * SCIPvarGetLbLocal(x)  - ycoef * SCIPvarGetLbLocal(y) - constant) / norm); /*lint !e666*/
    }
 
    return;
@@ -15386,8 +15386,8 @@ SCIP_RETCODE SCIPaddBilinearIneqQuadratic(
        * maximize max{vi,vj} + max{wi,wj} this measurement guarantees that select inequalities that
        * separate both important corner points
        */
-      getIneqViol(x, y, ineqs[1], ineqs[2], ineqs[3], &viols1[0], &viols2[0]);
-      getIneqViol(x, y, ineqs[4], ineqs[5], ineqs[6], &viols1[1], &viols2[1]);
+      getIneqViol(x, y, ineqs[0], ineqs[1], ineqs[2], &viols1[0], &viols2[0]);
+      getIneqViol(x, y, ineqs[3], ineqs[4], ineqs[5], &viols1[1], &viols2[1]);
       bestviol = MAX(viols1[0], viols1[1]) + MAX(viols2[0], viols2[1]);
 
       for( i = 0; i < *nineqs; ++i )

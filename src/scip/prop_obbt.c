@@ -734,11 +734,12 @@ void getCorner(
          *px = SCIPvarGetLbGlobal(x);
          *py = SCIPvarGetUbGlobal(y);
          break;
-      default:
-         assert(corner == RIGHTTOP);
+      case RIGHTTOP:
          *px = SCIPvarGetUbGlobal(x);
          *py = SCIPvarGetUbGlobal(y);
          break;
+      case FILTERED:
+         SCIPABORT();
    }
 }
 
@@ -776,10 +777,11 @@ void getCorners(
       case LEFTTOP:
          getCorner(x,y, RIGHTBOTTOM, xs, ys);
          break;
-      default:
-         assert(corner == RIGHTTOP);
+      case RIGHTTOP:
          getCorner(x,y, LEFTBOTTOM, xs, ys);
          break;
+      case FILTERED:
+         SCIPABORT();
    }
 }
 
@@ -910,7 +912,7 @@ SCIP_RETCODE filterExistingLP(
       int j;
 
       /* skip processed and filtered bounds */
-      if( bilinbound->done || bilinbound->filtered == FILTERED )
+      if( bilinbound->done || bilinbound->filtered == FILTERED ) /*lint !e641*/
          continue;
 
       SCIPdebug(oldfiltered = bilinbound->filtered;)
@@ -919,13 +921,13 @@ SCIP_RETCODE filterExistingLP(
 
       /* check cases of unbounded solution values */
       if( SCIPisInfinity(scip, solx) )
-         bilinbound->filtered = bilinbound->filtered | RIGHTTOP | RIGHTBOTTOM;
+         bilinbound->filtered = bilinbound->filtered | RIGHTTOP | RIGHTBOTTOM; /*lint !e641*/
       else if( SCIPisInfinity(scip, -solx) )
-         bilinbound->filtered = bilinbound->filtered | LEFTTOP | LEFTBOTTOM;
+         bilinbound->filtered = bilinbound->filtered | LEFTTOP | LEFTBOTTOM; /*lint !e641*/
       if( SCIPisInfinity(scip, soly) )
-         bilinbound->filtered = bilinbound->filtered | RIGHTTOP | LEFTTOP;
+         bilinbound->filtered = bilinbound->filtered | RIGHTTOP | LEFTTOP; /*lint !e641*/
       else if( SCIPisInfinity(scip, -soly) )
-         bilinbound->filtered = bilinbound->filtered | RIGHTBOTTOM | LEFTBOTTOM;
+         bilinbound->filtered = bilinbound->filtered | RIGHTBOTTOM | LEFTBOTTOM; /*lint !e641*/
 
       /* check all corners */
       for( j = 0; j < 4; ++j )
@@ -936,7 +938,7 @@ SCIP_RETCODE filterExistingLP(
          getCorner(bilinbound->x, bilinbound->y, corners[j], &xt, &yt);
 
          if( SCIPisFeasEQ(scip, xt, solx) && SCIPisFeasEQ(scip, yt, soly) )
-            bilinbound->filtered = bilinbound->filtered | corners[j];
+            bilinbound->filtered = bilinbound->filtered | corners[j]; /*lint !e641*/
       }
 
 #ifdef SCIP_DEBUG
@@ -2269,7 +2271,7 @@ SCIP_RETCODE applyObbtBilinear(
          bilinbound->nunderest, bilinbound->noverest);
 
       /* we already solved LPs for this bilinear term */
-      if( bilinbound->done || bilinbound->filtered == FILTERED )
+      if( bilinbound->done || bilinbound->filtered == (int)FILTERED )
          continue;
 
       /* iterate through all corners
@@ -2296,17 +2298,18 @@ SCIP_RETCODE applyObbtBilinear(
             continue;
 
          /* check whether corner has been filtered already */
-         if( (bilinbound->filtered & corner) != 0 )
+         if( (bilinbound->filtered & corner) != 0 ) /*lint !e641*/
             continue;
 
          /* get corners (xs,ys) and (xt,yt) */
          getCorners(bilinbound->x, bilinbound->y, corner, &xs, &ys, &xt, &yt);
 
          /* compute inequality */
-         SCIP_CALL( solveBilinearLP(scip, bilinbound->x, bilinbound->y, xs, ys, xt, yt, &xcoef, &ycoef, &constant, -1) );
+         SCIP_CALL( solveBilinearLP(scip, bilinbound->x, bilinbound->y, xs, ys, xt, yt, &xcoef, &ycoef, &constant, -1L) );
 
          /* add inequality to quadratic constraint handler if it separates (xt,yt) */
-         if( xcoef != SCIP_INVALID && !SCIPisFeasZero(scip, xcoef) && !SCIPisFeasZero(scip, ycoef)
+         if( !SCIPisHugeValue(scip, xcoef) && !SCIPisHugeValue(scip, ycoef)
+            && !SCIPisFeasZero(scip, xcoef) && !SCIPisFeasZero(scip, ycoef)
             && SCIPisFeasGT(scip, (xcoef*xt - ycoef*yt - constant) / SQRT(SQR(xcoef) + SQR(ycoef) + SQR(constant)), 1e-2) )
          {
             SCIP_Bool success;
@@ -2944,7 +2947,7 @@ SCIP_DECL_PROPEXEC(propExecObbt)
    assert(*result != SCIP_DIDNOTRUN);
 
    /* compute globally inequalities for bilinear terms */
-   SCIP_CALL( applyObbtBilinear(scip, propdata, -1, result) );
+   SCIP_CALL( applyObbtBilinear(scip, propdata, -1L, result) );
 
    /* set current node as last node */
    propdata->lastnode = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
