@@ -90,6 +90,7 @@
 #define DEFAULT_PROPAGATEFREQ               0      /**< trigger a propagation round after that many bound tightenings
                                                     *   (0: no propagation) */
 #define DEFAULT_CREATE_BILININEQS        TRUE      /**< solve auxiliary LPs in order to find valid inequalities for bilinear terms? */
+#define DEFAULT_RANDSEED                  149      /**< initial random seed */
 
 
 /** translate from one value of infinity to another
@@ -138,6 +139,7 @@ struct BilinBound
    int                   nunderest;          /**< number of constraints that require to underestimate the bilinear term */
    int                   noverest;           /**< number of constraints that require to overestimate the bilinear term */
    int                   index;              /**< index of the bilinear term in the quadratic constraint handler */
+   SCIP_Real             score;              /**< score value that is used to group bilinear term bounds */
 };
 typedef struct BilinBound BILINBOUND;
 
@@ -145,9 +147,10 @@ typedef struct BilinBound BILINBOUND;
 struct SCIP_PropData
 {
    BOUND**               bounds;             /**< array of interesting bounds */
-   BILINBOUND*           bilinbounds;        /**< array of interesting bilinear bounds */
+   BILINBOUND**          bilinbounds;        /**< array of interesting bilinear bounds */
    SCIP_ROW*             cutoffrow;          /**< pointer to current objective cutoff row */
    SCIP_PROP*            genvboundprop;      /**< pointer to genvbound propagator */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    SCIP_Longint          lastnode;           /**< number of last node where obbt was performed */
    SCIP_Longint          npropagatedomreds;  /**< number of domain reductions found during propagation */
    SCIP_Longint          nprobingiterations; /**< number of LP iterations during the probing mode */
@@ -181,7 +184,6 @@ struct SCIP_PropData
    int                   nbounds;            /**< length of interesting bounds array */
    int                   nbilinbounds;       /**< length of interesting bilinear bounds array */
    int                   boundssize;         /**< size of bounds array */
-   int                   bilinboundssize;    /**< size of bilinbounds array */
    int                   nminfilter;         /**< minimal number of filtered bounds to apply another filter round */
    int                   nfiltered;          /**< number of filtered bounds by solving auxiliary variables */
    int                   ntrivialfiltered;   /**< number of filtered bounds because the LP value was equal to the bound */
@@ -908,7 +910,7 @@ SCIP_RETCODE filterExistingLP(
    for( i = propdata->lastbilinidx; i < propdata->nbilinbounds; ++i )
    {
       CORNER corners[4] = {LEFTTOP, LEFTBOTTOM, RIGHTTOP, RIGHTBOTTOM};
-      BILINBOUND* bilinbound = &propdata->bilinbounds[i];
+      BILINBOUND* bilinbound = propdata->bilinbounds[i];
       SCIP_Real solx;
       SCIP_Real soly;
       SCIPdebug(int oldfiltered;)
@@ -1402,6 +1404,16 @@ SCIP_DECL_SORTPTRCOMP(compBoundsScore)
    BOUND* bound2 = (BOUND*) elem2;
 
    return bound1->score == bound2->score ? 0 : ( bound1->score > bound2->score ? 1 : -1 );
+}
+
+/** comparison method for two bilinear term bounds w.r.t. their scores */
+static
+SCIP_DECL_SORTPTRCOMP(compBilinboundsScore)
+{
+   BILINBOUND* bound1 = (BILINBOUND*) elem1;
+   BILINBOUND* bound2 = (BILINBOUND*) elem2;
+
+   return REALABS(bound1->score - bound2->score) < 1e-6 ? 0 : ( bound1->score > bound2->score ? 1 : -1 );
 }
 
 /** comparison method for two bounds w.r.t. their boundtype */
@@ -2274,7 +2286,7 @@ SCIP_RETCODE applyObbtBilinear(
       BILINBOUND* bilinbound;
       int k;
 
-      bilinbound = &propdata->bilinbounds[i];
+      bilinbound = propdata->bilinbounds[i];
       assert(bilinbound != NULL);
 
       SCIPdebugMsg(scip, "process %d: %s %s done=%u filtered=%d nunderest=%d noverest=%d\n", i,
@@ -2410,6 +2422,51 @@ unsigned int getScore(
    score *= OBBT_SCOREBASE;
    if( bound->boundtype == SCIP_BOUNDTYPE_UPPER )
       score += 1;
+
+   return score;
+}
+
+/** computes the score of a bilinear term bound */
+static
+SCIP_Real getScoreBilinBound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
+   BILINBOUND*           bilinbound,         /**< bilinear term bound */
+   int                   nbilinterms         /**< maximal number of bilinear terms in all quadratic constraints */
+   )
+{
+   SCIP_Real lbx = SCIPvarGetLbLocal(bilinbound->x);
+   SCIP_Real ubx = SCIPvarGetUbLocal(bilinbound->x);
+   SCIP_Real lby = SCIPvarGetLbLocal(bilinbound->y);
+   SCIP_Real uby = SCIPvarGetUbLocal(bilinbound->y);
+   SCIP_Real score;
+
+   assert(scip != NULL);
+   assert(randnumgen != NULL);
+   assert(bilinbound != NULL);
+
+   /* consider how often a bilinear term is present in the problem */
+   score = (bilinbound->noverest + bilinbound->nunderest) / (SCIP_Real)nbilinterms;
+
+   /* penalize small variable domains */
+   if( ubx - lbx < 0.5 )
+      score += log(2.0*(ubx-lbx) + SCIPepsilon(scip));
+   if( uby - lby < 0.5 )
+      score += log(2.0*(uby-lby) + SCIPepsilon(scip));
+
+   /* consider interiority of variables in the LP solution */
+   if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
+   {
+      SCIP_Real solx = SCIPvarGetLPSol(bilinbound->x);
+      SCIP_Real soly = SCIPvarGetLPSol(bilinbound->y);
+      SCIP_Real interiorityx = MIN(solx-lbx, ubx-solx) / MAX(ubx-lbx, SCIPepsilon(scip)); /*lint !e666*/
+      SCIP_Real interiorityy = MIN(soly-lby, uby-soly) / MAX(uby-lby, SCIPepsilon(scip)); /*lint !e666*/
+
+      score += interiorityx + interiorityy;
+   }
+
+   /* randomize score */
+   score *= 1.0 + SCIPrandomGetReal(randnumgen, -SCIPepsilon(scip), SCIPepsilon(scip));
 
    return score;
 }
@@ -2745,7 +2802,7 @@ SCIP_RETCODE initBounds(
    propdata->nbounds = bdidx;
 
    /* collect all bilinear terms from quadratic constraint handler */
-   if( propdata->nbounds > 0 && SCIPgetNAllBilinearTermsQuadratic(scip) > 0 )
+   if( propdata->nbounds > 0 && SCIPgetNAllBilinearTermsQuadratic(scip) > 0 && propdata->createbilinineqs )
    {
       SCIP_VAR** x;
       SCIP_VAR** y;
@@ -2753,9 +2810,12 @@ SCIP_RETCODE initBounds(
       int* noverest;
       int nbilins;
       int bilinidx;
+      int nbilinterms;
 
       nbilins = SCIPgetNAllBilinearTermsQuadratic(scip);
       bilinidx = 0;
+      nbilinterms = 0;
+
 
       /* allocate memory */
       SCIP_CALL( SCIPallocBufferArray(scip, &x, nbilins) );
@@ -2763,27 +2823,56 @@ SCIP_RETCODE initBounds(
       SCIP_CALL( SCIPallocBufferArray(scip, &nunderest, nbilins) );
       SCIP_CALL( SCIPallocBufferArray(scip, &noverest, nbilins) );
 
-      propdata->bilinboundssize = 2 * nbilins;
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(propdata->bilinbounds), propdata->bilinboundssize) );
-      BMSclearMemoryArray(propdata->bilinbounds, propdata->bilinboundssize);
-
       /* get data for bilinear terms */
       SCIP_CALL( SCIPgetAllBilinearTermsQuadratic(scip, x, y, &nbilins, nunderest, noverest) );
+
+      /* count the number of interesting bilinear terms */
+      propdata->nbilinbounds = 0;
+      for( i = 0; i < nbilins; ++i )
+         if( nunderest[i] + noverest[i] > 0 && varIsInteresting(scip, x[i], 1) && varIsInteresting(scip, y[i], 1) )
+            ++(propdata->nbilinbounds);
+
+      if( propdata->nbilinbounds == 0 )
+         goto TERMINATE;
+
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(propdata->bilinbounds), propdata->nbilinbounds) );
+      BMSclearMemoryArray(propdata->bilinbounds, propdata->nbilinbounds);
 
       for( i = 0; i < nbilins; ++i )
       {
          if( nunderest[i] + noverest[i] > 0 && varIsInteresting(scip, x[i], 1) && varIsInteresting(scip, y[i], 1) )
          {
-            propdata->bilinbounds[bilinidx].x = x[i];
-            propdata->bilinbounds[bilinidx].y = y[i];
-            propdata->bilinbounds[bilinidx].nunderest = nunderest[i];
-            propdata->bilinbounds[bilinidx].noverest = noverest[i];
-            propdata->bilinbounds[bilinidx].index = i;
+            SCIP_CALL( SCIPallocBlockMemory(scip, &propdata->bilinbounds[bilinidx]) );
+            BMSclearMemory(propdata->bilinbounds[bilinidx]);
+
+            propdata->bilinbounds[bilinidx]->x = x[i];
+            propdata->bilinbounds[bilinidx]->y = y[i];
+            propdata->bilinbounds[bilinidx]->nunderest = nunderest[i];
+            propdata->bilinbounds[bilinidx]->noverest = noverest[i];
+            propdata->bilinbounds[bilinidx]->index = i;
             ++bilinidx;
+
+            /* count how often bilinear terms appear in quadratic constraints */
+            nbilinterms += nunderest[i] + noverest[i];
          }
       }
-      propdata->nbilinbounds = bilinidx;
+      assert(propdata->nbilinbounds == bilinidx);
 
+      /* compute scores for each term */
+      for( i = 0; i < propdata->nbilinbounds; ++i )
+      {
+         propdata->bilinbounds[i]->score = getScoreBilinBound(scip, propdata->randnumgen, propdata->bilinbounds[i],
+            nbilinterms);
+         SCIPdebugMsg(scip, "score of %i = %g\n", i, propdata->bilinbounds[i]->score);
+      }
+
+      /* sort bounds according to decreasing score */
+      if( propdata->nbilinbounds > 1 )
+      {
+         SCIPsortDownPtr((void**) propdata->bilinbounds, compBilinboundsScore, propdata->nbilinbounds);
+      }
+
+TERMINATE:
       /* free memory */
       SCIPfreeBufferArray(scip, &noverest);
       SCIPfreeBufferArray(scip, &nunderest);
@@ -2865,6 +2954,9 @@ SCIP_DECL_PROPINITSOL(propInitsolObbt)
    propdata->genvboundprop = propdata->creategenvbounds ? SCIPfindProp(scip, GENVBOUND_PROP_NAME) : NULL;
 
    SCIPdebugMsg(scip, "creating genvbounds: %s\n", propdata->genvboundprop != NULL ? "true" : "false");
+
+   /* create random number generator */
+   SCIP_CALL( SCIPcreateRandom(scip, &propdata->randnumgen, DEFAULT_RANDSEED) );
 
    return SCIP_OKAY;
 }
@@ -3001,6 +3093,10 @@ SCIP_DECL_PROPEXITSOL(propExitsolObbt)
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
+   /* free random number generator */
+   SCIPfreeRandom(scip, &propdata->randnumgen);
+   propdata->randnumgen = NULL;
+
    /* note that because we reset filtered flags to false at each call to obbt, the same bound may be filtered multiple
     * times
     */
@@ -3010,10 +3106,13 @@ SCIP_DECL_PROPEXITSOL(propExitsolObbt)
       propdata->nfilterlpiters, propdata->ngenvboundsprobing, propdata->ngenvboundsaggrfil, propdata->ngenvboundstrivfil);
 
    /* free bilinear bounds */
-   if( propdata->bilinboundssize > 0 )
+   if( propdata->nbilinbounds > 0 )
    {
-      SCIPfreeBlockMemoryArray(scip, &propdata->bilinbounds, propdata->bilinboundssize);
-      propdata->bilinboundssize = 0;
+      for( i = propdata->nbilinbounds - 1; i >= 0; --i )
+      {
+         SCIPfreeBlockMemory(scip, &propdata->bilinbounds[i]);
+      }
+      SCIPfreeBlockMemoryArray(scip, &propdata->bilinbounds, propdata->nbilinbounds);
       propdata->nbilinbounds = 0;
    }
 
