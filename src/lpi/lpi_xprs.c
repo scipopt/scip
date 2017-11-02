@@ -2329,8 +2329,8 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
      return TRUE;
 
    /* get number of primal infeasibilities and number of simplex iterations */
-   ABORT_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_PRIMALINFEAS, &nInfeasible) );
-   ABORT_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_SIMPLEXITER, &nIter) );
+   ABORT_ZERO( lpi->messagehdlr, FALSE, XPRSgetintattrib(lpi->xprslp, XPRS_PRIMALINFEAS, &nInfeasible) );
+   ABORT_ZERO( lpi->messagehdlr, FALSE, XPRSgetintattrib(lpi->xprslp, XPRS_SIMPLEXITER, &nIter) );
 
    /* check if the number of primal infeasibilities is zero
     * We need to make sure that the LP was indeed solved by primal, otherwise infeasibility might have been found
