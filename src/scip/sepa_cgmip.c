@@ -3043,7 +3043,7 @@ SCIP_RETCODE createCGCutDirect(
                      SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
                   }
 #endif
-                  SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, cutoff) );
+                  SCIP_CALL( SCIPaddCut(scip, cut, FALSE, cutoff) );
                   ++(*ngen);
                }
                else
@@ -3331,7 +3331,7 @@ SCIP_RETCODE createCGCutCMIR(
                   SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
                }
                #endif
-               SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, cutoff) );
+               SCIP_CALL( SCIPaddCut(scip, cut, FALSE, cutoff) );
                ++(*ngen);
             }
             else
@@ -3562,7 +3562,7 @@ SCIP_RETCODE createCGCutStrongCG(
                   SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
                }
                #endif
-               SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, cutoff) );
+               SCIP_CALL( SCIPaddCut(scip, cut, FALSE, cutoff) );
                ++(*ngen);
             }
             else

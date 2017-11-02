@@ -1903,26 +1903,27 @@ SCIP_RETCODE scaleFirstRow(
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler */
    )
 {
-   SCIP_LPI* altlp;
-   SCIP_Real* val;
-   SCIP_Real sum = 0.0;
-   int j;
-   int nCols;
-   int cnt;
-   int beg;
-   int* ind;
 
    assert( scip != NULL );
    assert( conshdlrdata != NULL );
 
    if ( ! conshdlrdata->scaled )
    {
+      SCIP_Real* val;
+      SCIP_LPI* altlp;
+      int* ind;
+      SCIP_Real sum = 0.0;
+      int beg[1];
+      int nCols;
+      int cnt;
+      int j;
+
       altlp = conshdlrdata->altlp;
       SCIP_CALL( SCIPlpiGetNCols(altlp, &nCols) );
       SCIP_CALL( SCIPallocBufferArray(scip, &ind, nCols) );
       SCIP_CALL( SCIPallocBufferArray(scip, &val, nCols) );
 
-      SCIP_CALL( SCIPlpiGetRows(altlp, 0, 0, NULL, NULL, &cnt, &beg, ind, val) );
+      SCIP_CALL( SCIPlpiGetRows(altlp, 0, 0, NULL, NULL, &cnt, beg, ind, val) );
 
       if ( cnt > 0 )
       {
@@ -3014,7 +3015,7 @@ SCIP_RETCODE extendToCover(
 #ifdef SCIP_OUTPUT
             SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 #endif
-            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, cutoff) );
+            SCIP_CALL( SCIPaddCut(scip, row, FALSE, cutoff) );
             if ( *cutoff )
             {
                SCIPfreeBufferArray(scip, &primsol);
@@ -4553,7 +4554,7 @@ SCIP_RETCODE separatePerspective(
 #ifdef SCIP_OUTPUT
             SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 #endif
-            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, &infeasible) );
+            SCIP_CALL( SCIPaddCut(scip, row, FALSE, &infeasible) );
             assert( ! infeasible );
             SCIP_CALL( SCIPreleaseRow(scip, &row));
             SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
@@ -4672,7 +4673,7 @@ SCIP_RETCODE separateIndicators(
 #ifdef SCIP_OUTPUT
                SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 #endif
-               SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, &infeasible) );
+               SCIP_CALL( SCIPaddCut(scip, row, FALSE, &infeasible) );
                assert( ! infeasible );
                SCIP_CALL( SCIPreleaseRow(scip, &row));
 
@@ -5987,7 +5988,7 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
 #ifdef SCIP_OUTPUT
             SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 #endif
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, infeasible) );
+            SCIP_CALL( SCIPaddCut(scip, row, FALSE, infeasible) );
             SCIP_CALL( SCIPreleaseRow(scip, &row));
          }
       }

@@ -56,7 +56,7 @@
 #define SEPA_NAME              "gomory"
 #define SEPA_DESC              "Gomory MIR cuts separator"
 #define SEPA_PRIORITY             -1000
-#define SEPA_FREQ                    30
+#define SEPA_FREQ                    10
 #define SEPA_MAXBOUNDDIST           1.0
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
@@ -72,7 +72,7 @@
 #define DEFAULT_MAKEINTEGRAL       TRUE /**< try to scale all cuts to integral coefficients */
 #define DEFAULT_FORCECUTS          TRUE /**< if conversion to integral coefficients failed still consider the cut */
 #define DEFAULT_SEPARATEROWS       TRUE /**< separate rows with integral slack */
-#define DEFAULT_DELAYEDCUTS        TRUE /**< should cuts be added to the delayed cut pool? */
+#define DEFAULT_DELAYEDCUTS       FALSE /**< should cuts be added to the delayed cut pool? */
 #define DEFAULT_SIDETYPEBASIS      TRUE /**< choose side types of row (lhs/rhs) based on basis information? */
 #define DEFAULT_RANDSEED             53 /**< initial random seed */
 
@@ -122,7 +122,7 @@ SCIP_RETCODE evaluateCutNumerics(
    madeintegral = FALSE;
    (*useful) = FALSE;
 
-   if( sepadata->makeintegral )
+   if( sepadata->makeintegral && SCIPgetRowNumIntCols(scip, cut) == SCIProwGetNNonz(cut) )
    {
       /* try to scale the cut to integral values */
       SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
@@ -233,6 +233,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    SCIP_Real* cutcoefs;
    SCIP_Real* basisfrac;
    int* basisind;
+   int* basisperm;
    int* inds;
    int* cutinds;
    SCIP_Real maxscale;
@@ -346,6 +347,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cutinds, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &basisind, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &basisperm, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &basisfrac, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &binvrow, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &inds, nrows) );
@@ -359,6 +361,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       SCIP_Real frac = 0.0;
 
       c = basisind[i];
+
+      basisperm[i] = i;
 
       if( c >= 0 )
       {
@@ -397,7 +401,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    }
 
    /* sort basis indices by fractionality */
-   SCIPsortDownRealInt(basisfrac, basisind, nrows);
+   SCIPsortDownRealInt(basisfrac, basisperm, nrows);
 
    /* get the maximal number of cuts allowed in a separation round */
    if( depth == 0 )
@@ -420,15 +424,17 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       SCIP_Bool cutislocal;
       int cutnnz;
       int cutrank;
+      int j;
 
       if( basisfrac[i] == 0.0 )
          break;
 
-      c = basisind[i];
+      j = basisperm[i];
+      c = basisind[j];
 
       /* get the row of B^-1 for this basic integer variable with fractional solution value */
       ninds = -1;
-      SCIP_CALL( SCIPgetLPBInvRow(scip, i, binvrow, inds, &ninds) );
+      SCIP_CALL( SCIPgetLPBInvRow(scip, j, binvrow, inds, &ninds) );
 
       SCIP_CALL( SCIPaggrRowSumRows(scip, aggrrow, binvrow, inds, ninds,
          sepadata->sidetypebasis, allowlocal, 2, (int) MAXAGGRLEN(nvars), &success) );
@@ -492,7 +498,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                /* add the bound change as cut to avoid that the LP gets modified. that would mean the LP is not flushed
                 * and the method SCIPgetLPBInvRow() fails; SCIP internally will apply that bound change automatically
                 */
-               SCIP_CALL( SCIPaddCut(scip, NULL, cut, TRUE, &cutoff) );
+               SCIP_CALL( SCIPaddCut(scip, cut, TRUE, &cutoff) );
                naddedcuts++;
             }
             else
@@ -537,7 +543,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                      else
                      {
                         /* local cuts we add to the sepastore */
-                        SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &cutoff) );
+                        SCIP_CALL( SCIPaddCut(scip, cut, FALSE, &cutoff) );
                      }
 
                      naddedcuts++;
@@ -554,6 +560,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    SCIPfreeBufferArray(scip, &inds);
    SCIPfreeBufferArray(scip, &binvrow);
    SCIPfreeBufferArray(scip, &basisfrac);
+   SCIPfreeBufferArray(scip, &basisperm);
    SCIPfreeBufferArray(scip, &basisind);
    SCIPfreeBufferArray(scip, &cutinds);
    SCIPfreeBufferArray(scip, &cutcoefs);

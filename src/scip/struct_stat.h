@@ -136,6 +136,8 @@ struct SCIP_Stat
    SCIP_Real             lastupperbound;     /**< last upper bound (in transformed space) for integral evaluation */
    SCIP_Real             rootlpbestestimate; /**< best-estimate for final root LP solution that changes with every pseudo-cost update */
    SCIP_Real             referencebound;     /**< objective bound for reference purposes */
+   SCIP_Real             bestefficacy;       /**< best efficacy of global pool cut seen so far */
+   SCIP_Real             minefficacyfac;     /**< factor of best efficacy to use as min efficacy */
    SCIP_Real             detertimecnt;       /**< internal counter for deterministic time */
    SCIP_CLOCK*           solvingtime;        /**< total time used for solving (including presolving) the current problem */
    SCIP_CLOCK*           solvingtimeoverall; /**< total time used for solving (including presolving) during reoptimization */
@@ -195,6 +197,7 @@ struct SCIP_Stat
    int                   subscipdepth;       /**< depth of current scip instance (increased by each copy call) */
    int                   ndivesetcalls;      /**< total number of diveset diving calls */
    int                   nruns;              /**< number of branch and bound runs on current problem, including current run */
+   int                   ncutpoolfails;      /**< number of fails in a cutpool to separate efficacious cuts */
    int                   nconfrestarts;      /**< number of restarts performed due to conflict analysis */
    int                   nrootboundchgs;     /**< total number of bound changes generated in the root node */
    int                   nrootboundchgsrun;  /**< total number of bound changes generated in the root node of current run */
@@ -209,6 +212,7 @@ struct SCIP_Stat
    int                   marked_nrowidx;     /**< number of used row indices before solving started */
    int                   npricerounds;       /**< number of pricing rounds performed in current node */
    int                   nseparounds;        /**< number of separation rounds performed in current node */
+   int                   nincseparounds;     /**< number of separation rounds performed in current node that increased the maximum number of rows in the LP */
    int                   ndisplines;         /**< number of displayed information lines */
    int                   maxdepth;           /**< maximal depth of all processed nodes in current run */
    int                   maxtotaldepth;      /**< maximal depth of all processed nodes over all runs */

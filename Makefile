@@ -537,6 +537,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_linesearchdiving.o \
 			scip/heur_localbranching.o \
 			scip/heur_lpface.o \
+			scip/heur_alns.o \
 			scip/heur_locks.o \
 			scip/heur_mutation.o \
 			scip/heur_multistart.o \
@@ -635,10 +636,15 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/sepa_oddcycle.o \
 			scip/sepa_rapidlearning.o \
 			scip/sepa_strongcg.o \
-			scip/sepa_zerohalf.o
+			scip/sepa_zerohalf.o \
+			scip/table_default.o \
 
 SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/branch.o \
+			scip/bandit.o \
+			scip/bandit_epsgreedy.o \
+			scip/bandit_exp3.o \
+			scip/bandit_ucb.o \
 			scip/clock.o \
 			scip/concsolver.o \
 			scip/concurrent.o \
@@ -678,7 +684,9 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/reopt.o \
 			scip/retcode.o \
 			scip/scip.o \
+			scip/scip_bandit.o \
 			scip/scipbuildflags.o \
+			scip/scipcoreplugins.o \
 			scip/scipdefplugins.o \
 			scip/scipgithash.o \
 			scip/scipshell.o \
@@ -689,6 +697,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/solve.o \
 			scip/stat.o \
 			scip/syncstore.o \
+			scip/table.o \
 			scip/tree.o \
 			scip/var.o \
 			scip/visual.o \
@@ -747,6 +756,7 @@ OBJSCIPLIBOBJ	=	objscip/objbranchrule.o \
 			objscip/objreader.o \
 			objscip/objrelax.o \
 			objscip/objsepa.o \
+			objscip/objtable.o \
 			objscip/objvardata.o
 
 OBJSCIPLIB	=	$(OBJSCIPLIBNAME).$(BASE)
@@ -876,7 +886,7 @@ test:
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(EXECUTABLE) $(SETTINGS) $(BINID) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
 		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) \
-                $(SEEDS);
+                $(SEEDS) $(GLBSEEDSHIFT);
 
 .PHONY: testcount
 testcount:

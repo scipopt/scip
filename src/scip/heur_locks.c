@@ -29,7 +29,7 @@
 #define HEUR_NAME             "locks"
 #define HEUR_DESC             "heuristic that fixes variables based on their rounding locks"
 #define HEUR_DISPCHAR         'k'
-#define HEUR_PRIORITY         2000
+#define HEUR_PRIORITY         3000
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
@@ -38,7 +38,7 @@
 
 #define DEFAULT_MAXNODES      5000LL                     /**< maximum number of nodes to regard in the subproblem */
 #define DEFAULT_ROUNDUPPROBABILITY 0.67                  /**< probability for rounding a variable up in case of ties */
-#define DEFAULT_MINFIXINGRATE 0.25                       /**< minimum percentage of variables that have to be fixed */
+#define DEFAULT_MINFIXINGRATE 0.65                       /**< minimum percentage of variables that have to be fixed */
 #define DEFAULT_MINIMPROVE    0.01                       /**< factor by which locks heuristic should at least improve the
                                                           *   incumbent
                                                           */
@@ -194,12 +194,17 @@ SCIP_DECL_HEUREXIT(heurExitLocks) /*lint --e{715}*/
 #define heurInitsolLocks NULL
 #define heurExitsolLocks NULL
 
-/** execution method of primal heuristic */
-static
-SCIP_DECL_HEUREXEC(heurExecLocks)
-{  /*lint --e{715}*/
-   SCIP_HEURDATA* heurdata;
-   SCIP_SOL* sol;
+/** apply fix-and-propagate scheme based on variable locks
+ *
+ *  @note probing mode of SCIP needs to be enabled before
+ */
+SCIP_RETCODE SCIPapplyLockFixings(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< primal heuristic data */
+   SCIP_Bool*            cutoff,             /**< pointer to store if a cutoff was detected */
+   SCIP_Bool*            allrowsfulfilled    /**< pointer to store if all rows became redundant */
+   )
+{
    SCIP_ROW** lprows;
    SCIP_VAR** vars;
    SCIP_VAR** sortvars;
@@ -215,19 +220,14 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
    int* ndownlocks;
    int* nuplocks;
    int* varpos = NULL;
-   SCIP_LPSOLSTAT lpstatus;
    SCIP_Real lastfixval;
    SCIP_Real randnumber;
    SCIP_Real roundupprobability;
-   SCIP_Bool cutoff;
    SCIP_Bool propagate;
    SCIP_Bool propagated;
    SCIP_Bool haslhs;
    SCIP_Bool hasrhs;
    SCIP_Bool updatelocks;
-   SCIP_Bool lperror;
-   int oldnpscands;
-   int npscands;
    int lastfixlocks;
    int maxproprounds;
    int nglbfulfilledrows;
@@ -244,20 +244,20 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
    int r;
    int i;
 
-   *result = SCIP_DIDNOTRUN;
+   assert(scip != NULL);
+   assert(cutoff != NULL);
+   assert(allrowsfulfilled != NULL);
+   assert(SCIPinProbing(scip));
 
-   /* only run once */
-   if( SCIPgetNRuns(scip) > 1 )
-      return SCIP_OKAY;
-
-   if( SCIPgetNBinVars(scip) == 0 )
-      return SCIP_OKAY;
-
-   cutoff = FALSE;
-   lperror = FALSE;
-
-   heurdata = SCIPheurGetData(heur);
+   if( heurdata == NULL )
+   {
+      SCIP_HEUR* heur = SCIPfindHeur(scip, HEUR_NAME);
+      heurdata = SCIPheurGetData(heur);
+   }
    assert(heurdata != NULL);
+
+   *cutoff = FALSE;
+   *allrowsfulfilled = FALSE;
 
    propagate = (heurdata->maxproprounds != 0);
 
@@ -268,29 +268,6 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
 
    roundupprobability = heurdata->roundupprobability;
 
-   /* only run if we are allowed to solve an LP at the current node in the tree */
-   if( !SCIPhasCurrentNodeLP(scip) )
-      return SCIP_OKAY;
-
-   if( !SCIPisLPConstructed(scip) )
-   {
-      SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
-
-      /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a result) */
-      if( cutoff )
-      {
-         SCIP_CALL( SCIPcutoffNode(scip, SCIPgetCurrentNode(scip)) );
-         return SCIP_OKAY;
-      }
-
-      SCIP_CALL( SCIPflushLP(scip) );
-
-      /* we need an LP */
-      if( SCIPgetNLPRows(scip) == 0 )
-         return SCIP_OKAY;
-   }
-
-   *result = SCIP_DIDNOTFIND;
 
    updatelocks = heurdata->updatelocks && (SCIPgetNCheckConss(scip) == SCIPgetNLPRows(scip));
 
@@ -298,10 +275,6 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
 
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, NULL, NULL, NULL) );
    assert(vars != NULL);
-   oldnpscands = SCIPgetNPseudoBranchCands(scip);
-
-   /* create solution */
-   SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
 
    /* allocate memory */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &sortvars, vars, nbinvars) );
@@ -339,16 +312,16 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
       maxact[r] = SCIPgetRowMaxActivity(scip, row);
    }
 
-   /* start probing mode */
-   SCIP_CALL( SCIPstartProbing(scip) );
    propagated = TRUE;
    lastbestscore = INT_MAX;
 
    /* fix variables */
-   for( v = 0; v < nbinvars && !cutoff; v++ )
+   for( v = 0; v < nbinvars; v++ )
    {
       if( SCIPisStopped(scip) )
-         goto TERMINATE;
+         break;
+
+      assert(!(*cutoff));
 
       nfulfilledrows = 0;
 
@@ -491,33 +464,58 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
       if( propagate && lastfixlocks > 0 )
       {
          /* apply propagation */
-         SCIP_CALL( SCIPpropagateProbing(scip, maxproprounds, &cutoff, NULL) );
+         SCIP_CALL( SCIPpropagateProbing(scip, maxproprounds, cutoff, NULL) );
          propagated = TRUE;
 
-         if( cutoff )
+         if( *cutoff )
          {
+            SCIPdebugMsg(scip, "last fixing led to infeasibility trying other bound\n");
+
             /* fix cutoff variable in other direction */
             SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip) - 1) );
+            *cutoff = FALSE;
+
             if( lastfixval < 0.5 )
             {
+               lastfixval = 1.0;
+
                if( SCIPvarGetUbLocal(var) > 0.5 )
                {
                   SCIP_CALL( SCIPfixVarProbing(scip, var, 1.0) );
                }
+               /* because of the limited number of propagation rounds, it may happen that conflict analysis finds a
+                * valid global fixing for the last fixed variable that conflicts with applying the reverse fixing
+                * after backtracking; in that case, we ran into a deadend and stop
+                */
+               else
+                  *cutoff = TRUE;
             }
             else
             {
+               lastfixval = 0.0;
+
                if( SCIPvarGetLbLocal(var) < 0.5 )
                {
                   SCIP_CALL( SCIPfixVarProbing(scip, var, 0.0) );
                }
+               /* because of the limited number of propagation rounds, it may happen that conflict analysis finds a
+                * valid global fixing for the last fixed variable that conflicts with applying the reverse fixing
+                * after backtracking; in that case, we ran into a deadend and stop
+                */
+               else
+                  *cutoff = TRUE;
             }
 
-            SCIPdebugMsg(scip, "last fixing led to infeasibility trying other bound\n");
+            if( !(*cutoff) )
+            {
+               SCIP_CALL( SCIPpropagateProbing(scip, maxproprounds, cutoff, NULL) );
+            }
+            if( *cutoff )
+            {
+               SCIPdebugMsg(scip, "probing was infeasible\n");
 
-            SCIP_CALL( SCIPpropagateProbing(scip, maxproprounds, &cutoff, NULL) );
-            if( cutoff )
                break;
+            }
          }
          /* @todo collect propagated bounds and use them to update row activities as well */
       }
@@ -624,15 +622,12 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
             }
             else if( SCIPisFeasLT(scip, maxact[rowpos], SCIProwGetLhs(row)) || SCIPisFeasGT(scip, minact[rowpos], SCIProwGetRhs(row)) )
             {
-               cutoff = TRUE;
-               SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
-               SCIPdebugMsg(scip, "row <%s> activity [%g,%g] violates bounds, lhs = %g, rhs = %g\n",
-                  SCIProwGetName(row), minact[rowpos], maxact[rowpos], SCIProwGetLhs(row), SCIProwGetRhs(row));
+               *cutoff = TRUE;
                break;
             }
          }
 
-         if( cutoff )
+         if( *cutoff )
          {
             SCIPdebugMsg(scip, "found infeasible row, stopping heur\n");
             break;
@@ -642,26 +637,130 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
          SCIPdebugMsg(scip, "last fixing led to %d fulfilled rows, now %d of %d rows are fulfilled\n", nfulfilledrows, nglbfulfilledrows, nlprows);
 
          if( nglbfulfilledrows == nlprows )
+         {
+            *allrowsfulfilled = TRUE;
             break;
+         }
       }
    } /*lint --e{850}*/
+
+   SCIPfreeBufferArrayNull(scip, &varpos);
+   SCIPfreeBufferArray(scip, &fulfilled);
+   SCIPfreeBufferArray(scip, &maxact);
+   SCIPfreeBufferArray(scip, &minact);
+   SCIPfreeBufferArray(scip, &ndownlocks);
+   SCIPfreeBufferArray(scip, &nuplocks);
+   SCIPfreeBufferArray(scip, &sortvars);
+
+   return SCIP_OKAY;
+}
+
+
+
+
+/** execution method of primal heuristic */
+static
+SCIP_DECL_HEUREXEC(heurExecLocks)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+   SCIP_SOL* sol;
+   SCIP_VAR** vars;
+   SCIP_LPSOLSTAT lpstatus = SCIP_LPSOLSTAT_ERROR;
+   SCIP_Real lowerbound;
+   SCIP_Bool cutoff;
+   SCIP_Bool lperror;
+   SCIP_Bool allrowsfulfilled = FALSE;
+#ifdef NOCONFLICT
+   SCIP_Bool enabledconflicts;
+#endif
+   int oldnpscands;
+   int npscands;
+
+   int nvars;
+   int i;
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* only run once */
+   if( SCIPgetNRuns(scip) > 1 )
+      return SCIP_OKAY;
+
+   if( SCIPgetNBinVars(scip) == 0 )
+      return SCIP_OKAY;
+
+   /* only run if we are allowed to solve an LP at the current node in the tree */
+   if( !SCIPhasCurrentNodeLP(scip) )
+      return SCIP_OKAY;
+
+   if( !SCIPisLPConstructed(scip) )
+   {
+      SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
+
+      /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a result) */
+      if( cutoff )
+      {
+         SCIP_CALL( SCIPcutoffNode(scip, SCIPgetCurrentNode(scip)) );
+         return SCIP_OKAY;
+      }
+
+      SCIP_CALL( SCIPflushLP(scip) );
+
+      /* we need an LP */
+      if( SCIPgetNLPRows(scip) == 0 )
+         return SCIP_OKAY;
+   }
+
+   *result = SCIP_DIDNOTFIND;
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+#ifdef NOCONFLICT
+   /* disable conflict analysis */
+   SCIP_CALL( SCIPgetBoolParam(scip, "conflict/enable", &enabledconflicts) );
+
+   if( !SCIPisParamFixed(scip, "conflict/enable") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(scip, "conflict/enable", FALSE) );
+   }
+#endif
+
+   /* create solution */
+   SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
+
+   lowerbound = SCIPgetLowerbound(scip);
+   oldnpscands = SCIPgetNPseudoBranchCands(scip);
+
+   /* start probing mode */
+   SCIP_CALL( SCIPstartProbing(scip) );
+
+#ifdef COLLECTSTATISTICS
+   SCIPenableVarHistory(scip);
+#endif
+
+   cutoff = FALSE;
+   lperror = FALSE;
+
+   SCIP_CALL( SCIPapplyLockFixings(scip, heurdata, &cutoff, &allrowsfulfilled) );
+
+   if( cutoff || SCIPisStopped(scip) )
+      goto TERMINATE;
 
    /* check that we had enough fixings */
    npscands = SCIPgetNPseudoBranchCands(scip);
 
-   SCIPdebugMsg(scip, "npscands=%d, oldnpscands=%d, heurdata->minfixingrate=%g\n", npscands, oldnpscands, heurdata->minfixingrate);
+   SCIPdebugMsg(scip, "npscands=%d, oldnpscands=%d, allrowsfulfilled=%u heurdata->minfixingrate=%g\n",
+      npscands, oldnpscands, allrowsfulfilled, heurdata->minfixingrate);
 
-   if( nglbfulfilledrows != nlprows && npscands > oldnpscands * (1 - heurdata->minfixingrate) )
+   if( !allrowsfulfilled && npscands > oldnpscands * (1 - heurdata->minfixingrate) )
    {
       SCIPdebugMsg(scip, "--> too few fixings\n");
 
       goto TERMINATE;
    }
-
-   lpstatus = SCIP_LPSOLSTAT_ERROR;
-   if( !cutoff )
+   else
    {
-      SCIPdebugMsg(scip, "solve probing LP in LOCKS heuristic: %d unfixed integer variables\n", SCIPgetNPseudoBranchCands(scip));
+      SCIPdebugMsg(scip, "starting solving locks-lp at time %g\n", SCIPgetSolvingTime(scip));
 
       /* solve LP;
        * errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
@@ -675,12 +774,13 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
          {
             SCIPwarningMessage(scip, "Error while solving LP in LOCKS heuristic; LP solve terminated with code <%d>\n",
                retstat);
-            goto TERMINATE;
          }
       }
 #else
       SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
 #endif
+      SCIPdebugMsg(scip, "ending solving locks-lp at time %g\n", SCIPgetSolvingTime(scip));
+
       lpstatus = SCIPgetLPSolstat(scip);
 
       SCIPdebugMsg(scip, " -> new LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
@@ -690,6 +790,8 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
       if( !lperror && lpstatus == SCIP_LPSOLSTAT_OPTIMAL )
       {
          SCIP_Bool success;
+
+         lowerbound = SCIPgetLPObjval(scip);
 
          /* copy the current LP solution to the working solution */
          SCIP_CALL( SCIPlinkLPSol(scip, sol) );
@@ -843,9 +945,9 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
 
          upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
 
-         if( !SCIPisInfinity(scip, -1.0 * SCIPgetLowerbound(scip)) )
+         if( !SCIPisInfinity(scip, -1.0 * lowerbound) )
          {
-            cutoffbound = (1-minimprove) * SCIPgetUpperbound(scip) + minimprove * SCIPgetLowerbound(scip);
+            cutoffbound = (1-minimprove) * SCIPgetUpperbound(scip) + minimprove * lowerbound;
          }
          else
          {
@@ -880,7 +982,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
       SCIP_CALL_ABORT( SCIPpresolve(subscip) );
 #endif
 
-      SCIPdebugMsg(scip, "locks heuristic presolved subproblem: %d vars, %d cons; fixing value = %g\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip), ((nvars - SCIPgetNVars(subscip)) / (SCIP_Real)nvars));
+      SCIPdebugMsg(scip, "locks heuristic presolved subproblem at time %g : %d vars, %d cons; fixing value = %g\n", SCIPgetSolvingTime(scip), SCIPgetNVars(subscip), SCIPgetNConss(subscip), ((nvars - SCIPgetNVars(subscip)) / (SCIP_Real)nvars));
 
       /* after presolving, we should have at least reached a certain fixing rate over ALL variables (including continuous)
        * to ensure that not only the MIP but also the LP relaxation is easy enough
@@ -907,7 +1009,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
 #else
          SCIP_CALL_ABORT( SCIPsolve(subscip) );
 #endif
-         SCIPdebugMsg(scip, "ending locks locks-submip at time %g, status = %d\n", SCIPgetSolvingTime(scip), SCIPgetStatus(subscip));
+         SCIPdebugMsg(scip, "ending solving locks-submip at time %g, status = %d\n", SCIPgetSolvingTime(scip), SCIPgetStatus(subscip));
 
          /* check, whether a solution was found; due to numerics, it might happen that not all solutions are feasible ->
           * try all solutions until one was accepted
@@ -942,13 +1044,13 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
    /* exit probing mode */
    SCIP_CALL( SCIPendProbing(scip) );
 
-   SCIPfreeBufferArrayNull(scip, &varpos);
-   SCIPfreeBufferArray(scip, &fulfilled);
-   SCIPfreeBufferArray(scip, &maxact);
-   SCIPfreeBufferArray(scip, &minact);
-   SCIPfreeBufferArray(scip, &ndownlocks);
-   SCIPfreeBufferArray(scip, &nuplocks);
-   SCIPfreeBufferArray(scip, &sortvars);
+#ifdef NOCONFLICT
+   /* reset the conflict analysis */
+   if( !SCIPisParamFixed(scip, "conflict/enable") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(scip, "conflict/enable", enabledconflicts) );
+   }
+#endif
 
    /* free all allocated memory */
    SCIP_CALL( SCIPfreeSol(scip, &sol) );

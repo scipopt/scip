@@ -18,6 +18,7 @@
  * @brief  clique primal heuristic
  * @author Stefan Heinz
  * @author Michael Winkler
+ * @author Gerald Gamrath
  *
  * @todo allow smaller fixing rate for probing LP?
  * @todo allow smaller fixing rate after presolve if total number of variables is small (<= 1000)?
@@ -35,7 +36,9 @@
 #include <string.h>
 
 #include "scip/scip.h"
+#include "scip/pub_implics.h"
 #include "scip/heur_clique.h"
+#include "scip/heur_locks.h"
 #include "scip/cons_logicor.h"
 #include "scip/pub_misc.h"
 
@@ -43,15 +46,17 @@
 #define HEUR_NAME             "clique"
 #define HEUR_DESC             "LNS heuristic using a clique partition to restrict the search neighborhood"
 #define HEUR_DISPCHAR         'Q'
-#define HEUR_PRIORITY         -1000500
-#define HEUR_FREQ             -1
+#define HEUR_PRIORITY         5000
+#define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_BEFORENODE
 #define HEUR_USESSUBSCIP      TRUE                       /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_MAXNODES      5000LL                     /**< maximum number of nodes to regard in the subproblem */
-#define DEFAULT_MINFIXINGRATE 0.25                       /**< minimum percentage of variables that have to be fixed */
+#define DEFAULT_MININTFIXINGRATE 0.65                    /**< minimum percentage of integer variables that have to be fixed */
+#define DEFAULT_MINMIPFIXINGRATE 0.65                    /**< minimum percentage of variables that have to be fixed within sub-SCIP
+                                                          *   (integer and continuous) */
 #define DEFAULT_MINIMPROVE    0.01                       /**< factor by which clique heuristic should at least improve the
                                                           *   incumbent
                                                           */
@@ -59,12 +64,12 @@
 #define DEFAULT_NODESOFS      500LL                      /**< number of nodes added to the contingent of the total nodes */
 #define DEFAULT_NODESQUOT     0.1                        /**< subproblem nodes in relation to nodes of the original problem */
 #define DEFAULT_MAXPROPROUNDS 2                          /**< maximum number of propagation rounds during probing */
-#define DEFAULT_RANDSEED      61                         /**< random seed value to initialize the random permutation
-                                                          *   value for variables
-                                                          */
-#define DEFAULT_MULTIPLIER    1.1                        /**< value to increase node number to determine the next run */
+#define DEFAULT_MAXBACKTRACKS 10                         /**< maximum number of backtracks during the fixing process */
 #define DEFAULT_COPYCUTS      TRUE                       /**< should all active cuts from the cutpool of the
                                                           *   original scip be copied to constraints of the subscip
+                                                          */
+#define DEFAULT_USELOCKFIXINGS FALSE                     /**< should more variables be fixed based on variable locks if
+                                                          *   the fixing rate was not reached?
                                                           */
 
 
@@ -75,20 +80,22 @@
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    SCIP_Longint          maxnodes;           /**< maximum number of nodes to regard in the subproblem */
    SCIP_Longint          minnodes;           /**< minimum number of nodes to regard in the subproblem */
    SCIP_Longint          nodesofs;           /**< number of nodes added to the contingent of the total nodes */
    SCIP_Longint          usednodes;          /**< nodes already used by clique heuristic in earlier calls */
-   SCIP_Real             minfixingrate;      /**< minimum percentage of variables that have to be fixed */
+   SCIP_Real             minintfixingrate;   /**< minimum percentage of integer variables that have to be fixed */
+   SCIP_Real             minmipfixingrate;   /**< minimum percentage of variables that have to be fixed within sub-SCIP
+                                              *   (integer and continuous) */
    SCIP_Real             minimprove;         /**< factor by which clique heuristic should at least improve the incumbent */
    SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem */
    int                   maxproprounds;      /**< maximum number of propagation rounds during probing */
-   SCIP_Longint          nnodefornextrun;    /**< node number for next run */
-   SCIP_Real             multiplier;         /**< multiplier to determine next node number */
-   int                   initseed;           /**< initial random seed value */
+   int                   maxbacktracks;      /**< maximum number of backtracks during the fixing process */
    SCIP_Bool             copycuts;           /**< should all active cuts from cutpool be copied to constraints in
                                               *   subproblem?
+                                              */
+   SCIP_Bool             uselockfixings;     /**< should more variables be fixed based on variable locks if
+                                              *   the fixing rate was not reached?
                                               */
 };
 
@@ -96,129 +103,39 @@ struct SCIP_HeurData
  * Local methods
  */
 
-/** comparison method for sorting variables by non-decreasing index */
+/** comparison method for sorting cliques by their size */
 static
-SCIP_DECL_SORTPTRCOMP(varObjSort)
+SCIP_DECL_SORTINDCOMP(compCliquesSize)
 {
-   SCIP_VAR* var1;
-   SCIP_VAR* var2;
+   int* cliquesizes = (int*)dataptr;
 
-   assert(elem1 != NULL);
-   assert(elem2 != NULL);
-
-   var1 = (SCIP_VAR*)elem1;
-   var2 = (SCIP_VAR*)elem2;
-
-   if( SCIPvarGetObj(var1) < SCIPvarGetObj(var2) )
-      return -1;
-   else if( SCIPvarGetObj(var1) > SCIPvarGetObj(var2) )
-      return +1;
-   else
-      return 0;
+   return cliquesizes[ind2] - cliquesizes[ind1];
 }
 
-/** sort the binary variable array w.r.t. the clique partition; thereby ensure the current order within the cliques are
- *  not changed
- */
 static
-SCIP_RETCODE stableSortBinvars(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR**            binvars,            /**< array of binary variables to sort */
-   int                   nbinvars,           /**< number of binary variables */
-   int*                  cliquepartition,    /**< clique partition to use */
-   int                   ncliques            /**< number of cliques */
+int getCliqueUnfixedVars(
+   SCIP_CLIQUE*          clique
    )
 {
-   SCIP_VAR*** varpointers;
-   SCIP_VAR** vars;
-   int* cliquecount;
-   int nextpos;
-   int c;
+   SCIP_VAR** cliquevars;
+   SCIP_VAR* var;
+   int ncliquevars;
+   int nunfixed = 0;
    int v;
-   int cliquenumber;
 
-   assert(scip != NULL);
-   assert(binvars != NULL);
-   assert(cliquepartition != NULL);
+   ncliquevars = SCIPcliqueGetNVars(clique);
+   cliquevars = SCIPcliqueGetVars(clique);
 
-   /* @note: we don't want to loose order from same clique numbers, so we need a stable sorting algorithm, or we first
-    *       count all clique items and alloc temporary memory for a bucket sort */
-   /* sort variables after clique-numbers */
-   SCIP_CALL( SCIPallocBufferArray(scip, &cliquecount, ncliques) );
-   BMSclearMemoryArray(cliquecount, ncliques);
-
-   /* first we count for each clique the number of elements */
-   for( v = nbinvars - 1; v >= 0; --v )
+   for( v = 0; v < ncliquevars; ++v )
    {
-      assert(0 <= cliquepartition[v] && cliquepartition[v] < ncliques);
-      ++(cliquecount[cliquepartition[v]]);
+      var = cliquevars[v];
+
+      /* is variable unfixed? */
+      if( SCIPvarGetUbLocal(var) > SCIPvarGetLbLocal(var) + 0.5 )
+         ++nunfixed;
    }
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nbinvars) );
-#ifndef NDEBUG
-   BMSclearMemoryArray(vars, nbinvars);
-#endif
-   SCIP_CALL( SCIPallocBufferArray(scip, &varpointers, ncliques) );
-
-   nextpos = 0;
-   /* now we initialize all start pointers for each clique, so they will be ordered */
-   for( c = 0; c < ncliques; ++c )
-   {
-      /* to reach the goal that all variables of each clique will be standing next to each other we will initialize the
-       * starting pointers for each clique by adding the number of each clique to the last clique starting pointer
-       * e.g. clique1 has 4 elements and clique2 has 3 elements the the starting pointer for clique1 will be the pointer
-       *      to vars[0], the starting pointer to clique2 will be the pointer to vars[4] and to clique3 it will be
-       *      vars[7]
-       *
-       */
-      varpointers[c] = (SCIP_VAR**) (vars + nextpos);
-      assert(cliquecount[c] > 0);
-      nextpos += cliquecount[c];
-      assert(nextpos > 0);
-   }
-   assert(nextpos == nbinvars);
-
-   /* now we copy all variable to the right order in our temporary variable array */
-   for( v = 0; v < nbinvars; ++v )
-   {
-      *(varpointers[cliquepartition[v]]) = binvars[v];
-      ++(varpointers[cliquepartition[v]]);
-   }
-#ifndef NDEBUG
-   for( v = 0; v < nbinvars; ++v )
-      assert(vars[v] != NULL);
-#endif
-
-   /* move all variables back to our variable array */
-   BMScopyMemoryArray(binvars, vars, nbinvars);
-
-   cliquenumber = 0;
-   nextpos = cliquecount[0];
-
-   c = 1;
-   for( v = 0; v < nbinvars; ++v )
-   {
-      if( v == nextpos )
-      {
-         nextpos += cliquecount[c];
-         ++c;
-         ++cliquenumber;
-      }
-      cliquepartition[v] = cliquenumber;
-   }
-   assert(cliquepartition[v - 1] == ncliques - 1);
-
-#ifndef NDEBUG
-   for( v = 1; v < nbinvars; ++v )
-      assert(SCIPvarGetObj(binvars[v - 1]) <= SCIPvarGetObj(binvars[v - 1]));
-#endif
-
-   /* free temporary memory */
-   SCIPfreeBufferArray(scip, &varpointers);
-   SCIPfreeBufferArray(scip, &vars);
-   SCIPfreeBufferArray(scip, &cliquecount);
-
-   return SCIP_OKAY;
+   return nunfixed;
 }
 
 /** apply clique fixing using probing */
@@ -226,163 +143,339 @@ static
 SCIP_RETCODE applyCliqueFixings(
    SCIP*                 scip,               /**< original SCIP data structure */
    SCIP_HEURDATA*        heurdata,           /**< structure containing heurdata */
-   SCIP_VAR**            binvars,            /**< binary variables order w.r.t. to clique partition */
-   int                   nbinvars,           /**< number of binary variables */
-   int*                  cliquepartition,    /**< clique partition of all binary variables */
-   int                   ncliques,           /**< number of cliques */
-   SCIP_VAR**            onefixvars,         /**< array to store all variables which are stored to one */
+   SCIP_VAR**            onefixvars,         /**< array to store all variables which are fixed to one in the cliques */
+   uint8_t*              onefixvals,         /**< array to store the values of all variables fixed to one in the cliques */
    int*                  nonefixvars,        /**< pointer to store the number of variables fixed to one */
-   SCIP_SOL*             sol,                /**< working solution */
-   int*                  probingdepthofonefix,/**< pointer to store in which depth the last fixing to was applied  */
-   SCIP_Bool*            cutoff,             /**< pointer to store whether the propagation stopped with infeasibility */
-   SCIP_RESULT*          result              /**< pointer to store the result (solution found) */
+   SCIP_Bool*            cutoff              /**< pointer to store whether the propagation stopped with infeasibility */
    )
 {
-#if 0
-   SCIP_Bool success;
-#endif
+   SCIP_CLIQUE** cliques;
+   SCIP_CLIQUE* clique;
+   SCIP_VAR** cliquevars;
+   SCIP_VAR* var;
+   SCIP_Bool* cliquevals;
+   SCIP_Bool* propagated;
+   int* cliquesizes;
+   int* permutation;
+   SCIP_Real bestobj;
+   SCIP_Real obj;
    SCIP_Bool alreadyone;
-   SCIP_Bool allfixed;
+   SCIP_Bool newnode;
+   int probingdepthofonefix;
+   int ncliquevars;
+   int ncliques;
    int bestpos;
-   int v;
+   int firstclique;
+   int bestclique;
+   int cliquesize;
+   int bestcliquesize;
+   int nbacktracks = 0;
+   int v = 0;
    int c;
-#ifdef SCIP_DEBUG
-   int nsolsround;
-   int nsolstried;
-#endif
+   int i;
 
    assert(scip != NULL);
    assert(heurdata != NULL);
-   assert(binvars != NULL);
    assert(onefixvars != NULL);
    assert(nonefixvars != NULL);
-   assert(sol != NULL);
-   assert(probingdepthofonefix != NULL);
    assert(cutoff != NULL);
-   assert(result != NULL);
+
+   cliques = SCIPgetCliques(scip);
+   ncliques = SCIPgetNCliques(scip);
+
+   /* allocate memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &cliquesizes, ncliques) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &permutation, ncliques) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &propagated, ncliques) );
+
+   for( c = ncliques - 1; c >= 0; --c )
+   {
+      cliquesizes[c] = SCIPcliqueGetNVars(cliques[c]);
+   }
+
+   SCIPsort(permutation, compCliquesSize, (void*)cliquesizes, ncliques);
+
+#ifndef NDEBUG
+   for( c = ncliques - 1; c >= 1; --c )
+   {
+      assert(cliquesizes[permutation[c]] <= cliquesizes[permutation[c-1]]);
+   }
+#endif
 
    *cutoff = FALSE;
-   *probingdepthofonefix = 0;
+   probingdepthofonefix = 0;
+   firstclique = 0;
 
-#ifdef SCIP_DEBUG
-   nsolsround = 0;
-   nsolstried = 0;
-#endif
-   v = 0;
+   SCIP_CALL( SCIPnewProbingNode(scip) );
+
    /* @todo maybe try to fix more than one variable to one in each probing node, to gain faster results */
    for( c = 0; c < ncliques; ++c )
    {
+      bestpos = -1;
+      bestobj = SCIPinfinity(scip);
       alreadyone = FALSE;
-      allfixed = TRUE;
-      bestpos = nbinvars;
+      newnode = FALSE;
 
-      /* find first unfixed variable in this clique */
-      while( v < nbinvars && cliquepartition[v] == c )
+      bestclique = firstclique;
+
+      if( bestclique >= ncliques )
+         break;
+
+      bestcliquesize = getCliqueUnfixedVars(cliques[permutation[bestclique]]);
+      assert(!propagated[permutation[bestclique]]);
+
+      for( i = firstclique + 1; i < ncliques; ++i)
       {
-         if( SCIPvarGetLbLocal(binvars[v]) > 0.5 )
-            alreadyone = TRUE;
-         else if( allfixed && SCIPvarGetUbLocal(binvars[v]) > 0.5 )
+         if( cliquesizes[permutation[i]] < bestcliquesize )
+            break;
+
+         if( propagated[permutation[i]] )
+            continue;
+
+         cliquesize = getCliqueUnfixedVars(cliques[permutation[i]]);
+
+         if( cliquesize > bestcliquesize )
          {
+            bestclique = i;
+            bestcliquesize = cliquesize;
+         }
+         else if( cliquesize == 0 )
+         {
+            propagated[permutation[i]] = TRUE;
+         }
+      }
+      clique = cliques[permutation[bestclique]];
+      propagated[permutation[bestclique]] = TRUE;
+
+      while( firstclique < ncliques && propagated[permutation[firstclique]] )
+         ++firstclique;
+
+      ncliquevars = SCIPcliqueGetNVars(clique);
+      cliquevars = SCIPcliqueGetVars(clique);
+      cliquevals = SCIPcliqueGetValues(clique);
+
+      for( v = 0; v < ncliquevars; ++v )
+      {
+         var = cliquevars[v];
+
+         /* variable is already fixed */
+         if( SCIPvarGetUbLocal(var) < SCIPvarGetLbLocal(var) + 0.5 )
+         {
+            SCIPdebugMessage("<%s> is already fixed to %g\n", SCIPvarGetName(var), SCIPvarGetUbLocal(var));
+
+            /* clique variable is fixed to 1 */
+            if( cliquevals[v] == (SCIPvarGetLbLocal(var) > 0.5) )
+            {
+               assert(!alreadyone);
+               alreadyone = TRUE;
+               break;
+            }
+            continue;
+         }
+
+         obj = cliquevals[v] ? SCIPvarGetObj(var) : -SCIPvarGetObj(var);
+
+         /* @todo use a tiebreaker (locks?) */
+         if( obj < bestobj )
+         {
+            /* variable is not the best one in the clique anymore, fix it to 0 */
+            if( bestpos >= 0 )
+            {
+               if( cliquevals[bestpos] )
+               {
+                  SCIP_CALL( SCIPfixVarProbing(scip, cliquevars[bestpos], 0.0) );
+               }
+               else
+               {
+                  SCIP_CALL( SCIPfixVarProbing(scip, cliquevars[bestpos], 1.0) );
+               }
+               SCIPdebugMessage("fixed <%s> to %g\n", SCIPvarGetName(cliquevars[bestpos]), SCIPvarGetUbLocal(cliquevars[bestpos]));
+               newnode = TRUE;
+            }
+
+            bestobj = obj;
             bestpos = v;
-            allfixed = FALSE;
+         }
+         /* variable is not the best one in the clique, fix it to 0 */
+         else
+         {
+            assert(bestpos >= 0);
+
+            if( cliquevals[v] )
+            {
+               SCIP_CALL( SCIPfixVarProbing(scip, var, 0.0) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPfixVarProbing(scip, var, 1.0) );
+            }
+            SCIPdebugMessage("fixed <%s> to %g\n", SCIPvarGetName(var), SCIPvarGetUbLocal(var));
+            newnode = TRUE;
+         }
+      }
+      /* we found a variable in the clique which is already fixed to 1 */
+      if( alreadyone )
+      {
+         /* fix (so far) best candidate to 0 */
+         if( bestpos >= 0 )
+         {
+            if( cliquevals[bestpos] )
+            {
+               SCIP_CALL( SCIPfixVarProbing(scip, cliquevars[bestpos], 0.0) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPfixVarProbing(scip, cliquevars[bestpos], 1.0) );
+            }
+            SCIPdebugMessage("fixed <%s> to %g\n", SCIPvarGetName(cliquevars[bestpos]), SCIPvarGetUbLocal(cliquevars[bestpos]));
+            newnode = TRUE;
          }
 
-         ++v;
+         /* fix all variables not yet processed to 0 */
+         for( ; v < ncliquevars; ++v )
+         {
+            var = cliquevars[v];
+
+            if( SCIPvarGetUbLocal(var) < SCIPvarGetLbLocal(var) + 0.5 )
+               continue;
+
+            if( cliquevals[v] )
+            {
+               SCIP_CALL( SCIPfixVarProbing(scip, var, 0.0) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPfixVarProbing(scip, var, 1.0) );
+            }
+            SCIPdebugMessage("fixed <%s> to %g\n", SCIPvarGetName(var), SCIPvarGetUbLocal(var));
+            newnode = TRUE;
+         }
       }
-      if( v == nbinvars && allfixed )
-         break;
-
-      /* if all clique variables are fixed, continue with the next clique */
-      if( allfixed )
-         continue;
-
-      assert(bestpos < nbinvars);
-      assert(c == cliquepartition[bestpos]);
-
-      /* stop if we reached the depth limit */
-      if( SCIP_MAXTREEDEPTH <= SCIPgetDepth(scip) )
-         break;
-
-      SCIP_CALL( SCIPnewProbingNode(scip) );
-
-      v = bestpos;
-      if( !alreadyone )
+      /* fix the best variable to 1 */
+      else if( bestpos >= 0 )
       {
-         *probingdepthofonefix = SCIPgetProbingDepth(scip);
-         onefixvars[(*nonefixvars)] = binvars[v];
+         assert(bestpos <= ncliquevars);
+
+         probingdepthofonefix = SCIPgetProbingDepth(scip);
+         onefixvars[(*nonefixvars)] = cliquevars[bestpos];
+
+         /* @todo should we even fix the best candidate to 1? */
+         if( cliquevals[bestpos] )
+         {
+            SCIP_CALL( SCIPfixVarProbing(scip, cliquevars[bestpos], 1.0) );
+            onefixvals[(*nonefixvars)] = 1;
+         }
+         else
+         {
+            SCIP_CALL( SCIPfixVarProbing(scip, cliquevars[bestpos], 0.0) );
+            onefixvals[(*nonefixvars)] = 0;
+         }
+         SCIPdebugMessage("fixed <%s> to %g*\n", SCIPvarGetName(cliquevars[bestpos]), SCIPvarGetUbLocal(cliquevars[bestpos]));
          ++(*nonefixvars);
-
-         /* fix best possible clique variable to 1 */
-         SCIP_CALL( SCIPfixVarProbing(scip, binvars[v], 1.0) );
-         SCIPdebugMsg(scip, "probing: fixing variable <%s> to 1\n", SCIPvarGetName(binvars[v]));
-
-         ++v;
+         newnode = TRUE;
       }
 
-      /* fix rest of unfixed clique variables to 0 */
-      while( v < nbinvars && cliquepartition[v] == c )
+      if( newnode )
       {
-         if( SCIPvarGetUbLocal(binvars[v]) > 0.5 && SCIPvarGetLbLocal(binvars[v]) < 0.5 )
+         /* propagate fixings */
+         SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, cutoff, NULL) );
+
+         SCIPdebugMessage("propagate fixings of clique %d: cutoff=%u\n", c, *cutoff);
+
+         if( SCIPisStopped(scip) )
+            break;
+
+         /* stop if we reached the depth limit */
+         if( SCIP_MAXTREEDEPTH <= SCIPgetDepth(scip) )
+            break;
+
+         /* probing detected infeasibility: backtrack */
+         if( *cutoff )
          {
-            SCIP_CALL( SCIPfixVarProbing(scip, binvars[v], 0.0) );
-            SCIPdebugMsg(scip, "probing: fixing variable <%s> to 0\n", SCIPvarGetName(binvars[v]));
+            if( *nonefixvars > 0 )
+            {
+               if( probingdepthofonefix > 0 )
+               {
+
+                  SCIP_CALL( SCIPbacktrackProbing(scip, probingdepthofonefix - 1) );
+                  probingdepthofonefix = 0;
+                  ++nbacktracks;
+
+                  /* because of the limited number of propagation rounds, it may happen that conflict analysis finds a
+                   * valid global fixing for the last fixed variable that conflicts with applying the reverse fixing
+                   * after backtracking; in that case, we ran into a deadend and stop
+                   */
+                  if( SCIPvarGetLbLocal(onefixvars[*nonefixvars - 1]) < 1.5 - onefixvals[*nonefixvars - 1]
+                     && SCIPvarGetUbLocal(onefixvars[*nonefixvars - 1]) > 0.5 - onefixvals[*nonefixvars - 1] )
+                  {
+                     /* fix the last variable, which was fixed to 1 and led to the cutoff, to 0 */
+                     SCIP_CALL( SCIPfixVarProbing(scip, onefixvars[*nonefixvars - 1], 1.0 - onefixvals[*nonefixvars - 1]) );
+                     --(*nonefixvars);
+
+                     /* propagate fixings */
+                     SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, cutoff, NULL) );
+
+                     SCIPdebugMessage("backtrack %d was %sfeasible\n", nbacktracks, (*cutoff ? "in" : ""));
+                  }
+#ifndef NDEBUG
+                  else
+                     assert(*cutoff == TRUE);
+#endif
+               }
+               if( *cutoff )
+               {
+#ifndef NOCONFLICT
+                  SCIP_CONS* conflictcons;
+                  char consname[SCIP_MAXSTRLEN];
+
+                  /* create own conflict */
+                  (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "conf%" SCIP_LONGINT_FORMAT "", SCIPgetNNodes(scip));
+
+                  /* get variables for the conflict */
+                  for( i = 0; i < *nonefixvars; ++i )
+                  {
+                     /* if the variable was fixed to 1 by the heuristic, get its negated variable */
+                     if( onefixvals[i] )
+                     {
+                        SCIP_CALL( SCIPgetNegatedVar(scip, onefixvars[i], &onefixvars[i]) );
+                     }
+                  }
+
+                  SCIPdebugMsg(scip, "probing was infeasible after %d backtracks\n", nbacktracks);
+
+                  /* create conflict constraint */
+                  SCIP_CALL( SCIPcreateConsLogicor(scip, &conflictcons, consname, *nonefixvars, onefixvars,
+                        FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
+                  SCIP_CALL( SCIPaddConsNode(scip, SCIPgetFocusNode(scip), conflictcons, NULL) );
+                  SCIPdebugPrintCons(scip, conflictcons, NULL);
+                  SCIP_CALL( SCIPreleaseCons(scip, &conflictcons) );
+#endif
+                  break;
+               }
+               else if( nbacktracks > heurdata->maxbacktracks )
+               {
+                  SCIPdebugMsg(scip, "interrupt probing after %d backtracks\n", nbacktracks);
+                  break;
+               }
+            }
+            /* we had a cutoff without a single one-fixing, so the current problem seems to be infeasible already */
+            else
+               break;
          }
-         ++v;
+
+         SCIP_CALL( SCIPnewProbingNode(scip) );
       }
-
-      /* propagate fixings */
-      SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, cutoff, NULL) );
-
-      if( *cutoff )
-         break;
-
-      /* @todo need to be check if it's ok to always try to round and check the solution in each probing step */
-#if 0
-
-#ifdef SCIP_DEBUG
-      ++nsolsround;
-#endif
-      /* create solution from probing run and try to round it */
-      SCIP_CALL( SCIPlinkCurrentSol(scip, sol) );
-      SCIP_CALL( SCIProundSol(scip, sol, &success) );
-
-      if( success )
-      {
-         SCIPdebugMsg(scip, "clique heuristic found roundable primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, sol));
-
-#ifdef SCIP_DEBUG
-         ++nsolstried;
-#endif
-         /* try to add solution to SCIP */
-         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, TRUE, &success) );
-
-         /* check, if solution was feasible and good enough */
-         if( success )
-         {
-            SCIPdebugMsg(scip, " -> solution was feasible and good enough\n");
-            *result = SCIP_FOUNDSOL;
-         }
-      }
-#endif
-
-      if( SCIPisStopped(scip) )
-         return SCIP_OKAY;
-
-#if 0
-      /* if the rest of all variables are in cliques with one variable stop */
-      if( nbinvars - v == ncliques - c )
-         break;
-#endif
    }
-   assert((*probingdepthofonefix > 0 && *nonefixvars > 0) || (*probingdepthofonefix == 0 && *nonefixvars == 0));
-   assert(*cutoff || (nbinvars - v == ncliques - c) || (v == nbinvars && (c == ncliques || c == ncliques - 1)));
+   assert((*nonefixvars > 0) || probingdepthofonefix == 0 );
 
-   SCIPdebugMsg(scip, "fixed %d of %d variables in probing\n", v, nbinvars);
+   SCIPfreeBufferArray(scip, &propagated);
+   SCIPfreeBufferArray(scip, &permutation);
+   SCIPfreeBufferArray(scip, &cliquesizes);
+
+   SCIPdebugMsg(scip, "fixed %d of %d variables in probing\n", v, SCIPgetNBinVars(scip));
    SCIPdebugMsg(scip, "applied %d of %d cliques in probing\n", c, ncliques);
    SCIPdebugMsg(scip, "probing was %sfeasible\n", (*cutoff) ? "in" : "");
-#ifdef SCIP_DEBUG
-   SCIPdebugMsg(scip, "clique heuristic rounded %d solutions and tried %d of them\n", nsolsround, nsolstried);
-#endif
+
    return SCIP_OKAY;
 }
 
@@ -483,36 +576,10 @@ SCIP_DECL_HEURINIT(heurInitClique)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   /* create random number generator */
-   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
-         (unsigned int)heurdata->initseed) );
-
    heurdata->usednodes = 0;
 
    return SCIP_OKAY;
 }
-
-
-/** deinitialization method of primal heuristic */
-static
-SCIP_DECL_HEUREXIT(heurExitClique)
-{  /*lint --e{715}*/
-   SCIP_HEURDATA* heurdata;
-
-   assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
-   assert(scip != NULL);
-
-   /* get heuristic data */
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
-
-   /* free random number generator */
-   SCIPfreeRandom(scip, &heurdata->randnumgen);
-
-   return SCIP_OKAY;
-}
-
 
 /** execution method of primal heuristic */
 static
@@ -520,34 +587,25 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    SCIP_VAR** vars;
+   SCIP_Real lowerbound;
    int nvars;
-   SCIP_VAR** binvars;
    int nbinvars;
-   int* cliquepartition;
-   int ncliques;
    int oldnpscands;
    int npscands;
    int i;
-#if 0
-   SCIP_Longint tmpnnodes;
-#endif
    SCIP_Bool cutoff;
-   SCIP_Bool backtrackcutoff;
    SCIP_Bool lperror;
 
-   int probingdepthofonefix;
    SCIP_VAR** onefixvars;
+   uint8_t* onefixvals;
    int nonefixvars;
    SCIP_Bool enabledconflicts;
    SCIP_LPSOLSTAT lpstatus;
    SCIP_CONS* conflictcons;
-   SCIP_Bool shortconflict;
-   SCIP_Bool allfixsolfound;
-   SCIP_Bool backtracked;
    SCIP_Bool solvelp;
    char consname[SCIP_MAXSTRLEN];
 
-   SCIP_Longint nstallnodes;                 /* number of stalling nodes for the subproblem */
+   SCIP_Longint nstallnodes;
 
    SCIP_SOL* sol;
 
@@ -562,30 +620,21 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-#if 0
-   if( heurdata->nnodefornextrun != SCIPgetNNodes(scip) )
-      return SCIP_OKAY;
-#endif
-   /* get all binary variables */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, NULL, NULL, NULL) );
+   nbinvars = SCIPgetNBinVars(scip);
 
    if( nbinvars < 2 )
-   {
-      heurdata->nnodefornextrun = INT_MAX;
       return SCIP_OKAY;
-   }
 
    /* check for necessary information to apply this heuristic */
    if( SCIPgetNCliques(scip) == 0 )
-   {
-      heurdata->nnodefornextrun = INT_MAX;
       return SCIP_OKAY;
-   }
+
+   lowerbound = SCIPgetLowerbound(scip);
 
    /* calculate the maximal number of branching nodes until heuristic is aborted */
    nstallnodes = (SCIP_Longint)(heurdata->nodesquot * SCIPgetNNodes(scip));
 
-   /* reward variable bounds heuristic if it succeeded often */
+   /* reward clique heuristic if it succeeded often */
    nstallnodes = (SCIP_Longint)(nstallnodes * 3.0 * (SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
    nstallnodes -= 100 * SCIPheurGetNCalls(heur);  /* count the setup costs for the sub-MIP as 100 nodes */
    nstallnodes += heurdata->nodesofs;
@@ -603,30 +652,8 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
    oldnpscands = SCIPgetNPseudoBranchCands(scip);
    onefixvars = NULL;
+   onefixvals = NULL;
    sol = NULL;
-
-   /* allocate memory */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &binvars, vars, nbinvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &cliquepartition, nbinvars) );
-
-#if 1
-   /* @todo change sorting after some attempts to random variable order */
-   if( SCIPgetNNodes(scip) == 1 )
-   {
-      /* sort variables after increasing objective value */
-      SCIPsortPtr((void**)binvars, varObjSort, nbinvars);
-   }
-   else
-   {
-      SCIPrandomPermuteArray(heurdata->randnumgen, (void**)binvars, 0, nbinvars);
-   }
-#endif
-
-   /* get clique partitions */
-   SCIP_CALL( SCIPcalcCliquePartition(scip, binvars, nbinvars, cliquepartition, &ncliques) );
-   /* @todo get negated clique partition and use this too, or maybe mix both */
-
-   SCIPdebugMsg(scip, "found %d cliques\n", ncliques);
 
    /* disable conflict analysis, because we can it better than SCIP itself, cause we have more information */
    SCIP_CALL( SCIPgetBoolParam(scip, "conflict/enable", &enabledconflicts) );
@@ -635,32 +662,6 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    {
       SCIP_CALL( SCIPsetBoolParam(scip, "conflict/enable", FALSE) );
    }
-
-   if( ncliques == nbinvars )
-   {
-      heurdata->nnodefornextrun = INT_MAX;
-      goto TERMINATE;
-   }
-
-   /* sort the cliques together by respecting the current order (which is w.r.t. the objective coefficients */
-   SCIP_CALL( stableSortBinvars(scip, binvars, nbinvars, cliquepartition, ncliques) );
-
-   for( i = nbinvars - 1; i >= 0; --i )
-   {
-      if( cliquepartition[i] != ncliques - nbinvars + i )
-      {
-         assert(cliquepartition[i] > ncliques - nbinvars + i);
-         break;
-      }
-   }
-
-   if( i + 2 < heurdata->minfixingrate * nbinvars )
-   {
-      SCIPdebugMsg(scip, "--> too few variables in nontrivial cliques\n");
-
-      goto TERMINATE;
-   }
-
 
    solvelp = SCIPhasCurrentNodeLP(scip);
 
@@ -683,61 +684,71 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    /* start probing */
    SCIP_CALL( SCIPstartProbing(scip) );
 
+#ifdef COLLECTSTATISTICS
+   SCIPenableVarHistory(scip);
+#endif
+
    /* create a solution */
    SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
 
    /* allocate memory for all variables which will be fixed to one during probing */
-   SCIP_CALL(SCIPallocBufferArray(scip, &onefixvars, ncliques) );
+   SCIP_CALL(SCIPallocBufferArray(scip, &onefixvars, nbinvars) );
+   SCIP_CALL(SCIPallocBufferArray(scip, &onefixvals, nbinvars) );
    nonefixvars = 0;
 
    /* apply fixings due to clique information */
-   SCIP_CALL( applyCliqueFixings(scip, heurdata, binvars, nbinvars, cliquepartition, ncliques, onefixvars, &nonefixvars, sol, &probingdepthofonefix, &cutoff, result) );
+   SCIP_CALL( applyCliqueFixings(scip, heurdata, onefixvars, onefixvals, &nonefixvars, &cutoff) );
 
-   if( SCIPisStopped(scip) )
+   if( cutoff || SCIPisStopped(scip) )
       goto TERMINATE;
-
-   backtrackcutoff = FALSE;
-   backtracked = FALSE;
-
-   /* try to repair probing */
-   if( cutoff && nonefixvars > 0)
-   {
-      assert(probingdepthofonefix > 0);
-
-      SCIP_CALL( SCIPbacktrackProbing(scip, probingdepthofonefix - 1) );
-
-      /* fix the last variable, which was fixed to 1 and led to the cutoff, to 0 */
-      SCIP_CALL( SCIPfixVarProbing(scip, onefixvars[nonefixvars - 1], 0.0) );
-
-      backtracked = TRUE;
-
-      /* propagate fixings */
-      SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, &backtrackcutoff, NULL) );
-
-      SCIPdebugMsg(scip, "backtrack was %sfeasible\n", (backtrackcutoff ? "in" : ""));
-   }
 
    /* check that we had enough fixings */
    npscands = SCIPgetNPseudoBranchCands(scip);
 
-   SCIPdebugMsg(scip, "npscands=%d, oldnpscands=%d, heurdata->minfixingrate=%g\n", npscands, oldnpscands, heurdata->minfixingrate);
+   SCIPdebugMsg(scip, "npscands=%d, oldnpscands=%d, heurdata->minintfixingrate=%g\n", npscands, oldnpscands, heurdata->minintfixingrate);
 
-   if( npscands > oldnpscands * (1 - heurdata->minfixingrate) )
+   if( npscands > oldnpscands * (1.0 - heurdata->minintfixingrate) )
    {
-      SCIPdebugMsg(scip, "--> too few fixings\n");
+      if( heurdata->uselockfixings && npscands <= 2.0 * oldnpscands * (1.0 - heurdata->minintfixingrate) )
+      {
+         SCIP_Bool allrowsfulfilled = FALSE;
 
-      goto TERMINATE;
+         SCIP_CALL( SCIPapplyLockFixings(scip, NULL, &cutoff, &allrowsfulfilled) );
+
+         if( cutoff || SCIPisStopped(scip) )
+         {
+            SCIPdebugMsg(scip, "cutoff or timeout in locks fixing\n");
+            goto TERMINATE;
+         }
+
+         npscands = SCIPgetNPseudoBranchCands(scip);
+
+         SCIPdebugMsg(scip, "after lockfixings: npscands=%d, oldnpscands=%d, allrowsfulfilled=%u, heurdata->minintfixingrate=%g\n",
+            npscands, oldnpscands, allrowsfulfilled, heurdata->minintfixingrate);
+
+         if( !allrowsfulfilled && npscands > oldnpscands * (1 - heurdata->minintfixingrate) )
+         {
+            SCIPdebugMsg(scip, "--> too few fixings\n");
+
+            goto TERMINATE;
+         }
+      }
+      else
+      {
+         SCIPdebugMsg(scip, "--> too few fixings\n");
+
+         goto TERMINATE;
+      }
    }
 
    /*************************** Probing LP Solving ***************************/
 
    lpstatus = SCIP_LPSOLSTAT_ERROR;
    lperror = FALSE;
-   allfixsolfound = FALSE;
+
    /* solve lp only if the problem is still feasible */
-   if( !backtrackcutoff && solvelp )
+   if( solvelp )
    {
-#if 1
       SCIPdebugMsg(scip, "starting solving clique-lp at time %g\n", SCIPgetSolvingTime(scip));
 
       /* solve LP; errors in the LP solver should not kill the overall solving process, if the LP is just needed for a
@@ -771,6 +782,10 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       SCIP_Bool stored;
       SCIP_Bool success;
 
+      assert(!cutoff);
+
+      lowerbound = SCIPgetLPObjval(scip);
+
       /* copy the current LP solution to the working solution */
       SCIP_CALL( SCIPlinkLPSol(scip, sol) );
 
@@ -790,7 +805,6 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 #else
          SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, FALSE, FALSE, &stored) );
 #endif
-         allfixsolfound = TRUE;
 
          if( stored )
          {
@@ -798,44 +812,47 @@ SCIP_DECL_HEUREXEC(heurExecClique)
             SCIPdebug( SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) ) );
             *result = SCIP_FOUNDSOL;
          }
+
+         /* we found a solution, so we are done */
+         goto TERMINATE;
       }
    }
-#endif
-
    /*************************** END Probing LP Solving ***************************/
+
+
    /*************************** Create Conflict ***************************/
-
-   if( lpstatus == SCIP_LPSOLSTAT_INFEASIBLE || lpstatus == SCIP_LPSOLSTAT_OBJLIMIT || backtrackcutoff )
+   if( lpstatus == SCIP_LPSOLSTAT_INFEASIBLE || lpstatus == SCIP_LPSOLSTAT_OBJLIMIT )
    {
-      /* in case the last fixing in both direction led to infeasibility or to a reached objlimit than our conflict will
-       * only include all variable before that last fixing
-       */
-      shortconflict = cutoff && (nonefixvars > 0);
-
+#ifndef NOCONFLICT
       /* create own conflict */
       (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "conf%" SCIP_LONGINT_FORMAT "", SCIPgetNNodes(scip));
 
-      /* get negated variables for our conflict */
-      SCIP_CALL( SCIPgetNegatedVars(scip, nonefixvars, onefixvars, onefixvars) );
+      /* get variables for the conflict */
+      for( i = 0; i < nonefixvars; ++i )
+      {
+         /* if the variable was fixed to 1 by the heuristic, get its negated variable */
+         if( onefixvals[i] )
+         {
+            SCIP_CALL( SCIPgetNegatedVar(scip, onefixvars[i], &onefixvars[i]) );
+         }
+      }
 
       /* create conflict constraint */
-      SCIP_CALL( SCIPcreateConsLogicor(scip, &conflictcons, consname, (shortconflict ? nonefixvars - 1 : nonefixvars), onefixvars,
+      SCIP_CALL( SCIPcreateConsLogicor(scip, &conflictcons, consname, nonefixvars, onefixvars,
             FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
-      SCIP_CALL( SCIPaddConsNode(scip, SCIPgetCurrentNode(scip), conflictcons, NULL) );
+      SCIP_CALL( SCIPaddConsNode(scip, SCIPgetFocusNode(scip), conflictcons, NULL) );
       SCIPdebugPrintCons(scip, conflictcons, NULL);
       SCIP_CALL( SCIPreleaseCons(scip, &conflictcons) );
-
+#endif
       goto TERMINATE;
    }
-
    /*************************** End Conflict ***************************/
 
    /*************************** Start Subscip Solving ***************************/
-
-   /* if no solution has been found yet and the subproblem is still feasible --> fix all other variables by subscip if
+   /* no solution has been found yet and the subproblem is still feasible --> fix all other variables by subscip if
     * necessary
     */
-   if( !allfixsolfound && !lperror )
+   if( !lperror )
    {
       SCIP* subscip;
       SCIP_VAR** subvars;
@@ -848,7 +865,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       if( !valid )
          goto TERMINATE;
 
-      /* get all variables again because SCIPconstructLP() might have changed the variables array */
+      /* get all variables */
       SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
       /* create subproblem */
@@ -933,9 +950,9 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
          upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
 
-         if( !SCIPisInfinity(scip, -1.0 * SCIPgetLowerbound(scip)) )
+         if( !SCIPisInfinity(scip, -1.0 * lowerbound) )
          {
-            cutoffbound = (1-minimprove) * SCIPgetUpperbound(scip) + minimprove * SCIPgetLowerbound(scip);
+            cutoffbound = (1-minimprove) * SCIPgetUpperbound(scip) + minimprove * lowerbound;
          }
          else
          {
@@ -957,12 +974,12 @@ SCIP_DECL_HEUREXEC(heurExecClique)
        */
       SCIP_CALL_ABORT( SCIPpresolve(subscip) );
 
-      SCIPdebugMsg(scip, "clique heuristic presolved subproblem: %d vars, %d cons; fixing value = %g\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip), ((nvars - SCIPgetNVars(subscip)) / (SCIP_Real)nvars));
+      SCIPdebugMsg(scip, "clique heuristic presolved subproblem at time %g : %d vars, %d cons; fixing value = %g\n", SCIPgetSolvingTime(scip), SCIPgetNVars(subscip), SCIPgetNConss(subscip), ((nvars - SCIPgetNVars(subscip)) / (SCIP_Real)nvars));
 
       /* after presolving, we should have at least reached a certain fixing rate over ALL variables (including continuous)
        * to ensure that not only the MIP but also the LP relaxation is easy enough
        */
-      if( ((nvars - SCIPgetNVars(subscip)) / (SCIP_Real)nvars) >= heurdata->minfixingrate )
+      if( ((nvars - SCIPgetNVars(subscip)) / (SCIP_Real)nvars) >= heurdata->minmipfixingrate )
       {
          SCIP_SOL** subsols;
          SCIP_Bool success;
@@ -987,27 +1004,31 @@ SCIP_DECL_HEUREXEC(heurExecClique)
          }
          if( success )
             *result = SCIP_FOUNDSOL;
-
-         /* if subscip was infeasible we can add a conflict too */
+#ifndef NOCONFLICT
+         /* if subscip was infeasible, add a conflict */
          if( SCIPgetStatus(subscip) == SCIP_STATUS_INFEASIBLE )
          {
-            /* in case the last fixing in both direction led to infeasibility or to a reached objlimit than our conflict will only include all variable before that last fixing */
-            shortconflict = backtracked;
-
             /* create own conflict */
             (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "conf%" SCIP_LONGINT_FORMAT "", SCIPgetNNodes(scip));
 
-            /* get negated variables for our conflict */
-            SCIP_CALL( SCIPgetNegatedVars(scip, nonefixvars, onefixvars, onefixvars) );
+            /* get variables for the conflict */
+            for( i = 0; i < nonefixvars; ++i )
+            {
+               /* if the variable was fixed to 1 by the heuristic, get its negated variable */
+               if( onefixvals[i] )
+               {
+                  SCIP_CALL( SCIPgetNegatedVar(scip, onefixvars[i], &onefixvars[i]) );
+               }
+            }
 
             /* create conflict constraint */
-            SCIP_CALL( SCIPcreateConsLogicor(scip, &conflictcons, consname, (shortconflict ? nonefixvars - 1 : nonefixvars), onefixvars,
+            SCIP_CALL( SCIPcreateConsLogicor(scip, &conflictcons, consname, nonefixvars, onefixvars,
                   FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
-            SCIP_CALL( SCIPaddConsNode(scip, SCIPgetCurrentNode(scip), conflictcons, NULL) );
+            SCIP_CALL( SCIPaddConsNode(scip, SCIPgetFocusNode(scip), conflictcons, NULL) );
             SCIPdebugPrintCons(scip, conflictcons, NULL);
             SCIP_CALL( SCIPreleaseCons(scip, &conflictcons) );
          }
-
+#endif
       }
 
 #ifdef SCIP_DEBUG
@@ -1030,8 +1051,8 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    }
 
    /* free conflict variables */
-   if( onefixvars != NULL )
-      SCIPfreeBufferArray(scip, &onefixvars);
+   SCIPfreeBufferArrayNull(scip, &onefixvars);
+   SCIPfreeBufferArrayNull(scip, &onefixvals);
 
    /* freeing solution */
    if( sol != NULL )
@@ -1045,15 +1066,6 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       SCIP_CALL( SCIPendProbing(scip) );
    }
 
-   SCIPfreeBufferArray(scip, &cliquepartition);
-   SCIPfreeBufferArray(scip, &binvars);
-
-#if 0
-   /* calculate next node number to run this heuristic */
-   tmpnnodes = (SCIP_Longint) SCIPceil(scip, heurdata->nnodefornextrun * heurdata->multiplier);
-   heurdata->nnodefornextrun = MIN(tmpnnodes, INT_MAX);
-   SCIPdebugMsg(scip, "Next run will be at node %" SCIP_LONGINT_FORMAT ".\n", heurdata->nnodefornextrun);
-#endif
    return SCIP_OKAY;
 }
 
@@ -1083,21 +1095,16 @@ SCIP_RETCODE SCIPincludeHeurClique(
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyClique) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeClique) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitClique) );
-   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitClique) );
 
    /* add clique primal heuristic parameters */
 
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/multiplier",
-         "value to increase nodenumber to determine the next run",
-         &heurdata->multiplier, TRUE, DEFAULT_MULTIPLIER, 0.0, SCIP_REAL_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/initseed",
-         "initial random seed value to permutate variables",
-         &(heurdata->initseed), TRUE, DEFAULT_RANDSEED, 1, INT_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/minfixingrate",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/minintfixingrate",
          "minimum percentage of integer variables that have to be fixable",
-         &heurdata->minfixingrate, FALSE, DEFAULT_MINFIXINGRATE, 0.0, 1.0, NULL, NULL) );
+         &heurdata->minintfixingrate, FALSE, DEFAULT_MININTFIXINGRATE, 0.0, 1.0, NULL, NULL) );
+
+      SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/minmipfixingrate",
+         "minimum percentage of fixed variables in the sub-MIP",
+         &heurdata->minmipfixingrate, FALSE, DEFAULT_MINMIPFIXINGRATE, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/" HEUR_NAME "/maxnodes",
          "maximum number of nodes to regard in the subproblem",
@@ -1126,6 +1133,14 @@ SCIP_RETCODE SCIPincludeHeurClique(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copycuts",
          "should all active cuts from cutpool be copied to constraints in subproblem?",
          &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
+
+      SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/uselockfixings",
+         "should more variables be fixed based on variable locks if the fixing rate was not reached?",
+         &heurdata->uselockfixings, TRUE, DEFAULT_USELOCKFIXINGS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxbacktracks",
+         "maximum number of backtracks during the fixing process",
+         &heurdata->maxbacktracks, TRUE, DEFAULT_MAXBACKTRACKS, -1, INT_MAX/4, NULL, NULL) );
 
    return SCIP_OKAY;
 }

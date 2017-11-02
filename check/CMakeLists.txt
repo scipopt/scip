@@ -59,7 +59,7 @@ set(settings_MIP
     "setppclifting"
     "xorsepaparity"
 #    "cloud"
-#    "feaspump20"
+    "feaspump20"
     "indicatoralterlp"
     "leastinf"
     "presolfast"
@@ -69,6 +69,8 @@ set(settings_MIP
     "vbcvisualization"
     "bakvisualization"
     "solvingphases"
+    "lns_epsgreedy"
+    "lns_exp3"
 )
 
 set(settings_MINLP
