@@ -4354,7 +4354,7 @@ SCIP_RETCODE presolveDisaggregateMergeComponents(
       int count = 0;
 
       /* a minimal component size we should reach to have all components roughly the same size */
-      targetsize = nvars / maxncomponents;
+      targetsize = nvars / maxncomponents;  /*lint !e653*/
       for( i = 0; i < *ncomponents; ++i )
       {
          newcompidx[oldcompidx[i]] = i;
@@ -4406,7 +4406,7 @@ SCIP_RETCODE presolveDisaggregateMergeComponents(
          ++componentssize[maxncomponents-1];
       }
 
-      SCIPhashmapEntrySetImage(entry, (void*)(size_t)newcomponent);
+      SCIPhashmapEntrySetImage(entry, (void*)(size_t)newcomponent); /*lint !e571*/
    }
    if( *ncomponents > maxncomponents )
       *ncomponents = maxncomponents;
