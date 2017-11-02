@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+#define SCIP_STATISTIC
 /**@file   branch_lookahead.c
  * @ingroup BRANCHINGRULES
  * @brief  lookahead LP branching rule
@@ -3691,10 +3691,7 @@ SCIP_RETCODE selectVarRecursive(
              */
             status->propagationdomred = TRUE;
 #ifdef SCIP_STATISTIC
-            {
-               int probingdepth = SCIPgetProbingDepth(scip);
-               statistics->npropdomred[probingdepth]++;
-            }
+            statistics->npropdomred[probingdepth]++;
 #endif
             LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Domain Propagation changed the bounds of a branching candidate."
                   "\n");
@@ -3725,8 +3722,6 @@ SCIP_RETCODE selectVarRecursive(
          {
             DOMAINREDUCTIONS* downdomainreductions = NULL;
             DOMAINREDUCTIONS* updomainreductions = NULL;
-            DOMAINREDUCTIONS* localdomainreductions;
-            BRANCHINGRESULTDATA* localbranchingresult;
             SCIP_Bool down;
             int k;
 
@@ -3744,14 +3739,19 @@ SCIP_RETCODE selectVarRecursive(
 
             for( k = 0; k < 2; ++k )
             {
+               DOMAINREDUCTIONS* localdomainreductions;
+               BRANCHINGRESULTDATA* localbranchingresult;
+               BRANCHINGRESULTDATA* otherbranchingresult;
+
                localdomainreductions = down ? downdomainreductions : updomainreductions;
                localbranchingresult = down ? downbranchingresult : upbranchingresult;
+               otherbranchingresult = down ? upbranchingresult : downbranchingresult;
 
 
 #ifdef SCIP_STATISTIC /* ????????????????? */
                SCIP_CALL( executeBranchingRecursive(scip, status, config, baselpsol, candidate, localbaselpsolval,
                      recursiondepth, localdomainreductions, binconsdata, localbranchingresult, scorecontainer,
-                     storewarmstartinfo, down, addeddomainreduction, statistics, localstats) );
+                     storewarmstartinfo, down, &addeddomainreduction, statistics, localstats) );
 #else
                SCIP_CALL( executeBranchingRecursive(scip, status, config, baselpsol, candidate, localbaselpsolval,
                      recursiondepth, localdomainreductions, binconsdata, localbranchingresult, scorecontainer,
@@ -3759,21 +3759,15 @@ SCIP_RETCODE selectVarRecursive(
 #endif
 
                /* check whether a new solutions rendered the previous child infeasible */
-               /* Check, if all existing columns are in LP.
-                * If this is not the case, we may still return that the up and down dual bounds are valid, because the
-                * branching rule should not apply them otherwise.
-                * However, we must not set the downinf or upinf pointers to TRUE based on the dual bound, because we
-                * cannot guarantee that this node can be cut off.
-                */
                /* @todo break if result is infeasible (probably only in first layer) */
                if( SCIPallColsInLP(scip) )
                {
-                  if( SCIPisGE(scip, localbranchingresult->dualbound, SCIPgetCutoffbound(scip)) )
+                  if( SCIPisGE(scip, otherbranchingresult->dualbound, SCIPgetCutoffbound(scip)) )
                   {
-                     localbranchingresult->cutoff = TRUE;
+                     otherbranchingresult->cutoff = TRUE;
                      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH,
-                        "The up branching changed the cutoffbound and rendered the %s branching result infeasible.\n",
-                        down ? "down" : "up");
+                        "The %s branching changed the cutoffbound and rendered the %s branching result infeasible.\n",
+                        down ? "down" : "up", down ? "up" : "down");
                   }
                }
 
@@ -4188,7 +4182,7 @@ SCIP_RETCODE selectVarStart(
             {
                SCIP_VAR* var = candidates->candidates[i]->branchvar;
 
-               if( decision->var == var )
+               if( decision->cand->branchvar == var )
                {
                   statistics->chosenfsbcand[i] += 1;
                   break;
