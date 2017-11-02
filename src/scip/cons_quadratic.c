@@ -15377,8 +15377,8 @@ SCIP_RETCODE SCIPaddBilinearIneqQuadratic(
    }
    else
    {
-      SCIP_Real viols1[2];
-      SCIP_Real viols2[2];
+      SCIP_Real viols1[2] = {0.0, 0.0};
+      SCIP_Real viols2[2] = {0.0, 0.0};
       SCIP_Real bestviol;
       int pos = -1;
 
