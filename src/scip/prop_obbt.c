@@ -924,6 +924,7 @@ SCIP_RETCODE filterExistingLP(
          bilinbound->filtered = bilinbound->filtered | RIGHTTOP | RIGHTBOTTOM; /*lint !e641*/
       else if( SCIPisInfinity(scip, -solx) )
          bilinbound->filtered = bilinbound->filtered | LEFTTOP | LEFTBOTTOM; /*lint !e641*/
+
       if( SCIPisInfinity(scip, soly) )
          bilinbound->filtered = bilinbound->filtered | RIGHTTOP | LEFTTOP; /*lint !e641*/
       else if( SCIPisInfinity(scip, -soly) )
@@ -937,7 +938,8 @@ SCIP_RETCODE filterExistingLP(
 
          getCorner(bilinbound->x, bilinbound->y, corners[j], &xt, &yt);
 
-         if( SCIPisFeasEQ(scip, xt, solx) && SCIPisFeasEQ(scip, yt, soly) )
+         if( (SCIPisInfinity(scip, REALABS(solx)) || SCIPisFeasEQ(scip, xt, solx))
+            || (SCIPisInfinity(scip, REALABS(soly)) || SCIPisFeasEQ(scip, yt, soly)) )
             bilinbound->filtered = bilinbound->filtered | corners[j]; /*lint !e641*/
       }
 
@@ -2171,7 +2173,7 @@ SCIP_RETCODE solveBilinearLP(
       *ycoef = -(*ycoef);
 
       /* inequality is only useful when both coefficients are different from zero; normalize inequality if possible */
-      if( !SCIPisFeasZero(scip, *xcoef) || !SCIPisFeasZero(scip, *ycoef) )
+      if( !SCIPisFeasZero(scip, *xcoef) && !SCIPisFeasZero(scip, *ycoef) )
       {
          SCIP_Real val = REALABS(*xcoef);
          *xcoef /= val;
@@ -2302,6 +2304,10 @@ SCIP_RETCODE applyObbtBilinear(
 
          /* get corners (xs,ys) and (xt,yt) */
          getCorners(bilinbound->x, bilinbound->y, corner, &xs, &ys, &xt, &yt);
+
+         /* skip target corner points with too large values */
+         if( SCIPisHugeValue(scip, REALABS(xt)) || SCIPisHugeValue(scip, REALABS(yt)) )
+            continue;
 
          /* compute inequality */
          SCIP_CALL( solveBilinearLP(scip, bilinbound->x, bilinbound->y, xs, ys, xt, yt, &xcoef, &ycoef, &constant, -1L) );
