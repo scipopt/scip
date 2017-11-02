@@ -477,9 +477,12 @@ SCIP_RETCODE da_reduce(
       {
          SCIP_CALL( SCIPdualAscentStpSol(scip, graph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, result, edgearrint, state, root, 1, NULL, nodearrchar) );
       }
-      else if( run > 1 && graph->stp_type != STP_RSMT )
+      else if( run > 0 && graph->stp_type != STP_RSMT )
       {
          int realroot;
+
+         if( !graph_sol_valid(scip, graph, result) )
+            SCIP_CALL( SCIPheurAscendAndPrune(scip, NULL, graph, cost, result, nodearrint, root, nodearrchar, &success, TRUE, FALSE) );
 
          SCIP_CALL( graph_RerootSol(scip, graph, result, root) );
 
