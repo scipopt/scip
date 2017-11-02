@@ -322,7 +322,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
 /** creates the Edge separator and includes it in SCIP */
 SCIP_RETCODE SCIPincludeSepaEdge(
    SCIP*                 scip                /**< SCIP data structure */
-)
+   )
 {
    SCIP_SEPA* sepa;
 

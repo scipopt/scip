@@ -205,7 +205,7 @@ SCIP_RETCODE addPathCuts(
 
       edgeweight = SCIPvarGetLPSol(edgevars[MAX(start,j)][MIN(start,j)][0]);
 
-      if( edgeweight + adjmatrices[pathlength][start][j] > pathlength + 1)
+      if( edgeweight + adjmatrices[pathlength][start][j] > pathlength + 1 )
       {
          for( k = 0; k < pathlength; k++ )
          {
@@ -343,16 +343,16 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSubtour)
    int rounds;
 
    rounds = SCIPsepaGetNCallsAtNode(sepa);
+   ncluster = SCIPspaGetNrCluster(scip);
+   edgevars = SCIPspaGetEdgevars(scip);
+   nbins = SCIPspaGetNrBins(scip);
+   ncuts = 0;
+
    if( rounds >= MAXROUNDS || ncluster < 4 )
    {
       *result =  SCIP_DIDNOTRUN;
       return SCIP_OKAY;
    }
-
-   edgevars = SCIPspaGetEdgevars(scip);
-   nbins = SCIPspaGetNrBins(scip);
-   ncluster = SCIPspaGetNrCluster(scip);
-   ncuts = 0;
 
    assert(nbins > 0);
    assert(ncluster > 0);

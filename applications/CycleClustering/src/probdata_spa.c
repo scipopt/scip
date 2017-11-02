@@ -245,8 +245,8 @@ SCIP_RETCODE createVariables(
  * This is the tested default version*/
 static
 SCIP_RETCODE createProbSimplified(
-      SCIP*                 scip,               /**< SCIP Data Structure */
-      SCIP_PROBDATA*        probdata            /**< The problem data */
+   SCIP*                 scip,               /**< SCIP Data Structure */
+   SCIP_PROBDATA*        probdata            /**< The problem data */
    )
 {
    int i;

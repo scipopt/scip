@@ -648,8 +648,6 @@ SCIP_DECL_HEUREXITSOL(heurExitsolSpakerlin)
 static
 SCIP_DECL_HEURINIT(heurInitSpakerlin)
 {
-   SCIP_HEURDATA* heurdata;
-
    assert(heur != NULL);
    assert(scip != NULL);
 

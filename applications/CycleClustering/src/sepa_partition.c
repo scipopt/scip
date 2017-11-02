@@ -122,7 +122,6 @@ SCIP_DECL_SEPACOPY(sepaCopyPartition)
    return SCIP_OKAY;
 }
 
-
 /** LP solution separation method of separator */
 static
 SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)

@@ -33,19 +33,23 @@
 /** includes default plugins for coloring into SCIP */
 SCIP_RETCODE SCIPincludeSpaPlugins(
    SCIP*                 scip                /**< SCIP data structure */
-)
+   )
 {
+   /* Default and reader */
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
    SCIP_CALL( SCIPincludeReaderSpa(scip) );
 
+   /* Heuristics */
    SCIP_CALL( SCIPincludeHeurSpakerlin(scip) );
    SCIP_CALL( SCIPincludeHeurFuzzyround(scip) );
    SCIP_CALL( SCIPincludeHeurSpaGreedy(scip) );
 
+   /* Separators */
    SCIP_CALL( SCIPincludeSepaEdge(scip) );
    SCIP_CALL( SCIPincludeSepaPartition(scip) );
    SCIP_CALL( SCIPincludeSepaSubtour(scip) );
 
+   /* Branching rule */
    SCIP_CALL( SCIPincludeBranchruleMultinode(scip) );
 
    return SCIP_OKAY;

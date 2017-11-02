@@ -581,6 +581,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/presol_convertinttobin.o \
 			scip/presol_domcol.o\
 			scip/presol_dualagg.o\
+			scip/presol_dualcomp.o\
 			scip/presol_dualinfer.o\
 			scip/presol_gateextraction.o \
 			scip/presol_implfree.o\

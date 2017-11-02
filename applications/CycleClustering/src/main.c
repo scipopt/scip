@@ -386,7 +386,7 @@ int
 main(
    int                   argc,
    char**                argv
-)
+   )
 {
    SCIP_RETCODE retcode;
 

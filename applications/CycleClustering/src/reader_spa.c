@@ -46,7 +46,7 @@
 static
 SCIP_Real getNextNumber(
    char**                s                   /**< pointer to the pointer of the current position in the string */
-)
+   )
 {
    SCIP_Real tmp;
 
@@ -72,7 +72,7 @@ static
 SCIP_RETCODE readSpa(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename            /**< name of the input file */
-)
+   )
 {
    SCIP_FILE* fp;                            /* file-reader */
    char buf[COL_MAX_LINELEN];                /* maximal length of line */
@@ -86,7 +86,7 @@ SCIP_RETCODE readSpa(
    assert(scip != NULL);
    assert(filename != NULL);
 
-   if ( NULL == (fp = SCIPfopen(filename, "r")) )
+   if( NULL == (fp = SCIPfopen(filename, "r")) )
    {
       SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
       perror(filename);
@@ -94,7 +94,7 @@ SCIP_RETCODE readSpa(
    }
 
    /* Get problem name from filename and save it */
-   if( SCIPfgets(buf, (int) sizeof(buf), fp) == NULL)
+   if( SCIPfgets(buf, (int) sizeof(buf), fp) == NULL )
       return SCIP_READERROR;
 
    while( !SCIPfeof(fp) && (buf[0] != '#' || buf[2] != 'p') )
@@ -103,7 +103,7 @@ SCIP_RETCODE readSpa(
    }
 
    /* no graph information in file! */
-   if ( SCIPfeof(fp) )
+   if( SCIPfeof(fp) )
    {
       SCIPerrorMessage("Error! Could not find line starting with 'p'.\n");
       return SCIP_READERROR;
@@ -114,13 +114,13 @@ SCIP_RETCODE readSpa(
    nbins = (int) getNextNumber(&char_p);
    ncluster = (int) getNextNumber(&char_p);
 
-   if ( nbins <= 0 )
+   if( nbins <= 0 )
    {
       SCIPerrorMessage("Number of bins must be positive!\n");
       return SCIP_READERROR;
    }
 
-   if ( ncluster <= 0 || nbins <= ncluster )
+   if( ncluster <= 0 || nbins <= ncluster )
    {
          SCIPerrorMessage("Number of cluster must be positive and smaller than number of bins!\n");
          return SCIP_READERROR;
@@ -128,14 +128,14 @@ SCIP_RETCODE readSpa(
 
    /* create cmatrix */
    SCIP_CALL( SCIPallocMemoryArray(scip, &cmatrix, nbins) );
-   for( i = 0; i < nbins; i++)
+   for( i = 0; i < nbins; i++ )
    {
       SCIP_CALL( SCIPallocMemoryArray(scip, &(cmatrix[i]), nbins) ); /*lint !e866*/
    }
 
    /* fill array the cmatrix */
    i = 0;
-   while ( !SCIPfeof(fp) && i < nbins )
+   while( !SCIPfeof(fp) && i < nbins )
    {
       SCIPfgets(buf, (int) sizeof(buf), fp); /*lint !e534*/
       char_p = &buf[0];
@@ -156,7 +156,7 @@ SCIP_RETCODE readSpa(
    SCIP_CALL( SCIPcreateProbSpa(scip, filename, nbins, ncluster, cmatrix) );
    SCIPinfoMessage(scip, NULL, "Original problem: \n");
 
-   for ( i = nbins - 1; i >= 0; i-- )
+   for( i = nbins - 1; i >= 0; i-- )
    {
       SCIPfreeMemoryArray(scip, &(cmatrix[i]));
    }
@@ -204,7 +204,7 @@ SCIP_DECL_READERREAD(readerReadSpa)
 /** includes the spa file reader in SCIP */
 SCIP_RETCODE SCIPincludeReaderSpa(
    SCIP*                 scip                /**< SCIP data structure */
-)
+   )
 {
    SCIP_READERDATA* readerdata;
    SCIP_READER* reader;
