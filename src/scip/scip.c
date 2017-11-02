@@ -33868,6 +33868,12 @@ void SCIPcomputeBilinEnvelope2(
       || SCIPisFeasLE(scip, refpointy, lby) || SCIPisFeasGE(scip, refpointy, uby) )
       return;
 
+   /* the sign of the x-coefficients of the two inequalities must be different; otherwise the convex or concave
+    * envelope can be computed via SCIPcomputeBilinEnvelope1 for each inequality separately
+    */
+   if( (xcoef1 > 0) == (xcoef2 > 0) )
+      return;
+
    /* always consider xy without the bilinear coefficient */
    if( bilincoef < 0.0 )
       overestimate = !overestimate;
