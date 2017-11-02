@@ -44,6 +44,7 @@ interface:
 - added method SCIPgetNCliquesCreated() which returns the number of cliques created so far
 - unify handling of objective limit by only using one parameter and not distinguishing w.r.t. lower and upper limits
 - replaced LPI parameters SCIP_LPPAR_LOBJLIM and SCIP_LPPAR_UOBJLIM by SCIP_LPPAR_OBJLIM
+- removed solution pointer from list of arguments for SCIPaddCut()
 - added additional parameter for statistics tables to SCIPcopyPlugins
 - added parameter "objval" to SCIPnlpiGetSolution() for returning the optimal objective value (can be set to NULL)
 - removed argument "includeslp" from SCIPrelaxCreate() and added it to SCIPmarkRelaxSolValid(), SCIPsetRelaxSolVals() and
@@ -61,6 +62,7 @@ fixed bugs:
 - fixed bug in feasibility pump heuristic when switching on the usefp20 parameter
 - fixed potential ressource leaks in SCIPsolveLinearProb, expr.c, sepa_eccuts, cons_cumulative.c, cons_nonlinear.c
 - fixed order of SCIPcalcCliquePartition in corner case where no cliques are available
+- fixed bug in mps reader. Reader now prints OBJSENSE section and tries to generate unique names of constraints
 
 misc:
 - dropped support for MOSEK < 7.0.0.0
@@ -138,6 +140,9 @@ interface:
 
 testing:
 - added make options for specifying EXECUTABLE and OUTPUTDIR variables for the make test target
+
+makefile:
+- default build is now with ZIMPL=false
 
 SCIP version 4.0.0
 ==================

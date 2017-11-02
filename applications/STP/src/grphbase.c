@@ -3340,7 +3340,6 @@ SCIP_Bool graph_sol_valid(
             i = graph->head[e];
             if( Is_term(graph->term[i]) )
             {
-               assert(!terminal[i]);
                terminal[i] = TRUE;
                termcount++;
             }
