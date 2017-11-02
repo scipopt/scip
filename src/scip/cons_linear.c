@@ -16367,6 +16367,8 @@ SCIP_DECL_CONSCOPY(consCopyLinear)
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, valid) );
    assert(cons != NULL || *valid == FALSE);
 
+   /* @todo should also the checkabsolute flag of the constraint be copied? */
+
    return SCIP_OKAY;
 }
 
