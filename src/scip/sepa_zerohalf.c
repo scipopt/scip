@@ -2224,7 +2224,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
 
    for( i = 0; i < mod2matrix.nrows; ++i )
    {
-      int j;
       MOD2_ROW* row = mod2matrix.rows[i];
 
       if( computeMaxViolation(row) < sepadata->minviol )
