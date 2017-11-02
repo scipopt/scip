@@ -490,10 +490,11 @@ SCIP_RETCODE transformNonIntegralRow(
 
       *success = !SCIPcutsTightenCoefficients(scip, local, transrowvals, &transrowrhs, transrowvars, &transrowlen, &nchgcoefs);
 
+      mindelta = -SCIPepsilon(scip);
+      maxdelta = SCIPsumepsilon(scip);
+
       if( *success )
       {
-         mindelta = -SCIPepsilon(scip);
-         maxdelta = SCIPsumepsilon(scip);
          SCIP_CALL( SCIPcalcIntegralScalar(transrowvals, transrowlen, mindelta, maxdelta, MAXDNOM, MAXSCALE, &intscalar, success) );
       }
 
