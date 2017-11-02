@@ -30,8 +30,8 @@
 /* fundamental constraint handler properties */
 #define CONSHDLR_NAME          "benderslp"
 #define CONSHDLR_DESC          "constraint handler for Benders' Decomposition to separate root node LP solutions"
-#define CONSHDLR_ENFOPRIORITY     10000 /**< priority of the constraint handler for constraint enforcing */
-#define CONSHDLR_CHECKPRIORITY    10000 /**< priority of the constraint handler for checking feasibility */
+#define CONSHDLR_ENFOPRIORITY  10000000 /**< priority of the constraint handler for constraint enforcing */
+#define CONSHDLR_CHECKPRIORITY 10000000 /**< priority of the constraint handler for checking feasibility */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_NEEDSCONS        FALSE /**< should the constraint handler be skipped, if no constraints are available? */
@@ -49,6 +49,8 @@
 #define CONSHDLR_PRESOLTIMING    SCIP_PRESOLTIMING_MEDIUM /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 
+
+#define CONSBENDERSLP_MAXDEPTH      0
 
 /*
  * Data structures
@@ -314,7 +316,7 @@ static
 SCIP_DECL_CONSENFOLP(consEnfolpBenderslp)
 {  /*lint --e{715}*/
 
-   if( SCIPgetDepth(scip) >= 1 )
+   if( CONSBENDERSLP_MAXDEPTH >= 0 && SCIPgetDepth(scip) > CONSBENDERSLP_MAXDEPTH )
       (*result) = SCIP_FEASIBLE;
    else
       SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, NULL, conshdlr, result, LP, FALSE) );
@@ -328,7 +330,7 @@ static
 SCIP_DECL_CONSENFORELAX(consEnforelaxBenderslp)
 {  /*lint --e{715}*/
 
-   if( SCIPgetDepth(scip) >= 1 )
+   if( CONSBENDERSLP_MAXDEPTH >= 0 && SCIPgetDepth(scip) > CONSBENDERSLP_MAXDEPTH )
       (*result) = SCIP_FEASIBLE;
    else
       SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, sol, conshdlr, result, RELAX, FALSE) );
@@ -342,7 +344,7 @@ static
 SCIP_DECL_CONSENFOPS(consEnfopsBenderslp)
 {  /*lint --e{715}*/
 
-   if( SCIPgetDepth(scip) >= 1 )
+   if( CONSBENDERSLP_MAXDEPTH >= 0 && SCIPgetDepth(scip) > CONSBENDERSLP_MAXDEPTH )
       (*result) = SCIP_FEASIBLE;
    else
       SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, NULL, conshdlr, result, PSEUDO, FALSE) );
