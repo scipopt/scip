@@ -15245,6 +15245,44 @@ SCIP_RETCODE SCIPgetAllBilinearTermsQuadratic(
    return SCIP_OKAY;
 }
 
+/** helper function to compute the violation of an inequality of the form xcoef * x <= ycoef * y + constant for two
+ *  corner points of the domain [lbx,ubx]x[lby,uby]
+ */
+static
+void getIneqViol(
+   SCIP_VAR*             x,                  /**< first variable */
+   SCIP_VAR*             y,                  /**< second variable */
+   SCIP_Real             xcoef,              /**< x-coefficient */
+   SCIP_Real             ycoef,              /**< y-coefficient */
+   SCIP_Real             constant,           /**< constant */
+   SCIP_Real*            viol1,              /**< buffer to store the violation of the first corner point */
+   SCIP_Real*            viol2               /**< buffer to store the violation of the second corner point */
+   )
+{
+   SCIP_Real norm;
+
+   assert(viol1 != NULL);
+   assert(viol2 != NULL);
+
+   norm = SQRT(SQR(xcoef) + SQR(ycoef));
+
+   /* inequality can be used for underestimating xy if and only if xcoef * ycoef > 0 */
+   if( xcoef * ycoef >= 0 )
+   {
+      /* violation for top-left and bottom-right corner */
+      *viol1 = MAX(0, (xcoef * SCIPvarGetLbLocal(x)  - ycoef * SCIPvarGetUbLocal(y) - constant) / norm);
+      *viol2 = MAX(0, (xcoef * SCIPvarGetUbLocal(x)  - ycoef * SCIPvarGetLbLocal(y) - constant) / norm);
+   }
+   else
+   {
+      /* violation for top-right and bottom-left corner */
+      *viol1 = MAX(0, (xcoef * SCIPvarGetUbLocal(x)  - ycoef * SCIPvarGetUbLocal(y) - constant) / norm);
+      *viol2 = MAX(0, (xcoef * SCIPvarGetLbLocal(x)  - ycoef * SCIPvarGetLbLocal(y) - constant) / norm);
+   }
+
+   return;
+}
+
 /** adds a globally valid inequality of the form xcoef x <= ycoef y + constant for a bilinear term (x,y)
  *
  *  @note the indices of bilinear terms match with the entries of bilinear terms returned by SCIPgetAllBilinearTermsQuadratic
@@ -15263,6 +15301,12 @@ SCIP_RETCODE SCIPaddBilinearIneqQuadratic(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
    BILINESTIMATOR* bilinest;
+   SCIP_Real* ineqs;
+   SCIP_Real norm;
+   SCIP_Real viol1;
+   SCIP_Real viol2;
+   int* nineqs;
+   int i;
 
    assert(scip != NULL);
    assert(x != NULL);
@@ -15293,30 +15337,86 @@ SCIP_RETCODE SCIPaddBilinearIneqQuadratic(
    assert(bilinest->x == x);
    assert(bilinest->y == y);
 
-   SCIPdebugMsg(scip, "add bilinear term inequality: %g %s <= %g %s + %g\n", xcoef, SCIPvarGetName(bilinest->x),
+   SCIPdebugMsg(scip, "add bilinear term inequality: %g %s <= %g %s + %g with\n", xcoef, SCIPvarGetName(bilinest->x),
       ycoef, SCIPvarGetName(bilinest->y), constant);
 
-   /* inequality can be used for underestimating xy if and only if xcoef * ycoef > 0 */
-   if( xcoef * ycoef >= 0.0 )
+   if( xcoef * ycoef > 0.0 )
    {
-      /* TODO do not overwrite the last inequality */
-      int pos = MIN(bilinest->ninequnderest, 1);
-
-      bilinest->inequnderest[3*pos] = xcoef;
-      bilinest->inequnderest[3*pos+1] = ycoef;
-      bilinest->inequnderest[3*pos+2] = constant;
-      bilinest->ninequnderest = pos + 1;
+      ineqs = bilinest->inequnderest;
+      nineqs = &bilinest->ninequnderest;
    }
    else
    {
-      /* TODO do not overwrite the last inequality */
-      int pos = MIN(bilinest->nineqoverest, 1);
-
-      bilinest->ineqoverest[3*pos] = xcoef;
-      bilinest->ineqoverest[3*pos+1] = ycoef;
-      bilinest->ineqoverest[3*pos+2] = constant;
-      bilinest->nineqoverest = pos + 1;
+      ineqs = bilinest->ineqoverest;
+      nineqs = &bilinest->nineqoverest;
    }
+
+   /* compute violation of the inequality of the important corner points */
+   getIneqViol(x, y, xcoef, ycoef, constant, &viol1, &viol2);
+   SCIPdebugMsg(scip, "violations of inequality = (%g,%g)\n", viol1, viol2);
+
+   /* inequality does not cut off one of the important corner points */
+   if( SCIPisFeasLE(scip, MAX(viol1, viol2), 0.0) )
+      return SCIP_OKAY;
+
+   /* check whether inequality exists already */
+   for( i = 0; i < *nineqs; ++i )
+   {
+      if( SCIPisFeasEQ(scip, xcoef, ineqs[3*i]) && SCIPisFeasEQ(scip, ycoef, ineqs[3*i+1])
+         && SCIPisFeasEQ(scip, constant, ineqs[3*i+2]) )
+      {
+         SCIPdebugMsg(scip, "inequality already found -> skip\n");
+         return SCIP_OKAY;
+      }
+   }
+
+   /* add inequality if we found less than two so far; otherwise compare the violations to decide which which
+    * inequality might be replaced
+    */
+   if( *nineqs < 2 )
+   {
+      ineqs[3*(*nineqs)] = xcoef;
+      ineqs[3*(*nineqs) + 1] = ycoef;
+      ineqs[3*(*nineqs) + 2] = constant;
+      ++(*nineqs);
+      *success = TRUE;
+   }
+   else
+   {
+      SCIP_Real viols1[2];
+      SCIP_Real viols2[2];
+      SCIP_Real bestviol;
+      int pos = -1;
+
+      /* given the violations (v1,w1), (v2,w2), (v3,w3) we select two inequalities i and j that
+       * maximize max{vi,vj} + max{wi,wj} this measurement guarantees that select inequalities that
+       * separate both important corner points
+       */
+      getIneqViol(x, y, ineqs[1], ineqs[2], ineqs[3], &viols1[0], &viols2[0]);
+      getIneqViol(x, y, ineqs[4], ineqs[5], ineqs[6], &viols1[1], &viols2[1]);
+      bestviol = MAX(viols1[0], viols1[1]) + MAX(viols2[0], viols2[1]);
+
+      for( i = 0; i < *nineqs; ++i )
+      {
+         SCIP_Real viol = MAX(viol1, viols1[i]) + MAX(viol2, viols2[i]);
+         if( SCIPisGT(scip, viol, bestviol) )
+         {
+            bestviol = viol;
+            pos = 1 - i;
+         }
+      }
+
+      /* update inequality */
+      if( pos != -1 )
+      {
+         assert(pos >= 0 && pos < 2);
+         ineqs[3*pos] = xcoef;
+         ineqs[3*pos+1] = ycoef;
+         ineqs[3*pos+2] = constant;
+         *success = TRUE;
+      }
+   }
+   SCIPdebugMsg(scip, "accepted inequality? %u\n", *success);
 
    return SCIP_OKAY;
 }
