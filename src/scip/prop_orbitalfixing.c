@@ -25,6 +25,8 @@
 #include "prop_orbitalfixing.h"
 
 #include <scip/pub_tree.h>
+#include <scip/pub_table.h>
+
 #include "presol_symmetry.h"
 #include "presol_symbreak.h"
 
@@ -35,6 +37,13 @@
 #define PROP_PRIORITY          -1000000           /**< propagator priority */
 #define PROP_FREQ                    -1           /**< propagator frequency */
 #define PROP_DELAY                FALSE           /**< should propagation method be delayed, if other propagators found reductions? */
+
+/* output table properties */
+#define TABLE_NAME_ORBITALFIXING        "orbitalfixing"
+#define TABLE_DESC_ORBITALFIXING        "orbital fixing statistics"
+#define TABLE_POSITION_ORBITALFIXING    7001                    /**< the position of the statistics table */
+#define TABLE_EARLIEST_ORBITALFIXING    SCIP_STAGE_SOLVING      /**< output of the statistics table is only printed from this stage onwards */
+
 
 /*
  * Data structures
@@ -56,6 +65,32 @@ struct SCIP_PropData
 };
 
 
+
+/*
+ * Table callback methods
+ */
+
+/** output method of orbital fixing propagator statistics table to output file stream 'file' */
+static
+SCIP_DECL_TABLEOUTPUT(tableOutputOrbitalfixing)
+{
+   SCIP_PROPDATA* propdata;
+
+   assert( scip != NULL );
+   assert( table != NULL );
+
+   propdata = (SCIP_PROPDATA*) SCIPtableGetData(table);
+   assert( propdata != NULL );
+
+   if ( propdata->enabled )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "Orbital fixing     :\n");
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  vars fixed to 0  :\t%7d\n", propdata->nfixedzero);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  vars fixed to 1  :\t%7d\n", propdata->nfixedone);
+   }
+
+   return SCIP_OKAY;
+}
 
 
 /*
@@ -495,12 +530,6 @@ SCIP_DECL_PROPEXIT(propExitOrbitalfixing)
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
 
-   if ( propdata->enabled )
-   {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "\nNumber of variables fixed to 0 by orbital fixing:\t%6d\n", propdata->nfixedzero);
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Number of variables fixed to 1 by orbital fixing:\t%6d\n", propdata->nfixedone);
-   }
-
    if ( propdata->permvarmap != NULL )
    {
       SCIPhashmapFree(&propdata->permvarmap);
@@ -680,6 +709,11 @@ SCIP_RETCODE SCIPincludePropOrbitalfixing(
    SCIP_CALL( SCIPsetPropExit(scip, prop, propExitOrbitalfixing) );
    SCIP_CALL( SCIPsetPropInitsol(scip, prop, propInitsolOrbitalfixing) );
    SCIP_CALL( SCIPsetPropResprop(scip, prop, propRespropOrbitalfixing) );
+
+   /* include table */
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_ORBITALFIXING, TABLE_DESC_ORBITALFIXING, TRUE,
+         NULL, NULL, NULL, NULL, NULL, NULL, tableOutputOrbitalfixing,
+         (void*) propdata, TABLE_POSITION_ORBITALFIXING, TABLE_EARLIEST_ORBITALFIXING) );
 
    return SCIP_OKAY;
 }
