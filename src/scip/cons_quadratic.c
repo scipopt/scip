@@ -6835,6 +6835,7 @@ void updateBilinearRelaxation(
    SCIP_Real             refy,               /**< reference point for the y variable */
    SCIP_Real* RESTRICT   ineqs,              /**< coefficients of each linear inequality; stored as triple (xcoef,ycoef,constant) */
    int                   nineqs,             /**< total number of inequalities */
+   SCIP_Real             mccormickval,       /**< value of the McCormick relaxation at the reference point */
    SCIP_Real* RESTRICT   bestcoefx,          /**< pointer to update the x coefficient */
    SCIP_Real* RESTRICT   bestcoefy,          /**< pointer to update the y coefficient */
    SCIP_Real* RESTRICT   bestconst,          /**< pointer to update the constant */
@@ -6921,7 +6922,7 @@ void updateBilinearRelaxation(
       if( update )
       {
          SCIP_Real val = xcoef * refx + ycoef * refy + constant;
-         SCIP_Real relimpr = 1.0 - (REALABS(val - bilincoef * refx * refy) + 1e-4) / (REALABS(*bestval - bilincoef * refx * refy) + 1e-4);
+         SCIP_Real relimpr = 1.0 - (REALABS(val - bilincoef * refx * refy) + 1e-4) / (REALABS(mccormickval - bilincoef * refx * refy) + 1e-4);
          SCIP_Real absimpr = REALABS(val - (*bestval));
 
          /* update relaxation if possible */
@@ -7103,11 +7104,11 @@ SCIP_RETCODE generateCutNonConvex(
 
                /* use overestimates */
                updateBilinearRelaxation(scip, x, y, bilinterm->coef, violside, refx, refy, bilinestimator->ineqoverest,
-                  bilinestimator->nineqoverest, &coef, &coef2, &constant, &bestval, &updaterelax);
+                  bilinestimator->nineqoverest, mccormick, &coef, &coef2, &constant, &bestval, &updaterelax);
 
                /* use underestimates */
                updateBilinearRelaxation(scip, x, y, bilinterm->coef, violside, refx, refy, bilinestimator->inequnderest,
-                  bilinestimator->ninequnderest, &coef, &coef2, &constant, &bestval, &updaterelax);
+                  bilinestimator->ninequnderest, mccormick, &coef, &coef2, &constant, &bestval, &updaterelax);
 
                SCIPdebugMsg(scip, "found better relaxation value: %u (%g)\n", updaterelax, bestval);
 
