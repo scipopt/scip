@@ -15017,6 +15017,9 @@ void SCIPaddBilinMcCormick(
 
 /** computes coefficients of linearization of a bilinear term in a reference point when given a linear inequality
  *  involving only the variables of the bilinear term
+ *
+ *  @note the formulas are extracted from "Convex envelopes of bivariate functions through the solution of KKT systems"
+ *        by Marco Locatelli
  */
 EXTERN
 void SCIPcomputeBilinEnvelope1(
@@ -15040,6 +15043,10 @@ void SCIPcomputeBilinEnvelope1(
 
 /** computes coefficients of linearization of a bilinear term in a reference point when given two linear inequality
  *  involving only the variables of the bilinear term
+ *
+ *  @note the formulas are extracted from "Convex envelopes of bivariate functions through the solution of KKT systems"
+ *        by Marco Locatelli
+ *
  */
 EXTERN
 void SCIPcomputeBilinEnvelope2(
