@@ -582,6 +582,25 @@ SCIP_DECL_PARAMCHGD(paramChgdBarrierconvtol)
    return SCIP_OKAY;
 }
 
+/** information method for a parameter change of infinity value */
+static
+SCIP_DECL_PARAMCHGD(paramChgInfinity)
+{  /*lint --e{715}*/
+   SCIP_Real infinity;
+
+   infinity = SCIPparamGetReal(param);
+
+   /* Check that infinity value of LP-solver is at least as large as the one used in SCIP. This is necessary, because we
+    * transfer SCIP infinity values to the ones by the LPI, but not the converse. */
+   if ( scip->lp != NULL && scip->lp->lpi != NULL && infinity > SCIPlpiInfinity(scip->lp->lpi) )
+   {
+      SCIPerrorMessage("The infinity value of the LP solver has to be at least as large as the one of SCIP.\n");
+      return SCIP_PARAMETERWRONGVAL;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** parameter change information method to autoselect display columns again */
 static
 SCIP_DECL_PARAMCHGD(SCIPparamChgdDispWidth)
@@ -1904,7 +1923,7 @@ SCIP_RETCODE SCIPsetCreate(
          "numerics/infinity",
          "values larger than this are considered infinity",
          &(*set)->num_infinity, FALSE, SCIP_DEFAULT_INFINITY, 1e+10, SCIP_INVALID/10.0,
-         NULL, NULL) );
+         paramChgInfinity, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "numerics/epsilon",
          "absolute values smaller than this are considered zero",
