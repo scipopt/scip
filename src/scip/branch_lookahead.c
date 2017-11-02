@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define SCIP_STATISTIC
+
 /**@file   branch_lookahead.c
  * @ingroup BRANCHINGRULES
  * @brief  lookahead LP branching rule
@@ -3966,10 +3966,7 @@ SCIP_RETCODE selectVarRecursive(
              * reduction */
             status->propagationdomred = TRUE;
 #ifdef SCIP_STATISTIC
-            {
-               int probingdepth = SCIPgetProbingDepth(scip);
-               statistics->npropdomred[probingdepth]++;
-            }
+            statistics->npropdomred[probingdepth]++;
 #endif
             LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Domain Propagation changed the bounds of a branching candidate."
                   "\n");
