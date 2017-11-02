@@ -712,7 +712,7 @@ SCIP_RETCODE SCIPlpiCreate(
    SCIPdebugMessage("SCIPlpiCreate()\n");
 
    /* the interface is revised for Xpress 26 or higher */
-   if( XPVERSION < 26 ) /*lint !e506*/
+   if( XPVERSION < 26 ) /*lint !e506 !e774*/
    {
       SCIPmessagePrintWarning(messagehdlr, "Please use Xpress version 26 or higher, you are using %d\n", XPVERSION);
       return SCIP_LPERROR;
@@ -2329,8 +2329,8 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
      return TRUE;
 
    /* get number of primal infeasibilities and number of simplex iterations */
-   CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_PRIMALINFEAS, &nInfeasible) );
-   CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_SIMPLEXITER, &nIter) );
+   ABORT_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_PRIMALINFEAS, &nInfeasible) );
+   ABORT_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_SIMPLEXITER, &nIter) );
 
    /* check if the number of primal infeasibilities is zero
     * We need to make sure that the LP was indeed solved by primal, otherwise infeasibility might have been found
