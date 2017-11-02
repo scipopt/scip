@@ -4526,7 +4526,7 @@ SCIP_RETCODE presolveDisaggregate(
    SCIPfreeBufferArray(scip, &componentssize);
 
    /* scale all new constraints (ncomponents+1 many) by ncomponents+1, so violations sum up to at most epsilon */
-   scale = ncomponents + 1.0;
+   scale = ncomponents + 1.0;  /* @todo increase to next power of 2 */
 
    SCIP_CALL( SCIPallocBufferArray(scip, &auxconss, ncomponents) );
    SCIP_CALL( SCIPallocBufferArray(scip, &auxvars,  ncomponents) );
