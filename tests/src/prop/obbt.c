@@ -192,11 +192,11 @@ Test(projection, threevars, .init = setup, .fini=teardown,
    cr_expect(SCIPisEQ(scip, ycoef, 2.0));
    cr_expect(SCIPisEQ(scip, constant, -5.0));
 
-   /* y >= 3 is valid */
+   /* the resulting inequality y >= 3 results in no useful inequality */
    SCIP_CALL( solveBilinearLP(scip, x, y, -10, 5, 10, -5, &xcoef, &ycoef, &constant, -1) );
-   cr_expect(SCIPisEQ(scip, xcoef, 0.0));
-   cr_expect(SCIPisEQ(scip, ycoef, 1.0));
-   cr_expect(SCIPisEQ(scip, constant, -3.0));
+   cr_expect(xcoef == SCIP_INVALID);
+   cr_expect(ycoef == SCIP_INVALID);
+   cr_expect(constant == SCIP_INVALID);
 
    SCIP_CALL( SCIPendProbing(scip) );
 }
