@@ -33,7 +33,6 @@
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
-#include "scip/cons_varbound.h"
 #include "scip/cons_cardinality.h"
 #include "scip/cons_setppc.h"
 #include "scip/pub_misc.h"
@@ -12699,7 +12698,6 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
             SCIP_CONS* cardcons;
             SCIP_VAR** vars;
             SCIP_Longint* weights;
-            SCIP_Bool upgd = TRUE;
             int nvars;
             int v;
 
@@ -12713,22 +12711,16 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
             weights = consdata->weights;
 
             /* Check, whether linear knapsack can be upgraded to a cardinality constraint:
-             * - all variables must be binary
+             * - all variables must be binary (always true)
              * - all coefficients must be 1.0
              * - the right hand side must be smaller than nvars
              */
             if ( consdata->capacity >= nvars )
                continue;
 
-            for (v = 0; v < nvars; ++v)
-            {
-               if ( ! SCIPvarIsBinary(vars[v]) && weights[v] != 1 )
-               {
-                  upgd = FALSE;
-                  break;
-               }
-            }
-            if ( ! upgd )
+            /* the weights are sorted: check first and last weight */
+            assert( consdata->sorted );
+            if ( weights[0] != 1 || weights[nvars] != 1 )
                continue;
 
             /* check whether all variables are of the form 0 <= x_v <= u_v y_v for y_v \in \{0,1\} and zero objective */
