@@ -4444,6 +4444,12 @@ SCIP_DECL_QUADCONSUPGD(quadconsUpgdAbspower)
    if( SCIPisZero(scip, quadvarterm.sqrcoef) )
       return SCIP_OKAY;
 
+   /* don't upgrade if upgrade would scale the constraint down (divide by |sqrcoef|)
+    * @todo we could still allow this if we were keeping the scaling factor around for the feasibility check
+    */
+   if( REALABS(quadvarterm.sqrcoef) > 1.0 )
+      return SCIP_OKAY;
+
    x = quadvarterm.var;
    xoffset = quadvarterm.lincoef / (2.0 * quadvarterm.sqrcoef);
 
