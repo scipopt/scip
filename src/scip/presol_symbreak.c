@@ -286,7 +286,10 @@ SCIP_RETCODE computeComponents(
                /* both permutations belong to the same component */
                if ( permI[k] != k && permJ[k] != k )
                {
-                  /* keep the smallest identifier to keep track of where a new component starts */
+                  /* Keep the smallest identifier to keep track of where a new component starts.
+                   * Note that it is necessary to store the smaller identifier to be able to iterate
+                   * over all ordered pairs (i,j), i < j, of permutations, instead of all unordered
+                   * pairs {i,j}. */
                   if ( componentI < componentJ )
                      SCIPdisjointsetUnion(componentstoperm, i, j, TRUE);
                   else
