@@ -3542,7 +3542,8 @@ SCIP_RETCODE executeBranchingRecursive(
       }
    }
 
-   if( config->usebincons && branchingresult->cutoff && binconsdata->binaryvars->nbinaryvars == (probingdepth + 1) )
+   if( !status->lperror && config->usebincons && branchingresult->cutoff
+         && binconsdata->binaryvars->nbinaryvars == (probingdepth + 1) )
    {
 #ifdef SCIP_STATISTIC
       SCIP_CALL( addBinaryConstraint(scip, config, binconsdata, baselpsol, statistics) );
@@ -4133,29 +4134,23 @@ SCIP_RETCODE selectVarStart(
          /* apply binary constraints */
          if( config->usebincons )
          {
-            SCIP_NODE* basenode;
-
             assert(binconsdata != NULL);
-
-            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Applying binary constraints to the base node.\n");
-
             assert(binconsdata->binaryvars->nbinaryvars == 0);
 
-            basenode = SCIPgetCurrentNode(scip);
-
-            /* @todo are the first two checks needed? */
-            if( /*!status->lperror && !status->depthtoosmall &&*/ !status->cutoff )
+            if( !status->cutoff )
             {
+               SCIP_NODE* basenode = SCIPgetCurrentNode(scip);
+
+               LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Applying binary constraints to the base node.\n");
 #ifdef SCIP_STATISTIC
-               SCIP_CALL( applyBinaryConstraints(scip, basenode, binconsdata->createdconstraints, config, &status->addbinconst,
-                     &status->cutoff, &status->domred, statistics) );
+               SCIP_CALL( applyBinaryConstraints(scip, basenode, binconsdata->createdconstraints, config,
+                  &status->addbinconst, &status->cutoff, &status->domred, statistics) );
 #else
-               SCIP_CALL( applyBinaryConstraints(scip, basenode, binconsdata->createdconstraints, config, &status->addbinconst,
-                     &status->cutoff, &status->domred) );
+               SCIP_CALL( applyBinaryConstraints(scip, basenode, binconsdata->createdconstraints, config,
+                  &status->addbinconst, &status->cutoff, &status->domred) );
 #endif
             }
             binConsDataFree(scip, &binconsdata);
-
          }
 
          /* apply domain reductions */
@@ -4163,8 +4158,7 @@ SCIP_RETCODE selectVarStart(
          {
             assert(domainreductions != NULL);
 
-            /* @todo are the first two checks needed? */
-            if( /*!status->lperror && !status->depthtoosmall &&*/ !status->cutoff )
+            if( !status->cutoff )
             {
                LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Applying domain reductions to the base node.\n");
 #ifdef SCIP_STATISTIC
