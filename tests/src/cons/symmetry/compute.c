@@ -142,7 +142,7 @@ Test(test_compute_symmetry, basic1, .description = "compute symmetry for a simpl
       }
       SCIPinfoMessage(scip, NULL, ")\n");
    }
-#ifdef SCIP_DEBUG
+#endif
 
    SCIP_CALL( SCIPreleaseVar(scip, &var1) );
    SCIP_CALL( SCIPreleaseVar(scip, &var2) );
