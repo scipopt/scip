@@ -21,6 +21,7 @@
 #include <scip/scip.h>
 #include <include/scip_test.h>
 #include <scip/presol_symmetry.h>
+#include <scip/presol_symbreak.h>
 #include <symmetry/compute_symmetry.h>
 #include <scip/scipdefplugins.h>
 
@@ -65,22 +66,23 @@ Test(test_compute_symmetry, basic1, .description = "compute symmetry for a simpl
    SCIP_VAR* vars[2];
    SCIP_Real vals[2];
    SCIP_PRESOL* presol;
-   int npermvars;
    SCIP_VAR** permvars;
-   int nperms;
    int** perms;
-   int i;
-   int j;
+   int* orbits;
+   int* orbitbegins;
+   int norbits;
+   int npermvars;
+   int nperms;
 
    /* skip test if no symmetry can be computed */
    if ( ! SYMcanComputeSymmetry() )
       return;
 
    /* setup problem:
-    *
-    * x1 + x2          = 1
-    *          x3 + x4 = 1
-    * x1, ..., x4 binary
+    * min x1 + x2 + x3 + x4
+    *     x1 + x2           = 1
+    *               x3 + x4 = 1
+    *     x1, ..., x4 binary
     */
    SCIP_CALL( SCIPcreateProbBasic(scip, "basic1"));
 
@@ -127,20 +129,38 @@ Test(test_compute_symmetry, basic1, .description = "compute symmetry for a simpl
 
    /* get symmetry */
    SCIP_CALL( SCIPgetSymmetryGenerators(scip, presol, &npermvars, &permvars, &nperms, &perms, NULL) );
-   cr_assert( nperms == 3 );
+
+   /* compute orbits */
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
+   SCIP_CALL( computeGroupOrbits(scip, permvars, npermvars, perms, nperms, NULL, orbits, orbitbegins, &norbits) );
+   cr_assert( norbits == 1 );
+   cr_assert( orbitbegins[0] == 0 );
+   cr_assert( orbitbegins[1] == 4 );
+   cr_assert( orbits[0] == 0 );
+   cr_assert( orbits[1] == 1 );
+   cr_assert( orbits[2] == 2 );
+   cr_assert( orbits[3] == 3 );
+   SCIPfreeBufferArray(scip, &orbitbegins);
+   SCIPfreeBufferArray(scip, &orbits);
 
 #ifdef SCIP_DEBUG
-   for (i = 0; i < nperms; ++i)
    {
-      SCIPinfoMessage(scip, NULL, "Permutation %d: (", i);
-      for (j = 0; j < npermvars; ++j)
+      int i;
+      int j;
+
+      for (i = 0; i < nperms; ++i)
       {
-         if ( j == 0 )
-            SCIPinfoMessage(scip, NULL, "%d", perms[i][j]);
-         else
-            SCIPinfoMessage(scip, NULL, " %d", perms[i][j]);
+         SCIPinfoMessage(scip, NULL, "Permutation %d: (", i);
+         for (j = 0; j < npermvars; ++j)
+         {
+            if ( j == 0 )
+               SCIPinfoMessage(scip, NULL, "%d", perms[i][j]);
+            else
+               SCIPinfoMessage(scip, NULL, " %d", perms[i][j]);
+         }
+         SCIPinfoMessage(scip, NULL, ")\n");
       }
-      SCIPinfoMessage(scip, NULL, ")\n");
    }
 #endif
 
@@ -162,21 +182,24 @@ Test(test_compute_symmetry, basic2, .description = "compute symmetry for a simpl
    SCIP_VAR* vars[2];
    SCIP_Real vals[2];
    SCIP_PRESOL* presol;
-   int npermvars;
    SCIP_VAR** permvars;
-   int nperms;
    int** perms;
-   int j;
+   int* orbits;
+   int* orbitbegins;
+   int norbits;
+   int npermvars;
+   int nperms;
+
 
    /* skip test if no symmetry can be computed */
    if ( ! SYMcanComputeSymmetry() )
       return;
 
    /* setup problem:
-    *
-    * x1 + x2          = 1
-    *          x3 + x4 = 1
-    * x1, x2 binary; x3, x4 continuous
+    * min x1 + x2 + x3 + x4
+    *     x1 + x2           = 1
+    *               x3 + x4 = 1
+    *     x1, x2 binary; x3, x4 continuous
     */
    SCIP_CALL( SCIPcreateProbBasic(scip, "basic2"));
 
@@ -226,18 +249,33 @@ Test(test_compute_symmetry, basic2, .description = "compute symmetry for a simpl
 
    /* get symmetry */
    SCIP_CALL( SCIPgetSymmetryGenerators(scip, presol, &npermvars, &permvars, &nperms, &perms, NULL) );
-   cr_assert( nperms == 1 );
+
+   /* compute orbits */
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
+   SCIP_CALL( computeGroupOrbits(scip, permvars, npermvars, perms, nperms, NULL, orbits, orbitbegins, &norbits) );
+   cr_assert( norbits == 1 );
+   cr_assert( orbitbegins[0] == 0 );
+   cr_assert( orbitbegins[1] == 2 );
+   cr_assert( orbits[0] == 2 );
+   cr_assert( orbits[1] == 3 );
+   SCIPfreeBufferArray(scip, &orbitbegins);
+   SCIPfreeBufferArray(scip, &orbits);
 
 #ifdef SCIP_DEBUG
-   SCIPinfoMessage(scip, NULL, "Permutation: (");
-   for (j = 0; j < npermvars; ++j)
    {
-      if ( j == 0 )
-         SCIPinfoMessage(scip, NULL, "%d", perms[0][j]);
-      else
-         SCIPinfoMessage(scip, NULL, " %d", perms[0][j]);
+      int j;
+
+      SCIPinfoMessage(scip, NULL, "Permutation: (");
+      for (j = 0; j < npermvars; ++j)
+      {
+         if ( j == 0 )
+            SCIPinfoMessage(scip, NULL, "%d", perms[0][j]);
+         else
+            SCIPinfoMessage(scip, NULL, " %d", perms[0][j]);
+      }
+      SCIPinfoMessage(scip, NULL, ")\n");
    }
-   SCIPinfoMessage(scip, NULL, ")\n");
 #endif
 
    SCIP_CALL( SCIPreleaseVar(scip, &var1) );
@@ -258,24 +296,25 @@ Test(test_compute_symmetry, basic3, .description = "compute symmetry for a simpl
    SCIP_VAR* vars[2];
    SCIP_Real vals[2];
    SCIP_PRESOL* presol;
-   int npermvars;
    SCIP_VAR** permvars;
-   int nperms;
    int** perms;
-   int i;
-   int j;
+   int* orbits;
+   int* orbitbegins;
+   int norbits;
+   int npermvars;
+   int nperms;
 
    /* skip test if no symmetry can be computed */
    if ( ! SYMcanComputeSymmetry() )
       return;
 
    /* setup problem:
-    *
-    * x1 + x2          =  1
-    *          x3 + x4 =  1
-    * 2x1 +         x4 <= 2
-    *     2x2 + x3     <= 2
-    * x1, ..., x4 binary
+    * min x1 + x2 + x3 + x4
+    *     x1 + x2           =  1
+    *               x3 + x4 =  1
+    *    2x1 +           x4 <= 2
+    *         2x2 + x3      <= 2
+    *     x1, ..., x4 binary
     */
    SCIP_CALL( SCIPcreateProbBasic(scip, "basic3"));
 
@@ -338,20 +377,38 @@ Test(test_compute_symmetry, basic3, .description = "compute symmetry for a simpl
 
    /* get symmetry */
    SCIP_CALL( SCIPgetSymmetryGenerators(scip, presol, &npermvars, &permvars, &nperms, &perms, NULL) );
-   cr_assert( nperms == 1 );
+
+   /* compute orbits */
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
+   SCIP_CALL( computeGroupOrbits(scip, permvars, npermvars, perms, nperms, NULL, orbits, orbitbegins, &norbits) );
+   cr_assert( norbits == 2 );
+   cr_assert( orbitbegins[0] == 0 );
+   cr_assert( orbitbegins[1] == 2 );
+   cr_assert( orbits[0] == 0 );
+   cr_assert( orbits[1] == 1 );
+   cr_assert( orbits[2] == 2 );
+   cr_assert( orbits[3] == 3 );
+   SCIPfreeBufferArray(scip, &orbitbegins);
+   SCIPfreeBufferArray(scip, &orbits);
 
 #ifdef SCIP_DEBUG
-   for (i = 0; i < nperms; ++i)
    {
-      SCIPinfoMessage(scip, NULL, "Permutation %d: (", i);
-      for (j = 0; j < npermvars; ++j)
+      int i;
+      int j;
+
+      for (i = 0; i < nperms; ++i)
       {
-         if ( j == 0 )
-            SCIPinfoMessage(scip, NULL, "%d", perms[i][j]);
-         else
-            SCIPinfoMessage(scip, NULL, " %d", perms[i][j]);
+         SCIPinfoMessage(scip, NULL, "Permutation %d: (", i);
+         for (j = 0; j < npermvars; ++j)
+         {
+            if ( j == 0 )
+               SCIPinfoMessage(scip, NULL, "%d", perms[i][j]);
+            else
+               SCIPinfoMessage(scip, NULL, " %d", perms[i][j]);
+         }
+         SCIPinfoMessage(scip, NULL, ")\n");
       }
-      SCIPinfoMessage(scip, NULL, ")\n");
    }
 #endif
 
@@ -383,12 +440,12 @@ Test(test_compute_symmetry, basic4, .description = "compute symmetry for a simpl
       return;
 
    /* setup problem:
-    *
-    * x1 + x2          =  1
-    *          x3 + x4 =  1
-    * 2x1 +         x4 <= 2
-    *     2x2 + x3     <= 2
-    * x1, ..., x4 binary
+    * min x1 + x2 + x3 + x4
+    *     x1 + x2           =  1
+    *               x3 + x4 =  1
+    *    2x1 +           x4 <= 2
+    *         2x2 + x3      <= 2
+    *     x1, ..., x4 binary
     */
    SCIP_CALL( SCIPcreateProbBasic(scip, "basic3"));
 
