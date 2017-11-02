@@ -2737,10 +2737,10 @@ SCIP_RETCODE SCIPlpiGetBase(
     */
    for( r = 0; r < nrows; ++r )
    {
-      if (rstat[r] == SCIP_BASESTAT_LOWER)
-         rstat[r] = SCIP_BASESTAT_UPPER;
-      else if (rstat[r] == SCIP_BASESTAT_UPPER)
-         rstat[r] = SCIP_BASESTAT_LOWER;
+     if (rstat[r] == (int) SCIP_BASESTAT_LOWER)
+         rstat[r] = (int) SCIP_BASESTAT_UPPER;
+      else if (rstat[r] == (int) SCIP_BASESTAT_UPPER)
+         rstat[r] = (int) SCIP_BASESTAT_LOWER;
    }
 
    return SCIP_OKAY;
@@ -2780,10 +2780,10 @@ SCIP_RETCODE SCIPlpiSetBase(
     */
    for( r = 0; r < nrows; ++r )
    {
-      if (rstat[r] == SCIP_BASESTAT_LOWER)
-         slackstats[r] = SCIP_BASESTAT_UPPER;
-      else if (rstat[r] == SCIP_BASESTAT_UPPER)
-         slackstats[r] = SCIP_BASESTAT_LOWER;
+      if (rstat[r] == (int) SCIP_BASESTAT_LOWER)
+         slackstats[r] = (int) SCIP_BASESTAT_UPPER;
+      else if (rstat[r] == (int) SCIP_BASESTAT_UPPER)
+         slackstats[r] = (int) SCIP_BASESTAT_LOWER;
       else
          slackstats[r] = rstat[r];
    }
