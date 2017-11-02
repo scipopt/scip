@@ -712,7 +712,7 @@ SCIP_RETCODE SCIPlpiCreate(
    SCIPdebugMessage("SCIPlpiCreate()\n");
 
    /* the interface is revised for Xpress 26 or higher */
-   if( XPVERSION < 26 ) /*lint !e506 !e774*/
+   if( XPVERSION < 26 ) /*lint !e{506,774}*/
    {
       SCIPmessagePrintWarning(messagehdlr, "Please use Xpress version 26 or higher, you are using %d\n", XPVERSION);
       return SCIP_LPERROR;
@@ -2371,7 +2371,7 @@ SCIP_Bool SCIPlpiHasDualRay(
 
    ABORT_ZERO( lpi->messagehdlr, FALSE, XPRSgetdualray(lpi->xprslp, NULL, &hasRay) );
 
-   return hasRay;
+   return (SCIP_Bool) hasRay;
 }
 
 /** returns TRUE iff LP is proven to be dual unbounded */
@@ -2425,8 +2425,8 @@ SCIP_Bool SCIPlpiIsDualFeasible(
      return TRUE;
 
    /* get number of dual infeasibilities and number of simplex iterations */
-   CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_DUALINFEAS, &nInfeasible) );
-   CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_SIMPLEXITER, &nIter) );
+   ABORT_ZERO( lpi->messagehdlr, FALSE, XPRSgetintattrib(lpi->xprslp, XPRS_DUALINFEAS, &nInfeasible) );
+   ABORT_ZERO( lpi->messagehdlr, FALSE, XPRSgetintattrib(lpi->xprslp, XPRS_SIMPLEXITER, &nIter) );
 
    /* check if the number of dual infeasibilities is zero
     * We need to make sure that the LP was indeed solved by primal, otherwise infeasibility might have been found
@@ -2690,7 +2690,7 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
    SCIP_LPSOLQUALITY     qualityindicator,   /**< indicates which quality should be returned */
    SCIP_Real*            quality             /**< pointer to store quality number */
    )
-{
+{  /*lint --e{715}*/
    assert(lpi != NULL);
    assert(quality != NULL);
 
