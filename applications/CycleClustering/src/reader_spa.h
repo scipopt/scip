@@ -13,11 +13,14 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   reader_col.h
- * @brief  file reader for vertex coloring instances
- * @author Gerald Gamrath
+/**@file   reader_spa.h
+ * @brief  file reader for cycle clustering instances
+ * @author Leon Eifler
  *
- * This file implements the reader for vertex coloring problems in DIMACS standard format.
+ * This file implements the reader for the cycle clustering problem. The data is read from a matrix, entries separated
+ * by whitespace. The first line in the file has to be of the form "# p nstates ncluster",
+ * where nstates is the size of the matrix and ncluster is the number of clusters that should be used.
+ * The file has to have the ending ".spa" to be recognized by the reader.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

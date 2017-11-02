@@ -13,33 +13,26 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   reader_col.c
- * @brief  file reader for vertex coloring instances
- * @author Gerald Gamrath
+/**@file   reader_spa.c
+ * @brief  file reader for cycle clustering instances
+ * @author Leon Eifler
  *
- * This file implements the reader for vertex coloring problems in DIMACS standard format.
- *
+ * This file implements the reader for the cycle clustering problem. The data is read from a matrix, entries separated
+ * by whitespace. The first line in the file has to be of the form "# p nstates ncluster",
+ * where nstates is the size of the matrix and ncluster is the number of clusters that should be used.
+ * The file has to have the ending ".spa" to be recognized by the reader.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 #include "reader_spa.h"
 #include "probdata_spa.h"
-#include "scip/cons_orbitope.h"
-#include "scip/cons_quadratic.h"
-#include "scip/cons_linear.h"
-#include "scip/cons_indicator.h"
 
-#include <math.h>
 #include <assert.h>
 #include <string.h>
 #include <ctype.h>
-#include <stdlib.h>
-#include <stdio.h>
-
-
 
 #define READER_NAME             "spareader"
-#define READER_DESC             "file reader for a .spa-file representing an adjacency matrix for a clustering problem"
+#define READER_DESC             "file reader for a .spa-file representing a transition matrix for a cycle clustering problem"
 #define READER_EXTENSION        "spa"
 
 #define COL_MAX_LINELEN 10000
@@ -56,14 +49,16 @@ SCIP_Real getNextNumber(
 )
 {
    SCIP_Real tmp;
+
    /* skip whitespaces */
-   while ( isspace(**s) )
+   while( isspace(**s) )
       ++(*s);
    /* read number */
    tmp = atof(*s);
    /* skip whitespaces */
-   while ( (**s != 0) && (!isspace(**s)) )
+   while( (**s != 0) && (!isspace(**s)) )
       ++(*s);
+
    return tmp;
 }
 
@@ -79,12 +74,12 @@ SCIP_RETCODE readSpa(
    const char*           filename            /**< name of the input file */
 )
 {
-   SCIP_FILE* fp;               /* file-reader */
-   char buf[COL_MAX_LINELEN];   /* maximal length of line */
-   int nbins;
-   int ncluster;
-   char* char_p;
-   SCIP_Real** cmatrix;
+   SCIP_FILE* fp;                            /* file-reader */
+   char buf[COL_MAX_LINELEN];                /* maximal length of line */
+   char* char_p;                             /* current char */
+   SCIP_Real** cmatrix;                      /* transition matrix */
+   int nbins;                                /* number of states */
+   int ncluster;                             /* number of clusters */
    int i;
    int col;
 
@@ -106,6 +101,7 @@ SCIP_RETCODE readSpa(
    {
       SCIPfgets(buf, (int) sizeof(buf), fp); /*lint !e534*/
    }
+
    /* no graph information in file! */
    if ( SCIPfeof(fp) )
    {
@@ -113,10 +109,8 @@ SCIP_RETCODE readSpa(
       return SCIP_READERROR;
    }
    char_p = &buf[3];
-   /* if line reads 'edges' (non-standard!), instead of 'edge'. */
 
    /* read out number of nodes and edges, the pointer char_p will be changed */
-
    nbins = (int) getNextNumber(&char_p);
    ncluster = (int) getNextNumber(&char_p);
 
@@ -131,13 +125,15 @@ SCIP_RETCODE readSpa(
          SCIPerrorMessage("Number of cluster must be positive and smaller than number of bins!\n");
          return SCIP_READERROR;
    }
+
    /* create cmatrix */
    SCIP_CALL( SCIPallocMemoryArray(scip, &cmatrix, nbins) );
    for( i = 0; i < nbins; i++)
    {
       SCIP_CALL( SCIPallocMemoryArray(scip, &(cmatrix[i]), nbins) ); /*lint !e866*/
    }
-   /* fill array for edges */
+
+   /* fill array the cmatrix */
    i = 0;
    while ( !SCIPfeof(fp) && i < nbins )
    {

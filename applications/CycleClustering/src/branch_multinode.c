@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch_multinode.c
- * @brief  mutlinode branching rule for the setpartitioning part ins sparseapprox application
+ * @brief  mutlinode branching rule for the set-partitioning part in cycle clustering application.
  * @author Leon Eifler
  */
 
@@ -43,9 +43,9 @@
 static
 SCIP_RETCODE getBranchCands(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR***           branchcands,        /**< The address of the branching candidates */
-   SCIP_Real**           branchcandssol,     /**< Pointer to solution values of the candidates */
-   SCIP_Real**           branchcandsfrac,    /**< Pointer to fractionalities of the candidates */
+   SCIP_VAR**            branchcands,        /**< The address of the branching candidates */
+   SCIP_Real*            branchcandssol,     /**< Pointer to solution values of the candidates */
+   SCIP_Real*            branchcandsfrac,    /**< Pointer to fractionalities of the candidates */
    int*                  ncands              /**< Number of branching candidates */
 )
 {
@@ -59,11 +59,6 @@ SCIP_RETCODE getBranchCands(
    ncluster = SCIPspaGetNrCluster(scip);
    binvars = SCIPspaGetBinvars(scip);
 
-   /* allocate memory */
-   SCIP_CALL( SCIPallocClearMemoryArray(scip, branchcands, nbins * ncluster) );
-   SCIP_CALL( SCIPallocClearMemoryArray(scip, branchcandssol, nbins * ncluster) );
-   SCIP_CALL( SCIPallocClearMemoryArray(scip, branchcandsfrac, nbins * ncluster) );
-
    /* all binvars that are in the lp, and have fractional values are viable candidates */
    for( i = 0; i < nbins; ++i )
    {
@@ -71,9 +66,9 @@ SCIP_RETCODE getBranchCands(
       {
          if( SCIPvarGetStatus(binvars[i][k]) ==  SCIP_VARSTATUS_COLUMN && !SCIPisFeasIntegral(scip, SCIPvarGetLPSol(binvars[i][k])) )
          {
-            (*branchcands)[*ncands] = binvars[i][k];
-            (*branchcandssol)[*ncands] = SCIPvarGetLPSol(binvars[i][k]);
-            (*branchcandsfrac)[*ncands] = MAX(1-(*branchcandssol)[*ncands], (*branchcandssol)[*ncands]);
+            (branchcands)[*ncands] = binvars[i][k];
+            (branchcandssol)[*ncands] = SCIPvarGetLPSol(binvars[i][k]);
+            (branchcandsfrac)[*ncands] = MAX(1-(branchcandssol)[*ncands], (branchcandssol)[*ncands]);
             (*ncands)++;
          }
       }
@@ -148,7 +143,6 @@ SCIP_RETCODE branchOnBin(
  */
 
 /** branching execution method for fractional LP solutions */
-
 static
 SCIP_DECL_BRANCHEXECLP(branchExeclpMultinode)
 {  /*lint --e{715}*/
@@ -175,12 +169,14 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultinode)
    assert(nbins > 0);
    assert(ncluster > 0 && ncluster <= nbins);
 
-   /* if we use the non-simplified model, branch on the |Cluster|-variable at the root node */
    SCIP_CALL( SCIPallocClearMemoryArray(scip, &score, nbins) );
+   SCIP_CALL( SCIPallocClearMemoryArray(scip, &branchcands, nbins * ncluster) );
+   SCIP_CALL( SCIPallocClearMemoryArray(scip, &branchcandssol, nbins * ncluster) );
+   SCIP_CALL( SCIPallocClearMemoryArray(scip, &branchcandsfrac, nbins * ncluster) );
 
    ncands = 0;
    /* get the candidates */
-   SCIP_CALL( getBranchCands( scip, &branchcands, &branchcandssol, &branchcandsfrac, &ncands) );
+   SCIP_CALL( getBranchCands( scip, branchcands, branchcandssol, branchcandsfrac, &ncands) );
    if( ncands != 0 )
    {
       /* compute the relpcost for the candidates */
@@ -255,7 +251,6 @@ SCIP_RETCODE SCIPincludeBranchruleMultinode(
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpMultinode) );
-
 
    return SCIP_OKAY;
 }

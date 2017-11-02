@@ -1,4 +1,3 @@
-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -16,7 +15,7 @@
 
 /**@file   heur_fuzzyround.h
  * @ingroup PRIMALHEURISTICS
- * @brief  primal heuristic that constructs a feasible solution from the lp-relaxation. Round only on the bin-variables
+ * @brief  primal heuristic that constructs a feasible solution from the lp-relaxation. Round only on the state-variables (binvars)
  * and then reconstruct the rest of the variables accordingly.
  * @author Leon Eifler
  *
@@ -42,5 +41,4 @@ SCIP_RETCODE SCIPincludeHeurFuzzyround(
 }
 #endif
 
-
-#endif /* APPLICATIONS_SPARSEAPPROX_SRC_HEUR_FUZZYROUND_H_ */
+#endif

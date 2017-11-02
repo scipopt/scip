@@ -1,19 +1,38 @@
-/*
- * probdata_spa.h
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                           */
+/*                  This file is part of the program and library             */
+/*         SCIP --- Solving Constraint Integer Programs                      */
+/*                                                                           */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*                            fuer Informationstechnik Berlin                */
+/*                                                                           */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*                                                                           */
+/*  You should have received a copy of the ZIB Academic License              */
+/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*                                                                           */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/**@file   probdata_spa.h
+ * @brief  problem data for cycle clustering problem
+ * @author Leon Eifler
  *
- *  Created on: Dec 1, 2015
- *  Author: bzfeifle
+ * This file implements the problem data for the cycle clustering problem.
+ *
+ * The problem data contains original transition matrix, the scaling parameter that appears in the objective function,
+ * and all variables that appear in the problem.
  */
 
-#ifndef APPLICATIONS_SPARSEAPPROX_SRC_PROBDATA_SPA_H_
-#define APPLICATIONS_SPARSEAPPROX_SRC_PROBDATA_SPA_H_
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+#ifndef __SCIP_PROBDATA_SPA__
+#define __SCIP_PROBDATA_SPA__
 
 #include "scip/scip.h"
 #include "tclique/tclique.h"
 #include "scip/cons_setppc.h"
 #include "scip/type_cons.h"
 #include "scip/def.h"
-
 
 /** free memory allocated for an nxn matrix */
 extern
@@ -36,46 +55,35 @@ SCIP_Real** SCIPspaGetCmatrix(
    SCIP*                 scip                /**< SCIP data structure*/
 );
 
+/** returns the number of states */
 extern
 int SCIPspaGetNrBins(
    SCIP*                 scip                /**< SCIP data structure*/
 );
 
+/** returns the number of clusters */
 extern
 int SCIPspaGetNrCluster(
    SCIP*                 scip                /**< SCIP data structure*/
 );
 
+/** returns the state-variable-matrix */
 extern
 SCIP_VAR*** SCIPspaGetBinvars(
    SCIP*                 scip                /**< SCIP data structure*/
 );
 
+/** returns the edge variables */
 extern
 SCIP_VAR**** SCIPspaGetEdgevars(
    SCIP*                 scip                /**< SCIP data structure*/
 );
 
-extern
-SCIP_VAR** SCIPspaGetAbsvars(
-   SCIP*                 scip                /**< SCIP data structure*/
-);
-
-extern
-SCIP_VAR* SCIPspaGetTargetvar(
-   SCIP*                 scip                /**< SCIP data structure*/
-);
-
-extern
-SCIP_Real SCIPspaGetCoherence(
-   SCIP*                 scip                /**< SCIP data structure */
-);
-
+/** returns the number of scaling parameter */
 extern
 SCIP_Real SCIPspaGetScale(
    SCIP*                 scip                /**< SCIP data structure */
 );
-
 
 /** print all the relevant solution data */
 extern
@@ -84,9 +92,7 @@ SCIP_RETCODE SCIPspaPrintSolutionValues(
    SCIP_SOL*           sol                   /**< The solution containing the values*/
 );
 
-/**
- * Create the probdata for an spa-clustering problem
- */
+/** Create the probdata for an spa-clustering problem */
 extern
 SCIP_RETCODE SCIPcreateProbSpa(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -129,4 +135,4 @@ SCIP_Bool isPartition(
    int                   ncluster            /**< The number of clusters */
 );
 
-#endif /* APPLICATIONS_SPARSEAPPROX_SRC_PROBDATA_SPA_H_ */
+#endif

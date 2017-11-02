@@ -15,7 +15,8 @@
 
 /**@file   heur_spagreedy.c
  * @brief  Greedy primal heuristic. States are assigned to clusters iteratively. At each iteration all possible
- * assignments are computed and the one with the best change in objective value is selected. * @author Leon Eifler
+ * assignments are computed and the one with the best change in objective value is selected.
+ * @author Leon Eifler
  */
 
 #include <assert.h>
@@ -41,8 +42,8 @@
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   int                  lasteffectrootdepth;/**< index of the last solution for which oneopt was performed */
-   SCIP_Bool            local;
+   int                   lasteffectrootdepth;/**< index of the last solution for which oneopt was performed */
+   SCIP_Bool             local;              /**< if true, the heuristic only computes assignments until any improvement is found */
 };
 
 /**  calculate the current objective value for a q-matrix */
@@ -50,19 +51,21 @@ static
 SCIP_Real getObjective(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real**           qmatrix,            /**< The irreversibility matrix*/
-   SCIP_Real             scale,
+   SCIP_Real             scale,              /**< The scaling parameter in the objective function */
    int                   ncluster            /**< The number of cluster*/
 )
 {
-   SCIP_Real objective = 0;
-   int c,c2;
+   SCIP_Real objective = 0.0;
+   int c;
+   int c2;
 
    for( c = 0; c < ncluster; ++c )
    {
       c2 = ( c + 1 ) % ncluster;
-      objective += ( qmatrix[c][c2] - qmatrix[c2][c]);
+      objective += qmatrix[c][c2] - qmatrix[c2][c];
       objective += scale * qmatrix[c][c];
    }
+
    /* if we have no transitions at all then irreversibility should be set to 0 */
    return objective;
 }
@@ -82,20 +85,21 @@ void computeIrrevMat(
    int j;
    int k;
    int l;
+
    for( k = 0; k < ncluster; ++k )
    {
       for( l = 0; l < ncluster; ++l )
       {
          qmatrix[k][l] = 0;
+
          for( i = 0; i < nbins; ++i )
          {
             for( j = 0; j < nbins; ++j )
             {
                /* As -1 and 0 are both interpreted as 0, this check is necessary. Compute x_ik*x_jl*c_ij */
                if( clusterassignment[i][k] < 1 || clusterassignment[j][l] < 1 )
-               {
                   continue;
-               }
+
                qmatrix[k][l] += cmatrix[i][j];
             }
          }
@@ -160,6 +164,7 @@ SCIP_Real getTempObj(
    SCIP_Real obj;
    SCIP_Real temp;
    int i;
+
    obj = getObjective(scip, qmatrix, SCIPspaGetScale(scip), ncluster);
    /* the coh in cluster changes as well as the flow to the next and the previous cluster */
    for( i = 0; i < nbins; ++i )
@@ -188,21 +193,26 @@ SCIP_RETCODE assignNextBin(
    int                   ncluster,           /**< The number of cluster*/
    int*                  amountassigned,     /**< The total amount of bins already assigned*/
    int*                  binsincluster,      /**< The number of bins currently in a cluster*/
-   SCIP_Real*            epsI                /**< The pairwise irreversibility bound*/
+   SCIP_Real*            objective           /**< The objective */
 )
 {
+   SCIP_Real* binobjective;                  /* gives the best achievable objective for each state-assignment */
+   SCIP_Bool** clusterispossible;            /* Saves if a bin can be assigned to a cluster without violating feasibility */
+   int* bestcluster;                         /* saves the index of the cluster for which the best result was achieved */
+   SCIP_Real tempobj;
+   SCIP_Real max = -SCIPinfinity(scip);
    int i;
    int c;
    int c1;
+   int c2;
    int save = -1;
-   SCIP_Real* irrevbound;        /* gives the best achievable epsI-bound for each bin */
-   SCIP_Bool** clusterispossible;/* Saves if a bin can be assigned to a cluster without violating feasibility */
-   int* bestcluster;             /* saves the index of the cluster for which the best result was achieved */
-   SCIP_Real tempirrev;
+   int ind = -1;
+
    /* allocate memory */
-   SCIP_CALL( SCIPallocClearMemoryArray(scip, &irrevbound, nbins) );
+   SCIP_CALL( SCIPallocClearMemoryArray(scip, &binobjective, nbins) );
    SCIP_CALL( SCIPallocClearMemoryArray(scip, &bestcluster, nbins) );
    SCIP_CALL( SCIPallocClearMemoryArray(scip, &clusterispossible, nbins) );
+
    for( i = 0; i < nbins; ++i )
    {
       SCIP_CALL( SCIPallocClearMemoryArray(scip, &clusterispossible[i], ncluster) );
@@ -211,22 +221,31 @@ SCIP_RETCODE assignNextBin(
    /* make ceratin that each cluster is non-empty*/
    for( c = 0; c < ncluster; ++c )
    {
-      tempirrev = 0;
+      tempobj = 0;
+
       if( binsincluster[c] == 0 )
       {
          for( i = 0; i < nbins; ++i )
          {
+            /* if already assigned do nothing */
             if( isassigned[i] )
                continue;
-            irrevbound[i] = getTempObj(scip, qmatrix, cmatrix, clusterassignment, i, c, nbins, ncluster);
-            if( irrevbound[i] > tempirrev )
+
+            /* check if assigning this state is better than the previous best state */
+            binobjective[i] = getTempObj(scip, qmatrix, cmatrix, clusterassignment, i, c, nbins, ncluster);
+
+            if( binobjective[i] > tempobj )
             {
                save = i;
-               tempirrev = irrevbound[i];
+               tempobj = binobjective[i];
             }
+
+            /* ensure that a state is assigned */
             if( save == -1 )
                save = i;
          }
+
+         /* assign the found state to the cluster */
          for( c1 = 0; c1 < ncluster; ++c1 )
          {
             clusterassignment[save][c1] = 0;
@@ -236,19 +255,22 @@ SCIP_RETCODE assignNextBin(
          assert(binsincluster[c] == 1);
          isassigned[save] = TRUE;
          *amountassigned += 1;
+
+         /* update the q-matrix */
          updateIrrevMat(clusterassignment, qmatrix, cmatrix, save, c, nbins, ncluster);
       }
    }
 
+   /*phase 2: iteratively assign states such that at each iteration the highest objective improvement is achieved */
    for( i = 0; i < nbins; ++i )
    {
-      int c2;
       bestcluster[i] = 0;
-      irrevbound[i] = -SCIPinfinity(scip);
+      binobjective[i] = -SCIPinfinity(scip);
+
       if( isassigned[i] )
          continue;
 
-      /* check which clusters the bin can be assigned to */
+      /* check which clusters the bin can be assigned to. -1 means unassigned, 0 means fixed to 0. */
       for( c1 = 0; c1 < ncluster; ++c1 )
       {
          if( 0 != clusterassignment[i][c1] )
@@ -256,60 +278,61 @@ SCIP_RETCODE assignNextBin(
          else
             clusterispossible[i][c1] = FALSE;
          /* if assignment to i would violate abs-var assignment then set clusterpossible to FALSE */
-
       }
+
       /* calculate the irrevbound for all possible clusterassignments */
       for( c2 = 0; c2 < ncluster; ++c2 )
       {
-         save = clusterassignment[i][c2];
          if( !clusterispossible[i][c2] || clusterassignment[i][c2] == 0 )
             continue;
+
+         /* temporarily assign i to c2 */
+         save = clusterassignment[i][c2];
          clusterassignment[i][c2] = 1;
 
          /* save the best possible irrevbound for each bin */
-         tempirrev = getTempObj(scip, qmatrix, cmatrix, clusterassignment, i, c2, nbins, ncluster);
-         if( SCIPisGT(scip, tempirrev, irrevbound[i]) )
+         tempobj = getTempObj(scip, qmatrix, cmatrix, clusterassignment, i, c2, nbins, ncluster);
+
+         /* check if this is an improvement compared to the best known assignment */
+         if( SCIPisGT(scip, tempobj, binobjective[i]) )
          {
-            irrevbound[i] = tempirrev;
+            binobjective[i] = tempobj;
             bestcluster[i] = c2;
          }
+
          clusterassignment[i][c2] = save;
-
       }
-      if( localheur && SCIPisGT(scip, irrevbound[i], *epsI) )
-      {
+
+      /* if localheur is true, then the heuristic assigns a state as soon as any improvement is found */
+      if( localheur && SCIPisGT(scip, binobjective[i], *objective) )
          break;
-      }
    }
+
+   /* take the bin with the highest increase in irrev-bound */
+   for( i = 0; i < nbins; ++i )
    {
-      SCIP_Real max = -SCIPinfinity(scip);
-      int ind = -1;
-      /* take the bin with the highest increase in irrev-bound */
-      for( i = 0; i < nbins; ++i )
+      if( SCIPisLT(scip, max, binobjective[i]) )
       {
-         if( SCIPisLT(scip, max, irrevbound[i]) )
-         {
-            max = irrevbound[i];
-            ind = i;
-         }
+         max = binobjective[i];
+         ind = i;
       }
-
-      assert(!isassigned[ind] && ind > -1 && ind < nbins);
-      /* assign this bin to the found cluster */
-      isassigned[ind] = TRUE;
-      for( c1 = 0; c1 < ncluster; ++c1 )
-      {
-         clusterassignment[ind][c1] = 0;
-      }
-      clusterassignment[ind][bestcluster[ind]] = 1;
-      binsincluster[bestcluster[ind]]++;
-      *amountassigned += 1;
-      /* update the Irreversibility matrix */
-
-      updateIrrevMat(clusterassignment, qmatrix, cmatrix, ind, bestcluster[ind], nbins, ncluster);
-
-      *epsI = getObjective(scip, qmatrix, SCIPspaGetScale(scip), ncluster);
    }
+
+   assert(!isassigned[ind] && ind > -1 && ind < nbins);
+
+   /* assign this bin to the found cluster */
+   for( c1 = 0; c1 < ncluster; ++c1 )
+   {
+      clusterassignment[ind][c1] = 0;
+   }
+   clusterassignment[ind][bestcluster[ind]] = 1;
+   binsincluster[bestcluster[ind]]++;
+   *amountassigned += 1;
+   isassigned[ind] = TRUE;
+
+   /* update the Irreversibility matrix */
+   updateIrrevMat(clusterassignment, qmatrix, cmatrix, ind, bestcluster[ind], nbins, ncluster);
+   *objective = getObjective(scip, qmatrix, SCIPspaGetScale(scip), ncluster);
 
    /* free the allocated memory */
    for( i = 0; i < nbins; ++i )
@@ -317,11 +340,11 @@ SCIP_RETCODE assignNextBin(
       SCIPfreeMemoryArray(scip, &clusterispossible[i]);
    }
    SCIPfreeMemoryArray(scip, &clusterispossible);
-   SCIPfreeMemoryArray(scip, &irrevbound);
+   SCIPfreeMemoryArray(scip, &binobjective);
    SCIPfreeMemoryArray(scip, &bestcluster);
+
    return SCIP_OKAY;
 }
-
 
 /*
  * Callback methods of primal heuristic
@@ -360,7 +383,6 @@ SCIP_DECL_HEURFREE(heurFreeSpaGreedy)
    return SCIP_OKAY;
 }
 
-
 /** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
 static
 SCIP_DECL_HEUREXITSOL(heurExitsolSpaGreedy)
@@ -388,34 +410,32 @@ SCIP_DECL_HEURINIT(heurInitSpaGreedy)
    assert(heurdata != NULL);
 
    /* initialize last solution index */
-
    heurdata->lasteffectrootdepth = -1;
 
    return SCIP_OKAY;
 }
 
-
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecSpaGreedy)
 {
-   SCIP_Real** cmatrix;       /* The transition matrixx */
-   SCIP_Real** qmatrix;       /* The low-dimensional transition matrix between clusters */
-   SCIP_VAR*** binvars;       /* SCIP variables */
+   SCIP_Real** cmatrix;                      /* The transition matrixx */
+   SCIP_Real** qmatrix;                      /* The low-dimensional transition matrix between clusters */
+   SCIP_VAR*** binvars;                      /* SCIP variables */
+   SCIP_Real** clustering;                   /* matrix for the assignment of the binary variables */
+   int* binsincluster;                       /* amount of bins in a given cluster */
+   SCIP_Bool* isassigned;                    /* TRUE if a bin has already bin assigned to a cluster */
+   SCIP_HEURDATA* heurdata;                  /* The heurdata */
+   SCIP_SOL* sol;                            /* pointer to solution */
+   SCIP_Bool possible = TRUE;                /* Can the heuristic be run */
+   SCIP_Bool feasible = FALSE;               /* Is the solution feasible */
+   SCIP_Real obj = 0.0;                      /* Objective value */
+   int amountassigned;                       /* total amount of bins assigned */
    int nbins;
    int ncluster;
-   SCIP_Real** clustering;   /* matrix for the assignment of the binary variables */
-   int* binsincluster;        /* amount of bins in a given cluster */
-   SCIP_Bool* isassigned;     /* TRUE if a bin has already bin assigned to a cluster */
    int i;
    int j;
    int c;
-   int amountassigned;    /* total amount of bins assigned */
-   SCIP_SOL* sol;
-   SCIP_Bool possible = TRUE;
-   SCIP_Bool feasible = FALSE;
-   SCIP_Real obj = 0.0;
-   SCIP_HEURDATA* heurdata;
 
    *result = SCIP_DIDNOTRUN;
    amountassigned = 0;
@@ -427,11 +447,13 @@ SCIP_DECL_HEUREXEC(heurExecSpaGreedy)
       return SCIP_OKAY;
 
    heurdata->lasteffectrootdepth = SCIPgetEffectiveRootDepth(scip);
+
    /* get the problem data from scip */
    cmatrix = SCIPspaGetCmatrix(scip);
    nbins = SCIPspaGetNrBins(scip);
    ncluster = SCIPspaGetNrCluster(scip);
    binvars = SCIPspaGetBinvars(scip);
+
    assert( nbins > 0 && ncluster > 0 );
 
    /* allocate memory for the assignment */
@@ -445,6 +467,7 @@ SCIP_DECL_HEUREXEC(heurExecSpaGreedy)
       if( i < ncluster )
          SCIP_CALL( SCIPallocClearMemoryArray(scip, &qmatrix[i], ncluster) );
       SCIP_CALL( SCIPallocClearMemoryArray(scip, &clustering[i], ncluster) );
+
       for( j = 0; j < ncluster; ++j )
       {
          /* unassigned is set to -1 so we can differentiate between unassigned and fixed in the branch and bound tree */
@@ -462,15 +485,18 @@ SCIP_DECL_HEUREXEC(heurExecSpaGreedy)
             possible = FALSE;
             break;
          }
+
          /* if the bounds determine a fixed binary variable, then fix the variable in the clusterassignment */
          if( SCIPisEQ(scip, SCIPvarGetLbGlobal(binvars[i][j]), SCIPvarGetUbGlobal(binvars[i][j])) )
          {
             clustering[i][j] = SCIPvarGetLbGlobal(binvars[i][j]);
+
             if( SCIPisEQ(scip, 1.0, clustering[i][j]) )
             {
                binsincluster[j]++;
                isassigned[i] = TRUE;
                amountassigned += 1;
+
                for( c = 0; c < ncluster; ++c )
                {
                   if( clustering[i][c] == -1 )
@@ -478,14 +504,15 @@ SCIP_DECL_HEUREXEC(heurExecSpaGreedy)
                }
             }
          }
-
       }
    }
+
    /* check if the assignment violates paritioning, e.g. because we are in a subscip */
    for( i = 0; i < nbins; ++i )
    {
       int amountzeros = 0;
       int sum = 0;
+
       for( j = 0; j < ncluster; ++j )
       {
          if( 0 == clustering[i][j] )
@@ -502,25 +529,23 @@ SCIP_DECL_HEUREXEC(heurExecSpaGreedy)
       /* initialize the qmatrix and the lower irreversibility bound */
       computeIrrevMat(clustering, qmatrix, cmatrix, nbins, ncluster);
       obj = getObjective(scip, qmatrix, SCIPspaGetScale(scip), ncluster);
+
       /* assign bins iteratively until all bins are assigned */
       while( amountassigned < nbins )
-      {
          SCIP_CALL( assignNextBin(scip, heurdata->local, clustering, cmatrix, qmatrix, isassigned, nbins, ncluster, &amountassigned, binsincluster, &obj ) );
-      }
+
       /* assert that the assignment is valid in the sense that it is a partition of the bins. Feasibility is not checked in this method */
       assert(isPartition(scip,clustering, nbins, ncluster));
+
       /* update the qmatrix */
       computeIrrevMat(clustering, qmatrix, cmatrix, nbins, ncluster);
-
-      /* if we use the model without absolute values, transform the found solution if necessary */
-      /*if( model == 'w' || model == 's')
-         rotateSolution(clustering, binsincluster, qmatrix, cmatrix, nbins, ncluster);*/
 
       /* set the variables the problem to the found clustering and test feasibility */
       SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
       SCIP_CALL( assignVars( scip, sol, clustering, nbins, ncluster) );
       SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, TRUE, TRUE, TRUE, TRUE, &feasible) );
    }
+
    if( feasible )
       *result = SCIP_FOUNDSOL;
    else
@@ -533,7 +558,6 @@ SCIP_DECL_HEUREXEC(heurExecSpaGreedy)
          SCIPfreeMemoryArray(scip, &qmatrix[i]);
       SCIPfreeMemoryArray(scip, &clustering[i]);
    }
-
    SCIPfreeMemoryArray(scip, &clustering);
    SCIPfreeMemoryArray(scip, &binsincluster);
    SCIPfreeMemoryArray(scip, &qmatrix);

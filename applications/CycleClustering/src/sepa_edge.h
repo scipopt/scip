@@ -15,7 +15,7 @@
 
 /**@file   sepa_edge.h
  * @ingroup SEPARATORS
- * @brief  simple edge-separator
+ * @brief  edge-separator. Separates triangle-inequalities in cycle clustering problem
  * @author Leon Eifler
  */
 
@@ -23,7 +23,6 @@
 
 #ifndef __SCIP_SEPA_EDGE_H__
 #define __SCIP_SEPA_EDGE_H__
-
 
 #include "scip/scip.h"
 

@@ -1,4 +1,3 @@
-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -15,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_fuzzyround.c
- * @brief  primal heuristic that constructs a feasible solution from the lp-relaxation. Round only on the bin-variables
+ * @brief  primal heuristic that constructs a feasible solution from the lp-relaxation. Round only on the state-variables (binvars)
  * and then reconstruct the rest of the variables accordingly.
  * @author Leon Eifler
  */
@@ -27,9 +26,6 @@
 #include "probdata_spa.h"
 #include "heur_fuzzyround.h"
 #include "scip/cons_and.h"
-/* @note If the heuristic runs in the root node, the timing is changed to (SCIP_HEURTIMING_DURINGLPLOOP |
- *       SCIP_HEURTIMING_BEFORENODE), see SCIP_DECL_HEURINITSOL callback.
- */
 
 #define HEUR_NAME             "fuzzyround"
 #define HEUR_DESC             "primal heuristic that constructs a feasible solution from the lp-relaxation"
@@ -41,35 +37,25 @@
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
 #define HEUR_USESSUBSCIP      FALSE          /**< does the heuristic use a secondary SCIP instance? */
 
-
 /*
  * Local methods
- */
-
-
-/**
- * assign the variables in scip according to the found clusterassignment
- */
-
-/**
- * assign the variables in scip according to the found clusterassignment
  */
 
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecFuzzyround)
 {  /*lint --e{715}*/
-   int i;
-   int k;
-   SCIP_Real maxlpval;
-   int maxcluster;
    SCIP_VAR*** binvars;
    SCIP_SOL* sol;
+   SCIP_Real** clustering;
+   SCIP_Real maxlpval;
+   SCIP_Bool feasible = FALSE;
+   int* binsincluster;
    int nbins;
    int ncluster;
-   SCIP_Real** clustering;
-   int* binsincluster;
-   SCIP_Bool feasible = FALSE;
+   int i;
+   int k;
+   int maxcluster;
 
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
@@ -95,17 +81,20 @@ SCIP_DECL_HEUREXEC(heurExecFuzzyround)
    assert(binvars != NULL);
 
    /* allocate memory */
-
    SCIP_CALL( SCIPallocClearMemoryArray(scip, &clustering , nbins) );
    SCIP_CALL( SCIPallocClearMemoryArray(scip, &binsincluster, ncluster) );
+
    for( i = 0; i < nbins; ++i )
    {
       SCIP_CALL( SCIPallocClearMemoryArray(scip, &clustering[i], ncluster) );
    }
+
    /* for each bin, set the assignment with the highest lp-value to 1, the rest to 0 */
-   for( i = 0; i < nbins; ++i ) {
+   for( i = 0; i < nbins; ++i )
+   {
       maxlpval = 0;
       maxcluster = -1;
+
       for (k = 0; k < ncluster; ++k)
       {
          assert( NULL != binvars[i][k]);
@@ -135,8 +124,7 @@ SCIP_DECL_HEUREXEC(heurExecFuzzyround)
    else
       *result = SCIP_DIDNOTFIND;
 
-   /** free allocated memory */
-
+   /* free allocated memory */
    for( i = 0; i < nbins; ++i )
    {
       SCIPfreeMemoryArray(scip, &clustering[i]);
@@ -157,14 +145,12 @@ SCIP_RETCODE SCIPincludeHeurFuzzyround(
 {
    SCIP_HEUR* heur;
 
-
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
       HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
       HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecFuzzyround, NULL) );
 
    assert(heur != NULL);
-
 
    return SCIP_OKAY;
 }

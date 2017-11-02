@@ -27,7 +27,7 @@
 #include "probdata_spa.h"
 #include "scip/cons_linear.h"
 
-#define SEPA_NAME              "partition"
+#define SEPA_NAME           "partition"
 #define SEPA_DESC              "separator to separate triangle-inequalities in cycle-clustering application"
 #define SEPA_PRIORITY              1500
 #define SEPA_FREQ                     1
