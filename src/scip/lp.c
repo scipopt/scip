@@ -9137,6 +9137,14 @@ SCIP_RETCODE SCIPlpCreate(
       }
    }
 
+   /* Check that infinity value of LP-solver is at least as large as the one used in SCIP. This is necessary, because we
+    * transfer SCIP infinity values to the ones by the LPI, but not the converse. */
+   if ( set->num_infinity > SCIPlpiInfinity((*lp)->lpi) )
+   {
+      SCIPerrorMessage("The infinity value of the LP solver has to be as least as large as the one of SCIP.\n");
+      return SCIP_PARAMETERWRONGVAL;
+   }
+
    return SCIP_OKAY;
 }
 
