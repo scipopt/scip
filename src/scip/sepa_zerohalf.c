@@ -58,8 +58,8 @@
 #define SEPA_USESSUBSCIP          FALSE
 #define SEPA_DELAY                FALSE
 
-#define DEFAULT_MAXROUNDS            -1 /**< maximal number of zerohalf separation rounds per node (-1: unlimited) */
-#define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of zerohalf separation rounds in the root node (-1: unlimited) */
+#define DEFAULT_MAXROUNDS             5 /**< maximal number of zerohalf separation rounds per node (-1: unlimited) */
+#define DEFAULT_MAXROUNDSROOT        20 /**< maximal number of zerohalf separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_MAXSEPACUTS         100 /**< maximal number of zerohalf cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT     500 /**< maximal number of zerohalf cuts separated per separation round in root node */
 #define DEFAULT_MAXSLACK            0.0 /**< maximal slack of rows to be used in aggregation */
@@ -2240,60 +2240,83 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
    if( sepadata->ncuts > 0  )
    {
       SCIP_Real goodscore;
+      int naccepted;
 
       SCIPsortDownRealPtr(sepadata->cutscores, (void**)sepadata->cuts, sepadata->ncuts);
 
       goodscore = 0.9 * sepadata->cutscores[0];
+      naccepted = 0;
 
       for( i = 0; i < sepadata->ncuts; ++i )
       {
          int j;
+         int newncuts;
 
          if( sepadata->cuts[i] == NULL )
             continue;
 
+         /* just release remaining cuts if the maximum number has been accepted */
+         if( naccepted == maxsepacuts )
+         {
+            SCIP_CALL( SCIPreleaseRow(scip, &sepadata->cuts[i]) );
+            continue;
+         }
+
+         /* add global cuts to the pool and local cuts to the sepastore */
          if( SCIProwIsLocal(sepadata->cuts[i]) )
          {
             SCIP_CALL( SCIPaddCut(scip, sepadata->cuts[i], FALSE, &sepadata->infeasible) );
-
-            for( j = i+1; j < sepadata->ncuts; ++j )
-            {
-               SCIP_Real ortho;
-
-               if( sepadata->cuts[j] == NULL || !SCIProwIsLocal(sepadata->cuts[j]) )
-                  continue;
-
-               ortho = SCIProwGetOrthogonality(sepadata->cuts[j], sepadata->cuts[i], 'e');
-
-               if( ortho < 0.5 || (ortho < 0.9 && sepadata->cutscores[j] < goodscore) )
-               {
-                  SCIP_CALL( SCIPreleaseRow(scip, &sepadata->cuts[j]) );
-               }
-            }
-
-            SCIP_CALL( SCIPreleaseRow(scip, &sepadata->cuts[i]) );
          }
          else
          {
             SCIP_CALL( SCIPaddPoolCut(scip, sepadata->cuts[i]) );
+         }
 
-            for( j = i+1; j < sepadata->ncuts; ++j )
+         /* increase counters and initialize newncuts variable to truncate the
+          * the loop if cuts at the end of the array have been removed already
+          */
+         newncuts = i;
+         ++naccepted;
+
+         for( j = i + 1; j < sepadata->ncuts; ++j )
+         {
+            SCIP_Real ortho;
+
+            if( sepadata->cuts[j] == NULL )
+               continue;
+
+            /* do not filter global cuts with local cuts, still add them to the pool */
+            if( SCIProwIsLocal(sepadata->cuts[i]) && !SCIProwIsLocal(sepadata->cuts[j]) )
             {
-               SCIP_Real ortho;
-
-               if( sepadata->cuts[j] == NULL )
-                  continue;
-
-               ortho = SCIProwGetOrthogonality(sepadata->cuts[j], sepadata->cuts[i], 'e');
-
-               if( ortho < 0.5 || (ortho < 0.9 && sepadata->cutscores[j] < goodscore) )
-               {
-                  SCIPreleaseRow(scip, &sepadata->cuts[j]);
-               }
+               newncuts = j + 1;
+               continue;
             }
 
-            SCIP_CALL( SCIPreleaseRow(scip, &sepadata->cuts[i]) );
+            /* compute orthogonality */
+            ortho = SCIProwGetOrthogonality(sepadata->cuts[j], sepadata->cuts[i], 'e');
+
+            /* if the orthogonality is below 0.5 we always discard the other cut and if it
+             * is above 0.9 we always keep it. If the orthogonality is between these values we
+             * only keep global cuts of relatively high quality.
+             */
+            if( ortho < 0.5 ||
+               (ortho < 0.9 && (SCIProwIsLocal(sepadata->cuts[j]) || sepadata->cutscores[j] < goodscore)) )
+            {
+               SCIP_CALL( SCIPreleaseRow(scip, &sepadata->cuts[j]) );
+            }
+            else
+            {
+               newncuts = j + 1;
+            }
          }
+
+         /* release current cut */
+         SCIP_CALL( SCIPreleaseRow(scip, &sepadata->cuts[i]) );
+
+         /* remember new number of cuts so that we do not iterate over NULL values
+          * at the end of the array over and over again
+          */
+         sepadata->ncuts = newncuts;
       }
 
       SCIPfreeBlockMemoryArray(scip, &sepadata->cuts, sepadata->cutssize);
