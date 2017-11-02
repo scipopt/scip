@@ -67,7 +67,6 @@
                                                     *   decision be stored till the next call? */
 #define DEFAULT_REEVALAGE                    10LL  /**< Max number of LPs solved after which a previous prob branching
                                                     *   results are recalculated. */
-#define DEFAULT_FORCEBRANCHING               FALSE /**< Should LAB be forced, if only one candidate is given? */
 #define DEFAULT_RECURSIONDEPTH               2     /**< The max depth of LAB. */
 #define DEFAULT_ADDNONVIOCONS                FALSE /**< Should binary constraints, that are not violated by the base LP, be
                                                     *   collected and added? */
@@ -4722,6 +4721,7 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
    /* create lookahead branching rule data */
    SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
    SCIP_CALL( SCIPallocMemory(scip, &branchruledata->config) );
+   branchruledata->config->forcebranching = FALSE;
 
    /* needs to be allocated here, such that the previous decision can be filled and reset over multiple runs */
    SCIP_CALL( SCIPallocMemory(scip, &branchruledata->persistent) );
@@ -4769,10 +4769,6 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          "branching/lookahead/reevalage",
          "max number of LPs solved after which a previous prob branching results are recalculated",
          &branchruledata->config->reevalage, TRUE, DEFAULT_REEVALAGE, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "branching/lookahead/forcebranching",
-         "should LAB be forced, if only one candidate is given?",
-         &branchruledata->config->forcebranching, TRUE, DEFAULT_FORCEBRANCHING, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "branching/lookahead/recursiondepth",
          "the max depth of LAB.",
          &branchruledata->config->recursiondepth, TRUE, DEFAULT_RECURSIONDEPTH, 1, INT_MAX, NULL, NULL) );
