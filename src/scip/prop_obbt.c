@@ -2120,7 +2120,7 @@ SCIP_RETCODE solveBilinearLP(
    }
 
    /* compute scaler for the additional linear constraint */
-   scale = MAX3(1.0, REALABS(xt-xs), REALABS(yt-ys)); /*lint !e666*/
+   scale = MIN(MAX3(1.0, REALABS(xt-xs), REALABS(yt-ys)), 100.0); /*lint !e666*/
 
    /* set objective function */
    signx = (xs > xt) ? 1.0 : -1.0;
@@ -2170,20 +2170,19 @@ SCIP_RETCODE solveBilinearLP(
       /* xcoef x <= -ycoef y + constant */
       *ycoef = -(*ycoef);
 
-      /* normalize inequality */
-      if( !SCIPisZero(scip, *xcoef) )
+      /* inequality is only useful when both coefficients are different from zero; normalize inequality if possible */
+      if( !SCIPisFeasZero(scip, *xcoef) || !SCIPisFeasZero(scip, *ycoef) )
       {
          SCIP_Real val = REALABS(*xcoef);
          *xcoef /= val;
          *ycoef /= val;
          *constant /= val;
       }
-      else if( !SCIPisZero(scip, *ycoef) )
+      else
       {
-         SCIP_Real val = REALABS(*ycoef);
-         *xcoef /= val;
-         *ycoef /= val;
-         *constant /= val;
+         *xcoef = SCIP_INVALID;
+         *ycoef = SCIP_INVALID;
+         *constant = SCIP_INVALID;
       }
    }
 

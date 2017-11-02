@@ -15332,7 +15332,7 @@ SCIP_RETCODE SCIPaddBilinearIneqQuadratic(
    assert(bilinest->x == x);
    assert(bilinest->y == y);
 
-   SCIPdebugMsg(scip, "add bilinear term inequality: %g %s <= %g %s + %g with\n", xcoef, SCIPvarGetName(bilinest->x),
+   SCIPdebugMsg(scip, "add bilinear term inequality: %g %s <= %g %s + %g\n", xcoef, SCIPvarGetName(bilinest->x),
       ycoef, SCIPvarGetName(bilinest->y), constant);
 
    if( xcoef * ycoef > 0.0 )
