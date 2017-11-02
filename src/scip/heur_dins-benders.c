@@ -775,7 +775,7 @@ SCIP_DECL_HEUREXEC(heurExecDinsbenders)
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nsubnodes) );
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", MAX(10, nsubnodes/10)) );
    SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", heurdata->bestsollimit) );
-   //SCIP_CALL( SCIPsetRealParam(subscip, "limits/gap", 0.1) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/gap", 0.1) );
 
    /* forbid recursive call of heuristics and separators solving subMIPs */
    SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
