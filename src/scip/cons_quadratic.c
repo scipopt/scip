@@ -15383,6 +15383,8 @@ SCIP_RETCODE SCIPaddBilinearIneqQuadratic(
       SCIP_Real bestviol;
       int pos = -1;
 
+      assert(*nineqs == 2);
+
       /* compute resulting violations of both corner points when replacing an existing inequality
        *
        * given the violations (v1,w1), (v2,w2), (v3,w3) we select two inequalities i and j that
@@ -15393,7 +15395,7 @@ SCIP_RETCODE SCIPaddBilinearIneqQuadratic(
       getIneqViol(x, y, ineqs[3], ineqs[4], ineqs[5], &viols1[1], &viols2[1]);
       bestviol = MAX(viols1[0], viols1[1]) + MAX(viols2[0], viols2[1]);
 
-      for( i = 0; i < *nineqs; ++i )
+      for( i = 0; i < 2; ++i )
       {
          SCIP_Real viol = MAX(viol1, viols1[i]) + MAX(viol2, viols2[i]);
          if( SCIPisGT(scip, viol, bestviol) )
