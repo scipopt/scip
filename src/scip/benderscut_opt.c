@@ -318,7 +318,8 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    else
    {
       SCIP_CALL( SCIPcreateConsBasicLinear(masterprob, &cons, cutname, 0, NULL, NULL, 0.0, SCIPinfinity(masterprob)) );
-      SCIPsetConsRemovable(masterprob, cons, TRUE);
+      SCIP_CALL( SCIPsetConsDynamic(masterprob, cons, TRUE) );
+      SCIP_CALL( SCIPsetConsRemovable(masterprob, cons, TRUE) );
    }
 
    /* computing the coefficients of the optimality cut */

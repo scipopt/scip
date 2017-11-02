@@ -427,6 +427,7 @@ struct SCIP_Set
    /* Benders' decomposition settings */
    SCIP_Real             benders_soltol;     /**< the tolerance for checking optimality in Benders' decomposition */
    SCIP_Bool             benders_cutlpsol;   /**< should cuts be generated from the solution to the LP relaxation? */
+   SCIP_Bool             benders_copybenders;/**< should Benders' decomposition be copied for sub-SCIPs? */
 
    /* propagation settings */
    int                   prop_maxrounds;     /**< maximal number of propagation rounds per node (-1: unlimited) */

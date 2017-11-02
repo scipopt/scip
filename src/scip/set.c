@@ -329,6 +329,7 @@
 /* Benders' decomposition */
 #define SCIP_DEFAULT_BENDERS_SOLTOL        1e-6 /**< the tolerance used to determine optimality in Benders' decomposition */
 #define SCIP_DEFAULT_BENDERS_CUTLPSOL      TRUE /**< should Benders' cuts be generated from the LP solution? */
+#define SCIP_DEFAULT_BENDERS_COPYBENDERS   TRUE /**< should Benders' decomposition be copied for sub-SCIPs? */
 
 /* Reoptimization */
 
@@ -2062,6 +2063,11 @@ SCIP_RETCODE SCIPsetCreate(
          "benders/cutlpsol",
          "should Benders' cuts be generated from the solution to the LP relaxation?",
          &(*set)->benders_cutlpsol, FALSE, SCIP_DEFAULT_BENDERS_CUTLPSOL,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "benders/copybenders",
+         "should Benders' decomposition be copied for use in sub-SCIPs?",
+         &(*set)->benders_copybenders, FALSE, SCIP_DEFAULT_BENDERS_COPYBENDERS,
          NULL, NULL) );
 
    /* propagation parameters */
