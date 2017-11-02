@@ -1909,7 +1909,7 @@ SCIP_RETCODE SCIPlpiStartStrongbranch(
 SCIP_RETCODE SCIPlpiEndStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
-{ /*lint --e{715}*/
+{  /*lint --e{715}*/
    /* currently do nothing */
    return SCIP_OKAY;
 }
@@ -2812,7 +2812,10 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    int r;
 
    /* In the basis methods we assume that xprs basis flags coincide with scip, so assert it */
-   assert((0 == SCIP_BASESTAT_LOWER) && (1 == SCIP_BASESTAT_BASIC) && (2 == SCIP_BASESTAT_UPPER) && (3 == SCIP_BASESTAT_ZERO));
+   assert((int) SCIP_BASESTAT_LOWER == 0);
+   assert((int) SCIP_BASESTAT_BASIC == 1);
+   assert((int) SCIP_BASESTAT_UPPER == 2);
+   assert((int) SCIP_BASESTAT_ZERO == 3);
 
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
@@ -2857,7 +2860,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    int*                  ninds               /**< pointer to store the number of non-zero indices
                                                *  (-1: if we do not store sparsity informations) */
    )
-{
+{  /*lint --e{715}*/
    int nrows;
 
    assert(lpi != NULL);
@@ -2897,7 +2900,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    int*                  ninds               /**< pointer to store the number of non-zero indices
                                                *  (-1: if we do not store sparsity informations) */
    )
-{
+{  /*lint --e{715}*/
    int nrows;
 
    assert(lpi != NULL);
@@ -2934,7 +2937,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    int*                  ninds               /**< pointer to store the number of non-zero indices
                                               *  (-1: if we do not store sparsity informations) */
    )
-{
+{  /*lint --e{715}*/
    SCIP_Real* binv;
    SCIP_Real* buffer;
    int ncols;
@@ -3161,15 +3164,15 @@ SCIP_RETCODE SCIPlpiSetState(
          CHECK_ZERO( lpi->messagehdlr, XPRSgetub(lpi->xprslp, &bnd, i, i) );
 
          if( SCIPlpiIsInfinity(lpi, REALABS(bnd)) )
-            lpi->cstat[i] = SCIP_BASESTAT_ZERO;  /* variable is free */
+           lpi->cstat[i] = (int) SCIP_BASESTAT_ZERO;  /* variable is free */
          else
-            lpi->cstat[i] = SCIP_BASESTAT_UPPER; /* use finite upper bound */
+            lpi->cstat[i] = (int) SCIP_BASESTAT_UPPER; /* use finite upper bound */
       }
       else
          lpi->cstat[i] = SCIP_BASESTAT_LOWER;    /* use finite lower bound */
    }
    for( i = lpistate->nrows; i < nrows; ++i )
-      lpi->rstat[i] = SCIP_BASESTAT_BASIC;
+      lpi->rstat[i] = (int) SCIP_BASESTAT_BASIC;
 
    /* load basis information into Xpress
     *
