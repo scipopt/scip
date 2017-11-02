@@ -4,9 +4,9 @@ include(CTest)
 # instances in the Coloring data set and their optimal objective value
 #
 set(instances
-"Paper/Pot3/Pot3_T_20.txt_3cluster"
-"Paper/Pot4/Pot4_T_20.txt_4cluster"
-"Paper/Pot6/Pot6_T_20.txt_6cluster"
+"Pot/3Cycle/Pot3_T_20.txt_3cluster"
+"Pot/4Cycle/Pot4_T_20.txt_4cluster"
+"Pot/6Cycle/Pot6_T_20.txt_6cluster"
 )
 
 #
