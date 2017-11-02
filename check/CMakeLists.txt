@@ -102,6 +102,11 @@ set(instances_Indicator
     "instances/Indicator/mcf64-4-1.lp\;10"
 )
 
+set(settings_Cardinality
+    "default"
+    "upgdcardinality"
+)
+
 
 #
 # MIP instances
@@ -186,6 +191,14 @@ set(instances_Semicontinuous
 set(instances_SAT
     "instances/SAT/bart10.shuffled.cnf\;0"
     )
+
+set(instances_Cardinality
+    "instances/Cardinality/atm_5_25_1.lp.gz\;+1.40606905557936e+05"
+    "instances/Cardinality/atm_5_25_2.lp.gz\;+1.35948249319284e+05"
+    "instances/Cardinality/atm_5_25_3.lp.gz\;+1.35160667451104e+05"
+    "instances/Cardinality/atm_5_25_4.lp.gz\;+1.28994302472494e+05"
+    "instances/Cardinality/atm_5_25_5.lp.gz\;+1.47786890128836e+05"
+)
 
 #
 # SOS instances
@@ -286,6 +299,7 @@ add_instancetests(instances_Semicontinuous settings_default "Semicontinuous")
 add_instancetests(instances_SAT settings_default "SAT")
 add_instancetests(instances_SOS settings_default "SOS")
 add_instancetests(instances_Orbitope settings_default "Orbitope")
+add_instancetests(instances_Cardinality settings_Cardinality "Cardinality")
 
 #
 # test writing and reading solutions
