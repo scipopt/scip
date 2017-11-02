@@ -2324,7 +2324,7 @@ SCIP_RETCODE applyObbtBilinear(
 
          /* update number of LP iterations */
          nleftiterations = getIterationsLeft(scip, nolditerations, itlimit);
-         printf("LP iterations left: %lld\n", nleftiterations);
+         SCIPdebugMsg(scip, "LP iterations left: %lld\n", nleftiterations);
 
          /* add inequality to quadratic constraint handler if it separates (xt,yt) */
          if( !SCIPisHugeValue(scip, xcoef) && !SCIPisHugeValue(scip, ycoef)
