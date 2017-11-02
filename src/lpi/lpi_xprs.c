@@ -3394,6 +3394,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    switch( type )
    {
    case SCIP_LPPAR_PRICING:
+      /* every non-supported pricing strategy is promoted to the default pricing strategy */
       lpi->pricing = (SCIP_PRICING)ival; /* store pricing method in LPI struct */
       switch( lpi->pricing )
       {
@@ -3404,7 +3405,10 @@ SCIP_RETCODE SCIPlpiSetIntpar(
          CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_PRICINGALG, XPRS_PRICING_DEVEX) );
          break;
       case SCIP_PRICING_AUTO:
+      case SCIP_PRICING_FULL:
       case SCIP_PRICING_LPIDEFAULT:
+      case SCIP_PRICING_STEEP:
+      case SCIP_PRICING_STEEPQSTART:
       default:
          CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_PRICINGALG, XPRS_PRICING_DEFAULT) );
          break;
