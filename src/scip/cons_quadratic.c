@@ -252,7 +252,6 @@ struct SCIP_ConshdlrData
    BILINESTIMATOR*       bilinestimators;    /**< array containing all required information for using stronger estimators for each bilinear term in all quadratic constraints */
    int                   nbilinterms;        /**< number of bilinear terms in all quadratic constraints */
 
-   SCIP_Bool             usebilinineqroot;   /**< should linear inequalities for obtaining stronger envelopes for bilinear terms be computed in the root node? */
    SCIP_Bool             usebilinineqbranch; /**< should linear inequalities be considered when computing the branching scores for bilinear terms? */
    SCIP_Bool             storedbilinearterms; /**< did we already try to store all bilinear terms? */
 
@@ -13629,10 +13628,6 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/branchscoring",
          "which score to give branching candidates: convexification 'g'ap, constraint 'v'iolation, 'c'entrality of variable value in domain",
          &conshdlrdata->branchscoring, TRUE, 'g', "cgv", NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/usebilinineqroot",
-         "use linear inequalities to compute concave and convex envelopes of bilinear terms",
-         &conshdlrdata->usebilinineqroot, FALSE, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/usebilinineqbranch",
          "should linear inequalities be consindered when computing the branching scores for bilinear terms?",
