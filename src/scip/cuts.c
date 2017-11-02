@@ -579,12 +579,12 @@ SCIP_Bool cutTightenCoefsQuad(
     */
    if( (maxabsintval < 1.0 && ! SCIPisFeasZero(scip, maxabsintval)) || (maxabsval < 1.0 && ! SCIPisFeasZero(scip, maxabsval)) )
    {
-      SCIP_Real scale = 1.0 / maxabsval;
+      SCIP_Real scale = 1.0 / maxabsval; /*lint !e795*/
 
       /* compute scale to make the smallest coefficient of integer variables 1.0 */
       if( !SCIPisFeasZero(scip, maxabsintval) )
       {
-         scale = 1.0 / maxabsintval;
+         scale = 1.0 / maxabsintval; /*lint !e414*/
 
          for( i = 0; i < *cutnnz; ++i )
          {
@@ -817,12 +817,12 @@ SCIP_Bool cutTightenCoefs(
     */
    if( (maxabsintval < 1.0 && ! SCIPisFeasZero(scip, maxabsintval)) || (maxabsval < 1.0 && ! SCIPisFeasZero(scip, maxabsval)) )
    {
-      SCIP_Real scale = 1.0 / maxabsval;
+      SCIP_Real scale = 1.0 / maxabsval; /*lint !e795*/
 
       /* compute scale to make the smallest coefficient of integer variables 1.0 */
       if( !SCIPisFeasZero(scip, maxabsintval) )
       {
-         scale = 1.0 / maxabsintval;
+         scale = 1.0 / maxabsintval; /*lint !e414*/
 
          for( i = 0; i < *cutnnz; ++i )
          {

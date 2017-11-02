@@ -76,7 +76,7 @@
 /* other defines */
 #define MAXREDUCTIONROUNDS          100 /**< maximum number of rounds to perform reductions on the mod 2 system */
 #define BOUNDSWITCH                 0.5 /**< threshold for bound switching */
-#define MAXAGGRLEN(nvars)          (0.1*(nvars)+1000)
+#define MAXAGGRLEN(nvars)           ((int)(0.1*(nvars)+1000))
 
 typedef struct Mod2Col MOD2_COL;
 typedef struct Mod2Row MOD2_ROW;
@@ -503,7 +503,7 @@ SCIP_RETCODE transformNonIntegralRow(
          SCIP_Real floorrhs;
          SCIP_Real slack;
 
-         transrowrhs *= intscalar;
+         transrowrhs *= intscalar; /*lint !e644*/
 
          /* slack is initialized to zero since the transrowrhs can still change due to bound usage in the loop below;
           * the floored right hand side is then added afterwards
