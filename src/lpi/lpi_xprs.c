@@ -712,7 +712,7 @@ SCIP_RETCODE SCIPlpiCreate(
    SCIPdebugMessage("SCIPlpiCreate()\n");
 
    /* the interface is revised for Xpress 26 or higher */
-   if( XPVERSION < 26 ) /*lint !e{506,774}*/
+   if( XPVERSION < 26 ) /*lint !e506 !e774*/
    {
       SCIPmessagePrintWarning(messagehdlr, "Please use Xpress version 26 or higher, you are using %d\n", XPVERSION);
       return SCIP_LPERROR;
@@ -2720,9 +2720,9 @@ SCIP_RETCODE SCIPlpiGetBase(
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
 
-   assert(SCIP_BASESTAT_LOWER == 0);
-   assert(SCIP_BASESTAT_BASIC == 1);
-   assert(SCIP_BASESTAT_UPPER == 2);
+   assert((int) SCIP_BASESTAT_LOWER == 0);
+   assert((int) SCIP_BASESTAT_BASIC == 1);
+   assert((int) SCIP_BASESTAT_UPPER == 2);
 
    SCIPdebugMessage("saving Xpress basis into %p/%p\n", (void*)rstat, (void*)cstat);
 
@@ -2762,9 +2762,9 @@ SCIP_RETCODE SCIPlpiSetBase(
    assert(cstat != NULL);
    assert(rstat != NULL);
 
-   assert(SCIP_BASESTAT_LOWER == 0);
-   assert(SCIP_BASESTAT_BASIC == 1);
-   assert(SCIP_BASESTAT_UPPER == 2);
+   assert((int) SCIP_BASESTAT_LOWER == 0);
+   assert((int) SCIP_BASESTAT_BASIC == 1);
+   assert((int) SCIP_BASESTAT_UPPER == 2);
 
    SCIPdebugMessage("loading basis %p/%p into Xpress\n", (void*)rstat, (void*)cstat);
 
