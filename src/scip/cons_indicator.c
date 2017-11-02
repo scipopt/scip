@@ -1903,26 +1903,27 @@ SCIP_RETCODE scaleFirstRow(
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler */
    )
 {
-   SCIP_LPI* altlp;
-   SCIP_Real* val;
-   SCIP_Real sum = 0.0;
-   int j;
-   int nCols;
-   int cnt;
-   int beg;
-   int* ind;
 
    assert( scip != NULL );
    assert( conshdlrdata != NULL );
 
    if ( ! conshdlrdata->scaled )
    {
+      SCIP_Real* val;
+      SCIP_LPI* altlp;
+      int* ind;
+      SCIP_Real sum = 0.0;
+      int beg[1];
+      int nCols;
+      int cnt;
+      int j;
+
       altlp = conshdlrdata->altlp;
       SCIP_CALL( SCIPlpiGetNCols(altlp, &nCols) );
       SCIP_CALL( SCIPallocBufferArray(scip, &ind, nCols) );
       SCIP_CALL( SCIPallocBufferArray(scip, &val, nCols) );
 
-      SCIP_CALL( SCIPlpiGetRows(altlp, 0, 0, NULL, NULL, &cnt, &beg, ind, val) );
+      SCIP_CALL( SCIPlpiGetRows(altlp, 0, 0, NULL, NULL, &cnt, beg, ind, val) );
 
       if ( cnt > 0 )
       {

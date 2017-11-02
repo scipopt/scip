@@ -9698,13 +9698,13 @@ SCIP_RETCODE SCIPcomputeArraysSetminus(
 /** copies characters from 'src' to 'dest', copying is stopped when either the 'stop' character is reached or after
  *  'cnt' characters have been copied, whichever comes first.
  *
- *  @note undefined behaviuor on overlapping arrays
+ *  @note undefined behavior on overlapping arrays
  */
 int SCIPmemccpy(
    char*                 dest,               /**< destination pointer to copy to */
-   const char*           src,                /**< source pointer to copy to */
+   const char*           src,                /**< source pointer to copy from */
    char                  stop,               /**< character when found stop copying */
-   unsigned int          cnt                 /**< maximal number of characters to copy too */
+   unsigned int          cnt                 /**< maximal number of characters to copy */
    )
 {
    if( dest == NULL || src == NULL || cnt == 0 )
@@ -9719,10 +9719,11 @@ int SCIPmemccpy(
    }
 }
 
-/** prints an error message containing of the given string followed by a string describing the current system error;
- *  prefers to use the strerror_r method, which is threadsafe; on systems where this method does not exist,
- *  NO_STRERROR_R should be defined (see INSTALL), in this case, strerror is used which is not guaranteed to be
- *  threadsafe (on SUN-systems, it actually is)
+/** prints an error message containing of the given string followed by a string describing the current system error
+ *
+ *  Prefers to use the strerror_r method, which is threadsafe. On systems where this method does not exist,
+ *  NO_STRERROR_R should be defined (see INSTALL). In this case, strerror is used which is not guaranteed to be
+ *  threadsafe (on SUN-systems, it actually is).
  */
 void SCIPprintSysError(
    const char*           message             /**< first part of the error message, e.g. the filename */
@@ -9736,20 +9737,38 @@ void SCIPprintSysError(
 #if defined(_WIN32) || defined(_WIN64)
    /* strerror_s returns 0 on success; the string is \0 terminated. */
    if ( strerror_s(buf, SCIP_MAXSTRLEN, errno) != 0 )
-      SCIPmessagePrintError("Unkown error number %d or error message too long.\n", errno);
+      SCIPmessagePrintError("Unknown error number %d or error message too long.\n", errno);
+   SCIPmessagePrintError("%s: %s\n", message, buf);
+#elif (_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && ! defined(_GNU_SOURCE)
+   /* We are in the POSIX/XSI case, where strerror_r returns 0 on success; \0 termination is unclear. */
+   if ( strerror_r(errno, buf, SCIP_MAXSTRLEN) != 0 )
+      SCIPmessagePrintError("Unknown error number %d.\n", errno);
+   buf[SCIP_MAXSTRLEN - 1] = '\0';
    SCIPmessagePrintError("%s: %s\n", message, buf);
 #else
-   #if (_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && ! defined(_GNU_SOURCE)
-      /* We are in the POSIX/XSI case, where strerror_r returns 0 on success; \0 termination is unclear. */
-      if ( strerror_r(errno, buf, SCIP_MAXSTRLEN) != 0 )
-         SCIPmessagePrintError("Unkown error number %d.\n", errno);
-      buf[SCIP_MAXSTRLEN - 1] = '\0';
+   /* We are in the GNU case, where strerror_r returns a pointer to the error string. This string is possibly stored
+    * in buf and is always \0 terminated.
+    * However, if compiling on one system and executing on another system, we might actually call a different
+    * variant of the strerror_r function than we had at compile time.
+    */
+   char* errordescr;
+   *buf = '\0';
+   errordescr = strerror_r(errno, buf, SCIP_MAXSTRLEN);
+   if( *buf != '\0' )
+   {
+      /* strerror_r wrote into buf */
       SCIPmessagePrintError("%s: %s\n", message, buf);
-#else
-      /* We are in the GNU case, where strerror_r returns a string to the error string. This string is possibly stored
-       * in buf and is always \0 terminated. */
-      SCIPmessagePrintError("%s: %s\n", message, strerror_r(errno, buf, SCIP_MAXSTRLEN));
-   #endif
+   }
+   else if( errordescr != NULL )
+   {
+      /* strerror_r returned something non-NULL */
+      SCIPmessagePrintError("%s: %s\n", message, errordescr);
+   }
+   else
+   {
+      /* strerror_r did return NULL and did not write into buf */
+      SCIPmessagePrintError("Could not obtain description for error %d.\n", errno);
+   }
 #endif
 #endif
 }

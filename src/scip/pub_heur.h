@@ -370,6 +370,67 @@ SCIP_RANDNUMGEN* SCIPdivesetGetRandnumgen(
 
 /* @} */
 
+/**@defgroup PublicVariableGraphMethods Public Variable Graph Methods
+ * @ingroup MiscellaneousMethods
+ *
+ * @brief  methods to create a variable graph and perform breadth-first search
+ *
+ * @{
+ */
+
+/** Perform breadth-first (BFS) search on the variable constraint graph.
+ *
+ *  The result of the algorithm is that the \p distances array contains the correct distances for
+ *  every variable from the start variables. The distance of a variable can then be accessed through its
+ *  problem index (calling SCIPvarGetProbindex()).
+ *  Hence, The method assumes that the length of \p distances is at least
+ *  SCIPgetNVars().
+ *  Variables that are not connected through constraints to the start variables have a distance of -1.
+ *
+ *  Limits can be provided to further restrict the breadth-first search. If a distance limit is given,
+ *  the search will be performed until the first variable at this distance is popped from the queue, i.e.,
+ *  all variables with a distance < maxdistance have been labeled by the search.
+ *  If a variable limit is given, the search stops after it completes the distance level at which
+ *  the limit was reached. Hence, more variables may be actually labeled.
+ *  The start variables are accounted for those variable limits.
+ *
+ *  If no variable variable constraint graph is provided, the method will create one and free it at the end
+ *  This is useful for a single use of the variable constraint graph. For several consecutive uses,
+ *  it is advised to create a variable constraint graph via SCIPvariableGraphCreate().
+ */
+EXTERN
+SCIP_RETCODE SCIPvariablegraphBreadthFirst(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VGRAPH*          vargraph,           /**< pointer to the variable graph, or NULL to let the function create a local graph */
+   SCIP_VAR**            startvars,          /**< array of start variables to calculate distance from */
+   int                   nstartvars,         /**< number of starting variables, at least 1 */
+   int*                  distances,          /**< array to keep distance in vargraph from start variables for every variable */
+   int                   maxdistance,        /**< maximum distance >= 0 from start variable (INT_MAX for complete BFS) */
+   int                   maxvars,            /**< maximum number of variables to compute distance for */
+   int                   maxbinintvars       /**< maximum number of binary or integer variables to compute distance for */
+   );
+
+/** initialization method of variable graph data structure */
+EXTERN
+SCIP_RETCODE SCIPvariableGraphCreate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VGRAPH**         vargraph,           /**< pointer to the variable graph */
+   SCIP_Bool             relaxdenseconss,    /**< should dense constraints (at least as dense as \p density) be
+                                              *   ignored by connectivity graph? */
+   SCIP_Real             relaxdensity,       /**< density (with respect to number of variables) to relax constraint from graph */
+   int*                  nrelaxedconstraints  /**< pointer to store the number of constraints that were relaxed, or NULL if not needed */
+   );
+
+/** deinitialization method of variable graph data structure */
+EXTERN
+void SCIPvariableGraphFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VGRAPH**         vargraph            /**< pointer to the variable graph */
+   );
+
+/* @} */
+
+
 #ifdef __cplusplus
 }
 #endif

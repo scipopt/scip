@@ -756,8 +756,11 @@ SCIP_RETCODE SCIPcutpoolAddNewRow(
 
    assert(SCIPhashtableExists(cutpool->hashtable, (void*)cut));
 
-   thisefficacy = SCIProwGetLPEfficacy(row, set, stat, lp);
-   stat->bestefficacy = MAX(thisefficacy, stat->bestefficacy);
+   if( SCIPlpIsSolved(lp) )
+   {
+      thisefficacy = SCIProwGetLPEfficacy(row, set, stat, lp);
+      stat->bestefficacy = MAX(thisefficacy, stat->bestefficacy);
+   }
 
    /* if this is the global cut pool of SCIP, mark the row to be member of the pool */
    if( cutpool->globalcutpool )

@@ -1,5 +1,10 @@
 include(CTest)
 
+add_custom_target(check
+                COMMAND ${CMAKE_CTEST_COMMAND} -R "-default" --schedule-random
+                DEPENDS scip
+                )
+
 #
 # define the instance sets
 #
@@ -59,7 +64,7 @@ set(settings_MIP
     "setppclifting"
     "xorsepaparity"
 #    "cloud"
-#    "feaspump20"
+    "feaspump20"
     "indicatoralterlp"
     "leastinf"
     "presolfast"
@@ -69,6 +74,8 @@ set(settings_MIP
     "vbcvisualization"
     "bakvisualization"
     "solvingphases"
+    "lns_epsgreedy"
+    "lns_exp3"
 )
 
 set(settings_MINLP
@@ -211,7 +218,7 @@ set(scip_reader_extensions
     "opb"
     "pip"
     "rlp"
-#    "mps"
+    "mps"
     "lp"
     )
 
@@ -421,7 +428,12 @@ set_tests_properties(interactiveshell
                         DEPENDS scip-build
                     )
 
-add_custom_target(check
-                COMMAND ${CMAKE_CTEST_COMMAND} -R "-default" --schedule-random
-                DEPENDS scip
-                )
+add_test(NAME write_and_read_settings
+        COMMAND $<TARGET_FILE:scip> -b ${CMAKE_CURRENT_SOURCE_DIR}/interactiveshell/write_and_read_settings.bat
+        )
+set_tests_properties(write_and_read_settings
+                    PROPERTIES
+                        FAIL_REGULAR_EXPRESSION "ERROR"
+                        DEPENDS scip-build
+                    )
+
