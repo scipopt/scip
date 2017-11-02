@@ -3549,6 +3549,29 @@ int SCIPgetSubscipDepth(
    return scip->stat->subscipdepth;
 }
 
+/** sets depth of scip instance
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
+ *  @note SCIP stage does not get changed
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+void SCIPsetSubscipDepth(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   newdepth            /**< new subscip depth */
+   )
+{
+   assert( scip != NULL );
+   assert( scip->stat != NULL );
+   assert( newdepth > 0 );
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPsetSubscipDepth", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   scip->stat->subscipdepth = newdepth;
+}
+
 /** copies source SCIP data into target SCIP data structure
  *
  * distinguishes between
@@ -7084,7 +7107,6 @@ SCIP_RETCODE SCIPincludeRelax(
    const char*           desc,               /**< description of relaxation handler */
    int                   priority,           /**< priority of the relaxation handler (negative: after LP, non-negative: before LP) */
    int                   freq,               /**< frequency for calling relaxation handler */
-   SCIP_Bool             includeslp,         /**< does the relaxator contain all cuts in the LP? */
    SCIP_DECL_RELAXCOPY   ((*relaxcopy)),     /**< copy method of relaxation handler or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_RELAXFREE   ((*relaxfree)),     /**< destructor of relaxation handler */
    SCIP_DECL_RELAXINIT   ((*relaxinit)),     /**< initialize relaxation handler */
@@ -7107,8 +7129,7 @@ SCIP_RETCODE SCIPincludeRelax(
    }
 
    SCIP_CALL( SCIPrelaxCreate(&relax, scip->set, scip->messagehdlr, scip->mem->setmem,
-         name, desc, priority, freq, includeslp,
-         relaxcopy,
+         name, desc, priority, freq, relaxcopy,
          relaxfree, relaxinit, relaxexit, relaxinitsol, relaxexitsol, relaxexec, relaxdata) );
    SCIP_CALL( SCIPsetIncludeRelax(scip->set, relax) );
 
@@ -7129,7 +7150,6 @@ SCIP_RETCODE SCIPincludeRelaxBasic(
    const char*           desc,               /**< description of relaxation handler */
    int                   priority,           /**< priority of the relaxation handler (negative: after LP, non-negative: before LP) */
    int                   freq,               /**< frequency for calling relaxation handler */
-   SCIP_Bool             includeslp,         /**< does the relaxator contain all cuts in the LP? */
    SCIP_DECL_RELAXEXEC   ((*relaxexec)),     /**< execution method of relaxation handler */
    SCIP_RELAXDATA*       relaxdata           /**< relaxation handler data */
    )
@@ -7146,7 +7166,7 @@ SCIP_RETCODE SCIPincludeRelaxBasic(
    }
 
    SCIP_CALL( SCIPrelaxCreate(&relax, scip->set, scip->messagehdlr, scip->mem->setmem,
-         name, desc, priority, freq, includeslp,
+         name, desc, priority, freq,
          NULL, NULL, NULL, NULL, NULL, NULL, relaxexec, relaxdata) );
    SCIP_CALL( SCIPsetIncludeRelax(scip->set, relax) );
 
@@ -15380,7 +15400,7 @@ SCIP_RETCODE freeReoptSolve(
    SCIP_CALL( SCIPprobExitSolve(scip->transprob, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp, FALSE) );
 
    /* free solution process data structures */
-   SCIP_CALL( SCIPrelaxationFree(&scip->relaxation, scip->mem->probmem, scip->primal) );
+   SCIP_CALL( SCIPrelaxationFree(&scip->relaxation) );
 
    SCIP_CALL( SCIPcutpoolFree(&scip->cutpool, scip->mem->probmem, scip->set, scip->lp) );
    SCIP_CALL( SCIPcutpoolFree(&scip->delayedcutpool, scip->mem->probmem, scip->set, scip->lp) );
@@ -15572,7 +15592,7 @@ SCIP_RETCODE freeTransform(
 
    if( !reducedfree )
    {
-      SCIP_CALL( SCIPrelaxationFree(&scip->relaxation, scip->mem->probmem, scip->primal) );
+      SCIP_CALL( SCIPrelaxationFree(&scip->relaxation) );
    }
    SCIP_CALL( SCIPtreeFree(&scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
 
@@ -16116,6 +16136,10 @@ SCIP_RETCODE SCIPsolve(
          /* an extra blank line should be printed separately since the buffer message handler only handles up to one line
           * correctly */
          SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "\n");
+         /* reset relaxation solution, so that the objective value is recomputed from scratch next time, using the new
+          * fixings which may be produced during the presolving after the restart */
+         SCIP_CALL( SCIPclearRelaxSolVals(scip) );
+
          SCIP_CALL( freeSolve(scip, TRUE) );
          assert(scip->set->stage == SCIP_STAGE_TRANSFORMED);
       }
@@ -19829,6 +19853,10 @@ SCIP_RETCODE SCIPclearRelaxSolVals(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note This method incrementally updates the objective value of the relaxation solution. If the whole solution
+ *        should be updated, using SCIPsetRelaxSolVals() instead or calling SCIPclearRelaxSolVals() before setting
+ *        the first value to reset the solution and the objective value to 0 may help the numerics.
  */
 SCIP_RETCODE SCIPsetRelaxSolVal(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -19844,12 +19872,13 @@ SCIP_RETCODE SCIPsetRelaxSolVal(
 
    if( val != 0.0 )
       SCIPrelaxationSetSolZero(scip->relaxation, FALSE);
-   SCIPrelaxationSetSolValid(scip->relaxation, FALSE);
+   SCIPrelaxationSetSolValid(scip->relaxation, FALSE, FALSE);
 
    return SCIP_OKAY;
 }
 
-/** sets the values of the given variables in the global relaxation solution;
+/** sets the values of the given variables in the global relaxation solution and informs SCIP about the validity
+ *  and whether the solution can be enforced via linear cuts;
  *  this solution can be filled by the relaxation handlers  and can be used by heuristics and for separation;
  *  the solution is automatically cleared, s.t. all other variables get value 0.0
  *
@@ -19864,7 +19893,8 @@ SCIP_RETCODE SCIPsetRelaxSolVals(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nvars,              /**< number of variables to set relaxation solution value for */
    SCIP_VAR**            vars,               /**< array with variables to set value for */
-   SCIP_Real*            vals                /**< array with solution values of variables */
+   SCIP_Real*            vals,               /**< array with solution values of variables */
+   SCIP_Bool             includeslp          /**< does the relaxator contain all cuts in the LP? */
    )
 {
    int v;
@@ -19883,14 +19913,14 @@ SCIP_RETCODE SCIPsetRelaxSolVals(
    }
 
    SCIPrelaxationSetSolZero(scip->relaxation, FALSE);
-   SCIPrelaxationSetSolValid(scip->relaxation, TRUE);
+   SCIPrelaxationSetSolValid(scip->relaxation, TRUE, includeslp);
 
    return SCIP_OKAY;
 }
 
-/** sets the values of the variables in the global relaxation solution to the values
- *  in the given primal solution; the relaxation solution can be filled by the relaxation hanlders
- *  and might be used by heuristics and for separation
+/** sets the values of the variables in the global relaxation solution to the values in the given primal solution
+ *  and informs SCIP about the validity and whether the solution can be enforced via linear cuts;
+ *  the relaxation solution can be filled by the relaxation handlers and might be used by heuristics and for separation
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -19901,7 +19931,8 @@ SCIP_RETCODE SCIPsetRelaxSolVals(
  */
 SCIP_RETCODE SCIPsetRelaxSolValsSol(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol                 /**< primal relaxation solution */
+   SCIP_SOL*             sol,                /**< primal relaxation solution */
+   SCIP_Bool             includeslp          /**< does the relaxator contain all cuts in the LP? */
    )
 {
    SCIP_VAR** vars;
@@ -19929,7 +19960,7 @@ SCIP_RETCODE SCIPsetRelaxSolValsSol(
    SCIPrelaxationSetSolObj(scip->relaxation, SCIPsolGetObj(sol, scip->set, scip->transprob, scip->origprob));
 
    SCIPrelaxationSetSolZero(scip->relaxation, FALSE);
-   SCIPrelaxationSetSolValid(scip->relaxation, TRUE);
+   SCIPrelaxationSetSolValid(scip->relaxation, TRUE, includeslp);
 
    SCIPfreeBufferArray(scip, &vals);
 
@@ -19955,7 +19986,7 @@ SCIP_Bool SCIPisRelaxSolValid(
    return SCIPrelaxationIsSolValid(scip->relaxation);
 }
 
-/** informs SCIP, that the relaxation solution is valid
+/** informs SCIP that the relaxation solution is valid and whether the relaxation can be enforced through linear cuts
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -19965,14 +19996,15 @@ SCIP_Bool SCIPisRelaxSolValid(
  *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_RETCODE SCIPmarkRelaxSolValid(
-   SCIP*                 scip                /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             includeslp          /**< does the relaxator contain all cuts in the LP? */
    )
 {
    assert(scip != NULL);
 
    SCIP_CALL( checkStage(scip, "SCIPmarkRelaxSolValid", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIPrelaxationSetSolValid(scip->relaxation, TRUE);
+   SCIPrelaxationSetSolValid(scip->relaxation, TRUE, includeslp);
 
    return SCIP_OKAY;
 }
@@ -19994,7 +20026,7 @@ SCIP_RETCODE SCIPmarkRelaxSolInvalid(
 
    SCIP_CALL( checkStage(scip, "SCIPmarkRelaxSolInvalid", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIPrelaxationSetSolValid(scip->relaxation, FALSE);
+   SCIPrelaxationSetSolValid(scip->relaxation, FALSE, FALSE);
 
    return SCIP_OKAY;
 }
@@ -20099,7 +20131,7 @@ SCIP_RETCODE SCIPstartStrongbranch(
        * we cannot disable it, because the pseudo costs would not be updated, otherwise,
        * and reliability branching would end up doing strong branching all the time
        */
-      SCIP_CALL( SCIPtreeStartProbing(scip->tree, scip->mem->probmem, scip->set, scip->lp, TRUE) );
+      SCIP_CALL( SCIPtreeStartProbing(scip->tree, scip->mem->probmem, scip->set, scip->lp, scip->relaxation, scip->transprob, TRUE) );
 
       /* inform the LP that the current probing mode is used for strong branching */
       SCIPlpStartStrongbranchProbing(scip->lp);
@@ -34807,6 +34839,12 @@ SCIP_RETCODE SCIPstartDive(
 
    SCIP_CALL( SCIPlpStartDive(scip->lp, scip->mem->probmem, scip->set, scip->stat) );
 
+   /* remember the relaxation solution to reset it later */
+   if( SCIPisRelaxSolValid(scip) )
+   {
+      SCIP_CALL( SCIPtreeStoreRelaxSol(scip->tree, scip->set, scip->relaxation, scip->transprob) );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -34856,6 +34894,12 @@ SCIP_RETCODE SCIPendDive(
    {
       SCIP_CALL( SCIPtreeCutoff(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
             scip->lp, scip->primal->cutoffbound) );
+   }
+
+   /* if a relaxation was stored before diving, restore it now */
+   if( scip->tree->probdiverelaxstored )
+   {
+      SCIP_CALL( SCIPtreeRestoreRelaxSol(scip->tree, scip->set, scip->relaxation, scip->transprob) );
    }
 
    return SCIP_OKAY;
@@ -35382,7 +35426,7 @@ SCIP_RETCODE SCIPstartProbing(
       SCIPswapPointers((void**)&scip->sepastore, (void**)&scip->sepastoreprobing);
    }
 
-   SCIP_CALL( SCIPtreeStartProbing(scip->tree, scip->mem->probmem, scip->set, scip->lp, FALSE) );
+   SCIP_CALL( SCIPtreeStartProbing(scip->tree, scip->mem->probmem, scip->set, scip->lp, scip->relaxation, scip->transprob, FALSE) );
 
    /* disables the collection of any statistic for a variable */
    SCIPstatDisableVarHistory(scip->stat);
