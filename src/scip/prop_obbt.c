@@ -89,6 +89,8 @@
 #define DEFAULT_GENVBDSDURINGSEPA        TRUE      /**< try to create genvbounds during separation process? */
 #define DEFAULT_PROPAGATEFREQ               0      /**< trigger a propagation round after that many bound tightenings
                                                     *   (0: no propagation) */
+#define DEFAULT_CREATE_BILININEQS        TRUE      /**< solve auxiliary LPs in order to find valid inequalities for bilinear terms? */
+
 
 /** translate from one value of infinity to another
  *
@@ -173,6 +175,7 @@ struct SCIP_PropData
    SCIP_Bool             separatesol;        /**< should the obbt LP solution be separated? note that that by
                                               *   separating solution OBBT will apply all bound tightenings
                                               *   immediatly */
+   SCIP_Bool             createbilinineqs;   /**< solve auxiliary LPs in order to find valid inequalities for bilinear terms? */
    int                   orderingalgo;       /**< which type of ordering algorithm should we use?
                                               *   (0: no, 1: greedy, 2: greedy reverse) */
    int                   nbounds;            /**< length of interesting bounds array */
@@ -2220,6 +2223,8 @@ SCIP_RETCODE applyObbtBilinear(
    SCIP_Real oldfeastol;
    SCIP_Real olddualtol;
    SCIP_Bool lperror;
+   SCIP_Longint nolditerations;
+   SCIP_Longint nleftiterations;
    int nvars;
    int i;
 
@@ -2238,6 +2243,10 @@ SCIP_RETCODE applyObbtBilinear(
    oldfeastol = SCIPfeastol(scip);
    olddualtol = SCIPdualfeastol(scip);
 
+   nolditerations = SCIPgetNLPIterations(scip);
+   nleftiterations = getIterationsLeft(scip, nolditerations, itlimit);
+   SCIPdebugMsg(scip, "iteration limit: %lld\n", nleftiterations);
+
    /* 1. start probing */
    SCIP_CALL( SCIPstartProbing(scip) );
 
@@ -2251,14 +2260,15 @@ SCIP_RETCODE applyObbtBilinear(
    }
 
    /* we need to solve the probing LP before creating new probing nodes in solveBilinearLP() */
-   SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, NULL) );
+   SCIP_CALL( SCIPsolveProbingLP(scip, nleftiterations, &lperror, NULL) );
 
    /* 4. set feasibility and optimality tolerances */
    SCIP_CALL( SCIPchgLpfeastol(scip, oldfeastol / 10.0, FALSE) );
    SCIP_CALL( SCIPchgDualfeastol(scip, olddualtol / 10.0) );
 
    /* 5. main loop */
-   for( i = propdata->lastbilinidx; i < propdata->nbilinbounds && !SCIPisStopped(scip); ++i )
+   for( i = propdata->lastbilinidx; i < propdata->nbilinbounds
+      && (nleftiterations > 0 || nleftiterations == -1) && !SCIPisStopped(scip); ++i )
    {
       CORNER corners[4] = {LEFTBOTTOM, LEFTTOP, RIGHTTOP, RIGHTBOTTOM};
       BILINBOUND* bilinbound;
@@ -2311,6 +2321,10 @@ SCIP_RETCODE applyObbtBilinear(
 
          /* compute inequality */
          SCIP_CALL( solveBilinearLP(scip, bilinbound->x, bilinbound->y, xs, ys, xt, yt, &xcoef, &ycoef, &constant, -1L) );
+
+         /* update number of LP iterations */
+         nleftiterations = getIterationsLeft(scip, nolditerations, itlimit);
+         printf("LP iterations left: %lld\n", nleftiterations);
 
          /* add inequality to quadratic constraint handler if it separates (xt,yt) */
          if( !SCIPisHugeValue(scip, xcoef) && !SCIPisHugeValue(scip, ycoef)
@@ -2952,7 +2966,10 @@ SCIP_DECL_PROPEXEC(propExecObbt)
    assert(*result != SCIP_DIDNOTRUN);
 
    /* compute globally inequalities for bilinear terms */
-   SCIP_CALL( applyObbtBilinear(scip, propdata, -1L, result) );
+   if( propdata->createbilinineqs )
+   {
+      SCIP_CALL( applyObbtBilinear(scip, propdata, itlimit, result) );
+   }
 
    /* set current node as last node */
    propdata->lastnode = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
@@ -3134,6 +3151,10 @@ SCIP_RETCODE SCIPincludePropObbt(
   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/" PROP_NAME "/tightcontboundsprobing",
          "should continuous bounds be tightened during the probing mode?",
          &propdata->tightcontboundsprobing, TRUE, DEFAULT_TIGHTCONTBOUNDSPROBING, NULL, NULL) );
+
+  SCIP_CALL( SCIPaddBoolParam(scip, "propagating/" PROP_NAME "/createbilinineqs",
+         "solve auxiliary LPs in order to find valid inequalities for bilinear terms?",
+         &propdata->createbilinineqs, TRUE, DEFAULT_CREATE_BILININEQS, NULL, NULL) );
 
   SCIP_CALL( SCIPaddIntParam(scip, "propagating/" PROP_NAME "/orderingalgo",
         "select the type of ordering algorithm which should be used (0: no special ordering, 1: greedy, 2: greedy reverse)",
