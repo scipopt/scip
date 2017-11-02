@@ -2258,7 +2258,7 @@ SCIP_RETCODE applyObbtBilinear(
    SCIP_CALL( SCIPchgDualfeastol(scip, olddualtol / 10.0) );
 
    /* 5. main loop */
-   for( i = propdata->lastbilinidx; i < propdata->nbilinbounds; ++i )
+   for( i = propdata->lastbilinidx; i < propdata->nbilinbounds && !SCIPisStopped(scip); ++i )
    {
       CORNER corners[4] = {LEFTBOTTOM, LEFTTOP, RIGHTTOP, RIGHTBOTTOM};
       BILINBOUND* bilinbound;
