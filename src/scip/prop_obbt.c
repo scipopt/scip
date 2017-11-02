@@ -2272,7 +2272,7 @@ SCIP_RETCODE applyObbtBilinear(
    }
 
    /* we need to solve the probing LP before creating new probing nodes in solveBilinearLP() */
-   SCIP_CALL( SCIPsolveProbingLP(scip, nleftiterations, &lperror, NULL) );
+   SCIP_CALL( SCIPsolveProbingLP(scip, (int)nleftiterations, &lperror, NULL) );
 
    /* 4. set feasibility and optimality tolerances */
    SCIP_CALL( SCIPchgLpfeastol(scip, oldfeastol / 10.0, FALSE) );
@@ -2842,8 +2842,8 @@ SCIP_RETCODE initBounds(
       {
          if( nunderest[i] + noverest[i] > 0 && varIsInteresting(scip, x[i], 1) && varIsInteresting(scip, y[i], 1) )
          {
-            SCIP_CALL( SCIPallocBlockMemory(scip, &propdata->bilinbounds[bilinidx]) );
-            BMSclearMemory(propdata->bilinbounds[bilinidx]);
+            SCIP_CALL( SCIPallocBlockMemory(scip, &propdata->bilinbounds[bilinidx]) ); /*lint !e866*/
+            BMSclearMemory(propdata->bilinbounds[bilinidx]); /*lint !e866*/
 
             propdata->bilinbounds[bilinidx]->x = x[i];
             propdata->bilinbounds[bilinidx]->y = y[i];
@@ -3110,7 +3110,7 @@ SCIP_DECL_PROPEXITSOL(propExitsolObbt)
    {
       for( i = propdata->nbilinbounds - 1; i >= 0; --i )
       {
-         SCIPfreeBlockMemory(scip, &propdata->bilinbounds[i]);
+         SCIPfreeBlockMemory(scip, &propdata->bilinbounds[i]); /*lint !e866*/
       }
       SCIPfreeBlockMemoryArray(scip, &propdata->bilinbounds, propdata->nbilinbounds);
       propdata->nbilinbounds = 0;
