@@ -15298,8 +15298,8 @@ SCIP_RETCODE SCIPaddBilinearIneqQuadratic(
    SCIP_CONSHDLR* conshdlr;
    BILINESTIMATOR* bilinest;
    SCIP_Real* ineqs;
-   SCIP_Real viol1;
-   SCIP_Real viol2;
+   SCIP_Real viol1 = 0.0;
+   SCIP_Real viol2 = 0.0;
    int* nineqs;
    int i;
 
