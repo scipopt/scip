@@ -3011,7 +3011,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    int*                  ninds               /**< pointer to store the number of non-zero indices
                                                *  (-1: if we do not store sparsity informations) */
    )
-{
+{  /*lint --e{715}*/
    int nrows;
    int nnonz;
    int i;
@@ -3164,12 +3164,12 @@ SCIP_RETCODE SCIPlpiSetState(
          CHECK_ZERO( lpi->messagehdlr, XPRSgetub(lpi->xprslp, &bnd, i, i) );
 
          if( SCIPlpiIsInfinity(lpi, REALABS(bnd)) )
-           lpi->cstat[i] = (int) SCIP_BASESTAT_ZERO;  /* variable is free */
+            lpi->cstat[i] = (int) SCIP_BASESTAT_ZERO;  /* variable is free */
          else
             lpi->cstat[i] = (int) SCIP_BASESTAT_UPPER; /* use finite upper bound */
       }
       else
-         lpi->cstat[i] = SCIP_BASESTAT_LOWER;    /* use finite lower bound */
+        lpi->cstat[i] = (int) SCIP_BASESTAT_LOWER;    /* use finite lower bound */
    }
    for( i = lpistate->nrows; i < nrows; ++i )
       lpi->rstat[i] = (int) SCIP_BASESTAT_BASIC;
@@ -3440,7 +3440,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_OUTPUTLOG, (ival == TRUE) ? 1 : 0) );
       break;
    case SCIP_LPPAR_LPITLIM:
-      ival = MIN(ival, XPRS_MAXINT);
+      ival = MIN(ival, XPRS_MAXINT); /*lint !e685*/
       CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_LPITERLIMIT, ival) );
       break;
    case SCIP_LPPAR_THREADS:
