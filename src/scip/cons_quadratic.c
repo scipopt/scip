@@ -4486,6 +4486,9 @@ SCIP_RETCODE presolveDisaggregate(
    SCIP_CONS** auxconss;
    SCIP_VAR** auxvars;
    SCIP_Real* auxcoefs;
+#ifdef WITH_DEBUG_SOLUTION
+   SCIP_Real* auxsolvals; /* value of auxiliary variable in debug solution */
+#endif
    SCIP_Real scale;
    char name[SCIP_MAXSTRLEN];
 
@@ -4554,6 +4557,9 @@ SCIP_RETCODE presolveDisaggregate(
    SCIP_CALL( SCIPallocBufferArray(scip, &auxconss, ncomponents) );
    SCIP_CALL( SCIPallocBufferArray(scip, &auxvars,  ncomponents) );
    SCIP_CALL( SCIPallocBufferArray(scip, &auxcoefs, ncomponents) );
+#ifdef WITH_DEBUG_SOLUTION
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &auxsolvals, ncomponents) );
+#endif
 
    /* create auxiliary variables and empty constraints for each component */
    for( comp = 0; comp < ncomponents; ++comp )
@@ -4595,6 +4601,16 @@ SCIP_RETCODE presolveDisaggregate(
       SCIPfreeBlockMemoryArray(scip, &consdata->quadvarterms[i].adjbilin, consdata->quadvarterms[i].adjbilinsize);
       consdata->quadvarterms[i].nadjbilin = 0;
       consdata->quadvarterms[i].adjbilinsize = 0;
+
+#ifdef WITH_DEBUG_SOLUTION
+      if( SCIPdebugIsMainscip(scip) )
+      {
+         SCIP_Real debugvarval;
+
+         SCIP_CALL( SCIPdebugGetSolVal(scip, consdata->quadvarterms[i].var, &debugvarval) );
+         auxsolvals[comp] += consdata->quadvarterms[i].lincoef * debugvarval + consdata->quadvarterms[i].sqrcoef * debugvarval * debugvarval;
+      }
+#endif
    }
 
    /* add bilinear terms to each component constraint */
@@ -4612,6 +4628,18 @@ SCIP_RETCODE presolveDisaggregate(
 
       if( ABS(consdata->bilinterms[i].coef) < auxcoefs[comp] )
          auxcoefs[comp] = ABS(consdata->bilinterms[i].coef);
+
+#ifdef WITH_DEBUG_SOLUTION
+      if( SCIPdebugIsMainscip(scip) )
+      {
+         SCIP_Real debugvarval1;
+         SCIP_Real debugvarval2;
+
+         SCIP_CALL( SCIPdebugGetSolVal(scip, consdata->bilinterms[i].var1, &debugvarval1) );
+         SCIP_CALL( SCIPdebugGetSolVal(scip, consdata->bilinterms[i].var2, &debugvarval2) );
+         auxsolvals[comp] += consdata->bilinterms[i].coef * debugvarval1 * debugvarval2;
+      }
+#endif
    }
 
    /* forget about bilinear terms in cons */
@@ -4645,7 +4673,7 @@ SCIP_RETCODE presolveDisaggregate(
    /* add auxiliary variables to auxiliary constraints
     * add aux vars and constraints to SCIP 
     * add aux vars to this constraint
-    * @todo compute debug solution values and set for auxvars
+    * set value of aux vars in debug solution, if any
     */
    SCIPdebugMsg(scip, "add %d constraints for disaggregation of quadratic constraint <%s>\n", ncomponents, SCIPconsGetName(cons));
    SCIP_CALL( consdataEnsureLinearVarsSize(scip, consdata, consdata->nlinvars + ncomponents) );
@@ -4667,6 +4695,14 @@ SCIP_RETCODE presolveDisaggregate(
       assert(auxconsdata != NULL);
       auxconsdata->isdisaggregated = TRUE;
 
+#ifdef WITH_DEBUG_SOLUTION
+      if( SCIPdebugIsMainscip(scip) )
+      {
+         /* auxvar should take value from auxsolvals in debug solution, but we also scaled auxvar by auxcoefs[comp] */
+         SCIP_CALL( SCIPdebugAddSolVal(scip, auxvars[comp], auxsolvals[comp] / auxcoefs[comp]) );
+      }
+#endif
+
       SCIP_CALL( SCIPreleaseCons(scip, &auxconss[comp]) );
       SCIP_CALL( SCIPreleaseVar(scip, &auxvars[comp]) );
    }
@@ -4677,6 +4713,9 @@ SCIP_RETCODE presolveDisaggregate(
    SCIPfreeBufferArray(scip, &auxconss);
    SCIPfreeBufferArray(scip, &auxvars);
    SCIPfreeBufferArray(scip, &auxcoefs);
+#ifdef WITH_DEBUG_SOLUTION
+   SCIPfreeBufferArray(scip, &auxsolvals);
+#endif
    SCIPhashmapFree(&var2component);
 
    return SCIP_OKAY;
