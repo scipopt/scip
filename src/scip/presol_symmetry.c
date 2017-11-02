@@ -321,7 +321,7 @@ SCIP_RETCODE collectCoefficients(
    /* duplicate variable and value array */
    nvars = nlinvars;
    SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, linvars, nvars) );
-   if ( linvals != 0 )
+   if ( linvals != NULL )
    {
       SCIP_CALL( SCIPduplicateBufferArray(scip, &vals, linvals, nvars) );
    }
@@ -507,7 +507,7 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
 
       SCIPdebugMsg(scip, "Verifying automorphism group generator #%d ...\n", p);
       P = perms[p];
-      assert( P != 0 );
+      assert( P != NULL );
 
       for (j = 0; j < matrixdata->npermvars; ++j)
       {
@@ -955,7 +955,7 @@ SCIP_RETCODE computeSymmetryGroup(
       SCIP_VAR* var;
 
       var = vars[j];
-      assert( var != 0 );
+      assert( var != NULL );
 
       /* if the variable type should be fixed just increase the color */
       if ( SymmetryFixVar(fixedtype, var) )
@@ -1244,7 +1244,7 @@ SCIP_DECL_PRESOLINITPRE(presolInitpreSymmetry)
    assert( strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0 );
 
    presoldata = SCIPpresolGetData(presol);
-   assert( presoldata != 0 );
+   assert( presoldata != NULL );
 
    SCIPdebugMsg(scip, "Initialization of symmetry presolver.\n");
 
@@ -1395,7 +1395,7 @@ SCIP_RETCODE SCIPincludePresolSymmetry(
    SCIP_PRESOLDATA* presoldata = NULL;
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &presoldata) );
-   assert( presoldata != 0 );
+   assert( presoldata != NULL );
 
    presoldata->symspecrequire = 0;
    presoldata->symspecrequirefixed = 0;

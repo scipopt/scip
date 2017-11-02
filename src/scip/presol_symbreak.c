@@ -964,11 +964,11 @@ SCIP_RETCODE addSymresackConss(
    int i;
    int p;
 
-   assert( scip != 0 );
-   assert( presol != 0 );
+   assert( scip != NULL );
+   assert( presol != NULL );
 
    presoldata = SCIPpresolGetData(presol);
-   assert( presoldata != 0 );
+   assert( presoldata != NULL );
 
    perms = presoldata->perms;
    nperms = presoldata->nperms;
@@ -1046,11 +1046,11 @@ SCIP_RETCODE addSymmetryBreakingConstraints(
    SCIP_PRESOLDATA* presoldata;
    SCIP_Bool addsymresacks;
 
-   assert( scip != 0 );
-   assert( presol != 0 );
+   assert( scip != NULL );
+   assert( presol != NULL );
 
    presoldata = SCIPpresolGetData(presol);
-   assert( presoldata != 0 );
+   assert( presoldata != NULL );
 
    /* exit if no or only trivial symmetry group is available */
    if ( presoldata->nperms < 1 )
@@ -1058,7 +1058,7 @@ SCIP_RETCODE addSymmetryBreakingConstraints(
 
    if ( presoldata->addsymresacks )
    {
-      SCIP_CALL( SCIPgetBoolParam(scip, "presolving/" PRESOL_NAME"/forceaddingconss", &addsymresacks) );
+      SCIP_CALL( SCIPgetBoolParam(scip, "presolving/" PRESOL_NAME "/forceaddingconss", &addsymresacks) );
 
       if ( ! addsymresacks )
       {
@@ -1082,7 +1082,7 @@ SCIP_RETCODE addSymmetryBreakingConstraints(
          assert( 0 <= nvarsinorbits && nvarsinorbits <= presoldata->npermvars );
 
          if ( nvarsinorbits >= 0.95 * presoldata->npermvars ||
-            ( nvarsinorbits >= 0.05 * presoldata->npermvars && ratiogroupsizengens <= 0.55) )
+            ( nvarsinorbits >= 0.05 * presoldata->npermvars && ratiogroupsizengens <= 0.55 ) )
             decision = TRUE;
 
          if ( decision )
@@ -1134,7 +1134,7 @@ SCIP_DECL_PRESOLINIT(presolInitSymbreak)
    SCIPdebugMsg(scip, "Init method of symmetry breaking presolver ...\n");
 
    presoldata = SCIPpresolGetData(presol);
-   assert( presoldata != 0 );
+   assert( presoldata != NULL );
 
    /* check whether we should run */
    SCIP_CALL( SCIPgetBoolParam(scip, "misc/usesymmetry", &presoldata->enabled) );
@@ -1259,7 +1259,7 @@ SCIP_DECL_PRESOLINITPRE(presolInitpreSymbreak)
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Executing presolver <%s> early, since symmetries are computed early.\n\n", SCIPpresolGetName(presol));
 
-      SCIP_CALL( SCIPsetIntParam(scip, "presolving/" PRESOL_NAME"/priority", 90000000) );
+      SCIP_CALL( SCIPsetIntParam(scip, "presolving/" PRESOL_NAME "/priority", 90000000) );
    }
 
    return SCIP_OKAY;
@@ -1285,7 +1285,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
    *result = SCIP_DIDNOTRUN;
 
    presoldata = SCIPpresolGetData(presol);
-   assert( presoldata != 0 );
+   assert( presoldata != NULL );
 
    /* possibly skip presolver */
    if ( ! presoldata->enabled )

@@ -546,7 +546,7 @@ SCIP_RETCODE initLP(
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
-   assert( consdata->vars != 0 );
+   assert( consdata->vars != NULL );
 
    nvars = consdata->nvars;
    vars = consdata->vars;
@@ -1175,8 +1175,8 @@ SCIP_DECL_CONSFREE(consFreeSymresack)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
 
-   assert( scip != 0 );
-   assert( conshdlr != 0 );
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -1286,7 +1286,7 @@ SCIP_DECL_CONSINITLP(consInitlpSymresack)
    for (c = 0; c < nconss; ++c)
    {
       /* get data of constraint */
-      assert( conss[c] != 0 );
+      assert( conss[c] != NULL );
 
       SCIPdebugMessage("Generating initial symresack cut for constraint <%s> ...\n", SCIPconsGetName(conss[c]));
 
@@ -1327,7 +1327,7 @@ SCIP_DECL_CONSSEPALP(consSepalpSymresack)
       int ngen = 0;
 
       /* get data of constraint */
-      assert( conss[c] != 0 );
+      assert( conss[c] != NULL );
       consdata = SCIPconsGetData(conss[c]);
 
       /* get solution */
@@ -1377,7 +1377,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolSymresack)
       int ngen = 0;
 
       /* get data of constraint */
-      assert( conss[c] != 0 );
+      assert( conss[c] != NULL );
       consdata = SCIPconsGetData(conss[c]);
 
       /* get solution */
@@ -1435,7 +1435,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpSymresack)
       int ngen = 0;
 
       /* get data of constraint */
-      assert( conss[c] != 0 );
+      assert( conss[c] != NULL );
       consdata = SCIPconsGetData(conss[c]);
 
       /* get solution */
@@ -1584,7 +1584,7 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxSymresack)
       int ngen = 0;
 
       /* get data of constraint */
-      assert( conss[c] != 0 );
+      assert( conss[c] != NULL );
       consdata = SCIPconsGetData(conss[c]);
 
       /* get solution */
@@ -1717,7 +1717,7 @@ SCIP_DECL_CONSPROP(consPropSymresack)
       SCIP_Bool infeasible = FALSE;
       int localngen = 0;
 
-      assert( conss[c] != 0 );
+      assert( conss[c] != NULL );
 
       SCIP_CALL( propVariables(scip, conss[c], &infeasible, &localngen) );
 
@@ -1767,7 +1767,7 @@ SCIP_DECL_CONSPRESOL(consPresolSymresack)
       SCIP_CONSDATA* consdata;
       int localngen = 0;
 
-      assert( conss[c] != 0 );
+      assert( conss[c] != NULL );
 
       consdata = SCIPconsGetData(conss[c]);
       assert( consdata != NULL );
