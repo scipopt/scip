@@ -56,12 +56,17 @@
 #define DEFAULT_ADDCLIQUE                    FALSE /**< Add binary constraints also as a clique. */
 #define DEFAULT_ADDBINCONSROW                FALSE /**< Should binary constraints be added as rows to the base LP? */
 #define DEFAULT_USEDOMAINREDUCTION           TRUE  /**< Should domain reductions be collected and applied? */
-#define DEFAULT_MAXNUMBERVIOLATEDCONS        1     /**< How many constraints that are violated by the base lp solution should
-                                                    *   be gathered until the rule is stopped and they are added? */
+#define DEFAULT_MAXNUMBERVIOLATEDCONS        1     /**< How many constraints that are violated by the base lp solution
+                                                    *   should be gathered until the rule is stopped and they are added? */
+#define DEFAULT_MAXNUMBERVIOLATEDBINCONS     -1    /**< How many binary constraints that are violated by the base lp
+                                                    *   solution should be gathered until the rule is stopped and they are
+                                                    *   added? */
+#define DEFAULT_MAXNUMBERVIOLATEDDOMREDS     -1    /**< How many domain reductions that are violated by the base lp solution
+                                                    *   should be gathered until the rule is stopped and they are added? */
 #define DEFAULT_STOREUNVIOLATEDSOL           TRUE  /**< If only non violating constraints are added, should the branching
                                                     *   decision be stored till the next call? */
-#define DEFAULT_REEVALAGE                    10LL  /**< Max number of LPs solved after which a previous prob branching results
-                                                    *   are recalculated. */
+#define DEFAULT_REEVALAGE                    10LL  /**< Max number of LPs solved after which a previous prob branching
+                                                    *   results are recalculated. */
 #define DEFAULT_FORCEBRANCHING               FALSE /**< Should LAB be forced, if only one candidate is given? */
 #define DEFAULT_RECURSIONDEPTH               2     /**< The max depth of LAB. */
 #define DEFAULT_ADDNONVIOCONS                FALSE /**< Should binary constraints, that are not violated by the base LP, be
@@ -431,8 +436,13 @@ typedef struct
 {
    SCIP_Longint          reevalage;          /**< The number of "normal" (not probing) lps that may have been solved before
                                               *   we stop using old data and start recalculating new first level data. */
-   int                   maxnviolatedcons;   /**< The number of constraints we want to gather before restarting the run. Set
-                                              *   to -1 for an unbounded list. */
+   int                   maxnviolatedcons;   /**< The number of constraints (domain reductions and binary constraints) we
+                                              *   want to gather before restarting the run. Set to -1 for an unbounded
+                                              *   number of constraints. */
+   int                   maxnviolatedbincons;/**< The number of binary constraints we want to gather before restarting the
+                                              *   run. Set to -1 for an undbounded number of binary constraints. */
+   int                   maxnviolateddomreds;/**< The number of domain reductions we want to gather before restarting the
+                                              *   run. Set to -1 for an undbounded number of domain reductions. */
    int                   recursiondepth;     /**< How deep should the recursion go? Default for Lookahead: 2 */
    int                   maxncands;          /**< If abbreviated == TRUE, at most how many candidates should be handled? */
    SCIP_Bool             usedomainreduction; /**< indicates whether the data for domain reductions should be gathered and
@@ -3766,6 +3776,7 @@ SCIP_RETCODE selectVarRecursive(
                   }
                }
 
+               /* the second iteration of the loop should branch in the other direction */
                down = !down;
             }
 
@@ -3918,17 +3929,17 @@ SCIP_RETCODE selectVarRecursive(
                SCIP_CALL( scoreContainerSetScore(scip, scorecontainer, candidate, score) );
             }
 
-            if( config->maxnviolatedcons != -1 && (config->usebincons || config->usedomainreduction) &&
-                  !useoldbranching )
+            if( (config->maxnviolatedcons >= 0 || config->maxnviolatedbincons >= 0 || config->maxnviolateddomreds >= 0 )
+                && (config->usebincons || config->usedomainreduction) && !useoldbranching )
             {
-               int nimpliedbincons = 0;
+               int nbincons = 0;
                int ndomreds = 0;
 
                if( config->usebincons )
                {
-                  nimpliedbincons = binconsdata->createdconstraints->nviolatedcons;
+                  nbincons = binconsdata->createdconstraints->nviolatedcons;
                   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Found <%i> violating binary constraints.\n",
-                        nimpliedbincons);
+                        nbincons);
                }
 
                if( config->usedomainreduction )
@@ -3937,8 +3948,8 @@ SCIP_RETCODE selectVarRecursive(
                   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Found <%i> bound changes.\n", ndomreds);
                }
 
-               /* @todo add two individual limits for constraints and dom changes */
-               if( nimpliedbincons + ndomreds >= config->maxnviolatedcons )
+               if( (nbincons >= config->maxnviolatedbincons) || (ndomreds >=config->maxnviolateddomreds) ||
+                     (nbincons + ndomreds >= config->maxnviolatedcons) )
                {
                   status->maxnconsreached = TRUE;
                }
@@ -4756,8 +4767,16 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          &branchruledata->config->addbinconsrow, TRUE, DEFAULT_ADDBINCONSROW, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "branching/lookahead/maxnumberviolatedcons",
          "how many constraints that are violated by the base lp solution should be gathered until the rule is stopped and "\
-               "they are added?",
+         "they are added?",
          &branchruledata->config->maxnviolatedcons, TRUE, DEFAULT_MAXNUMBERVIOLATEDCONS, -1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip, "branching/lookahead/maxnumberviolatedbincons",
+         "how many binary constraints that are violated by the base lp solution should be gathered until the rule is "\
+         "stopped and they are added?",
+         &branchruledata->config->maxnviolatedbincons, TRUE, DEFAULT_MAXNUMBERVIOLATEDBINCONS, -1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip, "branching/lookahead/maxnumberviolateddomreds",
+         "how many domain reductions that are violated by the base lp solution should be gathered until the rule is "\
+         "stopped and they are added?",
+         &branchruledata->config->maxnviolateddomreds, TRUE, DEFAULT_MAXNUMBERVIOLATEDDOMREDS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddLongintParam(scip,
          "branching/lookahead/reevalage",
          "max number of LPs solved after which a previous prob branching results are recalculated",
