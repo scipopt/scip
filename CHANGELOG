@@ -140,6 +140,9 @@ interface:
 testing:
 - added make options for specifying EXECUTABLE and OUTPUTDIR variables for the make test target
 
+makefile:
+- default build is now with ZIMPL=false
+
 SCIP version 4.0.0
 ==================
 
