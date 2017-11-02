@@ -1,4 +1,0 @@
-FLAGS		+=	-DROUNDING_FE
-OFLAGS		+=	-O0 -g
-CFLAGS		+=	$(GCCWARN) -funit-at-a-time
-CXXFLAGS	+=	$(GXXWARN) -funit-at-a-time
