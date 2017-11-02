@@ -1119,6 +1119,7 @@ void updateNeighborhoodStats(
  *
  *  - variable distances should be used and a has a smaller distance than b
  *  - variable reduced costs should be used and a has a smaller score than b
+ *  - variable pseudo costs should be used and a has a smaller score than b
  *  - based on previously assigned random scores
  *
  *  @note: distances are context-based. For fixing more variables,
@@ -1227,9 +1228,9 @@ SCIP_Real getVariableRedcostScore(
       bestbound = SCIPvarGetBestRootSol(var);
 
       /* using global reduced costs, the two factors yield a nonnegative score within tolerances */
-      assert(SCIPisFeasZero(scip, redcost)
-         || (SCIPisFeasNegative(scip, redcost) && ! SCIPisFeasPositive(scip, refsolval - bestbound))
-         || (SCIPisFeasPositive(scip, redcost) && ! SCIPisFeasNegative(scip, refsolval - bestbound)));
+      assert(SCIPisDualfeasZero(scip, redcost)
+         || (SCIPisDualfeasNegative(scip, redcost) && ! SCIPisFeasPositive(scip, refsolval - bestbound))
+         || (SCIPisDualfeasPositive(scip, redcost) && ! SCIPisFeasNegative(scip, refsolval - bestbound)));
 
    }
    else
@@ -1244,7 +1245,7 @@ SCIP_Real getVariableRedcostScore(
    }
 
    assert(! SCIPisInfinity(scip, REALABS(bestbound)));
-   assert(SCIPisFeasZero(scip, redcost) || SCIPisFeasIntegral(scip, bestbound));
+   assert(SCIPisDualfeasZero(scip, redcost) || SCIPisFeasIntegral(scip, bestbound));
 
    score = redcost * (refsolval - bestbound);
 
