@@ -15383,7 +15383,9 @@ SCIP_RETCODE SCIPaddBilinearIneqQuadratic(
       SCIP_Real bestviol;
       int pos = -1;
 
-      /* given the violations (v1,w1), (v2,w2), (v3,w3) we select two inequalities i and j that
+      /* compute resulting violations of both corner points when replacing an existing inequality
+       *
+       * given the violations (v1,w1), (v2,w2), (v3,w3) we select two inequalities i and j that
        * maximize max{vi,vj} + max{wi,wj} this measurement guarantees that select inequalities that
        * separate both important corner points
        */
@@ -15397,11 +15399,12 @@ SCIP_RETCODE SCIPaddBilinearIneqQuadratic(
          if( SCIPisGT(scip, viol, bestviol) )
          {
             bestviol = viol;
+            /* remember inequality that should be replaced */
             pos = 1 - i;
          }
       }
 
-      /* update inequality */
+      /* replace inequality at pos when replacing an existing inequality improved the total violation */
       if( pos != -1 )
       {
          assert(pos >= 0 && pos < 2);
