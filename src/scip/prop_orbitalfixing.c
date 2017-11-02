@@ -536,8 +536,8 @@ SCIP_DECL_PROPINITSOL(propInitsolOrbitalfixing)
    if ( ! propdata->enabled )
       return SCIP_OKAY;
 
-   /* possibly stop */
-   if ( SCIPisStopped(scip) )
+   /* stop, if problem has already been solved */
+   if ( SCIPgetStatus(scip) != SCIP_STATUS_UNKNOWN )
       return SCIP_OKAY;
 
    assert( SCIPisTransformed(scip) );
