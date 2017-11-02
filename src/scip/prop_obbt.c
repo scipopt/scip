@@ -932,8 +932,8 @@ SCIP_RETCODE filterExistingLP(
       /* check all corners */
       for( j = 0; j < 4; ++j )
       {
-         SCIP_Real xt;
-         SCIP_Real yt;
+         SCIP_Real xt = SCIP_INVALID;
+         SCIP_Real yt = SCIP_INVALID;
 
          getCorner(bilinbound->x, bilinbound->y, corners[j], &xt, &yt);
 
@@ -2287,10 +2287,10 @@ SCIP_RETCODE applyObbtBilinear(
          SCIP_Real xcoef;
          SCIP_Real ycoef;
          SCIP_Real constant;
-         SCIP_Real xs;
-         SCIP_Real ys;
-         SCIP_Real xt;
-         SCIP_Real yt;
+         SCIP_Real xs = SCIP_INVALID;
+         SCIP_Real ys = SCIP_INVALID;
+         SCIP_Real xt = SCIP_INVALID;
+         SCIP_Real yt = SCIP_INVALID;
 
          /* skip corners that lead to an under- or overestimate that is not needed */
          if( ((corner == LEFTTOP || corner == RIGHTBOTTOM) && bilinbound->nunderest == 0)
