@@ -51,7 +51,6 @@
 //#define SCIP_DEFAULT_CUTSASCONS          FALSE  /** Should the transferred cuts be added as constraints? */
 #define SCIP_DEFAULT_MIPCHECKFREQ            5  /** the number of iterations that the MIP is checked, -1 for always. */
 #define SCIP_DEFAULT_LNSCHECK              TRUE /** should the Benders' decomposition be used in LNS heuristics */
-#define SCIP_DEFAULT_COPYBENDERS           TRUE /** Should Benders' decomposition be copied in sub-SCIPs? */
 
 #define AUXILIARYVAR_NAME     "##bendersauxiliaryvar"
 #define MW_AUXILIARYVAR_NAME  "##MWauxiliaryvar##"
@@ -872,7 +871,7 @@ SCIP_RETCODE SCIPbendersCopyInclude(
    assert(valid != NULL);
    assert(set->scip != NULL);
 
-   if( benders->benderscopy != NULL && benders->copybenders )
+   if( benders->benderscopy != NULL && set->benders_copybenders )
    {
       SCIPsetDebugMsg(set, "including benders %s in subscip %p\n", SCIPbendersGetName(benders), (void*)set->scip);
       SCIP_CALL( benders->benderscopy(set->scip, benders, valid) );
@@ -1044,11 +1043,6 @@ SCIP_RETCODE SCIPbendersCreate(
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "Should Benders' decomposition be used in LNS heurisics?");
    SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname, paramdesc,
                   &(*benders)->lnscheck, FALSE, SCIP_DEFAULT_LNSCHECK, NULL, NULL) ); /*lint !e740*/
-
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/copybenders", name);
-   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "Should Benders' decomposition be copied in sub-SCIPs?");
-   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname, paramdesc,
-                  &(*benders)->copybenders, FALSE, SCIP_DEFAULT_COPYBENDERS, NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -1851,6 +1845,19 @@ SCIP_RETCODE SCIPbendersExec(
       return SCIP_OKAY;
    }
 
+   /* it is not necessary to check all primal solutions by solving the Benders' decomposition subproblems.
+    * Only the improving solutions are checked to improve efficiency of the algorithm.
+    * If the solution is non-improving, the result FEASIBLE is returned. While this may be incorrect w.r.t to the
+    * Benders' subproblems, this solution will never be the optimal solution. A non-improving solution may be used
+    * within LNS primal heuristics. If this occurs, the improving solution, if found, will be checked by the solving
+    * the Benders' decomposition subproblems.
+    * TODO: Add a parameter to control this behaviour.*/
+   if( checkint && SCIPsetIsFeasLE(set, SCIPgetPrimalbound(set->scip), SCIPgetSolOrigObj(set->scip, sol)) )
+   {
+      (*result) = SCIP_FEASIBLE;
+      return SCIP_OKAY;
+   }
+
 #if 0
    /* This is part of testing!!!
     * A flag `onlylpcheck` has been added to force only the LP's to be checked during a LNS heuristic solve. As such,
@@ -2013,7 +2020,7 @@ SCIP_RETCODE SCIPbendersExec(
                   /* if the subproblem is an LP, then only LP based cuts are generated. This is also only performed in
                    * the first iteration of the solve loop. */
                   if( (l == 0 && SCIPbenderscutIsLPCut(benderscuts[k]))
-                     || (l > 0 && !lpsub && !SCIPbenderscutIsLPCut(benderscuts[k])) )
+                     || (l > 0 && !lpsub && !SCIPbenderscutIsLPCut(benderscuts[k]) && i == 0) )
                      SCIP_CALL( SCIPbenderscutExec(benderscuts[k], set, benders, sol, i, type, result) );
 
                   addedcuts += (SCIPbenderscutGetNAddedCons(benderscuts[k]) + SCIPbenderscutGetNAddedCuts(benderscuts[k]) - prevaddedcuts);
@@ -2022,13 +2029,18 @@ SCIP_RETCODE SCIPbendersExec(
          }
 
          /* if no cuts were added, then the number of solve loops is increased */
-         if( addedcuts == 0 && SCIPbendersGetNLPSubprobs(benders) < SCIPbendersGetNSubproblems(benders)
+         if( SCIPbendersGetNLPSubprobs(benders) < SCIPbendersGetNSubproblems(benders)
             && benders->benderssolvesub == NULL && checkint && !onlylpcheck )
             nsolveloops = 2;
       }
    }
 
    allchecked = (nchecked == nsubproblems);
+
+#ifndef NDEBUG
+   if( (*result) == SCIP_CONSADDED )
+      SCIPdebugMessage("Benders decomposition: Cut added\n");
+#endif
 
    if( checkint && (type == CHECK || (*result) != SCIP_CONSADDED) )
    {
@@ -2073,6 +2085,7 @@ SCIP_RETCODE SCIPbendersExec(
 
    /* increment the number of calls to the Benders' decomposition subproblem solve */
    benders->ncalls++;
+
 
    /* freeing memory */
    SCIPsetFreeBufferArray(set, &subisinfeas);
@@ -2332,6 +2345,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemMIP(
    char prevResolveAlgParam;
    SCIP_Bool prevConfParam;
    SCIP_Bool prevDualParam;
+   SCIP_Bool prevCtrlCParam;
    SCIP_Bool prevScaleObjParam;
    SCIP_Bool mipchecksolve;
    SCIP_Bool lperror;
@@ -2356,6 +2370,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemMIP(
    SCIP_CALL( SCIPgetCharParam(subproblem, "lp/resolvealgorithm", &prevResolveAlgParam) );
    SCIP_CALL( SCIPgetBoolParam(subproblem, "misc/alwaysgetduals", &prevDualParam) );
    SCIP_CALL( SCIPgetBoolParam(subproblem, "misc/scaleobj", &prevScaleObjParam) );
+   SCIP_CALL( SCIPgetBoolParam(subproblem, "misc/catchctrlc", &prevCtrlCParam) );
    SCIP_CALL( SCIPgetIntParam(subproblem, "propagating/maxrounds", &prevPropMaxroundsParam) );
    SCIP_CALL( SCIPgetIntParam(subproblem, "propagating/maxroundsroot", &prevPropMaxroundsRootParam) );
    SCIP_CALL( SCIPgetIntParam(subproblem, "limits/bestsol", &prevLimitsBestsolParam) );
@@ -2425,6 +2440,9 @@ SCIP_RETCODE SCIPbendersSolveSubproblemMIP(
       SCIP_CALL( SCIPsetBoolParam(subproblem, "misc/alwaysgetduals", TRUE) );
       SCIP_CALL( SCIPsetBoolParam(subproblem, "misc/scaleobj", FALSE) );
 
+      /* do not abort subproblem on CTRL-C */
+      SCIP_CALL( SCIPsetBoolParam(subproblem, "misc/catchctrlc", FALSE) );
+
       //SCIPinfoMessage(subproblem, NULL, "Pricing problem %d\n", probnumber);
       SCIP_CALL( SCIPsetIntParam(subproblem, "display/verblevel", (int)SCIP_VERBLEVEL_NONE) );
 
@@ -2493,6 +2511,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemMIP(
    SCIP_CALL( SCIPsetCharParam(subproblem, "lp/resolvealgorithm", prevResolveAlgParam) );
    SCIP_CALL( SCIPsetBoolParam(subproblem, "misc/alwaysgetduals", prevDualParam) );
    SCIP_CALL( SCIPsetBoolParam(subproblem, "misc/scaleobj", prevScaleObjParam) );
+   SCIP_CALL( SCIPsetBoolParam(subproblem, "misc/catchctrlc", prevCtrlCParam) );
    SCIP_CALL( SCIPsetIntParam(subproblem, "propagating/maxrounds", prevPropMaxroundsParam) );
    SCIP_CALL( SCIPsetIntParam(subproblem, "propagating/maxroundsroot", prevPropMaxroundsRootParam) );
    SCIP_CALL( SCIPsetIntParam(subproblem, "limits/bestsol", prevLimitsBestsolParam) );
@@ -2527,7 +2546,7 @@ SCIP_RETCODE SCIPbendersFreeSubproblem(
       {
          /* if the subproblems were solved as part of an enforcement stage, then they will still be in probing mode. The
           * probing mode must first be finished and then the problem can be freed */
-         if( SCIPinProbing(subproblem) )
+         if( SCIPgetStage(subproblem) >= SCIP_STAGE_TRANSFORMED && SCIPinProbing(subproblem) )
             SCIP_CALL( SCIPendProbing(subproblem) );
 
          SCIP_CALL( SCIPfreeTransform(subproblem) );

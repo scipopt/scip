@@ -38,7 +38,7 @@ heuristics/dins-benders/maxnodes = 20
 
 # factor by which dins-benders should at least improve the incumbent
 # [type: real, advanced: TRUE, range: [0,1], default: 0.01]
-heuristics/dins-benders/minimprove = 0.0001
+heuristics/dins-benders/minimprove = 0.01
 
 # number of nodes without incumbent change that heuristic should wait
 # [type: longint, advanced: TRUE, range: [0,9223372036854775807], default: 200]

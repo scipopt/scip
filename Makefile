@@ -526,7 +526,6 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_completesol.o \
 			scip/heur_crossover.o \
 			scip/heur_dins.o \
-			scip/heur_dins-benders.o \
 			scip/heur_distributiondiving.o \
 			scip/heur_dualval.o \
 			scip/heur_feaspump.o \
@@ -550,14 +549,12 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_ofins.o \
 			scip/heur_oneopt.o \
 			scip/heur_proximity.o \
-			scip/heur_proximity-benders.o \
 			scip/heur_pscostdiving.o \
 			scip/heur_reoptsols.o \
 			scip/heur_repair.o \
 			scip/heur_randrounding.o \
 			scip/heur_rens.o \
 			scip/heur_rins.o \
-			scip/heur_rins-benders.o \
 			scip/heur_rootsoldiving.o \
 			scip/heur_rounding.o \
 			scip/heur_shiftandpropagate.o \
@@ -573,6 +570,14 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_veclendiving.o \
 			scip/heur_zeroobj.o \
 			scip/heur_zirounding.o \
+			scip/heur_crossover-benders.o \
+			scip/heur_dins-benders.o \
+			scip/heur_gins-benders.o \
+			scip/heur_localbranching-benders.o \
+			scip/heur_mutation-benders.o \
+			scip/heur_proximity-benders.o \
+			scip/heur_rens-benders.o \
+			scip/heur_rins-benders.o \
 			scip/message_default.o \
 			scip/nodesel_bfs.o \
 			scip/nodesel_breadthfirst.o \
