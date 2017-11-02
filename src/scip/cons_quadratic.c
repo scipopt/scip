@@ -4425,6 +4425,29 @@ SCIP_RETCODE presolveDisaggregateMergeComponents(
    return SCIP_OKAY;
 }
 
+/** compute the next highest power of 2 for a 32-bit argument
+ *
+ * Source: https://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
+ *
+ * @note Returns 0 for v=0.
+ */
+static
+unsigned int nextPowerOf2(
+   unsigned int          v                   /**< input */
+   )
+{
+   v--;
+   v |= v >> 1;
+   v |= v >> 2;
+   v |= v >> 4;
+   v |= v >> 8;
+   v |= v >> 16;
+   v++;
+
+   return v;
+}
+
+
 /** for quadratic constraints that consists of a sum of quadratic terms, disaggregates the sum into a set of constraints by introducing auxiliary variables
  *
  * Assume the quadratic constraint can be written in the form
@@ -4525,8 +4548,8 @@ SCIP_RETCODE presolveDisaggregate(
 
    SCIPfreeBufferArray(scip, &componentssize);
 
-   /* scale all new constraints (ncomponents+1 many) by ncomponents+1, so violations sum up to at most epsilon */
-   scale = ncomponents + 1.0;  /* @todo increase to next power of 2 */
+   /* scale all new constraints (ncomponents+1 many) by ncomponents+1 (or its next power of 2), so violations sum up to at most epsilon */
+   scale = nextPowerOf2((unsigned int)ncomponents + 1);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &auxconss, ncomponents) );
    SCIP_CALL( SCIPallocBufferArray(scip, &auxvars,  ncomponents) );
