@@ -1782,8 +1782,8 @@ SCIP_RETCODE generateZerohalfCut(
             if( sepadata->ncuts > sepadata->cutssize )
             {
                int newsize = SCIPcalcMemGrowSize(scip, sepadata->ncuts);
-               SCIPreallocBlockMemoryArray(scip, &sepadata->cuts, sepadata->cutssize, newsize);
-               SCIPreallocBlockMemoryArray(scip, &sepadata->cutscores, sepadata->cutssize, newsize);
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->cuts, sepadata->cutssize, newsize) );
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->cutscores, sepadata->cutssize, newsize) );
                sepadata->cutssize = newsize;
             }
 
