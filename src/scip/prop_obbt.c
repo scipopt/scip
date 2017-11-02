@@ -2339,8 +2339,8 @@ SCIP_RETCODE applyObbtBilinear(
          SCIPdebugMsg(scip, "LP iterations left: %lld\n", nleftiterations);
 
          /* add inequality to quadratic constraint handler if it separates (xt,yt) */
-         if( !SCIPisHugeValue(scip, xcoef) && !SCIPisHugeValue(scip, ycoef)
-            && !SCIPisFeasZero(scip, xcoef) && !SCIPisFeasZero(scip, ycoef)
+         if( !SCIPisHugeValue(scip, xcoef)  && !SCIPisFeasZero(scip, xcoef)
+            && REALABS(ycoef) < 1e+3 && REALABS(ycoef) > 1e-3 /* TODO add a parameter for this */
             && SCIPisFeasGT(scip, (xcoef*xt - ycoef*yt - constant) / SQRT(SQR(xcoef) + SQR(ycoef) + SQR(constant)), 1e-2) )
          {
             SCIP_Bool success;
