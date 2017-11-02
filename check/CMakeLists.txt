@@ -216,7 +216,7 @@ set(scip_reader_extensions
     "opb"
     "pip"
     "rlp"
-#    "mps"
+    "mps"
     "lp"
     )
 
