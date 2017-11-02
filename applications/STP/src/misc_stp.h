@@ -31,6 +31,13 @@
 extern "C" {
 #endif
 
+/** returns maximum of given SCIP_Real values */
+extern
+SCIP_Real misc_stp_maxReal(
+   SCIP_Real*            realarr,            /**< array of reals */
+   unsigned              nreals              /**< size of array of reals */
+  );
+
 /** graph node structure storing number and distance */
 typedef struct Graph_Node
 {

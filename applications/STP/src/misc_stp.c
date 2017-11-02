@@ -36,6 +36,24 @@
 #include "portab.h"
 #include "scip/misc.h"
 
+
+/** returns maximum of given SCIP_Real values */
+SCIP_Real misc_stp_maxReal(
+   SCIP_Real*            realarr,            /**< array of reals */
+   unsigned              nreals              /**< size of array of reals */
+  )
+{
+   SCIP_Real max = realarr[0];
+
+   assert(nreals >= 1);
+
+   for( unsigned i = 1; i < nreals; i++ )
+      if( realarr[i] > max )
+         max = realarr[i];
+
+   return max;
+}
+
 /** compares distances of two GNODE structures */
 SCIP_DECL_SORTPTRCOMP(GNODECmpByDist)
 {
