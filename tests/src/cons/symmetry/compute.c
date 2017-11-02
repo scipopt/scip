@@ -36,9 +36,11 @@ void setup(void)
    /* turn on symmetry computation */
    SCIP_CALL( SCIPsetBoolParam(scip, "misc/usesymmetry", TRUE) );
 
+#ifdef SCIP_DEBUG
    /* output external codes in order to see which esternal symmetry computation code is used */
    SCIPprintExternalCodes(scip, NULL);
    SCIPinfoMessage(scip, NULL, "\n");
+#endif
 }
 
 /** teardown: free SCIP */
@@ -127,6 +129,7 @@ Test(test_compute_symmetry, basic1, .description = "compute symmetry for a simpl
    SCIP_CALL( SCIPgetSymmetryGenerators(scip, presol, &npermvars, &permvars, &nperms, &perms, NULL) );
    cr_assert( nperms == 3 );
 
+#ifdef SCIP_DEBUG
    for (i = 0; i < nperms; ++i)
    {
       SCIPinfoMessage(scip, NULL, "Permutation %d: (", i);
@@ -139,6 +142,7 @@ Test(test_compute_symmetry, basic1, .description = "compute symmetry for a simpl
       }
       SCIPinfoMessage(scip, NULL, ")\n");
    }
+#ifdef SCIP_DEBUG
 
    SCIP_CALL( SCIPreleaseVar(scip, &var1) );
    SCIP_CALL( SCIPreleaseVar(scip, &var2) );
@@ -224,6 +228,7 @@ Test(test_compute_symmetry, basic2, .description = "compute symmetry for a simpl
    SCIP_CALL( SCIPgetSymmetryGenerators(scip, presol, &npermvars, &permvars, &nperms, &perms, NULL) );
    cr_assert( nperms == 1 );
 
+#ifdef SCIP_DEBUG
    SCIPinfoMessage(scip, NULL, "Permutation: (");
    for (j = 0; j < npermvars; ++j)
    {
@@ -233,7 +238,7 @@ Test(test_compute_symmetry, basic2, .description = "compute symmetry for a simpl
          SCIPinfoMessage(scip, NULL, " %d", perms[0][j]);
    }
    SCIPinfoMessage(scip, NULL, ")\n");
-
+#endif
 
    SCIP_CALL( SCIPreleaseVar(scip, &var1) );
    SCIP_CALL( SCIPreleaseVar(scip, &var2) );
@@ -335,6 +340,7 @@ Test(test_compute_symmetry, basic3, .description = "compute symmetry for a simpl
    SCIP_CALL( SCIPgetSymmetryGenerators(scip, presol, &npermvars, &permvars, &nperms, &perms, NULL) );
    cr_assert( nperms == 1 );
 
+#ifdef SCIP_DEBUG
    for (i = 0; i < nperms; ++i)
    {
       SCIPinfoMessage(scip, NULL, "Permutation %d: (", i);
@@ -347,6 +353,7 @@ Test(test_compute_symmetry, basic3, .description = "compute symmetry for a simpl
       }
       SCIPinfoMessage(scip, NULL, ")\n");
    }
+#endif
 
    SCIP_CALL( SCIPreleaseVar(scip, &var1) );
    SCIP_CALL( SCIPreleaseVar(scip, &var2) );
