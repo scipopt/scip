@@ -939,7 +939,7 @@ SCIP_RETCODE filterExistingLP(
          getCorner(bilinbound->x, bilinbound->y, corners[j], &xt, &yt);
 
          if( (SCIPisInfinity(scip, REALABS(solx)) || SCIPisFeasEQ(scip, xt, solx))
-            || (SCIPisInfinity(scip, REALABS(soly)) || SCIPisFeasEQ(scip, yt, soly)) )
+            && (SCIPisInfinity(scip, REALABS(soly)) || SCIPisFeasEQ(scip, yt, soly)) )
             bilinbound->filtered = bilinbound->filtered | corners[j]; /*lint !e641*/
       }
 
