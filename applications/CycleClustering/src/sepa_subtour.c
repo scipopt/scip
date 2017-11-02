@@ -1,4 +1,3 @@
-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -13,13 +12,14 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file   sepa_edge.c
+/**@file   sepa_subtour.c
  * @brief  If there exists a transition forward along the cycle, then the state that the transition originates from can be reached only after
  * another ncluster - 1 transitions. Therefore cycles with a number of transitions smaller than that can be separated.
  * @author Leon Eifler
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 #include <assert.h>
 #include <string.h>
 
@@ -28,7 +28,6 @@
 #include "scip/cons_linear.h"
 #include "scip/pub_misc.h"
 #include "scip/misc.h"
-
 
 #define SEPA_NAME              "subtour"
 #define SEPA_DESC              "separator that elininates subtours of length smaller than |NCluster| in cycle-clusterign application"
@@ -41,28 +40,25 @@
 #define MAXROUNDS                     5
 
 #ifdef SCIP_DEBUG
+/** Print a cycle to the command line. For debugging purposes */
 static
 void printCycle(
-   SCIP*                 scip,
-   int*                  cycle,
-   int                   cyclelength,
-   int                   nbins
-)
+   SCIP*                 scip,               /**< SCIP data structure */
+   int*                  cycle,              /**< The cycle to be printed */
+   int                   cyclelength,        /**< The length of the cycle */
+   int                   nbins               /**< The number of states */
+   )
 {
    int i;
-   SCIPinfoMessage(scip, NULL, "cycle_l%d_c: %d", cyclelength, cycle[0]);
+
+   SCIPinfoMessage(scip, NULL, "cycle_l%d_c: %d", cyclelength, cycle[0]);x
    for( i = 0; i < cyclelength; ++i )
    {
       SCIPinfoMessage(scip, NULL, " -> %d", cycle[i+1]);
    }
    SCIPinfoMessage(scip, NULL, "\n");
 }
-
 #endif
-
-/** Consider three bins i,j,k. If there is a way from i to j and j and k are in the same cluster, then i and k can be also considered adjacent.
- *  This method adds new arcs to the capacity-graph based on this observation.
- */
 
 /** After finding a violation, construct and add all violated subtour cuts to scip */
 static
@@ -73,9 +69,9 @@ SCIP_RETCODE addSubtourCuts(
    SCIP_Real***          adjmatrices,        /**< The matrizes adjacency-matrix with the weight of all paths with 1,...,|Clutster| arcs */
    int                   cyclelength,        /**< The length of the subtours to add */
    SCIP_Bool*            result,             /**< Pointer to store the result of separation */
-   int*                  ncuts,               /**< Pointer to store number of cuts */
-   int                   start
-)
+   int*                  ncuts,              /**< Pointer to store number of cuts */
+   int                   start               /**< The starting state */
+   )
 {
    SCIP_VAR**** edgevars;
    char cutname[SCIP_MAXSTRLEN];
@@ -89,14 +85,17 @@ SCIP_RETCODE addSubtourCuts(
    int currnode;
    int k;
    int l;
+
    edgevars = SCIPspaGetEdgevars(scip);
    nbins = SCIPdigraphGetNNodes(capgraph);
 
    assert( SCIPisGT(scip, adjmatrices[cyclelength - 1][start][start], cyclelength - 1) );
 
    SCIP_CALL( SCIPallocClearMemoryArray(scip, &processed, nbins) );
+
    cycle[0] = start;
    processed[start] = TRUE;
+
    /* iterate throguh all bins in the cycle */
    for( k = 0; k < cyclelength - 1; ++k )
    {
@@ -106,10 +105,12 @@ SCIP_RETCODE addSubtourCuts(
          doubleloop = TRUE;
          break;
       }
+
       /* reconstruct the successor of the current bin from the adjacency matrices*/
       for( l = 0; l < SCIPdigraphGetNSuccessors(capgraph, cycle[k]); ++l )
       {
          successor = SCIPdigraphGetSuccessors(capgraph, currnode)[l];
+
          /* check if this successor of the current node is the one in the cycle. If so add it. */
          if( SCIPisFeasEQ(scip, adjmatrices[0][currnode][successor] + adjmatrices[cyclelength - (k + 2)][successor][start], adjmatrices[cyclelength - (k + 1)][currnode][start]) )
          {
@@ -124,6 +125,7 @@ SCIP_RETCODE addSubtourCuts(
          }
       }
    }
+
    cycle[cyclelength] = start;
 
    if( !doubleloop )
@@ -140,10 +142,13 @@ SCIP_RETCODE addSubtourCuts(
             nullvars = TRUE;
             break;
          }
+
          SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[cycle[k]][cycle[k+1]][1], 1.0) );
+
          if( k > 0)
             SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[MAX(cycle[k],cycle[k+1])][MIN(cycle[k],cycle[k+1])][0], 1.0) );
       }
+
       SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
       SCIPdebug( printCycle(scip, cycle, cyclelength, nbins) );
       SCIPdebugMsg(scip, "Computed violation: %f \n", adjmatrices[cyclelength - 1][start][start] - cyclelength + 1);
@@ -156,58 +161,69 @@ SCIP_RETCODE addSubtourCuts(
       }
       SCIP_CALL( SCIPreleaseRow(scip, &cut) );
    }
+
    SCIPfreeMemoryArray(scip, &processed);
+
    return SCIP_OKAY;
 }
 
+/** Detect if path inequalities are violated and if so, add them to scip */
 static
 SCIP_RETCODE addPathCuts(
    SCIP*                 scip,               /**< SCIP data structure. */
    SCIP_SEPA*            sepa,               /**< The subtour separator */
    SCIP_DIGRAPH*         capgraph,           /**< The directed edge-graph */
    SCIP_Real***          adjmatrices,        /**< The matrizes adjacency-matrix with the weight of all paths with 1,...,|Clutster| arcs */
-   int                   pathlength,        /**< The length of the subtours to add */
+   int                   pathlength,         /**< The length of the subtours to add */
    SCIP_Bool*            result,             /**< Pointer to store the result of separation */
-   int*                  ncuts,               /**< Pointer to store number of cuts */
-   int                   start
-)
+   int*                  ncuts,              /**< Pointer to store number of cuts */
+   int                   start               /**< The start of the path */
+   )
 {
    SCIP_VAR**** edgevars;
    char cutname[SCIP_MAXSTRLEN];
    SCIP_ROW* cut;
    int path[pathlength + 1];
    SCIP_Bool nullvars = FALSE;
-   int nbins;
-   int successor;
    SCIP_Real edgeweight;
    int currnode;
    int i;
    int j;
    int k;
+   int nbins;
+   int successor;
+
    edgevars = SCIPspaGetEdgevars(scip);
    nbins = SCIPdigraphGetNNodes(capgraph);
 
-
    path[0] =  start;
+
    for( j = 0; j < nbins; ++j )
    {
       if( j == start || edgevars[start][j] == NULL )
          continue;
+
       edgeweight = SCIPvarGetLPSol(edgevars[MAX(start,j)][MIN(start,j)][0]);
+
       if( edgeweight + adjmatrices[pathlength][start][j] > pathlength + 1)
       {
-         for( k = 0; k < pathlength; k++){
+         for( k = 0; k < pathlength; k++ )
+         {
             currnode = path[k];
+
             for( i = 0; i < SCIPdigraphGetNSuccessors(capgraph, currnode); ++i )
             {
                successor = SCIPdigraphGetSuccessors(capgraph, currnode)[i];
+
                assert(successor < nbins && successor >= 0);
+
                if( SCIPisEQ(scip, adjmatrices[0][currnode][successor] + adjmatrices[pathlength - (k + 1)][successor][j], adjmatrices[pathlength - (k)][currnode][j]) )
                {
                   path[k + 1] = successor;
                   break;
                }
             }
+
             assert(path[k+1] >= 0 && path[k+1] < nbins);
          }
 
@@ -229,8 +245,10 @@ SCIP_RETCODE addPathCuts(
             if( k > 0)
                SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[MAX(path[k],path[k+1])][MIN(path[k],path[k+1])][0], 1.0) );
          }
+
          SCIPaddVarToRow(scip, cut, edgevars[MAX(start,j)][MIN(start,j)][0], 1.0);
          SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
+
          SCIPdebug( printCycle(scip, path, l, nbins) );
 
          if( SCIPisCutEfficacious(scip, NULL, cut) && !nullvars )
@@ -239,12 +257,13 @@ SCIP_RETCODE addPathCuts(
             *ncuts += 1;
             *result = SCIP_SEPARATED;
          }
+
          SCIP_CALL( SCIPreleaseRow(scip, &cut) );
       }
    }
+
    return SCIP_OKAY;
 }
-
 
 /** Compute the next matrix with the weight off all the longest paths with fixed number of arcs. */
 static
@@ -253,7 +272,7 @@ SCIP_Bool computeNextAdj(
    SCIP_DIGRAPH*         capgraph,           /**< The directed edge-graph */
    SCIP_Real***          adjmatrices,        /**< The matrizes adjacency-matrix with the weight of all paths with 1,...,|Clutster| arcs */
    int                   cyclelength,        /**< The current number of arcs in the paths */
-   int                   start
+   int                   start               /**< The starting state */
 )
 {
    int i;
@@ -265,6 +284,7 @@ SCIP_Bool computeNextAdj(
 
    foundviolation = FALSE;
    nnodes = SCIPdigraphGetNNodes(capgraph);
+
    for( i = 0; i < nnodes; ++i )
    {
       for( j = 0; j < nnodes; ++j )
@@ -272,6 +292,7 @@ SCIP_Bool computeNextAdj(
          for( l = 0; l < SCIPdigraphGetNSuccessors(capgraph, i); ++l )
          {
             successor = SCIPdigraphGetSuccessors(capgraph, i)[l];
+
             if( SCIPisFeasPositive(scip, adjmatrices[0][i][successor]) && SCIPisFeasPositive(scip, adjmatrices[cyclelength - 2][successor][j]) )
             {
                if( SCIPisGT(scip, adjmatrices[0][i][successor] +  adjmatrices[cyclelength - 2][successor][j], adjmatrices[cyclelength - 1][i][j]) )
@@ -280,15 +301,15 @@ SCIP_Bool computeNextAdj(
          }
       }
    }
+
    /* Check if we have found a violated subtour constraint */
    if( SCIPisGT(scip, adjmatrices[cyclelength - 1][start][start], cyclelength - 1) )
       foundviolation = TRUE;
+
    return foundviolation;
 }
 
-
 /** copy method for separator plugins (called when SCIP copies plugins) */
-
 static
 SCIP_DECL_SEPACOPY(sepaCopySubtour)
 {   /*lint --e{715}*/
@@ -301,7 +322,6 @@ SCIP_DECL_SEPACOPY(sepaCopySubtour)
 
    return SCIP_OKAY;
 }
-
 
 /** LP solution separation method of separator */
 static
@@ -323,12 +343,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSubtour)
    int rounds;
 
    rounds = SCIPsepaGetNCallsAtNode(sepa);
-   /*if( rounds >= MAXROUNDS )
+   if( rounds >= MAXROUNDS || ncluster < 4 )
    {
-    *result =  SCIP_DIDNOTRUN;
+      *result =  SCIP_DIDNOTRUN;
       return SCIP_OKAY;
-   }*/
-   SCIPdebugMsg(scip, "Calls at node: %d \n", rounds);
+   }
 
    edgevars = SCIPspaGetEdgevars(scip);
    nbins = SCIPspaGetNrBins(scip);
@@ -338,11 +357,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSubtour)
    assert(nbins > 0);
    assert(ncluster > 0);
    assert(NULL != edgevars);
-   if( ncluster < 4 )
-   {
-      *result = SCIP_DIDNOTRUN;
-      return SCIP_OKAY;
-   }
+
    /* allocate memory */
    SCIP_CALL( SCIPallocClearMemoryArray(scip, &adjmatrices, ncluster) );
    for( i = 0; i < ncluster; ++i )
@@ -358,6 +373,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSubtour)
    for( a = 0; a < nbins; ++a )
    {
       SCIP_CALL( SCIPdigraphCreate(&capgraph, SCIPblkmem(scip), nbins) );
+
       for( i = 0; i < nbins; ++i )
       {
          for( j = 0; j < nbins; ++j )
@@ -365,14 +381,17 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSubtour)
             if( edgevars[i][j] != NULL && edgevars[i][j][1] != NULL )
             {
                capacity = SCIPvarGetLPSol(edgevars[i][j][1]);
+
                if ( i != a )
                   capacity += SCIPvarGetLPSol(edgevars[MAX(i,j)][MIN(i,j)][0]);
+
                if( SCIPisPositive(scip, capacity) )
                {
                   SCIP_CALL( SCIPdigraphAddArc(capgraph, i, j, &capacity) );
                   adjmatrices[0][i][j] = capacity;
                }
             }
+
             for( k = 1; k < ncluster; ++k )
             {
                adjmatrices[k][i][j] = 0;
@@ -383,11 +402,13 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSubtour)
       /* a cyclelength of one does not make sense as there are no loops */
       cyclelength = 2;
       *result = SCIP_DIDNOTFIND;
+
       /* Iterate until we have found a sufficient number of cuts or until we have checked all possible violations */
       while( cyclelength < ncluster )
       {
          /* Compute the next adjacency matrix */
          violation = computeNextAdj(scip, capgraph, adjmatrices, cyclelength, a);
+
          /* If we found a violation separate it */
          if( violation && cyclelength != ncluster )
             SCIP_CALL( addSubtourCuts(scip, sepa, capgraph, adjmatrices, cyclelength, result, &ncuts, a) );
@@ -395,9 +416,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSubtour)
             SCIP_CALL( addPathCuts(scip, sepa, capgraph, adjmatrices, cyclelength, result, &ncuts, a) );
          cyclelength++;
       }
+
       SCIPdigraphFreeComponents(capgraph);
       SCIPdigraphFree(&capgraph);
    }
+
    /* Free allocated memory */
    for( i = 0; i < ncluster; ++i )
    {
@@ -408,6 +431,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSubtour)
       SCIPfreeMemoryArray(scip, &adjmatrices[i]);
    }
    SCIPfreeMemoryArray(scip, &adjmatrices);
+
    return SCIP_OKAY;
 }
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -30,6 +30,7 @@
 #include <string.h>
 #include <unistd.h>
 #include "scip/debug.h"
+
 #define COL_MAX_LINELEN 1024
 
 /** Read the parameters from the command Line */
@@ -37,7 +38,7 @@ static
 SCIP_RETCODE readParams(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename            /**< parameter file name */
-)
+   )
 {
    if( SCIPfileExists(filename) )
    {
@@ -57,7 +58,7 @@ SCIP_RETCODE fromCommandLine(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< input file name */
    const char*           soluname            /**< input file name */
-)
+   )
 {
    SCIP_RETCODE retcode;
    /********************
@@ -107,8 +108,6 @@ SCIP_RETCODE fromCommandLine(
       default:
          SCIP_CALL( retcode );
       }
-
-
    }
 
    /*******************
@@ -138,7 +137,6 @@ SCIP_RETCODE fromCommandLine(
    SCIPinfoMessage(scip, NULL, "==========\n\n");
    SCIP_CALL( SCIPprintStatistics(scip, NULL) );
 
-
    return SCIP_OKAY;
 }
 
@@ -149,7 +147,7 @@ SCIP_RETCODE processArguments(
    int                   argc,               /**< number of shell parameters */
    char**                argv,               /**< array with shell parameters */
    const char*           defaultsetname      /**< name of default settings file */
-)
+   )
 {
    char* probname = NULL;
    char* soluname = NULL;
@@ -349,14 +347,13 @@ SCIP_RETCODE processArguments(
    return SCIP_OKAY;
 }
 
-
 /** Set up the problem-structure and solve the clustering problem */
 static
 SCIP_RETCODE SCIPrunSpa(
    int                   argc,               /**< number of shell parameters */
    char**                argv,               /**< array with shell parameters */
    const char*           defaultsetname      /**< name of default settings file */
-)
+   )
 {
    SCIP* scip = NULL;
    /*********
@@ -366,9 +363,6 @@ SCIP_RETCODE SCIPrunSpa(
    /* initialize SCIP */
    SCIP_CALL( SCIPcreate(&scip) );
 
-
-   /* add the problem-specifix parameters to scip */
-
    /* include reader, problemdata*/
    SCIP_CALL( SCIPincludeSpaPlugins(scip) );
 
@@ -376,16 +370,16 @@ SCIP_RETCODE SCIPrunSpa(
     * Process command line arguments *
     **********************************/
 
-
    SCIP_CALL( processArguments(scip, argc, argv, defaultsetname) );
    SCIPinfoMessage(scip, NULL, "\n");
+
+   /* free scip */
    SCIP_CALL( SCIPfree(&scip) );
 
    BMScheckEmptyMemory();
 
    return SCIP_OKAY;
 }
-
 
 /** main method */
 int

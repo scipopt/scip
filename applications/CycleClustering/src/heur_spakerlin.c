@@ -44,7 +44,6 @@
  * Local methods
  */
 
-
 /** Get the bin-var assignment from scip and save it as a matrix */
 static
 SCIP_RETCODE getSolutionValues(
@@ -54,7 +53,7 @@ SCIP_RETCODE getSolutionValues(
    SCIP_Bool**           binfixed,           /**< Matrix to save if a bin is fixed in scip */
    int*                  clusterofbin,       /**< Array containing the cluster of each bin */
    int*                  nbinsincluster      /**< Number of bins in each cluster */
-)
+   )
 {
    SCIP_VAR*** binvars;
    SCIP_VAR**** edgevars;
@@ -157,7 +156,6 @@ SCIP_RETCODE getSolutionValues(
    return SCIP_OKAY;
 }
 
-
 /** Set a bin to a new cluster, update the qmatrix. */
 static
 void setBinToCluster(
@@ -169,7 +167,7 @@ void setBinToCluster(
    SCIP_Bool             setone,             /**< TRUE if the assignment is switched from 0 to 1, FALSE if it is switched from 1 to 0*/
    int                   nbins,              /**< The number of bins*/
    int                   ncluster            /**< The number of clusters*/
-)
+   )
 {
    int bin;
    int cluster;
@@ -203,7 +201,7 @@ void computeIrrevMat(
    SCIP_Real**           cmatrix,            /**< The transition-matrix containg the probability-data */
    int                   nbins,              /**< The number of bins */
    int                   ncluster            /**< The number of possible clusters */
-)
+   )
 {
    int i;
    int j;
@@ -236,7 +234,7 @@ SCIP_Real getObjective(
    SCIP_Real**           qmatrix,            /**< The irreversibility matrix*/
    SCIP_Real             scale,              /**< The scaling parameter in the objective function */
    int                   ncluster            /**< The number of cluster*/
-)
+   )
 {
    SCIP_Real objective = 0.0;
    int c;
@@ -270,7 +268,7 @@ SCIP_Bool switchNext(
    SCIP_Real*            maxbound,           /**< The best objective value so far */
    int*                  bestlength,         /**< The amount of switches with the best objective value so far */
    int                   iteration           /**< which iteration are we in */
-)
+   )
 {
    SCIP_Real irrevchg;
    SCIP_Real cohchg;
@@ -396,7 +394,7 @@ SCIP_RETCODE createSwitchSolution(
    SCIP_RESULT*          result,             /**< Result pointer */
    int                   nbins,              /**< The number of states */
    int                   ncluster            /**< The number of clusters */
-)
+   )
 {
    SCIP_SOL* bestsol;
    SCIP_SOL* worksol;
@@ -544,7 +542,7 @@ SCIP_RETCODE permuteStartSolution(
    SCIP_RANDNUMGEN*      rand,               /**< A random number generator */
    int                   nbins,              /**< The number of states */
    int                   ncluster            /**< The number of clusters */
-)
+   )
 {
    int i;
    int t;
@@ -768,7 +766,7 @@ SCIP_DECL_HEUREXEC(heurExecSpakerlin)
 /** creates the oneopt primal heuristic and includes it in SCIP */
 SCIP_RETCODE SCIPincludeHeurSpakerlin(
    SCIP*                 scip                /**< SCIP data structure */
-)
+   )
 {
    SCIP_HEUR* heur;
 

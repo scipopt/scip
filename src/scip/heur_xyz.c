@@ -1,6 +1,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
- /*                  This file is part of the program and library             */
+/*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
 /*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */

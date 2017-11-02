@@ -138,6 +138,7 @@
 #include "scip/presol_domcol.h"
 #include "scip/presol_implfree.h"
 #include "scip/presol_dualagg.h"
+#include "scip/presol_dualcomp.h"
 #include "scip/presol_dualinfer.h"
 #include "scip/presol_gateextraction.h"
 #include "scip/presol_implics.h"

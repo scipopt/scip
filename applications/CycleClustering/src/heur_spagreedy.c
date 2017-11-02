@@ -53,7 +53,7 @@ SCIP_Real getObjective(
    SCIP_Real**           qmatrix,            /**< The irreversibility matrix*/
    SCIP_Real             scale,              /**< The scaling parameter in the objective function */
    int                   ncluster            /**< The number of cluster*/
-)
+   )
 {
    SCIP_Real objective = 0.0;
    int c;
@@ -70,7 +70,6 @@ SCIP_Real getObjective(
    return objective;
 }
 
-
 /** Initialize the q-matrix from a given (possibly incomplete) clusterassignment */
 static
 void computeIrrevMat(
@@ -79,7 +78,7 @@ void computeIrrevMat(
    SCIP_Real**           cmatrix,            /**< The transition-matrix containg the probability-data */
    int                   nbins,              /**< The number of bins */
    int                   ncluster            /**< The number of possible clusters */
-)
+   )
 {
    int i;
    int j;
@@ -117,7 +116,7 @@ void updateIrrevMat(
    int                   newcluster,         /**< The bluster in which the bin was changed */
    int                   nbins,              /**< The number of bins */
    int                   ncluster            /**< The number of clusters */
-)
+   )
 {
    int bin;
    int cluster;
@@ -146,8 +145,6 @@ void updateIrrevMat(
    }
 }
 
-
-
 /** Get the temporary objective value bound after newbin would be added to newcluster but dont not change anything with the clustering */
 static
 SCIP_Real getTempObj(
@@ -159,7 +156,7 @@ SCIP_Real getTempObj(
    int                   newcluster,         /**< The cluster the bin would be added to */
    int                   nbins,              /**< The number of bins */
    int                   ncluster            /**< The number of cluster */
-)
+   )
 {
    SCIP_Real obj;
    SCIP_Real temp;
@@ -194,7 +191,7 @@ SCIP_RETCODE assignNextBin(
    int*                  amountassigned,     /**< The total amount of bins already assigned*/
    int*                  binsincluster,      /**< The number of bins currently in a cluster*/
    SCIP_Real*            objective           /**< The objective */
-)
+   )
 {
    SCIP_Real* binobjective;                  /* gives the best achievable objective for each state-assignment */
    SCIP_Bool** clusterispossible;            /* Saves if a bin can be assigned to a cluster without violating feasibility */

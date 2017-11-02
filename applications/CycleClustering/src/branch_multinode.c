@@ -47,7 +47,7 @@ SCIP_RETCODE getBranchCands(
    SCIP_Real*            branchcandssol,     /**< Pointer to solution values of the candidates */
    SCIP_Real*            branchcandsfrac,    /**< Pointer to fractionalities of the candidates */
    int*                  ncands              /**< Number of branching candidates */
-)
+   )
 {
    SCIP_VAR*** binvars;
    int nbins;
@@ -83,7 +83,7 @@ SCIP_RETCODE branchOnBin(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   row,                /**< The row in the binvar-matrix (not lp-row) to be branched on */
    SCIP_RESULT*          result              /**< Pointer to store result of branching */
-)
+   )
 {
    SCIP_VAR*** binvars;
    SCIP_Bool* branched;
@@ -201,9 +201,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultinode)
                   nzero++;
                }
             }
-            /*if( nzero != 0 )
-               score[i] = score[i]/nzero;*/
-            if( max < score[i] )
+
+            if( SCIPisLT(scip, max, score[i]) )
             {
                max = score[i];
                maxrow = i;
@@ -211,17 +210,16 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultinode)
          }
 
          if( -1 != maxrow )
-         {
-            /* branch on the best candidate */
             SCIP_CALL( branchOnBin(scip, maxrow, result) );
-         }
       }
    }
+
    /* free memory */
    SCIPfreeMemoryArray(scip, &score);
    SCIPfreeMemoryArray(scip, &branchcands);
    SCIPfreeMemoryArray(scip, &branchcandssol);
    SCIPfreeMemoryArray(scip, &branchcandsfrac);
+
    return SCIP_OKAY;
 }
 
@@ -238,7 +236,6 @@ SCIP_RETCODE SCIPincludeBranchruleMultinode(
    SCIP_BRANCHRULE* branchrule;
 
    branchruledata = NULL;
-
 
    /* include branching rule */
    /* use SCIPincludeBranchruleBasic() plus setter functions if you want to set callbacks one-by-one and your code should

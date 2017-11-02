@@ -48,7 +48,7 @@ SCIP_Bool isPartition(
    SCIP_Real**           solclustering,      /**< Matrix with the clustering */
    int                   nbins,              /**< The number of bins */
    int                   ncluster            /**< The number of clusters */
-)
+   )
 {
    int i;
    int j;
@@ -77,7 +77,7 @@ SCIP_RETCODE assignVars(
    SCIP_Real**           clustering,         /**< The matrix with the clusterassignment */
    int                   nbins,              /**< The number of bins */
    int                   ncluster            /**< The number of cluster */
-)
+   )
 {
    SCIP_VAR* var;
    SCIP_VAR*** binvars;
@@ -152,7 +152,7 @@ SCIP_RETCODE assignVars(
 int phi(
    int                   k,                  /**< the cluster */
    int                   ncluster            /**< the number of clusters*/
-)
+   )
 {
    assert(k < ncluster && k >= 0);
    assert(ncluster > 0);
@@ -164,7 +164,7 @@ int phi(
 int phiinv(
    int                   k,                  /**< the cluster */
    int                   ncluster            /**< the number of clusters */
-)
+   )
 {
    assert(k < ncluster && k >= 0);
    assert(ncluster > 0);
@@ -180,7 +180,7 @@ static
 SCIP_RETCODE createVariables(
    SCIP*                 scip,               /**< SCIP Data Structure */
    SCIP_PROBDATA*        probdata            /**< The problem data */
-)
+   )
 {
    int i;
    int j;
@@ -247,7 +247,7 @@ static
 SCIP_RETCODE createProbSimplified(
       SCIP*                 scip,               /**< SCIP Data Structure */
       SCIP_PROBDATA*        probdata            /**< The problem data */
-)
+   )
 {
    int i;
    int j;
@@ -428,9 +428,9 @@ SCIP_RETCODE createProbSimplified(
  * Only useful for comparing relaxations.*/
 static
 SCIP_RETCODE createProbQP(
-      SCIP*                 scip,               /**< SCIP Data Structure */
-      SCIP_PROBDATA*        probdata            /**< The problem data */
-)
+   SCIP*                 scip,               /**< SCIP Data Structure */
+   SCIP_PROBDATA*        probdata            /**< The problem data */
+   )
 {
    SCIP_VAR** edgevars;
    SCIP_CONS* temp;
@@ -579,9 +579,9 @@ SCIP_RETCODE createProbQP(
 /** create the problem with variable amount of clusters. Very large number of constraints not viable for large scale problems. */
 static
 SCIP_RETCODE createProbOnlyEdge(
-      SCIP*                 scip,               /**< SCIP Data Structure */
-      SCIP_PROBDATA*        probdata            /**< The problem data */
-)
+   SCIP*                 scip,               /**< SCIP Data Structure */
+   SCIP_PROBDATA*        probdata            /**< The problem data */
+   )
 {
    SCIP_CONS* temp;
    SCIP_Real scale;
@@ -1015,7 +1015,7 @@ SCIP_RETCODE SCIPcreateProbSpa(
    int                   nbins,              /**< number of bins */
    int                   ncluster,           /**< number of cluster */
    SCIP_Real**           cmatrix             /**< The transition matrix */
-)
+   )
 {
    SCIP_PROBDATA* probdata = NULL;
    int i;
@@ -1084,7 +1084,7 @@ SCIP_RETCODE SCIPcreateProbSpa(
 /** Returns the transition matrix*/
 SCIP_Real** SCIPspaGetCmatrix(
    SCIP*                 scip                /**< SCIP data structure */
-)
+   )
 {
    SCIP_PROBDATA* probdata;
 
@@ -1098,7 +1098,7 @@ SCIP_Real** SCIPspaGetCmatrix(
 /** Returns the number of states */
 int SCIPspaGetNrBins(
    SCIP*                 scip                /**< SCIP data structure */
-)
+   )
 {
    SCIP_PROBDATA* probdata;
    assert(scip != NULL);
@@ -1111,7 +1111,7 @@ int SCIPspaGetNrBins(
 /** Returns the number of clusters*/
 int SCIPspaGetNrCluster(
    SCIP*                 scip                /**< SCIP data structure */
-)
+   )
 {
    SCIP_PROBDATA* probdata;
    assert(scip!= NULL);
@@ -1124,7 +1124,7 @@ int SCIPspaGetNrCluster(
 /** Returns the state-variable-matrix*/
 SCIP_VAR*** SCIPspaGetBinvars(
    SCIP*                 scip                /**< SCIP data structure */
-)
+   )
 {
    SCIP_PROBDATA* probdata;
    assert(scip!= NULL);
@@ -1151,7 +1151,7 @@ SCIP_Real SCIPspaGetScale(
 /** Returns the edge variables */
 SCIP_VAR**** SCIPspaGetEdgevars(
    SCIP*                 scip                /**< SCIP data structure */
-)
+   )
 {
    SCIP_PROBDATA* probdata;
    assert(scip!= NULL);
@@ -1166,7 +1166,7 @@ SCIP_VAR**** SCIPspaGetEdgevars(
 SCIP_RETCODE SCIPspaPrintSolutionValues(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< The solution containg the values */
-)
+   )
 {
    SCIP_PROBDATA* probdata;
    SCIP_Real value;

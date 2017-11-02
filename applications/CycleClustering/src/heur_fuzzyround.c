@@ -104,21 +104,25 @@ SCIP_DECL_HEUREXEC(heurExecFuzzyround)
             maxcluster = k;
             binsincluster[k]++;
          }
-         else if( SCIPisEQ(scip, SCIPvarGetLPSol(binvars[i][k]), maxlpval) &&  maxcluster != -1 && binsincluster[maxcluster] > binsincluster[k] )
+         else if( SCIPisEQ(scip, SCIPvarGetLPSol(binvars[i][k]), maxlpval) && maxcluster != -1 && binsincluster[maxcluster] > binsincluster[k] )
          {
             binsincluster[maxcluster]--;
             binsincluster[k]++;
             maxcluster = k;
          }
       }
+
       assert(maxcluster >= 0);
+
       clustering[i][maxcluster] = 1.0;
    }
+
    assert(isPartition(scip, clustering, nbins, ncluster));
 
    SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
    assignVars(scip, sol, clustering, nbins, ncluster);
    SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, TRUE, TRUE, TRUE, TRUE, &feasible) );
+
    if( feasible )
       *result = SCIP_FOUNDSOL;
    else
@@ -131,6 +135,7 @@ SCIP_DECL_HEUREXEC(heurExecFuzzyround)
    }
    SCIPfreeMemoryArray(scip, &clustering);
    SCIPfreeMemoryArray(scip, &binsincluster);
+
    return SCIP_OKAY;
 }
 
@@ -141,7 +146,7 @@ SCIP_DECL_HEUREXEC(heurExecFuzzyround)
 /** creates the oneopt primal heuristic and includes it in SCIP */
 SCIP_RETCODE SCIPincludeHeurFuzzyround(
    SCIP*                 scip                /**< SCIP data structure */
-)
+   )
 {
    SCIP_HEUR* heur;
 

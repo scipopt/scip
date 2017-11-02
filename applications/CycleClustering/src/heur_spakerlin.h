@@ -1,19 +1,9 @@
-/*
- * heur_spaswitch.h
- *
- *  Created on: Feb 23, 2016
- *      Author: bzfeifle
- */
-
-#ifndef APPLICATIONS_SPARSEAPPROX_SRC_HEUR_SPAKERLIN_H_
-#define APPLICATIONS_SPARSEAPPROX_SRC_HEUR_SPAKERLIN_H_
-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -23,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   heur_spaswitch.h
+/**@file   heur_spakerlin.h
  * @ingroup PRIMALHEURISTICS
  * @brief  Improvement heuristic that trades bin-variables between clusters
  * @author Leon Eifler
@@ -32,6 +22,9 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+#ifndef __SCIP_HEUR_SPAKERLIN_H__
+#define __SCIP_HEUR_SPAKERLIN_H__
 
 #include "scip/scip.h"
 
@@ -49,7 +42,4 @@ SCIP_RETCODE SCIPincludeHeurSpakerlin(
 }
 #endif
 
-
-
-
-#endif /* APPLICATIONS_SPARSEAPPROX_SRC_HEUR_SPAKERLIN_H_ */
+#endif

@@ -1,4 +1,3 @@
-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -24,7 +23,6 @@
 
 #ifndef __SCIP_HEUR_SPAGREEDY_H__
 #define __SCIP_HEUR_SPAGREEDY_H__
-
 
 #include "scip/scip.h"
 
