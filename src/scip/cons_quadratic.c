@@ -7121,13 +7121,13 @@ SCIP_RETCODE generateCutNonConvex(
                   assert(SCIPisEQ(scip, bestval, coef * refx + coef2 * refy + constant));
                   if( violside == SCIP_SIDETYPE_LEFT )
                   {
-                     assert(SCIPisGE(scip, bestval, bilinterm->coef * refx * refy));
-                     assert(SCIPisLE(scip, bestval, mccormick));
+                     assert(SCIPisRelGE(scip, bestval, bilinterm->coef * refx * refy));
+                     assert(SCIPisRelLE(scip, bestval, mccormick));
                   }
                   else
                   {
-                     assert(SCIPisLE(scip, bestval, bilinterm->coef * refx * refy));
-                     assert(SCIPisGE(scip, bestval, mccormick));
+                     assert(SCIPisRelLE(scip, bestval, bilinterm->coef * refx * refy));
+                     assert(SCIPisRelGE(scip, bestval, mccormick));
                   }
 #endif
                }
