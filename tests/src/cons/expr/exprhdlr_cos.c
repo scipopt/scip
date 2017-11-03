@@ -28,15 +28,15 @@
 
 #include "include/scip_test.h"
 
-static SCIP *scip;
-static SCIP_CONSHDLR *conshdlr;
-static SCIP_SOL *sol;
-static SCIP_VAR *x;
-static SCIP_VAR *y;
-static SCIP_CONSEXPR_EXPR *cosexpr;
-static SCIP_CONSEXPR_EXPR *xexpr;
-static SCIP_CONSEXPR_EXPR *yexpr;
-static SCIP_RANDNUMGEN *rndgen;
+static SCIP* scip;
+static SCIP_CONSHDLR* conshdlr;
+static SCIP_SOL* sol;
+static SCIP_VAR* x;
+static SCIP_VAR* y;
+static SCIP_CONSEXPR_EXPR* cosexpr;
+static SCIP_CONSEXPR_EXPR* xexpr;
+static SCIP_CONSEXPR_EXPR* yexpr;
+static SCIP_RANDNUMGEN* rndgen;
 
 
 /* creates scip, problem, includes expression constraint handler, creates  and adds variables */
