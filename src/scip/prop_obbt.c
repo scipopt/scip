@@ -89,7 +89,7 @@
 #define DEFAULT_GENVBDSDURINGSEPA        TRUE      /**< try to create genvbounds during separation process? */
 #define DEFAULT_PROPAGATEFREQ               0      /**< trigger a propagation round after that many bound tightenings
                                                     *   (0: no propagation) */
-#define DEFAULT_CREATE_BILININEQS        TRUE      /**< solve auxiliary LPs in order to find valid inequalities for bilinear terms? */
+#define DEFAULT_CREATE_BILININEQS       FALSE      /**< solve auxiliary LPs in order to find valid inequalities for bilinear terms? */
 #define DEFAULT_RANDSEED                  149      /**< initial random seed */
 
 
