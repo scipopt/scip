@@ -43,6 +43,7 @@
 
 #define DEFAULT_ENABLECOPY           TRUE    /**< should sparsify presolver be copied to sub-SCIPs? */
 #define DEFAULT_CANCELLINEAR        FALSE    /**< should we cancel nonzeros in constraints of the linear constraint handler? */
+#define DEFAULT_PRESERVEINTCOEFS     TRUE    /**< should we forbid cancellations that destroy integer coefficients? */
 #define DEFAULT_MAX_CONT_FILLIN         0    /**< default value for the maximal fillin for continuous variables */
 #define DEFAULT_MAX_BIN_FILLIN          0    /**< default value for the maximal fillin for binary variables */
 #define DEFAULT_MAX_INT_FILLIN          0    /**< default value for the maximal fillin for integer variables */
@@ -76,6 +77,7 @@ struct SCIP_PresolData
    char                  rowsort;            /**< order in which to process inequalities ('n'o sorting, 'i'ncreasing nonzeros, 'd'ecreasing nonzeros) */
    SCIP_Bool             enablecopy;         /**< should sparsify presolver be copied to sub-SCIPs? */
    SCIP_Bool             cancellinear;       /**< should we cancel nonzeros in constraints of the linear constraint handler? */
+   SCIP_Bool             preserveintcoefs;   /**< should we forbid cancellations that destroy integer coefficients? */
 };
 
 
@@ -144,6 +146,7 @@ SCIP_RETCODE cancelRow(
    int                   maxintfillin,
    int                   maxbinfillin,
    int                   maxconsiderednonzeros,
+   SCIP_Bool             preserveintcoefs,
    SCIP_Longint*         nuseless,
    int*                  nchgcoefs,
    int*                  ncanceled,
@@ -289,17 +292,22 @@ SCIP_RETCODE cancelRow(
 
                   newcoef = cancelrowvals[a] + scale * eqrowvals[b];
 
-                  if( SCIPisIntegral(scip, cancelrowvals[a]) && !SCIPisIntegral(scip, newcoef) )
+                  /* we try to avoid cancellations that might destroy structure by making integral coefficients
+                   * fractional or changing +/-1 coefficients to different values
+                   */
+                  if( preserveintcoefs )
                   {
-                     abortpair = TRUE;
-                     break;
-                  }
-
-                  if( (SCIPisEQ(scip, cancelrowvals[a], 1.0) || SCIPisEQ(scip, cancelrowvals[a], -1.0))
-                     && !SCIPisEQ(scip, newcoef, 1.0) && !SCIPisEQ(scip, newcoef, -1.0) && !SCIPisZero(scip, newcoef) )
-                  {
-                     abortpair = TRUE;
-                     break;
+                     if( SCIPisIntegral(scip, cancelrowvals[a]) && !SCIPisIntegral(scip, newcoef) )
+                     {
+                        abortpair = TRUE;
+                        break;
+                     }
+                     if( (SCIPisEQ(scip, cancelrowvals[a], 1.0) || SCIPisEQ(scip, cancelrowvals[a], -1.0))
+                        && !SCIPisEQ(scip, newcoef, 1.0) && !SCIPisEQ(scip, newcoef, -1.0) && !SCIPisZero(scip, newcoef) )
+                     {
+                        abortpair = TRUE;
+                        break;
+                     }
                   }
 
                   if( SCIPisZero(scip, newcoef) )
@@ -824,7 +832,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
 
          SCIP_CALL( cancelRow(scip, matrix, pairtable, rowidx,          \
                presoldata->maxcontfillin, presoldata->maxintfillin, presoldata->maxbinfillin, \
-               presoldata->maxconsiderednonzeros, \
+               presoldata->maxconsiderednonzeros, presoldata->preserveintcoefs, \
                &nuseless, nchgcoefs, &numcancel, &nfillin) );
       }
 
@@ -933,6 +941,11 @@ SCIP_RETCODE SCIPincludePresolSparsify(
          "presolving/sparsify/cancellinear",
          "should we cancel nonzeros in constraints of the linear constraint handler?",
          &presoldata->cancellinear, TRUE, DEFAULT_CANCELLINEAR, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "presolving/sparsify/preserveintcoefs",
+         "should we forbid cancellations that destroy integer coefficients?",
+         &presoldata->preserveintcoefs, TRUE, DEFAULT_PRESERVEINTCOEFS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/sparsify/maxcontfillin",
