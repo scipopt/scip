@@ -33,6 +33,46 @@
 #include "portab.h"
 #include "scip/scip.h"
 
+/** check whether problem has adjacent terminals */
+static
+SCIP_Bool adjterms(
+   const GRAPH*          g                   /**< graph data structure */
+)
+{
+   for( int e = 0; e < g->edges; e++ )
+   {
+      if( g->oeat[e] != EAT_FREE )
+      {
+         const int tail = g->tail[e];
+         const int head = g->head[e];
+         if( Is_term(g->term[tail]) && Is_term(g->term[head]) && g->mark[head] && g->mark[tail] )
+            return TRUE;
+      }
+   }
+
+   return FALSE;
+}
+
+/* count numbers of chains */
+
+static
+unsigned nchains(
+   const GRAPH*          g                   /**< graph data structure */
+   )
+{
+   unsigned ccount = 0;
+   for( int e = 0; e < g->edges; e++ )
+   {
+      if( g->oeat[e] != EAT_FREE )
+      {
+         const int tail = g->tail[e];
+         const int head = g->head[e];
+         if( !Is_term(g->term[tail]) && !Is_term(g->term[head]) && g->grad[head] == 2 && g->grad[tail] == 2 )
+            ccount++;
+      }
+   }
+   return ccount;
+}
 
 /** is there no vertex of higher prize? */
 static
@@ -894,29 +934,17 @@ SCIP_RETCODE degree_test_mw(
    int*                  count               /**< pointer to number of reductions */
    )
 {
-   int i;
-   int e;
-   int i1 = -1;
-   int i2;
-   int e1;
-   int e2;
-   int grad;
-   int head;
-   int root;
-   int localcount;
-   int nnodes;
-   SCIP_Bool hit;
-   SCIP_Bool rerun = TRUE;
+   const int root = g->source;
+   const int nnodes = g->knots;
+   int localcount = 0;
+
+   SCIP_Bool rerun;
    SCIP_Bool contracted;
 
    assert(g      != NULL);
    assert(fixed  != NULL);
    assert(count != NULL);
    assert(g->stp_type == STP_MWCSP);
-
-   root = g->source;
-   localcount = 0;
-   nnodes = g->knots;
 
    SCIPdebugMessage("MW degree test: \n");
 
@@ -926,17 +954,21 @@ SCIP_RETCODE degree_test_mw(
       contracted = FALSE;
 
       /* contract adjacent positive vertices */
-      for( i = 0; i < nnodes; i++ )
+      for( int i = 0; i < nnodes; i++ )
       {
+         int i1 = -1;
+         int grad;
+         SCIP_Bool hit;
+
          if( !Is_term(g->term[i]) || !(g->mark[i]) )
             continue;
 
          grad = g->grad[i];
          hit = FALSE;
 
-         for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
+         for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
          {
-            head = g->head[e];
+            const int head = g->head[e];
 
             if( Is_term(g->term[head]) && head != root )
             {
@@ -956,16 +988,17 @@ SCIP_RETCODE degree_test_mw(
 
          while( i1 >= 0 )
          {
+            int i2 = -1;
+
             assert(g->mark[i1]);
             assert(g->grad[i1] > 0);
             assert(Is_term(g->term[i1]));
 
-            i2 = -1;
             grad = g->grad[i];
             hit = FALSE;
-            for( e = g->outbeg[i1]; e != EAT_LAST; e = g->oeat[e] )
+            for( int e = g->outbeg[i1]; e != EAT_LAST; e = g->oeat[e] )
             {
-               head = g->head[e];
+               const int head = g->head[e];
                if( Is_term(g->term[head]) && head != i && head != root )
                {
                   assert(g->mark[head]);
@@ -993,16 +1026,15 @@ SCIP_RETCODE degree_test_mw(
       }
    }
 
-#if 1
    /* contract adjacent 0 vertices */
-   for( i = 0; i < nnodes; i++ )
+   for( int i = 0; i < nnodes; i++ )
    {
       if( !(g->mark[i]) || !SCIPisZero(scip, g->prize[i]) )
          continue;
 
-      for (e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e])
+      for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
       {
-         i2 = g->head[e];
+         const int i2 = g->head[e];
 
          if( g->mark[i2] && SCIPisGE(scip, g->prize[i2], 0.0) )
          {
@@ -1014,12 +1046,12 @@ SCIP_RETCODE degree_test_mw(
             {
                if( g->pcancestors[i] != NULL )
                {
-                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->pcancestors[i2]), g->pcancestors[i], NULL) );
+                  SCIP_CALL(SCIPintListNodeAppendCopy(scip, &(g->pcancestors[i2]), g->pcancestors[i], NULL));
                   SCIPintListNodeFree(scip, &(g->pcancestors[i]));
                }
-               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->pcancestors[i2]), g->ancestors[e], NULL) );
+               SCIP_CALL(SCIPintListNodeAppendCopy(scip, &(g->pcancestors[i2]), g->ancestors[e], NULL));
 
-               SCIP_CALL( graph_knot_contract(scip, g, solnode, i2, i) );
+               SCIP_CALL(graph_knot_contract(scip, g, solnode, i2, i));
             }
 
             localcount++;
@@ -1027,7 +1059,10 @@ SCIP_RETCODE degree_test_mw(
          }
       }
    }
-#endif
+
+   SCIPdebugMessage("chains before: %d \n", nchains(g));
+
+   rerun = TRUE;
 
    /* main loop */
    while( rerun )
@@ -1035,7 +1070,7 @@ SCIP_RETCODE degree_test_mw(
       rerun = FALSE;
 
       /* main loop for remaining tests */
-      for( i = 0; i < nnodes; i++ )
+      for( int i = 0; i < nnodes; i++ )
       {
          assert(g->grad[i] >= 0);
          if( !g->mark[i] || g->grad[i] == 0 )
@@ -1048,8 +1083,9 @@ SCIP_RETCODE degree_test_mw(
          {
             if( g->grad[i] == 1 )
             {
-               e1 = g->inpbeg[i];
-               i1 = g->tail[e1];
+               const int e1 = g->inpbeg[i];
+               const int i1 = g->tail[e1];
+
                assert(e1 >= 0);
                assert(e1 == Edge_anti(g->outbeg[i]));
                assert(g->ieat[e1] == EAT_LAST);
@@ -1074,10 +1110,10 @@ SCIP_RETCODE degree_test_mw(
                int f2 = -1;
                int length = 0;
 
-               e1 = g->outbeg[i];
-               e2 = g->oeat[e1];
-               i1 = g->head[e1];
-               i2 = g->head[e2];
+               const int e1 = g->outbeg[i];
+               const int e2 = g->oeat[e1];
+               const int i1 = g->head[e1];
+               const int i2 = g->head[e2];
 
                assert(e1 >= 0);
                assert(e2 >= 0);
@@ -1097,7 +1133,7 @@ SCIP_RETCODE degree_test_mw(
                {
                   assert(g->grad[i] <= 2);
 
-                  for( e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e] )
+                  for( int e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e] )
                      g->cost[e] = -g->prize[i];
 
                   localcount += length;
@@ -1130,6 +1166,7 @@ SCIP_RETCODE degree_test_mw(
          /* terminal of (real) degree 1? */
          else if( g->grad[i] == 3 )
          {
+            int e;
             for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
                if( g->mark[g->head[e]] )
                   break;
@@ -1147,8 +1184,10 @@ SCIP_RETCODE degree_test_mw(
    }
 
    /* contract adjacent positive vertices */
-   for( i = 0; i < nnodes; i++ )
+   for( int i = 0; i < nnodes; i++ )
    {
+      int i1;
+
       if( !(g->mark[i]) || !Is_term(g->term[i]) )
          continue;
 
@@ -1162,9 +1201,9 @@ SCIP_RETCODE degree_test_mw(
 
          contracted = FALSE;
 
-         for( e = g->outbeg[i1]; e != EAT_LAST; e = g->oeat[e] )
+         for( int e = g->outbeg[i1]; e != EAT_LAST; e = g->oeat[e] )
          {
-            i2 = g->head[e];
+            const int i2 = g->head[e];
             if( g->mark[i2] && Is_term(g->term[i2]) )
             {
                SCIPdebugMessage("contract tt after (local) main loop %d->%d\n ", i1, i2);
@@ -1180,6 +1219,9 @@ SCIP_RETCODE degree_test_mw(
 
    (*count) += localcount;
    SCIPdebugMessage("MW basic reduction package has deleted %d edges\n", *count);
+
+   SCIPdebugMessage("chains after: %d \n", nchains(g));
+   assert(!adjterms(g));
 
    return SCIP_OKAY;
 }
