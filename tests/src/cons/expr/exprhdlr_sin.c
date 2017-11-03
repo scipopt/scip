@@ -14,7 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   exprhdlr_sin.c
- * @brief  tests expression handler functions of xzy an expression
+ * @brief  tests expression handler functions of sine expressions
+ * @author Fabian Wegscheider
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -176,7 +177,7 @@ Test(sin, inteval, .description = "Tests the expression interval evaluation.")
    SCIP_Real detreslb[5] = {-1.0, -1.0, -1.0, 0.0, -1.0};
    SCIP_Real detresub[5] = {1.0, 1.0, 0.0, 1.0, 1.0};
 
-   /* create 5 random cases within specific bounds that have non-trivial resulsts */
+   /* create 5 random cases within specific bounds that have non-trivial results */
    rndlb[0]    = SCIPrandomGetReal(rndgen, 0.0, 0.5*M_PI);
    rndub[0]    = SCIPrandomGetReal(rndgen, 0.5*M_PI, M_PI);
    rndreslb[0] = MIN(SIN(rndlb[0]), SIN(rndub[0]));
