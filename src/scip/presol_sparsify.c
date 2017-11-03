@@ -716,14 +716,19 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
                nnonz = MIN(nnonz, presoldata->maxconsiderednonzeros);
 
             npairs = (nnonz * (nnonz - 1)) / 2;
-            failshift = presoldata->nfailures*presoldata->maxconsiderednonzeros;
-
             if( nvarpairs + npairs > varpairssize )
             {
                int newsize = SCIPcalcMemGrowSize(scip, nvarpairs + npairs);
                SCIP_CALL( SCIPreallocBufferArray(scip, &varpairs, newsize) );
                varpairssize = newsize;
             }
+
+            /* if we are called after one or more failures, i.e., executions without finding cancellations, then we
+             * shift the section of nonzeros considered; in the case that the maxconsiderednonzeros limit is hit, this
+             * results in different variable pairs being tried and avoids trying the same useless cancellations
+             * repeatedly
+             */
+            failshift = presoldata->nfailures*presoldata->maxconsiderednonzeros;
 
             for( i = 0; i < nnonz; ++i )
             {
