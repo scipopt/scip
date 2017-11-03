@@ -46,7 +46,7 @@
 #define DEFAULT_PRESERVEINTCOEFS     TRUE    /**< should we forbid cancellations that destroy integer coefficients? */
 #define DEFAULT_MAX_CONT_FILLIN         0    /**< default value for the maximal fillin for continuous variables */
 #define DEFAULT_MAX_BIN_FILLIN          0    /**< default value for the maximal fillin for binary variables */
-#define DEFAULT_MAX_INT_FILLIN          0    /**< default value for the maximal fillin for integer variables */
+#define DEFAULT_MAX_INT_FILLIN          0    /**< default value for the maximal fillin for integer variables (including binary) */
 #define DEFAULT_MAXNONZEROS            -1    /**< maximal support of one equality to be used for cancelling (-1: no limit) */
 #define DEFAULT_MAXCONSIDEREDNONZEROS  70    /**< maximal number of considered non-zeros within one row (-1: no limit) */
 #define DEFAULT_ROWSORT               'd'    /**< order in which to process inequalities ('n'o sorting, 'i'ncreasing nonzeros, 'd'ecreasing nonzeros) */
@@ -963,7 +963,7 @@ SCIP_RETCODE SCIPincludePresolSparsify(
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/sparsify/maxintfillin",
-         "maximal fillin for integer variables (-1: unlimited)",
+         "maximal fillin for integer variables including binaries (-1: unlimited)",
          &presoldata->maxintfillin, FALSE, DEFAULT_MAX_INT_FILLIN, -1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
