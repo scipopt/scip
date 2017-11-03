@@ -6288,8 +6288,16 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
 
          break;
       }
-      case SCIP_EXPR_SIGNPOWER:
       case SCIP_EXPR_COS:
+      {
+         assert(nchildren == 1);
+         assert(children != NULL && children[0] != NULL);
+
+         SCIP_CALL( SCIPcreateConsExprExprCos(scip, consexprhdlr, expr, children[0]) );
+
+         break;
+      }
+      case SCIP_EXPR_SIGNPOWER:
       case SCIP_EXPR_TAN:
       case SCIP_EXPR_MIN:
       case SCIP_EXPR_MAX:
