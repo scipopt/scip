@@ -6566,10 +6566,6 @@ SCIP_RETCODE treeBacktrackProbing(
             {
                assert(tree->probingobjchanged);
 
-               /* inform relaxation and update objective value of relaxation solution */
-               SCIPrelaxationUpdateVarObj(relaxation, set, node->data.probingnode->origobjvars[i],
-                     SCIPvarGetObj(node->data.probingnode->origobjvars[i]), node->data.probingnode->origobjvals[i]);
-
                SCIP_CALL( SCIPvarChgObj(node->data.probingnode->origobjvars[i], blkmem, set, transprob, primal, lp,
                      eventqueue, node->data.probingnode->origobjvals[i]) );
             }
