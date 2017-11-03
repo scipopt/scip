@@ -1691,6 +1691,7 @@ SCIP_RETCODE applyObbt(
    SCIP_Bool hasconditionlimit;
    SCIP_Bool continuenode;
    SCIP_Bool boundleft;
+   int oldpolishing;
    int nfiltered;
    int nvars;
    int i;
@@ -1791,6 +1792,10 @@ SCIP_RETCODE applyObbt(
    /* add objective cutoff */
    SCIP_CALL( addObjCutoff(scip, propdata) );
 
+   /* deactivate LP polishing */
+   SCIP_CALL( SCIPgetIntParam(scip, "lp/solutionpolishing", &oldpolishing) );
+   SCIP_CALL( SCIPsetIntParam(scip, "lp/solutionpolishing", 0) );
+
    /* apply filtering */
    if( propdata->applyfilterrounds )
    {
@@ -1871,6 +1876,9 @@ SCIP_RETCODE applyObbt(
 
    /* reset relative bound improvement limit */
    SCIP_CALL( SCIPsetRealParam(scip, "numerics/boundstreps", oldboundstreps) );
+
+   /* reset original LP polishing setting */
+   SCIP_CALL( SCIPsetIntParam(scip, "lp/solutionpolishing", oldpolishing) );
 
    /* end probing */
    SCIP_CALL( SCIPendProbing(scip) );
