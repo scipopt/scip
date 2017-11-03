@@ -523,7 +523,9 @@ SCIP_RETCODE SCIPapplyLockFixings(
       if( updatelocks )
       {
          col = SCIPvarGetCol(var);
-         assert(col != NULL);
+
+         if( col == NULL )
+            continue;
 
          colrows = SCIPcolGetRows(col);
          colvals = SCIPcolGetVals(col);

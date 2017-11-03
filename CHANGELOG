@@ -68,6 +68,7 @@ fixed bugs:
 - fixed potential ressource leaks in SCIPsolveLinearProb, expr.c, sepa_eccuts, cons_cumulative.c, cons_nonlinear.c
 - fixed order of SCIPcalcCliquePartition in corner case where no cliques are available
 - fixed bug in mps reader. Reader now prints OBJSENSE section and tries to generate unique names of constraints
+- fixed handling of LOOSE variables in locks heuristic
 
 misc:
 - dropped support for MOSEK < 7.0.0.0
