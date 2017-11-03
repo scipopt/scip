@@ -48289,9 +48289,9 @@ SCIP_RETCODE SCIPvalidateSolve(
    /* check the best solution for feasibility in the original problem */
    if( SCIPgetNSols(scip) > 0 )
    {
+      SCIP_SOL* bestsol = SCIPgetBestSol(scip);
       SCIP_Real checkfeastolfac;
       SCIP_Real oldfeastol;
-      SCIP_SOL* bestsol = SCIPgetBestSol(scip);
 
       assert(bestsol != NULL);
 
