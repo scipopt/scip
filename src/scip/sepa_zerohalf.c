@@ -1792,7 +1792,7 @@ SCIP_RETCODE generateZerohalfCut(
             }
 
             sepadata->cuts[pos] = cut;
-            sepadata->cutscores[pos] = cutefficacy;
+            sepadata->cutscores[pos] = cutefficacy + 1e-4 * (1 - SCIProwIsLocal(cut));
          }
          else
          {
@@ -2165,7 +2165,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
 
       nzeroslackrows = mod2matrix.nzeroslackrows;
       assert(mod2matrix.nzeroslackrows <= mod2matrix.nrows);
-      /* apply Prop5 */ /* TODO: this should be in another function, just like the preprocess stuff */
+
+      /* apply Prop5 */
       for( i = 0; i < nzeroslackrows; ++i )
       {
          int j;
@@ -2288,13 +2289,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
 
             if( sepadata->cuts[j] == NULL )
                continue;
-
-            /* do not filter global cuts with local cuts, still add them to the pool */
-            if( SCIProwIsLocal(sepadata->cuts[i]) && !SCIProwIsLocal(sepadata->cuts[j]) )
-            {
-               newncuts = j + 1;
-               continue;
-            }
 
             /* compute orthogonality */
             ortho = SCIProwGetOrthogonality(sepadata->cuts[j], sepadata->cuts[i], 'e');
