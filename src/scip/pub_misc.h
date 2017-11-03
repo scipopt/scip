@@ -880,6 +880,20 @@ SCIP_Real SCIPhashmapEntryGetImageReal(
    SCIP_HASHMAPENTRY*    entry               /**< hash map entry */
    );
 
+/** sets pointer image of a hashmap entry */
+EXTERN
+void SCIPhashmapEntrySetImage(
+   SCIP_HASHMAPENTRY*    entry,              /**< hash map entry */
+   void*                 image               /**< new image */
+   );
+
+/** sets real image of a hashmap entry */
+EXTERN
+void SCIPhashmapEntrySetImageReal(
+   SCIP_HASHMAPENTRY*    entry,              /**< hash map entry */
+   SCIP_Real             image               /**< new image */
+   );
+
 /** removes all entries in a hash map. */
 EXTERN
 SCIP_RETCODE SCIPhashmapRemoveAll(
