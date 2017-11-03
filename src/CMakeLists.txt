@@ -504,6 +504,7 @@ set(scipheaders
     scip/presol_qpkktref.h
     scip/presol_redvub.h
     scip/presol_stuffing.h
+    scip/presol_sparsify.h
     scip/presol_trivial.h
     scip/presol_tworowbnd.h
     scip/presolve.h

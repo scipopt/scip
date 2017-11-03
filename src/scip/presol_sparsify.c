@@ -80,11 +80,7 @@ struct SCIP_PresolData
    SCIP_Bool             preserveintcoefs;   /**< should we forbid cancellations that destroy integer coefficients? */
 };
 
-
-/*
- * Local methods
- */
-
+/** structure representing a pair of variables in a row; used for lookup in a hashtable */
 struct RowVarPair
 {
    int rowindex;
@@ -96,15 +92,21 @@ struct RowVarPair
 
 typedef struct RowVarPair ROWVARPAIR;
 
+/*
+ * Local methods
+ */
+
 /** returns TRUE iff both keys are equal */
 static
 SCIP_DECL_HASHKEYEQ(varPairsEqual)
 {  /*lint --e{715}*/
+   SCIP* scip;
    ROWVARPAIR* varpair1;
    ROWVARPAIR* varpair2;
    SCIP_Real ratio1;
    SCIP_Real ratio2;
 
+   scip = (SCIP*) userptr;
    varpair1 = (ROWVARPAIR*) key1;
    varpair2 = (ROWVARPAIR*) key2;
 
@@ -117,10 +119,7 @@ SCIP_DECL_HASHKEYEQ(varPairsEqual)
    ratio1 = varpair1->varcoef2 / varpair1->varcoef1;
    ratio2 = varpair2->varcoef2 / varpair2->varcoef1;
 
-   if( !EPSEQ(ratio1, ratio2, SCIP_DEFAULT_EPSILON) )
-      return FALSE;
-
-   return TRUE;
+   return SCIPisEQ(scip, ratio1, ratio2);
 }
 
 /** returns the hash value of the key */
@@ -135,22 +134,22 @@ SCIP_DECL_HASHKEYVAL(varPairHashval)
                       SCIPrealHashCode(varpair->varcoef2 / varpair->varcoef1));
 }
 
-/** non-zero cancellation of rows */
+/** try non-zero cancellation for given row */
 static
 SCIP_RETCODE cancelRow(
-   SCIP*                 scip,
-   SCIP_MATRIX*          matrix,
-   SCIP_HASHTABLE*       pairtable,
-   int                   rowidx,
-   int                   maxcontfillin,
-   int                   maxintfillin,
-   int                   maxbinfillin,
-   int                   maxconsiderednonzeros,
-   SCIP_Bool             preserveintcoefs,
-   SCIP_Longint*         nuseless,
-   int*                  nchgcoefs,
-   int*                  ncanceled,
-   int*                  nfillin
+   SCIP*                 scip,                 /**< SCIP datastructure */
+   SCIP_MATRIX*          matrix,               /**< the constraint matrix */
+   SCIP_HASHTABLE*       pairtable,            /**< the hashtable containing ROWVARPAIR's of equations */
+   int                   rowidx,               /**< index of row to try non-zero cancellation for */
+   int                   maxcontfillin,        /**< maximal fill-in allowed for continuous variables */
+   int                   maxintfillin,         /**< maximal fill-in allowed for integral variables */
+   int                   maxbinfillin,         /**< maximal fill-in allowed for binary variables */
+   int                   maxconsiderednonzeros,/**< maximal number of non-zeros to consider for cancellation */
+   SCIP_Bool             preserveintcoefs,     /**< only perform non-zero cancellation if integrality of coefficients is preserved? */
+   SCIP_Longint*         nuseless,             /**< pointer to update number of useless hashtable retrieves */
+   int*                  nchgcoefs,            /**< pointer to update number of changed coefficients */
+   int*                  ncanceled,            /**< pointer to update number of canceled nonzeros */
+   int*                  nfillin               /**< pointer to update the produced fill-in */
    )
 {
    int* cancelrowinds;
@@ -491,6 +490,9 @@ SCIP_RETCODE cancelRow(
             ++b;
          }
 
+         /* swap the temporary arrays so that the cancelrowinds and cancelrowvals arrays, contain the new
+          * changed row, and the tmpinds and tmpvals arrays can be overwritten in the next iteration
+          */
          SCIPswapPointers((void**) &tmpinds, (void**) &cancelrowinds);
          SCIPswapPointers((void**) &tmpvals, (void**) &cancelrowvals);
          cancelrowlen = tmprowlen;
@@ -689,7 +691,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       varpairssize = 0;
       nvarpairs = 0;
       varpairs = NULL;
-      SCIP_CALL( SCIPhashtableCreate(&pairtable, SCIPblkmem(scip), 1, SCIPhashGetKeyStandard, varPairsEqual, varPairHashval, NULL) );
+      SCIP_CALL( SCIPhashtableCreate(&pairtable, SCIPblkmem(scip), 1, SCIPhashGetKeyStandard, varPairsEqual, varPairHashval, (void*) scip)) );
 
       /* collect equalities and their number of non-zeros */
       for( r = 0; r < nrows; r++ )
@@ -830,7 +832,9 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
          if( !presoldata->cancellinear && SCIPconsGetHdlr(SCIPmatrixGetCons(matrix, rowidx)) == linearhdlr )
             continue;
 
-         SCIP_CALL( cancelRow(scip, matrix, pairtable, rowidx,          \
+         /* since the function parameters for the max fillin are unsigned we do not need to handle the
+          * unlimited (-1) case due to implicit conversion rules */
+         SCIP_CALL( cancelRow(scip, matrix, pairtable, rowidx, \
                presoldata->maxcontfillin, presoldata->maxintfillin, presoldata->maxbinfillin, \
                presoldata->maxconsiderednonzeros, presoldata->preserveintcoefs, \
                &nuseless, nchgcoefs, &numcancel, &nfillin) );
@@ -949,17 +953,17 @@ SCIP_RETCODE SCIPincludePresolSparsify(
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/sparsify/maxcontfillin",
-         "maximal fillin for continuous variables",
+         "maximal fillin for continuous variables (-1: unlimited)",
          &presoldata->maxcontfillin, FALSE, DEFAULT_MAX_CONT_FILLIN, -1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/sparsify/maxbinfillin",
-         "maximal fillin for binary variables",
+         "maximal fillin for binary variables (-1: unlimited)",
          &presoldata->maxbinfillin, FALSE, DEFAULT_MAX_BIN_FILLIN, -1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/sparsify/maxintfillin",
-         "maximal fillin for integer variables",
+         "maximal fillin for integer variables (-1: unlimited)",
          &presoldata->maxintfillin, FALSE, DEFAULT_MAX_INT_FILLIN, -1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
