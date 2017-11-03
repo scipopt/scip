@@ -1902,6 +1902,10 @@ SCIP_RETCODE SCIPbendersExec(
    //if( SCIPbendersGetNLPSubprobs(benders) < SCIPbendersGetNSubproblems(benders) && benders->benderssolvesub == NULL && type == CHECK && benders->ncalls % benders->mipcheckfreq == 0 )
       //nsolveloops = 2;
 
+   /* the result flag is set to FEASIBLE as default. If a cut is added, then this is changed to CONS_ADDED. If the
+    * problem is found to be infeasible due to the auxiliary variable values, then this is changed to INFEASIBLE. */
+   (*result) = SCIP_FEASIBLE;
+
    for( l = 0; l < nsolveloops; l++ )
    {
       if( type == CHECK && sol == NULL )
@@ -1980,9 +1984,6 @@ SCIP_RETCODE SCIPbendersExec(
          prepareMagnantiWongTechnique(set->scip, benders, sol);
 
 
-      /* the result flag is set to FEASIBLE as default. If a cut is added, then this is changed to CONS_ADDED */
-      (*result) = SCIP_FEASIBLE;
-
       /* Generating cuts for the subproblems. */
       benderscuts = SCIPbendersGetBenderscuts(benders);
       nbenderscuts = SCIPbendersGetNBenderscuts(benders);
@@ -2029,7 +2030,7 @@ SCIP_RETCODE SCIPbendersExec(
          }
 
          /* if no cuts were added, then the number of solve loops is increased */
-         if( SCIPbendersGetNLPSubprobs(benders) < SCIPbendersGetNSubproblems(benders)
+         if( addedcuts == 0 && SCIPbendersGetNLPSubprobs(benders) < SCIPbendersGetNSubproblems(benders)
             && benders->benderssolvesub == NULL && checkint && !onlylpcheck )
             nsolveloops = 2;
       }

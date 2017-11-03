@@ -114,7 +114,7 @@ SCIP_RETCODE updateCutConstant(
    if( SCIPisGT(masterprob, SCIPgetSolTransObj(masterprob, NULL), -SCIPinfinity(masterprob)) )
       benderscutdata->cutconstant = SCIPgetSolTransObj(masterprob, NULL);
 
-   printf("Cut constant: %g\n", benderscutdata->cutconstant);
+   SCIPdebugMessage("Cut constant: %g\n", benderscutdata->cutconstant);
 
    benderscutdata->firstcut = TRUE;
 
