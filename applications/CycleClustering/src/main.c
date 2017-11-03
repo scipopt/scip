@@ -143,7 +143,7 @@ SCIP_RETCODE fromCommandLine(
 /** process the arguments and set up the problem */
 static
 SCIP_RETCODE processArguments(
-   SCIP*                 scip,
+   SCIP*                 scip,               /**< SCIP data structure */
    int                   argc,               /**< number of shell parameters */
    char**                argv,               /**< array with shell parameters */
    const char*           defaultsetname      /**< name of default settings file */

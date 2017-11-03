@@ -63,10 +63,8 @@ SCIP_Real getNextNumber(
 }
 
 /** read LP in Spa File Format.
- * That means first line is "p edges nbins nedges(in pmatrix) ncluster".
- * Then a list of all edges in pmatrix with <startnode> <endnode> <weight>
- * Then a line "sd" that specifies the stationairy distribution vector starts
- * Then all weights in the stationary distribution vector
+ * That means first line is "p edges nbins ncluster".
+ * Then a matrix with whitespace-separated entries of size nbins x nbins
 */
 static
 SCIP_RETCODE readSpa(

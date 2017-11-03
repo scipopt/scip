@@ -40,7 +40,7 @@ include $(SCIPDIR)/make/make.project
 # Main Program
 #-----------------------------------------------------------------------------
 
-MAINNAME	=	scip
+MAINNAME	=	cycleclustering
 MAINOBJ		=	probdata_spa.o \
 			reader_spa.o \
 			heur_spagreedy.o \
