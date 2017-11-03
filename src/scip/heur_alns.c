@@ -84,7 +84,7 @@
  * parameters to control variable fixing
  */
 #define DEFAULT_USEREDCOST       TRUE  /**< should reduced cost scores be used for variable priorization? */
-#define DEFAULT_USEPSCOST       FALSE  /**< should pseudo cost scores be used for variable priorization? */
+#define DEFAULT_USEPSCOST        TRUE  /**< should pseudo cost scores be used for variable priorization? */
 #define DEFAULT_USEDISTANCES     TRUE  /**< should distances from fixed variables be used for variable priorization */
 #define DEFAULT_DOMOREFIXINGS    TRUE  /**< should the ALNS heuristic do more fixings by itself based on variable prioritization
                                          *  until the target fixing rate is reached? */
