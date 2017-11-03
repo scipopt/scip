@@ -88,7 +88,7 @@
 #define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP /**< propagation timing mask of the constraint handler */
 #define CONSHDLR_PRESOLTIMING            SCIP_PRESOLTIMING_MEDIUM /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 
-#define DEFAULT_PPORBITOPE        FALSE /**< whether we check if full orbitopes can be upgraded to packing/partitioning orbitopes */
+#define DEFAULT_PPORBITOPE         TRUE /**< whether we check if full orbitopes can be upgraded to packing/partitioning orbitopes */
 #define DEFAULT_SEPAFULLORBITOPE  FALSE /**< whether we separate inequalities for full orbitopes */
 
 
@@ -229,7 +229,7 @@ static
 SCIP_RETCODE upgradeOrbitopeConstraint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR***           vars,               /**< variable matrix of orbitope constraint */
-   int                   nrows,              /**< number of rows of variable matrix */
+   int*                  nrows,              /**< pointer to number of rows of variable matrix */
    int                   ncols,              /**< number of columns of variable matrix */
    SCIP_ORBITOPETYPE*    type                /**< pointer to store type of orbitope constraint after upgrade */
    )
@@ -248,7 +248,7 @@ SCIP_RETCODE upgradeOrbitopeConstraint(
    assert( scip != NULL );
    assert( vars != NULL );
    assert( vars != NULL );
-   assert( nrows > 0 );
+   assert( *nrows > 0 );
    assert( ncols > 0 );
    assert( type != NULL );
 
@@ -266,9 +266,9 @@ SCIP_RETCODE upgradeOrbitopeConstraint(
    assert( setppcconss != NULL );
 
    /* whether a row is contained in packing/partitioning constraint */
-   SCIP_CALL( SCIPallocBufferArray(scip, &covered, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &covered, *nrows) );
 
-   for (i = 0; i < nrows; ++i)
+   for (i = 0; i < *nrows; ++i)
       covered[i] = FALSE;
    ncovered = 0;
 
@@ -280,7 +280,7 @@ SCIP_RETCODE upgradeOrbitopeConstraint(
    for (i = 0; i < nprobvars; ++i)
       rowidxvar[i] = -1;
 
-   for (i = 0; i < nrows && success; ++i)
+   for (i = 0; i < *nrows && success; ++i)
    {
       for (j = 0; j < ncols; ++j)
       {
@@ -298,7 +298,7 @@ SCIP_RETCODE upgradeOrbitopeConstraint(
       goto FREEUPGRADESTRUCTURES;
 
    /* iterate over rows of orbitope and check whether rows are contained in partitioning constraints */
-   for (i = 0; i < nrows && success; ++i)
+   for (i = 0; i < *nrows && success; ++i)
    {
       /* iterate over constraints */
       int c;
@@ -352,14 +352,14 @@ SCIP_RETCODE upgradeOrbitopeConstraint(
       }
    }
 
-   if ( ncovered == nrows )
+   if ( ncovered == *nrows )
    {
       *type = SCIP_ORBITOPETYPE_PARTITIONING;
       goto FREEUPGRADESTRUCTURES;
    }
 
    /* iterate over rows of orbitope and check whether rows are contained in packing constraints */
-   for (i = 0; i < nrows; ++i)
+   for (i = 0; i < *nrows; ++i)
    {
       int c;
 
@@ -413,8 +413,27 @@ SCIP_RETCODE upgradeOrbitopeConstraint(
       }
    }
 
-   if ( ncovered == nrows )
+   if ( ncovered == *nrows )
       *type = SCIP_ORBITOPETYPE_PACKING;
+   else if ( ncovered >= 3 )
+   {
+      int r = *nrows - 1;
+      while ( r >= 0 )
+      {
+         if ( ! covered[r] )
+         {
+            for (i = r; i < *nrows - 1; ++i)
+            {
+               SCIP_VAR** row = vars[i];
+               vars[i] = vars[i+1];
+               vars[i+1] = row;
+            }
+            *nrows -= 1;
+         }
+         --r;
+      }
+      *type = SCIP_ORBITOPETYPE_PACKING;
+   }
 
  FREEUPGRADESTRUCTURES:
    SCIPfreeBufferArray(scip, &rowidxvar);
@@ -3206,7 +3225,7 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
    if ( checkupgrade )
    {
       type = SCIP_ORBITOPETYPE_FULL;
-      SCIP_CALL( upgradeOrbitopeConstraint(scip, vars, nspcons, nblocks, &type) );
+      SCIP_CALL( upgradeOrbitopeConstraint(scip, vars, &nspcons, nblocks, &type) );
    }
 
    /* create constraint data */
