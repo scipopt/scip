@@ -60,8 +60,8 @@
 
 #define DEFAULT_MAXROUNDS             5 /**< maximal number of zerohalf separation rounds per node (-1: unlimited) */
 #define DEFAULT_MAXROUNDSROOT        20 /**< maximal number of zerohalf separation rounds in the root node (-1: unlimited) */
-#define DEFAULT_MAXSEPACUTS         100 /**< maximal number of zerohalf cuts separated per separation round */
-#define DEFAULT_MAXSEPACUTSROOT     500 /**< maximal number of zerohalf cuts separated per separation round in root node */
+#define DEFAULT_MAXSEPACUTS          20 /**< maximal number of zerohalf cuts separated per separation round */
+#define DEFAULT_MAXSEPACUTSROOT     100 /**< maximal number of zerohalf cuts separated per separation round in root node */
 #define DEFAULT_MAXSLACK            0.0 /**< maximal slack of rows to be used in aggregation */
 #define DEFAULT_MAXSLACKROOT        0.0 /**< maximal slack of rows to be used in aggregation in the root node */
 #define DEFAULT_MINVIOL             0.1 /**< minimal violation to generate zerohalfcut for */
@@ -381,7 +381,7 @@ SCIP_RETCODE transformNonIntegralRow(
       {
          /* retrieve simple variable bound */
          closestbound = SCIPvarGetLbGlobal(colvar);
-         if( allowlocal && SCIPisGT(scip, SCIPvarGetLbLocal(colvar), closestbound) )
+         if( allowlocal && SCIPisSumGT(scip, SCIPvarGetLbLocal(colvar), closestbound) )
          {
             /* only use local bound if it is better thatn the global bound */
             closestbound = SCIPvarGetLbLocal(colvar);
@@ -394,7 +394,7 @@ SCIP_RETCODE transformNonIntegralRow(
          /* if a suitable variable bound exists which is at least as good as a local simple bound
           * or better than a global simple bound we use it
           */
-         if( closestvbdind >= 0 && (SCIPisGT(scip, closestvbd, closestbound) || (localbound && SCIPisEQ(scip, closestvbd, closestbound))) )
+         if( closestvbdind >= 0 && (SCIPisGT(scip, closestvbd, closestbound) || (localbound && SCIPisSumEQ(scip, closestvbd, closestbound))) )
          {
             vbdcoef = SCIPvarGetVlbCoefs(colvar)[closestvbdind];
             vbdvar = SCIPvarGetVlbVars(colvar)[closestvbdind];
@@ -410,7 +410,7 @@ SCIP_RETCODE transformNonIntegralRow(
       {
          /* retrieve simple variable bound */
          closestbound = SCIPvarGetUbGlobal(colvar);
-         if( allowlocal && SCIPisLT(scip, SCIPvarGetUbLocal(colvar), closestbound) )
+         if( allowlocal && SCIPisSumLT(scip, SCIPvarGetUbLocal(colvar), closestbound) )
          {
             closestbound = SCIPvarGetUbLocal(colvar);
             localbound = TRUE;
@@ -422,7 +422,7 @@ SCIP_RETCODE transformNonIntegralRow(
          /* if a suitable variable bound exists which is at least as good as a local simple bound
           * or better than a global simple bound we use it
           */
-         if( closestvbdind >= 0 && (SCIPisLT(scip, closestvbd, closestbound) || (localbound && SCIPisEQ(scip, closestvbd, closestbound))) )
+         if( closestvbdind >= 0 && (SCIPisLT(scip, closestvbd, closestbound) || (localbound && SCIPisSumEQ(scip, closestvbd, closestbound))) )
          {
             vbdcoef = SCIPvarGetVubCoefs(colvar)[closestvbdind];
             vbdvar = SCIPvarGetVubVars(colvar)[closestvbdind];
