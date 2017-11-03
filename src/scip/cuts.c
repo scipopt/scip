@@ -520,9 +520,7 @@ SCIP_Bool cutTightenCoefsQuad(
    maxabsval = 0.0;
    nintegralvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
 
-   /* loop over non-zeros and remove values below minval; values above QUAD_EPSILON are cancelled with their bound
-    * to avoid numerical rounding errors
-    */
+   /* compute the maximum activity and maximum absolute coefficient values for all and for integral variables in the cut */
    for( i = 0; i < *cutnnz; ++i )
    {
       SCIP_Real QUAD(val);
@@ -582,7 +580,7 @@ SCIP_Bool cutTightenCoefsQuad(
       SCIP_Real scale = 1.0 / maxabsval; /*lint !e795*/
 
       /* compute scale to make the smallest coefficient of integer variables 1.0 */
-      if( !SCIPisFeasZero(scip, maxabsintval) )
+      if( ! SCIPisFeasZero(scip, maxabsintval) )
       {
          scale = 1.0 / maxabsintval; /*lint !e414*/
 
@@ -737,7 +735,7 @@ SCIP_Bool cutTightenCoefsQuad(
 }
 
 /** tighten the coefficients of the given cut based on the maximal activity; see cons_linear.c for details
- *  the cut is given in a semi-sparse quad precision array; returns TRUE if the cut was detected
+ *  the cut is given in a semi-sparse array; returns TRUE if the cut was detected
  *  to be redundant due to acitvity bounds
  */
 static
@@ -820,7 +818,7 @@ SCIP_Bool cutTightenCoefs(
       SCIP_Real scale = 1.0 / maxabsval; /*lint !e795*/
 
       /* compute scale to make the smallest coefficient of integer variables 1.0 */
-      if( !SCIPisFeasZero(scip, maxabsintval) )
+      if( ! SCIPisFeasZero(scip, maxabsintval) )
       {
          scale = 1.0 / maxabsintval; /*lint !e414*/
 
@@ -939,7 +937,7 @@ SCIP_Bool cutTightenCoefs(
 
             QUAD_ASSIGN_Q(*cutrhs, tmp);
 
-            assert(!SCIPisNegative(scip, QUAD_ROUND(coef)));
+            assert(! SCIPisNegative(scip, QUAD_ROUND(coef)));
 
             if( SCIPisPositive(scip, QUAD_ROUND(coef)) )
             {

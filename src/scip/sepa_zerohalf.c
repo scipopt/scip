@@ -391,7 +391,9 @@ SCIP_RETCODE transformNonIntegralRow(
          /* retrieve closest variable bound */
          SCIP_CALL( SCIPgetVarClosestVlb(scip, colvar, NULL, &closestvbd, &closestvbdind) );
 
-         /* if a suitable variable bound exists which is at least as good as the simple bound we use it */
+         /* if a suitable variable bound exists which is at least as good as a local simple bound
+          * or better than a global simple bound we use it
+          */
          if( closestvbdind >= 0 && (SCIPisGT(scip, closestvbd, closestbound) || (localbound && SCIPisEQ(scip, closestvbd, closestbound))) )
          {
             vbdcoef = SCIPvarGetVlbCoefs(colvar)[closestvbdind];
@@ -417,7 +419,9 @@ SCIP_RETCODE transformNonIntegralRow(
          /* retrieve closest variable bound */
          SCIP_CALL( SCIPgetVarClosestVub(scip, colvar, NULL, &closestvbd, &closestvbdind) );
 
-         /* if a suitable variable bound exists which is at least as good as the simple bound we use it */
+         /* if a suitable variable bound exists which is at least as good as a local simple bound
+          * or better than a global simple bound we use it
+          */
          if( closestvbdind >= 0 && (SCIPisLT(scip, closestvbd, closestbound) || (localbound && SCIPisEQ(scip, closestvbd, closestbound))) )
          {
             vbdcoef = SCIPvarGetVubCoefs(colvar)[closestvbdind];
