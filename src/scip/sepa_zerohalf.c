@@ -64,6 +64,9 @@
 #define DEFAULT_MAXSEPACUTSROOT     100 /**< maximal number of zerohalf cuts separated per separation round in root node */
 #define DEFAULT_MAXSLACK            0.0 /**< maximal slack of rows to be used in aggregation */
 #define DEFAULT_MAXSLACKROOT        0.0 /**< maximal slack of rows to be used in aggregation in the root node */
+#define DEFAULT_GOODSCORE           0.9 /**< threshold for score of cut relative to best score to be considered good,
+                                         *   so that less strict filtering is applied */
+#define DEFAULT_BADSCORE            0.5 /**< threshold for score of cut relative to best score to be discarded */
 #define DEFAULT_MINVIOL             0.1 /**< minimal violation to generate zerohalfcut for */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
 #define DEFAULT_MAXROWDENSITY      0.05 /**< maximal density of row to be used in aggregation */
@@ -164,6 +167,9 @@ struct SCIP_SepaData
    SCIP_Real             maxslack;           /**< maximal slack of rows to be used in aggregation */
    SCIP_Real             maxslackroot;       /**< maximal slack of rows to be used in aggregation in the root node */
    SCIP_Real             maxrowdensity;      /**< maximal density of row to be used in aggregation */
+   SCIP_Real             goodscore;          /**< threshold for score of cut relative to best score to be considered good,
+                                              *   so that less strict filtering is applied */
+   SCIP_Real             badscore;           /**< threshold for score of cut relative to best score to be discarded */
    SCIP_Bool             infeasible;         /**< infeasibility was detected after adding a zerohalf cut */
    SCIP_Bool             dynamiccuts;        /**< should generated cuts be removed from the LP if they are no longer tight? */
    int                   maxrounds;          /**< maximal number of cmir separation rounds per node (-1: unlimited) */
@@ -2245,11 +2251,13 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
    if( sepadata->ncuts > 0  )
    {
       SCIP_Real goodscore;
+      SCIP_Real badscore;
       int naccepted;
 
       SCIPsortDownRealPtr(sepadata->cutscores, (void**)sepadata->cuts, sepadata->ncuts);
 
-      goodscore = 0.9 * sepadata->cutscores[0];
+      goodscore = sepadata->goodscore * sepadata->cutscores[0];
+      badscore = sepadata->badscore * sepadata->cutscores[0];
       naccepted = 0;
 
       for( i = 0; i < sepadata->ncuts; ++i )
@@ -2260,8 +2268,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
          if( sepadata->cuts[i] == NULL )
             continue;
 
-         /* just release remaining cuts if the maximum number has been accepted */
-         if( naccepted == maxsepacuts )
+         /* just release remaining cuts if the maximum number has been accepted or score is too bad */
+         if( naccepted == maxsepacuts || sepadata->cutscores[i] < badscore )
          {
             SCIP_CALL( SCIPreleaseRow(scip, &sepadata->cuts[i]) );
             continue;
@@ -2380,6 +2388,14 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
          "separating/" SEPA_NAME "/maxslackroot",
          "maximal slack of rows to be used in aggregation in the root node",
          &sepadata->maxslackroot, TRUE, DEFAULT_MAXSLACKROOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "separating/" SEPA_NAME "/goodscore",
+         "maximal slack of rows to be used in aggregation in the root node",
+         &sepadata->goodscore, TRUE, DEFAULT_GOODSCORE, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "separating/" SEPA_NAME "/badscore",
+         "maximal slack of rows to be used in aggregation in the root node",
+         &sepadata->badscore, TRUE, DEFAULT_BADSCORE, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/" SEPA_NAME "/minviol",
          "minimal violation to generate zerohalfcut for",
