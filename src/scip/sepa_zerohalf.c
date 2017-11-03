@@ -2248,6 +2248,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
    }
 
    SCIPdebugMsg(scip, "total number of cuts found: %i\n", sepadata->ncuts);
+
+   /* If cuts where found we apply a filtering procedure using the scores and the orthogonalities,
+    * similar to the sepastore. We only add the cuts that make it through this process and discard
+    * the rest.
+    */
    if( sepadata->ncuts > 0  )
    {
       SCIP_Real goodscore;
