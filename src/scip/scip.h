@@ -1351,6 +1351,21 @@ int SCIPgetSubscipDepth(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** sets depth of scip instance
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
+ *  @note SCIP stage does not get changed
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+void SCIPsetSubscipDepth(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   newdepth            /**< new subscip depth */
+   );
+
 /** copies source SCIP to target SCIP; the copying process is done in the following order:
  *  1) copy the plugins
  *  2) copy the settings
@@ -3470,7 +3485,6 @@ SCIP_RETCODE SCIPincludeRelax(
    const char*           desc,               /**< description of relaxation handler */
    int                   priority,           /**< priority of the relaxation handler (negative: after LP, non-negative: before LP) */
    int                   freq,               /**< frequency for calling relaxation handler */
-   SCIP_Bool             includeslp,         /**< Does the relaxator contain all cuts in the LP? */
    SCIP_DECL_RELAXCOPY   ((*relaxcopy)),     /**< copy method of relaxation handler or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_RELAXFREE   ((*relaxfree)),     /**< destructor of relaxation handler */
    SCIP_DECL_RELAXINIT   ((*relaxinit)),     /**< initialize relaxation handler */
@@ -3496,7 +3510,6 @@ SCIP_RETCODE SCIPincludeRelaxBasic(
    const char*           desc,               /**< description of relaxation handler */
    int                   priority,           /**< priority of the relaxation handler (negative: after LP, non-negative: before LP) */
    int                   freq,               /**< frequency for calling relaxation handler */
-   SCIP_Bool             includeslp,         /**< Does the relaxator contain all cuts in the LP? */
    SCIP_DECL_RELAXEXEC   ((*relaxexec)),     /**< execution method of relaxation handler */
    SCIP_RELAXDATA*       relaxdata           /**< relaxation handler data */
    );
@@ -8137,6 +8150,10 @@ SCIP_RETCODE SCIPclearRelaxSolVals(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note This method incrementally updates the objective value of the relaxation solution. If the whole solution
+ *        should be updated, using SCIPsetRelaxSolVals() instead or calling SCIPclearRelaxSolVals() before setting
+ *        the first value to reset the solution and the objective value to 0 may help the numerics.
  */
 EXTERN
 SCIP_RETCODE SCIPsetRelaxSolVal(
@@ -8145,7 +8162,8 @@ SCIP_RETCODE SCIPsetRelaxSolVal(
    SCIP_Real             val                 /**< solution value of variable */
    );
 
-/** sets the values of the given variables in the global relaxation solution;
+/** sets the values of the given variables in the global relaxation solution and informs SCIP about the validity
+ *  and whether the solution can be enforced via linear cuts;
  *  this solution can be filled by the relaxation handlers  and can be used by heuristics and for separation;
  *  the solution is automatically cleared, s.t. all other variables get value 0.0
  *
@@ -8161,12 +8179,13 @@ SCIP_RETCODE SCIPsetRelaxSolVals(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nvars,              /**< number of variables to set relaxation solution value for */
    SCIP_VAR**            vars,               /**< array with variables to set value for */
-   SCIP_Real*            vals                /**< array with solution values of variables */
+   SCIP_Real*            vals,               /**< array with solution values of variables */
+   SCIP_Bool             includeslp          /**< does the relaxator contain all cuts in the LP? */
    );
 
-/** sets the values of the variables in the global relaxation solution to the values
- *  in the given primal solution; the relaxation solution can be filled by the relaxation hanlders
- *  and might be used by heuristics and for separation
+/** sets the values of the variables in the global relaxation solution to the values in the given primal solution
+ *  and informs SCIP about the validity and whether the solution can be enforced via linear cuts;
+ *  the relaxation solution can be filled by the relaxation handlers and might be used by heuristics and for separation
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -8178,7 +8197,8 @@ SCIP_RETCODE SCIPsetRelaxSolVals(
 EXTERN
 SCIP_RETCODE SCIPsetRelaxSolValsSol(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol                 /**< primal relaxation solution */
+   SCIP_SOL*             sol,                /**< primal relaxation solution */
+   SCIP_Bool             includeslp          /**< does the relaxator contain all cuts in the LP? */
    );
 
 /** returns whether the relaxation solution is valid
@@ -8194,7 +8214,7 @@ SCIP_Bool SCIPisRelaxSolValid(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** informs SCIP, that the relaxation solution is valid
+/** informs SCIP that the relaxation solution is valid and whether the relaxation can be enforced through linear cuts
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -8205,7 +8225,8 @@ SCIP_Bool SCIPisRelaxSolValid(
  */
 EXTERN
 SCIP_RETCODE SCIPmarkRelaxSolValid(
-   SCIP*                 scip                /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             includeslp          /**< does the relaxator contain all cuts in the LP? */
    );
 
 /** informs SCIP, that the relaxation solution is invalid
@@ -14992,6 +15013,62 @@ void SCIPaddBilinMcCormick(
    SCIP_Real*            lincoefy,           /**< buffer to add coefficient of second variable in linearization */
    SCIP_Real*            linconstant,        /**< buffer to add constant of linearization */
    SCIP_Bool*            success             /**< buffer to set to FALSE if linearization has failed due to large numbers */
+   );
+
+/** computes coefficients of linearization of a bilinear term in a reference point when given a linear inequality
+ *  involving only the variables of the bilinear term
+ *
+ *  @note the formulas are extracted from "Convex envelopes of bivariate functions through the solution of KKT systems"
+ *        by Marco Locatelli
+ */
+EXTERN
+void SCIPcomputeBilinEnvelope1(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             bilincoef,          /**< coefficient of bilinear term */
+   SCIP_Real             lbx,                /**< lower bound on first variable */
+   SCIP_Real             ubx,                /**< upper bound on first variable */
+   SCIP_Real             refpointx,          /**< reference point for first variable */
+   SCIP_Real             lby,                /**< lower bound on second variable */
+   SCIP_Real             uby,                /**< upper bound on second variable */
+   SCIP_Real             refpointy,          /**< reference point for second variable */
+   SCIP_Bool             overestimate,       /**< whether to compute an overestimator instead of an underestimator */
+   SCIP_Real             xcoef,              /**< x coefficient of linear inequality; must be in {-1,0,1} */
+   SCIP_Real             ycoef,              /**< y coefficient of linear inequality */
+   SCIP_Real             constant,           /**< constant of linear inequality */
+   SCIP_Real* RESTRICT   lincoefx,           /**< buffer to store coefficient of first  variable in linearization */
+   SCIP_Real* RESTRICT   lincoefy,           /**< buffer to store coefficient of second variable in linearization */
+   SCIP_Real* RESTRICT   linconstant,        /**< buffer to store constant of linearization */
+   SCIP_Bool* RESTRICT   success             /**< buffer to store whether linearization was successful */
+   );
+
+/** computes coefficients of linearization of a bilinear term in a reference point when given two linear inequality
+ *  involving only the variables of the bilinear term
+ *
+ *  @note the formulas are extracted from "Convex envelopes of bivariate functions through the solution of KKT systems"
+ *        by Marco Locatelli
+ *
+ */
+EXTERN
+void SCIPcomputeBilinEnvelope2(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             bilincoef,          /**< coefficient of bilinear term */
+   SCIP_Real             lbx,                /**< lower bound on first variable */
+   SCIP_Real             ubx,                /**< upper bound on first variable */
+   SCIP_Real             refpointx,          /**< reference point for first variable */
+   SCIP_Real             lby,                /**< lower bound on second variable */
+   SCIP_Real             uby,                /**< upper bound on second variable */
+   SCIP_Real             refpointy,          /**< reference point for second variable */
+   SCIP_Bool             overestimate,       /**< whether to compute an overestimator instead of an underestimator */
+   SCIP_Real             alpha1,             /**< x coefficient of linear inequality; must be in {-1,0,1} */
+   SCIP_Real             beta1,              /**< y coefficient of linear inequality */
+   SCIP_Real             gamma1,             /**< constant of linear inequality */
+   SCIP_Real             alpha2,             /**< x coefficient of linear inequality; must be in {-1,0,1} */
+   SCIP_Real             beta2,              /**< y coefficient of linear inequality */
+   SCIP_Real             gamma2,             /**< constant of linear inequality */
+   SCIP_Real*            lincoefx,           /**< buffer to store coefficient of first  variable in linearization */
+   SCIP_Real*            lincoefy,           /**< buffer to store coefficient of second variable in linearization */
+   SCIP_Real*            linconstant,        /**< buffer to store constant of linearization */
+   SCIP_Bool*            success             /**< buffer to store whether linearization was successful */
    );
 
 /** creates an NLP relaxation and stores it in a given NLPI problem; the function computes for each variable which the

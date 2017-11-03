@@ -1,5 +1,10 @@
 include(CTest)
 
+add_custom_target(check
+                COMMAND ${CMAKE_CTEST_COMMAND} -R "-default" --schedule-random
+                DEPENDS scip
+                )
+
 #
 # define the instance sets
 #
@@ -89,6 +94,11 @@ set(settings_Bivariate
     "bivariate"
 )
 
+set(settings_Bilinrelax
+    "default"
+    "bilinrelax"
+  )
+
 #
 # Indicator instances
 #
@@ -153,8 +163,13 @@ set(instances_MINLP
     )
 set(instances_Bivariate
     "instances/Bivariate/st_qpk1.osil\;-3"
-    "instances/Bivariate/nvs01.osil\;12.4696688"
+#    "instances/Bivariate/nvs01.osil\;12.4696688"  # see issue #1809
    )
+set(instances_Bilinrelax
+    "instances/Bilinrelax/pointpack06.osil\;0.361111675167215"
+    "instances/Bilinrelax/ex5_4_2.osil\;7512.23014449367"
+  )
+
 #
 # PseudoBoolean instances
 #
@@ -213,7 +228,7 @@ set(scip_reader_extensions
     "opb"
     "pip"
     "rlp"
-#    "mps"
+    "mps"
     "lp"
     )
 
@@ -276,6 +291,7 @@ add_instancetests(instances_Indicator settings_default "Indicator")
 add_instancetests(instances_MIP settings_MIP "MIP")
 add_instancetests(instances_MINLP settings_MINLP "MINLP")
 add_instancetests(instances_Bivariate settings_Bivariate "Bivariate")
+add_instancetests(instances_Bilinrelax settings_Bilinrelax "Bilinrelax")
 add_instancetests(instances_PseudoBoolean settings_default "PseudoBoolean")
 add_instancetests(instances_Semicontinuous settings_default "Semicontinuous")
 add_instancetests(instances_SAT settings_default "SAT")
@@ -423,7 +439,11 @@ set_tests_properties(interactiveshell
                         DEPENDS scip-build
                     )
 
-add_custom_target(check
-                COMMAND ${CMAKE_CTEST_COMMAND} -R "-default" --schedule-random
-                DEPENDS scip
-                )
+add_test(NAME write_and_read_settings
+        COMMAND $<TARGET_FILE:scip> -b ${CMAKE_CURRENT_SOURCE_DIR}/interactiveshell/write_and_read_settings.bat
+        )
+set_tests_properties(write_and_read_settings
+                    PROPERTIES
+                        FAIL_REGULAR_EXPRESSION "ERROR"
+                        DEPENDS scip-build
+                    )
