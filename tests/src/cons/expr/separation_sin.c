@@ -61,6 +61,9 @@ Test(separation, sinus_x, .init = setup, .fini = teardown,
    SCIP_ROW* rmidtangent;
    SCIP_ROW* soltangent;
    SCIP_Real newtonpoint;
+   SCIP_Real refpoint;
+   SCIP_Real childlb;
+   SCIP_Real childub;
 
    secant = NULL;
    ltangent = NULL;
@@ -76,12 +79,16 @@ Test(separation, sinus_x, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPaddVarLocks(scip, auxvar, 1, 1) );
    expr->auxvar = auxvar;
 
+   refpoint = SCIP_INVALID;
+   childlb = SCIPvarGetLbLocal(x);
+   childub = SCIPvarGetUbLocal(x);
+
    /*
     * test initial overestimation
     */
 
-   SCIP_CALL( computeCutsSin(scip, conshdlr, expr, sol, &secant, &ltangent, &rtangent, &lmidtangent, &rmidtangent, NULL,
-      FALSE) );
+   SCIP_CALL( SCIPcomputeCutsSin(scip, conshdlr, expr, &secant, &ltangent, &rtangent, &lmidtangent, &rmidtangent, NULL,
+      refpoint, childlb, childub, FALSE) );
 
    /* check cuts which could not be computed */
    cr_expect(secant == NULL);
@@ -103,8 +110,8 @@ Test(separation, sinus_x, .init = setup, .fini = teardown,
     * test initial underestimation
     */
 
-   SCIP_CALL( computeCutsSin(scip, conshdlr, expr, sol, &secant, &ltangent, &rtangent, &lmidtangent, &rmidtangent, NULL,
-         TRUE) );
+   SCIP_CALL( SCIPcomputeCutsSin(scip, conshdlr, expr, &secant, &ltangent, &rtangent, &lmidtangent, &rmidtangent, NULL,
+         refpoint, childlb, childub, TRUE) );
 
    /* check cuts which could not be computed */
    cr_expect(secant == NULL);
@@ -127,11 +134,12 @@ Test(separation, sinus_x, .init = setup, .fini = teardown,
     */
 
    /* create solution that induces overestimating cut */
-   SCIP_CALL( SCIPsetSolVal(scip, sol, x, 1.5) );
+   refpoint = 1.5;
+   SCIP_CALL( SCIPsetSolVal(scip, sol, x, refpoint) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, 2.0) );
 
-   SCIP_CALL( computeCutsSin(scip, conshdlr, expr, sol, &secant, NULL, NULL, &lmidtangent, &rmidtangent, &soltangent,
-      FALSE) );
+   SCIP_CALL( SCIPcomputeCutsSin(scip, conshdlr, expr, &secant, NULL, NULL, &lmidtangent, &rmidtangent, &soltangent,
+      refpoint, childlb, childub, FALSE) );
 
    /* check cuts which could not be computed */
    cr_expect(secant == NULL);
@@ -149,11 +157,12 @@ Test(separation, sinus_x, .init = setup, .fini = teardown,
     */
 
    /* create solution that induces underestimating cut */
-   SCIP_CALL( SCIPsetSolVal(scip, sol, x, 4.8) );
+   refpoint = 4.8;
+   SCIP_CALL( SCIPsetSolVal(scip, sol, x, refpoint) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, -2.0) );
 
-   SCIP_CALL( computeCutsSin(scip, conshdlr, expr, sol, &secant, NULL, NULL, &lmidtangent, &rmidtangent, &soltangent,
-      TRUE) );
+   SCIP_CALL( SCIPcomputeCutsSin(scip, conshdlr, expr, &secant, NULL, NULL, &lmidtangent, &rmidtangent, &soltangent,
+      refpoint, childlb, childub, TRUE) );
 
    /* check cuts which could not be computed */
    cr_expect(secant == NULL);
@@ -171,11 +180,12 @@ Test(separation, sinus_x, .init = setup, .fini = teardown,
     */
 
    /* create solution */
-   SCIP_CALL( SCIPsetSolVal(scip, sol, x, 4.0) );
+   refpoint = 4.0;
+   SCIP_CALL( SCIPsetSolVal(scip, sol, x, refpoint) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, -2.0) );
 
-   SCIP_CALL( computeCutsSin(scip, conshdlr, expr, sol, &secant, NULL, NULL, &lmidtangent, &rmidtangent, &soltangent,
-      TRUE) );
+   SCIP_CALL( SCIPcomputeCutsSin(scip, conshdlr, expr, &secant, NULL, NULL, &lmidtangent, &rmidtangent, &soltangent,
+      refpoint, childlb, childub, TRUE) );
 
    /* check cuts which could not be computed */
    cr_expect(secant == NULL);
@@ -206,6 +216,9 @@ Test(separation, sinus_y, .init = setup, .fini = teardown,
    SCIP_ROW* rmidtangent;
    SCIP_ROW* soltangent;
    SCIP_Real newtonpoint;
+   SCIP_Real refpoint;
+   SCIP_Real childlb;
+   SCIP_Real childub;
 
    secant = NULL;
    ltangent = NULL;
@@ -221,12 +234,16 @@ Test(separation, sinus_y, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPaddVarLocks(scip, auxvar, 1, 1) );
    expr->auxvar = auxvar;
 
+   refpoint = SCIP_INVALID;
+   childlb = SCIPvarGetLbLocal(y);
+   childub = SCIPvarGetUbLocal(y);
+
    /*
     * test initial overestimation
     */
 
-   SCIP_CALL( computeCutsSin(scip, conshdlr, expr, sol, &secant, &ltangent, &rtangent, &lmidtangent, &rmidtangent, NULL,
-      FALSE) );
+   SCIP_CALL( SCIPcomputeCutsSin(scip, conshdlr, expr, &secant, &ltangent, &rtangent, &lmidtangent, &rmidtangent, NULL,
+      refpoint, childlb, childub, FALSE) );
 
    /* check cuts which could not be computed */
    cr_expect(secant == NULL);
@@ -248,8 +265,8 @@ Test(separation, sinus_y, .init = setup, .fini = teardown,
     * test initial underestimation
     */
 
-   SCIP_CALL( computeCutsSin(scip, conshdlr, expr, sol, &secant, &ltangent, &rtangent, &lmidtangent, &rmidtangent, NULL,
-      TRUE) );
+   SCIP_CALL( SCIPcomputeCutsSin(scip, conshdlr, expr, &secant, &ltangent, &rtangent, &lmidtangent, &rmidtangent, NULL,
+      refpoint, childlb, childub, TRUE) );
 
    /* check cuts which could not be computed */
    cr_expect(ltangent == NULL);
@@ -268,11 +285,12 @@ Test(separation, sinus_y, .init = setup, .fini = teardown,
     */
 
    /* create solution */
-   SCIP_CALL( SCIPsetSolVal(scip, sol, y, -4.0) );
+   refpoint = -4.0;
+   SCIP_CALL( SCIPsetSolVal(scip, sol, y, refpoint) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, 2.0) );
 
-   SCIP_CALL( computeCutsSin(scip, conshdlr, expr, sol, &secant, NULL, NULL, &lmidtangent, &rmidtangent, &soltangent,
-      FALSE) );
+   SCIP_CALL( SCIPcomputeCutsSin(scip, conshdlr, expr, &secant, NULL, NULL, &lmidtangent, &rmidtangent, &soltangent,
+      refpoint, childlb, childub, FALSE) );
 
    /* check cuts which could not be computed */
    cr_expect(secant == NULL);
@@ -290,11 +308,12 @@ Test(separation, sinus_y, .init = setup, .fini = teardown,
     */
 
    /* create solution */
-   SCIP_CALL( SCIPsetSolVal(scip, sol, y, -3.1) );
+   refpoint = -3.1;
+   SCIP_CALL( SCIPsetSolVal(scip, sol, y, refpoint) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, -2.0) );
 
-   SCIP_CALL( computeCutsSin(scip, conshdlr, expr, sol, &secant, NULL, NULL, &lmidtangent, &rmidtangent, &soltangent,
-      TRUE) );
+   SCIP_CALL( SCIPcomputeCutsSin(scip, conshdlr, expr, &secant, NULL, NULL, &lmidtangent, &rmidtangent, &soltangent,
+      refpoint, childlb, childub, TRUE) );
 
    /* check cuts which could not be computed */
    cr_expect(lmidtangent == NULL);
@@ -312,11 +331,12 @@ Test(separation, sinus_y, .init = setup, .fini = teardown,
     */
 
    /* create solution */
-   SCIP_CALL( SCIPsetSolVal(scip, sol, y, -3.2) );
+   refpoint = -3.2;
+   SCIP_CALL( SCIPsetSolVal(scip, sol, y, refpoint) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, 2.0) );
 
-   SCIP_CALL( computeCutsSin(scip, conshdlr, expr, sol, &secant, NULL, NULL, &lmidtangent, &rmidtangent, &soltangent,
-      FALSE) );
+   SCIP_CALL( SCIPcomputeCutsSin(scip, conshdlr, expr, &secant, NULL, NULL, &lmidtangent, &rmidtangent, &soltangent,
+      refpoint, childlb, childub, FALSE) );
 
    /* check cuts which could not be computed */
    cr_expect(secant == NULL);
@@ -347,6 +367,9 @@ Test(separation, sinus_z, .init = setup, .fini = teardown,
    SCIP_ROW* lmidtangent;
    SCIP_ROW* rmidtangent;
    SCIP_ROW* soltangent;
+   SCIP_Real refpoint;
+   SCIP_Real childlb;
+   SCIP_Real childub;
 
    secant = NULL;
    ltangent = NULL;
@@ -362,11 +385,15 @@ Test(separation, sinus_z, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPaddVarLocks(scip, auxvar, 1, 1) );
    expr->auxvar = auxvar;
 
+   refpoint = SCIP_INVALID;
+   childlb = SCIPvarGetLbLocal(z);
+   childub = SCIPvarGetUbLocal(z);
+
    /*
     * test initial overestimation
     */
-   SCIP_CALL( computeCutsSin(scip, conshdlr, expr, sol, &secant, &ltangent, &rtangent, &lmidtangent, &rmidtangent, NULL,
-      FALSE) );
+   SCIP_CALL( SCIPcomputeCutsSin(scip, conshdlr, expr, &secant, &ltangent, &rtangent, &lmidtangent, &rmidtangent, NULL,
+      refpoint, childlb, childub, FALSE) );
 
    /* check cuts which could not be computed */
    cr_expect(secant == NULL);
@@ -387,8 +414,8 @@ Test(separation, sinus_z, .init = setup, .fini = teardown,
     * test initial underestimation
     */
 
-   SCIP_CALL( computeCutsSin(scip, conshdlr, expr, sol, &secant, &ltangent, &rtangent, &lmidtangent, &rmidtangent, NULL,
-      TRUE) );
+   SCIP_CALL( SCIPcomputeCutsSin(scip, conshdlr, expr, &secant, &ltangent, &rtangent, &lmidtangent, &rmidtangent, NULL,
+      refpoint, childlb, childub, TRUE) );
 
    /* check cuts which could not be computed */
    cr_expect(ltangent == NULL);
@@ -407,11 +434,12 @@ Test(separation, sinus_z, .init = setup, .fini = teardown,
     */
 
    /* create solution */
-   SCIP_CALL( SCIPsetSolVal(scip, sol, z, 2.0) );
+   refpoint = 2.0;
+   SCIP_CALL( SCIPsetSolVal(scip, sol, z, refpoint) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, 2.0) );
 
-   SCIP_CALL( computeCutsSin(scip, conshdlr, expr, sol, &secant, NULL, NULL, &lmidtangent, &rmidtangent, &soltangent,
-      FALSE) );
+   SCIP_CALL( SCIPcomputeCutsSin(scip, conshdlr, expr, &secant, NULL, NULL, &lmidtangent, &rmidtangent, &soltangent,
+      refpoint, childlb, childub, FALSE) );
 
    /* check cuts which could not be computed */
    cr_expect(secant == NULL);
@@ -431,11 +459,12 @@ Test(separation, sinus_z, .init = setup, .fini = teardown,
     */
 
    /* create solution */
-   SCIP_CALL( SCIPsetSolVal(scip, sol, z, 2.0) );
+   refpoint = 2.0;
+   SCIP_CALL( SCIPsetSolVal(scip, sol, z, refpoint) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, -2.0) );
 
-   SCIP_CALL( computeCutsSin(scip, conshdlr, expr, sol, &secant, NULL, NULL, &lmidtangent, &rmidtangent, &soltangent,
-      TRUE) );
+   SCIP_CALL( SCIPcomputeCutsSin(scip, conshdlr, expr, &secant, NULL, NULL, &lmidtangent, &rmidtangent, &soltangent,
+      refpoint, childlb, childub, TRUE) );
 
    /* check cuts which could not be computed */
    cr_expect(lmidtangent == NULL);
