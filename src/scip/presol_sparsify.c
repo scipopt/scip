@@ -319,25 +319,28 @@ SCIP_RETCODE cancelRow(
                   if( SCIPvarIsIntegral(var) )
                   {
                      if( ++nintfillin > maxintfillin )
-                        break;
-                     if( SCIPvarIsBinary(var) )
                      {
-                        if( ++nbinfillin > maxbinfillin )
-                           break;
+                        abortpair = TRUE;
+                        break;
+                     }
+                     if( SCIPvarIsBinary(var) && ++nbinfillin > maxbinfillin )
+                     {
+                        abortpair = TRUE;
+                        break;
                      }
                   }
                   else
                   {
                      if( ++ncontfillin > maxcontfillin )
+                     {
+                        abortpair = TRUE;
                         break;
+                     }
                   }
                }
             }
 
             if( abortpair )
-               continue;
-
-            if( ncontfillin > maxcontfillin || nbinfillin > maxbinfillin || nintfillin > maxintfillin )
                continue;
 
             while( b < eqrowlen )
