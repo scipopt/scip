@@ -2448,7 +2448,7 @@ SCIP_Real getScoreBilinBound(
    /* consider how often a bilinear term is present in the problem */
    score = (bilinbound->noverest + bilinbound->nunderest) / (SCIP_Real)nbilinterms;
 
-   /* penalize small variable domains */
+   /* penalize small variable domains; TODO tune the factor in the logarithm, maybe add a parameter for it */
    if( ubx - lbx < 0.5 )
       score += log(2.0*(ubx-lbx) + SCIPepsilon(scip));
    if( uby - lby < 0.5 )
