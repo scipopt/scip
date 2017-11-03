@@ -61,7 +61,7 @@ performance improvements:
 - add and use RESTRICT macro for some pointers
 - improved the implementation of SCIPvarGetActiveRepresentatives
 - removed bestrelaxsol and directly access relaxation solution instead to decrease overhead when using relaxation handlers
-- use LP solution polishing during probing and diving mode to acivate it during many primal heuristics; remains disabled
+- use LP solution polishing during probing and diving mode to activate it during many primal heuristics; remains disabled
   during strong branching and OBBT
 
 fixed bugs:
