@@ -42,6 +42,7 @@
 #define PRESOL_TIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 
 #define DEFAULT_ENABLECOPY           TRUE    /**< should sparsify presolver be copied to sub-SCIPs? */
+#define DEFAULT_CANCELLINEAR        FALSE    /**< should we cancel nonzeros in constraints of the linear constraint handler? */
 #define DEFAULT_MAX_CONT_FILLIN         0    /**< default value for the maximal fillin for continuous variables */
 #define DEFAULT_MAX_BIN_FILLIN          0    /**< default value for the maximal fillin for binary variables */
 #define DEFAULT_MAX_INT_FILLIN          0    /**< default value for the maximal fillin for integer variables */
@@ -74,6 +75,7 @@ struct SCIP_PresolData
    SCIP_Real             waitingfac;         /**< number of calls to wait until next execution as a multiple of the number of useless calls */
    char                  rowsort;            /**< order in which to process inequalities ('n'o sorting, 'i'ncreasing nonzeros, 'd'ecreasing nonzeros) */
    SCIP_Bool             enablecopy;         /**< should sparsify presolver be copied to sub-SCIPs? */
+   SCIP_Bool             cancellinear;       /**< should we cancel nonzeros in constraints of the linear constraint handler? */
 };
 
 
@@ -638,8 +640,11 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       return SCIP_OKAY;
    }
 
+   /* if we want to cancel only from specialized constraints according to the parameter, then we can skip execution if
+    * only linear constraints are present
+    */
    linearhdlr = SCIPfindConshdlr(scip, "linear");
-   if( linearhdlr != NULL && SCIPconshdlrGetNConss(linearhdlr) >= SCIPgetNConss(scip) )
+   if( !presoldata->cancellinear && linearhdlr != NULL && SCIPconshdlrGetNConss(linearhdlr) >= SCIPgetNConss(scip) )
    {
       SCIPdebugMsg(scip, "skipping sparsify: only linear constraints found\n");
       return SCIP_OKAY;
@@ -799,10 +804,14 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       {
          int rowidx;
 
-         /* we only cancel from specialized constraints */
          rowidx = rowidxsorted != NULL ? rowidxsorted[r] : r;
+
+         /* check whether we want to cancel only from specialized constraints; one reasoning behind this may be that
+          * cancelling fractional coefficients requires more numerical care than is currently implemented in method
+          * cancelRow()
+          */
          assert(SCIPmatrixGetCons(matrix, rowidx) != NULL);
-         if( SCIPconsGetHdlr(SCIPmatrixGetCons(matrix, rowidx)) == linearhdlr )
+         if( !presoldata->cancellinear && SCIPconsGetHdlr(SCIPmatrixGetCons(matrix, rowidx)) == linearhdlr )
             continue;
 
          SCIP_CALL( cancelRow(scip, matrix, pairtable, rowidx,          \
@@ -911,6 +920,11 @@ SCIP_RETCODE SCIPincludePresolSparsify(
          "presolving/sparsify/enablecopy",
          "should sparsify presolver be copied to sub-SCIPs?",
          &presoldata->enablecopy, TRUE, DEFAULT_ENABLECOPY, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "presolving/sparsify/cancellinear",
+         "should we cancel nonzeros in constraints of the linear constraint handler?",
+         &presoldata->cancellinear, TRUE, DEFAULT_CANCELLINEAR, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/sparsify/maxcontfillin",
