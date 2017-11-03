@@ -118,6 +118,10 @@ struct TransIntRow
 /** structure representing a row in the mod 2 system */
 struct Mod2Row
 {
+   ROWINDEX*             rowinds;            /**< index set of rows associated with the mod 2 row */
+   MOD2_COL**            nonzcols;           /**< sorted array of non-zero mod 2 columns in this mod 2 row */
+   SCIP_Real             slack;              /**< slack of mod 2 row */
+   SCIP_Real             maxsolval;          /**< maximum solution value of columns in mod 2 row */
    int                   index;              /**< unique index of mod 2 row */
    int                   pos;                /**< position of mod 2 row in mod 2 matrix rows array */
    int                   rhs;                /**< rhs of row */
@@ -125,19 +129,15 @@ struct Mod2Row
    int                   rowindssize;        /**< size of rowinds array */
    int                   nnonzcols;          /**< number of columns in nonzcols */
    int                   nonzcolssize;       /**< size of nonzcols array */
-   ROWINDEX*             rowinds;            /**< index set of rows associated with the mod 2 row */
-   MOD2_COL**            nonzcols;           /**< sorted array of non-zero mod 2 columns in this mod 2 row */
-   SCIP_Real             slack;              /**< slack of mod 2 row */
-   SCIP_Real             maxsolval;          /**< maximum solution value of columns in mod 2 row */
 };
 
 /** structure representing a column in the mod 2 system */
 struct Mod2Col
 {
-   int                   index;              /**< index of SCIP column associated to this column */
-   int                   pos;                /**< position of column in matrix */
-   SCIP_Real             solval;             /**< solution value of the column */
    SCIP_HASHSET*         nonzrows;           /**< the set of rows that contain this column */
+   SCIP_Real             solval;             /**< solution value of the column */
+   int                   pos;                /**< position of column in matrix */
+   int                   index;              /**< index of SCIP column associated to this column */
 };
 
 /** matrix representing the modulo 2 system */
@@ -157,23 +157,23 @@ struct Mod2Matrix
 /** data of separator */
 struct SCIP_SepaData
 {
+   SCIP_AGGRROW*         aggrrow;            /**< aggregation row used for generating cuts */
+   SCIP_ROW**            cuts;               /**< generated in the current call */
+   SCIP_Real*            cutscores;          /**< score for each cut genereted in the current call */
    SCIP_Real             minviol;            /**< minimal violation to generate zerohalfcut for */
    SCIP_Real             maxslack;           /**< maximal slack of rows to be used in aggregation */
    SCIP_Real             maxslackroot;       /**< maximal slack of rows to be used in aggregation in the root node */
    SCIP_Real             maxrowdensity;      /**< maximal density of row to be used in aggregation */
+   SCIP_Bool             infeasible;         /**< infeasibility was detected after adding a zerohalf cut */
+   SCIP_Bool             dynamiccuts;        /**< should generated cuts be removed from the LP if they are no longer tight? */
    int                   maxrounds;          /**< maximal number of cmir separation rounds per node (-1: unlimited) */
    int                   maxroundsroot;      /**< maximal number of cmir separation rounds in the root node (-1: unlimited) */
    int                   maxsepacuts;        /**< maximal number of cmir cuts separated per separation round */
    int                   maxsepacutsroot;    /**< maximal number of cmir cuts separated per separation round in root node */
    int                   densityoffset;      /**< additional number of variables allowed in row on top of density */
-   SCIP_Bool             dynamiccuts;        /**< should generated cuts be removed from the LP if they are no longer tight? */
-   SCIP_AGGRROW*         aggrrow;            /**< aggregation row used for generating cuts */
-   SCIP_ROW**            cuts;               /**< generated in the current call */
-   SCIP_Real*            cutscores;          /**< score for each cut genereted in the current call */
    int                   cutssize;           /**< size of cuts and cutscores arrays */
    int                   ncuts;              /**< number of cuts generated in the current call */
    int                   nreductions;        /**< number of reductions to the mod 2 system found so far */
-   SCIP_Bool             infeasible;         /**< infeasibility was detected after adding a zerohalf cut */
 };
 
 
