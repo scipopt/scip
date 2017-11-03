@@ -16,14 +16,11 @@
 /**@file   presol_sparsify.h
  * @brief  cancel non-zeros of the constraint matrix
  * @author Dieter Weninger
+ * @author Robert Lion Gottwald
+ * @author Ambros Gleixner
  *
  * This presolver attempts to cancel non-zero entries of the constraint
- * matrix by adding equalities to other constraints.
- * It supports two cases:
- * a) the variable index set from non-zero entries of the other constraint
- *    is a superset of the variable index set of the non-zero entries of the
- *    equality
- * b) same as case a) except for one variable index
+ * matrix by adding scaled equalities to other constraints.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

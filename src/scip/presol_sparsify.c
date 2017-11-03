@@ -12,18 +12,15 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 /**@file   presol_sparsify.c
  * @brief  cancel non-zeros of the constraint matrix
  * @author Dieter Weninger
  * @author Robert Lion Gottwald
+ * @author Ambros Gleixner
  *
  * This presolver attempts to cancel non-zero entries of the constraint
- * matrix by adding equalities to other constraints.
- * It supports two cases:
- * a) the variable index set from non-zero entries of the other constraint
- *    is a superset of the variable index set of the non-zero entries of the
- *    equality
- * b) same as case a) except for one variable index
+ * matrix by adding scaled equalities to other constraints.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -52,6 +49,7 @@
 #define DEFAULT_MAXCONSIDEREDNONZEROS  70    /**< maximal number of considered non-zeros within one row (-1: no limit) */
 #define DEFAULT_ROWSORT               'd'    /**< order in which to process inequalities ('n'o sorting, 'i'ncreasing nonzeros, 'd'ecreasing nonzeros) */
 #define DEFAULT_MAXRETRIEVEFAC      100.0    /**< limit on the number of useless vs. useful hashtable retrieves as a multiple of the number of constraints */
+#define DEFAULT_WAITINGFAC            2.0    /**< number of calls to wait until next execution as a multiple of the number of useless calls */
 
 #define MAXSCALE                   1000.0    /**< maximal allowed scale for cancelling non-zeros */
 
@@ -73,6 +71,7 @@ struct SCIP_PresolData
    int                   maxnonzeros;        /**< maximal support of one equality to be used for cancelling (-1: no limit) */
    int                   maxconsiderednonzeros;/**< maximal number of considered non-zeros within one row (-1: no limit) */
    SCIP_Real             maxretrievefac;     /**< limit on the number of useless vs. useful hashtable retrieves as a multiple of the number of constraints */
+   SCIP_Real             waitingfac;         /**< number of calls to wait until next execution as a multiple of the number of useless calls */
    char                  rowsort;            /**< order in which to process inequalities ('n'o sorting, 'i'ncreasing nonzeros, 'd'ecreasing nonzeros) */
    SCIP_Bool             enablecopy;         /**< should sparsify presolver be copied to sub-SCIPs? */
 };
@@ -563,7 +562,7 @@ void updateFailureStatistic(
    else
    {
       presoldata->nfailures++;
-      presoldata->nwaitingcalls = 2*presoldata->nfailures;
+      presoldata->nwaitingcalls = presoldata->waitingfac*presoldata->nfailures;
    }
 }
 
@@ -947,6 +946,11 @@ SCIP_RETCODE SCIPincludePresolSparsify(
          "presolving/sparsify/maxretrievefac",
          "limit on the number of useless vs. useful hashtable retrieves as a multiple of the number of constraints",
          &presoldata->maxretrievefac, TRUE, DEFAULT_MAXRETRIEVEFAC, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "presolving/sparsify/waitingfac",
+         "number of calls to wait until next execution as a multiple of the number of useless calls",
+         &presoldata->waitingfac, TRUE, DEFAULT_WAITINGFAC, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
