@@ -19,6 +19,8 @@ features:
 - cons_orbitope.c can now handle full orbitopes as well
 - added new plugin type "table" for adding user-defined statistics tables
 - added new propagator orbital fixing
+- revised disaggregation of quadratic constraints: the number of created constraints can now be controlled and the
+  disaggregated constraints are scaled in order to increase numerical accuracy
 
 parameters:
 - new parameter misc/debugsol to specify a debug solution that should be checked during the solve
@@ -28,6 +30,9 @@ parameters:
 - new parameter: misc/usesymmetry to determine whether symmetry handling should be used
 - new value 3 for parameter "lp/solutionpolishing" to enable LP polishing only during probing and diving mode
 - removed parameters "constraints/{abspower,bivariate,nonlinear,quadratic,soc}/scaling"
+- replaced constraints/quadratic/disaggregate by constraints/quadratic/maxdisaggrsize to bound
+  the total number of created constraints when disaggregating a quadratic constraint
+- added parameter constraints/quadratic/disaggrmergemethod
 
 interface:
 - new interface methods to create and use bandit algorithms implemented as SCIP core plugins --
@@ -53,10 +58,12 @@ interface:
 - added cons_symresack.c to handle permutation symmetries in a binary programs via inequalities and propagation
 - added cons_orbisack.c to handle special permutation symmetries in a binary programs via inequalities and propagation
 - added presol_symbreak.c to detect special symmetry structures and to add symmetry handling constraints
+- removed solution pointer from list of arguments for SCIPaddCut()
 - added additional parameter for statistics tables to SCIPcopyPlugins
 - added parameter "objval" to SCIPnlpiGetSolution() for returning the optimal objective value (can be set to NULL)
 - removed argument "includeslp" from SCIPrelaxCreate() and added it to SCIPmarkRelaxSolValid(), SCIPsetRelaxSolVals() and
   SCIPsetRelaxSolValsSol(); removed function SCIPrelaxIncludesLp() and SCIPrelaxSetIncludesLp()
+- new method SCIPsetSubscipDepth() to set the depth of SCIP as a copied subproblem during problem stage
 
 performance improvements:
 - use disjoint set to reduce peak memory usage and time to compute of clique table connectedness information
@@ -71,6 +78,8 @@ fixed bugs:
 - fixed potential ressource leaks in SCIPsolveLinearProb, expr.c, sepa_eccuts, cons_cumulative.c, cons_nonlinear.c
 - fixed bug in cons_orbitope.c, where wrong terminating index in separation of SCIs was used
 - fixed order of SCIPcalcCliquePartition in corner case where no cliques are available
+- fixed bug in mps reader. Reader now prints OBJSENSE section and tries to generate unique names of constraints
+- fixed handling of LOOSE variables in locks heuristic
 
 misc:
 - dropped support for MOSEK < 7.0.0.0
@@ -150,6 +159,9 @@ interface:
 
 testing:
 - added make options for specifying EXECUTABLE and OUTPUTDIR variables for the make test target
+
+makefile:
+- default build is now with ZIMPL=false
 
 SCIP version 4.0.0
 ==================

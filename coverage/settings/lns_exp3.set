@@ -9,5 +9,6 @@ heuristics/alns/freq = 15
 heuristics/alns/rewardcontrol = 1.0
 
 heuristics/alns/uselocalredcost = TRUE
+heuristics/alns/usepscost = TRUE
 
 heuristics/alns/fixtol = 0.15

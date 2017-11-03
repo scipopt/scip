@@ -34,12 +34,12 @@
 #define TABLE_POSITION_TIMING            1000                   /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_TIMING      SCIP_STAGE_PROBLEM     /**< output of the statistics table is only printed from this stage onwards */
 
-#define TABLE_NAME_ORIGPROB              "original problem"
+#define TABLE_NAME_ORIGPROB              "origprob"
 #define TABLE_DESC_ORIGPROB              "original problem statistics table"
 #define TABLE_POSITION_ORIGPROB          2000                   /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_ORIGPROB    SCIP_STAGE_PROBLEM     /**< output of the statistics table is only printed from this stage onwards */
 
-#define TABLE_NAME_TRANSPROB             "presolved problem"
+#define TABLE_NAME_TRANSPROB             "presolvedprob"
 #define TABLE_DESC_TRANSPROB             "presolved problem statistics table"
 #define TABLE_POSITION_TRANSPROB         3000                   /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_TRANSPROB   SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
@@ -54,7 +54,7 @@
 #define TABLE_POSITION_CONS              5000                   /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_CONS        SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
 
-#define TABLE_NAME_CONSTIMING            "constraint timing"
+#define TABLE_NAME_CONSTIMING            "constiming"
 #define TABLE_DESC_CONSTIMING            "constraint timing statistics table"
 #define TABLE_POSITION_CONSTIMING        6000                   /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_CONSTIMING  SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
@@ -79,7 +79,7 @@
 #define TABLE_POSITION_PRICER            10000                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_PRICER      SCIP_STAGE_SOLVING     /**< output of the statistics table is only printed from this stage onwards */
 
-#define TABLE_NAME_BRANCH                "branching rules"
+#define TABLE_NAME_BRANCH                "branchrules"
 #define TABLE_DESC_BRANCH                "branching rules statistics table"
 #define TABLE_POSITION_BRANCH            11000                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_BRANCH      SCIP_STAGE_SOLVING     /**< output of the statistics table is only printed from this stage onwards */
@@ -124,7 +124,7 @@
 #define TABLE_POSITION_SOL               19000                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_SOL         SCIP_STAGE_PRESOLVING  /**< output of the statistics table is only printed from this stage onwards */
 
-#define TABLE_NAME_CONC                  "concurrent solver"
+#define TABLE_NAME_CONC                  "concurrentsolver"
 #define TABLE_DESC_CONC                  "concurrent solver statistics table"
 #define TABLE_POSITION_CONC              20000                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_CONC        SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
