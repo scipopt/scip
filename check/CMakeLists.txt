@@ -153,7 +153,7 @@ set(instances_MINLP
     )
 set(instances_Bivariate
     "instances/Bivariate/st_qpk1.osil\;-3"
-    "instances/Bivariate/nvs01.osil\;12.4696688"
+#    "instances/Bivariate/nvs01.osil\;12.4696688"  # see issue #1809
    )
 #
 # PseudoBoolean instances
