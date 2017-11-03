@@ -79,7 +79,7 @@ set(settings_MIP
 )
 
 set(settings_MINLP
-    "default"
+    "checkfeastolfac10"
     "undercover1"
     "undercover2"
     "rensnlp"
@@ -90,12 +90,12 @@ set(settings_MINLP
     "nlpdiving4"
 )
 set(settings_Bivariate
-    "default"
+    "checkfeastolfac10"
     "bivariate"
 )
 
 set(settings_Bilinrelax
-    "default"
+    "checkfeastolfac10"
     "bilinrelax"
   )
 
