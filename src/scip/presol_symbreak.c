@@ -777,7 +777,7 @@ SCIP_RETCODE detectOrbitopes(
       }
 
       /* if no orbitope was detected or orbitope has too few rows */
-      if ( ! isorbitope || ntwocyclescomp <= 1 )
+      if ( ! isorbitope )
          continue;
 
       /* iterate over permutations and check whether for each permutation there exists
@@ -1085,7 +1085,7 @@ SCIP_RETCODE addSymmetryBreakingConstraints(
          assert( 0 <= nvarsinorbits && nvarsinorbits <= presoldata->npermvars );
 
          if ( nvarsinorbits >= 0.95 * presoldata->npermvars ||
-            ( nvarsinorbits >= 0.05 * presoldata->npermvars && ratiogroupsizengens <= 0.55 && nvarsinorbits >= 2 * presoldata->nperms ) )
+            ( nvarsinorbits >= 0.05 * presoldata->npermvars && ratiogroupsizengens <= 0.55 ) )
             decision = TRUE;
 
          if ( decision )
