@@ -1901,7 +1901,8 @@ SCIP_RETCODE SCIPsolRetransform(
    /* reinsert the values of the original variables */
    for( v = 0; v < nvars; ++v )
    {
-      assert(SCIPvarGetUnchangedObj(vars[v]) == SCIPvarGetObj(vars[v]));
+      assert(SCIPvarGetUnchangedObj(vars[v]) == SCIPvarGetObj(vars[v])); /*lint !e777*/
+
       if( !SCIPsetIsZero(set, solvals[v]) )
       {
          SCIP_CALL( solSetArrayVal(sol, set, vars[v], solvals[v]) );

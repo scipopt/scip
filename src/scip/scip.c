@@ -19978,7 +19978,7 @@ SCIP_RETCODE SCIPendStrongbranch(
 
       /* switch back from probing to normal operation mode and restore variables and constraints to focus node */
       SCIP_CALL( SCIPtreeEndProbing(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat,
-         scip->transprob, scip->origprob, scip->lp, scip->relaxation, scip->primal,
+         scip->transprob, scip->origprob, scip->lp, scip->primal,
          scip->branchcand, scip->eventqueue, scip->eventfilter, scip->cliquetable) );
 
       /* apply the collected bound changes */
@@ -35310,7 +35310,7 @@ SCIP_RETCODE SCIPbacktrackProbing(
    }
 
    SCIP_CALL( SCIPtreeBacktrackProbing(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-         scip->origprob, scip->lp, scip->relaxation, scip->primal, scip->branchcand, scip->eventqueue, scip->eventfilter,
+         scip->origprob, scip->lp, scip->primal, scip->branchcand, scip->eventqueue, scip->eventfilter,
          scip->cliquetable, probingdepth) );
 
    return SCIP_OKAY;
@@ -35339,7 +35339,7 @@ SCIP_RETCODE SCIPendProbing(
 
    /* switch back from probing to normal operation mode and restore variables and constraints to focus node */
    SCIP_CALL( SCIPtreeEndProbing(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat,
-         scip->transprob, scip->origprob, scip->lp, scip->relaxation, scip->primal,
+         scip->transprob, scip->origprob, scip->lp, scip->primal,
          scip->branchcand, scip->eventqueue, scip->eventfilter, scip->cliquetable) );
 
    /* enables the collection of statistics for a variable */
