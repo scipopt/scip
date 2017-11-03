@@ -4,6 +4,10 @@
 # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
 reading/storeader/usebenders = TRUE
 
+# priority of node selection rule <bfs> in standard mode
+# [type: int, advanced: FALSE, range: [-536870912,1073741823], default: 100000]
+nodeselection/bfs/stdpriority = 300000
+
 # frequency for calling primal heuristic <coefdiving> (-1: never, 0: only at depth freqofs)
 # [type: int, advanced: FALSE, range: [-1,65534], default: 10]
 heuristics/coefdiving/freq = -1
@@ -47,10 +51,6 @@ heuristics/nlpdiving/freq = -1
 # frequency for calling primal heuristic <objpscostdiving> (-1: never, 0: only at depth freqofs)
 # [type: int, advanced: FALSE, range: [-1,65534], default: 20]
 heuristics/objpscostdiving/freq = -1
-
-# priority of heuristic <proximity-benders>
-# [type: int, advanced: TRUE, range: [-536870912,536870911], default: -2000000]
-heuristics/proximity-benders/priority = -2000000
 
 # frequency for calling primal heuristic <proximity-benders> (-1: never, 0: only at depth freqofs)
 # [type: int, advanced: FALSE, range: [-1,65534], default: -1]
