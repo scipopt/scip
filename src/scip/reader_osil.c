@@ -1357,7 +1357,8 @@ SCIP_RETCODE readExpression(
       strcmp(exprname, "exp") == 0 ||
       strcmp(exprname, "ln") == 0 ||
       strcmp(exprname, "log10") == 0 ||
-      strcmp(exprname, "sin") == 0
+      strcmp(exprname, "sin") == 0 ||
+      strcmp(exprname, "cos") == 0
       )
    {
       SCIP_EXPR* arg;
@@ -1417,6 +1418,10 @@ SCIP_RETCODE readExpression(
       else if( strcmp(exprname, "sin") == 0 )
       {
          SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_SIN, arg) );
+      }
+      else if( strcmp(exprname, "cos") == 0 )
+      {
+         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_COS, arg) );
       }
 
       return SCIP_OKAY;

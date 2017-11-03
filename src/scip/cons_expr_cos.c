@@ -38,270 +38,6 @@
  * Local methods
  */
 
-/** helper function to create cuts for point- or initial separation
- *
- *  A total of 6 different cuts can be generated. All except soltangent are independent of a specific solution and
- *  use only the bounds of the child variable. If their pointers are passed with NULL, the respective coputation
- *  is not performed at all. If one of the computations failes or turns out to be irrelevant, the respective argument
- *  pointer is set to NULL.
- */
-static
-SCIP_RETCODE computeCutsCos(
-        SCIP*                 scip,               /**< SCIP data structure */
-        SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-        SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
-        SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
-        SCIP_ROW**            secant,             /**< pointer to store the secant */
-        SCIP_ROW**            ltangent,           /**< pointer to store the left tangent */
-        SCIP_ROW**            rtangent,           /**< pointer to store the right tangent */
-        SCIP_ROW**            lmidtangent,        /**< pointer to store the left middle tangent */
-        SCIP_ROW**            rmidtangent,        /**< pointer to store the right middle tangent */
-        SCIP_ROW**            soltangent,         /**< pointer to store the solution tangent */
-        SCIP_Bool             underestimate       /**< whether the cuts should be underestimating */
-)
-{
-   SCIP_CONSEXPR_EXPR* child;
-   SCIP_VAR* auxvar;
-   SCIP_VAR* childvar;
-   SCIP_Real lincoef;
-   SCIP_Real linconst;
-   SCIP_Real childlb;
-   SCIP_Real childub;
-   SCIP_Real lhs;
-   SCIP_Real rhs;
-   SCIP_Bool success;
-   char name[SCIP_MAXSTRLEN];
-
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), "expr") == 0);
-   assert(expr != NULL);
-   assert(SCIPgetConsExprExprNChildren(expr) == 1);
-   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
-
-   /* get expression data */
-   auxvar = SCIPgetConsExprExprLinearizationVar(expr);
-   assert(auxvar != NULL);
-   child = SCIPgetConsExprExprChildren(expr)[0];
-   assert(child != NULL);
-   childvar = SCIPgetConsExprExprLinearizationVar(child);
-   assert(childvar != NULL);
-
-   /* shift bounds so that sine functions can be used for computation */
-   childlb = SCIPvarGetLbLocal(childvar) + 0.5*M_PI;
-   childub = SCIPvarGetUbLocal(childvar) + 0.5*M_PI;
-   assert(SCIPisLE(scip, childlb, childub));
-
-   /* if variable is fixed, it does not make sense to add cuts */
-   if( SCIPisEQ(scip, childlb, childub) )
-      return SCIP_OKAY;
-
-   /*
-    * Compute all cuts that where specified upon call.
-    * For each linear equation z = a*x + b with bounds [lb,ub] the parameters can be computed by:
-    *
-    * a = -sin(x^)    and     b = cos(x^) - a * x^        where x^ is any known point in [lb,ub]
-    *
-    * and the resulting cut is       a*x - z <=/>= -b           depending on over-/underestimation
-    */
-
-   /* compute secant between lower and upper bound */
-   if( secant != NULL )
-   {
-      *secant = NULL;
-
-      if( underestimate )
-         success = SCIPcomputeSecantSin(scip, &lincoef, &linconst, childlb, childub);
-      else
-         success = SCIPcomputeSecantSin(scip, &lincoef, &linconst, -childub, -childlb);
-
-      if( success )
-      {
-         /* shift cut back */
-         linconst += lincoef  * 0.5 * M_PI;
-
-         lhs = underestimate ? -SCIPinfinity(scip) : linconst;
-         rhs = underestimate ? -linconst : SCIPinfinity(scip);
-
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cos_secant_%s", SCIPvarGetName(childvar));
-
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, secant, conshdlr, name, lhs, rhs,
-                                           TRUE, FALSE, FALSE) );
-
-         SCIP_CALL( SCIPaddVarToRow(scip, *secant, auxvar, -1.0) );
-         SCIP_CALL( SCIPaddVarToRow(scip, *secant, childvar, lincoef) );
-      }
-   }
-
-   /* compute tangent at lower bound */
-   if( ltangent != NULL )
-   {
-      *ltangent = NULL;
-
-      if( underestimate )
-         success = SCIPcomputeLeftTangentSin(scip, &lincoef, &linconst, childlb);
-      else
-         success = SCIPcomputeRightTangentSin(scip, &lincoef, &linconst, -childlb);
-
-      if( success )
-      {
-         /* shift cut back */
-         linconst += lincoef  * 0.5 * M_PI;
-
-         lhs = underestimate ? -SCIPinfinity(scip) : linconst;
-         rhs = underestimate ? -linconst : SCIPinfinity(scip);
-
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cos_ltangent_%s", SCIPvarGetName(childvar));
-
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, ltangent, conshdlr, name, lhs, rhs,
-                                           TRUE, FALSE, FALSE) );
-
-         SCIP_CALL( SCIPaddVarToRow(scip, *ltangent, auxvar, -1.0) );
-         SCIP_CALL( SCIPaddVarToRow(scip, *ltangent, childvar, lincoef) );
-      }
-   }
-
-   /* compute tangent at upper bound */
-   if( rtangent != NULL )
-   {
-      *rtangent = NULL;
-
-      if( underestimate )
-         success = SCIPcomputeRightTangentSin(scip, &lincoef, &linconst, childub);
-      else
-         success = SCIPcomputeLeftTangentSin(scip, &lincoef, &linconst, -childub);
-
-      if( success )
-      {
-         /* shift cut back */
-         linconst += lincoef  * 0.5 * M_PI;
-
-         lhs = underestimate ? -SCIPinfinity(scip) : linconst;
-         rhs = underestimate ? -linconst : SCIPinfinity(scip);
-
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cos_rtangent_%s", SCIPvarGetName(childvar));
-
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, rtangent, conshdlr, name, lhs, rhs,
-                                           TRUE, FALSE, FALSE) );
-
-         SCIP_CALL( SCIPaddVarToRow(scip, *rtangent, auxvar, -1.0) );
-         SCIP_CALL( SCIPaddVarToRow(scip, *rtangent, childvar, lincoef) );
-      }
-   }
-
-   /* compute tangent at solution point */
-   if( soltangent != NULL )
-   {
-      SCIP_Real refpoint;
-
-      *soltangent = NULL;
-      refpoint = SCIPgetSolVal(scip, sol, childvar);
-
-      if( underestimate )
-         success = SCIPcomputeSolTangentSin(scip, &lincoef, &linconst, childlb, childub, refpoint);
-      else
-         success = SCIPcomputeSolTangentSin(scip, &lincoef, &linconst, -childub, -childlb, -refpoint);
-
-      if( success )
-      {
-
-         /* shift cut back */
-         linconst += lincoef  * 0.5 * M_PI;
-
-         lhs = underestimate ? -SCIPinfinity(scip) : linconst;
-         rhs = underestimate ? -linconst : SCIPinfinity(scip);
-
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cos_soltangent_%s", SCIPvarGetName(childvar));
-
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, soltangent, conshdlr, name, lhs, rhs,
-                                           TRUE, FALSE, FALSE) );
-
-         SCIP_CALL( SCIPaddVarToRow(scip, *soltangent, auxvar, -1.0) );
-         SCIP_CALL( SCIPaddVarToRow(scip, *soltangent, childvar, lincoef) );
-      }
-   }
-
-
-   /* compute left middle tangent, that is tangent at some other point which goes through (lb,sin(lb))
-    * if secant or soltangent are feasible, this cut can never beat them
-    */
-   if( lmidtangent != NULL && (secant == NULL || *secant == NULL) && (soltangent == NULL || *soltangent == NULL) )
-   {
-      SCIP_ROW** cutbuffer;
-      SCIP_Bool issecant;
-
-      *lmidtangent = NULL;
-
-      if( underestimate )
-         success = SCIPcomputeLeftMidTangentSin(scip, &lincoef, &linconst, &issecant, childlb, childub);
-      else
-         success = SCIPcomputeRightMidTangentSin(scip, &lincoef, &linconst, &issecant, -childub, -childlb);
-
-      /* if the cut connects bounds it is stored in secant */
-      cutbuffer = (issecant && secant != NULL) ? secant : lmidtangent;
-
-      if( success )
-      {
-         /* shift cut back */
-         linconst += lincoef  * 0.5 * M_PI;
-
-         lhs = underestimate ? -SCIPinfinity(scip) : linconst;
-         rhs = underestimate ? -linconst : SCIPinfinity(scip);
-
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cos_lmidtangent_%s", SCIPvarGetName(childvar));
-
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, cutbuffer, conshdlr, name, lhs, rhs,
-                                           TRUE, FALSE, FALSE) );
-
-         SCIP_CALL( SCIPaddVarToRow(scip, *cutbuffer, auxvar, -1.0) );
-         SCIP_CALL( SCIPaddVarToRow(scip, *cutbuffer, childvar, lincoef) );
-      }
-   }
-   else if( lmidtangent != NULL )
-      *lmidtangent = NULL;
-
-   /* compute right middle tangent, that is tangent at some other point which goes through (ub,sin(ub))
-    * if secant or soltangent are feasible, this cut can never beat them
-    */
-   if( rmidtangent != NULL && (secant == NULL || *secant == NULL) && (soltangent == NULL || *soltangent == NULL) )
-   {
-      SCIP_ROW** cutbuffer;
-      SCIP_Bool issecant;
-
-      *rmidtangent = NULL;
-
-      if( underestimate )
-         success = SCIPcomputeRightMidTangentSin(scip, &lincoef, &linconst, &issecant, childlb, childub);
-      else
-         success = SCIPcomputeLeftMidTangentSin(scip, &lincoef, &linconst, &issecant, -childub, -childlb);
-
-      /* if the cut connects bounds it is stored in secant */
-      cutbuffer = (issecant && secant != NULL) ? secant : rmidtangent;
-
-      if( success )
-      {
-
-         /* shift cut back */
-         linconst += lincoef  * 0.5 * M_PI;
-
-         lhs = underestimate ? -SCIPinfinity(scip) : linconst;
-         rhs = underestimate ? -linconst : SCIPinfinity(scip);
-
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cos_lmidtangent_%s", SCIPvarGetName(childvar));
-
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, cutbuffer, conshdlr, name, lhs, rhs,
-                                           TRUE, FALSE, FALSE) );
-
-         SCIP_CALL( SCIPaddVarToRow(scip, *cutbuffer, auxvar, -1.0) );
-         SCIP_CALL( SCIPaddVarToRow(scip, *cutbuffer, childvar, lincoef) );
-      }
-   }
-   else if( rmidtangent != NULL )
-      *rmidtangent = NULL;
-
-   return SCIP_OKAY;
-}
-
 /*
  * Callback methods of expression handler
  */
@@ -317,8 +53,8 @@ SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrCos)
 }
 
 /** simplifies a cos expression
- * Evaluates the sine value function when its child is a value expression
- * TODO: add further simplifications
+ *  Evaluates the sine value function when its child is a value expression
+ *  TODO: add further simplifications
  */
 static
 SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyCos)
@@ -491,20 +227,30 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalCos)
 /** separation initialization callback */
 static
 SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaCos)
-{  /*lint --e{715}*/
+{
+   SCIP_Real childlb;
+   SCIP_Real childub;
+
    SCIP_ROW* cuts[5];   /* 0: secant, 1: left tangent, 2: right tangent, 3: left mid tangent, 4: right mid tangent */
    int i;
 
    *infeasible = FALSE;
 
-   /* compute underestimating cuts */
-   SCIP_CALL( computeCutsCos(scip, conshdlr, expr, NULL, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4], NULL, TRUE) );
+   childlb = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]).inf;
+   childub = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]).sup;
 
-   for( i = 0; i < 5; ++i)
+
+   /* compute underestimating cuts */
+   SCIP_CALL( SCIPcomputeCutsSin(scip, conshdlr, expr, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4], NULL,
+      SCIP_INVALID, childlb, childub, TRUE) );
+
+   for( i = 0; i < 5; ++i )
    {
       /* only the cuts which could be created are added */
       if( !*infeasible && cuts[i] != NULL )
       {
+         /* TODO: shift cut back to match cosine */
+
          SCIP_CALL( SCIPmassageConsExprExprCut(scip, &cuts[i], NULL, -SCIPinfinity(scip)) );
 
          if( cuts[i] != NULL ) {
@@ -520,9 +266,10 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaCos)
    }
 
    /* compute overestimating cuts */
-   SCIP_CALL( computeCutsCos(scip, conshdlr, expr, NULL, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4], NULL, FALSE) );
+   SCIP_CALL( SCIPcomputeCutsSin(scip, conshdlr, expr, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4], NULL,
+      SCIP_INVALID, childlb, childub, FALSE) );
 
-   for( i = 0; i < 5; ++i) {
+   for( i = 0; i < 5; ++i ) {
       /* only the cuts which could be created are added */
       if (!*infeasible && cuts[i] != NULL) {
          SCIP_CALL(SCIPmassageConsExprExprCut(scip, &cuts[i], NULL, -SCIPinfinity(scip)));
@@ -550,6 +297,9 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaCos)
    SCIP_VAR* childvar;
    SCIP_ROW* cuts[4] = {NULL, NULL, NULL, NULL};
    SCIP_Real violation;
+   SCIP_Real refpoint;
+   SCIP_Real childlb;
+   SCIP_Real childub;
    SCIP_Bool underestimate;
    SCIP_Bool infeasible;
    int i;
@@ -565,6 +315,10 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaCos)
    infeasible = FALSE;
    *ncuts = 0;
    *result = SCIP_DIDNOTFIND;
+
+   refpoint = SCIPgetSolVal(scip, sol, childvar);
+   childlb = SCIPgetConsExprExprInterval(child).inf;
+   childub = SCIPgetConsExprExprInterval(child).sup;
 
    /* compute the violation; this determines whether we need to over- or underestimate */
    violation = exp(SCIPgetSolVal(scip, sol, childvar)) - SCIPgetSolVal(scip, sol, auxvar);
@@ -583,8 +337,8 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaCos)
     *  - cuts[1] = secant connecting (ub,cos(ubx)) with right tangent point
     *  - cuts[3] = solution tangent (for convex / concave segments that globally under- / overestimate)
     */
-   SCIP_CALL( computeCutsCos(scip, conshdlr, expr, sol, &cuts[0], NULL, NULL, &cuts[1], &cuts[2], &cuts[3],
-                             underestimate) );
+   SCIP_CALL( SCIPcomputeCutsSin(scip, conshdlr, expr, &cuts[0], NULL, NULL, &cuts[1], &cuts[2], &cuts[3],
+                             refpoint, childlb, childub, underestimate) );
 
    for( i = 0; i < 4; ++i )
    {
@@ -626,10 +380,7 @@ static
 SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropCos)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* child;
-   SCIP_INTERVAL interval;
-   SCIP_INTERVAL childbound;
-   SCIP_Real newinf;
-   SCIP_Real newsup;
+   SCIP_INTERVAL newbounds;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -643,72 +394,20 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropCos)
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
 
-   childbound = SCIPgetConsExprExprInterval(child);
-   newinf = childbound.inf;
-   newsup = childbound.sup;
+   /* get the child interval and shift it to match sine */
+   newbounds = SCIPgetConsExprExprInterval(child);
+   newbounds.inf += M_PI_2;
+   newbounds.sup += M_PI_2;
 
-   interval = SCIPgetConsExprExprInterval(expr);
+   /* compute the new child interval */
+   SCIP_CALL(SCIPcomputeRevPropIntervalSin(scip, SCIPgetConsExprExprInterval(expr), newbounds, &newbounds) );
 
-   if( !SCIPisInfinity(scip, -newinf) )
-   {
-      /* l(x) and u(x) are lower/upper bound of child, l(s) and u(s) are lower/upper bound of cos expr
-       *
-       * if cos(l(x)) < l(s), we are looking for k minimal s.t. a + 2k*pi > l(x) where a = acos(l(s))
-       * then the new lower bound is a + 2k*pi
-       */
-      if( SCIPisLT(scip, COS(newinf), interval.inf) )
-      {
-         SCIP_Real a = ACOS(interval.inf);
-         int k = (int) ceil((newinf - a) / (2.0*M_PI));
-         newinf = a + 2.0*M_PI * k;
-      }
-
-      /* if cos(l(x)) > u(s), we are looking for k minimal s.t. pi - a + 2k*pi > l(x) where a = acos(u(s))
-       * then the new lower bound is pi - a + 2k*pi
-       */
-      else if( SCIPisGT(scip, COS(newinf), interval.sup) )
-      {
-         SCIP_Real a = ACOS(interval.sup);
-         int k = (int) ceil((newinf + a) / (2.0*M_PI) - 0.5);
-         newinf = M_PI * (2.0*k + 1.0) - a;
-      }
-   }
-
-   if( !SCIPisInfinity(scip, newsup) )
-   {
-      /* if cos(u(x)) > u(s), we are looking for k minimal s.t. a + 2k*pi > u(x) - 2*pi where a = acos(u(s))
-       * then the new upper bound is a + 2k*pi
-       */
-      if ( SCIPisGT(scip, COS(newsup), interval.sup) )
-      {
-         SCIP_Real a = ACOS(interval.sup);
-         int k = (int) ceil((newsup - a ) / (2.0*M_PI)) - 1;
-         newsup = a + 2.0*M_PI * k;
-      }
-
-      /* if cos(u(x)) < l(s), we are looking for k minimal s.t. pi - a + 2k*pi > l(x) - 2*pi where a = acos(l(s))
-       * then the new upper bound is pi - a + 2k*pi
-       */
-      if( SCIPisLT(scip, COS(newsup), interval.inf) )
-      {
-         SCIP_Real a = ACOS(interval.inf);
-         int k = (int) ceil((newsup + a) / (2*M_PI) - 0.5) - 1;
-         newsup = M_PI * (2.0*k + 1.0) - a;
-      }
-   }
-
-   assert(newinf >= childbound.inf);
-   assert(newsup <= childbound.sup);
-   assert(newinf <= newsup);
-   assert(SCIPisGE(scip, COS(newinf), interval.inf));
-   assert(SCIPisLE(scip, COS(newinf), interval.sup));
-   assert(SCIPisGE(scip, COS(newsup), interval.inf));
-   assert(SCIPisLE(scip, COS(newsup), interval.sup));
-
-   SCIPintervalSetBounds(&childbound, newinf, newsup);
+   /* shift the new interval back */
+   newbounds.inf -= M_PI_2;
+   newbounds.sup -= M_PI_2;
 
    /* try to tighten the bounds of the child node */
-   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, child, childbound, force, infeasible, nreductions) );
+   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, child, newbounds, force, infeasible, nreductions) );
 
    return SCIP_OKAY;
 }
