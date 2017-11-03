@@ -48289,10 +48289,27 @@ SCIP_RETCODE SCIPvalidateSolve(
    /* check the best solution for feasibility in the original problem */
    if( SCIPgetNSols(scip) > 0 )
    {
+      SCIP_Real checkfeastolfac;
+      SCIP_Real oldfeastol;
       SCIP_SOL* bestsol = SCIPgetBestSol(scip);
+
       assert(bestsol != NULL);
 
+      /* scale feasibility tolerance by set->num_checkfeastolfac */
+      oldfeastol = SCIPfeastol(scip);
+      SCIP_CALL( SCIPgetRealParam(scip, "numerics/checkfeastolfac", &checkfeastolfac) );
+      if( !SCIPisEQ(scip, checkfeastolfac, 1.0) )
+      {
+         SCIP_CALL( SCIPchgFeastol(scip, oldfeastol * checkfeastolfac) );
+      }
+
       SCIP_CALL( SCIPcheckSolOrig(scip, bestsol, &localfeasible, !quiet, TRUE) );
+
+      /* restore old feasibilty tolerance */
+      if( !SCIPisEQ(scip, checkfeastolfac, 1.0) )
+      {
+         SCIP_CALL( SCIPchgFeastol(scip, oldfeastol) );
+      }
    }
    else
    {
