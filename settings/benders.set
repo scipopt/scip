@@ -3,3 +3,7 @@
 # should Benders' decomposition be used?
 # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
 reading/storeader/usebenders = TRUE
+
+# priority of node selection rule <bfs> in standard mode
+# [type: int, advanced: FALSE, range: [-536870912,1073741823], default: 100000]
+nodeselection/bfs/stdpriority = 300000
