@@ -315,15 +315,20 @@ SCIP_Bool computeLeftMidTangentSin(
       tangentpoint = ub;
 
       /* check whether cut is still underestimating */
-      if( SIN(0.5 * (ub + lb)) < SIN(lb) + 0.5*(SIN(ub) - SIN(lb)) / (ub - lb) )
+      if( SIN(0.5 * (ub + lb)) < SIN(lb) + 0.5*(SIN(ub) - SIN(lb)) )
          return FALSE;
 
       *issecant = TRUE;
    }
 
+
    /* compute secant between lower bound and connection point */
    *lincoef = (SIN(tangentpoint) - SIN(lb)) / (tangentpoint - lb);
    *linconst = SIN(lb) - (*lincoef) * lb;
+
+   /* if the bounds are to close to eachother, it's possible that the cut is invalid */
+   if( *lincoef >= COS(lb) )
+      return FALSE;
 
    return TRUE;
 }
@@ -336,7 +341,7 @@ SCIP_Bool computeRightMidTangentSin(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real*            lincoef,            /**< buffer to store linear coefficient of secant */
    SCIP_Real*            linconst,           /**< buffer to store linear constant of secant */
-   SCIP_Bool*            issecant,           /**< buffer to stroe whether cut is actually a secant */
+   SCIP_Bool*            issecant,           /**< buffer to store whether cut is actually a secant */
    SCIP_Real             lb,                 /**< lower bound of argument variable */
    SCIP_Real             ub                  /**< upper bound of argument variable */
    )
@@ -363,7 +368,7 @@ SCIP_Bool computeRightMidTangentSin(
    /* choose starting point for newton procedure */
    if( COS(ub) > 0.0 )
    {
-      /* in [pi/2,pi] underestimating doesn't work; othherwise, take the midpoint of possible area */
+      /* in [pi/2,pi] underestimating doesn't work; otherwise, take the midpoint of possible area */
       if( SIN(ub) <= 0.0 )
          return FALSE;
       else
@@ -392,7 +397,7 @@ SCIP_Bool computeRightMidTangentSin(
       tangentpoint = lb;
 
       /* check whether cut is still underestimating */
-      if( SIN(0.5 * (ub + lb)) < SIN(lb) + 0.5*(SIN(ub) - SIN(lb)) / (ub - lb) )
+      if( SIN(0.5 * (ub + lb)) < SIN(lb) + 0.5*(SIN(ub) - SIN(lb)) )
          return FALSE;
 
       *issecant = TRUE;
@@ -401,6 +406,10 @@ SCIP_Bool computeRightMidTangentSin(
    /* compute secant between lower bound and connection point */
    *lincoef = (SIN(tangentpoint) - SIN(ub)) / (tangentpoint - ub);
    *linconst = SIN(ub) - (*lincoef) * ub;
+
+   /* if the bounds are to close to eachother, it's possible that the cut is invalid */
+   if( *lincoef <= COS(lb) )
+      return FALSE;
 
    return TRUE;
 }
@@ -514,14 +523,15 @@ SCIP_RETCODE SCIPcomputeCutsSin(
    SCIP_Real shiftfactor;
    SCIP_Bool success;
    char name[SCIP_MAXSTRLEN];
+   char exprname[SCIP_MAXSTRLEN];
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), "expr") == 0);
    assert(expr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
-   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)));
-   assert(strcmp(name, "sin") == 0 || strcmp(name, "cos") == 0);
+   (void) SCIPsnprintf(exprname, SCIP_MAXSTRLEN, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)));
+   assert(strcmp(exprname, "sin") == 0 || strcmp(exprname, "cos") == 0);
    assert(SCIPisLE(scip, childlb, childub));
 
    /* get expression data */
@@ -537,9 +547,10 @@ SCIP_RETCODE SCIPcomputeCutsSin(
       return SCIP_OKAY;
 
    /* for cos expressions, the bounds have to be shifted before and after computation */
-   shiftfactor = (strcmp(name, "cos") == 0) ? M_PI_2 : 0.0;
+   shiftfactor = (strcmp(exprname, "cos") == 0) ? M_PI_2 : 0.0;
    childlb += shiftfactor;
    childub += shiftfactor;
+   refpoint += shiftfactor;
 
    /*
     * Compute all cuts that where specified upon call.
@@ -563,12 +574,10 @@ SCIP_RETCODE SCIPcomputeCutsSin(
       if( success )
       {
          /* for cos expressions, the cut is shifted back to match original bounds */
-         linconst += lincoef * shiftfactor;
+         lhs = underestimate ? -SCIPinfinity(scip) : linconst - lincoef * shiftfactor;
+         rhs = underestimate ? -linconst - lincoef * shiftfactor : SCIPinfinity(scip);
 
-         lhs = underestimate ? -SCIPinfinity(scip) : linconst;
-         rhs = underestimate ? -linconst : SCIPinfinity(scip);
-
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sin_secant_%s", SCIPvarGetName(childvar));
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_secant_%s", exprname, SCIPvarGetName(childvar));
 
          SCIP_CALL( SCIPcreateEmptyRowCons(scip, secant, conshdlr, name, lhs, rhs,
             TRUE, FALSE, FALSE) );
@@ -591,12 +600,10 @@ SCIP_RETCODE SCIPcomputeCutsSin(
       if( success )
       {
          /* for cos expressions, the cut is shifted back to match original bounds */
-         linconst += lincoef * shiftfactor;
+         lhs = underestimate ? -SCIPinfinity(scip) : linconst - lincoef * shiftfactor;
+         rhs = underestimate ? -linconst - lincoef * shiftfactor : SCIPinfinity(scip);
 
-         lhs = underestimate ? -SCIPinfinity(scip) : linconst;
-         rhs = underestimate ? -linconst : SCIPinfinity(scip);
-
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sin_ltangent_%s", SCIPvarGetName(childvar));
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_ltangent_%s", exprname, SCIPvarGetName(childvar));
 
          SCIP_CALL( SCIPcreateEmptyRowCons(scip, ltangent, conshdlr, name, lhs, rhs,
             TRUE, FALSE, FALSE) );
@@ -619,12 +626,10 @@ SCIP_RETCODE SCIPcomputeCutsSin(
       if( success )
       {
          /* for cos expressions, the cut is shifted back to match original bounds */
-         linconst += lincoef * shiftfactor;
+         lhs = underestimate ? -SCIPinfinity(scip) : linconst - lincoef * shiftfactor;
+         rhs = underestimate ? -linconst - lincoef * shiftfactor : SCIPinfinity(scip);
 
-         lhs = underestimate ? -SCIPinfinity(scip) : linconst;
-         rhs = underestimate ? -linconst : SCIPinfinity(scip);
-
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sin_rtangent_%s", SCIPvarGetName(childvar));
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_rtangent_%s", exprname, SCIPvarGetName(childvar));
 
          SCIP_CALL( SCIPcreateEmptyRowCons(scip, rtangent, conshdlr, name, lhs, rhs,
             TRUE, FALSE, FALSE) );
@@ -647,12 +652,10 @@ SCIP_RETCODE SCIPcomputeCutsSin(
       if( success )
       {
          /* for cos expressions, the cut is shifted back to match original bounds */
-         linconst += lincoef * shiftfactor;
+         lhs = underestimate ? -SCIPinfinity(scip) : linconst - lincoef * shiftfactor;
+         rhs = underestimate ? -linconst - lincoef * shiftfactor : SCIPinfinity(scip);
 
-         lhs = underestimate ? -SCIPinfinity(scip) : linconst;
-         rhs = underestimate ? -linconst : SCIPinfinity(scip);
-
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sin_soltangent_%s", SCIPvarGetName(childvar));
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_soltangent_%s", exprname, SCIPvarGetName(childvar));
 
          SCIP_CALL( SCIPcreateEmptyRowCons(scip, soltangent, conshdlr, name, lhs, rhs,
             TRUE, FALSE, FALSE) );
@@ -684,12 +687,10 @@ SCIP_RETCODE SCIPcomputeCutsSin(
       if( success )
       {
          /* for cos expressions, the cut is shifted back to match original bounds */
-         linconst += lincoef * shiftfactor;
+         lhs = underestimate ? -SCIPinfinity(scip) : linconst - lincoef * shiftfactor;
+         rhs = underestimate ? -linconst - lincoef * shiftfactor : SCIPinfinity(scip);
 
-         lhs = underestimate ? -SCIPinfinity(scip) : linconst;
-         rhs = underestimate ? -linconst : SCIPinfinity(scip);
-
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sin_lmidtangent_%s", SCIPvarGetName(childvar));
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_lmidtangent_%s", exprname, SCIPvarGetName(childvar));
 
          SCIP_CALL( SCIPcreateEmptyRowCons(scip, cutbuffer, conshdlr, name, lhs, rhs,
             TRUE, FALSE, FALSE) );
@@ -722,12 +723,10 @@ SCIP_RETCODE SCIPcomputeCutsSin(
       if( success )
       {
          /* for cos expressions, the cut is shifted back to match original bounds */
-         linconst += lincoef * shiftfactor;
+         lhs = underestimate ? -SCIPinfinity(scip) : linconst - lincoef * shiftfactor;
+         rhs = underestimate ? -linconst - lincoef * shiftfactor : SCIPinfinity(scip);
 
-         lhs = underestimate ? -SCIPinfinity(scip) : linconst;
-         rhs = underestimate ? -linconst : SCIPinfinity(scip);
-
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sin_rmidtangent_%s", SCIPvarGetName(childvar));
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_rmidtangent_%s", exprname, SCIPvarGetName(childvar));
 
          SCIP_CALL( SCIPcreateEmptyRowCons(scip, cutbuffer, conshdlr, name, lhs, rhs,
             TRUE, FALSE, FALSE) );

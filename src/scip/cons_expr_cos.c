@@ -242,15 +242,13 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaCos)
 
    /* compute underestimating cuts */
    SCIP_CALL( SCIPcomputeCutsSin(scip, conshdlr, expr, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4], NULL,
-      SCIP_INVALID, childlb, childub, TRUE) );
+         SCIP_INVALID, childlb, childub, TRUE) );
 
    for( i = 0; i < 5; ++i )
    {
       /* only the cuts which could be created are added */
       if( !*infeasible && cuts[i] != NULL )
       {
-         /* TODO: shift cut back to match cosine */
-
          SCIP_CALL( SCIPmassageConsExprExprCut(scip, &cuts[i], NULL, -SCIPinfinity(scip)) );
 
          if( cuts[i] != NULL ) {
@@ -267,7 +265,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaCos)
 
    /* compute overestimating cuts */
    SCIP_CALL( SCIPcomputeCutsSin(scip, conshdlr, expr, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4], NULL,
-      SCIP_INVALID, childlb, childub, FALSE) );
+         SCIP_INVALID, childlb, childub, FALSE) );
 
    for( i = 0; i < 5; ++i ) {
       /* only the cuts which could be created are added */
@@ -338,7 +336,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaCos)
     *  - cuts[3] = solution tangent (for convex / concave segments that globally under- / overestimate)
     */
    SCIP_CALL( SCIPcomputeCutsSin(scip, conshdlr, expr, &cuts[0], NULL, NULL, &cuts[1], &cuts[2], &cuts[3],
-                             refpoint, childlb, childub, underestimate) );
+         refpoint, childlb, childub, underestimate) );
 
    for( i = 0; i < 4; ++i )
    {
