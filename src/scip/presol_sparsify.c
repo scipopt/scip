@@ -691,7 +691,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       varpairssize = 0;
       nvarpairs = 0;
       varpairs = NULL;
-      SCIP_CALL( SCIPhashtableCreate(&pairtable, SCIPblkmem(scip), 1, SCIPhashGetKeyStandard, varPairsEqual, varPairHashval, (void*) scip)) );
+      SCIP_CALL( SCIPhashtableCreate(&pairtable, SCIPblkmem(scip), 1, SCIPhashGetKeyStandard, varPairsEqual, varPairHashval, (void*) scip) );
 
       /* collect equalities and their number of non-zeros */
       for( r = 0; r < nrows; r++ )
