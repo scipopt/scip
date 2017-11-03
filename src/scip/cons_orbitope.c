@@ -89,6 +89,7 @@
 #define CONSHDLR_PRESOLTIMING            SCIP_PRESOLTIMING_MEDIUM /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 
 #define DEFAULT_PPORBITOPE        FALSE /**< whether we check if full orbitopes can be upgraded to packing/partitioning orbitopes */
+#define DEFAULT_SEPAFULLORBITOPE  FALSE /**< whether we separate inequalities for full orbitopes */
 
 
 /*
@@ -99,6 +100,7 @@
 struct SCIP_ConshdlrData
 {
    SCIP_Bool             checkpporbitope;    /**< whether we allow upgrading to packing/partitioning orbitopes */
+   SCIP_Bool             sepafullorbitope;   /**< whether we separate inequalities for full orbitopes orbitopes */
 };
 
 /** constraint data for orbitope constraints */
@@ -2235,6 +2237,7 @@ SCIP_RETCODE separateConstraints(
       int nrows;
       int i;
       int j;
+      SCIP_Bool sepafullorbitope;
 
       assert( conss[c] != NULL );
 
@@ -2248,11 +2251,13 @@ SCIP_RETCODE separateConstraints(
       /* separate */
       orbitopetype = consdata->orbitopetype;
 
+      SCIP_CALL( SCIPgetBoolParam(scip, "cons/orbitope/sepafullorbitope", &sepafullorbitope) );
+
       if ( orbitopetype == SCIP_ORBITOPETYPE_PACKING || orbitopetype == SCIP_ORBITOPETYPE_PARTITIONING )
       {
          SCIP_CALL( separateSCIs(scip, conshdlr, conss[c], consdata, &infeasible, &nconsfixedvars, &nconscuts) );
       }
-      else
+      else if ( sepafullorbitope )
       {
          assert( consdata->nspcons > 0 );
          assert( consdata->vars != NULL );
@@ -3085,6 +3090,9 @@ SCIP_RETCODE SCIPincludeConshdlrOrbitope(
          "Upgrade orbitope constraints to packing/partioning orbitopes?",
          &conshdlrdata->checkpporbitope, TRUE, DEFAULT_PPORBITOPE, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "cons/" CONSHDLR_NAME "/sepafullorbitope",
+         "Whether we separate inequalities for full orbitopes?",
+         &conshdlrdata->sepafullorbitope, TRUE, DEFAULT_SEPAFULLORBITOPE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
