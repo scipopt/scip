@@ -94,6 +94,11 @@ set(settings_Bivariate
     "bivariate"
 )
 
+set(settings_Bilinrelax
+    "default"
+    "bilinrelax"
+  )
+
 #
 # Indicator instances
 #
@@ -160,6 +165,11 @@ set(instances_Bivariate
     "instances/Bivariate/st_qpk1.osil\;-3"
     "instances/Bivariate/nvs01.osil\;12.4696688"
    )
+set(instances_Bilinrelax
+    "instances/Bilinrelax/pointpack06.osil\;0.361111675167215"
+    "instances/Bilinrelax/ex5_4_2.osil\;7512.23014449367"
+  )
+
 #
 # PseudoBoolean instances
 #
@@ -281,6 +291,7 @@ add_instancetests(instances_Indicator settings_default "Indicator")
 add_instancetests(instances_MIP settings_MIP "MIP")
 add_instancetests(instances_MINLP settings_MINLP "MINLP")
 add_instancetests(instances_Bivariate settings_Bivariate "Bivariate")
+add_instancetests(instances_Bilinrelax settings_Bilinrelax "Bilinrelax")
 add_instancetests(instances_PseudoBoolean settings_default "PseudoBoolean")
 add_instancetests(instances_Semicontinuous settings_default "Semicontinuous")
 add_instancetests(instances_SAT settings_default "SAT")
