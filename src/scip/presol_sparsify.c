@@ -575,7 +575,7 @@ void updateFailureStatistic(
    else
    {
       presoldata->nfailures++;
-      presoldata->nwaitingcalls = presoldata->waitingfac*presoldata->nfailures;
+      presoldata->nwaitingcalls = (int)(presoldata->waitingfac*(SCIP_Real)presoldata->nfailures);
    }
 }
 
