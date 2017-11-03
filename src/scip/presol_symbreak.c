@@ -1085,7 +1085,7 @@ SCIP_RETCODE addSymmetryBreakingConstraints(
          assert( 0 <= nvarsinorbits && nvarsinorbits <= presoldata->npermvars );
 
          if ( nvarsinorbits >= 0.95 * presoldata->npermvars ||
-            ( nvarsinorbits >= 0.05 * presoldata->npermvars && ratiogroupsizengens <= 0.55 ) )
+            ( nvarsinorbits >= 0.05 * presoldata->npermvars && ratiogroupsizengens <= 0.55 && nvarsinorbits >= 2 * presoldata->nperms ) )
             decision = TRUE;
 
          if ( decision )
