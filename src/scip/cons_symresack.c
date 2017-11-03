@@ -2024,6 +2024,53 @@ SCIP_DECL_CONSPRINT(consPrintSymresack)
 }
 
 
+/** constraint method of constraint handler which returns the variables (if possible) */
+static
+SCIP_DECL_CONSGETVARS(consGetVarsSymresack)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   assert( cons != NULL );
+   assert( success != NULL );
+   assert( vars != NULL );
+
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+
+   if ( varssize < consdata->nvars )
+      (*success) = FALSE;
+   else
+   {
+      int cnt = 0;
+      int i;
+
+      for (i = 0; i < consdata->nvars; ++i)
+         vars[cnt++] = consdata->vars[i];
+      (*success) = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** constraint method of constraint handler which returns the number of variables (if possible) */
+static
+SCIP_DECL_CONSGETNVARS(consGetNVarsSymresack)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   assert( cons != NULL );
+
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+
+   (*nvars) = consdata->nvars;
+   (*success) = TRUE;
+
+   return SCIP_OKAY;
+}
+
+
 /** creates the handler for symresack constraints and includes it in SCIP */
 SCIP_RETCODE SCIPincludeConshdlrSymresack(
    SCIP*                 scip                /**< SCIP data structure */
@@ -2045,6 +2092,8 @@ SCIP_RETCODE SCIPincludeConshdlrSymresack(
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxSymresack) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeSymresack) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteSymresack) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsSymresack) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsSymresack) );
    SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolSymresack, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintSymresack) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropSymresack, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP, CONSHDLR_PROP_TIMING) );

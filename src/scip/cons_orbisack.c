@@ -1814,6 +1814,56 @@ SCIP_RETCODE SCIPseparateOrbisackCovers(
 }
 
 
+/** constraint method of constraint handler which returns the variables (if possible) */
+static
+SCIP_DECL_CONSGETVARS(consGetVarsOrbisack)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   assert( cons != NULL );
+   assert( success != NULL );
+   assert( vars != NULL );
+
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+
+   if ( varssize < 2 * consdata->nrows )
+      (*success) = FALSE;
+   else
+   {
+      int cnt = 0;
+      int i;
+
+      for (i = 0; i < consdata->nrows; ++i)
+      {
+         vars[cnt++] = consdata->vars1[i];
+         vars[cnt++] = consdata->vars2[i];
+      }
+      (*success) = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** constraint method of constraint handler which returns the number of variables (if possible) */
+static
+SCIP_DECL_CONSGETNVARS(consGetNVarsOrbisack)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   assert( cons != NULL );
+
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+
+   (*nvars) = 2 * consdata->nrows;
+   (*success) = TRUE;
+
+   return SCIP_OKAY;
+}
+
+
 /** creates the handler for orbisack constraints and includes it in SCIP */
 SCIP_RETCODE SCIPincludeConshdlrOrbisack(
    SCIP*                 scip                /**< SCIP data structure */
@@ -1836,6 +1886,8 @@ SCIP_RETCODE SCIPincludeConshdlrOrbisack(
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxOrbisack) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeOrbisack) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteOrbisack) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsOrbisack) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsOrbisack) );
    SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolOrbisack, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintOrbisack) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropOrbisack, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP, CONSHDLR_PROP_TIMING) );
