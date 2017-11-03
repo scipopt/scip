@@ -49,20 +49,6 @@
 #include "probdata_stp.h"
 #include "prop_stp.h"
 
-/** set entries of (STP_Bool) array to TRUE */
-static
-void setTrue(
-   STP_Bool*             arr,
-   int                   arrsize
-   )
-{
-   assert(arr != NULL);
-   assert(arrsize >= 0);
-
-   for( int i = 0; i < arrsize; i++ )
-      arr[i] = TRUE;
-}
-
 /** iterate NV and SL test while at least minelims many contractions are being performed */
 static
 SCIP_RETCODE nvsl_reduction(
@@ -917,22 +903,12 @@ SCIP_RETCODE redLoopMw(
    STP_Bool ansad = TRUE;
    STP_Bool ansad2 = TRUE;
    STP_Bool chain2 = TRUE;
-   STP_Bool boolarr[16];
    STP_Bool extensive = STP_RED_EXTENSIVE;
 
    assert(scip != NULL);
    assert(g != NULL);
    assert(fixed != NULL);
    assert(advanced || !tryrmw);
-
-   boolarr[0] = ans;
-   boolarr[1] = nnp;
-   boolarr[2] = npv;
-   boolarr[3] = bred;
-   boolarr[4] = ansad;
-   boolarr[5] = ansad2;
-   boolarr[6] = chain2;
-   boolarr[7] = da;
 
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
 
@@ -1092,12 +1068,18 @@ SCIP_RETCODE redLoopMw(
 
          if( cnsadvelims + daelims >= redbound || (extensive && (cnsadvelims + daelims > 0))  )
          {
-            setTrue(boolarr, 8);
+            da = TRUE;
+            ans = TRUE;
+            nnp = TRUE;
+            npv = TRUE;
+            ansad = TRUE;
+            ansad2 = TRUE;
+            chain2 = TRUE;
             rerun = TRUE;
             advanced = FALSE;
+
             SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
-            da = FALSE;
-            SCIPdebugMessage("Restarting reduction loop! %d \n\n ", cnsadvelims);
+            SCIPdebugMessage("Restarting reduction loop! (%d eliminations) \n\n ", cnsadvelims + daelims);
             if( extensive )
                advanced = TRUE;
          }
