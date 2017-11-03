@@ -12803,6 +12803,8 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
             }
             else
             {
+               SCIP_CONS* origcons;
+
                /* for each variable: check whether the number of cardinality constraints that can be upgraded to a
                 * knapsack constraint coincides with the number of variable up locks */
                for (v = 0; v < nvars; ++v)
@@ -12839,6 +12841,13 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
                /* delete oknapsack constraint */
                SCIP_CALL( SCIPdelCons(scip, cons) );
                ++(*ndelconss);
+
+               /* We need to disable the original knapsack constraint, since it might happen that the binary variables
+                * are 1 although the continuous variables are 0. Thus, the knapsack constraint might be violated,
+                * although the cardinality constraint is satisfied. */
+               origcons = SCIPfindOrigCons(scip, SCIPconsGetName(cons));
+               assert( origcons != NULL );
+               SCIP_CALL( SCIPsetConsChecked(scip, origcons, FALSE) );
 
                for (v = 0; v < nvars; ++v)
                {
