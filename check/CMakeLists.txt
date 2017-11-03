@@ -95,7 +95,7 @@ set(settings_Bivariate
 )
 
 set(settings_Bilinrelax
-    "default"
+    "checkfeastolrelax10"
     "bilinrelax"
   )
 
