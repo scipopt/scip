@@ -70,28 +70,49 @@ struct SCIP_PropData
  * Table callback methods
  */
 
+/** table data */
+struct SCIP_TableData
+{
+   SCIP_PROPDATA*        propdata;           /** pass data of propagator for table output function */
+};
+
+
 /** output method of orbital fixing propagator statistics table to output file stream 'file' */
 static
 SCIP_DECL_TABLEOUTPUT(tableOutputOrbitalfixing)
 {
-   SCIP_PROPDATA* propdata;
+   SCIP_TABLEDATA* tabledata;
 
    assert( scip != NULL );
    assert( table != NULL );
 
-   propdata = (SCIP_PROPDATA*) SCIPtableGetData(table);
-   assert( propdata != NULL );
+   tabledata = SCIPtableGetData(table);
+   assert( tabledata != NULL );
+   assert( tabledata->propdata != NULL );
 
-   if ( propdata->enabled )
+   if ( tabledata->propdata->enabled )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "Orbital fixing     :\n");
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  vars fixed to 0  :\t%7d\n", propdata->nfixedzero);
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  vars fixed to 1  :\t%7d\n", propdata->nfixedone);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  vars fixed to 0  :\t%7d\n", tabledata->propdata->nfixedzero);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  vars fixed to 1  :\t%7d\n", tabledata->propdata->nfixedone);
    }
 
    return SCIP_OKAY;
 }
 
+
+/** destructor of statistics table to free user data (called when SCIP is exiting) */
+static
+SCIP_DECL_TABLEFREE(tableFreeOrbitalfixing)
+{
+   SCIP_TABLEDATA* tabledata;
+   tabledata = SCIPtableGetData(table);
+   assert( tabledata != NULL );
+
+   SCIPfreeBlockMemory(scip, &tabledata);
+
+   return SCIP_OKAY;
+}
 
 /*
  * Local methods
@@ -676,6 +697,7 @@ SCIP_RETCODE SCIPincludePropOrbitalfixing(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_TABLEDATA* tabledata;
    SCIP_PROPDATA* propdata;
    SCIP_PRESOL* presol;
    SCIP_PROP* prop;
@@ -711,9 +733,11 @@ SCIP_RETCODE SCIPincludePropOrbitalfixing(
    SCIP_CALL( SCIPsetPropResprop(scip, prop, propRespropOrbitalfixing) );
 
    /* include table */
+   SCIP_CALL( SCIPallocBlockMemory(scip, &tabledata) );
+   tabledata->propdata = propdata;
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_ORBITALFIXING, TABLE_DESC_ORBITALFIXING, TRUE,
-         NULL, NULL, NULL, NULL, NULL, NULL, tableOutputOrbitalfixing,
-         (void*) propdata, TABLE_POSITION_ORBITALFIXING, TABLE_EARLIEST_ORBITALFIXING) );
+         NULL, tableFreeOrbitalfixing, NULL, NULL, NULL, NULL, tableOutputOrbitalfixing,
+         tabledata, TABLE_POSITION_ORBITALFIXING, TABLE_EARLIEST_ORBITALFIXING) );
 
    return SCIP_OKAY;
 }
