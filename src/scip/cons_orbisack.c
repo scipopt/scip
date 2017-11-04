@@ -93,8 +93,6 @@ struct SCIP_ConsData
 {
    SCIP_VAR**            vars1;              /**< first column of variable matrix */
    SCIP_VAR**            vars2;              /**< second column of variable matrix */
-   SCIP_Real*            vals1;              /**< LP-solution for those variables in first column */
-   SCIP_Real*            vals2;              /**< LP-solution for those variables in second column */
    int                   nrows;              /**< number of rows of variable matrix */
 };
 
@@ -119,9 +117,6 @@ SCIP_RETCODE consdataFree(
    SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vars2), nrows);
    SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vars1), nrows);
 
-   SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vals2), nrows);
-   SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vals1), nrows);
-
    SCIPfreeBlockMemory(scip, consdata);
 
    return SCIP_OKAY;
@@ -144,8 +139,6 @@ SCIP_RETCODE consdataCreate(
 
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->vals1, nrows) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->vals2, nrows) );
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars1, vars1, nrows) );
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars2, vars2, nrows) );
 
@@ -424,8 +417,6 @@ SCIP_RETCODE addOrbisackCover(
    assert( consdata->nrows > 0 );
    assert( consdata->vars1 != NULL );
    assert( consdata->vars2 != NULL );
-   assert( consdata->vals1 != NULL );
-   assert( consdata->vals2 != NULL );
    assert( coeffs1 != NULL );
    assert( coeffs2 != NULL );
    assert( infeasible != NULL );
@@ -463,14 +454,14 @@ SCIP_RETCODE separateOrbisackCovers(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONS*            cons,               /**< constraint */
    const SCIP_CONSDATA*  consdata,           /**< constraint data */
+   SCIP_Real*            vals1,              /**< LP-solution for those variables in first column */
+   SCIP_Real*            vals2,              /**< LP-solution for those variables in second column */
    int*                  ngen,               /**< number of separated covers */
    SCIP_Bool*            infeasible          /**< pointer to store whether we detected infeasibility */
    )
 {
    SCIP_Real rhs = 0.0;
    SCIP_Real lhs = 0.0;
-   SCIP_Real* vals1;
-   SCIP_Real* vals2;
    SCIP_Real* coeff1;
    SCIP_Real* coeff2;
    int nrows;
@@ -481,8 +472,6 @@ SCIP_RETCODE separateOrbisackCovers(
    assert( consdata->nrows > 0 );
    assert( consdata->vars1 != NULL );
    assert( consdata->vars2 != NULL );
-   assert( consdata->vals1 != NULL );
-   assert( consdata->vals2 != NULL );
    assert( infeasible != NULL );
    assert( ngen != NULL );
 
@@ -490,8 +479,6 @@ SCIP_RETCODE separateOrbisackCovers(
    *ngen = 0;
 
    nrows = consdata->nrows;
-   vals1 = consdata->vals1;
-   vals2 = consdata->vals2;
 
    /* allocate memory for inequality coefficients */
    SCIP_CALL( SCIPallocBufferArray(scip, &coeff1, nrows) );
@@ -582,8 +569,6 @@ SCIP_RETCODE addOrbisackInequality(
    assert( consdata->nrows > 0 );
    assert( consdata->vars1 != NULL );
    assert( consdata->vars2 != NULL );
-   assert( consdata->vals1 != NULL );
-   assert( consdata->vals2 != NULL );
    assert( coeffs1 != NULL );
    assert( coeffs2 != NULL );
    assert( infeasible != NULL );
@@ -626,14 +611,14 @@ SCIP_RETCODE separateOrbisack(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONS*            conss,              /**< constraint */
    const SCIP_CONSDATA*  consdata,           /**< constraint data */
+   SCIP_Real*            vals1,              /**< LP-solution for those variables in first column */
+   SCIP_Real*            vals2,              /**< LP-solution for those variables in second column */
    SCIP_Bool             coverseparation,    /**< whether we separate cover inequalities */
    SCIP_Real             coeffbound,         /**< maximum size of coefficients in orbisack inequalities */
    int*                  ngen,               /**< pointer to store the number of generated cuts */
    SCIP_Bool*            infeasible          /**< pointer to store whether we detected infeasibility */
    )
 {
-   SCIP_Real* vals1;
-   SCIP_Real* vals2;
    SCIP_Real* coeff1;
    SCIP_Real* coeff2;
    SCIP_Real rhs;
@@ -650,8 +635,6 @@ SCIP_RETCODE separateOrbisack(
    assert( consdata->nrows > 0 );
    assert( consdata->vars1 != NULL );
    assert( consdata->vars2 != NULL );
-   assert( consdata->vals1 != NULL );
-   assert( consdata->vals2 != NULL );
    assert( coeffbound >= 0.0 );
    assert( ngen != NULL );
    assert( infeasible != NULL );
@@ -660,8 +643,6 @@ SCIP_RETCODE separateOrbisack(
    *ngen = 0;
 
    nrows = consdata->nrows;
-   vals1 = consdata->vals1;
-   vals2 = consdata->vals2;
 
    /* if there is only one row, all cuts are added by initLP */
    if ( nrows < 2 )
@@ -751,7 +732,7 @@ SCIP_RETCODE separateOrbisack(
          if ( ! coverseparation )
          {
             int ncuts;
-            SCIP_CALL( separateOrbisackCovers(scip, conss, consdata, &ncuts, infeasible) );
+            SCIP_CALL( separateOrbisackCovers(scip, conss, consdata, vals1, vals2, &ncuts, infeasible) );
             *ngen += ncuts;
          }
          break;
@@ -965,7 +946,9 @@ SCIP_RETCODE separateInequalities(
    SCIP*                 scip,               /**< pointer to scip */
    SCIP_RESULT*          result,             /**< pointer to store the result of separation */
    SCIP_CONS*            cons,               /**< constraint */
-   SCIP_CONSDATA*        consdata            /**< constraint data */
+   SCIP_CONSDATA*        consdata,           /**< constraint data */
+   SCIP_Real*            vals1,              /**< LP-solution for those variables in first column */
+   SCIP_Real*            vals2               /**< LP-solution for those variables in second column */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -975,18 +958,22 @@ SCIP_RETCODE separateInequalities(
 
    assert( scip != NULL );
    assert( result != NULL );
+   assert( cons != NULL );
+   assert( consdata != NULL );
+   assert( vals1 != NULL );
+   assert( vals2 != NULL );
 
    conshdlrdata = SCIPconshdlrGetData(SCIPconsGetHdlr(cons));
    assert( conshdlrdata != NULL );
 
    if ( conshdlrdata->orbiseparation )
    {
-      SCIP_CALL( separateOrbisack(scip, cons, consdata, FALSE, conshdlrdata->coeffbound, &ngen1, &infeasible) );
+      SCIP_CALL( separateOrbisack(scip, cons, consdata, vals1, vals2, FALSE, conshdlrdata->coeffbound, &ngen1, &infeasible) );
    }
 
    if ( ! infeasible && conshdlrdata->coverseparation )
    {
-      SCIP_CALL( separateOrbisackCovers(scip, cons, consdata, &ngen2, &infeasible) );
+      SCIP_CALL( separateOrbisackCovers(scip, cons, consdata, vals1, vals2, &ngen2, &infeasible) );
    }
 
    if ( infeasible )
@@ -1062,8 +1049,6 @@ SCIP_DECL_CONSTRANS(consTransOrbisack)
    assert( sourcedata->nrows > 0 );
    assert( sourcedata->vars1 != NULL );
    assert( sourcedata->vars2 != NULL );
-   assert( sourcedata->vals1 != NULL );
-   assert( sourcedata->vals2 != NULL );
 
    /* create transformed constraint data (copy data where necessary) */
    nrows = sourcedata->nrows;
@@ -1077,8 +1062,6 @@ SCIP_DECL_CONSTRANS(consTransOrbisack)
 
    SCIP_CALL( SCIPgetTransformedVars(scip, nrows, sourcedata->vars1, consdata->vars1) );
    SCIP_CALL( SCIPgetTransformedVars(scip, nrows, sourcedata->vars2, consdata->vars2) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->vals1, nrows) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->vals2, nrows) );
 
    /* create transformed constraint */
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, consdata,
@@ -1129,6 +1112,8 @@ static
 SCIP_DECL_CONSSEPALP(consSepalpOrbisack)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
+   SCIP_Real* vals1;
+   SCIP_Real* vals2;
    int c;
 
    assert( scip != NULL );
@@ -1143,7 +1128,13 @@ SCIP_DECL_CONSSEPALP(consSepalpOrbisack)
    /* if solution is not integer */
    if ( SCIPgetNLPBranchCands(scip) > 0 )
    {
+      int nvals;
+
       *result = SCIP_DIDNOTFIND;
+
+      nvals = SCIPgetNVars(scip)/2;
+      SCIP_CALL( SCIPallocBufferArray(scip, &vals1, nvals) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &vals2, nvals) );
 
       /* loop through constraints */
       for (c = 0; c < nconss; ++c)
@@ -1153,15 +1144,19 @@ SCIP_DECL_CONSSEPALP(consSepalpOrbisack)
          consdata = SCIPconsGetData(conss[c]);
 
          /* get solution */
-         SCIP_CALL( SCIPgetSolVals(scip, NULL, consdata->nrows, consdata->vars1, consdata->vals1) );
-         SCIP_CALL( SCIPgetSolVals(scip, NULL, consdata->nrows, consdata->vars2, consdata->vals2) );
+         assert( consdata->nrows <= nvals );
+         SCIP_CALL( SCIPgetSolVals(scip, NULL, consdata->nrows, consdata->vars1, vals1) );
+         SCIP_CALL( SCIPgetSolVals(scip, NULL, consdata->nrows, consdata->vars2, vals2) );
 
          SCIPdebugMessage("Separating orbisack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
 
-         SCIP_CALL( separateInequalities(scip, result, conss[c], consdata) );
+         SCIP_CALL( separateInequalities(scip, result, conss[c], consdata, vals1, vals2) );
          if ( *result == SCIP_CUTOFF )
             break;
       }
+
+      SCIPfreeBufferArray(scip, &vals2);
+      SCIPfreeBufferArray(scip, &vals1);
    }
 
    return SCIP_OKAY;
@@ -1173,6 +1168,8 @@ static
 SCIP_DECL_CONSSEPASOL(consSepasolOrbisack)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
+   SCIP_Real* vals1;
+   SCIP_Real* vals2;
    int c;
 
    assert( scip != NULL );
@@ -1184,22 +1181,35 @@ SCIP_DECL_CONSSEPASOL(consSepasolOrbisack)
 
    *result = SCIP_DIDNOTFIND;
 
-   /* loop through constraints */
-   for (c = 0; c < nconss; ++c)
+   if ( nconss > 0 )
    {
-      /* get data of constraint */
-      assert( conss[c] != NULL );
-      consdata = SCIPconsGetData(conss[c]);
+      int nvals;
 
-      /* get solution */
-      SCIP_CALL( SCIPgetSolVals(scip, sol, consdata->nrows, consdata->vars1, consdata->vals1) );
-      SCIP_CALL( SCIPgetSolVals(scip, sol, consdata->nrows, consdata->vars2, consdata->vals2) );
+      nvals = SCIPgetNVars(scip)/2;
+      SCIP_CALL( SCIPallocBufferArray(scip, &vals1, nvals) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &vals2, nvals) );
 
-      SCIPdebugMessage("Separating orbisack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
+      /* loop through constraints */
+      for (c = 0; c < nconss; ++c)
+      {
+         /* get data of constraint */
+         assert( conss[c] != NULL );
+         consdata = SCIPconsGetData(conss[c]);
 
-      SCIP_CALL( separateInequalities(scip, result, conss[c], consdata) );
-      if ( *result == SCIP_CUTOFF )
-         break;
+         /* get solution */
+         assert( consdata->nrows <= nvals );
+         SCIP_CALL( SCIPgetSolVals(scip, sol, consdata->nrows, consdata->vars1, vals1) );
+         SCIP_CALL( SCIPgetSolVals(scip, sol, consdata->nrows, consdata->vars2, vals2) );
+
+         SCIPdebugMessage("Separating orbisack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
+
+         SCIP_CALL( separateInequalities(scip, result, conss[c], consdata, vals1, vals2) );
+         if ( *result == SCIP_CUTOFF )
+            break;
+      }
+
+      SCIPfreeBufferArray(scip, &vals2);
+      SCIPfreeBufferArray(scip, &vals1);
    }
 
    return SCIP_OKAY;
@@ -1215,6 +1225,8 @@ SCIP_DECL_CONSENFOLP(consEnfolpOrbisack)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
    SCIP_Bool infeasible = FALSE;
+   SCIP_Real* vals1;
+   SCIP_Real* vals2;
    int ngen = 0;
    int c;
 
@@ -1230,34 +1242,47 @@ SCIP_DECL_CONSENFOLP(consEnfolpOrbisack)
 
    *result = SCIP_FEASIBLE;
 
-   /* loop through constraints */
-   for (c = 0; c < nconss; ++c)
+   if ( nconss > 0 )
    {
-      /* get data of constraint */
-      assert( conss[c] != 0 );
-      consdata = SCIPconsGetData(conss[c]);
+      int nvals;
 
-      /* get solution */
-      SCIP_CALL( SCIPgetSolVals(scip, NULL, consdata->nrows, consdata->vars1, consdata->vals1) );
-      SCIP_CALL( SCIPgetSolVals(scip, NULL, consdata->nrows, consdata->vars2, consdata->vals2) );
+      nvals = SCIPgetNVars(scip)/2;
+      SCIP_CALL( SCIPallocBufferArray(scip, &vals1, nvals) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &vals2, nvals) );
 
-      SCIPdebugMessage("Enforcing orbisack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
-
-      /* Separate only cover inequalities to ensure that enforcing works correctly. */
-      /* Otherwise, it may happen that infeasible solutions cannot be detected, since */
-      /* we bound the size of the coefficients for the orbisack inequalities. */
-      SCIP_CALL( separateOrbisackCovers(scip, conss[c], consdata, &ngen, &infeasible) );
-
-      if ( infeasible )
+      /* loop through constraints */
+      for (c = 0; c < nconss; ++c)
       {
-         *result = SCIP_CUTOFF;
-         return SCIP_OKAY;
+         /* get data of constraint */
+         assert( conss[c] != 0 );
+         consdata = SCIPconsGetData(conss[c]);
+
+         /* get solution */
+         assert( consdata->nrows <= nvals );
+         SCIP_CALL( SCIPgetSolVals(scip, NULL, consdata->nrows, consdata->vars1, vals1) );
+         SCIP_CALL( SCIPgetSolVals(scip, NULL, consdata->nrows, consdata->vars2, vals2) );
+
+         SCIPdebugMessage("Enforcing orbisack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
+
+         /* Separate only cover inequalities to ensure that enforcing works correctly. */
+         /* Otherwise, it may happen that infeasible solutions cannot be detected, since */
+         /* we bound the size of the coefficients for the orbisack inequalities. */
+         SCIP_CALL( separateOrbisackCovers(scip, conss[c], consdata, vals1, vals2, &ngen, &infeasible) );
+
+         if ( infeasible )
+         {
+            *result = SCIP_CUTOFF;
+            break;
+         }
+
+         SCIPdebugMessage("Generated orbisack inequalities for <%s>: %d\n", SCIPconsGetName(conss[c]), ngen);
+
+         if ( ngen > 0 )
+            *result = SCIP_SEPARATED;
       }
 
-      SCIPdebugMessage("Generated orbisack inequalities for <%s>: %d\n", SCIPconsGetName(conss[c]), ngen);
-
-      if ( ngen > 0 )
-         *result = SCIP_SEPARATED;
+      SCIPfreeBufferArray(scip, &vals2);
+      SCIPfreeBufferArray(scip, &vals1);
    }
 
    return SCIP_OKAY;
@@ -1320,6 +1345,8 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxOrbisack)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
    SCIP_Bool infeasible = FALSE;
+   SCIP_Real* vals1;
+   SCIP_Real* vals2;
    int ngen = 0;
    int c;
 
@@ -1335,34 +1362,47 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxOrbisack)
 
    *result = SCIP_FEASIBLE;
 
-   /* loop through constraints */
-   for (c = 0; c < nconss; ++c)
+   if ( nconss > 0 )
    {
-      /* get data of constraint */
-      assert( conss[c] != 0 );
-      consdata = SCIPconsGetData(conss[c]);
+      int nvals;
 
-      /* get solution */
-      SCIP_CALL( SCIPgetSolVals(scip, sol, consdata->nrows, consdata->vars1, consdata->vals1) );
-      SCIP_CALL( SCIPgetSolVals(scip, sol, consdata->nrows, consdata->vars2, consdata->vals2) );
+      nvals = SCIPgetNVars(scip)/2;
+      SCIP_CALL( SCIPallocBufferArray(scip, &vals1, nvals) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &vals2, nvals) );
 
-      SCIPdebugMessage("Enforcing orbisack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
-
-      /* Separate only cover inequalities to ensure that enforcing works correctly. */
-      /* Otherwise, it may happen that infeasible solutions cannot be detected, since */
-      /* we bound the size of the coefficients for the orbisack inequalities. */
-      SCIP_CALL( separateOrbisackCovers(scip, conss[c], consdata, &ngen, &infeasible) );
-
-      if ( infeasible )
+      /* loop through constraints */
+      for (c = 0; c < nconss; ++c)
       {
-         *result = SCIP_CUTOFF;
-         return SCIP_OKAY;
+         /* get data of constraint */
+         assert( conss[c] != 0 );
+         consdata = SCIPconsGetData(conss[c]);
+
+         /* get solution */
+         assert( consdata->nrows <= nvals );
+         SCIP_CALL( SCIPgetSolVals(scip, sol, consdata->nrows, consdata->vars1, vals1) );
+         SCIP_CALL( SCIPgetSolVals(scip, sol, consdata->nrows, consdata->vars2, vals2) );
+
+         SCIPdebugMessage("Enforcing orbisack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
+
+         /* Separate only cover inequalities to ensure that enforcing works correctly. */
+         /* Otherwise, it may happen that infeasible solutions cannot be detected, since */
+         /* we bound the size of the coefficients for the orbisack inequalities. */
+         SCIP_CALL( separateOrbisackCovers(scip, conss[c], consdata, vals1, vals2, &ngen, &infeasible) );
+
+         if ( infeasible )
+         {
+            *result = SCIP_CUTOFF;
+            break;
+         }
+
+         SCIPdebugMessage("Generated orbisack inequalities for <%s>: %d\n", SCIPconsGetName(conss[c]), ngen);
+
+         if ( ngen > 0 )
+            *result = SCIP_SEPARATED;
       }
 
-      SCIPdebugMessage("Generated orbisack inequalities for <%s>: %d\n", SCIPconsGetName(conss[c]), ngen);
-
-      if ( ngen > 0 )
-         *result = SCIP_SEPARATED;
+      SCIPfreeBufferArray(scip, &vals2);
+      SCIPfreeBufferArray(scip, &vals1);
    }
 
    return SCIP_OKAY;
