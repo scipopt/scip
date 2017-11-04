@@ -698,7 +698,7 @@ SCIP_RETCODE neighborhoodStatsReset(
    stats->usednodes = 0L;
    stats->nfixings = 0L;
 
-   SCIPstatistic( BMSclearMemoryArray(stats->statushist, NHISTENTRIES); )
+   BMSclearMemoryArray(stats->statushist, NHISTENTRIES);
 
    SCIP_CALL( SCIPresetClock(scip, stats->setupclock) );
    SCIP_CALL( SCIPresetClock(scip, stats->submipclock) );
