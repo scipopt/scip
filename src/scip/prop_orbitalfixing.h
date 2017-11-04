@@ -16,7 +16,8 @@
 /**@file   prop_orbitalfixing.h
  * @brief  propagator for orbital fixing
  * @author Marc Pfetsch
- * @author Thomas Rehn
+ *
+ * This propagator implements orbital fixing, a method to exploit symmetries to fix variables in orbits to 0 or 1.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

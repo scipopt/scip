@@ -17,7 +17,17 @@
  * @brief  propagator for orbital fixing
  * @author Marc Pfetsch
  *
+ * This propagator implements orbital fixing as introduced by
+ *
+ * F. Margot: Exploiting orbits in symmetric ILP. Math. Program., 98(1-3):3–21, 2003.
+ *
+ * The method obtains symmetries from the symmetry presolver and then computes orbits of variables with respect to the
+ * subgroup of the symmetry group that stabilizes the variables branched to 1. Then one can fix all variables in an
+ * orbit to 0 or 1 if one of the other variables in the orbit is fixed to 0 or 1, respectively. Different from Margot,
+ * the subgroup is obtained by filtering out generators that do not individually stabilize the variables branched to 1.
+ *
  * @todo Turn off propagator in subtrees.
+ * @todo Check application of conflict resolution.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -49,7 +59,7 @@
  * Data structures
  */
 
-/** propagator data for orbtial branching */
+/** propagator data for orbital branching */
 struct SCIP_PropData
 {
    int                   npermvars;          /**< pointer to store number of variables for permutations */
@@ -276,7 +286,7 @@ SCIP_RETCODE computeBranchingVariables(
    assert( varmap != NULL );
    assert( b1 != NULL );
 
-   /* get curent node */
+   /* get current node */
    node = SCIPgetCurrentNode(scip);
 
 #ifdef SCIP_OUTPUT
@@ -556,7 +566,7 @@ SCIP_DECL_PROPEXIT(propExitOrbitalfixing)
       SCIPhashmapFree(&propdata->permvarmap);
    }
 
-   /* reset paramters */
+   /* reset parameters */
    propdata->nodenumber = -1;
    propdata->nfixedzero = 0;
    propdata->nfixedone = 0;
@@ -680,6 +690,10 @@ SCIP_DECL_PROPEXEC(propExecOrbitalfixing)
 /** propagation conflict resolving method of propagator
  *
  *  @todo Implement reverse propagation.
+ *
+ *  Note that this is relatively difficult to obtain: One needs to include all bounds of variables to would lead to a
+ *  different orbit in which the variables that was propagated lies. This includes all variables that are moved by the
+ *  permutations which are involved in creating the orbit.
  */
 static
 SCIP_DECL_PROPRESPROP(propRespropOrbitalfixing)
@@ -713,7 +727,7 @@ SCIP_RETCODE SCIPincludePropOrbitalfixing(
    propdata->npermvars = -1;
    propdata->permvarmap = NULL;
 
-   /* determine cons_symmetries constraint handler (preuse presol) */
+   /* determine cons_symmetries constraint handler */
    presol = SCIPfindPresol(scip, "symmetry");
    if ( presol == 0 )
    {
