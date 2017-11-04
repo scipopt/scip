@@ -758,7 +758,8 @@ static
 SCIP_RETCODE addSymresackInequality(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONS*            cons,               /**< constraint */
-   const SCIP_CONSDATA*  consdata,           /**< constraint data */
+   int                   nvars,              /**< number of variables */
+   SCIP_VAR**            vars,               /**< variables */
    int*                  coeffs,             /**< coefficient vector of inequality to be added */
    SCIP_Real             rhs,                /**< right-hand side of inequality to be added */
    SCIP_Bool*            infeasible          /**< pointer to store whether we detected infeasibility */
@@ -768,9 +769,8 @@ SCIP_RETCODE addSymresackInequality(
    int i;
 
    assert( scip != NULL );
-   assert( consdata != NULL );
-   assert( consdata->nvars > 0 );
-   assert( consdata->vars != NULL );
+   assert( nvars > 0 );
+   assert( vars != NULL );
    assert( coeffs != NULL );
    assert( infeasible != NULL );
 
@@ -779,15 +779,15 @@ SCIP_RETCODE addSymresackInequality(
    SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), "symresack", -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
-   for (i = 0; i < (consdata->nvars); ++i)
+   for (i = 0; i < nvars; ++i)
    {
       if ( coeffs[i] == 1 )
       {
-         SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->vars[i], 1.0) );
+         SCIP_CALL( SCIPaddVarToRow(scip, row, vars[i], 1.0) );
       }
       else if ( coeffs[i] == -1 )
       {
-         SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->vars[i], -1.0) );
+         SCIP_CALL( SCIPaddVarToRow(scip, row, vars[i], -1.0) );
       }
    }
    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
@@ -1040,7 +1040,7 @@ SCIP_RETCODE separateSymresackCovers(
       assert( SCIPisGT(scip, lhs, rhs) );
 
       /* add cover inequality */
-      SCIP_CALL( addSymresackInequality(scip, cons, consdata, maxsolu, rhs, infeasible) );
+      SCIP_CALL( addSymresackInequality(scip, cons, nvars, consdata->vars, maxsolu, rhs, infeasible) );
 
       if ( ! *infeasible )
          ++(*ngen);
