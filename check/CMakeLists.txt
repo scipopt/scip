@@ -99,6 +99,11 @@ set(settings_Bilinrelax
     "bilinrelax"
   )
 
+set(settings_Symmetry
+    "orbitalfixing"
+    "orbitopesafterpresolve"
+  )
+
 #
 # Indicator instances
 #
@@ -217,6 +222,39 @@ set(instances_Orbitope
     )
 
 #
+# Symmetry instances
+#
+set(instances_Symmetry
+    "instances/Orbitope/packorb_1-FullIns_3.cip\;28"
+    "instances/Orbitope/partorb_1-FullIns_3.cip\;4"
+    "instances/MIP/bell5.mps\;8966406.49"
+    "instances/MIP/blend2.mps\;7.598985"
+#    "instances/MIP/dcmulti.mps\;188182"
+    "instances/MIP/egout.mps\;568.1007"
+    "instances/MIP/enigma.mps\;0"
+    "instances/MIP/flugpl.mps\;1201500"
+    "instances/MIP/gt2.mps\;21166"
+    "instances/MIP/lseu.mps\;1120"
+    "instances/MIP/MANN_a9.clq.lp\;16"
+    "instances/MIP/misc03.mps\;3360"
+    "instances/MIP/p0033.osil\;3089"
+    "instances/MIP/p0548.mps\;8691"
+    "instances/MIP/rgn.mps\;82.1999974"
+    "instances/MIP/stein27.fzn\;18"
+    "instances/MIP/stein27_inf.lp\;+infinity"
+    "instances/MIP/vpm2.fzn\;13.75"
+    "instances/PseudoBoolean/factor-mod-size=9-P0=67-P1=349-P2=67-P3=499-P4=79-P5=347-P6=307-B.opb\;3"
+    "instances/PseudoBoolean/normalized-bsg_10_4_5.opb\;-4"
+    "instances/PseudoBoolean/normalized-mds_10_4_3.opb\;2"
+    "instances/PseudoBoolean/normalized-mds_50_25_5.opb\;3"
+    "instances/PseudoBoolean/normalized-t2001.13queen13.1111218308.opb\;+infinity"
+    "instances/PseudoBoolean/normalized-t2001.13queen13.1110976730--soft-33-100-0.wbo\;4"
+    "instances/PseudoBoolean/wheel010.lap.opb.pre.cip\;25"
+#    "instances/Semicontinuous/meanvarxsc.lp\;14.36918"
+    "instances/Semicontinuous/semicon1.mps\;1.1"
+    )
+
+#
 # available reader file extensions for SCIP readers
 #
 set(scip_reader_extensions
@@ -297,6 +335,7 @@ add_instancetests(instances_Semicontinuous settings_default "Semicontinuous")
 add_instancetests(instances_SAT settings_default "SAT")
 add_instancetests(instances_SOS settings_default "SOS")
 add_instancetests(instances_Orbitope settings_default "Orbitope")
+add_instancetests(instances_Symmetry settings_Symmetry "Symmetry")
 
 #
 # test writing and reading solutions

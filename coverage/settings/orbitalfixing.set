@@ -1,0 +1,6 @@
+misc/usesymmetry = TRUE
+presolving/symbreak/addsymresacks = FALSE
+presolving/symbreak/detectorbitopes = FALSE
+presolving/symmetry/computepresolved = TRUE
+propagating/orbitalfixing/maxprerounds = -1
+propagating/orbitalfixing/freq = 5
