@@ -214,7 +214,7 @@ SCIP_RETCODE packingUpgrade(
       return SCIP_OKAY;
    assert( setppcconss != NULL );
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &rowcovered, nrows) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &rowcovered, nrows) );
 
    /* iterate over orbisack rows and check whether rows are contained in partitioning constraints */
    *success = TRUE;
