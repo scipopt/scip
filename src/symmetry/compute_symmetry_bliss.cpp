@@ -273,14 +273,18 @@ static char blissname[100];
 /** return name of external program used to compute generators */
 const char* SYMsymmetryGetName(void)
 {
+#ifdef BLISS_PATCH_PRESENT
+   sprintf(blissname, "bliss %sp", bliss::version);
+#else
    sprintf(blissname, "bliss %s", bliss::version);
+#endif
    return blissname;
 }
 
 /** return description of external program used to compute generators */
 const char* SYMsymmetryGetDesc(void)
 {
-   return "computing graph automorphism groups by T. Junttila and P. Kaski (http://www.tcs.hut.fi/Software/bliss/)";
+   return "Computing Graph Automorphism Groups by T. Junttila and P. Kaski (http://www.tcs.hut.fi/Software/bliss/)";
 }
 
 /** compute generators of symmetry group */
