@@ -196,7 +196,6 @@ SCIP_DECL_BANDITSELECT(SCIPbanditSelectUcb)
 
    assert(*selection >= 0);
    assert(*selection < nactions);
-   banditdata->nselections++;
 
    return SCIP_OKAY;
 }
@@ -218,6 +217,8 @@ SCIP_DECL_BANDITUPDATE(SCIPbanditUpdateUcb)
    delta = score - banditdata->meanscores[selection];
    ++banditdata->counter[selection];
    banditdata->meanscores[selection] += delta / (SCIP_Real)banditdata->counter[selection];
+
+   banditdata->nselections++;
 
    return SCIP_OKAY;
 }
