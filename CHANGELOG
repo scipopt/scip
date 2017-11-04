@@ -5,7 +5,7 @@ features:
 - new command line parameter "-r" to pass a nonnegative integer as random seed.
 - new disjoint set data structure SCIP_DISJOINTSET to incrementally update connectedness information for a graph on nodes {0,...,n-1}
 - added macros to do computations with a higher precision by using double double arithmetic
-- new compiler flag DEBUGSOL={true,false} to enable an internal debugging mechanism to check against a user given debug solution
+- revised internal debugging mechanism to check against a user given debug solution (debug.h)
 - add new heuristic MPEC that solves a MPEC reformulation of a mixed-binary nonlinear problem by regularized NLP reformulations
 - added interface to the NLP solver WORHP; set WORHP=true in order to link to WORHP
 - added interface to the NLP solver FilterSQP; set FILTERSQP=true in order to link to FilterSQP
@@ -77,6 +77,7 @@ misc:
 
 Makefile:
 - default value for ZIMPL is now "false"
+- new flag DEBUGSOL={true,false} to enable checks against a user given debug solution
 
 SCIP version 4.0.1
 ==================
