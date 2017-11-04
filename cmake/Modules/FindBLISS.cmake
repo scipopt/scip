@@ -1,7 +1,7 @@
-find_path(BLISS_INCLUDE_DIRS
+find_path(BLISS_INCLUDE_DIR
     NAMES graph.hh
     HINTS ${BLISS_DIR}
-    PATH_SUFFIXES include/bliss include)
+    PATH_SUFFIXES include include/bliss)
 
 find_library(BLISS_LIBRARY
     NAMES bliss
@@ -9,6 +9,7 @@ find_library(BLISS_LIBRARY
     PATH_SUFFIXES lib)
 
 set(BLISS_LIBRARIES ${BLISS_LIBRARY})
+set(BLISS_INCLUDE_DIRS ${BLISS_INCLUDE_DIR})
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(BLISS DEFAULT_MSG BLISS_INCLUDE_DIRS BLISS_LIBRARIES)
