@@ -9857,6 +9857,7 @@ SCIP_RETCODE replaceByLinearConstraints(
    SCIP_CONS*          cons;
    SCIP_CONSDATA*      consdata;
    SCIP_RESULT         checkresult;
+   SCIP_Bool           tightened;
    SCIP_Real           constant;
    SCIP_Real           val1;
    SCIP_Real           val2;
@@ -9891,7 +9892,41 @@ SCIP_RETCODE replaceByLinearConstraints(
 
          val1 = (SCIPvarGetUbLocal(consdata->quadvarterms[i].var) + SCIPvarGetLbLocal(consdata->quadvarterms[i].var)) / 2.0;
          constant += (consdata->quadvarterms[i].lincoef + consdata->quadvarterms[i].sqrcoef * val1) * val1;
+
+         SCIPdebugMessage("<%s>: [%.20g, %.20g]\n", SCIPvarGetName(consdata->quadvarterms[i].var), SCIPvarGetLbLocal(consdata->quadvarterms[i].var), SCIPvarGetUbLocal(consdata->quadvarterms[i].var));
+
+         /* if variable is not fixed w.r.t. absolute eps yet, then try to fix it */
+         if( !SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->quadvarterms[i].var), SCIPvarGetUbLocal(consdata->quadvarterms[i].var)) )
+         {
+            SCIP_CALL( SCIPtightenVarLb(scip, consdata->quadvarterms[i].var, val1, TRUE, infeasible, &tightened) );
+            if( *infeasible )
+            {
+               SCIPdebugMsg(scip, "Fixing almost fixed variable <%s> lead to infeasibility.\n", SCIPvarGetName(consdata->quadvarterms[i].var));
+               return SCIP_OKAY;
+            }
+            if( tightened )
+            {
+               SCIPdebugMsg(scip, "Tightened lower bound of almost fixed variable <%s>.\n", SCIPvarGetName(consdata->quadvarterms[i].var));
+               *reduceddom = TRUE;
+            }
+
+            SCIP_CALL( SCIPtightenVarUb(scip, consdata->quadvarterms[i].var, val1, TRUE, infeasible, &tightened) );
+            if( *infeasible )
+            {
+               SCIPdebugMsg(scip, "Fixing almost fixed variable <%s> lead to infeasibility.\n", SCIPvarGetName(consdata->quadvarterms[i].var));
+               return SCIP_OKAY;
+            }
+            if( tightened )
+            {
+               SCIPdebugMsg(scip, "Tightened upper bound of almost fixed variable <%s>.\n", SCIPvarGetName(consdata->quadvarterms[i].var));
+               *reduceddom = TRUE;
+            }
+         }
       }
+
+      /* if some quadratic variable was fixed now, then restart node (next enfo round) */
+      if( *reduceddom )
+         return SCIP_OKAY;
 
       for( i = 0; i < consdata->nbilinterms; ++i )
       {
@@ -9903,7 +9938,6 @@ SCIP_RETCODE replaceByLinearConstraints(
       /* check if we have a bound change */
       if ( consdata->nlinvars == 1 )
       {
-         SCIP_Bool tightened;
          SCIP_Real coef;
          SCIP_Real lhs;
          SCIP_Real rhs;
@@ -9922,6 +9956,8 @@ SCIP_RETCODE replaceByLinearConstraints(
             rhs = consdata->rhs - constant;
 
          SCIPdebugMsg(scip, "Linear constraint with one variable: %g <= %g <%s> <= %g\n", lhs, coef, SCIPvarGetName(*consdata->linvars), rhs);
+
+         SCIPdebugMessage("<%s>: [%.20g, %g.20]\n", SCIPvarGetName(*consdata->linvars), SCIPvarGetLbLocal(*consdata->linvars), SCIPvarGetUbLocal(*consdata->linvars));
 
          /* possibly correct lhs/rhs */
          assert( ! SCIPisZero(scip, coef) );
@@ -9967,7 +10003,7 @@ SCIP_RETCODE replaceByLinearConstraints(
             }
             if ( tightened )
             {
-               SCIPdebugMsg(scip, "Lower boundx changed.\n");
+               SCIPdebugMsg(scip, "Lower bound changed.\n");
                *reduceddom = TRUE;
                return SCIP_OKAY;
             }
@@ -11570,8 +11606,8 @@ SCIP_RETCODE enforceConstraint(
 
          SCIP_CALL( replaceByLinearConstraints(scip, conss, nconss, &addedcons, &reduceddom, &infeasible) );
          /* if the linear constraints are actually feasible, then adding them and returning SCIP_CONSADDED confuses SCIP
-          * when it enforces the new constraints again and nothing resolves the infeasiblity that we declare here thus,
-          * we only add them if considered violated, and otherwise claim the solution is feasible (but print a
+          * when it enforces the new constraints again and nothing resolves the infeasibility that we declare here
+          * thus, we only add them if considered violated, and otherwise claim the solution is feasible (but print a
           * warning) */
          if ( infeasible )
             *result = SCIP_CUTOFF;
