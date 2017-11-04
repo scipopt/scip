@@ -18,6 +18,8 @@ features:
 - added new plugin type "table" for adding user-defined statistics tables
 - revised disaggregation of quadratic constraints: the number of created constraints can now be controlled and the
   disaggregated constraints are scaled in order to increase numerical accuracy
+- new presolving plugin presol_sparsify that tries to cancel nonzero coefficients in linear constraints by adding
+  multiples of linear equalities
 
 parameters:
 - new parameter misc/debugsol to specify a debug solution that should be checked during the solve
