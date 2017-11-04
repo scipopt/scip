@@ -617,7 +617,7 @@ SCIP_DECL_PROPEXEC(propExecOrbitalfixing)
    *result = SCIP_DIDNOTRUN;
 
    /* do not run if we are in the root or not yet solving */
-   if (SCIPgetDepth(scip) <= 0 || SCIPgetStage(scip) < SCIP_STAGE_SOLVING)
+   if ( SCIPgetDepth(scip) <= 0 || SCIPgetStage(scip) < SCIP_STAGE_SOLVING )
       return SCIP_OKAY;
 
    /* do nothing if we are in a probing node */
