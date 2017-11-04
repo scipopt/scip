@@ -75,6 +75,9 @@ fixed bugs:
 misc:
 - dropped support for MOSEK < 7.0.0.0
 
+Makefile:
+- default value for ZIMPL is now "false"
+
 SCIP version 4.0.1
 ==================
 
@@ -148,9 +151,6 @@ interface:
 
 testing:
 - added make options for specifying EXECUTABLE and OUTPUTDIR variables for the make test target
-
-makefile:
-- default build is now with ZIMPL=false
 
 SCIP version 4.0.0
 ==================
