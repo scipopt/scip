@@ -143,11 +143,12 @@ set(scipsources
     scip/presol_inttobinary.c
     scip/presol_qpkktref.c
     scip/presol_redvub.c
+    scip/presol_sparsify.c
+    scip/presol_stuffing.c
     scip/presol_symbreak.c
     scip/presol_symmetry.c
     scip/presol_trivial.c
     scip/presol_tworowbnd.c
-    scip/presol_stuffing.c
     scip/prop_dualfix.c
     scip/prop_genvbounds.c
     scip/prop_nlobbt.c
@@ -513,6 +514,7 @@ set(scipheaders
     scip/presol_inttobinary.h
     scip/presol_qpkktref.h
     scip/presol_redvub.h
+    scip/presol_sparsify.h
     scip/presol_stuffing.h
     scip/presol_symbreak.h
     scip/presol_symmetry.h

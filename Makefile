@@ -625,6 +625,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/presol_symbreak.o \
 			scip/presol_trivial.o \
 			scip/presol_tworowbnd.o \
+			scip/presol_sparsify.o \
 			scip/presol_stuffing.o \
 			scip/presol_symmetry.o \
 			scip/prop_dualfix.o \
