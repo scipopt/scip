@@ -1295,9 +1295,6 @@ SCIP_DECL_CONSENFOPS(consEnfopsOrbisack)
 {  /*lint --e{715}*/
    SCIP_Bool feasible = TRUE;
    SCIP_CONSDATA* consdata;
-   SCIP_VAR** vars1;
-   SCIP_VAR** vars2;
-   int nrows;
    int c;
 
    assert( scip != NULL );
@@ -1322,11 +1319,8 @@ SCIP_DECL_CONSENFOPS(consEnfopsOrbisack)
       assert( consdata->nrows > 0 );
       assert( consdata->vars1 != NULL );
       assert( consdata->vars2 != NULL );
-      nrows = consdata->nrows;
-      vars1 = consdata->vars1;
-      vars2 = consdata->vars2;
 
-      SCIP_CALL( SCIPcheckOrbisackSolution(scip, NULL, vars1, vars2, nrows, FALSE, &feasible) );
+      SCIP_CALL( SCIPcheckOrbisackSolution(scip, NULL, consdata->vars1, consdata->vars2, consdata->nrows, FALSE, &feasible) );
 
       if ( ! feasible )
       {
@@ -1415,9 +1409,6 @@ SCIP_DECL_CONSCHECK(consCheckOrbisack)
 {  /*lint --e{715}*/
    SCIP_Bool feasible = TRUE;
    SCIP_CONSDATA* consdata;
-   SCIP_VAR** vars1;
-   SCIP_VAR** vars2;
-   int nrows;
    int c;
 
    assert( scip != NULL );
@@ -1440,11 +1431,7 @@ SCIP_DECL_CONSCHECK(consCheckOrbisack)
 
       SCIPdebugMessage("Check method for orbisack constraint <%s> (%d rows) ...\n", SCIPconsGetName(conss[c]), consdata->nrows);
 
-      nrows = consdata->nrows;
-      vars1 = consdata->vars1;
-      vars2 = consdata->vars2;
-
-      SCIP_CALL( SCIPcheckOrbisackSolution(scip, sol, vars1, vars2, nrows, printreason, &feasible) );
+      SCIP_CALL( SCIPcheckOrbisackSolution(scip, sol, consdata->vars1, consdata->vars2, consdata->nrows, printreason, &feasible) );
 
       if ( ! feasible )
       {
