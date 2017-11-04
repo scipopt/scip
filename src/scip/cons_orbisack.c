@@ -402,7 +402,9 @@ static
 SCIP_RETCODE addOrbisackCover(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONS*            cons,               /**< constraint */
-   const SCIP_CONSDATA*  consdata,           /**< constraint data */
+   int                   nrows,              /**< number of rows of orbisack */
+   SCIP_VAR*const*       vars1,              /**< first column of matrix of variables on which the symmetry acts */
+   SCIP_VAR*const*       vars2,              /**< variables of second column */
    SCIP_Real*            coeffs1,            /**< coefficients of the variables of the first column of the inequality to be added */
    SCIP_Real*            coeffs2,            /**< coefficients of the variables of the second column of the inequality to be added */
    SCIP_Real             rhs,                /**< right-hand side of inequality to be added */
@@ -413,10 +415,8 @@ SCIP_RETCODE addOrbisackCover(
    int i;
 
    assert( scip != NULL );
-   assert( consdata != NULL );
-   assert( consdata->nrows > 0 );
-   assert( consdata->vars1 != NULL );
-   assert( consdata->vars2 != NULL );
+   assert( vars1 != NULL );
+   assert( vars2 != NULL );
    assert( coeffs1 != NULL );
    assert( coeffs2 != NULL );
    assert( infeasible != NULL );
@@ -425,10 +425,10 @@ SCIP_RETCODE addOrbisackCover(
 
    SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), "orbisackcover", -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
-   for (i = 0; i < consdata->nrows; ++i)
+   for (i = 0; i < nrows; ++i)
    {
-      SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->vars1[i], coeffs1[i]) );
-      SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->vars2[i], coeffs2[i]) );
+      SCIP_CALL( SCIPaddVarToRow(scip, row, vars1[i], coeffs1[i]) );
+      SCIP_CALL( SCIPaddVarToRow(scip, row, vars2[i], coeffs2[i]) );
    }
    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 
@@ -501,7 +501,7 @@ SCIP_RETCODE separateOrbisackCovers(
          coeff1[i] = -1.0;
          coeff2[i] = 1.0;
 
-         SCIP_CALL( addOrbisackCover(scip, cons, consdata, coeff1, coeff2, rhs, infeasible) );
+         SCIP_CALL( addOrbisackCover(scip, cons, nrows, consdata->vars1, consdata->vars2, coeff1, coeff2, rhs, infeasible) );
          ++(*ngen);
          if ( *infeasible )
             break;
