@@ -93,9 +93,9 @@ struct SCIP_ConsData
 {
    SCIP_VAR**            vars1;              /**< first column of variable matrix */
    SCIP_VAR**            vars2;              /**< second column of variable matrix */
-   int                   nrows;              /**< number of rows of variable matrix */
    SCIP_Real*            vals1;              /**< LP-solution for those variables in first column */
    SCIP_Real*            vals2;              /**< LP-solution for those variables in second column */
+   int                   nrows;              /**< number of rows of variable matrix */
 };
 
 
@@ -193,8 +193,8 @@ SCIP_RETCODE packingUpgrade(
 {
    SCIP_CONSHDLR* setppcconshdlr;
    SCIP_CONS** setppcconss;
-   int nsetppcconss;
    SCIP_Bool* rowcovered;
+   int nsetppcconss;
    int i;
    int c;
 
@@ -238,7 +238,7 @@ SCIP_RETCODE packingUpgrade(
 
          /* check type */
          if ( SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_COVERING ||
-            SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_PACKING )
+              SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_PACKING )
             continue;
          assert( SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_PARTITIONING );
 
@@ -268,7 +268,7 @@ SCIP_RETCODE packingUpgrade(
          varidx2 = SCIPvarGetProbindex(var);
 
          if ( (varidx1 == SCIPvarGetProbindex(vars1[i]) && varidx2 == SCIPvarGetProbindex(vars2[i])) ||
-            (varidx2 == SCIPvarGetProbindex(vars1[i]) && varidx1 == SCIPvarGetProbindex(vars2[i])))
+              (varidx2 == SCIPvarGetProbindex(vars1[i]) && varidx1 == SCIPvarGetProbindex(vars2[i])))
          {
             rowcovered[i] = TRUE;
             break;
@@ -301,10 +301,10 @@ SCIP_RETCODE packingUpgrade(
       /* iterate over constraints */
       for (c = 0; c < nsetppcconss; ++c)
       {
-         int nsetppcvars;
          SCIP_VAR** setppcvars;
-         int varidx;
          SCIP_VAR* var;
+         int nsetppcvars;
+         int varidx;
          int nfound = 0;
          int j;
 
@@ -1914,7 +1914,6 @@ SCIP_RETCODE SCIPincludeConshdlrOrbisack(
          "Upgrade orbisack constraints to packing/partioning orbisacks?",
          &conshdlrdata->checkpporbisack, TRUE, DEFAULT_PPORBISACK, NULL, NULL) );
 
-
    return SCIP_OKAY;
 }
 
@@ -1965,9 +1964,9 @@ SCIP_RETCODE SCIPcreateConsOrbisack(
    SCIP_CONSDATA* consdata;
    SCIP_VAR*** vars;
    SCIP_Bool checkupgrade = FALSE;
-   int i;
    SCIP_Bool success;
    SCIP_ORBITOPETYPE orbitopetype;
+   int i;
 
    /* find the orbisack constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -2012,7 +2011,6 @@ SCIP_RETCODE SCIPcreateConsOrbisack(
       for (i = 0; i < nrows; ++i)
          SCIPfreeBufferArray(scip, &vars[i]);
       SCIPfreeBufferArray(scip, &vars);
-
    }
    else
    {
