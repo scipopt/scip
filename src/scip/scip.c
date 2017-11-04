@@ -5094,8 +5094,8 @@ SCIP_RETCODE SCIPsetSubscipsOff(
 /** sets heuristic parameters values to
  *
  *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all heuristic parameters
- *  - SCIP_PARAMSETTING_FAST such that the time spend for heuristic is decreased
- *  - SCIP_PARAMSETTING_AGGRESSIVE such that the heuristic are called more aggregative
+ *  - SCIP_PARAMSETTING_FAST such that the time spent on heuristics is decreased
+ *  - SCIP_PARAMSETTING_AGGRESSIVE such that the heuristics are called more aggressively
  *  - SCIP_PARAMSETTING_OFF which turn off all heuristics
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -5120,8 +5120,8 @@ SCIP_RETCODE SCIPsetHeuristics(
 /** sets presolving parameters to
  *
  *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all presolving parameters
- *  - SCIP_PARAMSETTING_FAST such that the time spend for presolving is decreased
- *  - SCIP_PARAMSETTING_AGGRESSIVE such that the presolving is more aggregative
+ *  - SCIP_PARAMSETTING_FAST such that the time spent on presolving is decreased
+ *  - SCIP_PARAMSETTING_AGGRESSIVE such that the presolving is more aggressive
  *  - SCIP_PARAMSETTING_OFF which turn off all presolving
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -5146,8 +5146,8 @@ SCIP_RETCODE SCIPsetPresolving(
 /** sets separating parameters to
  *
  *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all separating parameters
- *  - SCIP_PARAMSETTING_FAST such that the time spend for separating is decreased
- *  - SCIP_PARAMSETTING_AGGRESSIVE such that the separating is done more aggregative
+ *  - SCIP_PARAMSETTING_FAST such that the time spent on separating is decreased
+ *  - SCIP_PARAMSETTING_AGGRESSIVE such that separating is more aggressive
  *  - SCIP_PARAMSETTING_OFF which turn off all separating
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
