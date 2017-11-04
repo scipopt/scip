@@ -2048,7 +2048,6 @@ SCIP_DECL_CONSPRINT(consPrintSymresack)
       }
       SCIPinfoMessage(scip, file, "]");
    }
-   SCIPinfoMessage(scip, file, ")\n");
 
    SCIPfreeBufferArray(scip, &covered);
 
