@@ -415,6 +415,7 @@ SCIP_RETCODE addOrbisackCover(
    int i;
 
    assert( scip != NULL );
+   assert( cons != NULL );
    assert( vars1 != NULL );
    assert( vars2 != NULL );
    assert( coeffs1 != NULL );
@@ -453,7 +454,9 @@ static
 SCIP_RETCODE separateOrbisackCovers(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONS*            cons,               /**< constraint */
-   const SCIP_CONSDATA*  consdata,           /**< constraint data */
+   int                   nrows,              /**< number of rows of orbisack */
+   SCIP_VAR*const*       vars1,              /**< first column of matrix of variables on which the symmetry acts */
+   SCIP_VAR*const*       vars2,              /**< variables of second column */
    SCIP_Real*            vals1,              /**< LP-solution for those variables in first column */
    SCIP_Real*            vals2,              /**< LP-solution for those variables in second column */
    int*                  ngen,               /**< number of separated covers */
@@ -464,21 +467,18 @@ SCIP_RETCODE separateOrbisackCovers(
    SCIP_Real lhs = 0.0;
    SCIP_Real* coeff1;
    SCIP_Real* coeff2;
-   int nrows;
    int i;
 
    assert( scip != NULL );
-   assert( consdata != NULL );
-   assert( consdata->nrows > 0 );
-   assert( consdata->vars1 != NULL );
-   assert( consdata->vars2 != NULL );
+   assert( cons != NULL );
+   assert( nrows > 0 );
+   assert( vars1 != NULL );
+   assert( vars2 != NULL );
    assert( infeasible != NULL );
    assert( ngen != NULL );
 
    *infeasible = FALSE;
    *ngen = 0;
-
-   nrows = consdata->nrows;
 
    /* allocate memory for inequality coefficients */
    SCIP_CALL( SCIPallocBufferArray(scip, &coeff1, nrows) );
@@ -501,7 +501,7 @@ SCIP_RETCODE separateOrbisackCovers(
          coeff1[i] = -1.0;
          coeff2[i] = 1.0;
 
-         SCIP_CALL( addOrbisackCover(scip, cons, nrows, consdata->vars1, consdata->vars2, coeff1, coeff2, rhs, infeasible) );
+         SCIP_CALL( addOrbisackCover(scip, cons, nrows, vars1, vars2, coeff1, coeff2, rhs, infeasible) );
          ++(*ngen);
          if ( *infeasible )
             break;
@@ -554,7 +554,9 @@ static
 SCIP_RETCODE addOrbisackInequality(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONS*            cons,               /**< constraint */
-   const SCIP_CONSDATA*  consdata,           /**< constraint data */
+   int                   nrows,              /**< number of rows of orbisack */
+   SCIP_VAR*const*       vars1,              /**< first column of matrix of variables on which the symmetry acts */
+   SCIP_VAR*const*       vars2,              /**< variables of second column */
    SCIP_Real*            coeffs1,            /**< first column of coefficient matrix of inequality to be added */
    SCIP_Real*            coeffs2,            /**< second column of coefficient matrix of inequality to be added */
    SCIP_Real             rhs,                /**< right-hand side of inequality to be added */
@@ -565,10 +567,9 @@ SCIP_RETCODE addOrbisackInequality(
    int i;
 
    assert( scip != NULL );
-   assert( consdata != NULL );
-   assert( consdata->nrows > 0 );
-   assert( consdata->vars1 != NULL );
-   assert( consdata->vars2 != NULL );
+   assert( cons != NULL );
+   assert( vars1 != NULL );
+   assert( vars2 != NULL );
    assert( coeffs1 != NULL );
    assert( coeffs2 != NULL );
    assert( infeasible != NULL );
@@ -578,10 +579,10 @@ SCIP_RETCODE addOrbisackInequality(
    SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), "orbisack", -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
-   for (i = 0; i < consdata->nrows; ++i)
+   for (i = 0; i < nrows; ++i)
    {
-      SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->vars1[i], coeffs1[i]) );
-      SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->vars2[i], coeffs2[i]) );
+      SCIP_CALL( SCIPaddVarToRow(scip, row, vars1[i], coeffs1[i]) );
+      SCIP_CALL( SCIPaddVarToRow(scip, row, vars2[i], coeffs2[i]) );
    }
    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 
@@ -610,7 +611,9 @@ static
 SCIP_RETCODE separateOrbisack(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONS*            cons,               /**< constraint */
-   const SCIP_CONSDATA*  consdata,           /**< constraint data */
+   int                   nrows,              /**< number of rows of orbisack */
+   SCIP_VAR*const*       vars1,              /**< first column of matrix of variables on which the symmetry acts */
+   SCIP_VAR*const*       vars2,              /**< variables of second column */
    SCIP_Real*            vals1,              /**< LP-solution for those variables in first column */
    SCIP_Real*            vals2,              /**< LP-solution for those variables in second column */
    SCIP_Bool             coverseparation,    /**< whether we separate cover inequalities */
@@ -627,22 +630,19 @@ SCIP_RETCODE separateOrbisack(
    SCIP_Real valueB;
    SCIP_Real valueC;
    int basement;
-   int nrows;
    int i;
 
    assert( scip != NULL );
-   assert( consdata != NULL );
-   assert( consdata->nrows > 0 );
-   assert( consdata->vars1 != NULL );
-   assert( consdata->vars2 != NULL );
+   assert( cons != NULL );
+   assert( nrows > 0 );
+   assert( vars1 != NULL );
+   assert( vars2 != NULL );
    assert( coeffbound >= 0.0 );
    assert( ngen != NULL );
    assert( infeasible != NULL );
 
    *infeasible = FALSE;
    *ngen = 0;
-
-   nrows = consdata->nrows;
 
    /* if there is only one row, all cuts are added by initLP */
    if ( nrows < 2 )
@@ -676,7 +676,7 @@ SCIP_RETCODE separateOrbisack(
    /* check whether cut for basement row = 1 is violated */
    if ( SCIPisEfficacious(scip, lhs - rhs) )
    {
-      SCIP_CALL( addOrbisackInequality(scip, cons, consdata, coeff1, coeff2, rhs, infeasible) );
+      SCIP_CALL( addOrbisackInequality(scip, cons, nrows, vars1, vars2, coeff1, coeff2, rhs, infeasible) );
       ++(*ngen);
    }
 
@@ -732,7 +732,7 @@ SCIP_RETCODE separateOrbisack(
          if ( ! coverseparation )
          {
             int ncuts;
-            SCIP_CALL( separateOrbisackCovers(scip, cons, consdata, vals1, vals2, &ncuts, infeasible) );
+            SCIP_CALL( separateOrbisackCovers(scip, cons, nrows, vars1, vars2, vals1, vals2, &ncuts, infeasible) );
             *ngen += ncuts;
          }
          break;
@@ -741,7 +741,7 @@ SCIP_RETCODE separateOrbisack(
       /* if current inequality is violated */
       if ( SCIPisEfficacious(scip, lhs - rhs) )
       {
-         SCIP_CALL( addOrbisackInequality(scip, cons, consdata, coeff1, coeff2, rhs, infeasible) );
+         SCIP_CALL( addOrbisackInequality(scip, cons, nrows, vars1, vars2, coeff1, coeff2, rhs, infeasible) );
          ++(*ngen);
       }
    }
@@ -946,7 +946,9 @@ SCIP_RETCODE separateInequalities(
    SCIP*                 scip,               /**< pointer to scip */
    SCIP_RESULT*          result,             /**< pointer to store the result of separation */
    SCIP_CONS*            cons,               /**< constraint */
-   SCIP_CONSDATA*        consdata,           /**< constraint data */
+   int                   nrows,              /**< number of rows of orbisack */
+   SCIP_VAR*const*       vars1,              /**< first column of matrix of variables on which the symmetry acts */
+   SCIP_VAR*const*       vars2,              /**< variables of second column */
    SCIP_Real*            vals1,              /**< LP-solution for those variables in first column */
    SCIP_Real*            vals2               /**< LP-solution for those variables in second column */
    )
@@ -959,7 +961,8 @@ SCIP_RETCODE separateInequalities(
    assert( scip != NULL );
    assert( result != NULL );
    assert( cons != NULL );
-   assert( consdata != NULL );
+   assert( vars1 != NULL );
+   assert( vars2 != NULL );
    assert( vals1 != NULL );
    assert( vals2 != NULL );
 
@@ -968,12 +971,12 @@ SCIP_RETCODE separateInequalities(
 
    if ( conshdlrdata->orbiseparation )
    {
-      SCIP_CALL( separateOrbisack(scip, cons, consdata, vals1, vals2, FALSE, conshdlrdata->coeffbound, &ngen1, &infeasible) );
+      SCIP_CALL( separateOrbisack(scip, cons, nrows, vars1, vars2, vals1, vals2, FALSE, conshdlrdata->coeffbound, &ngen1, &infeasible) );
    }
 
    if ( ! infeasible && conshdlrdata->coverseparation )
    {
-      SCIP_CALL( separateOrbisackCovers(scip, cons, consdata, vals1, vals2, &ngen2, &infeasible) );
+      SCIP_CALL( separateOrbisackCovers(scip, cons, nrows, vars1, vars2, vals1, vals2, &ngen2, &infeasible) );
    }
 
    if ( infeasible )
@@ -1150,7 +1153,7 @@ SCIP_DECL_CONSSEPALP(consSepalpOrbisack)
 
          SCIPdebugMessage("Separating orbisack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
 
-         SCIP_CALL( separateInequalities(scip, result, conss[c], consdata, vals1, vals2) );
+         SCIP_CALL( separateInequalities(scip, result, conss[c], consdata->nrows, consdata->vars1, consdata->vars2, vals1, vals2) );
          if ( *result == SCIP_CUTOFF )
             break;
       }
@@ -1203,7 +1206,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolOrbisack)
 
          SCIPdebugMessage("Separating orbisack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
 
-         SCIP_CALL( separateInequalities(scip, result, conss[c], consdata, vals1, vals2) );
+         SCIP_CALL( separateInequalities(scip, result, conss[c], consdata->nrows, consdata->vars1, consdata->vars2, vals1, vals2) );
          if ( *result == SCIP_CUTOFF )
             break;
       }
@@ -1267,7 +1270,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpOrbisack)
          /* Separate only cover inequalities to ensure that enforcing works correctly. */
          /* Otherwise, it may happen that infeasible solutions cannot be detected, since */
          /* we bound the size of the coefficients for the orbisack inequalities. */
-         SCIP_CALL( separateOrbisackCovers(scip, conss[c], consdata, vals1, vals2, &ngen, &infeasible) );
+         SCIP_CALL( separateOrbisackCovers(scip, conss[c], consdata->nrows, consdata->vars1, consdata->vars2, vals1, vals2, &ngen, &infeasible) );
 
          if ( infeasible )
          {
@@ -1381,7 +1384,7 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxOrbisack)
          /* Separate only cover inequalities to ensure that enforcing works correctly. */
          /* Otherwise, it may happen that infeasible solutions cannot be detected, since */
          /* we bound the size of the coefficients for the orbisack inequalities. */
-         SCIP_CALL( separateOrbisackCovers(scip, conss[c], consdata, vals1, vals2, &ngen, &infeasible) );
+         SCIP_CALL( separateOrbisackCovers(scip, conss[c], consdata->nrows, consdata->vars1, consdata->vars2, vals1, vals2, &ngen, &infeasible) );
 
          if ( infeasible )
          {
