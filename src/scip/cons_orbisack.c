@@ -609,7 +609,7 @@ SCIP_RETCODE addOrbisackInequality(
 static
 SCIP_RETCODE separateOrbisack(
    SCIP*                 scip,               /**< SCIP pointer */
-   SCIP_CONS*            conss,              /**< constraint */
+   SCIP_CONS*            cons,               /**< constraint */
    const SCIP_CONSDATA*  consdata,           /**< constraint data */
    SCIP_Real*            vals1,              /**< LP-solution for those variables in first column */
    SCIP_Real*            vals2,              /**< LP-solution for those variables in second column */
@@ -676,7 +676,7 @@ SCIP_RETCODE separateOrbisack(
    /* check whether cut for basement row = 1 is violated */
    if ( SCIPisEfficacious(scip, lhs - rhs) )
    {
-      SCIP_CALL( addOrbisackInequality(scip, conss, consdata, coeff1, coeff2, rhs, infeasible) );
+      SCIP_CALL( addOrbisackInequality(scip, cons, consdata, coeff1, coeff2, rhs, infeasible) );
       ++(*ngen);
    }
 
@@ -732,7 +732,7 @@ SCIP_RETCODE separateOrbisack(
          if ( ! coverseparation )
          {
             int ncuts;
-            SCIP_CALL( separateOrbisackCovers(scip, conss, consdata, vals1, vals2, &ncuts, infeasible) );
+            SCIP_CALL( separateOrbisackCovers(scip, cons, consdata, vals1, vals2, &ncuts, infeasible) );
             *ngen += ncuts;
          }
          break;
@@ -741,7 +741,7 @@ SCIP_RETCODE separateOrbisack(
       /* if current inequality is violated */
       if ( SCIPisEfficacious(scip, lhs - rhs) )
       {
-         SCIP_CALL( addOrbisackInequality(scip, conss, consdata, coeff1, coeff2, rhs, infeasible) );
+         SCIP_CALL( addOrbisackInequality(scip, cons, consdata, coeff1, coeff2, rhs, infeasible) );
          ++(*ngen);
       }
    }
