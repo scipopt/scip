@@ -166,7 +166,7 @@ SCIP_RETCODE orbitalFixing(
    *nfixedzero = 0;
    *nfixedone = 0;
 
-   SCIPdebugMessage("Perform orbital fixing on %d orbits.\n", norbits);
+   SCIPdebugMsg(scip, "Perform orbital fixing on %d orbits.\n", norbits);
 
    /* check all orbits */
    for (i = 0; i < norbits; ++i)
@@ -225,7 +225,7 @@ SCIP_RETCODE orbitalFixing(
             /* only variables that are not yet fixed to 0 */
             if ( SCIPvarGetUbLocal(var) > 0.5 )
             {
-               SCIPdebugMessage("can fix <%s> (index %d) to 0.\n", SCIPvarGetName(var), orbits[j]);
+               SCIPdebugMsg(scip, "can fix <%s> (index %d) to 0.\n", SCIPvarGetName(var), orbits[j]);
                assert( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY );
                /* due to aggregation, var might already be fixed to 1, so do not put assert here */
 
@@ -253,7 +253,7 @@ SCIP_RETCODE orbitalFixing(
             /* only variables that are not yet fixed to 1 */
             if ( SCIPvarGetLbLocal(var) < 0.5)
             {
-               SCIPdebugMessage("can fix <%s> (index %d) to 1.\n", SCIPvarGetName(var), orbits[j]);
+               SCIPdebugMsg(scip, "can fix <%s> (index %d) to 1.\n", SCIPvarGetName(var), orbits[j]);
                assert( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY );
                /* due to aggregation, var might already be fixed to 0, so do not put assert here */
 
@@ -487,7 +487,7 @@ SCIP_RETCODE propagate(
       propdata->nfixedone += nfixedone;
       *ngen = nfixedzero + nfixedone;
 
-      SCIPdebugMessage("Orbital fixings: %d 0s, %d 1s.\n", nfixedzero, nfixedone);
+      SCIPdebugMsg(scip, "Orbital fixings: %d 0s, %d 1s.\n", nfixedzero, nfixedone);
    }
 
    SCIPfreeBufferArray(scip, &orbitbegins);
@@ -512,7 +512,7 @@ SCIP_DECL_PROPFREE(propFreeOrbitalfixing)
 
    assert( prop != NULL );
 
-   SCIPdebugMessage("Freeing propagator <%s> ...\n", SCIPpropGetName(prop));
+   SCIPdebugMsg(scip, "Freeing propagator <%s> ...\n", SCIPpropGetName(prop));
 
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
@@ -531,7 +531,7 @@ SCIP_DECL_PROPINIT(propInitOrbitalfixing)
 
    assert( prop != NULL );
 
-   SCIPdebugMessage("Init propagator <%s> ...\n", SCIPpropGetName(prop));
+   SCIPdebugMsg(scip, "Init propagator <%s> ...\n", SCIPpropGetName(prop));
 
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
@@ -676,7 +676,7 @@ SCIP_DECL_PROPEXEC(propExecOrbitalfixing)
    /* propagate */
    *result = SCIP_DIDNOTFIND;
 
-   SCIPdebugMessage("Propagating <%s>.\n", SCIPpropGetName(prop));
+   SCIPdebugMsg(scip, "Propagating <%s>.\n", SCIPpropGetName(prop));
    SCIP_CALL( propagate(scip, propdata, &infeasible, &ngen) );
    if ( infeasible )
       *result = SCIP_CUTOFF;

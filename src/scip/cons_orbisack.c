@@ -785,7 +785,7 @@ SCIP_RETCODE propVariables(
    assert( ngen != NULL );
    assert( found != NULL );
 
-   SCIPdebugMessage("Propagating variables of constraint <%s>.\n", SCIPconsGetName(cons));
+   SCIPdebugMsg(scip, "Propagating variables of constraint <%s>.\n", SCIPconsGetName(cons));
 
    *ngen = 0;
    *infeasible = FALSE;
@@ -859,7 +859,7 @@ SCIP_RETCODE propVariables(
       {
          SCIP_Bool nocritical = TRUE;
 
-         SCIPdebugMessage("Check variable pair (%d,0) and (%d,1).\n", i, i);
+         SCIPdebugMsg(scip, "Check variable pair (%d,0) and (%d,1).\n", i, i);
 
          /* check whether there is a critical row above row i, otherwise the solution is infeasible
           * if there is a row without fixing (2) above the current row, we cannot obtain a result */
@@ -874,7 +874,7 @@ SCIP_RETCODE propVariables(
 
          if ( nocritical )
          {
-            SCIPdebugMessage(" -> node infeasible (row was fixed to 0,1 but there was no critical row above).\n");
+            SCIPdebugMsg(scip, " -> node infeasible (row was fixed to 0,1 but there was no critical row above).\n");
 
             /* perform conflict analysis */
             if ( SCIPisConflictAnalysisApplicable(scip) )
@@ -904,7 +904,7 @@ SCIP_RETCODE propVariables(
       {
          SCIP_Bool allconstant = TRUE;
 
-         SCIPdebugMessage("Check variable pair (%d,0) and (%d,1).\n", i, i);
+         SCIPdebugMsg(scip, "Check variable pair (%d,0) and (%d,1).\n", i, i);
 
          /* Check whether all rows above row i are constant. In this case, the variable in the second */
          /* column can be fixed to 0. If an entry above row i is unfixed or a row is not constant, we cannot */
@@ -1044,7 +1044,7 @@ SCIP_DECL_CONSTRANS(consTransOrbisack)
    assert( sourcecons != NULL );
    assert( targetcons != NULL );
 
-   SCIPdebugMessage("Transforming constraint.\n");
+   SCIPdebugMsg(scip, "Transforming constraint.\n");
 
    /* get data of original constraint */
    sourcedata = SCIPconsGetData(sourcecons);
@@ -1097,13 +1097,13 @@ SCIP_DECL_CONSINITLP(consInitlpOrbisack)
       /* get data of constraint */
       assert( conss[c] != 0 );
 
-      SCIPdebugMessage("Generating initial orbisack cut for constraint <%s> ...\n", SCIPconsGetName(conss[c]));
+      SCIPdebugMsg(scip, "Generating initial orbisack cut for constraint <%s> ...\n", SCIPconsGetName(conss[c]));
 
       SCIP_CALL( initLP(scip, conss[c], infeasible) );
       if ( *infeasible )
          break;
 
-      SCIPdebugMessage("Generated initial orbisack cut.\n");
+      SCIPdebugMsg(scip, "Generated initial orbisack cut.\n");
    }
 
    return SCIP_OKAY;
@@ -1124,7 +1124,7 @@ SCIP_DECL_CONSSEPALP(consSepalpOrbisack)
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
 
-   SCIPdebugMessage("Separation method for orbisack constraints.\n");
+   SCIPdebugMsg(scip, "Separation method for orbisack constraints.\n");
 
    *result = SCIP_DIDNOTRUN;
 
@@ -1151,7 +1151,7 @@ SCIP_DECL_CONSSEPALP(consSepalpOrbisack)
          SCIP_CALL( SCIPgetSolVals(scip, NULL, consdata->nrows, consdata->vars1, vals1) );
          SCIP_CALL( SCIPgetSolVals(scip, NULL, consdata->nrows, consdata->vars2, vals2) );
 
-         SCIPdebugMessage("Separating orbisack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
+         SCIPdebugMsg(scip, "Separating orbisack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
 
          SCIP_CALL( separateInequalities(scip, result, conss[c], consdata->nrows, consdata->vars1, consdata->vars2, vals1, vals2) );
          if ( *result == SCIP_CUTOFF )
@@ -1180,7 +1180,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolOrbisack)
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
 
-   SCIPdebugMessage("Separation method for orbisack constraints\n");
+   SCIPdebugMsg(scip, "Separation method for orbisack constraints\n");
 
    *result = SCIP_DIDNOTFIND;
 
@@ -1204,7 +1204,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolOrbisack)
          SCIP_CALL( SCIPgetSolVals(scip, sol, consdata->nrows, consdata->vars1, vals1) );
          SCIP_CALL( SCIPgetSolVals(scip, sol, consdata->nrows, consdata->vars2, vals2) );
 
-         SCIPdebugMessage("Separating orbisack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
+         SCIPdebugMsg(scip, "Separating orbisack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
 
          SCIP_CALL( separateInequalities(scip, result, conss[c], consdata->nrows, consdata->vars1, consdata->vars2, vals1, vals2) );
          if ( *result == SCIP_CUTOFF )
@@ -1238,7 +1238,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpOrbisack)
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != 0 );
 
-   SCIPdebugMessage("Enfolp method for orbisack constraints\n");
+   SCIPdebugMsg(scip, "Enfolp method for orbisack constraints\n");
 
    /* we have a negative priority, so we should come after the integrality conshdlr. */
    assert( SCIPgetNLPBranchCands(scip) == 0 );
@@ -1265,7 +1265,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpOrbisack)
          SCIP_CALL( SCIPgetSolVals(scip, NULL, consdata->nrows, consdata->vars1, vals1) );
          SCIP_CALL( SCIPgetSolVals(scip, NULL, consdata->nrows, consdata->vars2, vals2) );
 
-         SCIPdebugMessage("Enforcing orbisack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
+         SCIPdebugMsg(scip, "Enforcing orbisack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
 
          /* Separate only cover inequalities to ensure that enforcing works correctly. */
          /* Otherwise, it may happen that infeasible solutions cannot be detected, since */
@@ -1278,7 +1278,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpOrbisack)
             break;
          }
 
-         SCIPdebugMessage("Generated orbisack inequalities for <%s>: %d\n", SCIPconsGetName(conss[c]), ngen);
+         SCIPdebugMsg(scip, "Generated orbisack inequalities for <%s>: %d\n", SCIPconsGetName(conss[c]), ngen);
 
          if ( ngen > 0 )
             *result = SCIP_SEPARATED;
@@ -1305,7 +1305,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsOrbisack)
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
 
-   SCIPdebugMessage("Enforcing method for orbisack constraints (pseudo solutions) ...\n");
+   SCIPdebugMsg(scip, "Enforcing method for orbisack constraints (pseudo solutions) ...\n");
 
    *result = SCIP_FEASIBLE;
 
@@ -1352,7 +1352,7 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxOrbisack)
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != 0 );
 
-   SCIPdebugMessage("Enforelax method for orbisack constraints.\n");
+   SCIPdebugMsg(scip, "Enforelax method for orbisack constraints.\n");
 
    /* we have a negative priority, so we should come after the integrality conshdlr. */
    assert( SCIPgetNLPBranchCands(scip) == 0 );
@@ -1379,7 +1379,7 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxOrbisack)
          SCIP_CALL( SCIPgetSolVals(scip, sol, consdata->nrows, consdata->vars1, vals1) );
          SCIP_CALL( SCIPgetSolVals(scip, sol, consdata->nrows, consdata->vars2, vals2) );
 
-         SCIPdebugMessage("Enforcing orbisack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
+         SCIPdebugMsg(scip, "Enforcing orbisack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
 
          /* Separate only cover inequalities to ensure that enforcing works correctly. */
          /* Otherwise, it may happen that infeasible solutions cannot be detected, since */
@@ -1392,7 +1392,7 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxOrbisack)
             break;
          }
 
-         SCIPdebugMessage("Generated orbisack inequalities for <%s>: %d\n", SCIPconsGetName(conss[c]), ngen);
+         SCIPdebugMsg(scip, "Generated orbisack inequalities for <%s>: %d\n", SCIPconsGetName(conss[c]), ngen);
 
          if ( ngen > 0 )
             *result = SCIP_SEPARATED;
@@ -1432,7 +1432,7 @@ SCIP_DECL_CONSCHECK(consCheckOrbisack)
       assert( consdata->vars1 != NULL );
       assert( consdata->vars2 != NULL );
 
-      SCIPdebugMessage("Check method for orbisack constraint <%s> (%d rows) ...\n", SCIPconsGetName(conss[c]), consdata->nrows);
+      SCIPdebugMsg(scip, "Check method for orbisack constraint <%s> (%d rows) ...\n", SCIPconsGetName(conss[c]), consdata->nrows);
 
       SCIP_CALL( SCIPcheckOrbisackSolution(scip, sol, consdata->vars1, consdata->vars2, consdata->nrows, printreason, &feasible) );
 
@@ -1445,7 +1445,7 @@ SCIP_DECL_CONSCHECK(consCheckOrbisack)
    }
 
    if ( feasible )
-      SCIPdebugMessage("Solution is feasible.\n");
+      SCIPdebugMsg(scip, "Solution is feasible.\n");
 
    return SCIP_OKAY;
 }
@@ -1464,7 +1464,7 @@ SCIP_DECL_CONSPROP(consPropOrbisack)
 
    *result = SCIP_DIDNOTRUN;
 
-   SCIPdebugMessage("Propagation method of orbisack constraint handler.\n");
+   SCIPdebugMsg(scip, "Propagation method of orbisack constraint handler.\n");
 
    /* loop through constraints */
    for (c = 0; c < nconss; ++c)
@@ -1503,7 +1503,7 @@ SCIP_DECL_CONSPRESOL(consPresolOrbisack)
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
 
-   SCIPdebugMessage("Presolving method of orbisack constraint handler. Propagating orbisack inequalities.\n");
+   SCIPdebugMsg(scip, "Presolving method of orbisack constraint handler. Propagating orbisack inequalities.\n");
 
    *result = SCIP_DIDNOTFIND;
 
@@ -1553,7 +1553,7 @@ SCIP_DECL_CONSRESPROP(consRespropOrbisack)
    assert( bdchgidx != NULL );
    assert( result != NULL );
 
-   SCIPdebugMessage("Propagation resolution method of orbisack constraint handler.\n");
+   SCIPdebugMsg(scip, "Propagation resolution method of orbisack constraint handler.\n");
 
    *result = SCIP_DIDNOTFIND;
 
@@ -1573,7 +1573,7 @@ SCIP_DECL_CONSRESPROP(consRespropOrbisack)
 
    if ( SCIPvarGetUbAtIndex(vars2[inferinfo], bdchgidx, FALSE) > 0.5 && SCIPvarGetUbAtIndex(vars2[inferinfo], bdchgidx, TRUE) < 0.5 )
    {
-      SCIPdebugMessage(" -> reason for setting x[%d][1] = 0 was fixing x[%d][0] to 0 and each row above is fixed to the same value.\n",
+      SCIPdebugMsg(scip, " -> reason for setting x[%d][1] = 0 was fixing x[%d][0] to 0 and each row above is fixed to the same value.\n",
          inferinfo, inferinfo);
 
       for (i = 0; i < inferinfo; ++i)
@@ -1615,7 +1615,7 @@ SCIP_DECL_CONSLOCK(consLockOrbisack)
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( cons != NULL );
 
-   SCIPdebugMessage("Locking method for orbisack constraint handler.\n");
+   SCIPdebugMsg(scip, "Locking method for orbisack constraint handler.\n");
 
    /* get data of original constraint */
    consdata = SCIPconsGetData(cons);

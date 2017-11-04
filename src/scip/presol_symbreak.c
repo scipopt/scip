@@ -1166,7 +1166,7 @@ SCIP_DECL_PRESOLEXIT(presolExitSymbreak)
    assert( scip != NULL );
    assert( presol != NULL );
 
-   SCIPdebugMessage("Exit method of symmetry breaking presolver ...\n");
+   SCIPdebugMsg(scip, "Exit method of symmetry breaking presolver ...\n");
 
    presoldata = SCIPpresolGetData(presol);
    assert( presoldata != NULL );
@@ -1318,7 +1318,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
 
       if ( presoldata->nperms <= 0 )
       {
-         SCIPdebugMessage("Symmetry breaking presolver: no symmetry has been found, turning presolver off.\n");
+         SCIPdebugMsg(scip, "Symmetry breaking presolver: no symmetry has been found, turning presolver off.\n");
          presoldata->enabled = FALSE;
          return SCIP_OKAY;
       }
@@ -1379,7 +1379,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
          /* exit if cutoff has been detected */
          if ( *result == SCIP_CUTOFF || *result == SCIP_UNBOUNDED )
          {
-            SCIPdebugMessage("Presolving constraint <%s> detected cutoff or unboundedness.\n", SCIPconsGetName(presoldata->genconss[i]));
+            SCIPdebugMsg(scip, "Presolving constraint <%s> detected cutoff or unboundedness.\n", SCIPconsGetName(presoldata->genconss[i]));
             return SCIP_OKAY;
          }
       }

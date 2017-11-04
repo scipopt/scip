@@ -642,7 +642,7 @@ SCIP_RETCODE propVariables(
    assert( infeasible != NULL );
    assert( ngen != NULL );
 
-   SCIPdebugMessage("Propagating variables of constraint <%s>.\n", SCIPconsGetName(cons));
+   SCIPdebugMsg(scip, "Propagating variables of constraint <%s>.\n", SCIPconsGetName(cons));
 
    *ngen = 0;
    *infeasible = FALSE;
@@ -677,9 +677,9 @@ SCIP_RETCODE propVariables(
       /* if first part of variable pair fixed to 0 and second part is fixed to 1 */
       if ( ISFIXED0(var) && ISFIXED1(var2) )
       {
-         SCIPdebugMessage("Check variable pair (%d,%d).\n", i, invperm[i]);
+         SCIPdebugMsg(scip, "Check variable pair (%d,%d).\n", i, invperm[i]);
 
-         SCIPdebugMessage(" -> node infeasible (pair was fixed to (0,1) but there was no pair of type (1,0) before).\n");
+         SCIPdebugMsg(scip, " -> node infeasible (pair was fixed to (0,1) but there was no pair of type (1,0) before).\n");
 
          /* perform conflict analysis */
          if ( SCIPisConflictAnalysisApplicable(scip) )
@@ -708,7 +708,7 @@ SCIP_RETCODE propVariables(
          assert( SCIPvarGetLbLocal(var2) < 0.5 );
          assert( SCIPvarGetUbLocal(var2) > 0.5 );
 
-         SCIPdebugMessage("Check variable pair (%d,%d).\n", i, invperm[i]);
+         SCIPdebugMsg(scip, "Check variable pair (%d,%d).\n", i, invperm[i]);
 
          assert( SCIPvarGetLbLocal(var2) < 0.5 );
          SCIP_CALL( SCIPinferVarUbCons(scip, var2, 0.0, cons, i, FALSE, infeasible, &tightened) ); /*lint !e713*/
@@ -724,7 +724,7 @@ SCIP_RETCODE propVariables(
          assert( SCIPvarGetUbLocal(var) > 0.5 );
          assert( SCIPvarGetLbLocal(var2) > 0.5 );
 
-         SCIPdebugMessage("Check variable pair (%d,%d).\n", i, invperm[i]);
+         SCIPdebugMsg(scip, "Check variable pair (%d,%d).\n", i, invperm[i]);
 
          assert( SCIPvarGetUbLocal(var) > 0.5 );
          SCIP_CALL( SCIPinferVarLbCons(scip, var, 1.0, cons, i + nvars, FALSE, infeasible, &tightened) ); /*lint !e713*/
@@ -739,8 +739,8 @@ SCIP_RETCODE propVariables(
          assert( SCIPvarGetLbLocal(var) > 0.5 );
          assert( SCIPvarGetUbLocal(var2) < 0.5 );
 
-         SCIPdebugMessage("Check variable pair (%d,%d).\n", i, invperm[i]);
-         SCIPdebugMessage(" -> node is feasible (pair was fixed to (1,0) and every earlier pair is constant).\n");
+         SCIPdebugMsg(scip, "Check variable pair (%d,%d).\n", i, invperm[i]);
+         SCIPdebugMsg(scip, " -> node is feasible (pair was fixed to (1,0) and every earlier pair is constant).\n");
 
          break;
       }
@@ -1197,7 +1197,7 @@ SCIP_DECL_CONSTRANS(consTransSymresack)
    assert( sourcecons != NULL );
    assert( targetcons != NULL );
 
-   SCIPdebugMessage("Transforming constraint.\n");
+   SCIPdebugMsg(scip, "Transforming constraint.\n");
 
    /* get data of original constraint */
    sourcedata = SCIPconsGetData(sourcecons);
@@ -1280,13 +1280,13 @@ SCIP_DECL_CONSINITLP(consInitlpSymresack)
       /* get data of constraint */
       assert( conss[c] != NULL );
 
-      SCIPdebugMessage("Generating initial symresack cut for constraint <%s> ...\n", SCIPconsGetName(conss[c]));
+      SCIPdebugMsg(scip, "Generating initial symresack cut for constraint <%s> ...\n", SCIPconsGetName(conss[c]));
 
       SCIP_CALL( initLP(scip, conss[c], infeasible) );
       if ( *infeasible )
          break;
    }
-   SCIPdebugMessage("Generated initial symresack cuts.\n");
+   SCIPdebugMsg(scip, "Generated initial symresack cuts.\n");
 
    return SCIP_OKAY;
 }
@@ -1304,7 +1304,7 @@ SCIP_DECL_CONSSEPALP(consSepalpSymresack)
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
 
-   SCIPdebugMessage("Separation method for symresack constraints\n");
+   SCIPdebugMsg(scip, "Separation method for symresack constraints\n");
 
    *result = SCIP_DIDNOTRUN;
 
@@ -1326,7 +1326,7 @@ SCIP_DECL_CONSSEPALP(consSepalpSymresack)
          SCIP_Bool infeasible = FALSE;
          int ngen = 0;
 
-         SCIPdebugMessage("Separating symresack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
+         SCIPdebugMsg(scip, "Separating symresack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
 
          /* get data of constraint */
          assert( conss[c] != NULL );
@@ -1368,7 +1368,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolSymresack)
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
 
-   SCIPdebugMessage("Separation method for symresack constraints\n");
+   SCIPdebugMsg(scip, "Separation method for symresack constraints\n");
 
    *result = SCIP_DIDNOTRUN;
 
@@ -1386,7 +1386,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolSymresack)
          SCIP_Bool infeasible = FALSE;
          int ngen = 0;
 
-         SCIPdebugMessage("Separating symresack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
+         SCIPdebugMsg(scip, "Separating symresack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
 
          /* get data of constraint */
          assert( conss[c] != NULL );
@@ -1433,7 +1433,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpSymresack)
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
 
-   SCIPdebugMessage("Enforcing method for symresack constraints (lp solutions) ...\n");
+   SCIPdebugMsg(scip, "Enforcing method for symresack constraints (lp solutions) ...\n");
 
    /* we have a negative priority, so we should come after the integrality conshdlr. */
    assert( SCIPgetNLPBranchCands(scip) == 0 );
@@ -1454,7 +1454,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpSymresack)
          SCIP_Bool infeasible = FALSE;
          int ngen = 0;
 
-         SCIPdebugMessage("Enforcing symresack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
+         SCIPdebugMsg(scip, "Enforcing symresack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
 
          /* get data of constraint */
          assert( conss[c] != NULL );
@@ -1471,7 +1471,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpSymresack)
             return SCIP_OKAY;
          }
 
-         /* SCIPdebugMessage("Generated symresack inequalities for <%s>: %d\n", SCIPconsGetName(conss[c]), ngen); */
+         /* SCIPdebugMsg(scip, "Generated symresack inequalities for <%s>: %d\n", SCIPconsGetName(conss[c]), ngen); */
 
          if ( ngen > 0 )
             *result = SCIP_SEPARATED;
@@ -1494,7 +1494,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsSymresack)
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
 
-   SCIPdebugMessage("Enforcing method for symresack constraints (pseudo solutions) ...\n");
+   SCIPdebugMsg(scip, "Enforcing method for symresack constraints (pseudo solutions) ...\n");
 
    *result = SCIP_FEASIBLE;
 
@@ -1562,7 +1562,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsSymresack)
             break;
          else /* infeasible */
          {
-            SCIPdebugMessage("Solution is infeasible.\n");
+            SCIPdebugMsg(scip, "Solution is infeasible.\n");
             *result = SCIP_INFEASIBLE;
             terminated = TRUE;
             break;
@@ -1592,7 +1592,7 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxSymresack)
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
 
-   SCIPdebugMessage("Enforcing method for symresack constraints (relaxation solutions) ...\n");
+   SCIPdebugMsg(scip, "Enforcing method for symresack constraints (relaxation solutions) ...\n");
 
    /* we have a negative priority, so we should come after the integrality conshdlr. */
    assert( SCIPgetNLPBranchCands(scip) == 0 );
@@ -1613,7 +1613,7 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxSymresack)
          SCIP_Bool infeasible = FALSE;
          int ngen = 0;
 
-         SCIPdebugMessage("Enforcing symresack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
+         SCIPdebugMsg(scip, "Enforcing symresack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
 
          /* get data of constraint */
          assert( conss[c] != NULL );
@@ -1673,7 +1673,7 @@ SCIP_DECL_CONSCHECK(consCheckSymresack)
       assert( consdata->vars != NULL );
       assert( consdata->invperm != NULL );
 
-      SCIPdebugMessage("Check method for symresack constraint <%s> (%d rows) ...\n", SCIPconsGetName(conss[c]), consdata->nvars);
+      SCIPdebugMsg(scip, "Check method for symresack constraint <%s> (%d rows) ...\n", SCIPconsGetName(conss[c]), consdata->nvars);
 
       nvars = consdata->nvars;
       vars = consdata->vars;
@@ -1709,7 +1709,7 @@ SCIP_DECL_CONSCHECK(consCheckSymresack)
 
          /* pair is (0,1) --> solution is infeasible */
          assert( val2 > val1 );
-         SCIPdebugMessage("Solution is infeasible.\n");
+         SCIPdebugMsg(scip, "Solution is infeasible.\n");
          *result = SCIP_INFEASIBLE;
          terminated = TRUE;
 
@@ -1721,7 +1721,7 @@ SCIP_DECL_CONSCHECK(consCheckSymresack)
    }
 
    if ( ! terminated )
-      SCIPdebugMessage("Solution is feasible.\n");
+      SCIPdebugMsg(scip, "Solution is feasible.\n");
 
    return SCIP_OKAY;
 }
@@ -1741,7 +1741,7 @@ SCIP_DECL_CONSPROP(consPropSymresack)
 
    *result = SCIP_DIDNOTRUN;
 
-   SCIPdebugMessage("Propagation method of symresack constraint handler.\n");
+   SCIPdebugMsg(scip, "Propagation method of symresack constraint handler.\n");
 
    /* loop through constraints */
    for (c = 0; c < nconss; ++c)
@@ -1789,7 +1789,7 @@ SCIP_DECL_CONSPRESOL(consPresolSymresack)
 
    oldndelconss = *ndelconss;
 
-   SCIPdebugMessage("Presolving method of symresack constraint handler. Propagating symresack inequalities.\n");
+   SCIPdebugMsg(scip, "Presolving method of symresack constraint handler. Propagating symresack inequalities.\n");
    *result = SCIP_DIDNOTRUN;
 
    /* loop through constraints */
@@ -1855,7 +1855,7 @@ SCIP_DECL_CONSRESPROP(consRespropSymresack)
    assert( bdchgidx != NULL );
    assert( result != NULL );
 
-   SCIPdebugMessage("Propagation resolution method of symresack constraint handler.\n");
+   SCIPdebugMsg(scip, "Propagation resolution method of symresack constraint handler.\n");
 
    *result = SCIP_DIDNOTFIND;
 
@@ -1879,7 +1879,7 @@ SCIP_DECL_CONSRESPROP(consRespropSymresack)
 
       if ( SCIPvarGetUbAtIndex(vars[invperm[inferinfo]], bdchgidx, FALSE) > 0.5 && SCIPvarGetUbAtIndex(vars[invperm[inferinfo]], bdchgidx, TRUE) < 0.5 )
       {
-         SCIPdebugMessage(" -> reason for setting x[%d] = 0 was fixing x[%d] to 0 and each pair of binary variables before (%d,%d) which are not fixed points is constant.\n",
+         SCIPdebugMsg(scip, " -> reason for setting x[%d] = 0 was fixing x[%d] to 0 and each pair of binary variables before (%d,%d) which are not fixed points is constant.\n",
             invperm[inferinfo], inferinfo, inferinfo, invperm[inferinfo]);
 
          SCIP_CALL( SCIPaddConflictUb(scip, vars[inferinfo], bdchgidx) );
@@ -1907,7 +1907,7 @@ SCIP_DECL_CONSRESPROP(consRespropSymresack)
 
       if ( SCIPvarGetLbAtIndex(vars[inferinfo2], bdchgidx, FALSE) < 0.5 && SCIPvarGetLbAtIndex(vars[inferinfo2], bdchgidx, TRUE) > 0.5 )
       {
-         SCIPdebugMessage(" -> reason for setting x[%d] = 1 was fixing x[%d] to 1 and each pair of binary variables before (%d,%d) which are not fixed points is constant.\n",
+         SCIPdebugMsg(scip, " -> reason for setting x[%d] = 1 was fixing x[%d] to 1 and each pair of binary variables before (%d,%d) which are not fixed points is constant.\n",
             inferinfo2, invperm[inferinfo2], inferinfo2, invperm[inferinfo2]);
 
          SCIP_CALL( SCIPaddConflictLb(scip, vars[invperm[inferinfo2]], bdchgidx) );
@@ -1957,7 +1957,7 @@ SCIP_DECL_CONSLOCK(consLockSymresack)
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( cons != NULL );
 
-   SCIPdebugMessage("Locking method for symresack constraint handler.\n");
+   SCIPdebugMsg(scip, "Locking method for symresack constraint handler.\n");
 
    /* get data of original constraint */
    consdata = SCIPconsGetData(cons);
@@ -2220,7 +2220,7 @@ SCIP_RETCODE SCIPcreateConsSymresack(
 
       if ( success )
       {
-         SCIPdebugMessage("Upgraded symresack constraint to orbisack constraint.\n");
+         SCIPdebugMsg(scip, "Upgraded symresack constraint to orbisack constraint.\n");
 
          return SCIP_OKAY;
       }
