@@ -657,7 +657,7 @@ SCIP_RETCODE computeSymmetryGroup(
    /* skip if no symmetry can be computed */
    if ( ! SYMcanComputeSymmetry() )
    {
-      SCIPwarningMessage(scip, "Cannot compute symmetry, since no third party software has been linked in.\n");
+      SCIPwarningMessage(scip, "Cannot compute symmetry group, since SCIP was built without symmetry detector (SYM=none).\n");
       return SCIP_OKAY;
    }
 
