@@ -817,8 +817,11 @@ SCIP_RETCODE computeSymmetryGroup(
             consvals[j] = 1.0;
          }
          consvars[nconsvars] = SCIPgetIntVarXor(scip, cons);
-         consvals[nconsvars] = 2.0;
-         ++nconsvars;
+         if ( consvars[nconsvars] != NULL )
+         {
+            consvals[nconsvars] = 2.0;
+            ++nconsvars;
+         }
 
          SCIP_CALL( collectCoefficients(scip, consvars, consvals, nconsvars, (SCIP_Real) SCIPgetRhsXor(scip, cons),
                (SCIP_Real) SCIPgetRhsXor(scip, cons), SCIPconsIsTransformed(cons), SYM_SENSE_XOR, &matrixdata) );
