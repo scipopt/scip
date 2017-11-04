@@ -163,7 +163,7 @@ set(instances_MINLP
     )
 set(instances_Bivariate
     "instances/Bivariate/st_qpk1.osil\;-3"
-#    "instances/Bivariate/nvs01.osil\;12.4696688"  # see issue #1809
+    "instances/Bivariate/nvs01.osil\;12.4696688"
    )
 set(instances_Bilinrelax
     "instances/Bilinrelax/pointpack06.osil\;0.361111675167215"
