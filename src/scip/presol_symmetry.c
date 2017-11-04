@@ -907,7 +907,7 @@ SCIP_RETCODE computeSymmetryGroup(
       else if ( strcmp(conshdlrname, "bounddisjunction") == 0 )
       {
          /* currently assume bound disjunctions are o.k. for non local symmetry groups */
-         if ( ! local )
+         if ( local )
          {
             /* @todo we need to handle bounddisjunctions if local symmetry groups are considered */
             SCIPerrorMessage("Cannot determine symmetries for constraint <%s> of constraint handler <%s>.\n",
