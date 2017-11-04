@@ -1967,9 +1967,9 @@ SCIP_DECL_CONSPRINT(consPrintSymresack)
 
    SCIP_CONSDATA* consdata;
    SCIP_VAR** vars;
-   int nvars;
-   int* perm;
    SCIP_Bool* covered;
+   int* perm;
+   int nvars;
    int i;
    int j;
 
@@ -2060,6 +2060,8 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsSymresack)
    SCIP_CONSDATA* consdata;
 
    assert( cons != NULL );
+   assert( success != NULL );
+   assert( nvars != NULL );
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
