@@ -50,6 +50,7 @@
 #include "scip/type_table.h"
 #include "scip/type_prop.h"
 #include "scip/struct_set.h"
+#include "symmetry/type_symmetry.h"
 
 
 #ifdef NDEBUG
@@ -1139,6 +1140,19 @@ extern
 int SCIPsetInitializeRandomSeed(
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   initialseedvalue    /**< initial seed value to be modified */
+   );
+
+/** return types of symmetry handling that are performed */
+extern
+SYM_HANDLETYPE SCIPsetGetSymHandletype(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** add type of symmetry handling to the list of performed methods */
+extern
+void SCIPsetAddSymHandletype(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SYM_HANDLETYPE        type                /**< types of symmetry handling performed */
    );
 
 /** returns value treated as infinity */
