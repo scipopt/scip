@@ -203,8 +203,8 @@ SCIP_RETCODE packingUpgrade(
    setppcconshdlr = SCIPfindConshdlr(scip, "setppc");
    if ( setppcconshdlr == NULL )
    {
-      SCIPerrorMessage("Setppc constraint handler not found.\n");
-      return SCIP_PLUGINNOTFOUND;
+      SCIPwarningMessage(scip, "Check for upgrading orbisacks to packing/partitioning orbisacks not possible - setppc constraint handler not found.\n");
+      return SCIP_OKAY;
    }
    setppcconss = SCIPconshdlrGetConss(setppcconshdlr);
    nsetppcconss = SCIPconshdlrGetNConss(setppcconshdlr);
