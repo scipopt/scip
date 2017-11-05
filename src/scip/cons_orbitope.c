@@ -2270,7 +2270,7 @@ SCIP_RETCODE separateConstraints(
       /* separate */
       orbitopetype = consdata->orbitopetype;
 
-      SCIP_CALL( SCIPgetBoolParam(scip, "cons/orbitope/sepafullorbitope", &sepafullorbitope) );
+      SCIP_CALL( SCIPgetBoolParam(scip, "constraints/orbitope/sepafullorbitope", &sepafullorbitope) );
 
       if ( orbitopetype == SCIP_ORBITOPETYPE_PACKING || orbitopetype == SCIP_ORBITOPETYPE_PARTITIONING )
       {
@@ -3105,11 +3105,11 @@ SCIP_RETCODE SCIPincludeConshdlrOrbitope(
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransOrbitope) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxOrbitope) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "cons/" CONSHDLR_NAME "/checkpporbitope",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/checkpporbitope",
          "Upgrade orbitope constraints to packing/partioning orbitopes?",
          &conshdlrdata->checkpporbitope, TRUE, DEFAULT_PPORBITOPE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "cons/" CONSHDLR_NAME "/sepafullorbitope",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/sepafullorbitope",
          "Whether we separate inequalities for full orbitopes?",
          &conshdlrdata->sepafullorbitope, TRUE, DEFAULT_SEPAFULLORBITOPE, NULL, NULL) );
 
@@ -3221,7 +3221,7 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
    }
 #endif
 
-   SCIP_CALL( SCIPgetBoolParam(scip, "cons/orbitope/checkpporbitope", &checkupgrade) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "constraints/orbitope/checkpporbitope", &checkupgrade) );
    if ( checkupgrade )
    {
       type = SCIP_ORBITOPETYPE_FULL;

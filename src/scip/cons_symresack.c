@@ -477,7 +477,7 @@ SCIP_RETCODE consdataCreate(
 
    /* check whether an upgrade to packing/partitioning symresacks is possible */
    upgrade = FALSE;
-   SCIP_CALL( SCIPgetBoolParam(scip, "cons/symresack/ppsymresack", &upgrade) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "constraints/symresack/ppsymresack", &upgrade) );
 
    if ( upgrade )
    {
@@ -2136,12 +2136,12 @@ SCIP_RETCODE SCIPincludeConshdlrSymresack(
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpSymresack) );
 
    /* whether we allow upgrading to orbisack constraints*/
-   SCIP_CALL( SCIPaddBoolParam(scip, "cons/" CONSHDLR_NAME "/upgrade",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/upgrade",
          "Upgrade symresack constraints to orbisack constraints?",
          &conshdlrdata->symresackupgrade, TRUE, DEFAULT_UPGRADE, NULL, NULL) );
 
    /* whether we allow upgrading to packing/partioning symresack constraints*/
-   SCIP_CALL( SCIPaddBoolParam(scip, "cons/" CONSHDLR_NAME "/ppsymresack",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/ppsymresack",
          "Upgrade symresack constraints to packing/partioning symresacks?",
          &conshdlrdata->checkppsymresack, TRUE, DEFAULT_PPSYMRESACK, NULL, NULL) );
 
@@ -2211,7 +2211,7 @@ SCIP_RETCODE SCIPcreateConsSymresack(
    }
 
    /* check whether constraint can be upgraded to an orbisack constraint */
-   SCIP_CALL( SCIPgetBoolParam(scip, "cons/symresack/upgrade", &upgrade) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "constraints/symresack/upgrade", &upgrade) );
 
    if ( upgrade )
    {

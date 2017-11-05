@@ -1926,20 +1926,20 @@ SCIP_RETCODE SCIPincludeConshdlrOrbisack(
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpOrbisack) );
 
    /* separation methods */
-   SCIP_CALL( SCIPaddBoolParam(scip, "cons/" CONSHDLR_NAME "/orbisack/coverseparation",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/orbisack/coverseparation",
          "Separate cover inequalities for orbisacks?",
          &conshdlrdata->coverseparation, TRUE, DEFAULT_COVERSEPARATION, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "cons/" CONSHDLR_NAME "/orbiSeparation",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/orbiSeparation",
          "Separate orbisack inequalities?",
          &conshdlrdata->orbiseparation, TRUE, DEFAULT_ORBISEPARATION, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "cons/" CONSHDLR_NAME "/coeffbound",
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/coeffbound",
          "Maximum size of coefficients for orbisack inequalities",
          &conshdlrdata->coeffbound, TRUE, DEFAULT_COEFFBOUND, 0.0, DBL_MAX, NULL, NULL) );
 
    /* whether we allow upgrading to packing/partioning orbisack constraints*/
-   SCIP_CALL( SCIPaddBoolParam(scip, "cons/" CONSHDLR_NAME "/checkpporbisack",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/checkpporbisack",
          "Upgrade orbisack constraints to packing/partioning orbisacks?",
          &conshdlrdata->checkpporbisack, TRUE, DEFAULT_PPORBISACK, NULL, NULL) );
 
@@ -2008,7 +2008,7 @@ SCIP_RETCODE SCIPcreateConsOrbisack(
    assert( nrows > 0 );
 
    /* check for upgrade to packing/partitioning orbisacks*/
-   SCIP_CALL( SCIPgetBoolParam(scip, "cons/orbisack/checkpporbisack", &checkupgrade) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "constraints/orbisack/checkpporbisack", &checkupgrade) );
    if ( ! ispporbisack && checkupgrade )
    {
       SCIP_CALL( packingUpgrade(scip, vars1, vars2, nrows, &success, &isparttype) );
