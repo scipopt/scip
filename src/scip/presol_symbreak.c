@@ -1260,7 +1260,7 @@ SCIP_DECL_PRESOLINITPRE(presolInitpreSymbreak)
 
    if ( presoldata->early && presoldata->enabled )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Executing presolver <%s> early, since symmetries are computed early.\n\n", SCIPpresolGetName(presol));
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Executing presolver <%s> early, since symmetries are computed early.\n\n", SCIPpresolGetName(presol));
 
       SCIP_CALL( SCIPsetIntParam(scip, "presolving/" PRESOL_NAME "/priority", 90000000) );
    }

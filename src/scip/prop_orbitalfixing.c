@@ -610,7 +610,7 @@ SCIP_DECL_PROPINITSOL(propInitsolOrbitalfixing)
 
       if ( propdata->nperms <= 0 )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Skip orbital fixing, since no symmetries were found.\n");
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Skip orbital fixing, since no symmetries were found.\n");
          propdata->enabled = FALSE;
       }
       else
