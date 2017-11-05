@@ -711,7 +711,7 @@ SCIP_RETCODE computeSymmetryGroup(
    assert( nhandleconss <= nactiveconss );
    if ( nhandleconss < nactiveconss )
    {
-      SCIPwarningMessage(scip, "Cannot compute symmetry, since unkown constraints are present.\n");
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Cannot compute symmetry, since unkown constraints are present.\n");
       *success = FALSE;
       return SCIP_OKAY;
    }
