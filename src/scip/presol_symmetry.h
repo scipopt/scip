@@ -15,7 +15,7 @@
 
 /**@file   presol_symmetry.h
  * @ingroup PRESOLVERS
- * @brief  presovler for storing symmetry information about current problem
+ * @brief  presolver for storing symmetry information about current problem
  * @author Marc Pfetsch
  * @author Thomas Rehn
  */
