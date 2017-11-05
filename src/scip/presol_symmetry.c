@@ -1092,13 +1092,15 @@ SCIP_RETCODE computeSymmetryGroup(
       {
          if ( maxgenerators == 0 )
          {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Number of generators:\t\t\t%d \t(max: -)\n", *nperms);
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Log10 of symmetry group size:\t\t%f\n", *log10groupsize);
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL,
+               "   (%.1fs) symmetry computation finished: %d generators found (max: -, log10 of symmetry group size: %.1f)\n",
+               SCIPgetSolvingTime(scip), *nperms, *log10groupsize);
          }
          else
          {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Number of generators:\t\t\t%u \t(max: %u)\n", *nperms, maxgenerators);
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Log10 of symmetry group size:\t\t%f\n", *log10groupsize);
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL,
+               "   (%.1fs) symmetry computation finished: %d generators found (max: %u, log10 of symmetry group size: %.1f)\n",
+               SCIPgetSolvingTime(scip), *nperms, maxgenerators, *log10groupsize);
          }
       }
    }
@@ -1179,21 +1181,27 @@ SCIP_RETCODE determineSymmetry(
    /* skip symmetry computation if required variables are not present */
    if ( ! (type & presoldata->symspecrequire) )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Skip symmetry computation, since type does not match requirements (%d bin, %d int, %d cont); required: (%d bin, %d int, %d cont).\n",
-         SCIPgetNBinVars(scip), SCIPgetNIntVars(scip), SCIPgetNContVars(scip) + SCIPgetNImplVars(scip),
-         (presoldata->symspecrequire & (int) SYM_SPEC_BINARY) != 0,
-         (presoldata->symspecrequire & (int) SYM_SPEC_INTEGER) != 0,
-         (presoldata->symspecrequire & (int) SYM_SPEC_REAL) != 0);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL,
+         "   (%.1fs) symmetry computation skipped: type (bin %c, int %c, cont %c) does not match requirements (bin %c, int %c, cont %c)\n",
+         SCIPgetSolvingTime(scip),
+         SCIPgetNBinVars(scip) > 0 ? '+' : '-',
+         SCIPgetNIntVars(scip) > 0  ? '+' : '-',
+         SCIPgetNContVars(scip) + SCIPgetNImplVars(scip) > 0 ? '+' : '-',
+         (presoldata->symspecrequire & (int) SYM_SPEC_BINARY) != 0 ? '+' : '-',
+         (presoldata->symspecrequire & (int) SYM_SPEC_INTEGER) != 0 ? '+' : '-',
+         (presoldata->symspecrequire & (int) SYM_SPEC_REAL) != 0 ? '+' : '-');
       return SCIP_OKAY;
    }
 
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Required symmetry:\t\t\t(%d bin, %d int, %d cont); (fixed: %d bin, %d int, %d cont)\n",
-      (presoldata->symspecrequire & (int) SYM_SPEC_BINARY) != 0,
-      (presoldata->symspecrequire & (int) SYM_SPEC_INTEGER) != 0,
-      (presoldata->symspecrequire & (int) SYM_SPEC_REAL) != 0,
-      (presoldata->symspecrequirefixed & (int) SYM_SPEC_BINARY) != 0,
-      (presoldata->symspecrequirefixed & (int) SYM_SPEC_INTEGER) != 0,
-      (presoldata->symspecrequirefixed & (int) SYM_SPEC_REAL) != 0);
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL,
+      "   (%.1fs) symmetry computation started: requiring (bin %c, int %c, cont %c), (fixed: bin %c, int %c, cont %c)\n",
+      SCIPgetSolvingTime(scip),
+      (presoldata->symspecrequire & (int) SYM_SPEC_BINARY) != 0 ? '+' : '-',
+      (presoldata->symspecrequire & (int) SYM_SPEC_INTEGER) != 0 ? '+' : '-',
+      (presoldata->symspecrequire & (int) SYM_SPEC_REAL) != 0 ? '+' : '-',
+      (presoldata->symspecrequirefixed & (int) SYM_SPEC_BINARY) != 0 ? '+' : '-',
+      (presoldata->symspecrequirefixed & (int) SYM_SPEC_INTEGER) != 0 ? '+' : '-',
+      (presoldata->symspecrequirefixed & (int) SYM_SPEC_REAL) != 0 ? '+' : '-');
 
    if ( presoldata->symspecrequire & presoldata->symspecrequirefixed )
       SCIPwarningMessage(scip, "Warning: some required symmetries must be fixed.\n");
