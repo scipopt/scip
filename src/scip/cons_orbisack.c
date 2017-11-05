@@ -1990,9 +1990,9 @@ SCIP_RETCODE SCIPcreateConsOrbisack(
    )
 {
    SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_VAR*** vars;
-   SCIP_Bool checkupgrade = FALSE;
    SCIP_Bool success;
    SCIP_ORBITOPETYPE orbitopetype;
    int i;
@@ -2008,8 +2008,8 @@ SCIP_RETCODE SCIPcreateConsOrbisack(
    assert( nrows > 0 );
 
    /* check for upgrade to packing/partitioning orbisacks*/
-   SCIP_CALL( SCIPgetBoolParam(scip, "constraints/orbisack/checkpporbisack", &checkupgrade) );
-   if ( ! ispporbisack && checkupgrade )
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   if ( ! ispporbisack && conshdlrdata->checkpporbisack )
    {
       SCIP_CALL( packingUpgrade(scip, vars1, vars2, nrows, &success, &isparttype) );
 
