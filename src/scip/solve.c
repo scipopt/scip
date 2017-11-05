@@ -2721,7 +2721,7 @@ SCIP_RETCODE priceAndCutLoop(
       }
    }
 
-   if( (root || maxnsepastallrounds > 1) && nsepastallrounds >= maxnsepastallrounds )
+   if( root && nsepastallrounds >= maxnsepastallrounds )
    {
       SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "Truncate separation round because of stalling (%d stall rounds).\n", maxnsepastallrounds);
