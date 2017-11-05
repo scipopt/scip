@@ -1086,24 +1086,8 @@ SCIP_RETCODE computeSymmetryGroup(
       {
          SCIP_CALL( checkSymmetriesAreSymmetries(scip, fixedtype, &matrixdata, *nperms, *perms) );
       }
-
-      /* output statistics */
-      if ( ! local )
-      {
-         if ( maxgenerators == 0 )
-         {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL,
-               "   (%.1fs) symmetry computation finished: %d generators found (max: -, log10 of symmetry group size: %.1f)\n",
-               SCIPgetSolvingTime(scip), *nperms, *log10groupsize);
-         }
-         else
-         {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL,
-               "   (%.1fs) symmetry computation finished: %d generators found (max: %u, log10 of symmetry group size: %.1f)\n",
-               SCIPgetSolvingTime(scip), *nperms, maxgenerators, *log10groupsize);
-         }
-      }
    }
+   *success = TRUE;
 
    /* free matrix data */
    SCIPfreeBlockMemoryArray(scip, &uniquevararray, nvars);
@@ -1212,19 +1196,32 @@ SCIP_RETCODE determineSymmetry(
    maxgenerators = MIN(maxgenerators, MAXGENNUMERATOR / nvars);
 
    SCIP_CALL( computeSymmetryGroup(scip, maxgenerators, presoldata->symspecrequirefixed, FALSE, presoldata->checksymmetries,
-         &presoldata->npermvars, &presoldata->permvars, &presoldata->nperms, &presoldata->nmaxperms, &presoldata->perms, &presoldata->log10groupsize, &presoldata->successful) );
+         &presoldata->npermvars, &presoldata->permvars, &presoldata->nperms, &presoldata->nmaxperms, &presoldata->perms,
+         &presoldata->log10groupsize, &presoldata->successful) );
 
-   if ( ! presoldata->successful )
-      return SCIP_OKAY;
-
-   if ( presoldata->nperms == 0 )
+   /* output statistics */
+   if ( ! presoldata->successful || presoldata->nperms == 0 )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "No symmetry found.\n");
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "   (%.1fs) no symmetry found\n", SCIPgetSolvingTime(scip));
    }
    else
    {
-      /* turn off some other presolving methods in order to be sure that they do not destroy symmetry afterwards */
       assert( presoldata->nperms > 0 );
+
+      if ( maxgenerators == 0 )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL,
+            "   (%.1fs) symmetry computation finished: %d generators found (max: -, log10 of symmetry group size: %.1f)\n",
+            SCIPgetSolvingTime(scip), presoldata->nperms, presoldata->log10groupsize);
+      }
+      else
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL,
+            "   (%.1fs) symmetry computation finished: %d generators found (max: %u, log10 of symmetry group size: %.1f)\n",
+            SCIPgetSolvingTime(scip), presoldata->nperms, maxgenerators, presoldata->log10groupsize);
+      }
+
+      /* turn off some other presolving methods in order to be sure that they do not destroy symmetry afterwards */
 
       /* domcol avoids S_2-symmetries and may not be compatible with other symmetry handling methods. */
       SCIP_CALL( SCIPsetIntParam(scip, "presolving/domcol/maxrounds", 0) );
