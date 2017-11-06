@@ -56,8 +56,6 @@
  *   <tr><td>lastones     </td><td>\\alpha </td></tr>
  *   <tr><td>frontiersteps</td><td>\\Gamma </td></tr>
  * </table>
- *
- * @note resolution of full orbitope propagation not available yet
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
