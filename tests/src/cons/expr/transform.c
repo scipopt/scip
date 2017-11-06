@@ -87,7 +87,7 @@ Test(transform, transform, .init = setup, .fini = teardown)
    SCIPinfoMessage(scip, NULL, "\n");
    fflush(stdout);
 
-   cr_assert_stdout_eq_str("  [expr] <test>: 1.1*<t_x>*<t_y>*(<t_z>)^-1+3.2*(<t_x>)^2*(<t_y>)^-5*<t_z>+0.5*(<t_z>)^3 == 2\n");
+   cr_assert_stdout_eq_str("  [expr] <test>: 1.1*<t_x>*<t_y>*(<t_z>)^(-1)+3.2*(<t_x>)^2*(<t_y>)^(-5)*<t_z>+0.5*(<t_z>)^3 == 2\n");
 
    /* release constraints and transformed problem */
    SCIP_CALL( SCIPreleaseCons(scip, &transconsexpr) );
