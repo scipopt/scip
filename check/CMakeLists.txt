@@ -1,5 +1,10 @@
 include(CTest)
 
+add_custom_target(check
+                COMMAND ${CMAKE_CTEST_COMMAND} -R "-default" --schedule-random
+                DEPENDS scip
+                )
+
 #
 # define the instance sets
 #
@@ -74,7 +79,7 @@ set(settings_MIP
 )
 
 set(settings_MINLP
-    "default"
+    "checkfeastolfac10"
     "undercover1"
     "undercover2"
     "rensnlp"
@@ -85,9 +90,18 @@ set(settings_MINLP
     "nlpdiving4"
 )
 set(settings_Bivariate
-    "default"
+    "checkfeastolfac10"
     "bivariate"
 )
+
+set(settings_Bilinrelax
+    "checkfeastolfac10"
+    "bilinrelax"
+  )
+
+set(settings_sparsify
+    "sparsifyaggr"
+  )
 
 #
 # Indicator instances
@@ -153,8 +167,13 @@ set(instances_MINLP
     )
 set(instances_Bivariate
     "instances/Bivariate/st_qpk1.osil\;-3"
-    "instances/Bivariate/nvs01.osil\;12.4696688"
+#    "instances/Bivariate/nvs01.osil\;12.4696688"  # see issue #1809
    )
+set(instances_Bilinrelax
+    "instances/Bilinrelax/pointpack06.osil\;0.361111675167215"
+    "instances/Bilinrelax/ex5_4_2.osil\;7512.23014449367"
+  )
+
 #
 # PseudoBoolean instances
 #
@@ -166,6 +185,14 @@ set(instances_PseudoBoolean
     "instances/PseudoBoolean/normalized-t2001.13queen13.1111218308.opb\;+infinity"
     "instances/PseudoBoolean/normalized-t2001.13queen13.1110976730--soft-33-100-0.wbo\;4"
     "instances/PseudoBoolean/wheel010.lap.opb.pre.cip\;25"
+    )
+
+#
+# sparsify instances
+#
+set(instances_sparsify
+    "instances/MIP/blend2.mps\;7.598985"
+    "instances/PseudoBoolean/normalized-t2001.13queen13.1111218308.opb\;+infinity"
     )
 
 #
@@ -213,7 +240,7 @@ set(scip_reader_extensions
     "opb"
     "pip"
     "rlp"
-#    "mps"
+    "mps"
     "lp"
     )
 
@@ -276,7 +303,9 @@ add_instancetests(instances_Indicator settings_default "Indicator")
 add_instancetests(instances_MIP settings_MIP "MIP")
 add_instancetests(instances_MINLP settings_MINLP "MINLP")
 add_instancetests(instances_Bivariate settings_Bivariate "Bivariate")
+add_instancetests(instances_Bilinrelax settings_Bilinrelax "Bilinrelax")
 add_instancetests(instances_PseudoBoolean settings_default "PseudoBoolean")
+add_instancetests(instances_sparsify settings_sparsify "Sparsify")
 add_instancetests(instances_Semicontinuous settings_default "Semicontinuous")
 add_instancetests(instances_SAT settings_default "SAT")
 add_instancetests(instances_SOS settings_default "SOS")
@@ -423,7 +452,11 @@ set_tests_properties(interactiveshell
                         DEPENDS scip-build
                     )
 
-add_custom_target(check
-                COMMAND ${CMAKE_CTEST_COMMAND} -R "-default" --schedule-random
-                DEPENDS scip
-                )
+add_test(NAME write_and_read_settings
+        COMMAND $<TARGET_FILE:scip> -b ${CMAKE_CURRENT_SOURCE_DIR}/interactiveshell/write_and_read_settings.bat
+        )
+set_tests_properties(write_and_read_settings
+                    PROPERTIES
+                        FAIL_REGULAR_EXPRESSION "ERROR"
+                        DEPENDS scip-build
+                    )

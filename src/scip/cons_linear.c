@@ -247,6 +247,7 @@ struct SCIP_ConsData
    unsigned int          hascontvar:1;       /**< does the constraint contain at least one continuous variable? */
    unsigned int          hasnonbinvar:1;     /**< does the constraint contain at least one non-binary variable? */
    unsigned int          hasnonbinvalid:1;   /**< is the information stored in hasnonbinvar and hascontvar valid? */
+   unsigned int          checkabsolute:1;    /**< should the constraint be checked w.r.t. an absolute feasibilty tolerance? */
 };
 
 /** event data for bound change event */
@@ -1007,6 +1008,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->nbinvars = -1;
    (*consdata)->varsdeleted = FALSE;
    (*consdata)->rangedrowpropagated = 0;
+   (*consdata)->checkabsolute = FALSE;
 
    if( SCIPisTransformed(scip) )
    {
@@ -7189,7 +7191,8 @@ SCIP_RETCODE checkCons(
       /* reset constraint age since we are in enforcement */
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
    }
-   else if( SCIPisFeasLT(scip, activity, consdata->lhs) || SCIPisFeasGT(scip, activity, consdata->rhs) )
+   /* check with relative tolerances (the default) */
+   else if( !consdata->checkabsolute && (SCIPisFeasLT(scip, activity, consdata->lhs) || SCIPisFeasGT(scip, activity, consdata->rhs)) )
    {
       /* the "normal" check: one of the two sides is violated */
       if( !checkrelmaxabs )
@@ -7203,7 +7206,7 @@ SCIP_RETCODE checkCons(
          }
       }
       /* the (much) more complicated check: we try to disregard random noise and violations of a 0.0 side which are
-       * small compared to the absolute values occuring in the activity
+       * small compared to the absolute values occurring in the activity
        */
       else
       {
@@ -7337,6 +7340,19 @@ SCIP_RETCODE checkCons(
                }
             }
          }
+      }
+   }
+   /* check with absolute tolerances */
+   else if( consdata->checkabsolute &&
+      ((!SCIPisInfinity(scip, -consdata->lhs) && SCIPisGT(scip, consdata->lhs-activity, SCIPfeastol(scip))) ||
+       (!SCIPisInfinity(scip,  consdata->rhs) && SCIPisGT(scip, activity-consdata->rhs, SCIPfeastol(scip)))) )
+   {
+      *violated = TRUE;
+
+      /* only reset constraint age if we are in enforcement */
+      if( sol == NULL )
+      {
+         SCIP_CALL( SCIPresetConsAge(scip, cons) );
       }
    }
    else
@@ -16350,6 +16366,8 @@ SCIP_DECL_CONSCOPY(consCopyLinear)
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, valid) );
    assert(cons != NULL || *valid == FALSE);
 
+   /* @todo should also the checkabsolute flag of the constraint be copied? */
+
    return SCIP_OKAY;
 }
 
@@ -16927,6 +16945,8 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLinear)
 static
 SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
 {  /*lint --e{715}*/
+   SCIP_CONSDATA* upgdconsdata;
+
    assert(scip != NULL);
    assert(cons != NULL);
    assert(nupgdconss != NULL);
@@ -16959,6 +16979,13 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
          SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
          SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
          SCIPconsIsStickingAtNode(cons)) );
+
+   upgdconsdata = SCIPconsGetData(upgdconss[0]);
+   assert(upgdconsdata != NULL);
+
+   /* check violation of this linear constraint with absolute tolerances, to be consistent with the original quadratic constraint */
+   upgdconsdata->checkabsolute = TRUE;
+
    SCIPdebugMsg(scip, "created linear constraint:\n");
    SCIPdebugPrintCons(scip, upgdconss[0], NULL);
 
@@ -16969,6 +16996,8 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
 static
 SCIP_DECL_NONLINCONSUPGD(upgradeConsNonlinear)
 {
+   SCIP_CONSDATA* upgdconsdata;
+
    assert(nupgdconss != NULL);
    assert(upgdconss != NULL);
 
@@ -16997,6 +17026,15 @@ SCIP_DECL_NONLINCONSUPGD(upgradeConsNonlinear)
          SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
          SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
          SCIPconsIsStickingAtNode(cons)) );
+
+   upgdconsdata = SCIPconsGetData(upgdconss[0]);
+   assert(upgdconsdata != NULL);
+
+   /* check violation of this linear constraint with absolute tolerances, to be consistent with the original nonlinear constraint */
+   upgdconsdata->checkabsolute = TRUE;
+
+   SCIPdebugMsg(scip, "created linear constraint:\n");
+   SCIPdebugPrintCons(scip, upgdconss[0], NULL);
 
    return SCIP_OKAY;
 }
