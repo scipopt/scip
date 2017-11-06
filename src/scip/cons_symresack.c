@@ -1240,6 +1240,7 @@ SCIP_DECL_CONSTRANS(consTransSymresack)
    assert( sourcedata->vals != NULL );
    assert( sourcedata->perm != NULL );
    assert( sourcedata->invperm != NULL );
+#ifndef NDEBUG
    if ( sourcedata->ppupgrade )
    {
       assert( sourcedata->ncycles != 0 );
@@ -1250,6 +1251,7 @@ SCIP_DECL_CONSTRANS(consTransSymresack)
          assert( sourcedata->cycledecomposition[i][0] != 0 );
       }
    }
+#endif
 
    /* create transformed constraint data (copy data where necessary) */
    nvars = sourcedata->nvars;
