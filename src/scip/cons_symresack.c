@@ -1875,12 +1875,15 @@ SCIP_DECL_CONSRESPROP(consRespropSymresack)
    if ( inferinfo < nvars )
    {
       assert( vars[invperm[inferinfo]] == infervar );
-      assert( SCIPvarGetUbAtIndex(vars[invperm[inferinfo]], bdchgidx, FALSE) > 0.5 && SCIPvarGetUbAtIndex(vars[invperm[inferinfo]], bdchgidx, TRUE) < 0.5 );
+      assert( SCIPvarGetUbAtIndex(vars[invperm[inferinfo]], bdchgidx, FALSE) > 0.5
+         && SCIPvarGetUbAtIndex(vars[invperm[inferinfo]], bdchgidx, TRUE) < 0.5 );
 
-      if ( SCIPvarGetUbAtIndex(vars[invperm[inferinfo]], bdchgidx, FALSE) > 0.5 && SCIPvarGetUbAtIndex(vars[invperm[inferinfo]], bdchgidx, TRUE) < 0.5 )
+      if ( SCIPvarGetUbAtIndex(vars[invperm[inferinfo]], bdchgidx, FALSE) > 0.5
+         && SCIPvarGetUbAtIndex(vars[invperm[inferinfo]], bdchgidx, TRUE) < 0.5 )
       {
-         SCIPdebugMessage(" -> reason for setting x[%d] = 0 was fixing x[%d] to 0 and each pair of binary variables before (%d,%d) which are not fixed points is constant.\n",
-            invperm[inferinfo], inferinfo, inferinfo, invperm[inferinfo]);
+         SCIPdebugMessage(" -> reason for setting x[%d] = 0 was fixing x[%d] to 0 ", invperm[inferinfo], inferinfo);
+         SCIPdebugMessage("and each pair of binary variables before (%d,%d) which are not fixed points is constant.\n",
+            inferinfo, invperm[inferinfo]);
 
          SCIP_CALL( SCIPaddConflictUb(scip, vars[inferinfo], bdchgidx) );
 
@@ -1903,12 +1906,15 @@ SCIP_DECL_CONSRESPROP(consRespropSymresack)
 
       inferinfo2 = inferinfo - nvars;
       assert( vars[inferinfo2] == infervar );
-      assert( SCIPvarGetLbAtIndex(vars[inferinfo2], bdchgidx, FALSE) < 0.5 && SCIPvarGetLbAtIndex(vars[inferinfo2], bdchgidx, TRUE) > 0.5 );
+      assert( SCIPvarGetLbAtIndex(vars[inferinfo2], bdchgidx, FALSE) < 0.5
+         && SCIPvarGetLbAtIndex(vars[inferinfo2], bdchgidx, TRUE) > 0.5 );
 
-      if ( SCIPvarGetLbAtIndex(vars[inferinfo2], bdchgidx, FALSE) < 0.5 && SCIPvarGetLbAtIndex(vars[inferinfo2], bdchgidx, TRUE) > 0.5 )
+      if ( SCIPvarGetLbAtIndex(vars[inferinfo2], bdchgidx, FALSE) < 0.5
+         && SCIPvarGetLbAtIndex(vars[inferinfo2], bdchgidx, TRUE) > 0.5 )
       {
-         SCIPdebugMessage(" -> reason for setting x[%d] = 1 was fixing x[%d] to 1 and each pair of binary variables before (%d,%d) which are not fixed points is constant.\n",
-            inferinfo2, invperm[inferinfo2], inferinfo2, invperm[inferinfo2]);
+         SCIPdebugMessage(" -> reason for setting x[%d] = 1 was fixing x[%d] to 1 ", inferinfo2, invperm[inferinfo2]);
+         SCIPdebugMessage("and each pair of binary variables before (%d,%d) which are not fixed points is constant.\n",
+            inferinfo2, invperm[inferinfo2]);
 
          SCIP_CALL( SCIPaddConflictLb(scip, vars[invperm[inferinfo2]], bdchgidx) );
 
