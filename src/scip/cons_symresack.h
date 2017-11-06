@@ -82,7 +82,7 @@ SCIP_RETCODE SCIPcreateConsSymresack(
    const char*           name,               /**< name of constraint */
    int*                  perm,               /**< permutation */
    SCIP_VAR**            vars,               /**< variables */
-   int                   nvars,              /**< number of variables in problem */
+   int                   nvars,              /**< number of variables in vars array */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -123,7 +123,7 @@ SCIP_RETCODE SCIPcreateConsBasicSymresack(
    const char*           name,               /**< name of constraint */
    int*                  perm,               /**< permutation */
    SCIP_VAR**            vars,               /**< variables */
-   int                   nvars               /**< number of variables in problem */
+   int                   nvars               /**< number of variables in vars array */
    );
 
 #ifdef __cplusplus
