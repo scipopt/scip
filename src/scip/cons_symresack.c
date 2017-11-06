@@ -654,13 +654,9 @@ SCIP_RETCODE propVariables(
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_Bool tightened;
    SCIP_VAR** vars;
-   SCIP_VAR* var2;
-   SCIP_VAR* var;
    int* invperm;
    int nvars;
-   int r;
    int i;
 
    assert( scip != NULL );
@@ -691,6 +687,11 @@ SCIP_RETCODE propVariables(
    /* loop through all variables */
    for (i = 0; i < nvars; ++i)
    {
+      SCIP_VAR* var2;
+      SCIP_VAR* var;
+      int r;
+      SCIP_Bool tightened;
+
       /* there are no fixed points */
       assert( invperm[i] != i );
 
