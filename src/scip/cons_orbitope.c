@@ -342,10 +342,13 @@ SCIP_RETCODE upgradeOrbitopeConstraint(
                break;
          }
 
-         if ( nfound == ncols && ! covered[i] )
+         if ( nfound == ncols )
          {
+            assert( ! covered[i] );
             covered[i] = TRUE;
             ++ncovered;
+
+            break;
          }
       }
    }
@@ -403,10 +406,13 @@ SCIP_RETCODE upgradeOrbitopeConstraint(
                ++nfound;
          }
 
-         if ( nfound == ncols && ! covered[i] )
+         if ( nfound == ncols )
          {
+            assert( ! covered[i] );
             covered[i] = TRUE;
             ++ncovered;
+
+            break;
          }
       }
    }
