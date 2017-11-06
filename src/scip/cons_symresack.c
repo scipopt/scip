@@ -462,6 +462,8 @@ SCIP_RETCODE consdataCreate(
          }
       }
    }
+   SCIPfreeBufferArrayNull(scip, &indexcorrection);
+
    (*consdata)->vars = vars;
    (*consdata)->perm = perm;
 
@@ -476,8 +478,6 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->invperm = invperm;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->vals, naffectedvariables) );
-
-   SCIPfreeBufferArrayNull(scip, &indexcorrection);
 
    /* check whether an upgrade to packing/partitioning symresacks is possible */
    upgrade = FALSE;
