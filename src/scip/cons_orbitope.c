@@ -295,7 +295,10 @@ SCIP_RETCODE upgradeOrbitopeConstraint(
    if ( ! success )
       goto FREEUPGRADESTRUCTURES;
 
-   /* iterate over rows of orbitope and check whether rows are contained in partitioning constraints */
+   /* iterate over rows of orbitope and check whether rows are contained in partitioning constraints
+    *
+    * @todo sort constraints within the setppcconss array: first by type and then by increasing number of
+    * contained variables */
    for (i = 0; i < *nrows && success; ++i)
    {
       /* iterate over constraints */
