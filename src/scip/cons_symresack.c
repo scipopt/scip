@@ -705,7 +705,7 @@ SCIP_RETCODE propVariables(
       {
          SCIPdebugMessage("Check variable pair (%d,%d).\n", i, invperm[i]);
 
-         SCIPdebugMessage(" -> node infeasible (pair was fixed to (0,1) but there was no pair of type (1,0) before).\n");
+         SCIPdebugMessage(" -> node infeasible (pair was fixed to (0,1) but there was no pair of type (1,0) before) ---> lexicographical order violated, infeasible.\n");
 
          /* perform conflict analysis */
          if ( SCIPisConflictAnalysisApplicable(scip) )
