@@ -6321,7 +6321,8 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
             }
          }
 
-         if( SCIPvarGetType(consdata->z) < SCIP_VARTYPE_CONTINUOUS && !SCIPisZero(scip, zcoef) )
+         if( SCIPvarGetType(consdata->z) < SCIP_VARTYPE_CONTINUOUS && !SCIPisZero(scip, zcoef)
+            && SCIPvarGetStatus(consdata->z) != SCIP_VARSTATUS_MULTAGGR )
          {
             SCIP_CALL( SCIPcreateConsVarbound(scip, &lincons, SCIPconsGetName(conss[c]),
                   consdata->x, consdata->z, zcoef, lhs, rhs,
