@@ -1331,6 +1331,8 @@ static
 SCIP_DECL_CONSSEPALP(consSepalpSymresack)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
+   SCIP_Real* vals;
+   int ntotalvars;
    int c;
 
    assert( scip != NULL );
@@ -1348,9 +1350,6 @@ SCIP_DECL_CONSSEPALP(consSepalpSymresack)
 
    if ( nconss == 0 )
       return SCIP_OKAY;
-
-   SCIP_Real* vals;
-   int ntotalvars;
 
    ntotalvars = SCIPgetNVars(scip);
    SCIP_CALL( SCIPallocBufferArray(scip, &vals, ntotalvars) );
@@ -1395,6 +1394,8 @@ static
 SCIP_DECL_CONSSEPASOL(consSepasolSymresack)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
+   SCIP_Real* vals;
+   int ntotalvars;
    int c;
 
    assert( scip != NULL );
@@ -1408,9 +1409,6 @@ SCIP_DECL_CONSSEPASOL(consSepasolSymresack)
 
    if ( nconss == 0 )
       return SCIP_OKAY;
-
-   SCIP_Real* vals;
-   int ntotalvars;
 
    ntotalvars = SCIPgetNVars(scip);
    SCIP_CALL( SCIPallocBufferArray(scip, &vals, ntotalvars) );
