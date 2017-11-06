@@ -64,12 +64,12 @@ static
 SCIP_RETCODE branch(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
-   SCIP_Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
    SCIP_BRANCHRULEDATA* branchruledata;
    SCIP_VAR** pseudocands;
+   SCIP_VAR** pseudocandscopy;
    SCIP_Real bestdown;
    SCIP_Real bestup;
    SCIP_Real bestscore;
@@ -119,8 +119,10 @@ SCIP_RETCODE branch(
    assert(npseudocands > 0);
    assert(npriopseudocands > 0);
 
-   SCIP_CALL( SCIPselectVarPseudoStrongBranching(scip, pseudocands, branchruledata->skipdown, branchruledata->skipup, npseudocands, npriopseudocands,
-      allowaddcons, &bestpseudocand, &bestdown, &bestup, &bestscore, &bestdownvalid, &bestupvalid, &provedbound, result) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &pseudocandscopy, pseudocands, npseudocands) );
+
+   SCIP_CALL( SCIPselectVarPseudoStrongBranching(scip, pseudocandscopy, branchruledata->skipdown, branchruledata->skipup, npseudocands,
+         npriopseudocands, &bestpseudocand, &bestdown, &bestup, &bestscore, &bestdownvalid, &bestupvalid, &provedbound, result) );
 
    if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED )
    {
@@ -133,7 +135,7 @@ SCIP_RETCODE branch(
       assert(0 <= bestpseudocand && bestpseudocand < npseudocands);
       assert(SCIPisLT(scip, provedbound, cutoffbound));
 
-      var = pseudocands[bestpseudocand];
+      var = pseudocandscopy[bestpseudocand];
 
       /* perform the branching */
       SCIPdebugMsg(scip, " -> %d candidates, selected candidate %d: variable <%s>[%g,%g] (solval=%g, down=%g, up=%g, score=%g)\n",
@@ -163,6 +165,8 @@ SCIP_RETCODE branch(
 
       *result = SCIP_BRANCHED;
    }
+
+   SCIPfreeBufferArray(scip, &pseudocandscopy);
 
    return SCIP_OKAY;
 }
@@ -228,7 +232,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpAllfullstrong)
 
    *result = SCIP_DIDNOTRUN;
 
-   SCIP_CALL( branch(scip, branchrule, allowaddcons, result) );
+   SCIP_CALL( branch(scip, branchrule, result) );
 
    return SCIP_OKAY;
 }
@@ -246,7 +250,7 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsAllfullstrong)
 
    if( SCIPhasCurrentNodeLP(scip) )
    {
-      SCIP_CALL( branch(scip, branchrule, allowaddcons, result) );
+      SCIP_CALL( branch(scip, branchrule, result) );
    }
 
    return SCIP_OKAY;
@@ -271,7 +275,6 @@ SCIP_RETCODE SCIPselectVarPseudoStrongBranching(
    SCIP_Bool*            skipup,             /**< should up branchings be skipped? */
    int                   npseudocands,       /**< number of branching candidates                      */
    int                   npriopseudocands,   /**< number of priority branching candidates             */
-   SCIP_Bool             allowaddcons,       /**< is the branching rule allowed to add constraints?   */
    int*                  bestpseudocand,     /**< best candidate for branching                        */
    SCIP_Real*            bestdown,           /**< objective value of the down branch for bestcand     */
    SCIP_Real*            bestup,             /**< objective value of the up branch for bestcand       */
@@ -281,7 +284,7 @@ SCIP_RETCODE SCIPselectVarPseudoStrongBranching(
    SCIP_Real*            provedbound,        /**< proved dual bound for current subtree               */
    SCIP_RESULT*          result              /**< result pointer                                      */
    )
-{
+{  /*lint --e{715}*/
    SCIP_Real lpobjval;
    SCIP_Bool allcolsinlp;
    SCIP_Bool exactsolve;
@@ -424,16 +427,7 @@ SCIP_RETCODE SCIPselectVarPseudoStrongBranching(
             assert(allcolsinlp);
             assert(!exactsolve);
 
-            /* if for both infeasibilities, a conflict constraint was created, we don't need to fix the variable by hand,
-             * but better wait for the next propagation round to fix them as an inference, and potentially produce a
-             * cutoff that can be analyzed
-             */
-            if( allowaddcons && downinf == downconflict && upinf == upconflict )
-            {
-               *result = SCIP_CONSADDED;
-               break; /* terminate initialization loop, because constraint was added */
-            }
-            else if( downinf && upinf )
+            if( downinf && upinf )
             {
                if( integral )
                {

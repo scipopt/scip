@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_dualinfer.h
+ * @ingroup PRESOLVERS
  * @brief  dual inference presolver
  * @author Dieter Weninger
  *

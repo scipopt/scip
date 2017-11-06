@@ -57,14 +57,13 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataValue)
    assert(sourceexpr != NULL);
 
    *targetexprdata = SCIPgetConsExprExprData(sourceexpr);
-   assert(*targetexprdata != NULL);
 
    return SCIP_OKAY;
 }
 
 static
 SCIP_DECL_CONSEXPR_EXPRPRINT(printValue)
-{
+{  /*lint --e{715}*/
    assert(expr != NULL);
 
    if( stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR )
@@ -111,7 +110,7 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffValue)
 /** expression interval evaluation callback */
 static
 SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalValue)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    SCIP_Real val;
 
@@ -138,7 +137,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropValue)
 /** expression hash callback */
 static
 SCIP_DECL_CONSEXPR_EXPRHASH(hashValue)
-{
+{  /*lint --e{715}*/
    assert(scip != NULL);
    assert(expr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 0);

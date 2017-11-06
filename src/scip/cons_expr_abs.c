@@ -98,11 +98,11 @@ SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrAbs)
 static
 SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataAbs)
 {  /*lint --e{715}*/
+   assert(targetscip != NULL);
    assert(targetexprdata != NULL);
-   assert(sourceexpr != NULL);
-   assert(SCIPgetConsExprExprData(sourceexpr) == NULL);
 
-   *targetexprdata = NULL;
+   SCIP_CALL( SCIPallocBlockMemory(targetscip, targetexprdata) );
+   BMSclearMemory(*targetexprdata);
 
    return SCIP_OKAY;
 }
@@ -203,7 +203,7 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffAbs)
    assert(expr != NULL);
    assert(SCIPgetConsExprExprData(expr) != NULL);
    assert(idx >= 0 && idx < SCIPgetConsExprExprNChildren(expr));
-   assert(SCIPgetConsExprExprValue(expr) != SCIP_INVALID);
+   assert(SCIPgetConsExprExprValue(expr) != SCIP_INVALID); /*lint !e777*/
 
    child = SCIPgetConsExprExprChildren(expr)[idx];
    assert(child != NULL);
@@ -217,7 +217,7 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffAbs)
 /** expression interval evaluation callback */
 static
 SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalAbs)
-{
+{  /*lint --e{715}*/
    SCIP_INTERVAL childinterval;
 
    assert(expr != NULL);

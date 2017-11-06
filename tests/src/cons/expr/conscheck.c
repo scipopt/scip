@@ -95,7 +95,7 @@ Test(conshdlr, conscheck, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, 2) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, z, 3) );
    SCIP_CALL( SCIPcheckSol(scip, sol, TRUE, TRUE, FALSE, FALSE, FALSE, &success) );
-   cr_expect_not(success, "an ifeasible solution has been accepted");
+   cr_expect_not(success, "an infeasible solution has been accepted");
 
    /* create a feasible solution */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0) );

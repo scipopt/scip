@@ -128,6 +128,18 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printXyz)
    return SCIP_OKAY;
 }
 
+/** expression parse callback */
+static
+SCIP_DECL_CONSEXPR_EXPRPARSE(parseXyz)
+{  /*lint --e{715}*/
+   assert(expr != NULL);
+
+   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+
 /** expression (point-) evaluation callback */
 static
 SCIP_DECL_CONSEXPR_EXPREVAL(evalXyz)
@@ -272,7 +284,8 @@ SCIP_RETCODE SCIPcreateConsExprExprXyz(
    assert(consexprhdlr != NULL);
    assert(expr != NULL);
 
-    exprhdlr = SCIPfindConsExprExprHdlr(consexprhdlr, EXPRHDLR_NAME);
+   /* TODO: add function SCIPgetConsExprExprHdlrXyz to cons_expr.{h,c} */
+   /* exprhdlr = SCIPgetConsExprExprHdlrXyz(consexprhdlr); */
 
    /* create expression data */
    exprdata = NULL;

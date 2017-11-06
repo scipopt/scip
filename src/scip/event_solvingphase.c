@@ -210,9 +210,9 @@ SCIP_RETCODE addNodesInformation(
          /* allocate additional memory to hold new node */
          if( depthinfo->nminnodes == depthinfo->minnodescapacity )
          {
-            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &depthinfo->minnodes, depthinfo->minnodescapacity,
-                  2 * depthinfo->minnodescapacity) ); /*lint !e647*/
+            int oldcapacity = depthinfo->minnodescapacity;
             depthinfo->minnodescapacity *= 2;
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &depthinfo->minnodes, oldcapacity, depthinfo->minnodescapacity) );
          }
 
          /* find correct insert position */
@@ -1322,7 +1322,7 @@ SCIP_RETCODE collectNondefaultParams(
          else if( eventhdlrdata->nnondefaultparams == eventhdlrdata->nondefaultparamssize )
          {
             eventhdlrdata->nondefaultparamssize *= 2;
-            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &eventhdlrdata->nondefaultparams,
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &eventhdlrdata->nondefaultparams, \
                   eventhdlrdata->nnondefaultparams, eventhdlrdata->nondefaultparamssize) );
 
          }

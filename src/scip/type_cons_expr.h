@@ -40,9 +40,9 @@ extern "C" {
  *  input:
  *  - scip              : target SCIP main data structure
  *  - consexprhdlr      : target expression constraint handler
- *  - sourcescip        : source SCIP main data structure
  *  - sourceconsexprhdlr : expression constraint handler in source SCIP
  *  - sourceexprhdlr    : expression handler in source SCIP
+ *  - valid             : to store indication whether the expression handler was copied
  */
 #define SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(x) SCIP_RETCODE x (\
    SCIP* scip, \
@@ -419,6 +419,111 @@ typedef struct SCIP_ConsExpr_ExprHdlrData SCIP_CONSEXPR_EXPRHDLRDATA; /**< expre
 typedef struct SCIP_ConsExpr_Expr         SCIP_CONSEXPR_EXPR;         /**< expression */
 
 typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< printing a dot file data */
+
+/** nonlinear handler copy callback
+ *
+ * the method includes the nonlinear handler into a expression constraint handler
+ *
+ * This method is usually called when doing a copy of an expression constraint handler.
+ *
+ *  input:
+ *  - targetscip          : target SCIP main data structure
+ *  - targetconsexprhdlr  : target expression constraint handler
+ *  - sourceconsexprhdlr  : expression constraint handler in source SCIP
+ *  - sourcenlhdlr        : nonlinear handler in source SCIP
+ */
+#define SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(x) SCIP_RETCODE x (\
+   SCIP* targetscip, \
+   SCIP_CONSHDLR* targetconsexprhdlr, \
+   SCIP_CONSHDLR* sourceconsexprhdlr, \
+   SCIP_CONSEXPR_NLHDLR* sourcenlhdlr)
+
+/** callback to free data of handler
+ *
+ * - scip SCIP data structure
+ * - nlhdlr nonlinear handler
+ * - nlhdlrdata nonlinear handler data to be freed
+ */
+#define SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+	SCIP_CONSEXPR_NLHDLR* nlhdlr, \
+   SCIP_CONSEXPR_NLHDLRDATA** nlhdlrdata)
+
+/** callback to free expression specific data
+ *
+ * - scip SCIP data structure
+ * - nlhdlr nonlinear handler
+ * - nlhdlrexprdata nonlinear handler expression data to be freed
+ */
+#define SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSEXPR_NLHDLR* nlhdlr, \
+   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata)
+
+/** callback to be called in initialization
+ *
+ * - scip SCIP data structure
+ * - nlhdlr nonlinear handler
+ */
+#define SCIP_DECL_CONSEXPR_NLHDLRINIT(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSEXPR_NLHDLR* nlhdlr)
+
+/** callback to be called in deinitialization
+ *
+ * - scip SCIP data structure
+ * - nlhdlr nonlinear handler
+ */
+#define SCIP_DECL_CONSEXPR_NLHDLREXIT(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSEXPR_NLHDLR* nlhdlr)
+
+/** callback to detect structure in expression tree
+ *
+ * - scip SCIP data structure
+ * - conshdlr expr-constraint handler
+ * - nlhdlr nonlinear handler
+ * - expr expression to analyze
+ * - success buffer to return whether a nlhdlr specific structure has been found
+ * - nlhdlrexprdata nlhdlr's expr data to be stored in expr, can only be set to non-NULL if success is set to TRUE
+ */
+#define SCIP_DECL_CONSEXPR_NLHDLRDETECT(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSHDLR* conshdlr, \
+   SCIP_CONSEXPR_NLHDLR* nlhdlr, \
+   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_Bool* success, \
+   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata)
+
+/** nonlinear handler separation callback
+ *
+ * The method tries to separate a given point by means of the nonlinear handler.
+ *
+ * input:
+ *  - scip : SCIP main data structure
+ *  - conshdlr : cons expr handler
+ *  - nlhdlr : nonlinear handler
+ *  - expr : expression
+ *  - nlhdlrexprdata : expression specific data of the nonlinear handler
+ *  - sol  : solution to be separated (NULL for the LP solution)
+ *  - minviolation : minimal violation of a cut if it should be added to the LP
+ *  - result : pointer to store the result
+ *  - ncuts : pointer to store the number of added cuts
+ */
+#define SCIP_DECL_CONSEXPR_NLHDLRSEPA(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSHDLR* conshdlr, \
+   SCIP_CONSEXPR_NLHDLR* nlhdlr, \
+   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
+   SCIP_SOL* sol, \
+   SCIP_Real minviolation, \
+   SCIP_RESULT* result, \
+   int* ncuts)
+
+typedef struct SCIP_ConsExpr_Nlhdlr      SCIP_CONSEXPR_NLHDLR;        /**< nonlinear handler */
+typedef struct SCIP_ConsExpr_NlhdlrData  SCIP_CONSEXPR_NLHDLRDATA;    /**< nonlinear handler data */
+typedef struct SCIP_ConsExpr_NlhdlrExprData SCIP_CONSEXPR_NLHDLREXPRDATA;  /**< nonlinear handler data for a specific expression */
 
 #ifdef __cplusplus
 }

@@ -56,6 +56,9 @@ typedef enum
 } GamsOpCode;
 
 /** GAMS nonlinear expression opcode names as strings */
+#ifdef __GNUC__
+__attribute__((unused))
+#endif
 static const char* GamsOpCodeName[MAXINS] =
 {
    "nlNoOp",
@@ -129,6 +132,9 @@ typedef enum
    fndummy
 } GamsFuncCode;
 
+#ifdef __GNUC__
+__attribute__((unused))
+#endif
 static const char* GamsFuncCodeName[fndummy+1] =
 {
    "mapval","ceil","floor","round",

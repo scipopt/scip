@@ -86,6 +86,12 @@ typedef struct SCIP_HashMapEntry SCIP_HASHMAPENTRY;
  */
 typedef struct SCIP_HashMap SCIP_HASHMAP;
 
+/** Hash set data structure
+ *
+ *  - \ref HashMap "List of all available methods"
+ */
+typedef struct SCIP_HashSet SCIP_HASHSET;
+
 /** dynamic array for storing SCIP_Real values */
 typedef struct SCIP_RealArray SCIP_REALARRAY;
 
@@ -133,6 +139,12 @@ typedef struct SCIP_BtNode SCIP_BTNODE;
  *  - \ref Regression "List of all available methods"
  */
 typedef struct SCIP_Regression SCIP_REGRESSION;
+
+/** disjoint set (disjoint set (union find)) data structure for querying and updating connectedness of a graph with integer vertices 0,...,n - 1
+ *
+ *  - \ref DisjointSet "List of available methods"
+ */
+typedef struct SCIP_DisjointSet SCIP_DISJOINTSET;
 
 /** compares two element indices
  *  result:

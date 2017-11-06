@@ -1295,6 +1295,7 @@ SCIP_RETCODE SCIPprobAddCons(
    prob->conss[prob->nconss] = cons;
    prob->nconss++;
    prob->maxnconss = MAX(prob->maxnconss, prob->nconss);
+   stat->nactiveconssadded++;
 
    /* undelete constraint, if it was globally deleted in the past */
    cons->deleted = FALSE;
@@ -1757,6 +1758,9 @@ void SCIPprobUpdateBestRootSol(
    if( SCIPprobGetNObjVars(prob, set) == 0 )
       return;
 
+   if( !SCIPlpIsDualReliable(lp) )
+      return;
+
    SCIPsetDebugMsg(set, "update root reduced costs\n");
 
    /* compute current root LP objective value */
@@ -2183,6 +2187,7 @@ void SCIPprobPrintStatistics(
          !prob->transformed ? (prob->objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize") : "minimize",
          SCIPprobGetNObjVars(prob, set), SCIPprobGetAbsMinObjCoef(prob, set), SCIPprobGetAbsMaxObjCoef(prob, set));
 }
+
 
 #ifndef NDEBUG
 

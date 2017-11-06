@@ -35,7 +35,13 @@
 
 #include <sys/types.h>
 #ifdef WITH_ZLIB
+#if defined(_WIN32) || defined(_WIN64)
+#define R_OK _A_RDONLY
+#define access _access
+#include <io.h>
+#else
 #include <unistd.h>
+#endif
 #endif
 #include <stdio.h>
 #include <stdlib.h>
