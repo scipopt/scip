@@ -3161,10 +3161,10 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    )
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
    SCIP_ORBITOPETYPE type;
-   SCIP_Bool checkupgrade = FALSE;
 
    /* find the orbitope constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -3222,8 +3222,8 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
    }
 #endif
 
-   SCIP_CALL( SCIPgetBoolParam(scip, "constraints/orbitope/checkpporbitope", &checkupgrade) );
-   if ( checkupgrade )
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   if ( conshdlrdata->checkpporbitope )
    {
       type = SCIP_ORBITOPETYPE_FULL;
       SCIP_CALL( upgradeOrbitopeConstraint(scip, vars, &nspcons, nblocks, &type) );
