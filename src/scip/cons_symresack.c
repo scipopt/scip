@@ -673,7 +673,7 @@ SCIP_RETCODE propVariables(
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
    assert( consdata->vars != NULL );
-   assert( consdata->nvars != 0 );
+   assert( consdata->nvars > 0 );
    assert( consdata->invperm != NULL );
 
    vars = consdata->vars;
