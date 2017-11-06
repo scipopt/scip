@@ -199,7 +199,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
 /** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved)
  *
  *  Puts the LP relaxations of all "initial" constraints into the LP. The method should put a canonic LP relaxation
- *  of all given constraints to the LP with calls to SCIPaddCut().
+ *  of all given constraints to the LP with calls to SCIPaddRow().
  *
  *  @warning It is not guaranteed that the problem is going to be declared infeasible if the infeasible pointer is set
  *           to TRUE. Therefore, it is recommended that users do not end this method prematurely when an infeasiblity
