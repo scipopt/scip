@@ -1179,8 +1179,8 @@ SCIP_RETCODE presolveDual(
           */
          SCIPintervalSetBounds(&zbnds, SCIPvarGetLbGlobal(consdata->z), SCIPvarGetUbGlobal(consdata->z));
          computeBoundsX(scip, cons, zbnds, &xbnds);
-         xlb = MAX(SCIPvarGetLbGlobal(consdata->x), xbnds.inf);
-         xub = MIN(SCIPvarGetUbGlobal(consdata->x), xbnds.sup);
+         xlb = MAX(SCIPvarGetLbGlobal(consdata->x), xbnds.inf); /*lint !e666*/
+         xub = MIN(SCIPvarGetUbGlobal(consdata->x), xbnds.sup); /*lint !e666*/
 
          if( SCIPisZero(scip, SCIPvarGetObj(consdata->z)) )
          {
