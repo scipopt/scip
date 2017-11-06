@@ -24,7 +24,8 @@
 #include <string.h>
 
 #include "sepa_subtour.h"
-#include "probdata_spa.h"
+
+#include "probdata_cyc.h"
 #include "scip/cons_linear.h"
 #include "scip/pub_misc.h"
 #include "scip/misc.h"
@@ -86,7 +87,7 @@ SCIP_RETCODE addSubtourCuts(
    int k;
    int l;
 
-   edgevars = SCIPspaGetEdgevars(scip);
+   edgevars = SCIPcycGetEdgevars(scip);
    nbins = SCIPdigraphGetNNodes(capgraph);
 
    assert( SCIPisGT(scip, adjmatrices[cyclelength - 1][start][start], cyclelength - 1) );
@@ -193,7 +194,7 @@ SCIP_RETCODE addPathCuts(
    int nbins;
    int successor;
 
-   edgevars = SCIPspaGetEdgevars(scip);
+   edgevars = SCIPcycGetEdgevars(scip);
    nbins = SCIPdigraphGetNNodes(capgraph);
 
    path[0] =  start;
@@ -343,9 +344,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSubtour)
    int rounds;
 
    rounds = SCIPsepaGetNCallsAtNode(sepa);
-   ncluster = SCIPspaGetNrCluster(scip);
-   edgevars = SCIPspaGetEdgevars(scip);
-   nbins = SCIPspaGetNrBins(scip);
+   ncluster = SCIPcycGetNCluster(scip);
+   edgevars = SCIPcycGetEdgevars(scip);
+   nbins = SCIPcycGetNBins(scip);
    ncuts = 0;
 
    if( rounds >= MAXROUNDS || ncluster < 4 )

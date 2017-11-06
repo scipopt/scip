@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   probdata_spa.c
+/**@file   probdata_cyc.c
  * @brief  problem data for cycle clustering problem
  * @author Leon Eifler
  *
@@ -24,7 +24,8 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-#include "probdata_spa.h"
+#include "probdata_cyc.h"
+
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
 #include "scip/cons_quadratic.h"
@@ -86,8 +87,8 @@ SCIP_RETCODE assignVars(
    int j;
    int c;
 
-   binvars = SCIPspaGetBinvars(scip);
-   edgevars = SCIPspaGetEdgevars(scip);
+   binvars = SCIPcycGetBinvars(scip);
+   edgevars = SCIPcycGetEdgevars(scip);
 
    assert(nbins > 0 && ncluster > 0);
    assert(binvars != NULL);
@@ -692,7 +693,7 @@ SCIP_RETCODE createProbOnlyEdge(
 
 /** Scip callback to transform the problem */
 static
-SCIP_DECL_PROBTRANS(probtransSpa)
+SCIP_DECL_PROBTRANS(probtransCyc)
 {
    int i;
    int j;
@@ -774,7 +775,7 @@ SCIP_DECL_PROBTRANS(probtransSpa)
 
 /** delete-callback method of scip */
 static
-SCIP_DECL_PROBDELORIG(probdelorigSpa)
+SCIP_DECL_PROBDELORIG(probdelorigCyc)
 {
    int c;
    int edgetype;
@@ -833,7 +834,7 @@ SCIP_DECL_PROBDELORIG(probdelorigSpa)
 
 /** scip-callback to delete the transformed problem */
 static
-SCIP_DECL_PROBDELORIG(probdeltransSpa)
+SCIP_DECL_PROBDELORIG(probdeltransCyc)
 {
    int c;
    int edgetype;
@@ -892,7 +893,7 @@ SCIP_DECL_PROBDELORIG(probdeltransSpa)
 
 /** callback method of scip for copying the probdata  */
 static
-SCIP_DECL_PROBCOPY(probcopySpa)
+SCIP_DECL_PROBCOPY(probcopyCyc)
 {
    SCIP_Bool success;
    SCIP_VAR* var;
@@ -1007,9 +1008,9 @@ SCIP_DECL_PROBCOPY(probcopySpa)
 }
 
 /**
- * Create the probdata for an spa-clustering problem
+ * Create the probdata for an cyc-clustering problem
  */
-SCIP_RETCODE SCIPcreateProbSpa(
+SCIP_RETCODE SCIPcreateProbCyc(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< problem name */
    int                   nbins,              /**< number of bins */
@@ -1069,11 +1070,11 @@ SCIP_RETCODE SCIPcreateProbSpa(
    }
 
    /** add callback methods to scip */
-   SCIP_CALL( SCIPsetProbDelorig(scip, probdelorigSpa) );
-   SCIP_CALL( SCIPsetProbCopy(scip, probcopySpa) );
+   SCIP_CALL( SCIPsetProbDelorig(scip, probdelorigCyc) );
+   SCIP_CALL( SCIPsetProbCopy(scip, probcopyCyc) );
    SCIP_CALL( SCIPsetProbData(scip, probdata) );
-   SCIP_CALL( SCIPsetProbTrans(scip, probtransSpa) );
-   SCIP_CALL( SCIPsetProbDeltrans(scip, probdeltransSpa) );
+   SCIP_CALL( SCIPsetProbTrans(scip, probtransCyc) );
+   SCIP_CALL( SCIPsetProbDeltrans(scip, probdeltransCyc) );
 
    return SCIP_OKAY;
 }
@@ -1082,7 +1083,7 @@ SCIP_RETCODE SCIPcreateProbSpa(
 
 
 /** Returns the transition matrix*/
-SCIP_Real** SCIPspaGetCmatrix(
+SCIP_Real** SCIPcycGetCmatrix(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -1096,7 +1097,7 @@ SCIP_Real** SCIPspaGetCmatrix(
 }
 
 /** Returns the number of states */
-int SCIPspaGetNrBins(
+int SCIPcycGetNBins(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -1109,7 +1110,7 @@ int SCIPspaGetNrBins(
 }
 
 /** Returns the number of clusters*/
-int SCIPspaGetNrCluster(
+int SCIPcycGetNCluster(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -1122,7 +1123,7 @@ int SCIPspaGetNrCluster(
 }
 
 /** Returns the state-variable-matrix*/
-SCIP_VAR*** SCIPspaGetBinvars(
+SCIP_VAR*** SCIPcycGetBinvars(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -1136,7 +1137,7 @@ SCIP_VAR*** SCIPspaGetBinvars(
 }
 
 /** Returns the scaling parameter*/
-SCIP_Real SCIPspaGetScale(
+SCIP_Real SCIPcycGetScale(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
@@ -1149,7 +1150,7 @@ SCIP_Real SCIPspaGetScale(
 }
 
 /** Returns the edge variables */
-SCIP_VAR**** SCIPspaGetEdgevars(
+SCIP_VAR**** SCIPcycGetEdgevars(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -1163,7 +1164,7 @@ SCIP_VAR**** SCIPspaGetEdgevars(
 }
 
 /** print the model-values like coherence in the clusters and transition-probabilities between clusters that are not evident from the scip-solution */
-SCIP_RETCODE SCIPspaPrintSolutionValues(
+SCIP_RETCODE SCIPcycPrintSolutionValues(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< The solution containg the values */
    )

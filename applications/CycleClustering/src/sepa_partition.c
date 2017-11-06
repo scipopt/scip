@@ -23,7 +23,8 @@
 #include <string.h>
 
 #include "sepa_partition.h"
-#include "probdata_spa.h"
+
+#include "probdata_cyc.h"
 #include "scip/cons_linear.h"
 
 #define SEPA_NAME           "partition"
@@ -144,8 +145,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
    int ncuts;
 
    ncuts = 0;
-   edgevars = SCIPspaGetEdgevars(scip);
-   nbins = SCIPspaGetNrBins(scip);
+   edgevars = SCIPcycGetEdgevars(scip);
+   nbins = SCIPcycGetNBins(scip);
 
    assert(nbins > 0);
    assert(NULL != edgevars);

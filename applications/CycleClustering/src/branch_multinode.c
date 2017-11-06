@@ -23,7 +23,8 @@
 #include <assert.h>
 
 #include "branch_multinode.h"
-#include "probdata_spa.h"
+
+#include "probdata_cyc.h"
 #include "scip/branch_relpscost.h"
 
 
@@ -55,9 +56,9 @@ SCIP_RETCODE getBranchCands(
    int i;
    int k;
 
-   nbins = SCIPspaGetNrBins(scip);
-   ncluster = SCIPspaGetNrCluster(scip);
-   binvars = SCIPspaGetBinvars(scip);
+   nbins = SCIPcycGetNBins(scip);
+   ncluster = SCIPcycGetNCluster(scip);
+   binvars = SCIPcycGetBinvars(scip);
 
    /* all binvars that are in the lp, and have fractional values are viable candidates */
    for( i = 0; i < nbins; ++i )
@@ -96,8 +97,8 @@ SCIP_RETCODE branchOnBin(
    int k;
    int ncluster;
 
-   binvars = SCIPspaGetBinvars(scip);
-   ncluster = SCIPspaGetNrCluster(scip);
+   binvars = SCIPcycGetBinvars(scip);
+   ncluster = SCIPcycGetNCluster(scip);
    assert(NULL != binvars[row]);
 
    SCIP_CALL( SCIPallocClearMemoryArray(scip, &branched, ncluster) );
@@ -161,9 +162,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultinode)
    SCIP_Real* branchcandsfrac;
    int nzero;
 
-   binvars = SCIPspaGetBinvars(scip);
-   nbins = SCIPspaGetNrBins(scip);
-   ncluster = SCIPspaGetNrCluster(scip);
+   binvars = SCIPcycGetBinvars(scip);
+   nbins = SCIPcycGetNBins(scip);
+   ncluster = SCIPcycGetNCluster(scip);
    *result = SCIP_DIDNOTRUN;
 
    assert(nbins > 0);

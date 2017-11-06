@@ -23,8 +23,9 @@
 #include <assert.h>
 #include <string.h>
 
-#include "probdata_spa.h"
 #include "heur_fuzzyround.h"
+
+#include "probdata_cyc.h"
 #include "scip/cons_and.h"
 
 #define HEUR_NAME             "fuzzyround"
@@ -72,12 +73,12 @@ SCIP_DECL_HEUREXEC(heurExecFuzzyround)
    if( SCIPgetNLPBranchCands(scip) == 0 )
       return SCIP_OKAY;
 
-   nbins = SCIPspaGetNrBins(scip);
-   ncluster = SCIPspaGetNrCluster(scip);
+   nbins = SCIPcycGetNBins(scip);
+   ncluster = SCIPcycGetNCluster(scip);
    assert(nbins > 0);
    assert(ncluster > 0 && ncluster <= nbins);
 
-   binvars = SCIPspaGetBinvars(scip);
+   binvars = SCIPcycGetBinvars(scip);
    assert(binvars != NULL);
 
    /* allocate memory */

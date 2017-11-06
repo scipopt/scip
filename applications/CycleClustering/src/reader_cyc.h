@@ -13,32 +13,42 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   heur_fuzzyround.h
- * @ingroup PRIMALHEURISTICS
- * @brief  primal heuristic that constructs a feasible solution from the lp-relaxation. Round only on the state-variables (binvars)
- * and then reconstruct the rest of the variables accordingly.
+/**@file   reader_cyc.h
+ * @brief  file reader for cycle clustering instances
  * @author Leon Eifler
  *
+ * This file implements the reader for the cycle clustering problem. The data is read from a matrix, entries separated
+ * by whitespace. The first line in the file has to be of the form "# p nstates ncluster",
+ * where nstates is the size of the matrix and ncluster is the number of clusters that should be used.
+ * The file has to have the ending ".cyc" to be recognized by the reader.
  */
 
-#ifndef __SCIP_HEUR_FUZZYROUND_H__
-#define __SCIP_HEUR_FUZZYROUND_H__
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#ifndef __SCIP_READER_CYC_H__
+#define __SCIP_READER_CYC_H__
 
 #include "scip/scip.h"
+#include "tclique/tclique.h"
+#include "scip/cons_setppc.h"
+#include "scip/type_cons.h"
+#include "scip/scip.h"
+#include "scip/def.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** creates the fuzzy rounding primal heuristic and includes it in SCIP */
-EXTERN
-SCIP_RETCODE SCIPincludeHeurFuzzyround(
-   SCIP*                 scip                /**< SCIP data structure */
+/** includes the cyc file reader into SCIP */
+extern
+SCIP_RETCODE SCIPincludeReaderCyc(
+   SCIP*             scip                 /**< SCIP data structure */
    );
 
 #ifdef __cplusplus
 }
 #endif
+
+
 
 #endif

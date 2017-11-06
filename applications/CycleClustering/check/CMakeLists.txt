@@ -33,7 +33,7 @@ foreach(instance ${instances})
     # call the Binpacking binary and validate the solve with the given objective value
     #
     add_test(NAME "applications-cycleclustering-${basename}"
-            COMMAND $<TARGET_FILE:cycleclustering> -f ${CMAKE_CURRENT_SOURCE_DIR}/../instances/${basename}.spa
+            COMMAND $<TARGET_FILE:cycleclustering> -f ${CMAKE_CURRENT_SOURCE_DIR}/../instances/${basename}.cyc
             )
     set_tests_properties("applications-cycleclustering-${basename}"
                         PROPERTIES

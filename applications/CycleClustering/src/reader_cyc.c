@@ -13,27 +13,27 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   reader_spa.c
+/**@file   reader_cyc.c
  * @brief  file reader for cycle clustering instances
  * @author Leon Eifler
  *
  * This file implements the reader for the cycle clustering problem. The data is read from a matrix, entries separated
  * by whitespace. The first line in the file has to be of the form "# p nstates ncluster",
  * where nstates is the size of the matrix and ncluster is the number of clusters that should be used.
- * The file has to have the ending ".spa" to be recognized by the reader.
+ * The file has to have the ending ".cyc" to be recognized by the reader.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-#include "reader_spa.h"
-#include "probdata_spa.h"
+#include "reader_cyc.h"
 
 #include <assert.h>
 #include <string.h>
 #include <ctype.h>
+#include "probdata_cyc.h"
 
-#define READER_NAME             "spareader"
-#define READER_DESC             "file reader for a .spa-file representing a transition matrix for a cycle clustering problem"
-#define READER_EXTENSION        "spa"
+#define READER_NAME             "cycreader"
+#define READER_DESC             "file reader for a .cyc-file representing a transition matrix for a cycle clustering problem"
+#define READER_EXTENSION        "cyc"
 
 #define COL_MAX_LINELEN 10000
 
@@ -62,12 +62,12 @@ SCIP_Real getNextNumber(
    return tmp;
 }
 
-/** read LP in Spa File Format.
+/** read LP in Cyc File Format.
  * That means first line is "p edges nbins ncluster".
  * Then a matrix with whitespace-separated entries of size nbins x nbins
 */
 static
-SCIP_RETCODE readSpa(
+SCIP_RETCODE readCyc(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename            /**< name of the input file */
    )
@@ -151,7 +151,7 @@ SCIP_RETCODE readSpa(
    }
 
    /* create problem data */
-   SCIP_CALL( SCIPcreateProbSpa(scip, filename, nbins, ncluster, cmatrix) );
+   SCIP_CALL( SCIPcreateProbCyc(scip, filename, nbins, ncluster, cmatrix) );
    SCIPinfoMessage(scip, NULL, "Original problem: \n");
 
    for( i = nbins - 1; i >= 0; i-- )
@@ -171,7 +171,7 @@ SCIP_RETCODE readSpa(
 
 /** copy method for reader plugins (called when SCIP copies plugins) */
 static
-SCIP_DECL_READERCOPY(readerCopySpa)
+SCIP_DECL_READERCOPY(readerCopyCyc)
 {  /*lint --e{715}*/
    assert( scip != NULL);
    assert(reader != NULL);
@@ -182,13 +182,13 @@ SCIP_DECL_READERCOPY(readerCopySpa)
 
 /** problem reading method of reader */
 static
-SCIP_DECL_READERREAD(readerReadSpa)
+SCIP_DECL_READERREAD(readerReadCyc)
 {  /*lint --e{715}*/
    assert(reader != NULL);
    assert(strcmp( SCIPreaderGetName(reader), READER_NAME) == 0);
    assert( scip != NULL);
    assert(result != NULL);
-   SCIP_CALL( readSpa( scip, filename) );
+   SCIP_CALL( readCyc( scip, filename) );
 
    *result = SCIP_SUCCESS;
 
@@ -196,26 +196,26 @@ SCIP_DECL_READERREAD(readerReadSpa)
 }
 
 /*
- * col file reader specific interface methods
+ * cyc file reader specific interface methods
  */
 
-/** includes the spa file reader in SCIP */
-SCIP_RETCODE SCIPincludeReaderSpa(
+/** includes the cyc file reader in SCIP */
+SCIP_RETCODE SCIPincludeReaderCyc(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_READERDATA* readerdata;
    SCIP_READER* reader;
 
-   /* create col reader data */
+   /* create cyc reader data */
    readerdata = NULL;
 
-   /* include col reader */
+   /* include cyc reader */
    SCIP_CALL( SCIPincludeReaderBasic( scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION,
       readerdata) );
 
-   SCIP_CALL( SCIPsetReaderCopy( scip, reader, readerCopySpa) );
-   SCIP_CALL( SCIPsetReaderRead( scip, reader, readerReadSpa ) );
+   SCIP_CALL( SCIPsetReaderCopy( scip, reader, readerCopyCyc) );
+   SCIP_CALL( SCIPsetReaderRead( scip, reader, readerReadCyc ) );
 
    SCIP_CALL( SCIPaddRealParam(scip,"scale_coherence","factor to scale the cohrence in the target function", NULL, FALSE, 0.001, 0.0, 1.0, NULL, NULL ) );
    SCIP_CALL( SCIPaddIntParam(scip, "ncluster", "the amount of clusters allowed", NULL, FALSE, 3, 1, 100, NULL, NULL) );

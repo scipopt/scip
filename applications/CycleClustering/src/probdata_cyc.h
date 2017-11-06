@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   probdata_spa.h
+/**@file   probdata_cyc.h
  * @brief  problem data for cycle clustering problem
  * @author Leon Eifler
  *
@@ -25,8 +25,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_PROBDATA_SPA__
-#define __SCIP_PROBDATA_SPA__
+#ifndef __SCIP_PROBDATA_CYC__
+#define __SCIP_PROBDATA_CYC__
 
 #include "scip/scip.h"
 #include "tclique/tclique.h"
@@ -51,50 +51,50 @@ SCIP_Real getMinNonZero(
 
 /** getter methods for the probdata */
 extern
-SCIP_Real** SCIPspaGetCmatrix(
+SCIP_Real** SCIPcycGetCmatrix(
    SCIP*                 scip                /**< SCIP data structure*/
    );
 
 /** returns the number of states */
 extern
-int SCIPspaGetNrBins(
+int SCIPcycGetNBins(
    SCIP*                 scip                /**< SCIP data structure*/
    );
 
 /** returns the number of clusters */
 extern
-int SCIPspaGetNrCluster(
+int SCIPcycGetNCluster(
    SCIP*                 scip                /**< SCIP data structure*/
    );
 
 /** returns the state-variable-matrix */
 extern
-SCIP_VAR*** SCIPspaGetBinvars(
+SCIP_VAR*** SCIPcycGetBinvars(
    SCIP*                 scip                /**< SCIP data structure*/
    );
 
 /** returns the edge variables */
 extern
-SCIP_VAR**** SCIPspaGetEdgevars(
+SCIP_VAR**** SCIPcycGetEdgevars(
    SCIP*                 scip                /**< SCIP data structure*/
    );
 
 /** returns the number of scaling parameter */
 extern
-SCIP_Real SCIPspaGetScale(
+SCIP_Real SCIPcycGetScale(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** print all the relevant solution data */
 extern
-SCIP_RETCODE SCIPspaPrintSolutionValues(
+SCIP_RETCODE SCIPcycPrintSolutionValues(
    SCIP*               scip,                 /**< SCIP data structure*/
    SCIP_SOL*           sol                   /**< The solution containing the values*/
    );
 
-/** Create the probdata for an spa-clustering problem */
+/** Create the probdata for a cycle clustering problem */
 extern
-SCIP_RETCODE SCIPcreateProbSpa(
+SCIP_RETCODE SCIPcreateProbCyc(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< problem name */
    int                   nbins,              /**< number of bins */

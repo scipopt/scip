@@ -24,11 +24,12 @@
 #include "scip/scipdefplugins.h"
 #include "scip/scipshell.h"
 #include "scip/message_default.h"
-#include "reader_spa.h"
-#include "spaplugins.h"
-#include "probdata_spa.h"
 #include <string.h>
 #include <unistd.h>
+
+#include "cycplugins.h"
+#include "probdata_cyc.h"
+#include "reader_cyc.h"
 #include "scip/debug.h"
 
 #define COL_MAX_LINELEN 1024
@@ -128,7 +129,7 @@ SCIP_RETCODE fromCommandLine(
    SCIPinfoMessage(scip, NULL, "====================================\n\n");
 
    SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
-   SCIP_CALL( SCIPspaPrintSolutionValues(scip, SCIPgetBestSol(scip) ) );
+   SCIP_CALL( SCIPcycPrintSolutionValues(scip, SCIPgetBestSol(scip) ) );
    /**************
     * Statistics *
     **************/
@@ -349,7 +350,7 @@ SCIP_RETCODE processArguments(
 
 /** Set up the problem-structure and solve the clustering problem */
 static
-SCIP_RETCODE SCIPrunSpa(
+SCIP_RETCODE SCIPrunCyc(
    int                   argc,               /**< number of shell parameters */
    char**                argv,               /**< array with shell parameters */
    const char*           defaultsetname      /**< name of default settings file */
@@ -364,7 +365,7 @@ SCIP_RETCODE SCIPrunSpa(
    SCIP_CALL( SCIPcreate(&scip) );
 
    /* include reader, problemdata*/
-   SCIP_CALL( SCIPincludeSpaPlugins(scip) );
+   SCIP_CALL( SCIPincludeCycPlugins(scip) );
 
    /**********************************
     * Process command line arguments *
@@ -390,7 +391,7 @@ main(
 {
    SCIP_RETCODE retcode;
 
-   retcode = SCIPrunSpa(argc, argv, "scip.set");
+   retcode = SCIPrunCyc(argc, argv, "scip.set");
 
    if( retcode != SCIP_OKAY )
    {

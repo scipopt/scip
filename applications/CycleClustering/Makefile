@@ -14,11 +14,11 @@
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 #@file    Makefile
-#@brief   Makefile for C Coloring example using SCIP as a callable library
+#@brief   Makefile for C cycle clustering application using SCIP as a callable library
 #@author  Thorsten Koch
 #@author  Tobias Achterberg
 #@author  Marc Pfetsch
-#@author  Gerald Gamrath
+#@author  Leon Eifler
 
 
 #-----------------------------------------------------------------------------
@@ -41,16 +41,16 @@ include $(SCIPDIR)/make/make.project
 #-----------------------------------------------------------------------------
 
 MAINNAME	=	cycleclustering
-MAINOBJ		=	probdata_spa.o \
-			reader_spa.o \
-			heur_spagreedy.o \
+MAINOBJ		=	probdata_cyc.o \
+			reader_cyc.o \
+			heur_cycgreedy.o \
 			heur_fuzzyround.o \
-			heur_spakerlin.o \
+			heur_cyckerlin.o \
 			branch_multinode.o \
 			sepa_edge.o \
 			sepa_subtour.o \
 			sepa_partition.o \
-			spaplugins.o \
+			cycplugins.o \
 			main.o
 
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))

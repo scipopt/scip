@@ -13,11 +13,13 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   heur_spagreedy.c
+/**@file   heur_cycgreedy.c
  * @brief  Greedy primal heuristic. States are assigned to clusters iteratively. At each iteration all possible
  * assignments are computed and the one with the best change in objective value is selected.
  * @author Leon Eifler
  */
+
+#include "heur_cycgreedy.h"
 
 #include <assert.h>
 #include <math.h>
@@ -25,11 +27,10 @@
 #include <time.h>
 #include <stdlib.h>
 #include "scip/misc.h"
-#include "probdata_spa.h"
-#include "heur_spagreedy.h"
+#include "probdata_cyc.h"
 #include "scip/cons_and.h"
 
-#define HEUR_NAME             "spagreedy"
+#define HEUR_NAME             "cycgreedy"
 #define HEUR_DESC             "primal heuristic template"
 #define HEUR_DISPCHAR         'h'
 #define HEUR_PRIORITY         536870911
@@ -162,7 +163,7 @@ SCIP_Real getTempObj(
    SCIP_Real temp;
    int i;
 
-   obj = getObjective(scip, qmatrix, SCIPspaGetScale(scip), ncluster);
+   obj = getObjective(scip, qmatrix, SCIPcycGetScale(scip), ncluster);
    /* the coh in cluster changes as well as the flow to the next and the previous cluster */
    for( i = 0; i < nbins; ++i )
    {
@@ -329,7 +330,7 @@ SCIP_RETCODE assignNextBin(
 
    /* update the Irreversibility matrix */
    updateIrrevMat(clusterassignment, qmatrix, cmatrix, ind, bestcluster[ind], nbins, ncluster);
-   *objective = getObjective(scip, qmatrix, SCIPspaGetScale(scip), ncluster);
+   *objective = getObjective(scip, qmatrix, SCIPcycGetScale(scip), ncluster);
 
    /* free the allocated memory */
    for( i = 0; i < nbins; ++i )
@@ -349,21 +350,21 @@ SCIP_RETCODE assignNextBin(
 
 /** copy method for primal heuristic plugins (called when SCIP copies plugins) */
 static
-SCIP_DECL_HEURCOPY(heurCopySpaGreedy)
+SCIP_DECL_HEURCOPY(heurCopyCycGreedy)
 {
    assert(scip != NULL);
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
    /* call inclusion method of primal heuristic */
-   SCIP_CALL( SCIPincludeHeurSpaGreedy(scip) );
+   SCIP_CALL( SCIPincludeHeurCycGreedy(scip) );
 
    return SCIP_OKAY;
 }
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
-SCIP_DECL_HEURFREE(heurFreeSpaGreedy)
+SCIP_DECL_HEURFREE(heurFreeCycGreedy)
 {
    SCIP_HEURDATA* heurdata;
 
@@ -382,7 +383,7 @@ SCIP_DECL_HEURFREE(heurFreeSpaGreedy)
 
 /** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
 static
-SCIP_DECL_HEUREXITSOL(heurExitsolSpaGreedy)
+SCIP_DECL_HEUREXITSOL(heurExitsolCycGreedy)
 {
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
@@ -395,7 +396,7 @@ SCIP_DECL_HEUREXITSOL(heurExitsolSpaGreedy)
 
 /** initialization method of primal heuristic (called after problem was transformed) */
 static
-SCIP_DECL_HEURINIT(heurInitSpaGreedy)
+SCIP_DECL_HEURINIT(heurInitCycGreedy)
 {
    SCIP_HEURDATA* heurdata;
 
@@ -414,7 +415,7 @@ SCIP_DECL_HEURINIT(heurInitSpaGreedy)
 
 /** execution method of primal heuristic */
 static
-SCIP_DECL_HEUREXEC(heurExecSpaGreedy)
+SCIP_DECL_HEUREXEC(heurExecCycGreedy)
 {
    SCIP_Real** cmatrix;                      /* The transition matrixx */
    SCIP_Real** qmatrix;                      /* The low-dimensional transition matrix between clusters */
@@ -446,10 +447,10 @@ SCIP_DECL_HEUREXEC(heurExecSpaGreedy)
    heurdata->lasteffectrootdepth = SCIPgetEffectiveRootDepth(scip);
 
    /* get the problem data from scip */
-   cmatrix = SCIPspaGetCmatrix(scip);
-   nbins = SCIPspaGetNrBins(scip);
-   ncluster = SCIPspaGetNrCluster(scip);
-   binvars = SCIPspaGetBinvars(scip);
+   cmatrix = SCIPcycGetCmatrix(scip);
+   nbins = SCIPcycGetNBins(scip);
+   ncluster = SCIPcycGetNCluster(scip);
+   binvars = SCIPcycGetBinvars(scip);
 
    assert( nbins > 0 && ncluster > 0 );
 
@@ -525,7 +526,7 @@ SCIP_DECL_HEUREXEC(heurExecSpaGreedy)
    {
       /* initialize the qmatrix and the lower irreversibility bound */
       computeIrrevMat(clustering, qmatrix, cmatrix, nbins, ncluster);
-      obj = getObjective(scip, qmatrix, SCIPspaGetScale(scip), ncluster);
+      obj = getObjective(scip, qmatrix, SCIPcycGetScale(scip), ncluster);
 
       /* assign bins iteratively until all bins are assigned */
       while( amountassigned < nbins )
@@ -567,8 +568,8 @@ SCIP_DECL_HEUREXEC(heurExecSpaGreedy)
  * * primal heuristic specific interface methods
  */
 
-/** creates the SpaGreedy - primal heuristic and includes it in SCIP */
-SCIP_RETCODE SCIPincludeHeurSpaGreedy(
+/** creates the CycGreedy - primal heuristic and includes it in SCIP */
+SCIP_RETCODE SCIPincludeHeurCycGreedy(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
@@ -582,15 +583,15 @@ SCIP_RETCODE SCIPincludeHeurSpaGreedy(
 
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
       HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-      HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecSpaGreedy, heurdata) );
+      HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecCycGreedy, heurdata) );
 
    assert(heur != NULL);
 
    /* set non fundamental callbacks via setter functions */
-   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopySpaGreedy) );
-   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeSpaGreedy) );
-   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolSpaGreedy) );
-   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitSpaGreedy) );
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyCycGreedy) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeCycGreedy) );
+   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolCycGreedy) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitCycGreedy) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "localheur", "If set to true, heuristic assigns bins as soon as any improvement is found", &heurdata->local, FALSE, TRUE, NULL, NULL) );
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -13,16 +13,16 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   heur_spakerlin.h
+/**@file   heur_cycgreedy.h
  * @ingroup PRIMALHEURISTICS
- * @brief  Improvement heuristic that trades bin-variables between clusters
+ * @brief  Greedy primal heuristic. States are assigned to clusters iteratively. At each iteration all possible
+ * assignments are computed and the one with the best change in objective value is selected.
  * @author Leon Eifler
+ *
  */
 
-/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
-#ifndef __SCIP_HEUR_SPAKERLIN_H__
-#define __SCIP_HEUR_SPAKERLIN_H__
+#ifndef __SCIP_HEUR_CYCGREEDY_H__
+#define __SCIP_HEUR_CYCGREEDY_H__
 
 #include "scip/scip.h"
 
@@ -30,9 +30,9 @@
 extern "C" {
 #endif
 
-/** creates the oneopt primal heuristic and includes it in SCIP */
+/** creates the CycGreedy primal heuristic and includes it in SCIP */
 EXTERN
-SCIP_RETCODE SCIPincludeHeurSpakerlin(
+SCIP_RETCODE SCIPincludeHeurCycGreedy(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

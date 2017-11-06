@@ -13,22 +13,23 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   heur_spakerlin.c
+/**@file   heur_cyckerlin.c
  * @brief  improvement heuristic that exchanges binary variables between clusters.
  * @author Leon Eifler
  */
 
 /*---+---- 1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include "heur_cyckerlin.h"
+
 #include <assert.h>
 #include <string.h>
 
-#include "probdata_spa.h"
-#include "heur_spakerlin.h"
+#include "probdata_cyc.h"
 #include "scip/misc.h"
 
-#define HEUR_NAME             "spakerlin"
-#define HEUR_DESC             "switch heuristic that tries to improve solution by trading bins betweeen clusters, similar to the famous kernighan/lin heuristic"
+#define HEUR_NAME             "cyckerlin"
+#define HEUR_DESC             "switch heuristic that tries to improve solution by trading states betweeen clusters, similar to the famous kernighan/lin heuristic for graph partitioning"
 #define HEUR_DISPCHAR         '@'
 #define HEUR_PRIORITY         500
 #define HEUR_FREQ             10
@@ -68,10 +69,10 @@ SCIP_RETCODE getSolutionValues(
    int nprocessed;
    char model;
 
-   nbins = SCIPspaGetNrBins(scip);
-   ncluster = SCIPspaGetNrCluster(scip);
-   binvars = SCIPspaGetBinvars(scip);
-   edgevars = SCIPspaGetEdgevars(scip);
+   nbins = SCIPcycGetNBins(scip);
+   ncluster = SCIPcycGetNCluster(scip);
+   binvars = SCIPcycGetBinvars(scip);
+   edgevars = SCIPcycGetEdgevars(scip);
 
    assert(nbins > 0 && ncluster > 0 && nbins > ncluster);
    assert(binvars != NULL && edgevars != NULL);
@@ -283,10 +284,10 @@ SCIP_Bool switchNext(
    int indlmin;
    int maxbin;
    int maxcluster;
-   int nbins = SCIPspaGetNrBins(scip);
-   int ncluster = SCIPspaGetNrCluster(scip);
+   int nbins = SCIPcycGetNBins(scip);
+   int ncluster = SCIPcycGetNCluster(scip);
 
-   scale = SCIPspaGetScale(scip);
+   scale = SCIPcycGetScale(scip);
    maxboundlocal = -SCIPinfinity(scip);
    oldobjective = getObjective(scip, qmatrix, scale, ncluster);
    maxbin = -1;
@@ -500,7 +501,7 @@ SCIP_RETCODE createSwitchSolution(
       }
 
       computeIrrevMat(solclustering, qmatrix, cmatrix, nbins, ncluster);
-      max = getObjective(scip, qmatrix, SCIPspaGetScale(scip), ncluster);
+      max = getObjective(scip, qmatrix, SCIPcycGetScale(scip), ncluster);
       objective = SCIPgetSolOrigObj(scip, bestsol);
       feasible = FALSE;
 
@@ -608,21 +609,21 @@ SCIP_RETCODE permuteStartSolution(
 
 /** copy method for primal heuristic plugins (called when SCIP copies plugins) */
 static
-SCIP_DECL_HEURCOPY(heurCopySpakerlin)
+SCIP_DECL_HEURCOPY(heurCopyCyckerlin)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
    /* call inclusion method of primal heuristic */
-   SCIP_CALL( SCIPincludeHeurSpakerlin(scip) );
+   SCIP_CALL( SCIPincludeHeurCycKerlin(scip) );
 
    return SCIP_OKAY;
 }
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
-SCIP_DECL_HEURFREE(heurFreeSpakerlin)
+SCIP_DECL_HEURFREE(heurFreeCyckerlin)
 {   /*lint --e{715}*/
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
@@ -633,7 +634,7 @@ SCIP_DECL_HEURFREE(heurFreeSpakerlin)
 
 /** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
 static
-SCIP_DECL_HEUREXITSOL(heurExitsolSpakerlin)
+SCIP_DECL_HEUREXITSOL(heurExitsolCyckerlin)
 {
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
@@ -646,7 +647,7 @@ SCIP_DECL_HEUREXITSOL(heurExitsolSpakerlin)
 
 /** initialization method of primal heuristic (called after problem was transformed) */
 static
-SCIP_DECL_HEURINIT(heurInitSpakerlin)
+SCIP_DECL_HEURINIT(heurInitCyckerlin)
 {
    assert(heur != NULL);
    assert(scip != NULL);
@@ -657,7 +658,7 @@ SCIP_DECL_HEURINIT(heurInitSpakerlin)
 
 /** execution method of primal heuristic */
 static
-SCIP_DECL_HEUREXEC(heurExecSpakerlin)
+SCIP_DECL_HEUREXEC(heurExecCyckerlin)
 {  /*lint --e{715}*/
 
    SCIP_SOL* bestsol;                        /* incumbent solution */
@@ -688,9 +689,9 @@ SCIP_DECL_HEUREXEC(heurExecSpakerlin)
       SCIPheurSetTimingmask(heur, HEUR_TIMING);
 
    /* get problem variables */
-   nbins = SCIPspaGetNrBins(scip);
-   ncluster = SCIPspaGetNrCluster(scip);
-   cmatrix = SCIPspaGetCmatrix(scip);
+   nbins = SCIPcycGetNBins(scip);
+   ncluster = SCIPcycGetNCluster(scip);
+   cmatrix = SCIPcycGetCmatrix(scip);
    SCIP_CALL( SCIPrandomCreate(&rand, SCIPblkmem(scip),SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
    /* we do not want to run the heurtistic if there is no 'flow' between the clusters.
@@ -762,7 +763,7 @@ SCIP_DECL_HEUREXEC(heurExecSpakerlin)
  */
 
 /** creates the oneopt primal heuristic and includes it in SCIP */
-SCIP_RETCODE SCIPincludeHeurSpakerlin(
+SCIP_RETCODE SCIPincludeHeurCycKerlin(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -771,15 +772,15 @@ SCIP_RETCODE SCIPincludeHeurSpakerlin(
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
       HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-      HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecSpakerlin, NULL) );
+      HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecCyckerlin, NULL) );
 
    assert(heur != NULL);
 
    /* set non-NULL pointers to callback methods */
-   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopySpakerlin) );
-   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeSpakerlin) );
-   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolSpakerlin) );
-   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitSpakerlin) );
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyCyckerlin) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeCyckerlin) );
+   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolCyckerlin) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitCyckerlin) );
 
    return SCIP_OKAY;
 }

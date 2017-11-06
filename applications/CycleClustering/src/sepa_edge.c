@@ -23,7 +23,8 @@
 #include <string.h>
 
 #include "sepa_edge.h"
-#include "probdata_spa.h"
+
+#include "probdata_cyc.h"
 
 #define SEPA_NAME                "edge"
 #define SEPA_DESC              "separator to separate triangle-inequalities in cycle-clustering application"
@@ -76,8 +77,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
       return SCIP_OKAY;
    }
 
-   edgevars = SCIPspaGetEdgevars(scip);
-   nbins = SCIPspaGetNrBins(scip);
+   edgevars = SCIPcycGetEdgevars(scip);
+   nbins = SCIPcycGetNBins(scip);
 
    assert(nbins > 0);
    assert(NULL != edgevars);
@@ -100,7 +101,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
       sign[i][i] = -1.0;
    }
 
-   if( SCIPspaGetNrCluster(scip) > 3 )
+   if( SCIPcycGetNCluster(scip) > 3 )
    {
       /* separate edges by the valid inequality y_ij1 + y_ik1 - y_jk0 <= 1 and y_ij0+y_ik1-y_jk1 <= 1 */
       for( i = 0; i < nbins; ++i )
@@ -208,7 +209,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
       }
    }
 
-   if( SCIPspaGetNrCluster(scip) == 3 )
+   if( SCIPcycGetNCluster(scip) == 3 )
    {
       for( i = 0; i < nbins; ++i )
       {

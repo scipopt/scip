@@ -13,31 +13,44 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   heur_spagreedy.h
- * @ingroup PRIMALHEURISTICS
- * @brief  Greedy primal heuristic. States are assigned to clusters iteratively. At each iteration all possible
- * assignments are computed and the one with the best change in objective value is selected.
+/**@file   cycplugins.c
+ * @brief  SCIP plugins for cycle clustering of markov state models
  * @author Leon Eifler
- *
  */
 
-#ifndef __SCIP_HEUR_SPAGREEDY_H__
-#define __SCIP_HEUR_SPAGREEDY_H__
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scip/scip.h"
+#include "cycplugins.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "scip/scipdefplugins.h"
+#include "sepa_edge.h"
+#include "sepa_subtour.h"
+#include "sepa_partition.h"
+#include "heur_fuzzyround.h"
+#include "branch_multinode.h"
+#include "heur_cyckerlin.h"
 
-/** creates the spaGreedy primal heuristic and includes it in SCIP */
-EXTERN
-SCIP_RETCODE SCIPincludeHeurSpaGreedy(
+/** includes default plugins for cycle clustering into SCIP */
+SCIP_RETCODE SCIPincludeCycPlugins(
    SCIP*                 scip                /**< SCIP data structure */
-   );
+   )
+{
+   /* Default and reader */
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
+   SCIP_CALL( SCIPincludeReaderCyc(scip) );
 
-#ifdef __cplusplus
+   /* Heuristics */
+   SCIP_CALL( SCIPincludeHeurCycKerlin(scip) );
+   SCIP_CALL( SCIPincludeHeurFuzzyround(scip) );
+   SCIP_CALL( SCIPincludeHeurCycGreedy(scip) );
+
+   /* Separators */
+   SCIP_CALL( SCIPincludeSepaEdge(scip) );
+   SCIP_CALL( SCIPincludeSepaPartition(scip) );
+   SCIP_CALL( SCIPincludeSepaSubtour(scip) );
+
+   /* Branching rule */
+   SCIP_CALL( SCIPincludeBranchruleMultinode(scip) );
+
+   return SCIP_OKAY;
 }
-#endif
-
-#endif

@@ -8,16 +8,16 @@ include_directories(${SCIP_INCLUDE_DIRS})
 
 add_executable(cycleclustering
     src/main.c
-    src/spaplugins.c
+    src/cycplugins.c
     src/sepa_partition.c
     src/sepa_edge.c
     src/sepa_subtour.c
-    src/heur_spagreedy.c
+    src/heur_cycgreedy.c
     src/heur_fuzzyround.c
-    src/heur_spakerlin.c
+    src/heur_cyckerlin.c
     src/branch_multinode.c
-    src/reader_spa.c
-    src/probdata_spa.c
+    src/reader_cyc.c
+    src/probdata_cyc.c
 )
 
 target_link_libraries(cycleclustering ${SCIP_LIBRARIES} m)
