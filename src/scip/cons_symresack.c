@@ -311,7 +311,10 @@ SCIP_RETCODE packingUpgrade(
 
       cyclelength = cycledecomposition[i][0];
 
-      /* iterate over constraints */
+      /* iterate over constraints
+       *
+       * @todo Improve the check by sorting the constraints in the setppcconss array
+       * by type and number of contained variables. */
       for (c = 0; c < nsetppcconss; ++c)
       {
          int nsetppcvars;
