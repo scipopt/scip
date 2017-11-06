@@ -2258,7 +2258,6 @@ SCIP_RETCODE separateConstraints(
       int nrows;
       int i;
       int j;
-      SCIP_Bool sepafullorbitope;
 
       assert( conss[c] != NULL );
 
