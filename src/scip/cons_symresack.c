@@ -1732,7 +1732,7 @@ static
 SCIP_DECL_CONSPROP(consPropSymresack)
 {  /*lint --e{715}*/
    int c;
-   int ngen = 0;
+   SCIP_Bool success = FALSE;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -1747,11 +1747,11 @@ SCIP_DECL_CONSPROP(consPropSymresack)
    for (c = 0; c < nconss; ++c)
    {
       SCIP_Bool infeasible = FALSE;
-      int localngen = 0;
+      int ngen = 0;
 
       assert( conss[c] != NULL );
 
-      SCIP_CALL( propVariables(scip, conss[c], &infeasible, &localngen) );
+      SCIP_CALL( propVariables(scip, conss[c], &infeasible, &ngen) );
 
       if ( infeasible )
       {
@@ -1759,12 +1759,12 @@ SCIP_DECL_CONSPROP(consPropSymresack)
          return SCIP_OKAY;
       }
 
-      ngen += localngen;
+      success = success || ( ngen > 0 );
 
       *result = SCIP_DIDNOTFIND;
    }
 
-   if ( ngen > 0 )
+   if ( success )
    {
       *result = SCIP_REDUCEDDOM;
       return SCIP_OKAY;
