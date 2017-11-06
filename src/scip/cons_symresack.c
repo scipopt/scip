@@ -527,14 +527,7 @@ SCIP_RETCODE initLP(
    SCIP_CONSDATA* consdata;
    SCIP_VAR** vars;
    SCIP_ROW* row;
-   SCIP_VAR** varsincons;
-   SCIP_Real* coeffs;
-   int** cycledecomposition;
-   int nvarsincons;
-   int nvarsincycle;
-   int firstelemincycle;
    int nvars;
-   int ncycles;
 #ifdef SCIP_DEBUG
    char name[SCIP_MAXSTRLEN];
 #endif
@@ -579,6 +572,14 @@ SCIP_RETCODE initLP(
    /* check whether we have a packing/partioning symresack */
    if ( consdata->ppupgrade && ! *infeasible )
    {
+      SCIP_VAR** varsincons;
+      SCIP_Real* coeffs;
+      int** cycledecomposition;
+      int ncycles;
+      int nvarsincons;
+      int nvarsincycle;
+      int firstelemincycle;
+
       ncycles = consdata->ncycles;
       cycledecomposition = consdata->cycledecomposition;
 
