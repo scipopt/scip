@@ -1779,7 +1779,7 @@ static
 SCIP_DECL_CONSPRESOL(consPresolSymresack)
 {  /*lint --e{715}*/
    int c;
-   int ngen = 0;
+   SCIP_Bool success = FALSE;
    int oldndelconss;
 
    assert( scip != NULL );
@@ -1797,7 +1797,7 @@ SCIP_DECL_CONSPRESOL(consPresolSymresack)
    {
       SCIP_Bool infeasible = FALSE;
       SCIP_CONSDATA* consdata;
-      int localngen = 0;
+      int ngen = 0;
 
       assert( conss[c] != NULL );
 
@@ -1812,7 +1812,7 @@ SCIP_DECL_CONSPRESOL(consPresolSymresack)
       }
       else
       {
-         SCIP_CALL( propVariables(scip, conss[c], &infeasible, &localngen) );
+         SCIP_CALL( propVariables(scip, conss[c], &infeasible, &ngen) );
       }
 
       if ( infeasible )
@@ -1821,16 +1821,16 @@ SCIP_DECL_CONSPRESOL(consPresolSymresack)
          break;
       }
 
-      if ( localngen > 0 )
+      if ( ngen > 0 )
       {
-         *nfixedvars += localngen;
-         ngen += localngen;
+         *nfixedvars += ngen;
+         success = TRUE;
       }
 
       *result = SCIP_DIDNOTFIND;
    }
 
-   if ( *ndelconss > oldndelconss ||  ngen > 0 )
+   if ( *ndelconss > oldndelconss ||  success )
       *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;
