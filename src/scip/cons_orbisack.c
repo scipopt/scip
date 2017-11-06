@@ -1323,7 +1323,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsOrbisack)
       assert( consdata->vars1 != NULL );
       assert( consdata->vars2 != NULL );
 
-      SCIP_CALL( SCIPcheckOrbisackSolution(scip, NULL, consdata->vars1, consdata->vars2, consdata->nrows, FALSE, &feasible) );
+      SCIP_CALL( SCIPcheckSolutionOrbisack(scip, NULL, consdata->vars1, consdata->vars2, consdata->nrows, FALSE, &feasible) );
 
       if ( ! feasible )
       {
@@ -1434,7 +1434,7 @@ SCIP_DECL_CONSCHECK(consCheckOrbisack)
 
       SCIPdebugMsg(scip, "Check method for orbisack constraint <%s> (%d rows) ...\n", SCIPconsGetName(conss[c]), consdata->nrows);
 
-      SCIP_CALL( SCIPcheckOrbisackSolution(scip, sol, consdata->vars1, consdata->vars2, consdata->nrows, printreason, &feasible) );
+      SCIP_CALL( SCIPcheckSolutionOrbisack(scip, sol, consdata->vars1, consdata->vars2, consdata->nrows, printreason, &feasible) );
 
       if ( ! feasible )
       {
@@ -1682,7 +1682,7 @@ SCIP_DECL_CONSPRINT(consPrintOrbisack)
 
 
 /** checks given solution for feasibility */
-SCIP_RETCODE SCIPcheckOrbisackSolution(
+SCIP_RETCODE SCIPcheckSolutionOrbisack(
    SCIP*              scip,               /**< SCIP data structure */
    SCIP_SOL*          sol,                /**< solution to check for feasibility */
    SCIP_VAR**         vars1,              /**< variables of first column */
@@ -1737,7 +1737,7 @@ SCIP_RETCODE SCIPcheckOrbisackSolution(
 
 
 /** separate orbisack cover inequalities for a given solution */
-SCIP_RETCODE SCIPseparateOrbisackCovers(
+SCIP_RETCODE SCIPseparateCoversOrbisack(
    SCIP*                 scip,               /**< pointer to scip */
    SCIP_CONS*            cons,               /**< pointer to constraint for which cover inequality should be added */
    SCIP_SOL*             sol,                /**< solution to be separated */

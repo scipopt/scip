@@ -2211,7 +2211,7 @@ SCIP_RETCODE checkFullOrbitopeSolution(
          vars2[i] = vars[i][j];
       }
 
-      SCIP_CALL( SCIPcheckOrbisackSolution(scip, sol, vars1, vars2, nrows, printreason, feasible) );
+      SCIP_CALL( SCIPcheckSolutionOrbisack(scip, sol, vars1, vars2, nrows, printreason, feasible) );
    }
 
    SCIPfreeBufferArray(scip, &vars2);
@@ -2296,7 +2296,7 @@ SCIP_RETCODE separateConstraints(
                vars2[i] = vars[i][j];
             }
 
-            SCIP_CALL( SCIPseparateOrbisackCovers(scip, conss[c], sol, vars1, vars2, nrows, &infeasible, &nconscuts) );
+            SCIP_CALL( SCIPseparateCoversOrbisack(scip, conss[c], sol, vars1, vars2, nrows, &infeasible, &nconscuts) );
          }
 
          SCIPfreeBufferArray(scip, &vars2);

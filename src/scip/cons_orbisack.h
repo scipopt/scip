@@ -54,7 +54,7 @@ extern "C" {
 
 /** separate orbisack solutions */
 EXTERN
-SCIP_RETCODE SCIPseparateOrbisackCovers(
+SCIP_RETCODE SCIPseparateCoversOrbisack(
    SCIP*                 scip,               /**< pointer to scip */
    SCIP_CONS*            cons,               /**< pointer to constraint for which cover inequality should be added */
    SCIP_SOL*             sol,                /**< solution to be separated */
@@ -68,7 +68,7 @@ SCIP_RETCODE SCIPseparateOrbisackCovers(
 
 /** checks whether a given binary solution is feasible for the orbisack */
 EXTERN
-SCIP_RETCODE SCIPcheckOrbisackSolution(
+SCIP_RETCODE SCIPcheckSolutionOrbisack(
    SCIP*              scip,               /**< SCIP data structure */
    SCIP_SOL*          sol,                /**< solution to check for feasibility */
    SCIP_VAR**         vars1,              /**< variables of first column */
