@@ -1346,45 +1346,45 @@ SCIP_DECL_CONSSEPALP(consSepalpSymresack)
    if ( SCIPgetNLPBranchCands(scip) == 0 )
       return SCIP_OKAY;
 
-   if ( nconss > 0 )
+   if ( nconss == 0 )
+      return SCIP_OKAY;
+
+   SCIP_Real* vals;
+   int ntotalvars;
+
+   ntotalvars = SCIPgetNVars(scip);
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, ntotalvars) );
+
+   /* loop through constraints */
+   for (c = 0; c < nconss; ++c)
    {
-      SCIP_Real* vals;
-      int ntotalvars;
+      SCIP_Bool infeasible = FALSE;
+      int ngen = 0;
 
-      ntotalvars = SCIPgetNVars(scip);
-      SCIP_CALL( SCIPallocBufferArray(scip, &vals, ntotalvars) );
+      SCIPdebugMsg(scip, "Separating symresack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
 
-      /* loop through constraints */
-      for (c = 0; c < nconss; ++c)
+      /* get data of constraint */
+      assert( conss[c] != NULL );
+      consdata = SCIPconsGetData(conss[c]);
+
+      /* get solution */
+      assert( consdata->nvars <= ntotalvars );
+      SCIP_CALL( SCIPgetSolVals(scip, NULL, consdata->nvars, consdata->vars, vals) );
+      SCIP_CALL( separateSymresackCovers(scip, conss[c], consdata, vals, &ngen, &infeasible) );
+
+      if ( infeasible )
       {
-         SCIP_Bool infeasible = FALSE;
-         int ngen = 0;
-
-         SCIPdebugMsg(scip, "Separating symresack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
-
-         /* get data of constraint */
-         assert( conss[c] != NULL );
-         consdata = SCIPconsGetData(conss[c]);
-
-         /* get solution */
-         assert( consdata->nvars <= ntotalvars );
-         SCIP_CALL( SCIPgetSolVals(scip, NULL, consdata->nvars, consdata->vars, vals) );
-         SCIP_CALL( separateSymresackCovers(scip, conss[c], consdata, vals, &ngen, &infeasible) );
-
-         if ( infeasible )
-         {
-            *result = SCIP_CUTOFF;
-            return SCIP_OKAY;
-         }
-
-         if ( ngen > 0 )
-            *result = SCIP_SEPARATED;
-
-         if ( *result == SCIP_DIDNOTRUN )
-            *result = SCIP_DIDNOTFIND;
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
       }
-      SCIPfreeBlockMemory(scip, &vals);
+
+      if ( ngen > 0 )
+         *result = SCIP_SEPARATED;
+
+      if ( *result == SCIP_DIDNOTRUN )
+         *result = SCIP_DIDNOTFIND;
    }
+   SCIPfreeBlockMemory(scip, &vals);
 
    return SCIP_OKAY;
 }
@@ -1406,46 +1406,46 @@ SCIP_DECL_CONSSEPASOL(consSepasolSymresack)
 
    *result = SCIP_DIDNOTRUN;
 
-   if ( nconss > 0 )
+   if ( nconss == 0 )
+      return SCIP_OKAY;
+
+   SCIP_Real* vals;
+   int ntotalvars;
+
+   ntotalvars = SCIPgetNVars(scip);
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, ntotalvars) );
+
+   /* loop through constraints */
+   for (c = 0; c < nconss; ++c)
    {
-      SCIP_Real* vals;
-      int ntotalvars;
+      SCIP_Bool infeasible = FALSE;
+      int ngen = 0;
 
-      ntotalvars = SCIPgetNVars(scip);
-      SCIP_CALL( SCIPallocBufferArray(scip, &vals, ntotalvars) );
+      SCIPdebugMsg(scip, "Separating symresack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
 
-      /* loop through constraints */
-      for (c = 0; c < nconss; ++c)
+      /* get data of constraint */
+      assert( conss[c] != NULL );
+      consdata = SCIPconsGetData(conss[c]);
+
+      /* get solution */
+      assert( consdata->nvars <= ntotalvars );
+      SCIP_CALL( SCIPgetSolVals(scip, sol, consdata->nvars, consdata->vars, vals) );
+      SCIP_CALL( separateSymresackCovers(scip, conss[c], consdata, vals, &ngen, &infeasible) );
+
+
+      if ( infeasible )
       {
-         SCIP_Bool infeasible = FALSE;
-         int ngen = 0;
-
-         SCIPdebugMsg(scip, "Separating symresack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
-
-         /* get data of constraint */
-         assert( conss[c] != NULL );
-         consdata = SCIPconsGetData(conss[c]);
-
-         /* get solution */
-         assert( consdata->nvars <= ntotalvars );
-         SCIP_CALL( SCIPgetSolVals(scip, sol, consdata->nvars, consdata->vars, vals) );
-         SCIP_CALL( separateSymresackCovers(scip, conss[c], consdata, vals, &ngen, &infeasible) );
-
-
-         if ( infeasible )
-         {
-            *result = SCIP_CUTOFF;
-            return SCIP_OKAY;
-         }
-
-         if ( ngen > 0 )
-            *result = SCIP_SEPARATED;
-
-         if ( *result == SCIP_DIDNOTRUN )
-            *result = SCIP_DIDNOTFIND;
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
       }
-      SCIPfreeBufferArray(scip, &vals);
+
+      if ( ngen > 0 )
+         *result = SCIP_SEPARATED;
+
+      if ( *result == SCIP_DIDNOTRUN )
+         *result = SCIP_DIDNOTFIND;
    }
+   SCIPfreeBufferArray(scip, &vals);
 
    return SCIP_OKAY;
 }
