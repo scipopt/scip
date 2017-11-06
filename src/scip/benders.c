@@ -228,8 +228,8 @@ SCIP_DECL_EVENTEXEC(eventExecBendersUpperbound)
 
    bestsol = SCIPgetBestSol(scip);
 
-   if( SCIPisLT(scip, SCIPgetSolOrigObj(scip, bestsol), eventhdlrdata->upperbound) )
-      SCIP_CALL( SCIPinterruptSolve(scip) );
+   //if( SCIPisLT(scip, SCIPgetSolOrigObj(scip, bestsol), eventhdlrdata->upperbound) )
+      //SCIP_CALL( SCIPinterruptSolve(scip) );
 
    return SCIP_OKAY;
 }
