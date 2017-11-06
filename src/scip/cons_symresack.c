@@ -793,6 +793,9 @@ SCIP_RETCODE addSymresackInequality(
 {
    SCIP_ROW* row;
    int i;
+#ifdef SCIP_DEBUG
+   char name[SCIP_MAXSTRLEN];
+#endif
 
    assert( scip != NULL );
    assert( consdata != NULL );
@@ -803,7 +806,12 @@ SCIP_RETCODE addSymresackInequality(
 
    *infeasible = FALSE;
 
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), "symresack", -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
+#ifdef SCIP_DEBUG
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symresack_cover_%s", SCIPconsGetName(cons));
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
+#else
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), "", -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
+#endif
    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
    for (i = 0; i < (consdata->nvars); ++i)
