@@ -15145,12 +15145,25 @@ SCIP_RETCODE initSolve(
    /* initialize NLP if there are nonlinearities */
    if( scip->transprob->nlpenabled && !scip->set->nlp_disable )
    {
+      SCIP_Real lpfeastol;
+
       SCIPdebugMsg(scip, "constructing empty NLP\n");
 
       SCIP_CALL( SCIPnlpCreate(&scip->nlp, scip->mem->probmem, scip->set, scip->stat, SCIPprobGetName(scip->transprob), scip->transprob->nvars) );
       assert(scip->nlp != NULL);
 
       SCIP_CALL( SCIPnlpAddVars(scip->nlp, scip->mem->probmem, scip->set, scip->transprob->nvars, scip->transprob->vars) );
+
+      /* use a smaller LP feasibility tolerance in case of an MINLP; variable bounds violations might yield to large
+       * violations in the original space which are hard to enforce
+       */
+      lpfeastol = MAX(SCIPfeastol(scip)/10.0, SCIPepsilon(scip));
+      if( lpfeastol < SCIPlpfeastol(scip) )
+      {
+         SCIP_CALL( SCIPchgLpfeastol(scip, lpfeastol, FALSE) );
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
+            "Reduced LP feasibility tolerance to %g due to presence of nonlinear constraints.\n", lpfeastol);
+      }
    }
 
    /* possibly create visualization output file */
