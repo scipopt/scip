@@ -1586,7 +1586,11 @@ SCIP_DECL_CONSENFOPS(consEnfopsSymresack)
 }
 
 
-/** constraint enforcing method of constraint handler for relaxation solutions */
+/** constraint enforcing method of constraint handler for relaxation solutions
+ *
+ *  To check feasibility, we separate cover inequalities.
+ *
+ */
 static
 SCIP_DECL_CONSENFORELAX(consEnforelaxSymresack)
 {   /*lint --e{715}*/
