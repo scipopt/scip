@@ -399,6 +399,8 @@ SCIP_RETCODE consdataCreate(
    int*                  inputperm           /**< input permutation of the constraint handler */
    )
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
    SCIP_VAR** vars;
    SCIP_Bool upgrade;
    int* indexcorrection;
@@ -480,13 +482,18 @@ SCIP_RETCODE consdataCreate(
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->vals, naffectedvariables) );
 
-   /* check whether an upgrade to packing/partitioning symresacks is possible */
-   upgrade = FALSE;
-   SCIP_CALL( SCIPgetBoolParam(scip, "cons/symresack/ppsymresack", &upgrade) );
-
-   if ( upgrade )
+   /* check for upgrade to packing/partitioning orbisacks*/
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   if ( conshdlr == NULL )
    {
-      upgrade = FALSE;
+      SCIPerrorMessage("symresack constraint handler not found\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+
+   upgrade = FALSE;
+   if ( conshdlrdata->checkppsymresack )
+   {
       SCIP_CALL( packingUpgrade(scip, consdata, perm, vars, naffectedvariables, &upgrade) );
    }
 
