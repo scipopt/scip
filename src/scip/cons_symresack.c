@@ -852,7 +852,7 @@ SCIP_RETCODE separateSymresackCovers(
    int* invperm;
    int* perm;
    int nvars;
-   int c;
+   int crit;
    int i;
 
    assert( scip != NULL );
@@ -893,10 +893,10 @@ SCIP_RETCODE separateSymresackCovers(
    SCIP_CALL( SCIPallocBufferArray(scip, &maxsolu, nvars) );
 
    /* start separation procedure by iterating over critical rows */
-   for (c = 0; c < nvars; ++c)
+   for (crit = 0; crit < nvars; ++crit)
    {
       /* there are no fixed points */
-      assert( perm[c] != c );
+      assert( perm[crit] != crit );
 
       /* initialize temporary solution */
       for (i = 0; i < nvars; ++i)
@@ -904,15 +904,15 @@ SCIP_RETCODE separateSymresackCovers(
       tmpsoluobj = 0.0;
 
       /* perform fixings implied by the critical row */
-      tmpsolu[c] = 0;
-      assert( invperm[c] < nvars );
+      tmpsolu[crit] = 0;
+      assert( invperm[crit] < nvars );
 
-      tmpsolu[invperm[c]] = 1;
-      tmpsoluobj += sepaobjective[invperm[c]];
+      tmpsolu[invperm[crit]] = 1;
+      tmpsoluobj += sepaobjective[invperm[crit]];
 
       /* perform 1-fixings */
-      i = invperm[c];
-      while ( i < c )
+      i = invperm[crit];
+      while ( i < crit )
       {
          i = invperm[i];
          tmpsolu[i] = 1;
@@ -920,21 +920,21 @@ SCIP_RETCODE separateSymresackCovers(
       }
 
       /* row c cannot be critical */
-      if ( i == c )
+      if ( i == crit )
          continue;
 
-      assert( tmpsolu[c] == 0 );
+      assert( tmpsolu[crit] == 0 );
 
       /* perform 0-fixing */
-      i = perm[c];
-      while ( i < c )
+      i = perm[crit];
+      while ( i < crit )
       {
          tmpsolu[i] = 0;
          i = perm[i];
       }
 
       /* iterate over rows above the critical row */
-      for (i = 0; i < c; ++i)
+      for (i = 0; i < crit; ++i)
       {
          SCIP_Real objimpact = 0.0;
          int j;
@@ -959,7 +959,7 @@ SCIP_RETCODE separateSymresackCovers(
             objimpact += sepaobjective[j];
             j = invperm[j];
          }
-         while ( j < c && j != i );
+         while ( j < crit && j != i );
 
          /* if we do not detect a cycle */
          if ( j != i )
@@ -971,7 +971,7 @@ SCIP_RETCODE separateSymresackCovers(
 
             /* check fixings in perm direction */
             j = perm[i];
-            while ( j < c )
+            while ( j < crit )
             {
                assert( j != i );
                assert( tmpsolu[j] == 2 );
@@ -980,7 +980,7 @@ SCIP_RETCODE separateSymresackCovers(
                j = perm[j];
             }
 
-            assert( j != c );
+            assert( j != crit );
          }
 
          /* if fixing entry i has a positive impact -> keep above fixings of entries to 1 */
@@ -996,7 +996,7 @@ SCIP_RETCODE separateSymresackCovers(
                tmpsolu[j] = 0;
                j = invperm[j];
             }
-            while ( j < c && j != i );
+            while ( j < crit && j != i );
 
             /* if we do not detect a cycle */
             if ( j != i )
@@ -1007,7 +1007,7 @@ SCIP_RETCODE separateSymresackCovers(
 
                /* check fixings in perm direction */
                j = perm[i];
-               while ( j < c )
+               while ( j < crit )
                {
                   assert( j != i );
                   assert( tmpsolu[j] == 1 );
@@ -1015,13 +1015,13 @@ SCIP_RETCODE separateSymresackCovers(
                   j = perm[j];
                }
 
-               assert( j != c );
+               assert( j != crit );
             }
          }
       }
 
       /* iterate over unfixed entries below the critical row */
-      for (i = c + 1; i < nvars; ++i)
+      for (i = crit + 1; i < nvars; ++i)
       {
          /* skip already fixed entries */
          if ( tmpsolu[i] != 2 )
