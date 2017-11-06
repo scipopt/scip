@@ -48,7 +48,7 @@ extern "C" {
  *
  * Moreover, the constraint handler checks whether each cycle of the permutation is
  * contained in a set packing or partitioning constraint. In this case, the symresack
- * is upgraded to a ppsymresack and strong symmetry handling inequalities are added during
+ * is strengthened to a ppsymresack and strong symmetry handling inequalities are added during
  * the initialization of the constraint handler.
  *
  * Furthermore, the constraint handler checks whether the permutation is a composition of
