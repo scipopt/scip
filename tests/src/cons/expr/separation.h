@@ -39,11 +39,13 @@ static SCIP_CONSHDLR* conshdlr;
 static SCIP_VAR* x;
 static SCIP_VAR* y;
 static SCIP_VAR* z;
+static SCIP_VAR* w;
 static SCIP_VAR* auxvar;
 static SCIP_SOL* sol;
 static SCIP_CONSEXPR_EXPR* xexpr;
 static SCIP_CONSEXPR_EXPR* yexpr;
 static SCIP_CONSEXPR_EXPR* zexpr;
+static SCIP_CONSEXPR_EXPR* wexpr;
 
 static SCIP_RANDNUMGEN* randnumgen; /* needs it for the multilinear separation */
 
@@ -69,15 +71,18 @@ void setup(void)
    SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", -1.0, 5.0, 1.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", -6.0, -3.0, 2.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", 1.0, 3.0, 2.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &w, "w", 2.0, 4.0, -3.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &auxvar, "auxvar", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(scip, x) );
    SCIP_CALL( SCIPaddVar(scip, y) );
    SCIP_CALL( SCIPaddVar(scip, z) );
+   SCIP_CALL( SCIPaddVar(scip, w) );
    SCIP_CALL( SCIPaddVar(scip, auxvar) );
 
    SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &xexpr, x) );
    SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &yexpr, y) );
    SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &zexpr, z) );
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &wexpr, w) );
 
    /* transform the problem and set it so INITSOLVE stage */
    SCIP_CALL( SCIPincludeNodeselBfs(scip) );
@@ -101,10 +106,12 @@ void teardown(void)
    /* release solution */
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
 
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &wexpr) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &zexpr) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &yexpr) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
    SCIP_CALL( SCIPreleaseVar(scip, &auxvar) );
+   SCIP_CALL( SCIPreleaseVar(scip, &w) );
    SCIP_CALL( SCIPreleaseVar(scip, &z) );
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
