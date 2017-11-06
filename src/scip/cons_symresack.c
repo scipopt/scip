@@ -808,13 +808,9 @@ SCIP_RETCODE addSymresackInequality(
 
    for (i = 0; i < (consdata->nvars); ++i)
    {
-      if ( coeffs[i] == 1 )
+      if ( coeffs[i] == 1 || coeffs[i] == -1 )
       {
-         SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->vars[i], 1.0) );
-      }
-      else if ( coeffs[i] == -1 )
-      {
-         SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->vars[i], -1.0) );
+         SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->vars[i], (SCIP_Real) coeffs[i]) );
       }
    }
    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
