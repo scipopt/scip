@@ -299,7 +299,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyEntropy)
       }
       else
       {
-         SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, simplifiedexpr, -childvalue*log(childvalue)) );
+         SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, simplifiedexpr, -childvalue * log(childvalue)) );
       }
    }
    else
@@ -434,6 +434,8 @@ static
 SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalEntropy)
 {  /*lint --e{715}*/
    SCIP_INTERVAL childinterval;
+   SCIP_Real childinf;
+   SCIP_Real childsup;
 
    assert(expr != NULL);
    assert(SCIPgetConsExprExprData(expr) == NULL);
@@ -442,9 +444,29 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalEntropy)
    childinterval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]);
    assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), childinterval));
 
-   SCIPintervalLog(SCIPinfinity(scip), interval, childinterval);
-   SCIPintervalMul(SCIPinfinity(scip), interval, *interval, childinterval);
-   SCIPintervalMulScalar(SCIPinfinity(scip), interval, *interval, -1.0);
+   childinf = childinterval.inf;
+   childsup = childinterval.sup;
+
+   if( childinf == childsup )
+   {
+      SCIPintervalSet(interval, childinf);
+   }
+   /* if the lower bound is 0, we need to set the resultant manually */
+   else if( childinf == 0.0 )
+   {
+      if( SCIPisLE(scip, childsup, exp(-1.0)) )
+         SCIPintervalSetBounds(interval, 0.0, -childsup * log(childsup));
+      else if( SCIPisLE(scip, childsup, 1.0) )
+         SCIPintervalSetBounds(interval, 0.0, exp(-1.0));
+      else
+         SCIPintervalSetBounds(interval, -childsup * log(childsup), 0.0);
+   }
+   else
+   {
+      SCIPintervalLog(SCIPinfinity(scip), interval, childinterval);
+      SCIPintervalMul(SCIPinfinity(scip), interval, *interval, childinterval);
+      SCIPintervalSetBounds(interval, -(*interval).sup, -(*interval).inf);
+   }
 
    return SCIP_OKAY;
 }
