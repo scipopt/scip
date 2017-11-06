@@ -644,7 +644,7 @@ SCIP_RETCODE initLP(
 }
 
 
-/** propagation */
+/** perform propagation of symresack constraint */
 static
 SCIP_RETCODE propVariables(
    SCIP*                 scip,               /**< SCIP pointer */
