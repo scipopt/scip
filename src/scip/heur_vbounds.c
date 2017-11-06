@@ -258,6 +258,7 @@ SCIP_RETCODE dfs(
             /* put the adjacent node onto the stack */
             dfsstack[stacksize] = idx;
             stacknextedge[stacksize] = 0;
+            stacknextcliquevar[stacksize] = 0;
             stacknextedge[stacksize - 1] = i + 1;
             stacksize++;
             assert(stacksize <= 2* SCIPgetNVars(scip));
