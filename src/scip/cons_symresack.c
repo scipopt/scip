@@ -1314,7 +1314,6 @@ SCIP_DECL_CONSINITLP(consInitlpSymresack)
    /* loop through constraints */
    for (c = 0; c < nconss; ++c)
    {
-      /* get data of constraint */
       assert( conss[c] != NULL );
 
       SCIPdebugMessage("Generating initial symresack cut for constraint <%s> ...\n", SCIPconsGetName(conss[c]));
