@@ -111,7 +111,7 @@ Test(test_compute_symmetry, basic1, .description = "compute symmetry for a simpl
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-   /* get constraint handler */
+   /* get symmetry presolver */
    presol = SCIPfindPresol(scip, "symmetry");
    cr_assert( presol != NULL );
 
@@ -228,7 +228,7 @@ Test(test_compute_symmetry, basic2, .description = "compute symmetry for a simpl
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-   /* get constraint handler */
+   /* get symmetry presolver */
    presol = SCIPfindPresol(scip, "symmetry");
    cr_assert( presol != NULL );
 
@@ -359,7 +359,7 @@ Test(test_compute_symmetry, basic3, .description = "compute symmetry for a simpl
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-   /* get constraint handler */
+   /* get symmetry presolver */
    presol = SCIPfindPresol(scip, "symmetry");
    cr_assert( presol != NULL );
 
@@ -490,7 +490,7 @@ Test(test_compute_symmetry, basic4, .description = "compute symmetry for a simpl
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-   /* get constraint handler */
+   /* get symmetry presolver */
    presol = SCIPfindPresol(scip, "symmetry");
    cr_assert( presol != NULL );
 
