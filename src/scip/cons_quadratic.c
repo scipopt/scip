@@ -9857,6 +9857,7 @@ SCIP_RETCODE replaceByLinearConstraints(
    SCIP_CONS*          cons;
    SCIP_CONSDATA*      consdata;
    SCIP_RESULT         checkresult;
+   SCIP_VAR*           var;
    SCIP_Bool           tightened;
    SCIP_Real           constant;
    SCIP_Real           val1;
@@ -9887,38 +9888,42 @@ SCIP_RETCODE replaceByLinearConstraints(
 
       for( i = 0; i < consdata->nquadvars; ++i )
       {
-         /* variables should be fixed if constraint is violated */
-         assert(SCIPisRelEQ(scip, SCIPvarGetLbLocal(consdata->quadvarterms[i].var), SCIPvarGetUbLocal(consdata->quadvarterms[i].var)));
+         var = consdata->quadvarterms[i].var;
 
-         val1 = (SCIPvarGetUbLocal(consdata->quadvarterms[i].var) + SCIPvarGetLbLocal(consdata->quadvarterms[i].var)) / 2.0;
+         /* variables should be fixed if constraint is violated */
+         assert(SCIPisRelEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
+
+         val1 = (SCIPvarGetUbLocal(var) + SCIPvarGetLbLocal(var)) / 2.0;
          constant += (consdata->quadvarterms[i].lincoef + consdata->quadvarterms[i].sqrcoef * val1) * val1;
 
-         SCIPdebugMessage("<%s>: [%.20g, %.20g]\n", SCIPvarGetName(consdata->quadvarterms[i].var), SCIPvarGetLbLocal(consdata->quadvarterms[i].var), SCIPvarGetUbLocal(consdata->quadvarterms[i].var));
+         SCIPdebugMessage("<%s>: [%.20g, %.20g]\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
 
-         /* if variable is not fixed w.r.t. absolute eps yet, then try to fix it */
-         if( !SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->quadvarterms[i].var), SCIPvarGetUbLocal(consdata->quadvarterms[i].var)) )
+         /* if variable is not fixed w.r.t. absolute eps yet, then try to fix it
+          * (SCIPfixVar() doesn't allow for small tightenings, so tighten lower and upper bound separately)
+          */
+         if( !SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
          {
-            SCIP_CALL( SCIPtightenVarLb(scip, consdata->quadvarterms[i].var, val1, TRUE, infeasible, &tightened) );
+            SCIP_CALL( SCIPtightenVarLb(scip, var, val1, TRUE, infeasible, &tightened) );
             if( *infeasible )
             {
-               SCIPdebugMsg(scip, "Fixing almost fixed variable <%s> lead to infeasibility.\n", SCIPvarGetName(consdata->quadvarterms[i].var));
+               SCIPdebugMsg(scip, "Fixing almost fixed variable <%s> lead to infeasibility.\n", SCIPvarGetName(var));
                return SCIP_OKAY;
             }
             if( tightened )
             {
-               SCIPdebugMsg(scip, "Tightened lower bound of almost fixed variable <%s>.\n", SCIPvarGetName(consdata->quadvarterms[i].var));
+               SCIPdebugMsg(scip, "Tightened lower bound of almost fixed variable <%s>.\n", SCIPvarGetName(var));
                *reduceddom = TRUE;
             }
 
-            SCIP_CALL( SCIPtightenVarUb(scip, consdata->quadvarterms[i].var, val1, TRUE, infeasible, &tightened) );
+            SCIP_CALL( SCIPtightenVarUb(scip, var, val1, TRUE, infeasible, &tightened) );
             if( *infeasible )
             {
-               SCIPdebugMsg(scip, "Fixing almost fixed variable <%s> lead to infeasibility.\n", SCIPvarGetName(consdata->quadvarterms[i].var));
+               SCIPdebugMsg(scip, "Fixing almost fixed variable <%s> lead to infeasibility.\n", SCIPvarGetName(var));
                return SCIP_OKAY;
             }
             if( tightened )
             {
-               SCIPdebugMsg(scip, "Tightened upper bound of almost fixed variable <%s>.\n", SCIPvarGetName(consdata->quadvarterms[i].var));
+               SCIPdebugMsg(scip, "Tightened upper bound of almost fixed variable <%s>.\n", SCIPvarGetName(var));
                *reduceddom = TRUE;
             }
          }
@@ -9943,6 +9948,7 @@ SCIP_RETCODE replaceByLinearConstraints(
          SCIP_Real rhs;
 
          coef = *consdata->lincoefs;
+         var = *consdata->linvars;
 
          /* compute lhs/rhs */
          if ( SCIPisInfinity(scip, -consdata->lhs) )
@@ -9955,9 +9961,9 @@ SCIP_RETCODE replaceByLinearConstraints(
          else
             rhs = consdata->rhs - constant;
 
-         SCIPdebugMsg(scip, "Linear constraint with one variable: %g <= %g <%s> <= %g\n", lhs, coef, SCIPvarGetName(*consdata->linvars), rhs);
+         SCIPdebugMsg(scip, "Linear constraint with one variable: %g <= %g <%s> <= %g\n", lhs, coef, SCIPvarGetName(var), rhs);
 
-         SCIPdebugMessage("<%s>: [%.20g, %g.20]\n", SCIPvarGetName(*consdata->linvars), SCIPvarGetLbLocal(*consdata->linvars), SCIPvarGetUbLocal(*consdata->linvars));
+         SCIPdebugMessage("<%s>: [%.20g, %g.20]\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
 
          /* possibly correct lhs/rhs */
          assert( ! SCIPisZero(scip, coef) );
@@ -9982,12 +9988,12 @@ SCIP_RETCODE replaceByLinearConstraints(
             else
                lhs = -SCIPinfinity(scip);
          }
-         SCIPdebugMsg(scip, "Linear constraint is a bound: %g <= <%s> <= %g\n", lhs, SCIPvarGetName(*consdata->linvars), rhs);
+         SCIPdebugMsg(scip, "Linear constraint is a bound: %g <= <%s> <= %g\n", lhs, SCIPvarGetName(var), rhs);
 
          if( SCIPisInfinity(scip, -rhs) || SCIPisInfinity(scip, lhs) )
          {
             SCIPdebugMsg(scip, "node will marked as infeasible since lb/ub of %s is +/-infinity\n",
-               SCIPvarGetName(consdata->linvars[0]));
+               SCIPvarGetName(var));
 
             *infeasible = TRUE;
             return SCIP_OKAY;
@@ -9995,7 +10001,7 @@ SCIP_RETCODE replaceByLinearConstraints(
 
          if ( ! SCIPisInfinity(scip, -lhs) )
          {
-            SCIP_CALL( SCIPtightenVarLb(scip, *consdata->linvars, lhs, TRUE, infeasible, &tightened) );
+            SCIP_CALL( SCIPtightenVarLb(scip, var, lhs, TRUE, infeasible, &tightened) );
             if ( *infeasible )
             {
                SCIPdebugMsg(scip, "Lower bound leads to infeasibility.\n");
@@ -10011,7 +10017,7 @@ SCIP_RETCODE replaceByLinearConstraints(
 
          if ( ! SCIPisInfinity(scip, rhs) )
          {
-            SCIP_CALL( SCIPtightenVarUb(scip, *consdata->linvars, rhs, TRUE, infeasible, &tightened) );
+            SCIP_CALL( SCIPtightenVarUb(scip, var, rhs, TRUE, infeasible, &tightened) );
             if ( *infeasible )
             {
                SCIPdebugMsg(scip, "Upper bound leads to infeasibility.\n");
