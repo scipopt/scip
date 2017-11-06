@@ -8,6 +8,7 @@ fixed bugs:
 - fixed bug in mps reader. Reader now prints OBJSENSE section and tries to generate unique names of constraints
 - fixed handling of LOOSE variables in locks heuristic
 - fixed upgrade to a varbound constraint if abspower constraint contains a multi-aggregated variable
+- fixed numerical issues in boundshift presolver when aggregating integer variables
 
 SCIP version 4.0.1
 ==================
