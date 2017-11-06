@@ -370,12 +370,13 @@ SCIP_RETCODE packingUpgrade(
    else
    {
       SCIPfreeBufferArray(scip, &indicesincycle);
+      SCIPfreeBufferArray(scip, &covered);
+
       for (i = 0; i < ncycles; ++i)
       {
          SCIPfreeBlockMemoryArray(scip, &cycledecomposition[i], n + 1);
       }
       SCIPfreeBlockMemoryArray(scip, &cycledecomposition, ncycles);
-      SCIPfreeBufferArray(scip, &covered);
    }
 
    return SCIP_OKAY;
