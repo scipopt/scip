@@ -2247,6 +2247,7 @@ SCIP_RETCODE separateConstraints(
    /* loop through constraints */
    for (c = 0; c < nconss && ! infeasible; c++)
    {
+      SCIP_CONSHDLRDATA* conshdlrdata;
       SCIP_CONSDATA* consdata;
       int nconsfixedvars = 0;
       int nconscuts = 0;
@@ -2271,13 +2272,12 @@ SCIP_RETCODE separateConstraints(
       /* separate */
       orbitopetype = consdata->orbitopetype;
 
-      SCIP_CALL( SCIPgetBoolParam(scip, "constraints/orbitope/sepafullorbitope", &sepafullorbitope) );
-
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
       if ( orbitopetype == SCIP_ORBITOPETYPE_PACKING || orbitopetype == SCIP_ORBITOPETYPE_PARTITIONING )
       {
          SCIP_CALL( separateSCIs(scip, conshdlr, conss[c], consdata, &infeasible, &nconsfixedvars, &nconscuts) );
       }
-      else if ( sepafullorbitope )
+      else if ( conshdlrdata->sepafullorbitope )
       {
          assert( consdata->nspcons > 0 );
          assert( consdata->vars != NULL );
