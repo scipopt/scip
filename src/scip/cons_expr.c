@@ -36,7 +36,7 @@
 #include "scip/cons_expr_log.h"
 #include "scip/cons_expr_abs.h"
 #include "scip/cons_expr_pow.h"
-#include "scip/cons_expr_xlogx.h"
+#include "scip/cons_expr_entropy.h"
 #include "scip/debug.h"
 
 /* fundamental constraint handler properties */
@@ -7475,9 +7475,9 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    SCIP_CALL( SCIPincludeConsExprExprHdlrPow(scip, conshdlr) );
    assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "pow") == 0);
 
-   /* include handler for xlogx expression */
-   SCIP_CALL( SCIPincludeConsExprExprHdlrXlogx(scip, conshdlr) );
-   assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "xlogx") == 0);
+   /* include handler for entropy expression */
+   SCIP_CALL( SCIPincludeConsExprExprHdlrEntropy(scip, conshdlr) );
+   assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "entropy") == 0);
 
    return SCIP_OKAY;
 }

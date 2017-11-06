@@ -13,22 +13,22 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_xlogx.c
- * @brief  handler for x*log(x) expressions
+/**@file   cons_expr_entropy.c
+ * @brief  handler for -x*log(x) expressions
  * @author Benjamin Mueller
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scip/cons_expr_xlogx.h"
+#include "scip/cons_expr_entropy.h"
 #include "scip/cons_expr_value.h"
 #include "scip/cons_expr.h"
 
 #include <string.h>
 
 /* fundamental expression handler properties */
-#define EXPRHDLR_NAME         "xlogx"
-#define EXPRHDLR_DESC         "expression handler for x*log(x)"
+#define EXPRHDLR_NAME         "entropy"
+#define EXPRHDLR_DESC         "expression handler for -x*log(x)"
 #define EXPRHDLR_PRECEDENCE   0
 #define EXPRHDLR_HASHKEY      SCIPcalcFibHash(7477.0)
 
@@ -42,10 +42,10 @@
 
 /** helper function to separate a given point; needed for proper unittest */
 static
-SCIP_RETCODE separatePointXlogx(
+SCIP_RETCODE separatePointEntropy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< xlogx expression */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< entropy expression */
    SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
    SCIP_ROW**            cut                 /**< pointer to store the row */
    )
@@ -85,12 +85,12 @@ SCIP_RETCODE separatePointXlogx(
    if( refpoint < 0.0 )
       return SCIP_OKAY;
 
-   activity = (refpoint == 0.0) ? 0.0 : refpoint * log(refpoint);
+   activity = (refpoint == 0.0) ? 0.0 : -refpoint * log(refpoint);
    violation = activity - SCIPgetSolVal(scip, sol, auxvar);
    overestimate = SCIPisLT(scip, violation, 0.0);
 
-   /* use secant for overestimate (locally valid) */
-   if( overestimate )
+   /* use secant for underestimate (locally valid) */
+   if( !overestimate )
    {
       SCIP_Real lb;
       SCIP_Real ub;
@@ -106,8 +106,8 @@ SCIP_RETCODE separatePointXlogx(
       assert(lb >= 0.0 && ub >= 0.0);
       assert(ub - lb != 0.0);
 
-      vallb = (lb == 0.0) ? 0.0 : lb * log(lb);
-      valub = (ub == 0.0) ? 0.0 : ub * log(ub);
+      vallb = (lb == 0.0) ? 0.0 : -lb * log(lb);
+      valub = (ub == 0.0) ? 0.0 : -ub * log(ub);
 
       coef = (valub - vallb) / (ub - lb);
       constant = valub - coef * ub;
@@ -120,16 +120,16 @@ SCIP_RETCODE separatePointXlogx(
       if( SCIPisZero(scip, refpoint) )
          return SCIP_OKAY;
 
-      /* x*(1+log(x*)) - x* <= x*log(x) */
-      coef = (1.0 + log(refpoint));
-      constant = -refpoint;
+      /* -x*(1+log(x*)) + x* <= -x*log(x) */
+      coef = -(1.0 + log(refpoint));
+      constant = refpoint;
    }
 
    /* create cut */
-   SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "xlogx_cut", 0, NULL, NULL,
+   SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "entropy_cut", 0, NULL, NULL,
          overestimate ? -constant : -SCIPinfinity(scip),
          overestimate ? SCIPinfinity(scip) : -constant,
-         overestimate, FALSE, FALSE) );
+         !overestimate, FALSE, FALSE) );
 
    SCIP_CALL( SCIPaddVarToRow(scip, *cut, auxvar, -1.0) );
    SCIP_CALL( SCIPaddVarToRow(scip, *cut, childvar, coef) );
@@ -137,8 +137,8 @@ SCIP_RETCODE separatePointXlogx(
    return SCIP_OKAY;
 }
 
-/** helper function for reverseProp() which returns an x* in [xmin,xmax] s.t. the distance x*log(x) and a given target
- *  value is minimized; the function assumes that x*log(x) is monotone on [xmin,xmax];
+/** helper function for reverseProp() which returns an x* in [xmin,xmax] s.t. the distance -x*log(x) and a given target
+ *  value is minimized; the function assumes that -x*log(x) is monotone on [xmin,xmax];
  */
 static
 SCIP_Real reversePropBinarySearch(
@@ -149,13 +149,13 @@ SCIP_Real reversePropBinarySearch(
    SCIP_Real             targetval           /**< target value */
    )
 {
-   SCIP_Real xminval = (xmin == 0.0) ? 0.0 : xmin * log(xmin);
-   SCIP_Real xmaxval = (xmax == 0.0) ? 0.0 : xmax * log(xmax);
+   SCIP_Real xminval = (xmin == 0.0) ? 0.0 : -xmin * log(xmin);
+   SCIP_Real xmaxval = (xmax == 0.0) ? 0.0 : -xmax * log(xmax);
    int i;
 
    assert(increasing ? xminval <= xmaxval : xminval >= xmaxval);
 
-   /* function can not achieve x*log(x) -> return xmin or xmax */
+   /* function can not achieve -x*log(x) -> return xmin or xmax */
    if( SCIPisGE(scip, xminval, targetval) && SCIPisGE(scip, xmaxval, targetval) )
       return increasing ? xmin : xmax;
    else if( SCIPisLE(scip, xminval, targetval) && SCIPisLE(scip, xmaxval, targetval) )
@@ -165,7 +165,7 @@ SCIP_Real reversePropBinarySearch(
    for( i = 0; i < 1000; ++i )
    {
       SCIP_Real x = (xmin + xmax) / 2.0;
-      SCIP_Real xval = (x == 0.0) ? 0.0 : x * log(x);
+      SCIP_Real xval = (x == 0.0) ? 0.0 : -x * log(x);
 
       /* found the corresponding point -> skip */
       if( SCIPisEQ(scip, xval, targetval) )
@@ -207,8 +207,8 @@ SCIP_RETCODE reverseProp(
    assert(scip != NULL);
    assert(interval != NULL);
 
-   /* check whether domain is empty, i.e., bounds on x*log(x) < -1/e */
-   if( SCIPisLT(scip, SCIPintervalGetSup(exprinterval), -exp(-1.0))
+   /* check whether domain is empty, i.e., bounds on -x*log(x) > 1/e */
+   if( SCIPisGT(scip, SCIPintervalGetInf(exprinterval), exp(-1.0))
       || SCIPintervalIsEmpty(SCIPinfinity(scip), childinterval) )
    {
       SCIPintervalSetEmpty(interval);
@@ -221,28 +221,28 @@ SCIP_RETCODE reverseProp(
    exprinf = SCIPintervalGetInf(exprinterval);
 
    /*
-    * consider bounds implied by upper bound on the expression
+    * consider bounds implied by lower bound on the expression
     */
 
-   bound = reversePropBinarySearch(scip, exp(-1.0), childsup, TRUE, exprsup);
+   bound = reversePropBinarySearch(scip, exp(-1.0), childsup, FALSE, exprinf);
    assert(bound <= childsup);
    childsup = MIN(bound, childsup);
 
-   if( SCIPisLT(scip, exprsup, 0.0) )
+   if( SCIPisGT(scip, exprinf, 0.0) )
    {
-      bound = reversePropBinarySearch(scip, childinf, exp(-1.0), FALSE, exprsup);
+      bound = reversePropBinarySearch(scip, childinf, exp(-1.0), TRUE, exprinf);
       assert(bound >= childinf);
       childinf = MAX(childinf, bound);
    }
 
    /*
-    * consider bounds implied by lower bound on the expression
+    * consider bounds implied by upper bound on the expression
     */
 
-   /* lower bound on expression can only imply a better lower bound on the child's interval */
-   if( SCIPisGT(scip, exprinf, 0.0) && childinf >= exp(-1.0) )
+   /* upper bound on expression can only imply a better lower bound on the child's interval */
+   if( SCIPisLT(scip, exprsup, 0.0) && childinf >= exp(-1.0) )
    {
-      bound = reversePropBinarySearch(scip, exp(-1.0), childsup, TRUE, exprinf);
+      bound = reversePropBinarySearch(scip, exp(-1.0), childsup, FALSE, exprsup);
       assert(bound >= childinf);
       childinf = MAX(childinf, bound);
    }
@@ -259,17 +259,17 @@ SCIP_RETCODE reverseProp(
 
 /** expression handler copy callback */
 static
-SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrXlogx)
+SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrEntropy)
 {  /*lint --e{715}*/
-   SCIP_CALL( SCIPincludeConsExprExprHdlrXlogx(scip, consexprhdlr) );
+   SCIP_CALL( SCIPincludeConsExprExprHdlrEntropy(scip, consexprhdlr) );
    *valid = TRUE;
 
    return SCIP_OKAY;
 }
 
-/** simplifies an xlogx expression */
+/** simplifies an entropy expression */
 static
-SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyXlogx)
+SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyEntropy)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* child;
    SCIP_CONSHDLR* conshdlr;
@@ -299,7 +299,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyXlogx)
       }
       else
       {
-         SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, simplifiedexpr, childvalue*log(childvalue)) );
+         SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, simplifiedexpr, -childvalue*log(childvalue)) );
       }
    }
    else
@@ -315,7 +315,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyXlogx)
 
 /** expression data copy callback */
 static
-SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataXlogx)
+SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataEntropy)
 {  /*lint --e{715}*/
    assert(targetexprdata != NULL);
    assert(sourceexpr != NULL);
@@ -327,7 +327,7 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataXlogx)
 
 /** expression data free callback */
 static
-SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataXlogx)
+SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataEntropy)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
@@ -337,7 +337,7 @@ SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataXlogx)
 
 /** expression print callback */
 static
-SCIP_DECL_CONSEXPR_EXPRPRINT(printXlogx)
+SCIP_DECL_CONSEXPR_EXPRPRINT(printEntropy)
 {  /*lint --e{715}*/
    assert(expr != NULL);
    assert(SCIPgetConsExprExprData(expr) == NULL);
@@ -347,7 +347,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printXlogx)
       case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
       {
          /* print function with opening parenthesis */
-         SCIPinfoMessage(scip, file, "xlogx(");
+         SCIPinfoMessage(scip, file, "entropy(");
          break;
       }
 
@@ -373,7 +373,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printXlogx)
 
 /** expression (point-) evaluation callback */
 static
-SCIP_DECL_CONSEXPR_EXPREVAL(evalXlogx)
+SCIP_DECL_CONSEXPR_EXPREVAL(evalEntropy)
 {  /*lint --e{715}*/
    SCIP_Real childvalue;
 
@@ -386,17 +386,17 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalXlogx)
 
    if( childvalue < 0.0 )
    {
-      SCIPdebugMsg(scip, "invalid evaluation of xlogx expression\n");
+      SCIPdebugMsg(scip, "invalid evaluation of entropy expression\n");
       *val = SCIP_INVALID;
    }
    else if( childvalue == 0.0 || childvalue == 1.0 )
    {
-      /* x*log(x) = 0 iff x in {0,1} */
+      /* -x*log(x) = 0 iff x in {0,1} */
       *val = 0.0;
    }
    else
    {
-      *val = childvalue * log(childvalue);
+      *val = -childvalue * log(childvalue);
    }
 
    return SCIP_OKAY;
@@ -404,7 +404,7 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalXlogx)
 
 /** expression derivative evaluation callback */
 static
-SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffXlogx)
+SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffEntropy)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* child;
    SCIP_Real childvalue;
@@ -424,14 +424,14 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffXlogx)
    if( childvalue <= 0.0 )
       *val = SCIP_INVALID;
    else
-      *val = 1.0 + childvalue;
+      *val = -1.0 - log(childvalue);
 
    return SCIP_OKAY;
 }
 
 /** expression interval evaluation callback */
 static
-SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalXlogx)
+SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalEntropy)
 {  /*lint --e{715}*/
    SCIP_INTERVAL childinterval;
 
@@ -444,13 +444,14 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalXlogx)
 
    SCIPintervalLog(SCIPinfinity(scip), interval, childinterval);
    SCIPintervalMul(SCIPinfinity(scip), interval, *interval, childinterval);
+   SCIPintervalMulScalar(SCIPinfinity(scip), interval, *interval, -1.0);
 
    return SCIP_OKAY;
 }
 
 /** expression separation callback */
 static
-SCIP_DECL_CONSEXPR_EXPRSEPA(sepaXlogx)
+SCIP_DECL_CONSEXPR_EXPRSEPA(sepaEntropy)
 {  /*lint --e{715}*/
    SCIP_ROW* cut;
    SCIP_Bool infeasible;
@@ -459,7 +460,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaXlogx)
    *ncuts = 0;
    *result = SCIP_DIDNOTFIND;
 
-   SCIP_CALL( separatePointXlogx(scip, conshdlr, expr, sol, &cut) );
+   SCIP_CALL( separatePointEntropy(scip, conshdlr, expr, sol, &cut) );
 
    /* failed to compute a cut */
    if( cut == NULL )
@@ -488,7 +489,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaXlogx)
 
 /** expression reverse propagation callback */
 static
-SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropXlogx)
+SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropEntropy)
 {  /*lint --e{715}*/
    SCIP_INTERVAL newinterval;
    SCIP_INTERVAL exprinterval;
@@ -516,9 +517,9 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropXlogx)
    return SCIP_OKAY;
 }
 
-/** xlogx hash callback */
+/** entropy hash callback */
 static
-SCIP_DECL_CONSEXPR_EXPRHASH(hashXlogx)
+SCIP_DECL_CONSEXPR_EXPRHASH(hashEntropy)
 {  /*lint --e{715}*/
    unsigned int childhash;
 
@@ -538,7 +539,7 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashXlogx)
 }
 
 /** creates the handler for x*log(x) expressions and includes it into the expression constraint handler */
-SCIP_RETCODE SCIPincludeConsExprExprHdlrXlogx(
+SCIP_RETCODE SCIPincludeConsExprExprHdlrEntropy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    )
@@ -551,24 +552,24 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrXlogx(
 
    /* include expression handler */
    SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC,
-         EXPRHDLR_PRECEDENCE, evalXlogx, exprhdlrdata) );
+         EXPRHDLR_PRECEDENCE, evalEntropy, exprhdlrdata) );
    assert(exprhdlr != NULL);
 
-   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrXlogx, NULL) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataXlogx, freedataXlogx) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSimplify(scip, consexprhdlr, exprhdlr, simplifyXlogx) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printXlogx) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalXlogx) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, sepaXlogx) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropXlogx) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashXlogx) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffXlogx) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrEntropy, NULL) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataEntropy, freedataEntropy) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrSimplify(scip, consexprhdlr, exprhdlr, simplifyEntropy) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printEntropy) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalEntropy) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, sepaEntropy) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropEntropy) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashEntropy) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffEntropy) );
 
    return SCIP_OKAY;
 }
 
 /** creates an x*log(x) expression */
-SCIP_RETCODE SCIPcreateConsExprExprXlogx(
+SCIP_RETCODE SCIPcreateConsExprExprEntropy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */

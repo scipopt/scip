@@ -13,15 +13,15 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_xlogx.h
- * @brief  handler for x*log(x) expressions
+/**@file   cons_expr_entropy.h
+ * @brief  handler for -x*log(x) expressions
  * @author Benjamin Mueller
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_CONS_EXPR_XLOGX_H__
-#define __SCIP_CONS_EXPR_XLOGX_H__
+#ifndef __SCIP_CONS_EXPR_ENTROPY_H__
+#define __SCIP_CONS_EXPR_ENTROPY_H__
 
 
 #include "scip/scip.h"
@@ -33,14 +33,14 @@ extern "C" {
 
 /** creates the handler for x*log(x) expressions and includes it into the expression constraint handler */
 EXTERN
-SCIP_RETCODE SCIPincludeConsExprExprHdlrXlogx(
+SCIP_RETCODE SCIPincludeConsExprExprHdlrEntropy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    );
 
 /** creates an x*log(x) expression */
 EXTERN
-SCIP_RETCODE SCIPcreateConsExprExprXlogx(
+SCIP_RETCODE SCIPcreateConsExprExprEntropy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
@@ -51,4 +51,4 @@ SCIP_RETCODE SCIPcreateConsExprExprXlogx(
 }
 #endif
 
-#endif /* __SCIP_CONS_EXPR_XLOGX_H__ */
+#endif /* __SCIP_CONS_EXPR_ENTROPY_H__ */
