@@ -35,6 +35,7 @@
 #define STP_RED_SDSPBOUND2   400         /**< visited edges bound for SDSP test  */
 #define STP_RED_BD3BOUND     400         /**< visited edges bound for BD3 test  */
 #define STP_RED_EXTENSIVE FALSE
+#define STP_RED_MAXANSNODES 10000
 #define STP_RED_MWTERMBOUND 400
 #define STP_RED_MAXNROUNDS 15
 
@@ -917,6 +918,77 @@ SCIP_RETCODE redLoopMw(
    degelims = 0;
 
    SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
+#if 1
+
+   reduce_ans(scip, g, nodearrint2, &anselims);
+
+   printf("anselims %d \n", anselims);
+
+   reduce_ansAdv(scip, g, nodearrint2, &ansadelims, FALSE);
+
+   printf("ansadelims %d \n", ansadelims);
+
+   degelims = 0;
+   SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
+   printf("degelims %d \n", degelims);
+
+   reduce_ansAdv2(scip, g, nodearrint2, &ansad2elims);
+
+   printf("ansad2elims %d \n", ansad2elims);
+
+
+   reduce_nnp(scip, g, nodearrint2, &nnpelims);
+    printf("nnpelims %d \n", nnpelims);
+
+
+
+     printf("all %d \n", nnpelims + anselims+ ansadelims + ansad2elims);
+
+
+   int cc = 0;
+   int cct = 0;
+   int g5 = 0;
+
+   for( int i = 0; i < g->knots; i++ )
+   {
+      if( g->grad[i] == 4)
+         g5++;
+      if( g->mark[i] )
+      {
+         cc++;
+         if( Is_term(g->term[i]) )
+         {
+    //        printf("grad %d \n",g->grad[i] );
+            cct++;
+         }
+      }
+   }
+
+   printf("g4 %d \n", g5);
+   printf("nodes %d term  %d\n", cc, cct);
+   cc = 0;
+   for( int i = 0; i < g->edges; i++ )
+   {
+      if( g->oeat[i] != EAT_FREE )
+      {
+int t = g->tail[i];
+      int h = g->head[i];
+      if( g->grad[t] + g->grad[h] - 2 <= 6)
+         cc++;
+      }
+
+   }
+printf("edge cands %d \n", cc);
+
+
+
+   SCIP_CALL( npvReduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &npvelims, 400) );
+
+
+   printf("npvelims %d \n", npvelims);
+
+  exit(1);
+#endif
 
    while( rerun && !SCIPisStopped(scip) )
    {
@@ -935,7 +1007,7 @@ SCIP_RETCODE redLoopMw(
 
       if( ans || extensive )
       {
-         reduce_alt_ans(scip, g, nodearrint2, &anselims);
+         reduce_ans(scip, g, nodearrint2, &anselims);
 
          if( anselims <= redbound )
             ans = FALSE;
@@ -945,7 +1017,7 @@ SCIP_RETCODE redLoopMw(
 
       if( ansad || extensive )
       {
-         SCIP_CALL( ansadvReduction(scip, g, fixed, nodearrint2, &ansadelims) );
+         reduce_ansAdv(scip, g, nodearrint2, &ansadelims, FALSE);
 
          if( ansadelims <= redbound )
             ansad = FALSE;
@@ -953,15 +1025,41 @@ SCIP_RETCODE redLoopMw(
          SCIPdebugMessage("ans advanced deleted: %d \n", ansadelims);
       }
 
+      if( nnp )
+      {
+         reduce_nnp(scip, g, nodearrint2, &nnpelims);
+
+         if( nnpelims <= redbound )
+            nnp = FALSE;
+
+         SCIPdebugMessage("nnp deleted: %d \n", nnpelims);
+      }
+
+      if( nnp || extensive )
+      {
+         SCIP_CALL( chain2Reduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &chain2elims, 500));
+
+         if( chain2elims <= redbound )
+            chain2 = FALSE;
+
+         SCIPdebugMessage("chain2 delete: %d \n", chain2elims);
+
+         if( SCIPgetTotalTime(scip) > timelimit )
+            break;
+      }
+
       if( npv || extensive )
       {
-         SCIP_CALL( npvReduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &npvelims, 400) );
+         SCIP_CALL( npvReduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &npvelims, 400));
 
          if( npvelims <= redbound )
             npv = FALSE;
 
          SCIPdebugMessage("npv delete: %d \n", npvelims);
       }
+
+      if( ans || ansad || nnp || npv || extensive )
+         SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
 
       if( (da || (advanced && extensive)) )
       {
@@ -979,12 +1077,6 @@ SCIP_RETCODE redLoopMw(
          SCIPdebugMessage("Dual-Ascent Elims: %d \n", daelims);
       }
 
-      if( ans || ansad || extensive )
-      {
-         SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
-      }
-      SCIPdebugMessage("chain2: %d \n", 0);
-
       if( chain2 || extensive )
       {
          SCIP_CALL( chain2Reduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &chain2elims, 300) );
@@ -995,34 +1087,11 @@ SCIP_RETCODE redLoopMw(
          SCIPdebugMessage("chain2 delete: %d \n", chain2elims);
       }
 
-      if( nnp )
-      {
-         SCIP_CALL( nnpReduction(scip, g, fixed, nodearrint, nodearrint2, nodearrint3, &nnpelims, 300, nodearrchar) );
-
-         if( nnpelims <= redbound )
-            nnp = FALSE;
-
-         SCIPdebugMessage("nnp deleted: %d \n", nnpelims);
-      }
-
-      if( nnp || extensive )
-      {
-         SCIP_CALL( chain2Reduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &chain2elims, 500) );
-
-         if( chain2elims <= redbound )
-            chain2 = FALSE;
-
-         SCIPdebugMessage("chain2 delete: %d \n", chain2elims);
-
-         if( SCIPgetTotalTime(scip) > timelimit )
-            break;
-      }
-
       SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
 
       if( ansad2 || extensive )
       {
-         SCIP_CALL( ansadv2Reduction(scip, g, fixed, nodearrint2, &ansad2elims) );
+         reduce_ansAdv2(scip, g, nodearrint2, &ansad2elims);
 
          if( ansad2elims <= redbound )
          {
@@ -1041,13 +1110,8 @@ SCIP_RETCODE redLoopMw(
          SCIP_CALL( bound_reduceMw(scip, g, vnoi, path, edgearrreal, nodearrreal, edgearrreal2, fixed, nodearrint, state, vbase, NULL, &bredelims) );
 
          if( bredelims <= redbound )
-         {
             bred = FALSE;
-         }
-         else
-         {
-            SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
-         }
+
 
          SCIPdebugMessage("bound_reduce: %d \n", bredelims);
       }
@@ -1096,10 +1160,9 @@ SCIP_RETCODE redLoopMw(
       anselims = 0;
       ansadelims = 0;
       SCIP_CALL( npvReduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &npvelims, 400) );
-      reduce_alt_ans(scip, g, nodearrint2, &anselims);
-      SCIP_CALL( ansadvReduction(scip, g, fixed, nodearrint2, &ansadelims) );
+      reduce_ans(scip, g, nodearrint2, &anselims);
+      reduce_ansAdv(scip, g, nodearrint2, &ansadelims, FALSE);
    }
-
 
    /* go back to the extended graph */
    SCIP_CALL( graph_pc_2trans(scip, g) );

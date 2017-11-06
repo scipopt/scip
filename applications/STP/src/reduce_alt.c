@@ -44,6 +44,9 @@
 #define VERTEX_NEIGHBOR     2
 #define VERTEX_OTHER        3
 #define STP_RED_CNSNN       25
+#define STP_RED_ANSMAXCANDS 500
+#define STP_RED_ANSEXMAXCANDS 50
+
 
 
 /* can edge be deleted in SD test in case of equality? If so, 'forbidden' array is adapted */
@@ -1327,6 +1330,80 @@ SCIP_RETCODE sd2_reduction(
 }
 
 #endif
+
+/** ans subtest */
+static
+void ansProcessCandidate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   int*                  marked,             /**< nodes array */
+   int*                  count,              /**< pointer to number of reductions */
+   SCIP_Real             min,                /**< value to not surpass */
+   int                   candvertex          /**< candidate */
+)
+{
+   int e2;
+   int bridgeedge = -1;
+   unsigned misses = 0;
+
+   for( e2 = g->outbeg[candvertex]; e2 != EAT_LAST; e2 = g->oeat[e2] )
+   {
+      if( !marked[g->head[e2]] )
+      {
+         misses++;
+         if( misses >= 2 )
+            break;
+         bridgeedge = e2;
+      }
+   }
+
+   /* neighbors of candvertex subset of those of k? */
+   if( misses == 0 && SCIPisLE(scip, g->prize[candvertex], min) )
+   {
+      (*count) += g->grad[candvertex];
+      while( g->outbeg[candvertex] != EAT_LAST )
+         graph_edge_del(scip, g, g->outbeg[candvertex], TRUE);
+
+      g->mark[candvertex] = FALSE;
+      marked[candvertex] = FALSE;
+   }
+   else if( misses == 1 )
+   {
+      int e3;
+      const int neighbor = g->head[bridgeedge];
+
+      if( SCIPisGT(scip, g->prize[neighbor] + g->prize[candvertex], min) )
+         return;
+
+      for( e3 = g->outbeg[neighbor]; e3 != EAT_LAST; e3 = g->oeat[e3] )
+      {
+         const int head = g->head[e3];
+         if( !marked[head] )
+            break;
+      }
+      if( e3 == EAT_LAST )
+      {
+         // delete both vertices?
+         if( SCIPisLE(scip, g->prize[neighbor], min) && SCIPisLE(scip, g->prize[candvertex], min) )
+         {
+            (*count) += g->grad[candvertex] + g->grad[neighbor] - 1;
+            while( g->outbeg[candvertex] != EAT_LAST )
+               graph_edge_del(scip, g, g->outbeg[candvertex], TRUE);
+            while( g->outbeg[neighbor] != EAT_LAST )
+               graph_edge_del(scip, g, g->outbeg[neighbor], TRUE);
+
+            g->mark[candvertex] = FALSE;
+            g->mark[neighbor] = FALSE;
+            marked[candvertex] = FALSE;
+            marked[neighbor] = FALSE;
+         }
+         else
+         {
+            graph_edge_del(scip, g, bridgeedge, TRUE);
+         }
+      }
+   }
+}
 
 /** Special distance test */
 SCIP_RETCODE sd_red(
@@ -4479,14 +4556,14 @@ void reduce_alt_dv(
 #endif
 
 /** adjacent neighbourhood reduction for the MWCSP */
-void reduce_alt_ans(
+void reduce_ans(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    int*                  marked,             /**< nodes array */
    int*                  count               /**< pointer to number of reductions */
    )
 {
-   int nnodes;
+   const int nnodes = g->knots;
 
    assert(scip   != NULL);
    assert(g      != NULL);
@@ -4495,7 +4572,6 @@ void reduce_alt_ans(
    assert(g->stp_type == STP_MWCSP);
 
    *count = 0;
-   nnodes = g->knots;
 
    /* unmark all nodes */
    for( int k = 0; k < nnodes; k++ )
@@ -4505,7 +4581,6 @@ void reduce_alt_ans(
    for( int k = 0; k < nnodes; k++ )
    {
       SCIP_Real min;
-      SCIP_Real maxgrad;
       int e;
 
       if( !g->mark[k] )
@@ -4522,8 +4597,6 @@ void reduce_alt_ans(
       else
          min = 0.0;
 
-      maxgrad = g->grad[k];
-
       /* check all neighbors of k */
       e = g->outbeg[k];
       while( e != EAT_LAST )
@@ -4532,26 +4605,8 @@ void reduce_alt_ans(
          e = g->oeat[e];
 
          /* valid candidate? */
-         if( g->grad[j] <= maxgrad && g->mark[j] && SCIPisLE(scip, g->prize[j], min) )
-         {
-            int e2;
-            for( e2 = g->outbeg[j]; e2 != EAT_LAST; e2 = g->oeat[e2] )
-               if( !marked[g->head[e2]] )
-                  break;
-
-            /* neighbors of j subset of those of k? */
-            if( e2 == EAT_LAST )
-            {
-               while( g->outbeg[j] != EAT_LAST )
-               {
-                  e2 = g->outbeg[j];
-                  (*count)++;
-                  graph_edge_del(scip, g, e2, TRUE);
-               }
-               g->mark[j] = FALSE;
-               marked[j] = FALSE;
-            }
-         }
+         if( g->mark[j] && g->grad[j] <= g->grad[k]  && !Is_term(g->term[j]) )
+            ansProcessCandidate(scip, g, marked, count, min, j);
       }
 
       for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
@@ -4561,6 +4616,234 @@ void reduce_alt_ans(
 
       for( int j = 0; j < nnodes; j++ )
          assert(marked[j] == FALSE);
+   }
+}
+
+/** advanced adjacent neighbourhood reduction for the MWCSP */
+void reduce_ansAdv(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   int*                  marked,             /**< nodes array */
+   int*                  count,              /**< pointer to number of performed reductions */
+   SCIP_Bool             extneigbhood        /**< use extended neighbour hood */
+   )
+{
+   int candidates[MAX(STP_RED_ANSMAXCANDS, STP_RED_ANSEXMAXCANDS)];
+   int neighbarr[STP_RED_CNSNN];
+   const int nnodes = g->knots;
+
+   assert(scip   != NULL);
+   assert(g      != NULL);
+   assert(count  != NULL);
+   assert(marked != NULL);
+   assert(g->stp_type == STP_MWCSP);
+
+   *count = 0;
+
+   /* unmark all nodes */
+   for( int k = 0; k < nnodes; k++ )
+      marked[k] = FALSE;
+
+   /* check neighborhood of all nodes */
+   for( int k = 0; k < nnodes; k++ )
+   {
+      SCIP_Real min;
+      int nn;
+      int ncands;
+      int maxgrad;
+
+      if( (!(g->mark[k])) || (g->grad[k] < 2) || Is_term(g->term[k]) )
+         continue;
+
+      nn = 0;
+
+      /* mark adjacent vertices and k */
+      for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         const int j = g->head[e];
+         marked[j] = TRUE;
+         if( SCIPisGT(scip, g->prize[j], 0.0) && nn < STP_RED_CNSNN )
+            neighbarr[nn++] = j;
+      }
+
+      marked[k] = TRUE;
+      maxgrad = g->grad[k];
+      ncands = 0;
+
+      for( int l = 0; l < nn; l++ )
+      {
+         for( int e = g->outbeg[neighbarr[l]]; e != EAT_LAST; e = g->oeat[e] )
+         {
+            marked[g->head[e]] = TRUE;
+         }
+         maxgrad += g->grad[neighbarr[l]];
+      }
+
+      assert(SCIPisLE(scip, g->prize[k], 0.0));
+
+      min = g->prize[k];
+
+      if( extneigbhood )
+      {
+         assert(0 && "implement me");
+      }
+      else
+      {
+         for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+         {
+            const int j = g->head[e];
+            if( g->grad[j] <= maxgrad && g->mark[j] && !Is_term(g->term[j]) )
+            {
+               candidates[ncands++] = j;
+               if( ncands >= STP_RED_ANSMAXCANDS )
+               {
+                  SCIPdebugMessage("REACHED ANS LIMIT %d \n", ncands);
+                  break;
+               }
+            }
+         }
+      }
+
+      /* check all neighbors of k */
+      for( int l = 0; l < ncands; l++ )
+         ansProcessCandidate(scip, g, marked, count, min, candidates[l]);
+
+      for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+         marked[g->head[e]] = FALSE;
+
+      for( int l = 0; l < nn; l++ )
+         for( int e = g->outbeg[neighbarr[l]]; e != EAT_LAST; e = g->oeat[e] )
+            marked[g->head[e]] = FALSE;
+
+      marked[k] = FALSE;
+
+      for( int k2 = 0; k2 < nnodes; k2++ )
+         assert(marked[k2] == FALSE);
+   }
+}
+
+
+/** alternative advanced adjacent neighbourhood reduction for the MWCSP */
+void reduce_ansAdv2(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   int*                  marked,             /**< nodes array */
+   int*                  count               /**< pointer to number of reductions */
+   )
+{
+   int neighbarr[STP_RED_CNSNN + 1];
+   SCIP_Real min;
+   const int nnodes = g->knots;
+
+   assert(scip   != NULL);
+   assert(g      != NULL);
+   assert(count  != NULL);
+   assert(marked != NULL);
+   assert(g->stp_type == STP_MWCSP);
+
+   *count = 0;
+
+   /* unmark all nodes */
+   for( int k = 0; k < nnodes; k++ )
+      marked[k] = FALSE;
+
+      /* check neighbourhood of all nodes */
+   for( int k = 0; k < nnodes; k++ )
+   {
+      SCIP_Real maxprize;
+      int neighbor0;
+
+      if( (!(g->mark[k])) || (g->grad[k] < 2) || Is_term(g->term[k]) )
+         continue;
+
+      maxprize = g->prize[k];
+      neighbor0 = -1;
+
+      for( int run = 0; run < 2; run++ )
+      {
+         int e;
+         int nn = 0;
+         int k2 = UNKNOWN;
+         int maxgrad = g->grad[k];
+
+         /* mark adjacent vertices and k */
+         for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+         {
+            const int j = g->head[e];
+            marked[j] = TRUE;
+            if( SCIPisGE(scip, g->prize[j], 0.0) && nn < STP_RED_CNSNN - 1 )
+            {
+               neighbarr[nn++] = j;
+            }
+            else if( SCIPisGT(scip, g->prize[j], maxprize) && g->mark[j] && j != neighbor0 )
+            {
+               maxprize = g->prize[j];
+               k2 = j;
+            }
+         }
+
+         marked[k] = TRUE;
+
+         if( run == 0 && k2 != UNKNOWN )
+            neighbarr[nn++] = k2;
+
+         for( int l = 0; l < nn; l++ )
+         {
+            for( e = g->outbeg[neighbarr[l]]; e != EAT_LAST; e = g->oeat[e] )
+            {
+               const int j = g->head[e];
+               if( run == 1 && g->mark[j] && !Is_term(g->term[j]) && SCIPisGT(scip, g->prize[j], maxprize) && j != neighbor0 )
+               {
+                  maxprize = g->prize[j];
+                  k2 = j;
+               }
+               marked[j] = TRUE;
+            }
+            maxgrad += g->grad[neighbarr[l]];
+         }
+
+         if( run == 1 && k2 != UNKNOWN )
+         {
+            maxgrad += g->grad[k2];
+            neighbarr[nn++] = k2;
+
+            for( e = g->outbeg[k2]; e != EAT_LAST; e = g->oeat[e] )
+               marked[g->head[e]] = TRUE;
+         }
+
+         assert(SCIPisLE(scip, g->prize[k], 0.0));
+
+         min = g->prize[k];
+         if( k2 != UNKNOWN )
+         {
+            neighbor0 = k2;
+            min += g->prize[k2];
+         }
+
+         /* check all neighbours of k */
+         e = g->outbeg[k];
+         while( e != EAT_LAST )
+         {
+            const int j = g->head[e];
+            e = g->oeat[e];
+
+            /* valid candidate? */
+            if( g->grad[j] <= maxgrad && g->mark[j] && SCIPisLE(scip, g->prize[j], min) && k2 != j )
+               ansProcessCandidate(scip, g, marked, count, min, j);
+         }
+
+         for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+            marked[g->head[e]] = FALSE;
+
+         for( int l = 0; l < nn; l++ )
+            for( e = g->outbeg[neighbarr[l]]; e != EAT_LAST; e = g->oeat[e] )
+               marked[g->head[e]] = FALSE;
+
+         marked[k] = FALSE;
+
+         for( k2 = 0; k2 < nnodes; k2++ )
+            assert(marked[k2] == FALSE);
+      }
    }
 }
 
@@ -4840,268 +5123,6 @@ SCIP_RETCODE cnsAdvReduction(
    return SCIP_OKAY;
 }
 
-/** advanced adjacent neighbourhood reduction for the MWCSP */
-SCIP_RETCODE ansadvReduction(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                g,                  /**< graph data structure */
-   SCIP_Real*            fixed,              /**< pointer to offset value */
-   int*                  marked,             /**< nodes array */
-   int*                  count               /**< pointer to number of performed reductions */
-   )
-{
-   int neighbarr[STP_RED_CNSNN];
-   SCIP_Real min;
-   int k;
-   int j;
-   int e;
-   int k2;
-   int e2;
-   int l;
-   int nn;
-   int nnodes;
-   int maxgrad;
-
-   assert(scip   != NULL);
-   assert(g      != NULL);
-   assert(fixed  != NULL);
-   assert(count  != NULL);
-   assert(marked != NULL);
-   assert(g->stp_type == STP_MWCSP);
-
-   *count = 0;
-   nnodes = g->knots;
-
-   /* unmark all nodes */
-   for( k = 0; k < nnodes; k++ )
-      marked[k] = FALSE;
-
-   /* check neighborhood of all nodes */
-   for( k = 0; k < nnodes; k++ )
-   {
-      if( (!(g->mark[k])) || (g->grad[k] < 2) || Is_term(g->term[k]) )
-         continue;
-
-      nn = 0;
-
-      /* mark adjacent vertices and k */
-      for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
-      {
-         j = g->head[e];
-         marked[j] = TRUE;
-         if( SCIPisGT(scip, g->prize[j], 0.0) && nn < STP_RED_CNSNN )
-            neighbarr[nn++] = j;
-      }
-
-      marked[k] = TRUE;
-      maxgrad = g->grad[k];
-
-      for( l = 0; l < nn; l++ )
-      {
-         for( e = g->outbeg[neighbarr[l]]; e != EAT_LAST; e = g->oeat[e] )
-            marked[g->head[e]] = TRUE;
-         maxgrad += g->grad[neighbarr[l]];
-      }
-
-      assert(SCIPisLE(scip, g->prize[k], 0.0));
-
-      min = g->prize[k];
-
-      /* check all neighbors of k */
-      e = g->outbeg[k];
-      while( e != EAT_LAST )
-         {
-            j = g->head[e];
-            e = g->oeat[e];
-
-            /* valid candidate? */
-            if( g->grad[j] <= maxgrad && g->mark[j] && SCIPisLE(scip, g->prize[j], min) )
-            {
-               for( e2 = g->outbeg[j]; e2 != EAT_LAST; e2 = g->oeat[e2] )
-                  if( !marked[g->head[e2]] )
-                     break;
-
-               /* neighbours of j subset of those of k? */
-               if( e2 == EAT_LAST )
-               {
-                  while( g->outbeg[j] != EAT_LAST )
-                  {
-                     e2 = g->outbeg[j];
-                     (*count)++;
-                     graph_edge_del(scip, g, e2, TRUE);
-                  }
-                  g->mark[j] = FALSE;
-                  marked[j] = FALSE;
-               }
-            }
-         }
-
-      for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
-         marked[g->head[e]] = FALSE;
-
-      for( l = 0; l < nn; l++ )
-         for( e = g->outbeg[neighbarr[l]]; e != EAT_LAST; e = g->oeat[e] )
-            marked[g->head[e]] = FALSE;
-
-      marked[k] = FALSE;
-
-      for( k2 = 0; k2 < nnodes; k2++ )
-         assert(marked[k2] == FALSE);
-   }
-
-   return SCIP_OKAY;
-}
-
-
-/** alternative advanced adjacent neighbourhood reduction for the MWCSP */
-SCIP_RETCODE ansadv2Reduction(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                g,                  /**< graph data structure */
-   SCIP_Real*            fixed,              /**< pointer to offset value */
-   int*                  marked,             /**< nodes array */
-   int*                  count               /**< pointer to number of reductions */
-   )
-{
-   SCIP_Real min;
-   SCIP_Real maxprize;
-   int* neighbarr;
-   int k;
-   int j;
-   int e;
-   int k2;
-   int e2;
-   int l;
-   int run;
-   int nn;
-   int nnodes;
-   int maxgrad;
-
-   assert(scip   != NULL);
-   assert(g      != NULL);
-   assert(fixed  != NULL);
-   assert(count  != NULL);
-   assert(marked != NULL);
-   assert(g->stp_type == STP_MWCSP);
-
-   *count = 0;
-   nnodes = g->knots;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &neighbarr, STP_RED_CNSNN + 1) );
-
-   /* unmark all nodes */
-   for( k = 0; k < nnodes; k++ )
-      marked[k] = FALSE;
-
-   for( run = 0; run < 2; run++ )
-   {
-      /* check neighbourhood of all nodes */
-      for( k = 0; k < nnodes; k++ )
-      {
-         if( (!(g->mark[k])) || (g->grad[k] < 2) || Is_term(g->term[k]) )
-            continue;
-
-         nn = 0;
-         k2 = UNKNOWN;
-         maxgrad = g->grad[k];
-         maxprize = g->prize[k];
-
-         /* mark adjacent vertices and k */
-         for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
-         {
-            j = g->head[e];
-            marked[j] = TRUE;
-            if( SCIPisGE(scip, g->prize[j], 0.0) && nn < STP_RED_CNSNN - 1 )
-            {
-               neighbarr[nn++] = j;
-            }
-            else if( SCIPisGT(scip, g->prize[j], maxprize) && g->mark[j] )
-            {
-               maxprize = g->prize[j];
-               k2 = j;
-            }
-         }
-
-         marked[k] = TRUE;
-
-         if( run == 0 && k2 != UNKNOWN )
-            neighbarr[nn++] = k2;
-
-         for( l = 0; l < nn; l++ )
-         {
-            for( e = g->outbeg[neighbarr[l]]; e != EAT_LAST; e = g->oeat[e] )
-            {
-               j = g->head[e];
-               if( run == 1 && g->mark[j] && !Is_term(g->term[j]) && SCIPisGT(scip, g->prize[j], maxprize) )
-               {
-                  maxprize = g->prize[j];
-                  k2 = j;
-               }
-               marked[j] = TRUE;
-            }
-            maxgrad += g->grad[neighbarr[l]];
-         }
-
-         if( run == 1 && k2 != UNKNOWN )
-         {
-            maxgrad += g->grad[k2];
-            neighbarr[nn++] = k2;
-
-            for( e = g->outbeg[k2]; e != EAT_LAST; e = g->oeat[e] )
-               marked[g->head[e]] = TRUE;
-         }
-
-         assert(SCIPisLE(scip, g->prize[k], 0.0));
-
-         min = g->prize[k];
-         if( k2 != UNKNOWN )
-            min += g->prize[k2];
-
-         /* check all neighbours of k */
-         e = g->outbeg[k];
-         while( e != EAT_LAST )
-         {
-            j = g->head[e];
-            e = g->oeat[e];
-
-            /* valid candidate? */
-            if( g->grad[j] <= maxgrad && g->mark[j] && SCIPisLE(scip, g->prize[j], min) && k2 != j )
-            {
-               for( e2 = g->outbeg[j]; e2 != EAT_LAST; e2 = g->oeat[e2] )
-                  if( !marked[g->head[e2]] )
-                     break;
-
-               /* neighbours of j subset of those of k? */
-               if( e2 == EAT_LAST )
-               {
-                  while( g->outbeg[j] != EAT_LAST )
-                  {
-                     e2 = g->outbeg[j];
-                     (*count)++;
-                     graph_edge_del(scip, g, e2, TRUE);
-                  }
-                  g->mark[j] = FALSE;
-                  marked[j] = FALSE;
-               }
-            }
-         }
-
-         for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
-            marked[g->head[e]] = FALSE;
-
-         for( l = 0; l < nn; l++ )
-            for( e = g->outbeg[neighbarr[l]]; e != EAT_LAST; e = g->oeat[e] )
-               marked[g->head[e]] = FALSE;
-
-         marked[k] = FALSE;
-
-         for( k2 = 0; k2 < nnodes; k2++ )
-            assert(marked[k2] == FALSE);
-      }
-   }
-
-   SCIPfreeBufferArray(scip, &neighbarr);
-   return SCIP_OKAY;
-}
-
 
 /** non-positive vertex reduction for the MWCSP */
 SCIP_RETCODE npvReduction(
@@ -5120,17 +5141,14 @@ SCIP_RETCODE npvReduction(
 {
    GRAPH* auxg;
    PATH mst[5];
+   int adjverts[5];
+
    SCIP_Real prize;
    SCIP_Real sdist0;
    SCIP_Real sdist1;
    SCIP_Real sdist2;
-   int adjverts[5];
-   int k;
-   int k2;
-   int s;
-   int l;
-   int e;
-   int nnodes;
+
+   const int nnodes = g->knots;;
 
    assert(g != NULL);
    assert(scip  != NULL);
@@ -5144,7 +5162,6 @@ SCIP_RETCODE npvReduction(
    assert(nelims != NULL);
 
    *nelims = 0;
-   nnodes = g->knots;
 
    /* initialize arrays */
    for( int i = 0; i < nnodes; i++ )
@@ -5163,20 +5180,22 @@ SCIP_RETCODE npvReduction(
    /* try to eliminate non-positive vertices of degree 3 */
    for( int i = 0; i < nnodes; i++ )
    {
+      int k;
+
       assert(g->grad[i] >= 0);
+
       /* only non-positive vertices of degree 3 */
       if( !g->mark[i] || g->grad[i] != 3 || Is_term(g->term[i]) )
          continue;
 
       k = 0;
-      for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
+      for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
       {
          assert(g->head[e] != g->source);
+         assert(k < 3);
+
          adjverts[k++] = g->head[e];
       }
-
-      if( k != 3 )
-         return SCIP_ERROR;
 
       assert(k == 3);
 
@@ -5209,10 +5228,10 @@ SCIP_RETCODE npvReduction(
    /* initialize mst struct and new graph for further tests */
    SCIP_CALL( graph_init(scip, &auxg, 5, 40, 1) );
 
-   for( k = 0; k < 4; k++ )
+   for( int k = 0; k < 4; k++ )
       graph_knot_add(auxg, -1);
-   for( k = 0; k < 4; k++ )
-      for( k2 = k + 1; k2 < 4; k2++ )
+   for( int k = 0; k < 4; k++ )
+      for( int k2 = k + 1; k2 < 4; k2++ )
          graph_edge_add(scip, auxg, k, k2, 1.0, 1.0);
 
    SCIP_CALL( graph_path_init(scip, auxg) );
@@ -5220,6 +5239,9 @@ SCIP_RETCODE npvReduction(
    /* try to eliminate non-positive vertices of degree 4 */
    for( int i = 0; i < nnodes; i++ )
    {
+      int e;
+      int k;
+
       /* only non-positive vertices of degree 4 */
       if( !g->mark[i] || g->grad[i] != 4 || Is_term(g->term[i]) )
          continue;
@@ -5240,7 +5262,7 @@ SCIP_RETCODE npvReduction(
          auxg->mark[k] = TRUE;
          for( e = auxg->outbeg[k]; e != EAT_LAST; e = auxg->oeat[e] )
          {
-            k2 = auxg->head[e];
+            const int k2 = auxg->head[e];
             if( k2 > k )
             {
                SCIP_CALL( getSD(scip, g, pathtail, pathhead, &(sdist0), -prize, heap, statetail, statehead, memlbltail, memlblhead, adjverts[k], adjverts[k2], limit, FALSE, TRUE) );
@@ -5263,7 +5285,7 @@ SCIP_RETCODE npvReduction(
 
          /* calculate mst cost */
          sdist0 = 0.0;
-         for( l = 1; l < 4; l++ )
+         for( int l = 1; l < 4; l++ )
             sdist0 += mst[l].dist;
 
          if( SCIPisLE(scip, prize, -sdist0) )
@@ -5276,14 +5298,14 @@ SCIP_RETCODE npvReduction(
                if( k != 0 )
                {
                   graph_path_exec(scip, auxg, MST_MODE, 0, auxg->cost, mst);
-                  for( l = 1; l < 4; l++ )
+                  for( int l = 1; l < 4; l++ )
                      if( auxg->mark[l] )
                         sdist0 += mst[l].dist;
                }
                else
                {
                   graph_path_exec(scip, auxg, MST_MODE, 1, auxg->cost, mst);
-                  for( l = 2; l < 4; l++ )
+                  for( int l = 2; l < 4; l++ )
                      sdist0 += mst[l].dist;
                }
                auxg->mark[k] = TRUE;
@@ -5311,7 +5333,7 @@ SCIP_RETCODE npvReduction(
 
    /* enlarge graph for NPV5 test*/
    graph_knot_add(auxg, -1);
-   for( k = 0; k < 4; k++ )
+   for( int k = 0; k < 4; k++ )
       graph_edge_add(scip, auxg, k, 4, 1.0, 1.0);
    graph_path_exit(scip, auxg);
    SCIP_CALL( graph_path_init(scip, auxg) );
@@ -5319,6 +5341,9 @@ SCIP_RETCODE npvReduction(
    /* try to eliminate non-positive vertices of degree 5 */
    for( int i = 0; i < nnodes; i++ )
    {
+      int e;
+      int k;
+
       /* only non-positive vertices of degree 5 */
       if( !g->mark[i] || g->grad[i] != 5 || Is_term(g->term[i]) )
          continue;
@@ -5338,7 +5363,7 @@ SCIP_RETCODE npvReduction(
          auxg->mark[k] = TRUE;
          for( e = auxg->outbeg[k]; e != EAT_LAST; e = auxg->oeat[e] )
          {
-            k2 = auxg->head[e];
+            const int k2 = auxg->head[e];
             if( k2 > k )
             {
                SCIP_CALL( getSD(scip, g, pathtail, pathhead, &(sdist0), -prize, heap, statetail, statehead, memlbltail, memlblhead, adjverts[k], adjverts[k2], limit, FALSE, TRUE) );
@@ -5355,32 +5380,32 @@ SCIP_RETCODE npvReduction(
       k = UNKNOWN;
       if( e == EAT_LAST )
       {
-
          graph_path_exec(scip, auxg, MST_MODE, 0, auxg->cost, mst);
          sdist0 = 0.0;
-         for( l = 1; l < 5; l++ )
+         for( int l = 1; l < 5; l++ )
             sdist0 += mst[l].dist;
 
          if( SCIPisLE(scip, prize, -sdist0) )
          {
             for( k = 0; k < 5; k++ )
             {
+               int k2 = UNKNOWN;
                auxg->mark[k] = FALSE;
                sdist0 = 0.0;
                if( k != 0 )
                {
                   graph_path_exec(scip, auxg, MST_MODE, 0, auxg->cost, mst);
-                  for( l = 1; l < 5; l++ )
+                  for( int l = 1; l < 5; l++ )
                      if( auxg->mark[l] )
                         sdist0 += mst[l].dist;
                }
                else
                {
                   graph_path_exec(scip, auxg, MST_MODE, 1, auxg->cost, mst);
-                  for( l = 2; l < 5; l++ )
+                  for( int l = 2; l < 5; l++ )
                      sdist0 += mst[l].dist;
                }
-               k2 = UNKNOWN;
+
                if( SCIPisLE(scip, prize, -sdist0) )
                {
                   for( k2 = k + 1; k2 < 5; k2++ )
@@ -5392,18 +5417,19 @@ SCIP_RETCODE npvReduction(
                      if( k2 != 0 && k != 0)
                      {
                         graph_path_exec(scip, auxg, MST_MODE, 0, auxg->cost, mst);
-                        for( l = 1; l < 5; l++ )
+                        for( int l = 1; l < 5; l++ )
                            if( auxg->mark[l] )
                               sdist0 += mst[l].dist;
                      }
                      else
                      {
+                        int s;
                         if( k != 1 && k2 != 1 )
                            s = 1;
                         else
                            s = 2;
                         graph_path_exec(scip, auxg, MST_MODE, s, auxg->cost, mst);
-                        for( l = 0; l < 5; l++ )
+                        for( int l = 0; l < 5; l++ )
                            if( auxg->mark[l] && l != s  )
                               sdist0 += mst[l].dist;
                      }
@@ -5521,171 +5547,64 @@ SCIP_RETCODE chain2Reduction(
    }
    return SCIP_OKAY;
 }
+
+
+
 /** non-negative path reduction for the MWCSP */
-SCIP_RETCODE nnpReduction(
+void reduce_nnp(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
-   SCIP_Real*            fixed,              /**< pointer to offset value */
-   int*                  mem,                /**< nodes array */
    int*                  marked,             /**< nodes array */
-   int*                  visited,            /**< nodes array */
-   int*                  count,              /**< pointer to number of reductions */
-   int                   maxniter,           /**< max number of edges to check */
-   STP_Bool*                 positive            /**< nodes array */
+   int*                  count               /**< pointer to number of reductions */
    )
 {
-   SCIP_QUEUE* queue;
-   int* pnode;
-   int i;
-   int j;
-   int k;
-   int e;
-   int e2;
-   int erev;
-   int enext;
-   int nnodes;
-   int nvisited1;
-   int nvisited2;
-   int iterations;
-   SCIP_Bool success;
+   int localcount = 0;
+   const int nnodes = g->knots;
 
-   assert(scip      != NULL);
-   assert(g         != NULL);
-   assert(fixed     != NULL);
-   assert(count     != NULL);
-   assert(mem       != NULL);
-   assert(positive  != NULL);
-   assert(visited   != NULL);
-   assert(marked    != NULL);
+   assert(scip   != NULL);
+   assert(g      != NULL);
+   assert(count  != NULL);
+   assert(marked != NULL);
    assert(g->stp_type == STP_MWCSP);
 
-   *count = 0;
-   nnodes = g->knots;
-
    /* unmark all nodes */
-   for( i = 0; i < nnodes; i++ )
-   {
-      if( g->mark[i] && SCIPisGE(scip, g->prize[i], 0.0) )
-         positive[i] = TRUE;
-      else
-         positive[i] = FALSE;
-      marked[i] = FALSE;
-      visited[i] = FALSE;
-   }
+   for( int k = 0; k < nnodes; k++ )
+      marked[k] = FALSE;
 
-   SCIP_CALL( SCIPqueueCreate(&queue, nnodes, 2.0) );
-
-   for( i = 0; i < nnodes; i++ )
+   /* check neighborhood of terminals */
+   for( int k = 0; k < nnodes; k++ )
    {
-      if( !g->mark[i] )
+      if( g->prize[k] < 0.0 || !g->mark[k] )
          continue;
 
-      /* mark adjacent vertices and i*/
-      e = g->outbeg[i];
-      while( e != EAT_LAST )
+      /* mark adjacent vertices of k */
+      for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+         marked[g->head[e]] = TRUE;
+
+      /* ... and traverse them */
+      for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
       {
-         j = g->head[e];
-         enext = g->oeat[e];
-         if( g->mark[j] )
+         const int j = g->head[e];
+         int e2 = g->outbeg[j];
+
+         while( e2 != EAT_LAST )
          {
-            nvisited1 = 0;
-            iterations = 0;
-            success = FALSE;
-
-            assert(SCIPqueueIsEmpty(queue));
-
-            SCIP_CALL( SCIPqueueInsert(queue, &g->head[g->inpbeg[i]]) );
-            marked[i] = TRUE;
-            mem[nvisited1++] = i;
-
-            /* BFS */
-            while( !SCIPqueueIsEmpty(queue) )
+            const int candedge = e2;
+            e2 = g->oeat[e2];
+            if( marked[g->head[candedge]] )
             {
-               pnode = SCIPqueueRemove(queue);
-               for( e2 = g->outbeg[*pnode]; e2 != EAT_LAST; e2 = g->oeat[e2] )
-               {
-                  if( e2 == e )
-                     continue;
-                  k = g->head[e2];
-                  if( iterations++ >= maxniter || k == j )
-                  {
-                     if( k == j )
-                        success = TRUE;
-                     SCIPqueueClear(queue);
-                     break;
-                  }
-
-                  if( positive[k] && !marked[k] )
-                  {
-                     marked[k] = TRUE;
-                     assert(nvisited1 < nnodes);
-                     mem[nvisited1++] = k;
-                     SCIP_CALL( SCIPqueueInsert(queue, &g->head[e2]) );
-                  }
-               }
-            }
-
-            nvisited2 = 0;
-            /* vertex j not reached yet? */
-            if( !success )
-            {
-               assert(SCIPqueueIsEmpty(queue));
-               SCIP_CALL( SCIPqueueInsert(queue, &j) );
-               visited[j] = TRUE;
-               assert(nvisited2 + nvisited1 < nnodes);
-               mem[nvisited1 + nvisited2++] = j;
-               erev = flipedge(e);
-
-               iterations = 0;
-               while( !SCIPqueueIsEmpty(queue) )
-               {
-                  pnode = (SCIPqueueRemove(queue));
-                  for( e2 = g->outbeg[*pnode]; e2 != EAT_LAST; e2 = g->oeat[e2] )
-                  {
-                     if( e2 == erev )
-                        continue;
-                     k = g->head[e2];
-
-                     if( iterations++ >= maxniter || marked[k] )
-                     {
-                        if( marked[k] )
-                           success = TRUE;
-                        SCIPqueueClear(queue);
-                        break;
-                     }
-
-                     if( positive[k] && !visited[k] )
-                     {
-                        visited[k] = TRUE;
-                        assert(nvisited2 + nvisited1 < nnodes);
-                        mem[nvisited1 + nvisited2++] = k;
-                        SCIP_CALL( SCIPqueueInsert(queue, &g->head[e2]) );
-                     }
-                  }
-               }
-            }
-
-            if( success )
-            {
-               (*count)++;
-               graph_edge_del(scip, g, e, TRUE);
-            }
-            for( j = 0; j < nvisited1; j++ )
-               marked[mem[j]] = FALSE;
-
-            for( j = nvisited1; j < nvisited1 + nvisited2; j++ )
-               visited[mem[j]] = FALSE;
-
-            for( j = 0; j < nnodes; j++ )
-            {
-               assert(marked[j] == FALSE);
-               assert(visited[j] == FALSE);
+               graph_edge_del(scip, g, candedge, TRUE);
+               localcount++;
             }
          }
-         e = enext;
       }
-   }
-   SCIPqueueFree(&queue);
 
-   return SCIP_OKAY;
+      for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+         marked[g->head[e]] = FALSE;
+
+      for( int j = 0; j < nnodes; j++ )
+         assert(marked[j] == FALSE);
+   }
+
+   *count = localcount;
 }
