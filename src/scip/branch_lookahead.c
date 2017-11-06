@@ -2746,8 +2746,8 @@ SCIP_Bool isBranchFurther(
  * the given loopcounter. This is needed to better emulate the behavior of FSB by LAB with a depth of 1. */
 static
 SCIP_Bool isBranchFurtherLoopDecrement(
-   STATUS*               status,              /**< current status */
-   int*                  loopcounter          /**< the counter to decrement */
+   STATUS*               status,             /**< current status */
+   int*                  loopcounter         /**< the counter to decrement */
    )
 {
    SCIP_Bool branchfurther = isBranchFurther(status);
@@ -3090,7 +3090,7 @@ SCIP_Bool isCandidateReliable(
 /** Checks whether the current problem is feasible or cutoff */
 static
 SCIP_Bool isCurrentNodeCutoff(
-   SCIP*                  scip               /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    return (SCIPgetCutoffdepth(scip) <= SCIPgetDepth(scip));
