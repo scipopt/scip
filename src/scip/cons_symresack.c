@@ -2181,9 +2181,9 @@ SCIP_RETCODE SCIPcreateConsSymresack(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    )
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
-   SCIP_Bool upgrade;
    SCIP_Bool success;
 
    assert( cons != NULL );
@@ -2199,10 +2199,10 @@ SCIP_RETCODE SCIPcreateConsSymresack(
       return SCIP_PLUGINNOTFOUND;
    }
 
-   /* check whether constraint can be upgraded to an orbisack constraint */
-   SCIP_CALL( SCIPgetBoolParam(scip, "cons/symresack/upgrade", &upgrade) );
+   /* check for upgrade to packing/partitioning orbisacks*/
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
-   if ( upgrade )
+   if ( conshdlrdata->symresackupgrade )
    {
       SCIP_CALL( orbisackUpgrade(scip, perm, nvars, vars, &success, cons, initial, separate, enforce, check, propagate,
             local, modifiable, dynamic, removable, stickingatnode) );
