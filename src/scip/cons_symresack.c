@@ -351,6 +351,7 @@ SCIP_RETCODE packingUpgrade(
                }
             }
          }
+         assert( nfound <= cyclelength );
 
          if ( nfound == cyclelength )
             break;
