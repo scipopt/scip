@@ -3549,6 +3549,29 @@ int SCIPgetSubscipDepth(
    return scip->stat->subscipdepth;
 }
 
+/** sets depth of scip instance
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
+ *  @note SCIP stage does not get changed
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+void SCIPsetSubscipDepth(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   newdepth            /**< new subscip depth */
+   )
+{
+   assert( scip != NULL );
+   assert( scip->stat != NULL );
+   assert( newdepth > 0 );
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPsetSubscipDepth", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   scip->stat->subscipdepth = newdepth;
+}
+
 /** copies source SCIP data into target SCIP data structure
  *
  * distinguishes between
@@ -5071,8 +5094,8 @@ SCIP_RETCODE SCIPsetSubscipsOff(
 /** sets heuristic parameters values to
  *
  *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all heuristic parameters
- *  - SCIP_PARAMSETTING_FAST such that the time spend for heuristic is decreased
- *  - SCIP_PARAMSETTING_AGGRESSIVE such that the heuristic are called more aggregative
+ *  - SCIP_PARAMSETTING_FAST such that the time spent on heuristics is decreased
+ *  - SCIP_PARAMSETTING_AGGRESSIVE such that the heuristics are called more aggressively
  *  - SCIP_PARAMSETTING_OFF which turn off all heuristics
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -5097,8 +5120,8 @@ SCIP_RETCODE SCIPsetHeuristics(
 /** sets presolving parameters to
  *
  *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all presolving parameters
- *  - SCIP_PARAMSETTING_FAST such that the time spend for presolving is decreased
- *  - SCIP_PARAMSETTING_AGGRESSIVE such that the presolving is more aggregative
+ *  - SCIP_PARAMSETTING_FAST such that the time spent on presolving is decreased
+ *  - SCIP_PARAMSETTING_AGGRESSIVE such that the presolving is more aggressive
  *  - SCIP_PARAMSETTING_OFF which turn off all presolving
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -5123,8 +5146,8 @@ SCIP_RETCODE SCIPsetPresolving(
 /** sets separating parameters to
  *
  *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all separating parameters
- *  - SCIP_PARAMSETTING_FAST such that the time spend for separating is decreased
- *  - SCIP_PARAMSETTING_AGGRESSIVE such that the separating is done more aggregative
+ *  - SCIP_PARAMSETTING_FAST such that the time spent on separating is decreased
+ *  - SCIP_PARAMSETTING_AGGRESSIVE such that separating is more aggressive
  *  - SCIP_PARAMSETTING_OFF which turn off all separating
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -33552,6 +33575,354 @@ void SCIPaddBilinMcCormick(
    *linconstant += constant;
 }
 
+
+/** computes coefficients of linearization of a bilinear term in a reference point when given a linear inequality
+ *  involving only the variables of the bilinear term
+ *
+ *  @note the formulas are extracted from "Convex envelopes of bivariate functions through the solution of KKT systems"
+ *        by Marco Locatelli
+ */
+void SCIPcomputeBilinEnvelope1(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             bilincoef,          /**< coefficient of bilinear term */
+   SCIP_Real             lbx,                /**< lower bound on first variable */
+   SCIP_Real             ubx,                /**< upper bound on first variable */
+   SCIP_Real             refpointx,          /**< reference point for first variable */
+   SCIP_Real             lby,                /**< lower bound on second variable */
+   SCIP_Real             uby,                /**< upper bound on second variable */
+   SCIP_Real             refpointy,          /**< reference point for second variable */
+   SCIP_Bool             overestimate,       /**< whether to compute an overestimator instead of an underestimator */
+   SCIP_Real             xcoef,              /**< x coefficient of linear inequality; must be in {-1,0,1} */
+   SCIP_Real             ycoef,              /**< y coefficient of linear inequality */
+   SCIP_Real             constant,           /**< constant of linear inequality */
+   SCIP_Real* RESTRICT   lincoefx,           /**< buffer to store coefficient of first  variable in linearization */
+   SCIP_Real* RESTRICT   lincoefy,           /**< buffer to store coefficient of second variable in linearization */
+   SCIP_Real* RESTRICT   linconstant,        /**< buffer to store constant of linearization */
+   SCIP_Bool* RESTRICT   success             /**< buffer to store whether linearization was successful */
+   )
+{
+   SCIP_Real xs[2] = {lbx, ubx};
+   SCIP_Real ys[2] = {lby, uby};
+   SCIP_Real tmp;
+   SCIP_Real mj;
+   SCIP_Real qj;
+   SCIP_Real xj;
+   SCIP_Real yj;
+   SCIP_Real vx;
+   SCIP_Real vy;
+   int n;
+   int i;
+
+   assert(scip != NULL);
+   assert(!SCIPisInfinity(scip,  lbx));
+   assert(!SCIPisInfinity(scip, -ubx));
+   assert(!SCIPisInfinity(scip,  lby));
+   assert(!SCIPisInfinity(scip, -uby));
+   assert(SCIPisLE(scip, lbx, ubx));
+   assert(SCIPisLE(scip, lby, uby));
+   assert(SCIPisLE(scip, lbx, refpointx));
+   assert(SCIPisGE(scip, ubx, refpointx));
+   assert(SCIPisLE(scip, lby, refpointy));
+   assert(SCIPisGE(scip, uby, refpointy));
+   assert(lincoefx != NULL);
+   assert(lincoefy != NULL);
+   assert(linconstant != NULL);
+   assert(success != NULL);
+   assert(xcoef == 0.0 || xcoef == -1.0 || xcoef == 1.0); /*lint !e777*/
+   assert(ycoef != SCIP_INVALID && ycoef != 0.0); /*lint !e777*/
+   assert(constant != SCIP_INVALID); /*lint !e777*/
+
+   *success = FALSE;
+   *lincoefx = SCIP_INVALID;
+   *lincoefy = SCIP_INVALID;
+   *linconstant = SCIP_INVALID;
+
+   /* reference point does not satisfy linear inequality */
+   if( SCIPisFeasGT(scip, xcoef * refpointx - ycoef * refpointy - constant, 0.0) )
+      return;
+
+   /* check the reference point is in the interior of the domain */
+   if( SCIPisFeasLE(scip, refpointx, lbx) || SCIPisFeasGE(scip, refpointx, ubx)
+      || SCIPisFeasLE(scip, refpointy, lby) || SCIPisFeasGE(scip, refpointy, uby) )
+      return;
+
+   /* always consider xy without the bilinear coefficient */
+   if( bilincoef < 0.0 )
+      overestimate = !overestimate;
+
+   /* we use same notation as in "Convex envelopes of bivariate functions through the solution of KKT systems", 2016 */
+   mj = xcoef / ycoef;
+   qj = -constant / ycoef;
+
+   /* mj > 0 => underestimate; mj < 0 => overestimate */
+   if( SCIPisNegative(scip, mj) != overestimate )
+      return;
+
+   /* get the corner point that satisfies the linear inequality xcoef*x <= ycoef*y + constant */
+   if( !overestimate )
+   {
+      ys[0] = uby;
+      ys[1] = lby;
+   }
+
+   vx = SCIP_INVALID;
+   vy = SCIP_INVALID;
+   n = 0;
+   for( i = 0; i < 2; ++i )
+   {
+      SCIP_Real activity = xcoef * xs[i] - ycoef * ys[i] - constant;
+      if( SCIPisLE(scip, activity, 0.0) )
+      {
+         /* corner point is satisfies inequality */
+         vx = xs[i];
+         vy = ys[i];
+      }
+      else if( SCIPisFeasGT(scip, activity, 0.0) )
+         /* corner point is clearly cut off */
+         ++n;
+   }
+
+   /* skip if no corner point satisfies the inequality or if no corner point is cut off (that is, all corner points satisfy the inequality almost [1e-9..1e-6]) */
+   if( n != 1 || vx == SCIP_INVALID || vy == SCIP_INVALID ) /*lint !e777*/
+      return;
+
+   tmp = mj*(refpointx - vx) + vy - refpointy;
+   if( SCIPisZero(scip, tmp) )
+      return;
+
+   /* (xj,yj) is the projection onto the line xcoef*x = ycoef*y + constant */
+   xj = (refpointx*(vy - qj) - vx*(refpointy - qj)) / tmp;
+   yj = mj * xj + qj;
+
+   assert(SCIPisEQ(scip, xcoef*xj, ycoef*yj + constant));
+
+   /* nothing can be achieved if the reference point is outside of the domain */
+   if( SCIPisGT(scip, xj, ubx) || SCIPisLT(scip, xj, lbx) || SCIPisGT(scip, yj, uby) || SCIPisLT(scip, yj, lby) )
+      return;
+
+   assert(vy - mj*vx - qj != 0.0);
+
+   *lincoefy = (mj*SQR(xj) - 2.0*mj*vx*xj - qj*vx + vx*vy) / (vy - mj*vx - qj);
+   *lincoefx = 2.0*mj*xj + qj - mj*(*lincoefy);
+   *linconstant = -mj*SQR(xj) - (*lincoefy)*qj;
+
+   /* consider the bilinear coefficient */
+   *lincoefx *= bilincoef;
+   *lincoefy *= bilincoef;
+   *linconstant *= bilincoef;
+   *success = TRUE;
+
+#ifndef NDEBUG
+   {
+      SCIP_Real activity;
+
+      /* cut needs to be tight at (vx,vy) and (xj,yj) */
+      assert(SCIPisFeasEQ(scip, (*lincoefx)*vx + (*lincoefy)*vy + (*linconstant), bilincoef*vx*vy));
+      assert(SCIPisFeasEQ(scip, (*lincoefx)*xj + (*lincoefy)*yj + (*linconstant), bilincoef*xj*yj));
+
+      /* cut needs to under- or overestimate the bilinear term at the reference point */
+      if( bilincoef < 0.0 )
+         overestimate = !overestimate;
+
+      activity = (*lincoefx)*refpointx + (*lincoefy)*refpointy + (*linconstant);
+      if( overestimate )
+         assert(SCIPisFeasGE(scip, activity, bilincoef*refpointx*refpointy));
+      else
+         assert(SCIPisFeasLE(scip, activity, bilincoef*refpointx*refpointy));
+   }
+#endif
+}
+
+/** helper function to compute the convex envelope of a bilinear term when two linear inequalities are given; we
+ *  use the same notation and formulas as in Locatelli 2016
+ */
+static
+void computeBilinEnvelope2(
+   SCIP*                scip,               /**< SCIP data structure */
+   SCIP_Real            x,                  /**< reference point for x */
+   SCIP_Real            y,                  /**< reference point for y */
+   SCIP_Real            mi,                 /**< coefficient of x in the first linear inequality */
+   SCIP_Real            qi,                 /**< constant in the first linear inequality */
+   SCIP_Real            mj,                 /**< coefficient of x in the second linear inequality */
+   SCIP_Real            qj,                 /**< constant in the second linear inequality */
+   SCIP_Real* RESTRICT  xi,                 /**< buffer to store x coordinate of the first point */
+   SCIP_Real* RESTRICT  yi,                 /**< buffer to store y coordinate of the first point */
+   SCIP_Real* RESTRICT  xj,                 /**< buffer to store x coordinate of the second point */
+   SCIP_Real* RESTRICT  yj,                 /**< buffer to store y coordinate of the second point */
+   SCIP_Real* RESTRICT  xcoef,              /**< buffer to store the x coefficient of the envelope */
+   SCIP_Real* RESTRICT  ycoef,              /**< buffer to store the y coefficient of the envelope */
+   SCIP_Real* RESTRICT  constant            /**< buffer to store the constant of the envelope */
+   )
+{
+   assert(xi != NULL);
+   assert(yi != NULL);
+   assert(xj != NULL);
+   assert(yj != NULL);
+   assert(xcoef != NULL);
+   assert(ycoef != NULL);
+   assert(constant != NULL);
+
+   if( SCIPisEQ(scip, mi, mj) )
+   {
+      *xi = (x + mi * y - qi) / (2.0*mi);
+      *yi = mi*(*xi) + qi;
+      *xj = (*xi) + (qi - qj)/ (2.0*mi);
+      *yj = mj * (*xj) + qj;
+      *ycoef = (*xi) + (qi - qj) / (4.0*mi); /* note that this is wrong in Locatelli 2016 */
+      *xcoef = 2.0*mi*(*xi) - mi * (*ycoef) + qi;
+      *constant = -mj*SQR(*xj) - (*ycoef) * qj;
+   }
+   else if( mi > 0.0 )
+   {
+      assert(mj > 0.0);
+
+      *xi = (y + SQRT(mi*mj)*x - qi) / (REALABS(mi) + SQRT(mi*mj));
+      *yi = mi*(*xi) + qi;
+      *xj = (y + SQRT(mi*mj)*x - qj) / (REALABS(mj) + SQRT(mi*mj));
+      *yj = mj*(*xj) + qj;
+      *ycoef = (2.0*mj*(*xj) + qj - 2.0*mi*(*xi) - qi) / (mj - mi);
+      *xcoef = 2.0*mj*(*xj) + qj - mj*(*ycoef);
+      *constant = -mj*SQR(*xj) - (*ycoef) * qj;
+   }
+   else
+   {
+      assert(mi < 0.0 && mj < 0.0);
+
+      /* apply variable transformation x = -x in case for overestimation */
+      computeBilinEnvelope2(scip, -x, y, -mi, qi, -mj, qj, xi, yi, xj, yj, xcoef, ycoef, constant);
+
+      /* revert transformation; multiply cut by -1 and change -x by x */
+      *xi = -(*xi);
+      *xj = -(*xj);
+      *ycoef = -(*ycoef);
+      *constant = -(*constant);
+   }
+}
+
+/** computes coefficients of linearization of a bilinear term in a reference point when given two linear inequality
+ *  involving only the variables of the bilinear term
+ *
+ *  @note the formulas are extracted from "Convex envelopes of bivariate functions through the solution of KKT systems"
+ *        by Marco Locatelli
+ *
+ */
+void SCIPcomputeBilinEnvelope2(
+   SCIP*                scip,               /**< SCIP data structure */
+   SCIP_Real            bilincoef,          /**< coefficient of bilinear term */
+   SCIP_Real            lbx,                /**< lower bound on first variable */
+   SCIP_Real            ubx,                /**< upper bound on first variable */
+   SCIP_Real            refpointx,          /**< reference point for first variable */
+   SCIP_Real            lby,                /**< lower bound on second variable */
+   SCIP_Real            uby,                /**< upper bound on second variable */
+   SCIP_Real            refpointy,          /**< reference point for second variable */
+   SCIP_Bool            overestimate,       /**< whether to compute an overestimator instead of an underestimator */
+   SCIP_Real            xcoef1,             /**< x coefficient of linear inequality; must be in {-1,0,1} */
+   SCIP_Real            ycoef1,             /**< y coefficient of linear inequality */
+   SCIP_Real            constant1,          /**< constant of linear inequality */
+   SCIP_Real            xcoef2,             /**< x coefficient of linear inequality; must be in {-1,0,1} */
+   SCIP_Real            ycoef2,             /**< y coefficient of linear inequality */
+   SCIP_Real            constant2,          /**< constant of linear inequality */
+   SCIP_Real* RESTRICT  lincoefx,           /**< buffer to store coefficient of first  variable in linearization */
+   SCIP_Real* RESTRICT  lincoefy,           /**< buffer to store coefficient of second variable in linearization */
+   SCIP_Real* RESTRICT  linconstant,        /**< buffer to store constant of linearization */
+   SCIP_Bool* RESTRICT  success             /**< buffer to store whether linearization was successful */
+   )
+{
+   SCIP_Real mi, mj, qi, qj, xi, xj, yi, yj;
+   SCIP_Real xcoef, ycoef, constant;
+
+   assert(scip != NULL);
+   assert(!SCIPisInfinity(scip,  lbx));
+   assert(!SCIPisInfinity(scip, -ubx));
+   assert(!SCIPisInfinity(scip,  lby));
+   assert(!SCIPisInfinity(scip, -uby));
+   assert(SCIPisLE(scip, lbx, ubx));
+   assert(SCIPisLE(scip, lby, uby));
+   assert(SCIPisLE(scip, lbx, refpointx));
+   assert(SCIPisGE(scip, ubx, refpointx));
+   assert(SCIPisLE(scip, lby, refpointy));
+   assert(SCIPisGE(scip, uby, refpointy));
+   assert(lincoefx != NULL);
+   assert(lincoefy != NULL);
+   assert(linconstant != NULL);
+   assert(success != NULL);
+   assert(xcoef1 != 0.0 && xcoef1 != SCIP_INVALID); /*lint !e777*/
+   assert(ycoef1 != SCIP_INVALID && ycoef1 != 0.0); /*lint !e777*/
+   assert(constant1 != SCIP_INVALID); /*lint !e777*/
+   assert(xcoef2 != 0.0 && xcoef2 != SCIP_INVALID); /*lint !e777*/
+   assert(ycoef2 != SCIP_INVALID && ycoef2 != 0.0); /*lint !e777*/
+   assert(constant2 != SCIP_INVALID); /*lint !e777*/
+
+   *success = FALSE;
+   *lincoefx = SCIP_INVALID;
+   *lincoefy = SCIP_INVALID;
+   *linconstant = SCIP_INVALID;
+
+   /* reference point does not satisfy linear inequalities */
+   if( SCIPisFeasGT(scip, xcoef1 * refpointx - ycoef1 * refpointy - constant1, 0.0)
+      || SCIPisFeasGT(scip, xcoef2 * refpointx - ycoef2 * refpointy - constant2, 0.0) )
+      return;
+
+   /* check the reference point is in the interior of the domain */
+   if( SCIPisFeasLE(scip, refpointx, lbx) || SCIPisFeasGE(scip, refpointx, ubx)
+      || SCIPisFeasLE(scip, refpointy, lby) || SCIPisFeasGE(scip, refpointy, uby) )
+      return;
+
+   /* the sign of the x-coefficients of the two inequalities must be different; otherwise the convex or concave
+    * envelope can be computed via SCIPcomputeBilinEnvelope1 for each inequality separately
+    */
+   if( (xcoef1 > 0) == (xcoef2 > 0) )
+      return;
+
+   /* always consider xy without the bilinear coefficient */
+   if( bilincoef < 0.0 )
+      overestimate = !overestimate;
+
+   /* we use same notation as in "Convex envelopes of bivariate functions through the solution of KKT systems", 2016 */
+   mi = xcoef1 / ycoef1;
+   qi = -constant1 / ycoef1;
+   mj = xcoef2 / ycoef2;
+   qj = -constant2 / ycoef2;
+
+   /* mi, mj > 0 => underestimate; mi, mj < 0 => overestimate */
+   if( SCIPisNegative(scip, mi) != overestimate || SCIPisNegative(scip, mj) != overestimate )
+      return;
+
+   /* compute cut according to Locatelli 2016 */
+   computeBilinEnvelope2(scip, refpointx, refpointy, mi, qi, mj, qj, &xi, &yi, &xj, &yj, &xcoef, &ycoef, &constant);
+   assert(SCIPisEQ(scip, mi*xi + qi, yi));
+   assert(SCIPisEQ(scip, mj*xj + qj, yj));
+
+   /* it might happen that (xi,yi) = (xj,yj) if the two lines intersect */
+   if( SCIPisEQ(scip, xi, xj) && SCIPisEQ(scip, yi, yj) )
+      return;
+
+   *success = TRUE;
+   *lincoefx = bilincoef * xcoef;
+   *lincoefy = bilincoef * ycoef;
+   *linconstant = bilincoef * constant;
+
+#ifndef NDEBUG
+   {
+      SCIP_Real activity;
+
+      /* cut needs to be tight at (vx,vy) and (xj,yj) */
+      assert(SCIPisFeasEQ(scip, (*lincoefx)*xi + (*lincoefy)*yi + (*linconstant), bilincoef*xi*yi));
+      assert(SCIPisFeasEQ(scip, (*lincoefx)*xj + (*lincoefy)*yj + (*linconstant), bilincoef*xj*yj));
+
+      /* cut needs to under- or overestimate the bilinear term at the reference point */
+      if( bilincoef < 0.0 )
+         overestimate = !overestimate;
+
+      activity = (*lincoefx)*refpointx + (*lincoefy)*refpointy + (*linconstant);
+      if( overestimate )
+         assert(SCIPisFeasGE(scip, activity, bilincoef*refpointx*refpointy));
+      else
+         assert(SCIPisFeasLE(scip, activity, bilincoef*refpointx*refpointy));
+   }
+#endif
+}
+
 /** creates an NLP relaxation and stores it in a given NLPI problem; the function computes for each variable which the
  *  number of non-linearly occurrences and stores it in the nlscore array
  *
@@ -47919,9 +48290,26 @@ SCIP_RETCODE SCIPvalidateSolve(
    if( SCIPgetNSols(scip) > 0 )
    {
       SCIP_SOL* bestsol = SCIPgetBestSol(scip);
+      SCIP_Real checkfeastolfac;
+      SCIP_Real oldfeastol;
+
       assert(bestsol != NULL);
 
+      /* scale feasibility tolerance by set->num_checkfeastolfac */
+      oldfeastol = SCIPfeastol(scip);
+      SCIP_CALL( SCIPgetRealParam(scip, "numerics/checkfeastolfac", &checkfeastolfac) );
+      if( !SCIPisEQ(scip, checkfeastolfac, 1.0) )
+      {
+         SCIP_CALL( SCIPchgFeastol(scip, oldfeastol * checkfeastolfac) );
+      }
+
       SCIP_CALL( SCIPcheckSolOrig(scip, bestsol, &localfeasible, !quiet, TRUE) );
+
+      /* restore old feasibilty tolerance */
+      if( !SCIPisEQ(scip, checkfeastolfac, 1.0) )
+      {
+         SCIP_CALL( SCIPchgFeastol(scip, oldfeastol) );
+      }
    }
    else
    {
