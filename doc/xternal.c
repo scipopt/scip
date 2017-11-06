@@ -292,6 +292,14 @@
  *  A solver for multi-objective optimization problems.
  *  </td>
  *  </tr>
+ *  <tr>
+ *  <td>
+ *  <a href="http://scip.zib.de/doc/applications/Cycleclustering"><b>Cycle Clustering</b></a>
+ *  </td>
+ *  <td>
+ *  Branch-and-cut implementation of a graph partitioning problem used for Markov state models.
+ *  </td>
+ *  </tr>
  *  </table>
  *
  */

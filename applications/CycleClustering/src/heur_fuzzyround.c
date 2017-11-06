@@ -120,7 +120,7 @@ SCIP_DECL_HEUREXEC(heurExecFuzzyround)
    assert(isPartition(scip, clustering, nbins, ncluster));
 
    SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
-   assignVars(scip, sol, clustering, nbins, ncluster);
+   SCIP_CALL( assignVars(scip, sol, clustering, nbins, ncluster) );
    SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, TRUE, TRUE, TRUE, TRUE, &feasible) );
 
    if( feasible )

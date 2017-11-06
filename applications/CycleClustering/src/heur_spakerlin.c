@@ -508,7 +508,7 @@ SCIP_RETCODE createSwitchSolution(
       if( max > objective )
       {
          SCIP_CALL( SCIPcreateSol(scip, &worksol, heur) );
-         assignVars(scip, worksol, solclustering, nbins, ncluster);
+         SCIP_CALL( assignVars(scip, worksol, solclustering, nbins, ncluster) );
          SCIPtrySolFree(scip, &worksol, FALSE, TRUE, TRUE, TRUE, TRUE, &feasible);
       }
       if( feasible )
