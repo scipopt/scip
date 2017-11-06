@@ -60,6 +60,7 @@ interface:
 - added cons_symresack.c to handle permutation symmetries in a binary programs via inequalities and propagation
 - added cons_orbisack.c to handle special permutation symmetries in a binary programs via inequalities and propagation
 - added presol_symbreak.c to detect special symmetry structures and to add symmetry handling constraints
+- generalized SCIPcreate{Cons,ConsBasic}Orbitope() method to three orbitope types (full, partitioning, packing)
 - removed solution pointer from list of arguments for SCIPaddCut()
 - added additional parameter for statistics tables to SCIPcopyPlugins
 - added parameter "objval" to SCIPnlpiGetSolution() for returning the optimal objective value (can be set to NULL)
