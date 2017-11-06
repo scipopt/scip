@@ -224,7 +224,10 @@ SCIP_RETCODE computeStandardIntegerOptCut(
       subprobsol = SCIPgetBestSol(subproblem);
 #endif
 
-      subprobobj += SCIPbendersGetSubprobObjval(benders, i);
+      if( SCIPgetStatus(SCIPbendersSubproblem(benders, i)) == SCIP_STATUS_OPTIMAL )
+         subprobobj += SCIPbendersGetSubprobObjval(benders, i);
+      else
+         subprobobj += SCIPgetDualbound(SCIPbendersSubproblem(benders, i));
 
       SCIPdebugMessage("Subproblem %d - Objective Value: Stored - %g Orig Obj - %g\n", i,
          SCIPbendersGetSubprobObjval(benders, i), SCIPgetSolOrigObj(subproblem, subprobsol));
