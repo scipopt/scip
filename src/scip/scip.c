@@ -15157,7 +15157,7 @@ SCIP_RETCODE initSolve(
       /* use a smaller LP feasibility tolerance in case of an MINLP; variable bounds violations might yield to large
        * violations in the original space which are hard to enforce
        */
-      lpfeastol = MAX(SCIPfeastol(scip)/10.0, SCIPepsilon(scip));
+      lpfeastol = MAX(SCIPfeastol(scip)/10.0, SCIPepsilon(scip)); /*lint !e666*/
       if( lpfeastol < SCIPlpfeastol(scip) )
       {
          SCIP_CALL( SCIPchgLpfeastol(scip, lpfeastol, FALSE) );
