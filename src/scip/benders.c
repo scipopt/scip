@@ -2012,6 +2012,7 @@ SCIP_RETCODE SCIPbendersExec(
 
                for( k = 0; k < nbenderscuts; k++ )
                {
+                  SCIP_RESULT cutresult;
                   int prevaddedcuts;
 
                   assert(benderscuts[k] != NULL);
@@ -2022,7 +2023,14 @@ SCIP_RETCODE SCIPbendersExec(
                    * the first iteration of the solve loop. */
                   if( (l == 0 && SCIPbenderscutIsLPCut(benderscuts[k]))
                      || (l > 0 && !lpsub && !SCIPbenderscutIsLPCut(benderscuts[k]) && i == 0) )
-                     SCIP_CALL( SCIPbenderscutExec(benderscuts[k], set, benders, sol, i, type, result) );
+                  {
+                     cutresult = (*result);
+
+                     SCIP_CALL( SCIPbenderscutExec(benderscuts[k], set, benders, sol, i, type, &cutresult) );
+
+                     if( cutresult == SCIP_CONSADDED || cutresult == SCIP_SEPARATED )
+                        *result = cutresult;
+                  }
 
                   addedcuts += (SCIPbenderscutGetNAddedCons(benderscuts[k]) + SCIPbenderscutGetNAddedCuts(benderscuts[k]) - prevaddedcuts);
                }
