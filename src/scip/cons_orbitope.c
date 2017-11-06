@@ -267,10 +267,7 @@ SCIP_RETCODE upgradeOrbitopeConstraint(
    assert( setppcconss != NULL );
 
    /* whether a row is contained in packing/partitioning constraint */
-   SCIP_CALL( SCIPallocBufferArray(scip, &covered, *nrows) );
-
-   for (i = 0; i < *nrows; ++i)
-      covered[i] = FALSE;
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &covered, *nrows) );
    ncovered = 0;
 
    /* array storing index of orbitope row a variable is contained in */
