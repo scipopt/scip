@@ -208,8 +208,8 @@ SCIP_RETCODE consdataCreate(
 
       for (i = 0; i < nspcons; ++i)
       {
-         /* make sure that no variables are multiaggregated (cannot be handled by cons_orbitope, since one cannot easily
-          * eliminate single variables from an orbitope constraint.
+         /* make sure that no variable gets multiaggregated (cannot be handled by cons_orbitope, since one cannot easily
+          * eliminate single variables from an orbitope constraint).
           */
          for (j = 0; j < nblocks; ++j)
          {
