@@ -1374,6 +1374,8 @@ SCIP_DECL_CONSSEPALP(consSepalpSymresack)
       if ( infeasible )
       {
          *result = SCIP_CUTOFF;
+         SCIPfreeBufferArray(scip, &vals);
+
          return SCIP_OKAY;
       }
 
@@ -1434,6 +1436,8 @@ SCIP_DECL_CONSSEPASOL(consSepasolSymresack)
       if ( infeasible )
       {
          *result = SCIP_CUTOFF;
+         SCIPfreeBufferArray(scip, &vals);
+
          return SCIP_OKAY;
       }
 
@@ -1501,6 +1505,8 @@ SCIP_DECL_CONSENFOLP(consEnfolpSymresack)
          if ( infeasible )
          {
             *result = SCIP_CUTOFF;
+            SCIPfreeBufferArray(scip, &vals);
+
             return SCIP_OKAY;
          }
 
@@ -1664,6 +1670,8 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxSymresack)
          if ( infeasible )
          {
             *result = SCIP_CUTOFF;
+            SCIPfreeBufferArray(scip, &vals);
+
             return SCIP_OKAY;
          }
 
