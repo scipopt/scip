@@ -3219,7 +3219,8 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
 #endif
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   if ( conshdlrdata->checkpporbitope )
+   if ( conshdlrdata->checkpporbitope && orbitopetype != SCIP_ORBITOPETYPE_PARTITIONING
+      && orbitopetype != SCIP_ORBITOPETYPE_PACKING )
    {
       type = SCIP_ORBITOPETYPE_FULL;
       SCIP_CALL( upgradeOrbitopeConstraint(scip, vars, &nspcons, nblocks, &type) );
