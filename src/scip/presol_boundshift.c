@@ -171,6 +171,9 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
        */
       if( SCIPvarIsIntegral(var) )
       {
+         assert(SCIPisIntegral(scip, lb));
+         assert(SCIPisIntegral(scip, ub));
+
          lb = SCIPadjustedVarLb(scip, var, lb);
          ub = SCIPadjustedVarUb(scip, var, ub);
       }
