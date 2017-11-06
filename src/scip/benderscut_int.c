@@ -626,7 +626,7 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecInt)
    optimal = TRUE;
    for( i = 0; i < nsubproblems; i++ )
    {
-      if( SCIPgetStatus(SCIPbendersSubproblem(benders, i)) != SCIP_STATUS_OPTIMAL )
+      if( SCIPgetStatus(SCIPbendersSubproblem(benders, i)) < SCIP_STATUS_INFEASIBLE )
       {
          optimal = FALSE;
          break;
