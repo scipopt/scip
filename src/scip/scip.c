@@ -34531,9 +34531,12 @@ SCIP_Bool SCIPisCutApplicable(
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @deprecated Please use SCIPaddRow() instead, or, if the row is a global cut, add it only to the global cutpool.
  */
 SCIP_RETCODE SCIPaddCut(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
    SCIP_ROW*             cut,                /**< separated cut */
    SCIP_Bool             forcecut,           /**< should the cut be forced to enter the LP? */
    SCIP_Bool*            infeasible          /**< pointer to store whether cut has been detected to be infeasible for local bounds */
@@ -34541,10 +34544,32 @@ SCIP_RETCODE SCIPaddCut(
 {
    SCIP_CALL( checkStage(scip, "SCIPaddCut", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
+   SCIP_UNUSED(sol);
+
+   return SCIPaddRow(scip, cut, forcecut, infeasible);
+}
+
+/** adds row to separation storage
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPaddRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row,                /**< row */
+   SCIP_Bool             forcecut,           /**< should the row be forced to enter the LP? */
+   SCIP_Bool*            infeasible          /**< pointer to store whether row has been detected to be infeasible for local bounds */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPaddRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
    assert(SCIPtreeGetCurrentNode(scip->tree) != NULL);
 
    SCIP_CALL( SCIPsepastoreAddCut(scip->sepastore, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
-         scip->eventfilter, scip->lp, cut, forcecut, (SCIPtreeGetCurrentDepth(scip->tree) == 0), infeasible) );
+         scip->eventfilter, scip->lp, row, forcecut, (SCIPtreeGetCurrentDepth(scip->tree) == 0), infeasible) );
 
    /* possibly run conflict analysis */
    if ( *infeasible && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && SCIPisConflictAnalysisApplicable(scip) )
@@ -34558,18 +34583,18 @@ SCIP_RETCODE SCIPaddCut(
       /* initialize conflict analysis */
       SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
-      if ( ! SCIPisInfinity(scip, -cut->lhs) )
+      if ( ! SCIPisInfinity(scip, -row->lhs) )
       {
-         act = SCIProwGetMaxActivity(cut, scip->set, scip->stat);
-         if ( SCIPisLT(scip, act, cut->lhs) )
+         act = SCIProwGetMaxActivity(row, scip->set, scip->stat);
+         if ( SCIPisLT(scip, act, row->lhs) )
          {
-            ncols = SCIProwGetNNonz(cut);
+            ncols = SCIProwGetNNonz(row);
             for (j = 0; j < ncols; ++j)
             {
-               val = cut->vals[j];
+               val = row->vals[j];
                if ( ! SCIPisZero(scip, val) )
                {
-                  var = SCIPcolGetVar(cut->cols[j]);
+                  var = SCIPcolGetVar(row->cols[j]);
                   assert( var != NULL );
 
                   if ( val > 0.0 )
@@ -34584,18 +34609,18 @@ SCIP_RETCODE SCIPaddCut(
             }
          }
       }
-      else if ( ! SCIPisInfinity(scip, cut->rhs) )
+      else if ( ! SCIPisInfinity(scip, row->rhs) )
       {
-         act = SCIProwGetMinActivity(cut, scip->set, scip->stat);
-         if ( SCIPisGT(scip, act, cut->rhs) )
+         act = SCIProwGetMinActivity(row, scip->set, scip->stat);
+         if ( SCIPisGT(scip, act, row->rhs) )
          {
-            ncols = SCIProwGetNNonz(cut);
+            ncols = SCIProwGetNNonz(row);
             for (j = 0; j < ncols; ++j)
             {
-               val = cut->vals[j];
+               val = row->vals[j];
                if ( ! SCIPisZero(scip, val) )
                {
-                  var = SCIPcolGetVar(cut->cols[j]);
+                  var = SCIPcolGetVar(row->cols[j]);
                   assert( var != NULL );
 
                   if ( val > 0.0 )

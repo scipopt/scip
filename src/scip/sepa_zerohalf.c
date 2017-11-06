@@ -2283,7 +2283,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
          /* add global cuts to the pool and local cuts to the sepastore */
          if( SCIProwIsLocal(sepadata->cuts[i]) )
          {
-            SCIP_CALL( SCIPaddCut(scip, sepadata->cuts[i], FALSE, &sepadata->infeasible) );
+            SCIP_CALL( SCIPaddRow(scip, sepadata->cuts[i], FALSE, &sepadata->infeasible) );
          }
          else
          {
