@@ -165,6 +165,16 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
       lb = SCIPvarGetLbGlobal(var);
       ub = SCIPvarGetUbGlobal(var);
 
+      /* it can happen that the variable bounds of integer variables have not been propagated yet or contain
+       * some small noise; this will result in an aggregation that might trigger assertions when updating bounds of
+       * aggregated variables (see #1817)
+       */
+      if( SCIPvarIsIntegral(var) )
+      {
+         lb = SCIPadjustedVarLb(scip, var, lb);
+         ub = SCIPadjustedVarUb(scip, var, ub);
+      }
+
       assert( SCIPisLE(scip, lb, ub) );
       if( SCIPisEQ(scip, lb, ub) )
          continue;
