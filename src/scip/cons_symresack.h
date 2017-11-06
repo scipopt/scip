@@ -44,7 +44,9 @@ extern "C" {
  * such that the permutation is a symmetry of the program, this constraint handler can
  * be used to handle the symmetries corresponding to the permutation. The symmetries
  * are handled by enforcing that a binary solution is lexicographically not smaller than
- * its permutation.
+ * its permutation. In a presolving step, we check whether the permutation acts only on
+ * binary points. Otherwise, we eliminate the non-binary variables from the permutation.
+ * Furthermore, we delete fixed points from the permutation.
  *
  * Moreover, the constraint handler checks whether each cycle of the permutation is
  * contained in a set packing or partitioning constraint. In this case, the symresack
@@ -54,6 +56,12 @@ extern "C" {
  * Furthermore, the constraint handler checks whether the permutation is a composition of
  * 2-cycles. In this case, the symresack is a so-called orbisack and will be treated by
  * specialized methods of the orbisack constraint handler.
+ *
+ * @pre The permutation is encoded by an array perm for which perm[i] = j if and only if
+ * the image of i under the  permutation is j.
+ *
+ * @pre The permutation given to the constraint handler has to be a symmetry of the
+ * underlying problem. This is NOT checked by the constraint handler.
  */
 
 /** creates the handler for symresack constraints and includes it in SCIP */
@@ -64,9 +72,6 @@ SCIP_RETCODE SCIPincludeConshdlrSymresack(
 
 
 /** creates and captures a symresack constraint
- *
- *  In a presolving step, we check whether the permutation acts only on binary points. Otherwise, we eliminate
- *  the non-binary variables from the permutation.
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
@@ -106,8 +111,6 @@ SCIP_RETCODE SCIPcreateConsSymresack(
 /** creates and captures a symresack constraint
  *  in its most basic variant, i.e., with all constraint flags set to their default values, which can be set
  *  afterwards using SCIPsetConsFLAGNAME() in scip.h
- *
- *  In a presolving step, we remove all fixed points and cycles that act on non-binary variables of the permutation
  *
  *  @see SCIPcreateConsSymresack() for the default constraint flag configuration
  *
