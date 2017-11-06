@@ -609,6 +609,9 @@ SCIP_RETCODE initLP(
 
          SCIP_CALL( SCIPaddCut(scip, row, FALSE, infeasible) );
          SCIP_CALL( SCIPreleaseRow(scip, &row) );
+
+         if ( *infeasible )
+            break;
       }
 
       SCIPfreeBufferArray(scip, &coeffs);
