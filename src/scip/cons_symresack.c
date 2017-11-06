@@ -1643,7 +1643,7 @@ SCIP_DECL_CONSCHECK(consCheckSymresack)
    SCIP_CONSDATA* consdata;
    SCIP_Bool terminated = FALSE;
    SCIP_VAR** vars;
-   SCIP_Real solVal;
+   SCIP_Real solval;
    int* invperm;
    int nvars;
    int val1;
@@ -1682,16 +1682,16 @@ SCIP_DECL_CONSCHECK(consCheckSymresack)
          assert( invperm[i] != i );
 
          /* get value of variable i and its inverse */
-         solVal = SCIPgetSolVal(scip, sol, vars[i]);
-         assert( SCIPisFeasIntegral(scip, solVal) );
-         if ( solVal > 0.5 )
+         solval = SCIPgetSolVal(scip, sol, vars[i]);
+         assert( SCIPisFeasIntegral(scip, solval) );
+         if ( solval > 0.5 )
             val1 = 1;
          else
             val1 = 0;
 
-         solVal = SCIPgetSolVal(scip, sol, vars[invperm[i]]);
-         assert( SCIPisFeasIntegral(scip, solVal) );
-         if ( solVal > 0.5 )
+         solval = SCIPgetSolVal(scip, sol, vars[invperm[i]]);
+         assert( SCIPisFeasIntegral(scip, solval) );
+         if ( solval > 0.5 )
             val2 = 1;
          else
             val2 = 0;
