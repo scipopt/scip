@@ -97,7 +97,6 @@ struct SCIP_ConsData
 {
    SCIP_VAR**            vars;               /**< variables */
    int                   nvars;              /**< number of variables */
-   SCIP_Real*            vals;               /**< LP-solution for the variables */
    int*                  perm;               /**< permutation associated to the symresack */
    int*                  invperm;            /**< inverse permutation */
    SCIP_Bool             ppupgrade;          /**< whether constraint is upgraded to packing/partitioning symresack */
@@ -143,7 +142,6 @@ SCIP_RETCODE consdataFree(
       SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->cycledecomposition), (*consdata)->ncycles);
    }
 
-   SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vals), nvars);
    SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->invperm), nvars);
    SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->perm), nvars);
 
@@ -376,12 +374,12 @@ SCIP_RETCODE packingUpgrade(
    else
    {
       SCIPfreeBufferArray(scip, &indicesincycle);
+      SCIPfreeBufferArray(scip, &covered);
       for (i = 0; i < ncycles; ++i)
       {
          SCIPfreeBlockMemoryArray(scip, &cycledecomposition[i], nvars + 1);
       }
       SCIPfreeBlockMemoryArray(scip, &cycledecomposition, ncycles);
-      SCIPfreeBufferArray(scip, &covered);
    }
 
    return SCIP_OKAY;
@@ -482,8 +480,6 @@ SCIP_RETCODE consdataCreate(
    for (i = 0; i < naffectedvariables; ++i)
       invperm[perm[i]] = i;
    (*consdata)->invperm = invperm;
-
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->vals, naffectedvariables) );
 
    /* check for upgrade to packing/partitioning orbisacks*/
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -637,6 +633,9 @@ SCIP_RETCODE initLP(
 
          SCIP_CALL( SCIPaddCut(scip, row, FALSE, infeasible) );
          SCIP_CALL( SCIPreleaseRow(scip, &row) );
+
+         if ( *infeasible )
+            break;
       }
 
       SCIPfreeBufferArray(scip, &coeffs);
@@ -667,7 +666,7 @@ SCIP_RETCODE propVariables(
    assert( infeasible != NULL );
    assert( ngen != NULL );
 
-   SCIPdebugMessage("Propagating variables of constraint <%s>.\n", SCIPconsGetName(cons));
+   SCIPdebugMsg(scip, "Propagating variables of constraint <%s>.\n", SCIPconsGetName(cons));
 
    *ngen = 0;
    *infeasible = FALSE;
@@ -707,9 +706,9 @@ SCIP_RETCODE propVariables(
       /* if first part of variable pair fixed to 0 and second part is fixed to 1 */
       if ( ISFIXED0(var) && ISFIXED1(var2) )
       {
-         SCIPdebugMessage("Check variable pair (%d,%d).\n", i, invperm[i]);
+         SCIPdebugMsg(scip, "Check variable pair (%d,%d).\n", i, invperm[i]);
 
-         SCIPdebugMessage(" -> node infeasible (pair was fixed to (0,1) but there was no pair of type (1,0) before) ---> lexicographical order violated, infeasible.\n");
+         SCIPdebugMsg(scip, " -> node infeasible (pair was fixed to (0,1) but there was no pair of type (1,0) before) ---> lexicographical order violated, infeasible.\n");
 
          /* perform conflict analysis */
          if ( SCIPisConflictAnalysisApplicable(scip) )
@@ -738,7 +737,7 @@ SCIP_RETCODE propVariables(
          assert( SCIPvarGetLbLocal(var2) < 0.5 );
          assert( SCIPvarGetUbLocal(var2) > 0.5 );
 
-         SCIPdebugMessage("Check variable pair (%d,%d).\n", i, invperm[i]);
+         SCIPdebugMsg(scip, "Check variable pair (%d,%d).\n", i, invperm[i]);
 
          assert( SCIPvarGetLbLocal(var2) < 0.5 );
          SCIP_CALL( SCIPinferVarUbCons(scip, var2, 0.0, cons, i, FALSE, infeasible, &tightened) ); /*lint !e713*/
@@ -754,7 +753,7 @@ SCIP_RETCODE propVariables(
          assert( SCIPvarGetUbLocal(var) > 0.5 );
          assert( SCIPvarGetLbLocal(var2) > 0.5 );
 
-         SCIPdebugMessage("Check variable pair (%d,%d).\n", i, invperm[i]);
+         SCIPdebugMsg(scip, "Check variable pair (%d,%d).\n", i, invperm[i]);
 
          assert( SCIPvarGetUbLocal(var) > 0.5 );
          SCIP_CALL( SCIPinferVarLbCons(scip, var, 1.0, cons, i + nvars, FALSE, infeasible, &tightened) ); /*lint !e713*/
@@ -769,8 +768,8 @@ SCIP_RETCODE propVariables(
          assert( SCIPvarGetLbLocal(var) > 0.5 );
          assert( SCIPvarGetUbLocal(var2) < 0.5 );
 
-         SCIPdebugMessage("Check variable pair (%d,%d).\n", i, invperm[i]);
-         SCIPdebugMessage(" -> node is feasible (pair was fixed to (1,0) and every earlier pair is constant).\n");
+         SCIPdebugMsg(scip, "Check variable pair (%d,%d).\n", i, invperm[i]);
+         SCIPdebugMsg(scip, " -> node is feasible (pair was fixed to (1,0) and every earlier pair is constant).\n");
 
          break;
       }
@@ -788,7 +787,8 @@ static
 SCIP_RETCODE addSymresackInequality(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONS*            cons,               /**< constraint */
-   const SCIP_CONSDATA*  consdata,           /**< constraint data */
+   int                   nvars,              /**< number of variables */
+   SCIP_VAR**            vars,               /**< variables */
    int*                  coeffs,             /**< coefficient vector of inequality to be added */
    SCIP_Real             rhs,                /**< right-hand side of inequality to be added */
    SCIP_Bool*            infeasible          /**< pointer to store whether we detected infeasibility */
@@ -801,9 +801,8 @@ SCIP_RETCODE addSymresackInequality(
 #endif
 
    assert( scip != NULL );
-   assert( consdata != NULL );
-   assert( consdata->nvars > 0 );
-   assert( consdata->vars != NULL );
+   assert( nvars > 0 );
+   assert( vars != NULL );
    assert( coeffs != NULL );
    assert( infeasible != NULL );
 
@@ -817,11 +816,11 @@ SCIP_RETCODE addSymresackInequality(
 #endif
    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
-   for (i = 0; i < (consdata->nvars); ++i)
+   for (i = 0; i < nvars; ++i)
    {
       if ( coeffs[i] == 1 || coeffs[i] == -1 )
       {
-         SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->vars[i], (SCIP_Real) coeffs[i]) );
+         SCIP_CALL( SCIPaddVarToRow(scip, row, vars[i], (SCIP_Real) coeffs[i]) );
       }
    }
    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
@@ -841,11 +840,11 @@ SCIP_RETCODE separateSymresackCovers(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONS*            cons,               /**< constraint */
    const SCIP_CONSDATA*  consdata,           /**< constraint data */
+   SCIP_Real*            vals,               /**< solution values of variables */
    int*                  ngen,               /**< pointer to store the number of separated covers */
    SCIP_Bool*            infeasible          /**< pointer to store whether we detected infeasibility */
    )
 {
-   SCIP_Real* vals;
    SCIP_Real constobjective;
    SCIP_Real* sepaobjective;
    SCIP_Real tmpsoluobj = 0.0;
@@ -862,7 +861,6 @@ SCIP_RETCODE separateSymresackCovers(
    assert( consdata != NULL );
    assert( consdata->nvars > 0 );
    assert( consdata->vars != NULL );
-   assert( consdata->vals != NULL );
    assert( consdata->perm != NULL );
    assert( consdata->invperm != NULL );
    assert( infeasible != NULL );
@@ -872,7 +870,6 @@ SCIP_RETCODE separateSymresackCovers(
    *ngen = 0;
 
    nvars = consdata->nvars;
-   vals = consdata->vals;
    perm = consdata->perm;
    invperm = consdata->invperm;
 
@@ -1076,7 +1073,7 @@ SCIP_RETCODE separateSymresackCovers(
       assert( SCIPisGT(scip, lhs, rhs) );
 
       /* add cover inequality */
-      SCIP_CALL( addSymresackInequality(scip, cons, consdata, maxsolu, rhs, infeasible) );
+      SCIP_CALL( addSymresackInequality(scip, cons, nvars, consdata->vars, maxsolu, rhs, infeasible) );
 
       if ( ! *infeasible )
          ++(*ngen);
@@ -1233,14 +1230,13 @@ SCIP_DECL_CONSTRANS(consTransSymresack)
    assert( sourcecons != NULL );
    assert( targetcons != NULL );
 
-   SCIPdebugMessage("Transforming constraint.\n");
+   SCIPdebugMsg(scip, "Transforming constraint.\n");
 
    /* get data of original constraint */
    sourcedata = SCIPconsGetData(sourcecons);
    assert( sourcedata != NULL);
    assert( sourcedata->nvars != 0 );
    assert( sourcedata->vars != NULL );
-   assert( sourcedata->vals != NULL );
    assert( sourcedata->perm != NULL );
    assert( sourcedata->invperm != NULL );
 #ifndef NDEBUG
@@ -1266,7 +1262,6 @@ SCIP_DECL_CONSTRANS(consTransSymresack)
    if ( nvars > 0 )
    {
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->vars, nvars) );
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->vals, nvars) );
       SCIP_CALL( SCIPgetTransformedVars(scip, nvars, sourcedata->vars, consdata->vars) );
       for (i = 0; i < nvars; ++i)
       {
@@ -1319,13 +1314,13 @@ SCIP_DECL_CONSINITLP(consInitlpSymresack)
    {
       assert( conss[c] != NULL );
 
-      SCIPdebugMessage("Generating initial symresack cut for constraint <%s> ...\n", SCIPconsGetName(conss[c]));
+      SCIPdebugMsg(scip, "Generating initial symresack cut for constraint <%s> ...\n", SCIPconsGetName(conss[c]));
 
       SCIP_CALL( initLP(scip, conss[c], infeasible) );
       if ( *infeasible )
          break;
    }
-   SCIPdebugMessage("Generated initial symresack cuts.\n");
+   SCIPdebugMsg(scip, "Generated initial symresack cuts.\n");
 
    return SCIP_OKAY;
 }
@@ -1343,7 +1338,7 @@ SCIP_DECL_CONSSEPALP(consSepalpSymresack)
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
 
-   SCIPdebugMessage("Separation method for symresack constraints\n");
+   SCIPdebugMsg(scip, "Separation method for symresack constraints\n");
 
    *result = SCIP_DIDNOTRUN;
 
@@ -1351,34 +1346,44 @@ SCIP_DECL_CONSSEPALP(consSepalpSymresack)
    if ( SCIPgetNLPBranchCands(scip) == 0 )
       return SCIP_OKAY;
 
-   /* loop through constraints */
-   for (c = 0; c < nconss; ++c)
+   if ( nconss > 0 )
    {
-      SCIP_Bool infeasible = FALSE;
-      int ngen = 0;
+      SCIP_Real* vals;
+      int ntotalvars;
 
-      /* get data of constraint */
-      assert( conss[c] != NULL );
-      consdata = SCIPconsGetData(conss[c]);
+      ntotalvars = SCIPgetNVars(scip);
+      SCIP_CALL( SCIPallocBufferArray(scip, &vals, ntotalvars) );
 
-      /* get solution */
-      SCIP_CALL( SCIPgetSolVals(scip, NULL, consdata->nvars, consdata->vars, consdata->vals) );
-
-      SCIPdebugMessage("Separating symresack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
-
-      SCIP_CALL( separateSymresackCovers(scip, conss[c], consdata, &ngen, &infeasible) );
-
-      if ( infeasible )
+      /* loop through constraints */
+      for (c = 0; c < nconss; ++c)
       {
-         *result = SCIP_CUTOFF;
-         return SCIP_OKAY;
+         SCIP_Bool infeasible = FALSE;
+         int ngen = 0;
+
+         SCIPdebugMsg(scip, "Separating symresack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
+
+         /* get data of constraint */
+         assert( conss[c] != NULL );
+         consdata = SCIPconsGetData(conss[c]);
+
+         /* get solution */
+         assert( consdata->nvars <= ntotalvars );
+         SCIP_CALL( SCIPgetSolVals(scip, NULL, consdata->nvars, consdata->vars, vals) );
+         SCIP_CALL( separateSymresackCovers(scip, conss[c], consdata, vals, &ngen, &infeasible) );
+
+         if ( infeasible )
+         {
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
+
+         if ( ngen > 0 )
+            *result = SCIP_SEPARATED;
+
+         if ( *result == SCIP_DIDNOTRUN )
+            *result = SCIP_DIDNOTFIND;
       }
-
-      if ( ngen > 0 )
-         *result = SCIP_SEPARATED;
-
-      if ( *result == SCIP_DIDNOTRUN )
-         *result = SCIP_DIDNOTFIND;
+      SCIPfreeBlockMemory(scip, &vals);
    }
 
    return SCIP_OKAY;
@@ -1397,38 +1402,49 @@ SCIP_DECL_CONSSEPASOL(consSepasolSymresack)
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
 
-   SCIPdebugMessage("Separation method for symresack constraints\n");
+   SCIPdebugMsg(scip, "Separation method for symresack constraints\n");
 
    *result = SCIP_DIDNOTRUN;
 
-   /* loop through constraints */
-   for (c = 0; c < nconss; ++c)
+   if ( nconss > 0 )
    {
-      SCIP_Bool infeasible = FALSE;
-      int ngen = 0;
+      SCIP_Real* vals;
+      int ntotalvars;
 
-      /* get data of constraint */
-      assert( conss[c] != NULL );
-      consdata = SCIPconsGetData(conss[c]);
+      ntotalvars = SCIPgetNVars(scip);
+      SCIP_CALL( SCIPallocBufferArray(scip, &vals, ntotalvars) );
 
-      /* get solution */
-      SCIP_CALL( SCIPgetSolVals(scip, sol, consdata->nvars, consdata->vars, consdata->vals) );
-
-      SCIPdebugMessage("Separating symresack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
-
-      SCIP_CALL( separateSymresackCovers(scip, conss[c], consdata, &ngen, &infeasible) );
-
-      if ( infeasible )
+      /* loop through constraints */
+      for (c = 0; c < nconss; ++c)
       {
-         *result = SCIP_CUTOFF;
-         return SCIP_OKAY;
+         SCIP_Bool infeasible = FALSE;
+         int ngen = 0;
+
+         SCIPdebugMsg(scip, "Separating symresack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
+
+         /* get data of constraint */
+         assert( conss[c] != NULL );
+         consdata = SCIPconsGetData(conss[c]);
+
+         /* get solution */
+         assert( consdata->nvars <= ntotalvars );
+         SCIP_CALL( SCIPgetSolVals(scip, sol, consdata->nvars, consdata->vars, vals) );
+         SCIP_CALL( separateSymresackCovers(scip, conss[c], consdata, vals, &ngen, &infeasible) );
+
+
+         if ( infeasible )
+         {
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
+
+         if ( ngen > 0 )
+            *result = SCIP_SEPARATED;
+
+         if ( *result == SCIP_DIDNOTRUN )
+            *result = SCIP_DIDNOTFIND;
       }
-
-      if ( ngen > 0 )
-         *result = SCIP_SEPARATED;
-
-      if ( *result == SCIP_DIDNOTRUN )
-         *result = SCIP_DIDNOTFIND;
+      SCIPfreeBufferArray(scip, &vals);
    }
 
    return SCIP_OKAY;
@@ -1452,40 +1468,50 @@ SCIP_DECL_CONSENFOLP(consEnfolpSymresack)
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
 
-   SCIPdebugMessage("Enforcing method for symresack constraints (lp solutions) ...\n");
+   SCIPdebugMsg(scip, "Enforcing method for symresack constraints (lp solutions) ...\n");
 
    /* we have a negative priority, so we should come after the integrality conshdlr. */
    assert( SCIPgetNLPBranchCands(scip) == 0 );
 
    *result = SCIP_FEASIBLE;
 
-   /* loop through constraints */
-   for (c = 0; c < nconss; ++c)
+   if ( nconss > 0 )
    {
-      SCIP_Bool infeasible = FALSE;
-      int ngen = 0;
+      SCIP_Real* vals;
+      int ntotalvars;
 
-      /* get data of constraint */
-      assert( conss[c] != NULL );
-      consdata = SCIPconsGetData(conss[c]);
+      ntotalvars = SCIPgetNVars(scip);
+      SCIP_CALL( SCIPallocBufferArray(scip, &vals, ntotalvars) );
 
-      /* get solution */
-      SCIP_CALL( SCIPgetSolVals(scip, NULL, consdata->nvars, consdata->vars, consdata->vals) );
-
-      SCIPdebugMessage("Enforcing symresack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
-
-      SCIP_CALL( separateSymresackCovers(scip, conss[c], consdata, &ngen, &infeasible) );
-
-      if ( infeasible )
+      /* loop through constraints */
+      for (c = 0; c < nconss; ++c)
       {
-         *result = SCIP_CUTOFF;
-         return SCIP_OKAY;
+         SCIP_Bool infeasible = FALSE;
+         int ngen = 0;
+
+         SCIPdebugMsg(scip, "Enforcing symresack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
+
+         /* get data of constraint */
+         assert( conss[c] != NULL );
+         consdata = SCIPconsGetData(conss[c]);
+
+         /* get solution */
+         assert( consdata->nvars <= ntotalvars );
+         SCIP_CALL( SCIPgetSolVals(scip, NULL, consdata->nvars, consdata->vars, vals) );
+         SCIP_CALL( separateSymresackCovers(scip, conss[c], consdata, vals, &ngen, &infeasible) );
+
+         if ( infeasible )
+         {
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
+
+         /* SCIPdebugMsg(scip, "Generated symresack inequalities for <%s>: %d\n", SCIPconsGetName(conss[c]), ngen); */
+
+         if ( ngen > 0 )
+            *result = SCIP_SEPARATED;
       }
-
-      /* SCIPdebugMessage("Generated symresack inequalities for <%s>: %d\n", SCIPconsGetName(conss[c]), ngen); */
-
-      if ( ngen > 0 )
-         *result = SCIP_SEPARATED;
+      SCIPfreeBufferArray(scip, &vals);
    }
 
    return SCIP_OKAY;
@@ -1503,7 +1529,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsSymresack)
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
 
-   SCIPdebugMessage("Enforcing method for symresack constraints (pseudo solutions) ...\n");
+   SCIPdebugMsg(scip, "Enforcing method for symresack constraints (pseudo solutions) ...\n");
 
    *result = SCIP_FEASIBLE;
 
@@ -1571,7 +1597,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsSymresack)
             break;
          else /* infeasible */
          {
-            SCIPdebugMessage("Solution is infeasible.\n");
+            SCIPdebugMsg(scip, "Solution is infeasible.\n");
             *result = SCIP_INFEASIBLE;
             terminated = TRUE;
             break;
@@ -1605,38 +1631,48 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxSymresack)
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
 
-   SCIPdebugMessage("Enforcing method for symresack constraints (relaxation solutions) ...\n");
+   SCIPdebugMsg(scip, "Enforcing method for symresack constraints (relaxation solutions) ...\n");
 
    /* we have a negative priority, so we should come after the integrality conshdlr. */
    assert( SCIPgetNLPBranchCands(scip) == 0 );
 
    *result = SCIP_FEASIBLE;
 
-   /* loop through constraints */
-   for (c = 0; c < nconss; ++c)
+   if ( nconss > 0 )
    {
-      SCIP_Bool infeasible = FALSE;
-      int ngen = 0;
+      SCIP_Real* vals;
+      int ntotalvars;
 
-      /* get data of constraint */
-      assert( conss[c] != NULL );
-      consdata = SCIPconsGetData(conss[c]);
+      ntotalvars = SCIPgetNVars(scip);
+      SCIP_CALL( SCIPallocBufferArray(scip, &vals, ntotalvars) );
 
-      /* get solution */
-      SCIP_CALL( SCIPgetSolVals(scip, sol, consdata->nvars, consdata->vars, consdata->vals) );
-
-      SCIPdebugMessage("Enforcing symresack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
-
-      SCIP_CALL( separateSymresackCovers(scip, conss[c], consdata, &ngen, &infeasible) );
-
-      if ( infeasible )
+      /* loop through constraints */
+      for (c = 0; c < nconss; ++c)
       {
-         *result = SCIP_CUTOFF;
-         return SCIP_OKAY;
-      }
+         SCIP_Bool infeasible = FALSE;
+         int ngen = 0;
 
-      if ( ngen > 0 )
-         *result = SCIP_SEPARATED;
+         SCIPdebugMsg(scip, "Enforcing symresack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
+
+         /* get data of constraint */
+         assert( conss[c] != NULL );
+         consdata = SCIPconsGetData(conss[c]);
+
+          /* get solution */
+         assert( consdata->nvars <= ntotalvars );
+         SCIP_CALL( SCIPgetSolVals(scip, sol, consdata->nvars, consdata->vars, vals) );
+         SCIP_CALL( separateSymresackCovers(scip, conss[c], consdata, vals, &ngen, &infeasible) );
+
+         if ( infeasible )
+         {
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
+
+         if ( ngen > 0 )
+            *result = SCIP_SEPARATED;
+      }
+      SCIPfreeBufferArray(scip, &vals);
    }
 
    return SCIP_OKAY;
@@ -1676,7 +1712,7 @@ SCIP_DECL_CONSCHECK(consCheckSymresack)
       assert( consdata->vars != NULL );
       assert( consdata->invperm != NULL );
 
-      SCIPdebugMessage("Check method for symresack constraint <%s> (%d rows) ...\n", SCIPconsGetName(conss[c]), consdata->nvars);
+      SCIPdebugMsg(scip, "Check method for symresack constraint <%s> (%d rows) ...\n", SCIPconsGetName(conss[c]), consdata->nvars);
 
       nvars = consdata->nvars;
       vars = consdata->vars;
@@ -1712,7 +1748,7 @@ SCIP_DECL_CONSCHECK(consCheckSymresack)
 
          /* pair is (0,1) --> solution is infeasible */
          assert( val2 > val1 );
-         SCIPdebugMessage("Solution is infeasible.\n");
+         SCIPdebugMsg(scip, "Solution is infeasible.\n");
          *result = SCIP_INFEASIBLE;
          terminated = TRUE;
 
@@ -1724,7 +1760,7 @@ SCIP_DECL_CONSCHECK(consCheckSymresack)
    }
 
    if ( ! terminated )
-      SCIPdebugMessage("Solution is feasible.\n");
+      SCIPdebugMsg(scip, "Solution is feasible.\n");
 
    return SCIP_OKAY;
 }
@@ -1744,7 +1780,7 @@ SCIP_DECL_CONSPROP(consPropSymresack)
 
    *result = SCIP_DIDNOTRUN;
 
-   SCIPdebugMessage("Propagation method of symresack constraint handler.\n");
+   SCIPdebugMsg(scip, "Propagation method of symresack constraint handler.\n");
 
    /* loop through constraints */
    for (c = 0; c < nconss; ++c)
@@ -1792,7 +1828,7 @@ SCIP_DECL_CONSPRESOL(consPresolSymresack)
 
    oldndelconss = *ndelconss;
 
-   SCIPdebugMessage("Presolving method of symresack constraint handler. Propagating symresack inequalities.\n");
+   SCIPdebugMsg(scip, "Presolving method of symresack constraint handler. Propagating symresack inequalities.\n");
    *result = SCIP_DIDNOTRUN;
 
    /* loop through constraints */
@@ -1858,7 +1894,7 @@ SCIP_DECL_CONSRESPROP(consRespropSymresack)
    assert( bdchgidx != NULL );
    assert( result != NULL );
 
-   SCIPdebugMessage("Propagation resolution method of symresack constraint handler.\n");
+   SCIPdebugMsg(scip, "Propagation resolution method of symresack constraint handler.\n");
 
    *result = SCIP_DIDNOTFIND;
 
@@ -1884,8 +1920,8 @@ SCIP_DECL_CONSRESPROP(consRespropSymresack)
       if ( SCIPvarGetUbAtIndex(vars[invperm[inferinfo]], bdchgidx, FALSE) > 0.5
          && SCIPvarGetUbAtIndex(vars[invperm[inferinfo]], bdchgidx, TRUE) < 0.5 )
       {
-         SCIPdebugMessage(" -> reason for setting x[%d] = 0 was fixing x[%d] to 0 ", invperm[inferinfo], inferinfo);
-         SCIPdebugMessage("and each pair of binary variables before (%d,%d) which are not fixed points is constant.\n",
+         SCIPdebugMsg(scip, " -> reason for setting x[%d] = 0 was fixing x[%d] to 0 ", invperm[inferinfo], inferinfo);
+         SCIPdebugMsg(scip, "and each pair of binary variables before (%d,%d) which are not fixed points is constant.\n",
             inferinfo, invperm[inferinfo]);
 
          SCIP_CALL( SCIPaddConflictUb(scip, vars[inferinfo], bdchgidx) );
@@ -1915,8 +1951,8 @@ SCIP_DECL_CONSRESPROP(consRespropSymresack)
       if ( SCIPvarGetLbAtIndex(vars[inferinfo2], bdchgidx, FALSE) < 0.5
          && SCIPvarGetLbAtIndex(vars[inferinfo2], bdchgidx, TRUE) > 0.5 )
       {
-         SCIPdebugMessage(" -> reason for setting x[%d] = 1 was fixing x[%d] to 1 ", inferinfo2, invperm[inferinfo2]);
-         SCIPdebugMessage("and each pair of binary variables before (%d,%d) which are not fixed points is constant.\n",
+         SCIPdebugMsg(scip, " -> reason for setting x[%d] = 1 was fixing x[%d] to 1 ", inferinfo2, invperm[inferinfo2]);
+         SCIPdebugMsg(scip, "and each pair of binary variables before (%d,%d) which are not fixed points is constant.\n",
             inferinfo2, invperm[inferinfo2]);
 
          SCIP_CALL( SCIPaddConflictLb(scip, vars[invperm[inferinfo2]], bdchgidx) );
@@ -1966,7 +2002,7 @@ SCIP_DECL_CONSLOCK(consLockSymresack)
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( cons != NULL );
 
-   SCIPdebugMessage("Locking method for symresack constraint handler.\n");
+   SCIPdebugMsg(scip, "Locking method for symresack constraint handler.\n");
 
    /* get data of original constraint */
    consdata = SCIPconsGetData(cons);
@@ -2008,9 +2044,9 @@ SCIP_DECL_CONSPRINT(consPrintSymresack)
 
    SCIP_CONSDATA* consdata;
    SCIP_VAR** vars;
-   int nvars;
-   int* perm;
    SCIP_Bool* covered;
+   int* perm;
+   int nvars;
    int i;
    int j;
 
@@ -2057,7 +2093,7 @@ SCIP_DECL_CONSPRINT(consPrintSymresack)
       }
       SCIPinfoMessage(scip, file, "]");
    }
-   SCIPinfoMessage(scip, file, ")\n");
+   SCIPinfoMessage(scip, file, ")");
 
    SCIPfreeBufferArray(scip, &covered);
 
@@ -2101,6 +2137,8 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsSymresack)
    SCIP_CONSDATA* consdata;
 
    assert( cons != NULL );
+   assert( success != NULL );
+   assert( nvars != NULL );
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
@@ -2144,12 +2182,12 @@ SCIP_RETCODE SCIPincludeConshdlrSymresack(
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpSymresack) );
 
    /* whether we allow upgrading to orbisack constraints*/
-   SCIP_CALL( SCIPaddBoolParam(scip, "cons/" CONSHDLR_NAME "/upgrade",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/upgrade",
          "Upgrade symresack constraints to orbisack constraints?",
          &conshdlrdata->symresackupgrade, TRUE, DEFAULT_UPGRADE, NULL, NULL) );
 
    /* whether we allow upgrading to packing/partioning symresack constraints*/
-   SCIP_CALL( SCIPaddBoolParam(scip, "cons/" CONSHDLR_NAME "/ppsymresack",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/ppsymresack",
          "Upgrade symresack constraints to packing/partioning symresacks?",
          &conshdlrdata->checkppsymresack, TRUE, DEFAULT_PPSYMRESACK, NULL, NULL) );
 
@@ -2228,7 +2266,7 @@ SCIP_RETCODE SCIPcreateConsSymresack(
 
       if ( success )
       {
-         SCIPdebugMessage("Upgraded symresack constraint to orbisack constraint.\n");
+         SCIPdebugMsg(scip, "Upgraded symresack constraint to orbisack constraint.\n");
 
          return SCIP_OKAY;
       }
