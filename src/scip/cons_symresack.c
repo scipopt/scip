@@ -1384,7 +1384,7 @@ SCIP_DECL_CONSSEPALP(consSepalpSymresack)
       if ( *result == SCIP_DIDNOTRUN )
          *result = SCIP_DIDNOTFIND;
    }
-   SCIPfreeBlockMemory(scip, &vals);
+   SCIPfreeBufferArray(scip, &vals);
 
    return SCIP_OKAY;
 }
