@@ -980,15 +980,7 @@ SCIP_RETCODE binaryVarListAppend(
    assert(list != NULL);
    assert(vartoadd != NULL);
    assert(SCIPvarIsBinary(vartoadd));
-
-   /* In case the list tries to hold more elements than it has space, reallocate  */
-   if( list->memorysize == list->nbinaryvars )
-   {
-      /* resize the array, such that it can hold at least the new element */
-      int newmemsize = SCIPcalcMemGrowSize(scip, list->memorysize + 1);
-      SCIP_CALL( SCIPreallocBufferArray(scip, &list->binaryvars, newmemsize) );
-      list->memorysize = newmemsize;
-   }
+   assert(list->nbinaryvars < list->memorysize);
 
    /* Set the new var at the first unused place, which is the length used as index */
    list->binaryvars[list->nbinaryvars] = vartoadd;
@@ -1630,6 +1622,7 @@ void addLowerBoundProofNode(
 
    /* We want to use the proposed lower bound only if it is stronger than the current lower bound.
     * The current lower bound may have changed due to conflict analysis etc. */
+   /* @todo remove this check */
    if( SCIPisGT(scip, lowerbound, oldlowerbound) )
    {
       /* If we have an old lower bound we take the stronger one, so the MAX is taken. Otherwise we use the new lower bound
@@ -1904,6 +1897,7 @@ void applyDeeperDomainReductions(
       assert(vars[i] != NULL);
 
       /* If not both child branches have a lower bound for a var, we cannot apply the lower bound to the parent */
+      /* @todo this check can probably be removed, but we should check that the newlowerbound is larger than the current local LB (same for upper below) */
       if( downdomreds->lowerboundset[i] && updomreds->lowerboundset[i] )
       {
          SCIP_Real newlowerbound;
@@ -2279,7 +2273,7 @@ SCIP_RETCODE getNIterationsLastLP(
 }
 
 
-/** Creates a new probing node with a new bound for the given candidate. */
+/** Creates a new probing node with a new bound for the given candidate and solves the corresponding LP. */
 static
 SCIP_RETCODE executeBranching(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2347,119 +2341,120 @@ SCIP_RETCODE executeBranching(
    }
    else
    {
-      if( !resultdata->cutoff )
+      assert(!resultdata->cutoff);
+
+      SCIP_CALL( SCIPnewProbingNode(scip) );
+
+      if( downbranching )
       {
-         SCIP_CALL( SCIPnewProbingNode(scip) );
-
-         if( downbranching )
+         /* down branching preparations */
+         if( SCIPisFeasLT(scip, newbound, oldupperbound) )
          {
-            /* down branching preparations */
-            if( SCIPisFeasLT(scip, newbound, oldupperbound) )
-            {
-               /* if the new upper bound is lesser than the old upper bound and also
-                * greater than (or equal to) the old lower bound we set the new upper bound.
-                * oldLowerBound <= newUpperBound < oldUpperBound */
-               SCIP_CALL( SCIPchgVarUbProbing(scip, branchvar, newbound) );
-            }
-
-            if( warmStartInfoIsReadable(candidate->downwarmstartinfo) )
-            {
-               /* restore the stored LP data (e.g. the basis) from a previous run */
-               LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Restoring lp information for down branch of variable <%s>\n",
-                  SCIPvarGetName(branchvar));
-               SCIP_CALL(restoreFromWarmStartInfo(scip, candidate->downwarmstartinfo) );
-            }
-         }
-         else
-         {
-            /* up branching preparations */
-            if( SCIPisFeasGT(scip, newbound, oldlowerbound) )
-            {
-               /* if the new lower bound is greater than the old lower bound and also
-                * lesser than (or equal to) the old upper bound we set the new lower bound.
-                * oldLowerBound < newLowerBound <= oldUpperBound */
-               SCIP_CALL( SCIPchgVarLbProbing(scip, branchvar, newbound) );
-            }
-
-            if( warmStartInfoIsReadable(candidate->upwarmstartinfo) )
-            {
-               /* restore the stored LP data (e.g. the basis) from a previous run */
-               LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Restoring lp information for up branch of variable <%s>\n",
-                  SCIPvarGetName(branchvar));
-               SCIP_CALL(restoreFromWarmStartInfo(scip, candidate->upwarmstartinfo) );
-            }
+            /* if the new upper bound is lesser than the old upper bound and also
+             * greater than (or equal to) the old lower bound we set the new upper bound.
+             * oldLowerBound <= newUpperBound < oldUpperBound */
+            SCIP_CALL( SCIPchgVarUbProbing(scip, branchvar, newbound) );
          }
 
-         if( config->propagate )
+         if( warmStartInfoIsReadable(candidate->downwarmstartinfo) )
          {
-            SCIP_Longint ndomredsfound = 0;
+            /* restore the stored LP data (e.g. the basis) from a previous run */
+            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Restoring lp information for down branch of variable <%s>\n",
+               SCIPvarGetName(branchvar));
+            SCIP_CALL( restoreFromWarmStartInfo(scip, candidate->downwarmstartinfo) );
+         }
+      }
+      else
+      {
+         /* up branching preparations */
+         if( SCIPisFeasGT(scip, newbound, oldlowerbound) )
+         {
+            /* if the new lower bound is greater than the old lower bound and also
+             * lesser than (or equal to) the old upper bound we set the new lower bound.
+             * oldLowerBound < newLowerBound <= oldUpperBound */
+            SCIP_CALL( SCIPchgVarLbProbing(scip, branchvar, newbound) );
+         }
 
-            SCIP_CALL( SCIPpropagateProbing(scip, -1, &resultdata->cutoff, &ndomredsfound) );
+         if( warmStartInfoIsReadable(candidate->upwarmstartinfo) )
+         {
+            /* restore the stored LP data (e.g. the basis) from a previous run */
+            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Restoring lp information for up branch of variable <%s>\n",
+               SCIPvarGetName(branchvar));
+            SCIP_CALL( restoreFromWarmStartInfo(scip, candidate->upwarmstartinfo) );
+         }
+      }
 
-            if( ndomredsfound > 0 )
+      if( config->propagate )
+      {
+         SCIP_Longint ndomredsfound = 0;
+
+         SCIP_CALL( SCIPpropagateProbing(scip, -1, &resultdata->cutoff, &ndomredsfound) );
+
+         if( ndomredsfound > 0 )
+         {
+            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Found %d domain reductions via propagation.\n", ndomredsfound);
+
+            /* domreds != NULL iff config->usedomainreduction */
+            if( domreds != NULL )
             {
-               LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Found %d domain reductions via propagation.\n", ndomredsfound);
+               int i;
+               SCIP_VAR** problemvars = SCIPgetVars(scip);
+               int nproblemvars = SCIPgetNVars(scip);
 
-               /* domreds != NULL iff config->usedomainreduction */
-               if( domreds != NULL )
+               assert(config->usedomainreduction);
+
+               for( i = 0; i < nproblemvars; i++ )
                {
-                  int i;
-                  SCIP_VAR** problemvars = SCIPgetVars(scip);
-                  int nproblemvars = SCIPgetNVars(scip);
+                  SCIP_VAR* var = problemvars[i];
 
-                  for( i = 0; i < nproblemvars; i++ )
-                  {
-                     SCIP_VAR* var = problemvars[i];
+                  SCIP_Real lowerbound = SCIPvarGetLbLocal(var);
+                  SCIP_Real upperbound = SCIPvarGetUbLocal(var);
 
-                     SCIP_Real lowerbound = SCIPvarGetLbLocal(var);
-                     SCIP_Real upperbound = SCIPvarGetUbLocal(var);
-
-                     addLowerBound(scip, var, lowerbound, baselpsol, domreds, NULL);
-                     addUpperBound(scip, var, upperbound, baselpsol, domreds, NULL);
-                  }
+                  addLowerBound(scip, var, lowerbound, baselpsol, domreds, NULL);
+                  addUpperBound(scip, var, upperbound, baselpsol, domreds, NULL);
                }
             }
          }
+      }
 
-         if( !resultdata->cutoff )
+      if( !resultdata->cutoff )
+      {
+         /* solve the prepared probing LP */
+         SCIP_CALL( SCIPsolveProbingLP(scip, -1, &status->lperror, &resultdata->cutoff) );
+
+         /* store the number of iterations needed */
+         SCIP_CALL( getNIterationsLastLP(scip, &resultdata->niterations) );
+
+         solstat = SCIPgetLPSolstat(scip);
+         assert(solstat != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
+
+         /* for us an error occurred, if an error during the solving occurred, or the lp could not be solved but was not
+          * cutoff, or if the iter or time limit was reached. */
+         status->lperror = status->lperror || (solstat == SCIP_LPSOLSTAT_NOTSOLVED && resultdata->cutoff == FALSE);
+
+         /* if we seem to have reached a {time, iteration}-limit or the user cancelled the execution we want to stop
+          * further calculations and instead return the current calculation state */
+         status->limitreached = solstat == SCIP_LPSOLSTAT_ITERLIMIT || solstat == SCIP_LPSOLSTAT_TIMELIMIT;
+
+         if( resultdata->cutoff )
          {
-            /* solve the prepared probing LP */
-            SCIP_CALL( SCIPsolveProbingLP(scip, -1, &status->lperror, &resultdata->cutoff) );
+            resultdata->objval = SCIPinfinity(scip);
+            resultdata->dualbound = SCIPinfinity(scip);
+            resultdata->dualboundvalid = TRUE;
+         }
+         else if( !status->limitreached && !status->lperror )
+         {
+            SCIP_Bool foundsol = FALSE;
 
-            /* store the number of iterations needed */
-            SCIP_CALL( getNIterationsLastLP(scip, &resultdata->niterations) );
+            SCIP_CALL( SCIPtryStrongbranchLPSol(scip, &foundsol, &resultdata->cutoff) );
 
-            solstat = SCIPgetLPSolstat(scip);
-            assert(solstat != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
+            /* if we have no error, we save the new objective value and the cutoff decision in the resultdata */
+            resultdata->objval = SCIPgetLPObjval(scip);
+            resultdata->dualbound = SCIPgetLPObjval(scip);
+            resultdata->dualboundvalid = TRUE;
+            resultdata->cutoff = resultdata->cutoff || SCIPisGE(scip, resultdata->objval, SCIPgetCutoffbound(scip));
 
-            /* for us an error occurred, if an error during the solving occurred, or the lp could not be solved but was not
-             * cutoff, or if the iter or time limit was reached. */
-            status->lperror = status->lperror || (solstat == SCIP_LPSOLSTAT_NOTSOLVED && resultdata->cutoff == FALSE);
-
-            /* if we seem to have reached a {time, iteration}-limit or the user cancelled the execution we want to stop
-             * further calculations and instead return the current calculation state */
-            status->limitreached = solstat == SCIP_LPSOLSTAT_ITERLIMIT || solstat == SCIP_LPSOLSTAT_TIMELIMIT;
-
-            if( resultdata->cutoff )
-            {
-               resultdata->objval = SCIPinfinity(scip);
-               resultdata->dualbound = SCIPinfinity(scip);
-               resultdata->dualboundvalid = TRUE;
-            }
-            else if( !status->limitreached && !status->lperror )
-            {
-               SCIP_Bool foundsol = FALSE;
-
-               SCIP_CALL( SCIPtryStrongbranchLPSol(scip, &foundsol, &resultdata->cutoff) );
-
-               /* if we have no error, we save the new objective value and the cutoff decision in the resultdata */
-               resultdata->objval = SCIPgetLPObjval(scip);
-               resultdata->dualbound = SCIPgetLPObjval(scip);
-               resultdata->dualboundvalid = TRUE;
-               resultdata->cutoff = resultdata->cutoff || SCIPisGE(scip, resultdata->objval, SCIPgetCutoffbound(scip));
-
-               assert(solstat != SCIP_LPSOLSTAT_INFEASIBLE || resultdata->cutoff);
-            }
+            assert(solstat != SCIP_LPSOLSTAT_INFEASIBLE || resultdata->cutoff);
          }
       }
    }
@@ -3371,7 +3366,7 @@ SCIP_RETCODE executeBranchingRecursive(
 
    probingdepth = SCIPgetProbingDepth(scip);
 
-   if( config->usebincons && SCIPvarIsBinary(branchvar))
+   if( config->usebincons && SCIPvarIsBinary(branchvar) )
    {
       if( downbranching )
       {
@@ -3383,11 +3378,11 @@ SCIP_RETCODE executeBranchingRecursive(
           */
          SCIP_VAR *negbranchvar;
 
-         SCIP_CALL(SCIPgetNegatedVar(scip, branchvar, &negbranchvar));
+         SCIP_CALL( SCIPgetNegatedVar(scip, branchvar, &negbranchvar) );
 
          assert(negbranchvar != NULL);
 
-         SCIP_CALL(binaryVarListAppend(scip, binconsdata->binaryvars, negbranchvar));
+         SCIP_CALL( binaryVarListAppend(scip, binconsdata->binaryvars, negbranchvar) );
       }
       else
       {
@@ -3397,7 +3392,7 @@ SCIP_RETCODE executeBranchingRecursive(
           * UpBranching on a binary variable x means: x >= 1
           * When this cutoff occurs we have that: x <= 0
           */
-         SCIP_CALL(binaryVarListAppend(scip, binconsdata->binaryvars, branchvar));
+         SCIP_CALL( binaryVarListAppend(scip, binconsdata->binaryvars, branchvar) );
       }
    }
 
@@ -3408,6 +3403,7 @@ SCIP_RETCODE executeBranchingRecursive(
    SCIP_CALL( executeBranching(scip, config, downbranching, candidate, branchingresult, baselpsol, domainreductions,
          status) );
 
+   /* ???????????? vvvvvv */
 #ifdef SCIP_STATISTIC
    statistics->nlpssolved[probingdepth]++;
    statistics->nlpiterations[probingdepth] += branchingresult->niterations;
@@ -3746,16 +3742,15 @@ SCIP_RETCODE selectVarRecursive(
                localbranchingresult = down ? downbranchingresult : upbranchingresult;
                otherbranchingresult = down ? upbranchingresult : downbranchingresult;
 
-
-#ifdef SCIP_STATISTIC /* ????????????????? */
+               /* ????????????????? */
                SCIP_CALL( executeBranchingRecursive(scip, status, config, baselpsol, candidate, localbaselpsolval,
                      recursiondepth, localdomainreductions, binconsdata, localbranchingresult, scorecontainer,
-                     storewarmstartinfo, down, &addeddomainreduction, statistics, localstats) );
-#else
-               SCIP_CALL( executeBranchingRecursive(scip, status, config, baselpsol, candidate, localbaselpsolval,
-                     recursiondepth, localdomainreductions, binconsdata, localbranchingresult, scorecontainer,
-                     storewarmstartinfo, down) );
+                     storewarmstartinfo, down
+#ifdef SCIP_STATISTIC
+                     , &addeddomainreduction, statistics, localstats
 #endif
+                     ) );
+
 
                /* check whether a new solutions rendered the previous child infeasible */
                /* @todo break if result is infeasible (probably only in first layer) */
