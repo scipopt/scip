@@ -8155,17 +8155,15 @@ SCIP_Real SCIPgetRelaxSolObj(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** determine in which direction the strong branching children should be evaluated.
+/** determine which branching direction should be evaluated first by strong branching
  *
- * @return \ref SCIP_OKAY is returned if everything worked. If the value of branching/firstsbchild is
- *         invalid SCIP_PARAMETERWRONGVAL will be returned.
+ *  @return TRUE iff strong branching should first evaluate the down child
+ *
  */
 EXTERN
-SCIP_RETCODE SCIPgetBranchingDirection(
+SCIP_Bool SCIPisStrongbranchDownFirst(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,                /**< variable to determine the branching direction on */
-   SCIP_Bool             enabledconflict,    /**< should conflict analysis be enabled in case of an error? */
-   SCIP_Bool*            downchild           /**< pointer to store the resulting branching direction */
+   SCIP_VAR*             var                 /**< variable to determine the branching direction on */
    );
 
 /** start strong branching - call before any strong branching

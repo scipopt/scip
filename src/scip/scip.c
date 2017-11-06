@@ -19969,39 +19969,28 @@ SCIP_Real SCIPgetRelaxSolObj(
    return SCIPrelaxationGetSolObj(scip->relaxation);
 }
 
-/** determine in which direction the strong branching children should be evaluated.
+/** determine which branching direction should be evaluated first by strong branching
  *
- * @return \ref SCIP_OKAY is returned if everything worked. If the value of branching/firstsbchild is
- *         invalid SCIP_PARAMETERWRONGVAL will be returned.
+ *  @return TRUE iff strong branching should first evaluate the down child
+ *
  */
-SCIP_RETCODE SCIPgetBranchingDirection(
+SCIP_Bool SCIPisStrongbranchDownFirst(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,                /**< variable to determine the branching direction on */
-   SCIP_Bool             enabledconflict,    /**< should conflict analysis be enabled in case of an error? */
-   SCIP_Bool*            downchild           /**< pointer to store the resulting branching direction */
+   SCIP_VAR*             var                 /**< variable to determine the branching direction on */
    )
 {
    switch( scip->set->branch_firstsbchild )
    {
       case 'u':
-         *downchild = FALSE;
-         break;
+         return FALSE;
       case 'd':
-         *downchild = TRUE;
-         break;
+         return TRUE;
       case 'a':
-         *downchild = SCIPvarGetNLocksDown(var) > SCIPvarGetNLocksUp(var);
-         break;
-      case 'h':
-         *downchild = (SCIPgetVarAvgCutoffs(scip, var, SCIP_BRANCHDIR_DOWNWARDS) > SCIPgetVarAvgCutoffs(scip, var, SCIP_BRANCHDIR_UPWARDS));
-         break;
+         return (SCIPvarGetNLocksDown(var) > SCIPvarGetNLocksUp(var));
       default:
-         SCIPerrorMessage("Error: Unknown parameter value <%c> for branching/firstsbchild parameter:\n",scip->set->branch_firstsbchild);
-         SCIPABORT();
-         scip->set->conf_enable = enabledconflict;
-         return SCIP_PARAMETERWRONGVAL; /*lint !e527*/
+         assert(scip->set->branch_firstsbchild == 'h');
+         return (SCIPgetVarAvgCutoffs(scip, var, SCIP_BRANCHDIR_DOWNWARDS) > SCIPgetVarAvgCutoffs(scip, var, SCIP_BRANCHDIR_UPWARDS));
    }
-   return SCIP_OKAY;
 }
 
 /** start strong branching - call before any strong branching
@@ -20850,7 +20839,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
    scip->set->conf_enable = (scip->set->conf_enable && scip->set->conf_usesb);
 
    /* @todo: decide the branch to look at first based on the cutoffs in previous calls? */
-   SCIP_CALL( SCIPgetBranchingDirection(scip, var, enabledconflict, &downchild) );
+   downchild = SCIPisStrongbranchDownFirst(scip, var);
 
    downvalidlocal = FALSE;
    upvalidlocal = FALSE;

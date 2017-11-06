@@ -3734,7 +3734,7 @@ SCIP_RETCODE selectVarRecursive(
                SCIP_CALL( domainReductionsCreate(scip, &updomainreductions) );
             }
 
-            SCIP_CALL( SCIPgetBranchingDirection(scip, branchvar, TRUE, &down) );
+            down = SCIPisStrongbranchDownFirst(scip, branchvar);
 
             for( k = 0; k < 2; ++k )
             {
