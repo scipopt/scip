@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   gauge.c
+/**@file   probingobj.c
  * @brief  unit test for changing objective in probing
  */
 
