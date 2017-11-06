@@ -535,6 +535,9 @@ SCIP_RETCODE initLP(
    int firstelemincycle;
    int nvars;
    int ncycles;
+#ifdef SCIP_DEBUG
+   char name[SCIP_MAXSTRLEN];
+#endif
    int i;
    int j;
    int k;
@@ -560,7 +563,12 @@ SCIP_RETCODE initLP(
    assert( consdata->invperm[0] != 0 );
 
    /* add ordering inequality */
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), "symresack_init", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
+#ifdef SCIP_DEBUG
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symresack_init_%s", SCIPconsGetName(cons));
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
+#else
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), "", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
+#endif
    SCIP_CALL( SCIPaddVarToRow(scip, row, vars[0], -1.0) );
    SCIP_CALL( SCIPaddVarToRow(scip, row, vars[consdata->invperm[0]], 1.0) );
 
@@ -608,7 +616,12 @@ SCIP_RETCODE initLP(
             }
          }
 
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), "ppSymresack", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
+#ifdef SCIP_DEBUG
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "ppSymresack_%d_%s", i, SCIPconsGetName(cons));
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
+#else
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), "", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
+#endif
          SCIP_CALL( SCIPaddVarsToRow(scip, row, nvarsincons, varsincons, coeffs) );
 
          SCIP_CALL( SCIPaddCut(scip, row, FALSE, infeasible) );
