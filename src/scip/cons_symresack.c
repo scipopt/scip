@@ -166,7 +166,7 @@ SCIP_RETCODE packingUpgrade(
    SCIP_CONSDATA**       consdata,           /**< pointer to store constraint data */
    int*                  perm,               /**< permutation */
    SCIP_VAR**            vars,               /**< variables affected by permutation */
-   int                   n,                  /**< length of permutation */
+   int                   nvars,              /**< length of permutation */
    SCIP_Bool*            upgrade             /**< pointer to store whether upgrade was successful */
    )
 {
@@ -189,18 +189,18 @@ SCIP_RETCODE packingUpgrade(
    assert( scip != NULL );
    assert( perm != NULL );
    assert( vars != NULL );
-   assert( n > 0 );
+   assert( nvars > 0 );
    assert( upgrade != NULL );
 
    *upgrade = FALSE;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &covered, n) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &covered, nvars) );
 
-   for (i = 0; i < n; ++i)
+   for (i = 0; i < nvars; ++i)
       covered[i] = FALSE;
 
    /* check wether permutation is monotone */
-   for (i = 0; i < n; ++i)
+   for (i = 0; i < nvars; ++i)
    {
       /* skip checked indices */
       if ( covered[i] )
@@ -234,10 +234,10 @@ SCIP_RETCODE packingUpgrade(
          return SCIP_OKAY;
       }
    }
-   assert( ncycles <= n / 2 );
+   assert( ncycles <= nvars / 2 );
 
    /* each cycle is monotone; check for packing/partitioning type */
-   for (i = 0; i < n; ++i)
+   for (i = 0; i < nvars; ++i)
       covered[i] = FALSE;
 
    /* compute cycle decomposition: row i stores in entry 0 the length of the cycle,
@@ -245,12 +245,12 @@ SCIP_RETCODE packingUpgrade(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &cycledecomposition, ncycles) );
    for (i = 0; i < ncycles; ++i)
    {
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &cycledecomposition[i], n + 1) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &cycledecomposition[i], nvars + 1) );
    }
 
    curcycle = 0;
    maxcyclelength = 0;
-   for (i = 0; i < n; ++i)
+   for (i = 0; i < nvars; ++i)
    {
       int cyclelength = 0;
 
@@ -374,7 +374,7 @@ SCIP_RETCODE packingUpgrade(
       SCIPfreeBufferArray(scip, &indicesincycle);
       for (i = 0; i < ncycles; ++i)
       {
-         SCIPfreeBlockMemoryArray(scip, &cycledecomposition[i], n + 1);
+         SCIPfreeBlockMemoryArray(scip, &cycledecomposition[i], nvars + 1);
       }
       SCIPfreeBlockMemoryArray(scip, &cycledecomposition, ncycles);
       SCIPfreeBufferArray(scip, &covered);
