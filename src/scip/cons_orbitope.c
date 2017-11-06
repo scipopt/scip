@@ -86,7 +86,7 @@
 #define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP /**< propagation timing mask of the constraint handler */
 #define CONSHDLR_PRESOLTIMING            SCIP_PRESOLTIMING_MEDIUM /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 
-#define DEFAULT_PPORBITOPE         TRUE /**< whether we check if full orbitopes can be upgraded to packing/partitioning orbitopes */
+#define DEFAULT_PPORBITOPE         TRUE /**< whether we check if full orbitopes can be strengthened to packing/partitioning orbitopes */
 #define DEFAULT_SEPAFULLORBITOPE  FALSE /**< whether we separate inequalities for full orbitopes */
 
 
@@ -223,14 +223,14 @@ SCIP_RETCODE consdataCreate(
 }
 
 
-/** upgrade full orbitopes to packing/partitioning orbitopes if possible  */
+/** strenghten full orbitopes to packing/partitioning orbitopes if possible  */
 static
-SCIP_RETCODE upgradeOrbitopeConstraint(
+SCIP_RETCODE strenghtenOrbitopeConstraint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR***           vars,               /**< variable matrix of orbitope constraint */
    int*                  nrows,              /**< pointer to number of rows of variable matrix */
    int                   ncols,              /**< number of columns of variable matrix */
-   SCIP_ORBITOPETYPE*    type                /**< pointer to store type of orbitope constraint after upgrade */
+   SCIP_ORBITOPETYPE*    type                /**< pointer to store type of orbitope constraint after strengthening */
    )
 {
    SCIP_CONSHDLR* setppcconshdlr;
@@ -3110,7 +3110,7 @@ SCIP_RETCODE SCIPincludeConshdlrOrbitope(
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxOrbitope) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/checkpporbitope",
-         "Upgrade orbitope constraints to packing/partioning orbitopes?",
+         "Strengthen orbitope constraints to packing/partioning orbitopes?",
          &conshdlrdata->checkpporbitope, TRUE, DEFAULT_PPORBITOPE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/sepafullorbitope",
@@ -3230,7 +3230,7 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
       && orbitopetype != SCIP_ORBITOPETYPE_PACKING )
    {
       type = SCIP_ORBITOPETYPE_FULL;
-      SCIP_CALL( upgradeOrbitopeConstraint(scip, vars, &nspcons, nblocks, &type) );
+      SCIP_CALL( strenghtenOrbitopeConstraint(scip, vars, &nspcons, nblocks, &type) );
    }
 
    /* create constraint data */
