@@ -210,6 +210,11 @@ Test(probingobj, link_lpsol_after_objchange, .description="start probing, solve 
    SCIP_CALL( SCIPchgVarObjProbing(scip, y, 100.0) );
 
    SCIP_CALL( SCIPcreateLPSol(scip, &sol, NULL) );
+
+#ifdef NDEBUG
+   abort(); /* return SIGABORT in opt mode so it passes */
+#endif
+
 }
 
 Test(probingobj, solve_lp_after_objchange, .description="start probing, change objective, solve LP, link solution to the LP, unlink solution, end probing, and test that the objective value stays the same all the time")
