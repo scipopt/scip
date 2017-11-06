@@ -461,7 +461,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
                   }
                   else
                   {
-                     SCIP_CALL( SCIPaddCut(scip, cut, FALSE, &infeasible) );
+                     SCIP_CALL( SCIPaddRow(scip, cut, FALSE, &infeasible) );
                   }
 
                   ncuts++;
