@@ -1177,6 +1177,81 @@ SCIP_RETCODE orbisackUpgrade(
 }
 
 
+static
+SCIP_RETCODE checkSymresackSolution(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONS*            cons,               /**< constrained for which we check the solution */
+   SCIP_SOL*             sol,                /**< solution to be checked */
+   SCIP_RESULT*          result,             /**< pointer to store whether we detected infeasibility */
+   SCIP_Bool             printreason         /**< whether reason for infeasibility should be printed */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** vars;
+   int* invperm;
+   int nvars;
+   int i;
+
+   assert( cons != NULL );
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL);
+   assert( consdata->nvars > 0 );
+   assert( consdata->vars != NULL );
+   assert( consdata->invperm != NULL );
+
+   SCIPdebugMsg(scip, "Check method for symresack constraint <%s> (%d rows) ...\n", SCIPconsGetName(cons), consdata->nvars);
+
+   nvars = consdata->nvars;
+   vars = consdata->vars;
+   invperm = consdata->invperm;
+
+   /* detect first non-constant pair of variables */
+   for (i = 0; i < nvars; ++i)
+   {
+      SCIP_Real solval;
+      int val1;
+      int val2;
+
+      /* there are no fixed points */
+      assert( invperm[i] != i );
+
+      /* get value of variable i and its inverse */
+      solval = SCIPgetSolVal(scip, sol, vars[i]);
+      assert( SCIPisFeasIntegral(scip, solval) );
+      if ( solval > 0.5 )
+         val1 = 1;
+      else
+         val1 = 0;
+
+      solval = SCIPgetSolVal(scip, sol, vars[invperm[i]]);
+      assert( SCIPisFeasIntegral(scip, solval) );
+      if ( solval > 0.5 )
+         val2 = 1;
+      else
+         val2 = 0;
+
+      /* if we detected a constant pair */
+      if ( val1 == val2 )
+         continue;
+      /* pair is (1,0) --> lexicographically maximal */
+      else if ( val1 > val2 )
+         break;
+
+      /* pair is (0,1) --> solution is infeasible */
+      assert( val2 > val1 );
+      SCIPdebugMsg(scip, "Solution is infeasible.\n");
+      *result = SCIP_INFEASIBLE;
+
+      if ( printreason )
+         SCIPinfoMessage(scip, NULL, "First non-constant pair (%d, %d) of variables has pattern (0,1).\n", i, invperm[i]);
+
+      break;
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /*--------------------------------------------------------------------------------------------
  *--------------------------------- SCIP functions -------------------------------------------
  *--------------------------------------------------------------------------------------------*/
@@ -1546,72 +1621,9 @@ SCIP_DECL_CONSENFOPS(consEnfopsSymresack)
    /* loop through constraints */
    for (c = 0; c < nconss; ++c)
    {
-      SCIP_Bool terminated = FALSE;
-      SCIP_CONSDATA* consdata;
-      SCIP_VAR** vars;
-      SCIP_Real val;
-      int* invperm;
-      int* solu;
-      int nvars;
-      int i;
+      SCIP_CALL( checkSymresackSolution(scip, conss[c], NULL, result, FALSE) );
 
-      /* get data of constraint */
-      assert( conss[c] != NULL );
-      consdata = SCIPconsGetData(conss[c]);
-      assert( consdata != NULL);
-      assert( consdata->nvars > 0 );
-      assert( consdata->vars != NULL );
-      assert( consdata->invperm != NULL );
-
-      nvars = consdata->nvars;
-      vars = consdata->vars;
-      invperm = consdata->invperm;
-
-      /* determine solution */
-      SCIP_CALL( SCIPallocBufferArray(scip, &solu, nvars) );
-
-      for (i = 0; i < nvars; ++i)
-      {
-         /* there are no fixed points */
-         assert( invperm[i] != i );
-
-         /* get value of variables */
-         val = SCIPgetSolVal(scip, NULL, vars[i]);
-         assert( SCIPisFeasIntegral(scip, val) );
-
-         /* if variable is fixed to 1 -> solu[i] = 1, else = 0 */
-         if ( val > 0.5 )
-            solu[i] = 1;
-         else
-            solu[i] = 0;
-      }
-
-      /* check whether solution is lexicographically not smaller than its permutation */
-      for (i = 0; i < nvars; ++i)
-      {
-         /* there are no fixed points */
-         assert( invperm[i] != i );
-
-         /* if pair (i,invperm[i]) is constant */
-         if ( solu[i] == solu[invperm[i]] )
-            continue;
-
-         /* if first non-constant pair is (1,0): feasible */
-         if ( solu[i] == 1 )
-            break;
-         else /* infeasible */
-         {
-            SCIPdebugMsg(scip, "Solution is infeasible.\n");
-            *result = SCIP_INFEASIBLE;
-            terminated = TRUE;
-            break;
-         }
-      }
-
-      /* free buffers */
-      SCIPfreeBufferArrayNull(scip, &solu);
-
-      if ( terminated )
+      if ( *result == SCIP_INFEASIBLE )
          break;
    }
 
@@ -1689,16 +1701,7 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxSymresack)
 static
 SCIP_DECL_CONSCHECK(consCheckSymresack)
 {   /*lint --e{715}*/
-   SCIP_CONSDATA* consdata;
-   SCIP_Bool terminated = FALSE;
-   SCIP_VAR** vars;
-   SCIP_Real solval;
-   int* invperm;
-   int nvars;
-   int val1;
-   int val2;
    int c;
-   int i;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -1708,64 +1711,15 @@ SCIP_DECL_CONSCHECK(consCheckSymresack)
    *result = SCIP_FEASIBLE;
 
    /* loop through constraints */
-   for (c = 0; c < nconss && ! terminated; ++c)
+   for (c = 0; c < nconss; ++c)
    {
-      /* get data of constraint */
-      assert( conss[c] != NULL );
-      consdata = SCIPconsGetData(conss[c]);
-      assert( consdata != NULL);
-      assert( consdata->nvars > 0 );
-      assert( consdata->vars != NULL );
-      assert( consdata->invperm != NULL );
+      SCIP_CALL( checkSymresackSolution(scip, conss[c], sol, result, printreason) );
 
-      SCIPdebugMsg(scip, "Check method for symresack constraint <%s> (%d rows) ...\n", SCIPconsGetName(conss[c]), consdata->nvars);
-
-      nvars = consdata->nvars;
-      vars = consdata->vars;
-      invperm = consdata->invperm;
-
-      /* detect first non-constant pair of variables */
-      for (i = 0; i < nvars; ++i)
-      {
-         /* there are no fixed points */
-         assert( invperm[i] != i );
-
-         /* get value of variable i and its inverse */
-         solval = SCIPgetSolVal(scip, sol, vars[i]);
-         assert( SCIPisFeasIntegral(scip, solval) );
-         if ( solval > 0.5 )
-            val1 = 1;
-         else
-            val1 = 0;
-
-         solval = SCIPgetSolVal(scip, sol, vars[invperm[i]]);
-         assert( SCIPisFeasIntegral(scip, solval) );
-         if ( solval > 0.5 )
-            val2 = 1;
-         else
-            val2 = 0;
-
-         /* if we detected a constant pair */
-         if ( val1 == val2 )
-            continue;
-         /* pair is (1,0) --> lexicographically maximal */
-         else if ( val1 > val2 )
-            break;
-
-         /* pair is (0,1) --> solution is infeasible */
-         assert( val2 > val1 );
-         SCIPdebugMsg(scip, "Solution is infeasible.\n");
-         *result = SCIP_INFEASIBLE;
-         terminated = TRUE;
-
-         if ( printreason )
-            SCIPinfoMessage(scip, NULL, "First non-constant pair (%d, %d) of variables has pattern (0,1).\n", i, invperm[i]);
-
+      if ( *result == SCIP_INFEASIBLE )
          break;
-      }
    }
 
-   if ( ! terminated )
+   if ( *result == SCIP_FEASIBLE )
       SCIPdebugMsg(scip, "Solution is feasible.\n");
 
    return SCIP_OKAY;
