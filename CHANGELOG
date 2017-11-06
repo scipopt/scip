@@ -7,6 +7,7 @@ fixed bugs:
 - fixed order of SCIPcalcCliquePartition in corner case where no cliques are available
 - fixed bug in mps reader. Reader now prints OBJSENSE section and tries to generate unique names of constraints
 - fixed handling of LOOSE variables in locks heuristic
+- fixed upgrade to a varbound constraint if abspower constraint contains a multi-aggregated variable
 
 SCIP version 4.0.1
 ==================
