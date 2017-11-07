@@ -26,12 +26,12 @@
 #include <math.h>
 #include "scip/cons_expr_cos.h"
 #include "scip/cons_expr_sin.h"
-#include "cons_expr_value.h"
+#include "scip/cons_expr_value.h"
 
 /* fundamental expression handler properties */
 #define EXPRHDLR_NAME         "cos"
 #define EXPRHDLR_DESC         "cosine expression"
-#define EXPRHDLR_PRECEDENCE   9200
+#define EXPRHDLR_PRECEDENCE   92000
 #define EXPRHDLR_HASHKEY      SCIPcalcFibHash(82463.0)
 
 /*
@@ -251,7 +251,8 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaCos)
       {
          SCIP_CALL( SCIPmassageConsExprExprCut(scip, &cuts[i], NULL, -SCIPinfinity(scip)) );
 
-         if( cuts[i] != NULL ) {
+         if( cuts[i] != NULL )
+         {
             SCIP_CALL( SCIPaddCut(scip, NULL, cuts[i], FALSE, infeasible) );
          }
       }
@@ -267,19 +268,23 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaCos)
    SCIP_CALL( SCIPcomputeCutsSin(scip, conshdlr, expr, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4], NULL,
          SCIP_INVALID, childlb, childub, FALSE) );
 
-   for( i = 0; i < 5; ++i ) {
+   for( i = 0; i < 5; ++i )
+   {
       /* only the cuts which could be created are added */
-      if (!*infeasible && cuts[i] != NULL) {
-         SCIP_CALL(SCIPmassageConsExprExprCut(scip, &cuts[i], NULL, -SCIPinfinity(scip)));
+      if (!*infeasible && cuts[i] != NULL)
+      {
+         SCIP_CALL( SCIPmassageConsExprExprCut(scip, &cuts[i], NULL, -SCIPinfinity(scip)) );
 
-         if (cuts[i] != NULL) {
-            SCIP_CALL(SCIPaddCut(scip, NULL, cuts[i], FALSE, infeasible));
+         if (cuts[i] != NULL)
+         {
+            SCIP_CALL( SCIPaddCut(scip, NULL, cuts[i], FALSE, infeasible) );
          }
       }
 
       /* release the row */
-      if (cuts[i] != NULL) {
-         SCIP_CALL(SCIPreleaseRow(scip, &cuts[i]));
+      if (cuts[i] != NULL)
+      {
+         SCIP_CALL( SCIPreleaseRow(scip, &cuts[i]) );
       }
    }
 
@@ -398,7 +403,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropCos)
    newbounds.sup += M_PI_2;
 
    /* compute the new child interval */
-   SCIP_CALL(SCIPcomputeRevPropIntervalSin(scip, SCIPgetConsExprExprInterval(expr), newbounds, &newbounds) );
+   SCIP_CALL( SCIPcomputeRevPropIntervalSin(scip, SCIPgetConsExprExprInterval(expr), newbounds, &newbounds) );
 
    /* shift the new interval back */
    newbounds.inf -= M_PI_2;

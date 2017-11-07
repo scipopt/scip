@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   exprhdlr_cos.c
- * @brief  tests expression handler functions of xzy an expression
+ * @brief  tests expression handler functions of cosine an expression
  * @author Fabian Wegscheider
  */
 
@@ -43,33 +43,33 @@ static SCIP_RANDNUMGEN* rndgen;
 static
 void setup(void)
 {
-   SCIP_CALL(SCIPcreate(&scip));
+   SCIP_CALL( SCIPcreate(&scip) );
 
    /* include cons_expr: this adds the operator handlers */
-   SCIP_CALL(SCIPincludeConshdlrExpr(scip));
+   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
 
    /* get expr conshdlr */
    conshdlr = SCIPfindConshdlr(scip, "expr");
    cr_assert(conshdlr != NULL);
 
    /* create problem */
-   SCIP_CALL(SCIPcreateProbBasic(scip, "test_problem"));
+   SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
 
-   SCIP_CALL(SCIPcreateVarBasic(scip, &x, "x", -1.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS));
-   SCIP_CALL(SCIPcreateVarBasic(scip, &y, "y", -1.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS));
-   SCIP_CALL(SCIPaddVar(scip, x));
-   SCIP_CALL(SCIPaddVar(scip, y));
+   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", -1.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", -1.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, x) );
+   SCIP_CALL( SCIPaddVar(scip, y) );
 
    /* create variable and cosine expressions */
-   SCIP_CALL(SCIPcreateConsExprExprVar(scip, conshdlr, &xexpr, x));
-   SCIP_CALL(SCIPcreateConsExprExprVar(scip, conshdlr, &yexpr, y));
-   SCIP_CALL(SCIPcreateConsExprExprCos(scip, conshdlr, &cosexpr, xexpr));
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &xexpr, x) );
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &yexpr, y) );
+   SCIP_CALL( SCIPcreateConsExprExprCos(scip, conshdlr, &cosexpr, xexpr) );
 
    /* create solution */
-   SCIP_CALL(SCIPcreateSol(scip, &sol, NULL));
+   SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
 
    /* create random number generator */
-   SCIP_CALL(SCIPcreateRandom(scip, &rndgen, 1));
+   SCIP_CALL( SCIPcreateRandom(scip, &rndgen, 1) );
 }
 
 /* releases variables, frees scip */
@@ -80,14 +80,14 @@ void teardown(void)
    SCIPfreeRandom(scip, &rndgen);
 
    /* free allocated memory */
-   SCIP_CALL(SCIPfreeSol(scip, &sol));
+   SCIP_CALL( SCIPfreeSol(scip, &sol) );
 
-   SCIP_CALL(SCIPreleaseConsExprExpr(scip, &cosexpr));
-   SCIP_CALL(SCIPreleaseConsExprExpr(scip, &yexpr));
-   SCIP_CALL(SCIPreleaseConsExprExpr(scip, &xexpr));
-   SCIP_CALL(SCIPreleaseVar(scip, &x));
-   SCIP_CALL(SCIPreleaseVar(scip, &y));
-   SCIP_CALL(SCIPfree(&scip));
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &cosexpr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &yexpr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
+   SCIP_CALL( SCIPreleaseVar(scip, &x) );
+   SCIP_CALL( SCIPreleaseVar(scip, &y) );
+   SCIP_CALL( SCIPfree(&scip) );
 
    cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
 }
@@ -104,19 +104,14 @@ Test(cos, creation, .description = "Tests the expression creation.")
    SCIP_CONSEXPR_EXPR *expr;
 
    /* create cosine expression */
-   SCIP_CALL(SCIPcreateConsExprExprCos(scip, conshdlr, &expr, xexpr));
+   SCIP_CALL( SCIPcreateConsExprExprCos(scip, conshdlr, &expr, xexpr) );
 
    cr_assert(expr != NULL);
    cr_expect(SCIPgetConsExprExprNChildren(expr) == 1);
    cr_expect(SCIPgetConsExprExprChildren(expr)[0] == xexpr);
 
    /* release expression */
-   SCIP_CALL(SCIPreleaseConsExprExpr(scip, &expr));
-}
-
-Test(cos, print, .description = "Tests the expression printing function.")
-{
-/* TODO */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
 
 Test(cos, parse, .description = "Tests the expression parsing.")
@@ -125,14 +120,14 @@ Test(cos, parse, .description = "Tests the expression parsing.")
    const char *input = "cos(<x>[C])";
 
    /* create cosine expression */
-   SCIP_CALL(SCIPparseConsExprExpr(scip, conshdlr, (char *) input, NULL, &expr));
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char *) input, NULL, &expr) );
 
    cr_assert(expr != NULL);
    cr_expect(SCIPgetConsExprExprNChildren(expr) == 1);
    cr_expect(SCIPgetConsExprExprChildren(expr)[0] == xexpr);
 
    /* release expression */
-   SCIP_CALL(SCIPreleaseConsExprExpr(scip, &expr));
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
 
 Test(cos, eval, .description = "Tests the expression evaluation.")
@@ -143,18 +138,20 @@ Test(cos, eval, .description = "Tests the expression evaluation.")
    SCIP_Real results[5] = {1.0, -1.0, 0.0, 0.0, 1.0};
 
    /* deterministic part */
-   for (i = 0; i < 5; ++i) {
-      SCIP_CALL(SCIPsetSolVal(scip, sol, x, testvalues[i]));
-      SCIP_CALL(SCIPevalConsExprExpr(scip, cosexpr, sol, 0));
+   for (i = 0; i < 5; ++i)
+   {
+      SCIP_CALL( SCIPsetSolVal(scip, sol, x, testvalues[i]) );
+      SCIP_CALL( SCIPevalConsExprExpr(scip, cosexpr, sol, 0) );
 
       cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprValue(cosexpr), results[i]));
    }
 
    /* random part */
-   for (i = 0; i < 100; ++i) {
+   for (i = 0; i < 100; ++i)
+   {
       randnum = SCIPrandomGetReal(rndgen, -10.0, 10.0);
-      SCIP_CALL(SCIPsetSolVal(scip, sol, x, randnum));
-      SCIP_CALL(SCIPevalConsExprExpr(scip, cosexpr, sol, 0));
+      SCIP_CALL( SCIPsetSolVal(scip, sol, x, randnum) );
+      SCIP_CALL( SCIPevalConsExprExpr(scip, cosexpr, sol, 0) );
 
       cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprValue(cosexpr), COS(randnum)));
    }
@@ -202,11 +199,12 @@ Test(cos, inteval, .description = "Tests the expression interval evaluation.")
    rndresub[4] = 1.0;
 
    /* deterministic part */
-   for (i = 0; i < 5; ++i) {
-      SCIP_CALL(SCIPchgVarLb(scip, x, detlb[i]));
-      SCIP_CALL(SCIPchgVarUb(scip, x, detub[i]));
-      SCIP_CALL(SCIPevalConsExprExpr(scip, cosexpr, sol, 0));
-      SCIP_CALL(SCIPevalConsExprExprInterval(scip, cosexpr, FALSE, 0, SCIPepsilon(scip)));
+   for (i = 0; i < 5; ++i)
+   {
+      SCIP_CALL( SCIPchgVarLb(scip, x, detlb[i]) );
+      SCIP_CALL( SCIPchgVarUb(scip, x, detub[i]) );
+      SCIP_CALL( SCIPevalConsExprExpr(scip, cosexpr, sol, 0) );
+      SCIP_CALL( SCIPevalConsExprExprInterval(scip, cosexpr, FALSE, 0, SCIPepsilon(scip)) );
 
       interval = SCIPgetConsExprExprInterval(cosexpr);
       cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetInf(interval), detreslb[i]));
@@ -214,11 +212,12 @@ Test(cos, inteval, .description = "Tests the expression interval evaluation.")
    }
 
    /* random part */
-   for (i = 0; i < 5; ++i) {
-      SCIP_CALL(SCIPchgVarLb(scip, x, rndlb[i]));
-      SCIP_CALL(SCIPchgVarUb(scip, x, rndub[i]));
-      SCIP_CALL(SCIPevalConsExprExpr(scip, cosexpr, sol, 0));
-      SCIP_CALL(SCIPevalConsExprExprInterval(scip, cosexpr, FALSE, 0, SCIPepsilon(scip)));
+   for (i = 0; i < 5; ++i)
+   {
+      SCIP_CALL( SCIPchgVarLb(scip, x, rndlb[i]) );
+      SCIP_CALL( SCIPchgVarUb(scip, x, rndub[i]) );
+      SCIP_CALL( SCIPevalConsExprExpr(scip, cosexpr, sol, 0) );
+      SCIP_CALL( SCIPevalConsExprExprInterval(scip, cosexpr, FALSE, 0, SCIPepsilon(scip)) );
 
       interval = SCIPgetConsExprExprInterval(cosexpr);
       cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetInf(interval), rndreslb[i]));
@@ -234,18 +233,20 @@ Test(cos, derivative, .description = "Tests the expression derivation.")
    SCIP_Real results[5] = {0.0, 0.0, 0.0, -1.0, 1.0};
 
    /* deterministic part */
-   for (i = 0; i < 5; ++i) {
-      SCIP_CALL(SCIPsetSolVal(scip, sol, x, testvalues[i]));
-      SCIP_CALL(SCIPcomputeConsExprExprGradient(scip, conshdlr, cosexpr, sol, 0));
+   for (i = 0; i < 5; ++i)
+   {
+      SCIP_CALL( SCIPsetSolVal(scip, sol, x, testvalues[i]) );
+      SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, cosexpr, sol, 0) );
 
       cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprPartialDiff(scip, conshdlr, cosexpr, x), results[i]));
    }
 
    /* random part */
-   for (i = 0; i < 100; ++i) {
+   for (i = 0; i < 100; ++i)
+   {
       randnum = SCIPrandomGetReal(rndgen, -10.0, 10.0);
-      SCIP_CALL(SCIPsetSolVal(scip, sol, x, randnum));
-      SCIP_CALL(SCIPcomputeConsExprExprGradient(scip, conshdlr, cosexpr, sol, 0));
+      SCIP_CALL( SCIPsetSolVal(scip, sol, x, randnum) );
+      SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, cosexpr, sol, 0) );
 
       cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprPartialDiff(scip, conshdlr, cosexpr, x), -SIN(randnum)));
    }
@@ -260,13 +261,13 @@ Test(cos, hash, .description = "Tests the expression hash.")
    unsigned int hashkey2;
    unsigned int hashkey3;
 
-   SCIP_CALL(SCIPcreateConsExprExprCos(scip, conshdlr, &expr1, xexpr));
-   SCIP_CALL(SCIPcreateConsExprExprCos(scip, conshdlr, &expr2, xexpr));
-   SCIP_CALL(SCIPcreateConsExprExprCos(scip, conshdlr, &expr3, yexpr));
+   SCIP_CALL( SCIPcreateConsExprExprCos(scip, conshdlr, &expr1, xexpr) );
+   SCIP_CALL( SCIPcreateConsExprExprCos(scip, conshdlr, &expr2, xexpr) );
+   SCIP_CALL( SCIPcreateConsExprExprCos(scip, conshdlr, &expr3, yexpr) );
 
-   SCIP_CALL(SCIPgetConsExprExprHashkey(scip, expr1, &hashkey1));
-   SCIP_CALL(SCIPgetConsExprExprHashkey(scip, expr2, &hashkey2));
-   SCIP_CALL(SCIPgetConsExprExprHashkey(scip, expr3, &hashkey3));
+   SCIP_CALL( SCIPgetConsExprExprHashkey(scip, expr1, &hashkey1) );
+   SCIP_CALL( SCIPgetConsExprExprHashkey(scip, expr2, &hashkey2) );
+   SCIP_CALL( SCIPgetConsExprExprHashkey(scip, expr3, &hashkey3) );
 
    cr_expect(hashkey1 != 0);
    cr_expect(hashkey2 != 0);
@@ -274,9 +275,9 @@ Test(cos, hash, .description = "Tests the expression hash.")
    cr_expect(hashkey1 == hashkey2);
    cr_expect(hashkey1 != hashkey3);
 
-   SCIP_CALL(SCIPreleaseConsExprExpr(scip, &expr3));
-   SCIP_CALL(SCIPreleaseConsExprExpr(scip, &expr2));
-   SCIP_CALL(SCIPreleaseConsExprExpr(scip, &expr1));
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr3) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr2) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr1) );
 }
 
 Test(cos, simplify, .description = "Tests the expression simplification.")
@@ -286,15 +287,15 @@ Test(cos, simplify, .description = "Tests the expression simplification.")
    SCIP_CONSEXPR_EXPR *expr3;
 
    /* expr1 = <5.0>, expr2 = cos(<5.0>), expr3 is buffer for simplification */
-   SCIP_CALL(SCIPcreateConsExprExprValue(scip, conshdlr, &expr1, 5.0));
-   SCIP_CALL(SCIPcreateConsExprExprCos(scip, conshdlr, &expr2, expr1));
-   SCIP_CALL(SCIPsimplifyConsExprExpr(scip, expr2, &expr3));
-   SCIP_CALL(SCIPevalConsExprExpr(scip, expr2, sol, 0));
+   SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, &expr1, 5.0) );
+   SCIP_CALL( SCIPcreateConsExprExprCos(scip, conshdlr, &expr2, expr1) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, expr2, &expr3) );
+   SCIP_CALL( SCIPevalConsExprExpr(scip, expr2, sol, 0) );
 
    cr_expect(SCIPgetConsExprExprHdlr(expr3) == SCIPgetConsExprExprHdlrValue(conshdlr));
    cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprValue(expr2), COS(5.0)));
 
-   SCIP_CALL(SCIPreleaseConsExprExpr(scip, &expr3));
-   SCIP_CALL(SCIPreleaseConsExprExpr(scip, &expr2));
-   SCIP_CALL(SCIPreleaseConsExprExpr(scip, &expr1));
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr3) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr2) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr1) );
 }

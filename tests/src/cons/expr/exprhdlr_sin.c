@@ -114,11 +114,6 @@ Test(sin, creation, .description = "Tests the expression creation.")
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
 
-Test(sin, print, .description = "Tests the expression printing function.")
-{
-   /* TODO */
-}
-
 Test(sin, parse, .description = "Tests the expression parsing.")
 {
    SCIP_CONSEXPR_EXPR* expr;
@@ -292,9 +287,9 @@ Test(sin, simplify, .description = "Tests the expression simplification.")
    SCIP_CONSEXPR_EXPR* expr3;
 
    /* expr1 = <5.0>, expr2 = sin(<5.0>), expr3 is buffer for simplification */
-   SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, &expr1, 5.0));
-   SCIP_CALL( SCIPcreateConsExprExprSin(scip, conshdlr, &expr2, expr1));
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, expr2, &expr3));
+   SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, &expr1, 5.0) );
+   SCIP_CALL( SCIPcreateConsExprExprSin(scip, conshdlr, &expr2, expr1) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, expr2, &expr3) );
    SCIP_CALL( SCIPevalConsExprExpr(scip, expr2, sol, 0) );
 
    cr_expect(SCIPgetConsExprExprHdlr(expr3) == SCIPgetConsExprExprHdlrValue(conshdlr));

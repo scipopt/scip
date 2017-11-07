@@ -54,10 +54,10 @@ SCIP_RETCODE SCIPcreateConsExprExprSin(
 /** helper function to compute the new interval for child in reverse propagation */
 EXTERN
 SCIP_RETCODE SCIPcomputeRevPropIntervalSin(
-   SCIP *scip,                               /**< SCIP data structure */
-   SCIP_INTERVAL parentbounds,               /**< bounds for sine expression */
-   SCIP_INTERVAL childbounds,                /**< bounds for child expression */
-   SCIP_INTERVAL *newbounds                  /**< buffer to store new child bounds */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_INTERVAL         parentbounds,       /**< bounds for sine expression */
+   SCIP_INTERVAL         childbounds,        /**< bounds for child expression */
+   SCIP_INTERVAL*        newbounds           /**< buffer to store new child bounds */
 );
 
 /** helper function to create cuts for point- or initial separation for sine and cosine expressions
