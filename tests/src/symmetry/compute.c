@@ -65,7 +65,6 @@ Test(test_compute_symmetry, basic1, .description = "compute symmetry for a simpl
    SCIP_CONS* cons;
    SCIP_VAR* vars[2];
    SCIP_Real vals[2];
-   SCIP_PRESOL* presol;
    SCIP_VAR** permvars;
    int** perms;
    int* orbits;
@@ -111,10 +110,6 @@ Test(test_compute_symmetry, basic1, .description = "compute symmetry for a simpl
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-   /* get symmetry presolver */
-   presol = SCIPfindPresol(scip, "symmetry");
-   cr_assert( presol != NULL );
-
    /* turn off presolving in order to avoid having trivial problem afterwards */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
 
@@ -122,13 +117,13 @@ Test(test_compute_symmetry, basic1, .description = "compute symmetry for a simpl
    SCIP_CALL( SCIPsetBoolParam(scip, "presolving/symmetry/checksymmetries", TRUE) );
 
    /* mark that we want to have symmetry */
-   SYMsetSpecRequirement(presol, SYM_SPEC_BINARY);
+   SCIP_CALL( SCIPregisterSymmetry(scip, SYM_HANDLETYPE_SYMBREAK, SYM_SPEC_BINARY, 0) );
 
    /* presolve problem (symmetry will be available afterwards) */
    SCIP_CALL( SCIPpresolve(scip) );
 
    /* get symmetry */
-   SCIP_CALL( SCIPgetSymmetryGenerators(scip, presol, &npermvars, &permvars, &nperms, &perms, NULL) );
+   SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, &npermvars, &permvars, &nperms, &perms, NULL) );
 
    /* compute orbits */
    SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
@@ -181,7 +176,6 @@ Test(test_compute_symmetry, basic2, .description = "compute symmetry for a simpl
    SCIP_CONS* cons;
    SCIP_VAR* vars[2];
    SCIP_Real vals[2];
-   SCIP_PRESOL* presol;
    SCIP_VAR** permvars;
    int** perms;
    int* orbits;
@@ -228,10 +222,6 @@ Test(test_compute_symmetry, basic2, .description = "compute symmetry for a simpl
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-   /* get symmetry presolver */
-   presol = SCIPfindPresol(scip, "symmetry");
-   cr_assert( presol != NULL );
-
    /* turn off presolving in order to avoid having trivial problem afterwards */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
 
@@ -239,16 +229,13 @@ Test(test_compute_symmetry, basic2, .description = "compute symmetry for a simpl
    SCIP_CALL( SCIPsetBoolParam(scip, "presolving/symmetry/checksymmetries", TRUE) );
 
    /* mark that we want to have symmetry */
-   SYMsetSpecRequirement(presol, SYM_SPEC_BINARY | SYM_SPEC_REAL);
-
-   /* mark that we want to fix all binary variables */
-   SYMsetSpecRequirementFixed(presol, SYM_SPEC_BINARY);
+   SCIP_CALL( SCIPregisterSymmetry(scip, SYM_HANDLETYPE_SYMBREAK, SYM_SPEC_BINARY | SYM_SPEC_REAL, SYM_SPEC_BINARY) );
 
    /* presolve problem (symmetry will be available afterwards) */
    SCIP_CALL( SCIPpresolve(scip) );
 
    /* get symmetry */
-   SCIP_CALL( SCIPgetSymmetryGenerators(scip, presol, &npermvars, &permvars, &nperms, &perms, NULL) );
+   SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, &npermvars, &permvars, &nperms, &perms, NULL) );
 
    /* compute orbits */
    SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
@@ -295,7 +282,6 @@ Test(test_compute_symmetry, basic3, .description = "compute symmetry for a simpl
    SCIP_CONS* cons;
    SCIP_VAR* vars[2];
    SCIP_Real vals[2];
-   SCIP_PRESOL* presol;
    SCIP_VAR** permvars;
    int** perms;
    int* orbits;
@@ -359,10 +345,6 @@ Test(test_compute_symmetry, basic3, .description = "compute symmetry for a simpl
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-   /* get symmetry presolver */
-   presol = SCIPfindPresol(scip, "symmetry");
-   cr_assert( presol != NULL );
-
    /* compute symmetry before presolving */
    SCIP_CALL( SCIPsetBoolParam(scip, "presolving/symmetry/computepresolved", FALSE) );
 
@@ -370,13 +352,13 @@ Test(test_compute_symmetry, basic3, .description = "compute symmetry for a simpl
    SCIP_CALL( SCIPsetBoolParam(scip, "presolving/symmetry/checksymmetries", TRUE) );
 
    /* mark that we want to have symmetry */
-   SYMsetSpecRequirement(presol, SYM_SPEC_BINARY);
+   SCIP_CALL( SCIPregisterSymmetry(scip, SYM_HANDLETYPE_SYMBREAK, SYM_SPEC_BINARY, 0) );
 
    /* presolve problem (symmetry will be available afterwards) */
    SCIP_CALL( SCIPpresolve(scip) );
 
    /* get symmetry */
-   SCIP_CALL( SCIPgetSymmetryGenerators(scip, presol, &npermvars, &permvars, &nperms, &perms, NULL) );
+   SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, &npermvars, &permvars, &nperms, &perms, NULL) );
 
    /* compute orbits */
    SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
@@ -429,7 +411,6 @@ Test(test_compute_symmetry, basic4, .description = "compute symmetry for a simpl
    SCIP_CONS* cons;
    SCIP_VAR* vars[2];
    SCIP_Real vals[2];
-   SCIP_PRESOL* presol;
    int npermvars;
    SCIP_VAR** permvars;
    int nperms;
@@ -490,21 +471,17 @@ Test(test_compute_symmetry, basic4, .description = "compute symmetry for a simpl
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-   /* get symmetry presolver */
-   presol = SCIPfindPresol(scip, "symmetry");
-   cr_assert( presol != NULL );
-
    /* turn on checking of symmetries */
    SCIP_CALL( SCIPsetBoolParam(scip, "presolving/symmetry/checksymmetries", TRUE) );
 
    /* mark that we want to have symmetry */
-   SYMsetSpecRequirement(presol, SYM_SPEC_BINARY);
+   SCIP_CALL( SCIPregisterSymmetry(scip, SYM_HANDLETYPE_SYMBREAK, SYM_SPEC_BINARY, 0) );
 
    /* presolve problem (symmetry will be available afterwards) */
    SCIP_CALL( SCIPpresolve(scip) );
 
    /* get symmetry */
-   SCIP_CALL( SCIPgetSymmetryGenerators(scip, presol, &npermvars, &permvars, &nperms, &perms, NULL) );
+   SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, &npermvars, &permvars, &nperms, &perms, NULL) );
    cr_assert( nperms == 0 );  /* problem should be empty */
 
    SCIP_CALL( SCIPreleaseVar(scip, &var1) );

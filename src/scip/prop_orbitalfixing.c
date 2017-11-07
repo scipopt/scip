@@ -71,7 +71,6 @@ struct SCIP_PropData
    int                   nfixedzero;         /**< number of variables fixed to 0 */
    int                   nfixedone;          /**< number of variables fixed to 1 */
    SCIP_Longint          nodenumber;         /**< number of node where propagation has been last applied */
-   SCIP_PRESOL*          symmetrypresol;     /**< pointer to symmetry presolver */
 };
 
 
@@ -541,9 +540,8 @@ SCIP_DECL_PROPINIT(propInitOrbitalfixing)
 
    if ( propdata->enabled )
    {
-      /* work on binary variables while fixing integer variables */
-      SYMsetSpecRequirement(propdata->symmetrypresol, SYM_SPEC_BINARY);
-      SYMsetSpecRequirement(propdata->symmetrypresol, SYM_SPEC_INTEGER);
+      /* register presolver for symmetry information, work on binary variables while fixing integer variables */
+      SCIP_CALL( SCIPregisterSymmetry(scip, SYM_HANDLETYPE_ORBITALFIXING, SYM_SPEC_BINARY | SYM_SPEC_INTEGER, 0) );
    }
 
    return SCIP_OKAY;
@@ -605,8 +603,7 @@ SCIP_DECL_PROPINITSOL(propInitsolOrbitalfixing)
    /* possibly get symmetries */
    if ( propdata->npermvars < 0 )
    {
-      SCIP_CALL( SCIPgetSymmetryGenerators(scip, propdata->symmetrypresol, &(propdata->npermvars),
-            &(propdata->permvars), &(propdata->nperms), &(propdata->perms), NULL) );
+      SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, &(propdata->npermvars), &(propdata->permvars), &(propdata->nperms), &(propdata->perms), NULL) );
 
       if ( propdata->nperms <= 0 )
       {
@@ -713,7 +710,6 @@ SCIP_RETCODE SCIPincludePropOrbitalfixing(
 {
    SCIP_TABLEDATA* tabledata;
    SCIP_PROPDATA* propdata;
-   SCIP_PRESOL* presol;
    SCIP_PROP* prop;
 
    /* create orbitalfixing propagator data */
@@ -726,15 +722,6 @@ SCIP_RETCODE SCIPincludePropOrbitalfixing(
    propdata->permvars = NULL;
    propdata->npermvars = -1;
    propdata->permvarmap = NULL;
-
-   /* determine cons_symmetries constraint handler */
-   presol = SCIPfindPresol(scip, "symmetry");
-   if ( presol == 0 )
-   {
-      SCIPerrorMessage("Could not find symmetry presolver.\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
-   propdata->symmetrypresol = presol;
 
    /* include propagator */
    SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING, propExecOrbitalfixing, propdata) );

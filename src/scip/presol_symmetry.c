@@ -69,8 +69,9 @@ struct SCIP_PresolData
    SCIP_Bool             computepresolved;   /**< Should the symmetry be computed afer presolving (otherwise before presol)? */
    int                   maxgenerators;      /**< limit on the number of generators that should be produced within symmetry detection (0 = no limit) */
    SCIP_Bool             checksymmetries;    /**< Should all symmetries be checked after computation? */
-   int                   symspecrequire;     /**< symmetry specification for which we need to compute symmetries */
-   int                   symspecrequirefixed;/**< symmetry specification of variables which must be fixed by symmetries */
+   unsigned int          symtype;            /**< type of symmetry of registered calling function */
+   unsigned int          symspecrequire;     /**< symmetry specification for which we need to compute symmetries */
+   unsigned int          symspecrequirefixed;/**< symmetry specification of variables which must be fixed by symmetries */
    int                   npermvars;          /**< number of variables for permutations */
    SCIP_VAR**            permvars;           /**< variables on which permutations act */
    int                   nperms;             /**< number of permutations */
@@ -1232,6 +1233,9 @@ SCIP_RETCODE determineSymmetry(
       SCIPinfoMessage(scip, NULL, "Turned off presolver <components>.\n\n");
    }
 
+   SCIP_CALL( SCIPaddSymHandletype(scip, presoldata->symtype) );
+   assert( SCIPgetSymHandletype(scip) == presoldata->symtype );
+
    return SCIP_OKAY;
 }
 
@@ -1452,9 +1456,8 @@ SCIP_RETCODE SCIPincludePresolSymmetry(
 
 
 /** return symmetry group generators */
-SCIP_RETCODE SCIPgetSymmetryGenerators(
+SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PRESOL*          presol,             /**< symmetry presolver */
    int*                  npermvars,          /**< pointer to store number of variables for permutations */
    SCIP_VAR***           permvars,           /**< pointer to store variables on which permutations act */
    int*                  nperms,             /**< pointer to store number of permutations */
@@ -1463,12 +1466,23 @@ SCIP_RETCODE SCIPgetSymmetryGenerators(
    )
 {
    SCIP_PRESOLDATA* presoldata;
+   SCIP_PRESOL* presol;
 
-   assert( presol != NULL );
+   assert( scip != NULL );
    assert( npermvars != NULL );
    assert( permvars != NULL );
    assert( nperms != NULL );
    assert( perms != NULL );
+
+   /* find symmetry presolver */
+   presol = SCIPfindPresol(scip, "symmetry");
+   if ( presol == NULL )
+   {
+      SCIPerrorMessage("Could not find symmetry presolver.\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+   assert( presol != NULL );
+   assert( strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0 );
 
    presoldata = SCIPpresolGetData(presol);
    assert( presoldata != NULL );
@@ -1496,54 +1510,73 @@ SCIP_RETCODE SCIPgetSymmetryGenerators(
 }
 
 
-/** specify symmetry type for which we need symmetries */
-void SYMsetSpecRequirement(
-   SCIP_PRESOL*          presol,             /**< symmetry presolver */
-   SYM_SPEC              type                /**< variable types the callee is interested in */
-   )
-{
-   SCIP_PRESOLDATA* presoldata;
-
-   assert( presol != NULL );
-   assert( strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0 );
-
-   presoldata = SCIPpresolGetData(presol);
-   assert( presoldata != NULL );
-
-   presoldata->symspecrequire |= (int) type;
-}
-
-
-/** specify symmetry type which symmetry group must fix */
-void SYMsetSpecRequirementFixed(
-   SCIP_PRESOL*          presol,             /**< symmetry presolver */
+/** register that a specific symmetry is needed */
+SCIP_RETCODE SCIPregisterSymmetry(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_HANDLETYPE        symtype,            /**< type of symmetry handling of callee */
+   SYM_SPEC              type,               /**< variable types the callee is interested in */
    SYM_SPEC              fixedtype           /**< variable types that callee wants to have fixed */
    )
 {
    SCIP_PRESOLDATA* presoldata;
+   SCIP_PRESOL* presol;
 
+   assert( scip != NULL );
+
+   /* find symmetry presolver */
+   presol = SCIPfindPresol(scip, "symmetry");
+   if ( presol == NULL )
+   {
+      SCIPerrorMessage("Could not find symmetry presolver.\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
    assert( presol != NULL );
    assert( strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0 );
 
    presoldata = SCIPpresolGetData(presol);
    assert( presoldata != NULL );
 
-   presoldata->symspecrequirefixed |= (int) fixedtype;
+   /* check if there are conflicting symmetry handling methods */
+   if ( presoldata->symtype != 0 )
+   {
+      SCIPerrorMessage("Conflicting symmetry handling methods are activated.\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   presoldata->symtype |= symtype;
+   presoldata->symspecrequire |= type;
+   presoldata->symspecrequirefixed |= fixedtype;
+
+   return SCIP_OKAY;
 }
 
 
 /** whether symmetry should be computed for after presolving */
-SCIP_Bool SYMcomputeSymmetryPresolved(
-   SCIP_PRESOL*          presol              /**< symmetry presolver */
+SCIP_RETCODE SCIPcomputePresolvedSymmetry(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool*            afterpresolve       /**< pointer to store whether symmetry is computed after presolving */
    )
 {
    SCIP_PRESOLDATA* presoldata;
+   SCIP_PRESOL* presol;
 
+   assert( scip != NULL );
+   assert( afterpresolve != NULL );
+
+   /* find symmetry presolver */
+   presol = SCIPfindPresol(scip, "symmetry");
+   if ( presol == NULL )
+   {
+      SCIPerrorMessage("Could not find symmetry presolver.\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
    assert( presol != NULL );
    assert( strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0 );
 
    presoldata = SCIPpresolGetData(presol);
    assert( presoldata != NULL );
 
-   return presoldata->computepresolved;
+   *afterpresolve = presoldata->computepresolved;
+
+   return SCIP_OKAY;
 }

@@ -41,9 +41,8 @@ SCIP_RETCODE SCIPincludePresolSymmetry(
 
 /** return symmetry group generators */
 EXTERN
-SCIP_RETCODE SCIPgetSymmetryGenerators(
+SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PRESOL*          presol,             /**< symmetry presolver */
    int*                  npermvars,          /**< pointer to store number of variables for permutations */
    SCIP_VAR***           permvars,           /**< pointer to store variables on which permutations act */
    int*                  nperms,             /**< pointer to store number of permutations */
@@ -51,24 +50,20 @@ SCIP_RETCODE SCIPgetSymmetryGenerators(
    SCIP_Real*            log10groupsize      /**< pointer to store log10 of group size (or NULL) */
    );
 
-/** specify symmetry type for which we need symmetries */
+/** register that a specific symmetry is needed */
 EXTERN
-void SYMsetSpecRequirement(
-   SCIP_PRESOL*          presol,             /**< symmetry presolver */
-   SYM_SPEC              type                /**< variable types the callee is interested in */
-   );
-
-/** specify symmetry type which symmetry group must fix */
-EXTERN
-void SYMsetSpecRequirementFixed(
-   SCIP_PRESOL*          presol,             /**< symmetry presolver */
+SCIP_RETCODE SCIPregisterSymmetry(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_HANDLETYPE        symtype,            /**< type of symmetry handling of callee */
+   SYM_SPEC              type,               /**< variable types the callee is interested in */
    SYM_SPEC              fixedtype           /**< variable types that callee wants to have fixed */
    );
 
 /** whether symmetry should be computed for after presolving */
 EXTERN
-SCIP_Bool SYMcomputeSymmetryPresolved(
-   SCIP_PRESOL*          presol              /**< symmetry presolver */
+SCIP_RETCODE SCIPcomputePresolvedSymmetry(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool*            afterpresolve       /**< pointer to store whether symmetry is computed after presolving */
    );
 
 #ifdef __cplusplus

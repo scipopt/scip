@@ -77,7 +77,6 @@ struct SCIP_PresolData
    SCIP_Bool             conssaddlp;         /**< Should the symmetry breaking constraints be added to the LP? */
    SCIP_Bool             addsymresacks;      /**< Add symresack constraints for each generator? */
    SCIP_Bool             forceaddingconss;   /**< Add symmetry handling constraints even if problem has almost no symmetries? */
-   SCIP_PRESOL*          symmetrypresol;     /**< pointer to symmetry presolver */
    SCIP_Bool             enabled;            /**< run presolver? */
    SCIP_Bool             early;              /**< run presolver as early as possible if symmetry has been detected in initpre() */
    SCIP_CONS**           genconss;           /**< list of generated constraints */
@@ -1033,10 +1032,8 @@ SCIP_DECL_PRESOLINIT(presolInitSymbreak)
 
    if ( presoldata->enabled )
    {
-      /* allow all problem specifications, since we handle them in the code above */
-      SYMsetSpecRequirement(presoldata->symmetrypresol, SYM_SPEC_BINARY);
-      SYMsetSpecRequirement(presoldata->symmetrypresol, SYM_SPEC_INTEGER);
-      SYMsetSpecRequirement(presoldata->symmetrypresol, SYM_SPEC_REAL);
+      /* register presolver for symmetry information */
+      SCIP_CALL( SCIPregisterSymmetry(scip, SYM_HANDLETYPE_SYMBREAK, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
    }
 
    return SCIP_OKAY;
@@ -1132,7 +1129,8 @@ SCIP_DECL_PRESOLINITPRE(presolInitpreSymbreak)
    assert( presoldata != NULL );
 
    /* check whether we have to run the presolver at the beginning of presolving */
-   presoldata->early = ! SYMcomputeSymmetryPresolved(presoldata->symmetrypresol);
+   SCIP_CALL( SCIPcomputePresolvedSymmetry(scip, &presoldata->early) );
+   presoldata->early = ! presoldata->early;
 
    /* check whether we should run */
    SCIP_CALL( SCIPgetBoolParam(scip, "misc/usesymmetry", &presoldata->enabled) );
@@ -1141,10 +1139,8 @@ SCIP_DECL_PRESOLINITPRE(presolInitpreSymbreak)
 
    if ( presoldata->enabled )
    {
-      /* allow all problem specifications, since we handle them in the code above */
-      SYMsetSpecRequirement(presoldata->symmetrypresol, SYM_SPEC_BINARY);
-      SYMsetSpecRequirement(presoldata->symmetrypresol, SYM_SPEC_INTEGER);
-      SYMsetSpecRequirement(presoldata->symmetrypresol, SYM_SPEC_REAL);
+      /* register presolver for symmetry information */
+      SCIP_CALL( SCIPregisterSymmetry(scip, SYM_HANDLETYPE_SYMBREAK, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
    }
 
    if ( presoldata->early && presoldata->enabled )
@@ -1200,8 +1196,8 @@ SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
       assert( presoldata->nperms < 0 );
 
       /* get symmetries */
-      SCIP_CALL( SCIPgetSymmetryGenerators(scip, presoldata->symmetrypresol, &(presoldata->npermvars),
-            &(presoldata->permvars), &(presoldata->nperms), &(presoldata->perms), &(presoldata->log10groupsize)) );
+      SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, &(presoldata->npermvars), &(presoldata->permvars),
+            &(presoldata->nperms), &(presoldata->perms), &(presoldata->log10groupsize)) );
 
       presoldata->computedsymmetry = TRUE;
 
@@ -1316,15 +1312,6 @@ SCIP_RETCODE SCIPincludePresolSymbreak(
    presoldata->npermsincomponent = NULL;
    presoldata->components = NULL;
    presoldata->componentblocked = NULL;
-
-   /* determine cons_symmetries constraint handler (preuse presol) */
-   presol = SCIPfindPresol(scip, "symmetry");
-   if ( presol == 0 )
-   {
-      SCIPerrorMessage("Could not find symmetry presolver.\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
-   presoldata->symmetrypresol = presol;
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_TIMING,
