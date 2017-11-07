@@ -16,6 +16,7 @@ features:
 - added analysis of the conflict graph which identifies possible aggregations via the search for
   strongly connected components and may detect infeasible assignments on the way
 - added new plugin type "table" for adding user-defined statistics tables
+- added upgrade from knapsack constraints to cardinality constraints
 - revised disaggregation of quadratic constraints: the number of created constraints can now be controlled and the
   disaggregated constraints are scaled in order to increase numerical accuracy
 - new presolving plugin presol_sparsify that tries to cancel nonzero coefficients in linear constraints by adding
@@ -30,9 +31,11 @@ parameters:
 - new parameter: lp/refactorinterval to change the refactorization interval of the LP solver
 - new value 3 for parameter "lp/solutionpolishing" to enable LP polishing only during probing and diving mode
 - removed parameters "constraints/{abspower,bivariate,nonlinear,quadratic,soc}/scaling"
+- new parameter "constraints/knapsack/upgdcardinality" for upgrading knapsack to cardinality constraints
 - replaced constraints/quadratic/disaggregate by constraints/quadratic/maxdisaggrsize to bound
   the total number of created constraints when disaggregating a quadratic constraint
 - added parameter constraints/quadratic/disaggrmergemethod
+
 
 interface:
 - new interface methods to create and use bandit algorithms implemented as SCIP core plugins --
