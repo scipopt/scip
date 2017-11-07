@@ -7034,6 +7034,10 @@ SCIP_RETCODE tightenDualproof(
     */
    if( redundant )
    {
+#ifndef NDEBUG
+      SCIP_Real eps = MIN(0.01, 10.0*set->num_feastol);
+      assert(!EPSLE(getMaxActivity(transprob, proofset->vals, proofset->inds, proofset->nnz, NULL, NULL), proofset->rhs, eps));
+#endif
       proofsetClear(proofset);
    }
    else if( nchgcoefs > 0 )
