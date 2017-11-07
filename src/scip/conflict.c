@@ -7378,7 +7378,7 @@ SCIP_RETCODE runBoundHeuristic(
                if( globalinfeasible )
                {
                   SCIPaggrRowFree(set->scip, &farkasrow);
-                  goto FREEBUFFER;
+                  goto TERMINATE;
                }
 
                BMSclearMemoryArray(proofcoefs, SCIPprobGetNVars(transprob));
@@ -7460,6 +7460,7 @@ SCIP_RETCODE runBoundHeuristic(
       SCIPsetDebugMsg(set, "finished undoing bound changes after %d loops (valid=%u, nbdchgs: %d)\n",
          nloops, (*valid), oldlpbdchgs->nbdchgs);
 
+   TERMINATE:
       /* reset variables to local bounds */
       if( oldlpbdchgs->nbdchgs > 0 )
       {
@@ -7494,7 +7495,6 @@ SCIP_RETCODE runBoundHeuristic(
       SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_OBJLIM, lp->lpiobjlim) );
       SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPITLIM, lp->lpiitlim) );
 
-     FREEBUFFER:
       /* free temporary memory */
       SCIPsetFreeBufferArray(set, &sidechgnewrhss);
       SCIPsetFreeBufferArray(set, &sidechgnewlhss);
