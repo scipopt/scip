@@ -524,10 +524,11 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
 
       if( updatelocks )
       {
-         col = SCIPvarGetCol(var);
-
-         if( col == NULL )
+         if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
             continue;
+
+         col = SCIPvarGetCol(var);
+         assert(col != NULL);
 
          colrows = SCIPcolGetRows(col);
          colvals = SCIPcolGetVals(col);
