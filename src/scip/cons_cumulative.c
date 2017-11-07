@@ -8714,7 +8714,7 @@ SCIP_RETCODE addRelaxation(
       if( !SCIProwIsInLP(consdata->demandrows[r]) )
       {
          assert(consdata->demandrows[r] != NULL);
-         SCIP_CALL( SCIPaddCut(scip, consdata->demandrows[r], FALSE, infeasible) );
+         SCIP_CALL( SCIPaddRow(scip, consdata->demandrows[r], FALSE, infeasible) );
       }
    }
 
@@ -8770,7 +8770,7 @@ SCIP_RETCODE separateConsBinaryRepresentation(
 
          if( SCIPisFeasNegative(scip, feasibility) )
          {
-            SCIP_CALL( SCIPaddCut(scip, consdata->demandrows[r], FALSE, cutoff) );
+            SCIP_CALL( SCIPaddRow(scip, consdata->demandrows[r], FALSE, cutoff) );
             if ( *cutoff )
             {
                SCIP_CALL( SCIPresetConsAge(scip, cons) );
@@ -8863,7 +8863,7 @@ SCIP_RETCODE separateCoverCutsCons(
          SCIPconsGetName(cons), minfeasibility);
 
       assert(row != NULL);
-      SCIP_CALL( SCIPaddCut(scip, row, FALSE, cutoff) );
+      SCIP_CALL( SCIPaddRow(scip, row, FALSE, cutoff) );
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
       if ( *cutoff )
          return SCIP_OKAY;
@@ -8900,7 +8900,7 @@ SCIP_RETCODE separateCoverCutsCons(
          SCIPconsGetName(cons), minfeasibility);
 
       assert(row != NULL);
-      SCIP_CALL( SCIPaddCut(scip, row, FALSE, cutoff) );
+      SCIP_CALL( SCIPaddRow(scip, row, FALSE, cutoff) );
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
       if ( *cutoff )
          return SCIP_OKAY;
@@ -8967,7 +8967,7 @@ SCIP_RETCODE createCapacityRestrictionIntvars(
    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
    SCIPdebug( SCIP_CALL(SCIPprintRow(scip, row, NULL)) );
 
-   SCIP_CALL( SCIPaddCut(scip, row, TRUE, &infeasible) );
+   SCIP_CALL( SCIPaddRow(scip, row, TRUE, &infeasible) );
    assert( ! infeasible );
 
    SCIP_CALL( SCIPreleaseRow(scip, &row) );
