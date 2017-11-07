@@ -571,7 +571,7 @@ SCIP_RETCODE initLP(
    SCIP_CALL( SCIPaddVarToRow(scip, row, vars[0], -1.0) );
    SCIP_CALL( SCIPaddVarToRow(scip, row, vars[consdata->invperm[0]], 1.0) );
 
-   SCIP_CALL( SCIPaddCut(scip, row, FALSE, infeasible) );
+   SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
 
    SCIP_CALL( SCIPreleaseRow(scip, &row) );
 
@@ -631,7 +631,7 @@ SCIP_RETCODE initLP(
 #endif
          SCIP_CALL( SCIPaddVarsToRow(scip, row, nvarsincons, varsincons, coeffs) );
 
-         SCIP_CALL( SCIPaddCut(scip, row, FALSE, infeasible) );
+         SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
          SCIP_CALL( SCIPreleaseRow(scip, &row) );
 
          if ( *infeasible )
@@ -824,7 +824,7 @@ SCIP_RETCODE addSymresackInequality(
       }
    }
    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
-   SCIP_CALL( SCIPaddCut(scip, row, FALSE, infeasible) );
+   SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
    SCIP_CALL( SCIPreleaseRow(scip, &row) );
 
    return SCIP_OKAY;

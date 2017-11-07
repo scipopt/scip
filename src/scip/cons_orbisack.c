@@ -387,7 +387,7 @@ SCIP_RETCODE initLP(
    SCIP_CALL( SCIPaddVarToRow(scip, row, tmpvars[0], -1.0) );
    SCIP_CALL( SCIPaddVarToRow(scip, row, tmpvars[1], 1.0) );
 
-   SCIP_CALL( SCIPaddCut(scip, row, FALSE, infeasible) );
+   SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
 #ifdef SCIP_DEBUG
    SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 #endif
@@ -433,7 +433,7 @@ SCIP_RETCODE addOrbisackCover(
    }
    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 
-   SCIP_CALL( SCIPaddCut(scip, row, FALSE, infeasible) );
+   SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
 #ifdef SCIP_DEBUG
    SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 #endif
@@ -586,7 +586,7 @@ SCIP_RETCODE addOrbisackInequality(
    }
    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 
-   SCIP_CALL( SCIPaddCut(scip, row, FALSE, infeasible) );
+   SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
 #ifdef SCIP_DEBUG
    SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 #endif
@@ -1803,7 +1803,7 @@ SCIP_RETCODE SCIPseparateCoversOrbisack(
          }
          SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 
-         SCIP_CALL( SCIPaddCut(scip, row, FALSE, infeasible) );
+         SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
 #ifdef SCIP_DEBUG
          SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 #endif
