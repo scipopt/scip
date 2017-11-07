@@ -1198,7 +1198,7 @@ SCIP_RETCODE presolveDual(
             else
             {
                /* fix x to best bound */
-               xfix = SCIPvarGetBestBoundGlobal(consdata->x);
+               xfix = (SCIPvarGetObj(consdata->x) >= 0.0) ? xlb : xub;
             }
          }
          else if( consdata->exponent == 2.0 )
