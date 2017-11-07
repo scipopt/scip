@@ -1261,7 +1261,7 @@ SCIP_RETCODE orbisackUpgrade(
       *upgrade = FALSE;
    else if ( *upgrade )
    {
-      SCIP_CALL( SCIPcreateConsOrbisack(scip, cons, "orbisack", vars1, vars2, nrows, FALSE, FALSE,
+      SCIP_CALL( SCIPcreateConsOrbisack(scip, cons, name, vars1, vars2, nrows, FALSE, FALSE,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
 
