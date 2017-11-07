@@ -37,6 +37,7 @@
 #include <assert.h>
 
 #include <scip/cons_linear.h>
+#include <scip/cons_orbisack.h>
 #include <scip/cons_orbitope.h>
 #include <scip/cons_setppc.h>
 #include <scip/cons_symresack.h>
@@ -868,6 +869,7 @@ SCIP_RETCODE orbisackUpgrade(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    )
 {
+   SCIP_CONSHDLR* conshdlr;
    SCIP_VAR** vars1;
    SCIP_VAR** vars2;
    int nrows = 0;
@@ -880,6 +882,17 @@ SCIP_RETCODE orbisackUpgrade(
    assert( upgrade != NULL );
 
    *upgrade = TRUE;
+
+   /* check whether orbisack conshdlr is available */
+   conshdlr = SCIPfindConshdlr(scip, "orbisack");
+   if ( conshdlr == NULL )
+   {
+      *upgrade = FALSE;
+      SCIPdebugMsg(scip, "Cannot check whether symresack constraint can be upgraded to orbisack constraint. ");
+      SCIPdebugMsg(scip, "---> Orbisack constraint handler not found.\n");
+
+      return SCIP_OKAY;
+   }
 
    SCIP_CALL( SCIPallocBufferArray(scip, &vars1, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vars2, nvars) );
