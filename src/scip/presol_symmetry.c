@@ -1292,6 +1292,7 @@ SCIP_DECL_PRESOLEXIT(presolExitSymmetry)
    SCIPfreeBlockMemoryArrayNull(scip, &presoldata->perms, presoldata->nmaxperms);
 
    /* reset settings */
+   presoldata->symtype = 0;
    presoldata->symspecrequire = 0;
    presoldata->symspecrequirefixed = 0;
    presoldata->npermvars = 0;

@@ -45,7 +45,7 @@
 #define PROP_DESC              "propagator for orbital fixing"
 #define PROP_TIMING    SCIP_PROPTIMING_BEFORELP   /**< propagation timing mask */
 #define PROP_PRIORITY          -1000000           /**< propagator priority */
-#define PROP_FREQ                    -1           /**< propagator frequency */
+#define PROP_FREQ                     1           /**< propagator frequency */
 #define PROP_DELAY                FALSE           /**< should propagation method be delayed, if other propagators found reductions? */
 
 /* output table properties */
