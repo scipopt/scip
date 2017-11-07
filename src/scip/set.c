@@ -5121,8 +5121,14 @@ SCIP_RETCODE SCIPsetInitsolPlugins(
       SCIP_CALL( SCIPtableInitsol(set->tables[i], set) );
    }
 
-   /* reset feasibility tolerance for relaxations */
-   set->num_relaxfeastol = SCIP_INVALID;
+   /* reset feasibility tolerance for relaxations
+    * use a smaller relaxation feasibility tolerance in case of an MINLP, since variable bounds violations
+    * might yield to large violations in the original space which are hard to enforce
+    */
+   if( SCIPisNLPEnabled(set->scip) && !set->nlp_disable )
+      set->num_relaxfeastol = MAX(set->num_feastol/10.0, set->num_epsilon); /*lint !e666*/
+   else
+      set->num_relaxfeastol = SCIP_INVALID;
 
    return SCIP_OKAY;
 }
