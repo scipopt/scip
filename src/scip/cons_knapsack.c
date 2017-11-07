@@ -874,7 +874,7 @@ SCIP_RETCODE addRelaxation(
       SCIPdebugMsg(scip, "adding relaxation of knapsack constraint <%s> (capacity %" SCIP_LONGINT_FORMAT "): ",
          SCIPconsGetName(cons), consdata->capacity);
       SCIPdebug( SCIP_CALL(SCIPprintRow(scip, consdata->row, NULL)) );
-      SCIP_CALL( SCIPaddCut(scip, consdata->row, FALSE, cutoff) );
+      SCIP_CALL( SCIPaddRow(scip, consdata->row, FALSE, cutoff) );
    }
 
    return SCIP_OKAY;
@@ -4974,7 +4974,7 @@ SCIP_RETCODE separateSequLiftedMinimalCoverInequality(
          {
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
          }
-         SCIP_CALL( SCIPaddCut(scip, row, FALSE, cutoff) );
+         SCIP_CALL( SCIPaddRow(scip, row, FALSE, cutoff) );
          (*ncuts)++;
       }
       SCIP_CALL( SCIPreleaseRow(scip, &row) );
@@ -5141,7 +5141,7 @@ SCIP_RETCODE separateSequLiftedExtendedWeightInequality(
          {
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
          }
-         SCIP_CALL( SCIPaddCut(scip, row, FALSE, cutoff) );
+         SCIP_CALL( SCIPaddRow(scip, row, FALSE, cutoff) );
          (*ncuts)++;
       }
       SCIP_CALL( SCIPreleaseRow(scip, &row) );
@@ -5255,7 +5255,7 @@ SCIP_RETCODE separateSupLiftedMinimalCoverInequality(
          {
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
          }
-         SCIP_CALL( SCIPaddCut(scip, row, FALSE, cutoff) );
+         SCIP_CALL( SCIPaddRow(scip, row, FALSE, cutoff) );
          (*ncuts)++;
       }
       SCIP_CALL( SCIPreleaseRow(scip, &row) );

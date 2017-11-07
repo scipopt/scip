@@ -46,7 +46,7 @@ SCIP_RETCODE SCIPincludePresolSymbreak(
  *  Note that the description of the orbits ends at orbitbegins[norbits] - 1.
  */
 EXTERN
-SCIP_RETCODE computeGroupOrbits(
+SCIP_RETCODE SCIPcomputeGroupOrbits(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_VAR**            permvars,           /**< variables considered by symbreak presolver */
    int                   npermvars,          /**< length of a permutation array */

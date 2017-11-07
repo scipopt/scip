@@ -5094,8 +5094,8 @@ SCIP_RETCODE SCIPsetSubscipsOff(
 /** sets heuristic parameters values to
  *
  *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all heuristic parameters
- *  - SCIP_PARAMSETTING_FAST such that the time spend for heuristic is decreased
- *  - SCIP_PARAMSETTING_AGGRESSIVE such that the heuristic are called more aggregative
+ *  - SCIP_PARAMSETTING_FAST such that the time spent on heuristics is decreased
+ *  - SCIP_PARAMSETTING_AGGRESSIVE such that the heuristics are called more aggressively
  *  - SCIP_PARAMSETTING_OFF which turn off all heuristics
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -5120,8 +5120,8 @@ SCIP_RETCODE SCIPsetHeuristics(
 /** sets presolving parameters to
  *
  *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all presolving parameters
- *  - SCIP_PARAMSETTING_FAST such that the time spend for presolving is decreased
- *  - SCIP_PARAMSETTING_AGGRESSIVE such that the presolving is more aggregative
+ *  - SCIP_PARAMSETTING_FAST such that the time spent on presolving is decreased
+ *  - SCIP_PARAMSETTING_AGGRESSIVE such that the presolving is more aggressive
  *  - SCIP_PARAMSETTING_OFF which turn off all presolving
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -5146,8 +5146,8 @@ SCIP_RETCODE SCIPsetPresolving(
 /** sets separating parameters to
  *
  *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all separating parameters
- *  - SCIP_PARAMSETTING_FAST such that the time spend for separating is decreased
- *  - SCIP_PARAMSETTING_AGGRESSIVE such that the separating is done more aggregative
+ *  - SCIP_PARAMSETTING_FAST such that the time spent on separating is decreased
+ *  - SCIP_PARAMSETTING_AGGRESSIVE such that separating is more aggressive
  *  - SCIP_PARAMSETTING_OFF which turn off all separating
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -34531,9 +34531,12 @@ SCIP_Bool SCIPisCutApplicable(
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @deprecated Please use SCIPaddRow() instead, or, if the row is a global cut, add it only to the global cutpool.
  */
 SCIP_RETCODE SCIPaddCut(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
    SCIP_ROW*             cut,                /**< separated cut */
    SCIP_Bool             forcecut,           /**< should the cut be forced to enter the LP? */
    SCIP_Bool*            infeasible          /**< pointer to store whether cut has been detected to be infeasible for local bounds */
@@ -34541,10 +34544,32 @@ SCIP_RETCODE SCIPaddCut(
 {
    SCIP_CALL( checkStage(scip, "SCIPaddCut", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
+   SCIP_UNUSED(sol);
+
+   return SCIPaddRow(scip, cut, forcecut, infeasible);
+}
+
+/** adds row to separation storage
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPaddRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row,                /**< row */
+   SCIP_Bool             forcecut,           /**< should the row be forced to enter the LP? */
+   SCIP_Bool*            infeasible          /**< pointer to store whether row has been detected to be infeasible for local bounds */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPaddRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
    assert(SCIPtreeGetCurrentNode(scip->tree) != NULL);
 
    SCIP_CALL( SCIPsepastoreAddCut(scip->sepastore, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
-         scip->eventfilter, scip->lp, cut, forcecut, (SCIPtreeGetCurrentDepth(scip->tree) == 0), infeasible) );
+         scip->eventfilter, scip->lp, row, forcecut, (SCIPtreeGetCurrentDepth(scip->tree) == 0), infeasible) );
 
    /* possibly run conflict analysis */
    if ( *infeasible && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && SCIPisConflictAnalysisApplicable(scip) )
@@ -34558,18 +34583,18 @@ SCIP_RETCODE SCIPaddCut(
       /* initialize conflict analysis */
       SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
-      if ( ! SCIPisInfinity(scip, -cut->lhs) )
+      if ( ! SCIPisInfinity(scip, -row->lhs) )
       {
-         act = SCIProwGetMaxActivity(cut, scip->set, scip->stat);
-         if ( SCIPisLT(scip, act, cut->lhs) )
+         act = SCIProwGetMaxActivity(row, scip->set, scip->stat);
+         if ( SCIPisLT(scip, act, row->lhs) )
          {
-            ncols = SCIProwGetNNonz(cut);
+            ncols = SCIProwGetNNonz(row);
             for (j = 0; j < ncols; ++j)
             {
-               val = cut->vals[j];
+               val = row->vals[j];
                if ( ! SCIPisZero(scip, val) )
                {
-                  var = SCIPcolGetVar(cut->cols[j]);
+                  var = SCIPcolGetVar(row->cols[j]);
                   assert( var != NULL );
 
                   if ( val > 0.0 )
@@ -34584,18 +34609,18 @@ SCIP_RETCODE SCIPaddCut(
             }
          }
       }
-      else if ( ! SCIPisInfinity(scip, cut->rhs) )
+      else if ( ! SCIPisInfinity(scip, row->rhs) )
       {
-         act = SCIProwGetMinActivity(cut, scip->set, scip->stat);
-         if ( SCIPisGT(scip, act, cut->rhs) )
+         act = SCIProwGetMinActivity(row, scip->set, scip->stat);
+         if ( SCIPisGT(scip, act, row->rhs) )
          {
-            ncols = SCIProwGetNNonz(cut);
+            ncols = SCIProwGetNNonz(row);
             for (j = 0; j < ncols; ++j)
             {
-               val = cut->vals[j];
+               val = row->vals[j];
                if ( ! SCIPisZero(scip, val) )
                {
-                  var = SCIPcolGetVar(cut->cols[j]);
+                  var = SCIPcolGetVar(row->cols[j]);
                   assert( var != NULL );
 
                   if ( val > 0.0 )
@@ -35873,7 +35898,7 @@ SCIP_RETCODE SCIPbacktrackProbing(
    }
 
    SCIP_CALL( SCIPtreeBacktrackProbing(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-         scip->origprob, scip->lp, scip->relaxation, scip->primal, scip->branchcand, scip->eventqueue, scip->eventfilter,
+         scip->origprob, scip->lp, scip->primal, scip->branchcand, scip->eventqueue, scip->eventfilter,
          scip->cliquetable, probingdepth) );
 
    return SCIP_OKAY;
@@ -36119,12 +36144,6 @@ SCIP_RETCODE SCIPchgVarObjProbing(
       return SCIP_INVALIDCALL;
    }
 
-   if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
-   {
-      SCIPerrorMessage("variable is not a column variable\n");
-      return SCIP_INVALIDCALL;
-   }
-
    /* get current probing node */
    node = SCIPtreeGetCurrentNode(scip->tree);
    assert(SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
@@ -36164,9 +36183,6 @@ SCIP_RETCODE SCIPchgVarObjProbing(
       SCIPlpMarkDivingObjChanged(scip->lp);
    }
    assert(SCIPisInfinity(scip, scip->lp->cutoffbound));
-
-   /* inform relaxation and update objective value of relaxation solution accordingly */
-   SCIPrelaxationUpdateVarObj(scip->relaxation, scip->set, var, oldobj, newobj);
 
    /* perform the objective change */
    SCIP_CALL( SCIPvarChgObj(var, scip->mem->probmem, scip->set,  scip->transprob, scip->primal, scip->lp, scip->eventqueue, newobj) );
@@ -38849,9 +38865,6 @@ SCIP_RETCODE SCIPgetSolVals(
  *
  *  @return objective value of primal CIP solution w.r.t. original problem, or current LP/pseudo objective value
  *
- *  @note this function should not be used during probing mode when some objective coefficients have been changed via
- *        SCIPchgVarObjProbing()
- *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMING
@@ -38871,8 +38884,6 @@ SCIP_Real SCIPgetSolOrigObj(
    SCIP_SOL*             sol                 /**< primal solution, or NULL for current LP/pseudo objective value */
    )
 {
-   assert(!SCIPisObjChangedProbing(scip));
-
    /* for original solutions, an original objective value is already available in SCIP_STAGE_PROBLEM
     * for all other solutions, we should be at least in SCIP_STAGE_TRANSFORMING
     */

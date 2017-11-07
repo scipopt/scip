@@ -471,7 +471,7 @@ SCIP_RETCODE propagate(
    /* compute orbits */
    SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
-   SCIP_CALL( computeGroupOrbits(scip, permvars, npermvars, perms, nperms, activeperms, orbits, orbitbegins, &norbits) );
+   SCIP_CALL( SCIPcomputeGroupOrbits(scip, permvars, npermvars, perms, nperms, activeperms, orbits, orbitbegins, &norbits) );
 
    SCIPfreeBufferArray(scip, &activeperms);
    SCIPfreeBufferArray(scip, &b1);
@@ -610,7 +610,7 @@ SCIP_DECL_PROPINITSOL(propInitsolOrbitalfixing)
 
       if ( propdata->nperms <= 0 )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Skip orbital fixing, since no symmetries were found.\n");
+         /* Skip orbital fixing, since no symmetries were found. */
          propdata->enabled = FALSE;
       }
       else

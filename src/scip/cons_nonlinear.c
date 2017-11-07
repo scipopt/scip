@@ -5533,7 +5533,7 @@ SCIP_RETCODE separatePoint(
          SCIP_Bool infeasible;
 
          /* cut cuts off solution */
-         SCIP_CALL( SCIPaddCut(scip, row, FALSE /* forcecut */, &infeasible) );
+         SCIP_CALL( SCIPaddRow(scip, row, FALSE /* forcecut */, &infeasible) );
          if ( infeasible )
             *result = SCIP_CUTOFF;
          else
@@ -5638,7 +5638,7 @@ SCIP_RETCODE addLinearizationCuts(
 
             *separatedlpsol = TRUE;
             addedtolp = TRUE;
-            SCIP_CALL( SCIPaddCut(scip, row, TRUE, &infeasible) );
+            SCIP_CALL( SCIPaddRow(scip, row, TRUE, &infeasible) );
             assert( ! infeasible );
          }
       }
@@ -7546,7 +7546,7 @@ SCIP_DECL_CONSINITLP(consInitlpNonlinear)
          SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(conss[c]), SCIPconsGetName(conss[c]), consdata->lhs, consdata->rhs,
                SCIPconsIsLocal(conss[c]), FALSE , TRUE) );  /*lint !e613*/
          SCIP_CALL( SCIPaddVarsToRow(scip, row, consdata->nlinvars, consdata->linvars, consdata->lincoefs) );
-         SCIP_CALL( SCIPaddCut(scip, row, FALSE, infeasible) );
+         SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
          SCIP_CALL( SCIPreleaseRow (scip, &row) );
          continue;
       }
@@ -7601,7 +7601,7 @@ SCIP_DECL_CONSINITLP(consInitlpNonlinear)
 
          if( row != NULL )
          {
-            SCIP_CALL( SCIPaddCut(scip, row, FALSE /* forcecut */, infeasible) );
+            SCIP_CALL( SCIPaddRow(scip, row, FALSE /* forcecut */, infeasible) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
          }
@@ -7615,7 +7615,7 @@ SCIP_DECL_CONSINITLP(consInitlpNonlinear)
 
          if( row != NULL )
          {
-            SCIP_CALL( SCIPaddCut(scip, row, FALSE /* forcecut */, infeasible) );
+            SCIP_CALL( SCIPaddRow(scip, row, FALSE /* forcecut */, infeasible) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
          }

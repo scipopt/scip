@@ -6244,7 +6244,7 @@ SCIP_RETCODE addBoundCutSepa(
       {
          SCIP_Bool infeasible;
 
-         SCIP_CALL( SCIPaddCut(scip, rowlb, FALSE, &infeasible) );
+         SCIP_CALL( SCIPaddRow(scip, rowlb, FALSE, &infeasible) );
          if ( infeasible )
             *cutoff = TRUE;
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, rowlb, NULL) ) );
@@ -6261,7 +6261,7 @@ SCIP_RETCODE addBoundCutSepa(
       {
          SCIP_Bool infeasible;
 
-         SCIP_CALL( SCIPaddCut(scip, rowub, FALSE, &infeasible) );
+         SCIP_CALL( SCIPaddRow(scip, rowub, FALSE, &infeasible) );
          if ( infeasible )
             *cutoff = TRUE;
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, rowub, NULL) ) );
@@ -6923,7 +6923,7 @@ SCIP_RETCODE initsepaBoundInequalityFromSOS1Cons(
       /* put corresponding rows into LP */
       if ( rowub != NULL && ! SCIProwIsInLP(rowub) && ( solvedinitlp || SCIPisCutEfficacious(scip, sol, rowub) ) )
       {
-         SCIP_CALL( SCIPaddCut(scip, rowub, FALSE, cutoff) );
+         SCIP_CALL( SCIPaddRow(scip, rowub, FALSE, cutoff) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, rowub, NULL) ) );
 
          if ( solvedinitlp )
@@ -6935,7 +6935,7 @@ SCIP_RETCODE initsepaBoundInequalityFromSOS1Cons(
 
       if ( ! (*cutoff) && rowlb != NULL && ! SCIProwIsInLP(rowlb) && ( solvedinitlp || SCIPisCutEfficacious(scip, sol, rowlb) ) )
       {
-         SCIP_CALL( SCIPaddCut(scip, rowlb, FALSE, cutoff) );
+         SCIP_CALL( SCIPaddRow(scip, rowlb, FALSE, cutoff) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, rowlb, NULL) ) );
 
          if ( solvedinitlp )
@@ -7156,7 +7156,7 @@ SCIP_RETCODE sepaImplBoundCutsSOS1(
                if ( ! SCIProwIsInLP(cut) && SCIPisCutEfficacious(scip, NULL, cut) )
                {
                   SCIP_Bool infeasible;
-                  SCIP_CALL( SCIPaddCut(scip, cut, FALSE, &infeasible) );
+                  SCIP_CALL( SCIPaddRow(scip, cut, FALSE, &infeasible) );
                   if ( infeasible )
                   {
                      genbreak = TRUE;
