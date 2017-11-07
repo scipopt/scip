@@ -711,7 +711,7 @@ SCIP_RETCODE computeSymmetryGroup(
    assert( nhandleconss <= nactiveconss );
    if ( nhandleconss < nactiveconss )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Cannot compute symmetry, since unkown constraints are present.\n");
+      /* In this case we found unkown constraints and we exit, since we cannot handle them. */
       *success = FALSE;
       return SCIP_OKAY;
    }
@@ -1200,10 +1200,10 @@ SCIP_RETCODE determineSymmetry(
          &presoldata->log10groupsize, &presoldata->successful) );
 
    /* output statistics */
-   if ( ! presoldata->successful || presoldata->nperms == 0 )
-   {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "   (%.1fs) no symmetry found\n", SCIPgetSolvingTime(scip));
-   }
+   if ( ! presoldata->successful )
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "   (%.1fs) could not compute symmetry\n", SCIPgetSolvingTime(scip));
+   else if ( presoldata->nperms == 0 )
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "   (%.1fs) no symmetry present\n", SCIPgetSolvingTime(scip));
    else
    {
       assert( presoldata->nperms > 0 );
