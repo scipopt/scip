@@ -29,8 +29,10 @@
 #include "scip/cons_expr_product.h"
 #include "scip/cons_expr_sum.h"
 
-#define POW_PRECEDENCE  55000
-#define POW_HASHKEY     SCIPcalcFibHash(21163.0)
+#define EXPRHDLR_NAME         "pow"
+#define EXPRHDLR_DESC         "power expression"
+#define EXPRHDLR_PRECEDENCE  55000
+#define EXPRHDLR_HASHKEY     SCIPcalcFibHash(21163.0)
 
 /*
  * Data structures
@@ -552,7 +554,7 @@ SCIP_RETCODE separatePointPow(
    assert(strcmp(SCIPconshdlrGetName(conshdlr), "expr") == 0);
    assert(expr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
-   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "pow") == 0);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
    assert(cut != NULL);
 
    exponent = SCIPgetConsExprExprPowExponent(expr);
@@ -715,7 +717,7 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashPow)
    assert(expr2key != NULL);
    assert(hashkey != NULL);
 
-   *hashkey = POW_HASHKEY;
+   *hashkey = EXPRHDLR_HASHKEY;
 
    assert(SCIPhashmapExists(expr2key, (void*)SCIPgetConsExprExprChildren(expr)[0]));
    childhash = (unsigned int)(size_t)SCIPhashmapGetImage(expr2key, SCIPgetConsExprExprChildren(expr)[0]);
@@ -733,8 +735,8 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrPow(
 {
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
 
-   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "pow", "power expression",
-         POW_PRECEDENCE, evalPow, NULL) );
+   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC,
+         EXPRHDLR_PRECEDENCE, evalPow, NULL) );
    assert(exprhdlr != NULL);
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrPow, NULL) );
@@ -764,12 +766,12 @@ SCIP_RETCODE SCIPcreateConsExprExprPow(
 
    assert(expr != NULL);
    assert(child != NULL);
-   assert(SCIPfindConsExprExprHdlr(consexprhdlr, "pow") != NULL);
+   assert(SCIPfindConsExprExprHdlr(consexprhdlr, EXPRHDLR_NAME) != NULL);
 
    SCIP_CALL( createData(scip, &exprdata, exponent) );
    assert(exprdata != NULL);
 
-   SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, SCIPfindConsExprExprHdlr(consexprhdlr, "pow"), exprdata, 1, &child) );
+   SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, SCIPfindConsExprExprHdlr(consexprhdlr, EXPRHDLR_NAME), exprdata, 1, &child) );
 
    return SCIP_OKAY;
 }

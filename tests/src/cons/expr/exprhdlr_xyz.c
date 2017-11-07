@@ -65,7 +65,7 @@ void teardown(void)
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
+   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
 }
 
 /* test suite */

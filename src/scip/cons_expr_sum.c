@@ -26,12 +26,15 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <string.h>
+#include <stddef.h>
 
 #include "scip/cons_expr_sum.h"
 #include "scip/cons_expr_value.h"
 
-#define SUM_PRECEDENCE      40000
-#define SUM_HASHKEY         SCIPcalcFibHash(47161.0)
+#define EXPRHDLR_NAME         "sum"
+#define EXPRHDLR_DESC         "summation with coefficients and a constant"
+#define EXPRHDLR_PRECEDENCE      40000
+#define EXPRHDLR_HASHKEY         SCIPcalcFibHash(47161.0)
 
 /** ensures that a block memory array has at least a given size
  *
@@ -269,9 +272,9 @@ SCIP_RETCODE mergeSumExprlist(
       int compareres;
       EXPRNODE* aux;
 
-      assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(tomergenode->expr)), "sum") != 0);
+      assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(tomergenode->expr)), EXPRHDLR_NAME) != 0);
       assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(tomergenode->expr)), "val") != 0);
-      assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(current->expr)), "sum") != 0);
+      assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(current->expr)), EXPRHDLR_NAME) != 0);
       assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(current->expr)), "val") != 0);
       assert(previous == NULL || previous->next == current);
 
@@ -450,7 +453,7 @@ SCIP_RETCODE simplifyTerm(
     * and so simplifying expr' gives expr1.
     * All this can be done and checked without modifying expr
     */
-   if( strcmp(exprtype, "sum") == 0 )
+   if( strcmp(exprtype, EXPRHDLR_NAME) == 0 )
    {
       /* pass constant to parent */
       *simplifiedconstant += coef * SCIPgetConsExprExprSumConstant(expr);
@@ -459,7 +462,7 @@ SCIP_RETCODE simplifyTerm(
       if( SCIPgetConsExprExprNChildren(expr) == 1 && coef * SCIPgetConsExprExprSumCoefs(expr)[0] == 1.0 )
       {
          /* this is a one level recursion: expr is sum -> no child of expr is sum */
-         assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(SCIPgetConsExprExprChildren(expr)[0])), "sum") != 0);
+         assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(SCIPgetConsExprExprChildren(expr)[0])), EXPRHDLR_NAME) != 0);
          SCIP_CALL( simplifyTerm(scip, SCIPgetConsExprExprChildren(expr)[0], 1.0, simplifiedconstant, simplifiedterm) );
          return SCIP_OKAY;
       }
@@ -471,7 +474,7 @@ SCIP_RETCODE simplifyTerm(
    else
    {
       /* other types of (simplified) expressions can be a child of a simplified sum */
-      assert(strcmp(exprtype, "sum") != 0);
+      assert(strcmp(exprtype, EXPRHDLR_NAME) != 0);
       assert(strcmp(exprtype, "val") != 0);
 
       SCIP_CALL( createExprNode(scip, expr, coef, simplifiedterm) );
@@ -546,7 +549,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySum)
 
    assert(expr != NULL);
    assert(simplifiedexpr != NULL);
-   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "sum") == 0);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
 
    children  = SCIPgetConsExprExprChildren(expr);
    nchildren = SCIPgetConsExprExprNChildren(expr);
@@ -735,7 +738,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printSum)
       case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
       {
          /* print opening parenthesis, if necessary */
-         if( SUM_PRECEDENCE <= SCIPgetConsExprExprWalkParentPrecedence(expr) )
+         if( EXPRHDLR_PRECEDENCE <= SCIPgetConsExprExprWalkParentPrecedence(expr) )
          {
             SCIPinfoMessage(scip, file, "(");
          }
@@ -782,7 +785,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printSum)
       case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
       {
          /* print closing parenthesis, if necessary */
-         if( SUM_PRECEDENCE <= SCIPgetConsExprExprWalkParentPrecedence(expr) )
+         if( EXPRHDLR_PRECEDENCE <= SCIPgetConsExprExprWalkParentPrecedence(expr) )
          {
             SCIPinfoMessage(scip, file, ")");
          }
@@ -890,7 +893,7 @@ SCIP_RETCODE separatePointSum(
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), "expr") == 0);
    assert(expr != NULL);
-   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "sum") == 0);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
    assert(cut != NULL);
 
    exprdata = SCIPgetConsExprExprData(expr);
@@ -1163,7 +1166,7 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashSum)
    exprdata = SCIPgetConsExprExprData(expr);
    assert(exprdata != NULL);
 
-   *hashkey = SUM_HASHKEY;
+   *hashkey = EXPRHDLR_HASHKEY;
    *hashkey ^= SCIPcalcFibHash(exprdata->constant);
 
    for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
@@ -1187,8 +1190,8 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSum(
 {
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
 
-   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "sum", "summation with coefficients and a constant",
-         SUM_PRECEDENCE, evalSum, NULL) );
+   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC,
+         EXPRHDLR_PRECEDENCE, evalSum, NULL) );
    assert(exprhdlr != NULL);
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrSum, NULL) );

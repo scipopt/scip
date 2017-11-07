@@ -36,6 +36,8 @@
 #include "scip/cons_expr_log.h"
 #include "scip/cons_expr_abs.h"
 #include "scip/cons_expr_pow.h"
+#include "scip/cons_expr_sin.h"
+#include "scip/cons_expr_cos.h"
 #include "scip/debug.h"
 
 /* fundamental constraint handler properties */
@@ -258,7 +260,7 @@ struct SCIP_ConsExpr_PrintDotData
 typedef struct
 {
    SCIP_CONSHDLR*          conshdlr;         /**< expression constraint handler */
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
    SCIP_SOL*               debugsol;         /**< debug solution (or NULL if not debugging) */
 #endif
    SCIP_CONSEXPR_NLHDLR**  nlhdlrssuccess;   /**< buffer for nlhdlrs that had success detecting structure at expression */
@@ -1451,6 +1453,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(simplifyExpr)
             assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "log") != 0);
             assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "exp") != 0);
             assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "pow") != 0);
+            assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "sin") != 0);
+            assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "cos") != 0);
 
             /* if an expression handler doesn't implement simplify, we assume all those type of expressions are simplified
              * we have to capture it, since it must simulate a "normal" simplified call in which a new expression is created
@@ -3234,6 +3238,18 @@ SCIP_RETCODE makeClassicExpr(
       assert(children != NULL && children[0] != NULL);
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), targetexpr, SCIP_EXPR_LOG, children[0]) );
    }
+   else if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr), "sin") == 0 )
+   {
+      assert(nchildren == 1);
+      assert(children != NULL && children[0] != NULL);
+      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), targetexpr, SCIP_EXPR_SIN, children[0]) );
+   }
+   else if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr), "cos") == 0 )
+   {
+      assert(nchildren == 1);
+      assert(children != NULL && children[0] != NULL);
+      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), targetexpr, SCIP_EXPR_COS, children[0]) );
+   }
    else
    {
       SCIPerrorMessage("unsupported expression handler <%s>, cannot convert to classical expression\n", SCIPgetConsExprExprHdlrName(exprhdlr));
@@ -3551,7 +3567,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(createAuxVarsEnterExpr)
       /* add variable locks in both directions */
       SCIP_CALL( SCIPaddVarLocks(scip, expr->auxvar, 1, 1) );
 
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
       if( SCIPdebugIsMainscip(scip) )
       {
          /* store debug solution of auxiliary variable */
@@ -3702,7 +3718,7 @@ SCIP_RETCODE createAuxVars(
 
    createdata.conshdlr = conshdlr;
 
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
    if( SCIPdebugIsMainscip(scip) )
    {
       createdata.debugsol = NULL;
@@ -6263,9 +6279,25 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
 
          break;
       }
-      case SCIP_EXPR_SIGNPOWER:
       case SCIP_EXPR_SIN:
+      {
+         assert(nchildren == 1);
+         assert(children != NULL && children[0] != NULL);
+
+         SCIP_CALL( SCIPcreateConsExprExprSin(scip, consexprhdlr, expr, children[0]) );
+
+         break;
+      }
       case SCIP_EXPR_COS:
+      {
+         assert(nchildren == 1);
+         assert(children != NULL && children[0] != NULL);
+
+         SCIP_CALL( SCIPcreateConsExprExprCos(scip, consexprhdlr, expr, children[0]) );
+
+         break;
+      }
+      case SCIP_EXPR_SIGNPOWER:
       case SCIP_EXPR_TAN:
       case SCIP_EXPR_MIN:
       case SCIP_EXPR_MAX:
@@ -7474,6 +7506,14 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    /* include handler for power expression */
    SCIP_CALL( SCIPincludeConsExprExprHdlrPow(scip, conshdlr) );
    assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "pow") == 0);
+
+   /* include handler for sine expression */
+   SCIP_CALL( SCIPincludeConsExprExprHdlrSin(scip, conshdlr) );
+   assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "sin") == 0);
+
+   /* include handler for cosine expression */
+   SCIP_CALL( SCIPincludeConsExprExprHdlrCos(scip, conshdlr) );
+   assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "cos") == 0);
 
    return SCIP_OKAY;
 }
