@@ -6926,7 +6926,7 @@ SCIP_RETCODE SCIPsolve(
    );
 
 /** transforms, presolves, and solves problem using additional solvers which emphasize on
- * finding solutions.
+ *  finding solutions.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -15015,6 +15015,62 @@ void SCIPaddBilinMcCormick(
    SCIP_Bool*            success             /**< buffer to set to FALSE if linearization has failed due to large numbers */
    );
 
+/** computes coefficients of linearization of a bilinear term in a reference point when given a linear inequality
+ *  involving only the variables of the bilinear term
+ *
+ *  @note the formulas are extracted from "Convex envelopes of bivariate functions through the solution of KKT systems"
+ *        by Marco Locatelli
+ */
+EXTERN
+void SCIPcomputeBilinEnvelope1(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             bilincoef,          /**< coefficient of bilinear term */
+   SCIP_Real             lbx,                /**< lower bound on first variable */
+   SCIP_Real             ubx,                /**< upper bound on first variable */
+   SCIP_Real             refpointx,          /**< reference point for first variable */
+   SCIP_Real             lby,                /**< lower bound on second variable */
+   SCIP_Real             uby,                /**< upper bound on second variable */
+   SCIP_Real             refpointy,          /**< reference point for second variable */
+   SCIP_Bool             overestimate,       /**< whether to compute an overestimator instead of an underestimator */
+   SCIP_Real             xcoef,              /**< x coefficient of linear inequality; must be in {-1,0,1} */
+   SCIP_Real             ycoef,              /**< y coefficient of linear inequality */
+   SCIP_Real             constant,           /**< constant of linear inequality */
+   SCIP_Real* RESTRICT   lincoefx,           /**< buffer to store coefficient of first  variable in linearization */
+   SCIP_Real* RESTRICT   lincoefy,           /**< buffer to store coefficient of second variable in linearization */
+   SCIP_Real* RESTRICT   linconstant,        /**< buffer to store constant of linearization */
+   SCIP_Bool* RESTRICT   success             /**< buffer to store whether linearization was successful */
+   );
+
+/** computes coefficients of linearization of a bilinear term in a reference point when given two linear inequality
+ *  involving only the variables of the bilinear term
+ *
+ *  @note the formulas are extracted from "Convex envelopes of bivariate functions through the solution of KKT systems"
+ *        by Marco Locatelli
+ *
+ */
+EXTERN
+void SCIPcomputeBilinEnvelope2(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             bilincoef,          /**< coefficient of bilinear term */
+   SCIP_Real             lbx,                /**< lower bound on first variable */
+   SCIP_Real             ubx,                /**< upper bound on first variable */
+   SCIP_Real             refpointx,          /**< reference point for first variable */
+   SCIP_Real             lby,                /**< lower bound on second variable */
+   SCIP_Real             uby,                /**< upper bound on second variable */
+   SCIP_Real             refpointy,          /**< reference point for second variable */
+   SCIP_Bool             overestimate,       /**< whether to compute an overestimator instead of an underestimator */
+   SCIP_Real             alpha1,             /**< x coefficient of linear inequality; must be in {-1,0,1} */
+   SCIP_Real             beta1,              /**< y coefficient of linear inequality */
+   SCIP_Real             gamma1,             /**< constant of linear inequality */
+   SCIP_Real             alpha2,             /**< x coefficient of linear inequality; must be in {-1,0,1} */
+   SCIP_Real             beta2,              /**< y coefficient of linear inequality */
+   SCIP_Real             gamma2,             /**< constant of linear inequality */
+   SCIP_Real*            lincoefx,           /**< buffer to store coefficient of first  variable in linearization */
+   SCIP_Real*            lincoefy,           /**< buffer to store coefficient of second variable in linearization */
+   SCIP_Real*            linconstant,        /**< buffer to store constant of linearization */
+   SCIP_Bool*            success             /**< buffer to store whether linearization was successful */
+   );
+
 /** creates an NLP relaxation and stores it in a given NLPI problem; the function computes for each variable which the
  *  number of non-linearly occurrences and stores it in the nlscore array
  *
@@ -15151,13 +15207,32 @@ SCIP_Bool SCIPisCutApplicable(
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @deprecated Please use SCIPaddRow() instead, or, if the row is a global cut, add it only to the global cutpool.
  */
 EXTERN
 SCIP_RETCODE SCIPaddCut(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
    SCIP_ROW*             cut,                /**< separated cut */
    SCIP_Bool             forcecut,           /**< should the cut be forced to enter the LP? */
    SCIP_Bool*            infeasible          /**< pointer to store whether cut has been detected to be infeasible for local bounds */
+   );
+
+/** adds row to separation storage
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+SCIP_RETCODE SCIPaddRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row,                /**< row */
+   SCIP_Bool             forcecut,           /**< should the row be forced to enter the LP? */
+   SCIP_Bool*            infeasible          /**< pointer to store whether row has been detected to be infeasible for local bounds */
    );
 
 /** checks if cut is already existing in global cutpool
@@ -16008,9 +16083,6 @@ SCIP_RETCODE SCIPchgVarObjProbing(
 /** returns whether the objective function has changed during probing mode
  *
  *  @return \ref TRUE if objective has changed, \ref FALSE otherwise
- *
- *  @note this function should not be used during probing mode when some objective coefficients have been changed via
- *        SCIPchgVarObjProbing()
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_TRANSFORMED

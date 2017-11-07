@@ -84,7 +84,7 @@
  * parameters to control variable fixing
  */
 #define DEFAULT_USEREDCOST       TRUE  /**< should reduced cost scores be used for variable priorization? */
-#define DEFAULT_USEPSCOST       FALSE  /**< should pseudo cost scores be used for variable priorization? */
+#define DEFAULT_USEPSCOST        TRUE  /**< should pseudo cost scores be used for variable priorization? */
 #define DEFAULT_USEDISTANCES     TRUE  /**< should distances from fixed variables be used for variable priorization */
 #define DEFAULT_DOMOREFIXINGS    TRUE  /**< should the ALNS heuristic do more fixings by itself based on variable prioritization
                                          *  until the target fixing rate is reached? */
@@ -698,7 +698,7 @@ SCIP_RETCODE neighborhoodStatsReset(
    stats->usednodes = 0L;
    stats->nfixings = 0L;
 
-   SCIPstatistic( BMSclearMemoryArray(stats->statushist, NHISTENTRIES); )
+   BMSclearMemoryArray(stats->statushist, NHISTENTRIES);
 
    SCIP_CALL( SCIPresetClock(scip, stats->setupclock) );
    SCIP_CALL( SCIPresetClock(scip, stats->submipclock) );
@@ -1054,7 +1054,7 @@ void printNeighborhoodStatistics(
       ucb = 1.0;
       epsgreedyweight = -1.0;
 
-      if( i < heurdata->nactiveneighborhoods )
+      if( heurdata->bandit != NULL && i < heurdata->nactiveneighborhoods )
       {
          switch (heurdata->banditalgo) {
             case 'u':

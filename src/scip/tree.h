@@ -777,7 +777,6 @@ SCIP_RETCODE SCIPtreeBacktrackProbing(
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
    SCIP_PRIMAL*          primal,             /**< primal data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */

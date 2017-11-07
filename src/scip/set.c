@@ -87,8 +87,8 @@
 /* Conflict Analysis (general) */
 
 #define SCIP_DEFAULT_CONF_ENABLE           TRUE /**< conflict analysis be enabled? */
-#define SCIP_DEFAULT_CONF_MAXVARSFAC       0.10 /**< maximal fraction of variables involved in a conflict constraint */
-#define SCIP_DEFAULT_CONF_MINMAXVARS         30 /**< minimal absolute maximum of variables involved in a conflict constraint */
+#define SCIP_DEFAULT_CONF_MAXVARSFAC       0.15 /**< maximal fraction of variables involved in a conflict constraint */
+#define SCIP_DEFAULT_CONF_MINMAXVARS          0 /**< minimal absolute maximum of variables involved in a conflict constraint */
 #define SCIP_DEFAULT_CONF_MAXLPLOOPS          2 /**< maximal number of LP resolving loops during conflict analysis
                                                  *   (-1: no limit) */
 #define SCIP_DEFAULT_CONF_LPITERATIONS       10 /**< maximal number of LP iterations in each LP resolving loop
@@ -578,6 +578,25 @@ SCIP_DECL_PARAMCHGD(paramChgdBarrierconvtol)
 
    /* change the barrierconvtol through the SCIP call in order to mark the LP unsolved */
    SCIP_CALL( SCIPchgBarrierconvtol(scip, newbarrierconvtol) );
+
+   return SCIP_OKAY;
+}
+
+/** information method for a parameter change of infinity value */
+static
+SCIP_DECL_PARAMCHGD(paramChgInfinity)
+{  /*lint --e{715}*/
+   SCIP_Real infinity;
+
+   infinity = SCIPparamGetReal(param);
+
+   /* Check that infinity value of LP-solver is at least as large as the one used in SCIP. This is necessary, because we
+    * transfer SCIP infinity values to the ones by the LPI, but not the converse. */
+   if ( scip->lp != NULL && scip->lp->lpi != NULL && infinity > SCIPlpiInfinity(scip->lp->lpi) )
+   {
+      SCIPerrorMessage("The infinity value of the LP solver has to be at least as large as the one of SCIP.\n");
+      return SCIP_PARAMETERWRONGVAL;
+   }
 
    return SCIP_OKAY;
 }
@@ -1904,7 +1923,7 @@ SCIP_RETCODE SCIPsetCreate(
          "numerics/infinity",
          "values larger than this are considered infinity",
          &(*set)->num_infinity, FALSE, SCIP_DEFAULT_INFINITY, 1e+10, SCIP_INVALID/10.0,
-         NULL, NULL) );
+         paramChgInfinity, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "numerics/epsilon",
          "absolute values smaller than this are considered zero",
@@ -3297,8 +3316,8 @@ SCIP_RETCODE SCIPsetSetSubscipsOff(
 
 /** sets heuristic parameters values to
  *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all heuristic parameters
- *  - SCIP_PARAMSETTING_FAST such that the time spend for heuristic is decreased
- *  - SCIP_PARAMSETTING_AGGRESSIVE such that the heuristic are called more aggregative
+ *  - SCIP_PARAMSETTING_FAST such that the time spent on heuristics is decreased
+ *  - SCIP_PARAMSETTING_AGGRESSIVE such that the heuristics are called more aggressively
  *  - SCIP_PARAMSETTING_OFF which turn off all heuristics
  */
 SCIP_RETCODE SCIPsetSetHeuristics(
@@ -3315,8 +3334,8 @@ SCIP_RETCODE SCIPsetSetHeuristics(
 
 /** sets presolving parameters to
  *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all presolving parameters
- *  - SCIP_PARAMSETTING_FAST such that the time spend for presolving is decreased
- *  - SCIP_PARAMSETTING_AGGRESSIVE such that the presolving is more aggregative
+ *  - SCIP_PARAMSETTING_FAST such that the time spent on presolving is decreased
+ *  - SCIP_PARAMSETTING_AGGRESSIVE such that the presolving is more aggressive
  *  - SCIP_PARAMSETTING_OFF which turn off all presolving
  */
 SCIP_RETCODE SCIPsetSetPresolving(
@@ -3333,8 +3352,8 @@ SCIP_RETCODE SCIPsetSetPresolving(
 
 /** sets separating parameters to
  *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all separating parameters
- *  - SCIP_PARAMSETTING_FAST such that the time spend for separating is decreased
- *  - SCIP_PARAMSETTING_AGGRESSIVE such that the separating is done more aggregative
+ *  - SCIP_PARAMSETTING_FAST such that the time spent on separating is decreased
+ *  - SCIP_PARAMSETTING_AGGRESSIVE such that separating is more aggressive
  *  - SCIP_PARAMSETTING_OFF which turn off all separating
  */
 SCIP_RETCODE SCIPsetSetSeparating(

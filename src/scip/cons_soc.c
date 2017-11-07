@@ -1219,7 +1219,7 @@ SCIP_RETCODE separatePoint(
          SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
          if( SCIPisCutApplicable(scip, row) )
          {
-            SCIP_CALL( SCIPaddCut(scip, row, FALSE, cutoff) );
+            SCIP_CALL( SCIPaddRow(scip, row, FALSE, cutoff) );
             SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );  /*lint !e613*/
 
             *success = TRUE;
@@ -1312,7 +1312,7 @@ SCIP_RETCODE addLinearizationCuts(
             SCIP_ROW* row;
 
             SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
-            SCIP_CALL( SCIPaddCut(scip, row, TRUE, cutoff) );
+            SCIP_CALL( SCIPaddRow(scip, row, TRUE, cutoff) );
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
 
             *separatedlpsol = TRUE;

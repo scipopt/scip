@@ -5,7 +5,7 @@ features:
 - new command line parameter "-r" to pass a nonnegative integer as random seed.
 - new disjoint set data structure SCIP_DISJOINTSET to incrementally update connectedness information for a graph on nodes {0,...,n-1}
 - added macros to do computations with a higher precision by using double double arithmetic
-- new compiler flag DEBUGSOL={true,false} to enable an internal debugging mechanism to check against a user given debug solution
+- revised internal debugging mechanism to check against a user given debug solution (debug.h)
 - add new heuristic MPEC that solves a MPEC reformulation of a mixed-binary nonlinear problem by regularized NLP reformulations
 - added interface to the NLP solver WORHP; set WORHP=true in order to link to WORHP
 - added interface to the NLP solver FilterSQP; set FILTERSQP=true in order to link to FilterSQP
@@ -19,6 +19,10 @@ features:
 - added upgrade from knapsack constraints to cardinality constraints
 - revised disaggregation of quadratic constraints: the number of created constraints can now be controlled and the
   disaggregated constraints are scaled in order to increase numerical accuracy
+- new presolving plugin presol_sparsify that tries to cancel nonzero coefficients in linear constraints by adding
+  multiples of linear equalities
+- utilizing linear inequalities to compute stronger linearizations for bilinear terms; the inequalities are computed in
+  OBBT propagator
 
 parameters:
 - new parameter misc/debugsol to specify a debug solution that should be checked during the solve
@@ -58,12 +62,18 @@ interface:
 - removed argument "includeslp" from SCIPrelaxCreate() and added it to SCIPmarkRelaxSolValid(), SCIPsetRelaxSolVals() and
   SCIPsetRelaxSolValsSol(); removed function SCIPrelaxIncludesLp() and SCIPrelaxSetIncludesLp()
 - new method SCIPsetSubscipDepth() to set the depth of SCIP as a copied subproblem during problem stage
+- added SCIPgetAllBilinearTermsQuadratic to access data of all existing bilinear terms in quadratic constraints
+- added SCIPaddBilinearIneqQuadratic to propose an inequality with two variables that appear in a bilinear term
+- added SCIPcomputeBilinEnvelope{1,2} to compute a linearization of a bilinear term when considering at most two linear inequalities
+- new method SCIPaddRow() to replace deprecated SCIPaddCut()
 
 performance improvements:
 - use disjoint set to reduce peak memory usage and time to compute of clique table connectedness information
 - add and use RESTRICT macro for some pointers
 - improved the implementation of SCIPvarGetActiveRepresentatives
 - removed bestrelaxsol and directly access relaxation solution instead to decrease overhead when using relaxation handlers
+- use LP solution polishing during probing and diving mode to activate it during many primal heuristics; remains disabled
+  during strong branching and OBBT
 
 fixed bugs:
 - fix linear knapsack relaxation during separation if a binary variable does not have a solution value in [0,1].
@@ -71,9 +81,16 @@ fixed bugs:
 - fixed potential ressource leaks in SCIPsolveLinearProb, expr.c, sepa_eccuts, cons_cumulative.c, cons_nonlinear.c
 - fixed order of SCIPcalcCliquePartition in corner case where no cliques are available
 - fixed bug in mps reader. Reader now prints OBJSENSE section and tries to generate unique names of constraints
+- fixed handling of LOOSE variables in locks heuristic
+- fixed upgrade to a varbound constraint if abspower constraint contains a multi-aggregated variable
+- fixed numerical issues in boundshift presolver when aggregating integer variables
 
 misc:
 - dropped support for MOSEK < 7.0.0.0
+
+Makefile:
+- default value for ZIMPL is now "false"
+- new flag DEBUGSOL={true,false} to enable checks against a user given debug solution
 
 SCIP version 4.0.1
 ==================
@@ -148,9 +165,6 @@ interface:
 
 testing:
 - added make options for specifying EXECUTABLE and OUTPUTDIR variables for the make test target
-
-makefile:
-- default build is now with ZIMPL=false
 
 SCIP version 4.0.0
 ==================
