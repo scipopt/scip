@@ -1130,7 +1130,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->visual_bakfilename = NULL;
    (*set)->nlp_solver = NULL;
    (*set)->nlp_disable = FALSE;
-   (*set)->sepa_primfeastol = SCIP_INVALID;
+   (*set)->num_relaxfeastol = SCIP_INVALID;
    (*set)->misc_debugsol = NULL;
 
    /* the default time limit is infinite */
@@ -5122,7 +5122,7 @@ SCIP_RETCODE SCIPsetInitsolPlugins(
    }
 
    /* reset feasibility tolerance for relaxations */
-   set->sepa_primfeastol = SCIP_INVALID;
+   set->num_relaxfeastol = SCIP_INVALID;
 
    return SCIP_OKAY;
 }
@@ -5422,7 +5422,6 @@ SCIP_DEBUGSOLDATA* SCIPsetGetDebugSolData(
 #undef SCIPsetSumepsilon
 #undef SCIPsetFeastol
 #undef SCIPsetLpfeastol
-#undef SCIPsetSepaprimfeastol
 #undef SCIPsetDualfeastol
 #undef SCIPsetBarrierconvtol
 #undef SCIPsetPseudocosteps
@@ -5572,18 +5571,10 @@ SCIP_Real SCIPsetLpfeastol(
 {
    assert(set != NULL);
 
-   if( set->sepa_primfeastol != SCIP_INVALID ) /*lint !e777*/
-      return MIN(set->sepa_primfeastol, set->num_lpfeastol);
+   if( set->num_relaxfeastol != SCIP_INVALID ) /*lint !e777*/
+      return MIN(set->num_relaxfeastol, set->num_lpfeastol);
 
    return set->num_lpfeastol;
-}
-
-/** returns primal feasibility tolerance as specified by separation storage, or SCIP_INVALID */
-SCIP_Real SCIPsetSepaprimfeastol(
-   SCIP_SET*             set                 /**< global SCIP settings */
-   )
-{
-   return set->sepa_primfeastol;
 }
 
 /** returns convergence tolerance used in barrier algorithm */
