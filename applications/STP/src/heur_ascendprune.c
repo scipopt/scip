@@ -327,6 +327,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
       root = g->source;
 
    assert(Is_term(g->term[root]));
+   assert(graph_valid(g));
 
    if( addsol )
    {
@@ -515,9 +516,9 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
       }
    }
 
-   graph_pc_2orgcheck(scip, newgraph);
+   graph_pc_2orgcheck(newgraph);
    assert(graph_pc_term2edgeConsistent(newgraph));
-   graph_pc_2transcheck(scip, newgraph);
+   graph_pc_2transcheck(newgraph);
 #endif
    assert(graph_valid(newgraph));
 

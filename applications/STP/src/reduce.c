@@ -126,6 +126,9 @@ SCIP_RETCODE nvsl_reduction(
    }while( elims > minelims );
 
    *nelims = totalelims;
+
+   assert(graph_valid(g));
+
    return SCIP_OKAY;
 }
 
@@ -913,12 +916,15 @@ SCIP_RETCODE redLoopMw(
 
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
 
-   SCIP_CALL( graph_pc_2org(scip, g) );
+   graph_pc_2org(g);
 
    degelims = 0;
 
    SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
-#if 1
+   assert(graph_pc_term2edgeConsistent(g));
+
+#if 0
+   assert(graph_valid(g));
 
    reduce_ans(scip, g, nodearrint2, &anselims);
 
@@ -926,24 +932,24 @@ SCIP_RETCODE redLoopMw(
 
    reduce_ansAdv(scip, g, nodearrint2, &ansadelims, FALSE);
 
+   assert(graph_valid(g));
+
    printf("ansadelims %d \n", ansadelims);
 
    degelims = 0;
-   SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
+   SCIP_CALL(degree_test_mw(scip, g, solnode, fixed, &degelims));
    printf("degelims %d \n", degelims);
 
    reduce_ansAdv2(scip, g, nodearrint2, &ansad2elims);
 
    printf("ansad2elims %d \n", ansad2elims);
 
-
    reduce_nnp(scip, g, nodearrint2, &nnpelims);
-    printf("nnpelims %d \n", nnpelims);
+   printf("nnpelims %d \n", nnpelims);
 
+   assert(graph_valid(g));
 
-
-     printf("all %d \n", nnpelims + anselims+ ansadelims + ansad2elims);
-
+   printf("all %d \n", nnpelims + anselims + ansadelims + ansad2elims);
 
    int cc = 0;
    int cct = 0;
@@ -951,14 +957,14 @@ SCIP_RETCODE redLoopMw(
 
    for( int i = 0; i < g->knots; i++ )
    {
-      if( g->grad[i] == 4)
+      if( g->grad[i] == 4 )
          g5++;
       if( g->mark[i] )
       {
          cc++;
          if( Is_term(g->term[i]) )
          {
-    //        printf("grad %d \n",g->grad[i] );
+            //        printf("grad %d \n",g->grad[i] );
             cct++;
          }
       }
@@ -971,23 +977,42 @@ SCIP_RETCODE redLoopMw(
    {
       if( g->oeat[i] != EAT_FREE )
       {
-int t = g->tail[i];
-      int h = g->head[i];
-      if( g->grad[t] + g->grad[h] - 2 <= 6)
-         cc++;
+         int t = g->tail[i];
+         int h = g->head[i];
+         if( g->grad[t] + g->grad[h] - 2 <= 6 )
+            cc++;
       }
 
    }
-printf("edge cands %d \n", cc);
+   printf("edge cands %d \n", cc);
 
-
-
-   SCIP_CALL( npvReduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &npvelims, 400) );
-
-
+   SCIP_CALL(npvReduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &npvelims, 400));
    printf("npvelims %d \n", npvelims);
 
-  exit(1);
+   SCIP_CALL(chain2Reduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &chain2elims, 300));
+   printf("chain2elims %d \n", chain2elims);
+
+   if( bred )
+   {
+   SCIP_CALL(bound_reduceMw(scip, g, vnoi, path, edgearrreal, nodearrreal, edgearrreal2, fixed, nodearrint, state, vbase, NULL, &bredelims));
+
+   printf("bound_reduce: %d \n", bredelims);
+   }
+
+   assert(graph_pc_term2edgeConsistent(g));
+
+   assert(graph_valid(g));
+
+   if( advanced )
+   {
+      SCIP_CALL(
+            da_reducePcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint, state, nodearrchar, &daelims, TRUE, FALSE, FALSE, FALSE, userec));
+      printf("daelims %d \n", daelims);
+
+      exit(1);
+
+   }
+
 #endif
 
    while( rerun && !SCIPisStopped(scip) )
@@ -1066,13 +1091,9 @@ printf("edge cands %d \n", cc);
          SCIP_CALL( da_reducePcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint, state, nodearrchar, &daelims, TRUE, FALSE, FALSE, FALSE, userec) );
 
          if( daelims <= 2 * redbound )
-         {
             da = FALSE;
-         }
          else
-         {
             SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
-         }
 
          SCIPdebugMessage("Dual-Ascent Elims: %d \n", daelims);
       }
@@ -1094,13 +1115,9 @@ printf("edge cands %d \n", cc);
          reduce_ansAdv2(scip, g, nodearrint2, &ansad2elims);
 
          if( ansad2elims <= redbound )
-         {
             ansad2 = FALSE;
-         }
          else
-         {
             SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &ansad2elims) );
-         }
 
          SCIPdebugMessage("ans advanced 2 deleted: %d (da? %d ) \n", ansad2elims, da);
       }
@@ -1165,7 +1182,7 @@ printf("edge cands %d \n", cc);
    }
 
    /* go back to the extended graph */
-   SCIP_CALL( graph_pc_2trans(scip, g) );
+   graph_pc_2trans(g);
 
    SCIP_CALL( level0(scip, g) );
 
@@ -1237,7 +1254,7 @@ SCIP_RETCODE redLoopPc(
    ub = -1.0;
    fix = 0.0;
 
-   SCIP_CALL( graph_pc_2org(scip, g) );
+   graph_pc_2org(g);
 
    assert(graph_pc_term2edgeConsistent(g));
 
@@ -1414,7 +1431,7 @@ SCIP_RETCODE redLoopPc(
    if( rpc )
       g->prize[g->source] = rootprize;
 
-   SCIP_CALL( graph_pc_2trans(scip, g) );
+   graph_pc_2trans(g);
 
    /* free random number generator */
    SCIPrandomFree(&randnumgen);

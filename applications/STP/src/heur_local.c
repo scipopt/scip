@@ -1707,7 +1707,7 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    nnodes = graph->knots;
    nedges = graph->edges;
 
-   SCIP_CALL( graph_pc_2transcheck(scip, graph) );
+   graph_pc_2transcheck(graph);
    SCIP_CALL( SCIPallocBufferArray(scip, &stvertextmp, nnodes) );
 
    /* initialize solution vertex array with FALSE */

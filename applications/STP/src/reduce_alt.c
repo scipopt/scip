@@ -1346,6 +1346,10 @@ void ansProcessCandidate(
    int bridgeedge = -1;
    unsigned misses = 0;
 
+   assert(g->mark[candvertex]);
+   assert(candvertex != g->source);
+   assert(!Is_pterm(g->term[candvertex]));
+
    for( e2 = g->outbeg[candvertex]; e2 != EAT_LAST; e2 = g->oeat[e2] )
    {
       if( !marked[g->head[e2]] )
@@ -2069,8 +2073,10 @@ SCIP_RETCODE sdpc_reduction(
    }
 
    SCIPdebugMessage("SDPC eliminations: %d \n", *nelims);
-
    graph_free(scip, netgraph, TRUE);
+
+   assert(graph_valid(g));
+
    return SCIP_OKAY;
 }
 
@@ -3024,6 +3030,9 @@ SCIP_RETCODE sdsp_reduction(
 
    SCIPfreeBufferArrayNull(scip, &pathmaxnodehead);
    SCIPfreeBufferArrayNull(scip, &pathmaxnodetail);
+
+   assert(graph_valid(g));
+
    return SCIP_OKAY;
 }
 
@@ -3597,6 +3606,8 @@ SCIP_RETCODE reduce_alt_bd34(
 
    printf("bd34: %d nodes deleted \n \n", *nelims);
    SCIPdebugMessage("bd34: %d nodes deleted\n", *nelims);
+
+   assert(graph_valid(g));
 
    return SCIP_OKAY;
 }
@@ -4570,6 +4581,7 @@ void reduce_ans(
    assert(count  != NULL);
    assert(marked != NULL);
    assert(g->stp_type == STP_MWCSP);
+   assert(graph_valid(g));
 
    *count = 0;
 
@@ -4617,6 +4629,8 @@ void reduce_ans(
       for( int j = 0; j < nnodes; j++ )
          assert(marked[j] == FALSE);
    }
+
+   assert(graph_valid(g));
 }
 
 /** advanced adjacent neighbourhood reduction for the MWCSP */
@@ -4720,6 +4734,8 @@ void reduce_ansAdv(
       for( int k2 = 0; k2 < nnodes; k2++ )
          assert(marked[k2] == FALSE);
    }
+
+   assert(graph_valid(g));
 }
 
 
@@ -4845,6 +4861,8 @@ void reduce_ansAdv2(
             assert(marked[k2] == FALSE);
       }
    }
+
+   assert(graph_valid(g));
 }
 
 
@@ -5574,27 +5592,32 @@ void reduce_nnp(
    /* check neighborhood of terminals */
    for( int k = 0; k < nnodes; k++ )
    {
-      if( g->prize[k] < 0.0 || !g->mark[k] )
+      if( !g->mark[k] || g->prize[k] < 0.0 )
          continue;
 
       /* mark adjacent vertices of k */
       for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
-         marked[g->head[e]] = TRUE;
+         if( g->mark[g->head[e]] )
+            marked[g->head[e]] = TRUE;
 
       /* ... and traverse them */
       for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
       {
          const int j = g->head[e];
-         int e2 = g->outbeg[j];
 
-         while( e2 != EAT_LAST )
+         if( marked[j] )
          {
-            const int candedge = e2;
-            e2 = g->oeat[e2];
-            if( marked[g->head[candedge]] )
+            int e2 = g->outbeg[j];
+
+            while( e2 != EAT_LAST )
             {
-               graph_edge_del(scip, g, candedge, TRUE);
-               localcount++;
+               const int candedge = e2;
+               e2 = g->oeat[e2];
+               if( marked[g->head[candedge]] )
+               {
+                  graph_edge_del(scip, g, candedge, TRUE);
+                  localcount++;
+               }
             }
          }
       }
@@ -5607,4 +5630,6 @@ void reduce_nnp(
    }
 
    *count = localcount;
+
+   assert(graph_valid(g));
 }

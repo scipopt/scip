@@ -1790,10 +1790,10 @@ SCIP_RETCODE SCIPStpDualAscent(
             node = stackarr[n];
 #endif
             /* traverse incoming arcs */
-
-            for( i = start[node], end = start[node + 1]; i != end; i++ )
+// todo variables local MEASURE todo unsigned? todo pointer trick
+            for( i = start[node], end = start[node + 1]; i != end; i++ ) // todo while( j-- )
             {
-               tail = tailarr[i];
+               tail = tailarr[i]; //todo store with sat? // todo if g->mark[tail] continue TRUE= -
 #ifdef BITFIELDSARRAY
                if( BitTrue(bitarr, i) )
 #else

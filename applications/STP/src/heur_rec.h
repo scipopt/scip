@@ -118,8 +118,7 @@ extern
 SCIP_RETCODE SCIPStpHeurRecExclude(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph structure */
-   int*                  result,             /**< edge solution array (UNKNOWN/CONNECT) */
-   int*                  result2,            /**< second edge solution array or NULL */
+   const int*            result,             /**< edge solution array (UNKNOWN/CONNECT) */
    int*                  newresult,          /**< new edge solution array (UNKNOWN/CONNECT) */
    int*                  dnodemap,           /**< node array for internal use */
    STP_Bool*             stvertex,           /**< node array for internally marking solution vertices */

@@ -292,7 +292,7 @@ SCIP_RETCODE computeDaSolPcMw(
    if( graph->stp_type != STP_MWCSP )
      return SCIP_OKAY;
 
-   SCIP_CALL( SCIPStpHeurRecExclude(scip, graph, result1, NULL, result2, pathedge, nodearrchar, &success) );
+   SCIP_CALL( SCIPStpHeurRecExclude(scip, graph, result1, result2, pathedge, nodearrchar, &success) );
 
    if( success )
    {
@@ -339,7 +339,7 @@ SCIP_RETCODE computePertubedSol(
    const int nedges = graph->edges;
    const int transnedges = transgraph->edges;
 
-   SCIP_CALL( graph_pc_2transcheck(scip, graph) );
+   graph_pc_2transcheck(graph);
 
    BMScopyMemoryArray(costrev, cost, extnedges);
 
@@ -493,7 +493,7 @@ int reducePcMw(
    nfixed = 0;
    nnodes = graph->knots;
 
-   SCIP_CALL_ABORT( graph_pc_2orgcheck(scip, graph) );
+   graph_pc_2orgcheck(graph);
 
    if( solgiven )
    {
@@ -861,7 +861,7 @@ SCIP_RETCODE da_reduce(
       nruns = 1;
       if( rpc )
       {
-         SCIP_CALL( graph_pc_2trans(scip, graph) );
+         graph_pc_2trans(graph);
       }
    }
 
@@ -932,7 +932,7 @@ SCIP_RETCODE da_reduce(
          {
             if( rpc )
             {
-               SCIP_CALL( graph_pc_2org(scip, graph) );
+               graph_pc_2org(graph);
             }
 
             goto TERMINATE;
@@ -976,9 +976,7 @@ SCIP_RETCODE da_reduce(
 
       /* RPC? If yes, restore original graph */
       if( rpc )
-      {
-         SCIP_CALL( graph_pc_2org(scip, graph) );
-      }
+         graph_pc_2org(graph);
 
       for( k = 0; k < nnodes; k++ )
       {
@@ -1247,8 +1245,8 @@ SCIP_RETCODE da_reduce(
 
       if( rpc )
       {
-         SCIP_CALL( graph_pc_2trans(scip, graph) );
-         SCIP_CALL( graph_pc_2org(scip, graph) );
+         graph_pc_2trans(graph);
+         graph_pc_2org(graph);
       }
       else
       {
@@ -1406,7 +1404,7 @@ SCIP_RETCODE da_reduceSlackPrune(
 
    if( rpc )
    {
-      SCIP_CALL( graph_pc_2trans(scip, graph) );
+      graph_pc_2trans(graph);
    }
 
 
@@ -1587,7 +1585,7 @@ SCIP_RETCODE da_reduceSlackPrune(
    /* RPC? If yes, restore original graph */
    if( rpc )
    {
-      SCIP_CALL( graph_pc_2org(scip, graph) );
+      graph_pc_2org(graph);
       graph->mark[root] = FALSE;
    }
 
@@ -1774,7 +1772,7 @@ SCIP_RETCODE da_reduceSlackPrune(
    SCIPdebugMessage("deleted by da: %d \n", nfixed );
 
    if( rpc )
-      SCIP_CALL( graph_pc_2trans(scip, graph) );
+      graph_pc_2trans(graph);
    assert(graph->mark[root]);
 
  TERMINATE:
@@ -1838,14 +1836,14 @@ SCIP_RETCODE da_reducePcMw(
    int* result2;
    int* transresult;
    STP_Bool* marked;
-   int root;
    int nroots;
-   int nedges;
-   int nnodes;
    int nfixed;
    int beststart;
    int nusedroots;
-   int extnedges;
+   const int root = graph->source;
+   const int nedges = graph->edges;
+   const int extnedges = nedges + 2 * (graph->terms - 1);
+   const int nnodes = graph->knots;
    SCIP_Bool apsol;
    SCIP_Bool success;
 
@@ -1858,12 +1856,8 @@ SCIP_RETCODE da_reducePcMw(
    if( graph->terms <= 1 )
       return SCIP_OKAY;
 
-   root = graph->source;
    nroots = 0;
    nfixed = 0;
-   nnodes = graph->knots;
-   nedges = graph->edges;
-   extnedges = nedges + 2 * (graph->terms - 1);
    bestlb = 1.0;
    varyroot = varyroot && userec;
 
@@ -1902,7 +1896,7 @@ SCIP_RETCODE da_reducePcMw(
     * 2. step: compute lower bound and reduced costs
     */
 
-   SCIP_CALL( graph_pc_2trans(scip, graph) );
+   graph_pc_2trans(graph);
    offset = 0.0;
 
    /* transform the problem to a real SAP */
@@ -1911,7 +1905,7 @@ SCIP_RETCODE da_reducePcMw(
    else
       SCIP_CALL( graph_pc_getSap(scip, graph, &transgraph, &offset) );
 
-   printf("SHIFTED %d \n", 0);
+   printf("SHIFTED %d \n", shiftcosts);
 
    /* initialize data structures for shortest paths */
    SCIP_CALL( graph_path_init(scip, transgraph) );
@@ -1952,7 +1946,7 @@ SCIP_RETCODE da_reducePcMw(
 
 
    /* restore original graph */
-   SCIP_CALL( graph_pc_2org(scip, graph) );
+   graph_pc_2org(graph);
 
    if( shiftcosts )
    {
@@ -1973,8 +1967,6 @@ SCIP_RETCODE da_reducePcMw(
 
    /* try to reduce the graph */
    nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, TRUE);
-
-   //exit(1);
 
    SCIPdebugMessage("DA: 1. NFIXED %d \n", nfixed);
    assert(root == transgraph->source);
@@ -2021,7 +2013,7 @@ SCIP_RETCODE da_reducePcMw(
       for( int run = 0; run < DEFAULT_NMAXROOTS ; run++ )
       {
          // todo removed mark = FALSE
-         SCIP_CALL( graph_pc_2trans(scip, graph) );
+         graph_pc_2trans(graph);
 
          /* try to improve both dual and primal bound */
          SCIP_CALL( computePertubedSol(scip, graph, transgraph, pool, vnoi, gnodearr, cost, costrev, pathdist, state, vbase, pathedge, result, result2,
@@ -2244,7 +2236,7 @@ SCIP_RETCODE da_reducePcMw(
       get2next(scip, transgraph, costrev, costrev, vnoi, vbase, transgraph->path_heap, state);
 
       /* restore original graph */
-      SCIP_CALL( graph_pc_2org(scip, graph) );
+      graph_pc_2org(graph);
 
       assert(graph->mark[tmproot]);
       graph->mark[tmproot] = FALSE;
@@ -2273,6 +2265,8 @@ SCIP_RETCODE da_reducePcMw(
 
    if( edgearrint == NULL )
       SCIPfreeBufferArray(scip, &result);
+
+   assert(graph_valid(graph));
 
    return SCIP_OKAY;
 }
@@ -2530,7 +2524,7 @@ SCIP_RETCODE da_reduceSlackPruneMw(
    voronoi_terms(scip, transgraph, costrev, vnoi, vbase, transgraph->path_heap, transgraph->path_state);
 
    /* restore original graph */
-   SCIP_CALL( graph_pc_2org(scip, graph) );
+   graph_pc_2org(graph);
 
    for( k = 0; k < nnodes; k++ )
       solnode[k] = UNKNOWN;
@@ -2718,7 +2712,7 @@ SCIP_RETCODE da_reduceSlackPruneMw(
    graph_free(scip, transgraph, TRUE);
 
    /* restore transformed graph */
-   SCIP_CALL( graph_pc_2trans(scip, graph) );
+   graph_pc_2trans(graph);
 
    *nelims = nfixed;
 
@@ -3068,13 +3062,13 @@ SCIP_RETCODE bound_reduce(
 
       /* PC or RPC? Then restore transformed graph */
       if( pcmw )
-         SCIP_CALL( graph_pc_2trans(scip, graph) );
+         graph_pc_2trans(graph);
 
       SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, graph, starts, &best_start, result, runs, root, cost, costrev, &obj, NULL, maxcost, &success, FALSE) );
 
       /* PC or RPC? Then restore oringinal graph */
       if( pcmw )
-         SCIP_CALL( graph_pc_2org(scip, graph) );
+         graph_pc_2org(graph);
 
       /* no feasible solution found? */
       if( !success )
@@ -3403,6 +3397,8 @@ SCIP_RETCODE bound_reduce(
    SCIPfreeBufferArrayNull(scip, &starts);
    SCIPfreeBufferArrayNull(scip, &stnode);
    SCIPfreeBufferArrayNull(scip, &result);
+
+   assert(graph_valid(graph));
 
    return SCIP_OKAY;
 }

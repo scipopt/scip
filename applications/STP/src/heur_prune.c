@@ -977,13 +977,13 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
 #endif
 
          if( pcmw )
-            SCIP_CALL( graph_pc_2org(scip, prunegraph) );
+            graph_pc_2org(prunegraph);
 
          SCIP_CALL( bound_reducePrune(scip, prunegraph, vnoi, cost, (pcmw) ? prunegraph->prize : NULL, nodearrreal, costrev,
                &offsetnew, heap, state, vbase, solnode, edgearrint, &brednelims, minnelims));
 
          if( pcmw )
-            SCIP_CALL( graph_pc_2trans(scip, prunegraph) );
+            graph_pc_2trans(prunegraph);
 
 #ifdef SCIP_DEBUG
          graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);

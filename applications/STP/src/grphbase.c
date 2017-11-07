@@ -847,15 +847,13 @@ void graph_pc_updateTerm2edge(
 }
 
 /** mark terminals and switch terminal property to original terminals */
-SCIP_RETCODE graph_pc_2org(
-   SCIP*                 scip,               /**< SCIP data structure */
+void graph_pc_2org(
    GRAPH*                graph               /**< the graph */
    )
 {
    int root;
    int nnodes;
 
-   assert(scip != NULL);
    assert(graph != NULL);
    assert(graph->extended);
 
@@ -878,24 +876,22 @@ SCIP_RETCODE graph_pc_2org(
       }
    }
 
-   if( graph->stp_type == STP_RPCSPG )
+   if( graph->stp_type == STP_RPCSPG || graph->stp_type == STP_RMWCSP )
       graph->mark[root] = TRUE;
 
    graph->extended = FALSE;
 
-   return SCIP_OKAY;
+   return;
 }
 
 /** unmark terminals and switch terminal property to transformed terminals */
-SCIP_RETCODE graph_pc_2trans(
-   SCIP*                 scip,               /**< SCIP data structure */
+void graph_pc_2trans(
    GRAPH*                graph               /**< the graph */
    )
 {
    const int root = graph->source;
    const int nnodes = graph->knots;;
 
-   assert(scip != NULL);
    assert(graph != NULL);
    assert(!(graph->extended));
 
@@ -911,35 +907,33 @@ SCIP_RETCODE graph_pc_2trans(
 
    graph->extended = TRUE;
 
-   return SCIP_OKAY;
+   return;
 }
 
 /** graph_pc_2org if extended */
-SCIP_RETCODE graph_pc_2orgcheck(
-   SCIP*                 scip,               /**< SCIP data structure */
+void graph_pc_2orgcheck(
    GRAPH*                graph               /**< the graph */
    )
 {
    assert(graph != NULL);
 
    if( !graph->extended )
-      return SCIP_OKAY;
+      return;
 
-   return graph_pc_2org(scip, graph);
+   graph_pc_2org(graph);
 }
 
 /** graph_pc_2trans if not extended */
-SCIP_RETCODE graph_pc_2transcheck(
-   SCIP*                 scip,               /**< SCIP data structure */
+void graph_pc_2transcheck(
    GRAPH*                graph               /**< the graph */
    )
 {
    assert(graph != NULL);
 
    if( graph->extended )
-      return SCIP_OKAY;
+      return;
 
-   return graph_pc_2trans(scip, graph);
+   graph_pc_2trans(graph);
 }
 
 
@@ -1224,7 +1218,7 @@ SCIP_RETCODE graph_pc_getRsap(
    assert(graph->knots == graph->ksize);
    assert(graph->edges == graph->esize);
 
-   SCIP_CALL( graph_pc_2transcheck(scip, graph) );
+   graph_pc_2transcheck(graph);
 
    aterm = -1;
    proot = graph->source;
@@ -3558,7 +3552,7 @@ SCIP_RETCODE graph_trail_arr(
 }
 
 /** is the given graph valid? */
-int graph_valid(
+SCIP_Bool graph_valid(
    const GRAPH*          g                   /**< the new graph */
    )
 {
@@ -3644,26 +3638,97 @@ int graph_valid(
          return((void)fprintf(stderr, fehler7, k), FALSE);
    }
 
-   if( (g->stp_type == STP_PCSPG || g->stp_type == STP_MWCSP) && g->extended )
+   if( (g->stp_type == STP_PCSPG || g->stp_type == STP_MWCSP || g->stp_type == STP_RPCSPG || g->stp_type == STP_RMWCSP) )
    {
-      // todo
+      int npterms = 0;
       const int root = g->source;
+      const SCIP_Bool extended = g->extended;
+      nterms = 0;
 
-      /*
-      for( e = g->outbeg[root]; e != EAT_LAST; e = g->oeat[e] )
+      assert(g->prize != NULL);
+      assert(g->term2edge != NULL);
+
+      for( k = 0; k < nnodes; k++ )
       {
-         SCIP_Real p;
-         const int head = g->head;
-         if( Is_term(g->term[head]) )
-         {
-            p = g->cost[e];
-            for( int e2 = g->inpbeg[]; e2 != EAT_LAST; e2 = g->ieat[e2] )
-            {
+         if( k == root )
+            continue;
 
+         if( (extended ? Is_term(g->term[k]) : Is_pterm(g->term[k])) )
+         {
+            int e2;
+            int pterm;
+            const int term = k;
+            nterms++;
+
+            if( g->grad[k] != 2 )
+            {
+               printf("terminal degree != 2 for %d \n", k);
+               return FALSE;
+            }
+
+            for( e = g->inpbeg[term]; e != EAT_LAST; e = g->ieat[e] )
+               if( g->tail[e] == root )
+                  break;
+
+            if( e == EAT_LAST )
+            {
+               printf("no edge to root for term %d \n", term);
+               return FALSE;
+            }
+
+            for( e2 = g->outbeg[term]; e2 != EAT_LAST; e2 = g->oeat[e2] )
+            {
+               pterm = g->head[e2];
+               if( (extended ? Is_pterm(g->term[pterm]) : Is_term(g->term[pterm])) && pterm != root  )
+                  break;
+            }
+
+            if( e2 == EAT_LAST)
+            {
+               printf("no terminal for dummy %d \n", g->head[e2]);
+               return FALSE;
+            }
+
+            assert(pterm != root);
+
+            if( e2 != g->term2edge[term] )
+            {
+               printf("term2edge for node %d faulty \n", term);
+               return FALSE;
+            }
+
+            if( g->cost[e] != g->prize[pterm] )
+            {
+               printf("prize mismatch for node %d: \n", k);
+               return FALSE;
             }
          }
+         else if( (extended ? Is_pterm(g->term[k]) : Is_term(g->term[k])) )
+         {
+            npterms++;
+         }
       }
-      */
+      if( nterms != npterms || nterms != g->terms - 1 )
+      {
+         printf("wrong terminal count \n");
+         return FALSE;
+      }
+
+      for( k = 0; k < nnodes; k++ )
+      {
+          g->mark[k] = (g->grad[k] > 0);
+
+          if( !extended && (Is_pterm(g->term[k]) || k == root)  )
+                g->mark[k] = FALSE;
+      }
+      if( !extended && (g->stp_type == STP_RPCSPG || g->stp_type == STP_RMWCSP) )
+         g->mark[root] = TRUE;
+
+   }
+   else
+   {
+      for( k = 0; k < nnodes; k++ )
+         g->mark[k] = (g->grad[k] > 0);
    }
 
    return TRUE;

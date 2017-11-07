@@ -1603,12 +1603,11 @@ SCIP_RETCODE SCIPStpHeurRecInit(
 }
 
 
-/** heuristic to exclude vertices or edges from a given solution (and inserting other edges) to improve objective (also prunes original solution) */
+/** heuristic to exclude vertices or edges from a given solution (and inserting other edges) to improve objective */
 SCIP_RETCODE SCIPStpHeurRecExclude(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph structure */
-   int*                  result,             /**< edge solution array (UNKNOWN/CONNECT) */
-   int*                  result2,            /**< second edge solution array or NULL */
+   const int*            result,             /**< edge solution array (UNKNOWN/CONNECT) */
    int*                  newresult,          /**< new edge solution array (UNKNOWN/CONNECT) */
    int*                  dnodemap,           /**< node array for internal use */
    STP_Bool*             stvertex,           /**< node array for internally marking solution vertices */
@@ -1618,19 +1617,15 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
    SCIP_HEURDATA* tmheurdata;
    GRAPH* newgraph;
    SCIP_Real dummy;
-   int*   unodemap;
-   int    j;
-   int    root;
-   int    nedges;
-   int    nnodes;
-   int    nsolterms;
-   int    nsoledges;
-   int    nsolnodes;
-   int    best_start;
-   SCIP_Bool pcmw;
-   SCIP_Bool mergesols;
-
-   SCIP_Real cc;
+   int* unodemap;
+   int j;
+   int nsolterms;
+   int nsoledges;
+   int nsolnodes;
+   int best_start;
+   const int root = graph->source;
+   const int nedges = graph->edges;
+   const int nnodes = graph->knots;
 
    assert(scip != NULL);
    assert(graph != NULL);
@@ -1640,85 +1635,19 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
    assert(dnodemap != NULL);
    assert(newresult != NULL);
 
-   pcmw = (graph->stp_type == STP_PCSPG || graph->stp_type == STP_MWCSP || graph->stp_type == STP_RMWCSP || graph->stp_type == STP_RPCSPG);
-   nedges = graph->edges;
-   nnodes = graph->knots;
-   *success = TRUE;
-   // todo
+   *success = FALSE;
    assert(graph->stp_type == STP_MWCSP);
+   assert(graph_valid(graph));
 
    /* killed solution edge? */
    for( int e = 0; e < nedges; e++ )
       if( result[e] == CONNECT && graph->oeat[e] == EAT_FREE )
          return SCIP_OKAY;
 
-   BMSclearMemoryArray(stvertex, nnodes);
-
-   cc = graph_sol_getObj(graph->cost, result, 0.0, nedges);
-
-   int *x1;
-   int *x2;
-   SCIP_CALL( SCIPallocBufferArray(scip, &x1, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &x2, nnodes) );
-   BMSclearMemoryArray(x1, nnodes);
-   BMSclearMemoryArray(x2, nnodes);
-   for( int e = 0; e < nedges; e++ )
-   {
-      if( result[e] == CONNECT )
-      {
-         x1[graph->tail[e]] = TRUE;
-         x1[graph->head[e]] = TRUE;
-      }
-   }
-
-   for( int e = 0; e < nedges; e++ )
-   {
-      if( result[e] == CONNECT )
-      {
-         stvertex[graph->tail[e]] = TRUE;
-         stvertex[graph->head[e]] = TRUE;
-      }
-      result[e] = UNKNOWN;
-   }
-
-   if( pcmw )
-      SCIP_CALL( SCIPStpHeurTMPrunePc(scip, graph, graph->cost, result, stvertex) );
-   else
-      SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, graph->cost, 0, result, stvertex) );
-
-#if 1
-   for( int e = 0; e < nedges; e++ )
-   {
-      if( result[e] == CONNECT )
-      {
-         x2[graph->tail[e]] = TRUE;
-         x2[graph->head[e]] = TRUE;
-      }
-   }
-
-   for( int k = 0; k < nnodes; k++ )
-      if(x1[k] != x2[k])
-      {
-         printf("FAIL for %d \n", k);
-         return SCIP_ERROR;
-      }
-
-   if( !SCIPisEQ(scip, cc, graph_sol_getObj(graph->cost, result, 0.0, nedges)) )
-   {
-      printf("fail2 %f %f \n", cc, graph_sol_getObj(graph->cost, result, 0.0, nedges));
-      return SCIP_ERROR;
-   }
-
-   SCIPfreeBufferArray(scip, &x1);
-   SCIPfreeBufferArray(scip, &x2);
-#endif
-
-
    /*** 1. step: for solution S and original graph (V,E) initialize new graph (V[S], (V[S] X V[S]) \cup E) ***/
 
    BMSclearMemoryArray(stvertex, nnodes);
 
-   root = graph->source;
    nsolnodes = 1;
    nsolterms = 0;
    stvertex[root] = 1;
@@ -1744,13 +1673,7 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
             continue;
          }
 
-         //todo
-         if( stvertex[head] )
-         {
-            printf("ohoh %d \n", 0);
-            return SCIP_ERROR;
-         }
-
+         assert(!stvertex[head] );
          stvertex[head] = 1;
 
          if( Is_pterm(graph->term[head]) )
@@ -1758,115 +1681,6 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
          nsolnodes++;
       }
    }
-
-   mergesols = FALSE;
-
-   /* if there is second solution, check whether it can be merged with first one */
-   if( result2 != NULL )
-   {
-      int ed = 0;
-      for( ; ed < nedges; ed++ )
-         if( result2[ed] == CONNECT )
-         {
-            int e;
-            int k = graph->head[ed];
-
-            if( Is_term(graph->term[k]) )
-               continue;
-
-            if( stvertex[k] )
-               break;
-
-            for( e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
-               if( stvertex[graph->head[e]] )
-                  break;
-
-            if( e != EAT_LAST )
-               break;
-         }
-
-      if( ed != nedges )
-         mergesols = TRUE;
-   }
-
-   /* mark nodes in second solution */
-   if( mergesols )
-   {
-      for( int e = 0; e < nedges; e++ )
-      {
-         if( result2[e] == CONNECT )
-         {
-            int tail = graph->tail[e];
-            int head = graph->head[e];
-
-            if( stvertex[head] )
-            {
-               stvertex[head]++;
-               continue;
-            }
-
-            if( tail == root )
-            {
-               /* there might be only one node */
-               if( Is_pterm(graph->term[head]) )
-               {
-                  stvertex[head] = 1;
-                  nsolterms++;
-                  nsolnodes++;
-               }
-
-               continue;
-            }
-
-            stvertex[head] = 1;
-
-            if( Is_pterm(graph->term[head]) )
-               nsolterms++;
-            nsolnodes++;
-         }
-      }
-   }
-   else if( result2 != NULL )
-   {
-      *success = FALSE;
-      return SCIP_OKAY;
-   }
-
-
-//todo
-   for( int e = 0; e < nedges; e++ )
-   {
-      if( result[e] == CONNECT )
-      {
-         int tail = graph->tail[e];
-         int head = graph->head[e];
-
-         if( tail == root )
-         {
-            continue;
-         }
-
-
-         if(!stvertex[head] )
-                        {
-                           printf("FAILLL HEAD %d \n", head);
-                           return SCIP_ERROR;
-
-                        }
-
-         if( !stvertex[tail] )
-         {
-            printf("FAILLL TAIL %d \n", tail);
-            printf(" %d \n", 0);
-            return SCIP_ERROR;
-
-         }
-
-
-      }
-   }
-
-
 
    assert(nsolterms > 0);
 
@@ -1882,30 +1696,22 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
    /* create new graph */
    SCIP_CALL( graph_init(scip, &newgraph, nsolnodes, nsoledges, 1) );
 
+   newgraph->stp_type = graph->stp_type;
+   newgraph->extended = TRUE;
+
    SCIP_CALL( SCIPallocBufferArray(scip, &unodemap, nsolnodes) );
-
-   if( graph->stp_type == STP_RSMT || graph->stp_type == STP_OARSMT || graph->stp_type == STP_GSTP )
-      newgraph->stp_type = STP_SPG;
-   else
-      newgraph->stp_type = graph->stp_type;
-
-   if( pcmw )
-   {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(newgraph->prize), nsolnodes) );
-   }
+   SCIP_CALL( graph_pc_init(scip, newgraph, nsolnodes, nsolnodes) );
 
    j = 0;
    for( int i = 0; i < nnodes; i++ )
    {
       if( stvertex[i] )
       {
-         if( pcmw )
-         {
-            if( (!Is_term(graph->term[i])) )
-               newgraph->prize[j] = graph->prize[i];
-            else
-               newgraph->prize[j] = 0.0;
-         }
+         if( (!Is_term(graph->term[i])) )
+            newgraph->prize[j] = graph->prize[i];
+         else
+            newgraph->prize[j] = 0.0;
+
          graph_knot_add(newgraph, graph->term[i]);
          unodemap[j] = i;
          dnodemap[i] = j++;
@@ -1920,143 +1726,22 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
 
    /* set root */
    newgraph->source = dnodemap[root];
-   if( newgraph->stp_type == STP_RPCSPG )
-      newgraph->prize[newgraph->source] = FARAWAY;
-
-   assert(newgraph->source >= 0);
+   assert(newgraph->source >= 0 && newgraph->source < nsolnodes);
 
    /* add edges */
    for( int i = 0; i < nedges; i += 2 )
       if( stvertex[graph->tail[i]] && stvertex[graph->head[i]] && graph->oeat[i] != EAT_FREE )
-         graph_edge_add(scip, newgraph, dnodemap[graph->tail[i]], dnodemap[graph->head[i]], graph->cost[i], graph->cost[i + 1]);
+      {
+         const int tail = graph->tail[i];
+         const int head = graph->head[i];
+         const int dtail = dnodemap[tail];
+         const int dhead = dnodemap[head];
+
+         graph_pc_updateTerm2edge(newgraph, graph, dtail, dhead, tail, head);
+         graph_edge_add(scip, newgraph, dtail, dhead, graph->cost[i], graph->cost[i + 1]);
+      }
 
    assert(newgraph->edges == nsoledges);
-
-#if 0
-   if( pcmw && result2 != NULL )
-   {
-      const int newroot = newgraph->source;
-      srand(nsolnodes);
-
-      for( int i = 0; i < nsolnodes; i++ )
-      {
-         if( stvertex[unodemap[i]] > 1 && !Is_term(newgraph->term[i]) )
-         {
-            if( SCIPisPositive(scip, newgraph->prize[i]) )
-            {
-               int e;
-               int term;
-               const SCIP_Real factor = rand() % 4 + 4;
-
-               assert(Is_pterm(newgraph->term[i]));
-
-               newgraph->prize[i] *= factor;
-
-               for( e = newgraph->outbeg[i]; e != EAT_LAST; e = newgraph->oeat[e] )
-                  if( newgraph->head[e] != newroot && Is_term(newgraph->term[newgraph->head[e]]) )
-                     break;
-
-               assert(e != EAT_LAST);
-
-               // todo
-               if(e == EAT_LAST)
-                  return SCIP_ERROR;
-
-               term = newgraph->head[e];
-               for( e = newgraph->inpbeg[term]; e != EAT_LAST; e = newgraph->ieat[e] )
-                  if( newgraph->tail[e] == newroot )
-                     break;
-
-               assert(e != EAT_LAST);
-
-               // todo
-               if(e == EAT_LAST)
-                  return SCIP_ERROR;
-
-               newgraph->cost[e] *= factor;
-            }
-            else if( SCIPisNegative(scip, newgraph->prize[i]) )
-            {
-               const SCIP_Real factor = 1.0 / (rand() % 4 + 4);
-
-               newgraph->prize[i] *= factor;
-
-               for( int e = newgraph->inpbeg[i]; e != EAT_LAST; e = newgraph->ieat[e] )
-                  newgraph->cost[e] *= factor;
-            }
-         }
-      }
-   }
-#endif
-
-#ifdef DEBUG
-   if( j != nsolnodes )
-   {
-      printf("miscal %d != %d \n", j, nsolnodes);
-      return SCIP_ERROR;
-   }
-
-   for( int k = 0; k < newgraph->knots; k++ )
-   {
-      if( Is_pterm(newgraph->term[k]) )
-      {
-         int e = newgraph->outbeg[k];
-         for( ; e != EAT_LAST; e = newgraph->oeat[e] )
-         {
-            int head = newgraph->head[e];
-            if( newgraph->source != head && Is_term(newgraph->term[head]) )
-               break;
-
-         }
-         if( e == EAT_LAST )
-         {
-            printf("1graph construction fail in heur_rec \n");
-            return SCIP_ERROR;
-         }
-      }
-      if( Is_term(newgraph->term[k]) )
-      {
-         int e = newgraph->outbeg[k];
-         for( ; e != EAT_LAST; e = newgraph->oeat[e] )
-         {
-            int head = newgraph->head[e];
-            if( newgraph->source != head && Is_pterm(newgraph->term[head]) )
-               break;
-
-         }
-         if( e == EAT_LAST )
-         {
-            printf("2graph construction fail in heur_rec \n");
-            return SCIP_ERROR;
-         }
-      }
-   }
-
-   for( int e = newgraph->outbeg[newgraph->source] ; e != EAT_LAST; e = newgraph->oeat[e] )
-   {
-      if( Is_term(newgraph->term[newgraph->head[e]]) &&  SCIPisZero(scip, newgraph->cost[e] ) )
-      {
-         printf("TERM FAIL with %d \n", newgraph->head[e]);
-         return SCIP_ERROR;
-      }
-      if( Is_pterm(newgraph->term[newgraph->head[e]]) &&  !SCIPisZero(scip, newgraph->cost[e] ) )
-      {
-         printf("PTERM FAIL with %d \n", newgraph->head[e]);
-         return SCIP_ERROR;
-      }
-      if( newgraph->term[newgraph->head[e]] == -1 )
-      {
-         printf("NEWTERM FAIL with %d \n", newgraph->head[e]);
-         return SCIP_ERROR;
-      }
-   }
-
-   if( !graph_valid(newgraph) )
-   {
-      printf("GRAPH NOT VALID %d \n", 0);
-      return SCIP_ERROR;
-   }
-#endif
 
 
    /*** step 2: presolve ***/
@@ -2085,13 +1770,6 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
    assert(*success);
    assert(graph_sol_valid(scip, newgraph, newresult));
 
-#ifdef DEBUG
-   if( !graph_sol_valid(scip, newgraph, newresult) )
-   {
-      printf("FAIL %d \n", 0);
-      return SCIP_ERROR;
-   }
-#endif
 
    /*** step 4: retransform solution to original graph ***/
 
@@ -2105,26 +1783,30 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
    /* retransform edges fixed during graph reduction */
    markSolVerts(newgraph, newgraph->fixedges, unodemap, stvertex);
 
-   if( pcmw )
-      for( int k = 0; k < nsolnodes; k++ )
-         if( stvertex[unodemap[k]] )
-            markSolVerts(newgraph, newgraph->pcancestors[k], unodemap, stvertex);
+   for( int k = 0; k < nsolnodes; k++ )
+      if( stvertex[unodemap[k]] )
+         markSolVerts(newgraph, newgraph->pcancestors[k], unodemap, stvertex);
 
    for( int e = 0; e < nedges; e++ )
       newresult[e] = UNKNOWN;
 
-   if( pcmw )
-      SCIP_CALL( SCIPStpHeurTMPrunePc(scip, graph, graph->cost, newresult, stvertex) );
-   else
-      SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, graph->cost, 0, newresult, stvertex) );
+   SCIP_CALL( SCIPStpHeurTMPrunePc(scip, graph, graph->cost, newresult, stvertex) );
 
    /* solution better than original one?  */
 
    if( SCIPisLT(scip, graph_sol_getObj(graph->cost, newresult, 0.0, nedges),
          graph_sol_getObj(graph->cost, result, 0.0, nedges)) )
+   {
       *success = TRUE;
+      printf("success %f < %f \n", graph_sol_getObj(graph->cost, newresult, 0.0, nedges), graph_sol_getObj(graph->cost, result, 0.0, nedges));
+   }
    else
+   {
+      printf("no improvements %f >= %f \n", graph_sol_getObj(graph->cost, newresult, 0.0, nedges), graph_sol_getObj(graph->cost, result, 0.0, nedges));
       *success = FALSE;
+   }
+
+   assert(graph_sol_valid(scip, graph, newresult));
 
    if( !graph_sol_valid(scip, graph, newresult) )
       *success = FALSE;
@@ -2132,13 +1814,6 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
    SCIPfreeBufferArray(scip, &unodemap);
    graph_free(scip, newgraph, TRUE);
 
-#ifdef DEBUG
-   if( !graph_sol_valid(scip, graph, newresult) )
-   {
-      printf("invalid sol in REC \n");
-      return SCIP_ERROR;
-   }
-#endif
    return SCIP_OKAY;
 }
 

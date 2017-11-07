@@ -1223,6 +1223,8 @@ SCIP_RETCODE degree_test_mw(
    SCIPdebugMessage("chains after: %d \n", nchains(g));
    assert(!adjterms(g));
 
+   assert(graph_valid(g));
+
    return SCIP_OKAY;
 }
 
@@ -1598,6 +1600,8 @@ SCIP_RETCODE degree_test_pc(
    if( !pc )
       g->mark[root] = TRUE;
    SCIPdebugMessage("degree test pc: %d nodes deleted\n", *count);
+
+   assert(graph_valid(g));
 
    return SCIP_OKAY;
 }
