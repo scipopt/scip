@@ -549,7 +549,7 @@ SCIP_DECL_PROPINIT(propInitOrbitalfixing)
    if ( propdata->enabled )
    {
       /* register presolver for symmetry information, work on binary variables while fixing integer variables */
-      SCIP_CALL( SCIPregisterSymmetry(scip, SYM_HANDLETYPE_ORBITALFIXING, SYM_SPEC_BINARY | SYM_SPEC_INTEGER, 0) );
+      SCIP_CALL( SCIPregisterSymmetry(scip, SYM_HANDLETYPE_ORBITALFIXING, SYM_SPEC_BINARY, SYM_SPEC_INTEGER) );
    }
 
    return SCIP_OKAY;
