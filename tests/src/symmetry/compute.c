@@ -35,7 +35,7 @@ void setup(void)
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
    /* turn on symmetry computation */
-   SCIP_CALL( SCIPsetBoolParam(scip, "misc/usesymmetry", TRUE) );
+   SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 1) );
 
 #ifdef SCIP_DEBUG
    /* output external codes in order to see which esternal symmetry computation code is used */

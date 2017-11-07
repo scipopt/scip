@@ -1018,6 +1018,7 @@ static
 SCIP_DECL_PRESOLINIT(presolInitSymbreak)
 {
    SCIP_PRESOLDATA* presoldata;
+   int usesymmetry;
 
    assert( scip != NULL );
    assert( presol != NULL );
@@ -1028,7 +1029,14 @@ SCIP_DECL_PRESOLINIT(presolInitSymbreak)
    assert( presoldata != NULL );
 
    /* check whether we should run */
-   SCIP_CALL( SCIPgetBoolParam(scip, "misc/usesymmetry", &presoldata->enabled) );
+   SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
+   if ( usesymmetry == (int) SYM_HANDLETYPE_SYMBREAK )
+      presoldata->enabled = TRUE;
+   else
+   {
+      SCIP_CALL( SCIPsetIntParam(scip, "presolving/symbreak/maxrounds", 0) );
+      presoldata->enabled = FALSE;
+   }
 
    if ( presoldata->enabled )
    {
@@ -1120,7 +1128,7 @@ static
 SCIP_DECL_PRESOLINITPRE(presolInitpreSymbreak)
 {  /*lint --e{715}*/
    SCIP_PRESOLDATA* presoldata;
-   int maxrounds;
+   int usesymmetry;
 
    assert( scip != NULL );
    assert( presol != NULL );
@@ -1133,9 +1141,14 @@ SCIP_DECL_PRESOLINITPRE(presolInitpreSymbreak)
    presoldata->early = ! presoldata->early;
 
    /* check whether we should run */
-   SCIP_CALL( SCIPgetBoolParam(scip, "misc/usesymmetry", &presoldata->enabled) );
-   SCIP_CALL( SCIPgetIntParam(scip, "presolving/symbreak/maxrounds", &maxrounds) );
-   presoldata->enabled = presoldata->enabled && (maxrounds != 0);
+   SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
+   if ( usesymmetry == (int) SYM_HANDLETYPE_SYMBREAK )
+      presoldata->enabled = TRUE;
+   else
+   {
+      SCIP_CALL( SCIPsetIntParam(scip, "presolving/symbreak/maxrounds", 0) );
+      presoldata->enabled = FALSE;
+   }
 
    if ( presoldata->enabled )
    {

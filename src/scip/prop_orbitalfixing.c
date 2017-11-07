@@ -527,6 +527,7 @@ static
 SCIP_DECL_PROPINIT(propInitOrbitalfixing)
 {  /*lint --e{715}*/
    SCIP_PROPDATA* propdata;
+   int usesymmetry;
 
    assert( prop != NULL );
 
@@ -536,7 +537,14 @@ SCIP_DECL_PROPINIT(propInitOrbitalfixing)
    assert( propdata != NULL );
 
    /* check whether we should run */
-   SCIP_CALL( SCIPgetBoolParam(scip, "misc/usesymmetry", &propdata->enabled) );
+   SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
+   if ( usesymmetry == (int) SYM_HANDLETYPE_ORBITALFIXING )
+      propdata->enabled = TRUE;
+   else
+   {
+      SCIP_CALL( SCIPsetIntParam(scip, "propagating/orbitalfixing/freq", -1) );
+      propdata->enabled = FALSE;
+   }
 
    if ( propdata->enabled )
    {

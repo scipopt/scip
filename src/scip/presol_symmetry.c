@@ -1139,8 +1139,8 @@ SCIP_RETCODE determineSymmetry(
 
 #ifndef NDEBUG
    {
-      SCIP_Bool usesymmetry;
-      SCIP_CALL( SCIPgetBoolParam(scip, "misc/usesymmetry", &usesymmetry) );
+      int usesymmetry;
+      SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
       assert( usesymmetry );
    }
 #endif
@@ -1258,16 +1258,10 @@ SCIP_DECL_PRESOLINITPRE(presolInitpreSymmetry)
    SCIPdebugMsg(scip, "Initialization of symmetry presolver.\n");
 
    /* compute symmetries if not requested during presolving */
-   if ( ! presoldata->computepresolved && ! presoldata->computedsym )
+   if ( ! presoldata->computepresolved && ! presoldata->computedsym && presoldata->symtype != 0 )
    {
-      SCIP_Bool usesymmetry;
-
-      SCIP_CALL( SCIPgetBoolParam(scip, "misc/usesymmetry", &usesymmetry) );
-      if ( usesymmetry )
-      {
-         /* determine symmetry here in initpre, since other plugins specify their problem type in init() */
-         SCIP_CALL( determineSymmetry(scip, presoldata) );
-      }
+      /* determine symmetry here in initpre, since other plugins specify their problem type in init() */
+      SCIP_CALL( determineSymmetry(scip, presoldata) );
    }
 
    return SCIP_OKAY;
@@ -1375,15 +1369,9 @@ SCIP_DECL_PRESOLEXITPRE(presolExitpreSymmetry)
    assert( presoldata != NULL );
 
    /* compute symmetries if requested during presolving */
-   if ( presoldata->computepresolved && ! presoldata->computedsym )
+   if ( presoldata->computepresolved && ! presoldata->computedsym && presoldata->symtype != 0 )
    {
-      SCIP_Bool usesymmetry;
-
-      SCIP_CALL( SCIPgetBoolParam(scip, "misc/usesymmetry", &usesymmetry) );
-      if ( usesymmetry )
-      {
-         SCIP_CALL( determineSymmetry(scip, presoldata) );
-      }
+      SCIP_CALL( determineSymmetry(scip, presoldata) );
    }
 
    return SCIP_OKAY;
