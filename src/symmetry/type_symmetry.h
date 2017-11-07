@@ -50,6 +50,13 @@ enum SYM_Rhssense
 };
 typedef enum SYM_Rhssense SYM_RHSSENSE;
 
+/* type of symmetry handling codes */
+#define SYM_HANDLETYPE_NONE             UINT64_C(0x00000000)  /**< no symmetry handling */
+#define SYM_HANDLETYPE_SYMBREAK         UINT64_C(0x00000001)  /**< symmetry breaking inequalities */
+#define SYM_HANDLETYPE_ORBITALFIXING    UINT64_C(0x00000002)  /**< orbital fixing */
+
+typedef unsigned int SYM_HANDLETYPE;         /**< type of symmetry handling */
+
 typedef struct SYM_Vartype SYM_VARTYPE;      /**< data of variables that are considered to be equivalent */
 typedef struct SYM_Matrixdata SYM_MATRIXDATA;/**< data for symmetry group computation */
 

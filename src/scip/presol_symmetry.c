@@ -1233,9 +1233,6 @@ SCIP_RETCODE determineSymmetry(
       SCIPinfoMessage(scip, NULL, "Turned off presolver <components>.\n\n");
    }
 
-   SCIP_CALL( SCIPaddSymHandletype(scip, presoldata->symtype) );
-   assert( SCIPgetSymHandletype(scip) == presoldata->symtype );
-
    return SCIP_OKAY;
 }
 
@@ -1537,7 +1534,7 @@ SCIP_RETCODE SCIPregisterSymmetry(
    assert( presoldata != NULL );
 
    /* check if there are conflicting symmetry handling methods */
-   if ( presoldata->symtype != 0 )
+   if ( ( presoldata->symtype & ~ symtype ) != 0 )
    {
       SCIPerrorMessage("Conflicting symmetry handling methods are activated.\n");
       return SCIP_INVALIDDATA;
