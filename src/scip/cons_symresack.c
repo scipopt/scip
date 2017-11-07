@@ -100,6 +100,9 @@ struct SCIP_ConsData
    int*                  perm;               /**< permutation associated to the symresack */
    int*                  invperm;            /**< inverse permutation */
    SCIP_Bool             ppupgrade;          /**< whether constraint is upgraded to packing/partitioning symresack */
+#ifdef SCIP_DEBUG
+   int                   debugcnt;           /**< counter to store number of added cover inequalities */
+#endif
 
    /* data for upgraded symresack constraints */
    int                   ncycles;            /**< number of cycles in permutation */
@@ -414,6 +417,10 @@ SCIP_RETCODE consdataCreate(
    assert( consdata != NULL );
 
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
+
+#ifdef SCI_DEBUG
+   consdata->debugcnt = 0;
+#endif
 
    /* count the number of binary variables which are affected by the permutation */
    SCIP_CALL( SCIPallocBufferArray(scip, &indexcorrection, inputnvars) );
@@ -797,10 +804,12 @@ SCIP_RETCODE addSymresackInequality(
    SCIP_ROW* row;
    int i;
 #ifdef SCIP_DEBUG
+   SCIP_CONSDATA* consdata;
    char name[SCIP_MAXSTRLEN];
 #endif
 
    assert( scip != NULL );
+   assert( cons != NULL );
    assert( nvars > 0 );
    assert( vars != NULL );
    assert( coeffs != NULL );
@@ -809,8 +818,10 @@ SCIP_RETCODE addSymresackInequality(
    *infeasible = FALSE;
 
 #ifdef SCIP_DEBUG
-   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symresack_cover_%s", SCIPconsGetName(cons));
+   consdata = SCIPconsGetData(cons);
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symresack_cover_%s_%d", SCIPconsGetName(cons), consdata->debugcnt);
    SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
+   consdata->debugcnt += 1;
 #else
    SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), "", -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
 #endif
@@ -1332,6 +1343,9 @@ SCIP_DECL_CONSTRANS(consTransSymresack)
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &consdata) );
 
+#ifdef SCIP_DEBUG
+   consdata->debugcnt = sourcedata->debugcnt;
+#endif
    consdata->nvars = nvars;
 
    if ( nvars > 0 )
