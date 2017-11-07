@@ -369,7 +369,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    *nmaxperms = data.nmaxperms;
 
    /* determine log10 of symmetry group size */
-   *log10groupsize = log(stats.get_group_size_approx());
+   *log10groupsize = log((SCIP_Real) stats.get_group_size_approx());
 
    return SCIP_OKAY;
 }
