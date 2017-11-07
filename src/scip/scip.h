@@ -15586,20 +15586,6 @@ SCIP_RETCODE SCIPremoveInefficaciousCuts(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns current factor on cut infeasibility to limit feasibility tolerance for relaxation solver
- *
- *  Gives value of separating/feastolfac parameter.
- *
- *  @return factor on cut infeasibility to limit feasibility tolerance for relaxation solver
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_SOLVING
- */
-EXTERN
-SCIP_Real SCIPgetRelaxFeastolFactor(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
 /**@} */
 
 

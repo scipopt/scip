@@ -3830,7 +3830,7 @@ SCIP_RETCODE separatePoint(
          /* if cut is strong or it's weak but we are convex and desperate (speak, in enforcement), then add,
           * unless it corresponds to a bound change that is too weak (<eps) to be added
           */
-         if( (efficacy > minefficacy || (inenforcement && convex && (SCIPgetRelaxFeastolFactor(scip) > 0.0 ? SCIPisPositive(scip, efficacy) : SCIPisFeasPositive(scip, efficacy)))) &&
+         if( (efficacy > minefficacy || (inenforcement && convex && SCIPisFeasPositive(scip, efficacy))) &&
              SCIPisCutApplicable(scip, row) )
          {
             SCIP_Bool infeasible;
@@ -5192,7 +5192,7 @@ SCIP_RETCODE enforceConstraint(
    SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, sol, &nnotify) );
 
    /* if sepastore can decrease LP feasibility tolerance, we can add cuts with efficacy in [eps, feastol] */
-   leastpossibleefficacy = SCIPgetRelaxFeastolFactor(scip) > 0.0 ? SCIPepsilon(scip) : SCIPfeastol(scip);
+   leastpossibleefficacy = SCIPfeastol(scip);
    if( nnotify == 0 && !solinfeasible && minefficacy > leastpossibleefficacy )
    {
       /* fallback 1: we also have no branching candidates, so try to find a weak cut */

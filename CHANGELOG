@@ -64,6 +64,7 @@ interface:
 - added SCIPaddBilinearIneqQuadratic to propose an inequality with two variables that appear in a bilinear term
 - added SCIPcomputeBilinEnvelope{1,2} to compute a linearization of a bilinear term when considering at most two linear inequalities
 - new method SCIPaddRow() to replace deprecated SCIPaddCut()
+- removed method SCIPgetRelaxFeastolFactor()
 
 performance improvements:
 - use disjoint set to reduce peak memory usage and time to compute of clique table connectedness information

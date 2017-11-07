@@ -5525,7 +5525,7 @@ SCIP_RETCODE separatePoint(
          (inenforcement &&
             ( (violside == SCIP_SIDETYPE_RIGHT && (consdata->curvature & SCIP_EXPRCURV_CONVEX )) ||
                (violside == SCIP_SIDETYPE_LEFT  && (consdata->curvature & SCIP_EXPRCURV_CONCAVE)) ) &&
-               SCIPisGT(scip, efficacy, SCIPgetRelaxFeastolFactor(scip) > 0.0 ? SCIPepsilon(scip) : SCIPfeastol(scip))
+               SCIPisGT(scip, efficacy, SCIPfeastol(scip))
          )
       ) && SCIPisCutApplicable(scip, row)
       )
@@ -7012,7 +7012,7 @@ SCIP_RETCODE enforceConstraint(
    SCIP_CALL( registerBranchingVariables(scip, conshdlr, conss, nconss, &nnotify) );
 
    /* if sepastore can decrease feasibility tolerance, we can add cuts with efficacy in [eps, feastol] */
-   leastpossibleefficacy = SCIPgetRelaxFeastolFactor(scip) > 0.0 ? SCIPepsilon(scip) : SCIPfeastol(scip);
+   leastpossibleefficacy = SCIPfeastol(scip);
    if( nnotify == 0 && !solinfeasible && minefficacy > leastpossibleefficacy )
    {
       /* fallback 1: we also have no branching candidates, so try to find a weak cut */
