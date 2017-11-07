@@ -7028,9 +7028,19 @@ SCIP_RETCODE tightenDualproof(
 
    /* apply coefficient tightening to initial proof */
    tightenCoefficients(set, proofset, &nchgcoefs, &redundant);
-   assert(!redundant); /* the constraint should never be global redundant w.r.t to the maximal activity */
 
-   if( nchgcoefs > 0 )
+   /* it can happen that the constraints is almost globally redundant w.r.t to the maximal activity,
+    * e.g., due to numerics. in this case, we want to discard the proof
+    */
+   if( redundant )
+   {
+#ifndef NDEBUG
+      SCIP_Real eps = MIN(0.01, 10.0*set->num_feastol);
+      assert(!EPSLE(getMaxActivity(transprob, proofset->vals, proofset->inds, proofset->nnz, NULL, NULL), proofset->rhs, eps));
+#endif
+      proofsetClear(proofset);
+   }
+   else if( nchgcoefs > 0 )
    {
       if( proofset->conflicttype == SCIP_CONFTYPE_INFEASLP )
          proofset->conflicttype = SCIP_CONFTYPE_ALTINFPROOF;
