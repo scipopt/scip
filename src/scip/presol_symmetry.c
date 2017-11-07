@@ -69,9 +69,9 @@ struct SCIP_PresolData
    SCIP_Bool             computepresolved;   /**< Should the symmetry be computed afer presolving (otherwise before presol)? */
    int                   maxgenerators;      /**< limit on the number of generators that should be produced within symmetry detection (0 = no limit) */
    SCIP_Bool             checksymmetries;    /**< Should all symmetries be checked after computation? */
-   unsigned int          symtype;            /**< type of symmetry of registered calling function */
-   unsigned int          symspecrequire;     /**< symmetry specification for which we need to compute symmetries */
-   unsigned int          symspecrequirefixed;/**< symmetry specification of variables which must be fixed by symmetries */
+   SYM_HANDLETYPE        symtype;            /**< type of symmetry of registered calling function */
+   SYM_SPEC              symspecrequire;     /**< symmetry specification for which we need to compute symmetries */
+   SYM_SPEC              symspecrequirefixed;/**< symmetry specification of variables which must be fixed by symmetries */
    int                   npermvars;          /**< number of variables for permutations */
    SCIP_VAR**            permvars;           /**< variables on which permutations act */
    int                   nperms;             /**< number of permutations */
@@ -221,15 +221,15 @@ SCIP_DECL_SORTINDCOMP(SYMsortMatCoef)
 /** determines whether variable should be fixed by permutations */
 static
 SCIP_Bool SymmetryFixVar(
-   int                   fixedtype,          /**< bitset of variable types that should be fixed */
+   SYM_SPEC              fixedtype,          /**< bitset of variable types that should be fixed */
    SCIP_VAR*             var                 /**< variable to be considered */
    )
 {
-   if ( (fixedtype & (int) SYM_SPEC_INTEGER) && SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
+   if ( (fixedtype & SYM_SPEC_INTEGER) && SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
       return TRUE;
-   if ( (fixedtype & (int) SYM_SPEC_BINARY) && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+   if ( (fixedtype & SYM_SPEC_BINARY) && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
       return TRUE;
-   if ( (fixedtype & (int) SYM_SPEC_REAL) &&
+   if ( (fixedtype & SYM_SPEC_REAL) &&
       (SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT) )
       return TRUE;
    return FALSE;
@@ -458,7 +458,7 @@ SCIP_RETCODE collectCoefficients(
 static
 SCIP_RETCODE checkSymmetriesAreSymmetries(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   fixedtype,          /**< variable types that must be fixed by symmetries */
+   SYM_SPEC              fixedtype,          /**< variable types that must be fixed by symmetries */
    SYM_MATRIXDATA*       matrixdata,         /**< matrix data */
    int                   nperms,             /**< number of permutations */
    int**                 perms               /**< permutations */
@@ -514,7 +514,7 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
       {
          if ( SymmetryFixVar(fixedtype, matrixdata->permvars[j]) && P[j] != j )
          {
-            SCIPdebugMsg(scip, "Permutation does not fix types %d, moving variable %d.\n", fixedtype, j);
+            SCIPdebugMsg(scip, "Permutation does not fix types %u, moving variable %d.\n", fixedtype, j);
             return SCIP_ERROR;
          }
       }
@@ -605,7 +605,7 @@ static
 SCIP_RETCODE computeSymmetryGroup(
    SCIP*                 scip,               /**< SCIP pointer */
    int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */
-   int                   fixedtype,          /**< variable types that must be fixed by symmetries */
+   SYM_SPEC              fixedtype,          /**< variable types that must be fixed by symmetries */
    SCIP_Bool             local,              /**< Use local variable bounds? */
    SCIP_Bool             checksymmetries,    /**< Should all symmetries be checked after computation? */
    int*                  npermvars,          /**< pointer to store number of variables for permutations */
@@ -1406,6 +1406,7 @@ SCIP_RETCODE SCIPincludePresolSymmetry(
    SCIP_CALL( SCIPallocBlockMemory(scip, &presoldata) );
    assert( presoldata != NULL );
 
+   presoldata->symtype = 0;
    presoldata->symspecrequire = 0;
    presoldata->symspecrequirefixed = 0;
    presoldata->npermvars = 0;
