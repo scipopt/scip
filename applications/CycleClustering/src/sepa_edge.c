@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -39,7 +39,7 @@
 /** copy method for separator plugins (called when SCIP copies plugins) */
 static
 SCIP_DECL_SEPACOPY(sepaCopyEdge)
-{   /*lint --e{715}*/
+{
    assert(scip != NULL);
    assert(sepa != NULL);
    assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);

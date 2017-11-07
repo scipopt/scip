@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -610,7 +610,7 @@ SCIP_RETCODE permuteStartSolution(
 /** copy method for primal heuristic plugins (called when SCIP copies plugins) */
 static
 SCIP_DECL_HEURCOPY(heurCopyCyckerlin)
-{  /*lint --e{715}*/
+{
    assert(scip != NULL);
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
@@ -624,7 +624,7 @@ SCIP_DECL_HEURCOPY(heurCopyCyckerlin)
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_HEURFREE(heurFreeCyckerlin)
-{   /*lint --e{715}*/
+{
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(scip != NULL);
@@ -659,8 +659,7 @@ SCIP_DECL_HEURINIT(heurInitCyckerlin)
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecCyckerlin)
-{  /*lint --e{715}*/
-
+{
    SCIP_SOL* bestsol;                        /* incumbent solution */
    SCIP_Real** startclustering;              /* the assignment given from the solution */
    SCIP_Bool** binfixed;                     /* The bins that are fixed from scip */

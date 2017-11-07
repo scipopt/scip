@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -128,7 +128,7 @@ SCIP_RETCODE readCyc(
    SCIP_CALL( SCIPallocMemoryArray(scip, &cmatrix, nbins) );
    for( i = 0; i < nbins; i++ )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(cmatrix[i]), nbins) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(cmatrix[i]), nbins) );
    }
 
    /* fill array the cmatrix */
@@ -172,7 +172,7 @@ SCIP_RETCODE readCyc(
 /** copy method for reader plugins (called when SCIP copies plugins) */
 static
 SCIP_DECL_READERCOPY(readerCopyCyc)
-{  /*lint --e{715}*/
+{
    assert( scip != NULL);
    assert(reader != NULL);
    assert(strcmp( SCIPreaderGetName(reader), READER_NAME) == 0);
@@ -183,7 +183,7 @@ SCIP_DECL_READERCOPY(readerCopyCyc)
 /** problem reading method of reader */
 static
 SCIP_DECL_READERREAD(readerReadCyc)
-{  /*lint --e{715}*/
+{
    assert(reader != NULL);
    assert(strcmp( SCIPreaderGetName(reader), READER_NAME) == 0);
    assert( scip != NULL);
