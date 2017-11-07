@@ -4186,11 +4186,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 #endif
 
 #define MAXABSVBCOEF               1e+5 /**< maximal absolute coefficient in variable bounds used for snf relaxation */
-
-#if 0
-/* TODO check how this was used in the old flowcover separator */
 #define MAXBOUND                  1e+10   /**< maximal value of normal bounds used for snf relaxation */
-#endif
 
 /** structure that contains all data required to perform the sequence independent lifting
  */
@@ -4553,6 +4549,13 @@ SCIP_RETCODE determineBoundForSNF(
    /* get closest simple lower bound and closest simple upper bound */
    SCIP_CALL( findBestLb(scip, var, sol, FALSE, allowlocal, &bestslb[varposinrow], &bestslbtype[varposinrow]) );
    SCIP_CALL( findBestUb(scip, var, sol, FALSE, allowlocal, &bestsub[varposinrow], &bestsubtype[varposinrow]) );
+
+   /* do not use too large bounds */
+   if( bestslb[varposinrow] <= -MAXBOUND )
+      bestslb[varposinrow] = -SCIPinfinity(scip);
+
+   if( bestsub[varposinrow] >= MAXBOUND )
+      bestsub[varposinrow] = SCIPinfinity(scip);
 
    solval = SCIPgetSolVal(scip, sol, var);
 

@@ -116,6 +116,11 @@ set(instances_Indicator
     "instances/Indicator/mcf64-4-1.lp\;10"
 )
 
+set(settings_Cardinality
+    "default"
+    "upgdcardinality"
+)
+
 
 #
 # MIP instances
@@ -147,7 +152,7 @@ if(ZIMPL AND ZIMPL_FOUND)
 list(APPEND
     instances_Indicator
     "/instances/Indicator/indicatortest.zpl\;-2"
-    "../check/instances/Indicator/mcf64-4-1.zpl\;10"
+    "instances/Indicator/mcf64-4-1.zpl\;10"
     )
 #
 # this instance was part of the original coverage tests. However, it causes
@@ -172,7 +177,7 @@ set(instances_MINLP
     )
 set(instances_Bivariate
     "instances/Bivariate/st_qpk1.osil\;-3"
-#    "instances/Bivariate/nvs01.osil\;12.4696688"  # see issue #1809
+    "instances/Bivariate/nvs01.osil\;12.4696688"
    )
 set(instances_Bilinrelax
     "instances/Bilinrelax/pointpack06.osil\;0.361111675167215"
@@ -212,6 +217,25 @@ set(instances_Semicontinuous
 #
 set(instances_SAT
     "instances/SAT/bart10.shuffled.cnf\;0"
+    )
+
+#
+# Cardinality instances. Testing with or without cardinality upgrade
+# should yield the same optimal solution
+#
+set(instances_Cardinality
+    "instances/Cardinality/atm_5_10_1.lp.gz\;+5.97040200941306e+04"
+    "instances/Cardinality/atm_5_25_1.cip.gz\;+1.40606905557936e+05"
+#     "instances/Cardinality/atm_5_25_2.lp.gz\;+1.35948249319284e+05"
+    "instances/Cardinality/atm_5_25_3.cip.gz\;+1.35160667451104e+05"
+#     Some instances are dropped because they take too long
+#     "instances/Cardinality/atm_5_25_1.lp.gz\;+1.40606905557936e+05"
+#     "instances/Cardinality/atm_5_25_3.lp.gz\;+1.35160667451104e+05"
+#     "instances/Cardinality/atm_5_25_4.lp.gz\;+1.28994302472494e+05"
+#     "instances/Cardinality/atm_5_25_5.lp.gz\;+1.47786890128836e+05"
+#     "instances/Cardinality/atm_5_25_2.cip.gz\;+1.35948249319284e+05"
+#     "instances/Cardinality/atm_5_25_4.cip.gz\;+1.28994302472494e+05"
+#     "instances/Cardinality/atm_5_25_5.cip.gz\;+1.47786890128836e+05"
     )
 
 #
@@ -349,6 +373,7 @@ add_instancetests(instances_SAT settings_default "SAT")
 add_instancetests(instances_SOS settings_default "SOS")
 add_instancetests(instances_Orbitope settings_default "Orbitope")
 add_instancetests(instances_Symmetry settings_Symmetry "Symmetry")
+add_instancetests(instances_Cardinality settings_Cardinality "Cardinality")
 
 #
 # test writing and reading solutions
