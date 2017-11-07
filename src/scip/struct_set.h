@@ -51,7 +51,6 @@
 #include "nlpi/type_nlpi.h"
 #include "scip/type_concsolver.h"
 #include "scip/debug.h"
-#include "symmetry/type_symmetry.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -93,7 +92,6 @@ struct SCIP_Set
    SCIP_BANDITVTABLE**   banditvtables;      /**< virtual function tables for bandit algorithms */
    char**                extcodenames;       /**< names of externals codes */
    char**                extcodedescs;       /**< descriptions of external codes */
-   SYM_HANDLETYPE        symhandletype;      /**< types of symmetry handling performed in code */
    int                   nreaders;           /**< number of file readers */
    int                   readerssize;        /**< size of readers array */
    int                   npricers;           /**< number of variable pricers */

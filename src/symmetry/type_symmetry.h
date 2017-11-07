@@ -23,10 +23,7 @@
 #ifndef __SCIP_TYPE_SYMMETRY_H_
 #define __SCIP_TYPE_SYMMETRY_H_
 
-#if !defined(_MSC_VER) || _MSC_VER > 1600
-#include <inttypes.h>
-#endif
-
+#include <scip/scip.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -52,15 +49,6 @@ enum SYM_Rhssense
    SYM_SENSE_OR         = 5                  /**< OR constrant */
 };
 typedef enum SYM_Rhssense SYM_RHSSENSE;
-
-/* type of symmetry handling codes */
-#define SYM_HANDLETYPE_NONE             UINT64_C(0x00000000)  /**< no symmetry handling */
-#define SYM_HANDLETYPE_DOMCOL           UINT64_C(0x00000001)  /**< dominated column presolver */
-#define SYM_HANDLETYPE_SYMBREAK         UINT64_C(0x00000002)  /**< symmetry breaking inequalities */
-#define SYM_HANDLETYPE_ORBITALFIXING    UINT64_C(0x00000004)  /**< orbital fixing */
-
-typedef unsigned int SYM_HANDLETYPE;         /**< type of symmetry handling */
-
 
 typedef struct SYM_Vartype SYM_VARTYPE;      /**< data of variables that are considered to be equivalent */
 typedef struct SYM_Matrixdata SYM_MATRIXDATA;/**< data for symmetry group computation */

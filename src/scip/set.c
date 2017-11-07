@@ -1127,7 +1127,6 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->limitchanged = FALSE;
    (*set)->extcodenames = NULL;
    (*set)->extcodedescs = NULL;
-   (*set)->symhandletype = SYM_HANDLETYPE_NONE;
    (*set)->nextcodes = 0;
    (*set)->extcodessize = 0;
    (*set)->visual_vbcfilename = NULL;
@@ -6846,25 +6845,4 @@ int SCIPsetInitializeRandomSeed(
    assert(set != NULL);
 
    return (initialseedvalue + set->random_randomseedshift);
-}
-
-/** return types of symmetry handling that are performed */
-SYM_HANDLETYPE SCIPsetGetSymHandletype(
-   SCIP_SET*             set                 /**< global SCIP settings */
-   )
-{
-   assert(set != NULL);
-
-   return set->symhandletype;
-}
-
-/** add type of symmetry handling to the list of performed methods */
-void SCIPsetAddSymHandletype(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SYM_HANDLETYPE        type                /**< types of symmetry handling performed */
-   )
-{
-   assert(set != NULL);
-
-   set->symhandletype |= type;
 }
