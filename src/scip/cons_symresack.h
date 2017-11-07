@@ -53,10 +53,6 @@ extern "C" {
  * is strengthened to a ppsymresack and strong symmetry handling inequalities are added during
  * the initialization of the constraint handler.
  *
- * Furthermore, the constraint handler checks whether the permutation is a composition of
- * 2-cycles. In this case, the symresack is a so-called orbisack and will be treated by
- * specialized methods of the orbisack constraint handler.
- *
  * @pre The permutation is encoded by an array perm for which perm[i] = j if and only if
  * the image of i under the  permutation is j.
  *

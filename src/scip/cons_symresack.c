@@ -51,7 +51,6 @@
 #include <ctype.h>
 
 #include "scip/cons_setppc.h"
-#include "scip/cons_orbisack.h"
 #include "scip/cons_symresack.h"
 
 /* constraint handler properties */
@@ -72,7 +71,6 @@
 #define CONSHDLR_PROP_TIMING       SCIP_PROPTIMING_BEFORELP
 #define CONSHDLR_PRESOLTIMING      SCIP_PRESOLTIMING_EXHAUSTIVE
 
-#define DEFAULT_UPGRADE            TRUE /**< whether we allow upgrading to orbisack constraints */
 #define DEFAULT_PPSYMRESACK       FALSE /**< whether we allow upgrading to packing/partitioning symresacks */
 
 /* macros for getting bounds of pseudo solutions in propagation */
@@ -87,7 +85,6 @@
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {
-   SCIP_Bool             symresackupgrade;   /**< whether we allow upgrading symresack constraints to orbisack constraints */
    SCIP_Bool             checkppsymresack;   /**< whether we allow upgrading to packing/partitioning symresacks */
 };
 
@@ -488,7 +485,7 @@ SCIP_RETCODE consdataCreate(
       invperm[perm[i]] = i;
    (*consdata)->invperm = invperm;
 
-   /* check for upgrade to packing/partitioning orbisacks*/
+   /* check for upgrade to packing/partitioning symresacks*/
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if ( conshdlr == NULL )
    {
@@ -1093,96 +1090,6 @@ SCIP_RETCODE separateSymresackCovers(
    SCIPfreeBufferArrayNull(scip, &maxsolu);
    SCIPfreeBufferArrayNull(scip, &tmpsolu);
    SCIPfreeBufferArrayNull(scip, &sepaobjective);
-
-   return SCIP_OKAY;
-}
-
-
-/** Upgrade symresack constraints to orbisacks */
-static
-SCIP_RETCODE orbisackUpgrade(
-   SCIP*                 scip,               /**< SCIP pointer */
-   int*                  perm,               /**< permutation */
-   int                   nvars,              /**< size of perm array */
-   SCIP_VAR**            inputvars,          /**< permuted variables array */
-   SCIP_Bool*            success,            /**< whether constraint was upgraded */
-   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
-   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
-                                              *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
-   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
-                                              *   Usually set to TRUE. */
-   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing?
-                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
-   SCIP_Bool             check,              /**< should the constraint be checked for feasibility?
-                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
-   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing?
-                                              *   Usually set to TRUE. */
-   SCIP_Bool             local,              /**< is constraint only valid locally?
-                                              *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
-   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)?
-                                              *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
-                                              *   adds coefficients to this constraint. */
-   SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which
-                                              *   are separated as constraints. */
-   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
-                                              *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
-   SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
-                                              *   if it may be moved to a more global node?
-                                              *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
-   )
-{
-   SCIP_VAR** vars1;
-   SCIP_VAR** vars2;
-   int maxvars;
-   int nrows = 0;
-   int i;
-
-   assert( scip != NULL );
-   assert( perm != NULL );
-   assert( nvars > 0 );
-   assert( inputvars != NULL );
-   assert( success != NULL );
-
-   *success = TRUE;
-
-   maxvars = nvars / 2;
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars1, maxvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars2, maxvars) );
-
-   /* check whether permutation is a composition of 2-cycles */
-   for (i = 0; i < nvars; ++i)
-   {
-      /* ignore non-binary variables */
-      if ( ! SCIPvarIsBinary(inputvars[i]) )
-         continue;
-
-      if ( perm[perm[i]] != i )
-      {
-         *success = FALSE;
-         break;
-      }
-
-      if ( perm[i] > i )
-      {
-         vars1[nrows] = inputvars[i];
-         vars2[nrows++] = inputvars[perm[i]];
-
-         assert( nrows <= maxvars );
-      }
-   }
-
-   /* if permutation can be upgraded to an orbisack */
-   if ( nrows == 0 )
-      *success = FALSE;
-   else if ( *success )
-   {
-      SCIP_CALL( SCIPcreateConsOrbisack(scip, cons, "orbisack", vars1, vars2, nrows, FALSE, FALSE,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
-   }
-
-   SCIPfreeBufferArray(scip, &vars2);
-   SCIPfreeBufferArray(scip, &vars1);
 
    return SCIP_OKAY;
 }
@@ -2155,11 +2062,6 @@ SCIP_RETCODE SCIPincludeConshdlrSymresack(
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransSymresack) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpSymresack) );
 
-   /* whether we allow upgrading to orbisack constraints*/
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/upgrade",
-         "Upgrade symresack constraints to orbisack constraints?",
-         &conshdlrdata->symresackupgrade, TRUE, DEFAULT_UPGRADE, NULL, NULL) );
-
    /* whether we allow upgrading to packing/partioning symresack constraints*/
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/ppsymresack",
          "Upgrade symresack constraints to packing/partioning symresacks?",
@@ -2212,15 +2114,11 @@ SCIP_RETCODE SCIPcreateConsSymresack(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    )
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
-   SCIP_Bool success;
 
    assert( cons != NULL );
    assert( nvars > 0 );
-
-   success = FALSE;
 
    /* find the symresack constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -2228,22 +2126,6 @@ SCIP_RETCODE SCIPcreateConsSymresack(
    {
       SCIPerrorMessage("Symresack constraint handler not found.\n");
       return SCIP_PLUGINNOTFOUND;
-   }
-
-   /* check for upgrade to packing/partitioning orbisacks*/
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-
-   if ( conshdlrdata->symresackupgrade )
-   {
-      SCIP_CALL( orbisackUpgrade(scip, perm, nvars, vars, &success, cons, initial, separate, enforce, check, propagate,
-            local, modifiable, dynamic, removable, stickingatnode) );
-
-      if ( success )
-      {
-         SCIPdebugMsg(scip, "Upgraded symresack constraint to orbisack constraint.\n");
-
-         return SCIP_OKAY;
-      }
    }
 
    /* create constraint data */
