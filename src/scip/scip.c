@@ -35173,7 +35173,7 @@ SCIP_Real SCIPgetRelaxFeastolFactor(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetRelaxFeastolFactor", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   return scip->set->sepa_feastolfac;
+   return -1.0;
 }
 
 /*

@@ -33,6 +33,7 @@ parameters:
 - replaced constraints/quadratic/disaggregate by constraints/quadratic/maxdisaggrsize to bound
   the total number of created constraints when disaggregating a quadratic constraint
 - added parameter constraints/quadratic/disaggrmergemethod
+- removed parameter "separating/feastolfac"
 
 interface:
 - new interface methods to create and use bandit algorithms implemented as SCIP core plugins --

@@ -414,7 +414,6 @@
 #define SCIP_DEFAULT_SEPA_CUTAGELIMIT        80 /**< maximum age a cut can reach before it is deleted from global cut pool
                                                  *   (-1: cuts are never deleted from the global cut pool) */
 #define SCIP_DEFAULT_SEPA_POOLFREQ           10 /**< separation frequency for the global cut pool */
-#define SCIP_DEFAULT_SEPA_FEASTOLFAC      -1.00 /**< factor on cut infeasibility to limit feasibility tolerance for relaxation solver (-1: off) */
 #define SCIP_DEFAULT_SEPA_MINACTIVITYQUOT   0.8 /**< minimum cut activity quotient to convert cuts into constraints
                                                  *   during a restart (0.0: all cuts are converted) */
 
@@ -2322,11 +2321,6 @@ SCIP_RETCODE SCIPsetCreate(
          "separating/poolfreq",
          "separation frequency for the global cut pool (-1: disable global cut pool, 0: only separate pool at the root)",
          &(*set)->sepa_poolfreq, FALSE, SCIP_DEFAULT_SEPA_POOLFREQ, -1, SCIP_MAXTREEDEPTH,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
-         "separating/feastolfac",
-         "factor on cut infeasibility to limit feasibility tolerance for relaxation solver (-1: off)",
-         &(*set)->sepa_feastolfac, TRUE, SCIP_DEFAULT_SEPA_FEASTOLFAC, -1.0, 1.0,
          NULL, NULL) );
 
    /* parallel parameters */
