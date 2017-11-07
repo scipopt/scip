@@ -6719,7 +6719,7 @@ SCIP_RETCODE runBoundHeuristic(
                }
 
                if( globalinfeasible )
-                  goto FREEBUFFER;
+                  goto TERMINATE;
 
                SCIP_CALL( undoBdchgsDualfarkas(set, transprob, lp, currentdepth, curvarlbs, curvarubs,
                      lbchginfoposs, ubchginfoposs,  oldlpbdchgs, relaxedlpbdchgs, valid, &resolve,
@@ -6741,6 +6741,7 @@ SCIP_RETCODE runBoundHeuristic(
       SCIPdebugMessage("finished undoing bound changes after %d loops (valid=%u, nbdchgs: %d)\n",
          nloops, (*valid), oldlpbdchgs->nbdchgs);
 
+   TERMINATE:
       /* reset variables to local bounds */
       if( oldlpbdchgs->nbdchgs > 0 )
       {
@@ -6776,7 +6777,6 @@ SCIP_RETCODE runBoundHeuristic(
       SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_UOBJLIM, lp->lpiuobjlim) );
       SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPITLIM, lp->lpiitlim) );
 
-     FREEBUFFER:
       /* free temporary memory */
       SCIPsetFreeBufferArray(set, &sidechgnewrhss);
       SCIPsetFreeBufferArray(set, &sidechgnewlhss);
