@@ -1277,7 +1277,6 @@ SCIP_RETCODE orbisackUpgrade(
  * Depending on the given permutation, either an orbisack or symresack constraint
  * is created.
  */
-EXTERN
 SCIP_RETCODE SCIPcreateSymbreakCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
