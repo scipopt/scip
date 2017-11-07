@@ -171,6 +171,15 @@ typedef enum Proprule PROPRULE;
  * Local methods
  */
 
+/** computes bounds on x in a absolute power constraints for given bounds on z */
+static
+void computeBoundsX(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_INTERVAL         zbnds,              /**< bounds on x that are to be propagated */
+   SCIP_INTERVAL*        xbnds               /**< buffer to store corresponding bounds on z */
+   );
+
 /** power function for square, that should be faster than using pow(x, 2.0) */
 static
 DECL_MYPOW(square)
@@ -1154,18 +1163,23 @@ SCIP_RETCODE presolveDual(
          /* much simpler case where we can substitute z:
           * min xobj * x + zobj/zcoef * (rhs - sign(x+offset)*abs(x+offset)^exponent)
           * s.t. xlb <= x <= xub
-          *
-          * Since domain propagation had been applied, we can assume that for any valid value for x,
-          * also the corresponding z value is valid.
           */
          SCIP_Real xfix;
          SCIP_Real xlb;
          SCIP_Real xub;
          SCIP_Real zfix;
+         SCIP_INTERVAL xbnds;
+         SCIP_INTERVAL zbnds;
          SCIP_Bool fixed;
 
-         xlb = SCIPvarGetLbGlobal(consdata->x);
-         xub = SCIPvarGetUbGlobal(consdata->x);
+         /* Since domain propagation has been applied, we would like to assume that for any valid value for x,
+          * also the corresponding z value is valid. However, domain propagation only applies sufficiently
+          * strong bound tightenings, so we better recompute the bounds on x.
+          */
+         SCIPintervalSetBounds(&zbnds, SCIPvarGetLbGlobal(consdata->z), SCIPvarGetUbGlobal(consdata->z));
+         computeBoundsX(scip, cons, zbnds, &xbnds);
+         xlb = MAX(SCIPvarGetLbGlobal(consdata->x), xbnds.inf); /*lint !e666*/
+         xub = MIN(SCIPvarGetUbGlobal(consdata->x), xbnds.sup); /*lint !e666*/
 
          if( SCIPisZero(scip, SCIPvarGetObj(consdata->z)) )
          {
@@ -1183,7 +1197,7 @@ SCIP_RETCODE presolveDual(
             else
             {
                /* fix x to best bound */
-               xfix = SCIPvarGetBestBoundGlobal(consdata->x);
+               xfix = (SCIPvarGetObj(consdata->x) >= 0.0) ? xlb : xub;
             }
          }
          else if( consdata->exponent == 2.0 )
