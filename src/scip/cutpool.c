@@ -756,7 +756,7 @@ SCIP_RETCODE SCIPcutpoolAddNewRow(
 
    assert(SCIPhashtableExists(cutpool->hashtable, (void*)cut));
 
-   if( SCIPlpIsSolved(lp) )
+   if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
    {
       thisefficacy = SCIProwGetLPEfficacy(row, set, stat, lp);
       stat->bestefficacy = MAX(thisefficacy, stat->bestefficacy);
