@@ -39,7 +39,7 @@
 /** copy method for separator plugins (called when SCIP copies plugins) */
 static
 SCIP_DECL_SEPACOPY(sepaCopyEdge)
-{
+{  /*lint --e{715}*/
    assert(scip != NULL);
    assert(sepa != NULL);
    assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
@@ -54,7 +54,7 @@ SCIP_DECL_SEPACOPY(sepaCopyEdge)
 /** LP solution separation method of separator */
 static
 SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
-{
+{  /*lint --e{715}*/
    SCIP_VAR**** edgevars;
    char cutname[SCIP_MAXSTRLEN];
    SCIP_Real** sign;
@@ -68,7 +68,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
    int l;
    int rounds;
    int size;
-   int nadded;
 
    rounds = SCIPsepaGetNCallsAtNode(sepa);
    if( rounds >= MAXROUNDS )
@@ -84,7 +83,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
    assert(NULL != edgevars);
 
    ncuts = 0;
-   nadded = 0;
    size = MAXCUTS;
    *result = SCIP_DIDNOTFIND;
 
@@ -93,7 +91,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
    SCIP_CALL( SCIPallocClearMemoryArray(scip, &sign, 3) );
    for( i = 0; i < 3; ++i )
    {
-      SCIP_CALL( SCIPallocClearMemoryArray(scip, &sign[i], 3) );
+      SCIP_CALL( SCIPallocClearMemoryArray(scip, &sign[i], 3) ); /*lint !e866*/
       for( j = 0; j < 3; ++j )
       {
          sign[i][j] = 1.0;
@@ -128,8 +126,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
 
                      if( ncuts >= size - 1 )
                      {
-                        SCIP_CALL( SCIPreallocMemoryArray(scip, &violation, size + MAXCUTS) );
-                        SCIP_CALL( SCIPreallocMemoryArray(scip, &cuts, size + MAXCUTS) );
+                        SCIP_CALL( SCIPreallocMemoryArray(scip, &violation, (int) (size + MAXCUTS)) );
+                        SCIP_CALL( SCIPreallocMemoryArray(scip, &cuts, (int) (size + MAXCUTS)) );
                         size += MAXCUTS;
                      }
 
@@ -150,8 +148,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
 
                      if( ncuts >= size - 1 )
                      {
-                        SCIP_CALL( SCIPreallocMemoryArray(scip, &violation, size + MAXCUTS) );
-                        SCIP_CALL( SCIPreallocMemoryArray(scip, &cuts, size + MAXCUTS) );
+                        SCIP_CALL( SCIPreallocMemoryArray(scip, &violation, (int) (size + MAXCUTS)) );
+                        SCIP_CALL( SCIPreallocMemoryArray(scip, &cuts, (int) (size + MAXCUTS)) );
                         size += MAXCUTS;
                      }
 
@@ -196,8 +194,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
 
                      if( ncuts >= size - 1 )
                      {
-                        SCIP_CALL( SCIPreallocMemoryArray(scip, &violation, size + MAXCUTS) );
-                        SCIP_CALL( SCIPreallocMemoryArray(scip, &cuts, size + MAXCUTS) );
+                        SCIP_CALL( SCIPreallocMemoryArray(scip, &violation, (int) (size + MAXCUTS)) );
+                        SCIP_CALL( SCIPreallocMemoryArray(scip, &cuts, (int) (size + MAXCUTS)) );
                         size += MAXCUTS;
                      }
 
@@ -233,8 +231,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
                   SCIP_CALL( SCIPflushRowExtensions(scip, cuts[ncuts]) );
                   if( ncuts >= size - 1 )
                   {
-                     SCIP_CALL( SCIPreallocMemoryArray(scip, &violation, size + MAXCUTS) );
-                     SCIP_CALL( SCIPreallocMemoryArray(scip, &cuts, size + MAXCUTS) );
+                     SCIP_CALL( SCIPreallocMemoryArray(scip, &violation, (int) (size + MAXCUTS)) );
+                     SCIP_CALL( SCIPreallocMemoryArray(scip, &cuts, (int) (size + MAXCUTS)) );
                      size += MAXCUTS;
                   }
 
@@ -257,8 +255,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
 
                   if( ncuts >= size - 1 )
                   {
-                     SCIP_CALL( SCIPreallocMemoryArray(scip, &violation, size + MAXCUTS) );
-                     SCIP_CALL( SCIPreallocMemoryArray(scip, &cuts, size + MAXCUTS) );
+                     SCIP_CALL( SCIPreallocMemoryArray(scip, &violation, (int) (size + MAXCUTS)) );
+                     SCIP_CALL( SCIPreallocMemoryArray(scip, &cuts, (int) (size + MAXCUTS)) );
                      size += MAXCUTS;
                   }
 
@@ -280,8 +278,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
                   SCIP_CALL( SCIPflushRowExtensions(scip, cuts[ncuts]) );
                   if( ncuts >= size - 1 )
                   {
-                     SCIP_CALL( SCIPreallocMemoryArray(scip, &violation, size + MAXCUTS) );
-                     SCIP_CALL( SCIPreallocMemoryArray(scip, &cuts, size + MAXCUTS) );
+                     SCIP_CALL( SCIPreallocMemoryArray(scip, &violation, (int) (size + MAXCUTS)) );
+                     SCIP_CALL( SCIPreallocMemoryArray(scip, &cuts, (int) (size + MAXCUTS)) );
                      size += MAXCUTS;
                   }
 
@@ -300,7 +298,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
       {
          SCIP_CALL( SCIPaddPoolCut(scip, cuts[i]) );
          *result = SCIP_SEPARATED;
-         nadded++;
       }
    }
 

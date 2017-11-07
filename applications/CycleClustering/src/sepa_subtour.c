@@ -69,7 +69,7 @@ SCIP_RETCODE addSubtourCuts(
    SCIP_DIGRAPH*         capgraph,           /**< The directed edge-graph */
    SCIP_Real***          adjmatrices,        /**< The matrizes adjacency-matrix with the weight of all paths with 1,...,|Clutster| arcs */
    int                   cyclelength,        /**< The length of the subtours to add */
-   SCIP_Bool*            result,             /**< Pointer to store the result of separation */
+   SCIP_RESULT*          result,             /**< Pointer to store the result of separation */
    int*                  ncuts,              /**< Pointer to store number of cuts */
    int                   start               /**< The starting state */
    )
@@ -90,7 +90,7 @@ SCIP_RETCODE addSubtourCuts(
    edgevars = SCIPcycGetEdgevars(scip);
    nbins = SCIPdigraphGetNNodes(capgraph);
 
-   assert( SCIPisGT(scip, adjmatrices[cyclelength - 1][start][start], cyclelength - 1) );
+   assert( SCIPisGT(scip, adjmatrices[cyclelength - 1][start][start], cyclelength - 1.0) );
 
    SCIP_CALL( SCIPallocClearMemoryArray(scip, &processed, nbins) );
 
@@ -133,7 +133,7 @@ SCIP_RETCODE addSubtourCuts(
    {
       /* construct the cut. Check for and add all necessary contractions */
       (void)SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "subtour_%d_legnth_%d_contracted_%d", start, cyclelength );
-      SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut,sepa, cutname, -SCIPinfinity(scip), cyclelength - 1, FALSE, FALSE, TRUE) );
+      SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut,sepa, cutname, -SCIPinfinity(scip), cyclelength - 1.0, FALSE, FALSE, TRUE) );
       SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
 
       for( k = 0; k < cyclelength; ++k )
@@ -176,7 +176,7 @@ SCIP_RETCODE addPathCuts(
    SCIP_DIGRAPH*         capgraph,           /**< The directed edge-graph */
    SCIP_Real***          adjmatrices,        /**< The matrizes adjacency-matrix with the weight of all paths with 1,...,|Clutster| arcs */
    int                   pathlength,         /**< The length of the subtours to add */
-   SCIP_Bool*            result,             /**< Pointer to store the result of separation */
+   SCIP_RESULT*          result,             /**< Pointer to store the result of separation */
    int*                  ncuts,              /**< Pointer to store number of cuts */
    int                   start               /**< The start of the path */
    )
@@ -232,7 +232,7 @@ SCIP_RETCODE addPathCuts(
 
          /* construct the cut. Check for and add all necessary contractions */
          (void)SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "path_%d_legnth_%d_contracted_%d", start, pathlength );
-         SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut,sepa, cutname, -SCIPinfinity(scip), pathlength + 1, FALSE, FALSE, TRUE) );
+         SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut,sepa, cutname, -SCIPinfinity(scip), pathlength + 1.0, FALSE, FALSE, TRUE) );
          SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
 
          for( k = 0; k <= pathlength; ++k )
@@ -247,7 +247,7 @@ SCIP_RETCODE addPathCuts(
                SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[MAX(path[k],path[k+1])][MIN(path[k],path[k+1])][0], 1.0) );
          }
 
-         SCIPaddVarToRow(scip, cut, edgevars[MAX(start,j)][MIN(start,j)][0], 1.0);
+         SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[MAX(start,j)][MIN(start,j)][0], 1.0) );
          SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
 
          SCIPdebug( printCycle(scip, path, l, nbins) );
@@ -260,6 +260,8 @@ SCIP_RETCODE addPathCuts(
          }
 
          SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+         if( *ncuts >= MAXCUTS )
+            return SCIP_OKAY;
       }
    }
 
@@ -304,7 +306,7 @@ SCIP_Bool computeNextAdj(
    }
 
    /* Check if we have found a violated subtour constraint */
-   if( SCIPisGT(scip, adjmatrices[cyclelength - 1][start][start], cyclelength - 1) )
+   if( SCIPisGT(scip, adjmatrices[cyclelength - 1][start][start], cyclelength - 1.0) )
       foundviolation = TRUE;
 
    return foundviolation;
@@ -313,7 +315,7 @@ SCIP_Bool computeNextAdj(
 /** copy method for separator plugins (called when SCIP copies plugins) */
 static
 SCIP_DECL_SEPACOPY(sepaCopySubtour)
-{
+{  /*lint --e{715}*/
    assert(scip != NULL);
    assert(sepa != NULL);
    assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
@@ -327,7 +329,7 @@ SCIP_DECL_SEPACOPY(sepaCopySubtour)
 /** LP solution separation method of separator */
 static
 SCIP_DECL_SEPAEXECLP(sepaExeclpSubtour)
-{
+{  /*lint --e{715}*/
    SCIP_VAR****    edgevars;
    SCIP_Real***    adjmatrices;
    SCIP_DIGRAPH*  capgraph;
@@ -363,10 +365,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSubtour)
    SCIP_CALL( SCIPallocClearMemoryArray(scip, &adjmatrices, ncluster) );
    for( i = 0; i < ncluster; ++i )
    {
-      SCIP_CALL( SCIPallocClearMemoryArray(scip, &adjmatrices[i], nbins) );
+      SCIP_CALL( SCIPallocClearMemoryArray(scip, &adjmatrices[i], nbins) ); /*lint !e866*/
       for( j = 0; j < nbins; ++j )
       {
-         SCIP_CALL( SCIPallocClearMemoryArray(scip, &adjmatrices[i][j], nbins) );
+         SCIP_CALL( SCIPallocClearMemoryArray(scip, &adjmatrices[i][j], nbins) ); /*lint !e866*/
       }
    }
 
@@ -415,6 +417,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSubtour)
             SCIP_CALL( addSubtourCuts(scip, sepa, capgraph, adjmatrices, cyclelength, result, &ncuts, a) );
          if( cyclelength == ncluster - 1 )
             SCIP_CALL( addPathCuts(scip, sepa, capgraph, adjmatrices, cyclelength, result, &ncuts, a) );
+         if( ncuts >= MAXCUTS )
+            break;
          cyclelength++;
       }
 

@@ -53,7 +53,6 @@ SCIP_RETCODE createPartitionCut(
 {
    SCIP_ROW* cut;
    char cutname[SCIP_MAXSTRLEN];
-   SCIP_Real violation;
    int i;
    int j;
 
@@ -63,16 +62,14 @@ SCIP_RETCODE createPartitionCut(
 
    /* create cut */
    (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "PartitionCut_%d_%d", nfirst, nsecond);
-   SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), MIN(nfirst, nsecond), FALSE, FALSE, TRUE) );
+   SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), (SCIP_Real) MIN(nfirst, nsecond), FALSE, FALSE, TRUE) );
    SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
 
-   violation = MIN(nfirst,nsecond);
    for( i = 0; i < nfirst; ++i )
    {
       for( j = 0; j < i; ++j )
       {
          SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[firstpart[i]][firstpart[j]][0], -1.0) );
-         violation += SCIPvarGetLPSol(edgevars[firstpart[i]][firstpart[j]][0]);
       }
    }
    for( i = 0; i < nsecond; ++i )
@@ -80,7 +77,6 @@ SCIP_RETCODE createPartitionCut(
       for( j = 0; j < i; ++j )
       {
          SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[secondpart[i]][secondpart[j]][0], -1.0) );
-         violation += SCIPvarGetLPSol(edgevars[secondpart[i]][secondpart[j]][0]);
       }
    }
    for( i = 0; i < nfirst; ++i )
@@ -88,7 +84,6 @@ SCIP_RETCODE createPartitionCut(
       for( j = 0; j < nsecond; ++j )
       {
          SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[firstpart[i]][secondpart[j]][1], 1.0) );
-         violation -= SCIPvarGetLPSol(edgevars[firstpart[i]][secondpart[j]][1]);
       }
    }
 
@@ -99,9 +94,6 @@ SCIP_RETCODE createPartitionCut(
       SCIP_CALL( SCIPaddPoolCut(scip, cut) );
       *result = SCIP_SEPARATED;
       *ncuts += 1;
-      SCIPdebug(SCIPprintRow(scip, cut, NULL));
-      SCIPdebug(SCIPdebugMessagePrint(scip, "violation: %f \n", violation));
-
    }
 
    SCIP_CALL( SCIPreleaseRow(scip, &cut) );
@@ -112,7 +104,7 @@ SCIP_RETCODE createPartitionCut(
 /** copy method for separator plugins (called when SCIP copies plugins) */
 static
 SCIP_DECL_SEPACOPY(sepaCopyPartition)
-{
+{  /*lint --e{715}*/
    assert(scip != NULL);
    assert(sepa != NULL);
    assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
@@ -126,13 +118,15 @@ SCIP_DECL_SEPACOPY(sepaCopyPartition)
 /** LP solution separation method of separator */
 static
 SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
-{
+{  /*lint --e{715}*/
    SCIP_VAR**** edgevars;
    SCIP_Real* fractionality;
    int*       idx;
    SCIP_Real triangleval;
    SCIP_Real addval;
    SCIP_Real bestval;
+   SCIP_Real fval;
+   SCIP_Real incval;
    int* firstpart;
    int* secondpart;
    int nfirst = 0;
@@ -167,7 +161,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
       {
          if( NULL == edgevars[i][j] )
             continue;
-         fractionality[i] += MIN(SCIPvarGetLPSol(edgevars[i][j][1]), 1 - SCIPvarGetLPSol(edgevars[i][j][1])) + MIN(1 - SCIPvarGetLPSol(edgevars[MAX(i,j)][MIN(i,j)][0]), SCIPvarGetLPSol(edgevars[MAX(i,j)][MIN(i,j)][0]));
+         fval = SCIPvarGetLPSol(edgevars[i][j][1]);
+         incval = SCIPvarGetLPSol(edgevars[MAX(i,j)][MIN(i,j)][0]);
+         fractionality[i] += MIN(fval, 1 - fval) + MIN(1 - incval, incval);
       }
    }
 

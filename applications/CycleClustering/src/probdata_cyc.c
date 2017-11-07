@@ -57,7 +57,7 @@ SCIP_Bool isPartition(
    /* check if the assignment violates paritioning, e.g. because we are in a subscip */
    for( i = 0; i < nbins; ++i )
    {
-      int sum = 0;
+      SCIP_Real sum = 0.0;
 
       for( j = 0; j < ncluster; ++j )
       {
@@ -197,7 +197,7 @@ SCIP_RETCODE createVariables(
 
    for( i = 0; i < nbins; ++i )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->binvars[i]), ncluster) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->binvars[i]), ncluster) ); /*lint !e866*/
    }
 
    for( i = 0; i < nbins; ++i )
@@ -218,14 +218,14 @@ SCIP_RETCODE createVariables(
 
    for( i = 0; i < nbins; ++i )
    {
-      SCIP_CALL( SCIPallocClearMemoryArray(scip, &(probdata->edgevars[i]), nbins) );
+      SCIP_CALL( SCIPallocClearMemoryArray(scip, &(probdata->edgevars[i]), nbins) ); /*lint !e866*/
 
       for( j = 0; j < nbins; ++j )
       {
          if( i == j || (SCIPisZero(scip, (probdata->cmatrix[i][j] - probdata->cmatrix[j][i])) && SCIPisZero(scip, (probdata->cmatrix[i][j] + probdata->cmatrix[j][i]) )) )
             continue;
 
-         SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->edgevars[i][j]), 3) );
+         SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->edgevars[i][j]), 3) ); /*lint !e866*/
 
          for( edgetype = 0; edgetype < 2; ++edgetype )
          {
@@ -455,7 +455,7 @@ SCIP_RETCODE createProbQP(
 
    for( i = 0; i < nbins; ++i )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->binvars[i]), ncluster) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->binvars[i]), ncluster) ); /*lint !e866*/
    }
 
    for( i = 0; i < nbins; ++i )
@@ -484,12 +484,12 @@ SCIP_RETCODE createProbQP(
    SCIP_CALL( SCIPallocClearMemoryArray(scip, &(probdata->edgevars), nbins) );
    for( i = 0; i < nbins; ++i )
    {
-      SCIP_CALL( SCIPallocClearMemoryArray(scip, &(probdata->edgevars[i]), nbins) );
+      SCIP_CALL( SCIPallocClearMemoryArray(scip, &(probdata->edgevars[i]), nbins) ); /*lint !e866*/
       for( j = 0; j < nbins; ++j )
       {
          if( i == j || (SCIPisZero(scip, (probdata->cmatrix[i][j] - probdata->cmatrix[j][i])) && SCIPisZero(scip, (probdata->cmatrix[i][j] + probdata->cmatrix[j][i]))) )
             continue;
-         SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->edgevars[i][j]), 3) );
+         SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->edgevars[i][j]), 3) ); /*lint !e866*/
          for( edgetype = 0; edgetype < 2; ++edgetype )
          {
             if( edgetype == 0 && i < j )
@@ -534,7 +534,7 @@ SCIP_RETCODE createProbQP(
    for( c = 0; c < ncluster; ++c)
    {
       (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "irrev_%d", c);
-      SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &temp, consname, 0, NULL, NULL, 0, NULL, NULL, NULL, 0, 0) );
+      SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &temp, consname, 0, NULL, NULL, 0, NULL, NULL, NULL, 0.0, 0.0) );
       SCIP_CALL( SCIPaddLinearVarQuadratic(scip, temp, edgevars[c], -1.0) );
       for( i = 0; i < nbins; ++i )
       {
@@ -552,7 +552,7 @@ SCIP_RETCODE createProbQP(
    for( c = 0; c < ncluster; ++c )
    {
       (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "coh_%d", c);
-      SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &temp, consname, 0, NULL, NULL, 0, NULL, NULL, NULL, 0, 0) );
+      SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &temp, consname, 0, NULL, NULL, 0, NULL, NULL, NULL, 0.0, 0.0) );
       SCIP_CALL( SCIPaddLinearVarQuadratic(scip, temp, edgevars[c+ncluster], -1.0) );
       for( i = 0; i < nbins; ++i)
       {
@@ -586,7 +586,7 @@ SCIP_RETCODE createProbOnlyEdge(
 {
    SCIP_CONS* temp;
    SCIP_Real scale;
-   int sign[3][3];
+   SCIP_Real sign[3][3];
    char consname[SCIP_MAXSTRLEN];
    int nbins = probdata->nbins;
    int i;
@@ -600,9 +600,9 @@ SCIP_RETCODE createProbOnlyEdge(
    {
       for( j = 0; j < 3; ++j )
       {
-         sign[i][j] = 1;
+         sign[i][j] = 1.0;
       }
-      sign[i][i] = -1;
+      sign[i][i] = -1.0;
    }
    /*
     *  create constraints
@@ -655,33 +655,33 @@ SCIP_RETCODE createProbOnlyEdge(
 
             (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "tri_%d_%d_%d", i, j, k);
             SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[MAX(i,j)][MIN(i,j)][0], 1) );
-            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[j][k][1], 1) );
-            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][k][1], -1) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[MAX(i,j)][MIN(i,j)][0], 1.0) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[j][k][1], 1.0) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][k][1], -1.0) );
             SCIP_CALL( SCIPaddCons(scip, temp) );
             SCIP_CALL( SCIPreleaseCons(scip, &temp) );
 
             (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "tri_%d_%d_%d", i, j, k);
             SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[MAX(i,j)][MIN(i,j)][0], 1) );
-            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[k][j][1], 1) );
-            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[k][i][1], -1) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[MAX(i,j)][MIN(i,j)][0], 1.0) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[k][j][1], 1.0) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[k][i][1], -1.0) );
             SCIP_CALL( SCIPaddCons(scip, temp) );
             SCIP_CALL( SCIPreleaseCons(scip, &temp) );
 
             (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "tri_%d_%d_%d", i, j, k);
             SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[MAX(i,j)][MIN(i,j)][0], -1) );
-            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[j][k][1], 1) );
-            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][k][1], 1) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[MAX(i,j)][MIN(i,j)][0], -1.0) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[j][k][1], 1.0) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][k][1], 1.0) );
             SCIP_CALL( SCIPaddCons(scip, temp) );
             SCIP_CALL( SCIPreleaseCons(scip, &temp) );
 
             (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "tri_%d_%d_%d", i, j, k);
             SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[MAX(i,j)][MIN(i,j)][0], -1) );
-            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[k][j][1], 1) );
-            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[k][i][1], 1) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[MAX(i,j)][MIN(i,j)][0], -1.0) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[k][j][1], 1.0) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[k][i][1], 1.0) );
             SCIP_CALL( SCIPaddCons(scip, temp) );
             SCIP_CALL( SCIPreleaseCons(scip, &temp) );
          }
@@ -718,7 +718,7 @@ SCIP_DECL_PROBTRANS(probtransCyc)
    SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->cmatrix), nbins) );
    for( i = 0; i < nbins; ++i )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->cmatrix[i]), nbins) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->cmatrix[i]), nbins) ); /*lint !e866*/
    }
    /* copy the matrizes */
    for ( i = 0; i < nbins; ++i )
@@ -735,12 +735,12 @@ SCIP_DECL_PROBTRANS(probtransCyc)
 
    for( i = 0; i < nbins; ++i )
    {
-      SCIP_CALL( SCIPallocClearMemoryArray(scip, &((*targetdata)->edgevars[i]), nbins) );
+      SCIP_CALL( SCIPallocClearMemoryArray(scip, &((*targetdata)->edgevars[i]), nbins) ); /*lint !e866*/
       for( j = 0; j < nbins; ++j )
       {
          if( sourcedata->edgevars[i][j] == NULL || i == j)
             continue;
-         SCIP_CALL( SCIPallocClearMemoryArray(scip, &((*targetdata)->edgevars[i][j]), 3) );
+         SCIP_CALL( SCIPallocClearMemoryArray(scip, &((*targetdata)->edgevars[i][j]), 3) ); /*lint !e866*/
          for( edgetype = 0; edgetype < 2; ++edgetype )
          {
             if( edgetype == 0 && i < j )
@@ -757,7 +757,7 @@ SCIP_DECL_PROBTRANS(probtransCyc)
 
    for( i = 0; i < nbins; ++i )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->binvars[i]), ncluster) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->binvars[i]), ncluster) ); /*lint !e866*/
 
       for( c = 0; c < ncluster; ++c )
       {
@@ -914,6 +914,7 @@ SCIP_DECL_PROBCOPY(probcopyCyc)
 
    nbins = sourcedata->nbins;
    ncluster = sourcedata->ncluster;
+   success = FALSE;
 
    (*targetdata)->nbins = nbins;
    (*targetdata)->ncluster = ncluster;
@@ -924,7 +925,7 @@ SCIP_DECL_PROBCOPY(probcopyCyc)
    SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->cmatrix), nbins) );
    for( i = 0; i < nbins; ++i )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->cmatrix[i]), nbins) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->cmatrix[i]), nbins) ); /*lint !e866*/
    }
    /* copy the matrizes */
    for ( i = 0; i < nbins; ++i )
@@ -941,12 +942,12 @@ SCIP_DECL_PROBCOPY(probcopyCyc)
 
    for( i = 0; i < nbins; ++i )
    {
-      SCIP_CALL( SCIPallocClearMemoryArray(scip, &((*targetdata)->edgevars[i]), nbins) );
+      SCIP_CALL( SCIPallocClearMemoryArray(scip, &((*targetdata)->edgevars[i]), nbins) ); /*lint !e866*/
       for( j = 0; j < nbins; ++j )
       {
          if( (sourcedata)->edgevars[i][j] == NULL || j == i )
             continue;
-         SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->edgevars[i][j]), 3) );
+         SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->edgevars[i][j]), 3) );  /*lint !e866*/
 
          for( edgetype = 0; edgetype < 2; ++edgetype )
          {
@@ -975,7 +976,7 @@ SCIP_DECL_PROBCOPY(probcopyCyc)
 
    for( i = 0; i < nbins; ++i )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->binvars[i]), ncluster) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->binvars[i]), ncluster) ); /*lint !e866*/
 
       for( c = 0; c < ncluster; ++c )
       {
@@ -1035,7 +1036,7 @@ SCIP_RETCODE SCIPcreateProbCyc(
    SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->cmatrix), nbins) );
    for ( i = 0; i < nbins; ++i )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->cmatrix[i]), nbins) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->cmatrix[i]), nbins) ); /*lint !e866*/
       for( j = 0; j < nbins; ++j )
       {
          probdata->cmatrix[i][j] = cmatrix[i][j];

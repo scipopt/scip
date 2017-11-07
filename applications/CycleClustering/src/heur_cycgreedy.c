@@ -22,7 +22,6 @@
 #include "heur_cycgreedy.h"
 
 #include <assert.h>
-#include <math.h>
 #include <string.h>
 #include <time.h>
 #include <stdlib.h>
@@ -213,7 +212,7 @@ SCIP_RETCODE assignNextBin(
 
    for( i = 0; i < nbins; ++i )
    {
-      SCIP_CALL( SCIPallocClearMemoryArray(scip, &clusterispossible[i], ncluster) );
+      SCIP_CALL( SCIPallocClearMemoryArray(scip, &clusterispossible[i], ncluster) ); /*lint !e866*/
    }
 
    /* make ceratin that each cluster is non-empty*/
@@ -285,7 +284,7 @@ SCIP_RETCODE assignNextBin(
             continue;
 
          /* temporarily assign i to c2 */
-         save = clusterassignment[i][c2];
+         save = (int) clusterassignment[i][c2];
          clusterassignment[i][c2] = 1;
 
          /* save the best possible irrevbound for each bin */
@@ -351,7 +350,7 @@ SCIP_RETCODE assignNextBin(
 /** copy method for primal heuristic plugins (called when SCIP copies plugins) */
 static
 SCIP_DECL_HEURCOPY(heurCopyCycGreedy)
-{
+{  /*lint --e{715}*/
    assert(scip != NULL);
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
@@ -365,7 +364,7 @@ SCIP_DECL_HEURCOPY(heurCopyCycGreedy)
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_HEURFREE(heurFreeCycGreedy)
-{
+{  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
    assert(heur != NULL);
@@ -384,7 +383,7 @@ SCIP_DECL_HEURFREE(heurFreeCycGreedy)
 /** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
 static
 SCIP_DECL_HEUREXITSOL(heurExitsolCycGreedy)
-{
+{  /*lint --e{715}*/
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
@@ -397,7 +396,7 @@ SCIP_DECL_HEUREXITSOL(heurExitsolCycGreedy)
 /** initialization method of primal heuristic (called after problem was transformed) */
 static
 SCIP_DECL_HEURINIT(heurInitCycGreedy)
-{
+{  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
    assert(heur != NULL);
@@ -416,7 +415,7 @@ SCIP_DECL_HEURINIT(heurInitCycGreedy)
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecCycGreedy)
-{
+{  /*lint --e{715}*/
    SCIP_Real** cmatrix;                      /* The transition matrixx */
    SCIP_Real** qmatrix;                      /* The low-dimensional transition matrix between clusters */
    SCIP_VAR*** binvars;                      /* SCIP variables */
@@ -463,8 +462,8 @@ SCIP_DECL_HEUREXEC(heurExecCycGreedy)
    for ( i = 0; i < nbins; ++i )
    {
       if( i < ncluster )
-         SCIP_CALL( SCIPallocClearMemoryArray(scip, &qmatrix[i], ncluster) );
-      SCIP_CALL( SCIPallocClearMemoryArray(scip, &clustering[i], ncluster) );
+         SCIP_CALL( SCIPallocClearMemoryArray(scip, &qmatrix[i], ncluster) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocClearMemoryArray(scip, &clustering[i], ncluster) ); /*lint !e866*/
 
       for( j = 0; j < ncluster; ++j )
       {
@@ -576,7 +575,7 @@ SCIP_RETCODE SCIPincludeHeurCycGreedy(
    SCIP_HEURDATA* heurdata;
    SCIP_HEUR* heur;
 
-   /* create xyz primal heuristic data */
+   /* create greedy primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
 
    /* include primal heuristic */

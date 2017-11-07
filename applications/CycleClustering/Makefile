@@ -77,26 +77,26 @@ all:            $(SCIPDIR) $(MAINFILE) $(MAINSHORTLINK)
 lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(TPILIBSRC) $(NLPILIBSRC) $(MAINSRC)
 		-rm -f lint.out
 
-		@$(SHELL) -ec 'if test -e lint/co-gcc.mak ; \
+		@$(SHELL) -ec 'if test -e $(SCIPDIR)/lint/co-gcc.mak ; \
 			then \
 				echo "-> generating gcc-include-path lint-file" ; \
-				cd lint; $(MAKE) -f co-gcc.mak ; \
+				cd $(SCIPDIR)/lint; $(MAKE) -f co-gcc.mak ; \
 			else \
 				echo "-> lint Makefile not found"; \
 			fi'
 ifeq ($(FILES),)
-		$(SHELL) -ec 'for i in $^; \
+		$(SHELL) -ec 'cd $(SCIPDIR); for i in $^; \
 			do \
 				echo $$i; \
-				$(LINT) lint/main-gcc.lnt +os\(lint.out\) -u -zero \
-				$(FLAGS) -I/usr/include -UNDEBUG -UWITH_READLINE -UROUNDING_FE -D_BSD_SOURCE $$i; \
+				$(LINT) lint/main-gcc.lnt +os\(applications/CycleClustering/lint.out\) -u -zero \
+				$(FLAGS) -I/usr/include -UNDEBUG -UWITH_READLINE -UROUNDING_FE -D_BSD_SOURCE applications/CycleClustering/$$i; \
 			done'
 else
-		$(SHELL) -ec  'for i in $(FILES); \
+		$(SHELL) -ec  'cd $(SCIPDIR); for i in $(FILES); \
 			do \
 				echo $$i; \
 				$(LINT) lint/main-gcc.lnt +os\(lint.out\) -u -zero \
-				$(FLAGS) -I/usr/include -UNDEBUG -UWITH_READLINE -UROUNDING_FE -D_BSD_SOURCE $$i; \
+				$(FLAGS) -I/usr/include -UNDEBUG -UWITH_READLINE -UROUNDING_FE -D_BSD_SOURCE applications/CycleClustering/$$i; \
 			done'
 endif
 

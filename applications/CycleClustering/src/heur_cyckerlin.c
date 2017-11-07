@@ -35,7 +35,6 @@
 #define HEUR_FREQ             10
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
-#define MAXROUNDS             5
 #define MAXPERMUTATIONS       5
 #define DEFAULT_RANDSEED      177           /**< random seed                                                                       */
 #define HEUR_TIMING           SCIP_HEURTIMING_BEFORENODE
@@ -91,12 +90,12 @@ SCIP_RETCODE getSolutionValues(
 
                if( binvars[i][c] != NULL)
                {
-                  if((SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(binvars[i][c]), SCIPvarGetLbGlobal(binvars[i][c]))))
+                  if( (SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(binvars[i][c]), SCIPvarGetLbGlobal(binvars[i][c]))) )
                      binfixed[i][c] = TRUE;
 
                   solclustering[i][c] = SCIPgetSolVal(scip, bestsol, binvars[i][c]);
 
-                  if( SCIPisFeasEQ(scip, solclustering[i][c], 1))
+                  if( SCIPisFeasEQ(scip, solclustering[i][c], 1.0) )
                   {
                      clusterofbin[i] = c;
                      nbinsincluster[c]++;
@@ -172,7 +171,7 @@ void setBinToCluster(
 {
    int bin;
    int cluster;
-   int sign = setone ? 1 : -1;
+   SCIP_Real sign = setone ? 1.0 : -1.0;
 
    for( cluster = 0; cluster < ncluster; ++cluster )
    {
@@ -191,7 +190,7 @@ void setBinToCluster(
       }
    }
 
-   solclustering[newbin][newcluster] = (sign + 1) / 2;
+   solclustering[newbin][newcluster] = (sign + 1.0) / 2.0;
 }
 
 /**  Initialize the q-matrix from a given (possibly incomplete) clusterassignment */
@@ -410,7 +409,7 @@ SCIP_RETCODE createSwitchSolution(
    SCIP_Bool feasible;
    int c;
    int i;
-   int nbinsincluster[ncluster];
+   int nbinsincluster[ncluster]; /*lint !e771*/
    int switchedbin[nbins];
    int switchedcluster[nbins];
    int clusterofbin[nbins];
@@ -423,8 +422,8 @@ SCIP_RETCODE createSwitchSolution(
 
    for( i = 0; i < nbins; ++i )
    {
-      SCIP_CALL( SCIPallocClearMemoryArray(scip, &clustering[i], ncluster) );
-      SCIP_CALL( SCIPallocClearMemoryArray(scip, &solclustering[i], ncluster) );
+      SCIP_CALL( SCIPallocClearMemoryArray(scip, &clustering[i], ncluster) );    /*lint !e866*/
+      SCIP_CALL( SCIPallocClearMemoryArray(scip, &solclustering[i], ncluster) ); /*lint !e866*/
    }
 
    /* copy the solution so that we may change it and still keep the original one*/
@@ -441,7 +440,7 @@ SCIP_RETCODE createSwitchSolution(
          if( SCIPisFeasEQ(scip, startclustering[i][c], 1.0) )
          {
             clusterofbin[i] = c;
-            nbinsincluster[c]++;
+            nbinsincluster[c]++; /*lint !e771*/
          }
       }
       binprocessed[i] = FALSE;
@@ -494,9 +493,9 @@ SCIP_RETCODE createSwitchSolution(
       {
          for( c = 0; c < ncluster; ++c )
          {
-            solclustering[switchedbin[i]][c] = 0;
+            solclustering[switchedbin[i]][c] = 0; /*lint !e771*/
          }
-         solclustering[switchedbin[i]][switchedcluster[i]] = 1;
+         solclustering[switchedbin[i]][switchedcluster[i]] = 1; /*lint !e771*/
          clusterofbin[switchedbin[i]] = switchedcluster[i];
       }
 
@@ -510,7 +509,7 @@ SCIP_RETCODE createSwitchSolution(
       {
          SCIP_CALL( SCIPcreateSol(scip, &worksol, heur) );
          SCIP_CALL( assignVars(scip, worksol, solclustering, nbins, ncluster) );
-         SCIPtrySolFree(scip, &worksol, FALSE, TRUE, TRUE, TRUE, TRUE, &feasible);
+         SCIP_CALL( SCIPtrySolFree(scip, &worksol, FALSE, TRUE, TRUE, TRUE, TRUE, &feasible) );
       }
       if( feasible )
       {
@@ -540,7 +539,7 @@ SCIP_RETCODE createSwitchSolution(
 static
 SCIP_RETCODE permuteStartSolution(
    SCIP_Real**           startclustering,    /**< The solution to be permuted */
-   SCIP_RANDNUMGEN*      rand,               /**< A random number generator */
+   SCIP_RANDNUMGEN*      rnd,                /**< A random number generator */
    int                   nbins,              /**< The number of states */
    int                   ncluster            /**< The number of clusters */
    )
@@ -548,7 +547,7 @@ SCIP_RETCODE permuteStartSolution(
    int i;
    int t;
    int c;
-   int rnd;
+   int rndcluster;
    int pushed;
    int binsincluster[ncluster];
    int **bins;
@@ -565,7 +564,7 @@ SCIP_RETCODE permuteStartSolution(
             binsincluster[t]++;
       }
 
-      SCIP_CALL( SCIPallocClearMemoryArray(scip, &bins[t], binsincluster[t]) );
+      SCIP_CALL( SCIPallocClearMemoryArray(scip, &bins[t], binsincluster[t]) ); /*lint !e866*/
 
       c = 0;
 
@@ -582,17 +581,17 @@ SCIP_RETCODE permuteStartSolution(
    for( t = 0; t < ncluster; ++t )
    {
       pushed = 0;
-      while(pushed < binsincluster[t] / 2)
+      while(pushed < binsincluster[t] / 2) /*lint !e771*/
       {
-         rnd = bins[t][SCIPrandomGetInt(rand, 0, binsincluster[t] - 1)];
+         rndcluster = bins[t][SCIPrandomGetInt(rnd, 0, binsincluster[t] - 1)];
 
-         if( rnd == nbins -1 )
+         if( rndcluster == nbins -1 )
             continue;
-         if( startclustering[rnd][t] == 0 )
+         if( startclustering[rndcluster][t] == 0 )
             continue;
 
-         startclustering[rnd][t] = 0;
-         startclustering[rnd][phi(t,ncluster)] = 1;
+         startclustering[rndcluster][t] = 0;
+         startclustering[rndcluster][phi(t,ncluster)] = 1;
          pushed++;
       }
 
@@ -610,7 +609,7 @@ SCIP_RETCODE permuteStartSolution(
 /** copy method for primal heuristic plugins (called when SCIP copies plugins) */
 static
 SCIP_DECL_HEURCOPY(heurCopyCyckerlin)
-{
+{  /*lint --e{715}*/
    assert(scip != NULL);
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
@@ -624,7 +623,7 @@ SCIP_DECL_HEURCOPY(heurCopyCyckerlin)
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_HEURFREE(heurFreeCyckerlin)
-{
+{  /*lint --e{715}*/
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(scip != NULL);
@@ -635,7 +634,7 @@ SCIP_DECL_HEURFREE(heurFreeCyckerlin)
 /** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
 static
 SCIP_DECL_HEUREXITSOL(heurExitsolCyckerlin)
-{
+{  /*lint --e{715}*/
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
@@ -648,7 +647,7 @@ SCIP_DECL_HEUREXITSOL(heurExitsolCyckerlin)
 /** initialization method of primal heuristic (called after problem was transformed) */
 static
 SCIP_DECL_HEURINIT(heurInitCyckerlin)
-{
+{  /*lint --e{715}*/
    assert(heur != NULL);
    assert(scip != NULL);
 
@@ -659,13 +658,13 @@ SCIP_DECL_HEURINIT(heurInitCyckerlin)
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecCyckerlin)
-{
+{  /*lint --e{715}*/
    SCIP_SOL* bestsol;                        /* incumbent solution */
    SCIP_Real** startclustering;              /* the assignment given from the solution */
    SCIP_Bool** binfixed;                     /* The bins that are fixed from scip */
    SCIP_Real** cmatrix;                      /* Transition matrix */
    SCIP_Real** qmatrix;                      /* Aggregated transition matrix (projected through clustering) */
-   SCIP_RANDNUMGEN* rand;                    /* Random number generator */
+   SCIP_RANDNUMGEN* rnd;                     /* Random number generator */
    int* clusterofbin;                        /* hold the cluster that each bin is in */
    int* nbinsincluster;                      /* The number of bins ins each cluster */
    SCIP_Real objective;                      /* The value of the objective function */
@@ -691,7 +690,7 @@ SCIP_DECL_HEUREXEC(heurExecCyckerlin)
    nbins = SCIPcycGetNBins(scip);
    ncluster = SCIPcycGetNCluster(scip);
    cmatrix = SCIPcycGetCmatrix(scip);
-   SCIP_CALL( SCIPrandomCreate(&rand, SCIPblkmem(scip),SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+   SCIP_CALL( SCIPrandomCreate(&rnd, SCIPblkmem(scip),SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
    /* we do not want to run the heurtistic if there is no 'flow' between the clusters.
     * in case of a (ideally) full reversible problem there cannot be a better solution, in the other case, i.e., the
@@ -713,12 +712,12 @@ SCIP_DECL_HEUREXEC(heurExecCyckerlin)
 
    for( c = 0; c < ncluster; ++c )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &qmatrix[c], ncluster) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &qmatrix[c], ncluster) ); /*lint !e866*/
    }
    for( i = 0; i < nbins; ++i )
    {
-      SCIP_CALL( SCIPallocClearMemoryArray(scip, &startclustering[i], ncluster) );
-      SCIP_CALL( SCIPallocClearMemoryArray(scip, &binfixed[i], ncluster) );
+      SCIP_CALL( SCIPallocClearMemoryArray(scip, &startclustering[i], ncluster) );  /*lint !e866*/
+      SCIP_CALL( SCIPallocClearMemoryArray(scip, &binfixed[i], ncluster) );         /*lint !e866*/
    }
 
    /* get the solution values from scip */
@@ -729,7 +728,7 @@ SCIP_DECL_HEUREXEC(heurExecCyckerlin)
       SCIP_CALL( createSwitchSolution(scip, heur, cmatrix, qmatrix, binfixed, startclustering, result, nbins, ncluster) );
       for( i = 0; i < MAXPERMUTATIONS; ++i )
       {
-         SCIP_CALL( permuteStartSolution(startclustering, rand, nbins, ncluster) );
+         SCIP_CALL( permuteStartSolution(startclustering, rnd, nbins, ncluster) );
          assert(isPartition(scip, startclustering, nbins, ncluster) );
          SCIP_CALL( createSwitchSolution(scip, heur, cmatrix, qmatrix, binfixed, startclustering, result, nbins, ncluster) );
       }
@@ -747,7 +746,7 @@ SCIP_DECL_HEUREXEC(heurExecCyckerlin)
       SCIPfreeMemoryArray(scip, &qmatrix[c]);
    }
 
-   SCIPrandomFree(&rand, SCIPblkmem(scip));
+   SCIPrandomFree(&rnd, SCIPblkmem(scip));
    SCIPfreeMemoryArray(scip, &qmatrix);
    SCIPfreeMemoryArray(scip, &startclustering);
    SCIPfreeMemoryArray(scip, &binfixed);

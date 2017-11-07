@@ -89,7 +89,7 @@ SCIP_RETCODE fromCommandLine(
       return SCIP_OKAY;
    default:
       SCIP_CALL( retcode );
-   }
+   } /*lint !e788*/
 
    if( soluname != NULL )
    {
@@ -108,7 +108,7 @@ SCIP_RETCODE fromCommandLine(
          return SCIP_OKAY;
       default:
          SCIP_CALL( retcode );
-      }
+      } /*lint !e788*/
    }
 
    /*******************
@@ -169,7 +169,7 @@ SCIP_RETCODE processArguments(
    paramerror = FALSE;
    interactive = (argc == 0);
 
-   /* read the arguments from commandLine */
+   /*lint -e{850} read the arguments from commandLine */
    for( i = 1; i < argc; ++i )
    {
       if( strcmp(argv[i], "-l") == 0 )

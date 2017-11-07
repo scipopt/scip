@@ -128,7 +128,7 @@ SCIP_RETCODE readCyc(
    SCIP_CALL( SCIPallocMemoryArray(scip, &cmatrix, nbins) );
    for( i = 0; i < nbins; i++ )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(cmatrix[i]), nbins) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(cmatrix[i]), nbins) ); /*lint !e866*/
    }
 
    /* fill array the cmatrix */

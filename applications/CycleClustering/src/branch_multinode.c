@@ -111,7 +111,7 @@ SCIP_RETCODE branchOnBin(
          ncands++;
          priority = SCIPcalcNodeselPriority(scip, binvars[row][k], SCIP_BRANCHDIR_UPWARDS, 1.0);
          estimate = SCIPcalcChildEstimate(scip, binvars[row][k], 1.0);
-         tmp = SCIPcalcChildEstimate(scip, binvars[row][k], 0);
+         tmp = SCIPcalcChildEstimate(scip, binvars[row][k], 0.0);
          minestzero = MIN(tmp, minestzero);
 
          /* branch all viable candidates upwards */
@@ -146,7 +146,7 @@ SCIP_RETCODE branchOnBin(
 /** branching execution method for fractional LP solutions */
 static
 SCIP_DECL_BRANCHEXECLP(branchExeclpMultinode)
-{
+{  /*lint --e{715}*/
    int i;
    int k;
    int nbins;
@@ -160,7 +160,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultinode)
    SCIP_VAR** branchcands;
    SCIP_Real* branchcandssol;
    SCIP_Real* branchcandsfrac;
-   int nzero;
 
    binvars = SCIPcycGetBinvars(scip);
    nbins = SCIPcycGetNBins(scip);
@@ -192,15 +191,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultinode)
          for( i = 0; i < nbins; ++i )
          {
             score[i] = 0;
-            nzero = 0;
             for( k = 0; k < ncluster; ++k )
             {
                if( SCIPvarGetStatus(binvars[i][k]) == SCIP_VARSTATUS_COLUMN && !SCIPisZero(scip, SCIPvarGetLPSol(binvars[i][k])) && !SCIPisEQ(scip, SCIPvarGetLPSol(binvars[i][k]), 1.0) )
-               {
                   score[i] += SCIPgetVarPseudocostScore(scip, binvars[i][k], SCIPvarGetLPSol(binvars[i][k]));
-
-                  nzero++;
-               }
             }
 
             if( SCIPisLT(scip, max, score[i]) )

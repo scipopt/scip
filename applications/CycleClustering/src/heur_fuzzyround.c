@@ -45,7 +45,7 @@
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecFuzzyround)
-{
+{  /*lint --e{715}*/
    SCIP_VAR*** binvars;
    SCIP_SOL* sol;
    SCIP_Real** clustering;
@@ -87,7 +87,7 @@ SCIP_DECL_HEUREXEC(heurExecFuzzyround)
 
    for( i = 0; i < nbins; ++i )
    {
-      SCIP_CALL( SCIPallocClearMemoryArray(scip, &clustering[i], ncluster) );
+      SCIP_CALL( SCIPallocClearMemoryArray(scip, &clustering[i], ncluster) ); /*lint !e866*/
    }
 
    /* for each bin, set the assignment with the highest lp-value to 1, the rest to 0 */
