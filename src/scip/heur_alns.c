@@ -1054,7 +1054,7 @@ void printNeighborhoodStatistics(
       ucb = 1.0;
       epsgreedyweight = -1.0;
 
-      if( i < heurdata->nactiveneighborhoods )
+      if( heurdata->bandit != NULL && i < heurdata->nactiveneighborhoods )
       {
          switch (heurdata->banditalgo) {
             case 'u':
