@@ -393,7 +393,7 @@ SCIP_Real varGetObjResolved(
 
 /** propagate orbital fixing */
 static
-SCIP_RETCODE propagate(
+SCIP_RETCODE propagateOrbitalFixing(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_PROPDATA*        propdata,           /**< propagator data */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the node is detected to be infeasible */
@@ -681,7 +681,7 @@ SCIP_DECL_PROPEXEC(propExecOrbitalfixing)
    *result = SCIP_DIDNOTFIND;
 
    SCIPdebugMsg(scip, "Propagating <%s>.\n", SCIPpropGetName(prop));
-   SCIP_CALL( propagate(scip, propdata, &infeasible, &ngen) );
+   SCIP_CALL( propagateOrbitalFixing(scip, propdata, &infeasible, &ngen) );
    if ( infeasible )
       *result = SCIP_CUTOFF;
    else if ( ngen > 0 )
