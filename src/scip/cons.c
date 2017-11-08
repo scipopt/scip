@@ -7902,8 +7902,6 @@ void SCIPprintLinConsStats(
    SCIP_LINCONSSTATS*   linconsstats         /**< linear constraint classification statistics */
    )
 {
-   int c;
-
    assert(scip != NULL);
    assert(linconsstats != NULL);
 
