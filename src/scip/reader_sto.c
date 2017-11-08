@@ -1531,15 +1531,15 @@ SCIP_RETCODE readIndep(
    int* numblocksperblock;
    int blockssize;
    int* blocksperblocksize;
-   char BL[] = "BL";
    int blocknum;
    int blockindex;
    int i;
    int j;
    char stagenames[SCIP_MAXSTRLEN];
    int numstages;
+   SCIP_Bool foundblock;
 
-   SCIPdebugMsg(scip, "read Blocks\n");
+   SCIPdebugMsg(scip, "read Indep\n");
 
    /* This has to be the Line with the name. */
    if( stoinputField1(stoi) == NULL )
@@ -1566,10 +1566,11 @@ SCIP_RETCODE readIndep(
 
    while( stoinputReadLine(stoi) )
    {
+
       if( stoinputField0(stoi) != NULL )
       {
          if( !strcmp(stoinputField0(stoi), "INDEP") )
-            stoinputSetSection(stoi, STO_BLOCKS);
+            stoinputSetSection(stoi, STO_INDEP);
          else if( !strcmp(stoinputField0(stoi), "ENDATA") )
          {
             SCIP_CALL( createScenariosFromBlocks(scip, readerdata, blocks, numblocks, numblocksperblock, numstages) );
@@ -1581,78 +1582,73 @@ SCIP_RETCODE readIndep(
          goto TERMINATE;
       }
 
-      if( strcmp(stoinputField1(stoi), BL) == 0 )
+      /* checking whether the stage has been added previously */
+      if( strstr(stagenames, stoinputField4(stoi)) == NULL )
       {
-         SCIP_Bool foundblock = FALSE;
+         /* recording the stage name as processed */
+         (void) SCIPsnprintf(stagenames, SCIP_MAXSTRLEN, "%s_%s", stagenames, stoinputField4(stoi));
+         numstages++;
+      }
 
-         /* checking whether the stage has been added previously */
-         if( strstr(stagenames, stoinputField3(stoi)) == NULL )
+      foundblock = FALSE;
+
+      /* determining whether a block name has previously been added */
+      for( i = 0; i < numblocks; i++ )
+      {
+         if( strcmp(getScenarioName(blocks[i][0]), stoinputField2(stoi)) == 0 )
          {
-            /* recording the stage name as processed */
-            (void) SCIPsnprintf(stagenames, SCIP_MAXSTRLEN, "%s_%s", stagenames, stoinputField3(stoi));
-            numstages++;
+            foundblock = TRUE;
+            break;
          }
 
-         /* determining whether a block name has previously been added */
-         for( i = 0; i < numblocks; i++ )
+      }
+      blocknum = i;
+
+      /* if the block is found, then the memory for the blocks array must be ensured */
+      if( foundblock )
+      {
+         /* ensuring enough memory is available for the blocks */
+         if( numblocksperblock[blocknum] + 1 > blocksperblocksize[blocknum] )
          {
-            if( strcmp(getScenarioName(blocks[i][0]), stoinputField2(stoi)) == 0 )
-            {
-               foundblock = TRUE;
-               break;
-            }
-
+            int newsize;
+            newsize = SCIPcalcMemGrowSize(scip, numblocksperblock[blocknum] + 1);
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &blocks[blocknum], blocksperblocksize[blocknum], newsize) );
+            blocksperblocksize[blocknum] = newsize;
          }
-         blocknum = i;
-
-         /* if the block is found, then the memory for the blocks array must be ensured */
-         if( foundblock )
-         {
-            /* ensuring enough memory is available for the blocks */
-            if( numblocksperblock[blocknum] + 1 > blocksperblocksize[blocknum] )
-            {
-               int newsize;
-               newsize = SCIPcalcMemGrowSize(scip, numblocksperblock[blocknum] + 1);
-               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &blocks[blocknum], blocksperblocksize[blocknum], newsize) );
-               blocksperblocksize[blocknum] = newsize;
-            }
-         }
-         else
-         {
-            /* ensuring enough memory is available for the blocks */
-            if( numblocks + 1 > blockssize )
-            {
-               int newsize;
-               newsize = SCIPcalcMemGrowSize(scip, numblocks + 1);
-               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &blocks, blockssize, newsize) );
-               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &numblocksperblock, blockssize, newsize) );
-               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &blocksperblocksize, blockssize, newsize) );
-               blockssize = newsize;
-            }
-
-            blocksperblocksize[blocknum] = STO_DEFAULT_BLOCKARRAYSIZE;
-            numblocksperblock[blocknum] = 0;
-            SCIP_CALL( SCIPallocBlockMemoryArray(scip, &blocks[blocknum], blocksperblocksize[blocknum]) );
-         }
-
-         blockindex = numblocksperblock[blocknum];
-
-         /* creating the scenario data structure */
-         SCIP_CALL( createScenarioData(scip, &blocks[blocknum][blockindex]) );
-
-         SCIP_CALL( setScenarioName(scip, blocks[blocknum][blockindex], stoinputField2(stoi)) );
-         SCIP_CALL( setScenarioStageName(scip, blocks[blocknum][blockindex], stoinputField3(stoi)) );
-         SCIP_CALL( setScenarioProbability(scip, blocks[blocknum][blockindex], atof(stoinputField4(stoi))) );
-         numblocksperblock[blocknum]++;
-
-         if( !foundblock )
-            numblocks++;
       }
       else
       {
-         SCIP_CALL( addScenarioEntry(scip, blocks[blocknum][blockindex], stoinputField2(stoi), stoinputField1(stoi),
-               atof(stoinputField3(stoi))) );
+         /* ensuring enough memory is available for the blocks */
+         if( numblocks + 1 > blockssize )
+         {
+            int newsize;
+            newsize = SCIPcalcMemGrowSize(scip, numblocks + 1);
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &blocks, blockssize, newsize) );
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &numblocksperblock, blockssize, newsize) );
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &blocksperblocksize, blockssize, newsize) );
+            blockssize = newsize;
+         }
+
+         blocksperblocksize[blocknum] = STO_DEFAULT_BLOCKARRAYSIZE;
+         numblocksperblock[blocknum] = 0;
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &blocks[blocknum], blocksperblocksize[blocknum]) );
       }
+
+      blockindex = numblocksperblock[blocknum];
+
+      /* creating the scenario data structure */
+      SCIP_CALL( createScenarioData(scip, &blocks[blocknum][blockindex]) );
+
+      SCIP_CALL( setScenarioName(scip, blocks[blocknum][blockindex], stoinputField2(stoi)) );
+      SCIP_CALL( setScenarioStageName(scip, blocks[blocknum][blockindex], stoinputField4(stoi)) );
+      SCIP_CALL( setScenarioProbability(scip, blocks[blocknum][blockindex], atof(stoinputField5(stoi))) );
+      numblocksperblock[blocknum]++;
+
+      if( !foundblock )
+         numblocks++;
+
+      SCIP_CALL( addScenarioEntry(scip, blocks[blocknum][blockindex], stoinputField2(stoi), stoinputField1(stoi),
+            atof(stoinputField3(stoi))) );
    }
    stoinputSyntaxerror(stoi);
 
@@ -1799,6 +1795,7 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
       SCIP_CONS* cons;
       SCIP_VAR* var;
       char RHS[] = "RHS";
+      char RIGHT[] = "RIGHT";
       char MINI[] = "MINI";
       char OBJ[] = "obj";
 
@@ -1807,7 +1804,7 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
          getScenarioStageNum(scip, scenario), getScenarioNum(scip, scenario));
       cons = SCIPfindCons(scip, name);
 
-      if( strcmp(getScenarioEntryCol(scenario, i), RHS) == 0 )
+      if( strcmp(getScenarioEntryCol(scenario, i), RHS) == 0 || strcmp(getScenarioEntryCol(scenario, i), RIGHT) == 0 )
       {
          /* if the constraint is an equality constraint, then the LHS must also be changed */
          if( SCIPgetLhsLinear(scip, cons) == SCIPgetRhsLinear(scip, cons) )
@@ -2009,10 +2006,10 @@ SCIP_RETCODE readSto(
    {
       SCIP_CALL_TERMINATE( retcode, readScenarios(stoi, scip, readerdata), TERMINATE );
    }
-   //if( stoinputSection(stoi) == STO_INDEP )
-   //{
-      //SCIP_CALL_TERMINATE( retcode, readRhs(stoi, scip), TERMINATE );
-   //}
+   if( stoinputSection(stoi) == STO_INDEP )
+   {
+      SCIP_CALL_TERMINATE( retcode, readIndep(stoi, scip, readerdata), TERMINATE );
+   }
    if( stoinputSection(stoi) != STO_ENDATA )
       stoinputSyntaxerror(stoi);
 
