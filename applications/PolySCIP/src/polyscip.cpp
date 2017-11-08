@@ -850,7 +850,7 @@ namespace polyscip {
 
         // release and delete objective value constraints
         if (SCIPisTransformed(scip_)) {
-            SCIP_CALL_ABORT( SCIPfreeTransform(scip_) ;
+            SCIP_CALL_ABORT( SCIPfreeTransform(scip_) );
         }
         for (auto cons : obj_val_cons) {
             SCIP_CALL_ABORT( SCIPdelCons(scip_, cons) );
