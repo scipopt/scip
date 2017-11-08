@@ -100,9 +100,12 @@ set(settings_Bilinrelax
   )
 
 set(settings_Symmetry
-    "orbitalfixing"
-    "orbitopesafterpresolve"
-    "symresacksafterpresolve"
+    "orbitalfixing-beforepre"
+    "orbitopes-beforepre"
+    "symresacks-beforepre"
+    "orbitalfixing-afterpre"
+    "orbitopes-afterpre"
+    "symresacks-afterpre"
     )
 
 set(settings_sparsify
