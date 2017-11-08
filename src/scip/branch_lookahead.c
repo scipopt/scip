@@ -1421,13 +1421,18 @@ int findInsertionPoint(
    while( left <= right )
    {
       int mid = left + ((right - left) / 2);
-      CANDIDATE* midcand = candidates[mid];
+      SCIP_Real midscore = -SCIPinfinity(scip);
+      CANDIDATE *midcand = candidates[mid];
 
-      assert(midcand != NULL);
+      if( midcand != NULL)
+      {
+         SCIP_VAR* midvar;
+         int midindex;
 
-      SCIP_VAR *midvar = midcand->branchvar;
-      int midindex = SCIPvarGetProbindex(midvar);
-      SCIP_Real midscore = scorecontainer->scores[midindex];
+         midvar = midcand->branchvar;
+         midindex = SCIPvarGetProbindex(midvar);
+         midscore = scorecontainer->scores[midindex];
+      }
 
       if( SCIPisGT(scip, scoretoinsert, midscore) )
       {
@@ -2886,50 +2891,6 @@ SCIP_RETCODE getFSBResult(
    return SCIP_OKAY;
 }
 
-/** Small struct used to call a comparator */
-typedef struct
-{
-   SCORECONTAINER*       scorecontainer;     /**< container with the scores as the sort key */
-   CANDIDATELIST*        candidatelist;      /**< list of candidates to be sorted */
-} SCORESORTCONTAINER;
-
-/** Comparator used to order the candidates by their score. */
-static
-SCIP_DECL_SORTINDCOMP(scoreSortContainerScoreComp)
-{  /*lint --e{715}*/
-   SCORESORTCONTAINER* container = (SCORESORTCONTAINER*)dataptr;
-   SCIP_VAR* var1;
-   SCIP_VAR* var2;
-   int probindex1;
-   int probindex2;
-   SCIP_Real score1;
-   SCIP_Real score2;
-
-   assert(container != NULL);
-   assert(0 <= ind1 && ind1 < container->candidatelist->ncandidates);
-   assert(0 <= ind2 && ind2 < container->candidatelist->ncandidates);
-
-   var1 = container->candidatelist->candidates[ind1]->branchvar;
-   var2 = container->candidatelist->candidates[ind2]->branchvar;
-   probindex1 = SCIPvarGetProbindex(var1);
-   probindex2 = SCIPvarGetProbindex(var2);
-   score1 = container->scorecontainer->scores[probindex1];
-   score2 = container->scorecontainer->scores[probindex2];
-
-   if( score1 == score2 ) /*lint !e777*/
-   {
-      return 0;
-   }
-   else if( score1 < score2 ) /*lint !e777*/
-   {
-      return -1;
-   }
-   else
-   {
-      return 1;
-   }
-}
-
 #ifdef SCIP_DEBUG
 /** prints the given candidate list */
 static
@@ -3750,8 +3711,8 @@ SCIP_RETCODE selectVarRecursive(
          int k;
 
          LABdebugMessage(scip, SCIP_VERBLEVEL_NORMAL, "Started branching on var <%s> with val <%g> and bounds "
-               "[<%g>..<%g>]\n", SCIPvarGetName(branchvar), branchval, SCIPvarGetLbLocal(branchvar),
-               SCIPvarGetUbLocal(branchvar));
+            "[<%g>..<%g>]\n", SCIPvarGetName(branchvar), branchval, SCIPvarGetLbLocal(branchvar),
+            SCIPvarGetUbLocal(branchvar));
 
          if( config->usedomainreduction )
          {
@@ -3771,14 +3732,16 @@ SCIP_RETCODE selectVarRecursive(
             localbranchingresult = down ? downbranchingresult : upbranchingresult;
             otherbranchingresult = down ? upbranchingresult : downbranchingresult;
 
-               /* ????????????????? */
+            /* ????????????????? */
+#ifdef SCIP_STATISTIC
+            SCIP_CALL( executeBranchingRecursive(scip, status, config, baselpsol, candidate, localbaselpsolval,
+               recursiondepth, localdomainreductions, binconsdata, localbranchingresult, scorecontainer,
+               storewarmstartinfo, down, &addeddomainreduction, statistics, localstats) );
+#else
             SCIP_CALL( executeBranchingRecursive(scip, status, config, baselpsol, candidate, localbaselpsolval,
                   recursiondepth, localdomainreductions, binconsdata, localbranchingresult, scorecontainer,
-                  storewarmstartinfo, down
-#ifdef SCIP_STATISTIC
-                  , &addeddomainreduction, statistics, localstats
+                  storewarmstartinfo, down) );
 #endif
-                     ) );
 
 
             /* check whether a new solutions rendered the previous child infeasible */
