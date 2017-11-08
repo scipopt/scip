@@ -136,7 +136,7 @@ SCIP_DECL_TABLEFREE(tableFreeOrbitalfixing)
  *  fixed.
  */
 static
-SCIP_RETCODE orbitalFixing(
+SCIP_RETCODE performOrbitalFixing(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_VAR**            permvars,           /**< variables */
    int                   npermvars,          /**< number of variables */
@@ -469,12 +469,13 @@ SCIP_RETCODE propagateOrbitalFixing(
          activeperms[p] = FALSE;
    }
 
+   SCIPfreeBufferArray(scip, &b1);
+
    /* compute orbits */
    SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
    SCIP_CALL( SCIPcomputeGroupOrbits(scip, permvars, npermvars, perms, nperms, activeperms, orbits, orbitbegins, &norbits) );
 
-   SCIPfreeBufferArray(scip, &b1);
    SCIPfreeBufferArray(scip, &activeperms);
 
    if ( norbits > 0 )
@@ -482,7 +483,7 @@ SCIP_RETCODE propagateOrbitalFixing(
       int nfixedzero = 0;
       int nfixedone = 0;
 
-      SCIP_CALL( orbitalFixing(scip, permvars, npermvars, orbits, orbitbegins, norbits, infeasible, &nfixedzero, &nfixedone) );
+      SCIP_CALL( performOrbitalFixing(scip, permvars, npermvars, orbits, orbitbegins, norbits, infeasible, &nfixedzero, &nfixedone) );
 
       propdata->nfixedzero += nfixedzero;
       propdata->nfixedone += nfixedone;
