@@ -3643,6 +3643,7 @@ SCIP_Bool graph_valid(
       int npterms = 0;
       const int root = g->source;
       const SCIP_Bool extended = g->extended;
+      const SCIP_Bool rooted = (g->stp_type == STP_RPCSPG || g->stp_type == STP_RMWCSP);
       nterms = 0;
 
       assert(g->prize != NULL);
@@ -3650,7 +3651,7 @@ SCIP_Bool graph_valid(
 
       for( k = 0; k < nnodes; k++ )
       {
-         if( k == root )
+         if( k == root || (rooted && g->term2edge[k] < 0) )
             continue;
 
          if( (extended ? Is_term(g->term[k]) : Is_pterm(g->term[k])) )

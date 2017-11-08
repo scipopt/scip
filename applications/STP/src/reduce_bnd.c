@@ -2163,12 +2163,13 @@ SCIP_RETCODE da_reducePcMw(
          }
 
          SCIP_CALL( computeDaSolPcMw(scip, graph, pool, vnoi, cost, pathdist, &upperbound, result, result2, vbase, pathedge, root, nodearrchar, &apsol) );
-
+#if 0
          SCIP_CALL( graph_sol_reroot(scip, transgraph, result, tmproot) );
 
          assert(graph_sol_valid(scip, transgraph, result) );
 
          SCIP_CALL( SCIPStpDualAscent(scip, transgraph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, result, transresult, state, tmproot, 1, marked, nodearrchar) );
+#endif
       }
       else
       {
