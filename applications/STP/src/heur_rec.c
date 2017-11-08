@@ -1232,49 +1232,24 @@ SCIP_RETCODE SCIPStpHeurRecRun(
                assert(prize != NULL);
                assert(orgprize != NULL);
                assert(solgraph->extended);
-
-               // todo deletme
-               if( !solgraph->extended )
-               {
-                  printf("nex %d \n", 0);
-                  return SCIP_ERROR;
-               }
+               assert(graph_pc_term2edgeConsistent(solgraph));
 
                for( int k = 0; k < nsolnodes; k++ )
                {
                   if( Is_pterm(solgraph->term[k]) && k != solgraphroot )
                   {
                      int e;
-                     int tail = -1;
-                     int implementme; // CHANGE PRIZES OF GRAPH FOR PCMW and use for debug
-
+                     const int term = solgraph->head[solgraph->term2edge[k]];
                      orgprize[k] = prize[k];
 
-                     // todo only for testing
-                     for( e = solgraph->inpbeg[k]; e != EAT_LAST; e = solgraph->ieat[e] )
-                     {
-                        tail = solgraph->tail[e];
-                        if( SCIPisZero(scip, solgraph->cost[flipedge(e)]) && Is_term(solgraph->term[tail]) && tail != solgraphroot  )
-                           break;
-                     }
-                     assert(e != EAT_LAST);
-                     assert(tail >= 0);
+                     assert(term >= 0);
+                     assert(Is_term(solgraph->term[term]));
 
-                     if( e == EAT_LAST )
-                     {
-                        printf("F! %d \n", 0);
-                        return SCIP_ERROR;
-                     }
-
-                     for( e = solgraph->inpbeg[tail]; e != EAT_LAST; e = solgraph->ieat[e] )
+                     for( e = solgraph->inpbeg[term]; e != EAT_LAST; e = solgraph->ieat[e] )
                         if( solgraph->tail[e] == solgraphroot )
                            break;
+
                      assert(e != EAT_LAST);
-                     if( e == EAT_LAST )
-                     {
-                        printf("LAST %d \n", 0);
-                        return SCIP_ERROR;
-                     }
 
                      prize[k] = cost[e];
                      assert(solgraph->cost[e] > 0);
@@ -1300,7 +1275,6 @@ SCIP_RETCODE SCIPStpHeurRecRun(
                   solgraph->source, cost, costrev, &hopfactor, nodepriority, maxcost, &success, FALSE) );
 
             assert(success);
-            assert(graph_valid(solgraph));
             assert(graph_sol_valid(scip, solgraph, soledges));
 
             /* reset vertex weights */
@@ -1316,6 +1290,8 @@ SCIP_RETCODE SCIPStpHeurRecRun(
 
                SCIPfreeBufferArray(scip, &orgprize);
             }
+
+            assert(graph_valid(solgraph));
 
             /* run local heuristic (with original costs) */
             if( probtype != STP_DHCSTP && probtype != STP_DCSTP

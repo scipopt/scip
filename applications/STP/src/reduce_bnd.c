@@ -2006,7 +2006,7 @@ SCIP_RETCODE da_reducePcMw(
    }
 
    /* pertubation runs for MWCSP */
-   if( varyroot && graph->stp_type == STP_MWCSP )
+   if( varyroot && graph->stp_type == STP_MWCSP  )
    {
       int todo;
       // && graph->terms > 500 todo
