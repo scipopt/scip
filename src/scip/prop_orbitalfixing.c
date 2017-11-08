@@ -571,7 +571,7 @@ SCIP_DECL_PROPEXIT(propExitOrbitalfixing)
       SCIPhashmapFree(&propdata->permvarmap);
    }
 
-   /* reset parameters */
+   /* reset propagator variables */
    propdata->nodenumber = -1;
    propdata->nfixedzero = 0;
    propdata->nfixedone = 0;
@@ -643,7 +643,7 @@ SCIP_DECL_PROPEXEC(propExecOrbitalfixing)
 {  /*lint --e{715}*/
    SCIP_PROPDATA* propdata;
    SCIP_Bool infeasible = FALSE;
-   SCIP_Longint nn;
+   SCIP_Longint nodenumber;
    int ngen = 0;
 
    assert( scip != NULL );
@@ -672,10 +672,10 @@ SCIP_DECL_PROPEXEC(propExecOrbitalfixing)
       return SCIP_OKAY;
 
    /* return if we already ran in this node */
-   nn = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
-   if ( nn == propdata->nodenumber )
+   nodenumber = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
+   if ( nodenumber == propdata->nodenumber )
       return SCIP_OKAY;
-   propdata->nodenumber = nn;
+   propdata->nodenumber = nodenumber;
 
    /* propagate */
    *result = SCIP_DIDNOTFIND;
