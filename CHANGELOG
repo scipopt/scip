@@ -10,6 +10,10 @@ fixed bugs:
 - fixed upgrade to a varbound constraint if abspower constraint contains a multi-aggregated variable
 - fixed numerical issues in boundshift presolver when aggregating integer variables
 
+performance bugs
+- for fast presolving emphasis, disable use of implications in logicor presolving
+- use limit on the total number of nonzeros added to the clique table during the greedyCliqueAlgorithm of cons_knapsack.c
+
 SCIP version 4.0.1
 ==================
 
