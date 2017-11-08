@@ -430,8 +430,10 @@ SCIP_RETCODE propagateOrbitalFixing(
    perms = propdata->perms;
    nperms = propdata->nperms;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &b1, npermvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &activeperms, nperms) );
+
+   /* init bitset for marking variables branched to 1 */
+   SCIP_CALL( SCIPallocBufferArray(scip, &b1, npermvars) );
    for (v = 0; v < npermvars; ++v)
       b1[v] = FALSE;
 
@@ -472,8 +474,8 @@ SCIP_RETCODE propagateOrbitalFixing(
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
    SCIP_CALL( SCIPcomputeGroupOrbits(scip, permvars, npermvars, perms, nperms, activeperms, orbits, orbitbegins, &norbits) );
 
-   SCIPfreeBufferArray(scip, &activeperms);
    SCIPfreeBufferArray(scip, &b1);
+   SCIPfreeBufferArray(scip, &activeperms);
 
    if ( norbits > 0 )
    {
