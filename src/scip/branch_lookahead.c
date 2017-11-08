@@ -54,7 +54,7 @@
 
 #define DEFAULT_USEBINARYCONSTRAINTS         TRUE  /**< Should binary constraints be collected and applied? */
 #define DEFAULT_ADDCLIQUE                    FALSE /**< Add binary constraints also as a clique. */
-#define DEFAULT_ADDBINCONSROW                FALSE /**< Should binary constraints be added as rows to the base LP? */
+#define DEFAULT_ADDBINCONSROW                0     /**< Should binary constraints be added as rows to the base LP? */
 #define DEFAULT_USEDOMAINREDUCTION           TRUE  /**< Should domain reductions be collected and applied? */
 #define DEFAULT_MAXNUMBERVIOLATEDCONS        1     /**< How many constraints that are violated by the base lp solution
                                                     *   should be gathered until the rule is stopped and they are added? */
@@ -448,7 +448,7 @@ typedef struct
                                               *   used. */
    SCIP_Bool             usebincons;         /**< indicates whether the data for the implied binary constraints should
                                               *   be gathered and used */
-   SCIP_Bool             addbinconsrow;      /**< Add the implied binary constraints as a row to the problem matrix */
+   int                   addbinconsrow;      /**< Add the implied binary constraints as a row to the problem matrix */
    SCIP_Bool             stopbranching;      /**< indicates whether we should stop the first level branching after finding
                                               *   an infeasible first branch */
    SCIP_Bool             forcebranching;     /**< Execute the lookahead logic even if only one branching candidate is given.
@@ -1001,9 +1001,6 @@ void binaryVarListDrop(
    assert(list->nbinaryvars > 0);
    assert(list->binaryvars[list->nbinaryvars-1] != NULL);
 
-   /* get the last element and set the last pointer to NULL (maybe unnecessary, but feels cleaner) */
-   list->binaryvars[list->nbinaryvars-1] = NULL;
-
    /* decrement the number of entries in the actual list */
    list->nbinaryvars--;
 }
@@ -1506,6 +1503,7 @@ SCIP_RETCODE scoreContainerSetScore(
    }
 
    LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Stored score <%g> for var <%s>.\n", score, SCIPvarGetName(cand->branchvar));
+
    return SCIP_OKAY;
 }
 
@@ -2360,7 +2358,8 @@ SCIP_RETCODE executeBranching(
          {
             /* if the new lower bound is greater than the old lower bound and also
              * lesser than (or equal to) the old upper bound we set the new lower bound.
-             * oldLowerBound < newLowerBound <= oldUpperBound */
+             * oldLowerBound < newLowerBound <= oldUpperBound
+             */
             SCIP_CALL( SCIPchgVarLbProbing(scip, branchvar, newbound) );
          }
 
@@ -2469,13 +2468,13 @@ SCIP_RETCODE createBinaryConstraint(
 {
    SCIP_Bool initial;
    SCIP_Bool separate;
+   SCIP_Bool removable;
    SCIP_Bool enforce = FALSE;
    SCIP_Bool check = FALSE;
    SCIP_Bool propagate = TRUE;
    SCIP_Bool local = TRUE;
    SCIP_Bool modifiable = FALSE;
    SCIP_Bool dynamic = FALSE;
-   SCIP_Bool removable = FALSE;
    SCIP_Bool stickingatnode = FALSE;
 
    assert(scip != NULL);
@@ -2485,11 +2484,13 @@ SCIP_RETCODE createBinaryConstraint(
    assert(consvars != NULL);
    assert(nconsvars > 0);
 
-   initial = config->addbinconsrow;
-   separate = config->addbinconsrow;
+   initial = (config->addbinconsrow == 2);
+   separate = (config->addbinconsrow == 1);
+   removable = (config->addbinconsrow == 1);
 
    /* creating a logic or constraint based on the list of vars in 'consvars'.
-    * A logic or constraints looks like that: y_1 + ... + y_n >= 1. */
+    * A logic or constraints looks like that: y_1 + ... + y_n >= 1.
+    */
    SCIP_CALL( SCIPcreateConsLogicor(scip, constraint, constraintname, nconsvars, consvars, initial, separate, enforce,
          check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    return SCIP_OKAY;
@@ -2594,13 +2595,12 @@ SCIP_RETCODE addBinaryConstraint(
 
       SCIPfreeBufferArray(scip, &negatedvars);
    }
+#ifdef SCIP_STATISTIC
    else
    {
-
-#ifdef SCIP_STATISTIC
       statistics->ndomredcons++;
-#endif
    }
+#endif
 
    return SCIP_OKAY;
 }
@@ -2621,79 +2621,96 @@ SCIP_RETCODE applyBinaryConstraints(
 #endif
    )
 {
+   int nconsadded = 0;
    int i;
 
-   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Adding <%i> binary constraints.\n", conslist->nconstraints);
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "processing %d binary constraints.\n", conslist->nconstraints);
+
+   if( conslist->nconstraints == 0 )
+      return SCIP_OKAY;
 
    for( i = 0; i < conslist->nconstraints; i++ )
    {
       SCIP_CONS* constraint = conslist->constraints[i];
+      SCIP_VAR** vars;
+      int nvars;
+      int v;
 
-#ifdef PRINTNODECONS
+      //#ifdef PRINTNODECONS
       SCIP_CALL( SCIPprintCons(scip, constraint, NULL) );
       SCIPinfoMessage(scip, NULL, "\n");
-#endif
+      //#endif
 
-      /* add the constraint to the given node */
-      SCIP_CALL( SCIPaddConsNode(scip, basenode, constraint, NULL) );
+      /* get the variables */
+      assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(constraint)), "logicor") == 0);
+      vars = SCIPgetVarsLogicor(scip, constraint);
+      nvars = SCIPgetNVarsLogicor(scip, constraint);
 
-      /* only add cliques for the root node */
-      if( config->addclique && SCIPgetNNodes(scip) == 1 )
+      for( v = 0; v < nvars; ++v )
       {
-         int nvars;
+         assert(SCIPvarIsBinary(vars[v]));
 
-         assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(constraint)), "logicor"));
+         if( SCIPvarGetLbLocal(vars[v]) > 0.5 )
+            break;
+      }
 
-         /* get the number of contained variables, used to add a clique */
-         nvars = SCIPgetNVarsLogicor(scip, constraint);
+      /* no variable is fixed to 1, yet, so constraint is not redundant */
+      if( v == nvars )
+      {
+         /* add the constraint to the given node */
+         SCIP_CALL( SCIPaddConsNode(scip, basenode, constraint, NULL) );
+         ++nconsadded;
 
-         if( nvars == 2 )
+         /* only add cliques for the root node */
+         if( config->addclique && SCIPgetNNodes(scip) == 1 )
          {
-            SCIP_VAR** vars;
-            SCIP_Bool* values;
-            int j;
-            SCIP_Bool infeasible;
-            int nbdchgs;
 
-            vars = SCIPgetVarsLogicor(scip, constraint);
-
-            SCIP_CALL( SCIPallocBufferArray(scip, &values, nvars) );
-            for( j = 0; j < nvars; j++ )
+            if( nvars == 2 )
             {
-               values[j] = FALSE;
-            }
-            /* a two-variable logicor constraint x + y >= 1 yields the implication x == 0 -> y == 1, and is represented
-             * by the clique inequality ~x + ~y <= 1
-             */
-            SCIP_CALL( SCIPaddClique(scip, vars, values, nvars, FALSE, &infeasible, &nbdchgs) );
+               SCIP_Bool* values;
+               SCIP_Bool infeasible;
+               int nbdchgs;
+
+               SCIP_CALL( SCIPallocClearBufferArray(scip, &values, nvars) );
+
+               /* a two-variable logicor constraint x + y >= 1 yields the implication x == 0 -> y == 1, and is represented
+                * by the clique inequality ~x + ~y <= 1
+                */
+               SCIP_CALL( SCIPaddClique(scip, vars, values, nvars, FALSE, &infeasible, &nbdchgs) );
 
 #ifdef SCIP_STATISTIC
-            statistics->ncliquesadded++;
+               statistics->ncliquesadded++;
 #endif
 
-            if( infeasible )
-            {
-               *cutoff = TRUE;
-            }
+               if( infeasible )
+               {
+                  *cutoff = TRUE;
+               }
 
-            if( nbdchgs > 0 )
-            {
-               *boundchange = TRUE;
+               if( nbdchgs > 0 )
+               {
+                  *boundchange = TRUE;
+               }
+               SCIPfreeBufferArray(scip, &values);
             }
-            SCIPfreeBufferArray(scip, &values);
          }
       }
 
       /* release the constraint, as it is no longer needed */
       SCIP_CALL( SCIPreleaseCons(scip, &constraint) );
-
-      *consadded = TRUE;
    }
+
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "added %d/%d binary constraints.\n", nconsadded, conslist->nconstraints);
+
+   if( nconsadded > 0 )
+   {
+      *consadded = TRUE;
 
 #ifdef SCIP_STATISTIC
    statistics->nbinconst += conslist->nconstraints;
    statistics->nbinconstvio += conslist->nviolatedcons;
 #endif
+   }
 
    return SCIP_OKAY;
 }
@@ -2855,7 +2872,8 @@ SCIP_RETCODE getFSBResult(
    firstlevel = !SCIPinProbing(scip);
 
    /* In deeper levels we don't want any constraints to be added or domains to be reduced, as we are just interested in the
-    * score. */
+    * score.
+    */
    config->usebincons = firstlevel && config->usebincons;
    config->usedomainreduction = firstlevel && config->usedomainreduction;
 
@@ -3404,7 +3422,6 @@ SCIP_RETCODE executeBranchingRecursive(
    SCIP_CALL( executeBranching(scip, config, downbranching, candidate, branchingresult, baselpsol, domainreductions,
          status) );
 
-   /* ???????????? vvvvvv */
 #ifdef SCIP_STATISTIC
    statistics->nlpssolved[probingdepth]++;
    statistics->nlpiterations[probingdepth] += branchingresult->niterations;
@@ -3445,6 +3462,7 @@ SCIP_RETCODE executeBranchingRecursive(
 
       localgain = MAX(0, branchingresult->objval - localbaselpsolval);
 
+      /* update pseudo costs */
       if( downbranching )
       {
          SCIP_CALL( SCIPupdateVarPseudocost(scip, branchvar, 0.0 - branchvalfrac, localgain, 1.0) );
@@ -3473,8 +3491,9 @@ SCIP_RETCODE executeBranchingRecursive(
             LOCALSTATISTICS* deeperlocalstats;
 #endif
 
-            SCIP_CALL(statusCreate(scip, &deeperstatus) );
+            SCIP_CALL( statusCreate(scip, &deeperstatus) );
 
+            /* @todo collect bound changes ?????????????? */
 #ifdef SCIP_STATISTIC
             SCIP_CALL( filterCandidates(scip, config, deeperstatus, scorecontainer, candidates, statistics) );
 #else
@@ -3515,7 +3534,7 @@ SCIP_RETCODE executeBranchingRecursive(
 
                if( deeperstatus->cutoff )
                {
-                  /* upbranchingresult->cutoff is TRUE, if the up child was directly infeasible (so here it is always
+                  /* branchingresult->cutoff is TRUE, if the current child was directly infeasible (so here it is always
                    * false, as we don't want to branch on an infeasible node)
                    * deeperstatus->cutoff is TRUE, if any up/down child pair of the up child were cutoff
                    * */
@@ -3538,6 +3557,7 @@ SCIP_RETCODE executeBranchingRecursive(
       }
    }
 
+   /* the current branching child is infeasible and we only branched on binary variables in lookahead branching */
    if( !status->lperror && config->usebincons && branchingresult->cutoff
       && binconsdata->binaryvars->nbinaryvars == (probingdepth + 1) )
    {
@@ -4765,10 +4785,10 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          "branching/lookahead/useimpliedbincons",
          "should binary constraints be collected and applied?",
          &branchruledata->config->usebincons, TRUE, DEFAULT_USEBINARYCONSTRAINTS, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
+   SCIP_CALL( SCIPaddIntParam(scip,
          "branching/lookahead/addbinconsrow",
          "should binary constraints be added as rows to the base LP?",
-         &branchruledata->config->addbinconsrow, TRUE, DEFAULT_ADDBINCONSROW, NULL, NULL) );
+         &branchruledata->config->addbinconsrow, TRUE, DEFAULT_ADDBINCONSROW, 0, 2, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "branching/lookahead/maxnumberviolatedcons",
          "how many constraints that are violated by the base lp solution should be gathered until the rule is stopped and "\
          "they are added?",
