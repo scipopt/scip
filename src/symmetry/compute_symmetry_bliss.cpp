@@ -39,6 +39,7 @@ struct BLISS_Data
    int                   nperms;             /**< number of permutations */
    int**                 perms;              /**< permutation generators as (nperms x npermvars) matrix */
    int                   nmaxperms;          /**< maximal number of permutations */
+   int                   maxgenerators;      /**< maximal number of generators constructed (= 0 if unlimited) */
 };
 
 
@@ -57,6 +58,11 @@ void blisshook(
    assert( data->scip != NULL );
    assert( data->perms != NULL );
    assert( data->npermvars < (int) n );
+   assert( data->maxgenerators >= 0);
+
+   /* make sure we do not generate more that maxgenerators many permutations, if the limit is bliss is not available */
+   if ( data->maxgenerators != 0 && data->nperms >= data->maxgenerators )
+      return;
 
    /* check whether we need to resize */
    if ( data->nperms >= data->nmaxperms )
@@ -340,6 +346,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    data.npermvars = matrixdata->npermvars;
    data.nperms = 0;
    data.nmaxperms = 100 * matrixdata->npermvars;
+   data.maxgenerators = maxgenerators;
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &data.perms, data.nmaxperms) );
 
    /* Prefer splitting partition cells corresponding to variables over those corresponding
