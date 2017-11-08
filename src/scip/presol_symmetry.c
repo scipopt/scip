@@ -1226,11 +1226,13 @@ SCIP_RETCODE determineSymmetry(
 
       /* domcol avoids S_2-symmetries and may not be compatible with other symmetry handling methods. */
       SCIP_CALL( SCIPsetIntParam(scip, "presolving/domcol/maxrounds", 0) );
-      SCIPinfoMessage(scip, NULL, "Turned off presolver <domcol>.\n");
 
       /* components creates sub-SCIPs on which no symmetry handling is installed, thus turn this off. */
       SCIP_CALL( SCIPsetIntParam(scip, "constraints/components/maxprerounds", 0) );
-      SCIPinfoMessage(scip, NULL, "Turned off presolver <components>.\n\n");
+
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL,
+         "   (%.1fs) in order to avoid conflicts, turn off presolvers <domcol> and <components>  for remaining computations\n",
+         SCIPgetSolvingTime(scip));
    }
 
    return SCIP_OKAY;
