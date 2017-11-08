@@ -261,6 +261,10 @@ SCIP_RETCODE candidateFree(
 typedef struct
 {
    CANDIDATE*            cand;               /**< Candidate to branch on. May be NULL.*/
+   SCIP_Real*            downlowerbounds;    /**< variable lower bounds for down child */
+   SCIP_Real*            downupperbounds;    /**< variable upper bounds for down child */
+   SCIP_Real*            uplowerbounds;      /**< variable lower bounds for up child */
+   SCIP_Real*            upupperbounds;      /**< variable upper bounds for up child */
    SCIP_Real             downdb;             /**< dual bound for down branch */
    SCIP_Real             updb;               /**< dual bound for the up branch */
    SCIP_Real             proveddb;           /**< proven dual bound for the current node */
@@ -271,6 +275,7 @@ typedef struct
    SCIP_Bool             updbvalid;          /**< Indicator for the validity of the updb value. Is FALSE, if no actual
                                               *   branching occurred or the value was determined by an LP not solved to
                                               *   optimality. */
+   int                   boundssize;         /**< size of bounds arrays */
 } BRANCHINGDECISION;
 
 /** Allocates a branching decision in the buffer and initiates it with default values. */
@@ -285,11 +290,16 @@ SCIP_RETCODE branchingDecisionCreate(
 
    SCIP_CALL( SCIPallocBuffer(scip, decision) );
    (*decision)->cand = NULL;
+   (*decision)->downlowerbounds = NULL;
+   (*decision)->downupperbounds = NULL;
+   (*decision)->uplowerbounds = NULL;
+   (*decision)->upupperbounds = NULL;
    (*decision)->downdb = -SCIPinfinity(scip);
    (*decision)->downdbvalid = FALSE;
    (*decision)->updb = -SCIPinfinity(scip);
    (*decision)->updbvalid = FALSE;
    (*decision)->proveddb = -SCIPinfinity(scip);
+   (*decision)->boundssize = 0;
 
    return SCIP_OKAY;
 }
@@ -324,6 +334,29 @@ SCIP_Bool branchingDecisionIsValid(
    return decision->cand != NULL;
 }
 
+static
+SCIP_RETCODE branchingDecisionEnsureBoundArrays(
+   SCIP*                 scip,               /**< SCIP data structure */
+   BRANCHINGDECISION*    decision,           /**< branching decision */
+   int                   nvars               /**< number of problem variables */
+   )
+{
+   assert(decision != NULL);
+
+   if( decision->boundssize == 0 )
+   {
+      decision->boundssize = nvars;
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &decision->downlowerbounds, decision->boundssize) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &decision->downupperbounds, decision->boundssize) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &decision->uplowerbounds, decision->boundssize) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &decision->upupperbounds, decision->boundssize) );
+   }
+   assert(decision->boundssize == nvars);
+
+   return SCIP_OKAY;
+}
+
+
 /** Frees the allocated buffer memory of the branching decision. */
 static
 void branchingDecisionFree(
@@ -333,6 +366,19 @@ void branchingDecisionFree(
 {
    assert(scip != NULL);
    assert(decision != NULL);
+
+   if( (*decision)->boundssize != 0 )
+   {
+      assert((*decision)->downlowerbounds != NULL);
+      assert((*decision)->downupperbounds != NULL);
+      assert((*decision)->uplowerbounds != NULL);
+      assert((*decision)->upupperbounds != NULL);
+
+      SCIPfreeBlockMemoryArray(scip, &(*decision)->downlowerbounds, (*decision)->boundssize);
+      SCIPfreeBlockMemoryArray(scip, &(*decision)->downupperbounds, (*decision)->boundssize);
+      SCIPfreeBlockMemoryArray(scip, &(*decision)->uplowerbounds, (*decision)->boundssize);
+      SCIPfreeBlockMemoryArray(scip, &(*decision)->upupperbounds, (*decision)->boundssize);
+   }
 
    SCIPfreeBuffer(scip, decision);
 }
@@ -1218,8 +1264,6 @@ typedef struct
 {
    SCIP_Real*            lowerbounds;        /**< The new lower bounds found for each variable in the problem. */
    SCIP_Real*            upperbounds;        /**< The new upper bounds found for each variable in the problem. */
-   SCIP_Bool*            lowerboundset;      /**< Indicates whether the lower bound may be added to the base node. */
-   SCIP_Bool*            upperboundset;      /**< Indicates whether the upper bound may be added to the base node. */
    SCIP_Bool*            baselpviolated;     /**< Indicates whether the base lp solution violates the new bounds of a var.*/
    int                   nviolatedvars;      /**< Tracks the number of vars that have a violated (by the base lp) new lower
                                               *   or upper bound. */
@@ -1238,25 +1282,32 @@ SCIP_RETCODE domainReductionsCreate(
    DOMAINREDUCTIONS**    domreds             /**< The struct that has to be allocated and initialized. */
    )
 {
+   SCIP_VAR** vars;
    int ntotalvars;
+   int v;
 
    assert(scip != NULL);
    assert(domreds != NULL);
 
    /* The arrays saves the data for all variables in the problem via the ProbIndex. See SCIPvarGetProbindex() */
+   vars = SCIPgetVars(scip);
    ntotalvars = SCIPgetNVars(scip);
 
    /* Allocate the struct and the contained arrays; initialize flags to FALSE */
    SCIP_CALL( SCIPallocBuffer(scip, domreds) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*domreds)->lowerbounds, ntotalvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*domreds)->upperbounds, ntotalvars) );
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &(*domreds)->lowerboundset, ntotalvars) );
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &(*domreds)->upperboundset, ntotalvars) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &(*domreds)->baselpviolated, ntotalvars) );
 #ifdef SCIP_STATISTIC
    SCIP_CALL( SCIPallocClearBufferArray(scip, &(*domreds)->lowerboundnproofs, ntotalvars) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &(*domreds)->upperboundnproofs, ntotalvars) );
 #endif
+
+   for( v = 0; v < ntotalvars; ++v )
+   {
+      (*domreds)->lowerbounds[v] = SCIPvarGetLbLocal(vars[v]);
+      (*domreds)->upperbounds[v] = SCIPvarGetUbLocal(vars[v]);
+   }
 
    /* At the start we have no domain reductions for any variable. */
    (*domreds)->nviolatedvars = 0;
@@ -1280,8 +1331,6 @@ void domainReductionsFree(
    SCIPfreeBufferArray(scip, &(*domreds)->lowerboundnproofs);
 #endif
    SCIPfreeBufferArray(scip, &(*domreds)->baselpviolated);
-   SCIPfreeBufferArray(scip, &(*domreds)->upperboundset);
-   SCIPfreeBufferArray(scip, &(*domreds)->lowerboundset);
    SCIPfreeBufferArray(scip, &(*domreds)->upperbounds);
    SCIPfreeBufferArray(scip, &(*domreds)->lowerbounds);
    SCIPfreeBuffer(scip, domreds);
@@ -1297,7 +1346,6 @@ typedef struct
    SCIP_Bool             domredcutoff;       /**< Was the current node cutoff due to domain reductions? */
    SCIP_Bool             domred;             /**< Were domain reductions added due to information obtained through
                                               *   branching? */
-   SCIP_Bool             propagationdomred;  /**< Were domain reductions added due to domain propagation? */
    SCIP_Bool             limitreached;       /**< Was a limit (time, node, user, ...) reached? */
    SCIP_Bool             maxnconsreached;    /**< Was the max number of constraints(bin const and dom red) reached? */
 } STATUS;
@@ -1320,7 +1368,6 @@ SCIP_RETCODE statusCreate(
    (*status)->cutoff = FALSE;
    (*status)->domred = FALSE;
    (*status)->domredcutoff = FALSE;
-   (*status)->propagationdomred = FALSE;
    (*status)->limitreached = FALSE;
    (*status)->maxnconsreached = FALSE;
 
@@ -1578,8 +1625,7 @@ void addLowerBoundProofNode(
    SCIP_Real             lowerbound,         /**< The new lower bound for the variable. */
    SCIP_SOL*             baselpsol,          /**< The LP solution of the base problem. Used to check whether the domain
                                               *   reduction is violated by it. */
-   DOMAINREDUCTIONS*     domainreductions,   /**< The struct the domain reduction should be added to. */
-   SCIP_Bool*            domredadded         /**< Pointer to store whether a domain reduction was already added. */
+   DOMAINREDUCTIONS*     domainreductions    /**< The struct the domain reduction should be added to. */
 #ifdef SCIP_STATISTIC
    ,int                  nproofnodes         /**< The number of nodes needed to proof the new lower bound. */
 #endif
@@ -1587,11 +1633,6 @@ void addLowerBoundProofNode(
 {
    int varindex;
    SCIP_Real basesolutionval;
-   SCIP_Real newlowerbound;
-   SCIP_Real oldlowerbound;
-#ifdef SCIP_STATISTIC
-   int newnproof;
-#endif
 
    assert(scip != NULL);
    assert(var != NULL);
@@ -1605,81 +1646,35 @@ void addLowerBoundProofNode(
    varindex = SCIPvarGetProbindex(var);
 
    lowerbound = SCIPadjustedVarLb(scip, var, lowerbound);
-   oldlowerbound = SCIPvarGetLbLocal(var);
 
-   /* We want to use the proposed lower bound only if it is stronger than the current lower bound.
-    * The current lower bound may have changed due to conflict analysis etc. */
-   /* @todo remove this check */
-   if( SCIPisGT(scip, lowerbound, oldlowerbound) )
+   if( SCIPisGE(scip, domainreductions->lowerbounds[varindex], lowerbound) )
    {
-      /* If we have an old lower bound we take the stronger one, so the MAX is taken. Otherwise we use the new lower bound
-       * directly. */
-      if( domainreductions->lowerboundset[varindex] )
-      {
-         if( SCIPisGE(scip, domainreductions->lowerbounds[varindex], lowerbound) )
-         {
-            /* the old lower bound is stronger (greater) than or equal to the given one, so we keep the older */
-            newlowerbound = domainreductions->lowerbounds[varindex];
 #ifdef SCIP_STATISTIC
-            if( SCIPisEQ(scip, domainreductions->lowerbounds[varindex], lowerbound) )
-            {
-               /* if the given lower bound is equal to the old one we take the smaller number of proof nodes */
-               newnproof = MIN(domainreductions->lowerboundnproofs[varindex], nproofnodes);
-            }
-            else
-            {
-               /* if the old bound is stronger (greater) we keep the old number of proof nodes */
-               newnproof = domainreductions->lowerboundnproofs[varindex];
-            }
+      /* if the given lower bound is equal to the old one we take the smaller number of proof nodes */
+      if( SCIPisEQ(scip, domainreductions->lowerbounds[varindex], lowerbound) )
+         newnproof = MIN(domainreductions->lowerboundnproofs[varindex], nproofnodes);
 #endif
-         }
-         else
-         {
-            /* the new lower bound is stronger (greater) than the old one,
-             * so we update the bound and number of proof nodes */
-            newlowerbound = lowerbound;
-#ifdef SCIP_STATISTIC
-            newnproof = nproofnodes;
-#endif
-         }
-      }
-      else
-      {
-         /* we have no old lower bound, so we can directly take the new one together with the number of proof nodes */
-         newlowerbound = lowerbound;
-#ifdef SCIP_STATISTIC
-         newnproof = nproofnodes;
-#endif
-
-         if( !domainreductions->upperboundset[varindex] )
-         {
-            /* if we had no lower and upper bound set we now have a changed variable */
-            domainreductions->nchangedvars++;
-         }
-      }
-
-      /* set the calculated values */
-      domainreductions->lowerbounds[varindex] = newlowerbound;
-      domainreductions->lowerboundset[varindex] = TRUE;
-#ifdef SCIP_STATISTIC
-      domainreductions->lowerboundnproofs[varindex] = newnproof;
-#endif
-
-      /* We get the solution value to check whether the domain reduction is violated in the base LP */
-      basesolutionval = SCIPgetSolVal(scip, baselpsol, var);
-
-      /* In case the new lower bound is greater than the base solution val and the base solution val is not violated by a
-       * previously found bound, we increment the nviolatedvars counter and set the baselpviolated flag.  */
-      if( SCIPisGT(scip, newlowerbound, basesolutionval) && !domainreductions->baselpviolated[varindex] )
-      {
-         domainreductions->baselpviolated[varindex] = TRUE;
-         domainreductions->nviolatedvars++;
-      }
    }
-   else if( domredadded != NULL )
+   else
    {
-      /* the domain was already changed by the sb probing and/or conflict analysis */
-      *domredadded = TRUE;
+      /* the new lower bound is stronger (greater) than the old one,
+       * so we update the bound and number of proof nodes */
+      domainreductions->lowerbounds[varindex] = lowerbound;
+      domainreductions->nchangedvars++;
+#ifdef SCIP_STATISTIC
+      domainreductions->lowerboundnproofs[varindex] = nproofnodes;
+#endif
+   }
+
+   /* We get the solution value to check whether the domain reduction is violated in the base LP */
+   basesolutionval = SCIPgetSolVal(scip, baselpsol, var);
+
+   /* In case the new lower bound is greater than the base solution val and the base solution val is not violated by a
+    * previously found bound, we increment the nviolatedvars counter and set the baselpviolated flag.  */
+   if( SCIPisGT(scip, domainreductions->lowerbounds[varindex], basesolutionval) && !domainreductions->baselpviolated[varindex] )
+   {
+      domainreductions->baselpviolated[varindex] = TRUE;
+      domainreductions->nviolatedvars++;
    }
 }
 
@@ -1691,17 +1686,16 @@ void addLowerBound(
    SCIP_Real             lowerbound,         /**< The new lower bound for the variable. */
    SCIP_SOL*             baselpsol,          /**< The LP solution of the base problem. Used to check whether the domain
                                               *   reduction is violated by it. */
-   DOMAINREDUCTIONS*     domainreductions,   /**< The struct the domain reduction should be added to. */
-   SCIP_Bool*            domredadded         /**< Pointer to store whether a domain reduction was already added. */
+   DOMAINREDUCTIONS*     domainreductions    /**< The struct the domain reduction should be added to. */
    )
 {
    /* We add the lower bound with number of proof nodes 2, as this method is only called from the recursion directly. There
     * it is called in case that only one child node is cutoff. As proof nodes we count the cutoff node as well as the valid
     * node, as we need both to proof, that this domain reduction is valid. */
 #ifdef SCIP_STATISTIC
-   addLowerBoundProofNode(scip, var, lowerbound, baselpsol, domainreductions, domredadded, 2);
+   addLowerBoundProofNode(scip, var, lowerbound, baselpsol, domainreductions, 2);
 #else
-   addLowerBoundProofNode(scip, var, lowerbound, baselpsol, domainreductions, domredadded);
+   addLowerBoundProofNode(scip, var, lowerbound, baselpsol, domainreductions);
 #endif
 }
 
@@ -1713,8 +1707,7 @@ void addUpperBoundProofNode(
    SCIP_Real             upperbound,         /**< The new upper bound for the variable. */
    SCIP_SOL*             baselpsol,          /**< The LP solution of the base problem. Used to check whether the domain
                                               *   reduction is violated by it. */
-   DOMAINREDUCTIONS*     domainreductions,   /**< The struct the domain reduction should be added to. */
-   SCIP_Bool*            domredadded         /**< Pointer to store whether a domain reduction was already added. */
+   DOMAINREDUCTIONS*     domainreductions    /**< The struct the domain reduction should be added to. */
 #ifdef SCIP_STATISTIC
    ,int                  nproofnodes         /**< The number of nodes needed to proof the new lower bound. */
 #endif
@@ -1722,11 +1715,6 @@ void addUpperBoundProofNode(
 {
    int varindex;
    SCIP_Real basesolutionval;
-   SCIP_Real newupperbound;
-   SCIP_Real oldupperbound;
-#ifdef SCIP_STATISTIC
-   int newnproof;
-#endif
 
    assert(scip != NULL);
    assert(var != NULL);
@@ -1740,80 +1728,35 @@ void addUpperBoundProofNode(
    varindex = SCIPvarGetProbindex(var);
 
    upperbound = SCIPadjustedVarUb(scip, var, upperbound);
-   oldupperbound = SCIPvarGetUbLocal(var);
 
-   /* We want to use the proposed upper bound only if it is stronger than the current upper bound.
-    * The current upper bound may have changed due to conflict analysis etc. */
-   if( SCIPisLT(scip, upperbound, oldupperbound) )
+   if( SCIPisLE(scip, domainreductions->upperbounds[varindex], upperbound) )
    {
-      /* If we have an old upper bound we take the stronger one, so the MIN is taken. Otherwise we use the new upper bound
-       * directly. */
-      if( domainreductions->upperboundset[varindex] )
-      {
-         if( SCIPisLE(scip, domainreductions->upperbounds[varindex], upperbound) )
-         {
-            /* the old upper bound is stronger (smaller) than or equal to the given one, so we keep the older */
-            newupperbound = domainreductions->upperbounds[varindex];
 #ifdef SCIP_STATISTIC
-            if( SCIPisEQ(scip, domainreductions->upperbounds[varindex], upperbound) )
-            {
-               /* if the given upper bound is equal to the old one we take the smaller number of proof nodes */
-               newnproof = MIN(domainreductions->upperboundnproofs[varindex], nproofnodes);
-            }
-            else
-            {
-               /* if the old bound is stronger (smaller) we keep the old number of proof nodes */
-               newnproof = domainreductions->upperboundnproofs[varindex];
-            }
+      /* if the given upper bound is equal to the old one we take the smaller number of proof nodes */
+      if( SCIPisEQ(scip, domainreductions->upperbounds[varindex], upperbound) )
+         domainreductions->upperboundnproofs[varindex] = MIN(domainreductions->upperboundnproofs[varindex], nproofnodes);
 #endif
-         }
-         else
-         {
-            /* the new upper bound is stronger (smaller) than the old one,
-             * so we update the bound and number of proof nodes */
-            newupperbound = upperbound;
-#ifdef SCIP_STATISTIC
-            newnproof = nproofnodes;
-#endif
-         }
-      }
-      else
-      {
-         /* we have no old upper bound, so we can directly take the new one together with the number of proof nodes */
-         newupperbound = upperbound;
-#ifdef SCIP_STATISTIC
-         newnproof = nproofnodes;
-#endif
-
-         if( !domainreductions->lowerboundset[varindex] )
-         {
-            /* if we had no lower and upper bound set we now have a changed variable */
-            domainreductions->nchangedvars++;
-         }
-      }
-
-      /* set the calculated values */
-      domainreductions->upperbounds[varindex] = newupperbound;
-      domainreductions->upperboundset[varindex] = TRUE;
-#ifdef SCIP_STATISTIC
-      domainreductions->upperboundnproofs[varindex] = newnproof;
-#endif
-
-      /* We get the solution value to check whether the domain reduction is violated in the base LP */
-      basesolutionval = SCIPgetSolVal(scip, baselpsol, var);
-
-      /* In case the new upper bound is lesser than the base solution val and the base solution val is not violated by a
-       * previously found bound, we increment the nviolatedvars counter and set the baselpviolated flag.  */
-      if( SCIPisLT(scip, newupperbound, basesolutionval) && !domainreductions->baselpviolated[varindex] )
-      {
-         domainreductions->baselpviolated[varindex] = TRUE;
-         domainreductions->nviolatedvars++;
-      }
    }
-   else if( domredadded != NULL )
+   else
    {
-      /* the domain was already changed by the sb probing and/or conflict analysis */
-      *domredadded = TRUE;
+      /* the new upper bound is stronger (smaller) than the old one,
+       * so we update the bound and number of proof nodes */
+      domainreductions->upperbounds[varindex] = upperbound;
+      domainreductions->nchangedvars++;
+#ifdef SCIP_STATISTIC
+      domainreductions->upperboundnproofs[varindex] = nproofnodes;
+#endif
+   }
+
+   /* We get the solution value to check whether the domain reduction is violated in the base LP */
+   basesolutionval = SCIPgetSolVal(scip, baselpsol, var);
+
+   /* In case the new upper bound is lesser than the base solution val and the base solution val is not violated by a
+    * previously found bound, we increment the nviolatedvars counter and set the baselpviolated flag.  */
+   if( SCIPisLT(scip, domainreductions->upperbounds[varindex], basesolutionval) && !domainreductions->baselpviolated[varindex] )
+   {
+      domainreductions->baselpviolated[varindex] = TRUE;
+      domainreductions->nviolatedvars++;
    }
 }
 
@@ -1825,17 +1768,16 @@ void addUpperBound(
    SCIP_Real             upperbound,         /**< The new upper bound for the variable. */
    SCIP_SOL*             baselpsol,          /**< The LP solution of the base problem. Used to check whether the domain
                                               *   reduction is violated by it. */
-   DOMAINREDUCTIONS*     domainreductions,   /**< The struct the domain reduction should be added to. */
-   SCIP_Bool*            domredadded         /**< Pointer to store whether a domain reduction was already added. */
+   DOMAINREDUCTIONS*     domainreductions    /**< The struct the domain reduction should be added to. */
    )
 {
    /* We add the upper bound with number of proof nodes 2, as this method is only called from the recursion directly. There
     * it is called in case that only one child node is cutoff. As proof nodes we count the cutoff node as well as the valid
     * node, as we need both to proof, that this domain reduction is valid. */
 #ifdef SCIP_STATISTIC
-   addUpperBoundProofNode(scip, var, upperbound, baselpsol, domainreductions, domredadded, 2);
+   addUpperBoundProofNode(scip, var, upperbound, baselpsol, domainreductions, 2);
 #else
-   addUpperBoundProofNode(scip, var, upperbound, baselpsol, domainreductions, domredadded);
+   addUpperBoundProofNode(scip, var, upperbound, baselpsol, domainreductions);
 #endif
 }
 
@@ -1881,52 +1823,32 @@ void applyDeeperDomainReductions(
 
    for( i = 0; i < nvars; i++ )
    {
+      SCIP_Real newlowerbound;
+      SCIP_Real newupperbound;
+
       assert(vars[i] != NULL);
 
-      /* If not both child branches have a lower bound for a var, we cannot apply the lower bound to the parent */
-      /* @todo this check can probably be removed, but we should check that the newlowerbound is larger than the current local LB (same for upper below) */
-      if( downdomreds->lowerboundset[i] && updomreds->lowerboundset[i] )
-      {
-         SCIP_Real newlowerbound;
-#ifdef SCIP_STATISTIC
-         int newnproofs;
-#endif
+      /* the MIN of both lower bounds represents a valid lower bound at the parent node */
+      newlowerbound = MIN(downdomreds->lowerbounds[i], updomreds->lowerbounds[i]);
 
-         /* If both child branches have a lower bound for a var, the MIN of both values represents a valid lower bound */
-         newlowerbound = MIN(downdomreds->lowerbounds[i], updomreds->lowerbounds[i]);
+      /* This MIN can now be added via the default add method */
 #ifdef SCIP_STATISTIC
-         newnproofs = downdomreds->lowerboundnproofs[i] + updomreds->lowerboundnproofs[i] + 2;
-#endif
-
-         /* This MIN can now be added via the default add method */
-#ifdef SCIP_STATISTIC
-         addLowerBoundProofNode(scip, vars[i], newlowerbound, baselpsol, targetdomreds, &status->domred, newnproofs);
+      addLowerBoundProofNode(scip, vars[i], newlowerbound, baselpsol, targetdomreds,
+         downdomreds->lowerboundnproofs[i] + updomreds->lowerboundnproofs[i] + 2);
 #else
-         addLowerBoundProofNode(scip, vars[i], newlowerbound, baselpsol, targetdomreds, &status->domred);
-#endif
-      }
-
-      /* If not both child branches have an upper bound for a var, we cannot apply the upper bound to the parent */
-      if( downdomreds->upperboundset[i] && updomreds->upperboundset[i] )
-      {
-         SCIP_Real newupperbound;
-#ifdef SCIP_STATISTIC
-         int newnproofs;
+      addLowerBoundProofNode(scip, vars[i], newlowerbound, baselpsol, targetdomreds);
 #endif
 
-         /* If both child branches have an upper bound for a var, the MAX of both values represents a valid upper bound */
-         newupperbound = MAX(downdomreds->upperbounds[i], updomreds->upperbounds[i]);
-#ifdef SCIP_STATISTIC
-         newnproofs = downdomreds->upperboundnproofs[i] + updomreds->upperboundnproofs[i] + 2;
-#endif
+      /* the MAX of both upper bounds represents a valid upper bound at the parent node */
+      newupperbound = MAX(downdomreds->upperbounds[i], updomreds->upperbounds[i]);
 
-         /* This MAX can now be added via the default add method */
+      /* This MAX can now be added via the default add method */
 #ifdef SCIP_STATISTIC
-         addUpperBoundProofNode(scip, vars[i], newupperbound, baselpsol, targetdomreds, &status->domred, newnproofs);
+      addUpperBoundProofNode(scip, vars[i], newupperbound, baselpsol, targetdomreds,
+         downdomreds->upperboundnproofs[i] + updomreds->upperboundnproofs[i] + 2);
 #else
-         addUpperBoundProofNode(scip, vars[i], newupperbound, baselpsol, targetdomreds, &status->domred);
+      addUpperBoundProofNode(scip, vars[i], newupperbound, baselpsol, targetdomreds);
 #endif
-      }
    }
 
    LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Subsequent number of changed variable domains: %d\n",
@@ -1977,9 +1899,15 @@ SCIP_RETCODE applyDomainReductions(
    for( i = 0; i < nprobvars && !(*domredcutoff); i++ )
    {
       SCIP_VAR* var;
+      SCIP_Real proposedbound;
 #if defined(SCIP_DEBUG) || defined(SCIP_STATISTIC)
       SCIP_Real baselpval;
+#ifdef SCIP_DEBUG
+      SCIP_Real oldbound;
 #endif
+#endif
+      SCIP_Bool infeasible;
+      SCIP_Bool tightened;
 
       var = probvars[i];
 
@@ -1989,32 +1917,20 @@ SCIP_RETCODE applyDomainReductions(
       baselpval = SCIPgetSolVal(scip, baselpsol, var);
 #endif
 
-      if( domreds->lowerboundset[i] )
+      if( SCIPisGT(scip, domreds->lowerbounds[i], SCIPvarGetLbLocal(var)) )
       {
-         /* if we have a lower bound for the current var, apply it */
-         SCIP_Bool infeasible;
-         SCIP_Bool tightened;
-         SCIP_Real proposedlowerbound;
-#if defined(SCIP_DEBUG) || defined(SCIP_STATISTIC)
-         SCIP_Real newlowerbound;
+         /* apply lower bound */
 #ifdef SCIP_DEBUG
-         SCIP_Real oldlowerbound;
+         oldbound = SCIPvarGetLbLocal(var);
 #endif
-#endif
-
-         /* get the old and the new lower bound */
-#ifdef SCIP_DEBUG
-         oldlowerbound = SCIPvarGetLbLocal(var);
-#endif
-         proposedlowerbound = domreds->lowerbounds[i];
+         proposedbound = domreds->lowerbounds[i];
 
          /* add the new bound */
-         SCIP_CALL( SCIPtightenVarLb(scip, var, proposedlowerbound, TRUE, &infeasible, &tightened) );
+         SCIP_CALL( SCIPtightenVarLb(scip, var, proposedbound, TRUE, &infeasible, &tightened) );
 
 #if defined(SCIP_DEBUG) || defined(SCIP_STATISTIC)
-         newlowerbound = SCIPvarGetLbLocal(var);
          LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Variable <%s>, old lower bound <%g>, proposed lower bound <%g>, new "
-            "lower bound <%g>\n", SCIPvarGetName(var), oldlowerbound, proposedlowerbound, newlowerbound);
+            "lower bound <%g>\n", SCIPvarGetName(var), oldbound, proposedbound, SCIPvarGetLbLocal(var));
 #endif
 
          if( infeasible )
@@ -2038,7 +1954,7 @@ SCIP_RETCODE applyDomainReductions(
 #endif
 
 #if defined(SCIP_DEBUG) || defined(SCIP_STATISTIC)
-            if( SCIPisLT(scip, baselpval, newlowerbound) )
+            if( SCIPisLT(scip, baselpval, SCIPvarGetLbLocal(var)) )
             {
                LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The lower bound of variable <%s> is violated by the base lp "
                   "value <%g>.\n", SCIPvarGetName(var), baselpval);
@@ -2049,31 +1965,20 @@ SCIP_RETCODE applyDomainReductions(
          }
       }
 
-      if( !(*domredcutoff) && domreds->upperboundset[i] )
+      if( SCIPisLT(scip, domreds->upperbounds[i], SCIPvarGetUbLocal(var)) )
       {
-         SCIP_Bool infeasible;
-         SCIP_Bool tightened;
-         SCIP_Real proposedupperbound;
-#if defined(SCIP_DEBUG) || defined(SCIP_STATISTIC)
-         SCIP_Real newupperbound;
+         /* apply upper bound */
 #ifdef SCIP_DEBUG
-         SCIP_Real oldupperbound;
+         oldbound = SCIPvarGetUbLocal(var);
 #endif
-#endif
-
-         /* get the old and the new upper bound */
-#ifdef SCIP_DEBUG
-         oldupperbound = SCIPvarGetUbLocal(var);
-#endif
-         proposedupperbound = domreds->upperbounds[i];
+         proposedbound = domreds->upperbounds[i];
 
          /* add the new bound */
-         SCIP_CALL( SCIPtightenVarUb(scip, var, proposedupperbound, TRUE, &infeasible, &tightened) );
+         SCIP_CALL( SCIPtightenVarUb(scip, var, proposedbound, TRUE, &infeasible, &tightened) );
 
 #if defined(SCIP_DEBUG) || defined(SCIP_STATISTIC)
-         newupperbound = SCIPvarGetUbLocal(var);
          LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Variable <%s>, old upper bound <%g>, proposed upper bound <%g>, new "
-            "upper bound <%g>\n", SCIPvarGetName(var), oldupperbound, proposedupperbound, newupperbound);
+            "upper bound <%g>\n", SCIPvarGetName(var), oldbound, proposedbound, SCIPvarGetUbLocal(var));
 #endif
 
          if( infeasible )
@@ -2097,7 +2002,7 @@ SCIP_RETCODE applyDomainReductions(
 #endif
 
 #if defined(SCIP_DEBUG) || defined(SCIP_STATISTIC)
-            if( SCIPisGT(scip, baselpval, newupperbound) )
+            if( SCIPisGT(scip, baselpval, SCIPvarGetUbLocal(var)) )
             {
                LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The upper bound of variable <%s> is violated by the base lp "
                   "value <%g>.\n", SCIPvarGetName(var), baselpval);
@@ -2398,8 +2303,8 @@ SCIP_RETCODE executeBranching(
                   SCIP_Real lowerbound = SCIPvarGetLbLocal(var);
                   SCIP_Real upperbound = SCIPvarGetUbLocal(var);
 
-                  addLowerBound(scip, var, lowerbound, baselpsol, domreds, NULL);
-                  addUpperBound(scip, var, upperbound, baselpsol, domreds, NULL);
+                  addLowerBound(scip, var, lowerbound, baselpsol, domreds);
+                  addUpperBound(scip, var, upperbound, baselpsol, domreds);
                }
             }
          }
@@ -2739,8 +2644,7 @@ SCIP_Bool isBranchFurther(
    STATUS*               status              /**< current status */
    )
 {
-   return !status->lperror && !status->cutoff && !status->limitreached && !status->maxnconsreached
-      && !status->propagationdomred && !status->domred;
+   return !status->lperror && !status->cutoff && !status->limitreached && !status->maxnconsreached;
 }
 
 /** Checks whether the branching rule should continue or terminate with the currently gathered data. Additionally decrements
@@ -3613,9 +3517,7 @@ SCIP_RETCODE selectVarRecursive(
    int i;
    int c;
    int nlpcands;
-#ifdef SCIP_STATISTIC
    int probingdepth;
-#endif
 
    assert(scip != NULL);
    assert(status != NULL);
@@ -3631,9 +3533,7 @@ SCIP_RETCODE selectVarRecursive(
 #endif
 
    nlpcands = candidates->ncandidates;
-#ifdef SCIP_STATISTIC
    probingdepth = SCIPgetProbingDepth(scip);
-#endif
 
    /* init default decision */
    decision->cand = candidates->candidates[0];
@@ -3664,6 +3564,8 @@ SCIP_RETCODE selectVarRecursive(
    for( i = 0, c = start;
         isBranchFurtherLoopDecrement(status, &c) && i < nlpcands && !SCIPisStopped(scip); i++, c++)
    {
+      DOMAINREDUCTIONS* downdomainreductions = NULL;
+      DOMAINREDUCTIONS* updomainreductions = NULL;
       SCIP_Bool useoldbranching = FALSE;
       SCIP_Real oldlpobjval = -SCIPinfinity(scip);
       CANDIDATE* candidate;
@@ -3694,7 +3596,7 @@ SCIP_RETCODE selectVarRecursive(
          /* if both bounds are equal the variable is fixed and we cannot branch
           * this may happen if domain propagation on other candidates finds better bounds for the current candidate
           */
-         status->propagationdomred = TRUE;
+         status->domred = TRUE;
 #ifdef SCIP_STATISTIC
          statistics->npropdomred[probingdepth]++;
 #endif
@@ -3725,8 +3627,6 @@ SCIP_RETCODE selectVarRecursive(
       }
       else
       {
-         DOMAINREDUCTIONS* downdomainreductions = NULL;
-         DOMAINREDUCTIONS* updomainreductions = NULL;
          SCIP_Bool down;
          int k;
 
@@ -3752,12 +3652,12 @@ SCIP_RETCODE selectVarRecursive(
             localbranchingresult = down ? downbranchingresult : upbranchingresult;
             otherbranchingresult = down ? upbranchingresult : downbranchingresult;
 
-            /* ????????????????? */
 #ifdef SCIP_STATISTIC
             SCIP_CALL( executeBranchingRecursive(scip, status, config, baselpsol, candidate, localbaselpsolval,
-               recursiondepth, localdomainreductions, binconsdata, localbranchingresult, scorecontainer,
-               storewarmstartinfo, down, &addeddomainreduction, statistics, localstats) );
+                  recursiondepth, localdomainreductions, binconsdata, localbranchingresult, scorecontainer,
+                  storewarmstartinfo, down, &addeddomainreduction, statistics, localstats) );
 #else
+
             SCIP_CALL( executeBranchingRecursive(scip, status, config, baselpsol, candidate, localbaselpsolval,
                   recursiondepth, localdomainreductions, binconsdata, localbranchingresult, scorecontainer,
                   storewarmstartinfo, down) );
@@ -3804,9 +3704,6 @@ SCIP_RETCODE selectVarRecursive(
          {
             applyDeeperDomainReductions(scip, status, baselpsol, domainreductions, downdomainreductions,
                   updomainreductions);
-
-            domainReductionsFree(scip, &updomainreductions);
-            domainReductionsFree(scip, &downdomainreductions);
          }
       }
 
@@ -3838,7 +3735,7 @@ SCIP_RETCODE selectVarRecursive(
 
             if( config->usedomainreduction && !useoldbranching )
             {
-               addUpperBound(scip, branchvar, branchval, baselpsol, domainreductions, &status->domred);
+               addUpperBound(scip, branchvar, branchval, baselpsol, domainreductions);
 #ifdef SCIP_STATISTIC
                addeddomainreduction = TRUE;
 #endif
@@ -3866,7 +3763,7 @@ SCIP_RETCODE selectVarRecursive(
 
             if( config->usedomainreduction && !useoldbranching )
             {
-               addLowerBound(scip, branchvar, branchval, baselpsol, domainreductions, &status->domred);
+               addLowerBound(scip, branchvar, branchval, baselpsol, domainreductions);
 #ifdef SCIP_STATISTIC
                addeddomainreduction = TRUE;
 #endif
@@ -3892,6 +3789,8 @@ SCIP_RETCODE selectVarRecursive(
 
          if( SCIPisGE(scip, score, bestscore) )
          {
+            int nvars = SCIPgetNVars(scip);
+
             LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Old best var <%s> with bounds [<%g>..<%g>] and score %g\n",
                SCIPvarGetName(decision->cand->branchvar), bestscorelowerbound, bestscoreupperbound, bestscore);
 
@@ -3902,6 +3801,18 @@ SCIP_RETCODE selectVarRecursive(
             decision->downdbvalid = downbranchingresult->dualboundvalid;
             decision->updb = upbranchingresult->dualbound;
             decision->updbvalid = upbranchingresult->dualboundvalid;
+
+            if( updomainreductions != NULL )
+            {
+               assert(downdomainreductions != NULL);
+
+               SCIP_CALL( branchingDecisionEnsureBoundArrays(scip, decision, nvars) );
+
+               BMScopyMemoryArray(decision->uplowerbounds, updomainreductions->lowerbounds, nvars);
+               BMScopyMemoryArray(decision->upupperbounds, updomainreductions->upperbounds, nvars);
+               BMScopyMemoryArray(decision->downlowerbounds, downdomainreductions->lowerbounds, nvars);
+               BMScopyMemoryArray(decision->downupperbounds, downdomainreductions->upperbounds, nvars);
+            }
 
             bestscorelowerbound = branchlb;
             bestscoreupperbound = branchub;
@@ -3930,8 +3841,8 @@ SCIP_RETCODE selectVarRecursive(
             SCIP_CALL( scoreContainerSetScore(scip, scorecontainer, candidate, score) );
          }
 
-         if( (config->maxnviolatedcons >= 0 || config->maxnviolatedbincons >= 0 || config->maxnviolateddomreds >= 0 )
-               && (config->usebincons || config->usedomainreduction) && !useoldbranching )
+         if( probingdepth == 0 && (config->usebincons || config->usedomainreduction) && !useoldbranching
+            && (config->maxnviolatedcons >= 0 || config->maxnviolatedbincons >= 0 || config->maxnviolateddomreds >= 0 ) )
          {
             int nbincons = 0;
             int ndomreds = 0;
@@ -3945,20 +3856,20 @@ SCIP_RETCODE selectVarRecursive(
                if( (config->maxnviolatedbincons >= 0) && (nbincons > config->maxnviolatedbincons) )
                {
                   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The max number of violated binary constraints <%i> is "
-                     "exceeded.", config->maxnviolatedbincons);
+                     "exceeded.\n", config->maxnviolatedbincons);
                   status->maxnconsreached = TRUE;
                }
             }
 
             if( config->usedomainreduction )
             {
-               ndomreds = domainreductions->nchangedvars;
+               ndomreds = domainreductions->nviolatedvars;
                LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Found <%i> bound changes.\n", ndomreds);
 
                if( (config->maxnviolateddomreds >= 0) && (ndomreds > config->maxnviolateddomreds) )
                {
                   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The max number of violated bound changes <%i> is "
-                     "exceeded.", config->maxnviolateddomreds);
+                     "exceeded.\n", config->maxnviolateddomreds);
                   status->maxnconsreached = TRUE;
                }
             }
@@ -3966,7 +3877,7 @@ SCIP_RETCODE selectVarRecursive(
             if( config->maxnviolatedcons >= 0 && (nbincons + ndomreds > config->maxnviolatedcons) )
             {
                LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The max number of violated binary constraints and bound "
-                  "changes <%i> is exceeded.", config->maxnviolatedcons);
+                  "changes <%i> is exceeded.\n", config->maxnviolatedcons);
                status->maxnconsreached = TRUE;
             }
          }
@@ -3986,7 +3897,7 @@ SCIP_RETCODE selectVarRecursive(
          /* in case the bounds of the current highest scored solution have changed due to domain propagation during
           * the lookahead branching we can/should not branch on this variable but instead report the domain
           * reduction */
-         status->propagationdomred = TRUE;
+         status->domred = TRUE;
 #ifdef SCIP_STATISTIC
          statistics->npropdomred[probingdepth]++;
 #endif
@@ -3994,6 +3905,14 @@ SCIP_RETCODE selectVarRecursive(
                "\n");
       }
 
+      /* free domain reductions */
+      if( updomainreductions != NULL )
+      {
+         assert(downdomainreductions != NULL);
+
+         domainReductionsFree(scip, &updomainreductions);
+         domainReductionsFree(scip, &downdomainreductions);
+      }
    }
 
    branchingResultDataFree(scip, &upbranchingresult);
@@ -4119,15 +4038,15 @@ SCIP_RETCODE selectVarStart(
       /* we are at the top level, allocate some more data structures and start strong branching mode */
       if( !inprobing )
       {
-         if( config->usedomainreduction )
-         {
-            SCIP_CALL( domainReductionsCreate(scip, &domainreductions) );
-         }
-
          if( config->usebincons )
          {
             SCIP_CALL( binConsDataCreate(scip, &binconsdata, recursiondepth,
                   (int)SCIPceil(scip, 0.5*candidates->ncandidates)) );
+         }
+
+         if( config->usedomainreduction )
+         {
+            SCIP_CALL( domainReductionsCreate(scip, &domainreductions) );
          }
 
          LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "About to start probing.\n");
@@ -4160,6 +4079,25 @@ SCIP_RETCODE selectVarStart(
             branchingDecisionCopy(decision, persistent->prevdecision);
          }
 
+         /* apply domain reductions */
+         if( config->usedomainreduction )
+         {
+            assert(domainreductions != NULL);
+
+            if( !status->cutoff )
+            {
+               LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Applying domain reductions to the base node.\n");
+#ifdef SCIP_STATISTIC
+               SCIP_CALL( applyDomainReductions(scip, baselpsol, domainreductions, &status->domredcutoff,
+                     &status->domred, statistics) );
+#else
+               SCIP_CALL( applyDomainReductions(scip, baselpsol, domainreductions, &status->domredcutoff,
+                     &status->domred) );
+#endif
+            }
+            domainReductionsFree(scip, &domainreductions);
+         }
+
          /* apply binary constraints */
          if( config->usebincons )
          {
@@ -4180,25 +4118,6 @@ SCIP_RETCODE selectVarStart(
 #endif
             }
             binConsDataFree(scip, &binconsdata);
-         }
-
-         /* apply domain reductions */
-         if( config->usedomainreduction )
-         {
-            assert(domainreductions != NULL);
-
-            if( !status->cutoff )
-            {
-               LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Applying domain reductions to the base node.\n");
-#ifdef SCIP_STATISTIC
-               SCIP_CALL( applyDomainReductions(scip, baselpsol, domainreductions, &status->domredcutoff,
-                     &status->domred, statistics) );
-#else
-               SCIP_CALL( applyDomainReductions(scip, baselpsol, domainreductions, &status->domredcutoff,
-                     &status->domred) );
-#endif
-            }
-            domainReductionsFree(scip, &domainreductions);
          }
          LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Applied found data to the base node.\n");
       }
@@ -4645,7 +4564,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       {
          *result = SCIP_CONSADDED;
       }
-      else if( status->domred || status->propagationdomred )
+      else if( status->domred )
       {
          *result = SCIP_REDUCEDDOM;
       }
