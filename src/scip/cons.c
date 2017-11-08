@@ -7909,52 +7909,25 @@ void SCIPprintLinConsStats(
 
    /* print statistics */
    SCIPinfoMessage(scip, file, "\n");
-   SCIPinfoMessage(scip, file, "Number of classified constraints: %6d\n", SCIPlinConsStatsGetSum(linconsstats));
-   SCIPinfoMessage(scip, file, "Number of constraints according to type:\n");
-   SCIPinfoMessage(scip, file, "----------------------------------------\n");
-   SCIPinfoMessage(scip, file, "%2d SCIP_LINCONSTYPE_EMPTY        %6d\n",  0, SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_EMPTY));
-   SCIPinfoMessage(scip, file, "%2d SCIP_LINCONSTYPE_FREE         %6d\n",  1, SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_FREE));
-   SCIPinfoMessage(scip, file, "%2d SCIP_LINCONSTYPE_SINGLETON    %6d\n",  2, SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_SINGLETON));
-   SCIPinfoMessage(scip, file, "%2d SCIP_LINCONSTYPE_AGGREGATION  %6d\n",  3, SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_AGGREGATION));
-   SCIPinfoMessage(scip, file, "%2d SCIP_LINCONSTYPE_PRECEDENCE   %6d\n",  4, SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_PRECEDENCE));
-   SCIPinfoMessage(scip, file, "%2d SCIP_LINCONSTYPE_VARBOUND     %6d\n",  5, SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_VARBOUND));
-   SCIPinfoMessage(scip, file, "%2d SCIP_LINCONSTYPE_SETPARTITION %6d\n",  6, SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_SETPARTITION));
-   SCIPinfoMessage(scip, file, "%2d SCIP_LINCONSTYPE_SETPACKING   %6d\n",  7, SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_SETPACKING));
-   SCIPinfoMessage(scip, file, "%2d SCIP_LINCONSTYPE_SETCOVERING  %6d\n",  8, SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_SETCOVERING));
-   SCIPinfoMessage(scip, file, "%2d SCIP_LINCONSTYPE_CARDINALITY  %6d\n",  9, SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_CARDINALITY));
-   SCIPinfoMessage(scip, file, "%2d SCIP_LINCONSTYPE_INVKNAPSACK  %6d\n", 10, SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_INVKNAPSACK));
-   SCIPinfoMessage(scip, file, "%2d SCIP_LINCONSTYPE_EQKNAPSACK   %6d\n", 11, SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_EQKNAPSACK));
-   SCIPinfoMessage(scip, file, "%2d SCIP_LINCONSTYPE_BINPACKING   %6d\n", 12, SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_BINPACKING));
-   SCIPinfoMessage(scip, file, "%2d SCIP_LINCONSTYPE_KNAPSACK     %6d\n", 13, SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_KNAPSACK));
-   SCIPinfoMessage(scip, file, "%2d SCIP_LINCONSTYPE_INTKNAPSACK  %6d\n", 14, SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_INTKNAPSACK));
-   SCIPinfoMessage(scip, file, "%2d SCIP_LINCONSTYPE_MIXEDBINARY  %6d\n", 15, SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_MIXEDBINARY));
-   SCIPinfoMessage(scip, file, "%2d SCIP_LINCONSTYPE_GENERAL      %6d\n", 16, SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_GENERAL));
-   SCIPinfoMessage(scip, file, "----------------------------------------\n\n");
-
-   SCIPinfoMessage(scip, file, "    EMPTY");
-   SCIPinfoMessage(scip, file, "     FREE");
-   SCIPinfoMessage(scip, file, "     SING");
-   SCIPinfoMessage(scip, file, "     AGGR");
-   SCIPinfoMessage(scip, file, "     PREC");
-   SCIPinfoMessage(scip, file, "    VARBD");
-   SCIPinfoMessage(scip, file, "  SETPART");
-   SCIPinfoMessage(scip, file, "  SETPACK");
-   SCIPinfoMessage(scip, file, "   SETCOV");
-   SCIPinfoMessage(scip, file, "     CARD");
-   SCIPinfoMessage(scip, file, "  INVKNAP");
-   SCIPinfoMessage(scip, file, "   EQKNAP");
-   SCIPinfoMessage(scip, file, "  BINPACK");
-   SCIPinfoMessage(scip, file, "     KNAP");
-   SCIPinfoMessage(scip, file, "  INTKNAP");
-   SCIPinfoMessage(scip, file, "   MIXBIN");
-   SCIPinfoMessage(scip, file, "      GEN\n");
-   for( c = 0; c < SCIP_NLINCONSTYPES; c++ )
-   {
-      SCIPinfoMessage(scip, NULL, "%9d", SCIPlinConsStatsGetTypeCount(linconsstats, (SCIP_LINCONSTYPE)c));
-   }
-
-   SCIPinfoMessage(scip, NULL, "\n\n");
-   SCIPinfoMessage(scip, NULL, "----------------------------------------\n\n");
+   SCIPinfoMessage(scip, file, "%-19s : %10s\n", "Linear cons types", "count");
+   SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "total", SCIPlinConsStatsGetSum(linconsstats));
+   SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "empty",        SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_EMPTY));
+   SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "free",         SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_FREE));
+   SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "singleton",    SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_SINGLETON));
+   SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "aggregation",  SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_AGGREGATION));
+   SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "precedence",   SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_PRECEDENCE));
+   SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "varbound",     SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_VARBOUND));
+   SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "setpartition", SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_SETPARTITION));
+   SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "setpacking",   SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_SETPACKING));
+   SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "setcovering",  SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_SETCOVERING));
+   SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "cardinality",  SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_CARDINALITY));
+   SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "invknapsack",  SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_INVKNAPSACK));
+   SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "eqknapsack",   SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_EQKNAPSACK));
+   SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "binpacking",   SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_BINPACKING));
+   SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "knapsack",     SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_KNAPSACK));
+   SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "intknapsack",  SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_INTKNAPSACK));
+   SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "mixedbinary",  SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_MIXEDBINARY));
+   SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "general",      SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_GENERAL));
 }
 
 /*

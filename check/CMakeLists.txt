@@ -491,50 +491,85 @@ set_tests_properties(write_and_read_settings
 #
 
 set(linclass_bell5
-    " 4 SCIP_LINCONSTYPE_PRECEDENCE       17"
-    " 5 SCIP_LINCONSTYPE_VARBOUND         18"
-    "15 SCIP_LINCONSTYPE_MIXEDBINARY      26"
-    "16 SCIP_LINCONSTYPE_GENERAL          28"
-    )
+  "total             :         91"
+  "singleton         :          2"
+  "precedence        :         17"
+  "varbound          :         18"
+  "mixedbinary       :         26"
+  "general           :         28"
+  )
 
 set(linclass_blend2
-    " 2 SCIP_LINCONSTYPE_SINGLETON        88"
-    " 3 SCIP_LINCONSTYPE_AGGREGATION       9"
+    "total             :        274"
+    "singleton         :         88"
+    "aggregation       :          9"
+    "varbound          :         88"
+    "intknapsack       :          0"
+    "mixedbinary       :         68"
+    "general           :         21"
     )
 set(linclass_dcmulti
-    " 7 SCIP_LINCONSTYPE_SETPACKING        5"
-    " 9 SCIP_LINCONSTYPE_CARDINALITY       3"
-    "10 SCIP_LINCONSTYPE_INVKNAPSACK      10"
+    "setpacking        :          5"
+    "cardinality       :          3"
+    "invknapsack       :         10"
     )
+
 set(linclass_egout
-    "15 SCIP_LINCONSTYPE_MIXEDBINARY      33"
+    "total             :         98"
+    "aggregation       :         10"
+    "varbound          :         55"
+    "knapsack          :          0"
+    "intknapsack       :          0"
+    "mixedbinary       :         33"
+    "general           :          0"
     )
+
 set(linclass_enigma
-    " 6 SCIP_LINCONSTYPE_SETPARTITION     20"
-    "11 SCIP_LINCONSTYPE_EQKNAPSACK        1"
+    "total             :         21"
+    "varbound          :          0"
+    "setpartition      :         20"
+    "setpacking        :          0"
+    "eqknapsack        :          1"
     )
 set(linclass_flugpl
-    "15 SCIP_LINCONSTYPE_MIXEDBINARY       0"
-    "16 SCIP_LINCONSTYPE_GENERAL          11"
+    "total             :         18"
+    "empty             :          0"
+    "free              :          0"
+    "singleton         :          1"
+    "varbound          :          6"
+    "mixedbinary       :          0"
+    "general           :         11"
     )
 set(linclass_gt2
-    "14 SCIP_LINCONSTYPE_INTKNAPSACK      15"
+    "intknapsack       :         15"
     )
 set(linclass_lseu
-    "13 SCIP_LINCONSTYPE_KNAPSACK         11"
+    "knapsack          :         11"
     )
 set(linclass_misc03
-    " 6 SCIP_LINCONSTYPE_SETPARTITION      5"
-    " 7 SCIP_LINCONSTYPE_SETPACKING        3"
-    " 8 SCIP_LINCONSTYPE_SETCOVERING      31"
-    " 9 SCIP_LINCONSTYPE_CARDINALITY      21"
-    "10 SCIP_LINCONSTYPE_INVKNAPSACK      33"
-    "12 SCIP_LINCONSTYPE_BINPACKING        2"
-    "15 SCIP_LINCONSTYPE_MIXEDBINARY       1"
+    "setpartition      :          5"
+    "setpacking        :          3"
+    "setcovering       :         31"
+    "cardinality       :         21"
+    "invknapsack       :         33"
+    "eqknapsack        :          0"
+    "binpacking        :          2"
     )
 set(linclass_p0548
-    "0 SCIP_LINCONSTYPE_EMPTY             0"
-    "1 SCIP_LINCONSTYPE_FREE              0"
+    "empty             :          0"
+    "free              :          0"
+    "singleton         :          2"
+    "aggregation       :          0"
+    "precedence        :         12"
+    "varbound          :         28"
+    "setpartition      :          0"
+    "setpacking        :         22"
+    "setcovering       :          0"
+    "cardinality       :          0"
+    "invknapsack       :          0"
+    "eqknapsack        :          0"
+    "binpacking        :          5"
+    "knapsack          :        107"
     )
 
 set(linclasstests
