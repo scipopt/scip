@@ -1,4 +1,4 @@
-misc/usesymmetry = TRUE
+misc/usesymmetry = 2
 presolving/symbreak/addsymresacks = FALSE
 presolving/symbreak/detectorbitopes = FALSE
 presolving/symmetry/computepresolved = TRUE
