@@ -542,7 +542,6 @@ SCIP_DECL_PROPINIT(propInitOrbitalfixing)
       propdata->enabled = TRUE;
    else
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/orbitalfixing/freq", -1) );
       propdata->enabled = FALSE;
    }
 

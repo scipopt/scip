@@ -997,7 +997,6 @@ SCIP_DECL_PRESOLINIT(presolInitSymbreak)
       presoldata->enabled = TRUE;
    else
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "presolving/symbreak/maxrounds", 0) );
       presoldata->enabled = FALSE;
    }
 
