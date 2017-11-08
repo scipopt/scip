@@ -1199,6 +1199,8 @@ void printName(
    SCIP_Bool             longnames           /**< whether prefixes for long names should be added */
    )
 {
+   assert(idx >= 0 && idx < 100000); /* to ensure that we do not exceed the size of the buffer */
+
    if( longnames )
    {
       if( name != NULL )
@@ -3006,7 +3008,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
    int i;
    int nllevel; /* level of nonlinearity of problem: linear = 0, quadratic, smooth nonlinear, nonsmooth */
    static const char* nllevelname[4] = { "LP", "QCP", "NLP", "DNLP" };
-   const char* problemname;
+   char problemname[SCIP_MAXSTRLEN];
    char namebuf[70];
    SCIP_Bool havelongvarnames;
    SCIP_Bool havelongequnames;
@@ -3143,7 +3145,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
          nllevel = 3;
    }
 
-   problemname = oracle->name ? oracle->name : "m";
+   (void) SCIPsnprintf(problemname, SCIP_MAXSTRLEN, "%s", oracle->name ? oracle->name : "m");
 
    SCIPmessageFPrintInfo(messagehdlr, file, "Model %s / all /;\n", problemname);
    SCIPmessageFPrintInfo(messagehdlr, file, "option limrow = 0;\n");

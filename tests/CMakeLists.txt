@@ -92,11 +92,37 @@ if( CRITERION_FOUND )
         add_dependencies(unittests ${testName})
 
         #
+        # add a test to build this unit test
+        #
+        add_test(NAME ${testName}-build
+                COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${testName}
+                )
+
+        #
+        # avoid that several build jobs try to concurrently build the SCIP library
+        # note that this ressource lock name is not the actual libscip target
+        #
+        set_tests_properties(${testName}-build
+                            PROPERTIES
+                                RESOURCE_LOCK libscip
+                            )
+
+        #
         # Finally, add the executable as a test to the test framework
         #
+        if( COVERAGE )
+            set( ADDITIONAL_FLAGS "--no-early-exit" )
+        else()
+            set( ADDITIONAL_FLAGS "" )
+        endif()
+
         add_test(NAME ${testName}
-            COMMAND $<TARGET_FILE:${testName}>
+            COMMAND $<TARGET_FILE:${testName}> ${ADDITIONAL_FLAGS}
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-	    )
+            )
+        set_tests_properties(${testName}
+                            PROPERTIES
+                                DEPENDS ${testName}-build
+                            )
     endforeach(testSrc)
 endif()

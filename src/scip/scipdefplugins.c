@@ -92,6 +92,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludePresolRedvub(scip) );
    SCIP_CALL( SCIPincludePresolTrivial(scip) );
    SCIP_CALL( SCIPincludePresolTworowbnd(scip) );
+   SCIP_CALL( SCIPincludePresolSparsify(scip) );
    SCIP_CALL( SCIPincludePresolStuffing(scip) );
    SCIP_CALL( SCIPincludeNodeselBfs(scip) );
    SCIP_CALL( SCIPincludeNodeselBreadthfirst(scip) );
@@ -137,6 +138,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurLocalbranching(scip) );
    SCIP_CALL( SCIPincludeHeurLocks(scip) );
    SCIP_CALL( SCIPincludeHeurLpface(scip) );
+   SCIP_CALL( SCIPincludeHeurAlns(scip) );
    SCIP_CALL( SCIPincludeHeurNlpdiving(scip) );
    SCIP_CALL( SCIPincludeHeurMutation(scip) );
    SCIP_CALL( SCIPincludeHeurMultistart(scip) );
@@ -178,11 +180,10 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeSepaCGMIP(scip) );
    SCIP_CALL( SCIPincludeSepaClique(scip) );
    SCIP_CALL( SCIPincludeSepaClosecuts(scip) );
-   SCIP_CALL( SCIPincludeSepaCmir(scip) );
+   SCIP_CALL( SCIPincludeSepaAggregation(scip) );
    SCIP_CALL( SCIPincludeSepaConvexproj(scip) );
-   SCIP_CALL( SCIPincludeSepaEccuts(scip) );
    SCIP_CALL( SCIPincludeSepaDisjunctive(scip) );
-   SCIP_CALL( SCIPincludeSepaFlowcover(scip) );
+   SCIP_CALL( SCIPincludeSepaEccuts(scip) );
    SCIP_CALL( SCIPincludeSepaGauge(scip) );
    SCIP_CALL( SCIPincludeSepaGomory(scip) );
    SCIP_CALL( SCIPincludeSepaImpliedbounds(scip) );
@@ -193,6 +194,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeSepaStrongcg(scip) );
    SCIP_CALL( SCIPincludeSepaZerohalf(scip) );
    SCIP_CALL( SCIPincludeDispDefault(scip) );
+   SCIP_CALL( SCIPincludeTableDefault(scip) );
    SCIP_CALL( SCIPincludeEventHdlrSofttimelimit(scip) );
    SCIP_CALL( SCIPincludeConcurrentScipSolvers(scip) );
 

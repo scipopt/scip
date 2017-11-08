@@ -108,7 +108,7 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    int                   ncols,              /**< length of integrality array */
    int*                  intInfo             /**< integrality array (0: continuous, 1: integer) */
    )
-{
+{ /*lint --e{715}*/
    SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -189,6 +189,15 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    const SCIP_Real*      val                 /**< values of constraint matrix entries */
    )
 {  /*lint --e{715}*/
+
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
+
    assert( lpi != NULL );
 
    lpi->nrows = nrows;
@@ -213,6 +222,20 @@ SCIP_RETCODE SCIPlpiAddCols(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {  /*lint --e{715}*/
+
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+      {
+         assert( val[j] != 0 );
+         /* perform check that no new rows are added - this is forbidden */
+         assert( 0 <= ind[j] && ind[j] < lpi->nrows );
+      }
+   }
+#endif
+
+
    assert( lpi != NULL );
    assert( lpi->ncols >= 0 );
    assert(obj != NULL);
@@ -223,15 +246,6 @@ SCIP_RETCODE SCIPlpiAddCols(
    assert(nnonz == 0 || val != NULL);
    assert(nnonz >= 0);
    assert(ncols >= 0);
-
-#ifndef NDEBUG
-   {
-      /* perform check that no new rows are added - this is forbidden */
-      int j;
-      for (j = 0; j < nnonz; ++j)
-         assert( 0 <= ind[j] && ind[j] < lpi->nrows );
-   }
-#endif
 
    lpi->ncols += ncols;
 
@@ -298,6 +312,15 @@ SCIP_RETCODE SCIPlpiAddRows(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {  /*lint --e{715}*/
+
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
+
    assert( lpi != NULL );
    assert( lpi->nrows >= 0 );
 
@@ -575,7 +598,7 @@ SCIP_RETCODE SCIPlpiGetColNames(
    int                   namestoragesize,    /**< size of namestorage (if 0, storageleft returns the storage needed) */
    int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
    )
-{
+{ /*lint --e{715}*/
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -590,7 +613,7 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    int                   namestoragesize,    /**< size of namestorage (if 0, -storageleft returns the storage needed) */
    int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
    )
-{
+{ /*lint --e{715}*/
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -1075,7 +1098,7 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
    SCIP_LPSOLQUALITY     qualityindicator,   /**< indicates which quality should be returned */
    SCIP_Real*            quality             /**< pointer to store quality number */
    )
-{
+{ /*lint --e{715}*/
    assert(lpi != NULL);
    assert(quality != NULL);
 

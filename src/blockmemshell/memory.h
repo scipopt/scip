@@ -31,7 +31,10 @@
 
 #ifdef __cplusplus
 
+
 /* special thanks to Daniel Junglas for following template and macros */
+
+template<typename T> T* docast(T*, void *v);
 template<typename T> T* docast(T*, void *v) { return reinterpret_cast<T*>(v); }
 
 /* For C++11, we can easily check whether the types for memory functions like BMSduplicateXYZArray() are equal. */

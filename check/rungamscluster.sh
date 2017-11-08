@@ -107,7 +107,7 @@ if test "$PASSSTARTSOL" = 1 ; then
         touch $WORKDIR/include.u1
         GAMSOPTS="$GAMSOPTS u1=$WORKDIR/include.u1"
       fi
-      echo "execute_loadpoint '$sol'" >> $WORKDIR/include.u1
+      echo "execute_loadpoint '$sol';" >> $WORKDIR/include.u1
     fi
   done
 fi

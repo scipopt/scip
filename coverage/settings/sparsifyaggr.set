@@ -1,0 +1,21 @@
+# SCIP version 4.0.1.3
+
+# maximal number of presolving rounds the presolver participates in (-1: no limit)
+# [type: int, advanced: FALSE, range: [-1,2147483647], default: -1]
+presolving/sparsify/maxrounds = -1
+
+# should sparsify presolver be copied to sub-SCIPs?
+# [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: TRUE]
+presolving/sparsify/enablecopy = TRUE
+
+# should we cancel nonzeros in constraints of the linear constraint handler?
+# [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: FALSE]
+presolving/sparsify/cancellinear = TRUE
+
+# should we forbid cancellations that destroy integer coefficients?
+# [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: TRUE]
+presolving/sparsify/preserveintcoefs = FALSE
+
+# number of calls to wait until next execution as a multiple of the number of useless calls
+# [type: real, advanced: TRUE, range: [0,1.79769313486232e+308], default: 2]
+presolving/sparsify/waitingfac = 0

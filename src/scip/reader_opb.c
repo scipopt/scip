@@ -1211,10 +1211,10 @@ SCIP_RETCODE setObjective(
             /* add auxiliary variable to the problem */
             SCIP_CALL( SCIPaddVar(scip, var) );
 
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
             if( SCIPdebugIsMainscip(scip) )
             {
-               SCIP_Real val;
+               SCIP_Real val = 0.0;
 
                for( v = nvars - 1; v >= 0; --v )
                {
@@ -1279,7 +1279,7 @@ SCIP_RETCODE setObjective(
          /* add auxiliary variable to the problem */
          SCIP_CALL( SCIPaddVar(scip, var) );
 
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
          if( SCIPdebugIsMainscip(scip) )
          {
             SCIP_Real artval = 0.0;
@@ -1951,10 +1951,13 @@ SCIP_RETCODE computeAndConstraintInfos(
          /* collect all and-constraint variables */
          for( c = nandconss - 1; c >= 0; --c )
          {
+            SCIP_VAR** scipandvars;
+
             assert(andconss[c] != NULL);
 
+            scipandvars = SCIPgetVarsAnd(scip, andconss[c]);
             (*nandvars)[c] = SCIPgetNVarsAnd(scip, andconss[c]);
-            SCIP_CALL( SCIPduplicateMemoryArray(scip, &((*andvars)[c]), SCIPgetVarsAnd(scip, andconss[c]), (*nandvars)[c]) );  /*lint !e866 */
+            SCIP_CALL( SCIPduplicateMemoryArray(scip, &((*andvars)[c]), scipandvars, (*nandvars)[c]) );  /*lint !e866 */
             SCIP_CALL( getBinVarsRepresentatives(scip, (*andvars)[c], (*nandvars)[c], transformed) );
 
             (*resvars)[c] = SCIPgetResultantAnd(scip, andconss[c]);
@@ -3608,6 +3611,8 @@ SCIP_RETCODE writeOpbConstraints(
 	    /* only need to print indicator constraints with weights on their indicator variable */
 	    if( weight != 0 )
 	    {
+	       SCIP_VAR** scipvarslinear;
+	       SCIP_Real* scipvalslinear;
 	       SCIP_Bool cont;
 	       int nonbinarypos;
 
@@ -3615,10 +3620,12 @@ SCIP_RETCODE writeOpbConstraints(
 	       assert(lincons != NULL);
 
 	       nconsvars = SCIPgetNVarsLinear(scip, lincons);
+	       scipvarslinear = SCIPgetVarsLinear(scip, lincons);
+	       scipvalslinear = SCIPgetValsLinear(scip, lincons);
 
 	       /* allocate temporary memory */
-	       SCIP_CALL( SCIPduplicateBufferArray(scip, &consvars, SCIPgetVarsLinear(scip, lincons), nconsvars) );
-	       SCIP_CALL( SCIPduplicateBufferArray(scip, &consvals, SCIPgetValsLinear(scip, lincons), nconsvars) );
+	       SCIP_CALL( SCIPduplicateBufferArray(scip, &consvars, scipvarslinear, nconsvars) );
+	       SCIP_CALL( SCIPduplicateBufferArray(scip, &consvals, scipvalslinear, nconsvars) );
 
 	       nonbinarypos = -1;
 	       cont = FALSE;
@@ -4261,9 +4268,10 @@ SCIP_RETCODE SCIPwriteOpb(
 {  /*lint --e{715}*/
    SCIP_RETCODE retcode = SCIP_OKAY;
 
-   if( nvars != nbinvars && ncontvars + nimplvars + nbinvars != nvars && ncontvars + nimplvars != ( (SCIPfindConshdlr(scip, "indicator") != NULL) ? SCIPconshdlrGetNConss(SCIPfindConshdlr(scip, "indicator")) : 0 ) )
+   if( nvars != nbinvars && (nintvars > 0 || SCIPfindConshdlr(scip, "indicator") != NULL
+         || ncontvars + nimplvars != SCIPconshdlrGetNConss(SCIPfindConshdlr(scip, "indicator"))) )
    {
-      SCIPwarningMessage(scip, "OPB format is only capable for binary problems.\n");
+      SCIPwarningMessage(scip, "only binary problems can be written in OPB format.\n");
       *result = SCIP_DIDNOTRUN;
    }
    else

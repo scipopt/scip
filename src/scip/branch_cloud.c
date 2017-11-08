@@ -91,23 +91,24 @@ SCIP_DECL_BRANCHFREE(branchFreeCloud)
 
    if( branchruledata->cloudclock != NULL)
    {
-      int ntried;
-      int nuseful;
-      int ncloudpoints;
-      int nsavedlps;
-
       SCIPstatistic(
+         int ntried;
+         int nuseful;
+         int ncloudpoints;
+         int nsavedlps;
+
          ntried = branchruledata->ntried;
          nuseful = branchruledata->nuseful;
          ncloudpoints = branchruledata->ncloudpoints;
          nsavedlps = branchruledata->nsavedlps;
+
+         SCIPstatisticMessage("time spent diving in cloud branching: %g\n", SCIPgetClockTime(scip, branchruledata->cloudclock));
+         SCIPstatisticMessage("cloud branching tried: %6d      found cloud: %6d \n", ntried, nuseful);
+         SCIPstatisticMessage("cloud used points: %6d      saved LPs: %6d \n", ncloudpoints, nsavedlps);
+         SCIPstatisticMessage("cloud success rates useful/tried: %8.6g points/useful: %8.6g  saved/useful: %8.6g \n",
+            ntried == 0 ? -1 : (SCIP_Real)nuseful / ntried,  nuseful == 0 ? -1 : (SCIP_Real)ncloudpoints / nuseful, nuseful == 0 ? -1 :  (SCIP_Real)nsavedlps / nuseful);
       )
 
-      SCIPstatisticMessage("time spent diving in cloud branching: %g\n", SCIPgetClockTime(scip, branchruledata->cloudclock));
-      SCIPstatisticMessage("cloud branching tried: %6d      found cloud: %6d \n", ntried, nuseful);
-      SCIPstatisticMessage("cloud used points: %6d      saved LPs: %6d \n", ncloudpoints, nsavedlps);
-      SCIPstatisticMessage("cloud success rates useful/tried: %8.6g points/useful: %8.6g  saved/useful: %8.6g \n",
-         ntried == 0 ? -1 : (SCIP_Real)nuseful / ntried,  nuseful == 0 ? -1 : (SCIP_Real)ncloudpoints / nuseful, nuseful == 0 ? -1 :  (SCIP_Real)nsavedlps / nuseful);
       SCIP_CALL( SCIPfreeClock(scip, &(branchruledata->cloudclock)) );
    }
 
@@ -483,7 +484,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
 
    /* the second counter should maybe be replaced at some point */
    SCIP_CALL( SCIPselectVarStrongBranching(scip, lpcandscopy, lpcandssolcopy, lpcandsfraccopy, branchruledata->skipdown,
-         branchruledata->skipup, counter, counter, ncomplete, &branchruledata->lastcand, allowaddcons, 0, FALSE, FALSE,
+         branchruledata->skipup, counter, counter, ncomplete, &branchruledata->lastcand, 0, FALSE, FALSE,
          &bestcand, &bestdown, &bestup, &bestscore, &bestdownvalid, &bestupvalid, &provedbound, result) );
 
    if( branchruledata->lastcand <= ncomplete )
@@ -563,7 +564,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
             branchruledata->ntriedunions++;
             newscore = -SCIPinfinity(scip);
             SCIP_CALL( SCIPselectVarPseudoStrongBranching(scip, newlpcands, branchruledata->skipdown, branchruledata->skipup, counter, counter,
-                  allowaddcons, &newcand, &newdown, &newup, &newscore, &newdownvalid, &newupvalid, &newbound, result) );
+                  &newcand, &newdown, &newup, &newscore, &newdownvalid, &newupvalid, &newbound, result) );
 
             if( *result == SCIP_CUTOFF || *result == SCIP_REDUCEDDOM || *result == SCIP_CONSADDED  )
             {

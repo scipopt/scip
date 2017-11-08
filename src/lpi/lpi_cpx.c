@@ -756,13 +756,11 @@ void convertSides(
       }
       else if( lhs[i] <= -CPX_INFBOUND )
       {
-         assert(-CPX_INFBOUND < rhs[i] && rhs[i] < CPX_INFBOUND);
          lpi->senarray[i] = 'L';
          lpi->rhsarray[i] = rhs[i];
       }
       else if( rhs[i] >= CPX_INFBOUND )
       {
-         assert(-CPX_INFBOUND < lhs[i] && lhs[i] < CPX_INFBOUND);
          lpi->senarray[i] = 'G';
          lpi->rhsarray[i] = lhs[i];
       }
@@ -1043,7 +1041,7 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    int                   ncols,              /**< length of integrality array */
    int*                  intInfo             /**< integrality array (0: continuous, 1: integer) */
    )
-{
+{  /*lint --e{715}*/
    SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -1214,6 +1212,14 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    int rngcount;
    int c;
 
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
+
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
@@ -1265,6 +1271,15 @@ SCIP_RETCODE SCIPlpiAddCols(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {
+
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
+
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
@@ -1359,6 +1374,14 @@ SCIP_RETCODE SCIPlpiAddRows(
    )
 {
    int rngcount;
+
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
 
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
@@ -2212,7 +2235,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    if( CPXgetnumrows(lpi->cpxenv, lpi->cpxlp) == 0 )
    {
       CHECK_ZERO( lpi->messagehdlr, CPXgetintparam(lpi->cpxenv, CPX_PARAM_PREIND, &presolving) );
-      CPXsetintparam(lpi->cpxenv, CPX_PARAM_PREIND, CPX_ON);
+      CHECK_ZERO( lpi->messagehdlr, CPXsetintparam(lpi->cpxenv, CPX_PARAM_PREIND, CPX_ON) );
    }
 #endif
 
@@ -2224,7 +2247,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    /* restore previous value for presolving */
    if( CPXgetnumrows(lpi->cpxenv, lpi->cpxlp) == 0 )
    {
-      CPXsetintparam(lpi->cpxenv, CPX_PARAM_PREIND, presolving);
+      CHECK_ZERO( lpi->messagehdlr, CPXsetintparam(lpi->cpxenv, CPX_PARAM_PREIND, presolving) ); /*lint !e644*/
    }
 #endif
 
@@ -4411,11 +4434,11 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    case SCIP_LPPAR_BARRIERCONVTOL:
       *dval = getDblParam(lpi, CPX_PARAM_BAREPCOMP);
       break;
-   case SCIP_LPPAR_LOBJLIM:
-      *dval = getDblParam(lpi, CPX_PARAM_OBJLLIM);
-      break;
-   case SCIP_LPPAR_UOBJLIM:
-      *dval = getDblParam(lpi, CPX_PARAM_OBJULIM);
+   case SCIP_LPPAR_OBJLIM:
+      if ( CPXgetobjsen(lpi->cpxenv, lpi->cpxlp) == CPX_MIN )
+         *dval = getDblParam(lpi, CPX_PARAM_OBJULIM);
+      else
+         *dval = getDblParam(lpi, CPX_PARAM_OBJLLIM);
       break;
    case SCIP_LPPAR_LPTILIM:
       *dval = getDblParam(lpi, CPX_PARAM_TILIM);
@@ -4457,11 +4480,11 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    case SCIP_LPPAR_BARRIERCONVTOL:
       setDblParam(lpi, CPX_PARAM_BAREPCOMP, dval);
       break;
-   case SCIP_LPPAR_LOBJLIM:
-      setDblParam(lpi, CPX_PARAM_OBJLLIM, dval);
-      break;
-   case SCIP_LPPAR_UOBJLIM:
-      setDblParam(lpi, CPX_PARAM_OBJULIM, dval);
+   case SCIP_LPPAR_OBJLIM:
+      if ( CPXgetobjsen(lpi->cpxenv, lpi->cpxlp) == CPX_MIN )
+         setDblParam(lpi, CPX_PARAM_OBJULIM, dval);
+      else
+         setDblParam(lpi, CPX_PARAM_OBJLLIM, dval);
       break;
    case SCIP_LPPAR_LPTILIM:
       setDblParam(lpi, CPX_PARAM_TILIM, dval);

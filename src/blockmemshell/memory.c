@@ -326,6 +326,8 @@ void* BMSallocClearMemory_call(
 {
    void* ptr;
 
+   assert(typesize > 0);
+
    debugMessage("calloc %llu elements of %llu bytes [%s:%d]\n", (unsigned long long)num, (unsigned long long)typesize,
       filename, line);
 
@@ -733,7 +735,7 @@ struct BMS_ChkMem
 #define CHUNK_GT(ptr,chunk)  ptr >= chunk->storeend
 
 static
-SCIP_DEF_RBTREE_FIND(rbTreeFindChunk, const void*, CHUNK, CHUNK_LT, CHUNK_GT)
+SCIP_DEF_RBTREE_FIND(rbTreeFindChunk, const void*, CHUNK, CHUNK_LT, CHUNK_GT) /*lint !e123*/
 
 
 /** aligns the given byte size corresponding to the minimal alignment */
@@ -2618,6 +2620,7 @@ void* BMSallocBufferMemory_work(
    int                   line                /**< line number in source file of the function call */
    )
 {
+   /* cppcheck-suppress unassignedVariable */
    void* ptr;
 #ifndef SCIP_NOBUFFERMEM
    size_t bufnum;
@@ -2729,6 +2732,9 @@ void* BMSallocBufferMemory_work(
 #else
    if( buffer->clean )
    {
+      /* we should allocate at least one byte, otherwise BMSallocMemorySize will fail */
+      size = MAX(size,1);
+
       BMSallocClearMemorySize(&ptr, size);
    }
    else

@@ -16,6 +16,10 @@ set(scipsources
     blockmemshell/memory.c
     scip/message.c
     scip/bitencode.c
+    scip/bandit.c
+    scip/bandit_epsgreedy.c
+    scip/bandit_exp3.c
+    scip/bandit_ucb.c
     scip/branch_allfullstrong.c
     scip/branch_cloud.c
     scip/branch_distribution.c
@@ -85,6 +89,7 @@ set(scipsources
     scip/heur_localbranching.c
     scip/heur_lpface.c
     scip/heur_locks.c
+    scip/heur_alns.c
     scip/heur_mutation.c
     scip/heur_multistart.c
     scip/heur_mpec.c
@@ -139,6 +144,7 @@ set(scipsources
     scip/presol_trivial.c
     scip/presol_tworowbnd.c
     scip/presol_stuffing.c
+    scip/presol_sparsify.c
     scip/prop_dualfix.c
     scip/prop_genvbounds.c
     scip/prop_nlobbt.c
@@ -172,11 +178,10 @@ set(scipsources
     scip/sepa_cgmip.c
     scip/sepa_clique.c
     scip/sepa_closecuts.c
-    scip/sepa_cmir.c
+    scip/sepa_aggregation.c
     scip/sepa_convexproj.c
     scip/sepa_disjunctive.c
     scip/sepa_eccuts.c
-    scip/sepa_flowcover.c
     scip/sepa_gauge.c
     scip/sepa_gomory.c
     scip/sepa_impliedbounds.c
@@ -186,6 +191,7 @@ set(scipsources
     scip/sepa_rapidlearning.c
     scip/sepa_strongcg.c
     scip/sepa_zerohalf.c
+    scip/table_default.c
     scip/boundstore.c
     scip/branch.c
     scip/clock.c
@@ -227,8 +233,10 @@ set(scipsources
     scip/reopt.c
     scip/retcode.c
     scip/scip.c
+    scip/scip_bandit.c
     scip/scipbuildflags.c
     scip/scipdefplugins.c
+    scip/scipcoreplugins.c
     scip/scipgithash.c
     scip/scipshell.c
     scip/sepa.c
@@ -238,6 +246,7 @@ set(scipsources
     scip/solve.c
     scip/stat.c
     scip/syncstore.c
+    scip/table.c
     scip/tree.c
     scip/var.c
     scip/visual.c
@@ -265,6 +274,7 @@ set(objscipsources
     objscip/objreader.cpp
     objscip/objrelax.cpp
     objscip/objsepa.cpp
+    objscip/objtable.cpp
     objscip/objvardata.cpp
 )
 
@@ -332,12 +342,17 @@ set(objscipheaders
     objscip/objscipdefplugins.h
     objscip/objscip.h
     objscip/objsepa.h
+    objscip/objtable.h
     objscip/objvardata.h
     objscip/type_objcloneable.h
     objscip/type_objprobcloneable.h
 )
 
 set(scipheaders
+    scip/bandit.h
+    scip/bandit_epsgreedy.h
+    scip/bandit_exp3.h
+    scip/bandit_ucb.h
     scip/bitencode.h
     scip/boundstore.h
     scip/branch_allfullstrong.h
@@ -425,6 +440,7 @@ set(scipheaders
     scip/heur_linesearchdiving.h
     scip/heur_localbranching.h
     scip/heur_locks.h
+    scip/heur_alns.h
     scip/heur_lpface.h
     scip/heur_multistart.h
     scip/heur_mutation.h
@@ -490,6 +506,7 @@ set(scipheaders
     scip/presol_qpkktref.h
     scip/presol_redvub.h
     scip/presol_stuffing.h
+    scip/presol_sparsify.h
     scip/presol_trivial.h
     scip/presol_tworowbnd.h
     scip/presolve.h
@@ -509,6 +526,10 @@ set(scipheaders
     scip/prop_sync.h
     scip/prop_vbounds.h
     scip/pub_branch.h
+    scip/pub_bandit.h
+    scip/pub_bandit_epsgreedy.h
+    scip/pub_bandit_exp3.h
+    scip/pub_bandit_ucb.h
     scip/pub_compr.h
     scip/pub_conflict.h
     scip/pub_cons.h
@@ -537,6 +558,7 @@ set(scipheaders
     scip/pub_reopt.h
     scip/pub_sepa.h
     scip/pub_sol.h
+    scip/pub_table.h
     scip/pub_tree.h
     scip/pub_var.h
     scip/rbtree.h
@@ -565,6 +587,7 @@ set(scipheaders
     scip/reopt.h
     scip/retcode.h
     scip/scipbuildflags.h
+    scip/scipcoreplugins.h
     scip/scipdefplugins.h
     scip/scipgithash.h
     scip/scip.h
@@ -572,7 +595,7 @@ set(scipheaders
     scip/sepa_cgmip.h
     scip/sepa_clique.h
     scip/sepa_closecuts.h
-    scip/sepa_cmir.h
+    scip/sepa_aggregation.h
     scip/sepa_convexproj.h
     scip/sepa_disjunctive.h
     scip/sepa_eccuts.h
@@ -592,6 +615,7 @@ set(scipheaders
     scip/sol.h
     scip/solve.h
     scip/stat.h
+    scip/struct_bandit.h
     scip/struct_branch.h
     scip/struct_clock.h
     scip/struct_compr.h
@@ -631,11 +655,15 @@ set(scipheaders
     scip/struct_sol.h
     scip/struct_stat.h
     scip/struct_syncstore.h
+    scip/struct_table.h
     scip/struct_tree.h
     scip/struct_var.h
     scip/struct_visual.h
     scip/syncstore.h
+    scip/table_default.h
+    scip/table.h
     scip/tree.h
+    scip/type_bandit.h
     scip/type_branch.h
     scip/type_clock.h
     scip/type_compr.h
@@ -678,6 +706,7 @@ set(scipheaders
     scip/type_sol.h
     scip/type_stat.h
     scip/type_syncstore.h
+    scip/type_table.h
     scip/type_timing.h
     scip/type_tree.h
     scip/type_var.h
@@ -794,6 +823,15 @@ install(TARGETS scip libscip EXPORT scip-targets
 # Add all targets to the build-tree export set
 export(TARGETS scip libscip
   FILE "${CMAKE_BINARY_DIR}/scip-targets.cmake")
+
+#make soplex and zimpl dir absolute for the config file
+if(SOPLEX_FOUND)
+    get_filename_component(CONF_SOPLEX_DIR ${SOPLEX_DIR} REALPATH BASE_DIR ${CMAKE_SOURCE_DIR})
+endif()
+
+if(ZIMPL_FOUND)
+    get_filename_component(CONF_ZIMPL_DIR ${ZIMPL_DIR} REALPATH BASE_DIR ${CMAKE_SOURCE_DIR})
+endif()
 
 #configure the config file for the build tree
 set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src")

@@ -2188,6 +2188,7 @@ void SCIPprobPrintStatistics(
          SCIPprobGetNObjVars(prob, set), SCIPprobGetAbsMinObjCoef(prob, set), SCIPprobGetAbsMaxObjCoef(prob, set));
 }
 
+
 #ifndef NDEBUG
 
 /* In debug mode, the following methods are implemented as function calls to ensure

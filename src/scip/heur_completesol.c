@@ -56,7 +56,7 @@
 #define DEFAULT_IGNORECONT  FALSE       /**< should solution values for continuous variables be ignored? */
 #define DEFAULT_BESTSOLS        5       /**< heuristic stops, if the given number of improving solutions were found (-1: no limit) */
 #define DEFAULT_MAXPROPROUNDS  10       /**< maximal number of iterations in propagation (-1: no limit) */
-#define DEFAULT_MAXLPITER      -1       /**< maximal number of LP iterations (-1: no limit) */
+#define DEFAULT_MAXLPITER      -1LL     /**< maximal number of LP iterations (-1: no limit) */
 #define DEFAULT_MAXCONTVARS    -1       /**< maximal number of continuous variables after presolving (-1: no limit) */
 #define DEFAULT_BEFOREPRESOL  TRUE      /**< should the heuristic run before presolving? */
 
@@ -890,16 +890,28 @@ SCIP_RETCODE applyCompletesol(
 
    SCIP_CALL_ABORT( SCIPpresolve(subscip) );
 
-   SCIPdebugMsg(scip, "presolved instance has bin=%d, int=%d, cont=%d variables\n",
-         SCIPgetNBinVars(subscip), SCIPgetNIntVars(subscip), SCIPgetNContVars(subscip));
-
-   /* check whether the presolved instance is small enough */
-   if( heurdata->maxcontvars >= 0 && SCIPgetNContVars(subscip) > heurdata->maxcontvars )
+   if( SCIPgetStage(subscip) == SCIP_STAGE_PRESOLVED )
    {
-      SCIPdebugMsg(scip, "presolved instance has too many continuous variables (maxcontvars: %d)\n", heurdata->maxcontvars);
-      goto TERMINATE;
+      SCIPdebugMsg(scip, "presolved instance has bin=%d, int=%d, cont=%d variables\n",
+            SCIPgetNBinVars(subscip), SCIPgetNIntVars(subscip), SCIPgetNContVars(subscip));
+
+      /* check whether the presolved instance is small enough */
+      if( heurdata->maxcontvars >= 0 && SCIPgetNContVars(subscip) > heurdata->maxcontvars )
+      {
+         SCIPdebugMsg(scip, "presolved instance has too many continuous variables (maxcontvars: %d)\n", heurdata->maxcontvars);
+         goto TERMINATE;
+      }
+
+      /* set node limit of 1 if the presolved problem is an LP, otherwise we would start branching if an LP iteration
+       * limit was set by the user.
+       */
+      if( !SCIPisNLPEnabled(subscip) && SCIPgetNContVars(subscip) == SCIPgetNVars(subscip) )
+      {
+         SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 1LL) );
+      }
+
+      SCIP_CALL_ABORT( SCIPsolve(subscip) );
    }
-   SCIP_CALL_ABORT( SCIPsolve(subscip) );
 
    SCIP_CALL( SCIPdropEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, -1) );
 
@@ -1219,7 +1231,7 @@ SCIP_RETCODE SCIPincludeHeurCompletesol(
 
    SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/" HEUR_NAME "/maxlpiter",
          "maximal number of LP iterations (-1: no limit)",
-         &heurdata->maxlpiter, FALSE, DEFAULT_MAXLPITER, -1, INT_MAX, NULL, NULL) );
+         &heurdata->maxlpiter, FALSE, DEFAULT_MAXLPITER, -1LL, SCIP_LONGINT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxcontvars",
          "maximal number of continuous variables after presolving",

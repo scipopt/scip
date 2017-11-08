@@ -490,7 +490,7 @@ SCIP_RETCODE applyNlobbt(
 
       SCIP_CALL( SCIPnlpiCreateProblem(propdata->nlpi, &propdata->nlpiprob, "nlobbt-nlp") );
       SCIP_CALL( SCIPhashmapCreate(&propdata->var2nlpiidx, SCIPblkmem(scip), propdata->nlpinvars) );
-      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &propdata->nlpivars, SCIPgetVars(scip), propdata->nlpinvars) );
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &propdata->nlpivars, SCIPgetVars(scip), propdata->nlpinvars) ); /*lint !e666*/
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->nlscore, propdata->nlpinvars) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->status, propdata->nlpinvars) );
 

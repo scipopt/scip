@@ -226,7 +226,7 @@ SCIP_RETCODE separateCuts(
    {
       if( !SCIProwIsInLP(sepadata->objrow) )
       {
-         SCIP_CALL( SCIPaddCut(scip, sol, sepadata->objrow, FALSE, &infeasible) );
+         SCIP_CALL( SCIPaddRow(scip, sepadata->objrow, FALSE, &infeasible) );
       }
       if ( infeasible )
          *result = SCIP_CUTOFF;
