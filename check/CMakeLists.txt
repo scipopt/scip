@@ -485,3 +485,94 @@ set_tests_properties(write_and_read_settings
                         FAIL_REGULAR_EXPRESSION "ERROR"
                         DEPENDS scip-build
                     )
+
+#
+# define sets of linear classification results
+#
+
+set(linclass_bell5
+    " 4 SCIP_LINCONSTYPE_PRECEDENCE       17"
+    " 5 SCIP_LINCONSTYPE_VARBOUND         18"
+    "15 SCIP_LINCONSTYPE_MIXEDBINARY      26"
+    "16 SCIP_LINCONSTYPE_GENERAL          28"
+    )
+
+set(linclass_blend2
+    " 2 SCIP_LINCONSTYPE_SINGLETON        88"
+    " 3 SCIP_LINCONSTYPE_AGGREGATION       9"
+    )
+set(linclass_dcmulti
+    " 7 SCIP_LINCONSTYPE_SETPACKING        5"
+    " 9 SCIP_LINCONSTYPE_CARDINALITY       3"
+    "10 SCIP_LINCONSTYPE_INVKNAPSACK      10"
+    )
+set(linclass_egout
+    "15 SCIP_LINCONSTYPE_MIXEDBINARY      33"
+    )
+set(linclass_enigma
+    " 6 SCIP_LINCONSTYPE_SETPARTITION     20"
+    "11 SCIP_LINCONSTYPE_EQKNAPSACK        1"
+    )
+set(linclass_flugpl
+    "15 SCIP_LINCONSTYPE_MIXEDBINARY       0"
+    "16 SCIP_LINCONSTYPE_GENERAL          11"
+    )
+set(linclass_gt2
+    "14 SCIP_LINCONSTYPE_INTKNAPSACK      15"
+    )
+set(linclass_lseu
+    "13 SCIP_LINCONSTYPE_KNAPSACK         11"
+    )
+set(linclass_misc03
+    " 6 SCIP_LINCONSTYPE_SETPARTITION      5"
+    " 7 SCIP_LINCONSTYPE_SETPACKING        3"
+    " 8 SCIP_LINCONSTYPE_SETCOVERING      31"
+    " 9 SCIP_LINCONSTYPE_CARDINALITY      21"
+    "10 SCIP_LINCONSTYPE_INVKNAPSACK      33"
+    "12 SCIP_LINCONSTYPE_BINPACKING        2"
+    "15 SCIP_LINCONSTYPE_MIXEDBINARY       1"
+    )
+set(linclass_p0548
+    "0 SCIP_LINCONSTYPE_EMPTY             0"
+    "1 SCIP_LINCONSTYPE_FREE              0"
+    )
+
+set(linclasstests
+    linclass_bell5
+    linclass_blend2
+    linclass_dcmulti
+    linclass_egout
+    linclass_enigma
+    linclass_flugpl
+    linclass_gt2
+    linclass_lseu
+    linclass_misc03
+    linclass_p0548
+    )
+
+foreach(instance ${instances_MIP})
+    split_instance(${instance})
+    get_filename_component(shortbasename ${basename} NAME_WE)
+    LIST(FIND linclasstests linclass_${shortbasename} linclassfound)
+    if(NOT linclassfound EQUAL -1 )
+        configure_file(interactiveshell/linclass.bat.in interactiveshell/linclass-${basename}.bat)
+        add_test(NAME MIP-linclass-${basename}
+                COMMAND $<TARGET_FILE:scip> -b interactiveshell/linclass-${basename}.bat
+                )
+        set_tests_properties(MIP-linclass-${basename}
+                            PROPERTIES
+                                DEPENDS scip-build
+                            )
+        foreach( pass_regex ${linclass_${shortbasename}} )
+        set_tests_properties(MIP-linclass-${basename}
+                            PROPERTIES
+                                PASS_REGULAR_EXPRESSION "${pass_regex}"
+                            )
+        endforeach()
+
+    endif()
+
+endforeach()
+
+
+
