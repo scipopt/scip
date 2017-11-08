@@ -7865,7 +7865,7 @@ int SCIPlinConsStatsGetTypeCount(
    )
 {
    assert(linconsstats != NULL);
-   assert(0 <= (int)linconstype && (int)linconstype < SCIP_NLINCONSTYPES);
+   assert((int)linconstype < SCIP_NLINCONSTYPES);
 
    return linconsstats->counter[(int)linconstype];
 }

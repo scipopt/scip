@@ -29,7 +29,6 @@
 #include "nlpi/nlpi.h"
 #include "scip/pub_cons.h"
 #include "scip/type_cons.h"
-#include "scip/struct_cons.h"
 #include "scip/cons_linear.h"
 
 
@@ -3400,14 +3399,16 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayLinearConsClassification)
       SCIPdialogMessage(scip, NULL, "\nNo problem available for classification\n");
    else
    {
-      SCIP_LINCONSSTATS linconsstats;
-      SCIP_LINCONSSTATS* linconsstatsptr;
-      linconsstatsptr = &linconsstats;
+      SCIP_LINCONSSTATS* linconsstats;
+
+      SCIP_CALL( SCIPlinConsStatsCreate(scip, &linconsstats) );
 
       /* call linear constraint classification and print the statistics to standard out */
-      SCIP_CALL( SCIPclassifyConstraintTypesLinear(scip, linconsstatsptr) );
+      SCIP_CALL( SCIPclassifyConstraintTypesLinear(scip, linconsstats) );
 
-      SCIPprintLinConsStats(scip, NULL, linconsstatsptr);
+      SCIPprintLinConsStats(scip, NULL, linconsstats);
+
+      SCIPlinConsStatsFree(scip, &linconsstats);
    }
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
