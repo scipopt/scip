@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   presol_symmetry.cpp
+/**@file   presol_symmetry.c
  * @brief  presolver for storing symmetry information about current problem
  * @author Marc Pfetsch
  * @author Thomas Rehn

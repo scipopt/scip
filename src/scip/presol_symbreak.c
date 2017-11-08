@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   presol_symbreak.cpp
+/**@file   presol_symbreak.c
  * @brief  presolver for adding symmetry breaking constraints
  * @author Marc Pfetsch
  * @author Thomas Rehn
