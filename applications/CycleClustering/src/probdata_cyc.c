@@ -1185,6 +1185,8 @@ SCIP_RETCODE SCIPcycPrintSolutionValues(
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
 
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "\nDisplaying aggregated solution data: \n");
+
    for( c1  = 0; c1 < probdata->ncluster; ++c1 )
    {
       value = 0;
@@ -1198,7 +1200,7 @@ SCIP_RETCODE SCIPcycPrintSolutionValues(
          }
       }
 
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Coherence in cluster %d is %f \n", c1 + 1, value);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Coherence in cluster %d  :  %f \n", c1 + 1, value);
       coherence += value;
       objvalue += probdata->scale * value;
    }
@@ -1227,13 +1229,12 @@ SCIP_RETCODE SCIPcycPrintSolutionValues(
          }
       }
 
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "irrev_%d_%d is %f \n", c1 + 1, (c1 + 2) % probdata->ncluster, value);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Net flow from %d to %d    :  %f \n", c1, phi(c1, probdata->ncluster), value);
       flow += value;
       objvalue += value;
    }
 
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "objvalue is %f \n",  objvalue);
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Total coherence is %f \n",  coherence);
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Total net flow is %f \n",  flow);
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Total coherence         :  %f \n",  coherence);
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Total net flow          :  %f \n",  flow);
    return SCIP_OKAY;
 }

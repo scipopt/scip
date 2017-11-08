@@ -9,6 +9,11 @@ set(instances
 "Pot/6Cycle/Pot6_T_20.txt_6cluster"
 )
 
+set(settings
+    "default"
+    "nosepa"
+)
+
 #
 # add a test that builds the executable
 #
@@ -28,16 +33,18 @@ set_tests_properties(applications-cycleclustering-build
 # add a test for every instance
 #
 foreach(instance ${instances})
-    list(GET instance 0 basename)
-    #
-    # call the Binpacking binary and validate the solve with the given objective value
-    #
-    add_test(NAME "applications-cycleclustering-${basename}"
-            COMMAND $<TARGET_FILE:cycleclustering> -f ${CMAKE_CURRENT_SOURCE_DIR}/../instances/${basename}.cyc
-            )
-    set_tests_properties("applications-cycleclustering-${basename}"
-                        PROPERTIES
-                            PASS_REGULAR_EXPRESSION "optimal solution found"
-                            DEPENDS applications-cycleclustering-build
-                        )
+    foreach( setting ${settings})
+        list(GET instance 0 basename)
+        #
+        # call the Binpacking binary and validate the solve with the given objective value
+        #
+        add_test(NAME "applications-cycleclustering-${basename}-${setting}"
+                COMMAND $<TARGET_FILE:cycleclustering> -f ${CMAKE_CURRENT_SOURCE_DIR}/../instances/${basename}.cyc -s  ${CMAKE_CURRENT_SOURCE_DIR}/../settings/${setting}.set
+                )
+        set_tests_properties("applications-cycleclustering-${basename}-${setting}"
+                            PROPERTIES
+                                PASS_REGULAR_EXPRESSION "optimal solution found"
+                                DEPENDS applications-cycleclustering-build
+                            )
+    endforeach()
 endforeach()
