@@ -397,7 +397,7 @@ SCIP_RETCODE propagateOrbitalFixing(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_PROPDATA*        propdata,           /**< propagator data */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the node is detected to be infeasible */
-   int*                  ngen                /**< pointer to store the number of propagations */
+   int*                  nprop               /**< pointer to store the number of propagations */
    )
 {
    SCIP_Shortbool* activeperms;
@@ -415,10 +415,10 @@ SCIP_RETCODE propagateOrbitalFixing(
    assert( scip != NULL );
    assert( propdata != NULL );
    assert( infeasible != NULL );
-   assert( ngen != NULL );
+   assert( nprop != NULL );
 
    *infeasible = FALSE;
-   *ngen = 0;
+   *nprop = 0;
 
    assert( propdata->permvars != NULL );
    assert( propdata->npermvars > 0 );
@@ -484,7 +484,7 @@ SCIP_RETCODE propagateOrbitalFixing(
 
       propdata->nfixedzero += nfixedzero;
       propdata->nfixedone += nfixedone;
-      *ngen = nfixedzero + nfixedone;
+      *nprop = nfixedzero + nfixedone;
 
       SCIPdebugMsg(scip, "Orbital fixings: %d 0s, %d 1s.\n", nfixedzero, nfixedone);
    }
@@ -644,7 +644,7 @@ SCIP_DECL_PROPEXEC(propExecOrbitalfixing)
    SCIP_PROPDATA* propdata;
    SCIP_Bool infeasible = FALSE;
    SCIP_Longint nodenumber;
-   int ngen = 0;
+   int nprop = 0;
 
    assert( scip != NULL );
    assert( result != NULL );
@@ -681,10 +681,10 @@ SCIP_DECL_PROPEXEC(propExecOrbitalfixing)
    *result = SCIP_DIDNOTFIND;
 
    SCIPdebugMsg(scip, "Propagating <%s>.\n", SCIPpropGetName(prop));
-   SCIP_CALL( propagateOrbitalFixing(scip, propdata, &infeasible, &ngen) );
+   SCIP_CALL( propagateOrbitalFixing(scip, propdata, &infeasible, &nprop) );
    if ( infeasible )
       *result = SCIP_CUTOFF;
-   else if ( ngen > 0 )
+   else if ( nprop > 0 )
       *result = SCIP_REDUCEDDOM;
 
    return SCIP_OKAY;
