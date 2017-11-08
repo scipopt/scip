@@ -622,6 +622,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
    int i;
    int j;
    int numcancel;
+   int oldnchgcoefs;
    int nfillin;
    int* locks;
    int* perm;
@@ -821,6 +822,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       /* loop over the rows and cancel non-zeros until maximum number of retrieves is reached */
       maxuseless = (SCIP_Longint)(presoldata->maxretrievefac * (SCIP_Real)nrows);
       nuseless = 0;
+      oldnchgcoefs = *nchgcoefs;
       for( r = 0; r < nrows && nuseless <= maxuseless; r++ )
       {
          int rowidx;
@@ -863,7 +865,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
             " - in total %d canceled nonzeros, %d changed coefficients, %d added nonzeros\n",
             SCIPgetSolvingTime(scip), (nuseless > maxuseless ? "aborted" : "finished"), numcancel,
             SCIPmatrixGetNNonzs(matrix), 100.0*(SCIP_Real)numcancel/(SCIP_Real)SCIPmatrixGetNNonzs(matrix),
-            presoldata->ncancels, SCIPpresolGetNChgCoefs(presol), presoldata->nfillin);
+            presoldata->ncancels, SCIPpresolGetNChgCoefs(presol) + *nchgcoefs - oldnchgcoefs, presoldata->nfillin);
          *result = SCIP_SUCCESS;
       }
 
