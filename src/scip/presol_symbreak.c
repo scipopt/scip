@@ -1193,7 +1193,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSymbreak)
             SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->orbits, presoldata->npermvars) );
             SCIP_CALL( SCIPallocBlockMemoryArray(scip, &presoldata->orbitbegins, presoldata->npermvars) );
 
-            SCIP_CALL( SCIPcomputeGroupOrbits(scip, presoldata->permvars, presoldata->npermvars, presoldata->perms, presoldata->nperms, NULL,
+            SCIP_CALL( SCIPcomputeGroupOrbitsSymbreak(scip, presoldata->permvars, presoldata->npermvars, presoldata->perms, presoldata->nperms, NULL,
                   presoldata->orbits, presoldata->orbitbegins, &presoldata->norbits) );
          }
 
@@ -1331,7 +1331,7 @@ SCIP_RETCODE SCIPincludePresolSymbreak(
  *  orbits[orbitbegins[i]], ... , orbits[orbitbegins[i + 1] - 1].
  *  Note that the description of the orbits ends at orbitbegins[norbits] - 1.
  */
-SCIP_RETCODE SCIPcomputeGroupOrbits(
+SCIP_RETCODE SCIPcomputeGroupOrbitsSymbreak(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_VAR**            permvars,           /**< variables considered by symbreak presolver */
    int                   npermvars,          /**< length of a permutation array */
