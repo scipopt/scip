@@ -770,8 +770,7 @@ namespace polyscip {
         assert (size == orig_vals.size());
         auto is_dominated = false;
 
-        auto ret = SCIPfreeTransform(scip_);
-        assert (ret == SCIP_OKAY);
+        SCIPfreeTransform(scip_);
 
         auto new_cons = vector<SCIP_CONS*>{};
         // add objective value constraints
@@ -780,8 +779,7 @@ namespace polyscip {
                                          orig_vals[i],
                                          -SCIPinfinity(scip_),
                                          outcome[i]);
-            ret =  SCIPaddCons(scip_, cons);
-            assert (ret == SCIP_OKAY);
+            SCIPaddCons(scip_, cons);
             new_cons.push_back(cons);
         }
 
@@ -807,14 +805,11 @@ namespace polyscip {
             polyscip_status_ = PolyscipStatus::Error;
         }
 
-        ret = SCIPfreeTransform(scip_);
-        assert (ret == SCIP_OKAY);
+        SCIPfreeTransform(scip_);
         // release and delete added constraints
         for (auto cons : new_cons) {
-            ret = SCIPdelCons(scip_, cons);
-            assert (ret == SCIP_OKAY);
-            ret = SCIPreleaseCons(scip_, addressof(cons));
-            assert (ret == SCIP_OKAY);
+            SCIPdelCons(scip_, cons);
+            SCIPreleaseCons(scip_, addressof(cons));
         }
 
         return is_dominated;
@@ -835,8 +830,7 @@ namespace polyscip {
         // add constraints on objective values given by box
         auto obj_val_cons = vector<SCIP_CONS *>{};
         if (SCIPisTransformed(scip_)) {
-            auto ret = SCIPfreeTransform(scip_);
-            assert (ret == SCIP_OKAY);
+            SCIPfreeTransform(scip_);
         }
         for (size_t i=0; i<box.size(); ++i) {
             auto interval = box.getInterval(i);
@@ -844,8 +838,7 @@ namespace polyscip {
                                              orig_vals[i],
                                              interval.first,
                                              interval.second - cmd_line_args_.getDelta());
-            auto ret = SCIPaddCons(scip_, new_cons);
-            assert (ret == SCIP_OKAY);
+            SCIPaddCons(scip_, new_cons);
             obj_val_cons.push_back(new_cons);
         }
 
@@ -857,14 +850,11 @@ namespace polyscip {
 
         // release and delete objective value constraints
         if (SCIPisTransformed(scip_)) {
-            auto ret = SCIPfreeTransform(scip_);
-            assert (ret == SCIP_OKAY);
+            SCIPfreeTransform(scip_);
         }
         for (auto cons : obj_val_cons) {
-            auto ret = SCIPdelCons(scip_, cons);
-            assert (ret == SCIP_OKAY);
-            ret = SCIPreleaseCons(scip_, addressof(cons));
-            assert (ret == SCIP_OKAY);
+            SCIPdelCons(scip_, cons);
+            SCIPreleaseCons(scip_, addressof(cons));
         }
 
         // check computed subproblem results
