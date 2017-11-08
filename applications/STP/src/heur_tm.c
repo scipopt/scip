@@ -2058,7 +2058,7 @@ SCIP_RETCODE SCIPStpHeurTMRun(
 
             SCIPdebugMessage("\n Obj(run: %d, ncall: %d)=%.12e\n\n", r, (int) nexecs, obj);
 
-            for( e = nedges - 1; e >= 0; e-- )
+            for( e = 0; e < nedges; e++ )
                best_result[e] = result[e];
             (*success) = TRUE;
          }

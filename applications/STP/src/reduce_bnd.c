@@ -2220,9 +2220,6 @@ SCIP_RETCODE da_reducePcMw(
       printf("ROOTRUNS: minpathcost %f \n", minpathcost);
       printf("lb: %f ub: %f \n", lpobjval, upperbound);
 
-      // todo: necessary?
-      for( int e = 0; e < transnedges; e++ )
-         marked[e] = FALSE;
 
       /* distance from root to all nodes */
       graph_path_execX(scip, transgraph, tmproot, cost, pathdist, pathedge);
@@ -2240,6 +2237,9 @@ SCIP_RETCODE da_reducePcMw(
 
       assert(graph->mark[tmproot]);
       graph->mark[tmproot] = FALSE;
+
+      for( int e = 0; e < transnedges; e++ )
+         marked[e] = FALSE;
 
       /* try to eliminate vertices and edges */
       nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, apsol);
