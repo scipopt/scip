@@ -3847,13 +3847,13 @@ SCIP_RETCODE SCIPincludeDialogDefault(
    }
 
    /* display linear constraint type classification */
-   if( !SCIPdialogHasEntry(root, "linclass") )
+   if( !SCIPdialogHasEntry(submenu, "linclass") )
    {
       SCIP_CALL( SCIPincludeDialog(scip, &dialog,
             NULL,
             SCIPdialogExecDisplayLinearConsClassification, NULL, NULL,
             "linclass", "linear constraint classification as used for MIPLIB", FALSE, NULL) );
-      SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
