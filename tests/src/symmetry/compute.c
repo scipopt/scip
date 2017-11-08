@@ -128,7 +128,7 @@ Test(test_compute_symmetry, basic1, .description = "compute symmetry for a simpl
    /* compute orbits */
    SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
-   SCIP_CALL( SCIPcomputeGroupOrbits(scip, permvars, npermvars, perms, nperms, NULL, orbits, orbitbegins, &norbits) );
+   SCIP_CALL( SCIPcomputeGroupOrbitsSymbreak(scip, permvars, npermvars, perms, nperms, NULL, orbits, orbitbegins, &norbits) );
    cr_assert( norbits == 1 );
    cr_assert( orbitbegins[0] == 0 );
    cr_assert( orbitbegins[1] == 4 );
@@ -240,7 +240,7 @@ Test(test_compute_symmetry, basic2, .description = "compute symmetry for a simpl
    /* compute orbits */
    SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
-   SCIP_CALL( SCIPcomputeGroupOrbits(scip, permvars, npermvars, perms, nperms, NULL, orbits, orbitbegins, &norbits) );
+   SCIP_CALL( SCIPcomputeGroupOrbitsSymbreak(scip, permvars, npermvars, perms, nperms, NULL, orbits, orbitbegins, &norbits) );
    cr_assert( norbits == 1 );
    cr_assert( orbitbegins[0] == 0 );
    cr_assert( orbitbegins[1] == 2 );
@@ -363,7 +363,7 @@ Test(test_compute_symmetry, basic3, .description = "compute symmetry for a simpl
    /* compute orbits */
    SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
-   SCIP_CALL( SCIPcomputeGroupOrbits(scip, permvars, npermvars, perms, nperms, NULL, orbits, orbitbegins, &norbits) );
+   SCIP_CALL( SCIPcomputeGroupOrbitsSymbreak(scip, permvars, npermvars, perms, nperms, NULL, orbits, orbitbegins, &norbits) );
    cr_assert( norbits == 2 );
    cr_assert( orbitbegins[0] == 0 );
    cr_assert( orbitbegins[1] == 2 );
