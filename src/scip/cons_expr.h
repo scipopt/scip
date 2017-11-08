@@ -223,7 +223,7 @@ SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrProduct(
 
 /** returns expression handler for x*log(x) expressions */
 EXTERN
-SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrXlogx(
+SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrEntropy(
    SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
    );
 

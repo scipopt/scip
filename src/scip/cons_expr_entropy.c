@@ -145,7 +145,7 @@ SCIP_Real reversePropBinarySearch(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             xmin,               /**< smallest possible x */
    SCIP_Real             xmax,               /**< largest possible x */
-   SCIP_Bool             increasing,         /**< x*log(x) is increasing or decreasing on [xmin,xmax] */
+   SCIP_Bool             increasing,         /**< -x*log(x) is increasing or decreasing on [xmin,xmax] */
    SCIP_Real             targetval           /**< target value */
    )
 {
@@ -371,6 +371,31 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printEntropy)
    return SCIP_OKAY;
 }
 
+/** expression parse callback */
+static
+SCIP_DECL_CONSEXPR_EXPRPARSE(parseEntropy)
+{
+   SCIP_CONSEXPR_EXPR* childexpr;
+
+   assert(expr != NULL);
+
+   /* parse child expression from remaining string */
+   SCIP_CALL( SCIPparseConsExprExpr(scip, consexprhdlr, string, endstring, &childexpr) );
+   assert(childexpr != NULL);
+
+   /* create entropy expression */
+   SCIP_CALL( SCIPcreateConsExprExprEntropy(scip, consexprhdlr, expr, childexpr) );
+   assert(*expr != NULL);
+
+   /* release child expression since it has been captured by the entropy expression */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &childexpr) );
+
+   *success = TRUE;
+
+   return SCIP_OKAY;
+}
+
+
 /** expression (point-) evaluation callback */
 static
 SCIP_DECL_CONSEXPR_EXPREVAL(evalEntropy)
@@ -454,9 +479,9 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalEntropy)
    /* if the lower bound is 0, we need to set the resultant manually */
    else if( childinf == 0.0 )
    {
-      if( SCIPisLE(scip, childsup, exp(-1.0)) )
+      if( SCIPisFeasLE(scip, childsup, exp(-1.0)) )
          SCIPintervalSetBounds(interval, 0.0, -childsup * log(childsup));
-      else if( SCIPisLE(scip, childsup, 1.0) )
+      else if( SCIPisFeasLE(scip, childsup, 1.0) )
          SCIPintervalSetBounds(interval, 0.0, exp(-1.0));
       else
          SCIPintervalSetBounds(interval, -childsup * log(childsup), 0.0);
@@ -581,6 +606,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrEntropy(
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataEntropy, freedataEntropy) );
    SCIP_CALL( SCIPsetConsExprExprHdlrSimplify(scip, consexprhdlr, exprhdlr, simplifyEntropy) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printEntropy) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseEntropy) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalEntropy) );
    SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, sepaEntropy) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropEntropy) );
