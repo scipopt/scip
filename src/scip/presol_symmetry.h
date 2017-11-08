@@ -59,11 +59,11 @@ SCIP_RETCODE SCIPregisterSymmetry(
    SYM_SPEC              fixedtype           /**< variable types that callee wants to have fixed */
    );
 
-/** whether symmetry should be computed for after presolving */
+/** return at what time symmetry is computed (before or after presolving) */
 EXTERN
-SCIP_RETCODE SCIPcomputePresolvedSymmetry(
+SCIP_RETCODE SCIPgetTimingSymmetry(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool*            afterpresolve       /**< pointer to store whether symmetry is computed after presolving */
+   SCIP_Bool*            afterpresolve       /**< pointer to store whether symmetry is computed in stage initpre or exitpre */
    );
 
 #ifdef __cplusplus
