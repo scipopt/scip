@@ -7824,6 +7824,31 @@ SCIP_RETCODE SCIPconshdlrsResetPropagationStatus(
    return SCIP_OKAY;
 }
 
+/** create linear constraint statistics */
+SCIP_RETCODE SCIPlinConsStatsCreate(
+   SCIP*                scip,                /**< scip data structure */
+   SCIP_LINCONSSTATS**  linconsstats         /**< pointer to linear constraint classification statistics */
+   )
+{
+   assert(linconsstats != NULL);
+
+   SCIP_CALL( SCIPallocBlockMemory(scip, linconsstats) );
+
+   return SCIP_OKAY;
+}
+
+/** free linear constraint statistics */
+void SCIPlinConsStatsFree(
+   SCIP*                scip,                /**< scip data structure */
+   SCIP_LINCONSSTATS**  linconsstats         /**< pointer to linear constraint classification statistics */
+   )
+{
+   assert(linconsstats != NULL);
+   assert(*linconsstats != NULL);
+
+   SCIPfreeBlockMemory(scip, linconsstats);
+}
+
 /** resets linear constraint statistics */
 void SCIPlinConsStatsReset(
    SCIP_LINCONSSTATS*   linconsstats         /**< linear constraint classification statistics */
