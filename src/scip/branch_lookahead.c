@@ -58,10 +58,10 @@
 #define DEFAULT_USEDOMAINREDUCTION           TRUE  /**< Should domain reductions be collected and applied? */
 #define DEFAULT_MAXNUMBERVIOLATEDCONS        1     /**< How many constraints that are violated by the base lp solution
                                                     *   should be gathered until the rule is stopped and they are added? */
-#define DEFAULT_MAXNUMBERVIOLATEDBINCONS     -1    /**< How many binary constraints that are violated by the base lp
+#define DEFAULT_MAXNUMBERVIOLATEDBINCONS     0     /**< How many binary constraints that are violated by the base lp
                                                     *   solution should be gathered until the rule is stopped and they are
                                                     *   added? */
-#define DEFAULT_MAXNUMBERVIOLATEDDOMREDS     -1    /**< How many domain reductions that are violated by the base lp solution
+#define DEFAULT_MAXNUMBERVIOLATEDDOMREDS     0     /**< How many domain reductions that are violated by the base lp solution
                                                     *   should be gathered until the rule is stopped and they are added? */
 #define DEFAULT_STOREUNVIOLATEDSOL           TRUE  /**< If only non violating constraints are added, should the branching
                                                     *   decision be stored till the next call? */
@@ -3853,7 +3853,7 @@ SCIP_RETCODE selectVarRecursive(
                LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Found <%i> violating binary constraints.\n",
                      nbincons);
 
-               if( (config->maxnviolatedbincons >= 0) && (nbincons > config->maxnviolatedbincons) )
+               if( (config->maxnviolatedbincons > 0) && (nbincons >= config->maxnviolatedbincons) )
                {
                   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The max number of violated binary constraints <%i> is "
                      "exceeded.\n", config->maxnviolatedbincons);
@@ -3866,7 +3866,7 @@ SCIP_RETCODE selectVarRecursive(
                ndomreds = domainreductions->nviolatedvars;
                LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Found <%i> bound changes.\n", ndomreds);
 
-               if( (config->maxnviolateddomreds >= 0) && (ndomreds > config->maxnviolateddomreds) )
+               if( (config->maxnviolateddomreds > 0) && (ndomreds >= config->maxnviolateddomreds) )
                {
                   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The max number of violated bound changes <%i> is "
                      "exceeded.\n", config->maxnviolateddomreds);
@@ -3874,7 +3874,7 @@ SCIP_RETCODE selectVarRecursive(
                }
             }
 
-            if( config->maxnviolatedcons >= 0 && (nbincons + ndomreds > config->maxnviolatedcons) )
+            if( config->maxnviolatedcons > 0 && (nbincons + ndomreds >= config->maxnviolatedcons) )
             {
                LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The max number of violated binary constraints and bound "
                   "changes <%i> is exceeded.\n", config->maxnviolatedcons);
@@ -4710,16 +4710,16 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          &branchruledata->config->addbinconsrow, TRUE, DEFAULT_ADDBINCONSROW, 0, 2, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "branching/lookahead/maxnumberviolatedcons",
          "how many constraints that are violated by the base lp solution should be gathered until the rule is stopped and "\
-         "they are added?",
-         &branchruledata->config->maxnviolatedcons, TRUE, DEFAULT_MAXNUMBERVIOLATEDCONS, -1, INT_MAX, NULL, NULL) );
+         "they are added? [0 for unrestricted]",
+         &branchruledata->config->maxnviolatedcons, TRUE, DEFAULT_MAXNUMBERVIOLATEDCONS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "branching/lookahead/maxnumberviolatedbincons",
          "how many binary constraints that are violated by the base lp solution should be gathered until the rule is "\
-         "stopped and they are added?",
-         &branchruledata->config->maxnviolatedbincons, TRUE, DEFAULT_MAXNUMBERVIOLATEDBINCONS, -1, INT_MAX, NULL, NULL) );
+         "stopped and they are added? [0 for unrestricted]",
+         &branchruledata->config->maxnviolatedbincons, TRUE, DEFAULT_MAXNUMBERVIOLATEDBINCONS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "branching/lookahead/maxnumberviolateddomreds",
          "how many domain reductions that are violated by the base lp solution should be gathered until the rule is "\
-         "stopped and they are added?",
-         &branchruledata->config->maxnviolateddomreds, TRUE, DEFAULT_MAXNUMBERVIOLATEDDOMREDS, -1, INT_MAX, NULL, NULL) );
+         "stopped and they are added? [0 for unrestricted]",
+         &branchruledata->config->maxnviolateddomreds, TRUE, DEFAULT_MAXNUMBERVIOLATEDDOMREDS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddLongintParam(scip,
          "branching/lookahead/reevalage",
          "max number of LPs solved after which a previous prob branching results are recalculated",
