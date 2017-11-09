@@ -1050,39 +1050,6 @@ SCIP_RETCODE redLoopMw(
          SCIPdebugMessage("ans advanced deleted: %d \n", ansadelims);
       }
 
-      if( nnp )
-      {
-         reduce_nnp(scip, g, nodearrint2, &nnpelims);
-
-         if( nnpelims <= redbound )
-            nnp = FALSE;
-
-         SCIPdebugMessage("nnp deleted: %d \n", nnpelims);
-      }
-
-      if( nnp || extensive )
-      {
-         SCIP_CALL( chain2Reduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &chain2elims, 500));
-
-         if( chain2elims <= redbound )
-            chain2 = FALSE;
-
-         SCIPdebugMessage("chain2 delete: %d \n", chain2elims);
-
-         if( SCIPgetTotalTime(scip) > timelimit )
-            break;
-      }
-
-      if( npv || extensive )
-      {
-         SCIP_CALL( npvReduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &npvelims, 400));
-
-         if( npvelims <= redbound )
-            npv = FALSE;
-
-         SCIPdebugMessage("npv delete: %d \n", npvelims);
-      }
-
       if( ans || ansad || nnp || npv || extensive )
          SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
 
@@ -1098,9 +1065,42 @@ SCIP_RETCODE redLoopMw(
          SCIPdebugMessage("Dual-Ascent Elims: %d \n", daelims);
       }
 
+      if( nnp )
+      {
+         reduce_nnp(scip, g, nodearrint2, &nnpelims);
+
+         if( nnpelims <= redbound )
+            nnp = FALSE;
+
+         SCIPdebugMessage("nnp deleted: %d \n", nnpelims);
+      }
+
+      if( nnp || extensive )
+      {
+         SCIP_CALL(chain2Reduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &chain2elims, 500));
+
+         if( chain2elims <= redbound )
+            chain2 = FALSE;
+
+         SCIPdebugMessage("chain2 delete: %d \n", chain2elims);
+
+         if( SCIPgetTotalTime(scip) > timelimit )
+            break;
+      }
+
+      if( npv || extensive )
+      {
+         SCIP_CALL(npvReduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &npvelims, 400));
+
+         if( npvelims <= redbound )
+            npv = FALSE;
+
+         SCIPdebugMessage("npv delete: %d \n", npvelims);
+      }
+
       if( chain2 || extensive )
       {
-         SCIP_CALL( chain2Reduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &chain2elims, 300) );
+         SCIP_CALL(chain2Reduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &chain2elims, 300));
 
          if( chain2elims <= redbound )
             chain2 = FALSE;

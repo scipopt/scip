@@ -1531,7 +1531,7 @@ SCIP_RETCODE SCIPStpDualAscent(
    int* RESTRICT cutverts;
    int* RESTRICT unsatarcs;
    int* RESTRICT unsattails;
-   STP_Bool* RESTRICT gmark;
+   int* RESTRICT gmark;
    STP_Bool* RESTRICT active;
    const int nnodes = g->knots;
    const int nterms = g->terms;
@@ -1626,11 +1626,11 @@ SCIP_RETCODE SCIPStpDualAscent(
 
    SCIP_CALL( SCIPpqueueCreate(&pqueue, nterms, 2.0, GNODECmpByDist) );
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &edgearr, nedges) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &tailarr, nedges) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &start, nnodes + 1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &gmark, nnodes + 1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &stackarr, nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &edgearr, nedges) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &tailarr, nedges) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &start, nnodes + 1) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &gmark, nnodes + 1) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &stackarr, nnodes) );
 
    /* fill auxiliary adjacent vertex/edges arrays */
    graph_get_csr(g, edgearr, tailarr, start, &nnewedges);
@@ -2023,11 +2023,11 @@ SCIP_RETCODE SCIPStpDualAscent(
    SCIPfreeBufferArray(scip, &bitarr);
 #endif
 
-   SCIPfreeBufferArray(scip, &stackarr);
-   SCIPfreeBufferArray(scip, &gmark);
-   SCIPfreeBufferArray(scip, &start);
-   SCIPfreeBufferArray(scip, &tailarr);
-   SCIPfreeBufferArray(scip, &edgearr);
+   SCIPfreeMemoryArray(scip, &stackarr);
+   SCIPfreeMemoryArray(scip, &gmark);
+   SCIPfreeMemoryArray(scip, &start);
+   SCIPfreeMemoryArray(scip, &tailarr);
+   SCIPfreeMemoryArray(scip, &edgearr);
 
    SCIPpqueueFree(&pqueue);
 
