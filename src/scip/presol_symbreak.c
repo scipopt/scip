@@ -1099,7 +1099,7 @@ SCIP_DECL_PRESOLINITPRE(presolInitpreSymbreak)
    assert( presoldata != NULL );
 
    /* check whether we have to run the presolver at the beginning of presolving */
-   SCIP_CALL( SCIPcomputePresolvedSymmetry(scip, &presoldata->early) );
+   SCIP_CALL( SCIPgetTimingSymmetry(scip, &presoldata->early) );
    presoldata->early = ! presoldata->early;
 
    /* check whether we should run */
