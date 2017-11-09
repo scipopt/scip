@@ -2483,7 +2483,8 @@ SCIP_RETCODE propagateBounds(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_RESULT*          result,             /**< buffer to store result of propagation */
-   int*                  nchgbds             /**< buffer where to add number of tightened bounds */
+   int*                  nchgbds,            /**< buffer where to add number of tightened bounds */
+   SCIP_Bool*            redundant           /**< buffer to indicate whether constraint was marked for deletion because of redundancy */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -2499,9 +2500,13 @@ SCIP_RETCODE propagateBounds(
    assert(scip   != NULL);
    assert(cons   != NULL);
    assert(result != NULL);
+   assert(nchgbds != NULL);
+   assert(redundant != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+
+   *redundant = FALSE;
 
    if( !SCIPconsIsMarkedPropagate(cons) )
    {
@@ -2519,8 +2524,8 @@ SCIP_RETCODE propagateBounds(
 
    /* @todo do something clever to decide whether propagation should be tried */
 
-   SCIPintervalSetBounds(&lhsrange, consdata->constant - SCIPepsilon(scip), consdata->constant + SCIPepsilon(scip));
-
+   /* compute activity on lhs */
+   SCIPintervalSet(&lhsrange, consdata->constant);
    SCIP_CALL( SCIPallocBufferArray(scip, &lhsranges, consdata->nvars) );
    for( i = 0; i < consdata->nvars; ++i )
    {
@@ -2536,6 +2541,35 @@ SCIP_RETCODE propagateBounds(
       SCIPintervalAdd(SCIPinfinity(scip), &lhsrange, lhsrange, lhsranges[i]);
    }
 
+   /* compute activity on rhs: rhsrange = sqr(rhscoeff * (rhsvar + rhsoffset) ) */
+   lb = SCIPcomputeVarLbLocal(scip, consdata->rhsvar) - SCIPepsilon(scip);
+   ub = SCIPcomputeVarUbLocal(scip, consdata->rhsvar) + SCIPepsilon(scip);
+   SCIPintervalSetBounds(&rhsrange, MIN(lb, ub), MAX(lb, ub));
+   if( consdata->rhsoffset != 0.0 )
+      SCIPintervalAddScalar(SCIPinfinity(scip), &rhsrange, rhsrange, consdata->rhsoffset);
+   if( consdata->rhscoeff  != 1.0 )
+      SCIPintervalMulScalar(SCIPinfinity(scip), &rhsrange, rhsrange, consdata->rhscoeff);
+   SCIPintervalSquare(SCIPinfinity(scip), &rhsrange, rhsrange);
+
+   /* check for infeasibility */
+   if( SCIPisGT(scip, lhsrange.inf-SCIPfeastol(scip), rhsrange.sup) )
+   {
+      SCIPdebugMsg(scip, "propagation found constraint <%s> infeasible: lhs = [%.15g,%.15g]-feastol-eps > rhs = [%.15g,%.15g]\n",
+         SCIPconsGetName(cons), lhsrange.inf, lhsrange.sup, rhsrange.inf, rhsrange.sup);
+      *result = SCIP_CUTOFF;
+      goto TERMINATE;
+   }
+
+   /* check for redundancy */
+   if( SCIPintervalIsSubsetEQ(SCIPinfinity(scip), lhsrange, rhsrange) )
+   {
+      SCIPdebugMsg(scip, "propagation found constraint <%s> redundant: lhs = [%.15g,%.15g]-feastol-eps > rhs = [%.15g,%.15g]\n",
+         SCIPconsGetName(cons), lhsrange.inf, lhsrange.sup, rhsrange.inf, rhsrange.sup);
+      SCIP_CALL( SCIPdelConsLocal(scip, cons) );
+      goto TERMINATE;
+   }
+
+   /* try to tighten variable on rhs */
    if( SCIPvarGetStatus(consdata->rhsvar) != SCIP_VARSTATUS_MULTAGGR )
    {
       SCIPintervalSquareRoot(SCIPinfinity(scip), &a, lhsrange);
@@ -2548,8 +2582,9 @@ SCIP_RETCODE propagateBounds(
       {
          SCIPdebugMsg(scip, "propagation found constraint <%s> infeasible\n", SCIPconsGetName(cons));
          *result = SCIP_CUTOFF;
+         goto TERMINATE;
       }
-      else if( tightened )
+      if( tightened )
       {
          SCIPdebugMsg(scip, "propagation tightened bounds of rhs variable <%s> in constraint <%s>\n", SCIPvarGetName(consdata->rhsvar), SCIPconsGetName(cons));
          *result = SCIP_REDUCEDDOM;
@@ -2557,99 +2592,78 @@ SCIP_RETCODE propagateBounds(
       }
    }
 
-   if( *result != SCIP_CUTOFF )
+   /* try to tighten variables on lhs */
+   SCIPintervalSub(SCIPinfinity(scip), &b, rhsrange, lhsrange);  /*lint !e644 */
+   for( i = 0; i < consdata->nvars; ++i )
    {
-      lb = SCIPcomputeVarLbLocal(scip, consdata->rhsvar) - SCIPepsilon(scip);
-      ub = SCIPcomputeVarUbLocal(scip, consdata->rhsvar) + SCIPepsilon(scip);
-      SCIPintervalSetBounds(&rhsrange, MIN(lb, ub), MAX(lb, ub));
-      if( consdata->rhsoffset != 0.0 )
-         SCIPintervalAddScalar(SCIPinfinity(scip), &rhsrange, rhsrange, consdata->rhsoffset);
-      if( consdata->rhscoeff  != 1.0 )
-         SCIPintervalMulScalar(SCIPinfinity(scip), &rhsrange, rhsrange, consdata->rhscoeff);
-      SCIPintervalSquare(SCIPinfinity(scip), &rhsrange, rhsrange);
-      /* rhsrange = sqr(rhscoeff * (rhsvar + rhsoffset) ) */
+      if( SCIPvarGetStatus(consdata->vars[i]) == SCIP_VARSTATUS_MULTAGGR )
+         continue;
 
-      if( SCIPisGT(scip, lhsrange.inf-SCIPfeastol(scip), rhsrange.sup) )
+      roundmode = SCIPintervalGetRoundingMode();
+      if( !SCIPisInfinity(scip, b.sup) )
       {
-         SCIPdebugMsg(scip, "propagation found constraint <%s> infeasible: lhs = [%.15g,%.15g]-feastol-eps > rhs = [%.15g,%.15g]\n",
-            SCIPconsGetName(cons), lhsrange.inf, lhsrange.sup, rhsrange.inf, rhsrange.sup);
+         SCIPintervalSetRoundingModeUpwards();
+         a.sup = b.sup + lhsranges[i].inf;
+      }
+      else
+      {
+         a.sup = SCIPinfinity(scip);
+      }
+      if( !SCIPisInfinity(scip, -b.inf) )
+      {
+         SCIPintervalSetRoundingModeDownwards();
+         a.inf = b.inf + lhsranges[i].sup;
+      }
+      else
+      {
+         a.inf = -SCIPinfinity(scip);
+      }
+      SCIPintervalSetRoundingMode(roundmode);
+      SCIPintervalSquareRoot(SCIPinfinity(scip), &a, a);
+
+      assert(consdata->coefs[i] >= 0.0); /* should be ensured in create and presolveRemoveFixed */
+
+      c = a;
+      if( consdata->coefs[i]   != 1.0 )
+         SCIPintervalDivScalar(SCIPinfinity(scip), &c, c, consdata->coefs[i]);
+      if( consdata->offsets[i] != 0.0 )
+         SCIPintervalSubScalar(SCIPinfinity(scip), &c, c, consdata->offsets[i]);
+
+      SCIP_CALL( SCIPtightenVarUb(scip, consdata->vars[i], SCIPintervalGetSup(c), FALSE, &infeas, &tightened) );
+      if( infeas )
+      {
+         SCIPdebugMsg(scip, "propagation found constraint <%s> infeasible\n", SCIPconsGetName(cons));
          *result = SCIP_CUTOFF;
+         goto TERMINATE;
       }
-   }
-
-   if( *result != SCIP_CUTOFF )
-   {
-      SCIPintervalSub(SCIPinfinity(scip), &b, rhsrange, lhsrange);  /*lint !e644 */
-      for( i = 0; i < consdata->nvars; ++i )
+      if( tightened )
       {
-         if( SCIPvarGetStatus(consdata->vars[i]) == SCIP_VARSTATUS_MULTAGGR )
-            continue;
+         SCIPdebugMsg(scip, "propagation tightened bounds of lhs variable <%s> in constraint <%s>\n", SCIPvarGetName(consdata->vars[i]), SCIPconsGetName(cons));
+         *result = SCIP_REDUCEDDOM;
+         ++*nchgbds;
+      }
 
-         roundmode = SCIPintervalGetRoundingMode();
-         if( !SCIPisInfinity(scip, b.sup) )
-         {
-            SCIPintervalSetRoundingModeUpwards();
-            a.sup = b.sup + lhsranges[i].inf;
-         }
-         else
-         {
-            a.sup = SCIPinfinity(scip);
-         }
-         if( !SCIPisInfinity(scip, -b.inf) )
-         {
-            SCIPintervalSetRoundingModeDownwards();
-            a.inf = b.inf + lhsranges[i].sup;
-         }
-         else
-         {
-            a.inf = -SCIPinfinity(scip);
-         }
-         SCIPintervalSetRoundingMode(roundmode);
-         SCIPintervalSquareRoot(SCIPinfinity(scip), &a, a);
+      c = a;
+      SCIPintervalDivScalar(SCIPinfinity(scip), &c, c, -consdata->coefs[i]);
+      if( consdata->offsets[i] != 0.0 )
+         SCIPintervalSubScalar(SCIPinfinity(scip), &c, c, consdata->offsets[i]);
 
-         assert(consdata->coefs[i] >= 0.0); /* should be ensured in create and presolveRemoveFixed */
-
-         c = a;
-         if( consdata->coefs[i]   != 1.0 )
-            SCIPintervalDivScalar(SCIPinfinity(scip), &c, c, consdata->coefs[i]);
-         if( consdata->offsets[i] != 0.0 )
-            SCIPintervalSubScalar(SCIPinfinity(scip), &c, c, consdata->offsets[i]);
-
-         SCIP_CALL( SCIPtightenVarUb(scip, consdata->vars[i], SCIPintervalGetSup(c), FALSE, &infeas, &tightened) );
-         if( infeas )
-         {
-            SCIPdebugMsg(scip, "propagation found constraint <%s> infeasible\n", SCIPconsGetName(cons));
-            *result = SCIP_CUTOFF;
-            break;
-         }
-         else if( tightened )
-         {
-            SCIPdebugMsg(scip, "propagation tightened bounds of lhs variable <%s> in constraint <%s>\n", SCIPvarGetName(consdata->vars[i]), SCIPconsGetName(cons));
-            *result = SCIP_REDUCEDDOM;
-            ++*nchgbds;
-         }
-
-         c = a;
-         SCIPintervalDivScalar(SCIPinfinity(scip), &c, c, -consdata->coefs[i]);
-         if( consdata->offsets[i] != 0.0 )
-            SCIPintervalSubScalar(SCIPinfinity(scip), &c, c, consdata->offsets[i]);
-
-         SCIP_CALL( SCIPtightenVarLb(scip, consdata->vars[i], SCIPintervalGetInf(c), FALSE, &infeas, &tightened) );
-         if( infeas )
-         {
-            SCIPdebugMsg(scip, "propagation found constraint <%s> infeasible\n", SCIPconsGetName(cons));
-            *result = SCIP_CUTOFF;
-            break;
-         }
-         else if( tightened )
-         {
-            SCIPdebugMsg(scip, "propagation tightened bounds of lhs variable <%s> in constraint <%s>\n", SCIPvarGetName(consdata->vars[i]), SCIPconsGetName(cons));
-            *result = SCIP_REDUCEDDOM;
-            ++*nchgbds;
-         }
+      SCIP_CALL( SCIPtightenVarLb(scip, consdata->vars[i], SCIPintervalGetInf(c), FALSE, &infeas, &tightened) );
+      if( infeas )
+      {
+         SCIPdebugMsg(scip, "propagation found constraint <%s> infeasible\n", SCIPconsGetName(cons));
+         *result = SCIP_CUTOFF;
+         goto TERMINATE;
+      }
+      if( tightened )
+      {
+         SCIPdebugMsg(scip, "propagation tightened bounds of lhs variable <%s> in constraint <%s>\n", SCIPvarGetName(consdata->vars[i]), SCIPconsGetName(cons));
+         *result = SCIP_REDUCEDDOM;
+         ++*nchgbds;
       }
    }
 
+TERMINATE:
    SCIPfreeBufferArray(scip, &lhsranges);
 
    if( *result != SCIP_DIDNOTFIND )
@@ -2967,6 +2981,7 @@ SCIP_RETCODE enforceConstraint(
    SCIP_CONS*         maxviolcons;
    SCIP_Bool          success;
    SCIP_Bool          cutoff;
+   SCIP_Bool          redundant;
    int                nbndchg;
    int                c;
 
@@ -3039,7 +3054,8 @@ SCIP_RETCODE enforceConstraint(
          continue;
 
       nbndchg = 0;
-      SCIP_CALL( propagateBounds(scip, conss[c], result, &nbndchg) );  /*lint !e613*/
+      SCIP_CALL( propagateBounds(scip, conss[c], result, &nbndchg, &redundant) );  /*lint !e613*/
+      assert(!redundant); /* constraint should not be violated and redundant simultaneously (unless solution is far out of bounds) */
       if( *result == SCIP_CUTOFF || *result == SCIP_REDUCEDDOM )
       {
          SCIPdebugMsg(scip, "enforced by %s\n", *result == SCIP_CUTOFF ? "cutting off node" : "reducing domain");
@@ -4514,6 +4530,7 @@ SCIP_DECL_CONSPROP(consPropSOC)
    SCIP_RESULT propresult;
    int         c;
    int         nchgbds;
+   SCIP_Bool   redundant;
 
    assert(scip     != NULL);
    assert(conss    != NULL || ((nconss == 0) && (nmarkedconss == 0)));
@@ -4524,7 +4541,7 @@ SCIP_DECL_CONSPROP(consPropSOC)
 
    for( c = 0; c < nmarkedconss && *result != SCIP_CUTOFF; ++c )
    {
-      SCIP_CALL( propagateBounds(scip, conss[c], &propresult, &nchgbds) );  /*lint !e613*/
+      SCIP_CALL( propagateBounds(scip, conss[c], &propresult, &nchgbds, &redundant) );  /*lint !e613*/
       if( propresult != SCIP_DIDNOTFIND && propresult != SCIP_DIDNOTRUN )
          *result = propresult;
    }
@@ -4582,7 +4599,9 @@ SCIP_DECL_CONSPRESOL(consPresolSOC)
 
       if( (presoltiming & SCIP_PRESOLTIMING_FAST) != 0 )
       {
-         SCIP_CALL( propagateBounds(scip, conss[c], &propresult, nchgbds) );  /*lint !e613*/
+         SCIP_Bool redundant;
+
+         SCIP_CALL( propagateBounds(scip, conss[c], &propresult, nchgbds, &redundant) );  /*lint !e613*/
          switch( propresult )
          {
             case SCIP_DIDNOTRUN:
@@ -4599,6 +4618,8 @@ SCIP_DECL_CONSPRESOL(consPresolSOC)
                SCIPerrorMessage("unexpected result from propagation: %d\n", propresult);
                return SCIP_ERROR;
          } /*lint !e788*/
+         if( redundant )
+            ++*ndelconss;
       }
 
       /* disaggregate each lhs term to a quadratic constraint by using auxiliary variables */
