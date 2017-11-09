@@ -6202,21 +6202,9 @@ SCIP_RETCODE propagateBoundsCons(
    }
    assert(!SCIPintervalIsEmpty(INTERVALINFTY, nonlinactivity) );
 
-   /* @todo adding SCIPepsilon may be sufficient? */
-   SCIPintervalSetBounds(&consbounds,
-      -infty2infty(SCIPinfinity(scip), INTERVALINFTY, -consdata->lhs + SCIPfeastol(scip)),
-      +infty2infty(SCIPinfinity(scip), INTERVALINFTY,  consdata->rhs + SCIPfeastol(scip)));
-
-   /* check redundancy */
+   /* get activity of constraint function */
    SCIPintervalSetBounds(&consactivity, consdata->minlinactivityinf > 0 ? -INTERVALINFTY : consdata->minlinactivity, consdata->maxlinactivityinf > 0 ? INTERVALINFTY : consdata->maxlinactivity);
    SCIPintervalAdd(INTERVALINFTY, &consactivity, consactivity, nonlinactivity);
-   if( SCIPintervalIsSubsetEQ(INTERVALINFTY, consactivity, consbounds) )
-   {
-      SCIPdebugMsg(scip, "found constraint <%s> to be redundant: sides: [%g, %g], activity: [%g, %g]\n",
-         SCIPconsGetName(cons), consdata->lhs, consdata->rhs, SCIPintervalGetInf(consactivity), SCIPintervalGetSup(consactivity));
-      *redundant = TRUE;
-      return SCIP_OKAY;
-   }
 
    /* check infeasibility */
    if( SCIPisGT(scip, consdata->lhs-SCIPfeastol(scip), SCIPintervalGetSup(consactivity)) || SCIPisLT(scip, consdata->rhs+SCIPfeastol(scip), SCIPintervalGetInf(consactivity)) )
@@ -6225,6 +6213,19 @@ SCIP_RETCODE propagateBoundsCons(
          SCIPconsGetName(cons), consdata->lhs, consdata->rhs, SCIPintervalGetInf(consactivity), SCIPintervalGetSup(consactivity),
          MAX(consdata->lhs - SCIPintervalGetSup(consactivity), SCIPintervalGetInf(consactivity) - consdata->rhs));
       *result = SCIP_CUTOFF;
+      return SCIP_OKAY;
+   }
+
+   SCIPintervalSetBounds(&consbounds,
+      -infty2infty(SCIPinfinity(scip), INTERVALINFTY, -consdata->lhs + SCIPepsilon(scip)),
+      +infty2infty(SCIPinfinity(scip), INTERVALINFTY,  consdata->rhs + SCIPepsilon(scip)));
+
+   /* check redundancy */
+   if( SCIPintervalIsSubsetEQ(INTERVALINFTY, consactivity, consbounds) )
+   {
+      SCIPdebugMsg(scip, "found constraint <%s> to be redundant: sides: [%g, %g], activity: [%g, %g]\n",
+         SCIPconsGetName(cons), consdata->lhs, consdata->rhs, SCIPintervalGetInf(consactivity), SCIPintervalGetSup(consactivity));
+      *redundant = TRUE;
       return SCIP_OKAY;
    }
 
