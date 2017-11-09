@@ -29,29 +29,39 @@ fi
 EMAILFROM="adm_timo <timo-admin@zib.de>"
 EMAILTO="adm_timo <timo-admin@zib.de>"
 
+########################
+# FIND evalfile prefix #
+########################
+
 # SCIP check files are check.TESTSET.SCIPVERSION.otherstuff.SETTING.{out,err,res,meta} (SCIPVERSION is of the form scip-VERSION)
 BASEFILE="check/results/check.${TESTSET}.${SCIPVERSION}.*.${SETTING}"
 EVALFILE=`ls ${BASEFILE}*eval`
-# found no evalfile
+# if no evalfile was found --> check if this is fscip output
 if [ "${EVALFILE}" == "" ]; then
     echo "Ignore previous ls error; looking again for eval file"
     BASEFILE="check/results/check.${TESTSET}.fscip.*.${SETTING}"
     EVALFILE=`ls ${BASEFILE}*eval`
 fi
-# found no evalfile
+
+# if still no evalfile was found --> send an email informing that something is wrong and exit
 if [ "${EVALFILE}" == "" ]; then
     echo "Couldn't find eval file, sending email"
     SUBJECT="ERROR [BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING=$SETTING] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH]"
     echo -e "Aborting because the .eval file cannot be found.\nTried " | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
     exit 1
 fi
-# found more than one evalfile matching the pattern
+
+# if more than one evalfile was found --> something is wrong, send an email
 if [ `wc -w <<< ${EVALFILE}` -gt 1 ]; then
     echo "More than one eval file found; sending email"
     SUBJECT="ERROR [BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING=$SETTING] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH]"
     echo -e "Aborting because there were more than one .eval files found:\n${EVALFILE}\n\nAfter fixing this run\ncd `pwd`\nPERFORMANCE=$PERFORMANCE SCIPVERSION=$SCIPVERSION SETTING=$SETTING LPS=$LPS GITHASH=$GITHASH OPT=$OPT TESTSET=$TESTSET GITBRANCH=$GITBRANCH ./check/jenkins_failcheck.sh\n" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
     exit 1
 fi
+
+############################################
+# Process evalfile and upload to ruberband #
+############################################
 
 # evaluate the run and upload it to rubberband
 echo "Evaluating the run and uploading it to rubberband."
@@ -70,12 +80,12 @@ else
 fi
 cd ..
 
-# construct string which shows the destination of the out, err, and res files
+# Store paths of err out res and set file
 SCIPDIR=`pwd`
-ERRORFILE=`ls $BASEFILE*err`
-OUTFILE=`ls $BASEFILE*out`
-RESFILE=`ls $BASEFILE*res`
-DESTINATION="$SCIPDIR/$OUTFILE \n$SCIPDIR/$ERRORFILE \n$SCIPDIR/$RESFILE"
+ERRFILE=SCIPDIR/`ls $BASEFILE*err`
+OUTFILE=SCIPDIR/`ls $BASEFILE*out`
+RESFILE=SCIPDIR/`ls $BASEFILE*res`
+SETFILE=SCIPDIR/`ls $BASEFILE*set`
 
 # check for fixed instances
 echo "Checking for fixed instances."
@@ -100,10 +110,13 @@ NR != FNR {
 }' $RESFILE $DATABASE`
 mv $TMPDATABASE $DATABASE
 
-# check if fail occurs
-NFAILS=`grep -c fail $RESFILE`
 
-# if there are fails check for new fails and send email with information if needed
+###################
+# Check for fails #
+###################
+
+# if there are fails; process them and send email when there are new ones
+NFAILS=`grep -c fail $RESFILE`
 if [ $NFAILS -gt 0 ]; then
   echo "Detected ${NFAILS} fails."
   ERRORINSTANCES=`awk '
@@ -126,13 +139,68 @@ if [ $NFAILS -gt 0 ]; then
   }' $DATABASE $RESFILE`
   STILLFAILINGDB=`cat ${STILLFAILING}`
 
-  # check if there are errors (string non empty)
+  # check if there are new fails!
   if [ -n "$ERRORINSTANCES" ]; then
-     echo "Found new errors, sending emails."
-     SUBJECT="FAIL [BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING=$SETTING] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH]"
-     echo -e "There are newly failed instances:\n${ERRORINSTANCES}\n\nThe follwing instances are still failing:\n${STILLFAILINGDB}\n\nThe files can be found here:\n$DESTINATION\n\nPlease note that they might be deleted soon" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+      ###################
+      ## Process fails ##
+      ###################
+
+      # get SCIP's header
+      SCIP_HEADER=`awk '
+      BEGIN{printLines=0;}
+
+      /^SCIP version/ {printLines=1;}
+      printLines > 0 && /^$/ {printLines+=1;}
+      printLines > 0 {print $0}
+      {
+          if ( printLines == 3 ){
+              exit 0;
+          }
+      }' $OUTFILE`
+
+      # Get assertions and instance where they were generated
+      ERRORS_INFO=`echo "${ERRORINSTANCES}" | awk '
+      BEGIN{searchAssert=0; idx=1; delete failed[0]; delete human[0]}
+
+      NR==FNR && /fail \(abort\)/ {failed[length(failed)+1]=$1; next;}
+
+      # searching for an assert, but we see different instance name -> could not find assert for failed[idx],
+      # continue with next failed (search for instance output, not assert!
+      # failed[idx]"\\." --> name of the failed instance followed by a "."; this because the scripts keep the last characters of the name!
+      searchAssert == 1 && /^@01/ && !($0 ~ failed[idx]"\\.") { human[failed[idx]]=1; searchAssert=0; idx+=1;}
+      searchAssert == 1 && /Assertion.*failed\.$/ {print instance "\n" $0 "\n"; searchAssert=0; idx+=1;}
+
+      /^@01/ && $0 ~ failed[idx] {searchAssert=1; instance=$0}
+      END{ if( length(human) > 0 ){ print "The following fails need human inspection:"; for(key in human){ print key} }}
+      ' - $ERRFILE`
+
+      ###############
+      # ERROR EMAIL #
+      ###############
+      echo "Found new errors, sending emails."
+      SUBJECT="FAIL [BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING=$SETTING] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH]"
+      echo -e "There are newly failed instances.
+      The instances run with the following SCIP version and setting file:
+      ${SCIP_HEADER}
+      ${SETFILE}
+
+      Here is a list of the instances and the assertion that fails, if any.
+      ${ERRORS_INFO}
+
+      Here is the complete list of new fails:
+      ${ERRORINSTANCES}
+
+      The follwing instances are still failing:
+      ${STILLFAILINGDB}
+
+      Finally, the err, out and res file can be found here:
+      $ERRFILE
+      $OUTFILE
+      $RESFILE
+
+      Please note that they might be deleted soon" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
   else
-     echo "No new errors, sending no emails."
+      echo "No new errors, sending no emails."
   fi
 else
   echo "No fails detected."
@@ -141,7 +209,15 @@ fi
 # send email if there are fixed instances
 if [ -n "$RESOLVEDINSTANCES" ]; then
    SUBJECT="FIX [BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING=$SETTING] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH]"
-   echo -e "Congratulations, see bottom for fixed instances!\n\nThe following instances are still failing:\n${STILLFAILINGDB}\n\nThe files can be found here:\n$DESTINATION\n\nThe following errors have been fixed:\n${RESOLVEDINSTANCES}" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+   echo -e "Congratulations, see bottom for fixed instances!
+   The following instances are still failing:
+   ${STILLFAILINGDB}
+   The err, out and res file can be found here:
+   $ERRFILE
+   $OUTFILE
+   $RESFILE
+   The following errors have been fixed:
+   ${RESOLVEDINSTANCES}" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
 fi
 rm ${STILLFAILING}
 
