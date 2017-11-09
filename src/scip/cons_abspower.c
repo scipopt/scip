@@ -3774,8 +3774,6 @@ SCIP_RETCODE separatePoint(
    SCIP_CONSDATA*     consdata;
    SCIP_SIDETYPE      side;
    SCIP_Real          efficacy;
-   SCIP_Real          feasibility;
-   SCIP_Bool          convex;
    int                c;
    SCIP_ROW*          row;
 
@@ -3808,28 +3806,11 @@ SCIP_RETCODE separatePoint(
          if( row == NULL ) /* failed to generate cut */
             continue;
 
-         /* check if we separate in convex area */
-         if( side == SCIP_SIDETYPE_RIGHT )
-         {
-            convex = !SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->x))
-               && (!SCIPisNegative(scip, SCIPvarGetLbLocal(consdata->x)+consdata->xoffset)
-                  || SCIPgetSolVal(scip, sol, consdata->x)+consdata->xoffset >= -consdata->root*(SCIPvarGetLbLocal(consdata->x)+consdata->xoffset));
-         }
-         else
-         {
-            convex = !SCIPisInfinity(scip,  SCIPvarGetUbLocal(consdata->x))
-               && (!SCIPisPositive(scip, SCIPvarGetUbLocal(consdata->x)+consdata->xoffset)
-                  || SCIPgetSolVal(scip, sol, consdata->x)+consdata->xoffset <= -consdata->root*(SCIPvarGetUbLocal(consdata->x)+consdata->xoffset));
-         }
-
-         feasibility = SCIPgetRowSolFeasibility(scip, row, sol);
-         efficacy = -feasibility;
-
-         /* if cut is strong or it's weak but we are convex and desperate (speak, in enforcement), then add,
+         /* if cut is violated sufficiently, then add,
           * unless it corresponds to a bound change that is too weak (<eps) to be added
           */
-         if( (efficacy > minefficacy || (inenforcement && convex && SCIPisFeasPositive(scip, efficacy))) &&
-             SCIPisCutApplicable(scip, row) )
+         efficacy = -SCIPgetRowSolFeasibility(scip, row, sol);
+         if( SCIPisGT(scip, efficacy, minefficacy) && SCIPisCutApplicable(scip, row) )
          {
             SCIP_Bool infeasible;
 
@@ -5054,9 +5035,7 @@ SCIP_RETCODE enforceConstraint(
    SCIP_Bool          success;
    SCIP_Bool          cutoff;
    SCIP_Bool          solviolbounds;
-   SCIP_Real          minefficacy;
    SCIP_Real          sepaefficacy;
-   SCIP_Real          leastpossibleefficacy;
    SCIP_Real          maxviol;
    int                nnotify;
    int                c;
@@ -5161,13 +5140,9 @@ SCIP_RETCODE enforceConstraint(
    assert(SCIPisGT(scip, maxviol, SCIPfeastol(scip)));
 
    /* we would like a cut that is efficient enough that it is not redundant in the LP (>lpfeastol)
-    * however, if the maximal violation is very small, also the best cut efficacy cannot be large
-    * thus, in the latter case, we are also happy if the efficacy is at least, say, 75% of the maximal violation
-    * but in any case we need an efficacy that is at least lpfeastol
+    * however, we also don't want very weak cuts, so try to reach at least feastol (~10*lpfeastol)
     */
-   minefficacy = MIN(0.75*maxviol, 2.0 * SCIPlpfeastol(scip));  /*lint !e666*/
-   minefficacy = MAX(minefficacy, SCIPlpfeastol(scip));  /*lint !e666*/
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, minefficacy, TRUE, FALSE, &success,
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, SCIPfeastol(scip), TRUE, FALSE, &success,
          &cutoff, &sepaefficacy) );
    if( cutoff )
    {
@@ -5177,11 +5152,11 @@ SCIP_RETCODE enforceConstraint(
    }
    if( success )
    {
-      SCIPdebugMsg(scip, "separation succeeded (bestefficacy = %g, minefficacy = %g)\n", sepaefficacy, minefficacy);
+      SCIPdebugMsg(scip, "separation succeeded (bestefficacy = %g, minefficacy = %g)\n", sepaefficacy, SCIPfeastol(scip));
       *result = SCIP_SEPARATED;
       return SCIP_OKAY;
    }
-   SCIPdebugMsg(scip, "separation failed (bestefficacy = %g < %g = minefficacy ); max viol: %g\n", sepaefficacy, minefficacy,
+   SCIPdebugMsg(scip, "separation failed (bestefficacy = %g < %g = minefficacy ); max viol: %g\n", sepaefficacy, SCIPfeastol(scip),
       maxviol);
 
    /* we are not feasible, the whole node is not infeasible, and we cannot find a reasonable cut
@@ -5189,11 +5164,10 @@ SCIP_RETCODE enforceConstraint(
     */
    SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, sol, &nnotify) );
 
-   leastpossibleefficacy = SCIPlpfeastol(scip);
-   if( nnotify == 0 && !solinfeasible && minefficacy > leastpossibleefficacy )
+   if( nnotify == 0 && !solinfeasible && SCIPfeastol(scip) > SCIPlpfeastol(scip) )
    {
       /* fallback 1: we also have no branching candidates, so try to find a weak cut */
-      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, leastpossibleefficacy, TRUE, FALSE,
+      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, SCIPlpfeastol(scip), TRUE, FALSE,
             &success, &cutoff, &sepaefficacy) );
       if( cutoff )
       {
