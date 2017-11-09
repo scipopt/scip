@@ -485,3 +485,129 @@ set_tests_properties(write_and_read_settings
                         FAIL_REGULAR_EXPRESSION "ERROR"
                         DEPENDS scip-build
                     )
+
+#
+# define sets of linear classification results
+#
+
+set(linclass_bell5
+  "total             :         91"
+  "singleton         :          2"
+  "precedence        :         17"
+  "varbound          :         18"
+  "mixedbinary       :         26"
+  "general           :         28"
+  )
+
+set(linclass_blend2
+    "total             :        274"
+    "singleton         :         88"
+    "aggregation       :          9"
+    "varbound          :         88"
+    "intknapsack       :          0"
+    "mixedbinary       :         68"
+    "general           :         21"
+    )
+set(linclass_dcmulti
+    "setpacking        :          5"
+    "cardinality       :          3"
+    "invknapsack       :         10"
+    )
+
+set(linclass_egout
+    "total             :         98"
+    "aggregation       :         10"
+    "varbound          :         55"
+    "knapsack          :          0"
+    "intknapsack       :          0"
+    "mixedbinary       :         33"
+    "general           :          0"
+    )
+
+set(linclass_enigma
+    "total             :         21"
+    "varbound          :          0"
+    "setpartition      :         20"
+    "setpacking        :          0"
+    "eqknapsack        :          1"
+    )
+set(linclass_flugpl
+    "total             :         18"
+    "empty             :          0"
+    "free              :          0"
+    "singleton         :          1"
+    "varbound          :          6"
+    "mixedbinary       :          0"
+    "general           :         11"
+    )
+set(linclass_gt2
+    "intknapsack       :         15"
+    )
+set(linclass_lseu
+    "knapsack          :         11"
+    )
+set(linclass_misc03
+    "setpartition      :          5"
+    "setpacking        :          3"
+    "setcovering       :         31"
+    "cardinality       :         21"
+    "invknapsack       :         33"
+    "eqknapsack        :          0"
+    "binpacking        :          2"
+    )
+set(linclass_p0548
+    "empty             :          0"
+    "free              :          0"
+    "singleton         :          2"
+    "aggregation       :          0"
+    "precedence        :         12"
+    "varbound          :         28"
+    "setpartition      :          0"
+    "setpacking        :         22"
+    "setcovering       :          0"
+    "cardinality       :          0"
+    "invknapsack       :          0"
+    "eqknapsack        :          0"
+    "binpacking        :          5"
+    "knapsack          :        107"
+    )
+
+set(linclasstests
+    linclass_bell5
+    linclass_blend2
+    linclass_dcmulti
+    linclass_egout
+    linclass_enigma
+    linclass_flugpl
+    linclass_gt2
+    linclass_lseu
+    linclass_misc03
+    linclass_p0548
+    )
+
+foreach(instance ${instances_MIP})
+    split_instance(${instance})
+    get_filename_component(shortbasename ${basename} NAME_WE)
+    LIST(FIND linclasstests linclass_${shortbasename} linclassfound)
+    if(NOT linclassfound EQUAL -1 )
+        configure_file(interactiveshell/linclass.bat.in interactiveshell/linclass-${basename}.bat)
+        add_test(NAME MIP-linclass-${basename}
+                COMMAND $<TARGET_FILE:scip> -b interactiveshell/linclass-${basename}.bat
+                )
+        set_tests_properties(MIP-linclass-${basename}
+                            PROPERTIES
+                                DEPENDS scip-build
+                            )
+        foreach( pass_regex ${linclass_${shortbasename}} )
+        set_tests_properties(MIP-linclass-${basename}
+                            PROPERTIES
+                                PASS_REGULAR_EXPRESSION "${pass_regex}"
+                            )
+        endforeach()
+
+    endif()
+
+endforeach()
+
+
+
