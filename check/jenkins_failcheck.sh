@@ -166,8 +166,7 @@ if [ $NFAILS -gt 0 ]; then
 
       # searching for an assert, but we see different instance name -> could not find assert for failed[idx],
       # continue with next failed (search for instance output, not assert!
-      # failed[idx]"\\." --> name of the failed instance followed by a "."; this because the scripts keep the last characters of the name!
-      searchAssert == 1 && /^@01/ && !($0 ~ failed[idx]"\\.") { human[failed[idx]]=1; searchAssert=0; idx+=1;}
+      searchAssert == 1 && /^@01/ && !($0 ~ failed[idx]) { human[failed[idx]]=1; searchAssert=0; idx+=1;}
       searchAssert == 1 && /Assertion.*failed\.$/ {print instance "\n" $0 "\n"; searchAssert=0; idx+=1;}
 
       /^@01/ && $0 ~ failed[idx] {searchAssert=1; instance=$0}
