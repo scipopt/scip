@@ -179,10 +179,12 @@ if [ $NFAILS -gt 0 ]; then
       SUBJECT="FAIL [BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING=$SETTING] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH]"
       echo -e "There are newly failed instances.
       The instances run with the following SCIP version and setting file:
+
       ${SCIP_HEADER}
+
       ${SETFILE}
 
-      Here is a list of the instances and the assertion that fails, if any.
+      Here is a list of the instances and the assertion that fails (fails with _fail (abort)_), if any:
       ${ERRORS_INFO}
 
       Here is the complete list of new fails:
