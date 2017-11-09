@@ -1303,6 +1303,10 @@ SCIP_DECL_PRESOLEXIT(presolExitSymmetry)
    presoldata->computedsym = FALSE;
    presoldata->successful = FALSE;
 
+   /* reset changed parameters */
+   SCIP_CALL( SCIPresetParam(scip, "presolving/domcol/maxrounds") );
+   SCIP_CALL( SCIPresetParam(scip, "constraints/components/maxprerounds") );
+
    return SCIP_OKAY;
 }
 
