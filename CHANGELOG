@@ -23,6 +23,9 @@ features:
   multiples of linear equalities
 - utilizing linear inequalities to compute stronger linearizations for bilinear terms; the inequalities are computed in
   OBBT propagator
+- new methods and interactive shell functionality to display linear constraint classification types--
+  use 'display linclass' after reading a problem to classify linear constraint types
+
 
 parameters:
 - new parameter misc/debugsol to specify a debug solution that should be checked during the solve
@@ -66,6 +69,9 @@ interface:
 - added SCIPaddBilinearIneqQuadratic to propose an inequality with two variables that appear in a bilinear term
 - added SCIPcomputeBilinEnvelope{1,2} to compute a linearization of a bilinear term when considering at most two linear inequalities
 - new method SCIPaddRow() to replace deprecated SCIPaddCut()
+- new object SCIP_LINCONSSTATS, see type_cons.h, and its methods SCIPlinConsStats{Create,Free,GetTypeCount,GetSum} and SCIPprintLinConsStats()
+  to work with linear constraint classification through the C API
+
 
 performance improvements:
 - use disjoint set to reduce peak memory usage and time to compute of clique table connectedness information
@@ -86,6 +92,9 @@ fixed bugs:
 - fixed handling of LOOSE variables in locks heuristic
 - fixed upgrade to a varbound constraint if abspower constraint contains a multi-aggregated variable
 - fixed numerical issues in boundshift presolver when aggregating integer variables
+
+added tests:
+- added tests that cover nonempty linear constraint classification types
 
 misc:
 - dropped support for MOSEK < 7.0.0.0
