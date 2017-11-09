@@ -132,8 +132,6 @@ struct SCIP_ConshdlrData
 {
    SCIP_EXPRINT*         exprinterpreter;    /**< expression interpreter to compute gradients */
 
-   SCIP_Real             mincutefficacysepa; /**< minimal efficacy of a cut in order to add it to relaxation during separation */
-   SCIP_Real             mincutefficacyenfofac;/**< minimal target efficacy of a cut in order to add it to relaxation during enforcement as factor of feasibility tolerance (may be ignored) */
    SCIP_Real             cutmaxrange;        /**< maximal range (maximal coef / minimal coef) of a cut in order to be added to LP */
    SCIP_Bool             linfeasshift;       /**< whether to make solutions in check feasible if possible */
    SCIP_Bool             checkconvexexpensive;/**< whether to apply expensive curvature checking methods */
@@ -6981,13 +6979,13 @@ SCIP_RETCODE enforceConstraint(
       return SCIP_OKAY;
    }
 
-   /* we would like a cut that is efficient enough that it is not redundant in the LP (>feastol)
+   /* we would like a cut that is efficient enough that it is not redundant in the LP (>lpfeastol)
     * however, if the maximal violation is very small, also the best cut efficacy cannot be large
     * thus, in the latter case, we are also happy if the efficacy is at least, say, 75% of the maximal violation
-    * but in any case we need an efficacy that is at least feastol
+    * but in any case we need an efficacy that is at least lpfeastol
     */
-   minefficacy = MIN(0.75*maxviol, conshdlrdata->mincutefficacyenfofac * SCIPfeastol(scip));  /*lint !e666*/
-   minefficacy = MAX(minefficacy, SCIPfeastol(scip));  /*lint !e666*/
+   minefficacy = MIN(0.75*maxviol, 2.0 * SCIPfeastol(scip));  /*lint !e666*/
+   minefficacy = MAX(minefficacy, SCIPlpfeastol(scip));  /*lint !e666*/
    SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, TRUE /* because computeviolation projects point onto box */, minefficacy, TRUE, &separateresult, &sepaefficacy) );
    if( separateresult == SCIP_CUTOFF )
    {
@@ -7011,8 +7009,7 @@ SCIP_RETCODE enforceConstraint(
    /* find branching candidates */
    SCIP_CALL( registerBranchingVariables(scip, conshdlr, conss, nconss, &nnotify) );
 
-   /* if sepastore can decrease feasibility tolerance, we can add cuts with efficacy in [eps, feastol] */
-   leastpossibleefficacy = SCIPfeastol(scip);
+   leastpossibleefficacy = SCIPlpfeastol(scip);
    if( nnotify == 0 && !solinfeasible && minefficacy > leastpossibleefficacy )
    {
       /* fallback 1: we also have no branching candidates, so try to find a weak cut */
@@ -7761,7 +7758,7 @@ SCIP_DECL_CONSSEPALP(consSepalpNonlinear)
             }
          }
 
-         SCIP_CALL( addLinearizationCuts(scip, conshdlr, conss, nconss, nlpsol, &lpsolseparated, conshdlrdata->mincutefficacysepa) );
+         SCIP_CALL( addLinearizationCuts(scip, conshdlr, conss, nconss, nlpsol, &lpsolseparated, SCIPgetSepaMinEfficacy(scip)) );
 
          SCIP_CALL( SCIPfreeSol(scip, &nlpsol) );
 
@@ -7780,7 +7777,7 @@ SCIP_DECL_CONSSEPALP(consSepalpNonlinear)
     * or separating with NLP solution as reference point failed, then try (again) with LP solution as reference point
     */
 
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, TRUE, conshdlrdata->mincutefficacysepa, FALSE, result, NULL) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, TRUE, SCIPgetSepaMinEfficacy(scip), FALSE, result, NULL) );
 
    return SCIP_OKAY;
 }
@@ -7817,7 +7814,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolNonlinear)
    /* computeViolations already evaluated all constraints, so can pass newsol = FALSE here
     * in contrast to Sepalp, a sol != NULL is not projected onto the box in computeViolation
     */
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, FALSE, conshdlrdata->mincutefficacysepa, FALSE, result, NULL) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, FALSE, SCIPgetSepaMinEfficacy(scip), FALSE, result, NULL) );
 
    return SCIP_OKAY;
 }
@@ -9103,14 +9100,6 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxNonlinear) );
 
    /* add nonlinear constraint handler parameters */
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/minefficacysepa",
-         "minimal efficacy for a cut to be added to the LP during separation; overwrites separating/efficacy",
-         &conshdlrdata->mincutefficacysepa, TRUE, 0.0001, 0.0, SCIPinfinity(scip), NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/minefficacyenfofac",
-         "minimal target efficacy of a cut in order to add it to relaxation during enforcement as a factor of the feasibility tolerance (may be ignored)",
-         &conshdlrdata->mincutefficacyenfofac, TRUE, 2.0, 1.0, SCIPinfinity(scip), NULL, NULL) );
-
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/cutmaxrange",
          "maximal coef range of a cut (maximal coefficient divided by minimal coefficient) in order to be added to LP relaxation",
          &conshdlrdata->cutmaxrange, FALSE, 1e+7, 0.0, SCIPinfinity(scip), NULL, NULL) );

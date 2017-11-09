@@ -34,6 +34,8 @@ parameters:
   the total number of created constraints when disaggregating a quadratic constraint
 - added parameter constraints/quadratic/disaggrmergemethod
 - removed parameter "separating/feastolfac"
+- removed parameters "constraints/{abspower,bivariate,quadratic,nonlinear}/mincutefficacysepa",
+  "constraints/{abspower,bivariate,quadratic,nonlinear}/mincutefficacyenfofac", and constraints/soc/minefficacy
 
 interface:
 - new interface methods to create and use bandit algorithms implemented as SCIP core plugins --
