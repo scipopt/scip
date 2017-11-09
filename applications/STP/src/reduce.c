@@ -1149,7 +1149,6 @@ SCIP_RETCODE redLoopMw(
 
          if( cnsadvelims + daelims >= redbound || (extensive && (cnsadvelims + daelims > 0))  )
          {
-            da = TRUE;
             ans = TRUE;
             nnp = TRUE;
             npv = TRUE;
