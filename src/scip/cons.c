@@ -7926,6 +7926,7 @@ void SCIPprintLinConsStats(
    SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "intknapsack",  SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_INTKNAPSACK));
    SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "mixedbinary",  SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_MIXEDBINARY));
    SCIPinfoMessage(scip, file, "  %-17s : %10d\n", "general",      SCIPlinConsStatsGetTypeCount(linconsstats, SCIP_LINCONSTYPE_GENERAL));
+
 }
 
 /*
