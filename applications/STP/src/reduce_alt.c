@@ -2802,6 +2802,12 @@ SCIP_RETCODE sdsp_reduction(
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &pathmaxnodetail, nnodes) );
       SCIP_CALL( SCIPallocBufferArray(scip, &pathmaxnodehead, nnodes) );
+
+      for( int i = 0; i < nnodes; i++ )
+      {
+         pathmaxnodetail[i] = -1;
+         pathmaxnodehead[i] = -1;
+      }
    }
    else
    {
@@ -2817,8 +2823,6 @@ SCIP_RETCODE sdsp_reduction(
       statehead[i]     = UNKNOWN;
       pathhead[i].dist = FARAWAY;
       pathhead[i].edge = UNKNOWN;
-      pathmaxnodetail[i] = -1;
-      pathmaxnodehead[i] = -1;
    }
 
    /* iterate through all nodes */
@@ -2988,7 +2992,8 @@ SCIP_RETCODE sdsp_reduction(
             statetail[l] = UNKNOWN;
             pathtail[l].dist = FARAWAY;
             pathtail[l].edge = UNKNOWN;
-            pathmaxnodetail[l] = -1;
+            if( pc )
+               pathmaxnodetail[l] = -1;
          }
 
          /* restore data */
@@ -2998,7 +3003,8 @@ SCIP_RETCODE sdsp_reduction(
             statehead[l]     = UNKNOWN;
             pathhead[l].dist = FARAWAY;
             pathhead[l].edge = UNKNOWN;
-            pathmaxnodehead[l] = -1;
+            if( pc )
+               pathmaxnodehead[l] = -1;
          }
 
 #ifdef SCIP_DEBUG
@@ -3338,8 +3344,8 @@ SCIP_RETCODE reduce_alt_bd34(
    IDX* revancestors[4];
    SCIP_Real sd[4];
    SCIP_Real ecost[4];
-   int* pathmaxnodetail;
-   int* pathmaxnodehead;
+   int* pathmaxnodetail = NULL;
+   int* pathmaxnodehead = NULL;
    int adjvert[4];
    int incedge[4];
    int reinsert[4];
