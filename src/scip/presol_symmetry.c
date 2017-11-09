@@ -1231,7 +1231,7 @@ SCIP_RETCODE determineSymmetry(
       SCIP_CALL( SCIPsetIntParam(scip, "constraints/components/maxprerounds", 0) );
 
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL,
-         "   (%.1fs) in order to avoid conflicts, turn off presolvers <domcol> and <components>  for remaining computations\n",
+         "   (%.1fs) in order to avoid conflicts, turned off presolvers <domcol> and <components>  for remaining computations\n",
          SCIPgetSolvingTime(scip));
    }
 
