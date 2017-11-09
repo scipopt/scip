@@ -3007,7 +3007,7 @@ SCIP_DECL_CONSPARSE(consParseCardinality)
       SCIP_CALL( SCIPaddVarCardinality(scip, *cons, var, NULL, weight) );
 
       /* check if there is a '<=' */
-      if ( *s == '<' && *s+1 == '='  )
+      if ( *s == '<' && *(s+1) == '='  )
       {
          s = s + 2;
 
