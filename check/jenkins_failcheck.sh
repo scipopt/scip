@@ -76,7 +76,7 @@ if [ "${PERFORMANCE}" == "performance" ]; then
   echo $NEWRBID >> $RBDB
   rm ${OUTPUT}
 else
-  ./evalcheck_cluster.sh -T ../${EVALFILE}
+  ./evalcheck_cluster.sh -r ../${EVALFILE}
 fi
 cd ..
 
