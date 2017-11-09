@@ -81,11 +81,10 @@ fi
 cd ..
 
 # Store paths of err out res and set file
-SCIPDIR=`pwd`
-ERRFILE=SCIPDIR/`ls $BASEFILE*err`
-OUTFILE=SCIPDIR/`ls $BASEFILE*out`
-RESFILE=SCIPDIR/`ls $BASEFILE*res`
-SETFILE=SCIPDIR/`ls $BASEFILE*set`
+ERRFILE=`pwd`/`ls $BASEFILE*err`
+OUTFILE=`pwd`/`ls $BASEFILE*out`
+RESFILE=`pwd`/`ls $BASEFILE*res`
+SETFILE=`pwd`/`ls $BASEFILE*set`
 
 # check for fixed instances
 echo "Checking for fixed instances."
