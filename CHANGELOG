@@ -65,6 +65,7 @@ interface:
 - added SCIPcomputeBilinEnvelope{1,2} to compute a linearization of a bilinear term when considering at most two linear inequalities
 - new method SCIPaddRow() to replace deprecated SCIPaddCut()
 - removed method SCIPgetRelaxFeastolFactor()
+- added method SCIPgetSepaMinEfficacy() to access separating/minefficacy(root)
 
 performance improvements:
 - use disjoint set to reduce peak memory usage and time to compute of clique table connectedness information
