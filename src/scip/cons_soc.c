@@ -2569,9 +2569,9 @@ SCIP_RETCODE propagateBounds(
       SCIPintervalSquare(SCIPinfinity(scip), &rhsrange, rhsrange);
       /* rhsrange = sqr(rhscoeff * (rhsvar + rhsoffset) ) */
 
-      if( lhsrange.inf > rhsrange.sup )
+      if( SCIPisGT(scip, lhsrange.inf-SCIPfeastol(scip), rhsrange.sup) )
       {
-         SCIPdebugMsg(scip, "propagation found constraint <%s> infeasible: lhs = [%.15g,%.15g] > rhs = [%.15g,%.15g]\n",
+         SCIPdebugMsg(scip, "propagation found constraint <%s> infeasible: lhs = [%.15g,%.15g]-feastol-eps > rhs = [%.15g,%.15g]\n",
             SCIPconsGetName(cons), lhsrange.inf, lhsrange.sup, rhsrange.inf, rhsrange.sup);
          *result = SCIP_CUTOFF;
       }

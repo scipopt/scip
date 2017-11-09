@@ -6207,7 +6207,7 @@ SCIP_RETCODE propagateBoundsCons(
       -infty2infty(SCIPinfinity(scip), INTERVALINFTY, -consdata->lhs + SCIPfeastol(scip)),
       +infty2infty(SCIPinfinity(scip), INTERVALINFTY,  consdata->rhs + SCIPfeastol(scip)));
 
-   /* check redundancy and infeasibility */
+   /* check redundancy */
    SCIPintervalSetBounds(&consactivity, consdata->minlinactivityinf > 0 ? -INTERVALINFTY : consdata->minlinactivity, consdata->maxlinactivityinf > 0 ? INTERVALINFTY : consdata->maxlinactivity);
    SCIPintervalAdd(INTERVALINFTY, &consactivity, consactivity, nonlinactivity);
    if( SCIPintervalIsSubsetEQ(INTERVALINFTY, consactivity, consbounds) )
@@ -6218,7 +6218,8 @@ SCIP_RETCODE propagateBoundsCons(
       return SCIP_OKAY;
    }
 
-   if( SCIPintervalAreDisjoint(consbounds, consactivity) )
+   /* check infeasibility */
+   if( SCIPisGT(scip, consdata->lhs-SCIPfeastol(scip), SCIPintervalGetSup(consactivity)) || SCIPisLT(scip, consdata->rhs+SCIPfeastol(scip), SCIPintervalGetInf(consactivity)) )
    {
       SCIPdebugMsg(scip, "found constraint <%s> to be infeasible; sides: [%g, %g], activity: [%g, %g], infeas: %.20g\n",
          SCIPconsGetName(cons), consdata->lhs, consdata->rhs, SCIPintervalGetInf(consactivity), SCIPintervalGetSup(consactivity),
