@@ -1511,7 +1511,6 @@ SCIP_RETCODE SCIPStpDualAscent(
    int* RESTRICT         nodearrint,         /**< int vertices array for internal computations or NULL */
    int                   root,               /**< the root */
    int                   nruns,              /**< number of dual ascent runs */
-   STP_Bool* RESTRICT    edgearrchar,        /**< STP_Bool edges array for internal computations or NULL */
    STP_Bool* RESTRICT    nodearrchar         /**< STP_Bool vertices array for internal computations or NULL */
    )
 {
@@ -1532,7 +1531,6 @@ SCIP_RETCODE SCIPStpDualAscent(
    int* RESTRICT cutverts;
    int* RESTRICT unsatarcs;
    int* RESTRICT unsattails;
-   STP_Bool* RESTRICT sat;
    STP_Bool* RESTRICT gmark;
    STP_Bool* RESTRICT active;
    const int nnodes = g->knots;
@@ -1588,15 +1586,6 @@ SCIP_RETCODE SCIPStpDualAscent(
       rescap = redcost;
    }
 
-   if( edgearrchar == NULL )
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &sat, nedges) );
-   }
-   else
-   {
-      sat = edgearrchar;
-   }
-
    if( nodearrchar == NULL )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &active, nnodes) );
@@ -1640,7 +1629,7 @@ SCIP_RETCODE SCIPStpDualAscent(
    SCIP_CALL( SCIPallocBufferArray(scip, &edgearr, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tailarr, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &start, nnodes + 1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &gmark, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &gmark, nnodes + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &stackarr, nnodes) );
 
    /* fill auxiliary adjacent vertex/edges arrays */
@@ -1657,12 +1646,13 @@ SCIP_RETCODE SCIPStpDualAscent(
          {
             gnodearr[k]->number = i;
             gnodearr[k]->dist = g->grad[i];
+            /* for variants with dummy terminals */
             if( g->grad[i] == 2 )
             {
                int a;
 
                for( a = g->inpbeg[i]; a != EAT_LAST; a = g->ieat[a] )
-                  if( SCIPisEQ(scip, g->cost[a], 0.0) )
+                  if( g->cost[a] == 0.0 )
                      break;
 
                if( a != EAT_LAST )
@@ -1678,8 +1668,10 @@ SCIP_RETCODE SCIPStpDualAscent(
       {
          active[i] = FALSE;
       }
-      gmark[i] = FALSE;
    }
+
+   for( int i = 0; i < nnodes + 1; i++ )
+      gmark[i] = FALSE;
 
    /* set residual capacities and mark whether an arc is satisfied (has capacity 0) */
    for( int i = 0; i < nnewedges; i++ )
@@ -1691,9 +1683,14 @@ SCIP_RETCODE SCIPStpDualAscent(
       else
          CleanBit(bitarr, i);
 #else
-      sat[i] = SCIPisZero(scip, rescap[i]);
+      if( rescap[i] == 0.0 )
+      {
+         if( active[tailarr[i] - 1] )
+            tailarr[i] = 0;
+         else
+            tailarr[i] *= -1;
+      }
 #endif
-
    }
 
    norgcutverts = 0;
@@ -1724,7 +1721,7 @@ SCIP_RETCODE SCIPStpDualAscent(
          if( firstrun )
          {
             firstrun = FALSE;
-            gmark[v] = TRUE;
+            gmark[v + 1] = TRUE;
             cutverts[ncutverts++] = v;
             assert(stacklength < nnodes);
             stackarr[stacklength++] = v;
@@ -1735,13 +1732,19 @@ SCIP_RETCODE SCIPStpDualAscent(
             for( int i = norgcutverts; i < ncutverts; i++ )
             {
                const int s = cutverts[i];
-               assert(gmark[s]);
+               assert(gmark[s + 1]);
+#if 1 // todo OUT!!!
+               if( !gmark[s + 1] )
+                  exit(1);
                if( active[s] )
                {
+                  exit(1);
+
                   active[v] = FALSE;
                   stacklength = 0;
                   goto ENDOFLOOP;
                }
+#endif
               assert(stacklength < nnodes);
               stackarr[stacklength++] = s;
             }
@@ -1758,42 +1761,67 @@ SCIP_RETCODE SCIPStpDualAscent(
             assert(n < nnodes);
             node = stackarr[n];
 #endif
-            /* traverse incoming arcs */
-// todo unsigned? todo pointer trick
-            for( int i = start[node], end = start[node + 1]; i != end; i++ ) // todo while( j-- )
+#if 0
+            int i = start[node];
+            int j = start[node + 1] - i;
+            const int* s = &(tailarr[i]);
+            while( j-- )
             {
-               const int tail = tailarr[i]; //todo if sat = -1 ...
+               int tail = *s++;
 
-               if( !gmark[tail] )
-               {
-#ifdef BITFIELDSARRAY
-                  if( BitTrue(bitarr, i) )
 #else
-                  if( sat[i] )
+            /* traverse incoming arcs */
+            for( int i = start[node], end = start[node + 1]; i != end; i++ )
+            {
+               int tail = tailarr[i];
 #endif
+
+               if( tail <= 0 )
+               {
+                  tail *= -1;
+                  if( !gmark[tail] )
                   {
-                     /* if an active vertex has been hit, break */
-                     if( active[tail] )
+                     /* if an active vertex has been hit (other than v), break */
+                     if( 0 == tail )
                      {
-                        active[v] = FALSE;
+                        /* v should not be processed */
+                        if( g->tail[edgearr[i]] == v )
+                        {
+
+                           //i++;
+                           continue;
+                        }
+
                         stacklength = 0;
                         goto ENDOFLOOP;
                      }
-                     degsum += g->grad[tail];
+
+                     assert(!active[g->tail[edgearr[i]]] || v != g->tail[edgearr[i]]);
+
+                     if( active[g->tail[edgearr[i]]] && v != g->tail[edgearr[i]] )
+                     {
+                        printf("wtf %d \n", 0);
+                        printf("tail %d edge %d v %d %f %f\n", tail, i, v, g->cost[edgearr[i]], rescap[i]);
+                        exit(1);
+                     }
+
+                     assert(tail > 0);
+
                      gmark[tail] = TRUE;
+                     tail--;
                      cutverts[ncutverts++] = tail;
+                     degsum += g->grad[tail];
 
                      assert(stacklength < nnodes);
-
                      stackarr[stacklength++] = tail;
-
-                  }
-                  else
-                  {
-                     unsattails[nunsatarcs] = tail;
-                     unsatarcs[nunsatarcs++] = i;
                   }
                }
+               else if( !gmark[tail] )
+               {
+                  unsattails[nunsatarcs] = tail;
+                  unsatarcs[nunsatarcs++] = i;
+               }
+               //i++;
             }
          }
 #ifndef DFS
@@ -1808,10 +1836,16 @@ SCIP_RETCODE SCIPStpDualAscent(
             for( int i = 0; i < nunsatarcs; i++ )
             {
                const int a = unsatarcs[i];
+
+               if( tailarr[a] <= 0 ) // todo
+               {
+                  printf("fail %d \n", 0);
+                  exit(1);
+               }
+               assert(tailarr[a] > 0);
+
                if( !(gmark[tailarr[a]]) )
                {
-                  assert(!sat[a]);
-
                   if( result[edgearr[a]] == CONNECT )
                      nsolarcs++;
                }
@@ -1840,7 +1874,7 @@ SCIP_RETCODE SCIPStpDualAscent(
             SCIP_CONS* cons = NULL;
             int shift = 0;
             SCIP_Real min = FARAWAY;
-
+            SCIP_Bool isactive = FALSE;
 
             /* 2. step: get minimum residual capacity among cut-arcs */
 
@@ -1858,8 +1892,16 @@ SCIP_RETCODE SCIPStpDualAscent(
                {
                   const int a = unsatarcs[i];
 #ifndef BITFIELDSARRAY
-                  assert(!sat[a]);
+                  assert(tailarr[a] > 0);
 #endif
+                  assert(rescap[a] > 0);
+
+                                 if( rescap[a] <= 0.0) // todo
+                                 {
+                                    printf("0 res %d \n", 0);
+                                    exit(1);
+                                 }
+
                   if( rescap[a] < min )
                      min = rescap[a];
                   if( shift )
@@ -1912,21 +1954,69 @@ SCIP_RETCODE SCIPStpDualAscent(
 
                assert(SCIPisGE(scip, rescap[a], 0.0));
 
-               if( rescap[a] <= 0.0 )
+               if( rescap[a] < 0 ) // todo
                {
-                  const int tail = unsattails[i];
+                  printf("WTFFF %d \n", 0);
+                  exit(1);
+               }
 
+               if( rescap[a] == 0.0 )
+               {
+                  int tail = unsattails[i];
+
+                  assert(rescap[a] == 0.0);
 #ifdef BITFIELDSARRAY
                   SetBit(bitarr, a);
 #else
-                  sat[a] = TRUE;
-#endif
-                  if( !(gmark[tail]) )
+                  if( tailarr[a] <= 0 || tail <= 0 )// todo
                   {
-                     degsum += g->grad[tail];
+                     printf("ARF %d \n", 0);
+                     exit(1);
+                  }
+
+                  assert(tail > 0);
+                  assert(tailarr[a] > 0);
+                  tailarr[a] *= -1;
+#endif
+
+                  if( active[tail - 1] )
+                  {
+                     assert(tail - 1 != v);
+
+                     if( tail -1 == v ) // todo
+                     {
+                        printf("v %d \n", 0);
+
+                        exit(1);
+                     }
+                     tailarr[a] = 0;
+                     isactive = TRUE;
+                  }
+
+                  if( gmark[0] )
+                  {
+                     printf("0 %d \n", 0);
+
+                     exit(1);
+                  }
+
+                  if( !(gmark[tail])  )
+                  {
+
+                  if( tail == 0 )
+                     exit(1);
                      gmark[tail] = TRUE;
+                     tail--;
+                     degsum += g->grad[tail];
                      cutverts[ncutverts++] = tail;
                   }
+                  else if (active[tail - 1] && !isactive) // todo
+                  {
+                     printf(" %d %d\n", tail, v);
+
+                     exit(1); // todo
+                  }
+
                   shift++;
                }
                else if( shift )
@@ -1935,7 +2025,11 @@ SCIP_RETCODE SCIPStpDualAscent(
                   unsatarcs[i - shift] = a;
                }
             }
-
+            if( isactive )
+            {
+               stacklength = 0;
+               goto ENDOFLOOP;
+            }
             nunsatarcs -= shift;
 
 #if 0
@@ -1961,7 +2055,15 @@ SCIP_RETCODE SCIPStpDualAscent(
          ENDOFLOOP:
 
             for( int i = 0; i < ncutverts; i++ )
-               gmark[cutverts[i]] = FALSE;
+               gmark[cutverts[i] + 1] = FALSE;
+#if 1
+            for( int i = 0; i < nnodes + 1; i++ ) // todo
+                         if(  gmark[i])
+                         {
+                            printf("FFF %d \n", i);
+                            exit(1);
+                         }
+#endif
 
             break;
       } /* augmentation loop */
@@ -2031,9 +2133,6 @@ SCIP_RETCODE SCIPStpDualAscent(
 
    if( nodearrchar == NULL )
       SCIPfreeBufferArray(scip, &active);
-
-   if( edgearrchar == NULL )
-      SCIPfreeBufferArray(scip, &sat);
 
    if( redcost == NULL )
       SCIPfreeBufferArray(scip, &rescap);

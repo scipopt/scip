@@ -2774,7 +2774,7 @@ void graph_get_csr(
       for( int e = g->inpbeg[k]; e != EAT_LAST; e = g->ieat[e] )
       {
          edgearr[i] = e;
-         tailarr[i++] = g->tail[e];
+         tailarr[i++] = g->tail[e] + 1;
       }
    }
 
