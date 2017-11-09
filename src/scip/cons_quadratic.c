@@ -16455,8 +16455,15 @@ SCIP_RETCODE SCIPcleanupRowprep(
    SCIPprintRowprep(scip, rowprep, NULL);
 #endif
 
-   /* scale up to increase violation, updates myviol */
-   rowprepCleanupScaleup(scip, rowprep, &myviol, minviol);
+   /* if there is interest in achieving some minimal violation, then possibly scale up to increase violation, updates myviol */
+   if( minviol > 0.0 )
+   {
+      /* first, try to achieve scip's minefficacy (typically 1e-4) */
+      if( SCIPgetSepaMinEfficacy(scip) > minviol )
+         rowprepCleanupScaleup(scip, rowprep, &myviol, SCIPgetSepaMinEfficacy(scip));
+      /* in case scip minefficacy could not be reached or was smaller than minviol, try with the given minviol */
+      rowprepCleanupScaleup(scip, rowprep, &myviol, minviol);
+   }
 
    /* scale down to improve numerics, updates myviol */
    rowprepCleanupScaledown(scip, rowprep, &myviol, minviol);
