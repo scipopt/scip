@@ -1167,7 +1167,7 @@ SCIP_RETCODE redLoopMw(
 
    SCIP_CALL( reduce_simple_mw(scip, g, solnode, fixed, &degelims) );
 
-   if( tryrmw )
+   if( tryrmw && userec )
    {
       SCIP_CALL( reduce_daPcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint, state, nodearrchar, &daelims, TRUE, FALSE, FALSE, TRUE, userec) );
 
@@ -1184,7 +1184,7 @@ SCIP_RETCODE redLoopMw(
 
    SCIP_CALL( level0(scip, g) );
 
-   if( tryrmw )
+   if( tryrmw && userec )
    {
       SCIP_CALL( graph_pc_mw2rmw(scip, g) );
    }
