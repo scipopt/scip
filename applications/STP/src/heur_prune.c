@@ -979,7 +979,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
          if( pcmw )
             graph_pc_2org(prunegraph);
 
-         SCIP_CALL( bound_reducePrune(scip, prunegraph, vnoi, cost, (pcmw) ? prunegraph->prize : NULL, nodearrreal, costrev,
+         SCIP_CALL( reduce_boundPrune(scip, prunegraph, vnoi, cost, (pcmw) ? prunegraph->prize : NULL, nodearrreal, costrev,
                &offsetnew, heap, state, vbase, solnode, edgearrint, &brednelims, minnelims));
 
          if( pcmw )

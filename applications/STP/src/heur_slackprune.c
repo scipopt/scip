@@ -689,7 +689,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
 #endif
 
       /*  perform reductions */
-      SCIP_CALL( da_reduceSlackPrune(scip, vars, prunegraph, vnoi, gnodearr, cost, costrev, nodearrreal, &ubnew,
+      SCIP_CALL( reduce_daSlackPrune(scip, vars, prunegraph, vnoi, gnodearr, cost, costrev, nodearrreal, &ubnew,
             edgearrint, edgearrint2, vbase, nodearrint, state, solnode, nodearrchar, edgearrchar, &danelims, minnelims, ((i == 0) && !reducegraph)) );
 
       /* delete all vertices not reachable from the root */
@@ -1098,7 +1098,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRunPcMw(
 #endif
 
       /*  perform heuristic reductions */
-      SCIP_CALL( da_reduceSlackPruneMw(scip, prunegraph, vnoi, gnodearr, cost, costrev, nodearrreal, vbase, nodearrint,
+      SCIP_CALL( reduce_daSlackPruneMw(scip, prunegraph, vnoi, gnodearr, cost, costrev, nodearrreal, vbase, nodearrint,
             edgearrint, nodearrint2, solnode, nodearrchar, &danelims, minnelims, ((i == 0))) );
 
       updateSolNodeArray(prunegraph, edgearrint, solnode, nprunenodes, npruneedges);

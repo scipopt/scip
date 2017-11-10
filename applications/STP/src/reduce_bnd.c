@@ -596,7 +596,7 @@ int reducePcMw(
 
 
 /** dual ascent based reductions */
-SCIP_RETCODE da_reduce(
+SCIP_RETCODE reduce_da(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
    PATH*                 vnoi,               /**< Voronoi data structure */
@@ -1278,7 +1278,7 @@ SCIP_RETCODE da_reduce(
 
 
 /** dual ascent reduction for slack-and-prune heuristic */
-SCIP_RETCODE da_reduceSlackPrune(
+SCIP_RETCODE reduce_daSlackPrune(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< problem variables or NULL */
    GRAPH*                graph,              /**< graph data structure */
@@ -1801,7 +1801,7 @@ SCIP_RETCODE da_reduceSlackPrune(
 
 
 /** dual ascent based reductions for PCSPG and MWCSP */
-SCIP_RETCODE da_reducePcMw(
+SCIP_RETCODE reduce_daPcMw(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
    PATH*                 vnoi,               /**< Voronoi data structure array */
@@ -2275,7 +2275,7 @@ SCIP_RETCODE da_reducePcMw(
 
 
 /** dual ascent based heuristic reductions for MWCSP */
-SCIP_RETCODE da_reduceSlackPruneMw(
+SCIP_RETCODE reduce_daSlackPruneMw(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
    PATH*                 vnoi,               /**< Voronoi data structure array */
@@ -2468,7 +2468,7 @@ SCIP_RETCODE da_reduceSlackPruneMw(
       /* calculate objective value of solution */
       ub = graph_sol_getObj(graph->cost, transresult, 0.0, nedges);
 
-      SCIPdebugMessage("TM upperbound in da_reduceSlackPruneMw  %f \n", ub + SCIPprobdataGetOffset(scip));
+      SCIPdebugMessage("TM upperbound in reduce_daSlackPruneMw  %f \n", ub + SCIPprobdataGetOffset(scip));
 
       if( SCIPisLE(scip, ub, upperbound) )
       {
@@ -2490,7 +2490,7 @@ SCIP_RETCODE da_reduceSlackPruneMw(
    {
       ub = graph_sol_getObj(graph->cost, transresult, 0.0, nedges);
 
-      SCIPdebugMessage("AP upperbound in da_reduceSlackPruneMw  %f \n", ub + SCIPprobdataGetOffset(scip));
+      SCIPdebugMessage("AP upperbound in reduce_daSlackPruneMw  %f \n", ub + SCIPprobdataGetOffset(scip));
 
       if( SCIPisLE(scip, ub, upperbound) )
          for( e = 0; e < nedges; e++ )
@@ -2743,7 +2743,7 @@ SCIP_RETCODE da_reduceSlackPruneMw(
 
 
 /** bound-based reductions for the (R)PCSTP, the MWCSP and the STP */
-SCIP_RETCODE bound_reduce(
+SCIP_RETCODE reduce_bound(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
    PATH*                 vnoi,               /**< Voronoi data structure */
@@ -3414,7 +3414,7 @@ SCIP_RETCODE bound_reduce(
  * The essence of the approach is a decomposition of the graph such that this upper bound
  * is minimized.
  * */
-SCIP_RETCODE bound_reduceMw(
+SCIP_RETCODE reduce_boundMw(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
    PATH*                 vnoi,               /**< Voronoi data structure (size 3 * nnodes) */
@@ -3586,7 +3586,7 @@ SCIP_RETCODE bound_reduceMw(
 
 
 /** bound-based reductions for the (R)PCSTP, the MWCSP and the STP; used by prune heuristic */
-SCIP_RETCODE bound_reducePrune(
+SCIP_RETCODE reduce_boundPrune(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
    PATH*                 vnoi,               /**< Voronoi data structure */
@@ -4191,7 +4191,7 @@ SCIP_RETCODE bound_reducePrune(
 
 
 /** bound-based reduction test for the HCDSTP */
-SCIP_RETCODE hopbound_reduce(
+SCIP_RETCODE hopreduce_bound(
    SCIP*  scip,
    GRAPH* graph,
    PATH* vnoi,
@@ -4385,7 +4385,7 @@ SCIP_RETCODE hopbound_reduce(
 }
 
 /** hop bound-based reduction test for the HCDSTP */
-SCIP_RETCODE hcrbound_reduce(
+SCIP_RETCODE hcrreduce_bound(
    SCIP*  scip,
    GRAPH* graph,
    PATH* vnoi,
@@ -4513,7 +4513,7 @@ SCIP_RETCODE hcrbound_reduce(
 }
 
 /* reduction method for HCSTP */
-SCIP_RETCODE hcrcbound_reduce(
+SCIP_RETCODE hcrcreduce_bound(
    SCIP*  scip,
    GRAPH* graph,
    PATH* vnoi,

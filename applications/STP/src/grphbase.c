@@ -3711,8 +3711,11 @@ SCIP_Bool graph_valid(
       }
       if( nterms != npterms || nterms != g->terms - 1 )
       {
-         printf("wrong terminal count \n");
-         return FALSE;
+         if( !rooted )
+         {
+            printf("wrong terminal count \n");
+            return FALSE;
+         }
       }
 
       for( k = 0; k < nnodes; k++ )

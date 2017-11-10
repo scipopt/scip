@@ -767,7 +767,7 @@ SCIP_RETCODE nsv_reduction(
  *
  * This is only called for the directed Steiner tree problem
  */
-SCIP_RETCODE nv_reduction_optimal(
+SCIP_RETCODE reduce_nv_optimal(
    SCIP*   scip,
    GRAPH*  g,
    double* fixed,
@@ -1084,7 +1084,7 @@ SCIP_RETCODE nv_reduction_optimal(
  *
  * Special Distance Test
  */
-int sd_reduction(
+int reduce_sduction(
    SCIP* scip,
    GRAPH* g,
    double*  sddist,
@@ -1410,7 +1410,7 @@ void ansProcessCandidate(
 }
 
 /** Special distance test */
-SCIP_RETCODE sd_red(
+SCIP_RETCODE reduce_sd(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    PATH*                 vnoi,               /**< Voronoi data structure */
@@ -1791,7 +1791,7 @@ SCIP_RETCODE sd_red(
 
    if( nodereplacing )
    {
-      SCIP_CALL( bdr_reduction(scip, g, netgraph, mst, vnoi, mstsdist, termdist1, termdist2, vbase, nodesid, neighbterms1, neighbterms2, nelims) );
+      SCIP_CALL( reduce_bdr(scip, g, netgraph, mst, vnoi, mstsdist, termdist1, termdist2, vbase, nodesid, neighbterms1, neighbterms2, nelims) );
    }
 
    /* free memory*/
@@ -1804,7 +1804,7 @@ SCIP_RETCODE sd_red(
 
 
 /** SD test for PC */
-SCIP_RETCODE sdpc_reduction(
+SCIP_RETCODE reduce_sdPc(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    PATH*                 vnoi,               /**< Voronoi data structure */
@@ -2268,7 +2268,7 @@ SCIP_Real getRSD(
 
 
 /** get SD to a single edge*/
-SCIP_RETCODE getSD(
+SCIP_RETCODE reduce_getSd(
    SCIP* scip,
    GRAPH* g,
    PATH*  pathtail,
@@ -2408,7 +2408,7 @@ SCIP_RETCODE getSD(
 
 
 /** get SD to a single edge*/
-SCIP_RETCODE reduce_alt_getSdPcMW(
+SCIP_RETCODE reduce_getSdPcMw(
    SCIP* scip,
    const GRAPH* g,
    PATH*  pathtail,
@@ -2606,7 +2606,7 @@ SCIP_RETCODE reduce_alt_getSdPcMW(
 
 
 /** SDC test for the SAP using a limited version of Dijkstra's algorithm from both endpoints of an arc */
-SCIP_RETCODE sdsp_sap_reduction(
+SCIP_RETCODE reduce_sdspSap(
    SCIP*                 scip,
    GRAPH*                g,
    PATH*                 pathtail,
@@ -2763,7 +2763,7 @@ SCIP_RETCODE sdsp_sap_reduction(
 }
 
 /** SD test using only limited dijkstra from both endpoints of an edge */
-SCIP_RETCODE sdsp_reduction(
+SCIP_RETCODE reduce_sdsp(
    SCIP*                 scip,
    GRAPH*                g,
    PATH*                 pathtail,
@@ -3045,7 +3045,7 @@ SCIP_RETCODE sdsp_reduction(
 
 
 
-SCIP_RETCODE bdr_reduction(
+SCIP_RETCODE reduce_bdr(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph structure */
    GRAPH*                netgraph,           /**< auxiliary graph structure */
@@ -3324,7 +3324,7 @@ SCIP_RETCODE bdr_reduction(
  *
  * Bottleneck Degree 3,4 Test
  */
-SCIP_RETCODE reduce_alt_bd34(
+SCIP_RETCODE reduce_bd34(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph structure */
    PATH*                 pathtail,           /**< array for internal use */
@@ -3429,18 +3429,18 @@ SCIP_RETCODE reduce_alt_bd34(
 
          if( pc )
          {
-            SCIP_CALL( reduce_alt_getSdPcMW(scip, g, pathtail, pathhead, &(sd[0]), csum, heap, statetail, statehead, memlbltail, memlblhead,
+            SCIP_CALL( reduce_getSdPcMw(scip, g, pathtail, pathhead, &(sd[0]), csum, heap, statetail, statehead, memlbltail, memlblhead,
                         pathmaxnodetail, pathmaxnodehead, adjvert[0], adjvert[1], limit));
-            SCIP_CALL( reduce_alt_getSdPcMW(scip, g, pathtail, pathhead, &(sd[1]), csum, heap, statetail, statehead, memlbltail, memlblhead,
+            SCIP_CALL( reduce_getSdPcMw(scip, g, pathtail, pathhead, &(sd[1]), csum, heap, statetail, statehead, memlbltail, memlblhead,
                         pathmaxnodetail, pathmaxnodehead, adjvert[1], adjvert[2], limit));
-            SCIP_CALL( reduce_alt_getSdPcMW(scip, g, pathtail, pathhead, &(sd[2]), csum, heap, statetail, statehead, memlbltail, memlblhead,
+            SCIP_CALL( reduce_getSdPcMw(scip, g, pathtail, pathhead, &(sd[2]), csum, heap, statetail, statehead, memlbltail, memlblhead,
                         pathmaxnodetail, pathmaxnodehead, adjvert[2], adjvert[0], limit));
          }
          else
          {
-            SCIP_CALL( getSD(scip, g, pathtail, pathhead, &(sd[0]), csum, heap, statetail, statehead, memlbltail, memlblhead, adjvert[0], adjvert[1], limit, pc, FALSE));
-            SCIP_CALL( getSD(scip, g, pathtail, pathhead, &(sd[1]), csum, heap, statetail, statehead, memlbltail, memlblhead, adjvert[1], adjvert[2], limit, pc, FALSE));
-            SCIP_CALL( getSD(scip, g, pathtail, pathhead, &(sd[2]), csum, heap, statetail, statehead, memlbltail, memlblhead, adjvert[2], adjvert[0], limit, pc, FALSE));
+            SCIP_CALL( reduce_getSd(scip, g, pathtail, pathhead, &(sd[0]), csum, heap, statetail, statehead, memlbltail, memlblhead, adjvert[0], adjvert[1], limit, pc, FALSE));
+            SCIP_CALL( reduce_getSd(scip, g, pathtail, pathhead, &(sd[1]), csum, heap, statetail, statehead, memlbltail, memlblhead, adjvert[1], adjvert[2], limit, pc, FALSE));
+            SCIP_CALL( reduce_getSd(scip, g, pathtail, pathhead, &(sd[2]), csum, heap, statetail, statehead, memlbltail, memlblhead, adjvert[2], adjvert[0], limit, pc, FALSE));
          }
 
          if( SCIPisLE(scip, sd[0] + sd[1], csum) || SCIPisLE(scip, sd[0] + sd[2], csum) || SCIPisLE(scip, sd[1] + sd[2], csum) )
@@ -3489,10 +3489,10 @@ SCIP_RETCODE reduce_alt_bd34(
                {
                   SCIP_Real s1 = -1.0;
                   if( pc )
-                     SCIP_CALL( reduce_alt_getSdPcMW(scip, g, pathtail, pathhead, &(s1), csum, heap, statetail, statehead, memlbltail, memlblhead,
+                     SCIP_CALL( reduce_getSdPcMw(scip, g, pathtail, pathhead, &(s1), csum, heap, statetail, statehead, memlbltail, memlblhead,
                                  pathmaxnodetail, pathmaxnodehead, adjvert[k], adjvert[k2], limit));
                   else
-                     SCIP_CALL( getSD(scip, g, pathtail, pathhead, &(s1), csum, heap, statetail, statehead, memlbltail, memlblhead, adjvert[k], adjvert[k2], limit, pc, FALSE) );
+                     SCIP_CALL( reduce_getSd(scip, g, pathtail, pathhead, &(s1), csum, heap, statetail, statehead, memlbltail, memlblhead, adjvert[k], adjvert[k2], limit, pc, FALSE) );
                   assert(s1 >= 0);
                   auxg->cost[e] = s1;
                   auxg->cost[flipedge(e)] = s1;
@@ -3620,7 +3620,7 @@ SCIP_RETCODE reduce_alt_bd34(
 
 
 /* shortest link reduction */
-SCIP_RETCODE sl_reduction(
+SCIP_RETCODE reduce_sl(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    PATH*                 vnoi,
@@ -3831,7 +3831,7 @@ SCIP_RETCODE sl_reduction(
 
 
 /* NV reduction from T. Polzin's "Algorithms for the Steiner problem in networks" */
-SCIP_RETCODE nv_reduction(
+SCIP_RETCODE reduce_nv(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    PATH*                 vnoi,               /**< Voronoi data structure */
@@ -4024,7 +4024,7 @@ SCIP_RETCODE nv_reduction(
 
 
 /* advanced NV reduction */
-SCIP_RETCODE nv_reductionAdv(
+SCIP_RETCODE reduce_nvAdv(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    PATH*                 vnoi,
@@ -4264,7 +4264,7 @@ SCIP_RETCODE nv_reductionAdv(
 
 
 /*  longest edge reduction test from T. Polzin's "Algorithms for the Steiner problem in networks" (Lemma 20) */
-SCIP_RETCODE ledge_reduction(
+SCIP_RETCODE reduce_ledge(
    SCIP*   scip,
    GRAPH*  g,
    PATH*   vnoi,
@@ -4873,7 +4873,7 @@ void reduce_ansAdv2(
 
 
 /** advanced connected neighborhood subset reduction test for the MWCSP */
-SCIP_RETCODE cnsAdvReduction(
+SCIP_RETCODE reduce_cnsAdv(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    int*                  marked,             /**< nodes array for internal use */
@@ -5149,7 +5149,7 @@ SCIP_RETCODE cnsAdvReduction(
 
 
 /** non-positive vertex reduction for the MWCSP */
-SCIP_RETCODE npvReduction(
+SCIP_RETCODE reduce_npv(
    SCIP*                 scip,
    GRAPH*                g,
    PATH*                 pathtail,
@@ -5226,9 +5226,9 @@ SCIP_RETCODE npvReduction(
       g->mark[i] = FALSE;
 
       prize = g->prize[i];
-      SCIP_CALL( getSD(scip, g, pathtail, pathhead, &sdist0, -prize, heap, statetail, statehead, memlbltail, memlblhead, adjverts[0], adjverts[1], limit, FALSE, TRUE) );
-      SCIP_CALL( getSD(scip, g, pathtail, pathhead, &sdist1, -prize, heap, statetail, statehead, memlbltail, memlblhead, adjverts[1], adjverts[2], limit, FALSE, TRUE) );
-      SCIP_CALL( getSD(scip, g, pathtail, pathhead, &sdist2, -prize, heap, statetail, statehead, memlbltail, memlblhead, adjverts[2], adjverts[0], limit, FALSE, TRUE) );
+      SCIP_CALL( reduce_getSd(scip, g, pathtail, pathhead, &sdist0, -prize, heap, statetail, statehead, memlbltail, memlblhead, adjverts[0], adjverts[1], limit, FALSE, TRUE) );
+      SCIP_CALL( reduce_getSd(scip, g, pathtail, pathhead, &sdist1, -prize, heap, statetail, statehead, memlbltail, memlblhead, adjverts[1], adjverts[2], limit, FALSE, TRUE) );
+      SCIP_CALL( reduce_getSd(scip, g, pathtail, pathhead, &sdist2, -prize, heap, statetail, statehead, memlbltail, memlblhead, adjverts[2], adjverts[0], limit, FALSE, TRUE) );
 
       /* can vertex be deleted? */
       if( (SCIPisGE(scip, -sdist0 - sdist1, prize) && SCIPisGE(scip, -sdist2, prize))
@@ -5289,7 +5289,7 @@ SCIP_RETCODE npvReduction(
             const int k2 = auxg->head[e];
             if( k2 > k )
             {
-               SCIP_CALL( getSD(scip, g, pathtail, pathhead, &(sdist0), -prize, heap, statetail, statehead, memlbltail, memlblhead, adjverts[k], adjverts[k2], limit, FALSE, TRUE) );
+               SCIP_CALL( reduce_getSd(scip, g, pathtail, pathhead, &(sdist0), -prize, heap, statetail, statehead, memlbltail, memlblhead, adjverts[k], adjverts[k2], limit, FALSE, TRUE) );
                auxg->cost[e] = sdist0;
                if( SCIPisGT(scip, prize, -auxg->cost[e]) )
                   break;
@@ -5390,7 +5390,7 @@ SCIP_RETCODE npvReduction(
             const int k2 = auxg->head[e];
             if( k2 > k )
             {
-               SCIP_CALL( getSD(scip, g, pathtail, pathhead, &(sdist0), -prize, heap, statetail, statehead, memlbltail, memlblhead, adjverts[k], adjverts[k2], limit, FALSE, TRUE) );
+               SCIP_CALL( reduce_getSd(scip, g, pathtail, pathhead, &(sdist0), -prize, heap, statetail, statehead, memlbltail, memlblhead, adjverts[k], adjverts[k2], limit, FALSE, TRUE) );
                auxg->cost[e] = sdist0;
                if( SCIPisGT(scip, prize, -auxg->cost[e]) )
                   break;
@@ -5492,7 +5492,7 @@ SCIP_RETCODE npvReduction(
 
 
 /** chain reduction (NPV_2) for the MWCSP */
-SCIP_RETCODE chain2Reduction(
+SCIP_RETCODE reduce_chain2(
    SCIP*                 scip,
    GRAPH*                g,
    PATH*                 pathtail,
@@ -5556,7 +5556,7 @@ SCIP_RETCODE chain2Reduction(
       assert(g->mark[i1]);
       assert(g->mark[i2]);
       g->mark[i] = FALSE;
-      SCIP_CALL( getSD(scip, g, pathtail, pathhead, &sdist, -(g->prize[i]), heap, statetail, statehead, memlbltail, memlblhead, i1, i2, limit, FALSE, TRUE) );
+      SCIP_CALL( reduce_getSd(scip, g, pathtail, pathhead, &sdist, -(g->prize[i]), heap, statetail, statehead, memlbltail, memlblhead, i1, i2, limit, FALSE, TRUE) );
       if( SCIPisGE(scip, -sdist, g->prize[i]) )
       {
          SCIPdebugMessage("delete : %d prize: %f sd: %f \n", i,  g->prize[i], -sdist );
