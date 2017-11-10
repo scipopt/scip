@@ -380,7 +380,6 @@ SCIP_RETCODE calcBranchScore(
    ncolrows = SCIPcolGetNNonz(varcol);
    varlb = SCIPvarGetLbLocal(var);
    varub = SCIPvarGetUbLocal(var);
-   assert(SCIPisFeasLT(scip, varlb, varub));
    vartype = SCIPvarGetType(var);
 
    /* calculate mean and variance of variable uniform distribution before and after branching */
