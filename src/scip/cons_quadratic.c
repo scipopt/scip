@@ -8671,7 +8671,7 @@ SCIP_RETCODE registerBranchingCandidatesGap(
       if( (!SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) || consdata->isconcave) &&
          ( !SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) || consdata->isconvex ) )
          continue;
-      SCIPdebugMsg(scip, "cons %s violation: %g %g  convex: %u %u\n", SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol, consdata->isconvex, consdata->isconcave);
+      SCIPdebugMsg(scip, "cons <%s> violation: %g %g  convex: %u %u\n", SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol, consdata->isconvex, consdata->isconcave);
 
       /* square terms */
       for( j = 0; j < consdata->nquadvars; ++j )
@@ -9752,7 +9752,7 @@ void propagateBoundsGetQuadActivity(
       {
          /* compute maximal activity only if there is a finite left hand side */
          bnd = SCIPintervalQuadUpperBound(intervalinfty, consdata->quadvarterms[i].sqrcoef, lincoef, xrng);
-         if( SCIPisInfinity(scip,  bnd) )
+         if( bnd >= intervalinfty )
          {
             ++*maxactivityinf;
          }
@@ -9781,7 +9781,7 @@ void propagateBoundsGetQuadActivity(
          SCIPintervalSetBounds(&lincoef, -SCIPintervalGetSup(lincoef), -SCIPintervalGetInf(lincoef));
          bnd = -SCIPintervalQuadUpperBound(intervalinfty, -consdata->quadvarterms[i].sqrcoef, lincoef, xrng);
 
-         if( SCIPisInfinity(scip, -bnd) )
+         if( bnd <= -intervalinfty )
          {
             ++*minactivityinf;
          }
@@ -9888,8 +9888,8 @@ SCIP_RETCODE propagateBoundsCons(
    }
 
    SCIPdebugMsg(scip, "linear activity: [%g, %g]   quadratic activity: [%g, %g]\n",
-      (consdata->minlinactivityinf > 0 ? -SCIPinfinity(scip) : consdata->minlinactivity),
-      (consdata->maxlinactivityinf > 0 ?  SCIPinfinity(scip) : consdata->maxlinactivity),
+      (consdata->minlinactivityinf > 0 ? -intervalinfty : consdata->minlinactivity),
+      (consdata->maxlinactivityinf > 0 ?  intervalinfty : consdata->maxlinactivity),
       consdata->quadactivitybounds.inf, consdata->quadactivitybounds.sup);
 
    /* extend constraint bounds by epsilon to avoid some numerical difficulties */
