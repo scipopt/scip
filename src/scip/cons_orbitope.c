@@ -88,6 +88,7 @@
 
 #define DEFAULT_PPORBITOPE         TRUE /**< whether we check if full orbitopes can be strengthened to packing/partitioning orbitopes */
 #define DEFAULT_SEPAFULLORBITOPE  FALSE /**< whether we separate inequalities for full orbitopes */
+#define DEFAULT_CHECKALWAYSFEAS    TRUE /**< whether check routine returns always SCIP_FEASIBLE */
 
 
 /*
@@ -99,6 +100,7 @@ struct SCIP_ConshdlrData
 {
    SCIP_Bool             checkpporbitope;    /**< whether we allow upgrading to packing/partitioning orbitopes */
    SCIP_Bool             sepafullorbitope;   /**< whether we separate inequalities for full orbitopes orbitopes */
+   SCIP_Bool             checkalwaysfeas;    /**< whether check routine returns always SCIP_FEASIBLE */
 };
 
 /** constraint data for orbitope constraints */
@@ -2554,6 +2556,7 @@ static
 SCIP_DECL_CONSCHECK(consCheckOrbitope)
 {  /*lint --e{715}*/
    int c;
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_ORBITOPETYPE orbitopetype;
    SCIP_Bool feasible;
@@ -2564,6 +2567,12 @@ SCIP_DECL_CONSCHECK(consCheckOrbitope)
    assert( result != NULL );
 
    *result = SCIP_FEASIBLE;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   if ( conshdlrdata->checkalwaysfeas )
+      return SCIP_OKAY;
 
    /* loop through constraints */
    for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c )
@@ -3116,6 +3125,10 @@ SCIP_RETCODE SCIPincludeConshdlrOrbitope(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/sepafullorbitope",
          "Whether we separate inequalities for full orbitopes?",
          &conshdlrdata->sepafullorbitope, TRUE, DEFAULT_SEPAFULLORBITOPE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/checkalwaysfeas",
+         "Whether check routine returns always SCIP_FEASIBLE.",
+         &conshdlrdata->checkalwaysfeas, TRUE, DEFAULT_CHECKALWAYSFEAS, NULL, NULL) );
 
    return SCIP_OKAY;
 }

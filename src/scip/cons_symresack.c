@@ -73,6 +73,7 @@
 #define CONSHDLR_PRESOLTIMING      SCIP_PRESOLTIMING_EXHAUSTIVE
 
 #define DEFAULT_PPSYMRESACK       FALSE /**< whether we allow upgrading to packing/partitioning symresacks */
+#define DEFAULT_CHECKALWAYSFEAS    TRUE /**< whether check routine returns always SCIP_FEASIBLE */
 
 /* macros for getting bounds of pseudo solutions in propagation */
 #define ISFIXED0(x)   (SCIPvarGetUbLocal(x) < 0.5 ? TRUE : FALSE)
@@ -87,6 +88,7 @@
 struct SCIP_ConshdlrData
 {
    SCIP_Bool             checkppsymresack;   /**< whether we allow upgrading to packing/partitioning symresacks */
+   SCIP_Bool             checkalwaysfeas;    /**< whether check routine returns always SCIP_FEASIBLE */
 };
 
 
@@ -1784,6 +1786,7 @@ static
 SCIP_DECL_CONSCHECK(consCheckSymresack)
 {   /*lint --e{715}*/
    int c;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -1791,6 +1794,12 @@ SCIP_DECL_CONSCHECK(consCheckSymresack)
    assert( result != NULL );
 
    *result = SCIP_FEASIBLE;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   if ( conshdlrdata->checkalwaysfeas )
+      return SCIP_OKAY;
 
    /* loop through constraints */
    for (c = 0; c < nconss; ++c)
@@ -2227,6 +2236,10 @@ SCIP_RETCODE SCIPincludeConshdlrSymresack(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/ppsymresack",
          "Upgrade symresack constraints to packing/partioning symresacks?",
          &conshdlrdata->checkppsymresack, TRUE, DEFAULT_PPSYMRESACK, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/checkalwaysfeas",
+         "Whether check routine returns always SCIP_FEASIBLE.",
+         &conshdlrdata->checkalwaysfeas, TRUE, DEFAULT_CHECKALWAYSFEAS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
