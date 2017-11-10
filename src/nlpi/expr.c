@@ -11604,6 +11604,10 @@ SCIP_RETCODE exprgraphNodeSimplify(
          /* if monomial is not sorted, then polynomial should not be sorted either, or have only one monomial */
          assert(monomial->sorted || !polynomialdata->sorted || polynomialdata->nmonomials <= 1);
 
+         /* make sure factors are merged, should only be potentially necessary if not sorted, see also #1848 */
+         if( !monomial->sorted )
+            SCIPexprMergeMonomialFactors(monomial, eps);
+
          if( !SCIPexprFindMonomialFactor(monomial, i, &factorpos) )
          {
             ++j;
