@@ -540,7 +540,10 @@ SCIP_RETCODE cutpoolDelCut(
 
    /* if this is the global cut pool of SCIP, mark the row to not be member anymore */
    if( cutpool->globalcutpool )
+   {
+      assert(cut->row->inglobalcutpool);
       cut->row->inglobalcutpool = FALSE;
+   }
 
    /* remove the cut from the hash table */
    assert(SCIPhashtableExists(cutpool->hashtable, (void*)cut));
@@ -736,6 +739,8 @@ SCIP_RETCODE SCIPcutpoolAddNewRow(
       SCIPerrorMessage("cannot store locally valid row <%s> in a cut pool\n", SCIProwGetName(row));
       return SCIP_INVALIDDATA;
    }
+
+   assert(! row->inglobalcutpool);
 
    /* only called to ensure that minidx and maxidx are up-to-date */
    (void) SCIProwGetMaxidx(row, set);
