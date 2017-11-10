@@ -33,7 +33,7 @@ NR!=FNR && /^@01/ {
 }
 
 NR!=FNR && searchAssert == 1 && /Assertion.*failed.$/ {
-    print $0
+    print "";
     print instance;
     for(i=2;i<=NF;i++){printf "%s ", $i}; print "";
     searchAssert=0; idx+=1;
@@ -41,6 +41,7 @@ NR!=FNR && searchAssert == 1 && /Assertion.*failed.$/ {
 
 END {
     if( length(human) > 0 ) {
+        print "";
         print "The following fails need human inspection:";
         for(key in human){ print human[key] }
     }
