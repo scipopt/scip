@@ -2040,7 +2040,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    }
    SCIPprobdataWriteLogLine(scip, "Problem %s\n", probtype);
    SCIPprobdataWriteLogLine(scip, "Program SCIP-Jack\n");
-   SCIPprobdataWriteLogLine(scip, "Version 0.1\n");
+   SCIPprobdataWriteLogLine(scip, "Version %s\n", VERSION_SCIPJACK);
    SCIPprobdataWriteLogLine(scip, "End\n");
    SCIPprobdataWriteLogLine(scip, "\n");
    SCIPprobdataWriteLogLine(scip, "SECTION Solutions\n");
