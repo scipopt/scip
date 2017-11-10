@@ -80,6 +80,8 @@ struct SCIP_PresolData
    SCIP_Real             log10groupsize;     /**< log10 of size of symmetry group */
    SCIP_Bool             computedsym;        /**< Have we already tried to compute symmetries? */
    SCIP_Bool             successful;         /**< Was the computation of symmetries successful? */
+   int                   oldmaxpreroundscomponents;/**< original value of parameter constraints/components/maxprerounds */
+   int                   oldmaxroundsdomcol; /**< original value of parameter presolving/maxrounds/domcol */
 };
 
 
@@ -1058,7 +1060,7 @@ SCIP_RETCODE computeSymmetryGroup(
       if ( ! SCIPisEQ(scip, val, oldcoef) )
       {
 #ifdef SCIP_OUTPUT
-         SCIPdebugMsg(scip, "Detected new new rhs type %f, type: %u - color: %d\n", val, sense, matrixdata.nuniquerhs);
+         SCIPdebugMsg(scip, "Detected new rhs type %f, type: %u - color: %d\n", val, sense, matrixdata.nuniquerhs);
 #endif
          matrixdata.rhscoefcolors[idx] = matrixdata.nuniquerhs++;
          oldcoef = val;
@@ -1223,16 +1225,17 @@ SCIP_RETCODE determineSymmetry(
       }
 
       /* turn off some other presolving methods in order to be sure that they do not destroy symmetry afterwards */
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+         "   (%.1fs) turning off presolvers <domcol> and <components> for remaining computations in order to avoid conflicts\n",
+         SCIPgetSolvingTime(scip));
 
-      /* domcol avoids S_2-symmetries and may not be compatible with other symmetry handling methods. */
+      /* domcol avoids S_2-symmetries and may not be compatible with other symmetry handling methods */
+      SCIP_CALL( SCIPgetIntParam(scip, "presolving/domcol/maxrounds", &(presoldata->oldmaxroundsdomcol)) );
       SCIP_CALL( SCIPsetIntParam(scip, "presolving/domcol/maxrounds", 0) );
 
-      /* components creates sub-SCIPs on which no symmetry handling is installed, thus turn this off. */
+      /* components creates sub-SCIPs on which no symmetry handling is installed, thus turn this off */
+      SCIP_CALL( SCIPgetIntParam(scip, "constraints/components/maxprerounds", &(presoldata->oldmaxpreroundscomponents)) );
       SCIP_CALL( SCIPsetIntParam(scip, "constraints/components/maxprerounds", 0) );
-
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL,
-         "   (%.1fs) in order to avoid conflicts, turned off presolvers <domcol> and <components>  for remaining computations\n",
-         SCIPgetSolvingTime(scip));
    }
 
    return SCIP_OKAY;
@@ -1243,6 +1246,26 @@ SCIP_RETCODE determineSymmetry(
 /*
  * Callback methods of presolver
  */
+
+/** initialization method of presolver (called after problem was transformed) */
+static
+SCIP_DECL_PRESOLINIT(presolInitSymmetry)
+{  /*lint --e{715}*/
+   SCIP_PRESOLDATA* presoldata;
+
+   assert( scip != NULL );
+   assert( presol != NULL );
+   assert( strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0 );
+
+   presoldata = SCIPpresolGetData(presol);
+
+   /* initialize original values of changed parameters in case we do not enter determineSymmetry() */
+   SCIP_CALL( SCIPgetIntParam(scip, "presolving/domcol/maxrounds", &(presoldata->oldmaxroundsdomcol)) );
+   SCIP_CALL( SCIPgetIntParam(scip, "constraints/components/maxprerounds", &(presoldata->oldmaxpreroundscomponents)) );
+
+   return SCIP_OKAY;
+}
+
 
 /** presolving initialization method of presolver (called when presolving is about to begin) */
 static
@@ -1304,8 +1327,8 @@ SCIP_DECL_PRESOLEXIT(presolExitSymmetry)
    presoldata->successful = FALSE;
 
    /* reset changed parameters */
-   SCIP_CALL( SCIPresetParam(scip, "presolving/domcol/maxrounds") );
-   SCIP_CALL( SCIPresetParam(scip, "constraints/components/maxprerounds") );
+   SCIP_CALL( SCIPsetIntParam(scip, "presolving/domcol/maxrounds", presoldata->oldmaxroundsdomcol) );
+   SCIP_CALL( SCIPsetIntParam(scip, "constraints/components/maxprerounds", presoldata->oldmaxpreroundscomponents) );
 
    return SCIP_OKAY;
 }
@@ -1418,6 +1441,7 @@ SCIP_RETCODE SCIPincludePresolSymmetry(
    assert( presol != NULL );
 
    SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeSymmetry) );
+   SCIP_CALL( SCIPsetPresolInit(scip, presol, presolInitSymmetry) );
    SCIP_CALL( SCIPsetPresolExit(scip, presol, presolExitSymmetry) );
    SCIP_CALL( SCIPsetPresolInitpre(scip, presol, presolInitpreSymmetry) );
    SCIP_CALL( SCIPsetPresolExitpre(scip, presol, presolExitpreSymmetry) );
