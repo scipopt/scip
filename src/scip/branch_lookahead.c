@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define SCIP_DEBUG
+
 /**@file   branch_lookahead.c
  * @ingroup BRANCHINGRULES
  * @brief  lookahead LP branching rule
@@ -2077,6 +2077,56 @@ SCIP_RETCODE branchOnVar(
       /* update the lower bound for the LPs for further children of both created nodes */
       SCIP_CALL( SCIPupdateNodeLowerbound(scip, downchild, bestdownvalid ? MAX(bestdown, provedbound) : provedbound) );
       SCIP_CALL( SCIPupdateNodeLowerbound(scip, upchild, bestupvalid ? MAX(bestup, provedbound) : provedbound) );
+
+      if( decision->downlowerbounds != NULL )
+      {
+         SCIP_VAR** vars;
+         int nvars;
+         int i;
+
+         assert(decision->downupperbounds != NULL);
+         assert(decision->uplowerbounds != NULL);
+         assert(decision->upupperbounds != NULL);
+
+         nvars = SCIPgetNVars(scip);
+         vars = SCIPgetVars(scip);
+
+         assert(nvars == decision->boundssize);
+
+         for( i = 0; i < decision->boundssize; i++ )
+         {
+            SCIP_VAR* var = vars[i];
+            SCIP_Real currentlb;
+            SCIP_Real currentub;
+            SCIP_Real newlb = decision->downlowerbounds[i];
+            SCIP_Real newub = decision->downupperbounds[i];
+
+            currentlb = SCIPvarGetLbLocal(var);
+            currentub = SCIPvarGetUbLocal(var);
+
+            /* update the lower bound of the lower child in case it is better then the current one */
+            if( SCIPisGT(scip, newlb, currentlb) )
+               SCIP_CALL(SCIPchgVarLbNode(scip, downchild, var, newlb));
+
+            /* update the upper bound of the lower child in case it is better then the current one AND it is not the
+             * branching variable, as its upper bound is already updated
+             */
+            if( SCIPisLT(scip, newub, currentub) && var != bestvar )
+               SCIP_CALL(SCIPchgVarUbNode(scip, downchild, var, newub));
+
+            newlb = decision->uplowerbounds[i];
+            newub = decision->upupperbounds[i];
+
+            /* update the lower bound of the upper child in case it is better then the current one AND it is not the
+             * branching variable, as its lower bound is already updated
+             */
+            if( SCIPisGT(scip, newlb, currentlb) && var != bestvar)
+               SCIP_CALL(SCIPchgVarLbNode(scip, upchild, var, newlb));
+            /* update the upper bound of the upper child in case it is better then the current one */
+            if( SCIPisLT(scip, newub, currentub) )
+               SCIP_CALL(SCIPchgVarUbNode(scip, upchild, var, newub));
+         }
+      }
    }
    LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, " -> down child's lowerbound: %g\n", SCIPnodeGetLowerbound(downchild));
    LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, " -> up child's lowerbound: %g\n", SCIPnodeGetLowerbound(upchild));
@@ -2541,10 +2591,10 @@ SCIP_RETCODE applyBinaryConstraints(
       int nvars;
       int v;
 
-      //#ifdef PRINTNODECONS
+#ifdef PRINTNODECONS
       SCIP_CALL( SCIPprintCons(scip, constraint, NULL) );
       SCIPinfoMessage(scip, NULL, "\n");
-      //#endif
+#endif
 
       /* get the variables */
       assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(constraint)), "logicor") == 0);
