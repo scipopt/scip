@@ -9,6 +9,7 @@ fixed bugs:
 - fixed handling of LOOSE variables in locks heuristic
 - fixed upgrade to a varbound constraint if abspower constraint contains a multi-aggregated variable
 - fixed numerical issues in boundshift presolver when aggregating integer variables
+- fixed bug in expression graph simplification
 
 performance bugs
 - for fast presolving emphasis, disable use of implications in logicor presolving
