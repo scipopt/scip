@@ -143,6 +143,32 @@ struct SCIP_ConshdlrData
  * @{
  */
 
+/** returns whether node realtail is active or leads to active node other than dfsbase */
+static
+SCIP_Bool is_active(
+   const int*            active,             /**< active nodes array */
+   int                   realtail,           /**< vertex to start from */
+   int                   dfsbase             /**< DFS source vertex */
+   )
+{
+   int curr;
+
+   for( curr = active[realtail]; curr != 0 && curr != dfsbase + 1; curr = active[curr - 1] )
+   {
+
+      assert(curr >= 0);
+
+      if( curr < 0 ) /// todo
+      {
+         printf("FAIL in cr%d \n", 0);
+         exit(1);
+      }
+   }
+
+   return (curr == 0);
+}
+
+
 
 /** add a cut */
 static
@@ -1532,7 +1558,8 @@ SCIP_RETCODE SCIPStpDualAscent(
    int* RESTRICT unsatarcs;
    int* RESTRICT unsattails;
    int* RESTRICT gmark;
-   STP_Bool* RESTRICT active;
+   int* RESTRICT active;
+   STP_Bool* RESTRICT mynodearrchar = NULL;
    const int nnodes = g->knots;
    const int nterms = g->terms;
    const int nedges = g->edges;
@@ -1581,40 +1608,24 @@ SCIP_RETCODE SCIPStpDualAscent(
    SCIP_CALL( SCIPallocBufferArray(scip, &unsattails, nedges) );
 
    if( redcost == NULL )
-   {
       SCIP_CALL( SCIPallocBufferArray(scip, &rescap, nedges) );
-   }
    else
-   {
       rescap = redcost;
-   }
 
    if( nodearrchar == NULL )
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &active, nnodes) );
-   }
+      SCIP_CALL( SCIPallocBufferArray(scip, &mynodearrchar, nnodes) );
    else
-   {
-      active = nodearrchar;
-   }
+      mynodearrchar = nodearrchar;
 
    if( nodearrint == NULL )
-   {
       SCIP_CALL( SCIPallocBufferArray(scip, &cutverts, nnodes) );
-   }
    else
-   {
       cutverts = nodearrint;
-   }
 
    if( edgearrint == NULL )
-   {
       SCIP_CALL( SCIPallocBufferArray(scip, &unsatarcs, nedges) );
-   }
    else
-   {
       unsatarcs = edgearrint;
-   }
 
    if( gnodearrterms == NULL )
    {
@@ -1629,6 +1640,7 @@ SCIP_RETCODE SCIPStpDualAscent(
 
    SCIP_CALL( SCIPpqueueCreate(&pqueue, nterms, 2.0, GNODECmpByDist) );
 
+   SCIP_CALL( SCIPallocMemoryArray(scip, &active, nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &edgearr, nedges) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &tailarr, nedges) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &start, nnodes + 1) );
@@ -1643,7 +1655,7 @@ SCIP_RETCODE SCIPStpDualAscent(
    {
       if( Is_term(g->term[i]) )
       {
-         active[i] = TRUE;
+         active[i] = 0;
          assert(g->grad[i] > 0);
          if( i != root )
          {
@@ -1669,7 +1681,7 @@ SCIP_RETCODE SCIPStpDualAscent(
       }
       else
       {
-         active[i] = FALSE;
+         active[i] = -1;
       }
    }
 
@@ -1688,7 +1700,7 @@ SCIP_RETCODE SCIPStpDualAscent(
 #else
       if( rescap[i] == 0.0 )
       {
-         if( active[tailarr[i] - 1] )
+         if( active[tailarr[i] - 1] == 0 )
             tailarr[i] = 0;
          else
             tailarr[i] *= -1;
@@ -1737,7 +1749,7 @@ SCIP_RETCODE SCIPStpDualAscent(
                const int s = cutverts[i];
 
                assert(gmark[s + 1]);
-               assert(!active[s]);
+               assert(active[s] != 0);
                assert(stacklength < nnodes);
 
                stackarr[stacklength++] = s;
@@ -1761,6 +1773,7 @@ SCIP_RETCODE SCIPStpDualAscent(
             {
                int tail = tailarr[i];
 
+               /* zero reduced-cost arc? */
                if( tail <= 0 )
                {
                   tail *= -1;
@@ -1775,13 +1788,14 @@ SCIP_RETCODE SCIPStpDualAscent(
                         if( realtail == v )
                            continue;
 
-                        /* is realtail still active? */
-                        if( active[realtail] )
+                        /* is realtail active or does realtail lead to an active vertex other than v? */
+                        if( is_active(active, realtail, v) )
                         {
-                           active[v] = FALSE;
+                           active[v] = realtail + 1;
                            stacklength = 0;
                            goto ENDOFLOOP;
                         }
+
                         tail = realtail + 1;
 
                         /* have we processed tail already? */
@@ -1789,7 +1803,6 @@ SCIP_RETCODE SCIPStpDualAscent(
                            continue;
                      }
 
-                     assert(!active[g->tail[edgearr[i]]] || v != g->tail[edgearr[i]]);
                      assert(tail > 0);
 
                      gmark[tail] = TRUE;
@@ -1799,8 +1812,8 @@ SCIP_RETCODE SCIPStpDualAscent(
 
                      assert(stacklength < nnodes);
                      stackarr[stacklength++] = tail;
-                  }
-               }
+                  } /* marked */
+               } /* zero reduced-cost arc */
                else if( !gmark[tail] )
                {
                   unsattails[nunsatarcs] = tail;
@@ -1936,12 +1949,15 @@ SCIP_RETCODE SCIPStpDualAscent(
 
                   tailarr[a] *= -1;
 
-                  if( active[tail - 1] )
+                  if( active[tail - 1] >= 0 && is_active(active, tail - 1, v) )
                   {
                      assert(tail - 1 != v);
-
                      tailarr[a] = 0;
-                     isactive = TRUE;
+                     if( !isactive )
+                     {
+                        isactive = TRUE;
+                        active[v] = tail;
+                     }
                   }
 
 
@@ -1965,7 +1981,6 @@ SCIP_RETCODE SCIPStpDualAscent(
             }
             if( isactive )
             {
-               active[v] = FALSE;
                stacklength = 0;
                goto ENDOFLOOP;
             }
@@ -2044,6 +2059,7 @@ SCIP_RETCODE SCIPStpDualAscent(
    SCIPfreeMemoryArray(scip, &start);
    SCIPfreeMemoryArray(scip, &tailarr);
    SCIPfreeMemoryArray(scip, &edgearr);
+   SCIPfreeMemoryArray(scip, &active);
 
    SCIPpqueueFree(&pqueue);
 
@@ -2058,7 +2074,7 @@ SCIP_RETCODE SCIPStpDualAscent(
    if( ascendandprune )
    {
        SCIP_Bool success;
-       SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, g, rescap, unsatarcs, cutverts, root, active, &success, TRUE) );
+       SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, g, rescap, unsatarcs, cutverts, root, mynodearrchar, &success, TRUE) );
    }
 
    if( edgearrint == NULL )
@@ -2068,7 +2084,7 @@ SCIP_RETCODE SCIPStpDualAscent(
       SCIPfreeBufferArray(scip, &cutverts);
 
    if( nodearrchar == NULL )
-      SCIPfreeBufferArray(scip, &active);
+      SCIPfreeBufferArray(scip, &mynodearrchar);
 
    if( redcost == NULL )
       SCIPfreeBufferArray(scip, &rescap);

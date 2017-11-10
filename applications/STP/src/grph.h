@@ -263,8 +263,6 @@ extern SCIP_RETCODE   voronoi_dist(SCIP*, const GRAPH*, SCIP_Real*, double*, int
 extern SCIP_RETCODE   voronoi_radius(SCIP* scip, const GRAPH*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*);
 extern SCIP_RETCODE   getnext4tterms(SCIP*, const GRAPH*, SCIP_Real*, PATH*, int*, int*, int*);
 
-
-
 /* grphmcut.c
  */
 #if 0
@@ -297,7 +295,6 @@ extern SCIP_RETCODE reduce(SCIP*, GRAPH**, SCIP_Real*, int, int, SCIP_Bool);
 
 /* reduce_alt.c
  */
-
 extern void    reduce_ans(SCIP*, GRAPH*, int*, int*);
 extern void    reduce_ansAdv(SCIP*, GRAPH*, int*, int*, SCIP_Bool);
 extern void    reduce_ansAdv2(SCIP*, GRAPH*, int*, int*);
