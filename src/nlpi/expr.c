@@ -11580,11 +11580,11 @@ SCIP_RETCODE exprgraphNodeSimplify(
       if( node->children[i]->op != SCIP_EXPR_POLYNOMIAL )
          continue;
 
-      SCIPdebugMessage("expand child %d in expression node ", i);
+      SCIPdebugMessage("expand child %d in expression node %p = ", i, (void*)node);
       SCIPdebug( exprgraphPrintNodeExpression(node, messagehdlr, NULL, NULL, FALSE) );
-      SCIPdebugPrintf("\n\tchild = ");
+      SCIPdebug( SCIPmessagePrintInfo(messagehdlr, "\n\tchild = ") );
       SCIPdebug( exprgraphPrintNodeExpression(node->children[i], messagehdlr, NULL, NULL, FALSE) );
-      SCIPdebugPrintf("\n");
+      SCIPdebug( SCIPmessagePrintInfo(messagehdlr, "\n") );
 
       removechild = TRUE; /* we intend to release children[i] */
 
