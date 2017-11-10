@@ -1781,13 +1781,55 @@ void addUpperBound(
 #endif
 }
 
+/** apply the domain reductions from a single struct to another one; this may be used in case on of the two child
+ *  problems of a variable is infeasible
+ */
+static
+void applySingleDeeperDomainReductions(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             baselpsol,          /**< The LP solution of the base problem. Used to check whether the domain
+                                              *   reduction is violated by it. */
+   DOMAINREDUCTIONS*     targetdomreds,      /**< The target that should be filled with the merged data. */
+   DOMAINREDUCTIONS*     domreds             /**< source domain reductions */
+   )
+{
+   SCIP_VAR** vars;
+   int nvars;
+   int i;
+
+   assert(scip != NULL);
+   assert(baselpsol != NULL);
+   assert(targetdomreds != NULL);
+   assert(domreds != NULL);
+
+   /* as the bounds are tracked for all vars we have to iterate over all vars */
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
+
+   assert(vars != NULL);
+   assert(nvars > 0);
+
+   for( i = 0; i < nvars; i++ )
+   {
+#ifdef SCIP_STATISTIC
+      /* TODO: adjust the proof nodes */
+      addLowerBoundProofNode(scip, vars[i], domreds->lowerbounds[i], baselpsol, targetdomreds,
+         domreds->lowerboundnproofs[i] + 2);
+      addUpperBoundProofNode(scip, vars[i], domreds->upperbounds[i], baselpsol, targetdomreds,
+         domreds->upperboundnproofs[i] + 2);
+#else
+      addLowerBoundProofNode(scip, vars[i], domreds->lowerbounds[i], baselpsol, targetdomreds);
+      addUpperBoundProofNode(scip, vars[i], domreds->upperbounds[i], baselpsol, targetdomreds);
+#endif
+   }
+}
+
 /**
  * merges the domain reduction data from the two given branching childs data into the target parent data
  */
 static
 void applyDeeperDomainReductions(
    SCIP*                 scip,               /**< SCIP data structure */
-   STATUS*               status,             /**< the status struct to store whether a domain reduction was already added */
    SCIP_SOL*             baselpsol,          /**< The LP solution of the base problem. Used to check whether the domain
                                               *   reduction is violated by it. */
    DOMAINREDUCTIONS*     targetdomreds,      /**< The target that should be filled with the merged data. */
@@ -3752,8 +3794,13 @@ SCIP_RETCODE selectVarRecursive(
          /* merge domain changes from the two child nodes */
          if( config->usedomainreduction )
          {
-            applyDeeperDomainReductions(scip, status, baselpsol, domainreductions, downdomainreductions,
+            if( upbranchingresult->cutoff && downbranchingresult->cutoff )
+               applyDeeperDomainReductions(scip, baselpsol, domainreductions, downdomainreductions,
                   updomainreductions);
+            else if( upbranchingresult->cutoff )
+               applySingleDeeperDomainReductions(scip, baselpsol, domainreductions, downdomainreductions);
+            else if( downbranchingresult->cutoff )
+               applySingleDeeperDomainReductions(scip, baselpsol, domainreductions, updomainreductions);
          }
       }
 
