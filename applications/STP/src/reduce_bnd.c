@@ -4191,7 +4191,7 @@ SCIP_RETCODE reduce_boundPrune(
 
 
 /** bound-based reduction test for the HCDSTP */
-SCIP_RETCODE hopreduce_bound(
+SCIP_RETCODE reduce_boundHop(
    SCIP*  scip,
    GRAPH* graph,
    PATH* vnoi,
@@ -4385,7 +4385,7 @@ SCIP_RETCODE hopreduce_bound(
 }
 
 /** hop bound-based reduction test for the HCDSTP */
-SCIP_RETCODE hcrreduce_bound(
+SCIP_RETCODE reduce_boundHopR(
    SCIP*  scip,
    GRAPH* graph,
    PATH* vnoi,
@@ -4513,7 +4513,7 @@ SCIP_RETCODE hcrreduce_bound(
 }
 
 /* reduction method for HCSTP */
-SCIP_RETCODE hcrcreduce_bound(
+SCIP_RETCODE reduce_boundHopRc(
    SCIP*  scip,
    GRAPH* graph,
    PATH* vnoi,

@@ -2193,7 +2193,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    for( v = 0; v < nvars; v++ )
       nval[v] = (results[v % nedges] == (v / nedges)) ? 1.0 : 0.0;
 
-   SCIP_CALL( SCIPvalidateStpSol(scip, graph, nval, &feasible) );
+   SCIP_CALL( SCIPStpValidateSol(scip, graph, nval, &feasible) );
 
    /* solution feasible? */
    if( feasible )

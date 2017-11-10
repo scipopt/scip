@@ -1241,7 +1241,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpStp)
    {
       consdata = SCIPconsGetData(conss[i]);
 
-      SCIP_CALL( SCIPvalidateStpSol(scip, consdata->graph, SCIPprobdataGetXval(scip, NULL), &feasible) );
+      SCIP_CALL( SCIPStpValidateSol(scip, consdata->graph, SCIPprobdataGetXval(scip, NULL), &feasible) );
 
       if( !feasible )
       {
@@ -1266,7 +1266,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsStp)
    {
       consdata = SCIPconsGetData(conss[i]);
 
-      SCIP_CALL( SCIPvalidateStpSol(scip, consdata->graph, SCIPprobdataGetXval(scip, NULL), &feasible) );
+      SCIP_CALL( SCIPStpValidateSol(scip, consdata->graph, SCIPprobdataGetXval(scip, NULL), &feasible) );
 
       if( !feasible )
       {
@@ -1291,7 +1291,7 @@ SCIP_DECL_CONSCHECK(consCheckStp)
    {
       consdata = SCIPconsGetData(conss[i]);
 
-      SCIP_CALL( SCIPvalidateStpSol(scip, consdata->graph, SCIPprobdataGetXval(scip, sol), &feasible) );
+      SCIP_CALL( SCIPStpValidateSol(scip, consdata->graph, SCIPprobdataGetXval(scip, sol), &feasible) );
 
       if( !feasible )
       {

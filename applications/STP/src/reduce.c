@@ -108,9 +108,9 @@ SCIP_RETCODE nvreduce_sl(
       if( elims > 0 )
       {
          if( g->stp_type == STP_PCSPG || g->stp_type == STP_RPCSPG )
-            SCIP_CALL( degree_test_pc(scip, g, fixed, &degelims, solnode, FALSE) );
+            SCIP_CALL( reduce_simple_pc(scip, g, fixed, &degelims, solnode, FALSE) );
          else
-            SCIP_CALL( degree_test(scip, g, fixed, solnode, &degelims, NULL) );
+            SCIP_CALL( reduce_simple(scip, g, fixed, solnode, &degelims, NULL) );
       }
       else
       {
@@ -574,7 +574,7 @@ SCIP_RETCODE reduceHc(
    SCIP_CALL( SCIPallocBufferArray(scip, &pathedge, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, 3 * nnodes) );
 
-   SCIP_CALL( degree_test_hc(scip, g, fixed, &degnelims) );
+   SCIP_CALL( reduce_simple_hc(scip, g, fixed, &degnelims) );
 
    while( (bred || hbred || rbred || rcbred) && !SCIPisStopped(scip) )
    {
@@ -585,14 +585,14 @@ SCIP_RETCODE reduceHc(
 
       if( rbred )
       {
-         SCIP_CALL( hcrreduce_bound(scip, g, vnoi, cost, costrev, radius, heap, state, vbase, &hcrnelims, pathedge) );
+         SCIP_CALL( reduce_boundHopR(scip, g, vnoi, cost, costrev, radius, heap, state, vbase, &hcrnelims, pathedge) );
          if( hcrnelims <= redbound )
             rbred = FALSE;
       }
 
       if( rcbred )
       {
-         SCIP_CALL( hcrcreduce_bound(scip, g, vnoi, cost, costrev, radius, -1.0, heap, state, vbase, &hcrcnelims, pathedge, FALSE) );
+         SCIP_CALL( reduce_boundHopRc(scip, g, vnoi, cost, costrev, radius, -1.0, heap, state, vbase, &hcrcnelims, pathedge, FALSE) );
          if( hcrcnelims <= redbound )
             rcbred = FALSE;
       }
@@ -609,7 +609,7 @@ SCIP_RETCODE reduceHc(
 
       if( hbred )
       {
-         SCIP_CALL( hopreduce_bound(scip, g, vnoi, cost, radius, costrev, heap, state, vbase, &hbrednelims) );
+         SCIP_CALL( reduce_boundHop(scip, g, vnoi, cost, radius, costrev, heap, state, vbase, &hbrednelims) );
          if( hbrednelims <= redbound )
             hbred = FALSE;
          if( SCIPgetTotalTime(scip) > timelimit )
@@ -706,7 +706,7 @@ SCIP_RETCODE reduceSap(
       if( SCIPisEQ(scip, g->cost[e], 20000.0) )
          g->cost[e] = FARAWAY;
 
-   SCIP_CALL( degree_test_sap(scip, g, fixed, &degtnelims) );
+   SCIP_CALL( reduce_simple_sap(scip, g, fixed, &degtnelims) );
 
    /* main loop */
    while( (sd || rpt || da) && !SCIPisStopped(scip) )
@@ -723,12 +723,12 @@ SCIP_RETCODE reduceSap(
 
       if( rpt )
       {
-         SCIP_CALL( rptReduction(scip, g, fixed, &rptnelims) );
+         SCIP_CALL( reduce_rpt(scip, g, fixed, &rptnelims) );
          if( rptnelims <= redbound )
             rpt = FALSE;
       }
 
-      SCIP_CALL( degree_test_sap(scip, g, fixed, &degtnelims) );
+      SCIP_CALL( reduce_simple_sap(scip, g, fixed, &degtnelims) );
 
       if( da )
       {
@@ -740,7 +740,7 @@ SCIP_RETCODE reduceSap(
       }
    }
 
-   SCIP_CALL( degree_test_sap(scip, g, fixed, &degtnelims) );
+   SCIP_CALL( reduce_simple_sap(scip, g, fixed, &degtnelims) );
 
    SCIPfreeBufferArray(scip, &edgearrreal2);
    SCIPfreeBufferArray(scip, &path);
@@ -919,7 +919,7 @@ SCIP_RETCODE redLoopMw(
 
    degelims = 0;
 
-   SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
+   SCIP_CALL( reduce_simple_mw(scip, g, solnode, fixed, &degelims) );
    assert(graph_pc_term2edgeConsistent(g));
 
 #if 0
@@ -936,7 +936,7 @@ SCIP_RETCODE redLoopMw(
    printf("ansadelims %d \n", ansadelims);
 
    degelims = 0;
-   SCIP_CALL(degree_test_mw(scip, g, solnode, fixed, &degelims));
+   SCIP_CALL(reduce_simple_mw(scip, g, solnode, fixed, &degelims));
    printf("degelims %d \n", degelims);
 
    reduce_ansAdv2(scip, g, nodearrint2, &ansad2elims);
@@ -1050,7 +1050,7 @@ SCIP_RETCODE redLoopMw(
       }
 
       if( ans || ansad || nnp || npv || extensive )
-         SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
+         SCIP_CALL( reduce_simple_mw(scip, g, solnode, fixed, &degelims) );
 
       if( (da || (advanced && extensive)) )
       {
@@ -1059,7 +1059,7 @@ SCIP_RETCODE redLoopMw(
          if( daelims <= 2 * redbound )
             da = FALSE;
          else
-            SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
+            SCIP_CALL( reduce_simple_mw(scip, g, solnode, fixed, &degelims) );
 
          SCIPdebugMessage("Dual-Ascent Elims: %d \n", daelims);
       }
@@ -1107,7 +1107,7 @@ SCIP_RETCODE redLoopMw(
          SCIPdebugMessage("chain2 delete: %d \n", chain2elims);
       }
 
-      SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
+      SCIP_CALL( reduce_simple_mw(scip, g, solnode, fixed, &degelims) );
 
       if( ansad2 || extensive )
       {
@@ -1116,7 +1116,7 @@ SCIP_RETCODE redLoopMw(
          if( ansad2elims <= redbound )
             ansad2 = FALSE;
          else
-            SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &ansad2elims) );
+            SCIP_CALL( reduce_simple_mw(scip, g, solnode, fixed, &ansad2elims) );
 
          SCIPdebugMessage("ans advanced 2 deleted: %d (da? %d ) \n", ansad2elims, da);
       }
@@ -1139,7 +1139,7 @@ SCIP_RETCODE redLoopMw(
       {
          int cnsadvelims = 0;
 
-         SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
+         SCIP_CALL( reduce_simple_mw(scip, g, solnode, fixed, &degelims) );
 #if 0
          SCIP_CALL( reduce_cnsAdv(scip, g, nodearrint2, &cnsadvelims) );
 #endif
@@ -1157,7 +1157,7 @@ SCIP_RETCODE redLoopMw(
             rerun = TRUE;
             advanced = FALSE;
 
-            SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
+            SCIP_CALL( reduce_simple_mw(scip, g, solnode, fixed, &degelims) );
             SCIPdebugMessage("Restarting reduction loop! (%d eliminations) \n\n ", cnsadvelims + daelims);
             if( extensive )
                advanced = TRUE;
@@ -1165,7 +1165,7 @@ SCIP_RETCODE redLoopMw(
       }
    }
 
-   SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
+   SCIP_CALL( reduce_simple_mw(scip, g, solnode, fixed, &degelims) );
 
    if( tryrmw )
    {
@@ -1256,7 +1256,7 @@ SCIP_RETCODE redLoopPc(
 
    assert(graph_pc_term2edgeConsistent(g));
 
-   SCIP_CALL( degree_test_pc(scip, g, &fix, &degnelims, solnode, FALSE) );
+   SCIP_CALL( reduce_simple_pc(scip, g, &fix, &degnelims, solnode, FALSE) );
 
    assert(graph_pc_term2edgeConsistent(g));
 
@@ -1305,7 +1305,7 @@ SCIP_RETCODE redLoopPc(
             break;
       }
 
-      SCIP_CALL( degree_test_pc(scip, g, &fix, &nelims, solnode, FALSE) );
+      SCIP_CALL( reduce_simple_pc(scip, g, &fix, &nelims, solnode, FALSE) );
 
       degnelims += nelims;
 
@@ -1372,7 +1372,7 @@ SCIP_RETCODE redLoopPc(
          SCIPdebugMessage("da: %d \n", danelims);
       }
 
-      SCIP_CALL( degree_test_pc(scip, g, &fix, &degnelims, solnode, TRUE) );
+      SCIP_CALL( reduce_simple_pc(scip, g, &fix, &degnelims, solnode, TRUE) );
 
       if( ub >= 0 )
       {
@@ -1404,7 +1404,7 @@ SCIP_RETCODE redLoopPc(
          {
             SCIP_CALL( reduce_daPcMw(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, vbase, heap, edgearrint, state, nodearrchar, &danelims, TRUE, TRUE, FALSE, FALSE, userec) );
          }
-         SCIP_CALL( degree_test_pc(scip, g, &fix, &degnelims, solnode, TRUE) );
+         SCIP_CALL( reduce_simple_pc(scip, g, &fix, &degnelims, solnode, TRUE) );
          if( danelims + degnelims > reductbound || (extensive && danelims + degnelims > 0) )
          {
             da = dualascent;
@@ -1421,7 +1421,7 @@ SCIP_RETCODE redLoopPc(
          }
       }
    }
-   SCIP_CALL( degree_test_pc(scip, g, &fix, &degnelims, solnode, TRUE) );
+   SCIP_CALL( reduce_simple_pc(scip, g, &fix, &degnelims, solnode, TRUE) );
 
    assert(graph_pc_term2edgeConsistent(g));
 
@@ -1489,9 +1489,9 @@ SCIP_RETCODE redLoopStp(
    ub = upperbound;
    fix = 0.0;
 
-   SCIP_CALL( contractZeroEdges(scip, g) );
+   SCIP_CALL( reduce_contractZeroEdges(scip, g) );
 
-   SCIP_CALL( degree_test(scip, g, &fix, solnode, &i, edgestate) );
+   SCIP_CALL( reduce_simple(scip, g, &fix, solnode, &i, edgestate) );
 
    /* get timelimit parameter */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
@@ -1517,7 +1517,7 @@ SCIP_RETCODE redLoopStp(
          if( lenelims <= reductbound )
             le = FALSE;
          else
-            SCIP_CALL( degree_test(scip, g, &fix, solnode, &degtnelims, edgestate) );
+            SCIP_CALL( reduce_simple(scip, g, &fix, solnode, &degtnelims, edgestate) );
 
          SCIPdebugMessage("le: %d \n", lenelims);
          if( SCIPgetTotalTime(scip) > timelimit )
@@ -1549,7 +1549,7 @@ SCIP_RETCODE redLoopStp(
       }
 
       if( sd || sdc )
-         SCIP_CALL( degree_test(scip, g, &fix, solnode, &degtnelims, edgestate) );
+         SCIP_CALL( reduce_simple(scip, g, &fix, solnode, &degtnelims, edgestate) );
 
       if( bd3 )
       {
@@ -1558,7 +1558,7 @@ SCIP_RETCODE redLoopStp(
             bd3 = FALSE;
          else
          {
-            SCIP_CALL( degree_test(scip, g, &fix, solnode, &degtnelims, edgestate) );
+            SCIP_CALL( reduce_simple(scip, g, &fix, solnode, &degtnelims, edgestate) );
          }
 
          SCIPdebugMessage("bd3: %d \n", bd3nelims);
@@ -1609,7 +1609,7 @@ SCIP_RETCODE redLoopStp(
             break;
       }
       SCIP_CALL( level0(scip, g) );
-      SCIP_CALL( degree_test(scip, g, &fix, solnode, &degtnelims, edgestate) );
+      SCIP_CALL( reduce_simple(scip, g, &fix, solnode, &degtnelims, edgestate) );
 
       if( (danelims + sdnelims + bd3nelims + nvslnelims + lenelims + brednelims + sdcnelims) <= 2 * reductbound  )
       {

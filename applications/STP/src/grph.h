@@ -286,12 +286,6 @@ extern SCIP_RETCODE graph_load(SCIP*, GRAPH**, const char*, PRESOL*);
 extern void graph_save(const GRAPH*, const char*, FILETYPE);
 extern void SCIPwriteStp(SCIP*, const GRAPH*, FILE*, SCIP_Real);
 
-/* grph2fig.c
- */
-extern void graph_writefig(const GRAPH*, const char*, const double *, int);
-extern void graph_bfscoord(GRAPH* g);
-extern void graph_boxcoord(GRAPH* g);
-
 /* reduce.c
  */
 extern SCIP_RETCODE level0(SCIP*, GRAPH*);
@@ -336,22 +330,22 @@ extern SCIP_RETCODE    reduce_boundMw(SCIP*, GRAPH*, PATH*, PATH*, SCIP_Real*, S
 extern SCIP_RETCODE    reduce_boundPrune(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, SCIP_Real*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int*, SCIP_Bool);
 #endif
 extern SCIP_RETCODE    reduce_boundPrune(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int*, int*, int);
-extern SCIP_RETCODE    hopreduce_bound(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*);
-extern SCIP_RETCODE    hcrreduce_bound(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int*);
-extern SCIP_RETCODE    hcrcreduce_bound(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int*, SCIP_Bool);
+extern SCIP_RETCODE    reduce_boundHop(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*);
+extern SCIP_RETCODE    reduce_boundHopR(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int*);
+extern SCIP_RETCODE    reduce_boundHopRc(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int*, SCIP_Bool);
 
 /* reduce_simple.c
  */
-extern SCIP_RETCODE    contractZeroEdges(SCIP*, GRAPH*);
-extern SCIP_RETCODE    degree_test(SCIP*, GRAPH*, SCIP_Real*, int*, int*, int*);
-extern SCIP_RETCODE    degree_test_hc(SCIP*, GRAPH*, SCIP_Real*, int*);
-extern SCIP_RETCODE    degree_test_mw(SCIP*, GRAPH*, int*, SCIP_Real*, int*);
-extern SCIP_RETCODE    degree_test_pc(SCIP*, GRAPH*, SCIP_Real*, int*, int*, SCIP_Bool);
-extern SCIP_RETCODE    degree_test_sap(SCIP*, GRAPH*, SCIP_Real*, int*);
-extern SCIP_RETCODE    rptReduction(SCIP*, GRAPH*, SCIP_Real*, int*);
+extern SCIP_RETCODE    reduce_contractZeroEdges(SCIP*, GRAPH*);
+extern SCIP_RETCODE    reduce_simple(SCIP*, GRAPH*, SCIP_Real*, int*, int*, int*);
+extern SCIP_RETCODE    reduce_simple_hc(SCIP*, GRAPH*, SCIP_Real*, int*);
+extern SCIP_RETCODE    reduce_simple_mw(SCIP*, GRAPH*, int*, SCIP_Real*, int*);
+extern SCIP_RETCODE    reduce_simple_pc(SCIP*, GRAPH*, SCIP_Real*, int*, int*, SCIP_Bool);
+extern SCIP_RETCODE    reduce_simple_sap(SCIP*, GRAPH*, SCIP_Real*, int*);
+extern SCIP_RETCODE    reduce_rpt(SCIP*, GRAPH*, SCIP_Real*, int*);
 
 /* validate.c
  */
-extern SCIP_RETCODE    SCIPvalidateStpSol(SCIP*, const GRAPH*, const double*, SCIP_Bool*);
+extern SCIP_RETCODE    SCIPStpValidateSol(SCIP*, const GRAPH*, const double*, SCIP_Bool*);
 
 #endif /* !_GRAPH_H_ */

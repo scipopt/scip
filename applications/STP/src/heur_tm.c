@@ -2777,7 +2777,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
       for( v = 0; v < nvars; v++ )
          nval[v] = (results[v % nedges] == (v / nedges)) ? 1.0 : 0.0;
 
-      SCIP_CALL( SCIPvalidateStpSol(scip, graph, nval, &success) );
+      SCIP_CALL( SCIPStpValidateSol(scip, graph, nval, &success) );
       if( success )
       {
          pobj = SCIPprobdataGetOffset(scip);

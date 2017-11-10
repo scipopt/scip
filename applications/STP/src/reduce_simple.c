@@ -436,7 +436,7 @@ void adjust0term(
 
 
 /** contract edges of weight zero */
-SCIP_RETCODE contractZeroEdges(
+SCIP_RETCODE reduce_contractZeroEdges(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g                   /**< graph data structure */
    )
@@ -468,7 +468,7 @@ SCIP_RETCODE contractZeroEdges(
 
 
 /** basic reduction tests for the STP */
-SCIP_RETCODE degree_test(
+SCIP_RETCODE reduce_simple(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    SCIP_Real*            fixed,              /**< pointer to offset value */
@@ -658,7 +658,7 @@ SCIP_RETCODE degree_test(
 
 
 /** basic reduction tests for the SAP */
-SCIP_RETCODE degree_test_sap(
+SCIP_RETCODE reduce_simple_sap(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    SCIP_Real*            fixed,              /**< pointer to offfset value */
@@ -855,7 +855,7 @@ SCIP_RETCODE degree_test_sap(
 
 
 /** root proximity terminal test (SAP) */
-SCIP_RETCODE rptReduction(
+SCIP_RETCODE reduce_rpt(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    SCIP_Real*            fixed,              /**< pointer to offset value */
@@ -926,7 +926,7 @@ SCIP_RETCODE rptReduction(
 }
 
 /** basic reduction tests for the MWCS problem */
-SCIP_RETCODE degree_test_mw(
+SCIP_RETCODE reduce_simple_mw(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    int*                  solnode,            /**< array to indicate whether a node is part of the current solution (==CONNECT) */
@@ -1229,7 +1229,7 @@ SCIP_RETCODE degree_test_mw(
 }
 
 /** basic reduction tests for the HCDSTP */
-SCIP_RETCODE degree_test_hc(
+SCIP_RETCODE reduce_simple_hc(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    SCIP_Real*            fixed,              /**< pointer to offfset value */
@@ -1309,7 +1309,7 @@ SCIP_RETCODE degree_test_hc(
 
 
 /** basic reductions for RPCSTP and PCSPG */
-SCIP_RETCODE degree_test_pc(
+SCIP_RETCODE reduce_simple_pc(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    SCIP_Real*            fixed,              /**< pointer to offset value */

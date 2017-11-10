@@ -201,7 +201,7 @@ static void trail2(
 /*--- Returns  : TRUE / FALSE                                             ---*/
 /*---------------------------------------------------------------------------*/
 /** validates whether a (LP) solution is feasible */
-SCIP_RETCODE SCIPvalidateStpSol(
+SCIP_RETCODE SCIPStpValidateSol(
    SCIP* scip,
    const GRAPH*  g,
    const double* xval,
