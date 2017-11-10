@@ -802,7 +802,7 @@ SCIP_RETCODE detectOrbitopes(
       if ( ! infeasibleorbitope )
       {
          SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, "orbitope", vars, SCIP_ORBITOPETYPE_FULL, ntwocyclescomp, npermsincomponent[i] + 1, TRUE,
-               presoldata->conssaddlp, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+               presoldata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
          SCIP_CALL( SCIPaddCons(scip, cons) );
 
