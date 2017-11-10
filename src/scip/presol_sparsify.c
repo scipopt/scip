@@ -186,10 +186,6 @@ SCIP_RETCODE cancelRow(
    if( SCIPconsGetHdlr(cons) == SCIPfindConshdlr(scip, "setppc") ||
        SCIPconsGetHdlr(cons) == SCIPfindConshdlr(scip, "logicor") )
       mincancelrate = 1.0;
-   else if( SCIPconsGetHdlr(cons) == SCIPfindConshdlr(scip, "knapsack") )
-      preserveintcoefs = TRUE;
-   else
-      preserveintcoefs = FALSE;
 
    SCIP_CALL( SCIPduplicateBufferArray(scip, &cancelrowinds, rowidxptr, cancelrowlen) );
    SCIP_CALL( SCIPduplicateBufferArray(scip, &cancelrowvals, rowvalptr, cancelrowlen) );
