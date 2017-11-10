@@ -12,7 +12,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+#define SCIP_DEBUG
+#define PRINTNODECONS
 /**@file   branch_lookahead.c
  * @ingroup BRANCHINGRULES
  * @brief  lookahead LP branching rule
@@ -968,16 +969,28 @@ SCIP_RETCODE constraintListAppend(
 
 /** Free all resources of a constraint list in opposite order to the allocation. */
 static
-void constraintListFree(
+SCIP_RETCODE constraintListFree(
    SCIP*                 scip,               /**< SCIP data structure */
    CONSTRAINTLIST**      conslist            /**< Pointer to the list to be freed. */
    )
 {
+   int i;
+
    assert(scip != NULL);
    assert(conslist != NULL);
 
+   for( i = 0; i < (*conslist)->nconstraints; i++ )
+   {
+      SCIP_CONS* constraint = (*conslist)->constraints[i];
+      if( constraint != NULL )
+      {
+         SCIP_CALL( SCIPreleaseCons(scip, &constraint) );
+      }
+   }
+
    SCIPfreeBufferArray(scip, &(*conslist)->constraints);
    SCIPfreeBuffer(scip, conslist);
+   return SCIP_OKAY;
 }
 
 /**
@@ -1095,7 +1108,7 @@ SCIP_RETCODE binConsDataCreate(
 
 /** Free all resources in a BINCONSDATA in opposite order of allocation. */
 static
-void binConsDataFree(
+SCIP_RETCODE binConsDataFree(
    SCIP*                 scip,               /**< SCIP data structure */
    BINCONSDATA**         consdata            /**< Pointer to he struct to be freed. */
    )
@@ -1103,9 +1116,11 @@ void binConsDataFree(
    assert(scip != NULL);
    assert(consdata != NULL);
 
-   constraintListFree(scip, &(*consdata)->createdconstraints);
+   SCIP_CALL( constraintListFree(scip, &(*consdata)->createdconstraints) );
    binaryVarListFree(scip, &(*consdata)->binaryvars);
    SCIPfreeBuffer(scip, consdata);
+
+   return SCIP_OKAY;
 }
 
 /** A struct acting as a fixed list of candidates */
@@ -2695,7 +2710,9 @@ SCIP_RETCODE applyBinaryConstraints(
 
       /* release the constraint, as it is no longer needed */
       SCIP_CALL( SCIPreleaseCons(scip, &constraint) );
+      conslist->constraints[i] = NULL;
    }
+   conslist->nconstraints = 0;
 
    LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "added %d/%d binary constraints.\n", nconsadded, conslist->nconstraints);
 
@@ -4214,7 +4231,7 @@ SCIP_RETCODE selectVarStart(
                      &status->addbinconst, &status->cutoff, &status->domred) );
 #endif
             }
-            binConsDataFree(scip, &binconsdata);
+            SCIP_CALL( binConsDataFree(scip, &binconsdata) );
          }
          LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Applied found data to the base node.\n");
       }
