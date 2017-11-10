@@ -38,11 +38,11 @@
 #define PRESOL_DESC            "eliminate non-zero coefficients"
 
 #define PRESOL_PRIORITY            -24000    /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
-#define PRESOL_MAXROUNDS                0    /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+#define PRESOL_MAXROUNDS               -1    /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_TIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 
 #define DEFAULT_ENABLECOPY           TRUE    /**< should sparsify presolver be copied to sub-SCIPs? */
-#define DEFAULT_CANCELLINEAR        FALSE    /**< should we cancel nonzeros in constraints of the linear constraint handler? */
+#define DEFAULT_CANCELLINEAR         TRUE    /**< should we cancel nonzeros in constraints of the linear constraint handler? */
 #define DEFAULT_PRESERVEINTCOEFS     TRUE    /**< should we forbid cancellations that destroy integer coefficients? */
 #define DEFAULT_MAX_CONT_FILLIN         0    /**< default value for the maximal fillin for continuous variables */
 #define DEFAULT_MAX_BIN_FILLIN          0    /**< default value for the maximal fillin for binary variables */
@@ -159,6 +159,7 @@ SCIP_RETCODE cancelRow(
    SCIP_Real* cancelrowvals;
    SCIP_Real cancellhs;
    SCIP_Real cancelrhs;
+   SCIP_Real bestcancelrate;
    int* tmpinds;
    int* locks;
    SCIP_Real* tmpvals;
@@ -168,13 +169,27 @@ SCIP_RETCODE cancelRow(
    int nchgcoef;
    int nretrieves;
    int bestnfillin;
+   SCIP_Real mincancelrate;
    SCIP_Bool rowiseq;
+   SCIP_CONS* cons;
 
    rowiseq = SCIPisEQ(scip, SCIPmatrixGetRowLhs(matrix, rowidx), SCIPmatrixGetRowRhs(matrix, rowidx));
 
    cancelrowlen = SCIPmatrixGetRowNNonzs(matrix, rowidx);
    rowidxptr = SCIPmatrixGetRowIdxPtr(matrix, rowidx);
    rowvalptr = SCIPmatrixGetRowValPtr(matrix, rowidx);
+
+   cons = SCIPmatrixGetCons(matrix, rowidx);
+
+   mincancelrate = 0.0;
+
+   if( SCIPconsGetHdlr(cons) == SCIPfindConshdlr(scip, "setppc") ||
+       SCIPconsGetHdlr(cons) == SCIPfindConshdlr(scip, "logicor") )
+      mincancelrate = 1.0;
+   else if( SCIPconsGetHdlr(cons) == SCIPfindConshdlr(scip, "knapsack") )
+      preserveintcoefs = TRUE;
+   else
+      preserveintcoefs = FALSE;
 
    SCIP_CALL( SCIPduplicateBufferArray(scip, &cancelrowinds, rowidxptr, cancelrowlen) );
    SCIP_CALL( SCIPduplicateBufferArray(scip, &cancelrowvals, rowvalptr, cancelrowlen) );
@@ -192,7 +207,6 @@ SCIP_RETCODE cancelRow(
       SCIP_Real bestscale;
       int bestcand;
       int bestncancel;
-      SCIP_Bool bestdeccond;
       int i;
       int j;
       ROWVARPAIR rowvarpair;
@@ -202,7 +216,7 @@ SCIP_RETCODE cancelRow(
       bestcand = -1;
       bestncancel = 0;
       bestnfillin = 0;
-      bestdeccond = FALSE;
+      bestcancelrate = 0.0;
 
       for( i = 0; i < cancelrowlen; ++i )
       {
@@ -227,13 +241,14 @@ SCIP_RETCODE cancelRow(
             int nbinfillin;
             int ntotfillin;
             int eqrowlen;
+            int nsignflips;
             ROWVARPAIR* eqrowvarpair;
             SCIP_Real* eqrowvals;
             int* eqrowinds;
             SCIP_Real eqrowside;
             SCIP_Real scale;
+            SCIP_Real cancelrate;
             int i1,i2;
-            SCIP_Bool deccond;
             SCIP_Bool abortpair;
 
             i1 = tmpinds[i];
@@ -282,6 +297,7 @@ SCIP_RETCODE cancelRow(
             a = 0;
             b = 0;
             ncancel = 0;
+
             ncontfillin = 0;
             nintfillin = 0;
             nbinfillin = 0;
@@ -294,26 +310,17 @@ SCIP_RETCODE cancelRow(
 
                   newcoef = cancelrowvals[a] + scale * eqrowvals[b];
 
-                  /* we try to avoid cancellations that might destroy structure by making integral coefficients
-                   * fractional or changing +/-1 coefficients to different values
-                   */
-                  if( preserveintcoefs )
-                  {
-                     if( SCIPisIntegral(scip, cancelrowvals[a]) && !SCIPisIntegral(scip, newcoef) )
-                     {
-                        abortpair = TRUE;
-                        break;
-                     }
-                     if( (SCIPisEQ(scip, cancelrowvals[a], 1.0) || SCIPisEQ(scip, cancelrowvals[a], -1.0))
-                        && !SCIPisEQ(scip, newcoef, 1.0) && !SCIPisEQ(scip, newcoef, -1.0) && !SCIPisZero(scip, newcoef) )
-                     {
-                        abortpair = TRUE;
-                        break;
-                     }
-                  }
-
                   if( SCIPisZero(scip, newcoef) )
+                  {
                      ++ncancel;
+                  }
+                  else if( COPYSIGN(1.0, newcoef) != COPYSIGN(1.0, cancelrowvals[a]) ||
+                           (preserveintcoefs && SCIPisIntegral(scip, cancelrowvals[a]) && !SCIPisIntegral(scip, newcoef)) )
+                  {
+                     /* do not flip signs for non-canceled coefficients and check if integral coefficients are preserved */
+                     abortpair = TRUE;
+                     break;
+                  }
 
                   ++a;
                   ++b;
@@ -353,6 +360,11 @@ SCIP_RETCODE cancelRow(
             if( abortpair )
                continue;
 
+            cancelrate = ncancel / (SCIP_Real) eqrowlen;
+
+            if( cancelrate < mincancelrate )
+               continue;
+
             while( b < eqrowlen )
             {
                SCIP_VAR* var = SCIPmatrixGetVar(matrix, eqrowinds[b]);
@@ -377,6 +389,9 @@ SCIP_RETCODE cancelRow(
             if( ncontfillin > maxcontfillin || nbinfillin > maxbinfillin || nintfillin > maxintfillin )
                continue;
 
+#if 0 /*TODO I am not convinced that an integral right hand side is important. If integral coefficients are preserved the side might even be rounded
+            and yield stronger constraints if it is fractional */
+
             /* secure that integer lhs stays integer after scaling */
             if( !SCIPisInfinity(scip, -cancellhs) )
                if( SCIPisIntegral(scip, cancellhs) && !SCIPisIntegral(scip, cancellhs + scale * eqrowside) )
@@ -386,31 +401,24 @@ SCIP_RETCODE cancelRow(
             if( !SCIPisInfinity(scip, cancelrhs) )
                if( SCIPisIntegral(scip, cancelrhs) && !SCIPisIntegral(scip, cancelrhs + scale * eqrowside) )
                   continue;
-
+#endif
             ntotfillin = nbinfillin + nintfillin + ncontfillin;
 
-            /* the case if all non-zeros of the equation for cancelling are canceled in the
-             * cancel row is a necessary condition for generating independent components
-             */
-            deccond = (ntotfillin == 0 && ncancel == eqrowlen);
-
-            if( (deccond && !bestdeccond) ||
-                ((ncancel - ntotfillin) >  (bestncancel - bestnfillin) ||
-                ((ncancel - ntotfillin) == (bestncancel - bestnfillin) && ntotfillin < bestnfillin) ) )
+            if( cancelrate > bestcancelrate )
             {
                bestncancel = ncancel;
                bestnfillin = ntotfillin;
                bestcand = eqrowvarpair->rowindex;
                bestscale = scale;
-               bestdeccond = deccond;
+               bestcancelrate = cancelrate;
 
-               /* stop looking if the current candidate does not create any fill-in */
-               if( ntotfillin == 0 )
+               /* stop looking if the current candidate does not create any fill-in or alter coefficients */
+               if( cancelrate == 1.0 )
                   break;
             }
 
-            /* we accept the best candidate immediately if it does not create any fill-in */
-            if( bestcand != -1 && bestnfillin == 0 )
+            /* we accept the best candidate immediately if it does not create any fill-in or alter coefficients */
+            if( bestcand != -1 && bestcancelrate == 1.0 )
                break;
          }
       }
@@ -504,7 +512,7 @@ SCIP_RETCODE cancelRow(
          break;
    }
 
-   if( nchgcoef != 0 && nchgcoef <= maxchgcoeffac * (SCIP_Real)(SCIPmatrixGetRowNNonzs(matrix, rowidx) - cancelrowlen) )
+   if( nchgcoef != 0 )
    {
       SCIP_CONS* cons;
       SCIP_VAR** consvars;
