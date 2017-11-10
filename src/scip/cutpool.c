@@ -698,7 +698,11 @@ SCIP_RETCODE SCIPcutpoolAddRow(
       if( SCIPsetIsFeasLT(set, rhs, otherrhs) )
       {
          SCIP_CALL( cutpoolDelCut(cutpool, blkmem, set, stat, lp, othercut) );
-         SCIP_CALL( SCIPcutpoolAddNewRow(cutpool, blkmem, set, stat, lp, row) );
+
+         /* use recursion, since in rare cases new cut might compare equal to multiple other cuts
+          * that do not compare equal themselve due to non-transitivity of epsilon comparisons
+          */
+         SCIP_CALL( SCIPcutpoolAddRow(cutpool, blkmem, set, stat, lp, row) );
       }
    }
 
