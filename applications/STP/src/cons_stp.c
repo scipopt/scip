@@ -1564,6 +1564,9 @@ SCIP_RETCODE SCIPStpDualAscent(
    conshdlr = SCIPfindConshdlr(scip, "stp");
 #endif
 
+   if( !Is_term(g->term[root]) )
+      printf("nonroot \n\n\n %d \n", root);
+
    /* if specified root is not a terminal, take default root */
    if( !Is_term(g->term[root]) )
       root = g->source;
@@ -1766,12 +1769,20 @@ SCIP_RETCODE SCIPStpDualAscent(
                      /* if an active vertex has been hit (other than v), break */
                      if( 0 == tail )
                      {
+                        const int realtail = g->tail[edgearr[i]];
+
                         /* v should not be processed */
-                        if( g->tail[edgearr[i]] == v )
+                        if( realtail == v )
                            continue;
 
-                        stacklength = 0;
-                        goto ENDOFLOOP;
+                        /* is realtail still active? */
+                        if( active[realtail] )
+                        {
+                           active[v] = FALSE;
+                           stacklength = 0;
+                           goto ENDOFLOOP;
+                        }
+                        tail = realtail + 1;
                      }
 
                      assert(!active[g->tail[edgearr[i]]] || v != g->tail[edgearr[i]]);
@@ -1950,6 +1961,7 @@ SCIP_RETCODE SCIPStpDualAscent(
             }
             if( isactive )
             {
+               active[v] = FALSE;
                stacklength = 0;
                goto ENDOFLOOP;
             }

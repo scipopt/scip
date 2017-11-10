@@ -507,7 +507,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
             return SCIP_ERROR;
          }
 
-         if( newgraph->grad[i] == 0 )
+         if( newgraph->grad[i] == 0 && newgraph->knots > 1 )
          {
             printf("FAIL GRAD \n\n\n");
             return SCIP_ERROR;
@@ -530,7 +530,7 @@ if( pcmw )
 #if 1 // debug
    for( int k = 0; k < newgraph->knots; ++k )
    {
-      if( Is_term(newgraph->term[k]) && newgraph->grad[k] == 0 && k != root )
+      if( Is_term(newgraph->term[k]) && newgraph->grad[k] == 0 && k != newgraph->source )
       {
          printf("after i %d r %d \n", k, root);
          return SCIP_ERROR;
