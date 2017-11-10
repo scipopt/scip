@@ -322,22 +322,21 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    int nedges = 0;
 
    /* create bliss graph */
-   bliss::Graph* G = new bliss::Graph();
+   bliss::Graph G(0);
 
    SCIP_Bool success = FALSE;
-   SCIP_CALL( fillGraphByColoredCoefficients(scip, G, matrixdata, nnodes, nedges, success) );
+   SCIP_CALL( fillGraphByColoredCoefficients(scip, &G, matrixdata, nnodes, nedges, success) );
    if ( ! success )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Graph construction failed.\n");
-      delete G;
       return SCIP_OKAY;
    }
 
 #ifdef SCIP_OUTPUT
-   G->write_dot("debug.dot");
+   G.write_dot("debug.dot");
 #endif
 
-   SCIPdebugMsg(scip, "Symmetry detection graph has %u nodes.\n", G->get_nof_vertices());
+   SCIPdebugMsg(scip, "Symmetry detection graph has %u nodes.\n", G.get_nof_vertices());
 
    /* compute automorphisms */
    bliss::Stats stats;
@@ -352,23 +351,20 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    /* Prefer splitting partition cells corresponding to variables over those corresponding
     * to inequalities. This is because we are only interested in the action
     * of the automorphism group on the variables, and we need a base for this action */
-   G->set_splitting_heuristic(bliss::Graph::shs_f);
+   G.set_splitting_heuristic(bliss::Graph::shs_f);
    /* disable component recursion as advised by Tommi Junttila from bliss */
-   G->set_component_recursion(false);
+   G.set_component_recursion(false);
 
    /* do not use a node limit, but set generator limit */
 #ifdef BLISS_PATCH_PRESENT
-   G->set_search_limits(0, (unsigned) maxgenerators);
+   G.set_search_limits(0, (unsigned) maxgenerators);
 #endif
 
    /* start search */
-   G->find_automorphisms(stats, blisshook, (void*) &data);
+   G.find_automorphisms(stats, blisshook, (void*) &data);
 #ifdef SCIP_OUTPUT
    (void) stats.print(stdout);
 #endif
-
-   /* free graph */
-   delete G;
 
    /* prepare return values */
    *perms = data.perms;
