@@ -1783,6 +1783,10 @@ SCIP_RETCODE SCIPStpDualAscent(
                            goto ENDOFLOOP;
                         }
                         tail = realtail + 1;
+
+                        /* have we processed tail already? */
+                        if( gmark[tail] )
+                           continue;
                      }
 
                      assert(!active[g->tail[edgearr[i]]] || v != g->tail[edgearr[i]]);
