@@ -16455,7 +16455,7 @@ SCIP_RETCODE SCIPcleanupRowprep(
    }
 
    /* scale down to improve numerics, updates myviol */
-   rowprepCleanupScaledown(scip, rowprep, &myviol, minviol);
+   rowprepCleanupScaledown(scip, rowprep, &myviol, MAX(SCIPgetSepaMinEfficacy(scip), minviol));
 
 #ifdef SCIP_DEBUG
    SCIPinfoMessage(scip, NULL, "applied scaling, viol %g: ", myviol);
