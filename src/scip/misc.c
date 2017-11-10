@@ -2193,6 +2193,9 @@ SCIP_RETCODE hashtableInsert(
          tmp = hashval;
          hashval = hashtable->hashes[pos];
          hashtable->hashes[pos] = tmp;
+         key = hashtable->hashgetkey(hashtable->userptr, element);
+
+         /* after doing a swap the case that other elements are replaced must not happen anymore */
 #ifndef NDEBUG
          swapped = TRUE;
 #endif
