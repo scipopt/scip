@@ -1982,7 +1982,7 @@ SCIP_RETCODE SCIPStpDualAscent(
 
          for( int i = 0; i < nnodes + 1; i++ )
          {
-            assert(!g->mark[i]);
+            assert(!gmark[i]);
          }
 
          break;

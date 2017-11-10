@@ -515,10 +515,12 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
          }
       }
    }
-
+if( pcmw )
+{
    graph_pc_2orgcheck(newgraph);
    assert(graph_pc_term2edgeConsistent(newgraph));
    graph_pc_2transcheck(newgraph);
+}
 #endif
    assert(graph_valid(newgraph));
 
