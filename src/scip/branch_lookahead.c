@@ -2150,7 +2150,7 @@ SCIP_RETCODE branchOnVar(
 
          assert(nvars == decision->boundssize);
 
-         for( i = 0; i < decision->boundssize; i++ )
+         for( i = 0; i < nvars; i++ )
          {
             SCIP_VAR* var = vars[i];
             SCIP_Real currentlb;
