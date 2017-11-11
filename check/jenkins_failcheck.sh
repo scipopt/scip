@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 #
 # This script uploads and checks for fails in a SCIP run.
 # Sends an email if errors are detected. Is not meant to be use directly,
@@ -50,21 +50,21 @@ EOF
 
 read -d '' awkscript_checkfixedinstances << 'EOF'
 NR != FNR {
-  if( $3 == "'$GITBRANCH'" && $4 == "'$TESTSET'" && $5 == "'$SETTING'" && $6 == "'$OPT'" && $7 == "'$LPS'")
+  if( $3 == GITBRANCH && $4 == TESTSET && $5 == SETTING && $6 == OPT && $7 == LPS)
   {
      if( $0 in bugs == 0 )
         print "Previously failing instance " $1 " with error " $2 " does not fail anymore"
      else
-        print $0 >> "'$TMPDATABASE'"
+        print $0 >> TMPDATABASE
   }
   else
-     print $0 >> "'$TMPDATABASE'"
+     print $0 >> TMPDATABASE
   next;
 }
 ## fail instances for this configuration
 /fail/ {
   failmsg=$13; for(i=14;i<=NF;i++){failmsg=failmsg"_"$i;}
-  errorstring=$1 " " failmsg " '$GITBRANCH' '$TESTSET' '$SETTING' '$OPT' '$LPS'";
+  errorstring=$1 " " failmsg " " GITBRANCH " " TESTSET " " SETTING " " OPT " " LPS;
   bugs[errorstring]
 }
 EOF
@@ -74,16 +74,16 @@ NR == FNR {known_bugs[$0]; next}
 /fail/ {
     ## get the fail error and build string with the format of "database"
     failmsg=$13; for(i=14;i<=NF;i++){failmsg=failmsg"_"$i;}
-    errorstring=$1 " " failmsg " '$GITBRANCH' '$TESTSET' '$SETTING' '$OPT' '$LPS'";
+    errorstring=$1 " " failmsg " " GITBRANCH " " TESTSET " " SETTING " " OPT " " LPS;
     ## if error is not in "database", add it and print it in ERRORINSTANCES to send email
     if( errorstring in known_bugs == 0 )
     {
-        print errorstring >> "'$DATABASE'";
+        print errorstring >> DATABASE;
         print $0;
     }
     else # these are instances that failed before
     {
-        print $1 " " failmsg >> "'$STILLFAILING'"; # only report the name of the instance and the fail message
+        print $1 " " failmsg >> STILLFAILING; # only report the name of the instance and the fail message
     }
 }
 EOF
@@ -113,6 +113,9 @@ STILLFAILING="${DATABASE}_SF.tmp"
 RBDB="/nfs/OPTI/adm_timo/databases/rbdb/${PWD##*/}_${TESTSET}_${SETTING}_${LPS}_rb.txt"
 OUTPUT="${DATABASE}_output.tmp"
 touch ${STILLFAILING}
+
+AWKARGS="-v GITBRANCH=$GITBRANCH -v TESTSET=$TESTSET -v SETTING=$SETTING -v OPT=$OPT -v LPS=$LPS -v DATABASE=$DATABASE -v TMPDATABASE=$TMPDATABASE -v STILLFAILING=$STILLFAILING"
+echo $AWKARGS
 
 # the first time, the file might not exists so we create it
 # Even more, we have to write something to it, since otherwise
@@ -184,7 +187,7 @@ SETFILE=`pwd`/`ls $BASEFILE*set`
 
 # check for fixed instances
 echo "Checking for fixed instances."
-RESOLVEDINSTANCES=`awk "$awkscript_checkfixedinstances" $RESFILE $DATABASE`
+RESOLVEDINSTANCES=`awk $AWKARGS "$awkscript_checkfixedinstances" $RESFILE $DATABASE`
 mv $TMPDATABASE $DATABASE
 
 
@@ -197,7 +200,7 @@ NFAILS=`grep -c fail $RESFILE`
 if [ $NFAILS -gt 0 ]; then
   echo "Detected ${NFAILS} fails."
   ## read all known bugs
-  ERRORINSTANCES=`awk "$awkscript_readknownbugs" $DATABASE $RESFILE`
+  ERRORINSTANCES=`awk $AWKARGS "$awkscript_readknownbugs" $DATABASE $RESFILE`
   STILLFAILINGDB=`cat ${STILLFAILING}`
 
   # check if there are new fails!
