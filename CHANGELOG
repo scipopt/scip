@@ -92,6 +92,7 @@ fixed bugs:
 - fixed handling of LOOSE variables in locks heuristic
 - fixed upgrade to a varbound constraint if abspower constraint contains a multi-aggregated variable
 - fixed numerical issues in boundshift presolver when aggregating integer variables
+- fixed minor issue in expression graph simplification
 
 added tests:
 - added tests that cover nonempty linear constraint classification types
