@@ -130,7 +130,7 @@ SCIP_DECL_PARAMCHGD(paramChgdRandomseed)
 
 /** edge cost multiplier */
 static
-inline int edgecostMultiplier(
+inline int edgecostmultiplier(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
    SCIP_Real             avg                 /**< number of solutions containing this edge */
@@ -759,7 +759,7 @@ SCIP_RETCODE buildsolgraph(
                   hit = (SCIPisEQ(scip, SCIPgetSolVal(scip, sols[solselection[k]], vars[i]), 1.0)
                       || SCIPisEQ(scip, SCIPgetSolVal(scip, sols[solselection[k]], vars[i + 1]), 1.0));
 
-               /* solution value of edge i or reversed edge  == 1.0 in current solution? */
+               /* is edge i or reversed edge in current solution? */
                if( hit )
                {
                   (*edgeweight)[j - 2]++;
@@ -780,11 +780,8 @@ SCIP_RETCODE buildsolgraph(
    return SCIP_OKAY;
 }
 
-
-
-
 static
-inline void markSolVerts(
+inline void marksolverts(
    GRAPH* g,
    IDX* curr,
    int* unodemap,
@@ -1217,7 +1214,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
                nodepriority[solgraph->head[e]] += avg - 1.0;
                nodepriority[solgraph->tail[e]] += avg - 1.0;
 
-               cost[e] *= edgecostMultiplier(scip, heurdata, avg);
+               cost[e] *= edgecostmultiplier(scip, heurdata, avg);
 
                if( probtype == STP_DHCSTP && SCIPisLT(scip, cost[e], BLOCKED) && SCIPisGT(scip, cost[e], maxcost) )
                   maxcost = cost[e];
@@ -1759,14 +1756,14 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
 
    for( int e = 0; e < nsoledges; e++ )
       if( newresult[e] == CONNECT )
-         markSolVerts(newgraph, newgraph->ancestors[e], unodemap, stvertex);
+         marksolverts(newgraph, newgraph->ancestors[e], unodemap, stvertex);
 
    /* retransform edges fixed during graph reduction */
-   markSolVerts(newgraph, newgraph->fixedges, unodemap, stvertex);
+   marksolverts(newgraph, newgraph->fixedges, unodemap, stvertex);
 
    for( int k = 0; k < nsolnodes; k++ )
       if( stvertex[unodemap[k]] )
-         markSolVerts(newgraph, newgraph->pcancestors[k], unodemap, stvertex);
+         marksolverts(newgraph, newgraph->pcancestors[k], unodemap, stvertex);
 
    for( int e = 0; e < nedges; e++ )
       newresult[e] = UNKNOWN;

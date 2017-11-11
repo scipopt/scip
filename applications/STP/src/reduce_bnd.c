@@ -1980,7 +1980,7 @@ SCIP_RETCODE reduce_daPcMw(
       if( userec )
       {
          /* compute second solution and add to pool */
-         SCIP_CALL( SCIPStpHeurTMRun(scip, NULL, graph, NULL, &beststart, result2, DEFAULT_HEURRUNS, root, graph->cost, graph->cost, &bestlb, NULL, 0.0, &success, FALSE) );
+         SCIP_CALL( SCIPStpHeurTMRun(scip, NULL, graph, NULL, &beststart, result2, DEFAULT_HEURRUNS / 5, root, graph->cost, graph->cost, &bestlb, NULL, 0.0, &success, FALSE) );
          assert(success);
          SCIP_CALL( SCIPStpHeurLocalExtendPcMw(scip, graph, graph->cost, vnoi, result2, pathedge, nodearrchar, &success) );
 
