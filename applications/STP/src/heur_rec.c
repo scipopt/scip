@@ -1144,7 +1144,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
 
       /* build a new graph, consisting of several solutions */
       SCIP_CALL( buildsolgraph(scip, pool, heurdata, graph, &solgraph, incumbentedges, newsolindex,
-            &edgeancestor, &edgeweight, &success, randomize, probtype == STP_MWCSP) );
+            &edgeancestor, &edgeweight, &success, randomize, TRUE) );
 
       /* valid graph built? */
       if( success )
