@@ -26,7 +26,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-//#define SCIP_DEBUG
+#define SCIP_DEBUG
 
 #include <assert.h>
 #include <string.h>
@@ -69,13 +69,10 @@
 #define CYCLES_PER_RUN      3
 #define REC_MAX_FAILS       4
 #define REC_MIN_NSOLS       4
+#define REC_ADDEDGE_FACTOR 1.0
 
 #define COST_MAX_POLY_x0 500
 #define COST_MIN_POLY_x0 100
-
-#ifndef DEBUG
-#define DEBUG
-#endif
 
 #ifdef WITH_UG
 extern
@@ -479,7 +476,8 @@ SCIP_RETCODE buildsolgraph(
    int**                 edgeancestor,       /**< ancestor to edge edge */
    int**                 edgeweight,         /**< for each edge: number of solution that contain this edge */
    SCIP_Bool*            success,            /**< new graph constructed? */
-   SCIP_Bool             randomize           /**< select solution randomly? */
+   SCIP_Bool             randomize,          /**< select solution randomly? */
+   SCIP_Bool             addedges            /**< add additional edges between solution vertices? */
    )
 {
    GRAPH* newgraph = NULL;
@@ -638,6 +636,36 @@ SCIP_RETCODE buildsolgraph(
                }
             }
          }
+      }
+
+      /* add additional edges? */
+      if( addedges )
+      {
+         int naddedges = 0;
+
+         for( int e = 0; e < nedges && naddedges <= (int)(REC_ADDEDGE_FACTOR * nsoledges); e += 2 )
+         {
+            int tail;
+            int head;
+
+            if( soledge[e / 2] )
+               continue;
+            // todo if fixed to zero, continue?
+            if( graph->oeat[e] == EAT_FREE )
+               continue;
+
+            tail = graph->tail[e];
+            head = graph->head[e];
+
+            if( solnode[tail] && solnode[head] )
+            {
+               soledge[e / 2] = TRUE;
+               naddedges++;
+            }
+         }
+         SCIPdebugMessage("additional edges %d (orig: %d )\n", naddedges, nsoledges);
+
+         nsoledges += naddedges;
       }
 
       if( graph->stp_type == STP_GSTP )
@@ -1115,7 +1143,8 @@ SCIP_RETCODE SCIPStpHeurRecRun(
       SCIPdebugMessage("REC: merge %d solutions \n", heurdata->nusedsols);
 
       /* build a new graph, consisting of several solutions */
-      SCIP_CALL( buildsolgraph(scip, pool, heurdata, graph, &solgraph, incumbentedges, newsolindex, &edgeancestor, &edgeweight, &success, randomize) );
+      SCIP_CALL( buildsolgraph(scip, pool, heurdata, graph, &solgraph, incumbentedges, newsolindex,
+            &edgeancestor, &edgeweight, &success, randomize, probtype == STP_MWCSP) );
 
       /* valid graph built? */
       if( success )
@@ -1271,6 +1300,8 @@ SCIP_RETCODE SCIPStpHeurRecRun(
             /*
              *  2. compute solution
              */
+
+            // todo: run prune heuristic with changed weights!
 
             /* run TM heuristic */
             SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, solgraph, NULL, &best_start, soledges, heurdata->ntmruns,
