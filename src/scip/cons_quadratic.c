@@ -9167,6 +9167,9 @@ SCIP_RETCODE replaceByLinearConstraints(
          SCIP_Real coef;
          SCIP_Real lhs;
          SCIP_Real rhs;
+         SCIP_VAR* var;
+
+         var = *consdata->linvars;
          coef = *consdata->lincoefs;
 
          assert( ! SCIPisZero(scip, coef) );
@@ -9182,7 +9185,7 @@ SCIP_RETCODE replaceByLinearConstraints(
          else
             rhs = (consdata->rhs - constant) / REALABS(coef);
 
-         SCIPdebugMsg(scip, "Linear constraint with one variable: %g <= %g <%s> <= %g\n", lhs, coef > 0.0 ? 1.0 : -1.0, SCIPvarGetName(*consdata->linvars), rhs);
+         SCIPdebugMsg(scip, "Linear constraint with one variable: %g <= %g <%s> <= %g\n", lhs, coef > 0.0 ? 1.0 : -1.0, SCIPvarGetName(var), rhs);
 
          if ( coef < 0.0 )
          {
