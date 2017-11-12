@@ -3571,6 +3571,14 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
             SCIPintervalSetEmpty(resultant);
             return;
          }
+         else if( ub < 0.0 )
+         {
+            /* it looks like there will be no solution (rhs < 0), but we are very close and above operations did not take care of careful rounding
+             * thus, we relax rhs a be feasible a bit (-ub would be sufficient, but that would put us exactly onto the boundary)
+             * see also #1861
+             */
+            rhs.sup += -2.0*ub;
+         }
       }
 
       /* we have sqrt(ax)x \in (-sqrt(r(rhs,y))-b(y)) \cup (sqrt(r(rhs,y))-b(y))
