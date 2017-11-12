@@ -6775,7 +6775,8 @@ SCIP_RETCODE generateCut(
 
       SCIPdebugMsg(scip, "found cut <%s>, lhs=%g, rhs=%g, mincoef=%g, maxcoef=%g, range=%g, nnz=%d, efficacy=%g\n",
          SCIProwGetName(*row), SCIProwGetLhs(*row), SCIProwGetRhs(*row),
-         rowprep->coefs[rowprep->nvars-1], rowprep->coefs[0], rowprep->coefs[0]/rowprep->coefs[rowprep->nvars-1],
+         rowprep->nvars > 0 ? rowprep->coefs[rowprep->nvars-1] : 0.0, rowprep->nvars > 0 ? rowprep->coefs[0] : 0.0,
+         rowprep->nvars > 0 ? rowprep->coefs[0]/rowprep->coefs[rowprep->nvars-1] : 1.0,
          SCIProwGetNNonz(*row), viol);  /*lint !e414 */
 
       if( efficacy != NULL )
