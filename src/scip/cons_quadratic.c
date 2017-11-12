@@ -9950,43 +9950,30 @@ SCIP_RETCODE replaceByLinearConstraints(
          coef = *consdata->lincoefs;
          var = *consdata->linvars;
 
-         /* compute lhs/rhs */
+         assert( ! SCIPisZero(scip, coef) );
+
+         /* compute lhs/rhs, divide already by |coef| */
          if ( SCIPisInfinity(scip, -consdata->lhs) )
             lhs = -SCIPinfinity(scip);
          else
-            lhs = consdata->lhs - constant;
+            lhs = (consdata->lhs - constant) / REALABS(coef);
 
          if ( SCIPisInfinity(scip, consdata->rhs) )
             rhs = SCIPinfinity(scip);
          else
-            rhs = consdata->rhs - constant;
+            rhs = (consdata->rhs - constant) / REALABS(coef);
 
-         SCIPdebugMsg(scip, "Linear constraint with one variable: %g <= %g <%s> <= %g\n", lhs, coef, SCIPvarGetName(var), rhs);
+         SCIPdebugMsg(scip, "Linear constraint with one variable: %g <= %g <%s> <= %g\n", lhs, coef > 0.0 ? 1.0 : -1.0, SCIPvarGetName(var), rhs);
 
          SCIPdebugMessage("<%s>: [%.20g, %g.20]\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
 
-         /* possibly correct lhs/rhs */
-         assert( ! SCIPisZero(scip, coef) );
-         if ( coef >= 0.0 )
+         if ( coef < 0.0 )
          {
-            if ( ! SCIPisInfinity(scip, -lhs) )
-               lhs /= coef;
-            if ( ! SCIPisInfinity(scip, rhs) )
-               rhs /= coef;
-         }
-         else
-         {
+            /* swap lhs and rhs, with negated sign */
             SCIP_Real h;
             h = rhs;
-            if ( ! SCIPisInfinity(scip, -lhs) )
-               rhs = lhs/coef;
-            else
-               rhs = SCIPinfinity(scip);
-
-            if ( ! SCIPisInfinity(scip, h) )
-               lhs = h/coef;
-            else
-               lhs = -SCIPinfinity(scip);
+            rhs = -lhs;
+            lhs = -h;
          }
          SCIPdebugMsg(scip, "Linear constraint is a bound: %g <= <%s> <= %g\n", lhs, SCIPvarGetName(var), rhs);
 
