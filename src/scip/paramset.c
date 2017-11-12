@@ -3217,6 +3217,14 @@ SCIP_RETCODE paramsetSetPresolvingFast(
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/gateextraction/maxrounds", 0, quiet) );
    }
 
+   /* explicitly forbid the use of implications in logicor presolving */
+#ifndef NDEBUG
+   if( SCIPsetFindConshdlr(set, "logicor") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/logicor/implications", 0, quiet) );
+   }
+
    return SCIP_OKAY;
 }
 

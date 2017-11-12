@@ -149,7 +149,9 @@ BEGIN {
    onlyinsolufile = 0;          # should only instances be reported that are included in the .solu file?
    onlyintestfile = 0;          # should only instances be reported that are included in the .test file?  TEMPORARY HACK!
    onlypresolvereductions = 0;  # should only instances with presolve reductions be shown?
-   useshortnames = 1;           # should problem name be truncated to fit into column?
+   if (useshortnames == "") {
+       useshortnames = 1;       # should problem name be truncated to fit into column?
+   }
    writesolufile = 0;           # should a solution file be created from the results? Use '1' for writing a new solution file, or '2' for writing an update
                                 # respecting the previous solu file information and updating it by better solution values for previously unsolved instances
    printsoltimes = 0;           # should the times until first and best solution be shown

@@ -11140,6 +11140,7 @@ SCIP_RETCODE greedyCliqueAlgorithm(
       SCIP_VAR** cliquevars;
       int compareweightidx;
       int minclqsize;
+      int nnzadded;
 
       /* add the clique to the clique table */
       SCIPdebug( printClique(items, ncliquevars) );
@@ -11149,6 +11150,7 @@ SCIP_RETCODE greedyCliqueAlgorithm(
          return SCIP_OKAY;
 
       *nbdchgs += thisnbdchgs;
+      nnzadded = ncliquevars;
 
       /* no more cliques to be found (don't know if this can actually happen, since the knapsack could be replaced by a set-packing constraint)*/
       if( ncliquevars == nitems )
@@ -11166,8 +11168,12 @@ SCIP_RETCODE greedyCliqueAlgorithm(
       minclqsize = (int)(cliqueextractfactor * ncliquevars);
       minclqsize = MAX(minclqsize, 2);
 
-      /* loop over the remaining variables and the larger items of the first clique until we find another clique or reach the size limit */
-      while( compareweightidx >= 0 && i < nitems && ncliquevars >= minclqsize && ! (*cutoff) )
+      /* loop over the remaining variables and the larger items of the first clique until we
+       * find another clique or reach the size limit */
+      while( compareweightidx >= 0 && i < nitems && ! (*cutoff)
+            && ncliquevars >= minclqsize  /* stop at a given minimum clique size */
+            && nnzadded <= 2 * nitems     /* stop if enough nonzeros were added to the cliquetable */
+            )
       {
          compareweight = weights[compareweightidx];
          assert(compareweight > 0);
@@ -11179,6 +11185,8 @@ SCIP_RETCODE greedyCliqueAlgorithm(
             cliquevars[ncliquevars - 1] = items[i];
             SCIPdebug( printClique(cliquevars, ncliquevars) );
             SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, FALSE, cutoff, &thisnbdchgs) );
+
+            nnzadded += ncliquevars;
 
             /* stop when there is a cutoff */
             if( ! (*cutoff) )
