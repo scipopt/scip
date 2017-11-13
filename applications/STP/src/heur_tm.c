@@ -2053,7 +2053,7 @@ SCIP_RETCODE SCIPStpHeurTMRun(
 
          /* compute objective value (wrt original costs) */
          obj = 0.0;
-         for( e = nedges - 1; e >= 0; e-- ) /* todo: put into computeSteinerTreeDijkPcMw */
+         for( e = nedges - 1; e >= 0; e-- ) /* todo: save result array as char put into computeSteinerTreeDijkPcMw */
             if( result[e] == CONNECT )
                obj += graph->cost[e];
 

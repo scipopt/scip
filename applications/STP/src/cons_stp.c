@@ -1540,10 +1540,6 @@ SCIP_RETCODE SCIPStpDualAscent(
    STP_Bool* RESTRICT    nodearrchar         /**< STP_Bool vertices array for internal computations or NULL */
    )
 {
-#if 0
-   SCIP_CONSHDLR* conshdlr;
-   SCIP_Bool infeasible;
-#endif
    SCIP_PQUEUE* pqueue;
    SCIP_VAR** vars;
    SCIP_Real dualobj;
@@ -1587,9 +1583,6 @@ SCIP_RETCODE SCIPStpDualAscent(
    }
 
    dualobj = 0.0;
-#if 0
-   conshdlr = SCIPfindConshdlr(scip, "stp");
-#endif
 
    if( !Is_term(g->term[root]) )
       printf("nonroot \n\n\n %d \n", root);
@@ -1860,9 +1853,6 @@ SCIP_RETCODE SCIPStpDualAscent(
          /* augmentation criteria met? */
          if( ((currscore - prio1) / prio1) <= DEFAULT_DAMAXDEVIATION || currscore <= prio2 )
          {
-#if 0
-            SCIP_ROW* row;
-#endif
             SCIP_CONS* cons = NULL;
             int shift = 0;
             SCIP_Real min = FARAWAY;
@@ -1903,10 +1893,6 @@ SCIP_RETCODE SCIPStpDualAscent(
             norgcutverts = ncutverts;
 
             /* 3. step: perform augmentation */
-#if 0
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "dualascentcut", 1.0, SCIPinfinity(scip), FALSE, FALSE, TRUE) );
-            SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
-#endif
 
             /* create constraints? */
             if( addcuts )
@@ -1926,9 +1912,7 @@ SCIP_RETCODE SCIPStpDualAscent(
             {
                const int a = unsatarcs[i];
                assert(a >= 0);
-#if 0
-               SCIP_CALL( SCIPaddVarToRow(scip, row, vars[a], 1.0) );
-#endif
+
                if( addcuts )
                {
                   assert(cons != NULL);
@@ -1986,11 +1970,6 @@ SCIP_RETCODE SCIPStpDualAscent(
             }
             nunsatarcs -= shift;
 
-#if 0
-            SCIP_CALL( SCIPflushRowExtensions(scip, row) );
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
-            SCIP_CALL( SCIPreleaseRow(scip, &row) );
-#endif
             if( addcuts )
             {
                assert(cons != NULL);

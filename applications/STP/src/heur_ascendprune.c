@@ -551,13 +551,18 @@ if( pcmw )
 
    assert(success && graph_sol_valid(scip, newgraph, newedges));
 
-   printf("obj after prune %f \n", graph_sol_getObj(g->cost, newedges, 0.0, newgraph->edges));
+   printf("obj after prune %f \n", graph_sol_getObj(newgraph->cost, newedges, 0.0, newgraph->edges));
 
-   SCIPStpHeurLocalRun(scip, newgraph, g->cost, newedges);
+   SCIPStpHeurLocalRun(scip, newgraph, newgraph->cost, newedges);
+
+   printf("obj after local %f \n", graph_sol_getObj(newgraph->cost, newedges, 0.0, newgraph->edges));
 
 
-   printf("obj after local %f \n", graph_sol_getObj(g->cost, newedges, 0.0, newgraph->edges));
-
+   if( !graph_sol_valid(scip, newgraph, newedges) )
+   {
+      printf(" %d \n", 0);
+      exit(1);
+   }
 
    assert(graph_sol_valid(scip, newgraph, newedges));
    graph_path_exit(scip, newgraph);
