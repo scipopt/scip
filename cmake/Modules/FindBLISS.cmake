@@ -1,7 +1,7 @@
 find_path(BLISS_INCLUDE_DIR
-    NAMES graph.hh
+    NAMES bliss/graph.hh
     HINTS ${BLISS_DIR}
-    PATH_SUFFIXES include include/bliss)
+    PATH_SUFFIXES include)
 
 find_library(BLISS_LIBRARY
     NAMES bliss

@@ -23,9 +23,18 @@
 
 #include "compute_symmetry.h"
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wreturn-type"
+#endif
+
 /* include bliss graph */
-#include <defs.hh>
-#include <graph.hh>
+#include <bliss/defs.hh>
+#include <bliss/graph.hh>
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
 #include <vector>
 #include <list>
