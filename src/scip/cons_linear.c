@@ -132,7 +132,6 @@
                                            *   type
                                            */
 
-#define HASHSIZE_LINEARCONS           500 /**< minimal size of hash table in linear constraint tables */
 #define MAXVALRECOMP                1e+06 /**< maximal abolsute value we trust without recomputing the activity */
 #define MINVALRECOMP                1e-05 /**< minimal abolsute value we trust without recomputing the activity */
 
@@ -12749,6 +12748,10 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqLinearcons)
    scip = (SCIP*)userptr;
    assert(scip != NULL);
 
+   /* if it is the same constraint we dont need to check anything */
+   if( key1 == key2 )
+      return TRUE;
+
    /* checks trivial case */
    if( consdata1->nvars != consdata2->nvars )
       return FALSE;
@@ -12821,6 +12824,28 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
                        SCIPcombineTwoInt(maxidx, SCIPrealHashCode(consdata->vals[consdata->nvars - 1] * scale))); /*lint !e571*/
 }
 
+/** retrieves and removes all constraints from the hashtable that are parallel to the given constraint */
+static
+SCIP_RETCODE retrieveParallelConstraints(
+   SCIP_HASHTABLE*       hashtable,
+   SCIP_CONS*            querycons,
+   SCIP_CONS**           parallelconss,
+   int*                  nparallelconss
+   )
+{
+   SCIP_CONS* parallelcons;
+
+   *nparallelconss = 0;
+
+   while( (parallelcons = (SCIP_CONS*)SCIPhashtableRetrieve(hashtable, (void*)querycons)) != NULL )
+   {
+      parallelconss[(*nparallelconss)++] = parallelcons;
+      SCIP_CALL( SCIPhashtableRemove(hashtable, (void*) parallelcons) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** compares each constraint with all other constraints for possible redundancy and removes or changes constraint 
  *  accordingly; in contrast to preprocessConstraintPairs(), it uses a hash table 
  */
@@ -12837,6 +12862,8 @@ SCIP_RETCODE detectRedundantConstraints(
    )
 {
    SCIP_HASHTABLE* hashtable;
+   SCIP_CONS** parallelconss;
+   int nparallelconss;
    int hashtablesize;
    int c;
 
@@ -12850,15 +12877,15 @@ SCIP_RETCODE detectRedundantConstraints(
 
    /* create a hash table for the constraint set */
    hashtablesize = nconss;
-   hashtablesize = MAX(hashtablesize, HASHSIZE_LINEARCONS);
    SCIP_CALL( SCIPhashtableCreate(&hashtable, blkmem, hashtablesize,
          hashGetKeyLinearcons, hashKeyEqLinearcons, hashKeyValLinearcons, (void*) scip) );
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &parallelconss, nconss) );
 
    /* check all constraints in the given set for redundancy */
    for( c = 0; c < nconss; ++c )
    {
       SCIP_CONS* cons0;
-      SCIP_CONS* cons1;
       SCIP_CONSDATA* consdata0;
 
       cons0 = conss[c];
@@ -12876,88 +12903,135 @@ SCIP_RETCODE detectRedundantConstraints(
       SCIP_CALL( consdataSort(scip, consdata0) );
       assert(consdata0->sorted);
 
-      /* get constraint from current hash table with same variables as cons0 and with coefficients either equal or negated
-       * to the ones of cons0 */
-      cons1 = (SCIP_CONS*)(SCIPhashtableRetrieve(hashtable, (void*)cons0));
+      /* get constraints from current hash table with same variables as cons0 and with coefficients equal
+       * to the ones of cons0 when both are scaled such that maxabsval is 1.0 and the coefficient of the
+       * first variable is positive
+       */
+      SCIP_CALL( retrieveParallelConstraints(hashtable, cons0, parallelconss, &nparallelconss) );
 
-      if( cons1 != NULL )
+      if( nparallelconss != 0 )
       {
-         SCIP_CONS* consstay;
          SCIP_CONS* consdel;
-         SCIP_CONSDATA* consdatastay;
          SCIP_CONSDATA* consdatadel;
-         SCIP_CONSDATA* consdata1;
 
-         SCIP_Real scale;
          SCIP_Real lhs;
          SCIP_Real rhs;
 
-         assert(SCIPconsIsActive(cons1));
-         assert(!SCIPconsIsModifiable(cons1));
-
-         /* constraint found: create a new constraint with same coefficients and best left and right hand side;
-          * delete old constraints afterwards
-          */
-         consdata1 = SCIPconsGetData(cons1);
-
-         assert(consdata1 != NULL);
-         assert(consdata0->nvars >= 1 && consdata0->nvars == consdata1->nvars);
-
-         assert(consdata1->sorted);
-         assert(consdata0->vars[0] == consdata1->vars[0]);
+         int i;
 
          /* check which constraint has to stay;
-          * changes applied to an upgraded constraint will not be considered in the instance */
-         if( consdata1->upgraded && !consdata0->upgraded )
+          * changes applied to an upgraded constraint will not be considered in the instance
+          * so pick a not upgraded constraint among the parallel ones
+          */
+         if( consdata0->upgraded )
          {
-            consstay = cons0;
-            consdatastay = consdata0;
-            consdel = cons1;
-            consdatadel = consdata1;
+            for( i = 0; i < nparallelconss; ++i )
+            {
+               SCIP_CONSDATA* consdata;
 
-            /* exchange consdel with consstay in hashtable */
-            SCIP_CALL( SCIPhashtableRemove(hashtable, (void*) consdel) );
-            SCIP_CALL( SCIPhashtableInsert(hashtable, (void*) consstay) );
+               consdata = SCIPconsGetData(parallelconss[i]);
+
+               if( !consdata->upgraded )
+               {
+                  int nextraparallelconss;
+                  consdata0 = consdata;
+                  SCIPswapPointers((void**) &cons0, (void**) &parallelconss[i]);
+
+                  /* call the retrieveParallelConstraints function again with the swapped constraint;
+                   * due to non-transitivty there could be a constraint that compares equal to this ones
+                   * and would be overwritten by the call SCIPhashtableInsert(hashtable, cons0) below
+                   */
+                  SCIP_CALL( retrieveParallelConstraints(hashtable, cons0, &parallelconss[nparallelconss], &nextraparallelconss) );
+                  nparallelconss += nextraparallelconss;
+
+                  break;
+               }
+            }
          }
-         else
+
+         lhs = consdata0->lhs;
+         rhs = consdata0->rhs;
+
+#ifndef NDEBUG
+         SCIP_CALL_ABORT( SCIPhashtableSafeInsert(hashtable, cons0) );
+#else
+         SCIP_CALL( SCIPhashtableInsert(hashtable, cons0) );
+#endif
+
+         for( i = 0; i < nparallelconss; ++i )
          {
-            consstay = cons1;
-            consdatastay = consdata1;
-            consdel = cons0;
-            consdatadel = consdata0;
-         }
+            SCIP_Real scale;
 
-         scale = consdatastay->vals[0] / consdatadel->vals[0];
-         assert(scale != 0.0);
+            consdel = parallelconss[i];
+            consdatadel = SCIPconsGetData(consdel);
 
-         assert(consdatastay->nvars < 2 || SCIPisEQ(scip, consdatastay->vals[1], scale * consdatadel->vals[1]));
+            assert(SCIPconsIsActive(consdel));
+            assert(!SCIPconsIsModifiable(consdel));
 
-         if( scale > 0.0 )
-         {
-            /* the coefficients of both constraints are parallel with a positive scale */
-            SCIPdebugMsg(scip, "aggregate linear constraints <%s> and <%s> with equal coefficients into single ranged row\n",
-               SCIPconsGetName(cons0), SCIPconsGetName(cons1));
-            SCIPdebugPrintCons(scip, cons0, NULL);
-            SCIPdebugPrintCons(scip, cons1, NULL);
+            /* constraint found: create a new constraint with same coefficients and best left and right hand side;
+             * delete old constraints afterwards
+             */
+            assert(consdatadel != NULL);
+            assert(consdata0->nvars >= 1 && consdata0->nvars == consdatadel->nvars);
 
-            lhs = MAX(scale * consdatadel->lhs, consdatastay->lhs);
-            rhs = MIN(scale * consdatadel->rhs, consdatastay->rhs);
-         }
-         else
-         {
-            /* the coefficients of both rows are negations */
-            SCIPdebugMsg(scip, "aggregate linear constraints <%s> and <%s> with negated coefficients into single ranged row\n",
-               SCIPconsGetName(cons0), SCIPconsGetName(cons1));
-            SCIPdebugPrintCons(scip, cons0, NULL);
-            SCIPdebugPrintCons(scip, cons1, NULL);
+            assert(consdatadel->sorted);
+            assert(consdata0->vars[0] == consdatadel->vars[0]);
 
-            lhs = MAX(scale * consdatadel->rhs, consdatastay->lhs);
-            rhs = MIN(scale * consdatadel->lhs, consdatastay->rhs);
+            scale = consdata0->vals[0] / consdatadel->vals[0];
+            assert(scale != 0.0);
+
+            /* in debug mode, check that all coefficients are equal with respect to epsilon
+             * if the constraints are in equilibrium scale
+             */
+#ifndef NDEBUG
+            {
+               int k;
+               SCIP_Real scale0 = 1.0 / consdata0->maxabsval;
+               SCIP_Real scaledel = COPYSIGN(1.0 / consdatadel->maxabsval, scale);
+
+               for( k = 0; k < consdata0->nvars; ++k )
+               {
+                  assert(SCIPisEQ(scip, scale0 * consdata0->vals[k], scaledel * consdatadel->vals[k]));
+               }
+            }
+#endif
+
+            if( scale > 0.0 )
+            {
+               /* the coefficients of both constraints are parallel with a positive scale */
+               SCIPdebugMsg(scip, "aggregate linear constraints <%s> and <%s> with equal coefficients into single ranged row\n",
+                            SCIPconsGetName(cons0), SCIPconsGetName(consdel));
+               SCIPdebugPrintCons(scip, cons0, NULL);
+               SCIPdebugPrintCons(scip, cons1, NULL);
+
+               lhs = MAX(scale * consdatadel->lhs, lhs);
+               rhs = MIN(scale * consdatadel->rhs, rhs);
+            }
+            else
+            {
+               /* the coefficients of both rows are negations */
+               SCIPdebugMsg(scip, "aggregate linear constraints <%s> and <%s> with negated coefficients into single ranged row\n",
+                            SCIPconsGetName(cons0), SCIPconsGetName(consdel));
+               SCIPdebugPrintCons(scip, cons0, NULL);
+               SCIPdebugPrintCons(scip, cons1, NULL);
+
+               lhs = MAX(scale * consdatadel->rhs, lhs);
+               rhs = MIN(scale * consdatadel->lhs, rhs);
+            }
+
+            /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
+            SCIP_CALL( SCIPupdateConsFlags(scip, cons0, consdel) );
+
+            /* delete consdel */
+            assert( ! consdata0->upgraded || consdatadel->upgraded );
+            SCIP_CALL( SCIPdelCons(scip, consdel) );
+            if( !consdatadel->upgraded )
+               (*ndelconss)++;
          }
 
          if( SCIPisFeasLT(scip, rhs, lhs) )
          {
-            SCIPdebugMsg(scip, "aggregated linear constraint <%s> is infeasible\n", SCIPconsGetName(cons1));
+            SCIPdebugMsg(scip, "aggregated linear constraint <%s> is infeasible\n", SCIPconsGetName(consdel));
             *cutoff = TRUE;
             break;
          }
@@ -12970,23 +13044,14 @@ SCIP_RETCODE detectRedundantConstraints(
          }
 
          /* update lhs and rhs of consstay */
-         SCIP_CALL( chgLhs(scip, consstay, lhs) );
-         SCIP_CALL( chgRhs(scip, consstay, rhs) );
-
-         /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
-         SCIP_CALL( SCIPupdateConsFlags(scip, consstay, consdel) );
-
-         /* delete consdel */
-         assert( ! consdatastay->upgraded || consdatadel->upgraded );
-         SCIP_CALL( SCIPdelCons(scip, consdel) );
-         if( !consdatadel->upgraded )
-            (*ndelconss)++;
+         SCIP_CALL( chgLhs(scip, cons0, lhs) );
+         SCIP_CALL( chgRhs(scip, cons0, rhs) );
 
          /* update the first changed constraint to begin the next aggregation round with */
-         if( consdatastay->changed && SCIPconsGetPos(consstay) < *firstchange )
-            *firstchange = SCIPconsGetPos(consstay);
+         if( consdata0->changed && SCIPconsGetPos(cons0) < *firstchange )
+            *firstchange = SCIPconsGetPos(cons0);
 
-         assert(SCIPconsIsActive(consstay));
+         assert(SCIPconsIsActive(cons0));
       }
       else
       {
@@ -12998,6 +13063,8 @@ SCIP_RETCODE detectRedundantConstraints(
    SCIPinfoMessage(scip, NULL, "linear pairwise comparison hashtable statistics:\n");
    SCIPhashtablePrintStatistics(hashtable, SCIPgetMessagehdlr(scip));
 #endif
+
+   SCIPfreeBufferArray(scip, &parallelconss);
 
    /* free hash table */
    SCIPhashtableFree(&hashtable);
