@@ -964,6 +964,7 @@ SCIP_RETCODE constraintListAppend(
 
    /* Set the new vars at the first unused place, which is the length used as index */
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &list->consvars[list->nelements], consvars, nconsvars) ); /*lint !e866*/
+   list->nconsvars[list->nelements] = nconsvars;
    list->nelements++;
 
    return SCIP_OKAY;
@@ -3765,7 +3766,7 @@ SCIP_RETCODE  selectVarRecursive(
             /* @todo break if result is infeasible (probably only in first layer) */
             if( SCIPallColsInLP(scip) )
             {
-               if( SCIPisGE(scip, otherbranchingresult->dualbound, SCIPgetCutoffbound(scip)) )
+               if( k == 1 && SCIPisGE(scip, otherbranchingresult->dualbound, SCIPgetCutoffbound(scip)) )
                {
                   otherbranchingresult->cutoff = TRUE;
                   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH,
