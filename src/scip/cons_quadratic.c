@@ -9968,9 +9968,9 @@ SCIP_RETCODE replaceByLinearConstraints(
          else
             rhs = (consdata->rhs - constant) / REALABS(coef);
 
-         SCIPdebugMsg(scip, "Linear constraint with one variable: %g <= %g <%s> <= %g\n", lhs, coef > 0.0 ? 1.0 : -1.0, SCIPvarGetName(var), rhs);
+         SCIPdebugMsg(scip, "Linear constraint with one variable: %.20g <= %g <%s> <= %.20g\n", lhs, coef > 0.0 ? 1.0 : -1.0, SCIPvarGetName(var), rhs);
 
-         SCIPdebugMessage("<%s>: [%.20g, %g.20]\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+         SCIPdebugMessage("<%s>: [%.20g, %.20g]\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
 
          if ( coef < 0.0 )
          {
@@ -9980,7 +9980,7 @@ SCIP_RETCODE replaceByLinearConstraints(
             rhs = -lhs;
             lhs = -h;
          }
-         SCIPdebugMsg(scip, "Linear constraint is a bound: %g <= <%s> <= %g\n", lhs, SCIPvarGetName(var), rhs);
+         SCIPdebugMsg(scip, "Linear constraint is a bound: %.20g <= <%s> <= %.20g\n", lhs, SCIPvarGetName(var), rhs);
 
          if( SCIPisInfinity(scip, -rhs) || SCIPisInfinity(scip, lhs) )
          {
