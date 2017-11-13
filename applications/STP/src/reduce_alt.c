@@ -3610,7 +3610,6 @@ SCIP_RETCODE reduce_bd34(
    graph_path_exit(scip, auxg);
    graph_free(scip, auxg, TRUE);
 
-   printf("bd34: %d nodes deleted \n \n", *nelims);
    SCIPdebugMessage("bd34: %d nodes deleted\n", *nelims);
 
    assert(graph_valid(g));
