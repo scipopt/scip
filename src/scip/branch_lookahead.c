@@ -963,7 +963,7 @@ SCIP_RETCODE constraintListAppend(
    }
 
    /* Set the new vars at the first unused place, which is the length used as index */
-   SCIPduplicateBlockMemoryArray(scip, &list->consvars[list->nelements], consvars, nconsvars);
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &list->consvars[list->nelements], consvars, nconsvars) ); /*lint !e866*/
    list->nelements++;
 
    return SCIP_OKAY;
@@ -985,10 +985,7 @@ void constraintListFree(
    {
       SCIP_VAR** consvars = (*conslist)->consvars[i];
       int nconsvars = (*conslist)->nconsvars[i];
-      if( consvars != NULL )
-      {
-         SCIPfreeBlockMemoryArray(scip, &consvars, nconsvars);
-      }
+      SCIPfreeBlockMemoryArray(scip, &consvars, nconsvars);
    }
 
    SCIPfreeBufferArray(scip, &(*conslist)->nconsvars);
