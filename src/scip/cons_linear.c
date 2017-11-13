@@ -12735,6 +12735,7 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqLinearcons)
    SCIP* scip;
    SCIP_CONSDATA* consdata1;
    SCIP_CONSDATA* consdata2;
+   SCIP_Real cons1scale;
    SCIP_Real cons2scale;
    int i;
 
@@ -12764,7 +12765,9 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqLinearcons)
       assert(SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == 0);
    }
 
-   cons2scale = consdata1->vals[0] / consdata2->vals[0];
+   /* compute scale before comparing coefficients of constraints */
+   cons1scale = COPYSIGN(1.0/consdata1->maxabsval, consdata1->vals[0]);
+   cons2scale = COPYSIGN(1.0/consdata2->maxabsval, consdata2->vals[0]);
 
    /* tests if coefficients are equal with the computed scale */
    for( i = 1; i < consdata1->nvars; ++i )
@@ -12772,7 +12775,7 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqLinearcons)
       SCIP_Real val1;
       SCIP_Real val2;
 
-      val1 = consdata1->vals[i];
+      val1 = consdata1->vals[i] * cons1scale;
       val2 = consdata2->vals[i] * cons2scale;
 
       if( !SCIPisEQ(scip, val1, val2) )
