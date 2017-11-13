@@ -12773,7 +12773,7 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqLinearcons)
    cons2scale = COPYSIGN(1.0/consdata2->maxabsval, consdata2->vals[0]);
 
    /* tests if coefficients are equal with the computed scale */
-   for( i = 1; i < consdata1->nvars; ++i )
+   for( i = 0; i < consdata1->nvars; ++i )
    {
       SCIP_Real val1;
       SCIP_Real val2;
