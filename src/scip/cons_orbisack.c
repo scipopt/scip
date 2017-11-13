@@ -1133,13 +1133,7 @@ SCIP_DECL_CONSSEPALP(consSepalpOrbisack)
    /* if solution is not integer */
    if ( SCIPgetNLPBranchCands(scip) > 0 )
    {
-      int nvals;
-
       *result = SCIP_DIDNOTFIND;
-
-      nvals = SCIPgetNVars(scip)/2;
-      SCIP_CALL( SCIPallocBufferArray(scip, &vals1, nvals) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &vals2, nvals) );
 
       /* loop through constraints */
       for (c = 0; c < nconss; ++c)
@@ -1149,19 +1143,22 @@ SCIP_DECL_CONSSEPALP(consSepalpOrbisack)
          consdata = SCIPconsGetData(conss[c]);
 
          /* get solution */
-         assert( consdata->nrows <= nvals );
+         SCIP_CALL( SCIPallocBufferArray(scip, &vals1, consdata->nrows) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &vals2, consdata->nrows) );
+
          SCIP_CALL( SCIPgetSolVals(scip, NULL, consdata->nrows, consdata->vars1, vals1) );
          SCIP_CALL( SCIPgetSolVals(scip, NULL, consdata->nrows, consdata->vars2, vals2) );
 
          SCIPdebugMsg(scip, "Separating orbisack constraint <%s> ...\n", SCIPconsGetName(conss[c]));
 
          SCIP_CALL( separateInequalities(scip, result, conss[c], consdata->nrows, consdata->vars1, consdata->vars2, vals1, vals2) );
+
+         SCIPfreeBufferArray(scip, &vals2);
+         SCIPfreeBufferArray(scip, &vals1);
+
          if ( *result == SCIP_CUTOFF )
             break;
       }
-
-      SCIPfreeBufferArray(scip, &vals2);
-      SCIPfreeBufferArray(scip, &vals1);
    }
 
    return SCIP_OKAY;
