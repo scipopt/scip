@@ -697,13 +697,19 @@ int SCIPcompareConsExprExprs(
    SCIP_CONSEXPR_EXPR*   expr2               /**< second expression */
    );
 
-/** compare expressions
- * The given expressions are assumed to be simplified */
+/** sets the curvature of an expression */
 EXTERN
-int SCIPcompareExprs(
-   SCIP_CONSEXPR_EXPR*   expr1,              /**< first expression */
-   SCIP_CONSEXPR_EXPR*   expr2               /**< second expression */
+void SCIPsetCurvatureExprExpr(
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_EXPRCURV         curvature           /**< curvature of the expression */
    );
+
+/** returns the curvature of an expression */
+EXTERN
+SCIP_EXPRCURV SCIPgetCurvatureExprExpr(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   );
+
 
 /** @} */
 

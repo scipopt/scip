@@ -1625,6 +1625,25 @@ int SCIPcompareConsExprExprs(
    return retval == 0 ? 0 : retval < 0 ? -1 : 1;
 }
 
+/** sets the curvature of an expression */
+void SCIPsetCurvatureExprExpr(
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_EXPRCURV         curvature           /**< curvature of the expression */
+   )
+{
+   assert(expr != NULL);
+   expr->curvature = curvature;
+}
+
+/** returns the curvature of an expression */
+SCIP_EXPRCURV SCIPgetCurvatureExprExpr(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+   return expr->curvature;
+}
+
 /**@} */  /* end of simplifying methods */
 
 /** compares nonlinear handler by priority
@@ -5924,6 +5943,7 @@ SCIP_RETCODE SCIPcreateConsExprExpr(
 
    (*expr)->exprhdlr = exprhdlr;
    (*expr)->exprdata = exprdata;
+   (*expr)->curvature = SCIP_EXPRCURV_UNKNOWN;
 
    /* initialize an empty interval for interval evaluation */
    SCIPintervalSetEntire(SCIPinfinity(scip), &(*expr)->interval);

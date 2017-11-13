@@ -109,6 +109,9 @@ struct SCIP_ConsExpr_Expr
    SCIP_CONSEXPR_EXPR*     walkparent;    /**< parent expression in expression walk */
    int                     walkcurrentchild; /**< child that is currently visited (or will be visited next) by expression walk */
    SCIP_CONSEXPREXPRWALK_IO walkio;       /**< space for walker callback to store some (temporary) data, e.g., to simulate input or output values of a recursive call */
+
+   /* curvature information */
+   SCIP_EXPRCURV           curvature;     /**< curvature of the expression w.r.t. bounds that have been used in the last curvature detection */
 };
 
 struct SCIP_ConsExpr_Nlhdlr
