@@ -601,7 +601,7 @@ SCIP_RETCODE aggregateNextRow(
          rowaggrfac = - SCIPaggrRowGetProbvarValue(aggrrow, probvaridx) / candrowcoefs[k];
 
          /* if factor is too extreme skip this row */
-         if( SCIPisFeasZero(scip, rowaggrfac) || rowaggrfac > sepadata->maxrowfac )
+         if( SCIPisFeasZero(scip, rowaggrfac) || REALABS(rowaggrfac) > sepadata->maxrowfac )
             continue;
 
          lppos = SCIProwGetLPPos(candrows[k]);
@@ -673,7 +673,7 @@ SCIP_RETCODE aggregateNextRow(
          rowaggrfac = - SCIPaggrRowGetProbvarValue(aggrrow, probvaridx) / candrowcoefs[k];
 
          /* if factor is too extreme skip this row */
-         if( SCIPisFeasZero(scip, rowaggrfac) || rowaggrfac > sepadata->maxrowfac )
+         if( SCIPisFeasZero(scip, rowaggrfac) || REALABS(rowaggrfac) > sepadata->maxrowfac )
             continue;
 
          lppos = SCIProwGetLPPos(candrows[k]);
