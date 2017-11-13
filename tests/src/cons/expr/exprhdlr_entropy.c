@@ -181,22 +181,22 @@ Test(entropy, inteval, .description = "Tests the expression interval evaluation.
    rndlb[0]    = SCIPrandomGetReal(rndgen, 0.0, exp(-1.0));
    rndub[0]    = SCIPrandomGetReal(rndgen, exp(-1.0), 1.0);
    rndreslb[0] = MIN(-rndlb[0] * log(rndlb[0]), -rndub[0] * log(rndub[0]));
-   rndresub[0] = MAX(-rndlb[0] * log(rndlb[0]), -rndub[0] * log(rndub[0]));
+   rndresub[0] = exp(-1.0);
 
    rndlb[1]    = SCIPrandomGetReal(rndgen, 0.0, exp(-1.0));
-   rndub[1]    = SCIPrandomGetReal(rndgen, 1.0, SCIPinfinity(scip));
+   rndub[1]    = SCIPrandomGetReal(rndgen, 1.0, 10.0);
    rndreslb[1] = -rndub[1] * log(rndub[1]);
-   rndresub[1] = -rndlb[1] * log(rndlb[1]);
+   rndresub[1] = exp(-1.0);
 
    rndlb[2]    = SCIPrandomGetReal(rndgen, exp(-1.0), 1.0);
-   rndub[2]    = SCIPrandomGetReal(rndgen, 1.0, SCIPinfinity(scip));
+   rndub[2]    = SCIPrandomGetReal(rndgen, 1.0, 10.0);
    rndreslb[2] = -rndub[2] * log(rndub[2]);
    rndresub[2] = -rndlb[2] * log(rndlb[2]);
 
-   rndlb[3]    = SCIPrandomGetReal(rndgen, 1.0, SCIPinfinity(scip));
-   rndub[3]    = SCIPrandomGetReal(rndgen, rndlb[3], SCIPinfinity(scip));
-   rndreslb[3] = -rndub[2] * log(rndub[2]);
-   rndresub[3] = -rndlb[2] * log(rndlb[2]);
+   rndlb[3]    = SCIPrandomGetReal(rndgen, 1.0, 10.0);
+   rndub[3]    = SCIPrandomGetReal(rndgen, rndlb[3], 10.0);
+   rndreslb[3] = -rndub[3] * log(rndub[3]);
+   rndresub[3] = -rndlb[3] * log(rndlb[3]);
 
    /* deterministic part */
    for( i = 0; i < 4; ++i )
@@ -206,8 +206,8 @@ Test(entropy, inteval, .description = "Tests the expression interval evaluation.
       SCIP_CALL( SCIPevalConsExprExprInterval(scip, entropyexpr, FALSE, 0, 0.0) );
 
       interval = SCIPgetConsExprExprInterval(entropyexpr);
-      cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetInf(interval), detreslb[i]));
-      cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetSup(interval), detresub[i]));
+      cr_expect(SCIPisEQ(scip, SCIPintervalGetInf(interval), detreslb[i]));
+      cr_expect(SCIPisEQ(scip, SCIPintervalGetSup(interval), detresub[i]));
    }
 
    /* random part */
@@ -218,8 +218,8 @@ Test(entropy, inteval, .description = "Tests the expression interval evaluation.
       SCIP_CALL( SCIPevalConsExprExprInterval(scip, entropyexpr, FALSE, 0, 0.0) );
 
       interval = SCIPgetConsExprExprInterval(entropyexpr);
-      cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetInf(interval), rndreslb[i]));
-      cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetSup(interval), rndresub[i]));
+      cr_expect(SCIPisEQ(scip, SCIPintervalGetInf(interval), rndreslb[i]));
+      cr_expect(SCIPisEQ(scip, SCIPintervalGetSup(interval), rndresub[i]));
    }
 
 }

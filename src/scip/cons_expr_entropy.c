@@ -240,9 +240,9 @@ SCIP_RETCODE reverseProp(
     */
 
    /* upper bound on expression can only imply a better lower bound on the child's interval */
-   if( SCIPisLT(scip, exprsup, 0.0) && childinf >= exp(-1.0) )
+   if( SCIPisGT(scip, -childinf * log(childinf), exprsup) )
    {
-      bound = reversePropBinarySearch(scip, exp(-1.0), childsup, FALSE, exprsup);
+      bound = reversePropBinarySearch(scip, childinf, childsup, FALSE, exprsup);
       assert(bound >= childinf);
       childinf = MAX(childinf, bound);
    }
@@ -454,6 +454,7 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffEntropy)
    return SCIP_OKAY;
 }
 
+/* TODO: what happens if this function is called with infinity? */
 /** expression interval evaluation callback */
 static
 SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalEntropy)
@@ -461,6 +462,8 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalEntropy)
    SCIP_INTERVAL childinterval;
    SCIP_Real childinf;
    SCIP_Real childsup;
+   SCIP_Real infvalue;
+   SCIP_Real supvalue;
 
    assert(expr != NULL);
    assert(SCIPgetConsExprExprData(expr) == NULL);
@@ -471,26 +474,19 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalEntropy)
 
    childinf = childinterval.inf;
    childsup = childinterval.sup;
+   infvalue = (childinf == 0.0 ? 0.0 : -childinf * log(childinf));
+   supvalue = (childsup == 0.0 ? 0.0 : -childsup * log(childsup));
 
-   if( childinf == childsup )
+   /* non-monotone case */
+   if( SCIPisLE(scip, childinf, exp(-1.0)) )
    {
-      SCIPintervalSet(interval, childinf);
+      SCIPintervalSetBounds(interval, MIN(infvalue, supvalue),
+         SCIPisLE(scip, childsup, exp(-1.0)) ? supvalue : exp(-1.0));
    }
-   /* if the lower bound is 0, we need to set the resultant manually */
-   else if( childinf == 0.0 )
-   {
-      if( SCIPisFeasLE(scip, childsup, exp(-1.0)) )
-         SCIPintervalSetBounds(interval, 0.0, -childsup * log(childsup));
-      else if( SCIPisFeasLE(scip, childsup, 1.0) )
-         SCIPintervalSetBounds(interval, 0.0, exp(-1.0));
-      else
-         SCIPintervalSetBounds(interval, -childsup * log(childsup), 0.0);
-   }
+   /* monotone case */
    else
    {
-      SCIPintervalLog(SCIPinfinity(scip), interval, childinterval);
-      SCIPintervalMul(SCIPinfinity(scip), interval, *interval, childinterval);
-      SCIPintervalSetBounds(interval, -(*interval).sup, -(*interval).inf);
+      SCIPintervalSetBounds(interval, supvalue, infvalue);
    }
 
    return SCIP_OKAY;

@@ -297,8 +297,6 @@ Test(propagate, log)
    /* release conss */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
 Test(propagate, entropy)
@@ -333,9 +331,9 @@ Test(propagate, entropy)
 
    /* get expression and test stuff */
    cr_expect(SCIPisFeasEQ(scip, expr->interval.inf, -1.5 * log(1.5)));
-   cr_expect(SCIPisEQ(scip, expr->interval.sup, 0.09482446409));
+   cr_expect(SCIPisFeasEQ(scip, expr->interval.sup, 0.09482446409));
    cr_expect(SCIPisFeasEQ(scip, expr->children[0]->interval.inf, 0.9));
-   cr_expect(SCIPisEQ(scip, expr->children[0]->interval.sup, 1.5));
+   cr_expect(SCIPisFeasEQ(scip, expr->children[0]->interval.sup, 1.5));
 
    /* release conss */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
