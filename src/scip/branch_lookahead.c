@@ -13,7 +13,6 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #define SCIP_STATISTIC
-#define SCIP_DEBUG
 /**@file   branch_lookahead.c
  * @ingroup BRANCHINGRULES
  * @brief  lookahead LP branching rule
@@ -751,7 +750,6 @@ void mergeFSBStatistics(
       mainstatistics->nlpiterationsfsb[i] += childstatistics->nlpiterations[i];
       mainstatistics->npropdomred[i] += childstatistics->npropdomred[i];
       mainstatistics->noldbranchused[i] += childstatistics->noldbranchused[i];
-      mainstatistics->chosenfsbcand[i] += childstatistics->chosenfsbcand[i];
    }
 }
 
@@ -855,7 +853,6 @@ void statisticsFree(
 typedef struct
 {
    int                   ncutoffproofnodes;  /**< The number of nodes needed to proof the current cutoff. */
-   int                   ndomredproofnodes;  /**< The number of nodes needed to proof all current domreds. */
 } LOCALSTATISTICS;
 
 /** Allocates the local statistics in buffer memory and initializes it with default values. */
@@ -871,7 +868,6 @@ SCIP_RETCODE localStatisticsAllocate(
    SCIP_CALL( SCIPallocBuffer(scip, localstats) );
 
    (*localstats)->ncutoffproofnodes = 0;
-   (*localstats)->ndomredproofnodes = 0;
 
    return SCIP_OKAY;
 }
@@ -1142,13 +1138,17 @@ SCIP_RETCODE candidateListCreate(
 {
    assert(scip != NULL);
    assert(list != NULL);
-   assert(ncandidates > 0);
+   assert(ncandidates >= 0);
 
    SCIP_CALL( SCIPallocBuffer(scip, list) );
-   (*list)->candidates = NULL;
-   (*list)->ncandidates = 0;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*list)->candidates, ncandidates) );
+   if( ncandidates > 0 )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &(*list)->candidates, ncandidates) );
+   }
+   else
+      (*list)->candidates = NULL;
+
    (*list)->ncandidates = ncandidates;
 
    return SCIP_OKAY;
@@ -2125,7 +2125,7 @@ SCIP_RETCODE branchOnVar(
 
    /* update the lower bounds in the children; we must not do this if columns are missing in the LP
     * (e.g. because we are doing branch-and-price) or the problem should be solved exactly */
-   if( SCIPallColsInLP(scip) && !SCIPisExactSolve(scip) )
+   if( SCIPallColsInLP(scip) || SCIPisExactSolve(scip) )
    {
       SCIP_Real bestdown = decision->downdb;
       SCIP_Bool bestdownvalid = decision->downdbvalid;
@@ -2886,7 +2886,7 @@ SCIP_RETCODE getFSBResult(
     * score.
     */
    config->usebincons = firstlevel && config->usebincons;
-   config->usedomainreduction = firstlevel && config->usedomainreduction;
+   //config->usedomainreduction = firstlevel && config->usedomainreduction;
 
    /* Simple FSB is achieved by starting LAB with a max depth of 1 */
    config->recursiondepth = 1;
@@ -2905,6 +2905,8 @@ SCIP_RETCODE getFSBResult(
 
    SCIP_CALL( selectVarStart(scip, config, NULL, status, decision, scorecontainer, TRUE, candidates,
          statistics, localstats) );
+   assert(statistics->ncutoffproofnodes == 0 || statistics->ncutoffproofnodes == 2);
+   assert(!status->cutoff || statistics->ncutoffproofnodes == 2);
 
    mergeFSBStatistics(parentstatistics, statistics);
 
@@ -3381,7 +3383,6 @@ SCIP_RETCODE executeBranchingRecursive(
    SCIP_Bool             storewarmstartinfo, /**< should lp information be stored? */
    SCIP_Bool             downbranching       /**< should we branch up or down in here? */
 #ifdef SCIP_STATISTIC
-   ,SCIP_Bool*           addeddomainreduction/**< pointer to store whether a domain reduction was added */
    ,STATISTICS*          statistics          /**< general statistical data */
    ,LOCALSTATISTICS*     localstats          /**< local statistics, may be disregarded */
 #endif
@@ -3504,7 +3505,6 @@ SCIP_RETCODE executeBranchingRecursive(
 
             SCIP_CALL( statusCreate(scip, &deeperstatus) );
 
-            /* @todo collect bound changes ?????????????? */
 #ifdef SCIP_STATISTIC
             SCIP_CALL( filterCandidates(scip, config, deeperstatus, scorecontainer, candidates, statistics) );
 #else
@@ -3535,14 +3535,6 @@ SCIP_RETCODE executeBranchingRecursive(
                branchingresult->dualbound = deeperdecision->proveddb;
                branchingresult->dualboundvalid = TRUE;
 
-#ifdef SCIP_STATISTIC
-               if( deeperlocalstats->ndomredproofnodes > 0 )
-               {
-                  localstats->ndomredproofnodes += deeperlocalstats->ndomredproofnodes;
-                  *addeddomainreduction = TRUE;
-               }
-#endif
-
                if( deeperstatus->cutoff )
                {
                   /* branchingresult->cutoff is TRUE, if the current child was directly infeasible (so here it is always
@@ -3569,7 +3561,7 @@ SCIP_RETCODE executeBranchingRecursive(
    }
 
    /* the current branching child is infeasible and we only branched on binary variables in lookahead branching */
-   if( !status->lperror && config->usebincons && branchingresult->cutoff
+   if( SCIPallColsInLP(scip) && !status->lperror && config->usebincons && branchingresult->cutoff
       && binconsdata->binaryvars->nbinaryvars == (probingdepth + 1) )
    {
 #ifdef SCIP_STATISTIC
@@ -3680,9 +3672,6 @@ SCIP_RETCODE  selectVarRecursive(
       SCIP_Real branchval;
       SCIP_Real branchlb;
       SCIP_Real branchub;
-#ifdef SCIP_STATISTIC
-      SCIP_Bool addeddomainreduction = FALSE;
-#endif
 
       c = c % nlpcands;
 
@@ -3711,6 +3700,8 @@ SCIP_RETCODE  selectVarRecursive(
                "\n");
          continue;
       }
+
+      /* @todo apply already found domainreductions for this candidate? */
 
 #ifdef SCIP_STATISTIC
       /* Reset the cutoffproofnodes, as the number of proof nodes from previous branching vars (which where not
@@ -3749,6 +3740,7 @@ SCIP_RETCODE  selectVarRecursive(
 
          down = SCIPisStrongbranchDownFirst(scip, branchvar);
 
+         /* @todo break if result is infeasible (probably only in first layer)? */
          for( k = 0; k < 2; ++k )
          {
             DOMAINREDUCTIONS* localdomainreductions;
@@ -3762,7 +3754,7 @@ SCIP_RETCODE  selectVarRecursive(
 #ifdef SCIP_STATISTIC
             SCIP_CALL( executeBranchingRecursive(scip, status, config, baselpsol, candidate, localbaselpsolval,
                   recursiondepth, localdomainreductions, binconsdata, localbranchingresult, scorecontainer,
-                  storewarmstartinfo, down, &addeddomainreduction, statistics, localstats) );
+                  storewarmstartinfo, down, statistics, localstats) );
 #else
 
             SCIP_CALL( executeBranchingRecursive(scip, status, config, baselpsol, candidate, localbaselpsolval,
@@ -3770,9 +3762,7 @@ SCIP_RETCODE  selectVarRecursive(
                   storewarmstartinfo, down) );
 #endif
 
-
             /* check whether a new solutions rendered the previous child infeasible */
-            /* @todo break if result is infeasible (probably only in first layer) */
             if( SCIPallColsInLP(scip) )
             {
                if( k == 1 && SCIPisGE(scip, otherbranchingresult->dualbound, SCIPgetCutoffbound(scip)) )
@@ -3799,7 +3789,7 @@ SCIP_RETCODE  selectVarRecursive(
             *niterations += downbranchingresult->niterations + upbranchingresult->niterations;
          }
          /* store results of branching call */
-         if( persistent != NULL )
+         if( persistent != NULL && !upbranchingresult->cutoff && !downbranchingresult->cutoff )
          {
             SCIP_Longint iter = downbranchingresult->niterations + upbranchingresult->niterations;
             SCIP_CALL( updateOldBranching(scip, persistent, branchvar, branchval, iter, downbranchingresult,
@@ -3807,9 +3797,9 @@ SCIP_RETCODE  selectVarRecursive(
          }
 
          /* merge domain changes from the two child nodes */
-         if( config->usedomainreduction )
+         if( config->usedomainreduction && SCIPallColsInLP(scip) )
          {
-            if( upbranchingresult->cutoff && downbranchingresult->cutoff )
+            if( !upbranchingresult->cutoff && !downbranchingresult->cutoff )
                applyDeeperDomainReductions(scip, baselpsol, domainreductions, downdomainreductions,
                   updomainreductions);
             else if( upbranchingresult->cutoff )
@@ -3845,11 +3835,13 @@ SCIP_RETCODE  selectVarRecursive(
             LABdebugMessage(scip, SCIP_VERBLEVEL_NORMAL, " -> variable <%s> is infeasible in upward branch\n",
                SCIPvarGetName(branchvar));
 
-            if( config->usedomainreduction && !useoldbranching )
+            if( SCIPallColsInLP(scip) && config->usedomainreduction && !useoldbranching )
             {
-               addUpperBound(scip, branchvar, branchval, baselpsol, domainreductions);
 #ifdef SCIP_STATISTIC
-               addeddomainreduction = TRUE;
+               assert(localstats->ncutoffproofnodes == 0 || localstats->ncutoffproofnodes == 2);
+               addUpperBoundProofNode(scip, branchvar, branchval, baselpsol, domainreductions, 2 + localstats->ncutoffproofnodes);
+#else
+               addUpperBound(scip, branchvar, branchval, baselpsol, domainreductions);
 #endif
             }
 
@@ -3869,22 +3861,24 @@ SCIP_RETCODE  selectVarRecursive(
             LABdebugMessage(scip, SCIP_VERBLEVEL_NORMAL, " -> variable <%s> is infeasible in downward branch\n",
                SCIPvarGetName(branchvar));
 
-#ifdef SCIP_STATISTIC
-            statistics->nsinglecutoffs[probingdepth]++;
-#endif
-
-            if( config->usedomainreduction && !useoldbranching )
+            if( SCIPallColsInLP(scip) && config->usedomainreduction && !useoldbranching )
             {
-               addLowerBound(scip, branchvar, branchval, baselpsol, domainreductions);
 #ifdef SCIP_STATISTIC
-               addeddomainreduction = TRUE;
+               assert(localstats->ncutoffproofnodes == 0 || localstats->ncutoffproofnodes == 2);
+               addLowerBoundProofNode(scip, branchvar, branchval, baselpsol, domainreductions, 2 + localstats->ncutoffproofnodes);
+#else
+               addLowerBoundProofNode(scip, branchvar, branchval, baselpsol, domainreductions);
 #endif
             }
             if( upbranchingresult->dualboundvalid )
             {
                decision->proveddb = MAX(decision->proveddb, upbranchingresult->dualbound);
             }
-         }
+
+#ifdef SCIP_STATISTIC
+            statistics->nsinglecutoffs[probingdepth]++;
+#endif
+	 }
          else
          {
             LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Neither branch is cutoff and no limit reached.\n");
@@ -3993,15 +3987,6 @@ SCIP_RETCODE  selectVarRecursive(
                status->maxnconsreached = TRUE;
             }
          }
-
-#ifdef SCIP_STATISTIC
-         /* Increment the number of domredproofnodes by one, as we needed the current node as a proof node. */
-         /* ????????????? */
-         if( addeddomainreduction )
-         {
-            localstats->ndomredproofnodes++;
-         }
-#endif
       }
 
       if( areBoundsChanged(scip, decision->cand->branchvar, bestscorelowerbound, bestscoreupperbound) )
@@ -4148,20 +4133,20 @@ SCIP_RETCODE selectVarStart(
    {
       assert(candidates->ncandidates > 0);
 
+      if( config->usebincons )
+      {
+         SCIP_CALL( binConsDataCreate(scip, &binconsdata, recursiondepth,
+               (int)SCIPceil(scip, 0.5*candidates->ncandidates)) );
+      }
+
+      if( config->usedomainreduction )
+      {
+         SCIP_CALL( domainReductionsCreate(scip, &domainreductions) );
+      }
+
       /* we are at the top level, allocate some more data structures and start strong branching mode */
       if( !inprobing )
       {
-         if( config->usebincons )
-         {
-            SCIP_CALL( binConsDataCreate(scip, &binconsdata, recursiondepth,
-                  (int)SCIPceil(scip, 0.5*candidates->ncandidates)) );
-         }
-
-         if( config->usedomainreduction )
-         {
-            SCIP_CALL( domainReductionsCreate(scip, &domainreductions) );
-         }
-
          LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "About to start probing.\n");
          SCIP_CALL( SCIPstartStrongbranch(scip, TRUE) );
          SCIPenableVarHistory(scip);
@@ -4191,49 +4176,49 @@ SCIP_RETCODE selectVarStart(
 
             branchingDecisionCopy(decision, persistent->prevdecision);
          }
-
-         /* apply domain reductions */
-         if( config->usedomainreduction )
-         {
-            assert(domainreductions != NULL);
-
-            if( !status->cutoff )
-            {
-               LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Applying domain reductions to the base node.\n");
-#ifdef SCIP_STATISTIC
-               SCIP_CALL( applyDomainReductions(scip, baselpsol, domainreductions, &status->domredcutoff,
-                     &status->domred, statistics) );
-#else
-               SCIP_CALL( applyDomainReductions(scip, baselpsol, domainreductions, &status->domredcutoff,
-                     &status->domred) );
-#endif
-            }
-            domainReductionsFree(scip, &domainreductions);
-         }
-
-         /* apply binary constraints */
-         if( config->usebincons )
-         {
-            assert(binconsdata != NULL);
-            assert(binconsdata->binaryvars->nbinaryvars == 0);
-
-            if( !status->cutoff )
-            {
-               SCIP_NODE* basenode = SCIPgetCurrentNode(scip);
-
-               LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Applying binary constraints to the base node.\n");
-#ifdef SCIP_STATISTIC
-               SCIP_CALL( applyBinaryConstraints(scip, basenode, binconsdata->conslist, config,
-                     &status->addbinconst, &status->cutoff, &status->domred, statistics) );
-#else
-               SCIP_CALL( applyBinaryConstraints(scip, basenode, binconsdata->conslist, config,
-                     &status->addbinconst, &status->cutoff, &status->domred) );
-#endif
-            }
-            binConsDataFree(scip, &binconsdata);
-         }
-         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Applied found data to the base node.\n");
       }
+
+      /* apply domain reductions */
+      if( config->usedomainreduction )
+      {
+         assert(domainreductions != NULL);
+
+         if( !status->cutoff )
+         {
+            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Applying domain reductions to the base node.\n");
+#ifdef SCIP_STATISTIC
+            SCIP_CALL( applyDomainReductions(scip, baselpsol, domainreductions, &status->domredcutoff,
+                  &status->domred, statistics) );
+#else
+            SCIP_CALL( applyDomainReductions(scip, baselpsol, domainreductions, &status->domredcutoff,
+                  &status->domred) );
+#endif
+         }
+         domainReductionsFree(scip, &domainreductions);
+      }
+
+      /* apply binary constraints */
+      if( config->usebincons )
+      {
+         assert(binconsdata != NULL);
+         assert(binconsdata->binaryvars->nbinaryvars == 0);
+
+         if( !status->cutoff )
+         {
+            SCIP_NODE* basenode = SCIPgetCurrentNode(scip);
+
+            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Applying binary constraints to the base node.\n");
+#ifdef SCIP_STATISTIC
+            SCIP_CALL( applyBinaryConstraints(scip, basenode, binconsdata->conslist, config,
+                  &status->addbinconst, &status->cutoff, &status->domred, statistics) );
+#else
+            SCIP_CALL( applyBinaryConstraints(scip, basenode, binconsdata->conslist, config,
+                  &status->addbinconst, &status->cutoff, &status->domred) );
+#endif
+         }
+         binConsDataFree(scip, &binconsdata);
+      }
+      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Applied found data to the base node.\n");
 
 #ifdef SCIP_STATISTIC
       if( config->abbreviated )
