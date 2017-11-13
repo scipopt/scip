@@ -3981,7 +3981,14 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
       k = bounddistpos[i];
 
       SCIP_CALL( findBestLb(scip, vars[mksetinds[k]], sol, FALSE, allowlocal, &bestlb, &bestlbtype) );
+
+      if( SCIPisInfinity(scip, -bestlb) )
+         continue;
+
       SCIP_CALL( findBestUb(scip, vars[mksetinds[k]], sol, FALSE, allowlocal, &bestub, &bestubtype) );
+
+      if( SCIPisInfinity(scip, bestub) )
+         continue;
 
       /* switch the complementation of this variable */
 #ifndef NDEBUG
