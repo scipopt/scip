@@ -26,7 +26,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-#define SCIP_DEBUG
+//#define SCIP_DEBUG
 
 #include <assert.h>
 #include <string.h>
@@ -1301,7 +1301,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
              *  2. compute solution
              */
 
-            // todo: run prune heuristic with changed weights!
+            // todo: run prune heuristic with changed weights! costrev not needed!
 
             /* run TM heuristic */
             SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, solgraph, NULL, &best_start, soledges, heurdata->ntmruns,

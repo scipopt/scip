@@ -1671,13 +1671,14 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    int* perm = NULL;
    int* start;
    int* vcount = NULL;
-   int* result;
+   int* RESTRICT result;
    int* cluster = NULL;
    int* dijkedge = NULL;
    int* nodenterms = NULL;
    int** pathedge = NULL;
    int** node_base = NULL;
    int** node_edge = NULL;
+   SCIP_Bool startsgiven;
    STP_Bool* connected;
 
    assert(scip != NULL);
@@ -1701,7 +1702,12 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    (*success) = FALSE;
 
    if( runs < 1 )
+   {
+      startsgiven = FALSE;
       runs = 1;
+   }
+   else
+      startsgiven = (starts != NULL);
 
    for( e = 0; e < nedges; e++)
    {
@@ -1805,7 +1811,7 @@ SCIP_RETCODE SCIPStpHeurTMRun(
       else if( runs > (nterms) && graph->stp_type == STP_RMWCSP )
          runs = nterms;
    }
-   else if( starts != NULL )
+   else if( startsgiven )
    {
       for( k = 0; k < MIN(runs, nnodes); k++ )
          start[k] = starts[k];

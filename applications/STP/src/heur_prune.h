@@ -51,7 +51,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
    int*                  soledge,            /**< array to store primal solution (if no solution is provided,
                                                 solgiven must be set to FALSE) */
    SCIP_Bool*            success,            /**< feasible solution found? */
-   const SCIP_Bool       solgiven,           /**< solution given? */
+   const SCIP_Bool       withinitialsol,     /**< solution given? */
    const SCIP_Bool       reducegraph         /**< try to reduce graph initially? */
 	     );
 

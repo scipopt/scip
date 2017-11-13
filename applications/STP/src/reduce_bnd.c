@@ -25,7 +25,6 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-//#define SCIP_DEBUG
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -3591,15 +3590,14 @@ SCIP_RETCODE reduce_boundPrune(
    GRAPH*                graph,              /**< graph data structure */
    PATH*                 vnoi,               /**< Voronoi data structure */
    SCIP_Real*            cost,               /**< edge cost array                    */
-   SCIP_Real*            prize,              /**< prize (nodes) array                */
    SCIP_Real*            radius,             /**< radius array                       */
    SCIP_Real*            costrev,            /**< reversed edge cost array           */
    SCIP_Real*            offset,             /**< pointer to the offset              */
    int*                  heap,               /**< heap array */
    int*                  state,              /**< array to store state of a node during Voronoi computation */
    int*                  vbase,              /**< Voronoi base to each node */
-   int*                  solnode,            /**< array of nodes of current solution that is not to be destroyed */
-   int*                  soledge,            /**< array of edges of current solution that is not to be destroyed */
+   const int*            solnode,            /**< array of nodes of current solution that is not to be destroyed */
+   const int*            soledge,            /**< array of edges of current solution that is not to be destroyed */
    int*                  nelims,             /**< pointer to store number of eliminated edges */
    int                   minelims            /**< minimum number of edges to be eliminated */
    )
@@ -3607,15 +3605,16 @@ SCIP_RETCODE reduce_boundPrune(
    GRAPH* adjgraph;
    PATH* mst;
    SCIP_Real* cost3;
-   SCIP_Real  r;
-   SCIP_Real  obj;
-   SCIP_Real  max;
-   SCIP_Real  bound;
-   SCIP_Real  tmpcost;
-   SCIP_Real  mstobj;
-   SCIP_Real  maxcost;
-   SCIP_Real  radiim2;
-   SCIP_Real  radiim3;
+   SCIP_Real* const prize = graph->prize;
+   SCIP_Real r;
+   SCIP_Real obj;
+   SCIP_Real max;
+   SCIP_Real bound;
+   SCIP_Real tmpcost;
+   SCIP_Real mstobj;
+   SCIP_Real maxcost;
+   SCIP_Real radiim2;
+   SCIP_Real radiim3;
    IDX** ancestors;
    IDX** revancestors;
    int* edges3;

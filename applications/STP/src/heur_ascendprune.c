@@ -543,16 +543,25 @@ if( pcmw )
       return SCIP_ERROR;
    }
 #endif
-   assert(graph_sol_valid(scip, newgraph, newedges));
-
-   graph_path_exit(scip, newgraph);
-
-   assert(success);
    if( !success )
    {
       printf("failed to build tree in ascend-prune (by prune) \n");
       goto TERMINATE;
    }
+
+   assert(success && graph_sol_valid(scip, newgraph, newedges));
+
+   printf("obj after prune %f \n", graph_sol_getObj(g->cost, newedges, 0.0, newgraph->edges));
+
+   SCIPStpHeurLocalRun(scip, newgraph, g->cost, newedges);
+
+
+   printf("obj after local %f \n", graph_sol_getObj(g->cost, newedges, 0.0, newgraph->edges));
+
+
+   assert(graph_sol_valid(scip, newgraph, newedges));
+   graph_path_exit(scip, newgraph);
+
 
     /*
     * prune solution (in the original graph)
@@ -614,287 +623,6 @@ if( pcmw )
 
    return SCIP_OKAY;
 }
-
-#if 0
-/** ascent and prune for prize-collecting Steiner tree and maximum weight connected subgraph */
-SCIP_RETCODE SCIPStpHeurAscendPruneRunPcMw(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEUR*            heur,               /**< heuristic data structure or NULL */
-   const GRAPH*          g,                  /**< the graph */
-   const SCIP_Real*      redcosts,           /**< the reduced costs */
-   int*                  edgearrint,         /**< int edges array to store solution */
-   int*                  nodearrint,         /**< int vertices array for internal computations */
-   int                   daroot,             /**< the root (used for dual ascent) */
-   STP_Bool*             nodearrchar,        /**< STP_Bool vertices array for internal computations */
-   SCIP_Bool*            solfound,           /**< has a solution been found? */
-   SCIP_Bool             dualascredcosts,    /**< reduced costs from dual ascent? */
-   SCIP_Bool             addsol              /**< should the solution be added to SCIP by this method? */
-   )
-{
-   GRAPH* newgraph;
-   SCIP_Real maxcost;
-   SCIP_Real* nval;
-   int* const mark = g->mark;
-   int* const newedges = edgearrint;
-   int* const nodechild = nodearrint;
-   int* edgeancestor;
-   const int root = g->source;
-   const int nnodes = g->knots;
-   const int nedges = g->edges;
-   const int probtype = g->stp_type;
-   int nnewnodes = 0;
-   int nnewedges = 0;
-
-   SCIP_Bool success;
-
-#if XXX
-   addsol = FALSE;
-#endif
-
-   assert(g != NULL);
-   assert(scip != NULL);
-   assert(redcosts != NULL);
-   assert(edgearrint != NULL);
-   assert(nodearrint != NULL);
-   assert(nodearrchar != NULL);
-   assert(probtype == STP_PCSPG || probtype == STP_MWCSP);
-
-   if( addsol || !dualascredcosts )
-   {
-      const int nvars = SCIPprobdataGetNVars(scip);
-      assert(nvars >= nedges);
-      SCIP_CALL( SCIPallocBufferArray(scip, &nval, nvars) );
-   }
-   else
-   {
-      nval = NULL;
-   }
-
-   {
-      int* const queue = nodearrint;
-      STP_Bool* const scanned = nodearrchar;
-      int qsize;
-
-      /*
-       * construct new graph corresponding to zero cost paths from the root to all terminals
-       */
-
-      BMSclearMemoryArray(mark, nnodes);
-      BMSclearMemoryArray(scanned, nnodes);
-
-      qsize = 0;
-      mark[root] = TRUE;
-      queue[qsize++] = root;
-      nnewnodes++;
-
-      /* DFS */
-      while( qsize )
-      {
-         const int k = queue[--qsize];
-         scanned[k] = TRUE;
-
-         /* traverse outgoing arcs */
-         for( int a = g->outbeg[k]; a != EAT_LAST; a = g->oeat[a] )
-         {
-            const int head = g->head[a];
-
-            if( SCIPisZero(scip, redcosts[a]) )
-            {
-               if( k == root && Is_term(g->term[head]) )
-                  continue;
-
-               /* vertex not labeled yet? */
-               if( !mark[head] )
-               {
-                  mark[head] = TRUE;
-                  nnewnodes++;
-                  queue[qsize++] = head;
-               }
-               if( (!scanned[head] || !SCIPisZero(scip, redcosts[flipedge(a)])) && k != root )
-               {
-                  assert(g->tail[a] != root);
-                  assert(g->head[a] != root);
-
-                  newedges[nnewedges++] = a;
-               }
-            }
-         }
-      }
-
-//#ifdef SCIP_DEBUG
-      for( int k = 0; k < nnewedges; k++ )
-      {
-         const int e = newedges[k];
-         assert(!(g->tail[e] == root && Is_pterm(g->term[g->head[e]])));
-         assert(!(g->head[e] == root && Is_pterm(g->term[g->tail[e]])));
-      }
-//#endif
-
-      for( int a = g->outbeg[root]; a != EAT_LAST; a = g->oeat[a] )
-      {
-         const int head = g->head[a];
-         if( mark[head] )
-            newedges[nnewedges++] = a;
-      }
-   }
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &edgeancestor, 2 * nnewedges) );
-
-   /* initialize new graph */
-   SCIP_CALL( graph_init(scip, &newgraph, nnewnodes, 2 * nnewedges, 1) );
-
-   newgraph->stp_type = probtype;
-
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(newgraph->prize), nnewnodes) );
-
-   for( int k = 0; k < nnodes; k++ )
-   {
-      if( mark[k] )
-      {
-         if( (!Is_term(g->term[k])) )
-            newgraph->prize[newgraph->knots] = g->prize[k];
-         else
-            newgraph->prize[newgraph->knots] = 0.0;
-
-         nodechild[k] = newgraph->knots;
-
-         graph_knot_add(newgraph, g->term[k]);
-      }
-      else
-         nodechild[k] = -1;
-   }
-
-   newgraph->norgmodelknots = nnewnodes;
-
-   assert(nnewnodes == newgraph->knots);
-
-   /* set root of new graph */
-   newgraph->source = nodechild[root];
-
-   /* add edges to new graph */
-   for( int a = 0; a < nnewedges; a++ )
-   {
-      int i;
-      const int e = newedges[a];
-      const int tail = nodechild[g->tail[e]];
-      const int head = nodechild[g->head[e]];
-
-      assert(tail >= 0);
-      assert(head >= 0);
-
-      for( i = newgraph->outbeg[tail]; i != EAT_LAST; i = newgraph->oeat[i] )
-         if( newgraph->head[i] == head )
-            break;
-
-      if( i == EAT_LAST )
-      {
-         edgeancestor[newgraph->edges] = e;
-         edgeancestor[newgraph->edges + 1] = flipedge(e);
-         graph_edge_add(scip, newgraph, tail, head, g->cost[e], g->cost[flipedge(e)]);
-      }
-   }
-
-   nnewedges = newgraph->edges;
-   newgraph->norgmodeledges = nnewedges;
-   newgraph->extended = TRUE;
-
-   printf("SIZE OF A&P SUBGRAPH: n %d, m %d \n", newgraph->knots, nnewedges);
-
-   SCIP_CALL( level0(scip, newgraph) );
-
-   /* initialize shortest path algorithm */
-   SCIP_CALL( graph_path_init(scip, newgraph) );
-
-   assert(graph_valid(newgraph));
-
-   /* get solution on new graph by PRUNE heuristic */
-   SCIP_CALL( SCIPStpHeurPruneRun(scip, NULL, newgraph, newedges, &success, FALSE, TRUE) );
-
-   assert(success);
-   assert(graph_sol_valid(scip, newgraph, newedges));
-   graph_path_exit(scip, newgraph);
-
-   if( !success )
-   {
-      printf("failed to build tree\n");
-      goto TERMINATE;
-   }
-
-   /*
-    * prune solution (in the original graph)
-    */
-
-   BMSclearMemoryArray(nodearrchar, nnodes);
-
-   for( int e = 0; e < nnewedges; e++ )
-      if( newedges[e] == CONNECT )
-      {
-         const int eorg = edgeancestor[e];
-         nodearrchar[g->tail[eorg]] = TRUE;
-         nodearrchar[g->head[eorg]] = TRUE;
-      }
-
-   for( int e = 0; e < nedges; e++ )
-      newedges[e] = UNKNOWN;
-
-   SCIP_CALL( SCIPStpHeurTMPrunePc(scip, g, g->cost, newedges, nodearrchar) );
-
-#if XXX
-   SCIP_Real pobj;
-   pobj = 0.0;
-   for( e = 0; e < nedges; e++ )
-   if( newedges[e] == CONNECT )
-   pobj += g->cost[e];
-
-   FILE *fptr;
-   fptr=fopen("redStats.txt","a");
-   if(fptr==NULL)
-   {
-      printf("Error!");
-   }
-   if( g->stp_type == STP_MWCSP )
-   fprintf(fptr,"%f ", - pobj - SCIPprobdataGetOffset(scip));
-   else
-   fprintf(fptr,"%f ", pobj);
-
-   fclose(fptr);
-#endif
-
-   success = graph_sol_valid(scip, g, newedges);
-   assert(success);
-
-   if( success && addsol )
-   {
-      SCIP_SOL* sol = NULL;
-      assert(nval != NULL);
-
-      for( int e = 0; e < nedges; e++ )
-      {
-         if( newedges[e] == CONNECT )
-            nval[e] = 1.0;
-         else
-            nval[e] = 0.0;
-      }
-
-      /* add solution */
-      SCIP_CALL( SCIPprobdataAddNewSol(scip, nval, sol, heur, &success) );
-   }
-
-   *solfound = success;
-
- TERMINATE:
-
-   for( int k = 0; k < nnodes; k++ )
-      mark[k] = (g->grad[k] > 0);
-
-   /* free memory */
-   graph_free(scip, newgraph, TRUE);
-   SCIPfreeBufferArray(scip, &edgeancestor);
-   SCIPfreeBufferArrayNull(scip, &nval);
-
-   return SCIP_OKAY;
-}
-#endif
 
 
 /** creates the prune primal heuristic and includes it in SCIP */

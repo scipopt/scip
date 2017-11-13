@@ -17,8 +17,8 @@
  * @brief  Improvement heuristic for Steiner problems
  * @author Daniel Rehfeldt
  *
- * This file implements three local heuristics, namely vertex insertion, key-path exchange and key-vertex elimination,
- * see "Fast Local Search for Steiner Trees in Graphs" by Uchoa and Werneck.
+ * This file implements several local heuristics, including vertex insertion, key-path exchange and key-vertex elimination,
+ * ("Fast Local Search for Steiner Trees in Graphs" by Uchoa and Werneck). Other heuristics are for PCSTP and MWCSP.
  *
  * A list of all interface methods can be found in heur_local.h.
  *
@@ -207,7 +207,7 @@ STP_Bool nodeIsCrucial(
 SCIP_RETCODE SCIPStpHeurLocalRun(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
-   SCIP_Real*            cost,               /**< arc cost array */
+   const SCIP_Real*      cost,               /**< arc cost array */
    int*                  best_result         /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
    )
 {
