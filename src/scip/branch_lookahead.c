@@ -12,7 +12,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+#define SCIP_STATISTIC
+#define SCIP_DEBUG
 /**@file   branch_lookahead.c
  * @ingroup BRANCHINGRULES
  * @brief  lookahead LP branching rule
@@ -603,12 +604,11 @@ typedef struct
    SCIP_Longint*         nlpiterationsfsb;   /**< The number of lp iterations needed to get the FSB scores. */
    int*                  npropdomred;        /**< The number of domain reductions based on domain propagation per
                                               *   progingdepth. */
-   int*                  nsinglecandidate;   /**< The number of times a single candidate was given to the recursion routine
-                                              *   per probingdepth. */
    int*                  noldbranchused;     /**< The number of times old branching data is used (see the reevalage
                                               *   parameter in the CONFIGURATION struct) */
    int*                  chosenfsbcand;      /**< If abbreviated, this is the number of times each candidate was finally
                                               *   chosen by the following LAB */
+   int                   nsinglecandidate;   /**< number of times a single candidate was given to the recursion routine */
    int                   ntotalresults;      /**< The total sum of the entries in nresults. */
    int                   nbinconst;          /**< The number of binary constraints added to the base node. */
    int                   nbinconstvio;       /**< The number of binary constraints added to the base node, that are violated
@@ -644,6 +644,7 @@ void statisticsInit(
    assert(statistics != NULL);
    assert(statistics->recursiondepth > 0);
 
+   statistics->nsinglecandidate = 0;
    statistics->ntotalresults = 0;
    statistics->nbinconst = 0;
    statistics->nbinconstvio = 0;
@@ -666,7 +667,6 @@ void statisticsInit(
    for( i = 0; i < statistics->recursiondepth; i++ )
    {
       statistics->noldbranchused[i] = 0;
-      statistics->nsinglecandidate[i] = 0;
       statistics->npropdomred[i] = 0;
       statistics->nfullcutoffs[i] = 0;
       statistics->nlpssolved[i] = 0;
@@ -707,7 +707,6 @@ SCIP_RETCODE statisticsAllocate(
    SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->nlpiterations, recursiondepth) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->nlpiterationsfsb, recursiondepth) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->npropdomred, recursiondepth) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->nsinglecandidate, recursiondepth) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->noldbranchused, recursiondepth) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->chosenfsbcand, maxncands) );
 
@@ -751,7 +750,6 @@ void mergeFSBStatistics(
       mainstatistics->nlpiterations[i] += childstatistics->nlpiterations[i];
       mainstatistics->nlpiterationsfsb[i] += childstatistics->nlpiterations[i];
       mainstatistics->npropdomred[i] += childstatistics->npropdomred[i];
-      mainstatistics->nsinglecandidate[i] += childstatistics->nsinglecandidate[i];
       mainstatistics->noldbranchused[i] += childstatistics->noldbranchused[i];
       mainstatistics->chosenfsbcand[i] += childstatistics->chosenfsbcand[i];
    }
@@ -806,12 +804,12 @@ void statisticsPrint(
             statistics->nlpiterationsfsb[i]);
          SCIPinfoMessage(scip, NULL, "In depth <%i>, a decision was discarded <%i> times due to domain reduction because of"
             " propagation.\n", i, statistics->npropdomred[i]);
-         SCIPinfoMessage(scip, NULL, "In depth <%i>, only one branching candidate was given <%i> times.\n",
-            i, statistics->nsinglecandidate[i]);
          SCIPinfoMessage(scip, NULL, "In depth <%i>, old branching results were used in <%i> cases.\n",
             i, statistics->noldbranchused[i]);
       }
 
+      SCIPinfoMessage(scip, NULL, "One single branching candidate was given <%i> times.\n",
+         statistics->nsinglecandidate);
       SCIPinfoMessage(scip, NULL, "Depth limit was reached <%i> times.\n", statistics->ndepthreached);
       SCIPinfoMessage(scip, NULL, "Ignored <%i> binary constraints, that would be domain reductions.\n",
          statistics->ndomredcons);
@@ -842,7 +840,6 @@ void statisticsFree(
 
    SCIPfreeBufferArray(scip, &(*statistics)->chosenfsbcand);
    SCIPfreeBufferArray(scip, &(*statistics)->noldbranchused);
-   SCIPfreeBufferArray(scip, &(*statistics)->nsinglecandidate);
    SCIPfreeBufferArray(scip, &(*statistics)->npropdomred);
    SCIPfreeBufferArray(scip, &(*statistics)->nlpiterationsfsb);
    SCIPfreeBufferArray(scip, &(*statistics)->nlpiterations);
@@ -909,6 +906,7 @@ typedef struct
 {
    SCIP_VAR***           consvars;           /**< array containing the variables for each constraint to be created */
    int*                  nconsvars;          /**< number of vars in each element of 'consvars' */
+   SCIP_Bool*            violated;           /**< indicating whether a constraint is violated by the base solution */
    int                   nelements;          /**< number of elements in 'consvars' and 'nconsvars' */
    int                   memorysize;         /**< number of entries that the array 'consvars' may hold before the
                                               *   array is reallocated. */
@@ -929,7 +927,8 @@ SCIP_RETCODE constraintListCreate(
 
    SCIP_CALL( SCIPallocBuffer(scip, conslist) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*conslist)->consvars, startsize) );
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &(*conslist)->nconsvars, startsize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*conslist)->nconsvars, startsize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*conslist)->violated, startsize) );
 
    /* We start without any constraints */
    (*conslist)->nelements = 0;
@@ -945,7 +944,8 @@ SCIP_RETCODE constraintListAppend(
    SCIP*                 scip,               /**< SCIP data structure */
    CONSTRAINTLIST*       list,               /**< list to add the consvars to */
    SCIP_VAR**            consvars,           /**< array of variables for the constraint to be created later */
-   int                   nconsvars           /**< number of elements in 'consvars' */
+   int                   nconsvars,          /**< number of elements in 'consvars' */
+   SCIP_Bool             violated            /**< indicates whether the constraint is violated by the base lp */
    )
 {
    assert(scip != NULL);
@@ -959,12 +959,14 @@ SCIP_RETCODE constraintListAppend(
       int newmemsize = SCIPcalcMemGrowSize(scip, list->memorysize + 1);
       SCIP_CALL( SCIPreallocBufferArray(scip, &list->consvars, newmemsize) );
       SCIP_CALL( SCIPreallocBufferArray(scip, &list->nconsvars, newmemsize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, &list->violated, newmemsize) );
       list->memorysize = newmemsize;
    }
 
    /* Set the new vars at the first unused place, which is the length used as index */
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &list->consvars[list->nelements], consvars, nconsvars) ); /*lint !e866*/
    list->nconsvars[list->nelements] = nconsvars;
+   list->violated[list->nelements] = violated;
    list->nelements++;
 
    return SCIP_OKAY;
@@ -984,11 +986,10 @@ void constraintListFree(
 
    for( i = 0; i < (*conslist)->nelements; i++ )
    {
-      SCIP_VAR** consvars = (*conslist)->consvars[i];
-      int nconsvars = (*conslist)->nconsvars[i];
-      SCIPfreeBlockMemoryArray(scip, &consvars, nconsvars);
+      SCIPfreeBlockMemoryArray(scip, &(*conslist)->consvars[i], (*conslist)->nconsvars[i]);
    }
 
+   SCIPfreeBufferArray(scip, &(*conslist)->violated);
    SCIPfreeBufferArray(scip, &(*conslist)->nconsvars);
    SCIPfreeBufferArray(scip, &(*conslist)->consvars);
    SCIPfreeBuffer(scip, conslist);
@@ -1666,7 +1667,7 @@ void addLowerBoundProofNode(
 #ifdef SCIP_STATISTIC
       /* if the given lower bound is equal to the old one we take the smaller number of proof nodes */
       if( SCIPisEQ(scip, domainreductions->lowerbounds[varindex], lowerbound) )
-         newnproof = MIN(domainreductions->lowerboundnproofs[varindex], nproofnodes);
+         domainreductions->lowerboundnproofs[varindex] = MIN(domainreductions->lowerboundnproofs[varindex], nproofnodes);
 #endif
    }
    else
@@ -2563,6 +2564,7 @@ SCIP_RETCODE addBinaryConstraint(
       int i;
       SCIP_VAR** negatedvars;
       SCIP_Real lhssum = 0;
+      SCIP_Bool violated;
 
       LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Adding binary constraint for <%i> vars.\n",
          binconsdata->binaryvars->nbinaryvars);
@@ -2579,16 +2581,18 @@ SCIP_RETCODE addBinaryConstraint(
          lhssum += SCIPgetSolVal(scip, baselpsol, negatedvars[i]);
       }
 
-      if( config->addnonviocons || lhssum < 1 )
+      violated = (lhssum < 1);
+
+      if( config->addnonviocons || violated )
       {
          SCIP_CALL( constraintListAppend(scip, binconsdata->conslist, negatedvars,
-            binconsdata->binaryvars->nbinaryvars) );
+            binconsdata->binaryvars->nbinaryvars, violated) );
 
          /* the constraint we will be building is a logic or: we have a list of binary variables that were
           * cutoff while we branched on with >= 1. So we have the constraint: x_1 + ... + x_n <= n-1.
           * Let y = (1-x), then we have an equivalent formulation: y_1 + ... + y_n >= 1. If the base lp
           * is violating this constraint we count this for our number of violated constraints and bounds. */
-         if( lhssum < 1 )
+         if( violated )
          {
             binconsdata->conslist->nviolatedcons++;
          }
@@ -2623,6 +2627,7 @@ SCIP_RETCODE applyBinaryConstraints(
    )
 {
    int nconsadded = 0;
+   int nvioconsadded = 0;
    int i;
 
    LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "processing %d binary constraints.\n", conslist->nelements);
@@ -2634,6 +2639,7 @@ SCIP_RETCODE applyBinaryConstraints(
    {
       SCIP_VAR** vars = conslist->consvars[i];
       int nvars = conslist->nconsvars[i];
+      SCIP_Bool violated = conslist->violated[i];
       int v;
 
       for( v = 0; v < nvars; ++v )
@@ -2662,7 +2668,10 @@ SCIP_RETCODE applyBinaryConstraints(
 #endif
          /* add the constraint to the given node */
          SCIP_CALL( SCIPaddConsNode(scip, basenode, constraint, NULL) );
-         ++nconsadded;
+
+         nconsadded++;
+         if( violated )
+            nvioconsadded++;
 
          /* release the constraint, as it is no longer needed */
          SCIP_CALL( SCIPreleaseCons(scip, &constraint) );
@@ -2710,8 +2719,8 @@ SCIP_RETCODE applyBinaryConstraints(
       *consadded = TRUE;
 
 #ifdef SCIP_STATISTIC
-   statistics->nbinconst += conslist->nconstraints;
-   statistics->nbinconstvio += conslist->nviolatedcons;
+   statistics->nbinconst += nconsadded;
+   statistics->nbinconstvio += nvioconsadded;
 #endif
    }
 
@@ -4110,7 +4119,8 @@ SCIP_RETCODE selectVarStart(
       LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Only one candidate (<%s>) is given. This one is chosen without "
          "calculations.\n", SCIPvarGetName(decision->cand->branchvar));
 #ifdef SCIP_STATISTIC
-      statistics->nsinglecandidate[probingdepth]++;
+      assert(!SCIPinProbing(scip) || SCIPgetProbingDepth(scip) == 0);
+      statistics->nsinglecandidate++;
 #endif
       return SCIP_OKAY;
    }
@@ -4213,7 +4223,7 @@ SCIP_RETCODE selectVarStart(
 
                LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Applying binary constraints to the base node.\n");
 #ifdef SCIP_STATISTIC
-               SCIP_CALL( applyBinaryConstraints(scip, basenode, binconsdata->createdconstraints, config,
+               SCIP_CALL( applyBinaryConstraints(scip, basenode, binconsdata->conslist, config,
                      &status->addbinconst, &status->cutoff, &status->domred, statistics) );
 #else
                SCIP_CALL( applyBinaryConstraints(scip, basenode, binconsdata->conslist, config,
@@ -4512,7 +4522,6 @@ SCIP_DECL_BRANCHINIT(branchInitLookahead)
       SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->nlpiterations, recursiondepth) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->nlpiterationsfsb, recursiondepth) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->npropdomred, recursiondepth) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->nsinglecandidate, recursiondepth) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->noldbranchused, recursiondepth) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->chosenfsbcand, maxncands) );
 
@@ -4543,7 +4552,6 @@ SCIP_DECL_BRANCHEXIT(branchExitLookahead)
 
    SCIPfreeMemoryArray(scip, &statistics->chosenfsbcand);
    SCIPfreeMemoryArray(scip, &statistics->noldbranchused);
-   SCIPfreeMemoryArray(scip, &statistics->nsinglecandidate);
    SCIPfreeMemoryArray(scip, &statistics->npropdomred);
    SCIPfreeMemoryArray(scip, &statistics->nlpiterationsfsb);
    SCIPfreeMemoryArray(scip, &statistics->nlpiterations);
