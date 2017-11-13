@@ -4577,7 +4577,7 @@ SCIP_RETCODE solveNode(
 
       /* get LP objective value */
       lpobjval = SCIPlpGetObjval(lp, set, transprob);
-      assert(lpobjval != SCIP_INVALID && !SCIPsetIsInfinity(set, REALABS(lpobjval))); /*lint !e777*/
+      assert(lpobjval != SCIP_INVALID); /*lint !e777*/
 
       /* add the observation to the regression */
       SCIPregressionAddObservation(stat->regressioncandsobjval, (SCIP_Real)nlpbranchcands, lpobjval);
