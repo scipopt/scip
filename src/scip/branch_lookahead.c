@@ -2719,8 +2719,8 @@ SCIP_RETCODE applyBinaryConstraints(
       *consadded = TRUE;
 
 #ifdef SCIP_STATISTIC
-   statistics->nbinconst += nconsadded;
-   statistics->nbinconstvio += nvioconsadded;
+      statistics->nbinconst += nconsadded;
+      statistics->nbinconstvio += nvioconsadded;
 #endif
    }
 
