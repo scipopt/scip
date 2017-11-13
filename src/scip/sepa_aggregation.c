@@ -177,6 +177,8 @@ SCIP_RETCODE addCut(
 
       /* create the cut */
       (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s%d_%d", cutclassname, SCIPgetNLPs(scip), *ncuts);
+
+tryagain:
       SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs,
                                         cutislocal, FALSE, cutremovable) );
 
@@ -200,6 +202,16 @@ SCIP_RETCODE addCut(
       {
          SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
                1000LL, 1000.0, MAKECONTINTEGRAL, &success) );
+
+         if( SCIPisInfinity(scip, SCIProwGetRhs(cut)) )
+         {
+            /* release the row */
+            SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+
+            /* the scaling destroyed the cut, so try to add it again but this time do not scale it */
+            makeintegral = FALSE;
+            goto tryagain;
+         }
       }
       else
       {
@@ -211,6 +223,11 @@ SCIP_RETCODE addCut(
          SCIPdebugMsg(scip, " -> %s cut <%s> no longer efficacious: rhs=%f, eff=%f\n",
                       cutclassname, cutname, cutrhs, cutefficacy);
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
+
+         SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+
+         /* the cut is not efficacious anymore due to the scaling so do not add it */
+         return SCIP_OKAY;
       }
 
       SCIPdebugMsg(scip, " -> found %s cut <%s>: rhs=%f, eff=%f, rank=%d, min=%f, max=%f (range=%g)\n",
