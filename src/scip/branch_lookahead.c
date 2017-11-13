@@ -2906,7 +2906,7 @@ SCIP_RETCODE getFSBResult(
    SCIP_CALL( selectVarStart(scip, config, NULL, status, decision, scorecontainer, TRUE, candidates,
          statistics, localstats) );
    assert(statistics->ncutoffproofnodes == 0 || statistics->ncutoffproofnodes == 2);
-   assert(!status->cutoff || statistics->ncutoffproofnodes == 2);
+   assert(!status->cutoff || localstats->ncutoffproofnodes == 2);
 
    mergeFSBStatistics(parentstatistics, statistics);
 
@@ -4667,6 +4667,13 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       else if( status->lperror )
       {
          *result = SCIP_DIDNOTFIND;
+      }
+      else if( status->maxnconsreached )
+      {
+         /* this case may occure if the domain reductions that reached the limit were already applied via domain
+          * propagation
+          */
+         *result = SCIP_REDUCEDDOM;
       }
 
       LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Result before branching is %s\n", getStatusString(*result));
