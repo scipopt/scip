@@ -12,8 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define SCIP_DEBUG
-#define PRINTNODECONS
+
 /**@file   branch_lookahead.c
  * @ingroup BRANCHINGRULES
  * @brief  lookahead LP branching rule
@@ -908,12 +907,12 @@ struct SCIP_BranchruleData
 /** all constraints that were created and may be added to the base node */
 typedef struct
 {
-   SCIP_CONS**           constraints;        /**< The array of constraints. Length is adjusted as needed. */
-   int                   nconstraints;       /**< The number of entries in the array 'constraints'. */
-   int                   memorysize;         /**< The number of entries that the array 'constraints' may hold before the
+   SCIP_VAR***           consvars;           /**< array containing the variables for each constraint to be created */
+   int*                  nconsvars;          /**< number of vars in each element of 'consvars' */
+   int                   nelements;          /**< number of elements in 'consvars' and 'nconsvars' */
+   int                   memorysize;         /**< number of entries that the array 'consvars' may hold before the
                                               *   array is reallocated. */
-   int                   nviolatedcons;      /**< Tracks the number of constraints that are violated by the base LP
-                                              *   solution. */
+   int                   nviolatedcons;      /**< number of constraints that are violated by the base LP solution. */
 } CONSTRAINTLIST;
 
 /** Allocate and initialize the list holding the constraints. */
@@ -929,10 +928,11 @@ SCIP_RETCODE constraintListCreate(
    assert(startsize > 0);
 
    SCIP_CALL( SCIPallocBuffer(scip, conslist) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*conslist)->constraints, startsize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*conslist)->consvars, startsize) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &(*conslist)->nconsvars, startsize) );
 
    /* We start without any constraints */
-   (*conslist)->nconstraints = 0;
+   (*conslist)->nelements = 0;
    (*conslist)->memorysize = startsize;
    (*conslist)->nviolatedcons = 0;
 
@@ -943,33 +943,35 @@ SCIP_RETCODE constraintListCreate(
 static
 SCIP_RETCODE constraintListAppend(
    SCIP*                 scip,               /**< SCIP data structure */
-   CONSTRAINTLIST*       list,               /**< The list to add the element to. */
-   SCIP_CONS*            constoadd           /**< The element to add to the list. */
+   CONSTRAINTLIST*       list,               /**< list to add the consvars to */
+   SCIP_VAR**            consvars,           /**< array of variables for the constraint to be created later */
+   int                   nconsvars           /**< number of elements in 'consvars' */
    )
 {
    assert(scip != NULL);
    assert(list != NULL);
-   assert(constoadd != NULL);
+   assert(consvars != NULL);
 
    /* In case the list tries to hold more elements than it has space, reallocate  */
-   if( list->memorysize == list->nconstraints )
+   if( list->memorysize == list->nelements )
    {
       /* resize the array, such that it can hold the new element */
       int newmemsize = SCIPcalcMemGrowSize(scip, list->memorysize + 1);
-      SCIP_CALL( SCIPreallocBufferArray(scip, &list->constraints, newmemsize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, &list->consvars, newmemsize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, &list->nconsvars, newmemsize) );
       list->memorysize = newmemsize;
    }
 
-   /* Set the new var at the first unused place, which is the length used as index */
-   list->constraints[list->nconstraints] = constoadd;
-   list->nconstraints++;
+   /* Set the new vars at the first unused place, which is the length used as index */
+   SCIPduplicateBlockMemoryArray(scip, &list->consvars[list->nelements], consvars, nconsvars);
+   list->nelements++;
 
    return SCIP_OKAY;
 }
 
 /** Free all resources of a constraint list in opposite order to the allocation. */
 static
-SCIP_RETCODE constraintListFree(
+void constraintListFree(
    SCIP*                 scip,               /**< SCIP data structure */
    CONSTRAINTLIST**      conslist            /**< Pointer to the list to be freed. */
    )
@@ -979,18 +981,19 @@ SCIP_RETCODE constraintListFree(
    assert(scip != NULL);
    assert(conslist != NULL);
 
-   for( i = 0; i < (*conslist)->nconstraints; i++ )
+   for( i = 0; i < (*conslist)->nelements; i++ )
    {
-      SCIP_CONS* constraint = (*conslist)->constraints[i];
-      if( constraint != NULL )
+      SCIP_VAR** consvars = (*conslist)->consvars[i];
+      int nconsvars = (*conslist)->nconsvars[i];
+      if( consvars != NULL )
       {
-         SCIP_CALL( SCIPreleaseCons(scip, &constraint) );
+         SCIPfreeBlockMemoryArray(scip, &consvars, nconsvars);
       }
    }
 
-   SCIPfreeBufferArray(scip, &(*conslist)->constraints);
+   SCIPfreeBufferArray(scip, &(*conslist)->nconsvars);
+   SCIPfreeBufferArray(scip, &(*conslist)->consvars);
    SCIPfreeBuffer(scip, conslist);
-   return SCIP_OKAY;
 }
 
 /**
@@ -1081,8 +1084,8 @@ void binaryVarListFree(
 /** struct holding the relevant data for handling binary constraints */
 typedef struct
 {
-   BINARYVARLIST*        binaryvars;         /**< The current binary vars, used to created the constraints. */
-   CONSTRAINTLIST*       createdconstraints; /**< The created constraints. */
+   BINARYVARLIST*        binaryvars;         /**< current binary vars, used to fill the conslist */
+   CONSTRAINTLIST*       conslist;           /**< list of constraints to be created */
 } BINCONSDATA;
 
 /** Allocate and initialize the BINCONSDATA struct. */
@@ -1101,14 +1104,14 @@ SCIP_RETCODE binConsDataCreate(
 
    SCIP_CALL( SCIPallocBuffer(scip, consdata) );
    SCIP_CALL( binaryVarListCreate(scip, &(*consdata)->binaryvars, maxdepth) );
-   SCIP_CALL( constraintListCreate(scip, &(*consdata)->createdconstraints, nstartcons) );
+   SCIP_CALL( constraintListCreate(scip, &(*consdata)->conslist, nstartcons) );
 
    return SCIP_OKAY;
 }
 
 /** Free all resources in a BINCONSDATA in opposite order of allocation. */
 static
-SCIP_RETCODE binConsDataFree(
+void binConsDataFree(
    SCIP*                 scip,               /**< SCIP data structure */
    BINCONSDATA**         consdata            /**< Pointer to he struct to be freed. */
    )
@@ -1116,11 +1119,9 @@ SCIP_RETCODE binConsDataFree(
    assert(scip != NULL);
    assert(consdata != NULL);
 
-   SCIP_CALL( constraintListFree(scip, &(*consdata)->createdconstraints) );
+   constraintListFree(scip, &(*consdata)->conslist);
    binaryVarListFree(scip, &(*consdata)->binaryvars);
    SCIPfreeBuffer(scip, consdata);
-
-   return SCIP_OKAY;
 }
 
 /** A struct acting as a fixed list of candidates */
@@ -1686,7 +1687,8 @@ void addLowerBoundProofNode(
 
    /* In case the new lower bound is greater than the base solution val and the base solution val is not violated by a
     * previously found bound, we increment the nviolatedvars counter and set the baselpviolated flag.  */
-   if( SCIPisGT(scip, domainreductions->lowerbounds[varindex], basesolutionval) && !domainreductions->baselpviolated[varindex] )
+   if( SCIPisGT(scip, domainreductions->lowerbounds[varindex], basesolutionval)
+       && !domainreductions->baselpviolated[varindex] )
    {
       domainreductions->baselpviolated[varindex] = TRUE;
       domainreductions->nviolatedvars++;
@@ -1768,7 +1770,8 @@ void addUpperBoundProofNode(
 
    /* In case the new upper bound is lesser than the base solution val and the base solution val is not violated by a
     * previously found bound, we increment the nviolatedvars counter and set the baselpviolated flag.  */
-   if( SCIPisLT(scip, domainreductions->upperbounds[varindex], basesolutionval) && !domainreductions->baselpviolated[varindex] )
+   if( SCIPisLT(scip, domainreductions->upperbounds[varindex], basesolutionval)
+       && !domainreductions->baselpviolated[varindex] )
    {
       domainreductions->baselpviolated[varindex] = TRUE;
       domainreductions->nviolatedvars++;
@@ -2560,8 +2563,6 @@ SCIP_RETCODE addBinaryConstraint(
    if( binconsdata->binaryvars->nbinaryvars > 1 )
    {
       int i;
-      SCIP_CONS* constraint;
-      char constraintname[SCIP_MAXSTRLEN];
       SCIP_VAR** negatedvars;
       SCIP_Real lhssum = 0;
 
@@ -2582,26 +2583,16 @@ SCIP_RETCODE addBinaryConstraint(
 
       if( config->addnonviocons || lhssum < 1 )
       {
-         /* create a name for the new constraint */
-         createBinaryConstraintName(negatedvars, binconsdata->binaryvars->nbinaryvars, constraintname);
-         /* create the constraint with the freshly created name */
-         SCIP_CALL( createBinaryConstraint(scip, config, &constraint, constraintname, negatedvars,
-               binconsdata->binaryvars->nbinaryvars) );
+         SCIP_CALL( constraintListAppend(scip, binconsdata->conslist, negatedvars,
+            binconsdata->binaryvars->nbinaryvars) );
 
-#ifdef PRINTNODECONS
-         SCIPinfoMessage(scip, NULL, "Created constraint:\n");
-         SCIP_CALL( SCIPprintCons(scip, constraint, NULL) );
-         SCIPinfoMessage(scip, NULL, "\n");
-#endif
-
-         SCIP_CALL( constraintListAppend(scip, binconsdata->createdconstraints, constraint) );
-         /* the constraint we are building is a logic or: we have a list of binary variables that were
+         /* the constraint we will be building is a logic or: we have a list of binary variables that were
           * cutoff while we branched on with >= 1. So we have the constraint: x_1 + ... + x_n <= n-1.
           * Let y = (1-x), then we have an equivalent formulation: y_1 + ... + y_n >= 1. If the base lp
           * is violating this constraint we count this for our number of violated constraints and bounds. */
          if( lhssum < 1 )
          {
-            binconsdata->createdconstraints->nviolatedcons++;
+            binconsdata->conslist->nviolatedcons++;
          }
       }
 
@@ -2636,27 +2627,16 @@ SCIP_RETCODE applyBinaryConstraints(
    int nconsadded = 0;
    int i;
 
-   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "processing %d binary constraints.\n", conslist->nconstraints);
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "processing %d binary constraints.\n", conslist->nelements);
 
-   if( conslist->nconstraints == 0 )
+   if( conslist->nelements == 0 )
       return SCIP_OKAY;
 
-   for( i = 0; i < conslist->nconstraints; i++ )
+   for( i = 0; i < conslist->nelements; i++ )
    {
-      SCIP_CONS* constraint = conslist->constraints[i];
-      SCIP_VAR** vars;
-      int nvars;
+      SCIP_VAR** vars = conslist->consvars[i];
+      int nvars = conslist->nconsvars[i];
       int v;
-
-#ifdef PRINTNODECONS
-      SCIP_CALL( SCIPprintCons(scip, constraint, NULL) );
-      SCIPinfoMessage(scip, NULL, "\n");
-#endif
-
-      /* get the variables */
-      assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(constraint)), "logicor") == 0);
-      vars = SCIPgetVarsLogicor(scip, constraint);
-      nvars = SCIPgetNVarsLogicor(scip, constraint);
 
       for( v = 0; v < nvars; ++v )
       {
@@ -2669,9 +2649,25 @@ SCIP_RETCODE applyBinaryConstraints(
       /* no variable is fixed to 1, yet, so constraint is not redundant */
       if( v == nvars )
       {
+         SCIP_CONS* constraint;
+         char constraintname[SCIP_MAXSTRLEN];
+
+         /* create a name for the new constraint */
+         createBinaryConstraintName(vars, nvars, constraintname);
+         /* create the constraint with the freshly created name */
+         SCIP_CALL( createBinaryConstraint(scip, config, &constraint, constraintname, vars, nvars) );
+
+#ifdef PRINTNODECONS
+         SCIPinfoMessage(scip, NULL, "Created constraint:\n");
+         SCIP_CALL( SCIPprintCons(scip, constraint, NULL) );
+         SCIPinfoMessage(scip, NULL, "\n");
+#endif
          /* add the constraint to the given node */
          SCIP_CALL( SCIPaddConsNode(scip, basenode, constraint, NULL) );
          ++nconsadded;
+
+         /* release the constraint, as it is no longer needed */
+         SCIP_CALL( SCIPreleaseCons(scip, &constraint) );
 
          /* only add cliques for the root node */
          if( config->addclique && SCIPgetNNodes(scip) == 1 )
@@ -2707,14 +2703,9 @@ SCIP_RETCODE applyBinaryConstraints(
             }
          }
       }
-
-      /* release the constraint, as it is no longer needed */
-      SCIP_CALL( SCIPreleaseCons(scip, &constraint) );
-      conslist->constraints[i] = NULL;
    }
-   conslist->nconstraints = 0;
 
-   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "added %d/%d binary constraints.\n", nconsadded, conslist->nconstraints);
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "added %d/%d binary constraints.\n", nconsadded, conslist->nelements);
 
    if( nconsadded > 0 )
    {
@@ -3594,7 +3585,7 @@ SCIP_RETCODE executeBranchingRecursive(
 
 /** branches recursively on all given candidates */
 static
-SCIP_RETCODE selectVarRecursive(
+SCIP_RETCODE  selectVarRecursive(
    SCIP*                 scip,               /**< SCIP data structure */
    STATUS*               status,             /**< current status */
    PERSISTENTDATA*       persistent,         /**< container to store data over multiple calls to the branching rule */
@@ -3963,7 +3954,7 @@ SCIP_RETCODE selectVarRecursive(
 
             if( config->usebincons )
             {
-               nbincons = binconsdata->createdconstraints->nviolatedcons;
+               nbincons = binconsdata->conslist->nviolatedcons;
                LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Found <%i> violating binary constraints.\n",
                      nbincons);
 
@@ -4053,8 +4044,8 @@ SCIP_Bool isStoreDecision(
    SCIP_Bool noviolatingbincons;
    SCIP_Bool noviolatingdomreds;
 
-   noviolatingbincons = binconsdata != NULL && binconsdata->createdconstraints->nconstraints > 0 &&
-      binconsdata->createdconstraints->nviolatedcons == 0;
+   noviolatingbincons = binconsdata != NULL && binconsdata->conslist->nelements > 0 &&
+      binconsdata->conslist->nviolatedcons == 0;
    noviolatingdomreds = domainreductions != NULL && domainreductions->nchangedvars > 0 &&
       domainreductions->nviolatedvars == 0;
    return config->storeunviolatedsol && noviolatingbincons && noviolatingdomreds;
@@ -4227,11 +4218,11 @@ SCIP_RETCODE selectVarStart(
                SCIP_CALL( applyBinaryConstraints(scip, basenode, binconsdata->createdconstraints, config,
                      &status->addbinconst, &status->cutoff, &status->domred, statistics) );
 #else
-               SCIP_CALL( applyBinaryConstraints(scip, basenode, binconsdata->createdconstraints, config,
+               SCIP_CALL( applyBinaryConstraints(scip, basenode, binconsdata->conslist, config,
                      &status->addbinconst, &status->cutoff, &status->domred) );
 #endif
             }
-            SCIP_CALL( binConsDataFree(scip, &binconsdata) );
+            binConsDataFree(scip, &binconsdata);
          }
          LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Applied found data to the base node.\n");
       }
