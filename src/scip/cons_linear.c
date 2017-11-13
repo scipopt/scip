@@ -12911,9 +12911,6 @@ SCIP_RETCODE detectRedundantConstraints(
 
       if( nparallelconss != 0 )
       {
-         SCIP_CONS* consdel;
-         SCIP_CONSDATA* consdatadel;
-
          SCIP_Real lhs;
          SCIP_Real rhs;
 
@@ -12960,6 +12957,8 @@ SCIP_RETCODE detectRedundantConstraints(
 
          for( i = 0; i < nparallelconss; ++i )
          {
+            SCIP_CONS* consdel;
+            SCIP_CONSDATA* consdatadel;
             SCIP_Real scale;
 
             consdel = parallelconss[i];
@@ -13031,7 +13030,7 @@ SCIP_RETCODE detectRedundantConstraints(
 
          if( SCIPisFeasLT(scip, rhs, lhs) )
          {
-            SCIPdebugMsg(scip, "aggregated linear constraint <%s> is infeasible\n", SCIPconsGetName(consdel));
+            SCIPdebugMsg(scip, "aggregated linear constraint <%s> is infeasible\n", SCIPconsGetName(cons0));
             *cutoff = TRUE;
             break;
          }
@@ -13043,7 +13042,7 @@ SCIP_RETCODE detectRedundantConstraints(
             lhs = rhs;
          }
 
-         /* update lhs and rhs of consstay */
+         /* update lhs and rhs of cons0 */
          SCIP_CALL( chgLhs(scip, cons0, lhs) );
          SCIP_CALL( chgRhs(scip, cons0, rhs) );
 
