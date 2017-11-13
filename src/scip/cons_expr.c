@@ -2730,7 +2730,7 @@ SCIP_RETCODE parseBase(
       /* expect ')' */
       if( *expr != ')' )
       {
-         SCIPerrorMessage("Expected ')', but got <%c> from <%s>\n", *expr, expr);
+         SCIPerrorMessage("Read a '(', parsed expression inside --> expecting closing ')'. Got <%c>: rest of string <%s>\n", *expr, expr);
          SCIP_CALL( SCIPreleaseConsExprExpr(scip, basetree) );
          return SCIP_READERROR;
       }
