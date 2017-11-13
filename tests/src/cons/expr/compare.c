@@ -42,7 +42,7 @@ static SCIP_CONSEXPR_EXPR* expr_z; /* z */
 static SCIP_CONSEXPR_EXPR* expr_posvalue; /* 1.3 */
 static SCIP_CONSEXPR_EXPR* expr_negvalue; /* -12.58 */
 static SCIP_CONSEXPR_EXPR* expr_sum; /* x + y */
-static SCIP_CONSEXPR_EXPR* expr_prod; /* x */
+static SCIP_CONSEXPR_EXPR* expr_prod; /* x*y*(x+y) */
 static SCIP_CONSEXPR_EXPR* expr_halfx; /* 0.5 * x */
 static SCIP_CONSEXPR_EXPR* expr_sqrtx; /* \sqrt x */
 static SCIP_CONSEXPR_EXPR* expr_half_sqrx; /* 0.5 * x^2 */
