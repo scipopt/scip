@@ -437,6 +437,19 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashCos)
    return SCIP_OKAY;
 }
 
+/** expression curvature detection callback */
+static
+SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureCos)
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(curvature != NULL);
+
+   *curvature = SCIP_EXPRCURV_UNKNOWN;
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for cos expressions and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrCos(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -461,6 +474,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrCos(
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropCos) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashCos) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffCos) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureCos) );
 
    return SCIP_OKAY;
 }

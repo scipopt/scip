@@ -1881,6 +1881,24 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
    return SCIP_OKAY;
 }
 
+/** expression curvature detection callback */
+static
+SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureProduct)
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(curvature != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) > 0);
+
+   /* for one child the curvature does not change; otherwise the curvature is unknown */
+   if( SCIPgetConsExprExprNChildren(expr) == 1 )
+      *curvature = SCIPgetCurvatureExprExpr(SCIPgetConsExprExprChildren(expr)[0]);
+   else
+      *curvature = SCIP_EXPRCURV_UNKNOWN;
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for product expressions and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1916,6 +1934,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffProduct) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureProduct) );
 
    return SCIP_OKAY;
 }

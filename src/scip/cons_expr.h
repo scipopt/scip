@@ -178,6 +178,15 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrBranchscore(
    SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE((*brscore)) /**< branching score callback (can be NULL) */
 );
 
+/** set the curvature detection callback of an expression handler */
+EXTERN
+SCIP_RETCODE SCIPsetConsExprExprHdlrCurvature(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+   SCIP_DECL_CONSEXPR_EXPRCURVATURE((*curvature)) /**< curvature detection callback (can be NULL) */
+);
+
 /** gives expression handlers */
 EXTERN
 SCIP_CONSEXPR_EXPRHDLR** SCIPgetConsExprExprHdlrs(
@@ -709,7 +718,6 @@ EXTERN
 SCIP_EXPRCURV SCIPgetCurvatureExprExpr(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
-
 
 /** @} */
 

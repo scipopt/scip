@@ -410,6 +410,29 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashLog)
    return SCIP_OKAY;
 }
 
+/** expression curvature detection callback */
+static
+SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureLog)
+{
+   SCIP_CONSEXPR_EXPR* child;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(curvature != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+
+   child = SCIPgetConsExprExprChildren(expr)[0];
+   assert(child != NULL);
+
+   /* expression is convex if child is concave */
+   if( (SCIPgetCurvatureExprExpr(child) & SCIP_EXPRCURV_CONCAVE) != 0 )
+      *curvature = SCIP_EXPRCURV_CONCAVE;
+   else
+      *curvature = SCIP_EXPRCURV_UNKNOWN;
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for logarithmic expression and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrLog(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -432,6 +455,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrLog(
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropLog) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashLog) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffLog) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureLog) );
 
    return SCIP_OKAY;
 }

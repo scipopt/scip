@@ -519,6 +519,58 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashAbs)
    return SCIP_OKAY;
 }
 
+/** expression curvature detection callback */
+static
+SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureAbs)
+{
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_EXPRCURV childcurv;
+   SCIP_Real childinf;
+   SCIP_Real childsup;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(curvature != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+
+   child = SCIPgetConsExprExprChildren(expr)[0];
+   assert(child != NULL);
+
+   childcurv = SCIPgetCurvatureExprExpr(child);
+   childinf = SCIPintervalGetInf(SCIPgetConsExprExprInterval(child));
+   childsup = SCIPintervalGetSup(SCIPgetConsExprExprInterval(child));
+
+   *curvature = SCIP_EXPRCURV_UNKNOWN;
+
+   /* TODO do we need to consider the cases where childinf >= 0 or childsup <= 0.0 holds? */
+   switch( childcurv )
+   {
+      case SCIP_EXPRCURV_UNKNOWN:
+         *curvature = SCIP_EXPRCURV_UNKNOWN;
+         break;
+
+      case SCIP_EXPRCURV_CONVEX:
+         if( childinf >= 0.0 )
+            *curvature = SCIP_EXPRCURV_CONVEX;
+         else if( childsup <= 0.0 )
+            *curvature = SCIP_EXPRCURV_CONCAVE;
+         break;
+
+      case SCIP_EXPRCURV_CONCAVE:
+         if( childsup <= 0.0 )
+            *curvature = SCIP_EXPRCURV_CONVEX;
+         else if( childinf >= 0.0 )
+            *curvature = SCIP_EXPRCURV_CONCAVE;
+         break;
+
+      case SCIP_EXPRCURV_LINEAR:
+         *curvature = SCIP_EXPRCURV_CONVEX;
+         break;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for absolute expression and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrAbs(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -543,6 +595,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrAbs(
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashAbs) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropAbs) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffAbs) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureAbs) );
 
    return SCIP_OKAY;
 }

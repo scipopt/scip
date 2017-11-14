@@ -152,6 +152,20 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashValue)
    return SCIP_OKAY;
 }
 
+/** expression curvature detection callback */
+static
+SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureValue)
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(curvature != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 0);
+
+   *curvature = SCIP_EXPRCURV_LINEAR;
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for constant value expression and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrValue(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -171,6 +185,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrValue(
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashValue) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropValue) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffValue) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureValue) );
 
    return SCIP_OKAY;
 }

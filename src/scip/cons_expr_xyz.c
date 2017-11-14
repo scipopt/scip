@@ -237,6 +237,20 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashXyz)
    return SCIP_OKAY;
 }
 
+/** expression curvature detection callback */
+static
+SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureXyz)
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(curvature != NULL);
+
+   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for xyz expressions and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrXyz(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -269,6 +283,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrXyz(
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropXyz) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashXyz) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffXyz) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureXyz) );
 
    return SCIP_OKAY;
 }

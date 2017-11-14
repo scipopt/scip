@@ -1182,6 +1182,43 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashSum)
    return SCIP_OKAY;
 }
 
+/** expression curvature detection callback */
+static
+SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureSum)
+{
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+   int i;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(curvature != NULL);
+
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
+
+   /* start with linear curvature */
+   *curvature = SCIP_EXPRCURV_LINEAR;
+
+   for( i = 0; i < SCIPgetConsExprExprNChildren(expr) && *curvature != SCIP_EXPRCURV_UNKNOWN; ++i )
+   {
+      SCIP_EXPRCURV childcurv = SCIPgetCurvatureExprExpr(SCIPgetConsExprExprChildren(expr)[i]);
+
+      /* consider negative coefficients for the curvature of a child */
+      if( exprdata->coefficients[i] < 0.0 )
+      {
+         if( childcurv == SCIP_EXPRCURV_CONVEX )
+            childcurv = SCIP_EXPRCURV_CONCAVE;
+         else if( childcurv == SCIP_EXPRCURV_CONCAVE )
+            childcurv = SCIP_EXPRCURV_CONVEX;
+      }
+
+      /* use bit operations for determining the resulting curvature */
+      *curvature = (*curvature) & childcurv;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for sum expressions and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrSum(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1206,6 +1243,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSum(
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffSum) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureSum) );
 
    return SCIP_OKAY;
 }

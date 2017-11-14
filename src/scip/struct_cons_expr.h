@@ -57,6 +57,7 @@ struct SCIP_ConsExpr_ExprHdlr
    SCIP_DECL_CONSEXPR_REVERSEPROP((*reverseprop)); /**< reverse propagation callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRHASH((*hash));          /**< hash callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE((*brscore)); /**< branching score callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRCURVATURE((*curvature)); /**< curvature detection callback (can be NULL) */
 };
 
 /** a node in the expression graph that is handled by the expression constraint handler */

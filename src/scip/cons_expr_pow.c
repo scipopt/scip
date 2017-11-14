@@ -727,6 +727,42 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashPow)
    return SCIP_OKAY;
 }
 
+/** expression curvature detection callback */
+static
+SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvaturePow)
+{
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_EXPRCURV childcurv;
+   SCIP_Real exponent;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(curvature != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+
+   exponent = SCIPgetConsExprExprPowExponent(expr);
+   child = SCIPgetConsExprExprChildren(expr)[0];
+   assert(child != NULL);
+   childcurv = SCIPgetCurvatureExprExpr(child);
+
+   *curvature = SCIP_EXPRCURV_UNKNOWN;
+
+   /* nothing can be concluded if the child expression has unknown curvature */
+   if( childcurv == SCIP_EXPRCURV_UNKNOWN )
+      return SCIP_OKAY;
+
+   if( (childcurv & SCIP_EXPRCURV_CONVEX) != 0 )
+   {
+      /* TODO */
+   }
+   else if( (childcurv & SCIP_EXPRCURV_CONCAVE) != 0 )
+   {
+      /* TODO */
+   }
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for power expression and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrPow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -749,6 +785,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrPow(
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashPow) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, comparePow) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffPow) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvaturePow) );
 
    return SCIP_OKAY;
 }

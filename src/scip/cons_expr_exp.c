@@ -395,6 +395,29 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashExp)
    return SCIP_OKAY;
 }
 
+/** expression curvature detection callback */
+static
+SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureExp)
+{
+   SCIP_CONSEXPR_EXPR* child;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(curvature != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+
+   child = SCIPgetConsExprExprChildren(expr)[0];
+   assert(child != NULL);
+
+   /* expression is convex if child is convex */
+   if( (SCIPgetCurvatureExprExpr(child) & SCIP_EXPRCURV_CONVEX) != 0 )
+      *curvature = SCIP_EXPRCURV_CONVEX;
+   else
+      *curvature = SCIP_EXPRCURV_UNKNOWN;
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for exponential expressions and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrExp(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -417,6 +440,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrExp(
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropExp) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashExp) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffExp) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureExp) );
 
    return SCIP_OKAY;
 }
