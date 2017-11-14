@@ -977,7 +977,7 @@ SCIP_RETCODE reduce_da(
                   {
                      ubnew = sol->obj;
                      BMScopyMemoryArray(result, sol->soledges, nedges);
-#if 0
+#if 1
                      printf("obj before local2 %f \n", ubnew);
 
                      SCIPStpHeurLocalRun(scip, graph, graph->cost, result);
@@ -987,10 +987,9 @@ SCIP_RETCODE reduce_da(
 
                      ubnew = graph_sol_getObj(graph->cost, result, 0.0, nedges);
 
-                     if( ubnew < sol->obj)
-                     SCIP_CALL( SCIPStpHeurRecAddToPool(scip, ubnew, result, pool, &solfound) );
+                     if( ubnew < sol->obj )
+                        SCIP_CALL(SCIPStpHeurRecAddToPool(scip, ubnew, result, pool, &solfound));
 #endif
-
                   }
                }
             }
