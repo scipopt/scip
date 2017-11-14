@@ -1499,9 +1499,9 @@ SCIP_RETCODE SCIPlpiGetCols(
       assert( ind != NULL && lind != NULL );
       assert( val != NULL && lval != NULL );
       assert( lcnt != NULL );
-      if( lbeg == NULL || lind == NULL || lval == NULL || lcnt == NULL )
+      if( lbeg == NULL || lind == NULL || lval == NULL || lcnt == NULL ) /*lint !e774 !e845*/
       {
-         SCIPerrorMessage("Ran into NULL.\n");
+         SCIPerrorMessage("QSget_columns_list() failed to allocate memory.\n");
          return SCIP_LPERROR;
       }
 
@@ -1519,9 +1519,9 @@ SCIP_RETCODE SCIPlpiGetCols(
       assert( llb != NULL );
       assert( lub != NULL );
       assert( ub != NULL );
-      if( llb == NULL || lub == NULL )
+      if( llb == NULL || lub == NULL ) /*lint !e774 !e845*/
       {
-         SCIPerrorMessage("Ran into NULL.\n");
+         SCIPerrorMessage("QSget_columns_list() failed to allocate memory.\n");
          return SCIP_LPERROR;
       }
 
@@ -1601,9 +1601,9 @@ SCIP_RETCODE SCIPlpiGetRows(
       assert( ind != NULL && lind != NULL );
       assert( val != NULL && lval != NULL );
       assert( lcnt != NULL );
-      if( lbeg == NULL || lind == NULL || lval == NULL || lcnt == NULL )
+      if( lbeg == NULL || lind == NULL || lval == NULL || lcnt == NULL )  /*lint !e774 !e845*/
       {
-         SCIPerrorMessage("Ran into NULL.\n");
+         SCIPerrorMessage("QSget_ranged_rows_list() failed to allocate memory.\n");
          return SCIP_LPERROR;
       }
 
@@ -1621,9 +1621,9 @@ SCIP_RETCODE SCIPlpiGetRows(
       assert( lhs != NULL && lrhs != NULL );
       assert( lrng != NULL );
       assert( lsense != NULL );
-      if( lrhs == NULL || lrng == NULL || lsense == NULL )
+      if( lrhs == NULL || lrng == NULL || lsense == NULL ) /*lint !e774 !e845*/
       {
-         SCIPerrorMessage("Ran into NULL.\n");
+         SCIPerrorMessage("QSget_ranged_rows_list() failed to allocate memory.\n");
          return SCIP_LPERROR;
       }
 
@@ -1636,7 +1636,8 @@ SCIP_RETCODE SCIPlpiGetRows(
             rhs[i] = lrhs[i] + lrng[i];
             break;
          case 'E':
-            lhs[i] = rhs[i] = lrhs[i];
+            lhs[i] = lrhs[i];
+            rhs[i] = lrhs[i];
             break;
          case 'L':
             rhs[i] = lrhs[i];
