@@ -60,7 +60,6 @@ set(settings_MIP
     "feaspump20"
     "indicatoralterlp"
     "leastinf"
-    "presolfast"
     "randomhybrid"
     "uct_breadth_dualval"
     "alldisp"
