@@ -2259,7 +2259,6 @@ SCIP_RETCODE applyObbtBilinear(
 
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
-   oldfeastol = SCIPfeastol(scip);
 
    nolditerations = SCIPgetNLPIterations(scip);
    nleftiterations = getIterationsLeft(scip, nolditerations, itlimit);
@@ -2280,8 +2279,8 @@ SCIP_RETCODE applyObbtBilinear(
    /* we need to solve the probing LP before creating new probing nodes in solveBilinearLP() */
    SCIP_CALL( SCIPsolveProbingLP(scip, (int)nleftiterations, &lperror, NULL) );
 
-   /* 4. set feasibility and optimality tolerances */
-   SCIP_CALL( SCIPchgLpfeastol(scip, oldfeastol / 10.0, FALSE) );
+   /* 4. tighten LP feasibility tolerance to be at most feastol/10.0 */
+   oldfeastol = SCIPchgRelaxfeastol(scip, SCIPfeastol(scip) / 10.0);
 
    /* 5. main loop */
    for( i = propdata->lastbilinidx; i < propdata->nbilinbounds
@@ -2381,8 +2380,8 @@ SCIP_RETCODE applyObbtBilinear(
       SCIP_CALL( SCIPreleaseRow(scip, &(propdata->cutoffrow)) );
    }
 
-   /* 6. restore old tolerances */
-   SCIP_CALL( SCIPchgLpfeastol(scip, oldfeastol, FALSE) );
+   /* 6. restore old tolerance */
+   (void) SCIPchgRelaxfeastol(scip, oldfeastol);
 
    return SCIP_OKAY;
 }
