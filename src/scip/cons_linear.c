@@ -12827,10 +12827,11 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
 /** retrieves and removes all constraints from the hashtable that are parallel to the given constraint */
 static
 SCIP_RETCODE retrieveParallelConstraints(
-   SCIP_HASHTABLE*       hashtable,
-   SCIP_CONS*            querycons,
-   SCIP_CONS**           parallelconss,
-   int*                  nparallelconss
+   SCIP_HASHTABLE*       hashtable,          /**< hashtable containing linear constraints */
+   SCIP_CONS*            querycons,          /**< linear constraint to look for duplicates in the hash table */
+   SCIP_CONS**           parallelconss,      /**< array to return constraints that are parallel to the given;
+                                              *   these constraints where removed from the hashtable */
+   int*                  nparallelconss      /**< pointer to return number of parallel constraints */
    )
 {
    SCIP_CONS* parallelcons;
@@ -12931,12 +12932,15 @@ SCIP_RETCODE detectRedundantConstraints(
                if( !consdata->upgraded )
                {
                   int nextraparallelconss;
+
                   consdata0 = consdata;
                   SCIPswapPointers((void**) &cons0, (void**) &parallelconss[i]);
 
                   /* call the retrieveParallelConstraints function again with the swapped constraint;
-                   * due to non-transitivty there could be a constraint that compares equal to this ones
-                   * and would be overwritten by the call SCIPhashtableInsert(hashtable, cons0) below
+                   * due to non-transitivity there could be a constraint that compares equal to this one
+                   * that did not compare equal in the first call to retrieveParallelConstraints().
+                   * Such a constraint would be silently overridden by the call SCIPhashtableInsert(hashtable, cons0)
+                   * below
                    */
                   SCIP_CALL( retrieveParallelConstraints(hashtable, cons0, &parallelconss[nparallelconss], &nextraparallelconss) );
                   nparallelconss += nextraparallelconss;
