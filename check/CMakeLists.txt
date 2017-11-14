@@ -265,15 +265,11 @@ set(instances_Orbitope
 # Symmetry instances
 #
 set(instances_Symmetry
-    "instances/MIP/blend2.mps\;7.598985"
-    "instances/MIP/enigma.mps\;0"
     "instances/MIP/MANN_a9.clq.lp\;16"
-    "instances/MIP/misc03.mps\;3360"
     "instances/MIP/rgn.mps\;82.1999974"
     "instances/MIP/stein27.fzn\;18"
     "instances/MIP/stein27_inf.lp\;+infinity"
     "instances/PseudoBoolean/wheel010.lap.opb.pre.cip\;25"
-    "instances/MINLP/tltr.mps\;48.0666666667"
     )
 
 #
