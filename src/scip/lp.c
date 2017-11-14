@@ -10199,7 +10199,7 @@ SCIP_RETCODE lpDualSimplex(
       (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "lp%" SCIP_LONGINT_FORMAT "_%" SCIP_LONGINT_FORMAT ".lp", stat->nnodes, stat->lpcount);
       SCIP_CALL( SCIPlpWrite(lp, fname) );
       SCIPsetDebugMsg("wrote LP to file <%s> (dual simplex, objlim=%.15g, feastol=%.15g/%.15g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n",
-         fname, lp->lpiobjlim, lp->lpifeastol, lp->lpidualfeastol, 
+         fname, lp->lpiobjlim, lp->lpifeastol, lp->lpidualfeastol,
          lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling, lp->lpipresolving);
    }
 #endif
