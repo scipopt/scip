@@ -16,12 +16,24 @@ Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 //  BEGIN CppAD namespace
 namespace CppAD {
 
+// SV moved the division from operator / into extra function basediv,
+// as disabling the sanitizer check on operator / did not work (gcc 7.2)
+
+template <class Base>
+#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490 && !defined(__INTEL_COMPILER)
+__attribute__((no_sanitize_undefined))
+#endif
+inline Base basediv(const Base& left, const Base& right)
+{
+   return left / right;
+}
+
 template <class Base>
 AD<Base> operator / (const AD<Base> &left , const AD<Base> &right)
 {
 	// compute the Base part
 	AD<Base> result;
-	result.value_  = left.value_ / right.value_;
+	result.value_  = basediv(left.value_, right.value_);
 	CPPAD_ASSERT_UNKNOWN( Parameter(result) );
 
 	// check if there is a recording in progress

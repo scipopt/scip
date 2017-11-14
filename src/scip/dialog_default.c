@@ -27,6 +27,9 @@
 
 #include "scip/dialog_default.h"
 #include "nlpi/nlpi.h"
+#include "scip/pub_cons.h"
+#include "scip/type_cons.h"
+#include "scip/cons_linear.h"
 
 
 
@@ -3387,6 +3390,32 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecValidateSolve)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for linear constraint type classification */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayLinearConsClassification)
+{  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   if( SCIPgetStage(scip) < SCIP_STAGE_PROBLEM )
+      SCIPdialogMessage(scip, NULL, "\nNo problem available for classification\n");
+   else
+   {
+      SCIP_LINCONSSTATS* linconsstats;
+
+      SCIP_CALL( SCIPlinConsStatsCreate(scip, &linconsstats) );
+
+      /* call linear constraint classification and print the statistics to standard out */
+      SCIP_CALL( SCIPclassifyConstraintTypesLinear(scip, linconsstats) );
+
+      SCIPprintLinConsStats(scip, NULL, linconsstats);
+
+      SCIPlinConsStatsFree(scip, &linconsstats);
+   }
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
 /** creates a root dialog */
 SCIP_RETCODE SCIPcreateRootDialog(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3813,6 +3842,17 @@ SCIP_RETCODE SCIPincludeDialogDefault(
             NULL,
             SCIPdialogExecDisplayTranssolution, NULL, NULL,
             "transsolution", "display best primal solution in transformed variables", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* display linear constraint type classification */
+   if( !SCIPdialogHasEntry(submenu, "linclass") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecDisplayLinearConsClassification, NULL, NULL,
+            "linclass", "linear constraint classification as used for MIPLIB", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }

@@ -38,7 +38,6 @@
 
 
 #define SCIP_EXPRESSION_MAXCHILDEST 16       /**< estimate on maximal number of children */
-#define DEFAULT_RANDSEED            73       /**< initial random seed */
 
 /** sign of a value (-1 or +1)
  *
@@ -11607,11 +11606,11 @@ SCIP_RETCODE exprgraphNodeSimplify(
       if( node->children[i]->op != SCIP_EXPR_POLYNOMIAL )
          continue;
 
-      SCIPdebugMessage("expand child %d in expression node ", i);
+      SCIPdebugMessage("expand child %d in expression node %p = ", i, (void*)node);
       SCIPdebug( exprgraphPrintNodeExpression(node, messagehdlr, NULL, NULL, FALSE) );
-      SCIPdebugPrintf("\n\tchild = ");
+      SCIPdebug( SCIPmessagePrintInfo(messagehdlr, "\n\tchild = ") );
       SCIPdebug( exprgraphPrintNodeExpression(node->children[i], messagehdlr, NULL, NULL, FALSE) );
-      SCIPdebugPrintf("\n");
+      SCIPdebug( SCIPmessagePrintInfo(messagehdlr, "\n") );
 
       removechild = TRUE; /* we intend to release children[i] */
 
@@ -11630,6 +11629,10 @@ SCIP_RETCODE exprgraphNodeSimplify(
          monomial = polynomialdata->monomials[j];
          /* if monomial is not sorted, then polynomial should not be sorted either, or have only one monomial */
          assert(monomial->sorted || !polynomialdata->sorted || polynomialdata->nmonomials <= 1);
+
+         /* make sure factors are merged, should only be potentially necessary if not sorted, see also #1848 */
+         if( !monomial->sorted )
+            SCIPexprMergeMonomialFactors(monomial, eps);
 
          if( !SCIPexprFindMonomialFactor(monomial, i, &factorpos) )
          {
@@ -15944,7 +15947,7 @@ SCIP_RETCODE SCIPexprgraphSimplify(
    assert(domainerror != NULL);
 
 #ifndef NDEBUG
-   SCIP_CALL( SCIPrandomCreate(&randnumgen, exprgraph->blkmem, DEFAULT_RANDSEED) );
+   SCIP_CALL( SCIPrandomCreate(&randnumgen, exprgraph->blkmem, 862) ); /* see also #1848 */
    SCIP_CALL( SCIPhashmapCreate(&testvalidx, exprgraph->blkmem, 1000) );
    testvals = NULL;
    ntestvals = 0;

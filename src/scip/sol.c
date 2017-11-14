@@ -485,7 +485,7 @@ SCIP_RETCODE SCIPsolAdjustImplicitSolVals(
 
       nuplocks = SCIPvarGetNLocksUp(var);
       ndownlocks = SCIPvarGetNLocksDown(var);
-      obj = SCIPvarGetObj(var);
+      obj = SCIPvarGetUnchangedObj(var);
 
       roundup = FALSE;
       rounddown = FALSE;
@@ -518,7 +518,6 @@ SCIP_RETCODE SCIPsolAdjustImplicitSolVals(
             SCIP_Real lhs;
 
             row = rows[r];
-            assert(!SCIPsetIsFeasZero(set, vals[r]));
 
             if( SCIProwIsLocal(row) || !SCIProwIsInLP(row) )
                continue;
@@ -533,6 +532,7 @@ SCIP_RETCODE SCIPsolAdjustImplicitSolVals(
             if( SCIPsetIsFeasLE(set, activity, rhs) && SCIPsetIsFeasLE(set, lhs, activity) )
                continue;
 
+            assert(! SCIPsetIsZero(set, vals[r]));
             if( (SCIPsetIsFeasGT(set, activity, rhs) && SCIPsetIsPositive(set, vals[r]))
                   || (SCIPsetIsFeasLT(set, activity, lhs) && SCIPsetIsNegative(set, vals[r])) )
                rounddown = TRUE;
@@ -859,7 +859,7 @@ SCIP_RETCODE SCIPsolLinkNLPSol(
       for( v = 0; v < nvars; ++v )
       {
          assert(SCIPvarIsActive(vars[v]));
-         sol->obj += SCIPvarGetObj(vars[v]) * SCIPvarGetNLPSol(vars[v]);
+         sol->obj += SCIPvarGetUnchangedObj(vars[v]) * SCIPvarGetNLPSol(vars[v]);
       }
    }
    else
@@ -1066,7 +1066,7 @@ SCIP_RETCODE SCIPsolSetVal(
             if( !SCIPsolIsPartial(sol) )
             {
                /* an unknown solution value does not count towards the objective */
-               obj = SCIPvarGetObj(var);
+               obj = SCIPvarGetUnchangedObj(var);
                if( oldval != SCIP_UNKNOWN ) /*lint !e777*/
                {
                   objcont = obj * oldval;
@@ -1258,7 +1258,7 @@ SCIP_RETCODE SCIPsolIncVal(
       if( SCIPsolIsOriginal(sol) )
       {
          SCIP_CALL( solIncArrayVal(sol, set, var, incval) );
-         sol->obj += SCIPvarGetObj(var) * incval;
+         sol->obj += SCIPvarGetUnchangedObj(var) * incval;
          solStamp(sol, stat, tree, FALSE);
          return SCIP_OKAY;
       }
@@ -1668,21 +1668,21 @@ SCIP_RETCODE SCIPsolCheck(
             /* check whether there are infinite variable values that lead to an objective value of +infinity */
             if( *feasible && sol->hasinfval )
             {
-               *feasible = *feasible && (!SCIPsetIsInfinity(set, solval) || SCIPsetIsLE(set, SCIPvarGetObj(var), 0.0) );
-               *feasible = *feasible && (!SCIPsetIsInfinity(set, -solval) || SCIPsetIsGE(set, SCIPvarGetObj(var), 0.0) );
+               *feasible = *feasible && (!SCIPsetIsInfinity(set, solval) || SCIPsetIsLE(set, SCIPvarGetUnchangedObj(var), 0.0) );
+               *feasible = *feasible && (!SCIPsetIsInfinity(set, -solval) || SCIPsetIsGE(set, SCIPvarGetUnchangedObj(var), 0.0) );
 
-               if( ((SCIPsetIsInfinity(set, solval) && SCIPsetIsGT(set, SCIPvarGetObj(var), 0.0)) || (SCIPsetIsInfinity(set, -solval) && SCIPsetIsLT(set, SCIPvarGetObj(var), 0.0))) )
+               if( ((SCIPsetIsInfinity(set, solval) && SCIPsetIsGT(set, SCIPvarGetUnchangedObj(var), 0.0)) || (SCIPsetIsInfinity(set, -solval) && SCIPsetIsLT(set, SCIPvarGetUnchangedObj(var), 0.0))) )
                {
                   if( printreason )
                   {
                      SCIPmessagePrintInfo(messagehdlr, "infinite solution value %g for variable  <%s> with obj %g implies objective value +infinity\n",
-                        solval, SCIPvarGetName(var), SCIPvarGetObj(var));
+                        solval, SCIPvarGetName(var), SCIPvarGetUnchangedObj(var));
                   }
 #ifdef SCIP_DEBUG
                   else
                   {
                      SCIPsetDebugMsgPrint(set, "infinite solution value %g for variable  <%s> with obj %g implies objective value +infinity\n",
-                        solval, SCIPvarGetName(var), SCIPvarGetObj(var));
+                        solval, SCIPvarGetName(var), SCIPvarGetUnchangedObj(var));
                   }
 #endif
                }
@@ -1915,11 +1915,13 @@ SCIP_RETCODE SCIPsolRetransform(
    /* reinsert the values of the original variables */
    for( v = 0; v < nvars; ++v )
    {
+      assert(SCIPvarGetUnchangedObj(vars[v]) == SCIPvarGetObj(vars[v])); /*lint !e777*/
+
       if( !SCIPsetIsZero(set, solvals[v]) )
       {
          SCIP_CALL( solSetArrayVal(sol, set, vars[v], solvals[v]) );
          if( solvals[v] != SCIP_UNKNOWN ) /*lint !e777*/
-            sol->obj += SCIPvarGetObj(vars[v]) * solvals[v];
+            sol->obj += SCIPvarGetUnchangedObj(vars[v]) * solvals[v];
       }
    }
 

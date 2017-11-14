@@ -50,6 +50,7 @@
 #define DEFAULT_MAXNONZEROS            -1    /**< maximal support of one equality to be used for cancelling (-1: no limit) */
 #define DEFAULT_MAXCONSIDEREDNONZEROS  70    /**< maximal number of considered non-zeros within one row (-1: no limit) */
 #define DEFAULT_ROWSORT               'd'    /**< order in which to process inequalities ('n'o sorting, 'i'ncreasing nonzeros, 'd'ecreasing nonzeros) */
+#define DEFAULT_MAXCHGCOEFFAC    100000.0    /**< limit on coefficient changes per row as a factor of canceled nonzeros */
 #define DEFAULT_MAXRETRIEVEFAC      100.0    /**< limit on the number of useless vs. useful hashtable retrieves as a multiple of the number of constraints */
 #define DEFAULT_WAITINGFAC            2.0    /**< number of calls to wait until next execution as a multiple of the number of useless calls */
 
@@ -72,6 +73,7 @@ struct SCIP_PresolData
    int                   maxbinfillin;       /**< maximal fillin for binary variables */
    int                   maxnonzeros;        /**< maximal support of one equality to be used for cancelling (-1: no limit) */
    int                   maxconsiderednonzeros;/**< maximal number of considered non-zeros within one row (-1: no limit) */
+   SCIP_Real             maxchgcoeffac;      /**< limit on coefficient changes per row as a factor of canceled nonzeros */
    SCIP_Real             maxretrievefac;     /**< limit on the number of useless vs. useful hashtable retrieves as a multiple of the number of constraints */
    SCIP_Real             waitingfac;         /**< number of calls to wait until next execution as a multiple of the number of useless calls */
    char                  rowsort;            /**< order in which to process inequalities ('n'o sorting, 'i'ncreasing nonzeros, 'd'ecreasing nonzeros) */
@@ -144,6 +146,7 @@ SCIP_RETCODE cancelRow(
    int                   maxcontfillin,        /**< maximal fill-in allowed for continuous variables */
    int                   maxintfillin,         /**< maximal fill-in allowed for integral variables */
    int                   maxbinfillin,         /**< maximal fill-in allowed for binary variables */
+   SCIP_Real             maxchgcoeffac,        /**< limit on coefficient change as a factor of canceled nonzeros */
    int                   maxconsiderednonzeros,/**< maximal number of non-zeros to consider for cancellation */
    SCIP_Bool             preserveintcoefs,     /**< only perform non-zero cancellation if integrality of coefficients is preserved? */
    SCIP_Longint*         nuseless,             /**< pointer to update number of useless hashtable retrieves */
@@ -501,7 +504,7 @@ SCIP_RETCODE cancelRow(
          break;
    }
 
-   if( nchgcoef != 0 )
+   if( nchgcoef != 0 && nchgcoef <= maxchgcoeffac * (SCIP_Real)(SCIPmatrixGetRowNNonzs(matrix, rowidx) - cancelrowlen) )
    {
       SCIP_CONS* cons;
       SCIP_VAR** consvars;
@@ -619,6 +622,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
    int i;
    int j;
    int numcancel;
+   int oldnchgcoefs;
    int nfillin;
    int* locks;
    int* perm;
@@ -818,6 +822,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       /* loop over the rows and cancel non-zeros until maximum number of retrieves is reached */
       maxuseless = (SCIP_Longint)(presoldata->maxretrievefac * (SCIP_Real)nrows);
       nuseless = 0;
+      oldnchgcoefs = *nchgcoefs;
       for( r = 0; r < nrows && nuseless <= maxuseless; r++ )
       {
          int rowidx;
@@ -835,7 +840,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
          /* since the function parameters for the max fillin are unsigned we do not need to handle the
           * unlimited (-1) case due to implicit conversion rules */
          SCIP_CALL( cancelRow(scip, matrix, pairtable, rowidx, \
-               presoldata->maxcontfillin, presoldata->maxintfillin, presoldata->maxbinfillin, \
+               presoldata->maxcontfillin, presoldata->maxintfillin, presoldata->maxbinfillin, presoldata->maxchgcoeffac, \
                presoldata->maxconsiderednonzeros, presoldata->preserveintcoefs, \
                &nuseless, nchgcoefs, &numcancel, &nfillin) );
       }
@@ -860,7 +865,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
             " - in total %d canceled nonzeros, %d changed coefficients, %d added nonzeros\n",
             SCIPgetSolvingTime(scip), (nuseless > maxuseless ? "aborted" : "finished"), numcancel,
             SCIPmatrixGetNNonzs(matrix), 100.0*(SCIP_Real)numcancel/(SCIP_Real)SCIPmatrixGetNNonzs(matrix),
-            presoldata->ncancels, SCIPpresolGetNChgCoefs(presol), presoldata->nfillin);
+            presoldata->ncancels, SCIPpresolGetNChgCoefs(presol) + *nchgcoefs - oldnchgcoefs, presoldata->nfillin);
          *result = SCIP_SUCCESS;
       }
 
@@ -980,6 +985,11 @@ SCIP_RETCODE SCIPincludePresolSparsify(
          "presolving/sparsify/rowsort",
          "order in which to process inequalities ('n'o sorting, 'i'ncreasing nonzeros, 'd'ecreasing nonzeros)",
          &presoldata->rowsort, TRUE, DEFAULT_ROWSORT, "nid", NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "presolving/sparsify/maxchgcoeffac",
+         "limit on coefficient changes per row as a factor of canceled nonzeros",
+         &presoldata->maxchgcoeffac, TRUE, DEFAULT_MAXCHGCOEFFAC, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
          "presolving/sparsify/maxretrievefac",

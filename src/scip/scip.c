@@ -23180,7 +23180,8 @@ SCIP_RETCODE SCIPinferVarLbProp(
    }
    newbound = MIN(newbound, ub);
 
-   if( !force && !SCIPsetIsLbBetter(scip->set, newbound, lb, ub) )
+   if( (!force && !SCIPsetIsLbBetter(scip->set, newbound, lb, ub))
+      || SCIPsetIsLE(scip->set, newbound, lb) )
       return SCIP_OKAY;
 
    switch( scip->set->stage )
@@ -23293,7 +23294,8 @@ SCIP_RETCODE SCIPinferVarUbProp(
    }
    newbound = MAX(newbound, lb);
 
-   if( !force && !SCIPsetIsUbBetter(scip->set, newbound, lb, ub) )
+   if( (!force && !SCIPsetIsUbBetter(scip->set, newbound, lb, ub))
+      || SCIPsetIsGE(scip->set, newbound, ub) )
       return SCIP_OKAY;
 
    switch( scip->set->stage )
@@ -35880,7 +35882,7 @@ SCIP_RETCODE SCIPbacktrackProbing(
    }
 
    SCIP_CALL( SCIPtreeBacktrackProbing(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-         scip->origprob, scip->lp, scip->relaxation, scip->primal, scip->branchcand, scip->eventqueue, scip->eventfilter,
+         scip->origprob, scip->lp, scip->primal, scip->branchcand, scip->eventqueue, scip->eventfilter,
          scip->cliquetable, probingdepth) );
 
    return SCIP_OKAY;
@@ -36126,12 +36128,6 @@ SCIP_RETCODE SCIPchgVarObjProbing(
       return SCIP_INVALIDCALL;
    }
 
-   if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
-   {
-      SCIPerrorMessage("variable is not a column variable\n");
-      return SCIP_INVALIDCALL;
-   }
-
    /* get current probing node */
    node = SCIPtreeGetCurrentNode(scip->tree);
    assert(SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
@@ -36171,9 +36167,6 @@ SCIP_RETCODE SCIPchgVarObjProbing(
       SCIPlpMarkDivingObjChanged(scip->lp);
    }
    assert(SCIPisInfinity(scip, scip->lp->cutoffbound));
-
-   /* inform relaxation and update objective value of relaxation solution accordingly */
-   SCIPrelaxationUpdateVarObj(scip->relaxation, scip->set, var, oldobj, newobj);
 
    /* perform the objective change */
    SCIP_CALL( SCIPvarChgObj(var, scip->mem->probmem, scip->set,  scip->transprob, scip->primal, scip->lp, scip->eventqueue, newobj) );
@@ -38856,9 +38849,6 @@ SCIP_RETCODE SCIPgetSolVals(
  *
  *  @return objective value of primal CIP solution w.r.t. original problem, or current LP/pseudo objective value
  *
- *  @note this function should not be used during probing mode when some objective coefficients have been changed via
- *        SCIPchgVarObjProbing()
- *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMING
@@ -38878,8 +38868,6 @@ SCIP_Real SCIPgetSolOrigObj(
    SCIP_SOL*             sol                 /**< primal solution, or NULL for current LP/pseudo objective value */
    )
 {
-   assert(!SCIPisObjChangedProbing(scip));
-
    /* for original solutions, an original objective value is already available in SCIP_STAGE_PROBLEM
     * for all other solutions, we should be at least in SCIP_STAGE_TRANSFORMING
     */
@@ -48292,6 +48280,16 @@ SCIP_RETCODE SCIPvalidateSolve(
 
    localfeasible = TRUE;
    localdualboundcheck = TRUE;
+
+   /* if no problem exists, there is no need for validation */
+   if( SCIPgetStage(scip) < SCIP_STAGE_PROBLEM )
+   {
+      *feasible = TRUE;
+      *primalboundcheck = TRUE;
+      *dualboundcheck = TRUE;
+
+      return SCIP_OKAY;
+   }
 
    /* check the best solution for feasibility in the original problem */
    if( SCIPgetNSols(scip) > 0 )

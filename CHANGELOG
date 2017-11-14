@@ -1,5 +1,5 @@
-SCIP version NEXT
-=================
+SCIP version 5.0.0
+==================
 
 features:
 - new command line parameter "-r" to pass a nonnegative integer as random seed.
@@ -16,12 +16,16 @@ features:
 - added analysis of the conflict graph which identifies possible aggregations via the search for
   strongly connected components and may detect infeasible assignments on the way
 - added new plugin type "table" for adding user-defined statistics tables
+- added upgrade from knapsack constraints to cardinality constraints
 - revised disaggregation of quadratic constraints: the number of created constraints can now be controlled and the
   disaggregated constraints are scaled in order to increase numerical accuracy
 - new presolving plugin presol_sparsify that tries to cancel nonzero coefficients in linear constraints by adding
   multiples of linear equalities
 - utilizing linear inequalities to compute stronger linearizations for bilinear terms; the inequalities are computed in
   OBBT propagator
+- new methods and interactive shell functionality to display linear constraint classification types--
+  use 'display linclass' after reading a problem to classify linear constraint types
+
 
 parameters:
 - new parameter misc/debugsol to specify a debug solution that should be checked during the solve
@@ -30,10 +34,12 @@ parameters:
 - new parameter: lp/refactorinterval to change the refactorization interval of the LP solver
 - new value 3 for parameter "lp/solutionpolishing" to enable LP polishing only during probing and diving mode
 - removed parameters "constraints/{abspower,bivariate,nonlinear,quadratic,soc}/scaling"
+- new parameter "constraints/knapsack/upgdcardinality" for upgrading knapsack to cardinality constraints
 - replaced constraints/quadratic/disaggregate by constraints/quadratic/maxdisaggrsize to bound
   the total number of created constraints when disaggregating a quadratic constraint
 - added parameter constraints/quadratic/disaggrmergemethod
 - removed parameter "separating/feastolfac"
+
 
 interface:
 - new interface methods to create and use bandit algorithms implemented as SCIP core plugins --
@@ -65,6 +71,9 @@ interface:
 - added SCIPcomputeBilinEnvelope{1,2} to compute a linearization of a bilinear term when considering at most two linear inequalities
 - new method SCIPaddRow() to replace deprecated SCIPaddCut()
 - removed method SCIPgetRelaxFeastolFactor()
+- new object SCIP_LINCONSSTATS, see type_cons.h, and its methods SCIPlinConsStats{Create,Free,GetTypeCount,GetSum} and SCIPprintLinConsStats()
+  to work with linear constraint classification through the C API
+
 
 performance improvements:
 - use disjoint set to reduce peak memory usage and time to compute of clique table connectedness information
@@ -73,6 +82,8 @@ performance improvements:
 - removed bestrelaxsol and directly access relaxation solution instead to decrease overhead when using relaxation handlers
 - use LP solution polishing during probing and diving mode to activate it during many primal heuristics; remains disabled
   during strong branching and OBBT
+- for fast presolving emphasis, disable use of implications in logicor presolving
+- use limit on the total number of nonzeros added to the clique table during the greedyCliqueAlgorithm of cons_knapsack.c
 
 fixed bugs:
 - fix linear knapsack relaxation during separation if a binary variable does not have a solution value in [0,1].
@@ -81,6 +92,12 @@ fixed bugs:
 - fixed order of SCIPcalcCliquePartition in corner case where no cliques are available
 - fixed bug in mps reader. Reader now prints OBJSENSE section and tries to generate unique names of constraints
 - fixed handling of LOOSE variables in locks heuristic
+- fixed upgrade to a varbound constraint if abspower constraint contains a multi-aggregated variable
+- fixed numerical issues in boundshift presolver when aggregating integer variables
+- fixed minor issue in expression graph simplification
+
+added tests:
+- added tests that cover nonempty linear constraint classification types
 
 misc:
 - dropped support for MOSEK < 7.0.0.0
