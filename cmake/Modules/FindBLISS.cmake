@@ -21,9 +21,7 @@ if(BLISS_DIR)
 
       # if we found the headers there we copy the folder to a bliss folder in the binary dir and use that as include
       if(BLISS_INCLUDE_DIR)
-         file(GLOB bliss_headers ${BLISS_INCLUDE_DIR}/*.hh)
-         file(COPY ${bliss_headers} DESTINATION ${CMAKE_BINARY_DIR}/bliss)
-         set(BLISS_INCLUDE_DIR ${CMAKE_BINARY_DIR} CACHE PATH "Include path for bliss headers" FORCE)
+         set(COPY_BLISS_HEADERS TRUE)
       endif()
    endif()
 
@@ -40,6 +38,13 @@ if(BLISS_DIR)
    set(BLISS_INCLUDE_DIRS ${BLISS_INCLUDE_DIR})
 
    find_package_handle_standard_args(BLISS DEFAULT_MSG BLISS_INCLUDE_DIRS BLISS_LIBRARIES)
+
+   if(BLISS_FOUND AND COPY_BLISS_HEADERS)
+      file(GLOB bliss_headers ${BLISS_INCLUDE_DIR}/*.hh)
+      file(COPY ${bliss_headers} DESTINATION ${CMAKE_BINARY_DIR}/bliss)
+      set(BLISS_INCLUDE_DIR ${CMAKE_BINARY_DIR} CACHE PATH "Include path for bliss headers" FORCE)
+      set(BLISS_INCLUDE_DIRS ${BLISS_INCLUDE_DIR})
+   endif()
 endif()
 
 # if bliss is not already found by the code above we look for it including system directories
