@@ -2022,6 +2022,7 @@ SCIP_RETCODE SCIPbendersExec(
                   /* if the subproblem is an LP, then only LP based cuts are generated. This is also only performed in
                    * the first iteration of the solve loop. */
                   if( (l == 0 && SCIPbenderscutIsLPCut(benderscuts[k]))
+                     //|| (l > 0 && !lpsub && !SCIPbenderscutIsLPCut(benderscuts[k])) )
                      || (l > 0 && !lpsub && !SCIPbenderscutIsLPCut(benderscuts[k]) && i == 0) )
                   {
                      cutresult = (*result);

@@ -43,7 +43,7 @@
 #define SCIP_DEFAULT_SOLTOL               1e-2  /** The tolerance used to determine optimality of the solution */
 #define SCIP_DEFAULT_ADDCUTS             FALSE  /** Should cuts be generated, instead of constraints */
 
-#define SCIP_DEFAULT_CUTCONSTANT        -10000
+(??)#define SCIP_DEFAULT_CUTCONSTANT             0
 
 /* event handler properties */
 #define EVENTHDLR_NAME         "bendersintcutnodesolved"
@@ -135,7 +135,8 @@ SCIP_DECL_EVENTEXEC(eventExecBendersintcutNodesolved)
 
    benderscutdata = (SCIP_BENDERSCUTDATA*)SCIPeventhdlrGetData(eventhdlr);
 
-   SCIP_CALL( updateCutConstant(scip, benderscutdata) );
+   if( SCIPbendersGetNSubproblems(benderscutdata->benders) > SCIPbendersGetNLPSubprobs(benderscutdata->benders) )
+      SCIP_CALL( updateCutConstant(scip, benderscutdata) );
 
    SCIP_CALL(SCIPdropEvent(scip, SCIP_EVENTTYPE_NODESOLVED, eventhdlr, NULL, -1));
 

@@ -6398,6 +6398,21 @@ SCIP_RETCODE SCIPcheckBendersAuxiliaryVar(
    return SCIP_OKAY;
 }
 
+/** returns the value of the auxiliary variable for a given subproblem */
+SCIP_Real SCIPgetBendersAuxiliaryVarVal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
+   SCIP_SOL*             sol,                /**< primal CIP solution, can be NULL for the current LP solution */
+   int                   probnumber          /**< the number of the pricing problem */
+   )
+{
+   assert(scip != NULL);
+   assert(benders != NULL);
+   assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
+
+   return SCIPbendersGetAuxiliaryVarVal(benders, scip->set, sol, probnumber);
+}
+
 /** creates a Benders' cut algorithms and includes it in the associated Benders' decomposition
  *  This should be called from the SCIPincludeBendersXyz for the associated Benders' decomposition. It is only possible
  *  to include a Benders' cut algorithm if a Benders' decomposition has already been included

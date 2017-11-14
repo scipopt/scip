@@ -230,6 +230,12 @@ SCIP_Bool SCIPbendersSubprobIsLP(
    int                   probnumber          /**< the subproblem number */
    );
 
+/** returns the number of subproblems that are LPs */
+extern
+int SCIPbendersGetNLPSubprobs(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   );
+
 /** solves the LP of the Benders' decomposition subproblem. This requires that the subproblem is in probing mode */
 EXTERN
 SCIP_RETCODE SCIPbendersSolveSubproblemLP(
