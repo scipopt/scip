@@ -13003,10 +13003,10 @@ SCIP_RETCODE detectRedundantConstraints(
                SCIPdebugPrintCons(scip, cons0, NULL);
                SCIPdebugPrintCons(scip, cons1, NULL);
 
-               if( !SCIPisInfinity(scip, -consdatadel->lhs) )
+               if( ! SCIPisInfinity(scip, -consdatadel->lhs) )
                   lhs = MAX(scale * consdatadel->lhs, lhs);
 
-               if( !SCIPisInfinity(scip, consdatadel->rhs) )
+               if( ! SCIPisInfinity(scip, consdatadel->rhs) )
                   rhs = MIN(scale * consdatadel->rhs, rhs);
             }
             else
@@ -13017,10 +13017,10 @@ SCIP_RETCODE detectRedundantConstraints(
                SCIPdebugPrintCons(scip, cons0, NULL);
                SCIPdebugPrintCons(scip, cons1, NULL);
 
-               if( !SCIPisInfinity(scip, consdatadel->rhs) )
+               if( ! SCIPisInfinity(scip, consdatadel->rhs) )
                   lhs = MAX(scale * consdatadel->rhs, lhs);
 
-               if( !SCIPisInfinity(scip, -consdatadel->lhs) )
+               if( ! SCIPisInfinity(scip, -consdatadel->lhs) )
                   rhs = MIN(scale * consdatadel->lhs, rhs);
             }
 
