@@ -4,6 +4,7 @@ MINLP/instances/MINLPLib2/data/osil/batchs121208m.osil
 MINLP/instances/MINLPLib2/data/osil/batchs151208m.osil
 MINLP/instances/MINLPLib2/data/osil/batchs201210m.osil
 MINLP/instances/MINLPLib2/data/osil/blend480.osil
+MINLP/instances/MINLPLib2/data/osil/blend718.osil
 MINLP/instances/MINLPLib2/data/osil/carton7.osil
 MINLP/instances/MINLPLib2/data/osil/casctanks.osil
 MINLP/instances/MINLPLib2/data/osil/chp_shorttermplan2a.osil
@@ -34,12 +35,15 @@ MINLP/instances/MINLPLib2/data/osil/flay05m.osil
 MINLP/instances/MINLPLib2/data/osil/fo7.osil
 MINLP/instances/MINLPLib2/data/osil/fo8_ar4_1.osil
 MINLP/instances/MINLPLib2/data/osil/fo8_ar5_1.osil
+MINLP/instances/MINLPLib2/data/osil/fo9_ar25_1.osil
 MINLP/instances/MINLPLib2/data/osil/fo9_ar4_1.osil
 MINLP/instances/MINLPLib2/data/osil/fo9_ar5_1.osil
 MINLP/instances/MINLPLib2/data/osil/fo9.osil
 MINLP/instances/MINLPLib2/data/osil/genpooling_lee1.osil
 MINLP/instances/MINLPLib2/data/osil/genpooling_lee2.osil
 MINLP/instances/MINLPLib2/data/osil/ghg_1veh.osil
+MINLP/instances/MINLPLib2/data/osil/graphpart_clique-30.osil
+MINLP/instances/MINLPLib2/data/osil/graphpart_clique-40.osil
 MINLP/instances/MINLPLib2/data/osil/harker.osil
 MINLP/instances/MINLPLib2/data/osil/hvb11.osil
 MINLP/instances/MINLPLib2/data/osil/kall_circles_c6a.osil
@@ -57,6 +61,7 @@ MINLP/instances/MINLPLib2/data/osil/multiplants_mtg1a.osil
 MINLP/instances/MINLPLib2/data/osil/netmod_dol2.osil
 MINLP/instances/MINLPLib2/data/osil/no7_ar3_1.osil
 MINLP/instances/MINLPLib2/data/osil/no7_ar4_1.osil
+MINLP/instances/MINLPLib2/data/osil/nous1.osil
 MINLP/instances/MINLPLib2/data/osil/o7_2.osil
 MINLP/instances/MINLPLib2/data/osil/o7_ar25_1.osil
 MINLP/instances/MINLPLib2/data/osil/o7_ar3_1.osil
@@ -74,6 +79,7 @@ MINLP/instances/MINLPLib2/data/osil/product2.osil
 MINLP/instances/MINLPLib2/data/osil/product.osil
 MINLP/instances/MINLPLib2/data/osil/qp3.osil
 MINLP/instances/MINLPLib2/data/osil/rsyn0820m04h.osil
+MINLP/instances/MINLPLib2/data/osil/rsyn0830m04m.osil
 MINLP/instances/MINLPLib2/data/osil/sfacloc2_3_80.osil
 MINLP/instances/MINLPLib2/data/osil/sjup2.osil
 MINLP/instances/MINLPLib2/data/osil/slay07h.osil
