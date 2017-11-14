@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+#define SCIP_DEBUG
 /**@file   branch_lookahead.c
  * @ingroup BRANCHINGRULES
  * @brief  lookahead LP branching rule
@@ -78,6 +78,7 @@
                                                     *   candidates be reused? */
 #define DEFAULT_ABBREVPSEUDO                 FALSE /**< If abbreviated: Use pseudo costs to estimate the score of a
                                                     *   candidate. */
+#define DEFAULT_SCORING_FUNCTION               'd' /**< default scoring function to be used */
 
 #ifdef SCIP_DEBUG
 /* Adjusted debug message that also prints the current probing depth. */
@@ -394,6 +395,7 @@ typedef struct
    SCIP_Bool             cutoff;             /**< Indicates whether the node was infeasible and was cutoff. */
    SCIP_Bool             dualboundvalid;     /**< Us the value of the dual bound valid? That means, was the according LP
                                               *   or the sub problems solved to optimality? */
+   int                   ndeepestcutoffs;    /**< number of cutoffs on the lowest level below this child */
 } BRANCHINGRESULTDATA;
 
 /** Allocates a branching result in the buffer. */
@@ -426,6 +428,7 @@ void branchingResultDataInit(
    resultdata->cutoff = FALSE;
    resultdata->dualboundvalid = FALSE;
    resultdata->niterations = 0;
+   resultdata->ndeepestcutoffs = 0;
 }
 
 /** Copies the data from the source to the target. */
@@ -443,6 +446,7 @@ void branchingResultDataCopy(
    targetdata->dualbound = sourcedata->dualbound;
    targetdata->dualboundvalid = sourcedata->dualboundvalid;
    targetdata->niterations = sourcedata->niterations;
+   targetdata->ndeepestcutoffs = sourcedata->ndeepestcutoffs;
 }
 
 /** Frees the allocated buffer memory of the branching result. */
@@ -509,6 +513,7 @@ typedef struct
                                               *   the scoring? */
    SCIP_Bool             addclique;          /**< Should binary constraints found in the root node be added as cliques? */
    SCIP_Bool             propagate;          /**< Should the problem be propagated before solving each inner node? */
+   char                  scoringfunction;    /**< selected scoring function */
 } CONFIGURATION;
 
 /** Allocates a configuration in the buffer and initiates it with the default values. */
@@ -554,6 +559,7 @@ void configurationCopy(
    config->abbrevpseudo = copysource->abbrevpseudo;
    config->addclique = copysource->addclique;
    config->propagate = copysource->propagate;
+   config->scoringfunction = copysource->scoringfunction;
 }
 
 /** Frees the allocated buffer memory of the branching result. */
@@ -1608,7 +1614,8 @@ SCIP_RETCODE selectVarRecursive(
    SCIP_Bool             storewarmstartinfo, /**< should lp information be stored? */
    int                   recursiondepth,     /**< remaining recursion depth */
    SCIP_Real             lpobjval,           /**< base LP objective value */
-   SCIP_Longint*         niterations         /**< pointer to store total number of iterations for this variable */
+   SCIP_Longint*         niterations,        /**< pointer to store the total number of iterations for this variable */
+   int*                  ndeepestcutoffs     /**< pointer to store the total number of cutoffs on the deepest level */
 #ifdef SCIP_STATISTIC
    ,STATISTICS*          statistics          /**< general statistical data */
    ,LOCALSTATISTICS*     localstats          /**< local statistics, may be disregarded */
@@ -2953,18 +2960,6 @@ void printCandidates(
 }
 #endif
 
-/** calculates the score based on the gains given */
-static
-SCIP_Real calculateScoreFromGain(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             branchvar,          /**< variable to get the score for */
-   SCIP_Real             downgain,           /**< gain in the down branch of branchvar */
-   SCIP_Real             upgain              /**< gain in the up branch of branchvar */
-   )
-{
-   return SCIPgetBranchScore(scip, branchvar, downgain, upgain);
-}
-
 /** calculates the score based on the down and up branching result */
 static
 SCIP_Real calculateScoreFromResult(
@@ -3001,7 +2996,58 @@ SCIP_Real calculateScoreFromResult(
    if( upbranchingresult->cutoff )
       upgain = downgain;
 
-   score = calculateScoreFromGain(scip, branchvar, downgain, upgain);
+   score = SCIPgetBranchScore(scip, branchvar, downgain, upgain);
+
+   return score;
+}
+
+static
+SCIP_Real calculateScorePaper(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             branchvar,          /**< variable to get the score for */
+   BRANCHINGRESULTDATA*  downbranchingresult,/**< branching result of the down branch */
+   BRANCHINGRESULTDATA*  upbranchingresult,  /**< branching result of the up branch */
+   SCIP_Real             lpobjval            /**< objective value to get difference to as gain */
+   )
+{
+   int nlowestlevelcutoffs = downbranchingresult->ndeepestcutoffs + upbranchingresult->ndeepestcutoffs;
+   /*SCIP_Real bestdowngain = downbranchingresult->bestgain;
+   SCIP_Real bestupgain = upbranchingresult->bestgain;
+   SCIP_Real totaldowngains = downbranchingresult->totalgains;
+   SCIP_Real totalupgains = upbranchingresult->totalgains;
+   int ntotaldowngains = MAX(1, downbranchingresult->ntotalgains);
+   int ntotalupgains = MAX(1, upbranchingresult->ntotalgains);
+
+   SCIP_Real score = bestdowngain + bestupgain +
+      (totaldowngains/ntotaldowngains + totalupgains/ntotalupgains)*nlowestlevelcutoffs;*/
+
+   return 0;
+}
+
+static
+SCIP_Real calculateScore(
+   SCIP*                 scip,               /**< SCIP data structure */
+   CONFIGURATION*        config,             /**< LAB configuration */
+   SCIP_VAR*             branchvar,          /**< variable to get the score for */
+   BRANCHINGRESULTDATA*  downbranchingresult,/**< branching result of the down branch */
+   BRANCHINGRESULTDATA*  upbranchingresult,  /**< branching result of the up branch */
+   SCIP_Real             lpobjval            /**< objective value to get difference to as gain */
+   )
+{
+   SCIP_Real score;
+   assert(scip != NULL);
+
+   switch( config->scoringfunction )
+   {
+      case 'p':
+         score = calculateScorePaper(scip, branchvar, downbranchingresult, upbranchingresult, lpobjval);
+         break;
+      default:
+         assert(config->scoringfunction == 'd');
+         score = calculateScoreFromResult(scip, branchvar, downbranchingresult, upbranchingresult, lpobjval);
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "ndeepestcutoffs for %s is %d\n", SCIPvarGetName(branchvar),
+            downbranchingresult->ndeepestcutoffs + upbranchingresult->ndeepestcutoffs);
+   }
 
    return score;
 }
@@ -3020,7 +3066,7 @@ SCIP_Real calculateScoreFromPseudocosts(
    downpseudocost = SCIPgetVarPseudocostVal(scip, lpcand->branchvar, 0-lpcand->fracval);
    uppseudocost = SCIPgetVarPseudocostVal(scip, lpcand->branchvar, 1-lpcand->fracval);
 
-   score = calculateScoreFromGain(scip, lpcand->branchvar, downpseudocost, uppseudocost);
+   score = SCIPgetBranchScore(scip, lpcand->branchvar, downpseudocost, uppseudocost);
 
    return score;
 }
@@ -3535,7 +3581,7 @@ SCIP_RETCODE executeBranchingRecursive(
 #else
                SCIP_CALL( selectVarRecursive(scip, deeperstatus, deeperpersistent, config, baselpsol, domainreductions,
                      binconsdata, candidates, deeperdecision, scorecontainer, storewarmstartinfo, recursiondepth - 1,
-                     deeperlpobjval, &branchingresult->niterations) );
+                     deeperlpobjval, &branchingresult->niterations, &branchingresult->ndeepestcutoffs) );
 #endif
 
                /* the proved dual bound of the deeper branching cannot be less than the current dual bound, as every deeper
@@ -3567,6 +3613,13 @@ SCIP_RETCODE executeBranchingRecursive(
          }
          SCIP_CALL( candidateListFree(scip, &candidates) );
       }
+   }
+   else if( branchingresult->cutoff && recursiondepth == 1 )
+   {
+      /* this is a cutoff on the lowest tree level */
+      branchingresult->ndeepestcutoffs++;
+      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Incremented the ndeepestcutoffs counter of %s to %d\n",
+         SCIPvarGetName(branchvar), branchingresult->ndeepestcutoffs);
    }
 
    /* the current branching child is infeasible and we only branched on binary variables in lookahead branching */
@@ -3607,7 +3660,8 @@ SCIP_RETCODE  selectVarRecursive(
    SCIP_Bool             storewarmstartinfo, /**< should lp information be stored? */
    int                   recursiondepth,     /**< remaining recursion depth */
    SCIP_Real             lpobjval,           /**< base LP objective value */
-   SCIP_Longint*         niterations         /**< pointer to store total number of iterations for this variable */
+   SCIP_Longint*         niterations,        /**< pointer to store the total number of iterations for this variable */
+   int*                  ndeepestcutoffs     /**< pointer to store the total number of cutoffs on the deepest level */
 #ifdef SCIP_STATISTIC
    ,STATISTICS*          statistics          /**< general statistical data */
    ,LOCALSTATISTICS*     localstats          /**< local statistics, may be disregarded */
@@ -3797,6 +3851,11 @@ SCIP_RETCODE  selectVarRecursive(
          {
             *niterations += downbranchingresult->niterations + upbranchingresult->niterations;
          }
+         if( ndeepestcutoffs != NULL )
+         {
+            *ndeepestcutoffs += downbranchingresult->ndeepestcutoffs + upbranchingresult->ndeepestcutoffs;
+         }
+
          /* store results of branching call */
          if( persistent != NULL && !upbranchingresult->cutoff && !downbranchingresult->cutoff )
          {
@@ -3821,7 +3880,7 @@ SCIP_RETCODE  selectVarRecursive(
       if( !status->lperror && !status->limitreached )
       {
          SCIP_Real scoringlpobjval = useoldbranching ? oldlpobjval : lpobjval;
-         SCIP_Real score = calculateScoreFromResult(scip, branchvar, downbranchingresult, upbranchingresult,
+         SCIP_Real score = calculateScore(scip, config, branchvar, downbranchingresult, upbranchingresult,
             scoringlpobjval);
 
          if( upbranchingresult->cutoff && downbranchingresult->cutoff )
@@ -4158,7 +4217,7 @@ SCIP_RETCODE selectVarStart(
             decision, scorecontainer, storewarmstartinfo, recursiondepth, lpobjval, NULL, statistics, localstats) );
 #else
       SCIP_CALL( selectVarRecursive(scip, status, persistent, config, baselpsol, domainreductions, binconsdata, candidates,
-            decision, scorecontainer, storewarmstartinfo, recursiondepth, lpobjval, NULL) );
+            decision, scorecontainer, storewarmstartinfo, recursiondepth, lpobjval, NULL, NULL) );
 #endif
 
       /* we are at the top level */
@@ -4761,7 +4820,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
    config->usebincons = userusebincons;
 
    LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Exiting branchExeclpLookahead.\n");
-
+   SCIPABORT();
    return SCIP_OKAY;
 }
 
@@ -4866,6 +4925,10 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          "branching/lookahead/propagate",
          "should domain propagation be executed before each temporary node is solved?",
          &branchruledata->config->propagate, TRUE, DEFAULT_PROPAGATE, NULL, NULL) );
+   SCIP_CALL( SCIPaddCharParam(scip,
+         "branching/lookahead/scoringfunction",
+         "scoring function to be used: 'd'efault or 'p'aper",
+         &branchruledata->config->scoringfunction, TRUE, DEFAULT_SCORING_FUNCTION, "dp", NULL, NULL) );
 
    return SCIP_OKAY;
 }
