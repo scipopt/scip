@@ -1499,17 +1499,18 @@ SCIP_RETCODE SCIPlpiGetCols(
       assert( ind != NULL && lind != NULL );
       assert( val != NULL && lval != NULL );
       assert( lcnt != NULL );
+      if( lbeg == NULL || lind == NULL || lval == NULL || lcnt == NULL )
+      {
+         SCIPerrorMessage("Ran into NULL.\n");
+         return SCIP_LPERROR;
+      }
 
-      // cppcheck-suppress nullPointer
       *nnonz = lbeg[len-1] + lcnt[len-1];
       for( i = 0 ; i < len ; i++ )
-         // cppcheck-suppress nullPointer
          beg[i] = lbeg[i];
       for( i = 0; i < *nnonz; ++i )
       {
-         // cppcheck-suppress nullPointer
          ind[i] = lind[i];
-         // cppcheck-suppress nullPointer
          val[i] = lval[i];
       }
    }
@@ -1518,12 +1519,15 @@ SCIP_RETCODE SCIPlpiGetCols(
       assert( llb != NULL );
       assert( lub != NULL );
       assert( ub != NULL );
+      if( llb == NULL || lub == NULL )
+      {
+         SCIPerrorMessage("Ran into NULL.\n");
+         return SCIP_LPERROR;
+      }
 
       for( i = 0; i < len; ++i )
       {
-         // cppcheck-suppress nullPointer
          lb[i] = llb[i];
-         // cppcheck-suppress nullPointer
          ub[i] = lub[i];
       }
    }
@@ -1597,17 +1601,18 @@ SCIP_RETCODE SCIPlpiGetRows(
       assert( ind != NULL && lind != NULL );
       assert( val != NULL && lval != NULL );
       assert( lcnt != NULL );
+      if( lbeg == NULL || lind == NULL || lval == NULL || lcnt == NULL )
+      {
+         SCIPerrorMessage("Ran into NULL.\n");
+         return SCIP_LPERROR;
+      }
 
-      // cppcheck-suppress nullPointer
       *nnonz = lbeg[len-1] + lcnt[len-1];
       for( i = 0 ; i < len; i++ )
-         // cppcheck-suppress nullPointer
          beg[i] = lbeg[i];
       for( i = 0; i < *nnonz; ++i )
       {
-         // cppcheck-suppress nullPointer
          ind[i] = lind[i];
-         // cppcheck-suppress nullPointer
          val[i] = lval[i];
       }
    }
@@ -1616,29 +1621,28 @@ SCIP_RETCODE SCIPlpiGetRows(
       assert( lhs != NULL && lrhs != NULL );
       assert( lrng != NULL );
       assert( lsense != NULL );
+      if( lrhs == NULL || lrng == NULL || lsense == NULL )
+      {
+         SCIPerrorMessage("Ran into NULL.\n");
+         return SCIP_LPERROR;
+      }
 
       for( i = 0; i < len; ++i )
       {
-         // cppcheck-suppress nullPointer
          switch( lsense[i] )
          {
          case 'R':
-            // cppcheck-suppress nullPointer
             lhs[i] = lrhs[i];
-            // cppcheck-suppress nullPointer
             rhs[i] = lrhs[i] + lrng[i];
             break;
          case 'E':
-            // cppcheck-suppress nullPointer
             lhs[i] = rhs[i] = lrhs[i];
             break;
          case 'L':
-            // cppcheck-suppress nullPointer
             rhs[i] = lrhs[i];
             lhs[i] = -QS_MAXDOUBLE;
             break;
          case 'G':
-            // cppcheck-suppress nullPointer
             lhs[i] = lrhs[i];
             rhs[i] = QS_MAXDOUBLE;
             break;
