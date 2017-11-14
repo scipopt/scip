@@ -83,7 +83,7 @@ SCIP_RETCODE SCIPintListNodeInsert(
    IDX* curr;
    curr = *node;
 
-   SCIP_CALL( SCIPallocMemory(scip, node) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, node) );
    (*node)->index = nodeval;
    (*node)->parent = (curr);
 
@@ -154,7 +154,7 @@ SCIP_RETCODE SCIPintListNodeAppendCopy(
 
          if( hasharr[curr2idx] == 0 )
          {
-            SCIP_CALL(SCIPallocMemory(scip, &new));
+            SCIP_CALL( SCIPallocBlockMemory(scip, &new) );
             new->index = curr2idx;
             new->parent = curr1;
             curr1 = new;
@@ -179,7 +179,7 @@ SCIP_RETCODE SCIPintListNodeAppendCopy(
    {
       while( curr2 != NULL )
       {
-         SCIP_CALL(SCIPallocMemory(scip, &new));
+         SCIP_CALL( SCIPallocBlockMemory(scip, &new) );
          new->index = curr2->index;
          new->parent = curr1;
          curr1 = new;
@@ -206,7 +206,7 @@ void SCIPintListNodeFree(
    while( curr != NULL )
    {
       *node = curr->parent;
-      SCIPfreeMemory(scip, &curr);
+      SCIPfreeBlockMemory(scip, &curr);
       curr = *node;
    }
    assert(*node == NULL);

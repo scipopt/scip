@@ -2874,7 +2874,6 @@ SCIP_RETCODE graph_init_history(
    int* head;                /* head of all edges  */
    int* orgtail;             /* (original) tail of all original edges  */
    int* orghead;             /* (original) head of all original edges  */
-   int e;
    int nedges;
    SCIP_Bool pcmw;
 
@@ -2893,7 +2892,7 @@ SCIP_RETCODE graph_init_history(
    orgtail = graph->orgtail;
    orghead = graph->orghead;
 
-   for( e = 0; e < nedges; e++ )
+   for( int e = 0; e < nedges; e++ )
    {
       orgtail[e] = tail[e];
       orghead[e] = head[e];
@@ -2916,9 +2915,9 @@ SCIP_RETCODE graph_init_history(
 
    ancestors = graph->ancestors;
 
-   for( e = 0; e < nedges; e++ )
+   for( int e = 0; e < nedges; e++ )
    {
-      SCIP_CALL( SCIPallocMemory(scip, &(ancestors[e])) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocBlockMemory(scip, &(ancestors[e])) ); /*lint !e866*/
       (ancestors)[e]->index = e;
       (ancestors)[e]->parent = NULL;
    }
@@ -2994,7 +2993,7 @@ void graph_free(
            while( curr != NULL )
            {
               p->ancestors[e] = curr->parent;
-              SCIPfreeMemory(scip, &(curr));
+              SCIPfreeBlockMemory(scip, &(curr));
               curr = p->ancestors[e];
            }
         }
@@ -3014,7 +3013,7 @@ void graph_free(
             while( curr != NULL )
             {
                p->pcancestors[e] = curr->parent;
-               SCIPfreeMemory(scip, &(curr));
+               SCIPfreeBlockMemory(scip, &(curr));
                curr = p->pcancestors[e];
             }
          }
@@ -3032,7 +3031,7 @@ void graph_free(
       while( curr != NULL )
       {
          p->fixedges = curr->parent;
-         SCIPfreeMemory(scip, &(curr));
+         SCIPfreeBlockMemory(scip, &(curr));
 
          curr = p->fixedges;
       }
