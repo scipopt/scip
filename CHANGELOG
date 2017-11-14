@@ -1,5 +1,5 @@
-SCIP version NEXT
-=================
+SCIP version 5.0.0
+==================
 
 features:
 - new command line parameter "-r" to pass a nonnegative integer as random seed.
