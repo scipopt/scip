@@ -6971,7 +6971,7 @@ SCIP_RETCODE enforceConstraint(
    }
 
    /* we would like a cut that is efficient enough that it is not redundant in the LP (>lpfeastol)
-    * however, we also don't want very weak cuts, so try to reach at least feastol (~10*lpfeastol)
+    * however, we also don't want very weak cuts, so try to reach at least feastol (=lpfeastol by default, though)
     */
    SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, TRUE /* because computeviolation projects point onto box */, SCIPfeastol(scip), TRUE, &separateresult, &sepaefficacy) );
    if( separateresult == SCIP_CUTOFF )
@@ -6995,7 +6995,7 @@ SCIP_RETCODE enforceConstraint(
    /* find branching candidates */
    SCIP_CALL( registerBranchingVariables(scip, conshdlr, conss, nconss, &nnotify) );
 
-   if( nnotify == 0 && !solinfeasible && SCIPlpfeastol(scip) > SCIPlpfeastol(scip) )
+   if( nnotify == 0 && !solinfeasible && SCIPfeastol(scip) > SCIPlpfeastol(scip) )
    {
       /* fallback 1: we also have no branching candidates, so try to find a weak cut */
       SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, FALSE, SCIPlpfeastol(scip), TRUE, &separateresult, &sepaefficacy) );

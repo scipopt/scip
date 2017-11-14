@@ -5155,7 +5155,7 @@ SCIP_RETCODE enforceConstraint(
    assert(SCIPisGT(scip, maxviol, SCIPfeastol(scip)));
 
    /* we would like a cut that is efficient enough that it is not redundant in the LP (>lpfeastol)
-    * however, we also don't want very weak cuts, so try to reach at least feastol (~10*lpfeastol)
+    * however, we also don't want very weak cuts, so try to reach at least feastol (=lpfeastol by default, though)
     */
    SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, SCIPfeastol(scip), TRUE, FALSE, &success,
          &cutoff, &sepaefficacy) );
