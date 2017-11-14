@@ -414,7 +414,6 @@
 #define SCIP_DEFAULT_SEPA_CUTAGELIMIT        80 /**< maximum age a cut can reach before it is deleted from global cut pool
                                                  *   (-1: cuts are never deleted from the global cut pool) */
 #define SCIP_DEFAULT_SEPA_POOLFREQ           10 /**< separation frequency for the global cut pool */
-#define SCIP_DEFAULT_SEPA_FEASTOLFAC      -1.00 /**< factor on cut infeasibility to limit feasibility tolerance for relaxation solver (-1: off) */
 #define SCIP_DEFAULT_SEPA_MINACTIVITYQUOT   0.8 /**< minimum cut activity quotient to convert cuts into constraints
                                                  *   during a restart (0.0: all cuts are converted) */
 
@@ -1131,7 +1130,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->visual_bakfilename = NULL;
    (*set)->nlp_solver = NULL;
    (*set)->nlp_disable = FALSE;
-   (*set)->sepa_primfeastol = SCIP_INVALID;
+   (*set)->num_relaxfeastol = SCIP_INVALID;
    (*set)->misc_debugsol = NULL;
 
    /* the default time limit is infinite */
@@ -2322,11 +2321,6 @@ SCIP_RETCODE SCIPsetCreate(
          "separating/poolfreq",
          "separation frequency for the global cut pool (-1: disable global cut pool, 0: only separate pool at the root)",
          &(*set)->sepa_poolfreq, FALSE, SCIP_DEFAULT_SEPA_POOLFREQ, -1, SCIP_MAXTREEDEPTH,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
-         "separating/feastolfac",
-         "factor on cut infeasibility to limit feasibility tolerance for relaxation solver (-1: off)",
-         &(*set)->sepa_feastolfac, TRUE, SCIP_DEFAULT_SEPA_FEASTOLFAC, -1.0, 1.0,
          NULL, NULL) );
 
    /* parallel parameters */
@@ -5054,6 +5048,15 @@ SCIP_RETCODE SCIPsetInitsolPlugins(
 
    assert(set != NULL);
 
+   /* reset SCIP-defined feasibility tolerance for relaxations
+    * if this is invalid, then only the relaxation specific feasibility tolerance,
+    * e.g., numerics/lpfeastol is applied
+    * SCIP plugins or core may set num_relaxfeastol to request a
+    * tighter feasibility tolerance, though
+    * see also documentation of SCIPchgRelaxfeastol
+    */
+   set->num_relaxfeastol = SCIP_INVALID;
+
    /* active variable pricers */
    SCIPsetSortPricers(set);
    for( i = 0; i < set->nactivepricers; ++i )
@@ -5126,9 +5129,6 @@ SCIP_RETCODE SCIPsetInitsolPlugins(
    {
       SCIP_CALL( SCIPtableInitsol(set->tables[i], set) );
    }
-
-   /* reset feasibility tolerance for relaxations */
-   set->sepa_primfeastol = SCIP_INVALID;
 
    return SCIP_OKAY;
 }
@@ -5353,6 +5353,28 @@ SCIP_RETCODE SCIPsetSetBarrierconvtol(
    return SCIP_OKAY;
 }
 
+/** sets primal feasibility tolerance for relaxations (relaxfeastol)
+ *
+ * @note Set to SCIP_INVALID to apply relaxation-specific feasibility tolerance only.
+ *
+ * @return Previous value of relaxfeastol.
+ */
+SCIP_Real SCIPsetSetRelaxfeastol(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             relaxfeastol        /**< new primal feasibility tolerance for relaxations, or SCIP_INVALID */
+   )
+{
+   SCIP_Real oldval;
+
+   assert(set != NULL);
+   assert(relaxfeastol >= 0.0);
+
+   oldval = set->num_relaxfeastol;
+   set->num_relaxfeastol = relaxfeastol;
+
+   return oldval;
+}
+
 /** marks that some limit parameter was changed */
 void SCIPsetSetLimitChanged(
    SCIP_SET*             set                 /**< global SCIP settings */
@@ -5428,12 +5450,12 @@ SCIP_DEBUGSOLDATA* SCIPsetGetDebugSolData(
 #undef SCIPsetSumepsilon
 #undef SCIPsetFeastol
 #undef SCIPsetLpfeastol
-#undef SCIPsetSepaprimfeastol
 #undef SCIPsetDualfeastol
 #undef SCIPsetBarrierconvtol
 #undef SCIPsetPseudocosteps
 #undef SCIPsetPseudocostdelta
 #undef SCIPsetCutoffbounddelta
+#undef SCIPsetRelaxfeastol
 #undef SCIPsetRecompfac
 #undef SCIPsetIsEQ
 #undef SCIPsetIsLT
@@ -5571,25 +5593,17 @@ SCIP_Real SCIPsetDualfeastol(
    return set->num_dualfeastol;
 }
 
-/** returns primal feasibility tolerance of LP solver */
+/** returns primal feasibility tolerance of LP solver given as minimum of lpfeastol option and relaxfeastol */
 SCIP_Real SCIPsetLpfeastol(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(set != NULL);
 
-   if( set->sepa_primfeastol != SCIP_INVALID ) /*lint !e777*/
-      return MIN(set->sepa_primfeastol, set->num_lpfeastol);
+   if( set->num_relaxfeastol != SCIP_INVALID ) /*lint !e777*/
+      return MIN(set->num_relaxfeastol, set->num_lpfeastol);
 
    return set->num_lpfeastol;
-}
-
-/** returns primal feasibility tolerance as specified by separation storage, or SCIP_INVALID */
-SCIP_Real SCIPsetSepaprimfeastol(
-   SCIP_SET*             set                 /**< global SCIP settings */
-   )
-{
-   return set->sepa_primfeastol;
 }
 
 /** returns convergence tolerance used in barrier algorithm */
@@ -5634,6 +5648,16 @@ SCIP_Real SCIPsetCutoffbounddelta(
    feastol = SCIPsetFeastol(set);
 
    return MIN(100.0 * feastol, 0.0001);
+}
+
+/** return the primal feasibility tolerance for relaxations */
+SCIP_Real SCIPsetRelaxfeastol(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   return set->num_relaxfeastol;
 }
 
 /** returns minimal decrease factor that causes the recomputation of a value

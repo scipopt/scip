@@ -386,7 +386,7 @@ struct SCIP_Set
    SCIP_Real             num_feastol;        /**< feasibility tolerance for constraints */
    SCIP_Real             num_checkfeastolfac;/**< factor to change the feasibility tolerance when testing the best
                                               *   solution for feasibility (after solving process) */
-   SCIP_Real             num_lpfeastol;      /**< primal feasibility tolerance of LP solver */
+   SCIP_Real             num_lpfeastol;      /**< primal feasibility tolerance of LP solver (user parameter, see also num_relaxfeastol) */
    SCIP_Real             num_dualfeastol;    /**< feasibility tolerance for reduced costs */
    SCIP_Real             num_barrierconvtol; /**< convergence tolerance used in barrier algorithm */
    SCIP_Real             num_boundstreps;    /**< minimal improve for strengthening bounds */
@@ -396,6 +396,7 @@ struct SCIP_Set
                                               *   (e.g., pseudo objective) instead of an update */
    SCIP_Real             num_hugeval;        /**< values larger than this are considered huge and should be handled
                                               *   separately (e.g., in activity computation) */
+   SCIP_Real             num_relaxfeastol;   /**< primal feasibility tolerance for relaxations (set by core or plugins, not a parameter) */
 
    /* presolving settings */
    SCIP_Real             presol_abortfac;    /**< abort presolve, if l.t. this frac of the problem was changed in last round */
@@ -482,8 +483,6 @@ struct SCIP_Set
    SCIP_Real             sepa_minorthoroot;  /**< minimal orthogonality for a cut to enter the LP in the root node */
    SCIP_Real             sepa_objparalfac;   /**< factor to scale objective parallelism of cut in separation score calc. */
    SCIP_Real             sepa_intsupportfac; /**< factor to scale integral support of cut in separation score calculation */
-   SCIP_Real             sepa_feastolfac;    /**< factor on cut infeasibility to limit feasibility tolerance for relaxation solver (-1: off) */
-   SCIP_Real             sepa_primfeastol;   /**< primal feasibility tolerance derived from cut feasibility (set by sepastore, not a parameter) */
    SCIP_Real             sepa_minactivityquot; /**< minimum cut activity quotient to convert cuts into constraints
                                                 *   during a restart (0.0: all cuts are converted) */
    char                  sepa_orthofunc;     /**< function used for calc. scalar prod. in orthogonality test ('e'uclidean, 'd'iscrete) */

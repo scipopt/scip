@@ -336,7 +336,7 @@ SCIP_RETCODE catchLinearVarEvents(
    eventdata->cons = cons;
    eventdata->varidx = linvarpos;
 
-   eventtype = SCIP_EVENTTYPE_VARFIXED;
+   eventtype = SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_GBDCHANGED;
    if( !SCIPisInfinity(scip, consdata->rhs) )
    {
       /* if right hand side is finite, then a tightening in the lower bound of coef*linvar is of interest
@@ -399,7 +399,7 @@ SCIP_RETCODE dropLinearVarEvents(
    assert(consdata->lineventdata[linvarpos]->varidx == linvarpos);
    assert(consdata->lineventdata[linvarpos]->filterpos >= 0);
 
-   eventtype = SCIP_EVENTTYPE_VARFIXED;
+   eventtype = SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_GBDCHANGED;
    if( !SCIPisInfinity(scip, consdata->rhs) )
    {
       /* if right hand side is finite, then a tightening in the lower bound of coef*linvar is of interest
@@ -452,7 +452,7 @@ SCIP_RETCODE catchQuadVarEvents(
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &eventdata) );
 
-   eventtype = SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED;
+   eventtype = SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_GBDCHANGED;
 #ifdef CHECKIMPLINBILINEAR
    eventtype |= SCIP_EVENTTYPE_IMPLADDED;
 #endif
@@ -497,7 +497,7 @@ SCIP_RETCODE dropQuadVarEvents(
    assert(consdata->quadvarterms[quadvarpos].eventdata->varidx == -quadvarpos-1);
    assert(consdata->quadvarterms[quadvarpos].eventdata->filterpos >= 0);
 
-   eventtype = SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED;
+   eventtype = SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_GBDCHANGED;
 #ifdef CHECKIMPLINBILINEAR
    eventtype |= SCIP_EVENTTYPE_IMPLADDED;
 #endif
@@ -1060,29 +1060,11 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
 
    eventtype = SCIPeventGetType(event);
 
+   /* process local bound changes */
    if( eventtype & SCIP_EVENTTYPE_BOUNDCHANGED )
    {
       if( varidx < 0 )
       {
-         SCIP_QUADVARTERM* quadvarterm;
-         SCIP_VAR* var;
-
-         quadvarterm = &consdata->quadvarterms[-varidx-1];
-         var = quadvarterm->var;
-
-         /* if an integer variable x with a x^2 is tightened to [0,1], then we can replace the x^2 by x, which is done in mergeAndCleanQuadVarTerms()
-          * we currently do this only if the binary variable does not show up in any bilinear terms
-          * unfortunately, SCIP does not have an eventtype for vartype changes (nor do they always count as presolve reductions) and the bounds are
-          * not updated yet when this event is processed, so we cannot use SCIPvarIsBinary here to check if the tightened integer variable will be binary
-          */
-         if( SCIPgetStage(scip) < SCIP_STAGE_SOLVING && SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER && quadvarterm->sqrcoef != 0.0 && quadvarterm->nadjbilin == 0 &&
-             ( ((eventtype & SCIP_EVENTTYPE_LBTIGHTENED) && SCIPeventGetNewbound(event) > -0.5 && SCIPvarGetUbGlobal(var) <  1.5) ||
-               ((eventtype & SCIP_EVENTTYPE_UBTIGHTENED) && SCIPeventGetNewbound(event) <  1.5 && SCIPvarGetLbGlobal(var) > -0.5) ) )
-         {
-            consdata->quadvarsmerged = FALSE;
-            consdata->initialmerge = FALSE;
-         }
-
          /* mark activity bounds for quad term as not up to date anymore */
          SCIPintervalSetEmpty(&consdata->quadactivitybounds);
       }
@@ -1097,19 +1079,41 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
 
       if( eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED )
       {
-         SCIP_VAR* var;
-
          SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
          consdata->ispropagated = FALSE;
-
-         var = varidx < 0 ? consdata->quadvarterms[-varidx-1].var : consdata->linvars[varidx];
-         assert(var != NULL);
-
-         if( SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)) )
-            consdata->isremovedfixings = FALSE;
       }
    }
 
+   /* process global bound changes */
+   if( eventtype & SCIP_EVENTTYPE_GBDCHANGED )
+   {
+      SCIP_VAR* var;
+
+      var = varidx < 0 ? consdata->quadvarterms[-varidx-1].var : consdata->linvars[varidx];
+      assert(var != NULL);
+
+      if( varidx < 0 )
+      {
+         SCIP_QUADVARTERM* quadvarterm;
+
+         quadvarterm = &consdata->quadvarterms[-varidx-1];
+
+         /* if an integer variable x with a x^2 is tightened to [0,1], then we can replace the x^2 by x, which is done in mergeAndCleanQuadVarTerms()
+          * we currently do this only if the binary variable does not show up in any bilinear terms
+          */
+         if( SCIPgetStage(scip) < SCIP_STAGE_SOLVING && SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER && SCIPvarIsBinary(var) &&
+            quadvarterm->sqrcoef != 0.0 && quadvarterm->nadjbilin == 0 )
+         {
+            consdata->quadvarsmerged = FALSE;
+            consdata->initialmerge = FALSE;
+         }
+      }
+
+      if( SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)) )
+         consdata->isremovedfixings = FALSE;
+   }
+
+   /* process variable fixing event */
    if( eventtype & SCIP_EVENTTYPE_VARFIXED )
    {
       consdata->isremovedfixings = FALSE;
@@ -7551,7 +7555,8 @@ SCIP_RETCODE generateCut(
 
       SCIPdebugMsg(scip, "found cut <%s>, lhs=%g, rhs=%g, mincoef=%g, maxcoef=%g, range=%g, nnz=%d, efficacy=%g\n",
          SCIProwGetName(*row), SCIProwGetLhs(*row), SCIProwGetRhs(*row),
-         rowprep->coefs[rowprep->nvars-1], rowprep->coefs[0], rowprep->coefs[0]/rowprep->coefs[rowprep->nvars-1],
+         rowprep->nvars > 0 ? rowprep->coefs[rowprep->nvars-1] : 0.0, rowprep->nvars > 0 ? rowprep->coefs[0] : 0.0,
+         rowprep->nvars > 0 ? rowprep->coefs[0]/rowprep->coefs[rowprep->nvars-1] : 1.0,
          SCIProwGetNNonz(*row), viol);  /*lint !e414 */
 
       if( efficacy != NULL )
@@ -9141,8 +9146,7 @@ SCIP_RETCODE separatePoint(
 
       /* actual minimal efficacy */
       actminefficacy = inenforcement && ((violside == SCIP_SIDETYPE_RIGHT && consdata->isconvex ) || (violside == SCIP_SIDETYPE_LEFT && consdata->isconcave))
-               ? (SCIPgetRelaxFeastolFactor(scip) > 0.0 ? SCIPepsilon(scip) : SCIPfeastol(scip))
-                  : minefficacy;
+               ? SCIPfeastol(scip) : minefficacy;
 
       /* generate cut */
       if( sol == NULL && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
@@ -9950,45 +9954,32 @@ SCIP_RETCODE replaceByLinearConstraints(
          coef = *consdata->lincoefs;
          var = *consdata->linvars;
 
-         /* compute lhs/rhs */
+         assert( ! SCIPisZero(scip, coef) );
+
+         /* compute lhs/rhs, divide already by |coef| */
          if ( SCIPisInfinity(scip, -consdata->lhs) )
             lhs = -SCIPinfinity(scip);
          else
-            lhs = consdata->lhs - constant;
+            lhs = (consdata->lhs - constant) / REALABS(coef);
 
          if ( SCIPisInfinity(scip, consdata->rhs) )
             rhs = SCIPinfinity(scip);
          else
-            rhs = consdata->rhs - constant;
+            rhs = (consdata->rhs - constant) / REALABS(coef);
 
-         SCIPdebugMsg(scip, "Linear constraint with one variable: %g <= %g <%s> <= %g\n", lhs, coef, SCIPvarGetName(var), rhs);
+         SCIPdebugMsg(scip, "Linear constraint with one variable: %.20g <= %g <%s> <= %.20g\n", lhs, coef > 0.0 ? 1.0 : -1.0, SCIPvarGetName(var), rhs);
 
-         SCIPdebugMessage("<%s>: [%.20g, %g.20]\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+         SCIPdebugMessage("<%s>: [%.20g, %.20g]\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
 
-         /* possibly correct lhs/rhs */
-         assert( ! SCIPisZero(scip, coef) );
-         if ( coef >= 0.0 )
+         if ( coef < 0.0 )
          {
-            if ( ! SCIPisInfinity(scip, -lhs) )
-               lhs /= coef;
-            if ( ! SCIPisInfinity(scip, rhs) )
-               rhs /= coef;
-         }
-         else
-         {
+            /* swap lhs and rhs, with negated sign */
             SCIP_Real h;
             h = rhs;
-            if ( ! SCIPisInfinity(scip, -lhs) )
-               rhs = lhs/coef;
-            else
-               rhs = SCIPinfinity(scip);
-
-            if ( ! SCIPisInfinity(scip, h) )
-               lhs = h/coef;
-            else
-               lhs = -SCIPinfinity(scip);
+            rhs = -lhs;
+            lhs = -h;
          }
-         SCIPdebugMsg(scip, "Linear constraint is a bound: %g <= <%s> <= %g\n", lhs, SCIPvarGetName(var), rhs);
+         SCIPdebugMsg(scip, "Linear constraint is a bound: %.20g <= <%s> <= %.20g\n", lhs, SCIPvarGetName(var), rhs);
 
          if( SCIPisInfinity(scip, -rhs) || SCIPisInfinity(scip, lhs) )
          {
@@ -11577,7 +11568,7 @@ SCIP_RETCODE enforceConstraint(
    SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, sol, &nnotify) );
 
    /* if sepastore can decrease feasibility tolerance, we can add cuts with efficacy in [eps, feastol] */
-   leastpossibleefficacy = SCIPgetRelaxFeastolFactor(scip) > 0.0 ? SCIPepsilon(scip) : SCIPfeastol(scip);
+   leastpossibleefficacy = SCIPfeastol(scip);
    if( nnotify == 0 && !solinfeasible && minefficacy > leastpossibleefficacy )
    {
       /* fallback 1: we also have no branching candidates, so try to find a weak cut */

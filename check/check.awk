@@ -160,7 +160,7 @@ BEGIN {
    NEWSOLUFILE = "new_solufile.solu";
    infty = +1e+20;
    headerprinted = 0;
-   namelength = 18;             # maximal length of instance names (can be increased)
+   namelength = 35;             # maximal length of instance names (can be increased)
    usetimestamps = 0;
 
    nprobs = 0;
