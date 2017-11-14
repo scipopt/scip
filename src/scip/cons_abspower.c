@@ -5912,7 +5912,6 @@ SCIP_DECL_CONSSEPALP(consSepalpAbspower)
 static
 SCIP_DECL_CONSSEPASOL(consSepasolAbspower)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS*         maxviolcon;
    SCIP_Bool          success;
    SCIP_Bool          cutoff;
@@ -5923,9 +5922,6 @@ SCIP_DECL_CONSSEPASOL(consSepasolAbspower)
    assert(conss    != NULL || nconss == 0);
    assert(sol      != NULL);
    assert(result   != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    *result = SCIP_DIDNOTFIND;
 

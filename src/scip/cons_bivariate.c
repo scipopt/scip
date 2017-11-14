@@ -6704,7 +6704,6 @@ SCIP_DECL_CONSINITLP(consInitlpBivariate)
 static
 SCIP_DECL_CONSSEPALP(consSepalpBivariate)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS*         maxviolcon;
 
    assert(scip     != NULL);
@@ -6713,9 +6712,6 @@ SCIP_DECL_CONSSEPALP(consSepalpBivariate)
    assert(result   != NULL);
 
    *result = SCIP_DIDNOTFIND;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    SCIP_CALL( computeViolations(scip, conshdlr, conss, nconss, NULL, &maxviolcon) );
    if( maxviolcon == NULL )
@@ -6732,7 +6728,6 @@ SCIP_DECL_CONSSEPALP(consSepalpBivariate)
 static
 SCIP_DECL_CONSSEPASOL(consSepasolBivariate)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS*         maxviolcon;
 
    assert(scip     != NULL);
@@ -6740,9 +6735,6 @@ SCIP_DECL_CONSSEPASOL(consSepasolBivariate)
    assert(conss    != NULL || nconss == 0);
    assert(sol      != NULL);
    assert(result   != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    *result = SCIP_DIDNOTFIND;
 

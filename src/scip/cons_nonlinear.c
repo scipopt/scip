@@ -7771,7 +7771,6 @@ SCIP_DECL_CONSSEPALP(consSepalpNonlinear)
 static
 SCIP_DECL_CONSSEPASOL(consSepasolNonlinear)
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS*         maxviolcon;
    SCIP_Bool          solviolbounds;
 
@@ -7780,9 +7779,6 @@ SCIP_DECL_CONSSEPASOL(consSepasolNonlinear)
    assert(conss != NULL || nconss == 0);
    assert(sol != NULL);
    assert(result != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    *result = SCIP_DIDNOTFIND;
 
