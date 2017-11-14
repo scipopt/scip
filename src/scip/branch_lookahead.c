@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define SCIP_STATISTIC
+
 /**@file   branch_lookahead.c
  * @ingroup BRANCHINGRULES
  * @brief  lookahead LP branching rule
@@ -2967,7 +2967,7 @@ SCIP_Real calculateScoreFromGain(
 
 /** calculates the score based on the down and up branching result */
 static
-SCIP_Real calculcateScoreFromResult(
+SCIP_Real calculateScoreFromResult(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             branchvar,          /**< variable to get the score for */
    BRANCHINGRESULTDATA*  downbranchingresult,/**< branching result of the down branch */
@@ -2981,16 +2981,25 @@ SCIP_Real calculcateScoreFromResult(
 
    assert(scip != NULL);
    assert(branchvar != NULL);
+   assert(downbranchingresult != NULL);
+   assert(upbranchingresult != NULL);
 
-   /* @todo how should the NULL case be handled? */
-   if( downbranchingresult != NULL )
-   {
+   /* the gain is the difference of the dualbound of a child and the reference objective value;
+    * by bounding it by zero we are safe from numerical troubles
+    */
+   if( !downbranchingresult->cutoff )
       downgain = MAX(0, downbranchingresult->dualbound - lpobjval);
-   }
-   if( upbranchingresult != NULL )
-   {
+   if( !upbranchingresult->cutoff )
       upgain = MAX(0, upbranchingresult->dualbound - lpobjval);
-   }
+
+   /* in case a child is infeasible and therefore cutoff we take the gain of the other child to receive a somewhat
+    * realistic gain for the infeasible child;
+    * if both children are infeasible we just reset the initial zero values again
+    */
+   if( downbranchingresult->cutoff )
+      downgain = upgain;
+   if( upbranchingresult->cutoff )
+      upgain = downgain;
 
    score = calculateScoreFromGain(scip, branchvar, downgain, upgain);
 
@@ -3811,13 +3820,12 @@ SCIP_RETCODE  selectVarRecursive(
 
       if( !status->lperror && !status->limitreached )
       {
-         SCIP_Real score;
          SCIP_Real scoringlpobjval = useoldbranching ? oldlpobjval : lpobjval;
+         SCIP_Real score = calculateScoreFromResult(scip, branchvar, downbranchingresult, upbranchingresult,
+            scoringlpobjval);
 
          if( upbranchingresult->cutoff && downbranchingresult->cutoff )
          {
-            score = calculcateScoreFromResult(scip, branchvar, NULL, NULL, scoringlpobjval);
-
             LABdebugMessage(scip, SCIP_VERBLEVEL_NORMAL, " -> variable <%s> is infeasible in both directions\n",
                SCIPvarGetName(branchvar));
 
@@ -3830,8 +3838,6 @@ SCIP_RETCODE  selectVarRecursive(
          }
          else if( upbranchingresult->cutoff )
          {
-            score = calculcateScoreFromResult(scip, branchvar, downbranchingresult, NULL, scoringlpobjval);
-
             LABdebugMessage(scip, SCIP_VERBLEVEL_NORMAL, " -> variable <%s> is infeasible in upward branch\n",
                SCIPvarGetName(branchvar));
 
@@ -3856,8 +3862,6 @@ SCIP_RETCODE  selectVarRecursive(
          }
          else if( downbranchingresult->cutoff )
          {
-            score = calculcateScoreFromResult(scip, branchvar, NULL, upbranchingresult, scoringlpobjval);
-
             LABdebugMessage(scip, SCIP_VERBLEVEL_NORMAL, " -> variable <%s> is infeasible in downward branch\n",
                SCIPvarGetName(branchvar));
 
@@ -3878,13 +3882,10 @@ SCIP_RETCODE  selectVarRecursive(
 #ifdef SCIP_STATISTIC
             statistics->nsinglecutoffs[probingdepth]++;
 #endif
-	 }
+	      }
          else
          {
             LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Neither branch is cutoff and no limit reached.\n");
-
-            score = calculcateScoreFromResult(scip, branchvar, downbranchingresult, upbranchingresult,
-                  scoringlpobjval);
 
             if( upbranchingresult->dualboundvalid && downbranchingresult->dualboundvalid )
             {
