@@ -30,8 +30,6 @@ set(settings_default
 #
 set(settings_MIP
     "default"
-    "separating_off"
-    "presolving_off"
     "heuristics_off"
     "separating_fast"
     "presolving_fast"
@@ -39,9 +37,6 @@ set(settings_MIP
     "separating_aggressive"
     "presolving_aggressive"
     "heuristics_aggressive"
-    "allaggr"
-    "cgmip"
-    "cgmipstrong"
     "convertinttobin"
     "fullstrongbfs"
     "indicatorlogicor"
@@ -54,7 +49,6 @@ set(settings_MIP
     "proporbit"
     "allfull"
 
-    "cgmipviol"
 #    "dynamic"
     "heurlprows"
     "intobj"
@@ -77,7 +71,17 @@ set(settings_MIP
     "lns_epsgreedy"
     "lns_exp3"
 )
-
+#
+# settings to run a reduced MIP test
+#
+set(settings_fastMIP
+    "allaggr"
+    "cgmip"
+    "cgmipstrong"
+    "cgmipviol"
+    "presolving_off"
+    "separating_off"
+  )
 set(settings_MINLP
     "checkfeastolfac10"
     "undercover1"
@@ -125,6 +129,22 @@ set(settings_Cardinality
     "upgdcardinality"
 )
 
+set(instances_Readertest
+    "instances/MIP/bell5.mps\;8966406.49"
+    "instances/MIP/egout.mps\;568.1007"
+    "instances/MIP/enigma.mps\;0"
+    "instances/MIP/flugpl.mps\;1201500"
+    "instances/MIP/gt2.mps\;21166"
+    "instances/MIP/lseu.mps\;1120"
+    "instances/MIP/MANN_a9.clq.lp\;16"
+    "instances/MIP/misc03.mps\;3360"
+    "instances/MIP/p0033.osil\;3089"
+    "instances/MIP/p0548.mps\;8691"
+    "instances/MIP/stein27.fzn\;18"
+    "instances/MIP/stein27_inf.lp\;+infinity"
+    "instances/MIP/vpm2.fzn\;13.75"
+)
+
 
 #
 # MIP instances
@@ -146,6 +166,16 @@ set(instances_MIP
     "instances/MIP/stein27.fzn\;18"
     "instances/MIP/stein27_inf.lp\;+infinity"
     "instances/MIP/vpm2.fzn\;13.75"
+    )
+
+#
+# Reduced set of MIP instances for more expensive settings
+#
+set(instances_fastMIP
+    "instances/MIP/egout.mps\;568.1007"
+    "instances/MIP/gt2.mps\;21166"
+    "instances/MIP/MANN_a9.clq.lp\;16"
+    "instances/MIP/p0033.osil\;3089"
     )
 
 #
@@ -345,6 +375,7 @@ endmacro(add_instancetests)
 add_instancetests(instances_CP settings_default "CP")
 add_instancetests(instances_Indicator settings_default "Indicator")
 add_instancetests(instances_MIP settings_MIP "MIP")
+add_instancetests(instances_fastMIP settings_fastMIP "FastMIP")
 add_instancetests(instances_MINLP settings_MINLP "MINLP")
 add_instancetests(instances_Bivariate settings_Bivariate "Bivariate")
 add_instancetests(instances_Bilinrelax settings_Bilinrelax "Bilinrelax")
@@ -397,7 +428,7 @@ set(message_format_opb "WARNING: only binary problems can be written in OPB form
 #
 # test writing and reading from and to different file extensions for MIP
 #
-foreach(instance ${instances_MIP})
+foreach(instance ${instances_Readertest})
     split_instance(instance)
     foreach(extension ${scip_reader_extensions})
         #
