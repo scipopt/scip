@@ -107,6 +107,7 @@ fixed bugs:
 - fixed upgrade to a varbound constraint if abspower constraint contains a multi-aggregated variable
 - fixed numerical issues in boundshift presolver when aggregating integer variables
 - fixed minor issue in expression graph simplification
+- fixed several bugs related to hashing of constraints/rows in cutpool.c and cons_linear.c
 - fixed aggregation of variables in boundshift presolver that contain large variable bounds
 
 added tests:
