@@ -22942,7 +22942,8 @@ SCIP_RETCODE SCIPinferVarLbProp(
    }
    newbound = MIN(newbound, ub);
 
-   if( !force && !SCIPsetIsLbBetter(scip->set, newbound, lb, ub) )
+   if( (!force && !SCIPsetIsLbBetter(scip->set, newbound, lb, ub))
+      || SCIPsetIsLE(scip->set, newbound, lb) )
       return SCIP_OKAY;
 
    switch( scip->set->stage )
@@ -23055,7 +23056,8 @@ SCIP_RETCODE SCIPinferVarUbProp(
    }
    newbound = MAX(newbound, lb);
 
-   if( !force && !SCIPsetIsUbBetter(scip->set, newbound, lb, ub) )
+   if( (!force && !SCIPsetIsUbBetter(scip->set, newbound, lb, ub))
+      || SCIPsetIsGE(scip->set, newbound, ub) )
       return SCIP_OKAY;
 
    switch( scip->set->stage )
