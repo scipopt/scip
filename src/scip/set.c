@@ -5048,6 +5048,15 @@ SCIP_RETCODE SCIPsetInitsolPlugins(
 
    assert(set != NULL);
 
+   /* reset SCIP-defined feasibility tolerance for relaxations
+    * if this is invalid, then only the relaxation specific feasibility tolerance,
+    * e.g., numerics/lpfeastol is applied
+    * SCIP plugins or core may set num_relaxfeastol to request a
+    * tighter feasibility tolerance, though
+    * see also documentation of SCIPchgRelaxfeastol
+    */
+   set->num_relaxfeastol = SCIP_INVALID;
+
    /* active variable pricers */
    SCIPsetSortPricers(set);
    for( i = 0; i < set->nactivepricers; ++i )
@@ -5120,14 +5129,6 @@ SCIP_RETCODE SCIPsetInitsolPlugins(
    {
       SCIP_CALL( SCIPtableInitsol(set->tables[i], set) );
    }
-
-   /* reset SCIP-defined feasibility tolerance for relaxations
-    * if this is invalid, then only the relaxation specific feasibility tolerance,
-    * e.g., numerics/lpfeastol is applied
-    * SCIP plugins or core may set num_relaxfeastol to request a
-    * tighter feasibility tolerance, though
-    */
-   set->num_relaxfeastol = SCIP_INVALID;
 
    return SCIP_OKAY;
 }
