@@ -12794,6 +12794,9 @@ SCIP_Real SCIPlpGetGlobalPseudoObjval(
       if( SCIPsetIsInfinity(set, -lp->glbpseudoobjval) )
          return -SCIPsetInfinity(set);
 
+      if( SCIPsetIsInfinity(set, lp->glbpseudoobjval) )
+         return SCIPsetInfinity(set);
+
       return lp->glbpseudoobjval;
    }
 }
@@ -12822,6 +12825,9 @@ SCIP_Real SCIPlpGetPseudoObjval(
       /* if the pseudo objective value is smaller than -infinity, we just return -infinity */
       if( SCIPsetIsInfinity(set, -lp->pseudoobjval) )
          return -SCIPsetInfinity(set);
+
+      if( SCIPsetIsInfinity(set, lp->pseudoobjval) )
+         return SCIPsetInfinity(set);
 
       return lp->pseudoobjval;
    }

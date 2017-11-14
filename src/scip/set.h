@@ -1084,6 +1084,18 @@ SCIP_RETCODE SCIPsetSetBarrierconvtol(
    SCIP_Real             barrierconvtol      /**< new convergence tolerance used in barrier algorithm */
    );
 
+/** sets primal feasibility tolerance for relaxations (relaxfeastol)
+ *
+ * @note Set to SCIP_INVALID to apply relaxation-specific feasibility tolerance only.
+ *
+ * @return Previous value of relaxfeastol.
+ */
+extern
+SCIP_Real SCIPsetSetRelaxfeastol(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             relaxfeastol        /**< new primal feasibility tolerance for relaxations, or SCIP_INVALID */
+   );
+
 /** marks that some limit parameter was changed */
 extern
 void SCIPsetSetLimitChanged(
@@ -1173,7 +1185,7 @@ SCIP_Real SCIPsetFeastol(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
-/** returns primal feasibility tolerance of LP solver given as minimum of lpfeastol option and tolerance specified by separation storage */
+/** returns primal feasibility tolerance of LP solver given as minimum of lpfeastol option and relaxfeastol */
 extern
 SCIP_Real SCIPsetLpfeastol(
    SCIP_SET*             set                 /**< global SCIP settings */
@@ -1206,6 +1218,12 @@ SCIP_Real SCIPsetPseudocostdelta(
 /** return the delta to use for computing the cutoff bound for integral objectives */
 extern
 SCIP_Real SCIPsetCutoffbounddelta(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** return the primal feasibility tolerance for relaxations */
+extern
+SCIP_Real SCIPsetRelaxfeastol(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
@@ -1765,6 +1783,7 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetBarrierconvtol(set)         ( (set)->num_barrierconvtol )
 #define SCIPsetPseudocosteps(set)          ( (set)->num_pseudocosteps )
 #define SCIPsetPseudocostdelta(set)        ( (set)->num_pseudocostdelta )
+#define SCIPsetRelaxfeastol(set)           ( (set)->num_relaxfeastol )
 #define SCIPsetCutoffbounddelta(set)       ( MIN(100.0 * SCIPsetFeastol(set), 0.0001) )
 #define SCIPsetRecompfac(set)              ( (set)->num_recompfac )
 #define SCIPsetIsEQ(set, val1, val2)       ( EPSEQ(val1, val2, (set)->num_epsilon) )

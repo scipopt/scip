@@ -23206,7 +23206,8 @@ SCIP_RETCODE SCIPinferVarLbProp(
    }
    newbound = MIN(newbound, ub);
 
-   if( !force && !SCIPsetIsLbBetter(scip->set, newbound, lb, ub) )
+   if( (!force && !SCIPsetIsLbBetter(scip->set, newbound, lb, ub))
+      || SCIPsetIsLE(scip->set, newbound, lb) )
       return SCIP_OKAY;
 
    switch( scip->set->stage )
@@ -23319,7 +23320,8 @@ SCIP_RETCODE SCIPinferVarUbProp(
    }
    newbound = MAX(newbound, lb);
 
-   if( !force && !SCIPsetIsUbBetter(scip->set, newbound, lb, ub) )
+   if( (!force && !SCIPsetIsUbBetter(scip->set, newbound, lb, ub))
+      || SCIPsetIsGE(scip->set, newbound, ub) )
       return SCIP_OKAY;
 
    switch( scip->set->stage )
@@ -35906,7 +35908,7 @@ SCIP_RETCODE SCIPbacktrackProbing(
    }
 
    SCIP_CALL( SCIPtreeBacktrackProbing(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-         scip->origprob, scip->lp, scip->relaxation, scip->primal, scip->branchcand, scip->eventqueue, scip->eventfilter,
+         scip->origprob, scip->lp, scip->primal, scip->branchcand, scip->eventqueue, scip->eventfilter,
          scip->cliquetable, probingdepth) );
 
    return SCIP_OKAY;
@@ -36152,12 +36154,6 @@ SCIP_RETCODE SCIPchgVarObjProbing(
       return SCIP_INVALIDCALL;
    }
 
-   if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
-   {
-      SCIPerrorMessage("variable is not a column variable\n");
-      return SCIP_INVALIDCALL;
-   }
-
    /* get current probing node */
    node = SCIPtreeGetCurrentNode(scip->tree);
    assert(SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
@@ -36197,9 +36193,6 @@ SCIP_RETCODE SCIPchgVarObjProbing(
       SCIPlpMarkDivingObjChanged(scip->lp);
    }
    assert(SCIPisInfinity(scip, scip->lp->cutoffbound));
-
-   /* inform relaxation and update objective value of relaxation solution accordingly */
-   SCIPrelaxationUpdateVarObj(scip->relaxation, scip->set, var, oldobj, newobj);
 
    /* perform the objective change */
    SCIP_CALL( SCIPvarChgObj(var, scip->mem->probmem, scip->set,  scip->transprob, scip->primal, scip->lp, scip->eventqueue, newobj) );
@@ -38882,9 +38875,6 @@ SCIP_RETCODE SCIPgetSolVals(
  *
  *  @return objective value of primal CIP solution w.r.t. original problem, or current LP/pseudo objective value
  *
- *  @note this function should not be used during probing mode when some objective coefficients have been changed via
- *        SCIPchgVarObjProbing()
- *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMING
@@ -38904,8 +38894,6 @@ SCIP_Real SCIPgetSolOrigObj(
    SCIP_SOL*             sol                 /**< primal solution, or NULL for current LP/pseudo objective value */
    )
 {
-   assert(!SCIPisObjChangedProbing(scip));
-
    /* for original solutions, an original objective value is already available in SCIP_STAGE_PROBLEM
     * for all other solutions, we should be at least in SCIP_STAGE_TRANSFORMING
     */
@@ -46412,6 +46400,21 @@ SCIP_Real SCIPcutoffbounddelta(
    return SCIPsetCutoffbounddelta(scip->set);
 }
 
+/** return the relaxation primal feasibility tolerance
+ *
+ *  @see SCIPchgRelaxfeastol
+ *  @return relaxfeastol
+ */
+SCIP_Real SCIPrelaxfeastol(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetRelaxfeastol(scip->set);
+}
+
 /** sets the feasibility tolerance for constraints
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -46502,6 +46505,34 @@ SCIP_RETCODE SCIPchgBarrierconvtol(
    SCIP_CALL( SCIPsetSetBarrierconvtol(scip->set, barrierconvtol) );
 
    return SCIP_OKAY;
+}
+
+/** sets the primal feasibility tolerance of relaxations
+ *
+ * This tolerance value is used by the SCIP core and plugins to tighten then feasibility tolerance on relaxations
+ * (especially the LP relaxation) during a solve. It is set to SCIP_INVALID initially, which means that only the
+ * feasibility tolerance of the particular relaxation is taken into account. If set to a valid value, however,
+ * then this value should be used to reduce the primal feasibility tolerance of a relaxation (thus, use the
+ * minimum of relaxfeastol and the relaxations primal feastol).
+ *
+ * @pre The value of relaxfeastol is reset to SCIP_INVALID when initializing the solve (INITSOL).
+ * Therefore, this method can only be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_INITSOL
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ * @return previous value of relaxfeastol
+ */
+SCIP_Real SCIPchgRelaxfeastol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             relaxfeastol        /**< new primal feasibility tolerance of relaxations */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPchgRelaxfeastol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIPsetSetRelaxfeastol(scip->set, relaxfeastol);
 }
 
 /** marks that some limit parameter was changed */
@@ -48318,6 +48349,16 @@ SCIP_RETCODE SCIPvalidateSolve(
 
    localfeasible = TRUE;
    localdualboundcheck = TRUE;
+
+   /* if no problem exists, there is no need for validation */
+   if( SCIPgetStage(scip) < SCIP_STAGE_PROBLEM )
+   {
+      *feasible = TRUE;
+      *primalboundcheck = TRUE;
+      *dualboundcheck = TRUE;
+
+      return SCIP_OKAY;
+   }
 
    /* check the best solution for feasibility in the original problem */
    if( SCIPgetNSols(scip) > 0 )

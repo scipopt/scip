@@ -1,0 +1,1 @@
+../../../check/cmpres.awk

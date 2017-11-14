@@ -439,17 +439,15 @@ void convertSides(
       }
       else if( lhss[i] <= XPRS_MINUSINFINITY )
       {
-         assert(XPRS_MINUSINFINITY < rhss[i] && rhss[i] < XPRS_PLUSINFINITY);
          lpi->senarray[i] = 'L';
          lpi->rhsarray[i] = rhss[i];
-         lpi->rngarray[i] = 0.0;
+         lpi->rngarray[i] = XPRS_PLUSINFINITY;
       }
       else if( rhss[i] >= XPRS_PLUSINFINITY )
       {
-         assert(XPRS_MINUSINFINITY < lhss[i] && lhss[i] < XPRS_PLUSINFINITY);
          lpi->senarray[i] = 'G';
          lpi->rhsarray[i] = lhss[i];
-         lpi->rngarray[i] = 0.0;
+         lpi->rngarray[i] = XPRS_PLUSINFINITY;
       }
       else
       {
@@ -1322,7 +1320,6 @@ SCIP_RETCODE SCIPlpiScaleRow(
    SCIP_Real rhs;
    int nnonz;
    int ncols;
-   int beg;
    int i;
 
    assert(lpi != NULL);
@@ -1337,7 +1334,9 @@ SCIP_RETCODE SCIPlpiScaleRow(
    SCIP_CALL( ensureValMem(lpi, ncols) );
 
    /* get the row */
-   SCIP_CALL( SCIPlpiGetRows(lpi, row, row, &lhs, &rhs, &nnonz, &beg, lpi->indarray, lpi->valarray) );
+   SCIP_CALL( SCIPlpiGetSides(lpi, row, row, &lhs, &rhs) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetrows(lpi->xprslp, NULL, lpi->indarray, lpi->valarray, ncols, &nnonz, row, row) );
+   assert(nnonz <= ncols);
 
    /* scale row coefficients */
    for( i = 0; i < nnonz; ++i )
@@ -1381,7 +1380,6 @@ SCIP_RETCODE SCIPlpiScaleCol(
    SCIP_Real obj;
    int nnonz;
    int nrows;
-   int beg;
    int i;
 
    assert(lpi != NULL);
@@ -1396,7 +1394,10 @@ SCIP_RETCODE SCIPlpiScaleCol(
    SCIP_CALL( ensureValMem(lpi, nrows) );
 
    /* get the column */
-   SCIP_CALL( SCIPlpiGetCols(lpi, col, col, &lb, &ub, &nnonz, &beg, lpi->indarray, lpi->valarray) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetlb(lpi->xprslp, &lb, col, col) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetub(lpi->xprslp, &ub, col, col) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetcols(lpi->xprslp, NULL, lpi->indarray, lpi->valarray, nrows, &nnonz, col, col) );
+   assert(nnonz <= nrows);
 
    /* get objective coefficient */
    SCIP_CALL( SCIPlpiGetObj(lpi, col, col, &obj) );
@@ -1504,7 +1505,7 @@ SCIP_RETCODE SCIPlpiGetCols(
    SCIP_Real*            ub,                 /**< buffer to store the upper bound vector, or NULL */
    int*                  nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
    int*                  beg,                /**< buffer to store start index of each column in ind- and val-array, or NULL */
-   int*                  ind,                /**< buffer to store column indices of constraint matrix entries, or NULL */
+   int*                  ind,                /**< buffer to store row indices of constraint matrix entries, or NULL */
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {
@@ -1574,7 +1575,7 @@ SCIP_RETCODE SCIPlpiGetRows(
    SCIP_Real*            rhss,               /**< buffer to store right hand side vector, or NULL */
    int*                  nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
    int*                  beg,                /**< buffer to store start index of each row in ind- and val-array, or NULL */
-   int*                  ind,                /**< buffer to store row indices of constraint matrix entries, or NULL */
+   int*                  ind,                /**< buffer to store column indices of constraint matrix entries, or NULL */
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {

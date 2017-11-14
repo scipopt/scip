@@ -2135,6 +2135,9 @@ SCIP_RETCODE hashtableInsert(
 {
    uint32_t elemdistance;
    uint32_t pos;
+#ifndef NDEBUG
+   SCIP_Bool swapped = FALSE;
+#endif
 
    assert(hashtable != NULL);
    assert(hashtable->slots != NULL);
@@ -2165,6 +2168,9 @@ SCIP_RETCODE hashtableInsert(
       {
          if( override )
          {
+#ifndef NDEBUG
+            assert(! swapped);
+#endif
             hashtable->slots[pos] = element;
             hashtable->hashes[pos] = hashval;
             return SCIP_OKAY;
@@ -2187,6 +2193,12 @@ SCIP_RETCODE hashtableInsert(
          tmp = hashval;
          hashval = hashtable->hashes[pos];
          hashtable->hashes[pos] = tmp;
+         key = hashtable->hashgetkey(hashtable->userptr, element);
+
+         /* after doing a swap the case that other elements are replaced must not happen anymore */
+#ifndef NDEBUG
+         swapped = TRUE;
+#endif
       }
 
       /* continue until we have found an empty position */

@@ -35,6 +35,7 @@
 #define PRESOL_MAXROUNDS              0 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_TIMING           SCIP_PRESOLTIMING_FAST /* timing of the presolver (fast, medium, or exhaustive) */
 
+#define MAXABSBOUND             1000.0  /**< maximum absolute variable bounds for aggregation */
 
 /*
  * Default parameter settings
@@ -165,6 +166,19 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
       lb = SCIPvarGetLbGlobal(var);
       ub = SCIPvarGetUbGlobal(var);
 
+      /* it can happen that the variable bounds of integer variables have not been propagated yet or contain
+       * some small noise; this will result in an aggregation that might trigger assertions when updating bounds of
+       * aggregated variables (see #1817)
+       */
+      if( SCIPvarIsIntegral(var) )
+      {
+         assert(SCIPisIntegral(scip, lb));
+         assert(SCIPisIntegral(scip, ub));
+
+         lb = SCIPadjustedVarLb(scip, var, lb);
+         ub = SCIPadjustedVarUb(scip, var, ub);
+      }
+
       assert( SCIPisLE(scip, lb, ub) );
       if( SCIPisEQ(scip, lb, ub) )
          continue;
@@ -178,7 +192,9 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
 #if 0
          SCIPisLT(scip, ub - lb, SCIPinfinity(scip)) &&         /* interval length less than SCIPinfinity(scip) */
 #endif
-         SCIPisLT(scip, ub - lb, (SCIP_Real) presoldata->maxshift) )        /* less than max shifting */
+         SCIPisLT(scip, ub - lb, (SCIP_Real) presoldata->maxshift) &&      /* less than max shifting */
+         SCIPisLE(scip, REALABS(lb), MAXABSBOUND) &&            /* ensures a small constant in aggregation */
+         SCIPisLE(scip, REALABS(ub), MAXABSBOUND) )             /* ensures a small constant in aggregation */
       {
          SCIP_VAR* newvar;
          char newvarname[SCIP_MAXSTRLEN];

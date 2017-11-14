@@ -7028,9 +7028,19 @@ SCIP_RETCODE tightenDualproof(
 
    /* apply coefficient tightening to initial proof */
    tightenCoefficients(set, proofset, &nchgcoefs, &redundant);
-   assert(!redundant); /* the constraint should never be global redundant w.r.t to the maximal activity */
 
-   if( nchgcoefs > 0 )
+   /* it can happen that the constraints is almost globally redundant w.r.t to the maximal activity,
+    * e.g., due to numerics. in this case, we want to discard the proof
+    */
+   if( redundant )
+   {
+#ifndef NDEBUG
+      SCIP_Real eps = MIN(0.01, 10.0*set->num_feastol);
+      assert(proofset->rhs - getMaxActivity(transprob, proofset->vals, proofset->inds, proofset->nnz, NULL, NULL) < eps);
+#endif
+      proofsetClear(proofset);
+   }
+   else if( nchgcoefs > 0 )
    {
       if( proofset->conflicttype == SCIP_CONFTYPE_INFEASLP )
          proofset->conflicttype = SCIP_CONFTYPE_ALTINFPROOF;
@@ -7368,7 +7378,7 @@ SCIP_RETCODE runBoundHeuristic(
                if( globalinfeasible )
                {
                   SCIPaggrRowFree(set->scip, &farkasrow);
-                  goto FREEBUFFER;
+                  goto TERMINATE;
                }
 
                BMSclearMemoryArray(proofcoefs, SCIPprobGetNVars(transprob));
@@ -7450,6 +7460,7 @@ SCIP_RETCODE runBoundHeuristic(
       SCIPsetDebugMsg(set, "finished undoing bound changes after %d loops (valid=%u, nbdchgs: %d)\n",
          nloops, (*valid), oldlpbdchgs->nbdchgs);
 
+   TERMINATE:
       /* reset variables to local bounds */
       if( oldlpbdchgs->nbdchgs > 0 )
       {
@@ -7484,7 +7495,6 @@ SCIP_RETCODE runBoundHeuristic(
       SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_OBJLIM, lp->lpiobjlim) );
       SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPITLIM, lp->lpiitlim) );
 
-     FREEBUFFER:
       /* free temporary memory */
       SCIPsetFreeBufferArray(set, &sidechgnewrhss);
       SCIPsetFreeBufferArray(set, &sidechgnewlhss);
