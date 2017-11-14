@@ -53,7 +53,6 @@ set(settings_MIP
     "heurlprows"
     "intobj"
 #    "nologicor"
-    "presolaggr"
     "pscost"
     "setppclifting"
     "xorsepaparity"
