@@ -359,12 +359,6 @@ void SCIPbendersSetSubprobIsLP(
    SCIP_Bool             islp                /**< flag to indicate whether the subproblem is an LP */
    );
 
-/** returns the number of subproblems that are LPs */
-extern
-int SCIPbendersGetNLPSubprobs(
-   SCIP_BENDERS*         benders             /**< Benders' decomposition */
-   );
-
 /** changes all of the master problem variables in the given subproblem to continuous */
 SCIP_RETCODE SCIPbendersChgMastervarsToCont(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
