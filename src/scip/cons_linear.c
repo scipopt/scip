@@ -13003,8 +13003,11 @@ SCIP_RETCODE detectRedundantConstraints(
                SCIPdebugPrintCons(scip, cons0, NULL);
                SCIPdebugPrintCons(scip, cons1, NULL);
 
-               lhs = MAX(scale * consdatadel->lhs, lhs);
-               rhs = MIN(scale * consdatadel->rhs, rhs);
+               if( !SCIPisInfinity(scip, -consdatadel->lhs) )
+                  lhs = MAX(scale * consdatadel->lhs, lhs);
+
+               if( !SCIPisInfinity(scip, consdatadel->rhs) )
+                  rhs = MIN(scale * consdatadel->rhs, rhs);
             }
             else
             {
@@ -13014,8 +13017,11 @@ SCIP_RETCODE detectRedundantConstraints(
                SCIPdebugPrintCons(scip, cons0, NULL);
                SCIPdebugPrintCons(scip, cons1, NULL);
 
-               lhs = MAX(scale * consdatadel->rhs, lhs);
-               rhs = MIN(scale * consdatadel->lhs, rhs);
+               if( !SCIPisInfinity(scip, consdatadel->rhs) )
+                  lhs = MAX(scale * consdatadel->rhs, lhs);
+
+               if( !SCIPisInfinity(scip, -consdatadel->lhs) )
+                  rhs = MIN(scale * consdatadel->lhs, rhs);
             }
 
             /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
