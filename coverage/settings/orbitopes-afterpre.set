@@ -1,0 +1,3 @@
+misc/usesymmetry = 1
+presolving/symbreak/detectorbitopes = TRUE
+presolving/symmetry/computepresolved = TRUE
