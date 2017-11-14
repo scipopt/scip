@@ -38,6 +38,7 @@ parameters:
 - replaced constraints/quadratic/disaggregate by constraints/quadratic/maxdisaggrsize to bound
   the total number of created constraints when disaggregating a quadratic constraint
 - added parameter constraints/quadratic/disaggrmergemethod
+- removed parameter "separating/feastolfac"
 
 
 interface:
@@ -69,6 +70,7 @@ interface:
 - added SCIPaddBilinearIneqQuadratic to propose an inequality with two variables that appear in a bilinear term
 - added SCIPcomputeBilinEnvelope{1,2} to compute a linearization of a bilinear term when considering at most two linear inequalities
 - new method SCIPaddRow() to replace deprecated SCIPaddCut()
+- replaced method SCIPgetRelaxFeastolFactor() by SCIPrelaxfeastol() and added SCIPchgRelaxfeastol()
 - new object SCIP_LINCONSSTATS, see type_cons.h, and its methods SCIPlinConsStats{Create,Free,GetTypeCount,GetSum} and SCIPprintLinConsStats()
   to work with linear constraint classification through the C API
 

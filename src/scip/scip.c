@@ -35147,24 +35147,6 @@ SCIP_RETCODE SCIPremoveInefficaciousCuts(
    return SCIP_OKAY;
 }
 
-/** returns current factor on cut infeasibility to limit feasibility tolerance for relaxation solver
- *
- *  Gives value of separating/feastolfac parameter.
- *
- *  @return factor on cut infeasibility to limit feasibility tolerance for relaxation solver
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_Real SCIPgetRelaxFeastolFactor(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetRelaxFeastolFactor", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   return scip->set->sepa_feastolfac;
-}
-
 /*
  * LP diving methods
  */
@@ -46392,6 +46374,21 @@ SCIP_Real SCIPcutoffbounddelta(
    return SCIPsetCutoffbounddelta(scip->set);
 }
 
+/** return the relaxation primal feasibility tolerance
+ *
+ *  @see SCIPchgRelaxfeastol
+ *  @return relaxfeastol
+ */
+SCIP_Real SCIPrelaxfeastol(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetRelaxfeastol(scip->set);
+}
+
 /** sets the feasibility tolerance for constraints
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -46482,6 +46479,34 @@ SCIP_RETCODE SCIPchgBarrierconvtol(
    SCIP_CALL( SCIPsetSetBarrierconvtol(scip->set, barrierconvtol) );
 
    return SCIP_OKAY;
+}
+
+/** sets the primal feasibility tolerance of relaxations
+ *
+ * This tolerance value is used by the SCIP core and plugins to tighten then feasibility tolerance on relaxations
+ * (especially the LP relaxation) during a solve. It is set to SCIP_INVALID initially, which means that only the
+ * feasibility tolerance of the particular relaxation is taken into account. If set to a valid value, however,
+ * then this value should be used to reduce the primal feasibility tolerance of a relaxation (thus, use the
+ * minimum of relaxfeastol and the relaxations primal feastol).
+ *
+ * @pre The value of relaxfeastol is reset to SCIP_INVALID when initializing the solve (INITSOL).
+ * Therefore, this method can only be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_INITSOL
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ * @return previous value of relaxfeastol
+ */
+SCIP_Real SCIPchgRelaxfeastol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             relaxfeastol        /**< new primal feasibility tolerance of relaxations */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPchgRelaxfeastol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIPsetSetRelaxfeastol(scip->set, relaxfeastol);
 }
 
 /** marks that some limit parameter was changed */
