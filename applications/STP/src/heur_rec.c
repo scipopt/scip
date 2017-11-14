@@ -900,7 +900,7 @@ SCIP_RETCODE SCIPStpHeurRecInitPool(
    assert(nedges > 0);
    assert(maxsize > 0);
 
-   SCIP_CALL( SCIPallocMemory(scip, pool) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, pool) );
 
    dpool = *pool;
    SCIP_CALL( SCIPallocMemoryArray(scip, &(dpool->sols), maxsize) );
@@ -937,11 +937,11 @@ void SCIPStpHeurRecFreePool(
       assert(sol != NULL);
 
       SCIPfreeMemoryArray(scip, &(sol->soledges));
-      SCIPfreeMemory(scip, &sol);
+      SCIPfreeBlockMemory(scip, &sol);
    }
 
    SCIPfreeMemoryArray(scip, &(dpool->sols));
-   SCIPfreeMemory(scip, pool);
+   SCIPfreeBlockMemory(scip, pool);
 }
 
 
@@ -981,7 +981,7 @@ SCIP_RETCODE SCIPStpHeurRecAddToPool(
    {
       SCIPdebugMessage("Pool: alloc memory at position %d \n", poolsize);
 
-      SCIP_CALL( SCIPallocMemory(scip, &(poolsols[poolsize])) );
+      SCIP_CALL( SCIPallocBlockMemory(scip, &(poolsols[poolsize])) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &(poolsols[poolsize]->soledges), nedges) );
 
       poolsize++;

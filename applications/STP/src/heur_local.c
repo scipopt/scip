@@ -155,7 +155,7 @@ SCIP_RETCODE lca(
          /* if the ancestor of 'u' and 'v' is one of the two, the boundary-edge is already in boundpaths[u] */
          if( ancestor != u && ancestor != v)
          {
-            SCIP_CALL( SCIPallocMemory(scip, &curr) );
+            SCIP_CALL( SCIPallocBlockMemory(scip, &curr) );
             curr->index = oedge;
             curr->parent = lcalists[ancestor];
             lcalists[ancestor] = curr;
@@ -1588,7 +1588,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
             while( lvledges_curr != NULL )
             {
                lvledges_start[k] = lvledges_curr->parent;
-               SCIPfreeMemory(scip, &lvledges_curr);
+               SCIPfreeBlockMemory(scip, &lvledges_curr);
                lvledges_curr = lvledges_start[k];
             }
 
