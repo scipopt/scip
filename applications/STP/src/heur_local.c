@@ -51,9 +51,9 @@
 
 #define DEFAULT_DURINGROOT    TRUE
 #define DEFAULT_MAXFREQLOC    FALSE
-#define DEFAULT_MAXNBESTSOLS  5
-#define DEFAULT_NBESTSOLS     2
-#define DEFAULT_MINNBESTSOLS  2
+#define DEFAULT_MAXNBESTSOLS  10
+#define DEFAULT_NBESTSOLS     4
+#define DEFAULT_MINNBESTSOLS  4
 
 #define GREEDY_MAXRESTARTS  3  /**< Max number of restarts for greedy PC/MW heuristic if improving solution has been found. */
 #define GREEDY_EXTENSIONS_MW 25   /**< Number of extensions for greedy MW heuristic. MUST BE HIGHER THAN GREEDY_EXTENSIONS */
@@ -83,9 +83,9 @@ struct SCIP_HeurData
 /** recursive methode for a DFS ordering of graph 'g' */
 static
 void dfsorder(
-   const                 GRAPH* graph,
+   const GRAPH*          graph,
    int*                  edges,
-   int*                  node,
+   const int*            node,
    int*                  counter,
    int*                  dfst
    )
@@ -214,34 +214,26 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
    NODE* nodes;
    PATH* vnoi;
    int* vbase;
-   int* graphmark;
+   int* const graphmark = graph->mark;
    int e;
    int i;
    int k;
-   int root;
-   int nnodes;
-   int nedges;
-   int probtype;
+   const int root = graph->source;
+   const int nnodes = graph->knots;
+   const int nedges = graph->edges;
+   const int probtype = graph->stp_type;
    int newnverts;
    STP_Bool* steinertree;
-   STP_Bool pc;
-   STP_Bool mw;
-   STP_Bool mwpc;
+   const STP_Bool pc = ((probtype == STP_PCSPG) || (probtype == STP_RPCSPG));
+   const STP_Bool mw = (probtype == STP_MWCSP);
+   const STP_Bool mwpc =  (pc || mw);
 
    assert(graph != NULL);
    assert(cost != NULL);
    assert(best_result != NULL);
    assert(graph_valid(graph));
 
-   probtype = graph->stp_type;
-   pc = ((probtype == STP_PCSPG) || (probtype == STP_RPCSPG));
-   mw = (probtype == STP_MWCSP);
-   mwpc = (pc || mw);
-   root = graph->source;
-   nnodes = graph->knots;
-   nedges = graph->edges;
    newnverts = 0;
-   graphmark = graph->mark;
 
    /* for PC variants test whether solution is trivial */
    if( mwpc )
@@ -392,7 +384,6 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
                   assert(stdeg != NULL);
 
                   minweight = SCIPlinkcuttreeFindMinChain(scip, graph->prize, graph->head, stdeg, firstnode, &chainfirst, &chainlast);
-
 
                   if( SCIPisLT(scip, minweight, graph->prize[i]) )
                   {
@@ -600,7 +591,9 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
       printf(" ObjBEFKEYVertexELimination=%.12e\n", obj);
 #endif
       for( k = 0; k < nnodes; k++ )
-         graphmark[k] = TRUE;
+         graphmark[k] = (graph->grad[k] > 0);
+
+      graphmark[root] = TRUE;
 
       /* allocate memory */
 
@@ -646,8 +639,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
          /* initialize data structures  */
          for( k = 0; k < nnodes; k++ )
          {
-            assert(graphmark[k]);
-            assert(state[k] == CONNECT);
+            assert(state[k] == CONNECT || !graphmark[k]);
 
             pinned[k] = FALSE;
             scanned[k] = FALSE;
@@ -659,8 +651,11 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
 
             lvledges_start[k] = NULL;
 
+            if( !graphmark[k] )
+               continue;
+
             /* link all nodes to their (respective) voronoi base */
-            SCIP_CALL( SCIPallocMemory(scip, &blists_curr) );
+            SCIP_CALL( SCIPallocBlockMemory(scip, &blists_curr) );
             blists_curr->index = k;
             blists_curr->parent = blists_start[vbase[k]];
             blists_start[vbase[k]] = blists_curr;
@@ -687,7 +682,6 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
                      }
                   }
                }
-
             }
             if( probtype != STP_RPCSPG )
                graphmark[root] = FALSE;
@@ -742,7 +736,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
             if( !pinned[crucnode] && !Is_term(graph->term[crucnode]) && nodeIsCrucial(graph, best_result, crucnode) )
             {
                for( k = 0; k < nnodes; k++ )
-                  assert(state[k] == CONNECT);
+                  assert(state[k] == CONNECT || !graphmark[k]);
 
                /* find all (unique) key-paths starting in node 'crucnode' */
                k = UNKNOWN;
@@ -1319,7 +1313,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
                nkpnodes = 0;
 
                for( k = 0; k < nnodes; k++ )
-                  assert( state[k] == CONNECT);
+                  assert(state[k] == CONNECT || !graphmark[k]);
 
                /* find the (unique) key-path containing the parent of the current crucial node 'crucnode' */
                kptailnode = graph->head[nodes[crucnode].edge];
@@ -1584,7 +1578,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
          SCIPfreeBufferArray(scip, &kpnodes);
          SCIPfreeBufferArray(scip, &supernodes);
 
-         for( k = nnodes -1; k >= 0 ; k-- )
+         for( k = nnodes - 1; k >= 0; k-- )
          {
             if( boundpaths[k] != NULL )
                SCIPpairheapFree(scip, &boundpaths[k]);
@@ -1601,7 +1595,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
             while( blists_curr != NULL )
             {
                blists_start[k] = blists_curr->parent;
-               SCIPfreeMemory(scip, &blists_curr);
+               SCIPfreeBlockMemory(scip, &blists_curr);
                blists_curr = blists_start[k];
             }
          }
@@ -1612,9 +1606,11 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
             for( i = 0; i < nnodes; i++ )
             {
                steinertree[i] = FALSE;
-               graphmark[i] = TRUE;
+               graphmark[i] = (graph->grad[i] > 0);
                SCIPlinkcuttreeInit(&nodes[i]);
             }
+
+            graphmark[root] = TRUE;
 
             /* create a link-cut tree representing the current Steiner tree */
             for( e = 0; e < nedges; e++ )

@@ -537,7 +537,7 @@ SCIP_RETCODE SCIPpairheapInsert(
    if( (*root) == NULL )
    {
       (*size) = 1;
-      SCIP_CALL( SCIPallocBuffer(scip, root) );
+      SCIP_CALL( SCIPallocBlockMemory(scip, root) );
       (*root)->key = key;
       (*root)->element = element;
       (*root)->child = NULL;
@@ -548,7 +548,7 @@ SCIP_RETCODE SCIPpairheapInsert(
    {
       PHNODE* node;
       (*size)++;
-      SCIP_CALL( SCIPallocBuffer(scip, &node) );
+      SCIP_CALL( SCIPallocBlockMemory(scip, &node) );
       node->key = key;
       node->element = element;
       node->child = NULL;
@@ -589,7 +589,7 @@ SCIP_RETCODE SCIPpairheapDeletemin(
          SCIP_CALL( pairheapCombineSiblings(scip, &newroot, (*size)--) );
       }
 
-      SCIPfreeBuffer(scip, root);
+      SCIPfreeBlockMemory(scip, root);
       (*root) = newroot;
    }
    return SCIP_OKAY;
@@ -643,7 +643,7 @@ void SCIPpairheapFree(
       SCIPpairheapFree(scip, &((*root)->child));
    }
 
-   SCIPfreeBuffer(scip, root);
+   SCIPfreeBlockMemory(scip, root);
    (*root) = NULL;
 
 }

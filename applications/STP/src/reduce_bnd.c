@@ -43,7 +43,7 @@
 #include "heur_slackprune.h"
 
 #define DEFAULT_HEURRUNS 100                  /**< number of runs of constructive heuristic */
-#define DEFAULT_DARUNS     6                  /**< number of runs for dual ascent heuristic */
+#define DEFAULT_DARUNS     10                  /**< number of runs for dual ascent heuristic */
 #define DEFAULT_NMAXROOTS  5                 /**< max number of roots to use for new graph in dual ascent heuristic */
 #define PERTUBATION_RATIO   0.05              /**< pertubation ratio for dual-ascent primal bound computation */
 #define PERTUBATION_RATIO_PC   0.005          /**< pertubation ratio for dual-ascent primal bound computation */
@@ -616,9 +616,11 @@ SCIP_RETCODE reduce_da(
    int                   prevrounds,         /**< number of reduction rounds that have been performed already */
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
    SCIP_Bool             nodereplacing,      /**< should node replacement (by edges) be performed? */
-   int*                  edgestate           /**< array to store status of (directed) edge (for propagation, can otherwise be set to NULL) */
-   )
+   int*                  edgestate,          /**< array to store status of (directed) edge (for propagation, can otherwise be set to NULL) */
+   SCIP_Bool             userec              /**< use recombination heuristic? */
+)
 {
+   STPSOLPOOL* pool;
    SCIP_Real ecost[4];
    IDX* ancestors[4];
    IDX* revancestors[4];
@@ -630,12 +632,12 @@ SCIP_RETCODE reduce_da(
    SCIP_Real lpobjval;
    SCIP_Real upperbound;
    SCIP_Real minpathcost;
-   SCIP_Bool rpc;
    SCIP_Bool success;
-   SCIP_Bool directed;
    SCIP_Real hopfactor;
    SCIP_Bool apsol;
-   int* grad;
+   const SCIP_Bool rpc = (graph->stp_type == STP_RPCSPG);
+   const SCIP_Bool directed = (graph->stp_type == STP_SAP || graph->stp_type == STP_NWSPG);
+   int* const grad = graph->grad;
    int* terms;
    int* result;
    int* starts;
@@ -652,7 +654,6 @@ SCIP_RETCODE reduce_da(
    int nnodes;
    int nfixed;
    int best_start;
-
    STP_Bool* marked;
    SCIP_Bool externsol;
    SCIP_Bool deletable;
@@ -664,9 +665,6 @@ SCIP_RETCODE reduce_da(
    assert(nelims != NULL);
    assert(nodearrint != NULL);
 
-   rpc = (graph->stp_type == STP_RPCSPG);
-   directed = (graph->stp_type == STP_SAP || graph->stp_type == STP_NWSPG);
-   grad = graph->grad;
    checkstate = (edgestate != NULL);
    deletable = TRUE;
 
@@ -710,6 +708,11 @@ SCIP_RETCODE reduce_da(
    /*
     * 1. step: compute upper bound
     */
+   if( userec )
+      SCIP_CALL( SCIPStpHeurRecInitPool(scip, &pool, nedges, SOLPOOL_SIZE) );
+   else
+      pool = NULL;
+
 
    /* initialize */
    k = 0;
@@ -864,38 +867,56 @@ SCIP_RETCODE reduce_da(
       }
    }
 
-   for( int run = 0; run < nruns; run++ )
+   maxcost = -1;
+   for( int run = 0, bestroot = -1; run <= nruns; run++ )
    {
+      SCIP_Bool usesol = (run > 1);
+
       /* graph vanished? */
       if( grad[graph->source] == 0 )
          break;
 
-      if( !rpc && !directed )
+      if( run == nruns )
+      {
+         if( rpc || directed || bestroot == -1 )
+            break;
+//todo does not really work
+         root = bestroot;
+         usesol = FALSE;
+      }
+      else if( !rpc && !directed )
       {
          assert(terms != NULL);
          root = terms[nterms - run - 1];
+         usesol = usesol && (SCIPrandomGetInt(randnumgen, 0, 2) < 2) && graph->stp_type != STP_RSMT;
       }
 
       if( externsol && (run == 0) && graph->stp_type != STP_RSMT )
       {
          SCIP_CALL( SCIPStpDualAscent(scip, graph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, result, edgearrint, state, root, 1, nodearrchar) );
       }
-      else if( run > 0 && graph->stp_type != STP_RSMT )
+      else if( usesol )
       {
-         const int realroot = graph->source;
-
          // solution might not be valid anymore due to pseudo-node elimination
          if( !graph_sol_valid(scip, graph, result) )
-            SCIP_CALL( SCIPStpHeurTMRun(scip, NULL, graph, NULL, &best_start, result, runs, root, graph->cost, graph->cost, &hopfactor, NULL, maxcost, &success, FALSE) );
+         {
+            SCIP_CALL( SCIPStpDualAscent(scip, graph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, NULL, edgearrint, state, root, 1, nodearrchar) );
+         }
+         else
+         {
+            SCIP_CALL( graph_sol_reroot(scip, graph, result, root) );
 
-         SCIP_CALL( graph_sol_reroot(scip, graph, result, root) );
+#ifndef NDEBUG
+            {
+            const int realroot = graph->source;
+            graph->source = root;
+            assert(graph_sol_valid(scip, graph, result));
+            graph->source = realroot;
+            }
+#endif
 
-         graph->source = root;
-         assert(graph_sol_valid(scip, graph, result));
-         graph->source = realroot;
-
-         SCIP_CALL( SCIPStpDualAscent(scip, graph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, result, edgearrint, state, root, 1, nodearrchar) );
-
+            SCIP_CALL( SCIPStpDualAscent(scip, graph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, result, edgearrint, state, root, 1, nodearrchar) );
+         }
       }
       else
       {
@@ -915,8 +936,65 @@ SCIP_RETCODE reduce_da(
          /* calculate objective value of solution */
          ubnew = graph_sol_getObj(graph->cost, result, 0.0, nedges);
 
+         if( userec )
+         {
+            SCIP_Bool soladded;
+
+            if( ubnew < upperbound || maxcost > lpobjval )
+            {
+               printf("obj before local %f \n", ubnew);
+
+               SCIPStpHeurLocalRun(scip, graph, graph->cost, result);
+               ubnew = graph_sol_getObj(graph->cost, result, 0.0, nedges);
+
+               printf("obj after local %f \n", ubnew);
+            }
+
+            SCIP_CALL( SCIPStpHeurRecAddToPool(scip, ubnew, result, pool, &soladded) );
+         }
+
          if( success )
          {
+            if( userec && pool->size >= 2 && (ubnew < upperbound || maxcost > lpobjval) )
+            {
+               /* get index of just added solution */
+               int solindex = pool->maxindex;
+               SCIP_Bool solfound;
+
+               printf("POOLSIZE %d \n", pool->size);
+
+               SCIP_CALL(SCIPStpHeurRecRun(scip, pool, NULL, NULL, graph, NULL, &solindex, 1, pool->size, FALSE, &solfound));
+
+               if( solfound )
+               {
+                  const STPSOL* const sol = SCIPStpHeurRecSolfromIdx(pool, solindex);
+
+                  assert(sol != NULL);
+
+                  printf("DA: rec found better solution with obj %f vs %f \n", sol->obj, ubnew);
+
+                  if( sol->obj < ubnew )
+                  {
+                     ubnew = sol->obj;
+                     BMScopyMemoryArray(result, sol->soledges, nedges);
+#if 0
+                     printf("obj before local2 %f \n", ubnew);
+
+                     SCIPStpHeurLocalRun(scip, graph, graph->cost, result);
+                     ubnew = graph_sol_getObj(graph->cost, result, 0.0, nedges);
+
+                     printf("obj after local2 %f \n", ubnew);
+
+                     ubnew = graph_sol_getObj(graph->cost, result, 0.0, nedges);
+
+                     if( ubnew < sol->obj)
+                     SCIP_CALL( SCIPStpHeurRecAddToPool(scip, ubnew, result, pool, &solfound) );
+#endif
+
+                  }
+               }
+            }
+
             if( SCIPisLE(scip, ubnew, upperbound) )
             {
                apsol = TRUE;
@@ -938,8 +1016,17 @@ SCIP_RETCODE reduce_da(
          }
       }
 
+      if( maxcost < lpobjval && !usesol )
+      {
+         maxcost = lpobjval;
+         bestroot = root;
+      }
+
       /* the required reduced path cost to be surpassed */
       minpathcost = upperbound - lpobjval;
+
+      if( userec )
+      printf("run %d:    %f %f\n", run, upperbound, lpobjval);
 
       if( SCIPisLE(scip, minpathcost, 0.0) )
          minpathcost = 0.0;
@@ -1179,7 +1266,7 @@ SCIP_RETCODE reduce_da(
             if( rpc && k == root )
                continue;
 
-            int todo; //for degree 4 as well!!!
+            int todo; //for degree 4 ... 6  as well!!!
             if( graph->grad[k] == 3 )
             {
                SCIP_Real d = FARAWAY;
@@ -1259,6 +1346,9 @@ SCIP_RETCODE reduce_da(
 
    if( SCIPisLT(scip, upperbound, *ub) || SCIPisLT(scip, *ub, 0.0) )
       *ub = upperbound;
+
+   if( userec )
+      SCIPStpHeurRecFreePool(scip, &pool);
 
    /* free memory */
    for( k = 0; k < 4; k++ )
@@ -1920,15 +2010,17 @@ SCIP_RETCODE reduce_daPcMw(
 
    assert(apsol && upperbound < FARAWAY);
 
-   if( upperbound >= FARAWAY || !apsol )
-   {
-      int todo = 0;
-
-      printf("FAILQ %d \n", 2);
-      exit(1);
-   }
-
    lpobjval += offset;
+
+   if( graph->stp_type == STP_PCSPG && pool != NULL )
+   {
+      printf("obj before local %f \n", upperbound);
+
+      SCIPStpHeurLocalRun(scip, graph, graph->cost, result);
+      upperbound = graph_sol_getObj(graph->cost, result, 0.0, nedges);
+
+      printf("obj after local %f \n", upperbound);
+   }
 
    /* the required reduced path cost to be surpassed */
    minpathcost = upperbound - lpobjval;
@@ -2033,8 +2125,6 @@ SCIP_RETCODE reduce_daPcMw(
    /* change or mark roots? */
    if( varyroot || markroots )
    {
-      int CLEANUP;
-
       if( varyroot )
          SCIP_CALL( SCIPallocBufferArray(scip, &roots, graph->terms) );
       else
