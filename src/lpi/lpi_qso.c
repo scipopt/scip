@@ -1495,11 +1495,10 @@ SCIP_RETCODE SCIPlpiGetCols(
    /* store in the user-provided data */
    if( nnonz )
    {
-      assert( beg != NULL && lbeg != NULL );
-      assert( ind != NULL && lind != NULL );
-      assert( val != NULL && lval != NULL );
-      assert( lcnt != NULL );
-      if( lbeg == NULL || lind == NULL || lval == NULL || lcnt == NULL ) /*lint !e774 !e845*/
+      assert( beg != NULL );
+      assert( ind != NULL );
+      assert( val != NULL );
+      if( lbeg == NULL || lind == NULL || lval == NULL || lcnt == NULL )
       {
          SCIPerrorMessage("QSget_columns_list() failed to allocate memory.\n");
          return SCIP_LPERROR;
@@ -1516,10 +1515,8 @@ SCIP_RETCODE SCIPlpiGetCols(
    }
    if( lb )
    {
-      assert( llb != NULL );
-      assert( lub != NULL );
       assert( ub != NULL );
-      if( llb == NULL || lub == NULL ) /*lint !e774 !e845*/
+      if( llb == NULL || lub == NULL )
       {
          SCIPerrorMessage("QSget_columns_list() failed to allocate memory.\n");
          return SCIP_LPERROR;
@@ -1597,11 +1594,10 @@ SCIP_RETCODE SCIPlpiGetRows(
    /* store in the user-provided data */
    if( nnonz )
    {
-      assert( beg != NULL && lbeg != NULL );
-      assert( ind != NULL && lind != NULL );
-      assert( val != NULL && lval != NULL );
-      assert( lcnt != NULL );
-      if( lbeg == NULL || lind == NULL || lval == NULL || lcnt == NULL )  /*lint !e774 !e845*/
+      assert( beg != NULL );
+      assert( ind != NULL );
+      assert( val != NULL );
+      if( lbeg == NULL || lind == NULL || lval == NULL || lcnt == NULL )
       {
          SCIPerrorMessage("QSget_ranged_rows_list() failed to allocate memory.\n");
          return SCIP_LPERROR;
@@ -1618,10 +1614,8 @@ SCIP_RETCODE SCIPlpiGetRows(
    }
    if( rhs )
    {
-      assert( lhs != NULL && lrhs != NULL );
-      assert( lrng != NULL );
-      assert( lsense != NULL );
-      if( lrhs == NULL || lrng == NULL || lsense == NULL ) /*lint !e774 !e845*/
+      assert( lhs != NULL );
+      if( lrhs == NULL || lrng == NULL || lsense == NULL )
       {
          SCIPerrorMessage("QSget_ranged_rows_list() failed to allocate memory.\n");
          return SCIP_LPERROR;
