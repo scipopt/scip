@@ -299,6 +299,46 @@ Test(propagate, log)
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
+Test(propagate, sin)
+{
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSEXPR_EXPR* originalexpr;
+   SCIP_CONS* cons;
+   SCIP_Bool infeasible;
+   SCIP_Bool redundant;
+   int ntightenings;
+
+   /* change bounds of vars */
+   SCIP_CALL( SCIPchgVarLb(scip, x, -1.0) ); SCIP_CALL( SCIPchgVarUb(scip, x, 1.5) );
+
+   /* create cons -1 <= sin(x) <= 0.5 */
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "sin(<t_x>[C])", NULL, &originalexpr) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, originalexpr, &expr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &originalexpr) );
+   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -1.0, 0.5) );
+
+   /* forward prop only propagates active constraints and active constraint live in the transformed problem */
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   cr_assert(SCIPconsIsActive(cons));
+
+   SCIP_CALL( forwardPropCons(scip, cons, FALSE, TRUE, &infeasible, &redundant, &ntightenings) );
+   cr_assert_not(infeasible);
+   cr_assert_not(redundant);
+
+   SCIP_CALL( reversePropConss(scip, &cons, 1, TRUE, &infeasible, &ntightenings) );
+   cr_assert_not(infeasible);
+
+   /* get expression and test stuff */
+   cr_expect(SCIPisEQ(scip, expr->interval.inf, SIN(-1)));
+   cr_expect(SCIPisEQ(scip, expr->interval.sup, 0.5));
+   cr_expect(SCIPisFeasEQ(scip, expr->children[0]->interval.inf, -1.0));
+   cr_expect(SCIPisEQ(scip, expr->children[0]->interval.sup, ASIN(0.5)));
+
+   /* release conss */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+}
+
 Test(propagate, entropy)
 {
    SCIP_CONSEXPR_EXPR* expr;
@@ -339,7 +379,6 @@ Test(propagate, entropy)
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
-
 
 Test(propagate, complicated_expression)
 {

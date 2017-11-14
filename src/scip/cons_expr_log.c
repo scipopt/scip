@@ -28,8 +28,10 @@
 #include "scip/cons_expr_value.h"
 #include "scip/cons_expr_log.h"
 
-#define LOG_PRECEDENCE  80000
-#define LOG_HASHKEY     SCIPcalcFibHash(16273.0)
+#define EXPRHDLR_NAME         "log"
+#define EXPRHDLR_DESC         "logarithmic expression"
+#define EXPRHDLR_PRECEDENCE  80000
+#define EXPRHDLR_HASHKEY     SCIPcalcFibHash(16273.0)
 
 /*
  * Data structures
@@ -261,7 +263,7 @@ SCIP_RETCODE separatePointLog(
    assert(strcmp(SCIPconshdlrGetName(conshdlr), "expr") == 0);
    assert(expr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
-   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "log") == 0);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
    assert(cut != NULL);
 
    /* get expression data */
@@ -398,7 +400,7 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashLog)
    assert(expr2key != NULL);
    assert(hashkey != NULL);
 
-   *hashkey = LOG_HASHKEY;
+   *hashkey = EXPRHDLR_HASHKEY;
 
    assert(SCIPhashmapExists(expr2key, (void*)SCIPgetConsExprExprChildren(expr)[0]));
    childhash = (unsigned int)(size_t)SCIPhashmapGetImage(expr2key, SCIPgetConsExprExprChildren(expr)[0]);
@@ -416,8 +418,8 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrLog(
 {
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
 
-   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "log", "logarithmic expression",
-         LOG_PRECEDENCE, evalLog, NULL) );
+   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC,
+         EXPRHDLR_PRECEDENCE, evalLog, NULL) );
    assert(exprhdlr != NULL);
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrLog, NULL) );
@@ -444,9 +446,9 @@ SCIP_RETCODE SCIPcreateConsExprExprLog(
 {
    assert(expr != NULL);
    assert(child != NULL);
-   assert(SCIPfindConsExprExprHdlr(consexprhdlr, "log") != NULL);
+   assert(SCIPfindConsExprExprHdlr(consexprhdlr, EXPRHDLR_NAME) != NULL);
 
-   SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, SCIPfindConsExprExprHdlr(consexprhdlr, "log"), NULL, 1, &child) );
+   SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, SCIPfindConsExprExprHdlr(consexprhdlr, EXPRHDLR_NAME), NULL, 1, &child) );
 
    return SCIP_OKAY;
 }

@@ -69,8 +69,8 @@ Test(separation, absolute, .init = setup, .fini = teardown,
    /* check right tangent */
    cr_assert(rowpos != NULL);
    cr_assert_eq(SCIProwGetNNonz(rowpos), 2);
-   cr_assert_eq(SCIProwGetLhs(rowpos), 0.0);
-   cr_assert_eq(SCIProwGetRhs(rowpos), SCIPinfinity(scip));
+   cr_assert_eq(SCIProwGetLhs(rowpos), -SCIPinfinity(scip));
+   cr_assert_eq(SCIProwGetRhs(rowpos), 0.0);
 
    for( i = 0; i < SCIProwGetNNonz(rowpos); ++i )
    {
