@@ -4040,7 +4040,7 @@ SCIP_RETCODE selectVarRecursive(
 #ifdef SCIP_STATISTIC
             statistics->nsinglecutoffs[probingdepth]++;
 #endif
-	      }
+         }
          else
          {
             LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Neither branch is cutoff and no limit reached.\n");
@@ -5030,11 +5030,11 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
    SCIP_CALL( SCIPaddRealParam(scip,
          "branching/lookahead/minweight",
          "if scoringfunction is 'p', this value is used to weight the min of the gains of two child problems",
-         &branchruledata->config->minweight, TRUE, DEFAULT_MIN_WEIGHT, 0, SCIP_REAL_MAX, NULL, NULL) );
+         &branchruledata->config->minweight, TRUE, DEFAULT_MIN_WEIGHT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
         "branching/lookahead/maxweight",
         "if scoringfunction is 'p', this value is used to weight the max of the gains of two child problems",
-         &branchruledata->config->maxweight, TRUE, DEFAULT_MAX_WEIGHT, 0, SCIP_REAL_MAX, NULL, NULL) );
+         &branchruledata->config->maxweight, TRUE, DEFAULT_MAX_WEIGHT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
