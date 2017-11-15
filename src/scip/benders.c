@@ -51,6 +51,7 @@
 //#define SCIP_DEFAULT_CUTSASCONS          FALSE  /** Should the transferred cuts be added as constraints? */
 #define SCIP_DEFAULT_MIPCHECKFREQ            5  /** the number of iterations that the MIP is checked, -1 for always. */
 #define SCIP_DEFAULT_LNSCHECK              TRUE /** should the Benders' decomposition be used in LNS heuristics */
+#define SCIP_DEFAULT_SUBPROBFRAC            1.0 /** the fraction of subproblems that are solved in each iteration */
 
 #define AUXILIARYVAR_NAME     "##bendersauxiliaryvar"
 #define MW_AUXILIARYVAR_NAME  "##MWauxiliaryvar##"
@@ -979,6 +980,8 @@ SCIP_RETCODE SCIPbendersCreate(
    (*benders)->addedsubprobs = 0;
    (*benders)->nlpsubprobs = 0;
    (*benders)->subprobscreated = FALSE;
+   (*benders)->firstchecked = 0;
+   (*benders)->lastchecked = 0;
 
    (*benders)->benderscuts = NULL;
    (*benders)->nbenderscuts = 0;
@@ -1043,6 +1046,11 @@ SCIP_RETCODE SCIPbendersCreate(
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "Should Benders' decomposition be used in LNS heurisics?");
    SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname, paramdesc,
                   &(*benders)->lnscheck, FALSE, SCIP_DEFAULT_LNSCHECK, NULL, NULL) ); /*lint !e740*/
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/subprobfrac", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "The fraction of subproblems that are solved in each iteration.");
+   SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem, paramname, paramdesc,
+                  &(*benders)->subprobfrac, FALSE, SCIP_DEFAULT_SUBPROBFRAC, 0.0, 1.0, NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -1809,9 +1817,13 @@ SCIP_RETCODE SCIPbendersExec(
 {
    SCIP_BENDERSCUT** benderscuts;
    int nsubproblems;
+   int subproblemcount;
+   int subprobssolved;
    int nbenderscuts;
    int nsolveloops;     /* the number of times the subproblems are solved. An additional loop is required when the subproblem in integer */
    int ncutloops;
+   int numnotopt;
+   int numtocheck;
    int i;
    int j;
    int k;
@@ -1879,6 +1891,11 @@ SCIP_RETCODE SCIPbendersExec(
    benders->coreptupdated = FALSE;
 
    nsubproblems = SCIPbendersGetNSubproblems(benders);
+   if( benders->ncalls == 0 || type == CHECK )
+      numtocheck = nsubproblems;
+   else
+      numtocheck = SCIPsetCeil(set, nsubproblems*benders->subprobfrac);
+   benders->firstchecked = benders->lastchecked;
 
    /* allocating memory for the infeasible subproblem array */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &subisinfeas, nsubproblems) );
@@ -1889,7 +1906,7 @@ SCIP_RETCODE SCIPbendersExec(
    /* sets the stored objective function values of the subproblems to infinity */
    resetSubproblemObjectiveValue(benders);
 
-   SCIPdebugMessage("Performing the subproblem solving process.\n");
+   SCIPdebugMessage("Performing the subproblem solving process. Number of subproblems to check %d\n", numtocheck);
 
    SCIP_CALL( benders->bendersexec(set->scip, benders) );
 
@@ -1908,15 +1925,23 @@ SCIP_RETCODE SCIPbendersExec(
 
    for( l = 0; l < nsolveloops; l++ )
    {
+      numnotopt = 0;
+      subproblemcount = 0;
+      subprobssolved = 0;
+
       if( type == CHECK && sol == NULL )
       {
+         /* This if statement doesn't make sense to me. Need to determine what happens in the cut generation stage if
+          * this is true */
          (*infeasible) = TRUE;
       }
       else
       {
          /* solving each of the subproblems for Benders decomposition */
          /* TODO: ensure that the each of the subproblems solve and update the parameters with the correct return values */
-         for( i = 0; i < nsubproblems; i++ )
+         i = benders->firstchecked;
+         //for( i = 0; i < nsubproblems; i++ )
+         while( subproblemcount < nsubproblems && numnotopt < numtocheck )
          {
             SCIP_Bool subinfeas = FALSE;
             SCIP_Bool lpsub = SCIPbendersSubprobIsLP(benders, i);
@@ -1950,17 +1975,17 @@ SCIP_RETCODE SCIPbendersExec(
                 * objective function value of the subproblem. */
                if( !subinfeas )
                {
-                  SCIP_Bool suboptimal;
+                  SCIP_Bool subproboptimal;
 
-                  SCIP_CALL( SCIPbendersCheckAuxiliaryVar(benders, set, sol, i, &suboptimal) );
+                  SCIP_CALL( SCIPbendersCheckAuxiliaryVar(benders, set, sol, i, &subproboptimal) );
 
                   if( lpsub || benders->benderssolvesub != NULL || l > 0 || onlylpcheck )
-                     optimal = optimal && suboptimal;
+                     optimal = optimal && subproboptimal;
 
 #ifdef SCIP_DEBUG
                   if( lpsub || l > 0 )
                   {
-                     if( suboptimal )
+                     if( subproboptimal )
                         SCIPdebugMessage("Subproblem %d is Optimal (%f >= %f)\n", i,
                            SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i), SCIPbendersGetSubprobObjval(benders, i));
                      else
@@ -1973,10 +1998,30 @@ SCIP_RETCODE SCIPbendersExec(
                    * solving loop. Hence, the LP are solved once and the MIPs are solved twice */
                   if( lpsub || (l > 0 && !lpsub) || onlylpcheck )
                      nchecked++;
+
+
+                  if( !subproboptimal )
+                  {
+                     numnotopt++;
+                     assert(numnotopt <= nsubproblems);
+                  }
+               }
+               else
+               {
+                  numnotopt++;
+                  assert(numnotopt <= nsubproblems);
                }
             }
+
+            subproblemcount++;
+            i++;
+            if( i >= nsubproblems )
+               i = 0;
+            benders->lastchecked = i;
          }
       }
+
+      subprobssolved = subproblemcount;
 
 
       /* Preparing the data for the Magnanti-Wong technique */
@@ -2000,7 +2045,10 @@ SCIP_RETCODE SCIPbendersExec(
          int addedcuts = 0;
 
          /* This is done in two loops. The first is by subproblem and the second is by cut type. */
-         for( i = 0; i < nsubproblems; i++ )
+         //for( i = 0; i < nsubproblems; i++ )
+         i = benders->firstchecked;
+         subproblemcount = 0;
+         while( subproblemcount < subprobssolved )
          {
             SCIP_Bool lpsub = SCIPbendersSubprobIsLP(benders, i);
 
@@ -2036,6 +2084,11 @@ SCIP_RETCODE SCIPbendersExec(
                   addedcuts += (SCIPbenderscutGetNAddedCons(benderscuts[k]) + SCIPbenderscutGetNAddedCuts(benderscuts[k]) - prevaddedcuts);
                }
             }
+
+            subproblemcount++;
+            i++;
+            if( i >= nsubproblems )
+               i = 0;
          }
 
          /* if no cuts were added, then the number of solve loops is increased */
@@ -2085,12 +2138,20 @@ SCIP_RETCODE SCIPbendersExec(
       SCIP_CALL( benders->benderspostsolve(set->scip, benders, (*infeasible)) );
 
    /* freeing the subproblems after the cuts are generated */
-   for( i = 0; i < benders->nsubproblems; i++ )
+   i = benders->firstchecked;
+   subproblemcount = 0;
+   while( subproblemcount < subprobssolved )
+      //for( i = 0; i < benders->nsubproblems; i++ )
    {
       /* cleaning up after performing Magnanti-Wong */
       SCIP_CALL( cleanupMagnantiWong(benders, set, i) );
 
       SCIP_CALL( SCIPbendersFreeSubproblem(benders, set, i) );
+
+      subproblemcount++;
+      i++;
+      if( i >= nsubproblems )
+         i = 0;
    }
 
    /* increment the number of calls to the Benders' decomposition subproblem solve */
@@ -2577,6 +2638,7 @@ SCIP_RETCODE SCIPbendersCheckAuxiliaryVar(
 {
    SCIP_Real auxiliaryvarval;
    SCIP_Real soltol;
+   SCIP_Real reldiff;
 
    assert(benders != NULL);
    assert(set != NULL);
@@ -2594,7 +2656,15 @@ SCIP_RETCODE SCIPbendersCheckAuxiliaryVar(
    /* if the value of the auxiliary variable in the master problem is greater or equal to the subproblem objective,
     * then a cut is not added by the subproblem.
     */
-   if( SCIPsetIsFeasGE(set, auxiliaryvarval + soltol, SCIPbendersGetSubprobObjval(benders, probnumber)) )
+   if( SCIPsetIsGT(set, auxiliaryvarval, -SCIPsetInfinity(set))
+      && SCIPsetIsLT(set, SCIPbendersGetSubprobObjval(benders, probnumber), SCIPsetInfinity(set)) )
+      reldiff = ABS(auxiliaryvarval - SCIPbendersGetSubprobObjval(benders, probnumber))/
+         MAX(ABS(auxiliaryvarval), ABS(SCIPbendersGetSubprobObjval(benders, probnumber)));
+   else
+      reldiff = SCIPsetInfinity(set);
+
+   //if( SCIPsetIsFeasGE(set, auxiliaryvarval + soltol, SCIPbendersGetSubprobObjval(benders, probnumber)) )
+   if( SCIPsetIsFeasGE(set, auxiliaryvarval, SCIPbendersGetSubprobObjval(benders, probnumber)) || reldiff <= soltol )
       (*optimal) = TRUE;
 
    return SCIP_OKAY;

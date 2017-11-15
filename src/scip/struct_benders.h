@@ -74,6 +74,7 @@ struct SCIP_Benders
    SCIP_Bool             lnscheck;           /**< Should Benders' decomposition be used in LNS heuristics? */
    SCIP_Bool             cutsascons;         /**< Should the transferred cuts be added as constraints? */
    int                   mipcheckfreq;       /**< the frequency that the MIP subproblem is checked for feasibility, -1 for always.*/
+   SCIP_Real             subprobfrac;        /**< the fraction of subproblems that are solved in each iteration */
 
    /* information for heuristics */
    SCIP*                 sourcescip;         /**< the source scip from when the Benders' was copied */
@@ -102,6 +103,8 @@ struct SCIP_Benders
                                                   This flag is used when retransforming the problem.*/
    SCIP_Bool*            mastervarscont;     /**< flag to indicate that the master problem variable have been converted
                                                to continuous variables. */
+   int                   firstchecked;       /**< the subproblem index first checked in the current iteration */
+   int                   lastchecked;        /**< the subproblem index last checked in the current iteration */
 
    /* Bender's cut information */
    SCIP_BENDERSCUT**     benderscuts;        /**< the available Benders' cut algorithms */
