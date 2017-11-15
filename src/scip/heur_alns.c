@@ -1460,6 +1460,10 @@ SCIP_RETCODE alnsFixMoreVariables(
       if( isfixed[b] )
          continue;
 
+      /* filter variables with a solution value outside its global bounds */
+      if( solvals[b] < SCIPvarGetLbGlobal(var) - 0.5 || solvals[b] > SCIPvarGetUbGlobal(var) + 0.5 )
+         continue;
+
       redcostscores[nunfixedvars] = getVariableRedcostScore(scip, var, solvals[b], heurdata->uselocalredcost);
       pscostscores[nunfixedvars] = getVariablePscostScore(scip, var, solvals[b]);
 
@@ -1484,9 +1488,12 @@ SCIP_RETCODE alnsFixMoreVariables(
    varprio.distances = distances;
    varprio.redcostscores = redcostscores;
    varprio.pscostscores = pscostscores;
-   assert(nvarstoadd <= nunfixedvars);
 
-   SCIPselectInd(perm, sortIndCompAlns, &varprio, nvarstoadd, nunfixedvars);
+   nvarstoadd = MIN(nunfixedvars, nvarstoadd);
+
+   /* select the first nvarstoadd many variables according to the score */
+   if( nvarstoadd < nunfixedvars )
+      SCIPselectInd(perm, sortIndCompAlns, &varprio, nvarstoadd, nunfixedvars);
 
    /* loop over the first elements of the selection defined in permutation. They represent the best variables */
    for( b = 0; b < nvarstoadd; ++b )
