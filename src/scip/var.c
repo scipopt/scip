@@ -7185,7 +7185,7 @@ SCIP_RETCODE varEventLbChanged(
    assert(var != NULL);
    assert(var->eventfilter != NULL);
    assert(SCIPvarIsTransformed(var));
-   assert(!SCIPsetIsEQ(set, oldbound, newbound));
+   assert(!SCIPsetIsEQ(set, oldbound, newbound) || newbound == var->glbdom.lb);
    assert(set != NULL);
    assert(var->scip == set->scip);
 
@@ -7223,7 +7223,7 @@ SCIP_RETCODE varEventUbChanged(
    assert(var != NULL);
    assert(var->eventfilter != NULL);
    assert(SCIPvarIsTransformed(var));
-   assert(!SCIPsetIsEQ(set, oldbound, newbound));
+   assert(!SCIPsetIsEQ(set, oldbound, newbound) || newbound == var->glbdom.ub);
    assert(set != NULL);
    assert(var->scip == set->scip);
 
@@ -7303,10 +7303,10 @@ SCIP_RETCODE varProcessChgLbLocal(
 
    SCIPsetDebugMsg(set, "process changing lower bound of <%s> from %g to %g\n", var->name, var->locdom.lb, newbound);
 
-   if( SCIPsetIsEQ(set, newbound, var->locdom.lb) )
-      return SCIP_OKAY;
    if( SCIPsetIsEQ(set, newbound, var->glbdom.lb) )
       newbound = var->glbdom.lb;
+   else if( SCIPsetIsEQ(set, newbound, var->locdom.lb) )
+      return SCIP_OKAY;
 
    /* change the bound */
    oldbound = var->locdom.lb;
@@ -7470,10 +7470,10 @@ SCIP_RETCODE varProcessChgUbLocal(
 
    SCIPsetDebugMsg(set, "process changing upper bound of <%s> from %g to %g\n", var->name, var->locdom.ub, newbound);
 
-   if( SCIPsetIsEQ(set, newbound, var->locdom.ub) )
-      return SCIP_OKAY;
    if( SCIPsetIsEQ(set, newbound, var->glbdom.ub) )
       newbound = var->glbdom.ub;
+   else if( SCIPsetIsEQ(set, newbound, var->locdom.ub) )
+      return SCIP_OKAY;
 
    /* change the bound */
    oldbound = var->locdom.ub;
@@ -7631,7 +7631,7 @@ SCIP_RETCODE SCIPvarChgLbLocal(
 
    SCIPsetDebugMsg(set, "changing lower bound of <%s>[%g,%g] to %g\n", var->name, var->locdom.lb, var->locdom.ub, newbound);
 
-   if( SCIPsetIsEQ(set, var->locdom.lb, newbound) )
+   if( SCIPsetIsEQ(set, var->locdom.lb, newbound) && (!SCIPsetIsEQ(set, var->glbdom.lb, newbound) || var->locdom.lb == newbound) )
       return SCIP_OKAY;
 
    /* change bounds of attached variables */
@@ -7757,7 +7757,7 @@ SCIP_RETCODE SCIPvarChgUbLocal(
 
    SCIPsetDebugMsg(set, "changing upper bound of <%s>[%g,%g] to %g\n", var->name, var->locdom.lb, var->locdom.ub, newbound);
 
-   if( SCIPsetIsEQ(set, var->locdom.ub, newbound) )
+   if( SCIPsetIsEQ(set, var->locdom.ub, newbound) && (!SCIPsetIsEQ(set, var->glbdom.ub, newbound) || var->locdom.ub == newbound) )
       return SCIP_OKAY;
 
    /* change bounds of attached variables */
