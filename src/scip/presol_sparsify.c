@@ -183,6 +183,7 @@ SCIP_RETCODE cancelRow(
 
    mincancelrate = 0.0;
 
+   /* for set packing and logicor constraints, only accept equalities where all modified coefficients are cancelled */
    if( SCIPconsGetHdlr(cons) == SCIPfindConshdlr(scip, "setppc") ||
        SCIPconsGetHdlr(cons) == SCIPfindConshdlr(scip, "logicor") )
       mincancelrate = 1.0;
@@ -237,7 +238,6 @@ SCIP_RETCODE cancelRow(
             int nbinfillin;
             int ntotfillin;
             int eqrowlen;
-            int nsignflips;
             ROWVARPAIR* eqrowvarpair;
             SCIP_Real* eqrowvals;
             int* eqrowinds;
@@ -306,16 +306,49 @@ SCIP_RETCODE cancelRow(
 
                   newcoef = cancelrowvals[a] + scale * eqrowvals[b];
 
+                  /* check if coefficient is cancelled */
                   if( SCIPisZero(scip, newcoef) )
                   {
                      ++ncancel;
                   }
-                  else if( COPYSIGN(1.0, newcoef) != COPYSIGN(1.0, cancelrowvals[a]) ||
-                           (preserveintcoefs && SCIPisIntegral(scip, cancelrowvals[a]) && !SCIPisIntegral(scip, newcoef)) )
+                  /* otherwise, check if integral coefficients are preserved if the column is integral */
+                  else if( (preserveintcoefs && SCIPvarIsIntegral(SCIPmatrixGetVar(matrix, cancelrowinds[a])) &&
+                            SCIPisIntegral(scip, cancelrowvals[a]) && !SCIPisIntegral(scip, newcoef)) )
                   {
-                     /* do not flip signs for non-canceled coefficients and check if integral coefficients are preserved */
                      abortpair = TRUE;
                      break;
+                  }
+                  /* finally, check if locks could be modified in a bad way due to flipped signs */
+                  else if( (SCIPisInfinity(scip, cancelrhs) || SCIPisInfinity(scip, -cancellhs)) &&
+                           COPYSIGN(1.0, newcoef) != COPYSIGN(1.0, cancelrowvals[a]) )
+                  {
+                     /* do not flip signs for non-canceled coefficients if this adds a lock to a variable that had at most one lock
+                      * in that direction before, except if the other direction gets unlocked
+                      */
+                     if( (cancelrowvals[a] > 0.0 && ! SCIPisInfinity(scip, cancelrhs)) ||
+                         (cancelrowvals[a] < 0.0 && ! SCIPisInfinity(scip, -cancellhs)) )
+                     {
+                        /* if we get into this case the variable had a positive coefficient in a <= constraint or a negative
+                         * coefficient in a >= constraint, e.g. an uplock. If this was the only uplock we do not abort their
+                         * cancelling, otherwise we abort if we had a single or no downlock and add one
+                         */
+                        if( SCIPmatrixGetColNUplocks(matrix, cancelrowinds[a]) > 1 &&
+                            SCIPmatrixGetColNDownlocks(matrix, cancelrowinds[a]) <= 1 )
+                        {
+                           abortpair = TRUE;
+                           break;
+                        }
+                     }
+                     else
+                     {
+                        /* symmetric case where the variable had a downlock */
+                        if( SCIPmatrixGetColNDownlocks(matrix, cancelrowinds[a]) > 1 &&
+                            SCIPmatrixGetColNUplocks(matrix, cancelrowinds[a]) <= 1 )
+                        {
+                           abortpair = TRUE;
+                           break;
+                        }
+                     }
                   }
 
                   ++a;
