@@ -155,12 +155,6 @@ SCIP_RETCODE computeNewSols(
    assert(graph_valid(prunegraph));
    assert(nedges == prunegraph->edges);
 
-   if( nedges != prunegraph->edges ) // todo
-   {
-      printf("edges %d \n", 0);
-      exit(1);
-   }
-
    /*
     * compute new solution on pruned graph
     */
@@ -180,11 +174,7 @@ SCIP_RETCODE computeNewSols(
    SCIP_CALL( SCIPStpHeurTMRun(scip, NULL, prunegraph, nodearrint, &best_start, soledge, nruns,
          prunegraph->source, prunegraph->cost, prunegraph->cost, &dummyhop, NULL, 0.0, success, FALSE));
 
-   if( pcmw )
-   {
-      SCIP_Bool dummy;
-      SCIP_CALL(SCIPStpHeurLocalExtendPcMw(scip, prunegraph, prunegraph->cost, path, soledge, nodearrint, nodearrchar, &dummy));
-   }
+   SCIPStpHeurLocalRun(scip, prunegraph, prunegraph->cost, soledge);
 
    /*
     * compare new solution on pruned graph with (reconstructed) incumbent
@@ -215,7 +205,6 @@ SCIP_RETCODE computeNewSols(
             if( e >= 0 )
                soledge[e] = CONNECT;
          }
-         objnew = objold;
       }
    }
 

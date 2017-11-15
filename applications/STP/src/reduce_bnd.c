@@ -25,7 +25,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
+#define SCIP_DEBUG
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -870,7 +870,10 @@ SCIP_RETCODE reduce_da(
    maxcost = -1;
    for( int run = 0, bestroot = -1; run <= nruns; run++ )
    {
+      SCIP_Bool soladded;
       SCIP_Bool usesol = (run > 1);
+
+      SCIPdebugMessage("round %d\n", run);
 
       /* graph vanished? */
       if( grad[graph->source] == 0 )
@@ -880,7 +883,7 @@ SCIP_RETCODE reduce_da(
       {
          if( rpc || directed || bestroot == -1 )
             break;
-//todo does not really work
+         //todo does not really work too well
          root = bestroot;
          usesol = FALSE;
       }
@@ -897,13 +900,14 @@ SCIP_RETCODE reduce_da(
       }
       else if( usesol )
       {
-         // solution might not be valid anymore due to pseudo-node elimination
+         /* solution might not be valid anymore due to pseudo-node elimination */
          if( !graph_sol_valid(scip, graph, result) )
          {
             SCIP_CALL( SCIPStpDualAscent(scip, graph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, NULL, edgearrint, state, root, 1, nodearrchar) );
          }
          else
          {
+            SCIPdebugMessage("reroot solution \n");
             SCIP_CALL( graph_sol_reroot(scip, graph, result, root) );
 
 #ifndef NDEBUG
@@ -920,6 +924,7 @@ SCIP_RETCODE reduce_da(
       }
       else
       {
+         SCIPdebugMessage("no rerooting \n");
          SCIP_CALL( SCIPStpDualAscent(scip, graph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, NULL, edgearrint, state, root, 1, nodearrchar) );
       }
 
@@ -927,41 +932,41 @@ SCIP_RETCODE reduce_da(
       if( externsol && run == 0 )
       {
          apsol = TRUE;
+         assert(graph_sol_valid(scip, graph, result));
       }
       else if( !directed )
       {
          SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, graph, cost, result, nodearrint, root, nodearrchar, &success, FALSE) );
          assert(success);
+         assert(graph_sol_valid(scip, graph, result));
 
          /* calculate objective value of solution */
          ubnew = graph_sol_getObj(graph->cost, result, 0.0, nedges);
 
+         soladded = FALSE;
          if( userec )
          {
-            SCIP_Bool soladded;
+            SCIPdebugMessage("obj before local %f \n", ubnew);
+            assert(graph_sol_valid(scip, graph, result));
 
-            if( ubnew < upperbound || maxcost > lpobjval )
-            {
-               printf("obj before local %f \n", ubnew);
+            SCIPStpHeurLocalRun(scip, graph, graph->cost, result);
+            ubnew = graph_sol_getObj(graph->cost, result, 0.0, nedges);
 
-               SCIPStpHeurLocalRun(scip, graph, graph->cost, result);
-               ubnew = graph_sol_getObj(graph->cost, result, 0.0, nedges);
+            SCIPdebugMessage("obj after local  %f \n", ubnew);
+            assert(graph_sol_valid(scip, graph, result));
 
-               printf("obj after local %f \n", ubnew);
-            }
-
-            SCIP_CALL( SCIPStpHeurRecAddToPool(scip, ubnew, result, pool, &soladded) );
+            SCIP_CALL(SCIPStpHeurRecAddToPool(scip, ubnew, result, pool, &soladded));
          }
 
          if( success )
          {
-            if( userec && pool->size >= 2 && (ubnew < upperbound || maxcost > lpobjval) )
+            if( userec && soladded && pool->size >= 2 && (ubnew < upperbound || maxcost > lpobjval) )
             {
                /* get index of just added solution */
                int solindex = pool->maxindex;
                SCIP_Bool solfound;
 
-               printf("POOLSIZE %d \n", pool->size);
+               SCIPdebugMessage("POOLSIZE %d \n", pool->size);
 
                SCIP_CALL(SCIPStpHeurRecRun(scip, pool, NULL, NULL, graph, NULL, &solindex, 1, pool->size, FALSE, &solfound));
 
@@ -971,19 +976,19 @@ SCIP_RETCODE reduce_da(
 
                   assert(sol != NULL);
 
-                  printf("DA: rec found better solution with obj %f vs %f \n", sol->obj, ubnew);
+                  SCIPdebugMessage("DA: rec found better solution with obj %f vs %f \n", sol->obj, ubnew);
 
                   if( sol->obj < ubnew )
                   {
                      ubnew = sol->obj;
                      BMScopyMemoryArray(result, sol->soledges, nedges);
 #if 1
-                     printf("obj before local2 %f \n", ubnew);
+                     SCIPdebugMessage("obj before local2 %f \n", ubnew);
 
                      SCIPStpHeurLocalRun(scip, graph, graph->cost, result);
                      ubnew = graph_sol_getObj(graph->cost, result, 0.0, nedges);
 
-                     printf("obj after local2 %f \n", ubnew);
+                     SCIPdebugMessage("obj after local2  %f \n", ubnew);
 
                      ubnew = graph_sol_getObj(graph->cost, result, 0.0, nedges);
 
@@ -1024,10 +1029,11 @@ SCIP_RETCODE reduce_da(
       /* the required reduced path cost to be surpassed */
       minpathcost = upperbound - lpobjval;
 
-      if( userec )
-      printf("run %d:    %f %f\n", run, upperbound, lpobjval);
+      SCIPdebugMessage("upper: %f   lower: %f \n", upperbound, lpobjval);
 
-      if( SCIPisLE(scip, minpathcost, 0.0) )
+      assert(SCIPisGE(scip, minpathcost, 0.0));
+
+      if( minpathcost < 0.0 )
          minpathcost = 0.0;
 
       for( e = 0; e < nedges; e++ )
@@ -3692,10 +3698,8 @@ SCIP_RETCODE reduce_boundPrune(
    )
 {
    GRAPH* adjgraph;
-   PATH* mst;
    SCIP_Real* cost3;
    SCIP_Real* const prize = graph->prize;
-   SCIP_Real r;
    SCIP_Real obj;
    SCIP_Real max;
    SCIP_Real bound;
@@ -3704,24 +3708,17 @@ SCIP_RETCODE reduce_boundPrune(
    SCIP_Real maxcost;
    SCIP_Real radiim2;
    SCIP_Real radiim3;
-   IDX** ancestors;
-   IDX** revancestors;
    int* edges3;
    int* nodes3;
-   int e;
-   int k;
-   int l;
-   int head;
-   int tail;
-   int root;
-   int etemp;
-   int nterms;
-   int nnodes;
-   int nedges;
-   int redrounds;
-   SCIP_Bool pc;
-   SCIP_Bool mw;
-   SCIP_Bool pcmw;
+   IDX** ancestors = NULL;
+   IDX** revancestors = NULL;
+   const int root = graph->source;
+   const int nterms = graph->terms;
+   const int nnodes = graph->knots;
+   const int nedges = graph->edges;
+   const SCIP_Bool mw = (graph->stp_type == STP_MWCSP);
+   const SCIP_Bool pc = (graph->stp_type == STP_RPCSPG) || (graph->stp_type == STP_PCSPG);
+   const SCIP_Bool pcmw = (pc || mw);
    SCIP_Bool eliminate;
 
    assert(scip != NULL);
@@ -3738,47 +3735,25 @@ SCIP_RETCODE reduce_boundPrune(
    assert(soledge != NULL);
    assert(graph->source >= 0);
 
-   mst = NULL;
-   nedges = graph->edges;
-   nnodes = graph->knots;
    mstobj = 0.0;
    *nelims = 0;
-   mw = (graph->stp_type == STP_MWCSP);
-   pc = (graph->stp_type == STP_RPCSPG) || (graph->stp_type == STP_PCSPG);
-   pcmw = (pc || mw);
-   root = graph->source;
 
    cost3 = NULL;
    edges3 = NULL;
    nodes3 = NULL;
-   ancestors = NULL;
-   revancestors = NULL;
 
-   if( graph->stp_type == STP_RPCSPG )
-      graph_knot_chg(graph, root, 0);
-
-   /* initialize */
-   e = 0;
-   nterms = 0;
-   for( k = 0; k < nnodes; k++ )
-   {
-      if( !pcmw )
-         graph->mark[k] = (graph->grad[k] > 0);
-      if( graph->mark[k] )
-      {
-         e++;
-         if( Is_term(graph->term[k]) && graph->grad[k] > 0 )
-            nterms++;
-      }
-   }
-
-   /* not more than two terminals? */
    if( nterms <= 2 )
       return SCIP_OKAY;
 
+   assert( graph->stp_type != STP_RPCSPG || Is_term(graph->term[root]) );
+
+   if( !pcmw )
+      for( int k = 0; k < nnodes; k++ )
+         graph->mark[k] = (graph->grad[k] > 0);
+
    /* initialize cost and costrev array */
    maxcost = 0.0;
-   for( e = 0; e < nedges; e++ )
+   for( int e = 0; e < nedges; e++ )
    {
       cost[e] = graph->cost[e];
       costrev[e] = graph->cost[flipedge(e)];
@@ -3792,6 +3767,8 @@ SCIP_RETCODE reduce_boundPrune(
    /* no MWCSP? */
    if( !mw )
    {
+      PATH* mst;
+
       SCIP_CALL( graph_init(scip, &adjgraph, nterms, MIN(nedges, (nterms - 1) * nterms), 1) );
 
       /* build Voronoi regions, concomitantly building adjgraph and computing radii values*/
@@ -3813,21 +3790,21 @@ SCIP_RETCODE reduce_boundPrune(
       graph_path_exec(scip, adjgraph, MST_MODE, 0, adjgraph->cost, mst);
 
       max = -1.0;
-      r = -1.0;
-
-      for( k = 1; k < nterms; k++ )
+      for( int k = 1; k < nterms; k++ )
       {
+         const int e = mst[k].edge;
+
          assert(adjgraph->path_state[k] == CONNECT);
-         e = mst[k].edge;
          assert(e >= 0);
          tmpcost = adjgraph->cost[e];
          mstobj += tmpcost;
          if( SCIPisGT(scip, tmpcost, max) )
             max = tmpcost;
-         else if( SCIPisGT(scip, tmpcost, r) )
-            r = tmpcost;
       }
       mstobj -= max;
+
+      /* free memory*/
+      SCIPfreeBufferArray(scip, &mst);
    }
    else
    {
@@ -3845,7 +3822,7 @@ SCIP_RETCODE reduce_boundPrune(
    if( graph->stp_type == STP_RPCSPG )
    {
       assert(graph->mark[graph->source]);
-      for( k = 0; k < nnodes; k++ )
+      for( int k = 0; k < nnodes; k++ )
       {
          if( !Is_term(graph->term[k]) || !graph->mark[k] )
             continue;
@@ -3856,7 +3833,7 @@ SCIP_RETCODE reduce_boundPrune(
    }
    else if( graph->stp_type == STP_PCSPG )
    {
-      for( k = 0; k < nnodes; k++ )
+      for( int k = 0; k < nnodes; k++ )
       {
          if( !graph->mark[k] )
             continue;
@@ -3874,18 +3851,18 @@ SCIP_RETCODE reduce_boundPrune(
 
    if( mw )
    {
-      for( e = 0; e < nedges; e++ )
+      for( int e = 0; e < nedges; e++ )
          costrev[e] = FARAWAY;
       bound = 0.0;
       radiim3 = 0.0;
    }
    else
    {
-      for( e = 0; e < nedges; e++ )
+      for( int e = 0; e < nedges; e++ )
          costrev[e] = -1.0;
 
       /* sum all but two radius values of highest/lowest value */
-      for( k = 0; k < nterms - 2; k++ )
+      for( int k = 0; k < nterms - 2; k++ )
       {
          assert( SCIPisGT(scip, FARAWAY, radius[k]) );
          radiim2 += radius[k];
@@ -3901,7 +3878,7 @@ SCIP_RETCODE reduce_boundPrune(
          bound = mstobj;
    }
 
-   for( redrounds = 0; redrounds < 3; redrounds++ )
+   for( int redrounds = 0; redrounds < 3; redrounds++ )
    {
       int nrealelims = MIN(2 * minelims, nedges - 1);
 
@@ -3912,7 +3889,6 @@ SCIP_RETCODE reduce_boundPrune(
       }
       else if( redrounds == 1 )
       {
-
          assert(minelims > 0);
          assert(2 * minelims < nedges);
          eliminate = TRUE;
@@ -3948,7 +3924,7 @@ SCIP_RETCODE reduce_boundPrune(
 
       if( mw )
       {
-         for( k = 0; k < nnodes; k++ )
+         for( int k = 0; k < nnodes; k++ )
          {
             if( (*nelims) >= minelims )
                break;
@@ -3973,7 +3949,7 @@ SCIP_RETCODE reduce_boundPrune(
                }
                else
                {
-                  for (e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e])
+                  for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
                   {
                      if( SCIPisLT(scip, tmpcost, costrev[e]) )
                      {
@@ -3985,13 +3961,13 @@ SCIP_RETCODE reduce_boundPrune(
             }
             else if( solnode[k] == CONNECT )
             {
-               e = graph->outbeg[k];
+               int e = graph->outbeg[k];
 
                while( e != EAT_LAST )
                {
-                  etemp = graph->oeat[e];
-                  tail = graph->tail[e];
-                  head = graph->head[e];
+                  const int etemp = graph->oeat[e];
+                  const int tail = graph->tail[e];
+                  const int head = graph->head[e];
 
                   if( tail > head || soledge[e] == CONNECT || soledge[flipedge(e)] == CONNECT )
                   {
@@ -4042,7 +4018,7 @@ SCIP_RETCODE reduce_boundPrune(
       else
       {
          /* traverse all nodes, try to eliminate each node or incident edges */
-         for( k = 0; k < nnodes; k++ )
+         for( int k = 0; k < nnodes; k++ )
          {
             if( (*nelims) >= minelims )
                break;
@@ -4064,7 +4040,7 @@ SCIP_RETCODE reduce_boundPrune(
                {
                   while( graph->outbeg[k] != EAT_LAST )
                   {
-                     e = graph->outbeg[k];
+                     const int e = graph->outbeg[k];
                      (*nelims)++;
 
                      assert(!pc || graph->tail[e] != graph->source);
@@ -4077,7 +4053,7 @@ SCIP_RETCODE reduce_boundPrune(
                }
                else
                {
-                  for( e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
+                  for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
                   {
                      if( SCIPisGT(scip, tmpcost, costrev[e]) )
                      {
@@ -4089,12 +4065,12 @@ SCIP_RETCODE reduce_boundPrune(
             }
             else
             {
-               e = graph->outbeg[k];
+               int e = graph->outbeg[k];
                while( e != EAT_LAST )
                {
-                  etemp = graph->oeat[e];
-                  tail = graph->tail[e];
-                  head = graph->head[e];
+                  const int etemp = graph->oeat[e];
+                  const int tail = graph->tail[e];
+                  const int head = graph->head[e];
 
                   if( tail > head )
                   {
@@ -4149,7 +4125,7 @@ SCIP_RETCODE reduce_boundPrune(
          }
 #if 1
          /* traverse all nodes, try to eliminate 3 degree nodes */
-         for( k = 0; k < nnodes; k++ )
+         for( int k = 0; k < nnodes; k++ )
          {
             if( (*nelims) >= minelims )
                break;
@@ -4165,7 +4141,7 @@ SCIP_RETCODE reduce_boundPrune(
                if( graph->grad[k] == 3 && !Is_term(graph->term[k]) )
                {
                   tmpcost = vnoi[k].dist + vnoi[k + nnodes].dist + vnoi[k + 2 * nnodes].dist + radiim3;
-                  for( e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
+                  for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
                   {
                      if( SCIPisGT(scip, tmpcost, costrev[e]) )
                      {
@@ -4192,7 +4168,7 @@ SCIP_RETCODE reduce_boundPrune(
                      SCIP_CALL( SCIPallocBufferArray(scip, &nodes3, 3) );
                      SCIP_CALL( SCIPallocBufferArray(scip, &ancestors, 3) );
                      SCIP_CALL( SCIPallocBufferArray(scip, &revancestors, 3) );
-                     for( l = 0; l < 3; l++ )
+                     for( int l = 0; l < 3; l++ )
                      {
                         ancestors[l] = NULL;
                         revancestors[l] = NULL;
@@ -4207,8 +4183,7 @@ SCIP_RETCODE reduce_boundPrune(
 
                   SCIPdebugMessage("eliminated 3 knot %d\n", k);
                   /* get incident edges, cost and adjacent nodes */
-                  l = 0;
-                  for( e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
+                  for( int e = graph->outbeg[k], l = 0; e != EAT_LAST; e = graph->oeat[e] )
                   {
                      assert(l < 3);
                      edges3[l] = e;
@@ -4217,7 +4192,7 @@ SCIP_RETCODE reduce_boundPrune(
                   }
 
                   /* clear */
-                  for( l = 0; l < 3; l++ )
+                  for( int l = 0; l < 3; l++ )
                   {
                      SCIPintListNodeFree(scip, &(ancestors[l]));
                      SCIPintListNodeFree(scip, &(revancestors[l]));
@@ -4245,7 +4220,7 @@ SCIP_RETCODE reduce_boundPrune(
          if( ancestors != NULL )
          {
             assert(revancestors != NULL);
-            for( k = 0; k < 3; k++ )
+            for( int k = 0; k < 3; k++ )
             {
                SCIPintListNodeFree(scip, &(ancestors[k]));
                SCIPintListNodeFree(scip, &(revancestors[k]));
@@ -4269,12 +4244,8 @@ SCIP_RETCODE reduce_boundPrune(
       graph_free(scip, adjgraph, TRUE);
    }
 
-   /* free memory*/
-   SCIPfreeBufferArrayNull(scip, &mst);
-
    return SCIP_OKAY;
 }
-
 
 
 

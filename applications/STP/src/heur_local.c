@@ -235,6 +235,9 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
 
    newnverts = 0;
 
+   if( graph->grad[root] == 0 )
+      return SCIP_OKAY;
+
    /* for PC variants test whether solution is trivial */
    if( mwpc )
    {
@@ -532,6 +535,8 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
       printf("ObjAfterVertexInsertion=%.12e\n", obj);
 #endif
    }
+
+   assert(graph_sol_valid(scip, graph, best_result));
 
    /* Key-Vertex Elimination & Key-Path Exchange */
    if( !mw )
