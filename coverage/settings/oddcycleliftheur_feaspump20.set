@@ -12,3 +12,17 @@ separating/oddcycle/usegls = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 separating/oddcycle/liftoddcycles = TRUE
 
+# SCIP version 3.1.0.1
+
+# should statistics be collected for variable domain value pairs?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+history/valuebased = TRUE
+
+# should an iterative round-and-propagate scheme be used to find the integral points?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+heuristics/feaspump/usefp20 = TRUE
+
+# should we solve a local branching sub-MIP if no solution could be found?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+heuristics/feaspump/stage3 = TRUE
+

@@ -37,43 +37,43 @@ set(settings_MIP
     "separating_aggressive"
     "presolving_aggressive"
     "heuristics_aggressive"
-    "convertinttobin"
-    "fullstrongbfs"
-    "indicatorlogicor"
-    "mostinf"
-    "distribution"
-    "oddcylcelift"
-    "oddcylce"
-    "oddcylceliftheur"
-    "indicatorsepa"
-    "proporbit"
-    "allfull"
-
-#    "dynamic"
-    "heurlprows"
-    "intobj"
-#    "nologicor"
-    "pscost"
-    "setppclifting"
-    "xorsepaparity"
-#    "cloud"
-    "feaspump20"
+    #constraints
+    "indicatorlogicorsepa"
     "indicatoralterlp"
-    "leastinf"
-    "randomhybrid"
-    "uct_breadth_dualval"
-    "alldisp"
-    "vbcvisualization"
-    "bakvisualization"
-    "solvingphases"
+
+    #presolving and branching
+    "convertinttobin_mostinf"
+    "setppclifting_leastinf"
+    #branching and propagation
+
+    "pscost_proporbitope"
+    #separation and branching
+    "oddcyclelift_randomhybrid"
+    "oddcycle_distribution"
+
+    #separation and heuristics
+    "oddcycleliftheur_feaspump20"
+    "heurlprows"
     "lns_epsgreedy"
     "lns_exp3"
+#    "dynamic"
+    "intobj"
+#    "nologicor"
+    "xorsepaparity"
+    "solvingphases"
+#    "cloud"
+    "uct_breadth_dualval"
 )
 #
 # settings to run a reduced MIP test
 #
 set(settings_fastMIP
-    "allaggr"
+    "vbcvisualization"
+    "bakvisualization"
+    "alldisp"
+    "fullstrongbfs"
+    "allfull"
+    "all_aggressive"
     "cgmip"
     "cgmipstrong"
     "cgmipviol"
@@ -426,7 +426,7 @@ set(message_format_opb "WARNING: only binary problems can be written in OPB form
 #
 # test writing and reading from and to different file extensions for MIP
 #
-foreach(instance ${instances_Readertest})
+foreach(instance ${instances_MIP})
     split_instance(instance)
     foreach(extension ${scip_reader_extensions})
         #
