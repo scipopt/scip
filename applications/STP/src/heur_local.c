@@ -84,7 +84,7 @@ struct SCIP_HeurData
 static
 void dfsorder(
    const GRAPH*          graph,
-   int*                  edges,
+   const int*            edges,
    const int*            node,
    int*                  counter,
    int*                  dfst
@@ -529,10 +529,13 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
       }
 
 #ifdef SCIP_DEBUG
-      obj = 0.0;
-      for( e = 0; e < nedges; e++)
-         obj += (best_result[e] > -1) ? graph->cost[e] : 0.0;
-      printf("ObjAfterVertexInsertion=%.12e\n", obj);
+      {
+         SCIP_Real obj = 0.0;
+         for( e = 0; e < nedges; e++ )
+            obj += (best_result[e] > -1) ? graph->cost[e] : 0.0;
+         printf("ObjAfterVertexInsertion=%.12e\n", obj);
+
+      }
 #endif
    }
 
@@ -590,11 +593,12 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
       STP_Bool* nodesmark;
 
 #ifdef SCIP_DEBUG
-      obj = 0.0;
-      for( e = 0; e < nedges; e++)
+      SCIP_Real obj = 0.0;
+      for( e = 0; e < nedges; e++ )
          obj += (best_result[e] > -1) ? graph->cost[e] : 0.0;
       printf(" ObjBEFKEYVertexELimination=%.12e\n", obj);
 #endif
+
       for( k = 0; k < nnodes; k++ )
          graphmark[k] = (graph->grad[k] > 0);
 
@@ -695,6 +699,9 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
          /* for each node, store all of its outgoing boundary-edges in a (respective) heap*/
          for( e = 0; e < nedges; e += 2 )
          {
+            if( graph->oeat[e] == EAT_FREE )
+               continue;
+
             node = graph->tail[e];
             adjnode = graph->head[e];
             newedges[e] = UNKNOWN;
@@ -731,7 +738,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
             crucnode = dfstree[i];
             scanned[crucnode] = TRUE;
 
-            SCIPdebugMessage("iteration %d (%d) \n", i, crucnode);
+            SCIPdebugMessage("iteration %d (crucial node: %d) \n", i, crucnode);
 
             /*  has the node been temporarily removed from the ST? */
             if( !graphmark[crucnode] )
@@ -1654,13 +1661,14 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
       /******/
    }
 
-
 #ifdef SCIP_DEBUG
-   obj = 0.0;
-   for( e = 0; e < nedges; e++)
-      obj += (best_result[e] > -1) ? graph->cost[e] : 0.0;
+   {
+      SCIP_Real obj = 0.0;
+      for( e = 0; e < nedges; e++ )
+         obj += (best_result[e] > -1) ? graph->cost[e] : 0.0;
 
-   printf(" ObjAfterHeurLocal=%.12e\n", obj);
+      printf(" ObjAfterHeurLocal=%.12e\n", obj);
+   }
 #endif
 
    SCIPfreeBufferArray(scip, &steinertree);
@@ -1919,12 +1927,14 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    SCIPfreeBufferArray(scip, &stvertextmp);
 
 #ifdef SCIP_DEBUG
-   t = 0.0;
-   for (int e = 0; e < nedges; e++)
-      if( stedge[e] == CONNECT )
-         t += graph->cost[e];
+   {
+      SCIP_Real t = 0.0;
+      for( int e = 0; e < nedges; e++ )
+         if( stedge[e] == CONNECT )
+            t += graph->cost[e];
 
-   SCIPdebugMessage("SCIPStpHeurLocalExtendPcMw: exit real cost %f \n", t);
+      SCIPdebugMessage("SCIPStpHeurLocalExtendPcMw: exit real cost %f \n", t);
+   }
 #endif
 
    return SCIP_OKAY;

@@ -25,7 +25,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-#define SCIP_DEBUG
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -946,6 +946,8 @@ SCIP_RETCODE reduce_da(
          soladded = FALSE;
          if( userec )
          {
+            assert(graph_valid(graph));
+
             SCIPdebugMessage("obj before local %f \n", ubnew);
             assert(graph_sol_valid(scip, graph, result));
 
