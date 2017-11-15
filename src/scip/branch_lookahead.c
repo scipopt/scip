@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define SCIP_DEBUG
+
 /**@file   branch_lookahead.c
  * @ingroup BRANCHINGRULES
  * @brief  lookahead LP branching rule
@@ -78,10 +78,10 @@
                                                     *   candidates be reused? */
 #define DEFAULT_ABBREVPSEUDO                 FALSE /**< If abbreviated: Use pseudo costs to estimate the score of a
                                                     *   candidate. */
-#define DEFAULT_SCORING_FUNCTION               'd' /**< default scoring function to be used */
-#define DEFAULT_MIN_WEIGHT                      4  /**< default value for the min weight to get a weighted score of two
+#define DEFAULT_SCORING_FUNCTION             'p'   /**< default scoring function to be used */
+#define DEFAULT_MIN_WEIGHT                   4.0   /**< default value for the min weight to get a weighted score of two
                                                     *   child gains (taken from the paper) */
-#define DEFAULT_MAX_WEIGHT                      1  /**< default value for the max weight to get a weighted score of two
+#define DEFAULT_MAX_WEIGHT                   1.0   /**< default value for the max weight to get a weighted score of two
                                                     *   child gains (taken from the paper) */
 
 #ifdef SCIP_DEBUG
@@ -401,6 +401,8 @@ typedef struct
                                               *   or the sub problems solved to optimality? */
    int                   ndeepestcutoffs;    /**< number of cutoffs on the lowest level below this child */
    SCIP_Real             bestgain;           /**< best gain (w.r.t. to the base lp) on the lowest level below this child */
+   SCIP_Real             totalgains;         /**< sum over all gains that are valid in both children */
+   int                   ntotalgains;        /**< number of gains summed in totalgains */
 } BRANCHINGRESULTDATA;
 
 /** Allocates a branching result in the buffer. */
@@ -434,7 +436,9 @@ void branchingResultDataInit(
    resultdata->dualboundvalid = FALSE;
    resultdata->niterations = 0;
    resultdata->ndeepestcutoffs = 0;
-   resultdata->bestgain = 0;
+   resultdata->bestgain = 0.;
+   resultdata->totalgains = 0.;
+   resultdata->ntotalgains = 0;
 }
 
 /** Copies the data from the source to the target. */
@@ -454,6 +458,8 @@ void branchingResultDataCopy(
    targetdata->niterations = sourcedata->niterations;
    targetdata->ndeepestcutoffs = sourcedata->ndeepestcutoffs;
    targetdata->bestgain = sourcedata->bestgain;
+   targetdata->totalgains = sourcedata->totalgains;
+   targetdata->ntotalgains = sourcedata->ntotalgains;
 }
 
 /** Frees the allocated buffer memory of the branching result. */
@@ -1627,7 +1633,9 @@ SCIP_RETCODE selectVarRecursive(
    SCIP_Real             lpobjval,           /**< base LP objective value */
    SCIP_Longint*         niterations,        /**< pointer to store the total number of iterations for this variable */
    int*                  ndeepestcutoffs,    /**< pointer to store the total number of cutoffs on the deepest level */
-   SCIP_Real*            bestgain            /**< pointer to store the best gain found with these candidates */
+   SCIP_Real*            bestgain,           /**< pointer to store the best gain found with these candidates */
+   SCIP_Real*            totalgains,         /**< pointer to store the sum over all gains that are valid in both children */
+   int*                  ntotalgains         /**< pointer to store the number of gains summed in totalgains */
 #ifdef SCIP_STATISTIC
    ,STATISTICS*          statistics          /**< general statistical data */
    ,LOCALSTATISTICS*     localstats          /**< local statistics, may be disregarded */
@@ -2914,6 +2922,9 @@ SCIP_RETCODE getFSBResult(
    /* Even for one single candidate we want to get the corresponding score */
    config->forcebranching = TRUE;
 
+   /* use the FSB scoring function */
+   config->scoringfunction = 'f';
+
 #ifdef SCIP_STATISTIC
    /* we need to allocate enough space for all possible depths, as there is currently a problem with setting the FSB stats.
     * E.G.: we want to gather statistics for the FSB run started on layer 2 (1-indexed). Then we start in probing depth 1
@@ -3013,6 +3024,7 @@ SCIP_Real calculateScoreFromResult(
    return score;
 }
 
+/** calculates the combined gain, weighted with parameters given by the user configuration */
 static
 SCIP_Real calculateWeightedGain(
    CONFIGURATION*        config,             /**< LAB configuration */
@@ -3048,29 +3060,39 @@ SCIP_Real calculateWeightedGain(
    return config->minweight*MIN(downgain, upgain) + config->maxweight*MAX(downgain, upgain);
 }
 
+/** calculates the score as mentioned in the lookahead branching paper by Glankwamdee and Linderoth;
+ *  their score scales the number cutoffs on the last layer of a 2-level temporary branching tree with the average gain of
+ *  every last level problem; together witht the best gain for each branch of a variable we get the final score
+ */
 static
 SCIP_Real calculateScorePaper(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             branchvar,          /**< variable to get the score for */
    BRANCHINGRESULTDATA*  downbranchingresult,/**< branching result of the down branch */
-   BRANCHINGRESULTDATA*  upbranchingresult,  /**< branching result of the up branch */
-   SCIP_Real             lpobjval            /**< objective value to get difference to as gain */
+   BRANCHINGRESULTDATA*  upbranchingresult   /**< branching result of the up branch */
    )
 {
-   /*int nlowestlevelcutoffs = downbranchingresult->ndeepestcutoffs + upbranchingresult->ndeepestcutoffs;
-   SCIP_Real bestdowngain = downbranchingresult->bestgain;
-   SCIP_Real bestupgain = upbranchingresult->bestgain;
-   SCIP_Real totaldowngains = downbranchingresult->totalgains;
-   SCIP_Real totalupgains = upbranchingresult->totalgains;
-   int ntotaldowngains = MAX(1, downbranchingresult->ntotalgains);
-   int ntotalupgains = MAX(1, upbranchingresult->ntotalgains);
+   int nlowestlevelcutoffs;
+   SCIP_Real bestdowngain;
+   SCIP_Real bestupgain;
+   SCIP_Real totaldowngains;
+   SCIP_Real totalupgains;
+   int ntotaldowngains;
+   int ntotalupgains;
 
-   SCIP_Real score = bestdowngain + bestupgain +
-      (totaldowngains/ntotaldowngains + totalupgains/ntotalupgains)*nlowestlevelcutoffs;*/
+   assert(downbranchingresult != NULL);
+   assert(upbranchingresult != NULL);
 
-   return 0;
+   nlowestlevelcutoffs = downbranchingresult->ndeepestcutoffs + upbranchingresult->ndeepestcutoffs;
+   bestdowngain = downbranchingresult->bestgain;
+   bestupgain = upbranchingresult->bestgain;
+   totaldowngains = downbranchingresult->totalgains;
+   totalupgains = upbranchingresult->totalgains;
+   ntotaldowngains = MAX(1, downbranchingresult->ntotalgains);
+   ntotalupgains = MAX(1, upbranchingresult->ntotalgains);
+
+   return bestdowngain + bestupgain + (totaldowngains/ntotaldowngains + totalupgains/ntotalupgains)*nlowestlevelcutoffs;
 }
 
+/** scoring method that selects an actual scoring method based on the user configuration */
 static
 SCIP_Real calculateScore(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3082,12 +3104,20 @@ SCIP_Real calculateScore(
    )
 {
    SCIP_Real score;
+
    assert(scip != NULL);
+   assert(config != NULL);
+   assert(branchvar != NULL);
+   assert(downbranchingresult != NULL);
+   assert(upbranchingresult != NULL);
 
    switch( config->scoringfunction )
    {
       case 'p':
-         score = calculateScorePaper(scip, branchvar, downbranchingresult, upbranchingresult, lpobjval);
+         score = calculateScorePaper(downbranchingresult, upbranchingresult);
+         break;
+      case 'f':
+         score = calculateWeightedGain(config, downbranchingresult, upbranchingresult, lpobjval);
          break;
       default:
          assert(config->scoringfunction == 'd');
@@ -3627,7 +3657,7 @@ SCIP_RETCODE executeBranchingRecursive(
                SCIP_CALL( selectVarRecursive(scip, deeperstatus, deeperpersistent, config, baselpsol, domainreductions,
                      binconsdata, candidates, deeperdecision, scorecontainer, storewarmstartinfo, recursiondepth - 1,
                      deeperlpobjval, &branchingresult->niterations, &branchingresult->ndeepestcutoffs,
-                     &branchingresult->bestgain) );
+                     &branchingresult->bestgain, &branchingresult->totalgains, &branchingresult->ntotalgains) );
 #endif
 
                /* the proved dual bound of the deeper branching cannot be less than the current dual bound, as every deeper
@@ -3690,7 +3720,7 @@ SCIP_RETCODE executeBranchingRecursive(
 
 /** branches recursively on all given candidates */
 static
-SCIP_RETCODE  selectVarRecursive(
+SCIP_RETCODE selectVarRecursive(
    SCIP*                 scip,               /**< SCIP data structure */
    STATUS*               status,             /**< current status */
    PERSISTENTDATA*       persistent,         /**< container to store data over multiple calls to the branching rule */
@@ -3706,7 +3736,9 @@ SCIP_RETCODE  selectVarRecursive(
    SCIP_Real             lpobjval,           /**< base LP objective value */
    SCIP_Longint*         niterations,        /**< pointer to store the total number of iterations for this variable */
    int*                  ndeepestcutoffs,    /**< pointer to store the total number of cutoffs on the deepest level */
-   SCIP_Real*            bestgain            /**< pointer to store the best gain found with these candidates */
+   SCIP_Real*            bestgain,           /**< pointer to store the best gain found with these candidates */
+   SCIP_Real*            totalgains,         /**< pointer to store the sum over all gains that are valid in both children */
+   int*                  ntotalgains         /**< pointer to store the number of gains summed in totalgains */
 #ifdef SCIP_STATISTIC
    ,STATISTICS*          statistics          /**< general statistical data */
    ,LOCALSTATISTICS*     localstats          /**< local statistics, may be disregarded */
@@ -3904,7 +3936,19 @@ SCIP_RETCODE  selectVarRecursive(
 
          if( bestgain != NULL && SCIPgetProbingDepth(scip) == 1 )
          {
-            *bestgain = MAX(*bestgain, calculateWeightedGain(config, downbranchingresult, upbranchingresult, lpobjval));
+            SCIP_Real weightedgain;
+
+            assert(totalgains != NULL);
+            assert(ntotalgains != NULL);
+
+            weightedgain = calculateWeightedGain(config, downbranchingresult, upbranchingresult, lpobjval);
+            *bestgain = MAX(*bestgain, weightedgain);
+
+            if( !downbranchingresult->cutoff && !upbranchingresult->cutoff )
+            {
+               (*totalgains) += weightedgain;
+               (*ntotalgains)++;
+            }
          }
 
          /* store results of branching call */
@@ -4267,7 +4311,7 @@ SCIP_RETCODE selectVarStart(
             decision, scorecontainer, storewarmstartinfo, recursiondepth, lpobjval, NULL, statistics, localstats) );
 #else
       SCIP_CALL( selectVarRecursive(scip, status, persistent, config, baselpsol, domainreductions, binconsdata, candidates,
-            decision, scorecontainer, storewarmstartinfo, recursiondepth, lpobjval, NULL, NULL, NULL) );
+            decision, scorecontainer, storewarmstartinfo, recursiondepth, lpobjval, NULL, NULL, NULL, NULL, NULL) );
 #endif
 
       /* we are at the top level */
@@ -4423,7 +4467,7 @@ SCIP_Bool isUsePreviousResult(
    )
 {
    return branchingDecisionIsValid(persistent->prevdecision)
-      && SCIPareSolsEqual(scip, currentsol, persistent->prevbinsolution);
+          && SCIPareSolsEqual(scip, currentsol, persistent->prevbinsolution);
 }
 
 /**
@@ -4870,7 +4914,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
    config->usebincons = userusebincons;
 
    LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Exiting branchExeclpLookahead.\n");
-   SCIPABORT();
    return SCIP_OKAY;
 }
 
@@ -4977,8 +5020,8 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          &branchruledata->config->propagate, TRUE, DEFAULT_PROPAGATE, NULL, NULL) );
    SCIP_CALL( SCIPaddCharParam(scip,
          "branching/lookahead/scoringfunction",
-         "scoring function to be used: 'd'efault or 'p'aper",
-         &branchruledata->config->scoringfunction, TRUE, DEFAULT_SCORING_FUNCTION, "dp", NULL, NULL) );
+         "scoring function to be used: 'd'efault, 'f'ullstrong branching or 'p'aper",
+         &branchruledata->config->scoringfunction, TRUE, DEFAULT_SCORING_FUNCTION, "dfp", NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "branching/lookahead/minweight",
          "if scoringfunction is 'p', this value is used to weight the min of the gains of two child problems",
