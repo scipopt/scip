@@ -33,8 +33,8 @@
 #define SEPA_MAXBOUNDDIST           0.0
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
-#define MAXCUTS                    1000
-#define MAXROUNDS                     5
+#define MAXCUTS                     500
+#define MAXROUNDS                    15
 
 /** copy method for separator plugins (called when SCIP copies plugins) */
 static
