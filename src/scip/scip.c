@@ -7578,7 +7578,6 @@ SCIP_RETCODE SCIPsetSepaPriority(
  *
  *  @return value of "separating/minefficacyroot" if at root node, otherwise value of "separating/minefficacy"
  */
-EXTERN
 SCIP_Real SCIPgetSepaMinEfficacy(
    SCIP*                 scip                /**< SCIP data structure */
    )
