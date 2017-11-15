@@ -335,7 +335,7 @@ SCIP_RETCODE getPermProperties(
 }
 
 
-/** Given a matrix with nrows and #perms + 1 columns whose first nfilledcols columns contain entries of variables, this routine
+/** Given a matrix with nrows and \#perms + 1 columns whose first nfilledcols columns contain entries of variables, this routine
  *  checks whether the 2-cycles of perm intersect each row of column coltoextend in exactly one position. In this case,
  *  we add one column to the suborbitope of the first nfilledcols columns.
  *
