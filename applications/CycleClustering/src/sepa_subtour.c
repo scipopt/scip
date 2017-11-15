@@ -38,7 +38,7 @@
 #define SEPA_USESSUBSCIP          FALSE      /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE      /**< should separation method be delayed, if other separators found cuts? */
 #define MAXCUTS                     500
-#define MAXROUNDS                     5
+#define MAXROUNDS                    15
 
 #ifdef SCIP_DEBUG
 /** Print a cycle to the command line. For debugging purposes */

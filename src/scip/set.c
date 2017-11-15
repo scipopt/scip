@@ -278,6 +278,8 @@
 #define SCIP_DEFAULT_MISC_ALLOWDUALREDS    TRUE /**< should dual reductions in propagation methods and presolver be allowed? */
 #define SCIP_DEFAULT_MISC_ALLOWOBJPROP     TRUE /**< should propagation to the current objective be allowed in propagation methods? */
 #define SCIP_DEFAULT_MISC_REFERENCEVALUE   1e99 /**< objective value for reference purposes */
+#define SCIP_DEFAULT_MISC_USESYMMETRY         2 /**< used symmetry handling technique (0: off; 1: polyhedral; 2: orbital fixing) */
+
 
 #ifdef WITH_DEBUG_SOLUTION
 #define SCIP_DEFAULT_MISC_DEBUGSOLUTION     "-" /**< path to a debug solution */
@@ -657,6 +659,22 @@ SCIP_DECL_PARAMCHGD(paramChgdEnableReopt)
    /* create or deconstruct the reoptimization data structures */
 
    SCIP_CALL( SCIPenableReoptimization(scip, SCIPparamGetBool(param)) );
+
+   return SCIP_OKAY;
+}
+
+/** information method for a parameter change of usesymmetry */
+static
+SCIP_DECL_PARAMCHGD(paramChgdUsesymmetry)
+{  /*lint --e{715}*/
+
+   if ( SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_SOLVED )
+   {
+      if ( SCIPparamGetInt(param) > 0 )
+      {
+         SCIPerrorMessage("Cannot turn on symmetry handling during (pre)solving.\n");
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -1870,6 +1888,7 @@ SCIP_RETCODE SCIPsetCreate(
          "objective value for reference purposes",
          &(*set)->misc_referencevalue, FALSE, SCIP_DEFAULT_MISC_REFERENCEVALUE, SCIP_REAL_MIN, SCIP_REAL_MAX,
          NULL, NULL) );
+
 #ifdef WITH_DEBUG_SOLUTION
    SCIP_CALL( SCIPsetAddStringParam(*set, messagehdlr, blkmem,
          "misc/debugsol",
@@ -1877,6 +1896,12 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->misc_debugsol, FALSE, SCIP_DEFAULT_MISC_DEBUGSOLUTION,
          NULL, NULL) );
 #endif
+
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "misc/usesymmetry",
+         "used symmetry handling technique (0: off; 1: polyhedral; 2: orbital fixing)",
+         &(*set)->misc_usesymmetry, FALSE, SCIP_DEFAULT_MISC_USESYMMETRY, 0, 2,
+         paramChgdUsesymmetry, NULL) );
 
    /* randomization parameters */
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,

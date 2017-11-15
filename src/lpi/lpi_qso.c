@@ -1504,10 +1504,14 @@ SCIP_RETCODE SCIPlpiGetCols(
    /* store in the user-provided data */
    if( nnonz )
    {
-      assert( beg != NULL && lbeg != NULL );
-      assert( ind != NULL && lind != NULL );
-      assert( val != NULL && lval != NULL );
-      assert( lcnt != NULL );
+      assert( beg != NULL );
+      assert( ind != NULL );
+      assert( val != NULL );
+      if( lbeg == NULL || lind == NULL || lval == NULL || lcnt == NULL )
+      {
+         SCIPerrorMessage("QSget_columns_list() failed to allocate memory.\n");
+         return SCIP_LPERROR;
+      }
 
       *nnonz = lbeg[len-1] + lcnt[len-1];
       for( i = 0 ; i < len ; i++ )
@@ -1520,9 +1524,12 @@ SCIP_RETCODE SCIPlpiGetCols(
    }
    if( lb )
    {
-      assert( llb != NULL );
-      assert( lub != NULL );
       assert( ub != NULL );
+      if( llb == NULL || lub == NULL )
+      {
+         SCIPerrorMessage("QSget_columns_list() failed to allocate memory.\n");
+         return SCIP_LPERROR;
+      }
 
       for( i = 0; i < len; ++i )
       {
@@ -1596,10 +1603,14 @@ SCIP_RETCODE SCIPlpiGetRows(
    /* store in the user-provided data */
    if( nnonz )
    {
-      assert( beg != NULL && lbeg != NULL );
-      assert( ind != NULL && lind != NULL );
-      assert( val != NULL && lval != NULL );
-      assert( lcnt != NULL );
+      assert( beg != NULL );
+      assert( ind != NULL );
+      assert( val != NULL );
+      if( lbeg == NULL || lind == NULL || lval == NULL || lcnt == NULL )
+      {
+         SCIPerrorMessage("QSget_ranged_rows_list() failed to allocate memory.\n");
+         return SCIP_LPERROR;
+      }
 
       *nnonz = lbeg[len-1] + lcnt[len-1];
       for( i = 0 ; i < len; i++ )
@@ -1612,9 +1623,12 @@ SCIP_RETCODE SCIPlpiGetRows(
    }
    if( rhs )
    {
-      assert( lhs != NULL && lrhs != NULL );
-      assert( lrng != NULL );
-      assert( lsense != NULL );
+      assert( lhs != NULL );
+      if( lrhs == NULL || lrng == NULL || lsense == NULL )
+      {
+         SCIPerrorMessage("QSget_ranged_rows_list() failed to allocate memory.\n");
+         return SCIP_LPERROR;
+      }
 
       for( i = 0; i < len; ++i )
       {
@@ -1625,7 +1639,8 @@ SCIP_RETCODE SCIPlpiGetRows(
             rhs[i] = lrhs[i] + lrng[i];
             break;
          case 'E':
-            lhs[i] = rhs[i] = lrhs[i];
+            lhs[i] = lrhs[i];
+            rhs[i] = lrhs[i];
             break;
          case 'L':
             rhs[i] = lrhs[i];
