@@ -710,7 +710,10 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
       SCIPdebugMessage("fixed edges in prune: %d \n", nfixedges);
 
       if( nfixedges >= reductbound )
+      {
+         graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
          reductbound = getRedBound(0, anedges);
+      }
    }
 
    SCIP_CALL(graph_path_init(scip, prunegraph));
