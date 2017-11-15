@@ -37,7 +37,13 @@
 #include <assert.h>
 #include <stdarg.h>        /* message: va_list etc */
 
+#if defined(_WIN32) || defined(_WIN64)
+#ifndef R_OK
+#define R_OK 1
+#endif
+#else
 #include <unistd.h>        /* R_OK  */
+#endif
 
 #include "portab.h"
 #include "grph.h"

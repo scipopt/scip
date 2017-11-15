@@ -49,8 +49,6 @@
 #include "scip/misc.h"
 #include "scip/struct_misc.h"
 
-#include <unistd.h>
-
 #define CENTER_OK    0           /**< do nothing */
 #define CENTER_DEG   1           /**< find maximum degree */
 #define CENTER_SUM   2           /**< find the minimum distance sum */
