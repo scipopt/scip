@@ -101,7 +101,6 @@
                                          *   function defining a lower bound and prevent these constraints from
                                          *   entering the LP */
 #define DEFAULT_CLIQUEEXTRACTFACTOR 0.5 /**< lower clique size limit for greedy clique extraction algorithm (relative to largest clique) */
-
 #define MAXCOVERSIZEITERLEWI       1000 /**< maximal size for which LEWI are iteratively separated by reducing the feasible set */
 
 #define DEFAULT_USEGUBS           FALSE /**< should GUB information be used for separation? */
@@ -12728,7 +12727,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
 
             /* the weights are sorted: check first and last weight */
             assert( consdata->sorted );
-            if ( weights[0] != 1 || weights[nvars] != 1 )
+            if ( weights[0] != 1 || weights[nvars-1] != 1 )
                continue;
 
             /* check whether all variables are of the form 0 <= x_v <= u_v y_v for y_v \in \{0,1\} and zero objective */

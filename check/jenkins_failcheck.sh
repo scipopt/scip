@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 #
 # This script uploads and checks for fails in a SCIP run.
 # Sends an email if errors are detected. Is not meant to be use directly,
@@ -7,6 +7,102 @@
 # jenkins_check_results.sh
 
 sleep 5
+
+################################
+# AWK script for later         #
+################################
+read -d '' awkscript_findasserts << 'EOF'
+BEGIN {
+    searchAssert=0; idx=1; delete failed[0]; delete human[0];
+}
+
+NR==FNR && /fail.*abort/ {
+    failed[length(failed)+1]=$1; next;
+}
+
+NR!=FNR && /^@01/ {
+    # get instancename (copied from check.awk)
+    n = split($2, a, "/"); m = split(a[n], b, "."); currinstname = b[1];
+    if( b[m] == "gz" || b[m] == "z" || b[m] == "GZ" || b[m] == "Z" ) { m--; }
+    for( i = 2; i < m; ++i ) { currinstname = currinstname "." b[i]; }
+    instance = $2;
+
+    # adjust idx and searchAssert
+    if (searchAssert == 1) { human[length(human)]=failed[idx]; searchAssert=0; idx+=1; }
+    if (currinstname == failed[idx]) { searchAssert=1; }
+}
+
+NR!=FNR && searchAssert == 1 && /Assertion.*failed.$/ {
+    print "";
+    print instance;
+    for(i=2;i<=NF;i++){printf "%s ", $i}; print "";
+    searchAssert=0; idx+=1;
+}
+
+END {
+    if( length(human) > 0 ) {
+        print "";
+        print "The following fails need human inspection:";
+        for(key in human){ print human[key] }
+    }
+}
+EOF
+
+read -d '' awkscript_checkfixedinstances << 'EOF'
+NR != FNR {
+  if( $3 == GITBRANCH && $4 == TESTSET && $5 == SETTING && $6 == OPT && $7 == LPS)
+  {
+     if( $0 in bugs == 0 )
+        print "Previously failing instance " $1 " with error " $2 " does not fail anymore"
+     else
+        print $0 >> TMPDATABASE
+  }
+  else
+     print $0 >> TMPDATABASE
+  next;
+}
+## fail instances for this configuration
+/fail/ {
+  failmsg=$13; for(i=14;i<=NF;i++){failmsg=failmsg"_"$i;}
+  errorstring=$1 " " failmsg " " GITBRANCH " " TESTSET " " SETTING " " OPT " " LPS;
+  bugs[errorstring]
+}
+EOF
+
+read -d '' awkscript_readknownbugs << 'EOF'
+NR == FNR {known_bugs[$0]; next}
+/fail/ {
+    ## get the fail error and build string with the format of "database"
+    failmsg=$13; for(i=14;i<=NF;i++){failmsg=failmsg"_"$i;}
+    errorstring=$1 " " failmsg " " GITBRANCH " " TESTSET " " SETTING " " OPT " " LPS;
+    ## if error is not in "database", add it and print it in ERRORINSTANCES to send email
+    if( errorstring in known_bugs == 0 )
+    {
+        print errorstring >> DATABASE;
+        print $0;
+    }
+    else # these are instances that failed before
+    {
+        print $1 " " failmsg >> STILLFAILING; # only report the name of the instance and the fail message
+    }
+}
+EOF
+
+read -d '' awkscript_scipheader << 'EOF'
+BEGIN{printLines=0;}
+
+/^SCIP version/ {printLines=1;}
+printLines > 0 && /^$/ {printLines+=1;}
+printLines > 0 {print $0}
+{
+    if ( printLines == 3 ){
+        exit 0;
+    }
+}
+EOF
+################################
+# End of AWK Script            #
+################################
 
 # we use a name that is unique per test sent to the cluster (a jenkins job
 # can have several tests sent to the cluster, that is why the jenkins job
@@ -17,6 +113,9 @@ STILLFAILING="${DATABASE}_SF.tmp"
 RBDB="/nfs/OPTI/adm_timo/databases/rbdb/${PWD##*/}_${TESTSET}_${SETTING}_${LPS}_rb.txt"
 OUTPUT="${DATABASE}_output.tmp"
 touch ${STILLFAILING}
+
+AWKARGS="-v GITBRANCH=$GITBRANCH -v TESTSET=$TESTSET -v SETTING=$SETTING -v OPT=$OPT -v LPS=$LPS -v DATABASE=$DATABASE -v TMPDATABASE=$TMPDATABASE -v STILLFAILING=$STILLFAILING"
+echo $AWKARGS
 
 # the first time, the file might not exists so we create it
 # Even more, we have to write something to it, since otherwise
@@ -76,7 +175,7 @@ if [ "${PERFORMANCE}" == "performance" ]; then
   echo $NEWRBID >> $RBDB
   rm ${OUTPUT}
 else
-  ./evalcheck_cluster.sh -r ../${EVALFILE}
+  ./evalcheck_cluster.sh -r "-v useshortnames=0" ../${EVALFILE}
 fi
 cd ..
 
@@ -88,25 +187,7 @@ SETFILE=`pwd`/`ls $BASEFILE*set`
 
 # check for fixed instances
 echo "Checking for fixed instances."
-RESOLVEDINSTANCES=`awk '
-NR != FNR {
-  if( $3 == "'$GITBRANCH'" && $4 == "'$TESTSET'" && $5 == "'$SETTING'" && $6 == "'$OPT'" && $7 == "'$LPS'")
-  {
-     if( $0 in bugs == 0 )
-        print "Previously failing instance " $1 " with error " $2 " does not fail anymore"
-     else
-        print $0 >> "'$TMPDATABASE'"
-  }
-  else
-     print $0 >> "'$TMPDATABASE'"
-  next;
-}
-## fail instances for this configuration
-/fail/ {
-  failmsg=$13; for(i=14;i<=NF;i++){failmsg=failmsg"_"$i;}
-  errorstring=$1 " " failmsg " '$GITBRANCH' '$TESTSET' '$SETTING' '$OPT' '$LPS'";
-  bugs[errorstring]
-}' $RESFILE $DATABASE`
+RESOLVEDINSTANCES=`awk $AWKARGS "$awkscript_checkfixedinstances" $RESFILE $DATABASE`
 mv $TMPDATABASE $DATABASE
 
 
@@ -118,24 +199,8 @@ mv $TMPDATABASE $DATABASE
 NFAILS=`grep -c fail $RESFILE`
 if [ $NFAILS -gt 0 ]; then
   echo "Detected ${NFAILS} fails."
-  ERRORINSTANCES=`awk '
   ## read all known bugs
-  NR == FNR {known_bugs[$0]; next}
-  /fail/ {
-     ## get the fail error and build string with the format of "database"
-     failmsg=$13; for(i=14;i<=NF;i++){failmsg=failmsg"_"$i;}
-     errorstring=$1 " " failmsg " '$GITBRANCH' '$TESTSET' '$SETTING' '$OPT' '$LPS'";
-     ## if error is not in "database", add it and print it in ERRORINSTANCES to send email
-     if( errorstring in known_bugs == 0 )
-     {
-        print errorstring >> "'$DATABASE'";
-        print $0;
-     }
-     else # these are instances that failed before
-     {
-        print $1 " " failmsg >> "'$STILLFAILING'"; # only report the name of the instance and the fail message
-     }
-  }' $DATABASE $RESFILE`
+  ERRORINSTANCES=`awk $AWKARGS "$awkscript_readknownbugs" $DATABASE $RESFILE`
   STILLFAILINGDB=`cat ${STILLFAILING}`
 
   # check if there are new fails!
@@ -145,32 +210,12 @@ if [ $NFAILS -gt 0 ]; then
       ###################
 
       # get SCIP's header
-      SCIP_HEADER=`awk '
-      BEGIN{printLines=0;}
+      SCIP_HEADER=`awk "$awkscript_scipheader" $OUTFILE`
 
-      /^SCIP version/ {printLines=1;}
-      printLines > 0 && /^$/ {printLines+=1;}
-      printLines > 0 {print $0}
-      {
-          if ( printLines == 3 ){
-              exit 0;
-          }
-      }' $OUTFILE`
-
-      # Get assertions and instance where they were generated
-      ERRORS_INFO=`echo "${ERRORINSTANCES}" | awk '
-      BEGIN{searchAssert=0; idx=1; delete failed[0]; delete human[0]}
-
-      NR==FNR && /fail \(abort\)/ {failed[length(failed)+1]=$1; next;}
-
-      # searching for an assert, but we see different instance name -> could not find assert for failed[idx],
-      # continue with next failed (search for instance output, not assert!
-      searchAssert == 1 && /^@01/ && !($0 ~ failed[idx]) { human[failed[idx]]=1; searchAssert=0; idx+=1;}
-      searchAssert == 1 && /Assertion.*failed\.$/ {print instance "\n" $0 "\n"; searchAssert=0; idx+=1;}
-
-      /^@01/ && $0 ~ failed[idx] {searchAssert=1; instance=$0}
-      END{ if( length(human) > 0 ){ print "The following fails need human inspection:"; for(key in human){ print key} }}
-      ' - $ERRFILE`
+      if [ "${PERFORMANCE}" != "performance" ]; then
+          # Get assertions and instance where they were generated
+          ERRORS_INFO=`echo "${ERRORINSTANCES}" | awk "$awkscript_findasserts" - ${ERRFILE}`
+      fi
 
       ###############
       # ERROR EMAIL #
@@ -178,27 +223,33 @@ if [ $NFAILS -gt 0 ]; then
       echo "Found new errors, sending emails."
       SUBJECT="FAIL [BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING=$SETTING] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH]"
       echo -e "There are newly failed instances.
-      The instances run with the following SCIP version and setting file:
+The instances run with the following SCIP version and setting file:
 
-      ${SCIP_HEADER}
+\`\`\`
+BRANCH: $GITBRANCH
 
-      ${SETFILE}
+SCIP HEADER:
+${SCIP_HEADER}
 
-      Here is a list of the instances and the assertion that fails (fails with _fail (abort)_), if any:
-      ${ERRORS_INFO}
+SETTINGS FILE:
+${SETFILE}
+\`\`\`
 
-      Here is the complete list of new fails:
-      ${ERRORINSTANCES}
+Here is a list of the instances and the assertion that fails (fails with _fail (abort)_), if any:
+${ERRORS_INFO}
 
-      The follwing instances are still failing:
-      ${STILLFAILINGDB}
+Here is the complete list of new fails:
+${ERRORINSTANCES}
 
-      Finally, the err, out and res file can be found here:
-      $ERRFILE
-      $OUTFILE
-      $RESFILE
+The follwing instances are still failing:
+${STILLFAILINGDB}
 
-      Please note that they might be deleted soon" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+Finally, the err, out and res file can be found here:
+$ERRFILE
+$OUTFILE
+$RESFILE
+
+Please note that they might be deleted soon" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
   else
       echo "No new errors, sending no emails."
   fi
@@ -210,14 +261,17 @@ fi
 if [ -n "$RESOLVEDINSTANCES" ]; then
    SUBJECT="FIX [BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING=$SETTING] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH]"
    echo -e "Congratulations, see bottom for fixed instances!
-   The following instances are still failing:
-   ${STILLFAILINGDB}
-   The err, out and res file can be found here:
-   $ERRFILE
-   $OUTFILE
-   $RESFILE
-   The following errors have been fixed:
-   ${RESOLVEDINSTANCES}" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+
+The following instances are still failing:
+${STILLFAILINGDB}
+
+The err, out and res file can be found here:
+$ERRFILE
+$OUTFILE
+$RESFILE
+
+The following errors have been fixed:
+${RESOLVEDINSTANCES}" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
 fi
 rm ${STILLFAILING}
 

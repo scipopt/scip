@@ -1012,7 +1012,7 @@ SCIP_RETCODE getOptimalShiftingValue(
             slacksurplus -= val;
 
          /* check if the least violating shift lies within variable bounds and set corresponding array values */
-         if( SCIPisFeasLE(scip, maxfeasshift + 1.0, upperbound) )
+         if( !SCIPisInfinity(scip, maxfeasshift) && SCIPisFeasLE(scip, maxfeasshift + 1.0, upperbound) )
          {
             steps[i] = maxfeasshift + 1.0;
             violationchange[i] = rowweight;

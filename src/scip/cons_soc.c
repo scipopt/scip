@@ -1172,7 +1172,7 @@ SCIP_RETCODE separatePoint(
 
    *success = FALSE;
 
-   minefficacy = inenforcement ? (SCIPgetRelaxFeastolFactor(scip) > 0.0 ? SCIPepsilon(scip) : SCIPfeastol(scip)) : conshdlrdata->minefficacy;
+   minefficacy = inenforcement ? SCIPfeastol(scip) : conshdlrdata->minefficacy;
 
    for( c = 0; c < nconss; ++c )
    {

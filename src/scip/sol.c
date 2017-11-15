@@ -518,7 +518,6 @@ SCIP_RETCODE SCIPsolAdjustImplicitSolVals(
             SCIP_Real lhs;
 
             row = rows[r];
-            assert(!SCIPsetIsFeasZero(set, vals[r]));
 
             if( SCIProwIsLocal(row) || !SCIProwIsInLP(row) )
                continue;
@@ -533,6 +532,7 @@ SCIP_RETCODE SCIPsolAdjustImplicitSolVals(
             if( SCIPsetIsFeasLE(set, activity, rhs) && SCIPsetIsFeasLE(set, lhs, activity) )
                continue;
 
+            assert(! SCIPsetIsZero(set, vals[r]));
             if( (SCIPsetIsFeasGT(set, activity, rhs) && SCIPsetIsPositive(set, vals[r]))
                   || (SCIPsetIsFeasLT(set, activity, lhs) && SCIPsetIsNegative(set, vals[r])) )
                rounddown = TRUE;

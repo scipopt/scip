@@ -99,6 +99,15 @@ set(settings_Bilinrelax
     "bilinrelax"
   )
 
+set(settings_Symmetry
+    "orbitalfixing-beforepre"
+    "orbitopes-beforepre"
+    "symresacks-beforepre"
+    "orbitalfixing-afterpre"
+    "orbitopes-afterpre"
+    "symresacks-afterpre"
+    )
+
 set(settings_sparsify
     "sparsifyaggr"
   )
@@ -253,6 +262,17 @@ set(instances_Orbitope
     )
 
 #
+# Symmetry instances
+#
+set(instances_Symmetry
+    "instances/MIP/MANN_a9.clq.lp\;16"
+    "instances/MIP/rgn.mps\;82.1999974"
+    "instances/MIP/stein27.fzn\;18"
+    "instances/MIP/stein27_inf.lp\;+infinity"
+    "instances/PseudoBoolean/wheel010.lap.opb.pre.cip\;25"
+    )
+
+#
 # available reader file extensions for SCIP readers
 #
 set(scip_reader_extensions
@@ -334,6 +354,7 @@ add_instancetests(instances_Semicontinuous settings_default "Semicontinuous")
 add_instancetests(instances_SAT settings_default "SAT")
 add_instancetests(instances_SOS settings_default "SOS")
 add_instancetests(instances_Orbitope settings_default "Orbitope")
+add_instancetests(instances_Symmetry settings_Symmetry "Symmetry")
 add_instancetests(instances_Cardinality settings_Cardinality "Cardinality")
 
 #
