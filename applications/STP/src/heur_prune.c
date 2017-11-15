@@ -774,14 +774,6 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
 
          if( i > 0 )
          {
-            assert(graph_valid(prunegraph));
-
-            if( !graph_valid(prunegraph) )
-            {
-               printf("FAIL %d \n", 0);
-               exit(1);
-            }
-
             SCIP_CALL( computeNewSols(scip, g, prunegraph, path, nodearrint, edgearrint, solnode, soledge, globalsoledge,
                   nodearrchar, &globalobj, TRUE, success) );
          }
@@ -789,7 +781,6 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
          if( pcmw )
             graph_pc_2org(prunegraph);
 
-         // todo!!!
          SCIP_CALL( reduce_boundPrune(scip, prunegraph, vnoi, cost, nodearrreal, costrev,
                &offset, heap, state, vbase, solnode, soledge, &brednelims, minnelims));
 

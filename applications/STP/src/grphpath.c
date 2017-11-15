@@ -2670,11 +2670,14 @@ SCIP_RETCODE voronoi_radius(
    assert(vbase != NULL);
 
    nnodes = graph->knots;
-   if( nnodes == 0 || graph->terms == 0 )
+
+   if( graph->terms == 0 )
       return SCIP_OKAY;
+
    root = graph->source;
    mw = (graph->stp_type == STP_MWCSP);
    pc = ((graph->stp_type == STP_PCSPG) || (graph->stp_type == STP_RPCSPG));
+
    SCIP_CALL( SCIPallocBufferArray(scip, &nodesid, nnodes) );
 
    /* initialize */
@@ -2817,8 +2820,7 @@ SCIP_RETCODE voronoi_radius(
                   }
 
                   /* find edge in adjgraph */
-                  for (ne = adjgraph->outbeg[nodesid[vbk]]; ne != EAT_LAST; ne =
-                        adjgraph->oeat[ne])
+                  for( ne = adjgraph->outbeg[nodesid[vbk]]; ne != EAT_LAST; ne = adjgraph->oeat[ne] )
                      if( adjgraph->head[ne] == nodesid[vbm] )
                         break;
 
@@ -2862,6 +2864,7 @@ SCIP_RETCODE voronoi_radius(
       }
    }
    SCIPfreeBufferArray(scip, &nodesid);
+
    return SCIP_OKAY;
 }
 
