@@ -96,7 +96,7 @@
 #define READER_EXTENSION        "snip"
 
 
-#define DEFAULT_USEBENDERS      FALSE
+#define DEFAULT_USEBENDERS      TRUE
 
 struct SCIP_ReaderData
 {
