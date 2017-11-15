@@ -79,9 +79,9 @@
 #define DEFAULT_ABBREVPSEUDO                 FALSE /**< If abbreviated: Use pseudo costs to estimate the score of a
                                                     *   candidate. */
 #define DEFAULT_SCORING_FUNCTION             'p'   /**< default scoring function to be used */
-#define DEFAULT_MIN_WEIGHT        (SCIP_Real)4.0   /**< default value for the min weight to get a weighted score of two
+#define DEFAULT_MIN_WEIGHT                   4.0   /**< default value for the min weight to get a weighted score of two
                                                     *   child gains (taken from the paper) */
-#define DEFAULT_MAX_WEIGHT        (SCIP_Real)1.0   /**< default value for the max weight to get a weighted score of two
+#define DEFAULT_MAX_WEIGHT                   1.0   /**< default value for the max weight to get a weighted score of two
                                                     *   child gains (taken from the paper) */
 
 #ifdef SCIP_DEBUG
@@ -2668,8 +2668,10 @@ SCIP_RETCODE applyBinaryConstraints(
    {
       SCIP_VAR** vars = conslist->consvars[i];
       int nvars = conslist->nconsvars[i];
-      SCIP_Bool violated = conslist->violated[i];
       int v;
+#ifdef SCIP_STATISTIC
+      SCIP_Bool violated = conslist->violated[i];
+#endif
 
       for( v = 0; v < nvars; ++v )
       {
