@@ -385,16 +385,14 @@ make[1]: Leaving directory `/sw/scip'
 
   -> "cpxinc" is the path to the CPLEX "include" directory, e.g., "<CPLEX-path>/include/ilcplex".
   -> "libcplex.*.a" is the path to the CPLEX library, e.g., "<CPLEX-path>/lib/x86-64_linux/static_pic/libcplex.a"
-  -> "libcplex.*.so" is the path to the CPLEX library, e.g., "<CPLEX-path>/bin/x86-64_linux/libcplex1263.so"   -> "blissinc" is the path to the BLISS directory, e.g., "<BLISS-path>".
+  -> "libcplex.*.so" is the path to the CPLEX library, e.g., "<CPLEX-path>/bin/x86-64_linux/libcplex1263.so"
+  -> "blissinc" is the path to the BLISS directory, e.g., "<BLISS-path>".
   -> "libbliss.*.a" is the path to the BLISS library, e.g., "<BLISS-path>/libbliss.a"
   -> "libbliss.*.so" is the path to the BLISS library, e.g., "<BLISS-path>/libbliss.so"
 
 > Enter soft-link target file or directory for "lib/include/bliss" (return if not needed):
-> /sw/
--> creating softlink "lib/include/bliss" -> "/sw/"
-
-   NOTE: In contrast to other options, we need bliss to be compiled in a directory whose name is bliss.
-   Moreover, the soft-link has to point to the directory containg the bliss directory.
+> /sw/bliss
+-> creating softlink "lib/include/bliss" -> "/sw/bliss"
 
 > Enter soft-link target file or directory for "lib/static/libbliss.linux.x86_64.gnu.a" (return if not needed):
 > /sw/bliss/libbliss.a
@@ -404,8 +402,8 @@ make[1]: Leaving directory `/sw/scip'
 ---
 
    Note on how to (locally) install bliss:
-    - create a target directory for the installation whose name is "bliss" (this is required)
-    - compile the bliss code within the directory "bliss"
+    - create a target directory for the installation
+    - compile the bliss code within this directory
 
    If you ever need to modify the soft-link targets, delete the soft-links in the "lib/" subdirectory
    and enter "make links" to generate them again.
@@ -550,8 +548,8 @@ make[1]: Leaving directory `/sw/scip'
        - ln -s <path to GAMS system directory> <path to SCIP>/lib/shared/gams.$(OSTYPE).$(ARCH).$(COMP)
 
    (k) to use bliss
-       - ln -s <path to directory containing directory with name "bliss" which contains bliss' *.hh files> <path to SCIP>/lib/include/bliss
-         (e.g. "cd scip; ln -s ../bliss/.." lib/include/bliss)
+       - ln -s <path to bliss *.hh files> <path to SCIP>/lib/include/bliss
+         (e.g. "cd scip; ln -s ../bliss" lib/include/bliss)
        - ln -s <file libbliss.[...].a> <path to SCIP>/lib/static/libbliss.$(OSTYPE).$(ARCH).$(COMP).a
          for each operation system and architecture to use
          (e.g. "cd scip; ln -s ../bliss/libbliss.a lib.static/libbliss.linux.x86_64.gnu.a")
