@@ -876,7 +876,7 @@ SCIP_RETCODE changeParametersUsingSettingsFiles(
       case SOLVINGPHASE_UNINITIALIZED:
       default:
          SCIPdebugMsg(scip, "Unknown solving phase: %d -> ABORT!\n ", eventhdlrdata->solvingphase);
-         SCIPABORT();
+         return SCIP_INVALIDCALL;
          break;
    }
 
