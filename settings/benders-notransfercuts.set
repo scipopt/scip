@@ -4,10 +4,6 @@
 # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
 reading/storeader/usebenders = TRUE
 
-# priority of node selection rule <bfs> in standard mode
-# [type: int, advanced: FALSE, range: [-536870912,1073741823], default: 100000]
-nodeselection/bfs/stdpriority = 300000
-
 # Should Benders' cuts from LNS heuristics be transferred to the main SCIP instance?
 # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: TRUE]
 benders/default/transfercuts = FALSE
