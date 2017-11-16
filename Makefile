@@ -325,7 +325,7 @@ endif
 
 SYMOPTIONS	+=	bliss
 ifeq ($(SYM),bliss)
-FLAGS		+=	-I$(LIBDIR)/include/bliss
+FLAGS		+=	-I$(LIBDIR)/include/
 SYMOBJ		=	symmetry/compute_symmetry_bliss.o
 SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
