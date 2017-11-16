@@ -491,6 +491,17 @@ SCIP_Longint SCIPdivesetGetNBacktracks(
    return diveset->totalnbacktracks;
 }
 
+/** get the total number of solutions (leaf and rounded solutions) found by the dive set */
+SCIP_Longint SCIPdivesetGetNSols(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return diveset->nsolsfound;
+}
+
+
 /** get the maximum LP iterations quotient of the diving settings */
 SCIP_Real SCIPdivesetGetMaxLPIterQuot(
    SCIP_DIVESET*         diveset             /**< diving settings */
