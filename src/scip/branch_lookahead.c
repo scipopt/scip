@@ -47,7 +47,7 @@
 #include "scip/cons_logicor.h"
 
 #define BRANCHRULE_NAME            "lookahead"
-#define BRANCHRULE_DESC            "fullstrong branching over two levels"
+#define BRANCHRULE_DESC            "full strong branching over multiple levels"
 #define BRANCHRULE_PRIORITY        0
 #define BRANCHRULE_MAXDEPTH        -1
 #define BRANCHRULE_MAXBOUNDDIST    1.0
@@ -78,10 +78,10 @@
                                                     *   candidates be reused? */
 #define DEFAULT_ABBREVPSEUDO                 FALSE /**< If abbreviated: Use pseudo costs to estimate the score of a
                                                     *   candidate. */
-#define DEFAULT_SCORING_FUNCTION             'p'   /**< default scoring function to be used */
-#define DEFAULT_MIN_WEIGHT                   4.0   /**< default value for the min weight to get a weighted score of two
+#define DEFAULT_SCORINGFUNCTION              'p'   /**< default scoring function to be used */
+#define DEFAULT_MINWEIGHT                    4.0   /**< default value for the min weight to get a weighted score of two
                                                     *   child gains (taken from the paper) */
-#define DEFAULT_MAX_WEIGHT                   1.0   /**< default value for the max weight to get a weighted score of two
+#define DEFAULT_MAXWEIGHT                    1.0   /**< default value for the max weight to get a weighted score of two
                                                     *   child gains (taken from the paper) */
 
 #ifdef SCIP_DEBUG
@@ -5069,15 +5069,15 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
    SCIP_CALL( SCIPaddCharParam(scip,
          "branching/lookahead/scoringfunction",
          "scoring function to be used: 'd'efault, 'f'ullstrong branching or 'p'aper",
-         &branchruledata->config->scoringfunction, TRUE, DEFAULT_SCORING_FUNCTION, "dfp", NULL, NULL) );
+         &branchruledata->config->scoringfunction, TRUE, DEFAULT_SCORINGFUNCTION, "dfp", NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "branching/lookahead/minweight",
          "if scoringfunction is 'p', this value is used to weight the min of the gains of two child problems",
-         &branchruledata->config->minweight, TRUE, DEFAULT_MIN_WEIGHT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+         &branchruledata->config->minweight, TRUE, DEFAULT_MINWEIGHT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
         "branching/lookahead/maxweight",
         "if scoringfunction is 'p', this value is used to weight the max of the gains of two child problems",
-         &branchruledata->config->maxweight, TRUE, DEFAULT_MAX_WEIGHT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+         &branchruledata->config->maxweight, TRUE, DEFAULT_MAXWEIGHT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
