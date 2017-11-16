@@ -73,7 +73,6 @@ struct SCIP_PresolData
    int                   maxbinfillin;       /**< maximal fillin for binary variables */
    int                   maxnonzeros;        /**< maximal support of one equality to be used for cancelling (-1: no limit) */
    int                   maxconsiderednonzeros;/**< maximal number of considered non-zeros within one row (-1: no limit) */
-   SCIP_Real             maxchgcoeffac;      /**< limit on coefficient changes per row as a factor of canceled nonzeros */
    SCIP_Real             maxretrievefac;     /**< limit on the number of useless vs. useful hashtable retrieves as a multiple of the number of constraints */
    SCIP_Real             waitingfac;         /**< number of calls to wait until next execution as a multiple of the number of useless calls */
    char                  rowsort;            /**< order in which to process inequalities ('n'o sorting, 'i'ncreasing nonzeros, 'd'ecreasing nonzeros) */
@@ -146,7 +145,6 @@ SCIP_RETCODE cancelRow(
    int                   maxcontfillin,        /**< maximal fill-in allowed for continuous variables */
    int                   maxintfillin,         /**< maximal fill-in allowed for integral variables */
    int                   maxbinfillin,         /**< maximal fill-in allowed for binary variables */
-   SCIP_Real             maxchgcoeffac,        /**< limit on coefficient change as a factor of canceled nonzeros */
    int                   maxconsiderednonzeros,/**< maximal number of non-zeros to consider for cancellation */
    SCIP_Bool             preserveintcoefs,     /**< only perform non-zero cancellation if integrality of coefficients is preserved? */
    SCIP_Longint*         nuseless,             /**< pointer to update number of useless hashtable retrieves */
@@ -171,7 +169,7 @@ SCIP_RETCODE cancelRow(
    int bestnfillin;
    SCIP_Real mincancelrate;
    SCIP_Bool rowiseq;
-   SCIP_CONS* cons;
+   SCIP_CONS* cancelcons;
 
    rowiseq = SCIPisEQ(scip, SCIPmatrixGetRowLhs(matrix, rowidx), SCIPmatrixGetRowRhs(matrix, rowidx));
 
@@ -179,13 +177,13 @@ SCIP_RETCODE cancelRow(
    rowidxptr = SCIPmatrixGetRowIdxPtr(matrix, rowidx);
    rowvalptr = SCIPmatrixGetRowValPtr(matrix, rowidx);
 
-   cons = SCIPmatrixGetCons(matrix, rowidx);
+   cancelcons = SCIPmatrixGetCons(matrix, rowidx);
 
    mincancelrate = 0.0;
 
    /* for set packing and logicor constraints, only accept equalities where all modified coefficients are cancelled */
-   if( SCIPconsGetHdlr(cons) == SCIPfindConshdlr(scip, "setppc") ||
-       SCIPconsGetHdlr(cons) == SCIPfindConshdlr(scip, "logicor") )
+   if( SCIPconsGetHdlr(cancelcons) == SCIPfindConshdlr(scip, "setppc") ||
+       SCIPconsGetHdlr(cancelcons) == SCIPfindConshdlr(scip, "logicor") )
       mincancelrate = 1.0;
 
    SCIP_CALL( SCIPduplicateBufferArray(scip, &cancelrowinds, rowidxptr, cancelrowlen) );
@@ -203,7 +201,6 @@ SCIP_RETCODE cancelRow(
    {
       SCIP_Real bestscale;
       int bestcand;
-      int bestncancel;
       int i;
       int j;
       ROWVARPAIR rowvarpair;
@@ -211,7 +208,6 @@ SCIP_RETCODE cancelRow(
 
       bestscale = 1.0;
       bestcand = -1;
-      bestncancel = 0;
       bestnfillin = 0;
       bestcancelrate = 0.0;
 
@@ -241,7 +237,6 @@ SCIP_RETCODE cancelRow(
             ROWVARPAIR* eqrowvarpair;
             SCIP_Real* eqrowvals;
             int* eqrowinds;
-            SCIP_Real eqrowside;
             SCIP_Real scale;
             SCIP_Real cancelrate;
             int i1,i2;
@@ -283,7 +278,6 @@ SCIP_RETCODE cancelRow(
 
             eqrowvals = SCIPmatrixGetRowValPtr(matrix, eqrowvarpair->rowindex);
             eqrowinds = SCIPmatrixGetRowIdxPtr(matrix, eqrowvarpair->rowindex);
-            eqrowside = SCIPmatrixGetRowRhs(matrix, eqrowvarpair->rowindex);
 
             scale = -rowvarpair.varcoef1 / eqrowvarpair->varcoef1;
 
@@ -320,7 +314,7 @@ SCIP_RETCODE cancelRow(
                   }
                   /* finally, check if locks could be modified in a bad way due to flipped signs */
                   else if( (SCIPisInfinity(scip, cancelrhs) || SCIPisInfinity(scip, -cancellhs)) &&
-                           COPYSIGN(1.0, newcoef) != COPYSIGN(1.0, cancelrowvals[a]) )
+                           COPYSIGN(1.0, newcoef) != COPYSIGN(1.0, cancelrowvals[a]) ) /*lint !e777*/
                   {
                      /* do not flip signs for non-canceled coefficients if this adds a lock to a variable that had at most one lock
                       * in that direction before, except if the other direction gets unlocked
@@ -418,24 +412,10 @@ SCIP_RETCODE cancelRow(
             if( ncontfillin > maxcontfillin || nbinfillin > maxbinfillin || nintfillin > maxintfillin )
                continue;
 
-#if 0 /*TODO I am not convinced that an integral right hand side is important. If integral coefficients are preserved the side might even be rounded
-            and yield stronger constraints if it is fractional */
-
-            /* secure that integer lhs stays integer after scaling */
-            if( !SCIPisInfinity(scip, -cancellhs) )
-               if( SCIPisIntegral(scip, cancellhs) && !SCIPisIntegral(scip, cancellhs + scale * eqrowside) )
-                  continue;
-
-            /* secure that integer rhs stays integer after scaling */
-            if( !SCIPisInfinity(scip, cancelrhs) )
-               if( SCIPisIntegral(scip, cancelrhs) && !SCIPisIntegral(scip, cancelrhs + scale * eqrowside) )
-                  continue;
-#endif
             ntotfillin = nbinfillin + nintfillin + ncontfillin;
 
             if( cancelrate > bestcancelrate )
             {
-               bestncancel = ncancel;
                bestnfillin = ntotfillin;
                bestcand = eqrowvarpair->rowindex;
                bestscale = scale;
@@ -877,7 +857,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
          /* since the function parameters for the max fillin are unsigned we do not need to handle the
           * unlimited (-1) case due to implicit conversion rules */
          SCIP_CALL( cancelRow(scip, matrix, pairtable, rowidx, \
-               presoldata->maxcontfillin, presoldata->maxintfillin, presoldata->maxbinfillin, presoldata->maxchgcoeffac, \
+               presoldata->maxcontfillin, presoldata->maxintfillin, presoldata->maxbinfillin, \
                presoldata->maxconsiderednonzeros, presoldata->preserveintcoefs, \
                &nuseless, nchgcoefs, &numcancel, &nfillin) );
       }
@@ -1022,11 +1002,6 @@ SCIP_RETCODE SCIPincludePresolSparsify(
          "presolving/sparsify/rowsort",
          "order in which to process inequalities ('n'o sorting, 'i'ncreasing nonzeros, 'd'ecreasing nonzeros)",
          &presoldata->rowsort, TRUE, DEFAULT_ROWSORT, "nid", NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip,
-         "presolving/sparsify/maxchgcoeffac",
-         "limit on coefficient changes per row as a factor of canceled nonzeros",
-         &presoldata->maxchgcoeffac, TRUE, DEFAULT_MAXCHGCOEFFAC, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
          "presolving/sparsify/maxretrievefac",
