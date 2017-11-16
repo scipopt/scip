@@ -12,7 +12,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+#define SCIP_STATISTIC
+#define SCIP_DEBUG
 /**@file   branch_lookahead.c
  * @ingroup BRANCHINGRULES
  * @brief  lookahead LP branching rule
@@ -3659,7 +3660,9 @@ SCIP_RETCODE executeBranchingRecursive(
                SCIP_CALL( localStatisticsAllocate(scip, &deeperlocalstats) );
                SCIP_CALL( selectVarRecursive(scip, deeperstatus, deeperpersistent, config, baselpsol, domainreductions,
                      binconsdata, candidates, deeperdecision, scorecontainer, storewarmstartinfo, recursiondepth - 1,
-                     deeperlpobjval, &branchingresult->niterations, statistics, deeperlocalstats) );
+                     deeperlpobjval, &branchingresult->niterations, &branchingresult->ndeepestcutoffs,
+                     &branchingresult->bestgain, &branchingresult->totalgains, &branchingresult->ntotalgains,
+                     statistics, deeperlocalstats) );
 #else
                SCIP_CALL( selectVarRecursive(scip, deeperstatus, deeperpersistent, config, baselpsol, domainreductions,
                      binconsdata, candidates, deeperdecision, scorecontainer, storewarmstartinfo, recursiondepth - 1,
@@ -4005,7 +4008,8 @@ SCIP_RETCODE selectVarRecursive(
             {
 #ifdef SCIP_STATISTIC
                assert(localstats->ncutoffproofnodes == 0 || localstats->ncutoffproofnodes == 2);
-               addUpperBoundProofNode(scip, branchvar, branchval, baselpsol, domainreductions, 2 + localstats->ncutoffproofnodes);
+               addUpperBoundProofNode(scip, branchvar, branchval, baselpsol, domainreductions,
+                  2 + localstats->ncutoffproofnodes);
 #else
                addUpperBound(scip, branchvar, branchval, baselpsol, domainreductions);
 #endif
@@ -4029,7 +4033,8 @@ SCIP_RETCODE selectVarRecursive(
             {
 #ifdef SCIP_STATISTIC
                assert(localstats->ncutoffproofnodes == 0 || localstats->ncutoffproofnodes == 2);
-               addLowerBoundProofNode(scip, branchvar, branchval, baselpsol, domainreductions, 2 + localstats->ncutoffproofnodes);
+               addLowerBoundProofNode(scip, branchvar, branchval, baselpsol, domainreductions,
+                  2 + localstats->ncutoffproofnodes);
 #else
                addLowerBoundProofNode(scip, branchvar, branchval, baselpsol, domainreductions);
 #endif
@@ -4315,7 +4320,8 @@ SCIP_RETCODE selectVarStart(
 
 #ifdef SCIP_STATISTIC
       SCIP_CALL( selectVarRecursive(scip, status, persistent, config, baselpsol, domainreductions, binconsdata, candidates,
-            decision, scorecontainer, storewarmstartinfo, recursiondepth, lpobjval, NULL, statistics, localstats) );
+            decision, scorecontainer, storewarmstartinfo, recursiondepth, lpobjval, NULL, NULL, NULL, NULL, NULL,
+            statistics, localstats) );
 #else
       SCIP_CALL( selectVarRecursive(scip, status, persistent, config, baselpsol, domainreductions, binconsdata, candidates,
             decision, scorecontainer, storewarmstartinfo, recursiondepth, lpobjval, NULL, NULL, NULL, NULL, NULL) );
