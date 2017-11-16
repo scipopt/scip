@@ -215,7 +215,7 @@ SCIP_RETCODE reduceStp(
       SCIP_CALL( SCIPallocBufferArray(scip, &gnodearr, nterms - 1) );
       for( i = 0; i < nterms - 1; i++ )
       {
-         SCIP_CALL( SCIPallocBuffer(scip, &gnodearr[i]) ); /*lint !e866*/
+         SCIP_CALL( SCIPallocBlockMemory(scip, &gnodearr[i]) ); /*lint !e866*/
       }
    }
    else
@@ -270,7 +270,7 @@ SCIP_RETCODE reduceStp(
    if( gnodearr != NULL )
    {
       for( i = nterms - 2; i >= 0; i-- )
-         SCIPfreeBuffer(scip, &gnodearr[i]);
+         SCIPfreeBlockMemory(scip, &gnodearr[i]);
       SCIPfreeBufferArray(scip, &gnodearr);
    }
 
@@ -358,7 +358,7 @@ SCIP_RETCODE reducePc(
       SCIP_CALL( SCIPallocBufferArray(scip, &gnodearr, nterms - 1) );
       for( i = 0; i < nterms - 1; i++ )
       {
-         SCIP_CALL( SCIPallocBuffer(scip, &gnodearr[i]) ); /*lint !e866*/
+         SCIP_CALL( SCIPallocBlockMemory(scip, &gnodearr[i]) ); /*lint !e866*/
       }
    }
    else
@@ -379,7 +379,7 @@ SCIP_RETCODE reducePc(
    if( gnodearr != NULL )
    {
       for( i = nterms - 2; i >= 0; i-- )
-         SCIPfreeBuffer(scip, &gnodearr[i]);
+         SCIPfreeBlockMemory(scip, &gnodearr[i]);
       SCIPfreeBufferArray(scip, &gnodearr);
    }
    SCIPfreeBufferArray(scip, &edgearrint);
@@ -449,7 +449,7 @@ SCIP_RETCODE reduceMw(
       SCIP_CALL( SCIPallocBufferArray(scip, &gnodearr, nterms - 1) );
       for( i = 0; i < nterms - 1; i++ )
       {
-         SCIP_CALL( SCIPallocBuffer(scip, &gnodearr[i]) ); /*lint !e866*/
+         SCIP_CALL( SCIPallocBlockMemory(scip, &gnodearr[i]) ); /*lint !e866*/
       }
       SCIP_CALL( SCIPallocBufferArray(scip, &edgearrint, extnedges) );
    }
@@ -503,7 +503,7 @@ SCIP_RETCODE reduceMw(
    if( gnodearr != NULL )
    {
       for( i = nterms - 2; i >= 0; i-- )
-         SCIPfreeBuffer(scip, &gnodearr[i]);
+         SCIPfreeBlockMemory(scip, &gnodearr[i]);
       SCIPfreeBufferArray(scip, &gnodearr);
    }
 
@@ -683,7 +683,7 @@ SCIP_RETCODE reduceSap(
    SCIP_CALL( SCIPallocBufferArray(scip, &gnodearr, nterms - 1) );
    for( i = 0; i < nterms - 1; i++ )
    {
-      SCIP_CALL( SCIPallocBuffer(scip, &gnodearr[i]) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocBlockMemory(scip, &gnodearr[i]) ); /*lint !e866*/
    }
 
    /* allocate memory */
@@ -755,7 +755,7 @@ SCIP_RETCODE reduceSap(
    SCIPfreeBufferArray(scip, &edgearrint);
 
    for( i = nterms - 2; i >= 0; i-- )
-      SCIPfreeBuffer(scip, &gnodearr[i]);
+      SCIPfreeBlockMemory(scip, &gnodearr[i]);
    SCIPfreeBufferArray(scip, &gnodearr);
 
    /* free random number generator */
@@ -810,7 +810,7 @@ SCIP_RETCODE reduceNw(
    SCIP_CALL( SCIPallocBufferArray(scip, &gnodearr, nterms - 1) );
    for( i = 0; i < nterms - 1; i++ )
    {
-      SCIP_CALL( SCIPallocBuffer(scip, &gnodearr[i]) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocBlockMemory(scip, &gnodearr[i]) ); /*lint !e866*/
    }
 
    /* allocate memory */
@@ -851,7 +851,7 @@ SCIP_RETCODE reduceNw(
    SCIPfreeBufferArray(scip, &edgearrint);
 
    for( i = nterms - 2; i >= 0; i-- )
-      SCIPfreeBuffer(scip, &gnodearr[i]);
+      SCIPfreeBlockMemory(scip, &gnodearr[i]);
    SCIPfreeBufferArray(scip, &gnodearr);
 
    /* free random number generator */

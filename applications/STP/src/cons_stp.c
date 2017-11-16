@@ -1621,7 +1621,7 @@ SCIP_RETCODE SCIPStpDualAscent(
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &gnodearr, nterms - 1) );
       for( int i = 0; i < nterms - 1; i++ )
-         SCIP_CALL( SCIPallocBuffer(scip, &gnodearr[i]) ); /*lint !e866*/
+         SCIP_CALL( SCIPallocBlockMemory(scip, &gnodearr[i]) ); /*lint !e866*/
    }
    else
    {
@@ -2046,7 +2046,7 @@ SCIP_RETCODE SCIPStpDualAscent(
    if( gnodearrterms == NULL )
    {
       for( int i = nterms - 2; i >= 0; i-- )
-         SCIPfreeBuffer(scip, &gnodearr[i]);
+         SCIPfreeBlockMemory(scip, &gnodearr[i]);
       SCIPfreeBufferArray(scip, &gnodearr);
    }
 

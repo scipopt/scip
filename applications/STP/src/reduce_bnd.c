@@ -242,7 +242,7 @@ SCIP_RETCODE computeDaSolPcMw(
    SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, graph, cost, result2, vbase, -1, nodearrchar, &success, FALSE) );
    assert(success);
 
-   SCIPStpHeurLocalRun(scip, graph, graph->cost, result2);
+   SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, graph->cost, result2) );
 
    assert(graph_sol_valid(scip, graph, result2));
 
@@ -290,7 +290,7 @@ SCIP_RETCODE computeDaSolPcMw(
             {
                BMScopyMemoryArray(result2, sol->soledges, nedges);
 
-               SCIPStpHeurLocalRun(scip, graph, graph->cost, result2);
+               SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, graph->cost, result2) );
                ub = graph_sol_getObj(graph->cost, result2, 0.0, nedges);
             }
          }
@@ -961,7 +961,7 @@ SCIP_RETCODE reduce_da(
             SCIPdebugMessage("obj before local %f \n", ubnew);
             assert(graph_sol_valid(scip, graph, result));
 
-            SCIPStpHeurLocalRun(scip, graph, graph->cost, result);
+            SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, graph->cost, result) );
             ubnew = graph_sol_getObj(graph->cost, result, 0.0, nedges);
 
             SCIPdebugMessage("obj after local  %f \n", ubnew);
@@ -995,7 +995,7 @@ SCIP_RETCODE reduce_da(
                      BMScopyMemoryArray(result, sol->soledges, nedges);
                      SCIPdebugMessage("obj before local2 %f \n", sol->obj);
 
-                     SCIPStpHeurLocalRun(scip, graph, graph->cost, result);
+                     SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, graph->cost, result) );
 
                      ubnew = graph_sol_getObj(graph->cost, result, 0.0, nedges);
                      SCIPdebugMessage("obj after local2  %f \n", ubnew);
@@ -2067,7 +2067,7 @@ SCIP_RETCODE reduce_daPcMw(
          SCIP_CALL( SCIPStpHeurTMRun(scip, NULL, graph, NULL, &beststart, result2, DEFAULT_HEURRUNS / 5, root, graph->cost, graph->cost, &bestlb, NULL, 0.0, &success, FALSE) );
          assert(success);
 
-         SCIPStpHeurLocalRun(scip, graph, graph->cost, result2);
+         SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, graph->cost, result2) );
          ub = graph_sol_getObj(graph->cost, result2, 0.0, nedges);
 
          SCIP_CALL( SCIPStpHeurRecAddToPool(scip, ub, result2, pool, &success) );

@@ -127,7 +127,7 @@ void setNodeSolArray(
 static
 SCIP_RETCODE computeNewSols(
    SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          g,                  /**< graph data structure */
+   GRAPH*                g,                  /**< graph data structure */
    GRAPH*                prunegraph,         /**< pruned graph data structure */
    PATH*                 path,               /**< shortest path struct */
    int*                  nodearrint,         /**< array */
@@ -141,19 +141,14 @@ SCIP_RETCODE computeNewSols(
    SCIP_Bool*            success             /**< pointer to store whether a solution could be found */
 )
 {
-   IDX** ancestors;
-   SCIP_Real objnew;
-   SCIP_Real dummyhop = 0.0;
    int* const pmark = prunegraph->mark;
+   SCIP_Real dummyhop = 0.0;
    int nruns;
    int best_start;
    const int nnodes = g->knots;
-   const int nedges = g->edges;
-   const int probtype = g->stp_type;
-   const SCIP_Bool pcmw = (probtype == STP_MWCSP || probtype == STP_RMWCSP || probtype == STP_RPCSPG || probtype == STP_PCSPG);
 
    assert(graph_valid(prunegraph));
-   assert(nedges == prunegraph->edges);
+   assert(g->edges == prunegraph->edges);
 
    /*
     * compute new solution on pruned graph
@@ -174,117 +169,10 @@ SCIP_RETCODE computeNewSols(
    SCIP_CALL( SCIPStpHeurTMRun(scip, NULL, prunegraph, nodearrint, &best_start, soledge, nruns,
          prunegraph->source, prunegraph->cost, prunegraph->cost, &dummyhop, NULL, 0.0, success, FALSE));
 
-   SCIPStpHeurLocalRun(scip, prunegraph, prunegraph->cost, soledge);
+   SCIP_CALL( SCIPStpHeurLocalRun(scip, prunegraph, prunegraph->cost, soledge) );
 
-   /*
-    * compare new solution on pruned graph with (reconstructed) incumbent
-    */
-
-   if( incumbentgiven )
-   {
-      SCIP_Real objold;
-
-      objnew = graph_sol_getObj(prunegraph->cost, soledge, 0.0, nedges);
-
-      if( pcmw )
-         SCIP_CALL( SCIPStpHeurTMBuildTreePcMw(scip, prunegraph, path, prunegraph->cost, &objold, solnode) );
-      else
-         SCIP_CALL( SCIPStpHeurTMBuildTree(scip, prunegraph, path, prunegraph->cost, &objold, solnode) );
-
-      SCIPdebugMessage("objold %f objnew %f \n", objold, objnew);
-
-      /* keep (reconstructed) old solution? */
-      if( objold < objnew )
-      {
-         for( int e = 0; e < nedges; e++ )
-            soledge[e] = UNKNOWN;
-         for( int k = 0; k < nnodes; k++ )
-         {
-            const int e = path[k].edge;
-
-            if( e >= 0 )
-               soledge[e] = CONNECT;
-         }
-      }
-   }
-
-   assert(graph_sol_valid(scip, prunegraph, soledge));
-
-   if( !graph_sol_valid(scip, prunegraph, soledge) )
-   {
-      printf("PRUNE sol in prune not valid %d \n", 22);
-      exit(1);
-   }
-
-   setNodeSolArray(prunegraph, NULL, solnode, soledge);
-
-   /*
-    * retransform new solution and compare with best global one
-    */
-
-   ancestors = prunegraph->ancestors;
-
-   for( int k = 0; k < nnodes; k++ )
-      nodearrchar[k] = FALSE;
-
-   for( int e = 0; e < nedges; e++ )
-      if( soledge[e] == CONNECT )
-         graph_sol_setNodeList(g, nodearrchar, ancestors[e]);
-
-   /* retransform edges fixed during graph reduction */
-   graph_sol_setNodeList(g, nodearrchar, prunegraph->fixedges);
-
-   if( pcmw )
-   {
-      for( int k = 0; k < nnodes; k++ )
-         if( nodearrchar[k] )
-         {
-            IDX* curr = prunegraph->pcancestors[k];
-            while( curr != NULL )
-            {
-               const int idx = curr->index;
-               nodearrchar[g->tail[idx]] = TRUE;
-               nodearrchar[g->head[idx]] = TRUE;
-
-               curr = curr->parent;
-            }
-         }
-   }
-
-   for( int e = 0; e < nedges; e++ )
-      edgearrint[e] = UNKNOWN;
-
-   /* prune solution (in original graph) */
-   if( pcmw )
-      SCIP_CALL(SCIPStpHeurTMPrunePc(scip, g, g->cost, edgearrint, nodearrchar));
-   else
-      SCIP_CALL(SCIPStpHeurTMPrune(scip, g, g->cost, 0, edgearrint, nodearrchar));
-
-   assert(graph_sol_valid(scip, g, edgearrint));
-
-#if BREAKONERROR
-   if( !graph_sol_valid(scip, g, edgearrint) )
-   {
-      printf("TM orig sol in prune not valid %d \n", 0);
-      exit(1);
-   }
-#endif
-
-   objnew = graph_sol_getObj(g->cost, edgearrint, 0.0, nedges);
-
-   SCIPdebugMessage("old global obj: %f ... new global obj: %f \n", *globalobj, objnew);
-
-   if( objnew < (*globalobj) )
-   {
-      SCIPdebugMessage("new global solution is better \n");
-      *globalobj = objnew;
-      BMScopyMemoryArray(globalsoledge, edgearrint, nedges);
-   }
-
-   assert(*globalobj < FARAWAY);
-
-   for( int k = 0; k < nnodes; k++ )
-      pmark[k] = (prunegraph->grad[k] > 0);
+   SCIP_CALL( SCIPStpHeurPruneUpdateSols(scip, g, prunegraph, path, nodearrint, edgearrint, solnode, soledge,
+         globalsoledge, nodearrchar, globalobj, incumbentgiven, success) );
 
    return SCIP_OKAY;
 }
@@ -571,6 +459,163 @@ SCIP_DECL_HEUREXEC(heurExecPrune)
 /*
  * primal heuristic specific interface methods
  */
+
+/** updates solutions for pruned graph */
+SCIP_RETCODE SCIPStpHeurPruneUpdateSols(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   GRAPH*                prunegraph,         /**< pruned graph data structure */
+   PATH*                 path,               /**< shortest path struct */
+   int*                  nodearrint,         /**< array */
+   int*                  edgearrint,         /**< array */
+   int*                  solnode,            /**< array for best solution nodes wrt prunegraph */
+   int*                  soledge,            /**< array for best solution edges wrt prunegraph */
+   int*                  globalsoledge,      /**< array storing best solution wrt g */
+   STP_Bool*             nodearrchar,        /**< array */
+   SCIP_Real*            globalobj,          /**< pointer to objective value of best solution wrt g */
+   SCIP_Bool             incumbentgiven,     /**< incumbent solution for pruned graph given? */
+   SCIP_Bool*            success             /**< pointer to store whether a solution could be found */
+   )
+{
+   IDX** ancestors;
+   SCIP_Real objnew;
+   int* const pmark = prunegraph->mark;
+   const int nnodes = g->knots;
+   const int nedges = g->edges;
+   const int probtype = g->stp_type;
+   const SCIP_Bool pcmw = (probtype == STP_MWCSP || probtype == STP_RMWCSP || probtype == STP_RPCSPG || probtype == STP_PCSPG);
+
+   assert(g != NULL);
+   assert(scip != NULL);
+   assert(soledge != NULL);
+   assert(path != NULL);
+   assert(solnode != NULL);
+   assert(edgearrint != NULL);
+   assert(nodearrint != NULL);
+   assert(nodearrchar != NULL);
+
+   /*
+    * compare new solution on pruned graph with (reconstructed) incumbent
+    */
+
+   if( incumbentgiven )
+   {
+      SCIP_Real objold;
+
+      objnew = graph_sol_getObj(prunegraph->cost, soledge, 0.0, nedges);
+
+      if( pcmw )
+         SCIP_CALL( SCIPStpHeurTMBuildTreePcMw(scip, prunegraph, path, prunegraph->cost, &objold, solnode) );
+      else
+         SCIP_CALL( SCIPStpHeurTMBuildTree(scip, prunegraph, path, prunegraph->cost, &objold, solnode) );
+
+      SCIPdebugMessage("objold %f objnew %f \n", objold, objnew);
+
+      /* keep (reconstructed) old solution? */
+      if( objold < objnew )
+      {
+         for( int e = 0; e < nedges; e++ )
+            soledge[e] = UNKNOWN;
+         for( int k = 0; k < nnodes; k++ )
+         {
+            const int e = path[k].edge;
+
+            if( e >= 0 )
+               soledge[e] = CONNECT;
+         }
+      }
+   }
+
+   assert(graph_sol_valid(scip, prunegraph, soledge));
+
+   if( !graph_sol_valid(scip, prunegraph, soledge) )
+   {
+      printf("PRUNE sol in prune not valid %d \n", 22);
+      exit(1);
+   }
+
+   setNodeSolArray(prunegraph, NULL, solnode, soledge);
+
+   /*
+    * retransform new solution and compare with best global one
+    */
+
+   ancestors = prunegraph->ancestors;
+
+   for( int k = 0; k < nnodes; k++ )
+      nodearrchar[k] = FALSE;
+
+   for( int e = 0; e < nedges; e++ )
+      if( soledge[e] == CONNECT )
+         graph_sol_setNodeList(g, nodearrchar, ancestors[e]);
+
+   /* retransform edges fixed during graph reduction */
+   graph_sol_setNodeList(g, nodearrchar, prunegraph->fixedges);
+
+   if( pcmw )
+   {
+      for( int k = 0; k < nnodes; k++ )
+         if( nodearrchar[k] )
+         {
+            IDX* curr = prunegraph->pcancestors[k];
+            while( curr != NULL )
+            {
+               const int idx = curr->index;
+               nodearrchar[g->tail[idx]] = TRUE;
+               nodearrchar[g->head[idx]] = TRUE;
+
+               curr = curr->parent;
+            }
+         }
+   }
+
+   for( int e = 0; e < nedges; e++ )
+      edgearrint[e] = UNKNOWN;
+
+   /* prune solution (in original graph) */
+   if( pcmw )
+      SCIP_CALL(SCIPStpHeurTMPrunePc(scip, g, g->cost, edgearrint, nodearrchar));
+   else
+      SCIP_CALL(SCIPStpHeurTMPrune(scip, g, g->cost, 0, edgearrint, nodearrchar));
+
+   assert(graph_sol_valid(scip, g, edgearrint));
+
+#if BREAKONERROR
+   if( !graph_sol_valid(scip, g, edgearrint) )
+   {
+      printf("TM orig sol in prune not valid %d \n", 0);
+      exit(1);
+   }
+#endif
+
+   objnew = graph_sol_getObj(g->cost, edgearrint, 0.0, nedges);
+
+   SCIPdebugMessage("old global obj: %f ... new global obj: %f \n", *globalobj, objnew);
+
+   if( objnew < (*globalobj) )
+   {
+      SCIPdebugMessage("new global solution is better \n");
+      *globalobj = objnew;
+
+      SCIP_CALL( SCIPStpHeurLocalRun(scip, g, g->cost, edgearrint) );
+
+      objnew = graph_sol_getObj(g->cost, edgearrint, 0.0, nedges);
+
+      assert(SCIPisLE(scip, objnew, *globalobj));
+
+      if( objnew < (*globalobj) )
+         *globalobj = objnew;
+
+      BMScopyMemoryArray(globalsoledge, edgearrint, nedges);
+   }
+
+   assert(*globalobj < FARAWAY);
+
+   for( int k = 0; k < nnodes; k++ )
+      pmark[k] = (prunegraph->grad[k] > 0);
+
+   return SCIP_OKAY;
+}
 
 /** execute prune heuristic on given graph */
 SCIP_RETCODE SCIPStpHeurPruneRun(

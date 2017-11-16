@@ -392,14 +392,14 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
          }
       }
 
-//#ifdef SCIP_DEBUG
+#ifndef NDEBUG
       for( int k = 0; k < nnewedges && pcmw; k++ )
       {
          const int e = newedges[k];
          assert(!(g->tail[e] == root && Is_pterm(g->term[g->head[e]])));
          assert(!(g->head[e] == root && Is_pterm(g->term[g->tail[e]])));
       }
-//#endif
+#endif
 
       for( int a = g->outbeg[root]; a != EAT_LAST; a = g->oeat[a] )
       {
@@ -553,7 +553,7 @@ if( pcmw )
 
    SCIPdebugMessage("obj after prune %f \n", graph_sol_getObj(newgraph->cost, newedges, 0.0, newgraph->edges));
 
-   SCIPStpHeurLocalRun(scip, newgraph, newgraph->cost, newedges);
+   SCIP_CALL( SCIPStpHeurLocalRun(scip, newgraph, newgraph->cost, newedges) );
 
    SCIPdebugMessage("obj after local %f \n", graph_sol_getObj(newgraph->cost, newedges, 0.0, newgraph->edges));
 
