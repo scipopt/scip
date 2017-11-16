@@ -40,6 +40,7 @@
 #include "scip/cons_expr_sin.h"
 #include "scip/cons_expr_cos.h"
 #include "scip/cons_expr_nlhdlr_default.h"
+#include "scip/cons_expr_nlhdlr_quadratic.h"
 #include "scip/debug.h"
 
 /* fundamental constraint handler properties */
@@ -7723,6 +7724,9 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
 
    /* include default nonlinear handler */
    SCIP_CALL( SCIPincludeConsExprNlhdlrDefault(scip, conshdlr) );
+
+   /* include nonlinear handler for quadratics */
+   SCIP_CALL( SCIPincludeConsExprNlhdlrQuadratic(scip, conshdlr) );
 
    return SCIP_OKAY;
 }
