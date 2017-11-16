@@ -16286,7 +16286,7 @@ void rowprepCleanupScaledown(
    SCIP_Real scalefactor;
 
    /* if maxcoef < ROWPREP_SCALEDOWN_MINMAXCOEF (or no terms), then don't consider scaling down */
-   if( rowprep->nvars == 0 || rowprep->coefs[0] < ROWPREP_SCALEDOWN_MINMAXCOEF )
+   if( rowprep->nvars == 0 || REALABS(rowprep->coefs[0]) < ROWPREP_SCALEDOWN_MINMAXCOEF )
       return;
 
    /* consider scaling down so that maxcoef ~ 10 */
