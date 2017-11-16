@@ -2192,13 +2192,17 @@ SCIP_RETCODE branchOnVar(
 
             /* update the lower bound of the lower child in case it is better then the current one */
             if( SCIPisGT(scip, newlb, currentlb) )
-               SCIP_CALL(SCIPchgVarLbNode(scip, downchild, var, newlb));
+            {
+               SCIP_CALL( SCIPchgVarLbNode(scip, downchild, var, newlb) );
+            }
 
             /* update the upper bound of the lower child in case it is better then the current one AND it is not the
              * branching variable, as its upper bound is already updated
              */
             if( SCIPisLT(scip, newub, currentub) && var != bestvar )
-               SCIP_CALL(SCIPchgVarUbNode(scip, downchild, var, newub));
+            {
+               SCIP_CALL( SCIPchgVarUbNode(scip, downchild, var, newub) );
+            }
 
             newlb = decision->uplowerbounds[i];
             newub = decision->upupperbounds[i];
@@ -2207,10 +2211,15 @@ SCIP_RETCODE branchOnVar(
              * branching variable, as its lower bound is already updated
              */
             if( SCIPisGT(scip, newlb, currentlb) && var != bestvar)
-               SCIP_CALL(SCIPchgVarLbNode(scip, upchild, var, newlb));
+            {
+               SCIP_CALL( SCIPchgVarLbNode(scip, upchild, var, newlb) );
+            }
+
             /* update the upper bound of the upper child in case it is better then the current one */
             if( SCIPisLT(scip, newub, currentub) )
-               SCIP_CALL(SCIPchgVarUbNode(scip, upchild, var, newub));
+            {
+               SCIP_CALL( SCIPchgVarUbNode(scip, upchild, var, newub) );
+            }
          }
       }
    }
