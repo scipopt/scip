@@ -280,6 +280,7 @@ typedef struct
    SCIP_Bool             updbvalid;          /**< Indicator for the validity of the updb value. Is FALSE, if no actual
                                               *   branching occurred or the value was determined by an LP not solved to
                                               *   optimality. */
+   SCIP_Bool             boundsvalid;        /**< are variable bounds for down and up child valid? */
    int                   boundssize;         /**< size of bounds arrays */
 } BRANCHINGDECISION;
 
@@ -303,6 +304,7 @@ SCIP_RETCODE branchingDecisionCreate(
    (*decision)->downdbvalid = FALSE;
    (*decision)->updb = -SCIPinfinity(scip);
    (*decision)->updbvalid = FALSE;
+   (*decision)->boundsvalid = FALSE;
    (*decision)->proveddb = -SCIPinfinity(scip);
    (*decision)->boundssize = 0;
 
@@ -2147,6 +2149,11 @@ SCIP_RETCODE branchOnVar(
    /* branch on the given variable */
    SCIP_CALL( SCIPbranchVarVal(scip, bestvar, bestval, &downchild, NULL, &upchild) );
 
+   SCIPdebugMsg(scip, "down child (node %d): branching bound change <%s> <= %g\n",
+      SCIPnodeGetNumber(downchild), SCIPvarGetName(bestvar), SCIPfeasFloor(scip, bestval));
+   SCIPdebugMsg(scip, "up child (node %d): branching bound change <%s> >= %g\n",
+      SCIPnodeGetNumber(upchild), SCIPvarGetName(bestvar), SCIPfeasCeil(scip, bestval));
+
    assert(downchild != NULL);
    assert(upchild != NULL);
 
@@ -2164,12 +2171,13 @@ SCIP_RETCODE branchOnVar(
       SCIP_CALL( SCIPupdateNodeLowerbound(scip, downchild, bestdownvalid ? MAX(bestdown, provedbound) : provedbound) );
       SCIP_CALL( SCIPupdateNodeLowerbound(scip, upchild, bestupvalid ? MAX(bestup, provedbound) : provedbound) );
 
-      if( decision->downlowerbounds != NULL )
+      if( decision->boundsvalid )
       {
          SCIP_VAR** vars;
          int nvars;
          int i;
 
+         assert(decision->downlowerbounds != NULL);
          assert(decision->downupperbounds != NULL);
          assert(decision->uplowerbounds != NULL);
          assert(decision->upupperbounds != NULL);
@@ -2194,6 +2202,9 @@ SCIP_RETCODE branchOnVar(
             if( SCIPisGT(scip, newlb, currentlb) )
             {
                SCIP_CALL( SCIPchgVarLbNode(scip, downchild, var, newlb) );
+
+               SCIPdebugMsg(scip, "down child (node %d): add bound change <%s> >= %g\n",
+                  SCIPnodeGetNumber(downchild), SCIPvarGetName(var), newlb);
             }
 
             /* update the upper bound of the lower child in case it is better then the current one AND it is not the
@@ -2202,6 +2213,9 @@ SCIP_RETCODE branchOnVar(
             if( SCIPisLT(scip, newub, currentub) && var != bestvar )
             {
                SCIP_CALL( SCIPchgVarUbNode(scip, downchild, var, newub) );
+
+               SCIPdebugMsg(scip, "down child (node %d): add bound change <%s> <= %g\n",
+                  SCIPnodeGetNumber(downchild), SCIPvarGetName(var), newub);
             }
 
             newlb = decision->uplowerbounds[i];
@@ -2213,12 +2227,18 @@ SCIP_RETCODE branchOnVar(
             if( SCIPisGT(scip, newlb, currentlb) && var != bestvar)
             {
                SCIP_CALL( SCIPchgVarLbNode(scip, upchild, var, newlb) );
+
+               SCIPdebugMsg(scip, "up child (node %d): add bound change <%s> >= %g\n",
+                  SCIPnodeGetNumber(upchild), SCIPvarGetName(var), newlb);
             }
 
             /* update the upper bound of the upper child in case it is better then the current one */
             if( SCIPisLT(scip, newub, currentub) )
             {
                SCIP_CALL( SCIPchgVarUbNode(scip, upchild, var, newub) );
+
+               SCIPdebugMsg(scip, "up child (node %d): add bound change <%s> <= %g\n",
+                  SCIPnodeGetNumber(upchild), SCIPvarGetName(var), newub);
             }
          }
       }
@@ -3696,8 +3716,8 @@ SCIP_RETCODE executeBranchingRecursive(
 #ifdef SCIP_STATISTIC
                   localstats->ncutoffproofnodes += deeperlocalstats->ncutoffproofnodes;
 #endif
-                  LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Both deeper children were cutoff, so the down branch is "
-                     "cutoff\n");
+                  LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Both deeper children were cutoff, so the %s branch is "
+                     "cutoff\n", downbranching ? "down" : "up");
                }
 
 #ifdef SCIP_STATISTIC
@@ -4094,6 +4114,11 @@ SCIP_RETCODE selectVarRecursive(
                BMScopyMemoryArray(decision->upupperbounds, updomainreductions->upperbounds, nvars);
                BMScopyMemoryArray(decision->downlowerbounds, downdomainreductions->lowerbounds, nvars);
                BMScopyMemoryArray(decision->downupperbounds, downdomainreductions->upperbounds, nvars);
+               decision->boundsvalid = TRUE;
+            }
+            else
+            {
+               decision->boundsvalid = FALSE;
             }
 
             bestscorelowerbound = branchlb;
@@ -4888,7 +4913,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       }
       else if( *result == SCIP_CUTOFF )
       {
-         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Result: Finished LookaheadBranching by cutting of, as the current "
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Result: Finished LookaheadBranching by cutting off, as the current "
             "problem is infeasible.\n");
       }
       else if( *result == SCIP_CONSADDED )
