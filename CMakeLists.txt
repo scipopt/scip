@@ -8,8 +8,8 @@ project(SCIP)
 set(SCIP_VERSION_MAJOR 4)
 set(SCIP_VERSION_MINOR 0)
 set(SCIP_VERSION_PATCH 1)
-set(SCIP_VERSION_SUB 0)
-set(SCIP_VERSION_API 0)
+set(SCIP_VERSION_SUB 3)
+set(SCIP_VERSION_API 17)
 
 set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/COPYING")
 set(CPACK_PACKAGE_VERSION_MAJOR "${SCIP_VERSION_MAJOR}")
@@ -63,6 +63,9 @@ set_property(CACHE EXPRINT PROPERTY STRINGS none cppad )  #define list of values
 set(LPS spx CACHE STRING "options for LP solver")  #create the variable
 set_property(CACHE LPS PROPERTY STRINGS spx cpx grb xprs clp glop msk none )  #define list of values GUI will offer for the variable
 
+set(SYM bliss CACHE STRING "options for symmetry computation")  #create the variable
+set_property(CACHE SYM PROPERTY STRINGS bliss none )  #define list of values GUI will offer for the variable
+
 #set options for memory management
 if( NOBLKBUFMEM )
    set(NOBLKMEM ON FORCE)
@@ -97,10 +100,10 @@ endif()
 
 # Visual Studio compiler with static runtime libraries
 if(MSVC AND MT)
-    set(CMAKE_CXX_FLAGS_RELEASE "/MT")
-    set(CMAKE_CXX_FLAGS_DEBUG "/MTd")
-    set(CMAKE_C_FLAGS_RELEASE "/MT")
-    set(CMAKE_C_FLAGS_DEBUG "/MTd")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
+    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /MT")
+    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /MTd")
 endif()
 
 #set expression interpreter file that should be used
@@ -310,6 +313,26 @@ if(MOSEK_FOUND)
     set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
 endif()
 
+#search the selected symmetry computation program
+if(SYM STREQUAL "bliss")
+    find_package(BLISS)
+    if(BLISS_FOUND)
+        include_directories(${BLISS_INCLUDE_DIRS})
+        set(sym symmetry/compute_symmetry_bliss.cpp)
+        set(SYM_LIBRARIES ${BLISS_LIBRARIES})
+        set(SYM_PIC_LIBRARIES ${BLISS_LIBRARIES})
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${BLISS_CXX_FLAGS}")
+    else()
+        set(sym symmetry/compute_symmetry_none.cpp)
+    endif()
+elseif(SYM STREQUAL "none")
+    set(sym symmetry/compute_symmetry_none.cpp)
+else()
+    message(FATAL_ERROR "option SYM has wrong value")
+endif()
+
+
+
 #
 # enable coverage support
 #
@@ -354,7 +377,7 @@ endif()
 
 # IPOPT
 if(IPOPT)
-    find_package(IPOPT)
+    find_package(IPOPT 3.12.0)
 endif()
 if(IPOPT_FOUND)
     include_directories(${IPOPT_INCLUDE_DIRS})

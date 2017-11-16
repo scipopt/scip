@@ -134,7 +134,6 @@ struct SCIP_ConshdlrData
 
    SCIP_Real             mincutefficacysepa; /**< minimal efficacy of a cut in order to add it to relaxation during separation */
    SCIP_Real             mincutefficacyenfofac;/**< minimal target efficacy of a cut in order to add it to relaxation during enforcement as factor of feasibility tolerance (may be ignored) */
-   char                  scaling;            /**< scaling method of constraints in feasibility check */
    SCIP_Real             cutmaxrange;        /**< maximal range (maximal coef / minimal coef) of a cut in order to be added to LP */
    SCIP_Bool             linfeasshift;       /**< whether to make solutions in check feasible if possible */
    SCIP_Bool             checkconvexexpensive;/**< whether to apply expensive curvature checking methods */
@@ -3679,127 +3678,6 @@ SCIP_RETCODE reformulate(
    return SCIP_OKAY;
 }
 
-/** gets maximal absolute element of gradient of nonlinear function */
-static
-SCIP_RETCODE getGradientMaxElement(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EXPRINT*         exprint,            /**< expressions interpreter */
-   SCIP_CONS*            cons,               /**< constraint */
-   SCIP_SOL*             sol,                /**< solution or NULL if LP solution should be used */
-   SCIP_Bool             newsol,             /**< have the expression trees been evaluated at sol before? */
-   SCIP_Real*            maxelem             /**< buffer to store maximal element */
-   )
-{
-   SCIP_CONSDATA* consdata;
-   int i;
-   int j;
-
-   assert(scip != NULL);
-   assert(cons != NULL);
-   assert(maxelem != NULL);
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-   assert(exprint != NULL);
-   assert(consdata->nexprtrees != 0 || consdata->exprgraphnode == NULL);
-
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
-   {
-      *maxelem = 0.0;
-      for( i = 0; i < consdata->nlinvars; ++i )
-         if( REALABS(consdata->lincoefs[i]) > *maxelem )
-            *maxelem = REALABS(consdata->lincoefs[i]);
-   }
-   else
-   {
-      *maxelem = consdata->lincoefsmax;
-   }
-
-   for( j = 0; j < consdata->nexprtrees; ++j )
-   {
-      int nvars;
-      SCIP_Real val;
-
-      assert(consdata->exprtrees[j] != NULL);
-
-      nvars = SCIPexprtreeGetNVars(consdata->exprtrees[j]);
-
-      if( newsol )
-      {
-         /* compile expression tree, if not done before (can happen, if called from proposeFeasibleSolution) */
-         if( SCIPexprtreeGetInterpreterData(consdata->exprtrees[j]) == NULL )
-         {
-            SCIP_CALL( SCIPexprintCompile(exprint, consdata->exprtrees[j]) );
-         }
-
-         if( nvars == 1 )
-         {
-            /* in the not so unusual case that an expression has only one variable, we do not extra alloc memory */
-            double varval;
-            SCIP_Real grad;
-
-            varval = SCIPgetSolVal(scip, sol, SCIPexprtreeGetVars(consdata->exprtrees[j])[0]);
-            SCIP_CALL( SCIPexprintGrad(exprint, consdata->exprtrees[j], &varval, TRUE, &val, &grad) );
-            if( REALABS(grad) > *maxelem )
-               *maxelem = REALABS(grad);
-         }
-         else
-         {
-            SCIP_Real* x;
-            SCIP_Real* grad;
-
-            SCIP_CALL( SCIPallocBufferArray(scip, &x, nvars) );
-            SCIP_CALL( SCIPallocBufferArray(scip, &grad, nvars) );
-
-            SCIP_CALL( SCIPgetSolVals(scip, sol, nvars, SCIPexprtreeGetVars(consdata->exprtrees[j]), x) );
-            SCIP_CALL( SCIPexprintGrad(exprint, consdata->exprtrees[j], x, TRUE, &val, grad) );
-
-            for( i = 0; i < nvars; ++i )
-            {
-               grad[i] *= consdata->nonlincoefs[j];
-               if( REALABS(grad[i]) > *maxelem )
-                  *maxelem = REALABS(grad[i]);
-            }
-
-            SCIPfreeBufferArray(scip, &x);
-            SCIPfreeBufferArray(scip, &grad);
-         }
-      }
-      else
-      {
-         assert(SCIPexprtreeGetInterpreterData(consdata->exprtrees[j]) != NULL);
-
-         if( nvars == 1 )
-         {
-            SCIP_Real grad;
-
-            SCIP_CALL( SCIPexprintGrad(exprint, consdata->exprtrees[j], NULL, FALSE, &val, &grad) );
-            if( REALABS(grad) > *maxelem )
-               *maxelem = REALABS(grad);
-         }
-         else
-         {
-            SCIP_Real* grad;
-
-            SCIP_CALL( SCIPallocBufferArray(scip, &grad, nvars) );
-
-            SCIP_CALL( SCIPexprintGrad(exprint, consdata->exprtrees[j], NULL, FALSE, &val, grad) );
-
-            for( i = 0; i < nvars; ++i )
-            {
-               grad[i] *= consdata->nonlincoefs[j];
-               if( REALABS(grad[i]) > *maxelem )
-                  *maxelem = REALABS(grad[i]);
-            }
-
-            SCIPfreeBufferArray(scip, &grad);
-         }
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
 /** computes activity and violation of a constraint
  *
  * During presolving and if the constraint is active, it is assumes that SCIPexprgraphEval has been called for sol before.
@@ -4048,46 +3926,6 @@ SCIP_RETCODE computeViolation(
       relviol = MAX(lhsrelviol, rhsrelviol);
 
       SCIPupdateSolConsViolation(scip, sol, absviol, relviol);
-   }
-
-   switch( conshdlrdata->scaling )
-   {
-   case 'o' :
-      /* no scaling */
-      break;
-
-   case 'g' :
-      /* scale by sup-norm of gradient in current point
-       * do only if we are linear or have expression trees, thus, not during presolve
-       */
-      if( (consdata->lhsviol > 0.0 || consdata->rhsviol > 0.0) && (consdata->exprgraphnode == NULL || consdata->nexprtrees > 0) )
-      {
-         SCIP_Real norm;
-
-         SCIP_CALL( getGradientMaxElement(scip, conshdlrdata->exprinterpreter, cons, sol, FALSE, &norm) );
-
-         if( norm > 1.0 && !SCIPisInfinity(scip, norm) )
-         {
-            consdata->lhsviol /= norm;
-            consdata->rhsviol /= norm;
-         }
-      }
-      break;
-
-   case 's' :
-      /* scale by left/right hand side of constraint */
-      if( consdata->lhsviol > 0.0 )
-         consdata->lhsviol /= MAX(1.0, REALABS(consdata->lhs));
-
-      if( consdata->rhsviol > 0.0 )
-         consdata->rhsviol /= MAX(1.0, REALABS(consdata->rhs));
-
-      break;
-
-   default :
-      SCIPerrorMessage("Unknown scaling method '%c'.", conshdlrdata->scaling);
-      SCIPABORT();
-      return SCIP_INVALIDDATA;  /*lint !e527*/
    }
 
    return SCIP_OKAY;
@@ -4786,6 +4624,7 @@ SCIP_RETCODE _addConcaveEstimatorMultivariate(
    SCIP_Real* obj;
    SCIP_Real* lb;
    SCIP_Real* ub;
+   SCIP_Real* corner;
    SCIP_Real* lhs;
    SCIP_Real* rhs;
    int* beg;
@@ -4799,6 +4638,7 @@ SCIP_RETCODE _addConcaveEstimatorMultivariate(
 
    int i;
    int j;
+   int idx;
 
    SCIP_RETCODE lpret;
 
@@ -4813,22 +4653,23 @@ SCIP_RETCODE _addConcaveEstimatorMultivariate(
    SCIP_CALL( SCIPallocBufferArray(scip, &obj, ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lb, ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &ub, ncols) );
+   corner = lb; /* will not use lb and corner simultaneously, so can share memory */
 
    /* one row for each corner of domain, i.e., 2^nvars many */
    nrows = (int)(1u << nvars);
    SCIP_CALL( SCIPallocBufferArray(scip, &lhs, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &rhs, nrows) );
 
-   /* dense coefficients matrix, i.e., ncols * nrows many potential nonzeros */
+   /* the coefficients matrix will have at most ncols * nrows many nonzeros */
    nnonz = nrows * ncols;
    SCIP_CALL( SCIPallocBufferArray(scip, &beg, nrows+1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &ind, nnonz) );
    SCIP_CALL( SCIPallocBufferArray(scip, &val, nnonz) );
 
    /* setup LP data */
+   idx = 0;
    for( i = 0; i < nrows; ++i )
    {
-      beg[i] = i * ncols;
       /* assemble corner point */
       SCIPdebugMsg(scip, "f(");
       for( j = 0; j < nvars; ++j )
@@ -4836,17 +4677,15 @@ SCIP_RETCODE _addConcaveEstimatorMultivariate(
          /* if j'th bit of row index i is set, then take upper bound on var j, otherwise lower bound var j
           * we check this by shifting i for j positions to the right and checking whether the j'th bit is set */
          if( ((unsigned int)i >> j) & 0x1 )
-            val[i * ncols + j] = SCIPvarGetUbLocal(vars[j]);
+            corner[j] = SCIPvarGetUbLocal(vars[j]);
          else
-            val[i * ncols + j] = SCIPvarGetLbLocal(vars[j]);
-         SCIPdebugMsgPrint(scip, "%g, ", val[i*ncols+j]);
-         assert(!SCIPisInfinity(scip, REALABS(val[i*ncols+j])));
-
-         ind[i * ncols + j] = j;
+            corner[j] = SCIPvarGetLbLocal(vars[j]);
+         SCIPdebugMsgPrint(scip, "%g, ", corner[j]);
+         assert(!SCIPisInfinity(scip, REALABS(corner[j])));
       }
 
       /* evaluate function in current corner */
-      SCIP_CALL( SCIPexprtreeEval(exprtree, &val[i*ncols], &funcval) );
+      SCIP_CALL( SCIPexprtreeEval(exprtree, corner, &funcval) );
       SCIPdebugMsgPrint(scip, ") = %g\n", funcval);
 
       if( !SCIPisFinite(funcval) || SCIPisInfinity(scip, REALABS(funcval)) )
@@ -4868,10 +4707,24 @@ SCIP_RETCODE _addConcaveEstimatorMultivariate(
          rhs[i] = SCIPlpiInfinity(lpi);
       }
 
+      /* add nonzeros of corner to matrix */
+      beg[i] = idx;
+      for( j = 0; j < nvars; ++j )
+      {
+         if( corner[j] != 0.0 )
+         {
+            ind[idx] = j;
+            val[idx] = corner[j];
+            ++idx;
+         }
+      }
+
       /* coefficient for constant is 1.0 */
-      val[i * ncols + nvars] = 1.0;
-      ind[i * ncols + nvars] = nvars;
+      val[idx] = 1.0;
+      ind[idx] = nvars;
+      ++idx;
    }
+   nnonz = idx;
    beg[nrows] = nnonz;
 
    for( j = 0; j < ncols; ++j )
@@ -5616,7 +5469,6 @@ SCIP_RETCODE separatePoint(
    SCIP_CONSDATA*     consdata;
    SCIP_Real          efficacy;
    SCIP_Real          feasibility;
-   SCIP_Real          norm;
    SCIP_SIDETYPE      violside;
    int                c;
    SCIP_ROW*          row;
@@ -5667,43 +5519,13 @@ SCIP_RETCODE separatePoint(
          feasibility = SCIPgetRowLPFeasibility(scip, row);
       else
          feasibility = SCIPgetRowSolFeasibility(scip, row, sol);
-
-      switch( conshdlrdata->scaling )
-      {
-         case 'o' :
-            efficacy = -feasibility;
-            break;
-
-         case 'g' :
-            /* in difference to SCIPgetCutEfficacy, we scale by norm only if the norm is > 1.0 this avoid finding cuts
-             * efficient which are only very slightly violated CPLEX does not seem to scale row coefficients up too also
-             * we use infinity norm, since that seem to be the usual scaling strategy in LP solvers (equilibrium
-             * scaling) */
-            norm = SCIPgetRowMaxCoef(scip, row);
-            efficacy = -feasibility / MAX(1.0, norm);
-            break;
-
-         case 's' :
-         {
-            SCIP_Real abslhs = REALABS(SCIProwGetLhs(row));
-            SCIP_Real absrhs = REALABS(SCIProwGetRhs(row));
-            SCIP_Real minval = MIN(abslhs, absrhs);
-
-            efficacy = -feasibility / MAX(1.0, minval);
-            break;
-         }
-
-         default:
-            SCIPerrorMessage("Unknown scaling method '%c'.", conshdlrdata->scaling);
-            SCIPABORT();
-            return SCIP_INVALIDDATA;  /*lint !e527*/
-      }
+      efficacy = -feasibility;
 
       if( (SCIPisGT(scip, efficacy, minefficacy) ||
          (inenforcement &&
             ( (violside == SCIP_SIDETYPE_RIGHT && (consdata->curvature & SCIP_EXPRCURV_CONVEX )) ||
                (violside == SCIP_SIDETYPE_LEFT  && (consdata->curvature & SCIP_EXPRCURV_CONCAVE)) ) &&
-               SCIPisGT(scip, efficacy, SCIPgetRelaxFeastolFactor(scip) > 0.0 ? SCIPepsilon(scip) : SCIPfeastol(scip))
+               SCIPisGT(scip, efficacy, SCIPfeastol(scip))
          )
       ) && SCIPisCutApplicable(scip, row)
       )
@@ -5711,7 +5533,7 @@ SCIP_RETCODE separatePoint(
          SCIP_Bool infeasible;
 
          /* cut cuts off solution */
-         SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE /* forcecut */, &infeasible) );
+         SCIP_CALL( SCIPaddRow(scip, row, FALSE /* forcecut */, &infeasible) );
          if ( infeasible )
             *result = SCIP_CUTOFF;
          else
@@ -5810,46 +5632,13 @@ SCIP_RETCODE addLinearizationCuts(
       /* if caller wants, then check if cut separates LP solution and add to sepastore if so */
       if( separatedlpsol != NULL )
       {
-         SCIP_Real efficacy;
-         SCIP_Real norm;
-
-         efficacy = -SCIPgetRowLPFeasibility(scip, row);
-         switch( conshdlrdata->scaling )
-         {
-         case 'o' :
-            break;
-
-         case 'g' :
-            /* in difference to SCIPgetCutEfficacy, we scale by norm only if the norm is > 1.0 this avoid finding cuts
-             * efficient which are only very slightly violated CPLEX does not seem to scale row coefficients up too also
-             * we use infinity norm, since that seem to be the usual scaling strategy in LP solvers (equilibrium
-             * scaling) */
-            norm = SCIPgetRowMaxCoef(scip, row);
-            efficacy /= MAX(1.0, norm);
-            break;
-
-         case 's' :
-         {
-            SCIP_Real abslhs = REALABS(SCIProwGetLhs(row));
-            SCIP_Real absrhs = REALABS(SCIProwGetRhs(row));
-            SCIP_Real minval = MIN(abslhs, absrhs);
-
-            efficacy /= MAX(1.0, minval);
-            break;
-         }
-         default:
-            SCIPerrorMessage("Unknown scaling method '%c'.", conshdlrdata->scaling);
-            SCIPABORT();
-            return SCIP_INVALIDDATA;  /*lint !e527*/
-         }
-
-         if( efficacy >= minefficacy )
+         if( -SCIPgetRowLPFeasibility(scip, row) >= minefficacy )
          {
             SCIP_Bool infeasible;
 
             *separatedlpsol = TRUE;
             addedtolp = TRUE;
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, TRUE, &infeasible) );
+            SCIP_CALL( SCIPaddRow(scip, row, TRUE, &infeasible) );
             assert( ! infeasible );
          }
       }
@@ -7223,7 +7012,7 @@ SCIP_RETCODE enforceConstraint(
    SCIP_CALL( registerBranchingVariables(scip, conshdlr, conss, nconss, &nnotify) );
 
    /* if sepastore can decrease feasibility tolerance, we can add cuts with efficacy in [eps, feastol] */
-   leastpossibleefficacy = SCIPgetRelaxFeastolFactor(scip) > 0.0 ? SCIPepsilon(scip) : SCIPfeastol(scip);
+   leastpossibleefficacy = SCIPfeastol(scip);
    if( nnotify == 0 && !solinfeasible && minefficacy > leastpossibleefficacy )
    {
       /* fallback 1: we also have no branching candidates, so try to find a weak cut */
@@ -7757,7 +7546,7 @@ SCIP_DECL_CONSINITLP(consInitlpNonlinear)
          SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(conss[c]), SCIPconsGetName(conss[c]), consdata->lhs, consdata->rhs,
                SCIPconsIsLocal(conss[c]), FALSE , TRUE) );  /*lint !e613*/
          SCIP_CALL( SCIPaddVarsToRow(scip, row, consdata->nlinvars, consdata->linvars, consdata->lincoefs) );
-         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, infeasible) );
+         SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
          SCIP_CALL( SCIPreleaseRow (scip, &row) );
          continue;
       }
@@ -7812,7 +7601,7 @@ SCIP_DECL_CONSINITLP(consInitlpNonlinear)
 
          if( row != NULL )
          {
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, infeasible) );
+            SCIP_CALL( SCIPaddRow(scip, row, FALSE /* forcecut */, infeasible) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
          }
@@ -7826,7 +7615,7 @@ SCIP_DECL_CONSINITLP(consInitlpNonlinear)
 
          if( row != NULL )
          {
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, infeasible) );
+            SCIP_CALL( SCIPaddRow(scip, row, FALSE /* forcecut */, infeasible) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
          }
@@ -9082,6 +8871,7 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
    const char* exprlastchar;
    int* varnames;
    int* curvarname;
+   int varnameslength;
    int i;
 
    SCIPdebugMsg(scip, "cons_nonlinear::consparse parsing %s\n",str);
@@ -9206,10 +8996,11 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
    }
 
    /* alloc some space for variable names incl. indices; shouldn't be longer than expression string, and we even give it sizeof(int) times this length (plus 5) */
-   SCIP_CALL( SCIPallocBufferArray(scip, &varnames, (int) (exprlastchar - exprstart) + 5) );
+   varnameslength = (int) (exprlastchar - exprstart) + 5;
+   SCIP_CALL( SCIPallocBufferArray(scip, &varnames, varnameslength) );
 
    /* parse expression */
-   retcode = SCIPexprParse(SCIPblkmem(scip), SCIPgetMessagehdlr(scip), &expr, exprstart, exprlastchar, &nvars, varnames);
+   retcode = SCIPexprParse(SCIPblkmem(scip), SCIPgetMessagehdlr(scip), &expr, exprstart, exprlastchar, &nvars, varnames, varnameslength);
 
    if( retcode != SCIP_OKAY )
    {
@@ -9319,10 +9110,6 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/minefficacyenfofac",
          "minimal target efficacy of a cut in order to add it to relaxation during enforcement as a factor of the feasibility tolerance (may be ignored)",
          &conshdlrdata->mincutefficacyenfofac, TRUE, 2.0, 1.0, SCIPinfinity(scip), NULL, NULL) );
-
-   SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/scaling",
-         "whether scaling of infeasibility is 'o'ff, by sup-norm of function 'g'radient, or by left/right hand 's'ide",
-         &conshdlrdata->scaling, TRUE, 'o', "ogs", NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/cutmaxrange",
          "maximal coef range of a cut (maximal coefficient divided by minimal coefficient) in order to be added to LP relaxation",

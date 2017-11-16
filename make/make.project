@@ -74,6 +74,7 @@ MAXJOBS         =       1
 EXECUTABLE      =       $(MAINFILE)
 BINID           =       $(notdir $(EXECUTABLE))
 OUTPUTDIR       =       results
+CLUSTERNODES    =       all
 
 # set SCIP version here for external projects
 # use underscore to make it compatible with def.h
@@ -85,6 +86,7 @@ OPT		=	opt
 COMP		=	gnu
 LPS		=	spx2
 TPI		=	none
+SYM		=	none
 STATICLIBEXT	=	a
 SHAREDLIBEXT	=	so
 LIBEXT		=	$(STATICLIBEXT)
@@ -207,6 +209,10 @@ GCCWARN		=	-pedantic -Wno-long-long -Wall -W -Wpointer-arith -Wcast-align -Wwrit
 			-Wredundant-decls -Wdisabled-optimization \
 			-Wsign-compare -Wstrict-prototypes \
 			-Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement #-Wno-variadic-macros
+# GCCWARN is not only used for GCC!
+ifeq ($(COMP),gnu)
+GCCWARN += -Wno-maybe-uninitialized
+endif
 
 GXXWARN		=	-pedantic -Wno-long-long -Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
 			-Wno-unknown-pragmas -Wno-unused-parameter \
@@ -243,6 +249,7 @@ LIBOBJSUBDIRS	=	$(LIBOBJDIR)/scip \
 			$(LIBOBJDIR)/nlpi \
 			$(LIBOBJDIR)/xml \
 			$(LIBOBJDIR)/dijkstra \
+			$(LIBOBJDIR)/symmetry \
 			$(LIBOBJDIR)/tinycthread
 SRCDIR		=	src
 BINDIR		=	bin
@@ -465,6 +472,13 @@ TPILIB		=	$(TPILIBNAME).$(BASE)
 TPILIBFILE	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(TPILIB).$(LIBEXT)
 TPILIBSHORTLINK	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(TPILIBNAME).$(LIBEXT)
 
+#-----------------------------------------------------------------------------
+# Symmetry Interface
+#-----------------------------------------------------------------------------
+
+ifeq ($(SYM),bliss)
+LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)bliss.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+endif
 
 #-----------------------------------------------------------------------------
 # External Libraries

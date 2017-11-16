@@ -2150,7 +2150,7 @@ SCIP_RETCODE initsepaBoundInequalityFromCardinality(
          assert(SCIPisInfinity(scip, -SCIProwGetLhs(rowub)));
          assert(SCIPisLE(scip, SCIProwGetRhs(rowub), (SCIP_Real)consdata->cardval));
 
-         SCIP_CALL( SCIPaddCut(scip, NULL, rowub, FALSE, cutoff) );
+         SCIP_CALL( SCIPaddRow(scip, rowub, FALSE, cutoff) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, rowub, NULL) ) );
 
          if( solvedinitlp )
@@ -2167,7 +2167,7 @@ SCIP_RETCODE initsepaBoundInequalityFromCardinality(
          assert(SCIPisInfinity(scip, -SCIProwGetLhs(rowlb)));
          assert(SCIPisLE(scip, SCIProwGetRhs(rowlb), (SCIP_Real)consdata->cardval));
 
-         SCIP_CALL( SCIPaddCut(scip, NULL, rowlb, FALSE, cutoff) );
+         SCIP_CALL( SCIPaddRow(scip, rowlb, FALSE, cutoff) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, rowlb, NULL) ) );
 
          if( solvedinitlp )
@@ -3007,7 +3007,7 @@ SCIP_DECL_CONSPARSE(consParseCardinality)
       SCIP_CALL( SCIPaddVarCardinality(scip, *cons, var, NULL, weight) );
 
       /* check if there is a '<=' */
-      if ( *s == '<' && *s+1 == '='  )
+      if ( *s == '<' && *(s+1) == '='  )
       {
          s = s + 2;
 

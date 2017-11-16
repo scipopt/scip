@@ -548,10 +548,6 @@ SCIP_Bool debugSolIsAchieved(
       if( SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM )
          return TRUE;
 
-      /* we can't get the original objective function value during probing mode when the objective has changed */
-      if( SCIPisObjChangedProbing(scip) )
-         return TRUE;
-
       solvalue = SCIPgetSolOrigObj(scip, bestsol);
 
       /* make sure a debug solution has been read, so we do not compare against the initial debugsolval == 0 */
@@ -891,11 +887,11 @@ SCIP_RETCODE SCIPdebugCheckRow(
    SCIPsetDebugMsg(set, "debugging solution on row <%s>: %g <= [%g,%g] <= %g\n",
       SCIProwGetName(row), lhs, minactivity, maxactivity, rhs);
 
-   /* check row for violation */
-   if( SCIPsetIsFeasLT(set, maxactivity, lhs) || SCIPsetIsFeasGT(set, minactivity, rhs) )
+   /* check row for violation, using absolute LP feasibility tolerance (as LP solver should do) */
+   if( maxactivity + SCIPsetLpfeastol(set) < lhs || minactivity - SCIPsetLpfeastol(set) > rhs )
    {
-      printf("***** debug: row <%s> violates debugging solution (lhs=%.15g, rhs=%.15g, activity=[%.15g,%.15g], local=%u)\n",
-         SCIProwGetName(row), lhs, rhs, minactivity, maxactivity, SCIProwIsLocal(row));
+      printf("***** debug: row <%s> violates debugging solution (lhs=%.15g, rhs=%.15g, activity=[%.15g,%.15g], local=%u, lpfeastol=%g)\n",
+         SCIProwGetName(row), lhs, rhs, minactivity, maxactivity, SCIProwIsLocal(row), SCIPsetLpfeastol(set));
       SCIProwPrint(row, SCIPgetMessagehdlr(set->scip), NULL);
 
       /* output row with solution values */

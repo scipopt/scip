@@ -19,6 +19,7 @@
  * @author Xin Liu
  * @author Kati Wolter
  * @author Michael Winkler
+ * @author Tobias Fischer
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -32,6 +33,7 @@
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
+#include "scip/cons_cardinality.h"
 #include "scip/cons_setppc.h"
 #include "scip/pub_misc.h"
 
@@ -99,7 +101,6 @@
                                          *   function defining a lower bound and prevent these constraints from
                                          *   entering the LP */
 #define DEFAULT_CLIQUEEXTRACTFACTOR 0.5 /**< lower clique size limit for greedy clique extraction algorithm (relative to largest clique) */
-
 #define MAXCOVERSIZEITERLEWI       1000 /**< maximal size for which LEWI are iteratively separated by reducing the feasible set */
 
 #define DEFAULT_USEGUBS           FALSE /**< should GUB information be used for separation? */
@@ -108,6 +109,7 @@
 #define DEFAULT_CLQPARTUPDATEFAC   1.5  /**< factor on the growth of global cliques to decide when to update a previous
                                          *   (negated) clique partition (used only if updatecliquepartitions is set to TRUE) */
 #define DEFAULT_UPDATECLIQUEPARTITIONS FALSE /**< should clique partition information be updated when old partition seems outdated? */
+#define DEFAULT_UPGDCARDINALITY   FALSE /**< if TRUE then try to update knapsack constraints to cardinality constraints */
 
 #define MAXNCLIQUEVARSCOMP 1000000      /**< limit on number of pairwise comparisons in clique partitioning algorithm */
 
@@ -172,6 +174,8 @@ struct SCIP_ConshdlrData
    SCIP_Real             cliqueextractfactor;/**< lower clique size limit for greedy clique extraction algorithm (relative to largest clique) */
    SCIP_Real             clqpartupdatefac;   /**< factor on the growth of global cliques to decide when to update a previous
                                               *   (negated) clique partition (used only if updatecliquepartitions is set to TRUE) */
+   SCIP_Bool             upgdcardinality;    /**< if TRUE then try to update knapsack constraints to cardinality constraints */
+   SCIP_Bool             upgradedcard;       /**< whether we have already upgraded knapsack constraints to cardinality constraints */
 };
 
 
@@ -851,7 +855,6 @@ static
 SCIP_RETCODE addRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< knapsack constraint */
-   SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
    SCIP_Bool*            cutoff              /**< whether a cutoff has been detected */
    )
 {
@@ -875,7 +878,7 @@ SCIP_RETCODE addRelaxation(
       SCIPdebugMsg(scip, "adding relaxation of knapsack constraint <%s> (capacity %" SCIP_LONGINT_FORMAT "): ",
          SCIPconsGetName(cons), consdata->capacity);
       SCIPdebug( SCIP_CALL(SCIPprintRow(scip, consdata->row, NULL)) );
-      SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE, cutoff) );
+      SCIP_CALL( SCIPaddRow(scip, consdata->row, FALSE, cutoff) );
    }
 
    return SCIP_OKAY;
@@ -4975,7 +4978,7 @@ SCIP_RETCODE separateSequLiftedMinimalCoverInequality(
          {
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
          }
-         SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, cutoff) );
+         SCIP_CALL( SCIPaddRow(scip, row, FALSE, cutoff) );
          (*ncuts)++;
       }
       SCIP_CALL( SCIPreleaseRow(scip, &row) );
@@ -5142,7 +5145,7 @@ SCIP_RETCODE separateSequLiftedExtendedWeightInequality(
          {
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
          }
-         SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, cutoff) );
+         SCIP_CALL( SCIPaddRow(scip, row, FALSE, cutoff) );
          (*ncuts)++;
       }
       SCIP_CALL( SCIPreleaseRow(scip, &row) );
@@ -5256,7 +5259,7 @@ SCIP_RETCODE separateSupLiftedMinimalCoverInequality(
          {
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
          }
-         SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, cutoff) );
+         SCIP_CALL( SCIPaddRow(scip, row, FALSE, cutoff) );
          (*ncuts)++;
       }
       SCIP_CALL( SCIPreleaseRow(scip, &row) );
@@ -5864,7 +5867,20 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
 
       if( SCIPvarIsBinary(var) && SCIPvarIsActive(var) )
       {
+         SCIP_Real solval;
          assert(0 <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < nbinvars);
+
+         solval = SCIPgetSolVal(scip, sol, var);
+
+         /* knapsack relaxation assumes solution values between 0.0 and 1.0 for binary variables */
+         if( SCIPisFeasLT(scip, solval, 0.0 )
+               || SCIPisFeasGT(scip, solval, 1.0) )
+         {
+            SCIPdebugMsg(scip, "Solution value %.15g <%s> outside domain [0.0, 1.0]\n",
+                  solval, SCIPvarGetName(var));
+            goto TERMINATE;
+         }
+
          binvals[SCIPvarGetProbindex(var)] += valscale * knapvals[i];
          if( !noknapsackconshdlr )
          {
@@ -6187,7 +6203,7 @@ SCIP_RETCODE separateCons(
    if( violated )
    {
       /* add knapsack constraint as LP row to the LP */
-      SCIP_CALL( addRelaxation(scip, cons, sol, cutoff) );
+      SCIP_CALL( addRelaxation(scip, cons, cutoff) );
       (*ncuts)++;
    }
    else if( sepacuts )
@@ -11123,6 +11139,7 @@ SCIP_RETCODE greedyCliqueAlgorithm(
       SCIP_VAR** cliquevars;
       int compareweightidx;
       int minclqsize;
+      int nnzadded;
 
       /* add the clique to the clique table */
       SCIPdebug( printClique(items, ncliquevars) );
@@ -11132,6 +11149,7 @@ SCIP_RETCODE greedyCliqueAlgorithm(
          return SCIP_OKAY;
 
       *nbdchgs += thisnbdchgs;
+      nnzadded = ncliquevars;
 
       /* no more cliques to be found (don't know if this can actually happen, since the knapsack could be replaced by a set-packing constraint)*/
       if( ncliquevars == nitems )
@@ -11149,8 +11167,12 @@ SCIP_RETCODE greedyCliqueAlgorithm(
       minclqsize = (int)(cliqueextractfactor * ncliquevars);
       minclqsize = MAX(minclqsize, 2);
 
-      /* loop over the remaining variables and the larger items of the first clique until we find another clique or reach the size limit */
-      while( compareweightidx >= 0 && i < nitems && ncliquevars >= minclqsize && ! (*cutoff) )
+      /* loop over the remaining variables and the larger items of the first clique until we
+       * find another clique or reach the size limit */
+      while( compareweightidx >= 0 && i < nitems && ! (*cutoff)
+            && ncliquevars >= minclqsize  /* stop at a given minimum clique size */
+            && nnzadded <= 2 * nitems     /* stop if enough nonzeros were added to the cliquetable */
+            )
       {
          compareweight = weights[compareweightidx];
          assert(compareweight > 0);
@@ -11162,6 +11184,8 @@ SCIP_RETCODE greedyCliqueAlgorithm(
             cliquevars[ncliquevars - 1] = items[i];
             SCIPdebug( printClique(cliquevars, ncliquevars) );
             SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, FALSE, cutoff, &thisnbdchgs) );
+
+            nnzadded += ncliquevars;
 
             /* stop when there is a cutoff */
             if( ! (*cutoff) )
@@ -11770,7 +11794,7 @@ SCIP_RETCODE enforceConstraint(
       if( violated )
       {
          /* add knapsack constraint as LP row to the relaxation */
-         SCIP_CALL( addRelaxation(scip, conss[i], sol, &cutoff) );
+         SCIP_CALL( addRelaxation(scip, conss[i], &cutoff) );
          ncuts++;
       }
    }
@@ -11782,7 +11806,7 @@ SCIP_RETCODE enforceConstraint(
       if( violated )
       {
          /* add knapsack constraint as LP row to the relaxation */
-         SCIP_CALL( addRelaxation(scip, conss[i], sol, &cutoff) );
+         SCIP_CALL( addRelaxation(scip, conss[i], &cutoff) );
          ncuts++;
       }
    }
@@ -12047,6 +12071,8 @@ SCIP_DECL_CONSINITPRE(consInitpreKnapsack)
    conshdlrdata->bools3size = nvars;
    conshdlrdata->bools4size = nvars;
 
+   conshdlrdata->upgradedcard = FALSE;
+
    return SCIP_OKAY;
 }
 
@@ -12192,7 +12218,7 @@ SCIP_DECL_CONSINITLP(consInitlpKnapsack)
    for( i = 0; i < nconss && !(*infeasible); i++ )
    {
       assert(SCIPconsIsInitial(conss[i]));
-      SCIP_CALL( addRelaxation(scip, conss[i], NULL, infeasible) );
+      SCIP_CALL( addRelaxation(scip, conss[i], infeasible) );
    }
 
    return SCIP_OKAY;
@@ -12647,6 +12673,207 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
             npaircomparisons = 0;
          }
       }
+   }
+
+   /* upgrade to cardinality constraints - only try to upgrade towards the end of presolving, since the process below is quite expensive */
+   if ( ! cutoff && conshdlrdata->upgdcardinality && (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 && SCIPisPresolveFinished(scip) && ! conshdlrdata->upgradedcard )
+   {
+      SCIP_HASHMAP* varhash;
+      SCIP_VAR** cardvars;
+      SCIP_Real* cardweights;
+      int noldupgdconss;
+      int nscipvars;
+      int makeupgrade;
+
+      noldupgdconss = *nupgdconss;
+      nscipvars = SCIPgetNVars(scip);
+      SCIP_CALL( SCIPallocClearBufferArray(scip, &cardvars, nscipvars) );
+      SCIP_CALL( SCIPallocClearBufferArray(scip, &cardweights, nscipvars) );
+
+      /* set up hash map */
+      SCIP_CALL( SCIPhashmapCreate(&varhash, SCIPblkmem(scip), nscipvars) );
+
+      /* We loop through all cardinality constraints twice:
+       * - First, determine for each binary variable the number of cardinality constraints that can be upgraded to a
+       *   knapsack constraint and contain this variable; this number has to coincide with the number of variable up
+       *   locks; otherwise it would be infeasible to delete the knapsack constraints after the constraint update.
+       * - Second, upgrade knapsack constraints to cardinality constraints. */
+      for (makeupgrade = 0; makeupgrade < 2; ++makeupgrade)
+      {
+         for (c = nconss-1; c >= 0 && ! SCIPisStopped(scip); --c)
+         {
+            SCIP_CONS* cardcons;
+            SCIP_VAR** vars;
+            SCIP_Longint* weights;
+            int nvars;
+            int v;
+
+            cons = conss[c];
+            assert( cons != NULL );
+            consdata = SCIPconsGetData(cons);
+            assert( consdata != NULL );
+
+            nvars = consdata->nvars;
+            vars = consdata->vars;
+            weights = consdata->weights;
+
+            /* Check, whether linear knapsack can be upgraded to a cardinality constraint:
+             * - all variables must be binary (always true)
+             * - all coefficients must be 1.0
+             * - the right hand side must be smaller than nvars
+             */
+            if ( consdata->capacity >= nvars )
+               continue;
+
+            /* the weights are sorted: check first and last weight */
+            assert( consdata->sorted );
+            if ( weights[0] != 1 || weights[nvars-1] != 1 )
+               continue;
+
+            /* check whether all variables are of the form 0 <= x_v <= u_v y_v for y_v \in \{0,1\} and zero objective */
+            for (v = 0; v < nvars; ++v)
+            {
+               SCIP_BOUNDTYPE* impltypes;
+               SCIP_Real* implbounds;
+               SCIP_VAR** implvars;
+               SCIP_VAR* var;
+               int nimpls;
+               int j;
+
+               var = consdata->vars[v];
+               assert( var != NULL );
+               assert( SCIPvarIsBinary(var) );
+
+               /* ignore non-active variables */
+               if ( ! SCIPvarIsActive(var) )
+                  break;
+
+               /* be sure that implication variable has zero objective */
+               if ( ! SCIPisZero(scip, SCIPvarGetObj(var)) )
+                  break;
+
+               nimpls = SCIPvarGetNImpls(var, FALSE);
+               implvars = SCIPvarGetImplVars(var, FALSE);
+               implbounds = SCIPvarGetImplBounds(var, FALSE);
+               impltypes = SCIPvarGetImplTypes(var, FALSE);
+
+               for (j = 0; j < nimpls; ++j)
+               {
+                  /* be sure that continuous variable is fixed to 0 */
+                  if ( impltypes[j] != SCIP_BOUNDTYPE_UPPER )
+                     continue;
+
+                  /* cannot currently deal with nonzero fixings */
+                  if ( ! SCIPisZero(scip, implbounds[j]) )
+                     continue;
+
+                  /* number of down locks should be one */
+                  if ( SCIPvarGetNLocksDown(vars[v]) != 1 )
+                     continue;
+
+                  cardvars[v] = implvars[j];
+                  cardweights[v] = (SCIP_Real) v;
+
+                  break;
+               }
+
+               /* found no variable upper bound candidate -> exit */
+               if ( j >= nimpls )
+                  break;
+            }
+
+            /* did not find fitting variable upper bound for some variable -> exit */
+            if ( v < nvars )
+               break;
+
+            /* save number of knapsack constraints that can be upgraded to a cardinality constraint,
+             * in which the binary variable is involved in */
+            if ( makeupgrade == 0 )
+            {
+               for (v = 0; v < nvars; ++v)
+               {
+                  if ( SCIPhashmapExists(varhash, vars[v]) )
+                  {
+                     int image;
+
+                     image = (int) (size_t) SCIPhashmapGetImage(varhash, vars[v]);
+                     SCIP_CALL( SCIPhashmapSetImage(varhash, vars[v], (void*) (size_t) (image + 1)) );/*lint !e776*/
+                     assert( image + 1 == (int) (size_t) SCIPhashmapGetImage(varhash, vars[v]) );
+                  }
+                  else
+                  {
+                     SCIP_CALL( SCIPhashmapInsert(varhash, vars[v], (void*) (size_t) 1) );/*lint !e571*/
+                     assert( 1 == (int) (size_t) SCIPhashmapGetImage(varhash, vars[v]) );
+                     assert( SCIPhashmapExists(varhash, vars[v]) );
+                  }
+               }
+            }
+            else
+            {
+               SCIP_CONS* origcons;
+
+               /* for each variable: check whether the number of cardinality constraints that can be upgraded to a
+                * knapsack constraint coincides with the number of variable up locks */
+               for (v = 0; v < nvars; ++v)
+               {
+                  assert( SCIPhashmapExists(varhash, vars[v]) );
+                  if ( SCIPvarGetNLocksUp(vars[v]) != (int) (size_t) SCIPhashmapGetImage(varhash, vars[v]) )
+                     break;
+               }
+               if ( v < nvars )
+                  break;
+
+               /* store that we have upgraded */
+               conshdlrdata->upgradedcard = TRUE;
+
+               /* at this point we found suitable variable upper bounds */
+               SCIPdebugMessage("Upgrading knapsack constraint <%s> to cardinality constraint ...\n", SCIPconsGetName(cons));
+
+               /* create cardinality constraint */
+               assert( ! SCIPconsIsModifiable(cons) );
+               SCIP_CALL( SCIPcreateConsCardinality(scip, &cardcons, SCIPconsGetName(cons), nvars, cardvars, (int) consdata->capacity, vars, cardweights,
+                     SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+                     SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
+                     SCIPconsIsLocal(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+#ifdef SCIP_DEBUG
+               SCIPprintCons(scip, cons, NULL);
+               SCIPinfoMessage(scip, NULL, "\n");
+               SCIPprintCons(scip, cardcons, NULL);
+               SCIPinfoMessage(scip, NULL, "\n");
+#endif
+               SCIP_CALL( SCIPaddCons(scip, cardcons) );
+               SCIP_CALL( SCIPreleaseCons(scip, &cardcons) );
+               ++(*nupgdconss);
+
+               /* delete oknapsack constraint */
+               SCIP_CALL( SCIPdelCons(scip, cons) );
+               ++(*ndelconss);
+
+               /* We need to disable the original knapsack constraint, since it might happen that the binary variables
+                * are 1 although the continuous variables are 0. Thus, the knapsack constraint might be violated,
+                * although the cardinality constraint is satisfied. */
+               origcons = SCIPfindOrigCons(scip, SCIPconsGetName(cons));
+               assert( origcons != NULL );
+               SCIP_CALL( SCIPsetConsChecked(scip, origcons, FALSE) );
+
+               for (v = 0; v < nvars; ++v)
+               {
+                  int image;
+
+                  assert ( SCIPhashmapExists(varhash, vars[v]) );
+                  image = (int) (size_t) SCIPhashmapGetImage(varhash, vars[v]);
+                  SCIP_CALL( SCIPhashmapSetImage(varhash, vars[v], (void*) (size_t) (image - 1)) );
+                  assert( image - 1 == (int) (size_t) SCIPhashmapGetImage(varhash, vars[v]) );
+               }
+            }
+         }
+      }
+      SCIPhashmapFree(&varhash);
+      SCIPfreeBufferArray(scip, &cardweights);
+      SCIPfreeBufferArray(scip, &cardvars);
+
+      if ( *nupgdconss > noldupgdconss )
+         success = TRUE;
    }
 
    if( cutoff )
@@ -13182,6 +13409,10 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
           "factor on the growth of global cliques to decide when to update a previous "
           "(negated) clique partition (used only if updatecliquepartitions is set to TRUE)",
           &conshdlrdata->clqpartupdatefac, TRUE, DEFAULT_CLQPARTUPDATEFAC, 1.0, 10.0, NULL, NULL) );
+    SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/" CONSHDLR_NAME "/upgdcardinality",
+         "if TRUE then try to update knapsack constraints to cardinality constraints",
+         &conshdlrdata->upgdcardinality, TRUE, DEFAULT_UPGDCARDINALITY, NULL, NULL) );
 
    return SCIP_OKAY;
 }

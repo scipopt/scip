@@ -27,6 +27,7 @@
 
 #include "scip/def.h"
 #include "scip/message.h"
+#include "scip/type_bandit.h"
 #include "scip/type_set.h"
 #include "scip/type_clock.h"
 #include "scip/type_paramset.h"
@@ -45,6 +46,7 @@
 #include "scip/type_reader.h"
 #include "scip/type_relax.h"
 #include "scip/type_sepa.h"
+#include "scip/type_table.h"
 #include "scip/type_prop.h"
 #include "nlpi/type_nlpi.h"
 #include "scip/type_concsolver.h"
@@ -81,11 +83,13 @@ struct SCIP_Set
    SCIP_NODESEL*         nodesel;            /**< currently used node selector, or NULL if invalid */
    SCIP_BRANCHRULE**     branchrules;        /**< branching rules */
    SCIP_DISP**           disps;              /**< display columns */
+   SCIP_TABLE**          tables;             /**< statistics tables */
    SCIP_DIALOG**         dialogs;            /**< dialogs */
    SCIP_NLPI**           nlpis;              /**< interfaces to NLP solvers */
    SCIP_CONCSOLVERTYPE** concsolvertypes;    /**< concurrent solver types */
    SCIP_CONCSOLVER**     concsolvers;        /**< the concurrent solvers used for solving */
    SCIP_DEBUGSOLDATA*    debugsoldata;       /**< data for debug solutions */
+   SCIP_BANDITVTABLE**   banditvtables;      /**< virtual function tables for bandit algorithms */
    char**                extcodenames;       /**< names of externals codes */
    char**                extcodedescs;       /**< descriptions of external codes */
    int                   nreaders;           /**< number of file readers */
@@ -117,6 +121,8 @@ struct SCIP_Set
    int                   branchrulessize;    /**< size of branchrules array */
    int                   ndisps;             /**< number of display columns */
    int                   dispssize;          /**< size of disps array */
+   int                   ntables;            /**< number of statistics tables */
+   int                   tablessize;         /**< size of tables array */
    int                   ndialogs;           /**< number of dialogs */
    int                   dialogssize;        /**< size of dialogs array */
    int                   nnlpis;             /**< number of NLPIs */
@@ -127,6 +133,8 @@ struct SCIP_Set
    int                   concsolverssize;    /**< size of concurrent solvers array */
    int                   nextcodes;          /**< number of external codes */
    int                   extcodessize;       /**< size of external code arrays */
+   int                   nbanditvtables;     /**< number of bandit algorithm virtual function tables */
+   int                   banditvtablessize;  /**< size of banditvtables array */
    SCIP_Bool             pricerssorted;      /**< are the pricers sorted by activity and priority? */
    SCIP_Bool             pricersnamesorted;  /**< are the pricers sorted by name? */
    SCIP_Bool             conflicthdlrssorted;/**< are the conflict handlers sorted by priority? */
@@ -146,6 +154,7 @@ struct SCIP_Set
    SCIP_Bool             comprsnamesorted;   /**< are the compressions sorted by name? */
    SCIP_Bool             branchrulessorted;  /**< are the branching rules sorted by priority? */
    SCIP_Bool             branchrulesnamesorted;/**< are the branching rules sorted by name? */
+   SCIP_Bool             tablessorted;       /**< are the tables sorted by position? */
    SCIP_Bool             nlpissorted;        /**< are the NLPIs sorted by priority? */
    SCIP_Bool             limitchanged;       /**< marks whether any of the limit parameters was changed */
 
@@ -318,7 +327,7 @@ struct SCIP_Set
    SCIP_Real             lp_resolveiterfac;  /**< factor of average LP iterations that is used as LP iteration limit
                                               *   for LP resolve (-1: unlimited) */
    int                   lp_resolveitermin;  /**< minimum number of iterations that are allowed for LP resolve */
-   int                   lp_solutionpolishing;/**< LP solution polishing method (0: disabled, 1: only root, 2: always) */
+   int                   lp_solutionpolishing;/**< LP solution polishing method (0: disabled, 1: only root, 2: always, 3: auto) */
    int                   lp_refactorinterval;/**< LP refactorization interval (0: automatic) */
 
    /* NLP settings */
@@ -356,6 +365,7 @@ struct SCIP_Set
    SCIP_Bool             misc_allowdualreds; /**< should dual reductions in propagation methods and presolver be allowed? */
    SCIP_Bool             misc_allowobjprop;  /**< should propagation to the current objective be allowed in propagation methods? */
    SCIP_Real             misc_referencevalue;/**< objective value for reference purposes */
+   int                   misc_usesymmetry;   /**< used symmetry handling technique (0: off; 1: polyhedral; 2: orbital fixing) */
    char*                 misc_debugsol;      /**< path to a debug solution */
 
    /* randomization parameters */
@@ -377,7 +387,7 @@ struct SCIP_Set
    SCIP_Real             num_feastol;        /**< feasibility tolerance for constraints */
    SCIP_Real             num_checkfeastolfac;/**< factor to change the feasibility tolerance when testing the best
                                               *   solution for feasibility (after solving process) */
-   SCIP_Real             num_lpfeastol;      /**< primal feasibility tolerance of LP solver */
+   SCIP_Real             num_lpfeastol;      /**< primal feasibility tolerance of LP solver (user parameter, see also num_relaxfeastol) */
    SCIP_Real             num_dualfeastol;    /**< feasibility tolerance for reduced costs */
    SCIP_Real             num_barrierconvtol; /**< convergence tolerance used in barrier algorithm */
    SCIP_Real             num_boundstreps;    /**< minimal improve for strengthening bounds */
@@ -387,6 +397,7 @@ struct SCIP_Set
                                               *   (e.g., pseudo objective) instead of an update */
    SCIP_Real             num_hugeval;        /**< values larger than this are considered huge and should be handled
                                               *   separately (e.g., in activity computation) */
+   SCIP_Real             num_relaxfeastol;   /**< primal feasibility tolerance for relaxations (set by core or plugins, not a parameter) */
 
    /* presolving settings */
    SCIP_Real             presol_abortfac;    /**< abort presolve, if l.t. this frac of the problem was changed in last round */
@@ -472,9 +483,7 @@ struct SCIP_Set
    SCIP_Real             sepa_minortho;      /**< minimal orthogonality for a cut to enter the LP */
    SCIP_Real             sepa_minorthoroot;  /**< minimal orthogonality for a cut to enter the LP in the root node */
    SCIP_Real             sepa_objparalfac;   /**< factor to scale objective parallelism of cut in separation score calc. */
-   SCIP_Real             sepa_orthofac;      /**< factor to scale orthogonality of cut in separation score calculation */
-   SCIP_Real             sepa_feastolfac;    /**< factor on cut infeasibility to limit feasibility tolerance for relaxation solver (-1: off) */
-   SCIP_Real             sepa_primfeastol;   /**< primal feasibility tolerance derived from cut feasibility (set by sepastore, not a parameter) */
+   SCIP_Real             sepa_intsupportfac; /**< factor to scale integral support of cut in separation score calculation */
    SCIP_Real             sepa_minactivityquot; /**< minimum cut activity quotient to convert cuts into constraints
                                                 *   during a restart (0.0: all cuts are converted) */
    char                  sepa_orthofunc;     /**< function used for calc. scalar prod. in orthogonality test ('e'uclidean, 'd'iscrete) */
@@ -492,6 +501,7 @@ struct SCIP_Set
                                               *   or integrality improvement (-1: no additional restriction) */
    int                   sepa_maxstallroundsroot;/**< maximal number of consecutive separation rounds without objective
                                               *   or integrality improvement (-1: no additional restriction) */
+   int                   sepa_maxincrounds;  /**< maximal number of consecutive separation rounds that increase the size of the LP relaxation per node (-1: unlimited) */
    int                   sepa_maxcuts;       /**< maximal number of cuts separated per separation round */
    int                   sepa_maxcutsroot;   /**< maximal number of separated cuts at the root node */
    int                   sepa_cutagelimit;   /**< maximum age a cut can reach before it is deleted from the global cut pool */

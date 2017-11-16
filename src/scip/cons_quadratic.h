@@ -636,6 +636,38 @@ SCIP_RETCODE SCIPchgBilinCoefQuadratic(
    SCIP_Real             coef                /**< coefficient of bilinear term */
    );
 
+/** returns the total number of bilinear terms that are contained in all quadratic constraints */
+int SCIPgetNAllBilinearTermsQuadratic(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns all bilinear terms that are contained in all quadratic constraints */
+EXTERN
+SCIP_RETCODE SCIPgetAllBilinearTermsQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR** RESTRICT   x,                  /**< array to store first variable of each bilinear term */
+   SCIP_VAR** RESTRICT   y,                  /**< array to second variable of each bilinear term */
+   int* RESTRICT         nbilinterms,        /**< buffer to store the total number of bilinear terms */
+   int* RESTRICT         nunderests,         /**< array to store the total number of constraints that require to underestimate a bilinear term */
+   int* RESTRICT         noverests           /**< array to store the total number of constraints that require to overestimate a bilinear term */
+   );
+
+/** adds a globally valid inequality of the form xcoef x <= ycoef y + constant for a bilinear term (x,y)
+ *
+ *  @note the indices of bilinear terms match with the entries of bilinear terms returned by SCIPgetAllBilinearTermsQuadratic
+ */
+EXTERN
+SCIP_RETCODE SCIPaddBilinearIneqQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             x,                  /**< first variable */
+   SCIP_VAR*             y,                  /**< second variable */
+   int                   idx,                /**< index of the bilinear term */
+   SCIP_Real             xcoef,              /**< x coefficient */
+   SCIP_Real             ycoef,              /**< y coefficient */
+   SCIP_Real             constant,           /**< constant part */
+   SCIP_Bool*            success             /**< buffer to store whether inequality has been accepted */
+   );
+
 /* @} */
 
 
@@ -728,18 +760,12 @@ void SCIPaddRowprepConstant(
 #define SCIPaddRowprepConstant(rowprep, constant)  SCIPaddRowprepSide(rowprep, -(constant))
 #endif
 
-/* computes violation of cut in a given solution
- *
- * If scaling == 'g', assumes that terms in rowprep are sorted by abs value of coef, in decreasing order.
- *
- * @param scaling 'o' for no scaling, 'g' for scaling by the absolute value of the maximal coefficient, or 's' for scaling by side
- */
+/** computes violation of cut in a given solution */
 EXTERN
 SCIP_Real SCIPgetRowprepViolation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be turned into a row */
-   SCIP_SOL*             sol,                /**< solution or NULL for LP solution */
-   char                  scaling             /**< how to scale cut violation: o, g, or s */
+   SCIP_SOL*             sol                 /**< solution or NULL for LP solution */
 );
 
 /** Merge terms that use same variable and eliminate zero coefficients.
