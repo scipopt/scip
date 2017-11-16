@@ -12,8 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define SCIP_STATISTIC
-#define SCIP_DEBUG
+
 /**@file   branch_lookahead.c
  * @ingroup BRANCHINGRULES
  * @brief  lookahead LP branching rule
@@ -3529,13 +3528,15 @@ SCIP_RETCODE executeBranchingRecursive(
    int probingdepth;
    SCIP_VAR *branchvar = candidate->branchvar;
    SCIP_Real branchvalfrac = candidate->fracval;
+   SCIP_Bool varisbinary;
 #ifdef SCIP_DEBUG
    SCIP_Real branchval = candidate->branchval;
 #endif
 
    probingdepth = SCIPgetProbingDepth(scip);
+   varisbinary = SCIPvarIsBinary(branchvar);
 
-   if( config->usebincons && SCIPvarIsBinary(branchvar) )
+   if( config->usebincons && varisbinary )
    {
       if( downbranching )
       {
@@ -3717,7 +3718,7 @@ SCIP_RETCODE executeBranchingRecursive(
 #endif
    }
 
-   if( config->usebincons && SCIPvarIsBinary(branchvar) )
+   if( config->usebincons && varisbinary )
    {
       binaryVarListDrop(binconsdata->binaryvars);
    }
