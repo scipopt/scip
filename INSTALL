@@ -113,7 +113,7 @@ compilation settings:
               "none", "cppad"
 
 - $(SYM):     the graph automorphism code (needed to handle symmetries) to use
-  	      "none", "bliss"
+             "none", "bliss"
 
 For example, if you want to install SCIP on a Linux system with a x86 processor
 using the gnu compiler in debug mode, using Soplex version >= 1.4.0 as LP solver,
@@ -186,7 +186,7 @@ Here is what you have to do to get SCIP running:
    - "SHARED=true"     to create shared libraries
 
    - "SYM=bliss"       to use bliss to compute symmetries of a mixed integer program
-   - "SYM=none"	       to disable symmetry handling in mixed integer programs
+   - "SYM=none"        to disable symmetry handling in mixed integer programs
 
    On some machines, you should use gmake instead of make.
 
