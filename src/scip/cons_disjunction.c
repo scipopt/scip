@@ -968,7 +968,7 @@ SCIP_DECL_CONSCOPY(consCopyDisjunction)
                global, valid) );
       }
 
-      if( *valid )
+      if( *valid && targetrelaxcons != NULL )
       {
          if( name == NULL )
          {
