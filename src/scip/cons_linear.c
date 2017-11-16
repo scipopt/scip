@@ -12828,7 +12828,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
  *  prefers non-upgraded constraints and as second criterion the constraint with the smallest position
  */
 static
-int getParallelConsKey(
+unsigned int getParallelConsKey(
    SCIP_CONS*            cons                /**< linear constraint */
    )
 {
@@ -12839,7 +12839,7 @@ int getParallelConsKey(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   return (int)(consdata->upgraded<<30) + SCIPconsGetPos(cons);
+   return (((unsigned int)consdata->upgraded)<<31) + (unsigned int)SCIPconsGetPos(cons); /*lint !e571*/
 }
 
 /** updates the hashtable such that out of all constraints in the hashtable that are detected
@@ -12857,14 +12857,14 @@ SCIP_RETCODE retrieveParallelConstraints(
    )
 {
    SCIP_CONS* parallelcons;
-   int querykey;
+   unsigned int querykey;
 
    *nparallelconss = 0;
    querykey = getParallelConsKey(*querycons);
 
    while( (parallelcons = (SCIP_CONS*)SCIPhashtableRetrieve(hashtable, (void*)(*querycons))) != NULL )
    {
-      int conskey = getParallelConsKey(parallelcons);
+      unsigned int conskey = getParallelConsKey(parallelcons);
 
       if( conskey < querykey )
       {
