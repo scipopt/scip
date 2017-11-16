@@ -13005,7 +13005,7 @@ SCIP_RETCODE detectRedundantConstraints(
                SCIPdebugMsg(scip, "aggregate linear constraints <%s> and <%s> with equal coefficients into single ranged row\n",
                             SCIPconsGetName(cons0), SCIPconsGetName(consdel));
                SCIPdebugPrintCons(scip, cons0, NULL);
-               SCIPdebugPrintCons(scip, cons1, NULL);
+               SCIPdebugPrintCons(scip, consdel, NULL);
 
                if( ! SCIPisInfinity(scip, -consdatadel->lhs) )
                   lhs = MAX(scale * consdatadel->lhs, lhs);
@@ -13019,7 +13019,7 @@ SCIP_RETCODE detectRedundantConstraints(
                SCIPdebugMsg(scip, "aggregate linear constraints <%s> and <%s> with negated coefficients into single ranged row\n",
                             SCIPconsGetName(cons0), SCIPconsGetName(consdel));
                SCIPdebugPrintCons(scip, cons0, NULL);
-               SCIPdebugPrintCons(scip, cons1, NULL);
+               SCIPdebugPrintCons(scip, consdel, NULL);
 
                if( ! SCIPisInfinity(scip, consdatadel->rhs) )
                   lhs = MAX(scale * consdatadel->rhs, lhs);
