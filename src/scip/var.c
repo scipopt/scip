@@ -15330,12 +15330,12 @@ SCIP_Real SCIPvarGetVSIDSCurrentRun(
 {
    assert(var != NULL);
    assert(stat != NULL);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
-   if( dir != SCIP_BRANCHDIR_DOWNWARDS  && dir != SCIP_BRANCHDIR_UPWARDS )
+   if( dir != SCIP_BRANCHDIR_DOWNWARDS && dir != SCIP_BRANCHDIR_UPWARDS )
    {
-      SCIPerrorMessage("Auto branching direction makes no sense here \n");
-      SCIPABORT();
-      return 0.0; /*lint !e527*/
+      SCIPerrorMessage("invalid branching direction %d when asking for VSIDS value\n", dir);
+      return SCIP_INVALID;
    }
 
    switch( SCIPvarGetStatus(var) )
