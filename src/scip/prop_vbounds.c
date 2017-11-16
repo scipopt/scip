@@ -1381,7 +1381,7 @@ SCIP_Real computeRelaxedLowerbound(
 {
    SCIP_Real relaxedbd;
 
-   if( SCIPvarIsIntegral(var) && inferlb < SCIPgetHugeValue(scip) * SCIPepsilon(scip) )
+   if( SCIPvarIsIntegral(var) && inferlb < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
       relaxedbd = (inferlb - 1.0 + 2*SCIPfeastol(scip) - constant) / coef;
    else
       relaxedbd = (inferlb - constant) / coef;
