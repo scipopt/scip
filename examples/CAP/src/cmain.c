@@ -68,7 +68,7 @@ SCIP_RETCODE runShell(
    //SCIP_CALL( SCIPsetSeparating(scip, SCIP_PARAMSETTING_OFF, TRUE) );
    //SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE) );
    SCIP_CALL( SCIPsetPresolving(scip, SCIP_PARAMSETTING_OFF, TRUE) );
-   //SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxrounds", 0) );
+   SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxrounds", 0) );
    SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxroundsroot", 0) );
 
    //SCIP_CALL( SCIPsetIntParam(scip, "heuristics/proximity/priority", 10000) );
