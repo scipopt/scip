@@ -217,8 +217,6 @@ struct SCIP_ConshdlrData
    int                   empathy4and;        /**< how much empathy we have for using the AND constraint handler: 0 avoid always; 1 use sometimes; 2 use as often as possible */
    SCIP_Bool             binreforminitial;   /**< whether to make constraints added due to replacing products with binary variables initial */
    SCIP_Real             binreformmaxcoef;   /**< factor on 1/feastol to limit coefficients and coef range in linear constraints created by binary reformulation */
-   SCIP_Real             mincutefficacysepa; /**< minimal efficacy of a cut in order to add it to relaxation during separation */
-   SCIP_Real             mincutefficacyenfofac; /**< minimal target efficacy of a cut in order to add it to relaxation during enforcement as factor of feasibility tolerance (may be ignored) */
    SCIP_Real             cutmaxrange;        /**< maximal range (maximal coef / minimal coef) of a cut in order to be added to LP */
    SCIP_Bool             linearizeheursol;   /**< whether linearizations of convex quadratic constraints should be added to cutpool when some heuristics finds a new solution */
    SCIP_Bool             checkcurvature;     /**< whether functions should be checked for convexity/concavity */
@@ -7452,7 +7450,7 @@ SCIP_RETCODE generateCut(
    SCIP_ROW**            row,                /**< storage for cut */
    SCIP_Real*            efficacy,           /**< buffer to store efficacy of row in reference solution, or NULL if not of interest */
    SCIP_Bool             checkcurvmultivar,  /**< are we allowed to check the curvature of a multivariate quadratic function, if not done yet */
-   SCIP_Real             minefficacy         /**< minimal required efficacy (violation possibly scaled) */
+   SCIP_Real             minefficacy         /**< minimal required efficacy */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -8753,7 +8751,7 @@ SCIP_RETCODE generateCutSol(
    SCIP_ROW**            row,                /**< storage for cut */
    SCIP_Real*            efficacy,           /**< buffer to store efficacy of row in reference solution, or NULL if not of interest */
    SCIP_Bool             checkcurvmultivar,  /**< are we allowed to check the curvature of a multivariate quadratic function, if not done yet */
-   SCIP_Real             minefficacy,        /**< minimal required efficacy (violation scaled by maximal absolute coefficient) */
+   SCIP_Real             minefficacy,        /**< minimal required efficacy */
    char                  mode                /**< mode of execution 'g'auge, 'p'rojection, 'l'inearization gradient, 'd'efault */
    )
 {
@@ -9034,7 +9032,7 @@ SCIP_RETCODE processCut(
    SCIP_CONSHDLR*        conshdlr,           /**< quadratic constraints handler */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_Real             efficacy,           /**< efficacy of row in reference solution */
-   SCIP_Real             actminefficacy,     /**< actual minimal efficacy (whatever that is) */
+   SCIP_Real             minefficacy,        /**< minimal efficacy */
    SCIP_Bool             inenforcement,      /**< whether we are in constraint enforcement */
    SCIP_Real*            bestefficacy,       /**< buffer to store best efficacy of a cut that was added to the LP, if found; or NULL if not of interest */
    SCIP_RESULT*          result              /**< result of separation */
@@ -9059,7 +9057,7 @@ SCIP_RETCODE processCut(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   if( SCIPisGT(scip, efficacy, actminefficacy) && SCIPisCutApplicable(scip, *row) )  /*lint !e644 */
+   if( SCIPisGT(scip, efficacy, minefficacy) && SCIPisCutApplicable(scip, *row) )  /*lint !e644 */
    {
       SCIP_Bool infeasible;
 
@@ -9088,6 +9086,7 @@ SCIP_RETCODE processCut(
    SCIP_CALL( SCIPreleaseRow (scip, row) );
    return SCIP_OKAY;
 }
+
 /** tries to separate solution or LP solution by a linear cut
  *
  *  assumes that constraint violations have been computed
@@ -9109,7 +9108,6 @@ SCIP_RETCODE separatePoint(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
    SCIP_Real          efficacy;
-   SCIP_Real          actminefficacy;
    SCIP_SIDETYPE      violside;
    int                c;
    SCIP_ROW*          row;
@@ -9144,10 +9142,6 @@ SCIP_RETCODE separatePoint(
       if( *result == SCIP_FEASIBLE )
          *result = SCIP_DIDNOTFIND;
 
-      /* actual minimal efficacy */
-      actminefficacy = inenforcement && ((violside == SCIP_SIDETYPE_RIGHT && consdata->isconvex ) || (violside == SCIP_SIDETYPE_LEFT && consdata->isconcave))
-               ? SCIPfeastol(scip) : minefficacy;
-
       /* generate cut */
       if( sol == NULL && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
       {
@@ -9171,16 +9165,16 @@ SCIP_RETCODE separatePoint(
             else
                efficacy = 0.0;
 
-            SCIP_CALL( processCut(scip, &row, conshdlr, conss[c], efficacy, actminefficacy, inenforcement, bestefficacy, result) );
+            SCIP_CALL( processCut(scip, &row, conshdlr, conss[c], efficacy, minefficacy, inenforcement, bestefficacy, result) );
          }
          continue;
       }
       else
       {
          SCIP_CALL( generateCutSol(scip, conshdlr, conss[c], sol, NULL, violside, &row, &efficacy,
-            conshdlrdata->checkcurvature, actminefficacy, 'd') );
-         /* @todo If generation failed not because of low efficacy, then probably because of numerical issues */
-         SCIP_CALL( processCut(scip, &row, conshdlr, conss[c], efficacy, actminefficacy, inenforcement, bestefficacy, result) );
+            conshdlrdata->checkcurvature, minefficacy, 'd') );
+
+         SCIP_CALL( processCut(scip, &row, conshdlr, conss[c], efficacy, minefficacy, inenforcement, bestefficacy, result) );
       }
 
       if( *result == SCIP_CUTOFF )
@@ -11437,8 +11431,6 @@ SCIP_RETCODE enforceConstraint(
    int                nchgbds;
    int                nnotify;
    SCIP_Real          sepaefficacy;
-   SCIP_Real          minefficacy;
-   SCIP_Real          leastpossibleefficacy;
    SCIP_Bool          solviolbounds;
 
    assert(scip != NULL);
@@ -11537,14 +11529,10 @@ SCIP_RETCODE enforceConstraint(
       return SCIP_OKAY;
    }
 
-   /* we would like a cut that is efficient enough that it is not redundant in the LP (>feastol)
-    * however, if the maximal violation is very small, also the best cut efficacy cannot be large
-    * thus, in the latter case, we are also happy if the efficacy is at least, say, 75% of the maximal violation
-    * but in any case we need an efficacy that is at least feastol
+   /* we would like a cut that is efficient enough that it is not redundant in the LP (>lpfeastol)
+    * however, we also don't want very weak cuts, so try to reach at least feastol (=lpfeastol by default, though)
     */
-   minefficacy = MIN(0.75*maxviol, conshdlrdata->mincutefficacyenfofac * SCIPfeastol(scip));  /*lint !e666 */
-   minefficacy = MAX(minefficacy, SCIPfeastol(scip));  /*lint !e666 */
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, minefficacy, TRUE, &separateresult, &sepaefficacy) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, SCIPfeastol(scip), TRUE, &separateresult, &sepaefficacy) );
    if( separateresult == SCIP_CUTOFF )
    {
       SCIPdebugMsg(scip, "separation found cutoff\n");
@@ -11553,7 +11541,7 @@ SCIP_RETCODE enforceConstraint(
    }
    if( separateresult == SCIP_SEPARATED )
    {
-      SCIPdebugMsg(scip, "separation succeeded (bestefficacy = %g, minefficacy = %g)\n", sepaefficacy, minefficacy);
+      SCIPdebugMsg(scip, "separation succeeded (bestefficacy = %g, minefficacy = %g)\n", sepaefficacy, SCIPfeastol(scip));
       *result = SCIP_SEPARATED;
       return SCIP_OKAY;
    }
@@ -11562,17 +11550,15 @@ SCIP_RETCODE enforceConstraint(
     * -> collect variables for branching
     */
 
-   SCIPdebugMsg(scip, "separation failed (bestefficacy = %g < %g = minefficacy ); max viol: %g\n", sepaefficacy, minefficacy, maxviol);
+   SCIPdebugMsg(scip, "separation failed (bestefficacy = %g < %g = minefficacy ); max viol: %g\n", sepaefficacy, SCIPfeastol(scip), maxviol);
 
    /* find branching candidates */
    SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, sol, &nnotify) );
 
-   /* if sepastore can decrease feasibility tolerance, we can add cuts with efficacy in [eps, feastol] */
-   leastpossibleefficacy = SCIPfeastol(scip);
-   if( nnotify == 0 && !solinfeasible && minefficacy > leastpossibleefficacy )
+   if( nnotify == 0 && !solinfeasible && SCIPfeastol(scip) > SCIPlpfeastol(scip) )
    {
       /* fallback 1: we also have no branching candidates, so try to find a weak cut */
-      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, leastpossibleefficacy, TRUE, &separateresult, &sepaefficacy) );
+      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, SCIPlpfeastol(scip), TRUE, &separateresult, &sepaefficacy) );
       if( separateresult == SCIP_CUTOFF )
       {
          SCIPdebugMsg(scip, "separation found cutoff\n");
@@ -12565,7 +12551,7 @@ SCIP_DECL_CONSSEPALP(consSepalpQuadratic)
             }
          }
 
-         SCIP_CALL( addLinearizationCuts(scip, conshdlr, conss, nconss, nlpsol, &lpsolseparated, conshdlrdata->mincutefficacysepa) );
+         SCIP_CALL( addLinearizationCuts(scip, conshdlr, conss, nconss, nlpsol, &lpsolseparated, SCIPgetSepaMinEfficacy(scip)) );
 
          SCIP_CALL( SCIPfreeSol(scip, &nlpsol) );
 
@@ -12583,7 +12569,7 @@ SCIP_DECL_CONSSEPALP(consSepalpQuadratic)
     * or separating with NLP solution as reference point failed, then try (again) with LP solution as reference point
     */
 
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, conshdlrdata->mincutefficacysepa, FALSE, result, NULL) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, SCIPgetSepaMinEfficacy(scip), FALSE, result, NULL) );
 
    return SCIP_OKAY;
 }
@@ -12592,7 +12578,6 @@ SCIP_DECL_CONSSEPALP(consSepalpQuadratic)
 static
 SCIP_DECL_CONSSEPASOL(consSepasolQuadratic)
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool          solviolbounds;
    SCIP_CONS*         maxviolcon;
 
@@ -12601,9 +12586,6 @@ SCIP_DECL_CONSSEPASOL(consSepasolQuadratic)
    assert(conss != NULL || nconss == 0);
    assert(sol != NULL);
    assert(result != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    *result = SCIP_DIDNOTFIND;
 
@@ -12617,7 +12599,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolQuadratic)
    if( maxviolcon == NULL )
       return SCIP_OKAY;
 
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, conshdlrdata->mincutefficacysepa, FALSE, result, NULL) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, SCIPgetSepaMinEfficacy(scip), FALSE, result, NULL) );
 
    return SCIP_OKAY;
 }
@@ -13870,14 +13852,6 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/binreformmaxcoef",
          "limit (as factor on 1/feastol) on coefficients and coef. range in linear constraints created when replacing products with binary variables",
          &conshdlrdata->binreformmaxcoef, TRUE, 1e-4, 0.0, SCIPinfinity(scip), NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/minefficacysepa",
-         "minimal efficacy for a cut to be added to the LP during separation; overwrites separating/efficacy",
-         &conshdlrdata->mincutefficacysepa, TRUE, 0.0001, 0.0, SCIPinfinity(scip), NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/minefficacyenfofac",
-         "minimal target efficacy of a cut in order to add it to relaxation during enforcement as a factor of the feasibility tolerance (may be ignored)",
-         &conshdlrdata->mincutefficacyenfofac, TRUE, 2.0, 1.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/cutmaxrange",
          "maximal coef range of a cut (maximal coefficient divided by minimal coefficient) in order to be added to LP relaxation",
@@ -16504,11 +16478,18 @@ SCIP_RETCODE SCIPcleanupRowprep(
    SCIPprintRowprep(scip, rowprep, NULL);
 #endif
 
-   /* scale up to increase violation, updates myviol */
-   rowprepCleanupScaleup(scip, rowprep, &myviol, minviol);
+   /* if there is interest in achieving some minimal violation, then possibly scale up to increase violation, updates myviol */
+   if( minviol > 0.0 )
+   {
+      /* first, try to achieve scip's minefficacy (typically 1e-4) */
+      if( SCIPgetSepaMinEfficacy(scip) > minviol )
+         rowprepCleanupScaleup(scip, rowprep, &myviol, SCIPgetSepaMinEfficacy(scip));
+      /* in case scip minefficacy could not be reached or was smaller than minviol, try with the given minviol */
+      rowprepCleanupScaleup(scip, rowprep, &myviol, minviol);
+   }
 
    /* scale down to improve numerics, updates myviol */
-   rowprepCleanupScaledown(scip, rowprep, &myviol, minviol);
+   rowprepCleanupScaledown(scip, rowprep, &myviol, MAX(SCIPgetSepaMinEfficacy(scip), minviol)); /*lint !e666*/
 
 #ifdef SCIP_DEBUG
    SCIPinfoMessage(scip, NULL, "applied scaling, viol %g: ", myviol);
