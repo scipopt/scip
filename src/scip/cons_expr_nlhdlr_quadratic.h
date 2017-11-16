@@ -28,4 +28,19 @@
 #include "scip/scip.h"
 #include "scip/cons_expr.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/** includes quadratic nonlinear handler to consexpr */
+EXTERN
+SCIP_RETCODE SCIPincludeConsExprNlhdlrQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        consexprhdlr       /**< expression constraint handler */
+   );
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* __SCIP_CONS_EXPR_NLHDLR_QUADRATIC_H__ */
