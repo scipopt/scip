@@ -170,7 +170,7 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
    const SCIP_Real*      cost,               /**< edge costs */
-   int*                  result,             /**< ST edges */
+   int*                  result,             /**< ST edges (need to be set to UNKNOWN) */
    STP_Bool*             connected           /**< ST nodes */
    )
 {

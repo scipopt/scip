@@ -33,6 +33,7 @@
 #include "portab.h"
 #include "scip/scip.h"
 
+#ifndef NDEBUG
 /** check whether problem has adjacent terminals */
 static
 SCIP_Bool adjterms(
@@ -52,9 +53,9 @@ SCIP_Bool adjterms(
 
    return FALSE;
 }
+#endif
 
-/* count numbers of chains */
-
+/** count numbers of chains */
 static
 unsigned nchains(
    const GRAPH*          g                   /**< graph data structure */

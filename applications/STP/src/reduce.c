@@ -28,7 +28,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /*lint -esym(750,REDUCE_C) -esym(766,stdlib.h) -esym(766,string.h)           */
-//#define SCIP_DEBUG
 #define REDUCE_C
 #define STP_RED_SDSPBOUND    200         /**< visited edges bound for SDSP test  */
 #define STP_RED_SDSPBOUND2   500         /**< visited edges bound for SDSP test  */
@@ -907,11 +906,16 @@ SCIP_RETCODE redLoopMw(
    STP_Bool ansad2 = TRUE;
    STP_Bool chain2 = TRUE;
    STP_Bool extensive = STP_RED_EXTENSIVE;
+   SCIP_RANDNUMGEN* randnumgen;
+
 
    assert(scip != NULL);
    assert(g != NULL);
    assert(fixed != NULL);
    assert(advanced || !tryrmw);
+
+   /* create random number generator */
+   SCIP_CALL( SCIPrandomCreate(&randnumgen, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, 1)) );
 
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
 
@@ -963,7 +967,7 @@ SCIP_RETCODE redLoopMw(
       if( (da || (advanced && extensive)) )
       {
          SCIP_CALL( reduce_daPcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint,
-               state, nodearrchar, &daelims, TRUE, FALSE, FALSE, FALSE, userec) );
+               state, nodearrchar, &daelims, TRUE, FALSE, FALSE, FALSE, userec, randnumgen) );
 
          if( daelims <= 2 * redbound )
             da = FALSE;
@@ -1054,7 +1058,7 @@ SCIP_RETCODE redLoopMw(
 #endif
 
          SCIP_CALL( reduce_daPcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint,
-               state, nodearrchar, &daelims, TRUE, (g->terms > STP_RED_MWTERMBOUND), FALSE, FALSE, userec) );
+               state, nodearrchar, &daelims, TRUE, (g->terms > STP_RED_MWTERMBOUND), FALSE, FALSE, userec, randnumgen) );
 
          if( cnsadvelims + daelims >= redbound || (extensive && (cnsadvelims + daelims > 0))  )
          {
@@ -1080,7 +1084,7 @@ SCIP_RETCODE redLoopMw(
    if( tryrmw && userec )
    {
       SCIP_CALL( reduce_daPcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint,
-            state, nodearrchar, &daelims, TRUE, FALSE, FALSE, TRUE, userec) );
+            state, nodearrchar, &daelims, TRUE, FALSE, FALSE, TRUE, userec, randnumgen) );
 
       npvelims = 0;
       anselims = 0;
@@ -1096,9 +1100,9 @@ SCIP_RETCODE redLoopMw(
    SCIP_CALL( level0(scip, g) );
 
    if( tryrmw && userec )
-   {
       SCIP_CALL( graph_pc_mw2rmw(scip, g) );
-   }
+
+   SCIPrandomFree(&randnumgen);
 
    return SCIP_OKAY;
 }
@@ -1264,14 +1268,12 @@ SCIP_RETCODE redLoopPc(
 
       if( da || (dualascent && extensive) )
       {
-         if( userec )
-            printf("FIXED %f \n\n\n", fix);
          if( rpc )
             SCIP_CALL( reduce_da(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap,
                   nodearrint, nodearrint2, nodearrchar, &danelims, 0, randnumgen, TRUE, NULL, FALSE) );
          else
             SCIP_CALL( reduce_daPcMw(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, vbase, heap, edgearrint,
-                  state, nodearrchar, &danelims, TRUE, FALSE, FALSE, FALSE, userec) );
+                  state, nodearrchar, &danelims, TRUE, FALSE, FALSE, FALSE, userec, randnumgen) );
 
          if( danelims <= reductbound )
             da = FALSE;
@@ -1310,7 +1312,7 @@ SCIP_RETCODE redLoopPc(
          else
          {
             SCIP_CALL( reduce_daPcMw(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, vbase, heap, edgearrint,
-                  state, nodearrchar, &danelims, TRUE, TRUE, FALSE, FALSE, userec) );
+                  state, nodearrchar, &danelims, TRUE, TRUE, FALSE, FALSE, userec, randnumgen) );
          }
          SCIP_CALL( reduce_simple_pc(scip, g, &fix, &degnelims, solnode, TRUE) );
          if( danelims + degnelims > reductbound || (extensive && (danelims + degnelims > 0)) )

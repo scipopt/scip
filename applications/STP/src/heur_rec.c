@@ -172,7 +172,7 @@ static
 SCIP_RETCODE selectdiffsols(
    SCIP*                 scip,               /**< SCIP data structure */
    const STPSOLPOOL*     pool,               /**< solution pool or NULL */
-   GRAPH*                graph,              /**< graph data structure */
+   const GRAPH*          graph,              /**< graph data structure */
    SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< problem variables */
    const int*            incumbentedges,     /**< edges of solution to be used as recombination root */
@@ -469,7 +469,7 @@ SCIP_RETCODE buildsolgraph(
    SCIP*                 scip,               /**< SCIP data structure */
    const STPSOLPOOL*     pool,               /**< solution pool or NULL */
    SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
-   GRAPH*                graph,              /**< graph structure */
+   const GRAPH*          graph,              /**< graph structure */
    GRAPH**               solgraph,           /**< pointer to store new graph */
    const int*            incumbentedges,     /**< edges of solution to be used as recombination root */
    int*                  incumbentindex,     /**< index of ancestor of incumbent solution */
@@ -548,6 +548,10 @@ SCIP_RETCODE buildsolgraph(
       {
          const int ihalf = i / 2;
          soledge[ihalf] = FALSE;
+
+         if( graph->oeat[i] == EAT_FREE )
+            continue;
+
          for( j = 0; j < selectedsols; j++ )
          {
             SCIP_Bool hit;
@@ -804,7 +808,9 @@ SCIP_RETCODE buildsolgraph(
    }
 
    SCIPfreeBufferArray(scip, &solselection);
+   assert(graph_valid(newgraph));
    *solgraph = newgraph;
+
    return SCIP_OKAY;
 }
 
@@ -1024,7 +1030,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
    STPSOLPOOL*           pool,               /**< STP solution pool or NULL */
    SCIP_HEUR*            heur,               /**< heuristic or NULL */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data or NULL */
-   GRAPH*                graph,              /**< graph data */
+   const GRAPH*          graph,              /**< graph data */
    SCIP_VAR**            vars,               /**< variables or NULL */
    int*                  newsolindex,        /**< index of new solution */
    int                   runs,               /**< number of runs */

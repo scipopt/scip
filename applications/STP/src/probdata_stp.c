@@ -2671,7 +2671,45 @@ SCIP_RETCODE SCIPprobdataWriteIntermediateSolution(
    return SCIP_OKAY;
 }
 
+/** writes SPG (no variant!) to a file */
+void SCIPprobdataWriteStp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   const char*           filename            /**< file name */
+   )
+{
+   FILE *fptr;
 
+   assert(scip != NULL);
+   assert(graph != NULL);
+
+   fptr = fopen(filename, "w");
+   assert(fptr != NULL);
+
+   fprintf(fptr, "33D32945 STP File, STP Format Version 1.0\n");
+   fprintf(fptr, "SECTION Comment\n");
+   fprintf(fptr, "END\n\n");
+   fprintf(fptr, "SECTION Graph\n");
+   fprintf(fptr, "Nodes %d\n", graph->knots);
+   fprintf(fptr, "Edges %d\n", graph->edges);
+
+   for( int e = 0; e < graph->edges; e += 2 )
+      fprintf(fptr, "E %d %d %f\n", graph->tail[e] + 1, graph->head[e] + 1, graph->cost[e]);
+   fprintf(fptr, "END\n\n");
+
+   fprintf(fptr, "SECTION Terminals\n");
+   fprintf(fptr, "Terminals %d\n", graph->terms);
+
+   for( int k = 0; k < graph->knots; k++ )
+      if( Is_term(graph->term[k]) )
+         fprintf(fptr, "T %d\n", k + 1);
+
+   fprintf(fptr, "END\n\n");
+
+   fprintf(fptr, "EOF\n");
+
+   fclose(fptr);
+}
 
 /** writes the best solution to a file */
 SCIP_RETCODE SCIPprobdataWriteSolution(

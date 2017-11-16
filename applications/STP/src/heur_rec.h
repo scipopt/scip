@@ -59,7 +59,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
    STPSOLPOOL*           pool,               /**< solution pool or NULL */
    SCIP_HEUR*            heur,               /**< heuristic or NULL */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data or NULL */
-   GRAPH*                graph,              /**< graph data */
+   const GRAPH*          graph,              /**< graph data */
    SCIP_VAR**            vars,               /**< variables or NULL */
    int*                  newsolindex,        /**< index of new solution */
    int                   runs,               /**< number of runs */
