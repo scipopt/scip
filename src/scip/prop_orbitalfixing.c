@@ -321,7 +321,7 @@ SCIP_RETCODE computeBranchingVariables(
          branchvar = SCIPboundchgGetVar(boundchg);
 
          /* we only consider binary variables */
-         if ( SCIPvarIsBinary(branchvar) )
+         if ( SCIPvarGetType(branchvar) == SCIP_VARTYPE_BINARY )
          {
             /* make sure that branching variable is known */
             assert( SCIPhashmapExists(varmap, (void*) branchvar) );
