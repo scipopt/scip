@@ -215,10 +215,14 @@ SCIP_RETCODE reverseProp(
       return SCIP_OKAY;
    }
 
-   childsup = SCIPintervalGetSup(childinterval);
    childinf = SCIPintervalGetInf(childinterval);
-   exprsup = SCIPintervalGetSup(exprinterval);
+   childsup = SCIPintervalGetSup(childinterval);
    exprinf = SCIPintervalGetInf(exprinterval);
+   exprsup = SCIPintervalGetSup(exprinterval);
+
+   /* if childinf < 0, we have to set it to 0 before computation, s.t. binary search works */
+   if( childinf < 0.0 )
+      childinf = 0.0;
 
    /*
     * consider bounds implied by lower bound on the expression
@@ -467,7 +471,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalEntropy)
    childinterval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]);
    assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), childinterval));
 
-   SCIPintervalSEntropy(SCIPinfinity(scip), interval, childinterval);
+   SCIPintervalEntropy(SCIPinfinity(scip), interval, childinterval);
 
    return SCIP_OKAY;
 }
