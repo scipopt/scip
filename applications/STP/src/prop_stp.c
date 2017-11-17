@@ -420,7 +420,7 @@ SCIP_DECL_PROPEXEC(propExecStp)
         costrev[e] = FARAWAY;
 
    /* build voronoi diagram */
-   voronoi_terms(scip, graph, costrev, vnoi, vbase, graph->path_heap, graph->path_state);
+   graph_voronoiTerms(scip, graph, costrev, vnoi, vbase, graph->path_heap, graph->path_state);
 
    for( k = 0; k < nnodes; k++ )
    {

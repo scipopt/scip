@@ -1405,7 +1405,7 @@ SCIP_RETCODE computeSteinerTreeVnoi(
       }
 
       assert(j == nterms);
-      voronoi(scip, g, cost, costrev, termsmark, vbase, vnoi);
+      graph_voronoi(scip, g, cost, costrev, termsmark, vbase, vnoi);
       state = g->path_state;
 
       for( i = 0; i < nnodes; i++ )
@@ -1505,7 +1505,7 @@ SCIP_RETCODE computeSteinerTreeVnoi(
             assert(termsmark[vbase[tovisit[nnodes - j - 1]]]);
             heap_add(g->path_heap, state, &count, tovisit[nnodes - j - 1], vnoi);
          }
-         SCIP_CALL( voronoi_extend(scip, g, ((term == root)? cost : costrev), vnoi, node_dist, node_base, node_edge, termsmark, reachednodes, &nreachednodes, nodenterms,
+         SCIP_CALL( graph_voronoiExtend(scip, g, ((term == root)? cost : costrev), vnoi, node_dist, node_base, node_edge, termsmark, reachednodes, &nreachednodes, nodenterms,
                nneighbterms, term, nneighbnodes) );
 
          reachednodes[nreachednodes++] = term;

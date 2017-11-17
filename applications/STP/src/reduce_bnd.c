@@ -476,7 +476,7 @@ void computeTransVoronoi(
       costrev[e] = FARAWAY;
 
    /* build Voronoi diagram wrt incoming arcs */
-   voronoi_terms(scip, transgraph, costrev, vnoi, vbase, transgraph->path_heap, transgraph->path_state);
+   graph_voronoiTerms(scip, transgraph, costrev, vnoi, vbase, transgraph->path_heap, transgraph->path_state);
 }
 
 
@@ -1066,11 +1066,11 @@ SCIP_RETCODE reduce_da(
          for( k = 0; k < nnodes; k++ )
             graph->mark[k] = (graph->grad[k] > 0);
 
-         voronoi_terms(scip, graph, costrev, vnoi, vbase, graph->path_heap, state);
+         graph_voronoiTerms(scip, graph, costrev, vnoi, vbase, graph->path_heap, state);
       }
       else
       {
-         getnext4terms(scip, graph, costrev, costrev, vnoi, vbase, graph->path_heap, state);
+         graph_get4nextTerms(scip, graph, costrev, costrev, vnoi, vbase, graph->path_heap, state);
       }
 
       /* RPC? If yes, restore original graph */
@@ -1677,7 +1677,7 @@ SCIP_RETCODE reduce_daSlackPrune(
       costrev[e] = FARAWAY;
 
    /* build Voronoi diagram */
-   getnext4terms(scip, graph, costrev, costrev, vnoi, vbase, graph->path_heap, state);
+   graph_get4nextTerms(scip, graph, costrev, costrev, vnoi, vbase, graph->path_heap, state);
 
    for( k = 0; k < nnodes; k++ )
       if( !Is_term(graph->term[k]) )
@@ -2325,8 +2325,8 @@ SCIP_RETCODE reduce_daPcMw(
          costrev[e] = FARAWAY;
 
       /* build Voronoi diagram */
-      voronoi_terms(scip, transgraph, costrev, vnoi, vbase, transgraph->path_heap, transgraph->path_state);
-      get2next(scip, transgraph, costrev, costrev, vnoi, vbase, transgraph->path_heap, state);
+      graph_voronoiTerms(scip, transgraph, costrev, vnoi, vbase, transgraph->path_heap, transgraph->path_state);
+      graph_get2next(scip, transgraph, costrev, costrev, vnoi, vbase, transgraph->path_heap, state);
 
       /* restore original graph */
       graph_pc_2org(graph);
@@ -2617,7 +2617,7 @@ SCIP_RETCODE reduce_daSlackPruneMw(
       costrev[e] = FARAWAY;
 
    /* build Voronoi diagram */
-   voronoi_terms(scip, transgraph, costrev, vnoi, vbase, transgraph->path_heap, transgraph->path_state);
+   graph_voronoiTerms(scip, transgraph, costrev, vnoi, vbase, transgraph->path_heap, transgraph->path_state);
 
    /* restore original graph */
    graph_pc_2org(graph);
@@ -3022,17 +3022,17 @@ SCIP_RETCODE reduce_bound(
    }
 
    /* build voronoi regions, concomitantly building adjgraph and computing radii values*/
-   SCIP_CALL( voronoi_radius(scip, graph, adjgraph, vnoi, radius, cost, costrev, vbase, heap, state) );
+   SCIP_CALL( graph_voronoiWithRadius(scip, graph, adjgraph, vnoi, radius, cost, costrev, vbase, heap, state) );
 
    /* get 2nd next terminals to all non-terminal nodes */
-   get2next(scip, graph, cost, costrev, vnoi, vbase, heap, state);
+   graph_get2next(scip, graph, cost, costrev, vnoi, vbase, heap, state);
 
    /* get 3th next terminals to all non-terminal nodes */
-   get3next(scip, graph, cost, costrev, vnoi, vbase, heap, state);
+   graph_get3next(scip, graph, cost, costrev, vnoi, vbase, heap, state);
 
    /* for (rooted) prize collecting get 4th next terminals to all non-terminal nodes */
    if( pc )
-      get4next(scip, graph, cost, costrev, vnoi, vbase, heap, state);
+      graph_get4next(scip, graph, cost, costrev, vnoi, vbase, heap, state);
 
    /* no MWCS problem? */
    if( !mw )
@@ -3425,7 +3425,7 @@ SCIP_RETCODE reduce_bound(
    /* for(R)PC: try to eliminate terminals */
    if( pc )
    {
-      SCIP_CALL( getnext4tterms(scip, graph, cost, vnoi, vbase, heap, state) );
+      SCIP_CALL( graph_get4nextTTerms(scip, graph, cost, vnoi, vbase, heap, state) );
 
       for( k = 0; k < nnodes; k++ )
       {
@@ -3573,7 +3573,7 @@ SCIP_RETCODE reduce_boundMw(
    }
 
    /* compute decomposition of graph and radius values */
-   voronoi_mw_radius(scip, graph, path, cost, radius, vbase, heap, state);
+   graph_voronoiWithRadiusMw(scip, graph, path, cost, radius, vbase, heap, state);
 
    /* sum all radius values, exclude two radius values of lowest value */
    for( k = 0; k < nnodes; k++ )
@@ -3602,10 +3602,10 @@ SCIP_RETCODE reduce_boundMw(
    }
 
    /* build Voronoi regions */
-   voronoi_mw(scip, graph, costrev, vnoi, vbase, heap, state);
+   graph_voronoiMw(scip, graph, costrev, vnoi, vbase, heap, state);
 
    /* get 2nd next positive node to all non-positive nodes */
-   get2next(scip, graph, cost, costrev, vnoi, vbase, heap, state);
+   graph_get2next(scip, graph, cost, costrev, vnoi, vbase, heap, state);
 
    for( k = 0; k < nnodes; k++ )
    {
@@ -3772,13 +3772,13 @@ SCIP_RETCODE reduce_boundPrune(
       SCIP_CALL( graph_init(scip, &adjgraph, nterms, MIN(nedges, (nterms - 1) * nterms), 1) );
 
       /* build Voronoi regions, concomitantly building adjgraph and computing radii values*/
-      SCIP_CALL( voronoi_radius(scip, graph, adjgraph, vnoi, radius, cost, costrev, vbase, heap, state) );
+      SCIP_CALL( graph_voronoiWithRadius(scip, graph, adjgraph, vnoi, radius, cost, costrev, vbase, heap, state) );
 
       /* get 2nd next terminals to all non-terminal nodes */
-      get2next(scip, graph, cost, costrev, vnoi, vbase, heap, state);
+      graph_get2next(scip, graph, cost, costrev, vnoi, vbase, heap, state);
 
       /* get 3th next terminals to all non-terminal nodes */
-      get3next(scip, graph, cost, costrev, vnoi, vbase, heap, state);
+      graph_get3next(scip, graph, cost, costrev, vnoi, vbase, heap, state);
 
       assert(adjgraph != NULL);
       graph_knot_chg(adjgraph, 0, 0);
@@ -3813,10 +3813,10 @@ SCIP_RETCODE reduce_boundPrune(
    {
 
       /* build Voronoi regions */
-      voronoi_mw(scip, graph, costrev, vnoi, vbase, heap, state);
+      graph_voronoiMw(scip, graph, costrev, vnoi, vbase, heap, state);
 
       /* get 2nd next positive node to all non-positive nodes */
-      get2next(scip, graph, cost, costrev, vnoi, vbase, heap, state);
+      graph_get2next(scip, graph, cost, costrev, vnoi, vbase, heap, state);
    }
 
 
@@ -4308,10 +4308,10 @@ SCIP_RETCODE reduce_boundHop(
    /* init auxiliary graph */
    SCIP_CALL( graph_init(scip, &adjgraph, nterms, MIN(nedges, (nterms - 1) * nterms), 1) );
 
-   SCIP_CALL( voronoi_radius(scip, graph, adjgraph, vnoi, radius, cost, costrev, vbase, heap, state) );
+   SCIP_CALL( graph_voronoiWithRadius(scip, graph, adjgraph, vnoi, radius, cost, costrev, vbase, heap, state) );
 
    /* get 2nd next terminals to all nodes */
-   get2next(scip, graph, cost, costrev, vnoi, vbase, heap, state);
+   graph_get2next(scip, graph, cost, costrev, vnoi, vbase, heap, state);
 
    /* compute MST on adjgraph */
    graph_knot_chg(adjgraph, 0, 0);
@@ -4503,7 +4503,7 @@ SCIP_RETCODE reduce_boundHopR(
       costrev[e] = FARAWAY;
 
    /* build voronoi diagram */
-   voronoi_terms(scip, graph, costrev, vnoi, vbase, heap, state);
+   graph_voronoiTerms(scip, graph, costrev, vnoi, vbase, heap, state);
 
    /* traverse all node, try to eliminate first the node and then all incident edges */
    for( k = 0; k < nnodes; k++ )
@@ -4695,7 +4695,7 @@ SCIP_RETCODE reduce_boundHopRc(
       costrev[e] = FARAWAY;
 
    /* build voronoi diagram */
-   voronoi_terms(scip, graph, costrev, vnoi, vbase, heap, state);
+   graph_voronoiTerms(scip, graph, costrev, vnoi, vbase, heap, state);
 
    if( SCIPisLT(scip, objval, 0.0) )
    {

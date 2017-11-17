@@ -244,7 +244,7 @@ SCIP_RETCODE SCIPpairheapBuffarr(
 
 /** initializes the union-find structure 'uf' with 'length' many components (of size one) */
 extern
-SCIP_RETCODE SCIPSTPunionfindInit(
+SCIP_RETCODE SCIPStpunionfindInit(
    SCIP*                 scip,               /**< SCIP data structure */
    UF*                   uf,                 /**< union find data structure */
    int                   length              /**< number of components */
@@ -252,7 +252,7 @@ SCIP_RETCODE SCIPSTPunionfindInit(
 
 /** clears the union-find structure 'uf'*/
 extern
-void SCIPSTPunionfindClear(
+void SCIPStpunionfindClear(
    SCIP*                 scip,               /**< SCIP data structure */
    UF*                   uf,                 /**< union find data structure */
    int                   length              /**< number of components */
@@ -260,14 +260,14 @@ void SCIPSTPunionfindClear(
 
 /** finds and returns the component identifier */
 extern
-int SCIPSTPunionfindFind(
+int SCIPStpunionfindFind(
    UF*                   uf,                 /**< union find data structure */
    int                   element             /**< element to be found */
    );
 
 /** merges the components containing p and q respectively */
 extern
-void SCIPSTPunionfindUnion(
+void SCIPStpunionfindUnion(
    UF*                   uf,                 /**< union find data structure */
    int                   p,                  /**< first component */
    int                   q,                  /**< second component*/
@@ -276,7 +276,7 @@ void SCIPSTPunionfindUnion(
 
 /** frees the data fields of the union-find structure */
 extern
-void SCIPSTPunionfindFree(
+void SCIPStpunionfindFree(
    SCIP*                 scip,               /**< SCIP data structure */
    UF*                   uf                  /**< union find data structure */
    );

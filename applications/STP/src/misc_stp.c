@@ -687,7 +687,7 @@ SCIP_RETCODE SCIPpairheapBuffarr(
  */
 
 /** initializes the union-find structure 'uf' with 'length' many components (of size one) */
-SCIP_RETCODE SCIPSTPunionfindInit(
+SCIP_RETCODE SCIPStpunionfindInit(
    SCIP*                 scip,               /**< SCIP data structure */
    UF*                   uf,                 /**< union find data structure */
    int                   length              /**< number of components */
@@ -706,7 +706,7 @@ SCIP_RETCODE SCIPSTPunionfindInit(
 }
 
 /** clears the union-find structure 'uf'*/
-void SCIPSTPunionfindClear(
+void SCIPStpunionfindClear(
    SCIP*                 scip,               /**< SCIP data structure */
    UF*                   uf,                 /**< union find data structure */
    int                   length              /**< number of components */
@@ -726,7 +726,7 @@ void SCIPSTPunionfindClear(
 
 
 /** finds and returns the component identifier */
-int SCIPSTPunionfindFind(
+int SCIPStpunionfindFind(
    UF*                   uf,                 /**< union find data structure */
    int                   element             /**< element to be found */
    )
@@ -750,7 +750,7 @@ int SCIPSTPunionfindFind(
 }
 
 /** merges the components containing p and q respectively */
-void SCIPSTPunionfindUnion(
+void SCIPStpunionfindUnion(
    UF*                   uf,                 /**< union find data structure */
    int                   p,                  /**< first component */
    int                   q,                  /**< second component*/
@@ -761,8 +761,8 @@ void SCIPSTPunionfindUnion(
    int idq;
    int* size = uf->size;
    int* parent = uf->parent;
-   idp = SCIPSTPunionfindFind(uf, p);
-   idq = SCIPSTPunionfindFind(uf, q);
+   idp = SCIPStpunionfindFind(uf, p);
+   idq = SCIPStpunionfindFind(uf, q);
 
    /* if p and q lie in the same component, there is nothing to be done */
    if( idp == idq )
@@ -793,7 +793,7 @@ void SCIPSTPunionfindUnion(
 }
 
 /** frees the data fields of the union-find structure */
-void SCIPSTPunionfindFree(
+void SCIPStpunionfindFree(
    SCIP*                 scip,               /**< SCIP data structure */
    UF*                   uf                  /**< union find data structure */
    )

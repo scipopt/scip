@@ -1481,7 +1481,7 @@ SCIP_RETCODE reduce_sd(
       return SCIP_OKAY;
 
    /* compute nearest four terminals to all non-terminals */
-   getnext4terms(scip, g, g->cost, g->cost, vnoi, vbase, heap, state);
+   graph_get4nextTerms(scip, g, g->cost, g->cost, vnoi, vbase, heap, state);
 
    /* construct auxiliary graph to compute paths between terminals */
 
@@ -1855,7 +1855,7 @@ SCIP_RETCODE reduce_sdPc(
    }
 
    /* compute nearest four terminals to each non-terminal */
-   getnext4terms(scip, g, g->cost, g->cost, vnoi, vbase, heap, state);
+   graph_get4nextTerms(scip, g, g->cost, g->cost, vnoi, vbase, heap, state);
 
    /*
     * construct auxiliary graph to compute paths between terminals
@@ -1943,7 +1943,7 @@ SCIP_RETCODE reduce_sdPc(
    }
 
    /* compute four close terminals to each terminal */
-   SCIP_CALL( getnext4tterms(scip, g, g->cost, vnoi, vbase, heap, state) );
+   SCIP_CALL( graph_get4nextTTerms(scip, g, g->cost, vnoi, vbase, heap, state) );
 
    /* traverse all edges */
    for( int i = 0; i < nnodes; i++ )
@@ -2311,10 +2311,10 @@ SCIP_RETCODE reduce_getSd(
    nnodes = g->knots;
 
    /* start from tail */
-   sdpaths(scip, g, pathtail, g->cost, distlimit, heap, statetail, memlbltail, &nlbltail, i, i2, limit);
+   graph_sdPaths(scip, g, pathtail, g->cost, distlimit, heap, statetail, memlbltail, &nlbltail, i, i2, limit);
 
    /* test whether edge e can be eliminated */
-   sdpaths(scip, g, pathhead, g->cost, distlimit, heap, statehead, memlblhead, &nlblhead, i2, i, limit);
+   graph_sdPaths(scip, g, pathhead, g->cost, distlimit, heap, statehead, memlblhead, &nlblhead, i2, i, limit);
 
    sd = FARAWAY;
 #if 0
@@ -2680,10 +2680,10 @@ SCIP_RETCODE reduce_sdspSap(
          assert(g->mark[i2]);
 
          /* start limited dijkstra from i, marking all reached vertices */
-         sdpaths(scip, g, pathtail, g->cost, g->cost[e], heap, statetail, memlbltail, &nlbltail, i, i2, limit);
+         graph_sdPaths(scip, g, pathtail, g->cost, g->cost[e], heap, statetail, memlbltail, &nlbltail, i, i2, limit);
 
          /* start limited dijkstra from i2, marking all reached vertices */
-         sdpaths(scip, g, pathhead, costrev, g->cost[e], heap, statehead, memlblhead, &nlblhead, i2, i, limit);
+         graph_sdPaths(scip, g, pathhead, costrev, g->cost[e], heap, statehead, memlblhead, &nlblhead, i2, i, limit);
 
          sdist = FARAWAY;
 #if 0
@@ -2859,8 +2859,8 @@ SCIP_RETCODE reduce_sdsp(
          }
          else
          {
-            sdpaths(scip, g, pathtail, g->cost, ecost, heap, statetail, memlbltail, &nlbltail, i, i2, limit);
-            sdpaths(scip, g, pathhead, g->cost, ecost, heap, statehead, memlblhead, &nlblhead, i2, i, limit);
+            graph_sdPaths(scip, g, pathtail, g->cost, ecost, heap, statetail, memlbltail, &nlbltail, i, i2, limit);
+            graph_sdPaths(scip, g, pathhead, g->cost, ecost, heap, statehead, memlblhead, &nlblhead, i2, i, limit);
          }
 
          deletable = FALSE;
@@ -3680,7 +3680,7 @@ SCIP_RETCODE reduce_sl(
       for( i = 0; i < nnodes; i++ )
          g->mark[i] = (g->grad[i] > 0);
 
-   voronoi_terms(scip, g, g->cost, vnoi, vbase, heap, state);
+   graph_voronoiTerms(scip, g, g->cost, vnoi, vbase, heap, state);
 
    SCIP_CALL( SCIPqueueCreate(&queue, nnodes, 2.0) );
    for( j = 0; j < nnodes; j++ )
@@ -3929,7 +3929,7 @@ SCIP_RETCODE reduce_nv(
    }
 
    /* compute Voronoi regions and distances */
-   SCIP_CALL( voronoi_dist(scip, g, g->cost, distance, edgearrint, vbase, minedge1, heap, state, distnode, vnoi) );
+   SCIP_CALL( graph_voronoiWithDist(scip, g, g->cost, distance, edgearrint, vbase, minedge1, heap, state, distnode, vnoi) );
 
    for( l = 0; l < termcount; l++ )
    {
@@ -4130,7 +4130,7 @@ SCIP_RETCODE reduce_nvAdv(
    }
 
    /* compute Voronoi regions and distances */
-   SCIP_CALL( voronoi_dist(scip, g, g->cost, distance, edgearrint, vbase, minedge1, heap, state, distnode, vnoi) );
+   SCIP_CALL( graph_voronoiWithDist(scip, g, g->cost, distance, edgearrint, vbase, minedge1, heap, state, distnode, vnoi) );
 
    /* main loop: try to contract (shortest) edges into terminals */
    for( l = 0; l < termcount; l++ )
@@ -4319,7 +4319,7 @@ SCIP_RETCODE reduce_ledge(
    SCIP_CALL( SCIPallocBufferArray(scip, &blocked, nedges / 2) );
    SCIP_CALL( SCIPallocBufferArray(scip, &edgeorg, nedges / 2) );
 
-   voronoi_terms(scip, g, g->cost, vnoi, vbase, heap, state);
+   graph_voronoiTerms(scip, g, g->cost, vnoi, vbase, heap, state);
 
    if( nedges >= (nterms - 1) * nterms )
       maxnedges = (nterms - 1) * nterms;

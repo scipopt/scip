@@ -564,7 +564,7 @@ void graph_path_exec(
 }
 
 /** limited Dijkstra, stopping at terminals */
-void sdpaths(
+void graph_sdPaths(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    PATH*                 path,               /**< shortest paths data structure */
@@ -1691,7 +1691,7 @@ void graph_path_st_rmw(
 
 
 /** extend a voronoi region until all neighbouring terminals are spanned */
-SCIP_RETCODE voronoi_extend(
+SCIP_RETCODE graph_voronoiExtend(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    SCIP_Real*            cost,               /**< edgecosts */
@@ -1771,7 +1771,7 @@ SCIP_RETCODE voronoi_extend(
 
 
 /** build a voronoi region, w.r.t. shortest paths, for a given set of bases */
-void voronoi(
+void graph_voronoi(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    SCIP_Real*            cost,               /**< edge costs */
@@ -1858,7 +1858,7 @@ void voronoi(
 }
 
 /** 2th next terminal to all non terminal nodes */
-void get2next(
+void graph_get2next(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    const SCIP_Real*      cost,               /**< edge costs */
@@ -1954,7 +1954,7 @@ void get2next(
 }
 
 /* 3th next terminal to all non terminal nodes */
-void get3next(
+void graph_get3next(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    const SCIP_Real*      cost,               /**< edge costs */
@@ -2061,7 +2061,7 @@ void get3next(
 
 
 /* 4th next terminal to all non terminal nodes */
-void get4next(
+void graph_get4next(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    const SCIP_Real*      cost,               /**< edge costs */
@@ -2170,7 +2170,7 @@ void get4next(
 }
 
 /** build a voronoi region in presolving, w.r.t. shortest paths, for all terminals*/
-void getnext3terms(
+void graph_get3nextTerms(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    SCIP_Real*            cost,               /**< edge costs */
@@ -2194,19 +2194,19 @@ void getnext3terms(
          g->mark[k] = (g->grad[k] > 0);
 
    /* build voronoi diagram */
-   voronoi_terms(scip, g, cost, path3, vbase, heap, state);
+   graph_voronoiTerms(scip, g, cost, path3, vbase, heap, state);
 
    /* get 2nd nearest terms */
-   get2next(scip, g, cost, costrev, path3, vbase, heap, state);
+   graph_get2next(scip, g, cost, costrev, path3, vbase, heap, state);
 
    /* get 3th nearest terms */
-   get3next(scip, g, cost, costrev, path3, vbase, heap, state);
+   graph_get3next(scip, g, cost, costrev, path3, vbase, heap, state);
 
    return;
 }
 
 /** build a voronoi region in presolving, w.r.t. shortest paths, for all terminals*/
-void getnext4terms(
+void graph_get4nextTerms(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    SCIP_Real*            cost,               /**< edge costs */
@@ -2231,23 +2231,23 @@ void getnext4terms(
          g->mark[k] = (g->grad[k] > 0);
 
    /* build voronoi diagram */
-   voronoi_terms(scip, g, cost, path, vbase, heap, state);
+   graph_voronoiTerms(scip, g, cost, path, vbase, heap, state);
 
    /* get 2nd nearest terms */
-   get2next(scip, g, cost, costrev, path, vbase, heap, state);
+   graph_get2next(scip, g, cost, costrev, path, vbase, heap, state);
 
    /* get 3th nearest terms */
-   get3next(scip, g, cost, costrev, path, vbase, heap, state);
+   graph_get3next(scip, g, cost, costrev, path, vbase, heap, state);
 
    /* get 4th nearest terms */
-   get4next(scip, g, cost, costrev, path, vbase, heap, state);
+   graph_get4next(scip, g, cost, costrev, path, vbase, heap, state);
 
    return;
 }
 
 
 /** get 4 close terminals to each terminal */
-SCIP_RETCODE getnext4tterms(
+SCIP_RETCODE graph_get4nextTTerms(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    SCIP_Real*            cost,               /**< edge costs */
@@ -2327,7 +2327,7 @@ SCIP_RETCODE getnext4tterms(
 }
 
 /** build a Voronoi region in presolving, w.r.t. shortest paths, for all terminals */
-void voronoi_terms(
+void graph_voronoiTerms(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    const SCIP_Real*      cost,               /**< edge costs */
@@ -2403,7 +2403,7 @@ void voronoi_terms(
 
 
 /** build a Voronoi region, w.r.t. shortest paths, for all positive vertices */
-void voronoi_mw(
+void graph_voronoiMw(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    const SCIP_Real*      costrev,            /**< reversed edge costs */
@@ -2483,7 +2483,7 @@ void voronoi_mw(
 
 
 /** build a voronoi region, w.r.t. shortest paths, for all terminal and the distance */
-SCIP_RETCODE voronoi_dist(
+SCIP_RETCODE graph_voronoiWithDist(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    SCIP_Real*            cost,               /**< edge costs */
@@ -2634,7 +2634,7 @@ SCIP_RETCODE voronoi_dist(
 }
 
 /** build voronoi regions, w.r.t. shortest paths, for all terminals and compute the radii */
-SCIP_RETCODE voronoi_radius(
+SCIP_RETCODE graph_voronoiWithRadius(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
    GRAPH*                adjgraph,           /**< graph data structure */
@@ -2872,7 +2872,7 @@ SCIP_RETCODE voronoi_radius(
  * Store the weight of a minimum weight center-boundary path for each region
  * in the radius array (has to be reverted to obtain the final r() value).
  */
-void voronoi_mw_radius(
+void graph_voronoiWithRadiusMw(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    PATH*                 path,               /**< array containing graph decomposition data */
@@ -2999,7 +2999,7 @@ void voronoi_mw_radius(
 }
 
 /** repair a Voronoi diagram for a given set of base nodes */
-void voronoi_repair(
+void graph_voronoiRepair(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    SCIP_Real*            cost,               /**< edge costs */
@@ -3062,8 +3062,8 @@ void voronoi_repair(
             /* check whether there is a better new boundary edge adjacent to vertex k */
             else
             {
-               node1 = SCIPSTPunionfindFind(uf, vbase[m]);
-               node2 = SCIPSTPunionfindFind(uf, vbase[k]);
+               node1 = SCIPStpunionfindFind(uf, vbase[m]);
+               node2 = SCIPStpunionfindFind(uf, vbase[k]);
                if( state[m] == CONNECT && ((node1 == crucnode) != (node2 == crucnode)) && g->mark[m] && g->mark[vbase[m]]
                   && g->mark[node1] && g->mark[node2] && ((e == UNKNOWN) || SCIPisGT(scip,
                         (path[g->tail[e]].dist + cost[e] + path[g->head[e]].dist), path[k].dist + cost[i] + path[m].dist)) )
@@ -3077,7 +3077,7 @@ void voronoi_repair(
 
 
 /** repair the Voronoi diagram for a given set nodes */
-void voronoi_repair_mult(
+void graph_voronoiRepairMult(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    SCIP_Real*            cost,               /**< edge costs */
@@ -3140,7 +3140,7 @@ void voronoi_repair_mult(
                vbase[m] = vbase[k];
             }
             /* check whether there is a new boundary edge adjacent to vertex k */
-            else if( (state[m] == CONNECT) && ((node1 = SCIPSTPunionfindFind(uf, vbase[m])) != (node2 = SCIPSTPunionfindFind(uf, vbase[k])))
+            else if( (state[m] == CONNECT) && ((node1 = SCIPStpunionfindFind(uf, vbase[m])) != (node2 = SCIPStpunionfindFind(uf, vbase[k])))
                && g->mark[node1] && g->mark[node2] && (nodesmark[node1] || nodesmark[node2]) )
             {
                boundedges[(*nboundedges)++] = i;
