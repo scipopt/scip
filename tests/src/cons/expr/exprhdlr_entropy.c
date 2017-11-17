@@ -153,10 +153,8 @@ Test(entropy, eval, .description = "Tests the expression evaluation.")
    {
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, testvalues[i]) );
       SCIP_CALL( SCIPevalConsExprExpr(scip, entropyexpr, sol, 0) );
-      SCIP_CALL( SCIPevalConsExprExpr(scip, negprodexpr, sol, 0) );
 
       cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprValue(entropyexpr), results[i]));
-      cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprValue(entropyexpr), SCIPgetConsExprExprValue(entropyexpr)));
    }
 
    /* random part */
@@ -164,17 +162,19 @@ Test(entropy, eval, .description = "Tests the expression evaluation.")
    {
       randnum = SCIPrandomGetReal(rndgen, 0.0, 10.0);
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, randnum) );
-      SCIP_CALL( SCIPevalConsExprExpr(scip, entropyexpr, sol, 0) );
-      SCIP_CALL( SCIPevalConsExprExpr(scip, negprodexpr, sol, 0) );
 
+      SCIP_CALL( SCIPevalConsExprExpr(scip, entropyexpr, sol, 0) );
       cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprValue(entropyexpr), -randnum * log(randnum)));
-      cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprValue(entropyexpr), SCIPgetConsExprExprValue(entropyexpr)));
+
+      SCIP_CALL( SCIPevalConsExprExpr(scip, negprodexpr, sol, 0) );
+      cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprValue(negprodexpr), -randnum * log(randnum)));
    }
 }
 
 Test(entropy, inteval, .description = "Tests the expression interval evaluation.")
 {
-   SCIP_INTERVAL interval;
+   SCIP_INTERVAL intervalEntropy;
+   SCIP_INTERVAL intervalProd;
    SCIP_Real rndlb[4];
    SCIP_Real rndub[4];
    SCIP_Real rndreslb[4];
@@ -214,11 +214,15 @@ Test(entropy, inteval, .description = "Tests the expression interval evaluation.
       SCIP_CALL( SCIPchgVarLb(scip, x, detlb[i]) );
       SCIP_CALL( SCIPchgVarUb(scip, x, detub[i]) );
       SCIP_CALL( SCIPevalConsExprExprInterval(scip, entropyexpr, FALSE, 0, 0.0) );
-      SCIP_CALL( SCIPevalConsExprExprInterval(scip, negprodexpr, FALSE, 0, 0.0) );
 
-      interval = SCIPgetConsExprExprInterval(entropyexpr);
-      cr_expect(SCIPisEQ(scip, SCIPintervalGetInf(interval), detreslb[i]));
-      cr_expect(SCIPisEQ(scip, SCIPintervalGetSup(interval), detresub[i]));
+      intervalEntropy = SCIPgetConsExprExprInterval(entropyexpr);
+      cr_expect(SCIPisEQ(scip, intervalEntropy.inf, detreslb[i]));
+      cr_expect(SCIPisEQ(scip, intervalEntropy.sup, detresub[i]));
+
+      intervalProd = SCIPgetConsExprExprInterval(entropyexpr);
+      SCIP_CALL( SCIPevalConsExprExprInterval(scip, negprodexpr, FALSE, 0, 0.0) );
+      cr_expect(SCIPisLE(scip, intervalEntropy.inf, intervalProd.inf));
+      cr_expect(SCIPisGE(scip, intervalEntropy.sup, intervalProd.sup));
    }
 
    /* random part */
@@ -227,11 +231,15 @@ Test(entropy, inteval, .description = "Tests the expression interval evaluation.
       SCIP_CALL( SCIPchgVarLb(scip, x, rndlb[i]) );
       SCIP_CALL( SCIPchgVarUb(scip, x, rndub[i]) );
       SCIP_CALL( SCIPevalConsExprExprInterval(scip, entropyexpr, FALSE, 0, 0.0) );
-      SCIP_CALL( SCIPevalConsExprExprInterval(scip, negprodexpr, FALSE, 0, 0.0) );
 
-      interval = SCIPgetConsExprExprInterval(entropyexpr);
-      cr_expect(SCIPisEQ(scip, SCIPintervalGetInf(interval), rndreslb[i]));
-      cr_expect(SCIPisEQ(scip, SCIPintervalGetSup(interval), rndresub[i]));
+      intervalEntropy = SCIPgetConsExprExprInterval(entropyexpr);
+      cr_expect(SCIPisEQ(scip, intervalEntropy.inf, rndreslb[i]));
+      cr_expect(SCIPisEQ(scip, intervalEntropy.sup, rndresub[i]));
+
+      intervalProd = SCIPgetConsExprExprInterval(entropyexpr);
+      SCIP_CALL( SCIPevalConsExprExprInterval(scip, negprodexpr, FALSE, 0, 0.0) );
+      cr_expect(SCIPisLE(scip, intervalEntropy.inf, intervalProd.inf));
+      cr_expect(SCIPisGE(scip, intervalEntropy.sup, intervalProd.sup));
    }
 }
 
@@ -256,9 +264,12 @@ Test(entropy, derivative, .description = "Tests the expression derivation.")
    {
       randnum = SCIPrandomGetReal(rndgen, 1e-12, 10.0);
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, randnum) );
-      SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, entropyexpr, sol, 0) );
 
+      SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, entropyexpr, sol, 0) );
       cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprPartialDiff(scip, conshdlr, entropyexpr, x), -1.0 - log(randnum)));
+
+      SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, negprodexpr, sol, 0) );
+      cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprPartialDiff(scip, conshdlr, negprodexpr, x), -1.0 - log(randnum)));
    }
 }
 
