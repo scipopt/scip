@@ -7,7 +7,7 @@ set(instances
     "u20_00\;9"
     "u40_00\;17"
     "u60_00\;27"
-    "u80_00\;33"
+#    "u80_00\;33"
 #    "u100_00\;40"
 #    "u120_00\;48"
 # the remaining 2 from this set take too long.
