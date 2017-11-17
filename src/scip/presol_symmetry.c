@@ -659,15 +659,7 @@ SCIP_RETCODE computeSymmetryGroup(
 
    /* skip if no symmetry can be computed */
    if ( ! SYMcanComputeSymmetry() )
-   {
-      /* currently, we do not support symmetry handling for NLPs */
-      if ( SCIPgetStage(scip) == SCIP_STAGE_INITSOLVE || SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
-      {
-         if ( ! SCIPisNLPConstructed(scip) )
-            SCIPwarningMessage(scip, "Cannot compute symmetry group, since SCIP was built without symmetry detector (SYM=none).\n");
-      }
       return SCIP_OKAY;
-   }
 
    nconss = SCIPgetNConss(scip);
    nvars = SCIPgetNVars(scip);
@@ -1170,8 +1162,15 @@ SCIP_RETCODE determineSymmetry(
    if ( SCIPgetNContVars(scip) > 0 || SCIPgetNImplVars(scip) > 0 )
       type |= (int) SYM_SPEC_REAL;
 
+   /* skip symmetry computation if no graph automorphism code was linked */
+   if ( ! SYMcanComputeSymmetry() )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL,
+         "   Deactivated symmetry handling methods, since SCIP was built without symmetry detector (SYM=none).\n");
+      return SCIP_OKAY;
+   }
    /* skip symmetry computation if required variables are not present */
-   if ( ! (type & presoldata->symspecrequire) )
+   else if ( ! (type & presoldata->symspecrequire) )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL,
          "   (%.1fs) symmetry computation skipped: type (bin %c, int %c, cont %c) does not match requirements (bin %c, int %c, cont %c)\n",
