@@ -602,6 +602,30 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
 }
 
 
+/** get number of active variables in variable array */
+static
+int getNActiveVars(
+   SCIP_VAR**             vars,              /**< variable array */
+   int                    nvars              /**< number of variables in vars */
+   )
+{
+   int nactivevars = 0;
+   int i;
+
+   assert( vars != NULL );
+
+   for (i = 0; i < nvars; ++i)
+   {
+      assert( vars[i] != NULL );
+
+      if ( SCIPvarIsActive(vars[i]) )
+         ++nactivevars;
+   }
+
+   return nactivevars;
+}
+
+
 /** compute symmetry group of MIP */
 static
 SCIP_RETCODE computeSymmetryGroup(
@@ -893,7 +917,7 @@ SCIP_RETCODE computeSymmetryGroup(
 
          linvars = SCIPgetVarsKnapsack(scip, cons);
          nconsvars = SCIPgetNVarsKnapsack(scip, cons);
-         assert( nconsvars <= nvars );
+         assert( getNActiveVars(linvars, nconsvars) <= nvars );
          assert( consvals != NULL );
 
          /* copy Longint array to SCIP_Real array */
