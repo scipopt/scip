@@ -348,28 +348,28 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printEntropy)
 
    switch( stage )
    {
-      case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
-      {
-         /* print function with opening parenthesis */
-         SCIPinfoMessage(scip, file, "entropy(");
-         break;
-      }
+   case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
+   {
+      /* print function with opening parenthesis */
+      SCIPinfoMessage(scip, file, "entropy(");
+      break;
+   }
 
-      case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
-      {
-         assert(SCIPgetConsExprExprWalkCurrentChild(expr) == 0);
-         break;
-      }
+   case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
+   {
+      assert(SCIPgetConsExprExprWalkCurrentChild(expr) == 0);
+      break;
+   }
 
-      case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
-      {
-         /* print closing parenthesis */
-         SCIPinfoMessage(scip, file, ")");
-         break;
-      }
+   case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
+   {
+      /* print closing parenthesis */
+      SCIPinfoMessage(scip, file, ")");
+      break;
+   }
 
-      case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
-      default: ;
+   case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
+   default: ;
    }
 
    return SCIP_OKAY;
