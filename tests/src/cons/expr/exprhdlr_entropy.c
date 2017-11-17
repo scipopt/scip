@@ -22,6 +22,7 @@
 #include "scip/scip.h"
 #include "scip/cons_expr.h"
 #include "scip/cons_expr_var.h"
+#include "scip/cons_expr_sum.h"
 #include "scip/cons_expr_value.h"
 #include "scip/cons_expr_entropy.h"
 
@@ -33,6 +34,8 @@ static SCIP_SOL* sol;
 static SCIP_VAR* x;
 static SCIP_VAR* y;
 static SCIP_CONSEXPR_EXPR* entropyexpr;
+static SCIP_CONSEXPR_EXPR* prodexpr;          /* xlogx as product expression */
+static SCIP_CONSEXPR_EXPR* negprodexpr;       /* -xlogx as product expression */
 static SCIP_CONSEXPR_EXPR* xexpr;
 static SCIP_CONSEXPR_EXPR* yexpr;
 static SCIP_RANDNUMGEN* rndgen;
@@ -62,6 +65,8 @@ void setup(void)
    SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &xexpr, x) );
    SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &yexpr, y) );
    SCIP_CALL( SCIPcreateConsExprExprEntropy(scip, conshdlr, &entropyexpr, xexpr) );
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<x>[C]*log(<x>[C])", NULL, &prodexpr) );
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "-<x>[C]*log(<x>[C])", NULL, &negprodexpr) );
 
    /* create solution */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
@@ -79,6 +84,8 @@ void teardown(void)
 
    /* free allocated memory */
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &negprodexpr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &prodexpr) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &entropyexpr) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &yexpr) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
@@ -294,5 +301,34 @@ Test(entropy, simplify, .description = "Tests the expression simplification.")
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr3) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr2) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr1) );
+
+   /* test if product of x and log(x) is transformed to sum of entropy expression
+    * expr1 is buffer for simplification and expr2 is used to store children
+    */
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, prodexpr, &expr1));
+
+   cr_expect(SCIPgetConsExprExprHdlr(expr1) == SCIPgetConsExprExprHdlrSum(conshdlr));
+   cr_expect(SCIPgetConsExprExprNChildren(expr1) == 1);
+   cr_expect(SCIPgetConsExprExprSumCoefs(expr1)[0] == -1.0);
+
+   expr2 = SCIPgetConsExprExprChildren(expr1)[0];
+   cr_expect(SCIPgetConsExprExprHdlr(expr2) == SCIPfindConsExprExprHdlr(conshdlr, "entropy"));
+   cr_expect(SCIPgetConsExprExprNChildren(expr2) == 1);
+   cr_expect(SCIPgetConsExprExprChildren(expr2)[0] == xexpr);
+
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr2) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr1) );
+
+
+   /* test if product of -x and log(x) is transformed to entropy expression
+    * expr1 is buffer for simplification
+    */
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, negprodexpr, &expr1));
+
+   cr_expect(SCIPgetConsExprExprHdlr(expr1) == SCIPfindConsExprExprHdlr(conshdlr, "entropy"));
+   cr_expect(SCIPgetConsExprExprNChildren(expr1) == 1);
+   cr_expect(SCIPgetConsExprExprChildren(expr1)[0] == xexpr);
+
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr1) );
 }
