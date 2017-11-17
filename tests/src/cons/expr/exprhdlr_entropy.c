@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   exprhdlr_entropy.c
- * @brief  tests expression handler functions of xzy an expression
+ * @brief  tests expression handler functions of entropy an expression
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -109,12 +109,13 @@ Test(entropy, creation, .description = "Tests the expression creation.")
 
    /* release expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
-
 }
 
 Test(entropy, print, .description = "Tests the expression printing function.")
 {
-   /* TODO */
+   /* TODO 1. simplify expression */
+
+   /* TODO 2. print expression */
 }
 
 Test(entropy, parse, .description = "Tests the expression parsing.")
@@ -131,15 +132,14 @@ Test(entropy, parse, .description = "Tests the expression parsing.")
 
    /* release expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
-
 }
 
 Test(entropy, eval, .description = "Tests the expression evaluation.")
 {
-   int i;
-   SCIP_Real randnum;
    SCIP_Real testvalues[4] = {-1.0, 0.0, exp(-1.0), 1.0};
    SCIP_Real results[4] = {SCIP_INVALID, 0.0, exp(-1.0), 0.0};
+   SCIP_Real randnum;
+   int i;
 
    /* deterministic part */
    for( i = 0; i < 3; ++i )
@@ -159,17 +159,16 @@ Test(entropy, eval, .description = "Tests the expression evaluation.")
 
       cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprValue(entropyexpr), -randnum * log(randnum)));
    }
-
 }
 
 Test(entropy, inteval, .description = "Tests the expression interval evaluation.")
 {
-   int i;
    SCIP_INTERVAL interval;
    SCIP_Real rndlb[4];
    SCIP_Real rndub[4];
    SCIP_Real rndreslb[4];
    SCIP_Real rndresub[4];
+   int i;
 
    /* pick 5 special cases with well known results */
    SCIP_Real detlb[4] = {0.0, 0.0, exp(-1.0), 1.0};
@@ -221,15 +220,14 @@ Test(entropy, inteval, .description = "Tests the expression interval evaluation.
       cr_expect(SCIPisEQ(scip, SCIPintervalGetInf(interval), rndreslb[i]));
       cr_expect(SCIPisEQ(scip, SCIPintervalGetSup(interval), rndresub[i]));
    }
-
 }
 
 Test(entropy, derivative, .description = "Tests the expression derivation.")
 {
-   int i;
-   SCIP_Real randnum;
    SCIP_Real testvalues[5] = {-1.0, 0.0, exp(-1.0), 1.0, 2.0};
    SCIP_Real results[5] = {SCIP_INVALID, SCIP_INVALID, 0.0, -1.0, -1.0 - log(2.0)};
+   SCIP_Real randnum;
+   int i;
 
    /* deterministic part */
    for( i = 0; i < 5; ++i )
@@ -249,7 +247,6 @@ Test(entropy, derivative, .description = "Tests the expression derivation.")
 
       cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprPartialDiff(scip, conshdlr, entropyexpr, x), -1.0 - log(randnum)));
    }
-
 }
 
 Test(entropy, hash, .description = "Tests the expression hash.")
@@ -278,7 +275,6 @@ Test(entropy, hash, .description = "Tests the expression hash.")
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr3) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr2) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr1) );
-
 }
 
 Test(entropy, simplify, .description = "Tests the expression simplification.")
@@ -299,5 +295,4 @@ Test(entropy, simplify, .description = "Tests the expression simplification.")
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr3) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr2) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr1) );
-
 }
