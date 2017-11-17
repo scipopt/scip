@@ -869,20 +869,18 @@ SCIP_RETCODE collectMinactImplicVars(
    {
       SCIP_Bool useless;
 
-      assert(uselesscliques != NULL);
-
       clique = cliques[c];
       assert(clique != NULL);
 
       /* check if the clique was previously detected to be useless with respect to minimum activity */
-      if( SCIPhashtableExists(uselesscliques, (void*)clique) )
+      if( uselesscliques != NULL && SCIPhashtableExists(uselesscliques, (void*)clique) )
          continue;
 
       nbinvars = SCIPcliqueGetNVars(clique);
 
       if( nbinvars > MAX_CLIQUELENGTH )
       {
-         SCIP_CALL( SCIPhashtableInsert(uselesscliques, (void*)clique) );
+         SCIP_CALL( uselesscliques != NULL && SCIPhashtableInsert(uselesscliques, (void*)clique) );
          continue;
       }
 
@@ -916,7 +914,7 @@ SCIP_RETCODE collectMinactImplicVars(
       }
 
       /* if the clique is useless store it in the hash table to skip it later */
-      if( useless )
+      if( useless && uselesscliques != NULL )
       {
          assert(!SCIPhashtableExists(uselesscliques, (void*)clique));
          SCIP_CALL( SCIPhashtableInsert(uselesscliques, (void*)clique) );
