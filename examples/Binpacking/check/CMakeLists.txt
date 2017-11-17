@@ -10,7 +10,7 @@ set(instances
 #    "u80_00\;33"
 #    "u100_00\;40"
 #    "u120_00\;48"
-# the remaining 2 from this set take too long.
+# the remaining 3 from this set take too long.
 )
 
 add_test(NAME examples-binpacking-build
