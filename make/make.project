@@ -78,7 +78,7 @@ CLUSTERNODES    =       all
 
 # set SCIP version here for external projects
 # use underscore to make it compatible with def.h
-SCIP_VERSION	=	5.0.0
+SCIP_VERSION	=	5.0.0.1
 
 # compiling and linking parameters
 VERBOSE		=	false
