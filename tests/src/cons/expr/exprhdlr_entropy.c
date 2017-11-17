@@ -149,12 +149,14 @@ Test(entropy, eval, .description = "Tests the expression evaluation.")
    int i;
 
    /* deterministic part */
-   for( i = 0; i < 3; ++i )
+   for( i = 0; i < 4; ++i )
    {
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, testvalues[i]) );
       SCIP_CALL( SCIPevalConsExprExpr(scip, entropyexpr, sol, 0) );
+      SCIP_CALL( SCIPevalConsExprExpr(scip, negprodexpr, sol, 0) );
 
-      cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprValue(entropyexpr), results[i]));
+      cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprValue(entropyexpr), results[i]));
+      cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprValue(entropyexpr), SCIPgetConsExprExprValue(entropyexpr)));
    }
 
    /* random part */
@@ -163,8 +165,10 @@ Test(entropy, eval, .description = "Tests the expression evaluation.")
       randnum = SCIPrandomGetReal(rndgen, 0.0, 10.0);
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, randnum) );
       SCIP_CALL( SCIPevalConsExprExpr(scip, entropyexpr, sol, 0) );
+      SCIP_CALL( SCIPevalConsExprExpr(scip, negprodexpr, sol, 0) );
 
-      cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprValue(entropyexpr), -randnum * log(randnum)));
+      cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprValue(entropyexpr), -randnum * log(randnum)));
+      cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprValue(entropyexpr), SCIPgetConsExprExprValue(entropyexpr)));
    }
 }
 
@@ -210,6 +214,7 @@ Test(entropy, inteval, .description = "Tests the expression interval evaluation.
       SCIP_CALL( SCIPchgVarLb(scip, x, detlb[i]) );
       SCIP_CALL( SCIPchgVarUb(scip, x, detub[i]) );
       SCIP_CALL( SCIPevalConsExprExprInterval(scip, entropyexpr, FALSE, 0, 0.0) );
+      SCIP_CALL( SCIPevalConsExprExprInterval(scip, negprodexpr, FALSE, 0, 0.0) );
 
       interval = SCIPgetConsExprExprInterval(entropyexpr);
       cr_expect(SCIPisEQ(scip, SCIPintervalGetInf(interval), detreslb[i]));
@@ -222,6 +227,7 @@ Test(entropy, inteval, .description = "Tests the expression interval evaluation.
       SCIP_CALL( SCIPchgVarLb(scip, x, rndlb[i]) );
       SCIP_CALL( SCIPchgVarUb(scip, x, rndub[i]) );
       SCIP_CALL( SCIPevalConsExprExprInterval(scip, entropyexpr, FALSE, 0, 0.0) );
+      SCIP_CALL( SCIPevalConsExprExprInterval(scip, negprodexpr, FALSE, 0, 0.0) );
 
       interval = SCIPgetConsExprExprInterval(entropyexpr);
       cr_expect(SCIPisEQ(scip, SCIPintervalGetInf(interval), rndreslb[i]));
