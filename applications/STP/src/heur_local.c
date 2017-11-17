@@ -136,8 +136,8 @@ SCIP_RETCODE lca(
       if( steineredges[oedge] == 0 )
       {
          SCIP_CALL( lca(scip, graph, v, uf, nodesmark, steineredges, lcalists, boundpaths, heapsize, vbase) );
-         SCIPunionfindUnion(uf, u, v, FALSE);
-         uf->parent[SCIPunionfindFind(uf, u)] = u;
+         SCIPSTPunionfindUnion(uf, u, v, FALSE);
+         uf->parent[SCIPSTPunionfindFind(uf, u)] = u;
       }
    }
    nodesmark[u] = TRUE;
@@ -150,7 +150,7 @@ SCIP_RETCODE lca(
       v = vbase[graph->head[oedge]];
       if( nodesmark[v] )
       {
-         ancestor = uf->parent[SCIPunionfindFind(uf, v)];
+         ancestor = uf->parent[SCIPSTPunionfindFind(uf, v)];
 
          /* if the ancestor of 'u' and 'v' is one of the two, the boundary-edge is already in boundpaths[u] */
          if( ancestor != u && ancestor != v)
@@ -627,7 +627,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
       SCIP_CALL( SCIPallocBufferArray(scip, &nodesmark, nnodes) );
 
       /* initialize data structures */
-      SCIP_CALL( SCIPunionfindInit(scip, &uf, nnodes) );
+      SCIP_CALL( SCIPSTPunionfindInit(scip, &uf, nnodes) );
 
       for( nruns = 0; nruns < 3 && localmoves > 0; nruns++ )
       {
@@ -722,7 +722,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
          SCIP_CALL( lca(scip, graph, root, &uf, nodesmark, best_result, lvledges_start, boundpaths, heapsize, vbase) );
 
          /* henceforth, the union-find structure will be used on the ST */
-         SCIPunionfindClear(scip, &uf, nnodes);
+         SCIPSTPunionfindClear(scip, &uf, nnodes);
 
          /* henceforth, nodesmark will be used to mark the current supervertices (except for the one representing the root-component) */
          for( i = 0; dfstree[i] != root; i++ )
@@ -780,7 +780,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
                         while( !pinned[adjnode] && !nodeIsCrucial(graph, best_result, adjnode) && steinertree[adjnode] )
                         {
                            /* update the union-find data structure */
-                           SCIPunionfindUnion(&uf, crucnode, adjnode, FALSE);
+                           SCIPSTPunionfindUnion(&uf, crucnode, adjnode, FALSE);
 
                            kpnodes[nkpnodes++] = adjnode;
 
@@ -897,8 +897,8 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
                   {
                      SCIP_CALL( SCIPpairheapDeletemin(scip, &edge, &edgecost, &boundpaths[l], &heapsize[l]) );
 
-                     node = (vbase[graph->head[edge]] == UNKNOWN)? UNKNOWN : SCIPunionfindFind(&uf, vbase[graph->head[edge]]);
-                     assert( (vbase[graph->tail[edge]] == UNKNOWN)? UNKNOWN : SCIPunionfindFind(&uf, vbase[graph->tail[edge]]) == l );
+                     node = (vbase[graph->head[edge]] == UNKNOWN)? UNKNOWN : SCIPSTPunionfindFind(&uf, vbase[graph->head[edge]]);
+                     assert( (vbase[graph->tail[edge]] == UNKNOWN)? UNKNOWN : SCIPSTPunionfindFind(&uf, vbase[graph->tail[edge]]) == l );
 
                      /* check whether edge 'edge' represents a boundary-path having an endpoint in the kth-component and in the root-component respectively */
                      if( node != UNKNOWN && !nodesmark[node] && graphmark[node] )
@@ -917,8 +917,8 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
                   edge = lvledges_curr->index;
                   k = vbase[graph->tail[edge]];
                   l = vbase[graph->head[edge]];
-                  node = (l == UNKNOWN)? UNKNOWN : SCIPunionfindFind(&uf, l);
-                  adjnode = (k == UNKNOWN)? UNKNOWN : SCIPunionfindFind(&uf, k);
+                  node = (l == UNKNOWN)? UNKNOWN : SCIPSTPunionfindFind(&uf, l);
+                  adjnode = (k == UNKNOWN)? UNKNOWN : SCIPSTPunionfindFind(&uf, k);
 
                   /* check whether the current boundary-path connects two child components */
                   if( node != UNKNOWN && nodesmark[node] && adjnode != UNKNOWN && nodesmark[adjnode] )
@@ -985,8 +985,8 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
                for( l = 0; l < nboundedges; l++ )
                {
                   edge = boundedges[l];
-                  node = SCIPunionfindFind(&uf, vbase[graph->tail[edge]]);
-                  adjnode = SCIPunionfindFind(&uf, vbase[graph->head[edge]]);
+                  node = SCIPSTPunionfindFind(&uf, vbase[graph->tail[edge]]);
+                  adjnode = SCIPSTPunionfindFind(&uf, vbase[graph->head[edge]]);
 
                   /* if node 'node' or 'adjnode' belongs to the root-component, take the (temporary) root-component identifier instead */
                   node = ((nodesmark[node])? node : k);
@@ -1066,7 +1066,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
 
                   for( k = 0; k < i; k++ )
                   {
-                     node = SCIPunionfindFind(&uf, dfstree[k]);
+                     node = SCIPSTPunionfindFind(&uf, dfstree[k]);
                      if( nodesmark[node] || node == crucnode )
                      {
                         graphmark[dfstree[k]] = FALSE;
@@ -1086,7 +1086,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
                      if( !nodesmark[vbase[graph->head[edge]]] )
                      {
                         node = vbase[graph->head[edge]];
-                        k = SCIPunionfindFind(&uf, node);
+                        k = SCIPSTPunionfindFind(&uf, node);
                         assert(nodesmark[k]);
                         while( node != k )
                         {
@@ -1101,7 +1101,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
                      }
 
                      /* is the vbase of the current boundary-edge tail in the root-component? */
-                     if( !nodesmark[SCIPunionfindFind(&uf, vbase[graph->tail[edge]])] )
+                     if( !nodesmark[SCIPSTPunionfindFind(&uf, vbase[graph->tail[edge]])] )
                      {
 
                         best_result[edge] = CONNECT;
@@ -1120,7 +1120,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
                         assert( graphmark[node] == TRUE );
 
                         /* is the pinned node its own component identifier? */
-                        if( !Is_term(graph->term[node]) && scanned[node] && !pinned[node] && SCIPunionfindFind(&uf, node) == node )
+                        if( !Is_term(graph->term[node]) && scanned[node] && !pinned[node] && SCIPSTPunionfindFind(&uf, node) == node )
                         {
                            graphmark[graph->head[edge]] = FALSE;
                            oldedge = edge;
@@ -1129,7 +1129,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
                            {
                               adjnode = graph->head[edge];
                               /* check whether edge 'edge' leads to an ancestor of terminal 'node' */
-                              if( best_result[edge] == CONNECT && graphmark[adjnode] && steinertree[adjnode]  && SCIPunionfindFind(&uf, adjnode) != node )
+                              if( best_result[edge] == CONNECT && graphmark[adjnode] && steinertree[adjnode]  && SCIPSTPunionfindFind(&uf, adjnode) != node )
                               {
 
                                  assert(scanned[adjnode]);
@@ -1137,7 +1137,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
                                  SCIPpairheapMeldheaps(scip, &boundpaths[node], &boundpaths[adjnode], &heapsize[node], &heapsize[adjnode]);
 
                                  /* update the union-find data structure */
-                                 SCIPunionfindUnion(&uf, node, adjnode, FALSE);
+                                 SCIPSTPunionfindUnion(&uf, node, adjnode, FALSE);
 
                                  /* move along the key-path until its end (i.e. until a crucial node is reached) */
                                  while( !nodeIsCrucial(graph, best_result, adjnode) && !pinned[adjnode] )
@@ -1154,10 +1154,10 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
                                     if( !steinertree[adjnode]  )
                                        break;
                                     assert(scanned[adjnode]);
-                                    assert(SCIPunionfindFind(&uf, adjnode) != node);
+                                    assert(SCIPSTPunionfindFind(&uf, adjnode) != node);
 
                                     /* update the union-find data structure */
-                                    SCIPunionfindUnion(&uf, node, adjnode, FALSE);
+                                    SCIPSTPunionfindUnion(&uf, node, adjnode, FALSE);
 
                                     /* meld the heaps */
                                     SCIPpairheapMeldheaps(scip, &boundpaths[node], &boundpaths[adjnode], &heapsize[node], &heapsize[adjnode]);
@@ -1225,7 +1225,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
                      SCIPpairheapMeldheaps(scip, &boundpaths[crucnode], &boundpaths[supernodes[k]], &heapsize[crucnode], &heapsize[supernodes[k]]);
 
                      /* update the union-find data structure */
-                     SCIPunionfindUnion(&uf, crucnode, supernodes[k], FALSE);
+                     SCIPSTPunionfindUnion(&uf, crucnode, supernodes[k], FALSE);
                   }
                }
 
@@ -1285,13 +1285,13 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
                      /* check whether edge 'edge' leads to an ancestor of terminal 'crucnode' */
                      if( best_result[edge] == CONNECT && steinertree[adjnode] && graphmark[adjnode] )
                      {
-                        assert( SCIPunionfindFind(&uf, adjnode) != crucnode);
+                        assert( SCIPSTPunionfindFind(&uf, adjnode) != crucnode);
                         assert(scanned[adjnode]);
                         /* meld the heaps */
                         SCIPpairheapMeldheaps(scip, &boundpaths[crucnode], &boundpaths[adjnode], &heapsize[crucnode], &heapsize[adjnode]);
 
                         /* update the union-find data structure */
-                        SCIPunionfindUnion(&uf, crucnode, adjnode, FALSE);
+                        SCIPSTPunionfindUnion(&uf, crucnode, adjnode, FALSE);
 
                         /* move along the key-path until its end (i.e. until a crucial node is reached) */
                         while( !nodeIsCrucial(graph, best_result, adjnode) && !pinned[adjnode] )
@@ -1308,10 +1308,10 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
                            if( !steinertree[adjnode] || !graphmark[adjnode] )
                               break;
                            assert(scanned[adjnode]);
-                           assert(SCIPunionfindFind(&uf, adjnode) != crucnode);
+                           assert(SCIPSTPunionfindFind(&uf, adjnode) != crucnode);
 
                            /* update the union-find data structure */
-                           SCIPunionfindUnion(&uf, crucnode, adjnode, FALSE);
+                           SCIPSTPunionfindUnion(&uf, crucnode, adjnode, FALSE);
 
                            /* meld the heaps */
                            SCIPpairheapMeldheaps(scip, &boundpaths[crucnode], &boundpaths[adjnode], &heapsize[crucnode], &heapsize[adjnode]);
@@ -1372,7 +1372,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
                   l = vbase[graph->head[e]];
 
                   assert(graphmark[k]);
-                  node = (l == UNKNOWN || !graphmark[l] )? UNKNOWN : SCIPunionfindFind(&uf, l);
+                  node = (l == UNKNOWN || !graphmark[l] )? UNKNOWN : SCIPSTPunionfindFind(&uf, l);
 
                   /* does the boundary-path end in the root component? */
                   if( node != UNKNOWN && node != crucnode && graphmark[l] )
@@ -1444,7 +1444,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
                edgecost = vnoi[graph->tail[newedge]].dist + graph->cost[newedge] + vnoi[graph->head[newedge]].dist;
                if( SCIPisLT(scip, edgecost, kpathcost) )
                {
-                  node = SCIPunionfindFind(&uf, vbase[graph->head[newedge]]);
+                  node = SCIPSTPunionfindFind(&uf, vbase[graph->head[newedge]]);
 
                   SCIPdebugMessage( "ADDING NEW KEY PATH (%f )\n", edgecost - kpathcost );
 
@@ -1490,7 +1490,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
 
                   /* flip all edges on the ST path between the endnode of the new key-path and the current crucial node */
                   k = newpathend;
-                  assert(SCIPunionfindFind(&uf, newpathend) == crucnode);
+                  assert(SCIPSTPunionfindFind(&uf, newpathend) == crucnode);
 
                   while( k != crucnode )
                   {
@@ -1505,7 +1505,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
 
                   for( k = 0; k < i; k++ )
                   {
-                     if( crucnode == SCIPunionfindFind(&uf, dfstree[k]) )
+                     if( crucnode == SCIPSTPunionfindFind(&uf, dfstree[k]) )
                      {
                         graphmark[dfstree[k]] = FALSE;
                         steinertree[dfstree[k]] = FALSE;
@@ -1513,20 +1513,20 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
                   }
 
                   /* update union find */
-                  if( !Is_term(graph->term[node]) && scanned[node] && !pinned[node] && SCIPunionfindFind(&uf, node) == node )
+                  if( !Is_term(graph->term[node]) && scanned[node] && !pinned[node] && SCIPSTPunionfindFind(&uf, node) == node )
                   {
                      for( edge = graph->outbeg[node]; edge != EAT_LAST; edge = graph->oeat[edge] )
                      {
                         adjnode = graph->head[edge];
                         /* check whether edge 'edge' leads to an ancestor of terminal 'node' */
-                        if( best_result[edge] == CONNECT && steinertree[adjnode]  && graphmark[adjnode] && SCIPunionfindFind(&uf, adjnode) != node )
+                        if( best_result[edge] == CONNECT && steinertree[adjnode]  && graphmark[adjnode] && SCIPSTPunionfindFind(&uf, adjnode) != node )
                         {
                            assert(scanned[adjnode]);
                            /* meld the heaps */
                            SCIPpairheapMeldheaps(scip, &boundpaths[node], &boundpaths[adjnode], &heapsize[node], &heapsize[adjnode]);
 
                            /* update the union-find data structure */
-                           SCIPunionfindUnion(&uf, node, adjnode, FALSE);
+                           SCIPSTPunionfindUnion(&uf, node, adjnode, FALSE);
 
                            /* move along the key-path until its end (i.e. until a crucial node is reached) */
                            while( !nodeIsCrucial(graph, best_result, adjnode) && !pinned[adjnode] )
@@ -1543,10 +1543,10 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
                               if( !steinertree[adjnode]  )
                                  break;
                               assert(scanned[adjnode]);
-                              assert(SCIPunionfindFind(&uf, adjnode) != node);
+                              assert(SCIPSTPunionfindFind(&uf, adjnode) != node);
 
                               /* update the union-find data structure */
-                              SCIPunionfindUnion(&uf, node, adjnode, FALSE);
+                              SCIPSTPunionfindUnion(&uf, node, adjnode, FALSE);
 
                               /* meld the heaps */
                               SCIPpairheapMeldheaps(scip, &boundpaths[node], &boundpaths[adjnode], &heapsize[node], &heapsize[adjnode]);
@@ -1583,7 +1583,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
 
       TERMINATE:
 
-         SCIPunionfindClear(scip, &uf, nnodes);
+         SCIPSTPunionfindClear(scip, &uf, nnodes);
 
          /* free data structures */
          SCIPfreeBufferArray(scip, &kpedges);
@@ -1643,7 +1643,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
       }
 
       /* free data structures */
-      SCIPunionfindFree(scip, &uf);
+      SCIPSTPunionfindFree(scip, &uf);
       SCIPfreeBufferArray(scip, &nodesmark);
       SCIPfreeBufferArray(scip, &dfstree);
       SCIPfreeBufferArray(scip, &pinned);

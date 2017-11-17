@@ -31,6 +31,14 @@ GAMSDIR		=	gams
 
 include $(SCIPDIR)/make/make.project
 
+ifneq ($(SHARED), true)
+$(error Please compile SCIP and this interface with SHARED=true)
+endif
+
+ifneq ($(READLINE), false)
+$(error Please compile SCIP and this interface with READLINE=false)
+endif
+
 GAMSIODIR	=	$(GAMSDIR)/apifiles/C/api
 
 #-----------------------------------------------------------------------------
@@ -111,6 +119,10 @@ depend:		$(SCIPDIR)
 		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z\_]*\).cpp|$$\(OBJDIR\)/\2.o: $(SRCDIR)/\2.cpp|g'\'' \
 		| sed '\''s|$(GAMSIODIR).*h||g'\'' \
 		>$(MAINDEP)'
+
+.PHONY: test
+test:
+		./test.sh $(MAINFILE)
 
 -include	$(MAINDEP)
 

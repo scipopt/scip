@@ -138,6 +138,7 @@ SCIP_RETCODE SCIPprimalCreate(
    (*primal)->nlimbestsolsfound = 0;
    (*primal)->upperbound = SCIP_INVALID;
    (*primal)->cutoffbound = SCIP_INVALID;
+   (*primal)->updateviolations = TRUE;
 
    return SCIP_OKAY;
 }
@@ -223,6 +224,7 @@ SCIP_RETCODE SCIPprimalClear(
    (*primal)->nlimbestsolsfound = 0;
    (*primal)->upperbound = SCIP_INVALID;
    (*primal)->cutoffbound = SCIP_INVALID;
+   (*primal)->updateviolations = TRUE;
 
    return SCIP_OKAY;
 }
@@ -609,6 +611,7 @@ SCIP_RETCODE primalAddSol(
    )
 {
    SCIP_SOL* sol;
+   /* cppcheck-suppress unassignedVariable */
    SCIP_EVENT event;
    SCIP_Real obj;
    int pos;
@@ -735,7 +738,7 @@ SCIP_RETCODE primalAddSol(
    SCIPvisualFoundSolution(stat->visual, set, stat, SCIPtreeGetCurrentNode(tree), insertpos == 0 ? TRUE : FALSE, sol);
 
    /* check, if the global upper bound has to be updated */
-   if( obj < primal->upperbound )
+   if( obj < primal->cutoffbound && insertpos == 0 )
    {
       /* update the upper bound */
       SCIP_CALL( SCIPprimalSetUpperbound(primal, blkmem, set, stat, eventqueue, transprob, tree, reopt, lp, obj) );
@@ -1680,13 +1683,22 @@ void SCIPprimalUpdateVarObj(
    }
 }
 
-/** retransforms all existing solutions to original problem space */
+/** retransforms all existing solutions to original problem space
+ *
+ * @note as a side effect, the objective value of the solutions can change (numerical errors)
+ * so we update the objective cutoff value and upper bound accordingly
+ */
 SCIP_RETCODE SCIPprimalRetransformSolutions(
    SCIP_PRIMAL*          primal,             /**< primal data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_PROB*            origprob,           /**< original problem */
-   SCIP_PROB*            transprob           /**< transformed problem */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    SCIP_Bool hasinfval;
@@ -1699,6 +1711,22 @@ SCIP_RETCODE SCIPprimalRetransformSolutions(
       if( SCIPsolGetOrigin(primal->sols[i]) == SCIP_SOLORIGIN_ZERO )
       {
          SCIP_CALL( SCIPsolRetransform(primal->sols[i], set, stat, origprob, transprob, &hasinfval) );
+      }
+   }
+
+   /* check if the global upper bound has to be updated
+    * @todo we do not inform anybody about this change; if this leads to some
+    * problem, a possible solution is to issue a BESTSOLFOUND event
+    */
+   if( primal->nsols > 0 )
+   {
+      SCIP_Real obj;
+
+      obj = SCIPsolGetObj(primal->sols[0], set, transprob, origprob);
+      if( obj < primal->cutoffbound )
+      {
+         /* update the upper bound */
+         SCIP_CALL( SCIPprimalSetUpperbound(primal, blkmem, set, stat, eventqueue, transprob, tree, reopt, lp, obj) );
       }
    }
 
@@ -1877,4 +1905,26 @@ SCIP_RETCODE SCIPprimalTransformSol(
    }
 
    return SCIP_OKAY;
+}
+
+
+/** is the updating of violations enabled for this problem? */
+SCIP_Bool SCIPprimalUpdateViolations(
+   SCIP_PRIMAL*          primal              /**< problem data */
+   )
+{
+   assert(primal != NULL);
+
+   return primal->updateviolations;
+}
+
+/** set whether the updating of violations is turned on */
+void SCIPprimalSetUpdateViolations(
+   SCIP_PRIMAL*          primal,             /**< problem data */
+   SCIP_Bool             updateviolations    /**< marks whether the updating of violations is turned on */
+   )
+{
+   assert(primal != NULL);
+
+   primal->updateviolations = updateviolations;
 }

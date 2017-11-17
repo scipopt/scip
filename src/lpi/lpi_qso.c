@@ -33,11 +33,21 @@ typedef SCIP_DUALPACKET COLPACKET;           /* each column needs two bits of in
 typedef SCIP_DUALPACKET ROWPACKET;           /* each row needs two bit of information (basic/on_lower/on_upper) */
 #define ROWS_PER_PACKET SCIP_DUALPACKETSIZE
 
+enum LPI_QSOPT_Algo
+{
+   LPI_QSOPT_ALGO_UNKNOWN = 0,               /**< unknown */
+   LPI_QSOPT_ALGO_PRIMAL  = 1,               /**< primal simplex */
+   LPI_QSOPT_ALGO_DUAL    = 2                /**< dual simplex */
+};
+typedef enum LPI_QSOPT_Algo LPI_QSOPT_ALGO;
+
+
 /** LP interface */
 struct SCIP_LPi
 {
    QSprob                prob;               /**< LP struct pointer */
    int                   solstat;            /**< solution status of last optimization call */
+   LPI_QSOPT_ALGO        algo;               /**< previously used algorithm */
    int                   previt;             /**< previous number of simplex iterations performed */
    int                   rowspace;           /**< current size of internal row-related arrays */
    char*                 isen;               /**< array of length rowspace */
@@ -291,7 +301,7 @@ SCIP_RETCODE convertSides(
    int state;
    register int i;
 
-   for( i = nrows ; i-- ; )
+   for( i = 0 ; i < nrows ; ++i )
    {
       state = ((lhs[i] <= -QS_MAXDOUBLE ? 1U:0U) | (rhs[i] >= QS_MAXDOUBLE ? 2U:0U));
       lpi->ircnt[i] = 0;
@@ -325,7 +335,7 @@ SCIP_RETCODE convertSides(
          lpi->irng[i] = 0;
          break;
       default:
-         SCIPerrorMessage("Error, constraint %d has no bounds!",i);
+         SCIPerrorMessage("Error, constraint %d has no bounds!", i);
          SCIPABORT();
          return SCIP_INVALIDDATA; /*lint !e527*/
       }
@@ -384,7 +394,7 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    int                   ncols,              /**< length of integrality array */
    int*                  intInfo             /**< integrality array (0: continuous, 1: integer) */
    )
-{
+{  /*lint --e{715}*/
    SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -443,6 +453,7 @@ SCIP_RETCODE SCIPlpiCreate(
    SCIP_ALLOC( BMSallocMemoryArray(&((*lpi)->ibas), 1024) );
 
    (*lpi)->messagehdlr = messagehdlr;
+   (*lpi)->algo = LPI_QSOPT_ALGO_UNKNOWN;
 
    return SCIP_OKAY;
 }
@@ -507,12 +518,20 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    )
 {
    register int i;
-   int rval;
+
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
 
    lpi->solstat = 0;
+
    SCIPdebugMessage("loading LP in column format into QSopt: %d cols, %d rows\n", ncols, nrows);
 
    /* delete old LP */
@@ -521,13 +540,11 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    /* set sense */
    if( objsen == SCIP_OBJSEN_MAXIMIZE )
    {
-      rval = QSchange_objsense(lpi->prob, QS_MAX);
-      QS_CONDRET(rval);
+      QS_CONDRET( QSchange_objsense(lpi->prob, QS_MAX) );
    }
    else
    {
-      rval = QSchange_objsense(lpi->prob, QS_MIN);
-      QS_CONDRET(rval);
+      QS_CONDRET( QSchange_objsense(lpi->prob, QS_MIN) );
    }
 
    /* add rows with no matrix, and then the columns, first ensure space */
@@ -537,8 +554,7 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    SCIP_CALL( convertSides(lpi, nrows, lhs, rhs) );
 
    /* now we add the rows */
-   rval = QSadd_ranged_rows(lpi->prob, nrows, lpi->ircnt, lpi->irbeg, 0, 0, lpi->irhs, lpi->isen, lpi->irng, (const char**)rownames);
-   QS_CONDRET(rval);
+   QS_CONDRET( QSadd_ranged_rows(lpi->prob, nrows, lpi->ircnt, lpi->irbeg, 0, 0, lpi->irhs, lpi->isen, lpi->irng, (const char**)rownames) );
 
    /* ensure column size */
    SCIP_CALL( ensureColMem(lpi, ncols) );
@@ -557,10 +573,10 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    }
 
    /* and add the columns */
-   rval = QSadd_cols(lpi->prob, ncols, lpi->iccnt, (int*) beg, (int*) ind, (SCIP_Real*) val, (SCIP_Real*) obj,
-      (SCIP_Real*) lb, (SCIP_Real*) ub, (const char**)colnames);
+   QS_CONDRET( QSadd_cols(lpi->prob, ncols, lpi->iccnt, (int*) beg, (int*) ind, (SCIP_Real*) val, (SCIP_Real*) obj,
+         (SCIP_Real*) lb, (SCIP_Real*) ub, (const char**)colnames) );
 
-   QS_RETURN(rval);
+   return SCIP_OKAY;
 }
 
 
@@ -578,9 +594,16 @@ SCIP_RETCODE SCIPlpiAddCols(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {
-   int rval;
    register int i;
    int* lbeg;
+
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
 
    assert( lpi != NULL );
    assert( lpi->prob != NULL );
@@ -640,8 +663,8 @@ SCIP_RETCODE SCIPlpiAddCols(
    }
 
    /* add the columns */
-   rval = QSadd_cols(lpi->prob, ncols, lpi->iccnt, (int*) lbeg, (int*) ind, (SCIP_Real*) val, (SCIP_Real*) obj,
-      (SCIP_Real*) lb, (SCIP_Real*) ub, (const char**)colnames);
+   QS_CONDRET( QSadd_cols(lpi->prob, ncols, lpi->iccnt, (int*) lbeg, (int*) ind, (SCIP_Real*) val, (SCIP_Real*) obj,
+         (SCIP_Real*) lb, (SCIP_Real*) ub, (const char**)colnames) );
 
    /* possibly free space */
    if ( nnonz == 0 )
@@ -649,7 +672,7 @@ SCIP_RETCODE SCIPlpiAddCols(
       BMSfreeMemoryArray(&lbeg);
    }
 
-   QS_RETURN(rval);
+   return SCIP_OKAY;
 }
 
 /** deletes all columns in the given range from LP */
@@ -660,7 +683,6 @@ SCIP_RETCODE SCIPlpiDelCols(
    )
 {
    int len;
-   int rval;
    register int i;
 
    assert(lpi != NULL);
@@ -668,6 +690,7 @@ SCIP_RETCODE SCIPlpiDelCols(
 
    len = lastcol - firstcol +1;
    lpi->solstat = 0;
+
    assert(0 <= firstcol && len > 0 && lastcol < QSget_colcount(lpi->prob));
 
    SCIPdebugMessage("deleting %d columns from QSopt\n", len);
@@ -676,9 +699,9 @@ SCIP_RETCODE SCIPlpiDelCols(
    for( i = firstcol ; i <= lastcol ; i++ )
       lpi->iccnt[i-firstcol] = i;
 
-   rval = QSdelete_cols(lpi->prob, len, lpi->iccnt);
+   QS_CONDRET( QSdelete_cols(lpi->prob, len, lpi->iccnt) );
 
-   QS_RETURN(rval);
+   return SCIP_OKAY;
 }
 
 /** deletes columns from SCIP_LP; the new position of a column must not be greater that its old position */
@@ -689,7 +712,6 @@ SCIP_RETCODE SCIPlpiDelColset(
                                               *   output: new position of column, -1 if column was deleted */
    )
 {
-   int rval;
    int ncols;
    int ccnt;
    register int i;
@@ -702,8 +724,7 @@ SCIP_RETCODE SCIPlpiDelColset(
 
    SCIPdebugMessage("deleting a column set from QSopt\n");
 
-   rval = QSdelete_setcols(lpi->prob,dstat);
-   QS_CONDRET(rval);
+   QS_CONDRET( QSdelete_setcols(lpi->prob,dstat) );
 
    for( i=0, ccnt=0; i < ncols; i++ )
    {
@@ -712,6 +733,7 @@ SCIP_RETCODE SCIPlpiDelColset(
       else
          dstat[i] = ccnt++;
    }
+
    return SCIP_OKAY;
 }
 
@@ -730,7 +752,14 @@ SCIP_RETCODE SCIPlpiAddRows(
    )
 {
    register int i;
-   int rval;
+
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
 
    assert( lpi != NULL );
    assert( lpi->prob != NULL );
@@ -779,9 +808,8 @@ SCIP_RETCODE SCIPlpiAddRows(
       }
 
       /* now we add the rows */
-      rval = QSadd_ranged_rows(lpi->prob, nrows, lpi->ircnt, (int*) beg, (int*) ind, (SCIP_Real*) val, lpi->irhs,
-         lpi->isen, lpi->irng, (const char**)rownames);
-      QS_ERROR(rval, "failed adding %d rows with %d non-zeros", nrows, nnonz);
+      QS_CONDRET( QSadd_ranged_rows(lpi->prob, nrows, lpi->ircnt, (int*) beg, (int*) ind, (SCIP_Real*) val, lpi->irhs,
+            lpi->isen, lpi->irng, (const char**)rownames) );
    }
    else
    {
@@ -792,9 +820,8 @@ SCIP_RETCODE SCIPlpiAddRows(
       }
 
       /* now we add the rows */
-      rval = QSadd_ranged_rows(lpi->prob, nrows, lpi->ircnt, lpi->irbeg, (int*) ind, (SCIP_Real*) val, lpi->irhs,
-         lpi->isen, lpi->irng, (const char**)rownames);
-      QS_ERROR(rval, "failed adding %d rows with %d non-zeros", nrows, nnonz);
+      QS_CONDRET( QSadd_ranged_rows(lpi->prob, nrows, lpi->ircnt, lpi->irbeg, (int*) ind, (SCIP_Real*) val, lpi->irhs,
+            lpi->isen, lpi->irng, (const char**)rownames) );
    }
 
    return SCIP_OKAY;
@@ -933,13 +960,13 @@ SCIP_RETCODE SCIPlpiDelRows(
    )
 {
    const int len = lastrow - firstrow +1;
-   int rval;
    register int i;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
 
    lpi->solstat = 0;
+
    assert(0 <= firstrow && len > 0 && lastrow < QSget_rowcount (lpi->prob));
 
    SCIPdebugMessage("deleting %d rows from QSopt\n", len);
@@ -947,9 +974,9 @@ SCIP_RETCODE SCIPlpiDelRows(
    SCIP_CALL( ensureRowMem(lpi, len) );
    for( i = firstrow; i <= lastrow; i++ )
       lpi->ircnt[i-firstrow] = i;
-   rval = QSdelete_rows(lpi->prob, len, lpi->ircnt);
+   QS_CONDRET( QSdelete_rows(lpi->prob, len, lpi->ircnt) );
 
-   QS_RETURN(rval);
+   return SCIP_OKAY;
 }
 
 
@@ -961,7 +988,6 @@ SCIP_RETCODE SCIPlpiDelRowset(
                                               *   output: new position of row, -1 if row was deleted */
    )
 {
-   int rval;
    int nrows;
    int ccnt;
    int ndel = 0;
@@ -981,8 +1007,7 @@ SCIP_RETCODE SCIPlpiDelRowset(
 
    SCIPdebugMessage("deleting a row set from QSopt (%d)\n", ndel);
 
-   rval = QSdelete_setrows(lpi->prob,dstat);
-   QS_CONDRET(rval);
+   QS_CONDRET( QSdelete_setrows(lpi->prob,dstat) );
 
    for( i=0, ccnt=0; i < nrows; i++ )
    {
@@ -991,6 +1016,7 @@ SCIP_RETCODE SCIPlpiDelRowset(
       else
          dstat[i] = ccnt++;
    }
+
    return SCIP_OKAY;
 }
 
@@ -999,10 +1025,9 @@ SCIP_RETCODE SCIPlpiClear(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   register int i;
-   int ncols;
-   int nrows;
-   int rval;
+   char savename[1024];
+   char* name;
+   int objsen;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
@@ -1010,25 +1035,15 @@ SCIP_RETCODE SCIPlpiClear(
    SCIPdebugMessage("clearing QSopt LP\n");
    lpi->solstat = 0;
 
-   ncols = QSget_colcount(lpi->prob);
-   nrows = QSget_rowcount(lpi->prob);
-   if( ncols >= 1 )
-   {
-      SCIP_CALL( ensureColMem(lpi,ncols) );
-      for( i = 0; i < ncols; ++i )
-         lpi->iccnt[i] = i;
-      rval = QSdelete_cols(lpi->prob, ncols, lpi->iccnt);
-      QS_CONDRET(rval);
-   }
+   /* save sense and name of problem */
+   QS_CONDRET( QSget_objsense(lpi->prob, &objsen) );
 
-   if( nrows >= 1 )
-   {
-      SCIP_CALL( ensureRowMem(lpi, nrows) );
-      for( i = 0; i < nrows; ++i )
-         lpi->ircnt[i] = i;
-      rval = QSdelete_rows(lpi->prob, nrows, lpi->ircnt);
-      QS_CONDRET(rval);
-   }
+   name = QSget_probname(lpi->prob);
+   (void) strncpy(savename, name, 1024);
+
+   QSfree_prob(lpi->prob);
+   lpi->prob = QScreate_prob(savename, objsen);
+
    return SCIP_OKAY;
 }
 
@@ -1043,7 +1058,6 @@ SCIP_RETCODE SCIPlpiChgBounds(
    )
 {
    register int i;
-   int rval;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
@@ -1073,15 +1087,14 @@ SCIP_RETCODE SCIPlpiChgBounds(
    for( i = 0; i < ncols; ++i )
       lpi->iccha[i] = 'L';
 
-   rval = QSchange_bounds(lpi->prob, ncols, (int*) ind, lpi->iccha, (SCIP_Real*) lb);
-   QS_CONDRET(rval);
+   QS_CONDRET( QSchange_bounds(lpi->prob, ncols, (int*) ind, lpi->iccha, (SCIP_Real*) lb) );
 
    for( i = 0; i < ncols; ++i )
       lpi->iccha[i] = 'U';
 
-   rval = QSchange_bounds(lpi->prob, ncols, (int*) ind, lpi->iccha, (SCIP_Real*) ub);
+   QS_CONDRET( QSchange_bounds(lpi->prob, ncols, (int*) ind, lpi->iccha, (SCIP_Real*) ub) );
 
-   QS_RETURN(rval);
+   return SCIP_OKAY;
 }
 
 /** changes left and right hand sides of rows */
@@ -1094,12 +1107,12 @@ SCIP_RETCODE SCIPlpiChgSides(
    )
 {
    register int i;
-   int rval;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
 
    lpi->solstat = 0;
+
    SCIPdebugMessage("changing %d sides in QSopt\n", nrows);
 
    SCIP_CALL( ensureRowMem(lpi, nrows) );
@@ -1110,16 +1123,13 @@ SCIP_RETCODE SCIPlpiChgSides(
    /* now we change all rows */
    for( i = 0; i < nrows; ++i )
    {
-      rval = QSchange_sense(lpi->prob, ind[i], lpi->isen[i]);
-      QS_CONDRET(rval);
+      QS_CONDRET( QSchange_sense(lpi->prob, ind[i], lpi->isen[i]) );
 
-      rval = QSchange_rhscoef(lpi->prob, ind[i], lpi->irhs[i]);
-      QS_CONDRET(rval);
+      QS_CONDRET( QSchange_rhscoef(lpi->prob, ind[i], lpi->irhs[i]) );
 
       if( lpi->isen[i] == 'R' )
       {
-         rval = QSchange_range(lpi->prob, ind[i], lpi->irng[i]);
-         QS_CONDRET(rval);
+         QS_CONDRET( QSchange_range(lpi->prob, ind[i], lpi->irng[i]) );
       }
    }
 
@@ -1134,8 +1144,6 @@ SCIP_RETCODE SCIPlpiChgCoef(
    SCIP_Real             newval              /**< new value of coefficient */
    )
 {
-   int rval;
-
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
 
@@ -1143,9 +1151,9 @@ SCIP_RETCODE SCIPlpiChgCoef(
 
    SCIPdebugMessage("changing coefficient row %d, column %d in QSopt to %g\n", row, col, newval);
 
-   rval = QSchange_coef(lpi->prob, row, col, newval);
+   QS_CONDRET( QSchange_coef(lpi->prob, row, col, newval) );
 
-   QS_RETURN(rval);
+   return SCIP_OKAY;
 }
 
 /** changes the objective sense */
@@ -1154,8 +1162,6 @@ SCIP_RETCODE SCIPlpiChgObjsen(
    SCIP_OBJSEN           objsen              /**< new objective sense */
    )
 {
-   int rval;
-
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
 
@@ -1165,14 +1171,13 @@ SCIP_RETCODE SCIPlpiChgObjsen(
    /* set sense */
    if( objsen == SCIP_OBJSEN_MAXIMIZE )
    {
-      rval = QSchange_objsense(lpi->prob, QS_MAX);
-      QS_CONDRET(rval);
+      QS_CONDRET( QSchange_objsense(lpi->prob, QS_MAX) );
    }
    else
    {
-      rval = QSchange_objsense(lpi->prob, QS_MIN);
-      QS_CONDRET(rval);
+      QS_CONDRET( QSchange_objsense(lpi->prob, QS_MIN) );
    }
+
    return SCIP_OKAY;
 }
 
@@ -1185,19 +1190,19 @@ SCIP_RETCODE SCIPlpiChgObj(
    )
 {
    register int i;
-   int rval;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
 
    lpi->solstat = 0;
+
    SCIPdebugMessage("changing %d objective values in QSopt\n", ncols);
 
    for( i = 0; i < ncols; ++i )
    {
-      rval = QSchange_objcoef(lpi->prob, ind[i], obj[i]);
-      QS_CONDRET(rval);
+      QS_CONDRET( QSchange_objcoef(lpi->prob, ind[i], obj[i]) );
    }
+
    return SCIP_OKAY;
 }
 
@@ -1219,6 +1224,7 @@ SCIP_RETCODE SCIPlpiScaleRow(
    assert(lpi->prob != NULL);
 
    lpi->solstat = 0;
+
    SCIPdebugMessage("scaling row %d with factor %g in QSopt\n", row, scaleval);
 
    rowlist[0] = row;
@@ -1325,6 +1331,7 @@ SCIP_RETCODE SCIPlpiScaleCol(
    assert(lpi->prob != NULL);
 
    lpi->solstat = 0;
+
    SCIPdebugMessage("scaling column %d with factor %g in QSopt\n", col, scaleval);
 
    /* get the column */
@@ -1459,7 +1466,7 @@ SCIP_RETCODE SCIPlpiGetCols(
    SCIP_Real*            ub,                 /**< buffer to store the upper bound vector, or NULL */
    int*                  nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
    int*                  beg,                /**< buffer to store start index of each column in ind- and val-array, or NULL */
-   int*                  ind,                /**< buffer to store column indices of constraint matrix entries, or NULL */
+   int*                  ind,                /**< buffer to store row indices of constraint matrix entries, or NULL */
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {
@@ -1497,10 +1504,14 @@ SCIP_RETCODE SCIPlpiGetCols(
    /* store in the user-provided data */
    if( nnonz )
    {
-      assert( beg != NULL && lbeg != NULL );
-      assert( ind != NULL && lind != NULL );
-      assert( val != NULL && lval != NULL );
-      assert( lcnt != NULL );
+      assert( beg != NULL );
+      assert( ind != NULL );
+      assert( val != NULL );
+      if( lbeg == NULL || lind == NULL || lval == NULL || lcnt == NULL )
+      {
+         SCIPerrorMessage("QSget_columns_list() failed to allocate memory.\n");
+         return SCIP_LPERROR;
+      }
 
       *nnonz = lbeg[len-1] + lcnt[len-1];
       for( i = 0 ; i < len ; i++ )
@@ -1513,9 +1524,12 @@ SCIP_RETCODE SCIPlpiGetCols(
    }
    if( lb )
    {
-      assert( llb != NULL );
-      assert( lub != NULL );
       assert( ub != NULL );
+      if( llb == NULL || lub == NULL )
+      {
+         SCIPerrorMessage("QSget_columns_list() failed to allocate memory.\n");
+         return SCIP_LPERROR;
+      }
 
       for( i = 0; i < len; ++i )
       {
@@ -1553,7 +1567,7 @@ SCIP_RETCODE SCIPlpiGetRows(
    SCIP_Real*            rhs,                /**< buffer to store right hand side vector, or NULL */
    int*                  nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
    int*                  beg,                /**< buffer to store start index of each row in ind- and val-array, or NULL */
-   int*                  ind,                /**< buffer to store row indices of constraint matrix entries, or NULL */
+   int*                  ind,                /**< buffer to store column indices of constraint matrix entries, or NULL */
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {
@@ -1589,10 +1603,14 @@ SCIP_RETCODE SCIPlpiGetRows(
    /* store in the user-provided data */
    if( nnonz )
    {
-      assert( beg != NULL && lbeg != NULL );
-      assert( ind != NULL && lind != NULL );
-      assert( val != NULL && lval != NULL );
-      assert( lcnt != NULL );
+      assert( beg != NULL );
+      assert( ind != NULL );
+      assert( val != NULL );
+      if( lbeg == NULL || lind == NULL || lval == NULL || lcnt == NULL )
+      {
+         SCIPerrorMessage("QSget_ranged_rows_list() failed to allocate memory.\n");
+         return SCIP_LPERROR;
+      }
 
       *nnonz = lbeg[len-1] + lcnt[len-1];
       for( i = 0 ; i < len; i++ )
@@ -1605,9 +1623,12 @@ SCIP_RETCODE SCIPlpiGetRows(
    }
    if( rhs )
    {
-      assert( lhs != NULL && lrhs != NULL );
-      assert( lrng != NULL );
-      assert( lsense != NULL );
+      assert( lhs != NULL );
+      if( lrhs == NULL || lrng == NULL || lsense == NULL )
+      {
+         SCIPerrorMessage("QSget_ranged_rows_list() failed to allocate memory.\n");
+         return SCIP_LPERROR;
+      }
 
       for( i = 0; i < len; ++i )
       {
@@ -1618,7 +1639,8 @@ SCIP_RETCODE SCIPlpiGetRows(
             rhs[i] = lrhs[i] + lrng[i];
             break;
          case 'E':
-            lhs[i] = rhs[i] = lrhs[i];
+            lhs[i] = lrhs[i];
+            rhs[i] = lrhs[i];
             break;
          case 'L':
             rhs[i] = lrhs[i];
@@ -1660,9 +1682,18 @@ SCIP_RETCODE SCIPlpiGetObjsen(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_OBJSEN*          objsen              /**< pointer to store objective sense */
    )
-{  /*lint --e{715}*/
-   SCIPerrorMessage("SCIPlpiGetObjsen() has not been implemented yet.\n");
-   return SCIP_LPERROR;
+{
+   int sense;
+
+   assert( objsen != NULL );
+
+   QS_CONDRET( QSget_objsense(lpi->prob, &sense) );
+   if ( sense == QS_MIN )
+      *objsen = SCIP_OBJSEN_MINIMIZE;
+   else
+      *objsen = SCIP_OBJSEN_MAXIMIZE;
+
+   return SCIP_OKAY;
 }
 
 /** gets objective coefficients from LP problem object */
@@ -1674,8 +1705,8 @@ SCIP_RETCODE SCIPlpiGetObj(
    )
 {  /*lint --e{715}*/
    int len;
-   int rval;
    register int i;
+   double* qsoptvals;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
@@ -1690,9 +1721,19 @@ SCIP_RETCODE SCIPlpiGetObj(
       lpi->iccnt[i] = i + firstcol;
 
    /* get data from qsopt */
-   rval = QSget_obj_list(lpi->prob, len, lpi->iccnt, vals);
 
-   QS_RETURN(rval);
+   /* There seems to be a bug in qsopt: The function QSget_obj_list might return values for slack variables. We
+    * therefore have to use a workarround. */
+#if 0
+   QS_CONDRET( QSget_obj_list(lpi->prob, len, lpi->iccnt, vals) );
+#endif
+
+   QS_CONDRET( QSget_columns_list(lpi->prob, len, lpi->iccnt, NULL, NULL, NULL, NULL, &qsoptvals, NULL, NULL, NULL) );
+   for (i = 0; i < len; ++i)
+      vals[i] = qsoptvals[i];
+   free( qsoptvals );
+
+   return SCIP_OKAY;
 }
 
 /** gets current bounds from LP problem object */
@@ -1705,7 +1746,6 @@ SCIP_RETCODE SCIPlpiGetBounds(
    )
 {
    const int len = lastcol - firstcol + 1;
-   int rval;
    register int i;
 
    assert(lpi != NULL);
@@ -1720,9 +1760,9 @@ SCIP_RETCODE SCIPlpiGetBounds(
       lpi->iccnt[i] = i + firstcol;
 
    /* get data from qsopt */
-   rval = QSget_bounds_list(lpi->prob, len, lpi->iccnt, lbs, ubs);
+   QS_CONDRET( QSget_bounds_list(lpi->prob, len, lpi->iccnt, lbs, ubs) );
 
-   QS_RETURN(rval);
+   return SCIP_OKAY;
 }
 
 /** gets current row sides from LP problem object */
@@ -1803,16 +1843,14 @@ SCIP_RETCODE SCIPlpiGetCoef(
    SCIP_Real*            val                 /**< pointer to store the value of the coefficient */
    )
 {
-   int rval;
-
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
 
    SCIPdebugMessage("getting coefficient of row %d col %d\n", row, col);
 
-   rval = QSget_coef(lpi->prob, row, col, val);
+   QS_CONDRET( QSget_coef(lpi->prob, row, col, val) );
 
-   QS_RETURN(rval);
+   return SCIP_OKAY;
 }
 
 /**@} */
@@ -1832,17 +1870,16 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   int rval;
-
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
 
    SCIPdebugMessage("calling QSopt primal simplex: %d cols, %d rows, %d nz\n", QSget_colcount(lpi->prob),
       QSget_rowcount(lpi->prob), QSget_nzcount(lpi->prob));
 
-   rval = QSopt_primal(lpi->prob, &(lpi->solstat));
+   QS_CONDRET( QSopt_primal(lpi->prob, &(lpi->solstat)) );
+   lpi->algo = LPI_QSOPT_ALGO_PRIMAL;
 
-   QS_RETURN(rval);
+   return SCIP_OKAY;
 }
 
 /** calls dual simplex to solve the LP */
@@ -1850,17 +1887,16 @@ SCIP_RETCODE SCIPlpiSolveDual(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   int rval;
-
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
 
    SCIPdebugMessage("calling QSopt dual simplex: %d cols, %d rows, %d nz\n", QSget_colcount(lpi->prob),
       QSget_rowcount(lpi->prob), QSget_nzcount(lpi->prob));
 
-   rval = QSopt_dual(lpi->prob, &(lpi->solstat));
+   QS_CONDRET( QSopt_dual(lpi->prob, &(lpi->solstat)) );
+   lpi->algo = LPI_QSOPT_ALGO_DUAL;
 
-   QS_RETURN(rval);
+   return SCIP_OKAY;
 }
 
 /** calls barrier or interior point algorithm to solve the LP with crossover to simplex basis */
@@ -1905,7 +1941,6 @@ SCIP_RETCODE SCIPlpiStrongbranchFrac(
    int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
    )
 {
-   int rval;
    int nit;
 
    assert(lpi != NULL);
@@ -1924,11 +1959,9 @@ SCIP_RETCODE SCIPlpiStrongbranchFrac(
    assert( ! EPSISINT(psol, FEASTOL) );
 
    /* call QSopt */
-   rval = QSopt_strongbranch(lpi->prob, 1, &col, &psol, down, up, itlim, QS_MAXDOUBLE);
-   QS_CONDRET(rval);
+   QS_CONDRET( QSopt_strongbranch(lpi->prob, 1, &col, &psol, down, up, itlim, QS_MAXDOUBLE) );
 
-   rval = QSget_itcnt(lpi->prob, 0, 0, 0, 0, &nit);
-   QS_CONDRET(rval);
+   QS_CONDRET( QSget_itcnt(lpi->prob, 0, 0, 0, 0, &nit) );
 
    if( iter )
       *iter = nit - lpi->previt;
@@ -1953,7 +1986,6 @@ SCIP_RETCODE SCIPlpiStrongbranchesFrac(
    int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
    )
 {
-   int rval;
    int nit;
    int j;
 
@@ -1977,11 +2009,9 @@ SCIP_RETCODE SCIPlpiStrongbranchesFrac(
    }
 
    /* call QSopt */
-   rval = QSopt_strongbranch(lpi->prob, ncols, cols, psols, down, up, itlim, QS_MAXDOUBLE);
-   QS_CONDRET(rval);
+   QS_CONDRET( QSopt_strongbranch(lpi->prob, ncols, cols, psols, down, up, itlim, QS_MAXDOUBLE) );
 
-   rval = QSget_itcnt(lpi->prob, 0, 0, 0, 0, &nit);
-   QS_CONDRET(rval);
+   QS_CONDRET( QSget_itcnt(lpi->prob, 0, 0, 0, 0, &nit) );
 
    if( iter )
       *iter = nit - lpi->previt;
@@ -2005,7 +2035,6 @@ SCIP_RETCODE SCIPlpiStrongbranchInt(
    int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
    )
 {
-   int rval;
    SCIP_Real objval;
 
    assert(lpi != NULL);
@@ -2022,8 +2051,7 @@ SCIP_RETCODE SCIPlpiStrongbranchInt(
    /* QSopt cannot directly strong branch on integral values! We thus return the current objective
     * value for both cases. Could also implement a manual search as in lpi_cpx.c
     */
-   rval = QSget_objval(lpi->prob, &objval);
-   QS_CONDRET(rval);
+   QS_CONDRET( QSget_objval(lpi->prob, &objval) );
 
    *down = objval;
    *up = objval;
@@ -2052,7 +2080,6 @@ SCIP_RETCODE SCIPlpiStrongbranchesInt(
    int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
    )
 {  /*lint --e{715}*/
-   int rval;
    SCIP_Real objval;
    int j;
 
@@ -2068,8 +2095,7 @@ SCIP_RETCODE SCIPlpiStrongbranchesInt(
    /* QSopt cannot directly strong branch on integral values! We thus return the current objective
     * value for all cases. Could also implement a manual search as in lpi_cpx.c
     */
-   rval = QSget_objval(lpi->prob, &objval);
-   QS_CONDRET(rval);
+   QS_CONDRET( QSget_objval(lpi->prob, &objval) );
 
    for( j = 0; j < ncols; ++j )
    {
@@ -2105,8 +2131,6 @@ SCIP_Bool SCIPlpiWasSolved(
    assert(lpi!=NULL);
    assert(lpi->prob!=NULL);
 
-   (void) QSget_status(lpi->prob, &(lpi->solstat));
-
    return (lpi->solstat != 0 && lpi->solstat != QS_LP_MODIFIED);
 }
 
@@ -2119,16 +2143,19 @@ SCIP_RETCODE SCIPlpiGetSolFeasibility(
 {
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
+   assert(lpi->solstat != 0 );
 
    SCIPdebugMessage("getting solution feasibility\n");
 
-   (void) QSget_status(lpi->prob, &(lpi->solstat));
+   if( lpi->solstat == QS_LP_OPTIMAL || (lpi->algo == LPI_QSOPT_ALGO_PRIMAL && lpi->solstat == QS_LP_UNBOUNDED) )
+      *primalfeasible = TRUE;
+   else
+      *primalfeasible = FALSE;
 
-   if( lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_UNBOUNDED )
-      *primalfeasible = 1;
-
-   if( lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_INFEASIBLE || lpi->solstat == QS_LP_OBJ_LIMIT )
-      *dualfeasible = 1;
+   if( lpi->solstat == QS_LP_OPTIMAL || (lpi->algo == LPI_QSOPT_ALGO_DUAL && lpi->solstat == QS_LP_INFEASIBLE) || lpi->solstat == QS_LP_OBJ_LIMIT )
+      *dualfeasible = TRUE;
+   else
+      *dualfeasible = FALSE;
 
    return SCIP_OKAY;
 }
@@ -2144,8 +2171,6 @@ SCIP_Bool SCIPlpiExistsPrimalRay(
    assert(lpi->prob != NULL);
 
    SCIPdebugMessage("checking primal ray existence\n");
-
-   (void) QSget_status(lpi->prob, &(lpi->solstat));
 
    return (lpi->solstat == QS_LP_UNBOUNDED);
 }
@@ -2176,9 +2201,7 @@ SCIP_Bool SCIPlpiIsPrimalUnbounded(
 
    SCIPdebugMessage("checking for primal unboundedness\n");
 
-   (void) QSget_status(lpi->prob, &(lpi->solstat));
-
-   return (lpi->solstat == QS_LP_UNBOUNDED);
+   return (lpi->algo == LPI_QSOPT_ALGO_PRIMAL && lpi->solstat == QS_LP_UNBOUNDED);
 }
 
 /** returns TRUE iff LP is proven to be primal infeasible */
@@ -2206,8 +2229,6 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
 
    SCIPdebugMessage("checking for primal feasibility\n");
 
-   (void) QSget_status(lpi->prob, &(lpi->solstat));
-
    return (lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_UNBOUNDED);
 }
 
@@ -2223,9 +2244,7 @@ SCIP_Bool SCIPlpiExistsDualRay(
 
    SCIPdebugMessage("checking for dual ray availability\n");
 
-   (void) QSget_status(lpi->prob, &(lpi->solstat));
-
-   return (lpi->solstat == QS_LP_INFEASIBLE);
+   return (lpi->algo == LPI_QSOPT_ALGO_DUAL && lpi->solstat == QS_LP_INFEASIBLE);
 }
 
 /** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point),
@@ -2240,9 +2259,7 @@ SCIP_Bool SCIPlpiHasDualRay(
 
    SCIPdebugMessage("checking for dual ray availability\n");
 
-   (void) QSget_status(lpi->prob, &(lpi->solstat));
-
-   return (lpi->solstat == QS_LP_INFEASIBLE);
+   return (lpi->algo == LPI_QSOPT_ALGO_DUAL && lpi->solstat == QS_LP_INFEASIBLE);
 }
 
 /** returns TRUE iff LP is dual unbounded */
@@ -2255,9 +2272,7 @@ SCIP_Bool SCIPlpiIsDualUnbounded(
 
    SCIPdebugMessage("checking for dual unboundedness\n");
 
-   (void) QSget_status(lpi->prob, &(lpi->solstat));
-
-   return (lpi->solstat == QS_LP_INFEASIBLE);
+   return (lpi->algo == LPI_QSOPT_ALGO_DUAL && lpi->solstat == QS_LP_INFEASIBLE);
 }
 
 /** returns TRUE iff LP is dual infeasible */
@@ -2270,9 +2285,7 @@ SCIP_Bool SCIPlpiIsDualInfeasible(
 
    SCIPdebugMessage("checking for dual infeasibility\n");
 
-   (void) QSget_status(lpi->prob, &(lpi->solstat));
-
-   return (lpi->solstat == QS_LP_UNBOUNDED);
+   return (lpi->algo == LPI_QSOPT_ALGO_DUAL && lpi->solstat == QS_LP_INFEASIBLE);
 }
 
 /** returns TRUE iff LP is proven to be dual feasible */
@@ -2285,9 +2298,7 @@ SCIP_Bool SCIPlpiIsDualFeasible(
 
    SCIPdebugMessage("checking for dual feasibility\n");
 
-   (void) QSget_status(lpi->prob, &(lpi->solstat));
-
-   return (lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_OBJ_LIMIT);
+   return ( lpi->solstat == QS_LP_OPTIMAL || (lpi->algo == LPI_QSOPT_ALGO_DUAL && lpi->solstat == QS_LP_INFEASIBLE) || lpi->solstat == QS_LP_OBJ_LIMIT );
 }
 
 /** returns TRUE iff LP was solved to optimality */
@@ -2299,8 +2310,6 @@ SCIP_Bool SCIPlpiIsOptimal(
    assert(lpi->prob != NULL);
 
    SCIPdebugMessage("checking for optimality\n");
-
-   (void) QSget_status(lpi->prob, &(lpi->solstat));
 
    return (lpi->solstat == QS_LP_OPTIMAL);
 }
@@ -2315,8 +2324,6 @@ SCIP_Bool SCIPlpiIsStable(
 
    SCIPdebugMessage("checking for numerical stability\n");
 
-   (void) QSget_status(lpi->prob, &(lpi->solstat));
-
    return (lpi->solstat != QS_LP_NUMERR);
 }
 
@@ -2329,8 +2336,6 @@ SCIP_Bool SCIPlpiIsObjlimExc(
    assert(lpi->prob != NULL);
 
    SCIPdebugMessage("checking for objective limit exceeded\n");
-
-   (void) QSget_status(lpi->prob, &(lpi->solstat));
 
    return (lpi->solstat == QS_LP_OBJ_LIMIT);
 }
@@ -2345,8 +2350,6 @@ SCIP_Bool SCIPlpiIsIterlimExc(
 
    SCIPdebugMessage("checking for iteration limit exceeded\n");
 
-   (void) QSget_status(lpi->prob, &(lpi->solstat));
-
    return (lpi->solstat == QS_LP_ITER_LIMIT);
 }
 
@@ -2359,8 +2362,6 @@ SCIP_Bool SCIPlpiIsTimelimExc(
    assert(lpi->prob != NULL);
 
    SCIPdebugMessage("checking for time limit exceeded\n");
-
-   (void) QSget_status(lpi->prob, &(lpi->solstat));
 
    return (lpi->solstat == QS_LP_TIME_LIMIT);
 }
@@ -2375,8 +2376,6 @@ int SCIPlpiGetInternalStatus(
 
    SCIPdebugMessage("getting internal solution status\n");
 
-   (void) QSget_status(lpi->prob, &(lpi->solstat));
-
    return lpi->solstat;
 }
 
@@ -2388,6 +2387,7 @@ SCIP_RETCODE SCIPlpiIgnoreInstability(
 {
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
+   assert(success != NULL);
 
    SCIPdebugMessage("ignore instability (will fail)\n");
 
@@ -2403,16 +2403,14 @@ SCIP_RETCODE SCIPlpiGetObjval(
    SCIP_Real*            objval              /**< stores the objective value */
    )
 {
-   int rval;
-
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
 
    SCIPdebugMessage("getting solution's objective value\n");
 
-   rval = QSget_objval(lpi->prob, objval);
+   QS_CONDRET( QSget_objval(lpi->prob, objval) );
 
-   QS_RETURN(rval);
+   return SCIP_OKAY;
 }
 
 /** gets primal and dual solution vectors */
@@ -2425,7 +2423,6 @@ SCIP_RETCODE SCIPlpiGetSol(
    SCIP_Real*            redcost             /**< reduced cost vector, may be NULL if not needed */
    )
 {
-   int rval;
    int nrows;
    register int i;
 
@@ -2442,8 +2439,7 @@ SCIP_RETCODE SCIPlpiGetSol(
    nrows = QSget_rowcount(lpi->prob);
    SCIP_CALL( ensureRowMem(lpi, nrows) );
 
-   rval = QSget_solution(lpi->prob, objval, primsol, dualsol, lpi->irng, redcost);
-   QS_CONDRET(rval);
+   QS_CONDRET( QSget_solution(lpi->prob, objval, primsol, dualsol, lpi->irng, redcost) );
 
 #if 0
 #ifdef SCIP_DEBUG
@@ -2504,10 +2500,8 @@ SCIP_RETCODE SCIPlpiGetSol(
 #endif
 #endif
 
-   rval = QSget_rhs(lpi->prob, lpi->irhs);
-   QS_CONDRET(rval);
-   rval = QSget_senses(lpi->prob, lpi->isen);
-   QS_CONDRET(rval);
+   QS_CONDRET( QSget_rhs(lpi->prob, lpi->irhs) );
+   QS_CONDRET( QSget_senses(lpi->prob, lpi->isen) );
 
    /* build back the activity */
    if( activity )
@@ -2555,8 +2549,6 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
    SCIP_Real*            dualfarkas          /**< dual Farkas row multipliers */
    )
 {
-   int rval;
-
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
    assert(dualfarkas != NULL);
@@ -2564,9 +2556,9 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
    SCIPdebugMessage("calling QSopt dual Farkas: %d cols, %d rows, %d non zeros\n", QSget_colcount (lpi->prob),
       QSget_rowcount(lpi->prob), QSget_nzcount(lpi->prob));
 
-   rval = QSget_infeas_array(lpi->prob, dualfarkas);
+   QS_CONDRET( QSget_infeas_array(lpi->prob, dualfarkas) );
 
-   QS_RETURN(rval);
+   return SCIP_OKAY;
 }
 
 /** gets the number of LP iterations of the last solve call */
@@ -2575,14 +2567,12 @@ SCIP_RETCODE SCIPlpiGetIterations(
    int*                  iterations          /**< pointer to store the number of iterations of the last solve call */
    )
 {
-   int rval;
    int nit;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
 
-   rval = QSget_itcnt(lpi->prob, 0, 0, 0, 0, &nit);
-   QS_CONDRET(rval);
+   QS_CONDRET( QSget_itcnt(lpi->prob, 0, 0, 0, 0, &nit) );
 
    *iterations = nit - lpi->previt;
    lpi->previt = nit;
@@ -2628,7 +2618,6 @@ SCIP_RETCODE SCIPlpiGetBase(
    int*                  rstat               /**< array to store row basis status, or NULL */
    )
 {
-   int rval;
    int ncols;
    int nrows;
    char* icstat;
@@ -2647,14 +2636,12 @@ SCIP_RETCODE SCIPlpiGetBase(
    SCIP_CALL( ensureRowMem(lpi, nrows) );
 
    /* get senses */
-   rval = QSget_senses(lpi->prob, lpi->isen);
-   QS_CONDRET(rval);
+   QS_CONDRET( QSget_senses(lpi->prob, lpi->isen) );
 
    /* get basis */
    icstat = lpi->ibas;
    irstat = lpi->ibas + ncols;
-   rval = QSget_basis_array(lpi->prob, icstat, irstat);
-   QS_CONDRET(rval);
+   QS_CONDRET( QSget_basis_array(lpi->prob, icstat, irstat) );
 
    /* Now we must transform QSopt codes into SCIP codes.
     * We have the following cases:
@@ -2716,7 +2703,6 @@ SCIP_RETCODE SCIPlpiSetBase(
    const int*            rstat               /**< array with row basis status */
    )
 {
-   int rval;
    int ncols;
    int nrows;
    register int i;
@@ -2735,8 +2721,7 @@ SCIP_RETCODE SCIPlpiSetBase(
    SCIP_CALL( ensureRowMem(lpi, nrows) );
 
    /* get senses */
-   rval = QSget_senses(lpi->prob, lpi->isen);
-   QS_CONDRET(rval);
+   QS_CONDRET( QSget_senses(lpi->prob, lpi->isen) );
 
    icstat = lpi->ibas;
    irstat = lpi->ibas + ncols;
@@ -2788,8 +2773,9 @@ SCIP_RETCODE SCIPlpiSetBase(
    }
 
    /* set the basis */
-   rval = QSload_basis_array(lpi->prob, icstat, irstat);
-   QS_RETURN(rval);
+   QS_CONDRET( QSload_basis_array(lpi->prob, icstat, irstat) );
+
+   return SCIP_OKAY;
 }
 
 /** returns the indices of the basic columns and rows; basic column n gives value n, basic row m gives value -1-m */
@@ -2847,7 +2833,6 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    )
 {  /*lint --e{715} */
    int nrows;
-   int rval;
    int i;
 
    assert(lpi!=NULL);
@@ -2863,12 +2848,12 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    if ( ninds != NULL )
       *ninds = -1;
 
-   rval = QSget_binv_row(lpi->prob, r, coef);
+   QS_CONDRET( QSget_binv_row(lpi->prob, r, coef) );
 
    for (i = 0; i < nrows; i++)
       coef[i] *= -1.0;
 
-   QS_RETURN(rval);
+   return SCIP_OKAY;
 }
 
 /** get dense column of inverse basis matrix B^-1
@@ -2919,7 +2904,6 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
                                               *  (-1: if we do not store sparsity informations) */
    )
 {  /*lint --e{715} */
-   int rval;
    int ncols;
    int nrows;
    int i;
@@ -2938,8 +2922,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
 
    SCIP_CALL( ensureTabMem(lpi, nrows + ncols) );
 
-   rval = QSget_tableau_row(lpi->prob, r, lpi->itab);
-   QS_CONDRET(rval);
+   QS_CONDRET( QSget_tableau_row(lpi->prob, r, lpi->itab) );
 
    /* copy local information to the outside */
    memcpy(coef, lpi->itab, sizeof(double)*ncols);
@@ -3039,7 +3022,6 @@ SCIP_RETCODE SCIPlpiSetState(
    int i;
    int ncols;
    int nrows;
-   int rval;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
@@ -3072,8 +3054,7 @@ SCIP_RETCODE SCIPlpiSetState(
    irstat = lpi->ibas + ncols;
 
    /* get senses */
-   rval = QSget_senses(lpi->prob, lpi->isen);
-   QS_CONDRET(rval);
+   QS_CONDRET( QSget_senses(lpi->prob, lpi->isen) );
 
    /* unpack LPi state data */
    lpistateUnpack(lpistate, lpi->iccnt, lpi->ircnt);
@@ -3085,8 +3066,7 @@ SCIP_RETCODE SCIPlpiSetState(
       SCIP_Real ub;
 
       /* get bounds from qsopt */
-      rval = QSget_bounds_list(lpi->prob, 1, &i, &lb, &ub);
-      QS_CONDRET(rval);
+      QS_CONDRET( QSget_bounds_list(lpi->prob, 1, &i, &lb, &ub) );
       if ( SCIPlpiIsInfinity(lpi, REALABS(lb)) )
       {
          /* if lower bound is +/- infinity -> try upper bound */
@@ -3149,8 +3129,9 @@ SCIP_RETCODE SCIPlpiSetState(
    }
 
    /* set the basis */
-   rval = QSload_basis_array(lpi->prob, icstat, irstat);
-   QS_RETURN(rval);
+   QS_CONDRET( QSload_basis_array(lpi->prob, icstat, irstat) );
+
+   return SCIP_OKAY;
 }
 
 /** clears current LPi state (like basis information) of the solver */
@@ -3291,7 +3272,6 @@ SCIP_RETCODE SCIPlpiGetNorms(
 {  /*lint --e{715} */
    int ncols;
    int nrows;
-   int rval;
 
    assert( lpi != NULL );
    assert( lpi->prob != NULL );
@@ -3311,8 +3291,7 @@ SCIP_RETCODE SCIPlpiGetNorms(
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*lpinorms)->rstat, nrows) );
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*lpinorms)->norms, nrows) );
 
-      rval = QSget_basis_and_row_norms_array(lpi->prob, (*lpinorms)->cstat, (*lpinorms)->rstat, (*lpinorms)->norms);
-      QS_CONDRET(rval);
+      QS_CONDRET( QSget_basis_and_row_norms_array(lpi->prob, (*lpinorms)->cstat, (*lpinorms)->rstat, (*lpinorms)->norms) );
    }
    else
    {
@@ -3335,7 +3314,6 @@ SCIP_RETCODE SCIPlpiSetNorms(
 {  /*lint --e{715} */
    int ncols;
    int nrows;
-   int rval;
 
    assert( lpi != NULL );
    assert( lpi->prob != NULL );
@@ -3351,9 +3329,9 @@ SCIP_RETCODE SCIPlpiSetNorms(
 
    /* load row norms */
    assert( lpinorms->cstat != NULL && lpinorms->rstat != NULL && lpinorms->norms != NULL );
-   rval = QSload_basis_and_row_norms_array(lpi->prob, lpinorms->cstat, lpinorms->rstat, lpinorms->norms);
+   QS_CONDRET( QSload_basis_and_row_norms_array(lpi->prob, lpinorms->cstat, lpinorms->rstat, lpinorms->norms) );
 
-   QS_RETURN(rval);
+   return SCIP_OKAY;
 }
 
 /** frees pricing norms information */
@@ -3396,8 +3374,6 @@ SCIP_RETCODE SCIPlpiGetIntpar(
    int*                  ival                /**< buffer to store the parameter value */
    )
 {
-   int rval = 0;
-
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
    assert(ival != NULL);
@@ -3411,7 +3387,7 @@ SCIP_RETCODE SCIPlpiGetIntpar(
    case SCIP_LPPAR_PRESOLVING:
       return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_SCALING:
-      rval = QSget_param(lpi->prob, QS_PARAM_SIMPLEX_SCALING, ival);
+      QS_CONDRET( QSget_param(lpi->prob, QS_PARAM_SIMPLEX_SCALING, ival) );
       assert((*ival) == 0 || (*ival) == 1);
 
       break;
@@ -3419,20 +3395,20 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       *ival = lpi->pricing;
       break;
    case SCIP_LPPAR_LPINFO:
-      rval = QSget_param(lpi->prob, QS_PARAM_SIMPLEX_DISPLAY, ival);
+      QS_CONDRET( QSget_param(lpi->prob, QS_PARAM_SIMPLEX_DISPLAY, ival) );
       if( *ival )
          *ival = TRUE;
       else
          *ival = FALSE;
       break;
    case SCIP_LPPAR_LPITLIM:
-      rval = QSget_param(lpi->prob, QS_PARAM_SIMPLEX_MAX_ITERATIONS, ival);
+      QS_CONDRET( QSget_param(lpi->prob, QS_PARAM_SIMPLEX_MAX_ITERATIONS, ival) );
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
 
-   QS_RETURN(rval);
+   return SCIP_OKAY;
 }
 
 /** sets integer parameter of LP */
@@ -3442,8 +3418,6 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    int                   ival                /**< parameter value */
    )
 {
-   int rval = 0;
-
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
 
@@ -3453,9 +3427,9 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    {
    case SCIP_LPPAR_SCALING:
       if( ival == 0 )
-         rval = QSset_param(lpi->prob, QS_PARAM_SIMPLEX_SCALING, 0);
+         QS_CONDRET( QSset_param(lpi->prob, QS_PARAM_SIMPLEX_SCALING, 0) );
       else
-         rval = QSset_param(lpi->prob, QS_PARAM_SIMPLEX_SCALING, 1);
+         QS_CONDRET( QSset_param(lpi->prob, QS_PARAM_SIMPLEX_SCALING, 1) );
       break;
    case SCIP_LPPAR_PRICING:
       lpi->pricing = ival;
@@ -3466,16 +3440,16 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       case SCIP_PRICING_FULL:
       case SCIP_PRICING_STEEP:
       case SCIP_PRICING_STEEPQSTART:
-         rval = QSset_param(lpi->prob, QS_PARAM_PRIMAL_PRICING, QS_PRICE_PSTEEP);
-         rval += QSset_param(lpi->prob, QS_PARAM_DUAL_PRICING, QS_PRICE_DSTEEP);
+         QS_CONDRET( QSset_param(lpi->prob, QS_PARAM_PRIMAL_PRICING, QS_PRICE_PSTEEP) );
+         QS_CONDRET( QSset_param(lpi->prob, QS_PARAM_DUAL_PRICING, QS_PRICE_DSTEEP) );
          break;
       case SCIP_PRICING_PARTIAL:
-         rval = QSset_param(lpi->prob,QS_PARAM_PRIMAL_PRICING,QS_PRICE_PMULTPARTIAL);
-         rval += QSset_param(lpi->prob,QS_PARAM_DUAL_PRICING,QS_PRICE_DMULTPARTIAL);
+         QS_CONDRET( QSset_param(lpi->prob,QS_PARAM_PRIMAL_PRICING,QS_PRICE_PMULTPARTIAL) );
+         QS_CONDRET( QSset_param(lpi->prob,QS_PARAM_DUAL_PRICING,QS_PRICE_DMULTPARTIAL) );
          break;
       case SCIP_PRICING_DEVEX:
-         rval = QSset_param(lpi->prob,QS_PARAM_PRIMAL_PRICING,QS_PRICE_PDEVEX);
-         rval += QSset_param(lpi->prob,QS_PARAM_DUAL_PRICING,QS_PRICE_DDEVEX);
+         QS_CONDRET( QSset_param(lpi->prob,QS_PARAM_PRIMAL_PRICING,QS_PRICE_PDEVEX) );
+         QS_CONDRET( QSset_param(lpi->prob,QS_PARAM_DUAL_PRICING,QS_PRICE_DDEVEX) );
          break;
       default:
          return SCIP_LPERROR;
@@ -3483,18 +3457,18 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       break;
    case SCIP_LPPAR_LPINFO:
       if( ival )
-         rval = QSset_param(lpi->prob, QS_PARAM_SIMPLEX_DISPLAY, 1);
+         QS_CONDRET( QSset_param(lpi->prob, QS_PARAM_SIMPLEX_DISPLAY, 1) );
       else
-         rval = QSset_param(lpi->prob, QS_PARAM_SIMPLEX_DISPLAY, 0);
+         QS_CONDRET( QSset_param(lpi->prob, QS_PARAM_SIMPLEX_DISPLAY, 0) );
       break;
    case SCIP_LPPAR_LPITLIM:
-      rval = QSset_param(lpi->prob, QS_PARAM_SIMPLEX_MAX_ITERATIONS, ival);
+      QS_CONDRET( QSset_param(lpi->prob, QS_PARAM_SIMPLEX_MAX_ITERATIONS, ival) );
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
 
-   QS_RETURN(rval);
+   return SCIP_OKAY;
 }
 
 /** gets floating point parameter of LP */
@@ -3504,8 +3478,6 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    SCIP_Real*            dval                /**< buffer to store the parameter value */
    )
 {
-   int rval = 0;
-
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
    assert(dval != NULL);
@@ -3514,14 +3486,22 @@ SCIP_RETCODE SCIPlpiGetRealpar(
 
    switch( type )
    {
-   case SCIP_LPPAR_LOBJLIM:
-      rval = QSget_param_double(lpi->prob, QS_PARAM_OBJLLIM, dval);
+   case SCIP_LPPAR_OBJLIM:
+   {
+      int sense;
+      QS_CONDRET( QSget_objsense(lpi->prob, &sense) );
+      if ( sense == QS_MIN )
+      {
+         QS_CONDRET( QSget_param_double(lpi->prob, QS_PARAM_OBJULIM, dval) );
+      }
+      else
+      {
+         QS_CONDRET( QSget_param_double(lpi->prob, QS_PARAM_OBJLLIM, dval) );
+      }
       break;
-   case SCIP_LPPAR_UOBJLIM:
-      rval = QSget_param_double(lpi->prob, QS_PARAM_OBJULIM, dval);
-      break;
+   }
    case SCIP_LPPAR_LPTILIM:
-      rval = QSget_param_double(lpi->prob, QS_PARAM_SIMPLEX_MAX_TIME, dval);
+      QS_CONDRET( QSget_param_double(lpi->prob, QS_PARAM_SIMPLEX_MAX_TIME, dval) );
       break;
    default:
    case SCIP_LPPAR_MARKOWITZ:
@@ -3531,7 +3511,7 @@ SCIP_RETCODE SCIPlpiGetRealpar(
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
 
-   QS_RETURN(rval);
+   return SCIP_OKAY;
 }
 
 /** sets floating point parameter of LP */
@@ -3541,8 +3521,6 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    SCIP_Real             dval                /**< parameter value */
    )
 {
-   int rval = 0;
-
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
 
@@ -3551,14 +3529,22 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_LPTILIM:
-      rval = QSset_param_double(lpi->prob, QS_PARAM_SIMPLEX_MAX_TIME, dval);
+      QS_CONDRET( QSset_param_double(lpi->prob, QS_PARAM_SIMPLEX_MAX_TIME, dval) );
       break;
-   case SCIP_LPPAR_LOBJLIM:
-      rval = QSset_param_double(lpi->prob, QS_PARAM_OBJLLIM, dval);
+   case SCIP_LPPAR_OBJLIM:
+   {
+      int sense;
+      QS_CONDRET( QSget_objsense(lpi->prob, &sense) );
+      if ( sense == QS_MIN )
+      {
+         QS_CONDRET( QSset_param_double(lpi->prob, QS_PARAM_OBJULIM, dval) );
+      }
+      else
+      {
+         QS_CONDRET( QSset_param_double(lpi->prob, QS_PARAM_OBJLLIM, dval) );
+      }
       break;
-   case SCIP_LPPAR_UOBJLIM:
-      rval = QSset_param_double(lpi->prob, QS_PARAM_OBJULIM, dval);
-      break;
+   }
    case SCIP_LPPAR_FEASTOL:
    case SCIP_LPPAR_DUALFEASTOL:
    case SCIP_LPPAR_BARRIERCONVTOL:
@@ -3567,7 +3553,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
 
-   QS_RETURN(rval);
+   return SCIP_OKAY;
 }
 
 /**@} */

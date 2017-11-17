@@ -110,6 +110,7 @@ struct SCIP_Stat
    SCIP_Longint          nsbtimesiterlimhit; /**< total number of times that the strong branching iteration limit was hit */
    SCIP_Longint          nnodesbeforefirst;  /**< number of nodes before first primal solution */
    SCIP_Longint          ninitconssadded;    /**< total number of initial constraints added during the solve */
+   SCIP_Longint          nactiveconssadded;  /**< total number of active constraints added */
    SCIP_Longint          externmemestim;     /**< estimation of external memory usage, e.g., by LP solver */
    SCIP_Real             avgnnz;             /**< average number of nonzeros per constraint in presolved problem */
    SCIP_Real             firstlpdualbound;   /**< dual bound of root node computed by first LP solve (without cuts) */
@@ -135,6 +136,8 @@ struct SCIP_Stat
    SCIP_Real             lastupperbound;     /**< last upper bound (in transformed space) for integral evaluation */
    SCIP_Real             rootlpbestestimate; /**< best-estimate for final root LP solution that changes with every pseudo-cost update */
    SCIP_Real             referencebound;     /**< objective bound for reference purposes */
+   SCIP_Real             bestefficacy;       /**< best efficacy of global pool cut seen so far */
+   SCIP_Real             minefficacyfac;     /**< factor of best efficacy to use as min efficacy */
    SCIP_Real             detertimecnt;       /**< internal counter for deterministic time */
    SCIP_CLOCK*           solvingtime;        /**< total time used for solving (including presolving) the current problem */
    SCIP_CLOCK*           solvingtimeoverall; /**< total time used for solving (including presolving) during reoptimization */
@@ -184,6 +187,7 @@ struct SCIP_Stat
    SCIP_Longint          ndivinglps;         /**< number of LPs solved during diving and probing */
    SCIP_Longint          ndivesetlps;        /**< total number of diveset LPs */
    SCIP_Longint          nsbdivinglps;       /**< number of LPs solved during strong branching probing mode */
+   SCIP_Longint          nnumtroublelpmsgs;  /**< number of messages about numerical trouble in LP on verblevel HIGH or lower */
    SCIP_Longint          nstrongbranchs;     /**< number of strong branching calls */
    SCIP_Longint          nrootstrongbranchs; /**< number of strong branching calls at the root node */
    SCIP_Longint          nconflictlps;       /**< number of LPs solved during conflict analysis */
@@ -193,6 +197,7 @@ struct SCIP_Stat
    int                   subscipdepth;       /**< depth of current scip instance (increased by each copy call) */
    int                   ndivesetcalls;      /**< total number of diveset diving calls */
    int                   nruns;              /**< number of branch and bound runs on current problem, including current run */
+   int                   ncutpoolfails;      /**< number of fails in a cutpool to separate efficacious cuts */
    int                   nconfrestarts;      /**< number of restarts performed due to conflict analysis */
    int                   nrootboundchgs;     /**< total number of bound changes generated in the root node */
    int                   nrootboundchgsrun;  /**< total number of bound changes generated in the root node of current run */
@@ -207,6 +212,7 @@ struct SCIP_Stat
    int                   marked_nrowidx;     /**< number of used row indices before solving started */
    int                   npricerounds;       /**< number of pricing rounds performed in current node */
    int                   nseparounds;        /**< number of separation rounds performed in current node */
+   int                   nincseparounds;     /**< number of separation rounds performed in current node that increased the maximum number of rows in the LP */
    int                   ndisplines;         /**< number of displayed information lines */
    int                   maxdepth;           /**< maximal depth of all processed nodes in current run */
    int                   maxtotaldepth;      /**< maximal depth of all processed nodes over all runs */

@@ -81,6 +81,10 @@
 #ifndef SOPLEX_SUBVERSION
 #define SOPLEX_SUBVERSION 0
 #endif
+/* define API version for versions <= 3.0.0 */
+#ifndef SOPLEX_APIVERSION
+#define SOPLEX_APIVERSION 0
+#endif
 
 /* check version */
 #if (SOPLEX_VERSION < 200 || (SOPLEX_VERSION == 200 && SOPLEX_SUBVERSION < 2) || (SOPLEX_VERSION > 200 && SOPLEX_VERSION < 201))
@@ -1095,6 +1099,14 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    const SCIP_Real*      val                 /**< values of constraint matrix entries */
    )
 {
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
+
    SCIPdebugMessage("calling SCIPlpiLoadColLP()\n");
 
    assert(lpi != NULL);
@@ -1154,6 +1166,14 @@ SCIP_RETCODE SCIPlpiAddCols(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
+
    SCIPdebugMessage("calling SCIPlpiAddCols()\n");
 
    assert(lpi != NULL);
@@ -1285,6 +1305,14 @@ SCIP_RETCODE SCIPlpiAddRows(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
+
    SCIPdebugMessage("calling SCIPlpiAddRows()\n");
 
    assert(lpi != NULL);
@@ -1859,7 +1887,7 @@ SCIP_RETCODE SCIPlpiGetCols(
    SCIP_Real*            ub,                 /**< buffer to store the upper bound vector, or NULL */
    int*                  nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
    int*                  beg,                /**< buffer to store start index of each column in ind- and val-array, or NULL */
-   int*                  ind,                /**< buffer to store column indices of constraint matrix entries, or NULL */
+   int*                  ind,                /**< buffer to store row indices of constraint matrix entries, or NULL */
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {
@@ -1975,7 +2003,7 @@ SCIP_RETCODE SCIPlpiGetRows(
    SCIP_Real*            rhs,                /**< buffer to store right hand side vector, or NULL */
    int*                  nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
    int*                  beg,                /**< buffer to store start index of each row in ind- and val-array, or NULL */
-   int*                  ind,                /**< buffer to store row indices of constraint matrix entries, or NULL */
+   int*                  ind,                /**< buffer to store column indices of constraint matrix entries, or NULL */
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {
@@ -4077,6 +4105,12 @@ SCIP_RETCODE SCIPlpiGetIntpar(
          assert(scaleparam == SoPlex::SCALER_LEASTSQ);
          *ival = 2;
       }
+#else
+      else
+      {
+         assert(scaleparam == SoPlex::SCALER_GEO8);
+         *ival = 2;
+      }
 #endif
       break;
 #if SOPLEX_VERSION >= 201
@@ -4087,6 +4121,11 @@ SCIP_RETCODE SCIPlpiGetIntpar(
 #if SOPLEX_VERSION >= 230 || (SOPLEX_VERSION == 220 && SOPLEX_SUBVERSION >= 3)
    case SCIP_LPPAR_RANDOMSEED:
       *ival = (int) lpi->spx->randomSeed();
+      break;
+#endif
+#if SOPLEX_APIVERSION >= 1
+   case SCIP_LPPAR_REFACTOR:
+      *ival = (int) lpi->spx->intParam(SoPlex::FACTOR_UPDATE_MAX);
       break;
 #endif
    default:
@@ -4159,9 +4198,11 @@ SCIP_RETCODE SCIPlpiSetIntpar(
          (void) lpi->spx->setIntParam(SoPlex::SCALER, SoPlex::SCALER_OFF);
       else if( ival == 1 )
          (void) lpi->spx->setIntParam(SoPlex::SCALER, SoPlex::SCALER_BIEQUI);
-#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 2)
       else
+#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 2)
          (void) lpi->spx->setIntParam(SoPlex::SCALER, SoPlex::SCALER_LEASTSQ);
+#else
+         (void) lpi->spx->setIntParam(SoPlex::SCALER, SoPlex::SCALER_GEO8);
 #endif
 
       break;
@@ -4182,6 +4223,13 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       (void) lpi->spx->setIntParam(SoPlex::SOLUTION_POLISHING, ival);
       break;
 #endif
+#if SOPLEX_APIVERSION >= 1
+   case SCIP_LPPAR_REFACTOR:
+      assert(ival >= 0);
+      (void) lpi->spx->setIntParam(SoPlex::FACTOR_UPDATE_MAX, ival);
+      break;
+#endif
+
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
@@ -4210,11 +4258,11 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    case SCIP_LPPAR_DUALFEASTOL:
       *dval = lpi->spx->opttol();
       break;
-   case SCIP_LPPAR_LOBJLIM:
-      *dval = lpi->spx->realParam(SoPlex::OBJLIMIT_LOWER);
-      break;
-   case SCIP_LPPAR_UOBJLIM:
-      *dval = lpi->spx->realParam(SoPlex::OBJLIMIT_UPPER);
+   case SCIP_LPPAR_OBJLIM:
+      if ( lpi->spx->intParam(SoPlex::OBJSENSE) == SoPlex::OBJSENSE_MINIMIZE )
+         *dval = lpi->spx->realParam(SoPlex::OBJLIMIT_UPPER);
+      else
+         *dval = lpi->spx->realParam(SoPlex::OBJLIMIT_LOWER);
       break;
    case SCIP_LPPAR_LPTILIM:
       *dval = lpi->spx->realParam(SoPlex::TIMELIMIT);
@@ -4254,11 +4302,11 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    case SCIP_LPPAR_DUALFEASTOL:
       lpi->spx->setOpttol(dval);
       break;
-   case SCIP_LPPAR_LOBJLIM:
-      (void) lpi->spx->setRealParam(SoPlex::OBJLIMIT_LOWER, dval);
-      break;
-   case SCIP_LPPAR_UOBJLIM:
-      (void) lpi->spx->setRealParam(SoPlex::OBJLIMIT_UPPER, dval);
+   case SCIP_LPPAR_OBJLIM:
+      if ( lpi->spx->intParam(SoPlex::OBJSENSE) == SoPlex::OBJSENSE_MINIMIZE )
+         (void) lpi->spx->setRealParam(SoPlex::OBJLIMIT_UPPER, dval);
+      else
+         (void) lpi->spx->setRealParam(SoPlex::OBJLIMIT_LOWER, dval);
       break;
    case SCIP_LPPAR_LPTILIM:
       (void) lpi->spx->setRealParam(SoPlex::TIMELIMIT, dval);

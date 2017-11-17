@@ -1,0 +1,1 @@
+../../../check/configuration_tmpfile_setup_scip.sh

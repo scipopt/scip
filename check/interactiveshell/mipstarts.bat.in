@@ -1,0 +1,5 @@
+read ${CMAKE_CURRENT_SOURCE_DIR}/${path}
+read ${CMAKE_CURRENT_SOURCE_DIR}/mipstarts/${basename}.mst
+optimize
+validatesolve ${optval} ${optval}
+quit

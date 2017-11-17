@@ -49,12 +49,13 @@
 #include "scip/misc.h"
 #include "scip/cons_linear.h"
 #include <time.h>
-#define ADDCUTSTOPOOL FALSE
-#define Q_NULL     -1         /* NULL element of queue/list */
-
-#ifndef RESTRICT
-#define RESTRICT restrict
+#ifdef WITH_UG
+#define ADDCUTSTOPOOL 1
+#else
+#define ADDCUTSTOPOOL 0
 #endif
+
+#define Q_NULL     -1         /* NULL element of queue/list */
 
 /**@name Constraint handler properties
  *
@@ -74,7 +75,7 @@
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
-#define DEFAULT_MAXROUNDS             5 /**< maximal number of separation rounds per node (-1: unlimited) */
+#define DEFAULT_MAXROUNDS            10 /**< maximal number of separation rounds per node (-1: unlimited) */
 #define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_MAXSEPACUTS     INT_MAX /**< maximal number of cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT INT_MAX /**< maximal number of cuts separated per separation round in the root node */
@@ -155,14 +156,7 @@ SCIP_Bool is_active(
 
    for( curr = active[realtail]; curr != 0 && curr != dfsbase + 1; curr = active[curr - 1] )
    {
-
       assert(curr >= 0);
-
-      if( curr < 0 ) /// todo
-      {
-         printf("FAIL in cr%d \n", 0);
-         exit(1);
-      }
    }
 
    return (curr == 0);
@@ -252,7 +246,7 @@ SCIP_RETCODE cut_add(
 
       SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
 
-      SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+      SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
 
 #if ADDCUTSTOPOOL
       /* if at root node, add cut to pool */
@@ -461,7 +455,7 @@ SCIP_RETCODE sep_flow(
 
                SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 
-               SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+               SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
 
 #if ADDCUTSTOPOOL
                /* add cut to pool */
@@ -515,7 +509,7 @@ SCIP_RETCODE sep_flow(
 
                SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 
-               SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+               SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
 
 #if ADDCUTSTOPOOL
                /* add cut to pool */
@@ -562,7 +556,7 @@ SCIP_RETCODE sep_flow(
 
             SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+            SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
 
 #if ADDCUTSTOPOOL
             /* if at root node, add cut to pool */
@@ -615,7 +609,7 @@ SCIP_RETCODE sep_flow(
 
             SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+            SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
 
 #if ADDCUTSTOPOOL
             /* if at root node, add cut to pool */
@@ -2030,6 +2024,7 @@ SCIP_RETCODE SCIPStpDualAscent(
          }
       }
    }
+
 #ifdef BITFIELDSARRAY
    SCIPfreeBufferArray(scip, &bitarr);
 #endif
@@ -2368,25 +2363,10 @@ SCIP_RETCODE SCIPStpDualAscentPcMw(
 
             if( addcuts )
             {
-#if 1
                SCIP_CALL( SCIPcreateConsLinear(scip, &cons, "da", 0, NULL, NULL,
                      1.0, SCIPinfinity(scip), TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
                SCIP_CALL( SCIPaddCons(scip, cons) );
-#else
-               SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "dualascentcut", 1.0, SCIPinfinity(scip), FALSE, FALSE, TRUE) );
-               SCIP_CALL( SCIPflushRowExtensions(scip, row) );
-               SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
-
-#if ADDCUTSTOPOOL
-               /* add cut to pool */
-               if( !infeasible )
-                  SCIP_CALL( SCIPaddPoolCut(scip, row) );
-#endif
-
-               SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
-#endif
-
             }
 
             dualobj += min;

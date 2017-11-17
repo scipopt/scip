@@ -112,14 +112,20 @@ SCIP_RETCODE runShell(
    SCIP_CALL( SCIPsetIntParam(scip, "display/freq", 1) );
    SCIP_CALL( SCIPsetIntParam(scip, "limits/maxsol", 400) );
    SCIP_CALL( SCIPsetIntParam(scip, "lp/rowagelimit", 30) );
+   SCIP_CALL( SCIPsetIntParam(scip, "separating/maxroundsroot", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "separating/maxrounds", -1) );
-   SCIP_CALL( SCIPsetIntParam(scip, "separating/maxstallrounds", -1) );
-#if 0
-   SCIP_CALL( SCIPsetIntParam(scip, "separating/maxroundsroot", 40) );
-   SCIP_CALL( SCIPsetIntParam(scip, "separating/maxcutsroot", 4000) );
-#endif
+   SCIP_CALL( SCIPsetIntParam(scip, "separating/maxstallroundsroot", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "separating/maxcutsroot", 100000) );
+   SCIP_CALL( SCIPsetIntParam(scip, "separating/maxincrounds", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "separating/maxcuts", 1000) );
+   SCIP_CALL( SCIPsetRealParam(scip, "separating/minefficacyroot", 0.01) ); // todo tune
+   SCIP_CALL( SCIPsetRealParam(scip, "separating/minorthoroot", 0.3) ); // todo tune
+   SCIP_CALL( SCIPsetRealParam(scip, "separating/minortho", 0.4) ); // todo tune
+   SCIP_CALL( SCIPsetRealParam(scip, "separating/objparalfac", 0.1) ); // todo tune
+   SCIP_CALL( SCIPsetRealParam(scip, "separating/intsupportfac", 0.0) ); // todo tune
 
    SCIP_CALL( SCIPsetIntParam(scip, "branching/relpscost/maxproprounds", 0) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/alns/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/coefdiving/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/feaspump/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/fracdiving/freq", -1) );
@@ -136,11 +142,13 @@ SCIP_RETCODE runShell(
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/undercover/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/veclendiving/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/zirounding/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/oneopt/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/rounding/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/locks/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "propagating/probing/maxprerounds", 0) );
    SCIP_CALL( SCIPsetIntParam(scip, "propagating/pseudoobj/timingmask", 5) );
    SCIP_CALL( SCIPsetIntParam(scip, "propagating/redcost/freq", -1) );
    SCIP_CALL( SCIPsetRealParam(scip, "branching/relpscost/maxreliable", 1.0) );
-   SCIP_CALL( SCIPsetRealParam(scip, "separating/minefficacyroot", 0.01) );
 
    // todo test properly; normal dfs?
    SCIP_CALL( SCIPsetIntParam(scip, "nodeselection/restartdfs/stdpriority", 400000) );

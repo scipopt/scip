@@ -128,6 +128,14 @@ struct SCIP_HashMap
    uint32_t              nelements;          /**< number of elements in the hashtable */
 };
 
+/** lightweight hash set data structure to map pointers on pointers */
+struct SCIP_HashSet
+{
+   void**                slots;              /**< buffer for hashmap entries */
+   uint32_t              shift;              /**< power such that 2^(64-shift) == nslots */
+   uint32_t              nelements;          /**< number of elements in the hashtable */
+};
+
 /** dynamic array for storing real values */
 struct SCIP_RealArray
 {
@@ -243,7 +251,15 @@ struct SCIP_RandNumGen
    uint32_t              xor_seed;           /**< Xorshift seed */
    uint32_t              mwc_seed;           /**< Multiply-with-carry seed */
    uint32_t              cst_seed;           /**< constant seed */
-   BMS_BLKMEM*           blkmem;             /**< block memory */
+};
+
+/** disjoint set (disjoint set (union find)) data structure for querying and updating connectedness in a graph with integer vertices 0,...,n - 1 */
+struct SCIP_DisjointSet
+{
+   int*                  parents;            /**< array to store the parent node index for every vertex */
+   int*                  sizes;              /**< array to store the size of the subtree rooted at each vertex */
+   int                   size;               /**< the number of vertices in the graph */
+   int                   componentcount;     /**< counter for the number of connected components of the graph */
 };
 
 #ifdef __cplusplus

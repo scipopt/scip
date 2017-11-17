@@ -1411,7 +1411,11 @@ SCIP_RETCODE cliqueGetCommonSuccessorsSOS1(
    /* determine successors of variable var[0] that are not in the clique */
    assert(vars[0] != NULL );
    ind =  varGetNodeSOS1(conshdlrdata, vars[0]);
-   assert( ind >= 0 && ind < SCIPdigraphGetNNodes(conflictgraph) );
+
+   if( ind == -1 )
+      return SCIP_INVALIDDATA;
+
+   assert( ind < SCIPdigraphGetNNodes(conflictgraph) );
    nsucc = SCIPdigraphGetNSuccessors(conflictgraph, ind);
    succ = SCIPdigraphGetSuccessors(conflictgraph, ind);
 
@@ -1812,7 +1816,7 @@ SCIP_RETCODE presolRoundConssSOS1(
 
    /* create digraph whose nodes represent variables and cliques in the conflict graph */
    csize = MAX(1, conshdlrdata->maxextensions) * nconss;
-   SCIP_CALL( SCIPdigraphCreate(&vertexcliquegraph, SCIPblkmem(scip), nsos1vars + csize) );
+   SCIP_CALL( SCIPcreateDigraph(scip, &vertexcliquegraph, nsos1vars + csize) );
 
    /* allocate buffer arrays */
    SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nsos1vars) );
@@ -2430,7 +2434,7 @@ SCIP_RETCODE updateImplicationGraphSOS1(
             {
                if ( indcliq == w )
                {
-                  if ( ! SCIPisInfinity(scip, REALABS(bounds[w])) )
+                  if ( !SCIPisInfinity(scip, REALABS(bounds[w])) && !SCIPisInfinity(scip, REALABS(implbound + bounds[w])) )
                      implbound += bounds[w];
                   else
                      --newninftynonzero;
@@ -2438,7 +2442,7 @@ SCIP_RETCODE updateImplicationGraphSOS1(
                }
                else if ( implcoverw )
                {
-                  if ( SCIPisInfinity(scip, REALABS( bounds[indcliq] )) )
+                  if ( SCIPisInfinity(scip, REALABS(bounds[indcliq])) || SCIPisInfinity(scip, REALABS(implbound - bounds[indcliq])) )
                      implinfty = TRUE;
                   else
                      implbound -= bounds[indcliq];
@@ -2446,7 +2450,7 @@ SCIP_RETCODE updateImplicationGraphSOS1(
                }
                else
                {
-                  if ( SCIPisInfinity(scip, REALABS( bounds[indcliq] ) ) )
+                  if ( SCIPisInfinity(scip, REALABS(bounds[indcliq])) )
                      implinfty = TRUE;
                   break;
                }
@@ -2831,12 +2835,14 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
             ub = temp;
          }
 
-         if ( SCIPisInfinity(scip, REALABS(lb)) )
+         assert(!SCIPisInfinity(scip, REALABS(trafolinvals[v])));
+
+         if ( SCIPisInfinity(scip, REALABS(lb)) || SCIPisInfinity(scip, REALABS(lb * trafolinvals[v])) )
             trafolbs[v] = -SCIPinfinity(scip);
          else
             trafolbs[v] = lb * trafolinvals[v];
 
-         if ( SCIPisInfinity(scip, REALABS(ub)) )
+         if ( SCIPisInfinity(scip, REALABS(ub)) || SCIPisInfinity(scip, REALABS(ub * trafolinvals[v])) )
             trafoubs[v] = SCIPinfinity(scip);
          else
             trafoubs[v] = ub * trafolinvals[v];
@@ -2858,7 +2864,7 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
       }
 
       /* create conflict graph of linear constraint */
-      SCIP_CALL( SCIPdigraphCreate(&conflictgraphlin, SCIPblkmem(scip), ntrafolinvars) );
+      SCIP_CALL( SCIPcreateDigraph(scip, &conflictgraphlin, ntrafolinvars) );
       SCIP_CALL( genConflictgraphLinearCons(conshdlrdata, conflictgraphlin, conflictgraph, trafolinvars, ntrafolinvars, varindincons) );
 
       /* mark all the variables as 'not covered by some clique cover' */
@@ -2998,7 +3004,7 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
             /* determine maximum without index v (note that the array 'cliquecovers' is sorted by the values of trafoub in non-increasing order) */
             if ( v != indcliq )
             {
-               if ( SCIPisInfinity(scip, trafoubs[indcliq]) )
+               if ( SCIPisInfinity(scip, trafoubs[indcliq]) || SCIPisInfinity(scip, REALABS(newboundnores - trafoubs[indcliq])) )
                   inftynores = TRUE;
                else
                   newboundnores -= trafoubs[indcliq];
@@ -3006,7 +3012,7 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
             else if ( cliquecoversizes[i] > 1 )
             {
                assert( 0 <= cliquecovers[i][1] && cliquecovers[i][1] < ntrafolinvars );
-               if ( SCIPisInfinity(scip, trafoubs[cliquecovers[i][1]]) )
+               if ( SCIPisInfinity(scip, trafoubs[cliquecovers[i][1]]) || SCIPisInfinity(scip, REALABS(newboundnores - trafoubs[cliquecovers[i][1]])) )
                   inftynores = TRUE;
                else
                   newboundnores -= trafoubs[cliquecovers[i][1]];/*lint --e{679}*/
@@ -3026,7 +3032,7 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
                   /* if nodev or nodecliq are not a member of an SOS1 constraint or the variable corresponding to nodecliq is not implied to be zero if x_v != 0  */
                   if ( nodev < 0 || nodecliq < 0 || (! isConnectedSOS1(adjacencymatrix, NULL, nodev, nodecliq) && ! isImpliedZero(conflictgraph, implnodes, nodecliq) ) )
                   {
-                     if ( SCIPisInfinity(scip, trafoubs[indcliq]) )
+                     if ( SCIPisInfinity(scip, trafoubs[indcliq]) || SCIPisInfinity(scip, REALABS(newboundnonzero - trafoubs[indcliq])) )
                         ++ninftynonzero;
                      else
                         newboundnonzero -= trafoubs[indcliq];
@@ -3197,7 +3203,7 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
             if ( v != indcliq )
             {
                /* if bound would be infinity */
-               if ( SCIPisInfinity(scip, -trafolbs[indcliq]) )
+               if ( SCIPisInfinity(scip, -trafolbs[indcliq]) || SCIPisInfinity(scip, REALABS(newboundnores - trafolbs[indcliq])) )
                   inftynores = TRUE;
                else
                   newboundnores -= trafolbs[indcliq];
@@ -3205,7 +3211,7 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
             else if ( cliquecoversizes[i] > 1 )
             {
                assert( 0 <= cliquecovers[i][1] && cliquecovers[i][1] < ntrafolinvars );
-               if ( SCIPisInfinity(scip, -trafolbs[cliquecovers[i][1]]) )
+               if ( SCIPisInfinity(scip, -trafolbs[cliquecovers[i][1]]) || SCIPisInfinity(scip, REALABS(newboundnores - trafolbs[cliquecovers[i][1]])) )
                   inftynores = TRUE;
                else
                   newboundnores -= trafolbs[cliquecovers[i][1]]; /*lint --e{679}*/
@@ -3226,7 +3232,7 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
                   if ( nodev < 0 || nodecliq < 0 || (! isConnectedSOS1(adjacencymatrix, NULL, nodev, nodecliq) && ! isImpliedZero(conflictgraph, implnodes, nodecliq) ) )
                   {
                      /* if bound would be infinity */
-                     if ( SCIPisInfinity(scip, -trafolbs[indcliq]) )
+                     if ( SCIPisInfinity(scip, -trafolbs[indcliq]) || SCIPisInfinity(scip, REALABS(newboundnonzero - trafolbs[indcliq])) )
                         ++ninftynonzero;
                      else
                         newboundnonzero -= trafolbs[indcliq];
@@ -3399,7 +3405,7 @@ SCIP_RETCODE presolRoundVarsSOS1(
    }
 
    /* create implication graph */
-   SCIP_CALL( SCIPdigraphCreate(&implgraph, SCIPblkmem(scip), ntotalvars) );
+   SCIP_CALL( SCIPcreateDigraph(scip, &implgraph, ntotalvars) );
 
    /* try to tighten the lower and upper bounds of the variables */
    updateconfl = FALSE;
@@ -5419,8 +5425,10 @@ SCIP_RETCODE enforceConflictgraph(
             SCIP_VAR* var;
 
             var = vars[i];
-            indi =  varGetNodeSOS1(conshdlrdata, var);
-            assert( indi >= 0 );
+            indi = varGetNodeSOS1(conshdlrdata, var);
+
+            if( indi == -1 )
+               return SCIP_INVALIDDATA;
 
             if ( ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) || ! SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) )
             {
@@ -5428,7 +5436,9 @@ SCIP_RETCODE enforceConflictgraph(
                {
                   var = vars[j];
                   indj = varGetNodeSOS1(conshdlrdata, var);
-                  assert( indj >= 0 );
+
+                  if( indj == -1 )
+                     return SCIP_INVALIDDATA;
 
                   if ( ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) || ! SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) )
                   {
@@ -6234,7 +6244,7 @@ SCIP_RETCODE addBoundCutSepa(
       {
          SCIP_Bool infeasible;
 
-         SCIP_CALL( SCIPaddCut(scip, NULL, rowlb, FALSE, &infeasible) );
+         SCIP_CALL( SCIPaddRow(scip, rowlb, FALSE, &infeasible) );
          if ( infeasible )
             *cutoff = TRUE;
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, rowlb, NULL) ) );
@@ -6251,7 +6261,7 @@ SCIP_RETCODE addBoundCutSepa(
       {
          SCIP_Bool infeasible;
 
-         SCIP_CALL( SCIPaddCut(scip, NULL, rowub, FALSE, &infeasible) );
+         SCIP_CALL( SCIPaddRow(scip, rowub, FALSE, &infeasible) );
          if ( infeasible )
             *cutoff = TRUE;
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, rowub, NULL) ) );
@@ -6913,7 +6923,7 @@ SCIP_RETCODE initsepaBoundInequalityFromSOS1Cons(
       /* put corresponding rows into LP */
       if ( rowub != NULL && ! SCIProwIsInLP(rowub) && ( solvedinitlp || SCIPisCutEfficacious(scip, sol, rowub) ) )
       {
-         SCIP_CALL( SCIPaddCut(scip, NULL, rowub, FALSE, cutoff) );
+         SCIP_CALL( SCIPaddRow(scip, rowub, FALSE, cutoff) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, rowub, NULL) ) );
 
          if ( solvedinitlp )
@@ -6925,7 +6935,7 @@ SCIP_RETCODE initsepaBoundInequalityFromSOS1Cons(
 
       if ( ! (*cutoff) && rowlb != NULL && ! SCIProwIsInLP(rowlb) && ( solvedinitlp || SCIPisCutEfficacious(scip, sol, rowlb) ) )
       {
-         SCIP_CALL( SCIPaddCut(scip, NULL, rowlb, FALSE, cutoff) );
+         SCIP_CALL( SCIPaddRow(scip, rowlb, FALSE, cutoff) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, rowlb, NULL) ) );
 
          if ( solvedinitlp )
@@ -7146,7 +7156,7 @@ SCIP_RETCODE sepaImplBoundCutsSOS1(
                if ( ! SCIProwIsInLP(cut) && SCIPisCutEfficacious(scip, NULL, cut) )
                {
                   SCIP_Bool infeasible;
-                  SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
+                  SCIP_CALL( SCIPaddRow(scip, cut, FALSE, &infeasible) );
                   if ( infeasible )
                   {
                      genbreak = TRUE;
@@ -9194,9 +9204,13 @@ static
 SCIP_DECL_CONSPRESOL(consPresolSOS1)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
+   /* cppcheck-suppress unassignedVariable */
    int oldnfixedvars;
+   /* cppcheck-suppress unassignedVariable */
    int oldnchgbds;
+   /* cppcheck-suppress unassignedVariable */
    int oldndelconss;
+   /* cppcheck-suppress unassignedVariable */
    int oldnupgdconss;
    int nremovedvars;
 
@@ -9460,6 +9474,10 @@ SCIP_DECL_CONSCHECK(consCheckSOS1)
             {
                SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
                *result = SCIP_INFEASIBLE;
+
+               /* update constraint violation in solution */
+               if ( sol != NULL )
+                  SCIPupdateSolConsViolation(scip, sol, 1.0, 1.0);
 
                if ( printreason )
                {

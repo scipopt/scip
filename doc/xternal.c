@@ -17,6 +17,7 @@
  * @brief  main document page
  * @author Tobias Achterberg
  * @author Timo Berthold
+ * @author Tristan Gally
  * @author Gerald Gamrath
  * @author Stefan Heinz
  * @author Gregor Hendel
@@ -51,7 +52,8 @@
  * @section GETTINGSTARTED Getting started
  *
  * - \ref WHATPROBLEMS "What types of optimization problems does SCIP solve?"
- * - \ref MAKE    "Installation information / Makefiles"
+ * - \ref CMAKE   "Installation information using CMake"
+ * - \ref MAKE    "Installation information using Makefiles"
  * - \ref LICENSE "License"
  *
  * - \ref SHELL       "Tutorial: the interactive shell"
@@ -59,6 +61,7 @@
  * - \ref START       "How to start a new project"
  * - \ref EXAMPLES    "Examples"
  * - \ref APPLICATIONS "Extensions of SCIP for specific applications"
+ * - \ref LPI         "Available LP solver interfaces"
  *
  * @section FURTHERINFORMATION References
  *
@@ -67,7 +70,6 @@
  *
  * - \ref DOC     "How to search the documentation for interface methods"
  * - \ref FAQ     "Frequently asked questions (FAQ)"
- * - \ref APPLICATIONS "Extensions of SCIP for specific applications"
  *
  *
  * @section PROGRAMMING Programming with SCIP
@@ -100,6 +102,7 @@
  *   - \ref NLPI    "Interfaces to NLP solvers"
  *   - \ref EXPRINT "Interfaces to expression interpreters"
  *   - \ref PARAM   "additional user parameters"
+ *   - \ref TABLE   "Statistics tables"
  *
  * @subsection HOWTOUSESECTION How to use ...
  *
@@ -115,6 +118,7 @@
  * @subsection CHG Changes between different versions of SCIP
  * - \ref CHANGELOG    "Change log"
  * - \ref RELEASENOTES "Release notes"
+ * - \ref CHG9         "Interface changes between version 3.2 and 4.0"
  * - \ref CHG8         "Interface changes between version 3.1 and 3.2"
  * - \ref CHG7         "Interface changes between version 3.0 and 3.1"
  * - \ref CHG6         "Interface changes between version 2.1 and 3.0"
@@ -127,7 +131,7 @@
  * @subsection AUTHORS SCIP Authors
  * - <a class="el" href="http://scip.zib.de/#developers">Developers</a>
  *
- * @version  4.0.0.1
+ * @version  5.0.0
  *
  * \image html scippy.png
  *
@@ -290,7 +294,45 @@
  *  A solver for multi-objective optimization problems.
  *  </td>
  *  </tr>
+ *  <tr>
+ *  <td>
+ *  <a href="http://scip.zib.de/doc/applications/Cycleclustering"><b>Cycle Clustering</b></a>
+ *  </td>
+ *  <td>
+ *  Branch-and-cut implementation of a graph partitioning problem used for Markov state models.
+ *  </td>
+ *  </tr>
  *  </table>
+ *
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/** @page LPI Available LP solver interfaces
+ *
+ * SCIP provides a range of different interfaces to LP solvers:
+ *
+ * LPI name | LP solver
+ * ---------|----------
+ * `spx`    | SoPlex
+ * `cpx`    | IBM ILOG CPLEX
+ * `xprs`   | FICO XPress
+ * `grb`    | Gurobi (interface is in beta stage, version at least 7.0.2 required)
+ * `clp`    | CoinOR CLP (interface currently sometimes produces wrong results)
+ * `glop`   | Google Glop (experimental, LPI is contained in Glop package/Google OR tools)
+ * `msk`    | Mosek (experimental)
+ * `qsopt`  | QSopt (experimental)
+ * `none`   | disables LP solving entirely (not recommended; only for technical reasons)
+ *
+ * There are two different interfaces for SoPlex. The default one (`spx`) uses an updated interface that is provided
+ * by SoPlex itself (since version 2.0), resulting in a slimmer LPI that is similiar to those for CPLEX or XPRESS.
+ * The other one - `spx1` - is the older LPI that directly interfaces the internal simplex solver of SoPlex and
+ * therefore needs to duplicate some features in the LPI that are already available in SoPlex itself. It lacks some
+ * features like persistent scaling which are only available in the modern interface. Upcoming features may not be
+ * supported. Old compilers might have difficulties with the new interface because some C++11 features are required
+ * that may not be supported.
+ *
+ * To use the old interface, set the Makefile option `LPS=spx1` or configure your CMake build with `LEGACY=ON`.
  *
  */
 
@@ -387,6 +429,8 @@
  *    <td>
  *       <ul>
  *          <li>Compile with <code>IPOPT=true</code> for better performance.</li>
+ *          <li>Compile with <code>WORHP=true</code> for better performance.</li>
+ *          <li>Compile with <code>FILTERSQP=true</code> for better performance.</li>
  *          <li>Compile with <code>GAMS=true</code> to read gms-files.</li>
  *          <li>See <a href="FAQ\FILEEXT#minlptypes"> Which kind of MINLPs are supported by \SCIP? </a> in the FAQ.</li>
  *          <li>There is an interface for the modelling language AMPL, see \ref INTERFACES.</li>
@@ -556,6 +600,141 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+/**@page CMAKE Building SCIP with CMake
+ *
+ * <a href=https://cmake.org/>CMake</a> is a build system generator that can create, e.g., Makefiles for UNIX and Mac
+ * or Visual Studio project files for Windows.
+ *
+ * CMake provides an <a href="https://cmake.org/cmake/help/latest/manual/cmake.1.html">extensive documentation</a>
+ * explaining available features and use cases as well as an <a href="https://cmake.org/Wiki/CMake_FAQ">FAQ section</a>.
+ * It's recommended to use the latest stable CMake version available. `cmake --help` is also a good first step to see
+ * available options and usage information.
+ *
+ * ```
+ * cd scip
+ * mkdir build
+ * cd build
+ * cmake .. [-DSOPLEX_DIR=/path/to/soplex]
+ * make
+ *
+ * # optional: run a quick check on some instances
+ *
+ * make check
+ *
+ * # optional: install scip executable, library, and headers
+ *
+ * make install
+ *
+ * ```
+ *
+ * CMake uses an out-of-source build, i.e., compiled binaries and object files are separated from the source tree and
+ * located in another directory. Usually this directory is called `build` or `debug` or whatever you prefer. From within
+ * this directory, run `cmake <path/to/SCIP>` to configure your build, followed by `make` to compile the code according
+ * to the current configuration (this assumes that you chose Linux Makefiles as CMake Generator). By default, SCIP
+ * searches for Soplex as LP solver. If SoPlex is not installed systemwide, the path to a CMake build directory
+ * of SoPlex must be specified (ie one that contains "soplex-config.cmake"). Alternatively, a different LP solver
+ * can be specified with the `LPS` variable, see \ref CMAKE_CONFIG and \ref LPI.
+ *
+ * Afterwards,
+ * successive calls to `make` are going to recompile modified source code,
+ * without requiring another call to `cmake`. The initial configuration step checks your environment for available
+ * third-party libraries and packages and sets up the configuration accordingly, e.g., disabling support for GMP if not
+ * installed.
+ *
+ * The generated executable and libraries are put in directories `bin` and `lib` respectively and will simply be named
+ * `scip` or `libscip.so`. This is different from the naming convention of the previous Makefile setup that
+ * appended the configuration details like OS and third party dependencies directly to the name of the binary or library.
+ * The CMake setup tries to follow the established Linux/UNIX compilation conventions to facilitate the use of the
+ * libraries in other applications. The previously generated sub-libraries like `liblpi.so` or `libobjscip.so` are not
+ * created by default anymore. They can be built using the respective targets `liblpi`, `libobjscip`, etc. The main
+ * library `libscip.so` will contain all SCIP sources and won't have dependencies to the other sub-libs.
+ *
+ * @section CMAKE_CONFIG Modifying a CMake configuration
+ *
+ * There are several options that can be passed to the `cmake <path/to/SCIP>` call to modify how the code is built.
+ * For all of these options and parameters you have to use `-D<Parameter_name>=<value>`. Following a list of available
+ * options, for the full list run
+ *
+ * ```
+ * cmake <path/to/SCIP> -LH
+ * ```
+ *
+ * CMake option         | Available values               | Makefile equivalent    | Remarks                                    |
+ * ---------------------|--------------------------------|------------------------|--------------------------------------------|
+ * CMAKE_BUILD_TYPE     | Release, Debug, ...            | OPT=[opt, dbg]         |                                            |
+ * LPS                  | spx, cpx, grb, xprs, ...       | LPS=...                | See \ref LPI for a complete list           |
+ * GMP                  | on, off                        | GMP=[true, false]      |                                            |
+ * READLINE             | on, off                        | READLINE=[true, false] |                                            |
+ * ZIMPL                | on, off                        | ZIMPL=[true, false]    |                                            |
+ * CMAKE_INSTALL_PREFIX | \<path\>                       | INSTALLDIR=\<path\>    |                                            |
+ * SHARED               | on, off                        | SHARED=[true, false]   |                                            |
+ * SOPLEX_DIR           | <path/to/SoPlex/installation>  | --                     |                                            |
+ * GMP_DIR              | <path/to/GMP/installation>     | --                     |                                            |
+ * ..._DIR              | <custom/path/to/.../package>   | --                     |                                            |
+ * COVERAGE             | on, off                        | --                     | use with gcc, lcov, gcov in **debug** mode |
+ * COVERAGE_CTEST_ARGS  | ctest argument string          | --                     | see `ctest --help` for arguments           |
+ *
+ * Parameters can be set all at once or in subsequent calls to `cmake` - extending or modifying the existing
+ * configuration.
+ *
+ * @section CTEST Testing with CTest
+ *
+ * There is an extensive test suite written for <a href="https://cmake.org/cmake/help/latest/manual/ctest.1.html">CTest</a>,
+ * that may take a while to complete. To perform a quick test to see whether the compilation was really successful you may
+ * run `make check`. To see all available tests, run
+ *
+ * ```ctest -N```
+ *
+ * and to perform a memory check, run
+ *
+ * ```ctest -T MemCheck```
+ *
+ * If <a href="https://criterion.readthedocs.io/en/master/">Criterion</a> is installed (set
+ * custom path with `-DCRITERION_DIR=<path>`) the target `unittests` can be used to compile and run the available unit tests.
+ *
+ * A coverage report for the entire test suite can be generated. This requires a modification of the
+ * compilation process. Two variables govern the report generation, `COVERAGE` and `COVERAGE_CTEST_ARGS`.
+ * It is recommended to use the Debug build type.
+ *
+ * ```
+ * cmake .. -DCOVERAGE=on -DCOVERAGE_CTEST_ARGS="-R MIP -E stein -j4" -DCMAKE_BUILD_TYPE=Debug
+ * ```
+ *
+ * In this example, coverage is enabled in combination with the build type Debug. In addition, only the coverage
+ * for tests with "MIP" in the name are run, excluding those that have "stein" in the name.
+ * The tests are performed in parallel using 4 cores.
+ *
+ * Use the `coverage` target, e.g., `make coverage`, to build the coverage report. The generated report can be found
+ * under "coverage/index.html".
+ *
+ * @section CMAKE_INSTALL Installation
+ *
+ * CMake uses a default directory for installation, e.g., /usr/local on Linux. This can be modified by either changing
+ * the configuration using `-DCMAKE_INSTALL_PREFIX` as explained in \ref CMAKE_CONFIG or by setting the environment
+ * variable `DESTDIR` during or before the install command, e.g., `DESTDIR=<custom/install/dir> make install`.
+ *
+ * @section CMAKE_TARGETS Additional targets
+ *
+ * There are several further targets available, which can be listed using `make help`. For instance, there are some
+ * examples that can be built with `make examples` or by specifying a certain one: `make <example-name>`.
+ *
+ * | CMake target    | Description                                           | Requirements                          |
+ * |-----------------|-------------------------------------------------------|---------------------------------------|
+ * | scip            | build SCIP executable                                 |                                       |
+ * | applications    | build executables for all applications                |                                       |
+ * | examples        | build executables for all examples                    |                                       |
+ * | unittests       | build unit tests                                      | the Criterion package, see \ref CTEST |
+ * | all_executables | build all of the above                                |                                       |
+ * | libscip         | build the SCIP library                                |                                       |
+ * | install         | install SCIP, see \ref CMAKE_INSTALL                  |                                       |
+ * | coverage        | run the test suite and create a coverage report       | build flag `-DCOVERAGE=on`            |
+ * | liblpi          | build the LPI library                                 |                                       |
+ * | libnlpi         | build the NLPI library                                |                                       |
+ * | libobjscip      | build the ObjSCIP library for the C++ wrapper classes |                                       |
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page MAKE Makefiles / Installation information
  *
  *
@@ -638,7 +817,11 @@
  *
  * - <code>READLINE=\<true|false\></code> Turns support via the readline library on (default) or off, respectively.
  *
- * - <code>IPOPT=\<true|false\></code> Enable or disable (default) IPOPT interface (needs IPOPT >= 3.11).
+ * - <code>FILTERSQP=\<true|false\></code> Enable or disable (default) FilterSQP interface.
+ *
+ * - <code>IPOPT=\<true|false\></code> Enable or disable (default) IPOPT interface (needs IPOPT >= 3.12).
+ *
+ * - <code>WORHP=\<true|false\></code> Enable or disable (default) WORHP interface (needs WORHP >= 2.0).
  *
  * - <code>EXPRINT=\<cppad|none\></code> Use CppAD as expressions interpreter (default) or no expressions interpreter.
  *
@@ -656,6 +839,11 @@
  *                          for Linux, Mac OS X and Windows.
  *      - <code>omp</code>: use the OpenMP. This will not work with microsoft compilers, since they do not support
  *                          the required OpenMP version.
+ *
+ * - <code>SYM=\<bliss|none\></code> This determines the graph automorphism code used to compute symmetries of mixed
+ *   integer programs if symmetry handling is enabled. The options are the following:
+ *      - <code>none</code>: do not use a graph automorphism code, i.e., symmetries cannot be handled
+ *      - <code>bliss</code>: use bliss to compute symmetries.
  *
  * You can use other compilers - depending on the system:
  *
@@ -1350,6 +1538,14 @@
  * and has to check this solution for global feasibility.
  * It has to return a result SCIP_FEASIBLE, if the solution satisfies all the constraints of the constraint handler,
  * and a result SCIP_INFEASIBLE if there is at least one constraint that is violated.
+ *
+ * If the solution is not NULL, SCIP should also be informed about the constraint violation with a call to
+ * SCIPupdateSolConsViolation() and additionally SCIPupdateSolLPRowViolation() for every row of the constraint's current
+ * representation in the LP relaxation, if any such rows exist.
+ * As a convenience method, SCIPupdateSolLPConsViolation() can be used if the constraint
+ * is represented completely by a set of LP rows, meaning that the current constraint violation is equal to the maximum
+ * of the contraint violations of the corresponding LP rows.
+ *
  * The callback is used by primal heuristics to check a constructed solution for feasibility.
  * That means, the constraint handler has to deal with arbitrary solutions that do not necessarily satisfy the bounds
  * and constraints of the local subproblem.
@@ -3867,12 +4063,6 @@
  * 0, 7, 14, ... of the branching tree. A frequency of 0 means that the callback is only executed at the root node, i.e.,
  * only the relaxation of the root problem is solved. A frequency of -1 disables the relaxation handler.
  *
- * \par RELAX_INCLUDESLP: whether the whole lp is included in the relaxation.
- * This flag should be set to TRUE if all active LP-rows are included in the relaxation and every feasible solution produced
- * by the relaxator will satisfy all these LP-constraints. Only if this is set to TRUE, the solutions of this relaxator can
- * be enforced using the \ref CONSENFORELAX callback, meaning that they will be used as primal solutions if feasible and can
- * be separated or branched on. If this flag is set to FALSE, only the lowerbound computed by the relaxator will be used in
- * the solving process.
  *
  *
  * @section RELAX_DATA Relaxation Handler Data
@@ -3936,13 +4126,19 @@
  * make sure that the LP of the current node is constructed and its data can be accessed via calls to SCIPgetLPRowsData()
  * and SCIPgetLPColsData(), and SCIPseparateSol() to call the cutting plane separators for a given primal solution.
  *
- * The lowerbound computed by the relaxation should be returned in the lowerbound pointer. The primal solution of the relaxation can
- * be stored inside the data structures of SCIP with <code>SCIPsetRelaxSolVal()</code> and <code>SCIPsetRelaxSolVals()</code>. If the
- * RELAX_INCLUDESLP flag is set to true, this solution will be enforced and, if feasible, added to the solution storage if the
- * lowerbound of this relaxator is the largest among all relaxators and the LP. You may also call SCIPtrySolFree() directly from the
+ * The lowerbound computed by the relaxation should be returned in the lowerbound pointer. If the relaxation improves on the best
+ * relaxation already computed (either <code>SCIPisRelaxSolValid()</code> returns FALSE, meaning that no relaxation solution
+ * is available so far, or the lowerbound is larger than the value returned by <code>SCIPgetRelaxSolObj()</code>), then the primal
+ * solution of the relaxation should be stored inside the data structures of SCIP with <code>SCIPsetRelaxSolVal()</code>,
+ * <code>SCIPsetRelaxSolVals()</code> or <code>SCIPsetRelaxSolValsSol()</code>. If you set the values one by one, you will need to call
+ * <code>SCIPmarkRelaxSolValid()</code> to inform SCIP that the solution is complete and valid. With the "includeslp" argument of
+ * <code>SCIPsetRelaxSolVals()</code>, <code>SCIPsetRelaxSolValsSol()</code> and <code>SCIPmarkRelaxSolValid()</code> you need to tell SCIP
+ * whether the relaxation included all lp rows. In this case, the solution will be enforced and, if feasible, added to the solution storage if the
+ * lowerbound of this relaxator is larger than the LP's. You may also call SCIPtrySolFree() directly from the
  * relaxation handler to make sure that a solution is added to the solution storage if it is feasible, even if the relaxator does not
- * include the LP or another relaxator produced a stronger bound. After the relaxation round is finished, the best relaxation solution
- * can be accessed via <code>SCIPgetRelaxSolVal()</code>.
+ * include the LP or another relaxator produced a stronger bound. Also note that when setting the values of the relaxation solution one by one,
+ * the objective value of the relaxation solution will be updated incrementally. If the whole solution should be updated, using SCIPsetRelaxSolVals()
+ * instead or calling SCIPclearRelaxSolVals() before setting the first value to reset the solution and the objective value to 0 may help the numerics.
  * Furthermore, there is a list of external branching candidates, that can be filled by relaxation handlers and constraint handlers,
  * allowing branching rules to take these candidates as a guide on how to split the problem into subproblems. If the relaxation
  * solution is enforced, the integrality constraint handler will add external branching candidates for the relaxation solution
@@ -3985,7 +4181,7 @@
  * If you are using relaxation handler data, you have to implement this method in order to free the relaxation handler
  * data. This can be done by the following procedure:
  *
- * @refsnippet{unittests/src/unittest-relax/relax_unittest.c,SnippetRelaxFreeUnittest}
+ * @refsnippet{tests/src/relax/relax.c,SnippetRelaxFreeUnittest}
  *
  * If you have allocated memory for fields in your relaxation handler data, remember to free this memory
  * before freeing the relaxation handler data itself.
@@ -4451,7 +4647,7 @@
  * \n
  * A complete list of all displays contained in this release can be found \ref DISPLAYS "here".
  *
- * We now explain users can add their own display columns.
+ * We now explain how users can add their own display columns.
  * We give the explanation for creating your own source file for each additional display column. Of course, you can collect
  * different additional display columns in one source file.
  * Take src/scip/disp_default.c, where all default display columns are collected, as an example.
@@ -4624,7 +4820,7 @@
  * @subsection DISPEXITSOL
  *
  * The DISPEXITSOL callback is executed before the branch-and-bound process is freed. The display column should use this
- * call to clean up its branch-and-bound data specific data.
+ * call to clean up its branch-and-bound specific data.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -4792,7 +4988,7 @@
  * @subsection EVENTEXITSOL
  *
  * The EVENTEXITSOL callback is executed before the branch-and-bound process is freed. The event handler should use this
- * call to clean up its branch-and-bound data specific data.
+ * call to clean up its branch-and-bound specific data.
  *
  * @section EVENTUSAGE Catching and Dropping Events
  *
@@ -5194,6 +5390,185 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+/**@page TABLE How to add statistics tables
+ *
+ * After solving a constraint integer program, SCIP can display statistics tables with information about, e.g., the solving time,
+ * number of nodes, LP iterations or the number of calls and successes of different plugins via "display statistics" in the shell
+ * or via SCIPprintStatistics() in the C-interface. There already exists a wide variety of statistics tables which can be activated
+ * or deactivated on demand, see src/scip/table_default.c. Additionally, the user can implement his/her own statistics tables
+ * in order to display problem or algorithm specific values.
+ * \n
+ * A complete list of all statistics tables contained in this release can be found \ref TABLES "here".
+ *
+ * We now explain how users can add their own statistics tables.
+ * We give the explanation for creating your own source file for each additional statistics table. Of course, you can collect
+ * different additional statistics tables in one source file.
+ * Take src/scip/table_default.c, where all default statistics tables are collected, as an example.
+ * As all other default plugins, the default statistics table plugins and the statistics table template are written in C.
+ * C++ users can easily adapt the code by using the scip::ObjTable wrapper base class and implement the scip_...() virtual methods
+ * instead of the SCIP_DECL_TABLE... callback methods.
+ *
+ *
+ * Additional documentation for the callback methods of a statistics table can be found in the file type_table.h.
+ *
+ * Here is what you have to do to implement a statistics table (assuming your statistics table is named "mystatisticstable"):
+ * -# Copy the template files src/scip/table_xyz.c and src/scip/table_xyz.h into files named "table_mystatisticstable.c"
+ *    and "table_mystatisticstable.h".
+ *    \n
+ *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Use SCIPincludeTableMystatisticstable() in order to include the statistics table into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mystatisticstable".
+ * -# Adjust the \ref TABLE_PROPERTIES "properties of the statistics table".
+ * -# Define the  \ref TABLE_DATA "statistics table data". This is optional.
+ * -# Implement the \ref TABLE_INTERFACE "interface methods".
+ * -# Implement the \ref TABLE_FUNDAMENTALCALLBACKS "fundamental callback methods".
+ * -# Implement the \ref TABLE_ADDITIONALCALLBACKS "additional callback methods". This is optional.
+ *
+ *
+ * @section TABLE_PROPERTIES Properties of a Statistics Table
+ *
+ * At the top of the new file "table_mystatisticstable.c" you can find the statistics table properties.
+ * These are given as compiler defines.
+ * In the C++ wrapper class, you have to provide the statistics table properties by calling the constructor
+ * of the abstract base class scip::ObjTable from within your constructor.
+ * The properties you have to set have the following meaning:
+ *
+ * \par TABLE_NAME: the name of the statistics table.
+ * This name is used in the interactive shell to address the statistics table.
+ * Additionally, if you are searching for a statistics table with SCIPfindTable(), this name is looked up.
+ * Names have to be unique: no two statistic tables may have the same name.
+ *
+ * \par TABLE_DESC: the description of the statistics table.
+ * This string is printed as a description of the statistics table in the interactive shell.
+ *
+ * \par TABLE_POSITION: the position of the statistics table.
+ * In the statistics output, the statistics tables will be ordered by increasing position. Compare with the
+ * default statistics tables in "table_default.c" to find a value which will give you the desired position
+ * between the default statistics tables. If you give your table a negative position value, it will appear
+ * before all SCIP statistcs, with a value larger than 20000 it will appear after all default statistics.
+ *
+ * \par TABLE_EARLIEST_STAGE: output of the statistics table is only printed from this stage onwards
+ * The output routine of your statistics table will only be called if SCIP has reached this stage. For
+ * example, the default table "tree" will only output information starting from SCIP_STAGE_SOLVING, because
+ * there is no meaningful information available before, while the "presolver" table can already be called
+ * in SCIP_STAGE_TRANSFORMED.
+ *
+ * @section TABLE_DATA Statistics Table Data
+ *
+ * Below the header "Data structures" you can find a struct which is called "struct SCIP_TableData".
+ * In this data structure, you can store the data of your statistics table. For example, you should store the adjustable
+ * parameters of the statistics table in this data structure.
+ * If you are using C++, you can add statistics table data as usual as object variables to your class.
+ * \n
+ * Defining statistics table data is optional. You can leave the struct empty.
+ *
+ *
+ * @section TABLE_INTERFACE Interface Methods
+ *
+ * At the bottom of "table_mystatisticstable.c" you can find the interface method SCIPincludeTableMystatisticstable(), which also
+ * appears in "table_mystatisticstable.h".
+ * \n
+ * This method only has to be adjusted slightly.
+ * It is responsible for notifying SCIP of the presence of the statistics table by calling the method
+ * SCIPincludeTable().
+ *
+ * The interface method is called by the user, if (s)he wants to include the statistics table, i.e., if (s)he wants to use the statistics table in an
+ * application.
+ *
+ * If you are using statistics table data, you have to allocate the memory for the data at this point.
+ * You can do this by calling:
+ * \code
+ * SCIP_CALL( SCIPallocBlockMemory(scip, &tabledata) );
+ * \endcode
+ * You also have to initialize the fields in struct SCIP_TableData afterwards.
+ *
+ * Although this is very uncommon, you may also add user parameters for your statistics table, see the method
+ * SCIPincludeConshdlrKnapsack() in the \ref cons_knapsack.h "knapsack constraint handler" for an example.
+ *
+ *
+ * @section TABLE_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Statistics Table
+ *
+ * Statistics table plugins have only one fundamental callback method, namely the \ref TABLEOUTPUT method.
+ * This method has to be implemented for every display column; the other callback methods are optional.
+ * In the C++ wrapper class scip::ObjTable, the scip_output() method (which corresponds to the \ref TABLEOUTPUT callback) is a virtual
+ * abstract member function.
+ * You have to implement it in order to be able to construct an object of your statistics table class.
+ *
+ * Additional documentation for the callback methods can be found in type_table.h.
+ *
+ * @subsection TABLEOUTPUT
+ *
+ * The TABLEOUTPUT callback is called whenever SCIP is asked to print statistics (because the user typed "display statistics"
+ * in the shell or called SCIPprintStatistics()). In this callback, the table should print all of its information to the given file
+ * (which may be NULL if the output should be printed to the console).
+ *
+ * Typical methods called by a statistics table are, for example, SCIPdispLongint(), SCIPdispInt(), SCIPdispTime(), and
+ * SCIPinfoMessage().
+ *
+ *
+ * @section TABLE_ADDITIONALCALLBACKS Additional Callback Methods of a Statistics Table
+ *
+ * The additional callback methods do not need to be implemented in every case.
+ * They can be used, for example, to initialize and free private data.
+ *
+ * @subsection TABLECOPY
+ *
+ * The TABLECOPY callback is executed when a SCIP instance is copied, e.g. to solve a sub-SCIP. By defining this callback
+ * as <code>NULL</code> the user disables the execution of the specified column. In general it is probably not needed to
+ * implement that callback since the output of the copied instance is usually suppressed. In the other case or for
+ * debugging the callback should be implement.
+ *
+ *
+ * @subsection TABLEFREE
+ *
+ * If you are using statistics table data, you have to implement this method in order to free the statistics table data.
+ * This can be done by the following procedure:
+ * \code
+ * static
+ * SCIP_DECL_TABLEFREE(tableFreeMystatisticstable)
+ * {
+ *    SCIP_TABLEDATA* tabledata;
+ *
+ *    tabledata = SCIPtableGetData(table);
+ *    assert(tabledata != NULL);
+ *
+ *    SCIPfreeMemory(scip, &tabledata);
+ *
+ *    SCIPtableSetData(disp, NULL);
+ *
+ *    return SCIP_OKAY;
+ * }
+ * \endcode
+ * If you have allocated memory for fields in your statistics table data, remember to free this memory
+ * before freeing the statistics table data itself.
+ * If you are using the C++ wrapper class, this method is not available.
+ * Instead, just use the destructor of your class to free the member variables of your class.
+ *
+ * @subsection TABLEINIT
+ *
+ * The TABLEINIT callback is executed after the problem is transformed.
+ * The statistics table may, e.g., use this call to initialize its statistics table data.
+ *
+ * @subsection TABLEEXIT
+ *
+ * The TABLEEXIT callback is executed before the transformed problem is freed.
+ * In this method, the statistics table should free all resources that have been allocated for the solving process in
+ * \ref TABLEINIT.
+ *
+ * @subsection TABLEINITSOL
+ *
+ * The TABLEINITSOL callback is executed when the presolving is finished and the branch-and-bound process is about to
+ * begin. The statistics table may use this call to initialize its branch-and-bound specific data.
+ *
+ * @subsection TABLEEXITSOL
+ *
+ * The TABLEEXITSOL callback is executed before the branch-and-bound process is freed. The statistics table should use this
+ * call to clean up its branch-and-bound specific data.
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page CONF How to use conflict analysis
  *
  * Conflict analysis is a way to automatically use the information obtained from infeasible nodes
@@ -5305,7 +5680,7 @@
  *
  * The reoptimization feature of SCIP can be used to solve a sequence of optimization problems \f$(P_{i})_{i \in I}\f$ with
  * \f[
- *    (P_i) \quad \min \{ c_i^T x \;|\; A^ix \geq b^i,\; x_{j} \in \{0,1\}^{n}\;\forall j \in \mathcal{I} \}
+ *    (P_i) \quad \min \{ c_i^T x \;|\; A^ix \geq b^i,\; x_{j} \in \mathbb{Z}\;\forall j \in \mathcal{I} \}
  * \f]
  * such that between two problems \f$P_i\f$ and \f$P_{i+1}\f$ the space of solutions gets restricted and/or the objective
  * fuction changes. To use reoptimization the user has to change the parameter <code>reoptimization/enable</code> to
@@ -5352,14 +5727,13 @@
  *    \endcode
  *    or by calling SCIPreadDiff().
  * -# The objective function can be changed within the code. Therefore, the transformed problem needs to be freed by
- *    calling SCIPfreeTransform(). Afterwards, the objective coefficient of each variable can be changed by calling
- *    SCIPchgVarObj().
+ *    calling SCIPfreeReoptSolve(). Afterwards, the new objective function can be installed by calling
+ *    SCIPchgReoptObjective().
  *
  * After changing the objective function the modified problem can be solved as usal.
  *
- * \note Currently, the reoptimization feature only supports pure binary and mixed binary programs. In case the original
- * problem containts integer and implicit integer variables, reoptimization will be automatically disabled if there are
- * still (implicit) integer variables after presolving the problem.
+ * \note Currently, the compression heuristics used between two successive reoptimization runs only support pure binary
+ * and mixed binary programs.
  *
  * For more information on reoptimization we refer to@par
  * Jakob Witzig@n
@@ -5659,9 +6033,8 @@
  *    (do not forget to clean your code before with <code>make OPT=... LPS=... clean</code>). After that valgrind (or similar) helps
  *    to detect leaked memory.
  *  - If your code cuts off a feasible solution, but you do not know which component is responsible,
- *    you can define <code>SCIP_DEBUG_SOLUTION</code> in the file <code>debug.h</code> to be a filename
- *    containing a solution in SCIP format (see \ref EXAMPLE_2).
- *    This solution is then read and it is checked for every cut, whether the solution violates the cut.
+ *    you can use the debugging mechanism (see \ref EXAMPLE_2). Therefore, a given solution is read and it
+ *    is checked for every reduction, whether the solution will be pruned globally.
  *
  * @section EXAMPLE_1 How to activate debug messages
  * For example, if we include a <code>\#define SCIP_DEBUG</code> at the top of \ref heur_oneopt.h, recompile SCIP
@@ -5676,12 +6049,10 @@
  * The optimal solution can now be written to a file:
  * \include debugexamples/example2_1.txt
  *
- * If we afterwards use
- * <code>\#define SCIP_DEBUG_SOLUTION "check/p0033.sol"</code> in debug.h, recompile and run SCIP,
- * it will output:
+ * If we afterwards recompile SCIP with the additional compiler flag <code>DEBUGSOL=true</code>,
+ * set the parameter <code>misc/debugsol = check/p0033.sol</code>, and run SCIP again it will output:
  * \include debugexamples/example2_2.txt
  * Further debug output would only appear, if the solution was cut off in the solving process.
- * Of course, this is not the case! Hopefully...otherwise, please send a bug report ;-)
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -6887,6 +7258,11 @@
   * - <b>Solutions</b>:
   *   - added argument "completely" to SCIPtrySol(), SCIPtrySolFree(), SCIPcheckSol()
   *
+  * - <b>Hashmap and Hashtable</b>:
+  *   - removed function SCIPcalcHashtableSize() since not required anymore for SCIP_HASHTABLE and SCIP_HASHMAP
+  *   - based on the initial size SCIP_HASHTABLE and SCIP_HASHMAP choose an appropriate size internally to allow insertion of that many elements without resizing
+  *   - SCIP_MULTIHASH behaves like the old SCIP_HASHTABLE and SCIPcalcMultihashSize() should be used as replacement for SCIPcalcHashtableSize()
+  *
   * <br>
   * For further information we refer to the \ref RELEASENOTES "Release notes" and the \ref CHANGELOG "Changelog".
   */
@@ -7013,12 +7389,20 @@
  * \verbinclude INSTALL
  */
 
+/**@page INSTALL_CMAKE Installation information (CMake)
+ * \verbinclude INSTALL_CMAKE
+ */
+
+
 /**@page RELEASENOTES Release notes
  *
- * A release report with an in-depth description of many of the new features is available on <a href="http://www.optimization-online.org">Optimization Online</a>.
+ * A release report with an in-depth description of many of the new features in version 4.0 is available on <a href="http://www.optimization-online.org/DB_HTML/2017/03/5895.html">Optimization Online</a>.
+ *
+ * \verbinclude SCIP-release-notes-4.0.1
+ *
  * \verbinclude SCIP-release-notes-4.0
  *
- * Please consult the <a href="http://nbn-resolving.de/urn:nbn:de:0297-zib-57675">release report</a> that explains many of the new features in detail.
+ * Please consult the <a href="http://nbn-resolving.de/urn:nbn:de:0297-zib-57675">release report</a> for version 3.2 that explains many of the new features in detail.
  *
  * \verbinclude SCIP-release-notes-3.2.1
  *
@@ -7328,6 +7712,13 @@
  *  Below you find a list of available data structures
  */
 
+/** @defgroup DisjointSet Disjoined Set (Union Find)
+ *  @ingroup DataStructures
+ *  @brief weighted disjoint set (union find) data structure with path compression
+ *
+ *  Weighted Disjoined Set is a data structure to quickly update and query connectedness information
+ *  between nodes of a graph. Disjoined Set is also known as Union Find.
+ */
 /**@defgroup MiscellaneousMethods Miscellaneous Methods
  * @ingroup PUBLICCOREAPI
  * @brief commonly used methods from different categories
@@ -7351,6 +7742,13 @@
  * @ingroup MiscellaneousMethods
  * @brief  methods for timing
  */
+
+/**@defgroup PublicBanditMethods Bandit Algorithms
+ * @ingroup MiscellaneousMethods
+ * @brief  methods for bandit algorithms
+ */
+
+
 
 /**@defgroup DebugSolutionMethods Debug Solution
  * @ingroup PUBLICCOREAPI
@@ -7446,6 +7844,11 @@
 /**@defgroup PublicSeparatorMethods Separators
  * @ingroup PluginManagementMethods
  * @brief methods for separator plugins
+ */
+
+/**@defgroup PublicTableMethods Tables
+ * @ingroup PluginManagementMethods
+ * @brief  methods for the inclusion and access of statistics tables
  */
 
 /**@defgroup PublicConcsolverTypeMethods Concurrent Solver Types
@@ -7779,6 +8182,25 @@
  * This module contains methods to include specific separators into \SCIP.
  *
  * @note All default plugins can be included at once (including all default separators) using SCIPincludeDefaultPlugins()
+ *
+ */
+
+/**@defgroup TABLES Tables
+ * @ingroup PUBLICPLUGINAPI
+ * @brief methods and files provided by the default statistics tables of \SCIP
+ *
+ * A detailed description what a table does and how to add a table to SCIP can be found
+ * \ref TABLE "here".
+ *
+ */
+
+/**@defgroup TableIncludes Inclusion methods
+ * @ingroup TABLES
+ * @brief methods to include specific tables into \SCIP
+ *
+ * This module contains methods to include specific statistics tables into \SCIP.
+ *
+ * @note All default plugins can be included at once (including all default statisticstables) using SCIPincludeDefaultPlugins()
  *
  */
 

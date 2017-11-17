@@ -1295,6 +1295,7 @@ SCIP_RETCODE SCIPprobAddCons(
    prob->conss[prob->nconss] = cons;
    prob->nconss++;
    prob->maxnconss = MAX(prob->maxnconss, prob->nconss);
+   stat->nactiveconssadded++;
 
    /* undelete constraint, if it was globally deleted in the past */
    cons->deleted = FALSE;
@@ -1757,6 +1758,9 @@ void SCIPprobUpdateBestRootSol(
    if( SCIPprobGetNObjVars(prob, set) == 0 )
       return;
 
+   if( !SCIPlpIsDualReliable(lp) )
+      return;
+
    SCIPsetDebugMsg(set, "update root reduced costs\n");
 
    /* compute current root LP objective value */
@@ -2006,6 +2010,61 @@ int SCIPprobGetNObjVars(
    }
 }
 
+/** returns the minimal absolute non-zero objective coefficient
+ *
+ *  @note currently, this is only used for statistics and printed after the solving process. if this information is
+ *        needed during the (pre)solving process this should be implemented more efficiently, e.g., updating the minimal
+ *        absolute non-zero coefficient every time an objective coefficient has changed.
+ */
+SCIP_Real SCIPprobGetAbsMinObjCoef(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   SCIP_Real absmin;
+   int v;
+
+   absmin = SCIPsetInfinity(set);
+
+   for( v = 0; v < prob->nvars; v++ )
+   {
+      SCIP_Real objcoef = SCIPvarGetObj(prob->vars[v]);
+
+      if( !SCIPsetIsZero(set, objcoef) && SCIPsetIsLT(set, REALABS(objcoef), absmin) )
+         absmin = REALABS(objcoef);
+   }
+
+   return absmin;
+}
+
+/** returns the maximal absolute non-zero objective coefficient
+ *
+ *  @note currently, this is only used for statistics and printed after the solving process. if this information is
+ *        needed during the (pre)solving process this should be implemented more efficiently, e.g., updating the maximal
+ *        absolute non-zero coefficient every time an objective coefficient has changed.
+ */
+SCIP_Real SCIPprobGetAbsMaxObjCoef(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   SCIP_Real absmax;
+   int v;
+
+   absmax = -SCIPsetInfinity(set);
+
+   for( v = 0; v < prob->nvars; v++ )
+   {
+      SCIP_Real objcoef = SCIPvarGetObj(prob->vars[v]);
+
+      if( !SCIPsetIsZero(set, objcoef) && SCIPsetIsGT(set, REALABS(objcoef), absmax) )
+         absmax = REALABS(objcoef);
+   }
+
+   return absmax;
+}
+
+
 /** returns the external value of the given internal objective value */
 SCIP_Real SCIPprobExternObjval(
    SCIP_PROB*            transprob,          /**< tranformed problem data */
@@ -2113,6 +2172,7 @@ void SCIPprobPrintPseudoSol(
 /** outputs problem statistics */
 void SCIPprobPrintStatistics(
    SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
@@ -2123,9 +2183,11 @@ void SCIPprobPrintStatistics(
    SCIPmessageFPrintInfo(messagehdlr, file, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
       prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars);
    SCIPmessageFPrintInfo(messagehdlr, file, "  Constraints      : %d initial, %d maximal\n", prob->startnconss, prob->maxnconss);
-   if( ! prob->transformed )
-      SCIPmessageFPrintInfo(messagehdlr, file, "  Objective sense  : %s\n", prob->objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize");
+   SCIPmessageFPrintInfo(messagehdlr, file, "  Objective        : %s, %d non-zeros (abs.min = %g, abs.max = %g)\n",
+         !prob->transformed ? (prob->objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize") : "minimize",
+         SCIPprobGetNObjVars(prob, set), SCIPprobGetAbsMinObjCoef(prob, set), SCIPprobGetAbsMaxObjCoef(prob, set));
 }
+
 
 #ifndef NDEBUG
 

@@ -45,7 +45,7 @@
 #define HEUR_DESC             "Reduction based heuristic for Steiner problems"
 #define HEUR_DISPCHAR         'P'
 #define HEUR_PRIORITY         2
-#define HEUR_FREQ             1
+#define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           (SCIP_HEURTIMING_DURINGLPLOOP | SCIP_HEURTIMING_AFTERLPLOOP | SCIP_HEURTIMING_AFTERNODE)

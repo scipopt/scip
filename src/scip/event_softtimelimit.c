@@ -183,7 +183,7 @@ SCIP_RETCODE SCIPincludeEventHdlrSofttimelimit(
    SCIP_CALL( SCIPsetEventhdlrExit(scip, eventhdlr, eventExitSofttimelimit) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "limits/softtime",
-         "soft time limit which should be applied after first solution was found",
+         "soft time limit which should be applied after first solution was found (-1.0: disabled)",
          &eventhdlrdata->softtimelimit, FALSE, -1.0, -1.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;

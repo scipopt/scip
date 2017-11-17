@@ -173,7 +173,7 @@ BEGIN {
 }
 /^Problem is integer infeasible/ {
    db = infty;
-   pb = -infty;
+   pb = infty;
    feasible = 0;
 }
 /^Optimal solution found/ {
@@ -203,6 +203,7 @@ BEGIN {
 }
 /^ \*\*\* Search completed \*\*\*     Time:/ {
    bbnodes   = $8;
+   tottime = $6;
    aborted   = 0;
 }
 /^simplexiter/{

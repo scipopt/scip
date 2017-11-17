@@ -671,7 +671,7 @@ SCIP_RETCODE reduceSap(
    SCIP_RANDNUMGEN* randnumgen;
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&randnumgen, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, 1)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1) );
 
    nnodes = g->knots;
    nedges = g->edges;
@@ -759,7 +759,7 @@ SCIP_RETCODE reduceSap(
    SCIPfreeBufferArray(scip, &gnodearr);
 
    /* free random number generator */
-   SCIPrandomFree(&randnumgen);
+   SCIPfreeRandom(scip, &randnumgen);
 
    return SCIP_OKAY;
 }
@@ -793,12 +793,13 @@ SCIP_RETCODE reduceNw(
    int     nterms;
    int     danelims;
    int     redbound;
+
    STP_Bool*   nodearrchar;
    STP_Bool    da = TRUE;
    SCIP_RANDNUMGEN* randnumgen;
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&randnumgen, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, 1)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1) );
 
    nnodes = g->knots;
    nedges = g->edges;
@@ -855,7 +856,7 @@ SCIP_RETCODE reduceNw(
    SCIPfreeBufferArray(scip, &gnodearr);
 
    /* free random number generator */
-   SCIPrandomFree(&randnumgen);
+   SCIPfreeRandom(scip, &randnumgen);
 
    return SCIP_OKAY;
 }
@@ -915,7 +916,7 @@ SCIP_RETCODE redLoopMw(
    assert(advanced || !tryrmw);
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&randnumgen, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, 1)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1) );
 
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
 
@@ -1102,7 +1103,7 @@ SCIP_RETCODE redLoopMw(
    if( tryrmw && userec )
       SCIP_CALL( graph_pc_mw2rmw(scip, g) );
 
-   SCIPrandomFree(&randnumgen);
+   SCIPfreeRandom(scip, &randnumgen);
 
    return SCIP_OKAY;
 }
@@ -1156,7 +1157,7 @@ SCIP_RETCODE redLoopPc(
    SCIP_RANDNUMGEN* randnumgen;
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&randnumgen, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, 1)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1) );
 
    if( rpc )
    {
@@ -1342,7 +1343,7 @@ SCIP_RETCODE redLoopPc(
    graph_pc_2trans(g);
 
    /* free random number generator */
-   SCIPrandomFree(&randnumgen);
+   SCIPfreeRandom(scip, &randnumgen);
 
    *fixed += fix;
 
@@ -1395,7 +1396,7 @@ SCIP_RETCODE redLoopStp(
    assert(graph_valid(g));
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&randnumgen, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, 1)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1) );
 
    ub = upperbound;
    fix = 0.0;
@@ -1531,7 +1532,7 @@ SCIP_RETCODE redLoopStp(
    }
 
    /* free random number generator */
-   SCIPrandomFree(&randnumgen);
+   SCIPfreeRandom(scip, &randnumgen);
 
    *fixed += fix;
 

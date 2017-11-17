@@ -49,8 +49,6 @@
 #include "scip/misc.h"
 #include "scip/struct_misc.h"
 
-#include <unistd.h>
-
 #define CENTER_OK    0           /**< do nothing */
 #define CENTER_DEG   1           /**< find maximum degree */
 #define CENTER_SUM   2           /**< find the minimum distance sum */
@@ -1967,6 +1965,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_CALL( SCIPsetProbData(scip, probdata) );
 
    /* disable sub-SCIP heuristics */
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/gins/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/rens/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/rins/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/dins/freq", -1) );
@@ -2099,22 +2098,12 @@ SCIP_RETCODE SCIPprobdataCreate(
    probdata->graph = graph;
    probdata->stp_type = graph->stp_type;
 
-#if 1
-   if( (graph->edges > CUT_MAXNEDGES) && (graph->terms > CUT_MAXNTERMINALS)  )
+   if( (graph->edges > CUT_MAXNEDGES) && (graph->terms > CUT_MAXNTERMINALS) )
    {
+      SCIP_CALL(SCIPsetIntParam(scip, "separating/aggregation/maxroundsroot", 3));
       SCIP_CALL(SCIPsetIntParam(scip, "separating/strongcg/maxroundsroot", 3));
-      SCIP_CALL(SCIPsetIntParam(scip, "separating/gomory/maxroundsroot", 1));
-      SCIP_CALL(SCIPsetIntParam(scip, "separating/flowcover/maxroundsroot", 3));
-      SCIP_CALL(SCIPsetIntParam(scip, "separating/cmir/maxroundsroot", 1));
+      SCIP_CALL(SCIPsetIntParam(scip, "separating/gomory/maxroundsroot", 3));
    }
-#else
-   SCIP_CALL(SCIPsetIntParam(scip, "separating/gomory/freq", -1));
-   SCIP_CALL(SCIPsetIntParam(scip, "separating/flowcover/freq", -1));
-   SCIP_CALL(SCIPsetIntParam(scip, "separating/cmir/freq", -1));
-   SCIP_CALL(SCIPsetIntParam(scip, "separating/strongcg/freq", -1));
-#endif
-
-   SCIP_CALL(SCIPsetIntParam(scip, "heuristics/oneopt/freq", -1));
 
    if( mw )
    {

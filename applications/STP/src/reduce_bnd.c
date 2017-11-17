@@ -917,7 +917,6 @@ SCIP_RETCODE reduce_da(
          {
             SCIPdebugMessage("reroot solution \n");
             SCIP_CALL( graph_sol_reroot(scip, graph, result, root) );
-
 #ifndef NDEBUG
             {
             const int realroot = graph->source;
@@ -2087,7 +2086,6 @@ SCIP_RETCODE reduce_daPcMw(
    /* pertubation runs for MWCSP */
    if( varyroot && graph->stp_type == STP_MWCSP  )
    {
-      int todo;
       // && graph->terms > 500 todo
       for( int run = 0; run < DEFAULT_NMAXROOTS ; run++ )
       {
