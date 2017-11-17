@@ -454,16 +454,11 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffEntropy)
    return SCIP_OKAY;
 }
 
-/* TODO: what happens if this function is called with infinity? */
 /** expression interval evaluation callback */
 static
 SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalEntropy)
 {  /*lint --e{715}*/
    SCIP_INTERVAL childinterval;
-   SCIP_Real childinf;
-   SCIP_Real childsup;
-   SCIP_Real infvalue;
-   SCIP_Real supvalue;
 
    assert(expr != NULL);
    assert(SCIPgetConsExprExprData(expr) == NULL);
@@ -472,22 +467,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalEntropy)
    childinterval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]);
    assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), childinterval));
 
-   childinf = childinterval.inf;
-   childsup = childinterval.sup;
-   infvalue = (childinf == 0.0 ? 0.0 : -childinf * log(childinf));
-   supvalue = (childsup == 0.0 ? 0.0 : -childsup * log(childsup));
-
-   /* non-monotone case */
-   if( SCIPisLE(scip, childinf, exp(-1.0)) )
-   {
-      SCIPintervalSetBounds(interval, MIN(infvalue, supvalue),
-         SCIPisLE(scip, childsup, exp(-1.0)) ? supvalue : exp(-1.0));
-   }
-   /* monotone case */
-   else
-   {
-      SCIPintervalSetBounds(interval, supvalue, infvalue);
-   }
+   SCIPintervalSEntropy(SCIPinfinity(scip), interval, childinterval);
 
    return SCIP_OKAY;
 }

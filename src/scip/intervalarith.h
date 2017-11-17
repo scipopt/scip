@@ -590,6 +590,14 @@ void SCIPintervalSign(
    SCIP_INTERVAL         operand             /**< operand of operation */
    );
 
+/** stores entropy of operand in resultant */
+extern
+void SCIPintervalSEntropy(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand             /**< operand of operation */
+);
+
 /** computes exact upper bound on \f$ a x^2 + b x \f$ for x in [xlb, xub], b an interval, and a scalar
  * 
  * Uses Algorithm 2.2 from Domes and Neumaier: Constraint propagation on quadratic constraints (2008) */

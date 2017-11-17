@@ -2857,6 +2857,47 @@ void SCIPintervalSign(
    }
 }
 
+/** stores entropy of operand in resultant */
+extern
+void SCIPintervalEntropy(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand             /**< operand of operation */
+)
+{
+   assert(resultant != NULL);
+   assert(!SCIPintervalIsEmpty(infinity, operand));
+
+   SCIP_Real infvalue;
+   SCIP_Real supvalue;
+
+   if( operand.sup < 0.0 )
+   {
+      SCIPintervalSetEmpty(resultant);
+      return;
+   }
+
+   if( operand.sup >= infinity )
+      supvalue = -infinity;
+   else
+      supvalue = (operand.sup == 0.0 ? 0.0 : -operand.sup * log(operand.sup));
+
+   /* if inf < 0, we treat it as 0 */
+   infvalue = (operand.inf <= 0.0 ? 0.0 : -operand.inf * log(operand.inf));
+
+   /* non-monotone case */
+   if( operand.inf <= exp(-1.0) )
+   {
+      SCIPintervalSetBounds(resultant, MIN(infvalue, supvalue),
+         operand.sup <= exp(-1.0) ? supvalue : exp(-1.0));
+   }
+   /* monotone case */
+   else
+   {
+      SCIPintervalSetBounds(resultant, supvalue, infvalue);
+   }
+}
+
 /** computes exact upper bound on \f$ a x^2 + b x \f$ for x in [xlb, xub], b an interval, and a scalar
  * 
  * Uses Algorithm 2.2 from Domes and Neumaier: Constraint propagation on quadratic constraints (2008) */
