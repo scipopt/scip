@@ -61,7 +61,6 @@
 #include <string.h>
 
 #include "probdata_snip.h"
-#include "vardata_snip.h"
 
 #include "scip/cons_linear.h"
 #include "scip/benders_default.h"
