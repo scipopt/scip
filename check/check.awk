@@ -77,6 +77,8 @@ function setStatusToFail(statusstr)
 # 'Better' means larger for minimization problems, else 'smaller'.
 function isDualBoundBetter()
 {
+   if( !(prob in sol) )
+      return 0;
    # objective sense of 1 means minimization
    if( (objsense == 1 && db-sol[prob] > reltol) || ( objsense == -1 && sol[prob]-db > reltol) )
       return 1;
@@ -88,7 +90,7 @@ function isDualBoundBetter()
 # 'Better' means smaller for minimization problems, else 'larger'.
 function isPrimalBoundBetter()
 {
-   if( prob not in sol )
+   if( !(prob in sol) )
       return 0;
    # objective sense of 1 means minimization
    if( (objsense == 1 && sol[prob] - pb > reltol) || (objsense == -1 && pb - sol[prob] > reltol) )

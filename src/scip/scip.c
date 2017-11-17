@@ -7569,6 +7569,31 @@ SCIP_RETCODE SCIPsetSepaPriority(
    return SCIP_OKAY;
 }
 
+#undef SCIPgetSepaMinEfficacy
+
+/** gets value of minimal efficacy for a cut to enter the LP
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @return value of "separating/minefficacyroot" if at root node, otherwise value of "separating/minefficacy"
+ */
+SCIP_Real SCIPgetSepaMinEfficacy(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->tree != NULL);
+   assert(scip->set != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSepaMinEfficacy", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( SCIPtreeGetCurrentDepth(scip->tree) != 0 )
+      return scip->set->sepa_minefficacyroot;
+   return scip->set->sepa_minefficacy;
+}
+
+
 /** creates a propagator and includes it in SCIP.
  *
  *  @note method has all propagator callbacks as arguments and is thus changed every time a new

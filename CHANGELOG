@@ -43,7 +43,8 @@ parameters:
   the total number of created constraints when disaggregating a quadratic constraint
 - added parameter constraints/quadratic/disaggrmergemethod
 - removed parameter "separating/feastolfac"
-
+- removed parameters "constraints/{abspower,bivariate,quadratic,nonlinear}/mincutefficacysepa",
+  "constraints/{abspower,bivariate,quadratic,nonlinear}/mincutefficacyenfofac", and constraints/soc/minefficacy
 
 interface:
 - new interface methods to create and use bandit algorithms implemented as SCIP core plugins --
@@ -81,6 +82,7 @@ interface:
 - added SCIPcomputeBilinEnvelope{1,2} to compute a linearization of a bilinear term when considering at most two linear inequalities
 - new method SCIPaddRow() to replace deprecated SCIPaddCut()
 - replaced method SCIPgetRelaxFeastolFactor() by SCIPrelaxfeastol() and added SCIPchgRelaxfeastol()
+- added method SCIPgetSepaMinEfficacy() to access separating/minefficacy(root)
 - new object SCIP_LINCONSSTATS, see type_cons.h, and its methods SCIPlinConsStats{Create,Free,GetTypeCount,GetSum} and SCIPprintLinConsStats()
   to work with linear constraint classification through the C API
 
@@ -107,6 +109,7 @@ fixed bugs:
 - fixed upgrade to a varbound constraint if abspower constraint contains a multi-aggregated variable
 - fixed numerical issues in boundshift presolver when aggregating integer variables
 - fixed minor issue in expression graph simplification
+- fixed several bugs related to hashing of constraints/rows in cutpool.c and cons_linear.c
 - fixed aggregation of variables in boundshift presolver that contain large variable bounds
 
 added tests:

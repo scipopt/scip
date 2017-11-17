@@ -840,6 +840,11 @@
  *      - <code>omp</code>: use the OpenMP. This will not work with microsoft compilers, since they do not support
  *                          the required OpenMP version.
  *
+ * - <code>SYM=\<bliss|none\></code> This determines the graph automorphism code used to compute symmetries of mixed
+ *   integer programs if symmetry handling is enabled. The options are the following:
+ *      - <code>none</code>: do not use a graph automorphism code, i.e., symmetries cannot be handled
+ *      - <code>bliss</code>: use bliss to compute symmetries.
+ *
  * You can use other compilers - depending on the system:
  *
  * - <code>COMP=<clang|gnu|intel></code> Use Clang, Gnu (default) or Intel compiler.

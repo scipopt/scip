@@ -132,8 +132,6 @@ struct SCIP_ConshdlrData
 {
    SCIP_EXPRINT*         exprinterpreter;    /**< expression interpreter to compute gradients */
 
-   SCIP_Real             mincutefficacysepa; /**< minimal efficacy of a cut in order to add it to relaxation during separation */
-   SCIP_Real             mincutefficacyenfofac;/**< minimal target efficacy of a cut in order to add it to relaxation during enforcement as factor of feasibility tolerance (may be ignored) */
    SCIP_Real             cutmaxrange;        /**< maximal range (maximal coef / minimal coef) of a cut in order to be added to LP */
    SCIP_Bool             linfeasshift;       /**< whether to make solutions in check feasible if possible */
    SCIP_Bool             checkconvexexpensive;/**< whether to apply expensive curvature checking methods */
@@ -5521,14 +5519,7 @@ SCIP_RETCODE separatePoint(
          feasibility = SCIPgetRowSolFeasibility(scip, row, sol);
       efficacy = -feasibility;
 
-      if( (SCIPisGT(scip, efficacy, minefficacy) ||
-         (inenforcement &&
-            ( (violside == SCIP_SIDETYPE_RIGHT && (consdata->curvature & SCIP_EXPRCURV_CONVEX )) ||
-               (violside == SCIP_SIDETYPE_LEFT  && (consdata->curvature & SCIP_EXPRCURV_CONCAVE)) ) &&
-               SCIPisGT(scip, efficacy, SCIPfeastol(scip))
-         )
-      ) && SCIPisCutApplicable(scip, row)
-      )
+      if( SCIPisGT(scip, efficacy, minefficacy) && SCIPisCutApplicable(scip, row) )
       {
          SCIP_Bool infeasible;
 
@@ -6894,8 +6885,6 @@ SCIP_RETCODE enforceConstraint(
    int                dummy;
    int                nnotify;
    SCIP_Real          sepaefficacy;
-   SCIP_Real          minefficacy;
-   SCIP_Real          leastpossibleefficacy;
    SCIP_Bool          solviolbounds;
 
    assert(scip != NULL);
@@ -6981,14 +6970,10 @@ SCIP_RETCODE enforceConstraint(
       return SCIP_OKAY;
    }
 
-   /* we would like a cut that is efficient enough that it is not redundant in the LP (>feastol)
-    * however, if the maximal violation is very small, also the best cut efficacy cannot be large
-    * thus, in the latter case, we are also happy if the efficacy is at least, say, 75% of the maximal violation
-    * but in any case we need an efficacy that is at least feastol
+   /* we would like a cut that is efficient enough that it is not redundant in the LP (>lpfeastol)
+    * however, we also don't want very weak cuts, so try to reach at least feastol (=lpfeastol by default, though)
     */
-   minefficacy = MIN(0.75*maxviol, conshdlrdata->mincutefficacyenfofac * SCIPfeastol(scip));  /*lint !e666*/
-   minefficacy = MAX(minefficacy, SCIPfeastol(scip));  /*lint !e666*/
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, TRUE /* because computeviolation projects point onto box */, minefficacy, TRUE, &separateresult, &sepaefficacy) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, TRUE /* because computeviolation projects point onto box */, SCIPfeastol(scip), TRUE, &separateresult, &sepaefficacy) );
    if( separateresult == SCIP_CUTOFF )
    {
       SCIPdebugMsg(scip, "separation found cutoff\n");
@@ -6997,7 +6982,7 @@ SCIP_RETCODE enforceConstraint(
    }
    if( separateresult == SCIP_SEPARATED )
    {
-      SCIPdebugMsg(scip, "separation succeeded (bestefficacy = %g, minefficacy = %g)\n", sepaefficacy, minefficacy);
+      SCIPdebugMsg(scip, "separation succeeded (bestefficacy = %g, minefficacy = %g)\n", sepaefficacy, SCIPfeastol(scip));
       *result = SCIP_SEPARATED;
       return SCIP_OKAY;
    }
@@ -7005,18 +6990,15 @@ SCIP_RETCODE enforceConstraint(
    /* we are not feasible, the whole node is not infeasible, and we cannot find a good cut
     * -> collect variables for branching
     */
-
-   SCIPdebugMsg(scip, "separation failed (bestefficacy = %g < %g = minefficacy ); max viol: %g\n", sepaefficacy, minefficacy, maxviol);
+   SCIPdebugMsg(scip, "separation failed (bestefficacy = %g < %g = minefficacy ); max viol: %g\n", sepaefficacy, SCIPfeastol(scip), maxviol);
 
    /* find branching candidates */
    SCIP_CALL( registerBranchingVariables(scip, conshdlr, conss, nconss, &nnotify) );
 
-   /* if sepastore can decrease feasibility tolerance, we can add cuts with efficacy in [eps, feastol] */
-   leastpossibleefficacy = SCIPfeastol(scip);
-   if( nnotify == 0 && !solinfeasible && minefficacy > leastpossibleefficacy )
+   if( nnotify == 0 && !solinfeasible && SCIPfeastol(scip) > SCIPlpfeastol(scip) )
    {
       /* fallback 1: we also have no branching candidates, so try to find a weak cut */
-      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, FALSE, leastpossibleefficacy, TRUE, &separateresult, &sepaefficacy) );
+      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, FALSE, SCIPlpfeastol(scip), TRUE, &separateresult, &sepaefficacy) );
       if( separateresult == SCIP_SEPARATED || separateresult == SCIP_CUTOFF )
       {
          *result = separateresult;
@@ -7761,7 +7743,7 @@ SCIP_DECL_CONSSEPALP(consSepalpNonlinear)
             }
          }
 
-         SCIP_CALL( addLinearizationCuts(scip, conshdlr, conss, nconss, nlpsol, &lpsolseparated, conshdlrdata->mincutefficacysepa) );
+         SCIP_CALL( addLinearizationCuts(scip, conshdlr, conss, nconss, nlpsol, &lpsolseparated, SCIPgetSepaMinEfficacy(scip)) );
 
          SCIP_CALL( SCIPfreeSol(scip, &nlpsol) );
 
@@ -7780,7 +7762,7 @@ SCIP_DECL_CONSSEPALP(consSepalpNonlinear)
     * or separating with NLP solution as reference point failed, then try (again) with LP solution as reference point
     */
 
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, TRUE, conshdlrdata->mincutefficacysepa, FALSE, result, NULL) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, TRUE, SCIPgetSepaMinEfficacy(scip), FALSE, result, NULL) );
 
    return SCIP_OKAY;
 }
@@ -7789,7 +7771,6 @@ SCIP_DECL_CONSSEPALP(consSepalpNonlinear)
 static
 SCIP_DECL_CONSSEPASOL(consSepasolNonlinear)
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS*         maxviolcon;
    SCIP_Bool          solviolbounds;
 
@@ -7798,9 +7779,6 @@ SCIP_DECL_CONSSEPASOL(consSepasolNonlinear)
    assert(conss != NULL || nconss == 0);
    assert(sol != NULL);
    assert(result != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    *result = SCIP_DIDNOTFIND;
 
@@ -7817,7 +7795,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolNonlinear)
    /* computeViolations already evaluated all constraints, so can pass newsol = FALSE here
     * in contrast to Sepalp, a sol != NULL is not projected onto the box in computeViolation
     */
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, FALSE, conshdlrdata->mincutefficacysepa, FALSE, result, NULL) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, FALSE, SCIPgetSepaMinEfficacy(scip), FALSE, result, NULL) );
 
    return SCIP_OKAY;
 }
@@ -9103,14 +9081,6 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxNonlinear) );
 
    /* add nonlinear constraint handler parameters */
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/minefficacysepa",
-         "minimal efficacy for a cut to be added to the LP during separation; overwrites separating/efficacy",
-         &conshdlrdata->mincutefficacysepa, TRUE, 0.0001, 0.0, SCIPinfinity(scip), NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/minefficacyenfofac",
-         "minimal target efficacy of a cut in order to add it to relaxation during enforcement as a factor of the feasibility tolerance (may be ignored)",
-         &conshdlrdata->mincutefficacyenfofac, TRUE, 2.0, 1.0, SCIPinfinity(scip), NULL, NULL) );
-
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/cutmaxrange",
          "maximal coef range of a cut (maximal coefficient divided by minimal coefficient) in order to be added to LP relaxation",
          &conshdlrdata->cutmaxrange, FALSE, 1e+7, 0.0, SCIPinfinity(scip), NULL, NULL) );

@@ -3724,6 +3724,22 @@ SCIP_RETCODE SCIPsetSepaPriority(
    int                   priority            /**< new priority of the separator */
    );
 
+/** gets value of minimal efficacy for a cut to enter the LP
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @return value of "separating/minefficacyroot" if at root node, otherwise value of "separating/minefficacy"
+ */
+EXTERN
+SCIP_Real SCIPgetSepaMinEfficacy(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+#ifdef NDEBUG
+#define SCIPgetSepaMinEfficacy(scip)         (SCIPtreeGetCurrentDepth((scip)->tree) == 0 ? (scip)->set->sepa_minefficacyroot : (scip)->set->sepa_minefficacy)
+#endif
+
 /* @} */
 
 /**@addtogroup PublicPropagatorMethods
@@ -22462,7 +22478,6 @@ SCIP_Bool SCIPisUpdateUnreliable(
 #define SCIPgetStage(scip)                        (((scip)->set)->stage)
 #define SCIPhasPerformedPresolve(scip)            ((scip)->stat->performpresol)
 #define SCIPisStopped(scip)                       SCIPsolveIsStopped((scip)->set, (scip)->stat, 0)
-
 #endif
 
 /** outputs a real number, or "+infinity", or "-infinity" to a file */

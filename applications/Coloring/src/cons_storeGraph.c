@@ -428,7 +428,7 @@ SCIP_DECL_CONSACTIVE(consActiveStoreGraph)
    /* put constraint on the stack */
    if ( conshdlrData->nstack >= conshdlrData->maxstacksize )
    {
-      SCIP_Real newsize = SCIPcalcMemGrowSize(scip, conshdlrData->nstack + 1);
+      int newsize = SCIPcalcMemGrowSize(scip, conshdlrData->nstack + 1);
 
       SCIPdebugMessage("reallocating Memory for stack! %d --> %d\n", conshdlrData->maxstacksize, newsize);
 
