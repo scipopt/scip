@@ -880,7 +880,10 @@ SCIP_RETCODE collectMinactImplicVars(
 
       if( nbinvars > MAX_CLIQUELENGTH )
       {
-         SCIP_CALL( uselesscliques != NULL && SCIPhashtableInsert(uselesscliques, (void*)clique) );
+         if( uselesscliques != NULL )
+         {
+            SCIP_CALL( SCIPhashtableInsert(uselesscliques, (void*)clique) );
+         }
          continue;
       }
 
