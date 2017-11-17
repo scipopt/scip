@@ -74,6 +74,7 @@ struct SCIP_PresolData
    SYM_SPEC              symspecrequirefixed;/**< symmetry specification of variables which must be fixed by symmetries */
    int                   npermvars;          /**< number of variables for permutations */
    SCIP_VAR**            permvars;           /**< variables on which permutations act */
+   SCIP_Real*            permvarsobj;        /**< objective values of permuted variables (for debugging) */
    int                   nperms;             /**< number of permutations */
    int                   nmaxperms;          /**< maximal number of permutations (needed for freeing storage) */
    int**                 perms;              /**< permutation generators as (nperms x npermvars) matrix */
@@ -612,6 +613,7 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIP_Bool             checksymmetries,    /**< Should all symmetries be checked after computation? */
    int*                  npermvars,          /**< pointer to store number of variables for permutations */
    SCIP_VAR***           permvars,           /**< pointer to store variables on which permutations act */
+   SCIP_Real**           permvarsobj,        /**< objective values of permuted variables */
    int*                  nperms,             /**< pointer to store number of permutations */
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
@@ -642,6 +644,7 @@ SCIP_RETCODE computeSymmetryGroup(
    assert( scip != NULL );
    assert( npermvars != NULL );
    assert( permvars != NULL );
+   assert( permvarsobj != NULL );
    assert( nperms != NULL );
    assert( nmaxperms != NULL );
    assert( perms != NULL );
@@ -651,6 +654,7 @@ SCIP_RETCODE computeSymmetryGroup(
    /* init */
    *npermvars = 0;
    *permvars = NULL;
+   *permvarsobj = NULL;
    *nperms = 0;
    *nmaxperms = 0;
    *perms = NULL;
@@ -1117,6 +1121,12 @@ SCIP_RETCODE computeSymmetryGroup(
    *permvars = vars;
    *npermvars = nvars;
 
+#ifndef NDEBUG
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, permvarsobj, nvars) );
+   for (j = 0; j < nvars; ++j)
+      (*permvarsobj)[j] = SCIPvarGetObj(vars[j]);
+#endif
+
    return SCIP_OKAY;
 }
 
@@ -1138,6 +1148,7 @@ SCIP_RETCODE determineSymmetry(
    assert( ! presoldata->computedsym );
    assert( presoldata->npermvars == 0 );
    assert( presoldata->permvars == NULL );
+   assert( presoldata->permvarsobj == NULL );
    assert( presoldata->nperms == 0 );
    assert( presoldata->nmaxperms == 0 );
    assert( presoldata->perms == NULL );
@@ -1204,7 +1215,7 @@ SCIP_RETCODE determineSymmetry(
    maxgenerators = MIN(maxgenerators, MAXGENNUMERATOR / nvars);
 
    SCIP_CALL( computeSymmetryGroup(scip, maxgenerators, presoldata->symspecrequirefixed, FALSE, presoldata->checksymmetries,
-         &presoldata->npermvars, &presoldata->permvars, &presoldata->nperms, &presoldata->nmaxperms, &presoldata->perms,
+         &presoldata->npermvars, &presoldata->permvars, &presoldata->permvarsobj, &presoldata->nperms, &presoldata->nmaxperms, &presoldata->perms,
          &presoldata->log10groupsize, &presoldata->successful) );
 
    /* output statistics */
@@ -1315,6 +1326,7 @@ SCIP_DECL_PRESOLEXIT(presolExitSymmetry)
    assert( presoldata != NULL );
 
    SCIPfreeBlockMemoryArrayNull(scip, &presoldata->permvars, presoldata->npermvars);
+   SCIPfreeBlockMemoryArrayNull(scip, &presoldata->permvarsobj, presoldata->npermvars);
    for (i = 0; i < presoldata->nperms; ++i)
    {
       SCIPfreeBlockMemoryArray(scip, &presoldata->perms[i], presoldata->npermvars);
@@ -1434,6 +1446,7 @@ SCIP_RETCODE SCIPincludePresolSymmetry(
    presoldata->symspecrequirefixed = 0;
    presoldata->npermvars = 0;
    presoldata->permvars = NULL;
+   presoldata->permvarsobj = NULL;
    presoldata->perms = NULL;
    presoldata->nperms = 0;
    presoldata->nmaxperms = 0;
@@ -1527,6 +1540,37 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    *perms = presoldata->perms;
    if ( log10groupsize != NULL )
       *log10groupsize = presoldata->log10groupsize;
+
+   return SCIP_OKAY;
+}
+
+
+/** return objective coefficients of permuted variables at time of symmetry computation */
+SCIP_RETCODE SCIPgetPermvarsObjSymmetry(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real**           permvarsobj         /**< pointer to store objective coefficients of permuted variables (NULL if not available) */
+   )
+{
+   SCIP_PRESOLDATA* presoldata;
+   SCIP_PRESOL* presol;
+
+   assert( scip != NULL );
+   assert( permvarsobj != NULL );
+
+   /* find symmetry presolver */
+   presol = SCIPfindPresol(scip, "symmetry");
+   if ( presol == NULL )
+   {
+      SCIPerrorMessage("Could not find symmetry presolver.\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+   assert( presol != NULL );
+   assert( strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0 );
+
+   presoldata = SCIPpresolGetData(presol);
+   assert( presoldata != NULL );
+
+   *permvarsobj = presoldata->permvarsobj;
 
    return SCIP_OKAY;
 }
