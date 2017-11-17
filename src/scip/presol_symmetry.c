@@ -603,6 +603,7 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
 }
 
 
+#ifndef NDEBUG
 /** get number of active variables in variable array */
 static
 int getNActiveVars(
@@ -625,6 +626,7 @@ int getNActiveVars(
 
    return nactivevars;
 }
+#endif
 
 
 /** compute symmetry group of MIP */
