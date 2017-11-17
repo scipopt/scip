@@ -355,11 +355,11 @@ SCIP_RETCODE collectCoefficients(
       rhs -= constant;
 
    /* check whether we have to resize */
-   if ( matrixdata->nmatcoef + nvars > matrixdata->nmaxmatcoef )
+   if ( matrixdata->nmatcoef + 2 * nvars > matrixdata->nmaxmatcoef )
    {
       int newsize;
 
-      newsize = SCIPcalcMemGrowSize(scip, matrixdata->nmatcoef + nvars);
+      newsize = SCIPcalcMemGrowSize(scip, matrixdata->nmatcoef + 2 * nvars);
       assert( newsize >= 0 );
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(matrixdata->matidx), matrixdata->nmaxmatcoef, newsize) );
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(matrixdata->matrhsidx), matrixdata->nmaxmatcoef, newsize) );
