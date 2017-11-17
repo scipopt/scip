@@ -500,7 +500,7 @@ SCIP_RETCODE createSubproblems(
 
          coeff = 0.0;
          if( i == nodemapping[edgetail] )
-            coeff = scenariocost[j];
+            coeff = scenariocost[j] * 1000;
 
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "node_%d_%d", i, j);
          SCIP_CALL( SCIPcreateVarBasic(subproblems[j], &var, name, 0, SCIPinfinity(subproblems[j]), coeff, SCIP_VARTYPE_CONTINUOUS) );
