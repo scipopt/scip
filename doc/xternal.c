@@ -131,7 +131,7 @@
  * @subsection AUTHORS SCIP Authors
  * - <a class="el" href="http://scip.zib.de/#developers">Developers</a>
  *
- * @version  4.0.1.3
+ * @version  5.0.0
  *
  * \image html scippy.png
  *
@@ -839,6 +839,11 @@
  *                          for Linux, Mac OS X and Windows.
  *      - <code>omp</code>: use the OpenMP. This will not work with microsoft compilers, since they do not support
  *                          the required OpenMP version.
+ *
+ * - <code>SYM=\<bliss|none\></code> This determines the graph automorphism code used to compute symmetries of mixed
+ *   integer programs if symmetry handling is enabled. The options are the following:
+ *      - <code>none</code>: do not use a graph automorphism code, i.e., symmetries cannot be handled
+ *      - <code>bliss</code>: use bliss to compute symmetries.
  *
  * You can use other compilers - depending on the system:
  *

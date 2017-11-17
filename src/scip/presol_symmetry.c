@@ -660,7 +660,12 @@ SCIP_RETCODE computeSymmetryGroup(
    /* skip if no symmetry can be computed */
    if ( ! SYMcanComputeSymmetry() )
    {
-      SCIPwarningMessage(scip, "Cannot compute symmetry group, since SCIP was built without symmetry detector (SYM=none).\n");
+      /* currently, we do not support symmetry handling for NLPs */
+      if ( SCIPgetStage(scip) == SCIP_STAGE_INITSOLVE || SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+      {
+         if ( ! SCIPisNLPConstructed(scip) )
+            SCIPwarningMessage(scip, "Cannot compute symmetry group, since SCIP was built without symmetry detector (SYM=none).\n");
+      }
       return SCIP_OKAY;
    }
 
