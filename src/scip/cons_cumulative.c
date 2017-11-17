@@ -8895,7 +8895,9 @@ SCIP_RETCODE separateCoverCutsCons(
       }
    }
 
-   if( SCIPisFeasNegative(scip, minfeasibility) )
+   assert(!SCIPisFeasNegative(scip, minfeasibility) || row != NULL);
+
+   if( row != NULL && SCIPisFeasNegative(scip, minfeasibility) )
    {
       SCIPdebugMsg(scip, "cumulative constraint <%s> separated 1 cover cut with feasibility %g\n",
          SCIPconsGetName(cons), minfeasibility);
