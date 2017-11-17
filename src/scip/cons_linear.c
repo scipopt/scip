@@ -12200,7 +12200,10 @@ SCIP_RETCODE simplifyInequalities(
             }
 
             absval = REALABS(vals[v]);
-            assert(SCIPisIntegral(scip, absval));
+            /* arithmetic precision can lead to the absolute value only being integral up to feasibility tolerance,
+             * even though the value itself is feasible up to epsilon, but since we add feastol later, this is enough
+             */
+            assert(SCIPisFeasIntegral(scip, absval));
 
             if( gcd == -1 )
             {
@@ -12236,7 +12239,10 @@ SCIP_RETCODE simplifyInequalities(
          if( onlybin || SCIPvarIsBinary(vars[v]) )
          {
             absval = REALABS(vals[v]);
-            assert(SCIPisIntegral(scip, absval));
+            /* arithmetic precision can lead to the absolute value only being integral up to feasibility tolerance,
+             * even though the value itself is feasible up to epsilon, but since we add feastol later, this is enough
+             */
+            assert(SCIPisFeasIntegral(scip, absval));
 
             oldgcd = gcd;
 
