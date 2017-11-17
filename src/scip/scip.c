@@ -659,7 +659,7 @@ void SCIPprintBuildOptions(
 #elif defined(_MSC_VER)
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "microsoft visual c %d\n", _MSC_FULL_VER);
 #elif defined(__GNUC__)
-#ifdef __GNUC_PATCHLEVEL__
+#if defined(__GNUC_PATCHLEVEL__)
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "gcc %d.%d.%d\n", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
 #else
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "gcc %d.%d\n", __GNUC__, __GNUC_MINOR__);
