@@ -1298,6 +1298,9 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(getVarExprsLeaveExpr)
  *    SP10: it has at least two children
  *    ? at most one child is an exp
  *    ? at most one child is an abs
+ *    SP11: no two children are expr*log(expr)
+ *    (TODO: we could handle more complicated stuff like x*y*log(x) -> - y * entropy(x), but I am not sure this should
+ *    happen at the simplifcation level, or (x*y) * log(x*y), which currently simplifies to x * y * log(x*y))
  * - is a power expression such that
  *    POW1: exponent is not 0
  *    POW2: exponent is not 1
