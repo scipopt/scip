@@ -636,6 +636,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeExpr)
          SCIP_CONSEXPR_EXPR* child;
 
          assert(expr->walkcurrentchild < expr->nchildren);
+         assert(expr->children != NULL);
          child = expr->children[expr->walkcurrentchild];
          if( child->nuses > 1 )
          {
