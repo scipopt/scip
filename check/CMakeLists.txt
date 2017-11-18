@@ -212,8 +212,8 @@ set(instances_Bivariate
     "instances/Bivariate/nvs01.osil\;12.4696688"
    )
 set(instances_Bilinrelax
+    "instances/Bilinrelax/pointpack04.osil\;1.00000024988836"
     "instances/Bilinrelax/pointpack06.osil\;0.361111675167215"
-    "instances/Bilinrelax/ex5_4_2.osil\;7512.23014449367"
   )
 
 #
