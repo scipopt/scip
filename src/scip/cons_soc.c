@@ -2559,10 +2559,10 @@ SCIP_RETCODE propagateBounds(
       goto TERMINATE;
    }
 
-   /* check for redundancy */
-   if( SCIPintervalIsSubsetEQ(SCIPinfinity(scip), lhsrange, rhsrange) )
+   /* check for redundancy: max(lhsrange) <= min(rhsrange) */
+   if( SCIPisLE(scip, lhsrange.sup, rhsrange.inf) )
    {
-      SCIPdebugMsg(scip, "propagation found constraint <%s> redundant: lhs = [%.15g,%.15g]-feastol-eps > rhs = [%.15g,%.15g]\n",
+      SCIPdebugMsg(scip, "propagation found constraint <%s> redundant: lhs = [%.15g,%.15g] <= rhs = [%.15g,%.15g]\n",
          SCIPconsGetName(cons), lhsrange.inf, lhsrange.sup, rhsrange.inf, rhsrange.sup);
       SCIP_CALL( SCIPdelConsLocal(scip, cons) );
       goto TERMINATE;
