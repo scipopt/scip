@@ -1670,6 +1670,13 @@ SCIP_Real SCIPcalcMachineEpsilon(
    void
    );
 
+/** returns the next representable value of from in the direction of to */
+EXTERN
+SCIP_Real SCIPnextafter(
+   SCIP_Real             from,               /**< value from which the next representable value should be returned */
+   SCIP_Real             to                  /**< direction in which the next representable value should be returned */
+   );
+
 /** calculates the greatest common divisor of the two given values */
 EXTERN
 SCIP_Longint SCIPcalcGreComDiv(

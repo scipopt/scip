@@ -35,6 +35,7 @@
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define MAXCUTS                     500
+#define MAXROUNDS                    15
 
 
 /** Given two partitions S, T creates the corresponding cut and adds it do SCIP */
@@ -137,15 +138,24 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
    int k;
    int l;
    int ncuts;
+   int rounds;
+   int ncluster;
 
    ncuts = 0;
    edgevars = SCIPcycGetEdgevars(scip);
    nbins = SCIPcycGetNBins(scip);
+   rounds = SCIPsepaGetNCallsAtNode(sepa);
 
    assert(nbins > 0);
    assert(NULL != edgevars);
 
    *result = SCIP_DIDNOTFIND;
+
+   if( rounds >= MAXROUNDS )
+      {
+         *result =  SCIP_DIDNOTRUN;
+         return SCIP_OKAY;
+      }
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &fractionality, nbins) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &idx, nbins) );

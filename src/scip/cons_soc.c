@@ -117,7 +117,6 @@ struct SCIP_ConshdlrData
    SCIP_Bool             glineur;            /**< is the Glineur outer approx preferred to Ben-Tal Nemirovski? */
    SCIP_Bool             projectpoint;       /**< is the point in which a cut is generated projected onto the feasible set? */
    int                   nauxvars;           /**< number of auxiliary variables to use when creating a linear outer approx. of a SOC3 constraint */
-   SCIP_Real             minefficacy;        /**< minimal efficacy of a cut to be added to LP in separation loop */
    SCIP_Bool             sparsify;           /**< whether to sparsify cuts */
    SCIP_Real             sparsifymaxloss;    /**< maximal loss in cut efficacy by sparsification */
    SCIP_Real             sparsifynzgrowth;   /**< growth rate of maximal allowed nonzeros in cuts in sparsification */
@@ -1172,7 +1171,7 @@ SCIP_RETCODE separatePoint(
 
    *success = FALSE;
 
-   minefficacy = inenforcement ? SCIPfeastol(scip) : conshdlrdata->minefficacy;
+   minefficacy = inenforcement ? SCIPlpfeastol(scip) : SCIPgetSepaMinEfficacy(scip);
 
    for( c = 0; c < nconss; ++c )
    {
@@ -4304,7 +4303,7 @@ SCIP_DECL_CONSSEPALP(consSepalpSOC)
             }
          }
 
-         SCIP_CALL( addLinearizationCuts(scip, conshdlr, conss, nconss, nlpsol, &lpsolseparated, conshdlrdata->minefficacy, &cutoff) );
+         SCIP_CALL( addLinearizationCuts(scip, conshdlr, conss, nconss, nlpsol, &lpsolseparated, SCIPgetSepaMinEfficacy(scip), &cutoff) );
 
          SCIP_CALL( SCIPfreeSol(scip, &nlpsol) );
 
@@ -5103,10 +5102,6 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/glineur",
          "whether the Glineur Outer Approximation should be used instead of Ben-Tal Nemirovski",
          &conshdlrdata->glineur,          FALSE, TRUE,          NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/minefficacy",
-         "minimal efficacy of a cut to be added to LP in separation",
-         &conshdlrdata->minefficacy,      FALSE, 0.0001, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/sparsify",
          "whether to sparsify cuts",

@@ -40,7 +40,7 @@ do
 
     # look for solufiles under the name of the test, the name of the test with everything after the first "_" stripped, and all
     SOLUFILE=""
-    for f in $TSTNAME ${TSTNAME%%_*} all
+    for f in $TSTNAME ${TSTNAME%%_*} ${TSTNAME%%-*} all
     do
         if test -f testset/${f}.solu
         then

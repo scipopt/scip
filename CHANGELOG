@@ -43,7 +43,8 @@ parameters:
   the total number of created constraints when disaggregating a quadratic constraint
 - added parameter constraints/quadratic/disaggrmergemethod
 - removed parameter "separating/feastolfac"
-
+- removed parameters "constraints/{abspower,bivariate,quadratic,nonlinear}/mincutefficacysepa",
+  "constraints/{abspower,bivariate,quadratic,nonlinear}/mincutefficacyenfofac", and constraints/soc/minefficacy
 
 interface:
 - new interface methods to create and use bandit algorithms implemented as SCIP core plugins --
@@ -81,9 +82,11 @@ interface:
 - added SCIPcomputeBilinEnvelope{1,2} to compute a linearization of a bilinear term when considering at most two linear inequalities
 - new method SCIPaddRow() to replace deprecated SCIPaddCut()
 - replaced method SCIPgetRelaxFeastolFactor() by SCIPrelaxfeastol() and added SCIPchgRelaxfeastol()
+- added method SCIPgetSepaMinEfficacy() to access separating/minefficacy(root)
 - new object SCIP_LINCONSSTATS, see type_cons.h, and its methods SCIPlinConsStats{Create,Free,GetTypeCount,GetSum} and SCIPprintLinConsStats()
   to work with linear constraint classification through the C API
-
+- new method SCIPdivesetGetNSols to query the number of found solutions from a diveset.
+- new method SCIPnextafter that wraps different nextafter methods to return the next representable value after a given value
 
 performance improvements:
 - use disjoint set to reduce peak memory usage and time to compute of clique table connectedness information
@@ -97,6 +100,7 @@ performance improvements:
 - use limit on the total number of nonzeros added to the clique table during the greedyCliqueAlgorithm of cons_knapsack.c
 
 fixed bugs:
+- fix wrong statistic display of diving leaf solutions
 - fix linear knapsack relaxation during separation if a binary variable does not have a solution value in [0,1].
 - fixed bug in feasibility pump heuristic when switching on the usefp20 parameter
 - fixed potential ressource leaks in SCIPsolveLinearProb, expr.c, sepa_eccuts, cons_cumulative.c, cons_nonlinear.c
@@ -107,6 +111,7 @@ fixed bugs:
 - fixed upgrade to a varbound constraint if abspower constraint contains a multi-aggregated variable
 - fixed numerical issues in boundshift presolver when aggregating integer variables
 - fixed minor issue in expression graph simplification
+- fixed several bugs related to hashing of constraints/rows in cutpool.c and cons_linear.c
 - fixed aggregation of variables in boundshift presolver that contain large variable bounds
 
 added tests:
