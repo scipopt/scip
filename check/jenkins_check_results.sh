@@ -45,10 +45,21 @@ else
   SCIPVERSIONOUTPUT=`bin/${SCIPVERSION}* -v | sed -e 's/$/@/'`
 fi
 
+# if PERMUTE is not a number, set it to 0
+re='^[0-9]+$'
+if ! [[ $PERMUTE =~ $re ]] ; then
+  PERMUTE="0"
+fi
+
 export GITHASH=`git describe --always --dirty  | sed -re 's/^.+-g//'`
 export GITBRANCH=`git ls-remote --heads origin | grep $(git rev-parse HEAD)| cut -d / -f 3`
 export OPT=`echo $SCIPVERSIONOUTPUT | sed -e 's/.* OPT=\([^@]*\).*/\1/'`
 export LPS=`echo $SCIPVERSIONOUTPUT | sed -e 's/.* LPS=\([^@]*\).*/\1/'`
 
 # execute checker after all jobs completed
-sbatch --dependency=afterany:${jobidsstr} --kill-on-invalid-dep=yes --cpus-per-task=1 --mem=4000 --time=100 --partition=mip-dbg --account=mip check/jenkins_failcheck.sh
+p=0
+while [ $p -le $PERMUTE ]
+do
+  export PERM=$p # pass permutation to jenkins_failcheck
+  sbatch --dependency=afterany:${jobidsstr} --kill-on-invalid-dep=yes --cpus-per-task=1 --mem=4000 --time=100 --partition=mip-dbg --account=mip check/jenkins_failcheck.sh
+done

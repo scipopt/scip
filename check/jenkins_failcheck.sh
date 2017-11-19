@@ -9,7 +9,7 @@
 sleep 5
 
 ################################
-# AWK script for later         #
+# AWK scripts for later        #
 ################################
 read -d '' awkscript_findasserts << 'EOF'
 BEGIN {
@@ -101,16 +101,23 @@ printLines > 0 {print $0}
 }
 EOF
 ################################
-# End of AWK Script            #
+# End of AWK Scripts           #
 ################################
+
+# get ending given by permutation
+if [ "${PERM}" == "0" ]; then
+    PERM_ENDING="."
+else
+    PERM_ENDING="-${PERM}."
+end
 
 # we use a name that is unique per test sent to the cluster (a jenkins job
 # can have several tests sent to the cluster, that is why the jenkins job
 # name (i.e, the directory name) is not enough)
-DATABASE="/nfs/OPTI/adm_timo/databases/${PWD##*/}_${TESTSET}_${SETTING}_${LPS}.txt"
+DATABASE="/nfs/OPTI/adm_timo/databases/${PWD##*/}_${TESTSET}_${SETTING}_${LPS}${PERM_ENDING}txt"
 TMPDATABASE="$DATABASE.tmp"
 STILLFAILING="${DATABASE}_SF.tmp"
-RBDB="/nfs/OPTI/adm_timo/databases/rbdb/${PWD##*/}_${TESTSET}_${SETTING}_${LPS}_rb.txt"
+RBDB="/nfs/OPTI/adm_timo/databases/rbdb/${PWD##*/}_${TESTSET}_${SETTING}_${LPS}_rb${PERM_ENDING}txt"
 OUTPUT="${DATABASE}_output.tmp"
 touch ${STILLFAILING}
 
@@ -128,17 +135,17 @@ fi
 EMAILFROM="adm_timo <timo-admin@zib.de>"
 EMAILTO="adm_timo <timo-admin@zib.de>"
 
-########################
-# FIND evalfile prefix #
-########################
+#################
+# FIND evalfile #
+#################
 
 # SCIP check files are check.TESTSET.SCIPVERSION.otherstuff.SETTING.{out,err,res,meta} (SCIPVERSION is of the form scip-VERSION)
-BASEFILE="check/results/check.${TESTSET}.${SCIPVERSION}.*.${SETTING}"
+BASEFILE="check/results/check.${TESTSET}.${SCIPVERSION}.*.${SETTING}${PERM_ENDING}"
 EVALFILE=`ls ${BASEFILE}*eval`
 # if no evalfile was found --> check if this is fscip output
 if [ "${EVALFILE}" == "" ]; then
     echo "Ignore previous ls error; looking again for eval file"
-    BASEFILE="check/results/check.${TESTSET}.fscip.*.${SETTING}"
+    BASEFILE="check/results/check.${TESTSET}.fscip.*.${SETTING}" # we do not use permutations with fiber scip
     EVALFILE=`ls ${BASEFILE}*eval`
 fi
 
@@ -146,7 +153,7 @@ fi
 if [ "${EVALFILE}" == "" ]; then
     echo "Couldn't find eval file, sending email"
     SUBJECT="ERROR [BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING=$SETTING] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH]"
-    echo -e "Aborting because the .eval file cannot be found.\nTried " | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+    echo -e "Aborting because the .eval file cannot be found.\nTried check/results/check.${TESTSET}.${SCIPVERSION}.*.${SETTING}${PERM_ENDING}*" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
     exit 1
 fi
 
@@ -259,6 +266,9 @@ fi
 
 # send email if there are fixed instances
 if [ -n "$RESOLVEDINSTANCES" ]; then
+   #########################
+   # RESOLVED ERRORS EMAIL #
+   #########################
    SUBJECT="FIX [BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING=$SETTING] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH]"
    echo -e "Congratulations, see bottom for fixed instances!
 
