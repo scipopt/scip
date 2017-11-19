@@ -444,7 +444,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          }
 
          /* succesfully rounded solutions are tried for primal feasibility */
-         if( success )
+         if( success && SCIPdivesetGetAddSolution(diveset) )
          {
             SCIP_Bool changed = FALSE;
             SCIPdebugMsg(scip, "%s found roundable primal solution: obj=%g\n", SCIPdivesetGetName(diveset), SCIPgetSolOrigObj(scip, worksol));
@@ -790,7 +790,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
    success = FALSE;
    /* check if a solution has been found */
-   if( !enfosuccess && !lperror && !cutoff && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
+   if( !enfosuccess && !lperror && !cutoff && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL && SCIPdivesetGetAddSolution(diveset) )
    {
       /* create solution from diving LP */
       SCIP_CALL( SCIPlinkLPSol(scip, worksol) );

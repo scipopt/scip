@@ -368,6 +368,12 @@ SCIP_RANDNUMGEN* SCIPdivesetGetRandnumgen(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
+/** returns whether the solutions found by this \p diveset for be added to the solution storage */
+EXTERN
+SCIP_Bool SCIPdivesetGetAddSolution(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
 /* @} */
 
 /**@defgroup PublicVariableGraphMethods Public Variable Graph Methods

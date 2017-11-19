@@ -204,6 +204,7 @@ SCIP_RETCODE SCIPdivesetCreate(
    SCIP_Bool             backtrack,          /**< use one level of backtracking if infeasibility is encountered? */
    SCIP_Bool             onlylpbranchcands,  /**< should only LP branching candidates be considered instead of the slower but
                                               *   more general constraint handler diving variable selection? */
+   SCIP_Bool             addsolution,        /**< should the solution be added to the solution storage? */
    SCIP_DIVETYPE         divetypemask,       /**< bit mask that represents the supported dive types by this dive set */
    SCIP_DECL_DIVESETGETSCORE((*divesetgetscore))  /**< method for candidate score and rounding direction */
    )
@@ -314,6 +315,12 @@ SCIP_RETCODE SCIPdivesetCreate(
             "should only LP branching candidates be considered instead of the slower but "
             "more general constraint handler diving variable selection?",
             &diveset->onlylpbranchcands, FALSE, onlylpbranchcands, NULL, NULL) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/addsolution", diveset->name);
+   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem,
+            paramname,
+            "should the solution be added to the solution storage?",
+            &diveset->addsolution, TRUE, addsolution, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -565,6 +572,16 @@ SCIP_RANDNUMGEN* SCIPdivesetGetRandnumgen(
    assert(diveset->randnumgen != NULL);
 
    return diveset->randnumgen;
+}
+
+/** returns whether the solutions found by this \p diveset for be added to the solution storage */
+SCIP_Bool SCIPdivesetGetAddSolution(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return diveset->addsolution;
 }
 
 /** returns the domain reduction quotient for triggering an immediate resolve of the diving LP (0.0: always resolve)*/

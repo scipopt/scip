@@ -64,6 +64,7 @@
                                          *   'v'otes lowest c.p., votes highest c.p.('w'), 'r'evolving */
 #define SCOREPARAM_VALUESLEN 5
 #define DEFAULT_SCOREPARAM 'r'          /**< default scoring parameter to guide the diving */
+#define DEFAULT_ADDSOLUTION        TRUE /**< should the solution be added to the solution storage? */
 #define DEFAULT_RANDSEED   117          /**< initial seed for random number generation */
 
 /* locally defined heuristic data */
@@ -1075,7 +1076,7 @@ SCIP_RETCODE SCIPincludeHeurDistributiondiving(
          DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT, DEFAULT_MAXDIVEUBQUOT,
          DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL,
          DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_LPRESOLVEDOMCHGQUOT, DEFAULT_LPSOLVEFREQ,
-         DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_DIVETYPES,
+         DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DEFAULT_ADDSOLUTION, DIVESET_DIVETYPES,
          divesetGetScoreDistributiondiving) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "heuristics/" HEUR_NAME "/scoreparam",
