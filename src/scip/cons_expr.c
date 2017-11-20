@@ -1649,6 +1649,7 @@ static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeCurv)
 {
    SCIP_CONSHDLR* conshdlr;
+   SCIP_EXPRCURV curv;
 
    assert(expr != NULL);
    assert(expr->exprhdlr != NULL);
@@ -1656,25 +1657,21 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeCurv)
    assert(stage == SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
 
    *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+   curv = SCIP_EXPRCURV_UNKNOWN;
 
    conshdlr = (SCIP_CONSHDLR*)data;
    assert(conshdlr != NULL);
 
-   if( SCIPgetCurvatureExprExpr(expr) != SCIP_EXPRCURV_UNKNOWN )
-   {
-      /* we already have seen this expression -> skip */
-      *result = SCIP_CONSEXPREXPRWALK_SKIP;
-   }
-   else if( expr->exprhdlr->curvature != NULL )
-   {
-      SCIP_EXPRCURV curv = SCIP_EXPRCURV_UNKNOWN;
+   /* TODO add a tag to store whether an expression has been visited already */
 
+   if( expr->exprhdlr->curvature != NULL )
+   {
       /* get curvature from expression handler */
       SCIP_CALL( (*expr->exprhdlr->curvature)(scip, conshdlr, expr, &curv) );
-
-      /* set curvature in expression */
-      SCIPsetCurvatureExprExpr(expr, curv);
    }
+
+   /* set curvature in expression */
+   SCIPsetCurvatureExprExpr(expr, curv);
 
    return SCIP_OKAY;
 }
