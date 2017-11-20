@@ -12699,6 +12699,30 @@ SCIP_DECL_CONSENFOPS(consEnfopsQuadratic)
 
    if( nnotify == 0 )
    {
+      SCIP_Bool addedcons;
+      SCIP_Bool reduceddom;
+      SCIP_Bool infeasible;
+
+      /* if no branching candidate found, then all variables are almost fixed
+       * calling replaceByLinearConstraints() should lead to fix all almost-fixed quadratic variables, and possibly replace some quad. conss by linear ones
+       */
+      SCIP_CALL( replaceByLinearConstraints(scip, conss, nconss, &addedcons, &reduceddom, &infeasible) );
+      if( addedcons )
+      {
+         *result = SCIP_CONSADDED;
+         return SCIP_OKAY;
+      }
+      if( reduceddom )
+      {
+         *result = SCIP_REDUCEDDOM;
+         return SCIP_OKAY;
+      }
+      if( infeasible )
+      {
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+
       SCIPdebugMsg(scip, "All variables in violated constraints fixed (up to epsilon). Cannot find branching candidate. Forcing solution of LP.\n");
       *result = SCIP_SOLVELP;
    }
