@@ -15241,7 +15241,13 @@ SCIP_RETCODE initSolve(
       }
 
       /* adjust primal bound, such that solution with worst bound may be found */
-      objbound += SCIPsetCutoffbounddelta(scip->set);
+      if( objbound + SCIPsetCutoffbounddelta(scip->set) != objbound ) /*lint !e777*/
+         objbound += SCIPsetCutoffbounddelta(scip->set);
+      /* if objbound is very large, adding the cutoffbounddelta may not change the number; in this case, we are using
+       * SCIPnextafter to ensure that the cutoffbound is really larger than the best possible solution value
+       */
+      else
+         objbound = SCIPnextafter(objbound, SCIP_REAL_MAX);
 
       /* update cutoff bound */
       if( !SCIPsetIsInfinity(scip->set, objbound) && SCIPsetIsLT(scip->set, objbound, scip->primal->cutoffbound) )
