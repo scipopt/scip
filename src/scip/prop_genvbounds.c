@@ -1659,7 +1659,7 @@ SCIP_RETCODE applyGenVBounds(
 
       for( j = 0; j < propdata->ngenvbounds && *result != SCIP_CUTOFF; j++ )
       {
-         if( SCIPvarGetStatus(propdata->genvboundstore[j]->var) == SCIP_VARSTATUS_MULTAGGR )
+         if( ! SCIPvarIsActive(propdata->genvboundstore[j]->var) )
          {
             /**@todo resolve multiaggregation in exitpre */
          }
@@ -1688,7 +1688,7 @@ SCIP_RETCODE applyGenVBounds(
       {
          assert(j < propdata->ngenvbounds);
 
-         if( SCIPvarGetStatus(propdata->genvboundstore[j]->var) == SCIP_VARSTATUS_MULTAGGR )
+         if( ! SCIPvarIsActive(propdata->genvboundstore[j]->var) )
          {
             /**@todo resolve multiaggregation in exitpre */
          }
