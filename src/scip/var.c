@@ -7303,7 +7303,7 @@ SCIP_RETCODE varProcessChgLbLocal(
 
    SCIPsetDebugMsg(set, "process changing lower bound of <%s> from %g to %g\n", var->name, var->locdom.lb, newbound);
 
-   if( SCIPsetIsEQ(set, newbound, var->glbdom.lb) )
+   if( SCIPsetIsEQ(set, newbound, var->glbdom.lb) && var->glbdom.lb != var->locdom.lb )
       newbound = var->glbdom.lb;
    else if( SCIPsetIsEQ(set, newbound, var->locdom.lb) )
       return SCIP_OKAY;
@@ -7470,7 +7470,7 @@ SCIP_RETCODE varProcessChgUbLocal(
 
    SCIPsetDebugMsg(set, "process changing upper bound of <%s> from %g to %g\n", var->name, var->locdom.ub, newbound);
 
-   if( SCIPsetIsEQ(set, newbound, var->glbdom.ub) )
+   if( SCIPsetIsEQ(set, newbound, var->glbdom.ub) && var->glbdom.ub != var->locdom.ub  )
       newbound = var->glbdom.ub;
    else if( SCIPsetIsEQ(set, newbound, var->locdom.ub) )
       return SCIP_OKAY;
