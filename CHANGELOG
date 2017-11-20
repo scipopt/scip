@@ -85,7 +85,8 @@ interface:
 - added method SCIPgetSepaMinEfficacy() to access separating/minefficacy(root)
 - new object SCIP_LINCONSSTATS, see type_cons.h, and its methods SCIPlinConsStats{Create,Free,GetTypeCount,GetSum} and SCIPprintLinConsStats()
   to work with linear constraint classification through the C API
-
+- new method SCIPdivesetGetNSols to query the number of found solutions from a diveset.
+- new method SCIPnextafter that wraps different nextafter methods to return the next representable value after a given value
 
 performance improvements:
 - use disjoint set to reduce peak memory usage and time to compute of clique table connectedness information
@@ -99,6 +100,7 @@ performance improvements:
 - use limit on the total number of nonzeros added to the clique table during the greedyCliqueAlgorithm of cons_knapsack.c
 
 fixed bugs:
+- fix wrong statistic display of diving leaf solutions
 - fix linear knapsack relaxation during separation if a binary variable does not have a solution value in [0,1].
 - fixed bug in feasibility pump heuristic when switching on the usefp20 parameter
 - fixed potential ressource leaks in SCIPsolveLinearProb, expr.c, sepa_eccuts, cons_cumulative.c, cons_nonlinear.c

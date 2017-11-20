@@ -2,7 +2,7 @@
 
 # For release versions, only use VERSION="x.x.x".
 # For development versions, use VERSION="x.x.x.x" with subversion number.
-VERSION="4.0.1.3"
+VERSION="5.0.0"
 NAME="scip-$VERSION"
 rm -f $NAME
 ln -s . $NAME
@@ -56,6 +56,7 @@ $NAME/src/scip/*.c $NAME/src/scip/*.h \
 $NAME/src/nlpi/*.c $NAME/src/nlpi/*.cpp $NAME/src/nlpi/*.h \
 $NAME/src/lpi/*.c $NAME/src/lpi/*.cpp $NAME/src/lpi/*.h \
 $NAME/src/tpi/*.c $NAME/src/tpi/*.h \
+$NAME/src/symmetry/*.cpp $NAME/src/symmetry/*.h \
 $NAME/src/xml/*.c $NAME/src/xml/*.h \
 $NAME/src/tinycthread/*.c $NAME/src/tinycthread/*.h \
 $NAME/src/dijkstra/*.c $NAME/src/dijkstra/*.h \

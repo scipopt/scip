@@ -179,7 +179,7 @@ SCIP_RETCODE fillGraphByColoredCoefficients(
    else
       ninternodes = matrixdata->npermvars;
 
-   int* internodes;
+   int* internodes = NULL;
    SCIP_CALL( SCIPallocBufferArray(scip, &internodes, ninternodes) ); /*lint !e530*/
    for (int l = 0; l < ninternodes; ++l)
       internodes[l] = -1;
@@ -346,6 +346,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    data.nperms = 0;
    data.nmaxperms = 100 * matrixdata->npermvars;
    data.maxgenerators = maxgenerators;
+   data.perms = NULL;
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &data.perms, data.nmaxperms) );
 
    /* Prefer splitting partition cells corresponding to variables over those corresponding
@@ -372,7 +373,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    *nmaxperms = data.nmaxperms;
 
    /* determine log10 of symmetry group size */
-   *log10groupsize = log((SCIP_Real) stats.get_group_size_approx());
+   *log10groupsize = (SCIP_Real) log10l(stats.get_group_size_approx());
 
    return SCIP_OKAY;
 }

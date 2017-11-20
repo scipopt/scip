@@ -44883,7 +44883,7 @@ void SCIPprintHeuristicStatistics(
 
    if ( ndivesets > 0 )
    {
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "Diving Statistics  :      Calls      Nodes   LP Iters Backtracks   MinDepth   MaxDepth   AvgDepth  NLeafSols  MinSolDpt  MaxSolDpt  AvgSolDpt\n");
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "Diving Statistics  :      Calls      Nodes   LP Iters Backtracks   MinDepth   MaxDepth   AvgDepth  RoundSols  NLeafSols  MinSolDpt  MaxSolDpt  AvgSolDpt\n");
       for( i = 0; i < scip->set->nheurs; ++i )
       {
          int s;
@@ -44893,13 +44893,15 @@ void SCIPprintHeuristicStatistics(
             SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10d", SCIPdivesetGetName(diveset), SCIPdivesetGetNCalls(diveset));
             if( SCIPdivesetGetNCalls(diveset) > 0 )
             {
-               SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10d %10d %10.1f",
+               SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10d %10d %10.1f %10" SCIP_LONGINT_FORMAT,
                   SCIPdivesetGetNProbingNodes(diveset),
                   SCIPdivesetGetNLPIterations(diveset),
                   SCIPdivesetGetNBacktracks(diveset),
                   SCIPdivesetGetMinDepth(diveset),
                   SCIPdivesetGetMaxDepth(diveset),
-                  SCIPdivesetGetAvgDepth(diveset));
+                  SCIPdivesetGetAvgDepth(diveset),
+                  SCIPdivesetGetNSols(diveset) - SCIPdivesetGetNSolutionCalls(diveset));
+
                if( SCIPdivesetGetNSolutionCalls(diveset) > 0 )
                {
                   SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10d %10d %10d %10.1f\n",
@@ -44912,7 +44914,7 @@ void SCIPprintHeuristicStatistics(
                   SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -          -          -          -\n");
             }
             else
-               SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -          -          -          -          -          -          -          -          -          -\n");
+               SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -          -          -          -          -          -          -          -          -          -          -\n");
          }
       }
    }
