@@ -153,7 +153,7 @@ SCIP_RETCODE redbasedvarfixing(
    /* reduce graph */
 
    SCIP_CALL( level0(scip, copyg) );
-   SCIP_CALL( reduceStp(scip, &copyg, &offset, 5, FALSE, FALSE, edgestate) );
+   SCIP_CALL( reduceStp(scip, &copyg, &offset, 5, FALSE, FALSE, edgestate, FALSE) );
 
    assert(graph_valid(copyg));
 
@@ -413,17 +413,18 @@ SCIP_DECL_PROPEXEC(propExecStp)
       graph->mark[k] = (graph->grad[k] > 0);
 
    /* distance from root to all nodes */
-   graph_path_execX(scip, graph, graph->source[0], cost, pathdist, pathedge);
+   graph_path_execX(scip, graph, graph->source, cost, pathdist, pathedge);
 
    /* no paths should go back to the root */
-   for( e = graph->outbeg[graph->source[0]]; e != EAT_LAST; e = graph->oeat[e] )
+   for( e = graph->outbeg[graph->source]; e != EAT_LAST; e = graph->oeat[e] )
         costrev[e] = FARAWAY;
 
    /* build voronoi diagram */
-   voronoi_terms(scip, graph, costrev, vnoi, vbase, graph->path_heap, graph->path_state);
+   graph_voronoiTerms(scip, graph, costrev, vnoi, vbase, graph->path_heap, graph->path_state);
 
    for( k = 0; k < nnodes; k++ )
    {
+      // todo is that necessary?
       if( Is_term(graph->term[k]) && (graph->stp_type == STP_MWCSP || graph->stp_type == STP_PCSPG) )
             continue;
 
