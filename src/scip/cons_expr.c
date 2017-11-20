@@ -1651,7 +1651,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeCurv)
    assert(expr != NULL);
    assert(expr->exprhdlr != NULL);
    assert(result != NULL);
-   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
+   assert(stage == SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
 
    *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
 
@@ -1684,7 +1684,7 @@ SCIP_RETCODE SCIPcomputeCurvatureExprExpr(
    assert(scip != NULL);
    assert(expr != NULL);
 
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, computeCurv, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, NULL, NULL, computeCurv, NULL) );
    return SCIP_OKAY;
 }
 
