@@ -1186,6 +1186,7 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureSin)
    assert(scip != NULL);
    assert(expr != NULL);
    assert(curvature != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
 
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);

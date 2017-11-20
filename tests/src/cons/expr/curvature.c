@@ -81,11 +81,20 @@ SCIP_RETCODE checkCurvature(
    SCIP_EXPRCURV        expectedcur         /**< expected curvature */
    )
 {
+   SCIP_CONSEXPR_EXPR* origexpr;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
 
-   /* create an expression */
-   cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr), SCIP_OKAY);
+   /* create and print expression */
+   cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &origexpr), SCIP_OKAY);
+
+   /* simplify expression */
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, origexpr, &expr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &origexpr) );
+
+   /* print simplified expression */
+   SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+   SCIPinfoMessage(scip, NULL, "\n");
 
    /* check name of the corresponding expression handler */
    exprhdlr = SCIPgetConsExprExprHdlr(expr);

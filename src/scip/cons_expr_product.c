@@ -1888,13 +1888,10 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureProduct)
    assert(scip != NULL);
    assert(expr != NULL);
    assert(curvature != NULL);
-   assert(SCIPgetConsExprExprNChildren(expr) > 0);
+   assert(SCIPgetConsExprExprNChildren(expr) > 1);
+   assert(SCIPgetConsExprExprProductCoef(expr) == 1.0);
 
-   /* for one child the curvature does not change; otherwise the curvature is unknown */
-   if( SCIPgetConsExprExprNChildren(expr) == 1 )
-      *curvature = SCIPgetCurvatureExprExpr(SCIPgetConsExprExprChildren(expr)[0]);
-   else
-      *curvature = SCIP_EXPRCURV_UNKNOWN;
+   *curvature = SCIP_EXPRCURV_UNKNOWN;
 
    return SCIP_OKAY;
 }
