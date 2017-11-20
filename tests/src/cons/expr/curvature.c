@@ -32,6 +32,7 @@ static SCIP_CONSHDLR* conshdlr;
 static SCIP_VAR* x;
 static SCIP_VAR* y;
 static SCIP_VAR* z;
+static SCIP_VAR* w;
 
 static
 void setup(void)
@@ -51,17 +52,20 @@ void setup(void)
    SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", 1.0, 2.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", -4.0, -3.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &w, "w", 5.0, 6.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(scip, x) );
    SCIP_CALL( SCIPaddVar(scip, y) );
    SCIP_CALL( SCIPaddVar(scip, z) );
+   SCIP_CALL( SCIPaddVar(scip, w) );
 }
 
 static
 void teardown(void)
 {
-   SCIP_CALL( SCIPreleaseVar(scip, &x) );
-   SCIP_CALL( SCIPreleaseVar(scip, &y) );
+   SCIP_CALL( SCIPreleaseVar(scip, &w) );
    SCIP_CALL( SCIPreleaseVar(scip, &z) );
+   SCIP_CALL( SCIPreleaseVar(scip, &y) );
+   SCIP_CALL( SCIPreleaseVar(scip, &x) );
    SCIP_CALL( SCIPfree(&scip) );
 
    cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory leak!!");
@@ -110,9 +114,10 @@ Test(curvature, absolute)
 /* check for cosine expression */
 Test(curvature, cosine)
 {
-   SCIP_CALL( checkCurvature("cos(<x>[C])", "cos", SCIP_EXPRCURV_UNKNOWN) );
-
-   /* TODO add a test for convex and concave sine expression */
+   SCIP_CALL(checkCurvature("cos(<x>[C])", "cos", SCIP_EXPRCURV_UNKNOWN));
+   SCIP_CALL(checkCurvature("cos(<y>[C])", "cos", SCIP_EXPRCURV_UNKNOWN));
+   SCIP_CALL(checkCurvature("cos(<z>[C])", "cos", SCIP_EXPRCURV_CONVEX));
+   SCIP_CALL(checkCurvature("cos(<w>[C])", "cos", SCIP_EXPRCURV_CONCAVE));
 }
 
 /* check for exponential expression */
@@ -158,8 +163,10 @@ Test(curvature, product)
 Test(curvature, sine)
 {
    SCIP_CALL( checkCurvature("sin(<x>[C])", "sin", SCIP_EXPRCURV_UNKNOWN) );
+   SCIP_CALL( checkCurvature("sin(<y>[C])", "sin", SCIP_EXPRCURV_CONCAVE) );
+   SCIP_CALL( checkCurvature("sin(<z>[C])", "sin", SCIP_EXPRCURV_UNKNOWN) );
+   SCIP_CALL( checkCurvature("sin(<w>[C])", "sin", SCIP_EXPRCURV_CONVEX) );
 
-   /* TODO add a test for convex and concave sine expression */
 }
 
 /* check for sum expression */
