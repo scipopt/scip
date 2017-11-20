@@ -2584,6 +2584,27 @@ SCIP_RETCODE graph_sol_reroot(
    return SCIP_OKAY;
 }
 
+
+/** checks whether edge(s) of given primal solution have been deleted */
+SCIP_Bool graph_sol_unreduced(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   const int*            result              /**< solution array, indicating whether an edge is in the solution */
+   )
+{
+   const int nedges = graph->edges;
+
+   assert(scip != NULL);
+   assert(graph != NULL);
+   assert(result != NULL);
+
+   for( int i = 0; i < nedges; i++ )
+      if( result[i] == CONNECT && graph->oeat[i] == EAT_FREE )
+         return FALSE;
+
+   return TRUE;
+}
+
 /** verifies whether a given primal solution is feasible */
 SCIP_Bool graph_sol_valid(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2597,7 +2618,9 @@ SCIP_Bool graph_sol_valid(
    int size;
    int nnodes;
    int termcount;
+   SCIP_Bool usepterms;
 
+   assert(scip != NULL);
    assert(graph != NULL);
    assert(result != NULL);
 
@@ -2609,12 +2632,17 @@ SCIP_Bool graph_sol_valid(
    SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &reached, nnodes) );
    SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &queue, nnodes) );
 
+   if( (graph->stp_type == STP_MWCSP || graph->stp_type == STP_PCSPG) && !graph->extended )
+      usepterms = TRUE;
+   else
+      usepterms = FALSE;
+
    assert(reached != NULL);
 
    for( int i = 0; i < nnodes; i++ )
       reached[i] = FALSE;
 
-   /* BFS until all reacheds are reached */
+   /* BFS until all terminals are reached */
 
    termcount = 1;
    size = 0;
@@ -2635,8 +2663,16 @@ SCIP_Bool graph_sol_valid(
             if( reached[i] )
                return FALSE;
 
-            if( Is_term(graph->term[i]) )
-               termcount++;
+            if( usepterms)
+            {
+               if( Is_pterm(graph->term[i]) )
+                  termcount++;
+            }
+            else
+            {
+               if( Is_term(graph->term[i]) )
+                  termcount++;
+            }
 
             reached[i] = TRUE;
             queue[size++] = i;
@@ -2695,7 +2731,6 @@ void graph_sol_setNodeList(
    }
 }
 
-
 /** compute solution value for given edge-solution array (CONNECT/UNKNOWN) and offset */
 SCIP_Real graph_sol_getObj(
    const SCIP_Real*      edgecost,
@@ -2713,7 +2748,6 @@ SCIP_Real graph_sol_getObj(
 
    return obj;
 }
-
 
 
 /** get (real) number of nodes , edges, terminals */

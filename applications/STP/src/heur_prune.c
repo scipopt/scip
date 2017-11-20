@@ -689,11 +689,11 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
    SCIP_CALL( SCIPallocBufferArray(scip, &state, 4 * nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodearrreal, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vbase, 4 * nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint, nnodes + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &edgearrint, nedges) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint2, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint2, nnodes + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, 4 * nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &path, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &path, nnodes + 1) );
 
    if( probtype == STP_RSMT || probtype == STP_OARSMT || probtype == STP_GSTP )
       g->stp_type = STP_SPG;

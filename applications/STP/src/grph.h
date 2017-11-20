@@ -224,6 +224,7 @@ extern int    graph_edge_redirect(SCIP*, GRAPH*, int, int, int, SCIP_Real);
 extern int    graph_pc_deleteTerm(SCIP*, GRAPH*, int);
 extern SCIP_Bool graph_valid(const GRAPH*);
 extern SCIP_Bool graph_pc_term2edgeConsistent(const GRAPH*);
+extern SCIP_Bool graph_sol_unreduced(SCIP*, const GRAPH*, const int*);
 extern SCIP_Bool graph_sol_valid(SCIP*, const GRAPH*, const int*);
 extern SCIP_Real graph_sol_getObj(const SCIP_Real*, const int*, SCIP_Real, int);
 

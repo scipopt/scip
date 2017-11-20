@@ -335,9 +335,9 @@ SCIP_RETCODE reducePc(
    SCIP_CALL( SCIPallocBufferArray(scip, &exedgearrreal, extnedges ) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vbase, 4 * nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, 4 * nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &path, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &path, nnodes + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint, nnodes + 1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint2, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint2, nnodes + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodearrchar, nnodes + 1) );
 
    if( SCIPisLE(scip, (double) nterms / (double) nnodes, 0.03) )

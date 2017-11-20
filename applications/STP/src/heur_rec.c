@@ -26,7 +26,6 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-//#define SCIP_DEBUG
 
 #include <assert.h>
 #include <string.h>
@@ -1813,11 +1812,11 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
          graph_sol_getObj(graph->cost, result, 0.0, nedges)) )
    {
       *success = TRUE;
-      printf("success %f < %f \n", graph_sol_getObj(graph->cost, newresult, 0.0, nedges), graph_sol_getObj(graph->cost, result, 0.0, nedges));
+      SCIPdebugMessage("success %f < %f \n", graph_sol_getObj(graph->cost, newresult, 0.0, nedges), graph_sol_getObj(graph->cost, result, 0.0, nedges));
    }
    else
    {
-      printf("no improvements %f >= %f \n", graph_sol_getObj(graph->cost, newresult, 0.0, nedges), graph_sol_getObj(graph->cost, result, 0.0, nedges));
+      SCIPdebugMessage("no improvements %f >= %f \n", graph_sol_getObj(graph->cost, newresult, 0.0, nedges), graph_sol_getObj(graph->cost, result, 0.0, nedges));
       *success = FALSE;
    }
 

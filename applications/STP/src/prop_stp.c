@@ -424,6 +424,7 @@ SCIP_DECL_PROPEXEC(propExecStp)
 
    for( k = 0; k < nnodes; k++ )
    {
+      // todo is that necessary?
       if( Is_term(graph->term[k]) && (graph->stp_type == STP_MWCSP || graph->stp_type == STP_PCSPG) )
             continue;
 

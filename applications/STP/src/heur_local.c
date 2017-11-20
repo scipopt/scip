@@ -227,6 +227,9 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
    const STP_Bool pc = ((probtype == STP_PCSPG) || (probtype == STP_RPCSPG));
    const STP_Bool mw = (probtype == STP_MWCSP);
    const STP_Bool mwpc =  (pc || mw);
+#ifndef NDEBUG
+   const SCIP_Real initialobj = graph_sol_getObj(cost, best_result, 0.0, nedges);
+#endif
 
    assert(graph != NULL);
    assert(cost != NULL);
@@ -1669,6 +1672,10 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
 
       printf(" ObjAfterHeurLocal=%.12e\n", obj);
    }
+#endif
+
+#ifndef NDEBUG
+   assert(SCIPisLE(scip, graph_sol_getObj(cost, best_result, 0.0, nedges), initialobj));
 #endif
 
    SCIPfreeBufferArray(scip, &steinertree);
