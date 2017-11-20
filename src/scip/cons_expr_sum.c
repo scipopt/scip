@@ -1213,7 +1213,7 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureSum)
       }
 
       /* use bit operations for determining the resulting curvature */
-      *curvature = (*curvature) & childcurv;
+      *curvature = (SCIP_EXPRCURV)((*curvature) & childcurv);
    }
 
    return SCIP_OKAY;
