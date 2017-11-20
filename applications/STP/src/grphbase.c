@@ -2661,7 +2661,11 @@ SCIP_Bool graph_sol_valid(
 
             /* cycle? */
             if( reached[i] )
+            {
+               SCIPfreeBufferArray(scip, &queue);
+               SCIPfreeBufferArray(scip, &reached);
                return FALSE;
+            }
 
             if( usepterms)
             {
