@@ -1648,12 +1648,17 @@ SCIP_EXPRCURV SCIPgetCurvatureExprExpr(
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeCurv)
 {
+   SCIP_CONSHDLR* conshdlr;
+
    assert(expr != NULL);
    assert(expr->exprhdlr != NULL);
    assert(result != NULL);
    assert(stage == SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
 
    *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+
+   conshdlr = (SCIP_CONSHDLR*)data;
+   assert(conshdlr != NULL);
 
    if( SCIPgetCurvatureExprExpr(expr) != SCIP_EXPRCURV_UNKNOWN )
    {
@@ -1665,8 +1670,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeCurv)
       SCIP_EXPRCURV curv = SCIP_EXPRCURV_UNKNOWN;
 
       /* get curvature from expression handler */
-      SCIP_RETCODE retcode = (*expr->exprhdlr->curvature)(scip, expr, &curv);
-      assert(retcode == SCIP_OKAY);
+      SCIP_CALL( (*expr->exprhdlr->curvature)(scip, conshdlr, expr, &curv) );
 
       /* set curvature in expression */
       SCIPsetCurvatureExprExpr(expr, curv);
@@ -1684,14 +1688,19 @@ SCIP_RETCODE SCIPcomputeCurvatureExprExpr(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    )
 {
+   SCIP_CONSHDLR* conshdlr;
+
    assert(scip != NULL);
    assert(expr != NULL);
+
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   assert(conshdlr != NULL);
 
    /* first evaluate all subexpressions */
    SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, FALSE, 0, 0.0) );
 
    /* compute curvatures */
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, NULL, NULL, computeCurv, NULL) );
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, NULL, NULL, computeCurv, conshdlr) );
 
    return SCIP_OKAY;
 }
