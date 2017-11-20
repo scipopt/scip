@@ -568,6 +568,9 @@ SCIP_DECL_PROPINITSOL(propInitsolOrbitalfixing)
    if ( SCIPgetStatus(scip) != SCIP_STATUS_UNKNOWN )
       return SCIP_OKAY;
 
+   if ( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
    assert( SCIPisTransformed(scip) );
 
    /* possibly get symmetries */
