@@ -1131,6 +1131,21 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashSin)
    return SCIP_OKAY;
 }
 
+/** expression curvature detection callback */
+static
+SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureSin)
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(curvature != NULL);
+
+   *curvature = SCIP_EXPRCURV_UNKNOWN;
+
+   /* TODO check whether function is convex w.r.t. the current bounds */
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for sin expressions and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrSin(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1155,6 +1170,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSin(
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffSin) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureSin) );
 
    return SCIP_OKAY;
 }

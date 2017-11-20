@@ -447,6 +447,8 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureCos)
 
    *curvature = SCIP_EXPRCURV_UNKNOWN;
 
+   /* TODO check whether function is convex w.r.t. the current bounds */
+
    return SCIP_OKAY;
 }
 
