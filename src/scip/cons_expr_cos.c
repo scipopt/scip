@@ -441,13 +441,19 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashCos)
 static
 SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureCos)
 {
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_INTERVAL childinterval;
+
    assert(scip != NULL);
    assert(expr != NULL);
    assert(curvature != NULL);
 
-   *curvature = SCIP_EXPRCURV_UNKNOWN;
+   child = SCIPgetConsExprExprChildren(expr)[0];
+   assert(child != NULL);
+   childinterval = SCIPgetConsExprExprInterval(child);
 
-   /* TODO check whether function is convex w.r.t. the current bounds */
+   *curvature = SCIPcomputeCurvatureSin(SCIPgetCurvatureExprExpr(child), childinterval.inf + M_PI_2,
+      childinterval.sup + M_PI_2);
 
    return SCIP_OKAY;
 }
