@@ -192,6 +192,12 @@ Test(curvature, sum)
 
    /* sum of concave and convex expressions -> unknown */
    SCIP_CALL( checkCurvature("<x>[C]^2.5 + <y>[C]^(0.5) + <z>[C]^(-1)", "sum", SCIP_EXPRCURV_UNKNOWN) );
+
+   /* -1 * convex = concave */
+   SCIP_CALL( checkCurvature("-1 * <x>[C]^2", "sum", SCIP_EXPRCURV_CONCAVE) );
+
+   /* -1 * concave = convex */
+   SCIP_CALL( checkCurvature("-1 * <z>[C]^(-1)", "sum", SCIP_EXPRCURV_CONVEX) );
 }
 
 /* check for value expression */
