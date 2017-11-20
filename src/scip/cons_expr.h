@@ -713,9 +713,19 @@ void SCIPsetCurvatureExprExpr(
    SCIP_EXPRCURV         curvature           /**< curvature of the expression */
    );
 
-/** returns the curvature of an expression */
+/** returns the curvature of an expression
+ *
+ *  @note Call SCIPcomputeCurvatureExprExpr before calling this function.
+ */
 EXTERN
 SCIP_EXPRCURV SCIPgetCurvatureExprExpr(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   );
+
+/** computes the curvature of a given expression and all its subexpressions */
+EXTERN
+SCIP_RETCODE SCIPcomputeCurvatureExprExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 

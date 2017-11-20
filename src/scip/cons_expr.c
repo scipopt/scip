@@ -1644,6 +1644,52 @@ SCIP_EXPRCURV SCIPgetCurvatureExprExpr(
    return expr->curvature;
 }
 
+/** expression walk callback for computing expression curvatures */
+static
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeCurv)
+{
+   assert(expr != NULL);
+   assert(expr->exprhdlr != NULL);
+   assert(result != NULL);
+   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
+
+   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+
+   if( SCIPgetCurvatureExprExpr(expr) != SCIP_EXPRCURV_UNKNOWN )
+   {
+      /* we already have seen this expression -> skip */
+      *result = SCIP_CONSEXPREXPRWALK_SKIP;
+   }
+   else if( expr->exprhdlr->curvature != NULL )
+   {
+      SCIP_EXPRCURV curv = SCIP_EXPRCURV_UNKNOWN;
+
+      /* get curvature from expression handler */
+      SCIP_RETCODE retcode = (*expr->exprhdlr->curvature)(scip, expr, &curv);
+      assert(retcode == SCIP_OKAY);
+
+      /* set curvature in expression */
+      SCIPsetCurvatureExprExpr(expr, curv);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** computes the curvature of a given expression and all its subexpressions */
+SCIP_RETCODE SCIPcomputeCurvatureExprExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, computeCurv, NULL, NULL, NULL, NULL) );
+   return SCIP_OKAY;
+}
+
+/** */
+
 /**@} */  /* end of simplifying methods */
 
 /** compares nonlinear handler by priority
@@ -3533,50 +3579,6 @@ SCIP_RETCODE registerBranchingCandidates(
    return SCIP_OKAY;
 }
 
-/** expression walk callback for computing expression curvatures */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeCurv)
-{
-   assert(expr != NULL);
-   assert(expr->exprhdlr != NULL);
-   assert(result != NULL);
-   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
-
-   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-
-   if( SCIPgetCurvatureExprExpr(expr) != SCIP_EXPRCURV_UNKNOWN )
-   {
-      /* we already have seen this expression -> skip */
-      *result = SCIP_CONSEXPREXPRWALK_SKIP;
-   }
-   else if( expr->exprhdlr->curvature != NULL )
-   {
-      SCIP_EXPRCURV curv = SCIP_EXPRCURV_UNKNOWN;
-
-      /* get curvature from expression handler */
-      SCIP_CALL( (*expr->exprhdlr->curvature)(scip, expr, &curv) );
-
-      /* set curvature in expression */
-      SCIPsetCurvatureExprExpr(expr, curv);
-   }
-
-   return SCIP_OKAY;
-}
-
-/** computes the curvature of a given expression and all its subexpressions */
-static
-SCIP_RETCODE computeCurvatures(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
-   )
-{
-   assert(scip != NULL);
-   assert(expr != NULL);
-
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, computeCurv, NULL, NULL, NULL, NULL) );
-   return SCIP_OKAY;
-}
-
 /** expression walk callback to create and add auxiliary variables for the outer approximation */
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(createAuxVarsEnterExpr)
@@ -4730,7 +4732,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreExpr)
 
          /* evaluate all expressions for curvature check */
          SCIP_CALL( SCIPevalConsExprExprInterval(scip, consdata->expr, FALSE, 0, 0.0) );
-         SCIP_CALL( computeCurvatures(scip, consdata->expr) );
+         SCIP_CALL( SCIPcomputeCurvatureExprExpr(scip, consdata->expr) );
       }
 
       /* tell SCIP that we have something nonlinear */
