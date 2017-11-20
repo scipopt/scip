@@ -967,7 +967,7 @@ SCIP_RETCODE graph_load(
             message(MSG_ERROR, &curf, err_unknown_s, keyword);
          else
          {
-            char newformat[4] = "";
+            char newformat[5] = "";
             assert(p != NULL);
 
             message(MSG_DEBUG, &curf, msg_keyword_sd, p->keyword, p->sw_code);
