@@ -733,7 +733,9 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvaturePow)
 {
    SCIP_CONSEXPR_EXPR* child;
    SCIP_EXPRCURV childcurv;
+   SCIP_INTERVAL childinterval;
    SCIP_Real exponent;
+   SCIP_Bool expisint;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -744,20 +746,110 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvaturePow)
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
    childcurv = SCIPgetCurvatureExprExpr(child);
+   childinterval = SCIPgetConsExprExprInterval(child);
 
    *curvature = SCIP_EXPRCURV_UNKNOWN;
 
-   /* nothing can be concluded if the child expression has unknown curvature */
-   if( childcurv == SCIP_EXPRCURV_UNKNOWN )
-      return SCIP_OKAY;
+   assert(childinterval.inf <= childinterval.sup);
 
-   if( (childcurv & SCIP_EXPRCURV_CONVEX) != 0 )
+   if( exponent == 0.0 )
    {
-      /* TODO */
+      *curvature = SCIP_EXPRCURV_LINEAR;
+      return SCIP_OKAY;
    }
-   else if( (childcurv & SCIP_EXPRCURV_CONCAVE) != 0 )
+
+   if( exponent == 1.0 )
+      return childcurv;
+
+   expisint = EPSISINT(exponent, 0.0); /*lint !e835*/
+
+   /* if exponent is fractional, then power is not defined for a negative base
+    * thus, consider only positive part of basebounds
+    */
+   if( !expisint && childinterval.inf < 0.0 )
    {
-      /* TODO */
+      childinterval.inf = 0.0;
+      if( childinterval.sup < 0.0 )
+      {
+         *curvature = SCIP_EXPRCURV_LINEAR;
+         return SCIP_OKAY;
+      }
+   }
+
+   /* if basebounds contains 0.0, consider negative and positive interval separately, if possible */
+   if( childinterval.inf < 0.0 && childinterval.sup > 0.0 )
+   {
+      SCIP_INTERVAL leftbounds;
+      SCIP_INTERVAL rightbounds;
+
+      /* something like x^(-2) may look convex on each side of zero, but is not convex on the whole interval due to the singularity at 0.0 */
+      if( exponent < 0.0 )
+      {
+         *curvature = SCIP_EXPRCURV_UNKNOWN;
+         return SCIP_OKAY;
+      }
+
+      SCIPintervalSetBounds(&leftbounds,  childinterval.inf, 0.0);
+      SCIPintervalSetBounds(&rightbounds, 0.0, childinterval.sup);
+
+      return (SCIP_EXPRCURV) (SCIPexprcurvPower(leftbounds,  childcurv, exponent) & SCIPexprcurvPower(rightbounds, childcurv, exponent));
+   }
+   assert(childinterval.inf >= 0.0 || childinterval.sup <= 0.0);
+
+   /* (base^exponent)'' = exponent * ( (exponent-1) base^(exponent-2) (base')^2 + base^(exponent-1) base'' )
+    *
+    * if base'' is positive, i.e., base is convex, then
+    * - for base > 0.0 and exponent > 1.0, the second deriv. is positive -> convex
+    * - for base < 0.0 and exponent > 1.0, we can't say (first and second summand opposite signs)
+    * - for base > 0.0 and 0.0 < exponent < 1.0, we can't say (first sommand negative, second summand positive)
+    * - for base > 0.0 and exponent < 0.0, we can't say (first and second summand opposite signs)
+    * - for base < 0.0 and exponent < 0.0 and even, the second deriv. is positive -> convex
+    * - for base < 0.0 and exponent < 0.0 and odd, the second deriv. is negative -> concave
+    *
+    * if base'' is negative, i.e., base is concave, then
+    * - for base > 0.0 and exponent > 1.0, we can't say (first summand positive, second summand negative)
+    * - for base < 0.0 and exponent > 1.0 and even, the second deriv. is positive -> convex
+    * - for base < 0.0 and exponent > 1.0 and odd, the second deriv. is negative -> concave
+    * - for base > 0.0 and 0.0 < exponent < 1.0, the second deriv. is negative -> concave
+    * - for base > 0.0 and exponent < 0.0, the second deriv. is positive -> convex
+    * - for base < 0.0 and exponent < 0.0, we can't say (first and second summand opposite signs)
+    *
+    * if base'' is zero, i.e., base is linear, then
+    *   (base^exponent)'' = exponent * (exponent-1) base^(exponent-2) (base')^2
+    * - just multiply signs
+    */
+
+   if( childcurv == SCIP_EXPRCURV_LINEAR )
+   {
+      SCIP_Real sign;
+
+      /* base^(exponent-2) is negative, if base < 0.0 and exponent is odd */
+      sign = exponent * (exponent - 1.0);
+      assert(childinterval.inf >= 0.0 || expisint);
+      if( childinterval.inf < 0.0 && ((int)exponent)%2 != 0 )
+         sign *= -1.0;
+      assert(sign != 0.0);
+
+      *curvature =  sign > 0.0 ? SCIP_EXPRCURV_CONVEX : SCIP_EXPRCURV_CONCAVE;
+      return SCIP_OKAY;
+   }
+
+   if( childcurv == SCIP_EXPRCURV_CONVEX )
+   {
+      if( childinterval.sup <= 0.0 && exponent < 0.0 && expisint )
+         *curvature = ((int)exponent)%2 == 0 ? SCIP_EXPRCURV_CONVEX : SCIP_EXPRCURV_CONCAVE;
+      if( childinterval.inf >= 0.0 && exponent > 1.0 )
+         *curvature = SCIP_EXPRCURV_CONVEX ;
+      return SCIP_OKAY;
+   }
+
+   if( childcurv == SCIP_EXPRCURV_CONCAVE )
+   {
+      if( childinterval.sup <= 0.0 && exponent > 1.0 && expisint )
+         *curvature = ((int)exponent)%2 == 0 ? SCIP_EXPRCURV_CONVEX : SCIP_EXPRCURV_CONCAVE;
+      if( childinterval.inf >= 0.0 && exponent < 1.0 )
+         *curvature = exponent < 0.0 ? SCIP_EXPRCURV_CONVEX : SCIP_EXPRCURV_CONCAVE;
+      return SCIP_OKAY;
    }
 
    return SCIP_OKAY;
