@@ -43429,6 +43429,7 @@ SCIP_Bool SCIPisPrimalboundSol(
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
@@ -43436,7 +43437,7 @@ SCIP_Real SCIPgetGap(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetGap", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetGap", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( SCIPsetIsInfinity(scip->set, getLowerbound(scip)) )
    {
