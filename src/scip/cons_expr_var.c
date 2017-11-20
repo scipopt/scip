@@ -42,7 +42,7 @@
  */
 static
 SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyVar)
-{
+{  /*lint --e{715}*/
    SCIP_VAR* var;
    SCIP_VAR** vars;
    SCIP_Real* coefs;
@@ -293,7 +293,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalVar)
 /** variable hash callback */
 static
 SCIP_DECL_CONSEXPR_EXPRHASH(hashVar)
-{
+{  /*lint --e{715}*/
    SCIP_VAR* var;
 
    assert(scip != NULL);
@@ -312,8 +312,9 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashVar)
 }
 
 /** expression curvature detection callback */
-static SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureVar)
-{
+static
+SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureVar)
+{  /*lint --e{715}*/
    assert(scip != NULL);
    assert(expr != NULL);
    assert(curvature != NULL);

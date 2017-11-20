@@ -410,7 +410,7 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureExp)
    assert(child != NULL);
 
    /* expression is convex if child is convex */
-   if( (SCIPgetCurvatureExprExpr(child) & SCIP_EXPRCURV_CONVEX) != 0 )
+   if( (int)(SCIPgetCurvatureExprExpr(child) & SCIP_EXPRCURV_CONVEX) != 0 )
       *curvature = SCIP_EXPRCURV_CONVEX;
    else
       *curvature = SCIP_EXPRCURV_UNKNOWN;
