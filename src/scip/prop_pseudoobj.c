@@ -858,6 +858,9 @@ SCIP_RETCODE collectMinactImplicVars(
    cliques = SCIPvarGetCliques(var, varfixing);
    ncliques = SCIPvarGetNCliques(var, varfixing);
 
+   if( uselesscliques != NULL )
+      return SCIP_INVALIDDATA;
+
 #ifndef NDEBUG
    /* check that the marker array is reset */
    for( c = 0; c < nbinobjvars; ++c )
@@ -873,17 +876,14 @@ SCIP_RETCODE collectMinactImplicVars(
       assert(clique != NULL);
 
       /* check if the clique was previously detected to be useless with respect to minimum activity */
-      if( uselesscliques != NULL && SCIPhashtableExists(uselesscliques, (void*)clique) )
+      if( SCIPhashtableExists(uselesscliques, (void*)clique) )
          continue;
 
       nbinvars = SCIPcliqueGetNVars(clique);
 
       if( nbinvars > MAX_CLIQUELENGTH )
       {
-         if( uselesscliques != NULL )
-         {
-            SCIP_CALL( SCIPhashtableInsert(uselesscliques, (void*)clique) );
-         }
+         SCIP_CALL( SCIPhashtableInsert(uselesscliques, (void*)clique) );
          continue;
       }
 
@@ -917,7 +917,7 @@ SCIP_RETCODE collectMinactImplicVars(
       }
 
       /* if the clique is useless store it in the hash table to skip it later */
-      if( useless && uselesscliques != NULL )
+      if( useless )
       {
          assert(!SCIPhashtableExists(uselesscliques, (void*)clique));
          SCIP_CALL( SCIPhashtableInsert(uselesscliques, (void*)clique) );
