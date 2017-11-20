@@ -2173,6 +2173,14 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
          cost[e] = graph->cost[e];
    }
 
+   if( !graph_sol_valid(scip, graph, results) )
+   {
+      SCIPfreeBufferArray(scip, &nval);
+      SCIPfreeBufferArray(scip, &results);
+      SCIPfreeBufferArray(scip, &cost);
+      return SCIP_OKAY;
+   }
+
    /* pruning necessary? */
    if( SCIPsolGetHeur(newsol) == NULL ||
       !(strcmp(SCIPheurGetName(SCIPsolGetHeur(newsol)), "rec") == 0 ||
