@@ -858,7 +858,7 @@ SCIP_RETCODE collectMinactImplicVars(
    cliques = SCIPvarGetCliques(var, varfixing);
    ncliques = SCIPvarGetNCliques(var, varfixing);
 
-   if( uselesscliques != NULL )
+   if( uselesscliques == NULL )
       return SCIP_INVALIDDATA;
 
 #ifndef NDEBUG
