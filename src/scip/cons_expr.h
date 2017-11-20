@@ -722,7 +722,10 @@ SCIP_EXPRCURV SCIPgetCurvatureExprExpr(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
-/** computes the curvature of a given expression and all its subexpressions */
+/** computes the curvature of a given expression and all its subexpressions
+ *
+ *  @note this function also evaluates all subexpressions w.r.t. current variable bounds
+ */
 EXTERN
 SCIP_RETCODE SCIPcomputeCurvatureExprExpr(
    SCIP*                 scip,               /**< SCIP data structure */

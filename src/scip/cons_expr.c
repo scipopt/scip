@@ -1675,7 +1675,10 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeCurv)
    return SCIP_OKAY;
 }
 
-/** computes the curvature of a given expression and all its subexpressions */
+/** computes the curvature of a given expression and all its subexpressions
+ *
+ *  @note this function also evaluates all subexpressions w.r.t. current variable bounds
+ */
 SCIP_RETCODE SCIPcomputeCurvatureExprExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
@@ -1684,7 +1687,12 @@ SCIP_RETCODE SCIPcomputeCurvatureExprExpr(
    assert(scip != NULL);
    assert(expr != NULL);
 
+   /* first evaluate all subexpressions */
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, FALSE, 0, 0.0) );
+
+   /* compute curvatures */
    SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, NULL, NULL, computeCurv, NULL) );
+
    return SCIP_OKAY;
 }
 
@@ -4731,7 +4739,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreExpr)
          assert(consdata->expr != NULL);
 
          /* evaluate all expressions for curvature check */
-         SCIP_CALL( SCIPevalConsExprExprInterval(scip, consdata->expr, FALSE, 0, 0.0) );
          SCIP_CALL( SCIPcomputeCurvatureExprExpr(scip, consdata->expr) );
       }
 
