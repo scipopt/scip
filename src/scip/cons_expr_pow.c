@@ -759,7 +759,10 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvaturePow)
    }
 
    if( exponent == 1.0 )
-      return childcurv;
+   {
+      *curvature = childcurv;
+      return SCIP_OKAY;
+   }
 
    expisint = EPSISINT(exponent, 0.0); /*lint !e835*/
 
@@ -792,7 +795,8 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvaturePow)
       SCIPintervalSetBounds(&leftbounds,  childinterval.inf, 0.0);
       SCIPintervalSetBounds(&rightbounds, 0.0, childinterval.sup);
 
-      return (SCIP_EXPRCURV) (SCIPexprcurvPower(leftbounds,  childcurv, exponent) & SCIPexprcurvPower(rightbounds, childcurv, exponent));
+      *curvature = (SCIP_EXPRCURV) (SCIPexprcurvPower(leftbounds,  childcurv, exponent) & SCIPexprcurvPower(rightbounds, childcurv, exponent));
+      return SCIP_OKAY;
    }
    assert(childinterval.inf >= 0.0 || childinterval.sup <= 0.0);
 
