@@ -4904,7 +4904,7 @@ SCIP_RETCODE tryAggregateIntVars(
    }
    c = (SCIP_Longint)(SCIPsetFeasFloor(set, rhs));
 
-   if( REALABS((SCIP_Real)(c/a)) > SCIPsetGetHugeValue(set) * SCIPsetFeastol(set) )
+   if( REALABS((SCIP_Real)(c/a)) > SCIPsetGetHugeValue(set) * SCIPsetFeastol(set) ) /*lint !e653*/
       return SCIP_OKAY;
 
    /* check, if we are in an easy case with either |a| = 1 or |b| = 1 */
@@ -5162,7 +5162,7 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
       scalar = -scalary/scalarx;
       constant = rhs/scalarx;
 
-      if( REALABS(constant) > SCIPsetGetHugeValue(set) * SCIPsetFeastol(set) )
+      if( REALABS(constant) > SCIPsetGetHugeValue(set) * SCIPsetFeastol(set) ) /*lint !e653*/
          return SCIP_OKAY;
 
       /* check aggregation for integer feasibility */
