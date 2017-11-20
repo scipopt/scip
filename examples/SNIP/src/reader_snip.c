@@ -628,6 +628,9 @@ SCIP_DECL_READERREAD(readerReadSnip)
       }
       assert(nodecount == nnodes);
 
+      SCIPinfoMessage(scip, NULL, "SNIP settings: number = <%d>, budget = <%d>\n", snipnumber, budget);
+      SCIPinfoMessage(scip, NULL, "==========================================\n\n");
+
       /* create a new problem in SCIP */
       SCIP_CALL( SCIPprobdataCreate(scip, name, scenariocost, probwosensor, intdictwosensor, shortestpaths,
             scenarioarcids, arcids, intdictarcids, nodemapping, budget, multiplier, narcs, nnodes, nsensors, nscenarios,
