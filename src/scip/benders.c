@@ -51,6 +51,7 @@
 //#define SCIP_DEFAULT_CUTSASCONS          FALSE  /** Should the transferred cuts be added as constraints? */
 #define SCIP_DEFAULT_MIPCHECKFREQ            5  /** the number of iterations that the MIP is checked, -1 for always. */
 #define SCIP_DEFAULT_LNSCHECK              TRUE /** should the Benders' decomposition be used in LNS heuristics */
+#define SCIP_DEFAULT_LNSMAXDEPTH             -1 /** the maximum depth at which the LNS check is performed */
 #define SCIP_DEFAULT_SUBPROBFRAC            1.0 /** the fraction of subproblems that are solved in each iteration */
 
 #define AUXILIARYVAR_NAME     "##bendersauxiliaryvar"
@@ -1047,6 +1048,11 @@ SCIP_RETCODE SCIPbendersCreate(
    SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname, paramdesc,
                   &(*benders)->lnscheck, FALSE, SCIP_DEFAULT_LNSCHECK, NULL, NULL) ); /*lint !e740*/
 
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/lnsmaxdepth", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "maximal depth level at which the LNS check is performed (-1: no limit)");
+   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
+                  &(*benders)->lnsmaxdepth, TRUE, SCIP_DEFAULT_LNSMAXDEPTH, -1, SCIP_MAXTREEDEPTH, NULL, NULL) );
+
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/subprobfrac", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "The fraction of subproblems that are solved in each iteration.");
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem, paramname, paramdesc,
@@ -1851,7 +1857,9 @@ SCIP_RETCODE SCIPbendersExec(
 
    /* if the Benders' decomposition is called from a sub-scip, it is assumed that this is an LNS heuristic. As such, the
     * check is not performed and the solution is assumed to be feasible */
-   if( benders->iscopy && !benders->lnscheck )
+   if( benders->iscopy
+      && (!benders->lnscheck
+         || (benders->lnsmaxdepth > -1 && SCIPgetDepth(benders->sourcescip) > benders->lnsmaxdepth)) )
    {
       (*result) = SCIP_FEASIBLE;
       return SCIP_OKAY;
@@ -1891,7 +1899,7 @@ SCIP_RETCODE SCIPbendersExec(
    benders->coreptupdated = FALSE;
 
    nsubproblems = SCIPbendersGetNSubproblems(benders);
-   if( benders->ncalls == 0 || type == CHECK )
+   if( benders->ncalls == 0 || type == CHECK || onlylpcheck )
       numtocheck = nsubproblems;
    else
       numtocheck = SCIPsetCeil(set, nsubproblems*benders->subprobfrac);
@@ -2663,8 +2671,8 @@ SCIP_RETCODE SCIPbendersCheckAuxiliaryVar(
    else
       reldiff = SCIPsetInfinity(set);
 
-   //if( SCIPsetIsFeasGE(set, auxiliaryvarval + soltol, SCIPbendersGetSubprobObjval(benders, probnumber)) )
-   if( SCIPsetIsFeasGE(set, auxiliaryvarval, SCIPbendersGetSubprobObjval(benders, probnumber)) || reldiff <= soltol )
+   if( SCIPsetIsFeasGE(set, auxiliaryvarval + soltol, SCIPbendersGetSubprobObjval(benders, probnumber)) )
+   //if( SCIPsetIsFeasGE(set, auxiliaryvarval, SCIPbendersGetSubprobObjval(benders, probnumber)) || reldiff <= soltol )
       (*optimal) = TRUE;
 
    return SCIP_OKAY;
