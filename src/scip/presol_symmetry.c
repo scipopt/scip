@@ -828,9 +828,10 @@ SCIP_RETCODE computeSymmetryGroup(
             consvars[j] = curconsvars[j];
             consvals[j] = 1.0;
          }
-         consvars[nconsvars] = SCIPgetIntVarXor(scip, cons);
-         if ( consvars[nconsvars] != NULL )
+
+         if ( SCIPgetIntVarXor(scip, cons) != NULL )
          {
+            consvars[nconsvars] = SCIPgetIntVarXor(scip, cons);
             consvals[nconsvars] = 2.0;
             ++nconsvars;
          }
