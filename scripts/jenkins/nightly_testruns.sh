@@ -1,12 +1,27 @@
 #!/bin/bash -x
 # the -x is for writing each command to standard error (preceded by a ‘+ ’) before it is executed.
-# other flags for debugging: -Canvu, please also consult 'man sh'
+# other flags for debugging: -Canvu, please also consult 'man sh'.
 
 ###################
 ### Description ###
 ###################
-# This script is used by cijenkins.zib.de
-# Builds SCIP with Make and an LPSolver and runs mipdebug and MINLP on different settings
+# This script is used by cijenkins.zib.de.
+# It builds SCIP with Make and an LPSolver and runs mipdebug and MINLP on different settings.
+
+# Usage: from scip root execute
+#        ./nightly_testruns.sh LPS=spx
+
+# Arguments | defaultvalue
+# ----------|-------------
+# LPS       | spx
+
+##########################
+### evaluate arguments ###
+##########################
+for i in $@
+do
+    eval $i
+done
 
 #########################
 ### Compilation setup ###
@@ -24,18 +39,17 @@ ln -s /optimi/usr/sw/zimpl/lib/libzimpl.linux.x86_64.gnu.opt.a lib/static/libzim
 SCIP_FLAGS="ZIMPL=true COMP=gnu OPT=dbg IPOPT=true SYM=bliss "
 
 # deal with different LPSolvers
-if [ "${LPS}" == "spx" ];
-then
-    # soplex is in adm_timos jenkins workspace
-    ln -s /nfs/OPTI/jenkins/workspace/SOPLEX_COMP=gnu_OPT=dbg_nightly/src lib/include/spxinc
-    ln -s /nfs/OPTI/jenkins/workspace/SOPLEX_COMP=gnu_OPT=dbg_nightly/lib/libsoplex.linux.x86_64.gnu.dbg.a lib/static/libsoplex.linux.x86_64.gnu.dbg.a
-    SCIP_FLAGS+="LPS=spx LPSOPT=dbg"
-elif [ "${LPS}" == "cpx" ];
+if [ "${LPS}" == "cpx" ];
 then
     # cplex is globally installed
     ln -s /optimi/usr/sw/cplex/include/ilcplex lib/include/cpxinc
     ln -s /optimi/usr/sw/cplex/lib/x86-64_linux/static_pic/libcplex.a lib/static/libcplex.linux.x86_64.gnu.a
     SCIP_FLAG+="LPS=cpx"
+else
+    # soplex is in adm_timos jenkins workspace
+    ln -s /nfs/OPTI/jenkins/workspace/SOPLEX_COMP=gnu_OPT=dbg_nightly/src lib/include/spxinc
+    ln -s /nfs/OPTI/jenkins/workspace/SOPLEX_COMP=gnu_OPT=dbg_nightly/lib/libsoplex.linux.x86_64.gnu.dbg.a lib/static/libsoplex.linux.x86_64.gnu.dbg.a
+    SCIP_FLAGS+="LPS=spx LPSOPT=dbg"
 fi
 
 ###################
