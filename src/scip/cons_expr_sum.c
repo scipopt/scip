@@ -539,7 +539,7 @@ SCIP_RETCODE createData(
  */
 static
 SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySum)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR** children;
    EXPRNODE* finalchildren;
    SCIP_Real simplifiedconstant;
@@ -615,7 +615,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySum)
  */
 static
 SCIP_DECL_CONSEXPR_EXPRCMP(compareSum)
-{
+{  /*lint --e{715}*/
    SCIP_Real const1;
    SCIP_Real* coefs1;
    SCIP_CONSEXPR_EXPR** children1;
@@ -707,7 +707,7 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataSum)
 
 static
 SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataSum)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
 
    assert(expr != NULL);
@@ -725,7 +725,7 @@ SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataSum)
 
 static
 SCIP_DECL_CONSEXPR_EXPRPRINT(printSum)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
 
    assert(expr != NULL);
@@ -938,7 +938,7 @@ SCIP_RETCODE separatePointSum(
 /** separation initialization callback */
 static
 SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSum)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
 
    exprdata = SCIPgetConsExprExprData(expr);
@@ -959,7 +959,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSum)
 /** separation deinitialization callback */
 static
 SCIP_DECL_CONSEXPR_EXPREXITSEPA(exitSepaSum)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
 
    exprdata = SCIPgetConsExprExprData(expr);
@@ -977,7 +977,7 @@ SCIP_DECL_CONSEXPR_EXPREXITSEPA(exitSepaSum)
 /** expression separation callback */
 static
 SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    SCIP_Real violation;
 
@@ -1028,7 +1028,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
 /** expression reverse propagation callback */
 static
 SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSum)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    SCIP_INTERVAL* bounds;
    SCIP_ROUNDMODE prevroundmode;
@@ -1154,7 +1154,7 @@ TERMINATE:
 /** sum hash callback */
 static
 SCIP_DECL_CONSEXPR_EXPRHASH(hashSum)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    int c;
 
@@ -1185,7 +1185,7 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashSum)
 /** expression curvature detection callback */
 static
 SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureSum)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    int i;
 

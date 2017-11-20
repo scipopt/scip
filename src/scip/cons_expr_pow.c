@@ -396,7 +396,7 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataPow)
 
 static
 SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataPow)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
 
    assert(expr != NULL);
@@ -413,7 +413,7 @@ SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataPow)
 /** @todo: use precedence for better printing */
 static
 SCIP_DECL_CONSEXPR_EXPRPRINT(printPow)
-{
+{  /*lint --e{715}*/
    assert(expr != NULL);
 
    switch( stage )
@@ -638,7 +638,7 @@ SCIP_RETCODE separatePointPow(
 /** expression separation callback */
 static
 SCIP_DECL_CONSEXPR_EXPRSEPA(sepaPow)
-{
+{  /*lint --e{715}*/
    SCIP_ROW* cut;
    SCIP_Bool infeasible;
 
@@ -677,7 +677,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaPow)
 /** expression reverse propagaton callback */
 static
 SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropPow)
-{
+{  /*lint --e{715}*/
    SCIP_INTERVAL interval;
    SCIP_Real exponent;
 
@@ -708,7 +708,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropPow)
 /** expression hash callback */
 static
 SCIP_DECL_CONSEXPR_EXPRHASH(hashPow)
-{
+{  /*lint --e{715}*/
    unsigned int childhash;
 
    assert(scip != NULL);
@@ -730,7 +730,7 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashPow)
 /** expression curvature detection callback */
 static
 SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvaturePow)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* child;
    SCIP_EXPRCURV childcurv;
    SCIP_INTERVAL childinterval;

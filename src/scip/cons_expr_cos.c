@@ -440,7 +440,7 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashCos)
 /** expression curvature detection callback */
 static
 SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureCos)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* child;
    SCIP_INTERVAL childinterval;
 

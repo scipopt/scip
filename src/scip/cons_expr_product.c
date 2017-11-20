@@ -994,7 +994,7 @@ SCIP_RETCODE createData(
  */
 static
 SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
-{
+{  /*lint --e{715}*/
    EXPRNODE* unsimplifiedchildren;
    EXPRNODE* finalchildren;
    SCIP_Real simplifiedcoef;
@@ -1206,7 +1206,7 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataProduct)
 
 static
 SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataProduct)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
 
    assert(expr != NULL);
@@ -1223,7 +1223,7 @@ SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataProduct)
 
 static
 SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
 
    assert(expr != NULL);
@@ -1290,7 +1290,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
 /** product hash callback */
 static
 SCIP_DECL_CONSEXPR_EXPRHASH(hashProduct)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    int c;
 
@@ -1821,7 +1821,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaProduct)
 /** expression reverse propagation callback */
 static
 SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    SCIP_INTERVAL childbounds;
    int i;
@@ -1884,7 +1884,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
 /** expression curvature detection callback */
 static
 SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureProduct)
-{
+{  /*lint --e{715}*/
    assert(scip != NULL);
    assert(expr != NULL);
    assert(curvature != NULL);

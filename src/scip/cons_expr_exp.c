@@ -308,7 +308,7 @@ SCIP_RETCODE separatePointExp(
 /** expression separation callback */
 static
 SCIP_DECL_CONSEXPR_EXPRSEPA(sepaExp)
-{
+{  /*lint --e{715}*/
    SCIP_ROW* cut;
    SCIP_Bool infeasible;
 
@@ -346,7 +346,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaExp)
 /** expression reverse propagaton callback */
 static
 SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropExp)
-{
+{  /*lint --e{715}*/
    SCIP_INTERVAL childbound;
 
    assert(scip != NULL);
@@ -376,7 +376,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropExp)
 /** expression hash callback */
 static
 SCIP_DECL_CONSEXPR_EXPRHASH(hashExp)
-{
+{  /*lint --e{715}*/
    unsigned int childhash;
 
    assert(scip != NULL);
@@ -398,7 +398,7 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashExp)
 /** expression curvature detection callback */
 static
 SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureExp)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* child;
 
    assert(scip != NULL);

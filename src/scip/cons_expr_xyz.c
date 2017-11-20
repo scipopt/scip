@@ -240,7 +240,7 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashXyz)
 /** expression curvature detection callback */
 static
 SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureXyz)
-{
+{  /*lint --e{715}*/
    assert(scip != NULL);
    assert(expr != NULL);
    assert(curvature != NULL);

@@ -33,7 +33,7 @@
 /** the order of two values is the real order */
 static
 SCIP_DECL_CONSEXPR_EXPRCMP(compareValue)
-{
+{  /*lint --e{715}*/
    SCIP_Real val1;
    SCIP_Real val2;
 
@@ -155,7 +155,7 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashValue)
 /** expression curvature detection callback */
 static
 SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureValue)
-{
+{  /*lint --e{715}*/
    assert(scip != NULL);
    assert(expr != NULL);
    assert(curvature != NULL);

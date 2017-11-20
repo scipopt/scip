@@ -46,7 +46,7 @@
  */
 static
 SCIP_DECL_NEWTONEVAL(function1)
-{
+{  /*lint --e{715}*/
    assert(params != NULL);
    assert(nparams == 2);
 
@@ -58,7 +58,7 @@ SCIP_DECL_NEWTONEVAL(function1)
  */
 static
 SCIP_DECL_NEWTONEVAL(derivative1)
-{
+{  /*lint --e{715}*/
    assert(params != NULL);
    assert(nparams == 2);
 
@@ -70,7 +70,7 @@ SCIP_DECL_NEWTONEVAL(derivative1)
  */
 static
 SCIP_DECL_NEWTONEVAL(function2)
-{
+{  /*lint --e{715}*/
    assert(params != NULL);
    assert(nparams == 1);
 
@@ -82,7 +82,7 @@ SCIP_DECL_NEWTONEVAL(function2)
  */
 static
 SCIP_DECL_NEWTONEVAL(derivative2)
-{
+{  /*lint --e{715}*/
    assert(params != NULL);
    assert(nparams == 1);
 
@@ -762,19 +762,19 @@ SCIP_EXPRCURV SCIPcomputeCurvatureSin(
       else if( COS(lb) * COS(ub) >= 0.0 )
       {
          /* on [0, pi/2], sine is concave iff child is concave */
-         if( SIN(lb) >= 0.0 && COS(lb) >= 0.0 && ((childcurvature & SCIP_EXPRCURV_CONCAVE) != 0))
+         if( SIN(lb) >= 0.0 && COS(lb) >= 0.0 && ((int)(childcurvature & SCIP_EXPRCURV_CONCAVE) != 0))
             return SCIP_EXPRCURV_CONCAVE;
 
          /* on [pi/2, pi], sine is concave iff child is convex */
-         if( SIN(lb) >= 0.0 && COS(lb) <= 0.0 && ((childcurvature & SCIP_EXPRCURV_CONVEX) != 0))
+         if( SIN(lb) >= 0.0 && COS(lb) <= 0.0 && ((int)(childcurvature & SCIP_EXPRCURV_CONVEX) != 0))
             return SCIP_EXPRCURV_CONCAVE;
 
          /* on [pi, 3pi/2], sine is convex iff child is concave */
-         if( SIN(lb) <= 0.0 && COS(lb) <= 0.0 && ((childcurvature & SCIP_EXPRCURV_CONCAVE) != 0))
+         if( SIN(lb) <= 0.0 && COS(lb) <= 0.0 && ((int)(childcurvature & SCIP_EXPRCURV_CONCAVE) != 0))
             return SCIP_EXPRCURV_CONVEX;
 
          /* on [3pi/2, 2pi], sine is convex iff child is convex */
-         if( SIN(lb) <= 0.0 && COS(lb) >= 0.0 && ((childcurvature & SCIP_EXPRCURV_CONVEX) != 0))
+         if( SIN(lb) <= 0.0 && COS(lb) >= 0.0 && ((int)(childcurvature & SCIP_EXPRCURV_CONVEX) != 0))
             return SCIP_EXPRCURV_CONVEX;
       }
 
@@ -902,7 +902,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printSin)
 /** expression parse callback */
 static
 SCIP_DECL_CONSEXPR_EXPRPARSE(parseSin)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* childexpr;
 
    assert(expr != NULL);
@@ -975,7 +975,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalSin)
 /** separation initialization callback */
 static
 SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSin)
-{
+{  /*lint --e{715}*/
    SCIP_Real childlb;
    SCIP_Real childub;
 
@@ -1039,7 +1039,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSin)
 /** expression separation callback */
 static
 SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSin)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* child;
    SCIP_VAR* auxvar;
    SCIP_VAR* childvar;
@@ -1179,7 +1179,7 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashSin)
 /** expression curvature detection callback */
 static
 SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureSin)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* child;
    SCIP_INTERVAL childinterval;
 

@@ -57,7 +57,7 @@ struct SCIP_ConsExpr_ExprData
  */
 static
 SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyAbs)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* child;
    SCIP_CONSHDLR* conshdlr;
 
@@ -161,7 +161,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printAbs)
 
 static
 SCIP_DECL_CONSEXPR_EXPRPARSE(parseAbs)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* childexpr;
 
    assert(expr != NULL);
@@ -322,7 +322,7 @@ SCIP_RETCODE computeCutsAbs(
 /** expression separation initialization callback */
 static
 SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaAbs)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    SCIP_ROW* secant;
 
@@ -369,7 +369,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaAbs)
 /** expression separation deinitialization callback */
 static
 SCIP_DECL_CONSEXPR_EXPREXITSEPA(exitSepaAbs)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
 
    exprdata = SCIPgetConsExprExprData(expr);
@@ -395,7 +395,7 @@ SCIP_DECL_CONSEXPR_EXPREXITSEPA(exitSepaAbs)
 /** expression separation callback */
 static
 SCIP_DECL_CONSEXPR_EXPRSEPA(sepaAbs)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    SCIP_ROW* rows[3];
    SCIP_Real violation;
@@ -459,7 +459,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaAbs)
 /** expression reverse propagation callback */
 static
 SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropAbs)
-{
+{  /*lint --e{715}*/
    SCIP_INTERVAL childbound;
 
    assert(scip != NULL);
@@ -500,7 +500,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropAbs)
 /** expression hash callback */
 static
 SCIP_DECL_CONSEXPR_EXPRHASH(hashAbs)
-{
+{  /*lint --e{715}*/
    unsigned int childhash;
 
    assert(scip != NULL);
@@ -522,7 +522,7 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashAbs)
 /** expression curvature detection callback */
 static
 SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureAbs)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* child;
    SCIP_EXPRCURV childcurv;
    SCIP_Real childinf;
