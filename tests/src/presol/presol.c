@@ -60,7 +60,7 @@ static SCIP* scip;
 
 /** create bounded problem */
 static
-void initProb()
+void initProb(void)
 {
    SCIP_VAR* xvar;
    SCIP_VAR* yvar;

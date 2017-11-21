@@ -89,7 +89,7 @@ void getMatrix(SCIP_Real* matrix)
  * second eigenvector is eigenvectors[n..2n-1], etc;
  */
 static
-void checkEigenDecomposition()
+void checkEigenDecomposition(void)
 {
    int n, i, j, k;
    SCIP_Real* A;
@@ -264,7 +264,7 @@ void setup(void)
 }
 
 static
-void teardown()
+void teardown(void)
 {
    /* TODO: when we can skip test (cr_skip), remove this and just skip the test in setup. */
    if( SCIPgetNNlpis(scip) == 0 )
