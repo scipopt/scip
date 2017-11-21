@@ -587,6 +587,7 @@ int reducePcMw(
    int nnodes;
    int nfixed;
    SCIP_Real tmpcost;
+   SCIP_Bool keepsol = FALSE;
 
    assert(scip != NULL);
    assert(graph != NULL);
@@ -620,6 +621,8 @@ int reducePcMw(
             nodearrchar[graph->tail[e]] = TRUE;
          }
       }
+      if( SCIPisZero(scip, minpathcost) )
+         keepsol = TRUE;
    }
 
    /* try to eliminate vertices and edges */
@@ -639,7 +642,7 @@ int reducePcMw(
             tmpcost = pathdist[k] + cost[e] + vnoi[graph->head[e]].dist;
 
             if( graph->mark[graph->head[e]] &&
-               ((SCIPisGT(scip, tmpcost, minpathcost)) ||
+               ((SCIPisGT(scip, tmpcost, minpathcost) && (!keepsol || (result[e] != CONNECT && result[flipedge(e)] != CONNECT))) ||
                   (solgiven && tmpcost >= minpathcost && result[e] != CONNECT && result[flipedge(e)] != CONNECT)) )
             {
                if( marked[flipedge(e)] )
@@ -660,7 +663,7 @@ int reducePcMw(
 
       tmpcost = pathdist[k] + vnoi[k].dist;
 
-      if( SCIPisGT(scip, tmpcost, minpathcost) ||
+      if( (SCIPisGT(scip, tmpcost, minpathcost) && !keepsol) ||
          (solgiven && tmpcost >= minpathcost && !nodearrchar[k]))
       {
          while( transgraph->outbeg[k] != EAT_LAST )
@@ -681,7 +684,7 @@ int reducePcMw(
             const int etmp = transgraph->oeat[e];
             tmpcost = pathdist[k] + cost[e] + vnoi[transgraph->head[e]].dist;
 
-            if( SCIPisGT(scip, tmpcost, minpathcost) ||
+            if( (SCIPisGT(scip, tmpcost, minpathcost) && (!keepsol || (result[e] != CONNECT && result[flipedge(e)] != CONNECT))) ||
                (solgiven && tmpcost >= minpathcost && result[e] != CONNECT && result[flipedge(e)] != CONNECT) )
             {
                if( marked[flipedge(e)] )
@@ -717,10 +720,10 @@ int reducePcMwTryBest(
    SCIP_Real*            bestcost,           /**< best dual ascent costs */
    SCIP_Real*            pathdist,           /**< distance array from shortest path calculations */
    SCIP_Real*            upperbound,         /**< upper bound */
-   SCIP_Real*            oldupperbound,      /**< old upper bound */
    SCIP_Real*            lpobjval,           /**< reduced cost value */
    SCIP_Real*            bestlpobjval,       /**< best reduced cost value */
    SCIP_Real*            minpathcost,        /**< the required reduced path cost to be surpassed */
+   SCIP_Real             oldupperbound,      /**< old upper bound */
    const int*            result,             /**< sol int array */
    int*                  vbase,              /**< array for Voronoi bases */
    int*                  state,              /**< int 4 * nnodes array for internal computations */
@@ -735,14 +738,12 @@ int reducePcMwTryBest(
 
    if( !dualisvalid )
    {
-      printf("DUAL IS NOT VALID %d \n", 0); // todo
-      exit(1);
       *bestlpobjval = *lpobjval;
       BMScopyMemoryArray(bestcost, cost, extnedges);
    }
 
    /* has upperbound and changed, and is best reduced cost valid and different from cost? */
-   if( SCIPisGT(scip, *bestlpobjval, *lpobjval) && SCIPisLT(scip, *upperbound, *oldupperbound) )
+   if( SCIPisGT(scip, *bestlpobjval, *lpobjval) && SCIPisLT(scip, *upperbound, oldupperbound) )
    {
       *solgiven = *solgiven && graph_sol_unreduced(scip, graph, result);
 
@@ -1197,7 +1198,7 @@ SCIP_RETCODE reduce_da(
          costrev[e] = cost[flipedge(e)];
       }
 
-      /* todo: all the rest in separate function */
+      /* todo: all the rest in separate function todo: add check if minpathcost is zero to keep best solution! */
       for( k = 0; k < nnodes; k++ )
          graph->mark[k] = (grad[k] > 0);
 
@@ -2213,7 +2214,7 @@ SCIP_RETCODE reduce_daPcMw(
    /* rerun dual ascent? */
    if( solbasedda && graph->terms > 2 )
    {
-      SCIP_Real oldupperbound = upperbound;
+      const SCIP_Real oldupperbound = upperbound;
 
       /* with recombination? */
       if( userec && graph->stp_type != STP_MWCSP )
@@ -2231,7 +2232,6 @@ SCIP_RETCODE reduce_daPcMw(
          SCIPdebugMessage("added initial TM sol to pool? %d , ub %f \n", success, ub);
       }
 
-
       /* try to improve both dual and primal bound */
       SCIP_CALL( computePertubedSol(scip, graph, transgraph, pool, vnoi, gnodearr, cost, costrev, bestcost, pathdist, state, vbase, pathedge, result, result2,
             transresult, nodearrchar, &upperbound, &lpobjval, &bestlpobjval, &minpathcost, &apsol, offset, extnedges, 0) );
@@ -2242,10 +2242,11 @@ SCIP_RETCODE reduce_daPcMw(
       graph_pc_2orgcheck(graph);
 
       assert(dualCostIsValid(scip, transgraph, cost, state, nodearrchar));
+      computeTransVoronoi(scip, transgraph, vnoi, cost, costrev, pathdist, vbase, pathedge);
       nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, apsol);
 
-      nfixed += reducePcMwTryBest(scip, graph, transgraph, vnoi, cost, costrev, bestcost, pathdist, &upperbound, &oldupperbound,
-            &lpobjval, &bestlpobjval, &minpathcost, result, vbase, state, pathedge, marked, nodearrchar, &apsol, extnedges);
+      nfixed += reducePcMwTryBest(scip, graph, transgraph, vnoi, cost, costrev, bestcost, pathdist, &upperbound,
+            &lpobjval, &bestlpobjval, &minpathcost, oldupperbound, result, vbase, state, pathedge, marked, nodearrchar, &apsol, extnedges);
 
       if( userec )
          SCIPdebugMessage("eliminations after sol based run2 with best dual sol %d bestlb %f newlb %f\n", nfixed, bestlpobjval, lpobjval);
@@ -2256,6 +2257,8 @@ SCIP_RETCODE reduce_daPcMw(
    {
       for( int run = 0; run < DEFAULT_NMAXROOTS && graph->terms > 500; run++ )
       {
+         SCIP_Real oldupperbound = upperbound;
+
          graph_pc_2trans(graph);
 
          apsol = apsol && graph_sol_unreduced(scip, graph, result);
@@ -2272,6 +2275,9 @@ SCIP_RETCODE reduce_daPcMw(
 
          computeTransVoronoi(scip, transgraph, vnoi, cost, costrev, pathdist, vbase, pathedge);
          nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, apsol);
+
+         nfixed += reducePcMwTryBest(scip, graph, transgraph, vnoi, cost, costrev, bestcost, pathdist, &upperbound,
+               &lpobjval, &bestlpobjval, &minpathcost, oldupperbound, result, vbase, state, pathedge, marked, nodearrchar, &apsol, extnedges);
 
          SCIPdebugMessage("DA: pertubated run %d NFIXED %d \n", run, nfixed);
       }

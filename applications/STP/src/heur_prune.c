@@ -528,12 +528,6 @@ SCIP_RETCODE SCIPStpHeurPruneUpdateSols(
 
    assert(graph_sol_valid(scip, prunegraph, soledge));
 
-   if( !graph_sol_valid(scip, prunegraph, soledge) )
-   {
-      printf("PRUNE sol in prune not valid %d \n", 22);
-      exit(1);
-   }
-
    setNodeSolArray(prunegraph, NULL, solnode, soledge);
 
    /*
@@ -613,6 +607,8 @@ SCIP_RETCODE SCIPStpHeurPruneUpdateSols(
 
    for( int k = 0; k < nnodes; k++ )
       pmark[k] = (prunegraph->grad[k] > 0);
+
+   *success = TRUE;
 
    return SCIP_OKAY;
 }
@@ -852,13 +848,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
 
          /* is the reduced graph still feasible? */
          if( !graph_valid(prunegraph) )
-         {
-#if BREAKONERROR
-            printf("reduced graph in prune not valid X \n \n \n");
-            return SCIP_ERROR;
-#endif
             break;
-         }
 
          /* get number of remaining edges */
          graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);

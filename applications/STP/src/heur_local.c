@@ -436,6 +436,8 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
             {
                if( SCIPisLT(scip, diff, 0.0) )
                {
+                  assert(stdeg != NULL);
+
                   SCIPlinkcuttreeEvert(v);
                   stdeg[lastnodeidx]--;
                   SCIPlinkcuttreeCut(&nodes[graph->head[insert[0]]]);
