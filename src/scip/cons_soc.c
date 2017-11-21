@@ -4106,7 +4106,6 @@ SCIP_DECL_CONSDELETE(consDeleteSOC)
    assert(consdata  != NULL);
    assert(*consdata != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
-   assert((*consdata)->nlrow == NULL); /* should have been freed in exitsol */
 
    SCIPdebugMsg(scip, "Deleting SOC constraint <%s>.\n", SCIPconsGetName(cons) );
 
@@ -4133,6 +4132,14 @@ SCIP_DECL_CONSDELETE(consDeleteSOC)
    if( (*consdata)->rhsvar != NULL )
    {
       SCIP_CALL( SCIPreleaseVar(scip, &(*consdata)->rhsvar) );
+   }
+
+   /* free nonlinear row representation
+    * normally released in exitsol, but constraint may be deleted early (e.g., if found redundant)
+    */
+   if( (*consdata)->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPreleaseNlRow(scip, &(*consdata)->nlrow) );
    }
 
    SCIPfreeBlockMemory(scip, consdata);
