@@ -2091,7 +2091,7 @@ SCIP_RETCODE setupSubScip(
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
    SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 1) );
    /* enable statistic timing inside sub SCIP */
-      SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
+      SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", TRUE) );
 #endif
 
    SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", heurdata->nsolslim) );
@@ -2207,7 +2207,7 @@ SCIP_RETCODE setupSubScip(
    /* change random seed of sub-SCIP */
    if( heurdata->subsciprandseeds )
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "randomization/randomseedshift", (int)SCIPheurGetNCalls(heur)) );
+      SCIP_CALL( SCIPsetIntParam(subscip, "randomization/randomseedshift", (int)SCIPheurGetNCalls(heur)) );
    }
 
    SCIPdebugMsg(scip, "Solve Limits: %lld (%lld) nodes (stall nodes), %.1f sec., %d sols\n",
@@ -2490,6 +2490,10 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
       SCIP_CALL( SCIPstartClock(scip, neighborhood->stats.submipclock) );
       /* run sub-SCIP for the given budget, and collect statistics */
       SCIP_CALL_ABORT( SCIPsolve(subscip) );
+
+#ifdef ALNS_SUBSCIPOUTPUT
+      SCIP_CALL( SCIPprintStatistics(scip, NULL) );
+#endif
 
       SCIP_CALL( SCIPstopClock(scip, neighborhood->stats.submipclock) );
 
