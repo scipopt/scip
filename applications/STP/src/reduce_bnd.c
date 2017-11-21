@@ -47,7 +47,6 @@
 #define PERTUBATION_RATIO   0.05              /**< pertubation ratio for dual-ascent primal bound computation */
 #define PERTUBATION_RATIO_PC   0.005          /**< pertubation ratio for dual-ascent primal bound computation */
 #define SOLPOOL_SIZE 20                       /**< size of presolving solution pool */
-#define DA_REC_RUNS 3                         /**< runs of rec heuristic */
 
 
 /** are the dual costs still valid, i.e. are there zero cost paths from the root to all terminals? */
@@ -139,10 +138,10 @@ void pertubateEdgeCosts(
          assert(Is_gterm(graph->term[k]) == Is_gterm(transgraph->term[k]) || transgraph->grad[k] == 0);
 
          if( randomize > 8 )
-            pratio = ((SCIP_Real)(rand() % 10)) / (100.0) - 5.0 / 500.0;
-         if( randomize > 6 )
+            pratio = ((SCIP_Real)(rand() % 10)) / (100.0) - 1.0 / 100.0;
+         else if( randomize > 6 )
             pratio = ((SCIP_Real)(rand() % 10)) / (200.0);
-         if( randomize > 4 )
+         else if( randomize > 4 )
             pratio = ((SCIP_Real)(rand() % 10)) / (300.0);
          else if( randomize > 0 )
             pratio = ((SCIP_Real)(rand() % 10)) / 1000.0;
@@ -195,10 +194,10 @@ void pertubateEdgeCosts(
       assert(Is_gterm(graph->term[k]) == Is_gterm(transgraph->term[k]));
 
       if( randomize > 8 )
-         pratio = ((SCIP_Real)(rand() % 10)) / (50.0) - 5.0 / 50.0;
-      if( randomize > 6 )
+         pratio = ((SCIP_Real)(rand() % 10)) / (50.0) - 1.0 / 10.0;
+      else if( randomize > 6 )
          pratio = ((SCIP_Real)(rand() % 10)) / (20.0);
-      if( randomize > 4 )
+      else if( randomize > 4 )
          pratio = ((SCIP_Real)(rand() % 10)) / (30.0);
       else if( randomize > 0 )
          pratio = ((SCIP_Real)(rand() % 10)) / 100.0;

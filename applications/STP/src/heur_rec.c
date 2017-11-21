@@ -96,7 +96,7 @@ struct SCIP_HeurData
    int                   nselectedsols;      /**< number of solutions actually selected                             */
    int                   nwaitingsols;       /**< number of new solutions before executing the heuristic again      */
    int                   nfailures;          /**< number of failures since last successful call                     */
-   int                   randseed;           /**< seed value for random number generator                            */
+   unsigned int          randseed;           /**< seed value for random number generator                            */
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator                                           */
    SCIP_Bool             maxfreq;            /**< should the heuristic be called at maximum frequency?              */
 };
@@ -133,8 +133,8 @@ inline int edgecostmultiplier(
    )
 {
    SCIP_Real normed;
-   SCIP_Real maxpolyx0;
-   SCIP_Real minpolyx0;
+   int maxpolyx0;
+   int minpolyx0;
 
    int upper;
    int lower;
@@ -251,7 +251,7 @@ SCIP_RETCODE selectdiffsols(
 
    if( !usestppool )
    {
-      int sqrtnallsols = (int) sqrt(nsols);
+      int sqrtnallsols = (int) sqrt((double) nsols);
 
       if( sqrtnallsols >= REC_MIN_NSOLS && sqrtnallsols < maxnsols )
          maxnsols = sqrtnallsols;
@@ -338,7 +338,6 @@ SCIP_RETCODE selectsols(
    SCIP*                 scip,               /**< SCIP data structure */
    const STPSOLPOOL*     pool,               /**< solution pool or NULL */
    SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
-   const int*            incumbentedges,     /**< edges of solution to be used as recombination root */
    int*                  incumbentindex,     /**< index of ancestor of incumbent solution */
    int*                  selection,          /**< selected solutions */
    SCIP_Bool             randomize           /**< select solutions randomly? */
@@ -514,7 +513,7 @@ SCIP_RETCODE buildsolgraph(
    if( pcmw || graph->stp_type == STP_DCSTP )
       SCIP_CALL( selectdiffsols(scip, pool, graph, heurdata, vars, incumbentedges, incumbentindex, solselection, success) );
    else
-      SCIP_CALL( selectsols(scip, pool, heurdata, incumbentedges, incumbentindex, solselection, randomize) );
+      SCIP_CALL( selectsols(scip, pool, heurdata, incumbentindex, solselection, randomize) );
 
    if( *success )
    {
@@ -626,16 +625,16 @@ SCIP_RETCODE buildsolgraph(
                   int e2;
                   assert(Is_term(graph->term[head]));
                   for( e2 = graph->outbeg[head]; e2 != EAT_LAST; e2 = graph->oeat[e2] )
-                      if( Is_pterm(graph->term[graph->head[e2]]) && graph->head[e2] != oldroot )
-                         break;
+                     if( Is_pterm(graph->term[graph->head[e2]]) && graph->head[e2] != oldroot )
+                        break;
 
-                   assert(e2 != EAT_LAST);
+                  assert(e2 != EAT_LAST);
 
-                   if( soledge[e2 / 2] == FALSE )
-                   {
-                      nsoledges++;
-                      soledge[e2 / 2] = TRUE;
-                   }
+                  if( soledge[e2 / 2] == FALSE )
+                  {
+                     nsoledges++;
+                     soledge[e2 / 2] = TRUE;
+                  }
                }
             }
          }
@@ -870,19 +869,19 @@ SCIP_Bool isInPool(
 /** get solution from index */
 STPSOL* SCIPStpHeurRecSolfromIdx(
    STPSOLPOOL*           pool,               /**< the pool */
-   const int             index               /**< the index */
+   const int             soindex             /**< the index */
       )
 {
    int i;
    int size;
 
    assert(pool != NULL);
-   assert(index >= 0 && index <= pool->maxindex);
+   assert(soindex >= 0 && soindex <= pool->maxindex);
 
    size = pool->size;
 
    for( i = 0; i < size; i++ )
-      if( pool->sols[i]->index == index )
+      if( pool->sols[i]->index == soindex )
          break;
 
    if( i == size )
@@ -1773,7 +1772,7 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
    assert(SCIPfindHeur(scip, "TM") != NULL);
    tmheurdata = SCIPheurGetData(SCIPfindHeur(scip, "TM"));
 
-   graph_path_init(scip, newgraph);
+   SCIP_CALL( graph_path_init(scip, newgraph) );
 
    /* compute Steiner tree to obtain upper bound */
    best_start = newgraph->source;

@@ -73,7 +73,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
 extern
 STPSOL* SCIPStpHeurRecSolfromIdx(
    STPSOLPOOL*           pool,               /**< the pool */
-   const int             index               /**< the index */
+   const int             soindex             /**< the index */
     );
 
 /** initializes STPSOL pool */

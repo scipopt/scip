@@ -992,17 +992,17 @@ SCIP_RETCODE createVariables(
 #endif
 
 
-	 /* PRIZECOLLECTING STP */
-    if( graph->stp_type == STP_PCSPG || graph->stp_type == STP_MWCSP || graph->stp_type == STP_RPCSPG )
-	 {
-	    int head;
-	    int* pseudoterms;
+	      /* PRIZECOLLECTING STP */
+         if( graph->stp_type == STP_PCSPG || graph->stp_type == STP_MWCSP || graph->stp_type == STP_RPCSPG )
+         {
+            int head;
+            int* pseudoterms;
 
-	    pseudoterms = NULL;
+            pseudoterms = NULL;
 
             if( probdata->usesymcons )
             {
-               SCIP_CALL( SCIPallocBufferArray(scip, &pseudoterms, probdata->realnterms) );
+               SCIP_CALL(SCIPallocBufferArray(scip, &pseudoterms, probdata->realnterms));
                t = 0;
                k2 = 0;
             }
@@ -1012,13 +1012,13 @@ SCIP_RETCODE createVariables(
                for( e = 0; e < nedges; e++ )
                {
                   head = graph->head[e];
-                  SCIP_CALL( SCIPaddCoefLinear(scip, probdata->prizecyclecons[e], probdata->edgevars[e], 1.0) );
-                  SCIP_CALL( SCIPaddCoefLinear(scip, probdata->prizecyclecons[e], probdata->edgevars[flipedge(e)], 1.0) );
+                  SCIP_CALL(SCIPaddCoefLinear(scip, probdata->prizecyclecons[e], probdata->edgevars[e], 1.0));
+                  SCIP_CALL(SCIPaddCoefLinear(scip, probdata->prizecyclecons[e], probdata->edgevars[flipedge(e)], 1.0));
                   if( root != head )
                   {
                      for( a = graph->inpbeg[head]; a != EAT_LAST; a = graph->ieat[a] )
                      {
-                        SCIP_CALL( SCIPaddCoefLinear(scip, probdata->prizecyclecons[e], probdata->edgevars[a], -1.0) );
+                        SCIP_CALL(SCIPaddCoefLinear(scip, probdata->prizecyclecons[e], probdata->edgevars[a], -1.0));
                      }
                   }
                }
@@ -1030,10 +1030,10 @@ SCIP_RETCODE createVariables(
                if( !Is_term(graph->term[head]) )
                {
                   if( graph->stp_type != STP_RPCSPG )
-                     SCIP_CALL( SCIPaddCoefLinear(scip, probdata->prizecons, probdata->edgevars[e], 1.0) );
+                     SCIP_CALL(SCIPaddCoefLinear(scip, probdata->prizecons, probdata->edgevars[e], 1.0));
 
                   /* variables are preferred to be branched on */
-                  SCIP_CALL( SCIPchgVarBranchPriority(scip, probdata->edgevars[e], 10) );
+                  SCIP_CALL(SCIPchgVarBranchPriority(scip, probdata->edgevars[e], 10));
                   if( probdata->usesymcons )
                   {
                      if( graph->stp_type != STP_RPCSPG )
@@ -1045,10 +1045,10 @@ SCIP_RETCODE createVariables(
                         {
                            for( a = graph->inpbeg[pseudoterms[k]]; a != EAT_LAST; a = graph->ieat[a] )
                            {
-                              SCIP_CALL( SCIPaddCoefSetppc(scip, probdata->prizesymcons[k2], probdata->edgevars[a]) );
+                              SCIP_CALL(SCIPaddCoefSetppc(scip, probdata->prizesymcons[k2], probdata->edgevars[a]));
                            }
 
-                           SCIP_CALL( SCIPaddCoefSetppc(scip, probdata->prizesymcons[k2], probdata->edgevars[e]) );
+                           SCIP_CALL(SCIPaddCoefSetppc(scip, probdata->prizesymcons[k2], probdata->edgevars[e]));
                            k2++;
                         }
                         t++;
