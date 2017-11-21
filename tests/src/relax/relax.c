@@ -71,7 +71,7 @@ static SCIP_RELAX* relax;
 
 /** get the number of calls of the relaxator */
 static
-int SCIPgetNcallsUnittest()
+int SCIPgetNcallsUnittest(void)
 {
    SCIP_RELAXDATA* relaxdata;
 
@@ -85,7 +85,7 @@ int SCIPgetNcallsUnittest()
 
 /** creates the unittest relaxator and includes it in SCIP */
 static
-void SCIPincludeRelaxUnittest()
+void SCIPincludeRelaxUnittest(void)
 {
    SCIP_RELAXDATA* relaxdata;
 

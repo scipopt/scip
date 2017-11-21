@@ -15332,6 +15332,12 @@ SCIP_Real SCIPvarGetVSIDSCurrentRun(
    assert(stat != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
+   if( dir != SCIP_BRANCHDIR_DOWNWARDS && dir != SCIP_BRANCHDIR_UPWARDS )
+   {
+      SCIPerrorMessage("invalid branching direction %d when asking for VSIDS value\n", dir);
+      return SCIP_INVALID;
+   }
+
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
