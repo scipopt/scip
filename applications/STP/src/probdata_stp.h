@@ -189,6 +189,13 @@ SCIP_RETCODE SCIPprobdataWriteIntermediateSolution(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** writes SPG (no variant!) to a file */
+void SCIPprobdataWriteStp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   const char*           filename            /**< file name */
+   );
+
 /** writes the best solution to a file */
 extern
 SCIP_RETCODE SCIPprobdataWriteSolution(

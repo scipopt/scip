@@ -599,7 +599,6 @@ IP/Clique/Instances/san200_0.9_3.clq.lp.gz
 IP/Clique/Instances/brock200_4.clq.lp.gz
 IP/Clique/Instances/san400_0.9_1.clq.lp.gz
 IP/Clique/Instances/p_hat1500-1.clq.lp.gz
-IP/Clique/Instances/brock800_2.clq.lp.gz
 IP/Clique/Instances/c-fat500-1.clq.lp.gz
 IP/Clique/Instances/c-fat500-2.clq.lp.gz
 IP/Clique/Instances/hamming8-2.clq.lp.gz
@@ -726,7 +725,6 @@ IP/Coloring/Instances/2-Insertions_3.col.lp.gz
 IP/Coloring/Instances/le450_15c.col.lp.gz
 IP/Coloring/Instances/le450_15b.col.lp.gz
 IP/Coloring/Instances/3-Insertions_5.col.lp.gz
-IP/Coloring/Instances/qg.order30.col.lp.gz
 IP/Coloring/Instances/2-FullIns_3.col.lp.gz
 IP/Coloring/Instances/fpsol2.i.2.col.lp.gz
 IP/Coloring/Instances/1-Insertions_5.col.lp.gz
@@ -3427,7 +3425,6 @@ IP/sat/bf2670-001.mps.gz
 IP/sat/bmc-galileo-8.mps.gz
 IP/sat/bf1355-638.mps.gz
 IP/sat/ssa2670-141.mps.gz
-IP/sat/bmc-ibm-11.mps.gz
 IP/sat/bmc-ibm-13.mps.gz
 IP/sat/bmc-ibm-5.mps.gz
 IP/sat/bmc-ibm-3.mps.gz

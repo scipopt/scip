@@ -117,6 +117,7 @@ fixed bugs:
 - fixed minor issue in expression graph simplification
 - fixed several bugs related to hashing of constraints/rows in cutpool.c and cons_linear.c
 - fixed aggregation of variables in boundshift presolver that contain large variable bounds
+- fixed releasing of variables in the genvbounds propagator in case the problem could be solved during presolving of a restart
 
 added tests:
 - added tests that cover nonempty linear constraint classification types

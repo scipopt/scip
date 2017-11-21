@@ -38,14 +38,14 @@ extern "C" {
 
 /** creates the prune primal heuristic and includes it in SCIP */
 extern
-SCIP_RETCODE SCIPincludeHeurAscendPrune(
+SCIP_RETCODE SCIPStpIncludeHeurAscendPrune(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 
 /** ascent and prune */
 extern
-SCIP_RETCODE SCIPheurAscendAndPrune(
+SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic data structure or NULL */
    const GRAPH*          g,                  /**< the graph */
@@ -53,26 +53,11 @@ SCIP_RETCODE SCIPheurAscendAndPrune(
    int*                  edgearrint,         /**< int edges array to store solution */
    int*                  nodearrint,         /**< int vertices array for internal computations */
    int                   root,               /**< the root (used for dual ascent) */
-   char*                 nodearrchar,        /**< char vertices array for internal computations */
+   STP_Bool*             nodearrchar,        /**< char vertices array for internal computations */
    SCIP_Bool*            solfound,           /**< has a solution been found? */
-   SCIP_Bool             dualascredcosts,    /**< reduced costs from dual ascent? */
    SCIP_Bool             addsol              /**< should the solution be added to SCIP by this method? */
    );
 
-/** ascent and prune for prize-collecting Steiner tree and maximum weight connected subgraph */
-SCIP_RETCODE SCIPheurAscendAndPrunePcMw(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEUR*            heur,               /**< heuristic data structure or NULL */
-   const GRAPH*          g,                  /**< the graph */
-   const SCIP_Real*      redcosts,           /**< the reduced costs */
-   int*                  edgearrint,         /**< int edges array to store solution */
-   int*                  nodearrint,         /**< int vertices array for internal computations */
-   int                   root,               /**< the root (used for dual ascent) */
-   char*                 nodearrchar,        /**< char vertices array for internal computations */
-   SCIP_Bool*            solfound,           /**< has a solution been found? */
-   SCIP_Bool             dualascredcosts,    /**< reduced costs from dual ascent? */
-   SCIP_Bool             addsol              /**< should the solution be added to SCIP by this method? */
-   );
 
 #ifdef __cplusplus
 }
