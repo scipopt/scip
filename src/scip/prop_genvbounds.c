@@ -2367,13 +2367,6 @@ SCIP_DECL_PROPEXITPRE(propExitpreGenvbounds)
    assert(propdata->lbevents == NULL);
    assert(propdata->ubevents == NULL);
 
-   /* it might happen that during presolving we could solve the instance; in such a case we release all genvbounds */
-   if( SCIPisStopped(scip) )
-   {
-      SCIP_CALL( freeGenVBounds(scip, propdata) );
-      return SCIP_OKAY;
-   }
-
    /* allocate memory to store new variables */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, SCIPgetNTotalVars(scip)) );
 
@@ -2465,6 +2458,25 @@ SCIP_DECL_PROPEXITPRE(propExitpreGenvbounds)
    return SCIP_OKAY;
 }
 
+/** deinitialization method of propagator (called before transformed problem is freed) */
+static
+SCIP_DECL_PROPEXIT(propExitGenvbounds)
+{
+   SCIP_PROPDATA* propdata;
+
+   assert(scip != NULL);
+   assert(prop != NULL);
+   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   /* get propagator data */
+   propdata = SCIPpropGetData(prop);
+   assert(propdata != NULL);
+
+   /* free remaining genvbounds */
+   SCIP_CALL( freeGenVBounds(scip, propdata) );
+
+   return SCIP_OKAY;
+}
 
 /** execution method of propagator */
 static
@@ -2770,6 +2782,7 @@ SCIP_RETCODE SCIPincludePropGenvbounds(
    SCIP_CALL( SCIPsetPropInit(scip, prop, propInitGenvbounds) );
    SCIP_CALL( SCIPsetPropInitpre(scip, prop, propInitpreGenvbounds) );
    SCIP_CALL( SCIPsetPropExitpre(scip, prop, propExitpreGenvbounds) );
+   SCIP_CALL( SCIPsetPropExit(scip, prop, propExitGenvbounds) );
    SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolGenvbounds) );
    SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolGenvbounds, PROP_PRESOL_PRIORITY,
          PROP_PRESOL_MAXROUNDS, PROP_PRESOLTIMING) );
