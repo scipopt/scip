@@ -38,6 +38,7 @@
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 #define MAXSHIFTINGS          50        /**< maximal number of non improving shiftings */
+#define MAXSHIFTVAL           1e+4      /**< maximum shift value for selecting a variable */
 #define WEIGHTFACTOR          1.1
 #define DEFAULT_RANDSEED      17
 
@@ -373,7 +374,8 @@ SCIP_RETCODE selectShifting(
             continue;
 
          deltaobj = SCIPvarGetObj(var) * (shiftval - solval);
-         if( shiftscore < bestshiftscore || deltaobj < bestdeltaobj )
+         if( (shiftscore < bestshiftscore || deltaobj < bestdeltaobj)
+            && SCIPisLE(scip, REALABS(shiftval), MAXSHIFTVAL) ) /* ignore candidates for which shiftval is too large */
          {
             bestshiftscore = shiftscore;
             bestdeltaobj = deltaobj;
