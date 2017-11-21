@@ -5871,7 +5871,7 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
          SCIP_INTERVAL nonlinactivity;
 
          /* check whether there are almost fixed nonlinear variables that can be fixed */
-         for( v = 0; i < SCIPexprtreeGetNVars(consdata->exprtrees[i]); ++v )
+         for( v = 0; v < SCIPexprtreeGetNVars(consdata->exprtrees[i]); ++v )
          {
             var = SCIPexprtreeGetVars(consdata->exprtrees[i])[v];
 
