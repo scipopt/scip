@@ -410,6 +410,7 @@ SCIP_RETCODE propagateOrbitalFixing(
    if ( ! success )
    {
       SCIPfreeBufferArray(scip, &b1);
+      SCIPfreeBufferArray(scip, &activeperms);
       return SCIP_OKAY;
    }
 
