@@ -44,14 +44,14 @@
 #define DEFAULT_RANDSEED             54 /**< initial random seed */
 
 /*#define MAKECUTINTEGRAL*/        /* try to scale all cuts to integral coefficients */
-#define MAKEINTCUTINTEGRAL     /* try to scale cuts without continuous variables to integral coefficients */
+/*#define MAKEINTCUTINTEGRAL*/     /* try to scale cuts without continuous variables to integral coefficients */
 /*#define FORCECUTINTEGRAL*/       /* discard cut if conversion to integral coefficients failed */
 #define SEPARATEROWS           /* separate rows with integral slack */
 
 #define BOUNDSWITCH              0.9999
 #define POSTPROCESS                TRUE
 #define USEVBDS                    TRUE
-#define MAKECONTINTEGRAL          FALSE
+/*#define MAKECONTINTEGRAL          FALSE*/
 #define MINFRAC                    0.05
 #define MAXFRAC                    0.95
 
