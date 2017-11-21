@@ -73,6 +73,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <stdint.h>
 
 #include "scip/prop_vbounds.h"
 
@@ -366,7 +367,7 @@ SCIP_RETCODE catchEvents(
       else
          eventtype = SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_GUBCHANGED;
 
-      SCIP_CALL( SCIPcatchVarEvent(scip, var, eventtype, eventhdlr, (SCIP_EVENTDATA*) (size_t) v, NULL) ); /*lint !e571*/
+      SCIP_CALL( SCIPcatchVarEvent(scip, var, eventtype, eventhdlr, (SCIP_EVENTDATA*) (uintptr_t) v, NULL) ); /*lint !e571*/
    }
 
    return SCIP_OKAY;
@@ -414,7 +415,7 @@ SCIP_RETCODE dropEvents(
       else
          eventtype = SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_GUBCHANGED;
 
-      SCIP_CALL( SCIPdropVarEvent(scip, var, eventtype, eventhdlr, (SCIP_EVENTDATA*) (size_t) v, -1) ); /*lint !e571*/
+      SCIP_CALL( SCIPdropVarEvent(scip, var, eventtype, eventhdlr, (SCIP_EVENTDATA*) (uintptr_t) v, -1) ); /*lint !e571*/
    }
 
    return SCIP_OKAY;
