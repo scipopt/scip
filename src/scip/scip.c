@@ -43616,8 +43616,6 @@ SCIP_Real SCIPgetAvgPseudocostCurrentRun(
    return SCIPhistoryGetPseudocost(scip->stat->glbhistorycrun, solvaldelta);
 }
 
-
-
 /** gets the average number of pseudo cost updates for the given direction over all variables
  *
  *  @return the average number of pseudo cost updates for the given direction over all variables
@@ -43780,9 +43778,9 @@ SCIP_Real SCIPgetAvgConflictScore(
    return SCIPbranchGetScore(scip->set, NULL, conflictscoredown, conflictscoreup);
 }
 
-/** gets the average conflict score value over all variables, only using the pseudo cost information of the current run
+/** gets the average conflict score value over all variables, only using the conflict score information of the current run
  *
- *  @return the average conflict score value over all variables, only using the pseudo cost information of the current run
+ *  @return the average conflict score value over all variables, only using the conflict score information of the current run
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
@@ -43828,10 +43826,10 @@ SCIP_Real SCIPgetAvgConflictlengthScore(
    return SCIPbranchGetScore(scip->set, NULL, conflictlengthdown, conflictlengthup);
 }
 
-/** gets the average conflictlength score value over all variables, only using the pseudo cost information of the
+/** gets the average conflictlength score value over all variables, only using the conflictlength information of the
  *  current run
  *
- *  @return the average conflictlength score value over all variables, only using the pseudo cost information of the
+ *  @return the average conflictlength score value over all variables, only using the conflictlength information of the
  *          current run
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
@@ -43872,10 +43870,10 @@ SCIP_Real SCIPgetAvgInferences(
 }
 
 /** returns the average number of inferences found after branching in given direction over all variables,
- *  only using the pseudo cost information of the current run
+ *  only using the inference information of the current run
  *
  *  @return the average number of inferences found after branching in given direction over all variables,
- *          only using the pseudo cost information of the current run
+ *          only using the inference information of the current run
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
@@ -43914,10 +43912,10 @@ SCIP_Real SCIPgetAvgInferenceScore(
    return SCIPbranchGetScore(scip->set, NULL, inferencesdown, inferencesup);
 }
 
-/** gets the average inference score value over all variables, only using the inference information information of the
+/** gets the average inference score value over all variables, only using the inference information of the
  *  current run
  *
- *  @return the average inference score value over all variables, only using the inference information information of the
+ *  @return the average inference score value over all variables, only using the inference information of the
  *          current run
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
@@ -43958,10 +43956,10 @@ SCIP_Real SCIPgetAvgCutoffs(
 }
 
 /** returns the average number of cutoffs found after branching in given direction over all variables,
- *  only using the pseudo cost information of the current run
+ *  only using the cutoff information of the current run
  *
  *  @return the average number of cutoffs found after branching in given direction over all variables,
- *          only using the pseudo cost information of the current run
+ *          only using the cutoff information of the current run
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
@@ -44000,9 +43998,9 @@ SCIP_Real SCIPgetAvgCutoffScore(
    return SCIPbranchGetScore(scip->set, NULL, cutoffsdown, cutoffsup);
 }
 
-/** gets the average cutoff score value over all variables, only using the pseudo cost information of the current run
+/** gets the average cutoff score value over all variables, only using the cutoff score information of the current run
  *
- *  @return the average cutoff score value over all variables, only using the pseudo cost information of the current run
+ *  @return the average cutoff score value over all variables, only using the cutoff score information of the current run
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
