@@ -1958,18 +1958,19 @@ SCIP_RETCODE SCIPStpDualAscent(
                   unsatarcs[i - shift] = a;
                }
             }
-            if( isactive )
-            {
-               stacklength = 0;
-               goto ENDOFLOOP;
-            }
-            nunsatarcs -= shift;
 
             if( addcuts )
             {
                assert(cons != NULL);
                SCIP_CALL( SCIPreleaseCons(scip, &cons) );
             }
+
+            if( isactive )
+            {
+               stacklength = 0;
+               goto ENDOFLOOP;
+            }
+            nunsatarcs -= shift;
 
             continue;
          }

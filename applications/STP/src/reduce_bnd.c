@@ -896,7 +896,10 @@ SCIP_RETCODE reduce_da(
       goto TERMINATE;
 
    /* number of runs should not exceed number of connected vertices */
-   runs = MIN(k, DEFAULT_HEURRUNS / 5);
+   if( directed )
+      runs = MIN(k, DEFAULT_HEURRUNS);
+   else
+      runs = MIN(k, DEFAULT_HEURRUNS / 5);
 
    /* neither PC, MW, RPC nor HC? */
    if( !rpc && heursources != NULL )
@@ -965,7 +968,7 @@ SCIP_RETCODE reduce_da(
          maxcost = graph->cost[e];
    }
 
-   if( directed && !externsol )
+   if( (directed || rpc) && !externsol )
    {
       SCIP_CALL( SCIPStpHeurTMRun(scip, NULL, graph, starts, &best_start, result, runs, root, cost, costrev, &hopfactor, NULL, maxcost, &success, FALSE) );
 
@@ -1019,7 +1022,7 @@ SCIP_RETCODE reduce_da(
    {
       nruns = 0;
       if( rpc )
-         graph_pc_2trans(graph);
+         graph_pc_2transcheck(graph);
    }
 
    maxcost = -1;
@@ -1030,7 +1033,8 @@ SCIP_RETCODE reduce_da(
       SCIP_Bool soladded;
       SCIP_Bool usesol = (run > 1);
 
-      SCIPdebugMessage("round %d of %d\n", run, nruns);
+      if( rpc )
+         usesol = TRUE;
 
       /* graph vanished? */
       if( grad[graph->source] == 0 )
@@ -1167,9 +1171,7 @@ SCIP_RETCODE reduce_da(
          else
          {
             if( rpc )
-            {
                graph_pc_2org(graph);
-            }
 
             goto TERMINATE;
          }
@@ -1490,15 +1492,15 @@ SCIP_RETCODE reduce_da(
 
       assert(graph_valid(graph));
 
-      if( rpc )
-      {
-         graph_pc_2trans(graph);
-         graph_pc_2org(graph);
-      }
-      else
+      if( !rpc )
       {
          for( k = 0; k < nnodes; k++ )
             graph->mark[k] = graph->grad[k] > 0;
+      }
+      else
+      {
+         graph_pc_2trans(graph);
+         graph_pc_2org(graph);
       }
    } /* root loop */
 
