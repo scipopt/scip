@@ -355,7 +355,7 @@ SCIP_RETCODE collectCoefficients(
    if ( ! SCIPisInfinity(scip, rhs) )
       rhs -= constant;
 
-   /* check whether we have to resize */
+   /* check whether we have to resize; note that we have to add 2 * nvars since two inequalities may be added */
    if ( matrixdata->nmatcoef + 2 * nvars > matrixdata->nmaxmatcoef )
    {
       int newsize;
