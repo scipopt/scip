@@ -30,6 +30,11 @@
 #define EXPRHDLR_DESC         "variable expression"
 #define EXPRHDLR_HASHKEY     SCIPcalcFibHash(22153.0)
 
+/** translate from one value of infinity to another
+ *
+ *  if val is >= infty1, then give infty2, else give val
+ */
+#define infty2infty(infty1, infty2, val) ((val) >= (infty1) ? (infty2) : (val))
 
 /** simplifies a variable expression.
  * We replace the variable when fixed by its value
@@ -274,15 +279,19 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalVar)
       /* if bound in [0,varboundrelax], then relax to 0.0, otherwise relax by -varboundrelax */
       if( lb >= 0.0 && lb <= varboundrelax )
          lb = 0.0;
-      else
+      else if( !SCIPisInfinity(scip, -lb) )
          lb -= varboundrelax;
 
       /* if bound in [-varboundrelax,0], then relax to 0.0, otherwise relax by +varboundrelax */
       if( ub <= 0.0 && ub >= -varboundrelax )
          ub = 0.0;
-      else
+      else if( !SCIPisInfinity(scip, ub) )
          ub += varboundrelax;
    }
+
+   /* convert SCIPinfinity() to SCIP_INTERVAL_INFINITY */
+   lb = -infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY, -lb);
+   ub = infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY, ub);
 
    assert(lb <= ub);  /* can SCIP ensure by now that variable bounds are not contradicting? */
    SCIPintervalSetBounds(interval, lb, ub);

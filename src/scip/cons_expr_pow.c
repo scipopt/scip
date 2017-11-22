@@ -516,11 +516,11 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalPow)
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
 
    childinterval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]);
-   assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), childinterval));
+   assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval));
 
    exponent = SCIPgetConsExprExprPowExponent(expr);
 
-   SCIPintervalPowerScalar(SCIPinfinity(scip), interval, childinterval, exponent);
+   SCIPintervalPowerScalar(SCIP_INTERVAL_INFINITY, interval, childinterval, exponent);
 
    return SCIP_OKAY;
 }
@@ -689,13 +689,13 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropPow)
    *nreductions = 0;
 
    /* not possible to learn bounds if expression interval is unbounded in both directions */
-   if( SCIPintervalIsEntire(SCIPinfinity(scip), SCIPgetConsExprExprInterval(expr)) )
+   if( SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, SCIPgetConsExprExprInterval(expr)) )
       return SCIP_OKAY;
 
    exponent = SCIPgetConsExprExprPowExponent(expr);
 
    /* f = pow(c0, alpha) -> c0 = pow(f, 1/alpha) */
-   SCIPintervalPowerScalarInverse(SCIPinfinity(scip), &interval,
+   SCIPintervalPowerScalarInverse(SCIP_INTERVAL_INFINITY, &interval,
       SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]), exponent, SCIPgetConsExprExprInterval(expr));
 
    /* try to tighten the bounds of the child node */

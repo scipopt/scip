@@ -1396,10 +1396,10 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalProduct)
       SCIP_INTERVAL childinterval;
 
       childinterval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[c]);
-      assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), childinterval));
+      assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval));
 
       /* multiply childinterval with the so far computed interval */
-      SCIPintervalMul(SCIPinfinity(scip), interval, *interval, childinterval);
+      SCIPintervalMul(SCIP_INTERVAL_INFINITY, interval, *interval, childinterval);
    }
 
    return SCIP_OKAY;
@@ -1699,7 +1699,7 @@ SCIP_RETCODE separatePointProduct(
 
             midval *= (SCIPvarGetUbLocal(var) + SCIPvarGetLbLocal(var)) / 2.0;
             SCIPintervalSetBounds(&bounds, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
-            SCIPintervalMul(SCIPinfinity(scip), &fixedinterval, fixedinterval, bounds);
+            SCIPintervalMul(SCIP_INTERVAL_INFINITY, &fixedinterval, fixedinterval, bounds);
          }
       }
       nvars = pos; /* update number of vars */
@@ -1841,7 +1841,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
       return SCIP_OKAY;
 
    /* not possible to learn bounds if expression interval is unbounded in both directions */
-   if( SCIPintervalIsEntire(SCIPinfinity(scip), SCIPgetConsExprExprInterval(expr)) )
+   if( SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, SCIPgetConsExprExprInterval(expr)) )
       return SCIP_OKAY;
 
    exprdata = SCIPgetConsExprExprData(expr);
@@ -1858,7 +1858,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
          if( i == j )
             continue;
 
-         SCIPintervalMul(SCIPinfinity(scip), &childbounds, childbounds,
+         SCIPintervalMul(SCIP_INTERVAL_INFINITY, &childbounds, childbounds,
                SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[j]));
 
          /* if there is 0.0 in the product, then later division will hardly give useful bounds, so give up for this i */
@@ -1870,7 +1870,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
       if( j == SCIPgetConsExprExprNChildren(expr) )
       {
          /* f / (const * prod_{j:j!=i} c_j) */
-         SCIPintervalDiv(SCIPinfinity(scip), &childbounds, SCIPgetConsExprExprInterval(expr), childbounds);
+         SCIPintervalDiv(SCIP_INTERVAL_INFINITY, &childbounds, SCIPgetConsExprExprInterval(expr), childbounds);
 
          /* try to tighten the bounds of the expression */
          SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[i], childbounds, force,

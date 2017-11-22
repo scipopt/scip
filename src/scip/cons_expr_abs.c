@@ -226,9 +226,9 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalAbs)
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
 
    childinterval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]);
-   assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), childinterval));
+   assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval));
 
-   SCIPintervalAbs(SCIPinfinity(scip), interval, childinterval);
+   SCIPintervalAbs(SCIP_INTERVAL_INFINITY, interval, childinterval);
 
    return SCIP_OKAY;
 }

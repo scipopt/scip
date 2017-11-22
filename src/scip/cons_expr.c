@@ -947,7 +947,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprVisitChild)
    /* skip child if it has been evaluated already */
    if( propdata->boxtag != 0 && propdata->boxtag == expr->children[expr->walkcurrentchild]->intevaltag )
    {
-      if( SCIPintervalIsEmpty(SCIPinfinity(scip), expr->children[expr->walkcurrentchild]->interval) )
+      if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->children[expr->walkcurrentchild]->interval) )
       {
          propdata->aborted = TRUE;
          *result = SCIP_CONSEXPREXPRWALK_ABORT;
@@ -989,7 +989,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprLeaveExpr)
    /* set interval to [-inf,+inf] if interval evaluation callback is not implemented */
    if( expr->exprhdlr->inteval == NULL )
    {
-      SCIPintervalSetEntire(SCIPinfinity(scip), &expr->interval);
+      SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &expr->interval);
       *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
 
       return SCIP_OKAY;
@@ -999,7 +999,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprLeaveExpr)
    SCIP_CALL( (*expr->exprhdlr->inteval)(scip, expr, &interval, propdata->varboundrelax) );
 
    /* update expression interval */
-   if( !SCIPintervalIsEmpty(SCIPinfinity(scip), interval) )
+   if( !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, interval) )
    {
       /* intersect new interval with the previous one */
       if( propdata->intersect )
@@ -1011,7 +1011,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprLeaveExpr)
    }
 
    /* stop if the computed or resulting interval is empty */
-   if( SCIPintervalIsEmpty(SCIPinfinity(scip), interval) || SCIPintervalIsEmpty(SCIPinfinity(scip), expr->interval) )
+   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, interval)
+      || SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->interval) )
    {
       SCIPintervalSetEmpty(&expr->interval);
       propdata->aborted = TRUE;
@@ -1823,7 +1824,7 @@ SCIP_RETCODE forwardPropCons(
 #endif
 
    /* it may happen that we detect infeasibility during forward propagation if we use previously computed intervals */
-   if( SCIPintervalIsEmpty(SCIPinfinity(scip), SCIPgetConsExprExprInterval(consdata->expr)) )
+   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, SCIPgetConsExprExprInterval(consdata->expr)) )
    {
       *infeasible = TRUE;
    }
@@ -5926,7 +5927,7 @@ SCIP_RETCODE SCIPcreateConsExprExpr(
    (*expr)->exprdata = exprdata;
 
    /* initialize an empty interval for interval evaluation */
-   SCIPintervalSetEntire(SCIPinfinity(scip), &(*expr)->interval);
+   SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &(*expr)->interval);
 
    if( nchildren > 0 )
    {
@@ -6834,7 +6835,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    assert(expr != NULL);
    assert(cutoff != NULL);
    assert(ntightenings != NULL);
-   assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), expr->interval));
+   assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->interval));
 
    oldlb = SCIPintervalGetInf(expr->interval);
    oldub = SCIPintervalGetSup(expr->interval);
