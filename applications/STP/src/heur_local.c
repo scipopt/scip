@@ -238,7 +238,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
 
    newnverts = 0;
 
-   if( graph->grad[root] == 0 )
+   if( graph->grad[root] == 0 || graph->terms == 1 )
       return SCIP_OKAY;
 
    /* for PC variants test whether solution is trivial */
