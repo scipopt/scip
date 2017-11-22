@@ -6854,6 +6854,14 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    newlb = SCIPintervalGetInf(expr->interval);
    newub = SCIPintervalGetSup(expr->interval);
 
+   /* mark the current problem to be infeasible if either the lower/upper bound is above/below +/- SCIPinfinity() */
+   if( SCIPisInfinity(scip, newlb) || SCIPisInfinity(scip, -newub) )
+   {
+      SCIPintervalSetEmpty(&expr->interval);
+      *cutoff = TRUE;
+      return SCIP_OKAY;
+   }
+
 #ifdef SCIP_DEBUG
       SCIPinfoMessage(scip, NULL, "tighten bounds of ");
       SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
