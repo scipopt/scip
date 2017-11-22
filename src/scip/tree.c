@@ -6717,7 +6717,11 @@ SCIP_RETCODE treeBacktrackProbing(
          /* apply the pending bound changes */
          SCIP_CALL( treeApplyPendingBdchgs(tree, reopt, blkmem, set, stat, transprob, origprob, lp, branchcand, eventqueue, cliquetable) );
 
-         tree->cutoffdepth = INT_MAX;
+         /* applying the pending bound changes might have changed the cutoff depth; so the highest cutoff depth might
+          * be outside of the deleted part of the probing path now
+          */
+         if( tree->cutoffdepth >= tree->pathlen )
+            tree->cutoffdepth = INT_MAX;
       }
       if( tree->repropdepth >= tree->pathlen )
          tree->repropdepth = INT_MAX;
