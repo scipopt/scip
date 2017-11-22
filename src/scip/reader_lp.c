@@ -1667,7 +1667,7 @@ SCIP_RETCODE readConstraints(
                   if ( *lpinput->token == '>' )
                   {
                      lpinput->linepos = linepos;
-                     strcpy(lpinput->token, "<");
+                     (void) SCIPsnprintf(lpinput->token, 2, "<");
                      syntaxError(scip, lpinput,
                         "SCIP does not support equivalence (<->) indicator constraints; consider using the \"->\" form.");
                      goto TERMINATE;
@@ -1677,6 +1677,7 @@ SCIP_RETCODE readConstraints(
          }
          /* reset the lpinput for further usage as we have no indicator constraint */
          lpinput->linepos = linepos;
+         (void) SCIPsnprintf(lpinput->token, 2, "<");
          strcpy(lpinput->token, "<");
       }
 
