@@ -47,6 +47,7 @@
 #define PERTUBATION_RATIO   0.05              /**< pertubation ratio for dual-ascent primal bound computation */
 #define PERTUBATION_RATIO_PC   0.005          /**< pertubation ratio for dual-ascent primal bound computation */
 #define SOLPOOL_SIZE 20                       /**< size of presolving solution pool */
+#define STP_RED_MINBNDTERMS   500
 
 
 /** are the dual costs still valid, i.e. are there zero cost paths from the root to all terminals? */
@@ -2256,7 +2257,7 @@ SCIP_RETCODE reduce_daPcMw(
    /* pertubation runs for MWCSP */
    if( varyroot && graph->stp_type == STP_MWCSP )
    {
-      for( int run = 0; run < DEFAULT_NMAXROOTS && graph->terms > 500; run++ )
+      for( int run = 0; run < DEFAULT_NMAXROOTS && graph->terms > STP_RED_MINBNDTERMS; run++ )
       {
          SCIP_Real oldupperbound = upperbound;
 
@@ -2284,7 +2285,7 @@ SCIP_RETCODE reduce_daPcMw(
       }
    }
 
-   if( graph->stp_type == STP_MWCSP )
+   if( graph->stp_type == STP_MWCSP && graph->terms < STP_RED_MINBNDTERMS )
       varyroot = FALSE;
 
    /* change or mark roots? */
@@ -2444,12 +2445,15 @@ SCIP_RETCODE reduce_daPcMw(
       /* distance from root to all nodes */
       graph_path_execX(scip, transgraph, tmproot, cost, pathdist, pathedge);
 
+      for( int e = 0; e < transnedges; e++ )
+            costrev[e] = cost[flipedge(e)];
+
       /* no paths should go back to the root */
       for( int e = transgraph->outbeg[tmproot]; e != EAT_LAST; e = transgraph->oeat[e] )
          costrev[e] = FARAWAY;
 
       /* build Voronoi diagram */
-      graph_voronoiTerms(scip, transgraph, costrev, vnoi, vbase, transgraph->path_heap, transgraph->path_state);
+      graph_voronoiTerms(scip, transgraph, costrev, vnoi, vbase, transgraph->path_heap, state);
       graph_get2next(scip, transgraph, costrev, costrev, vnoi, vbase, transgraph->path_heap, state);
 
       /* restore original graph */

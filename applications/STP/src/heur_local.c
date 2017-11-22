@@ -203,11 +203,11 @@ STP_Bool nodeIsCrucial(
    return TRUE;
 }
 
-/** perform local heuristics on a given Steiner tree */
+/** perform local heuristics on a given Steiner tree todo delete cost parameter */
 SCIP_RETCODE SCIPStpHeurLocalRun(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
-   const SCIP_Real*      cost,               /**< arc cost array */
+   const SCIP_Real*      cost,               /**< arc cost array todo delete this parameter and use graph->cost */
    int*                  best_result         /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
    )
 {
@@ -228,7 +228,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
    const STP_Bool mw = (probtype == STP_MWCSP);
    const STP_Bool mwpc =  (pc || mw);
 #ifndef NDEBUG
-   const SCIP_Real initialobj = graph_sol_getObj(cost, best_result, 0.0, nedges);
+   const SCIP_Real initialobj = graph_sol_getObj(graph->cost, best_result, 0.0, nedges);
 #endif
 
    assert(graph != NULL);
@@ -1677,7 +1677,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
 #endif
 
 #ifndef NDEBUG
-   assert(SCIPisLE(scip, graph_sol_getObj(cost, best_result, 0.0, nedges), initialobj));
+   assert(SCIPisLE(scip, graph_sol_getObj(graph->cost, best_result, 0.0, nedges), initialobj));
 #endif
 
    SCIPfreeBufferArray(scip, &steinertree);
@@ -2004,7 +2004,6 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    SCIP_SOL** sols;                          /* solutions */
    SCIP_VAR** vars;                          /* SCIP variables */
    SCIP_Real pobj;
-   SCIP_Real* cost;
    SCIP_Real* nval;
    SCIP_Real* xval;
    int i;
@@ -2154,7 +2153,6 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    }
 
    /* allocate memory */
-   SCIP_CALL( SCIPallocBufferArray(scip, &cost, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &results, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nval, nvars) );
 
@@ -2167,19 +2165,10 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
          results[e] = UNKNOWN;
    }
 
-   for( e = 0; e < nedges; e++ )
-   {
-      if( SCIPvarGetUbLocal(vars[e]) < 0.5 )
-         cost[e] = BLOCKED;
-      else
-         cost[e] = graph->cost[e];
-   }
-
    if( !graph_sol_valid(scip, graph, results) )
    {
       SCIPfreeBufferArray(scip, &nval);
       SCIPfreeBufferArray(scip, &results);
-      SCIPfreeBufferArray(scip, &cost);
       return SCIP_OKAY;
    }
 
@@ -2215,7 +2204,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    }
 
    /* execute local heuristics */
-   SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, cost, results) );
+   SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, graph->cost, results) );
 
    /* can we connect the network */
    for( v = 0; v < nvars; v++ )
@@ -2268,7 +2257,6 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
 
    SCIPfreeBufferArray(scip, &nval);
    SCIPfreeBufferArray(scip, &results);
-   SCIPfreeBufferArray(scip, &cost);
 
    return SCIP_OKAY;
 }
