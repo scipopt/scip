@@ -1311,6 +1311,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
             SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, solgraph, NULL, &best_start, soledges, heurdata->ntmruns,
                   solgraph->source, cost, costrev, &hopfactor, nodepriority, maxcost, &success, FALSE) );
 
+
             assert(success);
             assert(graph_sol_valid(scip, solgraph, soledges));
 
@@ -1954,6 +1955,9 @@ SCIP_DECL_HEUREXEC(heurExecRec)
 
    /* only call heuristic if sufficiently many solutions are available */
    if( nreadysols < DEFAULT_NUSEDSOLS )
+      return SCIP_OKAY;
+
+   if( probtype == STP_DCSTP )
       return SCIP_OKAY;
 
    /* suspend heuristic? */

@@ -1289,7 +1289,6 @@ SCIP_RETCODE redLoopPc(
          if( brednelims <= reductbound )
             bred = FALSE;
 
-         assert(brednelims == 0);
          SCIPdebugMessage("bndelims %d \n", brednelims);
          if( SCIPgetTotalTime(scip) > timelimit )
             break;

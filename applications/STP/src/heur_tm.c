@@ -2196,6 +2196,8 @@ SCIP_RETCODE SCIPStpHeurTMRun(
                   }
                }
             }
+            for( e = 0; e < nedges; e++ )
+               result[e] = UNKNOWN;
 
             SCIP_CALL( computeDegConsTree(scip, graph, cost, costrev, pathdist, start[r], perm, result, cluster, pathedge,  heurdata->randnumgen, connected, &solfound) );
          }
