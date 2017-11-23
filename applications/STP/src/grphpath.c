@@ -976,8 +976,6 @@ void graph_path_st(
    {
       int node;
       int nterms = 0;
-      int z = SCIPrandomGetInt(randnumgen, 0, 1);
-      assert(z >= 0);
 
       count       = 1;
       heap[count] = k;
@@ -997,8 +995,6 @@ void graph_path_st(
             connected[k] = TRUE;
             pathdist[k] = 0.0;
             node = k;
-            z = SCIPrandomGetInt(randnumgen, 0, 1);
-            assert(z >= 0);
 
             if( k != start )
             {
@@ -1016,32 +1012,16 @@ void graph_path_st(
                break;
          }
 
-         if( z )
+         /* update adjacent vertices */
+         for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
          {
-            /* update adjacent vertices */
-            for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
-            {
-               m = g->head[e];
+            m = g->head[e];
 
-               assert(state[m]);
+            assert(state[m]);
 
-               /* is m not connected, allowed and closer (as close)? */
-               if( !connected[m] && g->mark[m] && SCIPisGT(scip, pathdist[m], (pathdist[k] + cost[e])) )
-                  correctX(scip, heap, state, &count, pathdist, pathedge, m, k, e, cost[e]);
-            }
-         }
-         else
-         {
-            for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
-            {
-               m = g->head[e];
-
-               assert(state[m]);
-
-               /* is m not connected, allowed and closer (as close)? */
-               if( !connected[m] && g->mark[m] && SCIPisGE(scip, pathdist[m], (pathdist[k] + cost[e])) )
-                  correctX(scip, heap, state, &count, pathdist, pathedge, m, k, e, cost[e]);
-            }
+            /* is m not connected, allowed and closer (as close)? */
+            if( !connected[m] && pathdist[m] > (pathdist[k] + cost[e]) && g->mark[m] )
+               correctX(scip, heap, state, &count, pathdist, pathedge, m, k, e, cost[e]);
          }
       }
    }
@@ -1161,7 +1141,7 @@ void graph_path_st_rpc(
             assert(state[m]);
 
             /* is m not connected, allowed and closer (as close)? */
-            if( !connected[m] && g->mark[m] && SCIPisGT(scip, pathdist[m], (pathdist[k] + cost[e])) )
+            if( !connected[m] && pathdist[m] > (pathdist[k] + cost[e]) && g->mark[m] )
                correctX(scip, heap, state, &count, pathdist, pathedge, m, k, e, cost[e]);
          }
       }
@@ -1180,7 +1160,6 @@ void graph_path_st_pcmw(
    SCIP_Real*            pathdist,           /**< distance array (on vertices) */
    int*                  pathedge,           /**< predecessor edge array (on vertices) */
    int                   start,              /**< start vertex */
-   const STP_Bool*       initialvert,        /**< mark vertices to initially be part of the solution, or NULL */
    STP_Bool*             connected           /**< array to mark whether a vertex is part of computed Steiner tree */
    )
 {
@@ -1272,8 +1251,8 @@ void graph_path_st_pcmw(
             assert(state[m]);
             /* is m not connected, allowed and closer (as close)? */
 
-               if( !connected[m] && g->mark[m] && (pathdist[m] > (pathdist[k] + cost[e])) )
-                  correctX(scip, heap, state, &count, pathdist, pathedge, m, k, e, cost[e]);
+            if( !connected[m] && pathdist[m] > (pathdist[k] + cost[e]) && g->mark[m] )
+               correctX(scip, heap, state, &count, pathdist, pathedge, m, k, e, cost[e]);
          }
       }
    }
@@ -1543,7 +1522,7 @@ void graph_path_st_pcmw_extend(
             assert(state[m]);
             /* is m not connected, allowed and closer (as close)? */
 
-            if( !connected[m] && g->mark[m] && SCIPisGT(scip, path[m].dist, (path[k].dist + cost[e])) )
+            if( !connected[m] && path[m].dist > (path[k].dist + cost[e]) && g->mark[m] )
                correct(scip, heap, state, &count, path, m, k, e, cost[e], FSP_MODE);
          }
       }
@@ -1562,7 +1541,6 @@ void graph_path_st_rmw(
    SCIP_Real*            pathdist,           /**< distance array (on vertices) */
    int*                  pathedge,           /**< predecessor edge array (on vertices) */
    int                   start,              /**< start vertex */
-   const STP_Bool*       initialvert,        /**< mark vertices to initially be part of the solution, or NULL */
    STP_Bool*             connected           /**< array to mark whether a vertex is part of computed Steiner tree */
    )
 {

@@ -881,11 +881,11 @@ SCIP_RETCODE computeSteinerTreeDijkPcMw(
    )
 {
    if( g->stp_type == STP_RMWCSP )
-      graph_path_st_rmw(scip, g, cost, dijkdist, dijkedge, start, NULL, connected);
+      graph_path_st_rmw(scip, g, cost, dijkdist, dijkedge, start, connected);
    else if( g->stp_type == STP_RPCSPG )
       graph_path_st_rpc(scip, g, cost, dijkdist, dijkedge, start, connected);
    else
-      graph_path_st_pcmw(scip, g, cost, dijkdist, dijkedge, start, NULL, connected);
+      graph_path_st_pcmw(scip, g, cost, dijkdist, dijkedge, start, connected);
 
    SCIP_CALL(prune(scip, g, cost, result, connected));
 
@@ -2196,6 +2196,8 @@ SCIP_RETCODE SCIPStpHeurTMRun(
                   }
                }
             }
+            for( e = 0; e < nedges; e++ )
+               result[e] = UNKNOWN;
 
             SCIP_CALL( computeDegConsTree(scip, graph, cost, costrev, pathdist, start[r], perm, result, cluster, pathedge,  heurdata->randnumgen, connected, &solfound) );
          }

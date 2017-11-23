@@ -196,7 +196,7 @@ SCIP_Real nodeGetUctScore(
    score = nodeseldata->useestimate ? SCIPnodeGetEstimate(node) : SCIPnodeGetLowerbound(node);
 
    /* if the root lower bound is infinite due to LP errors, we ignore the gap part of the UCT score */
-   if( !SCIPisInfinity(scip, -rootlowerbound) && !SCIPisEQ(scip, score, rootlowerbound) )
+   if( !SCIPisInfinity(scip, REALABS(rootlowerbound)) && !SCIPisEQ(scip, score, rootlowerbound) )
    {
       SCIP_Real absscore;
       SCIP_Real absrootlowerbound;

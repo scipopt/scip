@@ -46,7 +46,7 @@
 #define HEUR_DESC             "Dual-cost reduction heuristic for Steiner problems"
 #define HEUR_DISPCHAR         'A'
 #define HEUR_PRIORITY         2
-#define HEUR_FREQ             1
+#define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           (SCIP_HEURTIMING_DURINGLPLOOP | SCIP_HEURTIMING_AFTERLPLOOP | SCIP_HEURTIMING_AFTERNODE)
@@ -187,7 +187,6 @@ SCIP_DECL_HEUREXEC(heurExecAscendPrune)
    *result = SCIP_DIDNOTRUN;
 
    /* todo: delete this file and move to slack-prune */
-   return SCIP_OKAY;
 
    nedges = graph->edges;
    nnodes = graph->knots;
