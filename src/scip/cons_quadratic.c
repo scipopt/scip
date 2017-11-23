@@ -180,7 +180,7 @@ struct SCIP_ConsData
    SCIP_Real*            eigenvalues;        /**< eigenvalues of A */
    SCIP_Real*            eigenvectors;       /**< orthonormal eigenvectors of A; if A = P D P^T, then eigenvectors is P^T */
    SCIP_Real*            bp;                 /**< stores b * P where b are the linear coefficients of the quadratic vars */
-   SCIP_Real             maxnonconvexity;    /**< largest absolute value of nonconvex eigenvalues */
+   SCIP_Real             maxnonconvexity;    /**< nonconvexity measure: lower bound on largest absolute value of nonconvex eigenvalues */
 
    SCIP_Bool             isdisaggregated;    /**< has the constraint already been disaggregated? if might happen that more disaggreation would be potentially
                                                   possible, but we reached the maximum number of sparsity components during presolveDisaggregate() */
@@ -5021,6 +5021,7 @@ SCIP_RETCODE checkCurvature(
 
    consdata->isconvex  = TRUE;
    consdata->isconcave = TRUE;
+   consdata->maxnonconvexity = 0.0;
 
    SCIP_CALL( SCIPhashmapCreate(&var2index, SCIPblkmem(scip), n) );
    for( i = 0; i < n; ++i )
@@ -5030,6 +5031,14 @@ SCIP_RETCODE checkCurvature(
          SCIP_CALL( SCIPhashmapInsert(var2index, consdata->quadvarterms[i].var, (void*)(size_t)i) );
          matrix[i*n + i] = consdata->quadvarterms[i].sqrcoef;
       }
+      else
+      {
+         /* if pure square term, then update maximal nonconvex eigenvalue, as it will not be considered in lapack call below */
+         if( !SCIPisInfinity(scip, -consdata->lhs) && consdata->quadvarterms[i].sqrcoef > consdata->maxnonconvexity )
+            consdata->maxnonconvexity = consdata->quadvarterms[i].sqrcoef;
+         if( !SCIPisInfinity(scip, consdata->rhs) && -consdata->quadvarterms[i].sqrcoef > consdata->maxnonconvexity )
+            consdata->maxnonconvexity = -consdata->quadvarterms[i].sqrcoef;
+      }
       /* nonzero elements on diagonal tell a lot about convexity/concavity */
       if( SCIPisNegative(scip, consdata->quadvarterms[i].sqrcoef) )
          consdata->isconvex  = FALSE;
@@ -5037,6 +5046,9 @@ SCIP_RETCODE checkCurvature(
          consdata->isconcave = FALSE;
    }
 
+   /* skip lapack call, if we know already that we are indefinite
+    * NOTE: this will leave out updating consdata->maxnonconvexity, so that it only provides a lower bound in this case
+    */
    if( !consdata->isconvex && !consdata->isconcave )
    {
       SCIPfreeBufferArray(scip, &matrix);
@@ -5111,8 +5123,7 @@ SCIP_RETCODE checkCurvature(
 #endif
       }
 
-      /* store largest eigenvalue causing nonconvexity according to sides */
-      consdata->maxnonconvexity = 0.0;
+      /* update largest eigenvalue causing nonconvexity according to sides */
       if( !SCIPisInfinity(scip, -consdata->lhs) )
          consdata->maxnonconvexity = MAX(consdata->maxnonconvexity, alleigval[n-1]);
       if( !SCIPisInfinity(scip, consdata->rhs) )
