@@ -539,7 +539,7 @@ SCIP_RETCODE createData(
  */
 static
 SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySum)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR** children;
    EXPRNODE* finalchildren;
    SCIP_Real simplifiedconstant;
@@ -615,7 +615,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySum)
  */
 static
 SCIP_DECL_CONSEXPR_EXPRCMP(compareSum)
-{
+{  /*lint --e{715}*/
    SCIP_Real const1;
    SCIP_Real* coefs1;
    SCIP_CONSEXPR_EXPR** children1;
@@ -707,7 +707,7 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataSum)
 
 static
 SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataSum)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
 
    assert(expr != NULL);
@@ -725,7 +725,7 @@ SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataSum)
 
 static
 SCIP_DECL_CONSEXPR_EXPRPRINT(printSum)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
 
    assert(expr != NULL);
@@ -938,7 +938,7 @@ SCIP_RETCODE separatePointSum(
 /** separation initialization callback */
 static
 SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSum)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
 
    exprdata = SCIPgetConsExprExprData(expr);
@@ -959,7 +959,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSum)
 /** separation deinitialization callback */
 static
 SCIP_DECL_CONSEXPR_EXPREXITSEPA(exitSepaSum)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
 
    exprdata = SCIPgetConsExprExprData(expr);
@@ -977,7 +977,7 @@ SCIP_DECL_CONSEXPR_EXPREXITSEPA(exitSepaSum)
 /** expression separation callback */
 static
 SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    SCIP_Real violation;
 
@@ -1028,7 +1028,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
 /** expression reverse propagation callback */
 static
 SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSum)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    SCIP_INTERVAL* bounds;
    SCIP_ROUNDMODE prevroundmode;
@@ -1154,7 +1154,7 @@ TERMINATE:
 /** sum hash callback */
 static
 SCIP_DECL_CONSEXPR_EXPRHASH(hashSum)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    int c;
 
@@ -1177,6 +1177,43 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashSum)
       childhash = SCIPcalcFibHash(exprdata->coefficients[c]) ^ (unsigned int)(size_t)SCIPhashmapGetImage(expr2key, SCIPgetConsExprExprChildren(expr)[c]);
 
       *hashkey ^= childhash;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** expression curvature detection callback */
+static
+SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureSum)
+{  /*lint --e{715}*/
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+   int i;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(curvature != NULL);
+
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
+
+   /* start with linear curvature */
+   *curvature = SCIP_EXPRCURV_LINEAR;
+
+   for( i = 0; i < SCIPgetConsExprExprNChildren(expr) && *curvature != SCIP_EXPRCURV_UNKNOWN; ++i )
+   {
+      SCIP_EXPRCURV childcurv = SCIPgetCurvatureExprExpr(SCIPgetConsExprExprChildren(expr)[i]);
+
+      /* consider negative coefficients for the curvature of a child */
+      if( exprdata->coefficients[i] < 0.0 )
+      {
+         if( childcurv == SCIP_EXPRCURV_CONVEX )
+            childcurv = SCIP_EXPRCURV_CONCAVE;
+         else if( childcurv == SCIP_EXPRCURV_CONCAVE )
+            childcurv = SCIP_EXPRCURV_CONVEX;
+      }
+
+      /* use bit operations for determining the resulting curvature */
+      *curvature = (SCIP_EXPRCURV)((*curvature) & childcurv);
    }
 
    return SCIP_OKAY;
@@ -1206,6 +1243,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSum(
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffSum) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureSum) );
 
    return SCIP_OKAY;
 }

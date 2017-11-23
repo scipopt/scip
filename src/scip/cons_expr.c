@@ -1626,6 +1626,85 @@ int SCIPcompareConsExprExprs(
    return retval == 0 ? 0 : retval < 0 ? -1 : 1;
 }
 
+/** sets the curvature of an expression */
+void SCIPsetCurvatureExprExpr(
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_EXPRCURV         curvature           /**< curvature of the expression */
+   )
+{
+   assert(expr != NULL);
+   expr->curvature = curvature;
+}
+
+/** returns the curvature of an expression */
+SCIP_EXPRCURV SCIPgetCurvatureExprExpr(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+   return expr->curvature;
+}
+
+/** expression walk callback for computing expression curvatures */
+static
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeCurv)
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_EXPRCURV curv;
+
+   assert(expr != NULL);
+   assert(expr->exprhdlr != NULL);
+   assert(result != NULL);
+   assert(stage == SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
+
+   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+   curv = SCIP_EXPRCURV_UNKNOWN;
+
+   conshdlr = (SCIP_CONSHDLR*)data;
+   assert(conshdlr != NULL);
+
+   /* TODO add a tag to store whether an expression has been visited already */
+
+   if( expr->exprhdlr->curvature != NULL )
+   {
+      /* get curvature from expression handler */
+      SCIP_CALL( (*expr->exprhdlr->curvature)(scip, conshdlr, expr, &curv) );
+   }
+
+   /* set curvature in expression */
+   SCIPsetCurvatureExprExpr(expr, curv);
+
+   return SCIP_OKAY;
+}
+
+/** computes the curvature of a given expression and all its subexpressions
+ *
+ *  @note this function also evaluates all subexpressions w.r.t. current variable bounds
+ */
+SCIP_RETCODE SCIPcomputeCurvatureExprExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   assert(conshdlr != NULL);
+
+   /* first evaluate all subexpressions */
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, FALSE, 0, 0.0) );
+
+   /* compute curvatures */
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, NULL, NULL, computeCurv, conshdlr) );
+
+   return SCIP_OKAY;
+}
+
+/** */
+
 /**@} */  /* end of simplifying methods */
 
 /** compares nonlinear handler by priority
@@ -4642,7 +4721,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreExpr)
       /* simplify constraints */
       SCIP_CALL( simplifyConstraints(scip, conss, nconss, &success) );
 
-      /* replace common subexpressions */
+      /* replace common subexpressions; note that replacing common subexpressions requires to have simplified expressions */
       if( success )
       {
          SCIP_CALL( replaceCommonSubexpressions(scip, conss, nconss) );
@@ -4660,6 +4739,17 @@ SCIP_DECL_CONSEXITPRE(consExitpreExpr)
             SCIP_CALL( storeVarExprs(scip, SCIPconsGetData(conss[i])) );
             SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
          }
+      }
+
+      /* call curvature detection of expression handlers */
+      for( i = 0; i < nconss; ++i )
+      {
+         SCIP_CONSDATA* consdata = SCIPconsGetData(conss[i]);
+         assert(consdata != NULL);
+         assert(consdata->expr != NULL);
+
+         /* evaluate all expressions for curvature check */
+         SCIP_CALL( SCIPcomputeCurvatureExprExpr(scip, consdata->expr) );
       }
 
       /* tell SCIP that we have something nonlinear */
@@ -5785,6 +5875,22 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrBranchscore(
    return SCIP_OKAY;
 }
 
+/** set the curvature detection callback of an expression handler */
+SCIP_RETCODE SCIPsetConsExprExprHdlrCurvature(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+   SCIP_DECL_CONSEXPR_EXPRCURVATURE((*curvature)) /**< curvature detection callback (can be NULL) */
+   )
+{  /*lint --e{715}*/
+   assert(exprhdlr != NULL);
+
+   exprhdlr->curvature = curvature;
+
+   return SCIP_OKAY;
+}
+
+
 /** gives expression handlers */
 SCIP_CONSEXPR_EXPRHDLR** SCIPgetConsExprExprHdlrs(
    SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
@@ -5928,6 +6034,7 @@ SCIP_RETCODE SCIPcreateConsExprExpr(
 
    (*expr)->exprhdlr = exprhdlr;
    (*expr)->exprdata = exprdata;
+   (*expr)->curvature = SCIP_EXPRCURV_UNKNOWN;
 
    /* initialize an empty interval for interval evaluation */
    SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &(*expr)->interval);

@@ -84,6 +84,14 @@ SCIP_RETCODE SCIPcomputeCutsSin(
    SCIP_Bool             underestimate       /**< whether the cuts should be underestimating */
    );
 
+/* helper function that computs the curvature of a sine expression for given bounds and curvature of child */
+EXTERN
+SCIP_EXPRCURV SCIPcomputeCurvatureSin(
+   SCIP_EXPRCURV         childcurvature,     /**< curvature of child */
+   SCIP_Real             lb,                 /**< lower bound of child */
+   SCIP_Real             ub                  /**< lower bound of child */
+   );
+
 #ifdef __cplusplus
 }
 #endif

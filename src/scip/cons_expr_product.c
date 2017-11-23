@@ -994,7 +994,7 @@ SCIP_RETCODE createData(
  */
 static
 SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
-{
+{  /*lint --e{715}*/
    EXPRNODE* unsimplifiedchildren;
    EXPRNODE* finalchildren;
    SCIP_Real simplifiedcoef;
@@ -1206,7 +1206,7 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataProduct)
 
 static
 SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataProduct)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
 
    assert(expr != NULL);
@@ -1223,7 +1223,7 @@ SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataProduct)
 
 static
 SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
 
    assert(expr != NULL);
@@ -1290,7 +1290,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
 /** product hash callback */
 static
 SCIP_DECL_CONSEXPR_EXPRHASH(hashProduct)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    int c;
 
@@ -1821,7 +1821,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaProduct)
 /** expression reverse propagation callback */
 static
 SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    SCIP_INTERVAL childbounds;
    int i;
@@ -1881,6 +1881,21 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
    return SCIP_OKAY;
 }
 
+/** expression curvature detection callback */
+static
+SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureProduct)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(curvature != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) > 1);
+   assert(SCIPgetConsExprExprProductCoef(expr) == 1.0);
+
+   *curvature = SCIP_EXPRCURV_UNKNOWN;
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for product expressions and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1916,6 +1931,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffProduct) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureProduct) );
 
    return SCIP_OKAY;
 }

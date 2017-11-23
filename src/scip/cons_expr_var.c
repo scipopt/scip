@@ -47,7 +47,7 @@
  */
 static
 SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyVar)
-{
+{  /*lint --e{715}*/
    SCIP_VAR* var;
    SCIP_VAR** vars;
    SCIP_Real* coefs;
@@ -302,7 +302,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalVar)
 /** variable hash callback */
 static
 SCIP_DECL_CONSEXPR_EXPRHASH(hashVar)
-{
+{  /*lint --e{715}*/
    SCIP_VAR* var;
 
    assert(scip != NULL);
@@ -316,6 +316,20 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashVar)
 
    *hashkey = EXPRHDLR_HASHKEY;
    *hashkey ^= SCIPcalcFibHash((SCIP_Real)SCIPvarGetIndex(var));
+
+   return SCIP_OKAY;
+}
+
+/** expression curvature detection callback */
+static
+SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureVar)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(curvature != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 0);
+
+   *curvature = SCIP_EXPRCURV_LINEAR;
 
    return SCIP_OKAY;
 }
@@ -344,6 +358,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrVar(
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalVar) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashVar) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffVar) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureVar) );
 
    return SCIP_OKAY;
 }
