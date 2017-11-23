@@ -135,7 +135,7 @@ SCIP_BOUNDSTORE* SCIPgetConcurrentGlobalBoundChanges(
 
 /** start solving in parallel using the given set of concurrent solvers */
 extern
-SCIP_RETCODE SCIPsolveConcurrent(
+SCIP_RETCODE SCIPconcurrentSolve(
    SCIP*                 scip                /**< pointer to scip datastructure */
    );
 
