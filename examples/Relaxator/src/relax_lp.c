@@ -21,6 +21,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <string.h>
 
 #include "relax_lp.h"
 
@@ -50,12 +51,30 @@ SCIP_DECL_RELAXEXEC(relaxExecLp)
 {  /*lint --e{715}*/
    SCIP* relaxscip;
    SCIP_HASHMAP* varmap;
+   SCIP_CONS** conss;
    SCIP_Real relaxval;
    SCIP_Bool valid;
+   int nconss;
    int i;
+   int c;
 
    *lowerbound = -SCIPinfinity(scip);
    *result = SCIP_DIDNOTRUN;
+
+   /* we cannot run if any constraints are present which expect their variables to be binary or integer during transformation */
+   conss = SCIPgetConss(scip);
+   nconss = SCIPgetNConss(scip);
+
+   for( c = 0; c < nconss; ++c )
+   {
+      const char* conshdlrname;
+
+      conshdlrname = SCIPconshdlrGetName(SCIPconsGetHdlr(conss[c]));
+
+      if( strcmp(conshdlrname, "and") == 0 || strcmp(conshdlrname, "orbitope") == 0  || strcmp(conshdlrname, "pseudoboolean") == 0 ||
+            strcmp(conshdlrname, "superindicator") == 0 || strcmp(conshdlrname, "xor") == 0 )
+         return SCIP_OKAY;
+   }
 
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPcreate(&relaxscip) );
