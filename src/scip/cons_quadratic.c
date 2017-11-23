@@ -202,6 +202,7 @@ struct BilinearEstimator
    SCIP_VAR*             y;                 /**< second variable */
    SCIP_Real             inequnderest[6];   /**< at most two inequalities that can be used to underestimate xy; stored as (xcoef,ycoef,constant) with xcoef x <= ycoef y + constant */
    SCIP_Real             ineqoverest[6];    /**< at most two inequalities that can be used to overestimate xy; stored as (xcoef,ycoef,constant) with xcoef x <= ycoef y + constant */
+   SCIP_Real             maxnonconvexity;   /**< largest absolute value of nonconvex eigenvalues of all quadratic constraint containing xy */
    int                   ninequnderest;     /**< total number of inequalities for underestimating xy */
    int                   nineqoverest;      /**< total number of inequalities for overestimating xy */
    int                   nunderest;         /**< number of constraints that require to underestimate xy */
@@ -5827,6 +5828,7 @@ SCIP_RETCODE storeAllBilinearTerms(
          conshdlrdata->bilinestimators[pos].x = bilinterms[i].var1;
          conshdlrdata->bilinestimators[pos].y = bilinterms[i].var2;
          conshdlrdata->bilinestimators[pos].lastimprfac = 0.0;
+         conshdlrdata->bilinestimators[pos].maxnonconvexity = 0.0;
          ++pos;
       }
 
@@ -5838,12 +5840,14 @@ SCIP_RETCODE storeAllBilinearTerms(
       {
          conshdlrdata->bilinestimators[pos-1].nunderest += (hasrhs && !consdata->isconvex) ? 1 : 0;
          conshdlrdata->bilinestimators[pos-1].noverest += (haslhs && !consdata->isconcave) ? 1 : 0;
+         conshdlrdata->bilinestimators[pos-1].maxnonconvexity = MAX(conshdlrdata->bilinestimators[pos-1].maxnonconvexity, consdata->maxnonconvexity);
       }
       else
       {
          assert(SCIPisNegative(scip, bilinterms[i].coef));
          conshdlrdata->bilinestimators[pos-1].nunderest += (haslhs && !consdata->isconcave) ? 1 : 0;
          conshdlrdata->bilinestimators[pos-1].noverest += (hasrhs && !consdata->isconvex) ? 1 : 0;
+         conshdlrdata->bilinestimators[pos-1].maxnonconvexity = MAX(conshdlrdata->bilinestimators[pos-1].maxnonconvexity, consdata->maxnonconvexity);
       }
 
       /* update index of bilinear term in the constraint data */
@@ -15548,7 +15552,8 @@ SCIP_RETCODE SCIPgetAllBilinearTermsQuadratic(
    SCIP_VAR** RESTRICT   y,                  /**< array to second variable of each bilinear term */
    int* RESTRICT         nbilinterms,        /**< buffer to store the total number of bilinear terms */
    int* RESTRICT         nunderests,         /**< array to store the total number of constraints that require to underestimate a bilinear term */
-   int* RESTRICT         noverests           /**< array to store the total number of constraints that require to overestimate a bilinear term */
+   int* RESTRICT         noverests,          /**< array to store the total number of constraints that require to overestimate a bilinear term */
+   SCIP_Real*            maxnonconvexity     /**< largest absolute value of nonconvex eigenvalues of all quadratic constraint containing a bilinear term */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -15561,6 +15566,7 @@ SCIP_RETCODE SCIPgetAllBilinearTermsQuadratic(
    assert(nbilinterms != NULL);
    assert(nunderests != NULL);
    assert(noverests!= NULL);
+   assert(maxnonconvexity != NULL);
 
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
 
@@ -15579,6 +15585,7 @@ SCIP_RETCODE SCIPgetAllBilinearTermsQuadratic(
       y[i] = conshdlrdata->bilinestimators[i].y;
       nunderests[i] = conshdlrdata->bilinestimators[i].nunderest;
       noverests[i] = conshdlrdata->bilinestimators[i].noverest;
+      maxnonconvexity[i] = conshdlrdata->bilinestimators[i].maxnonconvexity;
    }
 
    *nbilinterms = conshdlrdata->nbilinterms;
