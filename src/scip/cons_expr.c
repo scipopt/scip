@@ -2053,7 +2053,10 @@ SCIP_RETCODE propConss(
          consdata = SCIPconsGetData(conss[i]);
          assert(consdata != NULL);
 
-         if( SCIPconsIsActive(conss[i]) && !consdata->ispropagated )
+         /* in the first round, we reevaluate all bounds to remove some possible leftovers that could be in this
+          * expression from a reverse propagation in a previous propagation round
+          */
+         if( SCIPconsIsActive(conss[i]) && (!consdata->ispropagated || roundnr == 0) )
          {
             SCIPdebugMsg(scip, "call forwardPropCons() for constraint <%s>\n", SCIPconsGetName(conss[i]));
             SCIPdebugPrintCons(scip, conss[i], NULL);
@@ -6844,6 +6847,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    /* check if the new bounds lead to an empty interval */
    if( SCIPintervalGetInf(newbounds) > oldub || SCIPintervalGetSup(newbounds) < oldlb )
    {
+      SCIPintervalSetEmpty(&expr->interval);
       *cutoff = TRUE;
       return SCIP_OKAY;
    }
@@ -6856,6 +6860,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    /* mark the current problem to be infeasible if either the lower/upper bound is above/below +/- SCIPinfinity() */
    if( SCIPisInfinity(scip, newlb) || SCIPisInfinity(scip, -newub) )
    {
+      SCIPintervalSetEmpty(&expr->interval);
       *cutoff = TRUE;
       return SCIP_OKAY;
    }
