@@ -6248,7 +6248,8 @@ SCIP_RETCODE propagateBoundsCons(
    SCIPintervalAdd(INTERVALINFTY, &consactivity, consactivity, nonlinactivity);
 
    /* check infeasibility */
-   if( SCIPisGT(scip, consdata->lhs-SCIPfeastol(scip), SCIPintervalGetSup(consactivity)) || SCIPisLT(scip, consdata->rhs+SCIPfeastol(scip), SCIPintervalGetInf(consactivity)) )
+   if( (!SCIPisInfinity(scip, -consdata->lhs) && SCIPisGT(scip, consdata->lhs-SCIPfeastol(scip), SCIPintervalGetSup(consactivity))) ||
+       (!SCIPisInfinity(scip,  consdata->rhs) && SCIPisLT(scip, consdata->rhs+SCIPfeastol(scip), SCIPintervalGetInf(consactivity))) )
    {
       SCIPdebugMsg(scip, "found constraint <%s> to be infeasible; sides: [%g, %g], activity: [%g, %g], infeas: %.20g\n",
          SCIPconsGetName(cons), consdata->lhs, consdata->rhs, SCIPintervalGetInf(consactivity), SCIPintervalGetSup(consactivity),

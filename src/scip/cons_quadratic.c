@@ -10679,7 +10679,8 @@ SCIP_RETCODE propagateBoundsCons(
    /* was SCIPintervalAreDisjoint(consbounds, consactivity), but that would allow violations up to eps only
     * we need to decide feasibility w.r.t. feastol (but still want to propagate w.r.t. eps)
     */
-   if( SCIPisGT(scip, consdata->lhs-SCIPfeastol(scip), SCIPintervalGetSup(consactivity)) || SCIPisLT(scip, consdata->rhs+SCIPfeastol(scip), SCIPintervalGetInf(consactivity)) )
+   if( (!SCIPisInfinity(scip, -consdata->lhs) && SCIPisGT(scip, consdata->lhs-SCIPfeastol(scip), SCIPintervalGetSup(consactivity))) ||
+       (!SCIPisInfinity(scip,  consdata->rhs) && SCIPisLT(scip, consdata->rhs+SCIPfeastol(scip), SCIPintervalGetInf(consactivity))) )
    {
       SCIPdebugMsg(scip, "found constraint <%s> to be infeasible; sides: [%g, %g], activity: [%g, %g], infeas: %g\n",
          SCIPconsGetName(cons), consdata->lhs, consdata->rhs, SCIPintervalGetInf(consactivity), SCIPintervalGetSup(consactivity),
