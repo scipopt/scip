@@ -2844,7 +2844,8 @@ SCIP_RETCODE initBounds(
       /* count the number of interesting bilinear terms */
       propdata->nbilinbounds = 0;
       for( i = 0; i < nbilins; ++i )
-         if( nunderest[i] + noverest[i] > 0 && varIsInteresting(scip, x[i], 1) && varIsInteresting(scip, y[i], 1) )
+         if( nunderest[i] + noverest[i] > 0 && propdata->minnonconvexity <= maxnonconvexity[i]
+            && varIsInteresting(scip, x[i], 1) && varIsInteresting(scip, y[i], 1) )
             ++(propdata->nbilinbounds);
 
       if( propdata->nbilinbounds == 0 )
