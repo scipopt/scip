@@ -180,7 +180,7 @@ struct SCIP_ConsData
    SCIP_Real*            eigenvalues;        /**< eigenvalues of A */
    SCIP_Real*            eigenvectors;       /**< orthonormal eigenvectors of A; if A = P D P^T, then eigenvectors is P^T */
    SCIP_Real*            bp;                 /**< stores b * P where b are the linear coefficients of the quadratic vars */
-   SCIP_Real             maxnonconvexity;    /**< nonconvexity measure: lower bound on largest absolute value of nonconvex eigenvalues */
+   SCIP_Real             maxnonconvexity;    /**< nonconvexity measure: estimate on largest absolute value of nonconvex eigenvalues */
 
    SCIP_Bool             isdisaggregated;    /**< has the constraint already been disaggregated? if might happen that more disaggreation would be potentially
                                                   possible, but we reached the maximum number of sparsity components during presolveDisaggregate() */
@@ -202,7 +202,7 @@ struct BilinearEstimator
    SCIP_VAR*             y;                 /**< second variable */
    SCIP_Real             inequnderest[6];   /**< at most two inequalities that can be used to underestimate xy; stored as (xcoef,ycoef,constant) with xcoef x <= ycoef y + constant */
    SCIP_Real             ineqoverest[6];    /**< at most two inequalities that can be used to overestimate xy; stored as (xcoef,ycoef,constant) with xcoef x <= ycoef y + constant */
-   SCIP_Real             maxnonconvexity;   /**< largest absolute value of nonconvex eigenvalues of all quadratic constraint containing xy */
+   SCIP_Real             maxnonconvexity;   /**< estimate on largest absolute value of nonconvex eigenvalues of all quadratic constraint containing xy */
    int                   ninequnderest;     /**< total number of inequalities for underestimating xy */
    int                   nineqoverest;      /**< total number of inequalities for overestimating xy */
    int                   nunderest;         /**< number of constraints that require to underestimate xy */
@@ -5067,6 +5067,10 @@ SCIP_RETCODE checkCurvature(
       SCIPfreeBufferArray(scip, &matrix);
       SCIPhashmapFree(&var2index);
       consdata->iscurvchecked = TRUE;
+      /* make sure that maxnonconvexity is strictly different from zero if nonconvex
+       * TODO one could think about doing some eigenvalue estimation here (Gershgorin)
+       */
+      consdata->maxnonconvexity = MAX(1000.0, consdata->maxnonconvexity);
       return SCIP_OKAY;
    }
 
