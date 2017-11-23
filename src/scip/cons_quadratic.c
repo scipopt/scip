@@ -15553,7 +15553,7 @@ SCIP_RETCODE SCIPgetAllBilinearTermsQuadratic(
    int* RESTRICT         nbilinterms,        /**< buffer to store the total number of bilinear terms */
    int* RESTRICT         nunderests,         /**< array to store the total number of constraints that require to underestimate a bilinear term */
    int* RESTRICT         noverests,          /**< array to store the total number of constraints that require to overestimate a bilinear term */
-   SCIP_Real*            maxnonconvexity     /**< largest absolute value of nonconvex eigenvalues of all quadratic constraint containing a bilinear term */
+   SCIP_Real*            maxnonconvexity     /**< largest absolute value of nonconvex eigenvalues of all quadratic constraints containing a bilinear term */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;

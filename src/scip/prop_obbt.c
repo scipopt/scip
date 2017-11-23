@@ -167,7 +167,7 @@ struct SCIP_PropData
    SCIP_Real             itlimitfactor;      /**< LP iteration limit for obbt will be this factor times total LP
                                               *   iterations in root node */
    SCIP_Real             itlimitfactorbilin; /**< multiple of OBBT LP limit used as total LP iteration limit for solving bilinear inequality LPs (< 0 for no limit) */
-   SCIP_Real             minnonconvexity;    /**< minimum absolute value of nonconvex eigenvalues for a bilinear term */
+   SCIP_Real             minnonconvexity;    /**< lower bound on minimum absolute value of nonconvex eigenvalues for a bilinear term */
    SCIP_Bool             applyfilterrounds;  /**< apply filter rounds? */
    SCIP_Bool             applytrivialfilter; /**< should obbt try to use the LP solution to filter some bounds? */
    SCIP_Bool             genvbdsduringfilter;/**< should we try to generate genvbounds during trivial and aggressive
