@@ -750,16 +750,16 @@ SCIP_RETCODE alnsIncludeNeighborhood(
    (*neighborhood)->nhdeactivate = nhdeactivate;
 
    /* add parameters for this neighborhood */
-   sprintf(paramname, "heuristics/alns/%s/minfixingrate", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/alns/%s/minfixingrate", name);
    SCIP_CALL( SCIPaddRealParam(scip, paramname, "minimum fixing rate for this neighborhood",
          &(*neighborhood)->fixingrate.minfixingrate, TRUE, minfixingrate, 0.0, 1.0, NULL, NULL) );
-   sprintf(paramname, "heuristics/alns/%s/maxfixingrate", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/alns/%s/maxfixingrate", name);
    SCIP_CALL( SCIPaddRealParam(scip, paramname, "maximum fixing rate for this neighborhood",
          &(*neighborhood)->fixingrate.maxfixingrate, TRUE, maxfixingrate, 0.0, 1.0, NULL, NULL) );
-   sprintf(paramname, "heuristics/alns/%s/active", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/alns/%s/active", name);
    SCIP_CALL( SCIPaddBoolParam(scip, paramname, "is this neighborhood active?",
          &(*neighborhood)->active, TRUE, active, NULL, NULL) );
-   sprintf(paramname, "heuristics/alns/%s/priority", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/alns/%s/priority", name);
    SCIP_CALL( SCIPaddRealParam(scip, paramname, "positive call priority to initialize bandit algorithms",
          &(*neighborhood)->priority, TRUE, priority, 1e-2, 1.0, NULL, NULL) );
 
