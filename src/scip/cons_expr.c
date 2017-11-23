@@ -6847,6 +6847,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    /* check if the new bounds lead to an empty interval */
    if( SCIPintervalGetInf(newbounds) > oldub || SCIPintervalGetSup(newbounds) < oldlb )
    {
+      SCIPintervalSetEmpty(&expr->interval);
       *cutoff = TRUE;
       return SCIP_OKAY;
    }
@@ -6859,6 +6860,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    /* mark the current problem to be infeasible if either the lower/upper bound is above/below +/- SCIPinfinity() */
    if( SCIPisInfinity(scip, newlb) || SCIPisInfinity(scip, -newub) )
    {
+      SCIPintervalSetEmpty(&expr->interval);
       *cutoff = TRUE;
       return SCIP_OKAY;
    }
