@@ -1,5 +1,13 @@
 include(FindPackageHandleStandardArgs)
 
+# check whether environment variable BLISS_DIR was set
+if(NOT BLISS_DIR)
+   set(BLISS_DIR_TEST $ENV{BLISS_DIR})
+   if(BLISS_DIR_TEST)
+      set(BLISS_DIR $ENV{BLISS_DIR} CACHE PATH "Path to bliss build directory")
+   endif()
+endif()
+
 # if the bliss directory is specified, first try to use exactly that bliss
 if(BLISS_DIR)
    # look for the includes with subdirectory bliss
