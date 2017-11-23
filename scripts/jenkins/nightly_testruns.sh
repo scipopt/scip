@@ -57,15 +57,15 @@ fi
 ###################
 yes "" | make $SCIP_FLAGS -j4 USRFLAGS=-Werror
 
-#####################
-### Testrun setup ###
-#####################
+######################
+### Testrun: setup ###
+######################
 ln -s /optimi/kombadon/IP check/
 ln -s /optimi/kombadon/MINLP check/
 
-#########################
-### Testrun execution ###
-#########################
+##########################
+### Testrun: execution ###
+##########################
 # MIP
 ./bin/scip -c "set heur emph aggr set diffsave settings/heuraggr.set q"
 ./bin/scip -c "set sepa emph aggr set diffsave settings/sepaaggr.set q"
