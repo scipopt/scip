@@ -180,6 +180,7 @@ struct SCIP_ConsData
    SCIP_Real*            eigenvalues;        /**< eigenvalues of A */
    SCIP_Real*            eigenvectors;       /**< orthonormal eigenvectors of A; if A = P D P^T, then eigenvectors is P^T */
    SCIP_Real*            bp;                 /**< stores b * P where b are the linear coefficients of the quadratic vars */
+   SCIP_Real             maxnonconvexity;    /**< largest absolute value of nonconvex eigenvalues */
 
    SCIP_Bool             isdisaggregated;    /**< has the constraint already been disaggregated? if might happen that more disaggreation would be potentially
                                                   possible, but we reached the maximum number of sparsity components during presolveDisaggregate() */
@@ -258,6 +259,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             storedbilinearterms; /**< did we already try to store all bilinear terms? */
 
    SCIP_Real             minscorebilinterms; /**< minimal required score in order to use linear inequalities for tighter bilinear relaxations */
+   SCIP_Real             mincurvcollectbilinterms;/**< minimal curvature of constraints to be considered when returning bilinear terms to other plugins */
    int                   bilinineqmaxseparounds; /**< maximum number of separation rounds to use linear inequalities for the bilinear term relaxation in a local node */
 };
 
@@ -4970,6 +4972,9 @@ SCIP_RETCODE checkCurvature(
 
    if( n == 2 )
    {
+      SCIP_Real tracehalf;
+      SCIP_Real discriminantroot;
+
       /* compute eigenvalues by hand */
       assert(consdata->nbilinterms == 1);
       consdata->isconvex =
@@ -4980,6 +4985,20 @@ SCIP_RETCODE checkCurvature(
          consdata->quadvarterms[0].sqrcoef <= 0 &&
          consdata->quadvarterms[1].sqrcoef <= 0 &&
          4 * consdata->quadvarterms[0].sqrcoef * consdata->quadvarterms[1].sqrcoef >= consdata->bilinterms[0].coef * consdata->bilinterms[0].coef;
+
+      /* store largest eigenvalue causing nonconvexity according to sides */
+      tracehalf = (consdata->quadvarterms[0].sqrcoef + consdata->quadvarterms[1].sqrcoef) / 2.0;
+      discriminantroot = consdata->quadvarterms[0].sqrcoef * consdata->quadvarterms[1].sqrcoef - SQR(consdata->bilinterms[0].coef / 2.0);
+      discriminantroot = SQR(tracehalf) - discriminantroot;
+      assert(discriminantroot >= 0.0);
+      discriminantroot = MAX(0.0, discriminantroot);
+      discriminantroot = SQRT(discriminantroot);
+
+      consdata->maxnonconvexity = 0.0;
+      if( !SCIPisInfinity(scip, -consdata->lhs) )
+         consdata->maxnonconvexity = MAX(consdata->maxnonconvexity, tracehalf + discriminantroot);
+      if( !SCIPisInfinity(scip, consdata->rhs) )
+         consdata->maxnonconvexity = MAX(consdata->maxnonconvexity, discriminantroot - tracehalf);
 
       consdata->iscurvchecked = TRUE;
       return SCIP_OKAY;
@@ -4993,6 +5012,7 @@ SCIP_RETCODE checkCurvature(
       consdata->isconvex = FALSE;
       consdata->isconcave = FALSE;
       consdata->iscurvchecked = TRUE;
+      consdata->maxnonconvexity = SCIPinfinity(scip);
       return SCIP_OKAY;
    }
 
@@ -5092,6 +5112,13 @@ SCIP_RETCODE checkCurvature(
 #endif
       }
 
+      /* store largest eigenvalue causing nonconvexity according to sides */
+      consdata->maxnonconvexity = 0.0;
+      if( !SCIPisInfinity(scip, -consdata->lhs) )
+         consdata->maxnonconvexity = MAX(consdata->maxnonconvexity, alleigval[n-1]);
+      if( !SCIPisInfinity(scip, consdata->rhs) )
+         consdata->maxnonconvexity = MAX(consdata->maxnonconvexity, -alleigval[0]);
+
       SCIPfreeBufferArray(scip, &alleigval);
    }
    else
@@ -5099,6 +5126,7 @@ SCIP_RETCODE checkCurvature(
       consdata->isconvex = FALSE;
       consdata->isconcave = FALSE;
       consdata->iscurvchecked = TRUE; /* set to TRUE since it does not help to repeat this procedure again and again (that will not bring Ipopt in) */
+      consdata->maxnonconvexity = SCIPinfinity(scip);
    }
 
    SCIPhashmapFree(&var2index);
@@ -13856,6 +13884,10 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/cutmaxrange",
          "maximal coef range of a cut (maximal coefficient divided by minimal coefficient) in order to be added to LP relaxation",
          &conshdlrdata->cutmaxrange, TRUE, 1e+7, 0.0, SCIPinfinity(scip), NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/mincurvcollectbilinterms",
+         "minimal curvature of constraints to be considered when returning bilinear terms to other plugins",
+         &conshdlrdata->mincurvcollectbilinterms, TRUE, 0.8, -SCIPinfinity(scip), SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/linearizeheursol",
          "whether linearizations of convex quadratic constraints should be added to cutpool in a solution found by some heuristic",
