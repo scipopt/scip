@@ -2053,7 +2053,10 @@ SCIP_RETCODE propConss(
          consdata = SCIPconsGetData(conss[i]);
          assert(consdata != NULL);
 
-         if( SCIPconsIsActive(conss[i]) && !consdata->ispropagated )
+         /* in the first round, we reevaluate all bounds to remove some possible leftovers that could be in this
+          * expression from a reverse propagation in a previous propagation round
+          */
+         if( SCIPconsIsActive(conss[i]) && (!consdata->ispropagated || roundnr == 0) )
          {
             SCIPdebugMsg(scip, "call forwardPropCons() for constraint <%s>\n", SCIPconsGetName(conss[i]));
             SCIPdebugPrintCons(scip, conss[i], NULL);
