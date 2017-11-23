@@ -61,7 +61,7 @@ SCIP_DECL_RELAXEXEC(relaxExecLp)
    *lowerbound = -SCIPinfinity(scip);
    *result = SCIP_DIDNOTRUN;
 
-   /* we cannot run if any constraints are present which expect their variables to be binary or integer during transformation */
+   /* we can only run if none of the present constraints expect their variables to be binary or integer during transformation */
    conss = SCIPgetConss(scip);
    nconss = SCIPgetNConss(scip);
 
@@ -71,8 +71,18 @@ SCIP_DECL_RELAXEXEC(relaxExecLp)
 
       conshdlrname = SCIPconshdlrGetName(SCIPconsGetHdlr(conss[c]));
 
-      if( strcmp(conshdlrname, "and") == 0 || strcmp(conshdlrname, "orbitope") == 0  || strcmp(conshdlrname, "pseudoboolean") == 0 ||
-            strcmp(conshdlrname, "superindicator") == 0 || strcmp(conshdlrname, "xor") == 0 )
+      /* skip if there are any "and", "linking", or", "orbitope", "pseudoboolean", "superindicator", "xor" or new/unknown constraints */
+      if( strcmp(conshdlrname, "SOS1") != 0 && strcmp(conshdlrname, "SOS2") != 0 && strcmp(conshdlrname, "abspower") != 0
+            && strcmp(conshdlrname, "bivariate") != 0 && strcmp(conshdlrname, "bounddisjunction") != 0
+            && strcmp(conshdlrname, "cardinality") != 0 && strcmp(conshdlrname, "components") != 0
+            && strcmp(conshdlrname, "conjunction") != 0 && strcmp(conshdlrname, "countsols") != 0
+            && strcmp(conshdlrname, "cumulative") != 0 && strcmp(conshdlrname, "disjunction") != 0
+            && strcmp(conshdlrname, "indicator") != 0 && strcmp(conshdlrname, "integral") != 0
+            && strcmp(conshdlrname, "knapsack") != 0 && strcmp(conshdlrname, "linear") != 0
+            && strcmp(conshdlrname, "logicor") != 0 && strcmp(conshdlrname, "nonlinear") != 0
+            && strcmp(conshdlrname, "orbisack") != 0 && strcmp(conshdlrname, "quadratic") != 0
+            && strcmp(conshdlrname, "setppc") != 0 && strcmp(conshdlrname, "soc") != 0
+            && strcmp(conshdlrname, "symresack") != 0 && strcmp(conshdlrname, "varbound") != 0 )
          return SCIP_OKAY;
    }
 
