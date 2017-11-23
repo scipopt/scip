@@ -2855,7 +2855,7 @@ SCIP_RETCODE initBounds(
 
       for( i = 0; i < nbilins; ++i )
       {
-         if( nunderest[i] + noverest[i] > 0 && SCIPisLE(scip, propdata->minnonconvexity, maxnonconvexity[i])
+         if( nunderest[i] + noverest[i] > 0 && propdata->minnonconvexity <= maxnonconvexity[i]
             && varIsInteresting(scip, x[i], 1) && varIsInteresting(scip, y[i], 1) )
          {
             SCIP_CALL( SCIPallocBlockMemory(scip, &propdata->bilinbounds[bilinidx]) ); /*lint !e866*/
