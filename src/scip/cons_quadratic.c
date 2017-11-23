@@ -4990,9 +4990,8 @@ SCIP_RETCODE checkCurvature(
       tracehalf = (consdata->quadvarterms[0].sqrcoef + consdata->quadvarterms[1].sqrcoef) / 2.0;
       discriminantroot = consdata->quadvarterms[0].sqrcoef * consdata->quadvarterms[1].sqrcoef - SQR(consdata->bilinterms[0].coef / 2.0);
       discriminantroot = SQR(tracehalf) - discriminantroot;
-      assert(discriminantroot >= 0.0);
-      discriminantroot = MAX(0.0, discriminantroot);
-      discriminantroot = SQRT(discriminantroot);
+      assert(!SCIPisNegative(scip, discriminantroot));
+      discriminantroot = SQRT(MAX(0.0, discriminantroot));
 
       consdata->maxnonconvexity = 0.0;
       if( !SCIPisInfinity(scip, -consdata->lhs) )
