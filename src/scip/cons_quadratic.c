@@ -4891,12 +4891,18 @@ void checkCurvatureEasy(
 
    SCIPdebugMsg(scip, "Checking curvature of constraint <%s> without multivariate functions\n", SCIPconsGetName(cons));
 
+   consdata->maxnonconvexity = 0.0;
    if( nquadvars == 1 )
    {
       assert(consdata->nbilinterms == 0);
       consdata->isconvex      = !SCIPisNegative(scip, consdata->quadvarterms[0].sqrcoef);
       consdata->isconcave     = !SCIPisPositive(scip, consdata->quadvarterms[0].sqrcoef);
       consdata->iscurvchecked = TRUE;
+
+      if( !SCIPisInfinity(scip, -consdata->lhs) && consdata->quadvarterms[0].sqrcoef > 0.0 )
+         consdata->maxnonconvexity =  consdata->quadvarterms[0].sqrcoef;
+      if( !SCIPisInfinity(scip,  consdata->rhs) && consdata->quadvarterms[0].sqrcoef < 0.0 )
+         consdata->maxnonconvexity = -consdata->quadvarterms[0].sqrcoef;
    }
    else if( nquadvars == 0 )
    {
@@ -4915,6 +4921,11 @@ void checkCurvatureEasy(
       {
          consdata->isconvex  = consdata->isconvex  && !SCIPisNegative(scip, consdata->quadvarterms[v].sqrcoef);
          consdata->isconcave = consdata->isconcave && !SCIPisPositive(scip, consdata->quadvarterms[v].sqrcoef);
+
+         if( !SCIPisInfinity(scip, -consdata->lhs) &&  consdata->quadvarterms[v].sqrcoef > consdata->maxnonconvexity )
+            consdata->maxnonconvexity =  consdata->quadvarterms[0].sqrcoef;
+         if( !SCIPisInfinity(scip,  consdata->rhs) && -consdata->quadvarterms[v].sqrcoef > consdata->maxnonconvexity )
+            consdata->maxnonconvexity = -consdata->quadvarterms[0].sqrcoef;
       }
 
       consdata->iscurvchecked = TRUE;
@@ -4924,6 +4935,7 @@ void checkCurvatureEasy(
       consdata->isconvex  = FALSE;
       consdata->isconcave = FALSE;
       consdata->iscurvchecked = TRUE;
+      consdata->maxnonconvexity = SCIPinfinity(scip);
    }
    else
       *determined = FALSE;
