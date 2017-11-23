@@ -1920,7 +1920,7 @@ SCIP_RETCODE mod2rowAddRow(
    MOD2_ROW*             rowtoadd            /**< mod 2 row that is added to the other mod 2 row */
    )
 {
-   uint8_t* contained;
+   SCIP_Shortbool* contained;
    int i;
    int j;
    int k;
