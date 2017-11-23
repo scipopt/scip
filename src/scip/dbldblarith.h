@@ -343,7 +343,7 @@
       else \
       { \
          /* ceil in double precision needs to be corrected */ \
-         double __tmp2_dbldbl_ceil = ceil((rhi) + (rlo)); \
+         double __tmp2_dbldbl_ceil = floor((rhi) + (rlo)); \
          SCIPdbldblSum(rhi, rlo, __tmp_dbldbl_ceil, -__tmp2_dbldbl_ceil); \
       } \
    } while(0)
