@@ -741,46 +741,51 @@ SCIP_RETCODE SCIPcomputeCutsSin(
    return SCIP_OKAY;
 }
 
-/* helper function that computs the curvature of a sine expression for given bounds and curvature of child */
+/* helper function that computes the curvature of a sine expression for given bounds and curvature of child */
 SCIP_EXPRCURV SCIPcomputeCurvatureSin(
    SCIP_EXPRCURV         childcurvature,     /**< curvature of child */
    SCIP_Real             lb,                 /**< lower bound of child */
-   SCIP_Real             ub                  /**< lower bound of child */
+   SCIP_Real             ub                  /**< upper bound of child */
    )
 {
+   SCIP_Real lbsin = SIN(lb);
+   SCIP_Real ubsin = SIN(ub);
+   SCIP_Real lbcos = COS(lb);
+   SCIP_Real ubcos = COS(ub);
+
    /* curvature can only be determined if bounds lie within one bay*/
-   if( (ub - lb <= M_PI) && (SIN(lb) * SIN(ub) >= 0.0) )
+   if( (ub - lb <= M_PI) && (lbsin * ubsin >= 0.0) )
    {
       /* special case that both sin(ub) and sin(lb) are 0 (i.e. ub - lb = pi) */
-      if( SIN(lb) == 0.0 && SIN(ub) == 0.0 )
+      if( lbsin == 0.0 && ubsin == 0.0 )
       {
          if( childcurvature == SCIP_EXPRCURV_LINEAR )
-            return (fmod(SIN(lb), 2.0*M_PI) == 0.0) ? SCIP_EXPRCURV_CONCAVE : SCIP_EXPRCURV_CONVEX;
+            return (fmod(lb, 2.0*M_PI) == 0.0) ? SCIP_EXPRCURV_CONCAVE : SCIP_EXPRCURV_CONVEX;
       }
 
       /* if sine is monotone on the interval, the curvature depends on the child curvature and on the segment */
-      else if( COS(lb) * COS(ub) >= 0.0 )
+      else if( lbcos * ubcos >= 0.0 )
       {
          /* on [0, pi/2], sine is concave iff child is concave */
-         if( SIN(lb) >= 0.0 && COS(lb) >= 0.0 && ((int)(childcurvature & SCIP_EXPRCURV_CONCAVE) != 0))
+         if( lbsin >= 0.0 && lbcos >= 0.0 && ((int)(childcurvature & SCIP_EXPRCURV_CONCAVE) != 0))
             return SCIP_EXPRCURV_CONCAVE;
 
          /* on [pi/2, pi], sine is concave iff child is convex */
-         if( SIN(lb) >= 0.0 && COS(lb) <= 0.0 && ((int)(childcurvature & SCIP_EXPRCURV_CONVEX) != 0))
+         if( lbsin >= 0.0 && lbcos <= 0.0 && ((int)(childcurvature & SCIP_EXPRCURV_CONVEX) != 0))
             return SCIP_EXPRCURV_CONCAVE;
 
          /* on [pi, 3pi/2], sine is convex iff child is concave */
-         if( SIN(lb) <= 0.0 && COS(lb) <= 0.0 && ((int)(childcurvature & SCIP_EXPRCURV_CONCAVE) != 0))
+         if( lbsin <= 0.0 && lbcos <= 0.0 && ((int)(childcurvature & SCIP_EXPRCURV_CONCAVE) != 0))
             return SCIP_EXPRCURV_CONVEX;
 
          /* on [3pi/2, 2pi], sine is convex iff child is convex */
-         if( SIN(lb) <= 0.0 && COS(lb) >= 0.0 && ((int)(childcurvature & SCIP_EXPRCURV_CONVEX) != 0))
+         if( lbsin <= 0.0 && lbcos >= 0.0 && ((int)(childcurvature & SCIP_EXPRCURV_CONVEX) != 0))
             return SCIP_EXPRCURV_CONVEX;
       }
 
       /* otherwise, we can only say something if the child is linear */
       else if( childcurvature == SCIP_EXPRCURV_LINEAR )
-         return (SIN(lb) >= 0.0 && SIN(ub) >= 0.0) ? SCIP_EXPRCURV_CONCAVE : SCIP_EXPRCURV_CONVEX;
+         return (lbsin >= 0.0 && ubsin >= 0.0) ? SCIP_EXPRCURV_CONCAVE : SCIP_EXPRCURV_CONVEX;
    }
 
    return SCIP_EXPRCURV_UNKNOWN;
