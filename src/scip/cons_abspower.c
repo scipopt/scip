@@ -3042,7 +3042,8 @@ SCIP_RETCODE propagateCons(
    else
       maxact = SCIPinfinity(scip);
 
-   if( SCIPisGE(scip, minact, consdata->lhs) && SCIPisLE(scip, maxact, consdata->rhs) )
+   if( (SCIPisInfinity(scip, -consdata->lhs) || SCIPisGE(scip, minact, consdata->lhs)) &&
+       (SCIPisInfinity(scip,  consdata->rhs) || SCIPisLE(scip, maxact, consdata->rhs)) )
    {
       SCIPdebugMsg(scip, "absolute power constraint <%s> is redundant: <%s>[%.15g,%.15g], <%s>[%.15g,%.15g]\n",
          SCIPconsGetName(cons),
