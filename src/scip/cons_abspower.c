@@ -5296,8 +5296,8 @@ SCIP_RETCODE enforceConstraint(
          return SCIP_OKAY;
       }
 
-      /* fallback 3: separation probably failed because of numerical difficulties with a convex constraint;
-         if noone declared solution infeasible yet and we had not even found a weak cut, try to resolve by branching */
+      /* fallback 3: separation probably failed because of numerical difficulties;
+         if no-one declared solution infeasible yet and we had not even found a weak cut, try to resolve by branching */
       SCIP_CALL( registerLargeRelaxValueVariableForBranching(scip, conss, nconss, sol, &brvar) );
       if( brvar == NULL )
       {
