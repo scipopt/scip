@@ -849,6 +849,9 @@ SCIP_RETCODE cutTightenCoefsQuad(
 
          if( isintegral )
          {
+            /* if the cut is integral, the true coefficient must also be integral;
+             * thus we round it to the exact integral value
+             */
             assert(SCIPisIntegral(scip, QUAD_TO_DBL(coef)));
             QUAD_ASSIGN(coef, SCIPround(scip, QUAD_TO_DBL(coef)));
          }
@@ -896,6 +899,9 @@ SCIP_RETCODE cutTightenCoefsQuad(
 
          if( isintegral )
          {
+            /* if the cut is integral, the true coefficient must also be integral;
+             * thus we round it to the exact integral value
+             */
             assert(SCIPisIntegral(scip, QUAD_TO_DBL(coef)));
             QUAD_ASSIGN(coef, SCIPround(scip, QUAD_TO_DBL(coef)));
          }
@@ -1199,6 +1205,9 @@ SCIP_RETCODE cutTightenCoefs(
 
          if( isintegral )
          {
+            /* if the cut is integral, the true coefficient must also be integral;
+             * thus we round it to the exact integral value
+             */
             assert(SCIPisIntegral(scip, QUAD_TO_DBL(coef)));
             QUAD_ASSIGN(coef, SCIPround(scip, QUAD_TO_DBL(coef)));
          }
@@ -1244,6 +1253,9 @@ SCIP_RETCODE cutTightenCoefs(
 
          if( isintegral )
          {
+            /* if the cut is integral, the true coefficient must also be integral;
+             * thus we round it to the exact integral value
+             */
             assert(SCIPisIntegral(scip, QUAD_TO_DBL(coef)));
             QUAD_ASSIGN(coef, SCIPround(scip, QUAD_TO_DBL(coef)));
          }
@@ -5855,7 +5867,7 @@ SCIP_Longint getIntegralVal(
 static
 SCIP_RETCODE getFlowCover(
    SCIP*                 scip,               /**< SCIP data structure */
-   SNF_RELAXATION*       snf,                /**< @bzfgottwa write comment */
+   SNF_RELAXATION*       snf,                /**< the single node flow relaxation */
    int*                  nflowcovervars,     /**< pointer to store number of variables in flow cover */
    int*                  nnonflowcovervars,  /**< pointer to store number of variables not in flow cover */
    int*                  flowcoverstatus,    /**< pointer to store whether variable is in flow cover (+1) or not (-1) */
