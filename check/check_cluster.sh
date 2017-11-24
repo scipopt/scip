@@ -201,7 +201,7 @@ do
 		    export SETFILE
 		    export TIMELIMIT
 		    # the space at the end is necessary
-		    export SRUN="srun --cpu_bind=cores "
+		    export SRUN="srun --cpu_bind=cores -v -v "
 		    if test "$CLUSTERNODES" = "all"
 		    then
 				  sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run.sh
