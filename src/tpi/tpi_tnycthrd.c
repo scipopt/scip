@@ -460,7 +460,7 @@ SCIP_RETCODE freeThreadPool(
       if( thrd_join((*thrdpool)->threads[i], &thrdretcode) != thrd_success )
          retcode = (SCIP_RETCODE) MIN((int)SCIP_ERROR, (int)retcode);
       else
-         retcode = (SCIP_RETCODE) MIN((int)thrdretcode, (int)retcode);
+         retcode = (SCIP_RETCODE) MIN(thrdretcode, (int)retcode);
    }
 
    /* freeing memory and data structures */
