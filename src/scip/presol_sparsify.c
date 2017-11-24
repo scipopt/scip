@@ -797,16 +797,29 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       /* insert varpairs into hash table */
       for( r = 0; r < nvarpairs; ++r )
       {
+         SCIP_Bool insert;
          ROWVARPAIR* othervarpair;
 
          assert(varpairs != NULL);
 
-         othervarpair = (ROWVARPAIR*)SCIPhashtableRetrieve(pairtable, (void*) &varpairs[r]);
 
-         if( othervarpair != NULL && SCIPmatrixGetRowNNonzs(matrix, othervarpair->rowindex) <= SCIPmatrixGetRowNNonzs(matrix, varpairs[r].rowindex) )
-            continue;
+         insert = TRUE;
 
-         SCIP_CALL( SCIPhashtableInsert(pairtable, (void*) &varpairs[r]) );
+         while( (othervarpair = (ROWVARPAIR*)SCIPhashtableRetrieve(pairtable, (void*) &varpairs[r])) != NULL )
+         {
+            if( SCIPmatrixGetRowNNonzs(matrix, othervarpair->rowindex) <= SCIPmatrixGetRowNNonzs(matrix, varpairs[r].rowindex) )
+            {
+               insert = FALSE;
+               break;
+            }
+
+            SCIP_CALL( SCIPhashtableRemove(pairtable, (void*) othervarpair) );
+         }
+
+         if( insert )
+         {
+            SCIP_CALL( SCIPhashtableInsert(pairtable, (void*) &varpairs[r]) );
+         }
       }
 
       /* sort rows according to parameter value */
