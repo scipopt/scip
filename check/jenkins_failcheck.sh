@@ -30,6 +30,7 @@ NR!=FNR && /^@01/ {
     n = split($2, a, "/"); m = split(a[n], b, "."); currinstname = b[1];
     if( b[m] == "gz" || b[m] == "z" || b[m] == "GZ" || b[m] == "Z" ) { m--; }
     for( i = 2; i < m; ++i ) { currinstname = currinstname "." b[i]; }
+
     instance = $2;
 
     # adjust idx and searchAssert
@@ -57,7 +58,8 @@ EOF
 
 read -d '' awkscript_checkfixedinstances << 'EOF'
 # call: awk $AWKARGS "$awkscript_checkfixedinstances" $RESFILE $DATABASE
-# $TMPDATABASE contains then all still failing bugs, not new ones!
+# prints fixed instances
+# afterwards $TMPDATABASE contains all still failing bugs, not new ones!
 
 # read fail instances for this configuration from resfile
 NR == FNR && /fail/ {
@@ -77,13 +79,15 @@ NR != FNR {
             next;
         }
     }
-    # write recored into the database for next time
+    # write record into the database for next time
     print $0 >> TMPDATABASE
 }
 EOF
 
 read -d '' awkscript_readknownbugs << 'EOF'
 # call: awk $AWKARGS "$awkscript_readknownbugs" $DATABASE $RESFILE
+# append new fails to DATABASE, also print them
+# write all still failing bugs into STILLFAILING
 
 # read known bugs from database
 NR == FNR {known_bugs[$0]; next}
@@ -107,6 +111,9 @@ NR == FNR {known_bugs[$0]; next}
 EOF
 
 read -d '' awkscript_scipheader << 'EOF'
+# call: awk "$awkscript_scipheader" $OUTFILE
+# prints current scipheader from OURFILE
+
 BEGIN{printLines=0;}
 
 /^SCIP version/ {printLines=1;}
@@ -186,15 +193,14 @@ cd check/
 PERF_MAIL=""
 if [ "${PERFORMANCE}" == "performance" ]; then
   ./evalcheck_cluster.sh -R ../${EVALFILE} > ${OUTPUT}
-  cat ${OUTPUT}
   NEWRBID=`cat $OUTPUT | grep "rubberband.zib" |sed -e 's|https://rubberband.zib.de/result/||'`
   OLDRBID=`tail $RBDB -n 1`
   PERF_MAIL=`echo "The results of the weekly performance runs are ready. Take a look at https://rubberband.zib.de/result/${NEWRBID}?compare=${OLDRBID}"`
   echo $NEWRBID >> $RBDB
-  rm ${OUTPUT}
 else
-  ./evalcheck_cluster.sh -r "-v useshortnames=0" ../${EVALFILE}
+  ./evalcheck_cluster.sh -r "-v useshortnames=0" ../${EVALFILE} > ${OUTPUT}
 fi
+cat ${OUTPUT}
 cd ..
 
 # Store paths of err out res and set file
@@ -259,7 +265,7 @@ ${ERRORS_INFO}
 Here is the complete list of new fails:
 ${ERRORINSTANCES}
 
-The follwing instances are still failing:
+The following instances are still failing:
 ${STILLFAILINGDB}
 
 Finally, the err, out and res file can be found here:
