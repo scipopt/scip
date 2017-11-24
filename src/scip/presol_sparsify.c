@@ -805,14 +805,21 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
 
          insert = TRUE;
 
+         /* check if this pair is already contained in the hash table;
+          * The loop is required due to the non-transitivity of the hash functions
+          */
          while( (othervarpair = (ROWVARPAIR*)SCIPhashtableRetrieve(pairtable, (void*) &varpairs[r])) != NULL )
          {
+            /* if the previous variable pair has fewer or the same number of non-zeros in the attached row
+             * we keep that pair and skip this one
+             */
             if( SCIPmatrixGetRowNNonzs(matrix, othervarpair->rowindex) <= SCIPmatrixGetRowNNonzs(matrix, varpairs[r].rowindex) )
             {
                insert = FALSE;
                break;
             }
 
+            /* this pairs row has fewer non-zeros, so remove the other pair from the hash table and loop */
             SCIP_CALL( SCIPhashtableRemove(pairtable, (void*) othervarpair) );
          }
 
