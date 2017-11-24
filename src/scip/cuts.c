@@ -3816,16 +3816,17 @@ SCIP_RETCODE SCIPcalcMIR(
    return SCIP_OKAY;
 }
 
-/** compute the violation of the MIR cut for the given values without computing the cut.
- *  This is used for the cMIR cut  generation heuristic.
+/** compute the efficacy of the MIR cut for the given values without computing the cut.
+ *  This is used for the CMIR cut generation heuristic.
  */
 static
-SCIP_Real computeMIRViolation(
+SCIP_Real computeMIREfficacy(
    SCIP*                 scip,               /**< SCIP datastructure */
    SCIP_Real*RESTRICT    coefs,              /**< array with coefficients in row */
    SCIP_Real*RESTRICT    solvals,            /**< solution values of variables in the row */
    SCIP_Real             rhs,                /**< right hand side of MIR cut */
    SCIP_Real             contactivity,       /**< aggregated activity of continuous variables in the row */
+   SCIP_Real             contsqrnorm,        /**< squared norm of continuous variables */
    SCIP_Real             delta,              /**< delta value to compute the violation for */
    int                   nvars,              /**< number of variables in the row, i.e. the size of coefs and solvals arrays */
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
@@ -3838,6 +3839,8 @@ SCIP_Real computeMIRViolation(
    SCIP_Real onedivoneminusf0;
    SCIP_Real scale;
    SCIP_Real downrhs;
+   SCIP_Real norm;
+   SCIP_Real contscale;
 
    scale = 1.0 / delta;
 
@@ -3852,13 +3855,17 @@ SCIP_Real computeMIRViolation(
 
    onedivoneminusf0 = 1.0 / (1.0 - f0);
 
+   contscale = scale * onedivoneminusf0;
+
    /* We multiply the coefficients of the base inequality roughly by scale/(1-f0).
     * If this gives a scalar that is very big, we better do not generate this cut.
     */
-   if( scale * onedivoneminusf0 > MAXCMIRSCALE )
+   if( contscale > MAXCMIRSCALE )
       return 0.0;
 
-   rhs = SCIPfloor(scip, rhs);
+   rhs = downrhs;
+   rhs -= contscale * contactivity;
+   norm = SQR(contscale) * contsqrnorm;
 
    assert(!SCIPisFeasZero(scip, f0));
    assert(!SCIPisFeasZero(scip, 1.0 - f0));
@@ -3874,11 +3881,10 @@ SCIP_Real computeMIRViolation(
          floorai += (fi - f0) * onedivoneminusf0;
 
       rhs -= solvals[i] * floorai;
+      norm += SQR(floorai);
    }
 
-   rhs -= scale * contactivity * onedivoneminusf0;
-
-   return - rhs;
+   return - rhs / SQRT(norm);
 }
 
 /** calculates an MIR cut out of an aggregation of LP rows
@@ -3949,6 +3955,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    SCIP_Bool freevariable;
    SCIP_Bool localbdsused;
    SCIP_Real contactivity;
+   SCIP_Real contsqrnorm;
 
    assert(aggrrow != NULL);
    assert(aggrrow->nrows + aggrrow->nnz >= 1);
@@ -4136,6 +4143,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    assert(ntmpcoefs == mksetnnz - intstart);
 
    contactivity = 0.0;
+   contsqrnorm = 0.0;
    for( i = 0; i < intstart; ++i )
    {
       SCIP_Real solval;
@@ -4195,6 +4203,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
       }
 
       contactivity += solval * (QUAD_ROUND(mksetcoef) * varsign[i]);
+      contsqrnorm += QUAD_ROUND(mksetcoef) * QUAD_ROUND(mksetcoef);
    }
 
    {
@@ -4240,8 +4249,11 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
          }
          else
          {
+            SCIP_Real slackcoeff = (aggrrow->rowweights[i] * aggrrow->slacksign[i]);
+
             /* otherwise add it to continuous activity */
-            contactivity += slackval * (aggrrow->rowweights[i] * aggrrow->slacksign[i]);
+            contactivity += slackval * slackcoeff;
+            contsqrnorm += SQR(slackcoeff);
          }
       }
    }
@@ -4273,7 +4285,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
          continue;
       }
 
-      viol = computeMIRViolation(scip, tmpcoefs, tmpvalues, QUAD_ROUND(mksetrhs), contactivity, deltacands[i], ntmpcoefs, minfrac, maxfrac);
+      viol = computeMIREfficacy(scip, tmpcoefs, tmpvalues, QUAD_ROUND(mksetrhs), contactivity, contsqrnorm, deltacands[i], ntmpcoefs, minfrac, maxfrac);
 
       if( viol > bestviol )
       {
@@ -4294,7 +4306,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 
       delta = bestdelta / i;
 
-      viol = computeMIRViolation(scip, tmpcoefs, tmpvalues, QUAD_ROUND(mksetrhs), contactivity, delta, ntmpcoefs, minfrac, maxfrac);
+      viol = computeMIREfficacy(scip, tmpcoefs, tmpvalues, QUAD_ROUND(mksetrhs), contactivity, contsqrnorm, delta, ntmpcoefs, minfrac, maxfrac);
 
       if( viol >= bestviol )
       {
@@ -4346,7 +4358,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
       tmpvalues[k - intstart] = varsign[k] == +1 ? bestub - SCIPgetSolVal(scip, sol, vars[mksetinds[k]]) : SCIPgetSolVal(scip, sol, vars[mksetinds[k]]) - bestlb;
 
       /* compute new violation */
-      newviol = computeMIRViolation(scip, tmpcoefs, tmpvalues, QUAD_ROUND(newrhs), contactivity, bestdelta, ntmpcoefs, minfrac, maxfrac);
+      newviol = computeMIREfficacy(scip, tmpcoefs, tmpvalues, QUAD_ROUND(newrhs), contactivity, contsqrnorm, bestdelta, ntmpcoefs, minfrac, maxfrac);
 
       /* check if violaton was increased */
       if( newviol > bestviol )
