@@ -33759,21 +33759,19 @@ void SCIPcomputeBilinEnvelope1(
    *lincoefx *= bilincoef;
    *lincoefy *= bilincoef;
    *linconstant *= bilincoef;
-   *success = TRUE;
+
+   /* cut needs to be tight at (vx,vy) and (xj,yj); otherwise we consider the cut to be numerically bad */
+   *success = SCIPisFeasEQ(scip, (*lincoefx)*vx + (*lincoefy)*vy + (*linconstant), bilincoef*vx*vy)
+      && SCIPisFeasEQ(scip, (*lincoefx)*xj + (*lincoefy)*yj + (*linconstant), bilincoef*xj*yj);
 
 #ifndef NDEBUG
    {
-      SCIP_Real activity;
-
-      /* cut needs to be tight at (vx,vy) and (xj,yj) */
-      assert(SCIPisFeasEQ(scip, (*lincoefx)*vx + (*lincoefy)*vy + (*linconstant), bilincoef*vx*vy));
-      assert(SCIPisFeasEQ(scip, (*lincoefx)*xj + (*lincoefy)*yj + (*linconstant), bilincoef*xj*yj));
+      SCIP_Real activity = (*lincoefx)*refpointx + (*lincoefy)*refpointy + (*linconstant);
 
       /* cut needs to under- or overestimate the bilinear term at the reference point */
       if( bilincoef < 0.0 )
          overestimate = !overestimate;
 
-      activity = (*lincoefx)*refpointx + (*lincoefy)*refpointy + (*linconstant);
       if( overestimate )
          assert(SCIPisFeasGE(scip, activity, bilincoef*refpointx*refpointy));
       else
@@ -33959,24 +33957,22 @@ void SCIPcomputeBilinEnvelope2(
    if( SCIPisLE(scip, xj, minx) || SCIPisGE(scip, xj, maxx) || SCIPisLE(scip, yj, miny) || SCIPisGE(scip, yj, maxy) )
       return;
 
-   *success = TRUE;
    *lincoefx = bilincoef * xcoef;
    *lincoefy = bilincoef * ycoef;
    *linconstant = bilincoef * constant;
 
+   /* cut needs to be tight at (vx,vy) and (xj,yj) */
+   *success = SCIPisFeasEQ(scip, (*lincoefx)*xi + (*lincoefy)*yi + (*linconstant), bilincoef*xi*yi)
+      && SCIPisFeasEQ(scip, (*lincoefx)*xj + (*lincoefy)*yj + (*linconstant), bilincoef*xj*yj);
+
 #ifndef NDEBUG
    {
-      SCIP_Real activity;
-
-      /* cut needs to be tight at (vx,vy) and (xj,yj) */
-      assert(SCIPisFeasEQ(scip, (*lincoefx)*xi + (*lincoefy)*yi + (*linconstant), bilincoef*xi*yi));
-      assert(SCIPisFeasEQ(scip, (*lincoefx)*xj + (*lincoefy)*yj + (*linconstant), bilincoef*xj*yj));
+      SCIP_Real activity = (*lincoefx)*refpointx + (*lincoefy)*refpointy + (*linconstant);
 
       /* cut needs to under- or overestimate the bilinear term at the reference point */
       if( bilincoef < 0.0 )
          overestimate = !overestimate;
 
-      activity = (*lincoefx)*refpointx + (*lincoefy)*refpointy + (*linconstant);
       if( overestimate )
          assert(SCIPisFeasGE(scip, activity, bilincoef*refpointx*refpointy));
       else
