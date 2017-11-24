@@ -2273,6 +2273,7 @@ SCIP_RETCODE buildDecompProblem(
    SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxroundsroot", 0) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/trysol/freq", 1) );
 
+   SCIP_CALL( SCIPsetIntParam(scip, "benders/default/lnsmaxdepth", 10) );
 
    return SCIP_OKAY;
 }
