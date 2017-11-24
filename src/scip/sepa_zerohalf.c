@@ -960,7 +960,7 @@ SCIP_RETCODE mod2MatrixAddTransRow(
 static
 void destroyMod2Matrix(
    SCIP*                 scip,               /**< scip data structure */
-   MOD2_MATRIX*          mod2matrix
+   MOD2_MATRIX*          mod2matrix          /**< pointer to mod2 matrix structure */
    )
 {
    int i;
