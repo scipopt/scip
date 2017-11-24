@@ -556,14 +556,15 @@ SCIP_RETCODE initLP(
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
-   assert( consdata->vars != NULL );
 
    nvars = consdata->nvars;
-   vars = consdata->vars;
 
    /* avoid stupid problems */
    if ( nvars <= 1 )
       return SCIP_OKAY;
+
+   assert( consdata->vars != NULL );
+   vars = consdata->vars;
 
    /* there are no fixed points */
    assert( consdata->invperm[0] != 0 );
@@ -681,17 +682,17 @@ SCIP_RETCODE propVariables(
    /* get data of constraint */
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
-   assert( consdata->vars != NULL );
    assert( consdata->nvars > 0 );
-   assert( consdata->invperm != NULL );
-
-   vars = consdata->vars;
    nvars = consdata->nvars;
-   invperm = consdata->invperm;
 
    /* avoid trivial problems */
    if ( nvars < 2 )
       return SCIP_OKAY;
+
+   assert( consdata->vars != NULL );
+   assert( consdata->invperm != NULL );
+   vars = consdata->vars;
+   invperm = consdata->invperm;
 
    /* loop through all variables */
    for (i = 0; i < nvars; ++i)
@@ -868,17 +869,21 @@ SCIP_RETCODE separateSymresackCovers(
    int crit;
    int i;
 
+   *infeasible = FALSE;
+   *ngen = 0;
+
    assert( scip != NULL );
    assert( consdata != NULL );
-   assert( consdata->nvars > 0 );
+
+   /* we don't have to take care of trivial constraints */
+   if ( consdata->nvars < 2 )
+      return SCIP_OKAY;
+
    assert( consdata->vars != NULL );
    assert( consdata->perm != NULL );
    assert( consdata->invperm != NULL );
    assert( infeasible != NULL );
    assert( ngen != NULL );
-
-   *infeasible = FALSE;
-   *ngen = 0;
 
    nvars = consdata->nvars;
    perm = consdata->perm;
@@ -1116,7 +1121,11 @@ SCIP_RETCODE checkSymresackSolution(
    assert( cons != NULL );
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL);
-   assert( consdata->nvars > 0 );
+
+   /* we don't have to take care of trivial constraints */
+   if ( consdata->nvars < 2 )
+      return SCIP_OKAY;
+
    assert( consdata->vars != NULL );
    assert( consdata->invperm != NULL );
 
@@ -1951,7 +1960,11 @@ SCIP_DECL_CONSRESPROP(consRespropSymresack)
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
-   assert( consdata->nvars > 0 );
+
+   /* we don't have to take care of trivial constraints */
+   if ( consdata->nvars < 2 )
+      return SCIP_OKAY;
+
    assert( consdata->vars != NULL );
    assert( consdata->invperm != NULL );
 
@@ -2058,7 +2071,11 @@ SCIP_DECL_CONSLOCK(consLockSymresack)
    /* get data of original constraint */
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
-   assert( consdata->nvars > 0 );
+
+   /* we don't have to take care of trivial constraints */
+   if ( consdata->nvars < 2 )
+      return SCIP_OKAY;
+
    assert( consdata->vars != NULL );
    assert( consdata->perm != NULL );
 
@@ -2108,15 +2125,22 @@ SCIP_DECL_CONSPRINT(consPrintSymresack)
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
+
+   SCIPdebugMsg(scip, "Printing method for symresack constraint handler\n");
+
+   /* we don't have to take care of trivial constraints */
+   if ( consdata->nvars < 2 )
+   {
+      SCIPinfoMessage(scip, file, "symresack()");
+      return SCIP_OKAY;
+   }
+
    assert( consdata->vars != NULL );
-   assert( consdata->nvars > 0 );
    assert( consdata->perm != NULL );
 
    vars = consdata->vars;
    nvars = consdata->nvars;
    perm = consdata->perm;
-
-   SCIPdebugMsg(scip, "Printing method for symresack constraint handler\n");
 
    SCIP_CALL( SCIPallocBufferArray(scip, &covered, nvars) );
    for (i = 0; i < nvars; ++i)
