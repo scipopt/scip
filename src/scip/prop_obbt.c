@@ -1419,7 +1419,7 @@ SCIP_DECL_SORTPTRCOMP(compBilinboundsScore)
    BILINBOUND* bound1 = (BILINBOUND*) elem1;
    BILINBOUND* bound2 = (BILINBOUND*) elem2;
 
-   return REALABS(bound1->score - bound2->score) < 1e-6 ? 0 : ( bound1->score > bound2->score ? 1 : -1 );
+   return bound1->score == bound2->score ? 0 : ( bound1->score > bound2->score ? 1 : -1 );
 }
 
 /** comparison method for two bounds w.r.t. their boundtype */
