@@ -226,7 +226,7 @@ SCIP_Real SCIPaggrRowGetValue(
 
    QUAD_ARRAY_LOAD(val, aggrrow->vals, aggrrow->inds[i]);
 
-   return QUAD_ROUND(val);
+   return QUAD_TO_DBL(val);
 }
 
 /** gets the non-zero value for the given problem index of a variable */
@@ -240,7 +240,7 @@ SCIP_Real SCIPaggrRowGetProbvarValue(
 
    QUAD_ARRAY_LOAD(val, aggrrow->vals, probindex);
 
-   return QUAD_ROUND(val);
+   return QUAD_TO_DBL(val);
 }
 
 /** gets the rank of the aggregation row */

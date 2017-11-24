@@ -146,7 +146,7 @@ fi
 if [ "${EVALFILE}" == "" ]; then
     echo "Couldn't find eval file, sending email"
     SUBJECT="ERROR [BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING=$SETTING] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH]"
-    echo -e "Aborting because the .eval file cannot be found.\nTried " | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+    echo -e "Aborting because the .eval file cannot be found.\nTried:\n${BASEFILE}, check/results/check.${TESTSET}.${SCIPVERSION}.*.${SETTING}.\n" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
     exit 1
 fi
 

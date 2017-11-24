@@ -56,7 +56,7 @@
 #define DEFAULT_MINNBESTSOLS  4
 
 #define GREEDY_MAXRESTARTS  3  /**< Max number of restarts for greedy PC/MW heuristic if improving solution has been found. */
-#define GREEDY_EXTENSIONS_MW 25   /**< Number of extensions for greedy MW heuristic. MUST BE HIGHER THAN GREEDY_EXTENSIONS */
+#define GREEDY_EXTENSIONS_MW 10   /**< Number of extensions for greedy MW heuristic. MUST BE HIGHER THAN GREEDY_EXTENSIONS */
 #define GREEDY_EXTENSIONS    5  /**< Number of extensions for greedy PC heuristic. */
 
 
@@ -263,7 +263,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
    if( mwpc )
    {
       SCIP_Bool dummy;
-      SCIP_CALL( SCIPStpHeurLocalExtendPcMw(scip, graph, cost, vnoi, best_result, vbase, steinertree, &dummy) );
+      SCIP_CALL( SCIPStpHeurLocalExtendPcMw(scip, graph, cost, vnoi, best_result, steinertree, &dummy) );
    }
 
    for( i = 0; i < nnodes; i++ )
@@ -1695,7 +1695,6 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    const SCIP_Real*      cost,               /**< edge cost array*/
    PATH*                 path,               /**< shortest data structure array */
    int*                  stedge,             /**< initialized array to indicate whether an edge is part of the Steiner tree */
-   int*                  pred,               /**< node array for internal computations */
    STP_Bool*             stvertex,           /**< uninitialized array to indicate whether a vertex is part of the Steiner tree */
    SCIP_Bool*            extensions          /**< pointer to store whether extensions have been made */
    )
@@ -1703,6 +1702,7 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    GNODE candidates[MAX(GREEDY_EXTENSIONS, GREEDY_EXTENSIONS_MW)];
    int candidatesup[MAX(GREEDY_EXTENSIONS, GREEDY_EXTENSIONS_MW)];
 
+   PATH* orgpath;
    SCIP_PQUEUE* pqueue;
    SCIP_Real bestsolval;
    int i;
@@ -1718,7 +1718,6 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    assert(graph != NULL);
    assert(stedge != NULL);
    assert(cost != NULL);
-   assert(pred != NULL);
    assert(stvertex != NULL);
 
    root = graph->source;
@@ -1727,6 +1726,7 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
 
    graph_pc_2transcheck(graph);
    SCIP_CALL( SCIPallocBufferArray(scip, &stvertextmp, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &orgpath, nnodes) );
 
    /* initialize solution vertex array with FALSE */
    BMSclearMemoryArray(stvertex, nnodes);
@@ -1744,6 +1744,8 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
 
    graph_path_st_pcmw_extend(scip, graph, cost, path, stvertex, extensions);
 
+   BMScopyMemoryArray(orgpath, path, nnodes);
+
    if( graph->stp_type == STP_MWCSP )
       greedyextensions = GREEDY_EXTENSIONS_MW;
    else
@@ -1759,8 +1761,6 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    {
       if( graph->grad[i] == 0 )
          continue;
-
-      pred[i] = path[i].edge;
 
       if( Is_term(graph->term[i]) )
       {
@@ -1783,9 +1783,9 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
       }
       else if( stvertex[i] )
       {
-         bestsolval += graph->cost[pred[i]];
+         bestsolval += graph->cost[orgpath[i].edge];
       }
-      else if( pred[i] != UNKNOWN && Is_pterm(graph->term[i]) )
+      else if( orgpath[i].edge != UNKNOWN && Is_pterm(graph->term[i]) )
       {
          if( nextensions < greedyextensions )
          {
@@ -1835,13 +1835,14 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
             int k = i;
 
             BMScopyMemoryArray(stvertextmp, stvertex, nnodes);
+            BMScopyMemoryArray(path, orgpath, nnodes);
 
             /* add new extension */
             while( !stvertextmp[k] )
             {
                stvertextmp[k] = TRUE;
-               assert(pred[k] != UNKNOWN);
-               k = graph->tail[pred[k]];
+               assert(orgpath[k].edge != UNKNOWN);
+               k = graph->tail[orgpath[k].edge];
             }
 
             graph_path_st_pcmw_extend(scip, graph, cost, path, stvertextmp, &extensionstmp);
@@ -1889,8 +1890,9 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
 
                for( int j = 0; j < nnodes; j++ )
                {
-                  pred[j] = path[j].edge;
-                  if( !stvertex[j] && Is_pterm(graph->term[j]) && pred[j] != UNKNOWN )
+                  orgpath[j].edge = path[j].edge;
+                  orgpath[j].dist = path[j].dist;
+                  if( !stvertex[j] && Is_pterm(graph->term[j]) && path[j].edge != UNKNOWN )
                   {
                      if( nextensions < greedyextensions )
                      {
@@ -1933,6 +1935,7 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    }
 
    SCIPpqueueFree(&pqueue);
+   SCIPfreeBufferArray(scip, &orgpath);
    SCIPfreeBufferArray(scip, &stvertextmp);
 
 #ifdef SCIP_DEBUG
