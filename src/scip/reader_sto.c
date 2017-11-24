@@ -2143,6 +2143,13 @@ SCIP_RETCODE addScenarioVarsAndConsToProb(
             getScenarioStageNum(scenarioscip, scenario), getScenarioNum(scenarioscip, scenario));
          var = SCIPfindVar(scenarioscip, name);
 
+         if( var == NULL )
+         {
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s", getScenarioEntryCol(scenario, i));
+            var = SCIPfindVar(scenarioscip, name);
+         }
+
+
          /* changing the coefficient for the variable */
          SCIP_CALL( SCIPchgCoefLinear(scenarioscip, cons, var, getScenarioEntryValue(scenario, i)) );
       }
