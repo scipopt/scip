@@ -33640,6 +33640,10 @@ void SCIPcomputeBilinEnvelope1(
 {
    SCIP_Real xs[2] = {lbx, ubx};
    SCIP_Real ys[2] = {lby, uby};
+   SCIP_Real minx;
+   SCIP_Real maxx;
+   SCIP_Real miny;
+   SCIP_Real maxy;
    SCIP_Real tmp;
    SCIP_Real mj;
    SCIP_Real qj;
@@ -33678,9 +33682,15 @@ void SCIPcomputeBilinEnvelope1(
    if( SCIPisFeasGT(scip, xcoef * refpointx - ycoef * refpointy - constant, 0.0) )
       return;
 
-   /* check the reference point is in the interior of the domain */
-   if( SCIPisFeasLE(scip, refpointx, lbx) || SCIPisFeasGE(scip, refpointx, ubx)
-      || SCIPisFeasLE(scip, refpointy, lby) || SCIPisFeasGE(scip, refpointy, uby) )
+   /* compute minimal and maximal bounds on x and y for accepting the reference point */
+   minx = lbx + 0.01 * (ubx-lbx);
+   maxx = ubx - 0.01 * (ubx-lbx);
+   miny = lby + 0.01 * (uby-lby);
+   maxy = uby - 0.01 * (uby-lby);
+
+   /* check whether the reference point is in [minx,maxx]x[miny,maxy] */
+   if( SCIPisLE(scip, refpointx, minx) || SCIPisGE(scip, refpointx, maxx)
+      || SCIPisLE(scip, refpointy, miny) || SCIPisGE(scip, refpointy, maxy) )
       return;
 
    /* always consider xy without the bilinear coefficient */
@@ -33733,8 +33743,10 @@ void SCIPcomputeBilinEnvelope1(
 
    assert(SCIPisEQ(scip, xcoef*xj, ycoef*yj + constant));
 
-   /* nothing can be achieved if the reference point is outside of the domain */
-   if( SCIPisGT(scip, xj, ubx) || SCIPisLT(scip, xj, lbx) || SCIPisGT(scip, yj, uby) || SCIPisLT(scip, yj, lby) )
+   /* check whether the projection is in [minx,maxx] x [miny,maxy]; this avoids numerical difficulties when the
+    * projection is close to the variable bounds
+    */
+   if( SCIPisLE(scip, xj, minx) || SCIPisGE(scip, xj, maxx) || SCIPisLE(scip, yj, miny) || SCIPisGE(scip, yj, maxy) )
       return;
 
    assert(vy - mj*vx - qj != 0.0);
@@ -33867,6 +33879,7 @@ void SCIPcomputeBilinEnvelope2(
 {
    SCIP_Real mi, mj, qi, qj, xi, xj, yi, yj;
    SCIP_Real xcoef, ycoef, constant;
+   SCIP_Real minx, maxx, miny, maxy;
 
    assert(scip != NULL);
    assert(!SCIPisInfinity(scip,  lbx));
@@ -33900,9 +33913,15 @@ void SCIPcomputeBilinEnvelope2(
       || SCIPisFeasGT(scip, xcoef2 * refpointx - ycoef2 * refpointy - constant2, 0.0) )
       return;
 
+   /* compute minimal and maximal bounds on x and y for accepting the reference point */
+   minx = lbx + 0.01 * (ubx-lbx);
+   maxx = ubx - 0.01 * (ubx-lbx);
+   miny = lby + 0.01 * (uby-lby);
+   maxy = uby - 0.01 * (uby-lby);
+
    /* check the reference point is in the interior of the domain */
-   if( SCIPisFeasLE(scip, refpointx, lbx) || SCIPisFeasGE(scip, refpointx, ubx)
-      || SCIPisFeasLE(scip, refpointy, lby) || SCIPisFeasGE(scip, refpointy, uby) )
+   if( SCIPisLE(scip, refpointx, minx) || SCIPisGE(scip, refpointx, maxx)
+      || SCIPisLE(scip, refpointy, miny) || SCIPisFeasGE(scip, refpointy, maxy) )
       return;
 
    /* the sign of the x-coefficients of the two inequalities must be different; otherwise the convex or concave
