@@ -206,14 +206,18 @@ SCIP_DECL_READERREAD(readerReadSmps)
 
    char newfilename[SCIP_MAXSTRLEN];
    char* fromlastslash;
-   char* parent;
+   char parent[SCIP_MAXSTRLEN];
+   int parentlen;
 
    assert(scip != NULL);
    assert(filename != NULL);
 
    fromlastslash = strrchr(filename, '/');
 
-   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &parent, filename, strlen(filename) - (strlen(fromlastslash) - 1)) );
+   parentlen = strlen(filename) - (strlen(fromlastslash) - 1);
+
+   strncpy(parent, filename, parentlen);
+   parent[parentlen] = '\0';
 
    fp = SCIPfopen(filename, "r");
    if( fp == NULL )
@@ -239,7 +243,6 @@ SCIP_DECL_READERREAD(readerReadSmps)
  /* cppcheck-suppress unusedLabel */
  TERMINATE:
    smpsinputFree(scip, &smpsi);
-   SCIPfreeBlockMemoryArray(scip, &parent, strlen(parent));
 
    if( retcode == SCIP_PLUGINNOTFOUND )
       retcode = SCIP_READERROR;
