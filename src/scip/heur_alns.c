@@ -46,19 +46,21 @@
  */
 #define DEFAULT_NODESQUOT        0.1
 #define DEFAULT_NODESOFFSET      500LL
-#define DEFAULT_NSOLSLIM         3
+#define DEFAULT_NSOLSLIM         -1
 #define DEFAULT_MINNODES         50LL
 #define DEFAULT_MAXNODES         5000LL
 #define DEFAULT_WAITINGNODES     25LL  /**< number of nodes since last incumbent solution that the heuristic should wait */
 #define DEFAULT_TARGETNODEFACTOR 1.5
 #define DEFAULT_STALLNODEFACTOR  0.25
+#define LRATE                    0.95  /**< learning rate for target nodes and minimum improvement */
+#define LRATEMIN                 0.01 /**<  lower bound for learning rate for target nodes and minimum improvement */
 #define LPLIMFAC                 4.0
 
 /*
  * parameters for the minimum improvement
  */
 #define DEFAULT_MINIMPROVELOW    0.0001
-#define DEFAULT_MINIMPROVEHIGH   0.1
+#define DEFAULT_MINIMPROVEHIGH   0.6
 #define MINIMPROVEFAC            1.5
 #define DEFAULT_STARTMINIMPROVE  0.05
 #define DEFAULT_ADJUSTMINIMPROVE TRUE
@@ -357,10 +359,14 @@ struct SCIP_HeurData
    SCIP_Real             ucb_alpha;          /**< parameter to increase the confidence width in UCB */
    SCIP_Real             rewardcontrol;      /**< reward control to increase the weight of the simple solution indicator
                                                *  and decrease the weight of the closed gap reward */
-   SCIP_Real             targetnodefactor;   /**< factor by which target node number is increased/decreased at every adjustment */
+   SCIP_Real             targetnodefactor;   /**< initial factor by which target node number is increased/decreased */
+   SCIP_Real             nodefaclearningrate;/**< learning rate for target node factor */
+   SCIP_Real             nodefacexponent;    /**< learning rate exponent for target node factor */
    SCIP_Real             stallnodefactor;    /**< stall node limit as a fraction of total node limit */
    SCIP_Real             rewardbaseline;     /**< the reward baseline to separate successful and failed calls */
    SCIP_Real             fixtol;             /**< tolerance by which the fixing rate may be missed/exceeded without generic (unfixing) */
+   SCIP_Real             minimprovlearnrate; /**< current learning rate for minimum improvement (decreases over time) */
+   SCIP_Real             minimprovexponent;  /**< exponent for minimum improvement base factor that varies based on learning rates */
    int                   nneighborhoods;     /**< number of neighborhoods */
    int                   nactiveneighborhoods;/**< number of active neighborhoods */
    int                   ninitneighborhoods; /**< neighborhoods that were used at least one time */
@@ -459,7 +465,7 @@ void updateFixingRateIncrement(
    )
 {
    fx->increment *= FIXINGRATE_DECAY;
-   fx->increment = MAX(fx->increment, 0.01);
+   fx->increment = MAX(fx->increment, LRATEMIN);
 }
 
 
@@ -474,7 +480,6 @@ void increaseFixingRate(
 {
    fx->targetfixingrate += fx->increment;
    fx->targetfixingrate = MIN(fx->targetfixingrate, fx->maxfixingrate);
-   updateFixingRateIncrement(fx);
 }
 
 /** decrease fixing rate
@@ -488,7 +493,6 @@ void decreaseFixingRate(
 {
    fx->targetfixingrate -= fx->increment;
    fx->targetfixingrate = MAX(fx->targetfixingrate, fx->minfixingrate);
-   updateFixingRateIncrement(fx);
 }
 
 /** update fixing rate based on the results of the current run */
@@ -531,6 +535,8 @@ void updateFixingRate(
       default:
          break;
    }
+
+   updateFixingRateIncrement(fx);
 }
 
 /** increase target node limit */
@@ -539,7 +545,8 @@ void increaseTargetNodeLimit(
    SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
-   heurdata->targetnodes = (SCIP_Longint)(heurdata->targetnodes * heurdata->targetnodefactor);
+   heurdata->nodefacexponent += heurdata->nodefaclearningrate;
+   heurdata->targetnodes = (SCIP_Longint)(heurdata->minnodes * pow(heurdata->targetnodefactor, heurdata->nodefacexponent));
    heurdata->targetnodes = MIN(heurdata->targetnodes, heurdata->maxnodes);
 }
 
@@ -549,7 +556,8 @@ void decreaseTargetNodeLimit(
    SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
-   heurdata->targetnodes = (SCIP_Longint)(heurdata->targetnodes / heurdata->targetnodefactor);
+   heurdata->nodefacexponent -= heurdata->nodefaclearningrate;
+   heurdata->targetnodes = (SCIP_Longint)(heurdata->minnodes * pow(heurdata->targetnodefactor, heurdata->nodefacexponent));
    heurdata->targetnodes = MAX(heurdata->targetnodes, heurdata->minnodes);
 }
 
@@ -560,6 +568,8 @@ void resetTargetNodeLimit(
    )
 {
    heurdata->targetnodes = heurdata->minnodes;
+   heurdata->nodefaclearningrate = 1.0;
+   heurdata->nodefacexponent = 0.0;
 }
 
 /** update target node limit based on the current run results */
@@ -597,6 +607,10 @@ void updateTargetNodeLimit(
       default:
          break;
    }
+
+   /* adapt the node factor learning rate */
+   if( heurdata->nodefaclearningrate > LRATEMIN )
+      heurdata->nodefaclearningrate = MAX(heurdata->nodefaclearningrate * LRATE, LRATEMIN);
 }
 
 /** reset the minimum improvement for the sub-SCIPs */
@@ -607,6 +621,8 @@ void resetMinimumImprovement(
 {
    assert(heurdata != NULL);
    heurdata->minimprove = heurdata->startminimprove;
+   heurdata->minimprovexponent = 0.0;
+   heurdata->minimprovlearnrate = 1.0;
 }
 
 /** increase minimum improvement for the sub-SCIPs */
@@ -617,7 +633,8 @@ void increaseMinimumImprovement(
 {
    assert(heurdata != NULL);
 
-   heurdata->minimprove *= MINIMPROVEFAC;
+   heurdata->minimprovexponent += heurdata->minimprovlearnrate;
+   heurdata->minimprove = heurdata->startminimprove * pow(MINIMPROVEFAC, heurdata->minimprovexponent);
    heurdata->minimprove = MIN(heurdata->minimprove, heurdata->minimprovehigh);
 }
 
@@ -629,8 +646,9 @@ void decreaseMinimumImprovement(
 {
    assert(heurdata != NULL);
 
-   heurdata->minimprove /= MINIMPROVEFAC;
-   SCIPdebugMessage("%.4f", heurdata->minimprovelow);
+   heurdata->minimprovexponent -= heurdata->minimprovlearnrate;
+
+   heurdata->minimprove = heurdata->startminimprove * pow(MINIMPROVEFAC, heurdata->minimprovexponent);
    heurdata->minimprove = MAX(heurdata->minimprove, heurdata->minimprovelow);
 }
 
@@ -652,33 +670,34 @@ void updateMinimumImprovement(
    switch (subscipstatus) {
       case SCIP_STATUS_INFEASIBLE:
       case SCIP_STATUS_INFORUNBD:
-         /* subproblem was infeasible, probably due to the minimum improvement -> decrease minimum improvement */
+         /* subproblem was infeasible or , probably due to the minimum improvement -> decrease minimum improvement */
          decreaseMinimumImprovement(heurdata);
 
          break;
       case SCIP_STATUS_SOLLIMIT:
       case SCIP_STATUS_BESTSOLLIMIT:
-      case SCIP_STATUS_OPTIMAL:
-         /* subproblem could be optimally solved -> try higher minimum improvement */
-         increaseMinimumImprovement(heurdata);
-         break;
       case SCIP_STATUS_NODELIMIT:
       case SCIP_STATUS_STALLNODELIMIT:
       case SCIP_STATUS_USERINTERRUPT:
-         /* subproblem was too hard, decrease minimum improvement */
-         if( runstats->nbestsolsfound <= 0 )
-            decreaseMinimumImprovement(heurdata);
-         break;
-      case SCIP_STATUS_UNKNOWN:
       case SCIP_STATUS_TOTALNODELIMIT:
+         /* try higher minimum improvement if a limit was reached to restrict search space further */
+         increaseMinimumImprovement(heurdata);
+         break;
+      case SCIP_STATUS_OPTIMAL:
+         /* do not change the minimum improvement if the problem was solved to optimality */
+      case SCIP_STATUS_GAPLIMIT:
+      case SCIP_STATUS_UNKNOWN:
       case SCIP_STATUS_TIMELIMIT:
       case SCIP_STATUS_MEMLIMIT:
-      case SCIP_STATUS_GAPLIMIT:
       case SCIP_STATUS_RESTARTLIMIT:
       case SCIP_STATUS_UNBOUNDED:
       default:
          break;
    }
+
+   /* adjust learning rate for minimum improvement */
+   if( heurdata->minimprovlearnrate > LRATEMIN )
+      heurdata->minimprovlearnrate = MAX(heurdata->minimprovlearnrate * LRATE, LRATEMIN);
 }
 
 /** Reset neighborhood statistics */
@@ -1904,23 +1923,26 @@ SCIP_RETCODE determineLimits(
       *runagain = FALSE;
 
    nodesquot = heurdata->nodesquot;
-   nodesquot *= (SCIPheurGetNBestSolsFound(heur) + 1.0)/(SCIPheurGetNCalls(heur) + 1.0);
+
+   /* if the heuristic is used to measure all rewards, it will always be penalized here */
+   if( heurdata->rewardfile == NULL )
+      nodesquot *= (SCIPheurGetNBestSolsFound(heur) + 1.0)/(SCIPheurGetNCalls(heur) + 1.0);
 
    /* calculate the search node limit of the heuristic  */
-   solvelimits->nodelimit = (SCIP_Longint)(nodesquot * SCIPgetNNodes(scip));
-   solvelimits->nodelimit += heurdata->nodesoffset;
-   solvelimits->nodelimit -= heurdata->usednodes;
-   solvelimits->nodelimit -= 100 * SCIPheurGetNCalls(heur);
-   solvelimits->nodelimit = MIN(heurdata->maxnodes, solvelimits->nodelimit);
+   solvelimits->stallnodes = (SCIP_Longint)(nodesquot * SCIPgetNNodes(scip));
+   solvelimits->stallnodes += heurdata->nodesoffset;
+   solvelimits->stallnodes -= heurdata->usednodes;
+   solvelimits->stallnodes -= 100 * SCIPheurGetNCalls(heur);
+   solvelimits->stallnodes = MIN(heurdata->maxnodes, solvelimits->stallnodes);
 
    /* use a smaller budget if not all neighborhoods have been initialized yet */
    assert(heurdata->ninitneighborhoods >= 0);
    initfactor = (heurdata->nactiveneighborhoods - heurdata->ninitneighborhoods + 1.0) / (heurdata->nactiveneighborhoods + 1.0);
-   solvelimits->nodelimit = (SCIP_Longint)(solvelimits->nodelimit * initfactor);
-   solvelimits->stallnodes = (SCIP_Longint)(solvelimits->nodelimit * heurdata->stallnodefactor);
+   solvelimits->stallnodes = (SCIP_Longint)(solvelimits->stallnodes * initfactor);
+   solvelimits->nodelimit = (SCIP_Longint)(heurdata->maxnodes);
 
    /* check whether we have enough nodes left to call subproblem solving */
-   if( solvelimits->nodelimit < heurdata->targetnodes )
+   if( solvelimits->stallnodes < heurdata->targetnodes )
       *runagain = FALSE;
 
    return SCIP_OKAY;
@@ -1971,15 +1993,15 @@ SCIP_RETCODE getReward(
    SCIP_Real reward = 0.0;
    SCIP_Real effort;
 
+   assert(rewardptr != NULL);
    assert(runstats->usednodes >= 0);
    assert(runstats->nfixings >= 0);
 
    /* just add one node to avoid division by zero */
-   effort = runstats->usednodes / (SCIP_Real)(heurdata->targetnodes + 1.0);
+   effort = runstats->usednodes / (SCIP_Real)(heurdata->maxnodes + 1.0);
 
    /* assume that every fixed variable linearly reduces the subproblem complexity */
    effort = (1.0 - (runstats->nfixings / ((SCIP_Real)SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip)))) * effort;
-   assert(rewardptr != NULL);
 
    /* a positive reward is only assigned if a new incumbent solution was found */
    if( runstats->nbestsolsfound > 0 )
@@ -1998,9 +2020,7 @@ SCIP_RETCODE getReward(
       lb = SCIPgetLowerbound(scip);
 
       /* compute the closed gap reward */
-      if( SCIPisEQ(scip, ub, lb) )
-         closedgapreward = 1.0;
-      else if( SCIPisInfinity(scip, runstats->oldupperbound) )
+      if( SCIPisEQ(scip, ub, lb) || SCIPisInfinity(scip, runstats->oldupperbound) )
          closedgapreward = 1.0;
       else
       {
@@ -2023,7 +2043,7 @@ SCIP_RETCODE getReward(
    else
    {
       /* linearly decrease the reward based on the number of nodes spent */
-      SCIP_Real maxeffort = heurdata->targetnodes * heurdata->stallnodefactor;
+      SCIP_Real maxeffort = heurdata->targetnodes;
       SCIP_Real usednodes = runstats->usednodes;
 
       usednodes *= (1.0 - (runstats->nfixings / ((SCIP_Real)SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip))));
@@ -2040,7 +2060,7 @@ SCIP_RETCODE getReward(
 
 /** update internal bandit algorithm statistics for future draws */
 static
-SCIP_RETCODE updateBanditAlgorithms(
+SCIP_RETCODE updateBanditAlgorithm(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data of the ALNS neighborhood */
    SCIP_Real             reward,             /**< measured reward */
@@ -2407,7 +2427,7 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
          {
             if( ntries < heurdata->nactiveneighborhoods )
             {
-               SCIP_CALL( updateBanditAlgorithms(scip, heurdata, 0.0, neighborhoodidx) );
+               SCIP_CALL( updateBanditAlgorithm(scip, heurdata, 0.0, neighborhoodidx) );
                SCIP_CALL( selectNeighborhood(scip, heurdata, &neighborhoodidx) );
                ntries++;
                tryagain = TRUE;
@@ -2500,6 +2520,7 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
       /* update statistics based on the sub-SCIP run results */
       updateRunStats(scip, &runstats[neighborhoodidx], subscip);
       subscipstatus[neighborhoodidx] = SCIPgetStatus(subscip);
+      SCIPdebugMsg(scip, "Status of sub-SCIP run: %d\n", subscipstatus[neighborhoodidx]);
 
       SCIP_CALL( getReward(scip, heurdata, &runstats[neighborhoodidx], &rewards[neighborhoodidx]) );
 
@@ -2536,10 +2557,9 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
 
       heurdata->usednodes += runstats[banditidx].usednodes;
 
-      /** determine the success of this neighborhood, and update the target fixing rate for the next time */
+      /* update neighborhood statistics */
       updateNeighborhoodStats(scip, &runstats[banditidx], heurdata->neighborhoods[banditidx], subscipstatus[banditidx]);
 
-      SCIPdebugMsg(scip, "Status of sub-SCIP run: %d\n", subscipstatus[banditidx]);
 
       /* adjust the fixing rate for this neighborhood
        * make no adjustments in all rewards mode, because this only affects 1 of 8 heuristics
@@ -2553,7 +2573,7 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
       /* similarly, update the minimum improvement for the ALNS heuristic
        * make no adjustments in all rewards mode
        */
-      if( heurdata->adjustminimprove && ! allrewardsmode )
+      if( heurdata->adjustminimprove )
       {
          SCIPdebugMsg(scip, "Update Minimum Improvement: %.4f\n", heurdata->minimprove);
          updateMinimumImprovement(heurdata, subscipstatus[banditidx], &runstats[banditidx]);
@@ -2563,8 +2583,8 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
       /* update the target node limit based on the status of the selected algorithm */
       updateTargetNodeLimit(heurdata, &runstats[banditidx], subscipstatus[banditidx]);
 
-      /* update the bandit algorithms by the measured reward */
-      SCIP_CALL( updateBanditAlgorithms(scip, heurdata, rewards[banditidx], banditidx) );
+      /* update the bandit algorithm by the measured reward */
+      SCIP_CALL( updateBanditAlgorithm(scip, heurdata, rewards[banditidx], banditidx) );
 
       resetCurrentNeighborhood(heurdata);
    }
