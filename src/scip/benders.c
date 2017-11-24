@@ -1953,6 +1953,7 @@ SCIP_RETCODE SCIPbendersExec(
          {
             SCIP_Bool subinfeas = FALSE;
             SCIP_Bool lpsub = SCIPbendersSubprobIsLP(benders, i);
+            SCIP_Bool solvesub = TRUE;
 
             /* for the second solving loop, if the problem is an LP, it is not solved again. If the problem is a MIP,
              * then the subproblem objective function value is set to infinity. However, if the subproblem is proven
@@ -1960,64 +1961,67 @@ SCIP_RETCODE SCIPbendersExec(
             if( l > 0 )
             {
                if( lpsub || subisinfeas[i] )
-                  continue;
+                  solvesub = FALSE;
                else
                   SCIPbendersSetSubprobObjval(benders, SCIPinfinity(SCIPbendersSubproblem(benders, i)), i);
             }
 
-            SCIP_CALL( SCIPbendersExecSubproblemSolve(benders, set, sol, i, l, FALSE, &subinfeas, type) );
-
-#ifdef SCIP_DEBUG
-            if( type == LP )
-               SCIPdebugMessage("LP: Subproblem %d (%f < %f)\n", i, SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i),
-                  SCIPbendersGetSubprobObjval(benders, i));
-#endif
-            (*infeasible) = (*infeasible) || subinfeas;
-            subisinfeas[i] = subinfeas;
-
-            /* if the subproblems are being solved as part of the conscheck, then we break once an infeasibility is found.
-             * The result pointer is set to (*infeasible) and the execution is halted. */
-            if( checkint )
+            if( solvesub )
             {
-               /* if the subproblem is feasible, then it is necessary to update the value of the auxiliary variable to the
-                * objective function value of the subproblem. */
-               if( !subinfeas )
-               {
-                  SCIP_Bool subproboptimal;
-
-                  SCIP_CALL( SCIPbendersCheckAuxiliaryVar(benders, set, sol, i, &subproboptimal) );
-
-                  if( lpsub || benders->benderssolvesub != NULL || l > 0 || onlylpcheck )
-                     optimal = optimal && subproboptimal;
+               SCIP_CALL( SCIPbendersExecSubproblemSolve(benders, set, sol, i, l, FALSE, &subinfeas, type) );
 
 #ifdef SCIP_DEBUG
-                  if( lpsub || l > 0 )
+               if( type == LP )
+                  SCIPdebugMessage("LP: Subproblem %d (%f < %f)\n", i, SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i),
+                     SCIPbendersGetSubprobObjval(benders, i));
+#endif
+               (*infeasible) = (*infeasible) || subinfeas;
+               subisinfeas[i] = subinfeas;
+
+               /* if the subproblems are being solved as part of the conscheck, then we break once an infeasibility is found.
+                * The result pointer is set to (*infeasible) and the execution is halted. */
+               if( checkint )
+               {
+                  /* if the subproblem is feasible, then it is necessary to update the value of the auxiliary variable to the
+                   * objective function value of the subproblem. */
+                  if( !subinfeas )
                   {
-                     if( subproboptimal )
-                        SCIPdebugMessage("Subproblem %d is Optimal (%f >= %f)\n", i,
-                           SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i), SCIPbendersGetSubprobObjval(benders, i));
-                     else
-                        SCIPdebugMessage("Subproblem %d is NOT Optimal (%f < %f)\n", i,
-                           SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i), SCIPbendersGetSubprobObjval(benders, i));
-                  }
+                     SCIP_Bool subproboptimal;
+
+                     SCIP_CALL( SCIPbendersCheckAuxiliaryVar(benders, set, sol, i, &subproboptimal) );
+
+                     if( lpsub || benders->benderssolvesub != NULL || l > 0 || onlylpcheck )
+                        optimal = optimal && subproboptimal;
+
+#ifdef SCIP_DEBUG
+                     if( lpsub || l > 0 )
+                     {
+                        if( subproboptimal )
+                           SCIPdebugMessage("Subproblem %d is Optimal (%f >= %f)\n", i,
+                              SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i), SCIPbendersGetSubprobObjval(benders, i));
+                        else
+                           SCIPdebugMessage("Subproblem %d is NOT Optimal (%f < %f)\n", i,
+                              SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i), SCIPbendersGetSubprobObjval(benders, i));
+                     }
 #endif
 
-                  /* only increment the checked count if the subproblem is not an LP, or the solve loop is the MIP
-                   * solving loop. Hence, the LP are solved once and the MIPs are solved twice */
-                  if( lpsub || (l > 0 && !lpsub) || onlylpcheck )
-                     nchecked++;
+                     /* only increment the checked count if the subproblem is not an LP, or the solve loop is the MIP
+                      * solving loop. Hence, the LP are solved once and the MIPs are solved twice */
+                     if( lpsub || (l > 0 && !lpsub) || onlylpcheck )
+                        nchecked++;
 
 
-                  if( !subproboptimal )
+                     if( !subproboptimal )
+                     {
+                        numnotopt++;
+                        assert(numnotopt <= nsubproblems);
+                     }
+                  }
+                  else
                   {
                      numnotopt++;
                      assert(numnotopt <= nsubproblems);
                   }
-               }
-               else
-               {
-                  numnotopt++;
-                  assert(numnotopt <= nsubproblems);
                }
             }
 
@@ -2078,8 +2082,8 @@ SCIP_RETCODE SCIPbendersExec(
                   /* if the subproblem is an LP, then only LP based cuts are generated. This is also only performed in
                    * the first iteration of the solve loop. */
                   if( (l == 0 && SCIPbenderscutIsLPCut(benderscuts[k]))
-                     //|| (l > 0 && !lpsub && !SCIPbenderscutIsLPCut(benderscuts[k])) )
-                     || (l > 0 && !lpsub && !SCIPbenderscutIsLPCut(benderscuts[k]) && i == 0) )
+                     || (l > 0 && !lpsub && !SCIPbenderscutIsLPCut(benderscuts[k])) )
+                     //|| (l > 0 && !lpsub && !SCIPbenderscutIsLPCut(benderscuts[k]) && i == 0) )
                   {
                      cutresult = (*result);
 
