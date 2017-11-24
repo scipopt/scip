@@ -7243,7 +7243,7 @@ void updateBilinearRelaxation(
          SCIP_Real absimpr = REALABS(val - (*bestval));
 
          /* update relaxation if possible */
-         if( relimpr > 0.05 && absimpr > 0.001 &&  ((overestimate && SCIPisFeasLT(scip, val, *bestval)) || (!overestimate && SCIPisFeasGT(scip, val, *bestval))) )
+         if( relimpr > 0.05 && absimpr > 1e-3 && ((overestimate && SCIPisRelLT(scip, val, *bestval)) || (!overestimate && SCIPisRelGT(scip, val, *bestval))) )
          {
             *bestcoefx = xcoef;
             *bestcoefy = ycoef;
@@ -7267,7 +7267,7 @@ void updateBilinearRelaxation(
          SCIP_Real absimpr = REALABS(val - (*bestval));
 
          /* update relaxation if possible */
-         if( relimpr > 0.05 && absimpr > 0.001 &&  ((overestimate && SCIPisFeasLT(scip, val, *bestval)) || (!overestimate && SCIPisFeasGT(scip, val, *bestval))) )
+         if( relimpr > 0.05 && absimpr > 1e-3 && ((overestimate && SCIPisRelLT(scip, val, *bestval)) || (!overestimate && SCIPisRelGT(scip, val, *bestval))) )
          {
             *bestcoefx = xcoef;
             *bestcoefy = ycoef;
