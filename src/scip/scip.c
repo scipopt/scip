@@ -33953,6 +33953,12 @@ void SCIPcomputeBilinEnvelope2(
    if( SCIPisEQ(scip, xi, xj) && SCIPisEQ(scip, yi, yj) )
       return;
 
+   /* check whether projected points are in the interior */
+   if( SCIPisLE(scip, xi, minx) || SCIPisGE(scip, xi, maxx) || SCIPisLE(scip, yi, miny) || SCIPisGE(scip, yi, maxy) )
+      return;
+   if( SCIPisLE(scip, xj, minx) || SCIPisGE(scip, xj, maxx) || SCIPisLE(scip, yj, miny) || SCIPisGE(scip, yj, maxy) )
+      return;
+
    *success = TRUE;
    *lincoefx = bilincoef * xcoef;
    *lincoefy = bilincoef * ycoef;
