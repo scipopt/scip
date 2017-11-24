@@ -160,7 +160,7 @@ static
 SCIP_RETCODE dfs(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   startnode,          /**< node to start the depth-first-search */
-   uint8_t*              visited,            /**< array to store for each node, whether it was already visited */
+   SCIP_Shortbool*       visited,            /**< array to store for each node, whether it was already visited */
    int*                  dfsstack,           /**< array of size number of nodes to store the stack;
                                               *   only needed for performance reasons */
    int*                  stacknextedge,      /**< array of size number of nodes to store the number of adjacent nodes
@@ -397,7 +397,7 @@ SCIP_RETCODE topologicalSort(
    int* stacknextedge;
    int* stacknextcliquevar;
    int* cliqueexit;
-   uint8_t* visited;
+   SCIP_Shortbool* visited;
    int nbounds;
    int i;
 

@@ -57,7 +57,7 @@ set(settings_MIP
     "lns_epsgreedy"
     "lns_exp3"
 #    "dynamic"
-    "intobj"
+#    "intobj"
 #    "nologicor"
     "xorsepaparity"
     "solvingphases"
