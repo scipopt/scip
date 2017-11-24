@@ -161,6 +161,7 @@ SCIP_RETCODE SCIPintListNodeAppendCopy(
          }
          else if( checkconflict )
          {
+            assert(conflict != NULL);
             (*conflict) = TRUE;
          }
 
@@ -302,6 +303,7 @@ SCIP_Real SCIPlinkcuttreeFindMinChain(
          /* better chain found? */
          if( !stopped && SCIPisLT(scip, tmpmin, min) )
          {
+            assert(tmpfirst != NULL);
             min = tmpmin;
             *first = tmpfirst;
             *last = curr;

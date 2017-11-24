@@ -1,7 +1,7 @@
 include(CTest)
 
 add_custom_target(check
-                COMMAND ${CMAKE_CTEST_COMMAND} -R "-default" --schedule-random
+                COMMAND ${CMAKE_CTEST_COMMAND} -R "-default" -E "applications" --schedule-random
                 DEPENDS scip
                 )
 
@@ -57,7 +57,7 @@ set(settings_MIP
     "lns_epsgreedy"
     "lns_exp3"
 #    "dynamic"
-    "intobj"
+#    "intobj"
 #    "nologicor"
     "xorsepaparity"
     "solvingphases"

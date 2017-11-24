@@ -592,7 +592,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    SCIP_CALL( SCIPallocBufferArray(scip, &gnodearr, nterms - 1) );
    for( i = 0; i < nterms - 1; i++ )
    {
-      SCIP_CALL( SCIPallocBlockMemory(scip, &gnodearr[i]) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocBlockMemory(scip, &(gnodearr[i])) ); /*lint !e866*/
    }
 
    SCIP_CALL( SCIPallocBufferArray(scip, &globalsoledge, nedges) );
@@ -778,7 +778,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    SCIPfreeBufferArray(scip, &globalsoledge);
 
    for( i = nterms - 2; i >= 0; i-- )
-      SCIPfreeBlockMemory(scip, &gnodearr[i]);
+      SCIPfreeBlockMemory(scip, &(gnodearr[i]));
    SCIPfreeBufferArray(scip, &gnodearr);
 
    SCIPfreeBufferArray(scip, &costrev);
@@ -893,8 +893,6 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRunPcMw(
    /* variables given? */
    if( vars != NULL )
    {
-      int nfixedges = 0;
-
       /* delete fixed edges from the new graph */
       for( e = 0; e < nedges; e += 2 )
       {
@@ -903,7 +901,6 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRunPcMw(
             && soledge[e] != CONNECT && soledge[e + 1] != CONNECT && !Is_term(g->term[g->tail[e]]) && !Is_term(g->term[g->head[e]]) )
          {
             graph_edge_del(scip, prunegraph, e, TRUE);
-            nfixedges++;
          }
       }
    }
@@ -1038,9 +1035,9 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRunPcMw(
       for( k = 0; k < nnodes; k++ )
          nodearrchar[k] = FALSE;
 
-         for( e = 0; e < nedges; e++ )
-            if( soledge[e] == CONNECT )
-               graph_sol_setNodeList(g, nodearrchar, ancestors[e]);
+      for( e = 0; e < nedges; e++ )
+         if( soledge[e] == CONNECT )
+            graph_sol_setNodeList(g, nodearrchar, ancestors[e]);
 
          /* calculate objective value of solution */
          objorg = graph_sol_getObj(prunegraph->cost, soledge, offsetnew, nedges);

@@ -355,7 +355,7 @@ SCIP_RETCODE collectCoefficients(
    if ( ! SCIPisInfinity(scip, rhs) )
       rhs -= constant;
 
-   /* check whether we have to resize */
+   /* check whether we have to resize; note that we have to add 2 * nvars since two inequalities may be added */
    if ( matrixdata->nmatcoef + 2 * nvars > matrixdata->nmaxmatcoef )
    {
       int newsize;
@@ -1429,12 +1429,12 @@ SCIP_DECL_PRESOLEXITPRE(presolExitpreSymmetry)
    if ( SCIPgetNRuns(scip) > 1 )
       return SCIP_OKAY;
 
-   /* skip if we are exiting */
-   if ( SCIPisStopped(scip) )
-      return SCIP_OKAY;
-
    /* skip if we already terminated */
    if ( SCIPgetStatus(scip) != SCIP_STATUS_UNKNOWN )
+      return SCIP_OKAY;
+
+   /* skip if we are exiting */
+   if ( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
    SCIPdebugMsg(scip, "Exitpre method of symmetry presolver ...\n");
@@ -1551,7 +1551,8 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
 
    if ( ! presoldata->computedsym )
    {
-      if ( SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING && SCIPgetStage(scip) != SCIP_STAGE_PRESOLVED )
+      if ( SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING && SCIPgetStage(scip) != SCIP_STAGE_PRESOLVED &&
+           SCIPgetStage(scip) != SCIP_STAGE_INITSOLVE )
       {
          SCIPerrorMessage("Cannot call symmetry detection outside of presolving.\n");
          return SCIP_INVALIDCALL;

@@ -33,7 +33,6 @@
 #define STP_RED_SDSPBOUND2   500         /**< visited edges bound for SDSP test  */
 #define STP_RED_BD3BOUND     400         /**< visited edges bound for BD3 test  */
 #define STP_RED_EXTENSIVE FALSE
-#define STP_RED_MAXANSNODES 10000
 #define STP_RED_MWTERMBOUND 400
 #define STP_RED_MAXNROUNDS 15
 
@@ -1290,7 +1289,6 @@ SCIP_RETCODE redLoopPc(
          if( brednelims <= reductbound )
             bred = FALSE;
 
-         assert(brednelims == 0);
          SCIPdebugMessage("bndelims %d \n", brednelims);
          if( SCIPgetTotalTime(scip) > timelimit )
             break;

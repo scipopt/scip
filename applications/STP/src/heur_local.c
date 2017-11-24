@@ -56,7 +56,7 @@
 #define DEFAULT_MINNBESTSOLS  4
 
 #define GREEDY_MAXRESTARTS  3  /**< Max number of restarts for greedy PC/MW heuristic if improving solution has been found. */
-#define GREEDY_EXTENSIONS_MW 25   /**< Number of extensions for greedy MW heuristic. MUST BE HIGHER THAN GREEDY_EXTENSIONS */
+#define GREEDY_EXTENSIONS_MW 10   /**< Number of extensions for greedy MW heuristic. MUST BE HIGHER THAN GREEDY_EXTENSIONS */
 #define GREEDY_EXTENSIONS    5  /**< Number of extensions for greedy PC heuristic. */
 
 
@@ -203,11 +203,11 @@ STP_Bool nodeIsCrucial(
    return TRUE;
 }
 
-/** perform local heuristics on a given Steiner tree */
+/** perform local heuristics on a given Steiner tree todo delete cost parameter */
 SCIP_RETCODE SCIPStpHeurLocalRun(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
-   const SCIP_Real*      cost,               /**< arc cost array */
+   const SCIP_Real*      cost,               /**< arc cost array todo delete this parameter and use graph->cost */
    int*                  best_result         /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
    )
 {
@@ -228,7 +228,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
    const STP_Bool mw = (probtype == STP_MWCSP);
    const STP_Bool mwpc =  (pc || mw);
 #ifndef NDEBUG
-   const SCIP_Real initialobj = graph_sol_getObj(cost, best_result, 0.0, nedges);
+   const SCIP_Real initialobj = graph_sol_getObj(graph->cost, best_result, 0.0, nedges);
 #endif
 
    assert(graph != NULL);
@@ -238,7 +238,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
 
    newnverts = 0;
 
-   if( graph->grad[root] == 0 )
+   if( graph->grad[root] == 0 || graph->terms == 1 )
       return SCIP_OKAY;
 
    /* for PC variants test whether solution is trivial */
@@ -263,7 +263,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
    if( mwpc )
    {
       SCIP_Bool dummy;
-      SCIP_CALL( SCIPStpHeurLocalExtendPcMw(scip, graph, cost, vnoi, best_result, vbase, steinertree, &dummy) );
+      SCIP_CALL( SCIPStpHeurLocalExtendPcMw(scip, graph, cost, vnoi, best_result, steinertree, &dummy) );
    }
 
    for( i = 0; i < nnodes; i++ )
@@ -436,6 +436,8 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
             {
                if( SCIPisLT(scip, diff, 0.0) )
                {
+                  assert(stdeg != NULL);
+
                   SCIPlinkcuttreeEvert(v);
                   stdeg[lastnodeidx]--;
                   SCIPlinkcuttreeCut(&nodes[graph->head[insert[0]]]);
@@ -1675,7 +1677,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
 #endif
 
 #ifndef NDEBUG
-   assert(SCIPisLE(scip, graph_sol_getObj(cost, best_result, 0.0, nedges), initialobj));
+   assert(SCIPisLE(scip, graph_sol_getObj(graph->cost, best_result, 0.0, nedges), initialobj));
 #endif
 
    SCIPfreeBufferArray(scip, &steinertree);
@@ -1693,7 +1695,6 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    const SCIP_Real*      cost,               /**< edge cost array*/
    PATH*                 path,               /**< shortest data structure array */
    int*                  stedge,             /**< initialized array to indicate whether an edge is part of the Steiner tree */
-   int*                  pred,               /**< node array for internal computations */
    STP_Bool*             stvertex,           /**< uninitialized array to indicate whether a vertex is part of the Steiner tree */
    SCIP_Bool*            extensions          /**< pointer to store whether extensions have been made */
    )
@@ -1701,6 +1702,7 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    GNODE candidates[MAX(GREEDY_EXTENSIONS, GREEDY_EXTENSIONS_MW)];
    int candidatesup[MAX(GREEDY_EXTENSIONS, GREEDY_EXTENSIONS_MW)];
 
+   PATH* orgpath;
    SCIP_PQUEUE* pqueue;
    SCIP_Real bestsolval;
    int i;
@@ -1716,7 +1718,6 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    assert(graph != NULL);
    assert(stedge != NULL);
    assert(cost != NULL);
-   assert(pred != NULL);
    assert(stvertex != NULL);
 
    root = graph->source;
@@ -1725,6 +1726,7 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
 
    graph_pc_2transcheck(graph);
    SCIP_CALL( SCIPallocBufferArray(scip, &stvertextmp, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &orgpath, nnodes) );
 
    /* initialize solution vertex array with FALSE */
    BMSclearMemoryArray(stvertex, nnodes);
@@ -1742,6 +1744,8 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
 
    graph_path_st_pcmw_extend(scip, graph, cost, path, stvertex, extensions);
 
+   BMScopyMemoryArray(orgpath, path, nnodes);
+
    if( graph->stp_type == STP_MWCSP )
       greedyextensions = GREEDY_EXTENSIONS_MW;
    else
@@ -1757,8 +1761,6 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    {
       if( graph->grad[i] == 0 )
          continue;
-
-      pred[i] = path[i].edge;
 
       if( Is_term(graph->term[i]) )
       {
@@ -1781,9 +1783,9 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
       }
       else if( stvertex[i] )
       {
-         bestsolval += graph->cost[pred[i]];
+         bestsolval += graph->cost[orgpath[i].edge];
       }
-      else if( pred[i] != UNKNOWN && Is_pterm(graph->term[i]) )
+      else if( orgpath[i].edge != UNKNOWN && Is_pterm(graph->term[i]) )
       {
          if( nextensions < greedyextensions )
          {
@@ -1833,13 +1835,14 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
             int k = i;
 
             BMScopyMemoryArray(stvertextmp, stvertex, nnodes);
+            BMScopyMemoryArray(path, orgpath, nnodes);
 
             /* add new extension */
             while( !stvertextmp[k] )
             {
                stvertextmp[k] = TRUE;
-               assert(pred[k] != UNKNOWN);
-               k = graph->tail[pred[k]];
+               assert(orgpath[k].edge != UNKNOWN);
+               k = graph->tail[orgpath[k].edge];
             }
 
             graph_path_st_pcmw_extend(scip, graph, cost, path, stvertextmp, &extensionstmp);
@@ -1887,8 +1890,9 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
 
                for( int j = 0; j < nnodes; j++ )
                {
-                  pred[j] = path[j].edge;
-                  if( !stvertex[j] && Is_pterm(graph->term[j]) && pred[j] != UNKNOWN )
+                  orgpath[j].edge = path[j].edge;
+                  orgpath[j].dist = path[j].dist;
+                  if( !stvertex[j] && Is_pterm(graph->term[j]) && path[j].edge != UNKNOWN )
                   {
                      if( nextensions < greedyextensions )
                      {
@@ -1931,6 +1935,7 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    }
 
    SCIPpqueueFree(&pqueue);
+   SCIPfreeBufferArray(scip, &orgpath);
    SCIPfreeBufferArray(scip, &stvertextmp);
 
 #ifdef SCIP_DEBUG
@@ -2002,7 +2007,6 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    SCIP_SOL** sols;                          /* solutions */
    SCIP_VAR** vars;                          /* SCIP variables */
    SCIP_Real pobj;
-   SCIP_Real* cost;
    SCIP_Real* nval;
    SCIP_Real* xval;
    int i;
@@ -2152,7 +2156,6 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    }
 
    /* allocate memory */
-   SCIP_CALL( SCIPallocBufferArray(scip, &cost, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &results, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nval, nvars) );
 
@@ -2165,19 +2168,10 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
          results[e] = UNKNOWN;
    }
 
-   for( e = 0; e < nedges; e++ )
-   {
-      if( SCIPvarGetUbLocal(vars[e]) < 0.5 )
-         cost[e] = BLOCKED;
-      else
-         cost[e] = graph->cost[e];
-   }
-
    if( !graph_sol_valid(scip, graph, results) )
    {
       SCIPfreeBufferArray(scip, &nval);
       SCIPfreeBufferArray(scip, &results);
-      SCIPfreeBufferArray(scip, &cost);
       return SCIP_OKAY;
    }
 
@@ -2213,7 +2207,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    }
 
    /* execute local heuristics */
-   SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, cost, results) );
+   SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, graph->cost, results) );
 
    /* can we connect the network */
    for( v = 0; v < nvars; v++ )
@@ -2266,7 +2260,6 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
 
    SCIPfreeBufferArray(scip, &nval);
    SCIPfreeBufferArray(scip, &results);
-   SCIPfreeBufferArray(scip, &cost);
 
    return SCIP_OKAY;
 }

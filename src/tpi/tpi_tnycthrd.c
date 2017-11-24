@@ -364,7 +364,7 @@ SCIP_RETCODE threadPoolAddWork(
    SCIP_CALL( SCIPtpiReleaseLock(&(_threadpool->poollock)) );
 
    *status = SCIP_SUBMIT_SUCCESS;
-   return SCIP_OKAY;;
+   return SCIP_OKAY;
 }
 
 /** frees the jobqueue of the threadpool */

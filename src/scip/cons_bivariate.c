@@ -514,6 +514,9 @@ SCIP_RETCODE removeFixedVariables(
    vars[0] = SCIPexprtreeGetVars(consdata->f)[0];
    vars[1] = SCIPexprtreeGetVars(consdata->f)[1];
 
+   if( vars[0] == NULL || vars[1] == NULL )
+      return SCIP_INVALIDDATA;
+
    if( SCIPvarGetStatus(SCIPvarGetProbvar(vars[0])) == SCIP_VARSTATUS_FIXED ||
       SCIPvarGetStatus(SCIPvarGetProbvar(vars[1])) == SCIP_VARSTATUS_FIXED ||
       SCIPvarGetProbvar(vars[0]) == SCIPvarGetProbvar(vars[1]) )
