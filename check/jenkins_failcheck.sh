@@ -56,23 +56,29 @@ END {
 EOF
 
 read -d '' awkscript_checkfixedinstances << 'EOF'
-NR != FNR {
-  if( $3 == GITBRANCH && $4 == TESTSET && $5 == SETTING && $6 == OPT && $7 == LPS)
-  {
-     if( $0 in bugs == 0 )
-        print "Previously failing instance " $1 " with error " $2 " does not fail anymore"
-     else
-        print $0 >> TMPDATABASE
-  }
-  else
-     print $0 >> TMPDATABASE
-  next;
+# call: awk $AWKARGS "$awkscript_checkfixedinstances" $RESFILE $DATABASE
+# $TMPDATABASE contains then all still failing bugs, not new ones!
+
+# read fail instances for this configuration from resfile
+NR == FNR && /fail/ {
+    failmsg=$13; for(i=14;i<=NF;i++){ failmsg=failmsg"_"$i; }
+    errorstring=$1 " " failmsg " " GITBRANCH " " TESTSET " " SETTING " " OPT " " LPS;
+    bugs[errorstring]
+    next;
 }
-## fail instances for this configuration
-/fail/ {
-  failmsg=$13; for(i=14;i<=NF;i++){failmsg=failmsg"_"$i;}
-  errorstring=$1 " " failmsg " " GITBRANCH " " TESTSET " " SETTING " " OPT " " LPS;
-  bugs[errorstring]
+
+# read from database
+NR != FNR {
+    if( $3 == GITBRANCH && $4 == TESTSET && $5 == SETTING && $6 == OPT && $7 == LPS ) {
+        if (!( $0 in bugs )) {
+            # if current line from database matches our settings and
+            # it is not in the set of failed instances from this run it was fixed
+            print "Previously failing instance " $1 " with error " $2 " does not fail anymore"
+            next;
+        }
+    }
+    # write recored into the database for next time
+    print $0 >> TMPDATABASE
 }
 EOF
 
@@ -158,7 +164,7 @@ fi
 if [ "${EVALFILE}" == "" ]; then
     echo "Couldn't find eval file, sending email"
     SUBJECT="ERROR [BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING=$SETTING] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH]"
-    echo -e "Aborting because the .eval file cannot be found.\nTried:\n${BASEFILE}, check/results/check.${TESTSET}.${SCIPVERSION}.*.${SETTING}.\n" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+    echo -e "Aborting because the .eval file cannot be found.\nTried:\n${BASEFILE}, check/results/check.${TESTSET}.${SCIPVERSION}.*.${SETTING}.\nJoin me at `pwd`.\n" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
     exit 1
 fi
 
