@@ -8,18 +8,23 @@
 
 sleep 5
 
-################################
-# AWK script for later         #
-################################
+#################################
+# AWK scripts for later         #
+#################################
 read -d '' awkscript_findasserts << 'EOF'
+# call: awk "$awkscript_findasserts" $ERRORINSTANCES $ERRFILE (or pipe a string with the error instances into awk if they are not in a file)
+
+# init variables
 BEGIN {
     searchAssert=0; idx=1; delete failed[0]; delete human[0];
 }
 
+# read failed instances into array
 NR==FNR && /fail.*abort/ {
     failed[length(failed)+1]=$1; next;
 }
 
+# find instances in errorfile
 NR!=FNR && /^@01/ {
     # get instancename (copied from check.awk)
     n = split($2, a, "/"); m = split(a[n], b, "."); currinstname = b[1];
@@ -32,6 +37,7 @@ NR!=FNR && /^@01/ {
     if (currinstname == failed[idx]) { searchAssert=1; }
 }
 
+# find assertions in errorfile
 NR!=FNR && searchAssert == 1 && /Assertion.*failed.$/ {
     print "";
     print instance;
@@ -39,6 +45,7 @@ NR!=FNR && searchAssert == 1 && /Assertion.*failed.$/ {
     searchAssert=0; idx+=1;
 }
 
+# print results
 END {
     if( length(human) > 0 ) {
         print "";
@@ -70,20 +77,25 @@ NR != FNR {
 EOF
 
 read -d '' awkscript_readknownbugs << 'EOF'
+# call: awk $AWKARGS "$awkscript_readknownbugs" $DATABASE $RESFILE
+
+# read known bugs from database
 NR == FNR {known_bugs[$0]; next}
+
+# find fails in resfile
 /fail/ {
-    ## get the fail error and build string with the format of "database"
+    # get the fail error and build string in database format
     failmsg=$13; for(i=14;i<=NF;i++){failmsg=failmsg"_"$i;}
     errorstring=$1 " " failmsg " " GITBRANCH " " TESTSET " " SETTING " " OPT " " LPS;
-    ## if error is not in "database", add it and print it in ERRORINSTANCES to send email
-    if( errorstring in known_bugs == 0 )
-    {
+
+    if (!( errorstring in known_bugs )) {
+        # if error is not known, add it and print it to ERRORINSTANCES for sending mail later
         print errorstring >> DATABASE;
         print $0;
-    }
-    else # these are instances that failed before
-    {
-        print $1 " " failmsg >> STILLFAILING; # only report the name of the instance and the fail message
+    } else {
+        # if error is known, then instance failed before with same settings
+        # only report the name and the fail message of the instance
+        print $1 " " failmsg >> STILLFAILING;
     }
 }
 EOF
@@ -100,9 +112,9 @@ printLines > 0 {print $0}
     }
 }
 EOF
-################################
-# End of AWK Script            #
-################################
+#################################
+# End of AWK Scripts            #
+#################################
 
 # we use a name that is unique per test sent to the cluster (a jenkins job
 # can have several tests sent to the cluster, that is why the jenkins job
