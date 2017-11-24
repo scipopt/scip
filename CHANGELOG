@@ -123,6 +123,7 @@ fixed bugs:
 - fixed aggregation of variables in boundshift presolver that contain large variable bounds
 - fixed releasing of variables in the genvbounds propagator in case the problem could be solved during presolving of a restart
 - fixed wrong mapping of permuted basis indices in gomory separator
+- fixed integer objective separator for objective scales < 1
 
 added tests:
 - added tests that cover nonempty linear constraint classification types
