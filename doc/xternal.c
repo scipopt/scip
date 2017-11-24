@@ -6606,7 +6606,7 @@
  *
  * - <b>Others</b>:
  *      <br><br>
- *    - SCIPcutGenerationHeuristicCmir() in \ref sepa_cmir.h has three new parameters:
+ *    - SCIPcutGenerationHeuristicCmir() in sepa_cmir.h has three new parameters:
  *        - <code>maxmksetcoefs</code> - If the mixed knapsack constraint obtained after aggregating LP rows contains more
  *          than <code>maxmksetcoefs</code> nonzero coefficients the generation of the <b>c-MIR cut</b> is aborted.
  *        - <code>delta</code> - It can be used to obtain the scaling factor which leads to the best c-MIR cut found within
