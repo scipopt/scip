@@ -256,15 +256,6 @@ struct SCIP_ConsExpr_PrintDotData
    SCIP_CONSEXPR_PRINTDOT_WHAT whattoprint;  /**< flags that indicate what to print for each expression */
 };
 
-/** data passed on during creating of auxiliary variables */
-typedef struct
-{
-   SCIP_CONSHDLR*          conshdlr;         /**< expression constraint handler */
-#ifdef WITH_DEBUG_SOLUTION
-   SCIP_SOL*               debugsol;         /**< debug solution (or NULL if not debugging) */
-#endif
-} CREATE_AUXVARS_DATA;
-
 /** data passed on during registering nonlinear handlers */
 typedef struct
 {
@@ -3602,13 +3593,15 @@ SCIP_RETCODE registerBranchingCandidates(
    return SCIP_OKAY;
 }
 
-/** expression walk callback to create and add auxiliary variables for the outer approximation */
+/** expression walk callback to install nlhdlrs in expressions */
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
    NLHDLR_DETECT_DATA* detectdata;
+   int nsuccess;
+   int c, h;
 
    assert(expr != NULL);
    assert(result != NULL);
@@ -3628,58 +3621,70 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
 
    *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
 
+   /* if there is no auxiliary variable here, then there is no-one requiring that
+    * an auxvar equals (or approximates) to value of this expression
+    * thus, not need to find nlhdlrs
+    */
+   if( expr->auxvar == NULL )
+      return SCIP_OKAY;
+
    SCIPdebugMsg(scip, "detecting nlhdlrs for expression %p\n", (void*)expr);
 
-   /* analyze expression with nonlinear handlers; because of common sub-expressions it might happen that we already
-    * detected a nonlinear handler and added it to the expr
-    */
-   if( expr->nnlhdlrs == 0 )
+   if( expr->nnlhdlrs > 0 )
    {
-      int nsuccess;
-      int h;
+      /* because of common sub-expressions it might happen that we already detected a nonlinear handler and added it to the expr
+       * then also the subtree has been investigated already and we can stop walking further down
+       */
+      *result = SCIP_CONSEXPREXPRWALK_SKIP;
 
-      assert(expr->nlhdlrs == NULL);
-      assert(expr->nlhdlrsexprdata == NULL);
+      return SCIP_OKAY;
+   }
 
-      nsuccess = 0;
-      for( h = 0; h < conshdlrdata->nnlhdlrs; ++h )
+   /* analyze expression with nonlinear handlers */
+   assert(expr->nlhdlrs == NULL);
+   assert(expr->nlhdlrsexprdata == NULL);
+   nsuccess = 0;
+   for( h = 0; h < conshdlrdata->nnlhdlrs; ++h )
+   {
+      SCIP_CONSEXPR_NLHDLR* nlhdlr;
+      SCIP_Bool success = FALSE;
+
+      nlhdlr = conshdlrdata->nlhdlrs[h];
+      assert(nlhdlr != NULL);
+      assert(nlhdlr->detect != NULL); /* detect callback is mandatory */
+
+      /* call detect routine of nlhdlr */
+      detectdata->nlhdlrssuccessexprdata[nsuccess] = NULL;
+      SCIP_CALL( (*nlhdlr->detect)(scip, conshdlr, nlhdlr, expr, &success, &detectdata->nlhdlrssuccessexprdata[nsuccess]) );
+
+      if( success )
       {
-         SCIP_CONSEXPR_NLHDLR* nlhdlr;
-         SCIP_Bool success = FALSE;
-
-         nlhdlr = conshdlrdata->nlhdlrs[h];
-         assert(nlhdlr != NULL);
-         assert(nlhdlr->detect != NULL); /* detect callback is mandatory */
-
-         /* call detect routine of nlhdlr */
-         detectdata->nlhdlrssuccessexprdata[nsuccess] = NULL;
-         SCIP_CALL( (*nlhdlr->detect)(scip, conshdlr, nlhdlr, expr, &success, &detectdata->nlhdlrssuccessexprdata[nsuccess]) );
-
-         if( success )
-         {
-            /* remember nlhdlr and success */
-            detectdata->nlhdlrssuccess[nsuccess] = nlhdlr;
-            ++nsuccess;
-         }
-         else
-         {
-            /* nlhdlrexprdata can be non-NULL only if success is TRUE */
-            assert(detectdata->nlhdlrssuccessexprdata[nsuccess] == NULL);
-         }
+         /* remember nlhdlr and success */
+         detectdata->nlhdlrssuccess[nsuccess] = nlhdlr;
+         ++nsuccess;
       }
-
-      if( nsuccess > 0 )
+      else
       {
-         /* if any nlhdlr had success, then store them and their data in the expression; and do not look further */
-         SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &expr->nlhdlrs, detectdata->nlhdlrssuccess, nsuccess) );
-         SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &expr->nlhdlrsexprdata, detectdata->nlhdlrssuccessexprdata, nsuccess) );
-         expr->nnlhdlrs = nsuccess;
-         *result = SCIP_CONSEXPREXPRWALK_SKIP;
+         /* nlhdlrexprdata can be non-NULL only if success is TRUE */
+         assert(detectdata->nlhdlrssuccessexprdata[nsuccess] == NULL);
       }
    }
-   else
+
+   if( nsuccess > 0 )
    {
-      *result = SCIP_CONSEXPREXPRWALK_SKIP;
+      /* if any nlhdlr had success, then store them and their data in the expression */
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &expr->nlhdlrs, detectdata->nlhdlrssuccess, nsuccess) );
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &expr->nlhdlrsexprdata, detectdata->nlhdlrssuccessexprdata, nsuccess) );
+      expr->nnlhdlrs = nsuccess;
+
+      return SCIP_OKAY;
+   }
+
+   /* if no handler had success, then make sure that an (auxiliary) variable exists for every child */
+   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+   {
+      /* todo skip this for value-expressions? */
+      SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[c], NULL) );
    }
 
    return SCIP_OKAY;
@@ -3726,80 +3731,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeNlhdlrsEnterExpr)
    {
       SCIPfreeBlockMemoryArray(scip, &expr->nlhdlrs, expr->nnlhdlrs);
       SCIPfreeBlockMemoryArray(scip, &expr->nlhdlrsexprdata, expr->nnlhdlrs);
-
-      /* if an expression has nnlhdlrs --> its chlidren do not; see detectNlhdlrsEnterExpr */
-      *result = SCIP_CONSEXPREXPRWALK_SKIP;
    }
    expr->nnlhdlrs = 0;
-
-   return SCIP_OKAY;
-}
-
-/** expression walk callback to create and add auxiliary variables for the outer approximation */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(createAuxVarsEnterExpr)
-{
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSHDLR* conshdlr;
-   CREATE_AUXVARS_DATA* createdata;
-
-   assert(expr != NULL);
-   assert(result != NULL);
-   assert(data != NULL);
-   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
-
-   createdata = (CREATE_AUXVARS_DATA*)data;
-   conshdlr = createdata->conshdlr;
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-   assert(conshdlrdata->auxvarid >= 0);
-
-   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-
-   /* create and capture auxiliary variable; because of common sub-expressions it might happen that we already added an
-    * auxiliary variable to an expression
-    */
-   if( expr->auxvar == NULL && expr->exprhdlr != SCIPgetConsExprExprHdlrVar(conshdlr)
-      && expr->exprhdlr != SCIPgetConsExprExprHdlrValue(conshdlr) )
-   {
-      char name[SCIP_MAXSTRLEN];
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "auxvar_%d", conshdlrdata->auxvarid);
-
-      /* @todo add an unique variable name */
-      SCIP_CALL( SCIPcreateVarBasic(scip, &expr->auxvar, name, MAX( -SCIPinfinity(scip), expr->interval.inf ),
-               MIN( SCIPinfinity(scip), expr->interval.sup ), 0.0, SCIP_VARTYPE_CONTINUOUS) ); /*lint !e666*/
-      SCIP_CALL( SCIPaddVar(scip, expr->auxvar) );
-      ++(conshdlrdata->auxvarid);
-
-      /* mark the auxiliary variable to be invalid after a restart happened; this prevents SCIP to create linear
-       * constraints from cuts that contain at least one auxiliary variable
-       */
-      SCIPvarSetCutInvalidAfterRestart(expr->auxvar, TRUE);
-
-      SCIPdebugMsg(scip, "add auxiliary variable %s for expression %p\n", SCIPvarGetName(expr->auxvar), (void*)expr);
-
-      /* add variable locks in both directions */
-      SCIP_CALL( SCIPaddVarLocks(scip, expr->auxvar, 1, 1) );
-
-#ifdef WITH_DEBUG_SOLUTION
-      if( SCIPdebugIsMainscip(scip) )
-      {
-         /* store debug solution of auxiliary variable */
-         assert(createdata->debugsol != NULL);
-         SCIP_CALL( SCIPevalConsExprExpr(scip, expr, createdata->debugsol, 0) );
-         SCIP_CALL( SCIPdebugAddSolVal(scip, expr->auxvar, SCIPgetConsExprExprValue(expr)) );
-      }
-#endif
-
-   }
-   else
-   {
-      /* skip nodes which have been already explored */
-      *result = SCIP_CONSEXPREXPRWALK_SKIP;
-   }
 
    return SCIP_OKAY;
 }
@@ -3881,7 +3814,8 @@ SCIP_RETCODE detectNlhdlrs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< constraints to check for auxiliary variables */
-   int                   nconss              /**< total number of constraints */
+   int                   nconss,             /**< total number of constraints */
+   SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected while creating the auxiliary vars */
    )
 {
    NLHDLR_DETECT_DATA nlhdlrdetect;
@@ -3909,8 +3843,48 @@ SCIP_RETCODE detectNlhdlrs(
       assert(consdata != NULL);
       assert(consdata->expr != NULL);
 
-      /* detect non-linear handlers */
+      /* make sure intervals in expression are uptodate (use 0 force recomputing)
+       * we do this here to have bounds for the auxiliary variables
+       */
+      SCIP_CALL( SCIPevalConsExprExprInterval(scip, consdata->expr, FALSE, 0, SCIPepsilon(scip)) );
+
+#ifdef WITH_DEBUG_SOLUTION
+      if( SCIPdebugIsMainscip(scip) )
+      {
+         SCIP_SOL* debugsol;
+
+         SCIP_CALL( SCIPdebugGetSol(scip, &debugsol) );
+         assert(debugsol != NULL);
+
+         /* evaluate expression in debug solution, so we can set the solution value of created auxiliary variables
+          * in SCIPcreateConsExprExprAuxVar()
+          */
+         SCIP_CALL( SCIPevalConsExprExpr(scip, consdata->expr, debugsol, 0) );
+      }
+#endif
+
+      /* create auxiliary variable for root expression */
+      SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, consdata->expr, NULL) );
+      assert(consdata->expr->auxvar != NULL);  /* couldn't this fail if the expression is only a variable? */
+
+      /* detect non-linear handlers, might create auxiliary variables */
       SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, detectNlhdlrsEnterExpr, NULL, NULL, NULL, &nlhdlrdetect) );
+
+      /* change the bounds of the auxiliary variable of the root node to [lhs,rhs] */
+      SCIP_CALL( SCIPtightenVarLb(scip, consdata->expr->auxvar, consdata->lhs, FALSE, infeasible, NULL) );
+      if( *infeasible )
+      {
+         SCIPdebugMsg(scip, "infeasibility detected while creating vars: lhs of constraint (%g) > ub of node (%g)\n",
+               consdata->lhs, SCIPvarGetUbLocal(consdata->expr->auxvar));
+         break;
+      }
+      SCIP_CALL( SCIPtightenVarUb(scip, consdata->expr->auxvar, consdata->rhs, FALSE, infeasible, NULL) );
+      if( *infeasible )
+      {
+         SCIPdebugMsg(scip, "infeasibility detected while creating vars: rhs of constraint (%g) < lb of node (%g)\n",
+               consdata->rhs, SCIPvarGetLbLocal(consdata->expr->auxvar));
+         break;
+      }
    }
 
    SCIPfreeBufferArray(scip, &nlhdlrdetect.nlhdlrssuccess);
@@ -3944,82 +3918,6 @@ SCIP_RETCODE freeNlhdlrsFromExprs(
       if( consdata->expr != NULL ) /* TODO: when can this happen? */
       {
          SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, freeNlhdlrsEnterExpr, NULL, NULL, NULL, (void*)conshdlr) );
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
-/** creates and adds auxiliary variables for outer approximation; we do not add variables for value and variable
- *  expressions; common sub-expression will share the same auxiliary variable
- */
-static
-SCIP_RETCODE createAuxVars(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_CONS**           conss,              /**< constraints to check for auxiliary variables */
-   int                   nconss,             /**< total number of constraints */
-   SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected while creating the auxiliary vars */
-   )
-{
-   CREATE_AUXVARS_DATA createdata;
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSDATA* consdata;
-   int i;
-
-   assert(conss != NULL || nconss == 0);
-   assert(nconss >= 0);
-   assert(infeasible != NULL);
-
-   createdata.conshdlr = conshdlr;
-
-#ifdef WITH_DEBUG_SOLUTION
-   if( SCIPdebugIsMainscip(scip) )
-   {
-      createdata.debugsol = NULL;
-      SCIP_CALL( SCIPdebugGetSol(scip, &createdata.debugsol) );
-      assert(createdata.debugsol != NULL);
-   }
-#endif
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   for( i = 0; i < nconss; ++i )
-   {
-      assert(conss != NULL && conss[i] != NULL);
-
-      consdata = SCIPconsGetData(conss[i]);
-      assert(consdata != NULL);
-
-      if( consdata->expr != NULL && consdata->expr->auxvar == NULL )
-      {
-         /* use 0 tag to recompute intervals; we do this here to have bounds for the auxiliary variables; note that we
-          * cannot trust variable bounds from SCIP, so we relax them a little bit (a.k.a. epsilon)
-          */
-         SCIP_CALL( SCIPevalConsExprExprInterval(scip, consdata->expr, FALSE, 0, SCIPepsilon(scip)) );
-
-         /* create auxiliary variables */
-         SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, createAuxVarsEnterExpr, NULL, NULL, NULL, &createdata) );
-
-         /* change the bounds of the auxiliary variable of the root node to [lhs,rhs] */
-         SCIP_CALL( SCIPtightenVarLb(scip, consdata->expr->auxvar, consdata->lhs, FALSE, infeasible, NULL) );
-
-         if( *infeasible )
-         {
-            /* TODO no printf */
-            printf("infeasibility detected while creating vars: lhs of constraint (%g) > ub of node (%g)\n",
-                  consdata->lhs, SCIPvarGetUbLocal(consdata->expr->auxvar));
-            break;
-         }
-         SCIP_CALL( SCIPtightenVarUb(scip, consdata->expr->auxvar, consdata->rhs, FALSE, infeasible, NULL) );
-         if( *infeasible )
-         {
-            /* TODO no printf */
-            printf("infeasibility detected while creating vars: rhs of constraint (%g) < lb of node (%g)\n",
-                  consdata->rhs, SCIPvarGetLbLocal(consdata->expr->auxvar));
-            break;
-         }
       }
    }
 
@@ -5098,15 +4996,12 @@ SCIP_DECL_CONSTRANS(consTransExpr)
 static
 SCIP_DECL_CONSINITLP(consInitlpExpr)
 {
-   /* create auxiliary variables */
-   SCIP_CALL( createAuxVars(scip, conshdlr, conss, nconss, infeasible) );
+   /* register non linear handlers TODO: do we want this here? */
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, conss, nconss, infeasible) );
 
    /* if creating auxiliary variables detected an infeasible (because of bounds), stop initing lp */
    if( *infeasible )
       return SCIP_OKAY;
-
-   /* register non linear handlers TODO: do we want this here? */
-   SCIP_CALL( detectNlhdlrs(scip, conshdlr, conss, nconss) );
 
    /* call LP initialization callbacks of the expression handlers */
    SCIP_CALL( initSepa(scip, conshdlr, conss, nconss, infeasible) );
@@ -7336,7 +7231,7 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   SCIP_VAR**            auxvar              /**< buffer to store pointer to auxiliary variable */
+   SCIP_VAR**            auxvar              /**< buffer to store pointer to auxiliary variable, or NULL */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -7346,19 +7241,20 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(expr != NULL);
-   assert(auxvar != NULL);
 
    /* if we already have auxvar, then just return it */
    if( expr->auxvar != NULL )
    {
-      *auxvar = expr->auxvar;
+      if( auxvar != NULL )
+         *auxvar = expr->auxvar;
       return SCIP_OKAY;
    }
 
    /* if expression is a variable-expression, then return that variable */
    if( expr->exprhdlr == SCIPgetConsExprExprHdlrVar(conshdlr) )
    {
-      *auxvar = SCIPgetConsExprExprVarVar(expr);
+      if( auxvar != NULL )
+         *auxvar = SCIPgetConsExprExprVarVar(expr);
       return SCIP_OKAY;
    }
 
@@ -7401,6 +7297,9 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
       SCIP_CALL( SCIPdebugAddSolVal(scip, expr->auxvar, SCIPgetConsExprExprValue(expr)) );
    }
 #endif
+
+   if( auxvar != NULL )
+      *auxvar = expr->auxvar;
 
    return SCIP_OKAY;
 }

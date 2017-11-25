@@ -558,7 +558,7 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   SCIP_VAR**            auxvar              /**< buffer to store pointer to auxiliary variable */
+   SCIP_VAR**            auxvar              /**< buffer to store pointer to auxiliary variable, or NULL */
    );
 
 /** walks the expression graph in depth-first manner and executes callbacks at certain places
