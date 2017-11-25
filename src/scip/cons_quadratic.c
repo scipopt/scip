@@ -3458,6 +3458,12 @@ SCIP_RETCODE presolveTryAddAND(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   /* if no binary variables, then we will find nothing to reformulate here
+    * (note that this does not count in integer variables with {0,1} bounds...)
+    */
+   if( SCIPgetNBinVars(scip) == 0 )
+      return SCIP_OKAY;
+
    /* if user does not like AND very much, then return */
    if( conshdlrdata->empathy4and < 2 )
       return SCIP_OKAY;
@@ -3661,6 +3667,12 @@ SCIP_RETCODE presolveTryAddLinearReform(
    assert(conshdlr != NULL);
    assert(cons != NULL);
    assert(naddconss != NULL);
+
+   /* if no binary variables, then we will find nothing to reformulate here
+    * (note that this does not count in integer variables with {0,1} bounds...)
+    */
+   if( SCIPgetNBinVars(scip) == 0 )
+      return SCIP_OKAY;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
