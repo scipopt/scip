@@ -762,6 +762,10 @@ SCIP_RETCODE cutTightenCoefsQuad(
 
          maxact = QUAD_TO_DBL(maxacttmp);
 
+         assert(EPSISINT(maxact, 1e-4));
+         maxact = SCIPround(scip, maxact);
+         QUAD_ASSIGN(maxacttmp, maxact);
+
          /* check again for redundancy */
          if( SCIPisFeasLE(scip, maxact, QUAD_TO_DBL(*cutrhs)) )
          {
@@ -852,7 +856,7 @@ SCIP_RETCODE cutTightenCoefsQuad(
             /* if the cut is integral, the true coefficient must also be integral;
              * thus we round it to the exact integral value
              */
-            assert(SCIPisIntegral(scip, QUAD_TO_DBL(coef)));
+            assert(SCIPisFeasIntegral(scip, QUAD_TO_DBL(coef)));
             QUAD_ASSIGN(coef, SCIPround(scip, QUAD_TO_DBL(coef)));
          }
 
@@ -902,7 +906,7 @@ SCIP_RETCODE cutTightenCoefsQuad(
             /* if the cut is integral, the true coefficient must also be integral;
              * thus we round it to the exact integral value
              */
-            assert(SCIPisIntegral(scip, QUAD_TO_DBL(coef)));
+            assert(SCIPisFeasIntegral(scip, QUAD_TO_DBL(coef)));
             QUAD_ASSIGN(coef, SCIPround(scip, QUAD_TO_DBL(coef)));
          }
 
@@ -1130,6 +1134,10 @@ SCIP_RETCODE cutTightenCoefs(
 
          maxact = QUAD_TO_DBL(maxacttmp);
 
+         assert(EPSISINT(maxact, 1e-4));
+         maxact = SCIPround(scip, maxact);
+         QUAD_ASSIGN(maxacttmp, maxact);
+
          /* check again for redundancy */
          if( SCIPisFeasLE(scip, maxact, QUAD_TO_DBL(*cutrhs)) )
          {
@@ -1208,7 +1216,7 @@ SCIP_RETCODE cutTightenCoefs(
             /* if the cut is integral, the true coefficient must also be integral;
              * thus we round it to the exact integral value
              */
-            assert(SCIPisIntegral(scip, QUAD_TO_DBL(coef)));
+            assert(SCIPisFeasIntegral(scip, QUAD_TO_DBL(coef)));
             QUAD_ASSIGN(coef, SCIPround(scip, QUAD_TO_DBL(coef)));
          }
 
@@ -1256,7 +1264,7 @@ SCIP_RETCODE cutTightenCoefs(
             /* if the cut is integral, the true coefficient must also be integral;
              * thus we round it to the exact integral value
              */
-            assert(SCIPisIntegral(scip, QUAD_TO_DBL(coef)));
+            assert(SCIPisFeasIntegral(scip, QUAD_TO_DBL(coef)));
             QUAD_ASSIGN(coef, SCIPround(scip, QUAD_TO_DBL(coef)));
          }
 
