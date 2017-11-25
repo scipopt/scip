@@ -314,7 +314,7 @@
       double __tmp_dbldbl_floor; \
       __tmp_dbldbl_floor = floor((ahi) + (alo)); \
       SCIPdbldblSum21(rhi, rlo, ahi, alo, -__tmp_dbldbl_floor); \
-      if( (rhi) + (rlo) < 1.0 && (rhi) + (rlo) >= 0.0 ) \
+      if( ((rhi) - 1.0) + (rlo) < 0.0 && (rhi) + (rlo) >= 0.0 ) \
       { \
          /* floor in double precision was fine */ \
          (rhi) = __tmp_dbldbl_floor; \
@@ -334,7 +334,7 @@
       double __tmp_dbldbl_ceil; \
       __tmp_dbldbl_ceil = ceil((ahi) + (alo)); \
       SCIPdbldblSum21(rhi, rlo, -(ahi), -(alo), __tmp_dbldbl_ceil); \
-      if( (rhi) + (rlo) < 1.0 && (rhi) + (rlo) >= 0.0 ) \
+      if( ((rhi) - 1.0) + (rlo) < 0.0 && (rhi) + (rlo) >= 0.0 ) \
       { \
          /* ceil in double precision was fine */ \
          (rhi) = __tmp_dbldbl_ceil; \
