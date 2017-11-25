@@ -7336,6 +7336,84 @@ SCIP_RETCODE SCIPgetConsExprExprHashkey(
 }
 
 
+/** creates and gives the auxiliary variable for a given expression
+ *
+ * @note if auxiliary variable already present for that expression, then only returns this variable
+ * @note for a variable expression it returns the corresponding variable
+ */
+SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_VAR**            auxvar              /**< buffer to store pointer to auxiliary variable */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   char name[SCIP_MAXSTRLEN];
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(expr != NULL);
+   assert(auxvar != NULL);
+
+   /* if we already have auxvar, then just return it */
+   if( expr->auxvar != NULL )
+   {
+      *auxvar = expr->auxvar;
+      return SCIP_OKAY;
+   }
+
+   /* if expression is a variable-expression, then return that variable */
+   if( expr->exprhdlr == SCIPgetConsExprExprHdlrVar(conshdlr) )
+   {
+      *auxvar = SCIPgetConsExprExprVarVar(expr);
+      return SCIP_OKAY;
+   }
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->auxvarid >= 0);
+
+   if( expr->exprhdlr == SCIPgetConsExprExprHdlrValue(conshdlr) )
+   {
+      /* it doesn't harm much to have an auxvar for a constant, but it doesn't seem to make much sense
+       * @todo ensure that this will not happen and change the warning to an assert
+       */
+      SCIPwarningMessage(scip, "Creating auxiliary variable for constant expression.");
+   }
+
+   /* create and capture auxiliary variable */
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "auxvar_%d", conshdlrdata->auxvarid);
+   ++conshdlrdata->auxvarid;
+
+   SCIP_CALL( SCIPcreateVarBasic(scip, &expr->auxvar, name, MAX( -SCIPinfinity(scip), expr->interval.inf ),
+      MIN( SCIPinfinity(scip), expr->interval.sup ), 0.0, SCIP_VARTYPE_CONTINUOUS) ); /*lint !e666*/
+   SCIP_CALL( SCIPaddVar(scip, expr->auxvar) );
+
+   /* mark the auxiliary variable to be invalid after a restart happened; this prevents SCIP to create linear
+    * constraints from cuts that contain auxiliary variables
+    */
+   SCIPvarSetCutInvalidAfterRestart(expr->auxvar, TRUE);
+
+   SCIPdebugMsg(scip, "added auxiliary variable %s for expression %p\n", SCIPvarGetName(expr->auxvar), (void*)expr);
+
+   /* add variable locks in both directions */
+   SCIP_CALL( SCIPaddVarLocks(scip, expr->auxvar, 1, 1) );
+
+#ifdef WITH_DEBUG_SOLUTION
+   if( SCIPdebugIsMainscip(scip) )
+   {
+      /* store debug solution value of auxiliary variable
+       * assumes that expression has been evaluated in debug solution before
+       */
+      SCIP_CALL( SCIPdebugAddSolVal(scip, expr->auxvar, SCIPgetConsExprExprValue(expr)) );
+   }
+#endif
+
+   return SCIP_OKAY;
+}
+
 
 /** walks the expression graph in depth-first manner and executes callbacks at certain places
  *
