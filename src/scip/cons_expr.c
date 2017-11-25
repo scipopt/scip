@@ -4879,8 +4879,21 @@ SCIP_DECL_CONSEXITSOL(consExitsolExpr)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    conshdlrdata->restart = restart;
 
-   /* free nonlinear handlers information from expressions TODO: do we want this here? */
+   /* TODO the following three could be merged into one walk */
+
+   /* call separation deinitialization callbacks; after a restart, the rows stored in the expressions are broken */
+   SCIP_CALL( exitSepa(scip, conshdlr, conss, nconss) );
+
+   /* free nonlinear handlers information from expressions */
    SCIP_CALL( freeNlhdlrsFromExprs(scip, conshdlr, conss, nconss) );
+
+   /* remove auxiliary variables from expressions; if a restart is about to happen, remove auxiliary variables in
+    * CONSINITPRE
+    */
+   if( !conshdlrdata->restart )
+   {
+      SCIP_CALL( freeAuxVars(scip, conshdlr, conss, nconss) );
+   }
 
    /* deinitialize nonlinear handlers */
    for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
@@ -4894,27 +4907,16 @@ SCIP_DECL_CONSEXITSOL(consExitsolExpr)
       }
    }
 
-   /* call separation deinitialization callbacks; after a restart, the rows stored in the expressions are broken */
-   SCIP_CALL( exitSepa(scip, conshdlr, conss, nconss) );
-
+   /* free nonlinear row representations */
    for( c = 0; c < nconss; ++c )
    {
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
 
-      /* free nonlinear row representation */
       if( consdata->nlrow != NULL )
       {
          SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
       }
-   }
-
-   /* remove auxiliary variables from expressions; if a restart is about to happen, remove auxiliary variables in
-    * CONSINITPRE
-    */
-   if( !conshdlrdata->restart )
-   {
-      SCIP_CALL( freeAuxVars(scip, conshdlr, conss, nconss) );
    }
 
    return SCIP_OKAY;
