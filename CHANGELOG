@@ -51,6 +51,8 @@ parameters:
 - removed parameter "separating/feastolfac"
 - removed parameters "constraints/{abspower,bivariate,quadratic,nonlinear}/mincutefficacysepa",
   "constraints/{abspower,bivariate,quadratic,nonlinear}/mincutefficacyenfofac", and constraints/soc/minefficacy
+- added parameter constraints/quadratic/binreformbinaryonly to disable reformulation of products of
+  binary and non-binary variables
 
 interface:
 - new interface methods to create and use bandit algorithms implemented as SCIP core plugins --
