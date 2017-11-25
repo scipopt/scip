@@ -263,8 +263,6 @@ typedef struct
 #ifdef WITH_DEBUG_SOLUTION
    SCIP_SOL*               debugsol;         /**< debug solution (or NULL if not debugging) */
 #endif
-   SCIP_CONSEXPR_NLHDLR**  nlhdlrssuccess;   /**< buffer for nlhdlrs that had success detecting structure at expression */
-   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrssuccessexprdata; /**< buffer for exprdata of nlhdlrs */
 } CREATE_AUXVARS_DATA;
 
 /** data passed on during registering nonlinear handlers */
@@ -3987,10 +3985,6 @@ SCIP_RETCODE createAuxVars(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   /* allocate some buffer for temporary storage of nlhdlr detect result */
-   SCIP_CALL( SCIPallocBufferArray(scip, &createdata.nlhdlrssuccess, conshdlrdata->nnlhdlrs) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &createdata.nlhdlrssuccessexprdata, conshdlrdata->nnlhdlrs) );
-
    for( i = 0; i < nconss; ++i )
    {
       assert(conss != NULL && conss[i] != NULL);
@@ -4028,9 +4022,6 @@ SCIP_RETCODE createAuxVars(
          }
       }
    }
-
-   SCIPfreeBufferArray(scip, &createdata.nlhdlrssuccess);
-   SCIPfreeBufferArray(scip, &createdata.nlhdlrssuccessexprdata);
 
    return SCIP_OKAY;
 }
