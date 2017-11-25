@@ -122,6 +122,7 @@ fixed bugs:
 - fixed several bugs related to hashing of constraints/rows in cutpool.c and cons_linear.c
 - fixed aggregation of variables in boundshift presolver that contain large variable bounds
 - fixed releasing of variables in the genvbounds propagator in case the problem could be solved during presolving of a restart
+- fix treatment of infinite lower bound in proximity objective cutoff
 - fixed wrong mapping of permuted basis indices in gomory separator
 - fixed integer objective separator for objective scales < 1
 
