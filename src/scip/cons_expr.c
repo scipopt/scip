@@ -3878,7 +3878,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(initSepaEnterExpr)
       return SCIP_OKAY;
    }
 
-   if( *(expr->exprhdlr->initsepa) != NULL )
+   if( *(expr->exprhdlr->initsepa) != NULL && expr->auxvar != NULL && expr->nnlhdlrs == 0 )
    {
       /* call the separation initialization callback of the expression handler */
       SCIP_CALL( (*expr->exprhdlr->initsepa)(scip, initsepadata->conshdlr, expr, &initsepadata->infeasible) );
@@ -3906,7 +3906,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(exitSolEnterExpr)
 
    *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
 
-   if( *(expr->exprhdlr->exitsepa) != NULL )
+   if( *(expr->exprhdlr->exitsepa) != NULL && expr->auxvar != NULL && expr->nnlhdlrs == 0 )
    {
       /* call the separation deinitialization callback of the expression handler */
       SCIP_CALL( (*expr->exprhdlr->exitsepa)(scip, expr) );
@@ -3999,7 +3999,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
             /* call the separation callback of the nonlinear handler */
             SCIP_CALL( (nlhdlr->sepa)(scip, sepadata->conshdlr, nlhdlr, expr, expr->nlhdlrsexprdata[h], sepadata->sol, sepadata->minviolation, &separesult, &ncuts) );
          }
-         else if( expr->exprhdlr->sepa != NULL )
+         else if( expr->exprhdlr->sepa != NULL && expr->nnlhdlrs == 0 )
          {
             /* call the separation callback of the expression handler */
             SCIP_CALL( (*expr->exprhdlr->sepa)(scip, sepadata->conshdlr, expr, sepadata->sol, sepadata->minviolation, &separesult, &ncuts) );
