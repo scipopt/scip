@@ -762,6 +762,10 @@ SCIP_RETCODE cutTightenCoefsQuad(
 
          maxact = QUAD_TO_DBL(maxacttmp);
 
+         assert(EPSISINT(maxact, 1e-4));
+         maxact = SCIPround(scip, maxact);
+         QUAD_ASSIGN(maxacttmp, maxact);
+
          /* check again for redundancy */
          if( SCIPisFeasLE(scip, maxact, QUAD_TO_DBL(*cutrhs)) )
          {
@@ -852,7 +856,7 @@ SCIP_RETCODE cutTightenCoefsQuad(
             /* if the cut is integral, the true coefficient must also be integral;
              * thus we round it to the exact integral value
              */
-            assert(SCIPisIntegral(scip, QUAD_TO_DBL(coef)));
+            assert(SCIPisFeasIntegral(scip, QUAD_TO_DBL(coef)));
             QUAD_ASSIGN(coef, SCIPround(scip, QUAD_TO_DBL(coef)));
          }
 
@@ -902,7 +906,7 @@ SCIP_RETCODE cutTightenCoefsQuad(
             /* if the cut is integral, the true coefficient must also be integral;
              * thus we round it to the exact integral value
              */
-            assert(SCIPisIntegral(scip, QUAD_TO_DBL(coef)));
+            assert(SCIPisFeasIntegral(scip, QUAD_TO_DBL(coef)));
             QUAD_ASSIGN(coef, SCIPround(scip, QUAD_TO_DBL(coef)));
          }
 
@@ -1130,6 +1134,10 @@ SCIP_RETCODE cutTightenCoefs(
 
          maxact = QUAD_TO_DBL(maxacttmp);
 
+         assert(EPSISINT(maxact, 1e-4));
+         maxact = SCIPround(scip, maxact);
+         QUAD_ASSIGN(maxacttmp, maxact);
+
          /* check again for redundancy */
          if( SCIPisFeasLE(scip, maxact, QUAD_TO_DBL(*cutrhs)) )
          {
@@ -1208,7 +1216,7 @@ SCIP_RETCODE cutTightenCoefs(
             /* if the cut is integral, the true coefficient must also be integral;
              * thus we round it to the exact integral value
              */
-            assert(SCIPisIntegral(scip, QUAD_TO_DBL(coef)));
+            assert(SCIPisFeasIntegral(scip, QUAD_TO_DBL(coef)));
             QUAD_ASSIGN(coef, SCIPround(scip, QUAD_TO_DBL(coef)));
          }
 
@@ -1256,7 +1264,7 @@ SCIP_RETCODE cutTightenCoefs(
             /* if the cut is integral, the true coefficient must also be integral;
              * thus we round it to the exact integral value
              */
-            assert(SCIPisIntegral(scip, QUAD_TO_DBL(coef)));
+            assert(SCIPisFeasIntegral(scip, QUAD_TO_DBL(coef)));
             QUAD_ASSIGN(coef, SCIPround(scip, QUAD_TO_DBL(coef)));
          }
 
@@ -2055,7 +2063,7 @@ SCIP_RETCODE addOneRow(
 }
 
 /** aggregate rows using the given weights; the current content of the aggregation
- *  row, @aggrow, gets overwritten
+ *  row, \p aggrrow, gets overwritten
  */
 SCIP_RETCODE SCIPaggrRowSumRows(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4575,19 +4583,20 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 typedef
 struct LiftingData
 {
-   SCIP_Real*            M;                  /**< M_0 := 0.0 and M_i := M_i-1 + m_i */
-   SCIP_Real*            m;                  /**< non-increasing array of variable upper bound coefficients for all variables in C++ and L-,
-                                              *   where C = C+ \cup C- is the flowcover and
-                                              *   C++ := \{ j \in C+ \mid u_j > \lambda \}
-                                              *   L- := \{ j \in (N- \setminus C-) \mid u_j > \lambda \}
+   SCIP_Real*            M;                  /**< \f$ M_0 := 0.0 \f$ and \f$ M_i := M_i-1 + m_i \f$ */
+   SCIP_Real*            m;                  /**< non-increasing array of variable upper bound coefficients
+                                              *   for all variables in \f$ C^{++} \f$  and \f$ L^- \f$,
+                                              *   where \f$ C = C^+ \cup C^- \f$ is the flowcover and
+                                              *   \f$ C^{++} := \{ j \in C^+ \mid u_j > \lambda \} \f$
+                                              *   \f$ L^- := \{ j \in (N^- \setminus C^-) \mid u_j > \lambda \} \f$
                                               */
    int                   r;                  /**< size of array m */
-   int                   t;                  /**< index of smallest value in m that comes from a variable in C++ */
-   SCIP_Real             d1;                 /**< right hand side of single-node-flow set plus the sum of all u_j for j \in C- */
-   SCIP_Real             d2;                 /**< right hand side of single-node-flow set plus the sum of all u_j for j \in N- */
+   int                   t;                  /**< index of smallest value in m that comes from a variable in \f$ C^{++} \f$ */
+   SCIP_Real             d1;                 /**< right hand side of single-node-flow set plus the sum of all \f$ u_j \f$ for \f$ j \in C^- \f$ */
+   SCIP_Real             d2;                 /**< right hand side of single-node-flow set plus the sum of all \f$ u_j \f$ for \f$ j \in N^- \f$ */
    SCIP_Real             lambda;             /**< excess of the flowcover */
-   SCIP_Real             mp;                 /**< smallest variable bound coefficient of variable in C++ (min_{j \in C++} u_j) */
-   SCIP_Real             ml;                 /**< ml := min(\lambda, \sum_{j \in C+ \setminus C++} u_j) */
+   SCIP_Real             mp;                 /**< smallest variable bound coefficient of variable in \f$ C^{++} (min_{j \in C++} u_j) \f$ */
+   SCIP_Real             ml;                 /**< \f$ ml := min(\lambda, \sum_{j \in C^+ \setminus C^{++}} u_j) \f$ */
 } LIFTINGDATA;
 
 /** structure that contains all the data that defines the single-node-flow relaxation of an aggregation row */
@@ -6255,14 +6264,15 @@ SCIP_RETCODE getFlowCover(
 
 #else
 
-/** get a flow cover (C1, C2) for a given 0-1 single node flow set
- *    {(x,y) in {0,1}^n x R^n : sum_{j in N1} y_j - sum_{j in N2} y_j <= b, 0 <= y_j <= u_j x_j},
- *  i.e., get sets C1 subset N1 and C2 subset N2 with sum_{j in C1} u_j - sum_{j in C2} u_j = b + lambda and lambda > 0
+/** get a flow cover \f$(C1, C2)\f$ for a given 0-1 single node flow set
+ *    \f${(x,y) in {0,1}^n x R^n : sum_{j in N1} y_j - sum_{j in N2} y_j <= b, 0 <= y_j <= u_j x_j}\f$,
+ *  i.e., get sets \f$ C1 \subset N1 \f$ and \f$ C2 \subset N2 \f$ with
+ *  \f$ \sum_{j in C1} u_j - sum_{j in C2} u_j = b + lambda \f$ and \f$ lambda > 0 \f$
  */
 static
 SCIP_RETCODE getFlowCover(
    SCIP*                 scip,               /**< SCIP data structure */
-   SNF_RELAXATION*       snf,                /**< @bzfgottwa write comment */
+   SNF_RELAXATION*       snf,                /**< the 0-1 single node flow relaxation */
    int*                  nflowcovervars,     /**< pointer to store number of variables in flow cover */
    int*                  nnonflowcovervars,  /**< pointer to store number of variables not in flow cover */
    int*                  flowcoverstatus,    /**< pointer to store whether variable is in flow cover (+1) or not (-1) */
@@ -6521,7 +6531,7 @@ SCIP_RETCODE getFlowCover(
 #endif
 
 /** evaluate the super-additive lifting function for the lifted simple generalized flowcover inequalities
- *  for a given value x \in \{ u_j \mid j \in C- \}.
+ *  for a given value \f$ x \in \{ u_j \mid j \in C- \} \f$.
  */
 static
 SCIP_Real evaluateLiftingFunction(
@@ -6596,8 +6606,14 @@ SCIP_Real evaluateLiftingFunction(
    return QUAD_TO_DBL(tmp);
 }
 
-/** compute (\alpha_j, \beta_j) := (0, 0)               if M_i \leq u_j \leq M_{i+1} - lambda
- *                                 (1, M_i - i \lambda) if M_i − \lambda < u_j < M_i
+/** computes
+ * \f[
+ * (\alpha_j, \beta_j) =
+ *    \begin{cases}
+ *       (0, 0) &\quad\text{if} M_i \leq u_j \leq M_{i+1} - \lambda \\
+ *       (1, M_i - i \lambda) &\quad\text{if} M_i − \lambda < u_j < M_i \\
+ *    \end{cases}
+ * \f]
  */
 static
 void getAlphaAndBeta(
@@ -7699,7 +7715,7 @@ SCIP_RETCODE cutsRoundStrongCG(
  */
 static
 SCIP_RETCODE cutsSubstituteStrongCG(
-   SCIP*                 scip,
+   SCIP*                 scip,               /**< SCIP datastructure */
    SCIP_Real*            weights,            /**< row weights in row summation */
    int*                  slacksign,          /**< stores the sign of the row's slack variable in summation */
    int*                  rowinds,            /**< sparsity pattern of used rows */

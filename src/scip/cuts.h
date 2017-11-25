@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   aggrrow.h
+/**@file   cuts.h
  * @ingroup PUBLICCOREAPI
  * @brief  methods for the aggregation rows
  * @author Jakob Witzig
@@ -150,7 +150,7 @@ void SCIPaggrRowClear(
    );
 
 /** aggregate rows using the given weights; the current content of the aggregation
- *  row, @aggrow, gets overwritten
+ *  row, \p aggrrow, gets overwritten
  */
 extern
 SCIP_RETCODE SCIPaggrRowSumRows(

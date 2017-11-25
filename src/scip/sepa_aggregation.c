@@ -443,8 +443,8 @@ SCIP_RETCODE setupAggregationData(
 /** free resources held in aggregation data */
 static
 void destroyAggregationData(
-   SCIP*                 scip,
-   AGGREGATIONDATA*      aggrdata
+   SCIP*                 scip,               /**< SCIP datastructure */
+   AGGREGATIONDATA*      aggrdata            /**< pointer to ggregation data */
    )
 {
    SCIPaggrRowFree(scip, &aggrdata->aggrrow);
@@ -463,12 +463,12 @@ void destroyAggregationData(
  */
 static
 SCIP_Bool getRowAggregationCandidates(
-   AGGREGATIONDATA*      aggrdata,
-   int                   probvaridx,
-   SCIP_ROW***           rows,
-   SCIP_Real**           rowvarcoefs,
-   int*                  nrows,
-   int*                  ngoodrows
+   AGGREGATIONDATA*      aggrdata,           /**< pointer to ggregation data */
+   int                   probvaridx,         /**< problem index of variables to retrieve candidates for */
+   SCIP_ROW***           rows,               /**< pointer to store array to candidate rows */
+   SCIP_Real**           rowvarcoefs,        /**< pointer to store array of coefficients of given variable in the corresponding rows */
+   int*                  nrows,              /**< pointer to return number of rows in returned arrays */
+   int*                  ngoodrows           /**< pointer to return number of "good" rows in the returned arrays */
    )
 {
    int aggrdataidx;
@@ -487,8 +487,8 @@ SCIP_Bool getRowAggregationCandidates(
 /** find the bound distance value in the aggregation data struct for the given variable problem index */
 static
 SCIP_Real aggrdataGetBoundDist(
-   AGGREGATIONDATA*      aggrdata,
-   int                   probvaridx
+   AGGREGATIONDATA*      aggrdata,           /**< SCIP datastructure */
+   int                   probvaridx          /**< problem index of variables to retrieve candidates for */
    )
 {
    int aggrdataidx;
@@ -745,7 +745,7 @@ TERMINATE:
 static
 SCIP_RETCODE aggregation(
    SCIP*                 scip,               /**< SCIP data structure */
-   AGGREGATIONDATA*      aggrdata,
+   AGGREGATIONDATA*      aggrdata,           /**< pointer to aggregation data */
    SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Bool             allowlocal,         /**< should local cuts be allowed */
@@ -755,9 +755,9 @@ SCIP_RETCODE aggregation(
    int                   maxaggrs,           /**< maximal number of aggregations */
    SCIP_Bool*            wastried,           /**< pointer to store whether the given startrow was actually tried */
    SCIP_Bool*            cutoff,             /**< whether a cutoff has been detected */
-   int*                  cutinds,
-   SCIP_Real*            cutcoefs,
-   SCIP_Bool             negate,
+   int*                  cutinds,            /**< buffer array to store temporarily cut */
+   SCIP_Real*            cutcoefs,           /**< buffer array to store temporarily cut */
+   SCIP_Bool             negate,             /**< should the start row be multiplied by -1 */
    int*                  ncuts               /**< pointer to count the number of generated cuts */
    )
 {
@@ -915,10 +915,13 @@ SCIP_RETCODE aggregation(
    return SCIP_OKAY;
 }
 
+/** gives an estimate of how much the activity of this row is
+ *  affected by fractionality in the current solution
+ */
 static
 SCIP_Real getRowFracActivity(
-   SCIP_ROW* row,
-   SCIP_Real* fractionalities
+   SCIP_ROW*             row,                /**< the LP row */
+   SCIP_Real*            fractionalities     /**< array of fractionalities for each variable */
    )
 {
    int nlpnonz;

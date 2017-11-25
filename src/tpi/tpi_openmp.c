@@ -422,7 +422,7 @@ SCIP_Bool isJobWaiting(
 
          currjob = currjob->nextjob;
       }
-      while( TRUE );
+      while( TRUE ); /*lint !e506*/
    }
 
    return FALSE;
@@ -465,7 +465,7 @@ SCIP_RETCODE SCIPtpiCollectJobs(
             if( currjob == _jobqueues->finishedjobs.firstjob )
                _jobqueues->finishedjobs.firstjob = currjob->nextjob;
             else
-               prevjob->nextjob = currjob->nextjob;
+               prevjob->nextjob = currjob->nextjob; /*lint !e613*/
 
             if( currjob == _jobqueues->finishedjobs.lastjob )
                _jobqueues->finishedjobs.lastjob = prevjob;
