@@ -10737,7 +10737,8 @@ SCIP_RETCODE propagateBoundsCons(
    /* was SCIPintervalAreDisjoint(consbounds, consactivity), but that would allow violations up to eps only
     * we need to decide feasibility w.r.t. feastol (but still want to propagate w.r.t. eps)
     */
-   if( SCIPisFeasGT(scip, consbounds.inf, consactivity.sup) || SCIPisFeasLT(scip, consbounds.sup, consactivity.inf) )
+   if( (!SCIPisInfinity(scip, -consdata->lhs) && SCIPisGT(scip, consdata->lhs-SCIPfeastol(scip), SCIPintervalGetSup(consactivity))) ||
+       (!SCIPisInfinity(scip,  consdata->rhs) && SCIPisLT(scip, consdata->rhs+SCIPfeastol(scip), SCIPintervalGetInf(consactivity))) )
    {
       SCIPdebugMsg(scip, "found constraint <%s> to be infeasible; sides: [%g, %g], activity: [%g, %g], infeas: %g\n",
          SCIPconsGetName(cons), consdata->lhs, consdata->rhs, SCIPintervalGetInf(consactivity), SCIPintervalGetSup(consactivity),
@@ -12757,6 +12758,30 @@ SCIP_DECL_CONSENFOPS(consEnfopsQuadratic)
 
    if( nnotify == 0 )
    {
+      SCIP_Bool addedcons;
+      SCIP_Bool reduceddom;
+      SCIP_Bool infeasible;
+
+      /* if no branching candidate found, then all variables are almost fixed
+       * calling replaceByLinearConstraints() should lead to fix all almost-fixed quadratic variables, and possibly replace some quad. conss by linear ones
+       */
+      SCIP_CALL( replaceByLinearConstraints(scip, conss, nconss, &addedcons, &reduceddom, &infeasible) );
+      if( addedcons )
+      {
+         *result = SCIP_CONSADDED;
+         return SCIP_OKAY;
+      }
+      if( reduceddom )
+      {
+         *result = SCIP_REDUCEDDOM;
+         return SCIP_OKAY;
+      }
+      if( infeasible )
+      {
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+
       SCIPdebugMsg(scip, "All variables in violated constraints fixed (up to epsilon). Cannot find branching candidate. Forcing solution of LP.\n");
       *result = SCIP_SOLVELP;
    }
