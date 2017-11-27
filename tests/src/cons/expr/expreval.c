@@ -240,7 +240,7 @@ Test(evalexpr, logarithm, .description = "Tests expression evaluation for logari
             cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetSup(interval), 2*log(xub)));
 
             if( xlb <= 0 )
-               cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetInf(interval), -SCIPinfinity(scip)));
+               cr_expect(SCIPisInfinity(scip, -SCIPintervalGetInf(interval)));
             else
                cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetInf(interval), 2*log(xlb)));
          }
@@ -498,8 +498,17 @@ void checkExprIntEval(
    /* check interval */
    if( !empty )
    {
-      cr_expect_float_eq(SCIPintervalGetInf(interval), targetinf, SCIPepsilon(scip));
-      cr_expect_float_eq(SCIPintervalGetSup(interval), targetsup, SCIPepsilon(scip));
+      /* check infimum */
+      if( SCIPisInfinity(scip, -targetinf) )
+         cr_expect(SCIPisInfinity(scip, -targetinf));
+      else
+         cr_expect_float_eq(SCIPintervalGetInf(interval), targetinf, SCIPepsilon(scip));
+
+      /* check supremum */
+      if( SCIPisInfinity(scip, targetsup) )
+         cr_expect(SCIPisInfinity(scip, targetsup));
+      else
+         cr_expect_float_eq(SCIPintervalGetSup(interval), targetsup, SCIPepsilon(scip));
    }
 }
 

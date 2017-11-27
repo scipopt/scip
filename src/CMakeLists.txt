@@ -44,6 +44,7 @@ set(scipsources
     scip/cons_expr.c
     scip/cons_expr_abs.c
     scip/cons_expr_cos.c
+    scip/cons_expr_entropy.c
     scip/cons_expr_exp.c
     scip/cons_expr_log.c
     scip/cons_expr_pow.c

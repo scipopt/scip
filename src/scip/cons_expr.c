@@ -36,6 +36,7 @@
 #include "scip/cons_expr_log.h"
 #include "scip/cons_expr_abs.h"
 #include "scip/cons_expr_pow.h"
+#include "scip/cons_expr_entropy.h"
 #include "scip/cons_expr_sin.h"
 #include "scip/cons_expr_cos.h"
 #include "scip/debug.h"
@@ -635,6 +636,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeExpr)
          SCIP_CONSEXPR_EXPR* child;
 
          assert(expr->walkcurrentchild < expr->nchildren);
+         assert(expr->children != NULL);
          child = expr->children[expr->walkcurrentchild];
          if( child->nuses > 1 )
          {
@@ -1298,6 +1300,9 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(getVarExprsLeaveExpr)
  *    SP10: it has at least two children
  *    ? at most one child is an exp
  *    ? at most one child is an abs
+ *    SP11: no two children are expr*log(expr)
+ *    (TODO: we could handle more complicated stuff like x*y*log(x) -> - y * entropy(x), but I am not sure this should
+ *    happen at the simplifcation level, or (x*y) * log(x*y), which currently simplifies to x * y * log(x*y))
  * - is a power expression such that
  *    POW1: exponent is not 0
  *    POW2: exponent is not 1
@@ -5973,7 +5978,6 @@ SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrProduct(
    return SCIPconshdlrGetData(conshdlr)->exprprodhdlr;
 }
 
-
 /** gives the name of an expression handler */
 const char* SCIPgetConsExprExprHdlrName(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
@@ -7625,6 +7629,10 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    /* include handler for power expression */
    SCIP_CALL( SCIPincludeConsExprExprHdlrPow(scip, conshdlr) );
    assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "pow") == 0);
+
+   /* include handler for entropy expression */
+   SCIP_CALL( SCIPincludeConsExprExprHdlrEntropy(scip, conshdlr) );
+   assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "entropy") == 0);
 
    /* include handler for sine expression */
    SCIP_CALL( SCIPincludeConsExprExprHdlrSin(scip, conshdlr) );
