@@ -347,6 +347,23 @@ extern "C" {
    SCIP_SOL* sol, \
    SCIP_Real* violation)
 
+/** expression curvature detection callback
+ *
+ * The method computes the curvature of an given expression. It assumes that the interval evaluation of the expression
+ * has been called before and the expression has been simplified.
+ *
+ * input:
+ *  - scip : SCIP main data structure
+ *  - conshdlr : expression constraint handler
+ *  - expr : expression to the curvature for
+ *  - curvature : buffer to store the curvature of the expression
+ */
+#define SCIP_DECL_CONSEXPR_EXPRCURVATURE(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSHDLR* conshdlr, \
+   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_EXPRCURV* curvature)
+
 /** stages of expression walker in which the walker callbacks are called */
 typedef enum
 {

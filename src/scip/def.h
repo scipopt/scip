@@ -164,7 +164,7 @@ extern "C" {
 #define SCIP_MINEPSILON               1e-20  /**< minimum value for any numerical epsilon */
 #define SCIP_INVALID          (double)1e+99  /**< floating point value is not valid */
 #define SCIP_UNKNOWN          (double)1e+98  /**< floating point value is not known (in primal solution) */
-
+#define SCIP_INTERVAL_INFINITY (double)1e+300 /**< infinity value for interval computations */
 
 #define REALABS(x)        (fabs(x))
 #define EPSEQ(x,y,eps)    (REALABS((x)-(y)) <= (eps))

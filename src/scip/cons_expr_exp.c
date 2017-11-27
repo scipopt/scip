@@ -212,9 +212,9 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalExp)
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
 
    childinterval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]);
-   assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), childinterval));
+   assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval));
 
-   SCIPintervalExp(SCIPinfinity(scip), interval, childinterval);
+   SCIPintervalExp(SCIP_INTERVAL_INFINITY, interval, childinterval);
 
    return SCIP_OKAY;
 }
@@ -308,7 +308,7 @@ SCIP_RETCODE separatePointExp(
 /** expression separation callback */
 static
 SCIP_DECL_CONSEXPR_EXPRSEPA(sepaExp)
-{
+{  /*lint --e{715}*/
    SCIP_ROW* cut;
    SCIP_Bool infeasible;
 
@@ -346,7 +346,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaExp)
 /** expression reverse propagaton callback */
 static
 SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropExp)
-{
+{  /*lint --e{715}*/
    SCIP_INTERVAL childbound;
 
    assert(scip != NULL);
@@ -364,7 +364,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropExp)
    }
 
    /* f = exp(c0) -> c0 = log(f) */
-   SCIPintervalLog(SCIPinfinity(scip), &childbound, SCIPgetConsExprExprInterval(expr));
+   SCIPintervalLog(SCIP_INTERVAL_INFINITY, &childbound, SCIPgetConsExprExprInterval(expr));
 
    /* try to tighten the bounds of the child node */
    SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[0], childbound, force, infeasible,
@@ -376,7 +376,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropExp)
 /** expression hash callback */
 static
 SCIP_DECL_CONSEXPR_EXPRHASH(hashExp)
-{
+{  /*lint --e{715}*/
    unsigned int childhash;
 
    assert(scip != NULL);
@@ -391,6 +391,29 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashExp)
    childhash = (unsigned int)(size_t)SCIPhashmapGetImage(expr2key, SCIPgetConsExprExprChildren(expr)[0]);
 
    *hashkey ^= childhash;
+
+   return SCIP_OKAY;
+}
+
+/** expression curvature detection callback */
+static
+SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureExp)
+{  /*lint --e{715}*/
+   SCIP_CONSEXPR_EXPR* child;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(curvature != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+
+   child = SCIPgetConsExprExprChildren(expr)[0];
+   assert(child != NULL);
+
+   /* expression is convex if child is convex */
+   if( (int)(SCIPgetCurvatureExprExpr(child) & SCIP_EXPRCURV_CONVEX) != 0 )
+      *curvature = SCIP_EXPRCURV_CONVEX;
+   else
+      *curvature = SCIP_EXPRCURV_UNKNOWN;
 
    return SCIP_OKAY;
 }
@@ -417,6 +440,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrExp(
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropExp) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashExp) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffExp) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureExp) );
 
    return SCIP_OKAY;
 }

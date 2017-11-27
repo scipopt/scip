@@ -178,6 +178,15 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrBranchscore(
    SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE((*brscore)) /**< branching score callback (can be NULL) */
 );
 
+/** set the curvature detection callback of an expression handler */
+EXTERN
+SCIP_RETCODE SCIPsetConsExprExprHdlrCurvature(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+   SCIP_DECL_CONSEXPR_EXPRCURVATURE((*curvature)) /**< curvature detection callback (can be NULL) */
+);
+
 /** gives expression handlers */
 EXTERN
 SCIP_CONSEXPR_EXPRHDLR** SCIPgetConsExprExprHdlrs(
@@ -703,12 +712,30 @@ int SCIPcompareConsExprExprs(
    SCIP_CONSEXPR_EXPR*   expr2               /**< second expression */
    );
 
-/** compare expressions
- * The given expressions are assumed to be simplified */
+/** sets the curvature of an expression */
 EXTERN
-int SCIPcompareExprs(
-   SCIP_CONSEXPR_EXPR*   expr1,              /**< first expression */
-   SCIP_CONSEXPR_EXPR*   expr2               /**< second expression */
+void SCIPsetCurvatureExprExpr(
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_EXPRCURV         curvature           /**< curvature of the expression */
+   );
+
+/** returns the curvature of an expression
+ *
+ *  @note Call SCIPcomputeCurvatureExprExpr before calling this function.
+ */
+EXTERN
+SCIP_EXPRCURV SCIPgetCurvatureExprExpr(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   );
+
+/** computes the curvature of a given expression and all its subexpressions
+ *
+ *  @note this function also evaluates all subexpressions w.r.t. current variable bounds
+ */
+EXTERN
+SCIP_RETCODE SCIPcomputeCurvatureExprExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
 /** @} */

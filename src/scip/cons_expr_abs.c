@@ -57,7 +57,7 @@ struct SCIP_ConsExpr_ExprData
  */
 static
 SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyAbs)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* child;
    SCIP_CONSHDLR* conshdlr;
 
@@ -161,7 +161,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printAbs)
 
 static
 SCIP_DECL_CONSEXPR_EXPRPARSE(parseAbs)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* childexpr;
 
    assert(expr != NULL);
@@ -226,9 +226,9 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalAbs)
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
 
    childinterval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]);
-   assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), childinterval));
+   assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval));
 
-   SCIPintervalAbs(SCIPinfinity(scip), interval, childinterval);
+   SCIPintervalAbs(SCIP_INTERVAL_INFINITY, interval, childinterval);
 
    return SCIP_OKAY;
 }
@@ -322,7 +322,7 @@ SCIP_RETCODE computeCutsAbs(
 /** expression separation initialization callback */
 static
 SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaAbs)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    SCIP_ROW* secant;
 
@@ -369,7 +369,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaAbs)
 /** expression separation deinitialization callback */
 static
 SCIP_DECL_CONSEXPR_EXPREXITSEPA(exitSepaAbs)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
 
    exprdata = SCIPgetConsExprExprData(expr);
@@ -395,7 +395,7 @@ SCIP_DECL_CONSEXPR_EXPREXITSEPA(exitSepaAbs)
 /** expression separation callback */
 static
 SCIP_DECL_CONSEXPR_EXPRSEPA(sepaAbs)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    SCIP_ROW* rows[3];
    SCIP_Real violation;
@@ -459,7 +459,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaAbs)
 /** expression reverse propagation callback */
 static
 SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropAbs)
-{
+{  /*lint --e{715}*/
    SCIP_INTERVAL childbound;
 
    assert(scip != NULL);
@@ -500,7 +500,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropAbs)
 /** expression hash callback */
 static
 SCIP_DECL_CONSEXPR_EXPRHASH(hashAbs)
-{
+{  /*lint --e{715}*/
    unsigned int childhash;
 
    assert(scip != NULL);
@@ -515,6 +515,58 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashAbs)
    childhash = (unsigned int)(size_t) SCIPhashmapGetImage(expr2key, SCIPgetConsExprExprChildren(expr)[0]);
 
    *hashkey ^= childhash;
+
+   return SCIP_OKAY;
+}
+
+/** expression curvature detection callback */
+static
+SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureAbs)
+{  /*lint --e{715}*/
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_EXPRCURV childcurv;
+   SCIP_Real childinf;
+   SCIP_Real childsup;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(curvature != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+
+   child = SCIPgetConsExprExprChildren(expr)[0];
+   assert(child != NULL);
+
+   childcurv = SCIPgetCurvatureExprExpr(child);
+   childinf = SCIPintervalGetInf(SCIPgetConsExprExprInterval(child));
+   childsup = SCIPintervalGetSup(SCIPgetConsExprExprInterval(child));
+
+   *curvature = SCIP_EXPRCURV_UNKNOWN;
+
+   /* TODO do we need to consider the cases where childinf >= 0 or childsup <= 0.0 holds? */
+   switch( childcurv )
+   {
+      case SCIP_EXPRCURV_UNKNOWN:
+         *curvature = SCIP_EXPRCURV_UNKNOWN;
+         break;
+
+      case SCIP_EXPRCURV_CONVEX:
+         if( childinf >= 0.0 )
+            *curvature = SCIP_EXPRCURV_CONVEX;
+         else if( childsup <= 0.0 )
+            *curvature = SCIP_EXPRCURV_CONCAVE;
+         break;
+
+      case SCIP_EXPRCURV_CONCAVE:
+         if( childsup <= 0.0 )
+            *curvature = SCIP_EXPRCURV_CONVEX;
+         else if( childinf >= 0.0 )
+            *curvature = SCIP_EXPRCURV_CONCAVE;
+         break;
+
+      case SCIP_EXPRCURV_LINEAR:
+         *curvature = SCIP_EXPRCURV_CONVEX;
+         break;
+   }
 
    return SCIP_OKAY;
 }
@@ -543,6 +595,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrAbs(
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashAbs) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropAbs) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffAbs) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureAbs) );
 
    return SCIP_OKAY;
 }

@@ -949,7 +949,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprVisitChild)
    /* skip child if it has been evaluated already */
    if( propdata->boxtag != 0 && propdata->boxtag == expr->children[expr->walkcurrentchild]->intevaltag )
    {
-      if( SCIPintervalIsEmpty(SCIPinfinity(scip), expr->children[expr->walkcurrentchild]->interval) )
+      if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->children[expr->walkcurrentchild]->interval) )
       {
          propdata->aborted = TRUE;
          *result = SCIP_CONSEXPREXPRWALK_ABORT;
@@ -991,7 +991,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprLeaveExpr)
    /* set interval to [-inf,+inf] if interval evaluation callback is not implemented */
    if( expr->exprhdlr->inteval == NULL )
    {
-      SCIPintervalSetEntire(SCIPinfinity(scip), &expr->interval);
+      SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &expr->interval);
       *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
 
       return SCIP_OKAY;
@@ -1001,7 +1001,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprLeaveExpr)
    SCIP_CALL( (*expr->exprhdlr->inteval)(scip, expr, &interval, propdata->varboundrelax) );
 
    /* update expression interval */
-   if( !SCIPintervalIsEmpty(SCIPinfinity(scip), interval) )
+   if( !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, interval) )
    {
       /* intersect new interval with the previous one */
       if( propdata->intersect )
@@ -1013,7 +1013,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprLeaveExpr)
    }
 
    /* stop if the computed or resulting interval is empty */
-   if( SCIPintervalIsEmpty(SCIPinfinity(scip), interval) || SCIPintervalIsEmpty(SCIPinfinity(scip), expr->interval) )
+   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, interval)
+      || SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->interval) )
    {
       SCIPintervalSetEmpty(&expr->interval);
       propdata->aborted = TRUE;
@@ -1630,6 +1631,85 @@ int SCIPcompareConsExprExprs(
    return retval == 0 ? 0 : retval < 0 ? -1 : 1;
 }
 
+/** sets the curvature of an expression */
+void SCIPsetCurvatureExprExpr(
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_EXPRCURV         curvature           /**< curvature of the expression */
+   )
+{
+   assert(expr != NULL);
+   expr->curvature = curvature;
+}
+
+/** returns the curvature of an expression */
+SCIP_EXPRCURV SCIPgetCurvatureExprExpr(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+   return expr->curvature;
+}
+
+/** expression walk callback for computing expression curvatures */
+static
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeCurv)
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_EXPRCURV curv;
+
+   assert(expr != NULL);
+   assert(expr->exprhdlr != NULL);
+   assert(result != NULL);
+   assert(stage == SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
+
+   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+   curv = SCIP_EXPRCURV_UNKNOWN;
+
+   conshdlr = (SCIP_CONSHDLR*)data;
+   assert(conshdlr != NULL);
+
+   /* TODO add a tag to store whether an expression has been visited already */
+
+   if( expr->exprhdlr->curvature != NULL )
+   {
+      /* get curvature from expression handler */
+      SCIP_CALL( (*expr->exprhdlr->curvature)(scip, conshdlr, expr, &curv) );
+   }
+
+   /* set curvature in expression */
+   SCIPsetCurvatureExprExpr(expr, curv);
+
+   return SCIP_OKAY;
+}
+
+/** computes the curvature of a given expression and all its subexpressions
+ *
+ *  @note this function also evaluates all subexpressions w.r.t. current variable bounds
+ */
+SCIP_RETCODE SCIPcomputeCurvatureExprExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   assert(conshdlr != NULL);
+
+   /* first evaluate all subexpressions */
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, FALSE, 0, 0.0) );
+
+   /* compute curvatures */
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, NULL, NULL, computeCurv, conshdlr) );
+
+   return SCIP_OKAY;
+}
+
+/** */
+
 /**@} */  /* end of simplifying methods */
 
 /** compares nonlinear handler by priority
@@ -1828,7 +1908,7 @@ SCIP_RETCODE forwardPropCons(
 #endif
 
    /* it may happen that we detect infeasibility during forward propagation if we use previously computed intervals */
-   if( SCIPintervalIsEmpty(SCIPinfinity(scip), SCIPgetConsExprExprInterval(consdata->expr)) )
+   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, SCIPgetConsExprExprInterval(consdata->expr)) )
    {
       *infeasible = TRUE;
    }
@@ -2057,7 +2137,10 @@ SCIP_RETCODE propConss(
          consdata = SCIPconsGetData(conss[i]);
          assert(consdata != NULL);
 
-         if( SCIPconsIsActive(conss[i]) && !consdata->ispropagated )
+         /* in the first round, we reevaluate all bounds to remove some possible leftovers that could be in this
+          * expression from a reverse propagation in a previous propagation round
+          */
+         if( SCIPconsIsActive(conss[i]) && (!consdata->ispropagated || roundnr == 0) )
          {
             SCIPdebugMsg(scip, "call forwardPropCons() for constraint <%s>\n", SCIPconsGetName(conss[i]));
             SCIPdebugPrintCons(scip, conss[i], NULL);
@@ -4643,7 +4726,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreExpr)
       /* simplify constraints */
       SCIP_CALL( simplifyConstraints(scip, conss, nconss, &success) );
 
-      /* replace common subexpressions */
+      /* replace common subexpressions; note that replacing common subexpressions requires to have simplified expressions */
       if( success )
       {
          SCIP_CALL( replaceCommonSubexpressions(scip, conss, nconss) );
@@ -4661,6 +4744,17 @@ SCIP_DECL_CONSEXITPRE(consExitpreExpr)
             SCIP_CALL( storeVarExprs(scip, SCIPconsGetData(conss[i])) );
             SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
          }
+      }
+
+      /* call curvature detection of expression handlers */
+      for( i = 0; i < nconss; ++i )
+      {
+         SCIP_CONSDATA* consdata = SCIPconsGetData(conss[i]);
+         assert(consdata != NULL);
+         assert(consdata->expr != NULL);
+
+         /* evaluate all expressions for curvature check */
+         SCIP_CALL( SCIPcomputeCurvatureExprExpr(scip, consdata->expr) );
       }
 
       /* tell SCIP that we have something nonlinear */
@@ -5786,6 +5880,22 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrBranchscore(
    return SCIP_OKAY;
 }
 
+/** set the curvature detection callback of an expression handler */
+SCIP_RETCODE SCIPsetConsExprExprHdlrCurvature(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+   SCIP_DECL_CONSEXPR_EXPRCURVATURE((*curvature)) /**< curvature detection callback (can be NULL) */
+   )
+{  /*lint --e{715}*/
+   assert(exprhdlr != NULL);
+
+   exprhdlr->curvature = curvature;
+
+   return SCIP_OKAY;
+}
+
+
 /** gives expression handlers */
 SCIP_CONSEXPR_EXPRHDLR** SCIPgetConsExprExprHdlrs(
    SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
@@ -5928,9 +6038,10 @@ SCIP_RETCODE SCIPcreateConsExprExpr(
 
    (*expr)->exprhdlr = exprhdlr;
    (*expr)->exprdata = exprdata;
+   (*expr)->curvature = SCIP_EXPRCURV_UNKNOWN;
 
    /* initialize an empty interval for interval evaluation */
-   SCIPintervalSetEntire(SCIPinfinity(scip), &(*expr)->interval);
+   SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &(*expr)->interval);
 
    if( nchildren > 0 )
    {
@@ -6838,7 +6949,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    assert(expr != NULL);
    assert(cutoff != NULL);
    assert(ntightenings != NULL);
-   assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), expr->interval));
+   assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->interval));
 
    oldlb = SCIPintervalGetInf(expr->interval);
    oldub = SCIPintervalGetSup(expr->interval);
@@ -6856,6 +6967,14 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    SCIPintervalIntersect(&expr->interval, expr->interval, newbounds);
    newlb = SCIPintervalGetInf(expr->interval);
    newub = SCIPintervalGetSup(expr->interval);
+
+   /* mark the current problem to be infeasible if either the lower/upper bound is above/below +/- SCIPinfinity() */
+   if( SCIPisInfinity(scip, newlb) || SCIPisInfinity(scip, -newub) )
+   {
+      SCIPintervalSetEmpty(&expr->interval);
+      *cutoff = TRUE;
+      return SCIP_OKAY;
+   }
 
 #ifdef SCIP_DEBUG
       SCIPinfoMessage(scip, NULL, "tighten bounds of ");

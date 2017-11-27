@@ -995,7 +995,7 @@ SCIP_RETCODE createData(
  */
 static
 SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
-{
+{  /*lint --e{715}*/
    EXPRNODE* unsimplifiedchildren;
    EXPRNODE* finalchildren;
    SCIP_Real simplifiedcoef;
@@ -1247,7 +1247,7 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataProduct)
 
 static
 SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataProduct)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
 
    assert(expr != NULL);
@@ -1264,7 +1264,7 @@ SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataProduct)
 
 static
 SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
 
    assert(expr != NULL);
@@ -1331,7 +1331,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
 /** product hash callback */
 static
 SCIP_DECL_CONSEXPR_EXPRHASH(hashProduct)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    int c;
 
@@ -1437,10 +1437,10 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalProduct)
       SCIP_INTERVAL childinterval;
 
       childinterval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[c]);
-      assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), childinterval));
+      assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval));
 
       /* multiply childinterval with the so far computed interval */
-      SCIPintervalMul(SCIPinfinity(scip), interval, *interval, childinterval);
+      SCIPintervalMul(SCIP_INTERVAL_INFINITY, interval, *interval, childinterval);
    }
 
    return SCIP_OKAY;
@@ -1740,7 +1740,7 @@ SCIP_RETCODE separatePointProduct(
 
             midval *= (SCIPvarGetUbLocal(var) + SCIPvarGetLbLocal(var)) / 2.0;
             SCIPintervalSetBounds(&bounds, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
-            SCIPintervalMul(SCIPinfinity(scip), &fixedinterval, fixedinterval, bounds);
+            SCIPintervalMul(SCIP_INTERVAL_INFINITY, &fixedinterval, fixedinterval, bounds);
          }
       }
       nvars = pos; /* update number of vars */
@@ -1862,7 +1862,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaProduct)
 /** expression reverse propagation callback */
 static
 SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    SCIP_INTERVAL childbounds;
    int i;
@@ -1882,7 +1882,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
       return SCIP_OKAY;
 
    /* not possible to learn bounds if expression interval is unbounded in both directions */
-   if( SCIPintervalIsEntire(SCIPinfinity(scip), SCIPgetConsExprExprInterval(expr)) )
+   if( SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, SCIPgetConsExprExprInterval(expr)) )
       return SCIP_OKAY;
 
    exprdata = SCIPgetConsExprExprData(expr);
@@ -1899,7 +1899,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
          if( i == j )
             continue;
 
-         SCIPintervalMul(SCIPinfinity(scip), &childbounds, childbounds,
+         SCIPintervalMul(SCIP_INTERVAL_INFINITY, &childbounds, childbounds,
                SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[j]));
 
          /* if there is 0.0 in the product, then later division will hardly give useful bounds, so give up for this i */
@@ -1911,13 +1911,28 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
       if( j == SCIPgetConsExprExprNChildren(expr) )
       {
          /* f / (const * prod_{j:j!=i} c_j) */
-         SCIPintervalDiv(SCIPinfinity(scip), &childbounds, SCIPgetConsExprExprInterval(expr), childbounds);
+         SCIPintervalDiv(SCIP_INTERVAL_INFINITY, &childbounds, SCIPgetConsExprExprInterval(expr), childbounds);
 
          /* try to tighten the bounds of the expression */
          SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[i], childbounds, force,
                infeasible, nreductions) );
       }
    }
+
+   return SCIP_OKAY;
+}
+
+/** expression curvature detection callback */
+static
+SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureProduct)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(curvature != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) > 1);
+   assert(SCIPgetConsExprExprProductCoef(expr) == 1.0);
+
+   *curvature = SCIP_EXPRCURV_UNKNOWN;
 
    return SCIP_OKAY;
 }
@@ -1957,6 +1972,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffProduct) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureProduct) );
 
    return SCIP_OKAY;
 }
