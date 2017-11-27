@@ -1533,7 +1533,7 @@ SCIP_DECL_NLPICHGQUADCOEFS( nlpiChgQuadraticCoefsFilterSQP )
 
    /* update constraint linearity in FilterSQP data, as we might have changed from linear to nonlinear now */
    if( problem->cstype != NULL && idx >= 0 )
-      problem->cstype[idx] = SCIPnlpiOracleGetConstraintDegree(problem->oracle, idx);
+      problem->cstype[idx] = (SCIPnlpiOracleGetConstraintDegree(problem->oracle, idx) <= 1 ? 'L' : 'N');
 
    /* gradients information (la,a) may have changed if elements were added or removed
     * (we only care that sparsity doesn't change, not about actual values in a)
@@ -1572,7 +1572,7 @@ SCIP_DECL_NLPICHGEXPRTREE( nlpiChgExprtreeFilterSQP )
 
    /* update constraint linearity in FilterSQP data, as we might have changed from linear to nonlinear now */
    if( problem->cstype != NULL && idxcons >= 0 )
-      problem->cstype[idxcons] = SCIPnlpiOracleGetConstraintDegree(problem->oracle, idxcons);
+      problem->cstype[idxcons] = (SCIPnlpiOracleGetConstraintDegree(problem->oracle, idxcons) <= 1 ? 'L' : 'N');
 
    /* gradients information (la,a) may have changed */
    BMSfreeMemoryArrayNull(&problem->la);
