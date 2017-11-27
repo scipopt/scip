@@ -4526,7 +4526,6 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    int nrows;
    int ncols;
    int ngrbcols;
-   int k;
    int j;
    int status;
 
