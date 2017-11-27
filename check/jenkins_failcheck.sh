@@ -201,6 +201,7 @@ else
   ./evalcheck_cluster.sh -r "-v useshortnames=0" ../${EVALFILE} > ${OUTPUT}
 fi
 cat ${OUTPUT}
+rm ${OUTPUT}
 cd ..
 
 # Store paths of err out res and set file
