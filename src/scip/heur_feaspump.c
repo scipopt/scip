@@ -715,8 +715,6 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    SCIP_VAR* var;
 
    SCIP_Real* mostfracvals;   /* the values of the variables above */
-   SCIP_Real newobjcoeff;     /* used for changing the objective */
-   SCIP_Real orgobjcoeff;     /* used for regarding the original objective */
    SCIP_Real oldsolval;       /* one value of the last solution */
    SCIP_Real solval;          /* one value of the actual solution */
    SCIP_Real frac;            /* the fractional part of the value above */
@@ -1008,7 +1006,6 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          SCIP_Longint ndomreds;
 
          var = pseudocands[i];
-         orgobjcoeff = SCIPvarGetObj(var);
 
          /* round the LP solution */
          solval = SCIPvarGetLPSol(var);
@@ -1060,7 +1057,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
             }
          }
 
-         updateVariableRounding(scip, heurdata, var, solval, alpha, scalingfactor);
+         SCIP_CALL( updateVariableRounding(scip, heurdata, var, solval, alpha, scalingfactor) );
 
          /* check whether the variable is one of the most fractionals and label if so */
          if( SCIPisFeasPositive(scip, frac) )
