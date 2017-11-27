@@ -1065,7 +1065,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
             entropicchild = finalchildren->expr;
       }
 
-      /* replace finalchildren by entropy expression */
+      /* success --> replace finalchildren by entropy expression */
       if( entropicchild != NULL )
       {
          SCIP_CONSEXPR_EXPR* entropy;
@@ -1083,10 +1083,13 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
          }
          else
             *simplifiedexpr = entropy;
+
+         goto CLEANUP;
       }
    }
+
    /* enforces SP10: if list is empty, return value */
-   else if( finalchildren == NULL )
+   if( finalchildren == NULL )
    {
       SCIP_CALL( SCIPcreateConsExprExprValue(scip, SCIPfindConshdlr(scip, "expr"), simplifiedexpr, simplifiedcoef) );
    }
@@ -1126,6 +1129,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
       SCIP_CALL( createExprProductFromExprlist(scip, finalchildren, simplifiedcoef, simplifiedexpr) );
    }
 
+CLEANUP:
    /* free memory */
    SCIP_CALL( freeExprlist(scip, &finalchildren) );
    assert(finalchildren == NULL);
