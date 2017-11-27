@@ -10,12 +10,12 @@
 
 find_path(CRITERION_INCLUDE_DIR
           NAMES criterion/criterion.h
-          HINTS ${CRITERION_DIR}
+          HINTS ${CRITERION_DIR} $ENV{CRITERION_DIR}
           PATH_SUFFIXES include)
 
 find_library(CRITERION_LIBRARY
         NAMES criterion
-        HINTS ${CRITERION_DIR}
+        HINTS ${CRITERION_DIR} $ENV{CRITERION_DIR}
         PATH_SUFFIXES lib)
 
 set(CRITERION_LIBRARIES ${CRITERION_LIBRARY})

@@ -50,6 +50,13 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    SCIP_Real*            log10groupsize      /**< pointer to store log10 of group size (or NULL) */
    );
 
+/** return objective coefficients of permuted variables at time of symmetry computation */
+EXTERN
+SCIP_RETCODE SCIPgetPermvarsObjSymmetry(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real**           permvarsobj         /**< pointer to store objective coefficients of permuted variables (NULL if not available) */
+   );
+
 /** register that a specific symmetry is needed */
 EXTERN
 SCIP_RETCODE SCIPregisterSymmetry(

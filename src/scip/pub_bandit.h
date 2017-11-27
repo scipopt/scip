@@ -24,7 +24,7 @@
 #ifndef __SCIP_PUB_BANDIT_H__
 #define __SCIP_PUB_BANDIT_H__
 
-#include "scip/scip.h"
+#include "scip/def.h"
 #include "scip/pub_bandit_epsgreedy.h"
 #include "scip/pub_bandit_exp3.h"
 #include "scip/pub_bandit_ucb.h"

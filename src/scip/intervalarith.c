@@ -247,17 +247,7 @@ double negate(
    return x;
 }
 
-/* for the MS compiler, the function nextafter is named _nextafter */
-#ifndef NO_NEXTAFTER
-#define nextafter(x,y) _nextafter(x,y)
-#endif
-
 #else /* unknown compiler or MSVS 64bit */
-
-/* for the MS compiler, the function nextafter is named _nextafter */
-#if defined(_MSC_VER) && defined(_M_X64) && !defined(NO_NEXTAFTER)
-#define nextafter(x,y) _nextafter(x,y)
-#endif
 
 /** gets the negation of a double
  *
@@ -275,130 +265,6 @@ SCIP_Real negate(
 
 #endif
 
-/* on systems where the function nextafter is not defined, we provide an implementation from Sun */
-#ifdef NO_NEXTAFTER
-/* The following implementation of the routine nextafter() comes with the following license:
- *
- * ====================================================
- * Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
- *
- * Developed at SunSoft, a Sun Microsystems, Inc. business.
- * Permission to use, copy, modify, and distribute this
- * software is freely granted, provided that this notice
- * is preserved.
- * ====================================================
- */
-
-#define __HI(x) *(1+(int*)&x)
-#define __LO(x) *(int*)&x
-#define __HIp(x) *(1+(int*)x)
-#define __LOp(x) *(int*)x
-
-static
-double nextafter(double x, double y)
-{
-   int hx;
-   int hy;
-   int ix;
-   int iy;
-   unsigned lx;
-   unsigned ly;
-
-   /* cppcheck-suppress invalidPointerCast */
-   hx = __HI(x);     /* high word of x */
-   /* cppcheck-suppress invalidPointerCast */
-   lx = __LO(x);     /* low  word of x */
-   /* cppcheck-suppress invalidPointerCast */
-   hy = __HI(y);     /* high word of y */
-   /* cppcheck-suppress invalidPointerCast */
-   ly = __LO(y);     /* low  word of y */
-   ix = hx&0x7fffffff;     /* |x| */
-   iy = hy&0x7fffffff;     /* |y| */
-
-   if( ((ix>=0x7ff00000) && ((ix-0x7ff00000)|lx) != 0 ) ||   /* x is nan */
-      ( (iy>=0x7ff00000) && ((iy-0x7ff00000)|ly) != 0 ))     /* y is nan */
-      return x + y;
-
-   /* x == y, return x */
-   if( x == y )
-      return x;
-
-   /* x == 0 */
-   if( (ix|lx) == 0 )
-   {
-      /* return +-minsubnormal */
-      /* cppcheck-suppress invalidPointerCast */
-      __HI(x) = hy&0x80000000;
-      /* cppcheck-suppress invalidPointerCast */
-      __LO(x) = 1;
-      y = x * x;
-      if ( y == x )
-         return y;
-      else
-         return x;  /* raise underflow flag */
-   }
-   /* x > 0 */
-   if( hx >= 0 )
-   {
-      /* x > y, x -= ulp */
-      if( hx > hy || ((hx == hy) && (lx > ly)) )
-      {
-         if ( lx == 0 )
-            hx -= 1;
-         lx -= 1;
-      }
-      else
-      {
-         /* x < y, x += ulp */
-         lx += 1;
-         if ( lx == 0 )
-            hx += 1;
-      }
-   }
-   else
-   {
-      /* x < 0 */
-      if( hy >= 0 || hx > hy || ((hx == hy) && (lx > ly)) )
-      {
-         /* x < y, x -= ulp */
-         if ( lx == 0 )
-            hx -= 1;
-         lx -= 1;
-      }
-      else
-      {
-         /* x > y, x += ulp */
-         lx += 1;
-         if( lx == 0 )
-            hx += 1;
-      }
-   }
-   hy = hx&0x7ff00000;
-   /* overflow  */
-   if( hy >= 0x7ff00000 )
-      return x + x;
-   if( hy < 0x00100000 )
-   {
-      /* underflow */
-      y = x*x;
-      if( y != x )
-      {
-         /* raise underflow flag */
-         /* cppcheck-suppress invalidPointerCast */
-         __HI(y) = hx;
-         /* cppcheck-suppress invalidPointerCast */
-         __LO(y) = lx;
-         return y;
-      }
-   }
-
-   /* cppcheck-suppress invalidPointerCast */
-   __HI(x) = hx;
-   /* cppcheck-suppress invalidPointerCast */
-   __LO(x) = lx;
-   return x;
-}
-#endif
 
 /** sets rounding mode of floating point operations to downwards rounding */
 void SCIPintervalSetRoundingModeDownwards(
@@ -1520,8 +1386,8 @@ void SCIPintervalSquareRoot(
 
          assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST); /* usually, no-one should have changed rounding mode */
          tmp = sqrt(operand.inf);
-         resultant->inf = nextafter(tmp, SCIP_REAL_MIN);
-         resultant->sup = nextafter(tmp, SCIP_REAL_MAX);
+         resultant->inf = SCIPnextafter(tmp, SCIP_REAL_MIN);
+         resultant->sup = SCIPnextafter(tmp, SCIP_REAL_MAX);
       }
 
       return;
@@ -1537,7 +1403,7 @@ void SCIPintervalSquareRoot(
    else
    {
       assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST); /* usually, no-one should have changed rounding mode */
-      resultant->inf = nextafter(sqrt(operand.inf), SCIP_REAL_MIN);
+      resultant->inf = SCIPnextafter(sqrt(operand.inf), SCIP_REAL_MIN);
    }
 
    if( operand.sup >= infinity )
@@ -1545,7 +1411,7 @@ void SCIPintervalSquareRoot(
    else
    {
       assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST); /* usually, no-one should have changed rounding mode */
-      resultant->sup = nextafter(sqrt(operand.sup), SCIP_REAL_MAX);
+      resultant->sup = SCIPnextafter(sqrt(operand.sup), SCIP_REAL_MAX);
    }
 }
 
@@ -1869,8 +1735,8 @@ void SCIPintervalPowerScalarScalar(
    result = pow(operand1, operand2);
 
    /* to get safe bounds, get the floating point numbers just below and above result */
-   resultant->inf = nextafter(result, SCIP_REAL_MIN);
-   resultant->sup = nextafter(result, SCIP_REAL_MAX);
+   resultant->inf = SCIPnextafter(result, SCIP_REAL_MIN);
+   resultant->sup = SCIPnextafter(result, SCIP_REAL_MAX);
 }
 
 /** stores operand1 to the power of the scalar operand2 in resultant
@@ -1954,7 +1820,7 @@ void SCIPintervalPowerScalar(
          else if( operand1.inf > 0.0 )
          {
             assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST); /* usually, no-one should have changed rounding mode */
-            resultant->inf = nextafter(pow(operand1.inf, operand2), SCIP_REAL_MIN);
+            resultant->inf = SCIPnextafter(pow(operand1.inf, operand2), SCIP_REAL_MIN);
          }
          else
             resultant->inf = 0.0;
@@ -1964,7 +1830,7 @@ void SCIPintervalPowerScalar(
          else if( operand1.sup > 0.0 )
          {
             assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST); /* usually, no-one should have changed rounding mode */
-            resultant->sup = nextafter(pow(operand1.sup, operand2), SCIP_REAL_MAX);
+            resultant->sup = SCIPnextafter(pow(operand1.sup, operand2), SCIP_REAL_MAX);
          }
          else
             resultant->sup = 0.0;
@@ -1985,7 +1851,7 @@ void SCIPintervalPowerScalar(
          else
          {
             assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST); /* usually, no-one should have changed rounding mode */
-            resultant->inf = nextafter(pow(operand1.sup, operand2), SCIP_REAL_MIN);
+            resultant->inf = SCIPnextafter(pow(operand1.sup, operand2), SCIP_REAL_MIN);
          }
 
          /* 0^(negative) = infinity */
@@ -1994,7 +1860,7 @@ void SCIPintervalPowerScalar(
          else
          {
             assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST); /* usually, no-one should have changed rounding mode */
-            resultant->sup = nextafter(pow(operand1.inf, operand2), SCIP_REAL_MAX);
+            resultant->sup = SCIPnextafter(pow(operand1.inf, operand2), SCIP_REAL_MAX);
          }
       }
    }
@@ -2315,12 +2181,12 @@ void SCIPintervalSignPowerScalar(
       else if( operand1.inf >= 0.0 )
       {
          assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
-         resultant->inf =  nextafter(sqrt( operand1.inf), SCIP_REAL_MIN);
+         resultant->inf =  SCIPnextafter(sqrt( operand1.inf), SCIP_REAL_MIN);
       }
       else
       {
          assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
-         resultant->inf = -nextafter(sqrt(-operand1.inf), SCIP_REAL_MAX);
+         resultant->inf = -SCIPnextafter(sqrt(-operand1.inf), SCIP_REAL_MAX);
       }
 
       if( operand1.sup >=  infinity )
@@ -2330,12 +2196,12 @@ void SCIPintervalSignPowerScalar(
       else if( operand1.sup > 0.0 )
       {
          assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
-         resultant->sup =  nextafter(sqrt( operand1.sup), SCIP_REAL_MAX);
+         resultant->sup =  SCIPnextafter(sqrt( operand1.sup), SCIP_REAL_MAX);
       }
       else
       {
          assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
-         resultant->sup = -nextafter(sqrt(-operand1.sup), SCIP_REAL_MAX);
+         resultant->sup = -SCIPnextafter(sqrt(-operand1.sup), SCIP_REAL_MAX);
       }
       assert(resultant->inf <= resultant->sup);
    }
@@ -2348,12 +2214,12 @@ void SCIPintervalSignPowerScalar(
       else if( operand1.inf > 0.0 )
       {
          assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
-         resultant->inf =  nextafter(pow( operand1.inf, operand2), SCIP_REAL_MIN);
+         resultant->inf =  SCIPnextafter(pow( operand1.inf, operand2), SCIP_REAL_MIN);
       }
       else
       {
          assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
-         resultant->inf = -nextafter(pow(-operand1.inf, operand2), SCIP_REAL_MAX);
+         resultant->inf = -SCIPnextafter(pow(-operand1.inf, operand2), SCIP_REAL_MAX);
       }
 
       if( operand1.sup >=  infinity )
@@ -2363,12 +2229,12 @@ void SCIPintervalSignPowerScalar(
       else if( operand1.sup > 0.0 )
       {
          assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
-         resultant->sup =  nextafter(pow( operand1.sup, operand2), SCIP_REAL_MAX);
+         resultant->sup =  SCIPnextafter(pow( operand1.sup, operand2), SCIP_REAL_MAX);
       }
       else
       {
          assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
-         resultant->sup = -nextafter(pow(-operand1.sup, operand2), SCIP_REAL_MIN);
+         resultant->sup = -SCIPnextafter(pow(-operand1.sup, operand2), SCIP_REAL_MIN);
       }
    }
 
@@ -2486,8 +2352,8 @@ void SCIPintervalExp(
 
          assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
          tmp = exp(operand.inf);
-         resultant->inf = nextafter(tmp, SCIP_REAL_MIN);
-         resultant->sup = nextafter(tmp, SCIP_REAL_MAX);
+         resultant->inf = SCIPnextafter(tmp, SCIP_REAL_MIN);
+         resultant->sup = SCIPnextafter(tmp, SCIP_REAL_MAX);
 
          return;
       }
@@ -2504,7 +2370,7 @@ void SCIPintervalExp(
    else
    {
       assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
-      resultant->inf = nextafter(exp(operand.inf), SCIP_REAL_MIN);
+      resultant->inf = SCIPnextafter(exp(operand.inf), SCIP_REAL_MIN);
       /* make sure we do not exceed value for infinity, so interval is not declared as empty if inf and sup are both > infinity */
       if( resultant->inf >= infinity )
          resultant->inf = infinity;
@@ -2521,7 +2387,7 @@ void SCIPintervalExp(
    else
    {
       assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
-      resultant->sup = nextafter(exp(operand.sup), SCIP_REAL_MAX);
+      resultant->sup = SCIPnextafter(exp(operand.sup), SCIP_REAL_MAX);
       if( resultant->sup < -infinity )
          resultant->sup = -infinity;
    }
@@ -2561,8 +2427,8 @@ void SCIPintervalLog(
 
          assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
          tmp = log(operand.inf);
-         resultant->inf = nextafter(tmp, SCIP_REAL_MIN);
-         resultant->sup = nextafter(tmp, SCIP_REAL_MAX);
+         resultant->inf = SCIPnextafter(tmp, SCIP_REAL_MIN);
+         resultant->sup = SCIPnextafter(tmp, SCIP_REAL_MAX);
       }
 
       return;
@@ -2579,7 +2445,7 @@ void SCIPintervalLog(
    else
    {
       assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
-      resultant->inf = nextafter(log(operand.inf), SCIP_REAL_MIN);
+      resultant->inf = SCIPnextafter(log(operand.inf), SCIP_REAL_MIN);
    }
 
    if( operand.sup >= infinity )
@@ -2593,7 +2459,7 @@ void SCIPintervalLog(
    else
    {
       assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
-      resultant->sup = nextafter(log(operand.sup), SCIP_REAL_MAX);
+      resultant->sup = SCIPnextafter(log(operand.sup), SCIP_REAL_MAX);
    }
 }
 
@@ -3071,7 +2937,7 @@ void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
          else
          {
             SCIPintervalSetRoundingMode(SCIP_ROUND_NEAREST);
-            z = nextafter(sqrt(delta), SCIP_REAL_MAX);
+            z = SCIPnextafter(sqrt(delta), SCIP_REAL_MAX);
             SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
             z += b;
             resultant->inf = negate(negate(rhs)/z);
@@ -3085,7 +2951,7 @@ void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
          {
             delta = b*b + sqrcoeff*rhs;
             SCIPintervalSetRoundingMode(SCIP_ROUND_NEAREST);
-            z = nextafter(sqrt(delta), SCIP_REAL_MAX);
+            z = SCIPnextafter(sqrt(delta), SCIP_REAL_MAX);
             SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
             z += b;
             resultant->sup = z / negate(sqrcoeff);
@@ -3101,7 +2967,7 @@ void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
             SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
             delta = b*b + sqrcoeff*rhs;
             SCIPintervalSetRoundingMode(SCIP_ROUND_NEAREST);
-            z = nextafter(sqrt(delta), SCIP_REAL_MAX);
+            z = SCIPnextafter(sqrt(delta), SCIP_REAL_MAX);
             SCIPintervalSetRoundingMode(SCIP_ROUND_DOWNWARDS);
             z += negate(b);
             resultant->inf = z / sqrcoeff;
@@ -3118,7 +2984,7 @@ void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
          if( delta >= 0.0 && sqrcoeff <= 0.0 )
          {
             SCIPintervalSetRoundingMode(SCIP_ROUND_NEAREST);
-            z = nextafter(sqrt(delta), SCIP_REAL_MAX);
+            z = SCIPnextafter(sqrt(delta), SCIP_REAL_MAX);
             SCIPintervalSetRoundingMode(SCIP_ROUND_UPWARDS);
             z += negate(b);
             resultant->sup = negate(rhs/z);

@@ -21,6 +21,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <string.h>
 
 #include "relax_lp.h"
 
@@ -50,12 +51,40 @@ SCIP_DECL_RELAXEXEC(relaxExecLp)
 {  /*lint --e{715}*/
    SCIP* relaxscip;
    SCIP_HASHMAP* varmap;
+   SCIP_CONS** conss;
    SCIP_Real relaxval;
    SCIP_Bool valid;
+   int nconss;
    int i;
+   int c;
 
    *lowerbound = -SCIPinfinity(scip);
    *result = SCIP_DIDNOTRUN;
+
+   /* we can only run if none of the present constraints expect their variables to be binary or integer during transformation */
+   conss = SCIPgetConss(scip);
+   nconss = SCIPgetNConss(scip);
+
+   for( c = 0; c < nconss; ++c )
+   {
+      const char* conshdlrname;
+
+      conshdlrname = SCIPconshdlrGetName(SCIPconsGetHdlr(conss[c]));
+
+      /* skip if there are any "and", "linking", or", "orbitope", "pseudoboolean", "superindicator", "xor" or new/unknown constraints */
+      if( strcmp(conshdlrname, "SOS1") != 0 && strcmp(conshdlrname, "SOS2") != 0 && strcmp(conshdlrname, "abspower") != 0
+            && strcmp(conshdlrname, "bivariate") != 0 && strcmp(conshdlrname, "bounddisjunction") != 0
+            && strcmp(conshdlrname, "cardinality") != 0 && strcmp(conshdlrname, "components") != 0
+            && strcmp(conshdlrname, "conjunction") != 0 && strcmp(conshdlrname, "countsols") != 0
+            && strcmp(conshdlrname, "cumulative") != 0 && strcmp(conshdlrname, "disjunction") != 0
+            && strcmp(conshdlrname, "indicator") != 0 && strcmp(conshdlrname, "integral") != 0
+            && strcmp(conshdlrname, "knapsack") != 0 && strcmp(conshdlrname, "linear") != 0
+            && strcmp(conshdlrname, "logicor") != 0 && strcmp(conshdlrname, "nonlinear") != 0
+            && strcmp(conshdlrname, "orbisack") != 0 && strcmp(conshdlrname, "quadratic") != 0
+            && strcmp(conshdlrname, "setppc") != 0 && strcmp(conshdlrname, "soc") != 0
+            && strcmp(conshdlrname, "symresack") != 0 && strcmp(conshdlrname, "varbound") != 0 )
+         return SCIP_OKAY;
+   }
 
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPcreate(&relaxscip) );

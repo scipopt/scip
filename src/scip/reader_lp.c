@@ -1667,7 +1667,7 @@ SCIP_RETCODE readConstraints(
                   if ( *lpinput->token == '>' )
                   {
                      lpinput->linepos = linepos;
-                     strcpy(lpinput->token, "<");
+                     (void) SCIPsnprintf(lpinput->token, 2, "<");
                      syntaxError(scip, lpinput,
                         "SCIP does not support equivalence (<->) indicator constraints; consider using the \"->\" form.");
                      goto TERMINATE;
@@ -1677,6 +1677,7 @@ SCIP_RETCODE readConstraints(
          }
          /* reset the lpinput for further usage as we have no indicator constraint */
          lpinput->linepos = linepos;
+         (void) SCIPsnprintf(lpinput->token, 2, "<");
          strcpy(lpinput->token, "<");
       }
 
@@ -3587,6 +3588,8 @@ SCIP_RETCODE SCIPwriteLp(
    SCIP_Real lb;
    SCIP_Real ub;
 
+   SCIP_Bool zeroobj;
+
    assert(scip != NULL);
 
    /* find indicator constraint handler */
@@ -3666,6 +3669,7 @@ SCIP_RETCODE SCIPwriteLp(
    clearLine(linebuffer, &linecnt);
    appendLine(scip, file, linebuffer, &linecnt, " Obj:");
 
+   zeroobj = TRUE;
    for( v = 0; v < nvars; ++v )
    {
       var = vars[v];
@@ -3679,12 +3683,23 @@ SCIP_RETCODE SCIPwriteLp(
       if( SCIPisZero(scip, SCIPvarGetObj(var)) )
          continue;
 
+      zeroobj = FALSE;
+
       /* we start a new line; therefore we tab this line */
       if( linecnt == 0 )
          appendLine(scip, file, linebuffer, &linecnt, "     ");
 
       (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
       (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s", SCIPvarGetObj(var), varname );
+
+      appendLine(scip, file, linebuffer, &linecnt, buffer);
+   }
+
+   /* add a linear term to avoid troubles when reading the lp file with another MIP solver */
+   if( zeroobj && nvars >= 1 )
+   {
+      (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[0]));
+      (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " 0 %s", varname );
 
       appendLine(scip, file, linebuffer, &linecnt, buffer);
    }
