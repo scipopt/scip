@@ -472,6 +472,36 @@ SCIP_RETCODE SCIPbranchcandGetExternCands(
    return SCIP_OKAY;
 }
 
+/** gets maximal branching priority of LP branching candidates */
+int SCIPbranchcandGetLPMaxPrio(
+   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
+   )
+{
+   assert(branchcand != NULL);
+
+   return branchcand->lpmaxpriority;
+}
+
+/** gets number of LP branching candidates with maximal branch priority */
+int SCIPbranchcandGetNPrioLPCands(
+   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
+   )
+{
+   assert(branchcand != NULL);
+
+   return branchcand->npriolpcands;
+}
+
+/** gets maximal branching priority of external branching candidates */
+int SCIPbranchcandGetExternMaxPrio(
+   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
+   )
+{
+   assert(branchcand != NULL);
+
+   return branchcand->externmaxpriority;
+}
+
 /** gets number of external branching candidates */
 int SCIPbranchcandGetNExternCands(
    SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
@@ -1143,7 +1173,7 @@ SCIP_RETCODE SCIPbranchcandUpdateVar(
    return SCIP_OKAY;
 }
 
-/** updates branching priority of the given variable and update the pseude candidate array if needed */
+/** updates branching priority of the given variable and update the pseudo candidate array if needed */
 SCIP_RETCODE SCIPbranchcandUpdateVarBranchPriority(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_SET*             set,                /**< global SCIP settings */

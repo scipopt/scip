@@ -31,8 +31,8 @@
 #define SEPA_NAME              "impliedbounds"
 #define SEPA_DESC              "implied bounds separator"
 #define SEPA_PRIORITY               -50
-#define SEPA_FREQ                     0
-#define SEPA_MAXBOUNDDIST           0.0
+#define SEPA_FREQ                    10
+#define SEPA_MAXBOUNDDIST           1.0
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
@@ -54,7 +54,6 @@ static
 SCIP_RETCODE addCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPA*            sepa,               /**< separator */
-   SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Real             val1,               /**< given coefficient of first variable */
    SCIP_VAR*             var1,               /**< given first variable */
    SCIP_Real             solval1,            /**< current LP solution value of first variable */
@@ -98,13 +97,8 @@ SCIP_RETCODE addCut(
       SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
 #endif
 
-      /* add cut */
-      SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, cutoff) );
-      if ( ! (*cutoff) )
-      {
-         SCIP_CALL( SCIPaddPoolCut(scip, cut) );
-         (*ncuts)++;
-      }
+      SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+      (*ncuts)++;
 
       /* release cut */
       SCIP_CALL( SCIPreleaseRow(scip, &cut) );
@@ -198,7 +192,7 @@ SCIP_RETCODE separateCuts(
             if( SCIPisLE(scip, implbounds[j], ub) && (ub - implbounds[j]) * SCIPfeastol(scip) <= RELCUTCOEFMAXRANGE )
             {
                /* add cut if violated */
-               SCIP_CALL( addCut(scip, sepa, sol, 1.0, implvars[j], solval, (ub - implbounds[j]), fracvars[i], fracvals[i],
+               SCIP_CALL( addCut(scip, sepa, 1.0, implvars[j], solval, (ub - implbounds[j]), fracvars[i], fracvals[i],
                      ub, cutoff, ncuts) );
                if ( *cutoff )
                   return SCIP_OKAY;
@@ -216,7 +210,7 @@ SCIP_RETCODE separateCuts(
             if( SCIPisGE(scip, implbounds[j], lb) && (implbounds[j] - lb) * SCIPfeastol(scip) <= RELCUTCOEFMAXRANGE )
             {
                /* add cut if violated */
-               SCIP_CALL( addCut(scip, sepa, sol, -1.0, implvars[j], solval, (implbounds[j] - lb), fracvars[i], fracvals[i],
+               SCIP_CALL( addCut(scip, sepa, -1.0, implvars[j], solval, (implbounds[j] - lb), fracvars[i], fracvals[i],
                      -lb, cutoff, ncuts) );
                if ( *cutoff )
                   return SCIP_OKAY;
@@ -257,7 +251,7 @@ SCIP_RETCODE separateCuts(
             if( SCIPisLE(scip, implbounds[j], ub) && (ub - implbounds[j]) * SCIPfeastol(scip) < RELCUTCOEFMAXRANGE )
             {
                /* add cut if violated */
-               SCIP_CALL( addCut(scip, sepa, sol, 1.0, implvars[j], solval, (implbounds[j] - ub), fracvars[i], fracvals[i],
+               SCIP_CALL( addCut(scip, sepa, 1.0, implvars[j], solval, (implbounds[j] - ub), fracvars[i], fracvals[i],
                      implbounds[j], cutoff, ncuts) );
                if ( *cutoff )
                   return SCIP_OKAY;
@@ -275,7 +269,7 @@ SCIP_RETCODE separateCuts(
             if( SCIPisGE(scip, implbounds[j], lb) && (implbounds[j] - lb) * SCIPfeastol(scip) < RELCUTCOEFMAXRANGE )
             {
                /* add cut if violated */
-               SCIP_CALL( addCut(scip, sepa, sol, -1.0, implvars[j], solval, (lb - implbounds[j]), fracvars[i], fracvals[i],
+               SCIP_CALL( addCut(scip, sepa, -1.0, implvars[j], solval, (lb - implbounds[j]), fracvars[i], fracvals[i],
                      -implbounds[j], cutoff, ncuts) );
                if ( *cutoff )
                   return SCIP_OKAY;
@@ -334,7 +328,7 @@ SCIP_RETCODE separateCuts(
        * clique value of 0 means that the negation of the variable should be part of the inequality.
        * Hence, exactly one of the two possible terms for x and y has a nonzero coefficient
        */
-      SCIP_CALL( addCut(scip, sepa, sol,
+      SCIP_CALL( addCut(scip, sepa,
             clqvals[0] ? 1.0 : -1.0, clqvars[0], SCIPgetSolVal(scip, sol, clqvars[0]),
             clqvals[1] ? 1.0 : -1.0, clqvars[1], SCIPgetSolVal(scip, sol, clqvars[1]),
             rhs, cutoff, ncuts) );

@@ -5,11 +5,11 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_R
 
 project(SCIP)
 
-set(SCIP_VERSION_MAJOR 4)
+set(SCIP_VERSION_MAJOR 5)
 set(SCIP_VERSION_MINOR 0)
-set(SCIP_VERSION_PATCH 2)
+set(SCIP_VERSION_PATCH 0)
 set(SCIP_VERSION_SUB 0)
-set(SCIP_VERSION_API 0)
+set(SCIP_VERSION_API 17)
 
 set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/COPYING")
 set(CPACK_PACKAGE_VERSION_MAJOR "${SCIP_VERSION_MAJOR}")
@@ -41,6 +41,7 @@ option(READLINE "should readline be linked" ON)
 option(GMP "should gmp be linked" ON)
 option(ZIMPL "should zimpl be linked" ON)
 option(IPOPT "should ipopt be linked" ON)
+option(WORHP "should worhp be linked" OFF)
 option(PARASCIP "should scip be compiled thread safe" OFF)
 option(LPSCHECK "double check SoPlex results with CPLEX" OFF)
 option(LEGACY "build SCIP/SoPlex in legacy mode" OFF)
@@ -61,6 +62,9 @@ set_property(CACHE EXPRINT PROPERTY STRINGS none cppad )  #define list of values
 
 set(LPS spx CACHE STRING "options for LP solver")  #create the variable
 set_property(CACHE LPS PROPERTY STRINGS spx cpx grb xprs clp glop msk none )  #define list of values GUI will offer for the variable
+
+set(SYM bliss CACHE STRING "options for symmetry computation")  #create the variable
+set_property(CACHE SYM PROPERTY STRINGS bliss none )  #define list of values GUI will offer for the variable
 
 #set options for memory management
 if( NOBLKBUFMEM )
@@ -150,6 +154,8 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 endif()
 message(STATUS "LEGACY mode for old compilers: ${LEGACY}")
 
+set(NEWLINE "\\\\n")
+
 # create a target for updating the current git hash
 file(WRITE ${CMAKE_BINARY_DIR}/scip_update_githash.cmake "
 find_program(GIT git)
@@ -159,7 +165,7 @@ if((GIT) AND (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git))
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
       OUTPUT_VARIABLE GITHASH OUTPUT_STRIP_TRAILING_WHITESPACE)
    string(REGEX REPLACE \"^.*-g\" \"\" GITHASH \${GITHASH})
-   file(WRITE \${DST} \"#define SCIP_GITHASH \\\"\${GITHASH}\\\"\")
+   file(WRITE \${DST} \"#define SCIP_GITHASH \\\"\${GITHASH}\\\"\n\")
 else()
    # read stored hash from file
    file(STRINGS \${DST} GITHASH)
@@ -172,9 +178,8 @@ add_custom_target(scip_update_githash
                                            -P ${CMAKE_BINARY_DIR}/scip_update_githash.cmake)
 
 # create a target for updating the current build configuration
-set(NEWLINE "\\\\n")
 file(WRITE ${CMAKE_BINARY_DIR}/scip_update_buildflags.cmake "
-file(WRITE \${DST} \"#define SCIP_BUILDFLAGS \\\" ARCH=${CMAKE_SYSTEM}${NEWLINE} COMP=${CMAKE_SYSTEM_PROCESSOR}${NEWLINE} BUILD=${CMAKE_BUILD_TYPE}\\\"\")
+file(WRITE \${DST} \"#define SCIP_BUILDFLAGS \\\" ARCH=${CMAKE_SYSTEM}${NEWLINE} COMP=${CMAKE_SYSTEM_PROCESSOR}${NEWLINE} BUILD=${CMAKE_BUILD_TYPE}${NEWLINE}\\\"\n\")
 ")
 add_custom_target(scip_update_buildflags
                   COMMAND ${CMAKE_COMMAND} -DDST=${PROJECT_SOURCE_DIR}/src/scip/buildflags.c
@@ -308,6 +313,26 @@ if(MOSEK_FOUND)
     set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
 endif()
 
+#search the selected symmetry computation program
+if(SYM STREQUAL "bliss")
+    find_package(BLISS)
+    if(BLISS_FOUND)
+        include_directories(${BLISS_INCLUDE_DIRS})
+        set(sym symmetry/compute_symmetry_bliss.cpp)
+        set(SYM_LIBRARIES ${BLISS_LIBRARIES})
+        set(SYM_PIC_LIBRARIES ${BLISS_LIBRARIES})
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${BLISS_CXX_FLAGS}")
+    else()
+        set(sym symmetry/compute_symmetry_none.cpp)
+    endif()
+elseif(SYM STREQUAL "none")
+    set(sym symmetry/compute_symmetry_none.cpp)
+else()
+    message(FATAL_ERROR "option SYM has wrong value")
+endif()
+
+
+
 #
 # enable coverage support
 #
@@ -358,11 +383,26 @@ if(IPOPT_FOUND)
     include_directories(${IPOPT_INCLUDE_DIRS})
     #on debian IPOPT package needs this definition to work
     add_definitions( -DHAVE_CSTDDEF )
+    set(NLPI_LIBRARIES ${IPOPT_LIBRARIES})
     set(nlpi nlpi/nlpi_ipopt.cpp)
-    set(NLPI_LIBRARIES ${NLPI_LIBRARIES} ${IPOPT_LIBRARIES})
 else()
     set(nlpi nlpi/nlpi_ipopt_dummy.c)
 endif()
+
+# WORHP
+if(WORHP)
+    find_package(WORHP)
+endif()
+if(WORHP_FOUND)
+    include_directories(${WORHP_INCLUDE_DIRS})
+    set(nlpi ${nlpi} nlpi/nlpi_worhp.c)
+    set(NLPI_LIBRARIES ${NLPI_LIBRARIES} ${WORHP_LIBRARIES})
+else()
+    set(nlpi ${nlpi} nlpi/nlpi_worhp_dummy.c)
+endif()
+
+# FilterSQP (with CMake, nlpi_filtersqp doesn't build anyway)
+set(nlpi ${nlpi} nlpi/nlpi_filtersqp_dummy.c)
 
 # run checks to figure out how the rounding mode can be set
 include(CheckSymbolExists)

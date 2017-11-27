@@ -142,7 +142,9 @@
 =opt=        acc-4                                0.0
 =opt=        acc-5                                0.0
 =opt=        acc-6                                0.0
+=opt=        acc-tight4                           0.0
 =opt=        acc-tight5                           0.0
+=opt=        acc-tight6                           0.0
 =opt=        aflow30a                             1158.0
 =opt=        aflow40b                             1168.0
 =opt=        aflow_20_90c                         869.0
@@ -1112,6 +1114,7 @@
 =best=       crudeoil_li11                        4671.935458
 =bestdual=   crudeoil_li21                        4877.543782
 =best=       crudeoil_li21                        4799.501646
+=opt=        csched008                            173.0
 =opt=        csched010                            408.0
 =opt=        csched1                              -30639.25785
 =opt=        csched1a                             -30430.17682
@@ -1276,6 +1279,7 @@
 =inf=        enlight11
 =opt=        enlight13                            71.0
 =inf=        enlight14
+=opt=        enlight15                            69.0
 =inf=        enlight16
 =inf=        enlight4
 =inf=        enlight5
@@ -1301,6 +1305,7 @@
 =best=       etamac                               -15.29467564
 =opt=        ethanolh                             -157.5865321
 =opt=        ethanolm                             -157.5865321
+=opt=        ex10                                 100
 =best=       ex1010-pi                            238.0
 =opt=        ex1221                               7.667180069
 =opt=        ex1222                               1.076543083
@@ -2245,7 +2250,10 @@
 =opt=        le450_5d.stab                        90.0
 =bestdual=   least                                0.0
 =best=       least                                14085.13985
+=opt=        lectsched-1                          0.0
 =best=       lectsched-1-obj                      73.0
+=opt=        lectsched-2                          0.0
+=opt=        lectsched-3                          0.0
 =opt=        lectsched-4-obj                      4.0
 =best=       leo1                                 406070355.52
 =opt=        leo2                                 404077000.0
@@ -2281,6 +2289,9 @@
 =opt=        ma-non                               43409.5879
 =opt=        macrophage                           374.0
 =opt=        manna81                              -13164.0
+=opt=        map06                                -289.0
+=opt=        map10                                -495.0
+=opt=        map14                                -674.0
 =opt=        map18                                -847.0
 =opt=        map20                                -922.0
 =opt=        markshare1                           1.0
@@ -2710,12 +2721,12 @@
 =opt=        neos-1228986                         -123.0
 =opt=        neos-1281048                         601.0
 =best=       neos-1311124                         -181.0
-=best=       neos-1324574                         8.0
+=opt=        neos-1324574                         8.0
 =best=       neos-1330346                         8.0
 =opt=        neos-1330635                         25.8781
 =opt=        neos-1337307                         -202319.0
 =opt=        neos-1337489                         -77.0
-=best=       neos-1346382                         -176.0
+=opt=        neos-1346382                         -176.0
 =opt=        neos-1367061                         31320456.3
 =opt=        neos-1396125                         3000.0453
 =opt=        neos-1413153                         105.12
@@ -2726,9 +2737,9 @@
 =best=       neos-1420790                         3133.2887
 =best=       neos-1423785                         22105.3333
 =opt=        neos-1425699                         3179698980.0
-=best=       neos-1426635                         -176.0
+=opt=        neos-1426635                         -176.0
 =best=       neos-1426662                         -44.0
-=best=       neos-1427181                         -102.0
+=opt=        neos-1427181                         -102.0
 =best=       neos-1427261                         -127.25
 =best=       neos-1429185                         -76.0
 =best=       neos-1429212                         2596.52
@@ -2738,7 +2749,7 @@
 =best=       neos-1436709                         -128.0
 =best=       neos-1436713                         -152.5
 =opt=        neos-1437164                         8.0
-=best=       neos-1439395                         -180.3333
+=opt=       neos-1439395                         -180.3333333333
 =opt=        neos-1440225                         36.0
 =opt=        neos-1440447                         -100.0
 =best=       neos-1440457                         -179.25
@@ -2767,7 +2778,7 @@
 =opt=        neos-1516309                         35954.0
 =opt=        neos-1582420                         91.0
 =best=       neos-1593097                         23136.0
-=best=       neos-1595230                         9.0
+=opt=        neos-1595230                         9.0
 =opt=        neos-1597104                         -30.0
 =opt=        neos-1599274                         32075.6
 =opt=        neos-1601936                         3.0
@@ -2777,9 +2788,9 @@
 =best=       neos-1605061                         19.0
 =opt=        neos-1605075                         9.0
 =opt=        neos-1616732                         159.0
-=best=       neos-1620770                         9.0
+=opt=        neos-1620770                         9.0
 =opt=        neos-1620807                         6.0
-=best=       neos-1622252                         9.0
+=opt=        neos-1622252                         9.0
 =opt=        neos-430149                          56.6
 =opt=        neos-476283                          406.3632
 =opt=        neos-480878                          492.5144
@@ -2897,7 +2908,7 @@
 =opt=        neos-839838                          106657171.0
 =opt=        neos-839859                          9809653.22
 =best=       neos-839894                          15739135.94795
-=best=       neos-841664                          32735.0
+=opt=        neos-841664                          32735.0
 =best=       neos-847051                          -887666.893
 =best=       neos-847302                          4.0
 =opt=        neos-848150                          0.0
@@ -2923,8 +2934,8 @@
 =opt=        neos-892255                          14.0
 =opt=        neos-905856                          -6.0
 =opt=        neos-906865                          3175.0
-=best=       neos-911880                          54.83
-=best=       neos-911970                          54.76
+=opt=        neos-911880                          54.76
+=opt=        neos-911970                          54.76
 =opt=        neos-912015                          -14.0
 =opt=        neos-912023                          -13.0
 =opt=        neos-913984                          1000.0
@@ -2967,7 +2978,7 @@
 =best=       neos-948126                          2609.0
 =opt=        neos-948268                          60.0
 =best=       neos-948346                          -227.6
-=best=       neos-950242                          4.0
+=opt=        neos-950242                          4.0
 =opt=        neos-953928                          -99.9044
 =opt=        neos-954925                          -237.7689
 =opt=        neos-955215                          446.5
@@ -5050,7 +5061,8 @@
 =opt=        nous1                                1.567072
 =opt=        nous2                                0.6259674118
 =opt=        npmv07                               1.04809813e+11
-=best=       ns1111636                            162.0
+=opt=        ns1111636                            162.0
+=opt=        ns1116954                            0
 =inf=        ns1158817
 =opt=        ns1208400                            2.0
 =best=       ns1456591                            988.1413
@@ -5086,6 +5098,7 @@
 =opt=        ns60-pr9                             24475.0
 =best=       ns894236                             17.0
 =best=       ns894786                             14.0
+=opt=        ns894788                             7.0
 =best=       ns903616                             19.0
 =best=       ns930473                             844051.0
 =opt=        nsa                                  120.0
@@ -5305,6 +5318,7 @@
 =opt=        pg                                   -8674.3426
 =opt=        pg5_34                               -14339.3534
 =opt=        pigeon-10                            -9000.0
+=opt=        pigeon-11                            -10000.0
 =opt=        pigeon-12                            -11000.0
 =opt=        pigeon-13                            -12000.0
 =best=       pigeon-19                            -18000.0
@@ -5431,7 +5445,7 @@
 =opt=        prob06                               1.177124344
 =opt=        prob07                               154990.2294
 =opt=        prob09                               -0.0
-=opt=        prob10                               3.4455
+=opt=        prob10                               0.0
 =opt=        prob_8_lc                            3.0
 =opt=        problematic                          0.25
 =opt=        probportfolio                        16.7342
@@ -5503,7 +5517,9 @@
 =opt=        ran12x21                             3664.0
 =opt=        ran13x13                             3252.0
 =best=       ran14x18.disj-8                      3712.0
+=opt=        ran14x18-disj-8                      3712.0
 =best=       ran14x18_1                           3712.0
+=opt=        ran14x18                             3712.0
 =opt=        ran16x16                             3823.0
 =opt=        ran6x43                              6330.0
 =opt=        ran8x32                              5247.0
@@ -5513,6 +5529,7 @@
 =opt=        ravempb                              269590.2193
 =opt=        rbrock                               0.0
 =opt=        rd-rplusc-21                         165395.2753
+=opt=        reblock166                           -600052168.906547
 =opt=        reblock354                           -39280500.0
 =opt=        reblock420                           -517793000.0
 =opt=        reblock67                            -34630648.4383
@@ -6810,6 +6827,7 @@
 =opt=        uflquad-25-40                        828.1645
 =opt=        uflquad-30-100                       361.9168
 =opt=        uflquad-40-80                        347.4886
+=opt=        umts                                 30090328.0
 =opt=        unfm10a                              8332.0
 =opt=        unfm10b                              4283.0
 =opt=        unfm10b+                             4283.0
@@ -6850,6 +6868,7 @@
 =inf=        vpm2_inf
 =opt=        vpphard                              5.0
 =opt=        vpphard2                             81.0
+=opt=        wachplan                             -8
 =opt=        wall                                 -1.000004662
 =opt=        wap01a.stab                          152.0
 =opt=        wap02a.stab                          170.0

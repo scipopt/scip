@@ -16,6 +16,10 @@ set(scipsources
     blockmemshell/memory.c
     scip/message.c
     scip/bitencode.c
+    scip/bandit.c
+    scip/bandit_epsgreedy.c
+    scip/bandit_exp3.c
+    scip/bandit_ucb.c
     scip/branch_allfullstrong.c
     scip/branch_cloud.c
     scip/branch_distribution.c
@@ -49,6 +53,7 @@ set(scipsources
     scip/cons_logicor.c
     scip/cons_nonlinear.c
     scip/cons_or.c
+    scip/cons_orbisack.c
     scip/cons_orbitope.c
     scip/cons_pseudoboolean.c
     scip/cons_quadratic.c
@@ -57,6 +62,7 @@ set(scipsources
     scip/cons_sos1.c
     scip/cons_sos2.c
     scip/cons_superindicator.c
+    scip/cons_symresack.c
     scip/cons_varbound.c
     scip/cons_xor.c
     scip/dialog_default.c
@@ -85,8 +91,10 @@ set(scipsources
     scip/heur_localbranching.c
     scip/heur_lpface.c
     scip/heur_locks.c
+    scip/heur_alns.c
     scip/heur_mutation.c
     scip/heur_multistart.c
+    scip/heur_mpec.c
     scip/heur_nlpdiving.c
     scip/heur_objpscostdiving.c
     scip/heur_octane.c
@@ -135,13 +143,17 @@ set(scipsources
     scip/presol_inttobinary.c
     scip/presol_qpkktref.c
     scip/presol_redvub.c
+    scip/presol_sparsify.c
+    scip/presol_stuffing.c
+    scip/presol_symbreak.c
+    scip/presol_symmetry.c
     scip/presol_trivial.c
     scip/presol_tworowbnd.c
-    scip/presol_stuffing.c
     scip/prop_dualfix.c
     scip/prop_genvbounds.c
     scip/prop_nlobbt.c
     scip/prop_obbt.c
+    scip/prop_orbitalfixing.c
     scip/prop_probing.c
     scip/prop_pseudoobj.c
     scip/prop_redcost.c
@@ -171,11 +183,10 @@ set(scipsources
     scip/sepa_cgmip.c
     scip/sepa_clique.c
     scip/sepa_closecuts.c
-    scip/sepa_cmir.c
+    scip/sepa_aggregation.c
     scip/sepa_convexproj.c
     scip/sepa_disjunctive.c
     scip/sepa_eccuts.c
-    scip/sepa_flowcover.c
     scip/sepa_gauge.c
     scip/sepa_gomory.c
     scip/sepa_impliedbounds.c
@@ -185,6 +196,7 @@ set(scipsources
     scip/sepa_rapidlearning.c
     scip/sepa_strongcg.c
     scip/sepa_zerohalf.c
+    scip/table_default.c
     scip/boundstore.c
     scip/branch.c
     scip/clock.c
@@ -226,8 +238,10 @@ set(scipsources
     scip/reopt.c
     scip/retcode.c
     scip/scip.c
+    scip/scip_bandit.c
     scip/scipbuildflags.c
     scip/scipdefplugins.c
+    scip/scipcoreplugins.c
     scip/scipgithash.c
     scip/scipshell.c
     scip/sepa.c
@@ -237,9 +251,11 @@ set(scipsources
     scip/solve.c
     scip/stat.c
     scip/syncstore.c
+    scip/table.c
     scip/tree.c
     scip/var.c
     scip/visual.c
+    scip/rbtree.c
     tclique/tclique_branch.c
     tclique/tclique_coloring.c
     tclique/tclique_graph.c
@@ -263,11 +279,13 @@ set(objscipsources
     objscip/objreader.cpp
     objscip/objrelax.cpp
     objscip/objsepa.cpp
+    objscip/objtable.cpp
     objscip/objvardata.cpp
 )
 
 set(nlpisources
     nlpi/nlpi.c
+    nlpi/nlpi_all.c
     nlpi/nlpioracle.c
     nlpi/expr.c
     nlpi/intervalarithext.cpp
@@ -277,7 +295,11 @@ set(nlpisources
 
 set(lpisources
    ${lpi}
-)
+   )
+
+set(symsources
+   ${sym}
+   )
 
 set(blockmemshellheader
     blockmemshell/memory.h
@@ -295,8 +317,11 @@ set(dijkstraheaders
 set(nlpiheaders
     nlpi/exprinterpret.h
     nlpi/intervalarithext.h
+    nlpi/nlpi_all.h
     nlpi/nlpi.h
+    nlpi/nlpi_filtersqp.h
     nlpi/nlpi_ipopt.h
+    nlpi/nlpi_worhp.h
     nlpi/nlpioracle.h
     nlpi/pub_expr.h
     nlpi/struct_expr.h
@@ -326,12 +351,17 @@ set(objscipheaders
     objscip/objscipdefplugins.h
     objscip/objscip.h
     objscip/objsepa.h
+    objscip/objtable.h
     objscip/objvardata.h
     objscip/type_objcloneable.h
     objscip/type_objprobcloneable.h
 )
 
 set(scipheaders
+    scip/bandit.h
+    scip/bandit_epsgreedy.h
+    scip/bandit_exp3.h
+    scip/bandit_ucb.h
     scip/bitencode.h
     scip/boundstore.h
     scip/branch_allfullstrong.h
@@ -374,6 +404,7 @@ set(scipheaders
     scip/cons_linking.h
     scip/cons_logicor.h
     scip/cons_nonlinear.h
+    scip/cons_orbisack.h
     scip/cons_orbitope.h
     scip/cons_or.h
     scip/cons_pseudoboolean.h
@@ -383,6 +414,7 @@ set(scipheaders
     scip/cons_sos1.h
     scip/cons_sos2.h
     scip/cons_superindicator.h
+    scip/cons_symretope.h
     scip/cons_varbound.h
     scip/cons_xor.h
     scip/cutpool.h
@@ -419,9 +451,11 @@ set(scipheaders
     scip/heur_linesearchdiving.h
     scip/heur_localbranching.h
     scip/heur_locks.h
+    scip/heur_alns.h
     scip/heur_lpface.h
     scip/heur_multistart.h
     scip/heur_mutation.h
+    scip/heur_mpec.h
     scip/heur_nlpdiving.h
     scip/heur_objpscostdiving.h
     scip/heur_octane.h
@@ -482,7 +516,10 @@ set(scipheaders
     scip/presol_inttobinary.h
     scip/presol_qpkktref.h
     scip/presol_redvub.h
+    scip/presol_sparsify.h
     scip/presol_stuffing.h
+    scip/presol_symbreak.h
+    scip/presol_symmetry.h
     scip/presol_trivial.h
     scip/presol_tworowbnd.h
     scip/presolve.h
@@ -502,6 +539,10 @@ set(scipheaders
     scip/prop_sync.h
     scip/prop_vbounds.h
     scip/pub_branch.h
+    scip/pub_bandit.h
+    scip/pub_bandit_epsgreedy.h
+    scip/pub_bandit_exp3.h
+    scip/pub_bandit_ucb.h
     scip/pub_compr.h
     scip/pub_conflict.h
     scip/pub_cons.h
@@ -530,8 +571,10 @@ set(scipheaders
     scip/pub_reopt.h
     scip/pub_sepa.h
     scip/pub_sol.h
+    scip/pub_table.h
     scip/pub_tree.h
     scip/pub_var.h
+    scip/rbtree.h
     scip/reader_bnd.h
     scip/reader_ccg.h
     scip/reader_cip.h
@@ -557,6 +600,7 @@ set(scipheaders
     scip/reopt.h
     scip/retcode.h
     scip/scipbuildflags.h
+    scip/scipcoreplugins.h
     scip/scipdefplugins.h
     scip/scipgithash.h
     scip/scip.h
@@ -564,7 +608,7 @@ set(scipheaders
     scip/sepa_cgmip.h
     scip/sepa_clique.h
     scip/sepa_closecuts.h
-    scip/sepa_cmir.h
+    scip/sepa_aggregation.h
     scip/sepa_convexproj.h
     scip/sepa_disjunctive.h
     scip/sepa_eccuts.h
@@ -584,6 +628,7 @@ set(scipheaders
     scip/sol.h
     scip/solve.h
     scip/stat.h
+    scip/struct_bandit.h
     scip/struct_branch.h
     scip/struct_clock.h
     scip/struct_compr.h
@@ -623,11 +668,15 @@ set(scipheaders
     scip/struct_sol.h
     scip/struct_stat.h
     scip/struct_syncstore.h
+    scip/struct_table.h
     scip/struct_tree.h
     scip/struct_var.h
     scip/struct_visual.h
     scip/syncstore.h
+    scip/table_default.h
+    scip/table.h
     scip/tree.h
+    scip/type_bandit.h
     scip/type_branch.h
     scip/type_clock.h
     scip/type_compr.h
@@ -670,12 +719,18 @@ set(scipheaders
     scip/type_sol.h
     scip/type_stat.h
     scip/type_syncstore.h
+    scip/type_table.h
     scip/type_timing.h
     scip/type_tree.h
     scip/type_var.h
     scip/type_visual.h
     scip/var.h
     scip/visual.h
+)
+
+set(symheaders
+  symmetry/compute_symmetry.h
+  symmetry/type_symmetry.h
 )
 
 set(tcliqueheaders
@@ -707,7 +762,7 @@ set(xmlheaders
 
 # all source files should be compiled with a c++ compiler
 if(CXXONLY)
-    set_source_files_properties(${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${tpisources} PROPERTIES LANGUAGE CXX)
+    set_source_files_properties(${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${tpisources} ${symsources} PROPERTIES LANGUAGE CXX)
 endif()
 
 add_library(libobjscip EXCLUDE_FROM_ALL ${objscipsources})
@@ -730,7 +785,7 @@ add_library(liblpi EXCLUDE_FROM_ALL
     scip/message.c)
 setLibProperties(liblpi "lpi")
 
-add_library(libscip ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${tpisources})
+add_library(libscip ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${tpisources} ${symsources})
 setLibProperties(libscip "scip")
 
 target_link_libraries(libscip PRIVATE
@@ -738,13 +793,14 @@ target_link_libraries(libscip PRIVATE
     ${Readline_LIBRARY}
     ${GMP_LIBRARIES}
     ${THREAD_LIBRARIES}
-    ${NLPI_LIBRARIES})
+    ${NLPI_LIBRARIES}
+    ${SYM_LIBRARIES})
 
 if(SHARED)
-    target_link_libraries(libscip PRIVATE ${ZIMPL_PIC_LIBRARIES} ${LPS_PIC_LIBRARIES})
-    add_executable(scip main.c ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${tpisources})
+    target_link_libraries(libscip PRIVATE ${ZIMPL_PIC_LIBRARIES} ${LPS_PIC_LIBRARIES} ${SYM_PIC_LIBRARIES})
+    add_executable(scip main.c ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${tpisources} ${symsources})
 else()
-    target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES})
+    target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES})
     add_executable(scip main.c)
     target_link_libraries(scip libscip)
 endif()
@@ -752,7 +808,7 @@ endif()
 target_compile_definitions(scip PRIVATE EXTERN=extern)
 
 target_link_libraries(scip ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES}
-   ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${THREAD_LIBRARIES} ${NLPI_LIBRARIES})
+   ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES} ${THREAD_LIBRARIES} ${NLPI_LIBRARIES})
 
 add_dependencies(libscip scip_update_githash scip_update_buildflags)
 add_dependencies(scip scip_update_githash scip_update_buildflags)
@@ -774,6 +830,7 @@ install(FILES ${tcliqueheaders} DESTINATION include/tclique)
 install(FILES ${tinycthreadheader} DESTINATION include/tinycthread)
 install(FILES ${tpiheaders} DESTINATION include/tpi)
 install(FILES ${xmlheaders} DESTINATION include/xml)
+install(FILES ${symheaders} DESTINATION include/symmetry)
 install(FILES ${blockmemshellheader} DESTINATION include/blockmemshell)
 
 # install the binary and the library to appropriate lcoations and add them to an export group

@@ -36,6 +36,24 @@
 #include "portab.h"
 #include "scip/misc.h"
 
+
+/** returns maximum of given SCIP_Real values */
+SCIP_Real misc_stp_maxReal(
+   SCIP_Real*            realarr,            /**< array of reals */
+   unsigned              nreals              /**< size of array of reals */
+  )
+{
+   SCIP_Real max = realarr[0];
+
+   assert(nreals >= 1);
+
+   for( unsigned i = 1; i < nreals; i++ )
+      if( realarr[i] > max )
+         max = realarr[i];
+
+   return max;
+}
+
 /** compares distances of two GNODE structures */
 SCIP_DECL_SORTPTRCOMP(GNODECmpByDist)
 {
@@ -65,7 +83,7 @@ SCIP_RETCODE SCIPintListNodeInsert(
    IDX* curr;
    curr = *node;
 
-   SCIP_CALL( SCIPallocMemory(scip, node) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, node) );
    (*node)->index = nodeval;
    (*node)->parent = (curr);
 
@@ -136,13 +154,14 @@ SCIP_RETCODE SCIPintListNodeAppendCopy(
 
          if( hasharr[curr2idx] == 0 )
          {
-            SCIP_CALL(SCIPallocMemory(scip, &new));
+            SCIP_CALL( SCIPallocBlockMemory(scip, &new) );
             new->index = curr2idx;
             new->parent = curr1;
             curr1 = new;
          }
          else if( checkconflict )
          {
+            assert(conflict != NULL);
             (*conflict) = TRUE;
          }
 
@@ -161,7 +180,7 @@ SCIP_RETCODE SCIPintListNodeAppendCopy(
    {
       while( curr2 != NULL )
       {
-         SCIP_CALL(SCIPallocMemory(scip, &new));
+         SCIP_CALL( SCIPallocBlockMemory(scip, &new) );
          new->index = curr2->index;
          new->parent = curr1;
          curr1 = new;
@@ -188,7 +207,7 @@ void SCIPintListNodeFree(
    while( curr != NULL )
    {
       *node = curr->parent;
-      SCIPfreeMemory(scip, &curr);
+      SCIPfreeBlockMemory(scip, &curr);
       curr = *node;
    }
    assert(*node == NULL);
@@ -207,7 +226,7 @@ void SCIPlinkcuttreeInit(
    v->edge = -1;
 }
 
-/** renders w a child of v; v has to be the root of its tree */
+/** renders v a child of w; v has to be the root of its tree */
 void SCIPlinkcuttreeLink(
    NODE*                 v,                  /**< pointer to node representing the tree */
    NODE*                 w,                  /**< pointer to the child */
@@ -229,39 +248,71 @@ void SCIPlinkcuttreeCut(
    v->parent = NULL;
 }
 
-/** finds minimal non-key-node value between node 'v' and the root of the tree **/
-NODE* SCIPlinkcuttreeFindMinMW(
+/** finds minimum weight chain between node 'start' and distinct root node **/
+SCIP_Real SCIPlinkcuttreeFindMinChain(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real*            nodeweight,         /**< node weight array */
-   int*                  tail,               /**< tail of an arc */
-   int*                  stdeg,              /**< degree in Steiner tree */
-   NODE*                 v                   /**< the node */
+   const SCIP_Real*      nodeweight,         /**< node weight array */
+   const int*            head,               /**< head of an arc */
+   const int*            stdeg,              /**< degree in Steiner tree */
+   const NODE*           start,              /**< the node to start at */
+   NODE**                first,              /**< first node of chain */
+   NODE**                last                /**< last node of chain */
    )
 {
-   NODE* p = v;
-   NODE* q = v;
+   NODE* curr;
+   NODE* tmpfirst;
+   SCIP_Real min;
+   SCIP_Real tmpmin;
+   SCIP_Bool stopped;
    int node;
-   SCIP_Real min = 0.0;
 
    assert(scip != NULL);
-   assert(tail != NULL);
+   assert(head != NULL);
    assert(nodeweight != NULL);
    assert(stdeg != NULL);
-   assert(v != NULL);
+   assert(start != NULL);
+   assert(first != NULL);
+   assert(last != NULL);
 
-   while( p->parent != NULL )
+   *last = NULL;
+   *first = NULL;
+
+   min = 0.0;
+   tmpmin = 0.0;
+   stopped = TRUE;
+
+   /* while p is not root */
+   for( curr = (NODE*) start; curr->parent != NULL; curr = curr->parent )
    {
-      assert(p->edge >= 0);
-      node = tail[p->edge];
+      assert(curr->edge >= 0);
 
-      if( SCIPisLT(scip, nodeweight[node], min) && stdeg[node] == 2 )
+      node = head[curr->edge];
+
+      if( stdeg[node] == 2 && !SCIPisPositive(scip, nodeweight[node]) && curr->parent->parent != NULL )
       {
-         min = nodeweight[node];
-         q = p;
+         if( stopped )
+         {
+            stopped = FALSE;
+            tmpmin = 0.0;
+            tmpfirst = curr;
+         }
+         tmpmin += nodeweight[node];
       }
-      p = p->parent;
+      else
+      {
+         /* better chain found? */
+         if( !stopped && SCIPisLT(scip, tmpmin, min) )
+         {
+            assert(tmpfirst != NULL);
+            min = tmpmin;
+            *first = tmpfirst;
+            *last = curr;
+         }
+         stopped = TRUE;
+      }
    }
-   return q;
+
+   return min;
 }
 
 
@@ -277,6 +328,7 @@ NODE* SCIPlinkcuttreeFindMax(
    NODE* q = v;
    SCIP_Real max = -1;
 
+   /* while p is not the root */
    while( p->parent != NULL )
    {
       assert(p->edge >= 0);
@@ -487,7 +539,7 @@ SCIP_RETCODE SCIPpairheapInsert(
    if( (*root) == NULL )
    {
       (*size) = 1;
-      SCIP_CALL( SCIPallocBuffer(scip, root) );
+      SCIP_CALL( SCIPallocBlockMemory(scip, root) );
       (*root)->key = key;
       (*root)->element = element;
       (*root)->child = NULL;
@@ -498,7 +550,7 @@ SCIP_RETCODE SCIPpairheapInsert(
    {
       PHNODE* node;
       (*size)++;
-      SCIP_CALL( SCIPallocBuffer(scip, &node) );
+      SCIP_CALL( SCIPallocBlockMemory(scip, &node) );
       node->key = key;
       node->element = element;
       node->child = NULL;
@@ -539,7 +591,7 @@ SCIP_RETCODE SCIPpairheapDeletemin(
          SCIP_CALL( pairheapCombineSiblings(scip, &newroot, (*size)--) );
       }
 
-      SCIPfreeBuffer(scip, root);
+      SCIPfreeBlockMemory(scip, root);
       (*root) = newroot;
    }
    return SCIP_OKAY;
@@ -593,7 +645,7 @@ void SCIPpairheapFree(
       SCIPpairheapFree(scip, &((*root)->child));
    }
 
-   SCIPfreeBuffer(scip, root);
+   SCIPfreeBlockMemory(scip, root);
    (*root) = NULL;
 
 }
@@ -637,7 +689,7 @@ SCIP_RETCODE SCIPpairheapBuffarr(
  */
 
 /** initializes the union-find structure 'uf' with 'length' many components (of size one) */
-SCIP_RETCODE SCIPunionfindInit(
+SCIP_RETCODE SCIPStpunionfindInit(
    SCIP*                 scip,               /**< SCIP data structure */
    UF*                   uf,                 /**< union find data structure */
    int                   length              /**< number of components */
@@ -656,7 +708,7 @@ SCIP_RETCODE SCIPunionfindInit(
 }
 
 /** clears the union-find structure 'uf'*/
-void SCIPunionfindClear(
+void SCIPStpunionfindClear(
    SCIP*                 scip,               /**< SCIP data structure */
    UF*                   uf,                 /**< union find data structure */
    int                   length              /**< number of components */
@@ -676,7 +728,7 @@ void SCIPunionfindClear(
 
 
 /** finds and returns the component identifier */
-int SCIPunionfindFind(
+int SCIPStpunionfindFind(
    UF*                   uf,                 /**< union find data structure */
    int                   element             /**< element to be found */
    )
@@ -700,7 +752,7 @@ int SCIPunionfindFind(
 }
 
 /** merges the components containing p and q respectively */
-void SCIPunionfindUnion(
+void SCIPStpunionfindUnion(
    UF*                   uf,                 /**< union find data structure */
    int                   p,                  /**< first component */
    int                   q,                  /**< second component*/
@@ -711,8 +763,8 @@ void SCIPunionfindUnion(
    int idq;
    int* size = uf->size;
    int* parent = uf->parent;
-   idp = SCIPunionfindFind(uf, p);
-   idq = SCIPunionfindFind(uf, q);
+   idp = SCIPStpunionfindFind(uf, p);
+   idq = SCIPStpunionfindFind(uf, q);
 
    /* if p and q lie in the same component, there is nothing to be done */
    if( idp == idq )
@@ -743,7 +795,7 @@ void SCIPunionfindUnion(
 }
 
 /** frees the data fields of the union-find structure */
-void SCIPunionfindFree(
+void SCIPStpunionfindFree(
    SCIP*                 scip,               /**< SCIP data structure */
    UF*                   uf                  /**< union find data structure */
    )

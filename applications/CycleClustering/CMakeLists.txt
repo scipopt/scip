@@ -1,0 +1,31 @@
+cmake_minimum_required(VERSION 3.0)
+
+project(CycleClustering)
+
+find_package(SCIP REQUIRED)
+
+include_directories(${SCIP_INCLUDE_DIRS})
+
+add_executable(cycleclustering
+    src/main.c
+    src/cycplugins.c
+    src/sepa_partition.c
+    src/sepa_edge.c
+    src/sepa_subtour.c
+    src/heur_cycgreedy.c
+    src/heur_fuzzyround.c
+    src/heur_cyckerlin.c
+    src/branch_multinode.c
+    src/reader_cyc.c
+    src/probdata_cyc.c
+)
+
+target_link_libraries(cycleclustering ${SCIP_LIBRARIES} m)
+
+if( TARGET applications )
+    add_dependencies( applications cycleclustering)
+endif()
+
+add_subdirectory(check)
+
+enable_testing()

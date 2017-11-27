@@ -756,8 +756,7 @@ Test(solve, test5)
    /* set objective limit */
    SCIP_CALL_PARAM( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_FROMSCRATCH, 1) );
    SCIP_CALL_PARAM( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_PRESOLVING, 0) );
-   SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_UOBJLIM, 0.0) );
-   SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_LOBJLIM, 0.0) );
+   SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_OBJLIM, 0.0) );
 
    /* set basis */
    SCIP_CALL( SCIPlpiSetBase(lpi, cstat, rstat) );
@@ -843,6 +842,23 @@ Test(solve, test6)
    int ind[30] = {1, 3, 4, 5, 6, 7, 1, 3, 4, 5, 6, 7, 4, 5, 6, 7, 1, 2, 2, 2, 0, 0, 0, 1, 3, 4, 5, 6, 7, 3};
    /*                   x0                              x1                                  x2          x3 x4  x5 x6 x7  x8 x9 x10                     x11 */
    SCIP_Real val[30] = {-1, -1, 2.75, 1.25, 0.75, 2.75, -1, -1, -3.75, -0.25, -0.25, -0.25, 1, 1, 1, 1, 1, -1, 1, 1, -1, 1, 1, 1, 1, 2.28, 2, 0.68, 3, -1.0};
+   int j;
+
+   /* possibly convert |1e20| to infinity of LPI */
+   for (j = 0; j < 12; ++j)
+   {
+      if ( lb[j] == -1e20 )
+         lb[j] = -SCIPlpiInfinity(lpi);
+      if ( ub[j] == 1e20 )
+         ub[j] = SCIPlpiInfinity(lpi);
+   }
+   for (j = 0; j < 8; ++j)
+   {
+      if ( lhs[j] == -1e20 )
+         lhs[j] = -SCIPlpiInfinity(lpi);
+      if ( rhs[j] == 1e20 )
+         rhs[j] = SCIPlpiInfinity(lpi);
+   }
 
    /* load problem */
    SCIP_CALL( SCIPlpiLoadColLP(lpi, SCIP_OBJSEN_MINIMIZE, 12, obj, lb, ub, NULL, 8, lhs, rhs, NULL, 30, beg, ind, val) );
@@ -859,7 +875,7 @@ Test(solve, test6)
    SCIP_CALL( SCIPlpiClearState(lpi) );
 
    /* set objlimit */
-   SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_UOBJLIM, 4.320412501) );
+   SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_OBJLIM, 4.320412501) );
 
    /* solve problem */
    SCIP_CALL( SCIPlpiSolveDual(lpi) );
@@ -894,7 +910,7 @@ Test(solve, test6)
    SCIP_CALL( SCIPlpiChgBounds(lpi, 12, varind, lb, ub) );
 
    /* set objlimit */
-   SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_UOBJLIM, -2.0625) );
+   SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_OBJLIM, -2.0625) );
 
    SCIP_CALL( SCIPlpiClearState(lpi) );
 

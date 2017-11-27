@@ -39,7 +39,6 @@ struct SCIP_Diveset
    SCIP_HEUR*            heur;               /**< the heuristic to which this dive set belongs */
    char*                 name;               /**< name of dive controller, in case that a heuristic has several */
    SCIP_SOL*             sol;                /**< working solution of this dive set */
-   BMS_BLKMEM*           blkmem;             /**< block memory for parameter settings */
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    SCIP_Real             minreldepth;        /**< minimal relative depth to start diving */
    SCIP_Real             maxreldepth;        /**< maximal relative depth to start diving */
@@ -104,6 +103,20 @@ struct SCIP_Heur
    SCIP_Bool             usessubscip;        /**< does the heuristic use a secondary SCIP instance? */
    SCIP_Bool             initialized;        /**< is primal heuristic initialized? */
    char                  dispchar;           /**< display character of primal heuristic */
+};
+
+/** variable graph data structure to determine breadth-first distances between variables
+ *
+ *  the variable graph internally stores a mapping from the variables to the constraints in which they appear.
+ *
+ *  @see PublicVariableGraphMethods for available methods
+ */
+struct SCIP_VGraph
+{
+   SCIP_CONS***          varconss;           /**< constraints of each variable */
+   SCIP_HASHTABLE*       visitedconss;       /**< hash table that keeps a record of visited constraints during breadth-first search */
+   int*                  nvarconss;          /**< number of constraints for each variable */
+   int*                  varconssize;        /**< size array for every varconss entry */
 };
 
 #ifdef __cplusplus

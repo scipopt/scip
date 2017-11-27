@@ -606,8 +606,26 @@ SCIP_RETCODE createCoveringProblem(
     */
    for( i = 0; i < nvars; i++ )
    {
+      SCIP_Real ub = 1.0;
+
+      /* if the variable in the original problem is fixed, then the corresponding cover variable cannot be 1 in any
+       * optimal solution of the covering problem (see special termIsConstant treatment below)
+       * since some calling code may assume that no fixed variables will appear in the cover (see #1845), but we
+       * might not compute an optimal cover here, we fix these variable to 0 here
+       */
+      if( globalbounds )
+      {
+         if( SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(vars[i]), SCIPvarGetUbGlobal(vars[i])) )
+            ub = 0.0;
+      }
+      else
+      {
+         if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i])) )
+            ub = 0.0;
+      }
+
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_covering", SCIPvarGetName(vars[i]));
-      SCIP_CALL( SCIPcreateVar(coveringscip, &coveringvars[i], name, 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY,
+      SCIP_CALL( SCIPcreateVar(coveringscip, &coveringvars[i], name, 0.0, ub, 1.0, SCIP_VARTYPE_BINARY,
             TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
       assert(coveringvars[i] != NULL);
       SCIP_CALL( SCIPaddVar(coveringscip, coveringvars[i]) );
@@ -3139,8 +3157,8 @@ SCIP_DECL_HEURINIT(heurInitUndercover)
    assert(heurdata != NULL);
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
-         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
+         DEFAULT_RANDSEED) );
 
    return SCIP_OKAY;
 }
@@ -3159,7 +3177,7 @@ SCIP_DECL_HEUREXIT(heurExitUndercover)
    assert(heurdata != NULL);
 
    /* free random number generator */
-   SCIPrandomFree(&heurdata->randnumgen);
+   SCIPfreeRandom(scip, &heurdata->randnumgen);
 
    return SCIP_OKAY;
 }

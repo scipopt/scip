@@ -714,7 +714,6 @@ SCIP_RETCODE newsolCliqueAddRow(
 
    /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
 
-   SCIP_CALL( SCIPaddCut(scip, sepadata->sol, cut, FALSE, cutoff) );
    SCIP_CALL( SCIPaddPoolCut(scip, cut) );
 
    /* release the row */

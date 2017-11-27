@@ -2,7 +2,7 @@
 
 # For release versions, only use VERSION="x.x.x".
 # For development versions, use VERSION="x.x.x.x" with subversion number.
-VERSION="4.0.2"
+VERSION="5.0.0"
 NAME="scip-$VERSION"
 rm -f $NAME
 ln -s . $NAME
@@ -56,6 +56,7 @@ $NAME/src/scip/*.c $NAME/src/scip/*.h \
 $NAME/src/nlpi/*.c $NAME/src/nlpi/*.cpp $NAME/src/nlpi/*.h \
 $NAME/src/lpi/*.c $NAME/src/lpi/*.cpp $NAME/src/lpi/*.h \
 $NAME/src/tpi/*.c $NAME/src/tpi/*.h \
+$NAME/src/symmetry/*.cpp $NAME/src/symmetry/*.h \
 $NAME/src/xml/*.c $NAME/src/xml/*.h \
 $NAME/src/tinycthread/*.c $NAME/src/tinycthread/*.h \
 $NAME/src/dijkstra/*.c $NAME/src/dijkstra/*.h \
@@ -69,6 +70,12 @@ $NAME/applications/Coloring/check/CMakeLists.txt \
 $NAME/applications/Coloring/check/testset/short.test $NAME/applications/Coloring/check/testset/short.solu \
 $NAME/applications/Coloring/src/depend.* \
 $NAME/applications/Coloring/src/*.c $NAME/applications/Coloring/src/*.h \
+$NAME/applications/CMakeLists.txt \
+$NAME/applications/CycleClustering/* $NAME/applications/CycleClustering/doc/* $NAME/applications/CycleClustering/instances/Pot/3Cycle/* \
+$NAME/applications/CycleClustering/instances/Pot/4Cycle/*                 $NAME/applications/CycleClustering/instances/Pot/6Cycle/* \
+$NAME/applications/CycleClustering/check/CMakeLists.txt $NAME/applications/CycleClustering/settings/* \
+$NAME/applications/CycleClustering/check/testset/quick.test \
+$NAME/applications/CycleClustering/src/*.c $NAME/applications/Coloring/src/*.h \
 $NAME/applications/Scheduler/doc/* \
 $NAME/applications/Scheduler/check/CMakeLists.txt \
 $NAME/applications/Scheduler/check/testset/short.test $NAME/applications/Scheduler/check/testset/short.solu \
@@ -182,6 +189,7 @@ $NAME/interfaces/ampl/check/instances/SOS/*.nl $NAME/interfaces/ampl/check/tests
 $NAME/interfaces/gams/Makefile $NAME/interfaces/gams/INSTALL $NAME/interfaces/gams/gamsinst.sh \
 $NAME/interfaces/gams/test.sh $NAME/interfaces/gams/src/* \
 $NAME/check/instances/Bivariate/*.osil \
+$NAME/check/instances/Bilinrelax/*.osil \
 $NAME/check/instances/CP/*.cip \
 $NAME/check/instances/Indicator/*.lp \
 $NAME/check/instances/MIP/*.fzn \
@@ -248,10 +256,9 @@ $NAME/tests/src/cons/superindicator/*                  \
 
 rm -f $NAME
 echo ""
-echo "check version numbers in src/scip/def.h, doc/xternal.c, make.project, Makefile.nmake, and makedist.sh ($VERSION):"
+echo "check version numbers in src/scip/def.h, doc/xternal.c, make.project, and makedist.sh ($VERSION):"
 grep -H "SCIP_VERSION" src/scip/def.h
 grep -H "@version" doc/xternal.c
 grep -H "^SCIP_VERSION" make/make.project
-grep -H "^VERSION" Makefile.nmake
 echo ""
 tail src/scip/githash.c

@@ -357,7 +357,7 @@ SCIP_Real getGenVBoundsBound(
    return boundval;
 }
 
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
 /** checks whether a generalized variable bound violates the debug solution */
 static
 SCIP_RETCODE checkDebugSolutionGenVBound(
@@ -624,6 +624,55 @@ SCIP_RETCODE freeGenVBound(
    SCIPfreeBlockMemoryArray(scip, &(genvbound->coefs), genvbound->coefssize);
    SCIPfreeBlockMemoryArray(scip, &(genvbound->vars), genvbound->coefssize);
    SCIPfreeBlockMemory(scip, &genvbound);
+
+   return SCIP_OKAY;
+}
+
+/** helper function to release all genvbounds */
+static
+SCIP_RETCODE freeGenVBounds(
+   SCIP*                 scip,
+   SCIP_PROPDATA*        propdata
+   )
+{
+   int i;
+
+   assert(scip != NULL);
+   assert(propdata != NULL);
+
+   if( propdata->genvboundstore != NULL )
+   {
+      /* free genvbounds */
+      for( i = propdata->ngenvbounds - 1; i >= 0; i-- )
+      {
+         SCIP_CALL( freeGenVBound(scip, propdata->genvboundstore[i]) );
+      }
+
+      /* free genvboundstore hashmaps */
+      SCIPhashmapFree(&(propdata->lbgenvbounds));
+      SCIPhashmapFree(&(propdata->ubgenvbounds));
+
+      /* free genvboundstore array */
+      SCIPfreeBlockMemoryArray(scip, &(propdata->genvboundstore), propdata->genvboundstoresize);
+
+      /* set the number of genvbounds to zero */
+      propdata->ngenvbounds = 0;
+
+      /* free componentsstart array */
+      SCIP_CALL( freeComponentsData(scip, propdata) );
+
+      /* free starting indices data */
+      SCIP_CALL( freeStartingData(scip, propdata) );
+
+      /* release the cutoffboundvar and undo the locks */
+      if( propdata->cutoffboundvar != NULL )
+      {
+         SCIP_CALL( SCIPaddVarLocks(scip, propdata->cutoffboundvar, -1, -1) );
+         SCIP_CALL( SCIPreleaseVar(scip, &(propdata->cutoffboundvar)) );
+         propdata->cutoffboundvar = NULL;
+         SCIPdebugMsg(scip, "release cutoffboundvar!\n");
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -1489,7 +1538,7 @@ SCIP_RETCODE sortGenVBounds(
    SCIPdebugMsg(scip, "(re-)sort genvbounds topologically\n");
 
    /* create digraph */
-   SCIP_CALL( SCIPdigraphCreate(&graph, propdata->ngenvbounds) );
+   SCIP_CALL( SCIPcreateDigraph(scip, &graph, propdata->ngenvbounds) );
 
    /* add outgoing arcs for each genvbound */
    for( i = 0; i < propdata->ngenvbounds; i++ )
@@ -1659,7 +1708,7 @@ SCIP_RETCODE applyGenVBounds(
 
       for( j = 0; j < propdata->ngenvbounds && *result != SCIP_CUTOFF; j++ )
       {
-         if( SCIPvarGetStatus(propdata->genvboundstore[j]->var) == SCIP_VARSTATUS_MULTAGGR )
+         if( ! SCIPvarIsActive(propdata->genvboundstore[j]->var) )
          {
             /**@todo resolve multiaggregation in exitpre */
          }
@@ -1688,7 +1737,7 @@ SCIP_RETCODE applyGenVBounds(
       {
          assert(j < propdata->ngenvbounds);
 
-         if( SCIPvarGetStatus(propdata->genvboundstore[j]->var) == SCIP_VARSTATUS_MULTAGGR )
+         if( ! SCIPvarIsActive(propdata->genvboundstore[j]->var) )
          {
             /**@todo resolve multiaggregation in exitpre */
          }
@@ -2158,7 +2207,7 @@ SCIP_RETCODE SCIPgenVBoundAdd(
    /* debug message */
    SCIPdebugMsg(scip, "added genvbound ");
    SCIPdebug( printGenVBound(scip, genvbound) );
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
    SCIP_CALL( checkDebugSolutionGenVBound(scip, genvbound) );
 #endif
 
@@ -2310,8 +2359,6 @@ SCIP_DECL_PROPEXITPRE(propExitpreGenvbounds)
    SCIPdebugMsg(scip, "propexitpre in problem <%s>: removing fixed, aggregated, negated, and multi-aggregated variables from right-hand side\n",
       SCIPgetProbName(scip));
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, SCIPgetNTotalVars(scip)) );
-
    /* get propagator data */
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
@@ -2319,6 +2366,9 @@ SCIP_DECL_PROPEXITPRE(propExitpreGenvbounds)
    /* there should be no events on the right-hand side variables */
    assert(propdata->lbevents == NULL);
    assert(propdata->ubevents == NULL);
+
+   /* allocate memory to store new variables */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, SCIPgetNTotalVars(scip)) );
 
    for( i = 0; i < propdata->ngenvbounds; )
    {
@@ -2408,6 +2458,25 @@ SCIP_DECL_PROPEXITPRE(propExitpreGenvbounds)
    return SCIP_OKAY;
 }
 
+/** deinitialization method of propagator (called before transformed problem is freed) */
+static
+SCIP_DECL_PROPEXIT(propExitGenvbounds)
+{
+   SCIP_PROPDATA* propdata;
+
+   assert(scip != NULL);
+   assert(prop != NULL);
+   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   /* get propagator data */
+   propdata = SCIPpropGetData(prop);
+   assert(propdata != NULL);
+
+   /* free remaining genvbounds */
+   SCIP_CALL( freeGenVBounds(scip, propdata) );
+
+   return SCIP_OKAY;
+}
 
 /** execution method of propagator */
 static
@@ -2563,7 +2632,6 @@ static
 SCIP_DECL_PROPEXITSOL(propExitsolGenvbounds)
 {  /*lint --e{715}*/
    SCIP_PROPDATA* propdata;
-   int i;
 
    assert(scip != NULL);
    assert(prop != NULL);
@@ -2575,38 +2643,10 @@ SCIP_DECL_PROPEXITSOL(propExitsolGenvbounds)
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
-   if( !SCIPisInRestart(scip) && propdata->genvboundstore != NULL )
+   /* free all genvbounds if we are not in a restart */
+   if( !SCIPisInRestart(scip) )
    {
-      /* free genvbounds */
-      for( i = propdata->ngenvbounds - 1; i >= 0; i-- )
-      {
-         SCIP_CALL( freeGenVBound(scip, propdata->genvboundstore[i]) );
-      }
-
-      /* free genvboundstore hashmaps */
-      SCIPhashmapFree(&(propdata->lbgenvbounds));
-      SCIPhashmapFree(&(propdata->ubgenvbounds));
-
-      /* free genvboundstore array */
-      SCIPfreeBlockMemoryArray(scip, &(propdata->genvboundstore), propdata->genvboundstoresize);
-
-      /* set the number of genvbounds to zero */
-      propdata->ngenvbounds = 0;
-
-      /* free componentsstart array */
-      SCIP_CALL( freeComponentsData(scip, propdata) );
-
-      /* free starting indices data */
-      SCIP_CALL( freeStartingData(scip, propdata) );
-   }
-
-   /* release the cutoffboundvar and undo the locks */
-   if( propdata->cutoffboundvar != NULL && SCIPisInRestart(scip) == FALSE )
-   {
-      SCIP_CALL( SCIPaddVarLocks(scip, propdata->cutoffboundvar, -1, -1) );
-      SCIP_CALL( SCIPreleaseVar(scip, &(propdata->cutoffboundvar)) );
-      propdata->cutoffboundvar = NULL;
-      SCIPdebugMsg(scip, "release cutoffboundvar!\n");
+      SCIP_CALL( freeGenVBounds(scip, propdata) );
    }
 
    /* drop and free all events */
@@ -2742,6 +2782,7 @@ SCIP_RETCODE SCIPincludePropGenvbounds(
    SCIP_CALL( SCIPsetPropInit(scip, prop, propInitGenvbounds) );
    SCIP_CALL( SCIPsetPropInitpre(scip, prop, propInitpreGenvbounds) );
    SCIP_CALL( SCIPsetPropExitpre(scip, prop, propExitpreGenvbounds) );
+   SCIP_CALL( SCIPsetPropExit(scip, prop, propExitGenvbounds) );
    SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolGenvbounds) );
    SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolGenvbounds, PROP_PRESOL_PRIORITY,
          PROP_PRESOL_MAXROUNDS, PROP_PRESOLTIMING) );

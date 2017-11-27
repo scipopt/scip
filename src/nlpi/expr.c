@@ -33,11 +33,11 @@
 
 #include "scip/intervalarith.h"
 #include "scip/pub_misc.h"
+#include "scip/misc.h"
 #include "scip/pub_message.h"
 
 
 #define SCIP_EXPRESSION_MAXCHILDEST 16       /**< estimate on maximal number of children */
-#define DEFAULT_RANDSEED            73       /**< initial random seed */
 
 /** sign of a value (-1 or +1)
  *
@@ -4927,6 +4927,7 @@ SCIP_RETCODE exprparseReadVariable(
    SCIP_EXPR**           expr,               /**< buffer to store pointer to created expression */
    int*                  nvars,              /**< running number of encountered variables so far */
    int**                 varnames,           /**< pointer to buffer to store new variable names */
+   int*                  varnameslength,     /**< pointer to length of the varnames buffer array */
    SCIP_HASHTABLE*       vartable,           /**< hash table for variable names and corresponding expression index */
    SCIP_Real             coefficient,        /**< coefficient to be used when creating the expression */
    const char*           varnameendptr       /**< if a \<varname\> should be parsed, set this to NULL. Then, str points to the '<'
@@ -4976,6 +4977,13 @@ SCIP_RETCODE exprparseReadVariable(
    {
       /* variable is new */
       varidx = *nvars;
+
+      (*varnameslength) -= (int)(1 + (strlen(varname) + 1) / sizeof(int) + 1);
+      if( *varnameslength < 0 )
+      {
+         SCIPerrorMessage("Buffer in exprparseReadVariable is too short for varaible name %.*s.\n", namelength, str);
+         return SCIP_READERROR;
+      }
 
       /* store index of variable and variable name in varnames buffer */
       **varnames = varidx;
@@ -5094,6 +5102,7 @@ SCIP_RETCODE exprParse(
    const char*           lastchar,           /**< pointer to the last char of str that should be parsed */
    int*                  nvars,              /**< running number of encountered variables so far */
    int**                 varnames,           /**< pointer to buffer to store new variable names */
+   int*                  varnameslength,     /**< pointer to length of the varnames buffer array */
    SCIP_HASHTABLE*       vartable,           /**< hash table for variable names and corresponding expression index */
    int                   recursiondepth      /**< current recursion depth */
    )
@@ -5145,11 +5154,13 @@ SCIP_RETCODE exprParse(
 
    if( subexpptr != lastchar )
    {
-      SCIP_CALL( exprParse(blkmem, messagehdlr, &arg1, str, (int) ((subexpptr - 1) - str + 1), subexpptr - 1, nvars, varnames, vartable, recursiondepth + 1) );
+      SCIP_CALL( exprParse(blkmem, messagehdlr, &arg1, str, (int) ((subexpptr - 1) - str + 1), subexpptr - 1, nvars,
+            varnames, varnameslength, vartable, recursiondepth + 1) );
 
       if( subexpptr[0] == '+' )
          ++subexpptr;
-      SCIP_CALL( exprParse(blkmem, messagehdlr, &arg2, subexpptr , (int) (lastchar - (subexpptr ) + 1), lastchar, nvars, varnames, vartable, recursiondepth + 1) );
+      SCIP_CALL( exprParse(blkmem, messagehdlr, &arg2, subexpptr , (int) (lastchar - (subexpptr ) + 1), lastchar, nvars,
+            varnames, varnameslength, vartable, recursiondepth + 1) );
 
       /* make new expression from two arguments
        * we always use add, because we leave the operator between the found expressions in the second argument
@@ -5185,7 +5196,8 @@ SCIP_RETCODE exprParse(
       }
       subexpendptr = str - 1; /* leave out closing bracket */
 
-      SCIP_CALL( exprParse(blkmem, messagehdlr, expr, subexpptr, subexplength, subexpendptr, nvars, varnames, vartable, recursiondepth + 1) );
+      SCIP_CALL( exprParse(blkmem, messagehdlr, expr, subexpptr, subexplength, subexpendptr, nvars, varnames,
+            varnameslength, vartable, recursiondepth + 1) );
       ++str;
    }
    else if( isdigit((unsigned char)str[0]) || ((str[0] == '-' || str[0] == '+')
@@ -5213,7 +5225,8 @@ SCIP_RETCODE exprParse(
       {
          if( str < lastchar )
          {
-            SCIP_CALL( exprParse(blkmem, messagehdlr, expr, str, (int)(lastchar - str) + 1, lastchar, nvars, varnames, vartable, recursiondepth + 1) );
+            SCIP_CALL( exprParse(blkmem, messagehdlr, expr, str, (int)(lastchar - str) + 1, lastchar, nvars, varnames,
+                  varnameslength, vartable, recursiondepth + 1) );
             SCIP_CALL( SCIPexprMulConstant(blkmem, expr, *expr, number) );
          }
          else
@@ -5230,14 +5243,15 @@ SCIP_RETCODE exprParse(
    else if( str[0] == '<' )
    {
       /* check if expressions begins with a variable */
-      SCIP_CALL( exprparseReadVariable(blkmem, &str, expr, nvars, varnames, vartable, 1.0, NULL) );
+      SCIP_CALL( exprparseReadVariable(blkmem, &str, expr, nvars, varnames, varnameslength, vartable, 1.0, NULL) );
    }
    /* four character operators */
    else if( strncmp(str, "sqrt", 4) == 0 )
    {
       str += 4;
       SCIP_CALL( exprparseFindClosingParenthesis(str, &endptr, length) );
-      SCIP_CALL( exprParse(blkmem, messagehdlr, &arg1, str + 1, endptr - str - 1, endptr -1, nvars, varnames, vartable, recursiondepth + 1) );
+      SCIP_CALL( exprParse(blkmem, messagehdlr, &arg1, str + 1, endptr - str - 1, endptr -1, nvars, varnames,
+            varnameslength, vartable, recursiondepth + 1) );
       str = endptr + 1;
 
       SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_SQRT, arg1) );
@@ -5256,7 +5270,8 @@ SCIP_RETCODE exprParse(
 
       str += 3;
       SCIP_CALL( exprparseFindClosingParenthesis(str, &endptr, length) );
-      SCIP_CALL( exprParse(blkmem, messagehdlr, &arg1, str + 1, endptr - str - 1, endptr -1, nvars, varnames, vartable, recursiondepth + 1) );
+      SCIP_CALL( exprParse(blkmem, messagehdlr, &arg1, str + 1, endptr - str - 1, endptr -1, nvars, varnames,
+            varnameslength, vartable, recursiondepth + 1) );
       str = endptr + 1;
 
       if( strncmp(opname, "abs", 3) == 0 )
@@ -5308,14 +5323,16 @@ SCIP_RETCODE exprParse(
       SCIP_CALL( exprparseFindSeparatingComma(str+1, &comma, endptr - str - 1) );
 
       /* parse first argument [str+1..comma-1] */
-      SCIP_CALL( exprParse(blkmem, messagehdlr, &arg1, str + 1, comma - str - 1, comma - 1, nvars, varnames, vartable, recursiondepth + 1) );
+      SCIP_CALL( exprParse(blkmem, messagehdlr, &arg1, str + 1, comma - str - 1, comma - 1, nvars, varnames,
+            varnameslength, vartable, recursiondepth + 1) );
 
       /* parse second argument [comma+1..endptr] */
       ++comma;
       while( comma < endptr && *comma == ' ' )
          ++comma;
 
-      SCIP_CALL( exprParse(blkmem, messagehdlr, &arg2, comma, endptr - comma, endptr - 1, nvars, varnames, vartable, recursiondepth + 1) );
+      SCIP_CALL( exprParse(blkmem, messagehdlr, &arg2, comma, endptr - comma, endptr - 1, nvars, varnames,
+            varnameslength, vartable, recursiondepth + 1) );
 
       SCIP_CALL( SCIPexprCreate(blkmem, expr, op, arg1, arg2) );
 
@@ -5335,7 +5352,8 @@ SCIP_RETCODE exprParse(
       SCIP_CALL( exprparseFindSeparatingComma(str+1, &comma, endptr - str - 1) );
 
       /* parse first argument [str+1..comma-1] */
-      SCIP_CALL( exprParse(blkmem, messagehdlr, &arg1, str + 1, comma - str - 1, comma - 1, nvars, varnames, vartable, recursiondepth + 1) );
+      SCIP_CALL( exprParse(blkmem, messagehdlr, &arg1, str + 1, comma - str - 1, comma - 1, nvars, varnames,
+            varnameslength, vartable, recursiondepth + 1) );
 
       ++comma;
       /* parse second argument [comma, endptr-1]: it needs to be an integer */
@@ -5369,7 +5387,8 @@ SCIP_RETCODE exprParse(
       SCIP_CALL( exprparseFindSeparatingComma(str+1, &comma, endptr - str - 1) );
 
       /* parse first argument [str+1..comma-1] */
-      SCIP_CALL( exprParse(blkmem, messagehdlr, &arg1, str + 1, comma - str - 1, comma - 1, nvars, varnames, vartable, recursiondepth + 1) );
+      SCIP_CALL( exprParse(blkmem, messagehdlr, &arg1, str + 1, comma - str - 1, comma - 1, nvars, varnames,
+            varnameslength, vartable, recursiondepth + 1) );
 
       ++comma;
       /* parse second argument [comma, endptr-1]: it needs to be an number */
@@ -5409,7 +5428,8 @@ SCIP_RETCODE exprParse(
       while( isalnum(str[0]) || str[0] == '_' || str[0] == '#' )
          ++str;
 
-      SCIP_CALL( exprparseReadVariable(blkmem, &varnamestartptr, expr, nvars, varnames, vartable, 1.0, str) );
+      SCIP_CALL( exprparseReadVariable(blkmem, &varnamestartptr, expr, nvars, varnames, varnameslength,
+            vartable, 1.0, str) );
    }
    else
    {
@@ -5488,7 +5508,8 @@ SCIP_RETCODE exprParse(
          /* we use exprParse to evaluate the exponent */
 
          SCIP_CALL( exprparseFindClosingParenthesis(str, &endptr, length) );
-         SCIP_CALL( exprParse(blkmem, messagehdlr, &arg2, str + 1, endptr - str - 1, endptr -1, nvars, varnames, vartable, recursiondepth + 1) );
+         SCIP_CALL( exprParse(blkmem, messagehdlr, &arg2, str + 1, endptr - str - 1, endptr -1, nvars, varnames,
+               varnameslength, vartable, recursiondepth + 1) );
 
          if( SCIPexprGetOperator(arg2) != SCIP_EXPR_CONST )
          {
@@ -5535,7 +5556,8 @@ SCIP_RETCODE exprParse(
       /* step forward over the operator to go to the beginning of the second argument */
       ++str;
 
-      SCIP_CALL( exprParse(blkmem, messagehdlr, &arg2, str, (int) (lastchar - str + 1), lastchar, nvars, varnames, vartable, recursiondepth + 1) );
+      SCIP_CALL( exprParse(blkmem, messagehdlr, &arg2, str, (int) (lastchar - str + 1), lastchar, nvars, varnames,
+            varnameslength, vartable, recursiondepth + 1) );
       str = lastchar + 1;
 
       /* make new expression from two arguments */
@@ -5605,7 +5627,8 @@ SCIP_RETCODE exprParse(
       SCIPdebugMessage("No operator found, assuming a multiplication before %.*s\n", (int) (lastchar - str + 1), str);
    }
 
-   SCIP_CALL( exprParse(blkmem, messagehdlr, &arg2, str, (int) (lastchar - str + 1), lastchar, nvars, varnames, vartable, recursiondepth + 1) );
+   SCIP_CALL( exprParse(blkmem, messagehdlr, &arg2, str, (int) (lastchar - str + 1), lastchar, nvars, varnames,
+         varnameslength, vartable, recursiondepth + 1) );
 
    if( SCIPexprGetOperator(arg1) == SCIP_EXPR_CONST )
    {
@@ -8495,7 +8518,8 @@ SCIP_RETCODE SCIPexprParse(
    const char*           str,                /**< pointer to the string to be parsed */
    const char*           lastchar,           /**< pointer to the last char of str that should be parsed */
    int*                  nvars,              /**< buffer to store number of variables */
-   int*                  varnames            /**< buffer to store variable names, prefixed by index (as int) */
+   int*                  varnames,           /**< buffer to store variable names, prefixed by index (as int) */
+   int                   varnameslength      /**< length of the varnames buffer array */
    )
 {
    SCIP_HASHTABLE* vartable;
@@ -8513,9 +8537,11 @@ SCIP_RETCODE SCIPexprParse(
    /* create a hash table for variable names and corresponding expression index
     * for each variable, we store its name, prefixed with the assigned index in the first sizeof(int) bytes
     */
-   SCIP_CALL( SCIPhashtableCreate(&vartable, blkmem, 10, exprparseVarTableGetKey, SCIPhashKeyEqString, SCIPhashKeyValString, NULL) );
+   SCIP_CALL( SCIPhashtableCreate(&vartable, blkmem, 10, exprparseVarTableGetKey, SCIPhashKeyEqString,
+         SCIPhashKeyValString, NULL) );
 
-   retcode = exprParse(blkmem, messagehdlr, expr, str, (int) (lastchar - str + 1), lastchar, nvars, &varnames, vartable, 0);
+   retcode = exprParse(blkmem, messagehdlr, expr, str, (int) (lastchar - str + 1), lastchar, nvars, &varnames,
+      &varnameslength, vartable, 0);
 
    SCIPhashtableFree(&vartable);
 
@@ -8901,7 +8927,7 @@ SCIP_RETCODE SCIPexprtreeSimplify(
       testx[i] = SCIPrandomGetReal(randnumgen, -100.0, 100.0);  /*lint !e644*/
    SCIP_CALL( SCIPexprtreeEval(tree, testx, &testval_before) );
 
-   SCIPrandomFree(&randnumgen);
+   SCIPrandomFree(&randnumgen, tree->blkmem);
 #endif
 
    /* we should be careful about declaring numbers close to zero as zero, so take eps^2 as tolerance */
@@ -15921,7 +15947,7 @@ SCIP_RETCODE SCIPexprgraphSimplify(
    assert(domainerror != NULL);
 
 #ifndef NDEBUG
-   SCIP_CALL( SCIPrandomCreate(&randnumgen, exprgraph->blkmem, DEFAULT_RANDSEED) );
+   SCIP_CALL( SCIPrandomCreate(&randnumgen, exprgraph->blkmem, 862) ); /* see also #1848 */
    SCIP_CALL( SCIPhashmapCreate(&testvalidx, exprgraph->blkmem, 1000) );
    testvals = NULL;
    ntestvals = 0;
@@ -15947,7 +15973,7 @@ SCIP_RETCODE SCIPexprgraphSimplify(
          }
       }
 
-   SCIPrandomFree(&randnumgen);
+   SCIPrandomFree(&randnumgen, exprgraph->blkmem);
 #endif
 
 #ifdef SCIP_OUTPUT

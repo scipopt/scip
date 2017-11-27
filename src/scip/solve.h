@@ -157,6 +157,7 @@ SCIP_RETCODE SCIPseparationRound(
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    SCIP_SOL*             sol,                /**< primal solution that should be separated, or NULL for LP solution */
    int                   actdepth,           /**< current depth in the tree */
+   SCIP_Bool             allowlocal,         /**< should the separator be asked to separate local cuts */
    SCIP_Bool             onlydelayed,        /**< should only delayed separators be called? */
    SCIP_Bool*            delayed,            /**< pointer to store whether a separator was delayed */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */

@@ -115,10 +115,8 @@ struct SCIP_ConshdlrData
    SCIP_Bool             sepanlp;            /**< where linearization of the NLP relaxation solution added? */
 
    SCIP_Bool             glineur;            /**< is the Glineur outer approx preferred to Ben-Tal Nemirovski? */
-   char                  scaling;            /**< scaling method of constraints in feasibility check */
    SCIP_Bool             projectpoint;       /**< is the point in which a cut is generated projected onto the feasible set? */
    int                   nauxvars;           /**< number of auxiliary variables to use when creating a linear outer approx. of a SOC3 constraint */
-   SCIP_Real             minefficacy;        /**< minimal efficacy of a cut to be added to LP in separation loop */
    SCIP_Bool             sparsify;           /**< whether to sparsify cuts */
    SCIP_Real             sparsifymaxloss;    /**< maximal loss in cut efficacy by sparsification */
    SCIP_Real             sparsifynzgrowth;   /**< growth rate of maximal allowed nonzeros in cuts in sparsification */
@@ -723,39 +721,6 @@ SCIP_RETCODE evalLhs(
    return SCIP_OKAY;
 }
 
-/** computes the norm of the gradient of the SOC function */
-static
-SCIP_Real getGradientNorm(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint */
-   SCIP_SOL*             sol                 /**< solution or NULL if LP solution should be used */
-   )
-{
-   SCIP_CONSDATA* consdata;
-   SCIP_Real      g, h;
-   int            i;
-
-   assert(scip != NULL);
-   assert(cons != NULL);
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
-   g = 0.0;
-   for( i = 0; i < consdata->nvars; ++i )
-   {
-      assert(!SCIPisInfinity(scip, ABS(SCIPgetSolVal(scip, sol, consdata->vars[i]))));  /*lint !e666*/
-
-      h = SCIPgetSolVal(scip, sol, consdata->vars[i]) + consdata->offsets[i];
-      h *= consdata->coefs[i] * consdata->coefs[i];
-      g += h * h;
-   }
-   g /= consdata->lhsval * consdata->lhsval;
-   g += consdata->rhscoeff * consdata->rhscoeff;
-
-   return sqrt(g);
-}
-
 /** computes violation of a SOC constraint */
 static
 SCIP_RETCODE computeViolation(
@@ -765,16 +730,15 @@ SCIP_RETCODE computeViolation(
    SCIP_SOL*             sol                 /**< solution to evaluate, or NULL if LP solution should be used */
    )
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_Real rhsval;
+   SCIP_Real rhs;
+   SCIP_Real absviol;
+   SCIP_Real relviol;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(cons != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -806,7 +770,10 @@ SCIP_RETCODE computeViolation(
       return SCIP_OKAY;
    }
 
-   consdata->violation = consdata->lhsval - consdata->rhscoeff * (rhsval + consdata->rhsoffset);
+   rhs = consdata->rhscoeff * (rhsval + consdata->rhsoffset);
+   consdata->violation = consdata->lhsval - rhs;
+   absviol = consdata->violation;
+   relviol = SCIPrelDiff(consdata->lhsval, rhs);
    if( consdata->violation <= 0.0 )
    {
       /* constraint is not violated for sure */
@@ -814,45 +781,8 @@ SCIP_RETCODE computeViolation(
       return SCIP_OKAY;
    }
 
-   switch( conshdlrdata->scaling )
-   {
-      case 'o' :
-      {
-         /* no scaling */
-         break;
-      }
-
-      case 'g' :
-      {
-         /* scale by sup-norm of gradient in current point */
-         if( consdata->violation > 0.0 )
-         {
-            SCIP_Real norm;
-
-            norm = getGradientNorm(scip, cons, sol);
-
-            if( norm > 1.0 )
-               consdata->violation /= norm;
-         }
-         break;
-      }
-
-      case 's' :
-      {
-         /* scale by constant term on right hand side */
-         if( consdata->violation > 0.0 )
-            consdata->violation /= MAX(1.0, consdata->rhscoeff * consdata->rhsoffset);
-
-         break;
-      }
-
-      default :
-      {
-         SCIPerrorMessage("Unknown scaling method '%c'.", conshdlrdata->scaling);
-         SCIPABORT();
-         return SCIP_INVALIDDATA;  /*lint !e527*/
-      }
-   }
+   if( sol != NULL )
+      SCIPupdateSolConsViolation(scip, sol, absviol, relviol);
 
    return SCIP_OKAY;
 }
@@ -1170,8 +1100,7 @@ SCIP_RETCODE generateSparseCut(
 
       if( *rowprep != NULL )
       {
-         efficacy = SCIPgetRowprepViolation(scip, *rowprep, sol, conshdlrdata->scaling);
-
+         efficacy = SCIPgetRowprepViolation(scip, *rowprep, sol);
          if( SCIPisGT(scip, efficacy, goodefficacy) ||
             (maxnz >= consdata->nvars && SCIPisGT(scip, efficacy, minefficacy)) )
          {
@@ -1242,7 +1171,7 @@ SCIP_RETCODE separatePoint(
 
    *success = FALSE;
 
-   minefficacy = inenforcement ? (SCIPgetRelaxFeastolFactor(scip) > 0.0 ? SCIPepsilon(scip) : SCIPfeastol(scip)) : conshdlrdata->minefficacy;
+   minefficacy = inenforcement ? SCIPlpfeastol(scip) : SCIPgetSepaMinEfficacy(scip);
 
    for( c = 0; c < nconss; ++c )
    {
@@ -1279,8 +1208,6 @@ SCIP_RETCODE separatePoint(
          /* cleanup rowprep (there is no limit on coefrange for cons_soc) TODO add a coefrange limit? */
          SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIPinfinity(scip), minefficacy, NULL, &efficacy) );
 
-         if( conshdlrdata->scaling != 'o' )
-            efficacy = SCIPgetRowprepViolation(scip, rowprep, sol, conshdlrdata->scaling);
          if( SCIPisLE(scip, efficacy, minefficacy) )
          {
             SCIPfreeRowprep(scip, &rowprep);
@@ -1291,7 +1218,7 @@ SCIP_RETCODE separatePoint(
          SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
          if( SCIPisCutApplicable(scip, row) )
          {
-            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, cutoff) );
+            SCIP_CALL( SCIPaddRow(scip, row, FALSE, cutoff) );
             SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );  /*lint !e613*/
 
             *success = TRUE;
@@ -1379,17 +1306,12 @@ SCIP_RETCODE addLinearizationCuts(
       /* if caller wants, then check if cut separates LP solution and add to sepastore if so */
       if( separatedlpsol != NULL )
       {
-         SCIP_CONSHDLRDATA* conshdlrdata;
-
-         conshdlrdata = SCIPconshdlrGetData(conshdlr);
-         assert(conshdlrdata != NULL);
-
-         if( SCIPgetRowprepViolation(scip, rowprep, NULL, conshdlrdata->scaling) >= minefficacy )
+         if( SCIPgetRowprepViolation(scip, rowprep, NULL) >= minefficacy )
          {
             SCIP_ROW* row;
 
             SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, TRUE, cutoff) );
+            SCIP_CALL( SCIPaddRow(scip, row, TRUE, cutoff) );
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
 
             *separatedlpsol = TRUE;
@@ -4365,7 +4287,7 @@ SCIP_DECL_CONSSEPALP(consSepalpSOC)
             }
          }
 
-         SCIP_CALL( addLinearizationCuts(scip, conshdlr, conss, nconss, nlpsol, &lpsolseparated, conshdlrdata->minefficacy, &cutoff) );
+         SCIP_CALL( addLinearizationCuts(scip, conshdlr, conss, nconss, nlpsol, &lpsolseparated, SCIPgetSepaMinEfficacy(scip), &cutoff) );
 
          SCIP_CALL( SCIPfreeSol(scip, &nlpsol) );
 
@@ -5148,10 +5070,6 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
    }
 
    /* add soc constraint handler parameters */
-   SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/scaling",
-         "whether scaling of infeasibility is 'o'ff, by sup-norm of function 'g'radient, or by left/right hand 's'ide",
-         &conshdlrdata->scaling,          TRUE,   'o', "ogs",   NULL, NULL) );
-
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/projectpoint",
          "whether the reference point of a cut should be projected onto the feasible set of the SOC constraint",
          &conshdlrdata->projectpoint,     TRUE,  FALSE,         NULL, NULL) );
@@ -5163,10 +5081,6 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/glineur",
          "whether the Glineur Outer Approximation should be used instead of Ben-Tal Nemirovski",
          &conshdlrdata->glineur,          FALSE, TRUE,          NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/minefficacy",
-         "minimal efficacy of a cut to be added to LP in separation",
-         &conshdlrdata->minefficacy,      FALSE, 0.0001, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/sparsify",
          "whether to sparsify cuts",

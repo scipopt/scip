@@ -22,6 +22,7 @@ instances/MIP/vpm2.fzn
 instances/MINLP/bip_cross_min.10.10.10.1.pip
 instances/MINLP/circle.cip
 instances/MINLP/ex1266.mps
+instances/MINLP/gastrans.cip
 instances/MINLP/m3.osil
 instances/MINLP/parincQuadratic.osil
 instances/MINLP/tltr.mps

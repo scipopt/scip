@@ -147,4 +147,3 @@ for Q in ${split_queue[@]}; do
     # artificial settings file may only be removed after executable was started
   done
 done
-

@@ -1,0 +1,20 @@
+# SCIP version 2.1.1.6
+
+# frequency for calling separator <oddcycle> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: -1]
+separating/oddcycle/freq = 0
+
+# should odd cycle cuts be lifted?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/oddcycle/liftoddcycles = TRUE
+
+# SCIP version 2.1.1.6
+
+# priority of node selection rule <hybridestim> in standard mode
+# [type: int, range: [-536870912,536870911], default: 50000]
+nodeselection/hybridestim/stdpriority = 1000000
+
+# priority of branching rule <random>
+# [type: int, range: [-536870912,536870911], default: -100000]
+branching/random/priority = 10000000
+

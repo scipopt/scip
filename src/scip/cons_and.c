@@ -965,7 +965,7 @@ SCIP_RETCODE addRelaxation(
    /* insert aggregated LP row as cut */
    if( !SCIProwIsInLP(consdata->aggrrow) )
    {
-      SCIP_CALL( SCIPaddCut(scip, NULL, consdata->aggrrow, FALSE, infeasible) );
+      SCIP_CALL( SCIPaddRow(scip, consdata->aggrrow, FALSE, infeasible) );
    }
 
    if( !(*infeasible) )
@@ -981,7 +981,7 @@ SCIP_RETCODE addRelaxation(
       /* add additional row */
       if( !SCIProwIsInLP(consdata->rows[0]) )
       {
-         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[0], FALSE, infeasible) );
+         SCIP_CALL( SCIPaddRow(scip, consdata->rows[0], FALSE, infeasible) );
       }
    }
 
@@ -1029,6 +1029,9 @@ SCIP_RETCODE checkCons(
    if( mustcheck )
    {
       SCIP_Real solval;
+      SCIP_Real viol;
+      SCIP_Real absviol;
+      SCIP_Real relviol;
       int i;
 
       /* increase age of constraint; age is reset to zero, if a violation was found only in case we are in
@@ -1039,10 +1042,20 @@ SCIP_RETCODE checkCons(
          SCIP_CALL( SCIPincConsAge(scip, cons) );
       }
 
+      absviol = 0.0;
+      relviol = 0.0;
+
       /* check, if all operator variables are TRUE */
       for( i = 0; i < consdata->nvars; ++i )
       {
          solval = SCIPgetSolVal(scip, sol, consdata->vars[i]);
+
+         viol = REALABS(1 - solval);
+         if( absviol < viol )
+         {
+            absviol = viol;
+            relviol = SCIPrelDiff(solval, 1.0);
+         }
 
         /* @todo If "upgraded resultants to varstatus implicit" is fully allowed, than the following assert does not hold
          *       anymore, therefor we need to stop the check and return with the status not violated, because the
@@ -1067,6 +1080,8 @@ SCIP_RETCODE checkCons(
       if( !SCIPisFeasIntegral(scip, solval) || (i == consdata->nvars) != (solval > 0.5) )
       {
          *violated = TRUE;
+         absviol = 1.0;
+         relviol = 1.0;
 
          /* only reset constraint age if we are in enforcement */
          if( sol == NULL )
@@ -1096,6 +1111,8 @@ SCIP_RETCODE checkCons(
             }
          }
       }
+      if( sol != NULL )
+         SCIPupdateSolConsViolation(scip, sol, absviol, relviol);
    }
 
    return SCIP_OKAY;
@@ -1139,7 +1156,7 @@ SCIP_RETCODE separateCons(
          feasibility = SCIPgetRowSolFeasibility(scip, consdata->rows[r], sol);
          if( SCIPisFeasNegative(scip, feasibility) )
          {
-            SCIP_CALL( SCIPaddCut(scip, sol, consdata->rows[r], FALSE, cutoff) );
+            SCIP_CALL( SCIPaddRow(scip, consdata->rows[r], FALSE, cutoff) );
             if ( *cutoff )
                return SCIP_OKAY;
             *separated = TRUE;
@@ -3758,7 +3775,7 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAnd)
       TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, var) );
 
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
    if( SCIPdebugIsMainscip(scip) )
    {
       SCIP_Bool debugval;
@@ -4647,6 +4664,9 @@ SCIP_DECL_CONSCOPY(consCopyAnd)
    /* map operand variables to active variables of the target SCIP  */
    sourcevars = SCIPgetVarsAnd(sourcescip, sourcecons);
    nvars = SCIPgetNVarsAnd(sourcescip, sourcecons);
+
+   if( nvars == -1 )
+      return SCIP_INVALIDCALL;
 
    /* allocate buffer array */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );

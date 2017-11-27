@@ -29,7 +29,6 @@
 #define RELAX_DESC             "relaxator template"
 #define RELAX_PRIORITY         0
 #define RELAX_FREQ             1
-#define RELAX_INCLUDESLP       FALSE
 
 
 
@@ -196,7 +195,7 @@ SCIP_RETCODE SCIPincludeRelaxXyz(
    /* use SCIPincludeRelaxBasic() plus setter functions if you want to set callbacks one-by-one and your code should
     * compile independent of new callbacks being added in future SCIP versions
     */
-   SCIP_CALL( SCIPincludeRelaxBasic(scip, &relax, RELAX_NAME, RELAX_DESC, RELAX_PRIORITY, RELAX_FREQ, RELAX_INCLUDESLP,
+   SCIP_CALL( SCIPincludeRelaxBasic(scip, &relax, RELAX_NAME, RELAX_DESC, RELAX_PRIORITY, RELAX_FREQ,
          relaxExecXyz, relaxdata) );
 
    assert(relax != NULL);

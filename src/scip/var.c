@@ -1972,7 +1972,6 @@ SCIP_RETCODE varCreate(
    (*var)->eventqueueimpl = FALSE;
    (*var)->deletable = FALSE;
    (*var)->delglobalstructs = FALSE;
-   (*var)->clqcomponentidx = -1;
 
    stat->nvaridx++;
 
@@ -3759,6 +3758,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    SCIP_VAR* var;
    SCIP_Real scalar;
    int v;
+   int k;
 
    SCIP_VAR** tmpvars;
    SCIP_VAR** multvars;
@@ -3779,6 +3779,8 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    SCIP_Real* tmpscalars2;
    int tmpvarssize2;
    int ntmpvars2;
+
+   SCIP_Bool sortagain = FALSE;
 
    assert(set != NULL);
    assert(nvars != NULL);
@@ -3851,21 +3853,32 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    noldtmpvars = ntmpvars;
 
    /* sort all variables to combine equal variables easily */
-   SCIPsortPtrReal((void**)tmpvars, tmpscalars, SCIPvarComp, ntmpvars);
-   for( v = ntmpvars - 1; v > 0; --v )
+   SCIPsortPtrReal((void**)tmpvars, tmpscalars, SCIPvarComp, noldtmpvars);
+   ntmpvars = 0;
+   for( v = 1; v < noldtmpvars; ++v )
    {
       /* combine same variables */
-      if( SCIPvarCompare(tmpvars[v], tmpvars[v - 1]) == 0 )
+      if( SCIPvarCompare(tmpvars[v], tmpvars[ntmpvars]) == 0 )
       {
-         tmpscalars[v - 1] += tmpscalars[v];
-         --ntmpvars;
-         tmpvars[v] = tmpvars[ntmpvars];
-         tmpscalars[v] = tmpscalars[ntmpvars];
+         tmpscalars[ntmpvars] += tmpscalars[v];
+      }
+      else
+      {
+         ++ntmpvars;
+         if( v > ntmpvars )
+         {
+            tmpscalars[ntmpvars] = tmpscalars[v];
+            tmpvars[ntmpvars] = tmpvars[v];
+         }
       }
    }
-   /* sort all variables again to combine equal variables later on */
-   if( noldtmpvars > ntmpvars )
-      SCIPsortPtrReal((void**)tmpvars, tmpscalars, SCIPvarComp, ntmpvars);
+   ++ntmpvars;
+
+#ifdef SCIP_MORE_DEBUG
+   for( v = 1; v < ntmpvars; ++v )
+      assert(SCIPvarCompare(tmpvars[v], tmpvars[v-1]) > 0);
+#endif
+
 
    /* collect for each variable the representation in active variables */
    while( ntmpvars >= 1 )
@@ -3908,6 +3921,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
          nmultvars = var->data.multaggr.nvars;
          multvars = var->data.multaggr.vars;
          multscalars = var->data.multaggr.scalars;
+         sortagain = TRUE;
 
          if( nmultvars + ntmpvars > tmpvarssize )
          {
@@ -3989,28 +4003,86 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
             }
          }
 
-         /* sort all variables to combine equal variables easily */
-         SCIPsortPtrReal((void**)tmpvars2, tmpscalars2, SCIPvarComp, ntmpvars2);
-         for( v = ntmpvars2 - 1; v > 0; --v )
+         if( ntmpvars2 > 0 )
          {
-            /* combine same variables */
-            if( SCIPvarCompare(tmpvars2[v], tmpvars2[v - 1]) == 0 )
+            /* sort all variables to combine equal variables easily */
+            SCIPsortPtrReal((void**)tmpvars2, tmpscalars2, SCIPvarComp, ntmpvars2);
+            pos = 0;
+            for( v = 1; v < ntmpvars2; ++v )
             {
-               tmpscalars2[v - 1] += tmpscalars2[v];
-               --ntmpvars2;
-               tmpvars2[v] = tmpvars2[ntmpvars2];
-               tmpscalars2[v] = tmpscalars2[ntmpvars2];
+               /* combine same variables */
+               if( SCIPvarCompare(tmpvars2[v], tmpvars2[pos]) == 0 )
+               {
+                  tmpscalars2[pos] += tmpscalars2[v];
+               }
+               else
+               {
+                  ++pos;
+                  if( v > pos )
+                  {
+                     tmpscalars2[pos] = tmpscalars2[v];
+                     tmpvars2[pos] = tmpvars2[v];
+                  }
+               }
+            }
+            ntmpvars2 = pos + 1;
+#ifdef SCIP_MORE_DEBUG
+            for( v = 1; v < ntmpvars2; ++v )
+            {
+               assert(SCIPvarCompare(tmpvars2[v], tmpvars2[v-1]) > 0);
+            }
+            for( v = 1; v < ntmpvars; ++v )
+            {
+               assert(SCIPvarCompare(tmpvars[v], tmpvars[v-1]) > 0);
+            }
+#endif
+            v = ntmpvars - 1;
+            k = ntmpvars2 - 1;
+            pos = ntmpvars + ntmpvars2 - 1;
+            ntmpvars += ntmpvars2;
+
+            while( v >= 0 && k >= 0 )
+            {
+               assert(pos >= 0);
+               assert(SCIPvarCompare(tmpvars[v], tmpvars2[k]) != 0);
+               if( SCIPvarCompare(tmpvars[v], tmpvars2[k]) >= 0 )
+               {
+                  tmpvars[pos] = tmpvars[v];
+                  tmpscalars[pos] = tmpscalars[v];
+                  --v;
+               }
+               else
+               {
+                  tmpvars[pos] = tmpvars2[k];
+                  tmpscalars[pos] = tmpscalars2[k];
+                  --k;
+               }
+               --pos;
+               assert(pos >= 0);
+            }
+            while( v >= 0 )
+            {
+               assert(pos >= 0);
+               tmpvars[pos] = tmpvars[v];
+               tmpscalars[pos] = tmpscalars[v];
+               --v;
+               --pos;
+            }
+            while( k >= 0 )
+            {
+               assert(pos >= 0);
+               tmpvars[pos] = tmpvars2[k];
+               tmpscalars[pos] = tmpscalars2[k];
+               --k;
+               --pos;
             }
          }
-
-         for( v = 0; v < ntmpvars2; ++v )
+#ifdef SCIP_MORE_DEBUG
+         for( v = 1; v < ntmpvars; ++v )
          {
-            tmpvars[ntmpvars] = tmpvars2[v];
-            tmpscalars[ntmpvars] = tmpscalars2[v];
-            ++(ntmpvars);
-            assert(ntmpvars <= tmpvarssize);
+            assert(SCIPvarCompare(tmpvars[v], tmpvars[v-1]) > 0);
          }
-         SCIPsortPtrReal((void**)tmpvars, tmpscalars, SCIPvarComp, ntmpvars);
+#endif
 
          if( !activeconstantinf )
          {
@@ -4062,35 +4134,56 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
 
    if( mergemultiples )
    {
-      /* sort variable and scalar array by variable index */
-      SCIPsortPtrReal((void**)activevars, activescalars, SCIPvarComp, nactivevars);
-
-      /* eliminate duplicates and count required size */
-      v = nactivevars - 1;
-      while( v > 0 )
+      if( sortagain )
       {
-         /* combine both variable since they are the same */
-         if( SCIPvarCompare(activevars[v - 1], activevars[v]) == 0 )
+         /* sort variable and scalar array by variable index */
+         SCIPsortPtrReal((void**)activevars, activescalars, SCIPvarComp, nactivevars);
+
+         /* eliminate duplicates and count required size */
+         v = nactivevars - 1;
+         while( v > 0 )
          {
-            if( activescalars[v - 1] + activescalars[v] != 0.0 )
+            /* combine both variable since they are the same */
+            if( SCIPvarCompare(activevars[v - 1], activevars[v]) == 0 )
             {
-               activescalars[v - 1] += activescalars[v];
-               --nactivevars;
-               activevars[v] = activevars[nactivevars];
-               activescalars[v] = activescalars[nactivevars];
+               if( activescalars[v - 1] + activescalars[v] != 0.0 )
+               {
+                  activescalars[v - 1] += activescalars[v];
+                  --nactivevars;
+                  activevars[v] = activevars[nactivevars];
+                  activescalars[v] = activescalars[nactivevars];
+               }
+               else
+               {
+                  --nactivevars;
+                  activevars[v] = activevars[nactivevars];
+                  activescalars[v] = activescalars[nactivevars];
+                  --nactivevars;
+                  --v;
+                  activevars[v] = activevars[nactivevars];
+                  activescalars[v] = activescalars[nactivevars];
+               }
             }
-            else
-            {
-               --nactivevars;
-               activevars[v] = activevars[nactivevars];
-               activescalars[v] = activescalars[nactivevars];
-               --nactivevars;
-               --v;
-               activevars[v] = activevars[nactivevars];
-               activescalars[v] = activescalars[nactivevars];
-            }
+            --v;
          }
-         --v;
+      }
+      /* the variables were added in reverse order, we revert the order now;
+       * this should not be necessary, but not doing this changes the behavior sometimes
+       */
+      else
+      {
+         SCIP_VAR* tmpvar;
+         SCIP_Real tmpscalar;
+
+         for( v = 0; v < nactivevars / 2; ++v )
+         {
+            tmpvar = activevars[v];
+            tmpscalar = activescalars[v];
+            activevars[v] = activevars[nactivevars - 1 - v];
+            activescalars[v] = activescalars[nactivevars - 1 - v];
+            activevars[nactivevars - 1 - v] = tmpvar;
+            activescalars[nactivevars - 1 - v] = tmpscalar;
+         }
       }
    }
    *requiredsize = nactivevars;
@@ -7092,7 +7185,7 @@ SCIP_RETCODE varEventLbChanged(
    assert(var != NULL);
    assert(var->eventfilter != NULL);
    assert(SCIPvarIsTransformed(var));
-   assert(!SCIPsetIsEQ(set, oldbound, newbound));
+   assert(!SCIPsetIsEQ(set, oldbound, newbound) || newbound == var->glbdom.lb); /*lint !e777*/
    assert(set != NULL);
    assert(var->scip == set->scip);
 
@@ -7130,7 +7223,7 @@ SCIP_RETCODE varEventUbChanged(
    assert(var != NULL);
    assert(var->eventfilter != NULL);
    assert(SCIPvarIsTransformed(var));
-   assert(!SCIPsetIsEQ(set, oldbound, newbound));
+   assert(!SCIPsetIsEQ(set, oldbound, newbound) || newbound == var->glbdom.ub); /*lint !e777*/
    assert(set != NULL);
    assert(var->scip == set->scip);
 
@@ -7210,10 +7303,10 @@ SCIP_RETCODE varProcessChgLbLocal(
 
    SCIPsetDebugMsg(set, "process changing lower bound of <%s> from %g to %g\n", var->name, var->locdom.lb, newbound);
 
-   if( SCIPsetIsEQ(set, newbound, var->locdom.lb) )
-      return SCIP_OKAY;
-   if( SCIPsetIsEQ(set, newbound, var->glbdom.lb) )
+   if( SCIPsetIsEQ(set, newbound, var->glbdom.lb) && var->glbdom.lb != var->locdom.lb ) /*lint !e777*/
       newbound = var->glbdom.lb;
+   else if( SCIPsetIsEQ(set, newbound, var->locdom.lb) )
+      return SCIP_OKAY;
 
    /* change the bound */
    oldbound = var->locdom.lb;
@@ -7377,10 +7470,10 @@ SCIP_RETCODE varProcessChgUbLocal(
 
    SCIPsetDebugMsg(set, "process changing upper bound of <%s> from %g to %g\n", var->name, var->locdom.ub, newbound);
 
-   if( SCIPsetIsEQ(set, newbound, var->locdom.ub) )
-      return SCIP_OKAY;
-   if( SCIPsetIsEQ(set, newbound, var->glbdom.ub) )
+   if( SCIPsetIsEQ(set, newbound, var->glbdom.ub) && var->glbdom.ub != var->locdom.ub  ) /*lint !e777*/
       newbound = var->glbdom.ub;
+   else if( SCIPsetIsEQ(set, newbound, var->locdom.ub) )
+      return SCIP_OKAY;
 
    /* change the bound */
    oldbound = var->locdom.ub;
@@ -7538,7 +7631,7 @@ SCIP_RETCODE SCIPvarChgLbLocal(
 
    SCIPsetDebugMsg(set, "changing lower bound of <%s>[%g,%g] to %g\n", var->name, var->locdom.lb, var->locdom.ub, newbound);
 
-   if( SCIPsetIsEQ(set, var->locdom.lb, newbound) )
+   if( SCIPsetIsEQ(set, var->locdom.lb, newbound) && (!SCIPsetIsEQ(set, var->glbdom.lb, newbound) || var->locdom.lb == newbound) ) /*lint !e777*/
       return SCIP_OKAY;
 
    /* change bounds of attached variables */
@@ -7664,7 +7757,7 @@ SCIP_RETCODE SCIPvarChgUbLocal(
 
    SCIPsetDebugMsg(set, "changing upper bound of <%s>[%g,%g] to %g\n", var->name, var->locdom.lb, var->locdom.ub, newbound);
 
-   if( SCIPsetIsEQ(set, var->locdom.ub, newbound) )
+   if( SCIPsetIsEQ(set, var->locdom.ub, newbound) && (!SCIPsetIsEQ(set, var->glbdom.ub, newbound) || var->locdom.ub == newbound) ) /*lint !e777*/
       return SCIP_OKAY;
 
    /* change bounds of attached variables */
@@ -15239,6 +15332,12 @@ SCIP_Real SCIPvarGetVSIDSCurrentRun(
    assert(stat != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
+   if( dir != SCIP_BRANCHDIR_DOWNWARDS && dir != SCIP_BRANCHDIR_UPWARDS )
+   {
+      SCIPerrorMessage("invalid branching direction %d when asking for VSIDS value\n", dir);
+      return SCIP_INVALID;
+   }
+
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
@@ -17645,26 +17744,6 @@ SCIP_Real SCIPvarGetVSIDS(
    else
       return SCIPvarGetVSIDS_rec(var, stat, dir);
 }
-
-/** returns the index of the connected component of the clique graph that the variable belongs to, or -1 if not computed */
-int SCIPvarGetCliqueComponentIdx(
-   SCIP_VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-   return var->clqcomponentidx;
-}
-
-/** sets the index of the connected component of the clique graph that the variable belongs to, or -1 if not computed */
-void SCIPvarSetCliqueComponentIdx(
-   SCIP_VAR*             var,                /**< problem variable */
-   int                   idx                 /**< clique component index of this variable */
-   )
-{
-   assert(var != NULL);
-   var->clqcomponentidx = idx;
-}
-
 
 /** includes event handler with given data in variable's event filter */
 SCIP_RETCODE SCIPvarCatchEvent(

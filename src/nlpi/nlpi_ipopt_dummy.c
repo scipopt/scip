@@ -46,7 +46,7 @@ const char* SCIPgetSolverNameIpopt(void)
    return "";
 }
 
-/** gets string that describes Ipopt (version number) */
+/** gets string that describes Ipopt */
 const char* SCIPgetSolverDescIpopt(void)
 {
    return "";

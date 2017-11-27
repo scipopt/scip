@@ -367,8 +367,8 @@ SCIP_RETCODE conshdlrdataCreate(
    (*conshdlrdata)->nsetpart = 0;
 
    /* create a random number generator */
-   SCIP_CALL( SCIPrandomCreate(&(*conshdlrdata)->randnumgen, SCIPblkmem(scip),
-         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &(*conshdlrdata)->randnumgen,
+         DEFAULT_RANDSEED) );
 
    return SCIP_OKAY;
 }
@@ -388,7 +388,7 @@ SCIP_RETCODE conshdlrdataFree(
 #endif
 
    /* free random number generator */
-   SCIPrandomFree(&(*conshdlrdata)->randnumgen);
+   SCIPfreeRandom(scip, &(*conshdlrdata)->randnumgen);
 
    SCIPfreeBlockMemory(scip, conshdlrdata);
 
@@ -2313,6 +2313,9 @@ SCIP_Bool checkCons(
    SCIP_Real solval;
    SCIP_Real sum;
    SCIP_Real sumbound;
+   SCIP_Real absviol;
+   SCIP_Real relviol;
+   SCIP_Bool check;
    int nvars;
    int v;
 
@@ -2331,19 +2334,36 @@ SCIP_Bool checkCons(
       sum += solval;
    }
 
+   absviol = sum - 1.0;
+   relviol = SCIPrelDiff(sum, 1.0);
    switch( consdata->setppctype )
    {
    case SCIP_SETPPCTYPE_PARTITIONING:
-      return SCIPisFeasEQ(scip, sum, 1.0);
+      /* in case of partitioning, the violation is equal to the absolute difference between sum and 1 */
+      absviol = REALABS(absviol);
+      relviol = REALABS(relviol);
+      check = SCIPisFeasEQ(scip, sum, 1.0);
+      break;
    case SCIP_SETPPCTYPE_PACKING:
-      return SCIPisFeasLE(scip, sum, 1.0);
+      /* in case of packing, the violation is equal to how much sum exceeds 1 */
+      check = SCIPisFeasLE(scip, sum, 1.0);
+      break;
    case SCIP_SETPPCTYPE_COVERING:
-      return SCIPisFeasGE(scip, sum, 1.0);
+      /* in case of covering, the violation is equal to how much 1 exceeds sum */
+      absviol = -absviol;
+      relviol = -relviol;
+      check = SCIPisFeasGE(scip, sum, 1.0);
+      break;
    default:
       SCIPerrorMessage("unknown setppc type\n");
       SCIPABORT();
       return FALSE; /*lint !e527*/
    }
+
+   if( sol != NULL )
+      SCIPupdateSolLPConsViolation(scip, sol, absviol, relviol);
+
+   return check;
 }
 
 /** creates an LP row in a set partitioning / packing / covering constraint data object */
@@ -2393,7 +2413,6 @@ static
 SCIP_RETCODE addCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< setppc constraint */
-   SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
    SCIP_Bool*            cutoff              /**< whether a cutoff has been detected */
    )
 {
@@ -2416,7 +2435,7 @@ SCIP_RETCODE addCut(
    if( !SCIProwIsInLP(consdata->row) )
    {
       SCIPdebugMsg(scip, "adding constraint <%s> as cut to the LP\n", SCIPconsGetName(cons));
-      SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE, cutoff) );
+      SCIP_CALL( SCIPaddRow(scip, consdata->row, FALSE, cutoff) );
    }
 
    return SCIP_OKAY;
@@ -2500,7 +2519,7 @@ SCIP_RETCODE separateCons(
    if( addcut )
    {
       /* insert LP row as cut */
-      SCIP_CALL( addCut(scip, cons, sol, cutoff) );
+      SCIP_CALL( addCut(scip, cons, cutoff) );
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
       *separated = TRUE;
    }
@@ -4943,6 +4962,7 @@ SCIP_RETCODE preprocessCliques(
    /* adding clique constraints which arises from global clique information */
    if( conshdlrdata->nclqpresolve == 0 && conshdlrdata->addvariablesascliques )
    {
+      SCIP_VAR** vars = SCIPgetVars(scip);
       SCIP_VAR** binvars;
       int* cliquepartition;
       int ncliques;
@@ -4950,7 +4970,7 @@ SCIP_RETCODE preprocessCliques(
       int naddconss;
 
       nbinvars = SCIPgetNBinVars(scip);
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &binvars, SCIPgetVars(scip), nbinvars) );
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &binvars, vars, nbinvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &cliquepartition, nbinvars) );
 
       /* @todo: check for better permutations/don't permutate the first round
@@ -7385,7 +7405,7 @@ SCIP_DECL_CONSINITLP(consInitlpSetppc)
    for( c = 0; c < nconss && !(*infeasible); ++c )
    {
       assert(SCIPconsIsInitial(conss[c]));
-      SCIP_CALL( addCut(scip, conss[c], NULL, infeasible) );
+      SCIP_CALL( addCut(scip, conss[c], infeasible) );
    }
 
    return SCIP_OKAY;

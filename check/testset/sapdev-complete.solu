@@ -6339,7 +6339,7 @@
 =bestdual= pure002                   120648187
 =best= pure003              3.23722504e+11
 =bestdual= pure003              3.17112986e+11
-=unkn= pure004           
+=unkn= pure004
 =best= pure005              3.24407059e+14
 =bestdual= pure005              2.30219633e+13
 =best= pure006              1.18845174e+10
@@ -6356,7 +6356,7 @@
 =opt= pure013              3.18071119e+12
 =best= pure014              2.86801567e+09
 =bestdual= pure014              2.84174879e+09
-=unkn= pure015           
+=unkn= pure015
 =best= pure016              1.39241482e+14
 =bestdual= pure016              1.37107421e+14
 =best= pure017              1.20345399e+09

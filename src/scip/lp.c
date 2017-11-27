@@ -1907,7 +1907,11 @@ void rowAddNorms(
             row->nummaxval = 1;
          }
          else if( SCIPsetIsGE(set, absval, row->maxval) )
+         {
+            /* make sure the maxval is always exactly the same */
+            row->maxval = MAX(absval, row->maxval);
             row->nummaxval++;
+         }
       }
       if( row->numminval > 0 )
       {
@@ -1917,15 +1921,19 @@ void rowAddNorms(
             row->numminval = 1;
          }
          else if( SCIPsetIsLE(set, absval, row->minval) )
+         {
+            /* make sure the minval is always exactly the same */
+            row->minval = MIN(absval, row->minval);
             row->numminval++;
+         }
       }
    }
    else
    {
       assert(row->minidx <= col->index);
       assert(row->maxidx >= col->index);
-      assert(row->numminval <= 0 || SCIPsetIsGE(set, absval, row->minval));
-      assert(row->nummaxval <= 0 || SCIPsetIsLE(set, absval, row->maxval));
+      assert(row->numminval <= 0 || absval >= row->minval);
+      assert(row->nummaxval <= 0 || absval <= row->maxval);
    }
 }
 
@@ -1951,8 +1959,8 @@ void rowDelNorms(
 
    absval = REALABS(val);
    assert(!SCIPsetIsZero(set, absval));
-   assert(row->nummaxval == 0 || SCIPsetIsGE(set, row->maxval, absval));
-   assert(row->numminval == 0 || SCIPsetIsLE(set, row->minval, absval));
+   assert(row->nummaxval == 0 || row->maxval >= absval);
+   assert(row->numminval == 0 || row->minval <= absval);
 
    /* update min/maxidx validity */
    if( updateindex && (col->index == row->minidx || col->index == row->maxidx) )
@@ -2598,34 +2606,36 @@ SCIP_RETCODE lpCheckRealpar(
 /** should the objective limit of the LP solver be disabled */
 #define lpCutoffDisabled(set) (set->lp_disablecutoff == 1 || (set->nactivepricers > 0 && set->lp_disablecutoff == 2))
 
-/** sets the upper objective limit of the LP solver */
+/** sets the objective limit of the LP solver
+ *
+ *  Note that we are always minimizing.
+ */
 static
-SCIP_RETCODE lpSetUobjlim(
+SCIP_RETCODE lpSetObjlim(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Real             uobjlim             /**< new feasibility tolerance */
+   SCIP_Real             objlim              /**< new objective limit */
    )
 {
    assert(lp != NULL);
    assert(set != NULL);
 
-   /* we disabled the objective limit in the LP solver or we want so solve exactly and thus cannot rely on the LP
-    * solver's objective limit handling, so we return here and do not apply the objective limit
-    */
+   /* We disabled the objective limit in the LP solver or we want so solve exactly and thus cannot rely on the LP
+    * solver's objective limit handling, so we return here and do not apply the objective limit. */
    if( lpCutoffDisabled(set) || set->misc_exactsolve )
       return SCIP_OKAY;
 
    /* convert SCIP infinity value to lp-solver infinity value if necessary */
-   if( SCIPsetIsInfinity(set, uobjlim) )
-      uobjlim = SCIPlpiInfinity(lp->lpi);
+   if( SCIPsetIsInfinity(set, objlim) )
+      objlim = SCIPlpiInfinity(lp->lpi);
 
-   SCIP_CALL( lpCheckRealpar(lp, SCIP_LPPAR_UOBJLIM, lp->lpiuobjlim) );
+   SCIP_CALL( lpCheckRealpar(lp, SCIP_LPPAR_OBJLIM, lp->lpiobjlim) );
 
-   if( uobjlim != lp->lpiuobjlim ) /*lint !e777*/
+   if( objlim != lp->lpiobjlim ) /*lint !e777*/
    {
       SCIP_Bool success;
 
-      SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_UOBJLIM, uobjlim, &success) );
+      SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_OBJLIM, objlim, &success) );
       if( success )
       {
          /* mark the current solution invalid */
@@ -2634,7 +2644,7 @@ SCIP_RETCODE lpSetUobjlim(
          lp->primalchecked = FALSE;
          lp->lpobjval = SCIP_INVALID;
          lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
-         lp->lpiuobjlim = uobjlim;
+         lp->lpiobjlim = objlim;
       }
    }
 
@@ -3139,6 +3149,30 @@ SCIP_RETCODE lpSetSolutionPolishing(
 
    return SCIP_OKAY;
 }
+
+/** sets the LP refactorization interval */
+static
+SCIP_RETCODE lpSetRefactorInterval(
+   SCIP_LP*              lp,                 /**< current LP data */
+   int                   refactor,           /**< LP refactorization interval (0: automatic) */
+   SCIP_Bool*            success             /**< pointer to store whether the parameter was successfully changed */
+   )
+{
+   assert(lp != NULL);
+   assert(success != NULL);
+
+   if( refactor != lp->lpirefactorinterval )
+   {
+      SCIP_CALL( lpSetIntpar(lp, SCIP_LPPAR_REFACTOR, refactor, success) );
+      if( *success )
+         lp->lpirefactorinterval = refactor;
+   }
+   else
+      *success = FALSE;
+
+   return SCIP_OKAY;
+}
+
 
 /*
  * Column methods
@@ -4697,6 +4731,7 @@ void rowCalcIdxsAndVals(
 
    row->maxval = 0.0;
    row->nummaxval = 1;
+   row->numintcols = 0;
    row->minval = SCIPsetInfinity(set);
    row->numminval = 1;
    row->minidx = INT_MAX;
@@ -4716,6 +4751,7 @@ void rowCalcIdxsAndVals(
       /* update min/maxidx */
       row->minidx = MIN(row->minidx, col->index);
       row->maxidx = MAX(row->maxidx, col->index);
+      row->numintcols += SCIPcolIsIntegral(col); /*lint !e713*/
 
       /* update maximal and minimal non-zero value */
       if( row->nummaxval > 0 )
@@ -4726,7 +4762,11 @@ void rowCalcIdxsAndVals(
             row->nummaxval = 1;
          }
          else if( SCIPsetIsGE(set, absval, row->maxval) )
+         {
+            /* make sure the maxval is always exactly the same */
+            row->maxval = MAX(absval, row->maxval);
             row->nummaxval++;
+         }
       }
       if( row->numminval > 0 )
       {
@@ -4736,7 +4776,11 @@ void rowCalcIdxsAndVals(
             row->numminval = 1;
          }
          else if( SCIPsetIsLE(set, absval, row->minval) )
+         {
+            /* make sure the minval is always exactly the same */
+            row->minval = MIN(absval, row->minval);
             row->numminval++;
+         }
       }
    }
 }
@@ -5057,6 +5101,7 @@ SCIP_RETCODE SCIProwCreate(
    (*row)->maxidx = INT_MIN;
    (*row)->nummaxval = 0;
    (*row)->numminval = 0;
+   (*row)->numintcols = -1;
    (*row)->validactivitylp = -1;
    (*row)->validpsactivitydomchg = -1;
    (*row)->validactivitybdsdomchg = -1;
@@ -6547,6 +6592,22 @@ int SCIProwGetMinidx(
    assert(row->validminmaxidx);
 
    return row->minidx;
+}
+
+/** gets number of integral columns in row */
+int SCIProwGetNumIntCols(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(row != NULL);
+
+   if( row->numintcols == -1 )
+      rowCalcIdxsAndVals(row, set);
+
+   assert(row->numintcols <= row->len && row->numintcols >= 0);
+
+   return row->numintcols;
 }
 
 /** returns row's efficacy with respect to the current LP solution: e = -feasibility/norm */
@@ -8176,8 +8237,8 @@ SCIP_RETCODE lpFlushChgCols(
             SCIP_CALL( SCIPlpiGetObj(lp->lpi, col->lpipos, col->lpipos, &lpiobj) );
             SCIP_CALL( SCIPlpiGetBounds(lp->lpi, col->lpipos, col->lpipos, &lpilb, &lpiub) );
             assert(SCIPsetIsFeasEQ(set, lpiobj, col->flushedobj));
-            assert((SCIPsetIsInfinity(set, lpilb) && SCIPsetIsInfinity(set, col->flushedlb))
-                  || (!SCIPsetIsInfinity(set, lpilb) && !SCIPsetIsInfinity(set, col->flushedlb) && SCIPsetIsFeasEQ(set, lpilb, col->flushedlb)));
+            assert((SCIPsetIsInfinity(set, -lpilb) && SCIPsetIsInfinity(set, -col->flushedlb))
+                  || (!SCIPsetIsInfinity(set, -lpilb) && !SCIPsetIsInfinity(set, -col->flushedlb) && SCIPsetIsFeasEQ(set, lpilb, col->flushedlb)));
             assert((SCIPsetIsInfinity(set, lpiub) && SCIPsetIsInfinity(set, col->flushedub))
                   || (!SCIPsetIsInfinity(set, lpiub) && !SCIPsetIsInfinity(set, col->flushedub) && SCIPsetIsFeasEQ(set, lpiub, col->flushedub)));
          }
@@ -8444,6 +8505,10 @@ SCIP_RETCODE SCIPlpFlush(
 
       checkLinks(lp);
    }
+
+   /* if the cutoff bound was changed in between, we want to re-optimize the LP even if nothing else has changed */
+   if( lp->cutoffbound != lp->lpiobjlim && lp->ncols > 0 ) /*lint !e777*/
+      lp->solved = FALSE;
 
    assert(lp->nlpicols == lp->ncols);
    assert(lp->lpifirstchgcol == lp->nlpicols);
@@ -8915,8 +8980,9 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->ndivingrows = 0;
    (*lp)->divinglpiitlim = INT_MAX;
    (*lp)->resolvelperror = FALSE;
+   (*lp)->divenolddomchgs = 0;
    (*lp)->adjustlpval = FALSE;
-   (*lp)->lpiuobjlim = SCIPlpiInfinity((*lp)->lpi);
+   (*lp)->lpiobjlim = SCIPlpiInfinity((*lp)->lpi);
    (*lp)->lpifeastol = SCIPsetLpfeastol(set);
    (*lp)->lpidualfeastol = SCIPsetDualfeastol(set);
    (*lp)->lpibarrierconvtol = SCIPsetBarrierconvtol(set);
@@ -8927,6 +8993,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lpilpinfo = set->disp_lpinfo;
    (*lp)->lpirowrepswitch = set->lp_rowrepswitch;
    (*lp)->lpisolutionpolishing = (set->lp_solutionpolishing > 0);
+   (*lp)->lpirefactorinterval = set->lp_refactorinterval;
    (*lp)->lpiconditionlimit = set->lp_conditionlimit;
    (*lp)->lpiitlim = INT_MAX;
    (*lp)->lpipricing = SCIP_PRICING_AUTO;
@@ -8940,11 +9007,11 @@ SCIP_RETCODE SCIPlpCreate(
    SCIP_CALL( allocDiveChgSideArrays(*lp, DIVESTACKINITSIZE) );
 
    /* set default parameters in LP solver */
-   SCIP_CALL( lpSetRealpar(*lp, SCIP_LPPAR_UOBJLIM, (*lp)->lpiuobjlim, &success) );
+   SCIP_CALL( lpSetRealpar(*lp, SCIP_LPPAR_OBJLIM, (*lp)->lpiobjlim, &success) );
    if( !success )
    {
       SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "LP Solver <%s>: upper objective limit cannot be set -- can lead to unnecessary simplex iterations\n",
+         "LP Solver <%s>: objective limit cannot be set -- can lead to unnecessary simplex iterations\n",
          SCIPlpiGetSolverName());
    }
    SCIP_CALL( lpSetRealpar(*lp, SCIP_LPPAR_FEASTOL, (*lp)->lpifeastol, &success) );
@@ -9040,6 +9107,14 @@ SCIP_RETCODE SCIPlpCreate(
          "LP Solver <%s>: solution polishing not available -- SCIP parameter lp/solutionpolishing has no effect\n",
          SCIPlpiGetSolverName());
    }
+   SCIP_CALL( lpSetIntpar(*lp, SCIP_LPPAR_REFACTOR, (*lp)->lpirefactorinterval, &success) );
+   (*lp)->lpihasrefactor = success;
+   if( !success )
+   {
+      SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         "LP Solver <%s>: refactorization interval not available -- SCIP parameter lp/refactorinterval has no effect\n",
+         SCIPlpiGetSolverName());
+   }
    SCIP_CALL( lpSetRealpar(*lp, SCIP_LPPAR_CONDITIONLIMIT, (*lp)->lpiconditionlimit, &success) );
    if( !success )
    {
@@ -9064,6 +9139,14 @@ SCIP_RETCODE SCIPlpCreate(
             "LP Solver <%s>: random seed parameter not available -- SCIP parameter has no effect\n",
             SCIPlpiGetSolverName());
       }
+   }
+
+   /* Check that infinity value of LP-solver is at least as large as the one used in SCIP. This is necessary, because we
+    * transfer SCIP infinity values to the ones by the LPI, but not the converse. */
+   if ( set->num_infinity > SCIPlpiInfinity((*lp)->lpi) )
+   {
+      SCIPerrorMessage("The infinity value of the LP solver has to be at least as large as the one of SCIP.\n");
+      return SCIP_PARAMETERWRONGVAL;
    }
 
    return SCIP_OKAY;
@@ -9978,8 +10061,8 @@ SCIP_RETCODE lpPrimalSimplex(
       char fname[SCIP_MAXSTRLEN];
       (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "lp%" SCIP_LONGINT_FORMAT "_%" SCIP_LONGINT_FORMAT ".lp", stat->nnodes, stat->lpcount);
       SCIP_CALL( SCIPlpWrite(lp, fname) );
-      SCIPsetDebugMsg("wrote LP to file <%s> (primal simplex, uobjlim=%.15g, feastol=%.15g/%.15g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n",
-         fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol,
+      SCIPsetDebugMsg("wrote LP to file <%s> (primal simplex, objlim=%.15g, feastol=%.15g/%.15g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n",
+         fname, lp->lpiobjlim, lp->lpifeastol, lp->lpidualfeastol,
          lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling, lp->lpipresolving);
    }
 #endif
@@ -10119,8 +10202,8 @@ SCIP_RETCODE lpDualSimplex(
       char fname[SCIP_MAXSTRLEN];
       (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "lp%" SCIP_LONGINT_FORMAT "_%" SCIP_LONGINT_FORMAT ".lp", stat->nnodes, stat->lpcount);
       SCIP_CALL( SCIPlpWrite(lp, fname) );
-      SCIPsetDebugMsg("wrote LP to file <%s> (dual simplex, uobjlim=%.15g, feastol=%.15g/%.15g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n",
-         fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol, 
+      SCIPsetDebugMsg("wrote LP to file <%s> (dual simplex, objlim=%.15g, feastol=%.15g/%.15g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n",
+         fname, lp->lpiobjlim, lp->lpifeastol, lp->lpidualfeastol,
          lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling, lp->lpipresolving);
    }
 #endif
@@ -10892,8 +10975,8 @@ SCIP_RETCODE lpBarrier(
       char fname[SCIP_MAXSTRLEN];
       (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "lp%" SCIP_LONGINT_FORMAT "_%" SCIP_LONGINT_FORMAT ".lp", stat->nnodes, stat->lpcount);
       SCIP_CALL( SCIPlpWrite(lp, fname) );
-      SCIPsetDebugMsg("wrote LP to file <%s> (barrier, uobjlim=%.15g, feastol=%.15g/%.15g, convtol=%.15g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n",
-         fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol, lp->lpibarrierconvtol,
+      SCIPsetDebugMsg("wrote LP to file <%s> (barrier, objlim=%.15g, feastol=%.15g/%.15g, convtol=%.15g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n",
+         fname, lp->lpiobjlim, lp->lpifeastol, lp->lpidualfeastol, lp->lpibarrierconvtol,
          lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling, lp->lpipresolving);
    }
 #endif
@@ -11197,7 +11280,8 @@ SCIP_RETCODE lpSolveStable(
    itlimishard = (itlim == harditlim);
 
    /* check whether solution polishing should be used */
-   if( lp->lpihaspolishing && (set->lp_solutionpolishing == 2 || (set->lp_solutionpolishing == 1 && stat->nnodes == 1 && !lp->probing)))
+   if( lp->lpihaspolishing && (set->lp_solutionpolishing == 2 || (set->lp_solutionpolishing == 1 && stat->nnodes == 1 && !lp->probing)
+         || (set->lp_solutionpolishing == 3 && ((lp->probing && !lp->strongbranchprobing) || lp->diving))) )
    {
       usepolishing = TRUE;
       if( lp->updateintegrality )
@@ -11211,11 +11295,11 @@ SCIP_RETCODE lpSolveStable(
    /* solve with given settings (usually fast but imprecise) */
    if( SCIPsetIsInfinity(set, lp->cutoffbound) )
    {
-      SCIP_CALL( lpSetUobjlim(lp, set, lp->cutoffbound) );
+      SCIP_CALL( lpSetObjlim(lp, set, lp->cutoffbound) );
    }
    else
    {
-      SCIP_CALL( lpSetUobjlim(lp, set, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob)) );
+      SCIP_CALL( lpSetObjlim(lp, set, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob)) );
    }
    SCIP_CALL( lpSetIterationLimit(lp, itlim) );
    SCIP_CALL( lpSetFeastol(lp, tightprimfeastol ? FEASTOLTIGHTFAC * SCIPsetLpfeastol(set) : SCIPsetLpfeastol(set), &success) );
@@ -11235,6 +11319,7 @@ SCIP_RETCODE lpSolveStable(
    SCIP_CALL( lpSetTiming(lp, set->time_clocktype, set->time_enabled, &success) );
    SCIP_CALL( lpSetRandomseed(lp, SCIPsetInitializeRandomSeed(set, set->random_randomseed), &success) );
    SCIP_CALL( lpSetSolutionPolishing(lp, usepolishing, &success) );
+   SCIP_CALL( lpSetRefactorInterval(lp, set->lp_refactorinterval, &success) );
    SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
    resolve = FALSE; /* only the first solve should be counted as resolving call */
 
@@ -11668,10 +11753,10 @@ SCIP_RETCODE lpSolve(
       SCIP_CALL( SCIPlpiGetObjval(lp->lpi, &lp->lpobjval) );
       adjustLPobjval(lp, set, messagehdlr);
 
-      if( !SCIPsetIsInfinity(set, lp->lpiuobjlim) && SCIPsetIsGE(set, lp->lpobjval, lp->lpiuobjlim) )
+      if( !SCIPsetIsInfinity(set, lp->lpiobjlim) && SCIPsetIsGE(set, lp->lpobjval, lp->lpiobjlim) )
       {
          /* the solver may return the optimal value, even if this is greater or equal than the upper bound */
-         SCIPsetDebugMsg(set, "optimal solution %.15g exceeds objective limit %.15g\n", lp->lpobjval, lp->lpiuobjlim);
+         SCIPsetDebugMsg(set, "optimal solution %.15g exceeds objective limit %.15g\n", lp->lpobjval, lp->lpiobjlim);
          lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
          lp->lpobjval = SCIPsetInfinity(set);
       }
@@ -12270,18 +12355,18 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             /* actually, SCIPsetIsGE(set, lp->lpobjval, lp->lpiuobjlim) should hold, but we are a bit less strict in
              * the assert by using !SCIPsetIsFeasNegative()
              */
-            assert(SCIPlpiIsObjlimExc(lpi) || !SCIPsetIsFeasNegative(set, lp->lpobjval - lp->lpiuobjlim));
+            assert(SCIPlpiIsObjlimExc(lpi) || !SCIPsetIsFeasNegative(set, lp->lpobjval - lp->lpiobjlim));
 
             SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
 
             /* do one additional simplex step if the computed dual solution doesn't exceed the objective limit */
-            if( SCIPsetIsLT(set, objval, lp->lpiuobjlim) )
+            if( SCIPsetIsLT(set, objval, lp->lpiobjlim) )
             {
                SCIP_Real tmpcutoff;
                char tmppricingchar;
                SCIP_LPSOLSTAT solstat;
 
-               SCIPsetDebugMsg(set, "objval = %f < %f = lp->lpiuobjlim, but status objlimit\n", objval, lp->lpiuobjlim);
+               SCIPsetDebugMsg(set, "objval = %f < %f = lp->lpiobjlim, but status objlimit\n", objval, lp->lpiobjlim);
 
                /* we want to resolve from the current basis (also if the LP had to be solved from scratch) */
                fromscratch = FALSE;
@@ -12713,6 +12798,9 @@ SCIP_Real SCIPlpGetGlobalPseudoObjval(
       if( SCIPsetIsInfinity(set, -lp->glbpseudoobjval) )
          return -SCIPsetInfinity(set);
 
+      if( SCIPsetIsInfinity(set, lp->glbpseudoobjval) )
+         return SCIPsetInfinity(set);
+
       return lp->glbpseudoobjval;
    }
 }
@@ -12741,6 +12829,9 @@ SCIP_Real SCIPlpGetPseudoObjval(
       /* if the pseudo objective value is smaller than -infinity, we just return -infinity */
       if( SCIPsetIsInfinity(set, -lp->pseudoobjval) )
          return -SCIPsetInfinity(set);
+
+      if( SCIPsetIsInfinity(set, lp->pseudoobjval) )
+         return SCIPsetInfinity(set);
 
       return lp->pseudoobjval;
    }
@@ -15224,6 +15315,9 @@ SCIP_RETCODE SCIPlpStartDive(
    /* store LPI iteration limit */
    SCIP_CALL( SCIPlpiGetIntpar(lp->lpi, SCIP_LPPAR_LPITLIM, &lp->divinglpiitlim) );
 
+   /* remember the number of domain changes */
+   lp->divenolddomchgs = stat->domchgcount;
+
    /* store current number of rows */
    lp->ndivingrows = lp->nrows;
 
@@ -15322,7 +15416,7 @@ SCIP_RETCODE SCIPlpEndDive(
     */
    assert(lp->storedsolvals != NULL);
    if( lp->storedsolvals->lpissolved
-      && (set->lp_resolverestore || lp->storedsolvals->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL) )
+      && (set->lp_resolverestore || lp->storedsolvals->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL || lp->divenolddomchgs < stat->domchgcount) )
    {
       SCIP_Bool lperror;
 
@@ -15797,12 +15891,10 @@ SCIP_RETCODE SCIPlpWriteMip(
       case 'b':
          SCIPmessageFPrintInfo(messagehdlr, file, "%s_lhs: ", rowname);
          break;
-      case 'B':
+      default:
+         assert(type == 'B');
          SCIPmessageFPrintInfo(messagehdlr, file, "%s_rhs: ", rowname);
          break;
-      default:
-         SCIPerrorMessage("Undefined row type!\n");
-         return SCIP_ERROR;
       }
 
       /* print coefficients and variables */
@@ -15889,12 +15981,10 @@ SCIP_RETCODE SCIPlpWriteMip(
          case 'b':
             SCIPmessageFPrintInfo(messagehdlr, file, "%s_lhs: ", rowname);
             break;
-         case 'B':
+         default:
+            assert(type == 'B');
             SCIPmessageFPrintInfo(messagehdlr, file, "%s_rhs: ", rowname);
             break;
-         default:
-            SCIPerrorMessage("Undefined row type!\n");
-            return SCIP_ERROR;
          }
 
          /* print coefficients and variables */

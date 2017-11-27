@@ -1,0 +1,12 @@
+# SCIP version 2.1.1.6
+
+# priority of branching rule <pscost>
+# [type: int, range: [-536870912,536870911], default: 2000]
+branching/pscost/priority = 1000000
+
+# SCIP version 3.0.0
+
+# frequency for propagating domains (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/orbitope/propfreq = 1
+

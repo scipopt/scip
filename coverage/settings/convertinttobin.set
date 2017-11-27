@@ -1,6 +1,0 @@
-# SCIP version 2.1.1.6
-
-# maximal number of presolving rounds the presolver participates in (-1: no limit)
-# [type: int, range: [-1,2147483647], default: 0]
-presolving/convertinttobin/maxrounds = -1
-

@@ -2518,7 +2518,7 @@ SCIP_RETCODE computeCut(
       /* add the cut if it is separating the given solution by at least minviolation */
       if( SCIPisGE(scip, cutactivity - nlrowaggr->rhs, sepadata->minviolation) )
       {
-         SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, cutoff) );
+         SCIP_CALL( SCIPaddRow(scip, cut, FALSE, cutoff) );
          *separated = TRUE;
          SCIPdebugMsg(scip, "added separating cut\n");
       }
@@ -2726,6 +2726,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEccuts)
    assert(sepadata != NULL);
 
    *result = SCIP_DIDNOTRUN;
+
+   if( !allowlocal )
+      return SCIP_OKAY;
 
    /* check min- and maximal aggregation size */
    if( sepadata->maxaggrsize < sepadata->minaggrsize )

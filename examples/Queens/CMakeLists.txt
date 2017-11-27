@@ -51,4 +51,3 @@ foreach(n ${nSet})
                             DEPENDS examples-queens-build
                         )
 endforeach(n)
-    

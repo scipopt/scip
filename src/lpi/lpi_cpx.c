@@ -510,8 +510,8 @@ SCIP_RETCODE checkParameterValues(
    SCIP_CALL( getParameterValues(lpi, &par) );
    for( i = 0; i < NUMINTPARAM; ++i )
    {
-#if (CPX_VERSION == 12070000)
-      /* due to a bug in CPLEX 12.7.0, we need to disable scaling for this version */
+#if (CPX_VERSION == 12070100 || CPX_VERSION == 12070000)
+      /* due to a bug in CPLEX 12.7.0 and CPLEX 12.7.1, we need to disable scaling for these versions */
       if ( intparam[i] != CPX_PARAM_SCAIND )
 #endif
          assert(lpi->curparam.intparval[i] == par.intparval[i]
@@ -1870,7 +1870,7 @@ SCIP_RETCODE SCIPlpiGetCols(
    SCIP_Real*            ub,                 /**< buffer to store the upper bound vector, or NULL */
    int*                  nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
    int*                  beg,                /**< buffer to store start index of each column in ind- and val-array, or NULL */
-   int*                  ind,                /**< buffer to store column indices of constraint matrix entries, or NULL */
+   int*                  ind,                /**< buffer to store row indices of constraint matrix entries, or NULL */
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {
@@ -1926,7 +1926,7 @@ SCIP_RETCODE SCIPlpiGetRows(
    SCIP_Real*            rhs,                /**< buffer to store right hand side vector, or NULL */
    int*                  nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
    int*                  beg,                /**< buffer to store start index of each row in ind- and val-array, or NULL */
-   int*                  ind,                /**< buffer to store row indices of constraint matrix entries, or NULL */
+   int*                  ind,                /**< buffer to store column indices of constraint matrix entries, or NULL */
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {
@@ -4434,11 +4434,11 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    case SCIP_LPPAR_BARRIERCONVTOL:
       *dval = getDblParam(lpi, CPX_PARAM_BAREPCOMP);
       break;
-   case SCIP_LPPAR_LOBJLIM:
-      *dval = getDblParam(lpi, CPX_PARAM_OBJLLIM);
-      break;
-   case SCIP_LPPAR_UOBJLIM:
-      *dval = getDblParam(lpi, CPX_PARAM_OBJULIM);
+   case SCIP_LPPAR_OBJLIM:
+      if ( CPXgetobjsen(lpi->cpxenv, lpi->cpxlp) == CPX_MIN )
+         *dval = getDblParam(lpi, CPX_PARAM_OBJULIM);
+      else
+         *dval = getDblParam(lpi, CPX_PARAM_OBJLLIM);
       break;
    case SCIP_LPPAR_LPTILIM:
       *dval = getDblParam(lpi, CPX_PARAM_TILIM);
@@ -4480,11 +4480,11 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    case SCIP_LPPAR_BARRIERCONVTOL:
       setDblParam(lpi, CPX_PARAM_BAREPCOMP, dval);
       break;
-   case SCIP_LPPAR_LOBJLIM:
-      setDblParam(lpi, CPX_PARAM_OBJLLIM, dval);
-      break;
-   case SCIP_LPPAR_UOBJLIM:
-      setDblParam(lpi, CPX_PARAM_OBJULIM, dval);
+   case SCIP_LPPAR_OBJLIM:
+      if ( CPXgetobjsen(lpi->cpxenv, lpi->cpxlp) == CPX_MIN )
+         setDblParam(lpi, CPX_PARAM_OBJULIM, dval);
+      else
+         setDblParam(lpi, CPX_PARAM_OBJLLIM, dval);
       break;
    case SCIP_LPPAR_LPTILIM:
       setDblParam(lpi, CPX_PARAM_TILIM, dval);
