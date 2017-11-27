@@ -4280,9 +4280,9 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ngrbcols) );
 
    /* get space for bhead */
-   SCIP_ALLOC( BMSallocMemoryArray(&bhead, nrows+ngrbcols) );
+   SCIP_ALLOC( BMSallocMemoryArray(&bhead, nrows) );
 
-   /* bet basis indices */
+   /* get basis indices */
    CHECK_ZERO( lpi->messagehdlr, GRBgetBasisHead(lpi->grbmodel, bhead) );
 
    for (i = 0; i < nrows; ++i)
@@ -4311,7 +4311,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    return SCIP_OKAY;
 }
 
-/** get dense row of inverse basis matrix B^-1
+/** get row of inverse basis matrix B^-1
  *
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
@@ -4359,6 +4359,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    /* set up rhs */
    b.len = 1;
    ind = r;
+   /**@todo Check whether r corresponds to a slack coefficient -1 and change this to -1.0 */
    val = 1.0;
    b.ind = &ind;
    b.val = &val;
@@ -4385,7 +4386,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    }
    else
    {
-      /* copy solution to dense vector */
+      /* copy solution to dense vector; this relies on the fact that Gurobi returns a sorted index vector */
       k = 0;
       for (i = 0; i < nrows; ++i)
       {
@@ -4404,7 +4405,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    return SCIP_OKAY;
 }
 
-/** get dense column of inverse basis matrix B^-1
+/** get column of inverse basis matrix B^-1
  *
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
@@ -4476,6 +4477,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
       {
          idx = (x.ind)[i];
          inds[i] = idx;
+         /**@todo For entries that correspond to slack variables with coefficient -1 negate the nonzero entry */
          coef[idx] = (x.val)[i];
       }
       *ninds = x.len;
@@ -4488,6 +4490,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
       {
          assert( k <= x.len );
          if ( k < x.len && (x.ind)[k] == i )
+            /**@todo For entries that correspond to slack variables with coefficient -1 negate the nonzero entry */
             coef[i] = (x.val)[k++];
          else
             coef[i] = 0.0;
@@ -4501,7 +4504,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    return SCIP_OKAY;
 }
 
-/** get dense row of inverse basis matrix times constraint matrix B^-1 * A
+/** get row of inverse basis matrix times constraint matrix B^-1 * A
  *
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
@@ -4542,6 +4545,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
    SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
    CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ngrbcols) );
+   assert( r >= 0 && r < nrows );
 
    x.len = 0;
    SCIP_ALLOC( BMSallocMemoryArray(&(x.ind), ngrbcols + nrows) );
@@ -4552,47 +4556,52 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    /* size should be at most the number of columns plus rows for slack variables */
    assert( x.len <= ngrbcols + nrows );
 
-   /* substitute out range variables */
-   if ( lpi->nrngrows > 0 )
-   {
-      for (k = 0; k < x.len; k++)
-      {
-         j = (x.ind)[k];
-         assert(0 <= j && j < ngrbcols);
-         if ( j >= ncols )
-         {
-            SCIPerrorMessage("range variable in basis inverse row: not yet implemented\n");
-            return SCIP_LPERROR; /*lint !e527*/
-         }
-      }
-   }
-
+   /**@todo If r corresponds to a slack variables with coefficient -1 negate all values */
    /* check whether we require a dense or sparse result vector */
    if ( ninds != NULL && inds != NULL )
    {
       int idx;
 
-      /* copy sparse solution */
+      /* Copy sparse solution: Column indices ngrbcols and larger correspond to slack variables artificially introduced
+       * by Gurobi; column indices ncols, ncols+1, ..., ngrbcols-1 correspond to slack variables introduced by the LPI
+       * implementation. Both must simply be ignored; we exploit the fact that Gurobi returns the vector with sorted
+       * indices (checked below in debug mode).
+       */
       for (j = 0; j < x.len; ++j)
       {
          idx = (x.ind)[j];
-         inds[j] = idx;
-         coef[idx] = (x.val)[j];
+         if ( idx < ncols )
+         {
+            inds[j] = idx;
+            coef[idx] = (x.val)[j];
+         }
+         else
+            break;
       }
-      *ninds = x.len;
+      *ninds = j;
    }
    else
    {
-      k = 0;
-      for (j = 0; j < ncols; ++j)
+      int idx;
+
+      /* Copy dense solution (see comment above). */
+      j = 0;
+      for (idx = 0; idx < ncols; ++idx)
       {
-         assert( k <= x.len );
-         if ( k < x.len && (x.ind)[k] == j )
-            coef[j] = (x.val)[k++];
+         assert( j <= x.len );
+         if ( j < x.len && (x.ind)[j] == idx )
+            coef[idx] = (x.val)[j++];
          else
-            coef[j] = 0.0;
+            coef[idx] = 0.0;
       }
    }
+
+#ifndef NDEBUG
+   for (; j < x.len; ++j)
+   {
+      assert( (x.ind)[j] >= ncols );
+   }
+#endif
 
    /* free solution space */
    BMSfreeMemoryArray(&(x.val));
@@ -4601,7 +4610,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    return SCIP_OKAY;
 }
 
-/** get dense column of inverse basis matrix times constraint matrix B^-1 * A
+/** get column of inverse basis matrix times constraint matrix B^-1 * A
  *
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
@@ -4657,6 +4666,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
       {
          idx = (x.ind)[j];
          inds[j] = idx;
+         /**@todo For entries that correspond to slack variables with coefficient -1 negate the nonzero entry */
          coef[idx] = (x.val)[j];
       }
       *ninds = x.len;
@@ -4668,6 +4678,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
       {
          assert( k <= x.len );
          if ( k < x.len && (x.ind)[k] == j )
+            /**@todo For entries that correspond to slack variables with coefficient -1 negate the nonzero entry */
             coef[j] = (x.val)[k++];
          else
             coef[j] = 0.0;
