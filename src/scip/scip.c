@@ -33773,7 +33773,7 @@ void SCIPcomputeBilinEnvelope1(
    xj = (refpointx*(vy - qj) - vx*(refpointy - qj)) / tmp;
    yj = mj * xj + qj;
 
-   assert(SCIPisEQ(scip, xcoef*xj - ycoef*yj - constant, 0.0));
+   assert(SCIPisFeasEQ(scip, xcoef*xj - ycoef*yj - constant, 0.0));
 
    /* check whether the projection is in [minx,maxx] x [miny,maxy]; this avoids numerical difficulties when the
     * projection is close to the variable bounds
