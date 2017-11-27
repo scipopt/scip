@@ -2544,6 +2544,7 @@ SCIP_RETCODE propagateBounds(
    lb = SCIPcomputeVarLbLocal(scip, consdata->rhsvar) - SCIPepsilon(scip);
    ub = SCIPcomputeVarUbLocal(scip, consdata->rhsvar) + SCIPepsilon(scip);
    SCIPintervalSetBounds(&rhsrange, MIN(lb, ub), MAX(lb, ub));
+
    if( consdata->rhsoffset != 0.0 )
       SCIPintervalAddScalar(SCIPinfinity(scip), &rhsrange, rhsrange, consdata->rhsoffset);
    if( consdata->rhscoeff  != 1.0 )
