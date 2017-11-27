@@ -702,7 +702,7 @@ SCIP_RETCODE cutTightenCoefsQuad(
 
          SCIPquadprecProdQD(*cutrhs, *cutrhs, intscalar);
 
-         for( i = 0; i < *cutnnz; ++i )
+         for( i = 0; i < *cutnnz; )
          {
             SCIP_Real QUAD(val);
             SCIP_Real intval;
@@ -721,6 +721,16 @@ SCIP_RETCODE cutTightenCoefsQuad(
 
             QUAD_ASSIGN(val, intval);
             QUAD_ARRAY_STORE(cutcoefs, cutinds[i], val);
+
+            if( intval != 0.0 )
+            {
+               ++i;
+            }
+            else
+            {
+               --(*cutnnz);
+               cutinds[i] = cutinds[*cutnnz];
+            }
          }
 
          SCIPquadprecEpsFloorQ(*cutrhs, *cutrhs, SCIPfeastol(scip)); /*lint !e666*/
@@ -1074,7 +1084,7 @@ SCIP_RETCODE cutTightenCoefs(
 
          SCIPquadprecProdQD(*cutrhs, *cutrhs, intscalar);
 
-         for( i = 0; i < *cutnnz; ++i )
+         for( i = 0; i < *cutnnz; )
          {
             SCIP_Real val;
             SCIP_Real intval;
@@ -1091,8 +1101,17 @@ SCIP_RETCODE cutTightenCoefs(
                return SCIP_OKAY;
             }
 
-            val = intval;
-            cutcoefs[cutinds[i]] = val;
+            cutcoefs[cutinds[i]] = intval;
+
+            if( intval != 0.0 )
+            {
+               ++i;
+            }
+            else
+            {
+               --(*cutnnz);
+               cutinds[i] = cutinds[*cutnnz];
+            }
          }
 
          SCIPquadprecEpsFloorQ(*cutrhs, *cutrhs, SCIPfeastol(scip)); /*lint !e666*/
