@@ -1756,6 +1756,9 @@ SCIP_RETCODE neighborhoodFixVariables(
   )
 {
    int ntargetfixings;
+   int nmaxfixings;
+   int nminfixings;
+   int nbinintvars;
 
    assert(scip != NULL);
    assert(neighborhood != NULL);
@@ -1777,12 +1780,17 @@ SCIP_RETCODE neighborhoodFixVariables(
    }
 
    assert(neighborhood->varfixings == NULL || *result != SCIP_DIDNOTRUN);
+   nbinintvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
+   ntargetfixings = (int)(neighborhood->fixingrate.targetfixingrate * nbinintvars);
+   nminfixings = (int)((neighborhood->fixingrate.targetfixingrate - heurdata->fixtol) * nbinintvars);
+   nminfixings = MAX(nminfixings, 0);
+   nmaxfixings = (int)((neighborhood->fixingrate.targetfixingrate + heurdata->fixtol) * nbinintvars);
+   nmaxfixings = MIN(nminfixings, nbinintvars);
 
-   ntargetfixings = (int)(neighborhood->fixingrate.targetfixingrate * (SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip)));
-   SCIPdebugMsg(scip, "Neighborhood Fixings/Target: %d / %d\n",*nfixings, ntargetfixings);
+   SCIPdebugMsg(scip, "Neighborhood Fixings/Target: %d / %d <= %d <= %d\n",*nfixings, nminfixings, ntargetfixings, nmaxfixings);
 
    /** if too few fixings, use a strategy to select more variable fixings: randomized, LP graph, ReducedCost based, mix */
-   if( (*result == SCIP_SUCCESS || *result == SCIP_DIDNOTRUN) && (*nfixings <= (1.0 - heurdata->fixtol) * ntargetfixings) )
+   if( (*result == SCIP_SUCCESS || *result == SCIP_DIDNOTRUN) && (*nfixings <= nminfixings) )
    {
       SCIP_Bool success;
       SCIP_SOL* refsol;
@@ -1807,7 +1815,7 @@ SCIP_RETCODE neighborhoodFixVariables(
 
       SCIPdebugMsg(scip, "After additional fixings: %d / %d\n",*nfixings, ntargetfixings);
    }
-   else if( (SCIP_Real)(*nfixings) > (1.0 + heurdata->fixtol) * ntargetfixings)
+   else if( (SCIP_Real)(*nfixings) > nmaxfixings )
    {
       SCIP_Bool success;
 
