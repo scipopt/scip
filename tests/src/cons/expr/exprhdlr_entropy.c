@@ -118,13 +118,6 @@ Test(entropy, creation, .description = "Tests the expression creation.")
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
 
-Test(entropy, print, .description = "Tests the expression printing function.")
-{
-   /* TODO 1. simplify expression */
-
-   /* TODO 2. print expression */
-}
-
 Test(entropy, parse, .description = "Tests the expression parsing.")
 {
    SCIP_CONSEXPR_EXPR* expr;
