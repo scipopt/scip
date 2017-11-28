@@ -707,6 +707,9 @@ SCIP_RETCODE SCIPlpiCreate(
    MOSEK_CALL( MSK_putdouparam((*lpi)->task, MSK_DPAR_DATA_TOL_AIJ_LARGE, MSK_INFINITY * 2));
    MOSEK_CALL( MSK_putdouparam((*lpi)->task, MSK_DPAR_DATA_TOL_CJ_LARGE, MSK_INFINITY));
 
+   /* disable warnings for large bounds */
+   MOSEK_CALL( MSK_putdouparam((*lpi)->task, MSK_DPAR_DATA_TOL_BOUND_WRN, MSK_INFINITY));
+
    (*lpi)->termcode = MSK_RES_OK;
    (*lpi)->itercount = 0;
    (*lpi)->pricing = SCIP_PRICING_LPIDEFAULT;
@@ -3570,6 +3573,9 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
       inds[0]= c;
       coef[c] = 1; /* Unit vector e_col */
 
+      /* prepare basis in Mosek, since we do not need the basis ourselves, we set the return parameter to NULL */
+      SCIP_CALL( handle_singular(lpi, NULL, MSK_initbasissolve(lpi->task, NULL)) );
+
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, ninds, inds, coef) );
       assert( *ninds <= nrows );
    }
@@ -3586,6 +3592,9 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
       numnz = 1;
       sub[0]= c;
       coef[c] = 1; /* Unit vector e_col */
+
+      /* prepare basis in Mosek, since we do not need the basis ourselves, we set the return parameter to NULL */
+      SCIP_CALL( handle_singular(lpi, NULL, MSK_initbasissolve(lpi->task, NULL)) );
 
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, &numnz, sub, coef) );
       assert( numnz <= nrows );
@@ -3637,6 +3646,9 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
       inds[0]= row;
       coef[row] = 1; /* Unit vector e_row */
 
+      /* prepare basis in Mosek, since we do not need the basis ourselves, we set the return parameter to NULL */
+      SCIP_CALL( handle_singular(lpi, NULL, MSK_initbasissolve(lpi->task, NULL)) );
+
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 1, ninds, inds, coef) );
       assert( *ninds <= nrows );
    }
@@ -3653,6 +3665,9 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
       numnz = 1;
       sub[0] = row;
       coef[row] = 1; /* Unit vector e_row */
+
+      /* prepare basis in Mosek, since we do not need the basis ourselves, we set the return parameter to NULL */
+      SCIP_CALL( handle_singular(lpi, NULL, MSK_initbasissolve(lpi->task, NULL)) );
 
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 1, &numnz, sub, coef) );
 
@@ -3785,6 +3800,10 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
 
       *ninds = numnz;
       MOSEK_CALL( MSK_putnaintparam(lpi->task, MSK_IPAR_BASIS_SOLVE_USE_PLUS_ONE_, MSK_OFF) );
+
+      /* prepare basis in Mosek, since we do not need the basis ourselves, we set the return parameter to NULL */
+      SCIP_CALL( handle_singular(lpi, NULL, MSK_initbasissolve(lpi->task, NULL)) );
+
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, ninds, inds, coef) );
       assert( *ninds <= nrows );
    }
@@ -3801,6 +3820,10 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
       if ( ninds != NULL )
          *ninds = numnz;
       MOSEK_CALL( MSK_putnaintparam(lpi->task, MSK_IPAR_BASIS_SOLVE_USE_PLUS_ONE_, MSK_OFF) );
+
+      /* prepare basis in Mosek, since we do not need the basis ourselves, we set the return parameter to NULL */
+      SCIP_CALL( handle_singular(lpi, NULL, MSK_initbasissolve(lpi->task, NULL)) );
+
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, &numnz, sub, coef) );
 
       BMSfreeMemoryArray(&sub);
