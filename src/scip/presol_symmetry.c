@@ -603,32 +603,6 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
 }
 
 
-#ifndef NDEBUG
-/** get number of active variables in variable array */
-static
-int getNActiveVars(
-   SCIP_VAR**             vars,              /**< variable array */
-   int                    nvars              /**< number of variables in vars */
-   )
-{
-   int nactivevars = 0;
-   int i;
-
-   assert( vars != NULL );
-
-   for (i = 0; i < nvars; ++i)
-   {
-      assert( vars[i] != NULL );
-
-      if ( SCIPvarIsActive(vars[i]) )
-         ++nactivevars;
-   }
-
-   return nactivevars;
-}
-#endif
-
-
 /** returns the number of active constraints that can be handled by symmetry */
 static
 int getNSymhandableConss(
