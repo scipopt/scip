@@ -222,7 +222,7 @@ SCIP_RETCODE createThreadPool(
    SCIP_Bool             blockwhenfull       /**< should the jobqueue block if it is full */
    )
 {
-   int i;
+   uintptr_t i;
 
    assert(nthreads >= 0);
    assert(qsize >= 0);
@@ -270,9 +270,9 @@ SCIP_RETCODE createThreadPool(
    SCIP_ALLOC( BMSallocMemoryArray(&((*thrdpool)->threads), nthreads) );
 
    /* create the threads */
-   for( i = 0; i < nthreads; i++ )
+   for( i = 0; i < (unsigned)nthreads; i++ )
    {
-      if( thrd_create(&((*thrdpool)->threads[i]), threadPoolThread, (void*)(uintptr_t)i) != thrd_success ) /*lint !e571*/
+      if( thrd_create(&((*thrdpool)->threads[i]), threadPoolThread, (void*)i) != thrd_success )
          return SCIP_ERROR;
    }
 

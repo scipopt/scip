@@ -55,6 +55,8 @@ parameters:
 - removed parameter "separating/feastolfac"
 - removed parameters "constraints/{abspower,bivariate,quadratic,nonlinear}/mincutefficacysepa",
   "constraints/{abspower,bivariate,quadratic,nonlinear}/mincutefficacyenfofac", and constraints/soc/minefficacy
+- added parameter constraints/quadratic/binreformbinaryonly to disable reformulation of products of
+  binary and non-binary variables
 
 interface:
 - new interface methods to create and use bandit algorithms implemented as SCIP core plugins --
@@ -110,6 +112,7 @@ performance improvements:
 - use limit on the total number of nonzeros added to the clique table during the greedyCliqueAlgorithm of cons_knapsack.c
 - faster implementation of CMIR cut generation heursitic
 - improved cut selection and management
+- disabled reformulation of products of a binary variable with a linear term that does not solely involve binary variables
 
 fixed bugs:
 - fix wrong statistic display of diving leaf solutions
@@ -126,7 +129,9 @@ fixed bugs:
 - fixed several bugs related to hashing of constraints/rows in cutpool.c and cons_linear.c
 - fixed aggregation of variables in boundshift presolver that contain large variable bounds
 - fixed releasing of variables in the genvbounds propagator in case the problem could be solved during presolving of a restart
+- fix treatment of infinite lower bound in proximity objective cutoff
 - fixed wrong mapping of permuted basis indices in gomory separator
+- fixed integer objective separator for objective scales < 1
 
 added tests:
 - added tests that cover nonempty linear constraint classification types

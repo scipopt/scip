@@ -5,6 +5,12 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_R
 
 project(SCIP)
 
+# for intel compilers we need to set the fp-model precise flag to disable incorrect floating point optimizations
+if(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
+   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fp-model precise")
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fp-model precise")
+endif()
+
 set(SCIP_VERSION_MAJOR 5)
 set(SCIP_VERSION_MINOR 0)
 set(SCIP_VERSION_PATCH 0)
@@ -30,7 +36,7 @@ set(BUILD_SHARED_LIBS ${SHARED})
 message(STATUS "Build shared libraries: " ${SHARED})
 
 # make 'Release' the default build type
-if(CMAKE_BUILD_TYPE STREQUAL "")
+if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
@@ -159,17 +165,21 @@ set(NEWLINE "\\\\n")
 # create a target for updating the current git hash
 file(WRITE ${CMAKE_BINARY_DIR}/scip_update_githash.cmake "
 find_program(GIT git)
+if(EXISTS \${DST})
+   file(STRINGS \${DST} GITHASH_OLD)
+   string(REGEX REPLACE \"#define SCIP_GITHASH \\\"(.*)\\\"\" \"\\\\1\" GITHASH_OLD \${GITHASH_OLD})
+endif()
 if((GIT) AND (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git))
    execute_process(
       COMMAND \${GIT} describe --always --dirty
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
       OUTPUT_VARIABLE GITHASH OUTPUT_STRIP_TRAILING_WHITESPACE)
    string(REGEX REPLACE \"^.*-g\" \"\" GITHASH \${GITHASH})
-   file(WRITE \${DST} \"#define SCIP_GITHASH \\\"\${GITHASH}\\\"\n\")
+   if(NOT \${GITHASH} STREQUAL \"\${GITHASH_OLD}\")
+      file(WRITE \${DST} \"#define SCIP_GITHASH \\\"\${GITHASH}\\\"\n\")
+   endif()
 else()
-   # read stored hash from file
-   file(STRINGS \${DST} GITHASH)
-   string(REGEX REPLACE \"#define SCIP_GITHASH \" \"\" GITHASH \${GITHASH})
+   set(GITHASH \${GITHASH_OLD})
 endif()
 message(STATUS \"Git hash: \" \${GITHASH})
 ")
@@ -179,7 +189,13 @@ add_custom_target(scip_update_githash
 
 # create a target for updating the current build configuration
 file(WRITE ${CMAKE_BINARY_DIR}/scip_update_buildflags.cmake "
-file(WRITE \${DST} \"#define SCIP_BUILDFLAGS \\\" ARCH=${CMAKE_SYSTEM}${NEWLINE} COMP=${CMAKE_SYSTEM_PROCESSOR}${NEWLINE} BUILD=${CMAKE_BUILD_TYPE}${NEWLINE}\\\"\n\")
+set(SCIP_BUILDFLAGS_DEFINE  \"#define SCIP_BUILDFLAGS \\\" ARCH=${CMAKE_SYSTEM}${NEWLINE} COMP=${CMAKE_SYSTEM_PROCESSOR}${NEWLINE} BUILD=${CMAKE_BUILD_TYPE}${NEWLINE}\\\"\")
+if(EXISTS \${DST})
+   file(STRINGS \${DST} SCIP_BUILDFLAGS_DEFINE_OLD)
+endif()
+if(NOT \${SCIP_BUILDFLAGS_DEFINE} STREQUAL \"\${SCIP_BUILDFLAGS_DEFINE_OLD}\")
+   file(WRITE \${DST} \"\${SCIP_BUILDFLAGS_DEFINE}\n\")
+endif()
 ")
 add_custom_target(scip_update_buildflags
                   COMMAND ${CMAKE_COMMAND} -DDST=${PROJECT_SOURCE_DIR}/src/scip/buildflags.c

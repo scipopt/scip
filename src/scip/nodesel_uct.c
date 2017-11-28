@@ -468,7 +468,12 @@ SCIP_DECL_NODESELSELECT(nodeselSelectUct)
    selectBestNode(scip, selnode, nodeseldata, children, nchildren);
    selectBestNode(scip, selnode, nodeseldata, siblings, nsiblings);
    selectBestNode(scip, selnode, nodeseldata, leaves, nleaves);
-   assert(*selnode != NULL);
+
+   if( *selnode == NULL )
+   {
+      SCIPerrorMessage("Node selection rule UCT could not select a node.\n");
+      return SCIP_INVALIDCALL;
+   }
 
    /* increase the number of selections */
    ++nodeseldata->nselections;

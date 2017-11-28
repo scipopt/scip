@@ -190,6 +190,8 @@ $NAME/interfaces/gams/Makefile $NAME/interfaces/gams/INSTALL $NAME/interfaces/ga
 $NAME/interfaces/gams/test.sh $NAME/interfaces/gams/src/* \
 $NAME/check/instances/Bivariate/*.osil \
 $NAME/check/instances/Bilinrelax/*.osil \
+$NAME/check/instances/Cardinality/*.cip \
+$NAME/check/instances/Cardinality/*.lp \
 $NAME/check/instances/CP/*.cip \
 $NAME/check/instances/Indicator/*.lp \
 $NAME/check/instances/MIP/*.fzn \

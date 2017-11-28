@@ -797,16 +797,36 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       /* insert varpairs into hash table */
       for( r = 0; r < nvarpairs; ++r )
       {
+         SCIP_Bool insert;
          ROWVARPAIR* othervarpair;
 
          assert(varpairs != NULL);
 
-         othervarpair = (ROWVARPAIR*)SCIPhashtableRetrieve(pairtable, (void*) &varpairs[r]);
 
-         if( othervarpair != NULL && SCIPmatrixGetRowNNonzs(matrix, othervarpair->rowindex) <= SCIPmatrixGetRowNNonzs(matrix, varpairs[r].rowindex) )
-            continue;
+         insert = TRUE;
 
-         SCIP_CALL( SCIPhashtableInsert(pairtable, (void*) &varpairs[r]) );
+         /* check if this pair is already contained in the hash table;
+          * The loop is required due to the non-transitivity of the hash functions
+          */
+         while( (othervarpair = (ROWVARPAIR*)SCIPhashtableRetrieve(pairtable, (void*) &varpairs[r])) != NULL )
+         {
+            /* if the previous variable pair has fewer or the same number of non-zeros in the attached row
+             * we keep that pair and skip this one
+             */
+            if( SCIPmatrixGetRowNNonzs(matrix, othervarpair->rowindex) <= SCIPmatrixGetRowNNonzs(matrix, varpairs[r].rowindex) )
+            {
+               insert = FALSE;
+               break;
+            }
+
+            /* this pairs row has fewer non-zeros, so remove the other pair from the hash table and loop */
+            SCIP_CALL( SCIPhashtableRemove(pairtable, (void*) othervarpair) );
+         }
+
+         if( insert )
+         {
+            SCIP_CALL( SCIPhashtableInsert(pairtable, (void*) &varpairs[r]) );
+         }
       }
 
       /* sort rows according to parameter value */

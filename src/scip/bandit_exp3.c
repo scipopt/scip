@@ -312,6 +312,7 @@ SCIP_RETCODE SCIPcreateBanditExp3(
    if( vtable == NULL )
    {
       SCIPerrorMessage("Could not find virtual function table for %s bandit algorithm\n", BANDIT_NAME);
+      return SCIP_INVALIDDATA;
    }
 
    SCIP_CALL( SCIPbanditCreateExp3(SCIPblkmem(scip), SCIPbuffer(scip), vtable, exp3,

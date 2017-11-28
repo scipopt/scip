@@ -33773,7 +33773,7 @@ void SCIPcomputeBilinEnvelope1(
    xj = (refpointx*(vy - qj) - vx*(refpointy - qj)) / tmp;
    yj = mj * xj + qj;
 
-   assert(SCIPisEQ(scip, xcoef*xj - ycoef*yj - constant, 0.0));
+   assert(SCIPisFeasEQ(scip, xcoef*xj - ycoef*yj - constant, 0.0));
 
    /* check whether the projection is in [minx,maxx] x [miny,maxy]; this avoids numerical difficulties when the
     * projection is close to the variable bounds
@@ -43131,6 +43131,9 @@ int SCIPgetPlungeDepth(
  *  @return the total number of active constraints at the current node
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
@@ -43138,7 +43141,7 @@ int SCIPgetNActiveConss(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNActiveConss", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNActiveConss", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    return scip->stat->nactiveconss;
 }
@@ -48410,18 +48413,21 @@ SCIP_RETCODE SCIPvalidateSolve(
    SCIP_Real dualviol;
    assert(scip != NULL);
 
-   localfeasible = TRUE;
-   localdualboundcheck = TRUE;
-
    /* if no problem exists, there is no need for validation */
    if( SCIPgetStage(scip) < SCIP_STAGE_PROBLEM )
    {
-      *feasible = TRUE;
-      *primalboundcheck = TRUE;
-      *dualboundcheck = TRUE;
+      if( feasible != NULL )
+         *feasible = TRUE;
+      if( primalboundcheck != NULL )
+         *primalboundcheck = TRUE;
+      if( dualboundcheck != NULL )
+         *dualboundcheck = TRUE;
 
       return SCIP_OKAY;
    }
+
+   localfeasible = TRUE;
+   localdualboundcheck = TRUE;
 
    /* check the best solution for feasibility in the original problem */
    if( SCIPgetNSols(scip) > 0 )
