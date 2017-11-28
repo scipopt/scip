@@ -1067,9 +1067,10 @@ $(LIBOBJDIR)/scip/cons_cumulative.o: src/scip/cons_cumulative.c src/tclique/tcli
  src/scip/presol_inttobinary.h src/scip/presol_redvub.h \
  src/scip/presol_symbreak.h src/scip/presol_qpkktref.h \
  src/scip/presol_trivial.h src/scip/presol_tworowbnd.h \
- src/scip/presol_stuffing.h src/scip/presol_symmetry.h \
- src/symmetry/type_symmetry.h src/scip/prop_dualfix.h \
- src/scip/prop_genvbounds.h src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
+ src/scip/presol_sparsify.h src/scip/presol_stuffing.h \
+ src/scip/presol_symmetry.h src/symmetry/type_symmetry.h \
+ src/scip/prop_dualfix.h src/scip/prop_genvbounds.h \
+ src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
  src/scip/prop_orbitalfixing.h src/scip/prop_probing.h \
  src/scip/prop_pseudoobj.h src/scip/prop_redcost.h \
  src/scip/prop_rootredcost.h src/scip/prop_vbounds.h \
@@ -1264,7 +1265,8 @@ $(LIBOBJDIR)/scip/cons_knapsack.o: src/scip/cons_knapsack.c src/scip/cons_knapsa
  src/scip/type_concurrent.h src/scip/struct_stat.h src/scip/type_visual.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
- src/scip/cons_linear.h src/scip/cons_logicor.h src/scip/cons_setppc.h
+ src/scip/cons_linear.h src/scip/cons_logicor.h \
+ src/scip/cons_cardinality.h src/scip/cons_setppc.h
 $(LIBOBJDIR)/scip/cons_linear.o: src/scip/cons_linear.c src/scip/cons_linear.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
@@ -1891,7 +1893,7 @@ $(LIBOBJDIR)/scip/cons_superindicator.o: src/scip/cons_superindicator.c \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
  src/scip/dialog_default.h src/scip/cons_indicator.h \
  src/scip/cons_linear.h
-$(LIBOBJDIR)/scip/cons_symresack.o: src/scip/cons_symresack.c src/scip/cons_setppc.h \
+$(LIBOBJDIR)/scip/cons_symresack.o: src/scip/cons_symresack.c src/scip/cons_orbisack.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
  src/blockmemshell/memory.h src/scip/type_result.h src/scip/type_clock.h \
@@ -1934,7 +1936,7 @@ $(LIBOBJDIR)/scip/cons_symresack.o: src/scip/cons_symresack.c src/scip/cons_setp
  src/scip/type_concurrent.h src/scip/struct_stat.h src/scip/type_visual.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
- src/scip/cons_orbisack.h src/scip/cons_symresack.h
+ src/scip/cons_setppc.h src/scip/cons_symresack.h
 $(LIBOBJDIR)/scip/cons_varbound.o: src/scip/cons_varbound.c src/scip/cons_varbound.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
@@ -2107,7 +2109,8 @@ $(LIBOBJDIR)/scip/dialog_default.o: src/scip/dialog_default.c src/scip/dialog_de
  src/scip/type_sepastore.h src/scip/type_conflictstore.h \
  src/scip/type_concurrent.h src/scip/struct_stat.h src/scip/type_visual.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
- src/scip/struct_event.h src/scip/cons.h src/scip/solve.h src/nlpi/nlpi.h
+ src/scip/struct_event.h src/scip/cons.h src/scip/solve.h src/nlpi/nlpi.h \
+ src/scip/cons_linear.h
 $(LIBOBJDIR)/scip/event_softtimelimit.o: src/scip/event_softtimelimit.c \
  src/scip/event_softtimelimit.h src/scip/scip.h src/scip/def.h \
  src/scip/type_retcode.h src/scip/pub_message.h src/scip/type_message.h \
@@ -2641,9 +2644,10 @@ $(LIBOBJDIR)/scip/heur_completesol.o: src/scip/heur_completesol.c \
  src/scip/presol_inttobinary.h src/scip/presol_redvub.h \
  src/scip/presol_symbreak.h src/scip/presol_qpkktref.h \
  src/scip/presol_trivial.h src/scip/presol_tworowbnd.h \
- src/scip/presol_stuffing.h src/scip/presol_symmetry.h \
- src/symmetry/type_symmetry.h src/scip/prop_dualfix.h \
- src/scip/prop_genvbounds.h src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
+ src/scip/presol_sparsify.h src/scip/presol_stuffing.h \
+ src/scip/presol_symmetry.h src/symmetry/type_symmetry.h \
+ src/scip/prop_dualfix.h src/scip/prop_genvbounds.h \
+ src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
  src/scip/prop_orbitalfixing.h src/scip/prop_probing.h \
  src/scip/prop_pseudoobj.h src/scip/prop_redcost.h \
  src/scip/prop_rootredcost.h src/scip/prop_vbounds.h \
@@ -2762,9 +2766,10 @@ $(LIBOBJDIR)/scip/heur_crossover.o: src/scip/heur_crossover.c src/scip/scip.h \
  src/scip/presol_inttobinary.h src/scip/presol_redvub.h \
  src/scip/presol_symbreak.h src/scip/presol_qpkktref.h \
  src/scip/presol_trivial.h src/scip/presol_tworowbnd.h \
- src/scip/presol_stuffing.h src/scip/presol_symmetry.h \
- src/symmetry/type_symmetry.h src/scip/prop_dualfix.h \
- src/scip/prop_genvbounds.h src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
+ src/scip/presol_sparsify.h src/scip/presol_stuffing.h \
+ src/scip/presol_symmetry.h src/symmetry/type_symmetry.h \
+ src/scip/prop_dualfix.h src/scip/prop_genvbounds.h \
+ src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
  src/scip/prop_orbitalfixing.h src/scip/prop_probing.h \
  src/scip/prop_pseudoobj.h src/scip/prop_redcost.h \
  src/scip/prop_rootredcost.h src/scip/prop_vbounds.h \
@@ -3016,9 +3021,10 @@ $(LIBOBJDIR)/scip/heur_feaspump.o: src/scip/heur_feaspump.c src/scip/heur_feaspu
  src/scip/presol_inttobinary.h src/scip/presol_redvub.h \
  src/scip/presol_symbreak.h src/scip/presol_qpkktref.h \
  src/scip/presol_trivial.h src/scip/presol_tworowbnd.h \
- src/scip/presol_stuffing.h src/scip/presol_symmetry.h \
- src/symmetry/type_symmetry.h src/scip/prop_dualfix.h \
- src/scip/prop_genvbounds.h src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
+ src/scip/presol_sparsify.h src/scip/presol_stuffing.h \
+ src/scip/presol_symmetry.h src/symmetry/type_symmetry.h \
+ src/scip/prop_dualfix.h src/scip/prop_genvbounds.h \
+ src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
  src/scip/prop_orbitalfixing.h src/scip/prop_probing.h \
  src/scip/prop_pseudoobj.h src/scip/prop_redcost.h \
  src/scip/prop_rootredcost.h src/scip/prop_vbounds.h \
@@ -3222,9 +3228,10 @@ $(LIBOBJDIR)/scip/heur_gins.o: src/scip/heur_gins.c src/scip/scip.h src/scip/def
  src/scip/presol_inttobinary.h src/scip/presol_redvub.h \
  src/scip/presol_symbreak.h src/scip/presol_qpkktref.h \
  src/scip/presol_trivial.h src/scip/presol_tworowbnd.h \
- src/scip/presol_stuffing.h src/scip/presol_symmetry.h \
- src/symmetry/type_symmetry.h src/scip/prop_dualfix.h \
- src/scip/prop_genvbounds.h src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
+ src/scip/presol_sparsify.h src/scip/presol_stuffing.h \
+ src/scip/presol_symmetry.h src/symmetry/type_symmetry.h \
+ src/scip/prop_dualfix.h src/scip/prop_genvbounds.h \
+ src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
  src/scip/prop_orbitalfixing.h src/scip/prop_probing.h \
  src/scip/prop_pseudoobj.h src/scip/prop_redcost.h \
  src/scip/prop_rootredcost.h src/scip/prop_vbounds.h \
@@ -3559,9 +3566,10 @@ $(LIBOBJDIR)/scip/heur_localbranching.o: src/scip/heur_localbranching.c src/scip
  src/scip/presol_inttobinary.h src/scip/presol_redvub.h \
  src/scip/presol_symbreak.h src/scip/presol_qpkktref.h \
  src/scip/presol_trivial.h src/scip/presol_tworowbnd.h \
- src/scip/presol_stuffing.h src/scip/presol_symmetry.h \
- src/symmetry/type_symmetry.h src/scip/prop_dualfix.h \
- src/scip/prop_genvbounds.h src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
+ src/scip/presol_sparsify.h src/scip/presol_stuffing.h \
+ src/scip/presol_symmetry.h src/symmetry/type_symmetry.h \
+ src/scip/prop_dualfix.h src/scip/prop_genvbounds.h \
+ src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
  src/scip/prop_orbitalfixing.h src/scip/prop_probing.h \
  src/scip/prop_pseudoobj.h src/scip/prop_redcost.h \
  src/scip/prop_rootredcost.h src/scip/prop_vbounds.h \
@@ -3679,9 +3687,10 @@ $(LIBOBJDIR)/scip/heur_lpface.o: src/scip/heur_lpface.c src/scip/scip.h src/scip
  src/scip/presol_inttobinary.h src/scip/presol_redvub.h \
  src/scip/presol_symbreak.h src/scip/presol_qpkktref.h \
  src/scip/presol_trivial.h src/scip/presol_tworowbnd.h \
- src/scip/presol_stuffing.h src/scip/presol_symmetry.h \
- src/symmetry/type_symmetry.h src/scip/prop_dualfix.h \
- src/scip/prop_genvbounds.h src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
+ src/scip/presol_sparsify.h src/scip/presol_stuffing.h \
+ src/scip/presol_symmetry.h src/symmetry/type_symmetry.h \
+ src/scip/prop_dualfix.h src/scip/prop_genvbounds.h \
+ src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
  src/scip/prop_orbitalfixing.h src/scip/prop_probing.h \
  src/scip/prop_pseudoobj.h src/scip/prop_redcost.h \
  src/scip/prop_rootredcost.h src/scip/prop_vbounds.h \
@@ -3800,9 +3809,10 @@ $(LIBOBJDIR)/scip/heur_alns.o: src/scip/heur_alns.c src/scip/heur_alns.h src/sci
  src/scip/presol_inttobinary.h src/scip/presol_redvub.h \
  src/scip/presol_symbreak.h src/scip/presol_qpkktref.h \
  src/scip/presol_trivial.h src/scip/presol_tworowbnd.h \
- src/scip/presol_stuffing.h src/scip/presol_symmetry.h \
- src/symmetry/type_symmetry.h src/scip/prop_dualfix.h \
- src/scip/prop_genvbounds.h src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
+ src/scip/presol_sparsify.h src/scip/presol_stuffing.h \
+ src/scip/presol_symmetry.h src/symmetry/type_symmetry.h \
+ src/scip/prop_dualfix.h src/scip/prop_genvbounds.h \
+ src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
  src/scip/prop_orbitalfixing.h src/scip/prop_probing.h \
  src/scip/prop_pseudoobj.h src/scip/prop_redcost.h \
  src/scip/prop_rootredcost.h src/scip/prop_vbounds.h \
@@ -3963,9 +3973,10 @@ $(LIBOBJDIR)/scip/heur_mutation.o: src/scip/heur_mutation.c src/scip/scip.h src/
  src/scip/presol_inttobinary.h src/scip/presol_redvub.h \
  src/scip/presol_symbreak.h src/scip/presol_qpkktref.h \
  src/scip/presol_trivial.h src/scip/presol_tworowbnd.h \
- src/scip/presol_stuffing.h src/scip/presol_symmetry.h \
- src/symmetry/type_symmetry.h src/scip/prop_dualfix.h \
- src/scip/prop_genvbounds.h src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
+ src/scip/presol_sparsify.h src/scip/presol_stuffing.h \
+ src/scip/presol_symmetry.h src/symmetry/type_symmetry.h \
+ src/scip/prop_dualfix.h src/scip/prop_genvbounds.h \
+ src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
  src/scip/prop_orbitalfixing.h src/scip/prop_probing.h \
  src/scip/prop_pseudoobj.h src/scip/prop_redcost.h \
  src/scip/prop_rootredcost.h src/scip/prop_vbounds.h \
@@ -4302,9 +4313,10 @@ $(LIBOBJDIR)/scip/heur_ofins.o: src/scip/heur_ofins.c src/scip/heur_ofins.h src/
  src/scip/presol_inttobinary.h src/scip/presol_redvub.h \
  src/scip/presol_symbreak.h src/scip/presol_qpkktref.h \
  src/scip/presol_trivial.h src/scip/presol_tworowbnd.h \
- src/scip/presol_stuffing.h src/scip/presol_symmetry.h \
- src/symmetry/type_symmetry.h src/scip/prop_dualfix.h \
- src/scip/prop_genvbounds.h src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
+ src/scip/presol_sparsify.h src/scip/presol_stuffing.h \
+ src/scip/presol_symmetry.h src/symmetry/type_symmetry.h \
+ src/scip/prop_dualfix.h src/scip/prop_genvbounds.h \
+ src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
  src/scip/prop_orbitalfixing.h src/scip/prop_probing.h \
  src/scip/prop_pseudoobj.h src/scip/prop_redcost.h \
  src/scip/prop_rootredcost.h src/scip/prop_vbounds.h \
@@ -4597,9 +4609,10 @@ $(LIBOBJDIR)/scip/heur_repair.o: src/scip/heur_repair.c src/scip/heur_repair.h \
  src/scip/presol_inttobinary.h src/scip/presol_redvub.h \
  src/scip/presol_symbreak.h src/scip/presol_qpkktref.h \
  src/scip/presol_trivial.h src/scip/presol_tworowbnd.h \
- src/scip/presol_stuffing.h src/scip/presol_symmetry.h \
- src/symmetry/type_symmetry.h src/scip/prop_dualfix.h \
- src/scip/prop_genvbounds.h src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
+ src/scip/presol_sparsify.h src/scip/presol_stuffing.h \
+ src/scip/presol_symmetry.h src/symmetry/type_symmetry.h \
+ src/scip/prop_dualfix.h src/scip/prop_genvbounds.h \
+ src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
  src/scip/prop_orbitalfixing.h src/scip/prop_probing.h \
  src/scip/prop_pseudoobj.h src/scip/prop_redcost.h \
  src/scip/prop_rootredcost.h src/scip/prop_vbounds.h \
@@ -4761,9 +4774,10 @@ $(LIBOBJDIR)/scip/heur_rens.o: src/scip/heur_rens.c src/scip/scip.h src/scip/def
  src/scip/presol_inttobinary.h src/scip/presol_redvub.h \
  src/scip/presol_symbreak.h src/scip/presol_qpkktref.h \
  src/scip/presol_trivial.h src/scip/presol_tworowbnd.h \
- src/scip/presol_stuffing.h src/scip/presol_symmetry.h \
- src/symmetry/type_symmetry.h src/scip/prop_dualfix.h \
- src/scip/prop_genvbounds.h src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
+ src/scip/presol_sparsify.h src/scip/presol_stuffing.h \
+ src/scip/presol_symmetry.h src/symmetry/type_symmetry.h \
+ src/scip/prop_dualfix.h src/scip/prop_genvbounds.h \
+ src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
  src/scip/prop_orbitalfixing.h src/scip/prop_probing.h \
  src/scip/prop_pseudoobj.h src/scip/prop_redcost.h \
  src/scip/prop_rootredcost.h src/scip/prop_vbounds.h \
@@ -4881,9 +4895,10 @@ $(LIBOBJDIR)/scip/heur_rins.o: src/scip/heur_rins.c src/scip/scip.h src/scip/def
  src/scip/presol_inttobinary.h src/scip/presol_redvub.h \
  src/scip/presol_symbreak.h src/scip/presol_qpkktref.h \
  src/scip/presol_trivial.h src/scip/presol_tworowbnd.h \
- src/scip/presol_stuffing.h src/scip/presol_symmetry.h \
- src/symmetry/type_symmetry.h src/scip/prop_dualfix.h \
- src/scip/prop_genvbounds.h src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
+ src/scip/presol_sparsify.h src/scip/presol_stuffing.h \
+ src/scip/presol_symmetry.h src/symmetry/type_symmetry.h \
+ src/scip/prop_dualfix.h src/scip/prop_genvbounds.h \
+ src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
  src/scip/prop_orbitalfixing.h src/scip/prop_probing.h \
  src/scip/prop_pseudoobj.h src/scip/prop_redcost.h \
  src/scip/prop_rootredcost.h src/scip/prop_vbounds.h \
@@ -5436,9 +5451,10 @@ $(LIBOBJDIR)/scip/heur_undercover.o: src/scip/heur_undercover.c src/scip/scip.h 
  src/scip/presol_inttobinary.h src/scip/presol_redvub.h \
  src/scip/presol_symbreak.h src/scip/presol_qpkktref.h \
  src/scip/presol_trivial.h src/scip/presol_tworowbnd.h \
- src/scip/presol_stuffing.h src/scip/presol_symmetry.h \
- src/symmetry/type_symmetry.h src/scip/prop_dualfix.h \
- src/scip/prop_genvbounds.h src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
+ src/scip/presol_sparsify.h src/scip/presol_stuffing.h \
+ src/scip/presol_symmetry.h src/symmetry/type_symmetry.h \
+ src/scip/prop_dualfix.h src/scip/prop_genvbounds.h \
+ src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
  src/scip/prop_orbitalfixing.h src/scip/prop_probing.h \
  src/scip/prop_pseudoobj.h src/scip/prop_redcost.h \
  src/scip/prop_rootredcost.h src/scip/prop_vbounds.h \
@@ -5556,9 +5572,10 @@ $(LIBOBJDIR)/scip/heur_vbounds.o: src/scip/heur_vbounds.c src/scip/scip.h src/sc
  src/scip/presol_inttobinary.h src/scip/presol_redvub.h \
  src/scip/presol_symbreak.h src/scip/presol_qpkktref.h \
  src/scip/presol_trivial.h src/scip/presol_tworowbnd.h \
- src/scip/presol_stuffing.h src/scip/presol_symmetry.h \
- src/symmetry/type_symmetry.h src/scip/prop_dualfix.h \
- src/scip/prop_genvbounds.h src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
+ src/scip/presol_sparsify.h src/scip/presol_stuffing.h \
+ src/scip/presol_symmetry.h src/symmetry/type_symmetry.h \
+ src/scip/prop_dualfix.h src/scip/prop_genvbounds.h \
+ src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
  src/scip/prop_orbitalfixing.h src/scip/prop_probing.h \
  src/scip/prop_pseudoobj.h src/scip/prop_redcost.h \
  src/scip/prop_rootredcost.h src/scip/prop_vbounds.h \
@@ -6674,6 +6691,51 @@ $(LIBOBJDIR)/scip/presol_tworowbnd.o: src/scip/presol_tworowbnd.c src/scip/pub_m
  src/scip/type_concurrent.h src/scip/struct_stat.h src/scip/type_visual.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
+$(LIBOBJDIR)/scip/presol_sparsify.o: src/scip/presol_sparsify.c src/scip/pub_matrix.h \
+ src/scip/def.h src/scip/type_retcode.h src/scip/pub_message.h \
+ src/scip/type_message.h src/scip/struct_message.h src/scip/type_var.h \
+ src/scip/type_cons.h src/scip/type_result.h src/scip/type_sol.h \
+ src/scip/type_scip.h src/scip/type_timing.h src/scip/type_heur.h \
+ src/scip/type_matrix.h src/scip/struct_matrix.h src/scip/cons_linear.h \
+ src/scip/scip.h src/blockmemshell/memory.h src/scip/type_clock.h \
+ src/scip/type_misc.h src/scip/type_paramset.h src/scip/type_event.h \
+ src/scip/type_lp.h src/scip/type_nlp.h src/scip/type_prob.h \
+ src/scip/type_tree.h src/scip/type_bandit.h src/scip/type_branch.h \
+ src/scip/type_conflict.h src/scip/type_dialog.h src/scip/type_disp.h \
+ src/scip/type_compr.h src/scip/type_history.h src/scip/type_nodesel.h \
+ src/scip/type_presol.h src/scip/type_pricer.h src/scip/type_reader.h \
+ src/scip/type_relax.h src/scip/type_sepa.h src/scip/type_table.h \
+ src/scip/type_prop.h src/nlpi/type_nlpi.h src/nlpi/type_expr.h \
+ src/scip/type_concsolver.h src/scip/type_stat.h \
+ src/scip/type_syncstore.h src/scip/pub_bandit.h \
+ src/scip/pub_bandit_epsgreedy.h src/scip/pub_bandit_exp3.h \
+ src/scip/pub_bandit_ucb.h src/scip/pub_branch.h src/scip/pub_conflict.h \
+ src/scip/pub_cons.h src/scip/struct_cons.h src/scip/pub_cutpool.h \
+ src/scip/type_cutpool.h src/scip/pub_dialog.h src/scip/pub_disp.h \
+ src/scip/pub_event.h src/scip/pub_fileio.h src/scip/pub_heur.h \
+ src/scip/pub_compr.h src/scip/pub_history.h src/scip/struct_history.h \
+ src/scip/pub_implics.h src/scip/type_implics.h src/scip/struct_implics.h \
+ src/scip/pub_lp.h src/scip/type_set.h src/lpi/type_lpi.h \
+ src/scip/struct_lp.h src/scip/pub_nlp.h src/scip/pub_misc.h \
+ src/scip/pub_misc_select.h src/scip/type_misc.h src/scip/pub_misc_sort.h \
+ src/scip/struct_misc.h src/scip/pub_nodesel.h src/scip/pub_paramset.h \
+ src/scip/pub_presol.h src/scip/pub_pricer.h src/scip/pub_reader.h \
+ src/scip/pub_relax.h src/scip/pub_sepa.h src/scip/pub_prop.h \
+ src/scip/pub_sol.h src/scip/struct_sol.h src/scip/pub_table.h \
+ src/scip/pub_tree.h src/scip/type_reopt.h src/scip/struct_tree.h \
+ src/scip/pub_var.h src/scip/struct_var.h src/scip/implics.h \
+ src/scip/history.h src/lpi/lpi.h src/nlpi/pub_expr.h \
+ src/scip/intervalarith.h src/nlpi/type_exprinterpret.h \
+ src/nlpi/struct_expr.h src/scip/presolve.h src/scip/cuts.h \
+ src/scip/set.h src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
+ src/scip/type_cuts.h src/scip/struct_cuts.h src/scip/dbldblarith.h \
+ src/scip/heuristics.h src/scip/struct_scip.h src/scip/type_interrupt.h \
+ src/scip/type_mem.h src/scip/type_primal.h src/scip/type_pricestore.h \
+ src/scip/type_sepastore.h src/scip/type_conflictstore.h \
+ src/scip/type_concurrent.h src/scip/struct_stat.h src/scip/type_visual.h \
+ src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
+ src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
+ src/scip/presol_sparsify.h
 $(LIBOBJDIR)/scip/presol_stuffing.o: src/scip/presol_stuffing.c src/scip/pub_matrix.h \
  src/scip/def.h src/scip/type_retcode.h src/scip/pub_message.h \
  src/scip/type_message.h src/scip/struct_message.h src/scip/type_var.h \
@@ -6764,7 +6826,8 @@ $(LIBOBJDIR)/scip/presol_symmetry.o: src/scip/presol_symmetry.c src/scip/cons_li
  src/scip/cons_knapsack.h src/scip/cons_varbound.h src/scip/cons_setppc.h \
  src/scip/cons_and.h src/scip/cons_logicor.h src/scip/cons_or.h \
  src/scip/cons_xor.h src/scip/presol_symmetry.h \
- src/symmetry/type_symmetry.h src/symmetry/compute_symmetry.h
+ src/symmetry/type_symmetry.h src/symmetry/compute_symmetry.h \
+ src/symmetry/struct_symmetry.h
 $(LIBOBJDIR)/scip/prop_dualfix.o: src/scip/prop_dualfix.c src/scip/prop_dualfix.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
@@ -8201,9 +8264,10 @@ $(LIBOBJDIR)/scip/sepa_cgmip.o: src/scip/sepa_cgmip.c src/scip/sepa_cgmip.h src/
  src/scip/presol_inttobinary.h src/scip/presol_redvub.h \
  src/scip/presol_symbreak.h src/scip/presol_qpkktref.h \
  src/scip/presol_trivial.h src/scip/presol_tworowbnd.h \
- src/scip/presol_stuffing.h src/scip/presol_symmetry.h \
- src/symmetry/type_symmetry.h src/scip/prop_dualfix.h \
- src/scip/prop_genvbounds.h src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
+ src/scip/presol_sparsify.h src/scip/presol_stuffing.h \
+ src/scip/presol_symmetry.h src/symmetry/type_symmetry.h \
+ src/scip/prop_dualfix.h src/scip/prop_genvbounds.h \
+ src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
  src/scip/prop_orbitalfixing.h src/scip/prop_probing.h \
  src/scip/prop_pseudoobj.h src/scip/prop_redcost.h \
  src/scip/prop_rootredcost.h src/scip/prop_vbounds.h \
@@ -8540,9 +8604,10 @@ $(LIBOBJDIR)/scip/sepa_eccuts.o: src/scip/sepa_eccuts.c src/scip/scipdefplugins.
  src/scip/presol_inttobinary.h src/scip/presol_redvub.h \
  src/scip/presol_symbreak.h src/scip/presol_qpkktref.h \
  src/scip/presol_trivial.h src/scip/presol_tworowbnd.h \
- src/scip/presol_stuffing.h src/scip/presol_symmetry.h \
- src/symmetry/type_symmetry.h src/scip/prop_dualfix.h \
- src/scip/prop_genvbounds.h src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
+ src/scip/presol_sparsify.h src/scip/presol_stuffing.h \
+ src/scip/presol_symmetry.h src/symmetry/type_symmetry.h \
+ src/scip/prop_dualfix.h src/scip/prop_genvbounds.h \
+ src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
  src/scip/prop_orbitalfixing.h src/scip/prop_probing.h \
  src/scip/prop_pseudoobj.h src/scip/prop_redcost.h \
  src/scip/prop_rootredcost.h src/scip/prop_vbounds.h \
@@ -8923,9 +8988,10 @@ $(LIBOBJDIR)/scip/sepa_rapidlearning.o: src/scip/sepa_rapidlearning.c \
  src/scip/presol_inttobinary.h src/scip/presol_redvub.h \
  src/scip/presol_symbreak.h src/scip/presol_qpkktref.h \
  src/scip/presol_trivial.h src/scip/presol_tworowbnd.h \
- src/scip/presol_stuffing.h src/scip/presol_symmetry.h \
- src/symmetry/type_symmetry.h src/scip/prop_dualfix.h \
- src/scip/prop_genvbounds.h src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
+ src/scip/presol_sparsify.h src/scip/presol_stuffing.h \
+ src/scip/presol_symmetry.h src/symmetry/type_symmetry.h \
+ src/scip/prop_dualfix.h src/scip/prop_genvbounds.h \
+ src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
  src/scip/prop_orbitalfixing.h src/scip/prop_probing.h \
  src/scip/prop_pseudoobj.h src/scip/prop_redcost.h \
  src/scip/prop_rootredcost.h src/scip/prop_vbounds.h \
@@ -9086,9 +9152,10 @@ $(LIBOBJDIR)/scip/sepa_zerohalf.o: src/scip/sepa_zerohalf.c src/scip/sepa_zeroha
  src/scip/presol_inttobinary.h src/scip/presol_redvub.h \
  src/scip/presol_symbreak.h src/scip/presol_qpkktref.h \
  src/scip/presol_trivial.h src/scip/presol_tworowbnd.h \
- src/scip/presol_stuffing.h src/scip/presol_symmetry.h \
- src/symmetry/type_symmetry.h src/scip/prop_dualfix.h \
- src/scip/prop_genvbounds.h src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
+ src/scip/presol_sparsify.h src/scip/presol_stuffing.h \
+ src/scip/presol_symmetry.h src/symmetry/type_symmetry.h \
+ src/scip/prop_dualfix.h src/scip/prop_genvbounds.h \
+ src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
  src/scip/prop_orbitalfixing.h src/scip/prop_probing.h \
  src/scip/prop_pseudoobj.h src/scip/prop_redcost.h \
  src/scip/prop_rootredcost.h src/scip/prop_vbounds.h \
@@ -9941,16 +10008,16 @@ $(LIBOBJDIR)/scip/heur.o: src/scip/heur.c src/scip/def.h src/scip/type_retcode.h
  src/scip/misc.h src/scip/var.h src/scip/event.h src/scip/struct_event.h \
  src/scip/cons.h src/scip/solve.h src/scip/heur.h src/scip/stat.h \
  src/scip/concurrent.h src/scip/struct_heur.h
-$(LIBOBJDIR)/scip/heuristics.o: src/scip/heuristics.c src/scip/heuristics.h src/scip/scip.h \
- src/scip/def.h src/scip/type_retcode.h src/scip/pub_message.h \
- src/scip/type_message.h src/scip/struct_message.h \
- src/blockmemshell/memory.h src/scip/type_result.h src/scip/type_clock.h \
- src/scip/type_misc.h src/scip/type_timing.h src/scip/type_scip.h \
+$(LIBOBJDIR)/scip/heuristics.o: src/scip/heuristics.c src/scip/heuristics.h src/scip/def.h \
+ src/scip/type_retcode.h src/scip/pub_message.h src/scip/type_message.h \
+ src/scip/struct_message.h src/scip/type_scip.h src/scip/type_heur.h \
+ src/scip/type_result.h src/scip/type_timing.h src/scip/type_misc.h \
+ src/scip/type_sol.h src/scip/type_var.h src/scip/cons_linear.h \
+ src/scip/scip.h src/blockmemshell/memory.h src/scip/type_clock.h \
  src/scip/type_paramset.h src/scip/type_event.h src/scip/type_lp.h \
- src/scip/type_nlp.h src/scip/type_var.h src/scip/type_prob.h \
- src/scip/type_tree.h src/scip/type_bandit.h src/scip/type_branch.h \
- src/scip/type_conflict.h src/scip/type_cons.h src/scip/type_sol.h \
- src/scip/type_heur.h src/scip/type_dialog.h src/scip/type_disp.h \
+ src/scip/type_nlp.h src/scip/type_prob.h src/scip/type_tree.h \
+ src/scip/type_bandit.h src/scip/type_branch.h src/scip/type_conflict.h \
+ src/scip/type_cons.h src/scip/type_dialog.h src/scip/type_disp.h \
  src/scip/type_compr.h src/scip/type_history.h src/scip/type_nodesel.h \
  src/scip/type_presol.h src/scip/type_pricer.h src/scip/type_reader.h \
  src/scip/type_relax.h src/scip/type_sepa.h src/scip/type_table.h \
@@ -9984,20 +10051,20 @@ $(LIBOBJDIR)/scip/heuristics.o: src/scip/heuristics.c src/scip/heuristics.h src/
  src/scip/type_concurrent.h src/scip/struct_stat.h src/scip/type_visual.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
- src/scip/cons_linear.h src/scip/scipdefplugins.h \
- src/scip/branch_allfullstrong.h src/scip/branch_cloud.h \
- src/scip/branch_distribution.h src/scip/branch_fullstrong.h \
- src/scip/branch_inference.h src/scip/branch_leastinf.h \
- src/scip/branch_mostinf.h src/scip/branch_multaggr.h \
- src/scip/branch_nodereopt.h src/scip/branch_pscost.h \
- src/scip/branch_random.h src/scip/branch_relpscost.h \
- src/scip/compr_largestrepr.h src/scip/compr_weakcompr.h \
- src/scip/cons_abspower.h src/scip/cons_and.h src/scip/cons_bivariate.h \
- src/scip/cons_bounddisjunction.h src/scip/cons_cardinality.h \
- src/scip/cons_conjunction.h src/scip/cons_countsols.h \
- src/scip/cons_cumulative.h src/scip/cons_disjunction.h \
- src/scip/cons_indicator.h src/scip/cons_integral.h \
- src/scip/cons_knapsack.h src/scip/cons_linking.h src/scip/cons_logicor.h \
+ src/scip/scipdefplugins.h src/scip/branch_allfullstrong.h \
+ src/scip/branch_cloud.h src/scip/branch_distribution.h \
+ src/scip/branch_fullstrong.h src/scip/branch_inference.h \
+ src/scip/branch_leastinf.h src/scip/branch_mostinf.h \
+ src/scip/branch_multaggr.h src/scip/branch_nodereopt.h \
+ src/scip/branch_pscost.h src/scip/branch_random.h \
+ src/scip/branch_relpscost.h src/scip/compr_largestrepr.h \
+ src/scip/compr_weakcompr.h src/scip/cons_abspower.h src/scip/cons_and.h \
+ src/scip/cons_bivariate.h src/scip/cons_bounddisjunction.h \
+ src/scip/cons_cardinality.h src/scip/cons_conjunction.h \
+ src/scip/cons_countsols.h src/scip/cons_cumulative.h \
+ src/scip/cons_disjunction.h src/scip/cons_indicator.h \
+ src/scip/cons_integral.h src/scip/cons_knapsack.h \
+ src/scip/cons_linking.h src/scip/cons_logicor.h \
  src/scip/cons_nonlinear.h src/scip/cons_or.h src/scip/cons_orbisack.h \
  src/scip/cons_orbitope.h src/scip/cons_pseudoboolean.h \
  src/scip/cons_quadratic.h src/scip/cons_setppc.h src/scip/cons_soc.h \
@@ -10040,9 +10107,10 @@ $(LIBOBJDIR)/scip/heuristics.o: src/scip/heuristics.c src/scip/heuristics.h src/
  src/scip/presol_inttobinary.h src/scip/presol_redvub.h \
  src/scip/presol_symbreak.h src/scip/presol_qpkktref.h \
  src/scip/presol_trivial.h src/scip/presol_tworowbnd.h \
- src/scip/presol_stuffing.h src/scip/presol_symmetry.h \
- src/symmetry/type_symmetry.h src/scip/prop_dualfix.h \
- src/scip/prop_genvbounds.h src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
+ src/scip/presol_sparsify.h src/scip/presol_stuffing.h \
+ src/scip/presol_symmetry.h src/symmetry/type_symmetry.h \
+ src/scip/prop_dualfix.h src/scip/prop_genvbounds.h \
+ src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
  src/scip/prop_orbitalfixing.h src/scip/prop_probing.h \
  src/scip/prop_pseudoobj.h src/scip/prop_redcost.h \
  src/scip/prop_rootredcost.h src/scip/prop_vbounds.h \
@@ -11008,9 +11076,10 @@ $(LIBOBJDIR)/scip/scipdefplugins.o: src/scip/scipdefplugins.c src/scip/scipdefpl
  src/scip/presol_inttobinary.h src/scip/presol_redvub.h \
  src/scip/presol_symbreak.h src/scip/presol_qpkktref.h \
  src/scip/presol_trivial.h src/scip/presol_tworowbnd.h \
- src/scip/presol_stuffing.h src/scip/presol_symmetry.h \
- src/symmetry/type_symmetry.h src/scip/prop_dualfix.h \
- src/scip/prop_genvbounds.h src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
+ src/scip/presol_sparsify.h src/scip/presol_stuffing.h \
+ src/scip/presol_symmetry.h src/symmetry/type_symmetry.h \
+ src/scip/prop_dualfix.h src/scip/prop_genvbounds.h \
+ src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
  src/scip/prop_orbitalfixing.h src/scip/prop_probing.h \
  src/scip/prop_pseudoobj.h src/scip/prop_redcost.h \
  src/scip/prop_rootredcost.h src/scip/prop_vbounds.h \
@@ -11131,9 +11200,10 @@ $(LIBOBJDIR)/scip/scipshell.o: src/scip/scipshell.c src/scip/scip.h src/scip/def
  src/scip/presol_inttobinary.h src/scip/presol_redvub.h \
  src/scip/presol_symbreak.h src/scip/presol_qpkktref.h \
  src/scip/presol_trivial.h src/scip/presol_tworowbnd.h \
- src/scip/presol_stuffing.h src/scip/presol_symmetry.h \
- src/symmetry/type_symmetry.h src/scip/prop_dualfix.h \
- src/scip/prop_genvbounds.h src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
+ src/scip/presol_sparsify.h src/scip/presol_stuffing.h \
+ src/scip/presol_symmetry.h src/symmetry/type_symmetry.h \
+ src/scip/prop_dualfix.h src/scip/prop_genvbounds.h \
+ src/scip/prop_nlobbt.h src/scip/prop_obbt.h \
  src/scip/prop_orbitalfixing.h src/scip/prop_probing.h \
  src/scip/prop_pseudoobj.h src/scip/prop_redcost.h \
  src/scip/prop_rootredcost.h src/scip/prop_vbounds.h \
@@ -11661,4 +11731,4 @@ $(LIBOBJDIR)/symmetry/compute_symmetry_none.o: src/symmetry/compute_symmetry_non
  src/scip/type_concurrent.h src/scip/struct_stat.h src/scip/type_visual.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
- src/symmetry/type_symmetry.h
+ src/symmetry/struct_symmetry.h src/symmetry/type_symmetry.h

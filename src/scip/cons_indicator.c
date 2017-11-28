@@ -1997,6 +1997,7 @@ SCIP_RETCODE addAltLPColumn(
    {
       SCIP_CALL( initAlternativeLP(scip, conshdlr) );
    }
+   assert( conshdlrdata->altlp != NULL );
    assert( conshdlrdata->varhash != NULL );
    assert( conshdlrdata->lbhash != NULL );
    assert( conshdlrdata->ubhash != NULL );

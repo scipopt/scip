@@ -8,23 +8,29 @@
 
 sleep 5
 
-################################
-# AWK script for later         #
-################################
+#################################
+# AWK scripts for later         #
+#################################
 read -d '' awkscript_findasserts << 'EOF'
+# call: awk "$awkscript_findasserts" $ERRORINSTANCES $ERRFILE (or pipe a string with the error instances into awk if they are not in a file)
+
+# init variables
 BEGIN {
     searchAssert=0; idx=1; delete failed[0]; delete human[0];
 }
 
+# read failed instances into array
 NR==FNR && /fail.*abort/ {
     failed[length(failed)+1]=$1; next;
 }
 
+# find instances in errorfile
 NR!=FNR && /^@01/ {
     # get instancename (copied from check.awk)
     n = split($2, a, "/"); m = split(a[n], b, "."); currinstname = b[1];
     if( b[m] == "gz" || b[m] == "z" || b[m] == "GZ" || b[m] == "Z" ) { m--; }
     for( i = 2; i < m; ++i ) { currinstname = currinstname "." b[i]; }
+
     instance = $2;
 
     # adjust idx and searchAssert
@@ -32,6 +38,7 @@ NR!=FNR && /^@01/ {
     if (currinstname == failed[idx]) { searchAssert=1; }
 }
 
+# find assertions in errorfile
 NR!=FNR && searchAssert == 1 && /Assertion.*failed.$/ {
     print "";
     print instance;
@@ -39,6 +46,7 @@ NR!=FNR && searchAssert == 1 && /Assertion.*failed.$/ {
     searchAssert=0; idx+=1;
 }
 
+# print results
 END {
     if( length(human) > 0 ) {
         print "";
@@ -49,46 +57,63 @@ END {
 EOF
 
 read -d '' awkscript_checkfixedinstances << 'EOF'
-NR != FNR {
-  if( $3 == GITBRANCH && $4 == TESTSET && $5 == SETTING && $6 == OPT && $7 == LPS)
-  {
-     if( $0 in bugs == 0 )
-        print "Previously failing instance " $1 " with error " $2 " does not fail anymore"
-     else
-        print $0 >> TMPDATABASE
-  }
-  else
-     print $0 >> TMPDATABASE
-  next;
+# call: awk $AWKARGS "$awkscript_checkfixedinstances" $RESFILE $DATABASE
+# prints fixed instances
+# afterwards $TMPDATABASE contains all still failing bugs, not new ones!
+
+# read fail instances for this configuration from resfile
+NR == FNR && /fail/ {
+    failmsg=$13; for(i=14;i<=NF;i++){ failmsg=failmsg"_"$i; }
+    errorstring=$1 " " failmsg " " GITBRANCH " " TESTSET " " SETTING " " OPT " " LPS;
+    bugs[errorstring]
+    next;
 }
-## fail instances for this configuration
-/fail/ {
-  failmsg=$13; for(i=14;i<=NF;i++){failmsg=failmsg"_"$i;}
-  errorstring=$1 " " failmsg " " GITBRANCH " " TESTSET " " SETTING " " OPT " " LPS;
-  bugs[errorstring]
+
+# read from database
+NR != FNR {
+    if( $3 == GITBRANCH && $4 == TESTSET && $5 == SETTING && $6 == OPT && $7 == LPS ) {
+        if (!( $0 in bugs )) {
+            # if current line from database matches our settings and
+            # it is not in the set of failed instances from this run it was fixed
+            print "Previously failing instance " $1 " with error " $2 " does not fail anymore"
+            next;
+        }
+    }
+    # write record into the database for next time
+    print $0 >> TMPDATABASE
 }
 EOF
 
 read -d '' awkscript_readknownbugs << 'EOF'
+# call: awk $AWKARGS "$awkscript_readknownbugs" $DATABASE $RESFILE
+# append new fails to DATABASE, also print them
+# write all still failing bugs into STILLFAILING
+
+# read known bugs from database
 NR == FNR {known_bugs[$0]; next}
+
+# find fails in resfile
 /fail/ {
-    ## get the fail error and build string with the format of "database"
+    # get the fail error and build string in database format
     failmsg=$13; for(i=14;i<=NF;i++){failmsg=failmsg"_"$i;}
     errorstring=$1 " " failmsg " " GITBRANCH " " TESTSET " " SETTING " " OPT " " LPS;
-    ## if error is not in "database", add it and print it in ERRORINSTANCES to send email
-    if( errorstring in known_bugs == 0 )
-    {
+
+    if (!( errorstring in known_bugs )) {
+        # if error is not known, add it and print it to ERRORINSTANCES for sending mail later
         print errorstring >> DATABASE;
         print $0;
-    }
-    else # these are instances that failed before
-    {
-        print $1 " " failmsg >> STILLFAILING; # only report the name of the instance and the fail message
+    } else {
+        # if error is known, then instance failed before with same settings
+        # only report the name and the fail message of the instance
+        print $1 " " failmsg >> STILLFAILING;
     }
 }
 EOF
 
 read -d '' awkscript_scipheader << 'EOF'
+# call: awk "$awkscript_scipheader" $OUTFILE
+# prints current scipheader from OURFILE
+
 BEGIN{printLines=0;}
 
 /^SCIP version/ {printLines=1;}
@@ -100,9 +125,9 @@ printLines > 0 {print $0}
     }
 }
 EOF
-################################
-# End of AWK Script            #
-################################
+#################################
+# End of AWK Scripts            #
+#################################
 
 # we use a name that is unique per test sent to the cluster (a jenkins job
 # can have several tests sent to the cluster, that is why the jenkins job
@@ -146,7 +171,7 @@ fi
 if [ "${EVALFILE}" == "" ]; then
     echo "Couldn't find eval file, sending email"
     SUBJECT="ERROR [BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING=$SETTING] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH]"
-    echo -e "Aborting because the .eval file cannot be found.\nTried " | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+    echo -e "Aborting because the .eval file cannot be found.\nTried:\n${BASEFILE}, check/results/check.${TESTSET}.${SCIPVERSION}.*.${SETTING}.\nJoin me at `pwd`.\n" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
     exit 1
 fi
 
@@ -168,15 +193,15 @@ cd check/
 PERF_MAIL=""
 if [ "${PERFORMANCE}" == "performance" ]; then
   ./evalcheck_cluster.sh -R ../${EVALFILE} > ${OUTPUT}
-  cat ${OUTPUT}
   NEWRBID=`cat $OUTPUT | grep "rubberband.zib" |sed -e 's|https://rubberband.zib.de/result/||'`
   OLDRBID=`tail $RBDB -n 1`
   PERF_MAIL=`echo "The results of the weekly performance runs are ready. Take a look at https://rubberband.zib.de/result/${NEWRBID}?compare=${OLDRBID}"`
   echo $NEWRBID >> $RBDB
-  rm ${OUTPUT}
 else
-  ./evalcheck_cluster.sh -r "-v useshortnames=0" ../${EVALFILE}
+  ./evalcheck_cluster.sh -r "-v useshortnames=0" ../${EVALFILE} > ${OUTPUT}
 fi
+cat ${OUTPUT}
+rm ${OUTPUT}
 cd ..
 
 # Store paths of err out res and set file
@@ -241,7 +266,7 @@ ${ERRORS_INFO}
 Here is the complete list of new fails:
 ${ERRORINSTANCES}
 
-The follwing instances are still failing:
+The following instances are still failing:
 ${STILLFAILINGDB}
 
 Finally, the err, out and res file can be found here:

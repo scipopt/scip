@@ -33,7 +33,7 @@ static SCIP* scip;
        
 /** create unbounded problem */
 static
-void initProb()
+void initProb(void)
 {
    SCIP_CONS* cons;
    SCIP_VAR* xvar;

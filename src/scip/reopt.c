@@ -7579,7 +7579,7 @@ SCIP_RETCODE SCIPreoptApplyGlbConss(
    assert(stat != NULL);
    assert(blkmem != NULL);
 
-   if( (reopt->glbconss == NULL || reopt->nglbconss == 0) && !set->reopt_sepabestsol )
+   if( reopt->glbconss == NULL || reopt->nglbconss == 0 )
       return SCIP_OKAY;
 
    for( c = reopt->nglbconss-1; c >= 0; c-- )

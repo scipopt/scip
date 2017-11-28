@@ -78,7 +78,7 @@ CLUSTERNODES    =       all
 
 # set SCIP version here for external projects
 # use underscore to make it compatible with def.h
-SCIP_VERSION	=	4.0.1.3
+SCIP_VERSION	=	5.0.0
 
 # compiling and linking parameters
 VERBOSE		=	false
@@ -190,7 +190,7 @@ LN_s		= 	ln -s
 LN_sf		=	ln -sf
 
 # initial compiler and linker flags
-FLAGS		=	-I$(SRCDIR) -DWITH_SCIPDEF -I$(SCIPDIR)/src
+FLAGS		=	-I$(SRCDIR) -DWITH_SCIPDEF -DFNAME_$(FORTRAN_NAMING_CONVENTION) -I$(SCIPDIR)/src
 OFLAGS		=
 CFLAGS		=
 CXXFLAGS	=
@@ -553,7 +553,6 @@ endif
 ifeq ($(FILTERSQP),true)
 FILTERSQPLIBS       =       $(LINKCC_l)filtersqp.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)bqpd.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
 LDFLAGS		+=	$(FILTERSQPLIBS) $(FORTRANLIBS)
-CFLAGS			+=	-DFNAME_$(FORTRAN_NAMING_CONVENTION)
 NLPILIBSHORTNAMEFILTERSQP = .filtersqp
 endif
 

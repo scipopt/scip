@@ -750,16 +750,16 @@ SCIP_RETCODE alnsIncludeNeighborhood(
    (*neighborhood)->nhdeactivate = nhdeactivate;
 
    /* add parameters for this neighborhood */
-   sprintf(paramname, "heuristics/alns/%s/minfixingrate", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/alns/%s/minfixingrate", name);
    SCIP_CALL( SCIPaddRealParam(scip, paramname, "minimum fixing rate for this neighborhood",
          &(*neighborhood)->fixingrate.minfixingrate, TRUE, minfixingrate, 0.0, 1.0, NULL, NULL) );
-   sprintf(paramname, "heuristics/alns/%s/maxfixingrate", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/alns/%s/maxfixingrate", name);
    SCIP_CALL( SCIPaddRealParam(scip, paramname, "maximum fixing rate for this neighborhood",
          &(*neighborhood)->fixingrate.maxfixingrate, TRUE, maxfixingrate, 0.0, 1.0, NULL, NULL) );
-   sprintf(paramname, "heuristics/alns/%s/active", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/alns/%s/active", name);
    SCIP_CALL( SCIPaddBoolParam(scip, paramname, "is this neighborhood active?",
          &(*neighborhood)->active, TRUE, active, NULL, NULL) );
-   sprintf(paramname, "heuristics/alns/%s/priority", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/alns/%s/priority", name);
    SCIP_CALL( SCIPaddRealParam(scip, paramname, "positive call priority to initialize bandit algorithms",
          &(*neighborhood)->priority, TRUE, priority, 1e-2, 1.0, NULL, NULL) );
 
@@ -2091,7 +2091,7 @@ SCIP_RETCODE setupSubScip(
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
    SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 1) );
    /* enable statistic timing inside sub SCIP */
-      SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
+      SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", TRUE) );
 #endif
 
    SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", heurdata->nsolslim) );
@@ -2207,7 +2207,7 @@ SCIP_RETCODE setupSubScip(
    /* change random seed of sub-SCIP */
    if( heurdata->subsciprandseeds )
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "randomization/randomseedshift", (int)SCIPheurGetNCalls(heur)) );
+      SCIP_CALL( SCIPsetIntParam(subscip, "randomization/randomseedshift", (int)SCIPheurGetNCalls(heur)) );
    }
 
    SCIPdebugMsg(scip, "Solve Limits: %lld (%lld) nodes (stall nodes), %.1f sec., %d sols\n",
@@ -2490,6 +2490,10 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
       SCIP_CALL( SCIPstartClock(scip, neighborhood->stats.submipclock) );
       /* run sub-SCIP for the given budget, and collect statistics */
       SCIP_CALL_ABORT( SCIPsolve(subscip) );
+
+#ifdef ALNS_SUBSCIPOUTPUT
+      SCIP_CALL( SCIPprintStatistics(scip, NULL) );
+#endif
 
       SCIP_CALL( SCIPstopClock(scip, neighborhood->stats.submipclock) );
 

@@ -1,7 +1,7 @@
 include(CTest)
 
 add_custom_target(check
-                COMMAND ${CMAKE_CTEST_COMMAND} -R "-default" --schedule-random
+                COMMAND ${CMAKE_CTEST_COMMAND} -R "-default" -E "applications" --schedule-random
                 DEPENDS scip
                 )
 
@@ -30,8 +30,6 @@ set(settings_default
 #
 set(settings_MIP
     "default"
-    "separating_off"
-    "presolving_off"
     "heuristics_off"
     "separating_fast"
     "presolving_fast"
@@ -39,45 +37,49 @@ set(settings_MIP
     "separating_aggressive"
     "presolving_aggressive"
     "heuristics_aggressive"
-    "allaggr"
-    "cgmip"
-    "cgmipstrong"
-    "convertinttobin"
-    "fullstrongbfs"
-    "indicatorlogicor"
-    "mostinf"
-    "distribution"
-    "oddcylcelift"
-    "oddcylce"
-    "oddcylceliftheur"
-    "indicatorsepa"
-    "proporbit"
-    "allfull"
-
-    "cgmipviol"
-#    "dynamic"
-    "heurlprows"
-    "intobj"
-#    "nologicor"
-    "presolaggr"
-    "pscost"
-    "setppclifting"
-    "xorsepaparity"
-#    "cloud"
-    "feaspump20"
+    #constraints
+    "indicatorlogicorsepa"
     "indicatoralterlp"
-    "leastinf"
-    "presolfast"
-    "randomhybrid"
-    "uct_breadth_dualval"
-    "alldisp"
-    "vbcvisualization"
-    "bakvisualization"
-    "solvingphases"
+
+    #presolving and branching
+    "convertinttobin_mostinf"
+    "setppclifting_leastinf"
+    #branching and propagation
+
+    "pscost_proporbitope"
+    #separation and branching
+    "oddcyclelift_randomhybrid"
+    "oddcycle_distribution"
+
+    #separation and heuristics
+    "oddcycleliftheur_feaspump20"
+    "heurlprows"
     "lns_epsgreedy"
     "lns_exp3"
+#    "dynamic"
+    "intobj"
+#    "nologicor"
+    "xorsepaparity"
+    "solvingphases"
+#    "cloud"
+    "uct_breadth_dualval"
 )
-
+#
+# settings to run a reduced MIP test
+#
+set(settings_fastMIP
+    "vbcvisualization"
+    "bakvisualization"
+    "alldisp"
+    "fullstrongbfs"
+    "allfull"
+    "all_aggressive"
+    "cgmip"
+    "cgmipstrong"
+    "cgmipviol"
+    "presolving_off"
+    "separating_off"
+  )
 set(settings_MINLP
     "checkfeastolfac10"
     "undercover1"
@@ -125,6 +127,22 @@ set(settings_Cardinality
     "upgdcardinality"
 )
 
+set(instances_Readertest
+    "instances/MIP/bell5.mps\;8966406.49"
+    "instances/MIP/egout.mps\;568.1007"
+    "instances/MIP/enigma.mps\;0"
+    "instances/MIP/flugpl.mps\;1201500"
+    "instances/MIP/gt2.mps\;21166"
+    "instances/MIP/lseu.mps\;1120"
+    "instances/MIP/MANN_a9.clq.lp\;16"
+    "instances/MIP/misc03.mps\;3360"
+    "instances/MIP/p0033.osil\;3089"
+    "instances/MIP/p0548.mps\;8691"
+    "instances/MIP/stein27.fzn\;18"
+    "instances/MIP/stein27_inf.lp\;+infinity"
+    "instances/MIP/vpm2.fzn\;13.75"
+)
+
 
 #
 # MIP instances
@@ -146,6 +164,16 @@ set(instances_MIP
     "instances/MIP/stein27.fzn\;18"
     "instances/MIP/stein27_inf.lp\;+infinity"
     "instances/MIP/vpm2.fzn\;13.75"
+    )
+
+#
+# Reduced set of MIP instances for more expensive settings
+#
+set(instances_fastMIP
+    "instances/MIP/egout.mps\;568.1007"
+    "instances/MIP/gt2.mps\;21166"
+    "instances/MIP/MANN_a9.clq.lp\;16"
+    "instances/MIP/p0033.osil\;3089"
     )
 
 #
@@ -184,8 +212,8 @@ set(instances_Bivariate
     "instances/Bivariate/nvs01.osil\;12.4696688"
    )
 set(instances_Bilinrelax
+    "instances/Bilinrelax/pointpack04.osil\;1.00000024988836"
     "instances/Bilinrelax/pointpack06.osil\;0.361111675167215"
-    "instances/Bilinrelax/ex5_4_2.osil\;7512.23014449367"
   )
 
 #
@@ -345,6 +373,7 @@ endmacro(add_instancetests)
 add_instancetests(instances_CP settings_default "CP")
 add_instancetests(instances_Indicator settings_default "Indicator")
 add_instancetests(instances_MIP settings_MIP "MIP")
+add_instancetests(instances_fastMIP settings_fastMIP "FastMIP")
 add_instancetests(instances_MINLP settings_MINLP "MINLP")
 add_instancetests(instances_Bivariate settings_Bivariate "Bivariate")
 add_instancetests(instances_Bilinrelax settings_Bilinrelax "Bilinrelax")
