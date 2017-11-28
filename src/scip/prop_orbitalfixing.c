@@ -613,6 +613,9 @@ SCIP_DECL_PROPINITSOL(propInitsolOrbitalfixing)
          for (j = 0; j < propdata->npermvars; ++j)
          {
             SCIP_CALL( SCIPhashmapInsert(propdata->permvarmap, propdata->permvars[j], (void*) (size_t) j) );
+
+            /* variables that are handled by symmetry are not allowed to be rounded */
+            SCIPaddVarLocks(scip, propdata->permvars[j], 1, 1);
          }
       }
    }
