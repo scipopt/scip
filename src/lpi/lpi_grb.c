@@ -904,7 +904,8 @@ SCIP_RETCODE convertSides(
       }
       else if( lhs[i] <= -GRB_INFINITY )
       {
-         assert(-GRB_INFINITY < rhs[i] && rhs[i] < GRB_INFINITY);
+         /* this includes the case of free rows */
+         assert(-GRB_INFINITY < rhs[i]);
          lpi->senarray[i] = GRB_LESS_EQUAL;
          lpi->rhsarray[i] = rhs[i];
       }
