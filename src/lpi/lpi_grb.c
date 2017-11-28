@@ -4334,8 +4334,6 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    int nrows;
    double val;
    int ind;
-   int k;
-   int i;
    int status;
 
    assert(lpi != NULL);
@@ -4377,6 +4375,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    if ( ninds != NULL && inds != NULL )
    {
       int idx;
+      int i;
 
       /* copy sparse solution */
       for (i = 0; i < x.len; ++i)
@@ -4389,15 +4388,19 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    }
    else
    {
-      /* copy solution to dense vector; this relies on the fact that Gurobi returns a sorted index vector */
-      k = 0;
-      for (i = 0; i < nrows; ++i)
+      int idx;
+      int i;
+
+      /* copy solution to dense vector */
+      SCIPsortIntReal(x.ind, x.val, x.len);
+      i = 0;
+      for (idx = 0; idx < nrows; ++idx)
       {
-         assert( k <= x.len );
-         if ( k < x.len && (x.ind)[k] == i )
-            coef[i] = (x.val)[k++];
+         assert( i <= x.len );
+         if ( i < x.len && (x.ind)[i] == idx )
+            coef[idx] = (x.val)[i++];
          else
-            coef[i] = 0.0;
+            coef[idx] = 0.0;
       }
    }
 
@@ -4435,8 +4438,6 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    int nrows;
    double val;
    int ind;
-   int k;
-   int i;
    int status;
 
    assert(lpi != NULL);
@@ -4479,6 +4480,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    if ( ninds != NULL && inds != NULL )
    {
       int idx;
+      int i;
 
       /* copy sparse solution */
       for (i = 0; i < x.len; ++i)
@@ -4493,19 +4495,23 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    }
    else
    {
+      int idx;
+      int i;
+
       /* copy solution to dense vector */
-      k = 0;
-      for (i = 0; i < nrows; ++i)
+      SCIPsortIntReal(x.ind, x.val, x.len);
+      i = 0;
+      for (idx = 0; idx < nrows; ++idx)
       {
-         assert( k <= x.len );
-         if ( k < x.len && (x.ind)[k] == i )
+         assert( i <= x.len );
+         if ( i < x.len && (x.ind)[i] == idx )
          {
-            coef[i] = (x.val)[k++];
-            if( bind[i] < 0 )
-               coef[i] *= -1.0;
+            coef[idx] = (x.val)[i++];
+            if( bind[idx] < 0 )
+               coef[idx] *= -1.0;
          }
          else
-            coef[i] = 0.0;
+            coef[idx] = 0.0;
       }
    }
 
@@ -4539,7 +4545,6 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    int nrows;
    int ncols;
    int ngrbcols;
-   int j;
    int status;
    SCIP_Bool isslackvar;
 
@@ -4580,32 +4585,34 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    if ( ninds != NULL && inds != NULL )
    {
       int idx;
+      int k;
+      int j;
 
       /* Copy sparse solution: Column indices ngrbcols and larger correspond to slack variables artificially introduced
        * by Gurobi; column indices ncols, ncols+1, ..., ngrbcols-1 correspond to slack variables introduced by the LPI
-       * implementation. Both must simply be ignored; we exploit the fact that Gurobi returns the vector with sorted
-       * indices (checked below in debug mode).
+       * implementation. Both must simply be ignored.
        */
+      k = 0;
       for (j = 0; j < x.len; ++j)
       {
          idx = (x.ind)[j];
          if ( idx < ncols )
          {
-            inds[j] = idx;
+            inds[k++] = idx;
             coef[idx] = (x.val)[j];
             if( isslackvar )
                coef[idx] *= -1.0;
          }
-         else
-            break;
       }
-      *ninds = j;
+      *ninds = k;
    }
    else
    {
       int idx;
+      int j;
 
       /* Copy dense solution (see comment above). */
+      SCIPsortIntReal(x.ind, x.val, x.len);
       j = 0;
       for (idx = 0; idx < ncols; ++idx)
       {
@@ -4620,13 +4627,6 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
             coef[idx] = 0.0;
       }
    }
-
-#ifndef NDEBUG
-   for (; j < x.len; ++j)
-   {
-      assert( (x.ind)[j] >= ncols );
-   }
-#endif
 
    /* free solution space */
    BMSfreeMemoryArray(&(x.val));
@@ -4655,8 +4655,6 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    SVECTOR x;
    int* bind;
    int nrows;
-   int k;
-   int j;
    int status;
 
    assert(lpi != NULL);
@@ -4690,6 +4688,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    if ( ninds != NULL && inds != NULL )
    {
       int idx;
+      int j;
 
       /* copy sparse solution */
       for (j = 0; j < x.len; ++j)
@@ -4704,18 +4703,23 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    }
    else
    {
-      k = 0;
-      for (j = 0; j < nrows; ++j)
+      int idx;
+      int j;
+
+      /* copy dense solution */
+      SCIPsortIntReal(x.ind, x.val, x.len);
+      j = 0;
+      for (idx = 0; idx < nrows; ++idx)
       {
-         assert( k <= x.len );
-         if ( k < x.len && (x.ind)[k] == j )
+         assert( j <= x.len );
+         if ( j < x.len && (x.ind)[j] == idx )
          {
-            coef[j] = (x.val)[k++];
-            if( bind[j] < 0 )
-               coef[j] *= -1.0;
+            coef[idx] = (x.val)[j++];
+            if( bind[idx] < 0 )
+               coef[idx] *= -1.0;
          }
          else
-            coef[j] = 0.0;
+            coef[idx] = 0.0;
       }
    }
 
