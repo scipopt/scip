@@ -48413,18 +48413,21 @@ SCIP_RETCODE SCIPvalidateSolve(
    SCIP_Real dualviol;
    assert(scip != NULL);
 
-   localfeasible = TRUE;
-   localdualboundcheck = TRUE;
-
    /* if no problem exists, there is no need for validation */
    if( SCIPgetStage(scip) < SCIP_STAGE_PROBLEM )
    {
-      *feasible = TRUE;
-      *primalboundcheck = TRUE;
-      *dualboundcheck = TRUE;
+      if( feasible != NULL )
+         *feasible = TRUE;
+      if( primalboundcheck != NULL )
+         *primalboundcheck = TRUE;
+      if( dualboundcheck != NULL )
+         *dualboundcheck = TRUE;
 
       return SCIP_OKAY;
    }
+
+   localfeasible = TRUE;
+   localdualboundcheck = TRUE;
 
    /* check the best solution for feasibility in the original problem */
    if( SCIPgetNSols(scip) > 0 )
