@@ -694,8 +694,8 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIP_Real oldcoef = SCIP_INVALID;
    SCIP_Real val;
    int nuniquevararray = 0;
-   int nhandleconss = 0;
-   int nactiveconss = 0;
+   int nhandleconss;
+   int nactiveconss;
    int nconss;
    int nvars;
    int c;
