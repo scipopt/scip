@@ -4279,6 +4279,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
    CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ngrbcols) );
 
+   /**@todo avoid memory allocation by using bind directly */
    /* get space for bhead */
    SCIP_ALLOC( BMSallocMemoryArray(&bhead, nrows) );
 
@@ -4356,11 +4357,13 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIP_ALLOC( BMSallocMemoryArray(&(x.ind), nrows) );
    SCIP_ALLOC( BMSallocMemoryArray(&(x.val), nrows) );
 
+   /* get basis indices, temporarily using memory of x.ind */
+   SCIP_CALL( SCIPlpiGetBasisInd(lpi, x.ind) );
+
    /* set up rhs */
    b.len = 1;
    ind = r;
-   /**@todo Check whether r corresponds to a slack coefficient -1 and change this to -1.0 */
-   val = 1.0;
+   val = (x.ind)[r] >= 0 ? 1.0 : -1.0;
    b.ind = &ind;
    b.val = &val;
 
@@ -4428,6 +4431,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
 {
    SVECTOR x;
    SVECTOR b;
+   int* bind;
    int nrows;
    double val;
    int ind;
@@ -4467,6 +4471,10 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    /* size should be at most the number of rows */
    assert( x.len <= nrows );
 
+   /* get basis indices: entries that correspond to slack variables with coefficient -1 must be negated */
+   SCIP_ALLOC( BMSallocMemoryArray(&bind, nrows) );
+   SCIP_CALL( SCIPlpiGetBasisInd(lpi, bind) );
+
    /* check whether we require a dense or sparse result vector */
    if ( ninds != NULL && inds != NULL )
    {
@@ -4477,8 +4485,9 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
       {
          idx = (x.ind)[i];
          inds[i] = idx;
-         /**@todo For entries that correspond to slack variables with coefficient -1 negate the nonzero entry */
          coef[idx] = (x.val)[i];
+         if( bind[idx] < 0 )
+            coef[idx] *= -1.0;
       }
       *ninds = x.len;
    }
@@ -4490,14 +4499,18 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
       {
          assert( k <= x.len );
          if ( k < x.len && (x.ind)[k] == i )
-            /**@todo For entries that correspond to slack variables with coefficient -1 negate the nonzero entry */
+         {
             coef[i] = (x.val)[k++];
+            if( bind[i] < 0 )
+               coef[i] *= -1.0;
+         }
          else
             coef[i] = 0.0;
       }
    }
 
-   /* free solution space */
+   /* free solution space and basis index array */
+   BMSfreeMemoryArray(&bind);
    BMSfreeMemoryArray(&(x.val));
    BMSfreeMemoryArray(&(x.ind));
 
@@ -4528,6 +4541,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    int ngrbcols;
    int j;
    int status;
+   SCIP_Bool isslackvar;
 
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
@@ -4550,12 +4564,18 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_ALLOC( BMSallocMemoryArray(&(x.ind), ngrbcols + nrows) );
    SCIP_ALLOC( BMSallocMemoryArray(&(x.val), ngrbcols + nrows) );
 
+   /* get basis indices, temporarily using memory of x.ind: if r corresponds to a slack variable with coefficient -1 we
+    * have to negate all values
+    */
+   SCIP_CALL( SCIPlpiGetBasisInd(lpi, x.ind) );
+   isslackvar = ((x.ind)[r] < 0);
+
+   /* retrieve row */
    CHECK_ZERO( lpi->messagehdlr, GRBBinvRowi(lpi->grbmodel, r, &x) );
 
    /* size should be at most the number of columns plus rows for slack variables */
    assert( x.len <= ngrbcols + nrows );
 
-   /**@todo If r corresponds to a slack variables with coefficient -1 negate all values */
    /* check whether we require a dense or sparse result vector */
    if ( ninds != NULL && inds != NULL )
    {
@@ -4573,6 +4593,8 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
          {
             inds[j] = idx;
             coef[idx] = (x.val)[j];
+            if( isslackvar )
+               coef[idx] *= -1.0;
          }
          else
             break;
@@ -4589,7 +4611,11 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
       {
          assert( j <= x.len );
          if ( j < x.len && (x.ind)[j] == idx )
+         {
             coef[idx] = (x.val)[j++];
+            if( isslackvar )
+               coef[idx] *= -1.0;
+         }
          else
             coef[idx] = 0.0;
       }
@@ -4627,6 +4653,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    )
 {  /*lint --e{715}*/
    SVECTOR x;
+   int* bind;
    int nrows;
    int k;
    int j;
@@ -4655,6 +4682,10 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    /* size should be at most the number of rows */
    assert( x.len <= nrows );
 
+   /* get basis indices: entries that correspond to slack variables with coefficient -1 must be negated */
+   SCIP_ALLOC( BMSallocMemoryArray(&bind, nrows) );
+   SCIP_CALL( SCIPlpiGetBasisInd(lpi, bind) );
+
    /* check whether we require a dense or sparse result vector */
    if ( ninds != NULL && inds != NULL )
    {
@@ -4665,8 +4696,9 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
       {
          idx = (x.ind)[j];
          inds[j] = idx;
-         /**@todo For entries that correspond to slack variables with coefficient -1 negate the nonzero entry */
          coef[idx] = (x.val)[j];
+         if( bind[idx] < 0 )
+            coef[idx] *= -1.0;
       }
       *ninds = x.len;
    }
@@ -4677,14 +4709,18 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
       {
          assert( k <= x.len );
          if ( k < x.len && (x.ind)[k] == j )
-            /**@todo For entries that correspond to slack variables with coefficient -1 negate the nonzero entry */
+         {
             coef[j] = (x.val)[k++];
+            if( bind[j] < 0 )
+               coef[j] *= -1.0;
+         }
          else
             coef[j] = 0.0;
       }
    }
 
-   /* free solution space */
+   /* free solution space and basis index array */
+   BMSfreeMemoryArray(&bind);
    BMSfreeMemoryArray(&(x.val));
    BMSfreeMemoryArray(&(x.ind));
 
