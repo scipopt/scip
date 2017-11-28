@@ -629,6 +629,40 @@ int getNActiveVars(
 #endif
 
 
+/** returns the number of active constraints that can be handled by symmetry */
+static
+int getNSymhandableConss(
+   SCIP*                 scip                /**< SCIP instance */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   int nhandleconss = 0;
+
+   assert( scip != NULL );
+
+   conshdlr = SCIPfindConshdlr(scip, "linear");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "setppc");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "xor");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "and");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "or");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "logicor");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "knapsack");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "varbound");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "bounddisjunction");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+
+   return nhandleconss;
+}
+
+
 /** compute symmetry group of MIP */
 static
 SCIP_RETCODE computeSymmetryGroup(
@@ -705,12 +739,7 @@ SCIP_RETCODE computeSymmetryGroup(
    assert( conss != NULL );
 
    /* compute the number of active constraints */
-   for (c = 0; c < nconss; ++c)
-   {
-      assert( conss[c] != NULL );
-      if ( SCIPconsIsActive(conss[c]) )
-         ++nactiveconss;
-   }
+   nactiveconss = SCIPgetNActiveConss(scip);
 
    /* exit if no active constraints are available */
    if ( nactiveconss == 0 )
@@ -720,24 +749,7 @@ SCIP_RETCODE computeSymmetryGroup(
    }
 
    /* before we set up the matrix, check whether we can handle all constraints */
-   conshdlr = SCIPfindConshdlr(scip, "linear");
-   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
-   conshdlr = SCIPfindConshdlr(scip, "setppc");
-   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
-   conshdlr = SCIPfindConshdlr(scip, "xor");
-   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
-   conshdlr = SCIPfindConshdlr(scip, "and");
-   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
-   conshdlr = SCIPfindConshdlr(scip, "or");
-   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
-   conshdlr = SCIPfindConshdlr(scip, "logicor");
-   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
-   conshdlr = SCIPfindConshdlr(scip, "knapsack");
-   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
-   conshdlr = SCIPfindConshdlr(scip, "varbound");
-   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
-   conshdlr = SCIPfindConshdlr(scip, "bounddisjunction");
-   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   nhandleconss = getNSymhandableConss(scip);
    assert( nhandleconss <= nactiveconss );
    if ( nhandleconss < nactiveconss )
    {
@@ -1147,40 +1159,6 @@ SCIP_RETCODE computeSymmetryGroup(
 #endif
 
    return SCIP_OKAY;
-}
-
-
-/** returns the number of active constraints that can be handled by symmetry */
-static
-int getNSymhandableConss(
-   SCIP*                 scip                /**< SCIP instance */
-   )
-{
-   SCIP_CONSHDLR* conshdlr;
-   int nhandleconss = 0;
-
-   assert( scip != NULL );
-
-   conshdlr = SCIPfindConshdlr(scip, "linear");
-   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
-   conshdlr = SCIPfindConshdlr(scip, "setppc");
-   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
-   conshdlr = SCIPfindConshdlr(scip, "xor");
-   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
-   conshdlr = SCIPfindConshdlr(scip, "and");
-   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
-   conshdlr = SCIPfindConshdlr(scip, "or");
-   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
-   conshdlr = SCIPfindConshdlr(scip, "logicor");
-   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
-   conshdlr = SCIPfindConshdlr(scip, "knapsack");
-   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
-   conshdlr = SCIPfindConshdlr(scip, "varbound");
-   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
-   conshdlr = SCIPfindConshdlr(scip, "bounddisjunction");
-   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
-
-   return nhandleconss;
 }
 
 
