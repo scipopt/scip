@@ -13928,7 +13928,7 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/binreformbinaryonly",
          "whether to consider only binary variables when replacing products with binary variables",
-         &conshdlrdata->binreformbinaryonly, TRUE, FALSE, NULL, NULL) );
+         &conshdlrdata->binreformbinaryonly, FALSE, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/binreformmaxcoef",
          "limit (as factor on 1/feastol) on coefficients and coef. range in linear constraints created when replacing products with binary variables",

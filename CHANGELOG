@@ -108,6 +108,7 @@ performance improvements:
 - use limit on the total number of nonzeros added to the clique table during the greedyCliqueAlgorithm of cons_knapsack.c
 - faster implementation of CMIR cut generation heursitic
 - improved cut selection and management
+- disabled reformulation of products of a binary variable with a linear term that does not solely involve binary variables
 
 fixed bugs:
 - fix wrong statistic display of diving leaf solutions
