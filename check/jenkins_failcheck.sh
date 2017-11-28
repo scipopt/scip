@@ -16,12 +16,13 @@ read -d '' awkscript_findasserts << 'EOF'
 
 # init variables
 BEGIN {
-    searchAssert=0; idx=1; delete failed[0]; delete human[0];
+    searchAssert=0; delete human[0];
 }
 
-# read failed instances into array
+# read failed instances into array as keys
+# the names in the errorinstances have to be the full names of the instances
 NR==FNR && /fail.*abort/ {
-    failed[length(failed)+1]=$1; next;
+    failed[$1]; next;
 }
 
 # find instances in errorfile
@@ -31,19 +32,19 @@ NR!=FNR && /^@01/ {
     if( b[m] == "gz" || b[m] == "z" || b[m] == "GZ" || b[m] == "Z" ) { m--; }
     for( i = 2; i < m; ++i ) { currinstname = currinstname "." b[i]; }
 
-    instance = $2;
+    instancestr = $2;
 
-    # adjust idx and searchAssert
-    if (searchAssert == 1) { human[length(human)]=failed[idx]; searchAssert=0; idx+=1; }
-    if (currinstname == failed[idx]) { searchAssert=1; }
+    # adjust searchAssert
+    if (searchAssert == 1) { human[currinstname]; searchAssert=0; }
+    if (currinstname in failed) { searchAssert=1; }
 }
 
 # find assertions in errorfile
 NR!=FNR && searchAssert == 1 && /Assertion.*failed.$/ {
     print "";
-    print instance;
+    print instancestr
     for(i=2;i<=NF;i++){printf "%s ", $i}; print "";
-    searchAssert=0; idx+=1;
+    searchAssert=0;
 }
 
 # print results
@@ -51,7 +52,10 @@ END {
     if( length(human) > 0 ) {
         print "";
         print "The following fails need human inspection:";
-        for(key in human){ print human[key] }
+        for(key in human){ print key }
+    } else {
+        print "";
+        print "No human inspection needed.";
     }
 }
 EOF
