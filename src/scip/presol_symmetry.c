@@ -844,10 +844,11 @@ SCIP_RETCODE computeSymmetryGroup(
       else if ( strcmp(conshdlrname, "xor") == 0 )
       {
          SCIP_VAR** curconsvars;
+         int naddedvars = 0;
+         SCIP_VAR* var;
 
          /* get number of variables of XOR constraint (without integer variable) */
          nconsvars = SCIPgetNVarsXor(scip, cons);
-         assert( nconsvars <= nvars );
 
          /* get variables of XOR constraint */
          curconsvars = SCIPgetVarsXor(scip, cons);
@@ -855,27 +856,32 @@ SCIP_RETCODE computeSymmetryGroup(
 
          for (j = 0; j < nconsvars; ++j)
          {
-            consvars[j] = curconsvars[j];
-            consvals[j] = 1.0;
+            /* we have only allocated memory for active variables */
+            if ( SCIPvarIsActive(consvars[j]) )
+            {
+               consvars[naddedvars] = curconsvars[j];
+               consvals[naddedvars++] = 1.0;
+            }
          }
 
-         if ( SCIPgetIntVarXor(scip, cons) != NULL )
+         var = SCIPgetIntVarXor(scip, cons);
+         if ( var != NULL && SCIPvarIsActive(var) )
          {
-            consvars[nconsvars] = SCIPgetIntVarXor(scip, cons);
-            consvals[nconsvars] = 2.0;
-            ++nconsvars;
+            consvars[naddedvars] = var;
+            consvals[naddedvars++] = 2.0;
          }
+         assert( naddedvars <= nvars );
 
-         SCIP_CALL( collectCoefficients(scip, consvars, consvals, nconsvars, (SCIP_Real) SCIPgetRhsXor(scip, cons),
+         SCIP_CALL( collectCoefficients(scip, consvars, consvals, naddedvars, (SCIP_Real) SCIPgetRhsXor(scip, cons),
                (SCIP_Real) SCIPgetRhsXor(scip, cons), SCIPconsIsTransformed(cons), SYM_SENSE_XOR, &matrixdata) );
       }
       else if ( strcmp(conshdlrname, "and") == 0 )
       {
          SCIP_VAR** curconsvars;
+         int naddedvars = 0;
 
          /* get number of variables of AND constraint (without resultant) */
          nconsvars = SCIPgetNVarsAnd(scip, cons);
-         assert( nconsvars <= nvars );
 
          /* get variables of AND constraint */
          curconsvars = SCIPgetVarsAnd(scip, cons);
@@ -883,23 +889,30 @@ SCIP_RETCODE computeSymmetryGroup(
 
          for (j = 0; j < nconsvars; ++j)
          {
-            consvars[j] = curconsvars[j];
-            consvals[j] = 1.0;
+            /* we have only allocated memory for active variables */
+            if ( SCIPvarIsActive(consvars[j]) )
+            {
+               consvars[naddedvars] = curconsvars[j];
+               consvals[naddedvars++] = 1.0;
+            }
          }
-         consvars[nconsvars] = SCIPgetResultantAnd(scip, cons);
-         consvals[nconsvars] = 2.0;
-         ++nconsvars;
+         if ( SCIPvarIsActive(SCIPgetResultantAnd(scip, cons)) )
+         {
+            consvars[naddedvars] = SCIPgetResultantAnd(scip, cons);
+            consvals[naddedvars++] = 2.0;
+         }
+         assert( naddedvars <= nvars );
 
-         SCIP_CALL( collectCoefficients(scip, consvars, consvals, nconsvars, 0.0, 0.0,
+         SCIP_CALL( collectCoefficients(scip, consvars, consvals, naddedvars, 0.0, 0.0,
                SCIPconsIsTransformed(cons), SYM_SENSE_AND, &matrixdata) );
       }
       else if ( strcmp(conshdlrname, "or") == 0 )
       {
          SCIP_VAR** curconsvars;
+         int naddedvars = 0;
 
          /* get number of variables of OR constraint (without resultant) */
          nconsvars = SCIPgetNVarsOr(scip, cons);
-         assert( nconsvars <= nvars );
 
          /* get variables of OR constraint */
          curconsvars = SCIPgetVarsOr(scip, cons);
@@ -907,14 +920,21 @@ SCIP_RETCODE computeSymmetryGroup(
 
          for (j = 0; j < nconsvars; ++j)
          {
-            consvars[j] = curconsvars[j];
-            consvals[j] = 1.0;
+            /* we have only allocated memory for active variables */
+            if ( SCIPvarIsActive(consvars[j]) )
+            {
+               consvars[naddedvars] = curconsvars[j];
+               consvals[naddedvars++] = 1.0;
+            }
          }
-         consvars[nconsvars] = SCIPgetResultantOr(scip, cons);
-         consvals[nconsvars] = 2.0;
-         ++nconsvars;
+         if ( SCIPvarIsActive(SCIPgetResultantOr(scip, cons)) )
+         {
+            consvars[naddedvars] = SCIPgetResultantOr(scip, cons);
+            consvals[naddedvars++] = 2.0;
+         }
+         assert( naddedvars <= nvars );
 
-         SCIP_CALL( collectCoefficients(scip, consvars, consvals, nconsvars, 0.0, 0.0,
+         SCIP_CALL( collectCoefficients(scip, consvars, consvals, naddedvars, 0.0, 0.0,
                SCIPconsIsTransformed(cons), SYM_SENSE_OR, &matrixdata) );
       }
       else if ( strcmp(conshdlrname, "logicor") == 0 )
@@ -925,29 +945,46 @@ SCIP_RETCODE computeSymmetryGroup(
       else if ( strcmp(conshdlrname, "knapsack") == 0 )
       {
          SCIP_Longint* weights;
+         SCIP_VAR** curconsvars;
+         int naddedvars = 0;
 
-         linvars = SCIPgetVarsKnapsack(scip, cons);
+         curconsvars = SCIPgetVarsKnapsack(scip, cons);
+         assert( curconsvars != NULL );
+
          nconsvars = SCIPgetNVarsKnapsack(scip, cons);
-         assert( getNActiveVars(linvars, nconsvars) <= nvars );
-         assert( consvals != NULL );
 
-         /* copy Longint array to SCIP_Real array */
+         /* copy Longint array to SCIP_Real array and get active variables of constraint */
          weights = SCIPgetWeightsKnapsack(scip, cons);
          for (j = 0; j < nconsvars; ++j)
-            consvals[j] = (SCIP_Real) weights[j];
+         {
+            if ( SCIPvarIsActive(curconsvars[j]) )
+            {
+               consvars[naddedvars] = curconsvars[j];
+               consvals[naddedvars++] = (SCIP_Real) weights[j];
+            }
+         }
+         assert( naddedvars <= nvars );
 
-         SCIP_CALL( collectCoefficients(scip, linvars, consvals, nconsvars, -SCIPinfinity(scip),
+         SCIP_CALL( collectCoefficients(scip, consvars, consvals, naddedvars, -SCIPinfinity(scip),
                (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons), SCIPconsIsTransformed(cons), SYM_SENSE_INEQUALITY, &matrixdata) );
       }
       else if ( strcmp(conshdlrname, "varbound") == 0 )
       {
-         consvars[0] = SCIPgetVarVarbound(scip, cons);
-         consvars[1] = SCIPgetVbdvarVarbound(scip, cons);
+         int naddedvars = 0;
 
-         consvals[0] = 1.0;
-         consvals[1] = SCIPgetVbdcoefVarbound(scip, cons);
+         consvars[naddedvars] = SCIPgetVarVarbound(scip, cons);
+         consvals[naddedvars] = 1.0;
 
-         SCIP_CALL( collectCoefficients(scip, consvars, consvals, 2, SCIPgetLhsVarbound(scip, cons),
+         if ( SCIPvarIsActive(consvars[0]) )
+            ++naddedvars;
+
+         consvars[naddedvars] = SCIPgetVbdvarVarbound(scip, cons);
+         consvals[naddedvars] = SCIPgetVbdcoefVarbound(scip, cons);
+
+         if ( SCIPvarIsActive(consvars[naddedvars]) )
+            ++naddedvars;
+
+         SCIP_CALL( collectCoefficients(scip, consvars, consvals, naddedvars, SCIPgetLhsVarbound(scip, cons),
                SCIPgetRhsVarbound(scip, cons), SCIPconsIsTransformed(cons), SYM_SENSE_INEQUALITY, &matrixdata) );
       }
       else if ( strcmp(conshdlrname, "bounddisjunction") == 0 )
