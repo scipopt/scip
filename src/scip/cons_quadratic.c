@@ -218,6 +218,7 @@ struct SCIP_ConshdlrData
    int                   replacebinaryprodlength; /**< length of linear term which when multiplied with a binary variable is replaced by an auxiliary variable and an equivalent linear formulation */
    int                   empathy4and;        /**< how much empathy we have for using the AND constraint handler: 0 avoid always; 1 use sometimes; 2 use as often as possible */
    SCIP_Bool             binreforminitial;   /**< whether to make constraints added due to replacing products with binary variables initial */
+   SCIP_Bool             binreformbinaryonly;/**< whether to consider only binary variables when reformulating products with binary variables */
    SCIP_Real             binreformmaxcoef;   /**< factor on 1/feastol to limit coefficients and coef range in linear constraints created by binary reformulation */
    SCIP_Real             cutmaxrange;        /**< maximal range (maximal coef / minimal coef) of a cut in order to be added to LP */
    SCIP_Bool             linearizeheursol;   /**< whether linearizations of convex quadratic constraints should be added to cutpool when some heuristics finds a new solution */
@@ -233,9 +234,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             enfocutsremovable;  /**< are cuts added during enforcement removable from the LP in the same node? */
    SCIP_Bool             gaugecuts;          /**< should convex quadratics generated strong cuts via gauge function? */
    SCIP_Bool             projectedcuts;      /**< should convex quadratics generated strong cuts via projections? */
-   char                  interiorcomputation;/**< how the interior point should be computed: 'a'ny point per constraint,
-                                              * 'm'ost interior per constraint
-                                              */
+   char                  interiorcomputation;/**< how the interior point should be computed: 'a'ny point per constraint, 'm'ost interior per constraint */
    char                  branchscoring;      /**< method to use to compute score of branching candidates */
    int                   enfolplimit;        /**< maximum number of enforcement round before declaring the LP relaxation
                                               * infeasible (-1: no limit); WARNING: if this parameter is not set to -1,
@@ -3459,6 +3458,12 @@ SCIP_RETCODE presolveTryAddAND(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   /* if no binary variables, then we will find nothing to reformulate here
+    * (note that this does not count in integer variables with {0,1} bounds...)
+    */
+   if( SCIPgetNBinVars(scip) == 0 )
+      return SCIP_OKAY;
+
    /* if user does not like AND very much, then return */
    if( conshdlrdata->empathy4and < 2 )
       return SCIP_OKAY;
@@ -3663,6 +3668,12 @@ SCIP_RETCODE presolveTryAddLinearReform(
    assert(cons != NULL);
    assert(naddconss != NULL);
 
+   /* if no binary variables, then we will find nothing to reformulate here
+    * (note that this does not count in integer variables with {0,1} bounds...)
+    */
+   if( SCIPgetNBinVars(scip) == 0 )
+      return SCIP_OKAY;
+
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
@@ -3700,7 +3711,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
 
       /* setup a list of bounded variables x_i with coefficients a_i that are multiplied with binary y: y*(sum_i a_i*x_i)
        * and compute range of sum_i a_i*x_i for the cases y = 0 and y = 1
-       * we may need several rounds of maxnrvar < nbilinterms
+       * we may need several rounds if maxnrvar < nbilinterms
        */
       j = 0;
       do
@@ -3730,6 +3741,14 @@ SCIP_RETCODE presolveTryAddLinearReform(
             {
                SCIPdebugMsg(scip, "skip reform of <%s><%s> due to unbounded second variable [%g,%g]\n",
                   SCIPvarGetName(y), SCIPvarGetName(bvar), SCIPvarGetLbGlobal(bvar), SCIPvarGetUbGlobal(bvar));
+               continue;
+            }
+
+            /* skip products with non-binary variables if binreformbinaryonly is set */
+            if( conshdlrdata->binreformbinaryonly && !SCIPvarIsBinary(bvar) )
+            {
+               SCIPdebugMsg(scip, "skip reform of <%s><%s> because second variable is not binary\n",
+                  SCIPvarGetName(y), SCIPvarGetName(bvar));
                continue;
             }
 
@@ -13931,6 +13950,10 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/binreforminitial",
          "whether to make non-varbound linear constraints added due to replacing products with binary variables initial",
          &conshdlrdata->binreforminitial, TRUE, FALSE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/binreformbinaryonly",
+         "whether to consider only binary variables when replacing products with binary variables",
+         &conshdlrdata->binreformbinaryonly, FALSE, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/binreformmaxcoef",
          "limit (as factor on 1/feastol) on coefficients and coef. range in linear constraints created when replacing products with binary variables",
