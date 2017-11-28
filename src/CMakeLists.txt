@@ -805,6 +805,11 @@ else()
     target_link_libraries(scip libscip)
 endif()
 
+if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+    find_package(Sanitizers)
+    add_sanitizers(scip)
+endif()
+
 target_compile_definitions(scip PRIVATE EXTERN=extern)
 
 target_link_libraries(scip ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES}
