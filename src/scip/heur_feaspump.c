@@ -1036,7 +1036,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
             solval = MIN(solval, ubprobing);
 
             /* fix the variable and propagate the domain change */
-            if( !SCIPisFeasEQ(probingscip, lbprobing, ubprobing) )
+            if( !SCIPisFeasEQ(probingscip, lbprobing, ubprobing) && SCIPvarIsActive(SCIPvarGetTransVar(probingvar)) )
             {
                assert(SCIPisFeasLE(probingscip, lbprobing, ubprobing));
                SCIPdebugMsg(scip, "try to fix variable <%s> (domain [%f,%f] to %f\n", SCIPvarGetName(probingvar), lbprobing, ubprobing,
