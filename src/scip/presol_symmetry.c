@@ -1163,6 +1163,12 @@ SCIP_RETCODE computeSymmetryGroup(
    *permvars = vars;
    *npermvars = nvars;
 
+   /* symmetric variables are not allowed to be multi-aggregated */
+   for (j = 0; j < nvars; ++j)
+   {
+      SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, vars[j]) );
+   }
+
 #ifndef NDEBUG
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, permvarsobj, nvars) );
    for (j = 0; j < nvars; ++j)
