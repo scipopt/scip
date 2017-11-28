@@ -27,6 +27,11 @@ NR==FNR && /fail.*abort/ {
 
 # find instances in errorfile
 NR!=FNR && /^@01/ {
+
+    # if we were looking for an assertion in currinstname, we are now at the beginning of the error output
+    # of another instance. Therefore, we didn't find an assertion and this instance needs human inspection.
+    if (searchAssert == 1) { human[currinstname]; searchAssert=0; }
+
     # get instancename (copied from check.awk)
     n = split($2, a, "/"); m = split(a[n], b, "."); currinstname = b[1];
     if( b[m] == "gz" || b[m] == "z" || b[m] == "GZ" || b[m] == "Z" ) { m--; }
@@ -35,7 +40,6 @@ NR!=FNR && /^@01/ {
     instancestr = $2;
 
     # adjust searchAssert
-    if (searchAssert == 1) { human[currinstname]; searchAssert=0; }
     if (currinstname in failed) { searchAssert=1; }
 }
 
