@@ -206,35 +206,43 @@ SCIP_RETCODE SCIPnodepqSetNodesel(
    SCIP_NODESEL*         nodesel             /**< node selector to use for sorting the nodes in the queue */
    )
 {
+   SCIP_NODEPQ* newnodepq;
+   SCIP_RETCODE retcode = SCIP_OKAY;
+   int i;
+
    assert(nodepq != NULL);
    assert(*nodepq != NULL);
    assert((*nodepq)->len >= 0);
    assert(nodesel != NULL);
    assert(nodesel->nodeselcomp != NULL);
 
-   if( (*nodepq)->nodesel != nodesel )
+   if( (*nodepq)->nodesel == nodesel )
+      return SCIP_OKAY;
+
+   /* create new node priority queue */
+   SCIP_CALL( SCIPnodepqCreate(&newnodepq, set, nodesel) );
+
+   /* resize the new node priority queue to be able to store all nodes */
+   retcode = nodepqResize(newnodepq, set, (*nodepq)->len);
+
+   /* insert all nodes in the new node priority queue */
+   for( i = 0; i < (*nodepq)->len && retcode == SCIP_OKAY; ++i )
    {
-      SCIP_NODEPQ* newnodepq;
-      int i;
-
-      /* create new node priority queue */
-      SCIP_CALL( SCIPnodepqCreate(&newnodepq, set, nodesel) );
-
-      /* resize the new node priority queue to be able to store all nodes */
-      SCIP_CALL( nodepqResize(newnodepq, set, (*nodepq)->len) );
-
-      /* insert all nodes in the new node priority queue */
-      for( i = 0; i < (*nodepq)->len; ++i )
-      {
-         SCIP_CALL( SCIPnodepqInsert(newnodepq, set, (*nodepq)->slots[i]) );
-      }
-
-      /* destroy the old node priority queue without freeing the nodes */
-      SCIPnodepqDestroy(nodepq);
-
-      /* use the new node priority queue */
-      *nodepq = newnodepq;
+      retcode = SCIPnodepqInsert(newnodepq, set, (*nodepq)->slots[i]);
    }
+
+   if( retcode != SCIP_OKAY )
+   {
+      SCIPnodepqDestroy(&newnodepq);
+
+      return retcode;
+   }
+
+   /* destroy the old node priority queue without freeing the nodes */
+   SCIPnodepqDestroy(nodepq);
+
+   /* use the new node priority queue */
+   *nodepq = newnodepq;
 
    return SCIP_OKAY;
 }
