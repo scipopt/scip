@@ -256,7 +256,7 @@ SCIP_DECL_HEUREXEC(heurExecZeroobj)
    return SCIP_OKAY;
 }
 
-/** todo setup and solve subscip */
+/** setup and solve subscip */
 static
 SCIP_RETCODE setupAndSolveSubscip(
    SCIP*                 scip,               /**< SCIP data structure */
