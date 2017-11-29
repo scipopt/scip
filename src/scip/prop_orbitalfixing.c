@@ -637,7 +637,6 @@ SCIP_DECL_PROPINITSOL(propInitsolOrbitalfixing)
             for (k = orbitbegins[j]; k < orbitbegins[j + 1]; ++k)
             {
                SCIP_CALL( SCIPaddVarLocks(scip, propdata->permvars[k], 1, 1) );
-               ++nlockedvars;
             }
          }
 
