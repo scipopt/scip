@@ -13204,9 +13204,10 @@ SCIP_RETCODE SCIPexprgraphGetNodePolynomialMonomialCurvature(
    SCIP_EXPRDATA_MONOMIAL* monomial;
    SCIP_INTERVAL  childboundsstatic[SCIP_EXPRESSION_MAXCHILDEST];
    SCIP_EXPRCURV  childcurvstatic[SCIP_EXPRESSION_MAXCHILDEST];
-   SCIP_INTERVAL* childbounds;
-   SCIP_EXPRCURV* childcurv;
+   SCIP_INTERVAL* childbounds = NULL;
+   SCIP_EXPRCURV* childcurv = NULL;
    SCIP_EXPRGRAPHNODE* child;
+   SCIP_RETCODE retcode = SCIP_OKAY;
    int i;
 
    assert(node != NULL);
@@ -13233,7 +13234,7 @@ SCIP_RETCODE SCIPexprgraphGetNodePolynomialMonomialCurvature(
    if( monomial->nfactors > SCIP_EXPRESSION_MAXCHILDEST )
    {
       SCIP_ALLOC( BMSallocMemoryArray(&childbounds, monomial->nfactors) );
-      SCIP_ALLOC( BMSallocMemoryArray(&childcurv, monomial->nfactors) );
+      SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&childcurv, monomial->nfactors), TERMINATE );
    }
    else
    {
@@ -13262,13 +13263,14 @@ SCIP_RETCODE SCIPexprgraphGetNodePolynomialMonomialCurvature(
    *curv = SCIPexprcurvMultiply(monomial->coef, *curv);
 
    /* free memory, if allocated before */
+TERMINATE:
    if( childbounds != childboundsstatic )
    {
-      BMSfreeMemoryArray(&childbounds);
-      BMSfreeMemoryArray(&childcurv);
+      BMSfreeMemoryArrayNull(&childbounds);
+      BMSfreeMemoryArrayNull(&childcurv);
    }
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 /** gives the user data belonging to a SCIP_EXPR_USER expression */
