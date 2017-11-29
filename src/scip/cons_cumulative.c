@@ -9614,7 +9614,7 @@ SCIP_RETCODE computeEffectiveHorizonCumulativeCondition(
    SCIP_CALL( SCIPprofileCreate(&profile, INT_MAX) );
 
    /* create worst case resource profile */
-   SCIP_CALL( SCIPcreateWorstCaseProfile(scip, profile, nvars, vars, durations, demands) );
+   SCIP_CALL_FINALLY( SCIPcreateWorstCaseProfile(scip, profile, nvars, vars, durations, demands), SCIPprofileFree(&profile) );
 
    /* print resource profile in if SCIP_DEBUG is defined */
    SCIPdebug( SCIPprofilePrint(profile, SCIPgetMessagehdlr(scip), NULL) );
