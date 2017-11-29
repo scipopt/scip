@@ -172,7 +172,7 @@ SCIP_DECL_SEPAFREE(sepaFreeRapidlearning)
 
 /** setup and solve sub-SCIP */
 static
-SCIP_RETCODE setupAndSolveSubscip(
+SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP*                 subscip,            /**< subSCIP data structure */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
@@ -196,7 +196,6 @@ SCIP_RETCODE setupAndSolveSubscip(
    int i;                                    /* counter                                                   */
 
    SCIP_Bool success;                        /* was problem creation / copying constraint successful? */
-   SCIP_RETCODE retcode;                     /* used for catching sub-SCIP errors in debug mode */
 
    int nconflicts;                          /* statistic: number of conflicts applied         */
    int nbdchgs;                             /* statistic: number of bound changes applied     */
@@ -691,7 +690,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
 
    SCIP_CALL( SCIPcreate(&subscip) );
 
-   retcode = setupAndSolveSubscip(scip, subscip, sepadata, result);
+   retcode = setupAndSolveSubscipRapidlearning(scip, subscip, sepadata, result);
 
    SCIP_CALL( SCIPfree(&subscip) );
 
