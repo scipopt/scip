@@ -90,6 +90,7 @@ set(settings_MINLP
     "nlpdiving1-relprop"
     "nlpdivingsolvesubmip"
     "nlpdiving4"
+    "separating_aggressive"
 )
 set(settings_Bivariate
     "checkfeastolfac10"
