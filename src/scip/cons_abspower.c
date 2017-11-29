@@ -3667,6 +3667,11 @@ SCIP_RETCODE generateCut(
       zcoef = -consdata->zcoef;
       rhs   = -consdata->lhs;
    }
+   /* move reference point onto local domain, if clearly (>eps) outside */
+   if( SCIPisLT(scip, xval, xlb) )
+      xval = xlb;
+   else if( SCIPisGT(scip, xval, xub) )
+      xval = xub;
 
    if( SCIPisInfinity(scip, REALABS(xval)) )
    {
