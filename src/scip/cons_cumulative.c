@@ -1245,144 +1245,140 @@ SCIP_RETCODE setupAndSolveCumulativeSubscip(
    SCIP_CONS* cons;
 
    char name[SCIP_MAXSTRLEN];
-
    int v;
-
    SCIP_RETCODE retcode;
 
-
-   assert(scip != NULL);
    assert(subscip != NULL);
 
    /* copy all plugins */
-      SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
+   SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
 
-      /* create the subproblem */
-      SCIP_CALL( SCIPcreateProbBasic(subscip, "cumulative") );
+   /* create the subproblem */
+   SCIP_CALL( SCIPcreateProbBasic(subscip, "cumulative") );
 
-      SCIP_CALL( SCIPallocBlockMemoryArray(subscip, &subvars, njobs) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(subscip, &subvars, njobs) );
 
-      /* create for each job a start time variable */
-      for( v = 0; v < njobs; ++v )
-      {
-         SCIP_Real objval;
+   /* create for each job a start time variable */
+   for( v = 0; v < njobs; ++v )
+   {
+      SCIP_Real objval;
 
-         /* construct variable name */
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "job%d", v);
+      /* construct variable name */
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "job%d", v);
 
-         if( objvals == NULL )
-            objval = 0.0;
-         else
-            objval = objvals[v];
-
-         SCIP_CALL( SCIPcreateVarBasic(subscip, &subvars[v], name, ests[v], lsts[v], objval, SCIP_VARTYPE_INTEGER) );
-         SCIP_CALL( SCIPaddVar(subscip, subvars[v]) );
-      }
-
-      /* create cumulative constraint */
-      SCIP_CALL( SCIPcreateConsBasicCumulative(subscip, &cons, "cumulative",
-            njobs, subvars, durations, demands, capacity) );
-
-      /* set effective horizon */
-      SCIP_CALL( SCIPsetHminCumulative(subscip, cons, hmin) );
-      SCIP_CALL( SCIPsetHmaxCumulative(subscip, cons, hmax) );
-
-      /* add cumulative constraint */
-      SCIP_CALL( SCIPaddCons(subscip, cons) );
-      SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
-
-      /* set CP solver settings
-       *
-       * @note This "meta" setting has to be set first since this call overwrite all parameters including for example the
-       *       time limit.
-       */
-      SCIP_CALL( SCIPsetEmphasis(subscip, SCIP_PARAMEMPHASIS_CPSOLVER, TRUE) );
-
-      /* do not abort subproblem on CTRL-C */
-      SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
-
-      /* disable output to console */
-      SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
-
-      /* set limits for the subproblem */
-      SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", maxnodes) );
-      SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
-      SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
-
-      /* forbid recursive call of heuristics and separators solving subMIPs */
-      SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
-
-      /* solve single cumulative constraint by branch and bound */
-      retcode = SCIPsolve(subscip);
-
-      if( retcode != SCIP_OKAY )
-         (*error) = TRUE;
+      if( objvals == NULL )
+         objval = 0.0;
       else
+         objval = objvals[v];
+
+      SCIP_CALL( SCIPcreateVarBasic(subscip, &subvars[v], name, ests[v], lsts[v], objval, SCIP_VARTYPE_INTEGER) );
+      SCIP_CALL( SCIPaddVar(subscip, subvars[v]) );
+   }
+
+   /* create cumulative constraint */
+   SCIP_CALL( SCIPcreateConsBasicCumulative(subscip, &cons, "cumulative",
+         njobs, subvars, durations, demands, capacity) );
+
+   /* set effective horizon */
+   SCIP_CALL( SCIPsetHminCumulative(subscip, cons, hmin) );
+   SCIP_CALL( SCIPsetHmaxCumulative(subscip, cons, hmax) );
+
+   /* add cumulative constraint */
+   SCIP_CALL( SCIPaddCons(subscip, cons) );
+   SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
+
+   /* set CP solver settings
+    *
+    * @note This "meta" setting has to be set first since this call overwrite all parameters including for example the
+    *       time limit.
+    */
+   SCIP_CALL( SCIPsetEmphasis(subscip, SCIP_PARAMEMPHASIS_CPSOLVER, TRUE) );
+
+   /* do not abort subproblem on CTRL-C */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
+
+   /* disable output to console */
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+
+   /* set limits for the subproblem */
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", maxnodes) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
+
+   /* forbid recursive call of heuristics and separators solving subMIPs */
+   SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
+
+   /* solve single cumulative constraint by branch and bound */
+   retcode = SCIPsolve(subscip);
+
+   if( retcode != SCIP_OKAY )
+      (*error) = TRUE;
+   else
+   {
+      SCIPdebugMsg(subscip, "solved single cumulative condition with status %d\n", SCIPgetStatus(subscip));
+
+      /* evaluated solution status */
+      switch( SCIPgetStatus(subscip) )
       {
-         SCIPdebugMsg(subscip, "solved single cumulative condition with status %d\n", SCIPgetStatus(subscip));
-
-         /* evaluated solution status */
-         switch( SCIPgetStatus(subscip) )
-         {
-         case SCIP_STATUS_INFORUNBD:
-         case SCIP_STATUS_INFEASIBLE:
-            (*infeasible) = TRUE;
-            (*solved) = TRUE;
-            break;
-         case SCIP_STATUS_UNBOUNDED:
-            (*unbounded) = TRUE;
-            (*solved) = TRUE;
-            break;
-         case SCIP_STATUS_OPTIMAL:
-         {
-            SCIP_SOL* sol;
-            SCIP_Real solval;
-
-            sol = SCIPgetBestSol(subscip);
-            assert(sol != NULL);
-
-            for( v = 0; v < njobs; ++v )
-            {
-               solval = SCIPgetSolVal(subscip, sol, subvars[v]);
-
-               ests[v] = solval;
-               lsts[v] = solval;
-            }
-            (*solved) = TRUE;
-            break;
-         }
-         case SCIP_STATUS_NODELIMIT:
-         case SCIP_STATUS_TOTALNODELIMIT:
-         case SCIP_STATUS_TIMELIMIT:
-         case SCIP_STATUS_MEMLIMIT:
-         case SCIP_STATUS_USERINTERRUPT:
-            /* transfer the global bound changes */
-            for( v = 0; v < njobs; ++v )
-            {
-               ests[v] = SCIPvarGetLbGlobal(subvars[v]);
-               lsts[v] = SCIPvarGetUbGlobal(subvars[v]);
-            }
-            (*solved) = FALSE;
-            break;
-
-         case SCIP_STATUS_UNKNOWN:
-         case SCIP_STATUS_STALLNODELIMIT:
-         case SCIP_STATUS_GAPLIMIT:
-         case SCIP_STATUS_SOLLIMIT:
-         case SCIP_STATUS_BESTSOLLIMIT:
-         case SCIP_STATUS_RESTARTLIMIT:
-            SCIPerrorMessage("invalid status code <%d>\n", SCIPgetStatus(subscip));
-            return SCIP_INVALIDDATA;
-         }
-      }
-
-      /* release all variables */
-      for( v = 0; v < njobs; ++v )
+      case SCIP_STATUS_INFORUNBD:
+      case SCIP_STATUS_INFEASIBLE:
+         (*infeasible) = TRUE;
+         (*solved) = TRUE;
+         break;
+      case SCIP_STATUS_UNBOUNDED:
+         (*unbounded) = TRUE;
+         (*solved) = TRUE;
+         break;
+      case SCIP_STATUS_OPTIMAL:
       {
-         SCIP_CALL( SCIPreleaseVar(subscip, &subvars[v]) );
-      }
+         SCIP_SOL* sol;
+         SCIP_Real solval;
 
-      SCIPfreeBlockMemoryArray(subscip, &subvars, njobs);
+         sol = SCIPgetBestSol(subscip);
+         assert(sol != NULL);
+
+         for( v = 0; v < njobs; ++v )
+         {
+            solval = SCIPgetSolVal(subscip, sol, subvars[v]);
+
+            ests[v] = solval;
+            lsts[v] = solval;
+         }
+         (*solved) = TRUE;
+         break;
+      }
+      case SCIP_STATUS_NODELIMIT:
+      case SCIP_STATUS_TOTALNODELIMIT:
+      case SCIP_STATUS_TIMELIMIT:
+      case SCIP_STATUS_MEMLIMIT:
+      case SCIP_STATUS_USERINTERRUPT:
+         /* transfer the global bound changes */
+         for( v = 0; v < njobs; ++v )
+         {
+            ests[v] = SCIPvarGetLbGlobal(subvars[v]);
+            lsts[v] = SCIPvarGetUbGlobal(subvars[v]);
+         }
+         (*solved) = FALSE;
+         break;
+
+      case SCIP_STATUS_UNKNOWN:
+      case SCIP_STATUS_STALLNODELIMIT:
+      case SCIP_STATUS_GAPLIMIT:
+      case SCIP_STATUS_SOLLIMIT:
+      case SCIP_STATUS_BESTSOLLIMIT:
+      case SCIP_STATUS_RESTARTLIMIT:
+         SCIPerrorMessage("invalid status code <%d>\n", SCIPgetStatus(subscip));
+         return SCIP_INVALIDDATA;
+      }
+   }
+
+   /* release all variables */
+   for( v = 0; v < njobs; ++v )
+   {
+      SCIP_CALL( SCIPreleaseVar(subscip, &subvars[v]) );
+   }
+
+   SCIPfreeBlockMemoryArray(subscip, &subvars, njobs);
 
    return SCIP_OKAY;
 }
