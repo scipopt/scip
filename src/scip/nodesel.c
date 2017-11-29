@@ -207,7 +207,7 @@ SCIP_RETCODE SCIPnodepqSetNodesel(
    )
 {
    SCIP_NODEPQ* newnodepq;
-   SCIP_RETCODE retcode = SCIP_OKAY;
+   SCIP_RETCODE retcode;
    int i;
 
    assert(nodepq != NULL);

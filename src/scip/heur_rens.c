@@ -645,12 +645,9 @@ SCIP_RETCODE SCIPapplyRens(
    )
 {
    SCIP* subscip;                            /* the subproblem created by RENS                  */
-   SCIP_HEURDATA* heurdata;                  /* heuristic's private data structure              */
 
    SCIP_Real intfixingrate;                  /* percentage of integer variables fixed           */
 
-   int nvars;                                /* number of original problem's variables          */
-   int i;
    SCIP_VAR** fixedvars;
    SCIP_Real* fixedvals;
    int nfixedvars;
@@ -691,10 +688,6 @@ SCIP_RETCODE SCIPapplyRens(
       SCIPstatisticPrintf("RENS statistic: fixed only %5.2f integer variables --> abort \n", intfixingrate);
       goto TERMINATE;
    }
-
-   /* get heuristic data */
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
 
    /* check whether there is enough time and memory left */
    SCIP_CALL( SCIPcheckCopyLimits(scip, &success) );
