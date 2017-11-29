@@ -3927,7 +3927,9 @@ SCIP_Real computeMIREfficacy(
       norm += SQR(floorai);
    }
 
-   return - rhs / SQRT(norm);
+   norm = SQRT(norm);
+
+   return - rhs / MAX(norm, 1e-6);
 }
 
 /** calculates an MIR cut out of an aggregation of LP rows
@@ -3992,7 +3994,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    SCIP_Real* deltacands;
    int ndeltacands;
    SCIP_Real bestdelta;
-   SCIP_Real bestviol;
+   SCIP_Real bestefficacy;
    SCIP_Real maxabsmksetcoef;
    SCIP_VAR** vars;
    SCIP_Bool freevariable;
@@ -4303,12 +4305,12 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 
    /* try all candidates for delta and remember best */
    bestdelta = SCIP_INVALID;
-   bestviol = -SCIPinfinity(scip);
+   bestefficacy = -SCIPinfinity(scip);
 
    for( i = 0; i < maxtestdelta; ++i )
    {
       int j;
-      SCIP_Real viol;
+      SCIP_Real efficacy;
 
       /* check if we have seen this value of delta before */
       SCIP_Bool deltaseenbefore = FALSE;
@@ -4328,11 +4330,11 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
          continue;
       }
 
-      viol = computeMIREfficacy(scip, tmpcoefs, tmpvalues, QUAD_TO_DBL(mksetrhs), contactivity, contsqrnorm, deltacands[i], ntmpcoefs, minfrac, maxfrac);
+      efficacy = computeMIREfficacy(scip, tmpcoefs, tmpvalues, QUAD_TO_DBL(mksetrhs), contactivity, contsqrnorm, deltacands[i], ntmpcoefs, minfrac, maxfrac);
 
-      if( viol > bestviol )
+      if( efficacy > bestefficacy )
       {
-         bestviol = viol;
+         bestefficacy = efficacy;
          bestdelta = deltacands[i];
       }
    }
@@ -4344,16 +4346,16 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    /* try bestdelta divided by 2, 4 and 8 */
    for( i = 2; i <= 8 ; i *= 2 )
    {
-      SCIP_Real viol;
+      SCIP_Real efficacy;
       SCIP_Real delta;
 
       delta = bestdelta / i;
 
-      viol = computeMIREfficacy(scip, tmpcoefs, tmpvalues, QUAD_TO_DBL(mksetrhs), contactivity, contsqrnorm, delta, ntmpcoefs, minfrac, maxfrac);
+      efficacy = computeMIREfficacy(scip, tmpcoefs, tmpvalues, QUAD_TO_DBL(mksetrhs), contactivity, contsqrnorm, delta, ntmpcoefs, minfrac, maxfrac);
 
-      if( viol >= bestviol )
+      if( efficacy >= bestefficacy )
       {
-         bestviol = viol;
+         bestefficacy = efficacy;
          bestdelta = delta;
       }
    }
@@ -4364,7 +4366,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    for( i = 0; i < nbounddist; ++i )
    {
       int k;
-      SCIP_Real newviol;
+      SCIP_Real newefficacy;
       SCIP_Real QUAD(newrhs);
       SCIP_Real bestlb;
       SCIP_Real bestub;
@@ -4401,13 +4403,13 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
       tmpvalues[k - intstart] = varsign[k] == +1 ? bestub - SCIPgetSolVal(scip, sol, vars[mksetinds[k]]) : SCIPgetSolVal(scip, sol, vars[mksetinds[k]]) - bestlb;
 
       /* compute new violation */
-      newviol = computeMIREfficacy(scip, tmpcoefs, tmpvalues, QUAD_TO_DBL(newrhs), contactivity, contsqrnorm, bestdelta, ntmpcoefs, minfrac, maxfrac);
+      newefficacy = computeMIREfficacy(scip, tmpcoefs, tmpvalues, QUAD_TO_DBL(newrhs), contactivity, contsqrnorm, bestdelta, ntmpcoefs, minfrac, maxfrac);
 
       /* check if violaton was increased */
-      if( newviol > bestviol )
+      if( newefficacy > bestefficacy )
       {
          /* keep change of complementation */
-         bestviol = newviol;
+         bestefficacy = newefficacy;
          QUAD_ASSIGN_Q(mksetrhs, newrhs);
 
          if( varsign[k] == +1 )
@@ -4435,7 +4437,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
       }
    }
 
-   if( bestviol > 0.0 )
+   if( bestefficacy > 0.0 )
    {
       SCIP_Real mirefficacy;
       SCIP_Real QUAD(downrhs);
@@ -4491,17 +4493,17 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 
 #ifndef NDEBUG
       {
-         SCIP_Real viol = -QUAD_TO_DBL(mksetrhs);
+         SCIP_Real efficacy = -QUAD_TO_DBL(mksetrhs);
          for( i = 0; i < mksetnnz; ++i )
          {
             SCIP_Real QUAD(coef);
             QUAD_ARRAY_LOAD(coef, mksetcoefs, mksetinds[i]);
-            viol += QUAD_TO_DBL(coef) * SCIPgetSolVal(scip, sol, vars[mksetinds[i]]);
+            efficacy += QUAD_TO_DBL(coef) * SCIPgetSolVal(scip, sol, vars[mksetinds[i]]);
          }
 
-         if(!EPSZ(SCIPrelDiff(viol, bestviol), 1e-4))
+         if(!EPSZ(SCIPrelDiff(efficacy, bestefficacy), 1e-4))
          {
-            SCIPdebugMessage("violation of cmir cut is different than expected violation: %f != %f\n", viol, bestviol);
+            SCIPdebugMessage("efficacy of cmir cut is different than expected efficacy: %f != %f\n", efficacy, bestefficacy);
          }
       }
 #endif
