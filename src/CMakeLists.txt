@@ -414,7 +414,7 @@ set(scipheaders
     scip/cons_sos1.h
     scip/cons_sos2.h
     scip/cons_superindicator.h
-    scip/cons_symretope.h
+    scip/cons_symresack.h
     scip/cons_varbound.h
     scip/cons_xor.h
     scip/cutpool.h
@@ -612,7 +612,6 @@ set(scipheaders
     scip/sepa_convexproj.h
     scip/sepa_disjunctive.h
     scip/sepa_eccuts.h
-    scip/sepa_flowcover.h
     scip/sepa_gauge.h
     scip/sepa_gomory.h
     scip/sepa.h
