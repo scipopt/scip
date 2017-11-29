@@ -931,7 +931,8 @@ SCIP_RETCODE computeSymmetryGroup(
          weights = SCIPgetWeightsKnapsack(scip, cons);
          for (j = 0; j < nconsvars; ++j)
          {
-            if ( curconsvars[j] != NULL && SCIPvarIsActive(curconsvars[j]) )
+            assert( curconsvars[j] != NULL );
+            if ( SCIPvarIsActive(curconsvars[j]) )
             {
                consvars[naddedvars] = curconsvars[j];
                consvals[naddedvars++] = (SCIP_Real) weights[j];
@@ -946,17 +947,26 @@ SCIP_RETCODE computeSymmetryGroup(
       {
          int naddedvars = 0;
 
+         assert( SCIPgetVarVarbound(scip, cons) != NULL );
+         assert( SCIPgetVbdvarVarbound(scip, cons) != NULL );
+
          consvars[naddedvars] = SCIPgetVarVarbound(scip, cons);
          consvals[naddedvars] = 1.0;
 
-         if ( consvars[0] != NULL && SCIPvarIsActive(consvars[0]) )
-            ++naddedvars;
+         if ( SCIPvarIsActive(SCIPgetVarVarbound(scip, cons)) )
+         {
+            consvars[naddedvars] = SCIPgetVarVarbound(scip, cons);
+            consvals[naddedvars++] = 1.0;
+         }
 
          consvars[naddedvars] = SCIPgetVbdvarVarbound(scip, cons);
          consvals[naddedvars] = SCIPgetVbdcoefVarbound(scip, cons);
 
-         if ( consvars[naddedvars] != NULL && SCIPvarIsActive(consvars[naddedvars]) )
-            ++naddedvars;
+         if ( SCIPvarIsActive(SCIPgetVbdvarVarbound(scip, cons)) )
+         {
+            consvars[naddedvars] = SCIPgetVbdvarVarbound(scip, cons);
+            consvals[naddedvars++] = SCIPgetVbdcoefVarbound(scip, cons);
+         }
 
          SCIP_CALL( collectCoefficients(scip, consvars, consvals, naddedvars, SCIPgetLhsVarbound(scip, cons),
                SCIPgetRhsVarbound(scip, cons), SCIPconsIsTransformed(cons), SYM_SENSE_INEQUALITY, &matrixdata) );
