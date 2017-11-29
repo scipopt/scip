@@ -674,7 +674,6 @@ IP/Coloring/Instances/3-Insertions_4.col.lp.gz
 IP/Coloring/Instances/queen6_6.col.lp.gz
 IP/Coloring/Instances/le450_15a.col.lp.gz
 IP/Coloring/Instances/games120.col.lp.gz
-IP/Coloring/Instances/abb313GPIA.col.lp.gz
 IP/Coloring/Instances/queen7_7.col.lp.gz
 IP/Coloring/Instances/2-FullIns_4.col.lp.gz
 IP/Coloring/Instances/2-Insertions_5.col.lp.gz
@@ -844,7 +843,6 @@ IP/coral/neos-570431.mps.gz
 IP/coral/neos-641591.mps.gz
 IP/coral/neos-807705.mps.gz
 IP/coral/neos-810286.mps.gz
-IP/coral/lrn.mps.gz
 IP/coral/neos-785914.mps.gz
 IP/coral/dano3_4.mps.gz
 IP/coral/leo2.mps.gz
@@ -3899,15 +3897,6 @@ IP/siemens2/MIP/seq10_173.mps.gz
 IP/siemens2/MIP/ilp_ma2.mps.gz
 IP/siemens2/MIP/prodplan2.mps.gz
 IP/siemens2/MIP/ilp_rol9.mps.gz
-IP/SMS/p_hat700-1.pr.10.mps.gz
-IP/SMS/keller6.pr.10.mps.gz
-IP/SMS/p_hat1000-2.pr.10.mps.gz
-IP/SMS/MANN_a81.pr.10.mps.gz
-IP/SMS/MANN_a81.pr.9.lp.gz
-IP/SMS/p_hat1000-1.pr.10.mps.gz
-IP/SMS/p_hat1500-3.pr.10.mps.gz
-IP/SMS/p_hat1500-2.pr.10.mps.gz
-IP/SMS/p_hat1500-1.pr.10.mps.gz
 IP/SOS/sparse2.lp.gz
 IP/SOS/sparse3.mps.gz
 IP/SOS/findRoot.lp.gz
