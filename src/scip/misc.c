@@ -7532,18 +7532,19 @@ SCIP_RETCODE SCIPdigraphTopoSortComponents(
    SCIP_DIGRAPH*         digraph             /**< directed graph */
    )
 {
-   SCIP_Bool* visited;
+   SCIP_Bool* visited = NULL;
    int* comps;
    int* compstarts;
-   int* stackadjvisited;
-   int* dfsstack;
-   int* dfsnodes;
+   int* stackadjvisited = NULL;
+   int* dfsstack = NULL;
+   int* dfsnodes = NULL;
    int ndfsnodes;
    int ncomps;
    int i;
    int j;
    int k;
    int endidx;
+   SCIP_RETCODE retcode = SCIP_OKAY;
 
    assert(digraph != NULL);
 
@@ -7551,10 +7552,10 @@ SCIP_RETCODE SCIPdigraphTopoSortComponents(
    comps = digraph->components;
    compstarts = digraph->componentstarts;
 
-   SCIP_ALLOC( BMSallocClearMemoryArray(&visited, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&dfsnodes, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&dfsstack, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&stackadjvisited, digraph->nnodes) );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocClearMemoryArray(&visited, digraph->nnodes), TERMINATE );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&dfsnodes, digraph->nnodes), TERMINATE );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&dfsstack, digraph->nnodes), TERMINATE );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&stackadjvisited, digraph->nnodes), TERMINATE );
 
    /* sort the components (almost) topologically */
    for( i = 0; i < ncomps; ++i )
@@ -7583,12 +7584,13 @@ SCIP_RETCODE SCIPdigraphTopoSortComponents(
       }
    }
 
-   BMSfreeMemoryArray(&stackadjvisited);
-   BMSfreeMemoryArray(&dfsstack);
-   BMSfreeMemoryArray(&dfsnodes);
-   BMSfreeMemoryArray(&visited);
+TERMINATE:
+   BMSfreeMemoryArrayNull(&stackadjvisited);
+   BMSfreeMemoryArrayNull(&dfsstack);
+   BMSfreeMemoryArrayNull(&dfsnodes);
+   BMSfreeMemoryArrayNull(&visited);
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 /** returns the number of previously computed undirected components for the given directed graph */
