@@ -148,6 +148,7 @@ SCIP_RETCODE createNewSol(
    return SCIP_OKAY;
 }
 
+/* setup and solve the sub-SCIP */
 static
 SCIP_RETCODE setupAndSolve(
    SCIP*                 scip,               /**< original SCIP data structure */
