@@ -59,7 +59,7 @@ END {
     count = 0;
     for( key in failed ) {
         if( failed[key] == 1 ) {
-            if( found == 0 ) {
+            if( count == 0 ) {
                 print "The following fails need human inspection:";
             }
             print key;
