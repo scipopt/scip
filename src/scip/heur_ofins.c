@@ -148,29 +148,29 @@ SCIP_RETCODE createNewSol(
    return SCIP_OKAY;
 }
 
-/** main procedure of the OFINS heuristic, creates and solves a sub-SCIP */
 static
-SCIP_RETCODE applyOfins(
+SCIP_RETCODE setupAndSolve(
    SCIP*                 scip,               /**< original SCIP data structure */
+   SCIP*                 subscip,            /**< sub-SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic data structure */
    SCIP_HEURDATA*        heurdata,           /**< euristic's private data structure */
    SCIP_RESULT*          result,             /**< result data structure */
    SCIP_Longint          nstallnodes,        /**< number of stalling nodes for the subproblem */
    SCIP_Bool*            chgcoeffs           /**< array of changed coefficients */
+
    )
 {
-   SCIP* subscip;                                 /* the subproblem created by OFINS */
-   SCIP_HASHMAP* varmapfw;                        /* mapping of SCIP variables to sub-SCIP variables */
-   SCIP_VAR** vars;                               /* source problem's variables */
-   SCIP_VAR** subvars;                            /* subproblem's variables */
-   SCIP_EVENTHDLR* eventhdlr;                     /* event handler for LP events */
+   SCIP_HASHMAP* varmapfw;
+   SCIP_VAR** vars;
+   SCIP_VAR** subvars;
+   SCIP_EVENTHDLR* eventhdlr;
 
    SCIP_SOL* sol;
    SCIP_VAR** fixedvars;
    SCIP_Real* fixedvals;
    int nfixedvars;
 
-   int nvars;                                     /* number of source problem's variables */
+   int nvars;
    int nintvars;
    int i;
 
@@ -182,33 +182,17 @@ SCIP_RETCODE applyOfins(
    SCIP_STATUS status;
 
    assert(scip != NULL);
+   assert(subscip != NULL);
    assert(heur != NULL);
    assert(heurdata != NULL);
    assert(result != NULL);
    assert(chgcoeffs != NULL);
 
-   *result = SCIP_DIDNOTRUN;
-
    SCIPdebugMsg(scip, "+---+ Start OFINS heuristic +---+\n");
-
-   /* check whether there is enough time and memory left */
-   SCIP_CALL( SCIPcheckCopyLimits(scip, &success) );
-
-   if( !success )
-      return SCIP_OKAY;
-
-   *result = SCIP_DIDNOTFIND;
-
-   /* do not run, if no solution was found */
-   if ( SCIPgetReoptLastOptSol(scip) == NULL )
-      return SCIP_OKAY;
 
    /* get variable data */
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
-
-   /* initialize the subproblem */
-   SCIP_CALL( SCIPcreate(&subscip) );
 
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
@@ -332,7 +316,6 @@ SCIP_RETCODE applyOfins(
 
       /* free */
       SCIPfreeBufferArray(scip, &subvars);
-      SCIP_CALL( SCIPfree(&subscip) );
       return SCIP_OKAY;
    }
 
@@ -415,7 +398,53 @@ SCIP_RETCODE applyOfins(
 
    /* free subproblem */
    SCIPfreeBufferArray(scip, &subvars);
+
+   return SCIP_OKAY;
+}
+
+/** main procedure of the OFINS heuristic, creates and solves a sub-SCIP */
+static
+SCIP_RETCODE applyOfins(
+   SCIP*                 scip,               /**< original SCIP data structure */
+   SCIP_HEUR*            heur,               /**< heuristic data structure */
+   SCIP_HEURDATA*        heurdata,           /**< euristic's private data structure */
+   SCIP_RESULT*          result,             /**< result data structure */
+   SCIP_Longint          nstallnodes,        /**< number of stalling nodes for the subproblem */
+   SCIP_Bool*            chgcoeffs           /**< array of changed coefficients */
+   )
+{
+   SCIP* subscip;
+   SCIP_RETCODE retcode;
+   SCIP_Bool success;
+
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(heurdata != NULL);
+   assert(result != NULL);
+   assert(chgcoeffs != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* check whether there is enough time and memory left */
+   SCIP_CALL( SCIPcheckCopyLimits(scip, &success) );
+
+   if( !success )
+      return SCIP_OKAY;
+
+   *result = SCIP_DIDNOTFIND;
+
+   /* do not run, if no solution was found */
+   if ( SCIPgetReoptLastOptSol(scip) == NULL )
+      return SCIP_OKAY;
+
+   /* initialize the subproblem */
+   SCIP_CALL( SCIPcreate(&subscip) );
+
+   retcode = setupAndSolve(scip, subscip, heur, heurdata, result, nstallnodes, chgcoeffs);
+
    SCIP_CALL( SCIPfree(&subscip) );
+
+   SCIP_CALL( retcode );
 
    return SCIP_OKAY;
 }
