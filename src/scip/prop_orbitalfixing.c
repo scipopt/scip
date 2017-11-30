@@ -604,44 +604,16 @@ SCIP_DECL_PROPINITSOL(propInitsolOrbitalfixing)
       else
       {
          int j;
-         int norbits;
-         int* orbits;
-         int* orbitbegins;
 
          /* create hashmap for storing the indices of variables */
          assert( propdata->permvarmap == NULL );
          SCIP_CALL( SCIPhashmapCreate(&propdata->permvarmap, SCIPblkmem(scip), propdata->npermvars) );
-
-         /* compute orbits to check which variables are affected by symmetry
-          * (necessary for variable locks) */
-         SCIP_CALL( SCIPallocBufferArray(scip, &orbits, propdata->npermvars) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, propdata->npermvars) );
-
-         SCIP_CALL( SCIPcomputeGroupOrbitsSymbreak(scip, propdata->permvars, propdata->npermvars, propdata->perms, propdata->nperms, NULL, orbits, orbitbegins, &norbits) );
 
          /* insert variables */
          for (j = 0; j < propdata->npermvars; ++j)
          {
             SCIP_CALL( SCIPhashmapInsert(propdata->permvarmap, propdata->permvars[j], (void*) (size_t) j) );
          }
-
-         /* lock affected variables */
-         for (j = 0; j < norbits; ++j)
-         {
-            int k;
-
-            /* skip trivial orbits */
-            if ( orbitbegins[j + 1] - orbitbegins[j] == 1 )
-               continue;
-
-            for (k = orbitbegins[j]; k < orbitbegins[j + 1]; ++k)
-            {
-               SCIP_CALL( SCIPaddVarLocks(scip, propdata->permvars[k], 1, 1) );
-            }
-         }
-
-         SCIPfreeBufferArray(scip, &orbitbegins);
-         SCIPfreeBufferArray(scip, &orbits);
       }
    }
 
