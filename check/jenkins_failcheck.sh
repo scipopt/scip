@@ -150,7 +150,7 @@ if [ "${PERM}" == "0" ]; then
     PERM_ENDING="."
 else
     PERM_ENDING="-${PERM}."
-end
+fi
 
 # we use a name that is unique per test sent to the cluster (a jenkins job
 # can have several tests sent to the cluster, that is why the jenkins job
