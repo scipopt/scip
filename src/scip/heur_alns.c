@@ -545,9 +545,11 @@ void increaseTargetNodeLimit(
    SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
+   SCIP_Real maxexponent = 1.0 +  log2(heurdata->maxnodes / (SCIP_Real)heurdata->minnodes) / log2(heurdata->targetnodefactor);
+
    heurdata->nodefacexponent += heurdata->nodefaclearningrate;
+   heurdata->nodefacexponent = MIN(heurdata->nodefacexponent, maxexponent);
    heurdata->targetnodes = (SCIP_Longint)(heurdata->minnodes * pow(heurdata->targetnodefactor, heurdata->nodefacexponent));
-   heurdata->targetnodes = MIN(heurdata->targetnodes, heurdata->maxnodes);
 }
 
 /** decrease target node limit */
@@ -556,9 +558,11 @@ void decreaseTargetNodeLimit(
    SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
+   SCIP_Real minexponent = -5.0 / log2(heurdata->targetnodefactor);
+
    heurdata->nodefacexponent -= heurdata->nodefaclearningrate;
+   heurdata->nodefacexponent = MAX(heurdata->nodefacexponent, minexponent);
    heurdata->targetnodes = (SCIP_Longint)(heurdata->minnodes * pow(heurdata->targetnodefactor, heurdata->nodefacexponent));
-   heurdata->targetnodes = MAX(heurdata->targetnodes, heurdata->minnodes);
 }
 
 /** reset target node limit */
@@ -608,6 +612,13 @@ void updateTargetNodeLimit(
          break;
    }
 
+
+   /* respect upper and lower parametrized bounds on targetnodes */
+   if( heurdata->targetnodes < heurdata->minnodes )
+      heurdata->targetnodes = heurdata->minnodes;
+   else if( heurdata->targetnodes > heurdata->maxnodes )
+      heurdata->targetnodes = heurdata->maxnodes;
+
    /* adapt the node factor learning rate */
    if( heurdata->nodefaclearningrate > LRATEMIN )
       heurdata->nodefaclearningrate = MAX(heurdata->nodefaclearningrate * LRATE, LRATEMIN);
@@ -631,11 +642,13 @@ void increaseMinimumImprovement(
    SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
+   SCIP_Real maxexponent = 1.0 + log2((SCIP_Real)heurdata->minimprovehigh / heurdata->startminimprove) / log2(MINIMPROVEFAC);
    assert(heurdata != NULL);
 
    heurdata->minimprovexponent += heurdata->minimprovlearnrate;
+   heurdata->minimprovexponent = MIN(heurdata->minimprovexponent, maxexponent);
+
    heurdata->minimprove = heurdata->startminimprove * pow(MINIMPROVEFAC, heurdata->minimprovexponent);
-   heurdata->minimprove = MIN(heurdata->minimprove, heurdata->minimprovehigh);
 }
 
 /** decrease the minimum improvement for the sub-SCIPs */
@@ -644,12 +657,13 @@ void decreaseMinimumImprovement(
    SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
+   SCIP_Real minexponent = -1.0 + log2((SCIP_Real)heurdata->minimprovelow / heurdata->startminimprove) / log2(MINIMPROVEFAC);
    assert(heurdata != NULL);
 
    heurdata->minimprovexponent -= heurdata->minimprovlearnrate;
+   heurdata->minimprovexponent = MAX(heurdata->minimprovexponent, minexponent);
 
    heurdata->minimprove = heurdata->startminimprove * pow(MINIMPROVEFAC, heurdata->minimprovexponent);
-   heurdata->minimprove = MAX(heurdata->minimprove, heurdata->minimprovelow);
 }
 
 /** update the minimum improvement based on the status of the sub-SCIP */
@@ -694,6 +708,12 @@ void updateMinimumImprovement(
       default:
          break;
    }
+
+   /* respect bounds on minimum improvement */
+   if( heurdata->minimprove > heurdata->minimprovehigh )
+      heurdata->minimprove = heurdata->minimprovehigh;
+   else if( heurdata->minimprove < heurdata->minimprovelow )
+      heurdata->minimprove = heurdata->minimprovelow;
 
    /* adjust learning rate for minimum improvement */
    if( heurdata->minimprovlearnrate > LRATEMIN )
