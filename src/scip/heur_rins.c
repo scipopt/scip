@@ -231,7 +231,7 @@ SCIP_RETCODE wrapperRins(
    SCIP_RESULT*          result,             /**< Result pointer                                      */
    int                   nvars,              /**< Number of variables                                 */
    int                   nfixedvars,         /**< Number of fixed variables                           */
-   int                   nnodes              /**< Number of nodes in the b&b tree                     */
+   SCIP_Longint          nnodes              /**< Number of nodes in the b&b tree                     */
    )
 {
    SCIP_VAR** subvars;                       /* variables of the subscip */

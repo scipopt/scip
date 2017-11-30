@@ -475,7 +475,7 @@ SCIP_RETCODE wrapperDins(
    int                   nintvars,           /**< Number of integer variables in original SCIP        */
    int                   binfixings,         /**< Number of binary fixing in original SCIP            */
    int                   intfixings,         /**< Number of integer fixings in original SCIP          */
-   int                   nsubnodes           /**< Number of nodes in the subscip                      */
+   SCIP_Longint          nsubnodes           /**< Number of nodes in the subscip                      */
    )
 {
    SCIP_VAR** subvars;                       /* variables of the subscip */
