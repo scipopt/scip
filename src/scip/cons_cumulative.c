@@ -1219,7 +1219,7 @@ int computeTotalEnergy(
  * @{
  */
 
-/** todo setup and solve subscip to solve single cumulative condition  */
+/** setup and solve subscip to solve single cumulative condition  */
 static
 SCIP_RETCODE setupAndSolveCumulativeSubscip(
    SCIP*                 subscip,            /**< subscip data structure */
@@ -7390,7 +7390,7 @@ SCIP_RETCODE propagateCumulativeCondition(
       return SCIP_OKAY;
 
    /* create an empty resource profile for profiling the cores of the jobs */
-   SCIP_CALL_FINALLY( SCIPprofileCreate(&profile, capacity), SCIPprofileFree(&profile) );
+   SCIP_CALL( SCIPprofileCreate(&profile, capacity) );
 
    /* create core profile (compulsory parts) */
    SCIP_CALL_TERMINATE( retcode, createCoreProfile(scip, conshdlrdata, profile, nvars, vars, durations, demands, capacity, hmin, hmax,
@@ -7748,7 +7748,7 @@ SCIP_RETCODE computeAlternativeBounds(
          SCIP_RETCODE retcode = SCIP_OKAY;
 
          /* create empty resource profile with infinity resource capacity */
-         SCIP_CALL_FINALLY( SCIPprofileCreate(&profile, INT_MAX), SCIPprofileFree(&profile) );
+         SCIP_CALL( SCIPprofileCreate(&profile, INT_MAX) );
 
          /* create worst case resource profile */
          retcode = SCIPcreateWorstCaseProfile(scip, profile, consdata->nvars, consdata->vars, consdata->durations, consdata->demands);
@@ -9650,7 +9650,7 @@ SCIP_RETCODE computeEffectiveHorizonCumulativeCondition(
    SCIP_PROFILE* profile;
 
    /* create empty resource profile with infinity resource capacity */
-   SCIP_CALL_FINALLY( SCIPprofileCreate(&profile, INT_MAX), SCIPprofileFree(&profile) );
+   SCIP_CALL( SCIPprofileCreate(&profile, INT_MAX) );
 
    /* create worst case resource profile */
    SCIP_CALL_FINALLY( SCIPcreateWorstCaseProfile(scip, profile, nvars, vars, durations, demands), SCIPprofileFree(&profile) );

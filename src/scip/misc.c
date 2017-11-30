@@ -6244,16 +6244,15 @@ int SCIPactivityGetEnergy(
  * Resource Profile
  */
 
-/** creates resource profile */
-SCIP_RETCODE SCIPprofileCreate(
+/** helper method to create a profile */
+static
+SCIP_RETCODE doProfileCreate(
    SCIP_PROFILE**        profile,            /**< pointer to store the resource profile */
    int                   capacity            /**< resource capacity */
    )
 {
-   assert(profile != NULL);
-   assert(capacity > 0);
-
    SCIP_ALLOC( BMSallocMemory(profile) );
+   BMSclearMemory(*profile);
 
    (*profile)->arraysize = 10;
    SCIP_ALLOC( BMSallocMemoryArray(&(*profile)->timepoints, (*profile)->arraysize) );
@@ -6268,18 +6267,34 @@ SCIP_RETCODE SCIPprofileCreate(
    return SCIP_OKAY;
 }
 
+/** creates resource profile */
+SCIP_RETCODE SCIPprofileCreate(
+   SCIP_PROFILE**        profile,            /**< pointer to store the resource profile */
+   int                   capacity            /**< resource capacity */
+   )
+{
+   assert(profile != NULL);
+   assert(capacity > 0);
+
+   SCIP_CALL_FINALLY( doProfileCreate(profile, capacity), SCIPprofileFree(profile) );
+
+   return SCIP_OKAY;
+}
+
 /** frees given resource profile */
 void SCIPprofileFree(
    SCIP_PROFILE**        profile             /**< pointer to the resource profile */
    )
 {
    assert(profile != NULL);
-   assert(*profile != NULL);
 
-   /* free main hash map data structure */
-   BMSfreeMemoryArray(&(*profile)->loads);
-   BMSfreeMemoryArray(&(*profile)->timepoints);
-   BMSfreeMemory(profile);
+   /* free resource profile */
+   if( *profile != NULL )
+   {
+      BMSfreeMemoryArrayNull(&(*profile)->loads);
+      BMSfreeMemoryArrayNull(&(*profile)->timepoints);
+      BMSfreeMemory(profile);
+   }
 }
 
 /** output of the given resource profile */
