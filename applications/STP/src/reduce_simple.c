@@ -1226,6 +1226,8 @@ SCIP_RETCODE reduce_simple_mw(
 
    assert(graph_valid(g));
 
+   SCIP_CALL( level0save(scip, g) );
+
    return SCIP_OKAY;
 }
 
@@ -1603,6 +1605,8 @@ SCIP_RETCODE reduce_simple_pc(
    SCIPdebugMessage("degree test pc: %d nodes deleted\n", *count);
 
    assert(graph_valid(g));
+
+   SCIP_CALL( level0save(scip, g) );
 
    return SCIP_OKAY;
 }

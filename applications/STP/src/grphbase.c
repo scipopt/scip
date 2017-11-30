@@ -3566,7 +3566,7 @@ SCIP_RETCODE graph_trail_arr(
 
       stackarr[stacksize++] = i;
 
-      /* BFS loop */
+      /* DFS loop */
       while( stacksize != 0 )
       {
          node = stackarr[--stacksize];

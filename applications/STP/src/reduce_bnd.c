@@ -636,11 +636,11 @@ int reducePcMw(
    assert(cost != NULL);
    assert(vnoi != NULL);
 
-   if( minpathcost < 0.0 )
-      minpathcost = 0.0;
-
    assert(SCIPisGE(scip, minpathcost, 0.0));
    assert(!solgiven || graph_sol_valid(scip, graph, result));
+
+   if( minpathcost < 0.0 )
+      minpathcost = 0.0;
 
    nfixed = 0;
    nnodes = graph->knots;
