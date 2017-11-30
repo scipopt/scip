@@ -3806,7 +3806,7 @@ SCIP_RETCODE generateCut(
                consdata->x, consdata->z, xval+xoffset < - consdata->root * (xglb+xoffset) && SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) > 0) );
       else
          SCIP_CALL( generateLinearizationCut(scip, &rowprep, SCIPconsGetHdlr(cons), xub, consdata->exponent, xoffset, xmult, zcoef, rhs,
-               consdata->x, consdata->z, xval+xoffset < - consdata->root * (xglb+xoffset) && SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) > 0) );
+               consdata->x, consdata->z, xub+xoffset < - consdata->root * (xglb+xoffset) && SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) > 0) );
    }
    else
    {
