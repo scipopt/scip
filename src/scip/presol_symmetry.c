@@ -831,7 +831,7 @@ SCIP_RETCODE computeSymmetryGroup(
          for (j = 0; j < nconsvars; ++j)
          {
             /* we have only allocated memory for active variables */
-            if ( consvars[j] != NULL && SCIPvarIsActive(consvars[j]) )
+            if ( curconsvars[j] != NULL && SCIPvarIsActive(curconsvars[j]) )
             {
                consvars[naddedvars] = curconsvars[j];
                consvals[naddedvars++] = 1.0;
@@ -864,12 +864,14 @@ SCIP_RETCODE computeSymmetryGroup(
          for (j = 0; j < nconsvars; ++j)
          {
             /* we have only allocated memory for active variables */
-            if ( consvars[j] != NULL && SCIPvarIsActive(consvars[j]) )
+            assert( curconsvars[j] != NULL );
+            if ( SCIPvarIsActive(curconsvars[j]) )
             {
                consvars[naddedvars] = curconsvars[j];
                consvals[naddedvars++] = 1.0;
             }
          }
+         assert( SCIPgetResultantAnd(scip, cons) != NULL );
          if ( SCIPvarIsActive(SCIPgetResultantAnd(scip, cons)) )
          {
             consvars[naddedvars] = SCIPgetResultantAnd(scip, cons);
@@ -895,12 +897,14 @@ SCIP_RETCODE computeSymmetryGroup(
          for (j = 0; j < nconsvars; ++j)
          {
             /* we have only allocated memory for active variables */
-            if ( consvars[j] != NULL && SCIPvarIsActive(consvars[j]) )
+            assert( curconsvars[j] != NULL );
+            if ( SCIPvarIsActive(curconsvars[j]) )
             {
                consvars[naddedvars] = curconsvars[j];
                consvals[naddedvars++] = 1.0;
             }
          }
+         assert( SCIPgetResultantOr(scip, cons) != NULL );
          if ( SCIPvarIsActive(SCIPgetResultantOr(scip, cons)) )
          {
             consvars[naddedvars] = SCIPgetResultantOr(scip, cons);
@@ -950,17 +954,11 @@ SCIP_RETCODE computeSymmetryGroup(
          assert( SCIPgetVarVarbound(scip, cons) != NULL );
          assert( SCIPgetVbdvarVarbound(scip, cons) != NULL );
 
-         consvars[naddedvars] = SCIPgetVarVarbound(scip, cons);
-         consvals[naddedvars] = 1.0;
-
          if ( SCIPvarIsActive(SCIPgetVarVarbound(scip, cons)) )
          {
             consvars[naddedvars] = SCIPgetVarVarbound(scip, cons);
             consvals[naddedvars++] = 1.0;
          }
-
-         consvars[naddedvars] = SCIPgetVbdvarVarbound(scip, cons);
-         consvals[naddedvars] = SCIPgetVbdcoefVarbound(scip, cons);
 
          if ( SCIPvarIsActive(SCIPgetVbdvarVarbound(scip, cons)) )
          {
