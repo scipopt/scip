@@ -995,14 +995,11 @@ void procPcdata(
    {
       if ( c == EOF )
          ppos->state = XML_STATE_EOF;
-      else if ( c == '<' )
-      {
-         ppos->state = XML_STATE_BEFORE;
-         ungetsymbol(ppos, c);
-      }
       else
       {
-         ppos->state = XML_STATE_ERROR;
+         assert(c == '<');
+         ppos->state = XML_STATE_BEFORE;
+         ungetsymbol(ppos, c);
       }
    }
    else
