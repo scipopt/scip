@@ -16,13 +16,14 @@ read -d '' awkscript_findasserts << 'EOF'
 
 # init variables
 BEGIN {
-    searchAssert=0; delete human[0];
+    searchAssert=0;
 }
 
 # read failed instances into array as keys
 # the names in the errorinstances have to be the full names of the instances
+# set failed[instname] to 0 when found an assert
 NR==FNR && /fail.*abort/ {
-    failed[$1]; next;
+    failed[$1]=1; next;
 }
 
 # find instances in errorfile
@@ -30,7 +31,7 @@ NR!=FNR && /^@01/ {
 
     # if we were looking for an assertion in currinstname, we are now at the beginning of the error output
     # of another instance. Therefore, we didn't find an assertion and this instance needs human inspection.
-    if (searchAssert == 1) { human[currinstname]; searchAssert=0; }
+    if (searchAssert == 1) { searchAssert=0; }
 
     # get instancename (copied from check.awk)
     n = split($2, a, "/"); m = split(a[n], b, "."); currinstname = b[1];
@@ -48,17 +49,24 @@ NR!=FNR && searchAssert == 1 && /Assertion.*failed.$/ {
     print "";
     print instancestr
     for(i=2;i<=NF;i++){printf "%s ", $i}; print "";
+    failed[currinstname]=0;
     searchAssert=0;
 }
 
 # print results
 END {
-    if( length(human) > 0 ) {
-        print "";
-        print "The following fails need human inspection:";
-        for(key in human){ print key }
-    } else {
-        print "";
+    print "";
+    count = 0;
+    for( key in failed ) {
+        if( failed[key] == 1 ) {
+            if( found == 0 ) {
+                print "The following fails need human inspection:";
+            }
+            print key;
+            count = count + 1;
+        }
+    }
+    if( count == 0 ) {
         print "No human inspection needed.";
     }
 }
