@@ -2218,6 +2218,10 @@ SCIP_RETCODE registerBranchingCandidates(
       {
          assert(conss[c] != NULL);  /*lint !e613*/
 
+         /* skip constraints that have been marked to be removed by propagateCons() */
+         if( !SCIPconsIsEnabled(conss[c]) )
+            continue;
+
          consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
          assert(consdata != NULL);
 
@@ -2281,6 +2285,10 @@ SCIP_RETCODE registerLargeRelaxValueVariableForBranching(
       assert(conss != NULL);
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
+
+      /* skip constraints that have been marked to be removed by propagateCons() */
+      if( !SCIPconsIsEnabled(conss[c]) )
+         continue;
 
       if( !SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && !SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
          continue;
