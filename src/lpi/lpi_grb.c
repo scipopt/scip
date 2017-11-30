@@ -3988,7 +3988,7 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
    assert(lpi != NULL);
    assert(quality != NULL);
 
-   SCIPdebugMessage("requesting solution quality from CPLEX: quality %d\n", qualityindicator);
+   SCIPdebugMessage("requesting solution quality from Gurobi: quality %d\n", qualityindicator);
 
    switch( qualityindicator )
    {
