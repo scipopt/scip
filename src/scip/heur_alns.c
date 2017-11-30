@@ -1785,7 +1785,7 @@ SCIP_RETCODE neighborhoodFixVariables(
    nminfixings = (int)((neighborhood->fixingrate.targetfixingrate - heurdata->fixtol) * nbinintvars);
    nminfixings = MAX(nminfixings, 0);
    nmaxfixings = (int)((neighborhood->fixingrate.targetfixingrate + heurdata->fixtol) * nbinintvars);
-   nmaxfixings = MIN(nminfixings, nbinintvars);
+   nmaxfixings = MIN(nmaxfixings, nbinintvars);
 
    SCIPdebugMsg(scip, "Neighborhood Fixings/Target: %d / %d <= %d <= %d\n",*nfixings, nminfixings, ntargetfixings, nmaxfixings);
 
