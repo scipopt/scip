@@ -1058,7 +1058,7 @@ SCIP_RETCODE redLoopMw(
 #endif
 
          SCIP_CALL( reduce_daPcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint,
-               state, nodearrchar, &daelims, TRUE, (g->terms > STP_RED_MWTERMBOUND), FALSE, FALSE, userec, randnumgen) );
+               state, nodearrchar, &daelims, TRUE, (g->terms > STP_RED_MWTERMBOUND), FALSE, tryrmw && userec , userec, randnumgen) );
 
          if( cnsadvelims + daelims >= redbound || (extensive && (cnsadvelims + daelims > 0))  )
          {

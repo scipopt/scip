@@ -1692,7 +1692,7 @@ SCIP_RETCODE graph_pc_mw2rmw(
    while( e != EAT_LAST )
    {
       const int enext = graph->oeat[e];
-      if( SCIPisGE(scip, graph->cost[e], FARAWAY) )
+      if( SCIPisGE(scip, graph->cost[e], TERMBLOCKED) )
       {
          int e2;
          const int k = graph->head[e];
@@ -1708,7 +1708,7 @@ SCIP_RETCODE graph_pc_mw2rmw(
          assert(e2 == graph->term2edge[k]);
 
          assert(Is_pterm(graph->term[p]));
-         assert(SCIPisGE(scip, graph->prize[p], FARAWAY));
+         assert(SCIPisGE(scip, graph->prize[p], TERMBLOCKED));
 
          /* delete terminal */
          graph_knot_chg(graph, k, -1);

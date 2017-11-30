@@ -153,6 +153,7 @@ typedef struct shortest_path
 #define CONNECT      0
 #define UNKNOWN    (-1)
 #define FARAWAY      1e15
+#define TERMBLOCKED  1e9
 #define BLOCKED     1e10
 
 #define EDGE_BLOCKED      0
