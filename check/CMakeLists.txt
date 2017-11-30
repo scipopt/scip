@@ -1,7 +1,7 @@
 include(CTest)
 
 add_custom_target(check
-                COMMAND ${CMAKE_CTEST_COMMAND} -R "-default" --schedule-random
+                COMMAND ${CMAKE_CTEST_COMMAND} -R "-default" -E "applications" --output-on-failure --schedule-random
                 DEPENDS scip
                 )
 
@@ -256,18 +256,9 @@ set(instances_SAT
 # should yield the same optimal solution
 #
 set(instances_Cardinality
-    "instances/Cardinality/atm_5_10_1.lp.gz\;+5.97040200941306e+04"
-    "instances/Cardinality/atm_5_25_1.cip.gz\;+1.40606905557936e+05"
-#     "instances/Cardinality/atm_5_25_2.lp.gz\;+1.35948249319284e+05"
-    "instances/Cardinality/atm_5_25_3.cip.gz\;+1.35160667451104e+05"
-#     Some instances are dropped because they take too long
-#     "instances/Cardinality/atm_5_25_1.lp.gz\;+1.40606905557936e+05"
-#     "instances/Cardinality/atm_5_25_3.lp.gz\;+1.35160667451104e+05"
-#     "instances/Cardinality/atm_5_25_4.lp.gz\;+1.28994302472494e+05"
-#     "instances/Cardinality/atm_5_25_5.lp.gz\;+1.47786890128836e+05"
-#     "instances/Cardinality/atm_5_25_2.cip.gz\;+1.35948249319284e+05"
-#     "instances/Cardinality/atm_5_25_4.cip.gz\;+1.28994302472494e+05"
-#     "instances/Cardinality/atm_5_25_5.cip.gz\;+1.47786890128836e+05"
+    "instances/Cardinality/atm_5_10_1.lp\;+5.97040200941306e+04"
+    "instances/Cardinality/atm_5_25_1.cip\;+1.40606905557936e+05"
+    "instances/Cardinality/atm_5_25_3.cip\;+1.35160667451104e+05"
     )
 
 #

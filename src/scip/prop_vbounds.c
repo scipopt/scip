@@ -73,6 +73,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <stdint.h>
 
 #include "scip/prop_vbounds.h"
 
@@ -366,7 +367,7 @@ SCIP_RETCODE catchEvents(
       else
          eventtype = SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_GUBCHANGED;
 
-      SCIP_CALL( SCIPcatchVarEvent(scip, var, eventtype, eventhdlr, (SCIP_EVENTDATA*) (size_t) v, NULL) ); /*lint !e571*/
+      SCIP_CALL( SCIPcatchVarEvent(scip, var, eventtype, eventhdlr, (SCIP_EVENTDATA*) (uintptr_t) v, NULL) ); /*lint !e571*/
    }
 
    return SCIP_OKAY;
@@ -414,7 +415,7 @@ SCIP_RETCODE dropEvents(
       else
          eventtype = SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_GUBCHANGED;
 
-      SCIP_CALL( SCIPdropVarEvent(scip, var, eventtype, eventhdlr, (SCIP_EVENTDATA*) (size_t) v, -1) ); /*lint !e571*/
+      SCIP_CALL( SCIPdropVarEvent(scip, var, eventtype, eventhdlr, (SCIP_EVENTDATA*) (uintptr_t) v, -1) ); /*lint !e571*/
    }
 
    return SCIP_OKAY;
@@ -2166,10 +2167,10 @@ SCIP_RETCODE tarjan(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   startnode,          /**< node to start the depth-first-search */
    int*                  startindex,         /**< next index to assign to a processed node */
-   uint8_t*              nodeonstack,        /**< array to store the whether a each node is on the stack */
+   SCIP_Shortbool*       nodeonstack,        /**< array to store the whether a each node is on the stack */
    int*                  nodeindex,          /**< array to store the dfs index for each node */
    int*                  nodelowlink,        /**< array to store the lowlink for each node */
-   uint8_t*              nodeinfeasible,     /**< array to store whether the fixing of a node was detected to be infeasible */
+   SCIP_Shortbool*       nodeinfeasible,     /**< array to store whether the fixing of a node was detected to be infeasible */
    int*                  dfsstack,           /**< array of size number of nodes to store the stack */
    int*                  predstackidx,       /**< for each node on the stack: stack position of its predecessor in the Tarjan search */
    int*                  stacknextclique,    /**< array of size number of nodes to store the next clique to be regarded in
@@ -2589,7 +2590,7 @@ SCIP_RETCODE applyFixingsAndAggregations(
    SCIP_VAR**            vars,               /**< array of active variables */
    int*                  infeasnodes,        /**< sparse array with node indices of infeasible nodes */
    int                   ninfeasnodes,       /**< pointer to store the number of infeasible nodes */
-   uint8_t*              nodeinfeasible,     /**< array to store whether the fixing of a node was detected to be infeasible */
+   SCIP_Shortbool*       nodeinfeasible,     /**< array to store whether the fixing of a node was detected to be infeasible */
    int*                  sccvars,            /**< array with all nontrivial strongly connected components in the graph */
    int*                  sccstarts,          /**< start indices of SCCs in sccvars array; one additional entry at the end
                                               *   to give length of used part of sccvars array */
@@ -2720,8 +2721,8 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
    int* sccvars;
    int* sccstarts;
    int* infeasnodes;
-   uint8_t* nodeonstack;
-   uint8_t* nodeinfeasible;
+   SCIP_Shortbool* nodeonstack;
+   SCIP_Shortbool* nodeinfeasible;
    int ninfeasnodes;
    int nsccs;
    int nbounds;

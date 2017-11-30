@@ -276,7 +276,8 @@ SCIP_RETCODE computeBranchingVariables(
    SCIP*                 scip,               /**< SCIP pointer */
    int                   nvars,              /**< number of variables */
    SCIP_HASHMAP*         varmap,             /**< map of variables to indices in vars array */
-   SCIP_Shortbool*       b1                  /**< bitset marking the variables branched to 1 */
+   SCIP_Shortbool*       b1,                 /**< bitset marking the variables branched to 1 */
+   SCIP_Bool*            success             /**< pointer to store whether branching variables were computed successfully */
    )
 {
    SCIP_NODE* node;
@@ -284,6 +285,9 @@ SCIP_RETCODE computeBranchingVariables(
    assert( scip != NULL );
    assert( varmap != NULL );
    assert( b1 != NULL );
+   assert( success != NULL );
+
+   *success = TRUE;
 
    /* get current node */
    node = SCIPgetCurrentNode(scip);
@@ -323,8 +327,14 @@ SCIP_RETCODE computeBranchingVariables(
          /* we only consider binary variables */
          if ( SCIPvarGetType(branchvar) == SCIP_VARTYPE_BINARY )
          {
-            /* make sure that branching variable is known */
-            assert( SCIPhashmapExists(varmap, (void*) branchvar) );
+            /* make sure that branching variable is known, since new binary variables may have
+             * been created meanwhile, e.g., by presol_inttobinary */
+            if ( ! SCIPhashmapExists(varmap, (void*) branchvar) )
+            {
+               *success = FALSE;
+               return SCIP_OKAY;
+            }
+
 
             if ( SCIPvarGetLbLocal(branchvar) > 0.5 )
             {
@@ -355,6 +365,7 @@ SCIP_RETCODE propagateOrbitalFixing(
 {
    SCIP_Shortbool* activeperms;
    SCIP_Shortbool* b1;
+   SCIP_Bool success = TRUE;
    SCIP_VAR** permvars;
    int* orbitbegins;
    int* orbits;
@@ -394,7 +405,14 @@ SCIP_RETCODE propagateOrbitalFixing(
       b1[v] = FALSE;
 
    /* get branching variables */
-   SCIP_CALL( computeBranchingVariables(scip, npermvars, propdata->permvarmap, b1) );
+   SCIP_CALL( computeBranchingVariables(scip, npermvars, propdata->permvarmap, b1, &success) );
+
+   if ( ! success )
+   {
+      SCIPfreeBufferArray(scip, &b1);
+      SCIPfreeBufferArray(scip, &activeperms);
+      return SCIP_OKAY;
+   }
 
 #ifndef NDEBUG
    SCIP_CALL( SCIPgetPermvarsObjSymmetry(scip, &permvarsobj) );
@@ -566,6 +584,9 @@ SCIP_DECL_PROPINITSOL(propInitsolOrbitalfixing)
 
    /* stop, if problem has already been solved */
    if ( SCIPgetStatus(scip) != SCIP_STATUS_UNKNOWN )
+      return SCIP_OKAY;
+
+   if ( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
    assert( SCIPisTransformed(scip) );

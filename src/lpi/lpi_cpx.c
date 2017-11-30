@@ -510,8 +510,8 @@ SCIP_RETCODE checkParameterValues(
    SCIP_CALL( getParameterValues(lpi, &par) );
    for( i = 0; i < NUMINTPARAM; ++i )
    {
-#if (CPX_VERSION == 12070000)
-      /* due to a bug in CPLEX 12.7.0, we need to disable scaling for this version */
+#if (CPX_VERSION == 12070100 || CPX_VERSION == 12070000)
+      /* due to a bug in CPLEX 12.7.0 and CPLEX 12.7.1, we need to disable scaling for these versions */
       if ( intparam[i] != CPX_PARAM_SCAIND )
 #endif
          assert(lpi->curparam.intparval[i] == par.intparval[i]

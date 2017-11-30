@@ -355,7 +355,7 @@ SCIP_RETCODE collectCoefficients(
    if ( ! SCIPisInfinity(scip, rhs) )
       rhs -= constant;
 
-   /* check whether we have to resize */
+   /* check whether we have to resize; note that we have to add 2 * nvars since two inequalities may be added */
    if ( matrixdata->nmatcoef + 2 * nvars > matrixdata->nmaxmatcoef )
    {
       int newsize;
@@ -628,6 +628,38 @@ int getNActiveVars(
 }
 #endif
 
+/** returns the number of active constraints that can be handled by symmetry */
+static
+int getNSymhandableConss(
+   SCIP*                 scip                /**< SCIP instance */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   int nhandleconss = 0;
+
+   assert( scip != NULL );
+
+   conshdlr = SCIPfindConshdlr(scip, "linear");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "setppc");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "xor");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "and");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "or");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "logicor");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "knapsack");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "varbound");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "bounddisjunction");
+   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+
+   return nhandleconss;
+}
 
 /** compute symmetry group of MIP */
 static
@@ -660,8 +692,8 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIP_Real oldcoef = SCIP_INVALID;
    SCIP_Real val;
    int nuniquevararray = 0;
-   int nhandleconss = 0;
-   int nactiveconss = 0;
+   int nhandleconss;
+   int nactiveconss;
    int nconss;
    int nvars;
    int c;
@@ -689,15 +721,7 @@ SCIP_RETCODE computeSymmetryGroup(
 
    /* skip if no symmetry can be computed */
    if ( ! SYMcanComputeSymmetry() )
-   {
-      /* currently, we do not support symmetry handling for NLPs */
-      if ( SCIPgetStage(scip) == SCIP_STAGE_INITSOLVE || SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
-      {
-         if ( ! SCIPisNLPConstructed(scip) )
-            SCIPwarningMessage(scip, "Cannot compute symmetry group, since SCIP was built without symmetry detector (SYM=none).\n");
-      }
       return SCIP_OKAY;
-   }
 
    nconss = SCIPgetNConss(scip);
    nvars = SCIPgetNVars(scip);
@@ -713,12 +737,7 @@ SCIP_RETCODE computeSymmetryGroup(
    assert( conss != NULL );
 
    /* compute the number of active constraints */
-   for (c = 0; c < nconss; ++c)
-   {
-      assert( conss[c] != NULL );
-      if ( SCIPconsIsActive(conss[c]) )
-         ++nactiveconss;
-   }
+   nactiveconss = SCIPgetNActiveConss(scip);
 
    /* exit if no active constraints are available */
    if ( nactiveconss == 0 )
@@ -728,24 +747,7 @@ SCIP_RETCODE computeSymmetryGroup(
    }
 
    /* before we set up the matrix, check whether we can handle all constraints */
-   conshdlr = SCIPfindConshdlr(scip, "linear");
-   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
-   conshdlr = SCIPfindConshdlr(scip, "setppc");
-   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
-   conshdlr = SCIPfindConshdlr(scip, "xor");
-   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
-   conshdlr = SCIPfindConshdlr(scip, "and");
-   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
-   conshdlr = SCIPfindConshdlr(scip, "or");
-   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
-   conshdlr = SCIPfindConshdlr(scip, "logicor");
-   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
-   conshdlr = SCIPfindConshdlr(scip, "knapsack");
-   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
-   conshdlr = SCIPfindConshdlr(scip, "varbound");
-   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
-   conshdlr = SCIPfindConshdlr(scip, "bounddisjunction");
-   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   nhandleconss = getNSymhandableConss(scip);
    assert( nhandleconss <= nactiveconss );
    if ( nhandleconss < nactiveconss )
    {
@@ -1208,8 +1210,23 @@ SCIP_RETCODE determineSymmetry(
    if ( SCIPgetNContVars(scip) > 0 || SCIPgetNImplVars(scip) > 0 )
       type |= (int) SYM_SPEC_REAL;
 
+   /* skip symmetry computation if no graph automorphism code was linked */
+   if ( ! SYMcanComputeSymmetry() )
+   {
+      int nconss = SCIPgetNActiveConss(scip);
+      int nhandleconss = getNSymhandableConss(scip);
+
+      /* print verbMessage only if problem consists of symmetry handable constraints */
+      assert( nhandleconss <=  nconss );
+      if ( nhandleconss < nconss )
+         return SCIP_OKAY;
+
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL,
+         "   Deactivated symmetry handling methods, since SCIP was built without symmetry detector (SYM=none).\n");
+      return SCIP_OKAY;
+   }
    /* skip symmetry computation if required variables are not present */
-   if ( ! (type & presoldata->symspecrequire) )
+   else if ( ! (type & presoldata->symspecrequire) )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL,
          "   (%.1fs) symmetry computation skipped: type (bin %c, int %c, cont %c) does not match requirements (bin %c, int %c, cont %c)\n",
@@ -1220,6 +1237,14 @@ SCIP_RETCODE determineSymmetry(
          (presoldata->symspecrequire & (int) SYM_SPEC_BINARY) != 0 ? '+' : '-',
          (presoldata->symspecrequire & (int) SYM_SPEC_INTEGER) != 0 ? '+' : '-',
          (presoldata->symspecrequire & (int) SYM_SPEC_REAL) != 0 ? '+' : '-');
+      return SCIP_OKAY;
+   }
+   /* skip symmetry computation if there are constraints that cannot be handled by symmetry */
+   else if ( getNSymhandableConss(scip) < SCIPgetNActiveConss(scip) )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL,
+         "   (%.1fs) symmetry computation skipped: there exist constraints that cannot be handled by symmetry methods\n",
+         SCIPgetSolvingTime(scip));
       return SCIP_OKAY;
    }
 
@@ -1429,12 +1454,12 @@ SCIP_DECL_PRESOLEXITPRE(presolExitpreSymmetry)
    if ( SCIPgetNRuns(scip) > 1 )
       return SCIP_OKAY;
 
-   /* skip if we are exiting */
-   if ( SCIPisStopped(scip) )
-      return SCIP_OKAY;
-
    /* skip if we already terminated */
    if ( SCIPgetStatus(scip) != SCIP_STATUS_UNKNOWN )
+      return SCIP_OKAY;
+
+   /* skip if we are exiting */
+   if ( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
    SCIPdebugMsg(scip, "Exitpre method of symmetry presolver ...\n");
@@ -1551,7 +1576,8 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
 
    if ( ! presoldata->computedsym )
    {
-      if ( SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING && SCIPgetStage(scip) != SCIP_STAGE_PRESOLVED )
+      if ( SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING && SCIPgetStage(scip) != SCIP_STAGE_PRESOLVED &&
+           SCIPgetStage(scip) != SCIP_STAGE_INITSOLVE )
       {
          SCIPerrorMessage("Cannot call symmetry detection outside of presolving.\n");
          return SCIP_INVALIDCALL;

@@ -180,6 +180,7 @@ struct SCIP_ConsData
    SCIP_Real*            eigenvalues;        /**< eigenvalues of A */
    SCIP_Real*            eigenvectors;       /**< orthonormal eigenvectors of A; if A = P D P^T, then eigenvectors is P^T */
    SCIP_Real*            bp;                 /**< stores b * P where b are the linear coefficients of the quadratic vars */
+   SCIP_Real             maxnonconvexity;    /**< nonconvexity measure: estimate on largest absolute value of nonconvex eigenvalues */
 
    SCIP_Bool             isdisaggregated;    /**< has the constraint already been disaggregated? if might happen that more disaggreation would be potentially
                                                   possible, but we reached the maximum number of sparsity components during presolveDisaggregate() */
@@ -201,6 +202,7 @@ struct BilinearEstimator
    SCIP_VAR*             y;                 /**< second variable */
    SCIP_Real             inequnderest[6];   /**< at most two inequalities that can be used to underestimate xy; stored as (xcoef,ycoef,constant) with xcoef x <= ycoef y + constant */
    SCIP_Real             ineqoverest[6];    /**< at most two inequalities that can be used to overestimate xy; stored as (xcoef,ycoef,constant) with xcoef x <= ycoef y + constant */
+   SCIP_Real             maxnonconvexity;   /**< estimate on largest absolute value of nonconvex eigenvalues of all quadratic constraint containing xy */
    int                   ninequnderest;     /**< total number of inequalities for underestimating xy */
    int                   nineqoverest;      /**< total number of inequalities for overestimating xy */
    int                   nunderest;         /**< number of constraints that require to underestimate xy */
@@ -216,6 +218,7 @@ struct SCIP_ConshdlrData
    int                   replacebinaryprodlength; /**< length of linear term which when multiplied with a binary variable is replaced by an auxiliary variable and an equivalent linear formulation */
    int                   empathy4and;        /**< how much empathy we have for using the AND constraint handler: 0 avoid always; 1 use sometimes; 2 use as often as possible */
    SCIP_Bool             binreforminitial;   /**< whether to make constraints added due to replacing products with binary variables initial */
+   SCIP_Bool             binreformbinaryonly;/**< whether to consider only binary variables when reformulating products with binary variables */
    SCIP_Real             binreformmaxcoef;   /**< factor on 1/feastol to limit coefficients and coef range in linear constraints created by binary reformulation */
    SCIP_Real             cutmaxrange;        /**< maximal range (maximal coef / minimal coef) of a cut in order to be added to LP */
    SCIP_Bool             linearizeheursol;   /**< whether linearizations of convex quadratic constraints should be added to cutpool when some heuristics finds a new solution */
@@ -231,9 +234,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             enfocutsremovable;  /**< are cuts added during enforcement removable from the LP in the same node? */
    SCIP_Bool             gaugecuts;          /**< should convex quadratics generated strong cuts via gauge function? */
    SCIP_Bool             projectedcuts;      /**< should convex quadratics generated strong cuts via projections? */
-   char                  interiorcomputation;/**< how the interior point should be computed: 'a'ny point per constraint,
-                                              * 'm'ost interior per constraint
-                                              */
+   char                  interiorcomputation;/**< how the interior point should be computed: 'a'ny point per constraint, 'm'ost interior per constraint */
    char                  branchscoring;      /**< method to use to compute score of branching candidates */
    int                   enfolplimit;        /**< maximum number of enforcement round before declaring the LP relaxation
                                               * infeasible (-1: no limit); WARNING: if this parameter is not set to -1,
@@ -258,6 +259,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             storedbilinearterms; /**< did we already try to store all bilinear terms? */
 
    SCIP_Real             minscorebilinterms; /**< minimal required score in order to use linear inequalities for tighter bilinear relaxations */
+   SCIP_Real             mincurvcollectbilinterms;/**< minimal curvature of constraints to be considered when returning bilinear terms to other plugins */
    int                   bilinineqmaxseparounds; /**< maximum number of separation rounds to use linear inequalities for the bilinear term relaxation in a local node */
 };
 
@@ -3456,6 +3458,12 @@ SCIP_RETCODE presolveTryAddAND(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   /* if no binary variables, then we will find nothing to reformulate here
+    * (note that this does not count in integer variables with {0,1} bounds...)
+    */
+   if( SCIPgetNBinVars(scip) == 0 )
+      return SCIP_OKAY;
+
    /* if user does not like AND very much, then return */
    if( conshdlrdata->empathy4and < 2 )
       return SCIP_OKAY;
@@ -3660,6 +3668,12 @@ SCIP_RETCODE presolveTryAddLinearReform(
    assert(cons != NULL);
    assert(naddconss != NULL);
 
+   /* if no binary variables, then we will find nothing to reformulate here
+    * (note that this does not count in integer variables with {0,1} bounds...)
+    */
+   if( SCIPgetNBinVars(scip) == 0 )
+      return SCIP_OKAY;
+
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
@@ -3697,7 +3711,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
 
       /* setup a list of bounded variables x_i with coefficients a_i that are multiplied with binary y: y*(sum_i a_i*x_i)
        * and compute range of sum_i a_i*x_i for the cases y = 0 and y = 1
-       * we may need several rounds of maxnrvar < nbilinterms
+       * we may need several rounds if maxnrvar < nbilinterms
        */
       j = 0;
       do
@@ -3727,6 +3741,14 @@ SCIP_RETCODE presolveTryAddLinearReform(
             {
                SCIPdebugMsg(scip, "skip reform of <%s><%s> due to unbounded second variable [%g,%g]\n",
                   SCIPvarGetName(y), SCIPvarGetName(bvar), SCIPvarGetLbGlobal(bvar), SCIPvarGetUbGlobal(bvar));
+               continue;
+            }
+
+            /* skip products with non-binary variables if binreformbinaryonly is set */
+            if( conshdlrdata->binreformbinaryonly && !SCIPvarIsBinary(bvar) )
+            {
+               SCIPdebugMsg(scip, "skip reform of <%s><%s> because second variable is not binary\n",
+                  SCIPvarGetName(y), SCIPvarGetName(bvar));
                continue;
             }
 
@@ -4889,12 +4911,18 @@ void checkCurvatureEasy(
 
    SCIPdebugMsg(scip, "Checking curvature of constraint <%s> without multivariate functions\n", SCIPconsGetName(cons));
 
+   consdata->maxnonconvexity = 0.0;
    if( nquadvars == 1 )
    {
       assert(consdata->nbilinterms == 0);
       consdata->isconvex      = !SCIPisNegative(scip, consdata->quadvarterms[0].sqrcoef);
       consdata->isconcave     = !SCIPisPositive(scip, consdata->quadvarterms[0].sqrcoef);
       consdata->iscurvchecked = TRUE;
+
+      if( !SCIPisInfinity(scip, -consdata->lhs) && consdata->quadvarterms[0].sqrcoef > 0.0 )
+         consdata->maxnonconvexity =  consdata->quadvarterms[0].sqrcoef;
+      if( !SCIPisInfinity(scip,  consdata->rhs) && consdata->quadvarterms[0].sqrcoef < 0.0 )
+         consdata->maxnonconvexity = -consdata->quadvarterms[0].sqrcoef;
    }
    else if( nquadvars == 0 )
    {
@@ -4913,6 +4941,11 @@ void checkCurvatureEasy(
       {
          consdata->isconvex  = consdata->isconvex  && !SCIPisNegative(scip, consdata->quadvarterms[v].sqrcoef);
          consdata->isconcave = consdata->isconcave && !SCIPisPositive(scip, consdata->quadvarterms[v].sqrcoef);
+
+         if( !SCIPisInfinity(scip, -consdata->lhs) &&  consdata->quadvarterms[v].sqrcoef > consdata->maxnonconvexity )
+            consdata->maxnonconvexity =  consdata->quadvarterms[0].sqrcoef;
+         if( !SCIPisInfinity(scip,  consdata->rhs) && -consdata->quadvarterms[v].sqrcoef > consdata->maxnonconvexity )
+            consdata->maxnonconvexity = -consdata->quadvarterms[0].sqrcoef;
       }
 
       consdata->iscurvchecked = TRUE;
@@ -4922,6 +4955,7 @@ void checkCurvatureEasy(
       consdata->isconvex  = FALSE;
       consdata->isconcave = FALSE;
       consdata->iscurvchecked = TRUE;
+      consdata->maxnonconvexity = SCIPinfinity(scip);
    }
    else
       *determined = FALSE;
@@ -4970,6 +5004,9 @@ SCIP_RETCODE checkCurvature(
 
    if( n == 2 )
    {
+      SCIP_Real tracehalf;
+      SCIP_Real discriminantroot;
+
       /* compute eigenvalues by hand */
       assert(consdata->nbilinterms == 1);
       consdata->isconvex =
@@ -4980,6 +5017,19 @@ SCIP_RETCODE checkCurvature(
          consdata->quadvarterms[0].sqrcoef <= 0 &&
          consdata->quadvarterms[1].sqrcoef <= 0 &&
          4 * consdata->quadvarterms[0].sqrcoef * consdata->quadvarterms[1].sqrcoef >= consdata->bilinterms[0].coef * consdata->bilinterms[0].coef;
+
+      /* store largest eigenvalue causing nonconvexity according to sides */
+      tracehalf = (consdata->quadvarterms[0].sqrcoef + consdata->quadvarterms[1].sqrcoef) / 2.0;
+      discriminantroot = consdata->quadvarterms[0].sqrcoef * consdata->quadvarterms[1].sqrcoef - SQR(consdata->bilinterms[0].coef / 2.0);
+      discriminantroot = SQR(tracehalf) - discriminantroot;
+      assert(!SCIPisNegative(scip, discriminantroot));
+      discriminantroot = SQRT(MAX(0.0, discriminantroot));
+
+      consdata->maxnonconvexity = 0.0;
+      if( !SCIPisInfinity(scip, -consdata->lhs) )
+         consdata->maxnonconvexity = MAX(consdata->maxnonconvexity, tracehalf + discriminantroot);
+      if( !SCIPisInfinity(scip, consdata->rhs) )
+         consdata->maxnonconvexity = MAX(consdata->maxnonconvexity, discriminantroot - tracehalf);
 
       consdata->iscurvchecked = TRUE;
       return SCIP_OKAY;
@@ -4993,6 +5043,7 @@ SCIP_RETCODE checkCurvature(
       consdata->isconvex = FALSE;
       consdata->isconcave = FALSE;
       consdata->iscurvchecked = TRUE;
+      consdata->maxnonconvexity = SCIPinfinity(scip);
       return SCIP_OKAY;
    }
 
@@ -5002,6 +5053,7 @@ SCIP_RETCODE checkCurvature(
 
    consdata->isconvex  = TRUE;
    consdata->isconcave = TRUE;
+   consdata->maxnonconvexity = 0.0;
 
    SCIP_CALL( SCIPhashmapCreate(&var2index, SCIPblkmem(scip), n) );
    for( i = 0; i < n; ++i )
@@ -5011,6 +5063,14 @@ SCIP_RETCODE checkCurvature(
          SCIP_CALL( SCIPhashmapInsert(var2index, consdata->quadvarterms[i].var, (void*)(size_t)i) );
          matrix[i*n + i] = consdata->quadvarterms[i].sqrcoef;
       }
+      else
+      {
+         /* if pure square term, then update maximal nonconvex eigenvalue, as it will not be considered in lapack call below */
+         if( !SCIPisInfinity(scip, -consdata->lhs) && consdata->quadvarterms[i].sqrcoef > consdata->maxnonconvexity )
+            consdata->maxnonconvexity = consdata->quadvarterms[i].sqrcoef;
+         if( !SCIPisInfinity(scip, consdata->rhs) && -consdata->quadvarterms[i].sqrcoef > consdata->maxnonconvexity )
+            consdata->maxnonconvexity = -consdata->quadvarterms[i].sqrcoef;
+      }
       /* nonzero elements on diagonal tell a lot about convexity/concavity */
       if( SCIPisNegative(scip, consdata->quadvarterms[i].sqrcoef) )
          consdata->isconvex  = FALSE;
@@ -5018,11 +5078,18 @@ SCIP_RETCODE checkCurvature(
          consdata->isconcave = FALSE;
    }
 
+   /* skip lapack call, if we know already that we are indefinite
+    * NOTE: this will leave out updating consdata->maxnonconvexity, so that it only provides a lower bound in this case
+    */
    if( !consdata->isconvex && !consdata->isconcave )
    {
       SCIPfreeBufferArray(scip, &matrix);
       SCIPhashmapFree(&var2index);
       consdata->iscurvchecked = TRUE;
+      /* make sure that maxnonconvexity is strictly different from zero if nonconvex
+       * TODO one could think about doing some eigenvalue estimation here (Gershgorin)
+       */
+      consdata->maxnonconvexity = MAX(1000.0, consdata->maxnonconvexity);
       return SCIP_OKAY;
    }
 
@@ -5092,6 +5159,12 @@ SCIP_RETCODE checkCurvature(
 #endif
       }
 
+      /* update largest eigenvalue causing nonconvexity according to sides */
+      if( !SCIPisInfinity(scip, -consdata->lhs) )
+         consdata->maxnonconvexity = MAX(consdata->maxnonconvexity, alleigval[n-1]);
+      if( !SCIPisInfinity(scip, consdata->rhs) )
+         consdata->maxnonconvexity = MAX(consdata->maxnonconvexity, -alleigval[0]);
+
       SCIPfreeBufferArray(scip, &alleigval);
    }
    else
@@ -5099,6 +5172,7 @@ SCIP_RETCODE checkCurvature(
       consdata->isconvex = FALSE;
       consdata->isconcave = FALSE;
       consdata->iscurvchecked = TRUE; /* set to TRUE since it does not help to repeat this procedure again and again (that will not bring Ipopt in) */
+      consdata->maxnonconvexity = SCIPinfinity(scip);
    }
 
    SCIPhashmapFree(&var2index);
@@ -5777,6 +5851,7 @@ SCIP_RETCODE storeAllBilinearTerms(
          conshdlrdata->bilinestimators[pos].x = bilinterms[i].var1;
          conshdlrdata->bilinestimators[pos].y = bilinterms[i].var2;
          conshdlrdata->bilinestimators[pos].lastimprfac = 0.0;
+         conshdlrdata->bilinestimators[pos].maxnonconvexity = 0.0;
          ++pos;
       }
 
@@ -5788,12 +5863,14 @@ SCIP_RETCODE storeAllBilinearTerms(
       {
          conshdlrdata->bilinestimators[pos-1].nunderest += (hasrhs && !consdata->isconvex) ? 1 : 0;
          conshdlrdata->bilinestimators[pos-1].noverest += (haslhs && !consdata->isconcave) ? 1 : 0;
+         conshdlrdata->bilinestimators[pos-1].maxnonconvexity = MAX(conshdlrdata->bilinestimators[pos-1].maxnonconvexity, consdata->maxnonconvexity);
       }
       else
       {
          assert(SCIPisNegative(scip, bilinterms[i].coef));
          conshdlrdata->bilinestimators[pos-1].nunderest += (haslhs && !consdata->isconcave) ? 1 : 0;
          conshdlrdata->bilinestimators[pos-1].noverest += (hasrhs && !consdata->isconvex) ? 1 : 0;
+         conshdlrdata->bilinestimators[pos-1].maxnonconvexity = MAX(conshdlrdata->bilinestimators[pos-1].maxnonconvexity, consdata->maxnonconvexity);
       }
 
       /* update index of bilinear term in the constraint data */
@@ -7185,7 +7262,7 @@ void updateBilinearRelaxation(
          SCIP_Real absimpr = REALABS(val - (*bestval));
 
          /* update relaxation if possible */
-         if( relimpr > 0.05 && absimpr > 0.001 &&  ((overestimate && SCIPisFeasLT(scip, val, *bestval)) || (!overestimate && SCIPisFeasGT(scip, val, *bestval))) )
+         if( relimpr > 0.05 && absimpr > 1e-3 && ((overestimate && SCIPisRelLT(scip, val, *bestval)) || (!overestimate && SCIPisRelGT(scip, val, *bestval))) )
          {
             *bestcoefx = xcoef;
             *bestcoefy = ycoef;
@@ -7209,7 +7286,7 @@ void updateBilinearRelaxation(
          SCIP_Real absimpr = REALABS(val - (*bestval));
 
          /* update relaxation if possible */
-         if( relimpr > 0.05 && absimpr > 0.001 &&  ((overestimate && SCIPisFeasLT(scip, val, *bestval)) || (!overestimate && SCIPisFeasGT(scip, val, *bestval))) )
+         if( relimpr > 0.05 && absimpr > 1e-3 && ((overestimate && SCIPisRelLT(scip, val, *bestval)) || (!overestimate && SCIPisRelGT(scip, val, *bestval))) )
          {
             *bestcoefx = xcoef;
             *bestcoefy = ycoef;
@@ -10679,7 +10756,8 @@ SCIP_RETCODE propagateBoundsCons(
    /* was SCIPintervalAreDisjoint(consbounds, consactivity), but that would allow violations up to eps only
     * we need to decide feasibility w.r.t. feastol (but still want to propagate w.r.t. eps)
     */
-   if( SCIPisFeasGT(scip, consbounds.inf, consactivity.sup) || SCIPisFeasLT(scip, consbounds.sup, consactivity.inf) )
+   if( (!SCIPisInfinity(scip, -consdata->lhs) && SCIPisGT(scip, consdata->lhs-SCIPfeastol(scip), SCIPintervalGetSup(consactivity))) ||
+       (!SCIPisInfinity(scip,  consdata->rhs) && SCIPisLT(scip, consdata->rhs+SCIPfeastol(scip), SCIPintervalGetInf(consactivity))) )
    {
       SCIPdebugMsg(scip, "found constraint <%s> to be infeasible; sides: [%g, %g], activity: [%g, %g], infeas: %g\n",
          SCIPconsGetName(cons), consdata->lhs, consdata->rhs, SCIPintervalGetInf(consactivity), SCIPintervalGetSup(consactivity),
@@ -12699,6 +12777,30 @@ SCIP_DECL_CONSENFOPS(consEnfopsQuadratic)
 
    if( nnotify == 0 )
    {
+      SCIP_Bool addedcons;
+      SCIP_Bool reduceddom;
+      SCIP_Bool infeasible;
+
+      /* if no branching candidate found, then all variables are almost fixed
+       * calling replaceByLinearConstraints() should lead to fix all almost-fixed quadratic variables, and possibly replace some quad. conss by linear ones
+       */
+      SCIP_CALL( replaceByLinearConstraints(scip, conss, nconss, &addedcons, &reduceddom, &infeasible) );
+      if( addedcons )
+      {
+         *result = SCIP_CONSADDED;
+         return SCIP_OKAY;
+      }
+      if( reduceddom )
+      {
+         *result = SCIP_REDUCEDDOM;
+         return SCIP_OKAY;
+      }
+      if( infeasible )
+      {
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+
       SCIPdebugMsg(scip, "All variables in violated constraints fixed (up to epsilon). Cannot find branching candidate. Forcing solution of LP.\n");
       *result = SCIP_SOLVELP;
    }
@@ -13849,6 +13951,10 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          "whether to make non-varbound linear constraints added due to replacing products with binary variables initial",
          &conshdlrdata->binreforminitial, TRUE, FALSE, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/binreformbinaryonly",
+         "whether to consider only binary variables when replacing products with binary variables",
+         &conshdlrdata->binreformbinaryonly, FALSE, TRUE, NULL, NULL) );
+
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/binreformmaxcoef",
          "limit (as factor on 1/feastol) on coefficients and coef. range in linear constraints created when replacing products with binary variables",
          &conshdlrdata->binreformmaxcoef, TRUE, 1e-4, 0.0, SCIPinfinity(scip), NULL, NULL) );
@@ -13856,6 +13962,10 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/cutmaxrange",
          "maximal coef range of a cut (maximal coefficient divided by minimal coefficient) in order to be added to LP relaxation",
          &conshdlrdata->cutmaxrange, TRUE, 1e+7, 0.0, SCIPinfinity(scip), NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/mincurvcollectbilinterms",
+         "minimal curvature of constraints to be considered when returning bilinear terms to other plugins",
+         &conshdlrdata->mincurvcollectbilinterms, TRUE, 0.8, -SCIPinfinity(scip), SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/linearizeheursol",
          "whether linearizations of convex quadratic constraints should be added to cutpool in a solution found by some heuristic",
@@ -15494,7 +15604,8 @@ SCIP_RETCODE SCIPgetAllBilinearTermsQuadratic(
    SCIP_VAR** RESTRICT   y,                  /**< array to second variable of each bilinear term */
    int* RESTRICT         nbilinterms,        /**< buffer to store the total number of bilinear terms */
    int* RESTRICT         nunderests,         /**< array to store the total number of constraints that require to underestimate a bilinear term */
-   int* RESTRICT         noverests           /**< array to store the total number of constraints that require to overestimate a bilinear term */
+   int* RESTRICT         noverests,          /**< array to store the total number of constraints that require to overestimate a bilinear term */
+   SCIP_Real*            maxnonconvexity     /**< largest absolute value of nonconvex eigenvalues of all quadratic constraints containing a bilinear term */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -15507,6 +15618,7 @@ SCIP_RETCODE SCIPgetAllBilinearTermsQuadratic(
    assert(nbilinterms != NULL);
    assert(nunderests != NULL);
    assert(noverests!= NULL);
+   assert(maxnonconvexity != NULL);
 
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
 
@@ -15525,6 +15637,7 @@ SCIP_RETCODE SCIPgetAllBilinearTermsQuadratic(
       y[i] = conshdlrdata->bilinestimators[i].y;
       nunderests[i] = conshdlrdata->bilinestimators[i].nunderest;
       noverests[i] = conshdlrdata->bilinestimators[i].noverest;
+      maxnonconvexity[i] = conshdlrdata->bilinestimators[i].maxnonconvexity;
    }
 
    *nbilinterms = conshdlrdata->nbilinterms;

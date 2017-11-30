@@ -5817,8 +5817,9 @@ SCIP_RETCODE registerLargeRelaxValueVariableForBranching(
    return SCIP_OKAY;
 }
 
-/** replaces violated nonlinear constraints where all nonlinear variables are fixed by linear constraints
+/** replaces violated nonlinear constraints where all nonlinear variables are almost fixed by linear constraints
  * only adds constraint if it is violated in current solution
+ * first tries to fix almost fixed variables
  */
 static
 SCIP_RETCODE replaceViolatedByLinearConstraints(
@@ -5834,9 +5835,14 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
    SCIP_CONSDATA*      consdata;
    SCIP_Real           lhs;
    SCIP_Real           rhs;
+   SCIP_Real           lb;
+   SCIP_Real           ub;
    SCIP_RESULT         checkresult;
+   SCIP_VAR*           var;
+   SCIP_Bool           tightened;
    int c;
    int i;
+   int v;
 
    assert(scip  != NULL);
    assert(conss != NULL || nconss == 0);
@@ -5863,6 +5869,47 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
       for( i = 0; i < consdata->nexprtrees; ++i )
       {
          SCIP_INTERVAL nonlinactivity;
+
+         /* check whether there are almost fixed nonlinear variables that can be fixed */
+         for( v = 0; v < SCIPexprtreeGetNVars(consdata->exprtrees[i]); ++v )
+         {
+            var = SCIPexprtreeGetVars(consdata->exprtrees[i])[v];
+
+            lb = SCIPvarGetLbLocal(var);
+            ub = SCIPvarGetUbLocal(var);
+            assert(SCIPisRelEQ(scip, lb, ub)); /* variable should be almost fixed */
+
+            assert(!SCIPisInfinity(scip, -lb));
+            assert(!SCIPisInfinity(scip,  ub));
+
+            if( !SCIPisEQ(scip, lb, ub) )
+            {
+               /* try to fix variable */
+               SCIP_CALL( SCIPtightenVarLb(scip, var, (lb+ub)/2.0, TRUE, infeasible, &tightened) );
+               if( *infeasible )
+               {
+                  SCIPdebugMsg(scip, "Fixing almost fixed variable <%s> lead to infeasibility.\n", SCIPvarGetName(var));
+                  return SCIP_OKAY;
+               }
+               if( tightened )
+               {
+                  SCIPdebugMsg(scip, "Tightened lower bound of almost fixed variable <%s>.\n", SCIPvarGetName(var));
+                  *reduceddom = TRUE;
+               }
+
+               SCIP_CALL( SCIPtightenVarUb(scip, var, (lb+ub)/2.0, TRUE, infeasible, &tightened) );
+               if( *infeasible )
+               {
+                  SCIPdebugMsg(scip, "Fixing almost fixed variable <%s> lead to infeasibility.\n", SCIPvarGetName(var));
+                  return SCIP_OKAY;
+               }
+               if( tightened )
+               {
+                  SCIPdebugMsg(scip, "Tightened upper bound of almost fixed variable <%s>.\n", SCIPvarGetName(var));
+                  *reduceddom = TRUE;
+               }
+            }
+         }
 
          SCIP_CALL( SCIPevalExprtreeLocalBounds(scip, consdata->exprtrees[i], INTERVALINFTY, &nonlinactivity) );
          SCIPintervalMulScalar(INTERVALINFTY, &nonlinactivity, nonlinactivity, consdata->nonlincoefs[i]);
@@ -5896,6 +5943,10 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
          }
       }
 
+      /* if some nonlinear variable was fixed now, then restart node (next enfo round) */
+      if( *reduceddom )
+         return SCIP_OKAY;
+
       /* check if we have a bound change */
       if ( consdata->nlinvars == 0 )
       {
@@ -5903,7 +5954,6 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
       }
       else if ( consdata->nlinvars == 1 )
       {
-         SCIP_Bool tightened;
          SCIP_Real coef;
 
          coef = *consdata->lincoefs;
@@ -6193,28 +6243,31 @@ SCIP_RETCODE propagateBoundsCons(
    }
    assert(!SCIPintervalIsEmpty(INTERVALINFTY, nonlinactivity) );
 
-   /* @todo adding SCIPepsilon may be sufficient? */
-   SCIPintervalSetBounds(&consbounds,
-      -infty2infty(SCIPinfinity(scip), INTERVALINFTY, -consdata->lhs + SCIPfeastol(scip)),
-      +infty2infty(SCIPinfinity(scip), INTERVALINFTY,  consdata->rhs + SCIPfeastol(scip)));
-
-   /* check redundancy and infeasibility */
+   /* get activity of constraint function */
    SCIPintervalSetBounds(&consactivity, consdata->minlinactivityinf > 0 ? -INTERVALINFTY : consdata->minlinactivity, consdata->maxlinactivityinf > 0 ? INTERVALINFTY : consdata->maxlinactivity);
    SCIPintervalAdd(INTERVALINFTY, &consactivity, consactivity, nonlinactivity);
-   if( SCIPintervalIsSubsetEQ(INTERVALINFTY, consactivity, consbounds) )
-   {
-      SCIPdebugMsg(scip, "found constraint <%s> to be redundant: sides: [%g, %g], activity: [%g, %g]\n",
-         SCIPconsGetName(cons), consdata->lhs, consdata->rhs, SCIPintervalGetInf(consactivity), SCIPintervalGetSup(consactivity));
-      *redundant = TRUE;
-      return SCIP_OKAY;
-   }
 
-   if( SCIPintervalAreDisjoint(consbounds, consactivity) )
+   /* check infeasibility */
+   if( (!SCIPisInfinity(scip, -consdata->lhs) && SCIPisGT(scip, consdata->lhs-SCIPfeastol(scip), SCIPintervalGetSup(consactivity))) ||
+       (!SCIPisInfinity(scip,  consdata->rhs) && SCIPisLT(scip, consdata->rhs+SCIPfeastol(scip), SCIPintervalGetInf(consactivity))) )
    {
       SCIPdebugMsg(scip, "found constraint <%s> to be infeasible; sides: [%g, %g], activity: [%g, %g], infeas: %.20g\n",
          SCIPconsGetName(cons), consdata->lhs, consdata->rhs, SCIPintervalGetInf(consactivity), SCIPintervalGetSup(consactivity),
          MAX(consdata->lhs - SCIPintervalGetSup(consactivity), SCIPintervalGetInf(consactivity) - consdata->rhs));
       *result = SCIP_CUTOFF;
+      return SCIP_OKAY;
+   }
+
+   SCIPintervalSetBounds(&consbounds,
+      -infty2infty(SCIPinfinity(scip), INTERVALINFTY, -consdata->lhs + SCIPepsilon(scip)),
+      +infty2infty(SCIPinfinity(scip), INTERVALINFTY,  consdata->rhs + SCIPepsilon(scip)));
+
+   /* check redundancy */
+   if( SCIPintervalIsSubsetEQ(INTERVALINFTY, consactivity, consbounds) )
+   {
+      SCIPdebugMsg(scip, "found constraint <%s> to be redundant: sides: [%g, %g], activity: [%g, %g]\n",
+         SCIPconsGetName(cons), consdata->lhs, consdata->rhs, SCIPintervalGetInf(consactivity), SCIPintervalGetSup(consactivity));
+      *redundant = TRUE;
       return SCIP_OKAY;
    }
 

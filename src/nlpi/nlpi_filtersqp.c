@@ -64,7 +64,7 @@ typedef long ftnlen;
 struct SCIP_Time
 {
    time_t                     sec;           /**< seconds part of time since epoch */
-   int                        usec;          /**< micro-seconds part of time */
+   long                       usec;          /**< micro-seconds part of time */
 };
 typedef struct SCIP_Time SCIP_TIME;
 
@@ -213,43 +213,41 @@ extern struct
 {
    fint char_l;
    char pname[10];
-}
-F77_FUNC(cpname,CPNAME);
+} F77_FUNC(cpname,CPNAME);
+/*lint -esym(752,cpname_) -esym(754,char_l) -esym(754,pname) */
 
 /** common block for Hessian storage set to 0, i.e. NO Hessian */
 extern struct
 {
    fint phl, phr, phc;
-}
-F77_FUNC(hessc,HESSC);
+} F77_FUNC(hessc,HESSC);
+/*lint -esym(754,phr) -esym(754,phc) */
 
 /** common block for upper bound on filter */
 extern struct
 {
    real ubd, tt;
-}
-F77_FUNC(ubdc,UBDC);
+} F77_FUNC(ubdc,UBDC);
 
 /** common block for infinity & epsilon */
 extern struct
 {
    real infty, eps;
-}
-F77_FUNC(nlp_eps_inf,NLP_EPS_INF);
+} F77_FUNC(nlp_eps_inf,NLP_EPS_INF);
 
 /** common block for printing from QP solver */
 extern struct
 {
    fint n_bqpd_calls, n_bqpd_prfint;
-}
-F77_FUNC(bqpd_count,BQPD_COUNT);
+} F77_FUNC(bqpd_count,BQPD_COUNT);
+/*lint -esym(752,bqpd_count_) -esym(754,n_bqpd_calls) -esym(754,n_bqpd_prfint) */
 
 /** common for scaling: scale_mode = 0 (none), 1 (variables), 2 (vars+cons) */
 extern struct
 {
    fint scale_mode, phe;
-}
-F77_FUNC(scalec,SCALEC);
+} F77_FUNC(scalec,SCALEC);
+/*lint -esym(754,phe) */
 
 #ifndef NPARASCIP
 static pthread_mutex_t filtersqpmutex = PTHREAD_MUTEX_INITIALIZER;
@@ -268,7 +266,7 @@ SCIP_TIME gettime(void)
    t.usec = 0;
 
 #else
-   gettimeofday(&tp, NULL);
+   (void) gettimeofday(&tp, NULL);
    t.sec = tp.tv_sec;
    t.usec = tp.tv_usec;
 #endif
@@ -301,7 +299,7 @@ SCIP_Bool timelimitreached(
    SCIP_NLPIPROBLEM*     nlpiproblem         /**< NLPI problem */
    )
 {
-   if( nlpiproblem->maxtime == DBL_MAX )
+   if( nlpiproblem->maxtime == DBL_MAX )  /*lint !e777 */
       return FALSE;
 
    return timeelapsed(nlpidata) >= nlpiproblem->maxtime;
@@ -316,14 +314,14 @@ void F77_FUNC(objfun,OBJFUN)(
    fint*                 iuser,              /**< user integer workspace */
    fint*                 errflag             /**< set to 1 if arithmetic exception occurs, otherwise 0 */
    )
-{
+{ /*lint --e{715} */
    SCIP_NLPIPROBLEM* problem;
    real val;
 
-   problem = (SCIP_NLPIPROBLEM*)iuser;
+   problem = (SCIP_NLPIPROBLEM*)(void*)iuser;
    assert(problem != NULL);
 
-   if( timelimitreached((SCIP_NLPIDATA*)user, problem) )
+   if( timelimitreached((SCIP_NLPIDATA*)(void*)user, problem) )
    {
       SCIPdebugMessage("timelimit reached, issuing arithmetic exception in objfun\n");
       *errflag = 1;
@@ -354,12 +352,12 @@ void F77_FUNC(confun,CONFUN)(
    fint*                 iuser,              /**< user integer workspace */
    fint*                 errflag             /**< set to 1 if arithmetic exception occurs, otherwise 0 */
    )
-{
+{ /*lint --e{715} */
    SCIP_NLPIPROBLEM* problem;
    real val;
    int j;
 
-   problem = (SCIP_NLPIPROBLEM*)iuser;
+   problem = (SCIP_NLPIPROBLEM*)(void*)iuser;
    assert(problem != NULL);
 
    *errflag = 0;
@@ -392,11 +390,11 @@ F77_FUNC(gradient,GRADIENT)(
    fint*                 iuser,              /**< user integer workspace */
    fint*                 errflag             /**< set to 1 if arithmetic exception occurs, otherwise 0 */
    )
-{
+{ /*lint --e{715} */
    SCIP_NLPIPROBLEM* problem;
    SCIP_Real dummy;
 
-   problem = (SCIP_NLPIPROBLEM*)iuser;
+   problem = (SCIP_NLPIPROBLEM*)(void*)iuser;
    assert(problem != NULL);
    assert(problem->evalbuffer != NULL);
    assert(problem->evalbufsize >= *maxa);
@@ -463,13 +461,13 @@ F77_FUNC(hessian,HESSIAN)(
    fint*                 li_hess,            /**< space of Hessian integer storage lws. On entry: maximal space allowed, on exit: actual amount used */
    fint*                 errflag             /**< set to 1 if arithmetic exception occurs, otherwise 0 */
    )
-{
+{ /*lint --e{715} */
    SCIP_NLPIPROBLEM* problem;
    SCIP_Real* lambda;
    int nnz;
    int i;
 
-   problem = (SCIP_NLPIPROBLEM*)iuser;
+   problem = (SCIP_NLPIPROBLEM*)(void*)iuser;
    assert(problem != NULL);
    assert(problem->evalbuffer != NULL);
 
@@ -681,11 +679,11 @@ SCIP_RETCODE setupStart(
     * NOTE: this does not check whether hessian can be computed!
     */
    *success = SCIPnlpiOracleEvalObjectiveValue(problem->oracle, x, &val) == SCIP_OKAY && SCIPisFinite(val);
-   *success &= SCIPnlpiOracleEvalObjectiveGradient(problem->oracle, x, FALSE, &val, problem->evalbuffer) == SCIP_OKAY;
+   *success &= SCIPnlpiOracleEvalObjectiveGradient(problem->oracle, x, FALSE, &val, problem->evalbuffer) == SCIP_OKAY;  /*lint !e514*/
    i = 0;
    for( ; *success && i < SCIPnlpiOracleGetNConstraints(problem->oracle); ++i )
       *success = SCIPnlpiOracleEvalConstraintValue(problem->oracle, i, x, &val) == SCIP_OKAY && SCIPisFinite(val);
-   *success &= SCIPnlpiOracleEvalJacobian(problem->oracle, x, FALSE, NULL, problem->evalbuffer) == SCIP_OKAY;
+   *success &= SCIPnlpiOracleEvalJacobian(problem->oracle, x, FALSE, NULL, problem->evalbuffer) == SCIP_OKAY;  /*lint !e514*/
 
    if( !*success )
    {
@@ -792,7 +790,7 @@ SCIP_RETCODE processSolveOutcome(
       case 1: /* unbounded, feasible point with f(x) <= fmin */
          assert(problem->rstat[4] <= problem->feastol); /* should be feasible */
          problem->solstat = SCIP_NLPSOLSTAT_UNBOUNDED;
-         if( problem->fmin == DEFAULT_LOBJLIM )
+         if( problem->fmin == DEFAULT_LOBJLIM )  /*lint !e777*/
             problem->termstat = SCIP_NLPTERMSTAT_OKAY;  /* fmin was not set */
          else
             problem->termstat = SCIP_NLPTERMSTAT_LOBJLIM;
@@ -1108,19 +1106,19 @@ SCIP_DECL_NLPIADDVARS( nlpiAddVarsFilterSQP )
 
       if( problem->lam != NULL )
       {
-         SCIP_ALLOC( BMSreallocMemoryArray(&problem->lam, problem->varssize + problem->conssize) );
+         SCIP_ALLOC( BMSreallocMemoryArray(&problem->lam, problem->varssize + problem->conssize) );  /*lint !e776*/
       }
 
       if( problem->bl != NULL )
       {
          assert(problem->bu != NULL);
-         SCIP_ALLOC( BMSreallocMemoryArray(&problem->bl, problem->varssize + problem->conssize) );
-         SCIP_ALLOC( BMSreallocMemoryArray(&problem->bu, problem->varssize + problem->conssize) );
+         SCIP_ALLOC( BMSreallocMemoryArray(&problem->bl, problem->varssize + problem->conssize) );  /*lint !e776*/
+         SCIP_ALLOC( BMSreallocMemoryArray(&problem->bu, problem->varssize + problem->conssize) );  /*lint !e776*/
       }
 
       if( problem->s != NULL )
       {
-         SCIP_ALLOC( BMSreallocMemoryArray(&problem->s, problem->varssize + problem->conssize) );
+         SCIP_ALLOC( BMSreallocMemoryArray(&problem->s, problem->varssize + problem->conssize) );  /*lint !e776*/
       }
    }
 
@@ -1235,21 +1233,21 @@ SCIP_DECL_NLPIADDCONSTRAINTS( nlpiAddConstraintsFilterSQP )
 
       if( problem->lam != NULL )
       {
-         SCIP_ALLOC( BMSreallocMemoryArray(&problem->lam, problem->varssize + problem->conssize) );
+         SCIP_ALLOC( BMSreallocMemoryArray(&problem->lam, problem->varssize + problem->conssize) );  /*lint !e776*/
       }
 
       if( problem->bl != NULL )
       {
          assert(problem->bu != NULL);
          assert(problem->cstype != NULL);
-         SCIP_ALLOC( BMSreallocMemoryArray(&problem->bl, problem->varssize + problem->conssize) );
-         SCIP_ALLOC( BMSreallocMemoryArray(&problem->bu, problem->varssize + problem->conssize) );
+         SCIP_ALLOC( BMSreallocMemoryArray(&problem->bl, problem->varssize + problem->conssize) );  /*lint !e776*/
+         SCIP_ALLOC( BMSreallocMemoryArray(&problem->bu, problem->varssize + problem->conssize) );  /*lint !e776*/
          SCIP_ALLOC( BMSreallocMemoryArray(&problem->cstype, problem->conssize) );
       }
 
       if( problem->s != NULL )
       {
-         SCIP_ALLOC( BMSreallocMemoryArray(&problem->s, problem->varssize + problem->conssize) );
+         SCIP_ALLOC( BMSreallocMemoryArray(&problem->s, problem->varssize + problem->conssize) );  /*lint !e776*/
       }
    }
 
@@ -1533,7 +1531,7 @@ SCIP_DECL_NLPICHGQUADCOEFS( nlpiChgQuadraticCoefsFilterSQP )
 
    /* update constraint linearity in FilterSQP data, as we might have changed from linear to nonlinear now */
    if( problem->cstype != NULL && idx >= 0 )
-      problem->cstype[idx] = SCIPnlpiOracleGetConstraintDegree(problem->oracle, idx);
+      problem->cstype[idx] = (SCIPnlpiOracleGetConstraintDegree(problem->oracle, idx) <= 1 ? 'L' : 'N');
 
    /* gradients information (la,a) may have changed if elements were added or removed
     * (we only care that sparsity doesn't change, not about actual values in a)
@@ -1572,7 +1570,7 @@ SCIP_DECL_NLPICHGEXPRTREE( nlpiChgExprtreeFilterSQP )
 
    /* update constraint linearity in FilterSQP data, as we might have changed from linear to nonlinear now */
    if( problem->cstype != NULL && idxcons >= 0 )
-      problem->cstype[idxcons] = SCIPnlpiOracleGetConstraintDegree(problem->oracle, idxcons);
+      problem->cstype[idxcons] = (SCIPnlpiOracleGetConstraintDegree(problem->oracle, idxcons) <= 1 ? 'L' : 'N');
 
    /* gradients information (la,a) may have changed */
    BMSfreeMemoryArrayNull(&problem->la);
@@ -1744,7 +1742,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    }
    if( problem->lam == NULL )
    {
-      SCIP_ALLOC( BMSallocClearMemoryArray(&problem->lam, problem->varssize + problem->conssize) );
+      SCIP_ALLOC( BMSallocClearMemoryArray(&problem->lam, problem->varssize + problem->conssize) );  /*lint !e776 */
    }
    else
    {
@@ -2260,7 +2258,7 @@ SCIP_DECL_NLPISETINTPAR( nlpiSetIntParFilterSQP )
    {
       if( ival == 0 || ival == 1 )
       {
-         problem->fromscratch = ival;
+         problem->fromscratch = (SCIP_Bool)ival;
       }
       else
       {
@@ -2525,7 +2523,7 @@ SCIP_DECL_NLPISETREALPAR( nlpiSetRealParFilterSQP )
          return SCIP_PARAMETERWRONGVAL;
       if( problem )
       {
-         SCIPnlpiOracleSetInfinity(problem->oracle, dval);
+         SCIP_CALL( SCIPnlpiOracleSetInfinity(problem->oracle, dval) );
       }
       else
       {
@@ -2663,8 +2661,6 @@ SCIP_DECL_NLPIGETSTRINGPAR( nlpiGetStringParFilterSQP )
       return SCIP_PARAMETERUNKNOWN;
    }
    }
-
-   return SCIP_OKAY;
 }  /*lint !e715*/
 
 /** sets string parameter of NLP
@@ -2749,8 +2745,6 @@ SCIP_DECL_NLPISETSTRINGPAR( nlpiSetStringParFilterSQP )
       return SCIP_PARAMETERUNKNOWN;
    }
    }
-
-   return SCIP_OKAY;
 }  /*lint !e715*/
 
 /** sets message handler for message output

@@ -659,7 +659,11 @@ void SCIPprintBuildOptions(
 #elif defined(_MSC_VER)
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "microsoft visual c %d\n", _MSC_FULL_VER);
 #elif defined(__GNUC__)
+#if defined(__GNUC_PATCHLEVEL__)
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "gcc %d.%d.%d\n", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
+#else
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "gcc %d.%d\n", __GNUC__, __GNUC_MINOR__);
+#endif
 #else
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "unknown\n");
 #endif
@@ -16384,8 +16388,40 @@ SCIP_RETCODE SCIPsolve(
  *        - \ref SCIP_STAGE_SOLVED if the solving process was not interrupted
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ *
+ *  @deprecated Please use SCIPsolveConcurrent() instead.
  */
 SCIP_RETCODE SCIPsolveParallel(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsolveParallel", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIPsolveConcurrent(scip);
+}
+
+/** transforms, presolves, and solves problem using the configured concurrent solvers
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @post After calling this method \SCIP reaches one of the following stages depending on if and when the solution
+ *        process was interrupted:
+ *        - \ref SCIP_STAGE_PRESOLVING if the solution process was interrupted during presolving
+ *        - \ref SCIP_STAGE_SOLVING if the solution process was interrupted during the tree search
+ *        - \ref SCIP_STAGE_SOLVED if the solving process was not interrupted
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPsolveConcurrent(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -16399,7 +16435,7 @@ SCIP_RETCODE SCIPsolveParallel(
    int              minnthreads;
    int              maxnthreads;
 
-   SCIP_CALL( checkStage(scip, "SCIPsolveParallel", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPsolveConcurrent", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPsetIntParam(scip, "timing/clocktype", SCIP_CLOCKTYPE_WALL) );
 
@@ -16542,7 +16578,7 @@ SCIP_RETCODE SCIPsolveParallel(
    }
 
    SCIPclockStart(scip->stat->solvingtime, scip->set);
-   retcode = SCIPsolveConcurrent(scip);
+   retcode = SCIPconcurrentSolve(scip);
    SCIPclockStop(scip->stat->solvingtime, scip->set);
    SCIP_CALL( displayRelevantStats(scip) );
 
@@ -33636,6 +33672,10 @@ void SCIPcomputeBilinEnvelope1(
 {
    SCIP_Real xs[2] = {lbx, ubx};
    SCIP_Real ys[2] = {lby, uby};
+   SCIP_Real minx;
+   SCIP_Real maxx;
+   SCIP_Real miny;
+   SCIP_Real maxy;
    SCIP_Real tmp;
    SCIP_Real mj;
    SCIP_Real qj;
@@ -33674,9 +33714,15 @@ void SCIPcomputeBilinEnvelope1(
    if( SCIPisFeasGT(scip, xcoef * refpointx - ycoef * refpointy - constant, 0.0) )
       return;
 
-   /* check the reference point is in the interior of the domain */
-   if( SCIPisFeasLE(scip, refpointx, lbx) || SCIPisFeasGE(scip, refpointx, ubx)
-      || SCIPisFeasLE(scip, refpointy, lby) || SCIPisFeasGE(scip, refpointy, uby) )
+   /* compute minimal and maximal bounds on x and y for accepting the reference point */
+   minx = lbx + 0.01 * (ubx-lbx);
+   maxx = ubx - 0.01 * (ubx-lbx);
+   miny = lby + 0.01 * (uby-lby);
+   maxy = uby - 0.01 * (uby-lby);
+
+   /* check whether the reference point is in [minx,maxx]x[miny,maxy] */
+   if( SCIPisLE(scip, refpointx, minx) || SCIPisGE(scip, refpointx, maxx)
+      || SCIPisLE(scip, refpointy, miny) || SCIPisGE(scip, refpointy, maxy) )
       return;
 
    /* always consider xy without the bilinear coefficient */
@@ -33727,10 +33773,12 @@ void SCIPcomputeBilinEnvelope1(
    xj = (refpointx*(vy - qj) - vx*(refpointy - qj)) / tmp;
    yj = mj * xj + qj;
 
-   assert(SCIPisEQ(scip, xcoef*xj, ycoef*yj + constant));
+   assert(SCIPisFeasEQ(scip, xcoef*xj - ycoef*yj - constant, 0.0));
 
-   /* nothing can be achieved if the reference point is outside of the domain */
-   if( SCIPisGT(scip, xj, ubx) || SCIPisLT(scip, xj, lbx) || SCIPisGT(scip, yj, uby) || SCIPisLT(scip, yj, lby) )
+   /* check whether the projection is in [minx,maxx] x [miny,maxy]; this avoids numerical difficulties when the
+    * projection is close to the variable bounds
+    */
+   if( SCIPisLE(scip, xj, minx) || SCIPisGE(scip, xj, maxx) || SCIPisLE(scip, yj, miny) || SCIPisGE(scip, yj, maxy) )
       return;
 
    assert(vy - mj*vx - qj != 0.0);
@@ -33743,21 +33791,19 @@ void SCIPcomputeBilinEnvelope1(
    *lincoefx *= bilincoef;
    *lincoefy *= bilincoef;
    *linconstant *= bilincoef;
-   *success = TRUE;
+
+   /* cut needs to be tight at (vx,vy) and (xj,yj); otherwise we consider the cut to be numerically bad */
+   *success = SCIPisFeasEQ(scip, (*lincoefx)*vx + (*lincoefy)*vy + (*linconstant), bilincoef*vx*vy)
+      && SCIPisFeasEQ(scip, (*lincoefx)*xj + (*lincoefy)*yj + (*linconstant), bilincoef*xj*yj);
 
 #ifndef NDEBUG
    {
-      SCIP_Real activity;
-
-      /* cut needs to be tight at (vx,vy) and (xj,yj) */
-      assert(SCIPisFeasEQ(scip, (*lincoefx)*vx + (*lincoefy)*vy + (*linconstant), bilincoef*vx*vy));
-      assert(SCIPisFeasEQ(scip, (*lincoefx)*xj + (*lincoefy)*yj + (*linconstant), bilincoef*xj*yj));
+      SCIP_Real activity = (*lincoefx)*refpointx + (*lincoefy)*refpointy + (*linconstant);
 
       /* cut needs to under- or overestimate the bilinear term at the reference point */
       if( bilincoef < 0.0 )
          overestimate = !overestimate;
 
-      activity = (*lincoefx)*refpointx + (*lincoefy)*refpointy + (*linconstant);
       if( overestimate )
          assert(SCIPisFeasGE(scip, activity, bilincoef*refpointx*refpointy));
       else
@@ -33863,6 +33909,7 @@ void SCIPcomputeBilinEnvelope2(
 {
    SCIP_Real mi, mj, qi, qj, xi, xj, yi, yj;
    SCIP_Real xcoef, ycoef, constant;
+   SCIP_Real minx, maxx, miny, maxy;
 
    assert(scip != NULL);
    assert(!SCIPisInfinity(scip,  lbx));
@@ -33896,9 +33943,15 @@ void SCIPcomputeBilinEnvelope2(
       || SCIPisFeasGT(scip, xcoef2 * refpointx - ycoef2 * refpointy - constant2, 0.0) )
       return;
 
+   /* compute minimal and maximal bounds on x and y for accepting the reference point */
+   minx = lbx + 0.01 * (ubx-lbx);
+   maxx = ubx - 0.01 * (ubx-lbx);
+   miny = lby + 0.01 * (uby-lby);
+   maxy = uby - 0.01 * (uby-lby);
+
    /* check the reference point is in the interior of the domain */
-   if( SCIPisFeasLE(scip, refpointx, lbx) || SCIPisFeasGE(scip, refpointx, ubx)
-      || SCIPisFeasLE(scip, refpointy, lby) || SCIPisFeasGE(scip, refpointy, uby) )
+   if( SCIPisLE(scip, refpointx, minx) || SCIPisGE(scip, refpointx, maxx)
+      || SCIPisLE(scip, refpointy, miny) || SCIPisFeasGE(scip, refpointy, maxy) )
       return;
 
    /* the sign of the x-coefficients of the two inequalities must be different; otherwise the convex or concave
@@ -33930,24 +33983,28 @@ void SCIPcomputeBilinEnvelope2(
    if( SCIPisEQ(scip, xi, xj) && SCIPisEQ(scip, yi, yj) )
       return;
 
-   *success = TRUE;
+   /* check whether projected points are in the interior */
+   if( SCIPisLE(scip, xi, minx) || SCIPisGE(scip, xi, maxx) || SCIPisLE(scip, yi, miny) || SCIPisGE(scip, yi, maxy) )
+      return;
+   if( SCIPisLE(scip, xj, minx) || SCIPisGE(scip, xj, maxx) || SCIPisLE(scip, yj, miny) || SCIPisGE(scip, yj, maxy) )
+      return;
+
    *lincoefx = bilincoef * xcoef;
    *lincoefy = bilincoef * ycoef;
    *linconstant = bilincoef * constant;
 
+   /* cut needs to be tight at (vx,vy) and (xj,yj) */
+   *success = SCIPisFeasEQ(scip, (*lincoefx)*xi + (*lincoefy)*yi + (*linconstant), bilincoef*xi*yi)
+      && SCIPisFeasEQ(scip, (*lincoefx)*xj + (*lincoefy)*yj + (*linconstant), bilincoef*xj*yj);
+
 #ifndef NDEBUG
    {
-      SCIP_Real activity;
-
-      /* cut needs to be tight at (vx,vy) and (xj,yj) */
-      assert(SCIPisFeasEQ(scip, (*lincoefx)*xi + (*lincoefy)*yi + (*linconstant), bilincoef*xi*yi));
-      assert(SCIPisFeasEQ(scip, (*lincoefx)*xj + (*lincoefy)*yj + (*linconstant), bilincoef*xj*yj));
+      SCIP_Real activity = (*lincoefx)*refpointx + (*lincoefy)*refpointy + (*linconstant);
 
       /* cut needs to under- or overestimate the bilinear term at the reference point */
       if( bilincoef < 0.0 )
          overestimate = !overestimate;
 
-      activity = (*lincoefx)*refpointx + (*lincoefy)*refpointy + (*linconstant);
       if( overestimate )
          assert(SCIPisFeasGE(scip, activity, bilincoef*refpointx*refpointy));
       else
@@ -43074,6 +43131,9 @@ int SCIPgetPlungeDepth(
  *  @return the total number of active constraints at the current node
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
@@ -43081,7 +43141,7 @@ int SCIPgetNActiveConss(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNActiveConss", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNActiveConss", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    return scip->stat->nactiveconss;
 }
@@ -43429,6 +43489,7 @@ SCIP_Bool SCIPisPrimalboundSol(
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
@@ -43436,7 +43497,7 @@ SCIP_Real SCIPgetGap(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetGap", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetGap", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( SCIPsetIsInfinity(scip->set, getLowerbound(scip)) )
    {
@@ -43616,8 +43677,6 @@ SCIP_Real SCIPgetAvgPseudocostCurrentRun(
    return SCIPhistoryGetPseudocost(scip->stat->glbhistorycrun, solvaldelta);
 }
 
-
-
 /** gets the average number of pseudo cost updates for the given direction over all variables
  *
  *  @return the average number of pseudo cost updates for the given direction over all variables
@@ -43780,9 +43839,9 @@ SCIP_Real SCIPgetAvgConflictScore(
    return SCIPbranchGetScore(scip->set, NULL, conflictscoredown, conflictscoreup);
 }
 
-/** gets the average conflict score value over all variables, only using the pseudo cost information of the current run
+/** gets the average conflict score value over all variables, only using the conflict score information of the current run
  *
- *  @return the average conflict score value over all variables, only using the pseudo cost information of the current run
+ *  @return the average conflict score value over all variables, only using the conflict score information of the current run
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
@@ -43828,10 +43887,10 @@ SCIP_Real SCIPgetAvgConflictlengthScore(
    return SCIPbranchGetScore(scip->set, NULL, conflictlengthdown, conflictlengthup);
 }
 
-/** gets the average conflictlength score value over all variables, only using the pseudo cost information of the
+/** gets the average conflictlength score value over all variables, only using the conflictlength information of the
  *  current run
  *
- *  @return the average conflictlength score value over all variables, only using the pseudo cost information of the
+ *  @return the average conflictlength score value over all variables, only using the conflictlength information of the
  *          current run
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
@@ -43872,10 +43931,10 @@ SCIP_Real SCIPgetAvgInferences(
 }
 
 /** returns the average number of inferences found after branching in given direction over all variables,
- *  only using the pseudo cost information of the current run
+ *  only using the inference information of the current run
  *
  *  @return the average number of inferences found after branching in given direction over all variables,
- *          only using the pseudo cost information of the current run
+ *          only using the inference information of the current run
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
@@ -43914,10 +43973,10 @@ SCIP_Real SCIPgetAvgInferenceScore(
    return SCIPbranchGetScore(scip->set, NULL, inferencesdown, inferencesup);
 }
 
-/** gets the average inference score value over all variables, only using the inference information information of the
+/** gets the average inference score value over all variables, only using the inference information of the
  *  current run
  *
- *  @return the average inference score value over all variables, only using the inference information information of the
+ *  @return the average inference score value over all variables, only using the inference information of the
  *          current run
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
@@ -43958,10 +44017,10 @@ SCIP_Real SCIPgetAvgCutoffs(
 }
 
 /** returns the average number of cutoffs found after branching in given direction over all variables,
- *  only using the pseudo cost information of the current run
+ *  only using the cutoff information of the current run
  *
  *  @return the average number of cutoffs found after branching in given direction over all variables,
- *          only using the pseudo cost information of the current run
+ *          only using the cutoff information of the current run
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
@@ -44000,9 +44059,9 @@ SCIP_Real SCIPgetAvgCutoffScore(
    return SCIPbranchGetScore(scip->set, NULL, cutoffsdown, cutoffsup);
 }
 
-/** gets the average cutoff score value over all variables, only using the pseudo cost information of the current run
+/** gets the average cutoff score value over all variables, only using the cutoff score information of the current run
  *
- *  @return the average cutoff score value over all variables, only using the pseudo cost information of the current run
+ *  @return the average cutoff score value over all variables, only using the cutoff score information of the current run
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
@@ -48354,18 +48413,21 @@ SCIP_RETCODE SCIPvalidateSolve(
    SCIP_Real dualviol;
    assert(scip != NULL);
 
-   localfeasible = TRUE;
-   localdualboundcheck = TRUE;
-
    /* if no problem exists, there is no need for validation */
    if( SCIPgetStage(scip) < SCIP_STAGE_PROBLEM )
    {
-      *feasible = TRUE;
-      *primalboundcheck = TRUE;
-      *dualboundcheck = TRUE;
+      if( feasible != NULL )
+         *feasible = TRUE;
+      if( primalboundcheck != NULL )
+         *primalboundcheck = TRUE;
+      if( dualboundcheck != NULL )
+         *dualboundcheck = TRUE;
 
       return SCIP_OKAY;
    }
+
+   localfeasible = TRUE;
+   localdualboundcheck = TRUE;
 
    /* check the best solution for feasibility in the original problem */
    if( SCIPgetNSols(scip) > 0 )
