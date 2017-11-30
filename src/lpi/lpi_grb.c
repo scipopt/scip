@@ -4707,7 +4707,6 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
       {
          idx = (x.ind)[j];
          assert( idx >= 0 && idx < nrows );
-         inds[j] = idx;
          coef[idx] = (x.val)[j];
          if( bind[idx] < 0 )
             coef[idx] *= -1.0;
