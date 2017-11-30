@@ -3799,6 +3799,8 @@ SCIP_RETCODE SCIPlpiGetObjval(
    SCIP_Real*            objval              /**< stores the objective value */
    )
 {
+   int ret;
+
 #ifndef NDEBUG
    double oval = GRB_INFINITY;
    double obnd = -GRB_INFINITY;
@@ -3816,7 +3818,25 @@ SCIP_RETCODE SCIPlpiGetObjval(
    assert(lpi->solstat != GRB_OPTIMAL || oval == obnd); /*lint !e777*/
 #endif
 
-   CHECK_ZERO( lpi->messagehdlr, GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJBOUND, objval) );
+   ret = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJBOUND, objval);
+
+   /**@todo The following is some kind of hack which works with the current SCIP implementation and should be fixed.  In
+    * the case that the LP status is GRB_CUTOFF it might be that certain * attributes cannot be queries (e.g., objval,
+    * primal and dual * solution), in this case we just return the installed cutoff value * minus some epsilon. This is
+    * some kind of hack for the code in * conflict.c:7595 were some extra code handles CPLEX' FASTMIP case that * is
+    * similar to this case.
+    */
+   if( ret == 10005 && lpi->solstat == GRB_CUTOFF )
+   {
+      SCIP_Real dval;
+
+      SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_CUTOFF, &dval) );
+      *objval = dval - 1e-06;
+   }
+   else
+   {
+      CHECK_ZERO( lpi->messagehdlr, ret );
+   }
 
    return SCIP_OKAY;
 }
