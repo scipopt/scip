@@ -80,7 +80,7 @@ read -d '' awkscript_checkfixedinstances << 'EOF'
 # read fail instances for this configuration from resfile
 NR == FNR && /fail/ {
     failmsg=$13; for(i=14;i<=NF;i++){ failmsg=failmsg"_"$i; }
-    errorstring=$1 " " failmsg " " GITBRANCH " " TESTSET " " SETTING " " OPT " " LPS;
+    errorstring=$1 " " failmsg " " GITBRANCH " " TESTSET " " SETTING " " OPT " " LPS " " PERM;
     bugs[errorstring]
     next;
 }
@@ -112,7 +112,7 @@ NR == FNR {known_bugs[$0]; next}
 /fail/ {
     # get the fail error and build string in database format
     failmsg=$13; for(i=14;i<=NF;i++){failmsg=failmsg"_"$i;}
-    errorstring=$1 " " failmsg " " GITBRANCH " " TESTSET " " SETTING " " OPT " " LPS;
+    errorstring=$1 " " failmsg " " GITBRANCH " " TESTSET " " SETTING " " OPT " " LPS " " PERM;
 
     if (!( errorstring in known_bugs )) {
         # if error is not known, add it and print it to ERRORINSTANCES for sending mail later
@@ -162,7 +162,9 @@ RBDB="/nfs/OPTI/adm_timo/databases/rbdb/${PWD##*/}_${TESTSET}_${SETTING}_${LPS}_
 OUTPUT="${DATABASE}_output.tmp"
 touch ${STILLFAILING}
 
-AWKARGS="-v GITBRANCH=$GITBRANCH -v TESTSET=$TESTSET -v SETTING=$SETTING -v OPT=$OPT -v LPS=$LPS -v DATABASE=$DATABASE -v TMPDATABASE=$TMPDATABASE -v STILLFAILING=$STILLFAILING"
+SUBJECTINFO="[BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING: $SETTING] [OPT: $OPT] [LPS: $LPS] [GITHASH: $GITHASH] [PERM: $PERM]"
+
+AWKARGS="-v GITBRANCH=$GITBRANCH -v TESTSET=$TESTSET -v SETTING=$SETTING -v OPT=$OPT -v LPS=$LPS -v DATABASE=$DATABASE -v TMPDATABASE=$TMPDATABASE -v STILLFAILING=$STILLFAILING -v PERM=$PERM"
 echo $AWKARGS
 
 # the first time, the file might not exists so we create it
@@ -193,7 +195,7 @@ fi
 # if still no evalfile was found --> send an email informing that something is wrong and exit
 if [ "${EVALFILE}" == "" ]; then
     echo "Couldn't find eval file, sending email"
-    SUBJECT="ERROR [BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING=$SETTING] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH]"
+    SUBJECT="ERROR ${SUBJECTINFO}"
     echo -e "Aborting because the .eval file cannot be found.\nTried:\n${BASEFILE}, check/results/check.${TESTSET}.${SCIPVERSION}.*.${SETTING}${PERM_ENDING}.\nJoin me at `pwd`.\n" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
     exit 1
 fi
@@ -201,8 +203,8 @@ fi
 # if more than one evalfile was found --> something is wrong, send an email
 if [ `wc -w <<< ${EVALFILE}` -gt 1 ]; then
     echo "More than one eval file found; sending email"
-    SUBJECT="ERROR [BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING=$SETTING] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH]"
-    echo -e "Aborting because there were more than one .eval files found:\n${EVALFILE}\n\nAfter fixing this run\ncd `pwd`\nPERFORMANCE=$PERFORMANCE SCIPVERSION=$SCIPVERSION SETTING=$SETTING LPS=$LPS GITHASH=$GITHASH OPT=$OPT TESTSET=$TESTSET GITBRANCH=$GITBRANCH ./check/jenkins_failcheck.sh\n" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+    SUBJECT="ERROR ${SUBJECTINFO}"
+    echo -e "Aborting because there were more than one .eval files found:\n${EVALFILE}\n\nAfter fixing this run\ncd `pwd`\nPERFORMANCE=$PERFORMANCE SCIPVERSION=$SCIPVERSION SETTING=$SETTING LPS=$LPS GITHASH=$GITHASH OPT=$OPT TESTSET=$TESTSET GITBRANCH=$GITBRANCH PERM=$PERM ./check/jenkins_failcheck.sh\n" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
     exit 1
 fi
 
@@ -269,7 +271,7 @@ if [ $NFAILS -gt 0 ]; then
       # ERROR EMAIL #
       ###############
       echo "Found new errors, sending emails."
-      SUBJECT="FAIL [BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING=$SETTING] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH]"
+      SUBJECT="FAIL ${SUBJECTINFO}"
       echo -e "There are newly failed instances.
 The instances run with the following SCIP version and setting file:
 
@@ -310,7 +312,7 @@ if [ -n "$RESOLVEDINSTANCES" ]; then
    #########################
    # RESOLVED ERRORS EMAIL #
    #########################
-   SUBJECT="FIX [BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING=$SETTING] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH]"
+   SUBJECT="FIX ${SUBJECTINFO}"
    echo -e "Congratulations, see bottom for fixed instances!
 
 The following instances are still failing:
@@ -327,6 +329,6 @@ fi
 rm ${STILLFAILING}
 
 if [ "${PERFORMANCE}" == "performance" ]; then
-   SUBJECT="WEEKLYPERF [BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING=$SETTING] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH]"
+   SUBJECT="WEEKLYPERF ${SUBJECTINFO}"
    echo -e "${PERF_MAIL}" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
 fi
