@@ -131,6 +131,13 @@ struct SCIP_ConsExpr_Nlhdlr
    SCIP_DECL_CONSEXPR_NLHDLRSEPA((*sepa));      /**< separation callback (can be NULL) */
 };
 
+/** expression tree iterator */
+struct SCIP_ConsExpr_Iterator
+{
+   SCIP_CONSEXPR_EXPR*         expr;      /**< current position of the iterator */
+   SCIP_CONSEXPRITERATOR_TYPE  itertype;  /**< type of expression iterator */
+   BMS_BLKMEM*                 blkmem;    /**< block memory */
+};
 
 #ifdef __cplusplus
 }
