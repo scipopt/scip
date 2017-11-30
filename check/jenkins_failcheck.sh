@@ -149,7 +149,7 @@ EOF
 if [ "${PERM}" == "0" ]; then
     PERM_ENDING="."
 else
-    PERM_ENDING="-${PERM}."
+    PERM_ENDING="-p${PERM}."
 fi
 
 # we use a name that is unique per test sent to the cluster (a jenkins job
@@ -196,7 +196,7 @@ fi
 if [ "${EVALFILE}" == "" ]; then
     echo "Couldn't find eval file, sending email"
     SUBJECT="ERROR ${SUBJECTINFO}"
-    echo -e "Aborting because the .eval file cannot be found.\nTried:\n${BASEFILE}, check/results/check.${TESTSET}.${SCIPVERSION}.*.${SETTING}${PERM_ENDING}.\nJoin me at `pwd`.\n" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+    echo -e "Aborting because the .eval file cannot be found.\n\nTried:\n${BASEFILE}.eval\ncheck/results/check.${TESTSET}.${SCIPVERSION}.*.${SETTING}${PERM_ENDING}eval\n\nDirectory: `pwd`.\n" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
     exit 1
 fi
 
