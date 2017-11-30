@@ -828,6 +828,7 @@ SCIP_RETCODE computeSymmetryGroup(
          curconsvars = SCIPgetVarsXor(scip, cons);
          assert( consvars != NULL );
 
+         /* we need to check whether variables are not NULL since intVar may have been set to NULL */
          for (j = 0; j < nconsvars; ++j)
          {
             /* we have only allocated memory for active variables */
