@@ -2294,7 +2294,7 @@ SCIP_RETCODE registerLargeRelaxValueVariableForBranching(
          continue;
 
       val = SCIPgetSolVal(scip, sol, consdata->x) + consdata->xoffset;
-      if( REALABS(val) > brvarval && !SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->x), SCIPvarGetUbLocal(consdata->x)) )
+      if( REALABS(val) > brvarval )
       {
          brvarval = ABS(val);
          *brvar   = consdata->x;
@@ -3610,7 +3610,10 @@ SCIP_RETCODE generateSecantCut(
 
    /* ignore constraints with fixed x (should be removed soon) */
    if( SCIPisRelEQ(scip, xlb, xub) )
+   {
+      SCIPdebugMsg(scip, "skip secant cut because <%s> is fixed [%.20g,%.20g]\n", SCIPvarGetName(x), SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x));
       return SCIP_OKAY;
+   }
 
    if( xlb > -xoffset )
       xlb = -xoffset;
@@ -3731,7 +3734,7 @@ SCIP_RETCODE generateCut(
 
    SCIPdebugMsg(scip, "generate cut for constraint <%s> with violated side %d\n", SCIPconsGetName(cons), violside);
    SCIPdebugPrintCons(scip, cons, NULL);
-   SCIPdebugMsg(scip, "xlb = %g  xub = %g  xval = %g\n", SCIPvarGetLbLocal(consdata->x), SCIPvarGetUbLocal(consdata->x), SCIPgetSolVal(scip, sol, consdata->x));
+   SCIPdebugMsg(scip, "xlb = %g  xub = %g  xval = %g  zval = %.15g\n", SCIPvarGetLbLocal(consdata->x), SCIPvarGetUbLocal(consdata->x), SCIPgetSolVal(scip, sol, consdata->x), SCIPgetSolVal(scip, sol, consdata->z));
 
    if( violside == SCIP_SIDETYPE_RIGHT )
    {
@@ -3903,6 +3906,10 @@ SCIP_RETCODE separatePoint(
    for( c = 0, side = SCIP_SIDETYPE_LEFT; c < nconss && ! (*cutoff); c = (side == SCIP_SIDETYPE_RIGHT ? c+1 : c), side = (side == SCIP_SIDETYPE_LEFT ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT) )
    {
       assert(conss[c] != NULL);  /*lint !e613*/
+
+      /* skip constraints that are not enabled, e.g., because they were already marked for deletion at this node */
+      if( !SCIPconsIsEnabled(conss[c]) )
+         continue;
 
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
