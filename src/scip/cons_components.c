@@ -2380,13 +2380,13 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
             SCIP_Real val;
             int i;
 
-            SCIPdebugSolEnable(subscip);
-
             SCIP_CALL( SCIPdebugGetSol(scip, &debugsol) );
 
             /* set solution values in the debug solution if it is available */
             if( debugsol != NULL )
             {
+               SCIPdebugSolEnable(subscip);
+
                for( i = 0; i < ncompvars; ++i )
                {
                   SCIP_CALL( SCIPdebugGetSolVal(scip, compvars[i], &val) );
