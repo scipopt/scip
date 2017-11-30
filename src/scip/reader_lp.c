@@ -2189,7 +2189,7 @@ SCIP_RETCODE readSos(
          if( strcmp(lpinput->token, ":") == 0 )
          {
             /* the second token was a colon: the first token is the constraint name */
-	    (void)SCIPmemccpy(name, lpinput->tokenbuf, '\0', SCIP_MAXSTRLEN);
+            (void)SCIPmemccpy(name, lpinput->tokenbuf, '\0', SCIP_MAXSTRLEN);
 
             name[SCIP_MAXSTRLEN-1] = '\0';
          }
@@ -2231,13 +2231,13 @@ SCIP_RETCODE readSos(
       {
          type = 1;
          SCIP_CALL( SCIPcreateConsSOS1(scip, &cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate,
-               local, modifiable, dynamic, removable) );
+               local, dynamic, removable, FALSE) );
       }
       else if( strcmp(lpinput->token, "S2") == 0 )
       {
          type = 2;
          SCIP_CALL( SCIPcreateConsSOS2(scip, &cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate,
-               local, modifiable, dynamic, removable) );
+               local, dynamic, removable, FALSE) );
       }
       else
       {
