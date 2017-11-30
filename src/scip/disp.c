@@ -625,7 +625,7 @@ void SCIPdispTime(
          timepower++;
          val /= timepowerval[timepower];
       }
-      if( REALABS(val) + 0.05 < maxval/100 ) /*lint !e653*/
+      if( REALABS(val) + 0.05 < maxval/100.0 )
          (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%d.1f%c", width-1, timepowerchar[timepower]);
       else
          (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%d.0f%c", width-1, timepowerchar[timepower]);
