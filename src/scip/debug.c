@@ -479,6 +479,8 @@ SCIP_RETCODE SCIPdebugGetSol(
    assert(scip != NULL);
    assert(sol != NULL);
 
+   *sol = NULL;
+
    /* check whether a debug solution is available */
    if( !debugSolutionAvailable(scip->set) )
       return SCIP_OKAY;
@@ -486,10 +488,7 @@ SCIP_RETCODE SCIPdebugGetSol(
    SCIP_CALL( readSolution(scip->set) );
 
    if( debugsoldata->debugsol == NULL )
-   {
-      *sol = NULL;
       return SCIP_ERROR;
-   }
 
    *sol = debugsoldata->debugsol;
 
