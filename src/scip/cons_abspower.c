@@ -3908,7 +3908,7 @@ SCIP_RETCODE separatePoint(
       assert(conss[c] != NULL);  /*lint !e613*/
 
       /* skip constraints that are not enabled, e.g., because they were already marked for deletion at this node */
-      if( !SCIPconsIsEnabled(conss[c]) )
+      if( !SCIPconsIsEnabled(conss[c]) )  /*lint !e613*/
          continue;
 
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
