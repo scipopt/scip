@@ -3982,10 +3982,32 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
    SCIP_Real*            quality             /**< pointer to store quality number */
    )
 {  /*lint --e{715}*/
+   const char* what;
+   int ret;
+
    assert(lpi != NULL);
    assert(quality != NULL);
 
-   CHECK_ZERO( lpi->messagehdlr, GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_KAPPA, quality) );
+   SCIPdebugMessage("requesting solution quality from CPLEX: quality %d\n", qualityindicator);
+
+   switch( qualityindicator )
+   {
+   case SCIP_LPSOLQUALITY_ESTIMCONDITION:
+      what = GRB_DBL_ATTR_KAPPA;
+      break;
+
+   case SCIP_LPSOLQUALITY_EXACTCONDITION:
+      what = GRB_DBL_ATTR_KAPPA_EXACT;
+      break;
+
+   default:
+      SCIPerrorMessage("Solution quality %d unknown.\n", qualityindicator);
+      return SCIP_INVALIDDATA;
+   }
+
+   ret = GRBgetdblattr(lpi->grbmodel, what, quality);
+   if( ret != 0 )
+      *quality = SCIP_INVALID;
 
    return SCIP_OKAY;
 }
