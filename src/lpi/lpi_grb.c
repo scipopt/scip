@@ -4382,6 +4382,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
       for (i = 0; i < x.len; ++i)
       {
          idx = (x.ind)[i];
+         assert( idx >= 0 && idx < nrows );
          inds[i] = idx;
          coef[idx] = (x.val)[i];
       }
@@ -4393,15 +4394,12 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
       int i;
 
       /* copy solution to dense vector */
-      SCIPsortIntReal(x.ind, x.val, x.len);
-      i = 0;
-      for (idx = 0; idx < nrows; ++idx)
+      BMSclearMemoryArray(coef, nrows);
+      for (i = 0; i < x.len; ++i)
       {
-         assert( i <= x.len );
-         if ( i < x.len && (x.ind)[i] == idx )
-            coef[idx] = (x.val)[i++];
-         else
-            coef[idx] = 0.0;
+         idx = (x.ind)[i];
+         assert( idx >= 0 && idx < nrows );
+         coef[idx] = (x.val)[i];
       }
    }
 
@@ -4487,6 +4485,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
       for (i = 0; i < x.len; ++i)
       {
          idx = (x.ind)[i];
+         assert( idx >= 0 && idx < nrows );
          inds[i] = idx;
          coef[idx] = (x.val)[i];
          if( bind[idx] < 0 )
@@ -4500,19 +4499,14 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
       int i;
 
       /* copy solution to dense vector */
-      SCIPsortIntReal(x.ind, x.val, x.len);
-      i = 0;
-      for (idx = 0; idx < nrows; ++idx)
+      BMSclearMemoryArray(coef, nrows);
+      for (i = 0; i < x.len; ++i)
       {
-         assert( i <= x.len );
-         if ( i < x.len && (x.ind)[i] == idx )
-         {
-            coef[idx] = (x.val)[i++];
-            if( bind[idx] < 0 )
-               coef[idx] *= -1.0;
-         }
-         else
-            coef[idx] = 0.0;
+         idx = (x.ind)[i];
+         assert( idx >= 0 && idx < nrows );
+         coef[idx] = (x.val)[i];
+         if( bind[idx] < 0 )
+            coef[idx] *= -1.0;
       }
    }
 
@@ -4597,6 +4591,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
       for (j = 0; j < x.len; ++j)
       {
          idx = (x.ind)[j];
+         assert( idx >= 0 && idx < ngrbcols+nrows );
          if ( idx < ncols )
          {
             inds[k++] = idx;
@@ -4613,19 +4608,17 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
       int j;
 
       /* Copy dense solution (see comment above). */
-      SCIPsortIntReal(x.ind, x.val, x.len);
-      j = 0;
-      for (idx = 0; idx < ncols; ++idx)
+      BMSclearMemoryArray(coef, ncols);
+      for (j = 0; j < x.len; ++j)
       {
-         assert( j <= x.len );
-         if ( j < x.len && (x.ind)[j] == idx )
+         idx = (x.ind)[j];
+         assert( idx >= 0 && idx < ngrbcols+nrows );
+         if ( idx < ncols )
          {
-            coef[idx] = (x.val)[j++];
+            coef[idx] = (x.val)[j];
             if( isslackvar )
                coef[idx] *= -1.0;
          }
-         else
-            coef[idx] = 0.0;
       }
    }
 
@@ -4695,6 +4688,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
       for (j = 0; j < x.len; ++j)
       {
          idx = (x.ind)[j];
+         assert( idx >= 0 && idx < nrows );
          inds[j] = idx;
          coef[idx] = (x.val)[j];
          if( bind[idx] < 0 )
@@ -4708,19 +4702,15 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
       int j;
 
       /* copy dense solution */
-      SCIPsortIntReal(x.ind, x.val, x.len);
-      j = 0;
-      for (idx = 0; idx < nrows; ++idx)
+      BMSclearMemoryArray(coef, nrows);
+      for (j = 0; j < x.len; ++j)
       {
-         assert( j <= x.len );
-         if ( j < x.len && (x.ind)[j] == idx )
-         {
-            coef[idx] = (x.val)[j++];
-            if( bind[idx] < 0 )
-               coef[idx] *= -1.0;
-         }
-         else
-            coef[idx] = 0.0;
+         idx = (x.ind)[j];
+         assert( idx >= 0 && idx < nrows );
+         inds[j] = idx;
+         coef[idx] = (x.val)[j];
+         if( bind[idx] < 0 )
+            coef[idx] *= -1.0;
       }
    }
 
