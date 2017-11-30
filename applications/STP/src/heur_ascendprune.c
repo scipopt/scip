@@ -493,7 +493,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
 
    SCIP_CALL( level0(scip, newgraph) );
 
-#if 1 // debug
+#if 0
    for( int k = 0; k < nnodes && !pcmw; k++ )
    {
       if( Is_term(g->term[k]) )
@@ -514,19 +514,13 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
          }
       }
    }
-if( pcmw )
-{
-   graph_pc_2orgcheck(newgraph);
-   assert(graph_pc_term2edgeConsistent(newgraph));
-   graph_pc_2transcheck(newgraph);
-}
 #endif
    assert(graph_valid(newgraph));
 
    /* get solution on new graph by PRUNE heuristic */
    SCIP_CALL( SCIPStpHeurPruneRun(scip, NULL, newgraph, newedges, &success, FALSE, TRUE) );
 
-#if 1 // debug
+#if 0
    for( int k = 0; k < newgraph->knots; ++k )
    {
       if( Is_term(newgraph->term[k]) && newgraph->grad[k] == 0 && k != newgraph->source )
@@ -555,12 +549,6 @@ if( pcmw )
    SCIP_CALL( SCIPStpHeurLocalRun(scip, newgraph, newgraph->cost, newedges) );
 
    SCIPdebugMessage("obj after local %f \n", graph_sol_getObj(newgraph->cost, newedges, 0.0, newgraph->edges));
-
-   if( !graph_sol_valid(scip, newgraph, newedges) ) // todo
-   {
-      printf(" %d \n", 0);
-      exit(1);
-   }
 
    assert(graph_sol_valid(scip, newgraph, newedges));
    graph_path_exit(scip, newgraph);

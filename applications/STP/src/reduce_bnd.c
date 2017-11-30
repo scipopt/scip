@@ -2785,28 +2785,6 @@ SCIP_RETCODE reduce_daSlackPruneMw(
    assert(SCIPfindHeur(scip, "TM") != NULL);
    tmheurdata = SCIPheurGetData(SCIPfindHeur(scip, "TM"));
 
-#if 0
-   for( k = 0; k < nnodes; k++ )
-   {
-      if( Is_term(graph->term[k]) && k != root )
-      {
-         assert(graph->grad[k] > 0);
-
-         for( e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
-         {
-            if( graph->head[e] == graph->source )
-            {
-               break;
-            }
-         }
-         if( e == EAT_LAST )
-         {
-            printf("err %d \n", 0);
-            return SCIP_ERROR;
-         }
-      }
-   }
-#endif
 
    /* compute Steiner tree to obtain upper bound */
    SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, graph, NULL, &best_start, transresult, runs, root, cost, costrev, &hopfactor, NULL, 0.0, &success, FALSE) );
@@ -2953,38 +2931,8 @@ SCIP_RETCODE reduce_daSlackPruneMw(
             break;
 
 
-#if 0 //todo
-         if( Is_term(graph->term[k]) )
-         {
-            e = graph->outbeg[k];
-            while( e != EAT_LAST )
-            {
-               etmp = graph->oeat[e];
-               tmpcost = pathdist[k] + cost[e] + vnoi[graph->head[e]].dist;
-
-               if( graph->mark[graph->head[e]] &&
-                  ((SCIPisGT(scip, tmpcost, minpathcost)) ||
-                     (SCIPisGE(scip, tmpcost, minpathcost) && result[e] != CONNECT && result[flipedge(e)] != CONNECT)) )
-               {
-                  if( marked[flipedge(e)] )
-                  {
-                     graph_edge_del(scip, graph, e, TRUE);
-                     graph_edge_del(scip, transgraph, e, FALSE);
-                     nfixed++;
-                  }
-                  else
-                  {
-                     marked[e] = TRUE;
-                  }
-               }
-               e = etmp;
-            }
-            continue;
-         }
-#else
          if( Is_term(graph->term[k]) )
             continue;
-#endif
 
          tmpcost = pathdist[k] + vnoi[k].dist;
 

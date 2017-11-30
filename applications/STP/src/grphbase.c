@@ -1308,10 +1308,10 @@ SCIP_RETCODE graph_pc_getRsap(
 
          for( e = p->outbeg[aterm]; e != EAT_LAST; e = p->oeat[e] )
          {
-            if( SCIPisZero(scip, p->cost[e]) )
-            {
-               head = p->head[e];
+            head = p->head[e];
 
+            if( Is_term(p->term[head]) && head != root )
+            {
                for( e2 = p->inpbeg[head]; e2 != EAT_LAST; e2 = p->ieat[e] )
                {
                   if( p->tail[e2] == root )
