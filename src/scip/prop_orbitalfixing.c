@@ -672,6 +672,7 @@ SCIP_DECL_PROPEXEC(propExecOrbitalfixing)
       return SCIP_OKAY;
 
    /* do not run after a restart */
+   /* @todo recompute symmetries after a restart */
    if ( SCIPgetNRuns(scip) > 1 )
       return SCIP_OKAY;
 
