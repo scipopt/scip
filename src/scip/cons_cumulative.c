@@ -1219,7 +1219,7 @@ int computeTotalEnergy(
  * @{
  */
 
-/** todo setup and solve subscip to solve single cumulative condition  */
+/** setup and solve subscip to solve single cumulative condition  */
 static
 SCIP_RETCODE setupAndSolveCumulativeSubscip(
    SCIP*                 subscip,            /**< subscip data structure */
