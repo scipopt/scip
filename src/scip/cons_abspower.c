@@ -2286,7 +2286,7 @@ SCIP_RETCODE registerLargeRelaxValueVariableForBranching(
          continue;
 
       val = SCIPgetSolVal(scip, sol, consdata->x) + consdata->xoffset;
-      if( REALABS(val) > brvarval )
+      if( REALABS(val) > brvarval && !SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->x), SCIPvarGetUbLocal(consdata->x)) )
       {
          brvarval = ABS(val);
          *brvar   = consdata->x;
