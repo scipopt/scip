@@ -2151,7 +2151,7 @@ SCIP_RETCODE readSos(
    )
 {
    SCIP_Bool initial, separate, enforce, check, propagate;
-   SCIP_Bool local, modifiable, dynamic, removable;
+   SCIP_Bool local, dynamic, removable;
    char name[SCIP_MAXSTRLEN];
    int cnt = 0;
 
@@ -2164,7 +2164,6 @@ SCIP_RETCODE readSos(
    check = TRUE;
    propagate = TRUE;
    local = FALSE;
-   modifiable = FALSE;
    dynamic = lpinput->dynamicconss;
    removable = lpinput->dynamicrows;
 

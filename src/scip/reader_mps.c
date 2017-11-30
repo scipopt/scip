@@ -1756,7 +1756,7 @@ SCIP_RETCODE readSOS(
          {
             assert( type == 2 );
             SCIP_CALL( SCIPcreateConsSOS2(scip, &cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate,
-                  local, dynamic, removable, FALE) );
+                  local, dynamic, removable, FALSE) );
          }
          consType = type;
          SCIPdebugMsg(scip, "created constraint <%s> of type %d.\n", name, type);
