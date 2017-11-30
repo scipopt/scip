@@ -4501,7 +4501,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
             efficacy += QUAD_TO_DBL(coef) * SCIPgetSolVal(scip, sol, vars[mksetinds[i]]);
          }
 
-         if(!EPSZ(SCIPrelDiff(efficacy, bestefficacy), 1e-4))
+         if( !EPSZ(SCIPrelDiff(efficacy, bestefficacy), 1e-4) )
          {
             SCIPdebugMessage("efficacy of cmir cut is different than expected efficacy: %f != %f\n", efficacy, bestefficacy);
          }
@@ -4682,14 +4682,11 @@ SCIP_RETCODE getClosestVlb(
       SCIP_VAR** vlbvars;
       SCIP_Real* vlbcoefs;
       SCIP_Real* vlbconsts;
-      SCIP_Real minvlbconst;
       int i;
 
       vlbvars = SCIPvarGetVlbVars(var);
       vlbcoefs = SCIPvarGetVlbCoefs(var);
       vlbconsts = SCIPvarGetVlbConstants(var);
-
-      minvlbconst = bestsub - MAX(SCIPfeastol(scip), bestsub * SCIPfeastol(scip)); /*lint !e666*/
 
       for( i = 0; i < nvlbs; i++ )
       {
@@ -4700,7 +4697,7 @@ SCIP_RETCODE getClosestVlb(
          SCIP_Real rowcoefsign;
          int probidxbinvar;
 
-         if( minvlbconst > vlbconsts[i] )
+         if( bestsub > vlbconsts[i] )
             continue;
 
          /* for numerical reasons, ignore variable bounds with large absolute coefficient and
@@ -4719,7 +4716,6 @@ SCIP_RETCODE getClosestVlb(
             continue;
 
          assert(SCIPvarIsBinary(vlbvars[i]));
-
 
          /* check if current variable lower bound l~_i * x_i + d_i imposed on y_j meets the following criteria:
           * (let a_j  = coefficient of y_j in current row,
@@ -4751,17 +4747,17 @@ SCIP_RETCODE getClosestVlb(
          val2 = rowcoefsign * ((rowcoef * vlbcoefs[i]) + rowcoefbinvar);
 
          /* variable lower bound does not meet criteria */
-         if( SCIPisFeasGT(scip, val2, 0.0) || SCIPisInfinity(scip, -val2) )
+         if( val2 > 0.0 || SCIPisInfinity(scip, -val2) )
             continue;
 
          val1 = rowcoefsign * ((rowcoef * (bestsub - vlbconsts[i])) + rowcoefbinvar);
 
          /* variable lower bound does not meet criteria */
-         if( SCIPisFeasGT(scip, val1, 0.0) )
+         if( val1 > 0.0 )
             continue;
 
          vlbsol = vlbcoefs[i] * SCIPgetSolVal(scip, sol, vlbvars[i]) + vlbconsts[i];
-         if( SCIPisGT(scip, vlbsol, *closestvlb) )
+         if( vlbsol > *closestvlb )
          {
             *closestvlb = vlbsol;
             *closestvlbidx = i;
@@ -4817,14 +4813,11 @@ SCIP_RETCODE getClosestVub(
       SCIP_VAR** vubvars;
       SCIP_Real* vubcoefs;
       SCIP_Real* vubconsts;
-      SCIP_Real maxvubconst;
       int i;
 
       vubvars = SCIPvarGetVubVars(var);
       vubcoefs = SCIPvarGetVubCoefs(var);
       vubconsts = SCIPvarGetVubConstants(var);
-
-      maxvubconst = bestslb + MAX(SCIPfeastol(scip), bestslb * SCIPfeastol(scip)); /*lint !e666*/
 
       for( i = 0; i < nvubs; i++ )
       {
@@ -4835,7 +4828,7 @@ SCIP_RETCODE getClosestVub(
          SCIP_Real rowcoefsign;
          int probidxbinvar;
 
-         if( maxvubconst < vubconsts[i] )
+         if( bestslb < vubconsts[i] )
             continue;
 
          /* for numerical reasons, ignore variable bounds with large absolute coefficient and
@@ -4886,17 +4879,17 @@ SCIP_RETCODE getClosestVub(
          val2 = rowcoefsign * ((rowcoef * vubcoefs[i]) + rowcoefbinvar);
 
          /* variable upper bound does not meet criteria */
-         if( SCIPisFeasLT(scip, val2, 0.0) || SCIPisInfinity(scip, val2) )
+         if( val2 < 0.0 || SCIPisInfinity(scip, val2) )
             continue;
 
          val1 = rowcoefsign * ((rowcoef * (bestslb - vubconsts[i])) + rowcoefbinvar);
 
          /* variable upper bound does not meet criteria */
-         if( SCIPisFeasLT(scip, val1, 0.0) )
+         if( val1 < 0.0 )
             continue;
 
          vubsol = vubcoefs[i] * SCIPgetSolVal(scip, sol, vubvars[i]) + vubconsts[i];
-         if( SCIPisLT(scip, vubsol, *closestvub) )
+         if( vubsol < *closestvub )
          {
             *closestvub = vubsol;
             *closestvubidx = i;
@@ -4975,8 +4968,8 @@ SCIP_RETCODE determineBoundForSNF(
       solval, bestslb[varposinrow], bestslbtype[varposinrow], bestsub[varposinrow], bestsubtype[varposinrow]);
 
    /* mixed integer set cannot be relaxed to 0-1 single node flow set because both simple bounds are -infinity
-      * and infinity, respectively
-      */
+    * and infinity, respectively
+    */
    if( SCIPisInfinity(scip, -bestslb[varposinrow]) && SCIPisInfinity(scip, bestsub[varposinrow]) )
    {
       *freevariable = TRUE;
@@ -4984,8 +4977,8 @@ SCIP_RETCODE determineBoundForSNF(
    }
 
    /* get closest lower bound that can be used to define the real variable y'_j in the 0-1 single node flow
-      * relaxation
-      */
+    * relaxation
+    */
    if( !SCIPisInfinity(scip, bestsub[varposinrow]) )
    {
       bestlb[varposinrow] = bestslb[varposinrow];
@@ -5004,9 +4997,10 @@ SCIP_RETCODE determineBoundForSNF(
          }
       }
    }
+
    /* get closest upper bound that can be used to define the real variable y'_j in the 0-1 single node flow
-      * relaxation
-      */
+    * relaxation
+    */
    if( !SCIPisInfinity(scip, -bestslb[varposinrow]) )
    {
       bestub[varposinrow] = bestsub[varposinrow];
@@ -5028,8 +5022,8 @@ SCIP_RETCODE determineBoundForSNF(
    SCIPdebugMsg(scip, "        bestlb=%g(%d), bestub=%g(%d)\n", bestlb[varposinrow], bestlbtype[varposinrow], bestub[varposinrow], bestubtype[varposinrow]);
 
    /* mixed integer set cannot be relaxed to 0-1 single node flow set because there are no suitable bounds
-      * to define the transformed variable y'_j
-      */
+    * to define the transformed variable y'_j
+    */
    if( SCIPisInfinity(scip, -bestlb[varposinrow]) && SCIPisInfinity(scip, bestub[varposinrow]) )
    {
       *freevariable = TRUE;
@@ -5039,9 +5033,9 @@ SCIP_RETCODE determineBoundForSNF(
    *freevariable = FALSE;
 
    /* select best upper bound if it is closer to the LP value of y_j and best lower bound otherwise and use this bound
-   * to define the real variable y'_j with 0 <= y'_j <= u'_j x_j in the 0-1 single node flow relaxation;
-   * prefer variable bounds
-   */
+    * to define the real variable y'_j with 0 <= y'_j <= u'_j x_j in the 0-1 single node flow relaxation;
+    * prefer variable bounds
+    */
    if( SCIPisEQ(scip, solval, (1.0 - boundswitch) * bestlb[varposinrow] + boundswitch * bestub[varposinrow]) && bestlbtype[varposinrow] >= 0 )
    {
       selectedbounds[varposinrow] = SCIP_BOUNDTYPE_LOWER;
