@@ -3821,10 +3821,10 @@ SCIP_RETCODE SCIPlpiGetObjval(
    ret = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJBOUND, objval);
 
    /**@todo The following is some kind of hack which works with the current SCIP implementation and should be fixed.  In
-    * the case that the LP status is GRB_CUTOFF it might be that certain * attributes cannot be queries (e.g., objval,
-    * primal and dual * solution), in this case we just return the installed cutoff value * minus some epsilon. This is
-    * some kind of hack for the code in * conflict.c:7595 were some extra code handles CPLEX' FASTMIP case that * is
-    * similar to this case.
+    * the case that the LP status is GRB_CUTOFF it might be that certain attributes cannot be queries (e.g., objval,
+    * primal and dual solution), in this case we just return the installed cutoff value minus some epsilon. This is some
+    * kind of hack for the code in conflict.c:7595 were some extra code handles CPLEX' FASTMIP case that is similar to
+    * this case.
     */
    if( ret == 10005 && lpi->solstat == GRB_CUTOFF )
    {
