@@ -683,7 +683,7 @@ TCLIQUE_Bool tcliqueLoadFile(
    {
       /* read edge (node1, node2) */
       result = fscanf(file, "%d%d", &node1, &node2);
-      if( result <= 0 )
+      if( result <= 1 )
       {
          infoMessage("Error while reading edges in file %s", filename); 
          fclose(file);
