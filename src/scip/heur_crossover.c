@@ -617,7 +617,7 @@ SCIP_RETCODE setupAndSolveSubscipCrossover(
 {
    SCIP_EVENTHDLR* eventhdlr;                /* event handler for LP events                     */
    SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
-   SCIP_VAR** subvars;                       /**< subproblem's variables */
+   SCIP_VAR** subvars;                       /* subproblem's variables                          */
    SCIP_Real cutoff;                         /* objective cutoff for the subproblem             */
    SCIP_Real upperbound;
    SCIP_Bool success;
@@ -886,8 +886,7 @@ SCIP_DECL_HEURINIT(heurInitCrossover)
    heurdata->nextnodenumber = 0;
 
    /* create random number generator */
-   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
-         DEFAULT_RANDSEED) );
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen, DEFAULT_RANDSEED) );
 
    /* initialize hash table */
    SCIP_CALL( SCIPhashtableCreate(&heurdata->hashtable, SCIPblkmem(scip), HASHSIZE_SOLS,
@@ -938,7 +937,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
 {  /*lint --e{715}*/
    SCIP* subscip;                            /* the subproblem created by crossover                 */
    SCIP_HEURDATA* heurdata;                  /* primal heuristic data                               */
-   SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
+   SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables     */
    SCIP_VAR** vars;                          /* original problem's variables                        */
    SCIP_VAR** fixedvars;
    SCIP_SOL** sols;

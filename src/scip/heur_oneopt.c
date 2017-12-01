@@ -285,7 +285,6 @@ SCIP_RETCODE setupAndSolveSubscipOneopt(
 
    nvars = SCIPgetNVars(scip);
 
-
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
@@ -369,7 +368,6 @@ SCIP_RETCODE setupAndSolveSubscipOneopt(
 
    if( *valid )
    {
-
       /* errors in solving the subproblem should not kill the overall solving process;
        * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
        */
@@ -491,12 +489,12 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 {  /*lint --e{715}*/
 
    SCIP_HEURDATA* heurdata;
-   SCIP_SOL* bestsol;                        /* incumbent solution */
-   SCIP_SOL* worksol;                        /* heuristic's working solution */
-   SCIP_VAR** vars;                          /* SCIP variables                */
-   SCIP_VAR** shiftcands;                    /* shiftable variables           */
-   SCIP_ROW** lprows;                        /* SCIP LP rows                  */
-   SCIP_Real* activities;                    /* row activities for working solution */
+   SCIP_SOL* bestsol;                        /* incumbent solution                   */
+   SCIP_SOL* worksol;                        /* heuristic's working solution         */
+   SCIP_VAR** vars;                          /* SCIP variables                       */
+   SCIP_VAR** shiftcands;                    /* shiftable variables                  */
+   SCIP_ROW** lprows;                        /* SCIP LP rows                         */
+   SCIP_Real* activities;                    /* row activities for working solution  */
    SCIP_Real* shiftvals;
    SCIP_Bool shifted;
 

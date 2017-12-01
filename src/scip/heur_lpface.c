@@ -1119,16 +1119,16 @@ SCIP_DECL_HEUREXIT(heurExitLpface)
 static
 SCIP_DECL_HEUREXEC(heurExecLpface)
 {  /*lint --e{715}*/
-   SCIP* subscip;                        /* the subproblem created by lpface */
-   SCIP_HEURDATA* heurdata;                  /* primal heuristic data */
-   SCIP_EVENTHDLR* eventhdlr = NULL;         /* event handler */
-   SCIP_VAR** vars;                          /* original problem's variables */
-   SCIP_VAR** subvars;                       /* subproblem's variables */
+   SCIP* subscip;                            /* the subproblem created by lpface       */
+   SCIP_HEURDATA* heurdata;                  /* primal heuristic data                  */
+   SCIP_EVENTHDLR* eventhdlr = NULL;         /* event handler                          */
+   SCIP_VAR** vars;                          /* original problem's variables           */
+   SCIP_VAR** subvars;                       /* subproblem's variables                 */
    SCIP_RETCODE retcode;
    SCIP_Bool keepthisscip;
    SCIP_Real focusnodelb;
    SCIP_Real rootlb;
-   SCIP_Longint nodelimit;                   /* node limit for the subproblem */
+   SCIP_Longint nodelimit;                   /* node limit for the subproblem          */
    int nvars;                                /* number of original problem's variables */
    int nbinvars;
    int nintvars;
