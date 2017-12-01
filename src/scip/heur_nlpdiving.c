@@ -1765,10 +1765,10 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
       /* update iteration count */
       if( SCIPgetNLPTermstat(scip) < SCIP_NLPTERMSTAT_NUMERR )
       {
-         SCIP_CALL( SCIPnlpStatisticsCreate(&nlpstatistics) );
+         SCIP_CALL( SCIPnlpStatisticsCreate(SCIPblkmem(scip), &nlpstatistics) );
          SCIP_CALL( SCIPgetNLPStatistics(scip, nlpstatistics) );
          heurdata->nnlpiterations += SCIPnlpStatisticsGetNIterations(nlpstatistics);
-         SCIPnlpStatisticsFree(&nlpstatistics);
+         SCIPnlpStatisticsFree(SCIPblkmem(scip), &nlpstatistics);
       }
 
       nlpsolstat = SCIPgetNLPSolstat(scip);
@@ -2465,10 +2465,10 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
             }
 
             /* update iteration count */
-            SCIP_CALL( SCIPnlpStatisticsCreate(&nlpstatistics) );
+            SCIP_CALL( SCIPnlpStatisticsCreate(SCIPblkmem(scip), &nlpstatistics) );
             SCIP_CALL( SCIPgetNLPStatistics(scip, nlpstatistics) );
             heurdata->nnlpiterations += SCIPnlpStatisticsGetNIterations(nlpstatistics);
-            SCIPnlpStatisticsFree(&nlpstatistics);
+            SCIPnlpStatisticsFree(SCIPblkmem(scip), &nlpstatistics);
 
             /* get NLP solution status, objective value, and fractional variables, that should be integral */
             nlpsolstat = SCIPgetNLPSolstat(scip);
