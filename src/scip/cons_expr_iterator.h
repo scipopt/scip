@@ -52,7 +52,7 @@ void SCIPexpriteratorFree(
 
 /**< initializes an expression iterator */
 EXTERN
-void SCIPexpriteratorInit(
+SCIP_CONSEXPR_EXPR* SCIPexpriteratorInit(
    SCIP_CONSEXPR_ITERATOR*     iterator,    /**< expression iterator */
    SCIP_CONSEXPR_EXPR*         expr         /**< expression of the iterator */
    );
