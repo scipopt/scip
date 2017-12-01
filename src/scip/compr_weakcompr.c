@@ -129,6 +129,7 @@ SCIP_RETCODE constructCompression(
    unsigned int* leaveids;
    int* nconss;
    int* nvars;
+   int mem_vars;
    int nids;
    int nleaveids;
    int pos_repr_fix;
@@ -183,6 +184,8 @@ SCIP_RETCODE constructCompression(
 
    /* allocate memory to store the old tree */
 
+   mem_vars = 2*SCIPgetNVars(scip);
+
    /* we use normal instead of buffer memory because we may need to reallocate the 2-dimensional arrays */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vars, size) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vals, size) );
@@ -200,18 +203,15 @@ SCIP_RETCODE constructCompression(
    for( k = size-1; k < 1; k++ )
    {
       SCIP_REOPTNODE* reoptnode;
-      int mem_vars;
       int mem_conss;
       int nvars2;
       int nafterdualvars;
       SCIPdebug(int c);
 
-      mem_vars = 2*SCIPgetNVars(scip);
-
       /* we use normal instead of buffer memory because we may need to reallocate the 2-dimensional arrays */
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vars[k], mem_vars) ); /*lint !e866*/
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vals[k], mem_vars) ); /*lint !e866*/
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &boundtypes[k], mem_vars) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vars[k], mem_vars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vals[k], mem_vars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &boundtypes[k], mem_vars) );
 
       /* get the branching path */
       reoptnode = SCIPgetReoptnode(scip, leaveids[k]);
@@ -340,9 +340,9 @@ SCIP_RETCODE constructCompression(
       SCIPfreeBufferArray(scip, &conss_nvars[k]);
       SCIPfreeBufferArray(scip, &conss_val[k]);
       SCIPfreeBufferArray(scip, &conss_var[k]);
-      SCIPfreeBlockMemoryArray(scip, &boundtypes[k], 2*SCIPgetNVars(scip));
-      SCIPfreeBlockMemoryArray(scip, &vals[k], 2*SCIPgetNVars(scip));
-      SCIPfreeBlockMemoryArray(scip, &vars[k], 2*SCIPgetNVars(scip));
+      SCIPfreeBlockMemoryArray(scip, &boundtypes[k], mem_vars);
+      SCIPfreeBlockMemoryArray(scip, &vals[k], mem_vars);
+      SCIPfreeBlockMemoryArray(scip, &vars[k], mem_vars);
    }
 
    SCIPfreeBufferArray(scip, &nconss);
