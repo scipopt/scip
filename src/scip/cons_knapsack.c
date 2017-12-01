@@ -33,9 +33,12 @@
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
-#include "scip/cons_cardinality.h"
 #include "scip/cons_setppc.h"
 #include "scip/pub_misc.h"
+
+#ifdef WITH_CARDINALITY_UPGRADE
+#include "scip/cons_cardinality.h"
+#endif
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "knapsack"
@@ -109,9 +112,10 @@
 #define DEFAULT_CLQPARTUPDATEFAC   1.5  /**< factor on the growth of global cliques to decide when to update a previous
                                          *   (negated) clique partition (used only if updatecliquepartitions is set to TRUE) */
 #define DEFAULT_UPDATECLIQUEPARTITIONS FALSE /**< should clique partition information be updated when old partition seems outdated? */
-#define DEFAULT_UPGDCARDINALITY   FALSE /**< if TRUE then try to update knapsack constraints to cardinality constraints */
-
 #define MAXNCLIQUEVARSCOMP 1000000      /**< limit on number of pairwise comparisons in clique partitioning algorithm */
+#ifdef WITH_CARDINALITY_UPGRADE
+#define DEFAULT_UPGDCARDINALITY   FALSE /**< if TRUE then try to update knapsack constraints to cardinality constraints */
+#endif
 
 /* @todo maybe use event SCIP_EVENTTYPE_VARUNLOCKED to decide for another dual-presolving run on a constraint */
 
@@ -174,8 +178,10 @@ struct SCIP_ConshdlrData
    SCIP_Real             cliqueextractfactor;/**< lower clique size limit for greedy clique extraction algorithm (relative to largest clique) */
    SCIP_Real             clqpartupdatefac;   /**< factor on the growth of global cliques to decide when to update a previous
                                               *   (negated) clique partition (used only if updatecliquepartitions is set to TRUE) */
+#ifdef WITH_CARDINALITY_UPGRADE
    SCIP_Bool             upgdcardinality;    /**< if TRUE then try to update knapsack constraints to cardinality constraints */
    SCIP_Bool             upgradedcard;       /**< whether we have already upgraded knapsack constraints to cardinality constraints */
+#endif
 };
 
 
@@ -12071,7 +12077,9 @@ SCIP_DECL_CONSINITPRE(consInitpreKnapsack)
    conshdlrdata->bools3size = nvars;
    conshdlrdata->bools4size = nvars;
 
+#ifdef WITH_CARDINALITY_UPGRADE
    conshdlrdata->upgradedcard = FALSE;
+#endif
 
    return SCIP_OKAY;
 }
@@ -12674,7 +12682,14 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
          }
       }
    }
-
+#ifdef WITH_CARDINALITY_UPGRADE
+   /* @todo upgrade to cardinality constraints: the code below relies on disabling the checking of the knapsack
+    * constraint in the original problem, because the upgrade ensures that at most the given number of continuous
+    * variables has a nonzero value, but not that the binary variables corresponding to the continuous variables with
+    * value zero are set to zero as well. This can cause problems if the user accesses the values of the binary
+    * variables (as the MIPLIB solution checker does), or the transformed problem is freed and the original problem
+    * (possibly with some user modifications) is re-optimized. Until there is a way to force the binary variables to 0
+    * as well, we better keep this code disabled. */
    /* upgrade to cardinality constraints - only try to upgrade towards the end of presolving, since the process below is quite expensive */
    if ( ! cutoff && conshdlrdata->upgdcardinality && (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 && SCIPisPresolveFinished(scip) && ! conshdlrdata->upgradedcard )
    {
@@ -12875,6 +12890,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
       if ( *nupgdconss > noldupgdconss )
          success = TRUE;
    }
+#endif
 
    if( cutoff )
       *result = SCIP_CUTOFF;
@@ -13409,11 +13425,12 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
           "factor on the growth of global cliques to decide when to update a previous "
           "(negated) clique partition (used only if updatecliquepartitions is set to TRUE)",
           &conshdlrdata->clqpartupdatefac, TRUE, DEFAULT_CLQPARTUPDATEFAC, 1.0, 10.0, NULL, NULL) );
+#ifdef WITH_CARDINALITY_UPGRADE
     SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/upgdcardinality",
          "if TRUE then try to update knapsack constraints to cardinality constraints",
          &conshdlrdata->upgdcardinality, TRUE, DEFAULT_UPGDCARDINALITY, NULL, NULL) );
-
+#endif
    return SCIP_OKAY;
 }
 
