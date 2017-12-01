@@ -287,7 +287,6 @@ SCIP_RETCODE setupAndSolveSubscipOneopt(
 
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
    /* copy complete SCIP instance */
    *valid = FALSE;
@@ -560,6 +559,8 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 
       if( !success )
          return SCIP_OKAY;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
       /* initialize the subproblem */
       SCIP_CALL( SCIPcreate(&subscip) );

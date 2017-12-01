@@ -937,7 +937,6 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
 {  /*lint --e{715}*/
    SCIP* subscip;                            /* the subproblem created by crossover                 */
    SCIP_HEURDATA* heurdata;                  /* primal heuristic data                               */
-   SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables     */
    SCIP_VAR** vars;                          /* original problem's variables                        */
    SCIP_VAR** fixedvars;
    SCIP_SOL** sols;
@@ -1072,7 +1071,6 @@ TERMINATE:
 
    return SCIP_OKAY;
 }
-
 
 /*
  * primal heuristic specific interface methods

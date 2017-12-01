@@ -846,7 +846,7 @@ SCIP_RETCODE setupSubscipLpface(
       updateFailureStatistic(scip, heurdata);
 
       /* we do not want to keep this SCIP */
-      keepthisscip = FALSE;
+      *keepthisscip = FALSE;
 
       return SCIP_OKAY;
    }
