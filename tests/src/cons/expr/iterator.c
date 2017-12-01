@@ -32,8 +32,8 @@ static SCIP_CONSHDLR* conshdlr;
 static SCIP_VAR* x;
 static SCIP_VAR* y;
 static SCIP_VAR* z;
-static SCIP_CONSEXPR_ITERATOR* bfsiter;
-static SCIP_CONSEXPR_ITERATOR* dfsiter;
+static SCIP_CONSEXPR_ITERATOR* bfs;
+static SCIP_CONSEXPR_ITERATOR* dfs;
 static SCIP_CONSEXPR_EXPR* expr;
 
 static
@@ -74,8 +74,8 @@ void setup(void)
    SCIP_CALL( SCIPreleaseVar(scip, &zo) );
 
    /* create iterator */
-   SCIP_CALL( SCIPexpriteratorCreate(&bfsiter, SCIPblkmem(scip), SCIP_CONSEXPRITERATOR_BFS) );
-   SCIP_CALL( SCIPexpriteratorCreate(&dfsiter, SCIPblkmem(scip), SCIP_CONSEXPRITERATOR_DFS) );
+   SCIP_CALL( SCIPexpriteratorCreate(&bfs, SCIPblkmem(scip), SCIP_CONSEXPRITERATOR_BFS) );
+   SCIP_CALL( SCIPexpriteratorCreate(&dfs, SCIPblkmem(scip), SCIP_CONSEXPRITERATOR_DFS) );
 
    /* NULL expression in order to free it in teardown() */
    expr = NULL;
@@ -90,8 +90,8 @@ void teardown(void)
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    }
 
-   SCIPexpriteratorFree(&dfsiter);
-   SCIPexpriteratorFree(&bfsiter);
+   SCIPexpriteratorFree(&dfs);
+   SCIPexpriteratorFree(&bfs);
 
    /* free scip and check for memory leaks */
    SCIP_CALL( SCIPfree(&scip) );
@@ -105,12 +105,12 @@ Test(iterator, bfs_single)
 {
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<t_x>", NULL, &expr) );
 
-   cr_expect(SCIPexpriteratorInit(bfsiter, expr) == expr);
-   cr_expect(SCIPexpriteratorIsEnd(bfsiter));
-   cr_expect(SCIPexpriteratorGetNext(bfsiter) == NULL);
+   cr_expect(SCIPexpriteratorInit(bfs, expr) == expr);
+   cr_expect(SCIPexpriteratorIsEnd(bfs));
+   cr_expect(SCIPexpriteratorGetNext(bfs) == NULL);
 
    /* reinitialize again */
-   cr_expect(SCIPexpriteratorInit(bfsiter, expr) == expr);
+   cr_expect(SCIPexpriteratorInit(bfs, expr) == expr);
 }
 
 /* test BFS iterator on a tree expression */
@@ -129,7 +129,8 @@ Test(iterator, bfs_tree)
    exprs[4] = SCIPgetConsExprExprChildren(exprs[2])[1]; /* y */
    exprs[5] = SCIPgetConsExprExprChildren(exprs[2])[2]; /* z */
 
-   for( tmp = SCIPexpriteratorInit(bfsiter, expr); !SCIPexpriteratorIsEnd(bfsiter); tmp = SCIPexpriteratorGetNext(bfsiter) )
+   /* loop over the whole tree; please enjoy the beauty of this code */
+   for( tmp = SCIPexpriteratorInit(bfs, expr); !SCIPexpriteratorIsEnd(bfs); tmp = SCIPexpriteratorGetNext(bfs) )
    {
       cr_expect(tmp == exprs[i]);
       ++i;
