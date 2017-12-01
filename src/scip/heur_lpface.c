@@ -756,7 +756,6 @@ static
 SCIP_RETCODE setupSubscipLpface(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP*                 subscip,            /**< sub-SCIP data structure */
-   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler for LP events */
    SCIP_HEURDATA*        heurdata,           /**< heuristics data */
    SCIP_VAR**            subvars,            /**< subproblem's variables */
    SCIP_VAR**            vars,               /**< original problem's variables */
@@ -776,8 +775,6 @@ SCIP_RETCODE setupSubscipLpface(
    /* create the variable hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
    success = FALSE;
-
-   eventhdlr = NULL;
 
    if( heurdata->uselprows )
    {
@@ -824,14 +821,6 @@ SCIP_RETCODE setupSubscipLpface(
    /* disable output to console */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
 
-   /* create event handler for LP events */
-   SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecLpface, NULL) );
-   if( eventhdlr == NULL )
-   {
-      SCIPerrorMessage("event handler for " HEUR_NAME " heuristic not found.\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
-
    /* fix variables that are at their bounds and have nonzero reduced costs  */
    SCIP_CALL( setupSubproblem(scip, subscip, subvars, heurdata, &success) );
 
@@ -861,7 +850,6 @@ static
 SCIP_RETCODE solveSubscipLpface(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP*                 subscip,            /**< sub-SCIP data structure */
-   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler for LP events */
    SCIP_HEUR*            heur,               /**< mutation heuristic */
    SCIP_HEURDATA*        heurdata,           /**< heuristics data */
    SCIP_VAR**            subvars,            /**< subproblem's variables */
@@ -870,15 +858,23 @@ SCIP_RETCODE solveSubscipLpface(
    SCIP_Bool*            keepthisscip        /**< should the subscip be kept or deleted? */
    )
 {
+   SCIP_EVENTHDLR* eventhdlr;
    SCIP_Bool success;
    int i;
 
    assert( scip != NULL );
    assert( subscip != NULL );
-   assert( eventhdlr != NULL );
    assert( heur != NULL );
    assert( heurdata != NULL );
    assert( subvars != NULL );
+
+   /* create event handler for LP events */
+   SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecLpface, NULL) );
+   if( eventhdlr == NULL )
+   {
+      SCIPerrorMessage("event handler for " HEUR_NAME " heuristic not found.\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
 
    /* determine node, memory, and time limits for the sub-SCIP. Both node and time limit change with every call to
     * the heuristic
@@ -1287,7 +1283,7 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
       /* initialize the subproblem */
       SCIP_CALL( SCIPcreate(&subscip) );
 
-      retcode = setupSubscipLpface(scip, subscip, eventhdlr, heurdata, subvars, vars, result, &keepthisscip, nvars);
+      retcode = setupSubscipLpface(scip, subscip, heurdata, subvars, vars, result, &keepthisscip, nvars);
 
       SCIP_CALL( retcode );
 
@@ -1295,7 +1291,7 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
          goto TERMINATE;
    }
 
-   retcode = solveSubscipLpface(scip, subscip, eventhdlr, heur, heurdata, subvars, result, focusnodelb, &keepthisscip);
+   retcode = solveSubscipLpface(scip, subscip, heur, heurdata, subvars, result, focusnodelb, &keepthisscip);
 
    SCIP_CALL( retcode );
 
