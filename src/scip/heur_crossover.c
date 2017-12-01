@@ -612,7 +612,7 @@ SCIP_RETCODE setupAndSolveSubscipCrossover(
    int*                  selection,          /**< pool of solutions crossover uses */
    int                   nvars,              /**< number of original problem's variables */
    int                   nfixedvars,         /**< the number of variables that should be fixed */
-   int                   nusedsols
+   int                   nusedsols           /**< number of solutions which will be chosen */
    )
 {
    SCIP_EVENTHDLR* eventhdlr;                /* event handler for LP events                     */
