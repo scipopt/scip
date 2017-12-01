@@ -124,7 +124,7 @@ set(instances_Indicator
 
 set(settings_Cardinality
     "default"
-    "upgdcardinality"
+#    "upgdcardinality"
 )
 
 set(instances_Readertest
@@ -256,7 +256,7 @@ set(instances_SAT
 # should yield the same optimal solution
 #
 set(instances_Cardinality
-    "instances/Cardinality/atm_5_10_1.lp\;+5.97040200941306e+04"
+#    "instances/Cardinality/atm_5_10_1.lp\;+5.97040200941306e+04"
     "instances/Cardinality/atm_5_25_1.cip\;+1.40606905557936e+05"
     "instances/Cardinality/atm_5_25_3.cip\;+1.35160667451104e+05"
     )
