@@ -81,8 +81,11 @@ struct SCIP_PresolData
    SCIP_Real             log10groupsize;     /**< log10 of size of symmetry group */
    SCIP_Bool             computedsym;        /**< Have we already tried to compute symmetries? */
    SCIP_Bool             successful;         /**< Was the computation of symmetries successful? */
-   int                   oldmaxpreroundscomponents;/**< original value of parameter constraints/components/maxprerounds */
+   int                   oldmaxpreroundscomponents; /**< original value of parameter constraints/components/maxprerounds */
    int                   oldmaxroundsdomcol; /**< original value of parameter presolving/maxrounds/domcol */
+   int                   oldmaxpreroundsdualfix; /**< original value of parameter propagating/dualfix/maxprerounds */
+   int                   oldfreqdualfix;     /**< original value of parameter propagating/dualfix/freq */
+   SCIP_Bool             changeddefaultparams; /**< whether default parameters were changed  */
 };
 
 
@@ -603,32 +606,6 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
 }
 
 
-#ifndef NDEBUG
-/** get number of active variables in variable array */
-static
-int getNActiveVars(
-   SCIP_VAR**             vars,              /**< variable array */
-   int                    nvars              /**< number of variables in vars */
-   )
-{
-   int nactivevars = 0;
-   int i;
-
-   assert( vars != NULL );
-
-   for (i = 0; i < nvars; ++i)
-   {
-      assert( vars[i] != NULL );
-
-      if ( SCIPvarIsActive(vars[i]) )
-         ++nactivevars;
-   }
-
-   return nactivevars;
-}
-#endif
-
-
 /** returns the number of active constraints that can be handled by symmetry */
 static
 int getNSymhandableConss(
@@ -698,6 +675,7 @@ SCIP_RETCODE computeSymmetryGroup(
    int nactiveconss;
    int nconss;
    int nvars;
+   int nallvars;
    int c;
    int j;
 
@@ -786,9 +764,11 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &matrixdata.rhssense, 2 * nactiveconss) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &matrixdata.rhsidx, 2 * nactiveconss) );
 
-   /* prepare temporary constraint data (use block memory, since this can become large) */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consvars, nvars) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consvals, nvars) );
+   /* prepare temporary constraint data (use block memory, since this can become large);
+    * also allocate memory for fixed vars since some vars might have been deactivated meanwhile */
+   nallvars = nvars + SCIPgetNFixedVars(scip);
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consvars, nallvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consvals, nallvars) );
 
    /* loop through all constraints */
    for (c = 0; c < nconss; ++c)
@@ -844,27 +824,28 @@ SCIP_RETCODE computeSymmetryGroup(
       else if ( strcmp(conshdlrname, "xor") == 0 )
       {
          SCIP_VAR** curconsvars;
+         SCIP_VAR* var;
 
          /* get number of variables of XOR constraint (without integer variable) */
          nconsvars = SCIPgetNVarsXor(scip, cons);
-         assert( nconsvars <= nvars );
 
          /* get variables of XOR constraint */
          curconsvars = SCIPgetVarsXor(scip, cons);
-         assert( consvars != NULL );
-
          for (j = 0; j < nconsvars; ++j)
          {
+            assert( curconsvars[j] != NULL );
             consvars[j] = curconsvars[j];
             consvals[j] = 1.0;
          }
 
-         if ( SCIPgetIntVarXor(scip, cons) != NULL )
+         /* intVar of xor constraint might have been removed */
+         var = SCIPgetIntVarXor(scip, cons);
+         if ( var != NULL )
          {
-            consvars[nconsvars] = SCIPgetIntVarXor(scip, cons);
-            consvals[nconsvars] = 2.0;
-            ++nconsvars;
+            consvars[nconsvars] = var;
+            consvals[nconsvars++] = 2.0;
          }
+         assert( nconsvars <= nallvars );
 
          SCIP_CALL( collectCoefficients(scip, consvars, consvals, nconsvars, (SCIP_Real) SCIPgetRhsXor(scip, cons),
                (SCIP_Real) SCIPgetRhsXor(scip, cons), SCIPconsIsTransformed(cons), SYM_SENSE_XOR, &matrixdata) );
@@ -875,20 +856,21 @@ SCIP_RETCODE computeSymmetryGroup(
 
          /* get number of variables of AND constraint (without resultant) */
          nconsvars = SCIPgetNVarsAnd(scip, cons);
-         assert( nconsvars <= nvars );
 
          /* get variables of AND constraint */
          curconsvars = SCIPgetVarsAnd(scip, cons);
-         assert( consvars != NULL );
 
          for (j = 0; j < nconsvars; ++j)
          {
+            assert( curconsvars[j] != NULL );
             consvars[j] = curconsvars[j];
             consvals[j] = 1.0;
          }
+
+         assert( SCIPgetResultantAnd(scip, cons) != NULL );
          consvars[nconsvars] = SCIPgetResultantAnd(scip, cons);
-         consvals[nconsvars] = 2.0;
-         ++nconsvars;
+         consvals[nconsvars++] = 2.0;
+         assert( nconsvars <= nallvars );
 
          SCIP_CALL( collectCoefficients(scip, consvars, consvals, nconsvars, 0.0, 0.0,
                SCIPconsIsTransformed(cons), SYM_SENSE_AND, &matrixdata) );
@@ -899,20 +881,21 @@ SCIP_RETCODE computeSymmetryGroup(
 
          /* get number of variables of OR constraint (without resultant) */
          nconsvars = SCIPgetNVarsOr(scip, cons);
-         assert( nconsvars <= nvars );
 
          /* get variables of OR constraint */
          curconsvars = SCIPgetVarsOr(scip, cons);
-         assert( consvars != NULL );
 
          for (j = 0; j < nconsvars; ++j)
          {
+            assert( curconsvars[j] != NULL );
             consvars[j] = curconsvars[j];
             consvals[j] = 1.0;
          }
+
+         assert( SCIPgetResultantOr(scip, cons) != NULL );
          consvars[nconsvars] = SCIPgetResultantOr(scip, cons);
-         consvals[nconsvars] = 2.0;
-         ++nconsvars;
+         consvals[nconsvars++] = 2.0;
+         assert( nconsvars <= nallvars );
 
          SCIP_CALL( collectCoefficients(scip, consvars, consvals, nconsvars, 0.0, 0.0,
                SCIPconsIsTransformed(cons), SYM_SENSE_OR, &matrixdata) );
@@ -926,25 +909,23 @@ SCIP_RETCODE computeSymmetryGroup(
       {
          SCIP_Longint* weights;
 
-         linvars = SCIPgetVarsKnapsack(scip, cons);
          nconsvars = SCIPgetNVarsKnapsack(scip, cons);
-         assert( getNActiveVars(linvars, nconsvars) <= nvars );
-         assert( consvals != NULL );
 
-         /* copy Longint array to SCIP_Real array */
+         /* copy Longint array to SCIP_Real array and get active variables of constraint */
          weights = SCIPgetWeightsKnapsack(scip, cons);
          for (j = 0; j < nconsvars; ++j)
             consvals[j] = (SCIP_Real) weights[j];
+         assert( nconsvars <= nallvars );
 
-         SCIP_CALL( collectCoefficients(scip, linvars, consvals, nconsvars, -SCIPinfinity(scip),
+         SCIP_CALL( collectCoefficients(scip, SCIPgetVarsKnapsack(scip, cons), consvals, nconsvars, -SCIPinfinity(scip),
                (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons), SCIPconsIsTransformed(cons), SYM_SENSE_INEQUALITY, &matrixdata) );
       }
       else if ( strcmp(conshdlrname, "varbound") == 0 )
       {
          consvars[0] = SCIPgetVarVarbound(scip, cons);
-         consvars[1] = SCIPgetVbdvarVarbound(scip, cons);
-
          consvals[0] = 1.0;
+
+         consvars[1] = SCIPgetVbdvarVarbound(scip, cons);
          consvals[1] = SCIPgetVbdcoefVarbound(scip, cons);
 
          SCIP_CALL( collectCoefficients(scip, consvars, consvals, 2, SCIPgetLhsVarbound(scip, cons),
@@ -971,8 +952,8 @@ SCIP_RETCODE computeSymmetryGroup(
    assert( matrixdata.nrhscoef <= 2 * nactiveconss );
    assert( matrixdata.nrhscoef > 0 ); /* cannot have empty rows! */
 
-   SCIPfreeBlockMemoryArray(scip, &consvals, nvars);
-   SCIPfreeBlockMemoryArray(scip, &consvars, nvars);
+   SCIPfreeBlockMemoryArray(scip, &consvals, nallvars);
+   SCIPfreeBlockMemoryArray(scip, &consvars, nallvars);
 
    /* sort matrix coefficients (leave matrix array intact) */
    SCIPsort(matrixdata.matidx, SYMsortMatCoef, (void*) matrixdata.matcoef, matrixdata.nmatcoef);
@@ -1152,6 +1133,12 @@ SCIP_RETCODE computeSymmetryGroup(
    *permvars = vars;
    *npermvars = nvars;
 
+   /* symmetric variables are not allowed to be multi-aggregated */
+   for (j = 0; j < nvars; ++j)
+   {
+      SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, vars[j]) );
+   }
+
 #ifndef NDEBUG
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, permvarsobj, nvars) );
    for (j = 0; j < nvars; ++j)
@@ -1296,16 +1283,20 @@ SCIP_RETCODE determineSymmetry(
 
       /* turn off some other presolving methods in order to be sure that they do not destroy symmetry afterwards */
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-         "   (%.1fs) turning off presolvers <domcol> and <components> for remaining computations in order to avoid conflicts\n",
+         "   (%.1fs) turning off presolver <domcol>, constraint handler <components>, and propagator <dualfix> for remaining computations in order to avoid conflicts\n",
          SCIPgetSolvingTime(scip));
 
       /* domcol avoids S_2-symmetries and may not be compatible with other symmetry handling methods */
-      SCIP_CALL( SCIPgetIntParam(scip, "presolving/domcol/maxrounds", &(presoldata->oldmaxroundsdomcol)) );
       SCIP_CALL( SCIPsetIntParam(scip, "presolving/domcol/maxrounds", 0) );
 
       /* components creates sub-SCIPs on which no symmetry handling is installed, thus turn this off */
-      SCIP_CALL( SCIPgetIntParam(scip, "constraints/components/maxprerounds", &(presoldata->oldmaxpreroundscomponents)) );
       SCIP_CALL( SCIPsetIntParam(scip, "constraints/components/maxprerounds", 0) );
+
+      /* dual fixing might interfere with symmetry handling methods, thus turn this off */
+      SCIP_CALL( SCIPsetIntParam(scip, "propagating/dualfix/maxprerounds", 0) );
+      SCIP_CALL( SCIPsetIntParam(scip, "propagating/dualfix/freq", 0) );
+
+      presoldata->changeddefaultparams = TRUE;
    }
 
    return SCIP_OKAY;
@@ -1332,6 +1323,8 @@ SCIP_DECL_PRESOLINIT(presolInitSymmetry)
    /* initialize original values of changed parameters in case we do not enter determineSymmetry() */
    SCIP_CALL( SCIPgetIntParam(scip, "presolving/domcol/maxrounds", &(presoldata->oldmaxroundsdomcol)) );
    SCIP_CALL( SCIPgetIntParam(scip, "constraints/components/maxprerounds", &(presoldata->oldmaxpreroundscomponents)) );
+   SCIP_CALL( SCIPgetIntParam(scip, "propagating/dualfix/maxprerounds", &(presoldata->oldmaxpreroundsdualfix)) );
+   SCIP_CALL( SCIPgetIntParam(scip, "propagating/dualfix/freq", &(presoldata->oldfreqdualfix)) );
 
    return SCIP_OKAY;
 }
@@ -1398,8 +1391,15 @@ SCIP_DECL_PRESOLEXIT(presolExitSymmetry)
    presoldata->successful = FALSE;
 
    /* reset changed parameters */
-   SCIP_CALL( SCIPsetIntParam(scip, "presolving/domcol/maxrounds", presoldata->oldmaxroundsdomcol) );
-   SCIP_CALL( SCIPsetIntParam(scip, "constraints/components/maxprerounds", presoldata->oldmaxpreroundscomponents) );
+   if ( presoldata->changeddefaultparams )
+   {
+      SCIP_CALL( SCIPsetIntParam(scip, "presolving/domcol/maxrounds", presoldata->oldmaxroundsdomcol) );
+      SCIP_CALL( SCIPsetIntParam(scip, "constraints/components/maxprerounds", presoldata->oldmaxpreroundscomponents) );
+      SCIP_CALL( SCIPsetIntParam(scip, "propagating/dualfix/maxprerounds", presoldata->oldmaxpreroundsdualfix) );
+      SCIP_CALL( SCIPsetIntParam(scip, "propagating/dualfix/maxprerounds", presoldata->oldfreqdualfix) );
+
+      presoldata->changeddefaultparams = FALSE;
+   }
 
    return SCIP_OKAY;
 }
@@ -1506,6 +1506,7 @@ SCIP_RETCODE SCIPincludePresolSymmetry(
    presoldata->nmaxperms = 0;
    presoldata->computedsym = FALSE;
    presoldata->successful = FALSE;
+   presoldata->changeddefaultparams = FALSE;
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC,
