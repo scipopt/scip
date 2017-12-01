@@ -579,12 +579,10 @@ void graph_sdPaths(
    int                   limit               /**< maximum number of edges to consider during execution */
    )
 {
-   int   k;
-   int   m;
-   int   e;
-   int   limit1;
-   int   count;
-   int   nchecks;
+
+   int count;
+   int nchecks;
+   const int limit1 = limit / 2;
 
    assert(g      != NULL);
    assert(heap   != NULL);
@@ -592,10 +590,9 @@ void graph_sdPaths(
    assert(cost   != NULL);
    assert(nlbl   != NULL);
    assert(memlbl != NULL);
+   assert(limit1 >= 0);
 
-   limit1 = limit / 2;
    *nlbl = 0;
-   nchecks = 0;
 
    if( g->grad[tail] == 0 || g->grad[head] == 0 )
       return;
@@ -603,6 +600,7 @@ void graph_sdPaths(
    assert(g->mark[head] && g->mark[tail]);
 
    count = 0;
+   nchecks = 0;
    path[tail].dist = 0.0;
    state[tail] = CONNECT;
    memlbl[(*nlbl)++] = tail;
@@ -610,11 +608,11 @@ void graph_sdPaths(
    if( g->stp_type != STP_MWCSP )
       g->mark[head] = FALSE;
 
-   for( e = g->outbeg[tail]; e != EAT_LAST; e = g->oeat[e] )
+   for( int e = g->outbeg[tail]; e != EAT_LAST; e = g->oeat[e] )
    {
-      m = g->head[e];
+      const int m = g->head[e];
 
-      if( g->mark[m] && SCIPisGE(scip, distlimit, cost[e]) )
+      if( g->mark[m] && (distlimit >= cost[e]) )
       {
          assert(SCIPisGT(scip, path[m].dist, path[tail].dist + cost[e]));
 
@@ -631,7 +629,7 @@ void graph_sdPaths(
    while( count > 0 && nchecks <= limit )
    {
       /* get nearest labelled node */
-      k = nearest(heap, state, &count, path);
+      const int k = nearest(heap, state, &count, path);
 
       /* scanned */
       state[k] = CONNECT;
@@ -645,10 +643,10 @@ void graph_sdPaths(
          continue;
 
       /* correct incident nodes */
-      for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+      for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
       {
-         m = g->head[e];
-         if( state[m] && g->mark[m] && SCIPisGT(scip, path[m].dist, path[k].dist + cost[e]) && SCIPisGE(scip, distlimit, cost[e]) )
+         const int m = g->head[e];
+         if( state[m] && g->mark[m] && (distlimit >= cost[e]) && (path[m].dist > path[k].dist + cost[e]) )
          {
             /* m labelled for the first time? */
             if( state[m] == UNKNOWN )

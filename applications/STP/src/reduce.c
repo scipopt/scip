@@ -129,11 +129,11 @@ SCIP_RETCODE nvreduce_sl(
    return SCIP_OKAY;
 }
 
-
-
+/* remove unconnected vertices, overwrites g->mark */
 SCIP_RETCODE level0(
-   SCIP* scip,
-   GRAPH* g)
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g                   /**< graph data structure */
+)
 {
    int k;
    int nnodes;
@@ -158,6 +158,44 @@ SCIP_RETCODE level0(
             graph_edge_del(scip, g, g->inpbeg[k], TRUE);
       }
    }
+   return SCIP_OKAY;
+}
+
+/* remove unconnected vertices, keep g->mark */
+SCIP_RETCODE level0save(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g                   /**< graph data structure */
+)
+{
+   int* savemark;
+   const int nnodes = g->knots;
+
+   assert(scip != NULL);
+   assert(g != NULL);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &savemark, nnodes) );
+   BMScopyMemoryArray(savemark, g->mark, nnodes);
+
+   for( int k = nnodes - 1; k >= 0; k-- )
+      g->mark[k] = FALSE;
+
+   SCIP_CALL( graph_trail_arr(scip, g, g->source) );
+
+   for( int k = nnodes - 1; k >= 0 ; k-- )
+   {
+      if( !g->mark[k] && (g->grad[k] > 0) )
+      {
+         assert(!Is_term(g->term[k]));
+
+         while( g->inpbeg[k] != EAT_LAST )
+            graph_edge_del(scip, g, g->inpbeg[k], TRUE);
+      }
+   }
+
+   BMScopyMemoryArray(g->mark, savemark, nnodes);
+
+   SCIPfreeBufferArray(scip, &savemark);
+
    return SCIP_OKAY;
 }
 
@@ -1058,7 +1096,7 @@ SCIP_RETCODE redLoopMw(
 #endif
 
          SCIP_CALL( reduce_daPcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint,
-               state, nodearrchar, &daelims, TRUE, (g->terms > STP_RED_MWTERMBOUND), FALSE, FALSE, userec, randnumgen) );
+               state, nodearrchar, &daelims, TRUE, (g->terms > STP_RED_MWTERMBOUND), FALSE, tryrmw && userec , userec, randnumgen) );
 
          if( cnsadvelims + daelims >= redbound || (extensive && (cnsadvelims + daelims > 0))  )
          {
@@ -1195,6 +1233,7 @@ SCIP_RETCODE redLoopPc(
       if( sd || extensive )
       {
          SCIP_CALL( reduce_sdPc(scip, g, vnoi, heap, state, vbase, nodearrint, nodearrint2, &sdnelims) );
+
          if( sdnelims <= reductbound )
             sd = FALSE;
 

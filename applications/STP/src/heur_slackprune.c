@@ -715,12 +715,6 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
          /* calculate objective value of solution */
          obj = graph_sol_getObj(prunegraph->cost, soledge, offsetnew, nedges);
 
-         if( !graph_sol_valid(scip, prunegraph, soledge) )
-          {
-             printf("PFFRUNE sol in prune not valid %d \n", 22);
-             exit(1);
-          }
-
          /* obj <= incumbent objective value? */
          if( SCIPisLE(scip, obj, ubbest) )
             ubbest = obj;
@@ -948,11 +942,6 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRunPcMw(
       SCIP_CALL( level0(scip, prunegraph) );
 
       assert(graph_valid(prunegraph));
-      if( !graph_valid(prunegraph) )
-      {
-         SCIPdebugMessage("SP: not valid %d \n", 0);
-         return SCIP_ERROR;
-      }
 
       /* get number of remaining vertices, edges and terminals */
       graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);

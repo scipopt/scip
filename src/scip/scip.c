@@ -10559,6 +10559,9 @@ SCIP_RETCODE SCIPfreeProb(
       }
       assert(scip->set->nactivepricers == 0);
 
+      /* free all debug data */
+      SCIP_CALL( SCIPdebugFreeDebugData(scip->set) );
+
       /* free original primal solution candidate pool, original problem and problem statistics data structures */
       if( scip->set->reopt_enable || scip->reopt != NULL)
       {
@@ -34372,7 +34375,7 @@ SCIP_RETCODE SCIPupdateNlpiProb(
 
       lbs[i] = SCIPvarGetLbLocal(nlpivars[i]);
       ubs[i] = SCIPvarGetUbLocal(nlpivars[i]);
-      inds[i] = (int)(size_t)SCIPhashmapGetImage(var2nlpiidx, (void*)nlpivars[i]);
+      inds[i] = (int)(uintptr_t)SCIPhashmapGetImage(var2nlpiidx, (void*)nlpivars[i]);
       assert(inds[i] >= 0 && inds[i] < nlpinvars);
    }
 

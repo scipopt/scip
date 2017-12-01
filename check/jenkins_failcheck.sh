@@ -21,9 +21,12 @@ BEGIN {
 
 # read failed instances into array as keys
 # the names in the errorinstances have to be the full names of the instances
-# set failed[instname] to 0 when found an assert
+# set failed[instname] to
+#     1 if instance found in err file once, and no assert found
+#     2 if instance found in err file once, also found assert
+#     3 if instance found more than once in errfile
 NR==FNR && /fail.*abort/ {
-    failed[$1]=1; next;
+    failed[$1]=0; next;
 }
 
 # find instances in errorfile
@@ -41,7 +44,14 @@ NR!=FNR && /^@01/ {
     instancestr = $2;
 
     # adjust searchAssert
-    if (currinstname in failed) { searchAssert=1; }
+    if (currinstname in failed) {
+        searchAssert=1;
+        if ( failed[currinstname] == 0 ) {
+            failed[currinstname]=1
+        } else {
+            failed[currinstname]=3
+        }
+    }
 }
 
 # find assertions in errorfile
@@ -49,7 +59,11 @@ NR!=FNR && searchAssert == 1 && /Assertion.*failed.$/ {
     print "";
     print instancestr
     for(i=2;i<=NF;i++){printf "%s ", $i}; print "";
-    failed[currinstname]=0;
+    if ( failed[currinstname] < 3 ) {
+        failed[currinstname]=2
+    } else {
+        failed[currinstname]=3
+    }
     searchAssert=0;
 }
 
@@ -59,15 +73,22 @@ END {
     count = 0;
     for( key in failed ) {
         if( failed[key] == 1 ) {
-            if( found == 0 ) {
-                print "The following fails need human inspection:";
+            if( count == 0 ) {
+                print "The following fails need human inspection, because there was no Assertion found:";
             }
             print key;
             count = count + 1;
         }
     }
-    if( count == 0 ) {
-        print "No human inspection needed.";
+    count = 0;
+    for( key in failed ) {
+        if( failed[key] == 3 ) {
+            if( count == 0 ) {
+                print "The following instances do not appear in the .err file, or some other error appeared:";
+            }
+            print key;
+            count = count + 1;
+        }
     }
 }
 EOF
