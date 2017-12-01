@@ -454,6 +454,8 @@ SCIP_RETCODE setSubscipLimits(
    SCIP_Real memorylimit;
    SCIP_Longint nodelimit;
 
+   success = TRUE;
+
    /* check whether there is enough time and memory left */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
