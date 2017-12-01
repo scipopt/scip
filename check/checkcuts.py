@@ -64,7 +64,7 @@ for lazycons in lazyconss:
 
    objexpr = LinExpr()
    while len(cons) > 0:
-      m = re.match("[\+-][^\+-]+", cons)
+      m = re.match("[\+-][0-9][^ ]*[^\+-]*", cons)
       length = len(m.group(0))
       term = m.group(0).strip()
       coef,varname = term.split()
