@@ -587,6 +587,13 @@ TCLIQUE_Bool tcliqueLoadFile(
 
    /* allocate temporary memory for skipping rest of problem name */
    BMSallocMemoryArray(&tmp, sizeofprobname +1 );
+   if( tmp == NULL )
+   {
+      infoMessage("[%s:%d] No memory in function call", __FILE__, __LINE__);
+      fclose(file);
+      return FALSE;
+   }
+
    BMScopyMemoryArray(tmp, probname, sizeofprobname);
    probname[sizeofprobname-1] = '\0';
    tmp[sizeofprobname] = '\0';
