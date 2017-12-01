@@ -884,7 +884,7 @@ SCIP_RETCODE solveSubscipLpface(
    /* if we did not succeed to set the limits of the subscip to let it run, we won't keep it any longer */
    if( !success )
    {
-      keepthisscip = FALSE;
+      *keepthisscip = FALSE;
 
       return SCIP_OKAY;
    }
@@ -1117,7 +1117,6 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
 {  /*lint --e{715}*/
    SCIP* subscip;                            /* the subproblem created by lpface       */
    SCIP_HEURDATA* heurdata;                  /* primal heuristic data                  */
-   SCIP_EVENTHDLR* eventhdlr = NULL;         /* event handler                          */
    SCIP_VAR** vars;                          /* original problem's variables           */
    SCIP_VAR** subvars;                       /* subproblem's variables                 */
    SCIP_RETCODE retcode;
