@@ -1328,17 +1328,13 @@ SCIP_RETCODE determineSymmetry(
          SCIPgetSolvingTime(scip));
 
       /* domcol avoids S_2-symmetries and may not be compatible with other symmetry handling methods */
-      SCIP_CALL( SCIPgetIntParam(scip, "presolving/domcol/maxrounds", &(presoldata->oldmaxroundsdomcol)) );
       SCIP_CALL( SCIPsetIntParam(scip, "presolving/domcol/maxrounds", 0) );
 
       /* components creates sub-SCIPs on which no symmetry handling is installed, thus turn this off */
-      SCIP_CALL( SCIPgetIntParam(scip, "constraints/components/maxprerounds", &(presoldata->oldmaxpreroundscomponents)) );
       SCIP_CALL( SCIPsetIntParam(scip, "constraints/components/maxprerounds", 0) );
 
       /* dual fixing might interfere with symmetry handling methods, thus turn this off */
-      SCIP_CALL( SCIPgetIntParam(scip, "propagating/dualfix/maxprerounds", &(presoldata->oldmaxpreroundsdualfix)) );
       SCIP_CALL( SCIPsetIntParam(scip, "propagating/dualfix/maxprerounds", 0) );
-      SCIP_CALL( SCIPgetIntParam(scip, "propagating/dualfix/freq", &(presoldata->oldfreqdualfix)) );
       SCIP_CALL( SCIPsetIntParam(scip, "propagating/dualfix/freq", 0) );
    }
 
