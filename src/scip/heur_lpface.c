@@ -767,6 +767,7 @@ SCIP_RETCODE setupAndSolveSubscipLpface(
    )
 {
    SCIP* subscip;
+   SCIP** subscipptr;
    SCIP_HASHMAP* varmapfw = NULL;            /* mapping of SCIP variables to sub-SCIP variables */
    SCIP_EVENTHDLR* eventhdlr = NULL;         /* event handler for LP events */
    SCIP_Bool success;

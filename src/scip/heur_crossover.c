@@ -618,13 +618,9 @@ SCIP_RETCODE setupAndSolveSubscipCrossover(
    SCIP_EVENTHDLR* eventhdlr;                /* event handler for LP events                     */
    SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
    SCIP_VAR** subvars;                       /**< subproblem's variables */
-   SCIP_SOL** subsols;
-   SCIP_SOL* startsol;
-   SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
    SCIP_Real cutoff;                         /* objective cutoff for the subproblem             */
    SCIP_Real upperbound;
    SCIP_Bool success;
-   int nsubsols;
    int i;
 
    assert(scip != NULL);
@@ -955,7 +951,6 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    int nbinvars;
    int nintvars;
    int nusedsols;
-   int i;
    int nfixedvars;
 
    assert(heur != NULL);
