@@ -10559,6 +10559,9 @@ SCIP_RETCODE SCIPfreeProb(
       }
       assert(scip->set->nactivepricers == 0);
 
+      /* free all debug data */
+      SCIP_CALL( SCIPdebugFreeDebugData(scip->set) );
+
       /* free original primal solution candidate pool, original problem and problem statistics data structures */
       if( scip->set->reopt_enable || scip->reopt != NULL)
       {
