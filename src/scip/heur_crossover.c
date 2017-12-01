@@ -119,7 +119,6 @@ struct SolTuple
  * Local methods
  */
 
-
 /** gets the hash key of a solution tuple */
 static
 SCIP_DECL_HASHGETKEY(hashGetKeySols)
@@ -598,95 +597,6 @@ SCIP_DECL_HEURCOPY(heurCopyCrossover)
    return SCIP_OKAY;
 }
 
-/** destructor of primal heuristic to free user data (called when SCIP is exiting) */
-static
-SCIP_DECL_HEURFREE(heurFreeCrossover)
-{  /*lint --e{715}*/
-   SCIP_HEURDATA* heurdata;
-
-   assert(heur != NULL);
-   assert(scip != NULL);
-
-   /* get heuristic data */
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
-
-   /* free heuristic data */
-   SCIPfreeBlockMemory(scip, &heurdata);
-   SCIPheurSetData(heur, NULL);
-
-   return SCIP_OKAY;
-}
-
-/** initialization method of primal heuristic (called after problem was transformed) */
-static
-SCIP_DECL_HEURINIT(heurInitCrossover)
-{  /*lint --e{715}*/
-   SCIP_HEURDATA* heurdata;
-
-   assert(heur != NULL);
-   assert(scip != NULL);
-
-   /* get heuristic's data */
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
-
-   /* initialize data */
-   heurdata->usednodes = 0;
-   heurdata->prevlastsol = NULL;
-   heurdata->prevbestsol = NULL;
-   heurdata->lasttuple = NULL;
-   heurdata->nfailures = 0;
-   heurdata->prevnsols = 0;
-   heurdata->nextnodenumber = 0;
-
-   /* create random number generator */
-   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
-         DEFAULT_RANDSEED) );
-
-   /* initialize hash table */
-   SCIP_CALL( SCIPhashtableCreate(&heurdata->hashtable, SCIPblkmem(scip), HASHSIZE_SOLS,
-         hashGetKeySols, hashKeyEqSols, hashKeyValSols, NULL) );
-   assert(heurdata->hashtable != NULL);
-
-   return SCIP_OKAY;
-}
-
-/** deinitialization method of primal heuristic (called before transformed problem is freed) */
-static
-SCIP_DECL_HEUREXIT(heurExitCrossover)
-{  /*lint --e{715}*/
-   SCIP_HEURDATA* heurdata;
-   SOLTUPLE* soltuple;
-
-   assert(heur != NULL);
-   assert(scip != NULL);
-
-   /* get heuristic data */
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
-   soltuple = heurdata->lasttuple;
-
-   /* free all soltuples iteratively */
-   while( soltuple != NULL )
-   {
-      SOLTUPLE* tmp;
-      tmp = soltuple->prev;
-      SCIPfreeBlockMemoryArray(scip, &soltuple->indices, soltuple->size);
-      SCIPfreeBlockMemory(scip, &soltuple);
-      soltuple = tmp;
-   }
-
-   /* free random number generator */
-   SCIPfreeRandom(scip, &heurdata->randnumgen);
-
-   /* free hash table */
-   assert(heurdata->hashtable != NULL);
-   SCIPhashtableFree(&heurdata->hashtable);
-
-   return SCIP_OKAY;
-}
-
 /** setup and solve the subproblem and catch the return code */
 static
 SCIP_RETCODE setupAndSolveSubscipCrossover(
@@ -937,6 +847,94 @@ SCIP_RETCODE setupAndSolveSubscipCrossover(
    return SCIP_OKAY;
 }
 
+/** destructor of primal heuristic to free user data (called when SCIP is exiting) */
+static
+SCIP_DECL_HEURFREE(heurFreeCrossover)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(scip != NULL);
+
+   /* get heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* free heuristic data */
+   SCIPfreeBlockMemory(scip, &heurdata);
+   SCIPheurSetData(heur, NULL);
+
+   return SCIP_OKAY;
+}
+
+/** initialization method of primal heuristic (called after problem was transformed) */
+static
+SCIP_DECL_HEURINIT(heurInitCrossover)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(scip != NULL);
+
+   /* get heuristic's data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* initialize data */
+   heurdata->usednodes = 0;
+   heurdata->prevlastsol = NULL;
+   heurdata->prevbestsol = NULL;
+   heurdata->lasttuple = NULL;
+   heurdata->nfailures = 0;
+   heurdata->prevnsols = 0;
+   heurdata->nextnodenumber = 0;
+
+   /* create random number generator */
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
+         DEFAULT_RANDSEED) );
+
+   /* initialize hash table */
+   SCIP_CALL( SCIPhashtableCreate(&heurdata->hashtable, SCIPblkmem(scip), HASHSIZE_SOLS,
+         hashGetKeySols, hashKeyEqSols, hashKeyValSols, NULL) );
+   assert(heurdata->hashtable != NULL);
+
+   return SCIP_OKAY;
+}
+
+/** deinitialization method of primal heuristic (called before transformed problem is freed) */
+static
+SCIP_DECL_HEUREXIT(heurExitCrossover)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+   SOLTUPLE* soltuple;
+
+   assert(heur != NULL);
+   assert(scip != NULL);
+
+   /* get heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+   soltuple = heurdata->lasttuple;
+
+   /* free all soltuples iteratively */
+   while( soltuple != NULL )
+   {
+      SOLTUPLE* tmp;
+      tmp = soltuple->prev;
+      SCIPfreeBlockMemoryArray(scip, &soltuple->indices, soltuple->size);
+      SCIPfreeBlockMemory(scip, &soltuple);
+      soltuple = tmp;
+   }
+
+   /* free random number generator */
+   SCIPfreeRandom(scip, &heurdata->randnumgen);
+
+   /* free hash table */
+   assert(heurdata->hashtable != NULL);
+   SCIPhashtableFree(&heurdata->hashtable);
+
+   return SCIP_OKAY;
+}
 
 /** execution method of primal heuristic */
 static

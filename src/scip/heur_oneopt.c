@@ -258,95 +258,6 @@ SCIP_RETCODE updateRowActivities(
    return SCIP_OKAY;
 }
 
-/*
- * Callback methods of primal heuristic
- */
-
-/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
-static
-SCIP_DECL_HEURCOPY(heurCopyOneopt)
-{  /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
-
-   /* call inclusion method of primal heuristic */
-   SCIP_CALL( SCIPincludeHeurOneopt(scip) );
-
-   return SCIP_OKAY;
-}
-
-/** destructor of primal heuristic to free user data (called when SCIP is exiting) */
-static
-SCIP_DECL_HEURFREE(heurFreeOneopt)
-{   /*lint --e{715}*/
-   SCIP_HEURDATA* heurdata;
-
-   assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
-   assert(scip != NULL);
-
-   /* free heuristic data */
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
-   SCIPfreeBlockMemory(scip, &heurdata);
-   SCIPheurSetData(heur, NULL);
-
-   return SCIP_OKAY;
-}
-
-
-/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
-static
-SCIP_DECL_HEURINITSOL(heurInitsolOneopt)
-{
-   SCIP_HEURDATA* heurdata;
-
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
-
-   /* create heuristic data */
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
-
-   /* if the heuristic is called at the root node, we may want to be called during the cut-and-price loop and even before the first LP solve */
-   if( heurdata->duringroot && SCIPheurGetFreqofs(heur) == 0 )
-      SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_DURINGLPLOOP | SCIP_HEURTIMING_BEFORENODE);
-
-   return SCIP_OKAY;
-}
-
-/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
-static
-SCIP_DECL_HEUREXITSOL(heurExitsolOneopt)
-{
-   assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
-
-   /* reset the timing mask to its default value */
-   SCIPheurSetTimingmask(heur, HEUR_TIMING);
-
-   return SCIP_OKAY;
-}
-
-/** initialization method of primal heuristic (called after problem was transformed) */
-static
-SCIP_DECL_HEURINIT(heurInitOneopt)
-{  /*lint --e{715}*/
-   SCIP_HEURDATA* heurdata;
-
-   assert(heur != NULL);
-   assert(scip != NULL);
-
-   /* get heuristic data */
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
-
-   /* initialize last solution index */
-   heurdata->lastsolindex = -1;
-
-   return SCIP_OKAY;
-}
-
 /** setup and solve oneopt sub-SCIP */
 static
 SCIP_RETCODE setupAndSolveSubscipOneopt(
@@ -370,6 +281,7 @@ SCIP_RETCODE setupAndSolveSubscipOneopt(
 
    assert(scip != NULL);
    assert(subscip != NULL);
+   assert(heur != NULL);
 
    nvars = SCIPgetNVars(scip);
 
@@ -484,6 +396,94 @@ SCIP_RETCODE setupAndSolveSubscipOneopt(
    return SCIP_OKAY;
 }
 
+/*
+ * Callback methods of primal heuristic
+ */
+
+/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_HEURCOPY(heurCopyOneopt)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   /* call inclusion method of primal heuristic */
+   SCIP_CALL( SCIPincludeHeurOneopt(scip) );
+
+   return SCIP_OKAY;
+}
+
+/** destructor of primal heuristic to free user data (called when SCIP is exiting) */
+static
+SCIP_DECL_HEURFREE(heurFreeOneopt)
+{   /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+   assert(scip != NULL);
+
+   /* free heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+   SCIPfreeBlockMemory(scip, &heurdata);
+   SCIPheurSetData(heur, NULL);
+
+   return SCIP_OKAY;
+}
+
+
+/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
+static
+SCIP_DECL_HEURINITSOL(heurInitsolOneopt)
+{
+   SCIP_HEURDATA* heurdata;
+
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   /* create heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* if the heuristic is called at the root node, we may want to be called during the cut-and-price loop and even before the first LP solve */
+   if( heurdata->duringroot && SCIPheurGetFreqofs(heur) == 0 )
+      SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_DURINGLPLOOP | SCIP_HEURTIMING_BEFORENODE);
+
+   return SCIP_OKAY;
+}
+
+/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
+static
+SCIP_DECL_HEUREXITSOL(heurExitsolOneopt)
+{
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   /* reset the timing mask to its default value */
+   SCIPheurSetTimingmask(heur, HEUR_TIMING);
+
+   return SCIP_OKAY;
+}
+
+/** initialization method of primal heuristic (called after problem was transformed) */
+static
+SCIP_DECL_HEURINIT(heurInitOneopt)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(scip != NULL);
+
+   /* get heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* initialize last solution index */
+   heurdata->lastsolindex = -1;
+
+   return SCIP_OKAY;
+}
 
 /** execution method of primal heuristic */
 static

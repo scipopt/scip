@@ -751,148 +751,6 @@ SCIP_DECL_EVENTEXEC(eventExecLpface)
    return SCIP_OKAY;
 }
 
-/*
- * Callback methods of primal heuristic
- */
-
-/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
-static
-SCIP_DECL_HEURCOPY(heurCopyLpface)
-{  /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
-
-   /* call inclusion method of primal heuristic */
-   SCIP_CALL( SCIPincludeHeurLpface(scip) );
-
-   return SCIP_OKAY;
-}
-
-/** destructor of primal heuristic to free user data (called when SCIP is exiting) */
-static
-SCIP_DECL_HEURFREE(heurFreeLpface)
-{  /*lint --e{715}*/
-   SCIP_HEURDATA* heurdata;
-
-   assert(heur != NULL);
-   assert(scip != NULL);
-
-   /* get heuristic data */
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
-
-   /* free heuristic data */
-   SCIPfreeBlockMemory(scip, &heurdata);
-   SCIPheurSetData(heur, NULL);
-
-   return SCIP_OKAY;
-}
-
-/** initialization method of primal heuristic (called after problem was transformed) */
-static
-SCIP_DECL_HEURINIT(heurInitLpface)
-{  /*lint --e{715}*/
-   SCIP_HEURDATA* heurdata;
-
-   assert(heur != NULL);
-   assert(scip != NULL);
-
-   /* get heuristic's data */
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
-
-   /* initialize data */
-   heurdata->usednodes = 0;
-   heurdata->nfailures = 0;
-   heurdata->nextnodenumber = 0;
-
-   heurdata->submipstatus = SCIP_STATUS_UNKNOWN;
-   heurdata->submipnlpiters = -1;
-   heurdata->submippresoltime = 0.0;
-   heurdata->nvarsfixed = -1;
-
-   return SCIP_OKAY;
-}
-
-/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
-static
-SCIP_DECL_HEURINITSOL(heurInitsolLpface)
-{  /*lint --e{715}*/
-   SCIP_HEURDATA* heurdata;
-
-   assert(heur != NULL);
-   assert(scip != NULL);
-
-   /* get heuristic's data */
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
-
-   /* reset the last infeasible objective because it lives in transformed space and must be invalidated at every restart */
-   heurdata->lastlpobjinfeas = -SCIPinfinity(scip);
-
-   assert(heurdata->subscipdata == NULL);
-
-   /* variable order might have changed since the last run, reinitialize sub-SCIP data */
-   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata->subscipdata) );
-   subscipdataReset(heurdata->subscipdata);
-
-   return SCIP_OKAY;
-}
-
-/** solving process deinitialization method of primal heuristic (called before branch and bound process is exiting) */
-static
-SCIP_DECL_HEUREXITSOL(heurExitsolLpface)
-{  /*lint --e{715}*/
-   SCIP_HEURDATA* heurdata;
-
-   assert(heur != NULL);
-   assert(scip != NULL);
-
-   /* get heuristic's data */
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
-
-   /* variable order might change after restart, free the heuristic subscipdata */
-   assert(heurdata->keepsubscip || heurdata->subscipdata->subscip == NULL);
-   if( heurdata->subscipdata->subscip != NULL )
-   {
-      /* free kept data structures first */
-      SCIP_CALL( subscipdataFreeSubscip(scip, heurdata->subscipdata) );
-
-   }
-
-   /* free the sub-SCIP data structure */
-   SCIPfreeBlockMemory(scip, &heurdata->subscipdata);
-
-   return SCIP_OKAY;
-}
-
-#ifdef SCIP_STATISTIC
-/** deinitialization method of primal heuristic (called before transformed problem is freed) */
-static
-SCIP_DECL_HEUREXIT(heurExitLpface)
-{  /*lint --e{715}*/
-   SCIP_HEURDATA* heurdata;
-
-   assert(heur != NULL);
-   assert(scip != NULL);
-
-   /* get heuristic's data */
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
-
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-      "LP Face heuristic stats: Status: %d Nodes: %d LP iters: %d Fixed: %d Presolving time: %.2f\n",
-      heurdata->submipstatus, heurdata->usednodes, heurdata->submipnlpiters, heurdata->nvarsfixed, heurdata->submippresoltime);
-
-   return SCIP_OKAY;
-}
-#else
-#define heurExitLpface NULL
-#endif
-
-
 /** setup and solve the subproblem and catch the return code */
 static
 SCIP_RETCODE setupAndSolveSubscipLpface(
@@ -1139,6 +997,148 @@ TERMINATE:
 
    return SCIP_OKAY;
 }
+
+/*
+ * Callback methods of primal heuristic
+ */
+
+/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_HEURCOPY(heurCopyLpface)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   /* call inclusion method of primal heuristic */
+   SCIP_CALL( SCIPincludeHeurLpface(scip) );
+
+   return SCIP_OKAY;
+}
+
+/** destructor of primal heuristic to free user data (called when SCIP is exiting) */
+static
+SCIP_DECL_HEURFREE(heurFreeLpface)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(scip != NULL);
+
+   /* get heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* free heuristic data */
+   SCIPfreeBlockMemory(scip, &heurdata);
+   SCIPheurSetData(heur, NULL);
+
+   return SCIP_OKAY;
+}
+
+/** initialization method of primal heuristic (called after problem was transformed) */
+static
+SCIP_DECL_HEURINIT(heurInitLpface)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(scip != NULL);
+
+   /* get heuristic's data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* initialize data */
+   heurdata->usednodes = 0;
+   heurdata->nfailures = 0;
+   heurdata->nextnodenumber = 0;
+
+   heurdata->submipstatus = SCIP_STATUS_UNKNOWN;
+   heurdata->submipnlpiters = -1;
+   heurdata->submippresoltime = 0.0;
+   heurdata->nvarsfixed = -1;
+
+   return SCIP_OKAY;
+}
+
+/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
+static
+SCIP_DECL_HEURINITSOL(heurInitsolLpface)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(scip != NULL);
+
+   /* get heuristic's data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* reset the last infeasible objective because it lives in transformed space and must be invalidated at every restart */
+   heurdata->lastlpobjinfeas = -SCIPinfinity(scip);
+
+   assert(heurdata->subscipdata == NULL);
+
+   /* variable order might have changed since the last run, reinitialize sub-SCIP data */
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata->subscipdata) );
+   subscipdataReset(heurdata->subscipdata);
+
+   return SCIP_OKAY;
+}
+
+/** solving process deinitialization method of primal heuristic (called before branch and bound process is exiting) */
+static
+SCIP_DECL_HEUREXITSOL(heurExitsolLpface)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(scip != NULL);
+
+   /* get heuristic's data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* variable order might change after restart, free the heuristic subscipdata */
+   assert(heurdata->keepsubscip || heurdata->subscipdata->subscip == NULL);
+   if( heurdata->subscipdata->subscip != NULL )
+   {
+      /* free kept data structures first */
+      SCIP_CALL( subscipdataFreeSubscip(scip, heurdata->subscipdata) );
+
+   }
+
+   /* free the sub-SCIP data structure */
+   SCIPfreeBlockMemory(scip, &heurdata->subscipdata);
+
+   return SCIP_OKAY;
+}
+
+#ifdef SCIP_STATISTIC
+/** deinitialization method of primal heuristic (called before transformed problem is freed) */
+static
+SCIP_DECL_HEUREXIT(heurExitLpface)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(scip != NULL);
+
+   /* get heuristic's data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+      "LP Face heuristic stats: Status: %d Nodes: %d LP iters: %d Fixed: %d Presolving time: %.2f\n",
+      heurdata->submipstatus, heurdata->usednodes, heurdata->submipnlpiters, heurdata->nvarsfixed, heurdata->submippresoltime);
+
+   return SCIP_OKAY;
+}
+#else
+#define heurExitLpface NULL
+#endif
+
 
 /** execution method of primal heuristic */
 static
