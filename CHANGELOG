@@ -107,6 +107,7 @@ performance improvements:
 - faster implementation of CMIR cut generation heursitic
 - improved cut selection and management
 - disabled reformulation of products of a binary variable with a linear term that does not solely involve binary variables
+- speed up for creation of LP in the computation of relative interior points
 
 fixed bugs:
 - fix wrong statistic display of diving leaf solutions
