@@ -85,6 +85,7 @@ struct SCIP_PresolData
    int                   oldmaxroundsdomcol; /**< original value of parameter presolving/maxrounds/domcol */
    int                   oldmaxpreroundsdualfix; /**< original value of parameter propagating/dualfix/maxprerounds */
    int                   oldfreqdualfix;  /**< original value of parameter propagating/dualfix/freq */
+   SCIP_Bool             changeddefaultparams; /**< whether default parameters were changed  */
 };
 
 
@@ -1336,6 +1337,8 @@ SCIP_RETCODE determineSymmetry(
       /* dual fixing might interfere with symmetry handling methods, thus turn this off */
       SCIP_CALL( SCIPsetIntParam(scip, "propagating/dualfix/maxprerounds", 0) );
       SCIP_CALL( SCIPsetIntParam(scip, "propagating/dualfix/freq", 0) );
+
+      presoldata->changeddefaultparams = TRUE;
    }
 
    return SCIP_OKAY;
@@ -1430,10 +1433,15 @@ SCIP_DECL_PRESOLEXIT(presolExitSymmetry)
    presoldata->successful = FALSE;
 
    /* reset changed parameters */
-   SCIP_CALL( SCIPsetIntParam(scip, "presolving/domcol/maxrounds", presoldata->oldmaxroundsdomcol) );
-   SCIP_CALL( SCIPsetIntParam(scip, "constraints/components/maxprerounds", presoldata->oldmaxpreroundscomponents) );
-   SCIP_CALL( SCIPsetIntParam(scip, "propagating/dualfix/maxprerounds", presoldata->oldmaxpreroundsdualfix) );
-   SCIP_CALL( SCIPsetIntParam(scip, "propagating/dualfix/maxprerounds", presoldata->oldfreqdualfix) );
+   if ( presoldata->changeddefaultparams )
+   {
+      SCIP_CALL( SCIPsetIntParam(scip, "presolving/domcol/maxrounds", presoldata->oldmaxroundsdomcol) );
+      SCIP_CALL( SCIPsetIntParam(scip, "constraints/components/maxprerounds", presoldata->oldmaxpreroundscomponents) );
+      SCIP_CALL( SCIPsetIntParam(scip, "propagating/dualfix/maxprerounds", presoldata->oldmaxpreroundsdualfix) );
+      SCIP_CALL( SCIPsetIntParam(scip, "propagating/dualfix/maxprerounds", presoldata->oldfreqdualfix) );
+
+      presoldata->changeddefaultparams = FALSE;
+   }
 
    return SCIP_OKAY;
 }
@@ -1540,6 +1548,7 @@ SCIP_RETCODE SCIPincludePresolSymmetry(
    presoldata->nmaxperms = 0;
    presoldata->computedsym = FALSE;
    presoldata->successful = FALSE;
+   presoldata->changeddefaultparams = FALSE;
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC,
