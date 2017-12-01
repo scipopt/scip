@@ -81,10 +81,10 @@ struct SCIP_PresolData
    SCIP_Real             log10groupsize;     /**< log10 of size of symmetry group */
    SCIP_Bool             computedsym;        /**< Have we already tried to compute symmetries? */
    SCIP_Bool             successful;         /**< Was the computation of symmetries successful? */
-   int                   oldmaxpreroundscomponents;/**< original value of parameter constraints/components/maxprerounds */
+   int                   oldmaxpreroundscomponents; /**< original value of parameter constraints/components/maxprerounds */
    int                   oldmaxroundsdomcol; /**< original value of parameter presolving/maxrounds/domcol */
    int                   oldmaxpreroundsdualfix; /**< original value of parameter propagating/dualfix/maxprerounds */
-   int                   oldfreqdualfix;  /**< original value of parameter propagating/dualfix/freq */
+   int                   oldfreqdualfix;     /**< original value of parameter propagating/dualfix/freq */
    SCIP_Bool             changeddefaultparams; /**< whether default parameters were changed  */
 };
 
