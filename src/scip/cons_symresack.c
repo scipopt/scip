@@ -1708,9 +1708,6 @@ SCIP_DECL_CONSENFOPS(consEnfopsSymresack)
    if ( objinfeasible || solinfeasible )
       return SCIP_OKAY;
 
-   if ( solinfeasible ) /*lint !e774*/
-      return SCIP_OKAY;
-
    /* loop through constraints */
    for (c = 0; c < nconss; ++c)
    {

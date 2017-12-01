@@ -2986,6 +2986,8 @@ SCIP_RETCODE reduce_sdsp(
             }
          }
 
+         /* restore data */
+
          for( int k = 0; k < nlbltail; k++ )
          {
             const int l = memlbltail[k];
@@ -2996,7 +2998,6 @@ SCIP_RETCODE reduce_sdsp(
                pathmaxnodetail[l] = -1;
          }
 
-         /* restore data */
          for( int k = 0; k < nlblhead; k++ )
          {
             const int l = memlblhead[k];
@@ -3007,7 +3008,7 @@ SCIP_RETCODE reduce_sdsp(
                pathmaxnodehead[l] = -1;
          }
 
-#ifdef SCIP_DEBUG
+#ifndef NDEBUG
          for( int k = 0; k < nnodes; k++ )
          {
             assert(statetail[k]     == UNKNOWN);
@@ -3016,8 +3017,11 @@ SCIP_RETCODE reduce_sdsp(
             assert(statehead[k]     == UNKNOWN);
             assert(pathhead[k].dist == FARAWAY);
             assert(pathhead[k].edge == UNKNOWN);
-            assert(pathmaxnodetail[k] == -1);
-            assert(pathmaxnodehead[k] == -1);
+            if( pc )
+            {
+               assert(pathmaxnodetail[k] == -1);
+               assert(pathmaxnodehead[k] == -1);
+            }
          }
 #endif
          /* can edge be deleted? */
