@@ -2830,6 +2830,53 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
          SCIPerrorMessage("Gurobi primal simplex returned GRB_INF_OR_UNBD after presolving was turned off\n");
       }
    }
+   else if ( lpi->solstat == GRB_UNBOUNDED )
+   {
+      /* Unbounded means that there exists an unbounded primal ray. However, this does not state whether the problem is
+       * feasible. Thus, we temporarily set the objective to 0 and resolve. */
+      SCIP_Real* zeroobjcoefs;
+      SCIP_Real* objcoefs;
+      int status;
+      int ncols;
+
+      SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
+      SCIP_ALLOC( BMSallocMemoryArray(&objcoefs, ncols) );
+      SCIP_ALLOC( BMSallocClearMemoryArray(&zeroobjcoefs, ncols) );
+
+      /* preserve objective coefficients */
+      CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_OBJ, 0, ncols, objcoefs) );
+
+      /* set objective to 0 */
+      CHECK_ZERO( lpi->messagehdlr, GRBsetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_OBJ, 0, ncols, zeroobjcoefs) );
+
+      /* solve problem again */
+      CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
+      CHECK_ZERO( lpi->messagehdlr, GRBoptimize(lpi->grbmodel) );
+
+      CHECK_ZERO( lpi->messagehdlr, GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_ITERCOUNT, &cnt) );
+      lpi->iterations += (int) cnt;
+
+      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_STATUS, &status) );
+
+      /* correct status */
+      if ( status != GRB_OPTIMAL )
+         lpi->solstat = GRB_INFEASIBLE;
+
+      /* restore objective */
+      CHECK_ZERO( lpi->messagehdlr, GRBsetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_OBJ, 0, ncols, objcoefs) );
+      CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
+
+      BMSfreeMemoryArray(&zeroobjcoefs);
+      BMSfreeMemoryArray(&objcoefs);
+
+      /* We again have to solve the problem to restore possible unbounded rays. */
+      if ( status == GRB_OPTIMAL )
+      {
+         CHECK_ZERO( lpi->messagehdlr, GRBoptimize(lpi->grbmodel) );
+         CHECK_ZERO( lpi->messagehdlr, GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_ITERCOUNT, &cnt) );
+         lpi->iterations += (int) cnt;
+      }
+   }
 
    checkRangeInfo(lpi);
 
@@ -3546,7 +3593,7 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   SCIP_Bool violated;
+   SCIP_Bool violated = FALSE;
    int algo;
    int res;
 
@@ -3564,7 +3611,7 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
       return FALSE; /*lint !e527*/
    }
 
-   if( lpi->solstat == GRB_ITERATION_LIMIT || lpi->solstat == GRB_UNBOUNDED )
+   if( lpi->solstat == GRB_ITERATION_LIMIT )
    {
       double consviol;
       double boundviol;
@@ -3591,11 +3638,9 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
 
       violated = (consviol > eps || boundviol > eps);
    }
-   else
-      violated = FALSE;
 
    return (lpi->solstat == GRB_OPTIMAL || (!violated && lpi->solstat == GRB_ITERATION_LIMIT && algo == GRB_METHOD_PRIMAL)
-     || (! violated && lpi->solstat == GRB_UNBOUNDED && algo == GRB_METHOD_PRIMAL));
+      || (lpi->solstat == GRB_UNBOUNDED && algo == GRB_METHOD_PRIMAL) );
 }
 
 /** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point);
@@ -3811,8 +3856,8 @@ SCIP_RETCODE SCIPlpiGetObjval(
    SCIPdebugMessage("getting solution's objective value\n");
 
 #ifndef NDEBUG
-   (void)GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJVAL, &oval);
-   (void)GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJBOUND, &obnd);
+   CHECK_ZERO( lpi->messagehdlr, GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJVAL, &oval) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJBOUND, &obnd) );
 
    assert(lpi->solstat != GRB_OPTIMAL || oval == obnd); /*lint !e777*/
 #endif
