@@ -1030,12 +1030,12 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemFilterSQP)
    BMSfreeBlockMemoryArrayNull(data->blkmem, &(*problem)->varlbdualvalues, (*problem)->varssize);
    BMSfreeBlockMemoryArrayNull(data->blkmem, &(*problem)->varubdualvalues, (*problem)->varssize);
    BMSfreeBlockMemoryArrayNull(data->blkmem, &(*problem)->cstype, (*problem)->conssize);
-   BMSfreeBlockMemoryArrayNull(data->blkmem, &(*problem)->s, (*problem)->varssize + (*problem)->conssize);
-   BMSfreeBlockMemoryArrayNull(data->blkmem, &(*problem)->bu, (*problem)->varssize + (*problem)->conssize);
-   BMSfreeBlockMemoryArrayNull(data->blkmem, &(*problem)->bl, (*problem)->varssize + (*problem)->conssize);
+   BMSfreeBlockMemoryArrayNull(data->blkmem, &(*problem)->s, (*problem)->varssize + (*problem)->conssize);  /*lint !e776 */
+   BMSfreeBlockMemoryArrayNull(data->blkmem, &(*problem)->bu, (*problem)->varssize + (*problem)->conssize);  /*lint !e776 */
+   BMSfreeBlockMemoryArrayNull(data->blkmem, &(*problem)->bl, (*problem)->varssize + (*problem)->conssize);  /*lint !e776 */
    BMSfreeBlockMemoryArrayNull(data->blkmem, &(*problem)->x, (*problem)->varssize);
    BMSfreeBlockMemoryArrayNull(data->blkmem, &(*problem)->c, (*problem)->conssize);
-   BMSfreeBlockMemoryArrayNull(data->blkmem, &(*problem)->lam, (*problem)->varssize + (*problem)->conssize);
+   BMSfreeBlockMemoryArrayNull(data->blkmem, &(*problem)->lam, (*problem)->varssize + (*problem)->conssize);  /*lint !e776 */
    BMSfreeBlockMemoryArrayNull(data->blkmem, &(*problem)->a, (*problem)->la != NULL ? (*problem)->la[0]-1 : 0);
    BMSfreeBlockMemoryArrayNull(data->blkmem, &(*problem)->la, (*problem)->lasize);
    BMSfreeBlockMemoryArrayNull(data->blkmem, &(*problem)->hessiannz, (*problem)->hessiannzsize);
@@ -1461,8 +1461,8 @@ SCIP_DECL_NLPIDELVARSET( nlpiDelVarSetFilterSQP )
    invalidateSolution(problem);
    problem->warmstart = FALSE;
 
-   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->bl, problem->varssize + problem->conssize);
-   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->bu, problem->varssize + problem->conssize);
+   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->bl, problem->varssize + problem->conssize);  /*lint !e776 */
+   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->bu, problem->varssize + problem->conssize);  /*lint !e776 */
    BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->cstype, problem->conssize);  /* because we assume that cstype is allocated iff bl is allocated */
 
    /* gradients information is out of date now (objective gradient is stored in dense form) */
@@ -1502,8 +1502,8 @@ SCIP_DECL_NLPIDELCONSSET( nlpiDelConstraintSetFilterSQP )
    invalidateSolution(problem);
    problem->warmstart = FALSE;
 
-   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->bl, problem->varssize + problem->conssize);
-   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->bu, problem->varssize + problem->conssize);
+   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->bl, problem->varssize + problem->conssize);  /*lint !e776 */
+   BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->bu, problem->varssize + problem->conssize);  /*lint !e776 */
    BMSfreeBlockMemoryArrayNull(nlpidata->blkmem, &problem->cstype, problem->conssize);  /* because we assume that cstype is allocated iff bl is allocated */
 
    /* gradients information is out of date now */
