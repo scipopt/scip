@@ -85,7 +85,7 @@ struct SCIP_HeurData
 
 /* get reduction bound */
 static
-inline int getRedBound(
+int getRedBound(
    int nrounds,
    int nedges
    )
