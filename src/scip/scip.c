@@ -13751,7 +13751,7 @@ SCIP_RETCODE checkSolOrig(
 void SCIPupdateSolIntegralityViolation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Real             absviol            /**< absolute violation */
+   SCIP_Real             absviol             /**< absolute violation */
    )
 {
    if( SCIPprimalUpdateViolations(scip->origprimal) )
@@ -13808,7 +13808,7 @@ void SCIPupdateSolLPConsViolation(
 
 /** allow violation updates */
 void SCIPactivateSolViolationUpdates(
-   SCIP*                 scip               /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIPprimalSetUpdateViolations(scip->origprimal, TRUE);
@@ -13816,7 +13816,7 @@ void SCIPactivateSolViolationUpdates(
 
 /** disallow violation updates */
 void SCIPdeactivateSolViolationUpdates(
-   SCIP*                 scip               /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIPprimalSetUpdateViolations(scip->origprimal, FALSE);
@@ -33824,20 +33824,20 @@ void SCIPcomputeBilinEnvelope1(
  */
 static
 void computeBilinEnvelope2(
-   SCIP*                scip,               /**< SCIP data structure */
-   SCIP_Real            x,                  /**< reference point for x */
-   SCIP_Real            y,                  /**< reference point for y */
-   SCIP_Real            mi,                 /**< coefficient of x in the first linear inequality */
-   SCIP_Real            qi,                 /**< constant in the first linear inequality */
-   SCIP_Real            mj,                 /**< coefficient of x in the second linear inequality */
-   SCIP_Real            qj,                 /**< constant in the second linear inequality */
-   SCIP_Real* RESTRICT  xi,                 /**< buffer to store x coordinate of the first point */
-   SCIP_Real* RESTRICT  yi,                 /**< buffer to store y coordinate of the first point */
-   SCIP_Real* RESTRICT  xj,                 /**< buffer to store x coordinate of the second point */
-   SCIP_Real* RESTRICT  yj,                 /**< buffer to store y coordinate of the second point */
-   SCIP_Real* RESTRICT  xcoef,              /**< buffer to store the x coefficient of the envelope */
-   SCIP_Real* RESTRICT  ycoef,              /**< buffer to store the y coefficient of the envelope */
-   SCIP_Real* RESTRICT  constant            /**< buffer to store the constant of the envelope */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             x,                  /**< reference point for x */
+   SCIP_Real             y,                  /**< reference point for y */
+   SCIP_Real             mi,                 /**< coefficient of x in the first linear inequality */
+   SCIP_Real             qi,                 /**< constant in the first linear inequality */
+   SCIP_Real             mj,                 /**< coefficient of x in the second linear inequality */
+   SCIP_Real             qj,                 /**< constant in the second linear inequality */
+   SCIP_Real* RESTRICT   xi,                 /**< buffer to store x coordinate of the first point */
+   SCIP_Real* RESTRICT   yi,                 /**< buffer to store y coordinate of the first point */
+   SCIP_Real* RESTRICT   xj,                 /**< buffer to store x coordinate of the second point */
+   SCIP_Real* RESTRICT   yj,                 /**< buffer to store y coordinate of the second point */
+   SCIP_Real* RESTRICT   xcoef,              /**< buffer to store the x coefficient of the envelope */
+   SCIP_Real* RESTRICT   ycoef,              /**< buffer to store the y coefficient of the envelope */
+   SCIP_Real* RESTRICT   constant            /**< buffer to store the constant of the envelope */
    )
 {
    assert(xi != NULL);
@@ -33893,25 +33893,25 @@ void computeBilinEnvelope2(
  *
  */
 void SCIPcomputeBilinEnvelope2(
-   SCIP*                scip,               /**< SCIP data structure */
-   SCIP_Real            bilincoef,          /**< coefficient of bilinear term */
-   SCIP_Real            lbx,                /**< lower bound on first variable */
-   SCIP_Real            ubx,                /**< upper bound on first variable */
-   SCIP_Real            refpointx,          /**< reference point for first variable */
-   SCIP_Real            lby,                /**< lower bound on second variable */
-   SCIP_Real            uby,                /**< upper bound on second variable */
-   SCIP_Real            refpointy,          /**< reference point for second variable */
-   SCIP_Bool            overestimate,       /**< whether to compute an overestimator instead of an underestimator */
-   SCIP_Real            xcoef1,             /**< x coefficient of linear inequality; must be in {-1,0,1} */
-   SCIP_Real            ycoef1,             /**< y coefficient of linear inequality */
-   SCIP_Real            constant1,          /**< constant of linear inequality */
-   SCIP_Real            xcoef2,             /**< x coefficient of linear inequality; must be in {-1,0,1} */
-   SCIP_Real            ycoef2,             /**< y coefficient of linear inequality */
-   SCIP_Real            constant2,          /**< constant of linear inequality */
-   SCIP_Real* RESTRICT  lincoefx,           /**< buffer to store coefficient of first  variable in linearization */
-   SCIP_Real* RESTRICT  lincoefy,           /**< buffer to store coefficient of second variable in linearization */
-   SCIP_Real* RESTRICT  linconstant,        /**< buffer to store constant of linearization */
-   SCIP_Bool* RESTRICT  success             /**< buffer to store whether linearization was successful */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             bilincoef,          /**< coefficient of bilinear term */
+   SCIP_Real             lbx,                /**< lower bound on first variable */
+   SCIP_Real             ubx,                /**< upper bound on first variable */
+   SCIP_Real             refpointx,          /**< reference point for first variable */
+   SCIP_Real             lby,                /**< lower bound on second variable */
+   SCIP_Real             uby,                /**< upper bound on second variable */
+   SCIP_Real             refpointy,          /**< reference point for second variable */
+   SCIP_Bool             overestimate,       /**< whether to compute an overestimator instead of an underestimator */
+   SCIP_Real             xcoef1,             /**< x coefficient of linear inequality; must be in {-1,0,1} */
+   SCIP_Real             ycoef1,             /**< y coefficient of linear inequality */
+   SCIP_Real             constant1,          /**< constant of linear inequality */
+   SCIP_Real             xcoef2,             /**< x coefficient of linear inequality; must be in {-1,0,1} */
+   SCIP_Real             ycoef2,             /**< y coefficient of linear inequality */
+   SCIP_Real             constant2,          /**< constant of linear inequality */
+   SCIP_Real* RESTRICT   lincoefx,           /**< buffer to store coefficient of first  variable in linearization */
+   SCIP_Real* RESTRICT   lincoefy,           /**< buffer to store coefficient of second variable in linearization */
+   SCIP_Real* RESTRICT   linconstant,        /**< buffer to store constant of linearization */
+   SCIP_Bool* RESTRICT   success             /**< buffer to store whether linearization was successful */
    )
 {
    SCIP_Real mi, mj, qi, qj, xi, xj, yi, yj;
@@ -45467,7 +45467,7 @@ void SCIPprintConcsolverStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintConflictStatistics", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintConcsolverStatistics", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( !SCIPsyncstoreIsInitialized(scip->syncstore) )
       return;
