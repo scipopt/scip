@@ -179,7 +179,7 @@ SCIP_RETCODE computeNewSols(
 
 /* get reduction bound */
 static
-inline int getRedBound(
+int getRedBound(
    int nround,
    int nedges
    )

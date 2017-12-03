@@ -17130,32 +17130,41 @@ SCIP_RETCODE computeRelIntPoint(
       rowSortLP(row);
       assert( row->lpcolssorted );
 
-      ntotnonz += SCIProwGetNNonz(row);
-
       /* check whether we have an equation */
       if( SCIPsetIsEQ(set, row->lhs, row->rhs) )
       {
          assert( !SCIPsetIsInfinity(set, REALABS(row->lhs)) );
          assert( !SCIPsetIsInfinity(set, REALABS(row->rhs)) );
+         ntotnonz += row->nlpcols + 1;
          ++ntotrows;
       }
-      else if( relaxrows )
+      else
       {
          /* otherwise add slacks for each side if necessary */
-         if( !SCIPsetIsInfinity(set, REALABS(row->lhs)) )
+         if ( ! SCIPsetIsInfinity(set, REALABS(row->lhs)) )
          {
-            obj[nnewcols] = 1.0;
-            lb[nnewcols] = 0.0;
-            ub[nnewcols] = 1.0;
-            ++nnewcols;
+            if ( relaxrows )
+            {
+               lb[nnewcols] = 0.0;
+               ub[nnewcols] = 1.0;
+               obj[nnewcols++] = 1.0;
+               ntotnonz += row->nlpcols + 2;
+            }
+            else
+               ntotnonz += row->nlpcols + 1;
             ++ntotrows;
          }
-         if( !SCIPsetIsInfinity(set, REALABS(row->rhs)) )
+         if ( ! SCIPsetIsInfinity(set, REALABS(row->rhs)) )
          {
-            obj[nnewcols] = 1.0;
-            lb[nnewcols] = 0.0;
-            ub[nnewcols] = 1.0;
-            ++nnewcols;
+            if ( relaxrows )
+            {
+               lb[nnewcols] = 0.0;
+               ub[nnewcols] = 1.0;
+               obj[nnewcols++] = 1.0;
+               ntotnonz += row->nlpcols + 2;
+            }
+            else
+               ntotnonz += row->nlpcols + 1;
             ++ntotrows;
          }
       }
@@ -17165,10 +17174,10 @@ SCIP_RETCODE computeRelIntPoint(
    if( inclobjcutoff && relaxrows )
    {
       /* add slacks for right hand side */
-      obj[nnewcols] = 1.0;
       lb[nnewcols] = 0.0;
       ub[nnewcols] = 1.0;
-      ++nnewcols;
+      obj[nnewcols++] = 1.0;
+      ntotnonz += lp->ncols + 2;
       ++ntotrows;
    }
 
@@ -17184,25 +17193,27 @@ SCIP_RETCODE computeRelIntPoint(
       if( SCIPsetIsEQ(set, col->lb, col->ub) )
       {
          ++ntotrows;
-         continue;
+         ntotnonz += 2;
       }
-
-      /* add slacks for each bound if necessary */
-      if( !SCIPsetIsInfinity(set, REALABS(col->lb)) )
+      else
       {
-         obj[nnewcols] = 1.0;
-         lb[nnewcols] = 0.0;
-         ub[nnewcols] = 1.0;
-         ++nnewcols;
-         ++ntotrows;
-      }
-      if( !SCIPsetIsInfinity(set, REALABS(col->ub)) )
-      {
-         obj[nnewcols] = 1.0;
-         lb[nnewcols] = 0.0;
-         ub[nnewcols] = 1.0;
-         ++nnewcols;
-         ++ntotrows;
+         /* add slacks for each bound if necessary */
+         if ( ! SCIPsetIsInfinity(set, REALABS(col->lb)) )
+         {
+            lb[nnewcols] = 0.0;
+            ub[nnewcols] = 1.0;
+            obj[nnewcols++] = 1.0;
+            ntotnonz += 3;
+            ++ntotrows;
+         }
+         if( ! SCIPsetIsInfinity(set, REALABS(col->ub)) )
+         {
+            lb[nnewcols] = 0.0;
+            ub[nnewcols] = 1.0;
+            obj[nnewcols++] = 1.0;
+            ntotnonz += 3;
+            ++ntotrows;
+         }
       }
    }
 #ifndef NDEBUG
@@ -17219,8 +17230,7 @@ SCIP_RETCODE computeRelIntPoint(
    SCIPsetFreeBufferArray(set, &ub);
    SCIPsetFreeBufferArray(set, &lb);
 
-   /* prepare storage for rows: max 2 for each row + (ncols + 2) for objective + (2 * ncols) for bounds */
-   ntotnonz += 2 * ntotrows + lp->ncols + 2 + 2 * lp->ncols;
+   /* prepare storage for rows */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &matinds, ntotnonz) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &matvals, ntotnonz) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &matbeg, ntotrows) );
@@ -17412,7 +17422,8 @@ SCIP_RETCODE computeRelIntPoint(
          assert( matidx <= ntotnonz );
          ++cnt;
       }
-      ++matrowidx;
+      matlhs[matrowidx] = -SCIPsetInfinity(set);
+      matrhs[matrowidx++] = 0.0;
       assert( matrowidx <= ntotrows );
    }
 
