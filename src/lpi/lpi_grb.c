@@ -2792,7 +2792,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 
    /* maybe the preprocessor solved the problem; but we need a solution, so solve again without preprocessing */
    assert( lpi->solstat != GRB_INF_OR_UNBD );
-   if( lpi->solstat == GRB_INFEASIBLE && lpi->solstat != GRB_UNBOUNDED )
+   if( lpi->solstat == GRB_INFEASIBLE )
    {
       int presolve;
 
