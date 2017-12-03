@@ -380,7 +380,7 @@ void generateMskBoundkeys(
          {
             bk[i] = MSK_BK_LO;
          }
-         else if (lb[i] == ub[i])/*lint !e777*/  /** No epsilon-test since MOSEK will also test for exact equality */
+         else if (lb[i] == ub[i])/*lint !e777*/  /* No epsilon-test since MOSEK will also test for exact equality */
          {
             assert(lb[i] - ub[i] == 0);
             assert(ub[i] - lb[i] == 0);
