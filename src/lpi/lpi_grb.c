@@ -2838,6 +2838,8 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
        * feasible. Thus, we temporarily set the objective to 0 and solve again. */
       SCIP_Real* zeroobjcoefs;
       SCIP_Real* objcoefs;
+      SCIP_Real oldobjcutoff;
+      int grbobjsen;
       int status;
       int ncols;
 
@@ -2851,6 +2853,20 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
       /* set objective to 0 */
       CHECK_ZERO( lpi->messagehdlr, GRBsetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_OBJ, 0, ncols, zeroobjcoefs) );
 
+      /* disable cutoff */
+      CHECK_ZERO( lpi->messagehdlr, GRBgetdblparam(lpi->grbenv, GRB_DBL_PAR_CUTOFF, &oldobjcutoff) );
+
+      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, &grbobjsen) );
+      if ( grbobjsen == GRB_MINIMIZE )
+      {
+         CHECK_ZERO( lpi->messagehdlr, GRBsetdblparam(lpi->grbenv, GRB_DBL_PAR_CUTOFF, GRB_INFINITY) );
+      }
+      else
+      {
+         CHECK_ZERO( lpi->messagehdlr, GRBsetdblparam(lpi->grbenv, GRB_DBL_PAR_CUTOFF, -GRB_INFINITY) );
+         assert( grbobjsen == GRB_MAXIMIZE );
+      }
+
       /* solve problem again */
       CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
       CHECK_ZERO( lpi->messagehdlr, GRBoptimize(lpi->grbmodel) );
@@ -2860,23 +2876,40 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 
       CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_STATUS, &status) );
 
-      /* correct status */
-      if ( status != GRB_OPTIMAL )
-         lpi->solstat = GRB_INFEASIBLE;
-
       /* restore objective */
       CHECK_ZERO( lpi->messagehdlr, GRBsetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_OBJ, 0, ncols, objcoefs) );
       CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
 
+      /* restore objective limit */
+      CHECK_ZERO( lpi->messagehdlr, GRBsetdblparam(lpi->grbenv, GRB_DBL_PAR_CUTOFF, oldobjcutoff) );
+
       BMSfreeMemoryArray(&zeroobjcoefs);
       BMSfreeMemoryArray(&objcoefs);
 
-      /* We again have to solve the problem to restore possible unbounded rays. */
-      if ( status == GRB_OPTIMAL )
+      /* possibly correct status */
+      switch ( status )
       {
+      case GRB_INF_OR_UNBD:
+      case GRB_INFEASIBLE:
+         lpi->solstat = GRB_INFEASIBLE;
+         break;
+
+      case GRB_OPTIMAL:
+         /* We again have to solve the problem to restore possible unbounded rays. */
          CHECK_ZERO( lpi->messagehdlr, GRBoptimize(lpi->grbmodel) );
          CHECK_ZERO( lpi->messagehdlr, GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_ITERCOUNT, &cnt) );
          lpi->iterations += (int) cnt;
+         break;
+
+      case GRB_ITERATION_LIMIT:
+      case GRB_TIME_LIMIT:
+         /* do nothing */
+         break;
+
+         /* GRB_LOADED, GRB_NODE_LIMIT, GRB_CUTOFF, GRB_SOLUTION_LIMIT, GRB_INTERRUPTED, GRB_NUMERIC, GRB_SUBOPTIMAL, GRB_INPROGRESS, GRB_USER_OBJ_LIMIT */
+      default:
+         SCIPerrorMessage("Gurobi returned wrong status %d.\n", status);
+         return SCIP_LPERROR;
       }
    }
 
