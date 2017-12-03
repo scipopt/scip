@@ -153,6 +153,7 @@ typedef struct shortest_path
 #define CONNECT      0
 #define UNKNOWN    (-1)
 #define FARAWAY      1e15
+#define TERMBLOCKED  1e7
 #define BLOCKED     1e10
 
 #define EDGE_BLOCKED      0
@@ -288,6 +289,7 @@ extern void SCIPwriteStp(SCIP*, const GRAPH*, FILE*, SCIP_Real);
 /* reduce.c
  */
 extern SCIP_RETCODE level0(SCIP*, GRAPH*);
+extern SCIP_RETCODE level0save(SCIP*, GRAPH*);
 extern SCIP_RETCODE reduceStp(SCIP*, GRAPH**, SCIP_Real*, int, SCIP_Bool, SCIP_Bool, int*, SCIP_Bool);
 extern SCIP_RETCODE redLoopStp(SCIP*, GRAPH*, PATH*, PATH*,  GNODE**, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int*, int*, int*, STP_Bool*, SCIP_Real*, SCIP_Real, SCIP_Bool, SCIP_Bool, SCIP_Bool, int, int*, SCIP_Bool);
 extern SCIP_RETCODE redLoopPc(SCIP*, GRAPH*, PATH*, PATH*,  GNODE**, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int*, int*, int*, STP_Bool*, SCIP_Real*, SCIP_Bool, SCIP_Bool, int, SCIP_Bool);

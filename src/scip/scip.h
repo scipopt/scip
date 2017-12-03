@@ -10069,7 +10069,11 @@ SCIP_Bool SCIPdoNotMultaggrVar(
    SCIP_VAR*             var                 /**< variable x to aggregate */
    );
 
-/** returns whether dual reductions propagation methods and presolvers is allowed */
+/** returns whether dual reduction are allowed during propagation and presolving
+ *
+ *  @note a reduction is called dual, if it may forbid improving feasible solutions
+ *        (in order to be valid, it should keep at least one optimal solution intact)
+ */
 EXTERN
 SCIP_Bool SCIPallowDualReds(
    SCIP*                 scip                /**< SCIP data structure */

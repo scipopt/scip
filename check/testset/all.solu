@@ -376,7 +376,7 @@
 =best=       bayes2_30                            0.0001075155
 =opt=        bayes2_50                            0.5202077404
 =opt=        bc                                   7.0
-=opt=        bc1                                  3.3384
+=opt=        bc1                                  3.33836255
 =best=       bchoco05                             0.9519030306
 =bestdual=   bchoco05                             0.9927048733
 =best=       bchoco06                             0.9627765007
@@ -2690,7 +2690,7 @@
 =best=       ndcc16persp                          113.5459483
 =bestdual=   ndcc16persp                          65.00553887
 =opt=        nemhaus                              31.0
-=opt=        neos-1053234                         0.5939
+=opt=        neos-1053234                         0.593889097
 =opt=        neos-1053591                         -3662.9144
 =best=       neos-1056905                         15.0
 =opt=        neos-1058477                         0.5467
@@ -7014,3 +7014,4 @@
 =opt=        zib54-UUE                            10334015.82
 =opt=        neos-777800                          -80
 =opt=        neos-1173026                         0.42184174
+=opt=        csched007                            351

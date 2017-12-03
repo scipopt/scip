@@ -376,6 +376,13 @@ SCIP_RETCODE checkDebugSolutionGenVBound(
    if( !SCIPdebugIsMainscip(scip) )
       return SCIP_OKAY;
 
+   /* the genvbound must be valid for all cutoff bounds greater equal the objective value of the debug solution */
+   SCIP_CALL( SCIPdebugGetSol(scip, &debugsol) );
+
+   /* check whether a debug solution is available */
+   if( debugsol == NULL )
+      return SCIP_OKAY;
+
    activity = 0.0;
    for( i = 0; i < genvbound->ncoefs; i++ )
    {
@@ -387,8 +394,6 @@ SCIP_RETCODE checkDebugSolutionGenVBound(
             solval == SCIP_UNKNOWN ? "unknown" : "invalid");
    }
 
-   /* the genvbound must be valid for all cutoff bounds greater equal the objective value of the debug solution */
-   SCIP_CALL( SCIPdebugGetSol(scip, &debugsol) );
    activity += genvbound->cutoffcoef *
       (SCIPgetSolTransObj(scip, debugsol) + SCIPgetTransObjoffset(scip)) * SCIPgetTransObjscale(scip);
    activity += genvbound->constant;

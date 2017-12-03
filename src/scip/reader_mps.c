@@ -1671,7 +1671,6 @@ SCIP_RETCODE readSOS(
    SCIP_Bool check;
    SCIP_Bool propagate;
    SCIP_Bool local;
-   SCIP_Bool modifiable;
    SCIP_Bool dynamic;
    SCIP_Bool removable;
    char name[MPS_MAX_NAMELEN] = { '\0' };
@@ -1688,7 +1687,6 @@ SCIP_RETCODE readSOS(
    check = TRUE;
    propagate = TRUE;
    local = FALSE;
-   modifiable = FALSE;
    dynamic = mpsi->dynamicconss;
    removable = mpsi->dynamicrows;
 
@@ -1740,7 +1738,7 @@ SCIP_RETCODE readSOS(
 
          /* check name */
          if( mpsinputField2(mpsi) != NULL )
-	    (void)SCIPmemccpy(name, mpsinputField2(mpsi), '\0', MPS_MAX_NAMELEN - 1);
+            (void)SCIPmemccpy(name, mpsinputField2(mpsi), '\0', MPS_MAX_NAMELEN - 1);
          else
          {
             /* create new name */
@@ -1752,13 +1750,13 @@ SCIP_RETCODE readSOS(
          {
             /* we do not know the name of the constraint */
             SCIP_CALL( SCIPcreateConsSOS1(scip, &cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate,
-                  local, modifiable, dynamic, removable) );
+                  local, dynamic, removable, FALSE) );
          }
          else
          {
             assert( type == 2 );
             SCIP_CALL( SCIPcreateConsSOS2(scip, &cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate,
-                  local, modifiable, dynamic, removable) );
+                  local, dynamic, removable, FALSE) );
          }
          consType = type;
          SCIPdebugMsg(scip, "created constraint <%s> of type %d.\n", name, type);

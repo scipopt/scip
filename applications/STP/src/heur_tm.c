@@ -2680,8 +2680,10 @@ SCIP_DECL_HEUREXEC(heurExecTM)
                   {
                      if( SCIPisGE(scip, graph->cost[e], FARAWAY) )
                         cost[e] = graph->cost[e];
-
+                     /* todo does not work because SCIP presolving kills constraints; deactivate? */
+#if 0
                      assert(SCIPisLE(scip, nodepriority[graph->head[e]], 1.0) || Is_gterm(graph->term[graph->head[e]]));
+#endif
 
                      if( SCIPvarGetUbLocal(vars[e]) < 0.5 )
                         cost[e] = BLOCKED;

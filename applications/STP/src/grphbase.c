@@ -1308,10 +1308,10 @@ SCIP_RETCODE graph_pc_getRsap(
 
          for( e = p->outbeg[aterm]; e != EAT_LAST; e = p->oeat[e] )
          {
-            if( SCIPisZero(scip, p->cost[e]) )
-            {
-               head = p->head[e];
+            head = p->head[e];
 
+            if( Is_term(p->term[head]) && head != root )
+            {
                for( e2 = p->inpbeg[head]; e2 != EAT_LAST; e2 = p->ieat[e] )
                {
                   if( p->tail[e2] == root )
@@ -1692,7 +1692,7 @@ SCIP_RETCODE graph_pc_mw2rmw(
    while( e != EAT_LAST )
    {
       const int enext = graph->oeat[e];
-      if( SCIPisGE(scip, graph->cost[e], FARAWAY) )
+      if( SCIPisGE(scip, graph->cost[e], TERMBLOCKED) )
       {
          int e2;
          const int k = graph->head[e];
@@ -1708,7 +1708,7 @@ SCIP_RETCODE graph_pc_mw2rmw(
          assert(e2 == graph->term2edge[k]);
 
          assert(Is_pterm(graph->term[p]));
-         assert(SCIPisGE(scip, graph->prize[p], FARAWAY));
+         assert(SCIPisGE(scip, graph->prize[p], TERMBLOCKED));
 
          /* delete terminal */
          graph_knot_chg(graph, k, -1);
@@ -3566,7 +3566,7 @@ SCIP_RETCODE graph_trail_arr(
 
       stackarr[stacksize++] = i;
 
-      /* BFS loop */
+      /* DFS loop */
       while( stacksize != 0 )
       {
          node = stackarr[--stacksize];

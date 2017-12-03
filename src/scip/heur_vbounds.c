@@ -75,10 +75,10 @@
                                          *   the fixing rate was not reached?
                                          */
 
-/**< which variants of the vbounds heuristic that try to stay feasible should be called? */
+/** which variants of the vbounds heuristic that try to stay feasible should be called? */
 #define DEFAULT_FEASVARIANT   (VBOUNDVARIANT_BESTBOUND | VBOUNDVARIANT_WORSTBOUND)
 
-/**< which tightening variants of the vbounds heuristic should be called? */
+/** which tightening variants of the vbounds heuristic should be called? */
 #define DEFAULT_TIGHTENVARIANT   (VBOUNDVARIANT_NOOBJ | VBOUNDVARIANT_BESTBOUND | VBOUNDVARIANT_WORSTBOUND)
 
 
@@ -747,6 +747,191 @@ SCIP_RETCODE createNewSol(
    return SCIP_OKAY;
 }
 
+/** copy problem to sub-SCIP, solve it, and add solutions */
+static
+SCIP_RETCODE setupAndSolveSubscip(
+   SCIP*                 scip,               /**< original SCIP data structure */
+   SCIP*                 subscip,            /**< SCIP structure of the subproblem */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   SCIP_VAR**            vars,               /**< variables of the main SCIP */
+   int                   nvars,              /**< number of variables of the main SCIP */
+   SCIP_SOL*             sol,                /**< working solution */
+   SCIP_Longint          nstallnodes,        /**< stalling node limit for the sub-SCIP */
+   SCIP_Real             lowerbound,         /**< lower bound of the main SCIP / current subproblem */
+   int*                  nprevars,           /**< pointer to store the number of presolved variables */
+   SCIP_Bool*            wasfeas,            /**< pointer to store if a feasible solution was found */
+   SCIP_RESULT*          result              /**< pointer to store the result */
+   )
+{
+   SCIP_VAR** subvars;
+   SCIP_HASHMAP* varmap;
+   int i;
+
+   assert(scip != NULL);
+   assert(subscip != NULL);
+   assert(heurdata != NULL);
+
+   /* create the variable mapping hash map */
+   SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), nvars) );
+
+   SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "_vbounds", NULL, NULL, 0, FALSE, FALSE, TRUE, NULL) );
+
+   if( heurdata->copycuts )
+   {
+      /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+      SCIP_CALL( SCIPcopyCuts(scip, subscip, varmap, NULL, FALSE, NULL) );
+   }
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
+
+   for( i = 0; i < nvars; i++ )
+      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmap, vars[i]);
+
+   /* free hash map */
+   SCIPhashmapFree(&varmap);
+
+   /* do not abort subproblem on CTRL-C */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
+
+#ifdef SCIP_DEBUG
+   /* for debugging, enable full output */
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
+#else
+   /* disable statistic timing inside sub SCIP and output to console */
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
+#endif
+
+   /* set limits for the subproblem */
+   SCIP_CALL( SCIPcopyLimits(scip, subscip) );
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", nstallnodes) );
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", heurdata->maxnodes) );
+
+   /* speed up sub-SCIP by not checking dual LP feasibility */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "lp/checkdualfeas", FALSE) );
+
+   /* forbid call of heuristics and separators solving sub-CIPs */
+   SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
+
+   /* disable cutting plane separation */
+   SCIP_CALL( SCIPsetSeparating(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
+
+   /* disable expensive presolving */
+   SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
+
+   /* use inference branching */
+   if( SCIPfindBranchrule(subscip, "inference") != NULL && !SCIPisParamFixed(subscip, "branching/inference/priority") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
+   }
+
+   /* employ a limit on the number of enforcement rounds in the quadratic constraint handlers; this fixes the issue that
+    * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
+    * feasibility status of a single node without fractional branching candidates by separation (namely for uflquad
+    * instances); however, the solution status of the sub-SCIP might get corrupted by this; hence no decutions shall be
+    * made for the original SCIP
+    */
+   if( SCIPfindConshdlr(subscip, "quadratic") != NULL && !SCIPisParamFixed(subscip, "constraints/quadratic/enfolplimit") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 10) );
+   }
+
+   /* set a cutoff bound */
+   if( SCIPgetNSols(scip) > 0 )
+   {
+      SCIP_Real upperbound;
+      SCIP_Real minimprove;
+      SCIP_Real cutoffbound;
+
+      minimprove = heurdata->minimprove;
+      assert( !SCIPisInfinity(scip,SCIPgetUpperbound(scip)) );
+
+      upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
+
+      if( !SCIPisInfinity(scip, -1.0 * lowerbound) )
+      {
+         cutoffbound = (1-minimprove) * SCIPgetUpperbound(scip) + minimprove * lowerbound;
+      }
+      else
+      {
+         if( SCIPgetUpperbound ( scip ) >= 0 )
+            cutoffbound = (1 - minimprove) * SCIPgetUpperbound(scip);
+         else
+            cutoffbound = (1 + minimprove) * SCIPgetUpperbound(scip);
+      }
+      heurdata->cutoffbound = MIN(upperbound, cutoffbound);
+   }
+
+   if( !SCIPisInfinity(scip, heurdata->cutoffbound) )
+   {
+      SCIP_CALL( SCIPsetObjlimit(subscip, heurdata->cutoffbound) );
+      SCIPdebugMsg(scip, "setting objlimit for subscip to %g\n", heurdata->cutoffbound);
+   }
+
+   SCIPdebugMsg(scip, "starting solving vbound-submip at time %g\n", SCIPgetSolvingTime(scip));
+
+   /* solve the subproblem */
+   /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
+    * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
+    */
+   SCIP_CALL_ABORT( SCIPpresolve(subscip) );
+
+   SCIPdebugMsg(scip, "vbounds heuristic presolved subproblem at time %g : %d vars, %d cons; fixing value = %g\n",
+      SCIPgetSolvingTime(scip), SCIPgetNVars(subscip), SCIPgetNConss(subscip),
+      ((nvars - SCIPgetNVars(subscip)) / (SCIP_Real)nvars));
+
+   *nprevars = SCIPgetNVars(subscip);
+
+   /* after presolving, we should have at least reached a certain fixing rate over ALL variables (including continuous)
+    * to ensure that not only the MIP but also the LP relaxation is easy enough
+    */
+   if( ((nvars - SCIPgetNVars(subscip)) / (SCIP_Real)nvars) >= heurdata->minmipfixingrate )
+   {
+      SCIP_SOL** subsols;
+      SCIP_Bool success;
+      int nsubsols;
+
+      SCIPdebugMsg(scip, "solving subproblem: nstallnodes=%" SCIP_LONGINT_FORMAT ", maxnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->maxnodes);
+
+      SCIP_CALL_ABORT( SCIPsolve(subscip) );
+
+      SCIPdebugMsg(scip, "ending solving vbounds-submip at time %g, status = %d\n", SCIPgetSolvingTime(scip), SCIPgetStatus(subscip));
+
+      /* check, whether a solution was found; due to numerics, it might happen that not all solutions are feasible ->
+       * try all solutions until one was accepted
+       */
+      nsubsols = SCIPgetNSols(subscip);
+      subsols = SCIPgetSols(subscip);
+      success = FALSE;
+      *wasfeas = FALSE;
+
+      for( i = 0; i < nsubsols && !success; ++i )
+      {
+         SCIP_CALL( createNewSol(scip, subscip, subvars, sol, subsols[i], &success) );
+         if( !(*wasfeas) )
+         {
+            SCIP_CALL( SCIPcheckSol(scip, sol, FALSE, FALSE, TRUE, TRUE, TRUE, wasfeas) );
+            if( (*wasfeas) )
+               SCIPdebugMsg(scip, "found feasible solution in sub-MIP: %16.9g\n", SCIPgetSolOrigObj(scip, sol));
+         }
+      }
+      if( success )
+      {
+         *result = SCIP_FOUNDSOL;
+      }
+   }
+
+#ifdef SCIP_DEBUG
+   SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
+#endif
+
+      /* free subproblem */
+   SCIPfreeBufferArray(scip, &subvars);
+
+   return SCIP_OKAY;
+}
+
 /** main procedure of the vbounds heuristic */
 static
 SCIP_RETCODE applyVbounds(
@@ -778,7 +963,7 @@ SCIP_RETCODE applyVbounds(
    int oldnpscands;
    int npscands;
    int nvars;
-   SCIPstatistic( int nprevars; )
+   int nprevars;
 
    assert(heur != NULL);
    assert(heurdata != NULL);
@@ -1001,10 +1186,8 @@ SCIP_RETCODE applyVbounds(
    if( !lperror && lpstatus != SCIP_LPSOLSTAT_INFEASIBLE && lpstatus != SCIP_LPSOLSTAT_OBJLIMIT )
    {
       SCIP* subscip;
-      SCIP_VAR** subvars;
-      SCIP_HASHMAP* varmap;
+      SCIP_RETCODE retcode;
       SCIP_Bool valid;
-      int i;
 
       /* check whether there is enough time and memory left */
       SCIP_CALL( SCIPcheckCopyLimits(scip, &valid) );
@@ -1015,161 +1198,12 @@ SCIP_RETCODE applyVbounds(
       /* create subproblem */
       SCIP_CALL( SCIPcreate(&subscip) );
 
-      /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), nvars) );
+      retcode = setupAndSolveSubscip(scip, subscip, heurdata, vars, nvars, sol, nstallnodes, lowerbound,
+         &nprevars, &wasfeas, result);
 
-      SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "_vbounds", NULL, NULL, 0, FALSE, FALSE, TRUE, NULL) );
-
-      if( heurdata->copycuts )
-      {
-         /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmap, NULL, FALSE, NULL) );
-      }
-
-      SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
-
-      for( i = 0; i < nvars; i++ )
-         subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmap, vars[i]);
-
-      /* free hash map */
-      SCIPhashmapFree(&varmap);
-
-      /* do not abort subproblem on CTRL-C */
-      SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
-
-#ifdef SCIP_DEBUG
-      /* for debugging, enable full output */
-      SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
-      SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
-#else
-      /* disable statistic timing inside sub SCIP and output to console */
-      SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
-      SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
-#endif
-
-      /* set limits for the subproblem */
-      SCIP_CALL( SCIPcopyLimits(scip, subscip) );
-      SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", nstallnodes) );
-      SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", heurdata->maxnodes) );
-
-      /* speed up sub-SCIP by not checking dual LP feasibility */
-      SCIP_CALL( SCIPsetBoolParam(subscip, "lp/checkdualfeas", FALSE) );
-
-      /* forbid call of heuristics and separators solving sub-CIPs */
-      SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
-
-      /* disable cutting plane separation */
-      SCIP_CALL( SCIPsetSeparating(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
-
-      /* disable expensive presolving */
-      SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
-
-      /* use inference branching */
-      if( SCIPfindBranchrule(subscip, "inference") != NULL && !SCIPisParamFixed(subscip, "branching/inference/priority") )
-      {
-         SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
-      }
-
-      /* employ a limit on the number of enforcement rounds in the quadratic constraint handlers; this fixes the issue that
-       * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
-       * feasibility status of a single node without fractional branching candidates by separation (namely for uflquad
-       * instances); however, the solution status of the sub-SCIP might get corrupted by this; hence no decutions shall be
-       * made for the original SCIP
-       */
-      if( SCIPfindConshdlr(subscip, "quadratic") != NULL && !SCIPisParamFixed(subscip, "constraints/quadratic/enfolplimit") )
-      {
-         SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 10) );
-      }
-
-      if( SCIPgetNSols(scip) > 0 )
-      {
-         SCIP_Real upperbound;
-         SCIP_Real minimprove;
-         SCIP_Real cutoffbound;
-
-         minimprove = heurdata->minimprove;
-         assert( !SCIPisInfinity(scip,SCIPgetUpperbound(scip)) );
-
-         upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
-
-         if( !SCIPisInfinity(scip, -1.0 * lowerbound) )
-         {
-            cutoffbound = (1-minimprove) * SCIPgetUpperbound(scip) + minimprove * lowerbound;
-         }
-         else
-         {
-            if( SCIPgetUpperbound ( scip ) >= 0 )
-               cutoffbound = (1 - minimprove) * SCIPgetUpperbound(scip);
-            else
-               cutoffbound = (1 + minimprove) * SCIPgetUpperbound(scip);
-         }
-         heurdata->cutoffbound = MIN(upperbound, cutoffbound);
-      }
-
-      if( !SCIPisInfinity(scip, heurdata->cutoffbound) )
-      {
-         SCIP_CALL( SCIPsetObjlimit(subscip, heurdata->cutoffbound) );
-         SCIPdebugMsg(scip, "setting objlimit for subscip to %g\n", heurdata->cutoffbound);
-      }
-
-      SCIPdebugMsg(scip, "starting solving vbound-submip at time %g\n", SCIPgetSolvingTime(scip));
-
-      /* solve the subproblem */
-      /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
-       * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
-       */
-      SCIP_CALL_ABORT( SCIPpresolve(subscip) );
-
-      SCIPdebugMsg(scip, "vbounds heuristic presolved subproblem at time %g : %d vars, %d cons; fixing value = %g\n", SCIPgetSolvingTime(scip), SCIPgetNVars(subscip), SCIPgetNConss(subscip), ((nvars - SCIPgetNVars(subscip)) / (SCIP_Real)nvars));
-
-      SCIPstatistic( nprevars = SCIPgetNVars(subscip) );
-
-      /* after presolving, we should have at least reached a certain fixing rate over ALL variables (including continuous)
-       * to ensure that not only the MIP but also the LP relaxation is easy enough
-       */
-      if( ((nvars - SCIPgetNVars(subscip)) / (SCIP_Real)nvars) >= heurdata->minmipfixingrate )
-      {
-         SCIP_SOL** subsols;
-         SCIP_Bool success;
-         int nsubsols;
-
-         SCIPdebugMsg(scip, "solving subproblem: nstallnodes=%" SCIP_LONGINT_FORMAT ", maxnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->maxnodes);
-
-         SCIP_CALL_ABORT( SCIPsolve(subscip) );
-
-         SCIPdebugMsg(scip, "ending solving vbounds-submip at time %g, status = %d\n", SCIPgetSolvingTime(scip), SCIPgetStatus(subscip));
-
-         /* check, whether a solution was found; due to numerics, it might happen that not all solutions are feasible ->
-          * try all solutions until one was accepted
-          */
-         nsubsols = SCIPgetNSols(subscip);
-         subsols = SCIPgetSols(subscip);
-         success = FALSE;
-         wasfeas = FALSE;
-
-         for( i = 0; i < nsubsols && !success; ++i )
-         {
-            SCIP_CALL( createNewSol(scip, subscip, subvars, sol, subsols[i], &success) );
-            if( !wasfeas )
-            {
-               SCIP_CALL( SCIPcheckSol(scip, sol, FALSE, FALSE, TRUE, TRUE, TRUE, &wasfeas) );
-               if( wasfeas )
-                  SCIPdebugMsg(scip, "found feasible solution in sub-MIP: %16.9g\n", SCIPgetSolOrigObj(scip, sol));
-            }
-         }
-         if( success )
-         {
-            *result = SCIP_FOUNDSOL;
-         }
-      }
-
-#ifdef SCIP_DEBUG
-      SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
-#endif
-
-      /* free subproblem */
-      SCIPfreeBufferArray(scip, &subvars);
       SCIP_CALL( SCIPfree(&subscip) );
+
+      SCIP_CALL( retcode );
    }
 
    /*************************** End Subscip Solving ***************************/
