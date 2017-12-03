@@ -2835,7 +2835,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    else if ( lpi->solstat == GRB_UNBOUNDED )
    {
       /* Unbounded means that there exists an unbounded primal ray. However, this does not state whether the problem is
-       * feasible. Thus, we temporarily set the objective to 0 and resolve. */
+       * feasible. Thus, we temporarily set the objective to 0 and solve again. */
       SCIP_Real* zeroobjcoefs;
       SCIP_Real* objcoefs;
       int status;
@@ -3597,7 +3597,6 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   SCIP_Bool violated = FALSE;
    int algo;
    int res;
 
@@ -3608,12 +3607,17 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
 
    SCIPdebugMessage("checking for primal feasibility\n");
 
+   if ( lpi->solstat == GRB_OPTIMAL )
+      return TRUE;
+
    res = GRBgetintparam(lpi->grbenv, GRB_INT_PAR_METHOD, &algo);
    if ( res != 0 )
    {
       SCIPABORT();
       return FALSE; /*lint !e527*/
    }
+   if ( algo != GRB_METHOD_PRIMAL )
+      return FALSE;
 
    if( lpi->solstat == GRB_ITERATION_LIMIT )
    {
@@ -3640,11 +3644,11 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
          return FALSE; /*lint !e527*/
       }
 
-      violated = (consviol > eps || boundviol > eps);
+      if ( consviol <= eps && boundviol <= eps )
+         return TRUE;
    }
 
-   return (lpi->solstat == GRB_OPTIMAL || (!violated && lpi->solstat == GRB_ITERATION_LIMIT && algo == GRB_METHOD_PRIMAL)
-      || (lpi->solstat == GRB_UNBOUNDED && algo == GRB_METHOD_PRIMAL) );
+   return FALSE;
 }
 
 /** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point);
