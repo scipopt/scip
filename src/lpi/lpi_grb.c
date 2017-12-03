@@ -2829,6 +2829,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
       {
          /* preprocessing was not the problem; issue a warning message and treat LP as infeasible */
          SCIPerrorMessage("Gurobi primal simplex returned GRB_INF_OR_UNBD after presolving was turned off\n");
+         return SCIP_LPERROR;
       }
    }
    else if ( lpi->solstat == GRB_UNBOUNDED )
@@ -3007,6 +3008,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
       {
          /* preprocessing was not the problem; issue a warning message and treat LP as infeasible */
          SCIPerrorMessage("Gurobi dual simplex returned GRB_INF_OR_UNBD after presolving was turned off.\n");
+         return SCIP_LPERROR;
       }
    }
 
@@ -3134,7 +3136,8 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
       if( lpi->solstat == GRB_INF_OR_UNBD )
       {
          /* preprocessing was not the problem; issue a warning message and treat LP as infeasible */
-         SCIPerrorMessage("Gurobi dual simplex returned GRB_INF_OR_UNBD after presolving was turned off\n");
+         SCIPerrorMessage("Gurobi barrier returned GRB_INF_OR_UNBD after presolving was turned off\n");
+         return SCIP_LPERROR;
       }
    }
 
