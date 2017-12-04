@@ -38,6 +38,7 @@
 static SCIP* scip;
 static SCIP_VAR* x;
 static SCIP_VAR* y;
+static SCIP_VAR* w;
 static SCIP_VAR* z;
 
 static SCIP_CONSHDLR* conshdlr;
@@ -75,9 +76,11 @@ void setup(void)
 
    SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", -1.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", -1.0, 1.0, 0.0, SCIP_VARTYPE_INTEGER) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z ", -1.0, 1.0, 0.0, SCIP_VARTYPE_INTEGER) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &w, "w", -1.0, 1.0, 0.0, SCIP_VARTYPE_INTEGER) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", -1.0, 1.0, 0.0, SCIP_VARTYPE_INTEGER) );
    SCIP_CALL( SCIPaddVar(scip, x) );
    SCIP_CALL( SCIPaddVar(scip, y) );
+   SCIP_CALL( SCIPaddVar(scip, w) );
    SCIP_CALL( SCIPaddVar(scip, z) );
 
    /* go to TRANSFORMED stage */
@@ -90,6 +93,7 @@ void teardown(void)
 {
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
+   SCIP_CALL( SCIPreleaseVar(scip, &w) );
    SCIP_CALL( SCIPreleaseVar(scip, &z) );
    SCIP_CALL( SCIPfree(&scip) );
 
@@ -125,7 +129,7 @@ Test(nlhdlrquadratic, detectandfree1, .init = setup, .fini = teardown)
    SCIP_QUADVARTERM quad;
    quad = nlhdlrexprdata->quadvarterms[0];
    cr_assert_not_null(quad.var);
-   fprintf(stderr, "x = %p, quad.var %p\n", x, quad.var);
+   fprintf(stderr, "x = %s, quad.var %s\n", SCIPvarGetName(x), SCIPvarGetName(quad.var));
    cr_expect_eq(quad.var, x, "Expecting var %s in quad term, got %s\n", SCIPvarGetName(x), SCIPvarGetName(quad.var));
    cr_expect_eq(1.0, quad.lincoef, "Expecting lincoef %g in quad term, got %g\n", 1.0, quad.lincoef);
    cr_expect_eq(1.0, quad.sqrcoef, "Expecting sqrcoef %g in quad term, got %g\n", 1.0, quad.sqrcoef);
@@ -148,21 +152,16 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    SCIP_CONSEXPR_EXPR* expexpr;
    SCIP_CONS* cons;
    SCIP_Bool success;
-   SCIP_Bool infeasible;
 
-
-   /* create expression and simplify it; introduce auxiliary variables */
+   /* create expression and simplify it */
    success = FALSE;
-   SCIP_CALL( SCIPparseCons(scip, &cons, (char*)"[expr] <test>: <x>^2 + 2 * <x> * exp(<y> * <x>^2) <= 1", TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*)"[expr] <test>: <x>^2 + 2 * <x> * exp(<y> * <x>^2) <= 1", TRUE, TRUE,
+            TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
    success = FALSE;
    SCIP_CALL( simplifyConstraints(scip, &cons, 1, &success) );
    cr_assert(success);
-
-   infeasible = FALSE;
-   SCIP_CALL( createAuxVars(scip, conshdlr, &cons, 1, &infeasible) );
-   cr_assert_not(infeasible);
 
    /* get expr and work with it */
    expr = SCIPgetExprConsExpr(scip, cons);
@@ -216,4 +215,27 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    /* XXX: why does release cons doesn't free the auxvars (of the transformed constraint?)? */
    SCIP_CALL( freeAuxVars(scip, conshdlr, &cons, 1) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+}
+
+
+/* x^2 + y^2 + w*z should not be handled by this nlhandler */
+Test(nlhdlrquadratic, noproperquadratic1, .init = setup, .fini = teardown)
+{
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSEXPR_EXPR* simplified;
+   SCIP_Bool success;
+
+   /* create expression and simplify it: note it fails if not simplified, the order matters! */
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x>^2 + <y>^2 + <w>*<z>", NULL, &expr) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, expr, &simplified) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = simplified;
+
+   /* detect */
+   SCIP_CALL( detectHdlrQuadratic(scip, conshdlr, nlhdlr, expr, &success, &nlhdlrexprdata) );
+   cr_expect_not(success);
+   cr_expect_null(nlhdlrexprdata);
+
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
