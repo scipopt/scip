@@ -66,10 +66,6 @@ struct SCIP_ConsExpr_Expr
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;      /**< expression type (as pointer to its handler) */
    SCIP_CONSEXPR_EXPRDATA* exprdata;      /**< expression data */
 
-   SCIP_CONSEXPR_NLHDLR**  nlhdlrs;       /**< nonlinear handlers at expression */
-   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrsexprdata;  /**< data of nonlinear handler at expression */
-   int                     nnlhdlrs;      /**< number of nonlinear handlers at expression */
-
    int                     nchildren;     /**< number of children */
    int                     childrensize;  /**< length of children array */
    SCIP_CONSEXPR_EXPR**    children;      /**< children expressions */
@@ -77,6 +73,10 @@ struct SCIP_ConsExpr_Expr
    int                     nuses;         /**< reference counter */
    int                     nlockspos;     /**< positive locks counter */
    int                     nlocksneg ;    /**< negative locks counter */
+
+   /* enforcement of expr == auxvar (or expr <= auxvar, or expr >= auxvar) */
+   SCIP_CONSEXPR_EXPRENFO** enfos;        /**< enforcements */
+   int                     nenfos;        /**< number of enforcements */
 
    /* separation */
    SCIP_VAR*               auxvar;        /**< auxiliary variable used for outer approximation cuts */
@@ -115,6 +115,7 @@ struct SCIP_ConsExpr_Expr
    SCIP_EXPRCURV           curvature;     /**< curvature of the expression w.r.t. bounds that have been used in the last curvature detection */
 };
 
+/** generic data and callback methods of an nonlinear handler */
 struct SCIP_ConsExpr_Nlhdlr
 {
    char*                         name;       /**< nonlinearity handler name */
@@ -131,6 +132,12 @@ struct SCIP_ConsExpr_Nlhdlr
    SCIP_DECL_CONSEXPR_NLHDLRSEPA((*sepa));      /**< separation callback (can be NULL) */
 };
 
+/** enforcement data of an expression */
+struct SCIP_ConsExpr_ExprEnfo
+{
+   SCIP_CONSEXPR_NLHDLR*         nlhdlr;          /**< nonlinear handler */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata;  /**< data of nonlinear handler */
+};
 
 #ifdef __cplusplus
 }
