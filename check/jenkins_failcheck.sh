@@ -232,7 +232,11 @@ if [ "${PERFORMANCE}" == "performance" ]; then
   ./evalcheck_cluster.sh -R ../${EVALFILE} > ${OUTPUT}
   NEWRBID=`cat $OUTPUT | grep "rubberband.zib" |sed -e 's|https://rubberband.zib.de/result/||'`
   OLDRBID=`tail $RBDB -n 1`
-  PERF_MAIL=`echo "The results of the weekly performance runs are ready. Take a look at https://rubberband.zib.de/result/${NEWRBID}?compare=${OLDRBID}"`
+  RBURL="https://rubberband.zib.de/result/${NEWRBID}"
+  if [ "${OLDRBID}" != "" ]; then
+    RBURL="${RBURL}?compare=${OLDRBID}"
+  fi
+  PERF_MAIL=`echo "The results of the weekly performance runs are ready. Take a look at ${RBURL}"
   echo $NEWRBID >> $RBDB
 else
   ./evalcheck_cluster.sh -r "-v useshortnames=0" ../${EVALFILE} > ${OUTPUT}
