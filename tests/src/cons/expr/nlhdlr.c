@@ -437,7 +437,7 @@ SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(copyHdlr)
    SCIPsetConsExprNlhdlrFreeExprData(targetscip, targetnlhdlr, freeExprData);
    SCIPsetConsExprNlhdlrCopyHdlr(targetscip, targetnlhdlr, copyHdlr);
    SCIPsetConsExprNlhdlrInitExit(targetscip, targetnlhdlr, initHdlr, exitHldr);
-   SCIPsetConsExprNlhdlrSepa(targetscip, targetnlhdlr, sepaHdlr);
+   SCIPsetConsExprNlhdlrSepa(targetscip, targetnlhdlr, NULL, sepaHdlr, NULL);
 
    return SCIP_OKAY;
 }
@@ -520,7 +520,7 @@ Test(conshdlr, nlhdlr, .init = setup, .fini = teardown,
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, freeExprData);
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, copyHdlr);
    SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, initHdlr, exitHldr);
-   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, sepaHdlr);
+   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, sepaHdlr, NULL);
 
    SCIP_CALL( SCIPsetIntParam(scip, "display/verblevel", SCIP_VERBLEVEL_NONE) );
    /* SCIP_CALL( SCIPsetRealParam(scip, "limits/gap", 1e-6) ); */
