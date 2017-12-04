@@ -23,6 +23,7 @@
 
 #include "scip/cons_expr_nlhdlr_default.h"
 #include "scip/cons_expr.h"
+#include "scip/struct_cons_expr.h"  // FIXME to get exprhdlr->sepa
 
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME         "default"
@@ -32,6 +33,8 @@
 static
 SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
 {
+   int c;
+
    assert(scip != NULL);
    assert(nlhdlr != NULL);
    assert(expr != NULL);
@@ -39,7 +42,36 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
 
    *success = FALSE;
 
-   /* TODO ensure all children have auxvar, and return with success = TRUE */
+   /* TODO return sepa possibility only if exprhdlr for expr has a sepa callback */
+
+   /* make sure that an (auxiliary) variable exists for every child */
+   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+   {
+      /* todo skip this for value-expressions? */
+      SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[c], NULL) );
+   }
+
+   *success = TRUE;
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaDefault)
+{
+   SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+
+   exprhdlr = SCIPgetConsExprExprHdlr(expr);
+   assert(exprhdlr != NULL);
+
+   if( exprhdlr->initsepa == NULL )
+      return SCIP_OKAY;
+
+   /* call the separation initialization callback of the expression handler */
+   SCIP_CALL( exprhdlr->initsepa(scip, conshdlr, expr, infeasible) );
 
    return SCIP_OKAY;
 }
@@ -47,20 +79,38 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
 static
 SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaDefault)
 {
-   SCIP_VAR* auxvar;
+   SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
 
    assert(scip != NULL);
-   assert(nlhdlr != NULL);
-   assert(nlhdlrexprdata != NULL);
+   assert(expr != NULL);
 
-   *result = SCIP_DIDNOTFIND;
-   *ncuts = 0;
+   exprhdlr = SCIPgetConsExprExprHdlr(expr);
+   assert(exprhdlr != NULL);
+   assert(exprhdlr->sepa != NULL);
 
-   /* get auxiliary variable */
-   auxvar = SCIPgetConsExprExprLinearizationVar(expr);
-   assert(auxvar != NULL);
+   /* call the separation callback of the expression handler */
+   SCIP_CALL( exprhdlr->sepa(scip, conshdlr, expr, sol, minviolation, result, ncuts) );
 
-   /* TODO call exprhdlr sepa */
+   return SCIP_OKAY;
+}
+
+
+static
+SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaDefault)
+{
+   SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+
+   exprhdlr = SCIPgetConsExprExprHdlr(expr);
+   assert(exprhdlr != NULL);
+
+   if( exprhdlr->exitsepa == NULL )
+      return SCIP_OKAY;
+
+   /* call the separation deinitialization callback of the expression handler */
+   SCIP_CALL( exprhdlr->exitsepa(scip, expr) );
 
    return SCIP_OKAY;
 }
@@ -93,7 +143,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrDefault(
    assert(nlhdlr != NULL);
 
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrDefault);
-   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, nlhdlrSepaDefault);
+   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, nlhdlrInitSepaDefault, nlhdlrSepaDefault, nlhdlrExitSepaDefault);
 
    return SCIP_OKAY;
 }

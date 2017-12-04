@@ -3600,7 +3600,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
    SCIP_CONSHDLR* conshdlr;
    NLHDLR_DETECT_DATA* detectdata;
    int nsuccess;
-   int c, h;
+   int e, h;
 
    assert(expr != NULL);
    assert(result != NULL);
@@ -3668,29 +3668,24 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
       }
    }
 
-   if( nsuccess > 0 )
+   if( nsuccess == 0 )
    {
-      int e;
-
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &expr->enfos, nsuccess) );
-      for( e = 0; e < nsuccess; ++c )
-      {
-         SCIP_CALL( SCIPallocBlockMemory(scip, &expr->enfos[e]) );
-         expr->enfos[e]->nlhdlr = detectdata->nlhdlrssuccess[e];
-         expr->enfos[e]->nlhdlrexprdata = detectdata->nlhdlrssuccessexprdata[e];
-         expr->enfos[e]->methods = SCIP_CONSEXPR_EXPRENFO_SEPABOTH;
-      }
-      expr->nenfos = nsuccess;
-
+      /* at least the default nlhdlr should have recognized success */
+      SCIPerrorMessage("no nonlinear handler found responsible for expression\n");
+      *result = SCIP_CONSEXPREXPRWALK_ABORT;
       return SCIP_OKAY;
    }
 
-   /* if no handler had success, then make sure that an (auxiliary) variable exists for every child */
-   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+   /* copy collected nlhdlrs into expr->enfos */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &expr->enfos, nsuccess) );
+   for( e = 0; e < nsuccess; ++e )
    {
-      /* todo skip this for value-expressions? */
-      SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[c], NULL) );
+      SCIP_CALL( SCIPallocBlockMemory(scip, &expr->enfos[e]) );
+      expr->enfos[e]->nlhdlr = detectdata->nlhdlrssuccess[e];
+      expr->enfos[e]->nlhdlrexprdata = detectdata->nlhdlrssuccessexprdata[e];
+      expr->enfos[e]->methods = SCIP_CONSEXPR_EXPRENFO_SEPABOTH;
    }
+   expr->nenfos = nsuccess;
 
    return SCIP_OKAY;
 }
@@ -3865,7 +3860,10 @@ SCIP_RETCODE freeAuxVars(
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(initSepaEnterExpr)
 {
+   SCIP_CONSEXPR_NLHDLR* nlhdlr;
    INITSEPA_DATA* initsepadata;
+   SCIP_Bool infeasible;
+   int e;
 
    assert(expr != NULL);
    assert(result != NULL);
@@ -3885,14 +3883,29 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(initSepaEnterExpr)
       return SCIP_OKAY;
    }
 
-   if( *(expr->exprhdlr->initsepa) != NULL && expr->auxvar != NULL && expr->nenfos == 0 )
+   /* call initsepa of all nlhdlrs in expr */
+   for( e = 0; e < expr->nenfos; ++e )
    {
-      /* call the separation initialization callback of the expression handler */
-      SCIP_CALL( (*expr->exprhdlr->initsepa)(scip, initsepadata->conshdlr, expr, &initsepadata->infeasible) );
-   }
+      assert(expr->enfos[e] != NULL);
 
-   /* stop if we detected infeasibility */
-   *result = initsepadata->infeasible ? SCIP_CONSEXPREXPRWALK_ABORT : SCIP_CONSEXPREXPRWALK_CONTINUE;
+      nlhdlr = expr->enfos[e]->nlhdlr;
+      assert(nlhdlr != NULL);
+
+      if( nlhdlr->initsepa == NULL )
+         continue;
+
+      /* call the separation initialization callback of the nonlinear handler */
+      SCIP_CALL( nlhdlr->initsepa(scip, initsepadata->conshdlr, nlhdlr, expr->enfos[e]->nlhdlrexprdata, expr, &infeasible) );
+
+      if( infeasible )
+      {
+         /* stop walk if we detected infeasibility
+          * TODO here we'll still call the initsepa of this expr nlhdlrs, but maybe we should not abort the walk? otherwise, we may later call exitsepa for expressions for which initsepa was not called?
+          */
+         initsepadata->infeasible = TRUE;
+         *result = SCIP_CONSEXPREXPRWALK_ABORT;
+      }
+   }
 
    /* store the initsepa tag */
    expr->initsepatag = initsepadata->initsepatag;
@@ -3913,13 +3926,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(exitSolEnterExpr)
 
    *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
 
-   if( *(expr->exprhdlr->exitsepa) != NULL && expr->auxvar != NULL && expr->nenfos == 0 )
-   {
-      /* call the separation deinitialization callback of the expression handler */
-      SCIP_CALL( (*expr->exprhdlr->exitsepa)(scip, expr) );
-   }
-
-   SCIPdebugMsg(scip, "free nonlinear handler data for expression %p\n", (void*)expr);
+   SCIPdebugMsg(scip, "exitsepa and free nonlinear handler data for expression %p\n", (void*)expr);
 
    /* remove nonlinear handlers in expression and their data */
    for( e = 0; e < expr->nenfos; ++e )
@@ -3930,6 +3937,12 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(exitSolEnterExpr)
 
       nlhdlr = expr->enfos[e]->nlhdlr;
       assert(nlhdlr != NULL);
+
+      if( nlhdlr->exitsepa != NULL )
+      {
+         /* call the separation deinitialization callback of the nonlinear handler */
+         SCIP_CALL( nlhdlr->exitsepa(scip, nlhdlr, expr->enfos[e]->nlhdlrexprdata, expr) );
+      }
 
       /* free nlhdlr exprdata, if there is any and there is a method to free this data */
       if( expr->enfos[e]->nlhdlrexprdata != NULL && nlhdlr->freeexprdata != NULL )
@@ -3991,24 +4004,16 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
       ncuts = 0;
 
       /* call the separation callbacks of the nonlinear handlers, if any, then the expression handler */
-      for( e = 0; e <= expr->nenfos; ++e )
+      for( e = 0; e < expr->nenfos; ++e )
       {
-         if( e < expr->nenfos )
-         {
-            SCIP_CONSEXPR_NLHDLR* nlhdlr;
+         SCIP_CONSEXPR_NLHDLR* nlhdlr;
 
-            nlhdlr = expr->enfos[e]->nlhdlr;
-            if( nlhdlr->sepa == NULL )
-               continue;
+         nlhdlr = expr->enfos[e]->nlhdlr;
+         if( nlhdlr->sepa == NULL )
+            continue;
 
-            /* call the separation callback of the nonlinear handler */
-            SCIP_CALL( (nlhdlr->sepa)(scip, sepadata->conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sepadata->sol, sepadata->minviolation, &separesult, &ncuts) );
-         }
-         else if( expr->exprhdlr->sepa != NULL && expr->nenfos == 0 )
-         {
-            /* call the separation callback of the expression handler */
-            SCIP_CALL( (*expr->exprhdlr->sepa)(scip, sepadata->conshdlr, expr, sepadata->sol, sepadata->minviolation, &separesult, &ncuts) );
-         }
+         /* call the separation callback of the nonlinear handler */
+         SCIP_CALL( nlhdlr->sepa(scip, sepadata->conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sepadata->sol, sepadata->minviolation, &separesult, &ncuts) );
 
          assert(ncuts >= 0);
          sepadata->ncuts += ncuts;
@@ -8239,12 +8244,17 @@ void SCIPsetConsExprNlhdlrInitExit(
 void SCIPsetConsExprNlhdlrSepa(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
-   SCIP_DECL_CONSEXPR_NLHDLRSEPA((*sepa))    /**< separation callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_NLHDLRINITSEPA((*initsepa)), /**< separation initialization callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_NLHDLRSEPA((*sepa)),         /**< separation callback (must not be NULL) */
+   SCIP_DECL_CONSEXPR_NLHDLREXITSEPA((*exitsepa))  /**< separation deinitialization callback (can be NULL) */
 )
 {
    assert(nlhdlr != NULL);
+   assert(sepa != NULL);
 
+   nlhdlr->initsepa = initsepa;
    nlhdlr->sepa = sepa;
+   nlhdlr->exitsepa = exitsepa;
 }
 
 /** gives name of nonlinear handler */

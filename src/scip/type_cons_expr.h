@@ -287,7 +287,6 @@ extern "C" {
  *
  *  input:
  *  - scip            : SCIP main data structure
- *  - conshdlr        : expression constraint handler
  *  - expr            : expression
  */
 #define SCIP_DECL_CONSEXPR_EXPREXITSEPA(x) SCIP_RETCODE x (\
@@ -519,6 +518,40 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_Bool* success, \
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata)
+
+/** separation initialization method of a nonlinear handler (called during CONSINITLP)
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : expression constraint handler
+ *  - nlhdlr          : nonlinear handler
+ *  - nlhdlrexprdata  : exprdata of nonlinear handler
+ *  - expr            : expression
+ *
+ *  output:
+ *  - infeasible      : pointer to store whether an infeasibility was detected while building the LP
+ */
+#define SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(x) SCIP_RETCODE x (\
+      SCIP* scip, \
+      SCIP_CONSHDLR* conshdlr, \
+      SCIP_CONSEXPR_NLHDLR* nlhdlr, \
+      SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
+      SCIP_CONSEXPR_EXPR* expr, \
+      SCIP_Bool* infeasible)
+
+/** separation deinitialization method of a nonlinear handler (called during CONSEXITSOL)
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - nlhdlr          : nonlinear handler
+ *  - nlhdlrexprdata  : exprdata of nonlinear handler
+ *  - expr            : expression
+ */
+#define SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(x) SCIP_RETCODE x (\
+      SCIP* scip, \
+      SCIP_CONSEXPR_NLHDLR* nlhdlr, \
+      SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
+      SCIP_CONSEXPR_EXPR* expr)
 
 /** nonlinear handler separation callback
  *
