@@ -15258,7 +15258,8 @@ SCIP_Bool SCIPisCutApplicable(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  *
- *  @deprecated Please use SCIPaddRow() instead, or, if the row is a global cut, add it only to the global cutpool.
+ *  @deprecated Please use SCIPaddRow() instead, or, if the row is a global cut and it might be useful to keep it for future use,
+ *  consider adding it to the global cutpool with SCIPaddPoolCut().
  */
 EXTERN
 SCIP_RETCODE SCIPaddCut(
