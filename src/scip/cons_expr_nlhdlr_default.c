@@ -32,7 +32,7 @@
 
 static
 SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
-{
+{ /*lint --e{715}*/
    int c;
 
    assert(scip != NULL);
@@ -58,7 +58,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
 
 static
 SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaDefault)
-{
+{ /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
 
    assert(scip != NULL);
@@ -78,7 +78,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaDefault)
 
 static
 SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaDefault)
-{
+{ /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
 
    assert(scip != NULL);
@@ -106,7 +106,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaDefault)
 
 static
 SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaDefault)
-{
+{ /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
 
    assert(scip != NULL);
@@ -126,7 +126,7 @@ SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaDefault)
 
 static
 SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(nlhdlrCopyhdlrDefault)
-{
+{ /*lint --e{715}*/
    assert(targetscip != NULL);
    assert(targetconsexprhdlr != NULL);
    assert(sourcenlhdlr != NULL);
