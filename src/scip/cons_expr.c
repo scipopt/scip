@@ -3687,7 +3687,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &expr->enfos, nsuccess) );
    for( e = 0; e < nsuccess; ++e )
    {
-      SCIP_CALL( SCIPallocBlockMemory(scip, &expr->enfos[e]) );
+      SCIP_CALL( SCIPallocBlockMemory(scip, &expr->enfos[e]) );  /*lint !e866 */
       expr->enfos[e]->nlhdlr = detectdata->nlhdlrssuccess[e];
       expr->enfos[e]->nlhdlrexprdata = detectdata->nlhdlrssuccessexprdata[e];
       expr->enfos[e]->methods = SCIP_CONSEXPR_EXPRENFO_SEPABOTH;
@@ -4038,10 +4038,10 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
          else if( separesult == SCIP_SEPARATED )
          {
             assert(ncuts > 0);
-            SCIPdebugMsg(scip, "found %d cuts separating the current solution\n", ncuts);
+            SCIPdebugMsg(scip, "found %d cuts by nlhdlr <%s> separating the current solution\n", ncuts, nlhdlr->name);
             sepadata->result = SCIP_SEPARATED;
             separated = TRUE;
-            break;
+            /* TODO or should we always just stop here? */
          }
       }
    }
