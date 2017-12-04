@@ -199,7 +199,7 @@ SCIP_DECL_CONSEXPR_NLHDLREXIT(exitHldrQuadratic)
 
 
 static
-SCIP_Bool isTwoVarsProduct(SCIP_CONSHDLR* conshdlr, SCIP_CONSEXPR_EXPR* expr, SCIP_VAR** var1, SCIP_VAR** var2)
+SCIP_Bool isTwoVarsProduct(SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONSEXPR_EXPR* expr, SCIP_VAR** var1, SCIP_VAR** var2)
 {
    assert(var1 != NULL && var2 != NULL);
 
@@ -209,16 +209,17 @@ SCIP_Bool isTwoVarsProduct(SCIP_CONSHDLR* conshdlr, SCIP_CONSEXPR_EXPR* expr, SC
    if( SCIPgetConsExprExprNChildren(expr) != 2 )
       return FALSE;
 
-   /* linearization var returns var if expr is var */
-   *var1 = SCIPgetConsExprExprLinearizationVar(SCIPgetConsExprExprChildren(expr)[0]);
-   *var2 = SCIPgetConsExprExprLinearizationVar(SCIPgetConsExprExprChildren(expr)[1]);
-   assert(*var1 != NULL && *var2 != NULL);
+   SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[0], var1) );
+   assert(*var1 != NULL);
+
+   SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[1], var2) );
+   assert(*var2 != NULL);
 
    return TRUE;
 }
 
 static
-SCIP_Bool isVarSquare(SCIP_CONSHDLR* conshdlr, SCIP_CONSEXPR_EXPR* expr, SCIP_VAR** var)
+SCIP_Bool isVarSquare(SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONSEXPR_EXPR* expr, SCIP_VAR** var)
 {
    if( strcmp("pow", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr))) != 0 )
       return FALSE;
@@ -228,11 +229,24 @@ SCIP_Bool isVarSquare(SCIP_CONSHDLR* conshdlr, SCIP_CONSEXPR_EXPR* expr, SCIP_VA
    if( SCIPgetConsExprExprPowExponent(expr) != 2.0 )
       return FALSE;
 
-   /* linearization var returns var if expr is var */
-   *var = SCIPgetConsExprExprLinearizationVar(SCIPgetConsExprExprChildren(expr)[0]);
+   SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[0], var) );
    assert(*var != NULL);
 
    return TRUE;
+}
+
+static
+SCIP_RETCODE checkProperQuadratic(SCIP_CONSEXPR_EXPR* expr, SCIP_HASHMAP* seenexpr, SCIP_Bool* properquadratic)
+{
+
+   if( SCIPhashmapExists(seenexpr, (void *)expr) )
+      *properquadratic = TRUE;
+   else
+   {
+      SCIP_CALL( SCIPhashmapInsert(seenexpr, (void *)expr, NULL) );
+   }
+
+   return SCIP_OKAY;
 }
 
 /** callback to detect structure in expression tree */
@@ -244,12 +258,17 @@ SCIP_Bool isVarSquare(SCIP_CONSHDLR* conshdlr, SCIP_CONSEXPR_EXPR* expr, SCIP_VA
  * - success buffer to return whether a nlhdlr specific structure has been found
  * - nlhdlrexprdata nlhdlr's expr data to be stored in expr, can only be set to non-NULL if success is set to TRUE
  *
- * An expression is quadratic if:
- * - It is a product expression of two var expressions
- * - It is power expression of a var expression with exponent 2.0
- * - It is a sum expression where each of its chlidren is of the type of one of the above or a simple variable
+ * A term is quadratic if:
+ * - It is a product expression of two expressions
+ * - It is power expression of an expression with exponent 2.0
  *
- * @note: the expression needs to be simplified (in particular, it is assumed to be sorted)
+ * An proper quadratic expression (i.e the only quadratic expressions that can be handled by this nlhdlr) is a sum
+ * expression such that there is at least one (aux) variable that appears in at least two quadratic terms.
+ *
+ * @note:
+ * - the expression needs to be simplified (in particular, it is assumed to be sorted)
+ * - common subexpressions are also assumed to have been identified.
+ *
  * Sorted implies that:
  *  - expr < expr^2: bases are the same, but exponent 1 < 2
  *  - expr < expr * other_expr: u*v < w holds if and only if v < w (OR8), but here w = u < v, since expr comes before
@@ -268,8 +287,10 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
 {
    SCIP_CONSEXPR_NLHDLREXPRDATA* exprdata;
    SCIP_HASHMAP*  varidx;
+   SCIP_HASHMAP*  seenexpr;
    SCIP_VAR* var1 = NULL;
    SCIP_VAR* var2 = NULL;
+   SCIP_Bool properquadratic;
    int c;
 
    assert(scip != NULL);
@@ -280,15 +301,46 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
 
    *success = FALSE;
 
-   /* TODO: handle simple cases */
-   if( isVarSquare(conshdlr, expr, &var1) || isTwoVarsProduct(conshdlr, expr, &var1, &var2) )
-   {
-      *success = TRUE;
+   /* if it is not a sum of at least two terms, it cannot be a proper quadratic expressions */
+   if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrSum(conshdlr) || SCIPgetConsExprExprNChildren(expr) < 2 )
       return SCIP_OKAY;
-   }
 
-   /* the only case left is sum expressions */
-   if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrSum(conshdlr) )
+   /* check if expression is a proper quadratic expression */
+   properquadratic = FALSE;
+   SCIP_CALL( SCIPhashmapCreate(&seenexpr, SCIPblkmem(scip), 2*SCIPgetConsExprExprNChildren(expr)) );
+   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+   {
+      SCIP_CONSEXPR_EXPR* child;
+      SCIP_Real coef;
+
+      child = SCIPgetConsExprExprChildren(expr)[c];
+      coef = SCIPgetConsExprExprSumCoefs(expr)[c];
+
+      assert(child != NULL);
+      assert(! SCIPisZero(scip, coef));
+
+      if( strcmp("pow", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child))) == 0 &&
+            SCIPgetConsExprExprPowExponent(child) == 2.0 ) /* quadratic term */
+      {
+         SCIP_CALL( checkProperQuadratic(SCIPgetConsExprExprChildren(child)[0], seenexpr, &properquadratic) );
+      }
+      else if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrProduct(conshdlr) &&
+            SCIPgetConsExprExprNChildren(child) == 2 ) /* bilinear term */
+      {
+         SCIP_CALL( checkProperQuadratic(SCIPgetConsExprExprChildren(child)[0], seenexpr, &properquadratic) );
+         SCIP_CALL( checkProperQuadratic(SCIPgetConsExprExprChildren(child)[1], seenexpr, &properquadratic) );
+      }
+      else
+      {
+         SCIP_CALL( checkProperQuadratic(child, seenexpr, &properquadratic) );
+      }
+
+      if( properquadratic )
+         break;
+   }
+   SCIPhashmapFree(&seenexpr);
+
+   if( ! properquadratic )
       return SCIP_OKAY;
 
    /* varidx maps vars to indices; if index > 0, it is its index in the linvars array, otherwise -index-1 is its
@@ -307,7 +359,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
    exprdata->quadvarssize = SCIPgetConsExprExprNChildren(expr);
    exprdata->bilintermssize = SCIPgetConsExprExprNChildren(expr);
 
-   /* TODO comment */
+   /* for every term of the expr */
    exprdata->nlinvars = 0;
    exprdata->nquadvars = 0;
    exprdata->nbilinterms = 0;
@@ -324,7 +376,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
 
       var1 = NULL;
       var2 = NULL;
-      if( isVarSquare(conshdlr, child, &var1) ) /* quadratic term */
+      if( isVarSquare(scip, conshdlr, child, &var1) ) /* quadratic term */
       {
          int idx;
 
@@ -350,7 +402,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
             exprdata->quadvarterms[exprdata->nquadvars - 1].sqrcoef = coef;
          }
       }
-      else if( isTwoVarsProduct(conshdlr, child, &var1, &var2) ) /* bilinear term */
+      else if( isTwoVarsProduct(scip, conshdlr, child, &var1, &var2) ) /* bilinear term */
       {
          SCIP_BILINTERM* bilinterm;
          assert(SCIPgetConsExprExprProductCoef(child) == 1.0);
@@ -370,7 +422,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
       }
       else
       {
-         /* not a product of exprs nor square of an expr --> use aux var (which is var itself when expr is var expr) */
+         /* not a product of exprs nor square of an expr --> create aux var */
          var1 = SCIPgetConsExprExprLinearizationVar(child);
          assert(var1 != NULL);
 
@@ -381,13 +433,6 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
          exprdata->nlinvars++;
       }
    }
-
-   /* check whether identified quadratic expression is actually quadratic */
-   if( exprdata->nbilinterms + exprdata->nquadvars == 0 )
-   {
-      SCIP_CALL( freeExprDataQuadratic(scip, nlhdlr, nlhdlrexprdata) );
-   }
-
    SCIPhashmapFree(&varidx);
 
 
