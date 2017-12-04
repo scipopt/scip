@@ -3959,7 +3959,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(exitSolEnterExpr)
       }
 
       /* free enfo data */
-      SCIPfreeBlockMemory(scip, &expr->enfos[e]);
+      SCIPfreeBlockMemory(scip, &expr->enfos[e]); /*lint !e866 */
    }
 
    /* free array that had the enfo data */
