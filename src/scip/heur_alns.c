@@ -2611,6 +2611,10 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
       /* update the target node limit based on the status of the selected algorithm */
       updateTargetNodeLimit(heurdata, &runstats[banditidx], subscipstatus[banditidx]);
 
+      SCIPdebugMsg(scip, "LRates %8.5f,%8.5f Exponents %8.5f %8.5f\n",
+            heurdata->minimprovlearnrate, heurdata->nodefaclearningrate,
+            heurdata->minimprovexponent, heurdata->nodefacexponent);
+
       /* update the bandit algorithm by the measured reward */
       SCIP_CALL( updateBanditAlgorithm(scip, heurdata, rewards[banditidx], banditidx) );
 
