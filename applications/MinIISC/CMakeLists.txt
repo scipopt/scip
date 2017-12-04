@@ -12,7 +12,13 @@ add_executable(miniisc
     src/readargs.c
 )
 
-target_link_libraries(miniisc ${SCIP_LIBRARIES} m)
+# link to math library if it is available
+find_library(LIBM m)
+if(NOT LIBM)
+  set(LIBM "")
+endif()
+
+target_link_libraries(miniisc ${SCIP_LIBRARIES} ${LIBM})
 
 if( TARGET applications )
     add_dependencies( applications miniisc )

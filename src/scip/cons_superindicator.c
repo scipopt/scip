@@ -1495,17 +1495,13 @@ SCIP_DECL_CONSPRESOL(consPresolSuperindicator)
          if( *result != SCIP_DELAYED )
             *result = locresult;
          break;
-      case SCIP_DIDNOTFIND:
+      default:
+         assert(locresult == SCIP_DIDNOTFIND);
          assert(*result != SCIP_CUTOFF);
-         if( *result != SCIP_UNBOUNDED
-            && *result != SCIP_DELAYED
-            && *result != SCIP_SUCCESS )
+         if( *result != SCIP_UNBOUNDED && *result != SCIP_DELAYED && *result != SCIP_SUCCESS )
             *result = locresult;
          break;
-      default:
-         SCIPerrorMessage("invalid SCIP result %d\n", locresult);
-         return SCIP_INVALIDRESULT;
-      }  /*lint !e788*/
+      } /*lint !e788*/
    }
 
    SCIPdebugMsg(scip, "presol result=%d\n", *result);

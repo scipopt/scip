@@ -1199,6 +1199,8 @@ void printName(
    SCIP_Bool             longnames           /**< whether prefixes for long names should be added */
    )
 {
+   assert(idx >= 0 && idx < 100000); /* to ensure that we do not exceed the size of the buffer */
+
    if( longnames )
    {
       if( name != NULL )

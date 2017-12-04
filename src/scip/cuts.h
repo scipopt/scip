@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   aggrrow.h
+/**@file   cuts.h
  * @ingroup PUBLICCOREAPI
  * @brief  methods for the aggregation rows
  * @author Jakob Witzig
@@ -50,7 +50,8 @@ SCIP_Bool SCIPcutsTightenCoefficients(
    SCIP_Real*            cutcoefs,           /**< array of the non-zero coefficients in the cut */
    SCIP_Real*            cutrhs,             /**< the right hand side of the cut */
    int*                  cutinds,            /**< array of the problem indices of variables with a non-zero coefficient in the cut */
-   int*                  cutnnz              /**< the number of non-zeros in the cut */
+   int*                  cutnnz,             /**< the number of non-zeros in the cut */
+   int*                  nchgcoefs           /**< number of changed coefficients */
    );
 
 /** create an empty the aggregation row */
@@ -149,7 +150,7 @@ void SCIPaggrRowClear(
    );
 
 /** aggregate rows using the given weights; the current content of the aggregation
- *  row, @aggrow, gets overwritten
+ *  row, \p aggrrow, gets overwritten
  */
 extern
 SCIP_RETCODE SCIPaggrRowSumRows(
@@ -176,6 +177,12 @@ void SCIPaggrRowRemoveZeros(
 /** get array with lp positions of aggregated rows */
 extern
 int* SCIPaggrRowGetRowInds(
+   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
+   );
+
+/** get array with weights of aggregated rows */
+extern
+SCIP_Real* SCIPaggrRowGetRowWeights(
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    );
 
@@ -219,7 +226,7 @@ SCIP_Real SCIPaggrRowGetValue(
 
    QUAD_ARRAY_LOAD(val, aggrrow->vals, aggrrow->inds[i]);
 
-   return QUAD_ROUND(val);
+   return QUAD_TO_DBL(val);
 }
 
 /** gets the non-zero value for the given problem index of a variable */
@@ -233,7 +240,7 @@ SCIP_Real SCIPaggrRowGetProbvarValue(
 
    QUAD_ARRAY_LOAD(val, aggrrow->vals, probindex);
 
-   return QUAD_ROUND(val);
+   return QUAD_TO_DBL(val);
 }
 
 /** gets the rank of the aggregation row */

@@ -332,6 +332,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisOptimality);
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective);
 
+/** dialog execution method for linear constraint type classification */
+EXTERN
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayLinearConsClassification);
+
 /** creates a root dialog */
 EXTERN
 SCIP_RETCODE SCIPcreateRootDialog(

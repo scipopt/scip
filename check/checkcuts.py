@@ -46,7 +46,7 @@ invalidcuts = 0
 currcons = ""
 for lazycons in lazyconss:
    currcons += lazycons
-   m = re.match("([^:]*):([^<]*)<=([^\n]*)", currcons)
+   m = re.match("([^:]*):([^<]*)(<=|>=)([^\n]*)", currcons)
    if m is None:
       currcons = currcons[:-1]
       continue
@@ -55,11 +55,16 @@ for lazycons in lazyconss:
    if not cutclassname in consname:
       continue
    cons = m.group(2).strip()
-   rhs = float(m.group(3).strip())
+   rhs = float(m.group(4).strip())
+
+   if m.group(3) == "<=":
+      objsense = GRB.MAXIMIZE
+   else:
+      objsense = GRB.MINIMIZE
 
    objexpr = LinExpr()
    while len(cons) > 0:
-      m = re.match("[\+-][^\+-]+", cons)
+      m = re.match("[\+-][0-9][^ ]*[^\+-]*", cons)
       length = len(m.group(0))
       term = m.group(0).strip()
       coef,varname = term.split()
@@ -67,13 +72,14 @@ for lazycons in lazyconss:
       var = model.getVarByName(varname)
       objexpr.add(var, float(coef))
 
-   model.setObjective(objexpr, GRB.MAXIMIZE)
+   model.setObjective(objexpr, objsense)
    model.optimize()
    if model.status == GRB.Status.INF_OR_UNBD:
       print("\nError: model is infeasible or unbounded")
       quit()
 
    viol = model.objVal - rhs
+
    if viol > 1e-9:
       solname = prefix + "_" + consname + ".sol"
       modelfilename = prefix + "_" + consname + ".lp"

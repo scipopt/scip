@@ -1,0 +1,936 @@
+STATISTICS
+  Problem name     : t_../check/instances/Cardinality/atm_5_25_3.lp.gz
+  Variables        : 468 (162 binary, 0 integer, 5 implicit integer, 301 continuous)
+  Constraints      : 425 initial, 425 maximal
+OBJECTIVE
+  Sense            : minimize
+  Offset           : +9528
+VARIABLES
+  [binary] <t_v$ATM0$DATE0>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM0$DATE1>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM0$DATE2>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM0$DATE3>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM0$DATE4>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM0$DATE5>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM0$DATE7>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM0$DATE8>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM0$DATE9>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM0$DATE10>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM0$DATE11>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM0$DATE12>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM0$DATE13>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM0$DATE15>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM0$DATE16>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM0$DATE17>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM0$DATE18>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM0$DATE19>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM0$DATE20>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM0$DATE21>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM0$DATE22>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM0$DATE23>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM0$DATE24>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM1$DATE0>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM1$DATE1>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM1$DATE2>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM1$DATE3>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM1$DATE4>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM1$DATE5>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM1$DATE6>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM1$DATE7>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM1$DATE8>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM1$DATE9>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM1$DATE10>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM1$DATE11>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM1$DATE12>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM1$DATE13>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM1$DATE14>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM1$DATE15>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM1$DATE16>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM1$DATE17>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM1$DATE18>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM1$DATE19>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM1$DATE21>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM1$DATE23>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM1$DATE24>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM2$DATE0>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM2$DATE2>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM2$DATE3>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM2$DATE4>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM2$DATE5>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM2$DATE6>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM2$DATE7>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM2$DATE8>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM2$DATE9>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM2$DATE10>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM2$DATE11>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM2$DATE12>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM2$DATE13>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM2$DATE14>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM2$DATE15>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM2$DATE18>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM2$DATE19>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM2$DATE20>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM2$DATE21>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM2$DATE22>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM2$DATE23>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM2$DATE24>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM3$DATE0>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM3$DATE2>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM3$DATE3>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM3$DATE4>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM3$DATE5>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM3$DATE6>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM3$DATE7>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM3$DATE8>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM3$DATE9>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM3$DATE10>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM3$DATE11>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM3$DATE12>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM3$DATE13>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM3$DATE14>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM3$DATE15>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM3$DATE16>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM3$DATE17>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM3$DATE18>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM3$DATE20>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM3$DATE21>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM3$DATE22>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM3$DATE23>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM4$DATE0>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM4$DATE1>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM4$DATE2>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM4$DATE4>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM4$DATE5>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM4$DATE6>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM4$DATE7>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM4$DATE8>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM4$DATE9>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM4$DATE10>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM4$DATE11>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM4$DATE12>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM4$DATE13>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM4$DATE14>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM4$DATE15>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM4$DATE16>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM4$DATE18>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM4$DATE19>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM4$DATE21>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM4$DATE22>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM4$DATE23>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_v$ATM4$DATE24>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM0#1>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM0#2>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM0#3>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM0#4>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM0#5>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM0#6>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM0#7>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM0#8>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM0#9>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM0#10>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM1#1>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM1#2>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM1#3>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM1#4>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM1#5>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM1#6>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM1#7>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM1#8>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM1#9>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM1#10>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM2#1>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM2#2>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM2#3>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM2#4>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM2#5>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM2#6>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM2#7>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM2#8>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM2#9>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM2#10>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM3#1>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM3#2>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM3#3>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM3#4>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM3#5>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM3#6>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM3#7>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM3#8>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM3#9>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM3#10>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM4#1>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM4#2>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM4#3>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM4#4>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM4#5>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM4#6>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM4#7>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM4#8>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM4#9>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [binary] <t_y1$ATM4#10>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
+  [implicit] <t_x1$ATM0_impl>: obj=110.3, global bounds=[-0,10], local bounds=[-0,10]
+  [implicit] <t_x1$ATM1_impl>: obj=0, global bounds=[-0,10], local bounds=[-0,10]
+  [implicit] <t_x1$ATM2_impl>: obj=49.2, global bounds=[-0,10], local bounds=[-0,10]
+  [implicit] <t_x1$ATM3_impl>: obj=213.8, global bounds=[-0,10], local bounds=[-0,10]
+  [implicit] <t_x1$ATM4_impl>: obj=417.4, global bounds=[-0,10], local bounds=[-0,10]
+  [continuous] <t_fp$ATM3$DATE5>: obj=1, global bounds=[0,10835.3989547037], local bounds=[0,10835.3989547037]
+  [continuous] <t_fp$ATM3$DATE6>: obj=1, global bounds=[0,7732.57839721253], local bounds=[0,7732.57839721253]
+  [continuous] <t_fp$ATM3$DATE7>: obj=1, global bounds=[0,5424.77526132402], local bounds=[0,5424.77526132402]
+  [continuous] <t_fp$ATM3$DATE8>: obj=1, global bounds=[0,13183.3165552312], local bounds=[0,13183.3165552312]
+  [continuous] <t_fp$ATM3$DATE9>: obj=1, global bounds=[0,6029.92682926827], local bounds=[0,6029.92682926827]
+  [continuous] <t_fp$ATM3$DATE10>: obj=1, global bounds=[209.497221960635,17530], local bounds=[209.497221960635,17530]
+  [continuous] <t_fp$ATM3$DATE11>: obj=1, global bounds=[0,5821.83797909413], local bounds=[0,5821.83797909413]
+  [continuous] <t_fp$ATM3$DATE12>: obj=1, global bounds=[0,2504.6968641115], local bounds=[0,2504.6968641115]
+  [continuous] <t_fp$ATM3$DATE13>: obj=1, global bounds=[0,10390.0684151049], local bounds=[0,10390.0684151049]
+  [continuous] <t_fp$ATM3$DATE14>: obj=1, global bounds=[0,3374.51916376307], local bounds=[0,3374.51916376307]
+  [continuous] <t_fp$ATM3$DATE15>: obj=1, global bounds=[0,7256.67708823806], local bounds=[0,7256.67708823806]
+  [continuous] <t_fp$ATM3$DATE16>: obj=1, global bounds=[0,9688.33275261324], local bounds=[0,9688.33275261324]
+  [continuous] <t_fp$ATM3$DATE17>: obj=1, global bounds=[0,8511.58126942262], local bounds=[0,8511.58126942262]
+  [continuous] <t_fp$ATM3$DATE18>: obj=1, global bounds=[0,2795.55052264808], local bounds=[0,2795.55052264808]
+  [continuous] <t_fp$ATM3$DATE19>: obj=1, global bounds=[0,2298.44773519165], local bounds=[0,2298.44773519165]
+  [continuous] <t_fp$ATM3$DATE20>: obj=1, global bounds=[0,3886.8919389773], local bounds=[0,3886.8919389773]
+  [continuous] <t_fp$ATM3$DATE21>: obj=1, global bounds=[0,4444.52787456446], local bounds=[0,4444.52787456446]
+  [continuous] <t_fp$ATM3$DATE22>: obj=1, global bounds=[0,8653.9895470383], local bounds=[0,8653.9895470383]
+  [continuous] <t_fp$ATM3$DATE23>: obj=1, global bounds=[0,13524.1846689895], local bounds=[0,13524.1846689895]
+  [continuous] <t_fp$ATM4$DATE0>: obj=1, global bounds=[0,13376.8061840378], local bounds=[0,13376.8061840378]
+  [continuous] <t_fp$ATM4$DATE1>: obj=1, global bounds=[0,12345.6857124128], local bounds=[0,12345.6857124128]
+  [continuous] <t_fp$ATM4$DATE2>: obj=1, global bounds=[0,3904.70731583346], local bounds=[0,3904.70731583346]
+  [continuous] <t_fp$ATM4$DATE4>: obj=1, global bounds=[0,7738.2085160834], local bounds=[0,7738.2085160834]
+  [continuous] <t_fp$ATM4$DATE5>: obj=1, global bounds=[1241,14593], local bounds=[1241,14593]
+  [continuous] <t_fp$ATM4$DATE6>: obj=1, global bounds=[0,5159.56036232214], local bounds=[0,5159.56036232214]
+  [continuous] <t_fp$ATM4$DATE7>: obj=1, global bounds=[0,4233.04137931035], local bounds=[0,4233.04137931035]
+  [continuous] <t_fp$ATM4$DATE8>: obj=1, global bounds=[0,8272.68739631247], local bounds=[0,8272.68739631247]
+  [continuous] <t_fp$ATM4$DATE9>: obj=1, global bounds=[1207,15065], local bounds=[1207,15065]
+  [continuous] <t_fp$ATM4$DATE10>: obj=1, global bounds=[0,12310.6685538861], local bounds=[0,12310.6685538861]
+  [continuous] <t_fp$ATM4$DATE11>: obj=1, global bounds=[0,9138.18833082239], local bounds=[0,9138.18833082239]
+  [continuous] <t_fp$ATM4$DATE12>: obj=1, global bounds=[0,5873.4057812098], local bounds=[0,5873.4057812098]
+  [continuous] <t_fp$ATM4$DATE13>: obj=1, global bounds=[0,8158.48779000157], local bounds=[0,8158.48779000157]
+  [continuous] <t_fp$ATM4$DATE14>: obj=1, global bounds=[0,9218.04036263643], local bounds=[0,9218.04036263643]
+  [continuous] <t_fp$ATM4$DATE15>: obj=1, global bounds=[0,9957.13942511161], local bounds=[0,9957.13942511161]
+  [continuous] <t_fp$ATM4$DATE16>: obj=1, global bounds=[0,13148.0386487661], local bounds=[0,13148.0386487661]
+  [continuous] <t_fp$ATM4$DATE17>: obj=1, global bounds=[0,3704.06910857645], local bounds=[0,3704.06910857645]
+  [continuous] <t_fp$ATM4$DATE18>: obj=1, global bounds=[0,4994.75389808441], local bounds=[0,4994.75389808441]
+  [continuous] <t_fp$ATM4$DATE19>: obj=1, global bounds=[0,9418.56139494231], local bounds=[0,9418.56139494231]
+  [continuous] <t_fp$ATM4$DATE21>: obj=1, global bounds=[0,7978.78047416811], local bounds=[0,7978.78047416811]
+  [continuous] <t_fp$ATM4$DATE22>: obj=1, global bounds=[0,11729], local bounds=[0,11729]
+  [continuous] <t_fp$ATM4$DATE23>: obj=1, global bounds=[0,12692.7227824658], local bounds=[0,12692.7227824658]
+  [continuous] <t_fp$ATM4$DATE24>: obj=1, global bounds=[0,14905.9075590346], local bounds=[0,14905.9075590346]
+  [continuous] <t_fm$ATM0$DATE0>: obj=1, global bounds=[0,1702], local bounds=[0,1702]
+  [continuous] <t_fm$ATM0$DATE1>: obj=1, global bounds=[0,3212], local bounds=[0,3212]
+  [continuous] <t_fm$ATM0$DATE2>: obj=1, global bounds=[0,2164], local bounds=[0,2164]
+  [continuous] <t_fm$ATM0$DATE3>: obj=1, global bounds=[0,567], local bounds=[0,567]
+  [continuous] <t_fm$ATM0$DATE4>: obj=1, global bounds=[0,2042], local bounds=[0,2042]
+  [continuous] <t_fm$ATM0$DATE5>: obj=1, global bounds=[0,859], local bounds=[0,859]
+  [continuous] <t_fm$ATM0$DATE6>: obj=1, global bounds=[640.926579614673,4582], local bounds=[640.926579614673,4582]
+  [continuous] <t_fm$ATM0$DATE7>: obj=1, global bounds=[0,2775], local bounds=[0,2775]
+  [continuous] <t_fm$ATM0$DATE8>: obj=1, global bounds=[0,1962], local bounds=[0,1962]
+  [continuous] <t_fm$ATM0$DATE9>: obj=1, global bounds=[0,722], local bounds=[0,722]
+  [continuous] <t_fm$ATM0$DATE10>: obj=1, global bounds=[0,54], local bounds=[0,54]
+  [continuous] <t_fm$ATM0$DATE11>: obj=1, global bounds=[0,965], local bounds=[0,965]
+  [continuous] <t_fm$ATM0$DATE12>: obj=1, global bounds=[0,1364], local bounds=[0,1364]
+  [continuous] <t_fm$ATM0$DATE13>: obj=1, global bounds=[0,1361], local bounds=[0,1361]
+  [continuous] <t_fm$ATM0$DATE15>: obj=1, global bounds=[0,790], local bounds=[0,790]
+  [continuous] <t_fm$ATM0$DATE16>: obj=1, global bounds=[0,1556], local bounds=[0,1556]
+  [continuous] <t_fm$ATM0$DATE17>: obj=1, global bounds=[0,816], local bounds=[0,816]
+  [continuous] <t_fm$ATM0$DATE18>: obj=1, global bounds=[0,98], local bounds=[0,98]
+  [continuous] <t_fm$ATM0$DATE19>: obj=1, global bounds=[0,1104], local bounds=[0,1104]
+  [continuous] <t_fm$ATM0$DATE20>: obj=1, global bounds=[0,2414], local bounds=[0,2414]
+  [continuous] <t_fm$ATM0$DATE21>: obj=1, global bounds=[0,2368], local bounds=[0,2368]
+  [continuous] <t_fm$ATM0$DATE22>: obj=1, global bounds=[0,2460], local bounds=[0,2460]
+  [continuous] <t_fm$ATM0$DATE23>: obj=1, global bounds=[0,1098], local bounds=[0,1098]
+  [continuous] <t_fm$ATM0$DATE24>: obj=1, global bounds=[0,2244], local bounds=[0,2244]
+  [continuous] <t_fm$ATM1$DATE0>: obj=1, global bounds=[0,2966], local bounds=[0,2966]
+  [continuous] <t_fm$ATM1$DATE1>: obj=1, global bounds=[0,749], local bounds=[0,749]
+  [continuous] <t_fm$ATM1$DATE2>: obj=1, global bounds=[0,2696], local bounds=[0,2696]
+  [continuous] <t_fm$ATM1$DATE3>: obj=1, global bounds=[0,3894], local bounds=[0,3894]
+  [continuous] <t_fm$ATM1$DATE4>: obj=1, global bounds=[0,1830], local bounds=[0,1830]
+  [continuous] <t_x2$ATM0>: obj=-67, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_z$ATM0>: obj=67, global bounds=[0,3.86873323604873], local bounds=[0,3.86873323604873]
+  [continuous] <t_x3$ATM0>: obj=801, global bounds=[0,6.34013054838019], local bounds=[0,6.34013054838019]
+  [continuous] <t_x2$ATM1>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_z$ATM1>: obj=0, global bounds=[0,2.87141969439857], local bounds=[0,2.87141969439857]
+  [continuous] <t_x3$ATM1>: obj=0, global bounds=[0,5.81889808588799], local bounds=[0,5.81889808588799]
+  [continuous] <t_x2$ATM2>: obj=-2187, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_z$ATM2>: obj=2187, global bounds=[0,4.5], local bounds=[0,4.5]
+  [continuous] <t_x3$ATM2>: obj=1471, global bounds=[0,5.15043547110055], local bounds=[0,5.15043547110055]
+  [continuous] <t_x2$ATM3>: obj=-718, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_z$ATM3>: obj=718, global bounds=[0,1.41030228835107], local bounds=[0,1.41030228835107]
+  [continuous] <t_x3$ATM3>: obj=24, global bounds=[0,2.44076655052265], local bounds=[0,2.44076655052265]
+  [continuous] <t_x2$ATM4>: obj=-102, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_z$ATM4>: obj=102, global bounds=[0,2.25466632676], local bounds=[0,2.25466632676]
+  [continuous] <t_x3$ATM4>: obj=1125, global bounds=[0,4.37794084808375], local bounds=[0,4.37794084808375]
+  [continuous] <t_fp$ATM1$DATE4>: obj=1, global bounds=[0,2094.49968572405], local bounds=[0,2094.49968572405]
+  [continuous] <t_fp$ATM1$DATE5>: obj=1, global bounds=[0,9479.35851468753], local bounds=[0,9479.35851468753]
+  [continuous] <t_fp$ATM1$DATE6>: obj=1, global bounds=[0,16468], local bounds=[0,16468]
+  [continuous] <t_fp$ATM1$DATE7>: obj=1, global bounds=[0,9319.57251189823], local bounds=[0,9319.57251189823]
+  [continuous] <t_fp$ATM1$DATE8>: obj=1, global bounds=[0,7984.88784249182], local bounds=[0,7984.88784249182]
+  [continuous] <t_fp$ATM1$DATE9>: obj=1, global bounds=[0,6709.93010676689], local bounds=[0,6709.93010676689]
+  [continuous] <t_fp$ATM1$DATE10>: obj=1, global bounds=[0,8246.25153061103], local bounds=[0,8246.25153061103]
+  [continuous] <t_fp$ATM1$DATE11>: obj=1, global bounds=[0,11385], local bounds=[0,11385]
+  [continuous] <t_fp$ATM1$DATE12>: obj=1, global bounds=[0,6615.54359028121], local bounds=[0,6615.54359028121]
+  [continuous] <t_fp$ATM1$DATE13>: obj=1, global bounds=[0,14941], local bounds=[0,14941]
+  [continuous] <t_fp$ATM1$DATE14>: obj=1, global bounds=[0,7734.03174341017], local bounds=[0,7734.03174341017]
+  [continuous] <t_fp$ATM1$DATE15>: obj=1, global bounds=[0,4648.04750129971], local bounds=[0,4648.04750129971]
+  [continuous] <t_fp$ATM1$DATE16>: obj=1, global bounds=[0,17168.5127676944], local bounds=[0,17168.5127676944]
+  [continuous] <t_fp$ATM1$DATE17>: obj=1, global bounds=[0,16346], local bounds=[0,16346]
+  [continuous] <t_fp$ATM1$DATE18>: obj=1, global bounds=[0,14894], local bounds=[0,14894]
+  [continuous] <t_fp$ATM1$DATE19>: obj=1, global bounds=[0,19883], local bounds=[0,19883]
+  [continuous] <t_fp$ATM1$DATE20>: obj=1, global bounds=[0,2437.00005690777], local bounds=[0,2437.00005690777]
+  [continuous] <t_fp$ATM1$DATE21>: obj=1, global bounds=[0,5556.19710866124], local bounds=[0,5556.19710866124]
+  [continuous] <t_fp$ATM1$DATE22>: obj=1, global bounds=[0,1906.42751964315], local bounds=[0,1906.42751964315]
+  [continuous] <t_fp$ATM1$DATE23>: obj=1, global bounds=[0,7850.22954107017], local bounds=[0,7850.22954107017]
+  [continuous] <t_fp$ATM1$DATE24>: obj=1, global bounds=[0,15198.1627905966], local bounds=[0,15198.1627905966]
+  [continuous] <t_fp$ATM2$DATE0>: obj=1, global bounds=[0,7850.19044730649], local bounds=[0,7850.19044730649]
+  [continuous] <t_fp$ATM2$DATE2>: obj=1, global bounds=[0,14704], local bounds=[0,14704]
+  [continuous] <t_fp$ATM2$DATE3>: obj=1, global bounds=[1188,7693], local bounds=[1188,7693]
+  [continuous] <t_fp$ATM2$DATE4>: obj=1, global bounds=[177,9107], local bounds=[177,9107]
+  [continuous] <t_fp$ATM2$DATE5>: obj=1, global bounds=[0,6138.66587490103], local bounds=[0,6138.66587490103]
+  [continuous] <t_fp$ATM2$DATE6>: obj=1, global bounds=[0,9899.6971496437], local bounds=[0,9899.6971496437]
+  [continuous] <t_fp$ATM2$DATE7>: obj=1, global bounds=[0,13014.4877276326], local bounds=[0,13014.4877276326]
+  [continuous] <t_fp$ATM2$DATE8>: obj=1, global bounds=[0,6464.60845283245], local bounds=[0,6464.60845283245]
+  [continuous] <t_fp$ATM2$DATE9>: obj=1, global bounds=[0,5842.25019794141], local bounds=[0,5842.25019794141]
+  [continuous] <t_fp$ATM2$DATE10>: obj=1, global bounds=[0,17530], local bounds=[0,17530]
+  [continuous] <t_fp$ATM2$DATE11>: obj=1, global bounds=[0,4659.69675376089], local bounds=[0,4659.69675376089]
+  [continuous] <t_fp$ATM2$DATE12>: obj=1, global bounds=[0,7731.60728424386], local bounds=[0,7731.60728424386]
+  [continuous] <t_fp$ATM2$DATE13>: obj=1, global bounds=[0,9360.6001389808], local bounds=[0,9360.6001389808]
+  [continuous] <t_fp$ATM2$DATE14>: obj=1, global bounds=[0,10088.3792557403], local bounds=[0,10088.3792557403]
+  [continuous] <t_fp$ATM2$DATE15>: obj=1, global bounds=[0,14854.6112430721], local bounds=[0,14854.6112430721]
+  [continuous] <t_fp$ATM2$DATE18>: obj=1, global bounds=[0,14894], local bounds=[0,14894]
+  [continuous] <t_fp$ATM2$DATE19>: obj=1, global bounds=[0,6976.67537608868], local bounds=[0,6976.67537608868]
+  [continuous] <t_fp$ATM2$DATE20>: obj=1, global bounds=[0,7285.71258907364], local bounds=[0,7285.71258907364]
+  [continuous] <t_fp$ATM2$DATE21>: obj=1, global bounds=[0,14698.317293093], local bounds=[0,14698.317293093]
+  [continuous] <t_fp$ATM2$DATE22>: obj=1, global bounds=[0,11729], local bounds=[0,11729]
+  [continuous] <t_fp$ATM2$DATE23>: obj=1, global bounds=[0,13432.7046714173], local bounds=[0,13432.7046714173]
+  [continuous] <t_fp$ATM2$DATE24>: obj=1, global bounds=[0,6012.47053344182], local bounds=[0,6012.47053344182]
+  [continuous] <t_fp$ATM3$DATE0>: obj=1, global bounds=[0,8620.65863075619], local bounds=[0,8620.65863075619]
+  [continuous] <t_fp$ATM3$DATE1>: obj=1, global bounds=[0,2604.06742631132], local bounds=[0,2604.06742631132]
+  [continuous] <t_fp$ATM3$DATE2>: obj=1, global bounds=[0,6998.40959600716], local bounds=[0,6998.40959600716]
+  [continuous] <t_fp$ATM3$DATE3>: obj=1, global bounds=[0,6505], local bounds=[0,6505]
+  [continuous] <t_y2$ATM0#1>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM0#2>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM0#3>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM0#4>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM0#5>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM0#6>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM0#7>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM0#8>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM0#9>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM0#10>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM1#1>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM1#2>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM1#3>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM1#4>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM1#5>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM1#6>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM1#7>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM1#8>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM1#9>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM1#10>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM2#1>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM2#2>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM2#3>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM2#4>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM2#5>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM2#6>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM2#7>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM2#8>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM2#9>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM2#10>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM3#1>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM3#2>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM3#3>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM3#4>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM3#5>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM3#6>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM3#7>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM3#8>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM3#9>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM3#10>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM4#1>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM4#2>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM4#3>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM4#4>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM4#5>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM4#6>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM4#7>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM4#8>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM4#9>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_y2$ATM4#10>: obj=0, global bounds=[0,1], local bounds=[0,1]
+  [continuous] <t_fp$ATM1$DATE3>: obj=1, global bounds=[0,4953.49625970483], local bounds=[0,4953.49625970483]
+  [continuous] <t_fm$ATM1$DATE5>: obj=1, global bounds=[0,1849], local bounds=[0,1849]
+  [continuous] <t_fm$ATM1$DATE6>: obj=1, global bounds=[0,941], local bounds=[0,941]
+  [continuous] <t_fm$ATM1$DATE7>: obj=1, global bounds=[0,1236], local bounds=[0,1236]
+  [continuous] <t_fm$ATM1$DATE8>: obj=1, global bounds=[0,2811], local bounds=[0,2811]
+  [continuous] <t_fm$ATM1$DATE9>: obj=1, global bounds=[0,2839], local bounds=[0,2839]
+  [continuous] <t_fm$ATM1$DATE10>: obj=1, global bounds=[0,2246], local bounds=[0,2246]
+  [continuous] <t_fm$ATM1$DATE11>: obj=1, global bounds=[0,2890], local bounds=[0,2890]
+  [continuous] <t_fm$ATM1$DATE12>: obj=1, global bounds=[0,3762], local bounds=[0,3762]
+  [continuous] <t_fm$ATM1$DATE13>: obj=1, global bounds=[0,255], local bounds=[0,255]
+  [continuous] <t_fm$ATM1$DATE14>: obj=1, global bounds=[0,792], local bounds=[0,792]
+  [continuous] <t_fm$ATM1$DATE15>: obj=1, global bounds=[0,3300], local bounds=[0,3300]
+  [continuous] <t_fm$ATM1$DATE16>: obj=1, global bounds=[0,2018], local bounds=[0,2018]
+  [continuous] <t_fm$ATM1$DATE17>: obj=1, global bounds=[0,1582], local bounds=[0,1582]
+  [continuous] <t_fm$ATM1$DATE18>: obj=1, global bounds=[0,2742], local bounds=[0,2742]
+  [continuous] <t_fm$ATM1$DATE19>: obj=1, global bounds=[0,2647], local bounds=[0,2647]
+  [continuous] <t_fm$ATM1$DATE20>: obj=1, global bounds=[338.999943092225,2776], local bounds=[338.999943092225,2776]
+  [continuous] <t_fm$ATM1$DATE21>: obj=1, global bounds=[0,1465], local bounds=[0,1465]
+  [continuous] <t_fm$ATM1$DATE22>: obj=1, global bounds=[1887.57248035685,3794], local bounds=[1887.57248035685,3794]
+  [continuous] <t_fm$ATM1$DATE23>: obj=1, global bounds=[0,2328], local bounds=[0,2328]
+  [continuous] <t_fm$ATM1$DATE24>: obj=1, global bounds=[0,810], local bounds=[0,810]
+  [continuous] <t_fm$ATM2$DATE0>: obj=1, global bounds=[0,3357], local bounds=[0,3357]
+  [continuous] <t_fm$ATM2$DATE2>: obj=1, global bounds=[0,2121], local bounds=[0,2121]
+  [continuous] <t_fm$ATM2$DATE3>: obj=1, global bounds=[0,257], local bounds=[0,257]
+  [continuous] <t_fm$ATM2$DATE4>: obj=1, global bounds=[0,413], local bounds=[0,413]
+  [continuous] <t_fm$ATM2$DATE5>: obj=1, global bounds=[0,1767], local bounds=[0,1767]
+  [continuous] <t_fm$ATM2$DATE6>: obj=1, global bounds=[0,319], local bounds=[0,319]
+  [continuous] <t_fm$ATM2$DATE7>: obj=1, global bounds=[0,3459], local bounds=[0,3459]
+  [continuous] <t_fm$ATM2$DATE8>: obj=1, global bounds=[0,2927], local bounds=[0,2927]
+  [continuous] <t_fm$ATM2$DATE9>: obj=1, global bounds=[0,1797], local bounds=[0,1797]
+  [continuous] <t_fm$ATM2$DATE10>: obj=1, global bounds=[0,2237], local bounds=[0,2237]
+  [continuous] <t_fm$ATM2$DATE11>: obj=1, global bounds=[0,302], local bounds=[0,302]
+  [continuous] <t_fm$ATM2$DATE12>: obj=1, global bounds=[0,1222], local bounds=[0,1222]
+  [continuous] <t_fm$ATM2$DATE13>: obj=1, global bounds=[0,3310], local bounds=[0,3310]
+  [continuous] <t_fm$ATM2$DATE14>: obj=1, global bounds=[0,5239], local bounds=[0,5239]
+  [continuous] <t_fm$ATM2$DATE15>: obj=1, global bounds=[0,1736], local bounds=[0,1736]
+  [continuous] <t_fm$ATM2$DATE18>: obj=1, global bounds=[0,1369], local bounds=[0,1369]
+  [continuous] <t_fm$ATM2$DATE19>: obj=1, global bounds=[0,1196], local bounds=[0,1196]
+  [continuous] <t_fm$ATM2$DATE20>: obj=1, global bounds=[0,1667], local bounds=[0,1667]
+  [continuous] <t_fm$ATM2$DATE21>: obj=1, global bounds=[0,419], local bounds=[0,419]
+  [continuous] <t_fm$ATM2$DATE22>: obj=1, global bounds=[0,1793], local bounds=[0,1793]
+  [continuous] <t_fm$ATM2$DATE23>: obj=1, global bounds=[0,2292], local bounds=[0,2292]
+  [continuous] <t_fm$ATM2$DATE24>: obj=1, global bounds=[0,2638], local bounds=[0,2638]
+  [continuous] <t_fm$ATM3$DATE0>: obj=1, global bounds=[0,1172], local bounds=[0,1172]
+  [continuous] <t_fm$ATM3$DATE1>: obj=1, global bounds=[1825.93257368868,4430], local bounds=[1825.93257368868,4430]
+  [continuous] <t_fm$ATM3$DATE2>: obj=1, global bounds=[0,2052], local bounds=[0,2052]
+  [continuous] <t_fm$ATM3$DATE3>: obj=1, global bounds=[0,1648], local bounds=[0,1648]
+  [continuous] <t_fm$ATM3$DATE4>: obj=1, global bounds=[0,2064], local bounds=[0,2064]
+  [continuous] <t_fm$ATM3$DATE5>: obj=1, global bounds=[0,314], local bounds=[0,314]
+  [continuous] <t_fm$ATM3$DATE6>: obj=1, global bounds=[0,1664], local bounds=[0,1664]
+  [continuous] <t_fm$ATM3$DATE7>: obj=1, global bounds=[0,3158], local bounds=[0,3158]
+  [continuous] <t_fm$ATM3$DATE8>: obj=1, global bounds=[0,980], local bounds=[0,980]
+  [continuous] <t_fm$ATM3$DATE9>: obj=1, global bounds=[0,1068], local bounds=[0,1068]
+  [continuous] <t_fm$ATM3$DATE10>: obj=1, global bounds=[0,1240], local bounds=[0,1240]
+  [continuous] <t_fm$ATM3$DATE11>: obj=1, global bounds=[0,1775], local bounds=[0,1775]
+  [continuous] <t_fm$ATM3$DATE12>: obj=1, global bounds=[0,750], local bounds=[0,750]
+  [continuous] <t_fm$ATM3$DATE13>: obj=1, global bounds=[0,3155], local bounds=[0,3155]
+  [continuous] <t_fm$ATM3$DATE14>: obj=1, global bounds=[0,172], local bounds=[0,172]
+  [continuous] <t_fm$ATM3$DATE15>: obj=1, global bounds=[0,1898], local bounds=[0,1898]
+  [continuous] <t_fm$ATM3$DATE16>: obj=1, global bounds=[0,357], local bounds=[0,357]
+  [continuous] <t_fm$ATM3$DATE17>: obj=1, global bounds=[0,2150], local bounds=[0,2150]
+  [continuous] <t_fm$ATM3$DATE18>: obj=1, global bounds=[0,880], local bounds=[0,880]
+  [continuous] <t_fm$ATM3$DATE19>: obj=1, global bounds=[0,2293], local bounds=[0,2293]
+  [continuous] <t_fm$ATM3$DATE20>: obj=1, global bounds=[0,1820], local bounds=[0,1820]
+  [continuous] <t_fm$ATM3$DATE21>: obj=1, global bounds=[0,1526], local bounds=[0,1526]
+  [continuous] <t_fm$ATM3$DATE22>: obj=1, global bounds=[0,1384], local bounds=[0,1384]
+  [continuous] <t_fm$ATM3$DATE23>: obj=1, global bounds=[0,356], local bounds=[0,356]
+  [continuous] <t_fm$ATM4$DATE0>: obj=1, global bounds=[0,1391], local bounds=[0,1391]
+  [continuous] <t_fm$ATM4$DATE1>: obj=1, global bounds=[0,2567], local bounds=[0,2567]
+  [continuous] <t_fm$ATM4$DATE2>: obj=1, global bounds=[0,349], local bounds=[0,349]
+  [continuous] <t_fm$ATM4$DATE4>: obj=1, global bounds=[0,1861], local bounds=[0,1861]
+  [continuous] <t_fm$ATM4$DATE5>: obj=1, global bounds=[0,775], local bounds=[0,775]
+  [continuous] <t_fm$ATM4$DATE6>: obj=1, global bounds=[0,1446], local bounds=[0,1446]
+  [continuous] <t_fm$ATM4$DATE7>: obj=1, global bounds=[0,2506], local bounds=[0,2506]
+  [continuous] <t_fm$ATM4$DATE8>: obj=1, global bounds=[0,3773], local bounds=[0,3773]
+  [continuous] <t_fm$ATM4$DATE9>: obj=1, global bounds=[0,897], local bounds=[0,897]
+  [continuous] <t_fm$ATM4$DATE10>: obj=1, global bounds=[0,100], local bounds=[0,100]
+  [continuous] <t_fm$ATM4$DATE11>: obj=1, global bounds=[0,3354], local bounds=[0,3354]
+  [continuous] <t_fm$ATM4$DATE12>: obj=1, global bounds=[0,3522], local bounds=[0,3522]
+  [continuous] <t_fm$ATM4$DATE13>: obj=1, global bounds=[0,1889], local bounds=[0,1889]
+  [continuous] <t_fm$ATM4$DATE14>: obj=1, global bounds=[0,2330], local bounds=[0,2330]
+  [continuous] <t_fm$ATM4$DATE15>: obj=1, global bounds=[0,3320], local bounds=[0,3320]
+  [continuous] <t_fm$ATM4$DATE16>: obj=1, global bounds=[0,1743], local bounds=[0,1743]
+  [continuous] <t_fm$ATM4$DATE17>: obj=1, global bounds=[0,3530], local bounds=[0,3530]
+  [continuous] <t_fm$ATM4$DATE18>: obj=1, global bounds=[0,1879], local bounds=[0,1879]
+  [continuous] <t_fm$ATM4$DATE19>: obj=1, global bounds=[0,1114], local bounds=[0,1114]
+  [continuous] <t_fm$ATM4$DATE21>: obj=1, global bounds=[0,5140], local bounds=[0,5140]
+  [continuous] <t_fm$ATM4$DATE22>: obj=1, global bounds=[0,2061], local bounds=[0,2061]
+  [continuous] <t_fm$ATM4$DATE23>: obj=1, global bounds=[0,2349], local bounds=[0,2349]
+  [continuous] <t_fm$ATM4$DATE24>: obj=1, global bounds=[0,617], local bounds=[0,617]
+  [continuous] <t_fp$ATM0$DATE0>: obj=1, global bounds=[0,13610.9633159644], local bounds=[0,13610.9633159644]
+  [continuous] <t_fp$ATM0$DATE1>: obj=1, global bounds=[0,13222], local bounds=[0,13222]
+  [continuous] <t_fp$ATM0$DATE2>: obj=1, global bounds=[0,9983.55143612102], local bounds=[0,9983.55143612102]
+  [continuous] <t_fp$ATM0$DATE3>: obj=1, global bounds=[0,6505], local bounds=[0,6505]
+  [continuous] <t_fp$ATM0$DATE4>: obj=1, global bounds=[0,7989.74391651063], local bounds=[0,7989.74391651063]
+  [continuous] <t_fp$ATM0$DATE5>: obj=1, global bounds=[0,13352], local bounds=[0,13352]
+  [continuous] <t_fp$ATM0$DATE6>: obj=1, global bounds=[0,3941.07342038533], local bounds=[0,3941.07342038533]
+  [continuous] <t_fp$ATM0$DATE7>: obj=1, global bounds=[0,9544.02125334736], local bounds=[0,9544.02125334736]
+  [continuous] <t_fp$ATM0$DATE8>: obj=1, global bounds=[0,8667.92913067818], local bounds=[0,8667.92913067818]
+  [continuous] <t_fp$ATM0$DATE9>: obj=1, global bounds=[232,14090], local bounds=[232,14090]
+  [continuous] <t_fp$ATM0$DATE10>: obj=1, global bounds=[0,17530], local bounds=[0,17530]
+  [continuous] <t_fp$ATM0$DATE11>: obj=1, global bounds=[0,11385], local bounds=[0,11385]
+  [continuous] <t_fp$ATM0$DATE12>: obj=1, global bounds=[0,9884.55877292814], local bounds=[0,9884.55877292814]
+  [continuous] <t_fp$ATM0$DATE13>: obj=1, global bounds=[0,14941], local bounds=[0,14941]
+  [continuous] <t_fp$ATM0$DATE15>: obj=1, global bounds=[0,6821.39168806142], local bounds=[0,6821.39168806142]
+  [continuous] <t_fp$ATM0$DATE16>: obj=1, global bounds=[0,4907.08809399957], local bounds=[0,4907.08809399957]
+  [continuous] <t_fp$ATM0$DATE17>: obj=1, global bounds=[0,16346], local bounds=[0,16346]
+  [continuous] <t_fp$ATM0$DATE18>: obj=1, global bounds=[912,15806], local bounds=[912,15806]
+  [continuous] <t_fp$ATM0$DATE19>: obj=1, global bounds=[0,15208.1672324158], local bounds=[0,15208.1672324158]
+  [continuous] <t_fp$ATM0$DATE20>: obj=1, global bounds=[0,5895.94945173826], local bounds=[0,5895.94945173826]
+  [continuous] <t_fp$ATM0$DATE21>: obj=1, global bounds=[0,8800.37033947909], local bounds=[0,8800.37033947909]
+  [continuous] <t_fp$ATM0$DATE22>: obj=1, global bounds=[0,11729], local bounds=[0,11729]
+  [continuous] <t_fp$ATM0$DATE23>: obj=1, global bounds=[0,10974.992715507], local bounds=[0,10974.992715507]
+  [continuous] <t_fp$ATM0$DATE24>: obj=1, global bounds=[0,11299.307431812], local bounds=[0,11299.307431812]
+  [continuous] <t_fp$ATM1$DATE0>: obj=1, global bounds=[0,12443.1706081139], local bounds=[0,12443.1706081139]
+  [continuous] <t_fp$ATM1$DATE1>: obj=1, global bounds=[0,9314.086782208], local bounds=[0,9314.086782208]
+  [continuous] <t_fp$ATM1$DATE2>: obj=1, global bounds=[0,14704], local bounds=[0,14704]
+  [continuous] <t_fp$ATM3$DATE4>: obj=1, global bounds=[0,8930], local bounds=[0,8930]
+FIXED
+  [continuous] <t_fp$ATM2$DATE1>: obj=0, global bounds=[526,+inf], local bounds=[526,+inf], aggregated: 1363 -325<t_x2$ATM2> +325<t_z$ATM2> +326<t_x3$ATM2> -51.2<t_x1$ATM2_impl>
+  [continuous] <t_fp$ATM2$DATE17>: obj=0, global bounds=[184,+inf], local bounds=[184,+inf], aggregated: 981 -30<t_x2$ATM2> +30<t_z$ATM2> +2<t_x3$ATM2> -76.7<t_x1$ATM2_impl>
+  [continuous] <t_fp$ATM4$DATE3>: obj=0, global bounds=[390,+inf], local bounds=[390,+inf], aggregated: 654 -264<t_x2$ATM4> +264<t_z$ATM4> +317<t_x3$ATM4> +60.3<t_x1$ATM4_impl>
+  [continuous] <t_x1$ATM0>: obj=0, global bounds=[0,1], local bounds=[0,1], aggregated: +0.1<t_x1$ATM0_impl>
+  [continuous] <t_x1$ATM1>: obj=0, global bounds=[0,1], local bounds=[0,1], aggregated: +0.1<t_x1$ATM1_impl>
+  [continuous] <t_x1$ATM2>: obj=0, global bounds=[0,1], local bounds=[0,1], aggregated: +0.1<t_x1$ATM2_impl>
+  [continuous] <t_x1$ATM3>: obj=0, global bounds=[0,1], local bounds=[0,1], aggregated: +0.1<t_x1$ATM3_impl>
+  [continuous] <t_x1$ATM4>: obj=0, global bounds=[0,1], local bounds=[0,1], aggregated: +0.1<t_x1$ATM4_impl>
+  [continuous] <t_fp$ATM0$DATE14>: obj=0, global bounds=[56,7840.63642384694], local bounds=[56,7840.63642384694], aggregated: 123 -67<t_x2$ATM0> +67<t_z$ATM0> +801<t_x3$ATM0> +110.3<t_x1$ATM0_impl>
+  [continuous] <t_fp$ATM2$DATE16>: obj=0, global bounds=[913,21075], local bounds=[913,21075], aggregated: 2745 -1832<t_x2$ATM2> +1832<t_z$ATM2> +1143<t_x3$ATM2> +177.1<t_x1$ATM2_impl>
+  [continuous] <t_fp$ATM3$DATE24>: obj=0, global bounds=[1861,6395.17544024861], local bounds=[1861,6395.17544024861], aggregated: 2579 -718<t_x2$ATM3> +718<t_z$ATM3> +24<t_x3$ATM3> +213.8<t_x1$ATM3_impl>
+  [continuous] <t_fp$ATM4$DATE20>: obj=0, global bounds=[675.616909127009,11599.4906403941], local bounds=[675.616909127009,11599.4906403941], aggregated: 1083 +162<t_x2$ATM4> -162<t_z$ATM4> +808<t_x3$ATM4> +357.1<t_x1$ATM4_impl>
+  [binary] <t_v$ATM1$DATE20>: obj=0, global bounds=[1,1], local bounds=[1,1], fixed:1
+  [binary] <t_v$ATM1$DATE22>: obj=0, global bounds=[1,1], local bounds=[1,1], fixed:1
+  [continuous] <t_fm$ATM4$DATE3>: obj=0, global bounds=[0,0], local bounds=[0,0], fixed:0
+  [continuous] <t_fm$ATM2$DATE17>: obj=0, global bounds=[0,0], local bounds=[0,0], fixed:0
+  [continuous] <t_fm$ATM2$DATE1>: obj=0, global bounds=[0,0], local bounds=[0,0], fixed:0
+  [binary] <t_v$ATM0$DATE6>: obj=0, global bounds=[1,1], local bounds=[1,1], fixed:1
+  [binary] <t_v$ATM3$DATE1>: obj=0, global bounds=[1,1], local bounds=[1,1], fixed:1
+  [continuous] <t_fm$ATM4$DATE20>: obj=0, global bounds=[0,0], local bounds=[0,0], fixed:0
+  [continuous] <t_fm$ATM3$DATE24>: obj=0, global bounds=[0,0], local bounds=[0,0], fixed:0
+  [continuous] <t_fm$ATM2$DATE16>: obj=0, global bounds=[0,0], local bounds=[0,0], fixed:0
+  [continuous] <t_fm$ATM0$DATE14>: obj=0, global bounds=[0,0], local bounds=[0,0], fixed:0
+  [binary] <t_v$ATM4$DATE3>: obj=0, global bounds=[-0,-0], local bounds=[-0,-0], fixed:-0
+  [binary] <t_v$ATM2$DATE17>: obj=0, global bounds=[-0,-0], local bounds=[-0,-0], fixed:-0
+  [binary] <t_v$ATM2$DATE1>: obj=0, global bounds=[-0,-0], local bounds=[-0,-0], fixed:-0
+  [binary] <t_v$ATM4$DATE20>: obj=0, global bounds=[-0,-0], local bounds=[-0,-0], fixed:-0
+  [binary] <t_v$ATM3$DATE24>: obj=0, global bounds=[-0,-0], local bounds=[-0,-0], fixed:-0
+  [binary] <t_v$ATM2$DATE16>: obj=0, global bounds=[-0,-0], local bounds=[-0,-0], fixed:-0
+  [binary] <t_v$ATM0$DATE14>: obj=0, global bounds=[-0,-0], local bounds=[-0,-0], fixed:-0
+  [binary] <t_v$ATM3$DATE19>: obj=0, global bounds=[1,1], local bounds=[1,1], fixed:1
+  [binary] <t_v$ATM4$DATE17>: obj=0, global bounds=[1,1], local bounds=[1,1], fixed:1
+CONSTRAINTS
+  [cardinality] <cons_count_1>: <t_fm$ATM0$DATE0> (0.00), <t_fm$ATM0$DATE1> (1.00), <t_fm$ATM0$DATE2> (2.00), <t_fm$ATM0$DATE3> (3.00), <t_fm$ATM0$DATE4> (4.00), <t_fm$ATM0$DATE5> (5.00), <t_fm$ATM0$DATE7> (6.00), <t_fm$ATM0$DATE8> (7.00), <t_fm$ATM0$DATE9> (8.00), <t_fm$ATM0$DATE10> (9.00), <t_fm$ATM0$DATE11> (10.00), <t_fm$ATM0$DATE12> (11.00), <t_fm$ATM0$DATE13> (12.00), <t_fm$ATM0$DATE15> (13.00), <t_fm$ATM0$DATE16> (14.00), <t_fm$ATM0$DATE17> (15.00), <t_fm$ATM0$DATE18> (16.00), <t_fm$ATM0$DATE19> (17.00), <t_fm$ATM0$DATE20> (18.00), <t_fm$ATM0$DATE21> (19.00), <t_fm$ATM0$DATE22> (20.00), <t_fm$ATM0$DATE23> (21.00), <t_fm$ATM0$DATE24> (22.00) <= 5;
+  [cardinality] <cons_count_5>: <t_fm$ATM4$DATE0> (0.00), <t_fm$ATM4$DATE1> (1.00), <t_fm$ATM4$DATE2> (2.00), <t_fm$ATM4$DATE4> (3.00), <t_fm$ATM4$DATE5> (4.00), <t_fm$ATM4$DATE6> (5.00), <t_fm$ATM4$DATE7> (6.00), <t_fm$ATM4$DATE8> (7.00), <t_fm$ATM4$DATE9> (8.00), <t_fm$ATM4$DATE10> (9.00), <t_fm$ATM4$DATE11> (10.00), <t_fm$ATM4$DATE12> (11.00), <t_fm$ATM4$DATE13> (12.00), <t_fm$ATM4$DATE14> (13.00), <t_fm$ATM4$DATE15> (14.00), <t_fm$ATM4$DATE16> (15.00), <t_fm$ATM4$DATE18> (17.00), <t_fm$ATM4$DATE19> (18.00), <t_fm$ATM4$DATE21> (19.00), <t_fm$ATM4$DATE22> (20.00), <t_fm$ATM4$DATE23> (21.00), <t_fm$ATM4$DATE24> (22.00) <= 8;
+  [cardinality] <cons_count_3>: <t_fm$ATM2$DATE0> (0.00), <t_fm$ATM2$DATE2> (1.00), <t_fm$ATM2$DATE3> (2.00), <t_fm$ATM2$DATE4> (3.00), <t_fm$ATM2$DATE5> (4.00), <t_fm$ATM2$DATE6> (5.00), <t_fm$ATM2$DATE7> (6.00), <t_fm$ATM2$DATE8> (7.00), <t_fm$ATM2$DATE9> (8.00), <t_fm$ATM2$DATE10> (9.00), <t_fm$ATM2$DATE11> (10.00), <t_fm$ATM2$DATE12> (11.00), <t_fm$ATM2$DATE13> (12.00), <t_fm$ATM2$DATE14> (13.00), <t_fm$ATM2$DATE15> (14.00), <t_fm$ATM2$DATE18> (15.00), <t_fm$ATM2$DATE19> (16.00), <t_fm$ATM2$DATE20> (17.00), <t_fm$ATM2$DATE21> (18.00), <t_fm$ATM2$DATE22> (19.00), <t_fm$ATM2$DATE23> (20.00), <t_fm$ATM2$DATE24> (21.00) <= 10;
+  [cardinality] <cons_count_4>: <t_fm$ATM3$DATE0> (0.00), <t_fm$ATM3$DATE2> (1.00), <t_fm$ATM3$DATE3> (2.00), <t_fm$ATM3$DATE4> (3.00), <t_fm$ATM3$DATE5> (4.00), <t_fm$ATM3$DATE6> (5.00), <t_fm$ATM3$DATE7> (6.00), <t_fm$ATM3$DATE8> (7.00), <t_fm$ATM3$DATE9> (8.00), <t_fm$ATM3$DATE10> (9.00), <t_fm$ATM3$DATE11> (10.00), <t_fm$ATM3$DATE12> (11.00), <t_fm$ATM3$DATE13> (12.00), <t_fm$ATM3$DATE14> (13.00), <t_fm$ATM3$DATE15> (14.00), <t_fm$ATM3$DATE16> (15.00), <t_fm$ATM3$DATE17> (16.00), <t_fm$ATM3$DATE18> (17.00), <t_fm$ATM3$DATE20> (19.00), <t_fm$ATM3$DATE21> (20.00), <t_fm$ATM3$DATE22> (21.00), <t_fm$ATM3$DATE23> (22.00) <= 9;
+  [cardinality] <cons_count_2>: <t_fm$ATM1$DATE0> (0.00), <t_fm$ATM1$DATE1> (1.00), <t_fm$ATM1$DATE2> (2.00), <t_fm$ATM1$DATE3> (3.00), <t_fm$ATM1$DATE4> (4.00), <t_fm$ATM1$DATE5> (5.00), <t_fm$ATM1$DATE6> (6.00), <t_fm$ATM1$DATE7> (7.00), <t_fm$ATM1$DATE8> (8.00), <t_fm$ATM1$DATE9> (9.00), <t_fm$ATM1$DATE10> (10.00), <t_fm$ATM1$DATE11> (11.00), <t_fm$ATM1$DATE12> (12.00), <t_fm$ATM1$DATE13> (13.00), <t_fm$ATM1$DATE14> (14.00), <t_fm$ATM1$DATE15> (15.00), <t_fm$ATM1$DATE16> (16.00), <t_fm$ATM1$DATE17> (17.00), <t_fm$ATM1$DATE18> (18.00), <t_fm$ATM1$DATE19> (19.00), <t_fm$ATM1$DATE21> (20.00), <t_fm$ATM1$DATE23> (21.00), <t_fm$ATM1$DATE24> (22.00) <= 7;
+  [varbound] <cons_link_76>: <t_fm$ATM3$DATE0>[C] -1172<t_v$ATM3$DATE0>[B] <= 0;
+  [varbound] <cons_link_92>: <t_fm$ATM3$DATE16>[C] -357<t_v$ATM3$DATE16>[B] <= 0;
+  [varbound] <cons_link_56>: <t_fm$ATM2$DATE5>[C] -1767<t_v$ATM2$DATE5>[B] <= 0;
+  [varbound] <cons_link_102>: <t_fm$ATM4$DATE1>[C] -2567<t_v$ATM4$DATE1>[B] <= 0;
+  [varbound] <cons_link_17>: <t_fm$ATM0$DATE16>[C] -1556<t_v$ATM0$DATE16>[B] <= 0;
+  [varbound] <cons_link_113>: <t_fm$ATM4$DATE12>[C] -3522<t_v$ATM4$DATE12>[B] <= 0;
+  [varbound] <cons_linearize1_2>: <t_y2$ATM0#2>[C] -1<t_y1$ATM0#2>[B] <= 0;
+  [varbound] <cons_linearize1_26>: <t_y2$ATM2#6>[C] -1<t_y1$ATM2#6>[B] <= 0;
+  [varbound] <cons_linearize1_27>: <t_y2$ATM2#7>[C] -1<t_y1$ATM2#7>[B] <= 0;
+  [varbound] <cons_linearize1_28>: <t_y2$ATM2#8>[C] -1<t_y1$ATM2#8>[B] <= 0;
+  [varbound] <cons_linearize1_21>: <t_y2$ATM2#1>[C] -1<t_y1$ATM2#1>[B] <= 0;
+  [varbound] <cons_link_97>: <t_fm$ATM3$DATE21>[C] -1526<t_v$ATM3$DATE21>[B] <= 0;
+  [varbound] <cons_linearize1_9>: <t_y2$ATM0#9>[C] -1<t_y1$ATM0#9>[B] <= 0;
+  [varbound] <cons_linearize1_31>: <t_y2$ATM3#1>[C] -1<t_y1$ATM3#1>[B] <= 0;
+  [varbound] <cons_linearize1_1>: <t_y2$ATM0#1>[C] -1<t_y1$ATM0#1>[B] <= 0;
+  [varbound] <cons_linearize1_41>: <t_y2$ATM4#1>[C] -1<t_y1$ATM4#1>[B] <= 0;
+  [varbound] <cons_linearize1_30>: <t_y2$ATM2#10>[C] -1<t_y1$ATM2#10>[B] <= 0;
+  [varbound] <cons_linearize1_36>: <t_y2$ATM3#6>[C] -1<t_y1$ATM3#6>[B] <= 0;
+  [varbound] <cons_link_1>: <t_fm$ATM0$DATE0>[C] -1702<t_v$ATM0$DATE0>[B] <= 0;
+  [varbound] <cons_link_34>: <t_fm$ATM1$DATE8>[C] -2811<t_v$ATM1$DATE8>[B] <= 0;
+  [varbound] <cons_linearize1_32>: <t_y2$ATM3#2>[C] -1<t_y1$ATM3#2>[B] <= 0;
+  [varbound] <cons_link_125>: <t_fm$ATM4$DATE24>[C] -617<t_v$ATM4$DATE24>[B] <= 0;
+  [varbound] <cons_linearize1_45>: <t_y2$ATM4#5>[C] -1<t_y1$ATM4#5>[B] <= 0;
+  [varbound] <cons_link_116>: <t_fm$ATM4$DATE15>[C] -3320<t_v$ATM4$DATE15>[B] <= 0;
+  [varbound] <cons_linearize1_25>: <t_y2$ATM2#5>[C] -1<t_y1$ATM2#5>[B] <= 0;
+  [varbound] <cons_linearize1_12>: <t_y2$ATM1#2>[C] -1<t_y1$ATM1#2>[B] <= 0;
+  [varbound] <cons_link_114>: <t_fm$ATM4$DATE13>[C] -1889<t_v$ATM4$DATE13>[B] <= 0;
+  [varbound] <cons_linearize1_37>: <t_y2$ATM3#7>[C] -1<t_y1$ATM3#7>[B] <= 0;
+  [varbound] <cons_linearize1_8>: <t_y2$ATM0#8>[C] -1<t_y1$ATM0#8>[B] <= 0;
+  [varbound] <cons_linearize1_22>: <t_y2$ATM2#2>[C] -1<t_y1$ATM2#2>[B] <= 0;
+  [varbound] <cons_link_108>: <t_fm$ATM4$DATE7>[C] -2506<t_v$ATM4$DATE7>[B] <= 0;
+  [varbound] <cons_linearize1_33>: <t_y2$ATM3#3>[C] -1<t_y1$ATM3#3>[B] <= 0;
+  [varbound] <cons_linearize1_24>: <t_y2$ATM2#4>[C] -1<t_y1$ATM2#4>[B] <= 0;
+  [varbound] <cons_link_42>: <t_fm$ATM1$DATE16>[C] -2018<t_v$ATM1$DATE16>[B] <= 0;
+  [varbound] <cons_linearize1_3>: <t_y2$ATM0#3>[C] -1<t_y1$ATM0#3>[B] <= 0;
+  [varbound] <cons_linearize1_6>: <t_y2$ATM0#6>[C] -1<t_y1$ATM0#6>[B] <= 0;
+  [varbound] <cons_linearize1_39>: <t_y2$ATM3#9>[C] -1<t_y1$ATM3#9>[B] <= 0;
+  [varbound] <cons_link_32>: <t_fm$ATM1$DATE6>[C] -941<t_v$ATM1$DATE6>[B] <= 0;
+  [varbound] <cons_link_36>: <t_fm$ATM1$DATE10>[C] -2246<t_v$ATM1$DATE10>[B] <= 0;
+  [varbound] <cons_link_88>: <t_fm$ATM3$DATE12>[C] -750<t_v$ATM3$DATE12>[B] <= 0;
+  [varbound] <cons_link_23>: <t_fm$ATM0$DATE22>[C] -2460<t_v$ATM0$DATE22>[B] <= 0;
+  [varbound] <cons_link_12>: <t_fm$ATM0$DATE11>[C] -965<t_v$ATM0$DATE11>[B] <= 0;
+  [varbound] <cons_link_14>: <t_fm$ATM0$DATE13>[C] -1361<t_v$ATM0$DATE13>[B] <= 0;
+  [varbound] <cons_link_63>: <t_fm$ATM2$DATE12>[C] -1222<t_v$ATM2$DATE12>[B] <= 0;
+  [varbound] <cons_link_96>: <t_fm$ATM3$DATE20>[C] -1820<t_v$ATM3$DATE20>[B] <= 0;
+  [varbound] <cons_link_70>: <t_fm$ATM2$DATE19>[C] -1196<t_v$ATM2$DATE19>[B] <= 0;
+  [varbound] <cons_link_120>: <t_fm$ATM4$DATE19>[C] -1114<t_v$ATM4$DATE19>[B] <= 0;
+  [varbound] <cons_link_99>: <t_fm$ATM3$DATE23>[C] -356<t_v$ATM3$DATE23>[B] <= 0;
+  [varbound] <cons_linearize1_43>: <t_y2$ATM4#3>[C] -1<t_y1$ATM4#3>[B] <= 0;
+  [varbound] <cons_linearize1_29>: <t_y2$ATM2#9>[C] -1<t_y1$ATM2#9>[B] <= 0;
+  [varbound] <cons_link_98>: <t_fm$ATM3$DATE22>[C] -1384<t_v$ATM3$DATE22>[B] <= 0;
+  [varbound] <cons_linearize1_46>: <t_y2$ATM4#6>[C] -1<t_y1$ATM4#6>[B] <= 0;
+  [varbound] <cons_link_93>: <t_fm$ATM3$DATE17>[C] -2150<t_v$ATM3$DATE17>[B] <= 0;
+  [varbound] <cons_linearize1_11>: <t_y2$ATM1#1>[C] -1<t_y1$ATM1#1>[B] <= 0;
+  [varbound] <cons_linearize1_23>: <t_y2$ATM2#3>[C] -1<t_y1$ATM2#3>[B] <= 0;
+  [varbound] <cons_link_60>: <t_fm$ATM2$DATE9>[C] -1797<t_v$ATM2$DATE9>[B] <= 0;
+  [varbound] <cons_link_28>: <t_fm$ATM1$DATE2>[C] -2696<t_v$ATM1$DATE2>[B] <= 0;
+  [varbound] <cons_link_45>: <t_fm$ATM1$DATE19>[C] -2647<t_v$ATM1$DATE19>[B] <= 0;
+  [varbound] <cons_link_3>: <t_fm$ATM0$DATE2>[C] -2164<t_v$ATM0$DATE2>[B] <= 0;
+  [varbound] <cons_link_51>: <t_fm$ATM2$DATE0>[C] -3357<t_v$ATM2$DATE0>[B] <= 0;
+  [varbound] <cons_link_30>: <t_fm$ATM1$DATE4>[C] -1830<t_v$ATM1$DATE4>[B] <= 0;
+  [varbound] <cons_link_47>: <t_fm$ATM1$DATE21>[C] -1465<t_v$ATM1$DATE21>[B] <= 0;
+  [varbound] <cons_link_103>: <t_fm$ATM4$DATE2>[C] -349<t_v$ATM4$DATE2>[B] <= 0;
+  [varbound] <cons_link_119>: <t_fm$ATM4$DATE18>[C] -1879<t_v$ATM4$DATE18>[B] <= 0;
+  [varbound] <cons_link_22>: <t_fm$ATM0$DATE21>[C] -2368<t_v$ATM0$DATE21>[B] <= 0;
+  [varbound] <cons_link_86>: <t_fm$ATM3$DATE10>[C] -1240<t_v$ATM3$DATE10>[B] <= 0;
+  [varbound] <cons_link_61>: <t_fm$ATM2$DATE10>[C] -2237<t_v$ATM2$DATE10>[B] <= 0;
+  [varbound] <cons_link_35>: <t_fm$ATM1$DATE9>[C] -2839<t_v$ATM1$DATE9>[B] <= 0;
+  [varbound] <cons_link_123>: <t_fm$ATM4$DATE22>[C] -2061<t_v$ATM4$DATE22>[B] <= 0;
+  [varbound] <cons_link_87>: <t_fm$ATM3$DATE11>[C] -1775<t_v$ATM3$DATE11>[B] <= 0;
+  [varbound] <cons_link_124>: <t_fm$ATM4$DATE23>[C] -2349<t_v$ATM4$DATE23>[B] <= 0;
+  [varbound] <cons_link_84>: <t_fm$ATM3$DATE8>[C] -980<t_v$ATM3$DATE8>[B] <= 0;
+  [varbound] <cons_link_115>: <t_fm$ATM4$DATE14>[C] -2330<t_v$ATM4$DATE14>[B] <= 0;
+  [varbound] <cons_link_81>: <t_fm$ATM3$DATE5>[C] -314<t_v$ATM3$DATE5>[B] <= 0;
+  [varbound] <cons_link_90>: <t_fm$ATM3$DATE14>[C] -172<t_v$ATM3$DATE14>[B] <= 0;
+  [varbound] <cons_link_105>: <t_fm$ATM4$DATE4>[C] -1861<t_v$ATM4$DATE4>[B] <= 0;
+  [varbound] <cons_link_111>: <t_fm$ATM4$DATE10>[C] -100<t_v$ATM4$DATE10>[B] <= 0;
+  [varbound] <cons_link_122>: <t_fm$ATM4$DATE21>[C] -5140<t_v$ATM4$DATE21>[B] <= 0;
+  [varbound] <cons_link_107>: <t_fm$ATM4$DATE6>[C] -1446<t_v$ATM4$DATE6>[B] <= 0;
+  [varbound] <cons_link_110>: <t_fm$ATM4$DATE9>[C] -897<t_v$ATM4$DATE9>[B] <= 0;
+  [varbound] <cons_link_11>: <t_fm$ATM0$DATE10>[C] -54<t_v$ATM0$DATE10>[B] <= 0;
+  [varbound] <cons_link_4>: <t_fm$ATM0$DATE3>[C] -567<t_v$ATM0$DATE3>[B] <= 0;
+  [varbound] <cons_link_25>: <t_fm$ATM0$DATE24>[C] -2244<t_v$ATM0$DATE24>[B] <= 0;
+  [varbound] <cons_link_89>: <t_fm$ATM3$DATE13>[C] -3155<t_v$ATM3$DATE13>[B] <= 0;
+  [varbound] <cons_link_24>: <t_fm$ATM0$DATE23>[C] -1098<t_v$ATM0$DATE23>[B] <= 0;
+  [varbound] <cons_link_117>: <t_fm$ATM4$DATE16>[C] -1743<t_v$ATM4$DATE16>[B] <= 0;
+  [varbound] <cons_linearize1_34>: <t_y2$ATM3#4>[C] -1<t_y1$ATM3#4>[B] <= 0;
+  [varbound] <cons_link_83>: <t_fm$ATM3$DATE7>[C] -3158<t_v$ATM3$DATE7>[B] <= 0;
+  [varbound] <cons_link_10>: <t_fm$ATM0$DATE9>[C] -722<t_v$ATM0$DATE9>[B] <= 0;
+  [varbound] <cons_link_43>: <t_fm$ATM1$DATE17>[C] -1582<t_v$ATM1$DATE17>[B] <= 0;
+  [varbound] <cons_link_2>: <t_fm$ATM0$DATE1>[C] -3212<t_v$ATM0$DATE1>[B] <= 0;
+  [varbound] <cons_link_39>: <t_fm$ATM1$DATE13>[C] -255<t_v$ATM1$DATE13>[B] <= 0;
+  [varbound] <cons_link_20>: <t_fm$ATM0$DATE19>[C] -1104<t_v$ATM0$DATE19>[B] <= 0;
+  [varbound] <cons_link_57>: <t_fm$ATM2$DATE6>[C] -319<t_v$ATM2$DATE6>[B] <= 0;
+  [varbound] <cons_link_112>: <t_fm$ATM4$DATE11>[C] -3354<t_v$ATM4$DATE11>[B] <= 0;
+  [varbound] <cons_link_94>: <t_fm$ATM3$DATE18>[C] -880<t_v$ATM3$DATE18>[B] <= 0;
+  [varbound] <cons_link_53>: <t_fm$ATM2$DATE2>[C] -2121<t_v$ATM2$DATE2>[B] <= 0;
+  [varbound] <cons_link_6>: <t_fm$ATM0$DATE5>[C] -859<t_v$ATM0$DATE5>[B] <= 0;
+  [varbound] <cons_link_73>: <t_fm$ATM2$DATE22>[C] -1793<t_v$ATM2$DATE22>[B] <= 0;
+  [varbound] <cons_link_50>: <t_fm$ATM1$DATE24>[C] -810<t_v$ATM1$DATE24>[B] <= 0;
+  [varbound] <cons_link_65>: <t_fm$ATM2$DATE14>[C] -5239<t_v$ATM2$DATE14>[B] <= 0;
+  [varbound] <cons_link_9>: <t_fm$ATM0$DATE8>[C] -1962<t_v$ATM0$DATE8>[B] <= 0;
+  [varbound] <cons_linearize1_4>: <t_y2$ATM0#4>[C] -1<t_y1$ATM0#4>[B] <= 0;
+  [varbound] <cons_link_59>: <t_fm$ATM2$DATE8>[C] -2927<t_v$ATM2$DATE8>[B] <= 0;
+  [varbound] <cons_link_106>: <t_fm$ATM4$DATE5>[C] -775<t_v$ATM4$DATE5>[B] <= 0;
+  [varbound] <cons_link_44>: <t_fm$ATM1$DATE18>[C] -2742<t_v$ATM1$DATE18>[B] <= 0;
+  [varbound] <cons_link_33>: <t_fm$ATM1$DATE7>[C] -1236<t_v$ATM1$DATE7>[B] <= 0;
+  [varbound] <cons_link_82>: <t_fm$ATM3$DATE6>[C] -1664<t_v$ATM3$DATE6>[B] <= 0;
+  [varbound] <cons_link_29>: <t_fm$ATM1$DATE3>[C] -3894<t_v$ATM1$DATE3>[B] <= 0;
+  [varbound] <cons_link_80>: <t_fm$ATM3$DATE4>[C] -2064<t_v$ATM3$DATE4>[B] <= 0;
+  [varbound] <cons_link_58>: <t_fm$ATM2$DATE7>[C] -3459<t_v$ATM2$DATE7>[B] <= 0;
+  [varbound] <cons_linearize1_50>: <t_y2$ATM4#10>[C] -1<t_y1$ATM4#10>[B] <= 0;
+  [varbound] <cons_link_41>: <t_fm$ATM1$DATE15>[C] -3300<t_v$ATM1$DATE15>[B] <= 0;
+  [varbound] <cons_link_75>: <t_fm$ATM2$DATE24>[C] -2638<t_v$ATM2$DATE24>[B] <= 0;
+  [varbound] <cons_link_109>: <t_fm$ATM4$DATE8>[C] -3773<t_v$ATM4$DATE8>[B] <= 0;
+  [varbound] <cons_link_49>: <t_fm$ATM1$DATE23>[C] -2328<t_v$ATM1$DATE23>[B] <= 0;
+  [varbound] <cons_link_66>: <t_fm$ATM2$DATE15>[C] -1736<t_v$ATM2$DATE15>[B] <= 0;
+  [varbound] <cons_link_64>: <t_fm$ATM2$DATE13>[C] -3310<t_v$ATM2$DATE13>[B] <= 0;
+  [varbound] <cons_linearize1_35>: <t_y2$ATM3#5>[C] -1<t_y1$ATM3#5>[B] <= 0;
+  [varbound] <cons_link_16>: <t_fm$ATM0$DATE15>[C] -790<t_v$ATM0$DATE15>[B] <= 0;
+  [varbound] <cons_link_8>: <t_fm$ATM0$DATE7>[C] -2775<t_v$ATM0$DATE7>[B] <= 0;
+  [varbound] <cons_link_71>: <t_fm$ATM2$DATE20>[C] -1667<t_v$ATM2$DATE20>[B] <= 0;
+  [varbound] <cons_linearize1_40>: <t_y2$ATM3#10>[C] -1<t_y1$ATM3#10>[B] <= 0;
+  [varbound] <cons_link_18>: <t_fm$ATM0$DATE17>[C] -816<t_v$ATM0$DATE17>[B] <= 0;
+  [varbound] <cons_linearize1_38>: <t_y2$ATM3#8>[C] -1<t_y1$ATM3#8>[B] <= 0;
+  [varbound] <cons_link_21>: <t_fm$ATM0$DATE20>[C] -2414<t_v$ATM0$DATE20>[B] <= 0;
+  [varbound] <cons_link_37>: <t_fm$ATM1$DATE11>[C] -2890<t_v$ATM1$DATE11>[B] <= 0;
+  [varbound] <cons_link_85>: <t_fm$ATM3$DATE9>[C] -1068<t_v$ATM3$DATE9>[B] <= 0;
+  [varbound] <cons_link_13>: <t_fm$ATM0$DATE12>[C] -1364<t_v$ATM0$DATE12>[B] <= 0;
+  [varbound] <cons_link_38>: <t_fm$ATM1$DATE12>[C] -3762<t_v$ATM1$DATE12>[B] <= 0;
+  [varbound] <cons_link_19>: <t_fm$ATM0$DATE18>[C] -98<t_v$ATM0$DATE18>[B] <= 0;
+  [varbound] <cons_link_72>: <t_fm$ATM2$DATE21>[C] -419<t_v$ATM2$DATE21>[B] <= 0;
+  [varbound] <cons_link_54>: <t_fm$ATM2$DATE3>[C] -257<t_v$ATM2$DATE3>[B] <= 0;
+  [varbound] <cons_link_62>: <t_fm$ATM2$DATE11>[C] -302<t_v$ATM2$DATE11>[B] <= 0;
+  [varbound] <cons_link_27>: <t_fm$ATM1$DATE1>[C] -749<t_v$ATM1$DATE1>[B] <= 0;
+  [varbound] <cons_link_79>: <t_fm$ATM3$DATE3>[C] -1648<t_v$ATM3$DATE3>[B] <= 0;
+  [varbound] <cons_linearize1_49>: <t_y2$ATM4#9>[C] -1<t_y1$ATM4#9>[B] <= 0;
+  [varbound] <cons_link_91>: <t_fm$ATM3$DATE15>[C] -1898<t_v$ATM3$DATE15>[B] <= 0;
+  [varbound] <cons_link_101>: <t_fm$ATM4$DATE0>[C] -1391<t_v$ATM4$DATE0>[B] <= 0;
+  [varbound] <cons_link_40>: <t_fm$ATM1$DATE14>[C] -792<t_v$ATM1$DATE14>[B] <= 0;
+  [varbound] <cons_link_74>: <t_fm$ATM2$DATE23>[C] -2292<t_v$ATM2$DATE23>[B] <= 0;
+  [varbound] <cons_link_55>: <t_fm$ATM2$DATE4>[C] -413<t_v$ATM2$DATE4>[B] <= 0;
+  [varbound] <cons_linearize1_44>: <t_y2$ATM4#4>[C] -1<t_y1$ATM4#4>[B] <= 0;
+  [varbound] <cons_link_69>: <t_fm$ATM2$DATE18>[C] -1369<t_v$ATM2$DATE18>[B] <= 0;
+  [varbound] <cons_link_5>: <t_fm$ATM0$DATE4>[C] -2042<t_v$ATM0$DATE4>[B] <= 0;
+  [varbound] <cons_linearize1_47>: <t_y2$ATM4#7>[C] -1<t_y1$ATM4#7>[B] <= 0;
+  [varbound] <cons_link_78>: <t_fm$ATM3$DATE2>[C] -2052<t_v$ATM3$DATE2>[B] <= 0;
+  [varbound] <cons_linearize1_48>: <t_y2$ATM4#8>[C] -1<t_y1$ATM4#8>[B] <= 0;
+  [varbound] <cons_linearize1_42>: <t_y2$ATM4#2>[C] -1<t_y1$ATM4#2>[B] <= 0;
+  [varbound] <cons_link_31>: <t_fm$ATM1$DATE5>[C] -1849<t_v$ATM1$DATE5>[B] <= 0;
+  [varbound] <cons_linearize1_5>: <t_y2$ATM0#5>[C] -1<t_y1$ATM0#5>[B] <= 0;
+  [varbound] <cons_linearize1_7>: <t_y2$ATM0#7>[C] -1<t_y1$ATM0#7>[B] <= 0;
+  [varbound] <cons_linearize1_10>: <t_y2$ATM0#10>[C] -1<t_y1$ATM0#10>[B] <= 0;
+  [varbound] <cons_linearize1_20>: <t_y2$ATM1#10>[C] -1<t_y1$ATM1#10>[B] <= 0;
+  [varbound] <cons_linearize1_19>: <t_y2$ATM1#9>[C] -1<t_y1$ATM1#9>[B] <= 0;
+  [varbound] <cons_linearize1_18>: <t_y2$ATM1#8>[C] -1<t_y1$ATM1#8>[B] <= 0;
+  [varbound] <cons_linearize1_17>: <t_y2$ATM1#7>[C] -1<t_y1$ATM1#7>[B] <= 0;
+  [varbound] <cons_linearize1_16>: <t_y2$ATM1#6>[C] -1<t_y1$ATM1#6>[B] <= 0;
+  [varbound] <cons_linearize1_15>: <t_y2$ATM1#5>[C] -1<t_y1$ATM1#5>[B] <= 0;
+  [varbound] <cons_linearize1_14>: <t_y2$ATM1#4>[C] -1<t_y1$ATM1#4>[B] <= 0;
+  [varbound] <cons_linearize1_13>: <t_y2$ATM1#3>[C] -1<t_y1$ATM1#3>[B] <= 0;
+  [varbound] <cons_link_26>: <t_fm$ATM1$DATE0>[C] -2966<t_v$ATM1$DATE0>[B] <= 0;
+  [setppc] <cons_y1choice_3>:  +<t_y1$ATM2#1>[B] +<t_y1$ATM2#2>[B] +<t_y1$ATM2#3>[B] +<t_y1$ATM2#4>[B] +<t_y1$ATM2#5>[B] +<t_y1$ATM2#6>[B] +<t_y1$ATM2#7>[B] +<t_y1$ATM2#8>[B] +<t_y1$ATM2#9>[B] +<t_y1$ATM2#10>[B] <= 1;
+  [setppc] <cons_y1choice_2>:  +<t_y1$ATM1#1>[B] +<t_y1$ATM1#2>[B] +<t_y1$ATM1#3>[B] +<t_y1$ATM1#4>[B] +<t_y1$ATM1#5>[B] +<t_y1$ATM1#6>[B] +<t_y1$ATM1#7>[B] +<t_y1$ATM1#8>[B] +<t_y1$ATM1#9>[B] +<t_y1$ATM1#10>[B] <= 1;
+  [setppc] <cons_y1choice_4>:  +<t_y1$ATM3#1>[B] +<t_y1$ATM3#2>[B] +<t_y1$ATM3#3>[B] +<t_y1$ATM3#4>[B] +<t_y1$ATM3#5>[B] +<t_y1$ATM3#6>[B] +<t_y1$ATM3#7>[B] +<t_y1$ATM3#8>[B] +<t_y1$ATM3#9>[B] +<t_y1$ATM3#10>[B] <= 1;
+  [setppc] <cons_y1choice_5>:  +<t_y1$ATM4#1>[B] +<t_y1$ATM4#2>[B] +<t_y1$ATM4#3>[B] +<t_y1$ATM4#4>[B] +<t_y1$ATM4#5>[B] +<t_y1$ATM4#6>[B] +<t_y1$ATM4#7>[B] +<t_y1$ATM4#8>[B] +<t_y1$ATM4#9>[B] +<t_y1$ATM4#10>[B] <= 1;
+  [setppc] <cons_y1choice_1>:  +<t_y1$ATM0#1>[B] +<t_y1$ATM0#2>[B] +<t_y1$ATM0#3>[B] +<t_y1$ATM0#4>[B] +<t_y1$ATM0#5>[B] +<t_y1$ATM0#6>[B] +<t_y1$ATM0#7>[B] +<t_y1$ATM0#8>[B] +<t_y1$ATM0#9>[B] +<t_y1$ATM0#10>[B] <= 1;
+  [linear] <cons_budget_1>: <t_fp$ATM4$DATE0>[C] -<t_fm$ATM0$DATE0>[C] -<t_fm$ATM1$DATE0>[C] +<t_fp$ATM2$DATE0>[C] +<t_fp$ATM3$DATE0>[C] -<t_fm$ATM2$DATE0>[C] -<t_fm$ATM3$DATE0>[C] -<t_fm$ATM4$DATE0>[C] +<t_fp$ATM0$DATE0>[C] +<t_fp$ATM1$DATE0>[C] <= 7516;
+  [linear] <cons_budget_2>: <t_fp$ATM4$DATE1>[C] -<t_fm$ATM0$DATE1>[C] -<t_fm$ATM1$DATE1>[C] -325<t_x2$ATM2>[C] +325<t_z$ATM2>[C] +326<t_x3$ATM2>[C] +<t_fp$ATM3$DATE1>[C] -<t_fm$ATM3$DATE1>[C] -<t_fm$ATM4$DATE1>[C] +<t_fp$ATM0$DATE1>[C] +<t_fp$ATM1$DATE1>[C] -51.2<t_x1$ATM2_impl>[M] <= 1427;
+  [linear] <cons_budget_3>: <t_fp$ATM4$DATE2>[C] -<t_fm$ATM0$DATE2>[C] -<t_fm$ATM1$DATE2>[C] +<t_fp$ATM2$DATE2>[C] +<t_fp$ATM3$DATE2>[C] -<t_fm$ATM2$DATE2>[C] -<t_fm$ATM3$DATE2>[C] -<t_fm$ATM4$DATE2>[C] +<t_fp$ATM0$DATE2>[C] +<t_fp$ATM1$DATE2>[C] <= 5322;
+  [linear] <cons_budget_4>:  -<t_fm$ATM0$DATE3>[C] -<t_fm$ATM1$DATE3>[C] -264<t_x2$ATM4>[C] +264<t_z$ATM4>[C] +317<t_x3$ATM4>[C] +<t_fp$ATM2$DATE3>[C] +<t_fp$ATM3$DATE3>[C] +<t_fp$ATM1$DATE3>[C] -<t_fm$ATM2$DATE3>[C] -<t_fm$ATM3$DATE3>[C] +<t_fp$ATM0$DATE3>[C] +60.3<t_x1$ATM4_impl>[M] <= 1063;
+  [linear] <cons_budget_5>: <t_fp$ATM4$DATE4>[C] -<t_fm$ATM0$DATE4>[C] -<t_fm$ATM1$DATE4>[C] +<t_fp$ATM1$DATE4>[C] +<t_fp$ATM2$DATE4>[C] -<t_fm$ATM2$DATE4>[C] -<t_fm$ATM3$DATE4>[C] -<t_fm$ATM4$DATE4>[C] +<t_fp$ATM0$DATE4>[C] +<t_fp$ATM3$DATE4>[C] <= 897;
+  [linear] <cons_budget_6>: <t_fp$ATM3$DATE5>[C] +<t_fp$ATM4$DATE5>[C] -<t_fm$ATM0$DATE5>[C] +<t_fp$ATM1$DATE5>[C] +<t_fp$ATM2$DATE5>[C] -<t_fm$ATM1$DATE5>[C] -<t_fm$ATM2$DATE5>[C] -<t_fm$ATM3$DATE5>[C] -<t_fm$ATM4$DATE5>[C] +<t_fp$ATM0$DATE5>[C] <= 9029;
+  [linear] <cons_budget_7>: <t_fp$ATM3$DATE6>[C] +<t_fp$ATM4$DATE6>[C] -<t_fm$ATM0$DATE6>[C] +<t_fp$ATM1$DATE6>[C] +<t_fp$ATM2$DATE6>[C] -<t_fm$ATM1$DATE6>[C] -<t_fm$ATM2$DATE6>[C] -<t_fm$ATM3$DATE6>[C] -<t_fm$ATM4$DATE6>[C] +<t_fp$ATM0$DATE6>[C] <= 7516;
+  [linear] <cons_budget_8>: <t_fp$ATM3$DATE7>[C] +<t_fp$ATM4$DATE7>[C] -<t_fm$ATM0$DATE7>[C] +<t_fp$ATM1$DATE7>[C] +<t_fp$ATM2$DATE7>[C] -<t_fm$ATM1$DATE7>[C] -<t_fm$ATM2$DATE7>[C] -<t_fm$ATM3$DATE7>[C] -<t_fm$ATM4$DATE7>[C] +<t_fp$ATM0$DATE7>[C] <= 7516;
+  [linear] <cons_budget_9>: <t_fp$ATM3$DATE8>[C] +<t_fp$ATM4$DATE8>[C] -<t_fm$ATM0$DATE8>[C] +<t_fp$ATM1$DATE8>[C] +<t_fp$ATM2$DATE8>[C] -<t_fm$ATM1$DATE8>[C] -<t_fm$ATM2$DATE8>[C] -<t_fm$ATM3$DATE8>[C] -<t_fm$ATM4$DATE8>[C] +<t_fp$ATM0$DATE8>[C] <= 7516;
+  [linear] <cons_budget_10>: <t_fp$ATM3$DATE9>[C] +<t_fp$ATM4$DATE9>[C] -<t_fm$ATM0$DATE9>[C] +<t_fp$ATM1$DATE9>[C] +<t_fp$ATM2$DATE9>[C] -<t_fm$ATM1$DATE9>[C] -<t_fm$ATM2$DATE9>[C] -<t_fm$ATM3$DATE9>[C] -<t_fm$ATM4$DATE9>[C] +<t_fp$ATM0$DATE9>[C] <= 7974;
+  [linear] <cons_budget_11>: <t_fp$ATM3$DATE10>[C] +<t_fp$ATM4$DATE10>[C] -<t_fm$ATM0$DATE10>[C] +<t_fp$ATM1$DATE10>[C] +<t_fp$ATM2$DATE10>[C] -<t_fm$ATM1$DATE10>[C] -<t_fm$ATM2$DATE10>[C] -<t_fm$ATM3$DATE10>[C] -<t_fm$ATM4$DATE10>[C] +<t_fp$ATM0$DATE10>[C] <= 11653;
+  [linear] <cons_budget_12>: <t_fp$ATM3$DATE11>[C] +<t_fp$ATM4$DATE11>[C] -<t_fm$ATM0$DATE11>[C] +<t_fp$ATM1$DATE11>[C] +<t_fp$ATM2$DATE11>[C] -<t_fm$ATM1$DATE11>[C] -<t_fm$ATM2$DATE11>[C] -<t_fm$ATM3$DATE11>[C] -<t_fm$ATM4$DATE11>[C] +<t_fp$ATM0$DATE11>[C] <= 2099;
+  [linear] <cons_budget_13>: <t_fp$ATM3$DATE12>[C] +<t_fp$ATM4$DATE12>[C] -<t_fm$ATM0$DATE12>[C] +<t_fp$ATM1$DATE12>[C] +<t_fp$ATM2$DATE12>[C] -<t_fm$ATM1$DATE12>[C] -<t_fm$ATM2$DATE12>[C] -<t_fm$ATM3$DATE12>[C] -<t_fm$ATM4$DATE12>[C] +<t_fp$ATM0$DATE12>[C] <= 1874;
+  [linear] <cons_budget_14>: <t_fp$ATM3$DATE13>[C] +<t_fp$ATM4$DATE13>[C] -<t_fm$ATM0$DATE13>[C] +<t_fp$ATM1$DATE13>[C] +<t_fp$ATM2$DATE13>[C] -<t_fm$ATM1$DATE13>[C] -<t_fm$ATM2$DATE13>[C] -<t_fm$ATM3$DATE13>[C] -<t_fm$ATM4$DATE13>[C] +<t_fp$ATM0$DATE13>[C] <= 4971;
+  [linear] <cons_budget_15>: <t_fp$ATM3$DATE14>[C] +<t_fp$ATM4$DATE14>[C] -67<t_x2$ATM0>[C] +67<t_z$ATM0>[C] +801<t_x3$ATM0>[C] +<t_fp$ATM1$DATE14>[C] +<t_fp$ATM2$DATE14>[C] -<t_fm$ATM1$DATE14>[C] -<t_fm$ATM2$DATE14>[C] -<t_fm$ATM3$DATE14>[C] -<t_fm$ATM4$DATE14>[C] +110.3<t_x1$ATM0_impl>[M] <= 1522;
+  [linear] <cons_budget_16>: <t_fp$ATM3$DATE15>[C] +<t_fp$ATM4$DATE15>[C] -<t_fm$ATM0$DATE15>[C] +<t_fp$ATM1$DATE15>[C] +<t_fp$ATM2$DATE15>[C] -<t_fm$ATM1$DATE15>[C] -<t_fm$ATM2$DATE15>[C] -<t_fm$ATM3$DATE15>[C] -<t_fm$ATM4$DATE15>[C] +<t_fp$ATM0$DATE15>[C] <= 7516;
+  [linear] <cons_budget_17>: <t_fp$ATM3$DATE16>[C] +<t_fp$ATM4$DATE16>[C] -<t_fm$ATM0$DATE16>[C] -1832<t_x2$ATM2>[C] +1832<t_z$ATM2>[C] +1143<t_x3$ATM2>[C] +<t_fp$ATM1$DATE16>[C] -<t_fm$ATM1$DATE16>[C] -<t_fm$ATM3$DATE16>[C] -<t_fm$ATM4$DATE16>[C] +<t_fp$ATM0$DATE16>[C] +177.1<t_x1$ATM2_impl>[M] <= 12241;
+  [linear] <cons_budget_18>:  +10<t_fp$ATM3$DATE17>[C] +10<t_fp$ATM4$DATE17>[C] -10<t_fm$ATM0$DATE17>[C] -300<t_x2$ATM2>[C] +300<t_z$ATM2>[C] +20<t_x3$ATM2>[C] +10<t_fp$ATM1$DATE17>[C] -10<t_fm$ATM1$DATE17>[C] -10<t_fm$ATM3$DATE17>[C] -10<t_fm$ATM4$DATE17>[C] +10<t_fp$ATM0$DATE17>[C] -767<t_x1$ATM2_impl>[M] <= 74710;
+  [linear] <cons_budget_19>: <t_fp$ATM3$DATE18>[C] +<t_fp$ATM4$DATE18>[C] -<t_fm$ATM0$DATE18>[C] +<t_fp$ATM1$DATE18>[C] +<t_fp$ATM2$DATE18>[C] -<t_fm$ATM1$DATE18>[C] -<t_fm$ATM2$DATE18>[C] -<t_fm$ATM3$DATE18>[C] -<t_fm$ATM4$DATE18>[C] +<t_fp$ATM0$DATE18>[C] <= 8838;
+  [linear] <cons_budget_20>: <t_fp$ATM3$DATE19>[C] +<t_fp$ATM4$DATE19>[C] -<t_fm$ATM0$DATE19>[C] +<t_fp$ATM1$DATE19>[C] +<t_fp$ATM2$DATE19>[C] -<t_fm$ATM1$DATE19>[C] -<t_fm$ATM2$DATE19>[C] -<t_fm$ATM3$DATE19>[C] -<t_fm$ATM4$DATE19>[C] +<t_fp$ATM0$DATE19>[C] <= 11529;
+  [linear] <cons_budget_21>: <t_fp$ATM3$DATE20>[C] -<t_fm$ATM0$DATE20>[C] +162<t_x2$ATM4>[C] -162<t_z$ATM4>[C] +808<t_x3$ATM4>[C] +<t_fp$ATM1$DATE20>[C] +<t_fp$ATM2$DATE20>[C] -<t_fm$ATM1$DATE20>[C] -<t_fm$ATM2$DATE20>[C] -<t_fm$ATM3$DATE20>[C] +<t_fp$ATM0$DATE20>[C] +357.1<t_x1$ATM4_impl>[M] <= 6433;
+  [linear] <cons_budget_22>: <t_fp$ATM3$DATE21>[C] +<t_fp$ATM4$DATE21>[C] -<t_fm$ATM0$DATE21>[C] +<t_fp$ATM1$DATE21>[C] +<t_fp$ATM2$DATE21>[C] -<t_fm$ATM1$DATE21>[C] -<t_fm$ATM2$DATE21>[C] -<t_fm$ATM3$DATE21>[C] -<t_fm$ATM4$DATE21>[C] +<t_fp$ATM0$DATE21>[C] <= 7516;
+  [linear] <cons_budget_23>: <t_fp$ATM3$DATE22>[C] +<t_fp$ATM4$DATE22>[C] -<t_fm$ATM0$DATE22>[C] +<t_fp$ATM1$DATE22>[C] +<t_fp$ATM2$DATE22>[C] -<t_fm$ATM1$DATE22>[C] -<t_fm$ATM2$DATE22>[C] -<t_fm$ATM3$DATE22>[C] -<t_fm$ATM4$DATE22>[C] +<t_fp$ATM0$DATE22>[C] <= 237;
+  [linear] <cons_budget_24>: <t_fp$ATM3$DATE23>[C] +<t_fp$ATM4$DATE23>[C] -<t_fm$ATM0$DATE23>[C] +<t_fp$ATM1$DATE23>[C] +<t_fp$ATM2$DATE23>[C] -<t_fm$ATM1$DATE23>[C] -<t_fm$ATM2$DATE23>[C] -<t_fm$ATM3$DATE23>[C] -<t_fm$ATM4$DATE23>[C] +<t_fp$ATM0$DATE23>[C] <= 9497;
+  [linear] <cons_budget_25>: <t_fp$ATM4$DATE24>[C] -<t_fm$ATM0$DATE24>[C] -718<t_x2$ATM3>[C] +718<t_z$ATM3>[C] +24<t_x3$ATM3>[C] +<t_fp$ATM1$DATE24>[C] +<t_fp$ATM2$DATE24>[C] -<t_fm$ATM1$DATE24>[C] -<t_fm$ATM2$DATE24>[C] -<t_fm$ATM4$DATE24>[C] +<t_fp$ATM0$DATE24>[C] +213.8<t_x1$ATM3_impl>[M] <= 12454;
+  [linear] <cons_fdefine_1>: <t_fm$ATM0$DATE0>[C] +3161<t_x2$ATM0>[C] -3161<t_z$ATM0>[C] +485<t_x3$ATM0>[C] -<t_fp$ATM0$DATE0>[C] +732.7<t_x1$ATM0_impl>[M] == 1654;
+  [linear] <cons_fdefine_2>:  -<t_fm$ATM0$DATE1>[C] +2971<t_x2$ATM0>[C] -2971<t_z$ATM0>[C] -936<t_x3$ATM0>[C] +<t_fp$ATM0$DATE1>[C] -84.1<t_x1$ATM0_impl>[M] == 620;
+  [linear] <cons_fdefine_3>:  -<t_fm$ATM0$DATE2>[C] -83<t_x2$ATM0>[C] +83<t_z$ATM0>[C] -1160<t_x3$ATM0>[C] +<t_fp$ATM0$DATE2>[C] +178.3<t_x1$ATM0_impl>[M] == 382;
+  [linear] <cons_fdefine_4>:  -<t_fm$ATM0$DATE3>[C] +1366<t_x2$ATM0>[C] -1366<t_z$ATM0>[C] -139<t_x3$ATM0>[C] +<t_fp$ATM0$DATE3>[C] +55<t_x1$ATM0_impl>[M] == 1031;
+  [linear] <cons_fdefine_5>: <t_fm$ATM0$DATE4>[C] +236<t_x2$ATM0>[C] -236<t_z$ATM0>[C] +796<t_x3$ATM0>[C] -<t_fp$ATM0$DATE4>[C] +90.8<t_x1$ATM0_impl>[M] == 243;
+  [linear] <cons_fdefine_6>: <t_fm$ATM0$DATE5>[C] +1577<t_x2$ATM0>[C] -1577<t_z$ATM0>[C] +1863<t_x3$ATM0>[C] -<t_fp$ATM0$DATE5>[C] +112.8<t_x1$ATM0_impl>[M] == 170;
+  [linear] <cons_fdefine_7>: <t_fm$ATM0$DATE6>[C] +188<t_x2$ATM0>[C] -188<t_z$ATM0>[C] +256<t_x3$ATM0>[C] -<t_fp$ATM0$DATE6>[C] -185<t_x1$ATM0_impl>[M] == 2452;
+  [linear] <cons_fdefine_8>: <t_fm$ATM0$DATE7>[C] +130<t_x2$ATM0>[C] -130<t_z$ATM0>[C] +1082<t_x3$ATM0>[C] -<t_fp$ATM0$DATE7>[C] -111.7<t_x1$ATM0_impl>[M] == 221;
+  [linear] <cons_fdefine_9>:  -<t_fm$ATM0$DATE8>[C] +838<t_x2$ATM0>[C] -838<t_z$ATM0>[C] -235<t_x3$ATM0>[C] +<t_fp$ATM0$DATE8>[C] -147.5<t_x1$ATM0_impl>[M] == 499;
+  [linear] <cons_fdefine_10>:  -<t_fm$ATM0$DATE9>[C] +1912<t_x2$ATM0>[C] -1912<t_z$ATM0>[C] -541<t_x3$ATM0>[C] +<t_fp$ATM0$DATE9>[C] -44.9<t_x1$ATM0_impl>[M] == 2144;
+  [linear] <cons_fdefine_11>:  -<t_fm$ATM0$DATE10>[C] +2484<t_x2$ATM0>[C] -2484<t_z$ATM0>[C] -1195<t_x3$ATM0>[C] +<t_fp$ATM0$DATE10>[C] +135.4<t_x1$ATM0_impl>[M] == 2887;
+  [linear] <cons_fdefine_12>:  -<t_fm$ATM0$DATE11>[C] +2350<t_x2$ATM0>[C] -2350<t_z$ATM0>[C] -423<t_x3$ATM0>[C] +<t_fp$ATM0$DATE11>[C] +245.9<t_x1$ATM0_impl>[M] == 2593;
+  [linear] <cons_fdefine_13>:  -<t_fm$ATM0$DATE12>[C] -972<t_x2$ATM0>[C] +972<t_z$ATM0>[C] -1063<t_x3$ATM0>[C] +<t_fp$ATM0$DATE12>[C] +88.7<t_x1$ATM0_impl>[M] == 809;
+  [linear] <cons_fdefine_14>:  -<t_fm$ATM0$DATE13>[C] -405<t_x2$ATM0>[C] +405<t_z$ATM0>[C] -2728<t_x3$ATM0>[C] +<t_fp$ATM0$DATE13>[C] +113.3<t_x1$ATM0_impl>[M] == 901;
+  [linear] <cons_linearize3_30>: <t_y1$ATM2#10>[B] +<t_x2$ATM2>[C] -<t_y2$ATM2#10>[C] <= 1;
+  [linear] <cons_fdefine_16>:  -<t_fm$ATM0$DATE15>[C] +929<t_x2$ATM0>[C] -929<t_z$ATM0>[C] -295<t_x3$ATM0>[C] +<t_fp$ATM0$DATE15>[C] +2.1<t_x1$ATM0_impl>[M] == 567;
+  [linear] <cons_fdefine_17>:  -<t_fm$ATM0$DATE16>[C] -886<t_x2$ATM0>[C] +886<t_z$ATM0>[C] -62<t_x3$ATM0>[C] +<t_fp$ATM0$DATE16>[C] -189<t_x1$ATM0_impl>[M] == 182;
+  [linear] <cons_fdefine_18>: <t_fm$ATM0$DATE17>[C] +2050<t_x2$ATM0>[C] -2050<t_z$ATM0>[C] +1818<t_x3$ATM0>[C] -<t_fp$ATM0$DATE17>[C] +272.4<t_x1$ATM0_impl>[M] == 297;
+  [linear] <cons_fdefine_19>:  -<t_fm$ATM0$DATE18>[C] +2848<t_x2$ATM0>[C] -2848<t_z$ATM0>[C] -436<t_x3$ATM0>[C] +<t_fp$ATM0$DATE18>[C] -199.7<t_x1$ATM0_impl>[M] == 3760;
+  [linear] <cons_fdefine_20>:  -<t_fm$ATM0$DATE19>[C] -359<t_x2$ATM0>[C] +359<t_z$ATM0>[C] -515<t_x3$ATM0>[C] +<t_fp$ATM0$DATE19>[C] -929.1<t_x1$ATM0_impl>[M] == 1189;
+  [linear] <cons_fdefine_21>: <t_fm$ATM0$DATE20>[C] +1524<t_x2$ATM0>[C] -1524<t_z$ATM0>[C] +532<t_x3$ATM0>[C] -<t_fp$ATM0$DATE20>[C] +45.4<t_x1$ATM0_impl>[M] == 1869;
+  [linear] <cons_fdefine_22>: <t_fm$ATM0$DATE21>[C] +1145<t_x2$ATM0>[C] -1145<t_z$ATM0>[C] +692<t_x3$ATM0>[C] -<t_fp$ATM0$DATE21>[C] +239.5<t_x1$ATM0_impl>[M] == 1495;
+  [linear] <cons_fdefine_23>: <t_fm$ATM0$DATE22>[C] +1053<t_x2$ATM0>[C] -1053<t_z$ATM0>[C] +2432<t_x3$ATM0>[C] -<t_fp$ATM0$DATE22>[C] +96.7<t_x1$ATM0_impl>[M] == 1881;
+  [linear] <cons_fdefine_24>:  -<t_fm$ATM0$DATE23>[C] -788<t_x2$ATM0>[C] +788<t_z$ATM0>[C] -1323<t_x3$ATM0>[C] +<t_fp$ATM0$DATE23>[C] +2.7<t_x1$ATM0_impl>[M] == 701;
+  [linear] <cons_fdefine_25>:  -<t_fm$ATM0$DATE24>[C] +1223<t_x2$ATM0>[C] -1223<t_z$ATM0>[C] -664<t_x3$ATM0>[C] +<t_fp$ATM0$DATE24>[C] +212.3<t_x1$ATM0_impl>[M] == 114;
+  [linear] <cons_fdefine_26>: <t_fm$ATM1$DATE0>[C] -711<t_x2$ATM1>[C] +711<t_z$ATM1>[C] +1460<t_x3$ATM1>[C] -<t_fp$ATM1$DATE0>[C] -18.5<t_x1$ATM1_impl>[M] == 1060;
+  [linear] <cons_fdefine_27>:  -<t_fm$ATM1$DATE1>[C] -1324<t_x2$ATM1>[C] +1324<t_z$ATM1>[C] -375<t_x3$ATM1>[C] +<t_fp$ATM1$DATE1>[C] -475.1<t_x1$ATM1_impl>[M] == 308;
+  [linear] <cons_fdefine_28>: <t_fm$ATM1$DATE2>[C] +691<t_x2$ATM1>[C] -691<t_z$ATM1>[C] +3130<t_x3$ATM1>[C] -<t_fp$ATM1$DATE2>[C] +458.7<t_x1$ATM1_impl>[M] == 1525;
+  [linear] <cons_fdefine_29>: <t_fm$ATM1$DATE3>[C] +459<t_x2$ATM1>[C] -459<t_z$ATM1>[C] +439<t_x3$ATM1>[C] -<t_fp$ATM1$DATE3>[C] -142.7<t_x1$ATM1_impl>[M] == 1954;
+  [linear] <cons_fdefine_30>:  -10<t_fm$ATM1$DATE4>[C] -690<t_x2$ATM1>[C] +690<t_z$ATM1>[C] -150<t_x3$ATM1>[C] +10<t_fp$ATM1$DATE4>[C] +809<t_x1$ATM1_impl>[M] == 870;
+  [linear] <cons_fdefine_31>:  +590<t_x2$ATM1>[C] -590<t_z$ATM1>[C] -943<t_x3$ATM1>[C] +<t_fp$ATM1$DATE5>[C] -<t_fm$ATM1$DATE5>[C] +30.2<t_x1$ATM1_impl>[M] == 449;
+  [linear] <cons_fdefine_32>:  +3217<t_x2$ATM1>[C] -3217<t_z$ATM1>[C] -1419<t_x3$ATM1>[C] +<t_fp$ATM1$DATE6>[C] -<t_fm$ATM1$DATE6>[C] +281<t_x1$ATM1_impl>[M] == 2569;
+  [linear] <cons_fdefine_33>:  +362<t_x2$ATM1>[C] -362<t_z$ATM1>[C] -1054<t_x3$ATM1>[C] +<t_fp$ATM1$DATE7>[C] -<t_fm$ATM1$DATE7>[C] +212.3<t_x1$ATM1_impl>[M] == 911;
+  [linear] <cons_fdefine_34>:  -1766<t_x2$ATM1>[C] +1766<t_z$ATM1>[C] +72<t_x3$ATM1>[C] -<t_fp$ATM1$DATE8>[C] +<t_fm$ATM1$DATE8>[C] -57.6<t_x1$ATM1_impl>[M] == 316;
+  [linear] <cons_fdefine_35>:  +296<t_x2$ATM1>[C] -296<t_z$ATM1>[C] +154<t_x3$ATM1>[C] -<t_fp$ATM1$DATE9>[C] +<t_fm$ATM1$DATE9>[C] +444.3<t_x1$ATM1_impl>[M] == 1982;
+  [linear] <cons_fdefine_36>:  -255<t_x2$ATM1>[C] +255<t_z$ATM1>[C] +309<t_x3$ATM1>[C] -<t_fp$ATM1$DATE10>[C] +<t_fm$ATM1$DATE10>[C] +379.6<t_x1$ATM1_impl>[M] == 326;
+  [linear] <cons_fdefine_37>:  -266<t_x2$ATM1>[C] +266<t_z$ATM1>[C] +1775<t_x3$ATM1>[C] -<t_fp$ATM1$DATE11>[C] +<t_fm$ATM1$DATE11>[C] +83.3<t_x1$ATM1_impl>[M] == 1826;
+  [linear] <cons_fdefine_38>:  +1062<t_x2$ATM1>[C] -1062<t_z$ATM1>[C] +632<t_x3$ATM1>[C] -<t_fp$ATM1$DATE12>[C] +<t_fm$ATM1$DATE12>[C] +156.2<t_x1$ATM1_impl>[M] == 3448;
+  [linear] <cons_fdefine_39>:  +2082<t_x2$ATM1>[C] -2082<t_z$ATM1>[C] -1344<t_x3$ATM1>[C] +<t_fp$ATM1$DATE13>[C] -<t_fm$ATM1$DATE13>[C] +251.8<t_x1$ATM1_impl>[M] == 2715;
+  [linear] <cons_fdefine_40>:  -858<t_x2$ATM1>[C] +858<t_z$ATM1>[C] -552<t_x3$ATM1>[C] +<t_fp$ATM1$DATE14>[C] -<t_fm$ATM1$DATE14>[C] -213<t_x1$ATM1_impl>[M] == 742;
+  [linear] <cons_fdefine_41>:  +167<t_x2$ATM1>[C] -167<t_z$ATM1>[C] +574<t_x3$ATM1>[C] -<t_fp$ATM1$DATE15>[C] +<t_fm$ATM1$DATE15>[C] +57.8<t_x1$ATM1_impl>[M] == 2737;
+  [linear] <cons_fdefine_42>:  -1307<t_x2$ATM1>[C] +1307<t_z$ATM1>[C] +665<t_x3$ATM1>[C] -<t_fp$ATM1$DATE16>[C] +<t_fm$ATM1$DATE16>[C] +777.5<t_x1$ATM1_impl>[M] == 247;
+  [linear] <cons_fdefine_43>:  +2007<t_x2$ATM1>[C] -2007<t_z$ATM1>[C] -997<t_x3$ATM1>[C] +<t_fp$ATM1$DATE17>[C] -<t_fm$ATM1$DATE17>[C] -438.1<t_x1$ATM1_impl>[M] == 1138;
+  [linear] <cons_fdefine_44>:  +1750<t_x2$ATM1>[C] -1750<t_z$ATM1>[C] +1483<t_x3$ATM1>[C] -<t_fp$ATM1$DATE18>[C] +<t_fm$ATM1$DATE18>[C] +736.3<t_x1$ATM1_impl>[M] == 2445;
+  [linear] <cons_fdefine_45>:  -22<t_x2$ATM1>[C] +22<t_z$ATM1>[C] +2434<t_x3$ATM1>[C] -<t_fp$ATM1$DATE19>[C] +<t_fm$ATM1$DATE19>[C] +728.5<t_x1$ATM1_impl>[M] == 1851;
+  [linear] <cons_fdefine_46>:  +204<t_x2$ATM1>[C] -204<t_z$ATM1>[C] +127<t_x3$ATM1>[C] -<t_fp$ATM1$DATE20>[C] +<t_fm$ATM1$DATE20>[C] -130.4<t_x1$ATM1_impl>[M] == 1282;
+  [linear] <cons_fdefine_47>:  -1935<t_x2$ATM1>[C] +1935<t_z$ATM1>[C] -138<t_x3$ATM1>[C] +<t_fp$ATM1$DATE21>[C] -<t_fm$ATM1$DATE21>[C] +214.8<t_x1$ATM1_impl>[M] == 1158;
+  [linear] <cons_fdefine_48>:  -76<t_x2$ATM1>[C] +76<t_z$ATM1>[C] +18<t_x3$ATM1>[C] -<t_fp$ATM1$DATE22>[C] +<t_fm$ATM1$DATE22>[C] -131.9<t_x1$ATM1_impl>[M] == 2236;
+  [linear] <cons_fdefine_49>:  +2276<t_x2$ATM1>[C] -2276<t_z$ATM1>[C] +181<t_x3$ATM1>[C] -<t_fp$ATM1$DATE23>[C] +<t_fm$ATM1$DATE23>[C] +340.5<t_x1$ATM1_impl>[M] == 1468;
+  [linear] <cons_fdefine_50>:  -2729<t_x2$ATM1>[C] +2729<t_z$ATM1>[C] -185<t_x3$ATM1>[C] +<t_fp$ATM1$DATE24>[C] -<t_fm$ATM1$DATE24>[C] -868.7<t_x1$ATM1_impl>[M] == 1634;
+  [linear] <cons_fdefine_51>:  -638<t_x2$ATM2>[C] +638<t_z$ATM2>[C] +72<t_x3$ATM2>[C] -<t_fp$ATM2$DATE0>[C] +<t_fm$ATM2$DATE0>[C] +360.7<t_x1$ATM2_impl>[M] == 2565;
+  [linear] <cons_linearize3_50>: <t_y1$ATM4#10>[B] +<t_x2$ATM4>[C] -<t_y2$ATM4#10>[C] <= 1;
+  [linear] <cons_fdefine_53>:  +2327<t_x2$ATM2>[C] -2327<t_z$ATM2>[C] -330<t_x3$ATM2>[C] +<t_fp$ATM2$DATE2>[C] -<t_fm$ATM2$DATE2>[C] +35.4<t_x1$ATM2_impl>[M] == 465;
+  [linear] <cons_fdefine_54>:  +1267<t_x2$ATM2>[C] -1267<t_z$ATM2>[C] -1263<t_x3$ATM2>[C] +<t_fp$ATM2$DATE3>[C] -<t_fm$ATM2$DATE3>[C] +62.1<t_x1$ATM2_impl>[M] == 3076;
+  [linear] <cons_fdefine_55>:  +1002<t_x2$ATM2>[C] -1002<t_z$ATM2>[C] -620<t_x3$ATM2>[C] +<t_fp$ATM2$DATE4>[C] -<t_fm$ATM2$DATE4>[C] +82.7<t_x1$ATM2_impl>[M] == 2006;
+  [linear] <cons_fdefine_56>:  +759<t_x2$ATM2>[C] -759<t_z$ATM2>[C] +955<t_x3$ATM2>[C] -<t_fp$ATM2$DATE5>[C] +<t_fm$ATM2$DATE5>[C] +38.8<t_x1$ATM2_impl>[M] == 1694;
+  [linear] <cons_fdefine_57>:  +839<t_x2$ATM2>[C] -839<t_z$ATM2>[C] -912<t_x3$ATM2>[C] +<t_fp$ATM2$DATE6>[C] -<t_fm$ATM2$DATE6>[C] -46.6<t_x1$ATM2_impl>[M] == 642;
+  [linear] <cons_fdefine_58>:  +2401<t_x2$ATM2>[C] -2401<t_z$ATM2>[C] +1120<t_x3$ATM2>[C] -<t_fp$ATM2$DATE7>[C] +<t_fm$ATM2$DATE7>[C] +301.7<t_x1$ATM2_impl>[M] == 1631;
+  [linear] <cons_fdefine_59>:  -314<t_x2$ATM2>[C] +314<t_z$ATM2>[C] +63<t_x3$ATM2>[C] -<t_fp$ATM2$DATE8>[C] +<t_fm$ATM2$DATE8>[C] +267<t_x1$ATM2_impl>[M] == 1069;
+  [linear] <cons_fdefine_60>:  +908<t_x2$ATM2>[C] -908<t_z$ATM2>[C] +919<t_x3$ATM2>[C] -<t_fp$ATM2$DATE9>[C] +<t_fm$ATM2$DATE9>[C] +11.9<t_x1$ATM2_impl>[M] == 1715;
+  [linear] <cons_fdefine_61>:  -606<t_x2$ATM2>[C] +606<t_z$ATM2>[C] +2471<t_x3$ATM2>[C] -<t_fp$ATM2$DATE10>[C] +<t_fm$ATM2$DATE10>[C] -88.7<t_x1$ATM2_impl>[M] == 892;
+  [linear] <cons_fdefine_62>:  -921<t_x2$ATM2>[C] +921<t_z$ATM2>[C] -337<t_x3$ATM2>[C] +<t_fp$ATM2$DATE11>[C] -<t_fm$ATM2$DATE11>[C] -47.8<t_x1$ATM2_impl>[M] == 1223;
+  [linear] <cons_fdefine_63>:  +1511<t_x2$ATM2>[C] -1511<t_z$ATM2>[C] +476<t_x3$ATM2>[C] -<t_fp$ATM2$DATE12>[C] +<t_fm$ATM2$DATE12>[C] +309.4<t_x1$ATM2_impl>[M] == 547;
+  [linear] <cons_fdefine_64>:  -423<t_x2$ATM2>[C] +423<t_z$ATM2>[C] +790<t_x3$ATM2>[C] -<t_fp$ATM2$DATE13>[C] +<t_fm$ATM2$DATE13>[C] -211.5<t_x1$ATM2_impl>[M] == 190;
+  [linear] <cons_fdefine_65>:  +268<t_x2$ATM2>[C] -268<t_z$ATM2>[C] +1445<t_x3$ATM2>[C] -<t_fp$ATM2$DATE14>[C] +<t_fm$ATM2$DATE14>[C] +218.3<t_x1$ATM2_impl>[M] == 5044;
+  [linear] <cons_fdefine_66>:  -99<t_x2$ATM2>[C] +99<t_z$ATM2>[C] -2437<t_x3$ATM2>[C] +<t_fp$ATM2$DATE15>[C] -<t_fm$ATM2$DATE15>[C] +4.5<t_x1$ATM2_impl>[M] == 468;
+  [linear] <cons_linearize2_26>:  -<t_x2$ATM2>[C] +<t_y2$ATM2#6>[C] <= 0;
+  [linear] <cons_linearize2_37>:  -<t_x2$ATM3>[C] +<t_y2$ATM3#7>[C] <= 0;
+  [linear] <cons_fdefine_69>:  +1461<t_x2$ATM2>[C] -1461<t_z$ATM2>[C] -1414<t_x3$ATM2>[C] +<t_fp$ATM2$DATE18>[C] -<t_fm$ATM2$DATE18>[C] +60<t_x1$ATM2_impl>[M] == 529;
+  [linear] <cons_fdefine_70>:  +1445<t_x2$ATM2>[C] -1445<t_z$ATM2>[C] +862<t_x3$ATM2>[C] -<t_fp$ATM2$DATE19>[C] +<t_fm$ATM2$DATE19>[C] -75.5<t_x1$ATM2_impl>[M] == 104;
+  [linear] <cons_fdefine_71>:  +290<t_x2$ATM2>[C] -290<t_z$ATM2>[C] +603<t_x3$ATM2>[C] -<t_fp$ATM2$DATE20>[C] +<t_fm$ATM2$DATE20>[C] +372.6<t_x1$ATM2_impl>[M] == 1503;
+  [linear] <cons_fdefine_72>:  +1241<t_x2$ATM2>[C] -1241<t_z$ATM2>[C] -1227<t_x3$ATM2>[C] +<t_fp$ATM2$DATE21>[C] -<t_fm$ATM2$DATE21>[C] +123.3<t_x1$ATM2_impl>[M] == 1968;
+  [linear] <cons_fdefine_73>:  +1616<t_x2$ATM2>[C] -1616<t_z$ATM2>[C] -591<t_x3$ATM2>[C] +<t_fp$ATM2$DATE22>[C] -<t_fm$ATM2$DATE22>[C] -201.6<t_x1$ATM2_impl>[M] == 884;
+  [linear] <cons_fdefine_74>:  +2007<t_x2$ATM2>[C] -2007<t_z$ATM2>[C] +1733<t_x3$ATM2>[C] -<t_fp$ATM2$DATE23>[C] +<t_fm$ATM2$DATE23>[C] +149.5<t_x1$ATM2_impl>[M] == 1287;
+  [linear] <cons_fdefine_75>:  -15<t_x2$ATM2>[C] +15<t_z$ATM2>[C] +685<t_x3$ATM2>[C] -<t_fp$ATM2$DATE24>[C] +<t_fm$ATM2$DATE24>[C] +96.1<t_x1$ATM2_impl>[M] == 1187;
+  [linear] <cons_fdefine_76>:  +3482<t_x2$ATM3>[C] -3482<t_z$ATM3>[C] -34<t_x3$ATM3>[C] +<t_fp$ATM3$DATE0>[C] -<t_fm$ATM3$DATE0>[C] +287.7<t_x1$ATM3_impl>[M] == 2455;
+  [linear] <cons_fdefine_77>:  -718<t_x2$ATM3>[C] +718<t_z$ATM3>[C] +144<t_x3$ATM3>[C] -<t_fp$ATM3$DATE1>[C] +<t_fm$ATM3$DATE1>[C] -50.4<t_x1$ATM3_impl>[M] == 3190;
+  [linear] <cons_fdefine_78>:  +1599<t_x2$ATM3>[C] -1599<t_z$ATM3>[C] -543<t_x3$ATM3>[C] +<t_fp$ATM3$DATE2>[C] -<t_fm$ATM3$DATE2>[C] +265.8<t_x1$ATM3_impl>[M] == 1366;
+  [linear] <cons_fdefine_79>:  +331<t_x2$ATM3>[C] -331<t_z$ATM3>[C] -3444<t_x3$ATM3>[C] +<t_fp$ATM3$DATE3>[C] -<t_fm$ATM3$DATE3>[C] +250.6<t_x1$ATM3_impl>[M] == 936;
+  [linear] <cons_fdefine_80>:  +2733<t_x2$ATM3>[C] -2733<t_z$ATM3>[C] -898<t_x3$ATM3>[C] -<t_fm$ATM3$DATE4>[C] +<t_fp$ATM3$DATE4>[C] +273.6<t_x1$ATM3_impl>[M] == 1028;
+  [linear] <cons_fdefine_81>: <t_fp$ATM3$DATE5>[C] -1324<t_x2$ATM3>[C] +1324<t_z$ATM3>[C] -2399<t_x3$ATM3>[C] -<t_fm$ATM3$DATE5>[C] -319.9<t_x1$ATM3_impl>[M] == 143;
+  [linear] <cons_fdefine_82>:  -<t_fp$ATM3$DATE6>[C] +1402<t_x2$ATM3>[C] -1402<t_z$ATM3>[C] +598<t_x3$ATM3>[C] +<t_fm$ATM3$DATE6>[C] +443.7<t_x1$ATM3_impl>[M] == 1230;
+  [linear] <cons_fdefine_83>:  -<t_fp$ATM3$DATE7>[C] +788<t_x2$ATM3>[C] -788<t_z$ATM3>[C] +1481<t_x3$ATM3>[C] +<t_fm$ATM3$DATE7>[C] -68.7<t_x1$ATM3_impl>[M] == 2136;
+  [linear] <cons_fdefine_84>: <t_fp$ATM3$DATE8>[C] +1939<t_x2$ATM3>[C] -1939<t_z$ATM3>[C] -2427<t_x3$ATM3>[C] -<t_fm$ATM3$DATE8>[C] -241.2<t_x1$ATM3_impl>[M] == 1133;
+  [linear] <cons_fdefine_85>:  -<t_fp$ATM3$DATE9>[C] +1253<t_x2$ATM3>[C] -1253<t_z$ATM3>[C] +896<t_x3$ATM3>[C] +<t_fm$ATM3$DATE9>[C] +172.7<t_x1$ATM3_impl>[M] == 205;
+  [linear] <cons_fdefine_86>: <t_fp$ATM3$DATE10>[C] -340<t_x2$ATM3>[C] +340<t_z$ATM3>[C] -5594<t_x3$ATM3>[C] -<t_fm$ATM3$DATE10>[C] -220.4<t_x1$ATM3_impl>[M] == 689;
+  [linear] <cons_fdefine_87>:  -<t_fp$ATM3$DATE11>[C] +847<t_x2$ATM3>[C] -847<t_z$ATM3>[C] +1615<t_x3$ATM3>[C] +<t_fm$ATM3$DATE11>[C] +39.3<t_x1$ATM3_impl>[M] == 1135;
+  [linear] <cons_fdefine_88>:  -<t_fp$ATM3$DATE12>[C] +1776<t_x2$ATM3>[C] -1776<t_z$ATM3>[C] +22<t_x3$ATM3>[C] +<t_fm$ATM3$DATE12>[C] +33.6<t_x1$ATM3_impl>[M] == 411;
+  [linear] <cons_fdefine_89>:  -<t_fp$ATM3$DATE13>[C] -1500<t_x2$ATM3>[C] +1500<t_z$ATM3>[C] +1585<t_x3$ATM3>[C] +<t_fm$ATM3$DATE13>[C] +156.3<t_x1$ATM3_impl>[M] == 312;
+  [linear] <cons_fdefine_90>:  -<t_fp$ATM3$DATE14>[C] +901<t_x2$ATM3>[C] -901<t_z$ATM3>[C] +312<t_x3$ATM3>[C] +<t_fm$ATM3$DATE14>[C] +168.7<t_x1$ATM3_impl>[M] == 147;
+  [linear] <cons_fdefine_91>:  -<t_fp$ATM3$DATE15>[C] -196<t_x2$ATM3>[C] +196<t_z$ATM3>[C] +806<t_x3$ATM3>[C] +<t_fm$ATM3$DATE15>[C] +474.7<t_x1$ATM3_impl>[M] == 1632;
+  [linear] <cons_fdefine_92>: <t_fp$ATM3$DATE16>[C] -887<t_x2$ATM3>[C] +887<t_z$ATM3>[C] -121<t_x3$ATM3>[C] -<t_fm$ATM3$DATE16>[C] -732.5<t_x1$ATM3_impl>[M] == 824;
+  [linear] <cons_fdefine_93>: <t_fp$ATM3$DATE17>[C] +714<t_x2$ATM3>[C] -714<t_z$ATM3>[C] -1129<t_x3$ATM3>[C] -<t_fm$ATM3$DATE17>[C] -259<t_x1$ATM3_impl>[M] == 9;
+  [linear] <cons_fdefine_94>: <t_fp$ATM3$DATE18>[C] -1561<t_x2$ATM3>[C] +1561<t_z$ATM3>[C] -92<t_x3$ATM3>[C] -<t_fm$ATM3$DATE18>[C] +84.7<t_x1$ATM3_impl>[M] == 130;
+  [linear] <cons_fdefine_95>:  -<t_fp$ATM3$DATE19>[C] +190<t_x2$ATM3>[C] -190<t_z$ATM3>[C] +271<t_x3$ATM3>[C] +<t_fm$ATM3$DATE19>[C] -82.6<t_x1$ATM3_impl>[M] == 846;
+  [linear] <cons_fdefine_96>:  -<t_fp$ATM3$DATE20>[C] -886<t_x2$ATM3>[C] +886<t_z$ATM3>[C] +475<t_x3$ATM3>[C] +<t_fm$ATM3$DATE20>[C] +6.6<t_x1$ATM3_impl>[M] == 408;
+  [linear] <cons_fdefine_97>: <t_fp$ATM3$DATE21>[C] -860<t_x2$ATM3>[C] +860<t_z$ATM3>[C] -219<t_x3$ATM3>[C] -<t_fm$ATM3$DATE21>[C] -126<t_x1$ATM3_impl>[M] == 264;
+  [linear] <cons_fdefine_98>:  -<t_fp$ATM3$DATE22>[C] +908<t_x2$ATM3>[C] -908<t_z$ATM3>[C] +1604<t_x3$ATM3>[C] +<t_fm$ATM3$DATE22>[C] +254.7<t_x1$ATM3_impl>[M] == 100;
+  [linear] <cons_fdefine_99>:  -<t_fp$ATM3$DATE23>[C] +1557<t_x2$ATM3>[C] -1557<t_z$ATM3>[C] +1702<t_x3$ATM3>[C] +<t_fm$ATM3$DATE23>[C] +747.3<t_x1$ATM3_impl>[M] == 16;
+  [linear] <cons_linearize3_34>: <t_y1$ATM3#4>[B] +<t_x2$ATM3>[C] -<t_y2$ATM3#4>[C] <= 1;
+  [linear] <cons_fdefine_101>: <t_fp$ATM4$DATE0>[C] +799<t_x2$ATM4>[C] -799<t_z$ATM4>[C] -1208<t_x3$ATM4>[C] -<t_fm$ATM4$DATE0>[C] -448.9<t_x1$ATM4_impl>[M] == 199;
+  [linear] <cons_fdefine_102>: <t_fp$ATM4$DATE1>[C] +1719<t_x2$ATM4>[C] -1719<t_z$ATM4>[C] -1246<t_x3$ATM4>[C] -<t_fm$ATM4$DATE1>[C] +256.4<t_x1$ATM4_impl>[M] == 448;
+  [linear] <cons_fdefine_103>:  -<t_fp$ATM4$DATE2>[C] +1516<t_x2$ATM4>[C] -1516<t_z$ATM4>[C] +113<t_x3$ATM4>[C] +<t_fm$ATM4$DATE2>[C] +178<t_x1$ATM4_impl>[M] == 235;
+  [linear] <cons_linearize3_8>: <t_y1$ATM0#8>[B] +<t_x2$ATM0>[C] -<t_y2$ATM0#8>[C] <= 1;
+  [linear] <cons_fdefine_105>: <t_fp$ATM4$DATE4>[C] +952<t_x2$ATM4>[C] -952<t_z$ATM4>[C] -707<t_x3$ATM4>[C] -<t_fm$ATM4$DATE4>[C] +80.5<t_x1$ATM4_impl>[M] == 388;
+  [linear] <cons_fdefine_106>: <t_fp$ATM4$DATE5>[C] +309<t_x2$ATM4>[C] -309<t_z$ATM4>[C] -2030<t_x3$ATM4>[C] -<t_fm$ATM4$DATE5>[C] -531.8<t_x1$ATM4_impl>[M] == 1550;
+  [linear] <cons_fdefine_107>:  -<t_fp$ATM4$DATE6>[C] -389<t_x2$ATM4>[C] +389<t_z$ATM4>[C] +710<t_x3$ATM4>[C] +<t_fm$ATM4$DATE6>[C] -44.3<t_x1$ATM4_impl>[M] == 373;
+  [linear] <cons_fdefine_108>:  -<t_fp$ATM4$DATE7>[C] +1350<t_x2$ATM4>[C] -1350<t_z$ATM4>[C] +7<t_x3$ATM4>[C] +<t_fm$ATM4$DATE7>[C] +201.5<t_x1$ATM4_impl>[M] == 1684;
+  [linear] <cons_fdefine_109>:  -<t_fp$ATM4$DATE8>[C] -1435<t_x2$ATM4>[C] +1435<t_z$ATM4>[C] +69<t_x3$ATM4>[C] +<t_fm$ATM4$DATE8>[C] +66.4<t_x1$ATM4_impl>[M] == 75;
+  [linear] <cons_fdefine_110>: <t_fp$ATM4$DATE9>[C] +496<t_x2$ATM4>[C] -496<t_z$ATM4>[C] -2118<t_x3$ATM4>[C] -<t_fm$ATM4$DATE9>[C] -602.7<t_x1$ATM4_impl>[M] == 1703;
+  [linear] <cons_fdefine_111>: <t_fp$ATM4$DATE10>[C] +1883<t_x2$ATM4>[C] -1883<t_z$ATM4>[C] -967<t_x3$ATM4>[C] -<t_fm$ATM4$DATE10>[C] +321.1<t_x1$ATM4_impl>[M] == 3242;
+  [linear] <cons_fdefine_112>:  -<t_fp$ATM4$DATE11>[C] -434<t_x2$ATM4>[C] +434<t_z$ATM4>[C] +1251<t_x3$ATM4>[C] +<t_fm$ATM4$DATE11>[C] +182.5<t_x1$ATM4_impl>[M] == 2609;
+  [linear] <cons_fdefine_113>:  -<t_fp$ATM4$DATE12>[C] +2605<t_x2$ATM4>[C] -2605<t_z$ATM4>[C] +308<t_x3$ATM4>[C] +<t_fm$ATM4$DATE12>[C] +80.1<t_x1$ATM4_impl>[M] == 2403;
+  [linear] <cons_fdefine_114>: <t_fp$ATM4$DATE13>[C] -7<t_x2$ATM4>[C] +7<t_z$ATM4>[C] -1356<t_x3$ATM4>[C] -<t_fm$ATM4$DATE13>[C] +62.9<t_x1$ATM4_impl>[M] == 326;
+  [linear] <cons_fdefine_115>:  -<t_fp$ATM4$DATE14>[C] -282<t_x2$ATM4>[C] +282<t_z$ATM4>[C] +1649<t_x3$ATM4>[C] +<t_fm$ATM4$DATE14>[C] -50.8<t_x1$ATM4_impl>[M] == 967;
+  [linear] <cons_fdefine_116>:  -<t_fp$ATM4$DATE15>[C] +3124<t_x2$ATM4>[C] -3124<t_z$ATM4>[C] +855<t_x3$ATM4>[C] +<t_fm$ATM4$DATE15>[C] +306.9<t_x1$ATM4_impl>[M] == 3299;
+  [linear] <cons_fdefine_117>: <t_fp$ATM4$DATE16>[C] +2031<t_x2$ATM4>[C] -2031<t_z$ATM4>[C] -1296<t_x3$ATM4>[C] -<t_fm$ATM4$DATE16>[C] +188.3<t_x1$ATM4_impl>[M] == 1152;
+  [linear] <cons_fdefine_118>:  -<t_fp$ATM4$DATE17>[C] -220<t_x2$ATM4>[C] +220<t_z$ATM4>[C] +397<t_x3$ATM4>[C] +<t_fm$ATM4$DATE17>[C] -146.4<t_x1$ATM4_impl>[M] == 2060;
+  [linear] <cons_fdefine_119>:  -<t_fp$ATM4$DATE18>[C] -513<t_x2$ATM4>[C] +513<t_z$ATM4>[C] +675<t_x3$ATM4>[C] +<t_fm$ATM4$DATE18>[C] -60.7<t_x1$ATM4_impl>[M] == 996;
+  [linear] <cons_fdefine_120>:  -<t_fp$ATM4$DATE19>[C] +812<t_x2$ATM4>[C] -812<t_z$ATM4>[C] +1126<t_x3$ATM4>[C] +<t_fm$ATM4$DATE19>[C] +291<t_x1$ATM4_impl>[M] == 347;
+  [linear] <cons_linearize2_21>:  -<t_x2$ATM2>[C] +<t_y2$ATM2#1>[C] <= 0;
+  [linear] <cons_fdefine_122>:  -<t_fp$ATM4$DATE21>[C] +1269<t_x2$ATM4>[C] -1269<t_z$ATM4>[C] +1243<t_x3$ATM4>[C] +<t_fm$ATM4$DATE21>[C] +50.3<t_x1$ATM4_impl>[M] == 4375;
+  [linear] <cons_fdefine_123>:  -<t_fp$ATM4$DATE22>[C] +416<t_x2$ATM4>[C] -416<t_z$ATM4>[C] +3186<t_x3$ATM4>[C] +<t_fm$ATM4$DATE22>[C] +62.2<t_x1$ATM4_impl>[M] == 1173;
+  [linear] <cons_fdefine_124>:  -<t_fp$ATM4$DATE23>[C] -1256<t_x2$ATM4>[C] +1256<t_z$ATM4>[C] +1784<t_x3$ATM4>[C] +<t_fm$ATM4$DATE23>[C] -99.1<t_x1$ATM4_impl>[M] == 625;
+  [linear] <cons_fdefine_125>: <t_fp$ATM4$DATE24>[C] +1781<t_x2$ATM4>[C] -1781<t_z$ATM4>[C] -1686<t_x3$ATM4>[C] -<t_fm$ATM4$DATE24>[C] +166.9<t_x1$ATM4_impl>[M] == 2429;
+  [linear] <cons_linearize2_40>:  -<t_x2$ATM3>[C] +<t_y2$ATM3#10>[C] <= 0;
+  [linear] <cons_linearize3_35>: <t_y1$ATM3#5>[B] +<t_x2$ATM3>[C] -<t_y2$ATM3#5>[C] <= 1;
+  [linear] <cons_linearize2_42>:  -<t_x2$ATM4>[C] +<t_y2$ATM4#2>[C] <= 0;
+  [linear] <cons_linearize2_8>:  -<t_x2$ATM0>[C] +<t_y2$ATM0#8>[C] <= 0;
+  [linear] <cons_x1define_5>: <t_y1$ATM4#1>[B] +2<t_y1$ATM4#2>[B] +3<t_y1$ATM4#3>[B] +4<t_y1$ATM4#4>[B] +5<t_y1$ATM4#5>[B] +6<t_y1$ATM4#6>[B] +7<t_y1$ATM4#7>[B] +8<t_y1$ATM4#8>[B] +9<t_y1$ATM4#9>[B] +10<t_y1$ATM4#10>[B] -<t_x1$ATM4_impl>[M] == -0;
+  [linear] <cons_linearize2_24>:  -<t_x2$ATM2>[C] +<t_y2$ATM2#4>[C] <= 0;
+  [linear] <cons_linearize2_4>:  -<t_x2$ATM0>[C] +<t_y2$ATM0#4>[C] <= 0;
+  [linear] <cons_linearize3_25>: <t_y1$ATM2#5>[B] +<t_x2$ATM2>[C] -<t_y2$ATM2#5>[C] <= 1;
+  [linear] <cons_linearize3_42>: <t_y1$ATM4#2>[B] +<t_x2$ATM4>[C] -<t_y2$ATM4#2>[C] <= 1;
+  [linear] <cons_linearize3_47>: <t_y1$ATM4#7>[B] +<t_x2$ATM4>[C] -<t_y2$ATM4#7>[C] <= 1;
+  [linear] <cons_zdefine_1>:  -10<t_z$ATM0>[C] +<t_y2$ATM0#1>[C] +2<t_y2$ATM0#2>[C] +3<t_y2$ATM0#3>[C] +4<t_y2$ATM0#4>[C] +5<t_y2$ATM0#5>[C] +6<t_y2$ATM0#6>[C] +7<t_y2$ATM0#7>[C] +8<t_y2$ATM0#8>[C] +9<t_y2$ATM0#9>[C] +10<t_y2$ATM0#10>[C] == -0;
+  [linear] <cons_zdefine_2>:  -10<t_z$ATM1>[C] +<t_y2$ATM1#1>[C] +2<t_y2$ATM1#2>[C] +3<t_y2$ATM1#3>[C] +4<t_y2$ATM1#4>[C] +5<t_y2$ATM1#5>[C] +6<t_y2$ATM1#6>[C] +7<t_y2$ATM1#7>[C] +8<t_y2$ATM1#8>[C] +9<t_y2$ATM1#9>[C] +10<t_y2$ATM1#10>[C] == -0;
+  [linear] <cons_zdefine_3>:  -10<t_z$ATM2>[C] +<t_y2$ATM2#1>[C] +2<t_y2$ATM2#2>[C] +3<t_y2$ATM2#3>[C] +4<t_y2$ATM2#4>[C] +5<t_y2$ATM2#5>[C] +6<t_y2$ATM2#6>[C] +7<t_y2$ATM2#7>[C] +8<t_y2$ATM2#8>[C] +9<t_y2$ATM2#9>[C] +10<t_y2$ATM2#10>[C] == -0;
+  [linear] <cons_zdefine_4>:  -10<t_z$ATM3>[C] +<t_y2$ATM3#1>[C] +2<t_y2$ATM3#2>[C] +3<t_y2$ATM3#3>[C] +4<t_y2$ATM3#4>[C] +5<t_y2$ATM3#5>[C] +6<t_y2$ATM3#6>[C] +7<t_y2$ATM3#7>[C] +8<t_y2$ATM3#8>[C] +9<t_y2$ATM3#9>[C] +10<t_y2$ATM3#10>[C] == -0;
+  [linear] <cons_zdefine_5>:  -10<t_z$ATM4>[C] +<t_y2$ATM4#1>[C] +2<t_y2$ATM4#2>[C] +3<t_y2$ATM4#3>[C] +4<t_y2$ATM4#4>[C] +5<t_y2$ATM4#5>[C] +6<t_y2$ATM4#6>[C] +7<t_y2$ATM4#7>[C] +8<t_y2$ATM4#8>[C] +9<t_y2$ATM4#9>[C] +10<t_y2$ATM4#10>[C] == -0;
+  [linear] <cons_linearize3_22>: <t_y1$ATM2#2>[B] +<t_x2$ATM2>[C] -<t_y2$ATM2#2>[C] <= 1;
+  [linear] <cons_linearize2_22>:  -<t_x2$ATM2>[C] +<t_y2$ATM2#2>[C] <= 0;
+  [linear] <cons_linearize3_37>: <t_y1$ATM3#7>[B] +<t_x2$ATM3>[C] -<t_y2$ATM3#7>[C] <= 1;
+  [linear] <cons_linearize2_2>:  -<t_x2$ATM0>[C] +<t_y2$ATM0#2>[C] <= 0;
+  [linear] <cons_linearize3_11>: <t_y1$ATM1#1>[B] +<t_x2$ATM1>[C] -<t_y2$ATM1#1>[C] <= 1;
+  [linear] <cons_linearize3_4>: <t_y1$ATM0#4>[B] +<t_x2$ATM0>[C] -<t_y2$ATM0#4>[C] <= 1;
+  [linear] <cons_linearize2_3>:  -<t_x2$ATM0>[C] +<t_y2$ATM0#3>[C] <= 0;
+  [linear] <cons_linearize2_36>:  -<t_x2$ATM3>[C] +<t_y2$ATM3#6>[C] <= 0;
+  [linear] <cons_linearize3_33>: <t_y1$ATM3#3>[B] +<t_x2$ATM3>[C] -<t_y2$ATM3#3>[C] <= 1;
+  [linear] <cons_linearize2_27>:  -<t_x2$ATM2>[C] +<t_y2$ATM2#7>[C] <= 0;
+  [linear] <cons_x1define_3>: <t_y1$ATM2#1>[B] +2<t_y1$ATM2#2>[B] +3<t_y1$ATM2#3>[B] +4<t_y1$ATM2#4>[B] +5<t_y1$ATM2#5>[B] +6<t_y1$ATM2#6>[B] +7<t_y1$ATM2#7>[B] +8<t_y1$ATM2#8>[B] +9<t_y1$ATM2#9>[B] +10<t_y1$ATM2#10>[B] -<t_x1$ATM2_impl>[M] == -0;
+  [linear] <cons_linearize3_29>: <t_y1$ATM2#9>[B] +<t_x2$ATM2>[C] -<t_y2$ATM2#9>[C] <= 1;
+  [linear] <cons_linearize3_28>: <t_y1$ATM2#8>[B] +<t_x2$ATM2>[C] -<t_y2$ATM2#8>[C] <= 1;
+  [linear] <cons_linearize3_12>: <t_y1$ATM1#2>[B] +<t_x2$ATM1>[C] -<t_y2$ATM1#2>[C] <= 1;
+  [linear] <cons_linearize3_26>: <t_y1$ATM2#6>[B] +<t_x2$ATM2>[C] -<t_y2$ATM2#6>[C] <= 1;
+  [linear] <cons_linearize2_33>:  -<t_x2$ATM3>[C] +<t_y2$ATM3#3>[C] <= 0;
+  [linear] <cons_linearize2_39>:  -<t_x2$ATM3>[C] +<t_y2$ATM3#9>[C] <= 0;
+  [linear] <cons_linearize3_49>: <t_y1$ATM4#9>[B] +<t_x2$ATM4>[C] -<t_y2$ATM4#9>[C] <= 1;
+  [linear] <cons_linearize3_23>: <t_y1$ATM2#3>[B] +<t_x2$ATM2>[C] -<t_y2$ATM2#3>[C] <= 1;
+  [linear] <cons_linearize2_41>:  -<t_x2$ATM4>[C] +<t_y2$ATM4#1>[C] <= 0;
+  [linear] <cons_linearize2_11>:  -<t_x2$ATM1>[C] +<t_y2$ATM1#1>[C] <= 0;
+  [linear] <cons_linearize2_35>:  -<t_x2$ATM3>[C] +<t_y2$ATM3#5>[C] <= 0;
+  [linear] <cons_linearize3_5>: <t_y1$ATM0#5>[B] +<t_x2$ATM0>[C] -<t_y2$ATM0#5>[C] <= 1;
+  [linear] <cons_linearize3_43>: <t_y1$ATM4#3>[B] +<t_x2$ATM4>[C] -<t_y2$ATM4#3>[C] <= 1;
+  [linear] <cons_linearize3_45>: <t_y1$ATM4#5>[B] +<t_x2$ATM4>[C] -<t_y2$ATM4#5>[C] <= 1;
+  [linear] <cons_linearize2_25>:  -<t_x2$ATM2>[C] +<t_y2$ATM2#5>[C] <= 0;
+  [linear] <cons_linearize3_44>: <t_y1$ATM4#4>[B] +<t_x2$ATM4>[C] -<t_y2$ATM4#4>[C] <= 1;
+  [linear] <cons_linearize2_5>:  -<t_x2$ATM0>[C] +<t_y2$ATM0#5>[C] <= 0;
+  [linear] <cons_linearize2_43>:  -<t_x2$ATM4>[C] +<t_y2$ATM4#3>[C] <= 0;
+  [linear] <cons_linearize3_48>: <t_y1$ATM4#8>[B] +<t_x2$ATM4>[C] -<t_y2$ATM4#8>[C] <= 1;
+  [linear] <cons_linearize3_7>: <t_y1$ATM0#7>[B] +<t_x2$ATM0>[C] -<t_y2$ATM0#7>[C] <= 1;
+  [linear] <cons_linearize3_2>: <t_y1$ATM0#2>[B] +<t_x2$ATM0>[C] -<t_y2$ATM0#2>[C] <= 1;
+  [linear] <cons_linearize2_29>:  -<t_x2$ATM2>[C] +<t_y2$ATM2#9>[C] <= 0;
+  [linear] <cons_linearize2_30>:  -<t_x2$ATM2>[C] +<t_y2$ATM2#10>[C] <= 0;
+  [linear] <cons_linearize2_49>:  -<t_x2$ATM4>[C] +<t_y2$ATM4#9>[C] <= 0;
+  [linear] <cons_x1define_4>: <t_y1$ATM3#1>[B] +2<t_y1$ATM3#2>[B] +3<t_y1$ATM3#3>[B] +4<t_y1$ATM3#4>[B] +5<t_y1$ATM3#5>[B] +6<t_y1$ATM3#6>[B] +7<t_y1$ATM3#7>[B] +8<t_y1$ATM3#8>[B] +9<t_y1$ATM3#9>[B] +10<t_y1$ATM3#10>[B] -<t_x1$ATM3_impl>[M] == -0;
+  [linear] <cons_linearize3_27>: <t_y1$ATM2#7>[B] +<t_x2$ATM2>[C] -<t_y2$ATM2#7>[C] <= 1;
+  [linear] <cons_linearize3_1>: <t_y1$ATM0#1>[B] +<t_x2$ATM0>[C] -<t_y2$ATM0#1>[C] <= 1;
+  [linear] <cons_linearize2_31>:  -<t_x2$ATM3>[C] +<t_y2$ATM3#1>[C] <= 0;
+  [linear] <cons_x1define_2>: <t_y1$ATM1#1>[B] +2<t_y1$ATM1#2>[B] +3<t_y1$ATM1#3>[B] +4<t_y1$ATM1#4>[B] +5<t_y1$ATM1#5>[B] +6<t_y1$ATM1#6>[B] +7<t_y1$ATM1#7>[B] +8<t_y1$ATM1#8>[B] +9<t_y1$ATM1#9>[B] +10<t_y1$ATM1#10>[B] -<t_x1$ATM1_impl>[M] == -0;
+  [linear] <cons_linearize3_39>: <t_y1$ATM3#9>[B] +<t_x2$ATM3>[C] -<t_y2$ATM3#9>[C] <= 1;
+  [linear] <cons_linearize2_48>:  -<t_x2$ATM4>[C] +<t_y2$ATM4#8>[C] <= 0;
+  [linear] <cons_linearize2_7>:  -<t_x2$ATM0>[C] +<t_y2$ATM0#7>[C] <= 0;
+  [linear] <cons_linearize3_21>: <t_y1$ATM2#1>[B] +<t_x2$ATM2>[C] -<t_y2$ATM2#1>[C] <= 1;
+  [linear] <cons_linearize2_50>:  -<t_x2$ATM4>[C] +<t_y2$ATM4#10>[C] <= 0;
+  [linear] <cons_linearize3_46>: <t_y1$ATM4#6>[B] +<t_x2$ATM4>[C] -<t_y2$ATM4#6>[C] <= 1;
+  [linear] <cons_x1define_1>: <t_y1$ATM0#1>[B] +2<t_y1$ATM0#2>[B] +3<t_y1$ATM0#3>[B] +4<t_y1$ATM0#4>[B] +5<t_y1$ATM0#5>[B] +6<t_y1$ATM0#6>[B] +7<t_y1$ATM0#7>[B] +8<t_y1$ATM0#8>[B] +9<t_y1$ATM0#9>[B] +10<t_y1$ATM0#10>[B] -<t_x1$ATM0_impl>[M] == -0;
+  [linear] <cons_linearize3_36>: <t_y1$ATM3#6>[B] +<t_x2$ATM3>[C] -<t_y2$ATM3#6>[C] <= 1;
+  [linear] <cons_linearize3_41>: <t_y1$ATM4#1>[B] +<t_x2$ATM4>[C] -<t_y2$ATM4#1>[C] <= 1;
+  [linear] <cons_linearize2_38>:  -<t_x2$ATM3>[C] +<t_y2$ATM3#8>[C] <= 0;
+  [linear] <cons_linearize3_32>: <t_y1$ATM3#2>[B] +<t_x2$ATM3>[C] -<t_y2$ATM3#2>[C] <= 1;
+  [linear] <cons_linearize2_32>:  -<t_x2$ATM3>[C] +<t_y2$ATM3#2>[C] <= 0;
+  [linear] <cons_linearize2_12>:  -<t_x2$ATM1>[C] +<t_y2$ATM1#2>[C] <= 0;
+  [linear] <cons_linearize2_45>:  -<t_x2$ATM4>[C] +<t_y2$ATM4#5>[C] <= 0;
+  [linear] <cons_linearize2_9>:  -<t_x2$ATM0>[C] +<t_y2$ATM0#9>[C] <= 0;
+  [linear] <cons_linearize2_44>:  -<t_x2$ATM4>[C] +<t_y2$ATM4#4>[C] <= 0;
+  [linear] <cons_linearize3_31>: <t_y1$ATM3#1>[B] +<t_x2$ATM3>[C] -<t_y2$ATM3#1>[C] <= 1;
+  [linear] <cons_linearize2_6>:  -<t_x2$ATM0>[C] +<t_y2$ATM0#6>[C] <= 0;
+  [linear] <cons_linearize2_1>:  -<t_x2$ATM0>[C] +<t_y2$ATM0#1>[C] <= 0;
+  [linear] <cons_linearize3_3>: <t_y1$ATM0#3>[B] +<t_x2$ATM0>[C] -<t_y2$ATM0#3>[C] <= 1;
+  [linear] <cons_linearize2_47>:  -<t_x2$ATM4>[C] +<t_y2$ATM4#7>[C] <= 0;
+  [linear] <cons_linearize3_24>: <t_y1$ATM2#4>[B] +<t_x2$ATM2>[C] -<t_y2$ATM2#4>[C] <= 1;
+  [linear] <cons_linearize3_6>: <t_y1$ATM0#6>[B] +<t_x2$ATM0>[C] -<t_y2$ATM0#6>[C] <= 1;
+  [linear] <cons_linearize2_46>:  -<t_x2$ATM4>[C] +<t_y2$ATM4#6>[C] <= 0;
+  [linear] <cons_linearize3_38>: <t_y1$ATM3#8>[B] +<t_x2$ATM3>[C] -<t_y2$ATM3#8>[C] <= 1;
+  [linear] <cons_linearize2_34>:  -<t_x2$ATM3>[C] +<t_y2$ATM3#4>[C] <= 0;
+  [linear] <cons_linearize3_40>: <t_y1$ATM3#10>[B] +<t_x2$ATM3>[C] -<t_y2$ATM3#10>[C] <= 1;
+  [linear] <cons_linearize2_23>:  -<t_x2$ATM2>[C] +<t_y2$ATM2#3>[C] <= 0;
+  [linear] <cons_linearize2_28>:  -<t_x2$ATM2>[C] +<t_y2$ATM2#8>[C] <= 0;
+  [linear] <cons_linearize3_10>: <t_y1$ATM0#10>[B] +<t_x2$ATM0>[C] -<t_y2$ATM0#10>[C] <= 1;
+  [linear] <cons_linearize2_10>:  -<t_x2$ATM0>[C] +<t_y2$ATM0#10>[C] <= 0;
+  [linear] <cons_linearize3_9>: <t_y1$ATM0#9>[B] +<t_x2$ATM0>[C] -<t_y2$ATM0#9>[C] <= 1;
+  [linear] <cons_linearize3_20>: <t_y1$ATM1#10>[B] +<t_x2$ATM1>[C] -<t_y2$ATM1#10>[C] <= 1;
+  [linear] <cons_linearize2_20>:  -<t_x2$ATM1>[C] +<t_y2$ATM1#10>[C] <= 0;
+  [linear] <cons_linearize3_19>: <t_y1$ATM1#9>[B] +<t_x2$ATM1>[C] -<t_y2$ATM1#9>[C] <= 1;
+  [linear] <cons_linearize2_19>:  -<t_x2$ATM1>[C] +<t_y2$ATM1#9>[C] <= 0;
+  [linear] <cons_linearize3_18>: <t_y1$ATM1#8>[B] +<t_x2$ATM1>[C] -<t_y2$ATM1#8>[C] <= 1;
+  [linear] <cons_linearize2_18>:  -<t_x2$ATM1>[C] +<t_y2$ATM1#8>[C] <= 0;
+  [linear] <cons_linearize3_17>: <t_y1$ATM1#7>[B] +<t_x2$ATM1>[C] -<t_y2$ATM1#7>[C] <= 1;
+  [linear] <cons_linearize2_17>:  -<t_x2$ATM1>[C] +<t_y2$ATM1#7>[C] <= 0;
+  [linear] <cons_linearize3_16>: <t_y1$ATM1#6>[B] +<t_x2$ATM1>[C] -<t_y2$ATM1#6>[C] <= 1;
+  [linear] <cons_linearize2_16>:  -<t_x2$ATM1>[C] +<t_y2$ATM1#6>[C] <= 0;
+  [linear] <cons_linearize3_15>: <t_y1$ATM1#5>[B] +<t_x2$ATM1>[C] -<t_y2$ATM1#5>[C] <= 1;
+  [linear] <cons_linearize2_15>:  -<t_x2$ATM1>[C] +<t_y2$ATM1#5>[C] <= 0;
+  [linear] <cons_linearize3_14>: <t_y1$ATM1#4>[B] +<t_x2$ATM1>[C] -<t_y2$ATM1#4>[C] <= 1;
+  [linear] <cons_linearize2_14>:  -<t_x2$ATM1>[C] +<t_y2$ATM1#4>[C] <= 0;
+  [linear] <cons_linearize3_13>: <t_y1$ATM1#3>[B] +<t_x2$ATM1>[C] -<t_y2$ATM1#3>[C] <= 1;
+  [linear] <cons_linearize2_13>:  -<t_x2$ATM1>[C] +<t_y2$ATM1#3>[C] <= 0;
+END

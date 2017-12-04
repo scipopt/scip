@@ -904,7 +904,8 @@ SCIP_RETCODE convertSides(
       }
       else if( lhs[i] <= -GRB_INFINITY )
       {
-         assert(-GRB_INFINITY < rhs[i] && rhs[i] < GRB_INFINITY);
+         /* this includes the case of free rows */
+         assert(-GRB_INFINITY < rhs[i]);
          lpi->senarray[i] = GRB_LESS_EQUAL;
          lpi->rhsarray[i] = rhs[i];
       }
@@ -1429,6 +1430,14 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    int rngcount;
    int c;
 
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
+
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
    assert(lpi->grbenv != NULL);
@@ -1505,6 +1514,15 @@ SCIP_RETCODE SCIPlpiAddCols(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {
+
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
+
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
    assert(obj != 0);
@@ -1662,6 +1680,14 @@ SCIP_RETCODE SCIPlpiAddRows(
 {
    int rngcount;
    int oldnrows = -1;
+
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
 
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
@@ -2393,7 +2419,7 @@ SCIP_RETCODE SCIPlpiGetCols(
    SCIP_Real*            ub,                 /**< buffer to store the upper bound vector, or NULL */
    int*                  nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
    int*                  beg,                /**< buffer to store start index of each column in ind- and val-array, or NULL */
-   int*                  ind,                /**< buffer to store column indices of constraint matrix entries, or NULL */
+   int*                  ind,                /**< buffer to store row indices of constraint matrix entries, or NULL */
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {
@@ -2450,7 +2476,7 @@ SCIP_RETCODE SCIPlpiGetRows(
    SCIP_Real*            rhs,                /**< buffer to store right hand side vector, or NULL */
    int*                  nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
    int*                  beg,                /**< buffer to store start index of each row in ind- and val-array, or NULL */
-   int*                  ind,                /**< buffer to store row indices of constraint matrix entries, or NULL */
+   int*                  ind,                /**< buffer to store column indices of constraint matrix entries, or NULL */
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {
@@ -2504,7 +2530,7 @@ SCIP_RETCODE SCIPlpiGetRows(
          if ( i <= lastrow )
          {
             /* skip last non-zero of this first ranged row */
-            int newnz = (i < lastrow ? beg[i - firstrow +1]-1 : (*nnonz)-1);
+            int newnz = (i < lastrow ? beg[i - firstrow +1]-1 : (*nnonz)-1); /*lint !e661*/
 
             /* process remaining rows, moving non-zeros to the front */
             for (; i <= lastrow; i++)
@@ -2512,7 +2538,7 @@ SCIP_RETCODE SCIPlpiGetRows(
                int thebeg;
                int theend;
 
-               thebeg = beg[i - firstrow];
+               thebeg = beg[i - firstrow]; /*lint !e661*/
                theend = (i < lastrow ? beg[i - firstrow +1] : *nnonz);
 
                assert(-1 <= lpi->rngrowmap[i] && lpi->rngrowmap[i] < lpi->nrngrows);
@@ -2521,7 +2547,7 @@ SCIP_RETCODE SCIPlpiGetRows(
 
                memmove(&ind[newnz], &ind[thebeg], (theend - thebeg) * sizeof(*ind)); /*lint !e776*/
                memmove(&val[newnz], &val[thebeg], (theend - thebeg) * sizeof(*val)); /*lint !e776*/
-               beg[i - firstrow] = newnz;
+               beg[i - firstrow] = newnz; /*lint !e661*/
                newnz += theend - thebeg;
             }
             assert(newnz < *nnonz);
@@ -2765,7 +2791,8 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    SCIPdebugMessage("Gurobi primal simplex needed %d iterations to gain LP status %d\n", (int) cnt, lpi->solstat);
 
    /* maybe the preprocessor solved the problem; but we need a solution, so solve again without preprocessing */
-   if( SCIPlpiIsPrimalInfeasible(lpi) && ! SCIPlpiHasPrimalRay(lpi) )
+   assert( lpi->solstat != GRB_INF_OR_UNBD );
+   if( lpi->solstat == GRB_INFEASIBLE )
    {
       int presolve;
 
@@ -2802,6 +2829,87 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
       {
          /* preprocessing was not the problem; issue a warning message and treat LP as infeasible */
          SCIPerrorMessage("Gurobi primal simplex returned GRB_INF_OR_UNBD after presolving was turned off\n");
+         return SCIP_LPERROR;
+      }
+   }
+   else if ( lpi->solstat == GRB_UNBOUNDED )
+   {
+      /* Unbounded means that there exists an unbounded primal ray. However, this does not state whether the problem is
+       * feasible. Thus, we temporarily set the objective to 0 and solve again. */
+      SCIP_Real* zeroobjcoefs;
+      SCIP_Real* objcoefs;
+      SCIP_Real oldobjcutoff;
+      int grbobjsen;
+      int status;
+      int ncols;
+
+      SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
+      SCIP_ALLOC( BMSallocMemoryArray(&objcoefs, ncols) );
+      SCIP_ALLOC( BMSallocClearMemoryArray(&zeroobjcoefs, ncols) );
+
+      /* preserve objective coefficients */
+      CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_OBJ, 0, ncols, objcoefs) );
+
+      /* set objective to 0 */
+      CHECK_ZERO( lpi->messagehdlr, GRBsetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_OBJ, 0, ncols, zeroobjcoefs) );
+
+      /* disable cutoff */
+      CHECK_ZERO( lpi->messagehdlr, GRBgetdblparam(lpi->grbenv, GRB_DBL_PAR_CUTOFF, &oldobjcutoff) );
+
+      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, &grbobjsen) );
+      if ( grbobjsen == GRB_MINIMIZE )
+      {
+         CHECK_ZERO( lpi->messagehdlr, GRBsetdblparam(lpi->grbenv, GRB_DBL_PAR_CUTOFF, GRB_INFINITY) );
+      }
+      else
+      {
+         CHECK_ZERO( lpi->messagehdlr, GRBsetdblparam(lpi->grbenv, GRB_DBL_PAR_CUTOFF, -GRB_INFINITY) );
+         assert( grbobjsen == GRB_MAXIMIZE );
+      }
+
+      /* solve problem again */
+      CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
+      CHECK_ZERO( lpi->messagehdlr, GRBoptimize(lpi->grbmodel) );
+
+      CHECK_ZERO( lpi->messagehdlr, GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_ITERCOUNT, &cnt) );
+      lpi->iterations += (int) cnt;
+
+      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_STATUS, &status) );
+
+      /* restore objective */
+      CHECK_ZERO( lpi->messagehdlr, GRBsetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_OBJ, 0, ncols, objcoefs) );
+      CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
+
+      /* restore objective limit */
+      CHECK_ZERO( lpi->messagehdlr, GRBsetdblparam(lpi->grbenv, GRB_DBL_PAR_CUTOFF, oldobjcutoff) );
+
+      BMSfreeMemoryArray(&zeroobjcoefs);
+      BMSfreeMemoryArray(&objcoefs);
+
+      /* possibly correct status */
+      switch ( status )
+      {
+      case GRB_INF_OR_UNBD:
+      case GRB_INFEASIBLE:
+         lpi->solstat = GRB_INFEASIBLE;
+         break;
+
+      case GRB_OPTIMAL:
+         /* We again have to solve the problem to restore possible unbounded rays. */
+         CHECK_ZERO( lpi->messagehdlr, GRBoptimize(lpi->grbmodel) );
+         CHECK_ZERO( lpi->messagehdlr, GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_ITERCOUNT, &cnt) );
+         lpi->iterations += (int) cnt;
+         break;
+
+      case GRB_ITERATION_LIMIT:
+      case GRB_TIME_LIMIT:
+         /* do nothing */
+         break;
+
+         /* GRB_LOADED, GRB_NODE_LIMIT, GRB_CUTOFF, GRB_SOLUTION_LIMIT, GRB_INTERRUPTED, GRB_NUMERIC, GRB_SUBOPTIMAL, GRB_INPROGRESS, GRB_USER_OBJ_LIMIT */
+      default:
+         SCIPerrorMessage("Gurobi returned wrong status %d.\n", status);
+         return SCIP_LPERROR;
       }
    }
 
@@ -2933,6 +3041,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
       {
          /* preprocessing was not the problem; issue a warning message and treat LP as infeasible */
          SCIPerrorMessage("Gurobi dual simplex returned GRB_INF_OR_UNBD after presolving was turned off.\n");
+         return SCIP_LPERROR;
       }
    }
 
@@ -3060,7 +3169,8 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
       if( lpi->solstat == GRB_INF_OR_UNBD )
       {
          /* preprocessing was not the problem; issue a warning message and treat LP as infeasible */
-         SCIPerrorMessage("Gurobi dual simplex returned GRB_INF_OR_UNBD after presolving was turned off\n");
+         SCIPerrorMessage("Gurobi barrier returned GRB_INF_OR_UNBD after presolving was turned off\n");
+         return SCIP_LPERROR;
       }
    }
 
@@ -3530,14 +3640,48 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
 
    SCIPdebugMessage("checking for primal feasibility\n");
 
+   if ( lpi->solstat == GRB_OPTIMAL )
+      return TRUE;
+
    res = GRBgetintparam(lpi->grbenv, GRB_INT_PAR_METHOD, &algo);
    if ( res != 0 )
    {
       SCIPABORT();
       return FALSE; /*lint !e527*/
    }
+   if ( algo != GRB_METHOD_PRIMAL )
+      return FALSE;
 
-   return (lpi->solstat == GRB_OPTIMAL || (lpi->solstat == GRB_UNBOUNDED && algo == GRB_METHOD_PRIMAL));
+   if( lpi->solstat == GRB_ITERATION_LIMIT )
+   {
+      double consviol;
+      double boundviol;
+      double eps;
+
+      res = GRBgetdblparam(lpi->grbenv, GRB_DBL_PAR_OPTIMALITYTOL, &eps);
+      if ( res != 0 )
+      {
+         SCIPABORT();
+         return FALSE; /*lint !e527*/
+      }
+      res = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_CONSTR_VIO, &consviol);
+      if ( res != 0 )
+      {
+         SCIPABORT();
+         return FALSE; /*lint !e527*/
+      }
+      res = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_BOUND_VIO, &boundviol);
+      if ( res != 0 )
+      {
+         SCIPABORT();
+         return FALSE; /*lint !e527*/
+      }
+
+      if ( consviol <= eps && boundviol <= eps )
+         return TRUE;
+   }
+
+   return FALSE;
 }
 
 /** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point);
@@ -3753,8 +3897,8 @@ SCIP_RETCODE SCIPlpiGetObjval(
    SCIPdebugMessage("getting solution's objective value\n");
 
 #ifndef NDEBUG
-   (void)GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJVAL, &oval);
-   (void)GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJBOUND, &obnd);
+   CHECK_ZERO( lpi->messagehdlr, GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJVAL, &oval) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJBOUND, &obnd) );
 
    assert(lpi->solstat != GRB_OPTIMAL || oval == obnd); /*lint !e777*/
 #endif
@@ -3925,10 +4069,32 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
    SCIP_Real*            quality             /**< pointer to store quality number */
    )
 {  /*lint --e{715}*/
+   const char* what;
+   int ret;
+
    assert(lpi != NULL);
    assert(quality != NULL);
 
-   CHECK_ZERO( lpi->messagehdlr, GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_KAPPA, quality) );
+   SCIPdebugMessage("requesting solution quality from Gurobi: quality %d\n", qualityindicator);
+
+   switch( qualityindicator )
+   {
+   case SCIP_LPSOLQUALITY_ESTIMCONDITION:
+      what = GRB_DBL_ATTR_KAPPA;
+      break;
+
+   case SCIP_LPSOLQUALITY_EXACTCONDITION:
+      what = GRB_DBL_ATTR_KAPPA_EXACT;
+      break;
+
+   default:
+      SCIPerrorMessage("Solution quality %d unknown.\n", qualityindicator);
+      return SCIP_INVALIDDATA;
+   }
+
+   ret = GRBgetdblattr(lpi->grbmodel, what, quality);
+   if( ret != 0 )
+      *quality = SCIP_INVALID;
 
    return SCIP_OKAY;
 }
@@ -3963,11 +4129,14 @@ SCIP_RETCODE SCIPlpiGetBase(
    SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
    SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
 
-   if( rstat != 0 )
+   if( rstat != NULL )
    {
       int i;
 
+      SCIP_CALL( ensureSidechgMem(lpi, nrows) );
+
       CHECK_ZERO( lpi->messagehdlr, GRBgetintattrarray(lpi->grbmodel, GRB_INT_ATTR_CBASIS, 0, nrows, rstat) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetcharattrarray(lpi->grbmodel, GRB_CHAR_ATTR_SENSE, 0, nrows, lpi->senarray) );
 
       for( i = 0; i < nrows; ++i )
       {
@@ -3979,30 +4148,56 @@ SCIP_RETCODE SCIPlpiGetBase(
             idx = ncols + lpi->rngrowmap[i];
             assert(lpi->rngrowmap[i] < lpi->nrngrows);
             CHECK_ZERO( lpi->messagehdlr, GRBgetintattrelement(lpi->grbmodel, GRB_INT_ATTR_VBASIS, idx, &rstat[i]) );
+
+            switch( rstat[i] )
+            {
+            case GRB_BASIC:
+               rstat[i] = (int) SCIP_BASESTAT_BASIC;
+               break;
+
+            case GRB_NONBASIC_LOWER:
+               rstat[i] = (int) SCIP_BASESTAT_LOWER;
+               break;
+
+            case GRB_NONBASIC_UPPER:
+               rstat[i] = (int) SCIP_BASESTAT_UPPER;
+               break;
+
+               /*lint -fallthrough*/
+            case GRB_SUPERBASIC:
+            default:
+               SCIPerrorMessage("invalid basis status %d for ranged row.\n", rstat[i]);
+               SCIPABORT();
+               return SCIP_INVALIDDATA; /*lint !e527*/
+            }
          }
-
-         switch( rstat[i] )
+         else
          {
-         case GRB_BASIC:
-            rstat[i] = (int) SCIP_BASESTAT_BASIC;
-            break;
+            /* Slack variables can only be basic or at their lower bounds in Gurobi. */
+            switch( rstat[i] )
+            {
+            case GRB_BASIC:
+               rstat[i] = (int) SCIP_BASESTAT_BASIC;
+               break;
 
-         case GRB_NONBASIC_LOWER:
-            rstat[i] = (int) SCIP_BASESTAT_LOWER;
-            break;
+            case GRB_NONBASIC_LOWER:
+               if ( lpi->senarray[i] == '>' || lpi->senarray[i] == '=' )
+                  rstat[i] = (int) SCIP_BASESTAT_LOWER;
+               else
+               {
+                  assert( lpi->senarray[i] == '<' );
+                  rstat[i] = (int) SCIP_BASESTAT_UPPER;
+               }
+               break;
 
-         case GRB_NONBASIC_UPPER:
-            rstat[i] = (int) SCIP_BASESTAT_UPPER;
-            break;
-
-         case GRB_SUPERBASIC:
-            rstat[i] = (int) SCIP_BASESTAT_ZERO;
-            break;
-
-         default:
-            SCIPerrorMessage("invalid basis status %d\n", rstat[i]);
-            SCIPABORT();
-            return SCIP_INVALIDDATA; /*lint !e527*/
+               /*lint -fallthrough*/
+            case GRB_NONBASIC_UPPER:
+            case GRB_SUPERBASIC:
+            default:
+               SCIPerrorMessage("invalid basis status %d for row.\n", rstat[i]);
+               SCIPABORT();
+               return SCIP_INVALIDDATA; /*lint !e527*/
+            }
          }
       }
    }
@@ -4028,12 +4223,13 @@ SCIP_RETCODE SCIPlpiGetBase(
          case GRB_NONBASIC_UPPER:
             cstat[j] = (int) SCIP_BASESTAT_UPPER;
             break;
+
          case GRB_SUPERBASIC:
             cstat[j] = (int) SCIP_BASESTAT_ZERO;
             break;
 
          default:
-            SCIPerrorMessage("invalid basis status %d\n", cstat[j]);
+            SCIPerrorMessage("invalid basis status %d for column.\n", cstat[j]);
             SCIPABORT();
             return SCIP_INVALIDDATA; /*lint !e527*/
          }
@@ -4073,35 +4269,11 @@ SCIP_RETCODE SCIPlpiSetBase(
 
    for( i = 0; i < nrows; ++i )
    {
-      switch( rstat[i] )
-      {
-      case SCIP_BASESTAT_BASIC:
-         lpi->rstat[i] = GRB_BASIC;
-         break;
-
-      case SCIP_BASESTAT_LOWER:
-         lpi->rstat[i] = GRB_NONBASIC_LOWER;
-         break;
-
-      case SCIP_BASESTAT_UPPER:
-         lpi->rstat[i] = GRB_NONBASIC_UPPER;
-         break;
-
-      case SCIP_BASESTAT_ZERO:
-         lpi->rstat[i] = GRB_SUPERBASIC;
-         break;
-
-      default:
-         SCIPerrorMessage("invalid basis status %d\n", rstat[i]);
-         SCIPABORT();
-         return SCIP_INVALIDDATA; /*lint !e527*/
-      }
-
       if ( lpi->rngrowmap != NULL && lpi->rngrowmap[i] >= 0 )
       {
-         /* set basis status of corresponding range variable; ranged row is always non-basic */
          int idx;
 
+         /* set basis status of corresponding range variable; ranged row is always non-basic */
          idx = ncols + lpi->rngrowmap[i];
          assert(lpi->rngrowmap[i] < lpi->nrngrows);
          lpi->cstat[idx] = lpi->rstat[i];
@@ -4109,6 +4281,44 @@ SCIP_RETCODE SCIPlpiSetBase(
 #ifndef NDEBUG
          nrngsfound++;
 #endif
+      }
+      else
+      {
+         switch( rstat[i] )
+         {
+         case SCIP_BASESTAT_BASIC:
+            lpi->rstat[i] = GRB_BASIC;
+            break;
+
+         case SCIP_BASESTAT_UPPER:
+         {
+#ifndef NDEBUG
+            char sense;
+            CHECK_ZERO( lpi->messagehdlr, GRBgetcharattrarray(lpi->grbmodel, GRB_CHAR_ATTR_SENSE, i, 1, &sense) );
+            assert( sense == '<' );
+#endif
+            /* Slack variables can only be basic or at their lower bounds in Gurobi. */
+            lpi->rstat[i] = GRB_NONBASIC_LOWER;
+            break;
+         }
+
+         case SCIP_BASESTAT_LOWER:
+         {
+#ifndef NDEBUG
+            char sense;
+            CHECK_ZERO( lpi->messagehdlr, GRBgetcharattrarray(lpi->grbmodel, GRB_CHAR_ATTR_SENSE, i, 1, &sense) );
+            assert( sense == '>' || sense == '=' );
+#endif
+            lpi->rstat[i] = GRB_NONBASIC_LOWER;
+            break;
+         }
+
+         case SCIP_BASESTAT_ZERO:
+         default:
+            SCIPerrorMessage("invalid basis status %d for row.\n", rstat[i]);
+            SCIPABORT();
+            return SCIP_INVALIDDATA; /*lint !e527*/
+         }
       }
    }
 
@@ -4178,10 +4388,11 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
    CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ngrbcols) );
 
+   /**@todo avoid memory allocation by using bind directly */
    /* get space for bhead */
-   SCIP_ALLOC( BMSallocMemoryArray(&bhead, nrows+ngrbcols) );
+   SCIP_ALLOC( BMSallocMemoryArray(&bhead, nrows) );
 
-   /* bet basis indices */
+   /* get basis indices */
    CHECK_ZERO( lpi->messagehdlr, GRBgetBasisHead(lpi->grbmodel, bhead) );
 
    for (i = 0; i < nrows; ++i)
@@ -4210,7 +4421,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    return SCIP_OKAY;
 }
 
-/** get dense row of inverse basis matrix B^-1
+/** get row of inverse basis matrix B^-1
  *
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
@@ -4232,8 +4443,6 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    int nrows;
    double val;
    int ind;
-   int k;
-   int i;
    int status;
 
    assert(lpi != NULL);
@@ -4255,10 +4464,13 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIP_ALLOC( BMSallocMemoryArray(&(x.ind), nrows) );
    SCIP_ALLOC( BMSallocMemoryArray(&(x.val), nrows) );
 
+   /* get basis indices, temporarily using memory of x.ind */
+   SCIP_CALL( SCIPlpiGetBasisInd(lpi, x.ind) );
+
    /* set up rhs */
    b.len = 1;
    ind = r;
-   val = 1.0;
+   val = (x.ind)[r] >= 0 ? 1.0 : -1.0;
    b.ind = &ind;
    b.val = &val;
 
@@ -4272,11 +4484,13 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    if ( ninds != NULL && inds != NULL )
    {
       int idx;
+      int i;
 
       /* copy sparse solution */
       for (i = 0; i < x.len; ++i)
       {
          idx = (x.ind)[i];
+         assert( idx >= 0 && idx < nrows );
          inds[i] = idx;
          coef[idx] = (x.val)[i];
       }
@@ -4284,15 +4498,16 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    }
    else
    {
+      int idx;
+      int i;
+
       /* copy solution to dense vector */
-      k = 0;
-      for (i = 0; i < nrows; ++i)
+      BMSclearMemoryArray(coef, nrows);
+      for (i = 0; i < x.len; ++i)
       {
-         assert( k <= x.len );
-         if ( k < x.len && (x.ind)[k] == i )
-            coef[i] = (x.val)[k++];
-         else
-            coef[i] = 0.0;
+         idx = (x.ind)[i];
+         assert( idx >= 0 && idx < nrows );
+         coef[idx] = (x.val)[i];
       }
    }
 
@@ -4303,7 +4518,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    return SCIP_OKAY;
 }
 
-/** get dense column of inverse basis matrix B^-1
+/** get column of inverse basis matrix B^-1
  *
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
@@ -4326,11 +4541,10 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
 {
    SVECTOR x;
    SVECTOR b;
+   int* bind;
    int nrows;
    double val;
    int ind;
-   int k;
-   int i;
    int status;
 
    assert(lpi != NULL);
@@ -4365,42 +4579,54 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    /* size should be at most the number of rows */
    assert( x.len <= nrows );
 
+   /* get basis indices: entries that correspond to slack variables with coefficient -1 must be negated */
+   SCIP_ALLOC( BMSallocMemoryArray(&bind, nrows) );
+   SCIP_CALL( SCIPlpiGetBasisInd(lpi, bind) );
+
    /* check whether we require a dense or sparse result vector */
    if ( ninds != NULL && inds != NULL )
    {
       int idx;
+      int i;
 
       /* copy sparse solution */
       for (i = 0; i < x.len; ++i)
       {
          idx = (x.ind)[i];
+         assert( idx >= 0 && idx < nrows );
          inds[i] = idx;
          coef[idx] = (x.val)[i];
+         if( bind[idx] < 0 )
+            coef[idx] *= -1.0;
       }
       *ninds = x.len;
    }
    else
    {
+      int idx;
+      int i;
+
       /* copy solution to dense vector */
-      k = 0;
-      for (i = 0; i < nrows; ++i)
+      BMSclearMemoryArray(coef, nrows);
+      for (i = 0; i < x.len; ++i)
       {
-         assert( k <= x.len );
-         if ( k < x.len && (x.ind)[k] == i )
-            coef[i] = (x.val)[k++];
-         else
-            coef[i] = 0.0;
+         idx = (x.ind)[i];
+         assert( idx >= 0 && idx < nrows );
+         coef[idx] = (x.val)[i];
+         if( bind[idx] < 0 )
+            coef[idx] *= -1.0;
       }
    }
 
-   /* free solution space */
+   /* free solution space and basis index array */
+   BMSfreeMemoryArray(&bind);
    BMSfreeMemoryArray(&(x.val));
    BMSfreeMemoryArray(&(x.ind));
 
    return SCIP_OKAY;
 }
 
-/** get dense row of inverse basis matrix times constraint matrix B^-1 * A
+/** get row of inverse basis matrix times constraint matrix B^-1 * A
  *
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
@@ -4422,9 +4648,8 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    int nrows;
    int ncols;
    int ngrbcols;
-   int k;
-   int j;
    int status;
+   SCIP_Bool isslackvar;
 
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
@@ -4441,55 +4666,67 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
    SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
    CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ngrbcols) );
+   assert( r >= 0 && r < nrows );
 
    x.len = 0;
    SCIP_ALLOC( BMSallocMemoryArray(&(x.ind), ngrbcols + nrows) );
    SCIP_ALLOC( BMSallocMemoryArray(&(x.val), ngrbcols + nrows) );
 
+   /* get basis indices, temporarily using memory of x.ind: if r corresponds to a slack variable with coefficient -1 we
+    * have to negate all values
+    */
+   SCIP_CALL( SCIPlpiGetBasisInd(lpi, x.ind) );
+   isslackvar = ((x.ind)[r] < 0);
+
+   /* retrieve row */
    CHECK_ZERO( lpi->messagehdlr, GRBBinvRowi(lpi->grbmodel, r, &x) );
 
    /* size should be at most the number of columns plus rows for slack variables */
    assert( x.len <= ngrbcols + nrows );
 
-   /* substitute out range variables */
-   if ( lpi->nrngrows > 0 )
-   {
-      for (k = 0; k < x.len; k++)
-      {
-         j = (x.ind)[k];
-         assert(0 <= j && j < ngrbcols);
-         if ( j >= ncols )
-         {
-            SCIPerrorMessage("range variable in basis inverse row: not yet implemented\n");
-            return SCIP_LPERROR; /*lint !e527*/
-         }
-      }
-   }
-
    /* check whether we require a dense or sparse result vector */
    if ( ninds != NULL && inds != NULL )
    {
       int idx;
+      int k;
+      int j;
 
-      /* copy sparse solution */
+      /* Copy sparse solution: Column indices ngrbcols and larger correspond to slack variables artificially introduced
+       * by Gurobi; column indices ncols, ncols+1, ..., ngrbcols-1 correspond to slack variables introduced by the LPI
+       * implementation. Both must simply be ignored.
+       */
+      k = 0;
       for (j = 0; j < x.len; ++j)
       {
          idx = (x.ind)[j];
-         inds[j] = idx;
-         coef[idx] = (x.val)[j];
+         assert( idx >= 0 && idx < ngrbcols+nrows );
+         if ( idx < ncols )
+         {
+            inds[k++] = idx;
+            coef[idx] = (x.val)[j];
+            if( isslackvar )
+               coef[idx] *= -1.0;
+         }
       }
-      *ninds = x.len;
+      *ninds = k;
    }
    else
    {
-      k = 0;
-      for (j = 0; j < ncols; ++j)
+      int idx;
+      int j;
+
+      /* Copy dense solution (see comment above). */
+      BMSclearMemoryArray(coef, ncols);
+      for (j = 0; j < x.len; ++j)
       {
-         assert( k <= x.len );
-         if ( k < x.len && (x.ind)[k] == j )
-            coef[j] = (x.val)[k++];
-         else
-            coef[j] = 0.0;
+         idx = (x.ind)[j];
+         assert( idx >= 0 && idx < ngrbcols+nrows );
+         if ( idx < ncols )
+         {
+            coef[idx] = (x.val)[j];
+            if( isslackvar )
+               coef[idx] *= -1.0;
+         }
       }
    }
 
@@ -4500,7 +4737,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    return SCIP_OKAY;
 }
 
-/** get dense column of inverse basis matrix times constraint matrix B^-1 * A
+/** get column of inverse basis matrix times constraint matrix B^-1 * A
  *
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
@@ -4518,9 +4755,8 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    )
 {  /*lint --e{715}*/
    SVECTOR x;
+   int* bind;
    int nrows;
-   int k;
-   int j;
    int status;
 
    assert(lpi != NULL);
@@ -4546,34 +4782,47 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    /* size should be at most the number of rows */
    assert( x.len <= nrows );
 
+   /* get basis indices: entries that correspond to slack variables with coefficient -1 must be negated */
+   SCIP_ALLOC( BMSallocMemoryArray(&bind, nrows) );
+   SCIP_CALL( SCIPlpiGetBasisInd(lpi, bind) );
+
    /* check whether we require a dense or sparse result vector */
    if ( ninds != NULL && inds != NULL )
    {
       int idx;
+      int j;
 
       /* copy sparse solution */
       for (j = 0; j < x.len; ++j)
       {
          idx = (x.ind)[j];
+         assert( idx >= 0 && idx < nrows );
          inds[j] = idx;
          coef[idx] = (x.val)[j];
+         if( bind[idx] < 0 )
+            coef[idx] *= -1.0;
       }
       *ninds = x.len;
    }
    else
    {
-      k = 0;
-      for (j = 0; j < nrows; ++j)
+      int idx;
+      int j;
+
+      /* copy dense solution */
+      BMSclearMemoryArray(coef, nrows);
+      for (j = 0; j < x.len; ++j)
       {
-         assert( k <= x.len );
-         if ( k < x.len && (x.ind)[k] == j )
-            coef[j] = (x.val)[k++];
-         else
-            coef[j] = 0.0;
+         idx = (x.ind)[j];
+         assert( idx >= 0 && idx < nrows );
+         coef[idx] = (x.val)[j];
+         if( bind[idx] < 0 )
+            coef[idx] *= -1.0;
       }
    }
 
-   /* free solution space */
+   /* free solution space and basis index array */
+   BMSfreeMemoryArray(&bind);
    BMSfreeMemoryArray(&(x.val));
    BMSfreeMemoryArray(&(x.ind));
 
@@ -5114,8 +5363,6 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    SCIP_Real*            dval                /**< buffer to store the parameter value */
    )
 {
-   int objsen;
-
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
    assert(dval != NULL);
@@ -5132,19 +5379,8 @@ SCIP_RETCODE SCIPlpiGetRealpar(
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
       return SCIP_PARAMETERUNKNOWN;
-   case SCIP_LPPAR_LOBJLIM:
-      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, &objsen) );
-      if( objsen == GRB_MAXIMIZE )
-         SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_CUTOFF, dval) );
-      else
-         return SCIP_PARAMETERUNKNOWN;
-      break;
-   case SCIP_LPPAR_UOBJLIM:
-      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, &objsen) );
-      if( objsen == GRB_MINIMIZE )
-         SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_CUTOFF, dval) );
-      else
-         return SCIP_PARAMETERUNKNOWN;
+   case SCIP_LPPAR_OBJLIM:
+      SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_CUTOFF, dval) );
       break;
    case SCIP_LPPAR_LPTILIM:
       SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_TIMELIMIT, dval) );
@@ -5166,8 +5402,6 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    SCIP_Real             dval                /**< parameter value */
    )
 {
-   int objsen;
-
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
 
@@ -5183,21 +5417,8 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
       return SCIP_PARAMETERUNKNOWN;
-   case SCIP_LPPAR_LOBJLIM:
-      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, &objsen) );
-      if( objsen == GRB_MAXIMIZE )
-         SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_CUTOFF, dval) );
-      else
-         return SCIP_PARAMETERUNKNOWN;
-      break;
-   case SCIP_LPPAR_UOBJLIM:
-      CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, &objsen) );
-      if( objsen == GRB_MINIMIZE )
-      {
-         SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_CUTOFF, dval) );
-      }
-      else
-         return SCIP_PARAMETERUNKNOWN;
+   case SCIP_LPPAR_OBJLIM:
+      SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_CUTOFF, dval) );
       break;
    case SCIP_LPPAR_LPTILIM:
       SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_TIMELIMIT, dval) );

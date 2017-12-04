@@ -890,16 +890,28 @@ SCIP_RETCODE applyCompletesol(
 
    SCIP_CALL_ABORT( SCIPpresolve(subscip) );
 
-   SCIPdebugMsg(scip, "presolved instance has bin=%d, int=%d, cont=%d variables\n",
-         SCIPgetNBinVars(subscip), SCIPgetNIntVars(subscip), SCIPgetNContVars(subscip));
-
-   /* check whether the presolved instance is small enough */
-   if( heurdata->maxcontvars >= 0 && SCIPgetNContVars(subscip) > heurdata->maxcontvars )
+   if( SCIPgetStage(subscip) == SCIP_STAGE_PRESOLVED )
    {
-      SCIPdebugMsg(scip, "presolved instance has too many continuous variables (maxcontvars: %d)\n", heurdata->maxcontvars);
-      goto TERMINATE;
+      SCIPdebugMsg(scip, "presolved instance has bin=%d, int=%d, cont=%d variables\n",
+            SCIPgetNBinVars(subscip), SCIPgetNIntVars(subscip), SCIPgetNContVars(subscip));
+
+      /* check whether the presolved instance is small enough */
+      if( heurdata->maxcontvars >= 0 && SCIPgetNContVars(subscip) > heurdata->maxcontvars )
+      {
+         SCIPdebugMsg(scip, "presolved instance has too many continuous variables (maxcontvars: %d)\n", heurdata->maxcontvars);
+         goto TERMINATE;
+      }
+
+      /* set node limit of 1 if the presolved problem is an LP, otherwise we would start branching if an LP iteration
+       * limit was set by the user.
+       */
+      if( !SCIPisNLPEnabled(subscip) && SCIPgetNContVars(subscip) == SCIPgetNVars(subscip) )
+      {
+         SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 1LL) );
+      }
+
+      SCIP_CALL_ABORT( SCIPsolve(subscip) );
    }
-   SCIP_CALL_ABORT( SCIPsolve(subscip) );
 
    SCIP_CALL( SCIPdropEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, -1) );
 

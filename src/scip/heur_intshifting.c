@@ -373,7 +373,8 @@ SCIP_RETCODE selectShifting(
             continue;
 
          deltaobj = SCIPvarGetObj(var) * (shiftval - solval);
-         if( shiftscore < bestshiftscore || deltaobj < bestdeltaobj )
+         if( (shiftscore < bestshiftscore || deltaobj < bestdeltaobj)
+            && !SCIPisHugeValue(scip, REALABS(shiftval)) ) /* ignore candidates for which shiftval is too large */
          {
             bestshiftscore = shiftscore;
             bestdeltaobj = deltaobj;
