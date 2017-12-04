@@ -241,7 +241,7 @@ typedef struct VarPrio VARPRIO;
    NH*                   neighborhood,       /**< neighborhood data structure */ \
    SCIP_SOL**            solptr,             /**< pointer to store the reference solution */ \
    SCIP_RESULT*          result              /**< pointer to indicate the callback success whether a reference solution is available */ \
-)
+   )
 
 /** callback function to deactivate neighborhoods on problems where they are irrelevant */
 #define DECL_NHDEACTIVATE(x) SCIP_RETCODE x (\
