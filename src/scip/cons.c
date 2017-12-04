@@ -7826,8 +7826,8 @@ SCIP_RETCODE SCIPconshdlrsResetPropagationStatus(
 
 /** create linear constraint statistics */
 SCIP_RETCODE SCIPlinConsStatsCreate(
-   SCIP*                scip,                /**< scip data structure */
-   SCIP_LINCONSSTATS**  linconsstats         /**< pointer to linear constraint classification statistics */
+   SCIP*                 scip,               /**< scip data structure */
+   SCIP_LINCONSSTATS**   linconsstats        /**< pointer to linear constraint classification statistics */
    )
 {
    assert(linconsstats != NULL);
@@ -7839,8 +7839,8 @@ SCIP_RETCODE SCIPlinConsStatsCreate(
 
 /** free linear constraint statistics */
 void SCIPlinConsStatsFree(
-   SCIP*                scip,                /**< scip data structure */
-   SCIP_LINCONSSTATS**  linconsstats         /**< pointer to linear constraint classification statistics */
+   SCIP*                 scip,               /**< scip data structure */
+   SCIP_LINCONSSTATS**   linconsstats        /**< pointer to linear constraint classification statistics */
    )
 {
    assert(linconsstats != NULL);
@@ -7851,7 +7851,7 @@ void SCIPlinConsStatsFree(
 
 /** resets linear constraint statistics */
 void SCIPlinConsStatsReset(
-   SCIP_LINCONSSTATS*   linconsstats         /**< linear constraint classification statistics */
+   SCIP_LINCONSSTATS*    linconsstats        /**< linear constraint classification statistics */
    )
 {
    BMSclearMemoryArray(linconsstats->counter, SCIP_NLINCONSTYPES);
@@ -7860,8 +7860,8 @@ void SCIPlinConsStatsReset(
 
 /** returns the number of occurrences of a specific type of linear constraint */
 int SCIPlinConsStatsGetTypeCount(
-   SCIP_LINCONSSTATS*   linconsstats,        /**< linear constraint classification statistics */
-   SCIP_LINCONSTYPE     linconstype          /**< linear constraint type */
+   SCIP_LINCONSSTATS*    linconsstats,       /**< linear constraint classification statistics */
+   SCIP_LINCONSTYPE      linconstype         /**< linear constraint type */
    )
 {
    assert(linconsstats != NULL);
@@ -7872,7 +7872,7 @@ int SCIPlinConsStatsGetTypeCount(
 
 /** returns the total number of classified constraints */
 int SCIPlinConsStatsGetSum(
-   SCIP_LINCONSSTATS*   linconsstats         /**< linear constraint classification statistics */
+   SCIP_LINCONSSTATS*    linconsstats        /**< linear constraint classification statistics */
    )
 {
    assert(linconsstats != NULL);
@@ -7882,9 +7882,9 @@ int SCIPlinConsStatsGetSum(
 
 /** increases the number of occurrences of a specific type of linear constraint */
 void SCIPlinConsStatsIncTypeCount(
-   SCIP_LINCONSSTATS*   linconsstats,        /**< linear constraint classification statistics */
-   SCIP_LINCONSTYPE     linconstype,         /**< linear constraint type */
-   int                  increment            /**< positive increment */
+   SCIP_LINCONSSTATS*    linconsstats,       /**< linear constraint classification statistics */
+   SCIP_LINCONSTYPE      linconstype,        /**< linear constraint type */
+   int                   increment           /**< positive increment */
    )
 {
    assert(linconsstats != NULL);
@@ -7897,9 +7897,9 @@ void SCIPlinConsStatsIncTypeCount(
 
 /** print linear constraint classification statistics */
 void SCIPprintLinConsStats(
-   SCIP*                scip,                /**< scip data structure */
-   FILE*                file,                /**< file handle or NULL to print to standard out */
-   SCIP_LINCONSSTATS*   linconsstats         /**< linear constraint classification statistics */
+   SCIP*                 scip,               /**< scip data structure */
+   FILE*                 file,               /**< file handle or NULL to print to standard out */
+   SCIP_LINCONSSTATS*    linconsstats        /**< linear constraint classification statistics */
    )
 {
    assert(scip != NULL);

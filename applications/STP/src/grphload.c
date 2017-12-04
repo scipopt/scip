@@ -37,7 +37,11 @@
 #include <assert.h>
 #include <stdarg.h>        /* message: va_list etc */
 
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(_MSC_VER)
+#include  <io.h>
+#endif
+
+#if defined(_WIN32) || defined(_WIN64) || defined(_MSC_VER)
 #ifndef R_OK
 #define R_OK 1
 #endif
@@ -626,8 +630,11 @@ static int start_section(
                (*inclname == '\0') ? basename : inclname,
                EXTSEP,
                temp.section->extension);
-
+#if defined(_MSC_VER)
+            if (_access(temp.filename, R_OK))
+#else
             if (access(temp.filename, R_OK))
+#endif
             {
                /* We can't access the include file.
                 * If the section is optional, we just ignore

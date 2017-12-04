@@ -813,7 +813,7 @@ SCIP_RETCODE buildsolgraph(
 }
 
 static
-inline void marksolverts(
+void marksolverts(
    GRAPH* g,
    IDX* curr,
    int* unodemap,

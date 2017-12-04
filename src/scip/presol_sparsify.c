@@ -137,19 +137,19 @@ SCIP_DECL_HASHKEYVAL(varPairHashval)
 /** try non-zero cancellation for given row */
 static
 SCIP_RETCODE cancelRow(
-   SCIP*                 scip,                 /**< SCIP datastructure */
-   SCIP_MATRIX*          matrix,               /**< the constraint matrix */
-   SCIP_HASHTABLE*       pairtable,            /**< the hashtable containing ROWVARPAIR's of equations */
-   int                   rowidx,               /**< index of row to try non-zero cancellation for */
-   int                   maxcontfillin,        /**< maximal fill-in allowed for continuous variables */
-   int                   maxintfillin,         /**< maximal fill-in allowed for integral variables */
-   int                   maxbinfillin,         /**< maximal fill-in allowed for binary variables */
-   int                   maxconsiderednonzeros,/**< maximal number of non-zeros to consider for cancellation */
-   SCIP_Bool             preserveintcoefs,     /**< only perform non-zero cancellation if integrality of coefficients is preserved? */
-   SCIP_Longint*         nuseless,             /**< pointer to update number of useless hashtable retrieves */
-   int*                  nchgcoefs,            /**< pointer to update number of changed coefficients */
-   int*                  ncanceled,            /**< pointer to update number of canceled nonzeros */
-   int*                  nfillin               /**< pointer to update the produced fill-in */
+   SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP_MATRIX*          matrix,             /**< the constraint matrix */
+   SCIP_HASHTABLE*       pairtable,          /**< the hashtable containing ROWVARPAIR's of equations */
+   int                   rowidx,             /**< index of row to try non-zero cancellation for */
+   int                   maxcontfillin,      /**< maximal fill-in allowed for continuous variables */
+   int                   maxintfillin,       /**< maximal fill-in allowed for integral variables */
+   int                   maxbinfillin,       /**< maximal fill-in allowed for binary variables */
+   int                   maxconsiderednonzeros, /**< maximal number of non-zeros to consider for cancellation */
+   SCIP_Bool             preserveintcoefs,   /**< only perform non-zero cancellation if integrality of coefficients is preserved? */
+   SCIP_Longint*         nuseless,           /**< pointer to update number of useless hashtable retrieves */
+   int*                  nchgcoefs,          /**< pointer to update number of changed coefficients */
+   int*                  ncanceled,          /**< pointer to update number of canceled nonzeros */
+   int*                  nfillin             /**< pointer to update the produced fill-in */
    )
 {
    int* cancelrowinds;

@@ -75,10 +75,10 @@
                                          *   the fixing rate was not reached?
                                          */
 
-/**< which variants of the vbounds heuristic that try to stay feasible should be called? */
+/** which variants of the vbounds heuristic that try to stay feasible should be called? */
 #define DEFAULT_FEASVARIANT   (VBOUNDVARIANT_BESTBOUND | VBOUNDVARIANT_WORSTBOUND)
 
-/**< which tightening variants of the vbounds heuristic should be called? */
+/** which tightening variants of the vbounds heuristic should be called? */
 #define DEFAULT_TIGHTENVARIANT   (VBOUNDVARIANT_NOOBJ | VBOUNDVARIANT_BESTBOUND | VBOUNDVARIANT_WORSTBOUND)
 
 

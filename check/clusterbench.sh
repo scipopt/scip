@@ -63,7 +63,7 @@ for Q in ${split_queue[@]}; do
         # a comma is contained in brackets: optc-07-[01,05-16]
         # the sed-command replaces occurences of commas outside brackets ], ... [
         # by a white space
-        moreopts=(`echo ${SINFOSTR[$i+5]} | sed -e 's/\(]\)\(,\)\([^[]*\)/\1 \3/g'`)
+        moreopts=(`echo ${SINFOSTR[$i+5]} | sed -e 's/\(^[^[]*\)\(,\)\([^[]*\)/\1 \3/g' | sed -e 's/\(]\)\(,\)\([^[]*\)/\1 \3/g'`)
         echo "Nodes  :" ${moreopts[@]}
         opts=( ${opts[@]} ${moreopts[@]} );
       fi;
