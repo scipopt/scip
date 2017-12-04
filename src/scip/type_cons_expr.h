@@ -430,6 +430,13 @@ typedef union
 typedef unsigned int SCIP_CONSEXPR_PRINTDOT_WHAT;
 /** @} */
 
+#define SCIP_CONSEXPR_EXPRENFO_SEPAUNDER      0x1u /** separates for expr <= auxvar, thus might underestimate expr */
+#define SCIP_CONSEXPR_EXPRENFO_SEPAOVER       0x2u /** separates for expr >= auxvar, thus might overestimate expr */
+#define SCIP_CONSEXPR_EXPRENFO_SEPABOTH SCIP_CONSEXPR_EXPRENFO_SEPAUNDER | SCIP_CONSEXPR_EXPRENFO_SEPAOVER
+
+/** type for exprenfo bitflags */
+typedef unsigned int SCIP_CONSEXPR_EXPRENFO_METHOD;
+
 typedef struct SCIP_ConsExpr_ExprData     SCIP_CONSEXPR_EXPRDATA;     /**< expression data */
 typedef struct SCIP_ConsExpr_ExprHdlr     SCIP_CONSEXPR_EXPRHDLR;     /**< expression handler */
 typedef struct SCIP_ConsExpr_ExprHdlrData SCIP_CONSEXPR_EXPRHDLRDATA; /**< expression handler data */

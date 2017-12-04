@@ -3677,6 +3677,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
          SCIP_CALL( SCIPallocBlockMemory(scip, &expr->enfos[e]) );
          expr->enfos[e]->nlhdlr = detectdata->nlhdlrssuccess[e];
          expr->enfos[e]->nlhdlrexprdata = detectdata->nlhdlrssuccessexprdata[e];
+         expr->enfos[e]->methods = SCIP_CONSEXPR_EXPRENFO_SEPABOTH;
       }
       expr->nenfos = nsuccess;
 
