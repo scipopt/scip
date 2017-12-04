@@ -3779,7 +3779,7 @@ SCIP_RETCODE detectNlhdlrs(
    return SCIP_OKAY;
 }
 
-/** expression walk callback to free auxiliary variables created for the outer approximation */
+/** frees auxiliary variables of expression, if any */
 static
 SCIP_RETCODE freeAuxVar(
    SCIP*                 scip,               /**< SCIP data structure */
