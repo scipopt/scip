@@ -38,6 +38,7 @@
 #include "scip/cons_expr_pow.h"
 #include "scip/cons_expr_sin.h"
 #include "scip/cons_expr_cos.h"
+#include "scip/cons_expr_nlhdlr_default.h"
 #include "scip/debug.h"
 
 /* fundamental constraint handler properties */
@@ -7687,6 +7688,9 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    /* include handler for cosine expression */
    SCIP_CALL( SCIPincludeConsExprExprHdlrCos(scip, conshdlr) );
    assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "cos") == 0);
+
+   /* include default nonlinear handler */
+   SCIP_CALL( SCIPincludeConsExprNlhdlrDefault(scip, conshdlr) );
 
    return SCIP_OKAY;
 }
