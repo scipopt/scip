@@ -36,7 +36,8 @@
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
-#define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
+//#define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
+#define HEUR_TIMING           SCIP_HEURTIMING_DURINGLPLOOP
 #define HEUR_USESSUBSCIP      TRUE  /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_MAXNODES      5000LL         /* maximum number of nodes to regard in the subproblem                   */
@@ -545,9 +546,9 @@ void updateFailureStatistic(
 {
    /* increase number of failures, calculate next node at which crossover should be called and update actual solutions */
    heurdata->nfailures++;
-   heurdata->nextnodenumber = (heurdata->nfailures <= 25
-      ? SCIPgetNNodes(scip) + 100*(2LL << heurdata->nfailures) /*lint !e703*/
-      : SCIP_LONGINT_MAX);
+   heurdata->nextnodenumber = (heurdata->nfailures <= 10 ? heurdata->nextnodenumber :
+      (heurdata->nfailures <= 25 ? SCIPgetNNodes(scip) + 10*(2LL << heurdata->nfailures) /*lint !e703*/
+      : SCIP_LONGINT_MAX));
 }
 
 /* ---------------- Callback methods of event handler ---------------- */

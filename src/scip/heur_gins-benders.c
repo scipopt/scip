@@ -53,7 +53,8 @@
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          8
 #define HEUR_MAXDEPTH         -1
-#define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
+//#define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
+#define HEUR_TIMING           SCIP_HEURTIMING_DURINGLPLOOP
 #define HEUR_USESSUBSCIP      TRUE  /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_NODESOFS      500           /**< number of nodes added to the contingent of the total nodes */
