@@ -1196,10 +1196,6 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(dismantleExpr)
             SCIPinfoMessage(scip, NULL, "%*s   ", nspaces, "");
             SCIPinfoMessage(scip, NULL, "[coef]: %g\n", SCIPgetConsExprExprSumCoefs(expr)[SCIPgetConsExprExprWalkCurrentChild(expr)]);
          }
-         else if( strcmp(type, "prod") == 0 )
-         {
-            SCIPinfoMessage(scip, NULL, "%*s   \n", nspaces, "");
-         }
          break;
       }
       case SCIP_CONSEXPREXPRWALK_LEAVEEXPR:
