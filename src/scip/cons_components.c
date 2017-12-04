@@ -421,8 +421,13 @@ SCIP_RETCODE createSubscip(
    SCIP_CALL( SCIPcreate(subscip) );
 
    /* copy plugins, we omit pricers (because we do not run if there are active pricers) and dialogs */
+#ifdef SCIP_MORE_DEBUG /* we print statistics later, so we need to copy statistics tables */
    SCIP_CALL( SCIPcopyPlugins(scip, *subscip, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, &success) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, &success) );
+#else
+   SCIP_CALL( SCIPcopyPlugins(scip, *subscip, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE,
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, &success) );
+#endif
 
    /* the plugins were successfully copied */
    if( success )
@@ -2371,19 +2376,22 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
             /* set up debug solution */
 #ifdef WITH_DEBUG_SOLUTION
          {
-            SCIP_SOL* debugsol = NULL;
+            SCIP_SOL* debugsol;
             SCIP_Real val;
             int i;
 
-            SCIPdebugSolEnable(subscip);
-
             SCIP_CALL( SCIPdebugGetSol(scip, &debugsol) );
-            assert(debugsol != NULL);
 
-            for( i = 0; i < ncompvars; ++i )
+            /* set solution values in the debug solution if it is available */
+            if( debugsol != NULL )
             {
-               SCIP_CALL( SCIPdebugGetSolVal(scip, compvars[i], &val) );
-               SCIP_CALL( SCIPdebugAddSolVal(subscip, subvars[i], val) );
+               SCIPdebugSolEnable(subscip);
+
+               for( i = 0; i < ncompvars; ++i )
+               {
+                  SCIP_CALL( SCIPdebugGetSolVal(scip, compvars[i], &val) );
+                  SCIP_CALL( SCIPdebugAddSolVal(subscip, subvars[i], val) );
+               }
             }
          }
 #endif

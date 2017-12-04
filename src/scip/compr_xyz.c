@@ -27,12 +27,8 @@
 
 #define COMPR_NAME             "xyz"
 #define COMPR_DESC             "tree compression template"
-#define COMPR_DISPCHAR         '?'
 #define COMPR_PRIORITY         0
-#define COMPR_MINDEPTH         0
 #define COMPR_MINNNODES        0
-#define COMPR_TIMING           SCIP_COMPRTIMING_AFTERPRESOL
-#define COMPR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 
 /*
@@ -182,16 +178,15 @@ SCIP_RETCODE SCIPincludeComprXyz(
    /* use SCIPincludeCompr() if you want to set all callbacks explicitly and realize (by getting compiler errors) when
     * new callbacks are added in future SCIP versions
     */
-   SCIP_CALL( SCIPincludeCompr(scip, COMPR_NAME, COMPR_DESC, COMPR_DISPCHAR, COMPR_PRIORITY,
-         COMPR_MINDEPTH, COMPR_MINNNODES, COMPR_USESSUBSCIP,
+   SCIP_CALL( SCIPincludeCompr(scip, COMPR_NAME, COMPR_DESC, COMPR_PRIORITY, COMPR_MINNNODES,
          comprCopyXyz, comprFreeXyz, comprInitXyz, comprExitXyz, comprInitsolXyz, comprExitsolXyz, comprExecXyz,
          comprdata) );
 #else
    /* use SCIPincludeComprBasic() plus setter functions if you want to set callbacks one-by-one and your code should
     * compile independent of new callbacks being added in future SCIP versions
     */
-   SCIP_CALL( SCIPincludeComprBasic(scip, &compr, COMPR_NAME, COMPR_DESC, COMPR_DISPCHAR,
-         COMPR_PRIORITY, COMPR_MINDEPTH, COMPR_MINNNODES, COMPR_USESSUBSCIP, comprExecXyz, comprdata) );
+   SCIP_CALL( SCIPincludeComprBasic(scip, &compr, COMPR_NAME, COMPR_DESC,
+         COMPR_PRIORITY, COMPR_MINNNODES, comprExecXyz, comprdata) );
 
    assert(compr != NULL);
 

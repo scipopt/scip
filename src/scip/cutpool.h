@@ -93,6 +93,8 @@ SCIP_RETCODE SCIPcutpoolAddNewRow(
    SCIP_CUTPOOL*         cutpool,            /**< cut pool */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_ROW*             row                 /**< cutting plane to add */
    );
 

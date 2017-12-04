@@ -926,7 +926,6 @@ IP/coral/sp97ic.mps.gz
 IP/coral/sp98ar.mps.gz
 IP/coral/neos-503737.mps.gz
 IP/coral/qap10.mps.gz
-IP/coral/mcf2.mps.gz
 IP/coral/neos-480878.mps.gz
 IP/coral/nag.mps.gz
 IP/coral/neos-593853.mps.gz
@@ -2663,7 +2662,6 @@ IP/ipcount/zeroOne/OA:6-13.lp.gz
 IP/IPdata/Oldmiplib/gams.mps.gz
 IP/IPdata/Oldmiplib/gt1.mps.gz
 IP/IPdata/Oldmiplib/fast2586.lp.gz
-IP/IPdata/Oldmiplib/adrud.mps.gz
 IP/jtl/rlp2.mps.gz
 IP/lodi/rococoC11-011100.mps.gz
 IP/lodi/nh97_tension.mps.gz

@@ -587,6 +587,13 @@ TCLIQUE_Bool tcliqueLoadFile(
 
    /* allocate temporary memory for skipping rest of problem name */
    BMSallocMemoryArray(&tmp, sizeofprobname +1 );
+   if( tmp == NULL )
+   {
+      infoMessage("[%s:%d] No memory in function call", __FILE__, __LINE__);
+      fclose(file);
+      return FALSE;
+   }
+
    BMScopyMemoryArray(tmp, probname, sizeofprobname);
    probname[sizeofprobname-1] = '\0';
    tmp[sizeofprobname] = '\0';
@@ -609,7 +616,7 @@ TCLIQUE_Bool tcliqueLoadFile(
 
    /* set number of nodes and number of edges in graph */
    result = fscanf(file, "%d", &(*tcliquegraph)->nnodes);
-   if( result == EOF )
+   if( result <= 0 )
    {
       infoMessage("Error while reading number of nodes in file %s", filename); 
       fclose(file);
@@ -617,7 +624,7 @@ TCLIQUE_Bool tcliqueLoadFile(
    }
 
    result = fscanf(file, "%d", &(*tcliquegraph)->nedges);
-   if( result == EOF )
+   if( result <= 0 )
    {
       infoMessage("Error while reading number of edges in file %s", filename); 
       fclose(file);
@@ -630,7 +637,7 @@ TCLIQUE_Bool tcliqueLoadFile(
          (*tcliquegraph)->nnodes < 0 ? (*tcliquegraph)->nnodes : (*tcliquegraph)->nedges, filename);
       fclose(file);
       return FALSE;
-   }    
+   }
 
    /* set data structures for tclique,
     * if an error occured, close the file before returning */
@@ -666,7 +673,7 @@ TCLIQUE_Bool tcliqueLoadFile(
    for( i = 0; i < (*tcliquegraph)->nnodes; i++ )
    {
       result = fscanf(file, "%lf", &weight);
-      if( result == EOF )
+      if( result <= 0 )
       {
          infoMessage("Error while reading weights of nodes in file %s", filename); 
          fclose(file);
@@ -683,7 +690,7 @@ TCLIQUE_Bool tcliqueLoadFile(
    {
       /* read edge (node1, node2) */
       result = fscanf(file, "%d%d", &node1, &node2);
-      if( result == EOF )
+      if( result <= 1 )
       {
          infoMessage("Error while reading edges in file %s", filename); 
          fclose(file);

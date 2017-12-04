@@ -60,7 +60,10 @@ using std::vector;
 #define SCIPInterval_NAMESPACE CppAD
 #include "nlpi/intervalarithext.h"
 
-SCIP_Real CppAD::SCIPInterval::infinity = SCIP_DEFAULT_INFINITY;
+namespace CppAD
+{
+   SCIP_Real SCIPInterval::infinity = SCIP_DEFAULT_INFINITY;
+}
 using CppAD::SCIPInterval;
 
 /* CppAD needs to know a fixed upper bound on the number of threads at compile time.

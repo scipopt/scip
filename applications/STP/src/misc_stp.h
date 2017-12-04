@@ -31,6 +31,13 @@
 extern "C" {
 #endif
 
+/** returns maximum of given SCIP_Real values */
+extern
+SCIP_Real misc_stp_maxReal(
+   SCIP_Real*            realarr,            /**< array of reals */
+   unsigned              nreals              /**< size of array of reals */
+  );
+
 /** graph node structure storing number and distance */
 typedef struct Graph_Node
 {
@@ -140,13 +147,15 @@ void SCIPlinkcuttreeCut(
    NODE*                 v                   /**< node to cut at */
    );
 
-/** finds minimal non-key-node value between node 'v' and the root of the tree **/
-NODE* SCIPlinkcuttreeFindMinMW(
+/** finds minimum weight chain between node 'start' and distinct root node **/
+SCIP_Real SCIPlinkcuttreeFindMinChain(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real*            nodeweight,         /**< node weight array */
-   int*                  tail,                  /**< arcs tails */
-   int*                  stdeg,              /**< degree in Steiner tree */
-   NODE*                 v                   /**< the node */
+   const SCIP_Real*      nodeweight,         /**< node weight array */
+   const int*            head,               /**< head of an arc */
+   const int*            stdeg,              /**< degree in Steiner tree */
+   const NODE*           start,              /**< the node to start at */
+   NODE**                first,              /**< first node of chain */
+   NODE**                last                /**< last node of chain */
    );
 
 /** finds the max value between node 'v' and the root of the tree **/
@@ -235,7 +244,7 @@ SCIP_RETCODE SCIPpairheapBuffarr(
 
 /** initializes the union-find structure 'uf' with 'length' many components (of size one) */
 extern
-SCIP_RETCODE SCIPSTPunionfindInit(
+SCIP_RETCODE SCIPStpunionfindInit(
    SCIP*                 scip,               /**< SCIP data structure */
    UF*                   uf,                 /**< union find data structure */
    int                   length              /**< number of components */
@@ -243,7 +252,7 @@ SCIP_RETCODE SCIPSTPunionfindInit(
 
 /** clears the union-find structure 'uf'*/
 extern
-void SCIPSTPunionfindClear(
+void SCIPStpunionfindClear(
    SCIP*                 scip,               /**< SCIP data structure */
    UF*                   uf,                 /**< union find data structure */
    int                   length              /**< number of components */
@@ -251,14 +260,14 @@ void SCIPSTPunionfindClear(
 
 /** finds and returns the component identifier */
 extern
-int SCIPSTPunionfindFind(
+int SCIPStpunionfindFind(
    UF*                   uf,                 /**< union find data structure */
    int                   element             /**< element to be found */
    );
 
 /** merges the components containing p and q respectively */
 extern
-void SCIPSTPunionfindUnion(
+void SCIPStpunionfindUnion(
    UF*                   uf,                 /**< union find data structure */
    int                   p,                  /**< first component */
    int                   q,                  /**< second component*/
@@ -267,7 +276,7 @@ void SCIPSTPunionfindUnion(
 
 /** frees the data fields of the union-find structure */
 extern
-void SCIPSTPunionfindFree(
+void SCIPStpunionfindFree(
    SCIP*                 scip,               /**< SCIP data structure */
    UF*                   uf                  /**< union find data structure */
    );

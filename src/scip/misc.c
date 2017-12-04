@@ -2041,11 +2041,7 @@ SCIP_RETCODE SCIPhashtableCreate(
     * to the next power of two.
     */
    (*hashtable)->shift = 32;
-#if defined(_MSC_VER) && (_MSC_VER < 1800)
-   (*hashtable)->shift -= (int)ceil(log(MAX(32.0, tablesize / 0.9)) / log(2.0));
-#else
-   (*hashtable)->shift -= (int)ceil(log2(MAX(32.0, tablesize / 0.9)));
-#endif
+   (*hashtable)->shift -= (int)ceil(LOG2(MAX(32.0, tablesize / 0.9)));
 
    /* compute size from shift */
    nslots = 1u << (32 - (*hashtable)->shift);
@@ -2139,6 +2135,9 @@ SCIP_RETCODE hashtableInsert(
 {
    uint32_t elemdistance;
    uint32_t pos;
+#ifndef NDEBUG
+   SCIP_Bool swapped = FALSE;
+#endif
 
    assert(hashtable != NULL);
    assert(hashtable->slots != NULL);
@@ -2169,6 +2168,9 @@ SCIP_RETCODE hashtableInsert(
       {
          if( override )
          {
+#ifndef NDEBUG
+            assert(! swapped);
+#endif
             hashtable->slots[pos] = element;
             hashtable->hashes[pos] = hashval;
             return SCIP_OKAY;
@@ -2191,6 +2193,12 @@ SCIP_RETCODE hashtableInsert(
          tmp = hashval;
          hashval = hashtable->hashes[pos];
          hashtable->hashes[pos] = tmp;
+         key = hashtable->hashgetkey(hashtable->userptr, element);
+
+         /* after doing a swap the case that other elements are replaced must not happen anymore */
+#ifndef NDEBUG
+         swapped = TRUE;
+#endif
       }
 
       /* continue until we have found an empty position */
@@ -2593,7 +2601,7 @@ SCIP_DECL_HASHKEYEQ(SCIPhashKeyEqPtr)
 SCIP_DECL_HASHKEYVAL(SCIPhashKeyValPtr)
 {  /*lint --e{715}*/
    /* the key is used as the keyvalue too */
-   return (uint64_t) key;
+   return (uint64_t) (uintptr_t) key;
 }
 
 
@@ -3178,6 +3186,28 @@ SCIP_Real SCIPhashmapEntryGetImageReal(
    assert(entry != NULL);
 
    return entry->image.real;
+}
+
+/** sets pointer image of a hashmap entry */
+void SCIPhashmapEntrySetImage(
+   SCIP_HASHMAPENTRY*    entry,              /**< hash map entry */
+   void*                 image               /**< new image */
+   )
+{
+   assert(entry != NULL);
+
+   entry->image.ptr = image;
+}
+
+/** sets real image of a hashmap entry */
+void SCIPhashmapEntrySetImageReal(
+   SCIP_HASHMAPENTRY*    entry,              /**< hash map entry */
+   SCIP_Real             image               /**< new image */
+   )
+{
+   assert(entry != NULL);
+
+   entry->image.real = image;
 }
 
 /** removes all entries in a hash map. */
@@ -5130,6 +5160,14 @@ void SCIPsort(
 #define SORTTPL_PTRCOMP
 #include "scip/sorttpl.c" /*lint !e451*/
 
+/* SCIPsortPtrRealRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     PtrRealRealInt
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_PTRCOMP
+#include "scip/sorttpl.c" /*lint !e451*/
 
 /* SCIPsortPtrRealBool(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     PtrRealBool
@@ -8500,6 +8538,147 @@ SCIP_Longint SCIPcalcGreComDiv(
    return (val1 << t);  /*lint !e703*/
 }
 
+
+/* for the MS compiler, the function nextafter is named _nextafter */
+#if defined(_MSC_VER) && !defined(NO_NEXTAFTER)
+#define nextafter(x,y) _nextafter(x,y)
+#endif
+
+/* on systems where the function nextafter is not defined, we provide an implementation from Sun */
+#ifdef NO_NEXTAFTER
+/* The following implementation of the routine nextafter() comes with the following license:
+ *
+ * ====================================================
+ * Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
+ *
+ * Developed at SunSoft, a Sun Microsystems, Inc. business.
+ * Permission to use, copy, modify, and distribute this
+ * software is freely granted, provided that this notice
+ * is preserved.
+ * ====================================================
+ */
+
+#define __HI(x) *(1+(int*)&x)
+#define __LO(x) *(int*)&x
+#define __HIp(x) *(1+(int*)x)
+#define __LOp(x) *(int*)x
+
+static
+double nextafter(double x, double y)
+{
+   int hx;
+   int hy;
+   int ix;
+   int iy;
+   unsigned lx;
+   unsigned ly;
+
+   /* cppcheck-suppress invalidPointerCast */
+   hx = __HI(x);     /* high word of x */
+   /* cppcheck-suppress invalidPointerCast */
+   lx = __LO(x);     /* low  word of x */
+   /* cppcheck-suppress invalidPointerCast */
+   hy = __HI(y);     /* high word of y */
+   /* cppcheck-suppress invalidPointerCast */
+   ly = __LO(y);     /* low  word of y */
+   ix = hx&0x7fffffff;     /* |x| */
+   iy = hy&0x7fffffff;     /* |y| */
+
+   if( ((ix>=0x7ff00000) && ((ix-0x7ff00000)|lx) != 0 ) ||   /* x is nan */
+      ( (iy>=0x7ff00000) && ((iy-0x7ff00000)|ly) != 0 ))     /* y is nan */
+      return x + y;
+
+   /* x == y, return x */
+   if( x == y )
+      return x;
+
+   /* x == 0 */
+   if( (ix|lx) == 0 )
+   {
+      /* return +-minsubnormal */
+      /* cppcheck-suppress invalidPointerCast */
+      __HI(x) = hy&0x80000000;
+      /* cppcheck-suppress invalidPointerCast */
+      __LO(x) = 1;
+      y = x * x;
+      if ( y == x )
+         return y;
+      else
+         return x;  /* raise underflow flag */
+   }
+   /* x > 0 */
+   if( hx >= 0 )
+   {
+      /* x > y, x -= ulp */
+      if( hx > hy || ((hx == hy) && (lx > ly)) )
+      {
+         if ( lx == 0 )
+            hx -= 1;
+         lx -= 1;
+      }
+      else
+      {
+         /* x < y, x += ulp */
+         lx += 1;
+         if ( lx == 0 )
+            hx += 1;
+      }
+   }
+   else
+   {
+      /* x < 0 */
+      if( hy >= 0 || hx > hy || ((hx == hy) && (lx > ly)) )
+      {
+         /* x < y, x -= ulp */
+         if ( lx == 0 )
+            hx -= 1;
+         lx -= 1;
+      }
+      else
+      {
+         /* x > y, x += ulp */
+         lx += 1;
+         if( lx == 0 )
+            hx += 1;
+      }
+   }
+   hy = hx&0x7ff00000;
+   /* overflow  */
+   if( hy >= 0x7ff00000 )
+      return x + x;
+   if( hy < 0x00100000 )
+   {
+      /* underflow */
+      y = x*x;
+      if( y != x )
+      {
+         /* raise underflow flag */
+         /* cppcheck-suppress invalidPointerCast */
+         __HI(y) = hx;
+         /* cppcheck-suppress invalidPointerCast */
+         __LO(y) = lx;
+         return y;
+      }
+   }
+
+   /* cppcheck-suppress invalidPointerCast */
+   __HI(x) = hx;
+   /* cppcheck-suppress invalidPointerCast */
+   __LO(x) = lx;
+   return x;
+}
+#endif
+
+
+/** returns the next representable value of from in the direction of to */
+SCIP_Real SCIPnextafter(
+   SCIP_Real             from,               /**< value from which the next representable value should be returned */
+   SCIP_Real             to                  /**< direction in which the next representable value should be returned */
+   )
+{
+   return nextafter(from, to);
+}
+
 /** calculates the smallest common multiple of the two given values */
 SCIP_Longint SCIPcalcSmaComMul(
    SCIP_Longint          val1,               /**< first value of smallest common multiple calculation */
@@ -9753,13 +9932,13 @@ SCIP_RETCODE SCIPcomputeArraysSetminus(
 /** copies characters from 'src' to 'dest', copying is stopped when either the 'stop' character is reached or after
  *  'cnt' characters have been copied, whichever comes first.
  *
- *  @note undefined behaviuor on overlapping arrays
+ *  @note undefined behavior on overlapping arrays
  */
 int SCIPmemccpy(
    char*                 dest,               /**< destination pointer to copy to */
-   const char*           src,                /**< source pointer to copy to */
+   const char*           src,                /**< source pointer to copy from */
    char                  stop,               /**< character when found stop copying */
-   unsigned int          cnt                 /**< maximal number of characters to copy too */
+   unsigned int          cnt                 /**< maximal number of characters to copy */
    )
 {
    if( dest == NULL || src == NULL || cnt == 0 )
@@ -9774,10 +9953,11 @@ int SCIPmemccpy(
    }
 }
 
-/** prints an error message containing of the given string followed by a string describing the current system error;
- *  prefers to use the strerror_r method, which is threadsafe; on systems where this method does not exist,
- *  NO_STRERROR_R should be defined (see INSTALL), in this case, strerror is used which is not guaranteed to be
- *  threadsafe (on SUN-systems, it actually is)
+/** prints an error message containing of the given string followed by a string describing the current system error
+ *
+ *  Prefers to use the strerror_r method, which is threadsafe. On systems where this method does not exist,
+ *  NO_STRERROR_R should be defined (see INSTALL). In this case, strerror is used which is not guaranteed to be
+ *  threadsafe (on SUN-systems, it actually is).
  */
 void SCIPprintSysError(
    const char*           message             /**< first part of the error message, e.g. the filename */
@@ -9791,20 +9971,38 @@ void SCIPprintSysError(
 #if defined(_WIN32) || defined(_WIN64)
    /* strerror_s returns 0 on success; the string is \0 terminated. */
    if ( strerror_s(buf, SCIP_MAXSTRLEN, errno) != 0 )
-      SCIPmessagePrintError("Unkown error number %d or error message too long.\n", errno);
+      SCIPmessagePrintError("Unknown error number %d or error message too long.\n", errno);
+   SCIPmessagePrintError("%s: %s\n", message, buf);
+#elif (_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && ! defined(_GNU_SOURCE)
+   /* We are in the POSIX/XSI case, where strerror_r returns 0 on success; \0 termination is unclear. */
+   if ( strerror_r(errno, buf, SCIP_MAXSTRLEN) != 0 )
+      SCIPmessagePrintError("Unknown error number %d.\n", errno);
+   buf[SCIP_MAXSTRLEN - 1] = '\0';
    SCIPmessagePrintError("%s: %s\n", message, buf);
 #else
-   #if (_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && ! defined(_GNU_SOURCE)
-      /* We are in the POSIX/XSI case, where strerror_r returns 0 on success; \0 termination is unclear. */
-      if ( strerror_r(errno, buf, SCIP_MAXSTRLEN) != 0 )
-         SCIPmessagePrintError("Unkown error number %d.\n", errno);
-      buf[SCIP_MAXSTRLEN - 1] = '\0';
+   /* We are in the GNU case, where strerror_r returns a pointer to the error string. This string is possibly stored
+    * in buf and is always \0 terminated.
+    * However, if compiling on one system and executing on another system, we might actually call a different
+    * variant of the strerror_r function than we had at compile time.
+    */
+   char* errordescr;
+   *buf = '\0';
+   errordescr = strerror_r(errno, buf, SCIP_MAXSTRLEN);
+   if( *buf != '\0' )
+   {
+      /* strerror_r wrote into buf */
       SCIPmessagePrintError("%s: %s\n", message, buf);
-#else
-      /* We are in the GNU case, where strerror_r returns a string to the error string. This string is possibly stored
-       * in buf and is always \0 terminated. */
-      SCIPmessagePrintError("%s: %s\n", message, strerror_r(errno, buf, SCIP_MAXSTRLEN));
-   #endif
+   }
+   else if( errordescr != NULL )
+   {
+      /* strerror_r returned something non-NULL */
+      SCIPmessagePrintError("%s: %s\n", message, errordescr);
+   }
+   else
+   {
+      /* strerror_r did return NULL and did not write into buf */
+      SCIPmessagePrintError("Could not obtain description for error %d.\n", errno);
+   }
 #endif
 #endif
 }

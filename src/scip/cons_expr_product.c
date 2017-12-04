@@ -33,6 +33,7 @@
 #include "scip/cons_expr_sum.h"
 #include "scip/cons_expr_value.h"
 #include "scip/cons_expr_pow.h"
+#include "scip/cons_expr_entropy.h"
 
 #include "scip/pub_misc.h"
 
@@ -1044,6 +1045,49 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
    /* build product expression from finalchildren and post-simplify */
    debugSimplify("[simplifyProduct] finalchildren has length %d\n", listLength(finalchildren)); /*lint !e506 !e681*/
 
+   /* enforce SP11: check if it is entropy expression (length of finalchildren should be 2) */
+   if( finalchildren != NULL && finalchildren->next != NULL && finalchildren->next->next == NULL )
+   {
+      SCIP_CONSEXPR_EXPR* entropicchild = NULL;
+
+      /* could be log(expr) * expr, e.g., log(sin(x)) * sin(x) (OR11) */
+      if( strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(finalchildren->expr)), "log") == 0 )
+      {
+         assert(SCIPgetConsExprExprNChildren(finalchildren->expr) == 1);
+         if( 0 == SCIPcompareConsExprExprs(SCIPgetConsExprExprChildren(finalchildren->expr)[0], finalchildren->next->expr) )
+            entropicchild = finalchildren->next->expr;
+      }
+      /* could be expr * log(expr), e.g., (1 + abs(x)) log(1 + abs(x)) (OR11) */
+      else if( strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(finalchildren->next->expr)), "log") == 0 )
+      {
+         assert(SCIPgetConsExprExprNChildren(finalchildren->next->expr) == 1);
+         if( 0 == SCIPcompareConsExprExprs(SCIPgetConsExprExprChildren(finalchildren->next->expr)[0], finalchildren->expr) )
+            entropicchild = finalchildren->expr;
+      }
+
+      /* success --> replace finalchildren by entropy expression */
+      if( entropicchild != NULL )
+      {
+         SCIP_CONSEXPR_EXPR* entropy;
+
+         simplifiedcoef *= -1.0;
+
+         SCIP_CALL( SCIPcreateConsExprExprEntropy(scip, SCIPfindConshdlr(scip, "expr"), &entropy, entropicchild) );
+
+         /* enforces SP8: if simplifiedcoef != 1.0, transform it into a sum with the (simplified) entropy as child */
+         if( simplifiedcoef != 1.0 )
+         {
+            SCIP_CALL( SCIPcreateConsExprExprSum(scip, SCIPfindConshdlr(scip, "expr"), simplifiedexpr,
+                     1, &entropy, &simplifiedcoef, 0.0) );
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &entropy) );
+         }
+         else
+            *simplifiedexpr = entropy;
+
+         goto CLEANUP;
+      }
+   }
+
    /* enforces SP10: if list is empty, return value */
    if( finalchildren == NULL )
    {
@@ -1085,6 +1129,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyProduct)
       SCIP_CALL( createExprProductFromExprlist(scip, finalchildren, simplifiedcoef, simplifiedexpr) );
    }
 
+CLEANUP:
    /* free memory */
    SCIP_CALL( freeExprlist(scip, &finalchildren) );
    assert(finalchildren == NULL);

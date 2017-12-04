@@ -1,0 +1,14 @@
+../instances/Pot/3Cycle/Pot3Cycle_20B_sym.txt_3cluster.cyc
+../instances/Pot/3Cycle/Pot3Cycle_30B_sym.txt_3cluster.cyc
+../instances/Pot/3Cycle/Pot3_T_20.txt_3cluster.cyc
+../instances/Pot/3Cycle/Pot3_T_50.txt_3cluster.cyc
+../instances/Pot/3Cycle/Pot3_T_100.txt_3cluster.cyc
+../instances/Pot/4Cycle/Pot4Cycle_20B_sym.txt_4cluster.cyc
+../instances/Pot/4Cycle/Pot4Cycle_30B_sym.txt_4cluster.cyc
+../instances/Pot/4Cycle/Pot4_T_50.txt_4cluster.cyc
+../instances/Pot/4Cycle/Pot4_T_100.txt_4cluster.cyc
+../instances/Pot/4Cycle/Pot4_T_20.txt_4cluster.cyc
+../instances/Pot/6Cycle/Pot6_T_20.txt_6cluster.cyc
+../instances/Pot/6Cycle/Pot6_T_50.txt_6cluster.cyc
+../instances/Repressilator/repressilator_40_P.txt_3cluster.cyc
+../instances/HindRose/HindRose_50.txt_5cluster.cyc
