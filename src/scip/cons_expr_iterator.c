@@ -37,40 +37,94 @@
 
 /** ensures minimum size of iterator's data */
 static
-void ensureStackSize(
+void ensureDfsStackSize(
    SCIP_CONSEXPR_ITERATOR*    iterator,     /**< expression iterator */
    int                        size          /**< minimum requires size */
    )
 {
    assert(iterator != NULL);
    assert(iterator->blkmem != NULL);
+   assert(iterator->itertype == SCIP_CONSEXPRITERATOR_DFS);
    assert(size >= 0);
 
-   if( size < iterator->dfssize )
+   if( size > iterator->dfssize )
    {
       int newsize = size * 2;
 
       SCIP_ALLOC_ABORT( BMSreallocBlockMemoryArray(iterator->blkmem, &iterator->dfsexprs, iterator->dfssize, newsize) );
-      SCIP_ALLOC_ABORT( BMSreallocBlockMemoryArray(iterator->blkmem, &iterator->dfsparents, iterator->dfssize, newsize) );
       SCIP_ALLOC_ABORT( BMSreallocBlockMemoryArray(iterator->blkmem, &iterator->dfsnvisited, iterator->dfssize, newsize) );
       iterator->dfssize = newsize;
    }
 }
 
+/** adds an expression to the DFS stack */
+static
+void dfsInsert(
+   SCIP_CONSEXPR_ITERATOR*    iterator,    /**< expression iterator */
+   SCIP_CONSEXPR_EXPR*        expr         /**< expression */
+   )
+{
+   assert(iterator != NULL);
+   assert(expr != NULL);
+
+   ensureDfsStackSize(iterator, iterator->dfsnexprs + 1);
+   iterator->dfsexprs[iterator->dfsnexprs] = expr;
+   iterator->dfsnvisited[iterator->dfsnexprs] = 0;
+   ++(iterator->dfsnexprs);
+}
+
 /** moves to the next expression according to the DFS rule */
 static
-SCIP_RETCODE doDfsNext(
+SCIP_CONSEXPR_EXPR* doDfsNext(
    SCIP_CONSEXPR_ITERATOR*    iterator     /**< expression iterator */
    )
 {
+   SCIP_CONSEXPR_EXPR* expr;
+   int childidx;
+
    assert(iterator != NULL);
    assert(iterator->itertype == SCIP_CONSEXPRITERATOR_DFS);
 
    /* no expression left */
    if( iterator->dfsnexprs == 0 )
-      return SCIP_OKAY;
+      return NULL;
 
-   return SCIP_OKAY;
+   /* get expression on the top of the stack */
+   expr = iterator->dfsexprs[iterator->dfsnexprs - 1];
+   childidx = iterator->dfsnvisited[iterator->dfsnexprs - 1];
+
+   /* remove the expression if all children have been visited */
+   if( childidx >= SCIPgetConsExprExprNChildren(expr) )
+   {
+      --(iterator->dfsnexprs);
+      return expr;
+   }
+   /* go to the next children */
+   else
+   {
+      SCIP_CONSEXPR_EXPR* child = SCIPgetConsExprExprChildren(expr)[childidx];
+      assert(child != NULL);
+
+      /* mark that the child has been visited */
+      ++(iterator->dfsnvisited[iterator->dfsnexprs-1]);
+
+      /* do left-most step */
+      while( SCIPgetConsExprExprNChildren(child) > 0 )
+      {
+         /* add child to the DFS stack */
+         dfsInsert(iterator, child);
+
+         /* mark that the child has been visited; note that child is on top of the DFS stack */
+         ++(iterator->dfsnvisited[iterator->dfsnexprs-1]);
+
+         child = SCIPgetConsExprExprChildren(child)[0];
+      }
+
+      /* return last child; NOTE this child is not been added to the stack */
+      return child;
+   }
+
+   return NULL;
 }
 
 /** moves to the next expression according to the BFS rule */
@@ -132,10 +186,7 @@ SCIP_RETCODE SCIPexpriteratorCreate(
       SCIP_CALL( SCIPqueueCreate(&(*iterator)->queue, MINBFSSIZE, 2.0) );
    }
    else
-   {
-      assert(itertype == SCIP_CONSEXPRITERATOR_DFS);
-      ensureStackSize(*iterator, MINDFSSIZE);
-   }
+      ensureDfsStackSize(*iterator, MINDFSSIZE);
 
    return SCIP_OKAY;
 }
@@ -156,7 +207,6 @@ void SCIPexpriteratorFree(
 
    /* free iterator arrays */
    BMSfreeBlockMemoryArrayNull((*iterator)->blkmem, &(*iterator)->dfsnvisited, (*iterator)->dfssize);
-   BMSfreeBlockMemoryArrayNull((*iterator)->blkmem, &(*iterator)->dfsparents, (*iterator)->dfssize);
    BMSfreeBlockMemoryArrayNull((*iterator)->blkmem, &(*iterator)->dfsexprs, (*iterator)->dfssize);
 
    /* free iterator */
@@ -172,24 +222,16 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorInit(
    assert(iterator != NULL);
    assert(expr != NULL);
 
-   switch( iterator->itertype )
+   if( iterator->itertype == SCIP_CONSEXPRITERATOR_BFS )
    {
-      case SCIP_CONSEXPRITERATOR_BFS:
-         assert(iterator->queue != NULL);
-         SCIPqueueClear(iterator->queue);
-         SCIP_CALL_ABORT( SCIPqueueInsert(iterator->queue, expr) );
-         break;
-
-      case SCIP_CONSEXPRITERATOR_DFS:
-         ensureStackSize(iterator, 1);
-         iterator->dfsexprs[0] = expr;
-         iterator->dfsparents[0] = NULL;
-         iterator->dfsnvisited[0] = 0;
-         iterator->dfsnexprs = 0;
-         break;
-
-      default:
-         SCIPABORT();
+      assert(iterator->queue != NULL);
+      SCIPqueueClear(iterator->queue);
+      SCIP_CALL_ABORT( SCIPqueueInsert(iterator->queue, expr) );
+   }
+   else
+   {
+      assert(iterator->itertype == SCIP_CONSEXPRITERATOR_DFS);
+      dfsInsert(iterator, expr);
    }
 
    /* return next expression */
@@ -202,20 +244,13 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetNext(
    )
 {
    /* move to the next expression according to iterator type */
-   switch( iterator->itertype )
+   if( iterator->itertype == SCIP_CONSEXPRITERATOR_BFS )
+      return doBfsNext(iterator);
+   else
    {
-      case SCIP_CONSEXPRITERATOR_BFS:
-         return doBfsNext(iterator);
-
-      case SCIP_CONSEXPRITERATOR_DFS:
-         SCIP_CALL_ABORT( doDfsNext(iterator) );
-         break;
-
-      default:
-         SCIPABORT();
+      assert(iterator->itertype == SCIP_CONSEXPRITERATOR_DFS);
+      return doDfsNext(iterator);
    }
-
-   return iterator->curr;
 }
 
 /** returns whether the iterator visited all expressions already */
@@ -224,5 +259,12 @@ SCIP_Bool SCIPexpriteratorIsEnd(
    )
 {
    assert(iterator != NULL);
-   return iterator->curr == NULL;
+
+   if( iterator->itertype == SCIP_CONSEXPRITERATOR_BFS )
+      return SCIPqueueIsEmpty(iterator->queue);
+   else
+   {
+      assert(iterator->itertype == SCIP_CONSEXPRITERATOR_DFS);
+      return iterator->dfsnexprs == 0;
+   }
 }
