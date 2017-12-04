@@ -83,6 +83,15 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaDefault)
 
    assert(scip != NULL);
    assert(expr != NULL);
+   assert(result != NULL);
+   assert(ncuts != NULL);
+
+   if( separated )
+   {
+      /* don't do anything if someone already separated */
+      *result = SCIP_DIDNOTFIND;
+      *ncuts = 0;
+   }
 
    exprhdlr = SCIPgetConsExprExprHdlr(expr);
    assert(exprhdlr != NULL);

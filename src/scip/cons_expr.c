@@ -3660,6 +3660,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
          /* remember nlhdlr and success */
          detectdata->nlhdlrssuccess[nsuccess] = nlhdlr;
          ++nsuccess;
+
+         /* TODO continuing with the next nlhdlr will always call the detection of the default hdlr, eventually -- sometimes, one might want to skip this*/
       }
       else
       {
@@ -3997,11 +3999,13 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
    if( expr->auxvar != NULL )
    {
       SCIP_RESULT separesult;
+      SCIP_Bool separated;
       int ncuts;
       int e;
 
       separesult = SCIP_DIDNOTFIND;
       ncuts = 0;
+      separated = FALSE;
 
       /* call the separation callbacks of the nonlinear handlers, if any, then the expression handler */
       for( e = 0; e < expr->nenfos; ++e )
@@ -4013,7 +4017,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
             continue;
 
          /* call the separation callback of the nonlinear handler */
-         SCIP_CALL( nlhdlr->sepa(scip, sepadata->conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sepadata->sol, sepadata->minviolation, &separesult, &ncuts) );
+         SCIP_CALL( nlhdlr->sepa(scip, sepadata->conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sepadata->sol, sepadata->minviolation, separated, &separesult, &ncuts) );
 
          assert(ncuts >= 0);
          sepadata->ncuts += ncuts;
@@ -4031,6 +4035,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
             assert(ncuts > 0);
             SCIPdebugMsg(scip, "found %d cuts separating the current solution\n", ncuts);
             sepadata->result = SCIP_SEPARATED;
+            separated = TRUE;
             break;
          }
       }

@@ -565,6 +565,7 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
  *  - nlhdlrexprdata : expression specific data of the nonlinear handler
  *  - sol  : solution to be separated (NULL for the LP solution)
  *  - minviolation : minimal violation of a cut if it should be added to the LP
+ *  - separated: whether another nonlinear handler already added a cut for this expression
  *  - result : pointer to store the result
  *  - ncuts : pointer to store the number of added cuts
  */
@@ -576,6 +577,7 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
    SCIP_SOL* sol, \
    SCIP_Real minviolation, \
+   SCIP_Bool separated, \
    SCIP_RESULT* result, \
    int* ncuts)
 
