@@ -1277,7 +1277,7 @@ SCIP_RETCODE readObjective(
 
    /* read the objective coefficients */
    SCIP_CALL( readPolynomial(scip, pipinput, name, &exprtree, &degree, &newsection) );
-   if( !hasError(pipinput) )
+   if( !hasError(pipinput) && exprtree != NULL )
    {
       int i;
 

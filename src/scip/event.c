@@ -1541,8 +1541,13 @@ SCIP_RETCODE SCIPeventProcess(
          SCIP_CALL( SCIPlpUpdateVarObj(lp, set, var, event->data.eventobjchg.oldobj, event->data.eventobjchg.newobj) );
       }
 
-      /* inform all existing primal solutions about the objective change */
-      SCIPprimalUpdateVarObj(primal, var, event->data.eventobjchg.oldobj, event->data.eventobjchg.newobj);
+      /* inform all existing primal solutions about the objective change (only if this is not a temporary change in
+       * probing mode)
+       */
+      if( ! lp->divingobjchg )
+      {
+         SCIPprimalUpdateVarObj(primal, var, event->data.eventobjchg.oldobj, event->data.eventobjchg.newobj);
+      }
 
       /* process variable's event filter */
       SCIP_CALL( SCIPeventfilterProcess(var->eventfilter, set, event) );

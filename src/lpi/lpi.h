@@ -51,6 +51,17 @@
  * The creation of a new LP should always be done in the following ways: Either one can use SCIPlpiLoadColLP() or one
  * first adds empty columns or rows. Then the matrix entries can be added by adding columns and rows, respectively. It
  * is an error, if matrix entries are added for rows or columns that have not been added before.
+ *
+ * The handling of the objective limit is as follows, if supported by the LP-solver: If the objective is larger than the
+ * objective limit for minimization problems or smaller than the objective limit for maximization problems, the solution
+ * process can be stopped. This naturally occurs in a branch-and-bound process, where the objective limit is set to the
+ * value of the best solution found so far. If the problem is a minimization problem and we use the dual simplex, the
+ * dual feasible solutions are maximized. If their value are larger than the objective limit, the process can be
+ * stopped. In this case, no feasible integer solution can be found in the corresponding branch.
+ *
+ * Some LP-solvers also support the opposite setting, but this can easily be checked after the solution process (i.e.,
+ * for a minimization problem a check whether the optimal value is smaller than the limit). Note that this check can
+ * only be determined at the end of the optimization. Thus, we do not support this.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -355,7 +366,7 @@ SCIP_RETCODE SCIPlpiGetCols(
    SCIP_Real*            ub,                 /**< buffer to store the upper bound vector, or NULL */
    int*                  nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
    int*                  beg,                /**< buffer to store start index of each column in ind- and val-array, or NULL */
-   int*                  ind,                /**< buffer to store column indices of constraint matrix entries, or NULL */
+   int*                  ind,                /**< buffer to store row indices of constraint matrix entries, or NULL */
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    );
 
@@ -372,7 +383,7 @@ SCIP_RETCODE SCIPlpiGetRows(
    SCIP_Real*            rhs,                /**< buffer to store right hand side vector, or NULL */
    int*                  nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
    int*                  beg,                /**< buffer to store start index of each row in ind- and val-array, or NULL */
-   int*                  ind,                /**< buffer to store row indices of constraint matrix entries, or NULL */
+   int*                  ind,                /**< buffer to store column indices of constraint matrix entries, or NULL */
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    );
 
@@ -769,7 +780,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    int*                  bind                /**< pointer to store basis indices ready to keep number of rows entries */
    );
 
-/** get dense row of inverse basis matrix B^-1
+/** get row of inverse basis matrix B^-1
  *
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
@@ -786,7 +797,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    );
 
 
-/** get dense column of inverse basis matrix B^-1
+/** get column of inverse basis matrix B^-1
  *
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
@@ -806,7 +817,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
                                                *  (-1: if we do not store sparsity informations) */
    );
 
-/** get dense row of inverse basis matrix times constraint matrix B^-1 * A
+/** get row of inverse basis matrix times constraint matrix B^-1 * A
  *
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
@@ -823,7 +834,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
                                               *  (-1: if we do not store sparsity informations) */
    );
 
-/** get dense column of inverse basis matrix times constraint matrix B^-1 * A
+/** get column of inverse basis matrix times constraint matrix B^-1 * A
  *
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;

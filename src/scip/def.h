@@ -58,11 +58,15 @@
  */
 
 #ifndef SCIP_Bool
-#define SCIP_Bool unsigned int                    /**< type used for boolean values */
+#define SCIP_Bool unsigned int               /**< type used for Boolean values */
 #ifndef TRUE
-#define TRUE  1                         /**< boolean value TRUE */
-#define FALSE 0                         /**< boolean value FALSE */
+#define TRUE  1                              /**< Boolean value TRUE */
+#define FALSE 0                              /**< Boolean value FALSE */
 #endif
+#endif
+
+#ifndef SCIP_Shortbool
+#define SCIP_Shortbool uint8_t               /**< type used for Boolean values with less space */
 #endif
 
 /*
@@ -103,9 +107,9 @@ extern "C" {
 #endif
 
 
-#define SCIP_VERSION                401 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION               3 /**< SCIP sub version number */
-#define SCIP_APIVERSION              15 /**< SCIP API version number */
+#define SCIP_VERSION                500 /**< SCIP version number (multiplied by 100 to get integer number) */
+#define SCIP_SUBVERSION               1 /**< SCIP sub version number */
+#define SCIP_APIVERSION              21 /**< SCIP API version number */
 #define SCIP_COPYRIGHT   "Copyright (C) 2002-2017 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
@@ -185,6 +189,23 @@ extern "C" {
 #ifndef SQR
 #define SQR(x)        ((x)*(x))
 #define SQRT(x)       (sqrt(x))
+#endif
+
+/* platform-dependent specification of the log1p, which is numerically more stable around x = 0.0 */
+#ifndef LOG1P
+#if defined(_WIN32) || defined(_WIN64)
+#define LOG1P(x) (log(1.0+x))
+#else
+#define LOG1P(x) (log1p(x))
+#endif
+#endif
+
+#ifndef LOG2
+#if defined(_MSC_VER) && (_MSC_VER < 1800)
+#define LOG2(x) (log(x) / log(2.0))
+#else
+#define LOG2(x) log2(x)
+#endif
 #endif
 
 #ifndef ABS

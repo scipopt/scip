@@ -170,6 +170,7 @@ SCIP_RETCODE createSubSCIP(
          TRUE,  /* nodeselectors (SCIP gives an error if there is none) */
          FALSE,  /* branchrules */
          copydisplays, /* displays */
+         FALSE, /* tables */
          FALSE, /* dialogs */
          TRUE,  /* nlpis */
          TRUE,  /* message handler */
@@ -196,6 +197,7 @@ SCIP_RETCODE createSubSCIP(
    /* get name of the original problem and add "subnlp" */
    (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_subnlp", SCIPgetProbName(scip));
    SCIP_CALL( SCIPcreateProb(heurdata->subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+   SCIPsetSubscipDepth(heurdata->subscip, SCIPgetSubscipDepth(scip) + 1);
 
    /* copy all variables */
    SCIP_CALL( SCIPcopyVars(scip, heurdata->subscip, varsmap, NULL, NULL, NULL, 0, TRUE) );

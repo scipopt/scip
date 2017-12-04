@@ -965,7 +965,7 @@ SCIP_RETCODE addRelaxation(
    /* insert aggregated LP row as cut */
    if( !SCIProwIsInLP(consdata->aggrrow) )
    {
-      SCIP_CALL( SCIPaddCut(scip, NULL, consdata->aggrrow, FALSE, infeasible) );
+      SCIP_CALL( SCIPaddRow(scip, consdata->aggrrow, FALSE, infeasible) );
    }
 
    if( !(*infeasible) )
@@ -981,7 +981,7 @@ SCIP_RETCODE addRelaxation(
       /* add additional row */
       if( !SCIProwIsInLP(consdata->rows[0]) )
       {
-         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[0], FALSE, infeasible) );
+         SCIP_CALL( SCIPaddRow(scip, consdata->rows[0], FALSE, infeasible) );
       }
    }
 
@@ -1156,7 +1156,7 @@ SCIP_RETCODE separateCons(
          feasibility = SCIPgetRowSolFeasibility(scip, consdata->rows[r], sol);
          if( SCIPisFeasNegative(scip, feasibility) )
          {
-            SCIP_CALL( SCIPaddCut(scip, sol, consdata->rows[r], FALSE, cutoff) );
+            SCIP_CALL( SCIPaddRow(scip, consdata->rows[r], FALSE, cutoff) );
             if ( *cutoff )
                return SCIP_OKAY;
             *separated = TRUE;
@@ -4664,6 +4664,9 @@ SCIP_DECL_CONSCOPY(consCopyAnd)
    /* map operand variables to active variables of the target SCIP  */
    sourcevars = SCIPgetVarsAnd(sourcescip, sourcecons);
    nvars = SCIPgetNVarsAnd(sourcescip, sourcecons);
+
+   if( nvars == -1 )
+      return SCIP_INVALIDCALL;
 
    /* allocate buffer array */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );

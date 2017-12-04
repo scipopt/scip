@@ -108,7 +108,7 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    int                   ncols,              /**< length of integrality array */
    int*                  intInfo             /**< integrality array (0: continuous, 1: integer) */
    )
-{
+{ /*lint --e{715}*/
    SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -189,6 +189,15 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    const SCIP_Real*      val                 /**< values of constraint matrix entries */
    )
 {  /*lint --e{715}*/
+
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
+
    assert( lpi != NULL );
 
    lpi->nrows = nrows;
@@ -213,6 +222,20 @@ SCIP_RETCODE SCIPlpiAddCols(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {  /*lint --e{715}*/
+
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+      {
+         assert( val[j] != 0 );
+         /* perform check that no new rows are added - this is forbidden */
+         assert( 0 <= ind[j] && ind[j] < lpi->nrows );
+      }
+   }
+#endif
+
+
    assert( lpi != NULL );
    assert( lpi->ncols >= 0 );
    assert(obj != NULL);
@@ -223,15 +246,6 @@ SCIP_RETCODE SCIPlpiAddCols(
    assert(nnonz == 0 || val != NULL);
    assert(nnonz >= 0);
    assert(ncols >= 0);
-
-#ifndef NDEBUG
-   {
-      /* perform check that no new rows are added - this is forbidden */
-      int j;
-      for (j = 0; j < nnonz; ++j)
-         assert( 0 <= ind[j] && ind[j] < lpi->nrows );
-   }
-#endif
 
    lpi->ncols += ncols;
 
@@ -298,6 +312,15 @@ SCIP_RETCODE SCIPlpiAddRows(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {  /*lint --e{715}*/
+
+#ifndef NDEBUG
+   {
+      int j;
+      for( j = 0; j < nnonz; j++ )
+         assert( val[j] != 0 );
+   }
+#endif
+
    assert( lpi != NULL );
    assert( lpi->nrows >= 0 );
 
@@ -537,7 +560,7 @@ SCIP_RETCODE SCIPlpiGetCols(
    SCIP_Real*            ub,                 /**< buffer to store the upper bound vector, or NULL */
    int*                  nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
    int*                  beg,                /**< buffer to store start index of each column in ind- and val-array, or NULL */
-   int*                  ind,                /**< buffer to store column indices of constraint matrix entries, or NULL */
+   int*                  ind,                /**< buffer to store row indices of constraint matrix entries, or NULL */
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {  /*lint --e{715}*/
@@ -557,7 +580,7 @@ SCIP_RETCODE SCIPlpiGetRows(
    SCIP_Real*            rhs,                /**< buffer to store right hand side vector, or NULL */
    int*                  nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
    int*                  beg,                /**< buffer to store start index of each row in ind- and val-array, or NULL */
-   int*                  ind,                /**< buffer to store row indices of constraint matrix entries, or NULL */
+   int*                  ind,                /**< buffer to store column indices of constraint matrix entries, or NULL */
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {  /*lint --e{715}*/
@@ -575,7 +598,7 @@ SCIP_RETCODE SCIPlpiGetColNames(
    int                   namestoragesize,    /**< size of namestorage (if 0, storageleft returns the storage needed) */
    int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
    )
-{
+{ /*lint --e{715}*/
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -590,7 +613,7 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    int                   namestoragesize,    /**< size of namestorage (if 0, -storageleft returns the storage needed) */
    int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
    )
-{
+{ /*lint --e{715}*/
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -1075,7 +1098,7 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
    SCIP_LPSOLQUALITY     qualityindicator,   /**< indicates which quality should be returned */
    SCIP_Real*            quality             /**< pointer to store quality number */
    )
-{
+{ /*lint --e{715}*/
    assert(lpi != NULL);
    assert(quality != NULL);
 
@@ -1130,7 +1153,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    return SCIP_PLUGINNOTFOUND;
 }
 
-/** get dense row of inverse basis matrix B^-1
+/** get row of inverse basis matrix B^-1
  *
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
@@ -1149,7 +1172,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    return SCIP_PLUGINNOTFOUND;
 }
 
-/** get dense column of inverse basis matrix B^-1
+/** get column of inverse basis matrix B^-1
  *
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
@@ -1172,7 +1195,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    return SCIP_PLUGINNOTFOUND;
 }
 
-/** get dense row of inverse basis matrix times constraint matrix B^-1 * A
+/** get row of inverse basis matrix times constraint matrix B^-1 * A
  *
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
@@ -1192,7 +1215,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    return SCIP_PLUGINNOTFOUND;
 }
 
-/** get dense column of inverse basis matrix times constraint matrix B^-1 * A
+/** get column of inverse basis matrix times constraint matrix B^-1 * A
  *
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;

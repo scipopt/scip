@@ -817,6 +817,64 @@ int SCIPconsGetNUpgradeLocks(
 
 /* @} */
 
+/**@addtogroup PublicProblemMethods
+ *
+ * public methods to query linear constraint classification statistics
+ *
+ * @{
+ */
+
+/** create linear constraint statistics */
+EXTERN
+SCIP_RETCODE SCIPlinConsStatsCreate(
+   SCIP*                scip,                /**< scip data structure */
+   SCIP_LINCONSSTATS**  linconsstats         /**< pointer to linear constraint classification statistics */
+   );
+
+/** free linear constraint statistics */
+EXTERN
+void SCIPlinConsStatsFree(
+   SCIP*                scip,                /**< scip data structure */
+   SCIP_LINCONSSTATS**  linconsstats         /**< pointer to linear constraint classification statistics */
+   );
+
+/** resets linear constraint statistics */
+EXTERN
+void SCIPlinConsStatsReset(
+   SCIP_LINCONSSTATS*   linconsstats         /**< linear constraint classification statistics */
+   );
+
+/** returns the number of occurrences of a specific type of linear constraint */
+EXTERN
+int SCIPlinConsStatsGetTypeCount(
+   SCIP_LINCONSSTATS*   linconsstats,        /**< linear constraint classification statistics */
+   SCIP_LINCONSTYPE     linconstype          /**< linear constraint type */
+   );
+
+/** returns the total number of classified constraints */
+EXTERN
+int SCIPlinConsStatsGetSum(
+   SCIP_LINCONSSTATS*   linconsstats         /**< linear constraint classification statistics */
+   );
+
+/** increases the number of occurrences of a specific type of linear constraint */
+EXTERN
+void SCIPlinConsStatsIncTypeCount(
+   SCIP_LINCONSSTATS*   linconsstats,        /**< linear constraint classification statistics */
+   SCIP_LINCONSTYPE     linconstype,         /**< linear constraint type */
+   int                  increment            /**< positive increment */
+   );
+
+/** print linear constraint classification statistics */
+EXTERN
+void SCIPprintLinConsStats(
+   SCIP*                scip,                /**< scip data structure */
+   FILE*                file,                /**< file handle or NULL to print to standard out */
+   SCIP_LINCONSSTATS*   linconsstats         /**< linear constraint classification statistics */
+   );
+
+/* @} */
+
 #ifdef __cplusplus
 }
 #endif

@@ -232,6 +232,7 @@ struct SCIP_Row
    int                   lpdepth;            /**< depth level at which row entered the LP, or -1 if not in current LP */
    int                   minidx;             /**< minimal column index of row entries */
    int                   maxidx;             /**< maximal column index of row entries */
+   int                   numintcols;         /**< number of integral columns */
    int                   nummaxval;          /**< number of coefs with absolute value equal to maxval, zero if maxval invalid */
    int                   numminval;          /**< number of coefs with absolute value equal to minval, zero if minval invalid */
    int                   age;                /**< number of successive times this row was in LP and was not sharp in solution */
@@ -271,7 +272,7 @@ struct SCIP_Lp
    SCIP_Real             rootlpobjval;       /**< objective value of root LP without loose variables, or SCIP_INVALID */
    SCIP_Real             rootlooseobjval;    /**< objective value of loose variables in root node, or SCIP_INVALID */
    SCIP_Real             cutoffbound;        /**< upper objective limit of LP (copy of primal->cutoffbound) */
-   SCIP_Real             lpiuobjlim;         /**< current upper objective limit in LPI */
+   SCIP_Real             lpiobjlim;          /**< current objective limit in LPI */
    SCIP_Real             lpifeastol;         /**< current feasibility tolerance in LPI */
    SCIP_Real             lpidualfeastol;     /**< current reduced costs feasibility tolerance in LPI */
    SCIP_Real             lpibarrierconvtol;  /**< current convergence tolerance used in barrier algorithm in LPI */

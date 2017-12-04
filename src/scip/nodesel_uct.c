@@ -196,7 +196,7 @@ SCIP_Real nodeGetUctScore(
    score = nodeseldata->useestimate ? SCIPnodeGetEstimate(node) : SCIPnodeGetLowerbound(node);
 
    /* if the root lower bound is infinite due to LP errors, we ignore the gap part of the UCT score */
-   if( !SCIPisInfinity(scip, -rootlowerbound) && !SCIPisEQ(scip, score, rootlowerbound) )
+   if( !SCIPisInfinity(scip, REALABS(rootlowerbound)) && !SCIPisEQ(scip, score, rootlowerbound) )
    {
       SCIP_Real absscore;
       SCIP_Real absrootlowerbound;
@@ -468,7 +468,12 @@ SCIP_DECL_NODESELSELECT(nodeselSelectUct)
    selectBestNode(scip, selnode, nodeseldata, children, nchildren);
    selectBestNode(scip, selnode, nodeseldata, siblings, nsiblings);
    selectBestNode(scip, selnode, nodeseldata, leaves, nleaves);
-   assert(*selnode != NULL);
+
+   if( *selnode == NULL )
+   {
+      SCIPerrorMessage("Node selection rule UCT could not select a node.\n");
+      return SCIP_INVALIDCALL;
+   }
 
    /* increase the number of selections */
    ++nodeseldata->nselections;
