@@ -233,7 +233,8 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorInit(
    }
 
    /* return next expression */
-   return SCIPexpriteratorGetNext(iterator);
+   iterator->curr = SCIPexpriteratorGetNext(iterator);
+   return iterator->curr;
 }
 
 /** gets the next expression according to the mode of the expression iterator */
@@ -243,12 +244,14 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetNext(
 {
    /* move to the next expression according to iterator type */
    if( iterator->itertype == SCIP_CONSEXPRITERATOR_BFS )
-      return doBfsNext(iterator);
+      iterator->curr = doBfsNext(iterator);
    else
    {
       assert(iterator->itertype == SCIP_CONSEXPRITERATOR_DFS);
-      return doDfsNext(iterator);
+      iterator->curr = doDfsNext(iterator);
    }
+
+   return iterator->curr;
 }
 
 /** returns whether the iterator visited all expressions already */
@@ -258,11 +261,5 @@ SCIP_Bool SCIPexpriteratorIsEnd(
 {
    assert(iterator != NULL);
 
-   if( iterator->itertype == SCIP_CONSEXPRITERATOR_BFS )
-      return SCIPqueueIsEmpty(iterator->queue);
-   else
-   {
-      assert(iterator->itertype == SCIP_CONSEXPRITERATOR_DFS);
-      return iterator->dfsnexprs == 0;
-   }
+   return iterator->curr == NULL;
 }
