@@ -123,8 +123,6 @@ SCIP_CONSEXPR_EXPR* doDfsNext(
       /* return last child; NOTE this child is not been added to the stack */
       return child;
    }
-
-   return NULL;
 }
 
 /** moves to the next expression according to the BFS rule */
