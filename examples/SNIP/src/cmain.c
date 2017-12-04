@@ -64,13 +64,12 @@ SCIP_RETCODE runShell(
    SCIP_CALL( SCIPsetIntParam(scip,"presolving/maxrestarts",0) );
 
    /* turn off all separation algorithms */
-   SCIP_CALL( SCIPsetSeparating(scip, SCIP_PARAMSETTING_OFF, TRUE) );
+   //SCIP_CALL( SCIPsetSeparating(scip, SCIP_PARAMSETTING_OFF, TRUE) );
    //SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE) );
    SCIP_CALL( SCIPsetPresolving(scip, SCIP_PARAMSETTING_OFF, TRUE) );
    SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxrounds", 0) );
    SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxroundsroot", 0) );
 
-   SCIP_CALL( SCIPsetRealParam(scip, "benders/default/subprobfrac", 0.05) );
    SCIP_CALL( SCIPsetIntParam(scip, "benders/default/lnsmaxdepth", 10) );
    //SCIP_CALL( SCIPsetRealParam(scip, "benders/solutiontol", 1e-04) );
 

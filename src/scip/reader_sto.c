@@ -2269,6 +2269,8 @@ SCIP_RETCODE buildDecompProblem(
    SCIP_CALL( removeCoreVariablesAndConstraints(scip) );
 
    /* changing settings that are required for Benders' decomposition */
+   //SCIP_CALL( SCIPsetSeparating(scip, SCIP_PARAMSETTING_OFF, TRUE) );
+   SCIP_CALL( SCIPsetPresolving(scip, SCIP_PARAMSETTING_OFF, TRUE) );
    SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxrounds", 0) );
    SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxroundsroot", 0) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/trysol/freq", 1) );
