@@ -2792,6 +2792,10 @@ SCIP_RETCODE paramsetSetHeuristicsAggressive(
       if( strcmp(heurname, "dualval") == 0 )
          continue;
 
+      /* the benders heuristics should remain disabled */
+      if( strstr(heurname, "benders") != NULL )
+         continue;
+
       /* get frequency parameter of heuristic */
       (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/freq", heurname);
       param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
