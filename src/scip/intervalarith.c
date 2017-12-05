@@ -2576,14 +2576,14 @@ void SCIPintervalSin(
       /* increasing */
       if( finf <= fsup )
       {
-	 finf = (finf == 0.0) ? 0.0 : nextafter(finf, SCIP_REAL_MIN);
-	 fsup = (fsup == 0.0) ? 0.0 : nextafter(fsup, SCIP_REAL_MAX);
+	 finf = (finf == 0.0) ? 0.0 : SCIPnextafter(finf, SCIP_REAL_MIN);
+	 fsup = (fsup == 0.0) ? 0.0 : SCIPnextafter(fsup, SCIP_REAL_MAX);
       }
       /* decreasing */
       else
       {
-	 finf = (finf == 0.0) ? 0.0 : nextafter(finf, SCIP_REAL_MAX);
-	 fsup = (fsup == 0.0) ? 0.0 : nextafter(fsup, SCIP_REAL_MIN);
+	 finf = (finf == 0.0) ? 0.0 : SCIPnextafter(finf, SCIP_REAL_MAX);
+	 fsup = (fsup == 0.0) ? 0.0 : SCIPnextafter(fsup, SCIP_REAL_MIN);
       }
    }
    else
@@ -2593,13 +2593,13 @@ void SCIPintervalSin(
       /* check whether we have seen a minimum or maximum */
       if( cos(operand.inf) >= 0.0 )
       {
-	 finf = (finf == 0.0) ? 0.0 : nextafter(finf, SCIP_REAL_MIN);
+	 finf = (finf == 0.0) ? 0.0 : SCIPnextafter(finf, SCIP_REAL_MIN);
 	 fsup = 1.0;
       }
       else
       {
 	 finf = -1.0;
-	 fsup = (fsup == 0.0) ? 0.0 : nextafter(fsup, SCIP_REAL_MAX);
+	 fsup = (fsup == 0.0) ? 0.0 : SCIPnextafter(fsup, SCIP_REAL_MAX);
       }
    }
    assert(finf <= fsup);
