@@ -111,6 +111,7 @@ Test(iterator, bfs_single)
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<t_x>", NULL, &expr) );
 
    cr_expect(SCIPexpriteratorInit(bfs, expr) == expr);
+   cr_expect(SCIPexpriteratorGetNext(bfs) == NULL);
    cr_expect(SCIPexpriteratorIsEnd(bfs));
    cr_expect(SCIPexpriteratorGetNext(bfs) == NULL);
 
@@ -175,6 +176,7 @@ Test(iterator, bfs_general)
    cr_expect(SCIPexpriteratorGetNext(bfs) == expr_y);
    cr_expect(SCIPexpriteratorGetNext(bfs) == expr_x);
    cr_expect(SCIPexpriteratorGetNext(bfs) == expr_y);
+   cr_expect(SCIPexpriteratorGetNext(bfs) == NULL);
    cr_expect(SCIPexpriteratorIsEnd(bfs));
 
    /* release expression */
@@ -192,6 +194,7 @@ Test(iterator, dfs_single)
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<t_x>", NULL, &expr) );
 
    cr_expect(SCIPexpriteratorInit(dfs, expr) == expr);
+   cr_expect(SCIPexpriteratorGetNext(dfs) == NULL);
    cr_expect(SCIPexpriteratorIsEnd(dfs));
    cr_expect(SCIPexpriteratorGetNext(dfs) == NULL);
 
@@ -258,6 +261,7 @@ Test(iterator, dfs_general)
    cr_expect(SCIPexpriteratorGetNext(dfs) == expr_sum);
    cr_expect(SCIPexpriteratorGetNext(dfs) == expr_sin);
    cr_expect(SCIPexpriteratorGetNext(dfs) == expr_prod);
+   cr_expect(SCIPexpriteratorGetNext(dfs) == NULL);
    cr_expect(SCIPexpriteratorIsEnd(dfs));
 
    /* release expression */
