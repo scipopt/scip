@@ -14,6 +14,7 @@
 # Arguments | defaultvalue | possibilities
 # ----------|--------------|--------------
 # LPS       | spx          | cpx, spx
+# SPX_DIR   | --           | --
 
 ##########################
 ### evaluate arguments ###
@@ -47,8 +48,8 @@ then
     SCIP_FLAGS="$SCIP_FLAGS LPS=cpx"
 else
     # soplex is in adm_timos jenkins workspace
-    ln -s /nfs/OPTI/jenkins/workspace/SOPLEX_COMP=gnu_OPT=dbg_nightly/src lib/include/spxinc
-    ln -s /nfs/OPTI/jenkins/workspace/SOPLEX_COMP=gnu_OPT=dbg_nightly/lib/libsoplex.linux.x86_64.gnu.dbg.a lib/static/libsoplex.linux.x86_64.gnu.dbg.a
+    ln -s ${SPX_DIR}/src lib/include/spxinc
+    ln -s ${SPX_DIR}/lib/libsoplex.linux.x86_64.gnu.dbg.a lib/static/libsoplex.linux.x86_64.gnu.dbg.a
     SCIP_FLAGS="$SCIP_FLAGS LPS=spx LPSOPT=dbg"
 fi
 
