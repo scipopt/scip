@@ -761,7 +761,12 @@ set(xmlheaders
 
 # all source files should be compiled with a c++ compiler
 if(CXXONLY)
-    set_source_files_properties(${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${tpisources} ${symsources} PROPERTIES LANGUAGE CXX)
+    set_source_files_properties(main.c ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${tpisources} ${symsources} PROPERTIES LANGUAGE CXX)
+
+    # for the clang compiler this suppresses the warnings about treating 'c' input as 'c++' when CXXONLY is enabled
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+       add_compile_options(-x c++)
+    endif()
 endif()
 
 add_library(libobjscip EXCLUDE_FROM_ALL ${objscipsources})
