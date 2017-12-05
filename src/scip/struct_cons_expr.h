@@ -27,6 +27,7 @@
 #define __SCIP_STRUCT_CONS_EXPR_H__
 
 #include "scip/type_cons_expr.h"
+#include "scip/type_misc.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -131,6 +132,18 @@ struct SCIP_ConsExpr_Nlhdlr
    SCIP_DECL_CONSEXPR_NLHDLRSEPA((*sepa));      /**< separation callback (can be NULL) */
 };
 
+/** expression tree iterator */
+struct SCIP_ConsExpr_Iterator
+{
+   SCIP_CONSEXPRITERATOR_TYPE  itertype;     /**< type of expression iterator */
+   BMS_BLKMEM*                 blkmem;       /**< block memory */
+   SCIP_CONSEXPR_EXPR*         curr;         /**< current expression of the iterator */
+   SCIP_CONSEXPR_EXPR**        dfsexprs;     /**< stack DFS */
+   int*                        dfsnvisited;  /**< number of visited children for each expression in the stack */
+   int                         dfsnexprs;    /**< total number of expression in stack */
+   int                         dfssize;      /**< size DFS stack */
+   SCIP_QUEUE*                 queue;        /**< BFS queue */
+};
 
 #ifdef __cplusplus
 }

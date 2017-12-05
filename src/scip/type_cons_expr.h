@@ -392,6 +392,12 @@ typedef union
    void*                 ptrval;             /**< a pointer */
 } SCIP_CONSEXPREXPRWALK_IO;
 
+/** mode for expression iterator */
+typedef enum
+{
+   SCIP_CONSEXPRITERATOR_DFS,                /**< depth-first search */
+   SCIP_CONSEXPRITERATOR_BFS                 /**< breadth-first search */
+} SCIP_CONSEXPRITERATOR_TYPE;
 
 /** expression graph walk callback
  *
@@ -541,6 +547,7 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
 typedef struct SCIP_ConsExpr_Nlhdlr      SCIP_CONSEXPR_NLHDLR;        /**< nonlinear handler */
 typedef struct SCIP_ConsExpr_NlhdlrData  SCIP_CONSEXPR_NLHDLRDATA;    /**< nonlinear handler data */
 typedef struct SCIP_ConsExpr_NlhdlrExprData SCIP_CONSEXPR_NLHDLREXPRDATA;  /**< nonlinear handler data for a specific expression */
+typedef struct SCIP_ConsExpr_Iterator    SCIP_CONSEXPR_ITERATOR;      /**< expression tree iterator */
 
 #ifdef __cplusplus
 }
