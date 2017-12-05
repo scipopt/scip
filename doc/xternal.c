@@ -7719,6 +7719,12 @@
  *  Weighted Disjoint Set is a data structure to quickly update and query connectedness information
  *  between nodes of a graph. Disjoint Set is also known as Union Find.
  */
+
+/**@defgroup DirectedGraph Directed Graph
+ * @ingroup DataStructures
+ * @brief graph structure with common algorithms for directed and undirected graphs
+ */
+
 /**@defgroup MiscellaneousMethods Miscellaneous Methods
  * @ingroup PUBLICCOREAPI
  * @brief commonly used methods from different categories

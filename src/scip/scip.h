@@ -23155,7 +23155,7 @@ void SCIPfreeDisjointset(
 
 /* @} */
 
-/**@addtogroup DigraphMethods
+/**@addtogroup DirectedGraph
  *
  * @{
  */

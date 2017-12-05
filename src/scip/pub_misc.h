@@ -1203,9 +1203,7 @@ int SCIPprofileGetLatestFeasibleStart(
  * Directed graph
  */
 
-/**@defgroup DirectedGraph Directed Graph
- * @ingroup DataStructures
- * @brief graph structure with common algorithms for directed and undirected graphs
+/**@addtogroup DirectedGraph
  *
  * @{
  */
