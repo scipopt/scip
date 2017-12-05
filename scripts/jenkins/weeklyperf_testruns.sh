@@ -9,7 +9,20 @@
 # It builds optimized SCIP/SoPlex with make and runs mipdev-solvable, sapdev-solvable and minlpdev-solvable
 
 # Usage: from scip root execute
-#        ./weeklyperf_testruns.sh
+#        ./weeklyperf_testruns.sh SPX_DIR=path/to/soplex
+
+# Arguments | defaultvalue | possibilities
+# ----------|--------------|--------------
+# SPX_DIR   | --           | --
+
+
+##########################
+### evaluate arguments ###
+##########################
+for i in $@
+do
+    eval $i
+done
 
 #############
 ### Setup ###
@@ -17,8 +30,9 @@
 mkdir -p lib/include
 mkdir -p lib/static
 mkdir -p settings
-ln -s ../../../SOPLEX_COMP=gnu_OPT=opt_weekly/src lib/include/spxinc
-ln -s ../../../SOPLEX_COMP=gnu_OPT=opt_weekly/lib/libsoplex.linux.x86_64.gnu.opt.a lib/static/libsoplex.linux.x86_64.gnu.opt.a
+
+ln -s ${SPX_DIR}/src lib/include/spxinc
+ln -s ${SPX_DIR}/lib/libsoplex.linux.x86_64.gnu.opt.a lib/static/libsoplex.linux.x86_64.gnu.opt.a
 
 ln -s /OPTI/adm_cple/ipopt lib/static/ipopt.linux.x86_64.gnu.opt
 

@@ -15115,10 +15115,10 @@ void SCIPcomputeBilinEnvelope2(
    SCIP_Real             alpha2,             /**< x coefficient of linear inequality; must be in {-1,0,1} */
    SCIP_Real             beta2,              /**< y coefficient of linear inequality */
    SCIP_Real             gamma2,             /**< constant of linear inequality */
-   SCIP_Real*            lincoefx,           /**< buffer to store coefficient of first  variable in linearization */
-   SCIP_Real*            lincoefy,           /**< buffer to store coefficient of second variable in linearization */
-   SCIP_Real*            linconstant,        /**< buffer to store constant of linearization */
-   SCIP_Bool*            success             /**< buffer to store whether linearization was successful */
+   SCIP_Real* RESTRICT   lincoefx,           /**< buffer to store coefficient of first  variable in linearization */
+   SCIP_Real* RESTRICT   lincoefy,           /**< buffer to store coefficient of second variable in linearization */
+   SCIP_Real* RESTRICT   linconstant,        /**< buffer to store constant of linearization */
+   SCIP_Bool* RESTRICT   success             /**< buffer to store whether linearization was successful */
    );
 
 /** creates an NLP relaxation and stores it in a given NLPI problem; the function computes for each variable which the

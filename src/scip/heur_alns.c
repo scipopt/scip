@@ -3539,6 +3539,9 @@ SCIP_DECL_HEURINIT(heurInitAlns)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
+   /* reactivate all neighborhoods if a new problem is read in */
+   heurdata->nactiveneighborhoods = heurdata->nneighborhoods;
+
    /* todo initialize neighborhoods for new problem */
    for( i = 0; i < heurdata->nneighborhoods; ++i )
    {
@@ -3746,11 +3749,10 @@ SCIP_RETCODE SCIPincludeHeurAlns(
    heur = NULL;
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
+   BMSclearMemory(heurdata);
 
    /* TODO make this a user parameter? */
    heurdata->lplimfac = LPLIMFAC;
-   heurdata->bandit = NULL;
-   heurdata->rewardfilename = NULL;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->neighborhoods, NNEIGHBORHOODS) );
 
