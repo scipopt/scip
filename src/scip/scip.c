@@ -695,6 +695,8 @@ SCIP_RETCODE doScipCreate(
    assert(scip != NULL);
 
    SCIP_ALLOC( BMSallocMemory(scip) );
+
+   /* all members are initialized to NULL */
    BMSclearMemory(*scip);
 
    /* create a default message handler */
@@ -711,25 +713,6 @@ SCIP_RETCODE doScipCreate(
    SCIP_CALL( SCIPincludeCorePlugins(*scip) );
 
    SCIPclockStart((*scip)->totaltime, (*scip)->set);
-   (*scip)->stat = NULL;
-   (*scip)->origprob = NULL;
-   (*scip)->origprimal = NULL;
-   (*scip)->eventfilter = NULL;
-   (*scip)->eventqueue = NULL;
-   (*scip)->branchcand = NULL;
-   (*scip)->lp = NULL;
-   (*scip)->nlp = NULL;
-   (*scip)->primal = NULL;
-   (*scip)->tree = NULL;
-   (*scip)->conflict = NULL;
-   (*scip)->transprob = NULL;
-   (*scip)->pricestore = NULL;
-   (*scip)->sepastore = NULL;
-   (*scip)->conflictstore = NULL;
-   (*scip)->cutpool = NULL;
-   (*scip)->delayedcutpool = NULL;
-   (*scip)->reopt = NULL;
-   (*scip)->concurrent = NULL;
 
    SCIP_CALL( SCIPnlpInclude((*scip)->set, SCIPblkmem(*scip)) );
 
