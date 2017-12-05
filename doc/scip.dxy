@@ -787,7 +787,6 @@ WARN_LOGFILE           =
 INPUT                  = . \
                          ../src \
                          ../src/scip \
-                         ../src/lpi \
                          ../src/nlpi \
                          ../src/objscip \
                          ../src/tclique \
