@@ -1608,7 +1608,7 @@ void SCIPbtSetRoot(
 
 /**@} */
 
-/**@addtogroup DisjoinedSet
+/**@addtogroup DisjointSet
  *
  * @{
  */

@@ -23133,7 +23133,7 @@ int SCIPgetPtrarrayMaxIdx(
 
 /**@} */
 
-/**@addtogroup DisjoinedSet
+/**@addtogroup DisjointSet
  *
  * @{
  */
