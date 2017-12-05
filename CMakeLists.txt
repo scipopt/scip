@@ -193,23 +193,7 @@ add_custom_target(scip_update_githash
                   COMMAND ${CMAKE_COMMAND} -DDST=${PROJECT_SOURCE_DIR}/src/scip/githash.c
                                            -P ${CMAKE_BINARY_DIR}/scip_update_githash.cmake)
 
-# create a target for updating the current build configuration
-file(WRITE ${CMAKE_BINARY_DIR}/scip_update_buildflags.cmake "
-set(SCIP_BUILDFLAGS_DEFINE  \"#define SCIP_BUILDFLAGS \\\" ARCH=${CMAKE_SYSTEM}${NEWLINE} COMP=${CMAKE_SYSTEM_PROCESSOR}${NEWLINE} BUILD=${CMAKE_BUILD_TYPE}${NEWLINE}\\\"\")
-if(EXISTS \${DST})
-   file(STRINGS \${DST} SCIP_BUILDFLAGS_DEFINE_OLD)
-endif()
-if(NOT \${SCIP_BUILDFLAGS_DEFINE} STREQUAL \"\${SCIP_BUILDFLAGS_DEFINE_OLD}\")
-   file(WRITE \${DST} \"\${SCIP_BUILDFLAGS_DEFINE}\n\")
-endif()
-")
-add_custom_target(scip_update_buildflags
-                  COMMAND ${CMAKE_COMMAND} -DDST=${PROJECT_SOURCE_DIR}/src/scip/buildflags.c
-                                           -P ${CMAKE_BINARY_DIR}/scip_update_buildflags.cmake)
-
 add_definitions(-DWITH_SCIPDEF)
-
-
 
 # use C++11 standard
 set(CMAKE_CXX_STANDARD 11)

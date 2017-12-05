@@ -12,7 +12,12 @@ endfunction(setLibProperties)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED on)
 
+#configure the scipbuildflags.c source file for the build tree
+configure_file(${PROJECT_SOURCE_DIR}/src/scipbuildflags.c.in
+  "${CMAKE_BINARY_DIR}/scipbuildflag.c" @ONLY)
+
 set(scipsources
+    ${CMAKE_BINARY_DIR}/scipbuildflag.c
     blockmemshell/memory.c
     scip/message.c
     scip/bitencode.c
@@ -239,7 +244,6 @@ set(scipsources
     scip/retcode.c
     scip/scip.c
     scip/scip_bandit.c
-    scip/scipbuildflags.c
     scip/scipdefplugins.c
     scip/scipcoreplugins.c
     scip/scipgithash.c
@@ -819,8 +823,8 @@ target_compile_definitions(scip PRIVATE EXTERN=extern)
 target_link_libraries(scip ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES}
    ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES} ${THREAD_LIBRARIES} ${NLPI_LIBRARIES})
 
-add_dependencies(libscip scip_update_githash scip_update_buildflags)
-add_dependencies(scip scip_update_githash scip_update_buildflags)
+add_dependencies(libscip scip_update_githash)
+add_dependencies(scip scip_update_githash)
 
 set_target_properties(libscip PROPERTIES
     VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}.${SCIP_VERSION_SUB}
