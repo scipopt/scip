@@ -99,7 +99,7 @@ SCIP_CONSEXPR_EXPR* doDfsNext(
       --(iterator->dfsnexprs);
       return expr;
    }
-   /* go to the next children */
+   /* go to the next child */
    else
    {
       SCIP_CONSEXPR_EXPR* child = SCIPgetConsExprExprChildren(expr)[childidx];
@@ -162,7 +162,7 @@ SCIP_CONSEXPR_EXPR* doBfsNext(
  * Interface methods
  */
 
-/**< creates an expression iterator */
+/** creates an expression iterator */
 SCIP_RETCODE SCIPexpriteratorCreate(
    SCIP_CONSEXPR_ITERATOR**    iterator,    /**< buffer to store expression iterator */
    BMS_BLKMEM*                 blkmem,      /**< block memory used to store hash map entries */
@@ -189,7 +189,7 @@ SCIP_RETCODE SCIPexpriteratorCreate(
    return SCIP_OKAY;
 }
 
-/**< frees an expression iterator */
+/** frees an expression iterator */
 void SCIPexpriteratorFree(
    SCIP_CONSEXPR_ITERATOR**    iterator     /**< pointer to the expression iterator */
    )
@@ -211,7 +211,7 @@ void SCIPexpriteratorFree(
    BMSfreeBlockMemory((*iterator)->blkmem, iterator);
 }
 
-/**< initializes an expression iterator */
+/** initializes an expression iterator */
 SCIP_CONSEXPR_EXPR* SCIPexpriteratorInit(
    SCIP_CONSEXPR_ITERATOR*    iterator,    /**< expression iterator */
    SCIP_CONSEXPR_EXPR*        expr         /**< expression of the iterator */

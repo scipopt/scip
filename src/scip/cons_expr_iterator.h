@@ -36,7 +36,7 @@ extern "C" {
 /**@name Expression Iterator Methods */
 /**@{ */
 
-/**< creates an expression iterator */
+/** creates an expression iterator */
 EXTERN
 SCIP_RETCODE SCIPexpriteratorCreate(
    SCIP_CONSEXPR_ITERATOR**    iterator,    /**< buffer to store expression iterator */
@@ -44,13 +44,13 @@ SCIP_RETCODE SCIPexpriteratorCreate(
    SCIP_CONSEXPRITERATOR_TYPE  type         /**< type of expression iterator */
    );
 
-/**< frees an expression iterator */
+/** frees an expression iterator */
 EXTERN
 void SCIPexpriteratorFree(
    SCIP_CONSEXPR_ITERATOR**    iterator     /**< pointer to the expression iterator */
    );
 
-/**< initializes an expression iterator */
+/** initializes an expression iterator */
 EXTERN
 SCIP_CONSEXPR_EXPR* SCIPexpriteratorInit(
    SCIP_CONSEXPR_ITERATOR*     iterator,    /**< expression iterator */

@@ -27,7 +27,7 @@
 #define __SCIP_STRUCT_CONS_EXPR_H__
 
 #include "scip/type_cons_expr.h"
-#include "scip/pub_misc.h"
+#include "scip/type_misc.h"
 
 #ifdef __cplusplus
 extern "C" {
