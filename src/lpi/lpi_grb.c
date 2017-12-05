@@ -3913,12 +3913,18 @@ SCIP_RETCODE SCIPlpiGetObjval(
     * kind of hack for the code in conflict.c:7595 were some extra code handles CPLEX' FASTMIP case that is similar to
     * this case.
     */
-   if( ret == 10005 && lpi->solstat == GRB_CUTOFF )
+   if( ret == GRB_ERROR_DATA_NOT_AVAILABLE && lpi->solstat == GRB_CUTOFF )
    {
       SCIP_Real dval;
+      SCIP_OBJSEN objsense;
 
+      SCIP_CALL( SCIPlpiGetObjsen(lpi, &objsense) )
       SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_CUTOFF, &dval) );
-      *objval = dval - 1e-06;
+
+      if( objsense == SCIP_OBJSENSE_MINIMIZE )
+         *objval = dval - 1e-06;
+      else
+         *objval = dval + 1e-06;
    }
    else
    {
