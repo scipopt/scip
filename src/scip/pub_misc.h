@@ -260,6 +260,7 @@ void SCIPgmlWriteClosing(
  */
 
 /**@defgroup SparseSol Sparse Solution
+ * @ingroup DataStructures
  * @brief sparse storage for multiple integer solutions
  *
  * @{
