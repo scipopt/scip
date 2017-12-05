@@ -166,6 +166,11 @@ EOF
 # End of AWK Scripts            #
 #################################
 
+# The RBDB database has the form: timestamp_of_testrun rubberbandid p=PERM s=SEED
+RBDB="/nfs/OPTI/adm_timo/databases/rbdb/${PWD##*/}_${TESTSET}_${SETTING}_${LPS}_rbdb.txt"
+OLDTIMESTAMP=`tail -n 1 ${RBDB}|cut -d ' ' -f 1`
+NEWTIMESTAMP=`date '+%F-%H-%M'`
+
 PERM=0
 while [ $PERM -le $PERMUTE ]; do
   # get ending given by permutation
@@ -181,7 +186,6 @@ while [ $PERM -le $PERMUTE ]; do
   DATABASE="/nfs/OPTI/adm_timo/databases/${PWD##*/}_${TESTSET}_${SETTING}_${LPS}${PERM_ENDING}txt"
   TMPDATABASE="$DATABASE.tmp"
   STILLFAILING="${DATABASE}_SF.tmp"
-  RBDB="/nfs/OPTI/adm_timo/databases/rbdb/${PWD##*/}_${TESTSET}_${SETTING}_${LPS}_rb${PERM_ENDING}txt"
   OUTPUT="${DATABASE}_output.tmp"
   touch ${STILLFAILING}
 
@@ -242,9 +246,7 @@ while [ $PERM -le $PERMUTE ]; do
   if [ "${PERFORMANCE}" == "performance" ]; then
     ./evalcheck_cluster.sh -R ../${EVALFILE} > ${OUTPUT}
     NEWRBID=`cat $OUTPUT | grep "rubberband.zib" |sed -e 's|https://rubberband.zib.de/result/||'`
-    OLDRBID=`tail $RBDB -n 1`
-    PERF_MAIL=`echo "The results of the weekly performance runs are ready. Take a look at https://rubberband.zib.de/result/${NEWRBID}?compare=${OLDRBID}"`
-    echo $NEWRBID >> $RBDB
+    echo "${RUNTIMESTAMP} ${NEWRBID} p=${PERM}" >> $RBDB
   else
     ./evalcheck_cluster.sh -r "-v useshortnames=0" ../${EVALFILE} > ${OUTPUT}
   fi
@@ -358,3 +360,23 @@ Please note that they might be deleted soon" | mailx -s "$SUBJECT" -r "$EMAILFRO
 
   PERM=$((PERM + 1))
 done
+
+
+if [ "${PERFORMANCE}" == "performance" ]; then
+  # collect all ids with timestamps OLDTIMESTAMP NEWTIMESTAMP in RBIDS
+  RBDB_STRS=`grep -e "\(${OLDTIMESTAMP}\|${NEWTIMESTAMP}\)" ${RBDB}|cut -d ' ' -f 2`
+
+  i=0
+  while read -r line; do
+      arr=($line)
+      RBIDS[$i]=${arr[-1]}
+      ((i++))
+  done <<< "${RBDB_STRS}"
+
+  IDSTR=$(printf ",%s" "${RBIDS[@]}")
+  IDSTR=${IDSTR:1}
+
+  URLSTR=`echo ${IDSTR} | sed 's/,/?compare=/'`
+
+  PERF_MAIL=`echo "The results of the weekly performance runs are ready. Take a look at https://rubberband.zib.de/result/${URLSTR}"`
+fi
