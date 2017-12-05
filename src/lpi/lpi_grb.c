@@ -3918,10 +3918,10 @@ SCIP_RETCODE SCIPlpiGetObjval(
       SCIP_Real dval;
       SCIP_OBJSEN objsense;
 
-      SCIP_CALL( SCIPlpiGetObjsen(lpi, &objsense) )
+      SCIP_CALL( SCIPlpiGetObjsen(lpi, &objsense) );
       SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_CUTOFF, &dval) );
 
-      if( objsense == SCIP_OBJSENSE_MINIMIZE )
+      if( objsense == SCIP_OBJSEN_MINIMIZE )
          *objval = dval - 1e-06;
       else
          *objval = dval + 1e-06;
