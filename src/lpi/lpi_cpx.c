@@ -1039,7 +1039,7 @@ void* SCIPlpiGetSolverPointer(
 SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
    int                   ncols,              /**< length of integrality array */
-   int*                  intInfo             /**< integrality array (0: continuous, 1: integer) */
+   int*                  intInfo             /**< integrality array (0: continuous, 1: integer). May be NULL iff ncols is 0.  */
    )
 {  /*lint --e{715}*/
    SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
@@ -1223,6 +1223,12 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
+   assert(obj != NULL);
+   assert(lb != NULL);
+   assert(ub != NULL);
+   assert(beg != NULL);
+   assert(ind != NULL);
+   assert(val != NULL);
 
    SCIPdebugMessage("loading LP in column format into CPLEX: %d cols, %d rows\n", ncols, nrows);
 
@@ -1283,12 +1289,12 @@ SCIP_RETCODE SCIPlpiAddCols(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
-   assert(obj != 0);
-   assert(lb != 0);
-   assert(ub != 0);
-   assert(nnonz == 0 || beg != 0);
-   assert(nnonz == 0 || ind != 0);
-   assert(nnonz == 0 || val != 0);
+   assert(obj != NULL);
+   assert(lb != NULL);
+   assert(ub != NULL);
+   assert(nnonz == 0 || beg != NULL);
+   assert(nnonz == 0 || ind != NULL);
+   assert(nnonz == 0 || val != NULL);
    assert(nnonz >= 0);
    assert(ncols >= 0);
 

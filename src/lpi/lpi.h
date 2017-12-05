@@ -114,7 +114,7 @@ EXTERN
 SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
    int                   ncols,              /**< length of integrality array */
-   int*                  intInfo             /**< integrality array (0: continuous, 1: integer) */
+   int*                  intInfo             /**< integrality array (0: continuous, 1: integer). May be NULL iff ncols is 0.  */
    );
 
 /**@} */
@@ -341,6 +341,7 @@ SCIP_RETCODE SCIPlpiGetNCols(
    );
 
 /** gets the objective sense of the LP */
+EXTERN
 SCIP_RETCODE SCIPlpiGetObjsen(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_OBJSEN*          objsen              /**< pointer to store objective sense */

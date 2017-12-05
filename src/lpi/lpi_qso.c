@@ -245,6 +245,7 @@ SCIP_RETCODE ensureTabMem(
    int                   sz                  /**< size */
    )
 {
+   assert(lpi != NULL);
    if( lpi->tbsz < sz )
    {
       lpi->tbsz = sz*2;
@@ -261,6 +262,7 @@ SCIP_RETCODE ensureColMem(
    int                   ncols               /**< number of columns */
    )
 {
+   assert(lpi != NULL);
    if( lpi->colspace < ncols )
    {
       lpi->colspace = ncols*2;
@@ -277,6 +279,7 @@ SCIP_RETCODE ensureRowMem(
    int                   nrows               /**< number of rows */
    )
 {
+   assert(lpi != NULL);
    if( lpi->rowspace < nrows )
    {
       lpi->rowspace = nrows*2;
@@ -298,6 +301,7 @@ SCIP_RETCODE convertSides(
    const double* const   rhs                 /**< right hand side */
    )
 {
+   assert(lpi != NULL);
    int state;
    register int i;
 
@@ -385,6 +389,7 @@ void* SCIPlpiGetSolverPointer(
    SCIP_LPI*             lpi                 /**< pointer to an LP interface structure */
    )
 {
+   assert(lpi != NULL);
    return (void*) lpi->prob;
 }
 
@@ -392,7 +397,7 @@ void* SCIPlpiGetSolverPointer(
 SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
    int                   ncols,              /**< length of integrality array */
-   int*                  intInfo             /**< integrality array (0: continuous, 1: integer) */
+   int*                  intInfo             /**< integrality array (0: continuous, 1: integer). May be NULL iff ncols is 0.  */
    )
 {  /*lint --e{715}*/
    SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
@@ -529,6 +534,14 @@ SCIP_RETCODE SCIPlpiLoadColLP(
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
+   assert(lhs != NULL);
+   assert(rhs != NULL);
+   assert(obj != NULL);
+   assert(lb != NULL);
+   assert(ub != NULL);
+   assert(beg != NULL);
+   assert(ind != NULL);
+   assert(val != NULL);
 
    lpi->solstat = 0;
 
@@ -608,8 +621,6 @@ SCIP_RETCODE SCIPlpiAddCols(
    assert( lpi != NULL );
    assert( lpi->prob != NULL );
    assert(obj != NULL);
-   assert(lb != NULL);
-   assert(ub != NULL);
    assert(nnonz == 0 || beg != NULL);
    assert(nnonz == 0 || ind != NULL);
    assert(nnonz == 0 || val != NULL);
@@ -1685,6 +1696,7 @@ SCIP_RETCODE SCIPlpiGetObjsen(
 {
    int sense;
 
+   assert(lpi != NULL);
    assert( objsen != NULL );
 
    QS_CONDRET( QSget_objsense(lpi->prob, &sense) );

@@ -139,7 +139,7 @@ SCIP_RETCODE ensureCstatMem(
    int                   num                 /**< minimal number of entries in array */
    )
 {
-   assert(lpi != 0);
+   assert(lpi != NULL);
 
    if( num > lpi->cstatsize )
    {
@@ -161,7 +161,7 @@ SCIP_RETCODE ensureRstatMem(
    int                   num                 /**< minimal number of entries in array */
    )
 {
-   assert(lpi != 0);
+   assert(lpi != NULL);
 
    if( num > lpi->rstatsize )
    {
@@ -294,6 +294,7 @@ void setFactorizationFrequency(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
+   assert(lpi != NULL);
    /* set the factorization frequency only once */
    if ( lpi->setFactorizationFrequency )
       return;
@@ -308,6 +309,7 @@ void setFastmipClpParameters(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
+   assert(lpi != NULL);
    lpi->fastmip = TRUE;
 
    /* Perturbation:
@@ -403,6 +405,7 @@ void unsetFastmipClpParameters(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
+   assert(lpi != NULL);
    lpi->fastmip = FALSE;
 
    // reset to default value:
@@ -450,6 +453,7 @@ void* SCIPlpiGetSolverPointer(
    SCIP_LPI*             lpi                 /**< pointer to an LP interface structure */
    )
 {
+   assert(lpi != NULL);
    return (void*) lpi->clp;
 }
 
@@ -457,10 +461,11 @@ void* SCIPlpiGetSolverPointer(
 SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
    int                   ncols,              /**< length of integrality array */
-   int*                  intInfo             /**< integrality array (0: continuous, 1: integer) */
+   int*                  intInfo             /**< integrality array (0: continuous, 1: integer). May be NULL iff ncols is 0.  */
    )
 {
    SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
+   assert(lpi != NULL);
    return SCIP_LPERROR;
 }
 
@@ -484,7 +489,7 @@ SCIP_RETCODE SCIPlpiCreate(
    SCIP_OBJSEN           objsen              /**< objective sense */
    )
 {
-   assert(lpi != 0);
+   assert(lpi != NULL);
 
    SCIPdebugMessage("calling SCIPlpiCreate()\n");
 
@@ -587,11 +592,11 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    const SCIP_Real*      obj,                /**< objective function values of columns */
    const SCIP_Real*      lb,                 /**< lower bounds of columns */
    const SCIP_Real*      ub,                 /**< upper bounds of columns */
-   char**                colnames,           /**< column names, or 0 */
+   char**                colnames,           /**< column names, or NULL */
    int                   nrows,              /**< number of rows */
    const SCIP_Real*      lhs,                /**< left hand sides of rows */
    const SCIP_Real*      rhs,                /**< right hand sides of rows */
-   char**                rownames,           /**< row names, or 0 */
+   char**                rownames,           /**< row names, or NULL */
    int                   nnonz,              /**< number of nonzero elements in the constraint matrix */
    const int*            beg,                /**< start index of each column in ind- and val-array */
    const int*            ind,                /**< row indices of constraint matrix entries */
@@ -608,10 +613,17 @@ SCIP_RETCODE SCIPlpiLoadColLP(
 
    SCIPdebugMessage("calling SCIPlpiLoadColLP()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
-   assert(lhs != 0);
-   assert(rhs != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
+   assert(lhs != NULL);
+   assert(rhs != NULL);
+   assert(obj != NULL);
+   assert(lb != NULL);
+   assert(ub != NULL);
+   assert(beg != NULL);
+   assert(ind != NULL);
+   assert(val != NULL);
+
    assert( nnonz > beg[ncols-1] );
 
    invalidateSolution(lpi);
@@ -677,14 +689,14 @@ SCIP_RETCODE SCIPlpiAddCols(
 
    SCIPdebugMessage("calling SCIPlpiAddCols()\n");
 
-   assert(lpi != 0);
-   assert(lpi->clp != 0);
-   assert(obj != 0);
-   assert(lb != 0);
-   assert(ub != 0);
-   assert(nnonz == 0 || beg != 0);
-   assert(nnonz == 0 || ind != 0);
-   assert(nnonz == 0 || val != 0);
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
+   assert(obj != NULL);
+   assert(lb != NULL);
+   assert(ub != NULL);
+   assert(nnonz == 0 || beg != NULL);
+   assert(nnonz == 0 || ind != NULL);
+   assert(nnonz == 0 || val != NULL);
    assert(nnonz >= 0);
    assert(ncols >= 0);
 
@@ -700,6 +712,17 @@ SCIP_RETCODE SCIPlpiAddCols(
    // if columns are not empty
    if ( nnonz != 0 )
    {
+#ifndef NDEBUG
+      {
+         int j;
+         for( j = 0; j < nnonz; j++ )
+         {
+            assert( val[j] != 0 );
+            /* perform check that no new rows are added - this is forbidden */
+            assert( 0 <= ind[j] && ind[j] < lpi->nrows );
+         }
+      }
+#endif
       BMScopyMemoryArray(mybeg, beg, ncols);
       mybeg[ncols] = nnonz;   // add additional entry at end
 
