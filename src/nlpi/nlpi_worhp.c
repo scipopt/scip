@@ -949,7 +949,7 @@ SCIP_DECL_NLPIFREE( nlpiFreeWorhp )
    assert(data != NULL);
    assert(data->blkmem != NULL);
 
-   BMSfreeMemory(&data);
+   BMSfreeBlockMemory(data->blkmem, &data);
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -2379,7 +2379,7 @@ SCIP_RETCODE SCIPcreateNlpSolverWorhp(
    assert(nlpi   != NULL);
 
    /* create Worhp solver interface data */
-   SCIP_ALLOC( BMSallocMemory(&nlpidata) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, &nlpidata) );
    BMSclearMemory(nlpidata);
 
    nlpidata->blkmem = blkmem;

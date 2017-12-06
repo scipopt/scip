@@ -262,7 +262,7 @@ SCIP_RETCODE constructCompression(
             continue;
 
          /* get a clear array of size SCIPgetNOrigVars */
-         SCIP_CALL( SCIPallocClearMemoryArray(scip, &common_vars, SCIPgetNOrigVars(scip)) );
+         SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &common_vars, SCIPgetNOrigVars(scip)) );
 
          /* allocate buffer */
          nnon_zero_vars = 0;
@@ -410,7 +410,7 @@ SCIP_RETCODE constructCompression(
          current_id = (current_id + 1) % nleaveids;
 
          /* free memory */
-         SCIPfreeMemoryArray(scip, &common_vars);
+         SCIPfreeBlockMemoryArray(scip, &common_vars, SCIPgetNOrigVars(scip));
 
          SCIPfreeBufferArray(scip, &covered_ids);
          SCIPfreeBufferArray(scip, &idx_non_zero);

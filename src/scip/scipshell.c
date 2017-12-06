@@ -432,7 +432,7 @@ SCIP_RETCODE SCIPrunShell(
    )
 {
    SCIP* scip = NULL;
-
+   SCIP_RETCODE retcode = SCIP_OKAY;
    /*********
     * Setup *
     *********/
@@ -444,22 +444,22 @@ SCIP_RETCODE SCIPrunShell(
    SCIPenableDebugSol(scip);
 
    /* include default SCIP plugins */
-   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
+   SCIP_CALL_TERMINATE( retcode, SCIPincludeDefaultPlugins(scip), TERMINATE );
 
    /**********************************
     * Process command line arguments *
     **********************************/
 
-   SCIP_CALL( SCIPprocessShellArguments(scip, argc, argv, defaultsetname) );
+   SCIP_CALL_TERMINATE( retcode, SCIPprocessShellArguments(scip, argc, argv, defaultsetname), TERMINATE );
 
 
    /********************
     * Deinitialization *
     ********************/
-
+TERMINATE:
    SCIP_CALL( SCIPfree(&scip) );
 
    BMScheckEmptyMemory();
 
-   return SCIP_OKAY;
+   return retcode;
 }

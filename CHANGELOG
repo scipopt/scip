@@ -93,6 +93,7 @@ interface:
   to work with linear constraint classification through the C API
 - new method SCIPdivesetGetNSols to query the number of found solutions from a diveset.
 - new method SCIPnextafter that wraps different nextafter methods to return the next representable value after a given value
+- SCIPnlpStatisticsCreate() and SCIPnlpStatisticsFree() now require a pointer to blockmemory as argument
 
 performance improvements:
 - use disjoint set to reduce peak memory usage and time to compute of clique table connectedness information
