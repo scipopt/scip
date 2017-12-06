@@ -793,6 +793,7 @@ INPUT                  = . \
                          ../src/tclique \
                          ../src/dijkstra \
                          ../src/tpi \
+                         ../src/symmetry \
                          ../src/xml \
                          ../src/blockmemshell \
                          ../examples \
