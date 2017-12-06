@@ -26,6 +26,10 @@
 #include "scip/def.h"
 #include "scip/type_misc.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct SCIP_RBTreeNode SCIP_RBTREENODE;
 
 struct SCIP_RBTreeNode
@@ -159,5 +163,9 @@ void SCIPrbtreeInsert_call(
                                               */
    SCIP_RBTREENODE*      node                /**< node to insert into the tree */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

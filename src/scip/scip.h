@@ -10071,8 +10071,8 @@ SCIP_Bool SCIPdoNotMultaggrVar(
 
 /** returns whether dual reduction are allowed during propagation and presolving
  *
- *  @note a reduction is called dual, if it may forbid improving feasible solutions
- *        (in order to be valid, it should keep at least one optimal solution intact)
+ *  @note A reduction is called dual, if it may discard feasible solutions, but leaves at least one optimal solution
+ *        intact. Often such reductions are based on analyzing the objective function, reduced costs and/or dual LPs.
  */
 EXTERN
 SCIP_Bool SCIPallowDualReds(
@@ -23133,7 +23133,7 @@ int SCIPgetPtrarrayMaxIdx(
 
 /**@} */
 
-/**@addtogroup DisjoinedSet
+/**@addtogroup DisjointSet
  *
  * @{
  */
@@ -23155,7 +23155,7 @@ void SCIPfreeDisjointset(
 
 /* @} */
 
-/**@addtogroup DigraphMethods
+/**@addtogroup DirectedGraph
  *
  * @{
  */

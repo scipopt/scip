@@ -35,6 +35,7 @@ $NAME/doc/pictures/miniscippy.png $NAME/doc/pictures/scippy.png \
 $NAME/make/make.* \
 $NAME/check/CMakeLists.txt                     \
 $NAME/tests/CMakeLists.txt                     \
+$NAME/src/scipbuildflags.c.in                  \
 $NAME/src/CMakeLists.txt                       \
 $NAME/CMakeLists.txt \
 $NAME/scip-config.cmake.in \
