@@ -683,11 +683,15 @@
  * that may take a while to complete. To perform a quick test to see whether the compilation was really successful you may
  * run `make check`. To see all available tests, run
  *
- * ```ctest -N```
+ * ```
+ * ctest -N
+ * ```
  *
  * and to perform a memory check, run
  *
- * ```ctest -T MemCheck```
+ * ```
+ * ctest -T MemCheck
+ * ```
  *
  * If <a href="https://criterion.readthedocs.io/en/master/">Criterion</a> is installed (set
  * custom path with `-DCRITERION_DIR=<path>`) the target `unittests` can be used to compile and run the available unit tests.
@@ -8049,9 +8053,18 @@
  *
  */
 
-/**@defgroup LPIS LP Solver Interfaces
+/**@defgroup LPIS LP Solver Interface
  * @ingroup PUBLICPLUGINLPI
- * @brief methods and files provided by the default LP solver interfaces of \SCIP
+ * @brief methods and files provided by the LP solver interface of \SCIP
+ *
+ * \SCIP uses external tools to solve LP relaxations. The communication
+ * is realized through an LP interface.
+ *
+ * This page lists public interface methods that every LP interface provides.
+ * Find the concrete implementation for your LP solver
+ * under "src/lpi/".
+ *
+ * @see \ref LPI for a list of available LP solver interfaces
  */
 
 /**@defgroup NODESELECTORS Node Selectors
