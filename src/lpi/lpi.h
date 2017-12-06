@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   lpi.h
- * @ingroup INTERNALAPI
+ * @ingroup LPIS
  * @brief  interface methods for specific LP solvers
  * @author Tobias Achterberg
  * @author Marc Pfetsch
@@ -78,6 +78,11 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**@addtogroup LPIS
+ *
+ * @{
+ */
 
 /*
  * Miscellaneous Methods
@@ -1048,6 +1053,9 @@ SCIP_RETCODE SCIPlpiWriteLP(
    );
 
 /**@} */
+
+/**@} */
+
 
 #ifdef __cplusplus
 }
