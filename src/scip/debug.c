@@ -1077,9 +1077,11 @@ SCIP_RETCODE SCIPdebugRemoveNode(
 
    /* check if a solution will be cutoff in tree */
    if( SCIPgetStage(set->scip) != SCIP_STAGE_EXITSOLVE && SCIPgetStage(set->scip) != SCIP_STAGE_EXITPRESOLVE
-      && SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE && !SCIPisInRestart(set->scip) )
+      && SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
    {
       SCIP_Bool solisinnode;
+
+      assert(!SCIPisInRestart(set->scip)); /* we can only be "in restart" during exitsolve, see also discussion at #1926 */
 
       solisinnode = FALSE;
 
