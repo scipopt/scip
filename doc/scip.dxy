@@ -788,10 +788,12 @@ INPUT                  = . \
                          ../src \
                          ../src/scip \
                          ../src/nlpi \
+                         ../src/lpi/lpi.h ../src/lpi/type_lpi.h \
                          ../src/objscip \
                          ../src/tclique \
                          ../src/dijkstra \
                          ../src/tpi \
+                         ../src/symmetry \
                          ../src/xml \
                          ../src/blockmemshell \
                          ../examples \

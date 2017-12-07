@@ -723,22 +723,22 @@ SCIP_RETCODE tightenVariables(
    return SCIP_OKAY;
 }
 
-/** main procedure of the completesol heuristic, creates and solves a sub-SCIP */
+/* setup and solve the sub-SCIP */
 static
-SCIP_RETCODE applyCompletesol(
+SCIP_RETCODE setupAndSolve(
    SCIP*                 scip,               /**< original SCIP data structure */
+   SCIP*                 subscip,            /**< sub-SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic data structure */
    SCIP_HEURDATA*        heurdata,           /**< heuristic's private data structure */
    SCIP_RESULT*          result,             /**< result data structure */
    SCIP_Longint          nstallnodes,        /**< number of stalling nodes for the subproblem */
-   SCIP_SOL*             partialsol          /**< partial solutions */
+   SCIP_SOL*             partialsol,         /**< partial solution */
+   SCIP_Bool*            tightened           /**< array to store whether a variable was already tightened */
    )
 {
-   SCIP* subscip;
    SCIP_HASHMAP* varmapf;
    SCIP_VAR** vars;
    SCIP_VAR** subvars = NULL;
-   SCIP_Bool* tightened;
    SCIP_EVENTHDLR* eventhdlr;
    int nvars;
    int i;
@@ -748,47 +748,20 @@ SCIP_RETCODE applyCompletesol(
 
    SCIP_Bool valid;
    SCIP_Bool success;
+   SCIP_RETCODE retcode;
 
    assert(scip != NULL);
+   assert(subscip != NULL);
    assert(heur != NULL);
    assert(heurdata != NULL);
    assert(result != NULL);
    assert(partialsol != NULL);
 
-   *result = SCIP_DIDNOTRUN;
-
-   SCIPdebugMsg(scip, "+---+ Start Completesol heuristic +---+\n");
-
-   /* check whether there is enough time and memory left */
-   SCIP_CALL( SCIPcheckCopyLimits(scip, &valid) );
-
-   if( ! valid )
-      return SCIP_OKAY;
-
-   *result = SCIP_DIDNOTFIND;
-
-   /* get variable data */
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
 
-   /* get buffer memory and initialize it to FALSE */
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &tightened, nvars) );
-
-   SCIP_CALL( SCIPstartProbing(scip) );
-
-   SCIP_CALL( tightenVariables(scip, heurdata, vars, nvars, partialsol, tightened, &success) );
-
-   if( !success )
-      goto ENDPROBING;
-
-   /* initialize the subproblem */
-   SCIP_CALL( SCIPcreate(&subscip) );
-
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmapf, SCIPblkmem(subscip), nvars) );
-
-   /* allocate memory to align the SCIP and the sub-SCIP variables */
-   SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
    eventhdlr = NULL;
    valid = FALSE;
@@ -804,6 +777,9 @@ SCIP_RETCODE applyCompletesol(
       SCIPerrorMessage("event handler for " HEUR_NAME " heuristic not found.\n");
       return SCIP_PLUGINNOTFOUND;
    }
+
+   /* allocate memory to align the SCIP and the sub-SCIP variables */
+   SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
    /* map all variables */
    for( i = 0; i < nvars; i++ )
@@ -888,7 +864,19 @@ SCIP_RETCODE applyCompletesol(
     * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
     */
 
-   SCIP_CALL_ABORT( SCIPpresolve(subscip) );
+   retcode = SCIPpresolve(subscip);
+
+   /* errors in presolving the subproblem should not kill the overall solving process;
+    * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
+    */
+   if( retcode != SCIP_OKAY )
+   {
+      SCIPwarningMessage(scip, "Error while presolving subproblem in %s heuristic; sub-SCIP terminated with code <%d>\n", HEUR_NAME, retcode);
+
+      SCIPABORT(); /*lint --e{527}*/
+
+      goto TERMINATE;
+   }
 
    if( SCIPgetStage(subscip) == SCIP_STAGE_PRESOLVED )
    {
@@ -910,7 +898,19 @@ SCIP_RETCODE applyCompletesol(
          SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 1LL) );
       }
 
-      SCIP_CALL_ABORT( SCIPsolve(subscip) );
+      retcode = SCIPsolve(subscip);
+
+      /* errors in solving the subproblem should not kill the overall solving process;
+       * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
+       */
+      if( retcode != SCIP_OKAY )
+      {
+         SCIPwarningMessage(scip, "Error while solving subproblem in %s heuristic; sub-SCIP terminated with code <%d>\n", HEUR_NAME, retcode);
+
+         SCIPABORT(); /*lint --e{527}*/
+
+         goto TERMINATE;
+      }
    }
 
    SCIP_CALL( SCIPdropEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, -1) );
@@ -936,13 +936,76 @@ SCIP_RETCODE applyCompletesol(
       nsubsols > 0 ? SCIPsolGetNodenum(SCIPgetBestSol(subscip)) : -1 );
 
   TERMINATE:
-   /* free subproblem */
    SCIPfreeBufferArray(scip, &subvars);
+
+   return SCIP_OKAY;
+}
+
+/** main procedure of the completesol heuristic, creates and solves a sub-SCIP */
+static
+SCIP_RETCODE applyCompletesol(
+   SCIP*                 scip,               /**< original SCIP data structure */
+   SCIP_HEUR*            heur,               /**< heuristic data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic's private data structure */
+   SCIP_RESULT*          result,             /**< result data structure */
+   SCIP_Longint          nstallnodes,        /**< number of stalling nodes for the subproblem */
+   SCIP_SOL*             partialsol          /**< partial solution */
+   )
+{
+   SCIP* subscip;
+   SCIP_VAR** vars;
+   SCIP_Bool* tightened;
+   SCIP_Bool success;
+   SCIP_RETCODE retcode;
+   int nvars;
+
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(heurdata != NULL);
+   assert(result != NULL);
+   assert(partialsol != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
+   SCIPdebugMsg(scip, "+---+ Start Completesol heuristic +---+\n");
+
+   /* check whether there is enough time and memory left */
+   SCIP_CALL( SCIPcheckCopyLimits(scip, &success) );
+
+   if( !success )
+      return SCIP_OKAY;
+
+   *result = SCIP_DIDNOTFIND;
+
+   /* get variable data */
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
+
+   /* get buffer memory and initialize it to FALSE */
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &tightened, nvars) );
+
+   SCIP_CALL( SCIPstartProbing(scip) );
+
+   SCIP_CALL( tightenVariables(scip, heurdata, vars, nvars, partialsol, tightened, &success) );
+
+   if( !success )
+      goto ENDPROBING;
+
+   /* initialize the subproblem */
+   SCIP_CALL( SCIPcreate(&subscip) );
+
+   retcode = setupAndSolve(scip, subscip, heur, heurdata, result, nstallnodes, partialsol, tightened);
+
+   /* free subproblem */
    SCIP_CALL( SCIPfree(&subscip) );
+
+   SCIP_CALL( retcode );
 
   ENDPROBING:
    SCIPfreeBufferArray(scip, &tightened);
    SCIP_CALL( SCIPendProbing(scip) );
+
+
 
    return SCIP_OKAY;
 }

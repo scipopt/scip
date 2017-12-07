@@ -256,73 +256,43 @@ SCIP_DECL_HEUREXEC(heurExecZeroobj)
    return SCIP_OKAY;
 }
 
-
-/*
- * primal heuristic specific interface methods
- */
-
-
-/** main procedure of the zeroobj heuristic, creates and solves a sub-SCIP */
-SCIP_RETCODE SCIPapplyZeroobj(
-   SCIP*                 scip,               /**< original SCIP data structure                                        */
-   SCIP_HEUR*            heur,               /**< heuristic data structure                                            */
-   SCIP_RESULT*          result,             /**< result data structure                                               */
-   SCIP_Real             minimprove,         /**< factor by which zeroobj should at least improve the incumbent      */
-   SCIP_Longint          nnodes              /**< node limit for the subproblem                                       */
+/** setup and solve subscip */
+static
+SCIP_RETCODE setupAndSolveSubscip(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP*                 subscip,            /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< heuristic data structure */
+   SCIP_RESULT*          result,             /**< result data structure */
+   SCIP_Real             minimprove,         /**< factor by which zeroobj should at least improve the incumbent */
+   SCIP_Longint          nnodes              /**< node limit for the subproblem */
    )
 {
-   SCIP*                 subscip;            /* the subproblem created by zeroobj              */
+   SCIP_Real cutoff;                         /* objective cutoff for the subproblem             */
+   SCIP_Real large;
    SCIP_HASHMAP*         varmapfw;           /* mapping of SCIP variables to sub-SCIP variables */
    SCIP_VAR**            vars;               /* original problem's variables                    */
    SCIP_VAR**            subvars;            /* subproblem's variables                          */
+   SCIP_SOL** subsols;
    SCIP_HEURDATA*        heurdata;           /* heuristic's private data structure              */
    SCIP_EVENTHDLR*       eventhdlr;          /* event handler for LP events                     */
 
-   SCIP_Real cutoff;                         /* objective cutoff for the subproblem             */
-   SCIP_Real large;
-
+   int nsubsols;
    int nvars;                                /* number of original problem's variables          */
    int i;
-
    SCIP_Bool success;
    SCIP_Bool valid;
-   SCIP_SOL** subsols;
-   int nsubsols;
+
 
    assert(scip != NULL);
+   assert(subscip != NULL);
    assert(heur != NULL);
    assert(result != NULL);
 
-   assert(nnodes >= 0);
-   assert(0.0 <= minimprove && minimprove <= 1.0);
-
-   *result = SCIP_DIDNOTRUN;
-
-   /* only call heuristic once at the root */
-   if( SCIPgetDepth(scip) <= 0 && SCIPheurGetNCalls(heur) > 0 )
-      return SCIP_OKAY;
-
-   /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   /* only call the heuristic if we do not have an incumbent  */
-   if( SCIPgetNSolsFound(scip) > 0 && heurdata->onlywithoutsol )
-      return SCIP_OKAY;
-
-   /* check whether there is enough time and memory left */
-   SCIP_CALL( SCIPcheckCopyLimits(scip, &success) );
-
-   if( !success )
-      return SCIP_OKAY;
-
-   *result = SCIP_DIDNOTFIND;
-
    /* get variable data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-
-   /* initialize the subproblem */
-   SCIP_CALL( SCIPcreate(&subscip) );
 
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
@@ -512,13 +482,14 @@ SCIP_RETCODE SCIPapplyZeroobj(
 
    SCIPdebugMsg(scip, "solving subproblem: nnodes=%" SCIP_LONGINT_FORMAT "\n", nnodes);
 
-   /* drop LP events of sub-SCIP */
-   SCIP_CALL( SCIPdropEvent(subscip, SCIP_EVENTTYPE_NODESOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, -1) );
 
    /* errors in solving the subproblem should not kill the overall solving process;
     * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
     */
    SCIP_CALL_ABORT( SCIPsolve(subscip) );
+
+   /* drop LP events of sub-SCIP */
+   SCIP_CALL( SCIPdropEvent(subscip, SCIP_EVENTTYPE_NODESOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, -1) );
 
    /* check, whether a solution was found;
     * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
@@ -539,9 +510,68 @@ SCIP_RETCODE SCIPapplyZeroobj(
 
    /* free subproblem */
    SCIPfreeBufferArray(scip, &subvars);
-   SCIP_CALL( SCIPfree(&subscip) );
 
    return SCIP_OKAY;
+}
+
+
+/*
+ * primal heuristic specific interface methods
+ */
+
+
+/** main procedure of the zeroobj heuristic, creates and solves a sub-SCIP */
+SCIP_RETCODE SCIPapplyZeroobj(
+   SCIP*                 scip,               /**< original SCIP data structure                                        */
+   SCIP_HEUR*            heur,               /**< heuristic data structure                                            */
+   SCIP_RESULT*          result,             /**< result data structure                                               */
+   SCIP_Real             minimprove,         /**< factor by which zeroobj should at least improve the incumbent      */
+   SCIP_Longint          nnodes              /**< node limit for the subproblem                                       */
+   )
+{
+   SCIP*                 subscip;            /* the subproblem created by zeroobj              */
+   SCIP_HEURDATA*        heurdata;           /* heuristic's private data structure              */
+   SCIP_Bool             success;
+   SCIP_RETCODE          retcode;
+
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(result != NULL);
+
+   assert(nnodes >= 0);
+   assert(0.0 <= minimprove && minimprove <= 1.0);
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* only call heuristic once at the root */
+   if( SCIPgetDepth(scip) <= 0 && SCIPheurGetNCalls(heur) > 0 )
+      return SCIP_OKAY;
+
+   /* get heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* only call the heuristic if we do not have an incumbent  */
+   if( SCIPgetNSolsFound(scip) > 0 && heurdata->onlywithoutsol )
+      return SCIP_OKAY;
+
+   /* check whether there is enough time and memory left */
+   SCIP_CALL( SCIPcheckCopyLimits(scip, &success) );
+
+   if( !success )
+      return SCIP_OKAY;
+
+   *result = SCIP_DIDNOTFIND;
+
+
+   /* initialize the subproblem */
+   SCIP_CALL( SCIPcreate(&subscip) );
+
+   retcode = setupAndSolveSubscip(scip, subscip, heur, result, minimprove, nnodes);
+
+   SCIP_CALL( SCIPfree(&subscip) );
+
+   return retcode;
 }
 
 

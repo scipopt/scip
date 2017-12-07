@@ -14,10 +14,29 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   lpi.h
- * @ingroup INTERNALAPI
+ * @ingroup LPIS
  * @brief  interface methods for specific LP solvers
  * @author Tobias Achterberg
  * @author Marc Pfetsch
+ *
+ */
+
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+#ifndef __SCIP_LPI_H__
+#define __SCIP_LPI_H__
+
+
+#include "scip/def.h"
+#include "blockmemshell/memory.h"
+#include "scip/type_retcode.h"
+#include "lpi/type_lpi.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**@addtogroup LPIS
  *
  * This file specifies a generic LP solver interface used by SCIP to create, modify, and solve linear programs of the
  * form
@@ -40,17 +59,17 @@
  * - If (A * x)_i = rhs, then i is at its upper bound (SCIP_BASESTAT_UPPER).
  * - If the slack variable for row i is basic, it has SCIP_BASESTAT_BASIC status.
  *
- * If the solvers use their status differently, the have to be corrected.
+ * If the solvers use their status differently, those status codes have to be corrected.
  *
  * In the methods accessing information about the (inverse of the) basis matrix, the interface assumes the following
  * column-oriented format: slack variables of rows have coefficient +1 and the basis matrix is a regular m times m
  * submatrix of (A,I), where m is the number of rows and I is the identity matrix. This means that if, internally, the
- * LP solver uses coefficients -1 for some of the slack variables, then rows associated with slacks variables whose
+ * LP solver uses coefficients -1 for some of the slack variables, then every row associated with a slack variable whose
  * coefficient is -1 should be negated in order to return the result in terms of the LP interface definition.
  *
  * The creation of a new LP should always be done in the following ways: Either one can use SCIPlpiLoadColLP() or one
- * first adds empty columns or rows. Then the matrix entries can be added by adding columns and rows, respectively. It
- * is an error, if matrix entries are added for rows or columns that have not been added before.
+ * first adds empty columns or rows. Then the matrix entries can be added by adding columns and rows, respectively.
+ * Adding matrix entries for a row or column that have not been added before will result in an error.
  *
  * The handling of the objective limit is as follows, if supported by the LP-solver: If the objective is larger than the
  * objective limit for minimization problems or smaller than the objective limit for maximization problems, the solution
@@ -62,22 +81,9 @@
  * Some LP-solvers also support the opposite setting, but this can easily be checked after the solution process (i.e.,
  * for a minimization problem a check whether the optimal value is smaller than the limit). Note that this check can
  * only be determined at the end of the optimization. Thus, we do not support this.
+ *
+ * @{
  */
-
-/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
-#ifndef __SCIP_LPI_H__
-#define __SCIP_LPI_H__
-
-
-#include "scip/def.h"
-#include "blockmemshell/memory.h"
-#include "scip/type_retcode.h"
-#include "lpi/type_lpi.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /*
  * Miscellaneous Methods
@@ -1048,6 +1054,9 @@ SCIP_RETCODE SCIPlpiWriteLP(
    );
 
 /**@} */
+
+/**@} */
+
 
 #ifdef __cplusplus
 }

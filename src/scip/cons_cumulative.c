@@ -1219,28 +1219,36 @@ int computeTotalEnergy(
  * @{
  */
 
-/** solve single cumulative condition using SCIP and a single cumulative constraint */
+/** setup and solve subscip to solve single cumulative condition  */
 static
-SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScipCp)
+SCIP_RETCODE setupAndSolveCumulativeSubscip(
+   SCIP*                 subscip,            /**< subscip data structure */
+   SCIP_Real*            objvals,            /**< array of objective coefficients for each job (linear objective function), or NULL if none */
+   int*                  durations,          /**< array of durations */
+   int*                  demands,            /**< array of demands */
+   int                   njobs,              /**< number of jobs (activities) */
+   int                   capacity,           /**< cumulative capacity */
+   int                   hmin,               /**< left bound of time axis to be considered (including hmin) */
+   int                   hmax,               /**< right bound of time axis to be considered (not including hmax) */
+   SCIP_Longint          maxnodes,           /**< maximum number of branch-and-bound nodes (-1: no limit) */
+   SCIP_Real             timelimit,          /**< time limit for solving in seconds */
+   SCIP_Real             memorylimit,        /**< memory limit for solving in mega bytes (MB) */
+   SCIP_Real*            ests,               /**< array of earliest start times for each job */
+   SCIP_Real*            lsts,               /**< array of latest start times for each job */
+   SCIP_Bool*            infeasible,         /**< pointer to store if the subproblem was infeasible */
+   SCIP_Bool*            unbounded,          /**< pointer to store if the problem is unbounded */
+   SCIP_Bool*            solved,             /**< pointer to store if the problem is solved (to optimality) */
+   SCIP_Bool*            error               /**< pointer to store if an error occurred */
+   )
 {
-   SCIP* subscip;
    SCIP_VAR** subvars;
    SCIP_CONS* cons;
-   SCIP_RETCODE retcode;
+
    char name[SCIP_MAXSTRLEN];
    int v;
+   SCIP_RETCODE retcode;
 
-   assert(njobs > 0);
-
-   (*solved) = FALSE;
-   (*infeasible) = FALSE;
-   (*unbounded) = FALSE;
-   (*error) = FALSE;
-
-   SCIPdebugMessage("solve independent cumulative condition with %d variables\n", njobs);
-
-   /* initialize the sub-problem */
-   SCIP_CALL( SCIPcreate(&subscip) );
+   assert(subscip != NULL);
 
    /* copy all plugins */
    SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
@@ -1255,7 +1263,7 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScipCp)
    {
       SCIP_Real objval;
 
-      /* construct varibale name */
+      /* construct variable name */
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "job%d", v);
 
       if( objvals == NULL )
@@ -1297,9 +1305,7 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScipCp)
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
-   /* forbid recursive call of heuristics and separators solving subMIPs
-    * todo: really? This method was part of 3.0.1 but not in v31-Bugfix
-    */
+   /* forbid recursive call of heuristics and separators solving subMIPs */
    SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
 
    /* solve single cumulative constraint by branch and bound */
@@ -1374,7 +1380,40 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScipCp)
 
    SCIPfreeBlockMemoryArray(subscip, &subvars, njobs);
 
+   return SCIP_OKAY;
+}
+
+/** solve single cumulative condition using SCIP and a single cumulative constraint */
+static
+SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScipCp)
+{
+   SCIP* subscip;
+
+   SCIP_RETCODE retcode;
+
+   assert(njobs > 0);
+
+   (*solved) = FALSE;
+   (*infeasible) = FALSE;
+   (*unbounded) = FALSE;
+   (*error) = FALSE;
+
+   SCIPdebugMessage("solve independent cumulative condition with %d variables\n", njobs);
+
+   /* initialize the sub-problem */
+   SCIP_CALL( SCIPcreate(&subscip) );
+
+   /* create and solve the subproblem. catch possible errors */
+   retcode = setupAndSolveCumulativeSubscip(subscip, objvals, durations, demands,
+         njobs, capacity, hmin, hmax,
+         maxnodes, timelimit, memorylimit,
+         ests, lsts,
+         infeasible, unbounded, solved, error);
+
+   /* free the subscip in any case */
    SCIP_CALL( SCIPfree(&subscip) );
+
+   SCIP_CALL( retcode );
 
    return SCIP_OKAY;
 }
@@ -9614,7 +9653,7 @@ SCIP_RETCODE computeEffectiveHorizonCumulativeCondition(
    SCIP_CALL( SCIPprofileCreate(&profile, INT_MAX) );
 
    /* create worst case resource profile */
-   SCIP_CALL( SCIPcreateWorstCaseProfile(scip, profile, nvars, vars, durations, demands) );
+   SCIP_CALL_FINALLY( SCIPcreateWorstCaseProfile(scip, profile, nvars, vars, durations, demands), SCIPprofileFree(&profile) );
 
    /* print resource profile in if SCIP_DEBUG is defined */
    SCIPdebug( SCIPprofilePrint(profile, SCIPgetMessagehdlr(scip), NULL) );

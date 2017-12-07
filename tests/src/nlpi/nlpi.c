@@ -173,11 +173,11 @@ SCIP_RETCODE testNlpi(SCIP_NLPI* nlpi)
    cr_expect(SCIPnlpiGetSolstat(nlpi, nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT);
 
    /* collect statistics */
-   SCIP_CALL( SCIPnlpStatisticsCreate(&statistics) );
+   SCIP_CALL( SCIPnlpStatisticsCreate(SCIPblkmem(scip), &statistics) );
    SCIP_CALL( SCIPnlpiGetStatistics(nlpi, nlpiprob, statistics) );
    cr_expect(SCIPnlpStatisticsGetNIterations(statistics) > 0);
    cr_expect(SCIPnlpStatisticsGetTotalTime(statistics) >= 0.0);
-   SCIPnlpStatisticsFree(&statistics);
+   SCIPnlpStatisticsFree(SCIPblkmem(scip), &statistics);
 
    SCIP_CALL( SCIPnlpiGetSolution(nlpi, nlpiprob, &primal, &dualcons, &duallb, &dualub, NULL) );
 
@@ -220,11 +220,11 @@ SCIP_RETCODE testNlpi(SCIP_NLPI* nlpi)
    cr_expect(SCIPnlpiGetSolstat(nlpi, nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT);
 
    /* collect statistics */
-   SCIP_CALL( SCIPnlpStatisticsCreate(&statistics) );
+   SCIP_CALL( SCIPnlpStatisticsCreate(SCIPblkmem(scip), &statistics) );
    SCIP_CALL( SCIPnlpiGetStatistics(nlpi, nlpiprob, statistics) );
    cr_expect(SCIPnlpStatisticsGetNIterations(statistics) > 0);
    cr_expect(SCIPnlpStatisticsGetTotalTime(statistics) >= 0.0);
-   SCIPnlpStatisticsFree(&statistics);
+   SCIPnlpStatisticsFree(SCIPblkmem(scip), &statistics);
 
    SCIP_CALL( SCIPnlpiGetSolution(nlpi, nlpiprob, &primal, &dualcons, &duallb, &dualub, NULL) );
 
@@ -365,9 +365,9 @@ SCIP_RETCODE solveQP(
    *nlptermstat = SCIPnlpiGetTermstat(nlpi, nlpiprob);
 
    /* collect statistics */
-   SCIP_CALL( SCIPnlpStatisticsCreate(&statistics) );
+   SCIP_CALL( SCIPnlpStatisticsCreate(SCIPblkmem(scip), &statistics) );
    SCIP_CALL( SCIPnlpiGetStatistics(nlpi, nlpiprob, statistics) );
-   SCIPnlpStatisticsFree(&statistics);
+   SCIPnlpStatisticsFree(SCIPblkmem(scip), &statistics);
 
    /* free memory */
    SCIP_CALL( SCIPnlpiFreeProblem(nlpi, &nlpiprob) );

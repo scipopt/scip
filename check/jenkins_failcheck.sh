@@ -236,7 +236,7 @@ if [ "${PERFORMANCE}" == "performance" ]; then
   if [ "${OLDRBID}" != "" ]; then
     RBURL="${RBURL}?compare=${OLDRBID}"
   fi
-  PERF_MAIL=`echo "The results of the weekly performance runs are ready. Take a look at ${RBURL}"
+  PERF_MAIL=`echo "The results of the weekly performance runs are ready. Take a look at ${RBURL}"`
   echo $NEWRBID >> $RBDB
 else
   ./evalcheck_cluster.sh -r "-v useshortnames=0" ../${EVALFILE} > ${OUTPUT}

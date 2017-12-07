@@ -686,6 +686,52 @@ void SCIPprintError(
  * general SCIP methods
  */
 
+/** internal method to create SCIP */
+static
+SCIP_RETCODE doScipCreate(
+   SCIP**                scip                /**< pointer to SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_ALLOC( BMSallocMemory(scip) );
+
+   /* all members are initialized to NULL */
+   BMSclearMemory(*scip);
+
+   /* create a default message handler */
+   SCIP_CALL( SCIPcreateMessagehdlrDefault(&(*scip)->messagehdlr, TRUE, NULL, FALSE) );
+
+   SCIP_CALL( SCIPmemCreate(&(*scip)->mem) );
+   SCIP_CALL( SCIPsetCreate(&(*scip)->set, (*scip)->messagehdlr, (*scip)->mem->setmem, *scip) );
+   SCIP_CALL( SCIPinterruptCreate(&(*scip)->interrupt) );
+   SCIP_CALL( SCIPdialoghdlrCreate((*scip)->set, &(*scip)->dialoghdlr) );
+   SCIP_CALL( SCIPclockCreate(&(*scip)->totaltime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPsyncstoreCreate( &(*scip)->syncstore ) );
+
+   /* include additional core functionality */
+   SCIP_CALL( SCIPincludeCorePlugins(*scip) );
+
+   SCIPclockStart((*scip)->totaltime, (*scip)->set);
+
+   SCIP_CALL( SCIPnlpInclude((*scip)->set, SCIPblkmem(*scip)) );
+
+   if( strcmp(SCIPlpiGetSolverName(), "NONE") != 0 )
+   {
+      SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, SCIPlpiGetSolverName(), SCIPlpiGetSolverDesc()) );
+   }
+   if( strcmp(SCIPexprintGetName(), "NONE") != 0 )
+   {
+      SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, SCIPexprintGetName(), SCIPexprintGetDesc()) );
+   }
+
+#ifdef WITH_ZLIB
+   SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, "ZLIB " ZLIB_VERSION, "General purpose compression library by J. Gailly and M. Adler (zlib.net)") );
+#endif
+
+   return SCIP_OKAY;
+}
+
 /** creates and initializes SCIP data structures
  *
  *  @note The SCIP default message handler is installed. Use the method SCIPsetMessagehdlr() to install your own
@@ -705,56 +751,7 @@ SCIP_RETCODE SCIPcreate(
 {
    assert(scip != NULL);
 
-   SCIP_ALLOC( BMSallocMemory(scip) );
-
-   /* create a default message handler */
-   SCIP_CALL( SCIPcreateMessagehdlrDefault(&(*scip)->messagehdlr, TRUE, NULL, FALSE) );
-
-   SCIP_CALL( SCIPmemCreate(&(*scip)->mem) );
-   SCIP_CALL( SCIPsetCreate(&(*scip)->set, (*scip)->messagehdlr, (*scip)->mem->setmem, *scip) );
-   SCIP_CALL( SCIPinterruptCreate(&(*scip)->interrupt) );
-   SCIP_CALL( SCIPdialoghdlrCreate((*scip)->set, &(*scip)->dialoghdlr) );
-   SCIP_CALL( SCIPclockCreate(&(*scip)->totaltime, SCIP_CLOCKTYPE_DEFAULT) );
-   SCIP_CALL( SCIPsyncstoreCreate( &(*scip)->syncstore ) );
-
-   /* include additional core functionality */
-   SCIP_CALL( SCIPincludeCorePlugins(*scip) );
-
-   SCIPclockStart((*scip)->totaltime, (*scip)->set);
-   (*scip)->stat = NULL;
-   (*scip)->origprob = NULL;
-   (*scip)->origprimal = NULL;
-   (*scip)->eventfilter = NULL;
-   (*scip)->eventqueue = NULL;
-   (*scip)->branchcand = NULL;
-   (*scip)->lp = NULL;
-   (*scip)->nlp = NULL;
-   (*scip)->primal = NULL;
-   (*scip)->tree = NULL;
-   (*scip)->conflict = NULL;
-   (*scip)->transprob = NULL;
-   (*scip)->pricestore = NULL;
-   (*scip)->sepastore = NULL;
-   (*scip)->conflictstore = NULL;
-   (*scip)->cutpool = NULL;
-   (*scip)->delayedcutpool = NULL;
-   (*scip)->reopt = NULL;
-   (*scip)->concurrent = NULL;
-
-   SCIP_CALL( SCIPnlpInclude((*scip)->set, SCIPblkmem(*scip)) );
-
-   if( strcmp(SCIPlpiGetSolverName(), "NONE") != 0 )
-   {
-      SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, SCIPlpiGetSolverName(), SCIPlpiGetSolverDesc()) );
-   }
-   if( strcmp(SCIPexprintGetName(), "NONE") != 0 )
-   {
-      SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, SCIPexprintGetName(), SCIPexprintGetDesc()) );
-   }
-
-#ifdef WITH_ZLIB
-   SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, "ZLIB " ZLIB_VERSION, "General purpose compression library by J. Gailly and M. Adler (zlib.net)") );
-#endif
+   SCIP_CALL_FINALLY( doScipCreate(scip), (void)SCIPfree(scip) );
 
    return SCIP_OKAY;
 }
@@ -785,7 +782,8 @@ SCIP_RETCODE SCIPfree(
    )
 {
    assert(scip != NULL);
-   assert(*scip != NULL);
+   if( *scip == NULL )
+      return SCIP_OKAY;
 
    SCIP_CALL( checkStage(*scip, "SCIPfree", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, TRUE) );
 

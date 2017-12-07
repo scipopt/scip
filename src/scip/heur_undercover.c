@@ -3561,10 +3561,11 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
    return SCIP_OKAY;
 }
 
-
-/** computes a minimal set of covering variables */
-SCIP_RETCODE SCIPcomputeCoverUndercover(
+/** create and solve covering problem */
+static
+SCIP_RETCODE computeCoverUndercover(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP*                 coveringscip,       /**< SCIP instance for covering problem */
    int*                  coversize,          /**< buffer for the size of the computed cover */
    SCIP_VAR**            cover,              /**< pointer to store the variables (of the original SCIP) in the computed cover
                                               *   (should be ready to hold SCIPgetNVars(scip) entries) */
@@ -3580,7 +3581,6 @@ SCIP_RETCODE SCIPcomputeCoverUndercover(
    SCIP_Bool*            success             /**< feasible cover found? */
    )
 {
-   SCIP* coveringscip;                       /* SCIP instance for covering problem */
    SCIP_VAR** coveringvars;                  /* covering variables */
    SCIP_VAR** vars;                          /* original variables */
    int* coverinds;                           /* indices of variables in the cover */
@@ -3588,19 +3588,15 @@ SCIP_RETCODE SCIPcomputeCoverUndercover(
    int i;
 
    assert(scip != NULL);
-   assert(coversize != NULL);
-   assert(success != NULL);
+   assert(coveringscip != NULL);
 
-   *success = FALSE;
+   SCIP_CALL( SCIPincludeDefaultPlugins(coveringscip) );
 
    /* allocate memory for variables of the covering problem */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL ) );
    SCIP_CALL( SCIPallocBufferArray(scip, &coveringvars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &coverinds, nvars) );
 
-   /* create covering problem */
-   SCIP_CALL( SCIPcreate(&coveringscip) );
-   SCIP_CALL( SCIPincludeDefaultPlugins(coveringscip) );
    SCIP_CALL( createCoveringProblem(scip, coveringscip, coveringvars, globalbounds, onlyconvexify, coverbd, coveringobj, success) );
 
    if( *success )
@@ -3635,9 +3631,50 @@ SCIP_RETCODE SCIPcomputeCoverUndercover(
    {
       SCIP_CALL( SCIPreleaseVar(coveringscip, &coveringvars[i]) );
    }
-   SCIP_CALL( SCIPfree(&coveringscip) );
    SCIPfreeBufferArray(scip, &coverinds);
    SCIPfreeBufferArray(scip, &coveringvars);
+
+   return SCIP_OKAY;
+}
+
+/** computes a minimal set of covering variables */
+SCIP_RETCODE SCIPcomputeCoverUndercover(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int*                  coversize,          /**< buffer for the size of the computed cover */
+   SCIP_VAR**            cover,              /**< pointer to store the variables (of the original SCIP) in the computed cover
+                                              *   (should be ready to hold SCIPgetNVars(scip) entries) */
+   SCIP_Real             timelimit,          /**< time limit */
+   SCIP_Real             memorylimit,        /**< memory limit */
+   SCIP_Real             objlimit,           /**< objective limit: upper bound on coversize */
+   SCIP_Bool             globalbounds,       /**< should global bounds on variables be used instead of local bounds at focus node? */
+   SCIP_Bool             onlyconvexify,      /**< should we only fix/dom.red. variables creating nonconvexity? */
+   SCIP_Bool             coverbd,            /**< should bounddisjunction constraints be covered (or just copied)? */
+   char                  coveringobj,        /**< objective function of the covering problem ('b'ranching status,
+                                              *   influenced nonlinear 'c'onstraints/'t'erms, 'd'omain size, 'l'ocks,
+                                              *   'm'in of up/down locks, 'u'nit penalties, constraint 'v'iolation) */
+   SCIP_Bool*            success             /**< feasible cover found? */
+   )
+{
+   SCIP* coveringscip;                       /* SCIP instance for covering problem */
+   SCIP_RETCODE retcode;
+
+   assert(scip != NULL);
+   assert(coversize != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   /* create covering problem */
+   SCIP_CALL( SCIPcreate(&coveringscip) );
+
+   retcode = computeCoverUndercover(scip, coveringscip, coversize, cover,
+         timelimit, memorylimit, objlimit,
+         globalbounds, onlyconvexify, coverbd, coveringobj, success);
+
+   /* free the covering problem scip instance before reacting on potential errors */
+   SCIP_CALL( SCIPfree(&coveringscip) );
+
+   SCIP_CALL( retcode );
 
    return SCIP_OKAY;
 }
