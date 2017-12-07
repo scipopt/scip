@@ -350,6 +350,12 @@
  * In this case, SCIP uses the solution from the solver that provides the best objective value. Other possible use
  * cases for the availability of multiple solvers have not been implemented yet.
  *
+ * In the @ref MAKE "GNU make" based build system, building the implementation of the interface to FilterSQP, IPOPT, and
+ * Worhp can be enabled by specifying `FILTERSQP=true`, `IPOPT=true`, and `WORHP=true`, respectively, as argument to the
+ * `make` call.
+ * In the @ref CMAKE "CMAKE" based build system, building the implementation of the interface to IPOPT and Worhp can be
+ * enabled by specifying `IPOPT=on` and `WORHP=on`, respectively, as argument to the `cmake` call.
+ *
  * @subsection NLPISOLVERS_IPOPT IPOPT
  *
  * <b>IPOPT</b> implements a primal-dual interior point method and uses line searches based on filter methods. It has
