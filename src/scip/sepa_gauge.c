@@ -274,14 +274,14 @@ SCIP_RETCODE computeInteriorPoint(
       SCIP_NLPSTATISTICS* nlpstatistics;
 
       /* get statistics */
-      SCIP_CALL( SCIPnlpStatisticsCreate(&nlpstatistics) );
+      SCIP_CALL( SCIPnlpStatisticsCreate(SCIPblkmem(scip), &nlpstatistics) );
       SCIP_CALL( SCIPnlpiGetStatistics(nlpi, nlpiprob, nlpstatistics) );
 
       SCIPdebugMsg(scip, "nlpi took iters %d, time %g searching for an find interior point: solstat %d\n",
             SCIPnlpStatisticsGetNIterations(nlpstatistics), SCIPnlpStatisticsGetTotalTime(nlpstatistics),
             SCIPnlpiGetSolstat(nlpi, nlpiprob));
 
-      SCIPnlpStatisticsFree(&nlpstatistics);
+      SCIPnlpStatisticsFree(SCIPblkmem(scip), &nlpstatistics);
    }
 #endif
 

@@ -14,6 +14,7 @@
 # Arguments | defaultvalue | possibilities
 # ----------|--------------|--------------
 # LPS       | spx          | cpx, spx
+# SPX_DIR   | --           | --
 
 ##########################
 ### evaluate arguments ###
@@ -47,8 +48,8 @@ then
     SCIP_FLAGS="$SCIP_FLAGS LPS=cpx"
 else
     # soplex is in adm_timos jenkins workspace
-    ln -s /nfs/OPTI/jenkins/workspace/SOPLEX_COMP=gnu_OPT=dbg_nightly/src lib/include/spxinc
-    ln -s /nfs/OPTI/jenkins/workspace/SOPLEX_COMP=gnu_OPT=dbg_nightly/lib/libsoplex.linux.x86_64.gnu.dbg.a lib/static/libsoplex.linux.x86_64.gnu.dbg.a
+    ln -s ${SPX_DIR}/src lib/include/spxinc
+    ln -s ${SPX_DIR}/lib/libsoplex.linux.x86_64.gnu.dbg.a lib/static/libsoplex.linux.x86_64.gnu.dbg.a
     SCIP_FLAGS="$SCIP_FLAGS LPS=spx LPSOPT=dbg"
 fi
 
@@ -72,7 +73,7 @@ ln -s /optimi/kombadon/MINLP check/
 ./bin/scip -c "set sepa emph aggr set presol emph aggr set heur emph off set rand rand 20171124 set diffsave settings/presolaggr_sepaaggr_heuroff_20171124.set q"
 for testset in mipdebug; do
   for setting in default_20171124 heuraggr_20171124 presolaggr_sepaaggr_heuroff_20171124; do
-    make testcluster $SCIP_FLAGS TEST=$testset MEM=6000 TIME=60 SETTINGS=$setting QUEUE=opt-low | check/jenkins_check_results.sh $testset $setting
+    make testcluster $SCIP_FLAGS TEST=$testset MEM=6000 TIME=300 SETTINGS=$setting QUEUE=opt-low | check/jenkins_check_results.sh $testset $setting
   done
 done
 
@@ -82,6 +83,6 @@ done
 ./bin/scip -c "set sepa emph aggr set presol emph aggr set heur emph off set numerics checkfeastolfac 1000.0 set rand rand 20171124 set diffsave settings/minlp_presolaggr_sepaaggr_heuroff_20171124.set q"
 for testset in MINLP; do
   for setting in minlp_default_20171124 minlp_heuraggr_20171124 minlp_presolaggr_sepaaggr_heuroff_20171124; do
-    make testcluster $SCIP_FLAGS TEST=$testset MEM=6000 TIME=60 SETTINGS=$setting QUEUE=opt-low | check/jenkins_check_results.sh $testset $setting
+    make testcluster $SCIP_FLAGS TEST=$testset MEM=6000 TIME=300 SETTINGS=$setting QUEUE=opt-low | check/jenkins_check_results.sh $testset $setting
   done
 done

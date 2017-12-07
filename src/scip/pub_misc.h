@@ -260,6 +260,7 @@ void SCIPgmlWriteClosing(
  */
 
 /**@defgroup SparseSol Sparse Solution
+ * @ingroup DataStructures
  * @brief sparse storage for multiple integer solutions
  *
  * @{
@@ -1203,9 +1204,7 @@ int SCIPprofileGetLatestFeasibleStart(
  * Directed graph
  */
 
-/**@defgroup DirectedGraph Directed Graph
- * @ingroup DataStructures
- * @brief graph structure with common algorithms for directed and undirected graphs
+/**@addtogroup DirectedGraph
  *
  * @{
  */
@@ -1608,7 +1607,7 @@ void SCIPbtSetRoot(
 
 /**@} */
 
-/**@addtogroup DisjoinedSet
+/**@addtogroup DisjointSet
  *
  * @{
  */
