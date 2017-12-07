@@ -129,6 +129,7 @@ fixed bugs:
 - fixed wrong mapping of permuted basis indices in gomory separator
 - fixed integer objective separator for objective scales < 1
 - fixed registration of almost fixed nonlinear variables in abspower constraints
+- fixed creation of conflicts in clique heuristic for incomplete LPs
 
 added tests:
 - added tests that cover nonempty linear constraint classification types
