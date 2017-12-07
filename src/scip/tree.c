@@ -1045,7 +1045,7 @@ SCIP_RETCODE SCIPnodeFree(
    SCIPsetDebugMsg(set, "free node #%" SCIP_LONGINT_FORMAT " at depth %d of type %d\n", SCIPnodeGetNumber(*node), SCIPnodeGetDepth(*node), SCIPnodeGetType(*node));
 
    /* inform solution debugger, that the node has been freed */
-   assert( stat->inrestart || SCIPdebugRemoveNode(blkmem, set, *node) ); /*lint !e506 !e774*/
+   SCIP_CALL( SCIPdebugRemoveNode(blkmem, set, *node) );
 
    /* check, if the node to be freed is the root node */
    isroot = (SCIPnodeGetDepth(*node) == 0);
