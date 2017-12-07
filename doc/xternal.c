@@ -345,8 +345,11 @@
  * SCIP implements the NLP solver interface to the solvers <a href="https://projects.coin-or.org/Ipopt">IPOPT</a>, <a
  * href="https://worhp.de/">WORHP</a>, and <a href=" http://www.mcs.anl.gov/~leyffer/solvers.html">FilterSQP</a>. In
  * contrast to the implementations of the LP solver interface, SCIP can be compiled with multiple NLP solvers and selects
- * the solver with the highest priority at the beginning of the solving process. It is possible to solve all NLPs during
- * the solving process with all available NLP solvers by setting the parameter `nlpi/all/priority` to the highest value.
+ * the solver with the highest priority at the beginning of the solving process.
+ * Currently, the priorities are, in descending order: Ipopt, Worhp/IP, FilterSQP, Worhp/SQP.
+ *
+ * If more than one solver is available, then it is possible to solve all NLPs during the solving process with all
+ * available NLP solvers by setting the parameter `nlpi/all/priority` to the highest value.
  * In this case, SCIP uses the solution from the solver that provides the best objective value. Other possible use
  * cases for the availability of multiple solvers have not been implemented yet.
  *
