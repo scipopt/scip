@@ -346,7 +346,7 @@
  * href="https://worhp.de/">WORHP</a>, and <a href=" http://www.mcs.anl.gov/~leyffer/solvers.html">FilterSQP</a>. In
  * contrast to the implementations of the LP solver interface, SCIP can be compiled with multiple NLP solvers and selects
  * the solver with the highest priority at the beginning of the solving process.
- * Currently, the priorities are, in descending order: Ipopt, Worhp/IP, FilterSQP, Worhp/SQP.
+ * Currently, the priorities are, in descending order: Ipopt, WORHP/IP, FilterSQP, WORHP/SQP.
  *
  * If more than one solver is available, then it is possible to solve all NLPs during the solving process with all
  * available NLP solvers by setting the parameter `nlpi/all/priority` to the highest value.
@@ -354,9 +354,9 @@
  * cases for the availability of multiple solvers have not been implemented yet.
  *
  * In the @ref MAKE "GNU make" based build system, building the implementation of the interface to FilterSQP, IPOPT, and
- * Worhp can be enabled by specifying `FILTERSQP=true`, `IPOPT=true`, and `WORHP=true`, respectively, as argument to the
+ * WORHP can be enabled by specifying `FILTERSQP=true`, `IPOPT=true`, and `WORHP=true`, respectively, as argument to the
  * `make` call.
- * In the @ref CMAKE "CMAKE" based build system, building the implementation of the interface to IPOPT and Worhp can be
+ * In the @ref CMAKE "CMAKE" based build system, building the implementation of the interface to IPOPT and WORHP can be
  * enabled by specifying `IPOPT=on` and `WORHP=on`, respectively, as argument to the `cmake` call.
  *
  * @subsection NLPISOLVERS_IPOPT IPOPT
