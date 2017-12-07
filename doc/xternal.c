@@ -62,6 +62,7 @@
  * - \ref EXAMPLES    "Examples"
  * - \ref APPLICATIONS "Extensions of SCIP for specific applications"
  * - \ref LPI         "Available LP solver interfaces"
+ * - \ref NLPISOLVERS "Available NLP solver interfaces"
  *
  * @section FURTHERINFORMATION References
  *
@@ -335,6 +336,33 @@
  *
  * To use the old interface, set the Makefile option `LPS=spx1` or configure your CMake build with `LEGACY=ON`.
  *
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/** @page NLPISOLVERS Available NLP solver interfaces
+ *
+ * SCIP provides interfaces to NLP solvers <a href="https://projects.coin-or.org/Ipopt">IPOPT</a>, <a
+ * href="https://worhp.de/">WORHP</a>, and <a href="http://www.mcs.anl.gov/~leyffer/SQP_manual.pdf">FilterSQP</a>. In
+ * contrast to the LP solver interfaces, SCIP can be compiled with multiple NLP solvers and selects the solver with the
+ * highest priority at the beginning of the solving process. It is possible to solve all NLPs during the solving process
+ * with all available NLP solvers by given the parameter `nlpi/all/priority` the highest priority. In this case, SCIP
+ * uses the solver which provides the best solution w.r.t. the objective value.
+ *
+ * @subsection NLPISOLVERS_IPOPT IPOPT
+ *
+ * <b>IPOPT</b> implements a primal-dual interior point method and uses line searches based on filter methods. It is
+ * developed by Roger Fetcher and Sven Leyffer and is available under the Eclipse Public License.
+ *
+ * @subsection NLPISOLVERS_WORHP WORHP
+ *
+ * <b>WORHP</b> implements a sequential quadratic programming method and a penalty-interior Point algorithm.  It is
+ * developed at the University of Bremen and is free for academic purposes.
+ *
+ * @subsection NLPISOLVERS_FILTERSQP FilterSQP
+ *
+ * <b>FilterSQP</b> implements a sequential quadratic programming method by Roger Fletcher and Sven Leyffer. It is not
+ * publicly available, but may be available from Sven Leyffer on request.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
