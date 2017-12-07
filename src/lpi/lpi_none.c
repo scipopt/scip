@@ -331,6 +331,11 @@ SCIP_RETCODE SCIPlpiAddRows(
 
    assert( lpi != NULL );
    assert( lpi->nrows >= 0 );
+   assert(lhs != NULL);
+   assert(rhs != NULL);
+   assert(nnonz == 0 || beg != NULL);
+   assert(nnonz == 0 || ind != NULL);
+   assert(nnonz == 0 || val != NULL);
 
 #ifndef NDEBUG
    /* perform check that no new columns are added - this is forbidden */
@@ -412,9 +417,9 @@ SCIP_RETCODE SCIPlpiClear(
 SCIP_RETCODE SCIPlpiChgBounds(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to change bounds for */
-   const int*            ind,                /**< column indices */
-   const SCIP_Real*      lb,                 /**< values for the new lower bounds */
-   const SCIP_Real*      ub                  /**< values for the new upper bounds */
+   const int*            ind,                /**< column indices or NULL if ncols is zero */
+   const SCIP_Real*      lb,                 /**< values for the new lower bounds or NULL if ncols is zero */
+   const SCIP_Real*      ub                  /**< values for the new upper bounds or NULL if ncols is zero */
    )
 {  /*lint --e{715}*/
    int j;
@@ -447,6 +452,10 @@ SCIP_RETCODE SCIPlpiChgSides(
    const SCIP_Real*      rhs                 /**< new values for right hand sides */
    )
 {  /*lint --e{715}*/
+   assert(lpi != NULL);
+   assert(ind != NULL);
+   assert(lhs != NULL);
+   assert(rhs != NULL);
    return SCIP_OKAY;
 }
 
@@ -458,6 +467,7 @@ SCIP_RETCODE SCIPlpiChgCoef(
    SCIP_Real             newval              /**< new value of coefficient */
    )
 {  /*lint --e{715}*/
+   assert(lpi != NULL);
    return SCIP_OKAY;
 }
 
@@ -467,6 +477,7 @@ SCIP_RETCODE SCIPlpiChgObjsen(
    SCIP_OBJSEN           objsen              /**< new objective sense */
    )
 {  /*lint --e{715}*/
+   assert(lpi != NULL);
    return SCIP_OKAY;
 }
 
@@ -478,6 +489,9 @@ SCIP_RETCODE SCIPlpiChgObj(
    const SCIP_Real*      obj                 /**< new objective values for columns */
    )
 {  /*lint --e{715}*/
+   assert(lpi != NULL);
+   assert(ind != NULL);
+   assert(obj != NULL);
    return SCIP_OKAY;
 }
 
@@ -488,6 +502,7 @@ SCIP_RETCODE SCIPlpiScaleRow(
    SCIP_Real             scaleval            /**< scaling multiplier */
    )
 {  /*lint --e{715}*/
+   assert(lpi != NULL);
    return SCIP_OKAY;
 }
 
@@ -500,6 +515,7 @@ SCIP_RETCODE SCIPlpiScaleCol(
    SCIP_Real             scaleval            /**< scaling multiplier */
    )
 {  /*lint --e{715}*/
+   assert(lpi != NULL);
    return SCIP_OKAY;
 }
 
@@ -552,6 +568,7 @@ SCIP_RETCODE SCIPlpiGetNNonz(
    )
 {  /*lint --e{715}*/
    assert(nnonz != NULL);
+   assert(lpi != NULL);
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }

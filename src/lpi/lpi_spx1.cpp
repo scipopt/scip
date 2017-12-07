@@ -1960,6 +1960,7 @@ SCIP_RETCODE SCIPlpiDelColset(
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
+   assert(dstat != NULL);
 
    invalidateSolution(lpi);
 
@@ -2134,9 +2135,9 @@ SCIP_RETCODE SCIPlpiClear(
 SCIP_RETCODE SCIPlpiChgBounds(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to change bounds for */
-   const int*            ind,                /**< column indices */
-   const SCIP_Real*      lb,                 /**< values for the new lower bounds */
-   const SCIP_Real*      ub                  /**< values for the new upper bounds */
+   const int*            ind,                /**< column indices or NULL if ncols is zero */
+   const SCIP_Real*      lb,                 /**< values for the new lower bounds or NULL if ncols is zero */
+   const SCIP_Real*      ub                  /**< values for the new upper bounds or NULL if ncols is zero */
    )
 {
    int i;
@@ -2145,9 +2146,7 @@ SCIP_RETCODE SCIPlpiChgBounds(
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
-   assert(ind != NULL);
-   assert(lb != NULL);
-   assert(ub != NULL);
+   assert(ncols == 0 || (ind != NULL && lb != NULL && ub != NULL));
 
    invalidateSolution(lpi);
 

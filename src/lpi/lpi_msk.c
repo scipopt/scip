@@ -988,6 +988,7 @@ SCIP_RETCODE SCIPlpiDelColset(
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+   assert(dstat != NULL);
 
    SCIPdebugMessage("Calling SCIPlpiDelColset (%d)\n", lpi->lpid);
 
@@ -1056,6 +1057,9 @@ SCIP_RETCODE SCIPlpiAddRows(
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+   assert(nnonz == 0 || beg != NULL);
+   assert(nnonz == 0 || ind != NULL);
+   assert(nnonz == 0 || val != NULL);
 
    SCIPdebugMessage("Calling SCIPlpiAddRows (%d)\n", lpi->lpid);
 
@@ -1219,9 +1223,9 @@ SCIP_RETCODE SCIPlpiClear(
 SCIP_RETCODE SCIPlpiChgBounds(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to change bounds for */
-   const int*            ind,                /**< column indices */
-   const SCIP_Real*      lb,                 /**< values for the new lower bounds */
-   const SCIP_Real*      ub                  /**< values for the new upper bounds */
+   const int*            ind,                /**< column indices or NULL if ncols is zero */
+   const SCIP_Real*      lb,                 /**< values for the new lower bounds or NULL if ncols is zero */
+   const SCIP_Real*      ub                  /**< values for the new upper bounds or NULL if ncols is zero */
    )
 {
    MSKboundkeye* bkx;
@@ -1285,6 +1289,7 @@ SCIP_RETCODE SCIPlpiChgSides(
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+   assert(ind != NULL);
 
    SCIPdebugMessage("Calling SCIPlpiChgSides (%d)\n", lpi->lpid);
 
@@ -1364,6 +1369,8 @@ SCIP_RETCODE SCIPlpiChgObj(
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+   assert(ind != NULL);
+   assert(obj != NULL);
 
    SCIPdebugMessage("Calling SCIPlpiChgObj (%d)\n", lpi->lpid);
 
@@ -1502,6 +1509,7 @@ SCIP_RETCODE SCIPlpiGetNRows(
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+   assert(nrows != NULL);
 
    SCIPdebugMessage("Calling SCIPlpiGetNRows (%d)\n", lpi->lpid);
 
@@ -1519,6 +1527,7 @@ SCIP_RETCODE SCIPlpiGetNCols(
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+   assert(ncols != NULL);
 
    SCIPdebugMessage("Calling SCIPlpiGetNCols (%d)\n", lpi->lpid);
 
@@ -1536,6 +1545,7 @@ SCIP_RETCODE SCIPlpiGetNNonz(
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+   assert(nnonz != NULL);
 
    SCIPdebugMessage("Calling SCIPlpiGetNNonz (%d)\n", lpi->lpid);
 

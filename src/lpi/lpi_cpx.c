@@ -1356,6 +1356,7 @@ SCIP_RETCODE SCIPlpiDelColset(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
+   assert(dstat != NULL);
 
    SCIPdebugMessage("deleting a column set from CPLEX\n");
 
@@ -1392,6 +1393,11 @@ SCIP_RETCODE SCIPlpiAddRows(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
+   assert(lhs != NULL);
+   assert(rhs != NULL);
+   assert(nnonz == 0 || beg != NULL);
+   assert(nnonz == 0 || ind != NULL);
+   assert(nnonz == 0 || val != NULL);
 
    SCIPdebugMessage("adding %d rows with %d nonzeros to CPLEX\n", nrows, nnonz);
 
@@ -1512,9 +1518,9 @@ SCIP_RETCODE SCIPlpiClear(
 SCIP_RETCODE SCIPlpiChgBounds(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to change bounds for */
-   const int*            ind,                /**< column indices */
-   const SCIP_Real*      lb,                 /**< values for the new lower bounds */
-   const SCIP_Real*      ub                  /**< values for the new upper bounds */
+   const int*            ind,                /**< column indices or NULL if ncols is zero */
+   const SCIP_Real*      lb,                 /**< values for the new lower bounds or NULL if ncols is zero */
+   const SCIP_Real*      ub                  /**< values for the new upper bounds or NULL if ncols is zero */
    )
 {
    int i;
@@ -1675,6 +1681,8 @@ SCIP_RETCODE SCIPlpiChgObj(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
+   assert(ind != NULL);
+   assert(obj != NULL);
 
    SCIPdebugMessage("changing %d objective values in CPLEX\n", ncols);
 
@@ -2067,6 +2075,8 @@ SCIP_RETCODE SCIPlpiGetObjsen(
    )
 {
    assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+   assert(lpi->cpxenv != NULL);
    assert(objsen != NULL);
    assert(CPXgetobjsen(lpi->cpxenv, lpi->cpxlp) == CPX_MIN || CPXgetobjsen(lpi->cpxenv, lpi->cpxlp) == CPX_MAX);
 

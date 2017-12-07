@@ -773,6 +773,7 @@ SCIP_RETCODE SCIPlpiFree(
 {
    assert(lpi != NULL);
    assert(*lpi != NULL);
+   assert((*lpi)->xprslp != NULL);
 
    SCIPdebugMessage("SCIPlpiFree()\n");
 
@@ -989,6 +990,7 @@ SCIP_RETCODE SCIPlpiDelColset(
 
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
+   assert(dstat != NULL);
 
    SCIPdebugMessage("deleting a column set from Xpress\n");
 
@@ -1178,6 +1180,7 @@ SCIP_RETCODE SCIPlpiClear(
    int zero = 0;
 
    assert(lpi != NULL);
+   assert(lpi->xprslp != NULL);
 
    SCIPdebugMessage("clearing Xpress LP\n");
 
@@ -1191,9 +1194,9 @@ SCIP_RETCODE SCIPlpiClear(
 SCIP_RETCODE SCIPlpiChgBounds(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to change bounds for */
-   const int*            ind,                /**< column indices */
-   const SCIP_Real*      lb,                 /**< values for the new lower bounds */
-   const SCIP_Real*      ub                  /**< values for the new upper bounds */
+   const int*            ind,                /**< column indices or NULL if ncols is zero */
+   const SCIP_Real*      lb,                 /**< values for the new lower bounds or NULL if ncols is zero */
+   const SCIP_Real*      ub                  /**< values for the new upper bounds or NULL if ncols is zero */
    )
 {
    int j;
@@ -1240,6 +1243,7 @@ SCIP_RETCODE SCIPlpiChgSides(
 {
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
+   assert(ind != NULL);
 
    SCIPdebugMessage("changing %d sides in Xpress\n", nrows);
 
@@ -1307,6 +1311,8 @@ SCIP_RETCODE SCIPlpiChgObj(
 {
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
+   assert(ind != NULL);
+   assert(obj != NULL);
 
    SCIPdebugMessage("changing %d objective values in Xpress\n", ncols);
 
@@ -1675,6 +1681,9 @@ SCIP_RETCODE SCIPlpiGetObjsen(
    )
 {
    double xprsobjsen;
+   assert(lpi != NULL);
+   assert(lpi->xprslp != NULL);
+   assert(objsen != NULL);
 
    /* check the objective sense attribute for the current objective sense set in  Xpress */
    CHECK_ZERO( lpi->messagehdlr, XPRSgetdblattrib(lpi->xprslp, XPRS_OBJSENSE, &xprsobjsen) );

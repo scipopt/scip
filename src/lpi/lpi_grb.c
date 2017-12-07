@@ -1633,6 +1633,7 @@ SCIP_RETCODE SCIPlpiDelColset(
 
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
+   assert(dstat != NULL);
 
    SCIPdebugMessage("deleting a column set from Gurobi\n");
 
@@ -1699,6 +1700,11 @@ SCIP_RETCODE SCIPlpiAddRows(
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
    assert((lpi->nrngrows > 0) == (lpi->rngrowmap != NULL));
+   assert(lhs != NULL);
+   assert(rhs != NULL);
+   assert(nnonz == 0 || beg != NULL);
+   assert(nnonz == 0 || ind != NULL);
+   assert(nnonz == 0 || val != NULL);
 
    SCIPdebugMessage("adding %d rows with %d nonzeros to Gurobi\n", nrows, nnonz);
 
@@ -1982,8 +1988,8 @@ SCIP_RETCODE SCIPlpiClear(
 SCIP_RETCODE SCIPlpiChgBounds(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to change bounds for */
-   const int*            ind,                /**< column indices */
-   const SCIP_Real*      lb,                 /**< values for the new lower bounds */
+   const int*            ind,                /**< column indices or NULL if ncols is zero */
+   const SCIP_Real*      lb,                 /**< values for the new lower bounds or NULL if ncols is zero */
    const SCIP_Real*      ub                  /**< values for the new upper bounds */
    )
 {
@@ -2036,6 +2042,7 @@ SCIP_RETCODE SCIPlpiChgSides(
 
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
+   assert(ind != NULL);
 
    SCIPdebugMessage("changing %d sides in Gurobi\n", nrows);
 
@@ -2213,6 +2220,8 @@ SCIP_RETCODE SCIPlpiChgObj(
 {
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
+   assert(ind != NULL);
+   assert(obj != NULL);
 
    SCIPdebugMessage("changing %d objective values in Gurobi\n", ncols);
 
@@ -2365,6 +2374,7 @@ SCIP_RETCODE SCIPlpiGetNRows(
    )
 {
    assert(lpi != NULL);
+   assert(lpi->grbmodel != NULL);
    assert(nrows != NULL);
 
    SCIPdebugMessage("getting number of rows\n");
@@ -2381,6 +2391,7 @@ SCIP_RETCODE SCIPlpiGetNCols(
    )
 {
    assert(lpi != NULL);
+   assert(lpi->grbmodel != NULL);
    assert(ncols != NULL);
 
    SCIPdebugMessage("getting number of columns\n");
@@ -2401,6 +2412,7 @@ SCIP_RETCODE SCIPlpiGetNNonz(
    )
 {
    assert(lpi != NULL);
+   assert(lpi->grbmodel != NULL);
    assert(nnonz != NULL);
 
    SCIPdebugMessage("getting number of non-zeros\n");
