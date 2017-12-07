@@ -118,6 +118,7 @@
  * @subsection CHG Changes between different versions of SCIP
  * - \ref CHANGELOG    "Change log"
  * - \ref RELEASENOTES "Release notes"
+ * - \ref CHG10        "Interface changes between version 4.0 and 5.0"
  * - \ref CHG9         "Interface changes between version 3.2 and 4.0"
  * - \ref CHG8         "Interface changes between version 3.1 and 3.2"
  * - \ref CHG7         "Interface changes between version 3.0 and 3.1"
@@ -683,11 +684,15 @@
  * that may take a while to complete. To perform a quick test to see whether the compilation was really successful you may
  * run `make check`. To see all available tests, run
  *
- * ```ctest -N```
+ * ```
+ * ctest -N
+ * ```
  *
  * and to perform a memory check, run
  *
- * ```ctest -T MemCheck```
+ * ```
+ * ctest -T MemCheck
+ * ```
  *
  * If <a href="https://criterion.readthedocs.io/en/master/">Criterion</a> is installed (set
  * custom path with `-DCRITERION_DIR=<path>`) the target `unittests` can be used to compile and run the available unit tests.
@@ -7185,7 +7190,8 @@
   * For further information we refer to the \ref RELEASENOTES "Release notes" and the \ref CHANGELOG "Changelog".
   */
 
-  /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
  /**@page CHG9 Interface changes between SCIP 3.2 and SCIP 4.0
   *
   *
@@ -7267,7 +7273,79 @@
   * For further information we refer to the \ref RELEASENOTES "Release notes" and the \ref CHANGELOG "Changelog".
   */
 
-/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+ /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+ /**@page CHG10 Interface changes between SCIP 4.0 and SCIP 5.0
+  *
+  *
+  * @section CHGCALLBACKS10 New and changed callbacks
+  *
+  * - <b>New types</b>:
+  *   - Added new abstract selection algorithm SCIP_BANDIT together with callbacks
+  *   - Added new type SCIP_TABLE together with callbacks to output SCIP statistics
+  *   - Added new types for symmetry handling
+  *
+  * - <b>Separation callbacks</b>:
+  *   - Added parameter "allowlocal" to SCIP_DECL_SEPAEXECLP and SCIP_DECL_SEPAEXECSOL
+  *
+  * - <b>NLP callbacks</b>
+  *   - Added parameter "dstatssize" to SCIP_DECL_NLPIDELVARSET and SCIP_DECL_NLPIDELCONSSET
+  *   - Added parameter "objval" to SCIP_DECL_NLPIGETSOLUTION
+  *
+  *
+  * <br>
+  * @section CHGINTERFUNC10 Changed interface methods
+  *
+  * <br>
+  * - <b>Cutting plane separation methods</b>:
+  *   - Change function signature of SCIPcalcMir()
+  *   - Change function signature of SCIPcalcStrongCG()
+  *   - Added parameter "allowlocal" to SCIPseparateSol()
+  *   - Removed solution pointer argument from SCIPaddCut()
+  *   - New method SCIPaddRow() to replace deprecated SCIPaddCut()
+  *
+  * <br>
+  * - <b>Relaxator methods</b>:
+  *   - Remove parameter "includeslp" from SCIPincludeRelax()
+  *   - Added parameter "includeslp" to SCIPmarkRelaxSolValid(), SCIPsetRelaxSolVals(), and SCIPsetRelaxSolValsSol()
+  *   - Removed functions SCIPrelaxIncludesLp() and SCIPrelaxSetIncludesLp()
+  *   - Replaced method SCIPgetRelaxFeastolFactor() by SCIPrelaxfeastol() and added SCIPchgRelaxfeastol()
+  *
+  * <br>
+  * - <b>LP interface</b>:
+  *   - Replace LP parameters SCIP_LPPARAM_LOBJLIM and SCIP_LPPARAM_UOBJLIM by SCIP_LPPARAM_OBJLIM.
+  *
+  * <br>
+  * - <b>NLP interface</b>:
+  *   - Added argument "dstatssize" to SCIPnlpiDelVarSet() and SCIPnlpiDelConsSet
+  *   - Added modifier const to "exprtree" argument of SCIPnlpiChgExprtree()
+  *   - Added parameter "objval" to SCIPnlpiGetSolution()
+  *   - Added argument "varnameslength" to SCIPexprParse()
+  *   - Drop NLP termination status "SCIP_NLPTERMSTAT_UOBJLIM"
+  *
+  * <br>
+  * - <b>Data structures</b>:
+  *   - Methods SCIPrandomCreate() and SCIPrandomFree() are no longer public and should be replaced
+  *     by SCIPcreateRandom() and SCIPfreeRandom(), respectively. The new methods respect
+  *     the global parameter "randomization/randomseedshift" automatically.
+  * -  Methods SCIPdigraphCreate() and SCIPdigraphFree() are no longer public and should be replaced
+  *     by SCIPcreateDigraph() and SCIPfreeDigraph(), respectively, which receive a \SCIP argument
+  *     and are more robust towards future interface changes.
+  *
+  * <br>
+  * - <b>Misc</b>:
+  *   - Added parameter "copytables" to SCIPcopyPlugins()
+  *   - Allow SCIPgetNConss() in stage SCIP_STAGE_INITSOLVE
+  *   - SCIPsolveConcurrent() is deprecated. Use SCIPsolveParallel() instead.
+  *   - Change return type of SCIPcliqueGetId() from "int" to "unsigned int".
+  *   - Remove SCIPvarGetCliqueComponentIdx(). The connectedness information is now
+  *     of the clique table is now stored as a SCIP_DISJOINTSET member of the cliquetable
+  *     and cannot be publicly accessed.
+  *
+  * <br>
+  * For further information we refer to the \ref RELEASENOTES "Release notes" and the \ref CHANGELOG "Changelog".
+  */
+
+ /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /**@page COUNTER How to use SCIP to count/enumerate feasible solutions
  *
@@ -7367,7 +7445,7 @@
  * <code>count</code> command by applying the following steps:
  *
  *  -# Solve the original problem to optimality and let \f$c^*\f$ be the optimal value
- *  -# Add the objective function as constraint with left and right hand side equal to \f$c^*\f$
+ *  -# Added the objective function as constraint with left and right hand side equal to \f$c^*\f$
  *  -# load the adjusted problem into SCIP
  *  -# use the predefined counting settings
  *  -# start counting the number of feasible solutions
@@ -7712,13 +7790,19 @@
  *  Below you find a list of available data structures
  */
 
-/** @defgroup DisjointSet Disjoined Set (Union Find)
+/** @defgroup DisjointSet Disjoint Set (Union Find)
  *  @ingroup DataStructures
  *  @brief weighted disjoint set (union find) data structure with path compression
  *
- *  Weighted Disjoined Set is a data structure to quickly update and query connectedness information
- *  between nodes of a graph. Disjoined Set is also known as Union Find.
+ *  Weighted Disjoint Set is a data structure to quickly update and query connectedness information
+ *  between nodes of a graph. Disjoint Set is also known as Union Find.
  */
+
+/**@defgroup DirectedGraph Directed Graph
+ * @ingroup DataStructures
+ * @brief graph structure with common algorithms for directed and undirected graphs
+ */
+
 /**@defgroup MiscellaneousMethods Miscellaneous Methods
  * @ingroup PUBLICCOREAPI
  * @brief commonly used methods from different categories
@@ -8043,9 +8127,18 @@
  *
  */
 
-/**@defgroup LPIS LP Solver Interfaces
+/**@defgroup LPIS LP Solver Interface
  * @ingroup PUBLICPLUGINLPI
- * @brief methods and files provided by the default LP solver interfaces of \SCIP
+ * @brief methods and files provided by the LP solver interface of \SCIP
+ *
+ * \SCIP uses external tools to solve LP relaxations. The communication
+ * is realized through an LP interface.
+ *
+ * This page lists public interface methods that every LP interface provides.
+ * Find the concrete implementation for your LP solver
+ * under "src/lpi/".
+ *
+ * @see \ref LPI for a list of available LP solver interfaces
  */
 
 /**@defgroup NODESELECTORS Node Selectors

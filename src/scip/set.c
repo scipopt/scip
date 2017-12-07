@@ -2544,6 +2544,9 @@ SCIP_RETCODE SCIPsetFree(
 
    assert(set != NULL);
 
+   if( *set == NULL )
+      return SCIP_OKAY;
+
    /* free parameter set */
    SCIPparamsetFree(&(*set)->paramset, blkmem);
 

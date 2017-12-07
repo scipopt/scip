@@ -1338,7 +1338,7 @@ SCIP_RETCODE solveDerivativeEquation(
          break;
       }
 
-      SCIP_CALL( SCIPexprintHessianDense(exprinterpreter, f, &s, FALSE, &fval, &hess) );
+      SCIP_CALL( SCIPexprintHessianDense(exprinterpreter, f, &s, FALSE, &fval, &hess) ); /* coverity ignore ARRAY_VS_SINGLETON warning */
 
       /* SCIPdebugMsg(scip, "s = %.20g [%g,%g] f(s) = %g hess = %g\n", s, lb, ub, fval, hess); */
 
@@ -3029,6 +3029,8 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
          SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(f_yfixed, SCIPgetMessagehdlr(scip), NULL) ) );
          SCIPdebugMsgPrint(scip, "\n");
 
+         assert(SCIPexprtreeGetNVars(f_yfixed) == 1);
+
          /* find xtilde in [xlb, xub] such that f'(xtilde,yub) = f'(xval,ylb) */
          SCIP_CALL( solveDerivativeEquation(scip, exprinterpreter, f_yfixed, grad[0], xlb, xub, &xtilde, success) );
 
@@ -3040,8 +3042,8 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
             /* if we could not find an xtilde such that f'(xtilde,yub) = f'(xval,ylb), then probably because f'(x,yub) is constant
              * in this case, choose xtilde from {xlb, xub} such that it maximizes f'(xtilde, yub) - grad[0]*xtilde
              */
-            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xlb, &fxlb) );
-            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xub, &fxub) );
+            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xlb, &fxlb) ); /* coverity ignore ARRAY_VS_SINGLETON warning */
+            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xub, &fxub) ); /* coverity ignore ARRAY_VS_SINGLETON warning */
 
             SCIPdebugMsg(scip, "couldn't solve deriv equ, compare f(%g,%g) - %g*%g = %g and f(%g,%g) - %g*%g = %g\n",
                xlb, ylb, grad[0], xlb, fxlb - grad[0] * xlb,
@@ -3065,7 +3067,7 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
          if( *success )
          {
             /* compute f(xtilde, yub) */
-            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xtilde, &ftilde) );
+            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xtilde, &ftilde) ); /* coverity ignore ARRAY_VS_SINGLETON warning */
 
             SCIPdebugMsg(scip, "xtilde = %g, f(%g,%g) = %g\n", xtilde, xtilde, yub, ftilde);
 
@@ -3110,6 +3112,8 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
          SCIPexprtreeSetParamVal(f_yfixed, 0, ylb);
          SCIP_CALL( SCIPexprintNewParametrization(exprinterpreter, f_yfixed) );
 
+         assert(SCIPexprtreeGetNVars(f_yfixed) == 1);
+
          /* find xtilde in [xlb, xub] such that f'(x,ylb) = f'(xval,yub) */
          SCIP_CALL( solveDerivativeEquation(scip, exprinterpreter, f_yfixed, grad[0], xlb, xub, &xtilde, success) );
 
@@ -3121,8 +3125,8 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
             /* if we could not find an xtilde such that f'(xtilde,ylb) = f'(xval,yub), then probably because f'(x,ylb) is constant
              * in this case, choose xtilde from {xlb, xub} such that it maximizes f'(xtilde, yub) - grad[0]*xtilde
              */
-            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xlb, &fxlb) );
-            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xub, &fxub) );
+            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xlb, &fxlb) ); /* coverity ignore ARRAY_VS_SINGLETON warning */
+            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xub, &fxub) ); /* coverity ignore ARRAY_VS_SINGLETON warning */
 
             SCIPdebugMsg(scip, "couldn't solve deriv equ, compare f(%g,%g) - %g*%g = %g and f(%g,%g) - %g*%g = %g\n",
                xlb, yub, grad[0], xlb, fxlb - grad[0] * xlb,
@@ -3146,7 +3150,7 @@ SCIP_RETCODE generateConvexConcaveUnderestimator(
          if( *success )
          {
             /* compute f(xtilde, yub) */
-            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xtilde, &ftilde) );
+            SCIP_CALL( SCIPexprintEval(exprinterpreter, f_yfixed, &xtilde, &ftilde) );  /* coverity ignore ARRAY_VS_SINGLETON warning */
 
             SCIPdebugMsg(scip, "xtilde = %g, f(%g,%g) = %g\n", xtilde, xtilde, ylb, ftilde);
 
