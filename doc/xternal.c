@@ -352,17 +352,19 @@
  * @subsection NLPISOLVERS_IPOPT IPOPT
  *
  * <b>IPOPT</b> implements a primal-dual interior point method and uses line searches based on filter methods. It is
- * developed by Roger Fetcher and Sven Leyffer and is available under the Eclipse Public License.
+ * developed by Roger Fetcher and Sven Leyffer and is available under the Eclipse Public License on <a
+ * href="https://www.coin-or.org/">coin-OR</a>.
  *
  * @subsection NLPISOLVERS_WORHP WORHP
  *
  * <b>WORHP</b> implements a sequential quadratic programming method and a penalty-interior Point algorithm.  It is
- * developed at the University of Bremen and is free for academic purposes.
+ * developed at the <a href="http://www.uni-bremen.de/en.html">University of Bremen</a> and is free for academic
+ * purposes.
  *
  * @subsection NLPISOLVERS_FILTERSQP FilterSQP
  *
  * <b>FilterSQP</b> implements a sequential quadratic programming method by Roger Fletcher and Sven Leyffer. It is not
- * publicly available, but may be available from Sven Leyffer on request.
+ * publicly available, but may be obtained from Sven Leyffer on request.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
