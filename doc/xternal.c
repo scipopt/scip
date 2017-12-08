@@ -342,7 +342,7 @@
 
 /** @page NLPISOLVERS Available implementations of the NLP solver interface
  *
- * SCIP implements the NLP solver interface to the solvers <a href="https://projects.coin-or.org/Ipopt">IPOPT</a>, <a
+ * SCIP implements the NLP solver interface for the solvers <a href="https://projects.coin-or.org/Ipopt">IPOPT</a>, <a
  * href="https://worhp.de/">WORHP</a>, and <a href=" http://www.mcs.anl.gov/~leyffer/solvers.html">FilterSQP</a>. In
  * contrast to the implementations of the LP solver interface, SCIP can be compiled with multiple NLP solvers and selects
  * the solver with the highest priority at the beginning of the solving process.
@@ -350,13 +350,13 @@
  *
  * If more than one solver is available, then it is possible to solve all NLPs during the solving process with all
  * available NLP solvers by setting the parameter `nlpi/all/priority` to the highest value.
- * In this case, SCIP uses the solution from the solver that provides the best objective value. Other possible use
+ * In this case, SCIP uses the solution from a solver that provides the best objective value. Other possible use
  * cases for the availability of multiple solvers have not been implemented yet.
  *
- * In the @ref MAKE "GNU make" based build system, building the implementation of the interface to FilterSQP, IPOPT, and
+ * In the @ref MAKE "GNU make" based build system, building the implementations of the interface for FilterSQP, IPOPT, and
  * WORHP can be enabled by specifying `FILTERSQP=true`, `IPOPT=true`, and `WORHP=true`, respectively, as argument to the
  * `make` call.
- * In the @ref CMAKE "CMAKE" based build system, building the implementation of the interface to IPOPT and WORHP can be
+ * In the @ref CMAKE "CMAKE" based build system, building the implementation of the interface for IPOPT and WORHP can be
  * enabled by specifying `IPOPT=on` and `WORHP=on`, respectively, as argument to the `cmake` call.
  *
  * @subsection NLPISOLVERS_IPOPT IPOPT
