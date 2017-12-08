@@ -813,7 +813,7 @@ else()
     target_link_libraries(scip libscip)
 endif()
 
-if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+if(CMAKE_BUILD_TYPE EQUAL "Debug")
     find_package(Sanitizers)
     add_sanitizers(scip)
 endif()
