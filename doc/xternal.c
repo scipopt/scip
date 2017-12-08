@@ -62,6 +62,7 @@
  * - \ref EXAMPLES    "Examples"
  * - \ref APPLICATIONS "Extensions of SCIP for specific applications"
  * - \ref LPI         "Available LP solver interfaces"
+ * - \ref NLPISOLVERS "Available implementations of the NLP solver interface"
  *
  * @section FURTHERINFORMATION References
  *
@@ -99,7 +100,7 @@
  *   - \ref DIALOG  "Dialogs"
  *   - \ref DISP    "Display columns"
  *   - \ref EVENT   "Event handler"
- *   - \ref NLPI    "Interfaces to NLP solvers"
+ *   - \ref NLPI    "Interface to NLP solvers"
  *   - \ref EXPRINT "Interfaces to expression interpreters"
  *   - \ref PARAM   "additional user parameters"
  *   - \ref TABLE   "Statistics tables"
@@ -335,6 +336,45 @@
  *
  * To use the old interface, set the Makefile option `LPS=spx1` or configure your CMake build with `LEGACY=ON`.
  *
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/** @page NLPISOLVERS Available implementations of the NLP solver interface
+ *
+ * SCIP implements the NLP solver interface for the solvers <a href="https://projects.coin-or.org/Ipopt">IPOPT</a>, <a
+ * href="https://worhp.de/">WORHP</a>, and <a href=" http://www.mcs.anl.gov/~leyffer/solvers.html">FilterSQP</a>. In
+ * contrast to the implementations of the LP solver interface, SCIP can be compiled with multiple NLP solvers and selects
+ * the solver with the highest priority at the beginning of the solving process.
+ * Currently, the priorities are, in descending order: Ipopt, WORHP/IP, FilterSQP, WORHP/SQP.
+ *
+ * If more than one solver is available, then it is possible to solve all NLPs during the solving process with all
+ * available NLP solvers by setting the parameter `nlpi/all/priority` to the highest value.
+ * In this case, SCIP uses the solution from a solver that provides the best objective value. Other possible use
+ * cases for the availability of multiple solvers have not been implemented yet.
+ *
+ * In the @ref MAKE "GNU make" based build system, building the implementations of the interface for FilterSQP, IPOPT, and
+ * WORHP can be enabled by specifying `FILTERSQP=true`, `IPOPT=true`, and `WORHP=true`, respectively, as argument to the
+ * `make` call.
+ * In the @ref CMAKE "CMAKE" based build system, building the implementation of the interface for IPOPT and WORHP can be
+ * enabled by specifying `IPOPT=on` and `WORHP=on`, respectively, as argument to the `cmake` call.
+ *
+ * @subsection NLPISOLVERS_IPOPT IPOPT
+ *
+ * <b>IPOPT</b> implements a primal-dual interior point method and uses line searches based on filter methods. It has
+ * been developed by Andreas W&auml;chter and Carl Laird and is available under the Eclipse Public License on <a
+ * href="https://www.coin-or.org/">COIN-OR</a>.
+ *
+ * @subsection NLPISOLVERS_WORHP WORHP
+ *
+ * <b>WORHP</b> implements a sequential quadratic programming method and a penalty-interior point algorithm.  It is
+ * developed at the <a href="http://www.uni-bremen.de/en.html">University of Bremen</a> and is free for academic
+ * purposes.
+ *
+ * @subsection NLPISOLVERS_FILTERSQP FilterSQP
+ *
+ * <b>FilterSQP</b> implements a sequential quadratic programming method. It has been developed by Roger Fletcher
+ * and Sven Leyffer. It is not publicly available, but may be obtained from Sven Leyffer on request.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -7297,47 +7337,47 @@
   *
   * <br>
   * - <b>Cutting plane separation methods</b>:
-  *   - Change function signature of SCIPcalcMir()
-  *   - Change function signature of SCIPcalcStrongCG()
+  *   - Changed function signature of SCIPcalcMir()
+  *   - Changed function signature of SCIPcalcStrongCG()
   *   - Added parameter "allowlocal" to SCIPseparateSol()
   *   - Removed solution pointer argument from SCIPaddCut()
   *   - New method SCIPaddRow() to replace deprecated SCIPaddCut()
   *
   * <br>
   * - <b>Relaxator methods</b>:
-  *   - Remove parameter "includeslp" from SCIPincludeRelax()
+  *   - Removed parameter "includeslp" from SCIPincludeRelax()
   *   - Added parameter "includeslp" to SCIPmarkRelaxSolValid(), SCIPsetRelaxSolVals(), and SCIPsetRelaxSolValsSol()
   *   - Removed functions SCIPrelaxIncludesLp() and SCIPrelaxSetIncludesLp()
   *   - Replaced method SCIPgetRelaxFeastolFactor() by SCIPrelaxfeastol() and added SCIPchgRelaxfeastol()
   *
   * <br>
   * - <b>LP interface</b>:
-  *   - Replace LP parameters SCIP_LPPARAM_LOBJLIM and SCIP_LPPARAM_UOBJLIM by SCIP_LPPARAM_OBJLIM.
+  *   - Replaced LP parameters SCIP_LPPARAM_LOBJLIM and SCIP_LPPARAM_UOBJLIM by SCIP_LPPARAM_OBJLIM.
   *
   * <br>
   * - <b>NLP interface</b>:
-  *   - Added argument "dstatssize" to SCIPnlpiDelVarSet() and SCIPnlpiDelConsSet
+  *   - Added argument "dstatssize" to SCIPnlpiDelVarSet() and SCIPnlpiDelConsSet()
   *   - Added modifier const to "exprtree" argument of SCIPnlpiChgExprtree()
   *   - Added parameter "objval" to SCIPnlpiGetSolution()
   *   - Added argument "varnameslength" to SCIPexprParse()
-  *   - Drop NLP termination status "SCIP_NLPTERMSTAT_UOBJLIM"
+  *   - Dropped NLP termination status "SCIP_NLPTERMSTAT_UOBJLIM"
   *
   * <br>
   * - <b>Data structures</b>:
   *   - Methods SCIPrandomCreate() and SCIPrandomFree() are no longer public and should be replaced
   *     by SCIPcreateRandom() and SCIPfreeRandom(), respectively. The new methods respect
   *     the global parameter "randomization/randomseedshift" automatically.
-  * -  Methods SCIPdigraphCreate() and SCIPdigraphFree() are no longer public and should be replaced
+  *   - Methods SCIPdigraphCreate() and SCIPdigraphFree() are no longer public and should be replaced
   *     by SCIPcreateDigraph() and SCIPfreeDigraph(), respectively, which receive a \SCIP argument
   *     and are more robust towards future interface changes.
   *
   * <br>
   * - <b>Misc</b>:
   *   - Added parameter "copytables" to SCIPcopyPlugins()
-  *   - Allow SCIPgetNConss() in stage SCIP_STAGE_INITSOLVE
+  *   - Allowed SCIPgetNConss() in stage SCIP_STAGE_INITSOLVE
   *   - SCIPsolveConcurrent() is deprecated. Use SCIPsolveParallel() instead.
-  *   - Change return type of SCIPcliqueGetId() from "int" to "unsigned int".
-  *   - Remove SCIPvarGetCliqueComponentIdx(). The connectedness information is now
+  *   - Changed return type of SCIPcliqueGetId() from "int" to "unsigned int".
+  *   - Removed SCIPvarGetCliqueComponentIdx(). The connectedness information
   *     of the clique table is now stored as a SCIP_DISJOINTSET member of the cliquetable
   *     and cannot be publicly accessed.
   *

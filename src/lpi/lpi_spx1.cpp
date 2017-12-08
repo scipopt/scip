@@ -5230,7 +5230,7 @@ SCIP_RETCODE SCIPlpiGetRealpar(
       break;
 #endif
    case SCIP_LPPAR_OBJLIM:
-      if ( spx->getSense() == SPxLP::MINIMIZE )
+      if ( lpi->spx->getSense() == SPxLP::MINIMIZE )
          *dval = lpi->spx->getObjUpLimit();
       else
          *dval = lpi->spx->getObjLoLimit();
@@ -5274,7 +5274,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       break;
 #endif
    case SCIP_LPPAR_OBJLIM:
-      if ( spx->getSense() == SPxLP::MINIMIZE )
+      if ( lpi->spx->getSense() == SPxLP::MINIMIZE )
          lpi->spx->setObjUpLimit(dval);
       else
          lpi->spx->setObjLoLimit(dval);
