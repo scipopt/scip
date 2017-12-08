@@ -80,7 +80,7 @@ void setup(void)
 
    /* create iterator */
    SCIP_CALL( SCIPexpriteratorCreate(&bfs, SCIPblkmem(scip), SCIP_CONSEXPRITERATOR_BFS) );
-   SCIP_CALL( SCIPexpriteratorCreate(&dfs, SCIPblkmem(scip), SCIP_CONSEXPRITERATOR_DFS) );
+   SCIP_CALL( SCIPexpriteratorCreate(&dfs, SCIPblkmem(scip), SCIP_CONSEXPRITERATOR_RTOPOLOGIC) );
 
    /* NULL expression in order to free it in teardown() */
    expr = NULL;

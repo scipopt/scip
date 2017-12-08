@@ -35,16 +35,16 @@
  * Local methods
  */
 
-/** ensures minimum size of iterator's data */
+/** ensures minimum stack size of iterator's data */
 static
-void ensureDfsStackSize(
+void ensureStackSize(
    SCIP_CONSEXPR_ITERATOR*    iterator,     /**< expression iterator */
    int                        size          /**< minimum requires size */
    )
 {
    assert(iterator != NULL);
    assert(iterator->blkmem != NULL);
-   assert(iterator->itertype == SCIP_CONSEXPRITERATOR_DFS);
+   assert(iterator->itertype == SCIP_CONSEXPRITERATOR_RTOPOLOGIC);
    assert(size >= 0);
 
    if( size > iterator->dfssize )
@@ -59,7 +59,7 @@ void ensureDfsStackSize(
 
 /** adds an expression to the DFS stack */
 static
-void dfsInsert(
+void reverseTopologicalInsert(
    SCIP_CONSEXPR_ITERATOR*    iterator,    /**< expression iterator */
    SCIP_CONSEXPR_EXPR*        expr         /**< expression */
    )
@@ -67,15 +67,15 @@ void dfsInsert(
    assert(iterator != NULL);
    assert(expr != NULL);
 
-   ensureDfsStackSize(iterator, iterator->dfsnexprs + 1);
+   ensureStackSize(iterator, iterator->dfsnexprs + 1);
    iterator->dfsexprs[iterator->dfsnexprs] = expr;
    iterator->dfsnvisited[iterator->dfsnexprs] = 0;
    ++(iterator->dfsnexprs);
 }
 
-/** moves to the next expression according to the DFS rule */
+/** moves to the next expression according to a reverse topological order */
 static
-SCIP_CONSEXPR_EXPR* doDfsNext(
+SCIP_CONSEXPR_EXPR* doReverseTopologicalNext(
    SCIP_CONSEXPR_ITERATOR*    iterator     /**< expression iterator */
    )
 {
@@ -83,7 +83,7 @@ SCIP_CONSEXPR_EXPR* doDfsNext(
    int childidx;
 
    assert(iterator != NULL);
-   assert(iterator->itertype == SCIP_CONSEXPRITERATOR_DFS);
+   assert(iterator->itertype == SCIP_CONSEXPRITERATOR_RTOPOLOGIC);
 
    /* no expression left */
    if( iterator->dfsnexprs == 0 )
@@ -112,7 +112,7 @@ SCIP_CONSEXPR_EXPR* doDfsNext(
       while( SCIPgetConsExprExprNChildren(child) > 0 )
       {
          /* add child to the DFS stack */
-         dfsInsert(iterator, child);
+         reverseTopologicalInsert(iterator, child);
 
          /* mark that the child has been visited; note that child is on top of the DFS stack */
          ++(iterator->dfsnvisited[iterator->dfsnexprs-1]);
@@ -184,7 +184,7 @@ SCIP_RETCODE SCIPexpriteratorCreate(
       SCIP_CALL( SCIPqueueCreate(&(*iterator)->queue, MINBFSSIZE, 2.0) );
    }
    else
-      ensureDfsStackSize(*iterator, MINDFSSIZE);
+      ensureStackSize(*iterator, MINDFSSIZE);
 
    return SCIP_OKAY;
 }
@@ -228,8 +228,8 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorInit(
    }
    else
    {
-      assert(iterator->itertype == SCIP_CONSEXPRITERATOR_DFS);
-      dfsInsert(iterator, expr);
+      assert(iterator->itertype == SCIP_CONSEXPRITERATOR_RTOPOLOGIC);
+      reverseTopologicalInsert(iterator, expr);
    }
 
    /* return next expression */
@@ -247,8 +247,8 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetNext(
       iterator->curr = doBfsNext(iterator);
    else
    {
-      assert(iterator->itertype == SCIP_CONSEXPRITERATOR_DFS);
-      iterator->curr = doDfsNext(iterator);
+      assert(iterator->itertype == SCIP_CONSEXPRITERATOR_RTOPOLOGIC);
+      iterator->curr = doReverseTopologicalNext(iterator);
    }
 
    return iterator->curr;

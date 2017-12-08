@@ -149,7 +149,7 @@ struct SCIP_ConsExpr_Iterator
    SCIP_CONSEXPRITERATOR_TYPE  itertype;     /**< type of expression iterator */
    BMS_BLKMEM*                 blkmem;       /**< block memory */
    SCIP_CONSEXPR_EXPR*         curr;         /**< current expression of the iterator */
-   SCIP_CONSEXPR_EXPR**        dfsexprs;     /**< stack DFS */
+   SCIP_CONSEXPR_EXPR**        dfsexprs;     /**< DFS stack */
    int*                        dfsnvisited;  /**< number of visited children for each expression in the stack */
    int                         dfsnexprs;    /**< total number of expression in stack */
    int                         dfssize;      /**< size DFS stack */
