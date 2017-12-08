@@ -400,23 +400,29 @@ SCIP_RETCODE createSwitchSolution(
    SCIP_SOL* worksol;
    SCIP_Real** clustering;
    SCIP_Real** solclustering;
-   SCIP_Bool binprocessed[nbins];
+   SCIP_Bool* binprocessed;
    SCIP_Real max;
    SCIP_Real objective;
-   SCIP_Real switchbound[nbins];
+   SCIP_Real* switchbound;
    SCIP_Real maxbound;
    SCIP_Bool heurpossible = TRUE;
    SCIP_Bool feasible;
    int c;
    int i;
-   int nbinsincluster[ncluster]; /*lint !e771*/
-   int switchedbin[nbins];
-   int switchedcluster[nbins];
-   int clusterofbin[nbins];
+   int* nbinsincluster; /*lint !e771*/
+   int* switchedbin;
+   int* switchedcluster;
+   int* clusterofbin;
    int bestlength;
    int nrswitches;
 
    /* allocate memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &binprocessed, nbins) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &switchbound, nbins) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nbinsincluster, ncluster) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &switchedbin, nbins) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &switchedcluster, nbins) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &clusterofbin, nbins) );
    SCIP_CALL( SCIPallocClearMemoryArray(scip, &clustering, nbins) );
    SCIP_CALL( SCIPallocClearMemoryArray(scip, &solclustering, nbins) );
 
@@ -523,6 +529,14 @@ SCIP_RETCODE createSwitchSolution(
       }
    }
 
+   /* free memory */
+   SCIPfreeBufferArray(scip, &clusterofbin);
+   SCIPfreeBufferArray(scip, &switchedcluster);
+   SCIPfreeBufferArray(scip, &switchedbin);
+   SCIPfreeBufferArray(scip, &nbinsincluster);
+   SCIPfreeBufferArray(scip, &switchbound);
+   SCIPfreeBufferArray(scip, &binprocessed);
+
    for( i = 0; i < nbins; ++i )
    {
       SCIPfreeMemoryArray(scip, &clustering[i]);
@@ -538,6 +552,7 @@ SCIP_RETCODE createSwitchSolution(
  * randomly selected and added to the next cluster.*/
 static
 SCIP_RETCODE permuteStartSolution(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real**           startclustering,    /**< The solution to be permuted */
    SCIP_RANDNUMGEN*      rnd,                /**< A random number generator */
    int                   nbins,              /**< The number of states */
@@ -549,9 +564,10 @@ SCIP_RETCODE permuteStartSolution(
    int c;
    int rndcluster;
    int pushed;
-   int binsincluster[ncluster];
+   int* binsincluster;
    int **bins;
 
+   SCIP_CALL( SCIPallocBufferArray(scip, &binsincluster, ncluster) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &bins, ncluster) );
 
    for( t = 0; t < ncluster; ++t )
@@ -599,6 +615,7 @@ SCIP_RETCODE permuteStartSolution(
    }
 
    SCIPfreeMemoryArray(scip, &bins);
+   SCIPfreeBufferArray(scip, &binsincluster);
 
    return SCIP_OKAY;
 }
@@ -728,7 +745,7 @@ SCIP_DECL_HEUREXEC(heurExecCyckerlin)
       SCIP_CALL( createSwitchSolution(scip, heur, cmatrix, qmatrix, binfixed, startclustering, result, nbins, ncluster) );
       for( i = 0; i < MAXPERMUTATIONS; ++i )
       {
-         SCIP_CALL( permuteStartSolution(startclustering, rnd, nbins, ncluster) );
+         SCIP_CALL( permuteStartSolution(scip, startclustering, rnd, nbins, ncluster) );
          assert(isPartition(scip, startclustering, nbins, ncluster) );
          SCIP_CALL( createSwitchSolution(scip, heur, cmatrix, qmatrix, binfixed, startclustering, result, nbins, ncluster) );
       }

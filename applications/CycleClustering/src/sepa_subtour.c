@@ -77,7 +77,7 @@ SCIP_RETCODE addSubtourCuts(
    SCIP_VAR**** edgevars;
    char cutname[SCIP_MAXSTRLEN];
    SCIP_ROW* cut;
-   int cycle[cyclelength + 1];
+   int* cycle;
    SCIP_Bool* processed;
    SCIP_Bool doubleloop = FALSE;
    SCIP_Bool nullvars = FALSE;
@@ -93,6 +93,8 @@ SCIP_RETCODE addSubtourCuts(
    assert( SCIPisGT(scip, adjmatrices[cyclelength - 1][start][start], cyclelength - 1.0) );
 
    SCIP_CALL( SCIPallocClearMemoryArray(scip, &processed, nbins) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cycle, cyclelength + 1) );
+   BMSclearMemoryArray(cycle, cyclelength + 1);
 
    cycle[0] = start;
    processed[start] = TRUE;
@@ -163,6 +165,7 @@ SCIP_RETCODE addSubtourCuts(
       SCIP_CALL( SCIPreleaseRow(scip, &cut) );
    }
 
+   SCIPfreeBufferArray(scip, &cycle);
    SCIPfreeMemoryArray(scip, &processed);
 
    return SCIP_OKAY;
@@ -184,7 +187,7 @@ SCIP_RETCODE addPathCuts(
    SCIP_VAR**** edgevars;
    char cutname[SCIP_MAXSTRLEN];
    SCIP_ROW* cut;
-   int path[pathlength + 1];
+   int* path;
    SCIP_Bool nullvars = FALSE;
    SCIP_Real edgeweight;
    int currnode;
@@ -196,6 +199,8 @@ SCIP_RETCODE addPathCuts(
 
    edgevars = SCIPcycGetEdgevars(scip);
    nbins = SCIPdigraphGetNNodes(capgraph);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &path, pathlength + 1) );
 
    path[0] =  start;
 
@@ -261,9 +266,12 @@ SCIP_RETCODE addPathCuts(
 
          SCIP_CALL( SCIPreleaseRow(scip, &cut) );
          if( *ncuts >= MAXCUTS )
-            return SCIP_OKAY;
+            goto TERMINATE;
       }
    }
+
+TERMINATE:
+   SCIPfreeBufferArray(scip, &path);
 
    return SCIP_OKAY;
 }
