@@ -7337,47 +7337,47 @@
   *
   * <br>
   * - <b>Cutting plane separation methods</b>:
-  *   - Change function signature of SCIPcalcMir()
-  *   - Change function signature of SCIPcalcStrongCG()
+  *   - Changed function signature of SCIPcalcMir()
+  *   - Changed function signature of SCIPcalcStrongCG()
   *   - Added parameter "allowlocal" to SCIPseparateSol()
   *   - Removed solution pointer argument from SCIPaddCut()
   *   - New method SCIPaddRow() to replace deprecated SCIPaddCut()
   *
   * <br>
   * - <b>Relaxator methods</b>:
-  *   - Remove parameter "includeslp" from SCIPincludeRelax()
+  *   - Removed parameter "includeslp" from SCIPincludeRelax()
   *   - Added parameter "includeslp" to SCIPmarkRelaxSolValid(), SCIPsetRelaxSolVals(), and SCIPsetRelaxSolValsSol()
   *   - Removed functions SCIPrelaxIncludesLp() and SCIPrelaxSetIncludesLp()
   *   - Replaced method SCIPgetRelaxFeastolFactor() by SCIPrelaxfeastol() and added SCIPchgRelaxfeastol()
   *
   * <br>
   * - <b>LP interface</b>:
-  *   - Replace LP parameters SCIP_LPPARAM_LOBJLIM and SCIP_LPPARAM_UOBJLIM by SCIP_LPPARAM_OBJLIM.
+  *   - Replaced LP parameters SCIP_LPPARAM_LOBJLIM and SCIP_LPPARAM_UOBJLIM by SCIP_LPPARAM_OBJLIM.
   *
   * <br>
   * - <b>NLP interface</b>:
-  *   - Added argument "dstatssize" to SCIPnlpiDelVarSet() and SCIPnlpiDelConsSet
+  *   - Added argument "dstatssize" to SCIPnlpiDelVarSet() and SCIPnlpiDelConsSet()
   *   - Added modifier const to "exprtree" argument of SCIPnlpiChgExprtree()
   *   - Added parameter "objval" to SCIPnlpiGetSolution()
   *   - Added argument "varnameslength" to SCIPexprParse()
-  *   - Drop NLP termination status "SCIP_NLPTERMSTAT_UOBJLIM"
+  *   - Dropped NLP termination status "SCIP_NLPTERMSTAT_UOBJLIM"
   *
   * <br>
   * - <b>Data structures</b>:
   *   - Methods SCIPrandomCreate() and SCIPrandomFree() are no longer public and should be replaced
   *     by SCIPcreateRandom() and SCIPfreeRandom(), respectively. The new methods respect
   *     the global parameter "randomization/randomseedshift" automatically.
-  * -  Methods SCIPdigraphCreate() and SCIPdigraphFree() are no longer public and should be replaced
+  *   - Methods SCIPdigraphCreate() and SCIPdigraphFree() are no longer public and should be replaced
   *     by SCIPcreateDigraph() and SCIPfreeDigraph(), respectively, which receive a \SCIP argument
   *     and are more robust towards future interface changes.
   *
   * <br>
   * - <b>Misc</b>:
   *   - Added parameter "copytables" to SCIPcopyPlugins()
-  *   - Allow SCIPgetNConss() in stage SCIP_STAGE_INITSOLVE
+  *   - Allowed SCIPgetNConss() in stage SCIP_STAGE_INITSOLVE
   *   - SCIPsolveConcurrent() is deprecated. Use SCIPsolveParallel() instead.
-  *   - Change return type of SCIPcliqueGetId() from "int" to "unsigned int".
-  *   - Remove SCIPvarGetCliqueComponentIdx(). The connectedness information is now
+  *   - Changed return type of SCIPcliqueGetId() from "int" to "unsigned int".
+  *   - Removed SCIPvarGetCliqueComponentIdx(). The connectedness information
   *     of the clique table is now stored as a SCIP_DISJOINTSET member of the cliquetable
   *     and cannot be publicly accessed.
   *
