@@ -816,6 +816,7 @@ endif()
 if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
     find_package(Sanitizers)
     add_sanitizers(scip)
+    add_sanitizers(libscip)
 endif()
 
 target_compile_definitions(scip PRIVATE EXTERN=extern)
