@@ -62,6 +62,7 @@
  * - \ref EXAMPLES    "Examples"
  * - \ref APPLICATIONS "Extensions of SCIP for specific applications"
  * - \ref LPI         "Available LP solver interfaces"
+ * - \ref NLPISOLVERS "Available implementations of the NLP solver interface"
  *
  * @section FURTHERINFORMATION References
  *
@@ -99,7 +100,7 @@
  *   - \ref DIALOG  "Dialogs"
  *   - \ref DISP    "Display columns"
  *   - \ref EVENT   "Event handler"
- *   - \ref NLPI    "Interfaces to NLP solvers"
+ *   - \ref NLPI    "Interface to NLP solvers"
  *   - \ref EXPRINT "Interfaces to expression interpreters"
  *   - \ref PARAM   "additional user parameters"
  *   - \ref TABLE   "Statistics tables"
@@ -335,6 +336,45 @@
  *
  * To use the old interface, set the Makefile option `LPS=spx1` or configure your CMake build with `LEGACY=ON`.
  *
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/** @page NLPISOLVERS Available implementations of the NLP solver interface
+ *
+ * SCIP implements the NLP solver interface to the solvers <a href="https://projects.coin-or.org/Ipopt">IPOPT</a>, <a
+ * href="https://worhp.de/">WORHP</a>, and <a href=" http://www.mcs.anl.gov/~leyffer/solvers.html">FilterSQP</a>. In
+ * contrast to the implementations of the LP solver interface, SCIP can be compiled with multiple NLP solvers and selects
+ * the solver with the highest priority at the beginning of the solving process.
+ * Currently, the priorities are, in descending order: Ipopt, WORHP/IP, FilterSQP, WORHP/SQP.
+ *
+ * If more than one solver is available, then it is possible to solve all NLPs during the solving process with all
+ * available NLP solvers by setting the parameter `nlpi/all/priority` to the highest value.
+ * In this case, SCIP uses the solution from the solver that provides the best objective value. Other possible use
+ * cases for the availability of multiple solvers have not been implemented yet.
+ *
+ * In the @ref MAKE "GNU make" based build system, building the implementation of the interface to FilterSQP, IPOPT, and
+ * WORHP can be enabled by specifying `FILTERSQP=true`, `IPOPT=true`, and `WORHP=true`, respectively, as argument to the
+ * `make` call.
+ * In the @ref CMAKE "CMAKE" based build system, building the implementation of the interface to IPOPT and WORHP can be
+ * enabled by specifying `IPOPT=on` and `WORHP=on`, respectively, as argument to the `cmake` call.
+ *
+ * @subsection NLPISOLVERS_IPOPT IPOPT
+ *
+ * <b>IPOPT</b> implements a primal-dual interior point method and uses line searches based on filter methods. It has
+ * been developed by Andreas W&auml;chter and Carl Laird and is available under the Eclipse Public License on <a
+ * href="https://www.coin-or.org/">COIN-OR</a>.
+ *
+ * @subsection NLPISOLVERS_WORHP WORHP
+ *
+ * <b>WORHP</b> implements a sequential quadratic programming method and a penalty-interior point algorithm.  It is
+ * developed at the <a href="http://www.uni-bremen.de/en.html">University of Bremen</a> and is free for academic
+ * purposes.
+ *
+ * @subsection NLPISOLVERS_FILTERSQP FilterSQP
+ *
+ * <b>FilterSQP</b> implements a sequential quadratic programming method. It has been developed by Roger Fletcher
+ * and Sven Leyffer. It is not publicly available, but may be obtained from Sven Leyffer on request.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
