@@ -554,6 +554,19 @@ void SCIPsetConsExprExprEvalInterval(
    unsigned int            tag               /**< tag of variable domains that were evaluated, or 0. */
    );
 
+/** creates and gives the auxiliary variable for a given expression
+ *
+ * @note if auxiliary variable already present for that expression, then only returns this variable
+ * @note for a variable expression it returns the corresponding variable
+ */
+EXTERN
+SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_VAR**            auxvar              /**< buffer to store pointer to auxiliary variable, or NULL */
+   );
+
 /** walks the expression graph in depth-first manner and executes callbacks at certain places
  *
  * Many algorithms over expression trees need to traverse the tree in depth-first manner and a
@@ -932,7 +945,9 @@ EXTERN
 void SCIPsetConsExprNlhdlrSepa(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
-   SCIP_DECL_CONSEXPR_NLHDLRSEPA((*sepa))    /**< separation callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_NLHDLRINITSEPA((*initsepa)), /**< separation initialization callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_NLHDLRSEPA((*sepa)),         /**< separation callback (must not be NULL) */
+   SCIP_DECL_CONSEXPR_NLHDLREXITSEPA((*exitsepa))  /**< separation deinitialization callback (can be NULL) */
 );
 
 /** gives name of nonlinear handler */

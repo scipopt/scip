@@ -287,7 +287,6 @@ extern "C" {
  *
  *  input:
  *  - scip            : SCIP main data structure
- *  - conshdlr        : expression constraint handler
  *  - expr            : expression
  */
 #define SCIP_DECL_CONSEXPR_EXPREXITSEPA(x) SCIP_RETCODE x (\
@@ -436,10 +435,18 @@ typedef enum
 typedef unsigned int SCIP_CONSEXPR_PRINTDOT_WHAT;
 /** @} */
 
+#define SCIP_CONSEXPR_EXPRENFO_SEPAUNDER      0x1u /** separates for expr <= auxvar, thus might underestimate expr */
+#define SCIP_CONSEXPR_EXPRENFO_SEPAOVER       0x2u /** separates for expr >= auxvar, thus might overestimate expr */
+#define SCIP_CONSEXPR_EXPRENFO_SEPABOTH SCIP_CONSEXPR_EXPRENFO_SEPAUNDER | SCIP_CONSEXPR_EXPRENFO_SEPAOVER
+
+/** type for exprenfo bitflags */
+typedef unsigned int SCIP_CONSEXPR_EXPRENFO_METHOD;
+
 typedef struct SCIP_ConsExpr_ExprData     SCIP_CONSEXPR_EXPRDATA;     /**< expression data */
 typedef struct SCIP_ConsExpr_ExprHdlr     SCIP_CONSEXPR_EXPRHDLR;     /**< expression handler */
 typedef struct SCIP_ConsExpr_ExprHdlrData SCIP_CONSEXPR_EXPRHDLRDATA; /**< expression handler data */
 typedef struct SCIP_ConsExpr_Expr         SCIP_CONSEXPR_EXPR;         /**< expression */
+typedef struct SCIP_ConsExpr_ExprEnfo     SCIP_CONSEXPR_EXPRENFO;     /**< expression enforcement data */
 
 typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< printing a dot file data */
 
@@ -518,6 +525,40 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
    SCIP_Bool* success, \
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata)
 
+/** separation initialization method of a nonlinear handler (called during CONSINITLP)
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : expression constraint handler
+ *  - nlhdlr          : nonlinear handler
+ *  - nlhdlrexprdata  : exprdata of nonlinear handler
+ *  - expr            : expression
+ *
+ *  output:
+ *  - infeasible      : pointer to store whether an infeasibility was detected while building the LP
+ */
+#define SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(x) SCIP_RETCODE x (\
+      SCIP* scip, \
+      SCIP_CONSHDLR* conshdlr, \
+      SCIP_CONSEXPR_NLHDLR* nlhdlr, \
+      SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
+      SCIP_CONSEXPR_EXPR* expr, \
+      SCIP_Bool* infeasible)
+
+/** separation deinitialization method of a nonlinear handler (called during CONSEXITSOL)
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - nlhdlr          : nonlinear handler
+ *  - nlhdlrexprdata  : exprdata of nonlinear handler
+ *  - expr            : expression
+ */
+#define SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(x) SCIP_RETCODE x (\
+      SCIP* scip, \
+      SCIP_CONSEXPR_NLHDLR* nlhdlr, \
+      SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
+      SCIP_CONSEXPR_EXPR* expr)
+
 /** nonlinear handler separation callback
  *
  * The method tries to separate a given point by means of the nonlinear handler.
@@ -530,6 +571,7 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
  *  - nlhdlrexprdata : expression specific data of the nonlinear handler
  *  - sol  : solution to be separated (NULL for the LP solution)
  *  - minviolation : minimal violation of a cut if it should be added to the LP
+ *  - separated: whether another nonlinear handler already added a cut for this expression
  *  - result : pointer to store the result
  *  - ncuts : pointer to store the number of added cuts
  */
@@ -541,6 +583,7 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
    SCIP_SOL* sol, \
    SCIP_Real minviolation, \
+   SCIP_Bool separated, \
    SCIP_RESULT* result, \
    int* ncuts)
 
