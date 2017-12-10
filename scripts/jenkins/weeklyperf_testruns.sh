@@ -46,24 +46,32 @@ SCIP_FLAGS="IPOPT=true SYM=bliss ZIMPL=false COMP=gnu LPS=spx OPT=opt"
 ###################
 yes "" | make $SCIP_FLAGS -j4 USRFLAGS=-Werror
 ls bin
-exit 0
 
 ######################
 ### Testrun: setup ###
 ######################
 ln -s /optimi/kombadon/IP check/
+ls bin
 ln -s /optimi/kombadon/MINLP check/
+ls bin
 
 ##########################
 ### Testrun: execution ###
 ##########################
 for testset in mipdev-solvable; do
+    ls bin
     for setting in default; do
+        ls bin
         make testcluster $SCIP_FLAGS TEST=$testset SETTINGS=$setting EXCLUSIVE=true TIME=7200 MEM=35000 QUEUE=M620v3-low | PERF=performance check/jenkins_check_results.sh $testset $setting
+        ls bin
     done
+    ls bin
 done
+ls bin
 
 cp ~/sap-400-pure.set settings/.
+ls bin
+exit 0
 for testset in sapdev-solvable; do
     for setting in sap-400-pure; do
         make testcluster $SCIP_FLAGS TEST=$testset SETTINGS=$setting EXCLUSIVE=true TIME=7200 MEM=35000 QUEUE=M630v2 | PERF=performance check/jenkins_check_results.sh $testset $setting
