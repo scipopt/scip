@@ -45,6 +45,8 @@ SCIP_FLAGS="IPOPT=true SYM=bliss ZIMPL=false COMP=gnu LPS=spx OPT=opt"
 ### Compilation ###
 ###################
 yes "" | make $SCIP_FLAGS -j4 USRFLAGS=-Werror
+ls bin
+exit 0
 
 ######################
 ### Testrun: setup ###
