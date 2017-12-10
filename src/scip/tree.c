@@ -1045,7 +1045,7 @@ SCIP_RETCODE SCIPnodeFree(
    SCIPsetDebugMsg(set, "free node #%" SCIP_LONGINT_FORMAT " at depth %d of type %d\n", SCIPnodeGetNumber(*node), SCIPnodeGetDepth(*node), SCIPnodeGetType(*node));
 
    /* inform solution debugger, that the node has been freed */
-   assert( stat->inrestart || SCIPdebugRemoveNode(blkmem, set, *node) ); /*lint !e506 !e774*/
+   SCIP_CALL( SCIPdebugRemoveNode(blkmem, set, *node) );
 
    /* check, if the node to be freed is the root node */
    isroot = (SCIPnodeGetDepth(*node) == 0);
@@ -6717,7 +6717,11 @@ SCIP_RETCODE treeBacktrackProbing(
          /* apply the pending bound changes */
          SCIP_CALL( treeApplyPendingBdchgs(tree, reopt, blkmem, set, stat, transprob, origprob, lp, branchcand, eventqueue, cliquetable) );
 
-         tree->cutoffdepth = INT_MAX;
+         /* applying the pending bound changes might have changed the cutoff depth; so the highest cutoff depth might
+          * be outside of the deleted part of the probing path now
+          */
+         if( tree->cutoffdepth >= tree->pathlen )
+            tree->cutoffdepth = INT_MAX;
       }
       if( tree->repropdepth >= tree->pathlen )
          tree->repropdepth = INT_MAX;

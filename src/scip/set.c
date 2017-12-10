@@ -2544,6 +2544,9 @@ SCIP_RETCODE SCIPsetFree(
 
    assert(set != NULL);
 
+   if( *set == NULL )
+      return SCIP_OKAY;
+
    /* free parameter set */
    SCIPparamsetFree(&(*set)->paramset, blkmem);
 
@@ -2685,9 +2688,6 @@ SCIP_RETCODE SCIPsetFree(
    }
    BMSfreeMemoryArrayNull(&(*set)->extcodenames);
    BMSfreeMemoryArrayNull(&(*set)->extcodedescs);
-
-   /* free all debug data */
-   SCIP_CALL( SCIPdebugFreeDebugData(*set) ); /*lint !e506 !e774*/
 
    /* free virtual tables of bandit algorithms */
    for( i = 0; i < (*set)->nbanditvtables; ++i )

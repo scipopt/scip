@@ -1,6 +1,6 @@
 find_path(GLOP_INCLUDE_DIRS
     NAMES ortools/glop/lp_solver.h
-    HINTS ${GLOP_DIR}
+    HINTS ${GLOP_DIR} $ENV{GLOP_DIR}
     PATH_SUFFIXES include)
 
 set(GLOP_INCLUDE_DIRS
@@ -12,7 +12,7 @@ set(GLOP_INCLUDE_DIRS
 # todo: enable recursive search
 find_library(GLOP_LIBRARY
     NAMES ortools
-    HINTS ${GLOP_DIR}
+    HINTS ${GLOP_DIR} $ENV{GLOP_DIR}
     PATH_SUFFIXES lib)
 
 set(GLOP_LIBRARIES ${GLOP_LIBRARY})

@@ -361,6 +361,8 @@ SCIP_RETCODE SCIPdialoghdlrFree(
    )
 {
    assert(dialoghdlr != NULL);
+   if( *dialoghdlr == NULL )
+      return SCIP_OKAY;
 
    SCIP_CALL( SCIPdialoghdlrSetRoot(scip, *dialoghdlr, NULL) );
    linelistFreeAll(&(*dialoghdlr)->inputlist);

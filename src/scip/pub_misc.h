@@ -260,6 +260,7 @@ void SCIPgmlWriteClosing(
  */
 
 /**@defgroup SparseSol Sparse Solution
+ * @ingroup DataStructures
  * @brief sparse storage for multiple integer solutions
  *
  * @{
@@ -1203,9 +1204,7 @@ int SCIPprofileGetLatestFeasibleStart(
  * Directed graph
  */
 
-/**@defgroup DirectedGraph Directed Graph
- * @ingroup DataStructures
- * @brief graph structure with common algorithms for directed and undirected graphs
+/**@addtogroup DirectedGraph
  *
  * @{
  */
@@ -1608,7 +1607,7 @@ void SCIPbtSetRoot(
 
 /**@} */
 
-/**@addtogroup DisjoinedSet
+/**@addtogroup DisjointSet
  *
  * @{
  */
@@ -1668,6 +1667,13 @@ int SCIPdisjointsetGetSize(
 EXTERN
 SCIP_Real SCIPcalcMachineEpsilon(
    void
+   );
+
+/** returns the next representable value of from in the direction of to */
+EXTERN
+SCIP_Real SCIPnextafter(
+   SCIP_Real             from,               /**< value from which the next representable value should be returned */
+   SCIP_Real             to                  /**< direction in which the next representable value should be returned */
    );
 
 /** calculates the greatest common divisor of the two given values */

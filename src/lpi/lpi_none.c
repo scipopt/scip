@@ -1153,7 +1153,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    return SCIP_PLUGINNOTFOUND;
 }
 
-/** get dense row of inverse basis matrix B^-1
+/** get row of inverse basis matrix B^-1
  *
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
@@ -1172,7 +1172,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    return SCIP_PLUGINNOTFOUND;
 }
 
-/** get dense column of inverse basis matrix B^-1
+/** get column of inverse basis matrix B^-1
  *
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
@@ -1195,7 +1195,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    return SCIP_PLUGINNOTFOUND;
 }
 
-/** get dense row of inverse basis matrix times constraint matrix B^-1 * A
+/** get row of inverse basis matrix times constraint matrix B^-1 * A
  *
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
@@ -1215,7 +1215,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    return SCIP_PLUGINNOTFOUND;
 }
 
-/** get dense column of inverse basis matrix times constraint matrix B^-1 * A
+/** get column of inverse basis matrix times constraint matrix B^-1 * A
  *
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;

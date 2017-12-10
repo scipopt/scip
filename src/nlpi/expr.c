@@ -8021,37 +8021,23 @@ SCIP_RETCODE SCIPexprEvalIntUser(
    return SCIP_OKAY;
 }
 
-/** tries to determine the curvature type of an expression w.r.t. given variable domains */
-SCIP_RETCODE SCIPexprCheckCurvature(
+/** internal curvature check method */
+static
+SCIP_RETCODE doCheckCurvature(
    SCIP_EXPR*            expr,               /**< expression to check */
    SCIP_Real             infinity,           /**< value to use for infinity */
    SCIP_INTERVAL*        varbounds,          /**< domains of variables */
+   SCIP_INTERVAL*        childbounds,        /**< child bounds buffer array */
    SCIP_Real*            param,              /**< values for parameters, can be NULL if the expression is not parameterized */
    SCIP_EXPRCURV*        curv,               /**< buffer to store curvature of expression */
+   SCIP_EXPRCURV*        childcurv,          /**< buffer array for curvature of children */
    SCIP_INTERVAL*        bounds              /**< buffer to store bounds on expression */
    )
 {
-   SCIP_INTERVAL  childboundsbuf[SCIP_EXPRESSION_MAXCHILDEST];
-   SCIP_INTERVAL* childbounds;
-   SCIP_EXPRCURV  childcurvbuf[SCIP_EXPRESSION_MAXCHILDEST];
-   SCIP_EXPRCURV* childcurv;
    int i;
 
-   assert(expr != NULL);
-   assert(curv != NULL);
-   assert(bounds != NULL);
-
-   /* if many children, get large enough memory to store argument values */
-   if( expr->nchildren > SCIP_EXPRESSION_MAXCHILDEST )
-   {
-      SCIP_ALLOC( BMSallocMemoryArray(&childbounds, expr->nchildren) );
-      SCIP_ALLOC( BMSallocMemoryArray(&childcurv,   expr->nchildren) );
-   }
-   else
-   {
-      childbounds = childboundsbuf;
-      childcurv   = childcurvbuf;
-   }
+   assert(childbounds != NULL);
+   assert(childcurv != NULL);
 
    /* check curvature and compute bounds of children
     * constant children can be considered as always linear */
@@ -8069,14 +8055,52 @@ SCIP_RETCODE SCIPexprCheckCurvature(
    SCIP_CALL( exprOpTable[expr->op].curv(infinity, expr->data, expr->nchildren, childbounds, childcurv, curv) );
    SCIP_CALL( exprOpTable[expr->op].inteval(infinity, expr->data, expr->nchildren, childbounds, varbounds, param, bounds) );
 
+   return SCIP_OKAY;
+}
+
+/** tries to determine the curvature type of an expression w.r.t. given variable domains */
+SCIP_RETCODE SCIPexprCheckCurvature(
+   SCIP_EXPR*            expr,               /**< expression to check */
+   SCIP_Real             infinity,           /**< value to use for infinity */
+   SCIP_INTERVAL*        varbounds,          /**< domains of variables */
+   SCIP_Real*            param,              /**< values for parameters, can be NULL if the expression is not parameterized */
+   SCIP_EXPRCURV*        curv,               /**< buffer to store curvature of expression */
+   SCIP_INTERVAL*        bounds              /**< buffer to store bounds on expression */
+   )
+{
+   SCIP_INTERVAL  childboundsbuf[SCIP_EXPRESSION_MAXCHILDEST];
+   SCIP_INTERVAL* childbounds = NULL;
+   SCIP_EXPRCURV  childcurvbuf[SCIP_EXPRESSION_MAXCHILDEST];
+   SCIP_EXPRCURV* childcurv = NULL;
+   SCIP_RETCODE retcode = SCIP_OKAY;
+
+   assert(expr != NULL);
+   assert(curv != NULL);
+   assert(bounds != NULL);
+
+   /* if many children, get large enough memory to store argument values */
+   if( expr->nchildren > SCIP_EXPRESSION_MAXCHILDEST )
+   {
+      SCIP_ALLOC( BMSallocMemoryArray(&childbounds, expr->nchildren) );
+      SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&childcurv, expr->nchildren), TERMINATE );
+   }
+   else
+   {
+      childbounds = childboundsbuf;
+      childcurv   = childcurvbuf;
+   }
+
+   retcode = doCheckCurvature(expr, infinity, varbounds, childbounds, param, curv, childcurv, bounds);
+
+TERMINATE:
    /* free memory, if allocated before */
    if( childboundsbuf != childbounds )
    {
-      BMSfreeMemoryArray(&childcurv);
-      BMSfreeMemoryArray(&childbounds);
+      BMSfreeMemoryArrayNull(&childcurv);
+      BMSfreeMemoryArrayNull(&childbounds);
    }
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 /** under-/overestimates a user expression w.r.t. to given values and bounds for children expressions */
@@ -13180,9 +13204,10 @@ SCIP_RETCODE SCIPexprgraphGetNodePolynomialMonomialCurvature(
    SCIP_EXPRDATA_MONOMIAL* monomial;
    SCIP_INTERVAL  childboundsstatic[SCIP_EXPRESSION_MAXCHILDEST];
    SCIP_EXPRCURV  childcurvstatic[SCIP_EXPRESSION_MAXCHILDEST];
-   SCIP_INTERVAL* childbounds;
-   SCIP_EXPRCURV* childcurv;
+   SCIP_INTERVAL* childbounds = NULL;
+   SCIP_EXPRCURV* childcurv = NULL;
    SCIP_EXPRGRAPHNODE* child;
+   SCIP_RETCODE retcode = SCIP_OKAY;
    int i;
 
    assert(node != NULL);
@@ -13209,7 +13234,7 @@ SCIP_RETCODE SCIPexprgraphGetNodePolynomialMonomialCurvature(
    if( monomial->nfactors > SCIP_EXPRESSION_MAXCHILDEST )
    {
       SCIP_ALLOC( BMSallocMemoryArray(&childbounds, monomial->nfactors) );
-      SCIP_ALLOC( BMSallocMemoryArray(&childcurv, monomial->nfactors) );
+      SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&childcurv, monomial->nfactors), TERMINATE );
    }
    else
    {
@@ -13238,13 +13263,14 @@ SCIP_RETCODE SCIPexprgraphGetNodePolynomialMonomialCurvature(
    *curv = SCIPexprcurvMultiply(monomial->coef, *curv);
 
    /* free memory, if allocated before */
+TERMINATE:
    if( childbounds != childboundsstatic )
    {
-      BMSfreeMemoryArray(&childbounds);
-      BMSfreeMemoryArray(&childcurv);
+      BMSfreeMemoryArrayNull(&childbounds);
+      BMSfreeMemoryArrayNull(&childcurv);
    }
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 /** gives the user data belonging to a SCIP_EXPR_USER expression */

@@ -62,6 +62,7 @@
  * - \ref EXAMPLES    "Examples"
  * - \ref APPLICATIONS "Extensions of SCIP for specific applications"
  * - \ref LPI         "Available LP solver interfaces"
+ * - \ref NLPISOLVERS "Available implementations of the NLP solver interface"
  *
  * @section FURTHERINFORMATION References
  *
@@ -99,7 +100,7 @@
  *   - \ref DIALOG  "Dialogs"
  *   - \ref DISP    "Display columns"
  *   - \ref EVENT   "Event handler"
- *   - \ref NLPI    "Interfaces to NLP solvers"
+ *   - \ref NLPI    "Interface to NLP solvers"
  *   - \ref EXPRINT "Interfaces to expression interpreters"
  *   - \ref PARAM   "additional user parameters"
  *   - \ref TABLE   "Statistics tables"
@@ -118,6 +119,7 @@
  * @subsection CHG Changes between different versions of SCIP
  * - \ref CHANGELOG    "Change log"
  * - \ref RELEASENOTES "Release notes"
+ * - \ref CHG10        "Interface changes between version 4.0 and 5.0"
  * - \ref CHG9         "Interface changes between version 3.2 and 4.0"
  * - \ref CHG8         "Interface changes between version 3.1 and 3.2"
  * - \ref CHG7         "Interface changes between version 3.0 and 3.1"
@@ -131,7 +133,7 @@
  * @subsection AUTHORS SCIP Authors
  * - <a class="el" href="http://scip.zib.de/#developers">Developers</a>
  *
- * @version  4.0.1.3
+ * @version  5.0.0.1
  *
  * \image html scippy.png
  *
@@ -334,6 +336,45 @@
  *
  * To use the old interface, set the Makefile option `LPS=spx1` or configure your CMake build with `LEGACY=ON`.
  *
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/** @page NLPISOLVERS Available implementations of the NLP solver interface
+ *
+ * SCIP implements the NLP solver interface for the solvers <a href="https://projects.coin-or.org/Ipopt">IPOPT</a>, <a
+ * href="https://worhp.de/">WORHP</a>, and <a href=" http://www.mcs.anl.gov/~leyffer/solvers.html">FilterSQP</a>. In
+ * contrast to the implementations of the LP solver interface, SCIP can be compiled with multiple NLP solvers and selects
+ * the solver with the highest priority at the beginning of the solving process.
+ * Currently, the priorities are, in descending order: Ipopt, WORHP/IP, FilterSQP, WORHP/SQP.
+ *
+ * If more than one solver is available, then it is possible to solve all NLPs during the solving process with all
+ * available NLP solvers by setting the parameter `nlpi/all/priority` to the highest value.
+ * In this case, SCIP uses the solution from a solver that provides the best objective value. Other possible use
+ * cases for the availability of multiple solvers have not been implemented yet.
+ *
+ * In the @ref MAKE "GNU make" based build system, building the implementations of the interface for FilterSQP, IPOPT, and
+ * WORHP can be enabled by specifying `FILTERSQP=true`, `IPOPT=true`, and `WORHP=true`, respectively, as argument to the
+ * `make` call.
+ * In the @ref CMAKE "CMAKE" based build system, building the implementation of the interface for IPOPT and WORHP can be
+ * enabled by specifying `IPOPT=on` and `WORHP=on`, respectively, as argument to the `cmake` call.
+ *
+ * @subsection NLPISOLVERS_IPOPT IPOPT
+ *
+ * <b>IPOPT</b> implements a primal-dual interior point method and uses line searches based on filter methods. It has
+ * been developed by Andreas W&auml;chter and Carl Laird and is available under the Eclipse Public License on <a
+ * href="https://www.coin-or.org/">COIN-OR</a>.
+ *
+ * @subsection NLPISOLVERS_WORHP WORHP
+ *
+ * <b>WORHP</b> implements a sequential quadratic programming method and a penalty-interior point algorithm.  It is
+ * developed at the <a href="http://www.uni-bremen.de/en.html">University of Bremen</a> and is free for academic
+ * purposes.
+ *
+ * @subsection NLPISOLVERS_FILTERSQP FilterSQP
+ *
+ * <b>FilterSQP</b> implements a sequential quadratic programming method. It has been developed by Roger Fletcher
+ * and Sven Leyffer. It is not publicly available, but may be obtained from Sven Leyffer on request.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -683,11 +724,15 @@
  * that may take a while to complete. To perform a quick test to see whether the compilation was really successful you may
  * run `make check`. To see all available tests, run
  *
- * ```ctest -N```
+ * ```
+ * ctest -N
+ * ```
  *
  * and to perform a memory check, run
  *
- * ```ctest -T MemCheck```
+ * ```
+ * ctest -T MemCheck
+ * ```
  *
  * If <a href="https://criterion.readthedocs.io/en/master/">Criterion</a> is installed (set
  * custom path with `-DCRITERION_DIR=<path>`) the target `unittests` can be used to compile and run the available unit tests.
@@ -839,6 +884,11 @@
  *                          for Linux, Mac OS X and Windows.
  *      - <code>omp</code>: use the OpenMP. This will not work with microsoft compilers, since they do not support
  *                          the required OpenMP version.
+ *
+ * - <code>SYM=\<bliss|none\></code> This determines the graph automorphism code used to compute symmetries of mixed
+ *   integer programs if symmetry handling is enabled. The options are the following:
+ *      - <code>none</code>: do not use a graph automorphism code, i.e., symmetries cannot be handled
+ *      - <code>bliss</code>: use bliss to compute symmetries.
  *
  * You can use other compilers - depending on the system:
  *
@@ -6601,7 +6651,7 @@
  *
  * - <b>Others</b>:
  *      <br><br>
- *    - SCIPcutGenerationHeuristicCmir() in \ref sepa_cmir.h has three new parameters:
+ *    - SCIPcutGenerationHeuristicCmir() in sepa_cmir.h has three new parameters:
  *        - <code>maxmksetcoefs</code> - If the mixed knapsack constraint obtained after aggregating LP rows contains more
  *          than <code>maxmksetcoefs</code> nonzero coefficients the generation of the <b>c-MIR cut</b> is aborted.
  *        - <code>delta</code> - It can be used to obtain the scaling factor which leads to the best c-MIR cut found within
@@ -7180,7 +7230,8 @@
   * For further information we refer to the \ref RELEASENOTES "Release notes" and the \ref CHANGELOG "Changelog".
   */
 
-  /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
  /**@page CHG9 Interface changes between SCIP 3.2 and SCIP 4.0
   *
   *
@@ -7262,7 +7313,79 @@
   * For further information we refer to the \ref RELEASENOTES "Release notes" and the \ref CHANGELOG "Changelog".
   */
 
-/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+ /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+ /**@page CHG10 Interface changes between SCIP 4.0 and SCIP 5.0
+  *
+  *
+  * @section CHGCALLBACKS10 New and changed callbacks
+  *
+  * - <b>New types</b>:
+  *   - Added new abstract selection algorithm SCIP_BANDIT together with callbacks
+  *   - Added new type SCIP_TABLE together with callbacks to output SCIP statistics
+  *   - Added new types for symmetry handling
+  *
+  * - <b>Separation callbacks</b>:
+  *   - Added parameter "allowlocal" to SCIP_DECL_SEPAEXECLP and SCIP_DECL_SEPAEXECSOL
+  *
+  * - <b>NLP callbacks</b>
+  *   - Added parameter "dstatssize" to SCIP_DECL_NLPIDELVARSET and SCIP_DECL_NLPIDELCONSSET
+  *   - Added parameter "objval" to SCIP_DECL_NLPIGETSOLUTION
+  *
+  *
+  * <br>
+  * @section CHGINTERFUNC10 Changed interface methods
+  *
+  * <br>
+  * - <b>Cutting plane separation methods</b>:
+  *   - Changed function signature of SCIPcalcMir()
+  *   - Changed function signature of SCIPcalcStrongCG()
+  *   - Added parameter "allowlocal" to SCIPseparateSol()
+  *   - Removed solution pointer argument from SCIPaddCut()
+  *   - New method SCIPaddRow() to replace deprecated SCIPaddCut()
+  *
+  * <br>
+  * - <b>Relaxator methods</b>:
+  *   - Removed parameter "includeslp" from SCIPincludeRelax()
+  *   - Added parameter "includeslp" to SCIPmarkRelaxSolValid(), SCIPsetRelaxSolVals(), and SCIPsetRelaxSolValsSol()
+  *   - Removed functions SCIPrelaxIncludesLp() and SCIPrelaxSetIncludesLp()
+  *   - Replaced method SCIPgetRelaxFeastolFactor() by SCIPrelaxfeastol() and added SCIPchgRelaxfeastol()
+  *
+  * <br>
+  * - <b>LP interface</b>:
+  *   - Replaced LP parameters SCIP_LPPARAM_LOBJLIM and SCIP_LPPARAM_UOBJLIM by SCIP_LPPARAM_OBJLIM.
+  *
+  * <br>
+  * - <b>NLP interface</b>:
+  *   - Added argument "dstatssize" to SCIPnlpiDelVarSet() and SCIPnlpiDelConsSet()
+  *   - Added modifier const to "exprtree" argument of SCIPnlpiChgExprtree()
+  *   - Added parameter "objval" to SCIPnlpiGetSolution()
+  *   - Added argument "varnameslength" to SCIPexprParse()
+  *   - Dropped NLP termination status "SCIP_NLPTERMSTAT_UOBJLIM"
+  *
+  * <br>
+  * - <b>Data structures</b>:
+  *   - Methods SCIPrandomCreate() and SCIPrandomFree() are no longer public and should be replaced
+  *     by SCIPcreateRandom() and SCIPfreeRandom(), respectively. The new methods respect
+  *     the global parameter "randomization/randomseedshift" automatically.
+  *   - Methods SCIPdigraphCreate() and SCIPdigraphFree() are no longer public and should be replaced
+  *     by SCIPcreateDigraph() and SCIPfreeDigraph(), respectively, which receive a \SCIP argument
+  *     and are more robust towards future interface changes.
+  *
+  * <br>
+  * - <b>Misc</b>:
+  *   - Added parameter "copytables" to SCIPcopyPlugins()
+  *   - Allowed SCIPgetNConss() in stage SCIP_STAGE_INITSOLVE
+  *   - SCIPsolveConcurrent() is deprecated. Use SCIPsolveParallel() instead.
+  *   - Changed return type of SCIPcliqueGetId() from "int" to "unsigned int".
+  *   - Removed SCIPvarGetCliqueComponentIdx(). The connectedness information
+  *     of the clique table is now stored as a SCIP_DISJOINTSET member of the cliquetable
+  *     and cannot be publicly accessed.
+  *
+  * <br>
+  * For further information we refer to the \ref RELEASENOTES "Release notes" and the \ref CHANGELOG "Changelog".
+  */
+
+ /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /**@page COUNTER How to use SCIP to count/enumerate feasible solutions
  *
@@ -7362,7 +7485,7 @@
  * <code>count</code> command by applying the following steps:
  *
  *  -# Solve the original problem to optimality and let \f$c^*\f$ be the optimal value
- *  -# Add the objective function as constraint with left and right hand side equal to \f$c^*\f$
+ *  -# Added the objective function as constraint with left and right hand side equal to \f$c^*\f$
  *  -# load the adjusted problem into SCIP
  *  -# use the predefined counting settings
  *  -# start counting the number of feasible solutions
@@ -7707,13 +7830,19 @@
  *  Below you find a list of available data structures
  */
 
-/** @defgroup DisjointSet Disjoined Set (Union Find)
+/** @defgroup DisjointSet Disjoint Set (Union Find)
  *  @ingroup DataStructures
  *  @brief weighted disjoint set (union find) data structure with path compression
  *
- *  Weighted Disjoined Set is a data structure to quickly update and query connectedness information
- *  between nodes of a graph. Disjoined Set is also known as Union Find.
+ *  Weighted Disjoint Set is a data structure to quickly update and query connectedness information
+ *  between nodes of a graph. Disjoint Set is also known as Union Find.
  */
+
+/**@defgroup DirectedGraph Directed Graph
+ * @ingroup DataStructures
+ * @brief graph structure with common algorithms for directed and undirected graphs
+ */
+
 /**@defgroup MiscellaneousMethods Miscellaneous Methods
  * @ingroup PUBLICCOREAPI
  * @brief commonly used methods from different categories
@@ -8038,9 +8167,18 @@
  *
  */
 
-/**@defgroup LPIS LP Solver Interfaces
+/**@defgroup LPIS LP Solver Interface
  * @ingroup PUBLICPLUGINLPI
- * @brief methods and files provided by the default LP solver interfaces of \SCIP
+ * @brief methods and files provided by the LP solver interface of \SCIP
+ *
+ * \SCIP uses external tools to solve LP relaxations. The communication
+ * is realized through an LP interface.
+ *
+ * This page lists public interface methods that every LP interface provides.
+ * Find the concrete implementation for your LP solver
+ * under "src/lpi/".
+ *
+ * @see \ref LPI for a list of available LP solver interfaces
  */
 
 /**@defgroup NODESELECTORS Node Selectors

@@ -347,7 +347,7 @@ void* BMSallocClearMemory_call(
    if( ptr == NULL )
    {
       printErrorHeader(filename, line);
-      printError("Insufficient memory for allocation of %llu bytes.\n", (unsigned long long)(num * typesize));
+      printError("Insufficient memory for allocation of %llu bytes.\n", (unsigned long long)(num) * (typesize));
    }
 #if !defined(NDEBUG) && defined(NPARASCIP)
    else

@@ -2,7 +2,7 @@
 
 # For release versions, only use VERSION="x.x.x".
 # For development versions, use VERSION="x.x.x.x" with subversion number.
-VERSION="4.0.1.3"
+VERSION="5.0.0.1"
 NAME="scip-$VERSION"
 rm -f $NAME
 ln -s . $NAME
@@ -35,6 +35,7 @@ $NAME/doc/pictures/miniscippy.png $NAME/doc/pictures/scippy.png \
 $NAME/make/make.* \
 $NAME/check/CMakeLists.txt                     \
 $NAME/tests/CMakeLists.txt                     \
+$NAME/src/scipbuildflags.c.in                  \
 $NAME/src/CMakeLists.txt                       \
 $NAME/CMakeLists.txt \
 $NAME/scip-config.cmake.in \
@@ -56,6 +57,7 @@ $NAME/src/scip/*.c $NAME/src/scip/*.h \
 $NAME/src/nlpi/*.c $NAME/src/nlpi/*.cpp $NAME/src/nlpi/*.h \
 $NAME/src/lpi/*.c $NAME/src/lpi/*.cpp $NAME/src/lpi/*.h \
 $NAME/src/tpi/*.c $NAME/src/tpi/*.h \
+$NAME/src/symmetry/*.cpp $NAME/src/symmetry/*.h \
 $NAME/src/xml/*.c $NAME/src/xml/*.h \
 $NAME/src/tinycthread/*.c $NAME/src/tinycthread/*.h \
 $NAME/src/dijkstra/*.c $NAME/src/dijkstra/*.h \
@@ -73,8 +75,9 @@ $NAME/applications/CMakeLists.txt \
 $NAME/applications/CycleClustering/* $NAME/applications/CycleClustering/doc/* $NAME/applications/CycleClustering/instances/Pot/3Cycle/* \
 $NAME/applications/CycleClustering/instances/Pot/4Cycle/*                 $NAME/applications/CycleClustering/instances/Pot/6Cycle/* \
 $NAME/applications/CycleClustering/check/CMakeLists.txt $NAME/applications/CycleClustering/settings/* \
-$NAME/applications/CycleClustering/check/testset/quick.test \
-$NAME/applications/CycleClustering/src/*.c $NAME/applications/Coloring/src/*.h \
+$NAME/applications/CycleClustering/check/testset/short.test \
+$NAME/applications/CycleClustering/src/*.c $NAME/applications/CycleClustering/src/*.h \
+$NAME/applications/Coloring/src/*.h \
 $NAME/applications/Scheduler/doc/* \
 $NAME/applications/Scheduler/check/CMakeLists.txt \
 $NAME/applications/Scheduler/check/testset/short.test $NAME/applications/Scheduler/check/testset/short.solu \
@@ -189,6 +192,8 @@ $NAME/interfaces/gams/Makefile $NAME/interfaces/gams/INSTALL $NAME/interfaces/ga
 $NAME/interfaces/gams/test.sh $NAME/interfaces/gams/src/* \
 $NAME/check/instances/Bivariate/*.osil \
 $NAME/check/instances/Bilinrelax/*.osil \
+$NAME/check/instances/Cardinality/*.cip \
+$NAME/check/instances/Cardinality/*.lp \
 $NAME/check/instances/CP/*.cip \
 $NAME/check/instances/Indicator/*.lp \
 $NAME/check/instances/MIP/*.fzn \

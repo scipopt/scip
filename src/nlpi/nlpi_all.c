@@ -38,6 +38,7 @@
 struct SCIP_NlpiData
 {
    SCIP_NLPI**           nlpis;              /**< array containing all nlpis */
+   BMS_BLKMEM*           blkmem;             /**< block memory */
    int                   nnlpis;             /**< total number of nlpis */
    SCIP_MESSAGEHDLR*     messagehdlr;        /**< message handler */
 };
@@ -114,8 +115,8 @@ SCIP_DECL_NLPIFREE( nlpiFreeAll )
       SCIP_CALL( SCIPnlpiFree(&data->nlpis[i]) );
    }
 
-   BMSfreeMemoryArrayNull(&data->nlpis);
-   BMSfreeMemory(&data);
+   BMSfreeBlockMemoryArrayNull(data->blkmem, &data->nlpis, data->nnlpis);
+   BMSfreeBlockMemory(data->blkmem, &data);
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
@@ -156,13 +157,13 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemAll)
    data = SCIPnlpiGetData(nlpi);
    assert(data != NULL);
 
-   SCIP_ALLOC( BMSallocMemory(problem) );
+   SCIP_ALLOC( BMSallocBlockMemory(data->blkmem, problem) );
    if( *problem == NULL )
       return SCIP_NOMEMORY;
 
    /* initialize problem */
    BMSclearMemory((*problem));
-   BMSallocMemoryArray(&(*problem)->nlpiproblems, data->nnlpis);
+   SCIP_ALLOC( BMSallocBlockMemoryArray(data->blkmem, &(*problem)->nlpiproblems, data->nnlpis) );
    (*problem)->nnlpiproblems = data->nnlpis;
 
    for( i = 0; i < data->nnlpis; ++i )
@@ -199,8 +200,8 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemAll)
       SCIP_CALL( SCIPnlpiFreeProblem(data->nlpis[i], &(*problem)->nlpiproblems[i]) );
    }
 
-   BMSfreeMemoryArrayNull(&(*problem)->nlpiproblems);
-   BMSfreeMemory(problem);
+   BMSfreeBlockMemoryArrayNull(data->blkmem, &(*problem)->nlpiproblems, data->nnlpis);
+   BMSfreeBlockMemory(data->blkmem, problem);
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -443,7 +444,7 @@ SCIP_DECL_NLPIDELVARSET( nlpiDelVarSetAll )
    nlpidata = SCIPnlpiGetData(nlpi);
    assert(nlpidata != NULL);
 
-   SCIP_ALLOC( BMSallocMemoryArray(&tmpdstats, dstatssize) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(nlpidata->blkmem, &tmpdstats, dstatssize) );
 
    for( i = 0; i < nlpidata->nnlpis; ++i )
    {
@@ -467,7 +468,7 @@ SCIP_DECL_NLPIDELVARSET( nlpiDelVarSetAll )
       }
    }
 
-   BMSfreeMemoryArray(&tmpdstats);
+   BMSfreeBlockMemoryArray(nlpidata->blkmem, &tmpdstats, dstatssize);
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -493,7 +494,7 @@ SCIP_DECL_NLPIDELCONSSET( nlpiDelConstraintSetAll )
    nlpidata = SCIPnlpiGetData(nlpi);
    assert(nlpidata != NULL);
 
-   SCIP_ALLOC( BMSallocMemoryArray(&tmpdstats, dstatssize) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(nlpidata->blkmem, &tmpdstats, dstatssize) );
 
    for( i = 0; i < nlpidata->nnlpis; ++i )
    {
@@ -518,7 +519,7 @@ SCIP_DECL_NLPIDELCONSSET( nlpiDelConstraintSetAll )
 
    }
 
-   BMSfreeMemoryArray(&tmpdstats);
+   BMSfreeBlockMemoryArray(nlpidata->blkmem, &tmpdstats, dstatssize);
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -1192,10 +1193,11 @@ SCIP_RETCODE SCIPcreateNlpSolverAll(
    assert(nlpis != NULL);
 
    /* create all solver interface data */
-   SCIP_ALLOC( BMSallocMemory(&nlpidata) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, &nlpidata) );
    BMSclearMemory(nlpidata);
+   nlpidata->blkmem = blkmem;
 
-   BMSallocMemoryArray(&nlpidata->nlpis, nnlpis);
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &nlpidata->nlpis, nnlpis) );
 
    /* copy nlpis */
    for( i = 0; i < nnlpis; ++i )

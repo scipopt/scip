@@ -448,11 +448,13 @@ void SCIPnlpiSetPriority(
 
 /** creates an NLP statistics structure */
 SCIP_RETCODE SCIPnlpStatisticsCreate(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_NLPSTATISTICS**  statistics          /**< pointer where to store NLP statistics structure */
    );
 
 /** frees an NLP statistics structure */
 void SCIPnlpStatisticsFree(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_NLPSTATISTICS**  statistics          /**< pointer where to store NLP statistics structure */
    );
 

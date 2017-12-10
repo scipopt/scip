@@ -276,7 +276,8 @@ SCIP_RETCODE computeBranchingVariables(
    SCIP*                 scip,               /**< SCIP pointer */
    int                   nvars,              /**< number of variables */
    SCIP_HASHMAP*         varmap,             /**< map of variables to indices in vars array */
-   SCIP_Shortbool*       b1                  /**< bitset marking the variables branched to 1 */
+   SCIP_Shortbool*       b1,                 /**< bitset marking the variables branched to 1 */
+   SCIP_Bool*            success             /**< pointer to store whether branching variables were computed successfully */
    )
 {
    SCIP_NODE* node;
@@ -284,6 +285,9 @@ SCIP_RETCODE computeBranchingVariables(
    assert( scip != NULL );
    assert( varmap != NULL );
    assert( b1 != NULL );
+   assert( success != NULL );
+
+   *success = TRUE;
 
    /* get current node */
    node = SCIPgetCurrentNode(scip);
@@ -321,10 +325,16 @@ SCIP_RETCODE computeBranchingVariables(
          branchvar = SCIPboundchgGetVar(boundchg);
 
          /* we only consider binary variables */
-         if ( SCIPvarIsBinary(branchvar) )
+         if ( SCIPvarGetType(branchvar) == SCIP_VARTYPE_BINARY )
          {
-            /* make sure that branching variable is known */
-            assert( SCIPhashmapExists(varmap, (void*) branchvar) );
+            /* make sure that branching variable is known, since new binary variables may have
+             * been created meanwhile, e.g., by presol_inttobinary */
+            if ( ! SCIPhashmapExists(varmap, (void*) branchvar) )
+            {
+               *success = FALSE;
+               return SCIP_OKAY;
+            }
+
 
             if ( SCIPvarGetLbLocal(branchvar) > 0.5 )
             {
@@ -344,53 +354,6 @@ SCIP_RETCODE computeBranchingVariables(
 }
 
 
-#ifndef NDEBUG
-/** return objective coefficient, resolves negated or aggregated variables */
-static
-SCIP_Real varGetObjResolved(
-   SCIP_VAR*             var                 /**< variable */
-   )
-{
-   switch ( SCIPvarGetStatus(var) )
-   {
-   case SCIP_VARSTATUS_ORIGINAL:
-   case SCIP_VARSTATUS_LOOSE:
-   case SCIP_VARSTATUS_COLUMN:
-      return SCIPvarGetObj(var);
-
-   case SCIP_VARSTATUS_AGGREGATED:
-      assert( SCIPvarGetAggrVar(var) != NULL );
-      return SCIPvarGetAggrScalar(var) * SCIPvarGetObj(SCIPvarGetAggrVar(var));
-
-   case SCIP_VARSTATUS_FIXED:
-   {
-      SCIP_RETCODE retcode;
-      SCIP_Real scalar = 1.0;
-      SCIP_Real constant = 0.0;
-      SCIP_VAR* origvar;
-
-      origvar = var;
-      retcode = SCIPvarGetOrigvarSum(&origvar, &scalar, &constant);
-      if ( retcode != SCIP_OKAY )
-         return 0.0;
-      return scalar * SCIPvarGetObj(origvar);
-   }
-
-   case SCIP_VARSTATUS_NEGATED:
-      assert( SCIPvarIsNegated(var) );
-      assert( SCIPvarGetNegatedVar(var) != NULL );
-      return -SCIPvarGetObj(SCIPvarGetNegatedVar(var));
-
-   case SCIP_VARSTATUS_MULTAGGR:
-   default:
-      break;
-   }
-
-   return 0.0;
-}
-#endif
-
-
 /** propagate orbital fixing */
 static
 SCIP_RETCODE propagateOrbitalFixing(
@@ -402,9 +365,13 @@ SCIP_RETCODE propagateOrbitalFixing(
 {
    SCIP_Shortbool* activeperms;
    SCIP_Shortbool* b1;
+   SCIP_Bool success = TRUE;
    SCIP_VAR** permvars;
    int* orbitbegins;
    int* orbits;
+#ifndef NDEBUG
+   SCIP_Real* permvarsobj;
+#endif
    int norbits;
    int npermvars;
    int** perms;
@@ -438,7 +405,19 @@ SCIP_RETCODE propagateOrbitalFixing(
       b1[v] = FALSE;
 
    /* get branching variables */
-   SCIP_CALL( computeBranchingVariables(scip, npermvars, propdata->permvarmap, b1) );
+   SCIP_CALL( computeBranchingVariables(scip, npermvars, propdata->permvarmap, b1, &success) );
+
+   if ( ! success )
+   {
+      SCIPfreeBufferArray(scip, &b1);
+      SCIPfreeBufferArray(scip, &activeperms);
+      return SCIP_OKAY;
+   }
+
+#ifndef NDEBUG
+   SCIP_CALL( SCIPgetPermvarsObjSymmetry(scip, &permvarsobj) );
+#endif
+   assert( permvarsobj != NULL );
 
    /* filter out permutations that move variables that are fixed to different values */
    for (p = 0; p < nperms; ++p)
@@ -454,8 +433,7 @@ SCIP_RETCODE propagateOrbitalFixing(
          if ( img != v )
          {
             assert( SCIPvarGetType(permvars[v]) == SCIPvarGetType(permvars[img]) );
-            assert( SCIPvarGetStatus(permvars[v]) == SCIP_VARSTATUS_MULTAGGR || SCIPvarGetStatus(permvars[img]) == SCIP_VARSTATUS_MULTAGGR ||
-               SCIPisEQ(scip, varGetObjResolved(permvars[v]), varGetObjResolved(permvars[img])) );
+            assert( SCIPisEQ(scip, permvarsobj[v], permvarsobj[img]) );
 
             /* we are moving a variable branched to 1 to another variable */
             if ( b1[v] && ! b1[img] )
@@ -608,6 +586,9 @@ SCIP_DECL_PROPINITSOL(propInitsolOrbitalfixing)
    if ( SCIPgetStatus(scip) != SCIP_STATUS_UNKNOWN )
       return SCIP_OKAY;
 
+   if ( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
    assert( SCIPisTransformed(scip) );
 
    /* possibly get symmetries */
@@ -660,6 +641,11 @@ SCIP_DECL_PROPEXEC(propExecOrbitalfixing)
 
    /* do nothing if we are in a probing node */
    if ( SCIPinProbing(scip) )
+      return SCIP_OKAY;
+
+   /* do not run after a restart */
+   /* @todo recompute symmetries after a restart */
+   if ( SCIPgetNRuns(scip) > 1 )
       return SCIP_OKAY;
 
    /* get data */

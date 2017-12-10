@@ -335,7 +335,7 @@ SCIP_RETCODE getPermProperties(
 }
 
 
-/** Given a matrix with nrows and #perms + 1 columns whose first nfilledcols columns contain entries of variables, this routine
+/** Given a matrix with nrows and \#perms + 1 columns whose first nfilledcols columns contain entries of variables, this routine
  *  checks whether the 2-cycles of perm intersect each row of column coltoextend in exactly one position. In this case,
  *  we add one column to the suborbitope of the first nfilledcols columns.
  *
@@ -638,6 +638,7 @@ SCIP_RETCODE detectOrbitopes(
       SCIP_Bool infeasibleorbitope;
 
       /* get properties of permutations */
+      assert( npermsincomponent[i] > 0 );
       for (j = 0; j < npermsincomponent[i]; ++j)
       {
          SCIP_Bool iscompoftwocycles = FALSE;
@@ -661,6 +662,7 @@ SCIP_RETCODE detectOrbitopes(
       /* if no orbitope was detected or orbitope has too few rows */
       if ( ! isorbitope )
          continue;
+      assert( ntwocyclescomp > 0 );
 
       /* iterate over permutations and check whether for each permutation there exists
        * another permutation whose 2-cycles intersect pairwise in exactly one element */

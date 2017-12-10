@@ -180,6 +180,7 @@ struct SCIP_ConsData
    SCIP_Real*            eigenvalues;        /**< eigenvalues of A */
    SCIP_Real*            eigenvectors;       /**< orthonormal eigenvectors of A; if A = P D P^T, then eigenvectors is P^T */
    SCIP_Real*            bp;                 /**< stores b * P where b are the linear coefficients of the quadratic vars */
+   SCIP_Real             maxnonconvexity;    /**< nonconvexity measure: estimate on largest absolute value of nonconvex eigenvalues */
 
    SCIP_Bool             isdisaggregated;    /**< has the constraint already been disaggregated? if might happen that more disaggreation would be potentially
                                                   possible, but we reached the maximum number of sparsity components during presolveDisaggregate() */
@@ -201,6 +202,7 @@ struct BilinearEstimator
    SCIP_VAR*             y;                 /**< second variable */
    SCIP_Real             inequnderest[6];   /**< at most two inequalities that can be used to underestimate xy; stored as (xcoef,ycoef,constant) with xcoef x <= ycoef y + constant */
    SCIP_Real             ineqoverest[6];    /**< at most two inequalities that can be used to overestimate xy; stored as (xcoef,ycoef,constant) with xcoef x <= ycoef y + constant */
+   SCIP_Real             maxnonconvexity;   /**< estimate on largest absolute value of nonconvex eigenvalues of all quadratic constraint containing xy */
    int                   ninequnderest;     /**< total number of inequalities for underestimating xy */
    int                   nineqoverest;      /**< total number of inequalities for overestimating xy */
    int                   nunderest;         /**< number of constraints that require to underestimate xy */
@@ -216,9 +218,8 @@ struct SCIP_ConshdlrData
    int                   replacebinaryprodlength; /**< length of linear term which when multiplied with a binary variable is replaced by an auxiliary variable and an equivalent linear formulation */
    int                   empathy4and;        /**< how much empathy we have for using the AND constraint handler: 0 avoid always; 1 use sometimes; 2 use as often as possible */
    SCIP_Bool             binreforminitial;   /**< whether to make constraints added due to replacing products with binary variables initial */
+   SCIP_Bool             binreformbinaryonly;/**< whether to consider only binary variables when reformulating products with binary variables */
    SCIP_Real             binreformmaxcoef;   /**< factor on 1/feastol to limit coefficients and coef range in linear constraints created by binary reformulation */
-   SCIP_Real             mincutefficacysepa; /**< minimal efficacy of a cut in order to add it to relaxation during separation */
-   SCIP_Real             mincutefficacyenfofac; /**< minimal target efficacy of a cut in order to add it to relaxation during enforcement as factor of feasibility tolerance (may be ignored) */
    SCIP_Real             cutmaxrange;        /**< maximal range (maximal coef / minimal coef) of a cut in order to be added to LP */
    SCIP_Bool             linearizeheursol;   /**< whether linearizations of convex quadratic constraints should be added to cutpool when some heuristics finds a new solution */
    SCIP_Bool             checkcurvature;     /**< whether functions should be checked for convexity/concavity */
@@ -233,9 +234,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             enfocutsremovable;  /**< are cuts added during enforcement removable from the LP in the same node? */
    SCIP_Bool             gaugecuts;          /**< should convex quadratics generated strong cuts via gauge function? */
    SCIP_Bool             projectedcuts;      /**< should convex quadratics generated strong cuts via projections? */
-   char                  interiorcomputation;/**< how the interior point should be computed: 'a'ny point per constraint,
-                                              * 'm'ost interior per constraint
-                                              */
+   char                  interiorcomputation;/**< how the interior point should be computed: 'a'ny point per constraint, 'm'ost interior per constraint */
    char                  branchscoring;      /**< method to use to compute score of branching candidates */
    int                   enfolplimit;        /**< maximum number of enforcement round before declaring the LP relaxation
                                               * infeasible (-1: no limit); WARNING: if this parameter is not set to -1,
@@ -260,6 +259,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             storedbilinearterms; /**< did we already try to store all bilinear terms? */
 
    SCIP_Real             minscorebilinterms; /**< minimal required score in order to use linear inequalities for tighter bilinear relaxations */
+   SCIP_Real             mincurvcollectbilinterms;/**< minimal curvature of constraints to be considered when returning bilinear terms to other plugins */
    int                   bilinineqmaxseparounds; /**< maximum number of separation rounds to use linear inequalities for the bilinear term relaxation in a local node */
 };
 
@@ -3458,6 +3458,12 @@ SCIP_RETCODE presolveTryAddAND(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   /* if no binary variables, then we will find nothing to reformulate here
+    * (note that this does not count in integer variables with {0,1} bounds...)
+    */
+   if( SCIPgetNBinVars(scip) == 0 )
+      return SCIP_OKAY;
+
    /* if user does not like AND very much, then return */
    if( conshdlrdata->empathy4and < 2 )
       return SCIP_OKAY;
@@ -3662,6 +3668,12 @@ SCIP_RETCODE presolveTryAddLinearReform(
    assert(cons != NULL);
    assert(naddconss != NULL);
 
+   /* if no binary variables, then we will find nothing to reformulate here
+    * (note that this does not count in integer variables with {0,1} bounds...)
+    */
+   if( SCIPgetNBinVars(scip) == 0 )
+      return SCIP_OKAY;
+
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
@@ -3699,7 +3711,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
 
       /* setup a list of bounded variables x_i with coefficients a_i that are multiplied with binary y: y*(sum_i a_i*x_i)
        * and compute range of sum_i a_i*x_i for the cases y = 0 and y = 1
-       * we may need several rounds of maxnrvar < nbilinterms
+       * we may need several rounds if maxnrvar < nbilinterms
        */
       j = 0;
       do
@@ -3729,6 +3741,14 @@ SCIP_RETCODE presolveTryAddLinearReform(
             {
                SCIPdebugMsg(scip, "skip reform of <%s><%s> due to unbounded second variable [%g,%g]\n",
                   SCIPvarGetName(y), SCIPvarGetName(bvar), SCIPvarGetLbGlobal(bvar), SCIPvarGetUbGlobal(bvar));
+               continue;
+            }
+
+            /* skip products with non-binary variables if binreformbinaryonly is set */
+            if( conshdlrdata->binreformbinaryonly && !SCIPvarIsBinary(bvar) )
+            {
+               SCIPdebugMsg(scip, "skip reform of <%s><%s> because second variable is not binary\n",
+                  SCIPvarGetName(y), SCIPvarGetName(bvar));
                continue;
             }
 
@@ -4891,12 +4911,18 @@ void checkCurvatureEasy(
 
    SCIPdebugMsg(scip, "Checking curvature of constraint <%s> without multivariate functions\n", SCIPconsGetName(cons));
 
+   consdata->maxnonconvexity = 0.0;
    if( nquadvars == 1 )
    {
       assert(consdata->nbilinterms == 0);
       consdata->isconvex      = !SCIPisNegative(scip, consdata->quadvarterms[0].sqrcoef);
       consdata->isconcave     = !SCIPisPositive(scip, consdata->quadvarterms[0].sqrcoef);
       consdata->iscurvchecked = TRUE;
+
+      if( !SCIPisInfinity(scip, -consdata->lhs) && consdata->quadvarterms[0].sqrcoef > 0.0 )
+         consdata->maxnonconvexity =  consdata->quadvarterms[0].sqrcoef;
+      if( !SCIPisInfinity(scip,  consdata->rhs) && consdata->quadvarterms[0].sqrcoef < 0.0 )
+         consdata->maxnonconvexity = -consdata->quadvarterms[0].sqrcoef;
    }
    else if( nquadvars == 0 )
    {
@@ -4915,6 +4941,11 @@ void checkCurvatureEasy(
       {
          consdata->isconvex  = consdata->isconvex  && !SCIPisNegative(scip, consdata->quadvarterms[v].sqrcoef);
          consdata->isconcave = consdata->isconcave && !SCIPisPositive(scip, consdata->quadvarterms[v].sqrcoef);
+
+         if( !SCIPisInfinity(scip, -consdata->lhs) &&  consdata->quadvarterms[v].sqrcoef > consdata->maxnonconvexity )
+            consdata->maxnonconvexity =  consdata->quadvarterms[0].sqrcoef;
+         if( !SCIPisInfinity(scip,  consdata->rhs) && -consdata->quadvarterms[v].sqrcoef > consdata->maxnonconvexity )
+            consdata->maxnonconvexity = -consdata->quadvarterms[0].sqrcoef;
       }
 
       consdata->iscurvchecked = TRUE;
@@ -4924,6 +4955,7 @@ void checkCurvatureEasy(
       consdata->isconvex  = FALSE;
       consdata->isconcave = FALSE;
       consdata->iscurvchecked = TRUE;
+      consdata->maxnonconvexity = SCIPinfinity(scip);
    }
    else
       *determined = FALSE;
@@ -4972,6 +5004,9 @@ SCIP_RETCODE checkCurvature(
 
    if( n == 2 )
    {
+      SCIP_Real tracehalf;
+      SCIP_Real discriminantroot;
+
       /* compute eigenvalues by hand */
       assert(consdata->nbilinterms == 1);
       consdata->isconvex =
@@ -4982,6 +5017,19 @@ SCIP_RETCODE checkCurvature(
          consdata->quadvarterms[0].sqrcoef <= 0 &&
          consdata->quadvarterms[1].sqrcoef <= 0 &&
          4 * consdata->quadvarterms[0].sqrcoef * consdata->quadvarterms[1].sqrcoef >= consdata->bilinterms[0].coef * consdata->bilinterms[0].coef;
+
+      /* store largest eigenvalue causing nonconvexity according to sides */
+      tracehalf = (consdata->quadvarterms[0].sqrcoef + consdata->quadvarterms[1].sqrcoef) / 2.0;
+      discriminantroot = consdata->quadvarterms[0].sqrcoef * consdata->quadvarterms[1].sqrcoef - SQR(consdata->bilinterms[0].coef / 2.0);
+      discriminantroot = SQR(tracehalf) - discriminantroot;
+      assert(!SCIPisNegative(scip, discriminantroot));
+      discriminantroot = SQRT(MAX(0.0, discriminantroot));
+
+      consdata->maxnonconvexity = 0.0;
+      if( !SCIPisInfinity(scip, -consdata->lhs) )
+         consdata->maxnonconvexity = MAX(consdata->maxnonconvexity, tracehalf + discriminantroot);
+      if( !SCIPisInfinity(scip, consdata->rhs) )
+         consdata->maxnonconvexity = MAX(consdata->maxnonconvexity, discriminantroot - tracehalf);
 
       consdata->iscurvchecked = TRUE;
       return SCIP_OKAY;
@@ -4995,6 +5043,7 @@ SCIP_RETCODE checkCurvature(
       consdata->isconvex = FALSE;
       consdata->isconcave = FALSE;
       consdata->iscurvchecked = TRUE;
+      consdata->maxnonconvexity = SCIPinfinity(scip);
       return SCIP_OKAY;
    }
 
@@ -5004,6 +5053,7 @@ SCIP_RETCODE checkCurvature(
 
    consdata->isconvex  = TRUE;
    consdata->isconcave = TRUE;
+   consdata->maxnonconvexity = 0.0;
 
    SCIP_CALL( SCIPhashmapCreate(&var2index, SCIPblkmem(scip), n) );
    for( i = 0; i < n; ++i )
@@ -5013,6 +5063,14 @@ SCIP_RETCODE checkCurvature(
          SCIP_CALL( SCIPhashmapInsert(var2index, consdata->quadvarterms[i].var, (void*)(size_t)i) );
          matrix[i*n + i] = consdata->quadvarterms[i].sqrcoef;
       }
+      else
+      {
+         /* if pure square term, then update maximal nonconvex eigenvalue, as it will not be considered in lapack call below */
+         if( !SCIPisInfinity(scip, -consdata->lhs) && consdata->quadvarterms[i].sqrcoef > consdata->maxnonconvexity )
+            consdata->maxnonconvexity = consdata->quadvarterms[i].sqrcoef;
+         if( !SCIPisInfinity(scip, consdata->rhs) && -consdata->quadvarterms[i].sqrcoef > consdata->maxnonconvexity )
+            consdata->maxnonconvexity = -consdata->quadvarterms[i].sqrcoef;
+      }
       /* nonzero elements on diagonal tell a lot about convexity/concavity */
       if( SCIPisNegative(scip, consdata->quadvarterms[i].sqrcoef) )
          consdata->isconvex  = FALSE;
@@ -5020,11 +5078,18 @@ SCIP_RETCODE checkCurvature(
          consdata->isconcave = FALSE;
    }
 
+   /* skip lapack call, if we know already that we are indefinite
+    * NOTE: this will leave out updating consdata->maxnonconvexity, so that it only provides a lower bound in this case
+    */
    if( !consdata->isconvex && !consdata->isconcave )
    {
       SCIPfreeBufferArray(scip, &matrix);
       SCIPhashmapFree(&var2index);
       consdata->iscurvchecked = TRUE;
+      /* make sure that maxnonconvexity is strictly different from zero if nonconvex
+       * TODO one could think about doing some eigenvalue estimation here (Gershgorin)
+       */
+      consdata->maxnonconvexity = MAX(1000.0, consdata->maxnonconvexity);
       return SCIP_OKAY;
    }
 
@@ -5094,6 +5159,12 @@ SCIP_RETCODE checkCurvature(
 #endif
       }
 
+      /* update largest eigenvalue causing nonconvexity according to sides */
+      if( !SCIPisInfinity(scip, -consdata->lhs) )
+         consdata->maxnonconvexity = MAX(consdata->maxnonconvexity, alleigval[n-1]);
+      if( !SCIPisInfinity(scip, consdata->rhs) )
+         consdata->maxnonconvexity = MAX(consdata->maxnonconvexity, -alleigval[0]);
+
       SCIPfreeBufferArray(scip, &alleigval);
    }
    else
@@ -5101,6 +5172,7 @@ SCIP_RETCODE checkCurvature(
       consdata->isconvex = FALSE;
       consdata->isconcave = FALSE;
       consdata->iscurvchecked = TRUE; /* set to TRUE since it does not help to repeat this procedure again and again (that will not bring Ipopt in) */
+      consdata->maxnonconvexity = SCIPinfinity(scip);
    }
 
    SCIPhashmapFree(&var2index);
@@ -5779,6 +5851,7 @@ SCIP_RETCODE storeAllBilinearTerms(
          conshdlrdata->bilinestimators[pos].x = bilinterms[i].var1;
          conshdlrdata->bilinestimators[pos].y = bilinterms[i].var2;
          conshdlrdata->bilinestimators[pos].lastimprfac = 0.0;
+         conshdlrdata->bilinestimators[pos].maxnonconvexity = 0.0;
          ++pos;
       }
 
@@ -5790,12 +5863,14 @@ SCIP_RETCODE storeAllBilinearTerms(
       {
          conshdlrdata->bilinestimators[pos-1].nunderest += (hasrhs && !consdata->isconvex) ? 1 : 0;
          conshdlrdata->bilinestimators[pos-1].noverest += (haslhs && !consdata->isconcave) ? 1 : 0;
+         conshdlrdata->bilinestimators[pos-1].maxnonconvexity = MAX(conshdlrdata->bilinestimators[pos-1].maxnonconvexity, consdata->maxnonconvexity);
       }
       else
       {
          assert(SCIPisNegative(scip, bilinterms[i].coef));
          conshdlrdata->bilinestimators[pos-1].nunderest += (haslhs && !consdata->isconcave) ? 1 : 0;
          conshdlrdata->bilinestimators[pos-1].noverest += (hasrhs && !consdata->isconvex) ? 1 : 0;
+         conshdlrdata->bilinestimators[pos-1].maxnonconvexity = MAX(conshdlrdata->bilinestimators[pos-1].maxnonconvexity, consdata->maxnonconvexity);
       }
 
       /* update index of bilinear term in the constraint data */
@@ -7187,7 +7262,7 @@ void updateBilinearRelaxation(
          SCIP_Real absimpr = REALABS(val - (*bestval));
 
          /* update relaxation if possible */
-         if( relimpr > 0.05 && absimpr > 0.001 &&  ((overestimate && SCIPisFeasLT(scip, val, *bestval)) || (!overestimate && SCIPisFeasGT(scip, val, *bestval))) )
+         if( relimpr > 0.05 && absimpr > 1e-3 && ((overestimate && SCIPisRelLT(scip, val, *bestval)) || (!overestimate && SCIPisRelGT(scip, val, *bestval))) )
          {
             *bestcoefx = xcoef;
             *bestcoefy = ycoef;
@@ -7211,7 +7286,7 @@ void updateBilinearRelaxation(
          SCIP_Real absimpr = REALABS(val - (*bestval));
 
          /* update relaxation if possible */
-         if( relimpr > 0.05 && absimpr > 0.001 &&  ((overestimate && SCIPisFeasLT(scip, val, *bestval)) || (!overestimate && SCIPisFeasGT(scip, val, *bestval))) )
+         if( relimpr > 0.05 && absimpr > 1e-3 && ((overestimate && SCIPisRelLT(scip, val, *bestval)) || (!overestimate && SCIPisRelGT(scip, val, *bestval))) )
          {
             *bestcoefx = xcoef;
             *bestcoefy = ycoef;
@@ -7452,7 +7527,7 @@ SCIP_RETCODE generateCut(
    SCIP_ROW**            row,                /**< storage for cut */
    SCIP_Real*            efficacy,           /**< buffer to store efficacy of row in reference solution, or NULL if not of interest */
    SCIP_Bool             checkcurvmultivar,  /**< are we allowed to check the curvature of a multivariate quadratic function, if not done yet */
-   SCIP_Real             minefficacy         /**< minimal required efficacy (violation possibly scaled) */
+   SCIP_Real             minefficacy         /**< minimal required efficacy */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -8753,7 +8828,7 @@ SCIP_RETCODE generateCutSol(
    SCIP_ROW**            row,                /**< storage for cut */
    SCIP_Real*            efficacy,           /**< buffer to store efficacy of row in reference solution, or NULL if not of interest */
    SCIP_Bool             checkcurvmultivar,  /**< are we allowed to check the curvature of a multivariate quadratic function, if not done yet */
-   SCIP_Real             minefficacy,        /**< minimal required efficacy (violation scaled by maximal absolute coefficient) */
+   SCIP_Real             minefficacy,        /**< minimal required efficacy */
    char                  mode                /**< mode of execution 'g'auge, 'p'rojection, 'l'inearization gradient, 'd'efault */
    )
 {
@@ -9034,7 +9109,7 @@ SCIP_RETCODE processCut(
    SCIP_CONSHDLR*        conshdlr,           /**< quadratic constraints handler */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_Real             efficacy,           /**< efficacy of row in reference solution */
-   SCIP_Real             actminefficacy,     /**< actual minimal efficacy (whatever that is) */
+   SCIP_Real             minefficacy,        /**< minimal efficacy */
    SCIP_Bool             inenforcement,      /**< whether we are in constraint enforcement */
    SCIP_Real*            bestefficacy,       /**< buffer to store best efficacy of a cut that was added to the LP, if found; or NULL if not of interest */
    SCIP_RESULT*          result              /**< result of separation */
@@ -9059,7 +9134,7 @@ SCIP_RETCODE processCut(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   if( SCIPisGT(scip, efficacy, actminefficacy) && SCIPisCutApplicable(scip, *row) )  /*lint !e644 */
+   if( SCIPisGT(scip, efficacy, minefficacy) && SCIPisCutApplicable(scip, *row) )  /*lint !e644 */
    {
       SCIP_Bool infeasible;
 
@@ -9088,6 +9163,7 @@ SCIP_RETCODE processCut(
    SCIP_CALL( SCIPreleaseRow (scip, row) );
    return SCIP_OKAY;
 }
+
 /** tries to separate solution or LP solution by a linear cut
  *
  *  assumes that constraint violations have been computed
@@ -9109,7 +9185,6 @@ SCIP_RETCODE separatePoint(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
    SCIP_Real          efficacy;
-   SCIP_Real          actminefficacy;
    SCIP_SIDETYPE      violside;
    int                c;
    SCIP_ROW*          row;
@@ -9144,10 +9219,6 @@ SCIP_RETCODE separatePoint(
       if( *result == SCIP_FEASIBLE )
          *result = SCIP_DIDNOTFIND;
 
-      /* actual minimal efficacy */
-      actminefficacy = inenforcement && ((violside == SCIP_SIDETYPE_RIGHT && consdata->isconvex ) || (violside == SCIP_SIDETYPE_LEFT && consdata->isconcave))
-               ? SCIPfeastol(scip) : minefficacy;
-
       /* generate cut */
       if( sol == NULL && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
       {
@@ -9171,16 +9242,16 @@ SCIP_RETCODE separatePoint(
             else
                efficacy = 0.0;
 
-            SCIP_CALL( processCut(scip, &row, conshdlr, conss[c], efficacy, actminefficacy, inenforcement, bestefficacy, result) );
+            SCIP_CALL( processCut(scip, &row, conshdlr, conss[c], efficacy, minefficacy, inenforcement, bestefficacy, result) );
          }
          continue;
       }
       else
       {
          SCIP_CALL( generateCutSol(scip, conshdlr, conss[c], sol, NULL, violside, &row, &efficacy,
-            conshdlrdata->checkcurvature, actminefficacy, 'd') );
-         /* @todo If generation failed not because of low efficacy, then probably because of numerical issues */
-         SCIP_CALL( processCut(scip, &row, conshdlr, conss[c], efficacy, actminefficacy, inenforcement, bestefficacy, result) );
+            conshdlrdata->checkcurvature, minefficacy, 'd') );
+
+         SCIP_CALL( processCut(scip, &row, conshdlr, conss[c], efficacy, minefficacy, inenforcement, bestefficacy, result) );
       }
 
       if( *result == SCIP_CUTOFF )
@@ -10685,7 +10756,8 @@ SCIP_RETCODE propagateBoundsCons(
    /* was SCIPintervalAreDisjoint(consbounds, consactivity), but that would allow violations up to eps only
     * we need to decide feasibility w.r.t. feastol (but still want to propagate w.r.t. eps)
     */
-   if( SCIPisFeasGT(scip, consbounds.inf, consactivity.sup) || SCIPisFeasLT(scip, consbounds.sup, consactivity.inf) )
+   if( (!SCIPisInfinity(scip, -consdata->lhs) && SCIPisGT(scip, consdata->lhs-SCIPfeastol(scip), SCIPintervalGetSup(consactivity))) ||
+       (!SCIPisInfinity(scip,  consdata->rhs) && SCIPisLT(scip, consdata->rhs+SCIPfeastol(scip), SCIPintervalGetInf(consactivity))) )
    {
       SCIPdebugMsg(scip, "found constraint <%s> to be infeasible; sides: [%g, %g], activity: [%g, %g], infeas: %g\n",
          SCIPconsGetName(cons), consdata->lhs, consdata->rhs, SCIPintervalGetInf(consactivity), SCIPintervalGetSup(consactivity),
@@ -11437,8 +11509,6 @@ SCIP_RETCODE enforceConstraint(
    int                nchgbds;
    int                nnotify;
    SCIP_Real          sepaefficacy;
-   SCIP_Real          minefficacy;
-   SCIP_Real          leastpossibleefficacy;
    SCIP_Bool          solviolbounds;
 
    assert(scip != NULL);
@@ -11537,14 +11607,10 @@ SCIP_RETCODE enforceConstraint(
       return SCIP_OKAY;
    }
 
-   /* we would like a cut that is efficient enough that it is not redundant in the LP (>feastol)
-    * however, if the maximal violation is very small, also the best cut efficacy cannot be large
-    * thus, in the latter case, we are also happy if the efficacy is at least, say, 75% of the maximal violation
-    * but in any case we need an efficacy that is at least feastol
+   /* we would like a cut that is efficient enough that it is not redundant in the LP (>lpfeastol)
+    * however, we also don't want very weak cuts, so try to reach at least feastol (=lpfeastol by default, though)
     */
-   minefficacy = MIN(0.75*maxviol, conshdlrdata->mincutefficacyenfofac * SCIPfeastol(scip));  /*lint !e666 */
-   minefficacy = MAX(minefficacy, SCIPfeastol(scip));  /*lint !e666 */
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, minefficacy, TRUE, &separateresult, &sepaefficacy) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, SCIPfeastol(scip), TRUE, &separateresult, &sepaefficacy) );
    if( separateresult == SCIP_CUTOFF )
    {
       SCIPdebugMsg(scip, "separation found cutoff\n");
@@ -11553,7 +11619,7 @@ SCIP_RETCODE enforceConstraint(
    }
    if( separateresult == SCIP_SEPARATED )
    {
-      SCIPdebugMsg(scip, "separation succeeded (bestefficacy = %g, minefficacy = %g)\n", sepaefficacy, minefficacy);
+      SCIPdebugMsg(scip, "separation succeeded (bestefficacy = %g, minefficacy = %g)\n", sepaefficacy, SCIPfeastol(scip));
       *result = SCIP_SEPARATED;
       return SCIP_OKAY;
    }
@@ -11562,17 +11628,15 @@ SCIP_RETCODE enforceConstraint(
     * -> collect variables for branching
     */
 
-   SCIPdebugMsg(scip, "separation failed (bestefficacy = %g < %g = minefficacy ); max viol: %g\n", sepaefficacy, minefficacy, maxviol);
+   SCIPdebugMsg(scip, "separation failed (bestefficacy = %g < %g = minefficacy ); max viol: %g\n", sepaefficacy, SCIPfeastol(scip), maxviol);
 
    /* find branching candidates */
    SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, sol, &nnotify) );
 
-   /* if sepastore can decrease feasibility tolerance, we can add cuts with efficacy in [eps, feastol] */
-   leastpossibleefficacy = SCIPfeastol(scip);
-   if( nnotify == 0 && !solinfeasible && minefficacy > leastpossibleefficacy )
+   if( nnotify == 0 && !solinfeasible && SCIPfeastol(scip) > SCIPlpfeastol(scip) )
    {
       /* fallback 1: we also have no branching candidates, so try to find a weak cut */
-      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, leastpossibleefficacy, TRUE, &separateresult, &sepaefficacy) );
+      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, SCIPlpfeastol(scip), TRUE, &separateresult, &sepaefficacy) );
       if( separateresult == SCIP_CUTOFF )
       {
          SCIPdebugMsg(scip, "separation found cutoff\n");
@@ -12565,7 +12629,7 @@ SCIP_DECL_CONSSEPALP(consSepalpQuadratic)
             }
          }
 
-         SCIP_CALL( addLinearizationCuts(scip, conshdlr, conss, nconss, nlpsol, &lpsolseparated, conshdlrdata->mincutefficacysepa) );
+         SCIP_CALL( addLinearizationCuts(scip, conshdlr, conss, nconss, nlpsol, &lpsolseparated, SCIPgetSepaMinEfficacy(scip)) );
 
          SCIP_CALL( SCIPfreeSol(scip, &nlpsol) );
 
@@ -12583,7 +12647,7 @@ SCIP_DECL_CONSSEPALP(consSepalpQuadratic)
     * or separating with NLP solution as reference point failed, then try (again) with LP solution as reference point
     */
 
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, conshdlrdata->mincutefficacysepa, FALSE, result, NULL) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, SCIPgetSepaMinEfficacy(scip), FALSE, result, NULL) );
 
    return SCIP_OKAY;
 }
@@ -12592,7 +12656,6 @@ SCIP_DECL_CONSSEPALP(consSepalpQuadratic)
 static
 SCIP_DECL_CONSSEPASOL(consSepasolQuadratic)
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool          solviolbounds;
    SCIP_CONS*         maxviolcon;
 
@@ -12601,9 +12664,6 @@ SCIP_DECL_CONSSEPASOL(consSepasolQuadratic)
    assert(conss != NULL || nconss == 0);
    assert(sol != NULL);
    assert(result != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    *result = SCIP_DIDNOTFIND;
 
@@ -12617,7 +12677,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolQuadratic)
    if( maxviolcon == NULL )
       return SCIP_OKAY;
 
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, conshdlrdata->mincutefficacysepa, FALSE, result, NULL) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, SCIPgetSepaMinEfficacy(scip), FALSE, result, NULL) );
 
    return SCIP_OKAY;
 }
@@ -12717,6 +12777,30 @@ SCIP_DECL_CONSENFOPS(consEnfopsQuadratic)
 
    if( nnotify == 0 )
    {
+      SCIP_Bool addedcons;
+      SCIP_Bool reduceddom;
+      SCIP_Bool infeasible;
+
+      /* if no branching candidate found, then all variables are almost fixed
+       * calling replaceByLinearConstraints() should lead to fix all almost-fixed quadratic variables, and possibly replace some quad. conss by linear ones
+       */
+      SCIP_CALL( replaceByLinearConstraints(scip, conss, nconss, &addedcons, &reduceddom, &infeasible) );
+      if( addedcons )
+      {
+         *result = SCIP_CONSADDED;
+         return SCIP_OKAY;
+      }
+      if( reduceddom )
+      {
+         *result = SCIP_REDUCEDDOM;
+         return SCIP_OKAY;
+      }
+      if( infeasible )
+      {
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+
       SCIPdebugMsg(scip, "All variables in violated constraints fixed (up to epsilon). Cannot find branching candidate. Forcing solution of LP.\n");
       *result = SCIP_SOLVELP;
    }
@@ -13867,21 +13951,21 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          "whether to make non-varbound linear constraints added due to replacing products with binary variables initial",
          &conshdlrdata->binreforminitial, TRUE, FALSE, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/binreformbinaryonly",
+         "whether to consider only binary variables when replacing products with binary variables",
+         &conshdlrdata->binreformbinaryonly, FALSE, TRUE, NULL, NULL) );
+
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/binreformmaxcoef",
          "limit (as factor on 1/feastol) on coefficients and coef. range in linear constraints created when replacing products with binary variables",
          &conshdlrdata->binreformmaxcoef, TRUE, 1e-4, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/minefficacysepa",
-         "minimal efficacy for a cut to be added to the LP during separation; overwrites separating/efficacy",
-         &conshdlrdata->mincutefficacysepa, TRUE, 0.0001, 0.0, SCIPinfinity(scip), NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/minefficacyenfofac",
-         "minimal target efficacy of a cut in order to add it to relaxation during enforcement as a factor of the feasibility tolerance (may be ignored)",
-         &conshdlrdata->mincutefficacyenfofac, TRUE, 2.0, 1.0, SCIPinfinity(scip), NULL, NULL) );
-
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/cutmaxrange",
          "maximal coef range of a cut (maximal coefficient divided by minimal coefficient) in order to be added to LP relaxation",
          &conshdlrdata->cutmaxrange, TRUE, 1e+7, 0.0, SCIPinfinity(scip), NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/mincurvcollectbilinterms",
+         "minimal curvature of constraints to be considered when returning bilinear terms to other plugins",
+         &conshdlrdata->mincurvcollectbilinterms, TRUE, 0.8, -SCIPinfinity(scip), SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/linearizeheursol",
          "whether linearizations of convex quadratic constraints should be added to cutpool in a solution found by some heuristic",
@@ -13905,7 +13989,7 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/maxdisaggrsize",
          "maximum number of created constraints when disaggregating a quadratic constraint (<= 1: off)",
-         &conshdlrdata->maxdisaggrsize, TRUE, 127, 1, INT_MAX, NULL, NULL) );
+         &conshdlrdata->maxdisaggrsize, FALSE, 127, 1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/disaggrmergemethod",
          "strategy how to merge independent blocks to reach maxdisaggrsize limit (keep 'b'iggest blocks and merge others; keep 's'mallest blocks and merge other; merge small blocks into bigger blocks to reach 'm'ean sizes)",
@@ -15520,7 +15604,8 @@ SCIP_RETCODE SCIPgetAllBilinearTermsQuadratic(
    SCIP_VAR** RESTRICT   y,                  /**< array to second variable of each bilinear term */
    int* RESTRICT         nbilinterms,        /**< buffer to store the total number of bilinear terms */
    int* RESTRICT         nunderests,         /**< array to store the total number of constraints that require to underestimate a bilinear term */
-   int* RESTRICT         noverests           /**< array to store the total number of constraints that require to overestimate a bilinear term */
+   int* RESTRICT         noverests,          /**< array to store the total number of constraints that require to overestimate a bilinear term */
+   SCIP_Real*            maxnonconvexity     /**< largest absolute value of nonconvex eigenvalues of all quadratic constraints containing a bilinear term */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -15533,6 +15618,7 @@ SCIP_RETCODE SCIPgetAllBilinearTermsQuadratic(
    assert(nbilinterms != NULL);
    assert(nunderests != NULL);
    assert(noverests!= NULL);
+   assert(maxnonconvexity != NULL);
 
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
 
@@ -15551,6 +15637,7 @@ SCIP_RETCODE SCIPgetAllBilinearTermsQuadratic(
       y[i] = conshdlrdata->bilinestimators[i].y;
       nunderests[i] = conshdlrdata->bilinestimators[i].nunderest;
       noverests[i] = conshdlrdata->bilinestimators[i].noverest;
+      maxnonconvexity[i] = conshdlrdata->bilinestimators[i].maxnonconvexity;
    }
 
    *nbilinterms = conshdlrdata->nbilinterms;
@@ -16312,7 +16399,7 @@ void rowprepCleanupScaledown(
    SCIP_Real scalefactor;
 
    /* if maxcoef < ROWPREP_SCALEDOWN_MINMAXCOEF (or no terms), then don't consider scaling down */
-   if( rowprep->nvars == 0 || rowprep->coefs[0] < ROWPREP_SCALEDOWN_MINMAXCOEF )
+   if( rowprep->nvars == 0 || REALABS(rowprep->coefs[0]) < ROWPREP_SCALEDOWN_MINMAXCOEF )
       return;
 
    /* consider scaling down so that maxcoef ~ 10 */
@@ -16504,11 +16591,18 @@ SCIP_RETCODE SCIPcleanupRowprep(
    SCIPprintRowprep(scip, rowprep, NULL);
 #endif
 
-   /* scale up to increase violation, updates myviol */
-   rowprepCleanupScaleup(scip, rowprep, &myviol, minviol);
+   /* if there is interest in achieving some minimal violation, then possibly scale up to increase violation, updates myviol */
+   if( minviol > 0.0 )
+   {
+      /* first, try to achieve scip's minefficacy (typically 1e-4) */
+      if( SCIPgetSepaMinEfficacy(scip) > minviol )
+         rowprepCleanupScaleup(scip, rowprep, &myviol, SCIPgetSepaMinEfficacy(scip));
+      /* in case scip minefficacy could not be reached or was smaller than minviol, try with the given minviol */
+      rowprepCleanupScaleup(scip, rowprep, &myviol, minviol);
+   }
 
    /* scale down to improve numerics, updates myviol */
-   rowprepCleanupScaledown(scip, rowprep, &myviol, minviol);
+   rowprepCleanupScaledown(scip, rowprep, &myviol, MAX(SCIPgetSepaMinEfficacy(scip), minviol)); /*lint !e666*/
 
 #ifdef SCIP_DEBUG
    SCIPinfoMessage(scip, NULL, "applied scaling, viol %g: ", myviol);

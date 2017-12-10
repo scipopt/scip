@@ -161,6 +161,10 @@ SCIP_RETCODE SCIPcreateConsBasicSymresack(
    int                   nvars               /**< number of variables in vars array */
    );
 
+/* @} */
+
+/* @} */
+
 #ifdef __cplusplus
 }
 #endif

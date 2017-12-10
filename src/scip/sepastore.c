@@ -818,7 +818,7 @@ SCIP_RETCODE sepastoreUpdateOrthogonalities(
       /* update orthogonality */
       thisortho = SCIProwGetOrthogonality(cut, sepastore->cuts[pos], set->sepa_orthofunc);
 
-      if( thisortho < 0.5 || (thisortho < mincutorthogonality && sepastore->scores[pos] < 0.9 * bestscore) )
+      if( thisortho < MIN(mincutorthogonality, 0.5) || (thisortho < mincutorthogonality && sepastore->scores[pos] < 0.9 * bestscore) )
       {
          /* cut is too parallel: release the row and delete the cut */
          SCIPsetDebugMsg(set, "    -> deleting parallel cut <%s> after adding <%s> (pos=%d, len=%d, orthogonality=%g, score=%g)\n",
@@ -903,10 +903,12 @@ int sepastoreGetBestCut(
    int pos;
 
    assert(sepastore != NULL);
+   assert(sepastore->nforcedcuts < sepastore->ncuts);
 
-   bestscore = SCIP_REAL_MIN;
-   bestpos = -1;
-   for( pos = sepastore->nforcedcuts; pos < sepastore->ncuts; pos++ )
+   bestpos = sepastore->nforcedcuts;
+   bestscore = sepastore->scores[bestpos];
+   assert( bestscore != SCIP_INVALID ); /*lint !e777*/
+   for( pos = sepastore->nforcedcuts + 1; pos < sepastore->ncuts; pos++ )
    {
       /* check if cut is current best cut */
       assert( sepastore->scores[pos] != SCIP_INVALID ); /*lint !e777*/

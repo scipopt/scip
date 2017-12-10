@@ -112,15 +112,20 @@ compilation settings:
 - $(EXPRINT): the expressions interpreter (code that computes derivatives and hessians) to use
               "none", "cppad"
 
+- $(SYM):     the graph automorphism code (needed to handle symmetries) to use
+             "none", "bliss"
+
 For example, if you want to install SCIP on a Linux system with a x86 processor
 using the gnu compiler in debug mode, using Soplex version >= 1.4.0 as LP solver,
-and no expressions interpreter you would have the following names:
+and neither an expressions interpreter nor symmetry handling techniques you would
+have the following names:
 - $(OSTYPE)  = linux
 - $(ARCH)    = x86
 - $(COMP)    = gnu
 - $(OPT)     = dbg
 - $(LPS)     = spx
 - $(EXPRINT) = none
+- $(SYM)     = none
 
 -----------------------------------------------------------------------------
 
@@ -179,6 +184,9 @@ Here is what you have to do to get SCIP running:
 
    - "SHARED=false"    to suppress shared libraries
    - "SHARED=true"     to create shared libraries
+
+   - "SYM=bliss"       to use bliss to compute symmetries of a mixed integer program
+   - "SYM=none"        to disable symmetry handling in mixed integer programs
 
    On some machines, you should use gmake instead of make.
 
@@ -358,7 +366,50 @@ make[1]: Leaving directory `/sw/scip'
    and enter "make links" to generate them again.
 
    After the soft-links have been created, the compilation of the source files should start.
+---
 
+   Example 5 (default: SoPlex, SYM):
+   =====================================================
+
+   Typing "make SYM=bliss" uses SoPlex as LP solver, and activates
+   the symmetry handling routines of SCIP. Symmetry is computed by using the graph automorphism
+   code bliss. You will be asked the following questions on the first call to "make"
+   (example answers are already given):
+
+- Current settings: SYM=bliss
+
+* SCIP needs some softlinks to external programs, in particular, LP-solvers.
+* Please insert the paths to the corresponding directories/libraries below.
+* The links will be installed in the 'lib/include' and 'lib/static' directories.
+* For more information and if you experience problems see the INSTALL file.
+
+  -> "cpxinc" is the path to the CPLEX "include" directory, e.g., "<CPLEX-path>/include/ilcplex".
+  -> "libcplex.*.a" is the path to the CPLEX library, e.g., "<CPLEX-path>/lib/x86-64_linux/static_pic/libcplex.a"
+  -> "libcplex.*.so" is the path to the CPLEX library, e.g., "<CPLEX-path>/bin/x86-64_linux/libcplex1263.so"
+  -> "blissinc" is the path to the BLISS directory, e.g., "<BLISS-path>".
+  -> "libbliss.*.a" is the path to the BLISS library, e.g., "<BLISS-path>/libbliss.a"
+  -> "libbliss.*.so" is the path to the BLISS library, e.g., "<BLISS-path>/libbliss.so"
+
+> Enter soft-link target file or directory for "lib/include/bliss" (return if not needed):
+> /sw/bliss
+-> creating softlink "lib/include/bliss" -> "/sw/bliss"
+
+> Enter soft-link target file or directory for "lib/static/libbliss.linux.x86_64.gnu.a" (return if not needed):
+> /sw/bliss/libbliss.a
+-> creating softlink "lib/static/libbliss.linux.x86_64.gnu.a" -> "/sw/bliss/libbliss.a"
+
+make[1]: Leaving directory `/sw/scip'
+---
+
+   Note on how to (locally) install bliss:
+    - create a target directory for the installation
+    - compile the bliss code within this directory
+
+   If you ever need to modify the soft-link targets, delete the soft-links in the "lib/" subdirectory
+   and enter "make links" to generate them again.
+
+   After the soft-links have been created, the compilation of the source files should start.
+---
 
    Compilation problems:
    =====================
@@ -495,6 +546,13 @@ make[1]: Leaving directory `/sw/scip'
 
    (j) to use GAMS
        - ln -s <path to GAMS system directory> <path to SCIP>/lib/shared/gams.$(OSTYPE).$(ARCH).$(COMP)
+
+   (k) to use bliss
+       - ln -s <path to bliss *.hh files> <path to SCIP>/lib/include/bliss
+         (e.g. "cd scip; ln -s ../bliss" lib/include/bliss)
+       - ln -s <file libbliss.[...].a> <path to SCIP>/lib/static/libbliss.$(OSTYPE).$(ARCH).$(COMP).a
+         for each operation system and architecture to use
+         (e.g. "cd scip; ln -s ../bliss/libbliss.a lib.static/libbliss.linux.x86_64.gnu.a")
 
 4. To run the program enter "bin/scip.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LPS)"
    (e.g. "bin/scip.linux.x86.gnu.opt.spx") or just "bin/scip" for the last compiled version

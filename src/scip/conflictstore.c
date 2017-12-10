@@ -1096,7 +1096,7 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    assert(conflictstore->initstoresize <= conflictstore->maxstoresize);
 
    /* return if conflict pool is disabled */
-   if( conflictstore->maxstoresize == 0 )
+   if( conflictstore->maxstoresize <= 0 )
       return SCIP_OKAY;
 
    SCIP_CALL( conflictstoreEnsureMem(conflictstore, set, blkmem, nconflicts+1) );

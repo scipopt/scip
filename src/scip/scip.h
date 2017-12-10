@@ -3724,6 +3724,22 @@ SCIP_RETCODE SCIPsetSepaPriority(
    int                   priority            /**< new priority of the separator */
    );
 
+/** gets value of minimal efficacy for a cut to enter the LP
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @return value of "separating/minefficacyroot" if at root node, otherwise value of "separating/minefficacy"
+ */
+EXTERN
+SCIP_Real SCIPgetSepaMinEfficacy(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+#ifdef NDEBUG
+#define SCIPgetSepaMinEfficacy(scip)         (SCIPtreeGetCurrentDepth((scip)->tree) == 0 ? (scip)->set->sepa_minefficacyroot : (scip)->set->sepa_minefficacy)
+#endif
+
 /* @} */
 
 /**@addtogroup PublicPropagatorMethods
@@ -6440,6 +6456,7 @@ int SCIPgetNConss(
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  *
@@ -6946,9 +6963,38 @@ SCIP_RETCODE SCIPsolve(
  *        - \ref SCIP_STAGE_SOLVED if the solving process was not interrupted
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ *
+ *  @deprecated Please use SCIPsolveConcurrent() instead.
  */
 EXTERN
 SCIP_RETCODE SCIPsolveParallel(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** transforms, presolves, and solves problem using additional solvers which emphasize on
+ *  finding solutions.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @post After calling this method \SCIP reaches one of the following stages depending on if and when the solution
+ *        process was interrupted:
+ *        - \ref SCIP_STAGE_PRESOLVING if the solution process was interrupted during presolving
+ *        - \ref SCIP_STAGE_SOLVING if the solution process was interrupted during the tree search
+ *        - \ref SCIP_STAGE_SOLVED if the solving process was not interrupted
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPsolveConcurrent(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -10071,7 +10117,11 @@ SCIP_Bool SCIPdoNotMultaggrVar(
    SCIP_VAR*             var                 /**< variable x to aggregate */
    );
 
-/** returns whether dual reductions propagation methods and presolvers is allowed */
+/** returns whether dual reduction are allowed during propagation and presolving
+ *
+ *  @note A reduction is called dual, if it may discard feasible solutions, but leaves at least one optimal solution
+ *        intact. Often such reductions are based on analyzing the objective function, reduced costs and/or dual LPs.
+ */
 EXTERN
 SCIP_Bool SCIPallowDualReds(
    SCIP*                 scip                /**< SCIP data structure */
@@ -15113,10 +15163,10 @@ void SCIPcomputeBilinEnvelope2(
    SCIP_Real             alpha2,             /**< x coefficient of linear inequality; must be in {-1,0,1} */
    SCIP_Real             beta2,              /**< y coefficient of linear inequality */
    SCIP_Real             gamma2,             /**< constant of linear inequality */
-   SCIP_Real*            lincoefx,           /**< buffer to store coefficient of first  variable in linearization */
-   SCIP_Real*            lincoefy,           /**< buffer to store coefficient of second variable in linearization */
-   SCIP_Real*            linconstant,        /**< buffer to store constant of linearization */
-   SCIP_Bool*            success             /**< buffer to store whether linearization was successful */
+   SCIP_Real* RESTRICT   lincoefx,           /**< buffer to store coefficient of first  variable in linearization */
+   SCIP_Real* RESTRICT   lincoefy,           /**< buffer to store coefficient of second variable in linearization */
+   SCIP_Real* RESTRICT   linconstant,        /**< buffer to store constant of linearization */
+   SCIP_Bool* RESTRICT   success             /**< buffer to store whether linearization was successful */
    );
 
 /** creates an NLP relaxation and stores it in a given NLPI problem; the function computes for each variable which the
@@ -15256,7 +15306,8 @@ SCIP_Bool SCIPisCutApplicable(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  *
- *  @deprecated Please use SCIPaddRow() instead, or, if the row is a global cut, add it only to the global cutpool.
+ *  @deprecated Please use SCIPaddRow() instead, or, if the row is a global cut and it might be useful to keep it for future use,
+ *  consider adding it to the global cutpool with SCIPaddPoolCut().
  */
 EXTERN
 SCIP_RETCODE SCIPaddCut(
@@ -20274,6 +20325,9 @@ SCIP_Longint SCIPgetNBacktracks(
  *  @return the total number of active constraints at the current node
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
@@ -20751,9 +20805,9 @@ SCIP_Real SCIPgetAvgConflictScore(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets the average conflict score value over all variables, only using the pseudo cost information of the current run
+/** gets the average conflict score value over all variables, only using the conflict information of the current run
  *
- *  @return the average conflict score value over all variables, only using the pseudo cost information of the current run
+ *  @return the average conflict score value over all variables, only using the conflict information of the current run
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
@@ -20777,10 +20831,10 @@ SCIP_Real SCIPgetAvgConflictlengthScore(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets the average conflictlength score value over all variables, only using the pseudo cost information of the
+/** gets the average conflictlength score value over all variables, only using the conflictlength information of the
  *  current run
  *
- *  @return the average conflictlength score value over all variables, only using the pseudo cost information of the
+ *  @return the average conflictlength score value over all variables, only using the conflictlength information of the
  *          current run
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
@@ -20807,10 +20861,10 @@ SCIP_Real SCIPgetAvgInferences(
    );
 
 /** returns the average number of inferences found after branching in given direction over all variables,
- *  only using the pseudo cost information of the current run
+ *  only using the inference information of the current run
  *
  *  @return the average number of inferences found after branching in given direction over all variables,
- *          only using the pseudo cost information of the current run
+ *          only using the inference information of the current run
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
@@ -20835,10 +20889,10 @@ SCIP_Real SCIPgetAvgInferenceScore(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets the average inference score value over all variables, only using the inference information information of the
+/** gets the average inference score value over all variables, only using the inference information of the
  *  current run
  *
- *  @return the average inference score value over all variables, only using the inference information information of the
+ *  @return the average inference score value over all variables, only using the inference information of the
  *          current run
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
@@ -20865,10 +20919,10 @@ SCIP_Real SCIPgetAvgCutoffs(
    );
 
 /** returns the average number of cutoffs found after branching in given direction over all variables,
- *  only using the pseudo cost information of the current run
+ *  only using the cutoff information of the current run
  *
  *  @return the average number of cutoffs found after branching in given direction over all variables,
- *          only using the pseudo cost information of the current run
+ *          only using the cutoff information of the current run
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
@@ -20893,9 +20947,9 @@ SCIP_Real SCIPgetAvgCutoffScore(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets the average cutoff score value over all variables, only using the pseudo cost information of the current run
+/** gets the average cutoff score value over all variables, only using the cutoff information of the current run
  *
- *  @return the average cutoff score value over all variables, only using the pseudo cost information of the current run
+ *  @return the average cutoff score value over all variables, only using the cutoff information of the current run
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
@@ -22510,7 +22564,6 @@ SCIP_Bool SCIPisUpdateUnreliable(
 #define SCIPgetStage(scip)                        (((scip)->set)->stage)
 #define SCIPhasPerformedPresolve(scip)            ((scip)->stat->performpresol)
 #define SCIPisStopped(scip)                       SCIPsolveIsStopped((scip)->set, (scip)->stat, 0)
-
 #endif
 
 /** outputs a real number, or "+infinity", or "-infinity" to a file */
@@ -23128,7 +23181,7 @@ int SCIPgetPtrarrayMaxIdx(
 
 /**@} */
 
-/**@addtogroup DisjoinedSet
+/**@addtogroup DisjointSet
  *
  * @{
  */
@@ -23150,7 +23203,7 @@ void SCIPfreeDisjointset(
 
 /* @} */
 
-/**@addtogroup DigraphMethods
+/**@addtogroup DirectedGraph
  *
  * @{
  */

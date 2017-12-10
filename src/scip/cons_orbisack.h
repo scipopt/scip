@@ -145,6 +145,10 @@ SCIP_RETCODE SCIPcreateConsBasicOrbisack(
    SCIP_Bool             isparttype          /**< whether the orbisack is a partitioning orbisack */
    );
 
+/* @} */
+
+/* @} */
+
 #ifdef __cplusplus
 }
 #endif

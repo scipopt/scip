@@ -7393,6 +7393,11 @@ SCIP_RETCODE addRelaxation(
    }
    assert(consdata->row != NULL);
 
+   if( consdata->nvars == 0 )
+   {
+      SCIPdebugMsg(scip, "Empty linear constraint enters LP: <%s>\n", SCIPconsGetName(cons));
+   }
+
    /* insert LP row as cut */
    if( !SCIProwIsInLP(consdata->row) )
    {
@@ -7637,7 +7642,12 @@ SCIP_RETCODE propagateCons(
          {
             SCIPdebugMsg(scip, "linear constraint <%s> is redundant: activitybounds=[%.15g,%.15g], sides=[%.15g,%.15g]\n",
                SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
-            SCIP_CALL( SCIPdelConsLocal(scip, cons) );
+
+            /* remove the constraint locally unless it has become empty, in which case it is removed globally */
+            if( consdata->nvars > 0 )
+               SCIP_CALL( SCIPdelConsLocal(scip, cons) );
+            else
+               SCIP_CALL( SCIPdelCons(scip, cons) );
          }
       }
    }
@@ -12200,7 +12210,10 @@ SCIP_RETCODE simplifyInequalities(
             }
 
             absval = REALABS(vals[v]);
-            assert(SCIPisIntegral(scip, absval));
+            /* arithmetic precision can lead to the absolute value only being integral up to feasibility tolerance,
+             * even though the value itself is feasible up to epsilon, but since we add feastol later, this is enough
+             */
+            assert(SCIPisFeasIntegral(scip, absval));
 
             if( gcd == -1 )
             {
@@ -12236,7 +12249,10 @@ SCIP_RETCODE simplifyInequalities(
          if( onlybin || SCIPvarIsBinary(vars[v]) )
          {
             absval = REALABS(vals[v]);
-            assert(SCIPisIntegral(scip, absval));
+            /* arithmetic precision can lead to the absolute value only being integral up to feasibility tolerance,
+             * even though the value itself is feasible up to epsilon, but since we add feastol later, this is enough
+             */
+            assert(SCIPisFeasIntegral(scip, absval));
 
             oldgcd = gcd;
 
@@ -12824,25 +12840,82 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
                        SCIPcombineTwoInt(maxidx, SCIPrealHashCode(consdata->vals[consdata->nvars - 1] * scale))); /*lint !e571*/
 }
 
-/** retrieves and removes all constraints from the hashtable that are parallel to the given constraint */
+/** returns the key for deciding which of two parallel constraints should be kept (smaller key should be kept);
+ *  prefers non-upgraded constraints and as second criterion the constraint with the smallest position
+ */
+static
+unsigned int getParallelConsKey(
+   SCIP_CONS*            cons                /**< linear constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return (((unsigned int)consdata->upgraded)<<31) + (unsigned int)SCIPconsGetPos(cons); /*lint !e571*/
+}
+
+/** updates the hashtable such that out of all constraints in the hashtable that are detected
+ *  to be parallel to *querycons, only one is kept in the hashtable and stored into *querycons,
+ *  and all others are removed from the hashtable and stored in the given array
+ */
 static
 SCIP_RETCODE retrieveParallelConstraints(
    SCIP_HASHTABLE*       hashtable,          /**< hashtable containing linear constraints */
-   SCIP_CONS*            querycons,          /**< linear constraint to look for duplicates in the hash table */
+   SCIP_CONS**           querycons,          /**< pointer to linear constraint used to look for duplicates in the hash table;
+                                              *   upon return will contain the constraint that should be kept */
    SCIP_CONS**           parallelconss,      /**< array to return constraints that are parallel to the given;
                                               *   these constraints where removed from the hashtable */
    int*                  nparallelconss      /**< pointer to return number of parallel constraints */
    )
 {
    SCIP_CONS* parallelcons;
+   unsigned int querykey;
 
    *nparallelconss = 0;
+   querykey = getParallelConsKey(*querycons);
 
-   while( (parallelcons = (SCIP_CONS*)SCIPhashtableRetrieve(hashtable, (void*)querycons)) != NULL )
+   while( (parallelcons = (SCIP_CONS*)SCIPhashtableRetrieve(hashtable, (void*)(*querycons))) != NULL )
    {
-      parallelconss[(*nparallelconss)++] = parallelcons;
+      unsigned int conskey = getParallelConsKey(parallelcons);
+
+      if( conskey < querykey )
+      {
+         parallelconss[(*nparallelconss)++] = *querycons;
+         *querycons = parallelcons;
+         querykey = conskey;
+      }
+      else
+      {
+         parallelconss[(*nparallelconss)++] = parallelcons;
+      }
+
+      /* if the constraint that just came out of the hash table is the one that is kept,
+       * we do not need to look into the hashtable again, since the invariant is that
+       * in the hashtable only pair-wise non-parallel constraints are contained.
+       * For the original querycons, however, multiple constraints that compare equal (=parallel)
+       * could be contained due to non-transitivity of the equality comparison.
+       * Also we can return immediately, since parallelcons is already contained in the
+       * hashtable and we do not need to remove and reinsert it.
+       */
+      if( *querycons == parallelcons )
+         return SCIP_OKAY;
+
+      /* remove parallelcons from the hashtable, since it will be replaced by querycons */
       SCIP_CALL( SCIPhashtableRemove(hashtable, (void*) parallelcons) );
    }
+
+   /* in debug mode we make sure, that the hashtable cannot contain a constraint that
+    * comnpares equal to querycons at this point
+    */
+#ifndef NDEBUG
+   SCIP_CALL_ABORT( SCIPhashtableSafeInsert(hashtable, *querycons) );
+#else
+   SCIP_CALL( SCIPhashtableInsert(hashtable, *querycons) );
+#endif
 
    return SCIP_OKAY;
 }
@@ -12907,8 +12980,9 @@ SCIP_RETCODE detectRedundantConstraints(
       /* get constraints from current hash table with same variables as cons0 and with coefficients equal
        * to the ones of cons0 when both are scaled such that maxabsval is 1.0 and the coefficient of the
        * first variable is positive
+       * Also inserts cons0 into the hashtable.
        */
-      SCIP_CALL( retrieveParallelConstraints(hashtable, cons0, parallelconss, &nparallelconss) );
+      SCIP_CALL( retrieveParallelConstraints(hashtable, &cons0, parallelconss, &nparallelconss) );
 
       if( nparallelconss != 0 )
       {
@@ -12917,47 +12991,11 @@ SCIP_RETCODE detectRedundantConstraints(
 
          int i;
 
-         /* check which constraint has to stay;
-          * changes applied to an upgraded constraint will not be considered in the instance
-          * so pick a not upgraded constraint among the parallel ones
-          */
-         if( consdata0->upgraded )
-         {
-            for( i = 0; i < nparallelconss; ++i )
-            {
-               SCIP_CONSDATA* consdata;
-
-               consdata = SCIPconsGetData(parallelconss[i]);
-
-               if( !consdata->upgraded )
-               {
-                  int nextraparallelconss;
-
-                  consdata0 = consdata;
-                  SCIPswapPointers((void**) &cons0, (void**) &parallelconss[i]);
-
-                  /* call the retrieveParallelConstraints function again with the swapped constraint;
-                   * due to non-transitivity there could be a constraint that compares equal to this one
-                   * that did not compare equal in the first call to retrieveParallelConstraints().
-                   * Such a constraint would be silently overridden by the call SCIPhashtableInsert(hashtable, cons0)
-                   * below
-                   */
-                  SCIP_CALL( retrieveParallelConstraints(hashtable, cons0, &parallelconss[nparallelconss], &nextraparallelconss) );
-                  nparallelconss += nextraparallelconss;
-
-                  break;
-               }
-            }
-         }
+         /* cons0 may have been changed in retrieveParallelConstraints() */
+         consdata0 = SCIPconsGetData(cons0);
 
          lhs = consdata0->lhs;
          rhs = consdata0->rhs;
-
-#ifndef NDEBUG
-         SCIP_CALL_ABORT( SCIPhashtableSafeInsert(hashtable, cons0) );
-#else
-         SCIP_CALL( SCIPhashtableInsert(hashtable, cons0) );
-#endif
 
          for( i = 0; i < nparallelconss; ++i )
          {
@@ -13061,11 +13099,6 @@ SCIP_RETCODE detectRedundantConstraints(
             *firstchange = SCIPconsGetPos(cons0);
 
          assert(SCIPconsIsActive(cons0));
-      }
-      else
-      {
-         /* no such constraint in current hash table: insert cons0 into hash table */
-         SCIP_CALL( SCIPhashtableInsert(hashtable, (void*) cons0) );
       }
    }
 #ifdef  SCIP_MORE_DEBUG

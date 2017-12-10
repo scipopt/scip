@@ -155,7 +155,9 @@ do
 	    for SETNAME in ${SETTINGSLIST[@]}
 	    do
 		# infer the names of all involved files from the arguments
+		s=`expr $s + $GLBSEEDSHIFT`
 		. ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SEEDS $SETNAME $TSTNAME $CONTINUE $QUEUE $p $s
+		s=`expr $s - $GLBSEEDSHIFT`
 
 		# skip instance if log file is present and we want to continue a previously launched test run
 		if test "$SKIPINSTANCE" = "true"
@@ -201,7 +203,7 @@ do
 		    export SETFILE
 		    export TIMELIMIT
 		    # the space at the end is necessary
-		    export SRUN="srun --cpu_bind=cores "
+		    export SRUN="srun --cpu_bind=cores -v -v "
 		    if test "$CLUSTERNODES" = "all"
 		    then
 				  sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run.sh

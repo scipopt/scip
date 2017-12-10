@@ -132,8 +132,6 @@ struct SCIP_ConshdlrData
 {
    SCIP_EXPRINT*         exprinterpreter;    /**< expression interpreter to compute gradients */
 
-   SCIP_Real             mincutefficacysepa; /**< minimal efficacy of a cut in order to add it to relaxation during separation */
-   SCIP_Real             mincutefficacyenfofac;/**< minimal target efficacy of a cut in order to add it to relaxation during enforcement as factor of feasibility tolerance (may be ignored) */
    SCIP_Real             cutmaxrange;        /**< maximal range (maximal coef / minimal coef) of a cut in order to be added to LP */
    SCIP_Bool             linfeasshift;       /**< whether to make solutions in check feasible if possible */
    SCIP_Bool             checkconvexexpensive;/**< whether to apply expensive curvature checking methods */
@@ -3794,7 +3792,7 @@ SCIP_RETCODE computeViolation(
             varval = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), varval));
          }
 
-         SCIP_CALL( SCIPexprintEval(conshdlrdata->exprinterpreter, consdata->exprtrees[i], &varval, &val) );
+         SCIP_CALL( SCIPexprintEval(conshdlrdata->exprinterpreter, consdata->exprtrees[i], &varval, &val) ); /* coverity ignore ARRAY_VS_SINGLETON warning */
       }
       else
       {
@@ -4217,7 +4215,7 @@ SCIP_RETCODE addConcaveEstimatorUnivariate(
    }
    assert(SCIPisLE(scip, xlb, xub));
 
-   SCIP_CALL( SCIPexprtreeEval(exprtree, &xlb, &vallb) );
+   SCIP_CALL( SCIPexprtreeEval(exprtree, &xlb, &vallb) ); /* coverity ignore ARRAY_VS_SINGLETON warning */
    if( !SCIPisFinite(vallb) || SCIPisInfinity(scip, REALABS(vallb)) )
    {
       SCIPdebugMsg(scip, "skip secant for tree %d of constraint <%s> since function cannot be evaluated in lower bound\n", exprtreeidx, SCIPconsGetName(cons));
@@ -4225,7 +4223,7 @@ SCIP_RETCODE addConcaveEstimatorUnivariate(
    }
    vallb *= treecoef;
 
-   SCIP_CALL( SCIPexprtreeEval(exprtree, &xub, &valub) );
+   SCIP_CALL( SCIPexprtreeEval(exprtree, &xub, &valub) ); /* coverity ignore ARRAY_VS_SINGLETON warning */
    if( !SCIPisFinite(valub) || SCIPisInfinity(scip, REALABS(valub)) )
    {
       SCIPdebugMsg(scip, "skip secant for tree %d of constraint <%s> since function cannot be evaluated in upper bound\n", exprtreeidx, SCIPconsGetName(cons));
@@ -5521,14 +5519,7 @@ SCIP_RETCODE separatePoint(
          feasibility = SCIPgetRowSolFeasibility(scip, row, sol);
       efficacy = -feasibility;
 
-      if( (SCIPisGT(scip, efficacy, minefficacy) ||
-         (inenforcement &&
-            ( (violside == SCIP_SIDETYPE_RIGHT && (consdata->curvature & SCIP_EXPRCURV_CONVEX )) ||
-               (violside == SCIP_SIDETYPE_LEFT  && (consdata->curvature & SCIP_EXPRCURV_CONCAVE)) ) &&
-               SCIPisGT(scip, efficacy, SCIPfeastol(scip))
-         )
-      ) && SCIPisCutApplicable(scip, row)
-      )
+      if( SCIPisGT(scip, efficacy, minefficacy) && SCIPisCutApplicable(scip, row) )
       {
          SCIP_Bool infeasible;
 
@@ -5826,8 +5817,9 @@ SCIP_RETCODE registerLargeRelaxValueVariableForBranching(
    return SCIP_OKAY;
 }
 
-/** replaces violated nonlinear constraints where all nonlinear variables are fixed by linear constraints
+/** replaces violated nonlinear constraints where all nonlinear variables are almost fixed by linear constraints
  * only adds constraint if it is violated in current solution
+ * first tries to fix almost fixed variables
  */
 static
 SCIP_RETCODE replaceViolatedByLinearConstraints(
@@ -5843,9 +5835,14 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
    SCIP_CONSDATA*      consdata;
    SCIP_Real           lhs;
    SCIP_Real           rhs;
+   SCIP_Real           lb;
+   SCIP_Real           ub;
    SCIP_RESULT         checkresult;
+   SCIP_VAR*           var;
+   SCIP_Bool           tightened;
    int c;
    int i;
+   int v;
 
    assert(scip  != NULL);
    assert(conss != NULL || nconss == 0);
@@ -5872,6 +5869,47 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
       for( i = 0; i < consdata->nexprtrees; ++i )
       {
          SCIP_INTERVAL nonlinactivity;
+
+         /* check whether there are almost fixed nonlinear variables that can be fixed */
+         for( v = 0; v < SCIPexprtreeGetNVars(consdata->exprtrees[i]); ++v )
+         {
+            var = SCIPexprtreeGetVars(consdata->exprtrees[i])[v];
+
+            lb = SCIPvarGetLbLocal(var);
+            ub = SCIPvarGetUbLocal(var);
+            assert(SCIPisRelEQ(scip, lb, ub)); /* variable should be almost fixed */
+
+            assert(!SCIPisInfinity(scip, -lb));
+            assert(!SCIPisInfinity(scip,  ub));
+
+            if( !SCIPisEQ(scip, lb, ub) )
+            {
+               /* try to fix variable */
+               SCIP_CALL( SCIPtightenVarLb(scip, var, (lb+ub)/2.0, TRUE, infeasible, &tightened) );
+               if( *infeasible )
+               {
+                  SCIPdebugMsg(scip, "Fixing almost fixed variable <%s> lead to infeasibility.\n", SCIPvarGetName(var));
+                  return SCIP_OKAY;
+               }
+               if( tightened )
+               {
+                  SCIPdebugMsg(scip, "Tightened lower bound of almost fixed variable <%s>.\n", SCIPvarGetName(var));
+                  *reduceddom = TRUE;
+               }
+
+               SCIP_CALL( SCIPtightenVarUb(scip, var, (lb+ub)/2.0, TRUE, infeasible, &tightened) );
+               if( *infeasible )
+               {
+                  SCIPdebugMsg(scip, "Fixing almost fixed variable <%s> lead to infeasibility.\n", SCIPvarGetName(var));
+                  return SCIP_OKAY;
+               }
+               if( tightened )
+               {
+                  SCIPdebugMsg(scip, "Tightened upper bound of almost fixed variable <%s>.\n", SCIPvarGetName(var));
+                  *reduceddom = TRUE;
+               }
+            }
+         }
 
          SCIP_CALL( SCIPevalExprtreeLocalBounds(scip, consdata->exprtrees[i], INTERVALINFTY, &nonlinactivity) );
          SCIPintervalMulScalar(INTERVALINFTY, &nonlinactivity, nonlinactivity, consdata->nonlincoefs[i]);
@@ -5905,6 +5943,10 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
          }
       }
 
+      /* if some nonlinear variable was fixed now, then restart node (next enfo round) */
+      if( *reduceddom )
+         return SCIP_OKAY;
+
       /* check if we have a bound change */
       if ( consdata->nlinvars == 0 )
       {
@@ -5912,7 +5954,6 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
       }
       else if ( consdata->nlinvars == 1 )
       {
-         SCIP_Bool tightened;
          SCIP_Real coef;
 
          coef = *consdata->lincoefs;
@@ -6202,28 +6243,31 @@ SCIP_RETCODE propagateBoundsCons(
    }
    assert(!SCIPintervalIsEmpty(INTERVALINFTY, nonlinactivity) );
 
-   /* @todo adding SCIPepsilon may be sufficient? */
-   SCIPintervalSetBounds(&consbounds,
-      -infty2infty(SCIPinfinity(scip), INTERVALINFTY, -consdata->lhs + SCIPfeastol(scip)),
-      +infty2infty(SCIPinfinity(scip), INTERVALINFTY,  consdata->rhs + SCIPfeastol(scip)));
-
-   /* check redundancy and infeasibility */
+   /* get activity of constraint function */
    SCIPintervalSetBounds(&consactivity, consdata->minlinactivityinf > 0 ? -INTERVALINFTY : consdata->minlinactivity, consdata->maxlinactivityinf > 0 ? INTERVALINFTY : consdata->maxlinactivity);
    SCIPintervalAdd(INTERVALINFTY, &consactivity, consactivity, nonlinactivity);
-   if( SCIPintervalIsSubsetEQ(INTERVALINFTY, consactivity, consbounds) )
-   {
-      SCIPdebugMsg(scip, "found constraint <%s> to be redundant: sides: [%g, %g], activity: [%g, %g]\n",
-         SCIPconsGetName(cons), consdata->lhs, consdata->rhs, SCIPintervalGetInf(consactivity), SCIPintervalGetSup(consactivity));
-      *redundant = TRUE;
-      return SCIP_OKAY;
-   }
 
-   if( SCIPintervalAreDisjoint(consbounds, consactivity) )
+   /* check infeasibility */
+   if( (!SCIPisInfinity(scip, -consdata->lhs) && SCIPisGT(scip, consdata->lhs-SCIPfeastol(scip), SCIPintervalGetSup(consactivity))) ||
+       (!SCIPisInfinity(scip,  consdata->rhs) && SCIPisLT(scip, consdata->rhs+SCIPfeastol(scip), SCIPintervalGetInf(consactivity))) )
    {
       SCIPdebugMsg(scip, "found constraint <%s> to be infeasible; sides: [%g, %g], activity: [%g, %g], infeas: %.20g\n",
          SCIPconsGetName(cons), consdata->lhs, consdata->rhs, SCIPintervalGetInf(consactivity), SCIPintervalGetSup(consactivity),
          MAX(consdata->lhs - SCIPintervalGetSup(consactivity), SCIPintervalGetInf(consactivity) - consdata->rhs));
       *result = SCIP_CUTOFF;
+      return SCIP_OKAY;
+   }
+
+   SCIPintervalSetBounds(&consbounds,
+      -infty2infty(SCIPinfinity(scip), INTERVALINFTY, -consdata->lhs + SCIPepsilon(scip)),
+      +infty2infty(SCIPinfinity(scip), INTERVALINFTY,  consdata->rhs + SCIPepsilon(scip)));
+
+   /* check redundancy */
+   if( SCIPintervalIsSubsetEQ(INTERVALINFTY, consactivity, consbounds) )
+   {
+      SCIPdebugMsg(scip, "found constraint <%s> to be redundant: sides: [%g, %g], activity: [%g, %g]\n",
+         SCIPconsGetName(cons), consdata->lhs, consdata->rhs, SCIPintervalGetInf(consactivity), SCIPintervalGetSup(consactivity));
+      *redundant = TRUE;
       return SCIP_OKAY;
    }
 
@@ -6894,8 +6938,6 @@ SCIP_RETCODE enforceConstraint(
    int                dummy;
    int                nnotify;
    SCIP_Real          sepaefficacy;
-   SCIP_Real          minefficacy;
-   SCIP_Real          leastpossibleefficacy;
    SCIP_Bool          solviolbounds;
 
    assert(scip != NULL);
@@ -6981,14 +7023,10 @@ SCIP_RETCODE enforceConstraint(
       return SCIP_OKAY;
    }
 
-   /* we would like a cut that is efficient enough that it is not redundant in the LP (>feastol)
-    * however, if the maximal violation is very small, also the best cut efficacy cannot be large
-    * thus, in the latter case, we are also happy if the efficacy is at least, say, 75% of the maximal violation
-    * but in any case we need an efficacy that is at least feastol
+   /* we would like a cut that is efficient enough that it is not redundant in the LP (>lpfeastol)
+    * however, we also don't want very weak cuts, so try to reach at least feastol (=lpfeastol by default, though)
     */
-   minefficacy = MIN(0.75*maxviol, conshdlrdata->mincutefficacyenfofac * SCIPfeastol(scip));  /*lint !e666*/
-   minefficacy = MAX(minefficacy, SCIPfeastol(scip));  /*lint !e666*/
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, TRUE /* because computeviolation projects point onto box */, minefficacy, TRUE, &separateresult, &sepaefficacy) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, TRUE /* because computeviolation projects point onto box */, SCIPfeastol(scip), TRUE, &separateresult, &sepaefficacy) );
    if( separateresult == SCIP_CUTOFF )
    {
       SCIPdebugMsg(scip, "separation found cutoff\n");
@@ -6997,7 +7035,7 @@ SCIP_RETCODE enforceConstraint(
    }
    if( separateresult == SCIP_SEPARATED )
    {
-      SCIPdebugMsg(scip, "separation succeeded (bestefficacy = %g, minefficacy = %g)\n", sepaefficacy, minefficacy);
+      SCIPdebugMsg(scip, "separation succeeded (bestefficacy = %g, minefficacy = %g)\n", sepaefficacy, SCIPfeastol(scip));
       *result = SCIP_SEPARATED;
       return SCIP_OKAY;
    }
@@ -7005,18 +7043,15 @@ SCIP_RETCODE enforceConstraint(
    /* we are not feasible, the whole node is not infeasible, and we cannot find a good cut
     * -> collect variables for branching
     */
-
-   SCIPdebugMsg(scip, "separation failed (bestefficacy = %g < %g = minefficacy ); max viol: %g\n", sepaefficacy, minefficacy, maxviol);
+   SCIPdebugMsg(scip, "separation failed (bestefficacy = %g < %g = minefficacy ); max viol: %g\n", sepaefficacy, SCIPfeastol(scip), maxviol);
 
    /* find branching candidates */
    SCIP_CALL( registerBranchingVariables(scip, conshdlr, conss, nconss, &nnotify) );
 
-   /* if sepastore can decrease feasibility tolerance, we can add cuts with efficacy in [eps, feastol] */
-   leastpossibleefficacy = SCIPfeastol(scip);
-   if( nnotify == 0 && !solinfeasible && minefficacy > leastpossibleefficacy )
+   if( nnotify == 0 && !solinfeasible && SCIPfeastol(scip) > SCIPlpfeastol(scip) )
    {
       /* fallback 1: we also have no branching candidates, so try to find a weak cut */
-      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, FALSE, leastpossibleefficacy, TRUE, &separateresult, &sepaefficacy) );
+      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, FALSE, SCIPlpfeastol(scip), TRUE, &separateresult, &sepaefficacy) );
       if( separateresult == SCIP_SEPARATED || separateresult == SCIP_CUTOFF )
       {
          *result = separateresult;
@@ -7761,7 +7796,7 @@ SCIP_DECL_CONSSEPALP(consSepalpNonlinear)
             }
          }
 
-         SCIP_CALL( addLinearizationCuts(scip, conshdlr, conss, nconss, nlpsol, &lpsolseparated, conshdlrdata->mincutefficacysepa) );
+         SCIP_CALL( addLinearizationCuts(scip, conshdlr, conss, nconss, nlpsol, &lpsolseparated, SCIPgetSepaMinEfficacy(scip)) );
 
          SCIP_CALL( SCIPfreeSol(scip, &nlpsol) );
 
@@ -7780,7 +7815,7 @@ SCIP_DECL_CONSSEPALP(consSepalpNonlinear)
     * or separating with NLP solution as reference point failed, then try (again) with LP solution as reference point
     */
 
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, TRUE, conshdlrdata->mincutefficacysepa, FALSE, result, NULL) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, TRUE, SCIPgetSepaMinEfficacy(scip), FALSE, result, NULL) );
 
    return SCIP_OKAY;
 }
@@ -7789,7 +7824,6 @@ SCIP_DECL_CONSSEPALP(consSepalpNonlinear)
 static
 SCIP_DECL_CONSSEPASOL(consSepasolNonlinear)
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS*         maxviolcon;
    SCIP_Bool          solviolbounds;
 
@@ -7798,9 +7832,6 @@ SCIP_DECL_CONSSEPASOL(consSepasolNonlinear)
    assert(conss != NULL || nconss == 0);
    assert(sol != NULL);
    assert(result != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    *result = SCIP_DIDNOTFIND;
 
@@ -7817,7 +7848,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolNonlinear)
    /* computeViolations already evaluated all constraints, so can pass newsol = FALSE here
     * in contrast to Sepalp, a sol != NULL is not projected onto the box in computeViolation
     */
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, FALSE, conshdlrdata->mincutefficacysepa, FALSE, result, NULL) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, FALSE, SCIPgetSepaMinEfficacy(scip), FALSE, result, NULL) );
 
    return SCIP_OKAY;
 }
@@ -9103,14 +9134,6 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxNonlinear) );
 
    /* add nonlinear constraint handler parameters */
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/minefficacysepa",
-         "minimal efficacy for a cut to be added to the LP during separation; overwrites separating/efficacy",
-         &conshdlrdata->mincutefficacysepa, TRUE, 0.0001, 0.0, SCIPinfinity(scip), NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/minefficacyenfofac",
-         "minimal target efficacy of a cut in order to add it to relaxation during enforcement as a factor of the feasibility tolerance (may be ignored)",
-         &conshdlrdata->mincutefficacyenfofac, TRUE, 2.0, 1.0, SCIPinfinity(scip), NULL, NULL) );
-
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/cutmaxrange",
          "maximal coef range of a cut (maximal coefficient divided by minimal coefficient) in order to be added to LP relaxation",
          &conshdlrdata->cutmaxrange, FALSE, 1e+7, 0.0, SCIPinfinity(scip), NULL, NULL) );

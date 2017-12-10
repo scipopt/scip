@@ -1237,32 +1237,25 @@ SCIP_RETCODE createNewSol(
    return SCIP_OKAY;
 }
 
-
-/** solves subproblem and passes best feasible solution to original SCIP instance */
+/** todo setup and solve the subMIP */
 static
-SCIP_RETCODE solveSubMIP(
-   SCIP*                 scip,               /**< SCIP data structure of the original problem */
+SCIP_RETCODE doSolveSubMIP(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP*                 subscip,            /**< NLP diving subscip */
    SCIP_HEUR*            heur,               /**< heuristic data structure */
    SCIP_VAR**            covervars,          /**< variables in the cover, should be fixed locally */
    int                   ncovervars,         /**< number of variables in the cover */
    SCIP_Bool*            success             /**< pointer to store whether a solution was found */
    )
 {
-   SCIP* subscip;
    SCIP_HASHMAP* varmap;
    SCIP_SOL** subsols;
-   SCIP_RETCODE retcode;
    int c;
    int nsubsols;
 
-   /* check whether there is enough time and memory left */
-   SCIP_CALL( SCIPcheckCopyLimits(scip, success) );
-
-   if( !(*success) )
-      return SCIP_OKAY;
-
-   /* create subproblem */
-   SCIP_CALL( SCIPcreate(&subscip) );
+   assert(subscip != NULL);
+   assert(scip != NULL);
+   assert(heur != NULL);
 
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), SCIPgetNVars(scip)) );
@@ -1361,18 +1354,7 @@ SCIP_RETCODE solveSubMIP(
       SCIP_CALL( SCIPsetObjlimit(subscip, cutoffbound) );
    }
 
-   retcode = SCIPsolve(subscip);
-
-   /* Errors in solving the subproblem should not kill the overall solving process
-    * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
-    */
-   if( retcode != SCIP_OKAY )
-   {
-#ifndef NDEBUG
-      SCIP_CALL( retcode );
-#endif
-      SCIPwarningMessage(scip, "Error while solving subproblem in " HEUR_NAME " heuristic; sub-SCIP terminated with code <%d>\n",retcode);
-   }
+   SCIP_CALL_ABORT( SCIPsolve(subscip) );
 
    /* check, whether a solution was found;
     * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
@@ -1384,9 +1366,42 @@ SCIP_RETCODE solveSubMIP(
       SCIP_CALL( createNewSol(scip, subscip, heur, varmap, subsols[c], success) );
    }
 
-   /* free sub-SCIP and hash map */
-   SCIP_CALL( SCIPfree(&subscip) );
    SCIPhashmapFree(&varmap);
+
+   return SCIP_OKAY;
+}
+
+
+/** solves subproblem and passes best feasible solution to original SCIP instance */
+static
+SCIP_RETCODE solveSubMIP(
+   SCIP*                 scip,               /**< SCIP data structure of the original problem */
+   SCIP_HEUR*            heur,               /**< heuristic data structure */
+   SCIP_VAR**            covervars,          /**< variables in the cover, should be fixed locally */
+   int                   ncovervars,         /**< number of variables in the cover */
+   SCIP_Bool*            success             /**< pointer to store whether a solution was found */
+   )
+{
+   SCIP* subscip;
+
+   SCIP_RETCODE retcode;
+
+
+   /* check whether there is enough time and memory left */
+   SCIP_CALL( SCIPcheckCopyLimits(scip, success) );
+
+   if( !(*success) )
+      return SCIP_OKAY;
+
+   /* create subproblem */
+   SCIP_CALL( SCIPcreate(&subscip) );
+
+   retcode = doSolveSubMIP(scip, subscip, heur, covervars, ncovervars, success);
+
+   /* free sub-SCIP even if an error occurred during the subscip solve */
+   SCIP_CALL( SCIPfree(&subscip) );
+
+   SCIP_CALL( retcode );
 
    return SCIP_OKAY;
 }
@@ -1750,10 +1765,10 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
       /* update iteration count */
       if( SCIPgetNLPTermstat(scip) < SCIP_NLPTERMSTAT_NUMERR )
       {
-         SCIP_CALL( SCIPnlpStatisticsCreate(&nlpstatistics) );
+         SCIP_CALL( SCIPnlpStatisticsCreate(SCIPblkmem(scip), &nlpstatistics) );
          SCIP_CALL( SCIPgetNLPStatistics(scip, nlpstatistics) );
          heurdata->nnlpiterations += SCIPnlpStatisticsGetNIterations(nlpstatistics);
-         SCIPnlpStatisticsFree(&nlpstatistics);
+         SCIPnlpStatisticsFree(SCIPblkmem(scip), &nlpstatistics);
       }
 
       nlpsolstat = SCIPgetNLPSolstat(scip);
@@ -2450,10 +2465,10 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
             }
 
             /* update iteration count */
-            SCIP_CALL( SCIPnlpStatisticsCreate(&nlpstatistics) );
+            SCIP_CALL( SCIPnlpStatisticsCreate(SCIPblkmem(scip), &nlpstatistics) );
             SCIP_CALL( SCIPgetNLPStatistics(scip, nlpstatistics) );
             heurdata->nnlpiterations += SCIPnlpStatisticsGetNIterations(nlpstatistics);
-            SCIPnlpStatisticsFree(&nlpstatistics);
+            SCIPnlpStatisticsFree(SCIPblkmem(scip), &nlpstatistics);
 
             /* get NLP solution status, objective value, and fractional variables, that should be integral */
             nlpsolstat = SCIPgetNLPSolstat(scip);
