@@ -262,6 +262,7 @@ typedef struct
    SCIP_CONSHDLR*          conshdlr;         /**< expression constraint handler */
    SCIP_CONSEXPR_NLHDLR**  nlhdlrssuccess;   /**< buffer for nlhdlrs that had success detecting structure at expression */
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrssuccessexprdata; /**< buffer for exprdata of nlhdlrs */
+   SCIP_CONSEXPR_EXPRENFO_METHOD* nlhdlrssuccessprovided; /**< buffer for methods provided by nlhdlrs */
 } NLHDLR_DETECT_DATA;
 
 /*
@@ -3604,6 +3605,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
    NLHDLR_DETECT_DATA* detectdata;
+   SCIP_CONSEXPR_EXPRENFO_METHOD desiredenfo;
+   SCIP_CONSEXPR_EXPRENFO_METHOD providedenfo;
    int nsuccess;
    int e, h;
 
@@ -3643,14 +3646,16 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
 
       return SCIP_OKAY;
    }
-
-   /* analyze expression with nonlinear handlers */
    assert(expr->enfos == NULL);
+
+   /* analyze expression with nonlinear handlers
+    * we start with desiring all enforcement methods for now (change this when we have better locks and have to enforce inequalities only)
+    */
    nsuccess = 0;
+   desiredenfo = SCIP_CONSEXPR_EXPRENFO_ALL;
    for( h = 0; h < conshdlrdata->nnlhdlrs; ++h )
    {
       SCIP_CONSEXPR_NLHDLR* nlhdlr;
-      SCIP_Bool success = FALSE;
 
       nlhdlr = conshdlrdata->nlhdlrs[h];
       assert(nlhdlr != NULL);
@@ -3658,27 +3663,32 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
 
       /* call detect routine of nlhdlr */
       detectdata->nlhdlrssuccessexprdata[nsuccess] = NULL;
-      SCIP_CALL( (*nlhdlr->detect)(scip, conshdlr, nlhdlr, expr, &success, &detectdata->nlhdlrssuccessexprdata[nsuccess]) );
+      SCIP_CALL( (*nlhdlr->detect)(scip, conshdlr, nlhdlr, expr, desiredenfo, &detectdata->nlhdlrssuccessprovided[nsuccess], &detectdata->nlhdlrssuccessexprdata[nsuccess]) );
 
-      if( success )
+      if( providedenfo == SCIP_CONSEXPR_EXPRENFO_NONE )
       {
-         /* remember nlhdlr and success */
-         detectdata->nlhdlrssuccess[nsuccess] = nlhdlr;
-         ++nsuccess;
-
-         /* TODO continuing with the next nlhdlr will always call the detection of the default hdlr, eventually -- sometimes, one might want to skip this*/
-      }
-      else
-      {
-         /* nlhdlrexprdata can be non-NULL only if success is TRUE */
+         /* nlhdlrexprdata can only be non-NULL if it provided some functionality */
          assert(detectdata->nlhdlrssuccessexprdata[nsuccess] == NULL);
+
+         continue;
       }
+
+      /* remember also nlhdlr */
+      detectdata->nlhdlrssuccess[nsuccess] = nlhdlr;
+      ++nsuccess;
+
+      /* update which enforcement methods we still require = desired before - provided now
+       * (it is possible that a handler provides a method that was not desired (anymore), which is allowed behavior) */
+      desiredenfo &= ~providedenfo;
    }
 
-   if( nsuccess == 0 )
+   /* stop if some desired enforcement method was not provided
+    * we might want to relax this a bit some day, e.g., having one out of separation and propagation could be sufficient
+    */
+   if( desiredenfo != SCIP_CONSEXPR_EXPRENFO_NONE )
    {
-      /* at least the default nlhdlr should have recognized success */
-      SCIPerrorMessage("no nonlinear handler found responsible for expression\n");
+      /* as long as the expression provides its callbacks, the default nlhdlr should have provided all enforcement methods */
+      SCIPerrorMessage("no nonlinear handler provided enforcement method(s) %d\n", desiredenfo);
       *result = SCIP_CONSEXPREXPRWALK_ABORT;
       return SCIP_OKAY;
    }
@@ -3690,7 +3700,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
       SCIP_CALL( SCIPallocBlockMemory(scip, &expr->enfos[e]) );  /*lint !e866 */
       expr->enfos[e]->nlhdlr = detectdata->nlhdlrssuccess[e];
       expr->enfos[e]->nlhdlrexprdata = detectdata->nlhdlrssuccessexprdata[e];
-      expr->enfos[e]->methods = SCIP_CONSEXPR_EXPRENFO_SEPABOTH;
+      expr->enfos[e]->methods = detectdata->nlhdlrssuccessprovided[e];
    }
    expr->nenfos = nsuccess;
 
@@ -3895,9 +3905,14 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(initSepaEnterExpr)
    {
       assert(expr->enfos[e] != NULL);
 
+      /* if nlhdlr will not separate, then don't init separation */
+      if( expr->enfos[e]->methods & SCIP_CONSEXPR_EXPRENFO_SEPABOTH == 0 )
+         continue;
+
       nlhdlr = expr->enfos[e]->nlhdlr;
       assert(nlhdlr != NULL);
 
+      /* even if the nlhdlr provides separation, it does not need to have an initsepa callback */
       if( nlhdlr->initsepa == NULL )
          continue;
 
@@ -3939,6 +3954,10 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(exitSolEnterExpr)
    for( e = 0; e < expr->nenfos; ++e )
    {
       SCIP_CONSEXPR_NLHDLR* nlhdlr;
+
+      /* if nlhdlr will not separate, then don't deinit separation */
+      if( expr->enfos[e]->methods & SCIP_CONSEXPR_EXPRENFO_SEPABOTH == 0 )
+         continue;
 
       assert(expr->enfos[e] != NULL);
 
@@ -4017,9 +4036,13 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
       {
          SCIP_CONSEXPR_NLHDLR* nlhdlr;
 
-         nlhdlr = expr->enfos[e]->nlhdlr;
-         if( nlhdlr->sepa == NULL )
+         /* skip nlhdlrs that do not provide separation */
+         if( expr->enfos[e]->methods & SCIP_CONSEXPR_EXPRENFO_SEPABOTH == 0 )
             continue;
+
+         nlhdlr = expr->enfos[e]->nlhdlr;
+         assert(nlhdlr != NULL);
+         assert(nlhdlr->sepa != NULL);
 
          /* call the separation callback of the nonlinear handler */
          SCIP_CALL( nlhdlr->sepa(scip, sepadata->conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sepadata->sol, sepadata->minviolation, separated, &separesult, &ncuts) );

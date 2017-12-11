@@ -435,9 +435,11 @@ typedef enum
 typedef unsigned int SCIP_CONSEXPR_PRINTDOT_WHAT;
 /** @} */
 
-#define SCIP_CONSEXPR_EXPRENFO_SEPAUNDER      0x1u /** separates for expr <= auxvar, thus might underestimate expr */
-#define SCIP_CONSEXPR_EXPRENFO_SEPAOVER       0x2u /** separates for expr >= auxvar, thus might overestimate expr */
-#define SCIP_CONSEXPR_EXPRENFO_SEPABOTH SCIP_CONSEXPR_EXPRENFO_SEPAUNDER | SCIP_CONSEXPR_EXPRENFO_SEPAOVER
+#define SCIP_CONSEXPR_EXPRENFO_NONE           0x0u /**< no enforcement */
+#define SCIP_CONSEXPR_EXPRENFO_SEPAUNDER      0x1u /**< separates for expr <= auxvar, thus might underestimate expr */
+#define SCIP_CONSEXPR_EXPRENFO_SEPAOVER       0x2u /**< separates for expr >= auxvar, thus might overestimate expr */
+#define SCIP_CONSEXPR_EXPRENFO_SEPABOTH       (SCIP_CONSEXPR_EXPRENFO_SEPAUNDER | SCIP_CONSEXPR_EXPRENFO_SEPAOVER)  /**< separates for expr == auxvar */
+#define SCIP_CONSEXPR_EXPRENFO_ALL            SCIP_CONSEXPR_EXPRENFO_SEPABOTH  /**< all enforcement methods */
 
 /** type for exprenfo bitflags */
 typedef unsigned int SCIP_CONSEXPR_EXPRENFO_METHOD;
@@ -522,7 +524,8 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< print
    SCIP_CONSHDLR* conshdlr, \
    SCIP_CONSEXPR_NLHDLR* nlhdlr, \
    SCIP_CONSEXPR_EXPR* expr, \
-   SCIP_Bool* success, \
+   SCIP_CONSEXPR_EXPRENFO_METHOD desired, \
+   SCIP_CONSEXPR_EXPRENFO_METHOD* provided, \
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata)
 
 /** separation initialization method of a nonlinear handler (called during CONSINITLP)

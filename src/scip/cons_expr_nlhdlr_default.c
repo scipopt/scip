@@ -38,20 +38,22 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
    assert(scip != NULL);
    assert(nlhdlr != NULL);
    assert(expr != NULL);
-   assert(success != NULL);
+   assert(provided != NULL);
 
-   *success = FALSE;
+   *provided = SCIP_CONSEXPR_EXPRENFO_NONE;
 
-   /* TODO return sepa possibility only if exprhdlr for expr has a sepa callback */
-
-   /* make sure that an (auxiliary) variable exists for every child */
-   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+   /* return sepa possibility if exprhdlr for expr has a sepa callback and separation is still desired */
+   if( (desired & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) != 0 && SCIPgetConsExprExprHdlr(expr)->sepa != NULL )
    {
-      /* todo skip this for value-expressions? */
-      SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[c], NULL) );
-   }
+      /* make sure that an (auxiliary) variable exists for every child */
+      for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+      {
+         /* todo skip this for value-expressions? */
+         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[c], NULL) );
+      }
 
-   *success = TRUE;
+      *provided = *provided | SCIP_CONSEXPR_EXPRENFO_SEPABOTH;
+   }
 
    return SCIP_OKAY;
 }
