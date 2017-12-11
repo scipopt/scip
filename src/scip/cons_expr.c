@@ -3906,7 +3906,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(initSepaEnterExpr)
       assert(expr->enfos[e] != NULL);
 
       /* if nlhdlr will not separate, then don't init separation */
-      if( expr->enfos[e]->methods & SCIP_CONSEXPR_EXPRENFO_SEPABOTH == 0 )
+      if( (expr->enfos[e]->methods & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == 0 )
          continue;
 
       nlhdlr = expr->enfos[e]->nlhdlr;
@@ -3956,7 +3956,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(exitSolEnterExpr)
       SCIP_CONSEXPR_NLHDLR* nlhdlr;
 
       /* if nlhdlr will not separate, then don't deinit separation */
-      if( expr->enfos[e]->methods & SCIP_CONSEXPR_EXPRENFO_SEPABOTH == 0 )
+      if( (expr->enfos[e]->methods & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == 0 )
          continue;
 
       assert(expr->enfos[e] != NULL);
@@ -4037,7 +4037,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
          SCIP_CONSEXPR_NLHDLR* nlhdlr;
 
          /* skip nlhdlrs that do not provide separation */
-         if( expr->enfos[e]->methods & SCIP_CONSEXPR_EXPRENFO_SEPABOTH == 0 )
+         if( (expr->enfos[e]->methods & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == 0 )
             continue;
 
          nlhdlr = expr->enfos[e]->nlhdlr;
