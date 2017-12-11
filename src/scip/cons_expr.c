@@ -268,6 +268,90 @@ typedef struct
  * Local methods
  */
 
+/** frees auxiliary variables of expression, if any */
+static
+SCIP_RETCODE freeAuxVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression which auxvar to free, if any */
+)
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+
+   if( expr->auxvar == NULL )
+      return SCIP_OKAY;
+
+   SCIPdebugMsg(scip, "remove auxiliary variable %s for expression %p\n", SCIPvarGetName(expr->auxvar), (void*)expr);
+
+   /* remove variable locks if variable is not used by any other plug-in which can be done by checking whether
+    * SCIPvarGetNUses() returns 2 (1 for the core; and one for cons_expr); note that SCIP does not enforce to have 0
+    * locks when freeing a variable
+    */
+   assert(SCIPvarGetNUses(expr->auxvar) >= 2);
+   if( SCIPvarGetNUses(expr->auxvar) == 2 )
+   {
+      SCIP_CALL( SCIPaddVarLocks(scip, expr->auxvar, -1, -1) );
+   }
+
+   /* release auxiliary variable */
+   SCIP_CALL( SCIPreleaseVar(scip, &expr->auxvar) );
+   assert(expr->auxvar == NULL);
+
+   return SCIP_OKAY;
+}
+
+/** frees data used for enforcement, that is, nonlinear handlers and auxiliary variables */
+static
+SCIP_RETCODE freeEnfoData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression whose enforcement data will be released */
+   SCIP_Bool             freeauxvar          /**< whether aux var should be released */
+   )
+{
+   int e;
+
+   /* free auxiliary variable */
+   if( freeauxvar )
+   {
+      SCIP_CALL( freeAuxVar(scip, expr) );
+   }
+   assert(expr->auxvar == NULL);
+
+   /* free data stored by nonlinear handlers */
+   for( e = 0; e < expr->nenfos; ++e )
+   {
+      SCIP_CONSEXPR_NLHDLR* nlhdlr;
+
+      assert(expr->enfos[e] != NULL);
+
+      nlhdlr = expr->enfos[e]->nlhdlr;
+      assert(nlhdlr != NULL);
+
+      if( expr->enfos[e]->issepainit && nlhdlr->exitsepa != NULL )
+      {
+         /* call the separation deinitialization callback of the nonlinear handler */
+         SCIP_CALL( nlhdlr->exitsepa(scip, nlhdlr, expr->enfos[e]->nlhdlrexprdata, expr) );
+         expr->enfos[e]->issepainit = FALSE;
+      }
+
+      /* free nlhdlr exprdata, if there is any and there is a method to free this data */
+      if( expr->enfos[e]->nlhdlrexprdata != NULL && nlhdlr->freeexprdata != NULL )
+      {
+         SCIP_CALL( (*nlhdlr->freeexprdata)(scip, nlhdlr, &expr->enfos[e]->nlhdlrexprdata) );
+         assert(expr->enfos[e]->nlhdlrexprdata == NULL);
+      }
+
+      /* free enfo data */
+      SCIPfreeBlockMemory(scip, &expr->enfos[e]); /*lint !e866 */
+   }
+
+   /* free array with enfo data */
+   SCIPfreeBlockMemoryArrayNull(scip, &expr->enfos, expr->nenfos);
+   expr->nenfos = 0;
+
+   return SCIP_OKAY;
+}
+
 /** create and include conshdlr to SCIP and set everything except for expression handlers */
 static
 SCIP_RETCODE includeConshdlrExprBasic(SCIP* scip);
@@ -643,9 +727,11 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeExpr)
          {
             assert(child->nuses == 1);
 
+            /* free child's enfodata and expression data when entering child */
+            SCIP_CALL( freeEnfoData(scip, child, TRUE) );
+
             if( child->exprdata != NULL )
             {
-               /* free child's expression data when entering child */
                if( child->exprhdlr->freedata != NULL )
                {
                   SCIP_CALL( child->exprhdlr->freedata(scip, child) );
@@ -3691,6 +3777,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
       expr->enfos[e]->nlhdlr = detectdata->nlhdlrssuccess[e];
       expr->enfos[e]->nlhdlrexprdata = detectdata->nlhdlrssuccessexprdata[e];
       expr->enfos[e]->methods = SCIP_CONSEXPR_EXPRENFO_SEPABOTH;
+      expr->enfos[e]->issepainit = FALSE;
    }
    expr->nenfos = nsuccess;
 
@@ -3782,38 +3869,6 @@ SCIP_RETCODE detectNlhdlrs(
    return SCIP_OKAY;
 }
 
-/** frees auxiliary variables of expression, if any */
-static
-SCIP_RETCODE freeAuxVar(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*   expr                /**< expression which auxvar to free, if any */
-)
-{
-   assert(scip != NULL);
-   assert(expr != NULL);
-
-   if( expr->auxvar == NULL )
-      return SCIP_OKAY;
-
-   SCIPdebugMsg(scip, "remove auxiliary variable %s for expression %p\n", SCIPvarGetName(expr->auxvar), (void*)expr);
-
-   /* remove variable locks if variable is not used by any other plug-in which can be done by checking whether
-    * SCIPvarGetNUses() returns 2 (1 for the core; and one for cons_expr); note that SCIP does not enforce to have 0
-    * locks when freeing a variable
-    */
-   assert(SCIPvarGetNUses(expr->auxvar) >= 2);
-   if( SCIPvarGetNUses(expr->auxvar) == 2 )
-   {
-      SCIP_CALL( SCIPaddVarLocks(scip, expr->auxvar, -1, -1) );
-   }
-
-   /* release auxiliary variable */
-   SCIP_CALL( SCIPreleaseVar(scip, &expr->auxvar) );
-   assert(expr->auxvar == NULL);
-
-   return SCIP_OKAY;
-}
-
 /** expression walk callback to free auxiliary variables created for the outer approximation */
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeAuxVarsEnterExpr)
@@ -3901,8 +3956,11 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(initSepaEnterExpr)
       if( nlhdlr->initsepa == NULL )
          continue;
 
+      assert(!expr->enfos[e]->issepainit);
+
       /* call the separation initialization callback of the nonlinear handler */
       SCIP_CALL( nlhdlr->initsepa(scip, initsepadata->conshdlr, nlhdlr, expr->enfos[e]->nlhdlrexprdata, expr, &infeasible) );
+      expr->enfos[e]->issepainit = TRUE;
 
       if( infeasible )
       {
@@ -3924,8 +3982,6 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(initSepaEnterExpr)
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(exitSolEnterExpr)
 {  /*lint --e{715}*/
-   int e;
-
    assert(expr != NULL);
    assert(result != NULL);
    assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
@@ -3935,44 +3991,10 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(exitSolEnterExpr)
 
    SCIPdebugMsg(scip, "exitsepa and free nonlinear handler data for expression %p\n", (void*)expr);
 
-   /* remove nonlinear handlers in expression and their data */
-   for( e = 0; e < expr->nenfos; ++e )
-   {
-      SCIP_CONSEXPR_NLHDLR* nlhdlr;
-
-      assert(expr->enfos[e] != NULL);
-
-      nlhdlr = expr->enfos[e]->nlhdlr;
-      assert(nlhdlr != NULL);
-
-      if( nlhdlr->exitsepa != NULL )
-      {
-         /* call the separation deinitialization callback of the nonlinear handler */
-         SCIP_CALL( nlhdlr->exitsepa(scip, nlhdlr, expr->enfos[e]->nlhdlrexprdata, expr) );
-      }
-
-      /* free nlhdlr exprdata, if there is any and there is a method to free this data */
-      if( expr->enfos[e]->nlhdlrexprdata != NULL && nlhdlr->freeexprdata != NULL )
-      {
-         SCIP_CALL( (*nlhdlr->freeexprdata)(scip, nlhdlr, &expr->enfos[e]->nlhdlrexprdata) );
-         assert(expr->enfos[e]->nlhdlrexprdata == NULL);
-      }
-
-      /* free enfo data */
-      SCIPfreeBlockMemory(scip, &expr->enfos[e]); /*lint !e866 */
-   }
-
-   /* free array that had the enfo data */
-   SCIPfreeBlockMemoryArrayNull(scip, &expr->enfos, expr->nenfos);
-   expr->nenfos = 0;
-
-   /* free auxiliary variable if not restarting
+   /* remove nonlinear handlers in expression and their data and auxiliary variables if not restarting
     * (data is a pointer to a bool that indicates whether we are restarting)
     */
-   if( !*(SCIP_Bool*)data )
-   {
-      SCIP_CALL( freeAuxVar(scip, expr) );
-   }
+   SCIP_CALL( freeEnfoData(scip, expr, !*(SCIP_Bool*)data) );
 
    return SCIP_OKAY;
 }
@@ -6451,45 +6473,14 @@ SCIP_RETCODE SCIPreleaseConsExprExpr(
    SCIP_CONSEXPR_EXPR**  expr                /**< pointer to expression to be released */
    )
 {
-   int i;
-
    assert(expr != NULL);
    assert(*expr != NULL);
 
    if( (*expr)->nuses == 1 )
    {
-      /* release the auxiliary variable */
-      if( (*expr)->auxvar != NULL )
-      {
-         /* remove variable locks of the auxiliary variable */
-         SCIP_CALL( SCIPaddVarLocks(scip, (*expr)->auxvar, -1, -1) );
+      /* handle the root expr separately: enfodata and expression data here */
+      SCIP_CALL( freeEnfoData(scip, *expr, TRUE) );
 
-         SCIP_CALL( SCIPreleaseVar(scip, &(*expr)->auxvar) );
-      }
-      assert((*expr)->auxvar == NULL);
-
-      /* free data stored by nonlinear handlers */
-      for( i = 0; i < (*expr)->nenfos; ++i )
-      {
-         SCIP_CONSEXPR_NLHDLR* nlhdlr;
-
-         assert((*expr)->enfos[i] != NULL);
-
-         nlhdlr = (*expr)->enfos[i]->nlhdlr;
-         assert(nlhdlr != NULL);
-
-         /* free nlhdlr exprdata if there is any and a method to free it */
-         if( (*expr)->enfos[i]->nlhdlrexprdata != NULL && nlhdlr->freeexprdata != NULL )
-         {
-            SCIP_CALL( (*nlhdlr->freeexprdata)(scip, nlhdlr, &(*expr)->enfos[i]->nlhdlrexprdata) );
-            assert((*expr)->enfos[i]->nlhdlrexprdata == NULL);
-         }
-      }
-
-      /* free array with enfo data */
-      SCIPfreeBlockMemoryArrayNull(scip, &(*expr)->enfos, (*expr)->nenfos);
-
-      /* handle the root expr separately: free its data here */
       if( (*expr)->exprdata != NULL && (*expr)->exprhdlr->freedata != NULL )
       {
          SCIP_CALL( (*expr)->exprhdlr->freedata(scip, *expr) );
