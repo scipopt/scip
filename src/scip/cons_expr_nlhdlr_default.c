@@ -91,6 +91,8 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaDefault)
       /* don't do anything if someone already separated */
       *result = SCIP_DIDNOTFIND;
       *ncuts = 0;
+
+      return SCIP_OKAY;
    }
 
    exprhdlr = SCIPgetConsExprExprHdlr(expr);
