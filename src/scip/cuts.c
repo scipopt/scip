@@ -5513,6 +5513,10 @@ SCIP_RETCODE constructSNFRelaxation(
          }
       }
 
+      /* make sure the coefficient is not negative due to small numerical rounding errors */
+      assert(snf->transvarvubcoefs[snf->ntransvars] > -QUAD_EPSILON);
+      snf->transvarvubcoefs[snf->ntransvars] = MAX(snf->transvarvubcoefs[snf->ntransvars], 0.0);
+
       ++snf->ntransvars;
    }
 
