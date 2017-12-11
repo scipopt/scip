@@ -30,6 +30,8 @@
 #include "scip/cons_expr_product.h"
 #include "scip/cons_quadratic.h"
 
+#include "nlpi/nlpi_ipopt.h" /* for LAPACK */
+
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME         "quadratic"
 #define NLHDLR_DESC         "handler for quadratic expressions"
@@ -60,6 +62,8 @@ struct SCIP_ConsExpr_NlhdlrExprData
    int                   nbilinterms;        /**< number of bilinear terms */
    int                   bilintermssize;     /**< size of bilinterms array */
    SCIP_BILINTERM*       bilinterms;         /**< bilinear terms array */
+
+   SCIP_EXPRCURV         curvature;          /**< curvature of the quadratic representation of the expression */
 };
 
 /*
@@ -249,15 +253,114 @@ SCIP_RETCODE checkProperQuadratic(SCIP_CONSEXPR_EXPR* expr, SCIP_HASHMAP* seenex
    return SCIP_OKAY;
 }
 
+/* TODO: make more simple test; like diagonal entries don't change sign, etc */
+static
+SCIP_RETCODE checkCurvature(
+   SCIP* scip,
+   SCIP_CONSEXPR_NLHDLREXPRDATA* exprdata,
+   SCIP_CONSEXPR_EXPRENFO_METHOD* provided
+   )
+{
+   SCIP_HASHMAP* var2matrix;
+   double* matrix;
+   double* alleigval;
+   int nvars;
+   int nn;
+   int n;
+   int i;
+
+   n  = exprdata->nquadvars;
+   nn = n * n;
+
+   /* do not check curvature if nn is too large */
+   if( nn < 0 || (unsigned) (int) nn > UINT_MAX / sizeof(SCIP_Real) )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "nlhdr_quadratic - number of quadratic variables is too large (%d) to check the curvature; will not handle this expression\n", n);
+
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &alleigval, n) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &matrix, nn) );
+   BMSclearMemoryArray(matrix, nn);
+
+   SCIP_CALL( SCIPhashmapCreate(&var2matrix, SCIPblkmem(scip), n) );
+
+   /* fill matrix's diagonal */
+   nvars = 0;
+   for( i = 0; i < n; ++i )
+   {
+      SCIP_QUADVARTERM quadterm;
+
+      quadterm = exprdata->quadvarterms[i];
+
+      assert(!SCIPhashmapExists(var2matrix, (void*)quadterm.var));
+
+      printf("quadvarterm = %s^2 * %g\n", SCIPvarGetName(quadterm.var), quadterm.sqrcoef);
+      if( quadterm.sqrcoef == 0.0 )
+      {
+         SCIPdebugMsg(scip, "var <%s> appears in bilinear term but is not squared --> indefinite quadratic\n", SCIPvarGetName(quadterm.var));
+         goto CLEANUP;
+      }
+
+      matrix[nvars * n + nvars] = quadterm.sqrcoef;
+
+      /* remember row of variable in matrix */
+      SCIP_CALL( SCIPhashmapInsert(var2matrix, (void *)quadterm.var, (void *)(size_t)nvars) );
+      nvars++;
+   }
+
+   /* fill matrix's upper-diagonal */
+   for( i = 0; i < exprdata->nbilinterms; ++i )
+   {
+      SCIP_BILINTERM bilinterm;
+      int col;
+      int row;
+
+      bilinterm = exprdata->bilinterms[i];
+
+      assert(SCIPhashmapExists(var2matrix, (void*)bilinterm.var1));
+      assert(SCIPhashmapExists(var2matrix, (void*)bilinterm.var2));
+      row = (int)(size_t)SCIPhashmapGetImage(var2matrix, bilinterm.var1);
+      col = (int)(size_t)SCIPhashmapGetImage(var2matrix, bilinterm.var2);
+
+      assert(row != col);
+
+      if( row < col )
+         matrix[row * n + col] = bilinterm.coef / 2.0;
+      else
+         matrix[col * n + row] = bilinterm.coef / 2.0;
+   }
+
+   /* compute eigenvalues */
+   if( LapackDsyev(FALSE, n, matrix, alleigval) != SCIP_OKAY )
+   {
+      SCIPwarningMessage(scip, "Failed to compute eigenvalues of quadratic coefficient matrix --> don't know curvature\n");
+      goto CLEANUP;
+   }
+
+   /* check convexity */
+   if( !SCIPisNegative(scip, alleigval[0]) )
+   {
+      *provided = SCIP_CONSEXPR_EXPRENFO_SEPAUNDER;
+      exprdata->curvature = SCIP_EXPRCURV_CONVEX;
+   }
+   else if( !SCIPisPositive(scip, alleigval[n-1]) )
+   {
+      *provided = SCIP_CONSEXPR_EXPRENFO_SEPAOVER;
+      exprdata->curvature = SCIP_EXPRCURV_CONCAVE;
+   }
+
+CLEANUP:
+   SCIPhashmapFree(&var2matrix);
+   SCIPfreeBufferArray(scip, &matrix);
+   SCIPfreeBufferArray(scip, &alleigval);
+
+   return SCIP_OKAY;
+}
+
 /** callback to detect structure in expression tree */
 /*
- * - scip SCIP data structure
- * - conshdlr expr-constraint handler
- * - nlhdlr nonlinear handler
- * - expr expression to analyze
- * - success buffer to return whether a nlhdlr specific structure has been found
- * - nlhdlrexprdata nlhdlr's expr data to be stored in expr, can only be set to non-NULL if success is set to TRUE
- *
  * A term is quadratic if:
  * - It is a product expression of two expressions
  * - It is power expression of an expression with exponent 2.0
@@ -296,10 +399,10 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
    assert(scip != NULL);
    assert(nlhdlr != NULL);
    assert(expr != NULL);
-   assert(success != NULL);
+   assert(provided != NULL);
    assert(nlhdlrexprdata != NULL);
 
-   *success = FALSE;
+   *provided = SCIP_CONSEXPR_EXPRENFO_NONE;
 
    /* if it is not a sum of at least two terms, it cannot be a proper quadratic expressions */
    if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrSum(conshdlr) || SCIPgetConsExprExprNChildren(expr) < 2 )
@@ -435,9 +538,9 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlrQuadratic)
    }
    SCIPhashmapFree(&varidx);
 
+   /* check curvature of quadratic function stored in exprdata */
+   SCIP_CALL( checkCurvature(scip, exprdata, provided) );
 
-   /* TODO: check if convex or concave */
-   *success = TRUE;
    return SCIP_OKAY;
 }
 
@@ -479,7 +582,7 @@ SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(copyHdlrQuadratic)
    SCIPsetConsExprNlhdlrFreeExprData(targetscip, targetnlhdlr, freeExprDataQuadratic);
    SCIPsetConsExprNlhdlrCopyHdlr(targetscip, targetnlhdlr, copyHdlrQuadratic);
    SCIPsetConsExprNlhdlrInitExit(targetscip, targetnlhdlr, initHdlrQuadratic, exitHldrQuadratic);
-   SCIPsetConsExprNlhdlrSepa(targetscip, targetnlhdlr, sepaHdlrQuadratic);
+   SCIPsetConsExprNlhdlrSepa(targetscip, targetnlhdlr, NULL, sepaHdlrQuadratic, NULL); // TODO: init exit sepa callbacks
 
    return SCIP_OKAY;
 }
