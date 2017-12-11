@@ -3788,9 +3788,9 @@ SCIP_RETCODE detectNlhdlrs(
       }
    }
 
-   SCIPfreeBufferArray(scip, &nlhdlrdetect.nlhdlrssuccess);
-   SCIPfreeBufferArray(scip, &nlhdlrdetect.nlhdlrssuccessexprdata);
    SCIPfreeBufferArray(scip, &nlhdlrdetect.nlhdlrssuccessprovided);
+   SCIPfreeBufferArray(scip, &nlhdlrdetect.nlhdlrssuccessexprdata);
+   SCIPfreeBufferArray(scip, &nlhdlrdetect.nlhdlrssuccess);
 
    return SCIP_OKAY;
 }
