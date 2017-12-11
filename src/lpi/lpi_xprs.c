@@ -1649,12 +1649,18 @@ SCIP_RETCODE SCIPlpiGetColNames(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   firstcol,           /**< first column to get name from LP */
    int                   lastcol,            /**< last column to get name from LP */
-   char**                colnames,           /**< pointers to column names (of size at least lastcol-firstcol+1) */
-   char*                 namestorage,        /**< storage for col names */
+   char**                colnames,           /**< pointers to column names (of size at least lastcol-firstcol+1) or NULL if namestoragesize is zero */
+   char*                 namestorage,        /**< storage for col names or NULL if namestoragesize is zero */
    int                   namestoragesize,    /**< size of namestorage (if 0, storageleft returns the storage needed) */
-   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
+   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) or NULL if namestoragesize is zero */
    )
 { /*lint --e{715}*/
+   assert(lpi != NULL);
+   assert(lpi->xprslp != NULL);
+   assert(colnames != NULL || namestoragesize == 0);
+   assert(namestorage != NULL || namestoragesize == 0);
+   assert(namestoragesize >= 0);
+   assert(storageleft != NULL);
    SCIPerrorMessage("SCIPlpiGetColNames() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -1664,12 +1670,18 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   firstrow,           /**< first row to get name from LP */
    int                   lastrow,            /**< last row to get name from LP */
-   char**                rownames,           /**< pointers to row names (of size at least lastrow-firstrow+1) */
-   char*                 namestorage,        /**< storage for row names */
+   char**                rownames,           /**< pointers to row names (of size at least lastrow-firstrow+1) or NULL if namestoragesize is zero */
+   char*                 namestorage,        /**< storage for row names or NULL if namestoragesize is zero */
    int                   namestoragesize,    /**< size of namestorage (if 0, -storageleft returns the storage needed) */
-   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
+   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) or NULL if namestoragesize is zero */
    )
 { /*lint --e{715}*/
+   assert(lpi != NULL);
+   assert(lpi->xprslp != NULL);
+   assert(rownames != NULL || namestoragesize == 0);
+   assert(namestorage != NULL || namestoragesize == 0);
+   assert(namestoragesize >= 0);
+   assert(storageleft != NULL);
    SCIPerrorMessage("SCIPlpiGetRowNames() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -1784,6 +1796,7 @@ SCIP_RETCODE SCIPlpiGetCoef(
 {
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
+   assert(val != NULL);
 
    /* get the coefficient of the column in the corresponding row */
    CHECK_ZERO( lpi->messagehdlr, XPRSgetcoef(lpi->xprslp, row, col, val) );
@@ -1877,6 +1890,9 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
+   assert(lpi != NULL);
+   assert(lpi->xprslp != NULL);
+
    lpi->solmethod = 'p';
    return lpiSolve(lpi, "p");
 }
@@ -1886,6 +1902,9 @@ SCIP_RETCODE SCIPlpiSolveDual(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
+   assert(lpi != NULL);
+   assert(lpi->xprslp != NULL);
+
    lpi->solmethod = 'd';
    return lpiSolve(lpi, "d");
 }
@@ -1917,6 +1936,9 @@ SCIP_RETCODE SCIPlpiStartStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 { /*lint --e{715}*/
+   assert(lpi != NULL);
+   assert(lpi->xprslp != NULL);
+
    /* currently do nothing */
    return SCIP_OKAY;
 }
@@ -1926,6 +1948,9 @@ SCIP_RETCODE SCIPlpiEndStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
+   assert(lpi != NULL);
+   assert(lpi->xprslp != NULL);
+
    /* currently do nothing */
    return SCIP_OKAY;
 }
@@ -2573,6 +2598,7 @@ SCIP_RETCODE SCIPlpiIgnoreInstability(
 {
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
+   assert(success != NULL);
 
    /* Nothing to do here for Xpress. */
    *success = TRUE;
@@ -2588,6 +2614,7 @@ SCIP_RETCODE SCIPlpiGetObjval(
 {
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
+   assert(objval != NULL);
 
    SCIPdebugMessage("getting solution's objective value\n");
 
@@ -2872,8 +2899,8 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   row,                /**< row number */
    SCIP_Real*            coef,               /**< pointer to store the coefficients of the row */
-   int*                  inds,               /**< array to store the non-zero indices */
-   int*                  ninds               /**< pointer to store the number of non-zero indices
+   int*                  inds,               /**< array to store the non-zero indices, or NULL */
+   int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                                *  (-1: if we do not store sparsity informations) */
    )
 {  /*lint --e{715}*/
@@ -2881,6 +2908,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
 
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
+   assert(coef != NULL);
 
    SCIPdebugMessage("getting binv-row %d\n", row);
 
@@ -2912,8 +2940,8 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
                                               *   c must be between 0 and nrows-1, since the basis has the size
                                               *   nrows * nrows */
    SCIP_Real*            coef,               /**< pointer to store the coefficients of the column */
-   int*                  inds,               /**< array to store the non-zero indices */
-   int*                  ninds               /**< pointer to store the number of non-zero indices
+   int*                  inds,               /**< array to store the non-zero indices, or NULL */
+   int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                                *  (-1: if we do not store sparsity informations) */
    )
 {  /*lint --e{715}*/
@@ -2921,6 +2949,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
 
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
+   assert(coef != NULL);
 
    SCIPdebugMessage("getting binv-col %d\n", c);
 
@@ -2949,8 +2978,8 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    int                   r,                  /**< row number */
    const SCIP_Real*      binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiGetBInvRow(), or NULL */
    SCIP_Real*            coef,               /**< vector to return coefficients */
-   int*                  inds,               /**< array to store the non-zero indices */
-   int*                  ninds               /**< pointer to store the number of non-zero indices
+   int*                  inds,               /**< array to store the non-zero indices, or NULL */
+   int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                               *  (-1: if we do not store sparsity informations) */
    )
 {  /*lint --e{715}*/
@@ -2963,6 +2992,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
 
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
+   assert(coef != NULL);
 
    SCIPdebugMessage("getting binva-row %d\n", r);
 
@@ -3023,8 +3053,8 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   c,                  /**< column number */
    SCIP_Real*            coef,               /**< vector to return coefficients */
-   int*                  inds,               /**< array to store the non-zero indices */
-   int*                  ninds               /**< pointer to store the number of non-zero indices
+   int*                  inds,               /**< array to store the non-zero indices, or NULL */
+   int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                                *  (-1: if we do not store sparsity informations) */
    )
 {  /*lint --e{715}*/
@@ -3036,6 +3066,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
 
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
+   assert(coef != NULL);
 
    SCIPdebugMessage("getting binv-col %d\n", c);
 

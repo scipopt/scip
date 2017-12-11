@@ -848,10 +848,10 @@ SCIP_RETCODE SCIPlpiGetColNames(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   firstcol,           /**< first column to get name from LP */
    int                   lastcol,            /**< last column to get name from LP */
-   char**                colnames,           /**< pointers to column names (of size at least lastcol-firstcol+1) */
-   char*                 namestorage,        /**< storage for col names */
+   char**                colnames,           /**< pointers to column names (of size at least lastcol-firstcol+1) or NULL if namestoragesize is zero */
+   char*                 namestorage,        /**< storage for col names or NULL if namestoragesize is zero */
    int                   namestoragesize,    /**< size of namestorage (if 0, storageleft returns the storage needed) */
-   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
+   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) or NULL if namestoragesize is zero */
    )
 {
    char** cnames;
@@ -911,10 +911,10 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   firstrow,           /**< first row to get name from LP */
    int                   lastrow,            /**< last row to get name from LP */
-   char**                rownames,           /**< pointers to row names (of size at least lastrow-firstrow+1) */
-   char*                 namestorage,        /**< storage for row names */
+   char**                rownames,           /**< pointers to row names (of size at least lastrow-firstrow+1) or NULL if namestoragesize is zero */
+   char*                 namestorage,        /**< storage for row names or NULL if namestoragesize is zero */
    int                   namestoragesize,    /**< size of namestorage (if 0, -storageleft returns the storage needed) */
-   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) */
+   int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) or NULL if namestoragesize is zero */
    )
 {
    char** rnames;
@@ -1732,6 +1732,7 @@ SCIP_RETCODE SCIPlpiGetObj(
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
+   assert(vals != NULL);
    assert(0 <= firstcol && firstcol <= lastcol && lastcol < QSget_colcount (lpi->prob));
 
    SCIPdebugMessage("getting objective values %d to %d\n", firstcol, lastcol);
@@ -1867,6 +1868,7 @@ SCIP_RETCODE SCIPlpiGetCoef(
 {
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
+   assert(val != NULL);
 
    SCIPdebugMessage("getting coefficient of row %d col %d\n", row, col);
 
@@ -1927,6 +1929,9 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    SCIP_Bool             crossover           /**< perform crossover */
    )
 {  /*lint --e{715}*/
+   assert(lpi != NULL);
+   assert(lpi->prob != NULL);
+
    return SCIPlpiSolveDual(lpi);
 }
 
@@ -1935,6 +1940,9 @@ SCIP_RETCODE SCIPlpiStartStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
+   assert(lpi != NULL);
+   assert(lpi->prob != NULL);
+
    /* currently do nothing */
    return SCIP_OKAY;
 }
@@ -1944,6 +1952,9 @@ SCIP_RETCODE SCIPlpiEndStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
+   assert(lpi != NULL);
+   assert(lpi->prob != NULL);
+
    /* currently do nothing */
    return SCIP_OKAY;
 }
@@ -2165,7 +2176,9 @@ SCIP_RETCODE SCIPlpiGetSolFeasibility(
 {
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
-   assert(lpi->solstat != 0 );
+   assert(lpi->solstat != NULL);
+   assert(primalfeasible != NULL);
+   assert(dualfeasible != NULL);
 
    SCIPdebugMessage("getting solution feasibility\n");
 
@@ -2427,6 +2440,7 @@ SCIP_RETCODE SCIPlpiGetObjval(
 {
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
+   assert(objval != NULL);
 
    SCIPdebugMessage("getting solution's objective value\n");
 
@@ -2455,6 +2469,7 @@ SCIP_RETCODE SCIPlpiGetSol(
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
+   assert(ray != NULL);
 
    SCIPdebugMessage("getting solution\n");
 
@@ -2593,6 +2608,7 @@ SCIP_RETCODE SCIPlpiGetIterations(
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
+   assert(iterations != NULL);
 
    QS_CONDRET( QSget_itcnt(lpi->prob, 0, 0, 0, 0, &nit) );
 
@@ -2733,6 +2749,8 @@ SCIP_RETCODE SCIPlpiSetBase(
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
+   assert(cstat != NULL);
+   assert(rstat != NULL);
 
    SCIPdebugMessage("loading basis %p/%p into QSopt\n", (void*)cstat, (void*)rstat);
 
@@ -2813,6 +2831,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
 
    assert(lpi!=NULL);
    assert(lpi->prob!=NULL);
+   assert(bind != NULL);
 
    SCIPdebugMessage("getting basis information\n");
 
@@ -2849,8 +2868,8 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
    SCIP_Real*            coef,               /**< pointer to store the coefficients of the row */
-   int*                  inds,               /**< array to store the non-zero indices */
-   int*                  ninds               /**< pointer to store the number of non-zero indices
+   int*                  inds,               /**< array to store the non-zero indices, or NULL */
+   int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                                *  (-1: if we do not store sparsity informations) */
    )
 {  /*lint --e{715} */
@@ -2859,6 +2878,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
 
    assert(lpi!=NULL);
    assert(lpi->prob!=NULL);
+   assert(coef != NULL);
 
    nrows = QSget_rowcount(lpi->prob);
    assert( 0 <= r && r < nrows );
@@ -2894,13 +2914,14 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
                                               *   c must be between 0 and nrows-1, since the basis has the size
                                               *   nrows * nrows */
    SCIP_Real*            coef,               /**< pointer to store the coefficients of the column */
-   int*                  inds,               /**< array to store the non-zero indices */
-   int*                  ninds               /**< pointer to store the number of non-zero indices
+   int*                  inds,               /**< array to store the non-zero indices, or NULL */
+   int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                                *  (-1: if we do not store sparsity informations) */
    )
 {  /*lint --e{715} */
    assert(lpi!=NULL);
    assert(lpi->prob!=NULL);
+   assert(coef != NULL);
 
    SCIPerrorMessage("SCIPlpiGetBInvCol() not supported by QSopt.\n");
 
@@ -2921,8 +2942,8 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    int                   r,                  /**< row number */
    const SCIP_Real*      binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiGetBInvRow(), or NULL */
    SCIP_Real*            coef,               /**< vector to return coefficients */
-   int*                  inds,               /**< array to store the non-zero indices */
-   int*                  ninds               /**< pointer to store the number of non-zero indices
+   int*                  inds,               /**< array to store the non-zero indices, or NULL */
+   int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                               *  (-1: if we do not store sparsity informations) */
    )
 {  /*lint --e{715} */
@@ -2932,6 +2953,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
+   assert(coef != NULL);
 
    SCIPdebugMessage("getting binva-row %d\n", r);
 
@@ -2967,13 +2989,14 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   c,                  /**< column number */
    SCIP_Real*            coef,               /**< vector to return coefficients */
-   int*                  inds,               /**< array to store the non-zero indices */
-   int*                  ninds               /**< pointer to store the number of non-zero indices
+   int*                  inds,               /**< array to store the non-zero indices, or NULL */
+   int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                                *  (-1: if we do not store sparsity informations) */
    )
 {  /*lint --e{715} */
    assert(lpi!=NULL);
    assert(lpi->prob!=NULL);
+   assert(coef != NULL);
 
    SCIPerrorMessage("SCIPlpiGetBInvACol() not supported by QSopt.\n");
 
