@@ -3299,10 +3299,10 @@ SCIP_RETCODE SCIPlpiGetState(
 {
    SCIPdebugMessage("calling SCIPlpiGetState()\n");
 
-   assert(blkmem != 0);
+   assert(blkmem != NULL);
    assert(lpi != NULL);
    assert(lpi->clp != NULL);
-   assert(lpistate != 0);
+   assert(lpistate != NULL);
 
    int ncols = lpi->clp->numberColumns();
    int nrows = lpi->clp->numberRows();
@@ -3345,7 +3345,8 @@ SCIP_RETCODE SCIPlpiSetState(
 
    assert(lpi != NULL);
    assert(lpi->clp != NULL);
-   assert(lpistate != 0);
+   assert(lpistate != NULL);
+   assert(blkmem != NULL);
 
    lpncols = lpi->clp->numberColumns();
    lpnrows = lpi->clp->numberRows();
@@ -3411,6 +3412,7 @@ SCIP_RETCODE SCIPlpiFreeState(
 
    assert(lpi != NULL);
    assert(lpistate != NULL);
+   assert(blkmem != NULL);
 
    if ( *lpistate != NULL )
       lpistateFree(lpistate, blkmem);
@@ -3421,9 +3423,10 @@ SCIP_RETCODE SCIPlpiFreeState(
 /** checks, whether the given LP state contains simplex basis information */
 SCIP_Bool SCIPlpiHasStateBasis(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information) */
+   SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information), or NULL*/
    )
 {
+   assert(lpi != NULL);
    return (lpistate != NULL);
 }
 
@@ -3434,6 +3437,9 @@ SCIP_RETCODE SCIPlpiReadState(
    )
 {
    SCIPdebugMessage("calling SCIPlpiReadState()\n");
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
+   assert(fname != NULL);
 
    /*  Read a basis from the given filename,
     *  returns -1 on file error, 0 if no values, 1 if values
@@ -3451,6 +3457,9 @@ SCIP_RETCODE SCIPlpiWriteState(
    )
 {
    SCIPdebugMessage("calling SCIPlpiWriteState()\n");
+   assert(lpi != NULL);
+   assert(lpi->clp != NULL);
+   assert(fname != NULL);
 
    /*  Write the basis in MPS format to the specified file.
     *  If writeValues true, writes values of structurals
@@ -3488,6 +3497,8 @@ SCIP_RETCODE SCIPlpiGetNorms(
    SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information */
    )
 {
+   assert(blkmem != NULL);
+   assert(lpi != NULL);
    assert(lpinorms != NULL);
 
    (*lpinorms) = NULL;
@@ -3777,6 +3788,7 @@ SCIP_Real SCIPlpiInfinity(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {  /* lint --e{715} */
+   assert(lpi != NULL);
    SCIPdebugMessage("calling SCIPlpiInfinity()\n");
 
    return COIN_DBL_MAX;
@@ -3789,6 +3801,7 @@ SCIP_Bool SCIPlpiIsInfinity(
    SCIP_Real             val                 /**< value to check */
    )
 {  /* lint --e{715} */
+   assert(lpi != NULL);
    SCIPdebugMessage("calling SCIPlpiIsInfinity()\n");
 
    return (val >= COIN_DBL_MAX);
@@ -3833,6 +3846,7 @@ SCIP_RETCODE SCIPlpiReadLP(
 
    assert(lpi != NULL);
    assert(lpi->clp != NULL);
+   assert(fname != NULL);
 
    // WARNING: can only read mps files
 
@@ -3861,6 +3875,7 @@ SCIP_RETCODE SCIPlpiWriteLP(
 
    assert(lpi != NULL);
    assert(lpi->clp != NULL);
+   assert(fname != NULL);
 
    /*  write file in MPS format
     *  parameters:

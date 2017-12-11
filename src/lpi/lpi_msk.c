@@ -4062,6 +4062,7 @@ SCIP_RETCODE SCIPlpiGetState(
    assert(lpi != NULL);
    assert(lpi->task != NULL);
    assert(lpistate != NULL);
+   assert(blkmem != NULL);
 
    SCIPdebugMessage("Calling SCIPlpiGetState (%d)\n", lpi->lpid);
 
@@ -4115,6 +4116,8 @@ SCIP_RETCODE SCIPlpiSetState(
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+   assert(blkmem != NULL);
+   assert(lpistate != NULL);
 
    if (lpistate == NULL)
    {
@@ -4185,6 +4188,8 @@ SCIP_RETCODE SCIPlpiFreeState(
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+   assert(lpistate != NULL);
+   assert(blkmem != NULL);
 
    SCIPdebugMessage("Calling SCIPlpiFreeState (%d)\n", lpi->lpid);
 
@@ -4199,7 +4204,7 @@ SCIP_RETCODE SCIPlpiFreeState(
 /** checks, whether the given LP state contains simplex basis information */
 SCIP_Bool SCIPlpiHasStateBasis(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information) */
+   SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information), or NULL */
    )
 {  /*lint --e{715}*/
    assert(MosekEnv != NULL);
@@ -4220,6 +4225,7 @@ SCIP_RETCODE SCIPlpiReadState(
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+   assert(fname != NULL);
 
    SCIPdebugMessage("reading LP state from file <%s>\n", fname);
 
@@ -4237,6 +4243,7 @@ SCIP_RETCODE SCIPlpiWriteState(
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+   assert(fname != NULL);
 
    SCIPdebugMessage("writing LP state to file <%s>\n", fname);
 
@@ -4275,7 +4282,9 @@ SCIP_RETCODE SCIPlpiGetNorms(
    SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information */
    )
 {  /*lint --e{715}*/
+   assert(lpi != NULL);
    assert(lpinorms != NULL);
+   assert(blkmem != NULL);
 
    (*lpinorms) = NULL;
 
@@ -4382,6 +4391,7 @@ SCIP_RETCODE SCIPlpiGetIntpar(
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+   assert(ival != NULL);
 
    SCIPdebugMessage("getting int parameter %s\n", paramty2str(type));
 
@@ -4586,6 +4596,7 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+   assert(dval != NULL);
 
    SCIPdebugMessage("getting real parameter %s\n", paramty2str(type));
 
@@ -4735,6 +4746,7 @@ SCIP_RETCODE SCIPlpiReadLP(
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+   assert(fname != NULL);
 
    SCIPdebugMessage("Calling SCIPlpiReadLP (%d), filename <%s>\n", lpi->lpid, fname);
 
@@ -4757,6 +4769,7 @@ SCIP_RETCODE SCIPlpiWriteLP(
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+   assert(fname != NULL);
 
    SCIPdebugMessage("Calling SCIPlpiReadLP (%d), filename <%s>\n", lpi->lpid, fname);
 

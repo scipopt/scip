@@ -4825,6 +4825,7 @@ SCIP_RETCODE SCIPlpiSetState(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
    assert(lpistate != NULL);
+   assert(blkmem != NULL);
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
@@ -4906,6 +4907,7 @@ SCIP_RETCODE SCIPlpiFreeState(
 
    assert(lpi != NULL);
    assert(lpistate != NULL);
+   assert(blkmem != NULL);
 
    if ( *lpistate != NULL )
       lpistateFree(lpistate, blkmem);
@@ -4916,9 +4918,10 @@ SCIP_RETCODE SCIPlpiFreeState(
 /** checks, whether the given LP state contains simplex basis information */
 SCIP_Bool SCIPlpiHasStateBasis(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information) */
+   SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information), or NULL */
    )
 {  /*lint --e{715}*/
+   assert(lpi != NULL);
    return TRUE;
 }
 
@@ -4929,6 +4932,9 @@ SCIP_RETCODE SCIPlpiReadState(
    )
 {
    SCIPdebugMessage("calling SCIPlpiReadState()\n");
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(fname != NULL);
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
@@ -4944,6 +4950,9 @@ SCIP_RETCODE SCIPlpiWriteState(
    const char*           fname           /**< file name */
    )
 {
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(fname != NULL);
    SCIPdebugMessage("calling SCIPlpiWriteState()\n");
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
@@ -5335,6 +5344,7 @@ SCIP_Real SCIPlpiInfinity(
    SCIP_LPI*             /*lpi*/             /**< LP interface structure */
    )
 {
+   assert(lpi != NULL);
    SCIPdebugMessage("calling SCIPlpiInfinity()\n");
 
    return soplex::infinity;
@@ -5346,6 +5356,7 @@ SCIP_Bool SCIPlpiIsInfinity(
    SCIP_Real             val
    )
 {
+   assert(lpi != NULL);
    SCIPdebugMessage("calling SCIPlpiIsInfinity()\n");
 
    return (val >= soplex::infinity);
@@ -5390,6 +5401,7 @@ SCIP_RETCODE SCIPlpiReadLP(
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
+   assert(fname != NULL);
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
@@ -5426,6 +5438,7 @@ SCIP_RETCODE SCIPlpiWriteLP(
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
+   assert(fname != NULL);
 
    try
    {

@@ -1343,6 +1343,7 @@ SCIP_RETCODE SCIPlpiGetState(
    assert(lpi != NULL);
    assert(blkmem != NULL);
    assert(lpistate != NULL);
+   assert(blkmem != NULL);
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -1358,6 +1359,7 @@ SCIP_RETCODE SCIPlpiSetState(
 {  /*lint --e{715}*/
    assert(lpi != NULL);
    assert(blkmem != NULL);
+   assert(lpistate != NULL);
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -1379,13 +1381,15 @@ SCIP_RETCODE SCIPlpiFreeState(
    )
 {  /*lint --e{715}*/
    assert(lpi != NULL);
+   assert(lpistate != NULL);
+   assert(blkmem != NULL);
    return SCIP_OKAY;
 }
 
 /** checks, whether the given LP state contains simplex basis information */
 SCIP_Bool SCIPlpiHasStateBasis(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information) */
+   SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information), or NULL */
    )
 {  /*lint --e{715}*/
    assert(lpi != NULL);
@@ -1400,6 +1404,7 @@ SCIP_RETCODE SCIPlpiReadState(
    )
 {  /*lint --e{715}*/
    assert(lpi != NULL);
+   assert(fname != NULL);
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -1411,6 +1416,7 @@ SCIP_RETCODE SCIPlpiWriteState(
    )
 {  /*lint --e{715}*/
    assert(lpi != NULL);
+   assert(fname != NULL);
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -1437,6 +1443,8 @@ SCIP_RETCODE SCIPlpiGetNorms(
    )
 {  /*lint --e{715}*/
    assert(lpi != NULL);
+   assert(blkmem != NULL);
+   assert(lpinorms != NULL);
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -1574,6 +1582,7 @@ SCIP_RETCODE SCIPlpiReadLP(
    )
 {  /*lint --e{715}*/
    assert(lpi != NULL);
+   assert(fname != NULL);
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }

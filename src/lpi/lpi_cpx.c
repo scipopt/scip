@@ -3984,6 +3984,7 @@ SCIP_RETCODE SCIPlpiSetState(
    int i;
 
    assert(blkmem != NULL);
+   assert(lpistate != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
@@ -4058,6 +4059,7 @@ SCIP_RETCODE SCIPlpiFreeState(
 {
    assert(lpi != NULL);
    assert(lpistate != NULL);
+   assert(blkmem != NULL);
 
    if( *lpistate != NULL )
    {
@@ -4070,9 +4072,10 @@ SCIP_RETCODE SCIPlpiFreeState(
 /** checks, whether the given LP state contains simplex basis information */
 SCIP_Bool SCIPlpiHasStateBasis(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information) */
+   SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information), or NULL */
    )
 {  /*lint --e{715}*/
+   assert(lpi != NULL);
    return (lpistate != NULL);
 }
 
@@ -4085,6 +4088,7 @@ SCIP_RETCODE SCIPlpiReadState(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
+   assert(fname != NULL);
 
    SCIPdebugMessage("reading LP state from file <%s>\n", fname);
 
@@ -4102,6 +4106,7 @@ SCIP_RETCODE SCIPlpiWriteState(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
+   assert(fname != NULL);
 
    SCIPdebugMessage("writing LP state to file <%s>\n", fname);
 
@@ -4556,6 +4561,7 @@ SCIP_Real SCIPlpiInfinity(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
+   assert(lpi != NULL);
    return CPX_INFBOUND;
 }
 
@@ -4565,6 +4571,7 @@ SCIP_Bool SCIPlpiIsInfinity(
    SCIP_Real             val                 /**< value to be checked for infinity */
    )
 {  /*lint --e{715}*/
+   assert(lpi != NULL);
    return (val >= CPX_INFBOUND);
 }
 
@@ -4591,6 +4598,7 @@ SCIP_RETCODE SCIPlpiReadLP(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
+   assert(fname != NULL);
 
    SCIPdebugMessage("reading LP from file <%s>\n", fname);
 
@@ -4615,6 +4623,7 @@ SCIP_RETCODE SCIPlpiWriteLP(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
+   assert(fname != NULL);
 
    SCIPdebugMessage("writing LP to file <%s>\n", fname);
 
