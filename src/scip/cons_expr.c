@@ -3691,8 +3691,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(detectNlhdlrsEnterExpr)
    {
       /* as long as the expression provides its callbacks, the default nlhdlr should have provided all enforcement methods */
       SCIPerrorMessage("no nonlinear handler provided enforcement method(s) %d\n", desiredenfo);
-      *result = SCIP_CONSEXPREXPRWALK_ABORT;
-      return SCIP_OKAY;
+      return SCIP_ERROR;
    }
 
    /* copy collected nlhdlrs into expr->enfos */
