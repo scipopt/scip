@@ -902,23 +902,23 @@ SCIP_RETCODE reduceNw(
 SCIP_RETCODE redLoopMw(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
-   PATH*                 vnoi,
-   PATH*                 path,
-   GNODE**               gnodearr,
-   SCIP_Real*            nodearrreal,
-   SCIP_Real*            edgearrreal,
-   SCIP_Real*            edgearrreal2,
-   int*                  state,
-   int*                  vbase,
-   int*                  nodearrint,
-   int*                  edgearrint,
-   int*                  nodearrint2,
-   int*                  nodearrint3,
+   PATH*                 vnoi,               /**< Voronoi data structure */
+   PATH*                 path,               /**< path data structure */
+   GNODE**               gnodearr,           /**< nodes-sized array  */
+   SCIP_Real*            nodearrreal,        /**< nodes-sized array  */
+   SCIP_Real*            edgearrreal,        /**< edges-sized array  */
+   SCIP_Real*            edgearrreal2,       /**< edges-sized array  */
+   int*                  state,              /**< shortest path array  */
+   int*                  vbase,              /**< voronoi base array  */
+   int*                  nodearrint,         /**< nodes-sized array  */
+   int*                  edgearrint,         /**< edges-sized array  */
+   int*                  nodearrint2,        /**< nodes-sized array  */
+   int*                  nodearrint3,        /**< nodes-sized array  */
    int*                  solnode,            /**< array to indicate whether a node is part of the current solution (==CONNECT) */
-   STP_Bool*             nodearrchar,
+   STP_Bool*             nodearrchar,        /**< nodes-sized array  */
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
-   STP_Bool              advanced,
-   STP_Bool              bred,
+   STP_Bool              advanced,           /**< do advanced reduction? */
+   STP_Bool              bred,               /**< do bound-based reduction? */
    STP_Bool              tryrmw,             /**< try to convert problem to RMWCSP? Only possible if advanced = TRUE and userec = TRUE */
    int                   redbound,           /**< minimal number of edges to be eliminated in order to reiterate reductions */
    SCIP_Bool             userec              /**< use recombination heuristic? */
@@ -1155,23 +1155,23 @@ SCIP_RETCODE redLoopMw(
 SCIP_RETCODE redLoopPc(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
-   PATH*                 vnoi,
-   PATH*                 path,
-   GNODE**               gnodearr,
-   SCIP_Real*            nodearrreal,
-   SCIP_Real*            exedgearrreal,
-   SCIP_Real*            exedgearrreal2,
-   int*                  heap,
-   int*                  state,
-   int*                  vbase,
-   int*                  nodearrint,
-   int*                  edgearrint,
-   int*                  nodearrint2,
-   int*                  solnode,
-   STP_Bool*             nodearrchar,
+   PATH*                 vnoi,               /**< Voronoi data structure */
+   PATH*                 path,               /**< path data structure */
+   GNODE**               gnodearr,           /**< nodes-sized array  */
+   SCIP_Real*            nodearrreal,        /**< nodes-sized array  */
+   SCIP_Real*            exedgearrreal,      /**< edges-sized array  */
+   SCIP_Real*            exedgearrreal2,     /**< edges-sized array  */
+   int*                  heap,               /**< shortest path array  */
+   int*                  state,              /**< voronoi base array  */
+   int*                  vbase,              /**< nodes-sized array  */
+   int*                  nodearrint,         /**< edges-sized array  */
+   int*                  edgearrint,         /**< nodes-sized array  */
+   int*                  nodearrint2,        /**< nodes-sized array  */
+   int*                  solnode,            /**< solution nodes array (or NULL) */
+   STP_Bool*             nodearrchar,        /**< nodes-sized array  */
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
-   SCIP_Bool             dualascent,
-   SCIP_Bool             bred,
+   SCIP_Bool             dualascent,         /**< do dual-ascent reduction? */
+   SCIP_Bool             bred,               /**< do bound-based reduction? */
    int                   reductbound,        /**< minimal number of edges to be eliminated in order to reiterate reductions */
    SCIP_Bool             userec              /**< use recombination heuristic? */
    )
@@ -1401,24 +1401,24 @@ SCIP_RETCODE redLoopPc(
 SCIP_RETCODE redLoopStp(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
-   PATH*                 vnoi,
-   PATH*                 path,
-   GNODE**               gnodearr,
-   SCIP_Real*            nodearrreal,
-   SCIP_Real*            edgearrreal,
-   SCIP_Real*            edgearrreal2,
-   int*                  heap,
-   int*                  state,
-   int*                  vbase,
-   int*                  nodearrint,
-   int*                  edgearrint,
-   int*                  nodearrint2,
-   int*                  solnode,
-   STP_Bool*             nodearrchar,
+   PATH*                 vnoi,               /**< Voronoi data structure */
+   PATH*                 path,               /**< path data structure */
+   GNODE**               gnodearr,           /**< nodes-sized array  */
+   SCIP_Real*            nodearrreal,        /**< nodes-sized array  */
+   SCIP_Real*            edgearrreal,        /**< edges-sized array  */
+   SCIP_Real*            edgearrreal2,       /**< edges-sized array  */
+   int*                  heap,               /**< heap array */
+   int*                  state,              /**< shortest path array  */
+   int*                  vbase,              /**< Voronoi base array  */
+   int*                  nodearrint,         /**< edges-sized array  */
+   int*                  edgearrint,         /**< nodes-sized array  */
+   int*                  nodearrint2,        /**< nodes-sized array  */
+   int*                  solnode,            /**< solution nodes array (or NULL) */
+   STP_Bool*             nodearrchar,        /**< nodes-sized array  */
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
-   SCIP_Real             upperbound,
-   SCIP_Bool             da,
-   SCIP_Bool             bred,
+   SCIP_Real             upperbound,         /**< upper bound */
+   SCIP_Bool             da,                 /**< do dual-ascent reduction? */
+   SCIP_Bool             bred,               /**< do bound-based reduction? */
    SCIP_Bool             nodereplacing,      /**< should node replacement (by edges) be performed? */
    int                   reductbound,        /**< minimal number of edges to be eliminated in order to reiterate reductions */
    int*                  edgestate,          /**< array to store status of (directed) edge (for propagation, can otherwise be set to NULL) */
