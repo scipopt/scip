@@ -43,5 +43,10 @@
  * Further information about particular modules like heuristics and separation routines
  * can be found in the documentation of the corresponding files.
  *
+ * Compiling the CycleClustering application
+ * -----------------------------------------
+ *
+ * See the @ref INSTALL "Install file"
+ *
  *
  */
