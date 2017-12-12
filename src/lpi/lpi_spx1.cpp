@@ -4825,7 +4825,7 @@ SCIP_RETCODE SCIPlpiSetState(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
    assert(lpistate != NULL);
-   assert(blkmem != NULL);
+   /* assert(blkmem != NULL); */
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
