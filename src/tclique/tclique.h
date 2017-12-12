@@ -30,6 +30,8 @@
 extern "C" {
 #endif
 
+#include "tclique/tclique_def.h"
+
 /*
  * Data Types and Structures
  */
