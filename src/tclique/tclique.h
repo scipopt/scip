@@ -150,19 +150,19 @@ TCLIQUE_SELECTADJNODES(tcliqueSelectAdjnodes);
  */
 
 /** creates graph data structure */
-extern
+EXTERN
 TCLIQUE_Bool tcliqueCreate(
    TCLIQUE_GRAPH**       tcliquegraph        /**< pointer to store graph data structure */
    );
 
 /** frees graph data structure */
-extern
+EXTERN
 void tcliqueFree(
    TCLIQUE_GRAPH**       tcliquegraph        /**< pointer to graph data structure */
    );
 
 /** adds nodes up to the given node number to graph data structure (intermediate nodes have weight 0) */
-extern
+EXTERN
 TCLIQUE_Bool tcliqueAddNode(
    TCLIQUE_GRAPH*        tcliquegraph,       /**< graph data structure */
    int                   node,               /**< node number to add */
@@ -170,7 +170,7 @@ TCLIQUE_Bool tcliqueAddNode(
    );
 
 /** changes weight of node in graph data structure */
-extern
+EXTERN
 void tcliqueChangeWeight(
    TCLIQUE_GRAPH*        tcliquegraph,       /**< graph data structure */
    int                   node,               /**< node to set new weight */
@@ -183,7 +183,7 @@ void tcliqueChangeWeight(
  *  New edges are cached, s.t. the graph data structures are not correct until a call to tcliqueFlush();
  *  you have to make sure, that no double edges are inserted.
  */
-extern
+EXTERN
 TCLIQUE_Bool tcliqueAddEdge(
    TCLIQUE_GRAPH*        tcliquegraph,       /**< graph data structure */
    int                   node1,              /**< start node of edge to add */
@@ -191,13 +191,13 @@ TCLIQUE_Bool tcliqueAddEdge(
    );
 
 /** inserts all cached edges into the data structures */
-extern
+EXTERN
 TCLIQUE_Bool tcliqueFlush(
    TCLIQUE_GRAPH*        tcliquegraph        /**< graph data structure */
    );
 
 /** loads graph data structure from file */
-extern
+EXTERN
 TCLIQUE_Bool tcliqueLoadFile(
    TCLIQUE_GRAPH**       tcliquegraph,       /**< pointer to store graph data structure */
    const char*           filename,           /**< name of file with graph data */
@@ -207,7 +207,7 @@ TCLIQUE_Bool tcliqueLoadFile(
    );
 
 /** saves graph data structure to file */
-extern
+EXTERN
 TCLIQUE_Bool tcliqueSaveFile(
    TCLIQUE_GRAPH*        tcliquegraph,       /**< graph data structure */
    const char*           filename,           /**< name of file to create */
@@ -216,39 +216,39 @@ TCLIQUE_Bool tcliqueSaveFile(
    );
 
 /** gets number of edges in the graph */
-extern
+EXTERN
 int tcliqueGetNEdges(
    TCLIQUE_GRAPH*        tcliquegraph        /**< pointer to graph data structure */
    );
 
 /** gets degree of nodes in graph */
-extern
+EXTERN
 int* tcliqueGetDegrees(
    TCLIQUE_GRAPH*        tcliquegraph        /**< pointer to graph data structure */
    );
 
 /** gets adjacent nodes of edges in graph */
-extern
+EXTERN
 int* tcliqueGetAdjnodes(
    TCLIQUE_GRAPH*        tcliquegraph        /**< pointer to graph data structure */
    );
 
 /** gets pointer to first adjacent edge of given node in graph */
-extern
+EXTERN
 int* tcliqueGetFirstAdjedge(
    TCLIQUE_GRAPH*        tcliquegraph,       /**< pointer to graph data structure */
    int                   node                /**< given node */
    );
 
 /** gets pointer to last adjacent edge of given node in graph */
-extern
+EXTERN
 int* tcliqueGetLastAdjedge(
    TCLIQUE_GRAPH*        tcliquegraph,       /**< pointer to graph data structure */
    int                   node                /**< given node */
    );
 
 /** prints graph data structure */
-extern
+EXTERN
 void tcliquePrintGraph(
    TCLIQUE_GRAPH*        tcliquegraph        /**< pointer to graph data structure */
    );
@@ -261,7 +261,7 @@ void tcliquePrintGraph(
  */
 
 /** finds maximum weight clique */
-extern
+EXTERN
 void tcliqueMaxClique(
    TCLIQUE_GETNNODES((*getnnodes)),          /**< user function to get the number of nodes */
    TCLIQUE_GETWEIGHTS((*getweights)),        /**< user function to get the node weights */
