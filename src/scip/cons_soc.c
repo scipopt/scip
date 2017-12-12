@@ -3743,13 +3743,8 @@ GENERALUPG:
           */
          if( rhsvarub < rhsvarlb )
          {
-            SCIP_Real aux;
-
             assert(SCIPisEQ(scip, rhsvarub, rhsvarlb));
-
-            aux = rhsvarlb;
-            rhsvarlb = rhsvarub;
-            rhsvarub = aux;
+            SCIPswapReals(&rhsvarub, &rhsvarlb);
          }
 
          /* check whether rhsvar changes sign */
