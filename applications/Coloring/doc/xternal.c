@@ -70,4 +70,11 @@
  * described in heur_init.c.  The organization of the data for the problem is described in the
  * problem data file (probdata_coloring.c). The file readers are described in reader_col.c and
  * reader_csol.c.
+ *
+ * Compiling the Coloring application
+ * ----------------------------------
+ *
+ * See the @ref INSTALL "Install file"
+ *
+ *
  */
