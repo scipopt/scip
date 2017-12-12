@@ -67,8 +67,9 @@ new parameters:
 - new parameter: "lp/refactorinterval" to change the refactorization interval of the LP solver
 - new parameter: "misc/usesymmetry" to determine whether symmetry handling should be used
 - new value 3 for parameter "lp/solutionpolishing" to enable LP polishing only during probing and diving mode
-- added parameter "constraints/quadratic/disaggrmergemethod"
-- added parameter "constraints/quadratic/mincurvcollectbilinterms"
+- added parameter "constraints/quadratic/disaggrmergemethod" to change the strategy of how to merge independent blocks of quadratic constraints
+- added parameter "constraints/quadratic/mincurvcollectbilinterms" to change the minimal curvature of constraints
+  to be considered when returning bilinear terms to other plugins
 - added parameter constraints/quadratic/binreformbinaryonly to disable reformulation of products of
   binary and non-binary variables
 - new parameter "conflict/sepaaltproofs"
