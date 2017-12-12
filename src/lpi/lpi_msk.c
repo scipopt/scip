@@ -1791,7 +1791,7 @@ SCIP_RETCODE SCIPlpiGetSides(
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
-   assert(firstcol <= lastcol);
+   assert(firstrow <= lastrow);
 
    SCIPdebugMessage("Calling SCIPlpiGetSides (%d)\n", lpi->lpid);
 
@@ -2433,10 +2433,10 @@ SCIP_RETCODE SCIPlpiStartStrongbranch(
 SCIP_RETCODE SCIPlpiEndStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
-{  /*l assert(MosekEnv != NULL);
+{ /* lint --e{715}*/
    assert(lpi != NULL);
-   assert(lpi->task != NULL);
-   int --e{715}*/
+   /* assert(MosekEnv != NULL);
+   assert(lpi->task != NULL); */
    /* currently do nothing */
    return SCIP_OKAY;
 }
@@ -4117,7 +4117,6 @@ SCIP_RETCODE SCIPlpiSetState(
    assert(lpi != NULL);
    assert(lpi->task != NULL);
    assert(blkmem != NULL);
-   assert(lpistate != NULL);
 
    if (lpistate == NULL)
    {

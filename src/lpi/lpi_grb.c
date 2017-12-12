@@ -4989,7 +4989,6 @@ SCIP_RETCODE SCIPlpiSetState(
    int i;
 
    assert(blkmem != NULL);
-   assert(lpistate != NULL);
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
 

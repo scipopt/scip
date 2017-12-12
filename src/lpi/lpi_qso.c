@@ -2176,7 +2176,7 @@ SCIP_RETCODE SCIPlpiGetSolFeasibility(
 {
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
-   assert(lpi->solstat != NULL);
+   assert(lpi->solstat != 0);
    assert(primalfeasible != NULL);
    assert(dualfeasible != NULL);
 
@@ -2469,7 +2469,6 @@ SCIP_RETCODE SCIPlpiGetSol(
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
-   assert(ray != NULL);
 
    SCIPdebugMessage("getting solution\n");
 
@@ -3071,7 +3070,6 @@ SCIP_RETCODE SCIPlpiSetState(
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
    assert(blkmem != NULL);
-   assert(lpistate != NULL);
 
    /* if there was no basis information available, LPI state was not stored */
    if( lpistate == NULL )
