@@ -69,29 +69,25 @@ struct cgrad;
 struct SCIP_ProbData
 {
    ASL*                  asl;                /**< ASL data structure */
-
-   SCIP_VAR**            vars;
-   int                   nvars;
-
+   SCIP_VAR**            vars;               /**< variables */
+   int                   nvars;              /**< number of variables */
    SCIP_Real*            fullx;              /**< scratch memory to store full point during evaluation of AMPL userexpr */
 };
 
 /** user expression data */
 struct SCIP_UserExprData
 {
-   SCIP_PROBDATA*        probdata;
-   int                   considx;
-   SCIP_EXPRCURV         curvature;
+   SCIP_PROBDATA*        probdata;           /**< problem data structure */
+   int                   considx;            /**< index for constraint */
+   SCIP_EXPRCURV         curvature;          /**< curvature information */
 };
 
 /*
  * Local methods
  */
 
-/* put your local methods here, and declare them static */
-
 static
-SCIP_DECL_USEREXPREVAL( SCIPuserexprEvalAmpl )
+SCIP_DECL_USEREXPREVAL(SCIPuserexprEvalAmpl)
 {
    ASL* asl;
    fint nerror = 0;
@@ -137,7 +133,7 @@ SCIP_DECL_USEREXPREVAL( SCIPuserexprEvalAmpl )
 }
 
 static
-SCIP_DECL_USEREXPRINTEVAL( SCIPuserexprIntEvalAmpl )
+SCIP_DECL_USEREXPRINTEVAL(SCIPuserexprIntEvalAmpl)
 {
    ASL* asl;
    cgrad* cg;
@@ -218,6 +214,7 @@ SCIP_DECL_USEREXPRINTEVAL( SCIPuserexprIntEvalAmpl )
             extrval = cornerval;
       }
    }
+
    if( p == (1<<nargs) )
    {
       /* all points could be evaluated, so can update funcvalue interval
@@ -230,22 +227,20 @@ SCIP_DECL_USEREXPRINTEVAL( SCIPuserexprIntEvalAmpl )
    }
 
    /* TODO find other extreme value by solving a convex box-constrained optimization problem
-    * in 1D, could also use bisection
-    */
-
+    * in 1D, could also use bisection */
 
    return SCIP_OKAY;
 }
 
 static
-SCIP_DECL_USEREXPRCURV( SCIPuserexprCurvAmpl )
+SCIP_DECL_USEREXPRCURV(SCIPuserexprCurvAmpl)
 {
    *result = data->curvature;
    return SCIP_OKAY;
 }
 
 static
-SCIP_DECL_USEREXPRCOPYDATA( SCIPuserexprCopyAmpl )
+SCIP_DECL_USEREXPRCOPYDATA(SCIPuserexprCopyAmpl)
 {
    SCIP_ALLOC( BMSduplicateBlockMemory(blkmem, datatarget, datasource) );
 
@@ -253,7 +248,7 @@ SCIP_DECL_USEREXPRCOPYDATA( SCIPuserexprCopyAmpl )
 }
 
 static
-SCIP_DECL_USEREXPRFREEDATA( SCIPuserexprFreeAmpl )
+SCIP_DECL_USEREXPRFREEDATA(SCIPuserexprFreeAmpl)
 {
    BMSfreeBlockMemory(blkmem, &data);
 }
@@ -441,9 +436,7 @@ SCIP_RETCODE walkExpression(
          /* treat the common expression or defined variables */
          if( varidx >= n_var )
          {
-            /* process common expression
-             * see also http://www.gerad.ca/~orban/drampl/def-vars.html
-             */
+            /* process common expression, see also http://www.gerad.ca/~orban/drampl/def-vars.html */
             expr* nlpart;
             linpart* L;
             int n_lin;
@@ -847,7 +840,7 @@ SCIP_RETCODE setupObjective(
 
    objconstant = 0.0;
    /* for nonlinear and quadratic constraints, objconst(0) is already part of that expression, somehow
-    * for a linear constraint, we may have a nonlinear expression that consists of the constant only...
+    * for a linear constraint, we may have a nonlinear expression that consists of the constant only ...
     */
    if( nqpterms >= 0 && ((ASL_fg*)asl)->I.obj_de_->e != NULL )  /*lint !e826*/
    {

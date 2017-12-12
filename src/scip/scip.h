@@ -15155,6 +15155,7 @@ SCIP_RETCODE SCIPupdateNlpiProb(
    );
 
 /** adds linear rows to the NLP relaxation */
+EXTERN
 SCIP_RETCODE SCIPaddNlpiProbRows(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPI*            nlpi,               /**< interface to NLP solver */

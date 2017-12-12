@@ -26,7 +26,7 @@
 #include <string.h>
 
 #include "probdata_cyc.h"
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 
 #define HEUR_NAME             "cyckerlin"
 #define HEUR_DESC             "switch heuristic that tries to improve solution by trading states betweeen clusters, similar to the famous kernighan/lin heuristic for graph partitioning"
@@ -707,7 +707,7 @@ SCIP_DECL_HEUREXEC(heurExecCyckerlin)
    nbins = SCIPcycGetNBins(scip);
    ncluster = SCIPcycGetNCluster(scip);
    cmatrix = SCIPcycGetCmatrix(scip);
-   SCIP_CALL( SCIPrandomCreate(&rnd, SCIPblkmem(scip),SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &rnd, DEFAULT_RANDSEED) );
 
    /* we do not want to run the heurtistic if there is no 'flow' between the clusters.
     * in case of a (ideally) full reversible problem there cannot be a better solution, in the other case, i.e., the
@@ -763,7 +763,7 @@ SCIP_DECL_HEUREXEC(heurExecCyckerlin)
       SCIPfreeMemoryArray(scip, &qmatrix[c]);
    }
 
-   SCIPrandomFree(&rnd, SCIPblkmem(scip));
+   SCIPfreeRandom(scip, &rnd);
    SCIPfreeMemoryArray(scip, &qmatrix);
    SCIPfreeMemoryArray(scip, &startclustering);
    SCIPfreeMemoryArray(scip, &binfixed);

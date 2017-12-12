@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   heur_prune.h
+/**@file   heur_slackprune.h
  * @ingroup PRIMALHEURISTICS
  * @brief  dual-ascent and reduction based primal heuristic for Steiner problems
  * @author Daniel Rehfeldt
