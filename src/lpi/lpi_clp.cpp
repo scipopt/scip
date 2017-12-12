@@ -490,6 +490,7 @@ SCIP_RETCODE SCIPlpiCreate(
    )
 {
    assert(lpi != NULL);
+   assert(name != NULL);
 
    SCIPdebugMessage("calling SCIPlpiCreate()\n");
 
@@ -2985,6 +2986,8 @@ SCIP_RETCODE SCIPlpiSetBase(
 
    assert(lpi != NULL);
    assert(lpi->clp != NULL);
+   assert(rstat != NULL);
+   assert(cstat != NULL);
 
    invalidateSolution(lpi);
 
@@ -2996,7 +2999,6 @@ SCIP_RETCODE SCIPlpiSetBase(
    const double* lhs = clp->getRowLower();
    const double* rhs = clp->getRowUpper();
 
-   assert( rstat != NULL || clp->numberRows() == 0 );
    for( int i = 0; i < clp->numberRows(); ++i )
    {
       int status = rstat[i];
@@ -3034,7 +3036,6 @@ SCIP_RETCODE SCIPlpiSetBase(
    const double* lb = clp->getColLower();
    const double* ub = clp->getColUpper();
 
-   assert( cstat != NULL || clp->numberColumns() == 0 );
    for( int j = 0; j < clp->numberColumns(); ++j )
    {
       int status = cstat[j];
@@ -3512,7 +3513,7 @@ SCIP_RETCODE SCIPlpiGetNorms(
 SCIP_RETCODE SCIPlpiSetNorms(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information */
+   const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information, or NULL */
    )
 {
    assert(lpinorms == NULL);
@@ -3525,7 +3526,7 @@ SCIP_RETCODE SCIPlpiSetNorms(
 SCIP_RETCODE SCIPlpiFreeNorms(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information */
+   SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information, or NULL */
    )
 {
    assert(lpinorms == NULL);

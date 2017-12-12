@@ -706,6 +706,7 @@ SCIP_RETCODE SCIPlpiCreate(
    assert(sizeof(SCIP_Real) == sizeof(double)); /* Xpress only works with doubles as floating points */
    assert(sizeof(SCIP_Bool) == sizeof(int));    /* Xpress only works with ints as bools */
    assert(lpi != NULL);
+   assert(name != NULL);
 
    SCIPdebugMessage("SCIPlpiCreate()\n");
 
@@ -3159,7 +3160,7 @@ SCIP_RETCODE SCIPlpiGetState(
 SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   const SCIP_LPISTATE*  lpistate            /**< LPi state information (like basis information) */
+   const SCIP_LPISTATE*  lpistate            /**< LPi state information (like basis information), or NULL */
    )
 {
    int nrows;
@@ -3340,7 +3341,7 @@ SCIP_RETCODE SCIPlpiGetNorms(
 SCIP_RETCODE SCIPlpiSetNorms(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information */
+   const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information, or NULL */
    )
 { /*lint --e{715}*/
    assert(lpinorms == NULL);
@@ -3353,7 +3354,7 @@ SCIP_RETCODE SCIPlpiSetNorms(
 SCIP_RETCODE SCIPlpiFreeNorms(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information */
+   SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information, or NULL */
    )
 { /*lint --e{715}*/
    assert(lpinorms == NULL);

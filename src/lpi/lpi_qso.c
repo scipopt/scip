@@ -429,6 +429,7 @@ SCIP_RETCODE SCIPlpiCreate(
    /* QSopt only works with doubles as floating points and bool as integers */
    assert(sizeof(SCIP_Real) == sizeof(double));
    assert(sizeof(SCIP_Bool) == sizeof(int));
+   assert(name != NULL);
    assert(lpi != NULL);
 
    SCIPdebugMessage("SCIPlpiCreate()\n");
@@ -3359,7 +3360,7 @@ SCIP_RETCODE SCIPlpiGetNorms(
 SCIP_RETCODE SCIPlpiSetNorms(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information */
+   const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information, or NULL */
    )
 {  /*lint --e{715} */
    int ncols;
@@ -3367,7 +3368,6 @@ SCIP_RETCODE SCIPlpiSetNorms(
 
    assert( lpi != NULL );
    assert( lpi->prob != NULL );
-   assert( lpinorms != NULL );
 
    if ( lpinorms->norms == NULL )
       return SCIP_OKAY;
@@ -3388,7 +3388,7 @@ SCIP_RETCODE SCIPlpiSetNorms(
 SCIP_RETCODE SCIPlpiFreeNorms(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information */
+   SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information, or NULL */
    )
 {  /*lint --e{715} */
    assert( lpinorms != NULL );

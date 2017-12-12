@@ -128,12 +128,13 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
 /** creates an LP problem object */
 SCIP_RETCODE SCIPlpiCreate(
    SCIP_LPI**            lpi,                /**< pointer to an LP interface structure */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler to use for printing messages, or NULL */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler to use for printing messages */
    const char*           name,               /**< problem name */
    SCIP_OBJSEN           objsen              /**< objective sense */
    )
 {  /*lint --e{715}*/
    assert(lpi != NULL);
+   assert(name != NULL);
    SCIPdebugMessage("SCIPlpiCreate()\n");
    SCIPdebugMessage("Note that there is no LP solver linked to the binary\n");
 
@@ -1354,7 +1355,7 @@ SCIP_RETCODE SCIPlpiGetState(
 SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   const SCIP_LPISTATE*  lpistate            /**< LPi state information (like basis information) */
+   const SCIP_LPISTATE*  lpistate            /**< LPi state information (like basis information), or NULL */
    )
 {  /*lint --e{715}*/
    assert(lpi != NULL);
@@ -1455,7 +1456,7 @@ SCIP_RETCODE SCIPlpiGetNorms(
 SCIP_RETCODE SCIPlpiSetNorms(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information */
+   const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information, or NULL */
    )
 {  /*lint --e{715}*/
    assert(lpi != NULL);
@@ -1467,7 +1468,7 @@ SCIP_RETCODE SCIPlpiSetNorms(
 SCIP_RETCODE SCIPlpiFreeNorms(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information */
+   SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information, or NULL */
    )
 {  /*lint --e{715}*/
    assert(lpi != NULL);

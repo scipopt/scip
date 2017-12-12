@@ -1696,6 +1696,7 @@ SCIP_RETCODE SCIPlpiCreate(
    )
 {
    assert(lpi != NULL);
+   assert(name != NULL);
 
    /* create SoPlex object */
    SCIP_ALLOC( BMSallocMemory(lpi) );
@@ -4101,15 +4102,19 @@ SCIP_RETCODE SCIPlpiSetBase(
    )
 {
    int i;
-   int nCols = lpi->spx->nCols();
-   int nRows = lpi->spx->nRows();
+   int nCols;
+   int nRows;
 
    SCIPdebugMessage("calling SCIPlpiSetBase()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
-   assert(cstat != NULL || nCols == 0);
-   assert(rstat != NULL || nRows == 0);
+
+   nCols = lpi->spx->nCols();
+   nRows = lpi->spx->nRows();
+
+   assert(cstat != NULL);
+   assert(rstat != NULL);
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
    invalidateSolution(lpi);
@@ -4813,7 +4818,7 @@ SCIP_RETCODE SCIPlpiGetState(
 SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           /*blkmem*/,         /**< block memory */
-   const SCIP_LPISTATE*  lpistate            /**< LPi state information (like basis information) */
+   const SCIP_LPISTATE*  lpistate            /**< LPi state information (like basis information), or NULL */
    )
 {
    int lpncols;
@@ -5039,7 +5044,7 @@ SCIP_RETCODE SCIPlpiGetNorms(
 SCIP_RETCODE SCIPlpiSetNorms(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information */
+   const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information, or NULL */
    )
 {
 #if ((SOPLEX_VERSION == 201 && SOPLEX_SUBVERSION >= 3) || SOPLEX_VERSION > 201)
@@ -5071,7 +5076,7 @@ SCIP_RETCODE SCIPlpiSetNorms(
 SCIP_RETCODE SCIPlpiFreeNorms(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information */
+   SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information, or NULL */
    )
 {
 #if ((SOPLEX_VERSION == 201 && SOPLEX_SUBVERSION >= 3) || SOPLEX_VERSION > 201)
