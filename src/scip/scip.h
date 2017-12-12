@@ -21872,7 +21872,7 @@ SCIP_RETCODE SCIPchgBarrierconvtol(
  *
  * @pre The value of relaxfeastol is reset to SCIP_INVALID when initializing the solve (INITSOL).
  * Therefore, this method can only be called in one of the following stages of the SCIP solving process:
- *       - \ref SCIP_STAGE_INITSOL
+ *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  *
  * @return previous value of relaxfeastol
