@@ -211,6 +211,7 @@ CMake build system
 - disable non-standard compliant floating point optimizations in combination with intel compilers
 - improve Visual Studio compilation
 - only accept IPOPT version 3.12.0 or higher
+- preserve correct rpath in library (e.g. path to libipopt) when installing
 
 Makefile:
 - default value for ZIMPL is now "false"
