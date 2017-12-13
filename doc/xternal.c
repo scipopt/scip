@@ -7349,10 +7349,9 @@
   *
   * <br>
   * - <b>Cutting plane separation methods</b>:
-  *   - Changed function signature of SCIPcalcMir()
+  *   - Changed function signature of SCIPcalcMIR()
   *   - Changed function signature of SCIPcalcStrongCG()
   *   - Added parameter "allowlocal" to SCIPseparateSol()
-  *   - Removed solution pointer argument from SCIPaddCut()
   *   - New method SCIPaddRow() to replace deprecated SCIPaddCut()
   *
   * <br>

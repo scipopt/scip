@@ -407,9 +407,9 @@
 #define SCIP_DEFAULT_SEPA_MAXADDROUNDS        1 /**< maximal additional number of separation rounds in subsequent
                                                  *   price-and-cut loops (-1: no additional restriction) */
 #define SCIP_DEFAULT_SEPA_MAXSTALLROUNDSROOT 10 /**< maximal number of consecutive separation rounds without objective
-                                                 *   or integrality improvement (-1: no additional restriction) */
+                                                 *   or integrality improvement in the root node (-1: no additional restriction) */
 #define SCIP_DEFAULT_SEPA_MAXSTALLROUNDS      1 /**< maximal number of consecutive separation rounds without objective
-                                                 *   or integrality improvement (-1: no additional restriction) */
+                                                 *   or integrality improvement in local nodes (-1: no additional restriction) */
 #define SCIP_DEFAULT_SEPA_MAXINCROUNDS       20 /**< maximal number of consecutive separation rounds that increase the size of the LP relaxation per node (-1: unlimited) */
 #define SCIP_DEFAULT_SEPA_MAXCUTS           100 /**< maximal number of cuts separated per separation round */
 #define SCIP_DEFAULT_SEPA_MAXCUTSROOT      2000 /**< maximal separated cuts at the root node */
@@ -2314,12 +2314,12 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "separating/maxstallrounds",
-         "maximal number of consecutive separation rounds without objective or integrality improvement (-1: no additional restriction)",
+         "maximal number of consecutive separation rounds without objective or integrality improvement in local nodes (-1: no additional restriction)",
          &(*set)->sepa_maxstallrounds, FALSE, SCIP_DEFAULT_SEPA_MAXSTALLROUNDS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "separating/maxstallroundsroot",
-         "maximal number of consecutive separation rounds without objective or integrality improvement (-1: no additional restriction)",
+         "maximal number of consecutive separation rounds without objective or integrality improvement in the root node (-1: no additional restriction)",
          &(*set)->sepa_maxstallroundsroot, FALSE, SCIP_DEFAULT_SEPA_MAXSTALLROUNDSROOT, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
