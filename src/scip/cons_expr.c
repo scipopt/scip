@@ -5969,7 +5969,6 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrCurvature(
 }
 
 /** set the monotonicity detection callback of an expression handler */
-EXTERN
 SCIP_RETCODE SCIPsetConsExprExprHdlrMonotonicity(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
@@ -5998,7 +5997,7 @@ SCIP_CONSEXPR_EXPRHDLR** SCIPgetConsExprExprHdlrs(
 /** gives number of expression handlers */
 int SCIPgetConsExprExprNHdlrs(
    SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
-)
+   )
 {
    assert(conshdlr != NULL);
 
