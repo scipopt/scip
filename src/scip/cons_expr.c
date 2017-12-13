@@ -1719,14 +1719,16 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeMonotonicity)
    assert(conshdlr != NULL);
 
    /* allocate memory to store monotonicity information of each child */
-   if( stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR && expr->monotonicity != NULL && expr->nchildren > 0 )
+   if( stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR && expr->monotonicity == NULL && expr->nchildren > 0 )
    {
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &expr->monotonicity, expr->nchildren) );
+      printf("ALLOC MONOTONICITY ARRAY\n");
    }
-   else if( stage == SCIP_CONSEXPREXPRWALK_VISITINGCHILD )
+   else if( stage == SCIP_CONSEXPREXPRWALK_VISITINGCHILD && expr->nchildren > 0 )
    {
       assert(expr->walkcurrentchild < expr->nchildren);
       assert(expr->children != NULL);
+      assert(expr->monotonicity != NULL);
 
       expr->monotonicity[expr->walkcurrentchild] = SCIP_MONOTONE_UNKNOWN;
 
@@ -6559,6 +6561,13 @@ SCIP_RETCODE SCIPreleaseConsExprExpr(
 
    if( (*expr)->nuses == 1 )
    {
+      /* release monotonicity information */
+      if( (*expr)->monotonicity != NULL )
+      {
+         assert((*expr)->nchildren > 0);
+         SCIPfreeBlockMemoryArray(scip, &((*expr)->monotonicity), (*expr)->nchildren);
+      }
+
       /* release the auxiliary variable */
       if( (*expr)->auxvar != NULL )
       {
