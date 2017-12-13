@@ -423,6 +423,7 @@ set(scipheaders
     scip/cons_xor.h
     scip/cutpool.h
     scip/cuts.h
+    scip/dbldblarith.h
     scip/debug.h
     scip/def.h
     scip/dialog_default.h
@@ -536,6 +537,7 @@ set(scipheaders
     scip/prop.h
     scip/prop_nlobbt.h
     scip/prop_obbt.h
+    scip/prop_orbitalfixing.h
     scip/prop_probing.h
     scip/prop_pseudoobj.h
     scip/prop_redcost.h
@@ -641,6 +643,7 @@ set(scipheaders
     scip/struct_conflictstore.h
     scip/struct_cons.h
     scip/struct_cutpool.h
+    scip/struct_cuts.h
     scip/struct_dialog.h
     scip/struct_disp.h
     scip/struct_event.h
