@@ -1234,7 +1234,7 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicitySin)
 
    /* check whether [inf,sup] are in containing in an interval for which the sine function is monotone */
    if( M_PI * (2.0*k + 3.0) / 2.0 <= sup )
-      *result = ((k % 2) == 0) ? SCIP_MONOTONE_INC : SCIP_MONOTONE_DEC;
+      *result = ((k % 2 + 2) % 2) == 1 ? SCIP_MONOTONE_INC : SCIP_MONOTONE_DEC;
 
    return SCIP_OKAY;
 }

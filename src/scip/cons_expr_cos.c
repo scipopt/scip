@@ -491,7 +491,7 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityCos)
 
    /* check whether [inf,sup] are in containing in an interval for which the cosine function is monotone */
    if( sup <= M_PI * (k+1) )
-      *result = ((k % 2) == 0) ? SCIP_MONOTONE_DEC : SCIP_MONOTONE_INC;
+      *result = ((k % 2 + 2) % 2) == 0 ? SCIP_MONOTONE_DEC : SCIP_MONOTONE_INC;
 
    return SCIP_OKAY;
 }

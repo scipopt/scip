@@ -136,7 +136,7 @@ SCIP_RETCODE testMonotonicity(
    SCIP_CALL( SCIPcomputeMonotonicityExprExpr(scip, expr) );
 
    /* check curvature */
-   //cr_expect(SCIPgetMonotonicityExprExpr(expr, i) == expectedres, "expect %d, got %d", SCIPgetMonotonicityExprExpr(expr, i), expectedres);
+   cr_expect(SCIPgetMonotonicityExprExpr(expr, i) == expectedres, "expect %d, got %d", SCIPgetMonotonicityExprExpr(expr, i), expectedres);
 
    return SCIP_OKAY;
 }
@@ -172,6 +172,9 @@ Test(monotonicity, cos)
 
    SCIP_CALL( chgBounds(x, -5.0*M_PI, -4.0*M_PI) );
    SCIP_CALL( testMonotonicity(0, SCIP_MONOTONE_INC) );
+
+   SCIP_CALL( chgBounds(x, -6.0*M_PI, -5.0*M_PI) );
+   SCIP_CALL( testMonotonicity(0, SCIP_MONOTONE_DEC) );
 }
 
 /* check for entropy expression */
@@ -273,7 +276,6 @@ Test(monotonicity, prod_three)
    /*
     * mixed
     */
-
    SCIP_CALL( chgBounds(x, 0.0, 1.0) );
    SCIP_CALL( chgBounds(y, -3.0, -2.0) );
    SCIP_CALL( chgBounds(z, -4.0, -2.0) );
@@ -294,7 +296,16 @@ Test(monotonicity, prod_three)
 /* check for sin expression */
 Test(monotonicity, sin)
 {
-   /* TODO */
+   SCIP_CALL( createExpr("sin(<x>[C])", "sin") );
+
+   SCIP_CALL( chgBounds(x, -M_PI/2.0, M_PI/2.0) );
+   SCIP_CALL( testMonotonicity(0, SCIP_MONOTONE_INC) );
+
+   SCIP_CALL( chgBounds(x, -M_PI/2.0 - 2.0*SCIPepsilon(scip), M_PI/2.0) );
+   SCIP_CALL( testMonotonicity(0, SCIP_MONOTONE_UNKNOWN) );
+
+   SCIP_CALL( chgBounds(x, M_PI/2.0, 3.0*M_PI/2.0) );
+   SCIP_CALL( testMonotonicity(0, SCIP_MONOTONE_DEC) );
 }
 
 /* check for sum expression */
@@ -319,12 +330,4 @@ Test(monotonicity, var)
 {
    SCIP_CALL( createExpr("<x>[C]", "var") );
    SCIP_CALL( testMonotonicity(-1, SCIP_MONOTONE_INC) );
-}
-
-
-/* check for var expression */
-Test(monotonicity, bug)
-{
-   SCIP_CALL( createExpr("sin(sin(<x>[C]))", "sin") );
-   SCIP_CALL( testMonotonicity(0, SCIP_MONOTONE_UNKNOWN) );
 }
