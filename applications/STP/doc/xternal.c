@@ -50,6 +50,8 @@
  * - a propagator, which attempts to fix (edge) variables to zero utilizing their reduced costs (prop_stp.c)
  * - an event handler, which simply writes each incumbent solution to a file -- if activated (event_bestsol.c)
  *
+ *
+ *
  * In the following the problem is introduced and the solving process is delineated. Furthermore, the two main plugins are
  * sketched.
  *
@@ -58,6 +60,10 @@
  * -# \ref CONS "Separating violated constraints"
  * -# \ref MAKEFILE "The Makefile"
  *
+ * Compiling the STP application
+ * -----------------------------
+ *
+ * See the @ref INSTALL "Install file"
  */
 
 /**@page PROBLEM Problem description and solving approach

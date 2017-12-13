@@ -43,7 +43,7 @@ via the algebraic modeling language ZIMPL.
 Installation
 ============
 
-see INSTALL file 
+See the @ref INSTALL "INSTALL file".
 
 Usage
 =====

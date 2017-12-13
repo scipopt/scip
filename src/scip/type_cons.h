@@ -59,7 +59,7 @@ enum SCIP_LinConstype
    SCIP_LINCONSTYPE_SINGLETON     =  2,         /**< linear constraints with a single variable */
    SCIP_LINCONSTYPE_AGGREGATION   =  3,         /**< linear constraints of the type \f$ ax + by = c\f$ */
    SCIP_LINCONSTYPE_PRECEDENCE    =  4,         /**< linear constraints of the type \f$ a x - a y \leq b\f$ where \f$x\f$ and \f$y\f$ must have the same type */
-   SCIP_LINCONSTYPE_VARBOUND      =  5,         /**< linear constraints of the form \f$ ax + by \leq c \, x \in \{0,1\} \$*/
+   SCIP_LINCONSTYPE_VARBOUND      =  5,         /**< linear constraints of the form \f$ ax + by \leq c \, x \in \{0,1\} \f$ */
    SCIP_LINCONSTYPE_SETPARTITION  =  6,         /**< linear constraints of the form \f$ \sum x_i = 1\, x_i \in \{0,1\} \forall i \f$ */
    SCIP_LINCONSTYPE_SETPACKING    =  7,         /**< linear constraints of the form \f$ \sum x_i \leq 1\, x_i \in \{0,1\} \forall i \f$ */
    SCIP_LINCONSTYPE_SETCOVERING   =  8,         /**< linear constraints of the form \f$ \sum x_i \geq 1\, x_i \in \{0,1\} \forall i \f$ */

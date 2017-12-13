@@ -359,19 +359,19 @@
  * In the @ref CMAKE "CMAKE" based build system, building the implementation of the interface for IPOPT and WORHP can be
  * enabled by specifying `IPOPT=on` and `WORHP=on`, respectively, as argument to the `cmake` call.
  *
- * @subsection NLPISOLVERS_IPOPT IPOPT
+ * @section NLPISOLVERS_IPOPT IPOPT
  *
  * <b>IPOPT</b> implements a primal-dual interior point method and uses line searches based on filter methods. It has
  * been developed by Andreas W&auml;chter and Carl Laird and is available under the Eclipse Public License on <a
  * href="https://www.coin-or.org/">COIN-OR</a>.
  *
- * @subsection NLPISOLVERS_WORHP WORHP
+ * @section NLPISOLVERS_WORHP WORHP
  *
  * <b>WORHP</b> implements a sequential quadratic programming method and a penalty-interior point algorithm.  It is
  * developed at the <a href="http://www.uni-bremen.de/en.html">University of Bremen</a> and is free for academic
  * purposes.
  *
- * @subsection NLPISOLVERS_FILTERSQP FilterSQP
+ * @section NLPISOLVERS_FILTERSQP FilterSQP
  *
  * <b>FilterSQP</b> implements a sequential quadratic programming method. It has been developed by Roger Fletcher
  * and Sven Leyffer. It is not publicly available, but may be obtained from Sven Leyffer on request.
@@ -707,6 +707,7 @@
  * GMP                  | on, off                        | GMP=[true, false]      |                                            |
  * READLINE             | on, off                        | READLINE=[true, false] |                                            |
  * ZIMPL                | on, off                        | ZIMPL=[true, false]    |                                            |
+ * SYM                  | bliss, none                    | --                     |                                            |
  * CMAKE_INSTALL_PREFIX | \<path\>                       | INSTALLDIR=\<path\>    |                                            |
  * SHARED               | on, off                        | SHARED=[true, false]   |                                            |
  * SOPLEX_DIR           | <path/to/SoPlex/installation>  | --                     |                                            |
@@ -714,6 +715,17 @@
  * ..._DIR              | <custom/path/to/.../package>   | --                     |                                            |
  * COVERAGE             | on, off                        | --                     | use with gcc, lcov, gcov in **debug** mode |
  * COVERAGE_CTEST_ARGS  | ctest argument string          | --                     | see `ctest --help` for arguments           |
+ * DEBUGSOL             | on, off                        | DEBUGSOL=[true,false]  | specify a debugging solution by setting the "misc/debugsol" parameter of SCIP |
+ * CXXONLY              | on, off                        | --                     | use a C++ compiler for all source files    |
+ * IPOPT                | on, off                        | IPOPT=[true,false]     | requires IPOPT version >= 3.12.0           |
+ * WORHP                | on, off                        | WORHP=[true,false]     | should worhp be linked                     |
+ * LPSCHECK             | on, off                        | LPSCHECK=[true,false]  | double check SoPlex results with CPLEX     |
+ * NOBLKMEM             | on, off                        | NOBLKMEM=[true,false]  |                                            |
+ * NOBUFMEM             | on, off                        | NOBUFMEM=[true,false]  |                                            |
+ * NOBLKBUFMEM          | on, off                        | NOBLKBUFMEM=[true,false] |                                          |
+ * MT                   | on, off                        |                        | use static runtime libraries for Visual Studio compiler on Windows |
+ * PARASCIP             | on, off                        | PARASCIP=[true,false]  | thread safe compilation                    |
+ * SANITIZE_...         | on, off                        | --                     | enable sanitizer in debug mode if available |
  *
  * Parameters can be set all at once or in subsequent calls to `cmake` - extending or modifying the existing
  * configuration.

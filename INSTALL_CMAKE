@@ -28,6 +28,7 @@ Compiling SCIP directly can be done as follows:
 1) unpack the tarball "tar xvzf scip-x.y.z.tgz"
 2) change into the directory "cd scip-x.y.z"
 3) create a new directory "build"
+4) change directories "cd build"
 4) configure the build "cmake .."
 5) start compiling SCIP "make"
 6) (recommended) check your SCIP installation "make check" or "ctest -R -default"
