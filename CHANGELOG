@@ -122,6 +122,7 @@ new parameters:
 interface:
 - new command line parameter "-r" to pass a nonnegative integer as random seed.
 - new interface methods to create and use bandit algorithms implemented as SCIP core plugins
+- new interface methods for aggregating rows and computating MIP cuts, see cuts.h
 - new public methods SCIPvariableGraphBreadthFirst() and SCIPvariableGraph{Create,Free}() to
   perform breadth-first search on the variable constraint graph used by the GINS and ALNS heuristics
 - removed clique component index from SCIP_Var struct and the public interface method SCIPvarGetCliqueComponentIdx
@@ -151,6 +152,8 @@ interface:
 - added SCIPaddBilinearIneqQuadratic to propose an inequality with two variables that appear in a bilinear term
 - added SCIPcomputeBilinEnvelope{1,2} to compute a linearization of a bilinear term when considering at most two linear inequalities
 - new method SCIPaddRow() to replace deprecated SCIPaddCut()
+- changed function signature of SCIPcalcMIR()
+- changed function signature of SCIPcalcStrongCG()
 - replaced method SCIPgetRelaxFeastolFactor() by SCIPrelaxfeastol() and added SCIPchgRelaxfeastol()
 - added method SCIPgetSepaMinEfficacy() to access separating/minefficacy(root)
 - new object SCIP_LINCONSSTATS, see type_cons.h, and its methods SCIPlinConsStats{Create,Free,GetTypeCount,GetSum} and SCIPprintLinConsStats()
@@ -205,7 +208,7 @@ CMake build system
 - added support for sanitizers in debug mode and options SANITIZE_ADDRESS, SANITIZE_MEMORY, SANITIZE_UNDEFINED, SANITIZE_THREAD
 - added option WORHP to specify if the NLP solver WORHP should be linked.
 - added option SYM to specify which graph automorphism package (bliss, none) should be used, if available
-- avoid imprecise floating point operations in combination with intel compilers
+- disable non-standard compliant floating point optimizations in combination with intel compilers
 - improve Visual Studio compilation
 - only accept IPOPT version 3.12.0 or higher
 
