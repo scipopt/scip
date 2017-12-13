@@ -832,10 +832,13 @@ add_dependencies(scip scip_update_githash)
 
 set_target_properties(libscip PROPERTIES
     VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}.${SCIP_VERSION_SUB}
-    SOVERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR})
+    SOVERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}
+    INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 # set the install rpath to the installed destination
-set_target_properties(scip PROPERTIES INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+set_target_properties(scip PROPERTIES
+    INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib"
+    INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 # install the header files of scip
 install(FILES ${lpiheaders} DESTINATION include/lpi)
