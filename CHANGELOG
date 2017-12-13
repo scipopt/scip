@@ -28,7 +28,7 @@ features:
 - utilizing linear inequalities to compute stronger linearizations for bilinear terms; the inequalities are computed in
   the OBBT propagator
 - new methods and interactive shell functionality to display linear constraint classification types;
-  use 'display linclass' after reading a problem to classify linear constraint types
+  use 'display linclass' after reading a problem to classify linear constraint types or SCIPclassifyConstraintTypesLinear()
 - improved selection of rows in CMIR aggregation heuristic
 - generate lifted flowcover cuts in CMIR cut generation heuristic
 - added API for aggregating rows for generating cuts which uses double-double arithmetic internally
@@ -71,7 +71,7 @@ deleted and modified parameters:
 - removed parameters "heuristics/clique/{multiplier,initseed}"
 - replaced parameter "heuristics/{clique,vbounds}/minfixingrate" by "heuristics/{clique,vbounds}/minintfixingrate" and
   "heuristics/{clique,vbounds}/minmipfixingrate", which check the fixing rate before LP solving and after MIP presolve
-- removed parameter "separating/cgmip/allowlocal" (use parameter passed to separation instead)
+- removed parameter "separating/cgmip/allowlocal" (use parameter passed to separation callback instead)
 - removed parameter "separating/{gomory,strongcg}/maxweightrange"
 - changed and removed several parameters for zerohalf separator
 - moved parameters for flowcover and cmir separators to "separating/aggregation"
@@ -165,6 +165,12 @@ interface:
 - added method SCIPgetRowNumIntCols() that returns the number of integer columns in a row
 - new method SCIPisCutNew() that returns whether a cut is already present in the global cut pool
 - return type of SCIPcliqueGetId() changed from int to unsigned int
+- removed parameter "allowaddcons" from SCIPselectVarPseudoStrongBranching(), SCIPselectVarStrongBranching(), and
+  SCIPincludeBranchruleRelpscost()
+- add function SCIPsetSlackVarUb() to control upper bound of slack variable in cons_indicator
+- removed parameter "scaling" from SCIPgetRowprepViolation()
+- SCIPheurPassIndicator has a new parameter which allows to pass the objective of the solution
+- new parameter "allowlocal" for SEPAEXEC{LP,SOL} callbacks to switch generation of locally valid cuts
 
 fixed bugs:
 - fix wrong statistic display of diving leaf solutions
@@ -220,10 +226,6 @@ Makefile:
 
 SCIP version 4.0.1
 ==================
-
-interface:
-- add function SCIPsetSlackVarUb() to control upper bound of slack variable in cons_indicator
-- SCIPheurPassIndicator has a new parameter which allows to pass the objective of the solution
 
 features
 - added parsing functionality to cardinality constraint handler for CIP format
