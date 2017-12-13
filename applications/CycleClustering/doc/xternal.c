@@ -28,7 +28,7 @@
  *
  * "Mixed-Integer Programming for Cycle Detection in Non-reversible Markov Processes"@n
  * by Isabel Beckenbach, Leon Eifler, Konstantin Fackeldey, Ambros Gleixner, Andreas Grever, Marcus Weber, and Jakob Witzig, @n
- * <em> Multiscale Modling and Simulation </em> , 2016 (accepted for publication,  preprint available as <a href="https://opus4.kobv.de/opus4-zib/frontdoor/index/index/docId/6035">ZIB-Report 16-39</a> ).
+ * <em> Multiscale Modeling and Simulation </em> , 2016 (accepted for publication,  preprint available as <a href="https://opus4.kobv.de/opus4-zib/frontdoor/index/index/docId/6035">ZIB-Report 16-39</a> ).
  *
  * The input format is an \f$n \times n\f$ - matrix \f$Q\f$ of unconditional transition probabilities with a header of the form
  * "# p nstates ncluster"; nstates is the size of the matrix, ncluster the desired number of clusters; the name of the file must end with ".spa".
