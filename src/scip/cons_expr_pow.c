@@ -886,7 +886,7 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityPow)
 
    if( expisint )
    {
-      SCIP_Bool expisodd = (((int)exponent) % 2) == 1;
+      SCIP_Bool expisodd = ceil(exponent/2) != exponent/2;
 
       /* ..., x^-3, x^-1, x^1, x^3, ... */
       if( expisodd )
@@ -904,8 +904,11 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityPow)
    }
    else
    {
-      /* x^c is not defined for negative x and fractional c */
-      assert(inf >= 0.0);
+      /* note that the expression is not defined for negative input values
+       *
+       * - increasing iff exponent >= 0
+       * - decreasing iff exponent <= 0
+       */
       *result = exponent >= 0.0 ? SCIP_MONOTONE_INC : SCIP_MONOTONE_DEC;
    }
 
