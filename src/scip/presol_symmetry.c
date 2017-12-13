@@ -1210,14 +1210,14 @@ SCIP_RETCODE determineSymmetry(
       if ( nhandleconss < nconss )
          return SCIP_OKAY;
 
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL,
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
          "   Deactivated symmetry handling methods, since SCIP was built without symmetry detector (SYM=none).\n");
       return SCIP_OKAY;
    }
    /* skip symmetry computation if required variables are not present */
    else if ( ! (type & presoldata->symspecrequire) )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL,
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
          "   (%.1fs) symmetry computation skipped: type (bin %c, int %c, cont %c) does not match requirements (bin %c, int %c, cont %c)\n",
          SCIPgetSolvingTime(scip),
          SCIPgetNBinVars(scip) > 0 ? '+' : '-',
@@ -1231,13 +1231,13 @@ SCIP_RETCODE determineSymmetry(
    /* skip symmetry computation if there are constraints that cannot be handled by symmetry */
    else if ( getNSymhandableConss(scip) < SCIPgetNActiveConss(scip) )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL,
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
          "   (%.1fs) symmetry computation skipped: there exist constraints that cannot be handled by symmetry methods\n",
          SCIPgetSolvingTime(scip));
       return SCIP_OKAY;
    }
 
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL,
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
       "   (%.1fs) symmetry computation started: requiring (bin %c, int %c, cont %c), (fixed: bin %c, int %c, cont %c)\n",
       SCIPgetSolvingTime(scip),
       (presoldata->symspecrequire & (int) SYM_SPEC_BINARY) != 0 ? '+' : '-',
@@ -1261,28 +1261,28 @@ SCIP_RETCODE determineSymmetry(
 
    /* output statistics */
    if ( ! presoldata->successful )
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "   (%.1fs) could not compute symmetry\n", SCIPgetSolvingTime(scip));
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "   (%.1fs) could not compute symmetry\n", SCIPgetSolvingTime(scip));
    else if ( presoldata->nperms == 0 )
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "   (%.1fs) no symmetry present\n", SCIPgetSolvingTime(scip));
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "   (%.1fs) no symmetry present\n", SCIPgetSolvingTime(scip));
    else
    {
       assert( presoldata->nperms > 0 );
 
       if ( maxgenerators == 0 )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL,
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
             "   (%.1fs) symmetry computation finished: %d generators found (max: -, log10 of symmetry group size: %.1f)\n",
             SCIPgetSolvingTime(scip), presoldata->nperms, presoldata->log10groupsize);
       }
       else
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL,
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
             "   (%.1fs) symmetry computation finished: %d generators found (max: %u, log10 of symmetry group size: %.1f)\n",
             SCIPgetSolvingTime(scip), presoldata->nperms, maxgenerators, presoldata->log10groupsize);
       }
 
       /* turn off some other presolving methods in order to be sure that they do not destroy symmetry afterwards */
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
          "   (%.1fs) turning off presolver <domcol>, constraint handler <components>, and propagator <dualfix> for remaining computations in order to avoid conflicts\n",
          SCIPgetSolvingTime(scip));
 
