@@ -9,7 +9,7 @@ features:
 - added interface to the NLP solver FilterSQP; set FILTERSQP=true in order to link to FilterSQP
 - new numerical solution violations get printed when checksol is called
 - three bandit selection algorithms to face sequential decision problems under uncertainty
-- new primal heuristic LNS that orchestrates eight different LNS heuristics adaptively
+- new primal heuristic ALNS that orchestrates eight different LNS heuristics adaptively
   using algorithms for the multi-armed bandit problem
 - added analysis of the clique table which identifies possible aggregations via the search for
   strongly connected components and may detect infeasible assignments on the way
@@ -37,6 +37,21 @@ features:
 - enabled cutting plane separation in the tree
 - improved cut post-processing: apply coefficient tightening, enforce maximal dynamism
 - improved versions of the clique and variable bound pre-root heuristics that are often able to fix many more variables
+
+performance improvements:
+- use disjoint set to reduce peak memory usage and time to compute of clique table connectedness information
+- add and use RESTRICT macro for some pointers
+- improved the implementation of SCIPvarGetActiveRepresentatives
+- speed-up reverse propagation
+- removed bestrelaxsol and directly access relaxation solution instead to decrease overhead when using relaxation handlers
+- use LP solution polishing during probing and diving mode to activate it during many primal heuristics; remains disabled
+  during strong branching and OBBT
+- for fast presolving emphasis, disable use of implications in logicor presolving
+- use limit on the total number of nonzeros added to the clique table during the greedyCliqueAlgorithm of cons_knapsack.c
+- faster implementation of CMIR cut generation heuristic
+- improved cut selection and management
+- disabled reformulation of products of a binary variable with a linear term that does not solely involve binary variables
+- speed up creation of LP in the computation of relative interior points
 
 data structures:
 - new disjoint set data structure SCIP_DISJOINTSET to incrementally update connectedness information for a graph on nodes {0,...,n-1}
@@ -111,8 +126,10 @@ interface:
   perform breadth-first search on the variable constraint graph used by the GINS and ALNS heuristics
 - removed clique component index from SCIP_Var struct and the public interface method SCIPvarGetCliqueComponentIdx
 - new interface methods SCIPcreateRandom, SCIPfreeRandom that replace SCIPrandomCreate and SCIPrandomFree
-  in the public SCIP API.
+  in the public SCIP API
 - new interface method SCIPsetRandomSeed to (re)set a random number generator seed
+- new interface methods SCIPcreateDigraph, SCIPcopyDigraph that replace SCIPdigraphCreate and SCIPdigraphCopy
+  in the public SCIP API
 - added method SCIPsetProbingLPState() to install given LP state and/or norms at the current probing node
 - generalized SCIPcreate{Cons,ConsBasic}Orbitope() method to three orbitope types (full, partitioning, packing)
 - added functions SCIPbranchcandGetLPMaxPrio() and SCIPbranchcandGetExternMaxPrio() to query the maximal branching priority of given
@@ -125,7 +142,6 @@ interface:
 - unify handling of objective limit by only using one parameter and not distinguishing w.r.t. lower and upper limits
 - replaced LPI parameters SCIP_LPPAR_LOBJLIM and SCIP_LPPAR_UOBJLIM by SCIP_LPPAR_OBJLIM
 - added interface to graph automorphism algorithms in src/symmetry/ (initially only to BLISS)
-- removed solution pointer from list of arguments for SCIPaddCut()
 - added additional parameter for statistics tables to SCIPcopyPlugins
 - added parameter "objval" to SCIPnlpiGetSolution() for returning the optimal objective value (can be set to NULL)
 - removed argument "includeslp" from SCIPrelaxCreate() and added it to SCIPmarkRelaxSolValid(), SCIPsetRelaxSolVals() and
@@ -142,21 +158,10 @@ interface:
 - new method SCIPdivesetGetNSols to query the number of found solutions from a diveset.
 - new method SCIPnextafter that wraps different nextafter methods to return the next representable value after a given value
 - SCIPnlpStatisticsCreate() and SCIPnlpStatisticsFree() now require a pointer to blockmemory as argument
-
-performance improvements:
-- use disjoint set to reduce peak memory usage and time to compute of clique table connectedness information
-- add and use RESTRICT macro for some pointers
-- improved the implementation of SCIPvarGetActiveRepresentatives
-- speed-up reverse propagation
-- removed bestrelaxsol and directly access relaxation solution instead to decrease overhead when using relaxation handlers
-- use LP solution polishing during probing and diving mode to activate it during many primal heuristics; remains disabled
-  during strong branching and OBBT
-- for fast presolving emphasis, disable use of implications in logicor presolving
-- use limit on the total number of nonzeros added to the clique table during the greedyCliqueAlgorithm of cons_knapsack.c
-- faster implementation of CMIR cut generation heursitic
-- improved cut selection and management
-- disabled reformulation of products of a binary variable with a linear term that does not solely involve binary variables
-- speed up for creation of LP in the computation of relative interior points
+- SCIPsolveParallel() has been deprecated, use the new method SCIPsolveConcurrent() instead
+- added method SCIPgetRowNumIntCols() that returns the number of integer columns in a row
+- new method SCIPisCutNew() that returns whether a cut is already present in the global cut pool
+- return type of SCIPcliqueGetId() changed from int to unsigned int
 
 fixed bugs:
 - fix wrong statistic display of diving leaf solutions
