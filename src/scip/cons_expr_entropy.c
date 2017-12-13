@@ -566,6 +566,59 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashEntropy)
    return SCIP_OKAY;
 }
 
+/** expression curvature detection callback */
+static
+SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureEntropy)
+{  /*lint --e{715}*/
+   SCIP_CONSEXPR_EXPR* child;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(curvature != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+
+   child = SCIPgetConsExprExprChildren(expr)[0];
+   assert(child != NULL);
+
+   /* expression is concave if child is concave */
+   if( (int)(SCIPgetCurvatureExprExpr(child) & SCIP_EXPRCURV_CONCAVE) != 0 )
+      *curvature = SCIP_EXPRCURV_CONCAVE;
+   else
+      *curvature = SCIP_EXPRCURV_UNKNOWN;
+
+   return SCIP_OKAY;
+}
+
+/** expression monotonicity detection callback */
+static
+SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityEntropy)
+{  /*lint --e{715}*/
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_Real childinf;
+   SCIP_Real childsup;
+   SCIP_Real brpoint = exp(-1.0);
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(result != NULL);
+   assert(idx >= 0 && idx < SCIPgetConsExprExprNChildren(expr));
+
+   child = SCIPgetConsExprExprChildren(expr)[0];
+   assert(child != NULL);
+
+   childinf = SCIPintervalGetInf(SCIPgetConsExprExprInterval(child));
+   childsup = SCIPintervalGetSup(SCIPgetConsExprExprInterval(child));
+
+   if( childsup <= brpoint )
+      *result = SCIP_MONOTONE_INC;
+   else if( childinf >= brpoint )
+      *result = SCIP_MONOTONE_DEC;
+   else
+      *result = SCIP_MONOTONE_UNKNOWN;
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for x*log(x) expressions and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrEntropy(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -593,6 +646,8 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrEntropy(
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropEntropy) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashEntropy) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffEntropy) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureEntropy) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrMonotonicity(scip, consexprhdlr, exprhdlr, monotonicityEntropy) );
 
    return SCIP_OKAY;
 }

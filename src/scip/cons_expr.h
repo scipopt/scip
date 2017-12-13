@@ -187,6 +187,15 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrCurvature(
    SCIP_DECL_CONSEXPR_EXPRCURVATURE((*curvature)) /**< curvature detection callback (can be NULL) */
 );
 
+/** set the monotonicity detection callback of an expression handler */
+EXTERN
+SCIP_RETCODE SCIPsetConsExprExprHdlrMonotonicity(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+   SCIP_DECL_CONSEXPR_EXPRMONOTONICITY((*monotonicity)) /**< monotonicity detection callback (can be NULL) */
+);
+
 /** gives expression handlers */
 EXTERN
 SCIP_CONSEXPR_EXPRHDLR** SCIPgetConsExprExprHdlrs(
@@ -749,6 +758,26 @@ EXTERN
 SCIP_RETCODE SCIPcomputeCurvatureExprExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   );
+
+/** computes the monotonicity of an expression w.r.t. to each child
+ *
+ * @note the result is stored inside of an expression and can be accessed via SCIPgetMonotonicityExprExpr
+ */
+EXTERN
+SCIP_RETCODE SCIPcomputeMonotonicityExprExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   );
+
+/** returns the monotonicity of an expression w.r.t. to a given child
+ *
+ * @note this function can only be used after calling SCIPcomputeMonotonicityExprExpr
+ */
+EXTERN
+SCIP_MONOTONE SCIPgetMonotonicityExprExpr(
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   int                   idx                 /**< index of child */
    );
 
 /** @} */

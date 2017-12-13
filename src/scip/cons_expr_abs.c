@@ -571,6 +571,35 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureAbs)
    return SCIP_OKAY;
 }
 
+/** expression monotonicity detection callback */
+static
+SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityAbs)
+{  /*lint --e{715}*/
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_Real childinf;
+   SCIP_Real childsup;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(result != NULL);
+   assert(idx >= 0 && idx < SCIPgetConsExprExprNChildren(expr));
+
+   child = SCIPgetConsExprExprChildren(expr)[0];
+   assert(child != NULL);
+
+   childinf = SCIPintervalGetInf(SCIPgetConsExprExprInterval(child));
+   childsup = SCIPintervalGetSup(SCIPgetConsExprExprInterval(child));
+
+   if( childsup <= 0.0 )
+      *result = SCIP_MONOTONE_DEC;
+   else if( childinf >= 0.0 )
+      *result = SCIP_MONOTONE_INC;
+   else
+      *result = SCIP_MONOTONE_UNKNOWN;
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for absolute expression and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrAbs(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -596,6 +625,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrAbs(
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropAbs) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffAbs) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureAbs) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrMonotonicity(scip, consexprhdlr, exprhdlr, monotonicityAbs) );
 
    return SCIP_OKAY;
 }

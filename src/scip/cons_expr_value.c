@@ -166,6 +166,20 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureValue)
    return SCIP_OKAY;
 }
 
+/** expression monotonicity detection callback */
+static
+SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityValue)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(result != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 0);
+
+   *result = SCIP_MONOTONE_INC;
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for constant value expression and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrValue(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -186,6 +200,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrValue(
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropValue) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffValue) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureValue) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrMonotonicity(scip, consexprhdlr, exprhdlr, monotonicityValue) );
 
    return SCIP_OKAY;
 }

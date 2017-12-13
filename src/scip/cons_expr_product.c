@@ -1941,6 +1941,56 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureProduct)
    return SCIP_OKAY;
 }
 
+/** expression monotonicity detection callback */
+static
+SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityProduct)
+{  /*lint --e{715}*/
+   SCIP_Real coef;
+   SCIP_Bool allpos;
+   SCIP_Bool allneg;
+   int i;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(result != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) > 1);
+   assert(idx >= 0 && idx < SCIPgetConsExprExprNChildren(expr));
+
+   coef = SCIPgetConsExprExprProductCoef(expr);
+   allpos = TRUE;
+   allneg = TRUE;
+
+   /* check whether all child intervals are positive or negative */
+   for( i = 0; i < SCIPgetConsExprExprNChildren(expr) && (allpos || allneg); ++i )
+   {
+      SCIP_INTERVAL interval;
+
+      if( i == idx )
+         continue;
+
+      assert(SCIPgetConsExprExprChildren(expr)[i] != NULL);
+      interval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[i]);
+
+      if( SCIPintervalGetInf(interval) < 0.0 )
+         allpos = FALSE;
+      if( SCIPintervalGetSup(interval) > 0.0 )
+         allneg = FALSE;
+   }
+
+   /* note that the monotonicity depends on the sign of the coefficient */
+   if( !allpos && !allneg )
+      *result = SCIP_MONOTONE_UNKNOWN;
+   else if( allpos )
+      *result = (coef >= 0.0) ? SCIP_MONOTONE_INC : SCIP_MONOTONE_DEC;
+   else
+   {
+      assert(allneg);
+      *result = (coef >= 0.0) ? SCIP_MONOTONE_DEC : SCIP_MONOTONE_INC;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for product expressions and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1977,6 +2027,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureProduct) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrMonotonicity(scip, consexprhdlr, exprhdlr, monotonicityProduct) );
 
    return SCIP_OKAY;
 }

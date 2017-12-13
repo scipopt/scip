@@ -1219,6 +1219,25 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureSum)
    return SCIP_OKAY;
 }
 
+/** expression monotonicity detection callback */
+static
+SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicitySum)
+{  /*lint --e{715}*/
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(result != NULL);
+   assert(idx >= 0 && idx < SCIPgetConsExprExprNChildren(expr));
+
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
+
+   *result = exprdata->coefficients[idx] >= 0.0 ? SCIP_MONOTONE_INC : SCIP_MONOTONE_DEC;
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for sum expressions and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrSum(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1244,6 +1263,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSum(
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureSum) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrMonotonicity(scip, consexprhdlr, exprhdlr, monotonicitySum) );
 
    return SCIP_OKAY;
 }

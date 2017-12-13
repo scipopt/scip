@@ -363,6 +363,24 @@ extern "C" {
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_EXPRCURV* curvature)
 
+/** expression monotonicity detection callback
+ *
+ * The method computes the monotonicity of an expression with respect to a given child.
+ *
+ * input:
+ *  - scip : SCIP main data structure
+ *  - conshdlr : expression constraint handler
+ *  - expr : expression to the curvature for
+ *  - idx : index of the considered child expression
+ *  - result : buffer to store the monotonicity
+ */
+#define SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSHDLR* conshdlr, \
+   SCIP_CONSEXPR_EXPR* expr, \
+   int idx, \
+   SCIP_MONOTONE* result)
+
 /** stages of expression walker in which the walker callbacks are called */
 typedef enum
 {
@@ -397,6 +415,15 @@ typedef enum
    SCIP_CONSEXPRITERATOR_RTOPOLOGIC,         /**< reverse topological order */
    SCIP_CONSEXPRITERATOR_BFS                 /**< breadth-first search */
 } SCIP_CONSEXPRITERATOR_TYPE;
+
+/** monotonicity of an expression */
+typedef enum
+{
+   SCIP_MONOTONE_INC,                       /**< increasing */
+   SCIP_MONOTONE_DEC,                       /**< decreasing */
+   SCIP_MONOTONE_UNKNOWN,                   /**< unknown */
+
+} SCIP_MONOTONE;
 
 /** expression graph walk callback
  *

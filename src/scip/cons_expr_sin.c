@@ -1202,6 +1202,43 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureSin)
    return SCIP_OKAY;
 }
 
+/** expression monotonicity detection callback */
+static
+SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicitySin)
+{  /*lint --e{715}*/
+   SCIP_INTERVAL interval;
+   SCIP_Real inf;
+   SCIP_Real sup;
+   int k;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(result != NULL);
+   assert(idx >= 0 && idx < SCIPgetConsExprExprNChildren(expr));
+
+   assert(SCIPgetConsExprExprChildren(expr)[0] != NULL);
+   interval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]);
+
+   *result = SCIP_MONOTONE_UNKNOWN;
+   inf = SCIPintervalGetInf(interval);
+   sup = SCIPintervalGetSup(interval);
+
+   /* expression is not monotone because the interval is too large */
+   if( sup - inf > M_PI )
+      return SCIP_OKAY;
+
+   /* compute k s.t. PI * (2k+1) / 2 <= interval.inf <= PI * (2k+3) / 2 */
+   k = (int)floor(inf/M_PI - 0.5);
+   assert(M_PI * (2*k + 1) / 2.0 <= inf);
+   assert(M_PI * (2*k + 3) / 2.0 >= inf);
+
+   /* check whether [inf,sup] are in containing in an interval for which the sine function is monotone */
+   if( M_PI * (2*k + 3) / 2.0 <= sup )
+      *result = ((k % 2) == 0) ? SCIP_MONOTONE_INC : SCIP_MONOTONE_DEC;
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for sin expressions and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrSin(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1227,6 +1264,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSin(
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffSin) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureSin) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrMonotonicity(scip, consexprhdlr, exprhdlr, monotonicitySin) );
 
    return SCIP_OKAY;
 }

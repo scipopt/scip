@@ -1694,7 +1694,7 @@ SCIP_RETCODE SCIPcomputeCurvatureExprExpr(
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    assert(conshdlr != NULL);
 
-   /* first evaluate all subexpressions */
+   /* evaluate all subexpressions */
    SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, FALSE, 0, 0.0) );
 
    /* compute curvatures */
@@ -1703,7 +1703,93 @@ SCIP_RETCODE SCIPcomputeCurvatureExprExpr(
    return SCIP_OKAY;
 }
 
-/** */
+/** expression walk callback for computing monotonicity information */
+static
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeMonotonicity)
+{
+   SCIP_CONSHDLR* conshdlr;
+
+   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR || stage == SCIP_CONSEXPREXPRWALK_VISITINGCHILD);
+   assert(result != NULL);
+   assert(expr != NULL);
+   assert(expr->exprhdlr != NULL);
+
+   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+   conshdlr = (SCIP_CONSHDLR*)data;
+   assert(conshdlr != NULL);
+
+   /* allocate memory to store monotonicity information of each child */
+   if( stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR && expr->monotonicity != NULL && expr->nchildren > 0 )
+   {
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &expr->monotonicity, expr->nchildren) );
+   }
+   else if( stage == SCIP_CONSEXPREXPRWALK_VISITINGCHILD )
+   {
+      assert(expr->walkcurrentchild < expr->nchildren);
+      assert(expr->children != NULL);
+
+      expr->monotonicity[expr->walkcurrentchild] = SCIP_MONOTONE_UNKNOWN;
+
+      /* call monotonicity detection callback */
+      if( expr->exprhdlr->monotonicity != NULL )
+      {
+         SCIP_CALL( (*expr->exprhdlr->monotonicity)(scip, conshdlr, expr, expr->walkcurrentchild,
+            &expr->monotonicity[expr->walkcurrentchild]) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** computes the monotonicity of an expression w.r.t. to each child
+ *
+ * @note the result is stored inside of an expression and can be accessed via SCIPgetMonotonicityExprExpr
+ */
+SCIP_RETCODE SCIPcomputeMonotonicityExprExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   assert(conshdlr != NULL);
+
+   /* evaluate all subexpressions */
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, FALSE, 0, 0.0) );
+
+   /* compute monotonicity information */
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, computeMonotonicity, computeMonotonicity, NULL, NULL, conshdlr) );
+
+   return SCIP_OKAY;
+}
+
+/** returns the monotonicity of an expression w.r.t. to a given child */
+SCIP_MONOTONE SCIPgetMonotonicityExprExpr(
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   int                   idx                 /**< index of child */
+   )
+{
+   assert(expr != NULL);
+
+   /* handle variable and constant expressions as monotone increasing */
+   if( SCIPgetConsExprExprNChildren(expr) == 0 )
+   {
+      assert(strcmp(expr->exprhdlr->name, "var") == 0 || strcmp(expr->exprhdlr->name, "val") == 0);
+      return SCIP_MONOTONE_INC;
+   }
+
+   assert(idx >= 0 && idx < SCIPgetConsExprExprNChildren(expr));
+
+   /* check whether monotonicity information are available */
+   if( expr->monotonicity == NULL )
+      return SCIP_MONOTONE_UNKNOWN;
+
+   return expr->monotonicity[idx];
+}
 
 /**@} */  /* end of simplifying methods */
 
@@ -5878,6 +5964,22 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrCurvature(
    assert(exprhdlr != NULL);
 
    exprhdlr->curvature = curvature;
+
+   return SCIP_OKAY;
+}
+
+/** set the monotonicity detection callback of an expression handler */
+EXTERN
+SCIP_RETCODE SCIPsetConsExprExprHdlrMonotonicity(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+   SCIP_DECL_CONSEXPR_EXPRMONOTONICITY((*monotonicity)) /**< monotonicity detection callback (can be NULL) */
+   )
+{  /*lint --e{715}*/
+   assert(exprhdlr != NULL);
+
+   exprhdlr->monotonicity = monotonicity;
 
    return SCIP_OKAY;
 }
