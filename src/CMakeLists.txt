@@ -689,6 +689,7 @@ set(scipheaders
     scip/type_conflictstore.h
     scip/type_cons.h
     scip/type_cutpool.h
+    scip/type_cuts.h
     scip/type_dialog.h
     scip/type_disp.h
     scip/type_event.h
