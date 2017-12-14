@@ -119,7 +119,7 @@ new parameters:
   number of binary variable for performing clique table analysis
 - added parameter "expbackoff" to all separators which increases the frequency exponentially over depth
 - parameter "conflict/useboundlp" has new values 'd' (only dual solution analysis) and 'b' (both, conflict and dual solution analysis)
-- new paramerer "conflict/prefinfproof" (prefer infeasibility proof to boundexceeding proof)
+- new parameter "conflict/prefinfproof" (prefer infeasibility proof to boundexceeding proof)
 
 interface:
 - new command line parameter "-r" to pass a nonnegative integer as random seed.
