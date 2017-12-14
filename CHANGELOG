@@ -37,6 +37,7 @@ features:
 - enabled cutting plane separation in the tree
 - improved cut post-processing: apply coefficient tightening, enforce maximal dynamism
 - improved versions of the clique and variable bound pre-root heuristics that are often able to fix many more variables
+- extended conflict analysis by analysing dual solutions of boundexceeding LPs
 
 performance improvements:
 - use disjoint set to reduce peak memory usage and time to compute of clique table connectedness information
@@ -52,6 +53,7 @@ performance improvements:
 - improved cut selection and management
 - disabled reformulation of products of a binary variable with a linear term that does not solely involve binary variables
 - speed up creation of LP in the computation of relative interior points
+- speed up dual ray analysis
 
 data structures:
 - new disjoint set data structure SCIP_DISJOINTSET to incrementally update connectedness information for a graph on nodes {0,...,n-1}
