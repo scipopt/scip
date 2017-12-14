@@ -3452,13 +3452,12 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(computeBranchScore)
       {
          SCIP_CALL( (*expr->exprhdlr->brscore)(scip, expr, brscoredata->sol, &violation) );
       }
-      else
+      else if( SCIPgetConsExprExprLinearizationVar(expr) != NULL )
       {
          /* define |f(x*) - z*| as the violation if the branch score callback does not have been implemented where f is
           * the expression, x* solution values of original variables, and z* be the solution value of the linearization
           * variable attached to expression f
           */
-         assert(SCIPgetConsExprExprLinearizationVar(expr) != NULL);
          violation = REALABS(SCIPgetSolVal(scip, brscoredata->sol,SCIPgetConsExprExprLinearizationVar(expr))
             - expr->evalvalue);
       }
