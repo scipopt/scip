@@ -25,9 +25,10 @@
 /* XXX: need the consdata struct because we don't have getNlhdlrs or findNlhdlrs; I don't add those function because I'm unsure
  * we actually need them
  */
+#define SCIP_PRIVATE_ROWPREP
 #include "scip/cons_expr.c"
-
 #include "scip/cons_expr_nlhdlr_quadratic.c"
+
 
 /*
  * TEST
@@ -118,7 +119,7 @@ Test(nlhdlrquadratic, detectandfree1, .init = setup, .fini = teardown)
 
    /* detect */
    SCIP_CALL( detectHdlrQuadratic(scip, conshdlr, nlhdlr, expr, SCIP_CONSEXPR_EXPRENFO_ALL, &provided, &nlhdlrexprdata) );
-   cr_expect_eq(provided, SCIP_CONSEXPR_EXPRENFO_SEPAUNDER);
+   cr_expect_eq(provided, SCIP_CONSEXPR_EXPRENFO_SEPAUNDER, "expecting sepaunder got %d\n", provided);
    cr_assert_not_null(nlhdlrexprdata);
 
    cr_expect_eq(nlhdlrexprdata->nlinvars, 0, "Expecting 0 linear vars, got %d\n", nlhdlrexprdata->nlinvars);
