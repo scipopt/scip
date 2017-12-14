@@ -7410,12 +7410,12 @@
   * <br>
   * @section CHGPARAMS10 Changed parameters
   *
-  * - fixed typo: "heuristics/completesol/maxunkownrate" has changed to heuristics/completesol/maxunknownrate
+  * - fixed typo: "heuristics/completesol/maxunkownrate" has changed to "heuristics/completesol/maxunknownrate"
   * - removed parameters "constraints/{abspower,bivariate,nonlinear,quadratic,soc}/scaling"
   * - replaced "constraints/quadratic/disaggregate" by "constraints/quadratic/maxdisaggrsize" to bound
   *   the total number of created constraints when disaggregating a quadratic constraint
   * - removed parameters "constraints/{abspower,bivariate,quadratic,nonlinear}/mincutefficacysepa",
-  *   "constraints/{abspower,bivariate,quadratic,nonlinear}/mincutefficacyenfofac", and constraints/soc/minefficacy
+  *   "constraints/{abspower,bivariate,quadratic,nonlinear}/mincutefficacyenfofac", and "constraints/soc/minefficacy"
   * - removed parameters "conflict/usemir" and "conflict/prefermir"
   * - removed parameter "separating/feastolfac"
   * - removed parameter "separating/orthofac"
