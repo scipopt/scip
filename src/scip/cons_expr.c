@@ -4036,7 +4036,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(separateSolEnterExpr)
       ncuts = 0;
       separated = FALSE;
 
-      /* call the separation callbacks of the nonlinear handlers, if any, then the expression handler */
+      /* call the separation callbacks of the nonlinear handlers */
       for( e = 0; e < expr->nenfos; ++e )
       {
          SCIP_CONSEXPR_NLHDLR* nlhdlr;
