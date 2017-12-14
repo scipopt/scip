@@ -3755,12 +3755,14 @@ SCIP_RETCODE detectNlhdlrs(
          SCIP_SOL* debugsol;
 
          SCIP_CALL( SCIPdebugGetSol(scip, &debugsol) );
-         assert(debugsol != NULL);
 
-         /* evaluate expression in debug solution, so we can set the solution value of created auxiliary variables
-          * in SCIPcreateConsExprExprAuxVar()
-          */
-         SCIP_CALL( SCIPevalConsExprExpr(scip, consdata->expr, debugsol, 0) );
+         if( debugsol != NULL ) /* it can be compiled WITH_DEBUG_SOLUTION, but still no solution given */
+         {
+            /* evaluate expression in debug solution, so we can set the solution value of created auxiliary variables
+             * in SCIPcreateConsExprExprAuxVar()
+             */
+            SCIP_CALL( SCIPevalConsExprExpr(scip, consdata->expr, debugsol, 0) );
+         }
       }
 #endif
 
