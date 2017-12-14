@@ -34,6 +34,7 @@ re='^[0-9]+$'
 if ! [[ $PERMUTE =~ $re ]] ; then
   PERMUTE="0"
 fi
+export PERMUTE
 
 export GITHASH=`git describe --always --dirty  | sed -re 's/^.+-g//'`
 

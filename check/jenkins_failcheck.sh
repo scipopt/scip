@@ -168,6 +168,7 @@ EOF
 
 # The RBDB database has the form: timestamp_of_testrun rubberbandid p=PERM s=SEED
 RBDB="/nfs/OPTI/adm_timo/databases/rbdb/${PWD##*/}_${TESTSET}_${SETTING}_${LPS}_rbdb.txt"
+touch $RBDB
 OLDTIMESTAMP=`tail -n 1 ${RBDB}|cut -d ' ' -f 1`
 NEWTIMESTAMP=`date '+%F-%H-%M'`
 
