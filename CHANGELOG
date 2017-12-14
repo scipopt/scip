@@ -60,13 +60,14 @@ data structures:
 - new red black tree data structure defined in src/scip/rbtree.{c,h}
 
 deleted and modified API functions:
-- removed clique component index from SCIP_Var struct and the public interface method SCIPvarGetCliqueComponentIdx
-- new interface methods SCIPcreateRandom, SCIPfreeRandom that replace SCIPrandomCreate and SCIPrandomFree
+- removed SCIPvarGetCliqueComponentIdx(); the connectedness information of the clique table is now stored as a
+  SCIP_DISJOINTSET member of the clique table and cannot be publicly accessed
+- new interface methods SCIPcreateRandom(), SCIPfreeRandom() that replace SCIPrandomCreate() and SCIPrandomFree()
   in the public SCIP API
-- new interface methods SCIPcreateDigraph, SCIPcopyDigraph that replace SCIPdigraphCreate and SCIPdigraphCopy
+- new interface methods SCIPcreateDigraph(), SCIPcopyDigraph() that replace SCIPdigraphCreate() and SCIPdigraphCopy()
   in the public SCIP API
 - generalized SCIPcreate{Cons,ConsBasic}Orbitope() method to three orbitope types (full, partitioning, packing)
-- added additional parameter for statistics tables to SCIPcopyPlugins
+- added additional parameter for statistics tables to SCIPcopyPlugins()
 - added parameter "objval" to SCIPnlpiGetSolution() and the NLPIGETSOLUTION callback of NLPIs for returning the optimal
   objective value (can be set to NULL)
 - removed argument "includeslp" from SCIPrelaxCreate() and added it to SCIPmarkRelaxSolValid(), SCIPsetRelaxSolVals() and
@@ -81,9 +82,10 @@ deleted and modified API functions:
 - removed parameter "allowaddcons" from SCIPselectVarPseudoStrongBranching(), SCIPselectVarStrongBranching(), and
   SCIPincludeBranchruleRelpscost()
 - removed parameter "scaling" from SCIPgetRowprepViolation()
-- SCIPheurPassIndicator has a new parameter which allows to pass the objective of the solution
+- SCIPheurPassIndicator() has a new parameter which allows to pass the objective of the solution
 - new parameter "allowlocal" for SEPAEXEC{LP,SOL} callbacks to switch generation of locally valid cuts
 - added parameter "dstatssize" to NLPIDELVARSET and NLPIDELCONSSET callbacks of NLPIs
+- added argument "varnameslength" to SCIPexprParse()
 
 new API functions:
 - new interface methods to create and use bandit algorithms implemented as SCIP core plugins
