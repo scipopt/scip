@@ -82,7 +82,7 @@ for testset in mipdebug; do
 done
 
 # MINLP
-./bin/scip -c "set numerics checkfeastolfac 1000.0 set set diffsave settings/minlp_default.set q"
+./bin/scip -c "set numerics checkfeastolfac 1000.0 set diffsave settings/minlp_default.set q"
 ./bin/scip -c "set numerics checkfeastolfac 1000.0 set rand rand 20171124 set diffsave settings/minlp_Default_20171124.set q"
 ./bin/scip -c "set heur emph aggr set numerics checkfeastolfac 1000.0 set rand rand 20171124 set diffsave settings/minlp_heuraggr_20171124.set q"
 ./bin/scip -c "set sepa emph aggr set presol emph aggr set heur emph off set numerics checkfeastolfac 1000.0 set rand rand 20171124 set diffsave settings/minlp_presolaggr_sepaaggr_heuroff_20171124.set q"
